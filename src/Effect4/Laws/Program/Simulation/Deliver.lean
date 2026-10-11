@@ -131,7 +131,7 @@ def scopedExitAt (root : NativeEff) (m : FMachine) (f : FRun) (y : Bool) (ex : E
     preventYield := previous.preventYield }
   let m' := m.emit (pop.events.map (RunEvent.frame f.id))
   match storesCloseScopeUnsafe scope ex pop.fiber.interruptible m.state with
-  | none => ⟨m', f', y, .stuck (.unknownScope scope), []⟩
+  | none => ⟨m', f', y, .stuck (.unknownScope scope), [], []⟩
   | some (state, program) =>
     ⟨(match program with
         | none => { m' with state }
@@ -140,7 +140,7 @@ def scopedExitAt (root : NativeEff) (m : FMachine) (f : FRun) (y : Bool) (ex : E
       { f' with frame := { pop.fiber with current := match program with
         | none => Prim.ofExit ex
         | some code => finalizerCode (interpAt root m.completedExits table) ex (embed code) } },
-      y, .continue_, []⟩
+      y, .continue_, [], []⟩
 
 theorem exitScoped_scoped (root : NativeEff) (m : FMachine) (f : FRun) (y : Bool) (ex : ExitV)
     (pop : NPop) (hpop : f.frame.getCont (demandOf ex) (skipOf ex) (causeOf ex) = pop)
@@ -214,7 +214,7 @@ theorem finalizerOr_program (i : FInterp) (m : FMachine) (f : FRun) (y : Bool) (
     evaluatePrim.finalizerOr i m f y ex =
       ⟨m.emit (pop.events.map (RunEvent.frame f.id) ++ [RunEvent.finalizerProgram f.id fin (pop.deliveredExit ex)]),
         { f with frame := { pop.fiber with current := finalizerCode i (pop.deliveredExit ex) program } }, y,
-        .continue_, []⟩ := by
+        .continue_, [], []⟩ := by
   cases ex with
   | success v =>
     simp only [demandOf, skipOf, causeOf] at hpop
@@ -240,14 +240,14 @@ theorem stepFrame_eq' (i : FInterp) (m : FMachine) (f : FRun) (y : Bool) :
 theorem finishFrame_running (m : FMachine) (f : FRun) (y : Bool) (frame : FFiber)
     (events : List (FrameEvent EffName EffThunk Val Err Defect FiberId Ann)) (nested : List FCmd) :
     evaluatePrim.finishFrame m f y (.running frame) events nested =
-      ⟨m.emit (events.map (RunEvent.frame f.id)), { f with frame := frame }, y, .continue_, nested⟩ :=
+      ⟨m.emit (events.map (RunEvent.frame f.id)), { f with frame := frame }, y, .continue_, nested, []⟩ :=
   by aesop
 
 theorem finishFrame_finished (m : FMachine) (f : FRun) (y : Bool) (ex : ExitV)
     (events : List (FrameEvent EffName EffThunk Val Err Defect FiberId Ann)) (nested : List FCmd) :
     evaluatePrim.finishFrame m f y (.finished ex) events nested =
       ⟨m.emit (events.map (RunEvent.frame f.id)), { f with frame := frameExitState f.frame }, y,
-        .finished ex, nested⟩ :=
+        .finished ex, nested, []⟩ :=
   by aesop
 
 theorem frameExitState_exit (fr : FFiber) (ex : ExitV) (hcur : fr.current = Prim.ofExit ex) :
@@ -306,35 +306,33 @@ theorem deliverR_deferred (i : RInterp) (m : RState) (f : RFiber) (y : Bool) (v 
     deliverR i m f y (.success v) =
       ⟨m, { f with frame := { f.frame with
         current := .pure (.failure f.frame.pendingCause), deferredInterrupt := false } }, y,
-        .continue_, []⟩ := by
+        .continue_, [], []⟩ := by
   simp only [deliverR, h, ↓reduceIte]
 
 theorem deliverR_walk (i : RInterp) (m : RState) (f : RFiber) (y : Bool) (ex : ExitV)
     (h : deferredOn ex f.frame.deferredInterrupt = false) :
     deliverR i m f y ex =
       ⟨m, { f with frame := (popR i ex f.frame.stack { f.frame with deferredInterrupt := false }).1 },
-        y, outcomeOfWalk (popR i ex f.frame.stack { f.frame with deferredInterrupt := false }).2, []⟩ := by
+        y, outcomeOfWalk (popR i ex f.frame.stack { f.frame with deferredInterrupt := false }).2, [], []⟩ := by
   cases ex with
   | success v =>
     simp only [deferredOn] at h
     unfold deliverR
     simp only [h, Bool.false_eq_true, ↓reduceIte]
-    try rfl
   | failure c =>
     unfold deliverR
     simp only [Bool.false_eq_true, ↓reduceIte]
-    try rfl
 
 theorem prepareIterR_walk (m : RState) (g : RFiber) (y : Bool) (done : Option ExitV) :
-    prepareIterR ⟨m, g, y, outcomeOfWalk done, []⟩ =
+    prepareIterR ⟨m, g, y, outcomeOfWalk done, [], []⟩ =
       prepareScopedExitR ⟨m, answerR g (prepareR m.completedExits g.frame.current), y,
-        outcomeOfWalk done, []⟩ := by
+        outcomeOfWalk done, [], []⟩ := by
   cases done <;> rfl
 
 theorem prepareIterR_continue (m : RState) (g : RFiber) (y : Bool) :
-    prepareIterR ⟨m, g, y, .continue_, []⟩ =
+    prepareIterR ⟨m, g, y, .continue_, [], []⟩ =
       prepareScopedExitR ⟨m, answerR g (prepareR m.completedExits g.frame.current), y,
-        .continue_, []⟩ :=
+        .continue_, [], []⟩ :=
   by aesop
 
 theorem prepareScopedExitR_of_not (it : RIter)
@@ -476,7 +474,7 @@ theorem deliver_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hok : 
   by_cases hdef : deferredOn ex f₁.frame.deferredInterrupt = true
   · -- a deferred interrupt answers a success before the stack is touched
     cases ex with
-    | failure c => simp [deferredOn] at hdef
+    | failure c => simp only [deferredOn, Bool.false_eq_true] at hdef
     | success v =>
       simp only [deferredOn] at hdef
       have hdef₂ : g₂.frame.deferredInterrupt = true := by rw [← hf.deferred]; exact hdef
@@ -485,9 +483,9 @@ theorem deliver_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hok : 
             ⟨f₁.frame.current, f₁.frame.stack, f₁.frame.interruptible, f₁.frame.interruptedCause,
               false⟩, none⟩ :=
         getCont_success_deferred f₁.frame hdef
-      rw [exitScoped_of_not root m₁ f₁ y (.success v) _ hpop (fun _ _ _ _ h => by simp at h),
+      rw [exitScoped_of_not root m₁ f₁ y (.success v) _ hpop (fun _ _ _ _ h => by cases h),
         evaluatePrim_exit root _ m₁ f₁ y (.success v) hcur,
-        finalizerOr_of_not _ m₁ f₁ y (.success v) _ hpop (fun _ _ _ h => by simp at h),
+        finalizerOr_of_not _ m₁ f₁ y (.success v) _ hpop (fun _ _ _ h => by cases h),
         stepFrame_eq', step_exit _ f₁.frame (.success v) _ hcur hpop]
       simp only [resumeAt]
       rw [finishFrame_running, deliverR_deferred _ _ _ _ _ hdef₂, prepareIterR_continue]
@@ -499,7 +497,7 @@ theorem deliver_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hok : 
         codeMeans_scopeExit_false root (Eq.mp (congrArg (CodeMeans root _) h) hcode))]
       exact ⟨machineOk_emit hok _, hm.emitL _,
         hf.withFrame ⟨hf.interruptible, hf.interruptedCause, rfl, hcode, hf.stack, hf.maskInv⟩,
-        rfl, rfl, ListRel.nil⟩
+        rfl, rfl, ListRel.nil, rfl⟩
   · -- the walk
     have hdef' : deferredOn ex f₁.frame.deferredInterrupt = false := by
       cases h : deferredOn ex f₁.frame.deferredInterrupt with
@@ -554,7 +552,7 @@ theorem deliver_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hok : 
         exact hf.current.prepare _
       rw [prepareScopedExitR_of_not _ (codeMeans_not_scopeExit root hcode)]
       refine ⟨machineOk_emit hok _, hm.emitL _, hf.withFrame ⟨hi, hc, hd, hcode, ?_, ?_⟩, rfl, rfl,
-        ListRel.nil⟩
+        ListRel.nil, rfl⟩
       · show StackMeans root pop.fiber.stack frame'.stack
         rw [hs, hs']; exact StackMeans.nil
       · show MaskInv frame'.interruptible frame'.stack
@@ -569,7 +567,7 @@ theorem deliver_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hok : 
         rw [hcur']; exact CodeMeans.failure cause
       rw [prepareScopedExitR_of_not _ (codeMeans_not_scopeExit root hcode)]
       exact ⟨machineOk_emit hok _, hm.emitL _, hf.withFrame (means_update hi hc hd hst hmask hcode),
-        rfl, rfl, ListRel.nil⟩
+        rfl, rfl, ListRel.nil, rfl⟩
     | arm fr ha hnot harm hsome hi hc hd hmask =>
       rw [hchain (fun body previous scope flag h =>
           hnot body _ flag (ContAnswer.frame.inj (ha.symm.trans h))),
@@ -581,7 +579,7 @@ theorem deliver_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hok : 
         simp only [resumeAt, ha, hcomp, delivered, harm']]
       rw [finishFrame_running, prepareScopedExitR_of_not _ (codeMeans_not_scopeExit root hnext)]
       exact ⟨machineOk_emit hok _, hm.emitL _, hf.withFrame ⟨hi, hc, hd, hnext, hstk, hmask⟩,
-        rfl, rfl, ListRel.nil⟩
+        rfl, rfl, ListRel.nil, rfl⟩
     | finalizer body fin ha hns hK hsome hst hi hc hd hmask =>
       have hnotScoped : ∀ body' previous scope flag,
           pop.answer ≠ .frame (Prim.onExit body' (.scopedExit previous scope) flag) := by
@@ -596,7 +594,7 @@ theorem deliver_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hok : 
       have hcode := hK program hprog
       rw [prepareScopedExitR_of_not _ (codeMeans_not_scopeExit root hcode)]
       refine ⟨machineOk_emit hok _, hm.emitL _, hf.withFrame ⟨hi, hc, hd, ?_, hst, hmask⟩, rfl, rfl,
-        ListRel.nil⟩
+        ListRel.nil, rfl⟩
       show CodeMeans root (finalizerCode (interpAt root m₁.completedExits table) delivered program)
         (prepareR m₂.completedExits frame'.current)
       rw [hcomp]; exact hcode
@@ -623,7 +621,7 @@ theorem deliver_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hok : 
         cases r₂ with
         | none =>
           exact ⟨machineOk_emit hok _, hm.emitL _,
-            hf.withFrameContext ⟨hi, hc, hd, hcode₀, hst, hmask⟩, rfl, rfl, ListRel.nil⟩
+            hf.withFrameContext ⟨hi, hc, hd, hcode₀, hst, hmask⟩, rfl, rfl, ListRel.nil, rfl⟩
         | some r => exact hclose.elim
       | some r₁ =>
         obtain ⟨state₁, program₁⟩ := r₁
@@ -640,7 +638,7 @@ theorem deliver_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hok : 
             | none =>
               exact ⟨machineOk_stateOf (machineOk_emit hok _) hs', (hm.emitL _).stateOf _,
                 hf.withFrameContext ⟨hi, hc, hd, codeMeans_finish root delivered k, hst, hmask⟩,
-                rfl, rfl, ListRel.nil⟩
+                rfl, rfl, ListRel.nil, rfl⟩
             | some code₂ => exact hprog.elim
           | some code₁ =>
             cases program₂ with
@@ -650,6 +648,6 @@ theorem deliver_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hok : 
                 ((hm.emitL _).stateOf _).emitL _,
                 hf.withFrameContext
                   ⟨hi, hc, hd, finalizer_bind_intro root m₁.completedExits delivered hprog k, hst, hmask⟩,
-                rfl, rfl, ListRel.nil⟩
+                rfl, rfl, ListRel.nil, rfl⟩
 
 end Effect4.Program.Sched

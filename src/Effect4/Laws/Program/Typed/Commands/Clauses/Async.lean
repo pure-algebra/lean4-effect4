@@ -119,7 +119,7 @@ where
 theorem prepareIterR_async {M : RState} {g : RFiber} {y : Bool} {register : EffName} {request : Val}
     {k : (FiberOp.async register request).answer → RProgram}
     (hg : g.frame.current = .vis (.inr (.async register request)) k) :
-    prepareIterR ⟨M, g, y, .parked, []⟩ = ⟨M, g, y, .parked, []⟩ := by
+    prepareIterR ⟨M, g, y, .parked, [], []⟩ = ⟨M, g, y, .parked, [], []⟩ := by
   rcases g with ⟨id, ⟨cur, stk, i, ic, di⟩, running, parked, pending, finalizing, exit, count,
     maxOps, prevent, yo, observers, children, dispatcher, context⟩
   change cur = _ at hg
@@ -367,7 +367,7 @@ theorem Evaluating.async_parks {root : ProgramSource} {rootTy : EffTy} {w : Worl
       ⟨({ m with nextToken := m.nextToken + 1 } : RState).emit [.parkedOn f.id m.nextToken],
         { f with frame := { f.frame with stack := stk }, parked := .withGuard m.nextToken,
                  pending := f.pending ++ [⟨m.nextToken, none, [], [], .void, false⟩] },
-        y, .parked, []⟩) := by
+        y, .parked, [], []⟩) := by
   have wide := ev.typed.machine.wide
   have hmem : f ∈ (m.update f).fibers := rfiber?_mem ev.look
   have old := ev.typed.machine.fiber hmem
@@ -393,7 +393,7 @@ theorem Evaluating.async_parks {root : ProgramSource} {rootTy : EffTy} {w : Worl
   let gE : RFiber := { f with frame := fr, parked := .withGuard tok, pending := f.pending ++ [p] }
   rw [prepareIterR_async (g := gE) hc]
   refine ⟨w.addToken f.id tok tin, ord, ?_⟩
-  unfold settle
+  unfold settle settleOutcome
   dsimp only
   split
   · rename_i hd
@@ -429,7 +429,7 @@ theorem Evaluating.async_parks_store {root : ProgramSource} {rootTy : EffTy} {w 
       ⟨({ m with state := s, nextToken := m.nextToken + 1 } : RState).emit [.parkedOn f.id m.nextToken],
         { f with frame := { f.frame with stack := stk }, parked := .withGuard m.nextToken,
                  pending := f.pending ++ [⟨m.nextToken, none, [], [], .void, false⟩] },
-        y, .parked, []⟩) := by
+        y, .parked, [], []⟩) := by
   have wide := ev.typed.machine.wide
   have hmem : f ∈ (m.update f).fibers := rfiber?_mem ev.look
   have old := ev.typed.machine.fiber hmem
@@ -462,7 +462,7 @@ theorem Evaluating.async_parks_store {root : ProgramSource} {rootTy : EffTy} {w 
     rw [requestOfR_of_parked lookP rfl]
     exact noRequest)
   refine ⟨_, leHost_trans _ _ _ ord editP.1, ?_⟩
-  unfold settle
+  unfold settle settleOutcome
   dsimp only
   split
   · rename_i hd
@@ -490,7 +490,7 @@ theorem Evaluating.settle_continue_bump_drain {root : ProgramSource} {rootTy : E
     (code : ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty fr) :
     SettlesTyped root rootTy w f.id rest
       (prepareIterR ⟨{ m with nextToken := m.nextToken + 1 }, { f with frame := fr }, y', .continue_,
-        [.drainDue]⟩) := by
+        [.drainDue], []⟩) := by
   obtain ⟨ty, declared⟩ := ev.declared
   obtain ⟨ord, bumped⟩ := configTyped_token ev.typed
     (show (w.Γ f.id).isSome = true by rw [declared]; rfl) (EffTy.pure .unit)
@@ -506,10 +506,10 @@ theorem Evaluating.settle_continue_bump_drain {root : ProgramSource} {rootTy : E
   have code' : ∀ ty, w1.Γ f.id = some ty → CodeOk root w1 (m1.update f) f.id ty fr' :=
     fun ty' d => codeOk_prepare m1.completedExits view (code1 ty' d)
   obtain ⟨_, current, _, _⟩ := code' ty declared
-  have idle : prepareScopedExitR ⟨m1, { f with frame := fr' }, y', .continue_, [.drainDue]⟩ =
-      ⟨m1, { f with frame := fr' }, y', .continue_, [.drainDue]⟩ := prepareScopedExitR_of_typed current
-  have glue : prepareIterR ⟨m1, { f with frame := fr }, y', .continue_, [.drainDue]⟩ =
-      ⟨m1, { f with frame := fr' }, y', .continue_, [.drainDue]⟩ := idle
+  have idle : prepareScopedExitR ⟨m1, { f with frame := fr' }, y', .continue_, [.drainDue], []⟩ =
+      ⟨m1, { f with frame := fr' }, y', .continue_, [.drainDue], []⟩ := prepareScopedExitR_of_typed current
+  have glue : prepareIterR ⟨m1, { f with frame := fr }, y', .continue_, [.drainDue], []⟩ =
+      ⟨m1, { f with frame := fr' }, y', .continue_, [.drainDue], []⟩ := idle
   rw [glue]
   obtain ⟨w', ord', typed⟩ := settle_frame_ready (y' := y') ev'.typed hf0 ev'.running fr' code'
   exact ⟨w', leHost_trans _ _ _ ord ord', configTyped_cons_drainDue typed⟩
@@ -952,7 +952,7 @@ theorem Evaluating.async_parks_request {root : ProgramSource} {rootTy : EffTy} {
       ⟨({ m with nextToken := m.nextToken + 1 } : RState).emit [.parkedOn f.id m.nextToken],
         { f with frame := { f.frame with stack := stk }, parked := .withGuard m.nextToken,
                  pending := f.pending ++ [⟨m.nextToken, none, [], [], .void, false⟩] },
-        y, .parked, []⟩) := by
+        y, .parked, [], []⟩) := by
   let tok : Nat := m.nextToken
   let fr : RSaved := { f.frame with stack := stk }
   let p : RPending := ⟨tok, none, [], [], .void, false⟩
@@ -967,7 +967,7 @@ theorem Evaluating.async_parks_request {root : ProgramSource} {rootTy : EffTy} {
   let gE : RFiber := { f with frame := fr, parked := .withGuard tok, pending := f.pending ++ [p] }
   rw [prepareIterR_async (g := gE) hc]
   refine ⟨w.addToken f.id tok tin, ord, ?_⟩
-  unfold settle
+  unfold settle settleOutcome
   dsimp only
   split
   · rename_i hd

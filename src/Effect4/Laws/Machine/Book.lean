@@ -320,11 +320,11 @@ theorem machineOk_modify (h : MachineOk StOk m) (id : FiberId)
   | none => exact h
   | some f => exact machineOk_update h (hk f (pendingOk_of_fiber? h hf))
 
-/-- Recording an interrupt keeps or clears the parks. -/
-theorem interruptRecord_pendingOk (i : RunInterp ν σ β ε δ ι α χ St κ) (who : Option FiberId)
-    (extra : ReasonAnnotations α) {f : RunFiber ν σ β ε δ ι α χ κ φ} (hf : PendingOk f) :
-    PendingOk (interruptRecord i who extra f).1 := by
-  unfold interruptRecord interruptWithCause
+/-- A fresh interrupt delta keeps or clears the parks. The message simulation consumes it. -/
+theorem interruptWithCause_pendingOk (cause : Cause ε δ ι α)
+    {f : RunFiber ν σ β ε δ ι α χ κ φ} (hf : PendingOk f) :
+    PendingOk (interruptWithCause cause f).1 := by
+  unfold interruptWithCause
   dsimp only
   split
   · exact hf
@@ -336,6 +336,12 @@ theorem interruptRecord_pendingOk (i : RunInterp ν σ β ε δ ι α χ St κ) 
         · intro p member
           cases member
       · exact hf
+
+/-- Recording an interrupt keeps or clears the parks. -/
+theorem interruptRecord_pendingOk (i : RunInterp ν σ β ε δ ι α χ St κ) (who : Option FiberId)
+    (extra : ReasonAnnotations α) {f : RunFiber ν σ β ε δ ι α χ κ φ} (hf : PendingOk f) :
+    PendingOk (interruptRecord i who extra f).1 :=
+  interruptWithCause_pendingOk (interruptCause i who extra f.id) hf
 
 end Invariant
 

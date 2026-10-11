@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.StackRegion
+import Effect4.Laws.Machine.EditObserverWords
 
 /-!
 Concept: scope-lifetime-finalization, R11, the saved-mask region bracket.
@@ -98,38 +99,64 @@ theorem observer {id : FiberId} {below : List NCode} (interp : NInterp)
     (machine : NativeMachine) (owner : FiberId) (exit : ExitV) (commands : List NCommand)
     (held : Held id below machine) (callback : Observer) :
     Held id below (fireObserver interp owner exit (machine, commands) callback).1 := by
-  unfold fireObserver
-  dsimp only
-  split
-  · exact held
-  · exact modify _ _ _ held (fun _ => rfl) (fun _ => rfl) (fun _ => rfl)
-  · split <;> exact held
-  · split
-    · exact held
-    · rename_i waiter found
+  rw [Edits.observer_word]
+  simp only [Edits.observerWord, Edits.run_append, Edits.run_cons, Edits.run_nil, Edit.apply]
+  have fired : Held id below (machine.emit [.observerFired owner callback]) :=
+    fields held rfl (Nat.le_refl _)
+  generalize machine.emit [.observerFired owner callback] = current at fired ⊢
+  cases callback with
+  | resumeAwait waiter token resumeWith => exact fired
+  | untrackChild parent =>
+    simp only [Edits.observerTailWord]
+    split
+    · exact fired
+    · rename_i fiber found
+      simp only [Edits.run_cons, Edits.run_nil, Edit.apply]
+      exact update_from fiber _ (List.mem_of_find?_eq_some found) fired rfl rfl
+        (fun inside => inside)
+  | dropScopeFinalizer scope key =>
+    simp only [Edits.observerTailWord]
+    split <;> exact fired
+  | countdown waiter token =>
+    simp only [Edits.observerTailWord]
+    split
+    · exact fired
+    · rename_i fiber found
       split
-      · exact held
-      · rename_i park pending
-        have original := held.frames waiter (List.mem_of_find?_eq_some found)
+      · exact fired
+      · rename_i pending pendingFound
+        rw [Edits.run_append, Edits.interrupt_choice_word]
+        have interrupted : Held id below
+            (if pending.failFast && !exit.isSuccess && pending.collected.all Exit.isSuccess then
+              interruptEach interp waiter (interp.stackAnnotations waiter) pending.remaining (current, [])
+            else (current, [])).1 := by
+          split
+          · exact interrupt_each interp _ _ _ _ _ fired
+          · exact fired
+        generalize (if pending.failFast && !exit.isSuccess && pending.collected.all Exit.isSuccess then
+            interruptEach interp waiter (interp.stackAnnotations waiter) pending.remaining (current, [])
+          else (current, [])) = changed at interrupted ⊢
         split
-        · apply update
+        · exact interrupted
+        · rename_i latest latestFound
+          split
+          · exact interrupted
           · split
-            · exact interrupt_each interp _ _ _ _ _ held
-            · exact held
-          · exact original
-        · apply update
-          · apply modify _ _ _
-            · split
-              · exact interrupt_each interp _ _ _ _ _ held
-              · exact held
-            · exact fun _ => rfl
-            · exact fun _ => rfl
-            · exact fun _ => rfl
-          · exact original
-  · split
-    · exact held
-    · split <;> exact held
-  · exact held
+            · simp only [Edits.run_cons, Edits.run_nil, Edit.apply]
+              exact update_from latest _ (List.mem_of_find?_eq_some latestFound) interrupted
+                rfl rfl (fun inside => inside)
+            · simp only [Edits.run_cons, Edits.run_nil, Edit.apply]
+              exact modify _ _ _
+                (update_from latest _ (List.mem_of_find?_eq_some latestFound) interrupted
+                  rfl rfl (fun inside => inside))
+                (fun _ => rfl) (fun _ => rfl) (fun _ => rfl)
+  | raceCallback raceId =>
+    simp only [Edits.observerTailWord]
+    split
+    · exact fired
+    · simp only [Edits.run_append, Edits.run_cons, Edits.run_nil, Edit.apply]
+      split <;> exact fired
+  | callback key => exact fired
 
 /-- Exit publication removes the live obligation before clearing the stack. -/
 theorem finish {id : FiberId} {below : List NCode} (interp : NInterp)

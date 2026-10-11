@@ -1,10 +1,11 @@
 import Effect4.Laws.Program.ReleaseCustody.CommandStoreDebit
 import Effect4.Laws.Program.ReleaseCustody.Outside
+import Effect4.Laws.Machine.EditObserverWords
 
 /-!
 Concept: scope-lifetime-finalization R11, serving `ReleaseCustody.Execution.history`.
 Consumers: countdown observer and native interrupt-action custody.
-Nested interruptions reduce off-owner credit before the saved waiter record is installed once.
+The shared observer path retains current-record writes and zero-credit generated commands.
 These local bounds establish no history closure, source uniqueness or progress.
 -/
 set_option autoImplicit false
@@ -80,90 +81,72 @@ theorem countdown_zero (root : NativeEff) (table : RowTable) (q : List Nat)
   · rfl
   · rfl
 
-/-- Countdown callbacks reinstall the saved waiter after nested interruptions exactly once. -/
+/-- Countdown callbacks retain funding through current-record writes and their generated commands. -/
 theorem countdown_observer (root : NativeEff) (table : RowTable) (q : List Nat) (m : NativeMachine)
     (id : FiberId) (exit : ExitV) (waiter : FiberId) (token : Nat) (commands rest : List Command)
     (unique : (m.fibers.map RunFiber.id).Nodup) (pendingShape : Execution.PendingShape m)
     (held : Funded q m (commands ++ rest)) :
     let out := fireObserver (interpOf root table) id exit (m, commands) (.countdown waiter token)
     Funded q out.1 (out.2 ++ rest) := by
-  let base := m.emit [RunEvent.observerFired id (.countdown waiter token)]
-  have before : Funded q base (commands ++ rest) := emit q m _ held _ rfl rfl
-  simp only [fireObserver, show m.emit _ = base from rfl]
-  cases found : base.fiber? waiter with
-  | none => exact before
-  | some fiber =>
-    simp only []
-    cases pending : fiber.pending.find? (fun p => p.token = token) with
-    | none => exact before
-    | some park =>
-      simp only []
-      have shape := pendingShape fiber (List.mem_of_find?_eq_some found) park
-        (List.mem_of_find?_eq_some pending)
-      have key : fiber.id = waiter := fiber_id_of_lookup found
-      have partition := outside_split q base waiter fiber unique found
-      have restore (after : NativeMachine) (links : CommandStacks.StackLinks base after)
-          (afterUnique : (after.fibers.map RunFiber.id).Nodup)
-          (debit : outsideCredits q waiter after ≤ outsideCredits q waiter base)
-          (starts : after.trace.countP (ReleaseTrace.releaseAt q) = base.trace.countP (ReleaseTrace.releaseAt q))
-          (registered : after.trace.countP (ReleaseTrace.registeredAt q) = base.trace.countP (ReleaseTrace.registeredAt q))
-          (next : Fiber) (key : next.id = waiter) (credit : fiberCredits q next = fiberCredits q fiber)
-          (queued : List Command)
-          (cost : (queued.map (commandCredits q)).sum ≤ ((commands ++ rest).map (commandCredits q)).sum) :
-          Funded q (after.update next) queued := by
-        obtain ⟨stored, seen, _⟩ := links waiter fiber found
-        have installed := outside_install q after waiter stored next afterUnique seen key
-        unfold Funded at before ⊢
-        change after.trace.countP (ReleaseTrace.releaseAt q) + machineCredits q (after.update next) +
-          (queued.map (commandCredits q)).sum ≤ after.trace.countP (ReleaseTrace.registeredAt q)
-        rw [installed, credit, starts, registered]
-        omega
-      generalize result : (if park.failFast && !exit.isSuccess && park.collected.all Exit.isSuccess then
-          interruptEach (interpOf root table) waiter ((interpOf root table).stackAnnotations waiter)
-            park.remaining (base, []) else (base, [])) = out
-      have facts : outsideCredits q waiter out.1 ≤ outsideCredits q waiter base ∧
-          out.1.fibers.map RunFiber.id = base.fibers.map RunFiber.id ∧
-          out.1.trace.countP (ReleaseTrace.releaseAt q) = base.trace.countP (ReleaseTrace.releaseAt q) ∧
-          out.1.trace.countP (ReleaseTrace.registeredAt q) = base.trace.countP (ReleaseTrace.registeredAt q) ∧
-          (out.2.map (commandCredits q)).sum = 0 := by
-        rw [← result]
-        split
-        · exact interrupt_each root table q waiter waiter _ park.remaining base [] unique
-        · exact ⟨Nat.le_refl _, rfl, rfl, rfl, rfl⟩
-      have links : CommandStacks.StackLinks base out.1 := by
-        rw [← result]
-        split
-        · exact CommandStacks.interruptEach_links root table waiter _ park.remaining base []
-        · exact .refl base
-      have afterUnique : (out.1.fibers.map RunFiber.id).Nodup := by rw [facts.2.1]; exact unique
-      obtain ⟨outMachine, nested⟩ := out
-      dsimp only at facts links afterUnique ⊢
-      cases walked : countdownWalk outMachine park.remaining (park.collected ++ [exit]) with
-      | mk exits next =>
-        cases next with
-        | none =>
-          refine restore outMachine links afterUnique facts.1 facts.2.2.1 facts.2.2.2.1
-            {fiber with pending := fiber.pending.map (fun p => if p.token = token then
-              {p with waitingOn := none, remaining := [], collected := exits} else p)}
-            key rfl _ ?_
-          simp only [List.map_append, List.sum_append, List.map_cons, List.map_nil, List.sum_cons,
-            List.sum_nil, commandCredits, countdown_zero root table q park.resumeWith exits shape,
-            facts.2.2.2.2, Nat.add_zero]
-          exact Nat.le_refl _
-        | some pair =>
-          obtain ⟨next, remaining⟩ := pair
-          let edit : Fiber → Fiber := fun f => {f with observers := f.observers ++ [.countdown waiter token]}
-          have linked := links.trans (CommandStacks.modify_links outMachine next edit (fun _ => rfl) (fun _ => rfl))
-          have smaller := modify_outside q outMachine waiter next edit afterUnique (fun _ => rfl) (fun _ => Nat.le_refl _)
-          refine restore (outMachine.modify next edit) linked (by rw [modify_ids]; exact afterUnique)
-            (Nat.le_trans smaller facts.1)
-            (by rw [RunMachine.modify_trace]; exact facts.2.2.1)
-            (by rw [RunMachine.modify_trace]; exact facts.2.2.2.1)
-            {fiber with pending := fiber.pending.map (fun p => if p.token = token then
-              {p with waitingOn := some next, remaining := remaining, collected := exits} else p)}
-            key rfl _ ?_
-          simp only [List.map_append, List.sum_append, facts.2.2.2.2, Nat.add_zero]
-          exact Nat.le_refl _
+  let Edge (before after : NativeMachine)
+      (edit : Machine.Edit EffName EffThunk Val Err Defect FiberId Ann Ctx Stores NCode
+        (FrameFiber EffName EffThunk Val Err Defect FiberId Ann)
+        (FrameEvent EffName EffThunk Val Err Defect FiberId Ann)) : Prop :=
+    after = edit.apply before ∧ after.fibers.map RunFiber.id = before.fibers.map RunFiber.id ∧
+      ((before.fibers.map RunFiber.id).Nodup →
+        ∀ queue, Funded q before queue → Funded q after queue)
+  have updated (before : NativeMachine) (target : FiberId) (old next : Fiber)
+      (found : before.fiber? target = some old) (key : next.id = old.id)
+      (bound : fiberCredits q next ≤ fiberCredits q old) :
+      Edge before (before.update next) (.update next) :=
+    ⟨rfl, RunMachine.update_keeps_ids _ _, fun unique queue held =>
+      update q before old next queue queue held unique
+        (by simpa only [fiber_id_of_lookup found] using found) key
+        (Nat.add_le_add_right bound _)⟩
+  have emitted (before : NativeMachine) (events)
+      (starts : events.countP (ReleaseTrace.releaseAt q) = 0)
+      (registrations : events.countP (ReleaseTrace.registeredAt q) = 0) :
+      Edge before (before.emit events) (.emit events) :=
+    ⟨rfl, rfl, fun _ queue held => emit q before queue held events starts registrations⟩
+  have interrupted (who : FiberId) (extra : ReasonAnnotations Ann) (target : FiberId)
+      (acc : NativeMachine × List Command) :
+      Effect4.Contracts.Path Edge acc.1 (interruptEach (interpOf root table) who extra [target] acc).1
+        (Edits.interruptWord (interpOf root table) who extra target acc.1) := by
+    exact Edits.interrupt_path (interpOf root table) who extra
+      (fun before target old found => updated before target old _ found
+        (interruptRecord_id root table (some who) extra old)
+        (interrupt_record root table q (some who) extra old))
+      (fun before target => emitted before [.interruptRecorded (some who) target] rfl rfl) target acc
+  have produced := Edits.observer_producer_path (Edge := Edge) (interpOf root table)
+    (commandCredits q) (fun _ => True) id exit (m, commands) (.countdown waiter token)
+    (fun before target old next found key frame dispatcher _ => updated before target old next found key
+      (by unfold fiberCredits; rw [frame, dispatcher]; exact Nat.le_refl _))
+    (fun before target observer => ⟨rfl, modify_ids before target _, fun unique queue held =>
+      modify q before target _ queue held unique (fun _ => rfl) (fun _ => Nat.le_refl _)⟩)
+    (fun before target observer => emitted before [.observerFired target observer] rfl rfl)
+    (fun before race answer => emitted before [.raceSettled race answer] rfl rfl)
+    (fun before key answer => emitted before [.callback key answer] rfl rfl)
+    (fun _ _ _ _ impossible _ => by cases impossible)
+    (fun _ _ _ impossible _ => by cases impossible)
+    (fun _ _ _ impossible => by cases impossible)
+    (fun who extra targets acc => Edits.interrupts_path (interpOf root table) who extra
+      (interrupted who extra) targets acc)
+    (fun _ => ⟨rfl, True.intro⟩)
+    (fun _ _ _ impossible => by cases impossible)
+    (fun _ _ _ _ _ impossible => by cases impossible)
+    (fun waiter token fiber pending exits _ found member =>
+      ⟨countdown_zero root table q pending.resumeWith exits
+        (pendingShape fiber (List.mem_of_find?_eq_some found) pending member), True.intro⟩)
+  have lifted := Edits.run_preserves_at (fun _ _ _ edge => edge.1)
+    (fun after => after.fibers.map RunFiber.id = m.fibers.map RunFiber.id ∧
+      Funded q after (commands ++ rest))
+    (fun before after edit edge initial =>
+      ⟨edge.2.1.trans initial.1, edge.2.2 (by rw [initial.1]; exact unique) _ initial.2⟩)
+    produced.1 ⟨rfl, held⟩
+  rw [← Edits.observer_word] at lifted
+  apply queue q _ (commands ++ rest) _ lifted.2
+  simp only [List.map_append, List.sum_append, produced.2.1]
+  exact Nat.le_refl _
 
 /-- Every native observer retains release funding, including nested countdown interruptions. -/
 theorem fire_observer (root : NativeEff) (table : RowTable) (q : List Nat) (m : NativeMachine)

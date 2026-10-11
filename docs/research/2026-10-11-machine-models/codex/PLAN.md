@@ -19,15 +19,17 @@ Never push.
 
 | Lane | Work | Consumer |
 | --- | --- | --- |
-| Coordinator | FinalizerCredits as FrameWeights instance; labelled moves and balance | Four accounting ledgers |
-| Timeout | Shared actual pop specification; restricted Timeout frame contracts as AnswerFlow instances | Numbers and Declared |
-| Workers | NativeStacks through shared interference and exact lookup survival | Workers and Queue cleanup |
-| Atomic | Generated native primitive fold; response-dependent stack-credit probe | Code weights and four ledgers |
+| Coordinator | R2 integration, shared observer paths, accounting and full law acceptance | Existing invariants and the original goals |
+| Timeout | Actual attempt, cleanup, and completed-form phase history through shared laws | Numbers and Declared |
+| Machine structure | R2 source review; then the field rule and canonical token filter | Item 10 and existing machine invariants |
+| Typed context | R2 typing adapters; then the approved context region and exit guarantees | B6 and the context service chain |
 
 `Machine.Ledger` is assigned to the adjacent L1 seat by the packet.
 It lands at `0d1acfd87` as `StackLedger` and passes the independent integration build.
 It accounts for saved stacks; active-code weights wait for the edit-message repair or a justified generalization.
-The first replacement removes the duplicate FinalizerBookkeeping and FinalizerCommands proofs through exact reading connectors.
+The checked replacement removes the duplicate FinalizerBookkeeping and FinalizerCommands proofs through exact reading connectors.
+The generated primitive fold, labelled moves, pop provenance, and FiberSum connectors are checked foundations.
+Their receipts retain the measured scope and remaining application obligations.
 
 ## Placement and limits
 
@@ -64,8 +66,14 @@ flowchart TD
   Ledgers --> Workers[Workers and Queue log histories]
   Ledgers --> Atomic[Atomic cleanup and stages]
   Labels --> Messages[Alias-safe edit messages]
+  Messages --> Fields[One edit field rule and token filter]
+  Fields --> Names[Shared names and worlds]
+  Messages --> Ledgers
+  Messages --> Context[Typed context region and exit guarantees]
   Messages --> Cleanup[Dead state and duplicated budget removal]
-  Cleanup --> Gates[Reached behavior sweep]
+  Names --> Gates[Reached behavior sweep]
+  Context --> Gates
+  Cleanup --> Gates
 ```
 
 The self-interrupt repair first probes self-aliasing join, countdown, and scope-link arms.
@@ -74,7 +82,11 @@ Retain `E4-RUN-CE-046` as a repaired regression and run the packet's truth and c
 FreshSupply, AppendOnly, Census, and Linear follow their placed consumers.
 Row 349 now rules option A at `1cda0752d`: typed context reading and a provideContext region.
 The constructor migration precedes B6 and context transformers.
-Remove the clean docgen probe worktree only after verifying its archived tip and current status.
+The worktree cleanup follows the retained housekeeping receipt.
+The owner approves separate success and failure service guarantees for continuations.
+The context signature change follows the R2 integration checkpoint.
+Item 10 follows the checked field-rule probe and removes both remaining executable token-filter copies.
+Item 11 then consolidates names, worlds, and pointwise relations in the packet order.
 
 ## Preserved work
 

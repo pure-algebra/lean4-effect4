@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.NativeReferences
+import Effect4.Laws.Program.StoreExecution
 
 /-!
 Concept: store-typing R4, serving `HeapSites.heap_sites_keep`.
@@ -6,6 +7,52 @@ The cell predicate follows actual evaluation using the checked source writer.
 Administrative scheduler and scope transitions retain references.
 -/
 set_option autoImplicit false
+namespace Effect4.Program.StoreExecution
+open Effect4 Effect4.Machine Effect4.Program
+
+/-- The generated primitive eliminator exposes the actual store action once.
+The existing administrative projections supply all non-synchronous reference effects. -/
+theorem primitive_refTransfer (root : NativeEff) (completed) (table : RowTable)
+    (m : NativeMachine) (fiber : SourceScope.SourceFiber) (yielding : Bool) :
+    RefTransfer (interpAt root completed table) fiber.frame.current m.state
+      (evaluatePrim (interpAt root completed table) m fiber yielding).machine.state := by
+  fun_cases evaluatePrim (interpAt root completed table) m fiber yielding
+  case case2 register signal cancel current token state grown code registered =>
+    apply RefTransfer.same
+    have kept := SourceScope.register_refs root completed table register fiber.id m.nextToken m.state
+    rw [registered] at kept
+    exact kept
+  case case3 register signal cancel current token state grown before parked registered =>
+    apply RefTransfer.same
+    have kept := SourceScope.register_refs root completed table register fiber.id m.nextToken m.state
+    rw [registered] at kept
+    exact kept
+  case case5 race parked noYield noAsync =>
+    unfold registerRace
+    split <;> exact .same _ rfl
+  case case6 targets parked next returned waiting edits counted noYield noAsync =>
+    apply RefTransfer.same
+    have kept := congrArg Stores.refs (StatePreservation.countdown_plan_state
+      (interpAt root completed table) m fiber targets .exitsValue false)
+    rw [counted] at kept
+    exact kept
+  case case10 noPark thunk current action found noYield noAsync =>
+    exact .same _ (SourceScope.action_refs root completed table m fiber yielding action)
+  case case11 noPark thunk current missing noYield noAsync =>
+    exact .same _ (SourceScope.step_frame_refs root completed table m fiber yielding)
+  case case12 noPark thunk current state value synced noYield noAsync =>
+    exact .sync thunk state value current noPark synced
+  case case14 noPark value current noYield noAsync =>
+    exact .same _ (SourceScope.finalizer_refs root completed table m fiber yielding (.success value))
+  case case15 noPark cause current noYield noAsync =>
+    exact .same _ (SourceScope.finalizer_refs root completed table m fiber yielding (.failure cause))
+  case case16 noPark noWithFiber noSync noSuccess noFailure noYield noAsync =>
+    exact .same _ (SourceScope.step_frame_refs root completed table m fiber yielding)
+  all_goals exact .same _ rfl
+
+
+end Effect4.Program.StoreExecution
+
 namespace Effect4.Program.SourceScope
 open Effect4 Effect4.Machine Effect4.Program HeapSites
 
@@ -14,42 +61,12 @@ theorem primitive_heap (root : NativeEff) (completed) (table : RowTable)
     (m : NativeMachine) (fiber : SourceFiber) (yielding : Bool) (held : FiberAt root fiber)
     (P : Val → Prop) (sites : SitesKeep root P) (heap : HeapOk P m.state.refs) :
     HeapOk P (evaluatePrim (interpAt root completed table) m fiber yielding).machine.state.refs := by
-  fun_cases evaluatePrim (interpAt root completed table) m fiber yielding
-  case case2 register signal cancel current token state grown code registered =>
-    have kept := register_refs root completed table register fiber.id m.nextToken m.state
-    rw [registered] at kept
-    exact kept ▸ heap
-  case case3 register signal cancel current token state grown before parked registered =>
-    have kept := register_refs root completed table register fiber.id m.nextToken m.state
-    rw [registered] at kept
-    exact kept ▸ heap
-  case case5 race parked noYield noAsync =>
-    unfold registerRace
-    split <;> exact heap
-  case case6 targets parked next returned waiting counted noYield noAsync =>
-    have kept := countdown_refs root completed table m fiber targets .exitsValue false
-    rw [counted] at kept
-    exact kept ▸ heap
-  case case10 noPark thunk current action found noYield noAsync =>
-    rw [action_refs root completed table m fiber yielding action]
-    exact heap
-  case case11 noPark thunk current missing noYield noAsync =>
-    rw [step_frame_refs root completed table m fiber yielding]
-    exact heap
-  case case12 noPark thunk current state value synced noYield noAsync =>
-    have source := held.frame.1
-    rw [current] at source
-    exact sync_heap_at root completed table thunk m.state state value P sites heap source synced
-  case case14 noPark value current noYield noAsync =>
-    rw [finalizer_refs root completed table m fiber yielding (.success value)]
-    exact heap
-  case case15 noPark cause current noYield noAsync =>
-    rw [finalizer_refs root completed table m fiber yielding (.failure cause)]
-    exact heap
-  case case16 noPark noWithFiber noSync noSuccess noFailure noYield noAsync =>
-    rw [step_frame_refs root completed table m fiber yielding]
-    exact heap
-  all_goals exact heap
+  apply (StoreExecution.primitive_refTransfer root completed table m fiber yielding).preserves
+    (HeapOk P) heap
+  intro thunk state value current unparked synced
+  have source := held.frame.1
+  rw [current] at source
+  exact sync_heap_at root completed table thunk m.state state value P sites heap source synced
 
 /-- Scoped exit changes only scope state before running its represented cleanup. -/
 theorem exit_scoped_heap (root : NativeEff) (m : NativeMachine) (fiber : SourceFiber) (yielding : Bool)

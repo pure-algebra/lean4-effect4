@@ -1,4 +1,5 @@
 import Test.Dogfood.Proofs.HostTimeoutNumberLedger
+import Effect4.Laws.Program.NativeHeapExecution
 
 /-!
 Placement: scope-lifetime-finalization R11 and translation-simulation R10.
@@ -346,5 +347,34 @@ theorem reference_step_point (view : View) (state : Stores) (point : Point)
   unfold sourceStep at step ⊢
   rw [code]
   exact step
+
+/-- The numeric reference instance consumes an exact captured source point at its actual store.
+This is local transfer; it supplies no history permission for that point. -/
+theorem reference_refTransfer (view : View) (point : Point) (before after : Stores)
+    (transfer : StoreExecution.RefTransfer (interpreter view)
+      (resolve HostTimeoutSource.program point) before after)
+    (heap : HeapAt before.refs) (reference : ReferenceAtPoint point before.refs) : HeapAt after.refs := by
+  apply transfer.preserves HeapAt heap
+  intro thunk next value current unparked answer
+  obtain ⟨expected, returned, step, kept, classified⟩ := reference_step_point view before point reference
+  unfold sourceStep at step
+  rw [current] at step
+  dsimp only at step
+  rw [answer] at step
+  cases step
+  exact kept
+
+
+/-- The actual primitive producer consumes the current row's captured numeric permission.
+This establishes one evaluation's heap result; history must still produce that permission. -/
+theorem reference_primitive_heap (machine : Effect4.Program.NativeMachine)
+    (fiber : Effect4.Program.SourceScope.SourceFiber) (yielding : Bool) (point : Point)
+    (current : fiber.frame.current = resolve HostTimeoutSource.program point)
+    (heap : HeapAt machine.state.refs) (reference : ReferenceAtPoint point machine.state.refs) :
+    HeapAt (evaluatePrim (interpreter machine.completedExits) machine fiber yielding).machine.state.refs := by
+  have transfer := StoreExecution.primitive_refTransfer HostTimeoutSource.program machine.completedExits
+    Test.Dogfood.Scenario.Timeout.fetch.table machine fiber yielding
+  rw [current] at transfer
+  exact reference_refTransfer machine.completedExits point machine.state _ transfer heap reference
 
 end Test.Dogfood.Proofs.HostTimeoutNumberState

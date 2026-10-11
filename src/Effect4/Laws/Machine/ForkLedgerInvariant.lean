@@ -240,10 +240,10 @@ theorem forkFinalizers_ok (interp : RunInterp ν σ β ε δ ι α χ St κ)
     exact ih (Effect4.Machine.spawn interp m host program ⟨true, true, .inherit⟩ []).1
       (spawn_ok interp h host program ⟨true, true, .inherit⟩ [])
 
-theorem settle_ok (id : FiberId) (rest : List (Cmd ν σ β ε δ ι α κ))
+theorem settleOutcome_ok (id : FiberId) (rest : List (Cmd ν σ β ε δ ι α κ))
     (it : Iter ν σ β ε δ ι α χ St κ φ η) (h : Ok it.machine) :
-    Ok (settle id rest it).1 := by
-  unfold settle
+    Ok (settleOutcome id rest it).1 := by
+  unfold settleOutcome
   split
   · exact update_ok h _
   · exact update_ok h _
@@ -253,6 +253,45 @@ theorem settle_ok (id : FiberId) (rest : List (Cmd ν σ β ε δ ι α κ))
   · exact halt_ok (update_ok h _) _
 
 variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+
+/-- R2 edit interpretation keeps the allocation view; `settle_ok` consumes this law. -/
+theorem fiberEdit_ok (edit : FiberEdit ε δ ι α)
+    {m : RunMachine ν σ β ε δ ι α χ St κ φ η} (h : Ok m) :
+    Ok (applyFiberEdit edit m).1 := by
+  cases edit with
+  | observe target observer => exact modify_ok h _ _
+  | dropToken token => exact mapFibers_ok h _ (fun _ => rfl)
+  | interrupt target cause =>
+    simp only [applyFiberEdit]
+    split
+    · exact h
+    · exact update_ok h _
+
+/-- The existing list fold preserves allocation through every addressed edit. -/
+theorem fiberEdits_ok (word : List (FiberEdit ε δ ι α))
+    {m : RunMachine ν σ β ε δ ι α χ St κ φ η} (h : Ok m) :
+    Ok (applyFiberEdits word m).1 := by
+  have kept (edits : List (FiberEdit ε δ ι α)) :
+      ∀ (acc : RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ)),
+        Ok acc.1 → Ok (edits.foldl (fun held edit =>
+          let next := applyFiberEdit edit held.1
+          (next.1, held.2 ++ next.2)) acc).1 := by
+    induction edits with
+    | nil => intro _ held; exact held
+    | cons edit rest ih => intro acc held; exact ih _ (fiberEdit_ok edit held)
+  exact kept word (m, []) h
+
+theorem settle_ok (id : FiberId) (rest : List (Cmd ν σ β ε δ ι α κ))
+    (it : Iter ν σ β ε δ ι α χ St κ φ η) (h : Ok it.machine) :
+    Ok (settle id rest it).1 := by
+  unfold settle
+  split
+  · exact settleOutcome_ok id rest it h
+  · have held := fiberEdits_ok it.edits (update_ok h it.fiber)
+    dsimp only
+    split
+    · exact halt_ok held _
+    · exact settleOutcome_ok id rest _ held
 
 theorem interruptEdit_ok (interp : RunInterp ν σ β ε δ ι α χ St κ)
     {m : RunMachine ν σ β ε δ ι α χ St κ φ η} (h : Ok m)

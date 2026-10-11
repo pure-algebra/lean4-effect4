@@ -193,7 +193,7 @@ theorem close_seq_start (root : NativeEff) (table : RowTable) (m : NativeMachine
        { f with frame := { f.frame with
          current := .exitFrame (embed (finProgram fin exit))
          stack := .iterator (.store (.closeSeq rest exit (captured ++ reasonsOfVal cursor))) cursor :: f.frame.stack } },
-       yielding, .continue_, []⟩ := by
+       yielding, .continue_, [], []⟩ := by
   have next : ((interpAt root m.completedExits table).toPrimInterp.iterNext
       (.store (.closeSeq (fin :: rest) exit captured)) cursor).snd =
       .resume (.exitFrame (embed (finProgram fin exit)))
@@ -250,7 +250,7 @@ theorem release_start (root : NativeEff) (table : RowTable) (m : NativeMachine)
          current := Prim.withFiber EffThunk.getCtx
          stack := .onSuccess (.withFiber .getCtx)
            (.releaseUnder (Point.ofCapture c) c.ctx exit) :: f.frame.stack } },
-       yielding, .continue_, []⟩ := by
+       yielding, .continue_, [], []⟩ := by
   have shape : f.frame.current = .onSuccess (.withFiber .getCtx)
       (.releaseUnder (Point.ofCapture c) c.ctx exit) := current
   have park : (interpAt root m.completedExits table).parkOf

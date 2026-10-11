@@ -69,6 +69,8 @@ def stateSources : List Row := [
   ("Effect4.Machine.Cmd.finish.exit", .exit (.fiber "fiber")),
   ("Effect4.Machine.Cmd.resume", .owner "ResumeOk"),
   ("Effect4.Machine.Cmd.observe.exit", .exit (.fiber "fiber")),
+  -- The interrupt message carries a fresh cause for its addressed fiber.
+  ("Effect4.Machine.FiberEdit.interrupt.cause", .cause (.fiber "target")),
   -- the step result
   ("Effect4.Machine.Outcome.finished.exit", .exit .inherited)
 ]

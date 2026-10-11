@@ -53,10 +53,10 @@ theorem registration_owner_mem {m : NativeMachine} {commands : List NCmd}
   refine List.mem_filterMap.mpr ⟨.registrationDone raceId yielding, member, ?_⟩
   simp only [commandOwner, lookup, Option.map_some]
 
-/-- Replacing the currently executing fiber may change its own frame and flags. -/
+/-- The command tail reads active or exited fibers away from the local owner. -/
 def ControlsAway (m n : NativeMachine) (target : FiberId) : Prop :=
   ∀ fiber f, m.fiber? fiber = some f → fiber ≠ target →
-    (f.parked = .notParked ∨ f.exit.isSome = true) → ∃ g, n.fiber? fiber = some g ∧
+    ((f.running = true ∧ f.parked = .notParked) ∨ f.exit.isSome = true) → ∃ g, n.fiber? fiber = some g ∧
     g.frame.current = f.frame.current ∧ g.parked = f.parked ∧ g.exit = f.exit ∧
     (f.running = true → g.running = true)
 
@@ -71,7 +71,7 @@ theorem activeAt_transport_away {m n : NativeMachine} {target fiber : FiberId}
     (controls : ControlsAway m n target) (other : fiber ≠ target) (active : ActiveAt m fiber) :
     ActiveAt n fiber := by
   obtain ⟨f, lookup, running, park⟩ := active
-  obtain ⟨g, after, _, park', _, running'⟩ := controls fiber f lookup other (Or.inl park)
+  obtain ⟨g, after, _, park', _, running'⟩ := controls fiber f lookup other (Or.inl ⟨running, park⟩)
   exact ⟨g, after, running' running, park'.trans park⟩
 
 theorem commandAuthority_transport_away (p : NativeEff) (table : RowTable)
@@ -106,7 +106,7 @@ theorem commandAuthority_transport_away (p : NativeEff) (table : RowTable)
     obtain ⟨race, f, hr, hf, running, park, code⟩ := authority
     have other : race.host ≠ target := owner_other (by simp only [commandOwner, hr, Option.map_some])
     obtain ⟨next, hn, host⟩ := races raceId race hr
-    obtain ⟨g, hg, current, park', _, running'⟩ := controls race.host f hf other (Or.inl park)
+    obtain ⟨g, hg, current, park', _, running'⟩ := controls race.host f hf other (Or.inl ⟨running, park⟩)
     exact ⟨next, g, hn, host ▸ hg, running' running, park'.trans park, current ▸ code⟩
   case exitDone fiber =>
     obtain ⟨f, hf, exited⟩ := authority

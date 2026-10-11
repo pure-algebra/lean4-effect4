@@ -1,5 +1,6 @@
 import Effect4.Laws.Machine.ForkLedgerInvariant
 import Effect4.Laws.Program.Guard.Core
+import Effect4.Laws.Machine.EditWords
 
 /-! The four ledger lookup facts on raw native decision prefixes. No reference evaluator
 or M6 instance is claimed. All command cases and all eight outside-loop edits are covered. -/
@@ -23,31 +24,47 @@ abbrev NInterp := RunInterp EffName EffThunk Val Err Defect FiberId Ann Ctx Stor
 abbrev NCmd := Cmd EffName EffThunk Val Err Defect FiberId Ann
 abbrev NIter := Iter EffName EffThunk Val Err Defect FiberId Ann Ctx Stores
 
+/-- Canonical countdown allocation retains the existing fork ledger view.
+Consumer: native primitive ledger preservation below. -/
+theorem countdownEdits_ok (interp : NInterp) (m : NativeMachine) (f : NFiber)
+    (targets : List FiberId) (resume : Resume EffName) (failFast : Bool) (h : Ok m) :
+    Ok (countdownParkEdits interp m f targets resume failFast).1 := by
+  rw [Edits.countdown_word]
+  unfold Edits.countdownWord
+  cases walk : countdownWalk {m with nextToken := m.nextToken + 1} targets [] with
+  | mk exits target => cases target <;> exact h
+
 theorem countdown_ok (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (targets : List FiberId) (resume : Resume EffName) (failFast : Bool) (h : Ok m) :
-    Ok (countdownPark interp m f targets resume failFast).1 := by
-  have bumped : Ok ({ m with nextToken := m.nextToken + 1 } : NativeMachine) := h
-  unfold countdownPark
-  dsimp only
-  split
-  · exact bumped
-  · exact emit_ok (modify_ok bumped _ _) _
+    Ok (countdownPark interp m f targets resume failFast).1 :=
+  fiberEdits_ok _ (countdownEdits_ok interp m f targets resume failFast h)
 
 theorem countdown_result_ok (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (targets : List FiberId) (resume : Resume EffName) (failFast : Bool)
     (after : NativeMachine) (next : NFiber) (parked : Bool) (h : Ok m)
     (step : countdownPark interp m f targets resume failFast = (after, next, parked)) :
     Ok after := by
-  have kept := countdown_ok interp m f targets resume failFast h
-  rw [step] at kept
-  exact kept
+  simpa only [step] using countdown_ok interp m f targets resume failFast h
+
+theorem countdownEdits_result_ok (interp : NInterp) (m : NativeMachine) (f : NFiber)
+    (targets : List FiberId) (resume : Resume EffName) (failFast : Bool)
+    (after : NativeMachine) (next : NFiber) (parked : Bool) (edits : List (FiberEdit Err Defect FiberId Ann))
+    (h : Ok m)
+    (step : countdownParkEdits interp m f targets resume failFast = (after, next, parked, edits)) :
+    Ok after := by
+  simpa only [step] using countdownEdits_ok interp m f targets resume failFast h
+
+theorem linkScopeEdits_ok (interp : NInterp) (m : NativeMachine) (mode : Supervision.ScopeMode)
+    (scope : Nat) (target : FiberId) (who : Option FiberId) (extra : ReasonAnnotations Ann)
+    (h : Ok m) : Ok (linkScopeEdits interp m mode scope target who extra).1 := by
+  unfold linkScopeEdits
+  repeat' split
+  all_goals aesop (rule_sets := [Effect4.StepInv])
 
 theorem linkScope_ok (interp : NInterp) (m : NativeMachine) (mode : Supervision.ScopeMode)
     (scope : Nat) (target : FiberId) (who : Option FiberId) (extra : ReasonAnnotations Ann)
-    (h : Ok m) : Ok (linkScope interp m mode scope target who extra).1 := by
-  unfold linkScope
-  repeat' split
-  all_goals aesop (rule_sets := [Effect4.StepInv])
+    (h : Ok m) : Ok (linkScope interp m mode scope target who extra).1 :=
+  fiberEdits_ok _ (linkScopeEdits_ok interp m mode scope target who extra h)
 
 theorem interruptEach_ok (interp : NInterp) (who : FiberId) (extra : ReasonAnnotations Ann)
     (targets : List FiberId) (acc : NativeMachine × List NCmd) (h : Ok acc.1) :
@@ -103,14 +120,13 @@ theorem withFiber_ok (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (yielding : Bool) (action : NAction) (h : Ok m) :
     Ok (evaluatePrim.withFiber interp m f yielding action).machine := by
   cases action <;> simp only [evaluatePrim.withFiber, evaluatePrim.interruptAs]
-  case dropObservers token =>
-    exact mapFibers_ok h _ (fun _ => rfl)
+  case dropObservers token => exact h
   all_goals repeat' split
   all_goals
     aesop (rule_sets := [Effect4.StepInv])
-      (add safe apply [spawn_ok, start_ok, countdown_ok, beginRace_ok,
-        forkFinalizers_ok, linkScope_ok])
-      (add safe forward [countdown_result_ok])
+      (add safe apply [spawn_ok, start_ok, countdownEdits_ok, beginRace_ok,
+        forkFinalizers_ok, linkScopeEdits_ok])
+      (add safe forward [countdownEdits_result_ok])
 
 theorem evaluatePrim_ok (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (yielding : Bool) (h : Ok m) : Ok (Effect4.Machine.evaluatePrim interp m f yielding).machine := by
@@ -118,8 +134,8 @@ theorem evaluatePrim_ok (interp : NInterp) (m : NativeMachine) (f : NFiber)
   repeat' split
   all_goals
     aesop (rule_sets := [Effect4.StepInv])
-      (add safe apply [withFiber_ok, registerRace_ok, countdown_ok, stepFrame_ok, finalizerOr_ok])
-      (add safe forward [countdown_result_ok])
+      (add safe apply [withFiber_ok, registerRace_ok, countdownEdits_ok, stepFrame_ok, finalizerOr_ok])
+      (add safe forward [countdownEdits_result_ok])
 
 theorem enterScoped_ok (p : NativeEff) (point : Point) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (h : Ok m) :
@@ -178,9 +194,10 @@ theorem fireObserver_ok (interp : NInterp) (fiber : FiberId) (exit : ExitV)
     Ok (fireObserver interp fiber exit acc observer).1 := by
   cases observer <;> simp only [fireObserver]
   all_goals repeat' split
+  all_goals dsimp (failIfUnchanged := false) only at *
   all_goals
-    aesop (rule_sets := [Effect4.StepInv])
-      (add safe apply [interruptEach_ok])
+    aesop (config := {enableSimp := false}) (rule_sets := [Effect4.StepInv])
+      (add safe apply [interruptEach_ok, fiberEdit_ok, emit_ok, update_ok, modify_ok, updateRace_ok, halt_ok])
       (add safe forward [interruptEach_result_ok])
 
 /-- All 18 command constructors; no command is abstracted into an extra premise. -/

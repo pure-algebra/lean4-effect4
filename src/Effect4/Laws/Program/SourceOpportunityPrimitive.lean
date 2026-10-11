@@ -112,7 +112,7 @@ theorem answer_debit (root : NativeEff) (q : List Nat) (m next : NativeMachine)
     (rows : next.fibers = m.fibers) (trace : next.trace = m.trace)
     (zero : current root q code = 0) :
     Debit root q m fiber ⟨next, {fiber with frame := {fiber.frame with current := code}},
-      yielding, outcome, commands⟩ := by
+      yielding, outcome, commands, []⟩ := by
   apply same_rows_debit root q m fiber _ rows
   unfold recorded
   rw [trace]
@@ -187,22 +187,18 @@ theorem primitive_debit (root : NativeEff) (q : List Nat) (fragment : Fragment r
     · simp only [frame, List.map_cons, List.sum_cons, saved, cancellationZero, Nat.zero_add]
       exact Nat.le_refl _
     · exact Nat.le_refl _
-  case case6 targets selected machine returned parked counted noYield noAsync =>
-    have debit := countdown_debit root q table m fiber yielding targets .exitsValue false unique trivial
+  case case6 targets selected machine returned parked edits counted noYield noAsync =>
+    have debit := countdown_plan_debit root q table m fiber yielding targets .exitsValue false trivial
     rw [counted] at debit
     exact debit
-  case case9 target mode park targetFiber found noExit token grown updated cancel before parked noYield noAsync =>
-    have off := outside_update_le root q grown fiber.id targetFiber
-      {targetFiber with observers := targetFiber.observers ++ [Observer.resumeAwait fiber.id token mode]}
-      rfl unique (List.mem_of_find?_eq_some found) (Nat.le_refl _)
+  case case9 target mode park targetFiber found noExit token grown cancel before parked noYield noAsync =>
     have cancelZero : name q cancel = 0 := rfl
     unfold Debit
     simp only [recorded_emit, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, runEvent, Nat.add_zero]
-    change recorded q m + outside root q fiber.id updated + frame root q _ ≤ _
+    change recorded q m + outside root q fiber.id m + frame root q _ ≤ _
     dsimp only [parked, before, RunFiber.park]
     simp only [frame, List.map_cons, List.sum_cons, saved, cancelZero, Nat.zero_add]
-    change outside root q fiber.id updated ≤ outside root q fiber.id m at off
-    exact Nat.add_le_add_right (Nat.add_le_add_left off _) _
+    exact Nat.le_refl _
   case case2 register signal cancel selected token state grown program produced =>
     have zero := register_reply_zero root q table m register fiber.id token program
       (congrArg Prod.snd produced)

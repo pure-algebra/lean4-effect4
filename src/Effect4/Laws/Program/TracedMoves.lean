@@ -255,17 +255,17 @@ theorem forkFinalizers_administrative (interp : NInterp) (m : NativeMachine) (f 
     exact (spawn_administrative interp m f code _ []).trans (ih _)
 
 /-- Scope links record linkage or interruption, without a frame event or program start. -/
-theorem linkScope_administrative (interp : NInterp) (m : NativeMachine)
+theorem linkScopeEdits_administrative (interp : NInterp) (m : NativeMachine)
     (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId)
     (interruptor : Option FiberId) (extra : ReasonAnnotations Ann) :
-    AdministrativeTrace m (linkScope interp m mode scope target interruptor extra).1 := by
-  unfold linkScope
+    AdministrativeTrace m (linkScopeEdits interp m mode scope target interruptor extra).1 := by
+  unfold linkScopeEdits
   split
   · exact .of_eq rfl
   · split
     · exact .of_eq rfl
     · refine ⟨[.scopeClosedOnLink scope target, .interruptRecorded interruptor target], rfl, ?_⟩
-      simp only [RunMachine.emit_trace, RunMachine.update_trace]
+      simp only [RunMachine.emit_trace]
   · split
     · exact .of_eq rfl
     · split
@@ -274,6 +274,14 @@ theorem linkScope_administrative (interp : NInterp) (m : NativeMachine)
         · exact .of_eq rfl
         · rename_i state key _
           refine ⟨[.scopeLinked mode scope key target], rfl, ?_⟩
-          simp only [RunMachine.emit_trace, RunMachine.modify_trace]
+          simp only [RunMachine.emit_trace]
+
+/-- The eager adapter has the plan's trace because message interpretation emits no events. -/
+theorem linkScope_administrative (interp : NInterp) (m : NativeMachine)
+    (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId)
+    (interruptor : Option FiberId) (extra : ReasonAnnotations Ann) :
+    AdministrativeTrace m (linkScope interp m mode scope target interruptor extra).1 := by
+  obtain ⟨events, allowed, trace⟩ := linkScopeEdits_administrative interp m mode scope target interruptor extra
+  exact ⟨events, allowed, (RunMachine.applyFiberEdits_trace _ _).trans trace⟩
 
 end Effect4.Program.Moves

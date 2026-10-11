@@ -136,3 +136,106 @@ Regenerate the reached machine/compiler outputs.
 Run `check-truth` and `check-compiler` at the coordinated behaviour sweep.
 Amend the seeded attack guard only after the repaired machine run is checked.
 No original scenario statement is weakened.
+
+## Structural proof migration
+
+Concept: reactive-scheduling, R11. Claim: command-moves, role structure.
+Consumer: command transport and its stack, mask, and release-custody instances.
+
+The existing interference relation records the fresh cause consumed by `interruptWithCause`.
+Its old interpreter-based constructor remains a proved adapter.
+The same change applies to frame and live transport.
+The three message tags then inherit one machine transport law.
+This law covers arbitrary causes because its observation contains only structural fields.
+It establishes no cause provenance, guard reservation, progress, or host agreement.
+The existing evaluator census still classifies local updates and allocation.
+Settlement composes its local installation, message word, selected-owner lookup, and outcome disposition.
+
+The typed-state position table assigns an interrupt message's cause to its target fiber.
+This row names the expected cause judgment; it proves no message typing invariant.
+The existing position gate checks that the new value-bearing position has an explicit source.
+The host-call agreement proof retains its statement and records its empty message word.
+
+## Simulation message obligation
+
+Concept: program-meaning, R4; consumer: the existing `run_eq_ref` simulation.
+The native and reference iteration relation must equate their new message lists.
+Their message alphabets contain the same first-order data.
+Settlement then applies equal messages to related current records before interpreting the outcome.
+The relation keeps the existing machine, fiber, outcome, and command clauses.
+This strengthens the internal iteration relation; it changes no equal-observation endpoint or host premise.
+The shared interruption relation consumes an arbitrary equal fresh cause on both sides.
+The producer still proves that its fresh cause comes from the interpreter.
+
+## Shared settlement accounting obligation
+
+Concept: reactive-scheduling and scope-lifetime-finalization; R11.
+Question: settlement retains the accounting bound after deferred messages apply to current records.
+Consumers: `WriterWeights.settle_bound` and `ReleaseCustody.settle_funded`.
+Reach: distinct fiber identities, observer-neutral weights, and nonincreasing interruption weights.
+The shared `FiberSum` table bound consumes the existing actual-prefix edit path.
+It adds no second message fold or machine representation.
+Settlement leaves the store, race table, and trace unchanged.
+Its added scheduler commands have zero release credit.
+The writer instance derives interruption's bound from its existing model premise.
+The release instance reuses its existing failure bound.
+Their original endpoint statements remain unchanged.
+These accounting laws establish no evaluator debit, release progress, or runtime correspondence.
+The original scenario goals remain open until their producers compose.
+
+## Queue control observation
+
+Concept: reactive-scheduling, R11; consumer: the reachable Guard queue claim.
+The queue reads current code only on running, unparked fibers.
+It reads an exited fiber's exit without requiring the local owner to remain running.
+The old `ControlsAway` additionally froze idle, unparked fibers' current code.
+An interrupt message may change that code before scheduling its evaluation.
+The internal relation now restricts its premise to running-unparked or exited fibers.
+The existing `OtherEdits` relation supplies this observation once.
+Queue settlement composes local installation, messages, and current-owner disposition.
+The public queue endpoints keep their statements.
+
+A raw iteration may lack its selected owner.
+Nonempty-message settlement then halts and drops its command tail.
+The raw precise tail equation therefore requires owner retention.
+A general disjunction covers both halting and prefix-plus-tail outcomes.
+Actual queue proofs use that disjunction and acquire no retention premise.
+Neither change establishes source admission, progress, or host behaviour.
+
+## Source budget and reference heap transport
+
+Concept: scope-lifetime-finalization, R11; store-typing, R4.
+Consumers: source-use history and `HeapSites.heap_sites_keep`.
+The existing evaluator debit measures its returned machine and acting frame before settlement.
+`FiberSum.settle_le` accounts for the deferred messages after the acting frame is installed.
+The native countdown and scope-link consumers read their canonical plans.
+Their eager helper statements remain adapters through the shared message bound.
+`outside_edits_le` instantiates that bound with the existing omitted-owner weight.
+The reference-heap consumers use `StatePreservation` for countdown and settlement.
+These facts establish neither progress nor agreement with an external implementation.
+The behavior gates remain deferred to the coordinated sweep.
+
+### Native release-accounting consumers
+
+Concept: scope-lifetime-finalization, R11, through `ReleaseCustody.Execution.history`.
+`NativeActionDebit` reads canonical countdown and scope-link plans before message installation.
+`FiberSum.fiberEdits_le` supplies its eager adapters and keeps actual lookup prefixes.
+Each message preserves the scope and race terms; interruption only spends fiber credit.
+The original eager helper statements remain adapters with their current premises.
+These bounds establish neither progress nor the open application history goals.
+
+## Observer and queue consumers
+
+Concept: scope-lifetime-finalization and reactive-scheduling, R11.
+Consumers: `ReleaseCustody.Execution.history` and its administrative queue and saved-frame conditions.
+`observer_producer_path` supplies one actual-prefix edit path and the provenance of generated commands.
+Each update retains the current record's frame, dispatcher, and parked state.
+The cost and predicate projections serve the existing custody and queue assertions.
+`observer_commands` exposes the predicate projection without a machine invariant.
+No new command census or decision source is introduced.
+
+Settlement's queue proof reads the actual owner after the message word.
+Its saved-stack transport uses `Moves.OtherEdits` and the existing outcome disposition.
+The nested command owner needs the retained race table, not the cached fiber's current code.
+The original endpoint statements remain unchanged.
+These facts establish no application history or outside-runtime agreement by themselves.

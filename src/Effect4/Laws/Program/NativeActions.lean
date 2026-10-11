@@ -57,16 +57,16 @@ theorem with_fiber_at (root : NativeEff) (completed) (table : RowTable)
   case raceAll programs site => exact begin_race_at root completed table m fiber yielding programs site .firstSuccess owned held source
   case raceAllFirst programs site => exact begin_race_at root completed table m fiber yielding programs site .firstExit owned held source
   case runIn target scope =>
-    have linked := link_at root completed table m .fiberRunIn scope target (some target) ReasonAnnotations.empty owned
-    exact ⟨linked.1, fiber_current_at root fiber _ held trivial, linked.2⟩
+    have linked := link_edits_at root completed table m .fiberRunIn scope target (some target) ReasonAnnotations.empty owned
+    exact ⟨linked, fiber_current_at root fiber _ held trivial, by intro command member; cases member⟩
   case awaitAll targets =>
-    have countdown := countdown_at root completed table m fiber targets .exitsValue false owned held trivial
+    have countdown := countdown_edits_at root completed table m fiber targets .exitsValue false owned held trivial
     exact ⟨countdown.1, countdown.2, by intro command member; cases member⟩
   case awaitAllFailFast targets =>
-    have countdown := countdown_at root completed table m fiber targets .exitsValue true owned held trivial
+    have countdown := countdown_edits_at root completed table m fiber targets .exitsValue true owned held trivial
     exact ⟨countdown.1, countdown.2, by intro command member; cases member⟩
   case awaitNewChildren snapshot =>
-    have countdown := countdown_at root completed table m fiber (fiber.children.filter (fun child => !(snapshot.contains child))) .void false owned held trivial
+    have countdown := countdown_edits_at root completed table m fiber (fiber.children.filter (fun child => !(snapshot.contains child))) .void false owned held trivial
     exact ⟨countdown.1, countdown.2, by intro command member; cases member⟩
   case closePar programs =>
     exact ⟨fork_finalizers_at root completed table m fiber programs owned source.1, held,
@@ -89,17 +89,8 @@ theorem with_fiber_at (root : NativeEff) (completed) (table : RowTable)
     cases found : m.fiber? target with
     | none => exact ⟨owned, held, by intro command member; cases member⟩
     | some other =>
-      simp only []
-      refine ⟨configuration_emit root _ _ (configuration_update root m _ owned
-        (interrupt_record_at root completed table (some who) _ other
-          (configuration_fiber root m target other owned found))), held, ?_⟩
-      unfold CommandsAt
-      intro command member
-      rcases List.mem_append.mp member with evaluated | finished
-      · split at evaluated
-        · rw [List.mem_singleton.mp evaluated]; trivial
-        · cases evaluated
-      · rw [List.mem_singleton.mp finished]; trivial
+      exact ⟨configuration_emit root m _ owned, held,
+        by intro command member; rw [List.mem_singleton.mp member]; trivial⟩
   case setInterruptible body flag =>
     cases flag with
     | false =>

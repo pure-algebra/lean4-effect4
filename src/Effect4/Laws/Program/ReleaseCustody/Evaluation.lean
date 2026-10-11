@@ -294,6 +294,23 @@ theorem failure_fiber_le (q : List Nat) (fiber : Fiber) (cause : CauseV) :
   simp only [fiberCredits, currentCredits, Nat.zero_add]
   omega
 
+/-- A fresh interruption cannot create current or saved release credit.
+Consumers: deferred-message settlement and the existing interrupt command debit. -/
+theorem interrupt_fiber_le (q : List Nat) (cause : CauseV) (fiber : Fiber) :
+    fiberCredits q (interruptWithCause cause fiber).1 ≤ fiberCredits q fiber := by
+  unfold interruptWithCause
+  dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
+    FiberCore.setDeferred, FiberCore.answerWith, FiberCore.failure, frameCore]
+  split
+  · exact Nat.le_refl _
+  · cases fiber.frame.interruptedCause <;> dsimp only
+    all_goals
+      split
+      · split
+        · exact Nat.le_refl _
+        · exact Evaluation.failure_fiber_le q fiber _
+      · exact Nat.le_refl _
+
 /-- The actual loop-top edit never increases selected control custody.
 Consumer: the full iteration clause of `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
@@ -316,7 +333,7 @@ theorem constant_start (root : NativeEff) (table : RowTable) (machine : NativeMa
       ⟨machine.emit [.frame fiber.id (.pushed (.onSuccessConst body next))],
         { fiber with frame := { fiber.frame with
           current := body
-          stack := .onSuccessConst body next :: fiber.frame.stack } }, yielding, .continue_, []⟩ := by
+          stack := .onSuccessConst body next :: fiber.frame.stack } }, yielding, .continue_, [], []⟩ := by
   have park : (interpAt root machine.completedExits table).parkOf (.onSuccessConst body next) = none := rfl
   have frame : fiber.frame.step (interpAt root machine.completedExits table).toPrimInterp =
       (.running { fiber.frame with
@@ -341,14 +358,14 @@ theorem forced_yield_iteration (root : NativeEff) (table : RowTable) (machine : 
           frame := { fiber.frame with
             current := .yieldNowWith 0
             stack := .onSuccessConst (.yieldNowWith 0) fiber.frame.current :: fiber.frame.stack }
-          yieldOverride := none }, true, .continue_, []⟩ := by
+          yieldOverride := none }, true, .continue_, [], []⟩ := by
   have top : runloopTop fiber = fiber := by
     simp only [runloopTop, interrupt, Bool.false_eq_true, if_false]
   have injected : injectYield machine (countOp fiber) false =
       some ⟨machine.emit [.yieldInjected fiber.id (fiber.currentOpCount + 1)],
         { countOp fiber with
           frame := { fiber.frame with current := .onSuccessConst (.yieldNowWith 0) fiber.frame.current }
-          yieldOverride := none }, true, .continue_, []⟩ := by
+          yieldOverride := none }, true, .continue_, [], []⟩ := by
     unfold injectYield
     rw [verdict]
     simp only [countOp, prevent, Bool.not_false, Bool.and_true, if_true]

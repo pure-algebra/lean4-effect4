@@ -1110,7 +1110,7 @@ theorem evaluatePrim_sync_op (root : NativeEff) (m : Api.Machine) (f : NRunFiber
     (hs : syncOpStep o m.state = some (s₁, v)) :
     evaluatePrim (interpAt root []) m f false =
       ⟨{ m with state := s₁ }, { f with frame := { f.frame with current := Prim.success v } },
-        false, Outcome.answered, [Cmd.drainDue]⟩ := by
+        false, Outcome.answered, [Cmd.drainDue], []⟩ := by
   simp only [evaluatePrim, hcur, parkOf_sync, syncState_op, hs]
 
 theorem evaluatePrim_sync_op_none (root : NativeEff) (m : Api.Machine) (f : NRunFiber)
@@ -1119,7 +1119,7 @@ theorem evaluatePrim_sync_op_none (root : NativeEff) (m : Api.Machine) (f : NRun
     evaluatePrim (interpAt root []) m f false =
       ⟨m, { f with frame := { f.frame with
           current := Prim.success ((interpAt root []).syncValue (EffThunk.op o)) } },
-        false, Outcome.answered, []⟩ := by
+        false, Outcome.answered, [], []⟩ := by
   simp only [evaluatePrim, hcur, parkOf_sync, syncState_op, hs]
 
 theorem evaluatePrim_sync_pure (root : NativeEff) (m : Api.Machine) (f : NRunFiber)
@@ -1127,7 +1127,7 @@ theorem evaluatePrim_sync_pure (root : NativeEff) (m : Api.Machine) (f : NRunFib
     evaluatePrim (interpAt root []) m f false =
       ⟨m, { f with frame := { f.frame with
           current := Prim.success ((interpAt root []).syncValue (EffThunk.pure p)) } },
-        false, Outcome.answered, []⟩ := by
+        false, Outcome.answered, [], []⟩ := by
   simp only [evaluatePrim, hcur, parkOf_sync, syncState_pure]
 
 theorem stepFrame_eq (root : NativeEff) (m : Api.Machine) (f : NRunFiber) :
@@ -1172,9 +1172,9 @@ theorem step_fst_failure (root : NativeEff) (c : CauseV) (K : List NCode) (i : B
 
 /-- The iteration a local step predicts, its events left open. -/
 def iterOf (m : Api.Machine) (f : NRunFiber) (ev : NTrace) : LocalStep → NIter
-  | .running fr' _ => ⟨m.emit ev, { f with frame := fr' }, false, Outcome.continue_, []⟩
+  | .running fr' _ => ⟨m.emit ev, { f with frame := fr' }, false, Outcome.continue_, [], []⟩
   | .finished ex _ =>
-    ⟨m.emit ev, { f with frame := frameExitState f.frame }, false, Outcome.finished ex, []⟩
+    ⟨m.emit ev, { f with frame := frameExitState f.frame }, false, Outcome.finished ex, [], []⟩
 
 /-- On a plain fiber whose current primitive is not a `sync`, `evaluatePrim` is the local
 step: the frame machine's step, or — for an exit meeting an `onExit` frame — the finalizer
@@ -1402,12 +1402,15 @@ theorem drive_loop_finished [evaluator : FiberEvaluator EffName EffThunk Val Err
     (interp : RunInterp EffName EffThunk Val Err Defect FiberId Ann Ctx Stores)
     (fuel : Nat) (m : Api.Machine) (id : FiberId) (yielding : Bool) (f : NRunFiber)
     (rest : List NCmd) (ex : ExitV) (hs : m.stuck = none) (hf : m.fiber? id = some f)
-    (h : (iteration interp m f yielding).outcome = Outcome.finished ex) :
+    (h : (iteration interp m f yielding).outcome = Outcome.finished ex)
+    (noEdits : (iteration interp m f yielding).edits = []) :
     driveState interp (fuel + 1) m (Cmd.loop id yielding :: rest) =
       driveState interp fuel
         ((iteration interp m f yielding).machine.update (iteration interp m f yielding).fiber)
         ((iteration interp m f yielding).nested ++ [Cmd.finish id ex] ++ rest) := by
-  simp [driveState, driveStep, settle, hs, hf, h]
+  rw [driveState_succ_cons]
+  simp only [hs, Option.isSome_none, Bool.false_eq_true, ↓reduceIte,
+    driveStep, hf, settle, noEdits, settleOutcome, h]
 
 /-- A store `sync` the store answers: the loop command answers it, then a drain and the
 delivery are owed (`Fibers.lean:836-838`). -/
@@ -1423,13 +1426,13 @@ theorem drive_loop_sync_op (root : NativeEff) (o : SyncOp) (K : List NCode) (i :
       (fiberAt (fiberOf (Prim.sync (EffThunk.op o)) K i) k) false =
       ⟨M (fiberOf (Prim.sync (EffThunk.op o)) K i) s₁ k tr nt,
         fiberAt (fiberOf (Prim.success v) K i) (k + 1), false, Outcome.answered,
-        [Cmd.drainDue]⟩ := by
+        [Cmd.drainDue], []⟩ := by
     rw [iteration_M root _ _ _ _ _ _ _ hk]
     simp only [evaluateNative, fiberAt_frame, fiberOf, M_completedExits]
     exact evaluatePrim_sync_op root (M (fiberOf (Prim.sync (EffThunk.op o)) K i) s k tr nt)
       (fiberAt (fiberOf (Prim.sync (EffThunk.op o)) K i) (k + 1)) o s₁ v rfl hs
   rw [driveState_succ_cons (evaluator := evaluatorFor root table)]
-  simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, hit, settle]
+  simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, hit, settle, settleOutcome]
   try dsimp only
   rw [M_update]
   rfl
@@ -1446,13 +1449,13 @@ theorem drive_loop_sync_op_none (root : NativeEff) (o : SyncOp) (K : List NCode)
   have hit : iteration (evaluator := evaluatorFor root table) (interpOf root table) (M (fiberOf (Prim.sync (EffThunk.op o)) K i) s k tr nt)
       (fiberAt (fiberOf (Prim.sync (EffThunk.op o)) K i) k) false =
       ⟨M (fiberOf (Prim.sync (EffThunk.op o)) K i) s k tr nt,
-        fiberAt (fiberOf (Prim.success Val.unit) K i) (k + 1), false, Outcome.answered, []⟩ := by
+        fiberAt (fiberOf (Prim.success Val.unit) K i) (k + 1), false, Outcome.answered, [], []⟩ := by
     rw [iteration_M root _ _ _ _ _ _ _ hk]
     simp only [evaluateNative, fiberAt_frame, fiberOf, M_completedExits]
     exact evaluatePrim_sync_op_none root (M (fiberOf (Prim.sync (EffThunk.op o)) K i) s k tr nt)
       (fiberAt (fiberOf (Prim.sync (EffThunk.op o)) K i) (k + 1)) o rfl hs
   rw [driveState_succ_cons (evaluator := evaluatorFor root table)]
-  simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, hit, settle]
+  simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, hit, settle, settleOutcome]
   try dsimp only
   rw [M_update]
   rfl
@@ -1471,13 +1474,13 @@ theorem drive_loop_sync_pure (root : NativeEff) (p : Point) (K : List NCode) (i 
       (fiberAt (fiberOf (Prim.sync (EffThunk.pure p)) K i) k) false =
       ⟨M (fiberOf (Prim.sync (EffThunk.pure p)) K i) s k tr nt,
         fiberAt (fiberOf (Prim.success (syncValueAt root (EffThunk.pure p))) K i) (k + 1), false,
-        Outcome.answered, []⟩ := by
+        Outcome.answered, [], []⟩ := by
     rw [iteration_M root _ _ _ _ _ _ _ hk]
     simp only [evaluateNative, fiberAt_frame, fiberOf, M_completedExits]
     exact evaluatePrim_sync_pure root (M (fiberOf (Prim.sync (EffThunk.pure p)) K i) s k tr nt)
       (fiberAt (fiberOf (Prim.sync (EffThunk.pure p)) K i) (k + 1)) p rfl
   rw [driveState_succ_cons (evaluator := evaluatorFor root table)]
-  simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, hit, settle]
+  simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, hit, settle, settleOutcome]
   try dsimp only
   rw [M_update]
   rfl
@@ -1502,13 +1505,13 @@ theorem drive_loop_running (root : NativeEff) (cur : NCode) (K : List NCode) (i 
   have hit : iteration (evaluator := evaluatorFor root table) (interpOf root table) (M (fiberOf cur K i) s k tr nt)
       (fiberAt (fiberOf cur K i) k) false =
       ⟨M (fiberOf cur K i) s k (tr ++ ev) nt, fiberAt (fiberOf cur₁ K₁ i₁) (k + 1), false,
-        Outcome.continue_, []⟩ := by
+        Outcome.continue_, [], []⟩ := by
     rw [iteration_M root _ _ _ _ _ _ _ hk, hraw, hev]
     simp only [iterOf, M_emit]
     rfl
   refine ⟨tr ++ ev, fun n => ?_⟩
   rw [driveState_succ_cons (evaluator := evaluatorFor root table)]
-  simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, hit, settle]
+  simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, hit, settle, settleOutcome]
   try dsimp only
   rw [M_update]
   rfl
@@ -1532,13 +1535,13 @@ theorem drive_loop_finish (root : NativeEff) (cur : NCode) (K : List NCode) (i :
   have hit : iteration (evaluator := evaluatorFor root table) (interpOf root table) (M (fiberOf cur K i) s k tr nt)
       (fiberAt (fiberOf cur K i) k) false =
       ⟨M (fiberOf cur K i) s k (tr ++ ev) nt, fiberAt (frameExitState (fiberOf cur K i)) (k + 1), false,
-        Outcome.finished ex, []⟩ := by
+        Outcome.finished ex, [], []⟩ := by
     rw [iteration_M root _ _ _ _ _ _ _ hk, hraw, hev]
     simp only [iterOf, M_emit]
     rfl
   refine ⟨tr ++ ev, fun n => ?_⟩
   rw [drive_loop_finished (evaluator := evaluatorFor root table) _ _ _ _ _ _ rest ex rfl
-    (M_fiber? _ _ _ _ _) (by rw [hit]), hit]
+    (M_fiber? _ _ _ _ _) (by rw [hit]) (by rw [hit]), hit]
   try dsimp only
   rw [M_update]
   rfl
@@ -1659,7 +1662,7 @@ theorem drive_loop_yield (root : NativeEff) (cur : NCode) (K : List NCode) (i : 
   have hit : iteration (evaluator := evaluatorFor root table) (interpOf root table) (M (fiberOf cur K i) s k tr nt)
       (fiberAt (fiberOf cur K i) k) false =
       ⟨M (fiberOf cur K i) s k tr₁ nt, fiberAt waiting (k + 1),
-        true, Outcome.continue_, []⟩ := by
+        true, Outcome.continue_, [], []⟩ := by
     unfold iteration
     rw [hidle, hcount]
     unfold injectYield
@@ -1668,7 +1671,7 @@ theorem drive_loop_yield (root : NativeEff) (cur : NCode) (K : List NCode) (i : 
     rfl
   rw [show n + 2 = (n + 1) + 1 by omega]
   rw [driveState_succ_cons (evaluator := evaluatorFor root table)]
-  simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, hit, settle]
+  simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, hit, settle, settleOutcome]
   try dsimp only
   rw [M_update]
   simp only [List.nil_append, List.cons_append]
@@ -1720,7 +1723,7 @@ theorem fire_Myield (root : NativeEff) (cur : NCode) (K : List NCode) (i : Bool)
     (M answered s 0 tr₀ (t + 1)) [Cmd.loop Api.root false, Cmd.drainDue]) = _
   have hit : iteration (evaluator := evaluatorFor root table) (interpOf root table) (M answered s 0 tr₀ (t + 1)) (fiberAt answered 0) false =
       ⟨M answered s 0 (tr₀ ++ popEvents) (t + 1), fiberAt (fiberOf cur K i) 1,
-        false, Outcome.continue_, []⟩ := by
+        false, Outcome.continue_, [], []⟩ := by
     rw [iteration_M root _ _ _ _ _ _ _ (by decide)]
     change exitScoped root (M answered s 0 tr₀ (t + 1)) (fiberAt answered 1) false
       (Exit.success Val.unit) = _
@@ -1742,7 +1745,7 @@ theorem fire_Myield (root : NativeEff) (cur : NCode) (K : List NCode) (i : Bool)
     rw [hstep]
     rfl
   rw [driveState_succ_cons (evaluator := evaluatorFor root table)]
-  simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, hit, settle]
+  simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, hit, settle, settleOutcome]
   try dsimp only
   rw [M_update]
   rfl

@@ -79,18 +79,8 @@ theorem replace_code (q : List Nat) (fiber : Fiber) (code : NCode)
 theorem interrupt_record (root : NativeEff) (table : RowTable) (q : List Nat)
     (who : Option FiberId) (extra : ReasonAnnotations Ann) (fiber : Fiber) :
     fiberCredits q (interruptRecord (interpOf root table) who extra fiber).1 ≤ fiberCredits q fiber := by
-  unfold interruptRecord interruptWithCause
-  dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
-    FiberCore.setDeferred, FiberCore.answerWith, FiberCore.failure, frameCore]
-  split
-  · exact Nat.le_refl _
-  · cases fiber.frame.interruptedCause <;> dsimp only
-    all_goals
-      split
-      · split
-        · exact Nat.le_refl _
-        · exact Evaluation.failure_fiber_le q fiber _
-      · exact Nat.le_refl _
+  exact Evaluation.interrupt_fiber_le q
+    (interruptCause (interpOf root table) who extra fiber.id) fiber
 
 /-- Starting a fiber changes counters and running status without spending release credit. -/
 theorem evaluate (root : NativeEff) (table : RowTable) (q : List Nat) (m : NativeMachine)
@@ -191,7 +181,7 @@ theorem after_interrupt (root : NativeEff) (table : RowTable) (q : List Nat) (m 
   split
   · exact tail q m _ rest held
   · rename_i fiber found
-    simp only [settle, List.nil_append, List.cons_append]
+    simp only [settle, settleOutcome, List.nil_append, List.cons_append]
     apply update q m fiber
       {fiber with frame := {fiber.frame with current := (asVoidCode (interpOf root table)
         (awaitCode (interpOf root table) m kind))}}
@@ -287,7 +277,7 @@ theorem close_parallel (root : NativeEff) (table : RowTable) (q : List Nat) (m :
   split
   · exact tail q m _ rest held
   · rename_i fiber found
-    simp only [settle, List.nil_append, List.cons_append]
+    simp only [settle, settleOutcome, List.nil_append, List.cons_append]
     apply update q m fiber
       {fiber with frame := {fiber.frame with
         current := .suspend (.park (.awaitAll fibers))

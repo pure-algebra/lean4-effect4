@@ -1,3 +1,4 @@
+import Effect4.Laws.Machine.Eliminators
 import Effect4.Laws.Program.NativeActions
 
 /-!
@@ -63,19 +64,15 @@ theorem primitive_at (root : NativeEff) (fragment : Fragment root) (completed) (
       · exact held
     exact ⟨configuration_emit root grown _ ⟨owned.fibers, owned.races, scopesAt.1⟩,
       fiber_park_at root before _ beforeAt trivial, by intro command member; cases member⟩
-  case case9 target mode park targetFiber found noExit token grown updated cancel before parked noYield noAsync =>
-    have targetAt := configuration_fiber root m target targetFiber owned found
-    have updatedAt : ConfigurationAt root updated :=
-      configuration_update root grown _ ⟨owned.fibers, owned.races, owned.scopes⟩
-        ⟨targetAt.frame, targetAt.pending, targetAt.dispatcher⟩
+  case case9 target mode park targetFiber found noExit token grown cancel before parked noYield noAsync =>
     have beforeAt : FiberAt root before := fiber_cancel_at root fiber _ held trivial
-    exact ⟨configuration_emit root updated _ updatedAt,
+    exact ⟨configuration_emit root grown _ ⟨owned.fibers, owned.races, owned.scopes⟩,
       fiber_park_at root before _ beforeAt trivial, by intro command member; cases member⟩
-  case case6 targets current machine returned parked counted noYield noAsync =>
-    have retained := countdown_at root completed table m fiber targets .exitsValue false owned held trivial
+  case case6 targets current machine returned parked edits counted noYield noAsync =>
+    have retained := countdown_edits_at root completed table m fiber targets .exitsValue false owned held trivial
     rw [counted] at retained
     exact ⟨retained.1, retained.2, by intro command member; cases member⟩
-  all_goals aesop (add safe constructors [EvaluationAt, ConfigurationAt, FiberAt, TerminalReply]) (add safe apply [(step_frame_at root fragment), (finalizer_at root fragment), register_race_at, (with_fiber_at root), configuration_update, configuration_emit, configuration_arm, fiber_current_at, fiber_park_at, fiber_cancel_at, dispatcher_enqueue_at, exit_value_at]) (add safe forward [actionOwned, syncOwned, registered, (countdown_at root completed table)]) (add norm simp [CommandsAt, CommandAt, List.mem_cons, FrameAt, CodeAt, ThunkAt, NameAt, ResumeAt, TaskAt, RunFiber.park])
+  all_goals aesop (add safe constructors [EvaluationAt, ConfigurationAt, FiberAt, TerminalReply]) (add safe apply [(step_frame_at root fragment), (finalizer_at root fragment), register_race_at, (with_fiber_at root), configuration_update, configuration_emit, configuration_arm, fiber_current_at, fiber_park_at, fiber_cancel_at, dispatcher_enqueue_at, exit_value_at]) (add safe forward [actionOwned, syncOwned, registered, (countdown_edits_at root completed table)]) (add norm simp [CommandsAt, CommandAt, List.mem_cons, FrameAt, CodeAt, ThunkAt, NameAt, ResumeAt, TaskAt, RunFiber.park])
 
 /-- Scoped entry installs its actual zero-binder source child and a fresh empty scope. -/
 theorem enter_scoped_at (root : NativeEff) (fragment : Fragment root) (p : Point)

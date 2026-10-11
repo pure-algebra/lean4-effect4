@@ -68,64 +68,21 @@ theorem interrupt_each (interp : Moves.NInterp) (who : FiberId) (extra : ReasonA
           exact Or.inr (fun _ => trivial)
       · simpa only [List.append_nil] using AddsFree.refl commands
 
-/-- Countdown observers add only interrupt evaluations and one optional resume.
-Consumer: fire_observer below. -/
-theorem countdown_observer (interp : Moves.NInterp) (m : NativeMachine) (id : FiberId) (exit : ExitV)
-    (commands : List NCmd) (waiter : FiberId) (token : Nat) :
-    AddsFree commands (fireObserver interp id exit (m, commands) (.countdown waiter token)).2 := by
-  simp only [fireObserver]
-  split
-  · exact .refl commands
-  · split
-    · exact .refl commands
-    · rename_i fiber found pending present
-      let base := m.emit [RunEvent.observerFired id (.countdown waiter token)]
-      let firstFailure := pending.failFast && !exit.isSuccess && pending.collected.all Exit.isSuccess
-      generalize result : (if firstFailure then
-          interruptEach interp waiter (interp.stackAnnotations waiter) pending.remaining (base, [])
-          else (base, [])) = out
-      have nested : AddsFree [] out.2 := by
-        rw [← result]
-        split
-        · exact interrupt_each interp waiter _ pending.remaining base []
-        · exact .refl []
-      obtain ⟨nextMachine, nextCommands⟩ := out
-      dsimp only at nested ⊢
-      split
-      · apply AddsFree.append
-        · apply AddsFree.append commands commands nextCommands (.refl commands)
-          intro command member
-          rcases nested command member with impossible | free
-          · cases impossible
-          · exact Or.inr free
-        · intro command member
-          rw [List.mem_singleton.mp member]
-          exact Or.inr (fun _ => trivial)
-      · apply AddsFree.append commands commands nextCommands (.refl commands)
-        intro command member
-        rcases nested command member with impossible | free
-        · cases impossible
-        · exact Or.inr free
-
-/-- An observer's emitted commands place no new saved-stack constraint.
+/-- Every generated observer command accepts any saved stack.
 Consumer: observe command pending-stack closure. -/
 theorem fire_observer (interp : Moves.NInterp) (m : NativeMachine) (id : FiberId) (exit : ExitV)
     (commands : List NCmd) (observer : Observer) :
-    AddsFree commands (fireObserver interp id exit (m, commands) observer).2 := by
-  cases observer with
-  | countdown waiter token => exact countdown_observer interp m id exit commands waiter token
-  | resumeAwait =>
-    intro command member
-    rcases List.mem_append.mp member with old | new
-    · exact Or.inl old
-    · rw [List.mem_singleton.mp new]; exact Or.inr (fun _ => trivial)
-  | untrackChild => exact .refl commands
-  | callback => exact .refl commands
-  | dropScopeFinalizer => simp only [fireObserver]; split <;> exact .refl commands
-  | raceCallback =>
-    simp only [fireObserver]
-    repeat' split
-    all_goals aesop (add norm simp [AddsFree, Free, CommandFrames, List.mem_append, List.mem_cons, List.not_mem_nil])
+    AddsFree commands (fireObserver interp id exit (m, commands) observer).2 :=
+  Edits.observer_commands interp Free id exit (m, commands) observer
+    (fun _ _ => True.intro) (fun _ _ _ _ _ => True.intro)
+    (fun _ _ _ _ _ _ _ => True.intro) (fun _ _ _ _ _ _ _ _ _ => True.intro)
+
+/-- Countdown commands use the same shared producer, including nested interrupts.
+Consumer: the existing administrative queue surface. -/
+theorem countdown_observer (interp : Moves.NInterp) (m : NativeMachine) (id : FiberId) (exit : ExitV)
+    (commands : List NCmd) (waiter : FiberId) (token : Nat) :
+    AddsFree commands (fireObserver interp id exit (m, commands) (.countdown waiter token)).2 :=
+  fire_observer interp m id exit commands (.countdown waiter token)
 
 /-- Draining owed resumes adds only token-matched resume commands.
 Consumer: the drainDue command census. -/
@@ -178,7 +135,7 @@ theorem emitted (root : NativeEff) (table : RowTable) (m : NativeMachine) (comma
   | evaluate | resume | launch | registrationDone | interruptTarget | afterInterrupt | trackChild | exitDone | closeParAwait | wake =>
     simp only [driveStep]
     repeat' split
-    all_goals aesop (add norm simp [AddsFree, Free, CommandFrames, settle,
+    all_goals aesop (add norm simp [AddsFree, Free, CommandFrames, settle, settleOutcome,
       List.mem_append, List.mem_cons, List.not_mem_nil])
   | enrollRace race child =>
     simp only [driveStep]
@@ -305,7 +262,7 @@ theorem tail (root : NativeEff) (table : RowTable) (m : NativeMachine)
     simp only [driveStep, found]
     apply queue_tail_transport root table (.afterInterrupt id yielding kind) rest guard (queue_tail held) id rfl
     · exact race_hosts m _ empty
-    · simp only [settle]
+    · simp only [settle, settleOutcome]
       apply away_owner (fiber_id_of_lookup found)
       exact update_away m {fiber with frame := {fiber.frame with
         current := asVoidCode (interpOf root table) (awaitCode (interpOf root table) m kind)}}
@@ -314,7 +271,7 @@ theorem tail (root : NativeEff) (table : RowTable) (m : NativeMachine)
     simp only [driveStep, found]
     apply queue_tail_transport root table (.closeParAwait id yielding targets) rest guard (queue_tail held) id rfl
     · exact race_hosts m _ empty
-    · simp only [settle]
+    · simp only [settle, settleOutcome]
       apply away_owner (fiber_id_of_lookup found)
       exact update_away m {fiber with frame := {fiber.frame with
         stack := .iterator ((interpOf root table).closeDoneName) ((interpOf root table).voidValue) :: fiber.frame.stack

@@ -48,7 +48,7 @@ theorem join (q : List Nat) (root : NativeEff) (table : RowTable) (m : NativeMac
     (fiber : Control.Fiber) (yielding : Bool) (thunk : EffThunk) (target : FiberId)
     (mode : Supervision.ObserverMode) (current : fiber.frame.current = .suspend thunk)
     (park : (interpAt root m.completedExits table).parkOf (.suspend thunk) = some (.ok (.join target mode)))
-    (held : Kept fiber.frame.current fiber.frame.stack) (unique : (m.fibers.map RunFiber.id).Nodup) :
+    (held : Kept fiber.frame.current fiber.frame.stack) (_unique : (m.fibers.map RunFiber.id).Nodup) :
     IterDebit q m fiber (evaluatePrim (interpAt root m.completedExits table) m fiber yielding) := by
   have clean := suspended_clean thunk fiber.frame.stack (current ▸ held)
   have full (active : NCode) := noAdd_full q active fiber.frame.stack clean
@@ -65,21 +65,13 @@ theorem join (q : List Nat) (root : NativeEff) (table : RowTable) (m : NativeMac
         Nat.add_zero, fiberCredits, exit_zero, full, Nat.zero_add]
       omega
     | none =>
-      have found' : m.fiber? other.id = some other := by
-        rw [RunMachine.id_of_fiber? found]
-        exact found
-      have outside := outside_update_le q m fiber.id other
-        {other with observers := other.observers ++ [.resumeAwait fiber.id m.nextToken mode]}
-        unique found' rfl (Nat.le_refl _)
-      simp only [exited] at outside
       unfold IterDebit
       simp only [evaluatePrim, current, park, found, exited, RunMachine.emit_trace,
         List.countP_append, List.countP_cons, List.countP_nil, ReleaseTrace.releaseAt,
-        ReleaseTrace.registeredAt, Bool.false_eq_true, if_false, RunMachine.update_trace,
+        ReleaseTrace.registeredAt, Bool.false_eq_true, if_false,
         List.map_nil, List.sum_nil, Nat.add_zero, fiberCredits, RunFiber.park, stackCredits,
         futureCredits, full, Nat.zero_add]
-      simp only [outsideCredits, RunMachine.emit, RunMachine.update] at outside ⊢
-      omega
+      exact Nat.le_refl _
 
 /-- Every native suspended park preserves its release reservation.
 Consumer: the complete primitive evaluator census. -/
@@ -105,7 +97,7 @@ theorem suspend (q : List Nat) (root : NativeEff) (table : RowTable) (m : Native
         simpa only [evaluatePrim, current, park] using race_missing q m fiber yielding rid races
       | awaitAll targets =>
         simpa only [evaluatePrim, current, park, IterDebit] using
-          NativeActionDebit.countdown q root table m fiber yielding targets .exitsValue false clean unique (Or.inl rfl)
+          NativeActionDebit.countdown_plan q root table m fiber yielding targets .exitsValue false clean (Or.inl rfl)
       | join target mode => exact join q root table m fiber yielding thunk target mode current park held unique
 
 /-- Every actual primitive evaluator case accounts for its foreign-release custody.

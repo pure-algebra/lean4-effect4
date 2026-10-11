@@ -7,8 +7,8 @@ Concept 4 (the configuration invariant `I`); steps of `deliver_preserves` and
 `loop_preserves` through `evaluate_keeps` (`FiberClauseKeeps`). Three fiber operations whose
 work is a machine step beside the fiber's own: `interruptAll` queues one `interruptTarget` per
 target and the `afterInterrupt` that awaits them (`Machine/Fibers.lean:1556-1564`), `runIn` links
-a fiber to a scope inline (`linkScope`, `:1005-1037`, the `link` command's step), and
-`dropObservers` filters every fiber's token observers (`:1434-1441`).
+a fiber to a scope through its addressed link plan (`linkScopeEdits`, the `link` command's
+producer), and `dropObservers` filters every installed fiber's token observers.
 
 Not established here: progress, or that the queued commands' own steps are typed (their
 `StepPreserves` are `Commands/Race.lean`'s and `Commands/Bookkeeping.lean`'s).
@@ -193,71 +193,81 @@ theorem configTyped_shrinkAll {root : ProgramSource} {rootTy : EffTy} {w : World
     rw [List.append_assoc, List.singleton_append] at next
     exact next
 
-/-- **The evaluated state after `dropObservers`' edit** (`Machine/Fibers.lean:1434-1441`): every
-fiber's observers filtered; the evaluated fiber's record is the configuration's own, which the
-settlement reinstalls unfiltered, so the edit shrinks every other fiber's observers. -/
-theorem Evaluating.dropObs {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
-    {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y)
-    (keep : Observer → Bool) :
-    Evaluating root rootTy w
-      { m with fibers := m.fibers.map fun g => { g with observers := g.observers.filter keep } }
-      rest f y := by
-  obtain ⟨f0, hf0, exit0⟩ := ev.stale
-  have sub : ∀ x : RFiber, ∀ o ∈ (if x.id = f.id then x.observers else x.observers.filter keep),
-      o ∈ x.observers := by
-    intro x o ho
-    by_cases h : x.id = f.id
-    · rw [if_pos h] at ho
-      exact ho
-    · rw [if_neg h] at ho
-      exact (List.mem_filter.mp ho).1
-  have all := configTyped_shrinkAll
-    (fun x => if x.id = f.id then x.observers else x.observers.filter keep) sub
-    (m.update f).fibers [] (m.update f) (by rw [List.map_nil, List.nil_append]) ev.typed
-  have fibers : (({ m with fibers := m.fibers.map fun (g : RFiber) =>
-        { g with observers := g.observers.filter keep } } : RState).update f).fibers =
-      ([] ++ (m.update f).fibers).map fun (x : RFiber) =>
-        { x with observers := if x.id = f.id then x.observers else x.observers.filter keep } := by
-    unfold RunMachine.update
-    rw [List.nil_append, List.map_map, List.map_map]
-    apply List.map_congr_left
-    intro x _
-    by_cases h : x.id = f.id
-    · show (if x.id = f.id then f else { x with observers := x.observers.filter keep }) =
-        ({ (if x.id = f.id then f else x) with observers :=
-          if (if x.id = f.id then f else x).id = f.id then (if x.id = f.id then f else x).observers
-          else (if x.id = f.id then f else x).observers.filter keep } : RFiber)
-      rw [if_pos h, if_pos h, if_pos rfl]
-    · show (if x.id = f.id then f else { x with observers := x.observers.filter keep }) =
-        ({ (if x.id = f.id then f else x) with observers :=
-          if (if x.id = f.id then f else x).id = f.id then (if x.id = f.id then f else x).observers
-          else (if x.id = f.id then f else x).observers.filter keep } : RFiber)
-      rw [if_neg h, if_neg h, if_neg h]
-  refine ⟨configTyped_congr ?_ (by rfl) (by rfl) (by rfl) (by rfl) (by rfl) (by rfl) all,
-    ⟨{ f0 with observers := f0.observers.filter keep }, ?_, exit0⟩, ev.running, ev.live⟩
-  · exact fibers
-  show (m.fibers.map fun g => ({ g with observers := g.observers.filter keep } : RFiber)).find?
-    (fun x => decide (x.id = f.id)) = some _
-  rw [List.find?_map]
-  show (m.fibers.find? fun x => decide (x.id = f.id)).map _ = _
-  rw [show (m.fibers.find? fun x => decide (x.id = f.id)) = some f0 from hf0]
-  rfl
+/-- Prepare the actual caller before applying its addressed edits; a step of `clause_dropObservers`
+and `clause_runIn` on the typed command preservation path. -/
+theorem Evaluating.prepare_continue {root : ProgramSource} {rootTy : EffTy} {w : World}
+    {m : RState} {rest : List RCmd} {f : RFiber} {y : Bool}
+    (ev : Evaluating root rootTy w m rest f y) (fr : RSaved)
+    (code : ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty fr)
+    (edits : List (FiberEdit Err Defect FiberId Ann)) :
+    ∃ g : RFiber, g.id = f.id ∧
+      prepareIterR ⟨m, {f with frame := fr}, y, .continue_, [], edits⟩ =
+        ⟨m, g, y, .continue_, [], edits⟩ ∧
+      ConfigTyped root rootTy w (m.update g) (.loop f.id y :: rest) := by
+  let fr' : RSaved := {fr with current := prepareR m.completedExits fr.current}
+  have code' : ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty fr' :=
+    fun ty declared => codeOk_prepare _ ev.view (code ty declared)
+  obtain ⟨ty, declared⟩ := ev.declared
+  obtain ⟨tin, current, _, _⟩ := code' ty declared
+  have glue : prepareIterR ⟨m, {f with frame := fr}, y, .continue_, [], edits⟩ =
+      ⟨m, {f with frame := fr'}, y, .continue_, [], edits⟩ :=
+    prepareScopedExitR_of_typed current
+  refine ⟨{f with frame := fr'}, rfl, glue, ?_⟩
+  have step := (configTyped_frame_step ev.typed rfl ev.look ev.running fr' code'
+    (raceRegistrationR_typed current)).1 y
+  rw [rupdate_rupdate m (show ({f with frame := fr'} : RFiber).id = f.id from rfl)] at step
+  exact step
 
-/-- **`dropObservers`** (`Machine/Fibers.lean:1434-1441`, the park's cleanup, `internal/effect.ts:773`):
-every fiber's token observers dropped (`Evaluating.dropObs`), the fiber answered `void`. -/
+/-- The edit word's typed actual result settles without overwriting its selected owner.
+This is the common settlement step of `clause_dropObservers` and `clause_runIn`. -/
+theorem settle_continue_edits_typed {root : ProgramSource} {rootTy : EffTy} {w : World}
+    {m : RState} {rest : List RCmd} {g : RFiber} {id : FiberId} {y : Bool}
+    (edits : List (FiberEdit Err Defect FiberId Ann))
+    (declared : (w.Γ g.id).isSome = true)
+    (typed : ConfigTyped root rootTy w (applyFiberEdits edits (m.update g)).1
+      ((applyFiberEdits edits (m.update g)).2 ++ [.loop id y] ++ rest)) :
+    ConfigTyped root rootTy w (settle id rest ⟨m, g, y, .continue_, [], edits⟩).1
+      (settle id rest ⟨m, g, y, .continue_, [], edits⟩).2 := by
+  obtain ⟨owner, found⟩ : ∃ owner, (applyFiberEdits edits (m.update g)).1.fiber? g.id = some owner := by
+    obtain ⟨owner, member, same⟩ := List.mem_map.mp ((typed.machine.wide.fibers g.id).mp declared)
+    refine ⟨owner, ?_⟩
+    rw [← same]
+    exact rfiber?_of_mem typed.machine.wide.fiberIds member
+  cases edits with
+  | nil => exact typed
+  | cons edit edits =>
+    simp only [settle, found, settleOutcome, List.append_nil]
+    have ownerFound : (applyFiberEdits (edit :: edits) (m.update g)).1.fiber? owner.id = some owner := by
+      rw [rfiber?_id found]
+      exact found
+    rw [rupdate_self ownerFound typed.machine.wide.fiberIds]
+    exact typed
+
+/-- `dropObservers` applies its token removal to the prepared caller and all retained fibers. -/
 theorem clause_dropObservers (root : ProgramSource) (rootTy : EffTy) (token : Nat) :
     FiberClauseKeeps root rootTy (.dropObservers token) := by
   intro w m rest f y next ev hc
+  have code := ev.answer_typed hc (by rw [hc]; rfl)
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) .unit (fun _ _ => rfl)
+  obtain ⟨g, gid, glue, ready⟩ := ev.prepare_continue _ code [.dropToken token]
   show SettlesTyped root rootTy w f.id rest (prepareIterR (FiberAction.dropObservers
     (interpRAt root.program m.completedExits) m f y token (answerWith next)))
-  unfold FiberAction.dropObservers
-  have keeps : ∀ keep : Observer → Bool, SettlesTyped root rootTy w f.id rest (prepareIterR
-      ⟨{ m with fibers := m.fibers.map fun g => { g with observers := g.observers.filter keep } },
-        answerR f (next .unit), y, .continue_, []⟩) := fun keep =>
-    (ev.dropObs keep).settle_continue _ ((ev.dropObs keep).answer_typed hc (by rw [hc]; rfl)
-      (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-      (fun _ _ _ h => nomatch h) .unit (fun _ _ => rfl))
-  exact keeps _
+  change SettlesTyped root rootTy w f.id rest
+    (prepareIterR ⟨m, {f with frame := {f.frame with current := next .unit}}, y,
+      .continue_, [], [.dropToken token]⟩)
+  rw [glue]
+  refine ⟨w, leHost_refl w, settle_continue_edits_typed _ ?_ ?_⟩
+  · rw [gid]
+    exact ev.typed.machine.wide.fibers f.id |>.mpr (List.mem_map.mpr ⟨f, rfiber?_mem ev.look, rfl⟩)
+  · let keep : Observer → Bool := fun
+      | .resumeAwait _ t _ => t ≠ token
+      | .countdown _ t => t ≠ token
+      | _ => true
+    have all := configTyped_shrinkAll (fun x => x.observers.filter keep)
+      (fun _ _ ho => (List.mem_filter.mp ho).1) (m.update g).fibers [] (m.update g)
+      (by rw [List.map_nil, List.nil_append]) ready
+    exact all
 
 /-! ## `runIn`: the link step inline -/
 
@@ -293,19 +303,23 @@ theorem linkScope_closed {ex : ExitV} {t' : RFiber} {applyNow : Bool}
       ((M.update t').emit
         [RunEvent.scopeClosedOnLink scope target, RunEvent.interruptRecorded interruptor target],
        if applyNow then [Cmd.evaluate target] else []) := by
-  unfold linkScope
+  unfold linkScope linkScopeEdits
   rw [scopeStatus_entry root hentry, hclosed]
-  simp only [ht, hr]
+  simp only [ht, applyFiberEdits, List.foldl, applyFiberEdit, rfiber?_emit, List.nil_append]
+  change (((M.emit _).update (interruptRecord (interpR root.program) interruptor extra t).1),
+    if (interruptRecord (interpR root.program) interruptor extra t).2 then _ else _) = _
+  rw [hr, emit_update_comm]
 
 /-- `linkScope` on an open scope and an exited target: nothing (`:1026-1027`). -/
 theorem linkScope_exited (hentry : M.state.scopes.entryAt scope = some entry)
     (hopen : entry.scope.closingExit? = none) (ht : M.fiber? target = some t)
     (hx : t.exit.isSome = true) :
     linkScope (interpR root.program) M mode scope target interruptor extra = (M, []) := by
-  unfold linkScope
+  unfold linkScope linkScopeEdits
   rw [scopeStatus_entry root hentry, hopen]
   simp only [ht]
   rw [if_pos hx]
+  rfl
 
 /-- `linkScope` on an open scope and a live target (`:1028-1037`): the store's registration and the
 target's drop observer. -/
@@ -317,10 +331,12 @@ theorem linkScope_open {s : Stores} {key : Nat} (hentry : M.state.scopes.entryAt
       ((({ M with state := s } : RState).update
           { t with observers := t.observers ++ [.dropScopeFinalizer scope key] }).emit
         [RunEvent.scopeLinked mode scope key target], []) := by
-  unfold linkScope
+  unfold linkScope linkScopeEdits
   rw [scopeStatus_entry root hentry, hopen]
   simp only [ht]
   rw [if_neg hx, hlink]
+  simp only [applyFiberEdits, List.foldl, applyFiberEdit, List.nil_append]
+  rw [RunMachine.modify_emit]
   show ((({ M with state := s } : RState).modify target fun t =>
     { t with observers := t.observers ++ [.dropScopeFinalizer scope key] }).emit
       [RunEvent.scopeLinked mode scope key target], []) = _
@@ -328,14 +344,7 @@ theorem linkScope_open {s : Stores} {key : Nat} (hentry : M.state.scopes.entryAt
 
 end LinkScope
 
-/-- **`runIn`** (`fiberRunIn`, `Machine/Fibers.lean:1444-1449`, `internal/effect.ts:5447-5461`): the
-link step inline (`linkScope` in mode `fiberRunIn`, the target its own interruptor), the fiber
-answered `void`. The pre gives the target declared and the scope live, so the link does not
-halt. Each arm moves the evaluated state (the configuration with `deliver` at its head) to the
-link's machine: a closed scope records the interrupt (`configTyped_interruptRecord`), an exited
-target is left alone, a live one is linked as the `link` command links it (`link_preserves`). On
-the fiber itself the settlement overwrites the record, as the machine does: the interrupt record
-and the drop observer are lost (the latter by `configTyped_shrinkObservers`). -/
+/-- `runIn` prepares its answer before applying the actual link edit to the installed caller. -/
 theorem clause_runIn (root : ProgramSource) (rootTy : EffTy) (target : FiberId) (scope : Nat) :
     FiberClauseKeeps root rootTy (.runIn target scope) := by
   intro w m rest f y next ev hc
@@ -345,32 +354,6 @@ theorem clause_runIn (root : ProgramSource) (rootTy : EffTy) (target : FiberId) 
   obtain ⟨_, ⟨pre, hlive⟩, _⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
   have wide := ev.typed.machine.wide
-  -- the settlement from the evaluated state over the link's machine
-  have finish : ∀ (w' : World) (m' : RState) (nested : List RCmd), w.leHost w' →
-      Evaluating root rootTy w' m' rest f y →
-      (∀ g : RFiber, g.id = f.id →
-        ConfigTyped root rootTy w' (m'.update g) (.loop f.id y :: rest) →
-        ConfigTyped root rootTy w' (m'.update g) (nested ++ [.loop f.id y] ++ rest)) →
-      SettlesTyped root rootTy w f.id rest
-        (prepareIterR ⟨m', answerR f (next .unit), y, FiberAction.outcomeOf m' false, nested⟩) := by
-    intro w' m' nested ord ev' push
-    have hout : FiberAction.outcomeOf m' false = Outcome.continue_ := by
-      unfold FiberAction.outcomeOf
-      rw [ev'.live]
-      rfl
-    rw [hout]
-    exact SettlesTyped.mono ord (ev'.settle_nested _ (ev'.answer_typed hc (by rw [hc]; rfl)
-      (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-      (fun _ _ _ h => nomatch h) .unit (fun _ _ => rfl)) nested push)
-  have evaluate : ∀ (w' : World) (m' : RState) (applyNow : Bool) (g : RFiber), g.id = f.id →
-      ConfigTyped root rootTy w' (m'.update g) (.loop f.id y :: rest) →
-      ConfigTyped root rootTy w' (m'.update g)
-        ((if applyNow then [Cmd.evaluate target] else []) ++ [.loop f.id y] ++ rest) := by
-    intro w' m' applyNow g _ typed
-    cases applyNow
-    · exact typed
-    · exact configTyped_cons_evaluate typed target
-  -- the store holds the scope; the machine holds the target
   have live : m.state.ScopeLive scope := by
     have l : w.state.ScopeLive scope := hlive
     rw [wide.state] at l
@@ -383,117 +366,115 @@ theorem clause_runIn (root : ProgramSource) (rootTy : EffTy) (target : FiberId) 
     rw [← hid]
     exact rfiber?_of_mem wide.fiberIds hx
   obtain ⟨f0, hf0, exit0⟩ := ev.stale
-  obtain ⟨s, key, hlink⟩ : ∃ s key,
-      (interpR root.program).scopeLinkFiber .fiberRunIn scope target m.state = some (s, key) := by
-    obtain ⟨_, h⟩ := scopeLinkFiber_open root .fiberRunIn scope target m.state hentry
-    exact ⟨_, _, h⟩
-  have typedQ : ConfigTyped root rootTy w (m.update f)
-      (.link .fiberRunIn scope target (some target) .empty :: .deliver f.id y :: rest) :=
-    configTyped_cons_link ev.typed live (by rw [ht₁]; rfl)
-  have hL : linkScope (interpRAt root.program m.completedExits) m .fiberRunIn scope target
-      (some target) .empty =
-      linkScope (interpR root.program) m .fiberRunIn scope target (some target) .empty := rfl
+  obtain ⟨t0, ht0, sameExit⟩ : ∃ t0, m.fiber? target = some t0 ∧ t0.exit = t₁.exit := by
+    by_cases self : target = f.id
+    · subst target
+      rw [ev.look] at ht₁
+      cases ht₁
+      exact ⟨f0, hf0, exit0⟩
+    · exact ⟨t₁, (rfiber?_update_other self).symm.trans ht₁, rfl⟩
+  have status : (interpRAt root.program m.completedExits).scopeStatus scope m.state =
+      some entry.scope.closingExit? := scopeStatus_entry root hentry
   show SettlesTyped root rootTy w f.id rest (prepareIterR (FiberAction.runIn
     (interpRAt root.program m.completedExits) m f y target scope (answerWith next)))
-  unfold FiberAction.runIn
-  rw [hL]
-  by_cases self : target = f.id
-  · -- the fiber links itself: the settlement overwrites its record
-    subst self
-    cases hcl : entry.scope.closingExit? with
-    | some ex =>
-      rcases hr : interruptRecord (interpR root.program) (some f.id) .empty f0 with ⟨t', applyNow⟩
-      have tid : t'.id = f.id := by
-        rw [← rfiber?_id hf0, ← interruptRecord_id (interpR root.program) (some f.id) .empty f0, hr]
-      have texit : t'.exit = f0.exit := by
-        rw [← interruptRecord_exit (interpR root.program) (some f.id) .empty f0, hr]
-      rw [linkScope_closed root hentry hcl hf0 hr]
-      refine finish w _ _ (leHost_refl w) ⟨?_, ⟨t', ?_, texit.trans exit0⟩, ev.running, ev.live⟩
-        (evaluate w _ applyNow)
-      · rw [emit_update_comm, rupdate_rupdate m (show f.id = t'.id from tid.symm)]
-        exact configTyped_emit ev.typed _
-      · show (m.update t').fiber? f.id = some t'
-        rw [← tid]
-        exact rfiber?_update_self (f := f0) (by rw [rfiber?_id hf0]; exact hf0)
-          (tid.trans (rfiber?_id hf0).symm)
-    | none =>
-      by_cases hx : f0.exit.isSome = true
-      · rw [linkScope_exited root hentry hcl hf0 hx]
-        exact finish w m [] (leHost_refl w) ev fun _ _ typed => typed
-      · rw [linkScope_open root hentry hcl hf0 hx hlink]
-        have hxF : ¬ f.exit.isSome = true := by rw [← exit0]; exact hx
-        obtain ⟨w', ord, typedL⟩ := link_preserves root rootTy .fiberRunIn scope f.id (some f.id)
-          .empty w (m.update f) (.deliver f.id y :: rest) ev.live typedQ
-        simp only [driveStep, linkScope_open (M := m.update f) root hentry hcl ev.look hxF hlink,
-          List.nil_append] at typedL
-        have lookL : ((({ m.update f with state := s } : RState).update
-            { f with observers := f.observers ++ [.dropScopeFinalizer scope key] }).emit
-              [RunEvent.scopeLinked .fiberRunIn scope key f.id]).fiber? f.id =
-            some { f with observers := f.observers ++ [.dropScopeFinalizer scope key] } :=
-          rfiber?_update_self (m := { m.update f with state := s }) (f := f)
-            (g := { f with observers := f.observers ++ [.dropScopeFinalizer scope key] }) ev.look rfl
-        have shrunk := configTyped_shrinkObservers typedL
-          (x := { f with observers := f.observers ++ [.dropScopeFinalizer scope key] }) lookL f.observers
-          (fun _ ho => List.mem_append_left [.dropScopeFinalizer scope key] ho)
-        have shrunk' : ConfigTyped root rootTy w'
-            ((({ m with state := s } : RState).update f).emit
-              [RunEvent.scopeLinked .fiberRunIn scope key f.id]) (.deliver f.id y :: rest) := by
-          have e : (((({ m with state := s } : RState).update f).update
-              { f with observers := f.observers ++ [.dropScopeFinalizer scope key] }).emit
-                [RunEvent.scopeLinked .fiberRunIn scope key f.id]).update f =
-              (({ m with state := s } : RState).update f).emit
-                [RunEvent.scopeLinked .fiberRunIn scope key f.id] := by
-            rw [emit_update_comm, rupdate_rupdate _
-              (show f.id = ({ f with observers := f.observers ++ [.dropScopeFinalizer scope key] } :
-                RFiber).id from rfl), rupdate_rupdate _ rfl]
-          rw [← e]
-          exact shrunk
-        have hid0 : f.id = ({ f0 with observers := f0.observers ++ [.dropScopeFinalizer scope key] } :
-            RFiber).id := (rfiber?_id hf0).symm
-        refine finish w' _ [] ord ⟨?_, ⟨{ f0 with observers :=
-          f0.observers ++ [.dropScopeFinalizer scope key] }, ?_, exit0⟩, ev.running, ev.live⟩
-          fun _ _ typed => typed
-        · rw [emit_update_comm, rupdate_rupdate _ hid0]
-          exact shrunk'
-        · show (({ m with state := s } : RState).update
-            { f0 with observers := f0.observers ++ [.dropScopeFinalizer scope key] }).fiber? f.id = _
-          rw [← rfiber?_id hf0]
-          exact rfiber?_update_self (m := { m with state := s }) (f := f0)
-            (by rw [rfiber?_id hf0]; exact hf0) rfl
-  · -- another fiber
-    have ht : m.fiber? target = some t₁ := by
-      rw [← rfiber?_update_other (m := m) (g := f) self]
-      exact ht₁
-    cases hcl : entry.scope.closingExit? with
-    | some ex =>
-      rcases hr : interruptRecord (interpR root.program) (some target) .empty t₁ with ⟨t', applyNow⟩
-      have tid : t'.id = target := by
-        rw [← rfiber?_id ht, ← interruptRecord_id (interpR root.program) (some target) .empty t₁, hr]
-      have ne : f.id ≠ t'.id := fun h => self (tid.symm.trans h.symm)
-      rw [linkScope_closed root hentry hcl ht hr]
-      refine finish w _ _ (leHost_refl w) ⟨?_, ⟨f0, ?_, exit0⟩, ev.running, ev.live⟩
-        (evaluate w _ applyNow)
-      · rw [emit_update_comm, rupdate_comm m ne]
-        have recorded := configTyped_interruptRecord ev.typed ht₁ (some target) .empty
-        rw [hr] at recorded
-        cases applyNow
-        · exact configTyped_emit recorded _
-        · exact configTyped_emit (configTyped_tail recorded) _
-      · exact (rfiber?_update_other ne).trans hf0
-    | none =>
-      by_cases hx : t₁.exit.isSome = true
-      · rw [linkScope_exited root hentry hcl ht hx]
-        exact finish w m [] (leHost_refl w) ev fun _ _ typed => typed
-      · rw [linkScope_open root hentry hcl ht hx hlink]
-        obtain ⟨w', ord, typedL⟩ := link_preserves root rootTy .fiberRunIn scope target
-          (some target) .empty w (m.update f) (.deliver f.id y :: rest) ev.live typedQ
-        simp only [driveStep, linkScope_open (M := m.update f) root hentry hcl ht₁ hx hlink,
-          List.nil_append] at typedL
-        have ne : f.id ≠ ({ t₁ with observers := t₁.observers ++ [.dropScopeFinalizer scope key] } :
-            RFiber).id := fun h => self ((rfiber?_id ht).symm.trans h.symm)
-        refine finish w' _ [] ord ⟨?_, ⟨f0, ?_, exit0⟩, ev.running, ev.live⟩ fun _ _ typed => typed
-        · rw [emit_update_comm, rupdate_comm _ ne]
-          exact typedL
-        · exact (rfiber?_update_other ne).trans hf0
+  unfold FiberAction.runIn linkScopeEdits
+  rw [status]
+  cases closed : entry.scope.closingExit? with
+  | some ex =>
+    rw [ht0]
+    let events : List (RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx RProgram Unit) :=
+      [.scopeClosedOnLink scope target, .interruptRecorded (some target) target]
+    let edits : List (FiberEdit Err Defect FiberId Ann) :=
+      [.interrupt target (interruptCause (interpR root.program) (some target) .empty target)]
+    have emitted := ev.emit events
+    have code := emitted.answer_typed hc (by rw [hc]; rfl)
+      (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+      (fun _ _ _ h => nomatch h) .unit (fun _ _ => rfl)
+    obtain ⟨g, gid, glue, ready⟩ := emitted.prepare_continue _ code edits
+    change SettlesTyped root rootTy w f.id rest
+      (prepareIterR ⟨m.emit events, {f with frame := {f.frame with current := next .unit}}, y,
+        FiberAction.outcomeOf (m.emit events) false, [],
+        [.interrupt target (interruptCause (interpR root.program) (some target) .empty t0.id)]⟩)
+    rw [rfiber?_id ht0]
+    have out : FiberAction.outcomeOf (m.emit events) false = .continue_ := by
+      unfold FiberAction.outcomeOf
+      rw [emitted.live]
+      rfl
+    rw [out, glue]
+    refine ⟨w, leHost_refl w, settle_continue_edits_typed edits (by rw [gid]; exact Option.isSome_iff_exists.mpr ⟨ty, declared⟩) ?_⟩
+    obtain ⟨t, ht⟩ : ∃ t, ((m.emit events).update g).fiber? target = some t := by
+      obtain ⟨t, member, same⟩ := List.mem_map.mp ((ready.machine.wide.fibers target).mp pre)
+      refine ⟨t, ?_⟩
+      rw [← same]
+      exact rfiber?_of_mem ready.machine.wide.fiberIds member
+    have recorded := configTyped_interruptRecord ready ht (some target) .empty
+    simpa only [edits, applyFiberEdits, List.foldl, applyFiberEdit, ht, interruptRecord,
+      rfiber?_id ht, List.nil_append, List.append_assoc, List.singleton_append] using recorded
+  | none =>
+    rw [ht0]
+    dsimp only
+    by_cases exited : t0.exit.isSome = true
+    · rw [if_pos exited]
+      have out : FiberAction.outcomeOf m false = .continue_ := by
+        unfold FiberAction.outcomeOf
+        rw [ev.live]
+        rfl
+      rw [out]
+      exact ev.settle_continue _ (ev.answer_typed hc (by rw [hc]; rfl)
+        (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+        (fun _ _ _ h => nomatch h) .unit (fun _ _ => rfl))
+    · rw [if_neg exited]
+      obtain ⟨skip, hlink⟩ := scopeLinkFiber_open root .fiberRunIn scope target m.state hentry
+      let s : Stores := {m.state with
+        scopes := (m.state.scopes.addFinalizer scope m.state.nextName (.interruptFiber target skip)).1
+        nextName := m.state.nextName + 1}
+      let events : List (RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx RProgram Unit) :=
+        [.scopeLinked .fiberRunIn scope m.state.nextName target]
+      let M : RState := ({m with state := s} : RState).emit events
+      let edits : List (FiberEdit Err Defect FiberId Ann) :=
+        [.observe target (.dropScopeFinalizer scope m.state.nextName)]
+      rw [show (interpRAt root.program m.completedExits).scopeLinkFiber .fiberRunIn scope target m.state =
+        some (s, m.state.nextName) from hlink]
+      have typedQ := configTyped_cons_link (mode := .fiberRunIn) (interruptor := some target)
+        (extra := .empty) ev.typed live (by rw [ht₁]; rfl)
+      obtain ⟨w', ord, typedL⟩ := link_preserves root rootTy .fiberRunIn scope target (some target)
+        .empty w (m.update f) (.deliver f.id y :: rest) ev.live typedQ
+      have exited₁ : ¬ t₁.exit.isSome = true := by rw [← sameExit]; exact exited
+      have linkEq := linkScope_open (M := m.update f) (interruptor := some target)
+        (extra := .empty) root hentry closed ht₁ exited₁ hlink
+      simp only [driveStep, linkEq, List.nil_append] at typedL
+      let t' : RFiber := {t₁ with observers := t₁.observers ++ [.dropScopeFinalizer scope m.state.nextName]}
+      have found₁ : (M.update f).fiber? t₁.id = some t₁ := by
+        rw [rfiber?_id ht₁]
+        exact ht₁
+      have found' : ((M.update f).update t').fiber? t₁.id = some t' :=
+        rfiber?_update_self found₁ rfl
+      have typedL' : ConfigTyped root rootTy w' ((M.update f).update t') (.deliver f.id y :: rest) := typedL
+      have shrunk := configTyped_shrinkObservers (x := t') typedL' found' t₁.observers
+        (fun _ ho => List.mem_append_left _ ho)
+      rw [rupdate_rupdate _ (show t₁.id = t'.id from rfl),
+        rupdate_self found₁ (by simpa only [rupdate_ids] using typedL'.machine.wide.fiberIds)] at shrunk
+      have ev' : Evaluating root rootTy w' M rest f y := ⟨shrunk, ev.stale, ev.running, ev.live⟩
+      have code := ev'.answer_typed hc (by rw [hc]; rfl)
+        (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+        (fun _ _ _ h => nomatch h) .unit (fun _ _ => rfl)
+      obtain ⟨g, gid, glue, ready⟩ := ev'.prepare_continue _ code edits
+      change SettlesTyped root rootTy w f.id rest
+        (prepareIterR ⟨M, {f with frame := {f.frame with current := next .unit}}, y,
+          FiberAction.outcomeOf M false, [], edits⟩)
+      have out : FiberAction.outcomeOf M false = .continue_ := by
+        unfold FiberAction.outcomeOf
+        rw [ev'.live]
+        rfl
+      rw [out, glue]
+      refine ⟨w', ord, settle_continue_edits_typed edits (by
+        rw [gid]
+        exact isSome_extends ord.1.2.1 (Option.isSome_iff_exists.mpr ⟨ty, declared⟩)) ?_⟩
+      have added := configTyped_observe ready target (.dropScopeFinalizer scope m.state.nextName)
+        (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) (fun _ _ => by
+          show (M.update g).state.ScopeLive scope
+          rw [← ready.machine.wide.state]
+          exact scopeLive_mono ord.1 hlive)
+      exact added
 
 end Effect4.Program.Typed

@@ -1170,6 +1170,69 @@ theorem middleware_maskAged {m m₁ : RunMachine ν σ β ε δ ι α χ St} (h 
   · exact h
   · exact h
 
+variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+
+/-- An addressed cause delta keeps the mask chain; settlement consumes this law. -/
+@[semantics "scope-lifetime-finalization"]
+theorem interruptWithCause_maskLater (cause : Cause ε δ ι α)
+    (f : RunFiber ν σ β ε δ ι α χ) : MaskLater f (interruptWithCause cause f).1 := by
+  unfold interruptWithCause
+  dsimp only
+  (repeat' split) <;> exact MaskLater.refl f
+
+/-- One R2 edit keeps mask chains and issues no clearing command. -/
+@[semantics "scope-lifetime-finalization"]
+theorem fiberEdit_keepsMask (edit : FiberEdit ε δ ι α)
+    (m : RunMachine ν σ β ε δ ι α χ St) :
+    MaskAged m (applyFiberEdit edit m).1 ∧ noClear (applyFiberEdit edit m).2 = true := by
+  cases edit with
+  | observe target observer =>
+    exact ⟨(MaskAged.refl m).modify target _ (fun f => MaskLater.refl f), rfl⟩
+  | dropToken token =>
+    exact ⟨(MaskAged.refl m).mapFibers _ (fun f => MaskLater.refl f), rfl⟩
+  | interrupt target cause =>
+    simp only [applyFiberEdit]
+    split
+    · exact ⟨MaskAged.refl m, rfl⟩
+    · next old found =>
+      refine ⟨(MaskAged.refl m).update (RunMachine.mem_of_fiber? found)
+        (interruptWithCause_maskLater cause old), ?_⟩
+      cases (interruptWithCause cause old).2 <;> rfl
+
+/-- The existing edit fold preserves mask chains and the no-clearing command condition. -/
+@[semantics "scope-lifetime-finalization"]
+theorem fiberEdits_keepsMask (edits : List (FiberEdit ε δ ι α))
+    (m : RunMachine ν σ β ε δ ι α χ St) :
+    MaskAged m (applyFiberEdits edits m).1 ∧ noClear (applyFiberEdits edits m).2 = true := by
+  have kept (word : List (FiberEdit ε δ ι α)) :
+      ∀ (acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α)),
+        MaskAged m acc.1 → noClear acc.2 = true →
+        let result := word.foldl (fun held edit =>
+          let next := applyFiberEdit edit held.1
+          (next.1, held.2 ++ next.2)) acc
+        MaskAged m result.1 ∧ noClear result.2 = true := by
+    induction word with
+    | nil => intro _ aged clear; exact ⟨aged, clear⟩
+    | cons edit rest ih =>
+      intro acc aged clear
+      have one := fiberEdit_keepsMask edit acc.1
+      exact ih _ (aged.trans one.1) (noClear_append_of clear one.2)
+  exact kept edits (m, []) (MaskAged.refl m) rfl
+
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+/-- The canonical countdown producer keeps masks before its addressed edits run. -/
+@[semantics "scope-lifetime-finalization"]
+theorem countdownParkEdits_keepsMask {m m₁ : RunMachine ν σ β ε δ ι α χ St} (h : MaskAged m m₁)
+    (interp : RunInterp ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ)
+    (targets : List FiberId) (resumeWith : Resume ν) (failFast : Bool) :
+    MaskAged m (countdownParkEdits interp m₁ f targets resumeWith failFast).1 ∧
+      MaskLater f (countdownParkEdits interp m₁ f targets resumeWith failFast).2.1 := by
+  unfold countdownParkEdits
+  dsimp only
+  split
+  · exact ⟨h, MaskLater.refl f⟩
+  · exact ⟨h, MaskLater.refl f⟩
+
 /-- A countdown park adds an observer to its first live target, and it pushes its cleanup as an
 `asyncFinalizer` frame, which is neutral. A step of `evaluatePrim_keepsMask`. -/
 @[semantics "scope-lifetime-finalization"]
@@ -1178,13 +1241,14 @@ theorem countdownPark_keepsMask {m m₁ : RunMachine ν σ β ε δ ι α χ St}
     (targets : List FiberId) (resumeWith : Resume ν) (failFast : Bool) :
     MaskAged m (countdownPark interp m₁ f targets resumeWith failFast).1 ∧
       MaskLater f (countdownPark interp m₁ f targets resumeWith failFast).2.1 := by
-  unfold countdownPark
+  unfold countdownPark countdownParkEdits
   dsimp only
   split
   · exact ⟨h, MaskLater.refl _⟩
-  · refine ⟨MaskAged.emit (MaskAged.modify ?_ _ _ ?_) _, MaskLater.refl _⟩
-    · exact h
-    · exact fun g => MaskLater.refl g
+  · next exits target remaining found =>
+    exact ⟨h.trans (fiberEdits_keepsMask [.observe target (.countdown f.id m₁.nextToken)]
+      ({m₁ with nextToken := m₁.nextToken + 1}.emit [.parkedOn f.id m₁.nextToken])).1,
+      MaskLater.refl _⟩
 
 end Helpers
 
@@ -1331,12 +1395,12 @@ theorem exitFiber_keepsMask {m : RunMachine ν σ β ε δ ι α χ St}
 /-- What the loop does with an evaluation: it writes the fiber back, and it issues the continuing
 command, which clears nothing. A step of `driveStep_keepsMask`. -/
 @[semantics "scope-lifetime-finalization"]
-theorem settle_keepsMask {m : RunMachine ν σ β ε δ ι α χ St} {f₀ : RunFiber ν σ β ε δ ι α χ}
+theorem settleOutcome_keepsMask {m : RunMachine ν σ β ε δ ι α χ St} {f₀ : RunFiber ν σ β ε δ ι α χ}
     (id : FiberId) (rest : List (Cmd ν σ β ε δ ι α)) (it : Iter ν σ β ε δ ι α χ St)
     (mem : f₀ ∈ m.fibers) (aged : MaskAged m it.machine) (later : MaskLater f₀ it.fiber)
     (nested : noClear it.nested = true) :
-    CmdKeepsMask m rest (settle id rest it) := by
-  unfold settle
+    CmdKeepsMask m rest (settleOutcome id rest it) := by
+  unfold settleOutcome
   split
   · refine CmdKeepsMask.of_prefix (MaskAged.update_old aged mem ?_) _ ?_
     · exact later
@@ -1362,6 +1426,35 @@ theorem settle_keepsMask {m : RunMachine ν σ β ε δ ι α χ St} {f₀ : Run
   · refine ⟨MaskAged.halt (MaskAged.update_old aged mem ?_) _, fun _ pending => nomatch pending⟩
     exact later
 
+variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+
+/-- Settlement composes local installation, addressed edits, and the single disposition law. -/
+@[semantics "scope-lifetime-finalization"]
+theorem settle_keepsMask {m : RunMachine ν σ β ε δ ι α χ St} {f₀ : RunFiber ν σ β ε δ ι α χ}
+    (id : FiberId) (rest : List (Cmd ν σ β ε δ ι α)) (it : Iter ν σ β ε δ ι α χ St)
+    (mem : f₀ ∈ m.fibers) (aged : MaskAged m it.machine) (later : MaskLater f₀ it.fiber)
+    (nested : noClear it.nested = true) :
+    CmdKeepsMask m rest (settle id rest it) := by
+  unfold settle
+  split
+  · exact settleOutcome_keepsMask id rest it mem aged later nested
+  · have installed := MaskAged.update_old aged mem later
+    have changed := fiberEdits_keepsMask it.edits (it.machine.update it.fiber)
+    dsimp only
+    split
+    · exact ⟨(installed.trans changed.1).halt _, fun _ pending => nomatch pending⟩
+    · next owner found =>
+      have outcome := settleOutcome_keepsMask id rest
+        { it with
+          machine := (applyFiberEdits it.edits (it.machine.update it.fiber)).1
+          fiber := owner
+          nested := (applyFiberEdits it.edits (it.machine.update it.fiber)).2 ++ it.nested
+          edits := [] }
+        (RunMachine.mem_of_fiber? found) (MaskAged.refl _) (MaskLater.refl owner)
+        (noClear_append_of changed.2 nested)
+      exact ⟨(installed.trans changed.1).trans outcome.1, outcome.2⟩
+
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- No outcome that a `withFiber` action reads off the machine is a finished one. A step of
 `withFiber_keepsMask`. -/
 @[semantics "scope-lifetime-finalization"]
@@ -1390,9 +1483,7 @@ flag and the stack. A step of `driveStep_keepsMask`. -/
 theorem interruptRecord_maskLater (interp : RunInterp ν σ β ε δ ι α χ St) (who : Option FiberId)
     (extra : ReasonAnnotations α) (f : RunFiber ν σ β ε δ ι α χ) :
     MaskLater f (interruptRecord interp who extra f).1 := by
-  unfold interruptRecord interruptWithCause
-  dsimp only
-  (repeat' split) <;> exact MaskLater.refl f
+  exact interruptWithCause_maskLater (interruptCause interp who extra f.id) f
 
 /-- Interrupts in list order: each is a record and at most one evaluation command. A step of
 `fireObserver_keepsMask`. -/
@@ -1435,35 +1526,28 @@ theorem interruptEach_if_keepsMask (interp : RunInterp ν σ β ε δ ι α χ S
   · exact ⟨h, clear⟩
   · exact interruptEach_keepsMask interp who extra targets acc h clear
 
-/-- A scope's link records an interrupt, or it adds an observer. A step of `driveStep_keepsMask`. -/
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+/-- The canonical scope link keeps masks before its addressed edit word runs. -/
+@[semantics "scope-lifetime-finalization"]
+theorem linkScopeEdits_keepsMask {m m₁ : RunMachine ν σ β ε δ ι α χ St} (h : MaskAged m m₁)
+    (interp : RunInterp ν σ β ε δ ι α χ St) (mode : Supervision.ScopeMode) (scope : Nat)
+    (target : FiberId) (interruptor : Option FiberId) (extra : ReasonAnnotations α) :
+    MaskAged m (linkScopeEdits interp m₁ mode scope target interruptor extra).1 := by
+  unfold linkScopeEdits
+  (repeat' split) <;> exact h
+
+/-- A scope's eager link interprets the canonical addressed edit word. -/
 @[semantics "scope-lifetime-finalization"]
 theorem linkScope_keepsMask {m m₁ : RunMachine ν σ β ε δ ι α χ St} (h : MaskAged m m₁)
     (interp : RunInterp ν σ β ε δ ι α χ St) (mode : Supervision.ScopeMode) (scope : Nat)
     (target : FiberId) (interruptor : Option FiberId) (extra : ReasonAnnotations α) :
     MaskAged m (linkScope interp m₁ mode scope target interruptor extra).1 ∧
       noClear (linkScope interp m₁ mode scope target interruptor extra).2 = true := by
-  unfold linkScope
-  split
-  · exact ⟨h, rfl⟩
-  · split
-    · exact ⟨h, rfl⟩
-    · rename_i t found
-      split
-      rename_i recorded applyNow record
-      have later := interruptRecord_maskLater interp interruptor extra t
-      rw [record] at later
-      refine ⟨MaskAged.emit (h.update (RunMachine.mem_of_fiber? found) later) _, ?_⟩
-      cases applyNow <;> rfl
-  · split
-    · exact ⟨h, rfl⟩
-    · rename_i t found
-      split
-      · exact ⟨h, rfl⟩
-      · split
-        · exact ⟨h, rfl⟩
-        · refine ⟨MaskAged.emit (MaskAged.modify ?_ _ _ ?_) _, rfl⟩
-          · exact h
-          · exact fun g => MaskLater.refl g
+  have kept := linkScopeEdits_keepsMask h interp mode scope target interruptor extra
+  have edits := fiberEdits_keepsMask
+    (linkScopeEdits interp m₁ mode scope target interruptor extra).2
+    (linkScopeEdits interp m₁ mode scope target interruptor extra).1
+  exact ⟨kept.trans edits.1, edits.2⟩
 
 /-- An observer's firing keeps the machine, and it issues no clearing. It writes children, pending
 parks, observers and races, and it records the fail-fast interrupts. A step of
@@ -1496,16 +1580,31 @@ theorem fireObserver_keepsMask (interp : RunInterp ν σ β ε δ ι α χ St) (
           (acc.1.emit [RunEvent.observerFired id (Observer.countdown waiter token)], [])
           (p.failFast && !exit.isSuccess && p.collected.all Exit.isSuccess) (MaskAged.refl _) rfl
         split
-        · refine ⟨MaskAged.update_old ?_ (RunMachine.mem_of_fiber? found) ?_, fun clear => ?_⟩
-          · exact step.1
-          · exact MaskLater.refl w
-          · exact noClear_append_of (noClear_append_of clear step.2) rfl
-        · refine ⟨MaskAged.update_old (MaskAged.modify ?_ _ _ ?_)
-            (RunMachine.mem_of_fiber? found) ?_, fun clear => ?_⟩
-          · exact step.1
-          · exact fun g => MaskLater.refl g
-          · exact MaskLater.refl w
-          · exact noClear_append_of clear step.2
+        · exact ⟨step.1, fun clear => noClear_append_of clear step.2⟩
+        · next current currentFound =>
+          split
+          · exact ⟨step.1, fun clear => noClear_append_of clear step.2⟩
+          · split
+            · refine ⟨step.1.update (RunMachine.mem_of_fiber? currentFound)
+                (MaskLater.refl current), fun clear => ?_⟩
+              exact noClear_append_of (noClear_append_of clear step.2) rfl
+            · next exits nextTarget remaining walk =>
+              have updated := step.1.update (g := { current with
+                pending := current.pending.map fun q =>
+                  if q.token = token then
+                    {q with waitingOn := some nextTarget, remaining := remaining, collected := exits}
+                  else q }) (RunMachine.mem_of_fiber? currentFound) (MaskLater.refl current)
+              have edit := fiberEdit_keepsMask (.observe nextTarget (.countdown waiter token))
+                ((if p.failFast && !exit.isSuccess && p.collected.all Exit.isSuccess then
+                    interruptEach interp waiter (interp.stackAnnotations waiter) p.remaining
+                      (acc.1.emit [.observerFired id (.countdown waiter token)], [])
+                  else (acc.1.emit [.observerFired id (.countdown waiter token)], [])).1.update
+                  { current with pending := current.pending.map fun q =>
+                    if q.token = token then
+                      {q with waitingOn := some nextTarget, remaining := remaining, collected := exits}
+                    else q })
+              exact ⟨updated.trans edit.1,
+                fun clear => noClear_append_of (noClear_append_of clear step.2) edit.2⟩
   · split
     · exact ⟨MaskAged.refl _, fun clear => clear⟩
     · rename_i race found
@@ -1594,6 +1693,7 @@ theorem finalizerOr_keepsMask (interp : RunInterp ν σ β ε δ ι α χ St)
     · exact stepFrame_keepsMask interp m f y
   · exact stepFrame_keepsMask interp m f y
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- `fiberInterruptAs` records one interrupt, and its commands clear nothing. A step of
 `evaluatePrim_keepsMask`. -/
 @[semantics "scope-lifetime-finalization"]
@@ -1604,15 +1704,9 @@ theorem interruptAs_keepsMask (interp : RunInterp ν σ β ε δ ι α χ St)
   unfold evaluatePrim.interruptAs
   split
   · exact ⟨MaskAged.refl m, MaskLater.refl f, rfl, fun _ h => nomatch h⟩
-  · rename_i t found
-    split
-    rename_i recorded applyNow record
-    have later := interruptRecord_maskLater interp (some who) (interp.stackAnnotations f.id) t
-    rw [record] at later
-    refine ⟨MaskAged.emit ((MaskAged.refl m).update (RunMachine.mem_of_fiber? found) later) _,
-      MaskLater.refl f, ?_, fun _ h => nomatch h⟩
-    cases applyNow <;> rfl
+  · exact ⟨MaskAged.refl m, MaskLater.refl f, rfl, fun _ h => nomatch h⟩
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- Each `withFiber` action keeps the machine and the fiber. The two regions' entries keep the chain
 (`uninterruptible_maskChain`, `interruptibleRegion_maskChain`), and so does the mask's getter.
 A fork is a birth. Every other action writes no flag and no stack, or it pushes a neutral frame.
@@ -1644,9 +1738,9 @@ theorem withFiber_keepsMask (interp : RunInterp ν σ β ε δ ι α χ St)
     · exact ⟨MaskAged.refl m, MaskLater.refl f, rfl, fun _ h => nomatch h⟩
     · exact ⟨MaskAged.refl m, MaskLater.refl f, rfl, fun _ h => nomatch h⟩
   · rename_i target scope
-    have facts := linkScope_keepsMask (MaskAged.refl m) interp Supervision.ScopeMode.fiberRunIn
+    have facts := linkScopeEdits_keepsMask (MaskAged.refl m) interp Supervision.ScopeMode.fiberRunIn
       scope target (some target) ReasonAnnotations.empty
-    exact ⟨facts.1, MaskLater.refl f, facts.2,
+    exact ⟨facts, MaskLater.refl f, rfl,
       fun exit finished => (outcomeOf_unfinished _ _ exit finished).elim⟩
   · exact ⟨MaskAged.refl m, MaskLater.refl f, rfl, fun _ h => nomatch h⟩
   · exact interruptAs_keepsMask interp m f y _ _
@@ -1656,16 +1750,16 @@ theorem withFiber_keepsMask (interp : RunInterp ν σ β ε δ ι α χ St)
   · exact ⟨MaskAged.refl m, MaskLater.refl f,
       noClear_append_of (noClear_map _ (fun _ => rfl) _) rfl, fun _ h => nomatch h⟩
   · rename_i targets
-    have facts := countdownPark_keepsMask (MaskAged.refl m) interp f targets Resume.exitsValue false
+    have facts := countdownParkEdits_keepsMask (MaskAged.refl m) interp f targets Resume.exitsValue false
     exact ⟨facts.1, facts.2, rfl,
       fun exit finished => (outcomeOf_unfinished _ _ exit finished).elim⟩
   · rename_i targets
-    have facts := countdownPark_keepsMask (MaskAged.refl m) interp f targets Resume.exitsValue true
+    have facts := countdownParkEdits_keepsMask (MaskAged.refl m) interp f targets Resume.exitsValue true
     exact ⟨facts.1, facts.2, rfl,
       fun exit finished => (outcomeOf_unfinished _ _ exit finished).elim⟩
   · exact ⟨MaskAged.refl m, MaskLater.refl f, rfl, fun _ h => nomatch h⟩
   · rename_i snapshot
-    have facts := countdownPark_keepsMask (MaskAged.refl m) interp f
+    have facts := countdownParkEdits_keepsMask (MaskAged.refl m) interp f
       (f.children.filter fun c => !(snapshot.contains c)) Resume.void false
     exact ⟨facts.1, facts.2, rfl,
       fun exit finished => (outcomeOf_unfinished _ _ exit finished).elim⟩
@@ -1687,8 +1781,7 @@ theorem withFiber_keepsMask (interp : RunInterp ν σ β ε δ ι α χ St)
   · exact ⟨forkFinalizers_maskAged interp f _ (MaskAged.refl m), MaskLater.refl f,
       noClear_append_of (noClear_map _ (fun _ => rfl) _) rfl, fun _ h => nomatch h⟩
   · exact ⟨MaskAged.refl m, MaskLater.refl f, rfl, fun _ h => nomatch h⟩
-  · refine ⟨MaskAged.mapFibers (MaskAged.refl m) _ ?_, MaskLater.refl f, rfl, fun _ h => nomatch h⟩
-    exact fun g => MaskLater.refl g
+  · exact ⟨MaskAged.refl m, MaskLater.refl f, rfl, fun _ h => nomatch h⟩
   · split
     · exact ⟨MaskAged.refl m, MaskLater.refl f, rfl, fun _ h => nomatch h⟩
     · exact ⟨MaskAged.refl m, MaskLater.refl f, rfl, fun _ h => nomatch h⟩
@@ -1717,9 +1810,9 @@ theorem evaluatePrim_keepsMask (interp : RunInterp ν σ β ε δ ι α χ St)
     · exact registerRace_keepsMask m f y _
     · rename_i targets _
       have facts :=
-        countdownPark_keepsMask (MaskAged.refl m) interp f targets Resume.exitsValue false
+        countdownParkEdits_keepsMask (MaskAged.refl m) interp f targets Resume.exitsValue false
       split
-      rename_i m' f' parked park
+      rename_i m' f' parked edits park
       rw [park] at facts
       cases parked
       · exact ⟨facts.1, facts.2, rfl, fun _ h => nomatch h⟩
@@ -1729,10 +1822,7 @@ theorem evaluatePrim_keepsMask (interp : RunInterp ν σ β ε δ ι α χ St)
       · rename_i t found
         split
         · exact ⟨MaskAged.refl m, MaskLater.refl f, rfl, fun _ h => nomatch h⟩
-        · refine ⟨MaskAged.emit (MaskAged.update_old ?_ (RunMachine.mem_of_fiber? found) ?_) _,
-            MaskLater.refl f, rfl, fun _ h => nomatch h⟩
-          · exact MaskAged.refl m
-          · exact MaskLater.refl t
+        · exact ⟨MaskAged.refl m, MaskLater.refl f, rfl, fun _ h => nomatch h⟩
     · split
       · split
         · exact withFiber_keepsMask interp m f y _

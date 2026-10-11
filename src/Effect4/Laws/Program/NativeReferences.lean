@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.NativeHistory
+import Effect4.Laws.Machine.StatePreservation
 
 /-!
 Concept: store-typing R4, serving `HeapSites.heap_sites_keep`.
@@ -56,15 +57,25 @@ theorem scope_link_refs (root : NativeEff) (table : RowTable) (mode : Supervisio
   · cases found
   · cases found; rfl
 
+/-- The native scope-link plan retains references before its addressed edits.
+Consumer: actual native actions and the eager link adapter. -/
+theorem link_plan_refs (root : NativeEff) (table : RowTable) (m : NativeMachine)
+    (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId) (who : Option FiberId)
+    (extra : ReasonAnnotations Ann) :
+    (linkScopeEdits (interpOf root table) m mode scope target who extra).1.state.refs = m.state.refs := by
+  unfold linkScopeEdits
+  dsimp only
+  repeat' split
+  all_goals aesop (add safe forward [(scope_link_refs root table)]) (add norm simp [RunMachine.emit])
+
 /-- Linking an existing native fiber retains references in every scope status. -/
 theorem link_refs (root : NativeEff) (table : RowTable) (m : NativeMachine)
     (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId) (who : Option FiberId)
     (extra : ReasonAnnotations Ann) :
     (linkScope (interpOf root table) m mode scope target who extra).1.state.refs = m.state.refs := by
   unfold linkScope
-  dsimp only
-  repeat' split
-  all_goals aesop (add safe forward [(scope_link_refs root table)]) (add norm simp [RunMachine.emit, RunMachine.update, modify_state])
+  rw [congrArg RunMachine.state (RunMachine.applyFiberEdits_shape _ _).1]
+  exact link_plan_refs root table m mode scope target who extra
 
 /-- Native registration changes only deferreds or timers. -/
 theorem register_refs (root : NativeEff) (completed) (table : RowTable) (name : EffName)
@@ -78,9 +89,8 @@ theorem register_refs (root : NativeEff) (completed) (table : RowTable) (name : 
 theorem countdown_refs (root : NativeEff) (completed) (table : RowTable) (m : NativeMachine)
     (fiber : SourceFiber) (targets : List FiberId) (resume : Resume EffName) (failFast : Bool) :
     (countdownPark (interpAt root completed table) m fiber targets resume failFast).1.state.refs = m.state.refs := by
-  unfold countdownPark
-  dsimp only
-  split <;> simp only [RunMachine.emit, modify_state]
+  exact congrArg Stores.refs (StatePreservation.countdown_state (interpAt root completed table)
+    m fiber targets resume failFast)
 
 /-- Spawning stores only a fiber and its provenance. -/
 theorem spawn_refs (root : NativeEff) (table : RowTable) (m : NativeMachine) (host : SourceFiber)
@@ -153,21 +163,21 @@ theorem action_refs (root : NativeEff) (completed) (table : RowTable) (m : Nativ
     exact (started spawned after returned final child options.startImmediately nested startEq).trans
       (born m spawned fiber returned program {options with daemon := true} site child birth)
   case case7 answer outcome target scope after nested found =>
-    have kept := link_refs root table m .fiberRunIn scope target (some target) ReasonAnnotations.empty
-    change (linkScope (interpAt root completed table) m .fiberRunIn scope target (some target) ReasonAnnotations.empty).1.state.refs = m.state.refs at kept
+    have kept := link_plan_refs root table m .fiberRunIn scope target (some target) ReasonAnnotations.empty
+    change (linkScopeEdits (interpAt root completed table) m .fiberRunIn scope target (some target) ReasonAnnotations.empty).1.state.refs = m.state.refs at kept
     rw [found] at kept
     exact kept
   case case9 target who =>
     unfold evaluatePrim.interruptAs
     split <;> rfl
-  case case13 outcome targets after returned parked found =>
-    have kept := countdown_refs root completed table m fiber targets .exitsValue false
+  case case13 outcome targets after returned parked edits found =>
+    have kept := congrArg Stores.refs (StatePreservation.countdown_plan_state (interpAt root completed table) m fiber targets .exitsValue false)
     rw [found] at kept; exact kept
-  case case14 outcome targets after returned parked found =>
-    have kept := countdown_refs root completed table m fiber targets .exitsValue true
+  case case14 outcome targets after returned parked edits found =>
+    have kept := congrArg Stores.refs (StatePreservation.countdown_plan_state (interpAt root completed table) m fiber targets .exitsValue true)
     rw [found] at kept; exact kept
-  case case16 outcome snapshot fresh after returned parked found =>
-    have kept := countdown_refs root completed table m fiber fresh .void false
+  case case16 outcome snapshot fresh after returned parked edits found =>
+    have kept := congrArg Stores.refs (StatePreservation.countdown_plan_state (interpAt root completed table) m fiber fresh .void false)
     rw [found] at kept; exact kept
   case case17 entrants site => rfl
   case case18 entrants site => rfl
@@ -219,29 +229,26 @@ theorem drop_refs (root : NativeEff) (table : RowTable) (scope key : Nat) (state
 theorem observer_refs (root : NativeEff) (table : RowTable) (id : FiberId) (exit : ExitV)
     (acc : NativeMachine × List SourceCommand) (observer : Observer) :
     (fireObserver (interpOf root table) id exit acc observer).1.state.refs = acc.1.state.refs := by
-  let emitted := acc.1.emit [RunEvent.observerFired id observer]
-  have counted (waiter : FiberId) (remaining : List FiberId) (failure : Bool) (next : NativeMachine)
-      (nested : List SourceCommand)
-      (found : (if failure then interruptEach (interpOf root table) waiter
-        ((interpOf root table).stackAnnotations waiter) remaining (emitted, []) else (emitted, [])) = (next, nested)) :
-      next.state.refs = acc.1.state.refs := by
-    split at found
-    · have kept := interrupt_each_refs root table waiter ((interpOf root table).stackAnnotations waiter) remaining (emitted, [])
-      rw [found] at kept; exact kept
-    · cases found; rfl
-  fun_cases fireObserver (interpOf root table) id exit acc observer
-  case case2 parent before =>
-    exact congrArg Stores.refs (modify_state before parent _)
-  case case4 scope key state before found => exact drop_refs root table scope key before.state state found
-  case case7 waiter token fiber p selected collected failure next nested exits walk changed before found countedEq =>
-    exact counted waiter p.remaining failure next nested countedEq
-  case case8 waiter token fiber p selected collected failure next nested exits target rest walk observing changed before found countedEq =>
-    change (observing.update changed).state.refs = acc.1.state.refs
-    change observing.state.refs = acc.1.state.refs
-    dsimp only [observing]
-    rw [modify_state]
-    exact counted waiter p.remaining failure next nested countedEq
-  all_goals rfl
+  cases observer with
+  | resumeAwait => rfl
+  | untrackChild => exact congrArg Stores.refs (modify_state _ _ _)
+  | dropScopeFinalizer scope key =>
+    simp only [fireObserver]
+    split
+    · rfl
+    · rename_i state step
+      exact drop_refs root table scope key _ state step
+  | countdown waiter token =>
+    simp only [fireObserver]
+    repeat' split
+    all_goals simp only [RunMachine.applyFiberEdit_state, RunMachine.update,
+      StatePreservation.interruptEach_state, RunMachine.emit]
+  | raceCallback =>
+    simp only [fireObserver]
+    split
+    · rfl
+    · split <;> rfl
+  | callback => rfl
 
 /-- Publishing an exit or installing middleware changes no reference cell. -/
 theorem exit_fiber_refs (root : NativeEff) (table : RowTable) (m : NativeMachine) (fiber : SourceFiber) (exit : ExitV) :
@@ -256,13 +263,6 @@ theorem exit_fiber_refs (root : NativeEff) (table : RowTable) (m : NativeMachine
 /-- Settling saves the acting fiber and commands, retaining its already produced store. -/
 theorem settle_refs (id : FiberId) (rest : List SourceCommand) (it : SourceIteration) :
     (settle id rest it).1.state.refs = it.machine.state.refs := by
-  unfold settle
-  split
-  · rfl
-  · rfl
-  · split <;> rfl
-  · rfl
-  · rfl
-  · rfl
+  exact congrArg Stores.refs (StatePreservation.settle_state id rest it)
 
 end Effect4.Program.SourceScope

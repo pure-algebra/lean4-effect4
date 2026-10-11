@@ -478,8 +478,8 @@ theorem settle_frame_ready {root : ProgramSource} {rootTy : EffTy} {w : World} {
     (hf0 : m.fiber? f.id = some f0) (running : f.running = true)
     (fr : RSaved) (code : ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty fr) :
     ∃ w', w.leHost w' ∧
-      ConfigTyped root rootTy w' (settle f.id rest ⟨m, { f with frame := fr }, y', .continue_, []⟩).1
-        (settle f.id rest ⟨m, { f with frame := fr }, y', .continue_, []⟩).2 := by
+      ConfigTyped root rootTy w' (settle f.id rest ⟨m, { f with frame := fr }, y', .continue_, [], []⟩).1
+        (settle f.id rest ⟨m, { f with frame := fr }, y', .continue_, [], []⟩).2 := by
   have same : f0.id = f.id := rfiber?_id hf0
   have look : (m.update f).fiber? f.id = some f := by
     have := rfiber?_update_self (m := m) (f := f0) (g := f) (by rw [same]; exact hf0) same.symm
@@ -505,8 +505,8 @@ theorem settle_frame_continue {root : ProgramSource} {rootTy : EffTy} {w : World
     (fr : RSaved) (code : ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty fr) :
     ∃ w', w.leHost w' ∧
       ConfigTyped root rootTy w'
-        (settle f.id rest (prepareIterR ⟨m, { f with frame := fr }, y', .continue_, []⟩)).1
-        (settle f.id rest (prepareIterR ⟨m, { f with frame := fr }, y', .continue_, []⟩)).2 := by
+        (settle f.id rest (prepareIterR ⟨m, { f with frame := fr }, y', .continue_, [], []⟩)).1
+        (settle f.id rest (prepareIterR ⟨m, { f with frame := fr }, y', .continue_, [], []⟩)).2 := by
   have id0 : f0.id = f.id := rfiber?_id hf0
   have look : (m.update f).fiber? f.id = some f := by
     have := rfiber?_update_self (m := m) (f := f0) (g := f) (by rw [id0]; exact hf0) id0.symm
@@ -524,10 +524,10 @@ theorem settle_frame_continue {root : ProgramSource} {rootTy : EffTy} {w : World
     Option.isSome_iff_exists.mp ((typed.machine.wide.fibers f.id).mpr
       (List.mem_map.mpr ⟨f, rfiber?_mem look, rfl⟩))
   obtain ⟨tin, current, _, _⟩ := code' ty declared
-  have idle : prepareScopedExitR ⟨m, { f with frame := fr' }, y', .continue_, []⟩ =
-      ⟨m, { f with frame := fr' }, y', .continue_, []⟩ := prepareScopedExitR_of_typed current
-  have glue : prepareIterR ⟨m, { f with frame := fr }, y', .continue_, []⟩ =
-      ⟨m, { f with frame := fr' }, y', .continue_, []⟩ := idle
+  have idle : prepareScopedExitR ⟨m, { f with frame := fr' }, y', .continue_, [], []⟩ =
+      ⟨m, { f with frame := fr' }, y', .continue_, [], []⟩ := prepareScopedExitR_of_typed current
+  have glue : prepareIterR ⟨m, { f with frame := fr }, y', .continue_, [], []⟩ =
+      ⟨m, { f with frame := fr' }, y', .continue_, [], []⟩ := idle
   rw [glue]
   exact settle_frame_ready typed hf0 running fr' code'
 
@@ -745,7 +745,7 @@ theorem Evaluating.settle_continue {root : ProgramSource} {rootTy : EffTy} {w : 
     {rest : List RCmd} {f : RFiber} {y y' : Bool} (ev : Evaluating root rootTy w m rest f y)
     (fr : RSaved) (code : ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty fr) :
     SettlesTyped root rootTy w f.id rest
-      (prepareIterR ⟨m, { f with frame := fr }, y', .continue_, []⟩) := by
+      (prepareIterR ⟨m, { f with frame := fr }, y', .continue_, [], []⟩) := by
   obtain ⟨f0, hf0, exit0⟩ := ev.stale
   exact settle_frame_continue ev.typed hf0 exit0 ev.running fr code
 
@@ -753,7 +753,7 @@ theorem Evaluating.settle_continue {root : ProgramSource} {rootTy : EffTy} {w : 
 theorem Evaluating.settle_ready {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
     {rest : List RCmd} {f : RFiber} {y y' : Bool} (ev : Evaluating root rootTy w m rest f y)
     (fr : RSaved) (code : ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty fr) :
-    SettlesTyped root rootTy w f.id rest ⟨m, { f with frame := fr }, y', .continue_, []⟩ := by
+    SettlesTyped root rootTy w f.id rest ⟨m, { f with frame := fr }, y', .continue_, [], []⟩ := by
   obtain ⟨f0, hf0, _⟩ := ev.stale
   exact settle_frame_ready ev.typed hf0 ev.running fr code
 
@@ -763,7 +763,7 @@ theorem Evaluating.settle_answered {root : ProgramSource} {rootTy : EffTy} {w : 
     {rest : List RCmd} {f : RFiber} {y y' : Bool} (ev : Evaluating root rootTy w m rest f y)
     (fr : RSaved) (code : ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty fr) :
     SettlesTyped root rootTy w f.id rest
-      (prepareIterR ⟨m, { f with frame := fr }, y', .answered, []⟩) := by
+      (prepareIterR ⟨m, { f with frame := fr }, y', .answered, [], []⟩) := by
   obtain ⟨ty, declared⟩ := ev.declared
   obtain ⟨tin, current, _, _⟩ := code ty declared
   have step := (configTyped_frame_step ev.typed rfl ev.look ev.running fr code
@@ -867,7 +867,7 @@ def maskFrame (fr : RSaved) (flag : Bool) (body : RProgram) (next : ExitV → RP
 theorem evaluateFiberR_mask (interp : RInterp) (m : RState) (f : RFiber) (y : Bool) (flag : Bool)
     (body : Body) (next : ExitV → RProgram) :
     evaluateFiberR interp m f y (.mask flag body) next =
-      ⟨m, { f with frame := maskFrame f.frame flag (bodyR interp body) next }, y, .continue_, []⟩ :=
+      ⟨m, { f with frame := maskFrame f.frame flag (bodyR interp body) next }, y, .continue_, [], []⟩ :=
   rfl
 
 /-- **`mask`**: the body's program is typed at the certificate (`bodyTyped_typed`, from `J`'s
@@ -913,7 +913,7 @@ theorem evaluateFiberR_getInterruptible (interp : RInterp) (m : RState) (f : RFi
       ⟨m, { f with
           frame := maskFrame f.frame false
             (.pure (.success (interp.restoreValue f.frame.interruptible))) (seqR next) },
-        y, .continue_, []⟩ :=
+        y, .continue_, [], []⟩ :=
   rfl
 
 /-- **`getInterruptible`** (decisions row 245): the mask at a constant body. The answer is a saved
@@ -976,7 +976,7 @@ theorem Evaluating.settle_answered_drain {root : ProgramSource} {rootTy : EffTy}
     (ev : Evaluating root rootTy w m rest f y) (fr : RSaved)
     (code : ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty fr) :
     SettlesTyped root rootTy w f.id rest
-      (prepareIterR ⟨m, { f with frame := fr }, y', .answered, [.drainDue]⟩) := by
+      (prepareIterR ⟨m, { f with frame := fr }, y', .answered, [.drainDue], []⟩) := by
   obtain ⟨w', ord, typed⟩ := ev.settle_answered (y' := y') fr code
   exact ⟨w', ord, configTyped_cons_drainDue typed⟩
 
@@ -1272,11 +1272,11 @@ theorem loop_preserves_of_clauses (root : ProgramSource) (rootTy : EffTy)
       frame := { charged.frame with current :=
         ((guardR .onSuccess (.vis (.inr (.yieldNow 0)) fun v => .pure (.success v))).bind
           (seqR fun _ => charged.frame.current)) } }
-    have injected : injectYield m charged y = some ⟨m.emit events, wrapped, true, .continue_, []⟩ := by
+    have injected : injectYield m charged y = some ⟨m.emit events, wrapped, true, .continue_, [], []⟩ := by
       unfold injectYield
       rw [if_pos injects]
     have iterationEq : iteration (interpR root.program) m f y =
-        ⟨m.emit events, g, true, .continue_, []⟩ := by
+        ⟨m.emit events, g, true, .continue_, [], []⟩ := by
       calc
         iteration (interpR root.program) m f y =
             evaluateR (interpRAt root.program (m.emit events).completedExits)
@@ -1284,7 +1284,7 @@ theorem loop_preserves_of_clauses (root : ProgramSource) (rootTy : EffTy)
           unfold iteration
           dsimp only
           rw [injected]
-        _ = ⟨m.emit events, g, true, .continue_, []⟩ := rfl
+        _ = ⟨m.emit events, g, true, .continue_, [], []⟩ := rfl
     have frameTyped := (configTyped_frame_step chargedTyped rfl chargedLook chargedRunning fr
       (fun ty declared => injected_frame_code chargedTyped chargedLook chargedRunning
         chargedNotDeferred ty declared)
@@ -1629,7 +1629,7 @@ theorem Evaluating.settle_callback {root : ProgramSource} {rootTy : EffTy} {w : 
     (fr : RSaved) {ty : EffTy} (declared : w.Γ f.id = some ty)
     (callback : HostCallback root w (m.update f) f.id ty fr) :
     SettlesTyped root rootTy w f.id rest
-      (prepareIterR ⟨m, { f with frame := fr }, y, .continue_, []⟩) := by
+      (prepareIterR ⟨m, { f with frame := fr }, y, .continue_, [], []⟩) := by
   have wide := ev.typed.machine.wide
   obtain ⟨tcb, prev, sc, ex, hcb, hexOk, ⟨live, services⟩, stack, prov⟩ := callback
   obtain ⟨next, hcur⟩ := scopeExitCallback?_some hcb
@@ -1661,7 +1661,7 @@ theorem Evaluating.settle_callback {root : ProgramSource} {rootTy : EffTy} {w : 
   -- any code typed at the callback's type settles, over the host stack below it
   suffices settles : ∀ code, TypedProg root w tcb code →
       SettlesTyped root rootTy w f.id rest
-        ⟨{ m with state := s }, { g with frame := { fr with current := code } }, y, .continue_, []⟩ by
+        ⟨{ m with state := s }, { g with frame := { fr with current := code } }, y, .continue_, [], []⟩ by
     have fins := finalizers_of_typedState ev.typed.machine
     rw [wide.state] at fins
     have finsAdm := finalizersAdmitted_of_typedState ev.typed.machine
@@ -1670,18 +1670,18 @@ theorem Evaluating.settle_callback {root : ProgramSource} {rootTy : EffTy} {w : 
       (fitsExit_unknown hexOk.1) (hprog false)
     cases program with
     | none =>
-      have glue : prepareIterR ⟨m, { f with frame := fr }, y, .continue_, []⟩ =
+      have glue : prepareIterR ⟨m, { f with frame := fr }, y, .continue_, [], []⟩ =
           ⟨{ m with state := s },
             { g with frame := { fr with current := .vis (.inr (.finishFinalizer ex)) next } }, y,
-            .continue_, []⟩ := by
+            .continue_, [], []⟩ := by
         simp only [prepareIterR, prepareScopedExitR, answerR, hcur, prepareR, hprog]
         rfl
       rw [glue]
       exact settles _ (.finishFinalizer hexOk)
     | some c =>
-      have glue : prepareIterR ⟨m, { f with frame := fr }, y, .continue_, []⟩ =
+      have glue : prepareIterR ⟨m, { f with frame := fr }, y, .continue_, [], []⟩ =
           ⟨{ m with state := s }, { g with frame := { fr with current := (finalizerR ex c).bind next } },
-            y, .continue_, []⟩ := by
+            y, .continue_, [], []⟩ := by
         simp only [prepareIterR, prepareScopedExitR, answerR, hcur, prepareR, hprog]
         rfl
       rw [glue]
@@ -1706,11 +1706,11 @@ theorem Evaluating.settle_marker {root : ProgramSource} {rootTy : EffTy} {w : Wo
     (fr : RSaved) {ty : EffTy} (declared : w.Γ f.id = some ty)
     (marker : HostMarker root w (m.update f) f.id ty fr) :
     SettlesTyped root rootTy w f.id rest
-      (prepareIterR ⟨m, { f with frame := fr }, y, .continue_, []⟩) := by
+      (prepareIterR ⟨m, { f with frame := fr }, y, .continue_, [], []⟩) := by
   have ⟨raceId, _, _, hmark, _⟩ := marker
   obtain ⟨k, hk⟩ := raceRegistrationR_shape hmark
-  have inert : prepareIterR ⟨m, { f with frame := fr }, y, .continue_, []⟩ =
-      ⟨m, { f with frame := fr }, y, .continue_, []⟩ := by
+  have inert : prepareIterR ⟨m, { f with frame := fr }, y, .continue_, [], []⟩ =
+      ⟨m, { f with frame := fr }, y, .continue_, [], []⟩ := by
     obtain ⟨cur, stk, intr, ic, di⟩ := fr
     change cur = _ at hk
     subst hk
@@ -1728,7 +1728,7 @@ theorem Evaluating.settle_finished {root : ProgramSource} {rootTy : EffTy} {w : 
     (prov : InterruptProvenance fr) (marker : raceRegistrationR f.frame.current = none)
     (ex : ExitV) (exit : ∀ ty, w.Γ f.id = some ty → ExitOk w ty ex) :
     SettlesTyped root rootTy w f.id rest
-      (prepareIterR ⟨m, { f with frame := fr }, y, .finished ex, []⟩) := by
+      (prepareIterR ⟨m, { f with frame := fr }, y, .finished ex, [], []⟩) := by
   obtain ⟨ty, declared⟩ := ev.declared
   obtain ⟨tin, current, _, _⟩ := ev.code marker ty declared
   let fr' : RSaved := { fr with current := prepareR m.completedExits fr.current }
@@ -1736,8 +1736,8 @@ theorem Evaluating.settle_finished {root : ProgramSource} {rootTy : EffTy} {w : 
     show TypedProg root w tin (prepareR m.completedExits fr.current)
     rw [cur]
     exact prepareR_typed _ _ ev.view current
-  have glue : prepareIterR ⟨m, { f with frame := fr }, y, .finished ex, []⟩ =
-      ⟨m, { f with frame := fr' }, y, .finished ex, []⟩ :=
+  have glue : prepareIterR ⟨m, { f with frame := fr }, y, .finished ex, [], []⟩ =
+      ⟨m, { f with frame := fr' }, y, .finished ex, [], []⟩ :=
     prepareScopedExitR_of_typed prepared
   rw [glue]
   have step := configTyped_frame_finish ev.typed rfl ev.look ev.running fr' empty
@@ -2003,7 +2003,7 @@ theorem clause_interruptScoped (root : ProgramSource) (rootTy : EffTy) (target :
     FiberClauseKeeps root rootTy (.interruptScoped target) := by
   intro w m rest f y next ev hc
   show SettlesTyped root rootTy w f.id rest (prepareIterR
-    (if target = f.id then ⟨m, answerR f (next .unit), y, .continue_, []⟩
+    (if target = f.id then ⟨m, answerR f (next .unit), y, .continue_, [], []⟩
      else FiberAction.interruptScoped _ m (saveAnswerR f (seqR next)) y target))
   split
   · exact ev.settle_continue _ (ev.answer_typed hc (by rw [hc]; rfl) (fun _ h => nomatch h)
@@ -2135,55 +2135,66 @@ theorem clause_interruptAs (root : ProgramSource) (rootTy : EffTy) (target who :
     (prepareIterR (FiberAction.interruptAs _ m g y target who))
   unfold FiberAction.interruptAs
   by_cases self : target = f.id
-  · -- the fiber interrupts itself: the record is overwritten by its own settlement
-    subst self
+  · subst self
     rw [hf0]
-    dsimp only
-    rcases hr : interruptRecord (interpRAt root.program m.completedExits) (some who)
-      ((interpRAt root.program m.completedExits).stackAnnotations g.id) f0 with ⟨t', applyNow⟩
-    have tid : t'.id = f.id := by
-      rw [← rfiber?_id hf0, ← interruptRecord_id (interpRAt root.program m.completedExits) (some who)
-        ((interpRAt root.program m.completedExits).stackAnnotations g.id) f0, hr]
-    have machines : ((m.update t').emit [RunEvent.interruptRecorded (some who) f.id]).update g =
-        (m.update g).emit [RunEvent.interruptRecorded (some who) f.id] := by
-      rw [emit_update_comm, rupdate_rupdate m (show g.id = t'.id from tid.symm)]
+    have sourceId : f0.id = g.id := rfiber?_id hf0
+    have installed : ((m.emit [.interruptRecorded (some who) f.id]).update g).fiber? g.id = some g := lookG
+    let changed := interruptRecord (interpR root.program) (some who) (stackAnnotationsOf f.id) g
+    have changedId : changed.1.id = g.id := interruptRecord_id _ _ _ _
+    have recorded := configTyped_interruptRecord
+      (configTyped_emit after [.interruptRecorded (some who) f.id]) installed
+      (some who) (stackAnnotationsOf f.id)
+    have finalLook : (((m.emit [.interruptRecorded (some who) f.id]).update g).update changed.1).fiber?
+        changed.1.id = some changed.1 := rfiber?_update_self installed changedId
+    have same := rupdate_self finalLook recorded.machine.wide.fiberIds
     refine ⟨w, leHost_refl w, ?_⟩
-    show ConfigTyped root rootTy w
-      (((m.update t').emit [RunEvent.interruptRecorded (some who) f.id]).update g)
-      ((if applyNow then [Cmd.evaluate f.id] else []) ++
-        [Cmd.afterInterrupt f.id y (.join f.id .awaitValue)] ++ rest)
-    rw [machines, List.append_assoc]
-    cases applyNow
-    · exact configTyped_emit after _
-    · exact configTyped_emit (configTyped_cons_evaluate after f.id) _
-  · -- another fiber: recorded, with its evaluation queued when it was idle and interruptible
-    have ht : m.fiber? target = some t₁ := by
+    simp only [prepareIterR, settle, applyFiberEdits, List.foldl_cons, List.foldl_nil,
+      applyFiberEdit, List.nil_append]
+    rw [sourceId, installed]
+    dsimp only
+    have delta : interruptWithCause
+        (interruptCause (interpRAt root.program m.completedExits) (some who)
+          ((interpRAt root.program m.completedExits).stackAnnotations g.id) g.id) g = changed := rfl
+    rw [delta]
+    have finalLook' : (((m.emit [.interruptRecorded (some who) f.id]).update g).update changed.1).fiber?
+        g.id = some changed.1 := by
+      rw [← changedId]
+      exact finalLook
+    rw [finalLook']
+    simp only [settleOutcome]
+    rw [same, List.append_assoc]
+    exact recorded
+  · have ht : m.fiber? target = some t₁ := by
       rw [← rfiber?_update_other (m := m) (g := f) self]
       exact ht₁
     rw [ht]
-    dsimp only
-    rcases hr : interruptRecord (interpRAt root.program m.completedExits) (some who)
-      ((interpRAt root.program m.completedExits).stackAnnotations g.id) t₁ with ⟨t', applyNow⟩
-    have hr' : interruptRecord (interpR root.program) (some who) (stackAnnotationsOf f.id) t₁ =
-        (t', applyNow) := hr
-    have tid : t'.id = target := by
-      rw [← rfiber?_id ht, ← interruptRecord_id (interpRAt root.program m.completedExits) (some who)
-        ((interpRAt root.program m.completedExits).stackAnnotations g.id) t₁, hr]
-    have htG : (m.update g).fiber? target = some t₁ := by
-      rw [rfiber?_update_other (m := m) (g := g) self]
+    have targetId : t₁.id = target := rfiber?_id ht
+    have installed : ((m.emit [.interruptRecorded (some who) target]).update g).fiber? target = some t₁ := by
+      rw [rfiber?_update_other (m := m.emit _) (g := g) self]
       exact ht
-    have recorded := configTyped_interruptRecord after htG (some who) (stackAnnotationsOf f.id)
-    rw [hr'] at recorded
-    have machines : ((m.update t').emit [RunEvent.interruptRecorded (some who) target]).update g =
-        ((m.update g).update t').emit [RunEvent.interruptRecorded (some who) target] := by
-      rw [emit_update_comm, rupdate_comm m (show g.id ≠ t'.id from fun h => self (tid.symm.trans h.symm))]
+    let changed := interruptRecord (interpR root.program) (some who) (stackAnnotationsOf f.id) t₁
+    have changedId : changed.1.id = target := (interruptRecord_id _ _ _ _).trans targetId
+    have recorded := configTyped_interruptRecord
+      (configTyped_emit after [.interruptRecorded (some who) target]) installed
+      (some who) (stackAnnotationsOf f.id)
+    have ownerLook : (((m.emit [.interruptRecorded (some who) target]).update g).update changed.1).fiber?
+        g.id = some g := by
+      rw [rfiber?_update_other (show g.id ≠ changed.1.id from fun same => self (changedId.symm.trans same.symm))]
+      exact lookG
+    have same := rupdate_self ownerLook recorded.machine.wide.fiberIds
     refine ⟨w, leHost_refl w, ?_⟩
-    show ConfigTyped root rootTy w
-      (((m.update t').emit [RunEvent.interruptRecorded (some who) target]).update g)
-      ((if applyNow then [Cmd.evaluate target] else []) ++
-        [Cmd.afterInterrupt f.id y (.join target .awaitValue)] ++ rest)
-    rw [machines, List.append_assoc]
-    exact configTyped_emit recorded _
+    simp only [prepareIterR, settle, applyFiberEdits, List.foldl_cons, List.foldl_nil,
+      applyFiberEdit, List.nil_append]
+    rw [installed]
+    dsimp only
+    have delta : interruptWithCause
+        (interruptCause (interpRAt root.program m.completedExits) (some who)
+          ((interpRAt root.program m.completedExits).stackAnnotations g.id) t₁.id) t₁ = changed := rfl
+    rw [delta]
+    rw [ownerLook]
+    simp only [settleOutcome]
+    rw [same, List.append_assoc]
+    exact recorded
 
 /-! ## `cancelRace`: the race's entrants interrupted through the queue -/
 

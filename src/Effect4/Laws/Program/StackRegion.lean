@@ -62,8 +62,8 @@ theorem other_edit_stack {first last : NFiber} (edit : OtherEdit first last) :
   cases edit with
   | observe => rfl
   | filterObservers => rfl
-  | interrupted interp fiber who extra =>
-    unfold interruptRecord interruptWithCause
+  | interruptCause cause =>
+    unfold interruptWithCause
     dsimp only
     repeat' split
     all_goals rfl
@@ -123,11 +123,11 @@ theorem fields {id : FiberId} {below : List NCode} {first last : NativeMachine}
     fun fiber member => held.frames fiber (fibers ▸ member)⟩
 
 /-- Every settle outcome installs the proved suffix; exited rows remain outside the assertion. -/
-theorem settle_held {id : FiberId} {below : List NCode} (owner : FiberId)
+theorem settleOutcome_held {id : FiberId} {below : List NCode} (owner : FiberId)
     (rest : List NCommand) (result : NIter) (held : Held id below result.machine)
     (inside : result.fiber.id = id → result.fiber.exit = none → Inside below result.fiber) :
-    Held id below (settle owner rest result).1 := by
-  unfold settle
+    Held id below (settleOutcome owner rest result).1 := by
+  unfold settleOutcome
   split
   · exact update _ held inside
   · exact update _ held inside
@@ -137,6 +137,23 @@ theorem settle_held {id : FiberId} {below : List NCode} (owner : FiberId)
   · exact update _ held inside
   · exact update _ held inside
   · exact fields (update {result.fiber with running := false} held inside) rfl (Nat.le_refl _)
+
+/-- Message settlement retains the suffix through the shared interference word and actual owner. -/
+theorem settle_held {id : FiberId} {below : List NCode} (owner : FiberId)
+    (rest : List NCommand) (result : NIter) (held : Held id below result.machine)
+    (inside : result.fiber.id = id → result.fiber.exit = none → Inside below result.fiber) :
+    Held id below (settle owner rest result).1 := by
+  unfold settle
+  split
+  · exact settleOutcome_held owner rest result held inside
+  · have changed := interferes (InterferesWithLookup.fiberEdits result.edits _).backward
+      (update result.fiber held inside)
+    dsimp only
+    split
+    · exact fields changed rfl (Nat.le_refl _)
+    · rename_i selected found
+      exact settleOutcome_held owner rest _ changed
+        (changed.frames selected (List.mem_of_find?_eq_some found))
 
 /-- The actual loop installation retains the region when the watched detached evaluation continues. -/
 theorem loop_held (root : NativeEff) (table : RowTable) (interp : NInterp)

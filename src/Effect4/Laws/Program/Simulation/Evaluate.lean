@@ -42,30 +42,31 @@ structure IterRelP (table : RowTable) (root : NativeEff) (it₁ : FIter) (it₂ 
   yielding : it₁.yielding = it₂.yielding
   outcome : it₁.outcome = it₂.outcome
   nested : ListRel (CMeans root) it₁.nested it₂.nested
+  edits : it₁.edits = it₂.edits
 
 theorem IterRel.toP {root : NativeEff} {it₁ : FIter} {it₂ : RIter} (h : IterRel table root it₁ it₂) :
     IterRelP table root it₁ it₂ :=
-  ⟨h.ok, h.machine, h.fiber.answer' (h.fiber.current.prepare _), h.yielding, h.outcome, h.nested⟩
+  ⟨h.ok, h.machine, h.fiber.answer' (h.fiber.current.prepare _), h.yielding, h.outcome, h.nested, h.edits⟩
 
 /-- Construction glue after an iteration that is neither a store answer nor a command
 handoff: the term's current is prepared and no scoped callback is pending. -/
 theorem iterRelP_prepare {root : NativeEff} {it₁ : FIter} {it₂ : RIter} (h : IterRelP table root it₁ it₂)
     (hout : it₂.outcome ≠ .answered ∧ it₂.outcome ≠ .commands) :
     IterRel table root it₁ (prepareIterR it₂) := by
-  obtain ⟨m₂, g₂, y₂, o₂, n₂⟩ := it₂
-  obtain ⟨hok, hm, hf, hy, ho, hn⟩ := h
-  dsimp only at hok hm hf hy ho hn hout
-  cases o₂
-  all_goals first
-    | exact absurd rfl hout.1
-    | exact absurd rfl hout.2
-    | (dsimp only [prepareIterR]
-       rw [prepareScopedExitR_of_not _ (codeMeans_not_scopeExit root hf.current)]
-       exact ⟨hok, hm, hf, hy, ho, hn⟩)
+  obtain ⟨m₂, g₂, y₂, o₂, n₂, e₂⟩ := it₂
+  obtain ⟨hok, hm, hf, hy, ho, hn, he⟩ := h
+  dsimp only at hok hm hf hy ho hn he hout
+  cases o₂ with
+  | answered => exact absurd rfl hout.1
+  | commands => exact absurd rfl hout.2
+  | continue_ | parked | finished _ | stuck _ =>
+    dsimp only [prepareIterR]
+    rw [prepareScopedExitR_of_not _ (codeMeans_not_scopeExit root hf.current)]
+    exact ⟨hok, hm, hf, hy, ho, hn, he⟩
 
 theorem iterRel_prepare {root : NativeEff} {it₁ : FIter} {it₂ : RIter} (h : IterRel table root it₁ it₂) :
     IterRel table root it₁ (prepareIterR it₂) := by
-  obtain ⟨m₂, g₂, y₂, o₂, n₂⟩ := it₂
+  obtain ⟨m₂, g₂, y₂, o₂, n₂, e₂⟩ := it₂
   cases o₂ with
   | answered => exact h
   | commands => exact h
@@ -177,11 +178,10 @@ theorem evaluatePrim_awaitAllPark (root : NativeEff) (c : List (FiberId × ExitV
     (hcur : f.frame.current = Prim.suspend thunk)
     (hp : (interpAt root c table).parkOf (Prim.suspend thunk) = some (Except.ok (.awaitAll targets))) :
     evaluatePrim (interpAt root c table) m f y =
-      (fun (r : FMachine × FRun × Bool) =>
-        (⟨r.1, r.2.1, y, if r.2.2 then .parked else .continue_, []⟩ : FIter))
-        (countdownPark (interpAt root c table) m f targets Resume.exitsValue false) := by
+      (fun (r : FMachine × FRun × Bool × List (FiberEdit Err Defect FiberId Ann)) =>
+        (⟨r.1, r.2.1, y, if r.2.2.1 then .parked else .continue_, [], r.2.2.2⟩ : FIter))
+        (countdownParkEdits (interpAt root c table) m f targets Resume.exitsValue false) := by
   simp only [evaluatePrim, hcur, hp]
-  try rfl
 
 theorem evaluatePrim_join (root : NativeEff) (c : List (FiberId × ExitV)) (m : FMachine) (f : FRun)
     (y : Bool) {thunk : EffThunk} (target : FiberId) (mode : Supervision.ObserverMode)
@@ -211,7 +211,7 @@ theorem evaluatePrim_sync_some (root : NativeEff) (c : List (FiberId × ExitV)) 
     (hs : (interpAt root c table).syncState thunk m.state = some (s, v)) :
     evaluatePrim (interpAt root c table) m f y =
       ⟨{ m with state := s }, { f with frame := { f.frame with current := Prim.success v } }, y,
-        .answered, [.drainDue]⟩ := by
+        .answered, [.drainDue], []⟩ := by
   simp only [evaluatePrim, hcur, parkOf_sync', hs]
 
 theorem evaluatePrim_sync_none (root : NativeEff) (c : List (FiberId × ExitV)) (m : FMachine) (f : FRun)
@@ -219,7 +219,7 @@ theorem evaluatePrim_sync_none (root : NativeEff) (c : List (FiberId × ExitV)) 
     (hs : (interpAt root c table).syncState thunk m.state = none) :
     evaluatePrim (interpAt root c table) m f y =
       ⟨m, { f with frame := { f.frame with current := Prim.success ((interpAt root c table).syncValue thunk) } },
-        y, .answered, []⟩ := by
+        y, .answered, [], []⟩ := by
   simp only [evaluatePrim, hcur, parkOf_sync', hs]
 
 /-- The frame's `Async` arm, by the registration's answer. -/
@@ -229,7 +229,7 @@ theorem evaluatePrim_async_some (root : NativeEff) (c : List (FiberId × ExitV))
     (hreg : (interpAt root c table).registerAsync register f.id m.nextToken m.state = (s, some next)) :
     evaluatePrim (interpAt root c table) m f y =
       ⟨{ m with state := s, nextToken := m.nextToken + 1 },
-        { f with frame := { f.frame with current := next } }, y, .continue_, [.drainDue]⟩ := by
+        { f with frame := { f.frame with current := next } }, y, .continue_, [.drainDue], []⟩ := by
   simp only [evaluatePrim, hcur, hreg]
 
 theorem evaluatePrim_async_none (root : NativeEff) (c : List (FiberId × ExitV)) (m : FMachine) (f : FRun)
@@ -243,9 +243,8 @@ theorem evaluatePrim_async_none (root : NativeEff) (c : List (FiberId × ExitV))
          else f
        let f' := f'.park ⟨m.nextToken, none, [], [], Resume.void, false⟩
        ⟨({ m with state := s, nextToken := m.nextToken + 1 }).emit [RunEvent.parkedOn f'.id m.nextToken],
-         f', y, .parked, []⟩) := by
+         f', y, .parked, [], []⟩) := by
   simp only [evaluatePrim, hcur, hreg]
-  try rfl
 
 /-! ## The frame step, by the head -/
 
@@ -330,26 +329,34 @@ theorem evaluateRawR_pure (i : RInterp) (m : RState) (g : RFiber) (y : Bool) {ex
 theorem evaluateRawR_store_some (i : RInterp) (m : RState) (g : RFiber) (y : Bool) {o : SyncOp}
     {k : Val → RProgram} (hcur : g.frame.current = .vis (.inl o) k) {s : Stores} {v : Val}
     (hs : syncOpStep o m.state = some (s, v)) :
-    evaluateRawR i m g y = ⟨{ m with state := s }, answerR g (k v), y, .answered, [.drainDue]⟩ := by
+    evaluateRawR i m g y = ⟨{ m with state := s }, answerR g (k v), y, .answered, [.drainDue], []⟩ := by
   simp only [evaluateRawR, hcur, hs]
 
 theorem evaluateRawR_store_none (i : RInterp) (m : RState) (g : RFiber) (y : Bool) {o : SyncOp}
     {k : Val → RProgram} (hcur : g.frame.current = .vis (.inl o) k) (hs : syncOpStep o m.state = none) :
-    evaluateRawR i m g y = ⟨m, answerR g (k .unit), y, .answered, []⟩ := by
+    evaluateRawR i m g y = ⟨m, answerR g (k .unit), y, .answered, [], []⟩ := by
   simp only [evaluateRawR, hcur, hs]
 
 /-! ## Small facts -/
 
+theorem countdownParkEdits_stuck (i : FInterp) (m : FMachine) (f : FRun) (targets : List FiberId)
+    (resume : Resume EffName) (failFast : Bool) :
+    (countdownParkEdits i m f targets resume failFast).1.stuck = m.stuck := by
+  unfold countdownParkEdits
+  dsimp only
+  split <;> rfl
+
+
+/-- The eager compatibility adapter changes no stuck marker after its countdown plan. -/
 theorem countdownPark_stuck (i : FInterp) (m : FMachine) (f : FRun) (targets : List FiberId)
     (resume : Resume EffName) (failFast : Bool) :
     (countdownPark i m f targets resume failFast).1.stuck = m.stuck := by
-  unfold countdownPark
-  dsimp only
-  split
-  · rfl
-  · show ((RunMachine.modify _ _ _).emit _).stuck = m.stuck
-    unfold RunMachine.modify
-    split <;> rfl
+  have shape := RunMachine.applyFiberEdits_shape
+    (countdownParkEdits i m f targets resume failFast).2.2.2
+    (countdownParkEdits i m f targets resume failFast).1
+  exact (congrArg (fun held : FMachine => held.stuck) shape.1).trans
+    (countdownParkEdits_stuck i m f targets resume failFast)
+
 
 theorem iterNext_gen_congr (root : NativeEff) (cv : List (FiberId × ExitV)) {p p' : Point}
     (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root ∧
@@ -514,10 +521,10 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
       obtain ⟨s, v⟩ := sv
       rw [evaluatePrim_sync_some root _ m₁ f₁ y hc₁ (hs₁.trans hs), evaluateRawR_store_some _ _ _ _ hc₂ hs]
       exact ⟨machineOk_stateOf hok (storesOk_syncOpStep (hm.state ▸ hok.state) hs), hm.stateOf _,
-        hf'.answer (hk v), rfl, rfl, ListRel.cons True.intro ListRel.nil⟩
+        hf'.answer (hk v), rfl, rfl, ListRel.cons True.intro ListRel.nil, rfl⟩
     | none =>
       rw [evaluatePrim_sync_none root _ m₁ f₁ y hc₁ (hs₁.trans hs), evaluateRawR_store_none _ _ _ _ hc₂ hs]
-      exact ⟨hok, hm, hf'.answer (hk _), rfl, rfl, ListRel.nil⟩
+      exact ⟨hok, hm, hf'.answer (hk _), rfl, rfl, ListRel.nil, rfl⟩
   | syncStore o k hk =>
     rw [evaluateNative_plain root m₁ f₁ y hc₁ rfl, hcomp]
     refine iterRel_prepare ?_
@@ -528,33 +535,33 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
       obtain ⟨s, v⟩ := sv
       rw [evaluatePrim_sync_some root _ m₁ f₁ y hc₁ (hs₁.trans hs), evaluateRawR_store_some _ _ _ _ hc₂ hs]
       exact ⟨machineOk_stateOf hok (storesOk_syncOpStep (hm.state ▸ hok.state) hs), hm.stateOf _,
-        hf'.answer (hk v), rfl, rfl, ListRel.cons True.intro ListRel.nil⟩
+        hf'.answer (hk v), rfl, rfl, ListRel.cons True.intro ListRel.nil, rfl⟩
     | none =>
       rw [evaluatePrim_sync_none root _ m₁ f₁ y hc₁ (hs₁.trans hs), evaluateRawR_store_none _ _ _ _ hc₂ hs]
-      exact ⟨hok, hm, hf'.answer (hk _), rfl, rfl, ListRel.nil⟩
+      exact ⟨hok, hm, hf'.answer (hk _), rfl, rfl, ListRel.nil, rfl⟩
   | syncPure p k hk =>
     rw [evaluateNative_plain root m₁ f₁ y hc₁ rfl, hcomp, evaluatePrim_sync_none root _ m₁ f₁ y hc₁ rfl,
       evaluateRawR_fiber _ _ _ _ hc₂]
-    exact iterRel_prepare ⟨hok, hm, hf'.answer hk, rfl, rfl, ListRel.nil⟩
+    exact iterRel_prepare ⟨hok, hm, hf'.answer hk, rfl, rfl, ListRel.nil, rfl⟩
   -- the suspensions
   | suspendBody p k hk =>
     rw [evaluateNative_plain root m₁ f₁ y hc₁ rfl, hcomp, evaluatePrim_step root _ m₁ f₁ y hc₁ rfl,
       stepFrame_eq', step_suspend _ _ hc₁, finishFrame_running, evaluateRawR_fiber _ _ _ _ hc₂]
     dsimp only [evaluateFiberR]
     exact iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _,
-      hf'.withFrame (means_answerWith hf'.means (hk _)), rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
+      hf'.withFrame (means_answerWith hf'.means (hk _)), rfl, rfl, ListRel.nil, rfl⟩ ⟨nofun, nofun⟩
   | suspendMemo q mm scope k hk =>
     rw [evaluateNative_plain root m₁ f₁ y hc₁ rfl, hcomp, evaluatePrim_step root _ m₁ f₁ y hc₁ rfl,
       stepFrame_eq', step_suspend _ _ hc₁, finishFrame_running, evaluateRawR_fiber _ _ _ _ hc₂]
     dsimp only [evaluateFiberR]
     exact iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _,
-      hf'.withFrame (means_answerWith hf'.means (hk _)), rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
+      hf'.withFrame (means_answerWith hf'.means (hk _)), rfl, rfl, ListRel.nil, rfl⟩ ⟨nofun, nofun⟩
   | frontier p p' reason k hp hloop =>
     rw [evaluateNative_plain root m₁ f₁ y hc₁ rfl, hcomp, evaluatePrim_step root _ m₁ f₁ y hc₁ rfl,
       stepFrame_eq', step_suspend _ _ hc₁, finishFrame_running, evaluateRawR_fiber _ _ _ _ hc₂]
     dsimp only [evaluateFiberR]
     refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _,
-      hf'.withFrame (means_answerWith hf'.means ?_), rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
+      hf'.withFrame (means_answerWith hf'.means ?_), rfl, rfl, ListRel.nil, rfl⟩ ⟨nofun, nofun⟩
     rw [hc₂]
     show CodeMeans root (suspendBodyAt root (.body { p' with completed := m₂.completedExits }))
       (.vis (.inr (.frontier reason p)) k)
@@ -566,27 +573,27 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
       stepFrame_eq', step_yieldError _ _ hc₁, finishFrame_running, evaluateRawR_fiber _ _ _ _ hc₂]
     dsimp only [evaluateFiberR]
     exact iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _,
-      hf'.withFrame (means_answerWith hf'.means (hk _)), rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
+      hf'.withFrame (means_answerWith hf'.means (hk _)), rfl, rfl, ListRel.nil, rfl⟩ ⟨nofun, nofun⟩
   | closeWalk strategy order ex k hk =>
     rw [evaluateNative_plain root m₁ f₁ y hc₁ rfl, hcomp, evaluatePrim_step root _ m₁ f₁ y hc₁ rfl,
       stepFrame_eq', step_suspend _ _ hc₁, finishFrame_running, evaluateRawR_fiber _ _ _ _ hc₂]
     dsimp only [evaluateFiberR]
     exact iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _,
-      hf'.withFrame (means_answerWith hf'.means (hk _)), rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
+      hf'.withFrame (means_answerWith hf'.means (hk _)), rfl, rfl, ListRel.nil, rfl⟩ ⟨nofun, nofun⟩
   -- a capture's release: the counted suspend on both sides (V1), as `closeWalk`
   | foreignRelease c ex k hk =>
     rw [evaluateNative_plain root m₁ f₁ y hc₁ rfl, hcomp, evaluatePrim_step root _ m₁ f₁ y hc₁ rfl,
       stepFrame_eq', step_suspend _ _ hc₁, finishFrame_running, evaluateRawR_fiber _ _ _ _ hc₂]
     dsimp only [evaluateFiberR]
     exact iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _,
-      hf'.withFrame (means_answerWith hf'.means (hk _)), rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
+      hf'.withFrame (means_answerWith hf'.means (hk _)), rfl, rfl, ListRel.nil, rfl⟩ ⟨nofun, nofun⟩
   -- the frames pushed by the current primitive
   | onSuccess body n g body' K hb hK hnone hsome =>
     rw [evaluateNative_plain root m₁ f₁ y hc₁ rfl, hcomp, evaluatePrim_step root _ m₁ f₁ y hc₁ rfl,
       stepFrame_eq', step_onSuccess _ _ hc₁, finishFrame_running, evaluateRawR_fiber _ _ _ _ hc₂]
     dsimp only [evaluateFiberR, saveR, pushR]
     rw [show (fun ex => g (some ex)) = K from funext hsome]
-    refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
+    refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil, rfl⟩ ⟨nofun, nofun⟩
     refine hf'.withFrame ⟨hf'.interruptible, hf'.interruptedCause, hf'.deferred, ?_,
       StackMeans.slot (SlotMeans.onSuccess body n K hK) hf'.stack, hf'.maskInv⟩
     show CodeMeans root body (prepareR _ (g none))
@@ -597,7 +604,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
       stepFrame_eq', step_onSuccessConst _ _ hc₁, finishFrame_running, evaluateRawR_fiber _ _ _ _ hc₂]
     dsimp only [evaluateFiberR, saveR, pushR]
     rw [show (fun ex => g (some ex)) = K from funext hsome]
-    refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
+    refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil, rfl⟩ ⟨nofun, nofun⟩
     refine hf'.withFrame ⟨hf'.interruptible, hf'.interruptedCause, hf'.deferred, ?_,
       StackMeans.slot (SlotMeans.onSuccessConst body next K hK) hf'.stack, hf'.maskInv⟩
     show CodeMeans root body (prepareR _ (g none))
@@ -608,7 +615,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
       stepFrame_eq', step_onFailure _ _ hc₁, finishFrame_running, evaluateRawR_fiber _ _ _ _ hc₂]
     dsimp only [evaluateFiberR, saveR, pushR]
     rw [show (fun ex => g (some ex)) = K from funext hsome]
-    refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
+    refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil, rfl⟩ ⟨nofun, nofun⟩
     refine hf'.withFrame ⟨hf'.interruptible, hf'.interruptedCause, hf'.deferred, ?_,
       StackMeans.slot (SlotMeans.onFailure body n K hK) hf'.stack, hf'.maskInv⟩
     show CodeMeans root body (prepareR _ (g none))
@@ -619,7 +626,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
       stepFrame_eq', step_onBoth _ _ hc₁, finishFrame_running, evaluateRawR_fiber _ _ _ _ hc₂]
     dsimp only [evaluateFiberR, saveR, pushR]
     rw [show (fun ex => g (some ex)) = K from funext hsome]
-    refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
+    refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil, rfl⟩ ⟨nofun, nofun⟩
     refine hf'.withFrame ⟨hf'.interruptible, hf'.interruptedCause, hf'.deferred, ?_,
       StackMeans.slot (SlotMeans.onBoth body a e K hA hE) hf'.stack, hf'.maskInv⟩
     show CodeMeans root body (prepareR _ (g none))
@@ -630,7 +637,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
       stepFrame_eq', step_exitFrame _ _ hc₁, finishFrame_running, evaluateRawR_fiber _ _ _ _ hc₂]
     dsimp only [evaluateFiberR, saveR, pushR]
     rw [show (fun ex => g (some ex)) = K from funext hsome]
-    refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
+    refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil, rfl⟩ ⟨nofun, nofun⟩
     refine hf'.withFrame ⟨hf'.interruptible, hf'.interruptedCause, hf'.deferred, ?_,
       StackMeans.slot (SlotMeans.exitFrame body K hK) hf'.stack, hf'.maskInv⟩
     show CodeMeans root body (prepareR _ (g none))
@@ -641,7 +648,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
       stepFrame_eq', step_onExit _ _ hc₁, finishFrame_running, evaluateRawR_fiber _ _ _ _ hc₂]
     dsimp only [evaluateFiberR, saveR, pushR]
     rw [show (fun ex => g (some ex)) = K from funext hsome]
-    refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
+    refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil, rfl⟩ ⟨nofun, nofun⟩
     refine hf'.withFrame ⟨hf'.interruptible, hf'.interruptedCause, hf'.deferred, ?_,
       StackMeans.slot (SlotMeans.onExit body fin K hK hsome_prog) hf'.stack, hf'.maskInv⟩
     show CodeMeans root body (prepareR _ (g none))
@@ -651,7 +658,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
     rw [evaluateNative_plain root m₁ f₁ y hc₁ rfl, hcomp, evaluatePrim_step root _ m₁ f₁ y hc₁ rfl,
       stepFrame_eq', step_onExit _ _ hc₁, finishFrame_running, evaluateRawR_fiber _ _ _ _ hc₂]
     dsimp only [evaluateFiberR, saveR, pushR]
-    refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
+    refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil, rfl⟩ ⟨nofun, nofun⟩
     refine hf'.withFrame ⟨hf'.interruptible, hf'.interruptedCause, hf'.deferred, ?_,
       StackMeans.slot (SlotMeans.scopedFrame body previous scope (fun ex => g (some ex)) k hk hsome)
         hf'.stack, hf'.maskInv⟩
@@ -671,17 +678,17 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
     cases hstep with
     | done v =>
       rw [step_iterator_done _ _ hc₁ hi, finishFrame_running]
-      refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
+      refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil, rfl⟩ ⟨nofun, nofun⟩
       exact (hf'.saveAnswer hk).withFrame ⟨hf'.interruptible, hf'.interruptedCause, hf'.deferred,
         CodeMeans.success v, StackMeans.answer k hk hf'.stack, hf'.maskInv⟩
     | halt c' =>
       rw [step_iterator_halt _ _ hc₁ hi, finishFrame_running]
-      refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
+      refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil, rfl⟩ ⟨nofun, nofun⟩
       exact (hf'.saveAnswer hk).withFrame ⟨hf'.interruptible, hf'.interruptedCause, hf'.deferred,
         CodeMeans.failure c', StackMeans.answer k hk hf'.stack, hf'.maskInv⟩
     | resume name hcode =>
       rw [step_iterator_resume _ _ hc₁ hi, finishFrame_running]
-      refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
+      refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil, rfl⟩ ⟨nofun, nofun⟩
       exact (hf'.saveAnswer hk).withFrame ⟨hf'.interruptible, hf'.interruptedCause, hf'.deferred,
         hcode.prepare _, StackMeans.slot (SlotMeans.iterator name Val.unit) (StackMeans.answer k hk hf'.stack),
         hf'.maskInv⟩
@@ -696,14 +703,14 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
     cases hrel with
     | «continue» entered hbody =>
       rw [step_whileLoop_true _ _ hc₁ h₁, finishFrame_running]
-      refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
+      refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil, rfl⟩ ⟨nofun, nofun⟩
       exact (hf'.saveAnswer hk).withFrame ⟨hf'.interruptible, hf'.interruptedCause, hf'.deferred,
         hbody.prepare _,
         StackMeans.slot (SlotMeans.whileLoop p p' entered hp) (StackMeans.answer k hk hf'.stack),
         hf'.maskInv⟩
     | finish hcode =>
       rw [step_whileLoop_false _ _ hc₁ h₁, finishFrame_running]
-      refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
+      refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil, rfl⟩ ⟨nofun, nofun⟩
       exact (hf'.saveAnswer hk).withFrame ⟨hf'.interruptible, hf'.interruptedCause, hf'.deferred,
         hcode.prepare _, StackMeans.answer k hk hf'.stack, hf'.maskInv⟩
   | closeIterSeq order ex k hk =>
@@ -718,17 +725,17 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
     cases hstep with
     | done v =>
       rw [step_iterator_done _ _ hc₁ hi, finishFrame_running]
-      refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
+      refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil, rfl⟩ ⟨nofun, nofun⟩
       exact (hf'.saveAnswer hk).withFrame ⟨hf'.interruptible, hf'.interruptedCause, hf'.deferred,
         CodeMeans.success v, StackMeans.answer k hk hf'.stack, hf'.maskInv⟩
     | halt c' =>
       rw [step_iterator_halt _ _ hc₁ hi, finishFrame_running]
-      refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
+      refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil, rfl⟩ ⟨nofun, nofun⟩
       exact (hf'.saveAnswer hk).withFrame ⟨hf'.interruptible, hf'.interruptedCause, hf'.deferred,
         CodeMeans.failure c', StackMeans.answer k hk hf'.stack, hf'.maskInv⟩
     | resume name hcode =>
       rw [step_iterator_resume _ _ hc₁ hi, finishFrame_running]
-      refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
+      refine iterRelP_prepare ⟨machineOk_emit hok _, hm.emitL _, ?_, rfl, rfl, ListRel.nil, rfl⟩ ⟨nofun, nofun⟩
       exact (hf'.saveAnswer hk).withFrame ⟨hf'.interruptible, hf'.interruptedCause, hf'.deferred,
         hcode.prepare _, StackMeans.slot (SlotMeans.iterator name Val.unit) (StackMeans.answer k hk hf'.stack),
         hf'.maskInv⟩
@@ -761,7 +768,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
           (machineOk_withStateToken (s := { m₂.state with deferreds := d }) hok
             (StoresOk.frame_deferreds table m₂.state (hm.state ▸ hok.state) d) _) _,
         BMeans.emit (hm.withStateToken _ _) _ _, ((hf'.saveAnswer hk).withFrame ?_).park _, rfl, rfl,
-        ListRel.nil⟩
+        ListRel.nil, rfl⟩
       rw [hf'.id]
       exact means_pushAsyncFinalizer (hf'.saveAnswer hk).means _
     | some prog =>
@@ -773,7 +780,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
         hm.withStateToken _ _,
         (hf'.saveAnswer hk).withFrame (means_answerWith (hf'.saveAnswer hk).means
           ((completion_means root prog).prepare _)), rfl, rfl,
-        ListRel.cons True.intro ListRel.nil⟩ ⟨nofun, nofun⟩
+        ListRel.cons True.intro ListRel.nil, rfl⟩ ⟨nofun, nofun⟩
   | asyncExternal slot k hk =>
     rw [evaluateNative_plain root m₁ f₁ y hc₁ rfl, hcomp, evaluateRawR_fiber _ _ _ _ hc₂]
     dsimp only [evaluateFiberR, saveAnswerR, pushR]
@@ -783,7 +790,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
     simp only [Bool.false_or, Option.isSome_none, Bool.false_eq_true, ↓reduceIte]
     rw [hm.nextToken, hm.state]
     exact iterRel_prepare ⟨machineOk_emit (machineOk_withStateToken hok (hm.state ▸ hok.state) _) _,
-      BMeans.emit (hm.withStateToken _ _) _ _, (hf'.saveAnswer hk).park _, rfl, rfl, ListRel.nil⟩
+      BMeans.emit (hm.withStateToken _ _) _ _, (hf'.saveAnswer hk).park _, rfl, rfl, ListRel.nil, rfl⟩
   | asyncForeign op request origin hnode k hk =>
     rw [evaluateNative_plain root m₁ f₁ y hc₁ rfl, hcomp, evaluateRawR_fiber _ _ _ _ hc₂]
     dsimp only [evaluateFiberR, saveAnswerR, pushR]
@@ -793,7 +800,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
     simp only [Bool.false_or, Option.isSome_none, Bool.false_eq_true, ↓reduceIte]
     rw [hm.nextToken, hm.state]
     exact iterRel_prepare ⟨machineOk_emit (machineOk_withStateToken hok (hm.state ▸ hok.state) _) _,
-      BMeans.emit (hm.withStateToken _ _) _ _, (hf'.saveAnswer hk).park _, rfl, rfl, ListRel.nil⟩
+      BMeans.emit (hm.withStateToken _ _) _ _, (hf'.saveAnswer hk).park _, rfl, rfl, ListRel.nil, rfl⟩
   | asyncSleep millis request k hk =>
     rw [evaluateNative_plain root m₁ f₁ y hc₁ rfl, hcomp, evaluateRawR_fiber _ _ _ _ hc₂]
     dsimp only [evaluateFiberR, saveAnswerR, pushR]
@@ -812,7 +819,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
           (s := { m₂.state with timers := m₂.state.timers.sleep g₂.id m₂.nextToken millis }) hok
           (StoresOk.frame_timers table m₂.state (hm.state ▸ hok.state) _) _) _,
       BMeans.emit (hm.withStateToken _ _) _ _, ((hf'.saveAnswer hk).withFrame ?_).park _, rfl, rfl,
-      ListRel.nil⟩
+      ListRel.nil, rfl⟩
     rw [hf'.id]
     exact means_pushAsyncFinalizer (hf'.saveAnswer hk).means _
   | joinValue target k hk =>
@@ -846,21 +853,21 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
     refine iterRel_prepare ?_
     show IterRel table root _ (FiberAction.awaitAll (interpRAt root m₂.completedExits table) m₂
       (saveAnswerR g₂ (seqR k)) y targets false)
-    have hp := countdownPark_rel root m₂.completedExits hok hm (hf'.saveAnswer hk) targets Resume.exitsValue
+    have hp := countdownParkEdits_rel root m₂.completedExits hok hm (hf'.saveAnswer hk) targets Resume.exitsValue
       (fun _ h => nomatch h) false
-    have hst : (countdownPark (interpAt root m₂.completedExits table) m₁ f₁ targets Resume.exitsValue false).1.stuck =
-        none := by rw [countdownPark_stuck]; exact hstuck
+    have hst : (countdownParkEdits (interpAt root m₂.completedExits table) m₁ f₁ targets Resume.exitsValue false).1.stuck =
+        none := by rw [countdownParkEdits_stuck]; exact hstuck
     unfold FiberAction.awaitAll
-    generalize countdownPark (interpAt root m₂.completedExits table) m₁ f₁ targets Resume.exitsValue false = r₁
+    generalize countdownParkEdits (interpAt root m₂.completedExits table) m₁ f₁ targets Resume.exitsValue false = r₁
       at hp hst ⊢
-    generalize countdownPark (interpRAt root m₂.completedExits table) m₂ (saveAnswerR g₂ (seqR k)) targets
+    generalize countdownParkEdits (interpRAt root m₂.completedExits table) m₂ (saveAnswerR g₂ (seqR k)) targets
       Resume.exitsValue false = r₂ at hp ⊢
-    obtain ⟨pm₁, pf₁, pk₁⟩ := r₁
-    obtain ⟨pm₂, pf₂, pk₂⟩ := r₂
+    obtain ⟨pm₁, pf₁, pk₁, pe₁⟩ := r₁
+    obtain ⟨pm₂, pf₂, pk₂, pe₂⟩ := r₂
     obtain ⟨hok', hm', hf'', hpk⟩ := hp
     dsimp only at hok' hm' hf'' hpk hst
-    subst hpk
-    refine ⟨hok', hm', hf'', rfl, ?_, ListRel.nil⟩
+    obtain ⟨rfl, rfl⟩ := Prod.mk.inj hpk
+    refine ⟨hok', hm', hf'', rfl, ?_, ListRel.nil, rfl⟩
     show (if pk₁ then Outcome.parked else Outcome.continue_) = FiberAction.outcomeOf pm₂ pk₁
     unfold FiberAction.outcomeOf
     rw [← hm'.stuck, hst]
@@ -896,7 +903,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
       unfold FiberAction.interruptScoped
       rw [if_neg (show ¬ target = (saveAnswerR g₂ (seqR k)).id from h₂)]
       exact ⟨hok, hm, (hf'.saveAnswer hk).withFrame (means_answerWith (hf'.saveAnswer hk).means
-        (interruptCode_means (table := table) root target)), rfl, rfl, ListRel.nil⟩
+        (interruptCode_means (table := table) root target)), rfl, rfl, ListRel.nil, rfl⟩
   | actInterruptAll t targets who k ht hk =>
     rw [evaluateNative_action root m₁ f₁ y hc₁ ht, hcomp, evaluateRawR_fiber _ _ _ _ hc₂]
     exact iterRel_prepare (interruptAll_rel root _ hok hm (hf'.saveAnswer hk) y targets who)
@@ -932,12 +939,12 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
       · simp only [hi, ↓reduceIte, Bool.false_and, Bool.true_eq_false]
         exact ⟨hok, hm, (hf'.saveAnswer hk).withFrame ⟨rfl, rfl, hf'.deferred, hbody.prepare _,
           StackMeans.slot (SlotMeans.mask true) (StackMeans.answer k hk hf'.stack), hi ▸ hf'.maskInv⟩,
-          rfl, rfl, ListRel.nil⟩
+          rfl, rfl, ListRel.nil, rfl⟩
       · have hi' := Effect4.Store.bool_eq_false_of_not hi
         simp only [hi', Bool.false_eq_true, ↓reduceIte, Bool.false_and]
         exact ⟨hok, hm, (hf'.saveAnswer hk).withFrame ⟨hf'.interruptible.trans hi', hf'.interruptedCause,
           hf'.deferred, hbody.prepare _, StackMeans.answer k hk hf'.stack, hi' ▸ hf'.maskInv⟩, rfl, rfl,
-          ListRel.nil⟩
+          ListRel.nil, rfl⟩
     | true =>
       dsimp only [evaluatePrim.withFiber, evaluateFiberR, saveAnswerR, pushR,
         FrameFiber.interruptibleRegion, FrameFiber.setFiberInterruptible]
@@ -946,7 +953,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
       · simp only [hi, ↓reduceIte, Bool.not_true, Bool.and_false, Bool.false_and]
         exact ⟨hok, hm, (hf'.saveAnswer hk).withFrame ⟨hf'.interruptible.trans hi, hf'.interruptedCause,
           hf'.deferred, hbody.prepare _, StackMeans.answer k hk hf'.stack, hi ▸ hf'.maskInv⟩, rfl, rfl,
-          ListRel.nil⟩
+          ListRel.nil, rfl⟩
       · have hi' := Effect4.Store.bool_eq_false_of_not hi
         simp only [hi', Bool.false_eq_true, ↓reduceIte, Bool.not_false, Bool.and_true, Bool.true_and]
         by_cases hsome : g₂.frame.interruptedCause.isSome = true
@@ -954,7 +961,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
           simp only [hcause, Option.isSome_some, ↓reduceIte, Option.getD_some]
           refine ⟨hok, hm, (hf'.saveAnswer hk).withFrame ⟨rfl, rfl, hf'.deferred, ?_,
             StackMeans.slot (SlotMeans.mask false) (StackMeans.answer k hk hf'.stack),
-            hi' ▸ hf'.maskInv⟩, rfl, rfl, ListRel.nil⟩
+            hi' ▸ hf'.maskInv⟩, rfl, rfl, ListRel.nil, rfl⟩
           simp only [RSaved.pendingCause, Option.getD_some]
           exact CodeMeans.failure cause
         · have hnone : g₂.frame.interruptedCause = none := by
@@ -964,7 +971,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
           simp only [hnone, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, Option.getD_none]
           exact ⟨hok, hm, (hf'.saveAnswer hk).withFrame ⟨rfl, rfl, hf'.deferred, hbody.prepare _,
             StackMeans.slot (SlotMeans.mask false) (StackMeans.answer k hk hf'.stack),
-            hi' ▸ hf'.maskInv⟩, rfl, rfl, ListRel.nil⟩
+            hi' ▸ hf'.maskInv⟩, rfl, rfl, ListRel.nil, rfl⟩
   | actSetContext t context k ht hk =>
     rw [evaluateNative_action root m₁ f₁ y hc₁ ht, hcomp, evaluateRawR_fiber _ _ _ _ hc₂]
     exact iterRel_prepare (setContext_rel root _ hok hm hf' y context (answerRel_core root hk))
@@ -985,12 +992,12 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
     · simp only [hi, ↓reduceIte, Bool.true_eq_false]
       exact ⟨hok, hm, (hf'.saveAnswer hk).withFrame ⟨rfl, hf'.interruptedCause, hf'.deferred,
         CodeMeans.success _, StackMeans.slot (SlotMeans.mask true)
-          (StackMeans.answer (seqR k) hk hf'.stack), hi ▸ hf'.maskInv⟩, rfl, rfl, ListRel.nil⟩
+          (StackMeans.answer (seqR k) hk hf'.stack), hi ▸ hf'.maskInv⟩, rfl, rfl, ListRel.nil, rfl⟩
     · have hi' := Effect4.Store.bool_eq_false_of_not hi
       simp only [hi', Bool.false_eq_true, ↓reduceIte]
       exact ⟨hok, hm, (hf'.saveAnswer hk).withFrame ⟨hf'.interruptible.trans hi',
         hf'.interruptedCause, hf'.deferred, CodeMeans.success _,
-        StackMeans.answer (seqR k) hk hf'.stack, hi' ▸ hf'.maskInv⟩, rfl, rfl, ListRel.nil⟩
+        StackMeans.answer (seqR k) hk hf'.stack, hi' ▸ hf'.maskInv⟩, rfl, rfl, ListRel.nil, rfl⟩
   | actCloseScope t scope ex k ht hk =>
     rw [evaluateNative_action root m₁ f₁ y hc₁ ht, hcomp, frame_closeScope, evaluateRawR_fiber _ _ _ _ hc₂]
     exact iterRel_prepare (closeScope_rel root _ hok hm (hf'.saveAnswer hk) y scope ex)
@@ -1021,7 +1028,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
     refine iterRelP_prepare ⟨machineOk_stateOf hok
         ⟨(ScopeStore.keysBelow_make (hm.state ▸ hok.state).keysFresh).mono (Nat.le_succ _),
           (hm.state ▸ hok.state).externals⟩,
-      hm.stateOf _, ?_, rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
+      hm.stateOf _, ?_, rfl, rfl, ListRel.nil, rfl⟩ ⟨nofun, nofun⟩
     refine FMeans.mk' hf'.id hf'.parked rfl hf'.running hf'.pending hf'.finalizing hf'.exit hf'.opCount rfl rfl
       hf'.yieldOverride hf'.observers hf'.children hf'.dispatcher
       ⟨hf'.interruptible, hf'.interruptedCause, hf'.deferred, ?_, StackMeans.answer k hk hf'.stack,

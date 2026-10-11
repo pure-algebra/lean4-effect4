@@ -44,19 +44,17 @@ theorem finalizerOr_kept (choose : ν → Bool) (interp : RunInterp ν σ β ε 
       exact ⟨kept.1, kept.2.1, kept.2.2.1⟩
   exact ⟨views.1, views.2.1, views.2.2, finalizerOr_debit choose interp m f y exit⟩
 
-/-- The interrupt action edits the target, while retaining the caller's frame. -/
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+/-- The interrupt action queues its target delta, while retaining the caller's frame. -/
 theorem interruptAs_kept (choose : ν → Bool) (interp : RunInterp ν σ β ε δ ι α χ St)
-    (m : RunMachine ν σ β ε δ ι α χ St) (unique : (m.fibers.map RunFiber.id).Nodup)
+    (m : RunMachine ν σ β ε δ ι α χ St) (_unique : (m.fibers.map RunFiber.id).Nodup)
     (f : RunFiber ν σ β ε δ ι α χ) (y : Bool) (target who : FiberId) :
     IterKept choose m f (evaluatePrim.interruptAs interp m f y target who) := by
   unfold evaluatePrim.interruptAs
   split
   · exact IterKept.of_same (.refl choose m) rfl rfl
   · rename_i old found
-    exact IterKept.of_same
-      ((same_interruptUpdate choose interp m unique target old found (some who)
-        (interp.stackAnnotations f.id)).trans
-        (same_emit choose _ [.interruptRecorded (some who) target] rfl rfl)) rfl rfl
+    exact IterKept.of_same (same_emit choose m [.interruptRecorded (some who) target] rfl rfl) rfl rfl
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
 
@@ -87,6 +85,7 @@ theorem interruptibleRegion_credit (choose : ν → Bool) (f : FrameFiber ν σ 
 
 variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- Every fiber action keeps the table projection and the caller's finalizer credits. -/
 theorem withFiber_kept (choose : ν → Bool) (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (unique : (m.fibers.map RunFiber.id).Nodup)
@@ -115,27 +114,27 @@ theorem withFiber_kept (choose : ν → Bool) (interp : RunInterp ν σ β ε δ
       exact IterKept.of_same facts.1 facts.2.1 facts.2.2
     · exact IterKept.of_same (.refl choose m) rfl rfl
   · split <;> exact IterKept.of_same (.refl choose m) rfl rfl
-  · exact IterKept.of_same (same_linkScope choose interp m unique _ _ _ _ _) rfl rfl
+  · exact IterKept.of_same (same_linkScope_plan choose interp m _ _ _ _ _) rfl rfl
   · exact IterKept.of_same (.refl choose m) rfl rfl
   · exact interruptAs_kept choose interp m unique f y _ _
   · split <;> exact IterKept.of_same (.refl choose m) rfl rfl
   · exact IterKept.of_same (.refl choose m) rfl rfl
-  · exact IterKept.of_same (same_countdown choose interp m unique f _ _ _) (by
-        unfold countdownPark
+  · exact IterKept.of_same (same_countdown_plan choose interp m f _ _ _) (by
+        unfold countdownParkEdits
         dsimp only
         split <;> rfl)
-      (countdown_credit choose interp m f _ _ _)
-  · exact IterKept.of_same (same_countdown choose interp m unique f _ _ _) (by
-        unfold countdownPark
+      (countdown_plan_credit choose interp m f _ _ _)
+  · exact IterKept.of_same (same_countdown_plan choose interp m f _ _ _) (by
+        unfold countdownParkEdits
         dsimp only
         split <;> rfl)
-      (countdown_credit choose interp m f _ _ _)
+      (countdown_plan_credit choose interp m f _ _ _)
   · exact IterKept.of_same (.refl choose m) rfl rfl
-  · exact IterKept.of_same (same_countdown choose interp m unique f _ _ _) (by
-        unfold countdownPark
+  · exact IterKept.of_same (same_countdown_plan choose interp m f _ _ _) (by
+        unfold countdownParkEdits
         dsimp only
         split <;> rfl)
-      (countdown_credit choose interp m f _ _ _)
+      (countdown_plan_credit choose interp m f _ _ _)
   · exact IterKept.of_same (same_beginRace choose interp m f y _ _ _) rfl rfl
   · exact IterKept.of_same (same_beginRace choose interp m f y _ _ _) rfl rfl
   · exact IterKept.of_same (.refl choose m) rfl (uninterruptible_credit choose f.frame)
@@ -146,7 +145,7 @@ theorem withFiber_kept (choose : ν → Bool) (interp : RunInterp ν σ β ε δ
   · split <;> exact IterKept.of_same (.refl choose m) rfl rfl
   · exact IterKept.of_same (same_forkFinalizers choose interp m f _) rfl rfl
   · exact IterKept.of_same (.refl choose m) rfl rfl
-  · exact IterKept.of_same (same_map choose m _ (fun _ => rfl) (fun _ => rfl)) rfl rfl
+  · exact IterKept.of_same (.refl choose m) rfl rfl
   · split <;> exact IterKept.of_same (.refl choose m) rfl rfl
   · exact IterKept.of_same (.refl choose m) rfl (uninterruptible_credit choose f.frame)
 
@@ -168,11 +167,11 @@ theorem evaluatePrim_kept (choose : ν → Bool) (interp : RunInterp ν σ β ε
     · unfold registerRace
       split <;> exact IterKept.of_same (.refl choose m) rfl rfl
     · rename_i targets _
-      have same := same_countdown choose interp m unique f targets .exitsValue false
-      have credit := countdown_credit choose interp m f targets .exitsValue false
-      have key := (countdownPark_keepsMask (MaskAged.refl m) interp f targets .exitsValue false).2.1
+      have same := same_countdown_plan choose interp m f targets .exitsValue false
+      have credit := countdown_plan_credit choose interp m f targets .exitsValue false
+      have key := (countdownParkEdits_keepsMask (MaskAged.refl m) interp f targets .exitsValue false).2.1
       split
-      rename_i after next parked equation
+      rename_i after next parked edits equation
       rw [equation] at same credit key
       exact IterKept.of_same same key credit
     · rename_i target mode _
@@ -182,13 +181,9 @@ theorem evaluatePrim_kept (choose : ν → Bool) (interp : RunInterp ν σ β ε
         split
         · exact IterKept.of_same (.refl choose m) rfl rfl
         · refine IterKept.of_same ?_ rfl rfl
-          let bumped : RunMachine ν σ β ε δ ι α χ St := { m with nextToken := m.nextToken + 1 }
-          let observed : RunFiber ν σ β ε δ ι α χ :=
-            { old with observers := old.observers ++ [.resumeAwait f.id m.nextToken mode] }
-          exact (same_update choose bumped old observed unique
-            (by change m.fiber? old.id = some old
-                simpa only [RunMachine.id_of_fiber? found] using found) rfl rfl).trans
-            (same_emit choose (bumped.update observed) [.parkedOn f.id m.nextToken] rfl rfl)
+          exact same_emit choose {m with nextToken := m.nextToken + 1}
+            [.parkedOn f.id m.nextToken] rfl rfl
+
     · split
       · split
         · exact withFiber_kept choose interp m unique f y _

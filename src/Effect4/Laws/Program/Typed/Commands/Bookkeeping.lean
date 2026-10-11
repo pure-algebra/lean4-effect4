@@ -2748,12 +2748,15 @@ theorem link_preserves (root : ProgramSource) (rootTy : EffTy) (mode : Supervisi
     rw [hentry]
     rfl
   simp only [driveStep]
-  unfold linkScope
+  unfold linkScope linkScopeEdits
   rw [hstatus]
   cases hc : entry.scope.closingExit? with
   | some ex =>
-    simp only [ht]
-    exact ⟨w, leHost_refl w, configTyped_emit (configTyped_interruptRecord tail ht interruptor extra) _⟩
+    have emitted : (m.emit [.scopeClosedOnLink scope target,
+        .interruptRecorded interruptor target]).fiber? target = some t := ht
+    simp only [ht, applyFiberEdits, List.foldl, applyFiberEdit, emitted, List.nil_append]
+    exact ⟨w, leHost_refl w, configTyped_emit (configTyped_interruptRecord tail ht interruptor extra)
+      [.scopeClosedOnLink scope target, .interruptRecorded interruptor target]⟩
   | none =>
     simp only [ht]
     by_cases hx : t.exit.isSome = true
@@ -2799,6 +2802,8 @@ theorem link_preserves (root : ProgramSource) (rootTy : EffTy) (mode : Supervisi
             rw [rmodify_state]
             exact ScopeStore.entryAt_setEntry_isSome _ _ scope live)
         (fun _ _ kept => Or.inl kept)
+      simp only [applyFiberEdits, List.foldl_cons, List.foldl_nil, applyFiberEdit, List.nil_append]
+      rw [RunMachine.modify_emit]
       exact ⟨{ w with state := s }, ord, configTyped_emit modified _⟩
 
 /-! ## `observe` (one halting arm: a scope-finalizer drop on an absent scope,

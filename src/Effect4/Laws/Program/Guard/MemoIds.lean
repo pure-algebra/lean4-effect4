@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.Guard.Core
 import Effect4.Laws.Machine.StoresLaws
+import Effect4.Laws.Machine.EditWords
 
 /-!
 Memo-map identifiers on the native machine. The store operation law covers memo allocation
@@ -168,24 +169,42 @@ theorem start_state (m : NativeMachine) (f : NFiber) (child : FiberId) (immediat
   unfold Effect4.Machine.start
   split <;> rfl
 
+/-- The canonical countdown word changes no store.
+Consumer: memo identifiers at actual native countdown source leaves. -/
+theorem countdownEdits_state (interp : NInterp) (m : NativeMachine) (f : NFiber)
+    (targets : List FiberId) (resume : Resume EffName) (failFast : Bool) :
+    (countdownParkEdits interp m f targets resume failFast).1.state = m.state := by
+  rw [Edits.countdown_word]
+  unfold Edits.countdownWord
+  cases walk : countdownWalk {m with nextToken := m.nextToken + 1} targets [] with
+  | mk exits target => cases target <;> rfl
+
 theorem countdown_state (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (targets : List FiberId) (resume : Resume EffName) (failFast : Bool) :
     (countdownPark interp m f targets resume failFast).1.state = m.state := by
   unfold countdownPark
   dsimp only
-  split
-  · rfl
-  · exact modify_state _ _ _
+  rw [(RunMachine.applyFiberEdits_shape _ _).1]
+  exact countdownEdits_state interp m f targets resume failFast
 
 theorem countdown_result (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (targets : List FiberId) (resume : Resume EffName) (failFast : Bool)
     (after : NativeMachine) (next : NFiber) (parked : Bool) (hs : m.state.MemoIdsOk)
     (step : countdownPark interp m f targets resume failFast = (after, next, parked)) :
     after.state.MemoIdsOk := by
-  have hstate := countdown_state interp m f targets resume failFast
-  rw [step] at hstate
-  rw [hstate]
-  exact hs
+  have view := countdown_state interp m f targets resume failFast
+  rw [step] at view
+  exact view ▸ hs
+
+theorem countdownEdits_result (interp : NInterp) (m : NativeMachine) (f : NFiber)
+    (targets : List FiberId) (resume : Resume EffName) (failFast : Bool)
+    (after : NativeMachine) (next : NFiber) (parked : Bool) (edits : List (FiberEdit Err Defect FiberId Ann))
+    (hs : m.state.MemoIdsOk)
+    (step : countdownParkEdits interp m f targets resume failFast = (after, next, parked, edits)) :
+    after.state.MemoIdsOk := by
+  have view := countdownEdits_state interp m f targets resume failFast
+  rw [step] at view
+  exact view ▸ hs
 
 theorem forkFinalizers_state (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (codes : List NCode) : (forkFinalizers interp m f codes).1.state = m.state := by
@@ -225,16 +244,20 @@ theorem registerRace_state (m : NativeMachine) (f : NFiber) (yielding : Bool) (r
   unfold registerRace
   split <;> rfl
 
+/-- Addressed edits touch only stored fibers; the shared shape law owns this projection.
+Consumer: observer countdown transfer and settlement memo preservation. -/
+theorem fiberEdit_state (edit : FiberEdit Err Defect FiberId Ann) (m : NativeMachine) :
+    (applyFiberEdit edit m).1.state = m.state := by
+  rw [(RunMachine.applyFiberEdit_shape edit m).1]
+
 theorem settle_state (fiber : FiberId) (rest : List NCmd) (it : NIter) :
     (settle fiber rest it).1.state = it.machine.state := by
-  unfold settle
-  split
-  · rfl
-  · rfl
-  · split <;> rfl
-  · rfl
-  · rfl
-  · rfl
+  apply Edits.settle_keeps (fun held : NativeMachine => held.state)
+  · intro fiber held; rfl
+  · intro why held; rfl
+  · intro target observer held
+    exact modify_state held target _
+  · intro token held; rfl
 
 theorem exitFiber_state (interp : NInterp) (m : NativeMachine) (f : NFiber) (exit : ExitV) :
     (exitFiber interp m f exit).1.state = m.state := by
@@ -257,11 +280,11 @@ theorem drainOwed_state (m : NativeMachine) (owed : List (Owed NCode)) :
 
 /-! The native evaluator's two store-writing hooks and its direct scoped writes. -/
 
-theorem linkScope (p : NativeEff) (table : RowTable) (completed : List (FiberId × ExitV))
+theorem linkScopeEdits (p : NativeEff) (table : RowTable) (completed : List (FiberId × ExitV))
     (m : NativeMachine) (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId)
     (who : Option FiberId) (extra : ReasonAnnotations Ann) (hs : m.state.MemoIdsOk) :
-    (Effect4.Machine.linkScope (interpAt p completed table) m mode scope target who extra).1.state.MemoIdsOk := by
-  unfold Effect4.Machine.linkScope
+    (Effect4.Machine.linkScopeEdits (interpAt p completed table) m mode scope target who extra).1.state.MemoIdsOk := by
+  unfold Effect4.Machine.linkScopeEdits
   split
   · exact hs
   · split <;> exact hs
@@ -272,9 +295,15 @@ theorem linkScope (p : NativeEff) (table : RowTable) (completed : List (FiberId 
       · split
         · exact hs
         · rename_i after key h
-          change (({ m with state := after } : NativeMachine).modify target _).state.MemoIdsOk
-          rw [modify_state]
           exact scopeLinkFiber p table mode scope target hs h
+
+theorem linkScope (p : NativeEff) (table : RowTable) (completed : List (FiberId × ExitV))
+    (m : NativeMachine) (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId)
+    (who : Option FiberId) (extra : ReasonAnnotations Ann) (hs : m.state.MemoIdsOk) :
+    (Effect4.Machine.linkScope (interpAt p completed table) m mode scope target who extra).1.state.MemoIdsOk := by
+  unfold Effect4.Machine.linkScope
+  rw [(RunMachine.applyFiberEdits_shape _ _).1]
+  exact linkScopeEdits p table completed m mode scope target who extra hs
 
 theorem linkScopeBase (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId)
@@ -290,8 +319,8 @@ theorem withFiber (p : NativeEff) (table : RowTable) (completed : List (FiberId 
   all_goals repeat' split
   all_goals
     aesop (add norm simp [emit_state, update_state, arm_state, start_state,
-      countdown_state, forkFinalizers_state])
-      (add safe apply [linkScope]) (add safe forward [closeScopeAt])
+      countdownEdits_state, forkFinalizers_state])
+      (add safe apply [linkScopeEdits]) (add safe forward [closeScopeAt])
 
 theorem registerAsync_result (p : NativeEff) (table : RowTable)
     (completed : List (FiberId × ExitV)) (name : EffName) (fiber : FiberId) (token : Nat)
@@ -310,9 +339,9 @@ theorem evaluatePrim (p : NativeEff) (table : RowTable) (completed : List (Fiber
   repeat' split
   all_goals
     aesop (add norm simp [emit_state, update_state, arm_state, stepFrame_state,
-      finalizerOr_state, registerRace_state, countdown_state])
+      finalizerOr_state, registerRace_state, countdownEdits_state])
       (add safe apply [withFiber, registerAsyncAt])
-      (add safe forward [syncStateAt, registerAsync_result, countdown_result])
+      (add safe forward [syncStateAt, registerAsync_result, countdownEdits_result])
 
 theorem enterScoped (p : NativeEff) (point : Point) (m : NativeMachine) (f : NFiber)
     (yielding : Bool) (hs : m.state.MemoIdsOk) :
@@ -369,7 +398,7 @@ theorem fireObserver (p : NativeEff) (table : RowTable) (fiber : FiberId) (exit 
   all_goals repeat' split
   all_goals
     aesop (add norm simp [emit_state, update_state, updateRace_state, halt_state,
-      modify_state, interruptEach_state])
+      modify_state, interruptEach_state, fiberEdit_state])
       (add safe forward [dropFinalizer])
 
 theorem driveStep (p : NativeEff) (table : RowTable) (m : NativeMachine) (cmd : NCmd)

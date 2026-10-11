@@ -1355,7 +1355,7 @@ theorem enterScoped_eq (p : Point)
           frame := { f.frame with
             current := Prim.onExit (resolve root (p.child 0))
               (.scopedExit f.context m.state.nextName) false } },
-        yielding, .continue_, []⟩ := by aesop
+        yielding, .continue_, [], []⟩ := by aesop
 
 /-- The scoped callback restores the previous context before the close (`:3944-3947`), whether
 or not the scope is known to the store. census: scope.remove-finalizer -/

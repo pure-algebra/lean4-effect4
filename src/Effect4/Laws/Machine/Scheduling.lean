@@ -1,4 +1,5 @@
 import Effect4.Laws.Machine.Approximation
+import Effect4.Laws.Machine.Keeps
 
 /-!
 # Finite scheduling fairness
@@ -83,21 +84,50 @@ theorem interrupts_queue {interp : RunInterp ν σ β ε δ ι α χ St} {who : 
     refine queue_trans ?_ ih
     split <;> queue_leaf
 
+/-- The shared message footprint keeps the already armed queue unchanged. -/
+theorem fiberEdit_queue (edit : FiberEdit ε δ ι α) (m : RunMachine ν σ β ε δ ι α χ St) :
+    QueueKeeps m (applyFiberEdit edit m).1 := by
+  have same := congrArg (fun held : RunMachine ν σ β ε δ ι α χ St => held.armed)
+    (RunMachine.applyFiberEdit_shape edit m).1
+  change m.armed <+: _
+  rw [same]
+  exact List.prefix_rfl
+
+theorem fiberEdits_queue (edits : List (FiberEdit ε δ ι α)) (m : RunMachine ν σ β ε δ ι α χ St) :
+    QueueKeeps m (applyFiberEdits edits m).1 := by
+  have same := congrArg (fun held : RunMachine ν σ β ε δ ι α χ St => held.armed)
+    (RunMachine.applyFiberEdits_shape edits m).1
+  change m.armed <+: _
+  rw [same]
+  exact List.prefix_rfl
+
+theorem countdownEdits_queue {interp : RunInterp ν σ β ε δ ι α χ St}
+    {m : RunMachine ν σ β ε δ ι α χ St} {f : RunFiber ν σ β ε δ ι α χ} {targets : List FiberId}
+    {resume : Resume ν} {failFast : Bool} :
+    QueueKeeps m (countdownParkEdits interp m f targets resume failFast).1 := by
+  unfold countdownParkEdits
+  dsimp only
+  (repeat' split) <;> queue_leaf
+
+theorem linkEdits_queue {interp : RunInterp ν σ β ε δ ι α χ St} {m : RunMachine ν σ β ε δ ι α χ St}
+    {mode : Supervision.ScopeMode} {scope : Nat} {target : FiberId}
+    {interruptor : Option FiberId} {extra : ReasonAnnotations α} :
+    QueueKeeps m (linkScopeEdits interp m mode scope target interruptor extra).1 := by
+  unfold linkScopeEdits
+  dsimp only
+  (repeat' split) <;> queue_leaf
+
 theorem countdown_queue {interp : RunInterp ν σ β ε δ ι α χ St}
     {m : RunMachine ν σ β ε δ ι α χ St} {f : RunFiber ν σ β ε δ ι α χ} {targets : List FiberId}
     {resume : Resume ν} {failFast : Bool} :
     QueueKeeps m (countdownPark interp m f targets resume failFast).1 := by
-  unfold countdownPark
-  dsimp only
-  (repeat' split) <;> queue_leaf
+  exact queue_trans (countdownEdits_queue (interp := interp)) (fiberEdits_queue _ _)
 
 theorem link_queue {interp : RunInterp ν σ β ε δ ι α χ St} {m : RunMachine ν σ β ε δ ι α χ St}
     {mode : Supervision.ScopeMode} {scope : Nat} {target : FiberId}
     {interruptor : Option FiberId} {extra : ReasonAnnotations α} :
     QueueKeeps m (linkScope interp m mode scope target interruptor extra).1 := by
-  unfold linkScope
-  dsimp only
-  (repeat' split) <;> queue_leaf
+  exact queue_trans (linkEdits_queue (interp := interp)) (fiberEdits_queue _ _)
 
 /-- The parallel close's forks (§20) only append fibers. -/
 theorem forkFinalizers_queue {interp : RunInterp ν σ β ε δ ι α χ St}
@@ -117,8 +147,12 @@ macro "queue_hops" i:term : tactic => `(tactic| first
   | exact spawn_queue (interp := $i)
   | exact start_queue (_interp := $i)
   | exact interrupts_queue (interp := $i)
+  | exact countdownEdits_queue (interp := $i)
   | exact countdown_queue (interp := $i)
+  | exact linkEdits_queue (interp := $i)
   | exact link_queue (interp := $i)
+  | exact fiberEdit_queue _ _
+  | exact fiberEdits_queue _ _
   | exact forkFinalizers_queue (interp := $i))
 
 theorem launch_queue {interp : RunInterp ν σ β ε δ ι α χ St} {race : Nat}
@@ -233,10 +267,26 @@ theorem iteration_queue {interp : RunInterp ν σ β ε δ ι α χ St}
   · next it h => exact queue_trans (inject_queue h) (evaluate_queue (interp := interp))
   · exact evaluate_queue (interp := interp)
 
+theorem settleOutcome_queue {id : FiberId} {rest : List (Cmd ν σ β ε δ ι α)} {it : Iter ν σ β ε δ ι α χ St} :
+    QueueKeeps it.machine (settleOutcome id rest it).1 := by
+  unfold settleOutcome
+  (repeat' split) <;> queue_leaf
+
 theorem settle_queue {id : FiberId} {rest : List (Cmd ν σ β ε δ ι α)} {it : Iter ν σ β ε δ ι α χ St} :
     QueueKeeps it.machine (settle id rest it).1 := by
   unfold settle
-  (repeat' split) <;> queue_leaf
+  split
+  · exact settleOutcome_queue
+  · have changed := fiberEdits_queue it.edits (it.machine.update it.fiber)
+    dsimp only
+    split
+    · exact changed
+    · next owner found =>
+      exact queue_trans changed (settleOutcome_queue (it := { it with
+        machine := (applyFiberEdits it.edits (it.machine.update it.fiber)).1
+        fiber := owner
+        nested := (applyFiberEdits it.edits (it.machine.update it.fiber)).2 ++ it.nested
+        edits := [] }))
 
 /-- Arming appends behind the queue, or keeps it. -/
 theorem arm_queue {m : RunMachine ν σ β ε δ ι α χ St} {owner : FiberId} :

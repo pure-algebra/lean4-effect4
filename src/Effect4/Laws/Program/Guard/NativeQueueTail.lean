@@ -101,9 +101,9 @@ theorem guardQueue_settle (p : NativeEff) (table : RowTable)
   have fresh := Effect4.Program.Guard.SettleQueue.guardQueue_fresh_transport p table queue
     (Effect4.Program.Guard.SettleQueue.raceHostsPreserved_settle id rest it links.races) freshOwner
   have joined := Effect4.Program.Guard.SettleQueue.guardQueue_append_owned p table it.fiber.id front' tail owns' fresh
-  rw [Effect4.Program.Guard.SettleQueue.settle_commands_rest]
-  cases ho : it.outcome <;> try exact joined
-  exact guardQueue_nil p table _
+  rcases Effect4.Program.Guard.SettleQueue.settle_commands_rest_cases id rest it with stopped | continues
+  · rw [stopped]; exact guardQueue_nil p table _
+  · rw [continues]; exact joined
 
 theorem native_settle_rest (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (id : FiberId) (rest : List NCmd) (f : NFiber) (yielding : Bool)

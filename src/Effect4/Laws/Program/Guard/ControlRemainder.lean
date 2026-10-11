@@ -106,8 +106,21 @@ theorem registrationQueue_driveStep_link (p : NativeEff) (table : RowTable)
     letI := evaluatorFor p table
     RegistrationQueue (driveStep (interpOf p table) m (.link mode scope target who extra) rest).2 := by
   letI := evaluatorFor p table
-  simp only [driveStep, linkScope]
-  repeat' first | exact registration.2 | exact ⟨True.intro, registration.2⟩ | split
+  change RegistrationQueue ((applyFiberEdits
+    (linkScopeEdits (interpOf p table) m mode scope target who extra).2
+    (linkScopeEdits (interpOf p table) m mode scope target who extra).1).2 ++ rest)
+  apply registrationQueue_append _ registration.2
+  have commands := (RunMachine.applyFiberEdits_shape
+    (linkScopeEdits (interpOf p table) m mode scope target who extra).2
+    (linkScopeEdits (interpOf p table) m mode scope target who extra).1).2
+  generalize (applyFiberEdits
+    (linkScopeEdits (interpOf p table) m mode scope target who extra).2
+    (linkScopeEdits (interpOf p table) m mode scope target who extra).1).2 = produced at commands ⊢
+  induction produced with
+  | nil => exact True.intro
+  | cons first rest ih =>
+    obtain ⟨target, rfl⟩ := commands first List.mem_cons_self
+    exact ⟨True.intro, ih (fun next member => commands next (List.mem_cons_of_mem _ member))⟩
 
 /-- A field update that keeps the old interruption witness: `Finish.interruptedAt_update`, with
 the fiber named. -/

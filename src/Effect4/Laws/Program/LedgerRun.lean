@@ -1,4 +1,5 @@
 import Effect4.Laws.Machine.Ledger
+import Effect4.Laws.Machine.EditObserverWords
 import Effect4.Laws.Program.FinalizerTransfer
 
 /-!
@@ -78,62 +79,29 @@ countdown. -/
 theorem observer_same (interp : Native.NInterp) (id : FiberId) (exit : ExitV)
     (acc : NativeMachine × List Native.NCmd) (observer : Observer) (ok : Ok acc.1) :
     L.Same acc.1 (fireObserver interp id exit acc observer).1 := by
-  have emitted := L.same_emit acc.1 [.observerFired id observer] rfl rfl
-  unfold fireObserver
-  dsimp only
-  split
-  · exact emitted
-  · rename_i parent
-    exact emitted.trans (L.same_modify
-      (acc.1.emit [.observerFired id (.untrackChild parent)]) ok.idsUnique parent
-      (fun f => { f with children := f.children.filter fun c => c ≠ id })
-      (fun _ => rfl) (fun _ => rfl))
-  · split <;> exact emitted
-  · rename_i waiter token
-    split
-    · exact emitted
-    · rename_i w found
-      split
-      · exact emitted
-      · rename_i pending pendingFound
-        let before := acc.1.emit [.observerFired id (.countdown waiter token)]
-        let middle := if pending.failFast && !exit.isSuccess && pending.collected.all Exit.isSuccess then
-          interruptEach interp waiter (interp.stackAnnotations waiter) pending.remaining (before, [])
-          else (before, [])
-        have kept : L.Same acc.1 middle.1 ∧ Ok middle.1 := by
-          unfold middle
-          split
-          · exact ⟨emitted.trans (L.same_interruptEach interp waiter
-              (interp.stackAnnotations waiter) pending.remaining (before, []) ok),
-              Native.interruptEach_ok interp waiter (interp.stackAnnotations waiter)
-                pending.remaining (before, []) ok⟩
-          · exact ⟨emitted, ok⟩
-        have atOld : L.atFiber acc.1 w.id = L.held w := by
-          rw [RunMachine.id_of_fiber? found]
-          exact L.atFiber_found _ waiter w found
-        split
-        · apply kept.1.trans
-          apply L.same_update_view middle.1 kept.2.idsUnique
-          change L.atFiber middle.1 w.id = L.held w
-          rw [kept.1.2.1]
-          exact atOld
-        · rename_i exits next rest walked
-          let edit (g : NFiber) : NFiber :=
-            { g with observers := g.observers ++ [.countdown waiter token] }
-          have changed := L.same_modify middle.1 kept.2.idsUnique next edit
-            (fun _ => rfl) (fun _ => rfl)
-          apply (kept.1.trans changed).trans
-          apply L.same_update_view (middle.1.modify next edit) (modify_ok kept.2 next edit).idsUnique
-          change L.atFiber (middle.1.modify next edit) w.id = L.held w
-          rw [changed.2.1, kept.1.2.1]
-          exact atOld
-  · split
-    · exact emitted
-    · rename_i race found
-      split
-      · exact emitted.trans (L.same_emit _ [.raceSettled _ _] rfl rfl)
-      · exact emitted
-  · exact emitted.trans (L.same_emit _ [.callback _ exit] rfl rfl)
+  apply L.same_ok_word (ok := ok)
+  refine Edits.observer_path interp (fun _ _ _ edge => edge.1) ?_ ?_ ?_ ?_ ?_ ?_ ?_ ?_
+    (L.interrupt_payload_path interp) id exit acc observer
+  · intro m target old next found key frame
+    refine ⟨rfl, fun held => ⟨?_, update_ok held next⟩⟩
+    refine ⟨held.idsUnique, old, ?_, key, ?_⟩
+    · simpa only [RunMachine.id_of_fiber? found] using found
+    · unfold StackLedger.held
+      rw [frame]
+  · intro m target observer
+    exact ⟨rfl, fun held => ⟨held.idsUnique, modify_ok held target _⟩⟩
+  · intro m id observer
+    exact ⟨rfl, fun held => ⟨⟨rfl, rfl⟩, emit_ok held _⟩⟩
+  · intro m id exit
+    exact ⟨rfl, fun held => ⟨⟨rfl, rfl⟩, emit_ok held _⟩⟩
+  · intro m key exit
+    exact ⟨rfl, fun held => ⟨⟨rfl, rfl⟩, emit_ok held _⟩⟩
+  · intro m state
+    exact ⟨rfl, fun held => ⟨True.intro, state_ok held state⟩⟩
+  · intro m why
+    exact ⟨rfl, fun held => ⟨True.intro, halt_ok held why⟩⟩
+  · intro m race
+    exact ⟨rfl, fun held => ⟨True.intro, updateRace_ok held race⟩⟩
 
 /-- A cleared fiber's stack is empty, so it holds nothing. -/
 theorem held_cleared (interp : Native.NInterp) (f : NFiber) : L.held (f.cleared interp) = 0 :=

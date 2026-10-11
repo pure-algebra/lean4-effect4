@@ -22,8 +22,8 @@ theorem edit {before after : Moves.NFiber} (changed : Moves.OtherEdit before aft
   cases changed with
   | observe => exact ⟨held.sequence, held.parked⟩
   | filterObservers => exact ⟨held.sequence, held.parked⟩
-  | interrupted interp _ who extra =>
-    unfold interruptRecord interruptWithCause
+  | interruptCause cause =>
+    unfold interruptWithCause
     dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
       FiberCore.setDeferred, FiberCore.answerWith, FiberCore.failure, frameCore]
     split

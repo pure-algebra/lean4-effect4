@@ -234,13 +234,9 @@ theorem guardState_fireObserver_countdown (p : NativeEff) (table : RowTable)
   cases hw : base.fiber? waiter with
   | none => simpa only [fireObserver, show m.emit _ = base from rfl, hw] using baseState
   | some w =>
-    have wid : w.id = waiter := fiber_id_of_lookup hw
-    have hw' : base.fiber? w.id = some w := by simpa only [wid] using hw
     cases hp : w.pending.find? (fun q => q.token = token) with
     | none => simpa only [fireObserver, show m.emit _ = base from rfl, hw, hp] using baseState
     | some pending =>
-      have code : externalRequest w.frame.current = none :=
-        pending_reserved_noExternal baseState hw' hp (by simpa only [wid] using baseKeys)
       let run := if pending.failFast && !exit.isSuccess && pending.collected.all Exit.isSuccess then
         interruptEach (interpOf p table) waiter ((interpOf p table).stackAnnotations waiter)
           pending.remaining (base, []) else (base, [])
@@ -248,66 +244,48 @@ theorem guardState_fireObserver_countdown (p : NativeEff) (table : RowTable)
         dsimp only [run]; split
         · exact guardState_interruptEach p table waiter _ _ base [] baseState
         · exact baseState
-      have runKeys : ReservedKeys run.1 (fiberKeys w) := by
-        have keys := reservedKeys_fiber baseState (List.mem_of_find?_eq_some hw)
-        dsimp only [run]; split
-        · exact reservedKeys_interruptEach p table waiter _ _ base [] _ keys
-        · exact keys
       have callbackKeys : ReservedKeys run.1 [(waiter, token)] := by
         dsimp only [run]; split
         · exact reservedKeys_interruptEach p table waiter _ _ base [] _ baseKeys
         · exact baseKeys
-      have context : run.1.nextId = base.nextId ∧ run.1.nextToken = base.nextToken ∧
-          run.1.races = base.races := by
-        dsimp only [run]; split
-        · have hc := interruptEach_context p table waiter ((interpOf p table).stackAnnotations waiter)
-            pending.remaining base []
-          exact ⟨hc.1, nextToken_interruptEach p table waiter _ _ base [], hc.2⟩
-        · exact ⟨rfl, rfl, rfl⟩
-      have races : RaceHostsPreserved base run.1 := by
-        intro raceId race hr
-        refine ⟨race, ?_, rfl⟩
-        change run.1.races.find? _ = some race
-        rw [context.2.2]
-        exact hr
-      have lookup : ∃ current, run.1.fiber? w.id = some current ∧
-          current.running = w.running ∧ current.exit = w.exit := by
-        dsimp only [run]; split
-        · exact interruptEach_lookup_fields p table waiter _ _ base [] hw'
-        · exact ⟨w, hw', rfl, rfl⟩
-      obtain ⟨current, currentLookup, currentRunning, currentExit⟩ := lookup
       simp only [fireObserver, show m.emit _ = base from rfl, hw, hp]
-      cases walk : countdownWalk run.1 pending.remaining (pending.collected ++ [exit]) with
-      | mk exits next =>
-        cases next with
-        | none =>
-          exact guardState_restorePending baseState hw' runState currentLookup
-            (Nat.le_of_eq context.1.symm) (Nat.le_of_eq context.2.1.symm) races runKeys code
-            (fun q => if q.token = token then { q with waitingOn := none, remaining := [], collected := exits } else q)
-            (by intro q; split <;> rfl)
-        | some pair =>
-          obtain ⟨next, rest⟩ := pair
-          let updated := run.1.modify next fun f => { f with observers := f.observers ++ [.countdown waiter token] }
-          have added : GuardState updated := guardState_addObserver runState next (.countdown waiter token) callbackKeys
-          obtain ⟨after, afterLookup, _, _⟩ :=
-            fiber_lookup_addObserver_fields run.1 next (.countdown waiter token) currentLookup
-          have ids : base.nextId ≤ updated.nextId := by
-            dsimp only [updated, RunMachine.modify]
-            split <;> exact Nat.le_of_eq context.1.symm
-          have tokens : base.nextToken ≤ updated.nextToken := by
-            dsimp only [updated, RunMachine.modify]
-            split <;> exact Nat.le_of_eq context.2.1.symm
-          have races' : RaceHostsPreserved base updated := by
-            intro raceId race hr
-            obtain ⟨found, hf, hh⟩ := races raceId race hr
-            refine ⟨found, ?_, hh⟩
-            dsimp only [updated, RunMachine.modify]
-            split <;> exact hf
-          exact guardState_restorePending baseState hw' added afterLookup ids tokens races'
-            (reservedKeys_addObserver runKeys next (.countdown waiter token)) code
-            (fun q => if q.token = token then
-              { q with waitingOn := some next, remaining := rest, collected := exits } else q)
-            (by intro q; split <;> rfl)
+      cases hc : run.1.fiber? waiter with
+      | none => exact runState
+      | some current =>
+        dsimp only
+        have hc' : run.1.fiber? current.id = some current := by
+          simpa only [fiber_id_of_lookup hc] using hc
+        cases hcp : current.pending.find? (fun q => q.token = token) with
+        | none => exact runState
+        | some selected =>
+          dsimp only
+          have currentCode : externalRequest current.frame.current = none :=
+            pending_reserved_noExternal runState hc' hcp
+              (by simpa only [fiber_id_of_lookup hc] using callbackKeys)
+          have currentKeys := reservedKeys_fiber runState (List.mem_of_find?_eq_some hc)
+          have update (change : NPending → NPending)
+              (tokens : ∀ q, (change q).token = q.token) :
+              GuardState (run.1.update { current with pending := current.pending.map change }) :=
+            guardState_update_noExternal runState hc' _ rfl
+              (fiberGuardState_pendingMap (guardState_fiber runState (List.mem_of_find?_eq_some hc))
+                change tokens) currentKeys currentCode
+          cases walk : countdownWalk run.1 pending.remaining (pending.collected ++ [exit]) with
+          | mk exits next =>
+            cases next with
+            | none =>
+              exact update
+                (fun q => if q.token = token then
+                  { q with waitingOn := none, remaining := [], collected := exits } else q)
+                (by intro q; split <;> rfl)
+            | some pair =>
+              obtain ⟨next, rest⟩ := pair
+              dsimp only [applyFiberEdit]
+              apply guardState_addObserver
+                (update (fun q => if q.token = token then
+                  { q with waitingOn := some next, remaining := rest, collected := exits } else q)
+                  (by intro q; split <;> rfl)) next (.countdown waiter token)
+              exact reservedKeys_of_requests_subset callbackKeys (Nat.le_refl _)
+                (requestOf_update_noExternal_subset _ _ currentCode)
 
 theorem interruptEach_append (p : NativeEff) (table : RowTable)
     (who : FiberId) (extra : ReasonAnnotations Ann) (targets : List FiberId)
@@ -351,16 +329,9 @@ theorem guardQueue_fireObserver_countdown (p : NativeEff) (table : RowTable)
   cases hw : base.fiber? waiter with
   | none => simpa only [fireObserver, show m.emit _ = base from rfl, hw] using baseQueue
   | some w =>
-    have wid : w.id = waiter := fiber_id_of_lookup hw
-    have hw' : base.fiber? w.id = some w := by simpa only [wid] using hw
     cases hp : w.pending.find? (fun q => q.token = token) with
     | none => simpa only [fireObserver, show m.emit _ = base from rfl, hw, hp] using baseQueue
     | some pending =>
-      have code : externalRequest w.frame.current = none :=
-        pending_reserved_noExternal baseState hw' hp (by simpa only [wid] using baseKeys)
-      have parked := (pending_lookup_guard baseState (List.mem_of_find?_eq_some hw) hp).1
-      have idle : w.running = false := baseState.parkedIdle w (List.mem_of_find?_eq_some hw)
-        (by rw [parked]; intro h; cases h)
       let run := if pending.failFast && !exit.isSuccess && pending.collected.all Exit.isSuccess then
         interruptEach (interpOf p table) waiter ((interpOf p table).stackAnnotations waiter)
           pending.remaining (base, []) else (base, [])
@@ -378,35 +349,50 @@ theorem guardQueue_fireObserver_countdown (p : NativeEff) (table : RowTable)
         dsimp only [run]; split
         · exact reservedKeys_interruptEach p table waiter _ _ base [] _ baseKeys
         · exact baseKeys
-      have lookup : ∃ current, run.1.fiber? w.id = some current ∧
-          current.running = w.running ∧ current.exit = w.exit := by
+      have runState : GuardState run.1 := by
         dsimp only [run]; split
-        · exact interruptEach_lookup_fields p table waiter _ _ base [] hw'
-        · exact ⟨w, hw', rfl, rfl⟩
-      obtain ⟨current, currentLookup, currentRunning, currentExit⟩ := lookup
+        · exact guardState_interruptEach p table waiter _ _ base [] baseState
+        · exact baseState
       simp only [fireObserver, show m.emit _ = base from rfl, hw, hp]
-      cases walk : countdownWalk run.1 pending.remaining (pending.collected ++ [exit]) with
-      | mk exits next =>
-        cases next with
-        | none =>
-          have restored := guardQueue_restorePending p table runQueue currentLookup
-            (currentRunning.trans idle) currentExit code
-            (fun q => if q.token = token then
-              { q with waitingOn := none, remaining := [], collected := exits } else q)
-          apply guardQueue_snoc_resume p table restored waiter token
-            (countdownPark.resumePrim (interpOf p table) pending.resumeWith exits)
-          · exact reservedKeys_of_requests_subset callbackKeys (Nat.le_refl _)
-              (requestOf_update_noExternal_subset _ _ code)
-          · exact raceSites_countdownResume p table pending.resumeWith exits
-        | some pair =>
-          obtain ⟨next, rest⟩ := pair
-          have added := guardQueue_addObserver p table runQueue next (.countdown waiter token)
-          obtain ⟨after, afterLookup, afterRunning, afterExit⟩ :=
-            fiber_lookup_addObserver_fields run.1 next (.countdown waiter token) currentLookup
-          exact guardQueue_restorePending p table added afterLookup
-            (afterRunning.trans (currentRunning.trans idle)) (afterExit.trans currentExit) code
-            (fun q => if q.token = token then
-              { q with waitingOn := some next, remaining := rest, collected := exits } else q)
+      cases hc : run.1.fiber? waiter with
+      | none => exact runQueue
+      | some current =>
+        dsimp only
+        have hc' : run.1.fiber? current.id = some current := by
+          simpa only [fiber_id_of_lookup hc] using hc
+        cases hcp : current.pending.find? (fun q => q.token = token) with
+        | none => exact runQueue
+        | some selected =>
+          dsimp only
+          have currentCode : externalRequest current.frame.current = none :=
+            pending_reserved_noExternal runState hc' hcp
+              (by simpa only [fiber_id_of_lookup hc] using callbackKeys)
+          have currentPark := (pending_lookup_guard runState (List.mem_of_find?_eq_some hc) hcp).1
+          have currentIdle : current.running = false :=
+            runState.parkedIdle current (List.mem_of_find?_eq_some hc)
+              (by rw [currentPark]; intro h; cases h)
+          cases walk : countdownWalk run.1 pending.remaining (pending.collected ++ [exit]) with
+          | mk exits next =>
+            cases next with
+            | none =>
+              have restored := guardQueue_restorePending p table runQueue hc'
+                currentIdle rfl currentCode
+                (fun q => if q.token = token then
+                  { q with waitingOn := none, remaining := [], collected := exits } else q)
+              apply guardQueue_snoc_resume p table restored waiter token
+                (countdownPark.resumePrim (interpOf p table) pending.resumeWith exits)
+              · exact reservedKeys_of_requests_subset callbackKeys (Nat.le_refl _)
+                  (requestOf_update_noExternal_subset _ _ currentCode)
+              · exact raceSites_countdownResume p table pending.resumeWith exits
+            | some pair =>
+              obtain ⟨next, rest⟩ := pair
+              dsimp only [applyFiberEdit]
+              simp only [List.append_nil]
+              exact guardQueue_addObserver p table
+                (guardQueue_restorePending p table runQueue hc' currentIdle rfl currentCode
+                  (fun q => if q.token = token then
+                    { q with waitingOn := some next, remaining := rest, collected := exits } else q))
+                next (.countdown waiter token)
 
 theorem guardState_fireObserver (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (id : FiberId) (exit : ExitV) (commands : List NCmd)
@@ -519,11 +505,9 @@ theorem nextToken_fireObserver (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (id : FiberId) (exit : ExitV) (commands : List NCmd) (observer : Observer) :
     (fireObserver (interpOf p table) id exit (m, commands) observer).1.nextToken = m.nextToken := by
   cases observer <;> simp only [fireObserver]
-  all_goals repeat' first
-    | rfl
-    | (solve | simp only [RunMachine.update, RunMachine.updateRace, RunMachine.emit,
-        RunMachine.halt, nextToken_modify, nextToken_interruptEach])
-    | split
+  all_goals repeat' split
+  all_goals simp only [applyFiberEdit, RunMachine.update, RunMachine.updateRace,
+    RunMachine.emit, RunMachine.halt, nextToken_modify, nextToken_interruptEach]
 
 theorem requestOf_fireObserver_countdown_subset (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (id : FiberId) (exit : ExitV) (commands : List NCmd)
@@ -539,13 +523,9 @@ theorem requestOf_fireObserver_countdown_subset (p : NativeEff) (table : RowTabl
   cases hw : base.fiber? waiter with
   | none => simpa only [fireObserver, show m.emit _ = base from rfl, hw] using hr
   | some w =>
-    have wid : w.id = waiter := fiber_id_of_lookup hw
-    have hw' : base.fiber? w.id = some w := by simpa only [wid] using hw
     cases hp : w.pending.find? (fun q => q.token = token) with
     | none => simpa only [fireObserver, show m.emit _ = base from rfl, hw, hp] using hr
     | some pending =>
-      have code : externalRequest w.frame.current = none :=
-        pending_reserved_noExternal baseState hw' hp (by simpa only [wid] using baseKeys)
       let run := if pending.failFast && !exit.isSuccess && pending.collected.all Exit.isSuccess then
         interruptEach (interpOf p table) waiter ((interpOf p table).stackAnnotations waiter)
           pending.remaining (base, []) else (base, [])
@@ -554,23 +534,42 @@ theorem requestOf_fireObserver_countdown_subset (p : NativeEff) (table : RowTabl
         · exact requestOf_interruptEach_subset p table waiter _ _ base []
         · exact fun _ _ _ h => h
       simp only [fireObserver, show m.emit _ = base from rfl, hw, hp] at hr
-      cases walk : countdownWalk run.1 pending.remaining (pending.collected ++ [exit]) with
-      | mk exits next =>
-        rw [walk] at hr
-        cases next with
-        | none => exact subset fiber offered request (requestOf_update_noExternal_subset run.1
-            { w with pending := w.pending.map fun q => if q.token = token then
-              { q with waitingOn := none, remaining := [], collected := exits } else q }
-            code fiber offered request hr)
-        | some pair =>
-          obtain ⟨next, rest⟩ := pair
-          have h := requestOf_update_noExternal_subset
-            (run.1.modify next fun f => { f with observers := f.observers ++ [.countdown waiter token] })
-            { w with pending := w.pending.map fun q => if q.token = token then
-              { q with waitingOn := some next, remaining := rest, collected := exits } else q }
-            code fiber offered request hr
-          rw [requestOf_addObserver] at h
-          exact subset fiber offered request h
+      cases hc : run.1.fiber? waiter with
+      | none =>
+        dsimp only [run] at hc
+        simp only [hc] at hr
+        exact subset fiber offered request hr
+      | some current =>
+        have hc' : run.1.fiber? current.id = some current := by
+          simpa only [fiber_id_of_lookup hc] using hc
+        have preserves (change : NPending → NPending) :
+            requestOf (run.1.update {current with pending := current.pending.map change}) fiber offered =
+              requestOf run.1 fiber offered :=
+          requestOf_update_view hc' {current with pending := current.pending.map change}
+            ⟨rfl, rfl, rfl⟩ fiber offered
+        cases hcp : current.pending.find? (fun q => q.token = token) with
+        | none =>
+          dsimp only [run] at hc
+          simp only [hc, hcp] at hr
+          exact subset fiber offered request hr
+        | some selected =>
+          dsimp only [run] at hc
+          simp only [hc, hcp] at hr
+          cases walk : countdownWalk run.1 pending.remaining (pending.collected ++ [exit]) with
+          | mk exits next =>
+            rw [walk] at hr
+            cases next with
+            | none =>
+              dsimp only at hr
+              rw [preserves (fun q => if q.token = token then
+                {q with waitingOn := none, remaining := [], collected := exits} else q)] at hr
+              exact subset fiber offered request hr
+            | some pair =>
+              obtain ⟨next, rest⟩ := pair
+              dsimp only [applyFiberEdit] at hr
+              rw [requestOf_addObserver, preserves (fun q => if q.token = token then
+                {q with waitingOn := some next, remaining := rest, collected := exits} else q)] at hr
+              exact subset fiber offered request hr
 
 theorem requestOf_fireObserver_subset (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (id : FiberId) (exit : ExitV) (commands : List NCmd)
@@ -671,6 +670,21 @@ theorem requestOrInterrupted_addObserver (m : NativeMachine) (target : FiberId) 
   · exact Or.inl ((requestOf_addObserver m target observer fiber token) ▸ h)
   · exact Or.inr (interruptedAt_addObserver target observer h)
 
+/-- Mapping the actual stored pending list keeps requests and interruptions.
+Concept: reactive-scheduling, R11; consumer: the countdown observer after its fresh waiter read. -/
+theorem requestOrInterrupted_pendingMap {m : NativeMachine} {current : NFiber}
+    (lookup : m.fiber? current.id = some current) (change : NPending → NPending)
+    (fiber : FiberId) (token : Nat) (request : NativeOp × Val)
+    (before : requestOf m fiber token = some request ∨ InterruptedAt m fiber) :
+    requestOf (m.update { current with pending := current.pending.map change }) fiber token = some request ∨
+      InterruptedAt (m.update { current with pending := current.pending.map change }) fiber := by
+  rcases before with h | h
+  · left
+    exact (requestOf_update_view lookup {current with pending := current.pending.map change}
+      ⟨rfl, rfl, rfl⟩ fiber token).trans h
+  · right
+    exact interruptedAt_restorePending lookup lookup change h h
+
 theorem requestOrInterrupted_fireObserver_countdown (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (id : FiberId) (exit : ExitV) (commands : List NCmd)
     (waiter : FiberId) (token : Nat) (state : GuardState m)
@@ -685,21 +699,9 @@ theorem requestOrInterrupted_fireObserver_countdown (p : NativeEff) (table : Row
   cases hw : base.fiber? waiter with
   | none => simpa only [fireObserver, show m.emit _ = base from rfl, hw] using Or.inl (b := InterruptedAt base fiber) baseRequest
   | some w =>
-    have wid : w.id = waiter := fiber_id_of_lookup hw
-    have hw' : base.fiber? w.id = some w := by simpa only [wid] using hw
     cases hp : w.pending.find? (fun q => q.token = token) with
     | none => simpa only [fireObserver, show m.emit _ = base from rfl, hw, hp] using Or.inl (b := InterruptedAt base fiber) baseRequest
     | some pending =>
-      have code : externalRequest w.frame.current = none :=
-        pending_reserved_noExternal baseState hw' hp (by simpa only [wid] using baseKeys)
-      have different : w.id ≠ fiber := by
-        intro he
-        obtain ⟨found, hf, _, hc⟩ := requestOf_shape baseRequest
-        have hl : base.fiber? w.id = some found := by simpa only [he] using hf
-        have eq : found = w := Option.some.inj (hl.symm.trans hw')
-        subst found
-        rw [code] at hc
-        cases hc
       let run := if pending.failFast && !exit.isSuccess && pending.collected.all Exit.isSuccess then
         interruptEach (interpOf p table) waiter ((interpOf p table).stackAnnotations waiter)
           pending.remaining (base, []) else (base, [])
@@ -708,22 +710,33 @@ theorem requestOrInterrupted_fireObserver_countdown (p : NativeEff) (table : Row
         · exact requestOrInterrupted_interruptEach p table waiter _ _ base [] fiber offered request baseRequest
         · exact Or.inl baseRequest
       simp only [fireObserver, show m.emit _ = base from rfl, hw, hp]
-      cases walk : countdownWalk run.1 pending.remaining (pending.collected ++ [exit]) with
-      | mk exits next =>
-        cases next with
-        | none =>
-          exact requestOrInterrupted_update_other run.1
-            { w with pending := w.pending.map fun q => if q.token = token then
-              { q with waitingOn := none, remaining := [], collected := exits } else q }
-            fiber offered request different runRequest
-        | some pair =>
-          obtain ⟨next, rest⟩ := pair
-          exact requestOrInterrupted_update_other
-            (run.1.modify next fun f => { f with observers := f.observers ++ [.countdown waiter token] })
-            { w with pending := w.pending.map fun q => if q.token = token then
-              { q with waitingOn := some next, remaining := rest, collected := exits } else q }
-            fiber offered request different
-            (requestOrInterrupted_addObserver run.1 next (.countdown waiter token) fiber offered request runRequest)
+      cases hc : run.1.fiber? waiter with
+      | none => exact runRequest
+      | some current =>
+        dsimp only
+        have hc' : run.1.fiber? current.id = some current := by
+          simpa only [fiber_id_of_lookup hc] using hc
+        cases hcp : current.pending.find? (fun q => q.token = token) with
+        | none => exact runRequest
+        | some selected =>
+          dsimp only
+          cases walk : countdownWalk run.1 pending.remaining (pending.collected ++ [exit]) with
+          | mk exits next =>
+            cases next with
+            | none =>
+              exact requestOrInterrupted_pendingMap hc'
+                (fun q => if q.token = token then
+                  { q with waitingOn := none, remaining := [], collected := exits } else q)
+                fiber offered request runRequest
+            | some pair =>
+              obtain ⟨next, rest⟩ := pair
+              dsimp only [applyFiberEdit]
+              exact requestOrInterrupted_addObserver _ next (.countdown waiter token)
+                fiber offered request
+                (requestOrInterrupted_pendingMap hc'
+                  (fun q => if q.token = token then
+                    { q with waitingOn := some next, remaining := rest, collected := exits } else q)
+                  fiber offered request runRequest)
 
 theorem requestOrInterrupted_fireObserver (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (id : FiberId) (exit : ExitV) (commands : List NCmd)
@@ -758,8 +771,6 @@ theorem interruptedAt_fireObserver_countdown (p : NativeEff) (table : RowTable)
   cases hw : base.fiber? waiter with
   | none => simpa only [fireObserver, show m.emit _ = base from rfl, hw] using baseInterrupted
   | some w =>
-    have wid : w.id = waiter := fiber_id_of_lookup hw
-    have hw' : base.fiber? w.id = some w := by simpa only [wid] using hw
     cases hp : w.pending.find? (fun q => q.token = token) with
     | none => simpa only [fireObserver, show m.emit _ = base from rfl, hw, hp] using baseInterrupted
     | some pending =>
@@ -770,28 +781,33 @@ theorem interruptedAt_fireObserver_countdown (p : NativeEff) (table : RowTable)
         dsimp only [run]; split
         · exact interruptedAt_interruptEach p table waiter _ _ base [] baseInterrupted
         · exact baseInterrupted
-      have lookup : ∃ current, run.1.fiber? w.id = some current ∧
-          current.running = w.running ∧ current.exit = w.exit := by
-        dsimp only [run]; split
-        · exact interruptEach_lookup_fields p table waiter _ _ base [] hw'
-        · exact ⟨w, hw', rfl, rfl⟩
-      obtain ⟨current, currentLookup, _, _⟩ := lookup
       simp only [fireObserver, show m.emit _ = base from rfl, hw, hp]
-      cases walk : countdownWalk run.1 pending.remaining (pending.collected ++ [exit]) with
-      | mk exits next =>
-        cases next with
-        | none =>
-          exact interruptedAt_restorePending hw' currentLookup
-            (fun q => if q.token = token then { q with waitingOn := none, remaining := [], collected := exits } else q)
-            baseInterrupted runInterrupted
-        | some pair =>
-          obtain ⟨next, rest⟩ := pair
-          obtain ⟨after, afterLookup, _, _⟩ :=
-            fiber_lookup_addObserver_fields run.1 next (.countdown waiter token) currentLookup
-          exact interruptedAt_restorePending hw' afterLookup
-            (fun q => if q.token = token then
-              { q with waitingOn := some next, remaining := rest, collected := exits } else q)
-            baseInterrupted (interruptedAt_addObserver next (.countdown waiter token) runInterrupted)
+      cases hc : run.1.fiber? waiter with
+      | none => exact runInterrupted
+      | some current =>
+        dsimp only
+        have hc' : run.1.fiber? current.id = some current := by
+          simpa only [fiber_id_of_lookup hc] using hc
+        cases hcp : current.pending.find? (fun q => q.token = token) with
+        | none => exact runInterrupted
+        | some selected =>
+          dsimp only
+          cases walk : countdownWalk run.1 pending.remaining (pending.collected ++ [exit]) with
+          | mk exits next =>
+            cases next with
+            | none =>
+              exact interruptedAt_restorePending hc' hc'
+                (fun q => if q.token = token then
+                  { q with waitingOn := none, remaining := [], collected := exits } else q)
+                runInterrupted runInterrupted
+            | some pair =>
+              obtain ⟨next, rest⟩ := pair
+              dsimp only [applyFiberEdit]
+              exact interruptedAt_addObserver next (.countdown waiter token)
+                (interruptedAt_restorePending hc' hc'
+                  (fun q => if q.token = token then
+                    { q with waitingOn := some next, remaining := rest, collected := exits } else q)
+                  runInterrupted runInterrupted)
 
 theorem interruptedAt_fireObserver (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (id : FiberId) (exit : ExitV) (commands : List NCmd)
@@ -936,13 +952,20 @@ theorem registrationQueue_fireObserver (p : NativeEff) (table : RowTable)
           dsimp only [run]; split
           · exact registrationQueue_interruptEach p table waiter _ _ base [] True.intro
           · trivial
-        cases walk : countdownWalk run.1 pending.remaining (pending.collected ++ [exit]) with
-        | mk exits next =>
-          cases next with
-          | none =>
-            exact registrationQueue_append (registrationQueue_append registration nested)
-              ⟨True.intro, True.intro⟩
-          | some pair => exact registrationQueue_append registration nested
+        split
+        · exact registrationQueue_append registration nested
+        · split
+          · exact registrationQueue_append registration nested
+          · cases walk : countdownWalk run.1 pending.remaining (pending.collected ++ [exit]) with
+            | mk exits next =>
+              cases next with
+              | none =>
+                exact registrationQueue_append (registrationQueue_append registration nested)
+                  ⟨True.intro, True.intro⟩
+              | some pair =>
+                dsimp only [applyFiberEdit]
+                simp only [List.append_nil]
+                exact registrationQueue_append registration nested
   | raceCallback raceId =>
     simp only [fireObserver]
     split

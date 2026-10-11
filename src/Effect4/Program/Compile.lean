@@ -1757,7 +1757,7 @@ def enterScoped (root : NativeEff) (p : Point)
     maxOpsBeforeYield := context.maxOpsBeforeYield
     preventYield := context.preventYield
     frame := { f.frame with current } }
-  ⟨{ m with state }, f, yielding, .continue_, []⟩
+  ⟨{ m with state }, f, yielding, .continue_, [], []⟩
 
 /-- The scoped callback runs after the real pop, including any passed mask
 frames, and restores context before constructing unsafe close's optional effect
@@ -1781,7 +1781,7 @@ def exitScoped (root : NativeEff)
       preventYield := previous.preventYield }
     let m := m.emit (pop.events.map (RunEvent.frame f.id))
     match storesCloseScopeUnsafe scope exit f.frame.interruptible m.state with
-    | none => ⟨m, f, yielding, .stuck (.unknownScope scope), []⟩
+    | none => ⟨m, f, yielding, .stuck (.unknownScope scope), [], []⟩
     | some (state, program) =>
       let m := { m with state }
       let m := match program with
@@ -1790,7 +1790,7 @@ def exitScoped (root : NativeEff)
       let current := match program with
         | none => Prim.ofExit exit
         | some code => finalizerCode interp exit (embed code)
-      ⟨m, { f with frame := { f.frame with current } }, yielding, .continue_, []⟩
+      ⟨m, { f with frame := { f.frame with current } }, yielding, .continue_, [], []⟩
   | _ => evaluatePrim interp m f yielding
 
 /-- Native source actions use the shared loop's stateful evaluator seam. Only

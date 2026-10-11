@@ -1,6 +1,7 @@
 import Effect4.Api
 import Effect4.Laws.Program.Guard.RaceSites
 import Effect4.Laws.Machine.Handles
+import Effect4.Laws.Machine.EditWords
 
 /-! Native returned-frame race ownership under existing internal invariants.
 RaceIdsBelow and FrameCodeOwned express allocation bounds and frame ownership.
@@ -630,12 +631,24 @@ theorem modify_races (m : NativeMachine) (fid : FiberId) (update : NFiber → NF
   unfold RunMachine.modify
   split <;> rfl
 
+theorem linkScopeEdits_races (interp : NInterp) (m : NativeMachine) (mode : Supervision.ScopeMode)
+    (scope : Nat) (target : FiberId) (interruptor : Option FiberId) (extra : ReasonAnnotations Ann) :
+    (linkScopeEdits interp m mode scope target interruptor extra).1.races = m.races := by
+  rw [Edits.link_plan_word]
+  apply Edits.run_keeps (fun held : NativeMachine => held.races) _ ?_ m
+  intro edit member held
+  unfold Edits.linkWord at member
+  repeat' split at member
+  all_goals
+    aesop (add norm simp [List.mem_cons, List.not_mem_nil, Edit.apply, RunMachine.halt,
+      RunMachine.emit])
+
 theorem linkScope_races (interp : NInterp) (m : NativeMachine) (mode : Supervision.ScopeMode)
     (scope : Nat) (target : FiberId) (interruptor : Option FiberId) (extra : ReasonAnnotations Ann) :
     (linkScope interp m mode scope target interruptor extra).1.races = m.races := by
   unfold linkScope
-  repeat' first | rfl | split
-  all_goals simp only [RunMachine.emit, modify_races]
+  rw [(RunMachine.applyFiberEdits_shape _ _).1]
+  exact linkScopeEdits_races interp m mode scope target interruptor extra
 
 theorem forkFinalizers_races (interp : NInterp) (m : NativeMachine) (f : NFiber) (codes : List NCode) :
     (forkFinalizers interp m f codes).1.races = m.races := by
@@ -680,13 +693,13 @@ theorem withFiber_owned (p : NativeEff) (completed : List (FiberId × ExitV)) (t
   case raceAllFirst entrants site =>
     exact beginRace_owned p completed table m f yielding entrants bounds hf site .firstExit
   all_goals simp only [evaluatePrim.withFiber, evaluatePrim.interruptAs, spawn, start,
-    countdownPark, RunFiber.park, FrameFiber.uninterruptible, FrameFiber.interruptibleRegion,
+    countdownParkEdits, RunFiber.park, FrameFiber.uninterruptible, FrameFiber.interruptibleRegion,
     FrameFiber.setFiberInterruptible]
   all_goals repeat' split
   all_goals apply frameCodeOwned_same_races hf
   all_goals
     aesop (rule_sets := [Effect4.Stores])
-      (add norm simp [RunMachine.emit, modify_races, linkScope_races, forkFinalizers_races,
+      (add norm simp [RunMachine.emit, modify_races, linkScopeEdits_races, forkFinalizers_races,
         frameSites, raceSites, Option.getD_none, Option.getD_some, countdownPark.resumePrim,
         List.flatMap_cons, List.nil_append, ha])
       (add safe apply [replace_current_sites, closeScope_hook_sites])
@@ -707,27 +720,52 @@ theorem registerAsync_result_sites (p : NativeEff) (completed : List (FiberId ×
   rw [h] at hs
   exact hs
 
+/-- The canonical countdown plan retains the returned frame's race ownership.
+Consumer: native primitive evaluation; the eager adapter follows by the shared message word. -/
+theorem countdownParkEdits_owned (interp : NInterp) (m : NativeMachine) (f : NFiber)
+    (targets : List FiberId) (resumeWith : Resume EffName) (failFast : Bool)
+    (hf : FrameCodeOwned m f) :
+    FrameCodeOwned (countdownParkEdits interp m f targets resumeWith failFast).1
+      (countdownParkEdits interp m f targets resumeWith failFast).2.1 := by
+  unfold countdownParkEdits
+  cases hwalk : countdownWalk { m with nextToken := m.nextToken + 1 } targets [] with
+  | mk exits waiting =>
+    cases waiting with
+    | none =>
+      simp only [hwalk]
+      apply frameCodeOwned_same_races hf
+      · rfl
+      · rfl
+      · apply replace_current_sites
+        cases resumeWith <;> rfl
+    | some pair =>
+      rcases pair with ⟨target, remaining⟩
+      simp only [hwalk]
+      apply frameCodeOwned_same_races hf
+      · rfl
+      · rfl
+      · simp only [RunFiber.park, frameSites, raceSites, List.flatMap_cons, List.nil_append]
+        exact List.Subset.refl _
+
+theorem countdownParkEdits_result_owned (interp : NInterp) (m : NativeMachine) (f : NFiber)
+    (targets : List FiberId) (resumeWith : Resume EffName) (failFast : Bool)
+    (after : NativeMachine) (next : NFiber) (parked : Bool) (edits : List (FiberEdit Err Defect FiberId Ann))
+    (hf : FrameCodeOwned m f)
+    (h : countdownParkEdits interp m f targets resumeWith failFast = (after, next, parked, edits)) :
+    FrameCodeOwned after next := by
+  simpa only [h] using countdownParkEdits_owned interp m f targets resumeWith failFast hf
+
 theorem countdownPark_owned (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (targets : List FiberId) (resumeWith : Resume EffName) (failFast : Bool)
     (hf : FrameCodeOwned m f) :
     FrameCodeOwned (countdownPark interp m f targets resumeWith failFast).1
       (countdownPark interp m f targets resumeWith failFast).2.1 := by
-  unfold countdownPark
-  dsimp only
-  cases hwalk : countdownWalk { m with nextToken := m.nextToken + 1 } targets [] with
-  | mk exits waiting =>
-    cases waiting with
-    | none =>
-      apply frameCodeOwned_same_races hf <;> try rfl
-      apply replace_current_sites
-      cases resumeWith <;> rfl
-    | some pair =>
-      rcases pair with ⟨target, remaining⟩
-      apply frameCodeOwned_same_races hf
-      · simp only [RunMachine.emit, modify_races]
-      · rfl
-      · simp only [RunFiber.park, frameSites, raceSites, List.flatMap_cons, List.nil_append]
-        exact List.Subset.refl _
+  let plan := countdownParkEdits interp m f targets resumeWith failFast
+  change FrameCodeOwned (applyFiberEdits plan.2.2.2 plan.1).1 plan.2.1
+  apply frameCodeOwned_same_races (countdownParkEdits_owned interp m f targets resumeWith failFast hf)
+  · rw [(RunMachine.applyFiberEdits_shape plan.2.2.2 plan.1).1]
+  · rfl
+  · exact List.Subset.refl _
 
 theorem countdownPark_result_owned (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (targets : List FiberId) (resumeWith : Resume EffName) (failFast : Bool)
@@ -744,7 +782,7 @@ theorem closeScopeUnsafe_some_sites (scope : Nat) (exit : ExitV) (mask : Bool)
   exact raceSites_closeScopeUnsafe scope exit mask state after (some code) h code rfl
 
 attribute [aesop safe forward (rule_sets := [Effect4.Stores])]
-  countdownPark_result_owned closeScopeUnsafe_some_sites
+  countdownPark_result_owned countdownParkEdits_result_owned closeScopeUnsafe_some_sites
 
 theorem exitValue_sites (p : NativeEff) (completed : List (FiberId × ExitV)) (table : RowTable)
     (exit : ExitV) (mode : Supervision.ObserverMode) :
@@ -763,7 +801,7 @@ theorem evaluatePrim_owned (p : NativeEff) (completed : List (FiberId × ExitV))
   all_goals
     aesop (rule_sets := [Effect4.Stores])
       (add safe apply [stepFrame_owned, finalizerOr_owned, registerRace_owned,
-        countdownPark_owned, withFiber_owned])
+        countdownParkEdits_owned, withFiber_owned])
       (add safe forward [withFiber_hook_sites, registerAsync_result_sites])
       (add norm simp [exitValue_sites, RunFiber.park, RunMachine.emit, frameSites,
         raceSites, List.flatMap_cons, List.nil_append])

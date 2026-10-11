@@ -28,7 +28,7 @@ theorem native_sync_op (root : NativeEff) (table : RowTable) (m : Api.Machine)
     (answer : syncOpStep op m.state = some (state, value)) :
     evaluateNative root m f yielding table =
       ⟨{ m with state }, { f with frame := { f.frame with current := .success value } },
-        yielding, .answered, [.drainDue]⟩ := by
+        yielding, .answered, [.drainDue], []⟩ := by
   have park : (interpAt root m.completedExits table).parkOf (.sync (.op op)) = none := rfl
   have sync : (interpAt root m.completedExits table).syncState (.op op) m.state =
       syncOpStep op m.state := rfl
@@ -52,7 +52,7 @@ theorem native_sync_answer {World Kind : Type} (root : NativeEff) (table : RowTa
     (stack : AnswerFlow.StackAt model interp (world m.state) input output f.frame.stack) :
     evaluateNative root m f yielding table =
       ⟨{m with state}, {f with frame := {f.frame with current := .success value}},
-        yielding, .answered, [.drainDue]⟩ ∧
+        yielding, .answered, [.drainDue], []⟩ ∧
       AnswerFlow.FrameAt model interp (world state) output
         {f.frame with current := .success value} :=
   ⟨native_sync_op root table m f yielding op state value current answer,

@@ -274,17 +274,17 @@ theorem asVoidCode_means (root : NativeEff) {c₁ : NCode} {c₂ : RProgram} (hc
 
 /-! ## Settling an iteration -/
 
-theorem settle_rel (root : NativeEff) {it₁ : FIter} {it₂ : RIter} (h : IterRel table root it₁ it₂)
+theorem settleOutcome_rel (root : NativeEff) {it₁ : FIter} {it₂ : RIter} (h : IterRel table root it₁ it₂)
     (hp : PendingOk it₁.fiber) {id₁ id₂ : FiberId} (hid : id₁ = id₂) {r₁ : List FCmd}
     {r₂ : List RCmd} (hr : ListRel (CMeans root) r₁ r₂) :
-    CmdsRel (table := table) root (settle id₁ r₁ it₁) (settle id₂ r₂ it₂) := by
+    CmdsRel (table := table) root (settleOutcome id₁ r₁ it₁) (settleOutcome id₂ r₂ it₂) := by
   subst hid
-  obtain ⟨m₁, f₁, y₁, o₁, n₁⟩ := it₁
-  obtain ⟨m₂, f₂, y₂, o₂, n₂⟩ := it₂
-  obtain ⟨hok, hm, hf, hy, ho, hn⟩ := h
+  obtain ⟨m₁, f₁, y₁, o₁, n₁, e₁⟩ := it₁
+  obtain ⟨m₂, f₂, y₂, o₂, n₂, e₂⟩ := it₂
+  obtain ⟨hok, hm, hf, hy, ho, hn, _⟩ := h
   dsimp only at hok hm hf hy ho hn hp
   subst hy ho
-  unfold settle
+  unfold settleOutcome
   dsimp only [FiberCore.deferredInterrupt, frameCore, termCore]
   cases o₁ with
   | continue_ =>
@@ -317,6 +317,41 @@ theorem settle_rel (root : NativeEff) {it₁ : FIter} {it₂ : RIter} (h : IterR
       (machineOk_halt (machineOk_update (f := { f₁ with running := false }) hok
         (pendingOk_of_fields hp rfl)) why)
       ((hm.update (hf.withRunning false)).halt why) ListRel.nil
+
+/-- Settlement installs related local fibers, applies equal messages, and reads their current owners. -/
+theorem settle_rel (root : NativeEff) {it₁ : FIter} {it₂ : RIter} (h : IterRel table root it₁ it₂)
+    (hp : PendingOk it₁.fiber) {id₁ id₂ : FiberId} (hid : id₁ = id₂) {r₁ : List FCmd}
+    {r₂ : List RCmd} (hr : ListRel (CMeans root) r₁ r₂) :
+    CmdsRel (table := table) root (settle id₁ r₁ it₁) (settle id₂ r₂ it₂) := by
+  unfold settle
+  rw [h.edits]
+  cases word : it₂.edits with
+  | nil => exact settleOutcome_rel root h hp hid hr
+  | cons edit rest =>
+    have changed := fiberEdits_rel root (edit :: rest)
+      (machineOk_update h.ok hp) (h.machine.update h.fiber)
+    dsimp only
+    rw [h.fiber.id]
+    rcases changed.2.1.fiber?_cases it₂.fiber.id with ⟨left, right⟩ |
+        ⟨first, last, left, right, related⟩
+    · rw [left, right]
+      exact CmdsRel.mk' (machineOk_halt changed.1 _) (changed.2.1.halt _) ListRel.nil
+    · rw [left, right]
+      have result : IterRel table root
+          { it₁ with
+            machine := (applyFiberEdits (edit :: rest) (it₁.machine.update it₁.fiber)).1,
+            fiber := first,
+            nested := (applyFiberEdits (edit :: rest) (it₁.machine.update it₁.fiber)).2 ++ it₁.nested,
+            edits := [] }
+          { it₂ with
+            machine := (applyFiberEdits (edit :: rest) (it₂.machine.update it₂.fiber)).1,
+            fiber := last,
+            nested := (applyFiberEdits (edit :: rest) (it₂.machine.update it₂.fiber)).2 ++ it₂.nested,
+            edits := [] } :=
+        ⟨changed.1, changed.2.1, related, h.yielding, h.outcome,
+          ListRel.append changed.2.2 h.nested, rfl⟩
+      exact settleOutcome_rel root result (pendingOk_of_fiber? changed.1 left) hid hr
+
 
 /-! ## One iteration -/
 
@@ -436,67 +471,60 @@ theorem fireObserver_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (h
         dsimp only
         have hp : ∀ name, p.resumeWith ≠ Resume.continueWith name :=
           hpw p (by rw [hw.pending]; exact List.mem_of_find?_eq_some hfind)
-        by_cases hff : (p.failFast && !exit.isSuccess && p.collected.all Exit.isSuccess) = true
-        · rw [if_pos hff, if_pos hff]
-          have hie := interruptEach_rel root (interpAgree_of root) hok' hm' waiter
-            (x₁ := (interpOf root table).stackAnnotations waiter) (x₂ := (interpR root table).stackAnnotations waiter)
-            rfl p.remaining (n₁ := []) (n₂ := []) ListRel.nil
-          generalize interruptEach (interpOf root table) waiter ((interpOf root table).stackAnnotations waiter)
-            p.remaining (M₁, []) = ie₁ at hie ⊢
-          generalize interruptEach (interpR root table) waiter ((interpR root table).stackAnnotations waiter)
-            p.remaining (M₂, []) = ie₂ at hie ⊢
-          obtain ⟨im₁, in₁⟩ := ie₁
-          obtain ⟨im₂, in₂⟩ := ie₂
-          obtain ⟨hok'', hm'', hn''⟩ := hie
-          dsimp only at hok'' hm'' hn'' ⊢
-          rw [countdownWalk_eq hm'' p.remaining (p.collected ++ [exit])]
-          cases hcw : countdownWalk im₂ p.remaining (p.collected ++ [exit]) with
-          | mk exits opt =>
-            cases opt with
-            | none =>
-              dsimp only
-              exact CmdsRel.mk' (machineOk_update hok'' (pendingOk_countdownEntry hpw hw.pending token none [] exits))
-                (hm''.update (hw.countdownEntry token none [] exits))
-                (ListRel.append (ListRel.append hn hn'')
-                  (ListRel.cons (cmeans_resume root rfl token (resumePrim_means root p.resumeWith hp exits))
-                    ListRel.nil))
-            | some tr =>
-              obtain ⟨next, rest⟩ := tr
-              dsimp only
-              refine CmdsRel.mk'
-                (machineOk_update (machineOk_modify hok'' next ?_)
-                  (pendingOk_countdownEntry hpw hw.pending token (some next) rest exits))
-                ((hm''.modify next ?_).update (hw.countdownEntry token (some next) rest exits))
-                (ListRel.append hn hn'')
-              · intro _ hg
-                exact pendingOk_of_fields hg rfl
-              · intro g₁ g₂ hg
-                exact hg.mapObservers (fun l => l ++ [Observer.countdown waiter token])
-        · rw [if_neg hff, if_neg hff]
+        have interrupts := interruptEach_rel root (interpAgree_of root) hok' hm' waiter
+          (x₁ := (interpOf root table).stackAnnotations waiter)
+          (x₂ := (interpR root table).stackAnnotations waiter) rfl p.remaining
+          (n₁ := []) (n₂ := []) ListRel.nil
+        have branch : CmdsRel (table := table) root
+            (if p.failFast && !exit.isSuccess && p.collected.all Exit.isSuccess then
+              interruptEach (interpOf root table) waiter ((interpOf root table).stackAnnotations waiter)
+                p.remaining (M₁, []) else (M₁, []))
+            (if p.failFast && !exit.isSuccess && p.collected.all Exit.isSuccess then
+              interruptEach (interpR root table) waiter ((interpR root table).stackAnnotations waiter)
+                p.remaining (M₂, []) else (M₂, [])) := by
+          split
+          · exact interrupts
+          · exact ⟨hok', hm', ListRel.nil⟩
+        generalize (if p.failFast && !exit.isSuccess && p.collected.all Exit.isSuccess then
+            interruptEach (interpOf root table) waiter ((interpOf root table).stackAnnotations waiter)
+              p.remaining (M₁, []) else (M₁, [])) = phase₁ at branch ⊢
+        generalize (if p.failFast && !exit.isSuccess && p.collected.all Exit.isSuccess then
+            interruptEach (interpR root table) waiter ((interpR root table).stackAnnotations waiter)
+              p.remaining (M₂, []) else (M₂, [])) = phase₂ at branch ⊢
+        obtain ⟨im₁, in₁⟩ := phase₁
+        obtain ⟨im₂, in₂⟩ := phase₂
+        obtain ⟨heldOk, heldRel, commands⟩ := branch
+        dsimp only at heldOk heldRel commands ⊢
+        rcases heldRel.fiber?_cases waiter with ⟨left, right⟩ |
+            ⟨current₁, current₂, left, right, currentRel⟩
+        · rw [left, right]
+          exact ⟨heldOk, heldRel, ListRel.append hn commands⟩
+        · rw [left, right]
           dsimp only
-          rw [countdownWalk_eq hm' p.remaining (p.collected ++ [exit])]
-          cases hcw : countdownWalk M₂ p.remaining (p.collected ++ [exit]) with
-          | mk exits opt =>
-            cases opt with
-            | none =>
-              dsimp only
-              exact CmdsRel.mk' (machineOk_update hok' (pendingOk_countdownEntry hpw hw.pending token none [] exits))
-                (hm'.update (hw.countdownEntry token none [] exits))
-                (ListRel.append (ListRel.append hn ListRel.nil)
-                  (ListRel.cons (cmeans_resume root rfl token (resumePrim_means root p.resumeWith hp exits))
-                    ListRel.nil))
-            | some tr =>
-              obtain ⟨next, rest⟩ := tr
-              dsimp only
-              refine CmdsRel.mk'
-                (machineOk_update (machineOk_modify hok' next ?_)
-                  (pendingOk_countdownEntry hpw hw.pending token (some next) rest exits))
-                ((hm'.modify next ?_).update (hw.countdownEntry token (some next) rest exits))
-                (ListRel.append hn ListRel.nil)
-              · intro _ hg
-                exact pendingOk_of_fields hg rfl
-              · intro g₁ g₂ hg
-                exact hg.mapObservers (fun l => l ++ [Observer.countdown waiter token])
+          rw [currentRel.pending]
+          cases guard : current₂.pending.find? (fun q => q.token = token) with
+          | none => exact ⟨heldOk, heldRel, ListRel.append hn commands⟩
+          | some active =>
+            have pending := pendingOk_of_fiber? heldOk left
+            dsimp only
+            rw [countdownWalk_eq heldRel p.remaining (p.collected ++ [exit])]
+            cases countdownWalk im₂ p.remaining (p.collected ++ [exit]) with
+            | mk exits next =>
+              cases next with
+              | none =>
+                exact CmdsRel.mk'
+                  (machineOk_update heldOk (pendingOk_countdownEntry pending currentRel.pending token none [] exits))
+                  (heldRel.update (currentRel.countdownEntry token none [] exits))
+                  (ListRel.append (ListRel.append hn commands)
+                    (ListRel.cons (cmeans_resume root rfl token (resumePrim_means root p.resumeWith hp exits))
+                      ListRel.nil))
+              | some target =>
+                obtain ⟨next, rest⟩ := target
+                have observed := fiberEdit_rel root (.observe next (.countdown waiter token))
+                  (machineOk_update heldOk
+                    (pendingOk_countdownEntry pending currentRel.pending token (some next) rest exits))
+                  (heldRel.update (currentRel.countdownEntry token (some next) rest exits))
+                exact ⟨observed.1, observed.2.1, ListRel.append (ListRel.append hn commands) observed.2.2⟩
   | raceCallback raceId =>
     simp only [fireObserver]
     have hok' := machineOk_emit hok [RunEvent.observerFired id (Observer.raceCallback raceId)]
@@ -807,7 +835,7 @@ theorem drive_registrationDone (raceId : Nat) (y : Bool) :
       cases hacc : state₁.accepted with
       | some exit =>
         exact settle_rel root
-          ⟨hok', hm', hf.answer (raceSettle_means root raceId _ exit), rfl, rfl, ListRel.nil⟩
+          ⟨hok', hm', hf.answer (raceSettle_means root raceId _ exit), rfl, rfl, ListRel.nil, rfl⟩
           (pendingOk_of_fields (pendingOk_of_fiber? hok' hh₁) rfl) hf.id hr
       | none =>
         have hname : (interpOf root table).cancelName ((interpOf root table).raceCancelName raceId) f₁.id token₁
@@ -817,7 +845,7 @@ theorem drive_registrationDone (raceId : Nat) (y : Bool) :
         rw [← hname]
         exact settle_rel root
           ⟨machineOk_emit hok' _, BMeans.emit hm' _ _,
-            (hf.withFrame (means_pushAsyncFinalizer hf.means _)).park _, rfl, rfl, ListRel.nil⟩
+            (hf.withFrame (means_pushAsyncFinalizer hf.means _)).park _, rfl, rfl, ListRel.nil, rfl⟩
           (pendingOk_parkVoid (pendingOk_of_fields (pendingOk_of_fiber? hok' hh₁) rfl) _ _ _ _ _)
           hf.id hr
 
@@ -859,7 +887,7 @@ theorem drive_afterInterrupt (host : FiberId) (y : Bool) (kind : ParkKind) :
   · rw [h₁, h₂]
     dsimp only
     exact settle_rel root
-      ⟨hok, hm, hf.answer (asVoidCode_means root (awaitCode_means root hm kind)), rfl, rfl, ListRel.nil⟩
+      ⟨hok, hm, hf.answer (asVoidCode_means root (awaitCode_means root hm kind)), rfl, rfl, ListRel.nil, rfl⟩
       (pendingOk_of_fields (pendingOk_of_fiber? hok h₁) rfl) hf.id hr
 
 theorem drive_raceCancel (raceId : Nat) (host : FiberId) (y : Bool) (remaining visited : List FiberId) :
@@ -949,7 +977,7 @@ theorem drive_closeParAwait (host : FiberId) (y : Bool) (fibers : List FiberId) 
     exact settle_rel root
       ⟨hok, hm,
         hf.withFrame (means_answerWith (means_pushIterator hf.means _ _)
-          (parkCode_means root (ParkKind.awaitAll fibers))), rfl, rfl, ListRel.nil⟩
+          (parkCode_means root (ParkKind.awaitAll fibers))), rfl, rfl, ListRel.nil, rfl⟩
       (pendingOk_of_fields (pendingOk_of_fiber? hok h₁) rfl) hf.id hr
 
 theorem drive_link (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId)

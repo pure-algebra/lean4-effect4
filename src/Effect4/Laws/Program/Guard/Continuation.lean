@@ -109,7 +109,7 @@ theorem guardState_driveStep_afterInterrupt (p : NativeEff) (table : RowTable)
   let code := asVoidCode (interpOf p table) (awaitCode (interpOf p table) m kind)
   let g : NFiber := { f with frame := { f.frame with current := code } }
   have codes := frameCodeOwned_answer valid.codes code (raceSites_afterInterrupt p table m host yielding kind sites)
-  simpa only [driveStep, lookup, settle, List.nil_append, List.cons_append] using
+  simpa only [driveStep, lookup, settle, settleOutcome, List.nil_append, List.cons_append] using
     guardState_update_unparked state found g rfl
       (fiberGuardState_reframe valid _ rfl rfl codes)
       (reservedKeys_fiber state (f := f) (List.mem_of_find?_eq_some lookup)) park
@@ -126,7 +126,7 @@ theorem guardQueue_driveStep_afterInterrupt (p : NativeEff) (table : RowTable)
   have hid := fiber_id_of_lookup lookup
   have found : m.fiber? f.id = some f := by simpa only [hid] using lookup
   have fresh := guardQueue_head_fresh p table queue (show commandOwner m (.afterInterrupt host yielding kind) = some host from rfl)
-  simpa only [driveStep, lookup, settle, List.nil_append, List.cons_append] using
+  simpa only [driveStep, lookup, settle, settleOutcome, List.nil_append, List.cons_append] using
     guardQueue_continue_active p table state found running park (guardQueue_tail p table queue)
       registration.2 (hid ▸ fresh)
       { f with frame := { f.frame with current := asVoidCode (interpOf p table) (awaitCode (interpOf p table) m kind) } }
@@ -142,7 +142,7 @@ theorem requestOf_driveStep_afterInterrupt (p : NativeEff) (table : RowTable)
   letI := evaluatorFor p table
   obtain ⟨f, lookup, _, park⟩ := authority
   have found : m.fiber? f.id = some f := by simpa only [fiber_id_of_lookup lookup] using lookup
-  simp only [driveStep, lookup, settle]
+  simp only [driveStep, lookup, settle, settleOutcome]
   exact requestOf_update_unparked_eq found park
     { f with frame := { f.frame with current := asVoidCode (interpOf p table) (awaitCode (interpOf p table) m kind) } }
     rfl park fiber token
@@ -168,7 +168,7 @@ theorem interruptedAt_driveStep_afterInterrupt (p : NativeEff) (table : RowTable
   | none => simpa only [driveStep, lookup] using before
   | some f =>
     have found : m.fiber? f.id = some f := by simpa only [fiber_id_of_lookup lookup] using lookup
-    simp only [driveStep, lookup, settle]
+    simp only [driveStep, lookup, settle, settleOutcome]
     exact interruptedAt_update_reframe found
       { f.frame with current := asVoidCode (interpOf p table) (awaitCode (interpOf p table) m kind) }
       rfl rfl fiber before
@@ -182,7 +182,7 @@ theorem registrationQueue_driveStep_afterInterrupt (p : NativeEff) (table : RowT
   cases lookup : m.fiber? host with
   | none => simpa only [driveStep, lookup] using registration.2
   | some f =>
-    simp only [driveStep, lookup, settle, List.nil_append, List.cons_append]
+    simp only [driveStep, lookup, settle, settleOutcome, List.nil_append, List.cons_append]
     exact ⟨True.intro, registration.2⟩
 
 theorem frameCodeOwned_closeParAwait (p : NativeEff) (table : RowTable)
@@ -206,7 +206,7 @@ theorem guardState_driveStep_closeParAwait (p : NativeEff) (table : RowTable)
   have found : m.fiber? f.id = some f := by simpa only [fiber_id_of_lookup lookup] using lookup
   have valid := guardState_fiber state (List.mem_of_find?_eq_some lookup)
   let frame := { f.frame with current := (interpOf p table).parkCode (.awaitAll fibers), stack := Prim.iterator (interpOf p table).closeDoneName (interpOf p table).voidValue :: f.frame.stack }
-  simp only [driveStep, lookup, settle]
+  simp only [driveStep, lookup, settle, settleOutcome]
   exact guardState_update_unparked state found { f with frame := frame } rfl
     (fiberGuardState_reframe valid frame rfl rfl (frameCodeOwned_closeParAwait p table fibers valid.codes))
     (reservedKeys_fiber state (f := f) (List.mem_of_find?_eq_some lookup)) park
@@ -224,7 +224,7 @@ theorem guardQueue_driveStep_closeParAwait (p : NativeEff) (table : RowTable)
   have found : m.fiber? f.id = some f := by simpa only [hid] using lookup
   have fresh := guardQueue_head_fresh p table queue (show commandOwner m (.closeParAwait host yielding fibers) = some host from rfl)
   let frame := { f.frame with current := (interpOf p table).parkCode (.awaitAll fibers), stack := Prim.iterator (interpOf p table).closeDoneName (interpOf p table).voidValue :: f.frame.stack }
-  simpa only [driveStep, lookup, settle, List.nil_append, List.cons_append] using
+  simpa only [driveStep, lookup, settle, settleOutcome, List.nil_append, List.cons_append] using
     guardQueue_continue_active p table state found running park (guardQueue_tail p table queue)
       registration.2 (hid ▸ fresh) { f with frame := frame } rfl running park yielding
 
@@ -238,7 +238,7 @@ theorem requestOf_driveStep_closeParAwait (p : NativeEff) (table : RowTable)
   letI := evaluatorFor p table
   obtain ⟨f, lookup, _, park⟩ := authority
   have found : m.fiber? f.id = some f := by simpa only [fiber_id_of_lookup lookup] using lookup
-  simp only [driveStep, lookup, settle]
+  simp only [driveStep, lookup, settle, settleOutcome]
   exact requestOf_update_unparked_eq found park
     { f with frame := { f.frame with current := (interpOf p table).parkCode (.awaitAll fibers), stack := Prim.iterator (interpOf p table).closeDoneName (interpOf p table).voidValue :: f.frame.stack } }
     rfl park fiber token
@@ -264,7 +264,7 @@ theorem interruptedAt_driveStep_closeParAwait (p : NativeEff) (table : RowTable)
   | none => simpa only [driveStep, lookup] using before
   | some f =>
     have found : m.fiber? f.id = some f := by simpa only [fiber_id_of_lookup lookup] using lookup
-    simp only [driveStep, lookup, settle]
+    simp only [driveStep, lookup, settle, settleOutcome]
     exact interruptedAt_update_reframe found
       { f.frame with current := (interpOf p table).parkCode (.awaitAll fibers), stack := Prim.iterator (interpOf p table).closeDoneName (interpOf p table).voidValue :: f.frame.stack }
       rfl rfl fiber before
@@ -278,7 +278,7 @@ theorem registrationQueue_driveStep_closeParAwait (p : NativeEff) (table : RowTa
   cases lookup : m.fiber? host with
   | none => simpa only [driveStep, lookup] using registration.2
   | some f =>
-    simp only [driveStep, lookup, settle, List.nil_append, List.cons_append]
+    simp only [driveStep, lookup, settle, settleOutcome, List.nil_append, List.cons_append]
     exact ⟨True.intro, registration.2⟩
 
 end Effect4.Program.Guard

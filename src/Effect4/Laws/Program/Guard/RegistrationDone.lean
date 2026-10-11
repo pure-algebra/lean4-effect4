@@ -78,12 +78,12 @@ theorem guardState_park_internal (m : NativeMachine) (f : NFiber) (frame : NFram
     (codes : FrameCodeOwned m { f with frame := frame }) (below : token < m.nextToken) :
     GuardState (settle f.id rest
       ⟨m, ({ f with frame := frame } : NFiber).park ⟨token, none, [], [], Resume.void, false⟩,
-        yielding, .parked, []⟩).1 := by
+        yielding, .parked, [], []⟩).1 := by
   have mem := List.mem_of_find?_eq_some lookup
   have old := guardState_fiber state mem
   have pending : f.pending = [] := by simpa only [PendingShape, park] using old.pending
   let g := ({ f with frame := frame } : NFiber).park ⟨token, none, [], [], Resume.void, false⟩
-  let it : NIter := ⟨m, g, yielding, .parked, []⟩
+  let it : NIter := ⟨m, g, yielding, .parked, [], []⟩
   have pshape : PendingShape g := by
     simp only [g, RunFiber.park, PendingShape, pending, List.nil_append]
     exact ⟨_, rfl, rfl⟩
@@ -91,7 +91,7 @@ theorem guardState_park_internal (m : NativeMachine) (f : NFiber) (frame : NFram
     True.intro (fun next hp => Parked.withGuard.inj hp ▸ below)
     (active_noExit state (f := f) lookup running) (fun h => cause ▸ old.deferredCause (deferred ▸ h)) codes old.tasks
   exact guardState_settle f.id rest it state f lookup valid (reservedKeys_fiber state (f := f) mem)
-    (fun _ _ _ hc => False.elim (by rw [show externalRequest g.frame.current = none from code] at hc; cases hc))
+    (fun _ _ _ hc => False.elim (by rw [show externalRequest g.frame.current = none from code] at hc; cases hc)) rfl
 
 theorem guardQueue_park_internal (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (frame : NFrame)
@@ -103,9 +103,9 @@ theorem guardQueue_park_internal (p : NativeEff) (table : RowTable)
     (fresh : f.id ∉ rest.filterMap (commandOwner m)) :
     let result := settle f.id rest
       ⟨m, ({ f with frame := frame } : NFiber).park ⟨token, none, [], [], Resume.void, false⟩,
-        yielding, .parked, []⟩
+        yielding, .parked, [], []⟩
     GuardQueue p table result.1 result.2 := by
-  simp only [settle, List.nil_append, List.cons_append]
+  simp only [settle, settleOutcome, List.nil_append, List.cons_append]
   split
   · let g : NFiber := { ({ f with frame := frame } : NFiber).park
         ⟨token, none, [], [], Resume.void, false⟩ with parked := .notParked, pending := [] }
@@ -120,8 +120,8 @@ theorem requestOf_park_internal (m : NativeMachine) (f : NFiber) (frame : NFrame
     (code : externalRequest frame.current = none) (fiber : FiberId) (offered : Nat) :
     requestOf (settle f.id rest
       ⟨m, ({ f with frame := frame } : NFiber).park ⟨token, none, [], [], Resume.void, false⟩,
-        yielding, .parked, []⟩).1 fiber offered = requestOf m fiber offered := by
-  simp only [settle]
+        yielding, .parked, [], []⟩).1 fiber offered = requestOf m fiber offered := by
+  simp only [settle, settleOutcome]
   split
   · exact requestOf_update_internal_eq lookup park
       { ({ f with frame := frame } : NFiber).park ⟨token, none, [], [], Resume.void, false⟩ with parked := .notParked, pending := [] }
@@ -138,7 +138,7 @@ theorem interruptedAt_park_internal (m : NativeMachine) (f : NFiber) (frame : NF
     (fiber : FiberId) (before : InterruptedAt m fiber) :
     InterruptedAt (settle f.id rest
       ⟨m, ({ f with frame := frame } : NFiber).park ⟨token, none, [], [], Resume.void, false⟩,
-        yielding, .parked, []⟩).1 fiber := by
+        yielding, .parked, [], []⟩).1 fiber := by
   apply interruptedAt_settle _ _ _ fiber before
   intro same
   obtain ⟨old, found, interrupted⟩ := before
@@ -167,7 +167,7 @@ theorem guardState_driveStep_registrationDone (p : NativeEff) (table : RowTable)
   | some exit =>
     let code' := (interpOf p table).raceSettle rid race.state.cleanupNeeded exit
     let frame := { f.frame with current := code' }
-    simp only [settle]
+    simp only [settle, settleOutcome]
     exact guardState_update_unparked state' lookup { f with frame := frame } rfl
       (fiberGuardState_reframe valid frame rfl rfl
         (frameCodeOwned_answer valid.codes code' (raceSites_raceSettle p table rid _ exit)))
@@ -209,7 +209,7 @@ theorem guardQueue_driveStep_registrationDone (p : NativeEff) (table : RowTable)
   simp only [driveStep, hr, RunMachine.updateRace, RunMachine.fiber?, hf]
   cases accepted : race.state.accepted with
   | some exit =>
-    simp only [settle, List.nil_append, List.cons_append]
+    simp only [settle, settleOutcome, List.nil_append, List.cons_append]
     exact guardQueue_continue_active p table state' lookup running park tail registration.2 fresh
       { f with frame := { f.frame with current := (interpOf p table).raceSettle rid race.state.cleanupNeeded exit } }
       rfl running park yielding
@@ -238,7 +238,7 @@ theorem requestOf_driveStep_registrationDone (p : NativeEff) (table : RowTable)
   simp only [driveStep, hr, RunMachine.updateRace, RunMachine.fiber?, hf]
   cases accepted : race.state.accepted with
   | some exit =>
-    simp only [settle]
+    simp only [settle, settleOutcome]
     exact requestOf_update_unparked_eq lookup park
       { f with frame := { f.frame with current := (interpOf p table).raceSettle rid race.state.cleanupNeeded exit } }
       rfl park fiber token
@@ -257,7 +257,10 @@ theorem reservedKeys_driveStep_registrationDone (p : NativeEff) (table : RowTabl
   letI := evaluatorFor p table
   apply reservedKeys_of_same_requests reserved
   · simp only [driveStep]
-    repeat' first | exact Nat.le_refl _ | (simp only [settle]; split) | split
+    repeat' split
+    all_goals simp only [settle, settleOutcome]
+    all_goals repeat' split
+    all_goals exact Nat.le_refl _
   · exact requestOf_driveStep_registrationDone p table m rid yielding rest authority
 
 theorem interruptedAt_driveStep_registrationDone (p : NativeEff) (table : RowTable)
@@ -280,7 +283,7 @@ theorem interruptedAt_driveStep_registrationDone (p : NativeEff) (table : RowTab
           (show m.fiber? race.host = some f from hf)
       cases accepted : race.state.accepted with
       | some exit =>
-        simp only [settle]
+        simp only [settle, settleOutcome]
         exact interruptedAt_update_reframe lookup
           { f.frame with current := (interpOf p table).raceSettle rid race.state.cleanupNeeded exit }
           rfl rfl fiber before
@@ -296,11 +299,11 @@ theorem registrationQueue_driveStep_registrationDone (p : NativeEff) (table : Ro
     letI := evaluatorFor p table
     RegistrationQueue (driveStep (interpOf p table) m (.registrationDone rid yielding) rest).2 := by
   letI := evaluatorFor p table
+  have tail := registration.2
   simp only [driveStep]
-  repeat' first
-    | exact registration.2
-    | exact ⟨True.intro, registration.2⟩
-    | (simp only [settle, List.nil_append, List.cons_append]; split)
-    | split
+  repeat' split
+  all_goals simp only [settle, settleOutcome, List.nil_append, List.cons_append]
+  all_goals repeat' split
+  all_goals aesop (add safe apply [tail])
 
 end Effect4.Program.Guard

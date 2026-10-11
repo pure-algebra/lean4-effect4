@@ -145,10 +145,10 @@ def Framed (s : List (Cmd ν σ β ε δ ι α κ))
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
   [FiberEvaluator ν σ β ε δ ι α χ St κ φ η] in
-theorem settle_append (id : FiberId) (rest s : List (Cmd ν σ β ε δ ι α κ))
+theorem settleOutcome_append (id : FiberId) (rest s : List (Cmd ν σ β ε δ ι α κ))
     (it : Iter ν σ β ε δ ι α χ St κ φ η) :
-    Framed s (settle id rest it) (settle id (rest ++ s) it) := by
-  unfold settle Framed
+    Framed s (settleOutcome id rest it) (settleOutcome id (rest ++ s) it) := by
+  unfold settleOutcome Framed
   split
   · exact ⟨rfl, Or.inl (by simp only [List.append_assoc])⟩
   · exact ⟨rfl, Or.inl (by simp only [List.append_assoc])⟩
@@ -158,6 +158,19 @@ theorem settle_append (id : FiberId) (rest s : List (Cmd ν σ β ε δ ι α κ
   · exact ⟨rfl, Or.inl (by simp only [List.append_assoc])⟩
   · exact ⟨rfl, Or.inl (by simp only [List.append_assoc])⟩
   · exact ⟨rfl, Or.inr ⟨rfl, rfl, rfl⟩⟩
+
+omit [FiberEvaluator ν σ β ε δ ι α χ St κ φ η] in
+theorem settle_append (id : FiberId) (rest s : List (Cmd ν σ β ε δ ι α κ))
+    (it : Iter ν σ β ε δ ι α χ St κ φ η) :
+    Framed s (settle id rest it) (settle id (rest ++ s) it) := by
+  unfold settle
+  cases word : it.edits with
+  | nil => exact settleOutcome_append id rest s it
+  | cons edit edits =>
+    dsimp only
+    split
+    · exact ⟨rfl, Or.inr ⟨rfl, rfl, rfl⟩⟩
+    · exact settleOutcome_append id rest s _
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] [FiberCore ν β ε δ ι α κ φ]
   [FiberEvaluator ν σ β ε δ ι α χ St κ φ η] in

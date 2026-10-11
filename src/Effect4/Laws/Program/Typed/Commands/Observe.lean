@@ -804,6 +804,130 @@ theorem fiberTyped_repend {root : ProgramSource} {w : World} {m M' : RState} {wf
     exact ⟨race, resultTy, (view.races raceId).trans found, host, token',
       stackReply_races (racesKept_of_eq view.races) reply⟩
 
+/-- **An observer at a fresh key appended to a fiber keeps `I`** (the target of a park): its keys are
+below the counter and unrequested, its waiter below `nextId`, it holds no race's key, and it is typed
+on the edited machine; nothing else about the fiber moves. -/
+theorem configTyped_addObserver {root : ProgramSource} {rootTy : EffTy} {w : World} {M : RState}
+    {q : List RCmd} (typed : ConfigTyped root rootTy w M q) {t : RFiber}
+    (ht : M.fiber? t.id = some t) (o : Observer)
+    (keysOk : ∀ k ∈ Guard.observerKeys o,
+      k.2 < M.nextToken ∧ requestOfR M k.1 k.2 = none ∧ k.1.value < M.nextId)
+    (raceOff : ∀ raceId race, M.race? raceId = some race → (race.host, race.token) ∉ Guard.observerKeys o)
+    (ok : StoredObserverOk root w (M.update { t with observers := t.observers ++ [o] }) t.id o) :
+    ConfigTyped root rootTy w (M.update { t with observers := t.observers ++ [o] }) q := by
+  let t' : RFiber := { t with observers := t.observers ++ [o] }
+  have hmem : t ∈ M.fibers := rfiber?_mem ht
+  have old := typed.machine.fiber hmem
+  have lookT : (M.update t').fiber? t'.id = some t' := rfiber?_update_self ht rfl
+  have view : ObsView M (M.update t') := obsView_rupdate ht rfl (PendingWeaker.refl _)
+  have moved := fiberTyped_transport old view (Nat.le_refl _) (Nat.le_refl _)
+  have ctl : ∀ id, ((M.update t').fiber? id).map ctlView = (M.fiber? id).map ctlView := by
+    intro id
+    rw [rfiber?_update]
+    cases h : M.fiber? id with
+    | none => rfl
+    | some x =>
+      by_cases hx : x.id = t'.id
+      · rw [Option.map_some, if_pos hx]
+        have xt : x = t := rfiber?_same ht h hx
+        subst xt
+        rfl
+      · rw [Option.map_some, if_neg hx]
+  have newOf : ∀ o' ∈ t'.observers, o' ∈ t.observers ∨ o' = o := fun o' ho' => by
+    rcases List.mem_append.mp ho' with h | h
+    · exact Or.inl h
+    · exact Or.inr (List.mem_singleton.mp h)
+  refine configTyped_rupdate_code typed ht rfl (PendingWeaker.refl _) rfl id ?_ ?_
+    (fun c _ h => commandAuthority_view ctl view.races c h)
+    (fun hrun reads marker ty d => ((typed.code t hmem hrun reads marker ty d).races
+      (racesKept_of_eq view.races)).congr rfl rfl) ?_
+  · intro k hk
+    unfold Guard.fiberKeys at hk
+    rcases List.mem_append.mp hk with ho | hb
+    · obtain ⟨o', ho', hk'⟩ := List.mem_flatMap.mp ho
+      rcases newOf o' ho' with hold | rfl
+      · exact Or.inl (fiberKeys_internal hmem (List.mem_append_left _
+          (List.mem_flatMap.mpr ⟨o', hold, hk'⟩)))
+      · exact Or.inr ⟨(keysOk k hk').1, (keysOk k hk').2.1⟩
+    · exact Or.inl (fiberKeys_internal hmem (List.mem_append_right _ hb))
+  · intro token r hr
+    by_cases hp : t.parked = .withGuard token
+    · rw [requestOfR_of_parked lookT hp] at hr
+      rw [requestOfR_of_parked ht hp]
+      exact hr
+    · rw [requestOfR_of_not_parked lookT hp] at hr
+      cases hr
+  · obtain ⟨⟨c0⟩, c1, c2, c3, ⟨c4⟩, c5⟩ := moved.ok
+    exact
+      { ok := ⟨⟨c0⟩, c1, c2, c3, ⟨c4⟩, c5⟩
+        delivery := moved.delivery
+        below := moved.below
+        pendingShape := moved.pendingShape
+        parkedIdle := moved.parkedIdle
+        parkedBelow := moved.parkedBelow
+        exited := moved.exited
+        exitedStack := moved.exitedStack
+        deferredCause := moved.deferredCause
+        pendingOwner := moved.pendingOwner
+        observers := fun o' ho' => by
+          rcases newOf o' ho' with hold | rfl
+          · exact moved.observers o' hold
+          · exact ok
+        registration := moved.registration
+        code := moved.code
+        tokens := moved.tokens
+        raceObservers := fun r race hr o' ho' => by
+          rcases newOf o' ho' with hold | rfl
+          · exact moved.raceObservers r race hr o' hold
+          · exact raceOff r race hr
+        targetsBelow := moved.targetsBelow
+        observersBelow := fun o' ho' k hk => by
+          rcases newOf o' ho' with hold | rfl
+          · exact moved.observersBelow o' hold k hk
+          · exact (keysOk k hk).2.2
+        children := moved.children }
+
+/-- A changed machine with the same relevant fields keeps a typed observer edit. -/
+theorem configTyped_observe_congr {root : ProgramSource} {rootTy : EffTy} {w : World} {M M' : RState}
+    {q : List RCmd} (fibers : M'.fibers = M.fibers) (races : M'.races = M.races)
+    (state : M'.state = M.state) (nextId : M'.nextId = M.nextId)
+    (nextToken : M'.nextToken = M.nextToken) (nextRace : M'.nextRace = M.nextRace)
+    (stuck : M'.stuck = M.stuck) (target : FiberId) (o : Observer)
+    (typed : ConfigTyped root rootTy w (M.modify target (fun f => {f with observers := f.observers ++ [o]})) q) :
+    ConfigTyped root rootTy w (M'.modify target (fun f => {f with observers := f.observers ++ [o]})) q := by
+  have lookup : M'.fiber? target = M.fiber? target := by
+    unfold RunMachine.fiber?
+    rw [fibers]
+  unfold RunMachine.modify at typed ⊢
+  rw [lookup]
+  cases ht : M.fiber? target with
+  | none =>
+    rw [ht] at typed
+    exact configTyped_congr fibers races state nextId nextToken nextRace stuck typed
+  | some t =>
+    rw [ht] at typed
+    refine configTyped_congr (m := M.update {t with observers := t.observers ++ [o]})
+      (m' := M'.update {t with observers := t.observers ++ [o]}) ?_ races state nextId nextToken nextRace stuck typed
+    unfold RunMachine.update
+    dsimp only
+    rw [fibers]
+
+/-- Applying an observer message keeps the configuration at its actual target record. -/
+theorem configTyped_observe {root : ProgramSource} {rootTy : EffTy} {w : World} {M : RState}
+    {q : List RCmd} (typed : ConfigTyped root rootTy w M q) (target : FiberId) (o : Observer)
+    (keysOk : ∀ k ∈ Guard.observerKeys o,
+      k.2 < M.nextToken ∧ requestOfR M k.1 k.2 = none ∧ k.1.value < M.nextId)
+    (raceOff : ∀ raceId race, M.race? raceId = some race → (race.host, race.token) ∉ Guard.observerKeys o)
+    (ok : ∀ t, M.fiber? target = some t →
+      StoredObserverOk root w (M.update {t with observers := t.observers ++ [o]}) t.id o) :
+    ConfigTyped root rootTy w (M.modify target (fun f => {f with observers := f.observers ++ [o]})) q := by
+  unfold RunMachine.modify
+  cases ht : M.fiber? target with
+  | none => exact typed
+  | some t =>
+    have tid := rfiber?_id ht
+    exact configTyped_addObserver typed (by rw [tid]; exact ht) o keysOk raceOff (ok t ht)
+
 /-! ## The countdown arm -/
 
 theorem rfiber?_emit (m : RState)
@@ -946,390 +1070,222 @@ theorem observe_countdown (root : ProgramSource) (rootTy : EffTy) {w : World} {m
       have yid : y.id = waiter := ykept.1.trans wid
       have hy' : m2.fiber? y.id = some y := by rw [yid]; exact hy
       have ymem : y ∈ m2.fibers := rfiber?_mem hy'
-      have wfNone : externalRequestR wf.frame.current = none := by
-        rw [← requestOfR_of_parked hw parked]
-        exact keyFree
-      have walk := countdownWalk_spec m2 p.remaining (p.collected ++ [exit])
-      have typedExtra : ∀ x, (∃ t ∈ p.remaining, ∃ g, m2.fiber? t = some g ∧ g.exit = some x) →
-          ExitOk w ⟨a, e, Env.Requirement.empty⟩ x := by
-        rintro x ⟨t, ht, g, hg, gx⟩
-        obtain ⟨g0, hg0, kept⟩ := view2.lookup t g hg
-        have g0x : g0.exit = some x := kept.2.1.symm.trans gx
-        obtain ⟨ty, declared, sa, se⟩ :=
-          payload.targets t (List.mem_append_right _ ht) g0 hg0
-        exact exitOk_subN ((typed.machine.fiber (rfiber?_mem hg0)).ok.c3 x g0x ty declared) sa se
-      have lookupBack : ∀ (g : RFiber), g.id = waiter → ∀ id f',
-          (m2.update g).fiber? id = some f' → ∃ f, m.fiber? id = some f ∧ f'.id = f.id := by
-        intro g gid id f' h
-        rw [rfiber?_update] at h
-        cases h2 : m2.fiber? id with
-        | none =>
-          rw [h2] at h
-          cases h
-        | some x =>
-          rw [h2, Option.map_some] at h
-          cases h
-          obtain ⟨x0, hx0, kept⟩ := view2.lookup id x h2
-          by_cases hx : x.id = g.id
-          · rw [if_pos hx]
-            exact ⟨x0, hx0, gid.trans ((hx.trans gid).symm.trans kept.1)⟩
-          · rw [if_neg hx]
-            exact ⟨x0, hx0, kept.1⟩
-      have typedWalk : ∀ x ∈ (countdownWalk m2 p.remaining (p.collected ++ [exit])).1,
-          ExitOk w ⟨a, e, Env.Requirement.empty⟩ x := by
-        obtain ⟨⟨extra, hexits, hextra⟩, _⟩ := walk
-        intro x hx
-        rw [hexits] at hx
-        rcases List.mem_append.mp hx with hx | hx
-        · rcases List.mem_append.mp hx with hx | hx
-          · exact payload.collected x hx
-          · rw [List.mem_singleton.mp hx]
-            exact incomingOk
-        · exact typedExtra x (hextra x hx)
-      have nextWalk := walk.2
-      rcases hwalk : countdownWalk m2 p.remaining (p.collected ++ [exit]) with
-        ⟨exits, _ | ⟨next, rest'⟩⟩
-      · rw [hwalk] at typedWalk
-        dsimp only
-        rw [single, List.map_cons, List.map_nil, if_pos ptok]
-        let p' : RPending := { p with waitingOn := none, remaining := [], collected := exits }
-        let g : RFiber := { wf with pending := [p'] }
-        show ConfigTyped root rootTy w (m2.update g)
-          ((([] ++ nested) ++
-            [Cmd.resume waiter token (countdownPark.resumePrim (interpR root.program) p.resumeWith
-              exits)]) ++ rest)
-        have gid : g.id = waiter := wid
-        have hid : g.id = y.id := gid.trans yid.symm
-        have look : (m2.update g).fiber? waiter = some g := by
-          rw [← gid]
-          exact rfiber?_update_self hy' hid
-        have find' : g.pending.find? (fun q => decide (q.token = token)) = some p' := by
-          show ([p'] : List RPending).find? (fun q => decide (q.token = token)) = some p'
-          rw [List.find?_cons, decide_eq_true (show p'.token = token from ptok)]
-        have gNone : ∀ tok r, requestOfR (m2.update g) waiter tok = some r → False := by
-          intro tok r hr
-          by_cases hpk : g.parked = .withGuard tok
-          · rw [requestOfR_of_parked look hpk] at hr
-            have current : g.frame.current = wf.frame.current := rfl
-            rw [current, wfNone] at hr
-            cases hr
-          · rw [requestOfR_of_not_parked look hpk] at hr
-            cases hr
-        have agree : PendingExcept y.pending g.pending (fun tok => (y.id, tok) = (waiter, token)) := by
-          intro tok q skip hq
-          have hq' : ([p'] : List RPending).find? (fun x => decide (x.token = tok)) = some q := hq
-          rw [List.find?_cons] at hq'
-          by_cases same : p'.token = tok
-          · exact absurd (by rw [yid, ← same]; exact congrArg _ ptok) skip
-          · rw [decide_eq_false same] at hq'
-            cases hq'
-        have keysG : ∀ k ∈ Guard.fiberKeys g, k ∈ Guard.internalKeys m2 ∨
-            (k.2 < m2.nextToken ∧ requestOfR m2 k.1 k.2 = none) := by
-          intro k hk
-          refine Or.inl (fiberKeys_internal ymem ?_)
-          unfold Guard.fiberKeys at hk ⊢
-          rw [ykept.2.2.2.1, ykept.2.2.2.2.1]
-          exact hk
-        have lookupNew := lookupBack g gid
-        have advance : ∀ (incoming : Ty → Ty → Prop),
-            (∀ a e, incoming a e → incoming .unknown .unknown) →
-            CountdownAt w m waiter token incoming → CountdownAt w (m2.update g) waiter token incoming := by
-          intro incoming widen h
-          exact countdownAt_advance payload (countdownAt_found h hw hp) widen look find' rfl rfl
-            typedWalk (fun _ h => nomatch h) lookupNew
-        have widenCols : ∀ (s : FiberId) (a e : Ty), FiberColumnsBelow w s a e →
-            FiberColumnsBelow w s .unknown .unknown := by
-          rintro s a e ⟨ty, d, _, _⟩
-          exact ⟨ty, d, subN_unknown _, subN_unknown _⟩
-        have storedNew : ∀ x ∈ m.fibers, ∀ o ∈ x.observers, ¬ OffKey (waiter, token) o →
-            StoredObserverOk root w (m2.update g) x.id o := by
-          intro x hx o ho off
-          have ho' := countdown_of_not_offKey off
-          dsimp only at ho'
-          have stored := (typed.machine.fiber hx).observers o ho
-          rw [ho'] at stored ⊢
-          exact advance _ (widenCols x.id) stored
-        have fresh : FiberTyped root w (m2.update g) g := by
-          have view' : ExceptView m (m2.update g) (wf.id, token) := by
-            rw [wid]
-            exact ExceptView.obs_trans obs2 (exceptView_rupdate hy' hid agree)
-          exact fiberTyped_repend old view' (Nat.le_of_eq view2.nextId.symm)
-            (Nat.le_of_eq view2.nextToken.symm) parked ptok
-            (fun o ho off => storedNew wf hmem o ho (by rw [← wid]; exact off))
-            (fun _ h => nomatch h)
-        have replaced := configTyped_replace t2 hy' hid (ykept.2.2.1.trans idle)
-          (ykept.2.1.trans live) idle (key := (waiter, token)) agree keysG
-          (fun tok r hr => absurd hr (fun h => gNone tok r (by rw [← gid]; exact h)))
-          (fun x hx _ o ho off => by
-            obtain ⟨x0, hx0, kept⟩ := view2.member x hx
-            rw [kept.1]
-            exact storedNew x0 hx0 o (by rw [← kept.2.2.2.1]; exact ho) off)
-          (fun src ex o ho off => by
-            have ho' := countdown_of_not_offKey off
-            dsimp only at ho'
-            have queued := (typed.queue.observer src ex o (List.mem_cons_of_mem _ ho)).2
-            rw [ho'] at queued ⊢
-            exact advance _ (fun a e h => exitOk_subN h (subN_unknown _) (subN_unknown _)) queued)
-          fresh
-        have resumeOk : Contracts.ResumeOk (TypedProg root) w waiter token
-            (countdownPark.resumePrim (interpR root.program) p.resumeWith exits) := by
-          intro ty declared
-          have pt := payload.token
-          rw [ptok, declared] at pt
-          cases pt
-          exact resumePrim_typed root payload exits typedWalk
-        have free : requestOfR (m2.update g) waiter token = none := by
-          cases h : requestOfR (m2.update g) waiter token with
-          | none => rfl
-          | some r => exact (gNone token r h).elim
-        have consed := configTyped_cons_resume replaced resumeOk
-          (by rw [show (m2.update g).nextToken = m.nextToken from view2.nextToken]; exact keyBelow)
-          free
-        have all := configTyped_evaluates consed nested evals
-        rw [List.nil_append, List.append_assoc, List.singleton_append]
-        exact all
-      · rw [hwalk] at typedWalk nextWalk
-        dsimp only
-        rw [single, List.map_cons, List.map_nil, if_pos ptok]
-        obtain ⟨nextMem, ⟨gn, hgn, _⟩, restSub⟩ := nextWalk next rest' rfl
-        let p' : RPending :=
-          { p with waitingOn := some next, remaining := rest', collected := exits }
-        let g : RFiber := { wf with pending := [p'] }
-        let obs : RFiber → RFiber := fun x =>
-          { x with observers := x.observers ++ [Observer.countdown waiter token] }
-        have gnid : gn.id = next := rfiber?_id hgn
-        have hgn' : m2.fiber? gn.id = some gn := by rw [gnid]; exact hgn
-        have modified : m2.modify next obs = m2.update (obs gn) := by
-          unfold RunMachine.modify
-          rw [hgn]
-        show ConfigTyped root rootTy w ((m2.modify next obs).update g) (([] ++ nested) ++ rest)
-        rw [modified]
-        -- the next target's record and the head's columns at it
-        obtain ⟨gn0, hgn0, gnkept⟩ := view2.lookup next gn hgn
-        have nextCols : FiberColumnsBelow w gn.id a e := by
-          rw [gnkept.1]
-          exact payload.targets next (List.mem_append_right _ nextMem) gn0 hgn0
-        have widenCols : ∀ (s : FiberId) (a e : Ty), FiberColumnsBelow w s a e →
-            FiberColumnsBelow w s .unknown .unknown := by
-          rintro s a e ⟨ty, d, _, _⟩
-          exact ⟨ty, d, subN_unknown _, subN_unknown _⟩
-        have m2NoReq : requestOfR m2 waiter token = none := by
+      rw [hy]
+      dsimp only
+      cases currentPending : y.pending.find? (fun q => decide (q.token = token)) with
+      | none =>
+        exact configTyped_evaluates t2 nested evals
+      | some currentP =>
+        have sameP := pweak waiter y hy wf hw token currentP currentPending
+        rw [hp] at sameP
+        cases sameP
+        have currentOld := t2.machine.fiber ymem
+        obtain ⟨parkedY, singleY, ptokY⟩ := countdown_parked currentOld currentPending
+        have wfNone : externalRequestR y.frame.current = none := by
+          rw [← requestOfR_of_parked hy parkedY]
           cases h : requestOfR m2 waiter token with
           | none => rfl
           | some r =>
             have back := view2.requests h
             rw [keyFree] at back
             cases back
-        -- step 1: the next target stores the countdown observer
-        have obs2' : ObsView m2 (m2.update (obs gn)) :=
-          obsView_rupdate hgn' rfl (PendingWeaker.refl _)
-        have t3 : ConfigTyped root rootTy w (m2.update (obs gn)) rest := by
-          refine configTyped_rupdate t2 hgn' rfl (PendingWeaker.refl _) rfl rfl rfl rfl rfl
-            (fun p => p) (fun d => d) (fun k hk => ?_) ?_
-          · unfold Guard.fiberKeys at hk
-            rw [show (obs gn).observers = gn.observers ++ [Observer.countdown waiter token] from rfl,
-              List.flatMap_append] at hk
-            rcases List.mem_append.mp hk with hk | hk
-            · rcases List.mem_append.mp hk with hk | hk
-              · exact Or.inl (fiberKeys_internal (rfiber?_mem hgn')
-                  (List.mem_append_left _ hk))
-              · rw [List.flatMap_cons, List.flatMap_nil, List.append_nil] at hk
-                rw [List.mem_singleton.mp hk]
-                exact Or.inr ⟨by rw [view2.nextToken]; exact keyBelow, m2NoReq⟩
-            · exact Or.inl (fiberKeys_internal (rfiber?_mem hgn') (List.mem_append_right _ hk))
-          · have moved := fiberTyped_transport (t2.machine.fiber (rfiber?_mem hgn')) obs2'
-              (Nat.le_refl _) (Nat.le_refl _)
-            refine ⟨runFiberOk_congr moved.ok rfl rfl rfl rfl rfl rfl rfl, moved.delivery,
-              moved.below, moved.pendingShape, moved.parkedIdle,
-              moved.parkedBelow, moved.exited, moved.exitedStack, moved.deferredCause,
-              moved.pendingOwner, fun o ho => ?_, moved.registration, moved.code, moved.tokens,
-              fun r race hr o ho => by
-                rcases mem_append_observer ho with old' | rfl
-                · exact moved.raceObservers r race hr o old'
-                · have hr2 : m2.race? r = some race := (obs2'.races r).symm.trans hr
-                  have hr0 : m.race? r = some race := by
-                    unfold RunMachine.race? at hr2 ⊢
-                    rw [view2.races] at hr2
-                    exact hr2
-                  exact typed.queue.raceObservers source exit (.countdown waiter token)
-                    List.mem_cons_self r race hr0,
-              moved.targetsBelow,
-              fun o ho k hk => by
-                rcases mem_append_observer ho with old' | rfl
-                · exact moved.observersBelow o old' k hk
-                · rw [show Guard.observerKeys (.countdown waiter token) = [(waiter, token)] from rfl,
-                    List.mem_singleton] at hk
-                  subst hk
-                  show waiter.value < m2.nextId
-                  rw [view2.nextId, ← wid]
-                  exact old.below,
-              moved.children⟩
-            rcases mem_append_observer ho with old' | rfl
-            · exact moved.observers o old'
-            · show CountdownAt w (m2.update (obs gn)) waiter token (FiberColumnsBelow w gn.id)
-              unfold CountdownAt
-              cases hz : (m2.update (obs gn)).fiber? waiter with
-              | none => trivial
-              | some z =>
-                dsimp only
-                cases hzp : z.pending.find? (fun q => decide (q.token = token)) with
-                | none => trivial
-                | some q =>
-                  dsimp only
-                  obtain ⟨z1, hz1, _, weakz⟩ := obs2'.fibers waiter z hz
-                  obtain ⟨z0, hz0, _, weak0⟩ := obs2.fibers waiter z1 hz1
-                  rw [hw] at hz0
-                  cases hz0
-                  have found := weak0 token q (weakz token q hzp)
-                  rw [hp] at found
-                  cases found
-                  exact ⟨a, e, tt, ⟨payload.token, payload.collected, fun id hid f hf => by
-                    obtain ⟨f1, hf1, hid1, _⟩ := obs2'.fibers id f hf
-                    obtain ⟨f0, hf0, hid0, _⟩ := obs2.fibers id f1 hf1
-                    rw [hid1, hid0]
-                    exact payload.targets id hid f0 hf0, payload.resume⟩, nextCols⟩
-        -- step 2: the waiter's record advances
-        obtain ⟨y3, hy3, y3facts⟩ : ∃ y3, (m2.update (obs gn)).fiber? waiter = some y3 ∧
-            y3.id = waiter ∧ y3.running = false ∧ y3.exit = none ∧
-            (∀ k, k ∈ Guard.fiberKeys g → k ∈ Guard.fiberKeys y3) := by
-          by_cases same : next = waiter
-          · refine ⟨obs gn, ?_, by rw [show (obs gn).id = gn.id from rfl, gnid, same], ?_, ?_, ?_⟩
-            · rw [← same, ← gnid]
-              exact rfiber?_update_self hgn' rfl
-            · have gy : gn = y := by
-                rw [same] at hgn
-                rw [hy] at hgn
-                exact (Option.some.inj hgn).symm
-              rw [show (obs gn).running = gn.running from rfl, gy]
-              exact ykept.2.2.1.trans idle
-            · have gy : gn = y := by
-                rw [same] at hgn
-                rw [hy] at hgn
-                exact (Option.some.inj hgn).symm
-              rw [show (obs gn).exit = gn.exit from rfl, gy]
-              exact ykept.2.1.trans live
-            · have gy : gn = y := by
-                rw [same] at hgn
-                rw [hy] at hgn
-                exact (Option.some.inj hgn).symm
-              intro k hk
-              unfold Guard.fiberKeys at hk ⊢
-              rw [show (obs gn).observers = gn.observers ++ [Observer.countdown waiter token] from rfl,
-                show (obs gn).dispatcher = gn.dispatcher from rfl, gy, ykept.2.2.2.1,
-                ykept.2.2.2.2.1, List.flatMap_append]
-              rcases List.mem_append.mp hk with hk | hk
-              · exact List.mem_append_left _ (List.mem_append_left _ hk)
-              · exact List.mem_append_right _ hk
-          · refine ⟨y, ?_, yid, ykept.2.2.1.trans idle, ykept.2.1.trans live, ?_⟩
-            · rw [rfiber?_update_other (show waiter ≠ (obs gn).id by
-                rw [show (obs gn).id = gn.id from rfl, gnid]
-                exact fun h => same h.symm)]
-              exact hy
-            · intro k hk
-              unfold Guard.fiberKeys at hk ⊢
-              rw [ykept.2.2.2.1, ykept.2.2.2.2.1]
-              exact hk
-        obtain ⟨y3id, y3idle, y3live, y3keys⟩ := y3facts
-        have hy3' : (m2.update (obs gn)).fiber? y3.id = some y3 := by rw [y3id]; exact hy3
-        have gid : g.id = waiter := wid
-        have hid : g.id = y3.id := gid.trans y3id.symm
-        have look : ((m2.update (obs gn)).update g).fiber? waiter = some g := by
-          rw [← gid]
-          exact rfiber?_update_self hy3' hid
-        have find' : g.pending.find? (fun q => decide (q.token = token)) = some p' := by
-          show ([p'] : List RPending).find? (fun q => decide (q.token = token)) = some p'
-          rw [List.find?_cons, decide_eq_true (show p'.token = token from ptok)]
-        have gNone : ∀ tok r, requestOfR ((m2.update (obs gn)).update g) waiter tok = some r →
-            False := by
-          intro tok r hr
-          by_cases hpk : g.parked = .withGuard tok
-          · rw [requestOfR_of_parked look hpk] at hr
-            have current : g.frame.current = wf.frame.current := rfl
-            rw [current, wfNone] at hr
-            cases hr
-          · rw [requestOfR_of_not_parked look hpk] at hr
-            cases hr
-        have agree : PendingExcept y3.pending g.pending
-            (fun tok => (y3.id, tok) = (waiter, token)) := by
-          intro tok q skip hq
-          have hq' : ([p'] : List RPending).find? (fun x => decide (x.token = tok)) = some q := hq
-          rw [List.find?_cons] at hq'
-          by_cases same : p'.token = tok
-          · exact absurd (by rw [y3id, ← same]; exact congrArg _ ptok) skip
-          · rw [decide_eq_false same] at hq'
-            cases hq'
-        have back3 : ∀ id f', (m2.update (obs gn)).fiber? id = some f' →
-            ∃ f, m.fiber? id = some f ∧ f'.id = f.id :=
-          lookupBack_update (fun id f' h => by
-            obtain ⟨f, hf, k⟩ := view2.lookup id f' h
-            exact ⟨f, hf, k.1⟩) hgn' rfl
-        have lookupNew := lookupBack_update back3 hy3' hid
-        have targets' : ∀ id ∈ p'.waitingOn.toList ++ p'.remaining,
-            id ∈ p.waitingOn.toList ++ p.remaining := by
-          intro id hid'
-          rcases List.mem_append.mp hid' with h | h
-          · have hn : id = next := by
-              change id ∈ [next] at h
-              exact List.mem_singleton.mp h
-            rw [hn]
-            exact List.mem_append_right _ nextMem
-          · exact List.mem_append_right _ (restSub id h)
-        have advance : ∀ (incoming : Ty → Ty → Prop),
-            (∀ a e, incoming a e → incoming .unknown .unknown) →
-            (∃ a e tt, CountdownPayload w m waiter p a e tt ∧ incoming a e) →
-            CountdownAt w ((m2.update (obs gn)).update g) waiter token incoming := by
-          intro incoming widen other
-          exact countdownAt_advance payload other widen look find' rfl rfl typedWalk targets'
-            lookupNew
-        have storedNew : ∀ x ∈ m.fibers, ∀ o ∈ x.observers, ¬ OffKey (waiter, token) o →
-            StoredObserverOk root w ((m2.update (obs gn)).update g) x.id o := by
-          intro x hx o ho off
-          have ho' := countdown_of_not_offKey off
-          dsimp only at ho'
-          have stored := (typed.machine.fiber hx).observers o ho
-          rw [ho'] at stored ⊢
-          exact advance _ (widenCols x.id) (countdownAt_found stored hw hp)
-        have obs3 : ObsView m (m2.update (obs gn)) := obs2.trans obs2'
-        have fresh : FiberTyped root w ((m2.update (obs gn)).update g) g := by
-          have view' : ExceptView m ((m2.update (obs gn)).update g) (wf.id, token) := by
-            rw [wid]
-            exact ExceptView.obs_trans obs3 (exceptView_rupdate hy3' hid agree)
-          exact fiberTyped_repend old view' (Nat.le_of_eq view2.nextId.symm)
-            (Nat.le_of_eq view2.nextToken.symm) parked ptok
-            (fun o ho off => storedNew wf hmem o ho (by rw [← wid]; exact off))
-            (fun id hid => by
-              have pmem : p ∈ wf.pending := List.mem_of_find?_eq_some hp
-              rcases List.mem_append.mp hid with h | h
-              · rw [List.mem_singleton.mp h]
-                exact old.targetsBelow p pmem next (List.mem_append_right _ nextMem)
-              · exact old.targetsBelow p pmem id (List.mem_append_right _ (restSub id h)))
-        have replaced := configTyped_replace t3 hy3' hid y3idle y3live idle
-          (key := (waiter, token)) agree
-          (fun k hk => Or.inl (fiberKeys_internal (rfiber?_mem hy3') (y3keys k hk)))
-          (fun tok r hr => absurd hr (fun h => gNone tok r (by rw [← gid]; exact h)))
-          (fun x hx _ o ho off => by
-            rcases mem_rupdate hx with rfl | ⟨hold, _⟩
-            · rcases mem_append_observer ho with old' | rfl
-              · obtain ⟨x0, hx0, kept⟩ := view2.member gn (rfiber?_mem hgn')
-                rw [show (obs gn).id = gn.id from rfl, kept.1]
-                exact storedNew x0 hx0 o (by rw [← kept.2.2.2.1]; exact old') off
-              · show CountdownAt w ((m2.update (obs gn)).update g) waiter token
-                  (FiberColumnsBelow w gn.id)
-                exact advance _ (widenCols gn.id) ⟨a, e, tt, payload, nextCols⟩
-            · obtain ⟨x0, hx0, kept⟩ := view2.member x hold
-              rw [kept.1]
-              exact storedNew x0 hx0 o (by rw [← kept.2.2.2.1]; exact ho) off)
-          (fun src ex o ho off => by
+        have walk := countdownWalk_spec m2 p.remaining (p.collected ++ [exit])
+        have typedExtra : ∀ x, (∃ t ∈ p.remaining, ∃ g, m2.fiber? t = some g ∧ g.exit = some x) →
+            ExitOk w ⟨a, e, Env.Requirement.empty⟩ x := by
+          rintro x ⟨t, ht, g, hg, gx⟩
+          obtain ⟨g0, hg0, kept⟩ := view2.lookup t g hg
+          have g0x : g0.exit = some x := kept.2.1.symm.trans gx
+          obtain ⟨ty, declared, sa, se⟩ :=
+            payload.targets t (List.mem_append_right _ ht) g0 hg0
+          exact exitOk_subN ((typed.machine.fiber (rfiber?_mem hg0)).ok.c3 x g0x ty declared) sa se
+        have lookupBack : ∀ (g : RFiber), g.id = waiter → ∀ id f',
+            (m2.update g).fiber? id = some f' → ∃ f, m.fiber? id = some f ∧ f'.id = f.id := by
+          intro g gid id f' h
+          rw [rfiber?_update] at h
+          cases h2 : m2.fiber? id with
+          | none =>
+            rw [h2] at h
+            cases h
+          | some x =>
+            rw [h2, Option.map_some] at h
+            cases h
+            obtain ⟨x0, hx0, kept⟩ := view2.lookup id x h2
+            by_cases hx : x.id = g.id
+            · rw [if_pos hx]
+              exact ⟨x0, hx0, gid.trans ((hx.trans gid).symm.trans kept.1)⟩
+            · rw [if_neg hx]
+              exact ⟨x0, hx0, kept.1⟩
+        have typedWalk : ∀ x ∈ (countdownWalk m2 p.remaining (p.collected ++ [exit])).1,
+            ExitOk w ⟨a, e, Env.Requirement.empty⟩ x := by
+          obtain ⟨⟨extra, hexits, hextra⟩, _⟩ := walk
+          intro x hx
+          rw [hexits] at hx
+          rcases List.mem_append.mp hx with hx | hx
+          · rcases List.mem_append.mp hx with hx | hx
+            · exact payload.collected x hx
+            · rw [List.mem_singleton.mp hx]
+              exact incomingOk
+          · exact typedExtra x (hextra x hx)
+        have nextWalk := walk.2
+        have advancePending : ∀ (p' : RPending), p'.token = p.token → p'.resumeWith = p.resumeWith →
+            (∀ ex ∈ p'.collected, ExitOk w ⟨a, e, Env.Requirement.empty⟩ ex) →
+            (∀ id ∈ p'.waitingOn.toList ++ p'.remaining, id ∈ p.waitingOn.toList ++ p.remaining) →
+            ConfigTyped root rootTy w (m2.update {y with pending := [p']}) rest ∧
+              CountdownPayload w (m2.update {y with pending := [p']}) waiter p' a e tt := by
+          intro p' tokenSame resumeSame collectedOk targets
+          let g : RFiber := {y with pending := [p']}
+          have tokenEq : p'.token = token := tokenSame.trans ptok
+          have gid : g.id = waiter := yid
+          have hid : g.id = y.id := gid.trans yid.symm
+          have look : (m2.update g).fiber? waiter = some g := by
+            rw [← gid]
+            exact rfiber?_update_self hy' hid
+          have find' : g.pending.find? (fun q => decide (q.token = token)) = some p' := by
+            show ([p'] : List RPending).find? (fun q => decide (q.token = token)) = some p'
+            rw [List.find?_cons, decide_eq_true (show p'.token = token from tokenEq)]
+          have gNone : ∀ tok r, requestOfR (m2.update g) waiter tok = some r → False := by
+            intro tok r hr
+            by_cases hpk : g.parked = .withGuard tok
+            · rw [requestOfR_of_parked look hpk] at hr
+              have current : g.frame.current = y.frame.current := rfl
+              rw [current, wfNone] at hr
+              cases hr
+            · rw [requestOfR_of_not_parked look hpk] at hr
+              cases hr
+          have agree : PendingExcept y.pending g.pending (fun tok => (y.id, tok) = (waiter, token)) := by
+            intro tok q skip hq
+            have hq' : ([p'] : List RPending).find? (fun x => decide (x.token = tok)) = some q := hq
+            rw [List.find?_cons] at hq'
+            by_cases same : p'.token = tok
+            · exact absurd (by rw [yid, ← same]; exact congrArg _ tokenEq) skip
+            · rw [decide_eq_false same] at hq'
+              cases hq'
+          have keysG : ∀ k ∈ Guard.fiberKeys g, k ∈ Guard.internalKeys m2 ∨
+              (k.2 < m2.nextToken ∧ requestOfR m2 k.1 k.2 = none) := by
+            intro k hk
+            refine Or.inl (fiberKeys_internal ymem ?_)
+            unfold Guard.fiberKeys at hk ⊢
+            exact hk
+          have lookupNew := lookupBack g gid
+          have advance : ∀ (incoming : Ty → Ty → Prop),
+              (∀ a e, incoming a e → incoming .unknown .unknown) →
+              CountdownAt w m waiter token incoming → CountdownAt w (m2.update g) waiter token incoming := by
+            intro incoming widen h
+            exact countdownAt_advance payload (countdownAt_found h hw hp) widen look find' tokenSame resumeSame
+              collectedOk targets lookupNew
+          have widenCols : ∀ (s : FiberId) (a e : Ty), FiberColumnsBelow w s a e →
+              FiberColumnsBelow w s .unknown .unknown := by
+            rintro s a e ⟨ty, d, _, _⟩
+            exact ⟨ty, d, subN_unknown _, subN_unknown _⟩
+          have storedNew : ∀ x ∈ m.fibers, ∀ o ∈ x.observers, ¬ OffKey (waiter, token) o →
+              StoredObserverOk root w (m2.update g) x.id o := by
+            intro x hx o ho off
             have ho' := countdown_of_not_offKey off
             dsimp only at ho'
-            have queued := (typed.queue.observer src ex o (List.mem_cons_of_mem _ ho)).2
-            rw [ho'] at queued ⊢
-            exact advance _ (fun a e h => exitOk_subN h (subN_unknown _) (subN_unknown _))
-              (countdownAt_found queued hw hp))
-          fresh
-        have all := configTyped_evaluates replaced nested evals
-        rw [List.nil_append]
-        exact all
+            have stored := (typed.machine.fiber hx).observers o ho
+            rw [ho'] at stored ⊢
+            exact advance _ (widenCols x.id) stored
+          have fresh : FiberTyped root w (m2.update g) g := by
+            have view' : ExceptView m2 (m2.update g) (y.id, token) := by
+              rw [yid]
+              exact exceptView_rupdate hy' hid agree
+            exact fiberTyped_repend currentOld view' (Nat.le_refl _) (Nat.le_refl _) parkedY tokenEq
+              (fun o ho off => by
+                rw [ykept.1]
+                exact storedNew wf hmem o (by rw [← ykept.2.2.2.1]; exact ho)
+                  (by rw [yid] at off; exact off))
+              (fun id hid => currentOld.targetsBelow p (List.mem_of_find?_eq_some currentPending) id (targets id hid))
+          have replaced := configTyped_replace t2 hy' hid (ykept.2.2.1.trans idle)
+            (ykept.2.1.trans live) (ykept.2.2.1.trans idle) (key := (waiter, token)) agree keysG
+            (fun tok r hr => absurd hr (fun h => gNone tok r (by rw [← gid]; exact h)))
+            (fun x hx _ o ho off => by
+              obtain ⟨x0, hx0, kept⟩ := view2.member x hx
+              rw [kept.1]
+              exact storedNew x0 hx0 o (by rw [← kept.2.2.2.1]; exact ho) off)
+            (fun src ex o ho off => by
+              have ho' := countdown_of_not_offKey off
+              dsimp only at ho'
+              have queued := (typed.queue.observer src ex o (List.mem_cons_of_mem _ ho)).2
+              rw [ho'] at queued ⊢
+              exact advance _ (fun a e h => exitOk_subN h (subN_unknown _) (subN_unknown _)) queued)
+            fresh
+          exact ⟨replaced, countdownPayload_advance payload tokenSame resumeSame collectedOk targets lookupNew⟩
+        rcases hwalk : countdownWalk m2 p.remaining (p.collected ++ [exit]) with
+          ⟨exits, _ | ⟨next, rest'⟩⟩
+        · rw [hwalk] at typedWalk
+          dsimp only
+          rw [singleY, List.map_cons, List.map_nil, if_pos ptokY]
+          let p' : RPending := {p with waitingOn := none, remaining := [], collected := exits}
+          let g : RFiber := {y with pending := [p']}
+          obtain ⟨replaced, _⟩ := advancePending p' rfl rfl typedWalk (fun _ h => nomatch h)
+          have look : (m2.update g).fiber? waiter = some g := by
+            rw [← yid]
+            exact rfiber?_update_self hy' rfl
+          have free : requestOfR (m2.update g) waiter token = none := by
+            rw [requestOfR_of_parked look parkedY]
+            exact wfNone
+          have resumeOk : Contracts.ResumeOk (TypedProg root) w waiter token
+              (countdownPark.resumePrim (interpR root.program) p.resumeWith exits) := by
+            intro ty declared
+            have pt := payload.token
+            rw [ptok, declared] at pt
+            cases pt
+            exact resumePrim_typed root payload exits typedWalk
+          have consed := configTyped_cons_resume replaced resumeOk
+            (by rw [show (m2.update g).nextToken = m.nextToken from view2.nextToken]; exact keyBelow) free
+          have all := configTyped_evaluates consed nested evals
+          simpa only [List.nil_append, List.append_assoc, List.singleton_append] using all
+        · rw [hwalk] at typedWalk nextWalk
+          dsimp only
+          rw [singleY, List.map_cons, List.map_nil, if_pos ptokY]
+          obtain ⟨nextMem, ⟨gn, hgn, _⟩, restSub⟩ := nextWalk next rest' rfl
+          let p' : RPending := {p with waitingOn := some next, remaining := rest', collected := exits}
+          let g : RFiber := {y with pending := [p']}
+          have targets : ∀ id ∈ p'.waitingOn.toList ++ p'.remaining,
+              id ∈ p.waitingOn.toList ++ p.remaining := by
+            intro id hid
+            rcases List.mem_append.mp hid with h | h
+            · rw [List.mem_singleton.mp h]
+              exact List.mem_append_right _ nextMem
+            · exact List.mem_append_right _ (restSub id h)
+          obtain ⟨replaced, newPayload⟩ := advancePending p' rfl rfl typedWalk targets
+          have look : (m2.update g).fiber? waiter = some g := by
+            rw [← yid]
+            exact rfiber?_update_self hy' rfl
+          have find' : g.pending.find? (fun q => decide (q.token = token)) = some p' := by
+            show ([p'] : List RPending).find? (fun q => decide (q.token = token)) = some p'
+            rw [List.find?_cons, decide_eq_true (show p'.token = token from ptok)]
+          have free : requestOfR (m2.update g) waiter token = none := by
+            rw [requestOfR_of_parked look parkedY]
+            exact wfNone
+          have added := configTyped_observe replaced next (.countdown waiter token)
+            (fun k hk => by
+              rw [show Guard.observerKeys (.countdown waiter token) = [(waiter, token)] from rfl,
+                List.mem_singleton] at hk
+              subst hk
+              exact ⟨by rw [show (m2.update g).nextToken = m.nextToken from view2.nextToken]; exact keyBelow,
+                free, by rw [← yid]; exact currentOld.below⟩)
+            (fun r race hr => by
+              have hr0 : m.race? r = some race := by
+                unfold RunMachine.race? at hr ⊢
+                rw [show (m2.update g).races = m.races from view2.races] at hr
+                exact hr
+              exact typed.queue.raceObservers source exit (.countdown waiter token) List.mem_cons_self r race hr0)
+            (fun t ht => by
+              have nextCols : FiberColumnsBelow w t.id a e := by
+                obtain ⟨f0, hf0, same⟩ := lookupBack g yid next t ht
+                rw [same]
+                exact payload.targets next (List.mem_append_right _ nextMem) f0 hf0
+              let t' : RFiber := {t with observers := t.observers ++ [.countdown waiter token]}
+              have lookT : (m2.update g).fiber? t.id = some t := by
+                rw [rfiber?_id ht]
+                exact ht
+              have view := obsView_rupdate (m := m2.update g) (f := t) (g := t')
+                lookT rfl (PendingWeaker.refl _)
+              exact countdownAt_view view.fibers
+                (countdownAt_of_found look find' ⟨a, e, tt, newPayload, nextCols⟩))
+          have all := configTyped_evaluates added nested evals
+          simpa only [applyFiberEdit, List.nil_append, List.append_nil] using all
 
 /-! ## `observe` -/
 

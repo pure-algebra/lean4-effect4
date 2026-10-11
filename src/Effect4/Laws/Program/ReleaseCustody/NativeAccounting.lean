@@ -55,7 +55,7 @@ theorem step_running (q : List Nat) (root : NativeEff) (completed : List (FiberI
   unfold evaluatePrim.stepFrame
   rw [step]
   change IterDebit q m fiber ⟨m.emit (events.map (RunEvent.frame fiber.id)),
-    {fiber with frame := next}, yielding, .continue_, []⟩
+    {fiber with frame := next}, yielding, .continue_, [], []⟩
   unfold IterDebit
   simp only [RunMachine.emit_trace, List.countP_append, counts.1, counts.2,
     List.map_nil, List.sum_nil, Nat.add_zero]
@@ -122,7 +122,7 @@ theorem step_finished (q : List Nat) (root : NativeEff) (completed : List (Fiber
   unfold evaluatePrim.stepFrame
   rw [step]
   change IterDebit q m fiber ⟨m.emit (events.map (RunEvent.frame fiber.id)),
-    {fiber with frame := frameExitState fiber.frame}, yielding, .finished exit, []⟩
+    {fiber with frame := frameExitState fiber.frame}, yielding, .finished exit, [], []⟩
   unfold IterDebit
   simp only [RunMachine.emit_trace, List.countP_append, counts.1, counts.2, zero.1, zero.2,
     List.map_nil, List.sum_nil, Nat.add_zero]
@@ -156,7 +156,7 @@ theorem sync_answer (q : List Nat) (root : NativeEff) (table : RowTable) (m : Na
   have debit := NativeDebit.sync_op q m.state state op value fiber.frame.stack unique fresh (current ▸ held) step
   have native : evaluateNative root m fiber yielding table =
       ⟨{m with state}, {fiber with frame := {fiber.frame with current := .success value}},
-        yielding, .answered, [.drainDue]⟩ := by
+        yielding, .answered, [.drainDue], []⟩ := by
     simp only [evaluateNative, current, evaluatePrim, interpAt, interpOf, step]
   rw [native]
   unfold IterDebit

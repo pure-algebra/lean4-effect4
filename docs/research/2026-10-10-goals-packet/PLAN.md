@@ -161,14 +161,18 @@ Evidence: `codex/StackRegionReceipt.md`.
 
 B4's general point law and B5's call-segment and parameter-link stack law remain open.
 Reuse the checked lexical fragment and existing generated binder table when extending them.
-B6 waits for the existing owner ruling on the context note's option A.
-Do not start the services-chain lane before that ruling.
+B6 follows the approved context reader and provider region under decisions row 349, option A.
+The owner also approves separate success and failure service guarantees for continuations.
+An interruption before service installation cannot promise the uninstalled services.
+The context lane integrates after the R2 checkpoint.
 
 ## Decisions
 
 | Question | Settled direction | Evidence or boundary |
 | --- | --- | --- |
 | Timeout retries | Follow the completed timeout form's declared failure; retain four attempts | Owner-approved amendment; `codex/timeout-contract-decision.md` |
+| Context region | Use the typed reader and provider region | Owner ruling, decisions row 349, option A |
+| Continuation guarantees | Distinguish success and failure service guarantees | Owner approval; keep the existing type-only claims |
 | Cleanup premise | Keep the original proposition | Raw script rows still pass session admission |
 | Stale provenance | Keep all original clauses | Key uniqueness alone does not prove provenance |
 | Routing budget | Keep the original budget | The infrastructure clause is proved |

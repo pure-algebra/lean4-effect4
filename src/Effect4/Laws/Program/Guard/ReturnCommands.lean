@@ -1,5 +1,7 @@
+import Effect4.Laws.Machine.Eliminators
 import Effect4.Laws.Program.Guard.Core
 import Effect4.Laws.Program.Guard.Settle
+import Effect4.Laws.Program.Interference
 
 /-! Proof graph: generated command shapes, retained fiber identity,
 then the empty-tail settle queue and its sole possible owner.
@@ -49,8 +51,13 @@ theorem allSimple_linkScope (interp : NInterp) (m : NativeMachine)
     (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId)
     (who : Option FiberId) (extra : ReasonAnnotations Ann) :
     AllSimple (linkScope interp m mode scope target who extra).2 := by
-  unfold linkScope
-  repeat' first | exact allSimple_nil | (solve | simp [AllSimple, Simple]) | split
+  have commands := (RunMachine.applyFiberEdits_shape
+    (linkScopeEdits interp m mode scope target who extra).2
+    (linkScopeEdits interp m mode scope target who extra).1).2
+  intro command member
+  obtain ⟨target, same⟩ := commands command member
+  subst command
+  exact True.intro
 
 theorem stepFrame_nested (p : NativeEff) (table : RowTable) (interp : NInterp)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) :
@@ -71,23 +78,23 @@ theorem finalizerOr_nested (p : NativeEff) (table : RowTable) (interp : NInterp)
 theorem withFiber_nested (p : NativeEff) (table : RowTable) (interp : NInterp)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) (action : Effect4.Program.Guard.ReturnFields.NAction) :
     Nested p table (evaluatePrim.withFiber interp m f yielding action) := by
-  cases action <;> simp only [evaluatePrim.withFiber, evaluatePrim.interruptAs,
-    spawn, start, countdownPark, beginRace]
-  all_goals repeat' first
-    | exact .simple allSimple_nil
-    | exact .simple (allSimple_linkScope _ _ _ _ _ _ _)
-    | (solve | apply Nested.simple; simp [AllSimple, Simple])
-    | (solve
-        | apply Nested.owned rfl _ _ rfl
-          · first | exact allSimple_map _ _ (fun _ => True.intro)
-                  | simp [AllSimple, Simple]
-          · rfl)
-    | (solve
-        | apply Nested.owned rfl [] _ (by simp)
-          · exact allSimple_nil
-          · rfl)
-    | split
-  all_goals exact .owned rfl [] _ rfl allSimple_nil rfl
+  fun_cases evaluatePrim.withFiber interp m f yielding action
+  case case1 | case2 | case3 =>
+    apply Nested.simple
+    simp only [start] at *
+    aesop (add norm unfold [AllSimple, Simple])
+  case case9 =>
+    unfold evaluatePrim.interruptAs
+    split
+    · exact .simple allSimple_nil
+    · exact .owned rfl [] _ rfl allSimple_nil rfl
+  case case12 | case26 =>
+    exact .owned rfl _ _ rfl (allSimple_map _ _ (fun _ => True.intro)) rfl
+  case case17 | case18 =>
+    unfold beginRace
+    exact .simple allSimple_nil
+  case case30 => exact .owned rfl [] _ rfl allSimple_nil rfl
+  all_goals exact .simple allSimple_nil
 
 theorem registerRace_nested (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) (rid : Nat)
@@ -104,17 +111,18 @@ theorem evaluatePrim_nested (p : NativeEff) (table : RowTable) (interp : NInterp
     (m : NativeMachine) (f : NFiber) (yielding : Bool) (owned : FrameCodeOwned m f)
     (parkEq : interp.parkOf = (interpOf p table).parkOf) :
     Nested p table (evaluatePrim interp m f yielding) := by
-  simp only [evaluatePrim, countdownPark]
-  repeat' first
-    | exact stepFrame_nested _ _ _ _ _ _
-    | exact finalizerOr_nested _ _ _ _ _ _ _
-    | exact withFiber_nested _ _ _ _ _ _ _
-    | exact .simple allSimple_nil
-    | (solve | apply Nested.simple; simp [AllSimple, Simple])
-    | (solve | apply registerRace_nested _ _ _ _ _ _ owned; assumption)
-    | split
-  all_goals apply registerRace_nested _ _ _ _ _ _ owned
-  all_goals rw [← parkEq]; assumption
+  fun_cases evaluatePrim interp m f yielding
+  case case5 =>
+    apply registerRace_nested p table m f yielding _ owned
+    rw [← parkEq]
+    assumption
+  case case10 => exact withFiber_nested p table interp m f yielding _
+  case case11 | case16 => exact stepFrame_nested p table interp m f yielding
+  case case2 | case12 =>
+    apply Nested.simple
+    simp only [AllSimple, Simple, List.mem_cons, List.not_mem_nil, or_false, forall_eq]
+  case case14 | case15 => exact finalizerOr_nested p table interp m f yielding _
+  all_goals exact .simple allSimple_nil
 
 theorem exitScoped_nested (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) (exit : ExitV)
@@ -178,100 +186,68 @@ theorem present_map (m : NativeMachine) (fn : NFiber → NFiber) (id : FiberId)
   obtain ⟨g, hm, hi⟩ := h
   exact ⟨fn g, List.mem_map.mpr ⟨g, hm, rfl⟩, (same g).trans hi⟩
 
+/-- Forward lookup classification supplies the existing identifier-presence observation. -/
+theorem present_of_lookupEdits {m n : NativeMachine} (edits : Moves.LookupEdits m n)
+    (id : FiberId) (present : Present m id) : Present n id := by
+  obtain ⟨old, found⟩ := lookup_present present
+  obtain ⟨next, lookup, _⟩ := edits id old found
+  exact present_lookup lookup
+
 theorem present_forkFinalizers (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (programs : List NCode) (id : FiberId) (h : Present m id) :
     Present (forkFinalizers interp m f programs).1 id := by
-  induction programs generalizing m with
-  | nil => exact h
-  | cons program programs ih =>
-    exact ih _ (present_append m _ id h)
+  exact present_of_lookupEdits (Moves.InterferesWithLookup.forkFinalizers interp f m programs).lookup id h
+
 
 theorem present_linkScope (interp : NInterp) (m : NativeMachine)
     (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId)
     (who : Option FiberId) (extra : ReasonAnnotations Ann) (id : FiberId)
     (h : Present m id) : Present (linkScope interp m mode scope target who extra).1 id := by
-  unfold linkScope
-  repeat' first
-    | exact h
-    | exact present_update _ _ _ h
-    | exact present_modify _ _ _ _ h
-    | split
+  exact present_of_lookupEdits (Moves.InterferesWithLookup.linkScope interp m mode scope target who extra).lookup id h
+
 
 theorem stepFrame_present (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (yielding : Bool) (id : FiberId) (h : Present m id) :
     Present (evaluatePrim.stepFrame interp m f yielding).machine id := by
-  unfold evaluatePrim.stepFrame
-  cases hs : f.frame.step interp.toPrimInterp with
-  | mk step events => cases step <;> exact h
+  exact present_of_lookupEdits (Moves.stepFrame_interference interp m f yielding).lookup id h
+
 
 theorem finalizerOr_present (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (yielding : Bool) (exit : ExitV) (id : FiberId) (h : Present m id) :
     Present (evaluatePrim.finalizerOr interp m f yielding exit).machine id := by
-  cases exit <;> unfold evaluatePrim.finalizerOr <;> dsimp only
-  all_goals repeat' first
-    | exact h
-    | exact stepFrame_present _ _ _ _ _ h
-    | split
+  exact present_of_lookupEdits (Moves.finalizerOr_interference interp m f yielding exit).lookup id h
+
 
 theorem withFiber_present (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (yielding : Bool) (action : Effect4.Program.Guard.ReturnFields.NAction)
     (id : FiberId) (h : Present m id) :
     Present (evaluatePrim.withFiber interp m f yielding action).machine id := by
-  cases action <;> simp only [evaluatePrim.withFiber, evaluatePrim.interruptAs,
-    spawn, start, countdownPark, beginRace]
-  all_goals repeat' first
-    | exact h
-    | exact present_append _ _ _ h
-    | exact present_update _ _ _ h
-    | exact present_modify _ _ _ _ h
-    | exact present_map _ _ _ (fun _ => rfl) h
-    | exact present_linkScope _ _ _ _ _ _ _ _ h
-    | exact present_forkFinalizers _ _ _ _ _ h
-    | split
-  all_goals simp_all
+  exact present_of_lookupEdits (Moves.withFiber_interference interp m f yielding action).lookup id h
+
 
 theorem countdown_present (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (targets : List FiberId) (resumeWith : Resume EffName) (failFast : Bool)
     (id : FiberId) (h : Present m id) :
     Present (countdownPark interp m f targets resumeWith failFast).1 id := by
-  unfold countdownPark
-  dsimp only
-  split
-  · exact h
-  · exact present_modify _ _ _ _ h
+  exact present_of_lookupEdits (Moves.InterferesWithLookup.countdownPark interp m f targets resumeWith failFast).lookup id h
+
 
 theorem evaluatePrim_present (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (yielding : Bool) (id : FiberId) (h : Present m id) :
     Present (evaluatePrim interp m f yielding).machine id := by
-  simp only [evaluatePrim, registerRace]
-  repeat' first
-    | exact h
-    | exact stepFrame_present _ _ _ _ _ h
-    | exact finalizerOr_present _ _ _ _ _ _ h
-    | exact withFiber_present _ _ _ _ _ _ h
-    | exact countdown_present _ _ _ _ _ _ _ h
-    | exact present_update _ _ _ h
-    | exact present_modify _ _ _ _ h
-    | split
+  exact present_of_lookupEdits (Moves.evaluatePrim_interference interp m f yielding).lookup id h
+
 
 theorem exitScoped_present (p : NativeEff) (m : NativeMachine) (f : NFiber)
     (yielding : Bool) (exit : ExitV) (id : FiberId) (h : Present m id) :
     Present (exitScoped p m f yielding exit).machine id := by
-  cases exit <;> simp only [exitScoped]
-  all_goals repeat' first
-    | exact h
-    | exact evaluatePrim_present _ _ _ _ _ h
-    | split
+  exact present_of_lookupEdits (Moves.exitScoped_interference p m f yielding exit).lookup id h
+
 
 theorem evaluateNative_present (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) (id : FiberId)
     (h : Present m id) : Present (evaluateNative p m f yielding table).machine id := by
-  simp only [evaluateNative]
-  repeat' first
-    | exact h
-    | exact evaluatePrim_present _ _ _ _ _ h
-    | exact exitScoped_present _ _ _ _ _ _ h
-    | split
+  exact present_of_lookupEdits (Moves.evaluateNative_interference p table m f yielding).lookup id h
 
 /-- Queue safety together with the only possible command owner. -/
 structure GeneratedQueue (p : NativeEff) (table : RowTable) (m : NativeMachine)
@@ -376,18 +352,18 @@ theorem generatedQueue_registration (p : NativeEff) (table : RowTable)
     rcases hc with rfl | rfl <;> rfl
   · intro who hw; exact List.mem_singleton.mp (owners ▸ hw)
 
-theorem settle_generatedQueue (p : NativeEff) (table : RowTable) (it : NIter)
+theorem settleOutcome_generatedQueue (p : NativeEff) (table : RowTable) (it : NIter)
     (nested : Nested p table it) (present : Present it.machine it.fiber.id)
     (running : it.fiber.running = true) (ready : ReadyOutcome it) :
-    GeneratedQueue p table (settle it.fiber.id [] it).1 it.fiber.id
-      (settle it.fiber.id [] it).2 := by
+    GeneratedQueue p table (settleOutcome it.fiber.id [] it).1 it.fiber.id
+      (settleOutcome it.fiber.id [] it).2 := by
   cases nested with
   | simple simple =>
-    cases ho : it.outcome <;> simp only [settle, ho, List.append_nil]
-    all_goals try (
+    cases ho : it.outcome <;> simp only [settleOutcome, ho, List.append_nil]
+    case continue_ | answered | finished =>
       have park : it.fiber.parked = .notParked := by simpa only [ReadyOutcome, ho] using ready
       exact generatedQueue_append_one p table _ _ _ _ simple
-        (active_update _ _ present running park) rfl rfl rfl)
+        (active_update _ _ present running park) rfl rfl rfl
     case commands => exact generatedQueue_simple p table _ _ _ simple
     case stuck why => exact generatedQueue_simple p table _ _ _ allSimple_nil
     case parked =>
@@ -399,14 +375,95 @@ theorem settle_generatedQueue (p : NativeEff) (table : RowTable) (it : NIter)
     have park : it.fiber.parked = .notParked := by simpa only [ReadyOutcome, outcome] using ready
     have active := active_update _ _ present running park
     have fields := local_fields p table _ _ last isLocal active
-    simpa only [settle, outcome, List.append_nil, commands] using
+    simpa only [settleOutcome, outcome, List.append_nil, commands] using
       generatedQueue_append_one p table _ _ _ last simple fields.1 fields.2.1 fields.2.2.1 fields.2.2.2
   | registration outcome rid race raceLookup host park commands =>
     have parked : it.fiber.parked = .notParked := by simpa only [ReadyOutcome, outcome] using ready
     obtain ⟨old, lookup⟩ := lookup_present present
     have result := generatedQueue_registration p table (it.machine.update it.fiber) it.fiber
       it.yielding rid race (fiber_lookup_update_self lookup it.fiber rfl) running parked raceLookup host park
-    simpa only [settle, outcome, List.append_nil, commands] using result
+    simpa only [settleOutcome, outcome, List.append_nil, commands] using result
+
+/-- Scheduler messages prepend owner-free commands to the existing generated queue. -/
+theorem generatedQueue_prepend (p : NativeEff) (table : RowTable) (m : NativeMachine)
+    (id : FiberId) (front rest : List NCmd) (simple : AllSimple front)
+    (held : GeneratedQueue p table m id rest) :
+    GeneratedQueue p table m id (front ++ rest) := by
+  have owners := simple_owners p table m front simple
+  refine ⟨guardQueue_append_noOwners p table
+    (generatedQueue_simple p table m id front simple).queue held.queue owners, ?_⟩
+  simpa only [List.filterMap_append, owners, List.nil_append] using held.owner
+
+/-- Disposition either retains the simple message prefix or discards the whole queue. -/
+theorem settleOutcome_generatedQueue_prepend (p : NativeEff) (table : RowTable)
+    (it : NIter) (front : List NCmd) (simple : AllSimple front)
+    (held : GeneratedQueue p table (settleOutcome it.fiber.id [] it).1 it.fiber.id
+      (settleOutcome it.fiber.id [] it).2) :
+    GeneratedQueue p table (settleOutcome it.fiber.id [] {it with nested := front ++ it.nested}).1
+      it.fiber.id (settleOutcome it.fiber.id [] {it with nested := front ++ it.nested}).2 := by
+  cases outcome : it.outcome <;> simp only [settleOutcome, outcome, List.append_nil] at held ⊢
+  case stuck why => exact held
+  case parked =>
+    split <;> rename_i deferred
+    all_goals simp only [deferred, ↓reduceIte] at held
+    · simpa only [List.append_assoc] using generatedQueue_prepend p table _ _ _ _ simple held
+    · exact generatedQueue_prepend p table _ _ _ _ simple held
+  all_goals simpa only [List.append_assoc] using
+    generatedQueue_prepend p table _ _ _ _ simple held
+
+/-- Actual addressed edits retain the running owner's command fields before disposition. -/
+theorem settle_generatedQueue (p : NativeEff) (table : RowTable) (it : NIter)
+    (nested : Nested p table it) (present : Present it.machine it.fiber.id)
+    (running : it.fiber.running = true) (ready : ReadyOutcome it) :
+    GeneratedQueue p table (settle it.fiber.id [] it).1 it.fiber.id
+      (settle it.fiber.id [] it).2 := by
+  cases edits : it.edits with
+  | nil =>
+    simpa only [settle, edits] using
+      settleOutcome_generatedQueue p table it nested present running ready
+  | cons message tail =>
+    obtain ⟨old, found⟩ := lookup_present present
+    have installed := fiber_lookup_update_self found it.fiber rfl
+    obtain ⟨owner, ownerFound, word⟩ :=
+      (Moves.InterferesWithLookup.fiberEdits it.edits (it.machine.update it.fiber)).lookup
+        it.fiber.id it.fiber installed
+    have fields := word.controls (Or.inl running)
+    have sameId := word.id
+    let next : NIter := {it with machine := (applyFiberEdits it.edits
+      (it.machine.update it.fiber)).1, fiber := owner, edits := []}
+    have nextNested : Nested p table next := by
+      cases nested with
+      | simple simple => exact .simple simple
+      | owned outcome front last commands simple isLocal =>
+        refine .owned outcome front last commands simple ?_
+        simpa only [next, sameId] using isLocal
+      | registration outcome rid race raceLookup host park commands =>
+        refine .registration outcome rid race ?_ ?_ ?_ commands
+        · have races := congrArg (fun m : NativeMachine => m.races)
+            (RunMachine.applyFiberEdits_shape it.edits (it.machine.update it.fiber)).1
+          change (applyFiberEdits it.edits (it.machine.update it.fiber)).1.race? rid = some race
+          unfold RunMachine.race?
+          rw [races]
+          exact raceLookup
+        · simpa only [next, sameId] using host
+        · simpa only [next, fields.1] using park
+    have nextReady : ReadyOutcome next := by
+      cases outcome : it.outcome <;>
+        simp only [ReadyOutcome, next, outcome] at ready ⊢
+      all_goals exact fields.2.1.trans ready
+    have nextPresent : Present next.machine next.fiber.id := by
+      simpa only [next, sameId] using present_lookup ownerFound
+    have held := settleOutcome_generatedQueue p table next nextNested nextPresent
+      (fields.2.2.2 running) nextReady
+    have simple : AllSimple (applyFiberEdits it.edits (it.machine.update it.fiber)).2 := by
+      intro command member
+      obtain ⟨target, same⟩ := (RunMachine.applyFiberEdits_shape it.edits
+        (it.machine.update it.fiber)).2 command member
+      subst command
+      exact True.intro
+    have combined := settleOutcome_generatedQueue_prepend p table next _ simple held
+    rw [edits] at ownerFound
+    simpa only [settle, edits, ownerFound, next, sameId] using combined
 
 theorem iteration_nested (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) (owned : FrameCodeOwned m f) :

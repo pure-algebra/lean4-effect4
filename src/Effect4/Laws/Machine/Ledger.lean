@@ -1,6 +1,8 @@
 import Effect4.Laws.Machine.MaskRuns
 import Effect4.Laws.Machine.ControlWeights
 import Effect4.Laws.Machine.Keeps
+import Effect4.Laws.Machine.EditWords
+import Effect4.Laws.Machine.FiberSumMessages
 import Effect4.Laws.Machine.ForkLedgerInvariant
 
 /-!
@@ -209,81 +211,183 @@ theorem held_make (id : FiberId) (program : Prim ν σ β ε δ ι α) (flag : B
       (α := α) id program flag budget context) = 0 :=
   L.empty
 
+/-- The local payload obligations of a bookkeeping write, at its actual prefix state. -/
+def Neutral (edit : Edit ν σ β ε δ ι α χ St
+    (Prim ν σ β ε δ ι α) (FrameFiber ν σ β ε δ ι α) (FrameEvent ν σ β ε δ ι α))
+    (m : RunMachine ν σ β ε δ ι α χ St) : Prop :=
+  match edit with
+  | .update next => (m.fibers.map RunFiber.id).Nodup ∧
+      ∃ old, m.fiber? old.id = some old ∧ next.id = old.id ∧ L.held next = L.held old
+  | .emit events => L.consumedIn events = 0 ∧ L.producedIn events = 0
+  | .appendFiber child => L.held child = 0
+  | .observe _ _ => (m.fibers.map RunFiber.id).Nodup
+  | _ => True
+
+/-- The ledger's per-edit instance. Helpers supply only their actual payload obligations. -/
+theorem same_edit (m : RunMachine ν σ β ε δ ι α χ St)
+    (edit : Edit ν σ β ε δ ι α χ St
+      (Prim ν σ β ε δ ι α) (FrameFiber ν σ β ε δ ι α) (FrameEvent ν σ β ε δ ι α))
+    (payload : L.Neutral edit m) : L.Same m (edit.apply m) := by
+  cases edit with
+  | update next =>
+    obtain ⟨unique, old, found, key, weight⟩ := payload
+    exact L.same_update m old next unique found key weight
+  | emit events => exact L.same_emit m events payload.1 payload.2
+  | appendFiber child => exact L.same_append_empty m child payload
+  | observe target observer =>
+    exact L.same_modify m payload target (fun f => {f with observers := f.observers ++ [observer]})
+      (fun _ => rfl) (fun _ => rfl)
+  | dropToken token =>
+    exact L.same_map m (fun f => {f with observers := f.observers.filter fun
+      | .resumeAwait _ t _ => t ≠ token
+      | .countdown _ t => t ≠ token
+      | _ => true}) (fun _ => rfl) (fun _ => rfl)
+  | _ => exact .refl L m
+
+/-- Bookkeeping words compose through the existing actual-prefix Path. -/
+theorem same_word {m n : RunMachine ν σ β ε δ ι α χ St}
+    {word : List (Edit ν σ β ε δ ι α χ St
+      (Prim ν σ β ε δ ι α) (FrameFiber ν σ β ε δ ι α) (FrameEvent ν σ β ε δ ι α))}
+    (path : Effect4.Contracts.Path (fun before after edit =>
+      after = edit.apply before ∧ L.Neutral edit before) m n word) : L.Same m n := by
+  have same := Edits.run_preserves_at (fun _ _ _ edge => edge.1) (L.Same m)
+    (fun before after edit edge held => by
+      rw [edge.1]
+      exact held.trans (L.same_edit before edit edge.2)) path (.refl L m)
+  rwa [Edits.run_of_path (fun _ _ _ edge => edge.1) path] at same
+
+/-- Prefix-independent payloads need no lookup path from the caller. -/
+theorem same_run (m : RunMachine ν σ β ε δ ι α χ St)
+    (word : List (Edit ν σ β ε δ ι α χ St
+      (Prim ν σ β ε δ ι α) (FrameFiber ν σ β ε δ ι α) (FrameEvent ν σ β ε δ ι α)))
+    (payload : ∀ edit ∈ word, ∀ held, L.Neutral edit held) : L.Same m (Edits.run word m) :=
+  Edits.run_preserves (L.Same m) word
+    (fun edit member held same => same.trans (L.same_edit held edit (payload edit member held))) m (.refl L m)
+
+/-- Spawn payloads satisfy the ledger's primitive obligations, independently of the prefix. -/
+theorem spawn_neutral (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (parent : RunFiber ν σ β ε δ ι α χ)
+    (program : Prim ν σ β ε δ ι α) (options : Supervision.ForkOptions) (site : List Nat)
+    (edit : Edit ν σ β ε δ ι α χ St
+      (Prim ν σ β ε δ ι α) (FrameFiber ν σ β ε δ ι α) (FrameEvent ν σ β ε δ ι α))
+    (member : edit ∈ Edits.spawnWord interp m parent program options site)
+    (held : RunMachine ν σ β ε δ ι α χ St) : L.Neutral edit held := by
+  simp only [Edits.spawnWord, List.mem_cons, List.not_mem_nil, or_false] at member
+  rcases member with rfl | rfl | rfl | rfl
+  · exact L.held_make _ _ _ _ _
+  · exact True.intro
+  · exact True.intro
+  · exact ⟨rfl, rfl⟩
+
 /-- A spawn appends a fiber with an empty stack and records the fork. -/
 theorem same_spawn (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
     (parent : RunFiber ν σ β ε δ ι α χ) (program : Prim ν σ β ε δ ι α)
     (options : Supervision.ForkOptions) (site : List Nat) :
     L.Same m (spawn interp m parent program options site).1 := by
-  have born := L.same_append_empty m
-    (RunFiber.make (ν := ν) (σ := σ) (β := β) (ε := ε) (δ := δ) (ι := ι) (α := α)
-      ⟨m.nextId⟩ program
-      (match options.maskMode with
-       | .interruptible => true | .uninterruptible => false | .inherit => parent.frame.interruptible)
-      (interp.budgetOf parent.context) parent.context) (L.held_make _ _ _ _ _)
-  exact born.trans (L.same_emit _ [.forked parent.id ⟨m.nextId⟩ options.daemon] rfl rfl)
+  rw [Edits.spawn_word]
+  exact L.same_run m _ (L.spawn_neutral interp m parent program options site)
 
 /-- Starting a spawned child records at most a scheduling event. -/
 theorem same_start (m : RunMachine ν σ β ε δ ι α χ St) (parent : RunFiber ν σ β ε δ ι α χ)
     (child : FiberId) (immediately : Bool) : L.Same m (start m parent child immediately).1 := by
-  cases immediately
-  · exact L.same_emit m [.scheduledTask parent.id 0 (.start child)] rfl rfl
-  · exact .refl L m
+  rw [Edits.start_word]
+  apply L.same_run
+  intro edit member held
+  cases immediately with
+  | true => exact False.elim (List.not_mem_nil member)
+  | false =>
+    simp only [Edits.startWord, Bool.false_eq_true, ite_false, List.mem_cons, List.not_mem_nil, or_false] at member
+    rcases member with rfl | rfl
+    · exact True.intro
+    · exact ⟨rfl, rfl⟩
 
 /-- The parallel close's finalizer fibers each start with an empty stack. -/
 theorem same_forkFinalizers (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (parent : RunFiber ν σ β ε δ ι α χ)
     (programs : List (Prim ν σ β ε δ ι α)) : L.Same m (forkFinalizers interp m parent programs).1 := by
-  induction programs generalizing m with
-  | nil => exact .refl L m
-  | cons program rest ih =>
-    exact (L.same_spawn interp m parent program ⟨true, true, .inherit⟩ []).trans (ih _)
-
-/-- A countdown park appends an observer to a target and records the park. -/
-theorem same_countdown (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
-    (unique : (m.fibers.map RunFiber.id).Nodup) (f : RunFiber ν σ β ε δ ι α χ)
-    (targets : List FiberId) (resume : Resume ν) (fast : Bool) :
-    L.Same m (countdownPark interp m f targets resume fast).1 := by
-  unfold countdownPark
-  dsimp only
-  split
-  · exact .refl L m
-  · rename_i exits target remaining found
-    let edit (g : RunFiber ν σ β ε δ ι α χ) : RunFiber ν σ β ε δ ι α χ :=
-      { g with observers := g.observers ++ [Observer.countdown f.id m.nextToken] }
-    let bumped : RunMachine ν σ β ε δ ι α χ St := { m with nextToken := m.nextToken + 1 }
-    exact (L.same_modify bumped unique target edit (fun _ => rfl) (fun _ => rfl)).trans
-      (L.same_emit (bumped.modify target edit) [.parkedOn f.id m.nextToken] rfl rfl)
+  apply L.same_word
+  apply Edits.forks_path interp parent
+  intro held program
+  rw [Edits.spawn_word]
+  exact Edits.run_path _ (fun edit member before =>
+    ⟨rfl, L.spawn_neutral interp held parent program ⟨true, true, .inherit⟩ [] edit member before⟩) held
 
 /-- A race's allocation records its start. -/
 theorem same_beginRace (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
     (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool) (programs : List (Prim ν σ β ε δ ι α))
     (site : Option (List Nat)) (mode : Supervision.RaceMode) :
-    L.Same m (beginRace interp m f yielding programs site mode).machine :=
-  L.same_emit m [.raceStarted m.nextRace f.id programs.length] rfl rfl
+    L.Same m (beginRace interp m f yielding programs site mode).machine  := by
+  rw [Edits.race_word]
+  apply L.same_run
+  intro edit member held
+  simp only [Edits.raceWord, List.mem_cons, List.not_mem_nil, or_false] at member
+  rcases member with rfl | rfl | rfl | rfl
+  · exact True.intro
+  · exact True.intro
+  · exact True.intro
+  · exact ⟨rfl, rfl⟩
 
 /-- Posting a task edits a dispatcher and records the post. -/
 theorem same_postTask (m : RunMachine ν σ β ε δ ι α χ St) (unique : (m.fibers.map RunFiber.id).Nodup)
     (owner : FiberId) (priority : Nat) (task : Task ν σ β ε δ ι α) :
     L.Same m (m.postTask owner priority task) := by
-  unfold RunMachine.postTask
-  split
-  · exact .refl L m
-  · rename_i old found
-    have same := L.same_update m old { old with dispatcher := old.dispatcher.enqueue priority task }
-      unique (by simpa only [RunMachine.id_of_fiber? found] using found) rfl rfl
-    exact same.trans (L.same_emit _ [.scheduledTask owner priority task] rfl rfl)
+  rw [Edits.postTask_word]
+  cases found : m.fiber? owner with
+  | none =>
+    apply L.same_run
+    intro edit member held
+    simp only [Edits.postTaskWord, found, List.mem_singleton] at member
+    subst edit
+    exact True.intro
+  | some old =>
+    simp only [Edits.postTaskWord, found]
+    apply L.same_word (word := [.update {old with dispatcher := old.dispatcher.enqueue priority task},
+      .arm owner, .emit [.scheduledTask owner priority task]])
+    refine .cons ⟨rfl, ?_⟩ (.cons ⟨rfl, True.intro⟩ (.cons ⟨rfl, ⟨rfl, rfl⟩⟩ (.nil _)))
+    exact ⟨unique, old, by simpa only [RunMachine.id_of_fiber? found] using found, rfl, rfl⟩
+
+/-- Actual-prefix payload obligations compose with the existing fork-key invariant. -/
+theorem same_ok_word {m n : RunMachine ν σ β ε δ ι α χ St}
+    {word : List (Edit ν σ β ε δ ι α χ St
+      (Prim ν σ β ε δ ι α) (FrameFiber ν σ β ε δ ι α) (FrameEvent ν σ β ε δ ι α))}
+    (path : Effect4.Contracts.Path
+      (fun before after edit => after = edit.apply before ∧
+        (ForkLedger.Invariant.Ok before → L.Neutral edit before ∧ ForkLedger.Invariant.Ok after))
+      m n word) (ok : ForkLedger.Invariant.Ok m) : L.Same m n := by
+  have kept := Edits.run_preserves_at (fun _ _ _ edge => edge.1)
+    (fun after => L.Same m after ∧ ForkLedger.Invariant.Ok after)
+    (fun before after edit edge previous => by
+      have next := edge.2 previous.2
+      refine ⟨previous.1.trans ?_, next.2⟩
+      rw [edge.1]
+      exact L.same_edit before edit next.1) path ⟨.refl L m, ok⟩
+  rw [Edits.run_of_path (fun _ _ _ edge => edge.1) path] at kept
+  exact kept.1
+
+/-- Task-post payloads retain the ledger and the fork-key premise at their actual prefixes. -/
+theorem postTask_payload_path (m : RunMachine ν σ β ε δ ι α χ St)
+    (owner : FiberId) (priority : Nat) (task : Task ν σ β ε δ ι α) :
+    Effect4.Contracts.Path
+      (fun before after edit => after = edit.apply before ∧
+        (ForkLedger.Invariant.Ok before → L.Neutral edit before ∧ ForkLedger.Invariant.Ok after))
+      m (m.postTask owner priority task) (Edits.postTaskWord m owner priority task) := by
+  rw [Edits.postTask_word]
+  cases found : m.fiber? owner with
+  | none =>
+    simp only [Edits.postTaskWord, found]
+    exact .cons ⟨rfl, fun ok => ⟨True.intro, ForkLedger.Invariant.halt_ok ok _⟩⟩ (.nil _)
+  | some old =>
+    simp only [Edits.postTaskWord, found]
+    refine .cons ⟨rfl, ?_⟩ (.cons ⟨rfl, fun ok => ⟨True.intro, ForkLedger.Invariant.arm_ok ok _⟩⟩
+      (.cons ⟨rfl, fun ok => ⟨⟨rfl, rfl⟩, ForkLedger.Invariant.emit_ok ok _⟩⟩ (.nil _)))
+    intro ok
+    exact ⟨⟨ok.idsUnique, old, by simpa only [RunMachine.id_of_fiber? found] using found, rfl, rfl⟩,
+      ForkLedger.Invariant.update_ok ok _⟩
 
 /-- Draining store work only posts tasks. -/
 theorem same_drainOwed (m : RunMachine ν σ β ε δ ι α χ St) (ok : ForkLedger.Invariant.Ok m)
     (owed : List (Owed (Prim ν σ β ε δ ι α))) : L.Same m (drainOwed m owed).1 := by
-  induction owed generalizing m with
-  | nil => exact .refl L m
-  | cons entry rest ih =>
-    unfold drainOwed
-    split
-    · exact ih m ok
-    · exact (L.same_postTask m ok.idsUnique _ _ _).trans
-        (ih _ (ForkLedger.Invariant.postTask_ok ok _ _ _))
+  exact L.same_ok_word (Edits.drain_path L.postTask_payload_path m owed) ok
 
 /-- Updating an absent id leaves the machine unchanged. -/
 theorem update_absent (m : RunMachine ν σ β ε δ ι α χ St) (next : RunFiber ν σ β ε δ ι α χ)
@@ -346,21 +450,141 @@ theorem same_update_view (m : RunMachine ν σ β ε δ ι α χ St)
 
 variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
 
+/-- An interrupt delta keeps the saved-stack weight. The R2 message interpretation consumes this law. -/
+theorem interruptWithCause_held (cause : Cause ε δ ι α) (f : RunFiber ν σ β ε δ ι α χ) :
+    L.held (interruptWithCause cause f).1 = L.held f := by
+  unfold interruptWithCause
+  dsimp only
+  (repeat' split) <;> rfl
+
+/-- An interrupt delta keeps the addressed record's identity. -/
+theorem interruptWithCause_key (cause : Cause ε δ ι α) (f : RunFiber ν σ β ε δ ι α χ) :
+    (interruptWithCause cause f).1.id = f.id := by
+  unfold interruptWithCause
+  dsimp only
+  (repeat' split) <;> rfl
+
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+/-- Replacing records by a record at their own key keeps the key list, including duplicate raw keys. -/
+theorem update_keys (m : RunMachine ν σ β ε δ ι α χ St) (next : RunFiber ν σ β ε δ ι α χ) :
+    ((m.update next).fibers.map RunFiber.id) = m.fibers.map RunFiber.id := by
+  simp only [RunMachine.update, List.map_map, Function.comp_def]
+  apply List.map_congr_left
+  intro old _
+  split
+  · next same => exact same.symm
+  · rfl
+
+/-- One first-order edit keeps every stack weight and the actual stored key list.
+The R2 settlement proof consumes this result. -/
+theorem fiberEdit_kept (edit : FiberEdit ε δ ι α) (m : RunMachine ν σ β ε δ ι α χ St)
+    (unique : (m.fibers.map RunFiber.id).Nodup) :
+    L.Same m (applyFiberEdit edit m).1 ∧
+      ((applyFiberEdit edit m).1.fibers.map RunFiber.id) = m.fibers.map RunFiber.id := by
+  cases edit with
+  | observe target observer =>
+    refine ⟨L.same_modify m unique target (fun f => {f with observers := f.observers ++ [observer]})
+      (fun _ => rfl) (fun _ => rfl), ?_⟩
+    simp only [applyFiberEdit]
+    unfold RunMachine.modify
+    dsimp only
+    split
+    · rfl
+    · exact update_keys m _
+  | dropToken token =>
+    refine ⟨L.same_map m (fun f => {f with observers := f.observers.filter fun
+      | .resumeAwait _ t _ => t ≠ token
+      | .countdown _ t => t ≠ token
+      | _ => true}) (fun _ => rfl) (fun _ => rfl), ?_⟩
+    simp only [applyFiberEdit, List.map_map, Function.comp_def]
+  | interrupt target cause =>
+    simp only [applyFiberEdit]
+    split
+    · exact ⟨.refl L m, rfl⟩
+    · next old found =>
+      refine ⟨L.same_update m old (interruptWithCause cause old).1 unique ?_
+        (interruptWithCause_key cause old) (L.interruptWithCause_held cause old), update_keys m _⟩
+      simpa only [RunMachine.id_of_fiber? found] using found
+
+/-- The edit fold keeps the ledger and the stored key list without another command census. -/
+theorem fiberEdits_kept (edits : List (FiberEdit ε δ ι α))
+    (m : RunMachine ν σ β ε δ ι α χ St) (unique : (m.fibers.map RunFiber.id).Nodup) :
+    L.Same m (applyFiberEdits edits m).1 ∧
+      ((applyFiberEdits edits m).1.fibers.map RunFiber.id) = m.fibers.map RunFiber.id := by
+  have path := Edits.fiberWords_path
+    (Edge := fun before after edit => after = edit.apply before ∧
+      ((before.fibers.map RunFiber.id).Nodup → L.Same before after ∧
+        after.fibers.map RunFiber.id = before.fibers.map RunFiber.id))
+    edits (fun message _ before => Edits.fiberWord_path message before (fun edit single => by
+      refine ⟨?_, fun held => L.fiberEdit_kept message before held⟩
+      rw [Edits.fiber_word, single]
+      rfl)) m
+  have kept := Edits.run_preserves_at (fun _ _ _ edge => edge.1)
+    (fun after => L.Same m after ∧ after.fibers.map RunFiber.id = m.fibers.map RunFiber.id)
+    (fun before after edit edge previous => by
+      have next := edge.2 (by rw [previous.2]; exact unique)
+      exact ⟨previous.1.trans next.1, next.2.trans previous.2⟩) path ⟨.refl L m, rfl⟩
+  rwa [← Edits.fiber_words] at kept
+
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+/-- The canonical countdown plan only changes the token counter and emits a neutral park event. -/
+theorem same_countdown_plan (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ)
+    (targets : List FiberId) (resume : Resume ν) (fast : Bool) :
+    L.Same m (countdownParkEdits interp m f targets resume fast).1 := by
+  rw [Edits.countdown_word]
+  apply L.same_run
+  intro edit member held
+  simp only [Edits.countdownWord] at member
+  split at member
+  · simp only [List.mem_append, List.mem_singleton, List.not_mem_nil, or_false] at member
+    subst edit
+    exact True.intro
+  · simp only [List.mem_append, List.mem_singleton] at member
+    rcases member with rfl | rfl
+    · exact True.intro
+    · exact ⟨rfl, rfl⟩
+
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+/-- The canonical scope-link plan has only neutral store, halt and diagnostic writes. -/
+theorem same_linkScope_plan (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (mode : Supervision.ScopeMode) (scope : Nat)
+    (target : FiberId) (who : Option FiberId) (extra : ReasonAnnotations α) :
+    L.Same m (linkScopeEdits interp m mode scope target who extra).1 := by
+  rw [Edits.link_plan_word]
+  apply L.same_run
+  intro edit member held
+  unfold Edits.linkWord at member
+  repeat' split at member
+  all_goals simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+  all_goals rcases member with rfl | rfl
+  all_goals aesop (add norm [Neutral, consumedIn, producedIn, eventConsumed, eventProduced])
+
+/-- A countdown park appends an observer to a target and records the park. -/
+theorem same_countdown (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine ν σ β ε δ ι α χ St)
+    (unique : (m.fibers.map RunFiber.id).Nodup) (f : RunFiber ν σ β ε δ ι α χ)
+    (targets : List FiberId) (resume : Resume ν) (fast : Bool) :
+    L.Same m (countdownPark interp m f targets resume fast).1 := by
+  change L.Same m (applyFiberEdits (countdownParkEdits interp m f targets resume fast).2.2.2
+    (countdownParkEdits interp m f targets resume fast).1).1
+  have rows : (countdownParkEdits interp m f targets resume fast).1.fibers = m.fibers := by
+    rw [Edits.countdown_word]
+    exact Edits.run_keeps (fun held => held.fibers) _
+      (fun edit member => edit.keeps_fibers (Edits.countdown_misses m f targets edit member)) m
+  exact (L.same_countdown_plan interp m f targets resume fast).trans
+    (L.fiberEdits_kept _ _ (by rw [rows]; exact unique)).1
+
 /-- Recording an interrupt keeps the stack, so the weight. -/
 theorem interruptRecord_held (interp : RunInterp ν σ β ε δ ι α χ St) (who : Option FiberId)
     (extra : ReasonAnnotations α) (f : RunFiber ν σ β ε δ ι α χ) :
     L.held (interruptRecord interp who extra f).1 = L.held f := by
-  unfold interruptRecord interruptWithCause
-  dsimp only
-  (repeat' split) <;> rfl
+  exact L.interruptWithCause_held (interruptCause interp who extra f.id) f
 
 /-- Recording an interrupt keeps the fiber's id. -/
 theorem interruptRecord_key (interp : RunInterp ν σ β ε δ ι α χ St) (who : Option FiberId)
     (extra : ReasonAnnotations α) (f : RunFiber ν σ β ε δ ι α χ) :
     (interruptRecord interp who extra f).1.id = f.id := by
-  unfold interruptRecord interruptWithCause
-  dsimp only
-  (repeat' split) <;> rfl
+  exact interruptWithCause_key (interruptCause interp who extra f.id) f
 
 /-- Recording an interrupt in a looked-up fiber is bookkeeping. -/
 theorem same_interruptUpdate (interp : RunInterp ν σ β ε δ ι α χ St)
@@ -376,25 +600,32 @@ theorem same_linkScope (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunM
     (unique : (m.fibers.map RunFiber.id).Nodup) (mode : Supervision.ScopeMode) (scope : Nat)
     (target : FiberId) (who : Option FiberId) (extra : ReasonAnnotations α) :
     L.Same m (linkScope interp m mode scope target who extra).1 := by
-  unfold linkScope
-  split
-  · exact .refl L m
-  · split
-    · exact .refl L m
-    · rename_i old found
-      exact (L.same_interruptUpdate interp m unique target old found who extra).trans
-        (L.same_emit _ [.scopeClosedOnLink scope target, .interruptRecorded who target] rfl rfl)
-  · split
-    · exact .refl L m
-    · split
-      · exact .refl L m
-      · split
-        · exact .refl L m
-        · rename_i state key _
-          exact (L.same_modify { m with state } unique target
-            (fun f => { f with observers := f.observers ++ [.dropScopeFinalizer scope key] })
-            (fun _ => rfl) (fun _ => rfl)).trans
-            (L.same_emit _ [.scopeLinked mode scope key target] rfl rfl)
+  change L.Same m (applyFiberEdits (linkScopeEdits interp m mode scope target who extra).2
+    (linkScopeEdits interp m mode scope target who extra).1).1
+  have rows : (linkScopeEdits interp m mode scope target who extra).1.fibers = m.fibers := by
+    rw [Edits.link_plan_word]
+    exact Edits.run_keeps (fun held => held.fibers) _
+      (fun edit member => edit.keeps_fibers (Edits.link_misses interp m mode scope target who edit member)) m
+  exact (L.same_linkScope_plan interp m mode scope target who extra).trans
+    (L.fiberEdits_kept _ _ (by rw [rows]; exact unique)).1
+
+/-- An interrupt word uses the current lookup's stack and then emits a neutral record event. -/
+theorem interrupt_payload_path (interp : RunInterp ν σ β ε δ ι α χ St) (who : FiberId)
+    (extra : ReasonAnnotations α) (target : FiberId)
+    (acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α)) :
+    Effect4.Contracts.Path
+      (fun before after edit => after = edit.apply before ∧
+        (ForkLedger.Invariant.Ok before → L.Neutral edit before ∧ ForkLedger.Invariant.Ok after))
+      acc.1 (interruptEach interp who extra [target] acc).1
+      (Edits.interruptWord interp who extra target acc.1) := by
+  apply Edits.interrupt_path interp who extra
+  · intro m target old found
+    refine ⟨rfl, fun ok => ⟨?_, ForkLedger.Invariant.update_ok ok _⟩⟩
+    exact ⟨ok.idsUnique, old, by simpa only [RunMachine.id_of_fiber? found] using found,
+      StackLedger.interruptRecord_key interp (some who) extra old,
+      L.interruptRecord_held interp (some who) extra old⟩
+  · intro m target
+    exact ⟨rfl, fun ok => ⟨⟨rfl, rfl⟩, ForkLedger.Invariant.emit_ok ok _⟩⟩
 
 /-- Interrupting a list of fibers records each interrupt. The nested commands have not run. -/
 theorem same_interruptEach (interp : RunInterp ν σ β ε δ ι α χ St) (who : FiberId)
@@ -402,17 +633,8 @@ theorem same_interruptEach (interp : RunInterp ν σ β ε δ ι α χ St) (who 
     (acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α))
     (ok : ForkLedger.Invariant.Ok acc.1) :
     L.Same acc.1 (interruptEach interp who extra targets acc).1 := by
-  unfold interruptEach
-  induction targets generalizing acc with
-  | nil => exact .refl L acc.1
-  | cons target rest ih =>
-    rw [List.foldl_cons]
-    split
-    · exact ih acc ok
-    · rename_i old found
-      exact ((L.same_interruptUpdate interp acc.1 ok.idsUnique target old found (some who) extra).trans
-        (L.same_emit _ [.interruptRecorded (some who) target] rfl rfl)).trans
-        (ih _ (ForkLedger.Invariant.emit_ok (ForkLedger.Invariant.update_ok ok _) _))
+  exact L.same_ok_word
+    (Edits.interrupts_path interp who extra (L.interrupt_payload_path interp who extra) targets acc) ok
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
 
@@ -453,27 +675,27 @@ theorem update_balanced {cap : Nat} (m : RunMachine ν σ β ε δ ι α χ St) 
     L.producedIn next.machine.trace + cap
   omega
 
-/-- Settling writes the evaluated fiber back, with its weight unchanged. -/
-theorem settle_balanced {cap : Nat} (m : RunMachine ν σ β ε δ ι α χ St) (next : Iter ν σ β ε δ ι α χ St)
+/-- Settlement applies the ordered edit word between local write-back and disposition.
+The edit interpretation keeps the saved-stack ledger. -/
+theorem settle_balanced [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+    {cap : Nat} (m : RunMachine ν σ β ε δ ι α χ St) (next : Iter ν σ β ε δ ι α χ St)
     (unique : (next.machine.fibers.map RunFiber.id).Nodup) (funded : L.Funded cap m)
     (balanced : L.Balanced m next) (id : FiberId) (rest : List (Cmd ν σ β ε δ ι α)) :
     L.Funded cap (settle id rest next).1 := by
-  have changed (f : RunFiber ν σ β ε δ ι α χ)
-      (key : f.id = next.fiber.id) (weight : L.held f = L.held next.fiber) :
-      L.Funded cap (next.machine.update f) := by
-    apply L.update_balanced m { next with fiber := f } unique funded
-    unfold Balanced at balanced ⊢
-    change _ + _ + L.held f + _ ≤ _ + _ + L.atFiber next.machine f.id + _
-    rw [key, weight]
-    exact balanced
-  unfold settle
-  split
-  · exact changed _ rfl rfl
-  · exact changed _ rfl rfl
-  · split <;> exact changed _ rfl rfl
-  · exact changed _ rfl rfl
-  · exact changed _ rfl rfl
-  · exact changed _ rfl rfl
+  have installed := L.update_balanced m next unique funded balanced
+  have bound := FiberSum.settle_le L.held (fun _ _ => rfl)
+    (fun cause fiber => Nat.le_of_eq (L.interruptWithCause_held cause fiber))
+    (fun _ => rfl) (fun _ => rfl) id rest next unique
+  have fields := FiberSum.settle_fields id rest next
+  have trace := congrArg (fun value => value.2.2) fields
+  change (settle id rest next).1.trace = next.machine.trace at trace
+  change L.consumedIn (settle id rest next).1.trace + L.total (settle id rest next).1 ≤
+    L.producedIn (settle id rest next).1.trace + cap
+  rw [trace]
+  unfold Funded at installed
+  change L.consumedIn next.machine.trace + L.total (next.machine.update next.fiber) ≤
+    L.producedIn next.machine.trace + cap at installed
+  exact Nat.le_trans (Nat.add_le_add_left bound _) installed
 
 /-- **An evaluation kept**: the other fibers' bookkeeping is kept, the id is the fiber's, and the
 local debit holds. -/

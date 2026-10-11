@@ -196,7 +196,6 @@ theorem withFiber_under (interp : NInterp) (m : NativeMachine) (f : NFiber) (yie
   | interruptAs target who =>
     cases found : m.fiber? target <;>
       simp only [evaluatePrim.withFiber, evaluatePrim.interruptAs, fiberUnder, iterUnder, found]
-    all_goals rfl
   | interruptScoped target =>
     rcases Decidable.em (target = f.id) with same | other
     · have same' : target = (fiberUnder f below).id := same
@@ -209,19 +208,19 @@ theorem withFiber_under (interp : NInterp) (m : NativeMachine) (f : NFiber) (yie
   | awaitAll targets =>
     cases walk : countdownWalk { m with nextToken := m.nextToken + 1 } targets [] with
     | mk exits rest =>
-      cases rest <;> simp only [evaluatePrim.withFiber, countdownPark, fiberUnder, iterUnder, walk,
+      cases rest <;> simp only [evaluatePrim.withFiber, countdownParkEdits, fiberUnder, iterUnder, walk,
         RunFiber.park] <;> rfl
   | awaitAllFailFast targets =>
     cases walk : countdownWalk { m with nextToken := m.nextToken + 1 } targets [] with
     | mk exits rest =>
-      cases rest <;> simp only [evaluatePrim.withFiber, countdownPark, fiberUnder, iterUnder, walk,
+      cases rest <;> simp only [evaluatePrim.withFiber, countdownParkEdits, fiberUnder, iterUnder, walk,
         RunFiber.park] <;> rfl
   | snapshotChildren => rfl
   | awaitNewChildren snapshot =>
     cases walk : countdownWalk { m with nextToken := m.nextToken + 1 }
         (f.children.filter fun c => !(snapshot.contains c)) [] with
     | mk exits rest =>
-      cases rest <;> simp only [evaluatePrim.withFiber, countdownPark, fiberUnder, iterUnder, walk,
+      cases rest <;> simp only [evaluatePrim.withFiber, countdownParkEdits, fiberUnder, iterUnder, walk,
         RunFiber.park] <;> rfl
   | raceAll entrants site => rfl
   | raceAllFirst entrants site => rfl
@@ -316,7 +315,7 @@ theorem evaluatePrim_under (interp : NInterp) (m : NativeMachine) (f : NFiber) (
         | awaitAll targets =>
           cases walk : countdownWalk { m with nextToken := m.nextToken + 1 } targets [] with
           | mk exits rest =>
-            cases rest <;> simp only [countdownPark, walk, fiberUnder, iterUnder, RunFiber.park]
+            cases rest <;> simp only [countdownParkEdits, walk, fiberUnder, iterUnder, RunFiber.park]
             all_goals rfl
         | join target mode =>
           cases found : m.fiber? target with

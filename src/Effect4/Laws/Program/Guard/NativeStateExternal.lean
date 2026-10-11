@@ -46,18 +46,43 @@ theorem finalizerOr_external (interp : NInterp) (m : NativeMachine)
     | dsimp only
     | split
 
+/-- The canonical countdown has no local host request when it installs a park.
+Consumer: the existing primitive external-key proof. -/
+theorem countdownEdits_external (interp : NInterp) (m : NativeMachine)
+    (f : NFiber) (yielding : Bool) (targets : List FiberId) (resume : Resume EffName)
+    (failFast : Bool) (outcome : Effect4.Machine.Outcome EffName EffThunk Val Err Defect FiberId Ann)
+    (nested : List NCmd) (park : f.parked = .notParked)
+    (code : externalRequest f.frame.current = none) :
+    let result := countdownParkEdits interp m f targets resume failFast
+    ExternalParkKeys m ⟨result.1, result.2.1, yielding, outcome, nested, result.2.2.2⟩ := by
+  unfold countdownParkEdits
+  dsimp only
+  split
+  · exact .unparked _ _ park
+  · exact .noExternal _ _ code
+
 theorem countdown_external (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (targets : List FiberId) (resume : Resume EffName)
     (failFast : Bool) (outcome : Effect4.Machine.Outcome EffName EffThunk Val Err Defect FiberId Ann)
     (nested : List NCmd) (park : f.parked = .notParked)
     (code : externalRequest f.frame.current = none) :
     let result := countdownPark interp m f targets resume failFast
-    ExternalParkKeys m ⟨result.1, result.2.1, yielding, outcome, nested⟩ := by
-  unfold countdownPark
+    ExternalParkKeys m ⟨result.1, result.2.1, yielding, outcome, nested, []⟩ := by
+  unfold countdownPark countdownParkEdits
   dsimp only
   split
   · exact .unparked _ _ park
   · exact .noExternal _ _ code
+
+theorem countdownEdits_external_result (interp : NInterp) (m : NativeMachine)
+    (f : NFiber) (yielding : Bool) (targets : List FiberId) (resume : Resume EffName)
+    (failFast : Bool) (outcome : Effect4.Machine.Outcome EffName EffThunk Val Err Defect FiberId Ann)
+    (nested : List NCmd) (park : f.parked = .notParked)
+    (code : externalRequest f.frame.current = none)
+    (after : NativeMachine) (next : NFiber) (parked : Bool) (edits : List (FiberEdit Err Defect FiberId Ann))
+    (h : countdownParkEdits interp m f targets resume failFast = (after, next, parked, edits)) :
+    ExternalParkKeys m ⟨after, next, yielding, outcome, nested, edits⟩ := by
+  simpa only [h] using countdownEdits_external interp m f yielding targets resume failFast outcome nested park code
 
 theorem withFiber_external (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (action : NAction)
@@ -65,19 +90,15 @@ theorem withFiber_external (interp : NInterp) (m : NativeMachine)
     ExternalParkKeys m (evaluatePrim.withFiber interp m f yielding action) := by
   cases action <;> simp only [evaluatePrim.withFiber, evaluatePrim.interruptAs,
     spawn, start, beginRace]
-  all_goals repeat' first
-    | exact countdown_external _ _ _ _ _ _ _ _ _ park code
-    | exact .unparked _ _ park
-    | exact .noExternal _ _ rfl
-    | split
+  all_goals repeat' split
+  all_goals aesop (add unsafe 90% apply [ExternalParkKeys.unparked, ExternalParkKeys.noExternal, countdownEdits_external],
+    unsafe 90% forward [countdownEdits_external_result])
 
 theorem parkOf_noExternal (p : NativeEff) (table : RowTable) (completed)
     (code : NCode) (kind : Except CauseV ParkKind)
     (h : (interpAt p completed table).parkOf code = some kind) :
     externalRequest code = none := by
-  cases code <;> try rfl
-  simp only [interpAt, interpOf] at h
-  cases h
+  cases code <;> aesop (add norm simp [externalRequest, interpAt, interpOf])
 
 theorem async_external (p : NativeEff) (table : RowTable) (completed)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) (register : EffName)
@@ -108,18 +129,11 @@ theorem evaluatePrim_external (p : NativeEff) (table : RowTable) (completed)
   cases hc : f.frame.current
   case async register signal cancel => exact async_external p table completed m f yielding register signal cancel hc park
   all_goals simp only [evaluatePrim, hc]
-  all_goals repeat' first
-    | exact .unparked _ _ park
-    | exact .noExternal _ _ rfl
-    | solve | apply ExternalParkKeys.noExternal; simp only [externalRequest]
-    | exact stepFrame_external _ _ _ _ park
-    | exact finalizerOr_external _ _ _ _ _ park
-    | exact withFiber_external _ _ _ _ _ park (by simp only [externalRequest, *])
-    | solve | apply countdown_external _ _ _ _ _ _ _ _ _ park; simp only [hc, externalRequest]
-    | dsimp only
-    | split
-  all_goals try (simp_all only [registerRace]; contradiction)
-  all_goals try (unfold registerRace; split <;> exact .unparked _ _ park)
+  all_goals repeat' split
+  all_goals aesop (add norm simp [externalRequest, registerRace],
+    safe apply [stepFrame_external, finalizerOr_external, withFiber_external],
+    unsafe 90% apply [ExternalParkKeys.unparked, ExternalParkKeys.noExternal, countdownEdits_external],
+    unsafe 90% forward [countdownEdits_external_result])
 
 theorem exitScoped_external (p : NativeEff) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (exit : ExitV) (park : f.parked = .notParked) :

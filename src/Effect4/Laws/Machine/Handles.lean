@@ -687,6 +687,12 @@ def Observer.keys : Observer → List Handle
   | Observer.raceCallback _ => []
   | Observer.callback _ => []
 
+/-- R2 messages collect only dereferenced observer handles, as the existing observer does.
+Interrupt causes and token numbers carry no handles in this instance. -/
+def FiberEdit.keys : FiberEdit Err Defect FiberId Ann → List Handle
+  | .observe _ observer => observer.keys
+  | .dropToken _ | .interrupt _ _ => []
+
 /-- The handle a waiter list's key names: the cell of its family, when the kind has one. -/
 def WakeKey.keys (key : WakeKey) : List Handle :=
   (Handle.ofCode (key.kind.byte, key.index)).toList
@@ -835,7 +841,8 @@ def RunMachine.keys (nk : ν → List Handle) (sk : σ → List Handle)
 finished exit's. -/
 def iterKeys (nk : ν → List Handle) (sk : σ → List Handle)
     (it : Iter ν σ Val Err Defect FiberId Ann Ctx Stores) : List Handle :=
-  it.machine.keys nk sk ++ it.fiber.keys nk sk ++ cmdsKeys nk sk it.nested ++ it.outcome.keys
+  it.machine.keys nk sk ++ it.fiber.keys nk sk ++ cmdsKeys nk sk it.nested ++ it.outcome.keys ++
+    it.edits.flatMap FiberEdit.keys
 
 /-- The machine at the frame instance, for ascriptions. -/
 abbrev NM (ν σ : Type) := RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores
@@ -1135,7 +1142,7 @@ attribute [keys_norm] RunMachine.keys RunMachine.emit RunMachine.halt races_upda
   fibers_updateRace armed_updateRace state_updateRace fibers_arm races_arm state_arm fibers_disarm
   races_disarm state_disarm races_modify armed_modify state_modify WithFiberAction.keys
   RunFiber.keys RunFiber.park frameKeys Race.keys iterKeys cmdsKeys
-  Cmd.keys Outcome.keys Pending.keys Task.keys Observer.keys Resume.keys optExitKeys Stores.keys
+  Cmd.keys Outcome.keys Pending.keys Task.keys Observer.keys FiberEdit.keys Resume.keys optExitKeys Stores.keys
   primKeys exitKeys Val.keys Val.keysList Val.keys_fiber Val.keys_cell Val.keys_promise
   Val.keys_scopeHandle Val.keys_memoMap Val.keys_exitOk Val.keys_exitErr Val.keys_context
   Val.keys_fibers Val.keys_causeImage Val.keys_snapshotPayload
@@ -2088,16 +2095,86 @@ theorem start_minted (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores
         sub_tac
       · sub_tac
 
+theorem interruptWithCause_keys_subset (cause : CauseV)
+    (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) :
+    (interruptWithCause cause f).1.keys nk sk ⊆ f.keys nk sk := by
+  unfold interruptWithCause
+  dsimp only
+  (repeat' split) <;>
+    simp only [RunFiber.keys, frameKeys, primKeys, List.flatMap_nil, List.nil_append] <;>
+    sub_tac
+
 theorem interruptRecord_keys_subset (interp : RunInterp ν σ Val Err Defect FiberId Ann Ctx Stores)
     (interruptor : Option FiberId) (extra : ReasonAnnotations Ann)
     (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) :
-    (interruptRecord interp interruptor extra f).1.keys nk sk ⊆ f.keys nk sk := by
-  unfold interruptRecord interruptWithCause
-  try dsimp only
-  (repeat' split) <;> first
-    | exact List.Subset.refl _
-    | (simp only [RunFiber.keys, frameKeys, primKeys, List.flatMap_nil, List.nil_append]
-       sub_tac)
+    (interruptRecord interp interruptor extra f).1.keys nk sk ⊆ f.keys nk sk :=
+  interruptWithCause_keys_subset nk sk (interruptCause interp interruptor extra f.id) f
+
+/-- Message interpretation uses the current record and cannot mint a handle.
+The canonical producer and settlement proofs consume this key projection. -/
+theorem fiberEdit_keys_subset (edit : FiberEdit Err Defect FiberId Ann)
+    (m : NM ν σ) :
+    (applyFiberEdit edit m).1.keys nk sk ++ cmdsKeys nk sk (applyFiberEdit edit m).2 ⊆
+      m.keys nk sk ++ edit.keys := by
+  cases edit with
+  | observe target observer =>
+    simp only [applyFiberEdit, FiberEdit.keys, cmdsKeys, List.flatMap_nil, List.append_nil]
+    exact keys_modify_subset nk sk target _ observer.keys (fun f => by sub_tac)
+  | dropToken token =>
+    simp only [applyFiberEdit, FiberEdit.keys, cmdsKeys, List.flatMap_nil, List.append_nil]
+    simp only [RunMachine.keys]
+    sub_tac using (keys_map_observers_subset nk sk (m := m) _)
+  | interrupt target cause =>
+    simp only [applyFiberEdit, FiberEdit.keys, List.append_nil]
+    split
+    · simp only [cmdsKeys, List.flatMap_nil, List.append_nil]; exact List.Subset.refl _
+    · next old found =>
+      refine List.append_subset.mpr ⟨?_, ?_⟩
+      · refine List.Subset.trans (keys_update_subset nk sk _) ?_
+        refine List.append_subset.mpr ⟨List.Subset.refl _, ?_⟩
+        exact (interruptWithCause_keys_subset nk sk cause old).trans (fiber?_keys_subset nk sk found)
+      · split <;> simp only [cmdsKeys, List.flatMap_cons, List.flatMap_nil, Cmd.keys] <;> sub_tac
+
+/-- The edit interpreter leaves the handle world unchanged. -/
+theorem fiberEdit_world (edit : FiberEdit Err Defect FiberId Ann) (m : NM ν σ) :
+    (applyFiberEdit edit m).1.world = m.world := by
+  cases edit with
+  | observe target observer => exact world_modify target _
+  | dropToken token => exact world_map_observers _
+  | interrupt target cause =>
+    simp only [applyFiberEdit]
+    split
+    · rfl
+    · exact world_update _
+
+/-- The existing message fold transports minted keys and an arbitrary retained key bag. -/
+theorem fiberEdits_minted (word : List (FiberEdit Err Defect FiberId Ann)) :
+    ∀ (acc : NM ν σ × List (Cmd ν σ Val Err Defect FiberId Ann)) (extra : List Handle),
+      MintedIn acc.1 (acc.1.keys nk sk ++ cmdsKeys nk sk acc.2 ++ word.flatMap FiberEdit.keys ++ extra) →
+      let result := word.foldl (fun held edit =>
+        let next := applyFiberEdit edit held.1
+        (next.1, held.2 ++ next.2)) acc
+      result.1.world = acc.1.world ∧
+        MintedIn result.1 (result.1.keys nk sk ++ cmdsKeys nk sk result.2 ++ extra) := by
+  induction word with
+  | nil =>
+    intro acc extra held
+    exact ⟨rfl, by simpa only [List.foldl_nil, List.flatMap_nil, List.append_nil, List.nil_append] using held⟩
+  | cons edit rest ih =>
+    intro acc extra held
+    have keys := fiberEdit_keys_subset nk sk edit acc.1
+    have world := fiberEdit_world edit acc.1
+    have next : MintedIn (applyFiberEdit edit acc.1).1
+        ((applyFiberEdit edit acc.1).1.keys nk sk ++
+          cmdsKeys nk sk (acc.2 ++ (applyFiberEdit edit acc.1).2) ++
+          rest.flatMap FiberEdit.keys ++ extra) := by
+      unfold MintedIn
+      rw [world]
+      refine Ok_of_subset ?_ held
+      simp only [cmdsKeys, List.flatMap_append] at keys ⊢
+      sub_tac using keys
+    have tail := ih ((applyFiberEdit edit acc.1).1, acc.2 ++ (applyFiberEdit edit acc.1).2) extra next
+    exact ⟨tail.1.trans world, tail.2⟩
 
 theorem interruptEach_minted (interp : RunInterp ν σ Val Err Defect FiberId Ann Ctx Stores)
     (who : FiberId) (extra : ReasonAnnotations Ann) (targets : List FiberId) :
@@ -2194,21 +2271,22 @@ theorem resumePrim_keys (hb : KeyBounded nk sk interp ambient) (resumeWith : Res
     · refine List.Subset.trans (hb.exitsValue exits) ?_; sub_tac
     · sub_tac
 
-theorem countdownPark_minted (hb : KeyBounded nk sk interp ambient)
+theorem countdownParkEdits_minted (hb : KeyBounded nk sk interp ambient)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (targets : List FiberId) (resumeWith : Resume ν)
     (failFast : Bool)
     (hm : MintedIn m (Handle.fiber f.id :: m.keys nk sk ++ f.keys nk sk ++ targets.map Handle.fiber ++
       resumeWith.keys nk)) :
-    m.world.le (countdownPark interp m f targets resumeWith failFast).1.world ∧
-      MintedIn (countdownPark interp m f targets resumeWith failFast).1
-        ((countdownPark interp m f targets resumeWith failFast).1.keys nk sk ++
-          (countdownPark interp m f targets resumeWith failFast).2.1.keys nk sk) := by
-  unfold countdownPark
+    m.world.le (countdownParkEdits interp m f targets resumeWith failFast).1.world ∧
+      MintedIn (countdownParkEdits interp m f targets resumeWith failFast).1
+        ((countdownParkEdits interp m f targets resumeWith failFast).1.keys nk sk ++
+          (countdownParkEdits interp m f targets resumeWith failFast).2.1.keys nk sk ++
+          (countdownParkEdits interp m f targets resumeWith failFast).2.2.2.flatMap FiberEdit.keys) := by
+  unfold countdownParkEdits
   have hwalk := countdownWalk_keys nk sk { m with nextToken := m.nextToken + 1 } targets []
   have hkeq : ({ m with nextToken := m.nextToken + 1 } : NM ν σ).keys nk sk = m.keys nk sk := rfl
   have hweq : ({ m with nextToken := m.nextToken + 1 } : NM ν σ).world = m.world := rfl
-  try dsimp only
+  dsimp only
   split
   · next exits hwalk' =>
     rw [hwalk'] at hwalk
@@ -2229,7 +2307,7 @@ theorem countdownPark_minted (hb : KeyBounded nk sk interp ambient)
     simp only [List.flatMap_nil, List.nil_append, hkeq] at hwalk
     obtain ⟨hexits, hrest⟩ := hwalk
     obtain ⟨htarget, hremaining⟩ := hrest target remaining rfl
-    refine ⟨by rw [world_emit, world_modify]; exact World.le_refl _, ?_⟩
+    refine ⟨by rw [world_emit]; exact World.le_refl _, ?_⟩
     have hname : nk (interp.cancelName interp.parkCancelName f.id m.nextToken) ⊆ [Handle.fiber f.id] := by
       refine List.Subset.trans (hb.cancelName _ _ _) ?_
       rw [hb.parkCancelName]
@@ -2245,19 +2323,35 @@ theorem countdownPark_minted (hb : KeyBounded nk sk interp ambient)
       · exact Ok_of_subset hexits (Ok_of_subset (by sub_tac) hm)
       · exact Ok_of_subset hname (Ok_of_subset (by sub_tac) hm)
     simp only [MintedIn]
-    rw [world_emit, world_modify, hweq]
+    rw [world_emit, hweq]
     refine Ok_of_subset ?_ hall
     rw [keys_emit]
-    refine List.append_subset.mpr ⟨?_, ?_⟩
-    · refine List.Subset.trans (keys_modify_subset nk sk target _ [Handle.fiber f.id] fun g => ?_) ?_
-      · simp only [RunFiber.keys, List.flatMap_append, List.flatMap_cons, List.flatMap_nil, Observer.keys,
-          List.append_nil]
-        sub_tac
-      · rw [hkeq]; sub_tac
-    · refine List.Subset.trans (keys_park nk sk _ _) ?_
-      simp only [RunFiber.keys, frameKeys, List.flatMap_cons, primKeys, Pending.keys, Option.map,
-        Option.toList]
-      sub_tac
+    simp only [RunMachine.keys, RunFiber.keys, frameKeys, FiberEdit.keys,
+      List.flatMap_cons, List.flatMap_nil, Observer.keys]
+    sub_tac
+
+theorem countdownPark_minted (hb : KeyBounded nk sk interp ambient)
+    (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
+    (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (targets : List FiberId) (resumeWith : Resume ν)
+    (failFast : Bool)
+    (hm : MintedIn m (Handle.fiber f.id :: m.keys nk sk ++ f.keys nk sk ++ targets.map Handle.fiber ++
+      resumeWith.keys nk)) :
+    m.world.le (countdownPark interp m f targets resumeWith failFast).1.world ∧
+      MintedIn (countdownPark interp m f targets resumeWith failFast).1
+        ((countdownPark interp m f targets resumeWith failFast).1.keys nk sk ++
+          (countdownPark interp m f targets resumeWith failFast).2.1.keys nk sk) := by
+  have canonical := countdownParkEdits_minted nk sk hb m f targets resumeWith failFast hm
+  let next := countdownParkEdits interp m f targets resumeWith failFast
+  have held : MintedIn next.1 (next.1.keys nk sk ++ cmdsKeys nk sk [] ++
+      next.2.2.2.flatMap FiberEdit.keys ++ next.2.1.keys nk sk) :=
+    Ok_of_subset (by sub_tac) canonical.2
+  have edits := fiberEdits_minted nk sk next.2.2.2 (next.1, []) (next.2.1.keys nk sk) held
+  refine ⟨?_, ?_⟩
+  · change m.world.le (applyFiberEdits next.2.2.2 next.1).1.world
+    have world : (applyFiberEdits _ next.1).1.world = next.1.world := edits.1
+    rw [world]
+    exact canonical.1
+  · exact Ok_of_subset (by sub_tac) edits.2
 
 @[aesop safe -100 apply (rule_sets := [Effect4.Fibers])]
 theorem launchEntrant_minted (interp : RunInterp ν σ Val Err Defect FiberId Ann Ctx Stores) (raceId : Nat)
@@ -2273,47 +2367,39 @@ theorem launchEntrant_minted (interp : RunInterp ν σ Val Err Defect FiberId An
     ⟨true, true, Supervision.MaskMode.interruptible⟩ hm site
   exact ⟨hle, Ok_of_subset (by sub_tac) hsp⟩
 
-theorem linkScope_minted (hb : KeyBounded nk sk interp ambient)
+theorem linkScopeEdits_minted (hb : KeyBounded nk sk interp ambient)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores) (mode : Supervision.ScopeMode)
     (scope : Nat) (target : FiberId) (interruptor : Option FiberId) (extra : ReasonAnnotations Ann)
     (hm : MintedIn m (m.keys nk sk)) :
-    m.world.le (linkScope interp m mode scope target interruptor extra).1.world ∧
-      MintedIn (linkScope interp m mode scope target interruptor extra).1
-        ((linkScope interp m mode scope target interruptor extra).1.keys nk sk ++
-          cmdsKeys nk sk (linkScope interp m mode scope target interruptor extra).2) := by
-  unfold linkScope
+    m.world.le (linkScopeEdits interp m mode scope target interruptor extra).1.world ∧
+      MintedIn (linkScopeEdits interp m mode scope target interruptor extra).1
+        ((linkScopeEdits interp m mode scope target interruptor extra).1.keys nk sk ++
+          (linkScopeEdits interp m mode scope target interruptor extra).2.flatMap FiberEdit.keys) := by
+  unfold linkScopeEdits
   split
   · refine ⟨by rw [world_halt]; exact World.le_refl _, ?_⟩
-    simp only [MintedIn, world_halt, keys_halt, cmdsKeys, List.flatMap_nil, List.append_nil]
+    simp only [MintedIn, world_halt, keys_halt, List.flatMap_nil, List.append_nil]
     exact hm
   · next hstatus =>
     split
     · refine ⟨by rw [world_halt]; exact World.le_refl _, ?_⟩
-      simp only [MintedIn, world_halt, keys_halt, cmdsKeys, List.flatMap_nil, List.append_nil]
+      simp only [MintedIn, world_halt, keys_halt, List.flatMap_nil, List.append_nil]
       exact hm
     · next t ht =>
-      refine ⟨by rw [world_emit, world_update]; exact World.le_refl _, ?_⟩
-      simp only [MintedIn]
-      rw [world_emit, world_update]
-      refine Ok_of_subset ?_ hm
-      rw [keys_emit]
-      refine List.append_subset.mpr ⟨?_, ?_⟩
-      · refine List.Subset.trans (keys_update_subset nk sk _) ?_
-        refine List.append_subset.mpr ⟨List.Subset.refl _, ?_⟩
-        refine List.Subset.trans (interruptRecord_keys_subset nk sk interp _ _ t) ?_
-        exact fiber?_keys_subset nk sk ht
-      · split <;> simp only [cmdsKeys, List.flatMap_cons, List.flatMap_nil, Cmd.keys] <;> exact List.nil_subset _
+      refine ⟨by rw [world_emit]; exact World.le_refl _, ?_⟩
+      simpa only [MintedIn, world_emit, keys_emit, FiberEdit.keys, List.flatMap_cons,
+        List.flatMap_nil, List.nil_append, List.append_nil] using hm
   · next hstatus =>
     split
     · refine ⟨by rw [world_halt]; exact World.le_refl _, ?_⟩
-      simp only [MintedIn, world_halt, keys_halt, cmdsKeys, List.flatMap_nil, List.append_nil]
+      simp only [MintedIn, world_halt, keys_halt, List.flatMap_nil, List.append_nil]
       exact hm
     · next t ht =>
       split
-      · exact ⟨World.le_refl _, by simpa [cmdsKeys] using hm⟩
+      · exact ⟨World.le_refl _, by simpa only [List.flatMap_nil, List.append_nil] using hm⟩
       · split
         · refine ⟨by rw [world_halt]; exact World.le_refl _, ?_⟩
-          simp only [MintedIn, world_halt, keys_halt, cmdsKeys, List.flatMap_nil, List.append_nil]
+          simp only [MintedIn, world_halt, keys_halt, List.flatMap_nil, List.append_nil]
           exact hm
         · next state key hstate =>
           have htid : (Handle.fiber target).existsIn m.world = true := fiber?_id_exists ht
@@ -2325,9 +2411,9 @@ theorem linkScope_minted (hb : KeyBounded nk sk interp ambient)
           obtain ⟨hsle, hsok⟩ := hb.scopeLinkFiber mode scope target m.state state key _ hstate hsk
           have hle : m.world.le ({ m with state := state } : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores).world :=
             ⟨fun _ h => h, hsle⟩
-          refine ⟨by rw [world_emit, world_modify]; exact hle, ?_⟩
+          refine ⟨by rw [world_emit]; exact hle, ?_⟩
           simp only [MintedIn]
-          rw [world_emit, world_modify]
+          rw [world_emit]
           have hscope : (Handle.scope scope).existsIn ({ m with state := state } : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores).world = true := by
             have h0 : (m.state.scopes.entryAt scope).isSome = true :=
               hb.scopeStatus scope m.state (by rw [hstatus]; rfl)
@@ -2338,13 +2424,28 @@ theorem linkScope_minted (hb : KeyBounded nk sk interp ambient)
             Ok_cons.mpr ⟨hscope, Ok_append.mpr ⟨Ok_mono hle hm, hsok⟩⟩
           refine Ok_of_subset ?_ hall
           rw [keys_emit]
-          simp only [cmdsKeys, List.flatMap_nil, List.append_nil]
-          refine List.Subset.trans (keys_modify_subset nk sk target _ [Handle.scope scope] fun g => ?_) ?_
-          · simp only [RunFiber.keys, List.flatMap_append, List.flatMap_cons, List.flatMap_nil, Observer.keys,
-              List.append_nil]
-            sub_tac
-          · simp only [RunMachine.keys]
-            sub_tac
+          simp only [RunMachine.keys, FiberEdit.keys, List.flatMap_cons, List.flatMap_nil, Observer.keys]
+          sub_tac
+
+theorem linkScope_minted (hb : KeyBounded nk sk interp ambient)
+    (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores) (mode : Supervision.ScopeMode)
+    (scope : Nat) (target : FiberId) (interruptor : Option FiberId) (extra : ReasonAnnotations Ann)
+    (hm : MintedIn m (m.keys nk sk)) :
+    m.world.le (linkScope interp m mode scope target interruptor extra).1.world ∧
+      MintedIn (linkScope interp m mode scope target interruptor extra).1
+        ((linkScope interp m mode scope target interruptor extra).1.keys nk sk ++
+          cmdsKeys nk sk (linkScope interp m mode scope target interruptor extra).2) := by
+  have canonical := linkScopeEdits_minted nk sk hb m mode scope target interruptor extra hm
+  let next := linkScopeEdits interp m mode scope target interruptor extra
+  have held : MintedIn next.1 (next.1.keys nk sk ++ cmdsKeys nk sk [] ++
+      next.2.flatMap FiberEdit.keys ++ []) := Ok_of_subset (by sub_tac) canonical.2
+  have edits := fiberEdits_minted nk sk next.2 (next.1, []) [] held
+  refine ⟨?_, ?_⟩
+  · change m.world.le (applyFiberEdits next.2 next.1).1.world
+    have world : (applyFiberEdits _ next.1).1.world = next.1.world := edits.1
+    rw [world]
+    exact canonical.1
+  · exact Ok_of_subset (by sub_tac) edits.2
 
 theorem injectYield_minted (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (yielding : Bool)
@@ -2574,9 +2675,9 @@ theorem countdown_next_minted
     (hex1 : exits.flatMap exitKeys ⊆ (p.collected ++ [exit]).flatMap exitKeys ++ R.1.keys nk sk)
     (hnext : next ∈ p.remaining) (hrest : rest ⊆ p.remaining) :
     FiredMinted nk sk acc
-      ((R.1.modify next fun g => { g with observers := g.observers ++ [Observer.countdown waiter token] }).update
-        { w with pending := w.pending.map fun q =>
-          if q.token = token then { q with waitingOn := some next, remaining := rest, collected := exits } else q },
+      ((R.1.update { w with pending := w.pending.map fun q =>
+          if q.token = token then { q with waitingOn := some next, remaining := rest, collected := exits } else q }).modify
+          next fun g => {g with observers := g.observers ++ [Observer.countdown waiter token]},
         acc.2 ++ R.2) := by
   unfold FiredMinted
   have hcol : (p.collected ++ [exit]).flatMap exitKeys ⊆ p.keys nk ++ exitKeys exit := by
@@ -2598,19 +2699,15 @@ theorem countdown_next_minted
   have hpm := pending_map_keys_subset nk w.pending token
     (fun q => { q with waitingOn := some next, remaining := rest, collected := exits })
     (Handle.fiber next :: rest.map Handle.fiber ++ exits.flatMap exitKeys) (fun q => by sub_tac)
-  have hM2 := keys_modify_subset nk sk (m := R.1) next
-    (fun g => { g with observers := g.observers ++ [Observer.countdown waiter token] })
-    [Handle.fiber waiter] (fun g => by sub_tac)
-  have hM2w := world_modify (m := R.1) next
-    (fun g => { g with observers := g.observers ++ [Observer.countdown waiter token] })
-  generalize hM2def : R.1.modify next
-    (fun g => { g with observers := g.observers ++ [Observer.countdown waiter token] }) = M2 at hM2 hM2w ⊢
-  refine ⟨by rw [world_update, hM2w]; exact hle, ?_⟩
+  refine ⟨by rw [world_modify, world_update]; exact hle, ?_⟩
   simp only [MintedIn]
-  rw [world_update, hM2w]
+  rw [world_modify, world_update]
   refine Ok_of_subset ?_ hall
-  refine List.append_subset.mpr ⟨List.Subset.trans (keys_update_subset nk sk _)
-    (List.append_subset.mpr ⟨List.Subset.trans hM2 (by sub_tac), ?_⟩), by sub_tac⟩
+  refine List.append_subset.mpr ⟨?_, by sub_tac⟩
+  refine List.Subset.trans (keys_modify_subset nk sk next _ [Handle.fiber waiter]
+    (fun g => by sub_tac)) ?_
+  refine List.append_subset.mpr ⟨?_, by sub_tac⟩
+  refine List.Subset.trans (keys_update_subset nk sk _) ?_
   sub_tac using hpm
 
 theorem fireObserver_countdown_minted (hb : KeyBounded nk sk interp ambient) (id : FiberId) (exit : ExitV)
@@ -2687,14 +2784,29 @@ theorem fireObserver_countdown_minted (hb : KeyBounded nk sk interp ambient) (id
             Ok_mono hle (Ok_of_subset hpk (Ok_of_subset (by sub_tac) hm))⟩,
             Ok_mono hle (Ok_of_subset hwk (Ok_of_subset (by sub_tac) hm))⟩
         split
-        · next exits hwalk' =>
-          rw [hwalk'] at hwalk
-          exact countdown_done_minted nk sk hb acc waiter token exit w p R exits hle hbase hwalk.1
-        · next exits next rest hwalk' =>
-          rw [hwalk'] at hwalk
-          obtain ⟨hnext, hrest⟩ := hwalk.2 next rest rfl
-          exact countdown_next_minted nk sk acc waiter token exit w p R exits next rest hle hbase hwalk.1
-            hnext hrest
+        · refine ⟨hle, ?_⟩
+          refine Ok_of_subset ?_ hbase
+          sub_tac
+        · next current foundCurrent =>
+          have currentKeys : Ok R.1.world (current.keys nk sk) :=
+            Ok_of_subset (fiber?_keys_subset nk sk foundCurrent) (Ok_of_subset (by sub_tac) hbase)
+          have currentBase : Ok R.1.world (R.1.keys nk sk ++ cmdsKeys nk sk R.2 ++ acc.1.keys nk sk ++
+              cmdsKeys nk sk acc.2 ++ exitKeys exit ++ [Handle.fiber waiter] ++ p.keys nk ++ current.keys nk sk) :=
+            Ok_of_subset (by sub_tac) (Ok_append.mpr ⟨hbase, currentKeys⟩)
+          split
+          · refine ⟨hle, ?_⟩
+            refine Ok_of_subset ?_ hbase
+            sub_tac
+          · split
+            · next exits walk =>
+              rw [walk] at hwalk
+              exact countdown_done_minted nk sk hb acc waiter token exit current p R exits hle currentBase hwalk.1
+            · next exits nextTarget remaining walk =>
+              rw [walk] at hwalk
+              obtain ⟨hnext, hrest⟩ := hwalk.2 nextTarget remaining rfl
+              simpa only [FiredMinted, applyFiberEdit, List.append_nil] using
+                countdown_next_minted nk sk acc waiter token exit current p R exits nextTarget remaining
+                  hle currentBase hwalk.1 hnext hrest
 
 theorem fireObserver_raceCallback_minted (hb : KeyBounded nk sk interp ambient) (id : FiberId) (exit : ExitV)
     (acc : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores × List (Cmd ν σ Val Err Defect FiberId Ann))
@@ -3076,27 +3188,14 @@ theorem interruptAs_minted (_hb : KeyBounded nk sk interp ambient)
     (hm : MintedIn m (Handle.fiber f.id :: Handle.fiber target :: m.keys nk sk ++ f.keys nk sk)) :
     IterMinted nk sk m (evaluatePrim.interruptAs interp m f yielding target who) := by
   unfold IterMinted evaluatePrim.interruptAs
-  try dsimp only
+  dsimp only
   split
   · refine ⟨World.le_refl _, ?_⟩
     refine Ok_of_subset ?_ hm
     sub_tac
-  · next t ht =>
-    have hir := interruptRecord_keys_subset nk sk interp (some who) (interp.stackAnnotations f.id) t
-    have htk := fiber?_keys_subset nk sk ht
-    have hX : Ok m.world ((interruptRecord interp (some who) (interp.stackAnnotations f.id) t).1.keys nk sk) :=
-      Ok_of_subset (List.Subset.trans hir htk) (Ok_of_subset (by sub_tac) hm)
-    have hup := keys_update_fibers_subset nk sk (m := m)
-      (interruptRecord interp (some who) (interp.stackAnnotations f.id) t).1
-    refine ⟨by rw [world_emit, world_update]; exact World.le_refl _, ?_⟩
-    simp only [MintedIn, iterKeys, Outcome.keys]
-    rw [world_emit, world_update]
-    refine Ok_of_subset ?_ (Ok_append.mpr ⟨hm, hX⟩)
-    rw [keys_emit]
-    split <;>
-      simp only [cmdsKeys, List.flatMap_append, List.flatMap_cons, List.flatMap_nil, Cmd.keys,
-        ParkKind.keys, List.append_nil, List.nil_append] <;>
-      sub_tac using hup
+  · refine ⟨World.le_refl _, ?_⟩
+    refine Ok_of_subset ?_ hm
+    sub_tac
 
 /-! #### The `withFiber` arms, one lemma each -/
 
@@ -3115,7 +3214,7 @@ theorem fork_arm_minted (hb : KeyBounded nk sk interp ambient)
     (hfib : it.fiber.keys nk sk ⊆ T.2.1.keys nk sk ++ (interp.fiberValue S.2.2).keys)
     (hnest : cmdsKeys nk sk it.nested ⊆
       cmdsKeys nk sk T.2.2 ++ [Handle.fiber f.id, Handle.fiber S.2.2])
-    (hout : it.outcome.keys = []) :
+    (hout : it.outcome.keys = []) (hedit : it.edits = []) :
     IterMinted nk sk m it := by
   unfold IterMinted
   obtain ⟨hle1, h1⟩ := spawn_minted nk sk interp M f program options hm site
@@ -3134,12 +3233,9 @@ theorem fork_arm_minted (hb : KeyBounded nk sk interp ambient)
     Ok_mono hle2 (Ok_mono hle1 (Ok_of_subset (by sub_tac) hm))
   rw [hMw] at hle1
   refine ⟨by rw [hmach]; exact World.le_trans hle1 hle2, ?_⟩
-  simp only [MintedIn, iterKeys, hmach, hout]
+  simp only [MintedIn, iterKeys, hmach, hout, hedit, List.flatMap_nil, List.append_nil]
   refine Ok_of_subset ?_ (Ok_append.mpr ⟨Ok_append.mpr ⟨h2, hv⟩, Ok_append.mpr ⟨hparent, hchild⟩⟩)
-  refine List.append_subset.mpr ⟨List.append_subset.mpr ⟨List.append_subset.mpr ⟨by sub_tac, ?_⟩, ?_⟩,
-    List.nil_subset _⟩
-  · refine List.Subset.trans hfib ?_; sub_tac
-  · refine List.Subset.trans hnest ?_; sub_tac
+  sub_tac using hfib, hnest
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem withFiber_fork_minted (hb : KeyBounded nk sk interp ambient)
@@ -3165,7 +3261,7 @@ theorem withFiber_fork_minted (hb : KeyBounded nk sk interp ambient)
     exact Ok_of_subset (by sub_tac) hm
   generalize hS : spawn interp M f program options site = S
   generalize hT : start S.1 S.2.1 S.2.2 options.startImmediately = T
-  refine fork_arm_minted (site := site) nk sk hb m M hMw f program options S T hS hT hm' _ rfl ?_ ?_ rfl
+  refine fork_arm_minted (site := site) nk sk hb m M hMw f program options S T hS hT hm' _ rfl ?_ ?_ rfl rfl
   · sub_tac
   · -- the start's commands, then the tracking command unless daemon (D6b)
     simp only [cmdsKeys, List.flatMap_append]
@@ -3185,7 +3281,7 @@ theorem withFiber_forkIn_minted (hb : KeyBounded nk sk interp ambient)
   generalize hS : spawn interp m f program { options with daemon := true } site = S
   generalize hT : start S.1 S.2.1 S.2.2 options.startImmediately = T
   refine fork_arm_minted (site := site) nk sk hb m m rfl f program { options with daemon := true } S T hS hT
-    (Ok_of_subset (by sub_tac) hm) _ rfl ?_ ?_ rfl
+    (Ok_of_subset (by sub_tac) hm) _ rfl ?_ ?_ rfl rfl
   · sub_tac
   · sub_tac
 
@@ -3205,7 +3301,7 @@ theorem withFiber_forkScoped_minted (hb : KeyBounded nk sk interp ambient)
     generalize hS : spawn interp m f program { options with daemon := true } site = S
     generalize hT : start S.1 S.2.1 S.2.2 options.startImmediately = T
     refine fork_arm_minted (site := site) nk sk hb m m rfl f program { options with daemon := true } S T hS hT
-      (Ok_of_subset (by sub_tac) hm) _ rfl ?_ ?_ rfl
+      (Ok_of_subset (by sub_tac) hm) _ rfl ?_ ?_ rfl rfl
     · sub_tac
     · sub_tac
   · unfold IterMinted
@@ -3221,9 +3317,9 @@ theorem withFiber_runIn_minted (hb : KeyBounded nk sk interp ambient)
     IterMinted nk sk m (evaluatePrim.withFiber interp m f yielding (WithFiberAction.runIn target scope)) := by
   unfold IterMinted
   simp only [evaluatePrim.withFiber]
-  obtain ⟨hle, hok⟩ := linkScope_minted nk sk hb m Supervision.ScopeMode.fiberRunIn scope target
+  obtain ⟨hle, hok⟩ := linkScopeEdits_minted nk sk hb m Supervision.ScopeMode.fiberRunIn scope target
     (some target) ReasonAnnotations.empty (Ok_of_subset (by sub_tac) hm)
-  generalize hL : linkScope interp m Supervision.ScopeMode.fiberRunIn scope target (some target)
+  generalize hL : linkScopeEdits interp m Supervision.ScopeMode.fiberRunIn scope target (some target)
     ReasonAnnotations.empty = L at hle hok ⊢
   refine ⟨hle, ?_⟩
   simp only [MintedIn]
@@ -3286,18 +3382,19 @@ theorem countdown_arm_minted (hb : KeyBounded nk sk interp ambient)
     (hm : MintedIn m (Handle.fiber f.id :: m.keys nk sk ++ f.keys nk sk ++ targets.map Handle.fiber ++
       resumeWith.keys nk)) :
     IterMinted nk sk m
-      ⟨(countdownPark interp I.1 f targets resumeWith failFast).1,
-        (countdownPark interp I.1 f targets resumeWith failFast).2.1, yielding,
-        (match (countdownPark interp I.1 f targets resumeWith failFast).1.stuck with
+      ⟨(countdownParkEdits interp I.1 f targets resumeWith failFast).1,
+        (countdownParkEdits interp I.1 f targets resumeWith failFast).2.1, yielding,
+        (match (countdownParkEdits interp I.1 f targets resumeWith failFast).1.stuck with
           | some why => Outcome.stuck why
-          | none => if (countdownPark interp I.1 f targets resumeWith failFast).2.2 then Outcome.parked
-            else Outcome.continue_), I.2⟩ := by
+          | none => if (countdownParkEdits interp I.1 f targets resumeWith failFast).2.2.1 then Outcome.parked
+            else Outcome.continue_), I.2,
+        (countdownParkEdits interp I.1 f targets resumeWith failFast).2.2.2⟩ := by
   unfold IterMinted
   have hin : MintedIn I.1 (Handle.fiber f.id :: I.1.keys nk sk ++ f.keys nk sk ++ targets.map Handle.fiber ++
       resumeWith.keys nk) :=
     Ok_of_subset (by sub_tac) (Ok_append.mpr ⟨hI, Ok_mono hle hm⟩)
-  obtain ⟨hle2, hok⟩ := countdownPark_minted nk sk hb I.1 f targets resumeWith failFast hin
-  generalize hP : countdownPark interp I.1 f targets resumeWith failFast = P at hle2 hok ⊢
+  obtain ⟨hle2, hok⟩ := countdownParkEdits_minted nk sk hb I.1 f targets resumeWith failFast hin
+  generalize hP : countdownParkEdits interp I.1 f targets resumeWith failFast = P at hle2 hok ⊢
   refine ⟨World.le_trans hle hle2, ?_⟩
   simp only [MintedIn]
   refine Ok_of_subset ?_ (Ok_append.mpr ⟨hok, Ok_mono hle2 hI⟩)
@@ -3630,12 +3727,10 @@ theorem withFiber_dropObservers_minted (hb : KeyBounded nk sk interp ambient)
     IterMinted nk sk m (evaluatePrim.withFiber interp m f yielding (WithFiberAction.dropObservers token)) := by
   unfold IterMinted
   simp only [evaluatePrim.withFiber]
-  refine ⟨by rw [world_map_observers]; exact World.le_refl _, ?_⟩
-  simp only [MintedIn]
-  rw [world_map_observers]
+  refine ⟨World.le_refl _, ?_⟩
   have hv : Ok m.world interp.voidValue.keys := by rw [hb.voidValue]; exact Ok_nil _
   refine Ok_of_subset ?_ (Ok_append.mpr ⟨hm, hv⟩)
-  sub_tac using (keys_map_observers_subset nk sk (m := m) _)
+  sub_tac
 
 theorem withFiber_cancelRace_minted (hb : KeyBounded nk sk interp ambient)
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
@@ -3802,8 +3897,9 @@ theorem evaluatePrim_minted_with_ambient (hb : KeyBounded nk sk interp ambient)
       have hin : MintedIn m (Handle.fiber f.id :: m.keys nk sk ++ f.keys nk sk ++
           targets.map Handle.fiber ++ Resume.exitsValue.keys nk) :=
         Ok_of_subset (by sub_tac) (Ok_append.mpr ⟨hm, htargets⟩)
-      obtain ⟨hle, hok⟩ := countdownPark_minted nk sk hb m f targets Resume.exitsValue false hin
-      generalize hP : countdownPark interp m f targets Resume.exitsValue false = P at hle hok ⊢
+      obtain ⟨hle, hok⟩ := countdownParkEdits_minted nk sk hb m f targets Resume.exitsValue false hin
+      generalize hP : countdownParkEdits interp m f targets Resume.exitsValue false = P at hle hok ⊢
+      rcases P with ⟨parkMachine, parkFiber, parked, edits⟩
       refine ⟨hle, ?_⟩
       simp only [MintedIn, iterKeys, cmdsKeys, List.flatMap_nil, List.append_nil]
       refine Ok_of_subset ?_ hok
@@ -3831,9 +3927,9 @@ theorem evaluatePrim_minted_with_ambient (hb : KeyBounded nk sk interp ambient)
           sub_tac
         · unfold IterMinted
           have hweq : ({ m with nextToken := m.nextToken + 1 } : NM ν σ).world = m.world := rfl
-          refine ⟨by rw [world_emit, world_update, hweq]; exact World.le_refl _, ?_⟩
+          refine ⟨by rw [world_emit, hweq]; exact World.le_refl _, ?_⟩
           simp only [MintedIn]
-          rw [world_emit, world_update, hweq]
+          rw [world_emit, hweq]
           have hname : nk (interp.cancelName interp.parkCancelName f.id m.nextToken) ⊆ [Handle.fiber f.id] := by
             refine List.Subset.trans (hb.cancelName _ _ _) ?_
             rw [hb.parkCancelName]
@@ -3843,7 +3939,7 @@ theorem evaluatePrim_minted_with_ambient (hb : KeyBounded nk sk interp ambient)
           have hall := Ok_append.mpr ⟨Ok_append.mpr ⟨Ok_append.mpr ⟨hm, htk⟩, hn⟩,
             Ok_cons.mpr ⟨htarget, Ok_nil _⟩⟩
           refine Ok_of_subset ?_ hall
-          sub_tac using (keys_update_fibers_subset nk sk _)
+          sub_tac
     · split
       · next thunk heq =>
         split
@@ -3999,12 +4095,12 @@ theorem iteration_minted_of_evaluator (hEval : EvaluatorMinted nk sk interp)
   · exact hEval m _ yielding hm'
 
 omit evaluator in
-theorem settle_minted (id : FiberId) (rest : List (Cmd ν σ Val Err Defect FiberId Ann))
+theorem settleOutcome_minted (id : FiberId) (rest : List (Cmd ν σ Val Err Defect FiberId Ann))
     (it : Iter ν σ Val Err Defect FiberId Ann Ctx Stores)
     (hm : MintedIn it.machine (iterKeys nk sk it ++ cmdsKeys nk sk rest)) :
-    it.machine.world.le (settle id rest it).1.world ∧
-      MintedIn (settle id rest it).1 ((settle id rest it).1.keys nk sk ++ cmdsKeys nk sk (settle id rest it).2) := by
-  unfold settle
+    it.machine.world.le (settleOutcome id rest it).1.world ∧
+      MintedIn (settleOutcome id rest it).1 ((settleOutcome id rest it).1.keys nk sk ++ cmdsKeys nk sk (settleOutcome id rest it).2) := by
+  unfold settleOutcome
   split
   · refine ⟨by rw [world_update]; exact World.le_refl _, ?_⟩
     simp only [MintedIn]
@@ -4047,6 +4143,52 @@ theorem settle_minted (id : FiberId) (rest : List (Cmd ν σ Val Err Defect Fibe
     refine Ok_of_subset ?_ hm
     rw [keys_halt]
     refine List.append_subset.mpr ⟨List.Subset.trans (keys_update_subset nk sk _) (by sub_tac), by sub_tac⟩
+
+omit evaluator in
+theorem settle_minted (id : FiberId) (rest : List (Cmd ν σ Val Err Defect FiberId Ann))
+    (it : Iter ν σ Val Err Defect FiberId Ann Ctx Stores)
+    (hm : MintedIn it.machine (iterKeys nk sk it ++ cmdsKeys nk sk rest)) :
+    it.machine.world.le (settle id rest it).1.world ∧
+      MintedIn (settle id rest it).1 ((settle id rest it).1.keys nk sk ++ cmdsKeys nk sk (settle id rest it).2) := by
+  unfold settle
+  split
+  · exact settleOutcome_minted nk sk id rest it hm
+  · let installed := it.machine.update it.fiber
+    have input : MintedIn installed (installed.keys nk sk ++ cmdsKeys nk sk [] ++
+        it.edits.flatMap FiberEdit.keys ++
+        (cmdsKeys nk sk it.nested ++ it.outcome.keys ++ cmdsKeys nk sk rest)) := by
+      unfold MintedIn
+      rw [world_update]
+      refine Ok_of_subset ?_ hm
+      sub_tac using (keys_update_subset nk sk (m := it.machine) it.fiber)
+    have edits := fiberEdits_minted nk sk it.edits (installed, [])
+      (cmdsKeys nk sk it.nested ++ it.outcome.keys ++ cmdsKeys nk sk rest) input
+    have world : (applyFiberEdits it.edits installed).1.world = it.machine.world :=
+      edits.1.trans (world_update it.fiber)
+    dsimp only
+    split
+    · refine ⟨?_, ?_⟩
+      · rw [world_halt, world]; exact World.le_refl _
+      · unfold MintedIn
+        rw [world_halt]
+        refine Ok_of_subset ?_ edits.2
+        rw [keys_halt]
+        sub_tac
+    · next owner found =>
+      have owned : owner.keys nk sk ⊆ (applyFiberEdits it.edits installed).1.keys nk sk :=
+        fiber?_keys_subset nk sk found
+      have ready : MintedIn (applyFiberEdits it.edits installed).1
+          (iterKeys nk sk { it with
+              machine := (applyFiberEdits it.edits installed).1
+              fiber := owner
+              nested := (applyFiberEdits it.edits installed).2 ++ it.nested
+              edits := [] } ++ cmdsKeys nk sk rest) := by
+        refine Ok_of_subset ?_ edits.2
+        sub_tac using owned
+      have outcome := settleOutcome_minted nk sk id rest _ ready
+      refine ⟨?_, outcome.2⟩
+      rw [world] at outcome
+      exact outcome.1
 
 omit evaluator in
 /-- Posting a task (the scheduler surface): the world is unchanged and the machine's keys grow
@@ -4360,7 +4502,7 @@ theorem driveStep_registrationDone_minted (hb : KeyBounded nk sk interp)
           ⟨m.updateRace { race with registering := false },
             { f with frame := { f.frame with
                 current := interp.raceSettle raceId race.state.cleanupNeeded exit } },
-            yielding, Outcome.continue_, []⟩ (by
+            yielding, Outcome.continue_, [], []⟩ (by
           simp only [MintedIn, iterKeys, cmdsKeys, List.flatMap_nil, List.append_nil, Outcome.keys]
           rw [world_updateRace]
           refine Ok_of_subset ?_ (Ok_append.mpr ⟨Ok_append.mpr ⟨hM, hfk⟩, Ok_append.mpr ⟨hcode, hrest⟩⟩)
@@ -4380,7 +4522,7 @@ theorem driveStep_registrationDone_minted (hb : KeyBounded nk sk interp)
             ({ f with frame := { f.frame with
                 stack := Prim.asyncFinalizer (interp.cancelName (interp.raceCancelName raceId) f.id race.token) :: f.frame.stack } }).park
               ⟨race.token, none, [], [], Resume.void, false⟩,
-            yielding, Outcome.parked, []⟩ (by
+            yielding, Outcome.parked, [], []⟩ (by
           simp only [MintedIn, iterKeys, cmdsKeys, List.flatMap_nil, List.append_nil, Outcome.keys]
           rw [world_emit, world_updateRace]
           refine Ok_of_subset ?_ (Ok_append.mpr ⟨Ok_append.mpr ⟨hM, hfk⟩, Ok_append.mpr ⟨hn, hrest⟩⟩)
@@ -4536,7 +4678,7 @@ theorem driveStep_afterInterrupt_minted (hb : KeyBounded nk sk interp)
         (Ok_of_subset (awaitCode_keys_subset nk sk hb m kind) (Ok_append.mpr ⟨hkind, hmk⟩))
     obtain ⟨hle, hS⟩ := settle_minted nk sk f.id rest
       ⟨m, { f with frame := { f.frame with current := asVoidCode interp (awaitCode interp m kind) } },
-        yielding, Outcome.continue_, []⟩ (by
+        yielding, Outcome.continue_, [], []⟩ (by
       simp only [MintedIn, iterKeys, cmdsKeys, List.flatMap_nil, List.append_nil, Outcome.keys]
       refine Ok_of_subset ?_ (Ok_append.mpr ⟨Ok_append.mpr ⟨hmk, hfk⟩, Ok_append.mpr ⟨hcode, hrest⟩⟩)
       simp only [RunFiber.keys, frameKeys]
@@ -4571,7 +4713,7 @@ theorem driveStep_closeParAwait_minted (hb : KeyBounded nk sk interp)
       ⟨m, { f with frame := { f.frame with
           current := interp.parkCode (ParkKind.awaitAll fibers)
           stack := Prim.iterator interp.closeDoneName interp.voidValue :: f.frame.stack } },
-        yielding, Outcome.continue_, []⟩ (by
+        yielding, Outcome.continue_, [], []⟩ (by
       simp only [MintedIn, iterKeys, cmdsKeys, List.flatMap_nil, List.append_nil, Outcome.keys]
       refine Ok_of_subset ?_ (Ok_append.mpr ⟨Ok_append.mpr ⟨hmk, hfk⟩, Ok_append.mpr ⟨hcode, hrest⟩⟩)
       simp only [RunFiber.keys, frameKeys, List.flatMap_cons, primKeys, hb.closeDoneName, hb.voidValue,

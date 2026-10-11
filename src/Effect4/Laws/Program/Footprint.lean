@@ -121,18 +121,28 @@ theorem finalizerOr_tracedFootprint (interp : NInterp) (m : NativeMachine) (f : 
     · exact stepFrame_tracedFootprint _ _ _ _
 
 /-- Countdown parking emits only its administrative park event. -/
-theorem countdownPark_tracedFootprint (interp : NInterp) (m : NativeMachine) (f : NFiber)
+theorem countdownParkEdits_tracedFootprint (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (targets : List FiberId) (resumeWith : Resume EffName) (failFast : Bool) :
-    TracedFootprint m f (countdownPark interp m f targets resumeWith failFast).1
-      (countdownPark interp m f targets resumeWith failFast).2.1 := by
-  unfold countdownPark
+    TracedFootprint m f (countdownParkEdits interp m f targets resumeWith failFast).1
+      (countdownParkEdits interp m f targets resumeWith failFast).2.1 := by
+  unfold countdownParkEdits
   dsimp only
   split
   · exact ⟨(AdministrativeTrace.of_eq rfl).answer _ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
   · refine ⟨AdministrativeTrace.push ?_ _ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
     refine ⟨[.parkedOn f.id m.nextToken], rfl, ?_⟩
-    simp only [RunMachine.emit_trace, RunMachine.modify_trace]
+    simp only [RunMachine.emit_trace]
     rfl
+
+/-- The eager countdown view retains the same local footprint and trace. -/
+theorem countdownPark_tracedFootprint (interp : NInterp) (m : NativeMachine) (f : NFiber)
+    (targets : List FiberId) (resumeWith : Resume EffName) (failFast : Bool) :
+    TracedFootprint m f (countdownPark interp m f targets resumeWith failFast).1
+      (countdownPark interp m f targets resumeWith failFast).2.1 := by
+  obtain ⟨⟨events, word, trace⟩, id, exit, running, finalizing, observers, children⟩ :=
+    countdownParkEdits_tracedFootprint interp m f targets resumeWith failFast
+  exact ⟨⟨events, word, (RunMachine.applyFiberEdits_trace _ _).trans trace⟩,
+    id, exit, running, finalizing, observers, children⟩
 
 /-- Spawning leaves the parent fields and frame unchanged. -/
 theorem spawn_tracedFootprint (interp : NInterp) (m : NativeMachine) (f : NFiber)
@@ -174,7 +184,7 @@ theorem withFiber_tracedFootprint (interp : NInterp) (m : NativeMachine) (f : NF
     simp only [evaluatePrim.withFiber]
     split <;> exact ⟨(AdministrativeTrace.of_eq rfl).answer _ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
   | runIn target scope =>
-    exact ⟨(linkScope_administrative interp m _ scope target _ _).answer _ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    exact ⟨(linkScopeEdits_administrative interp m _ scope target _ _).answer _ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
   | interrupt target =>
     exact ⟨(AdministrativeTrace.of_eq rfl).answer _ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
   | interruptAs target who =>
@@ -183,17 +193,17 @@ theorem withFiber_tracedFootprint (interp : NInterp) (m : NativeMachine) (f : NF
     · exact ⟨(AdministrativeTrace.of_eq rfl).idle _, rfl, rfl, rfl, rfl, rfl, rfl⟩
     · refine ⟨AdministrativeTrace.idle ?_ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
       refine ⟨[.interruptRecorded (some who) target], rfl, ?_⟩
-      simp only [RunMachine.emit_trace, RunMachine.update_trace]
+      simp only [RunMachine.emit_trace]
   | interruptScoped target =>
     simp only [evaluatePrim.withFiber]
     split <;> exact ⟨(AdministrativeTrace.of_eq rfl).answer _ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
   | interruptAll targets interruptor =>
     exact ⟨(AdministrativeTrace.of_eq rfl).idle _, rfl, rfl, rfl, rfl, rfl, rfl⟩
-  | awaitAll targets => exact countdownPark_tracedFootprint _ _ _ _ _ _
-  | awaitAllFailFast targets => exact countdownPark_tracedFootprint _ _ _ _ _ _
+  | awaitAll targets => exact countdownParkEdits_tracedFootprint _ _ _ _ _ _
+  | awaitAllFailFast targets => exact countdownParkEdits_tracedFootprint _ _ _ _ _ _
   | snapshotChildren =>
     exact ⟨(AdministrativeTrace.of_eq rfl).answer _ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
-  | awaitNewChildren snapshot => exact countdownPark_tracedFootprint _ _ _ _ _ _
+  | awaitNewChildren snapshot => exact countdownParkEdits_tracedFootprint _ _ _ _ _ _
   | raceAll entrants site =>
     refine ⟨AdministrativeTrace.answer ?_ _ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
     exact ⟨[.raceStarted m.nextRace f.id entrants.length], rfl, RunMachine.emit_trace _ _⟩
@@ -257,14 +267,14 @@ theorem evaluatePrim_tracedFootprint (interp : NInterp) (m : NativeMachine) (f :
     · exact ⟨(AdministrativeTrace.of_eq rfl).answer _ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
     · unfold registerRace
       split <;> exact ⟨(AdministrativeTrace.of_eq rfl).idle _, rfl, rfl, rfl, rfl, rfl, rfl⟩
-    · exact countdownPark_tracedFootprint _ _ _ _ _ _
+    · exact countdownParkEdits_tracedFootprint _ _ _ _ _ _
     · split
       · exact ⟨(AdministrativeTrace.of_eq rfl).idle _, rfl, rfl, rfl, rfl, rfl, rfl⟩
       · split
         · exact ⟨(AdministrativeTrace.of_eq rfl).answer _ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
         · refine ⟨AdministrativeTrace.push ?_ _ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
           refine ⟨[.parkedOn f.id m.nextToken], rfl, ?_⟩
-          simp only [RunMachine.emit_trace, RunMachine.update_trace]
+          simp only [RunMachine.emit_trace]
           rfl
     · split
       · split
@@ -371,8 +381,8 @@ theorem finalizerOr_footprint (interp : NInterp) (m : NativeMachine) (f : NFiber
 /-- The countdown park answers, or pushes its cancel frame and parks. -/
 theorem countdownPark_footprint (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (targets : List FiberId) (resumeWith : Resume EffName) (failFast : Bool) :
-    Footprint f (countdownPark interp m f targets resumeWith failFast).2.1 :=
-  (countdownPark_tracedFootprint interp m f targets resumeWith failFast).shape
+    Footprint f (countdownParkEdits interp m f targets resumeWith failFast).2.1 :=
+  (countdownParkEdits_tracedFootprint interp m f targets resumeWith failFast).shape
 
 /-- Every `withFiber` action, on the run fiber. -/
 theorem withFiber_footprint (interp : NInterp) (m : NativeMachine) (f : NFiber) (yielding : Bool)

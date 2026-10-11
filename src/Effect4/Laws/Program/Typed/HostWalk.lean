@@ -183,13 +183,13 @@ def walkExit : Outcome EffName EffThunk Val Err Defect FiberId Ann → Option Ex
 /-- The iteration a delivery's walk leaves (`deliverR`'s second branch). -/
 def walkIter (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool) (ex : ExitV) : RIter :=
   let (frame, done) := popR interp ex f.frame.stack { f.frame with deferredInterrupt := false }
-  ⟨m, { f with frame }, yielding, outcomeOfWalk done, []⟩
+  ⟨m, { f with frame }, yielding, outcomeOfWalk done, [], []⟩
 
 /-- The iteration a success with a deferred interrupt leaves (`deliverR`'s first branch). -/
 def deferredIter (m : RState) (f : RFiber) (yielding : Bool) : RIter :=
   ⟨m, { f with frame := { f.frame with
     current := .pure (.failure f.frame.pendingCause)
-    deferredInterrupt := false } }, yielding, .continue_, []⟩
+    deferredInterrupt := false } }, yielding, .continue_, [], []⟩
 
 /-- `deliverR` is one of its two branches. -/
 theorem deliverR_cases (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool) (ex : ExitV) :

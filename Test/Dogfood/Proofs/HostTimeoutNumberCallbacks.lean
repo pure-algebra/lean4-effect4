@@ -211,7 +211,7 @@ theorem native_reference (machine : Effect4.Program.NativeMachine) (fiber : Host
     ∃ next value,
       evaluateNative HostTimeoutSource.program machine fiber yielding Scenario.Timeout.fetch.table =
         ⟨{machine with state := next}, {fiber with frame := {fiber.frame with current := .success value}},
-          yielding, .answered, [.drainDue]⟩ ∧
+          yielding, .answered, [.drainDue], []⟩ ∧
       HeapAt next.refs ∧ ReferenceAnswer point next.refs value := by
   obtain ⟨op, code⟩ := reference_sync point machine.state.refs owned
   obtain ⟨next, value, step, heap, answer⟩ :=

@@ -151,7 +151,7 @@ theorem registration_done (root : NativeEff) (table : RowTable) (q : List Nat) (
       have stack := noAdd race found fiber lookup
       cases accepted : race.state.accepted with
       | some exit =>
-        simp only [settle, List.nil_append, List.cons_append]
+        simp only [settle, settleOutcome, List.nil_append, List.cons_append]
         apply update q base fiber
           {fiber with frame := {fiber.frame with current := (interpOf root table).raceSettle raceId race.state.cleanupNeeded exit}}
           rest _ baseFunded fibers own rfl
@@ -159,7 +159,7 @@ theorem registration_done (root : NativeEff) (table : RowTable) (q : List Nat) (
           Nat.add_le_add_right (replace_code q fiber _ stack (race_settle_zero root table q _ _ _))
             ((rest.map (commandCredits q)).sum)
       | none =>
-        simp only [settle, FiberCore.deferredInterrupt, RunFiber.park, List.nil_append,
+        simp only [settle, settleOutcome, FiberCore.deferredInterrupt, RunFiber.park, List.nil_append,
           List.cons_append]
         by_cases deferred : fiber.frame.deferredInterrupt = true
         all_goals

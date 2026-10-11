@@ -53,8 +53,13 @@ inductive OtherEdit : NFiber → NFiber → Prop
   | filterObservers (g : NFiber) (keep : Observer → Bool) :
       OtherEdit g { g with observers := g.observers.filter keep }
   /-- An interrupt is recorded on this fiber. -/
-  | interrupted (interp : NInterp) (g : NFiber) (who : Option FiberId) (extra : ReasonAnnotations Ann) :
-      OtherEdit g (interruptRecord interp who extra g).1
+  | interruptCause (g : NFiber) (cause : Cause Err Defect FiberId Ann) :
+      OtherEdit g (interruptWithCause cause g).1
+
+/-- The interpreter-based view records the same fresh cause as the native message. -/
+theorem OtherEdit.interrupted (interp : NInterp) (g : NFiber) (who : Option FiberId)
+    (extra : ReasonAnnotations Ann) : OtherEdit g (interruptRecord interp who extra g).1 :=
+  .interruptCause g (Machine.interruptCause interp who extra g.id)
 
 /-- Words of edits of another fiber. -/
 inductive OtherEdits : NFiber → NFiber → Prop
@@ -75,8 +80,8 @@ theorem OtherEdit.id {g h : NFiber} (e : OtherEdit g h) : h.id = g.id := by
   cases e with
   | observe => rfl
   | filterObservers => rfl
-  | interrupted interp g who extra =>
-    unfold interruptRecord interruptWithCause
+  | interruptCause cause =>
+    unfold interruptWithCause
     dsimp only
     repeat' split
     all_goals rfl
@@ -92,8 +97,8 @@ theorem OtherEdit.exit {g h : NFiber} (e : OtherEdit g h) : h.exit = g.exit := b
   cases e with
   | observe => rfl
   | filterObservers => rfl
-  | interrupted interp g who extra =>
-    unfold interruptRecord interruptWithCause
+  | interruptCause cause =>
+    unfold interruptWithCause
     dsimp only
     repeat' split
     all_goals rfl
@@ -103,6 +108,43 @@ theorem OtherEdits.exit {g h : NFiber} (w : OtherEdits g h) : h.exit = g.exit :=
   induction w with
   | refl => rfl
   | tail _ e ih => exact e.exit.trans ih
+
+/-- Messages retain the command fields of running or exited fibers.
+Consumer: Guard queue transport through the shared message interpretation. -/
+theorem OtherEdit.controls {g h : NFiber} (edit : OtherEdit g h)
+    (eligible : g.running = true ∨ g.exit.isSome = true) :
+    h.frame.current = g.frame.current ∧ h.parked = g.parked ∧ h.exit = g.exit ∧
+      (g.running = true → h.running = true) := by
+  cases edit with
+  | observe => exact ⟨rfl, rfl, rfl, fun h => h⟩
+  | filterObservers => exact ⟨rfl, rfl, rfl, fun h => h⟩
+  | interruptCause cause =>
+    cases exited : g.exit with
+    | some exit =>
+      simp only [interruptWithCause, exited, Option.isSome_some, ↓reduceIte]
+      exact ⟨True.intro, True.intro, True.intro, fun h => h⟩
+    | none =>
+      have running : g.running = true := by
+        rcases eligible with running | impossible
+        · exact running
+        · simp only [exited, Option.isSome_none, Bool.false_eq_true] at impossible
+      cases mask : g.frame.interruptible <;>
+        simp only [interruptWithCause, exited, mask, running, FiberCore.interruptible,
+          FiberCore.recordCause, FiberCore.setDeferred, Option.isSome_none, ↓reduceIte,
+          Bool.false_eq_true, and_self, implies_true]
+
+/-- The existing other-fiber edit word composes its command-field observation. -/
+theorem OtherEdits.controls {g h : NFiber} (word : OtherEdits g h)
+    (eligible : g.running = true ∨ g.exit.isSome = true) :
+    h.frame.current = g.frame.current ∧ h.parked = g.parked ∧ h.exit = g.exit ∧
+      (g.running = true → h.running = true) := by
+  induction word with
+  | refl => exact ⟨rfl, rfl, rfl, fun h => h⟩
+  | tail prior edit ih =>
+    have next := edit.controls (eligible.elim (fun running => Or.inl (ih.2.2.2 running))
+      (fun exited => Or.inr (ih.2.2.1 ▸ exited)))
+    exact ⟨next.1.trans ih.1, next.2.1.trans ih.2.1, next.2.2.1.trans ih.2.2.1,
+      fun running => next.2.2.2 (ih.2.2.2 running)⟩
 
 /-- The initial fields of an allocated fiber, retained as proof data.
 This witness reuses the machine's code and context; it adds no stored program syntax. -/
@@ -359,42 +401,76 @@ theorem InterferesWithLookup.forkFinalizers (interp : NInterp) (host : NFiber) :
     exact (InterferesWithLookup.spawn interp m host program _ []).trans
       (InterferesWithLookup.forkFinalizers interp host _ rest)
 
-theorem InterferesWithLookup.countdownPark (interp : NInterp) (m : NativeMachine) (fiber : NFiber)
-    (targets : List FiberId) (resume : Resume EffName) (failFast : Bool) :
-    InterferesWithLookup m (countdownPark interp m fiber targets resume failFast).1 := by
-  unfold Machine.countdownPark
-  dsimp only
-  split
-  · exact .ofFibers rfl (Nat.le_refl _)
-  · apply InterferesWithLookup.thenEmit
-    apply InterferesWithLookup.thenObserve
-    exact .ofFibers rfl (Nat.le_refl _)
-
-theorem InterferesWithLookup.linkScope (interp : NInterp) (m : NativeMachine) (mode : Supervision.ScopeMode)
-    (scope : Nat) (target : FiberId) (who : Option FiberId) (extra : ReasonAnnotations Ann) :
-    InterferesWithLookup m (linkScope interp m mode scope target who extra).1 := by
-  unfold Machine.linkScope
-  split
-  · exact .ofFibers rfl (Nat.le_refl _)
-  · split
-    · exact .ofFibers rfl (Nat.le_refl _)
-    · rename_i fiber found
-      apply InterferesWithLookup.thenEmit
-      exact .update found (.tail (.refl fiber) (.interrupted interp fiber who extra))
-  · split
-    · exact .ofFibers rfl (Nat.le_refl _)
-    · split
-      · exact .refl _
-      · split
-        · exact .ofFibers rfl (Nat.le_refl _)
-        · apply InterferesWithLookup.thenEmit
-          apply InterferesWithLookup.thenObserve
-          exact .ofFibers rfl (Nat.le_refl _)
-
 theorem InterferesWithLookup.filterObservers (m : NativeMachine) (keep : Observer → Bool) :
     InterferesWithLookup m {m with fibers := m.fibers.map fun fiber =>
       {fiber with observers := fiber.observers.filter keep}} :=
   ⟨.filterObservers m keep, LookupEdits.map m _ (fun fiber => .tail (.refl _) (.filterObservers fiber keep))⟩
+
+/-- Each native message changes only the fields named by the structural edit relation.
+Consumer: settlement transport and eager administrative adapters. -/
+theorem InterferesWithLookup.fiberEdit (edit : FiberEdit Err Defect FiberId Ann)
+    (m : NativeMachine) : InterferesWithLookup m (applyFiberEdit edit m).1 := by
+  cases edit with
+  | observe target observer =>
+    exact (InterferesWithLookup.refl m).thenObserve target observer
+  | dropToken token => exact .filterObservers m _
+  | interrupt target cause =>
+    simp only [applyFiberEdit]
+    split
+    · exact .refl _
+    · rename_i fiber found
+      exact .update found (.tail (.refl fiber) (.interruptCause fiber cause))
+
+/-- A message word composes the same lookup and allocation transport once. -/
+theorem InterferesWithLookup.fiberEdits (edits : List (FiberEdit Err Defect FiberId Ann))
+    (m : NativeMachine) : InterferesWithLookup m (applyFiberEdits edits m).1 := by
+  unfold applyFiberEdits
+  suffices ∀ acc : NativeMachine × List (Cmd EffName EffThunk Val Err Defect FiberId Ann),
+      InterferesWithLookup acc.1 (edits.foldl (fun held edit =>
+        let next := applyFiberEdit edit held.1
+        (next.1, held.2 ++ next.2)) acc).1 from this (m, [])
+  intro acc
+  induction edits generalizing acc with
+  | nil => exact .refl _
+  | cons edit rest ih =>
+    simp only [List.foldl_cons]
+    exact (fiberEdit edit acc.1).trans
+      (ih ((applyFiberEdit edit acc.1).1, acc.2 ++ (applyFiberEdit edit acc.1).2))
+
+/-- Queued countdown registration changes no stored fiber before settlement. -/
+theorem InterferesWithLookup.countdownParkEdits (interp : NInterp) (m : NativeMachine)
+    (fiber : NFiber) (targets : List FiberId) (resume : Resume EffName) (failFast : Bool) :
+    InterferesWithLookup m (Machine.countdownParkEdits interp m fiber targets resume failFast).1 := by
+  unfold Machine.countdownParkEdits
+  dsimp only
+  split <;> exact .ofFibers rfl (Nat.le_refl _)
+
+/-- The eager countdown adapter interprets the same structural message word. -/
+theorem InterferesWithLookup.countdownPark (interp : NInterp) (m : NativeMachine) (fiber : NFiber)
+    (targets : List FiberId) (resume : Resume EffName) (failFast : Bool) :
+    InterferesWithLookup m (countdownPark interp m fiber targets resume failFast).1 :=
+  (countdownParkEdits interp m fiber targets resume failFast).trans (fiberEdits _ _)
+
+/-- Queued scope linkage changes stores and trace before interpreting its message. -/
+theorem InterferesWithLookup.linkScopeEdits (interp : NInterp) (m : NativeMachine)
+    (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId)
+    (who : Option FiberId) (extra : ReasonAnnotations Ann) :
+    InterferesWithLookup m (Machine.linkScopeEdits interp m mode scope target who extra).1 := by
+  unfold Machine.linkScopeEdits
+  split
+  · exact .ofFibers rfl (Nat.le_refl _)
+  · split <;> exact .ofFibers rfl (Nat.le_refl _)
+  · split
+    · exact .ofFibers rfl (Nat.le_refl _)
+    · split
+      · exact .refl _
+      · split <;> exact .ofFibers rfl (Nat.le_refl _)
+
+/-- The eager scope adapter interprets the same structural message word. -/
+theorem InterferesWithLookup.linkScope (interp : NInterp) (m : NativeMachine) (mode : Supervision.ScopeMode)
+    (scope : Nat) (target : FiberId) (who : Option FiberId) (extra : ReasonAnnotations Ann) :
+    InterferesWithLookup m (linkScope interp m mode scope target who extra).1 :=
+  (linkScopeEdits interp m mode scope target who extra).trans (fiberEdits _ _)
 
 theorem InterferesWithLookup.thenSpawn {m n : NativeMachine} (held : InterferesWithLookup m n)
     (interp : NInterp) (parent : NFiber) (program : NCode) (options : Supervision.ForkOptions) (site : List Nat) :
@@ -515,24 +591,21 @@ theorem withFiber_interference (interp : NInterp) (m : NativeMachine) (f : NFibe
   | ambientScope =>
     simp only [evaluatePrim.withFiber]
     split <;> exact .refl _
-  | runIn target scope => exact InterferesWithLookup.linkScope _ _ _ _ _ _ _
+  | runIn target scope => exact InterferesWithLookup.linkScopeEdits _ _ _ _ _ _ _
   | interrupt target => exact .refl _
   | interruptAs target who =>
     simp only [evaluatePrim.withFiber, evaluatePrim.interruptAs]
     split
     · exact .refl _
-    · rename_i t found
-      apply InterferesWithLookup.thenEmit
-      exact InterferesWithLookup.update found
-        (.tail (.refl t) (.interrupted interp t (some who) _))
+    · exact .emit _ _
   | interruptScoped target =>
     simp only [evaluatePrim.withFiber]
     split <;> exact .refl _
   | interruptAll targets interruptor => exact .refl _
-  | awaitAll targets => exact InterferesWithLookup.countdownPark _ _ _ _ _ _
-  | awaitAllFailFast targets => exact InterferesWithLookup.countdownPark _ _ _ _ _ _
+  | awaitAll targets => exact InterferesWithLookup.countdownParkEdits _ _ _ _ _ _
+  | awaitAllFailFast targets => exact InterferesWithLookup.countdownParkEdits _ _ _ _ _ _
   | snapshotChildren => exact .refl _
-  | awaitNewChildren snapshot => exact InterferesWithLookup.countdownPark _ _ _ _ _ _
+  | awaitNewChildren snapshot => exact InterferesWithLookup.countdownParkEdits _ _ _ _ _ _
   | raceAll entrants site =>
     simp only [evaluatePrim.withFiber, beginRace]
     exact .ofFibers rfl (Nat.le_refl _)
@@ -551,7 +624,7 @@ theorem withFiber_interference (interp : NInterp) (m : NativeMachine) (f : NFibe
     · exact .ofFibers rfl (Nat.le_refl _)
   | closePar finalizers => exact InterferesWithLookup.forkFinalizers _ _ _ _
   | refuse cause => exact .refl _
-  | dropObservers token => exact InterferesWithLookup.filterObservers _ _
+  | dropObservers token => exact .refl _
   | cancelRace race =>
     simp only [evaluatePrim.withFiber]
     split <;> exact .refl _
@@ -575,15 +648,12 @@ theorem evaluatePrim_interference (interp : NInterp) (m : NativeMachine) (f : NF
       split
       · exact .refl _
       · exact .ofFibers rfl (Nat.le_refl _)
-    · exact InterferesWithLookup.countdownPark _ _ _ _ _ _
+    · exact InterferesWithLookup.countdownParkEdits _ _ _ _ _ _
     · split
       · exact .refl _
       · split
         · exact .refl _
-        · rename_i t found _ _
-          apply InterferesWithLookup.thenEmit
-          exact InterferesWithLookup.thenUpdate (.ofFibers rfl (Nat.le_refl _))
-            found (.tail (.refl t) (.observe t _))
+        · exact .ofFibers rfl (Nat.le_refl _)
     · split
       · split
         · exact withFiber_interference _ _ _ _ _

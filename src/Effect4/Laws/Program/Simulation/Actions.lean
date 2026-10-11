@@ -87,16 +87,42 @@ theorem interpAgree_of (root : NativeEff) : InterpAgree (table := table) (interp
 
 /-! ## Recording an interrupt -/
 
-/-- The cause `interruptUnsafe` records, accumulated over the one already pending. -/
-def accumulatedCause {κ φ : Type} [core : FiberCore EffName Val Err Defect FiberId Ann κ φ]
-    (i : RunInterp EffName EffThunk Val Err Defect FiberId Ann Ctx Stores κ) (who : Option FiberId)
-    (extra : ReasonAnnotations Ann) (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx κ φ) :
-    CauseV :=
-  let cause : CauseV :=
-    Cause.annotate (Supervision.interruptCause i.encodeFiber who (i.stackAnnotations f.id)) extra false
+/-- Combine a fresh cause with the currently recorded cause. The message simulation reads this view. -/
+def accumulatedDelta {κ φ : Type} [core : FiberCore EffName Val Err Defect FiberId Ann κ φ]
+    (cause : CauseV) (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx κ φ) : CauseV :=
   match core.interruptedCause f.frame with
   | none => cause
   | some previous => Cause.combine previous cause
+
+/-- The cause `interruptUnsafe` records, accumulated over the one already pending. -/
+def accumulatedCause {κ φ : Type} [FiberCore EffName Val Err Defect FiberId Ann κ φ]
+    (i : RunInterp EffName EffThunk Val Err Defect FiberId Ann Ctx Stores κ) (who : Option FiberId)
+    (extra : ReasonAnnotations Ann) (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx κ φ) :
+    CauseV := accumulatedDelta (interruptCause i who extra f.id) f
+
+theorem interruptWithCause_frame_eq (cause : CauseV)
+    (f : FRun) :
+    interruptWithCause cause f =
+      if f.exit.isSome then (f, false)
+      else if f.frame.interruptible then
+        if f.running then
+          ({ f with frame := { f.frame with
+              interruptedCause := some (accumulatedDelta cause f), deferredInterrupt := true } },
+            false)
+        else
+          ({ f with
+              parked := .notParked
+              pending := []
+              frame := { f.frame with
+                interruptedCause := some (accumulatedDelta cause f)
+                current := Prim.failure (accumulatedDelta cause f) } }, true)
+      else ({ f with frame := { f.frame with interruptedCause := some (accumulatedDelta cause f) } },
+        false) := by
+  unfold interruptWithCause accumulatedDelta
+  dsimp only [FiberCore.interruptible, FiberCore.recordCause, FiberCore.setDeferred,
+    FiberCore.answerWith, FiberCore.failure, FiberCore.interruptedCause, frameCore]
+  cases f.frame.interruptedCause <;> rfl
+
 
 theorem interruptRecord_frame_eq (i : FInterp) (who : Option FiberId) (extra : ReasonAnnotations Ann)
     (f : FRun) :
@@ -115,11 +141,32 @@ theorem interruptRecord_frame_eq (i : FInterp) (who : Option FiberId) (extra : R
                 interruptedCause := some (accumulatedCause i who extra f)
                 current := Prim.failure (accumulatedCause i who extra f) } }, true)
       else ({ f with frame := { f.frame with interruptedCause := some (accumulatedCause i who extra f) } },
+        false) :=
+  interruptWithCause_frame_eq (interruptCause i who extra f.id) f
+
+theorem interruptWithCause_term_eq (cause : CauseV)
+    (f : RFiber) :
+    interruptWithCause cause f =
+      if f.exit.isSome then (f, false)
+      else if f.frame.interruptible then
+        if f.running then
+          ({ f with frame := { f.frame with
+              interruptedCause := some (accumulatedDelta cause f), deferredInterrupt := true } },
+            false)
+        else
+          ({ f with
+              parked := .notParked
+              pending := []
+              frame := { f.frame with
+                interruptedCause := some (accumulatedDelta cause f)
+                current := .pure (.failure (accumulatedDelta cause f)) } }, true)
+      else ({ f with frame := { f.frame with interruptedCause := some (accumulatedDelta cause f) } },
         false) := by
-  unfold interruptRecord interruptWithCause accumulatedCause
+  unfold interruptWithCause accumulatedDelta
   dsimp only [FiberCore.interruptible, FiberCore.recordCause, FiberCore.setDeferred,
-    FiberCore.answerWith, FiberCore.failure, FiberCore.interruptedCause, frameCore]
+    FiberCore.answerWith, FiberCore.failure, FiberCore.interruptedCause, termCore]
   cases f.frame.interruptedCause <;> rfl
+
 
 theorem interruptRecord_term_eq (i : RInterp) (who : Option FiberId) (extra : ReasonAnnotations Ann)
     (f : RFiber) :
@@ -138,24 +185,20 @@ theorem interruptRecord_term_eq (i : RInterp) (who : Option FiberId) (extra : Re
                 interruptedCause := some (accumulatedCause i who extra f)
                 current := .pure (.failure (accumulatedCause i who extra f)) } }, true)
       else ({ f with frame := { f.frame with interruptedCause := some (accumulatedCause i who extra f) } },
-        false) := by
-  unfold interruptRecord interruptWithCause accumulatedCause
-  dsimp only [FiberCore.interruptible, FiberCore.recordCause, FiberCore.setDeferred,
-    FiberCore.answerWith, FiberCore.failure, FiberCore.interruptedCause, termCore]
-  cases f.frame.interruptedCause <;> rfl
+        false) :=
+  interruptWithCause_term_eq (interruptCause i who extra f.id) f
 
-/-- `interruptUnsafe` on related fibers: related fibers, the same verdict. -/
-theorem interruptRecord_rel (root : NativeEff) {i₁ : FInterp} {i₂ : RInterp} (hi : InterpAgree (table := table) i₁ i₂)
-    (who : Option FiberId) (extra : ReasonAnnotations Ann) {t₁ : FRun} {t₂ : RFiber}
+/-- Applying equal fresh causes to related current fibers retains the book and wake verdict. -/
+theorem interruptWithCause_rel (root : NativeEff) (cause : CauseV) {t₁ : FRun} {t₂ : RFiber}
     (ht : FMeans root t₁ t₂) :
-    FMeans root (interruptRecord i₁ who extra t₁).1 (interruptRecord i₂ who extra t₂).1 ∧
-      (interruptRecord i₁ who extra t₁).2 = (interruptRecord i₂ who extra t₂).2 := by
-  rw [interruptRecord_frame_eq, interruptRecord_term_eq]
-  have hacc : accumulatedCause i₁ who extra t₁ = accumulatedCause i₂ who extra t₂ := by
-    dsimp only [accumulatedCause, FiberCore.interruptedCause, frameCore, termCore]
-    rw [ht.interruptedCause, ht.id, hi.encodeFiber, hi.stackAnnotations]
-  rw [hacc]
-  generalize accumulatedCause i₂ who extra t₂ = acc
+    FMeans root (interruptWithCause cause t₁).1 (interruptWithCause cause t₂).1 ∧
+      (interruptWithCause cause t₁).2 = (interruptWithCause cause t₂).2 := by
+  rw [interruptWithCause_frame_eq, interruptWithCause_term_eq]
+  have same : accumulatedDelta cause t₁ = accumulatedDelta cause t₂ := by
+    dsimp only [accumulatedDelta, FiberCore.interruptedCause, frameCore, termCore]
+    rw [ht.interruptedCause]
+  rw [same]
+  generalize accumulatedDelta cause t₂ = acc
   by_cases hex : t₁.exit.isSome = true
   · have hex₂ : t₂.exit.isSome = true := by rw [← ht.exit]; exact hex
     rw [if_pos hex, if_pos hex₂]
@@ -178,6 +221,19 @@ theorem interruptRecord_rel (root : NativeEff) {i₁ : FInterp} {i₂ : RInterp}
       rw [if_neg hint, if_neg hint₂]
       exact ⟨ht.withFrame ⟨ht.interruptible, rfl, ht.deferred, ht.current, ht.stack, ht.maskInv⟩, rfl⟩
 
+
+/-- `interruptUnsafe` on related fibers: related fibers, the same verdict. -/
+theorem interruptRecord_rel (root : NativeEff) {i₁ : FInterp} {i₂ : RInterp} (hi : InterpAgree (table := table) i₁ i₂)
+    (who : Option FiberId) (extra : ReasonAnnotations Ann) {t₁ : FRun} {t₂ : RFiber}
+    (ht : FMeans root t₁ t₂) :
+    FMeans root (interruptRecord i₁ who extra t₁).1 (interruptRecord i₂ who extra t₂).1 ∧
+      (interruptRecord i₁ who extra t₁).2 = (interruptRecord i₂ who extra t₂).2 := by
+  unfold interruptRecord
+  have same : interruptCause i₁ who extra t₁.id = interruptCause i₂ who extra t₂.id := by
+    simp only [interruptCause, ht.id, hi.encodeFiber, hi.stackAnnotations]
+  rw [same]
+  exact interruptWithCause_rel root _ ht
+
 /-! ## The machine operations the actions compose -/
 
 /-- A result carrying a machine, a fiber and a list. -/
@@ -188,6 +244,51 @@ def TripleRel (root : NativeEff) {γ₁ γ₂ : Type} (R : γ₁ → γ₂ → P
 /-- A result carrying a machine and the commands it leaves. -/
 def CmdsRel (root : NativeEff) (r₁ : FMachine × List FCmd) (r₂ : RState × List RCmd) : Prop :=
   MachineOk (StoresOk table) r₁.1 ∧ BMeans root r₁.1 r₂.1 ∧ ListRel (CMeans root) r₁.2 r₂.2
+
+/-- Equal message data acts on the current related records and emits related wake commands. -/
+theorem fiberEdit_rel (root : NativeEff) (edit : FiberEdit Err Defect FiberId Ann)
+    {m₁ : FMachine} {m₂ : RState} (hok : MachineOk (StoresOk table) m₁)
+    (hm : BMeans root m₁ m₂) :
+    CmdsRel (table := table) root (applyFiberEdit edit m₁) (applyFiberEdit edit m₂) := by
+  cases edit with
+  | observe target observer =>
+    refine ⟨machineOk_modify hok target (fun _ hg => pendingOk_of_fields hg rfl),
+      hm.modify target (fun first last related => ?_), ListRel.nil⟩
+    rw [← related.observers]
+    exact related.withObservers _
+  | dropToken token =>
+    refine ⟨machineOk_mapFibers hok (fun _ hg => pendingOk_of_fields hg rfl),
+      hm.mapFibers (fun first last related => ?_), ListRel.nil⟩
+    rw [← related.observers]
+    exact related.withObservers _
+  | interrupt target cause =>
+    simp only [applyFiberEdit]
+    rcases hm.fiber?_cases target with ⟨left, right⟩ | ⟨first, last, left, right, related⟩
+    · rw [left, right]
+      exact ⟨hok, hm, ListRel.nil⟩
+    · rw [left, right]
+      have changed := interruptWithCause_rel root cause related
+      have pending := interruptWithCause_pendingOk cause (pendingOk_of_fiber? hok left)
+      refine ⟨machineOk_update hok pending, hm.update changed.1, ?_⟩
+      dsimp only
+      rw [changed.2]
+      split
+      · exact ListRel.cons rfl ListRel.nil
+      · exact ListRel.nil
+
+/-- The shared fold relates every current-record message phase, including its command prefix. -/
+theorem fiberEdits_rel (root : NativeEff) (edits : List (FiberEdit Err Defect FiberId Ann))
+    {m₁ : FMachine} {m₂ : RState} (hok : MachineOk (StoresOk table) m₁)
+    (hm : BMeans root m₁ m₂) :
+    CmdsRel (table := table) root (applyFiberEdits edits m₁) (applyFiberEdits edits m₂) := by
+  unfold applyFiberEdits
+  apply foldl_rel (R := Eq) (P := CmdsRel (table := table) root)
+    (h := ListRel.refl (fun _ => rfl) edits)
+  · exact ⟨hok, hm, ListRel.nil⟩
+  · intro first last edit other related equal
+    subst other
+    have one := fiberEdit_rel root edit related.1 related.2.1
+    exact ⟨one.1, one.2.1, ListRel.append related.2.2 one.2.2⟩
 
 theorem listRel_evaluate (root : NativeEff) :
     ∀ l : List FiberId, ListRel (CMeans root) (l.map Cmd.evaluate) (l.map Cmd.evaluate)
@@ -284,13 +385,13 @@ theorem countdownWalk_eq {root : NativeEff} {m₁ : FMachine} {m₂ : RState} (h
       | some ex => exact countdownWalk_eq hm rest _
       | none => rfl
 
-theorem countdownPark_rel (root : NativeEff) (c : List (FiberId × ExitV)) {m₁ : FMachine} {m₂ : RState}
+theorem countdownParkEdits_rel (root : NativeEff) (c : List (FiberId × ExitV)) {m₁ : FMachine} {m₂ : RState}
     (hok : MachineOk (StoresOk table) m₁) (hm : BMeans root m₁ m₂) {f₁ : FRun} {f₂ : RFiber}
     (hf : FMeans root f₁ f₂) (targets : List FiberId) (resume : Resume EffName)
     (hres : ∀ name, resume ≠ Resume.continueWith name) (failFast : Bool) :
-    TripleRel (table := table) root Eq (countdownPark (interpAt root c table) m₁ f₁ targets resume failFast)
-      (countdownPark (interpRAt root c table) m₂ f₂ targets resume failFast) := by
-  unfold countdownPark
+    TripleRel (table := table) root Eq (countdownParkEdits (interpAt root c table) m₁ f₁ targets resume failFast)
+      (countdownParkEdits (interpRAt root c table) m₂ f₂ targets resume failFast) := by
+  unfold countdownParkEdits
   dsimp only
   rw [hm.nextToken, countdownWalk_eq (hm.withNextToken (m₂.nextToken + 1)) targets []]
   cases countdownWalk { m₂ with nextToken := m₂.nextToken + 1 } targets [] with
@@ -307,14 +408,28 @@ theorem countdownPark_rel (root : NativeEff) (c : List (FiberId × ExitV)) {m₁
     | some tr =>
       obtain ⟨target, remaining⟩ := tr
       dsimp only [TripleRel]
-      refine ⟨machineOk_emit (machineOk_modify (machineOk_withNextToken hok _) target ?_) _,
-        BMeans.emit ((hm.withNextToken _).modify target (fun g₁ g₂ hg => ?_)) _ _,
-        (hf.withFrame ?_).park _, rfl⟩
-      · exact fun _ hg => pendingOk_of_fields hg rfl
-      · rw [← hg.observers, hf.id]
-        exact hg.withObservers _
+      refine ⟨machineOk_emit (machineOk_withNextToken hok _) _,
+        BMeans.emit (hm.withNextToken _) _ _, (hf.withFrame ?_).park _, ?_⟩
       · rw [hf.id]
         exact means_pushAsyncFinalizer hf.means _
+      · simp only [RunFiber.park, hf.id]
+
+theorem countdownPark_rel (root : NativeEff) (c : List (FiberId × ExitV)) {m₁ : FMachine} {m₂ : RState}
+    (hok : MachineOk (StoresOk table) m₁) (hm : BMeans root m₁ m₂) {f₁ : FRun} {f₂ : RFiber}
+    (hf : FMeans root f₁ f₂) (targets : List FiberId) (resume : Resume EffName)
+    (hres : ∀ name, resume ≠ Resume.continueWith name) (failFast : Bool) :
+    TripleRel (table := table) root Eq (countdownPark (interpAt root c table) m₁ f₁ targets resume failFast)
+      (countdownPark (interpRAt root c table) m₂ f₂ targets resume failFast) := by
+  have plan := countdownParkEdits_rel root c hok hm hf targets resume hres failFast
+  unfold countdownPark
+  generalize countdownParkEdits (interpAt root c table) m₁ f₁ targets resume failFast = first at plan ⊢
+  generalize countdownParkEdits (interpRAt root c table) m₂ f₂ targets resume failFast = last at plan ⊢
+  obtain ⟨held₁, next₁, parked₁, edits₁⟩ := first
+  obtain ⟨held₂, next₂, parked₂, edits₂⟩ := last
+  obtain ⟨heldOk, heldRel, nextRel, equal⟩ := plan
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj equal
+  have phase := fiberEdits_rel root edits₁ heldOk heldRel
+  exact ⟨phase.1, phase.2.1, nextRel, rfl⟩
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem beginRace_rel (root : NativeEff) (c : List (FiberId × ExitV)) {m₁ : FMachine} {m₂ : RState}
@@ -327,7 +442,7 @@ theorem beginRace_rel (root : NativeEff) (c : List (FiberId × ExitV)) {m₁ : F
   rw [hm.nextRace, hm.nextToken, ListRel.length he]
   exact ⟨machineOk_emit (machineOk_appendRace hok _ _ _) _,
     BMeans.emit (hm.appendRace (raceMeans_mk' rfl hf.id rfl rfl rfl rfl he rfl rfl rfl) _ _) _ _,
-    hf.withFrame (means_answerWith hf.means (parkCode_means (table := table) root _)), rfl, rfl, ListRel.nil⟩
+    hf.withFrame (means_answerWith hf.means (parkCode_means (table := table) root _)), rfl, rfl, ListRel.nil, rfl⟩
 
 theorem registerRace_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hok : MachineOk (StoresOk table) m₁)
     (hm : BMeans root m₁ m₂) {f₁ : FRun} {f₂ : RFiber} (hf : FMeans root f₁ f₂) (y : Bool)
@@ -336,11 +451,55 @@ theorem registerRace_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (h
   unfold registerRace
   rcases hm.race?_cases raceId with ⟨h₁, h₂⟩ | ⟨r₁, r₂, h₁, h₂, hr⟩
   · rw [h₁, h₂]
-    exact ⟨hok, hm, hf, rfl, rfl, ListRel.nil⟩
+    exact ⟨hok, hm, hf, rfl, rfl, ListRel.nil, rfl⟩
   · rw [h₁, h₂]
     exact ⟨machineOk_updateRace hok _,
       hm.updateRace ⟨hr.1, hr.2.1, hr.2.2.1, hr.2.2.2.1, hr.2.2.2.2.1, rfl, hr.2.2.2.2.2.2⟩,
-      hf, rfl, rfl, ListRel.cons rfl (ListRel.cons ⟨rfl, rfl⟩ ListRel.nil)⟩
+      hf, rfl, rfl, ListRel.cons rfl (ListRel.cons ⟨rfl, rfl⟩ ListRel.nil), rfl⟩
+
+/-- Scope-link planning relates the eager store change and equal addressed messages. -/
+theorem linkScopeEdits_rel (root : NativeEff) {i₁ : FInterp} {i₂ : RInterp}
+    (hi : InterpAgree (table := table) i₁ i₂) {m₁ : FMachine} {m₂ : RState}
+    (hok : MachineOk (StoresOk table) m₁) (hm : BMeans root m₁ m₂)
+    (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId) (interruptor : Option FiberId)
+    (extra : ReasonAnnotations Ann) :
+    let first := linkScopeEdits i₁ m₁ mode scope target interruptor extra
+    let last := linkScopeEdits i₂ m₂ mode scope target interruptor extra
+    MachineOk (StoresOk table) first.1 ∧ BMeans root first.1 last.1 ∧ first.2 = last.2 := by
+  unfold linkScopeEdits
+  rw [hi.scopeStatus, hm.state]
+  cases i₂.scopeStatus scope m₂.state with
+  | none => exact ⟨machineOk_halt hok _, hm.halt _, rfl⟩
+  | some status =>
+    cases status with
+    | some closingExit =>
+      rcases hm.fiber?_cases target with ⟨h₁, h₂⟩ | ⟨t₁, t₂, h₁, h₂, ht⟩
+      · rw [h₁, h₂]
+        exact ⟨machineOk_halt hok _, hm.halt _, rfl⟩
+      · rw [h₁, h₂]
+        refine ⟨machineOk_emit hok _, BMeans.emit hm _ _, ?_⟩
+        simp only [interruptCause, ht.id, hi.encodeFiber, hi.stackAnnotations]
+    | none =>
+      rcases hm.fiber?_cases target with ⟨h₁, h₂⟩ | ⟨t₁, t₂, h₁, h₂, ht⟩
+      · rw [h₁, h₂]
+        exact ⟨machineOk_halt hok _, hm.halt _, rfl⟩
+      · rw [h₁, h₂]
+        dsimp only
+        rw [ht.exit]
+        cases t₂.exit.isSome with
+        | true => exact ⟨hok, hm, rfl⟩
+        | false =>
+          simp only [Bool.false_eq_true, ↓reduceIte]
+          rw [hi.scopeLinkFiber]
+          cases hlink : i₂.scopeLinkFiber mode scope target m₂.state with
+          | none => exact ⟨machineOk_halt hok _, hm.halt _, rfl⟩
+          | some res =>
+            obtain ⟨state, key⟩ := res
+            have hs : StoresOk table state :=
+              hi.linkOk mode scope target m₂.state state key (hm.state ▸ hok.state)
+                (by rw [hi.scopeLinkFiber]; exact hlink)
+            exact ⟨machineOk_emit (machineOk_stateOf hok hs) _,
+              BMeans.emit (hm.stateOf state) _ _, rfl⟩
 
 theorem linkScope_rel (root : NativeEff) {i₁ : FInterp} {i₂ : RInterp} (hi : InterpAgree (table := table) i₁ i₂)
     {m₁ : FMachine} {m₂ : RState} (hok : MachineOk (StoresOk table) m₁) (hm : BMeans root m₁ m₂)
@@ -348,56 +507,11 @@ theorem linkScope_rel (root : NativeEff) {i₁ : FInterp} {i₂ : RInterp} (hi :
     (extra : ReasonAnnotations Ann) :
     CmdsRel (table := table) root (linkScope i₁ m₁ mode scope target interruptor extra)
       (linkScope i₂ m₂ mode scope target interruptor extra) := by
+  have plans := linkScopeEdits_rel root hi hok hm mode scope target interruptor extra
   unfold linkScope
-  rw [hi.scopeStatus, hm.state]
-  cases i₂.scopeStatus scope m₂.state with
-  | none => exact ⟨machineOk_halt hok _, hm.halt _, ListRel.nil⟩
-  | some status =>
-    cases status with
-    | some closingExit =>
-      rcases hm.fiber?_cases target with ⟨h₁, h₂⟩ | ⟨t₁, t₂, h₁, h₂, ht⟩
-      · rw [h₁, h₂]
-        exact ⟨machineOk_halt hok _, hm.halt _, ListRel.nil⟩
-      · rw [h₁, h₂]
-        dsimp only
-        have hrec := interruptRecord_rel root hi interruptor extra ht
-        have hpend := interruptRecord_pendingOk i₁ interruptor extra (pendingOk_of_fiber? hok h₁)
-        generalize interruptRecord i₁ interruptor extra t₁ = r₁ at hrec hpend ⊢
-        generalize interruptRecord i₂ interruptor extra t₂ = r₂ at hrec ⊢
-        obtain ⟨t₁', a₁⟩ := r₁
-        obtain ⟨t₂', a₂⟩ := r₂
-        obtain ⟨hrel, ha⟩ := hrec
-        dsimp only at hrel ha hpend
-        subst ha
-        refine ⟨machineOk_emit (machineOk_update hok hpend) _, BMeans.emit (hm.update hrel) _ _, ?_⟩
-        cases a₁
-        · exact ListRel.nil
-        · exact ListRel.cons rfl ListRel.nil
-    | none =>
-      rcases hm.fiber?_cases target with ⟨h₁, h₂⟩ | ⟨t₁, t₂, h₁, h₂, ht⟩
-      · rw [h₁, h₂]
-        exact ⟨machineOk_halt hok _, hm.halt _, ListRel.nil⟩
-      · rw [h₁, h₂]
-        dsimp only
-        rw [ht.exit]
-        cases t₂.exit.isSome with
-        | true => exact ⟨hok, hm, ListRel.nil⟩
-        | false =>
-          simp only [Bool.false_eq_true, ↓reduceIte]
-          rw [hi.scopeLinkFiber]
-          cases hlink : i₂.scopeLinkFiber mode scope target m₂.state with
-          | none => exact ⟨machineOk_halt hok _, hm.halt _, ListRel.nil⟩
-          | some res =>
-            obtain ⟨state, key⟩ := res
-            have hs : StoresOk table state :=
-              hi.linkOk mode scope target m₂.state state key (hm.state ▸ hok.state)
-                (by rw [hi.scopeLinkFiber]; exact hlink)
-            dsimp only [CmdsRel]
-            refine ⟨machineOk_emit (machineOk_modify (machineOk_stateOf hok hs) target ?_) _,
-              BMeans.emit ((hm.stateOf state).modify target (fun g₁ g₂ hg => ?_)) _ _, ListRel.nil⟩
-            · exact fun _ hg => pendingOk_of_fields hg rfl
-            · rw [← hg.observers]
-              exact hg.withObservers _
+  dsimp only
+  rw [← plans.2.2]
+  exact fiberEdits_rel root _ plans.1 plans.2.1
 
 /-! ## The fiber actions on related fibers -/
 
@@ -430,8 +544,8 @@ theorem iterRel_answer {root : NativeEff} {m₁ : FMachine} {m₂ : RState} (hok
     (hm : BMeans root m₁ m₂) {f₁ : FRun} {f₂ : RFiber} (hf : FMeans root f₁ f₂) {a₁ : FAnswer}
     {a₂ : RAnswer} (ha : AnswerRel root a₁ a₂) (v : Val) (y : Bool)
     (o : Outcome EffName EffThunk Val Err Defect FiberId Ann) :
-    IterRel table root ⟨m₁, a₁ f₁ v, y, o, []⟩ ⟨m₂, a₂ f₂ v, y, o, []⟩ :=
-  ⟨hok, hm, ha _ _ _ hf, rfl, rfl, ListRel.nil⟩
+    IterRel table root ⟨m₁, a₁ f₁ v, y, o, [], []⟩ ⟨m₂, a₂ f₂ v, y, o, [], []⟩ :=
+  ⟨hok, hm, ha _ _ _ hf, rfl, rfl, ListRel.nil, rfl⟩
 
 theorem storesOk_closeScope {root : NativeEff} {c : List (FiberId × ExitV)} {scope : Nat} {ex : ExitV}
     {flag : Bool} {id : FiberId} {s s' : Stores} {p : NCode} (hs : StoresOk table s)
@@ -476,7 +590,7 @@ theorem setContext_rel (context : Ctx) {a₁ : FAnswer} {a₂ : RAnswer} (ha : A
       (FiberAction.setContext (interpRAt root c table) m₂ f₂ y context a₂) := by
   unfold FiberAction.setContext
   exact ⟨machineOk_emit hok _, BMeans.emit hm _ _, ha _ _ _ (hf.withContext context _ _), rfl, rfl,
-    ListRel.nil⟩
+    ListRel.nil, rfl⟩
 
 theorem snapshotChildren_rel {a₁ : FAnswer} {a₂ : RAnswer} (ha : AnswerRel root a₁ a₂) :
     IterRel table root (FiberAction.snapshotChildren (interpAt root c table) m₁ f₁ y a₁)
@@ -489,29 +603,24 @@ theorem dropObservers_rel (token : Nat) {a₁ : FAnswer} {a₂ : RAnswer} (ha : 
     IterRel table root (FiberAction.dropObservers (interpAt root c table) m₁ f₁ y token a₁)
       (FiberAction.dropObservers (interpRAt root c table) m₂ f₂ y token a₂) := by
   unfold FiberAction.dropObservers
-  dsimp only
-  refine ⟨machineOk_mapFibers hok ?_, hm.mapFibers ?_, ha _ _ _ hf, rfl, rfl, ListRel.nil⟩
-  · exact fun _ hg => pendingOk_of_fields hg rfl
-  · intro g₁ g₂ hg
-    rw [← hg.observers]
-    exact hg.withObservers _
+  exact ⟨hok, hm, ha _ _ _ hf, rfl, rfl, ListRel.nil, rfl⟩
 
 theorem runIn_rel (target : FiberId) (scope : Nat) {a₁ : FAnswer} {a₂ : RAnswer}
     (ha : AnswerRel root a₁ a₂) :
     IterRel table root (FiberAction.runIn (interpAt root c table) m₁ f₁ y target scope a₁)
       (FiberAction.runIn (interpRAt root c table) m₂ f₂ y target scope a₂) := by
   unfold FiberAction.runIn
-  have hl := linkScope_rel root (interpAgree_at (table := table) root c c) hok hm Supervision.ScopeMode.fiberRunIn scope
+  have hl := linkScopeEdits_rel root (interpAgree_at (table := table) root c c) hok hm Supervision.ScopeMode.fiberRunIn scope
     target (some target) ReasonAnnotations.empty
-  generalize linkScope (interpAt root c table) m₁ Supervision.ScopeMode.fiberRunIn scope target (some target)
+  generalize linkScopeEdits (interpAt root c table) m₁ Supervision.ScopeMode.fiberRunIn scope target (some target)
     ReasonAnnotations.empty = r₁ at hl ⊢
-  generalize linkScope (interpRAt root c table) m₂ Supervision.ScopeMode.fiberRunIn scope target (some target)
+  generalize linkScopeEdits (interpRAt root c table) m₂ Supervision.ScopeMode.fiberRunIn scope target (some target)
     ReasonAnnotations.empty = r₂ at hl ⊢
   obtain ⟨n₁, cs₁⟩ := r₁
   obtain ⟨n₂, cs₂⟩ := r₂
   obtain ⟨hok', hm', hcs⟩ := hl
   dsimp only at hok' hm' hcs
-  exact ⟨hok', hm', ha _ _ _ hf, rfl, outcomeOf_eq hm' false, hcs⟩
+  exact ⟨hok', hm', ha _ _ _ hf, rfl, outcomeOf_eq hm' false, ListRel.nil, hcs⟩
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem fork_rel {p₁ : NCode} {p₂ : RProgram} (hp : CodeMeans root p₁ p₂)
@@ -538,7 +647,7 @@ theorem fork_rel {p₁ : NCode} {p₂ : RProgram} (hp : CodeMeans root p₁ p₂
     obtain ⟨tm₂, tf₂, tn₂⟩ := t₂
     obtain ⟨hok'', hm'', hf'', hn⟩ := hst
     dsimp only at hok'' hm'' hf'' hn
-    exact ⟨hok'', hm'', ha _ _ _ hf'', rfl, rfl, hn⟩
+    exact ⟨hok'', hm'', ha _ _ _ hf'', rfl, rfl, hn, rfl⟩
   | false =>
     simp only [Bool.false_eq_true, ↓reduceIte]
     have hs := spawn_rel root (i₁ := interpAt root c table) (i₂ := interpRAt root c table) rfl
@@ -559,7 +668,7 @@ theorem fork_rel {p₁ : NCode} {p₂ : RProgram} (hp : CodeMeans root p₁ p₂
     obtain ⟨hok'', hm'', hf'', hn⟩ := hst
     dsimp only at hok'' hm'' hf'' hn
     exact ⟨hok'', hm'', ha _ _ _ hf'', rfl, rfl,
-      ListRel.append hn (ListRel.cons ⟨hf.id, rfl⟩ ListRel.nil)⟩
+      ListRel.append hn (ListRel.cons ⟨hf.id, rfl⟩ ListRel.nil), rfl⟩
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem forkIn_rel {p₁ : NCode} {p₂ : RProgram} (hp : CodeMeans root p₁ p₂)
@@ -586,7 +695,7 @@ theorem forkIn_rel {p₁ : NCode} {p₂ : RProgram} (hp : CodeMeans root p₁ p�
   dsimp only at hok'' hm'' hf'' hn
   dsimp only
   refine ⟨hok'', hm'', ha _ _ _ hf'', rfl, rfl,
-    ListRel.append hn (ListRel.cons ⟨rfl, rfl, rfl, congrArg some hf''.id, ?_⟩ ListRel.nil)⟩
+    ListRel.append hn (ListRel.cons ⟨rfl, rfl, rfl, congrArg some hf''.id, ?_⟩ ListRel.nil), rfl⟩
   show stackAnnotationsOf tf₁.id = stackAnnotationsOf tf₂.id
   rw [hf''.id]
 
@@ -599,7 +708,7 @@ theorem ambientScope_rel {a₁ : FAnswer} {a₂ : RAnswer} (ha : AnswerRel root 
   | some scope => exact iterRel_answer hok hm hf ha _ y _
   | none =>
     exact ⟨hok, hm, hf.withFrame (means_answerWith hf.means (CodeMeans.failure _)), rfl, rfl,
-      ListRel.nil⟩
+      ListRel.nil, rfl⟩
 
 theorem closePar_rel {l₁ : List NCode} {l₂ : List RProgram} (hl : ListRel (CodeMeans root) l₁ l₂) :
     IterRel table root (FiberAction.closePar (interpAt root c table) m₁ f₁ y l₁)
@@ -614,11 +723,11 @@ theorem closePar_rel {l₁ : List NCode} {l₂ : List RProgram} (hl : ListRel (C
   dsimp only at hok' hm' hch
   subst hch
   exact ⟨hok', hm', hf, rfl, rfl,
-    ListRel.append (listRel_evaluate root ch₁) (ListRel.cons ⟨hf.id, rfl, rfl⟩ ListRel.nil)⟩
+    ListRel.append (listRel_evaluate root ch₁) (ListRel.cons ⟨hf.id, rfl, rfl⟩ ListRel.nil), rfl⟩
 
 theorem refuse_rel (cause : CauseV) :
     IterRel table root (FiberAction.refuse m₁ f₁ y cause) (FiberAction.refuse m₂ f₂ y cause) :=
-  ⟨hok, hm, hf.withFrame (means_answerWith hf.means (CodeMeans.failure cause)), rfl, rfl, ListRel.nil⟩
+  ⟨hok, hm, hf.withFrame (means_answerWith hf.means (CodeMeans.failure cause)), rfl, rfl, ListRel.nil, rfl⟩
 
 theorem closeScope_rel (scope : Nat) (ex : ExitV) :
     IterRel table root (FiberAction.closeScope (interpAt root c table) m₁ f₁ y scope ex)
@@ -635,7 +744,7 @@ theorem closeScope_rel (scope : Nat) (ex : ExitV) :
   cases r₁ with
   | none =>
     cases r₂ with
-    | none => exact ⟨hok, hm, hf, rfl, rfl, ListRel.nil⟩
+    | none => exact ⟨hok, hm, hf, rfl, rfl, ListRel.nil, rfl⟩
     | some _ => exact h.elim
   | some p₁ =>
     cases r₂ with
@@ -647,44 +756,27 @@ theorem closeScope_rel (scope : Nat) (ex : ExitV) :
       dsimp only at hs hc
       subst hs
       exact ⟨machineOk_stateOf hok (storesOk_closeScope hok.state hr₁), hm.stateOf _,
-        hf.withFrame (means_answerWith hf.means hc), rfl, rfl, ListRel.nil⟩
+        hf.withFrame (means_answerWith hf.means hc), rfl, rfl, ListRel.nil, rfl⟩
 
 theorem interrupt_rel (target : FiberId) :
     IterRel table root (FiberAction.interrupt (interpAt root c table) m₁ f₁ y target)
       (FiberAction.interrupt (interpRAt root c table) m₂ f₂ y target) := by
   unfold FiberAction.interrupt
   exact ⟨hok, hm, hf.withFrame (means_answerWith hf.means
-    (by rw [hf.id]; exact interruptAsCode_means (table := table) root target f₂.id)), rfl, rfl, ListRel.nil⟩
+    (by rw [hf.id]; exact interruptAsCode_means (table := table) root target f₂.id)), rfl, rfl, ListRel.nil, rfl⟩
 
 theorem interruptAs_rel (target who : FiberId) :
     IterRel table root (FiberAction.interruptAs (interpAt root c table) m₁ f₁ y target who)
       (FiberAction.interruptAs (interpRAt root c table) m₂ f₂ y target who) := by
   unfold FiberAction.interruptAs
-  rcases hm.fiber?_cases target with ⟨h₁, h₂⟩ | ⟨t₁, t₂, h₁, h₂, ht⟩
-  · rw [h₁, h₂]
-    exact ⟨hok, hm, hf, rfl, rfl, ListRel.nil⟩
-  · rw [h₁, h₂]
-    dsimp only
-    have hann : (interpRAt root c table).stackAnnotations = (interpAt root c table).stackAnnotations := rfl
-    rw [hann, hf.id]
-    have hrec := interruptRecord_rel root (interpAgree_at (table := table) root c c) (some who)
-      ((interpAt root c table).stackAnnotations f₂.id) ht
-    have hpend := interruptRecord_pendingOk (interpAt root c table) (some who)
-      ((interpAt root c table).stackAnnotations f₂.id) (pendingOk_of_fiber? hok h₁)
-    generalize interruptRecord (interpAt root c table) (some who) ((interpAt root c table).stackAnnotations f₂.id) t₁ = r₁
-      at hrec hpend ⊢
-    generalize interruptRecord (interpRAt root c table) (some who) ((interpAt root c table).stackAnnotations f₂.id) t₂ = r₂
-      at hrec ⊢
-    obtain ⟨t₁', a₁⟩ := r₁
-    obtain ⟨t₂', a₂⟩ := r₂
-    obtain ⟨hrel, ha⟩ := hrec
-    dsimp only at hrel ha hpend
-    subst ha
-    refine ⟨machineOk_emit (machineOk_update hok hpend) _, BMeans.emit (hm.update hrel) _ _, hf, rfl,
-      rfl, ListRel.append ?_ (ListRel.cons ⟨rfl, rfl, rfl⟩ ListRel.nil)⟩
-    cases a₁
-    · exact ListRel.nil
-    · exact ListRel.cons rfl ListRel.nil
+  rcases hm.fiber?_cases target with ⟨left, right⟩ | ⟨first, last, left, right, related⟩
+  · rw [left, right]
+    exact ⟨hok, hm, hf, rfl, rfl, ListRel.nil, rfl⟩
+  · rw [left, right]
+    refine ⟨machineOk_emit hok _, BMeans.emit hm _ _, hf, rfl, rfl,
+      ListRel.cons ⟨hf.id, rfl, rfl⟩ ListRel.nil, ?_⟩
+    simp only [interruptCause, hf.id, related.id,
+      (interpAgree_at (table := table) root c c).encodeFiber, (interpAgree_at (table := table) root c c).stackAnnotations]
 
 theorem interruptScoped_rel (target : FiberId) {a₁ : FAnswer} {a₂ : RAnswer} (ha : AnswerRel root a₁ a₂) :
     IterRel table root (FiberAction.interruptScoped (interpAt root c table) m₁ f₁ y target a₁)
@@ -697,7 +789,7 @@ theorem interruptScoped_rel (target : FiberId) {a₁ : FAnswer} {a₂ : RAnswer}
   · have h₂ : ¬ target = f₂.id := by rw [← hf.id]; exact h
     rw [if_neg h, if_neg h₂]
     exact ⟨hok, hm, hf.withFrame (means_answerWith hf.means (interruptCode_means (table := table) root target)), rfl,
-      rfl, ListRel.nil⟩
+      rfl, ListRel.nil, rfl⟩
 
 theorem interruptAll_rel (targets : List FiberId) (who : Option FiberId) :
     IterRel table root (FiberAction.interruptAll (interpAt root c table) m₁ f₁ y targets who)
@@ -708,22 +800,22 @@ theorem interruptAll_rel (targets : List FiberId) (who : Option FiberId) :
     ListRel.append
       (ListRel.map_rel (fun a b (h : a = b) => by subst h; exact ⟨rfl, rfl, rfl⟩)
         (ListRel.refl (fun _ => rfl) targets))
-      (ListRel.cons ⟨rfl, rfl, rfl⟩ ListRel.nil)⟩
+      (ListRel.cons ⟨rfl, rfl, rfl⟩ ListRel.nil), rfl⟩
 
 theorem awaitAll_rel (targets : List FiberId) (failFast : Bool) :
     IterRel table root (FiberAction.awaitAll (interpAt root c table) m₁ f₁ y targets failFast)
       (FiberAction.awaitAll (interpRAt root c table) m₂ f₂ y targets failFast) := by
   unfold FiberAction.awaitAll
-  have hp := countdownPark_rel (table := table) root c hok hm hf targets Resume.exitsValue
+  have hp := countdownParkEdits_rel (table := table) root c hok hm hf targets Resume.exitsValue
     (fun _ h => nomatch h) failFast
-  generalize countdownPark (interpAt root c table) m₁ f₁ targets Resume.exitsValue failFast = r₁ at hp ⊢
-  generalize countdownPark (interpRAt root c table) m₂ f₂ targets Resume.exitsValue failFast = r₂ at hp ⊢
-  obtain ⟨pm₁, pf₁, pk₁⟩ := r₁
-  obtain ⟨pm₂, pf₂, pk₂⟩ := r₂
+  generalize countdownParkEdits (interpAt root c table) m₁ f₁ targets Resume.exitsValue failFast = r₁ at hp ⊢
+  generalize countdownParkEdits (interpRAt root c table) m₂ f₂ targets Resume.exitsValue failFast = r₂ at hp ⊢
+  obtain ⟨pm₁, pf₁, pk₁, pe₁⟩ := r₁
+  obtain ⟨pm₂, pf₂, pk₂, pe₂⟩ := r₂
   obtain ⟨hok', hm', hf', hpk⟩ := hp
   dsimp only at hok' hm' hf' hpk
-  subst hpk
-  exact ⟨hok', hm', hf', rfl, outcomeOf_eq hm' pk₁, ListRel.nil⟩
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj hpk
+  exact ⟨hok', hm', hf', rfl, outcomeOf_eq hm' pk₁, ListRel.nil, rfl⟩
 
 theorem awaitNewChildren_rel (snapshot : List FiberId) :
     IterRel table root (FiberAction.awaitNewChildren (interpAt root c table) m₁ f₁ y snapshot)
@@ -731,18 +823,18 @@ theorem awaitNewChildren_rel (snapshot : List FiberId) :
   unfold FiberAction.awaitNewChildren
   dsimp only
   rw [hf.children]
-  have hp := countdownPark_rel (table := table) root c hok hm hf (f₂.children.filter fun c => !(snapshot.contains c))
+  have hp := countdownParkEdits_rel (table := table) root c hok hm hf (f₂.children.filter fun c => !(snapshot.contains c))
     Resume.void (fun _ h => nomatch h) false
-  generalize countdownPark (interpAt root c table) m₁ f₁ (f₂.children.filter fun c => !(snapshot.contains c))
+  generalize countdownParkEdits (interpAt root c table) m₁ f₁ (f₂.children.filter fun c => !(snapshot.contains c))
     Resume.void false = r₁ at hp ⊢
-  generalize countdownPark (interpRAt root c table) m₂ f₂ (f₂.children.filter fun c => !(snapshot.contains c))
+  generalize countdownParkEdits (interpRAt root c table) m₂ f₂ (f₂.children.filter fun c => !(snapshot.contains c))
     Resume.void false = r₂ at hp ⊢
-  obtain ⟨pm₁, pf₁, pk₁⟩ := r₁
-  obtain ⟨pm₂, pf₂, pk₂⟩ := r₂
+  obtain ⟨pm₁, pf₁, pk₁, pe₁⟩ := r₁
+  obtain ⟨pm₂, pf₂, pk₂, pe₂⟩ := r₂
   obtain ⟨hok', hm', hf', hpk⟩ := hp
   dsimp only at hok' hm' hf' hpk
-  subst hpk
-  exact ⟨hok', hm', hf', rfl, outcomeOf_eq hm' pk₁, ListRel.nil⟩
+  obtain ⟨rfl, rfl⟩ := Prod.mk.inj hpk
+  exact ⟨hok', hm', hf', rfl, outcomeOf_eq hm' pk₁, ListRel.nil, rfl⟩
 
 theorem cancelRace_rel (raceId : Nat) {a₁ : FAnswer} {a₂ : RAnswer} (ha : AnswerRel root a₁ a₂) :
     IterRel table root (FiberAction.cancelRace (interpAt root c table) m₁ f₁ y raceId a₁)
@@ -753,7 +845,7 @@ theorem cancelRace_rel (raceId : Nat) {a₁ : FAnswer} {a₂ : RAnswer} (ha : An
     exact iterRel_answer hok hm hf ha _ y _
   · rw [h₁, h₂]
     exact ⟨hok, hm, hf, rfl, rfl,
-      ListRel.cons ⟨rfl, hf.id, rfl, congrArg (fun s => s.live) (raceMeans_state hr), rfl⟩ ListRel.nil⟩
+      ListRel.cons ⟨rfl, hf.id, rfl, congrArg (fun s => s.live) (raceMeans_state hr), rfl⟩ ListRel.nil, rfl⟩
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem raceAll_rel {e₁ : List NCode} {e₂ : List RProgram} (he : ListRel (CodeMeans root) e₁ e₂) (site : Option (List Nat) := none) :
@@ -777,7 +869,7 @@ theorem yieldNow_rel (priority : Nat) :
     BMeans.emit (BMeans.armOf (hm.withNextToken _) hf.id) _ _,
     (FMeans.answerEnqueue hf (CodeMeans.success _) priority
       (taskMeans_resume' hf.id _ (CodeMeans.success _))).park _,
-    rfl, rfl, ListRel.nil⟩
+    rfl, rfl, ListRel.nil, rfl⟩
 
 theorem join_rel (target : FiberId) (mode : Supervision.ObserverMode) :
     IterRel table root (FiberAction.join (interpAt root c table) m₁ f₁ y target mode)
@@ -785,7 +877,7 @@ theorem join_rel (target : FiberId) (mode : Supervision.ObserverMode) :
   unfold FiberAction.join
   rcases hm.fiber?_cases target with ⟨h₁, h₂⟩ | ⟨t₁, t₂, h₁, h₂, ht⟩
   · rw [h₁, h₂]
-    exact ⟨hok, hm, hf, rfl, rfl, ListRel.nil⟩
+    exact ⟨hok, hm, hf, rfl, rfl, ListRel.nil, rfl⟩
   · rw [h₁, h₂]
     dsimp only
     have hex := ht.exit
@@ -794,19 +886,16 @@ theorem join_rel (target : FiberId) (mode : Supervision.ObserverMode) :
       rw [← hex]
       dsimp only
       rw [hm.nextToken]
-      refine ⟨machineOk_emit (machineOk_update (machineOk_withNextToken hok _) ?_) _,
-        BMeans.emit ((hm.withNextToken _).update ?_) _ _, (hf.withFrame ?_).park _, rfl, rfl,
-        ListRel.nil⟩
-      · exact pendingOk_of_fields (pendingOk_of_fiber? hok h₁) rfl
-      · exact FMeans.mk' ht.id ht.parked ht.context ht.running ht.pending ht.finalizing rfl ht.opCount
-          ht.maxOps ht.preventYield ht.yieldOverride (by rw [ht.observers, hf.id]) ht.children
-          ht.dispatcher ht.means
+      refine ⟨machineOk_emit (machineOk_withNextToken hok _) _,
+        BMeans.emit (hm.withNextToken _) _ _, (hf.withFrame ?_).park _, rfl, rfl,
+        ListRel.nil, ?_⟩
       · rw [hf.id]
         exact means_pushAsyncFinalizer hf.means _
+      · simp only [RunFiber.park, hf.id]
     · rw [hex₁] at hex
       rw [← hex]
       exact ⟨hok, hm, hf.withFrame (means_answerWith hf.means (exitValue_means (table := table) root ex mode)), rfl, rfl,
-        ListRel.nil⟩
+        ListRel.nil, rfl⟩
 
 end Actions
 

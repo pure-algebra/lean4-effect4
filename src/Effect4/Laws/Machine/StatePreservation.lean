@@ -1,4 +1,5 @@
 import Effect4.Laws.Machine.Lift
+import Effect4.Laws.Machine.EditWords
 import Effect4.Laws.Auto.RuleSets
 
 /-!
@@ -49,12 +50,14 @@ theorem interruptEach_state (interp : RunInterp ν σ β ε δ ι α χ St κ) (
     · exact ih _
     · exact ih _
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] core in
 /-- Scope linking uses exactly the interpreter's link hook. Consumer: native actions and commands. -/
-theorem link (interp : RunInterp ν σ β ε δ ι α χ St κ) (P : St → Prop) (hooks : Hooks interp P)
+theorem link_plan (interp : RunInterp ν σ β ε δ ι α χ St κ) (P : St → Prop) (hooks : Hooks interp P)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (mode : Supervision.ScopeMode)
     (scope : Nat) (target : FiberId) (who : Option FiberId) (extra : ReasonAnnotations α)
-    (held : P m.state) : P (linkScope interp m mode scope target who extra).1.state := by
-  unfold linkScope
+    (held : P m.state) : P (linkScopeEdits interp m mode scope target who extra).1.state := by
+  rw [Edits.link_plan_word]
+  simp only [Edits.linkWord]
   split
   · exact held
   · split
@@ -67,8 +70,19 @@ theorem link (interp : RunInterp ν σ β ε δ ι α χ St κ) (P : St → Prop
       · split
         · exact held
         · rename_i state key step
-          simp only [RunMachine.emit, modify_state]
           exact hooks.link mode scope target m.state state key held step
+
+/-- The eager scope-link view interprets a fiber-only word after its store hook. -/
+theorem link (interp : RunInterp ν σ β ε δ ι α χ St κ) (P : St → Prop) (hooks : Hooks interp P)
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (mode : Supervision.ScopeMode)
+    (scope : Nat) (target : FiberId) (who : Option FiberId) (extra : ReasonAnnotations α)
+    (held : P m.state) : P (linkScope interp m mode scope target who extra).1.state := by
+  unfold linkScope
+  have shape := RunMachine.applyFiberEdits_shape
+    (linkScopeEdits interp m mode scope target who extra).2
+    (linkScopeEdits interp m mode scope target who extra).1
+  rw [congrArg RunMachine.state shape.1]
+  exact link_plan interp P hooks m mode scope target who extra held
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- Forking the parallel cleanup list leaves the store untouched. Consumer: native close actions. -/
@@ -80,24 +94,50 @@ theorem forkFinalizers_state (interp : RunInterp ν σ β ε δ ι α χ St κ)
   | cons program rest ih => exact ih _
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
-/-- Countdown registration changes fiber bookkeeping alone. Consumer: native parks. -/
+/-- The canonical countdown plan changes no store. Consumer: actual native parks. -/
+theorem countdown_plan_state (interp : RunInterp ν σ β ε δ ι α χ St κ)
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (f : RunFiber ν σ β ε δ ι α χ κ φ)
+    (targets : List FiberId) (resume : Resume ν) (failFast : Bool) :
+    (countdownParkEdits interp m f targets resume failFast).1.state = m.state := by
+  rw [Edits.countdown_word]
+  simp only [Edits.countdownWord, Edits.run_append, Edits.run_cons, Edits.run_nil, Edit.apply]
+  split <;> rfl
+
+/-- Countdown registration interprets only a fiber word after the canonical plan. -/
 theorem countdown_state (interp : RunInterp ν σ β ε δ ι α χ St κ)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (f : RunFiber ν σ β ε δ ι α χ κ φ)
     (targets : List FiberId) (resume : Resume ν) (failFast : Bool) :
     (countdownPark interp m f targets resume failFast).1.state = m.state := by
   unfold countdownPark
-  dsimp only
-  split
-  · rfl
-  · exact modify_state _ _ _
+  have shape := RunMachine.applyFiberEdits_shape
+    (countdownParkEdits interp m f targets resume failFast).2.2.2
+    (countdownParkEdits interp m f targets resume failFast).1
+  rw [congrArg RunMachine.state shape.1]
+  exact countdown_plan_state interp m f targets resume failFast
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
-/-- Settlement writes back the fiber without changing the store. Consumer: loop and delivery. -/
+/-- The disposition changes no store. Consumer: exact R2 settlement. -/
+theorem settleOutcome_state (id : FiberId) (rest : List (Cmd ν σ β ε δ ι α κ))
+    (it : Iter ν σ β ε δ ι α χ St κ φ η) : (settleOutcome id rest it).1.state = it.machine.state := by
+  rw [Edits.outcome_word]
+  cases found : it.outcome with
+  | parked =>
+    simp only [Edits.outcomeWord, found]
+    split <;> rfl
+  | _ => simp only [Edits.outcomeWord, found]; rfl
+
+/-- Settlement installs the local result and interprets fiber-only edits before disposition. -/
 theorem settle_state (id : FiberId) (rest : List (Cmd ν σ β ε δ ι α κ))
     (it : Iter ν σ β ε δ ι α χ St κ φ η) : (settle id rest it).1.state = it.machine.state := by
   unfold settle
-  split <;> dsimp only
-  all_goals aesop (add norm unfold [RunMachine.update, RunMachine.halt])
+  split
+  · exact settleOutcome_state id rest it
+  · have shape := RunMachine.applyFiberEdits_shape it.edits (it.machine.update it.fiber)
+    have same := congrArg RunMachine.state shape.1
+    dsimp only
+    split
+    · exact same
+    · exact (settleOutcome_state id rest _).trans same
 
 section Primitive
 variable (interp : RunInterp ν σ β ε δ ι α χ St) (P : St → Prop) (hooks : Hooks interp P)
@@ -120,6 +160,7 @@ theorem finalizerOr (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν
       · exact stepFrame interp P _ _ _ held
     · exact stepFrame interp P _ _ _ held
 
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 include hooks in
 /-- All fiber actions preserve the store predicate through their declared hooks.
 Consumer: primitive evaluation, including source actions after native elaboration. -/
@@ -133,10 +174,10 @@ theorem withFiber (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν �
     · exact held
     · rename_i state code step
       exact hooks.close scope exit f.frame.interruptible f.id m.state state code held step
-  | runIn target scope => exact link interp P hooks m _ scope target _ _ held
-  | awaitAll targets => exact (countdown_state interp m f targets .exitsValue false) ▸ held
-  | awaitAllFailFast targets => exact (countdown_state interp m f targets .exitsValue true) ▸ held
-  | awaitNewChildren snapshot => exact (countdown_state interp m f _ .void false) ▸ held
+  | runIn target scope => exact link_plan interp P hooks m _ scope target _ _ held
+  | awaitAll targets => exact (countdown_plan_state interp m f targets .exitsValue false) ▸ held
+  | awaitAllFailFast targets => exact (countdown_plan_state interp m f targets .exitsValue true) ▸ held
+  | awaitNewChildren snapshot => exact (countdown_plan_state interp m f _ .void false) ▸ held
   | closePar programs => exact (forkFinalizers_state interp m f programs) ▸ held
   | fork program options site =>
     simp only [evaluatePrim.withFiber, spawn, start]
@@ -176,7 +217,7 @@ theorem primitive (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν �
     · exact held
     · unfold registerRace
       split <;> exact held
-    · exact (countdown_state interp m f _ .exitsValue false) ▸ held
+    · exact (countdown_plan_state interp m f _ .exitsValue false) ▸ held
     · split
       · exact held
       · split <;> exact held
@@ -213,15 +254,9 @@ theorem observer (id : FiberId) (exit : Exit β ε δ ι α)
       exact hooks.drop scope key acc.1.state state held step
   | countdown waiter token =>
     simp only [fireObserver]
-    split
-    · exact held
-    · split
-      · exact held
-      · split
-        all_goals
-          split
-          · simpa only [RunMachine.update, modify_state, interruptEach_state, RunMachine.emit] using held
-          · simpa only [RunMachine.update, modify_state, interruptEach_state, RunMachine.emit] using held
+    repeat' split
+    all_goals simpa only [RunMachine.applyFiberEdit_state, RunMachine.update,
+      interruptEach_state, RunMachine.emit] using held
   | raceCallback =>
     simp only [fireObserver]
     split

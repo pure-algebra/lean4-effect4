@@ -30,15 +30,21 @@ theorem start_pending (m : FMachine) (p : FRun) (child : FiberId) (imm : Bool) :
   unfold start
   split <;> rfl
 
-theorem countdownPark_pendingOk (i : FInterp) (m : FMachine) (f : FRun) (targets : List FiberId)
+theorem countdownParkEdits_pendingOk (i : FInterp) (m : FMachine) (f : FRun) (targets : List FiberId)
     (resume : Resume EffName) (failFast : Bool) (hf : PendingOk f)
     (hres : ∀ name, resume ≠ Resume.continueWith name) :
-    PendingOk (countdownPark i m f targets resume failFast).2.1 := by
-  unfold countdownPark
+    PendingOk (countdownParkEdits i m f targets resume failFast).2.1 := by
+  unfold countdownParkEdits
   dsimp only
   split
   · exact pendingOk_of_fields hf rfl
   · exact pendingOk_park (pendingOk_of_fields hf rfl) _ hres
+
+theorem countdownPark_pendingOk (i : FInterp) (m : FMachine) (f : FRun) (targets : List FiberId)
+    (resume : Resume EffName) (failFast : Bool) (hf : PendingOk f)
+    (hres : ∀ name, resume ≠ Resume.continueWith name) :
+    PendingOk (countdownPark i m f targets resume failFast).2.1 :=
+  countdownParkEdits_pendingOk i m f targets resume failFast hf hres
 
 theorem registerRace_pendingOk (m : FMachine) (f : FRun) (y : Bool) (raceId : Nat) (hf : PendingOk f) :
     PendingOk (registerRace m f y raceId).fiber := by
@@ -119,23 +125,13 @@ theorem runIn_pendingOk (target : FiberId) (scope : Nat) {a : FAnswer}
   aesop
 
 theorem awaitAll_pendingOk (targets : List FiberId) (failFast : Bool) :
-    PendingOk (FiberAction.awaitAll i m f y targets failFast).fiber := by
-  unfold FiberAction.awaitAll
-  have hp := countdownPark_pendingOk i m f targets Resume.exitsValue failFast hf (fun _ h => nomatch h)
-  generalize countdownPark i m f targets Resume.exitsValue failFast = r at hp
-  obtain ⟨rm, rf, rk⟩ := r
-  exact hp
+    PendingOk (FiberAction.awaitAll i m f y targets failFast).fiber :=
+  countdownParkEdits_pendingOk i m f targets Resume.exitsValue failFast hf (fun _ h => nomatch h)
 
 theorem awaitNewChildren_pendingOk (snapshot : List FiberId) :
-    PendingOk (FiberAction.awaitNewChildren i m f y snapshot).fiber := by
-  unfold FiberAction.awaitNewChildren
-  dsimp only
-  have hp := countdownPark_pendingOk i m f (f.children.filter fun c => !(snapshot.contains c))
+    PendingOk (FiberAction.awaitNewChildren i m f y snapshot).fiber :=
+  countdownParkEdits_pendingOk i m f (f.children.filter fun c => !(snapshot.contains c))
     Resume.void false hf (fun _ h => nomatch h)
-  generalize countdownPark i m f (f.children.filter fun c => !(snapshot.contains c)) Resume.void false = r
-    at hp
-  obtain ⟨rm, rf, rk⟩ := r
-  exact hp
 
 theorem closePar_pendingOk (finalizers : List NCode) :
     PendingOk (FiberAction.closePar i m f y finalizers).fiber := by

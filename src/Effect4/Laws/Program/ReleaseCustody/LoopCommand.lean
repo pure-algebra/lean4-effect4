@@ -23,16 +23,31 @@ open Effect4.Program.ReleaseCustody.CommandStacks
 Consumer: loop tail transport below. -/
 theorem settle_away (id : FiberId) (rest : List NCmd) (it : RuntimeShape.Iteration)
     (key : it.fiber.id = id) : StackLinksAway id it.machine (settle id rest it).1 := by
-  have installed := update_away it.machine it.fiber
-  have stopped := update_away it.machine {it.fiber with running := false}
-  have cleared := update_away it.machine {it.fiber with parked := .notParked, pending := []}
-  rw [key] at installed stopped cleared
-  cases outcome : it.outcome <;> simp only [settle, outcome]
-  case continue_ | answered | commands | finished => exact installed
-  case stuck => exact stopped
-  case parked => split
-                 · exact cleared
-                 · exact stopped
+  have outcome (next : RuntimeShape.Iteration) (same : next.fiber.id = id) :
+      StackLinksAway id next.machine (settleOutcome id rest next).1 := by
+    have installed := update_away next.machine (Settle.settledFiber next)
+    rw [Settle.settledFiber_id, same] at installed
+    rw [Settle.settleOutcome_machine]
+    cases next.outcome with
+    | stuck why => exact installed
+    | _ => exact installed
+  cases messages : it.edits with
+  | nil => simpa only [settle, messages] using outcome it key
+  | cons message tail =>
+    have installed := update_away it.machine it.fiber
+    rw [key] at installed
+    have changed := (NativeStacks.lookup_links
+      (Moves.InterferesWithLookup.fiberEdits (message :: tail) (it.machine.update it.fiber)).lookup).away id
+    have prior := installed.trans changed
+    simp only [settle, messages]
+    split
+    · exact prior
+    · rename_i owner found
+      exact prior.trans (outcome {it with
+        machine := (applyFiberEdits (message :: tail) (it.machine.update it.fiber)).1
+        fiber := owner
+        nested := (applyFiberEdits (message :: tail) (it.machine.update it.fiber)).2 ++ it.nested
+        edits := []} ((fiber_id_of_lookup found).trans key))
 
 /-- The actual loop installs one returned owner and protects every waiting command.
 Consumer: full command induction for the original Workers release history. -/

@@ -26,6 +26,19 @@ theorem Keeps.comp {S : Sort w₁} {P : Sort w₂} {proj : S → P} {s t : S →
 
 theorem Keeps.id {S : Sort w₁} {P : Sort w₂} (proj : S → P) : Keeps proj (fun s => s) := fun _ => rfl
 
+/-- A left-to-right word keeps a projection when each step keeps it.
+The machine edit word consumes this frame rule. -/
+theorem Keeps.foldl {S : Type w₁} {P : Sort w₂} {A : Type u}
+    (proj : S → P) (step : A → S → S) (word : List A)
+    (kept : ∀ entry ∈ word, Keeps proj (step entry)) :
+    Keeps proj (fun s => word.foldl (fun held entry => step entry held) s) := by
+  intro s
+  induction word generalizing s with
+  | nil => rfl
+  | cons entry rest ih =>
+    exact (ih (fun next member => kept next (List.mem_cons_of_mem entry member)) _).trans
+      (kept entry List.mem_cons_self s)
+
 namespace RunMachine
 variable {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
   {κ φ η : Type (max u v)}
@@ -146,6 +159,81 @@ theorem emit_keeps_stuck : Keeps (fun m : RunMachine ν σ β ε δ ι α χ St 
 -- A lookup through `emit` is `RunMachine.fiber?_emit` (`Laws/Machine/Clauses.lean`).
 
 end emit
+
+section fiberEdits
+variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+  [FiberCore ν β ε δ ι α κ φ]
+
+/-- Message interpretation changes only the fiber table and requests only evaluation commands.
+Concept: reactive-scheduling, R11, serving command-moves and source-location preservation.
+Consumers: guard reservation and native source ownership after settlement.
+This states no validity or cause provenance of the edited records. -/
+theorem applyFiberEdit_shape (edit : FiberEdit ε δ ι α)
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) :
+    (applyFiberEdit edit m).1 = {m with fibers := (applyFiberEdit edit m).1.fibers} ∧
+    ∀ command ∈ (applyFiberEdit edit m).2, ∃ target, command = Cmd.evaluate target := by
+  cases edit with
+  | observe target observer =>
+    simp only [applyFiberEdit, modify]
+    split
+    all_goals exact ⟨rfl, by intro command member; cases member⟩
+  | dropToken token => exact ⟨rfl, by intro command member; cases member⟩
+  | interrupt target cause =>
+    simp only [applyFiberEdit]
+    split
+    · exact ⟨rfl, by intro command member; cases member⟩
+    · refine ⟨rfl, ?_⟩
+      split
+      · intro command member
+        exact ⟨target, List.mem_singleton.mp member⟩
+      · intro command member
+        cases member
+
+/-- The whole word has the same footprint, with command order retained by the actual fold. -/
+theorem applyFiberEdits_shape (edits : List (FiberEdit ε δ ι α))
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) :
+    (applyFiberEdits edits m).1 = {m with fibers := (applyFiberEdits edits m).1.fibers} ∧
+    ∀ command ∈ (applyFiberEdits edits m).2, ∃ target, command = Cmd.evaluate target := by
+  unfold applyFiberEdits
+  suffices ∀ acc : RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ),
+      (∀ command ∈ acc.2, ∃ target, command = Cmd.evaluate target) →
+      let next := edits.foldl (fun held edit =>
+        let changed := applyFiberEdit edit held.1
+        (changed.1, held.2 ++ changed.2)) acc
+      next.1 = {acc.1 with fibers := next.1.fibers} ∧
+        ∀ command ∈ next.2, ∃ target, command = Cmd.evaluate target from
+    this (m, []) (by intro command member; cases member)
+  intro acc commands
+  induction edits generalizing acc with
+  | nil => exact ⟨rfl, commands⟩
+  | cons edit rest ih =>
+    have shape := applyFiberEdit_shape edit acc.1
+    have appended : ∀ command ∈ acc.2 ++ (applyFiberEdit edit acc.1).2,
+        ∃ target, command = Cmd.evaluate target := by
+      intro command member
+      rcases List.mem_append.mp member with old | new
+      · exact commands command old
+      · exact shape.2 command new
+    have next := ih ((applyFiberEdit edit acc.1).1,
+      acc.2 ++ (applyFiberEdit edit acc.1).2) appended
+    have replace (fibers : List (RunFiber ν σ β ε δ ι α χ κ φ)) :
+        {(applyFiberEdit edit acc.1).1 with fibers} = {acc.1 with fibers} :=
+      congrArg (fun held : RunMachine ν σ β ε δ ι α χ St κ φ η => {held with fibers}) shape.1
+    exact ⟨next.1.trans (replace _), next.2⟩
+
+theorem applyFiberEdit_state (edit : FiberEdit ε δ ι α)
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) : (applyFiberEdit edit m).1.state = m.state := by
+  have same := congrArg (fun held : RunMachine ν σ β ε δ ι α χ St κ φ η => held.state)
+    (applyFiberEdit_shape edit m).1
+  exact same
+
+theorem applyFiberEdits_state (edits : List (FiberEdit ε δ ι α))
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) : (applyFiberEdits edits m).1.state = m.state := by
+  have same := congrArg (fun held : RunMachine ν σ β ε δ ι α χ St κ φ η => held.state)
+    (applyFiberEdits_shape edits m).1
+  exact same
+
+end fiberEdits
 
 end RunMachine
 end Effect4.Machine

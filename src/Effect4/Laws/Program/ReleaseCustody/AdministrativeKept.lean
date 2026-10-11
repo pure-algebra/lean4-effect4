@@ -84,69 +84,55 @@ theorem drain_owed (m : NativeMachine) (due : List (Owed NCode)) (held : Configu
     | scheduled owner priority =>
       simpa only [drainOwed, mode] using ih _ (post_task m owner priority (.resume owed.waiter owed.token owed.code) held)
 
-/-- A stale waiter record retains its original frame after the observer's nested interrupts.
-Consumer: fire_observer below. -/
-theorem countdown_observer (root : NativeEff) (table : RowTable) (m : NativeMachine)
-    (id : FiberId) (exit : ExitV) (commands : List NCmd) (waiter : FiberId) (token : Nat)
-    (held : ConfigurationKept m) :
-    ConfigurationKept (fireObserver (interpOf root table) id exit (m, commands) (.countdown waiter token)).1 := by
-  let base := m.emit [RunEvent.observerFired id (.countdown waiter token)]
-  have emitted : ConfigurationKept base := held
-  simp only [fireObserver, show m.emit _ = base from rfl]
-  cases found : base.fiber? waiter with
-  | none => exact emitted
-  | some fiber =>
-    have original := emitted fiber (List.mem_of_find?_eq_some found)
-    simp only []
-    cases pending : fiber.pending.find? (fun p => p.token = token) with
-    | none => exact emitted
-    | some park =>
-      simp only []
-      let collected := park.collected ++ [exit]
-      let firstFailure := park.failFast && !exit.isSuccess && park.collected.all Exit.isSuccess
-      generalize result : (if firstFailure then
-          interruptEach (interpOf root table) waiter ((interpOf root table).stackAnnotations waiter)
-            park.remaining (base, []) else (base, [])) = out
-      have middle : ConfigurationKept out.1 := by
-        rw [← result]
-        split
-        · exact interrupt_each root table waiter _ park.remaining base [] emitted
-        · exact emitted
-      obtain ⟨outMachine, nested⟩ := out
-      dsimp only at middle ⊢
-      cases walked : countdownWalk outMachine park.remaining collected with
-      | mk exits next =>
-        cases next with
-        | none =>
-          exact CommandSequencing.configuration_update outMachine _ middle
-            (CommandSequencing.fiber_fields fiber _ original rfl rfl rfl)
-        | some pair =>
-          obtain ⟨next, rest⟩ := pair
-          exact CommandSequencing.configuration_update _ _
-            (modify outMachine next (fun f => {f with observers := f.observers ++ [.countdown waiter token]})
-              middle (fun _ => rfl) (fun _ => rfl) (fun _ => rfl))
-            (CommandSequencing.fiber_fields fiber _ original rfl rfl rfl)
-
-/-- Every actual observer retains stored frames, including the saved waiter after nested interruption.
+/-- The shared observer path retains frames and parked-stack conditions at each actual update.
 Consumer: observe and finish command closure. -/
 theorem fire_observer (root : NativeEff) (table : RowTable) (m : NativeMachine)
     (id : FiberId) (exit : ExitV) (commands : List NCmd) (observer : Observer)
     (held : ConfigurationKept m) :
     ConfigurationKept (fireObserver (interpOf root table) id exit (m, commands) observer).1 := by
-  cases observer with
-  | countdown waiter token => exact countdown_observer root table m id exit commands waiter token held
-  | resumeAwait => exact same_fibers held rfl
-  | callback => exact same_fibers held rfl
-  | untrackChild parent =>
-    exact modify _ parent _ held (fun _ => rfl) (fun _ => rfl) (fun _ => rfl)
-  | dropScopeFinalizer scope key =>
-    simp only [fireObserver]
-    split <;> exact same_fibers held rfl
-  | raceCallback race =>
-    simp only [fireObserver]
-    split
-    · exact same_fibers held rfl
-    · split <;> exact same_fibers held rfl
+  let Edge (before after : NativeMachine)
+      (edit : Machine.Edit EffName EffThunk Val Err Defect FiberId Ann Ctx Stores NCode
+        (FrameFiber EffName EffThunk Val Err Defect FiberId Ann)
+        (FrameEvent EffName EffThunk Val Err Defect FiberId Ann)) : Prop :=
+    after = edit.apply before ∧ (ConfigurationKept before → ConfigurationKept after)
+  have interrupted (who : FiberId) (extra : ReasonAnnotations Ann) (target : FiberId)
+      (acc : NativeMachine × List NCmd) :
+      Effect4.Contracts.Path Edge acc.1 (interruptEach (interpOf root table) who extra [target] acc).1
+        (Edits.interruptWord (interpOf root table) who extra target acc.1) :=
+    Edits.interrupt_path (interpOf root table) who extra
+      (fun before target old found => ⟨rfl, fun state => interrupt root table before old
+        (by simpa only [fiber_id_of_lookup found] using found) (some who) extra state⟩)
+      (fun _ _ => ⟨rfl, fun state => state⟩) target acc
+  have produced := Edits.observer_producer_path (Edge := Edge) (interpOf root table)
+    (fun _ => 0) (fun _ => True) id exit (m, commands) observer
+    (fun before target old next found _ frame _ park => ⟨rfl, fun state =>
+      CommandSequencing.configuration_update before next state
+        (CommandSequencing.fiber_fields old next (state old (List.mem_of_find?_eq_some found))
+          (congrArg FrameFiber.current frame) (congrArg FrameFiber.stack frame) park)⟩)
+    (fun before target observer => ⟨rfl, fun state =>
+      modify before target _ state (fun _ => rfl) (fun _ => rfl) (fun _ => rfl)⟩)
+    (fun _ _ _ => ⟨rfl, fun state => state⟩)
+    (fun _ _ _ => ⟨rfl, fun state => state⟩)
+    (fun _ _ _ => ⟨rfl, fun state => state⟩)
+    (fun _ _ _ _ _ _ => ⟨rfl, fun state => state⟩)
+    (fun _ _ _ _ _ => ⟨rfl, fun state => state⟩)
+    (fun _ _ _ _ => ⟨rfl, fun state => state⟩)
+    (fun who extra targets acc => Edits.interrupts_path (interpOf root table) who extra
+      (interrupted who extra) targets acc)
+    (fun _ => ⟨rfl, True.intro⟩) (fun _ _ _ _ => ⟨rfl, True.intro⟩)
+    (fun _ _ _ _ _ _ => ⟨rfl, True.intro⟩) (fun _ _ _ _ _ _ _ _ => ⟨rfl, True.intro⟩)
+  have kept := Edits.run_preserves_at (fun _ _ _ edge => edge.1) ConfigurationKept
+    (fun _ _ _ edge => edge.2) produced.1 held
+  rw [Edits.observer_word]
+  exact kept
+
+/-- Countdown is an instance of the shared observer path.
+Consumer: the existing administrative command surface. -/
+theorem countdown_observer (root : NativeEff) (table : RowTable) (m : NativeMachine)
+    (id : FiberId) (exit : ExitV) (commands : List NCmd) (waiter : FiberId) (token : Nat)
+    (held : ConfigurationKept m) :
+    ConfigurationKept (fireObserver (interpOf root table) id exit (m, commands) (.countdown waiter token)).1 :=
+  fire_observer root table m id exit commands (.countdown waiter token) held
 
 /-- A clean stack accepts every administrative current code and parked status.
 Consumer: finish, afterInterrupt and closeParAwait. -/

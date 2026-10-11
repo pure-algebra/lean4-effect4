@@ -1,6 +1,6 @@
 import Effect4.Laws.Machine.FrameWeights
 import Effect4.Laws.Machine.FinalizerRun
-import Effect4.Laws.Machine.FiberSum
+import Effect4.Laws.Machine.FiberSumMessages
 
 /-!
 Concept: scope-lifetime-finalization, R11.
@@ -103,37 +103,43 @@ def outside (model : FrameWeights.Model ν σ β ε δ ι α) (owner : FiberId)
   (machine.fibers.map (ControlWeights.omitted (fun fiber => fiber.id)
     (fun fiber => FrameWeights.frame model fiber.frame) owner)).sum
 
+/-- Hook replacement already requires every pending failure to have zero current weight.
+Consumer: the shared message debit at writer settlement. -/
+theorem failure_current (model : FrameWeights.Model ν σ β ε δ ι α) (cause : Cause ε δ ι α) :
+    model.current (.failure cause) = 0 :=
+  model.ensure_replacement (.setInterruptible true)
+    ⟨.failure cause, [], false, some cause, false⟩ (.failure cause) rfl
+
+/-- A fresh interruption keeps the saved reservations and can only discard current weight. -/
+theorem interrupt_weight_le (model : FrameWeights.Model ν σ β ε δ ι α)
+    (cause : Cause ε δ ι α) (fiber : RunFiber ν σ β ε δ ι α χ) :
+    FrameWeights.frame model (interruptWithCause cause fiber).1.frame ≤
+      FrameWeights.frame model fiber.frame := by
+  unfold interruptWithCause
+  dsimp only
+  (repeat' split)
+  all_goals simp only [FrameWeights.frame, failure_current, Nat.zero_add]
+  all_goals omega
+
 /-- Every actual settlement outcome installs the acting owner at most once.
 Consumer: source opportunity and Atomic writer command debit. -/
 theorem settle_bound (model : FrameWeights.Model ν σ β ε δ ι α) (owner : FiberId)
     (next : Iter ν σ β ε δ ι α χ St) (rest : List (Cmd ν σ β ε δ ι α))
     (same : next.fiber.id = owner) (unique : (next.machine.fibers.map (fun fiber => fiber.id)).Nodup) :
     fibers model (settle owner rest next).1 ≤ outside model owner next.machine + FrameWeights.frame model next.fiber.frame := by
-  have changed (fiber : RunFiber ν σ β ε δ ι α χ) (key : fiber.id = owner)
-      (weight : FrameWeights.frame model fiber.frame = FrameWeights.frame model next.fiber.frame) :
-      fibers model (next.machine.update fiber) ≤ outside model owner next.machine + FrameWeights.frame model next.fiber.frame := by
-    have bounded := FiberSum.install_le (fun fiber => FrameWeights.frame model fiber.frame)
-      next.machine owner fiber key unique
-    rw [weight] at bounded
-    exact bounded
-  have original := changed next.fiber same rfl
-  cases outcome : next.outcome <;> simp only [settle, outcome]
-  case continue_ | answered | commands | finished => exact original
-  case parked =>
-    split
-    · exact changed {next.fiber with parked := .notParked, pending := []} same rfl
-    · exact changed {next.fiber with running := false} same rfl
-  case stuck => exact changed {next.fiber with running := false} same rfl
+  have bounded := FiberSum.settle_le (fun fiber => FrameWeights.frame model fiber.frame)
+    (fun _ _ => rfl) (interrupt_weight_le model) (fun _ => rfl) (fun _ => rfl)
+    owner rest next unique
+  exact Nat.le_trans bounded (FiberSum.install_le (fun fiber => FrameWeights.frame model fiber.frame)
+    next.machine owner next.fiber same unique)
 
-omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- Settlement retains the evaluator's store and trace in every outcome.
 Consumer: source opportunity and Atomic writer command debit. -/
 theorem settle_fields (owner : FiberId) (next : Iter ν σ β ε δ ι α χ St)
     (rest : List (Cmd ν σ β ε δ ι α)) :
     (settle owner rest next).1.state = next.machine.state ∧ (settle owner rest next).1.trace = next.machine.trace := by
-  cases outcome : next.outcome <;> simp only [settle, outcome]
-  case parked => split <;> exact ⟨rfl, rfl⟩
-  all_goals exact ⟨rfl, rfl⟩
+  have fields := FiberSum.settle_fields owner rest next
+  exact ⟨congrArg Prod.fst fields, congrArg (fun fields => fields.2.2) fields⟩
 
 /-- A local action bound counts the returned acting frame once. -/
 def LocalBound (model : FrameWeights.Model ν σ β ε δ ι α)

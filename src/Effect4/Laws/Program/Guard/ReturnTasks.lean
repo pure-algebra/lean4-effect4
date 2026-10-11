@@ -107,12 +107,24 @@ theorem finalizerOr_returned (interp : NInterp) (m : NativeMachine) (f : NFiber)
       · exact stepFrame_returned _ _ _ _
     · exact stepFrame_returned _ _ _ _
 
-theorem countdown_returned (interp : NInterp) (m : NativeMachine) (f : NFiber)
+theorem countdownEdits_returned (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (targets : List FiberId) (resumeWith : Resume EffName) (failFast : Bool) :
-    Returned m f (countdownPark interp m f targets resumeWith failFast).2.1 := by
-  unfold countdownPark
+    Returned m f (countdownParkEdits interp m f targets resumeWith failFast).2.1 := by
+  unfold countdownParkEdits
   dsimp only
   split <;> exact returned_same _ _ _ rfl rfl
+
+theorem countdown_returned (interp : NInterp) (m : NativeMachine) (f : NFiber)
+    (targets : List FiberId) (resumeWith : Resume EffName) (failFast : Bool) :
+    Returned m f (countdownPark interp m f targets resumeWith failFast).2.1 :=
+  countdownEdits_returned interp m f targets resumeWith failFast
+
+theorem countdownEdits_result_returned (interp : NInterp) (m : NativeMachine) (f : NFiber)
+    (targets : List FiberId) (resumeWith : Resume EffName) (failFast : Bool)
+    (after : NativeMachine) (next : NFiber) (parked : Bool) (edits : List (FiberEdit Err Defect FiberId Ann))
+    (h : countdownParkEdits interp m f targets resumeWith failFast = (after, next, parked, edits)) :
+    Returned m f next := by
+  simpa only [h] using countdownEdits_returned interp m f targets resumeWith failFast
 
 theorem withFiber_returned (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (yielding : Bool) (action : NAction) :
@@ -123,7 +135,7 @@ theorem withFiber_returned (interp : NInterp) (m : NativeMachine) (f : NFiber)
   all_goals repeat' split
   all_goals
     aesop (rule_sets := [Effect4.Stores])
-      (add safe apply [countdown_returned])
+      (add safe apply [countdownEdits_returned])
       (add safe 50 (by exact returned_same _ _ _ rfl rfl))
       (add safe 50 (by exact returned_start _ _ _ _ rfl rfl))
 
@@ -134,7 +146,8 @@ theorem evaluatePrim_returned (interp : NInterp) (m : NativeMachine) (f : NFiber
   all_goals
     aesop (rule_sets := [Effect4.Stores])
       (add safe apply [stepFrame_returned, finalizerOr_returned, withFiber_returned,
-        countdown_returned])
+        countdownEdits_returned])
+      (add safe forward [countdownEdits_result_returned])
       (add safe 50 (by exact returned_same _ _ _ rfl rfl))
       (add safe 50 (by exact returned_yield _ _ _ _ _ rfl rfl rfl rfl))
 

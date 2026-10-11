@@ -178,14 +178,14 @@ theorem countdownPark_unparked (interp : NInterp) (m : NativeMachine) (f : NFibe
   cases hw : countdownWalk { m with nextToken := m.nextToken + 1 } targets [] with
   | mk exits wait =>
     cases wait with
-    | none => simpa only [countdownPark, hw] using park
-    | some wait => simp only [countdownPark, hw] at hp; cases hp
+    | none => simpa only [countdownPark, countdownParkEdits, hw, applyFiberEdits, List.foldl, applyFiberEdit] using park
+    | some wait => simp only [countdownPark, countdownParkEdits, hw, applyFiberEdits, List.foldl, applyFiberEdit] at hp; cases hp
 
 theorem countdown_ready (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (yielding : Bool) (targets : List FiberId) (resume : Resume EffName) (failFast : Bool)
     (park : f.parked = .notParked) :
     let r := countdownPark interp m f targets resume failFast
-    ReadyOutcome ⟨r.1, r.2.1, yielding, if r.2.2 then .parked else .continue_, []⟩ := by
+    ReadyOutcome ⟨r.1, r.2.1, yielding, if r.2.2 then .parked else .continue_, [], []⟩ := by
   cases hp : (countdownPark interp m f targets resume failFast).2.2 with
   | false =>
     simpa only [ReadyOutcome, hp, Bool.false_eq_true, if_false] using
@@ -196,7 +196,7 @@ theorem countdown_readyOf (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (yielding : Bool) (targets : List FiberId) (resume : Resume EffName) (failFast : Bool)
     (park : f.parked = .notParked) :
     let r := countdownPark interp m f targets resume failFast
-    ReadyOutcome ⟨r.1, r.2.1, yielding, FiberAction.outcomeOf r.1 r.2.2, []⟩ := by
+    ReadyOutcome ⟨r.1, r.2.1, yielding, FiberAction.outcomeOf r.1 r.2.2, [], []⟩ := by
   cases hs : (countdownPark interp m f targets resume failFast).1.stuck with
   | none => simpa only [FiberAction.outcomeOf, hs] using
       countdown_ready interp m f yielding targets resume failFast park
@@ -269,15 +269,15 @@ theorem countdown_freshPark (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (outcome : Effect4.Machine.Outcome EffName EffThunk Val Err Defect FiberId Ann)
     (nested : List NCmd) (park : f.parked = .notParked) :
     let r := countdownPark interp m f targets resume failFast
-    FreshPark m ⟨r.1, r.2.1, yielding, outcome, nested⟩ := by
+    FreshPark m ⟨r.1, r.2.1, yielding, outcome, nested, []⟩ := by
   cases hw : countdownWalk { m with nextToken := m.nextToken + 1 } targets [] with
   | mk exits wait =>
     cases wait with
     | none =>
-      simp only [countdownPark, hw]
+      simp only [countdownPark, countdownParkEdits, hw, applyFiberEdits, List.foldl, applyFiberEdit]
       exact freshPark_unparked _ _ park
     | some wait =>
-      simp only [countdownPark, hw]
+      simp only [countdownPark, countdownParkEdits, hw, applyFiberEdits, List.foldl, applyFiberEdit]
       apply freshPark_minted rfl
       simp only [RunMachine.emit, RunMachine.modify]
       split <;> exact Nat.lt_succ_self _

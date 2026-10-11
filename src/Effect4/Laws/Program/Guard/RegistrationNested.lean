@@ -13,12 +13,23 @@ theorem registrationQueue_map {α : Type} (xs : List α) (cmd : α → NCmd)
   | nil => trivial
   | cons x xs ih => exact ⟨simple x _, ih⟩
 
+/-- Evaluate-only message commands satisfy the existing registration queue judgment.
+Consumer: canonical scope messages and settlement below. -/
+theorem registrationQueue_of_evaluates {commands : List NCmd}
+    (evaluates : ∀ command ∈ commands, ∃ target, command = .evaluate target) :
+    RegistrationQueue commands := by
+  induction commands with
+  | nil => trivial
+  | cons command rest ih =>
+    obtain ⟨target, rfl⟩ := evaluates command (List.mem_cons_self ..)
+    exact ⟨True.intro, ih (fun cmd member => evaluates cmd (List.mem_cons_of_mem _ member))⟩
+
 theorem registrationQueue_linkScope (interp : NInterp) (m : NativeMachine)
     (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId)
     (who : Option FiberId) (extra : ReasonAnnotations Ann) :
     RegistrationQueue (linkScope interp m mode scope target who extra).2 := by
   unfold linkScope
-  repeat' first | exact True.intro | exact ⟨True.intro, True.intro⟩ | split
+  exact registrationQueue_of_evaluates (RunMachine.applyFiberEdits_shape _ _).2
 
 theorem registrationQueue_registerRace (m : NativeMachine) (f : NFiber)
     (yielding : Bool) (raceId : Nat) :
@@ -49,7 +60,7 @@ theorem withFiber_registration (interp : NInterp) (m : NativeMachine)
     RegistrationQueue (evaluatePrim.withFiber interp m f yielding action).nested := by
   cases action <;>
     simp only [evaluatePrim.withFiber, evaluatePrim.interruptAs, spawn, start,
-      countdownPark, beginRace]
+      beginRace]
   all_goals repeat' first
     | exact True.intro
     | exact registrationQueue_linkScope _ _ _ _ _ _ _
@@ -61,7 +72,7 @@ theorem withFiber_registration (interp : NInterp) (m : NativeMachine)
 theorem evaluatePrim_registration (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) :
     RegistrationQueue (evaluatePrim interp m f yielding).nested := by
-  simp only [evaluatePrim, countdownPark]
+  simp only [evaluatePrim]
   repeat' first
     | exact stepFrame_registration _ _ _ _
     | exact finalizerOr_registration _ _ _ _ _
@@ -103,13 +114,20 @@ theorem iteration_registration (p : NativeEff) (table : RowTable)
 theorem registrationQueue_settle (id : FiberId) (rest : List NCmd) (it : NIter)
     (front : RegistrationQueue it.nested) (back : RegistrationQueue rest) :
     RegistrationQueue (settle id rest it).2 := by
-  cases ho : it.outcome <;> simp only [settle, ho]
-  all_goals repeat' first
-    | exact True.intro
-    | exact front
-    | exact back
-    | apply registrationQueue_append
-    | constructor
-    | split
+  have outcome (next : NIter) (front : RegistrationQueue next.nested) :
+      RegistrationQueue (settleOutcome id rest next).2 := by
+    cases ho : next.outcome <;> simp only [settleOutcome, ho]
+    all_goals repeat' split
+    all_goals aesop (add safe apply [registrationQueue_append],
+      norm simp [RegistrationQueue, RegistrationTail])
+  cases edits : it.edits with
+  | nil => simpa only [settle, edits] using outcome it front
+  | cons edit tail =>
+    simp only [settle, edits]
+    split
+    · trivial
+    · apply outcome
+      exact registrationQueue_append
+        (registrationQueue_of_evaluates (RunMachine.applyFiberEdits_shape _ _).2) front
 
 end Effect4.Program.Guard.RegistrationNested

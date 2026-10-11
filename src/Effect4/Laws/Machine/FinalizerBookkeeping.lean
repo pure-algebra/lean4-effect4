@@ -160,6 +160,34 @@ theorem same_forkFinalizers (choose : ν → Bool) (interp : RunInterp ν σ β 
     Same choose m (forkFinalizers interp m parent programs).1 :=
   (ledger_same choose _ _).mp ((ledger choose).same_forkFinalizers interp m parent programs)
 
+variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+/-- The canonical countdown plan keeps the ledger before its addressed messages run. -/
+theorem same_countdown_plan (choose : ν → Bool) (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ)
+    (targets : List FiberId) (resume : Resume ν) (fast : Bool) :
+    Same choose m (countdownParkEdits interp m f targets resume fast).1 :=
+  (ledger_same choose _ _).mp ((ledger choose).same_countdown_plan interp m f targets resume fast)
+
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+/-- The canonical scope-link plan keeps the ledger before its addressed messages run. -/
+theorem same_linkScope_plan (choose : ν → Bool) (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (mode : Supervision.ScopeMode) (scope : Nat)
+    (target : FiberId) (who : Option FiberId) (extra : ReasonAnnotations α) :
+    Same choose m (linkScopeEdits interp m mode scope target who extra).1 :=
+  (ledger_same choose _ _).mp ((ledger choose).same_linkScope_plan interp m mode scope target who extra)
+
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+/-- Countdown's local callback frame carries no selected onExit credit. -/
+theorem countdown_plan_credit (choose : ν → Bool) (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ)
+    (targets : List FiberId) (resume : Resume ν) (fast : Bool) :
+    fiberCredits choose (countdownParkEdits interp m f targets resume fast).2.1 = fiberCredits choose f := by
+  unfold countdownParkEdits
+  dsimp only
+  split <;> rfl
+
 /-- A countdown edits observers, while its callback frame owns no selected credit. -/
 theorem same_countdown (choose : ν → Bool) (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (unique : (m.fibers.map RunFiber.id).Nodup)
@@ -172,11 +200,9 @@ theorem countdown_credit (choose : ν → Bool) (interp : RunInterp ν σ β ε 
     (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ)
     (targets : List FiberId) (resume : Resume ν) (fast : Bool) :
     fiberCredits choose (countdownPark interp m f targets resume fast).2.1 = fiberCredits choose f := by
-  unfold countdownPark
+  unfold countdownPark countdownParkEdits
   dsimp only
   split <;> rfl
-
-variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
 
 /-- Interrupt delivery changes the current code but retains every frame credit. -/
 theorem interruptRecord_credit (choose : ν → Bool) (interp : RunInterp ν σ β ε δ ι α χ St)
@@ -244,7 +270,8 @@ theorem update_balanced (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι
     ((ledger_funded choose _).mpr funded) ((ledger_balanced choose _ _).mpr balanced))
 
 /-- Settling edits no credited frame in the iteration's result. -/
-theorem settle_balanced (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ St)
+theorem settle_balanced [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+    (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ St)
     (next : Iter ν σ β ε δ ι α χ St)
     (unique : (next.machine.fibers.map RunFiber.id).Nodup)
     (funded : Funded choose m) (balanced : Balanced choose m next)

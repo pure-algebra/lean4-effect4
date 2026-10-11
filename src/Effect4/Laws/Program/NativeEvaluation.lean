@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.NativeConfiguration
+import Effect4.Laws.Program.Interference
 
 /-!
 Concept: store-typing R4, serving `HeapSites.heap_sites_keep`.
@@ -192,26 +193,6 @@ theorem exit_value_reply (root : NativeEff) (completed) (table : RowTable) (exit
   · constructor
   · cases exit <;> constructor
 
-/-- Native countdown parks retain the pending continuation and actual cleanup frame. -/
-theorem countdown_at (root : NativeEff) (completed) (table : RowTable) (m : NativeMachine)
-    (fiber : SourceFiber) (targets : List FiberId) (resume : Resume EffName) (failFast : Bool)
-    (owned : ConfigurationAt root m) (held : FiberAt root fiber) (saved : ResumeAt root resume) :
-    ConfigurationAt root (countdownPark (interpAt root completed table) m fiber targets resume failFast).1 ∧
-      FiberAt root (countdownPark (interpAt root completed table) m fiber targets resume failFast).2.1 := by
-  have grown : ConfigurationAt root {m with nextToken := m.nextToken + 1} :=
-    ⟨owned.fibers, owned.races, owned.scopes⟩
-  unfold countdownPark
-  dsimp only
-  split
-  · exact ⟨grown, fiber_current_at root fiber _ held (countdown_program_at root completed table resume _ saved)⟩
-  · rename_i exits target remaining walk
-    refine ⟨configuration_emit root _ _ ?_, ?_⟩
-    · apply configuration_modify root _ target _ grown
-      intro other old
-      exact ⟨old.frame, old.pending, old.dispatcher⟩
-    · apply fiber_park_at root _ _ _ saved
-      exact fiber_cancel_at root fiber _ held trivial
-
 /-- Race registration retains its existing entrant programs. -/
 theorem register_race_at (root : NativeEff) (m : NativeMachine) (fiber : SourceFiber)
     (yielding : Bool) (id : Nat) (owned : ConfigurationAt root m) (held : FiberAt root fiber) :
@@ -236,14 +217,77 @@ theorem begin_race_at (root : NativeEff) (completed) (table : RowTable)
   ⟨configuration_begin_race root completed table m fiber yielding programs site mode owned entrants,
     fiber_current_at root fiber _ held trivial, by intro command member; cases member⟩
 
-/-- Recording an interrupt retains all source programs and saved continuations. -/
-theorem interrupt_record_at (root : NativeEff) (completed) (table : RowTable)
-    (who : Option FiberId) (extra : ReasonAnnotations Ann) (fiber : SourceFiber) (held : FiberAt root fiber) :
-    FiberAt root (interruptRecord (interpAt root completed table) who extra fiber).1 := by
-  unfold interruptRecord interruptWithCause
+/-- A fresh cause updates metadata or installs a failure, retaining all source captures. -/
+theorem interrupt_cause_at (root : NativeEff) (cause : CauseV)
+    (fiber : SourceFiber) (held : FiberAt root fiber) :
+    FiberAt root (interruptWithCause cause fiber).1 := by
+  unfold interruptWithCause
   dsimp only
   repeat' split
   all_goals aesop (add safe constructors [FiberAt]) (add norm simp [FrameAt, CodeAt]) (add safe cases [FiberAt])
+
+/-- Recording an interrupt retains all source programs and saved continuations. -/
+theorem interrupt_record_at (root : NativeEff) (completed) (table : RowTable)
+    (who : Option FiberId) (extra : ReasonAnnotations Ann) (fiber : SourceFiber) (held : FiberAt root fiber) :
+    FiberAt root (interruptRecord (interpAt root completed table) who extra fiber).1 :=
+  interrupt_cause_at root _ fiber held
+
+/-- Source ownership is an instance of the shared structural edit word. -/
+theorem fiber_other_edits_at (root : NativeEff) {before after : SourceFiber}
+    (edits : Moves.OtherEdits before after) (held : FiberAt root before) : FiberAt root after := by
+  induction edits with
+  | refl => exact held
+  | tail _ edit ih =>
+    cases edit with
+    | observe => exact ⟨ih.frame, ih.pending, ih.dispatcher⟩
+    | filterObservers => exact ⟨ih.frame, ih.pending, ih.dispatcher⟩
+    | interruptCause cause => exact interrupt_cause_at root cause _ ih
+
+/-- The native message word retains source ownership and creates only evaluation commands.
+Consumer: settlement and the eager countdown and scope-link adapters. -/
+theorem fiber_edits_at (root : NativeEff) (edits : List (FiberEdit Err Defect FiberId Ann))
+    (m : NativeMachine) (held : ConfigurationAt root m) :
+    ConfigurationAt root (applyFiberEdits edits m).1 ∧ CommandsAt root (applyFiberEdits edits m).2 := by
+  have shape := RunMachine.applyFiberEdits_shape edits m
+  have counter := congrArg (fun machine : NativeMachine => machine.nextId) shape.1
+  obtain ⟨born, rows⟩ := (Moves.InterferesWithLookup.fiberEdits edits m).backward.births
+  refine ⟨⟨?_, ?_, ?_⟩, ?_⟩
+  · intro fiber member
+    rcases rows fiber member with ⟨before, present, edits⟩ | ⟨lower, upper, _⟩
+    · exact fiber_other_edits_at root edits (held.fibers before present)
+    · exact False.elim ((Nat.not_lt_of_ge lower) (counter ▸ upper))
+  · simpa only [congrArg (fun machine : NativeMachine => machine.races) shape.1] using held.races
+  · simpa only [congrArg (fun machine : NativeMachine => machine.state) shape.1] using held.scopes
+  · intro command member
+    obtain ⟨target, same⟩ := shape.2 command member
+    subst command
+    trivial
+
+/-- Native countdown parks retain the pending continuation and actual cleanup frame. -/
+theorem countdown_edits_at (root : NativeEff) (completed) (table : RowTable) (m : NativeMachine)
+    (fiber : SourceFiber) (targets : List FiberId) (resume : Resume EffName) (failFast : Bool)
+    (owned : ConfigurationAt root m) (held : FiberAt root fiber) (saved : ResumeAt root resume) :
+    ConfigurationAt root (countdownParkEdits (interpAt root completed table) m fiber targets resume failFast).1 ∧
+      FiberAt root (countdownParkEdits (interpAt root completed table) m fiber targets resume failFast).2.1 := by
+  have grown : ConfigurationAt root {m with nextToken := m.nextToken + 1} :=
+    ⟨owned.fibers, owned.races, owned.scopes⟩
+  unfold countdownParkEdits
+  dsimp only
+  split
+  · exact ⟨grown, fiber_current_at root fiber _ held (countdown_program_at root completed table resume _ saved)⟩
+  · rename_i exits target remaining walk
+    refine ⟨configuration_emit root _ _ grown, ?_⟩
+    apply fiber_park_at root _ _ _ saved
+    exact fiber_cancel_at root fiber _ held trivial
+
+/-- The eager countdown adapter applies the same source-preserving message word. -/
+theorem countdown_at (root : NativeEff) (completed) (table : RowTable) (m : NativeMachine)
+    (fiber : SourceFiber) (targets : List FiberId) (resume : Resume EffName) (failFast : Bool)
+    (owned : ConfigurationAt root m) (held : FiberAt root fiber) (saved : ResumeAt root resume) :
+    ConfigurationAt root (countdownPark (interpAt root completed table) m fiber targets resume failFast).1 ∧
+      FiberAt root (countdownPark (interpAt root completed table) m fiber targets resume failFast).2.1 :=
+  let next := countdown_edits_at root completed table m fiber targets resume failFast owned held saved
+  ⟨(fiber_edits_at root _ _ next.1).1, next.2⟩
 
 /-- Linking a fiber registers only its administrative interrupt finalizer. -/
 theorem scope_link_at (root : NativeEff) (completed) (table : RowTable) (mode : Supervision.ScopeMode)
@@ -257,49 +301,34 @@ theorem scope_link_at (root : NativeEff) (completed) (table : RowTable) (mode : 
   · cases found
     exact scope_register_at root state.scopes scope state.nextName _ owned trivial
 
-set_option maxHeartbeats 1600000 in
-/-- The actual scope-link command retains its stored programs and administrative residue. -/
+/-- A queued scope link retains the configuration before its addressed message. -/
+theorem link_edits_at (root : NativeEff) (completed) (table : RowTable) (m : NativeMachine)
+    (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId) (who : Option FiberId)
+    (extra : ReasonAnnotations Ann) (owned : ConfigurationAt root m) :
+    ConfigurationAt root (linkScopeEdits (interpAt root completed table) m mode scope target who extra).1 := by
+  unfold linkScopeEdits
+  split
+  · exact configuration_halt root m _ owned
+  · split
+    · exact configuration_halt root m _ owned
+    · exact configuration_emit root m _ owned
+  · split
+    · exact configuration_halt root m _ owned
+    · split
+      · exact owned
+      · split
+        · exact configuration_halt root m _ owned
+        · rename_i state key found
+          exact configuration_emit root _ _ (configuration_store root m state owned
+            (scope_link_at root completed table mode scope target m.state state key owned.scopes found))
+
+/-- The eager scope adapter applies the same source-preserving message word. -/
 theorem link_at (root : NativeEff) (completed) (table : RowTable) (m : NativeMachine)
     (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId) (who : Option FiberId)
     (extra : ReasonAnnotations Ann) (owned : ConfigurationAt root m) :
     ConfigurationAt root (linkScope (interpAt root completed table) m mode scope target who extra).1 ∧
-      CommandsAt root (linkScope (interpAt root completed table) m mode scope target who extra).2 := by
-  unfold linkScope
-  cases hs : (interpAt root completed table).scopeStatus scope m.state with
-  | none => exact ⟨configuration_halt root m _ owned, by intro command member; cases member⟩
-  | some status =>
-    cases status with
-    | some exit =>
-      simp only []
-      cases hf : m.fiber? target with
-      | none => exact ⟨configuration_halt root m _ owned, by intro command member; cases member⟩
-      | some fiber =>
-        simp only []
-        refine ⟨configuration_emit root _ _ (configuration_update root m _ owned
-          (interrupt_record_at root completed table who extra fiber
-            (configuration_fiber root m target fiber owned hf))), ?_⟩
-        split
-        · intro command member; rw [List.mem_singleton.mp member]; trivial
-        · intro command member; cases member
-    | none =>
-      simp only []
-      cases hf : m.fiber? target with
-      | none => exact ⟨configuration_halt root m _ owned, by intro command member; cases member⟩
-      | some fiber =>
-        simp only []
-        split
-        · exact ⟨owned, by intro command member; cases member⟩
-        · cases hl : (interpAt root completed table).scopeLinkFiber mode scope target m.state with
-          | none => exact ⟨configuration_halt root m _ owned, by intro command member; cases member⟩
-          | some result =>
-            rcases result with ⟨state, key⟩
-            refine ⟨configuration_emit root _ _ ?_, by intro command member; cases member⟩
-            apply configuration_modify root _ target _
-              (configuration_store root m state owned
-                (scope_link_at root completed table mode scope target m.state state key owned.scopes hl))
-            intro other old
-            exact ⟨old.frame, old.pending, old.dispatcher⟩
-
+      CommandsAt root (linkScope (interpAt root completed table) m mode scope target who extra).2 :=
+  fiber_edits_at root _ _ (link_edits_at root completed table m mode scope target who extra owned)
 
 /-- Parallel closing launches exactly the finalizer programs owned by its source captures. -/
 theorem fork_finalizers_at (root : NativeEff) (completed) (table : RowTable)

@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.SourceOpportunityExecution
 import Effect4.Laws.Program.Size
+import Effect4.Laws.Machine.EditObserverWords
 
 /-!
 Concept: scope-lifetime-finalization R11.
@@ -295,96 +296,55 @@ theorem interrupt_each_outside_le (root : NativeEff) (q : List Nat) (table : Row
 Consumer: observe command preservation. -/
 theorem observer_total_le (root : NativeEff) (q : List Nat) (table : RowTable)
     (id : FiberId) (exit : ExitV) (acc : NativeMachine × List SourceCommand) (observer : Observer)
-    (ledger : ForkLedger.Invariant.Ok acc.1) (raceFree : RaceFreeSource root)
-    (source : ConfigurationAt root acc.1) :
+    (ledger : ForkLedger.Invariant.Ok acc.1) (_raceFree : RaceFreeSource root)
+    (_source : ConfigurationAt root acc.1) :
     recorded q (fireObserver (interpOf root table) id exit acc observer).1 +
         fibers root q (fireObserver (interpOf root table) id exit acc observer).1 ≤
       recorded q acc.1 + fibers root q acc.1 := by
-  let m := acc.1.emit [RunEvent.observerFired id observer]
-  have base : ForkLedger.Invariant.Ok m := ledger
-  have unchanged : recorded q m + fibers root q m = recorded q acc.1 + fibers root q acc.1 :=
-    emit_total root q acc.1 _ rfl
-  have offFailed (waiter : FiberId) (remaining : List FiberId) (failure : Bool)
-      (next : NativeMachine) (nested : List SourceCommand)
-      (found : (if failure then interruptEach (interpOf root table) waiter
-        ((interpOf root table).stackAnnotations waiter) remaining (m, []) else (m, [])) = (next, nested)) :
-      ForkLedger.Invariant.Ok next ∧ recorded q next + outside root q waiter next ≤
-        recorded q m + outside root q waiter m := by
-    split at found
-    · have off := interrupt_each_outside_le root q table waiter waiter
-        ((interpOf root table).stackAnnotations waiter) remaining (m, []) base
-      have rows := ForkLedger.Invariant.Native.interruptEach_ok (interpOf root table) waiter
-        ((interpOf root table).stackAnnotations waiter) remaining (m, []) base
-      rw [found] at off rows
-      exact ⟨rows, off⟩
-    · cases found
-      exact ⟨base, Nat.le_refl _⟩
-  have pendingInstall (waiter : FiberId) (fiber changed : SourceFiber)
-      (next : NativeMachine) (found : m.fiber? waiter = some fiber)
-      (rows : ForkLedger.Invariant.Ok next)
-      (off : recorded q next + outside root q waiter next ≤ recorded q m + outside root q waiter m)
-      (key : changed.id = fiber.id) (sameFrame : changed.frame = fiber.frame) :
-      recorded q (next.update changed) + fibers root q (next.update changed) ≤
-        recorded q acc.1 + fibers root q acc.1 := by
-    have same := RunMachine.id_of_fiber? found
-    have installed := install_le root q next waiter changed (key.trans same) rows.idsUnique
-    rw [sameFrame] at installed
-    have partition := outside_split root q m fiber base.idsUnique (List.mem_of_find?_eq_some found)
-    rw [same] at partition
-    change recorded q next + fibers root q (next.update changed) ≤ _
-    omega
-  have noRaces : m.races = [] := races_nil root m raceFree ⟨source.fibers, source.races, source.scopes⟩
-  fun_cases fireObserver (interpOf root table) id exit acc observer
-  case case2 parent emitted =>
-    rw [← unchanged]
-    exact modify_total_le root q m parent _ base.idsUnique (fun _ => rfl) (fun _ => Nat.le_refl _)
-  case case7 waiter token fiber p selected collected failure next nested exits walk changed emitted found counted =>
-    have moved := offFailed waiter p.remaining failure next nested counted
-    exact pendingInstall waiter fiber changed next found moved.1 moved.2 rfl rfl
-  case case8 waiter token fiber p selected collected failure next nested exits target rest walk observing changed emitted found counted =>
-    have moved := offFailed waiter p.remaining failure next nested counted
-    have off := outside_modify_le root q next waiter target
-      (fun fiber => {fiber with observers := fiber.observers ++ [Observer.countdown waiter token]})
-      moved.1.idsUnique (fun _ => rfl) (fun _ => Nat.le_refl _)
-    have rows := ForkLedger.Invariant.modify_ok moved.1 target
-      (fun fiber => {fiber with observers := fiber.observers ++ [Observer.countdown waiter token]})
-    have observationTrace : recorded q observing = recorded q next := by
-      unfold observing RunMachine.modify
-      split <;> rfl
-    have observingOff : recorded q observing + outside root q waiter observing ≤
-        recorded q m + outside root q waiter m := by
-      rw [observationTrace]
-      exact Nat.le_trans (Nat.add_le_add_left off _) moved.2
-    exact pendingInstall waiter fiber changed observing found rows observingOff rfl rfl
-  case case10 race previous changed state accepted unsettled selected emitted found updated settling finished =>
-    have empty : m.race? race = none := by unfold RunMachine.race?; rw [noRaces]; rfl
-    rw [empty] at found
-    cases found
-  case case11 race previous changed state stopped emitted found updated =>
-    have empty : m.race? race = none := by unfold RunMachine.race?; rw [noRaces]; rfl
-    rw [empty] at found
-    cases found
-  case case1 waiter token mode emitted =>
-    rw [← unchanged]
-    exact Nat.le_refl _
-  case case3 scope key emitted found =>
-    rw [← unchanged]
-    exact Nat.le_refl _
-  case case4 scope key state emitted found =>
-    rw [← unchanged]
-    exact Nat.le_refl _
-  case case5 waiter token emitted found =>
-    rw [← unchanged]
-    exact Nat.le_refl _
-  case case6 waiter token fiber selected emitted found =>
-    rw [← unchanged]
-    exact Nat.le_refl _
-  case case9 race emitted found =>
-    rw [← unchanged]
-    exact Nat.le_refl _
-  case case12 key emitted =>
-    rw [← unchanged, emit_total root q m [RunEvent.callback key exit] rfl]
-    exact Nat.le_refl _
+  let total (m : NativeMachine) := recorded q m + fibers root q m
+  let Edge (before after : NativeMachine)
+      (edit : Machine.Edit EffName EffThunk Val Err Defect FiberId Ann Ctx Stores NCode
+        (FrameFiber EffName EffThunk Val Err Defect FiberId Ann)
+        (FrameEvent EffName EffThunk Val Err Defect FiberId Ann)) : Prop :=
+    after = edit.apply before ∧ after.fibers.map RunFiber.id = before.fibers.map RunFiber.id ∧
+      ((before.fibers.map RunFiber.id).Nodup → total after ≤ total before)
+  have updated (before : NativeMachine) (target : FiberId) (old next : SourceFiber)
+      (found : before.fiber? target = some old) (key : next.id = old.id)
+      (bound : frame root q next.frame ≤ frame root q old.frame) :
+      Edge before (before.update next) (.update next) :=
+    ⟨rfl, RunMachine.update_keeps_ids _ _, fun unique =>
+      update_total_le root q before old next key unique (List.mem_of_find?_eq_some found) bound⟩
+  have emitted (before : NativeMachine) (events) (zero : (events.map (runEvent q)).sum = 0) :
+      Edge before (before.emit events) (.emit events) :=
+    ⟨rfl, rfl, fun _ => Nat.le_of_eq (emit_total root q before events zero)⟩
+  have interrupted (who : FiberId) (extra : ReasonAnnotations Ann) (target : FiberId)
+      (held : NativeMachine × List SourceCommand) :
+      Effect4.Contracts.Path Edge held.1 (interruptEach (interpOf root table) who extra [target] held).1
+        (Edits.interruptWord (interpOf root table) who extra target held.1) := by
+    exact Edits.interrupt_path (interpOf root table) who extra
+      (fun before target old found => updated before target old _ found
+        (Guard.interruptRecord_id root table (some who) extra old)
+        (interrupt_record_le root q table [] (some who) extra old))
+      (fun before target => emitted before [.interruptRecorded (some who) target] rfl) target held
+  have path := Edits.observer_path (Edge := Edge) (interpOf root table)
+    (fun _ _ _ edge => edge.1)
+    (fun before target old next found key same => updated before target old next found key
+      (by rw [same]; exact Nat.le_refl _))
+    (fun before target entry => ⟨rfl, modify_ids_same before target _, fun unique =>
+      modify_total_le root q before target _ unique (fun _ => rfl) (fun _ => Nat.le_refl _)⟩)
+    (fun before target entry => emitted before [.observerFired target entry] rfl)
+    (fun before race answer => emitted before [.raceSettled race answer] rfl)
+    (fun before key answer => emitted before [.callback key answer] rfl)
+    (fun _ _ => ⟨rfl, rfl, fun _ => Nat.le_refl _⟩)
+    (fun _ _ => ⟨rfl, rfl, fun _ => Nat.le_refl _⟩)
+    (fun _ _ => ⟨rfl, rfl, fun _ => Nat.le_refl _⟩) interrupted id exit acc observer
+  have lifted := Edits.run_preserves_at (fun _ _ _ edge => edge.1)
+    (fun held => held.fibers.map RunFiber.id = acc.1.fibers.map RunFiber.id ∧ total held ≤ total acc.1)
+    (fun before after edit edge prior =>
+      ⟨edge.2.1.trans prior.1, Nat.le_trans (edge.2.2 (by rw [prior.1]; exact ledger.idsUnique)) prior.2⟩)
+    path ⟨rfl, Nat.le_refl _⟩
+  rw [← Edits.observer_word] at lifted
+  exact lifted.2
 
 /-- Bounds for every omitted owner bound the total finite stored-row projection.
 Consumer: the existing native scope-link debit. -/

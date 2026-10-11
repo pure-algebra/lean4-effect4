@@ -85,7 +85,7 @@ theorem evaluateR_pure (interp : RInterp) (m : RState) (f : RFiber) (yielding : 
 theorem evaluateR_frontier (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool)
     (reason : PendingReason) (at_ : Point) (k : ExitV → RProgram) :
     evaluateR interp m (answerR f (.vis (.inr (.frontier reason at_)) k)) yielding =
-      ⟨m, answerR f (.vis (.inr (.frontier reason at_)) k), yielding, .continue_, []⟩ := rfl
+      ⟨m, answerR f (.vis (.inr (.frontier reason at_)) k), yielding, .continue_, [], []⟩ := rfl
 
 /-- The store answer waits for due resumes before the shared loop delivers it; the
 continuation is installed directly, with no saved slot. -/
@@ -94,14 +94,14 @@ theorem evaluateR_store (interp : RInterp) (m : RState) (f : RFiber) (yielding :
     (h : syncOpStep op m.state = some (state, value)) :
     evaluateR interp m (answerR f (.vis (.inl op) k)) yielding =
       ⟨{ m with state }, answerR (answerR f (.vis (.inl op) k)) (k value),
-        yielding, .answered, [.drainDue]⟩ := by
+        yielding, .answered, [.drainDue], []⟩ := by
   simp only [evaluateR, evaluateRawR, prepareIterR, prepareR, answerR, h]
 
 /-- A malformed store request keeps the existing sync fallback. -/
 theorem evaluateR_store_missing (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool)
     (op : SyncOp) (k : Val → RProgram) (h : syncOpStep op m.state = none) :
     evaluateR interp m (answerR f (.vis (.inl op) k)) yielding =
-      ⟨m, answerR (answerR f (.vis (.inl op) k)) (k .unit), yielding, .answered, []⟩ := by
+      ⟨m, answerR (answerR f (.vis (.inl op) k)) (k .unit), yielding, .answered, [], []⟩ := by
   simp only [evaluateR, evaluateRawR, prepareIterR, prepareR, answerR, h]
 
 /-- The checkpoint returns its continuation, completing stateful callback and
@@ -110,13 +110,13 @@ theorem evaluateR_suspend (interp : RInterp) (m : RState) (f : RFiber) (yielding
     (p : Point) (k : Val → RProgram) :
     evaluateR interp m (answerR f (.vis (.inr (.suspend p)) k)) yielding =
       prepareIterR ⟨m, answerR (answerR f (.vis (.inr (.suspend p)) k))
-        (k .unit), yielding, .continue_, []⟩ := rfl
+        (k .unit), yielding, .continue_, [], []⟩ := rfl
 
 /-- A pure thunk's value goes through the `answered` phase, owing nothing. -/
 theorem evaluateR_sync (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool)
     (v : Val) (k : Val → RProgram) :
     evaluateR interp m (answerR f (.vis (.inr (.sync v)) k)) yielding =
-      ⟨m, answerR (answerR f (.vis (.inr (.sync v)) k)) (k v), yielding, .answered, []⟩ := rfl
+      ⟨m, answerR (answerR f (.vis (.inr (.sync v)) k)) (k v), yielding, .answered, [], []⟩ := rfl
 
 theorem BehR_fuel_irrelevant (e : NativeEff) (n n' : Nat) (m : RState)
     (tape : List Api.Decision) (h : SufficientR e n m tape = true)

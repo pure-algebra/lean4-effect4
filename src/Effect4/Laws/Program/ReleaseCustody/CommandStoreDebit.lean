@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.ReleaseCustody.CommandRaceDebit
 import Effect4.Laws.Program.ReleaseCustody.ScopeTransfer
+import Effect4.Laws.Machine.FiberSumMessages
 
 /-!
 Concept: scope-lifetime-finalization R11, serving `ReleaseCustody.Execution.history`.
@@ -24,6 +25,31 @@ theorem state (q : List Nat) (m : NativeMachine) (next : Stores) (commands : Lis
   dsimp only
   omega
 
+/-- Addressed messages spend only stored fiber credit and emit zero-credit commands.
+Consumer: actual scope-link command funding after its canonical plan. -/
+theorem fiber_edits (q : List Nat) (m : NativeMachine)
+    (edits : List (FiberEdit Err Defect FiberId Ann)) (rest : List Command)
+    (unique : (m.fibers.map RunFiber.id).Nodup) (held : Funded q m rest) :
+    Funded q (applyFiberEdits edits m).1 ((applyFiberEdits edits m).2 ++ rest) := by
+  have bounded := (FiberSum.fiberEdits_le (fiberCredits q) (fun _ _ => rfl)
+    (Evaluation.interrupt_fiber_le q) edits m unique).2
+  have shape := RunMachine.applyFiberEdits_shape edits m
+  have zero : ((applyFiberEdits edits m).2.map (commandCredits q)).sum = 0 := by
+    have mapped : (applyFiberEdits edits m).2.map (commandCredits q) =
+        List.replicate (applyFiberEdits edits m).2.length 0 := by
+      apply List.map_eq_replicate_iff.mpr
+      intro command member
+      obtain ⟨id, rfl⟩ := shape.2 command member
+      rfl
+    rw [mapped, List.sum_replicate_nat, Nat.mul_zero]
+  have trace := congrArg RunMachine.trace shape.1
+  have stores := congrArg RunMachine.state shape.1
+  have races := congrArg RunMachine.races shape.1
+  unfold Funded machineCredits at held ⊢
+  simp only [List.map_append, List.sum_append, zero, Nat.zero_add, trace, stores, races]
+  unfold FiberSum.total at bounded
+  omega
+
 /-- Linking an existing fiber adds only administrative scope cleanup or interrupts that fiber. -/
 theorem link_scope (root : NativeEff) (table : RowTable) (q : List Nat) (m : NativeMachine)
     (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId)
@@ -33,42 +59,33 @@ theorem link_scope (root : NativeEff) (table : RowTable) (q : List Nat) (m : Nat
     (held : Funded q m rest) :
     let out := linkScope (interpOf root table) m mode scope target who extra
     Funded q out.1 (out.2 ++ rest) := by
-  unfold linkScope
-  cases statusEq : (interpOf root table).scopeStatus scope m.state with
-  | none => exact held
-  | some status =>
-    cases status with
-    | some exit =>
-      simp only []
-      cases found : m.fiber? target with
-      | none => exact held
-      | some fiber =>
-        simp only []
-        apply emit q _ _ _ _ rfl rfl
-        refine update q m fiber (interruptRecord (interpOf root table) who extra fiber).1 rest _
-          held fibers (by simpa only [fiber_id_of_lookup found] using found)
-          (interruptRecord_id root table who extra fiber) ?_
-        have debit := interrupt_record root table q who extra fiber
-        split <;> simpa only [List.nil_append, List.cons_append, List.map_cons, List.sum_cons,
-          commandCredits, Nat.zero_add] using Nat.add_le_add_right debit ((rest.map (commandCredits q)).sum)
-    | none =>
-      simp only []
-      cases found : m.fiber? target with
-      | none => exact held
-      | some fiber =>
-        simp only []
-        split
-        · exact held
-        · cases linked : (interpOf root table).scopeLinkFiber mode scope target m.state with
-          | none => exact held
-          | some result =>
-            obtain ⟨stores, key⟩ := result
-            apply emit q _ _ _ _ rfl rfl
-            apply modify q {m with state := stores} target
-              (fun f => {f with observers := f.observers ++ [.dropScopeFinalizer scope key]}) rest
-              _ fibers (fun _ => rfl) (fun _ => Nat.le_refl _)
-            exact state q m stores rest held
-              (Nat.le_of_eq (ScopeTransfer.link q mode scope target scopes fresh linked))
+  let plan := linkScopeEdits (interpOf root table) m mode scope target who extra
+  let Edge (before after : NativeMachine)
+      (edit : Machine.Edit EffName EffThunk Val Err Defect FiberId Ann Ctx Stores NCode
+        (FrameFiber EffName EffThunk Val Err Defect FiberId Ann)
+        (FrameEvent EffName EffThunk Val Err Defect FiberId Ann)) : Prop :=
+    after = edit.apply before ∧ (Funded q before rest → Funded q after rest)
+  have emitted (before : NativeMachine) (events)
+      (release : events.countP (ReleaseTrace.releaseAt q) = 0)
+      (registered : events.countP (ReleaseTrace.registeredAt q) = 0) :
+      Edge before (before.emit events) (.emit events) :=
+    ⟨rfl, fun funded => emit q before rest funded events release registered⟩
+  have path := Edits.link_plan_path (Edge := Edge) (interpOf root table)
+    mode scope target who m
+    (fun next key result => ⟨rfl, fun funded => state q m next rest funded
+      (Nat.le_of_eq (ScopeTransfer.link q mode scope target scopes fresh result))⟩)
+    (fun before => emitted before [.scopeClosedOnLink scope target, .interruptRecorded who target] rfl rfl)
+    (fun before key => emitted before [.scopeLinked mode scope key target] rfl rfl)
+    (fun _ _ => ⟨rfl, fun funded => funded⟩) extra
+  have funded : Funded q plan.1 rest := by
+    rw [Edits.link_plan_word]
+    exact Edits.run_preserves_at (fun _ _ _ edge => edge.1) (fun before => Funded q before rest)
+      (fun _ _ _ edge => edge.2) path held
+  have sameFibers : plan.1.fibers = m.fibers := by
+    rw [Edits.link_plan_word]
+    exact Edits.run_keeps _ _ (fun edit member => edit.keeps_fibers
+      (Edits.link_misses _ m mode scope target who edit member)) m
+  exact fiber_edits q plan.1 plan.2 rest (by rw [sameFibers]; exact fibers) funded
 
 /-- Actual scope-link commands retain the same registration funding. -/
 theorem link (root : NativeEff) (table : RowTable) (q : List Nat) (m : NativeMachine)

@@ -49,9 +49,9 @@ theorem iteration_at (root : NativeEff) (fragment : Fragment root) (table : RowT
   · exact native_at root fragment table m _ yielding owned charged
 
 /-- Settling retains stored source slots and the actual pending command suffix. -/
-theorem settle_at (root : NativeEff) (id : FiberId) (rest : List SourceCommand) (it : SourceIteration)
+theorem settleOutcome_at (root : NativeEff) (id : FiberId) (rest : List SourceCommand) (it : SourceIteration)
     (owned : EvaluationAt root it) (pending : CommandsAt root rest) :
-    ConfigurationAt root (settle id rest it).1 ∧ CommandsAt root (settle id rest it).2 := by
+    ConfigurationAt root (settleOutcome id rest it).1 ∧ CommandsAt root (settleOutcome id rest it).2 := by
   have stopped : FiberAt root {it.fiber with running := false} :=
     ⟨owned.fiber.frame, owned.fiber.pending, owned.fiber.dispatcher⟩
   have cleared : FiberAt root {it.fiber with parked := .notParked, pending := []} :=
@@ -63,7 +63,7 @@ theorem settle_at (root : NativeEff) (id : FiberId) (rest : List SourceCommand) 
       CommandsAt root (it.nested ++ [c] ++ rest) :=
     commands_append root _ rest
       (commands_append root it.nested [c] owned.commands (by intro x member; rw [List.mem_singleton.mp member]; exact admin)) pending
-  unfold settle
+  unfold settleOutcome
   split
   · exact ⟨installed, suffix _ trivial⟩
   · exact ⟨installed, suffix _ trivial⟩
@@ -73,6 +73,23 @@ theorem settle_at (root : NativeEff) (id : FiberId) (rest : List SourceCommand) 
   · exact ⟨installed, commands_append root _ _ owned.commands pending⟩
   · exact ⟨installed, suffix _ trivial⟩
   · exact ⟨configuration_halt root _ _ halted, by intro c member; cases member⟩
+
+/-- Settlement interprets the source-preserving word before selecting its actual owner. -/
+theorem settle_at (root : NativeEff) (id : FiberId) (rest : List SourceCommand) (it : SourceIteration)
+    (owned : EvaluationAt root it) (pending : CommandsAt root rest) :
+    ConfigurationAt root (settle id rest it).1 ∧ CommandsAt root (settle id rest it).2 := by
+  unfold settle
+  split
+  · exact settleOutcome_at root id rest it owned pending
+  · have changed := fiber_edits_at root it.edits _
+      (configuration_update root it.machine it.fiber owned.machine owned.fiber)
+    dsimp only
+    split
+    · exact ⟨configuration_halt root _ _ changed.1, by intro command member; cases member⟩
+    · rename_i owner found
+      exact settleOutcome_at root id rest _
+        ⟨changed.1, configuration_fiber root _ _ owner changed.1 found,
+          commands_append root _ _ changed.2 owned.commands⟩ pending
 
 /-- Race settlement introduces only administrative cleanup and the accepted exit. -/
 theorem race_settle_at (root : NativeEff) (table : RowTable) (race : Nat) (cleanup : Bool) (exit : ExitV)
@@ -223,80 +240,79 @@ theorem observer_at (root : NativeEff) (table : RowTable) (id : FiberId) (exit :
       CommandsAt root (fireObserver (interpOf root table) id exit acc observer).2 := by
   let m := acc.1.emit [RunEvent.observerFired id observer]
   have base : ConfigurationAt root m := configuration_emit root acc.1 _ owned
-  have looked (target : FiberId) (fiber : SourceFiber) (found : m.fiber? target = some fiber) : FiberAt root fiber :=
-    configuration_fiber root m target fiber base found
-  have updated (fiber : SourceFiber) (held : FiberAt root fiber) : ConfigurationAt root (m.update fiber) :=
-    configuration_update root m fiber base held
-  have modified (target : FiberId) (edit : SourceFiber → SourceFiber)
-      (kept : ∀ fiber, FiberAt root fiber → FiberAt root (edit fiber)) : ConfigurationAt root (m.modify target edit) :=
-    configuration_modify root m target edit base kept
-  have interrupted (waiter : FiberId) (remaining : List FiberId) :
-      ConfigurationAt root (interruptEach (interpOf root table) waiter ((interpOf root table).stackAnnotations waiter) remaining (m, [])).1 ∧
-      CommandsAt root (interruptEach (interpOf root table) waiter ((interpOf root table).stackAnnotations waiter) remaining (m, [])).2 :=
-    interrupt_each_at root table waiter _ remaining (m, []) base (by intro c member; cases member)
-  have saved (waiter : FiberId) (fiber : SourceFiber) (token : Nat) (p : Pending EffName Val Err Defect FiberId Ann)
-      (found : m.fiber? waiter = some fiber) (selected : fiber.pending.find? (fun p => p.token = token) = some p) :
-      ResumeAt root p.resumeWith :=
-    (looked waiter fiber found).pending p (List.mem_of_find?_eq_some selected)
-  have first_failed (waiter : FiberId) (remaining : List FiberId) (failure : Bool)
-      (next : NativeMachine) (nested : List SourceCommand)
-      (found : (if failure then interruptEach (interpOf root table) waiter
-        ((interpOf root table).stackAnnotations waiter) remaining (m, []) else (m, [])) = (next, nested)) :
-      ConfigurationAt root next ∧ CommandsAt root nested := by
-    split at found
-    · have h := interrupted waiter remaining
-      rw [found] at h
-      exact h
-    · cases found
-      exact ⟨base, by intro c member; cases member⟩
-  fun_cases fireObserver (interpOf root table) id exit acc observer
-  case case1 waiter token mode emitted =>
-    exact ⟨base, commands_append root _ _ pending (by intro c member; rw [List.mem_singleton.mp member]; exact ⟨exit_value_at root [] table exit mode, exit_value_reply root [] table exit mode⟩)⟩
-  case case2 parent emitted =>
-    exact ⟨configuration_modify root m parent _ base (fun fiber held => ⟨held.frame, held.pending, held.dispatcher⟩), pending⟩
-  case case3 scope key emitted found => exact ⟨configuration_halt root m _ base, pending⟩
-  case case4 scope key state emitted found =>
-    exact ⟨⟨base.fibers, base.races, drop_at root table scope key m.state state base.scopes found⟩, pending⟩
-  case case5 waiter token emitted found => exact ⟨base, pending⟩
-  case case6 waiter token fiber selected emitted found => exact ⟨base, pending⟩
-  case case7 waiter token fiber p selected collected failure next nested exits walk changed emitted found counted =>
-    have moved := first_failed waiter p.remaining failure next nested counted
-    have held := looked waiter fiber found
-    have resumed := saved waiter fiber token p found selected
-    have changedAt : FiberAt root changed := by
-      apply pending_map_at root fiber _ held
-      intro p
-      split <;> rfl
-    exact ⟨configuration_update root next changed moved.1 changedAt,
-      commands_append root _ _ (commands_append root _ _ pending moved.2)
-        (by intro c member; rw [List.mem_singleton.mp member]; exact ⟨countdown_program_at root [] table p.resumeWith exits resumed,
-          countdown_program_reply root [] table p.resumeWith exits resumed⟩)⟩
-  case case8 waiter token fiber p selected collected failure next nested exits target rest walk observing changed emitted found counted =>
-    have moved := first_failed waiter p.remaining failure next nested counted
-    have held := looked waiter fiber found
-    have observingAt : ConfigurationAt root observing :=
-      configuration_modify root next target _ moved.1 (fun fiber held => ⟨held.frame, held.pending, held.dispatcher⟩)
-    have changedAt : FiberAt root changed := by
-      apply pending_map_at root fiber _ held
-      intro p
-      split <;> rfl
-    exact ⟨configuration_update root observing changed observingAt changedAt,
-      commands_append root _ _ pending moved.2⟩
-  case case9 race emitted found => exact ⟨base, pending⟩
-  case case10 race previous changed state accepted unsettled selected emitted found updated settling finished =>
-    have raceAt := configuration_race root m race previous base found
-    have finishedAt : ConfigurationAt root finished :=
-      configuration_emit root _ _ (configuration_race_update root _ _
-        (configuration_race_update root m changed base raceAt) raceAt)
-    refine ⟨finishedAt, commands_append root _ _ pending ?_⟩
+  unfold fireObserver
+  dsimp only
+  split
+  · exact ⟨base, commands_append root _ _ pending (by
+      intro command member
+      rw [List.mem_singleton.mp member]
+      exact ⟨exit_value_at root [] table exit _, exit_value_reply root [] table exit _⟩)⟩
+  · exact ⟨configuration_modify root m _ _ base
+      (fun fiber held => ⟨held.frame, held.pending, held.dispatcher⟩), pending⟩
+  · split
+    · exact ⟨configuration_halt root m _ base, pending⟩
+    · rename_i state found
+      exact ⟨⟨base.fibers, base.races, drop_at root table _ _ m.state state base.scopes found⟩, pending⟩
+  · rename_i waiter token
     split
-    · intro c member; cases member
-    · intro c member; rw [List.mem_singleton.mp member]
-      exact ⟨race_settle_at root table race state.cleanupNeeded accepted raceAt.2,
-        race_settle_reply root table race state.cleanupNeeded accepted⟩
-  case case11 race previous changed state stopped emitted found updated =>
-    exact ⟨configuration_race_update root m changed base (configuration_race root m race previous base found), pending⟩
-  case case12 key emitted => exact ⟨configuration_emit root m _ base, pending⟩
+    · exact ⟨base, pending⟩
+    · rename_i old oldFound
+      split
+      · exact ⟨base, pending⟩
+      · rename_i p pendingFound
+        have resumeAt := (configuration_fiber root m waiter old base oldFound).pending p
+          (List.mem_of_find?_eq_some pendingFound)
+        have changed :
+            let next := if p.failFast && !exit.isSuccess && p.collected.all Exit.isSuccess then
+              interruptEach (interpOf root table) waiter ((interpOf root table).stackAnnotations waiter)
+                p.remaining (m, []) else (m, [])
+            ConfigurationAt root next.1 ∧ CommandsAt root next.2 := by
+          split
+          · exact interrupt_each_at root table waiter _ p.remaining (m, []) base
+              (by intro command member; cases member)
+          · exact ⟨base, by intro command member; cases member⟩
+        split
+        · exact ⟨changed.1, commands_append root _ _ pending changed.2⟩
+        · rename_i current currentFound
+          have currentAt := configuration_fiber root _ waiter current changed.1 currentFound
+          split
+          · exact ⟨changed.1, commands_append root _ _ pending changed.2⟩
+          · split
+            · rename_i exits walk
+              refine ⟨configuration_update root _ _ changed.1 ?_, ?_⟩
+              · exact pending_map_at root current _ currentAt (by intro q; split <;> rfl)
+              · exact commands_append root _ _ (commands_append root _ _ pending changed.2) (by
+                  intro command member
+                  rw [List.mem_singleton.mp member]
+                  exact ⟨countdown_program_at root [] table p.resumeWith exits resumeAt,
+                    countdown_program_reply root [] table p.resumeWith exits resumeAt⟩)
+            · rename_i exits target remaining walk
+              let nextCurrent : SourceFiber := {current with pending := current.pending.map fun q =>
+                if q.token = token then
+                  {q with waitingOn := some target, remaining, collected := exits}
+                else q}
+              have nextAt : FiberAt root nextCurrent :=
+                pending_map_at root current _ currentAt (by intro q; split <;> rfl)
+              have observed := fiber_edits_at root [.observe target (.countdown waiter token)] _
+                (configuration_update root _ nextCurrent changed.1 nextAt)
+              exact ⟨observed.1,
+                commands_append root _ _ (commands_append root _ _ pending changed.2) observed.2⟩
+  · rename_i raceId
+    split
+    · exact ⟨base, pending⟩
+    · rename_i race found
+      have raceAt := configuration_race root m raceId race base found
+      split
+      · refine ⟨configuration_emit root _ _ (configuration_race_update root _ _
+          (configuration_race_update root m _ base raceAt) raceAt), commands_append root _ _ pending ?_⟩
+        split
+        · intro command member
+          cases member
+        · intro command member
+          rw [List.mem_singleton.mp member]
+          exact ⟨race_settle_at root table raceId _ _ raceAt.2, race_settle_reply root table raceId _ _⟩
+      · exact ⟨configuration_race_update root m _ base raceAt, pending⟩
+  · exact ⟨configuration_emit root m _ base, pending⟩
 
 /-- The native await program embeds a represented park or an observed exit. -/
 theorem await_code_at (root : NativeEff) (table : RowTable) (m : NativeMachine) (kind : ParkKind) :

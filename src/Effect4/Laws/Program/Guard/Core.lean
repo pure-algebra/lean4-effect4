@@ -4,6 +4,7 @@ import Effect4.Api
 import Effect4.Laws.Program.Guard.RaceSites
 import Effect4.Laws.Auto.Frames
 import Effect4.Laws.Machine.WakeKeys
+import Effect4.Laws.Program.Interference
 
 /-!
 DI-68 guard ownership for the owner-approved reachable-machine scope. A prefix is raw
@@ -316,21 +317,28 @@ theorem registerExternal_internal_state (p : NativeEff) (table : RowTable)
         state.deferreds :=
   ⟨rfl, rfl⟩
 
+theorem interruptWithCause_id (fresh : Cause Err Defect FiberId Ann) (f : NFiber) :
+    (interruptWithCause fresh f).1.id = f.id :=
+  (Moves.OtherEdit.interruptCause f fresh).id
+
 theorem interruptRecord_id (p : NativeEff) (table : RowTable) (who : Option FiberId)
     (extra : ReasonAnnotations Ann) (f : NFiber) :
-    (interruptRecord (interpOf p table) who extra f).1.id = f.id := by
-  unfold interruptRecord interruptWithCause
-  dsimp only
-  (repeat' split) <;> rfl
+    (interruptRecord (interpOf p table) who extra f).1.id = f.id :=
+  interruptWithCause_id (Machine.interruptCause (interpOf p table) who extra f.id) f
+
+theorem interruptWithCause_interrupted (fresh : Cause Err Defect FiberId Ann) (f : NFiber) :
+    Interrupted (interruptWithCause fresh f).1 := by
+  cases he : f.exit <;> cases hi : f.frame.interruptible <;> cases hr : f.running <;>
+    simp only [interruptWithCause, Interrupted, RunFiber.interruptPending,
+      FiberCore.interruptible, FiberCore.recordCause, FiberCore.deferredInterrupt,
+      FiberCore.interruptedCause, FiberCore.setDeferred, FiberCore.answerWith, he, hi, hr,
+      Option.isSome_none, Option.isSome_some, Bool.false_eq_true, ↓reduceIte,
+      Bool.or_true, or_true, true_or]
 
 theorem interruptRecord_interrupted (p : NativeEff) (table : RowTable) (who : Option FiberId)
     (extra : ReasonAnnotations Ann) (f : NFiber) :
-    Interrupted (interruptRecord (interpOf p table) who extra f).1 := by
-  cases he : f.exit <;> cases hi : f.frame.interruptible <;> cases hr : f.running <;>
-    simp only [interruptRecord, interruptWithCause, Interrupted, RunFiber.interruptPending,
-      FiberCore.interruptible, FiberCore.recordCause, FiberCore.deferredInterrupt,
-      FiberCore.interruptedCause, FiberCore.setDeferred, FiberCore.answerWith, he, hi, hr,
-      Option.isSome_none, Option.isSome_some, Bool.false_eq_true, ↓reduceIte, Bool.or_true, or_true, true_or]
+    Interrupted (interruptRecord (interpOf p table) who extra f).1 :=
+  interruptWithCause_interrupted (Machine.interruptCause (interpOf p table) who extra f.id) f
 
 abbrev NCmd := Cmd EffName EffThunk Val Err Defect FiberId Ann
 
@@ -537,8 +545,8 @@ theorem requestsOwned_settle_parked {m : NativeMachine} {f : NFiber}
     (hobservers : g.observers = f.observers) (hdispatcher : g.dispatcher = f.dispatcher)
     (hkey : (g.id, token) ∉ internalKeys m) (owned : RequestsOwned m)
     (yielding : Bool) (rest : List NCmd) :
-    RequestsOwned (settle f.id rest ⟨m, g, yielding, .parked, []⟩).1 := by
-  simp only [settle]
+    RequestsOwned (settle f.id rest ⟨m, g, yielding, .parked, [], []⟩).1 := by
+  simp only [settle, settleOutcome]
   split
   · exact requestsOwned_update_unparked hf _ hid rfl hobservers hdispatcher owned
   · exact requestsOwned_update_disjoint_guard hf _ token hid hp hobservers hdispatcher hkey owned
@@ -577,9 +585,11 @@ theorem requestsOwned_external_park (p : NativeEff) (table : RowTable)
     else f
   let parked := framed.park ⟨m.nextToken, none, [], [], .void, false⟩
   have heval : evaluateNative p m f yielding table =
-      ⟨before, parked, yielding, .parked, []⟩ := by
+      ⟨before, parked, yielding, .parked, [], []⟩ := by
     cases signal <;> cases cancel <;>
-      simp [evaluateNative, hc, evaluatePrim, interpAt, hpair, before, parked, framed, name, RunFiber.park]
+      simp only [evaluateNative, hc, evaluatePrim, interpAt, hpair, before, parked, framed,
+        name, RunFiber.park, Option.isSome_none, Option.isSome_some, Bool.false_or,
+        Bool.true_or, Bool.false_eq_true, ↓reduceIte, Option.getD_none, Option.getD_some]
   have hid : parked.id = f.id := by
     dsimp only [parked, RunFiber.park, framed]
     split <;> rfl
@@ -1140,7 +1150,7 @@ def InternalCodeNoRace (m : NativeMachine) : Prop :=
     ∀ task ∈ bucket.tasks, taskRaceSites task = []) ∧
   (∀ race ∈ m.races, ∀ code ∈ race.programs, raceSites code = [])
 
-structure GuardState (m : NativeMachine) : Prop where
+structure GuardState (m : NativeMachine) (active : Option FiberId := none) : Prop where
   fiberIds : (m.fibers.map RunFiber.id).Nodup
   fibersBelow : ∀ f ∈ m.fibers, f.id.value < m.nextId
   raceIds : (m.races.map Race.id).Nodup
@@ -1150,7 +1160,9 @@ structure GuardState (m : NativeMachine) : Prop where
   requestsBelow : RequestsBelow m
   requestsOwned : RequestsOwned m
   pendingShape : ∀ f ∈ m.fibers, PendingShape f
-  parkedIdle : ∀ f ∈ m.fibers, f.parked ≠ .notParked → f.running = false
+  parkedIdle : ∀ f ∈ m.fibers, match active with
+    | none => f.parked ≠ .notParked → f.running = false
+    | some owner => f.id ≠ owner → f.parked ≠ .notParked → f.running = false
   parkedBelow : ∀ f ∈ m.fibers, ∀ token, f.parked = .withGuard token → token < m.nextToken
   exited : ∀ f ∈ m.fibers, f.exit.isSome = true → f.parked = .notParked ∧ f.running = false
   deferredCause : ∀ f ∈ m.fibers, f.frame.deferredInterrupt = true →
@@ -1160,7 +1172,7 @@ structure GuardState (m : NativeMachine) : Prop where
 
 /-- info: frame rules: 11 checked theorems, 138 reused clauses, 27 explicit premises -/
 #guard_msgs in
-#frame_rules GuardState
+#frame_rules GuardState (state := m)
 
 /-- Keys already removed from a dispatcher are still reserved while its snapshot runs. -/
 structure ReservedKeys (m : NativeMachine) (keys : List GuardKey) : Prop where
@@ -1546,30 +1558,55 @@ theorem guardQueue_driveStep_evaluate (p : NativeEff) (table : RowTable)
         have : false = true := hg.2.1.symm.trans (heq ▸ hrun)
         cases this
 
-structure FiberGuardState (m : NativeMachine) (f : NFiber) : Prop where
+structure FiberGuardState (m : NativeMachine) (f : NFiber) (active : Option FiberId := none) : Prop where
   below : f.id.value < m.nextId
   pending : PendingShape f
-  idle : f.parked ≠ .notParked → f.running = false
+  idle : match active with
+    | none => f.parked ≠ .notParked → f.running = false
+    | some owner => f.id ≠ owner → f.parked ≠ .notParked → f.running = false
   parkedBelow : ∀ token, f.parked = .withGuard token → token < m.nextToken
   exited : f.exit.isSome = true → f.parked = .notParked ∧ f.running = false
   deferredCause : f.frame.deferredInterrupt = true → f.frame.interruptedCause.isSome = true
   codes : FrameCodeOwned m f
   tasks : ∀ bucket ∈ f.dispatcher.buckets, ∀ task ∈ bucket.tasks, taskRaceSites task = []
 
-theorem guardState_fiber {m : NativeMachine} (state : GuardState m)
-    {f : NFiber} (hf : f ∈ m.fibers) : FiberGuardState m f :=
+theorem guardState_fiber_at {active : Option FiberId} {m : NativeMachine} (state : GuardState m active)
+    {f : NFiber} (hf : f ∈ m.fibers) : FiberGuardState m f active :=
   ⟨state.fibersBelow f hf, state.pendingShape f hf, state.parkedIdle f hf,
     state.parkedBelow f hf, state.exited f hf, state.deferredCause f hf,
     state.frameCodes f hf, state.internalCodes.1 f hf⟩
 
+theorem guardState_fiber {m : NativeMachine} (state : GuardState m)
+    {f : NFiber} (hf : f ∈ m.fibers) : FiberGuardState m f :=
+  guardState_fiber_at state hf
+
+/-- The default Guard state entails the active-owner transient instance.
+Consumer: saving the native local result before interpreting its message word. -/
+theorem guardState_relax {m : NativeMachine} (state : GuardState m) (active : Option FiberId) :
+    GuardState m active := by
+  cases active with
+  | none => exact state
+  | some owner =>
+    cases state
+    constructor <;> aesop
+
+/-- The default per-fiber condition entails its transient instance. -/
+theorem fiberGuardState_relax {m : NativeMachine} {fiber : NFiber}
+    (valid : FiberGuardState m fiber) (active : Option FiberId) : FiberGuardState m fiber active := by
+  cases active with
+  | none => exact valid
+  | some owner =>
+    cases valid
+    constructor <;> aesop
+
 /-- A fiber replacement accounts for its new internal keys and its possible external guard. -/
-theorem guardState_update {m : NativeMachine} {f : NFiber} (state : GuardState m)
+theorem guardState_update_at {active : Option FiberId} {m : NativeMachine} {f : NFiber} (state : GuardState m active)
     (hf : m.fiber? f.id = some f) (g : NFiber) (hid : g.id = f.id)
-    (valid : FiberGuardState m g) (reserved : ReservedKeys m (fiberKeys g))
+    (valid : FiberGuardState m g active) (reserved : ReservedKeys m (fiberKeys g))
     (guardSafe : ∀ token request, g.parked = .withGuard token →
       externalRequest g.frame.current = some request →
       (g.id, token) ∉ internalKeys m ∧ (g.id, token) ∉ fiberKeys g) :
-    GuardState (m.update g) := by
+    GuardState (m.update g) active := by
   have hkeys := internalKeys_update_add m g (fiberKeys g) (List.subset_append_right _ _)
   have hparked := update_all m g _ state.parkedBelow valid.parkedBelow
   constructor
@@ -1612,22 +1649,77 @@ theorem guardState_update {m : NativeMachine} {f : NFiber} (state : GuardState m
   · refine ⟨?_, state.internalCodes.2⟩
     exact update_all m g _ state.internalCodes.1 valid.tasks
 
-theorem reservedKeys_fiber {m : NativeMachine} (state : GuardState m)
+theorem guardState_update {m : NativeMachine} {f : NFiber} (state : GuardState m)
+    (hf : m.fiber? f.id = some f) (g : NFiber) (hid : g.id = f.id)
+    (valid : FiberGuardState m g) (reserved : ReservedKeys m (fiberKeys g))
+    (guardSafe : ∀ token request, g.parked = .withGuard token →
+      externalRequest g.frame.current = some request →
+      (g.id, token) ∉ internalKeys m ∧ (g.id, token) ∉ fiberKeys g) :
+    GuardState (m.update g) :=
+  guardState_update_at state hf g hid valid reserved guardSafe
+
+/-- Settlement removes the active-owner exception once that owner is idle when parked.
+Concept: reactive-scheduling, R11; consumer: the final outcome after addressed messages. -/
+theorem guardState_finish_owner {m : NativeMachine} {owner : FiberId}
+    (state : GuardState m (some owner))
+    (ownedIdle : ∀ f ∈ m.fibers, f.id = owner → f.parked ≠ .notParked → f.running = false) :
+    GuardState m := by
+  have idle : ∀ f ∈ m.fibers, f.parked ≠ .notParked → f.running = false := by
+    intro f hf parked
+    by_cases same : f.id = owner
+    · exact ownedIdle f hf same parked
+    · exact state.parkedIdle f hf same parked
+  cases state
+  constructor <;> assumption
+
+/-- Installing the completed owner discharges the transient instance.
+Consumer: `settleOutcome`, after its ordinary parked/stuck disposition. -/
+theorem guardState_update_finish_owner {m : NativeMachine} {old g : NFiber} {owner : FiberId}
+    (state : GuardState m (some owner)) (lookup : m.fiber? old.id = some old)
+    (same : g.id = old.id) (ownerId : g.id = owner)
+    (valid : FiberGuardState m g) (reserved : ReservedKeys m (fiberKeys g))
+    (safe : ∀ token request, g.parked = .withGuard token →
+      externalRequest g.frame.current = some request →
+      (g.id, token) ∉ internalKeys m ∧ (g.id, token) ∉ fiberKeys g) :
+    GuardState (m.update g) := by
+  apply guardState_finish_owner
+    (guardState_update_at state lookup g same (fiberGuardState_relax valid (some owner)) reserved safe)
+  intro f hf
+  obtain ⟨before, member, result⟩ := List.mem_map.mp hf
+  subst f
+  split
+  · exact fun _ => valid.idle
+  · rename_i different
+    intro sameOwner
+    exact False.elim (different (sameOwner.trans ownerId.symm))
+
+theorem reservedKeys_fiber_at {active : Option FiberId} {m : NativeMachine} (state : GuardState m active)
     {f : NFiber} (hf : f ∈ m.fibers) : ReservedKeys m (fiberKeys f) := by
   constructor
   · intro key hk; exact state.keysBelow key (internalKeys_fiber hf hk)
   · intro fiber token request hr hk
     exact state.requestsOwned fiber token request hr (internalKeys_fiber hf hk)
 
+theorem reservedKeys_fiber {m : NativeMachine} (state : GuardState m)
+    {f : NFiber} (hf : f ∈ m.fibers) : ReservedKeys m (fiberKeys f) :=
+  reservedKeys_fiber_at state hf
+
+theorem guardState_update_unparked_at {active : Option FiberId} {m : NativeMachine} {f : NFiber}
+    (state : GuardState m active) (hf : m.fiber? f.id = some f) (g : NFiber)
+    (hid : g.id = f.id) (valid : FiberGuardState m g active)
+    (reserved : ReservedKeys m (fiberKeys g)) (hpark : g.parked = .notParked) :
+    GuardState (m.update g) active := by
+  apply guardState_update_at state hf g hid valid reserved
+  intro token request hp _
+  rw [hpark] at hp
+  cases hp
+
 theorem guardState_update_unparked {m : NativeMachine} {f : NFiber}
     (state : GuardState m) (hf : m.fiber? f.id = some f) (g : NFiber)
     (hid : g.id = f.id) (valid : FiberGuardState m g)
     (reserved : ReservedKeys m (fiberKeys g)) (hpark : g.parked = .notParked) :
-    GuardState (m.update g) := by
-  apply guardState_update state hf g hid valid reserved
-  intro token request hp _
-  rw [hpark] at hp
-  cases hp
+    GuardState (m.update g) :=
+  guardState_update_unparked_at state hf g hid valid reserved hpark
 
 theorem requestOf_update_unparked_subset (m : NativeMachine) (g : NFiber)
     (hpark : g.parked = .notParked) (fiber : FiberId) (token : Nat) (request : NativeOp × Val)
@@ -1776,7 +1868,7 @@ theorem reservedKeys_driveStep_resume (p : NativeEff) (table : RowTable)
 theorem guardState_withState {m : NativeMachine} (state : GuardState m) (stores : Stores)
     (keys : storeKeys stores ⊆ storeKeys m.state) :
     GuardState { m with state := stores } := by
-  exact GuardState.frame_state m state stores
+  exact GuardState.frame_state m none state stores
     (internalKeysBelow_state_subset m stores keys state.keysBelow)
     (requestsOwned_state_subset m stores keys state.requestsOwned)
 
@@ -1812,13 +1904,13 @@ theorem requestOf_of_shape {m : NativeMachine} {fiber : FiberId} {token : Nat}
   rename_i register signal cancel
   cases register <;> simp_all
 
-theorem guardState_update_view {m : NativeMachine} {f : NFiber}
-    (state : GuardState m) (hf : m.fiber? f.id = some f) (g : NFiber)
-    (valid : FiberGuardState m g) (view : RequestView f g) (keys : fiberKeys g = fiberKeys f) :
-    GuardState (m.update g) := by
+theorem guardState_update_view_at {active : Option FiberId} {m : NativeMachine} {f : NFiber}
+    (state : GuardState m active) (hf : m.fiber? f.id = some f) (g : NFiber)
+    (valid : FiberGuardState m g active) (view : RequestView f g) (keys : fiberKeys g = fiberKeys f) :
+    GuardState (m.update g) active := by
   have hmem : f ∈ m.fibers := List.mem_of_find?_eq_some hf
-  apply guardState_update (f := f) state hf g view.1.symm valid
-  · rw [keys]; exact reservedKeys_fiber state hmem
+  apply guardState_update_at (f := f) state hf g view.1.symm valid
+  · rw [keys]; exact reservedKeys_fiber_at state hmem
   · intro token request hp hr
     have oldRequest : requestOf m f.id token = some request :=
       requestOf_of_shape hf (view.2.1.trans hp) (view.2.2 ▸ hr)
@@ -1827,6 +1919,12 @@ theorem guardState_update_view {m : NativeMachine} {f : NFiber}
     intro hk
     rw [keys] at hk
     exact hsafe (view.1 ▸ internalKeys_fiber hmem hk)
+
+theorem guardState_update_view {m : NativeMachine} {f : NFiber}
+    (state : GuardState m) (hf : m.fiber? f.id = some f) (g : NFiber)
+    (valid : FiberGuardState m g) (view : RequestView f g) (keys : fiberKeys g = fiberKeys f) :
+    GuardState (m.update g) :=
+  guardState_update_view_at state hf g valid view keys
 
 theorem reservedKeys_subset {m : NativeMachine} {keys more : List GuardKey}
     (reserved : ReservedKeys m more) (subset : keys ⊆ more) : ReservedKeys m keys :=
@@ -1944,16 +2042,22 @@ theorem reservedKeys_append {m : NativeMachine} {left right : List GuardKey}
     · exact hl.disjoint fiber token request hreq h
     · exact hr.disjoint fiber token request hreq h
 
-theorem guardState_update_preserved_request {m : NativeMachine} {f : NFiber}
-    (state : GuardState m) (hf : m.fiber? f.id = some f) (g : NFiber)
-    (valid : FiberGuardState m g) (view : RequestView f g)
-    (reserved : ReservedKeys m (fiberKeys g)) : GuardState (m.update g) := by
-  apply guardState_update (f := f) state hf g view.1.symm valid reserved
+theorem guardState_update_preserved_request_at {active : Option FiberId} {m : NativeMachine} {f : NFiber}
+    (state : GuardState m active) (hf : m.fiber? f.id = some f) (g : NFiber)
+    (valid : FiberGuardState m g active) (view : RequestView f g)
+    (reserved : ReservedKeys m (fiberKeys g)) : GuardState (m.update g) active := by
+  apply guardState_update_at (f := f) state hf g view.1.symm valid reserved
   intro token request hp hr
   have oldRequest : requestOf m f.id token = some request :=
     requestOf_of_shape hf (view.2.1.trans hp) (view.2.2 ▸ hr)
   exact ⟨view.1 ▸ state.requestsOwned f.id token request oldRequest,
     view.1 ▸ reserved.disjoint f.id token request oldRequest⟩
+
+theorem guardState_update_preserved_request {m : NativeMachine} {f : NFiber}
+    (state : GuardState m) (hf : m.fiber? f.id = some f) (g : NFiber)
+    (valid : FiberGuardState m g) (view : RequestView f g)
+    (reserved : ReservedKeys m (fiberKeys g)) : GuardState (m.update g) :=
+  guardState_update_preserved_request_at state hf g valid view reserved
 
 theorem guardState_arm {m : NativeMachine} (state : GuardState m) (owner : FiberId) :
     GuardState (m.arm owner) := by
@@ -2241,60 +2345,110 @@ theorem reservedKeys_driveStep_drainDue (p : NativeEff) (table : RowTable)
   rcases reserved with ⟨hb, hd⟩
   exact ⟨hb, hd⟩
 
+/-- A fresh interrupt cause changes no owned callback key.
+Consumer: the update edit resolved from the actual prefix lookup. -/
+theorem fiberGuardState_interruptWithCause_at {active : Option FiberId}
+    {m : NativeMachine} {f : NFiber} (old : FiberGuardState m f active) (fresh : CauseV) :
+    FiberGuardState m (interruptWithCause fresh f).1 active := by
+  cases he : f.exit with
+  | some exit => simpa only [interruptWithCause, he, Option.isSome_some, ↓reduceIte] using old
+  | none =>
+    cases hi : f.frame.interruptible with
+    | false =>
+      simp only [interruptWithCause, he, hi, FiberCore.interruptible, Option.isSome_none,
+        Bool.false_eq_true, ↓reduceIte]
+      refine ⟨old.below, old.pending, old.idle, old.parkedBelow, ?_, ?_, old.codes, old.tasks⟩
+      · intro exited
+        simp only [Option.isSome_none] at exited
+        cases exited
+      · intro _
+        rfl
+    | true =>
+      cases hr : f.running with
+      | true =>
+        simp only [interruptWithCause, he, hi, hr, FiberCore.interruptible,
+          Option.isSome_none, Bool.false_eq_true, ↓reduceIte]
+        refine ⟨old.below, old.pending, ?_, old.parkedBelow, ?_, ?_, old.codes, old.tasks⟩
+        · simpa only [hr] using old.idle
+        · intro exited
+          simp only [Option.isSome_none] at exited
+          cases exited
+        · intro _
+          rfl
+      | false =>
+        simp only [interruptWithCause, he, hi, hr, FiberCore.interruptible,
+          Option.isSome_none, Bool.false_eq_true, ↓reduceIte]
+        refine ⟨old.below, rfl, ?_, ?_, ?_, ?_, ?_, old.tasks⟩
+        · cases active with
+          | none => exact fun h => False.elim (h rfl)
+          | some owner => exact fun _ h => False.elim (h rfl)
+        · intro token parked
+          cases parked
+        · intro exited
+          simp only [Option.isSome_none] at exited
+          cases exited
+        · intro _
+          rfl
+        · exact ⟨raceCodeOwned_of_no_sites m f.id _ rfl, old.codes.2⟩
+
+theorem guardState_interruptWithCause_at {active : Option FiberId}
+    {m : NativeMachine} {f : NFiber} (state : GuardState m active)
+    (lookup : m.fiber? f.id = some f) (fresh : CauseV) :
+    GuardState (m.update (interruptWithCause fresh f).1) active := by
+  have member := List.mem_of_find?_eq_some lookup
+  have keys : fiberKeys (interruptWithCause fresh f).1 = fiberKeys f := by
+    unfold interruptWithCause
+    dsimp only
+    repeat' split
+    all_goals rfl
+  have valid := fiberGuardState_interruptWithCause_at (guardState_fiber_at state member) fresh
+  by_cases unparked : (interruptWithCause fresh f).1.parked = .notParked
+  · apply guardState_update_unparked_at state lookup _ ?_ valid ?_ unparked
+    · exact (Moves.OtherEdit.interruptCause f fresh).id
+    · rw [keys]
+      exact reservedKeys_fiber_at state member
+  · have view : RequestView f (interruptWithCause fresh f).1 := by
+      cases he : f.exit <;> cases hi : f.frame.interruptible <;> cases hr : f.running <;>
+        simp only [interruptWithCause, RequestView, FiberCore.interruptible, FiberCore.recordCause,
+          FiberCore.setDeferred, FiberCore.answerWith, he, hi, hr, Option.isSome_none,
+          Option.isSome_some, Bool.false_eq_true, ↓reduceIte, and_self, not_true_eq_false] at unparked ⊢
+    exact guardState_update_view_at state lookup _ valid view keys
+
+/-- Interrupt messages may remove requests but never manufacture a request. -/
+theorem requestOf_interruptWithCause_subset {m : NativeMachine} {f : NFiber}
+    (lookup : m.fiber? f.id = some f) (fresh : CauseV)
+    (fiber : FiberId) (token : Nat) (request : NativeOp × Val)
+    (offered : requestOf (m.update (interruptWithCause fresh f).1) fiber token = some request) :
+    requestOf m fiber token = some request := by
+  by_cases unparked : (interruptWithCause fresh f).1.parked = .notParked
+  · exact requestOf_update_unparked_subset m _ unparked fiber token request offered
+  · have view : RequestView f (interruptWithCause fresh f).1 := by
+      cases he : f.exit <;> cases hi : f.frame.interruptible <;> cases hr : f.running <;>
+        simp only [interruptWithCause, RequestView, FiberCore.interruptible, FiberCore.recordCause,
+          FiberCore.setDeferred, FiberCore.answerWith, he, hi, hr, Option.isSome_none,
+          Option.isSome_some, Bool.false_eq_true, ↓reduceIte, and_self, not_true_eq_false] at unparked ⊢
+    exact (requestOf_update_view lookup _ view fiber token).symm.trans offered
+
 theorem fiberGuardState_interruptRecord (p : NativeEff) (table : RowTable)
     {m : NativeMachine} {f : NFiber} (old : FiberGuardState m f)
     (who : Option FiberId) (extra : ReasonAnnotations Ann) :
-    FiberGuardState m (interruptRecord (interpOf p table) who extra f).1 := by
-  cases he : f.exit <;> cases hi : f.frame.interruptible <;> cases hr : f.running
-  all_goals simp only [interruptRecord, interruptWithCause, FiberCore.interruptible, FiberCore.recordCause,
-    FiberCore.interruptedCause, FiberCore.setDeferred, FiberCore.answerWith,
-    he, hi, hr, Option.isSome_none, Option.isSome_some, Bool.false_eq_true, ↓reduceIte]
-  all_goals first | exact old | skip
-  all_goals refine ⟨old.below, ?_, ?_, ?_, ?_, ?_, ?_, old.tasks⟩
-  all_goals first
-    | exact old.pending
-    | simpa only [hr] using old.idle
-    | exact old.parkedBelow
-    | simpa only [he, hr] using old.exited
-    | exact old.deferredCause
-    | exact old.codes
-    | rfl
-    | solve | intro h; exact False.elim (h rfl)
-    | solve | intro token h; cases h
-    | solve | intro h; simp only [Option.isSome_none] at h; cases h
-    | solve | intro _; rfl
-    | exact ⟨raceCodeOwned_of_no_sites m f.id _ rfl, old.codes.2⟩
+    FiberGuardState m (interruptRecord (interpOf p table) who extra f).1 :=
+  fiberGuardState_interruptWithCause_at old (Machine.interruptCause (interpOf p table) who extra f.id)
 
 theorem guardState_interruptRecord (p : NativeEff) (table : RowTable)
     {m : NativeMachine} {f : NFiber} (state : GuardState m)
     (hf : m.fiber? f.id = some f) (who : Option FiberId) (extra : ReasonAnnotations Ann) :
-    GuardState (m.update (interruptRecord (interpOf p table) who extra f).1) := by
-  have hmem : f ∈ m.fibers := List.mem_of_find?_eq_some hf
-  have valid := fiberGuardState_interruptRecord p table (guardState_fiber state hmem) who extra
-  cases he : f.exit <;> cases hi : f.frame.interruptible <;> cases hr : f.running
-  all_goals simp only [interruptRecord, interruptWithCause, FiberCore.interruptible, FiberCore.recordCause,
-    FiberCore.interruptedCause, FiberCore.setDeferred, FiberCore.answerWith,
-    he, hi, hr, Option.isSome_none, Option.isSome_some, Bool.false_eq_true, ↓reduceIte] at valid ⊢
-  all_goals first
-    | exact guardState_update_view (f := f) state hf _ valid ⟨rfl, rfl, rfl⟩ rfl
-    | exact guardState_update_unparked (f := f) state hf _ rfl valid
-        (reservedKeys_fiber (f := f) state hmem) rfl
+    GuardState (m.update (interruptRecord (interpOf p table) who extra f).1) :=
+  guardState_interruptWithCause_at state hf (Machine.interruptCause (interpOf p table) who extra f.id)
 
 theorem requestOf_interruptRecord_subset (p : NativeEff) (table : RowTable)
     {m : NativeMachine} {f : NFiber} (hf : m.fiber? f.id = some f)
     (who : Option FiberId) (extra : ReasonAnnotations Ann)
     (fiber : FiberId) (token : Nat) (request : NativeOp × Val)
     (hrequest : requestOf (m.update (interruptRecord (interpOf p table) who extra f).1)
-      fiber token = some request) : requestOf m fiber token = some request := by
-  let g := (interruptRecord (interpOf p table) who extra f).1
-  by_cases hpark : g.parked = .notParked
-  · exact requestOf_update_unparked_subset m g hpark fiber token request hrequest
-  · have view : RequestView f g := by
-      cases he : f.exit <;> cases hi : f.frame.interruptible <;> cases hr : f.running <;>
-        simp only [g, interruptRecord, interruptWithCause, RequestView, FiberCore.interruptible, FiberCore.recordCause,
-          FiberCore.setDeferred, FiberCore.answerWith, he, hi, hr, Option.isSome_none,
-          Option.isSome_some, Bool.false_eq_true, ↓reduceIte, and_self, not_true_eq_false] at hpark ⊢
-    exact (requestOf_update_view (f := f) hf g view fiber token) ▸ hrequest
+      fiber token = some request) : requestOf m fiber token = some request :=
+  requestOf_interruptWithCause_subset hf (Machine.interruptCause (interpOf p table) who extra f.id)
+    fiber token request hrequest
 
 theorem guardState_driveStep_interruptTarget (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (target : FiberId) (who : Option FiberId) (extra : ReasonAnnotations Ann)
@@ -2382,12 +2536,12 @@ theorem commandAuthority_transport_commands (p : NativeEff) (table : RowTable)
     obtain ⟨f, hf, he⟩ := authority
     exact controls.exited fiber f hf he
 
-theorem commandControls_interruptRecord (p : NativeEff) (table : RowTable)
+theorem commandControls_interruptWithCause
     {m : NativeMachine} {f : NFiber} (hf : m.fiber? f.id = some f)
-    (who : Option FiberId) (extra : ReasonAnnotations Ann) :
-    CommandControlsPreserved m (m.update (interruptRecord (interpOf p table) who extra f).1) := by
-  let g := (interruptRecord (interpOf p table) who extra f).1
-  have hid : g.id = f.id := interruptRecord_id p table who extra f
+    (fresh : Cause Err Defect FiberId Ann) :
+    CommandControlsPreserved m (m.update (interruptWithCause fresh f).1) := by
+  let g := (interruptWithCause fresh f).1
+  have hid : g.id = f.id := interruptWithCause_id fresh f
   constructor
   · intro fiber old hold hrun hpark
     by_cases he : old.id = f.id
@@ -2396,10 +2550,8 @@ theorem commandControls_interruptRecord (p : NativeEff) (table : RowTable)
       have heq : old = f := Option.some.inj (hlookup.symm.trans hf)
       subst old
       refine ⟨g, fiber_lookup_update_self hold g (hid.trans (fiber_id_of_lookup hold)), ?_⟩
-      cases hx : f.exit <;> cases hi : f.frame.interruptible <;>
-        simp only [g, interruptRecord, interruptWithCause, FiberCore.interruptible, FiberCore.recordCause,
-          FiberCore.setDeferred, hx, hi, hrun, hpark, Option.isSome_none, Option.isSome_some,
-          Bool.false_eq_true, ↓reduceIte, and_self]
+      have fields := (Moves.OtherEdit.interruptCause f fresh).controls (Or.inl hrun)
+      exact ⟨fields.2.2.2 hrun, fields.2.1.trans hpark, fields.1⟩
     · refine ⟨old, ?_, hrun, hpark, rfl⟩
       change (m.update g).fiber? fiber = some old
       simp only [fiber_lookup_update, hold, Option.map_some, hid, he, ↓reduceIte]
@@ -2409,13 +2561,20 @@ theorem commandControls_interruptRecord (p : NativeEff) (table : RowTable)
         simpa only [← he, fiber_id_of_lookup hold] using hold
       have heq : old = f := Option.some.inj (hlookup.symm.trans hf)
       subst old
-      have hg : g = f := by simp only [g, interruptRecord, interruptWithCause, hexit, ↓reduceIte]
+      have hg : g = f := by simp only [g, interruptWithCause, hexit, ↓reduceIte]
       refine ⟨f, ?_, hexit⟩
       change (m.update g).fiber? fiber = some f
       simpa only [hg] using fiber_lookup_update_self hold g (hid.trans (fiber_id_of_lookup hold))
     · refine ⟨old, ?_, hexit⟩
       change (m.update g).fiber? fiber = some old
       simp only [fiber_lookup_update, hold, Option.map_some, hid, he, ↓reduceIte]
+
+/-- The interpreted interruption is the fresh-cause command-control law. -/
+theorem commandControls_interruptRecord (p : NativeEff) (table : RowTable)
+    {m : NativeMachine} {f : NFiber} (hf : m.fiber? f.id = some f)
+    (who : Option FiberId) (extra : ReasonAnnotations Ann) :
+    CommandControlsPreserved m (m.update (interruptRecord (interpOf p table) who extra f).1) :=
+  commandControls_interruptWithCause hf (Machine.interruptCause (interpOf p table) who extra f.id)
 
 theorem guardQueue_interruptRecord (p : NativeEff) (table : RowTable)
     {m : NativeMachine} {commands : List NCmd} (queue : GuardQueue p table m commands)
@@ -2643,7 +2802,7 @@ theorem internalKeys_state_add (m : NativeMachine) (stores : Stores) :
 theorem guardState_withStoreKeys {m : NativeMachine} (state : GuardState m)
     (stores : Stores) (keys : ReservedKeys m (storeKeys stores)) : GuardState { m with state := stores } := by
   have subset := internalKeys_state_add m stores
-  apply GuardState.frame_state m state stores
+  apply GuardState.frame_state m none state stores
   · intro key hk
     rcases List.mem_append.mp (subset hk) with h | h
     · exact state.keysBelow key h
@@ -2954,11 +3113,16 @@ theorem fiberGuardState_children {m : NativeMachine} {f : NFiber}
   rcases valid
   constructor <;> assumption
 
-theorem fiberGuardState_observers {m : NativeMachine} {f : NFiber}
-    (valid : FiberGuardState m f) (observers : List Observer) :
-    FiberGuardState m { f with observers := observers } := by
+theorem fiberGuardState_observers_at {active : Option FiberId} {m : NativeMachine} {f : NFiber}
+    (valid : FiberGuardState m f active) (observers : List Observer) :
+    FiberGuardState m { f with observers := observers } active := by
   rcases valid
   constructor <;> assumption
+
+theorem fiberGuardState_observers {m : NativeMachine} {f : NFiber}
+    (valid : FiberGuardState m f) (observers : List Observer) :
+    FiberGuardState m { f with observers := observers } :=
+  fiberGuardState_observers_at valid observers
 
 def trackedChild (m : NativeMachine) (parent child : FiberId) : NativeMachine :=
   (m.modify parent fun f => { f with children := f.children ++ [child] }).modify child
@@ -3135,16 +3299,22 @@ theorem requestOrInterrupted_linkScope (p : NativeEff) (table : RowTable)
     (hrequest : requestOf m fiber token = some request) :
     requestOf (linkScope (interpOf p table) m mode scope target who extra).1 fiber token = some request ∨
       InterruptedAt (linkScope (interpOf p table) m mode scope target who extra).1 fiber := by
-  unfold linkScope
+  unfold linkScope linkScopeEdits
   cases hs : (interpOf p table).scopeStatus scope m.state with
-  | none => exact Or.inl hrequest
+  | none =>
+        dsimp only [applyFiberEdits, List.foldl]
+        exact Or.inl hrequest
   | some status =>
     cases status with
     | some exit =>
       simp only []
       cases hf : m.fiber? target with
-      | none => exact Or.inl hrequest
+      | none =>
+        dsimp only [applyFiberEdits, List.foldl]
+        exact Or.inl hrequest
       | some f =>
+        dsimp only [applyFiberEdits, List.foldl, applyFiberEdit]
+        rw [RunMachine.fiber?_emit, hf]
         let g := (interruptRecord (interpOf p table) who extra f).1
         have hid : g.id = target := (interruptRecord_id p table who extra f).trans (fiber_id_of_lookup hf)
         by_cases he : target = fiber
@@ -3156,16 +3326,22 @@ theorem requestOrInterrupted_linkScope (p : NativeEff) (table : RowTable)
     | none =>
       simp only []
       cases hf : m.fiber? target with
-      | none => exact Or.inl hrequest
+      | none =>
+        dsimp only [applyFiberEdits, List.foldl]
+        exact Or.inl hrequest
       | some f =>
         simp only []
         split
-        · exact Or.inl hrequest
+        · dsimp only [applyFiberEdits, List.foldl]
+          exact Or.inl hrequest
         · cases hl : (interpOf p table).scopeLinkFiber mode scope target m.state with
-          | none => exact Or.inl hrequest
+          | none =>
+        dsimp only [applyFiberEdits, List.foldl]
+        exact Or.inl hrequest
           | some result =>
             rcases result with ⟨state, key⟩
-            simp only []
+            dsimp only [applyFiberEdits, List.foldl, applyFiberEdit]
+            rw [RunMachine.modify_emit]
             left
             exact (requestOf_modify_view ({ m with state := state } : NativeMachine)
               target fiber token
@@ -3177,29 +3353,42 @@ theorem interruptedAt_linkScope (p : NativeEff) (table : RowTable)
     (who : Option FiberId) (extra : ReasonAnnotations Ann) (fiber : FiberId)
     (h : InterruptedAt m fiber) :
     InterruptedAt (linkScope (interpOf p table) m mode scope target who extra).1 fiber := by
-  unfold linkScope
+  unfold linkScope linkScopeEdits
   cases hs : (interpOf p table).scopeStatus scope m.state with
-  | none => exact h
+  | none =>
+        dsimp only [applyFiberEdits, List.foldl]
+        exact h
   | some status =>
     cases status with
     | some exit =>
       simp only []
       cases hf : m.fiber? target with
-      | none => exact h
-      | some f => exact interruptedAt_update_interruptRecord p table hf who extra fiber h
+      | none =>
+        dsimp only [applyFiberEdits, List.foldl]
+        exact h
+      | some f =>
+        dsimp only [applyFiberEdits, List.foldl, applyFiberEdit]
+        rw [RunMachine.fiber?_emit, hf]
+        exact interruptedAt_update_interruptRecord p table hf who extra fiber h
     | none =>
       simp only []
       cases hf : m.fiber? target with
-      | none => exact h
+      | none =>
+        dsimp only [applyFiberEdits, List.foldl]
+        exact h
       | some f =>
         simp only []
         split
-        · exact h
+        · dsimp only [applyFiberEdits, List.foldl]
+          exact h
         · cases hl : (interpOf p table).scopeLinkFiber mode scope target m.state with
-          | none => exact h
+          | none =>
+        dsimp only [applyFiberEdits, List.foldl]
+        exact h
           | some result =>
             rcases result with ⟨state, key⟩
-            simp only []
+            dsimp only [applyFiberEdits, List.foldl, applyFiberEdit]
+            rw [RunMachine.modify_emit]
             exact interruptedAt_modify_view target
               (fun f => { f with observers := f.observers ++ [.dropScopeFinalizer scope key] })
               (fun _ => rfl) (fun _ h => h) fiber h
@@ -3215,31 +3404,45 @@ theorem guardState_linkScope (p : NativeEff) (table : RowTable)
     (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId)
     (who : Option FiberId) (extra : ReasonAnnotations Ann) :
     GuardState (linkScope (interpOf p table) m mode scope target who extra).1 := by
-  unfold linkScope
+  unfold linkScope linkScopeEdits
   cases hs : (interpOf p table).scopeStatus scope m.state with
-  | none => exact guardState_halt state _
+  | none =>
+        dsimp only [applyFiberEdits, List.foldl]
+        exact guardState_halt state _
   | some status =>
     cases status with
     | some exit =>
       simp only []
       cases hf : m.fiber? target with
-      | none => exact guardState_halt state _
+      | none =>
+        dsimp only [applyFiberEdits, List.foldl]
+        exact guardState_halt state _
       | some f =>
+        dsimp only [applyFiberEdits, List.foldl, applyFiberEdit]
+        rw [RunMachine.fiber?_emit, hf]
+        dsimp only []
         exact guardState_emit (guardState_interruptRecord p table (f := f) state
-          (by simpa only [fiber_id_of_lookup hf] using hf) who extra) _
+          (by simpa only [fiber_id_of_lookup hf] using hf) who extra)
+          [RunEvent.scopeClosedOnLink scope target, RunEvent.interruptRecorded who target]
     | none =>
       simp only []
       cases hf : m.fiber? target with
-      | none => exact guardState_halt state _
+      | none =>
+        dsimp only [applyFiberEdits, List.foldl]
+        exact guardState_halt state _
       | some f =>
         simp only []
         split
-        · exact state
+        · dsimp only [applyFiberEdits, List.foldl]
+          exact state
         · cases hl : (interpOf p table).scopeLinkFiber mode scope target m.state with
-          | none => exact guardState_halt state _
+          | none =>
+        dsimp only [applyFiberEdits, List.foldl]
+        exact guardState_halt state _
           | some result =>
             rcases result with ⟨after, key⟩
-            simp only []
+            dsimp only [applyFiberEdits, List.foldl, applyFiberEdit]
+            rw [RunMachine.modify_emit]
             have valid := guardState_scopeLinkFiber p table state mode scope target hl
             apply guardState_emit
             apply guardState_modify_view valid target
@@ -3256,16 +3459,22 @@ theorem guardQueue_linkScope (p : NativeEff) (table : RowTable)
     (who : Option FiberId) (extra : ReasonAnnotations Ann) :
     let result := linkScope (interpOf p table) m mode scope target who extra
     GuardQueue p table result.1 (result.2 ++ rest) := by
-  unfold linkScope
+  unfold linkScope linkScopeEdits
   cases hs : (interpOf p table).scopeStatus scope m.state with
-  | none => exact guardQueue_halt p table queue _
+  | none =>
+        dsimp only [applyFiberEdits, List.foldl]
+        exact guardQueue_halt p table queue _
   | some status =>
     cases status with
     | some exit =>
       simp only []
       cases hf : m.fiber? target with
-      | none => exact guardQueue_halt p table queue _
+      | none =>
+        dsimp only [applyFiberEdits, List.foldl]
+        exact guardQueue_halt p table queue _
       | some f =>
+        dsimp only [applyFiberEdits, List.foldl, applyFiberEdit]
+        rw [RunMachine.fiber?_emit, hf]
         have after := guardQueue_emit p table (guardQueue_interruptRecord p table (f := f) queue
           (by simpa only [fiber_id_of_lookup hf] using hf) who extra)
           [RunEvent.scopeClosedOnLink scope target, RunEvent.interruptRecorded who target]
@@ -3276,16 +3485,22 @@ theorem guardQueue_linkScope (p : NativeEff) (table : RowTable)
     | none =>
       simp only []
       cases hf : m.fiber? target with
-      | none => exact guardQueue_halt p table queue _
+      | none =>
+        dsimp only [applyFiberEdits, List.foldl]
+        exact guardQueue_halt p table queue _
       | some f =>
         simp only []
         split
-        · exact queue
+        · dsimp only [applyFiberEdits, List.foldl]
+          exact queue
         · cases hl : (interpOf p table).scopeLinkFiber mode scope target m.state with
-          | none => exact guardQueue_halt p table queue _
+          | none =>
+        dsimp only [applyFiberEdits, List.foldl]
+        exact guardQueue_halt p table queue _
           | some result =>
             rcases result with ⟨after, key⟩
-            simp only []
+            dsimp only [applyFiberEdits, List.foldl, applyFiberEdit]
+            rw [RunMachine.modify_emit]
             exact guardQueue_emit p table
               (guardQueue_modify_fields p table (guardQueue_withState p table queue after) target
                 (fun g => { g with observers := g.observers ++ [.dropScopeFinalizer scope key] })
@@ -3306,33 +3521,46 @@ theorem reservedKeys_linkScope (p : NativeEff) (table : RowTable)
     (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId)
     (who : Option FiberId) (extra : ReasonAnnotations Ann) :
     ReservedKeys (linkScope (interpOf p table) m mode scope target who extra).1 keys := by
-  unfold linkScope
+  unfold linkScope linkScopeEdits
   cases hs : (interpOf p table).scopeStatus scope m.state with
-  | none => exact reservedKeys_halt reserved _
+  | none =>
+        dsimp only [applyFiberEdits, List.foldl]
+        exact reservedKeys_halt reserved _
   | some status =>
     cases status with
     | some exit =>
       simp only []
       cases hf : m.fiber? target with
-      | none => exact reservedKeys_halt reserved _
+      | none =>
+        dsimp only [applyFiberEdits, List.foldl]
+        exact reservedKeys_halt reserved _
       | some f =>
+        dsimp only [applyFiberEdits, List.foldl, applyFiberEdit]
+        rw [RunMachine.fiber?_emit, hf]
+        dsimp only []
         apply reservedKeys_of_requests_subset reserved
         · exact Nat.le_refl _
-        · exact requestOf_interruptRecord_subset p table (f := f)
+        · exact requestOf_interruptRecord_subset p table (m := m) (f := f)
             (by simpa only [fiber_id_of_lookup hf] using hf) who extra
     | none =>
       simp only []
       cases hf : m.fiber? target with
-      | none => exact reservedKeys_halt reserved _
+      | none =>
+        dsimp only [applyFiberEdits, List.foldl]
+        exact reservedKeys_halt reserved _
       | some f =>
         simp only []
         split
-        · exact reserved
+        · dsimp only [applyFiberEdits, List.foldl]
+          exact reserved
         · cases hl : (interpOf p table).scopeLinkFiber mode scope target m.state with
-          | none => exact reservedKeys_halt reserved _
+          | none =>
+        dsimp only [applyFiberEdits, List.foldl]
+        exact reservedKeys_halt reserved _
           | some result =>
             rcases result with ⟨after, key⟩
-            simp only []
+            dsimp only [applyFiberEdits, List.foldl, applyFiberEdit]
+            rw [RunMachine.modify_emit]
             exact reservedKeys_emit (reservedKeys_modify_view (reservedKeys_withState reserved after) target
               (fun g => { g with observers := g.observers ++ [.dropScopeFinalizer scope key] })
               (fun _ => ⟨rfl, rfl, rfl⟩)) _
@@ -3670,22 +3898,27 @@ theorem reservedKeys_forkFinalizers (p : NativeEff) (table : RowTable) {m : Nati
   | cons code programs ih => exact ih (reservedKeys_spawn p table reserved host code ⟨true, true, .inherit⟩)
 
 /-- Installing a scheduler-owned observer reserves exactly its callback keys. -/
-theorem guardState_addObserver {m : NativeMachine} (state : GuardState m)
+theorem guardState_addObserver_at {active : Option FiberId} {m : NativeMachine} (state : GuardState m active)
     (target : FiberId) (observer : Observer) (reserved : ReservedKeys m (observerKeys observer)) :
-    GuardState (m.modify target fun f => { f with observers := f.observers ++ [observer] }) := by
+    GuardState (m.modify target fun f => { f with observers := f.observers ++ [observer] }) active := by
   unfold RunMachine.modify
   cases hf : m.fiber? target with
   | none => exact state
   | some f =>
     have fm := List.mem_of_find?_eq_some hf
-    apply guardState_update_preserved_request (f := f) state
+    apply guardState_update_preserved_request_at (f := f) state
       (by simpa only [fiber_id_of_lookup hf] using hf)
       { f with observers := f.observers ++ [observer] }
-      (fiberGuardState_observers (guardState_fiber state fm) _) ⟨rfl, rfl, rfl⟩
-    apply reservedKeys_subset (reservedKeys_append (reservedKeys_fiber state fm) reserved)
+      (fiberGuardState_observers_at (guardState_fiber_at state fm) _) ⟨rfl, rfl, rfl⟩
+    apply reservedKeys_subset (reservedKeys_append (reservedKeys_fiber_at state fm) reserved)
     intro key hk
     simpa only [fiberKeys, List.flatMap_append, List.flatMap_cons,
       List.flatMap_nil, List.append_nil, List.mem_append, or_assoc, or_left_comm, or_comm] using hk
+
+theorem guardState_addObserver {m : NativeMachine} (state : GuardState m)
+    (target : FiberId) (observer : Observer) (reserved : ReservedKeys m (observerKeys observer)) :
+    GuardState (m.modify target fun f => { f with observers := f.observers ++ [observer] }) :=
+  guardState_addObserver_at state target observer reserved
 
 theorem guardQueue_addObserver (p : NativeEff) (table : RowTable)
     {m : NativeMachine} {commands : List NCmd} (queue : GuardQueue p table m commands)

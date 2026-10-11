@@ -1,5 +1,6 @@
 import Effect4.Machine.Fibers
 import Effect4.Laws.Machine.Clauses
+import Effect4.Laws.Machine.EditObserverWords
 import Effect4.Laws.Auto.Obligations
 
 /-!
@@ -272,6 +273,18 @@ omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem disarm_trace (m : RunMachine ν σ β ε δ ι α χ St) (owner : FiberId) :
     (m.disarm owner).trace = m.trace := by aesop
 
+/-- R2 edit interpretation keeps the existing trace. The fuel and replay laws consume this fact. -/
+theorem applyFiberEdit_trace (edit : FiberEdit ε δ ι α)
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) :
+    (applyFiberEdit edit m).1.trace = m.trace := by
+  rw [Edits.fiber_word, Edits.run_trace, Edits.fiberWord_events, List.append_nil]
+
+/-- The ordered R2 word emits no trace events. Its settlement supplies only a command prefix. -/
+theorem applyFiberEdits_trace (edits : List (FiberEdit ε δ ι α))
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) :
+    (applyFiberEdits edits m).1.trace = m.trace := by
+  rw [Edits.fiber_words, Edits.run_trace, Edits.fiberWords_events, List.append_nil]
+
 /-- A machine-first tuple whose machine extends `m`: the shape every helper that returns a
 machine beside other things has, so a hop through it is one lemma. -/
 def Grows (m : RunMachine ν σ β ε δ ι α χ St) {R : Type w} (e : RunMachine ν σ β ε δ ι α χ St × R) :
@@ -298,7 +311,8 @@ macro "trace_leaf" : tactic =>
   `(tactic| (
     try simp only [RunMachine.Extends, RunMachine.emit_trace, RunMachine.update_trace,
       RunMachine.modify_trace, RunMachine.halt_trace, RunMachine.updateRace_trace,
-      RunMachine.arm_trace, RunMachine.disarm_trace, List.append_assoc]
+      RunMachine.arm_trace, RunMachine.disarm_trace, RunMachine.applyFiberEdit_trace,
+      RunMachine.applyFiberEdits_trace, List.append_assoc]
     first
       | exact List.prefix_rfl
       | exact List.prefix_append _ _
@@ -325,56 +339,72 @@ omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem spawn_grows {interp : RunInterp ν σ β ε δ ι α χ St} {m : RunMachine ν σ β ε δ ι α χ St}
     {parent : RunFiber ν σ β ε δ ι α χ} {program : Prim ν σ β ε δ ι α}
     {options : Supervision.ForkOptions} {site : List Nat} : Grows m (spawn interp m parent program options site) := by
-  unfold Grows spawn
-  trace_leaf
+  unfold Grows
+  rw [Edits.spawn_word]
+  exact Edits.run_extends _ _
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem start_grows {m : RunMachine ν σ β ε δ ι α χ St} {parent : RunFiber ν σ β ε δ ι α χ}
     {child : FiberId} {immediately : Bool} : Grows m (start m parent child immediately) := by
-  unfold Grows start
-  split <;> trace_leaf
+  unfold Grows
+  rw [Edits.start_word]
+  exact Edits.run_extends _ _
 
 theorem interruptEach_grows {interp : RunInterp ν σ β ε δ ι α χ St} {who : FiberId}
     {extra : ReasonAnnotations α} {targets : List FiberId}
     {acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α)} :
     Grows acc.1 (interruptEach interp who extra targets acc) := by
-  induction targets generalizing acc with
-  | nil => exact Grows.refl _ _
-  | cons t ts ih =>
-    rw [interruptEach_cons]
-    refine Extends.trans ?_ ih
-    split <;> trace_leaf
+  unfold Grows
+  rw [Edits.interrupts_word]
+  exact Edits.run_extends _ _
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+/-- The countdown's canonical registration records its park. The eager view and native growth census consume it. -/
+theorem countdownParkEdits_grows {interp : RunInterp ν σ β ε δ ι α χ St}
+    {m : RunMachine ν σ β ε δ ι α χ St} {f : RunFiber ν σ β ε δ ι α χ} {targets : List FiberId}
+    {resumeWith : Resume ν} {failFast : Bool} :
+    Grows m (countdownParkEdits interp m f targets resumeWith failFast) := by
+  unfold Grows
+  rw [Edits.countdown_word]
+  exact Edits.run_extends _ _
+
 theorem countdownPark_grows {interp : RunInterp ν σ β ε δ ι α χ St}
     {m : RunMachine ν σ β ε δ ι α χ St} {f : RunFiber ν σ β ε δ ι α χ} {targets : List FiberId}
     {resumeWith : Resume ν} {failFast : Bool} :
     Grows m (countdownPark interp m f targets resumeWith failFast) := by
   unfold Grows countdownPark
-  try dsimp only
-  (repeat' split) <;> trace_leaf
+  dsimp only
+  unfold Extends
+  rw [RunMachine.applyFiberEdits_trace]
+  exact countdownParkEdits_grows
+
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+/-- Scope linking records its existing diagnostic events before the R2 word. Its eager view consumes this fact. -/
+theorem linkScopeEdits_grows {interp : RunInterp ν σ β ε δ ι α χ St} {m : RunMachine ν σ β ε δ ι α χ St}
+    {mode : Supervision.ScopeMode} {scope : Nat} {target : FiberId}
+    {interruptor : Option FiberId} {extra : ReasonAnnotations α} :
+    Grows m (linkScopeEdits interp m mode scope target interruptor extra) := by
+  unfold Grows
+  rw [Edits.link_plan_word]
+  exact Edits.run_extends _ _
 
 theorem linkScope_grows {interp : RunInterp ν σ β ε δ ι α χ St} {m : RunMachine ν σ β ε δ ι α χ St}
     {mode : Supervision.ScopeMode} {scope : Nat} {target : FiberId}
     {interruptor : Option FiberId} {extra : ReasonAnnotations α} :
     Grows m (linkScope interp m mode scope target interruptor extra) := by
-  unfold Grows linkScope
-  try dsimp only
-  (repeat' split) <;> trace_leaf
+  unfold Grows
+  rw [Edits.eager_link_word]
+  exact Edits.run_extends _ _
 
-/-- The parallel close's forks (§20): one spawn per finalizer, each extending the last. -/
+/-- The parallel close's forks (§20), read from the shared spawn word. -/
 theorem forkFinalizers_grows {interp : RunInterp ν σ β ε δ ι α χ St}
     {host : RunFiber ν σ β ε δ ι α χ} :
     ∀ {m : RunMachine ν σ β ε δ ι α χ St} {programs : List (Prim ν σ β ε δ ι α)},
-      Grows m (forkFinalizers interp m host programs)
-  | m, [] => Grows.refl m []
-  | m, program :: rest => by
-    unfold Grows forkFinalizers
-    try dsimp only
-    exact Extends.trans
-      (spawn_grows (interp := interp) (m := m) (parent := host) (program := program)
-        (options := ⟨true, true, Supervision.MaskMode.inherit⟩))
-      (forkFinalizers_grows (interp := interp) (host := host) (programs := rest))
+      Grows m (forkFinalizers interp m host programs) := by
+  intro m programs
+  unfold Grows
+  rw [Edits.forks_word]
+  exact Edits.run_extends _ _
 
 /-- The hops through the leaves. -/
 macro "hops_leaf" : tactic => `(tactic| first
@@ -382,7 +412,9 @@ macro "hops_leaf" : tactic => `(tactic| first
   | exact start_grows
   | exact interruptEach_grows
   | exact countdownPark_grows
+  | exact countdownParkEdits_grows
   | exact linkScope_grows
+  | exact linkScopeEdits_grows
   | exact forkFinalizers_grows)
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
@@ -390,29 +422,26 @@ omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem launchEntrant_grows {interp : RunInterp ν σ β ε δ ι α χ St} {raceId : Nat}
     {m : RunMachine ν σ β ε δ ι α χ St} {host : RunFiber ν σ β ε δ ι α χ}
     {program : Prim ν σ β ε δ ι α} {site : List Nat} : Grows m (launchEntrant interp raceId m host program site) := by
-  unfold Grows launchEntrant
-  dsimp only
-  trace_leaf
+  unfold Grows
+  rw [Edits.launch_word]
+  exact Edits.run_extends _ _
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- `injectYield` extends the diagnostic trace and changes no store observation. -/
 theorem injectYield_extends {m : RunMachine ν σ β ε δ ι α χ St} {f : RunFiber ν σ β ε δ ι α χ}
     {yielding : Bool} {it : Iter ν σ β ε δ ι α χ St} (h : injectYield m f yielding = some it) :
     Extends m it.machine := by
-  unfold injectYield at h
-  split at h
-  · cases h
-    trace_leaf
-  · cases h
+  rw [Edits.inject_word _ _ _ _ h]
+  exact Edits.run_extends _ _
 
 /-! ### The exit path -/
 
 theorem fireObserver_grows {interp : RunInterp ν σ β ε δ ι α χ St} {id : FiberId}
     {exit : Exit β ε δ ι α} {acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α)}
     {observer : Observer} : Grows acc.1 (fireObserver interp id exit acc observer) := by
-  unfold Grows fireObserver
-  try dsimp only
-  (repeat' split) <;> trace_chain with hops_leaf
+  unfold Grows
+  rw [Edits.observer_word]
+  exact Edits.run_extends _ _
 
 theorem fireObserver_fold_grows {interp : RunInterp ν σ β ε δ ι α χ St} {id : FiberId}
     {exit : Exit β ε δ ι α} {observers : List Observer}
@@ -433,9 +462,9 @@ omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem exitFiber_grows {interp : RunInterp ν σ β ε δ ι α χ St} {m : RunMachine ν σ β ε δ ι α χ St}
     {f : RunFiber ν σ β ε δ ι α χ} {exit : Exit β ε δ ι α} :
     Grows m (exitFiber interp m f exit) := by
-  unfold Grows exitFiber exitFiber.exitInterruptChildren exitFiber.exitStore
-  try dsimp only
-  (repeat' split) <;> trace_leaf
+  unfold Grows
+  rw [Edits.exit_word]
+  exact Edits.run_extends _ _
 
 /-! ### `evaluatePrim` and its arms -/
 
@@ -444,9 +473,8 @@ omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem registerRace_extends {m : RunMachine ν σ β ε δ ι α χ St} {f : RunFiber ν σ β ε δ ι α χ}
     {yielding : Bool} {raceId : Nat} :
     Extends m (registerRace m f yielding raceId).machine := by
-  unfold registerRace
-  try dsimp only
-  split <;> trace_leaf
+  rw [Edits.register_word]
+  exact Edits.run_extends _ _
 
 theorem finishFrame_extends {m : RunMachine ν σ β ε δ ι α χ St} {f : RunFiber ν σ β ε δ ι α χ}
     {yielding : Bool} {next : FrameStep ν σ β ε δ ι α} {events : List (FrameEvent ν σ β ε δ ι α)}
@@ -515,28 +543,34 @@ theorem iteration_extends {interp : RunInterp ν σ β ε δ ι α χ St}
 /-! ### The loop -/
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+/-- The existing disposition pass emits nothing. The R2 settlement growth proof consumes it. -/
+theorem settleOutcome_grows {id : FiberId} {rest : List (Cmd ν σ β ε δ ι α)}
+    {it : Iter ν σ β ε δ ι α χ St} : Grows it.machine (settleOutcome id rest it) := by
+  unfold Grows
+  rw [Edits.outcome_word]
+  exact Edits.run_extends _ _
+
 theorem settle_grows {id : FiberId} {rest : List (Cmd ν σ β ε δ ι α)} {it : Iter ν σ β ε δ ι α χ St} :
     Grows it.machine (settle id rest it) := by
-  unfold Grows settle
-  (repeat' split) <;> trace_leaf
+  unfold Grows
+  rw [Edits.settle_word]
+  exact Edits.run_extends _ _
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- Posting a task keeps the trace's prefix: a halt, or an update, an arm and an emit. -/
 theorem postTask_extends {m : RunMachine ν σ β ε δ ι α χ St} {owner : FiberId}
     {priority : Nat} {task : Task ν σ β ε δ ι α} :
     Extends m (m.postTask owner priority task) := by
-  unfold RunMachine.postTask
-  split <;> trace_leaf
+  rw [Edits.postTask_word]
+  exact Edits.run_extends _ _
 
 /-- The drain of owed resumes grows the machine: every scheduled entry is a post. -/
 theorem drainOwed_grows_aux (m : RunMachine ν σ β ε δ ι α χ St) :
-    ∀ (due : List (Owed (Prim ν σ β ε δ ι α))), Grows m (drainOwed m due)
-  | [] => Grows.refl _ _
-  | d :: rest => by
-    unfold drainOwed
-    split
-    · exact drainOwed_grows_aux m rest
-    · exact Extends.trans postTask_extends (drainOwed_grows_aux _ rest)
+    ∀ (due : List (Owed (Prim ν σ β ε δ ι α))), Grows m (drainOwed m due) := by
+  intro due
+  unfold Grows
+  rw [Edits.drain_word]
+  exact Edits.run_extends _ _
 
 theorem drainOwed_grows {m : RunMachine ν σ β ε δ ι α χ St}
     {due : List (Owed (Prim ν σ β ε δ ι α))} : Grows m (drainOwed m due) :=

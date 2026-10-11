@@ -87,25 +87,24 @@ theorem finalizerOr_parking (interp : NInterp) (m : NativeMachine) (f : NFiber)
 /-- A completed countdown answers; a live countdown installs its one pending entry. -/
 theorem countdown_parking (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (yielding : Bool) (targets : List FiberId) (resume : Resume EffName) (failFast : Bool) :
-    let result := countdownPark interp m f targets resume failFast
+    let result := countdownParkEdits interp m f targets resume failFast
     Parking m f ⟨result.1, result.2.1, yielding,
-      if result.2.2 then .parked else .continue_, []⟩ := by
-  unfold countdownPark
+      if result.2.2.1 then .parked else .continue_, [], result.2.2.2⟩ := by
+  unfold countdownParkEdits
   dsimp only
   split
   · exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
   · refine .installed _ rfl ?_ rfl rfl (.inl rfl)
-    simp only [RunMachine.emit, RunMachine.modify]
-    split <;> exact Nat.lt_succ_self _
+    exact Nat.lt_succ_self _
 
 /-- A stuck machine reports its refusal while retaining the same installed park. -/
 theorem countdown_parkingOf (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (yielding : Bool) (targets : List FiberId) (resume : Resume EffName) (failFast : Bool) :
-    let result := countdownPark interp m f targets resume failFast
+    let result := countdownParkEdits interp m f targets resume failFast
     Parking m f ⟨result.1, result.2.1, yielding,
-      FiberAction.outcomeOf result.1 result.2.2, []⟩ := by
+      FiberAction.outcomeOf result.1 result.2.2.1, [], result.2.2.2⟩ := by
   have held := countdown_parking interp m f yielding targets resume failFast
-  cases stuck : (countdownPark interp m f targets resume failFast).1.stuck with
+  cases stuck : (countdownParkEdits interp m f targets resume failFast).1.stuck with
   | none => simpa only [FiberAction.outcomeOf, stuck] using held
   | some why =>
     cases held with

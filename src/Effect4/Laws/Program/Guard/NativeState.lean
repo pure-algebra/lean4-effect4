@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.Guard.Core
 import Effect4.Laws.Program.Guard.FrameOwned
+import Effect4.Laws.Program.Guard.Messages
 
 /-! Native evaluation preserves the stored machine invariant.
 Returned-fiber installation is handled by Settle and NativeAssembly.
@@ -20,50 +21,99 @@ structure StateStep (before after : NativeMachine) : Prop where
   tokens : before.nextToken ≤ after.nextToken
   requests : ∀ fiber token request, requestOf after fiber token = some request →
     requestOf before fiber token = some request
+  races : RaceHostsPreserved before after
+
+/-- The existing native-state census also records the emitted observer admission.
+Raw withFiber calls retain their source-head premise; actual native evaluation discharges it. -/
+structure NativeStep (before : NativeMachine)
+    (next : Iter EffName EffThunk Val Err Defect FiberId Ann Ctx Stores)
+    (permit : Prop := True) : Prop where
+  state : StateStep before next.machine
+  messages : permit → Messages.MessageKeys before next
+
+theorem NativeStep.empty {before : NativeMachine}
+    {next : Iter EffName EffThunk Val Err Defect FiberId Ann Ctx Stores} {permit : Prop}
+    (state : StateStep before next.machine) (edits : next.edits = []) :
+    NativeStep before next permit := by
+  refine ⟨state, ?_⟩
+  intro _ target observer observed
+  rw [edits] at observed
+  exact False.elim (List.not_mem_nil observed)
+
+theorem NativeStep.admit {before : NativeMachine}
+    {next : Iter EffName EffThunk Val Err Defect FiberId Ann Ctx Stores} {permit : Prop}
+    (step : NativeStep before next permit) (permission : permit) : NativeStep before next :=
+  ⟨step.state, fun _ => step.messages permission⟩
+
+theorem park_internal (p : NativeEff) (table : RowTable) (completed) (code : NCode)
+    (kind : ParkKind) (park : (interpAt p completed table).parkOf code = some (.ok kind)) :
+    externalRequest code = none := by
+  cases code <;> aesop (add simp [externalRequest, interpAt, interpOf])
+
+theorem NativeStep.keyless {before : NativeMachine}
+    {next : Iter EffName EffThunk Val Err Defect FiberId Ann Ctx Stores} {permit : Prop}
+    (state : StateStep before next.machine)
+    (keys : ∀ target observer, FiberEdit.observe target observer ∈ next.edits → observerKeys observer = []) :
+    NativeStep before next permit :=
+  ⟨state, fun _ target observer observed => Or.inl (keys target observer observed)⟩
+
+theorem NativeStep.raw {before after : NativeMachine} {f : NFiber}
+    {yielding : Bool} {outcome : Outcome EffName EffThunk Val Err Defect FiberId Ann}
+    {nested : List NCmd} {permit : Prop} (state : StateStep before after) :
+    NativeStep before ⟨after, f, yielding, outcome, nested, []⟩ permit :=
+  NativeStep.empty state rfl
+
+theorem races_same {m n : NativeMachine} (same : n.races = m.races) : RaceHostsPreserved m n :=
+  fun _ race found => ⟨race, by simpa only [RunMachine.race?, same] using found, rfl⟩
 
 theorem StateStep.refl {m : NativeMachine} (state : GuardState m) : StateStep m m :=
-  ⟨state, Nat.le_refl _, fun _ _ _ h => h⟩
+  ⟨state, Nat.le_refl _, fun _ _ _ h => h, races_same rfl⟩
 
 theorem StateStep.trans {m n o : NativeMachine} (a : StateStep m n) (b : StateStep n o) :
     StateStep m o :=
   ⟨b.state, Nat.le_trans a.tokens b.tokens,
-    fun fiber token request h => a.requests fiber token request (b.requests fiber token request h)⟩
+    fun fiber token request h => a.requests fiber token request (b.requests fiber token request h),
+    fun id race found => by
+      obtain ⟨middle, seen, host⟩ := a.races id race found
+      obtain ⟨last, final, same⟩ := b.races id middle seen
+      exact ⟨last, final, same.trans host⟩⟩
 
 theorem StateStep.reserved {m n : NativeMachine} (h : StateStep m n)
     {keys : List GuardKey} (keysBefore : ReservedKeys m keys) : ReservedKeys n keys :=
   reservedKeys_of_requests_subset keysBefore h.tokens h.requests
 
 theorem StateStep.emit {m n : NativeMachine} (h : StateStep m n) (events) :
-    StateStep m (n.emit events) := ⟨guardState_emit h.state events, h.tokens, h.requests⟩
+    StateStep m (n.emit events) := ⟨guardState_emit h.state events, h.tokens, h.requests, h.races⟩
 
 theorem StateStep.arm {m n : NativeMachine} (h : StateStep m n) (owner : FiberId) :
-    StateStep m (n.arm owner) := ⟨guardState_arm h.state owner, h.tokens, h.requests⟩
+    StateStep m (n.arm owner) := ⟨guardState_arm h.state owner, h.tokens, h.requests, h.races⟩
 
 theorem StateStep.middleware {m : NativeMachine} (state : GuardState m) (flag : Bool) :
     StateStep m {m with middlewareInstalled := flag} := by
-  refine ⟨?_, Nat.le_refl _, fun _ _ _ h => h⟩
+  refine ⟨?_, Nat.le_refl _, fun _ _ _ h => h, races_same rfl⟩
   rcases state with ⟨a,b,c,d,e,f,g,h,i,j,k,l,n,o,q⟩
   exact ⟨a,b,c,d,e,f,g,h,i,j,k,l,n,o,q⟩
 
 theorem StateStep.grow {m : NativeMachine} (state : GuardState m) :
     StateStep m {m with nextToken := m.nextToken + 1} :=
-  ⟨guardState_increaseTokens state _ (Nat.le_succ _), Nat.le_succ _, fun _ _ _ h => h⟩
+  ⟨guardState_increaseTokens state _ (Nat.le_succ _), Nat.le_succ _, fun _ _ _ h => h, races_same rfl⟩
 
 theorem StateStep.store {m : NativeMachine} (state : GuardState m) (stores : Stores)
     (keys : storeKeys stores ⊆ storeKeys m.state) :
     StateStep m {m with state := stores} :=
-  ⟨guardState_withState state stores keys, Nat.le_refl _, fun _ _ _ h => h⟩
+  ⟨guardState_withState state stores keys, Nat.le_refl _, fun _ _ _ h => h, races_same rfl⟩
 
 theorem StateStep.storeFresh {m : NativeMachine} (state : GuardState m)
     (stores : Stores) (fiber : FiberId)
     (keys : storeKeys stores ⊆ storeKeys m.state ++ [(fiber, m.nextToken)]) :
     StateStep m {m with state := stores, nextToken := m.nextToken + 1} :=
-  ⟨guardState_storeFresh state stores fiber keys, Nat.le_succ _, fun _ _ _ h => h⟩
+  ⟨guardState_storeFresh state stores fiber keys, Nat.le_succ _, fun _ _ _ h => h, races_same rfl⟩
 
 theorem StateStep.observer {m : NativeMachine} (state : GuardState m)
     (target : FiberId) (observer : Observer) (keys : ReservedKeys m (observerKeys observer)) :
     StateStep m (m.modify target fun f => {f with observers := f.observers ++ [observer]}) := by
-  refine ⟨guardState_addObserver state target observer keys, ?_, ?_⟩
+  refine ⟨guardState_addObserver state target observer keys, ?_, ?_,
+    races_same (Effect4.Program.Guard.FrameOwned.modify_races m target _)⟩
   · unfold RunMachine.modify
     split <;> exact Nat.le_refl _
   · intro fiber token request h
@@ -78,7 +128,9 @@ theorem StateStep.registerRace {m : NativeMachine} (state : GuardState m)
   · rename_i race hr
     refine ⟨guardState_updateRace (race := race) state ?_ {race with registering := true}
       rfl rfl rfl (state.internalCodes.2 race (List.mem_of_find?_eq_some hr)),
-      Nat.le_refl _, fun _ _ _ h => h⟩
+      Nat.le_refl _, fun _ _ _ h => h,
+      raceHostsPreserved_updateRace (race := race)
+        (by simpa only [race_id_of_lookup hr] using hr) _ rfl rfl⟩
     simpa only [race_id_of_lookup hr] using hr
 
 theorem guardState_appendRace {m : NativeMachine} (state : GuardState m)
@@ -145,17 +197,32 @@ theorem StateStep.beginRace (p : NativeEff) (table : RowTable) (completed)
     (mode : Supervision.RaceMode := .firstSuccess) :
     StateStep m (beginRace (interpAt p completed table) m f yielding entrants site mode).machine := by
   apply StateStep.emit
-  exact ⟨guardState_appendRace state _ rfl rfl host programs, Nat.le_succ _, fun _ _ _ h => h⟩
+  exact ⟨guardState_appendRace state _ rfl rfl host programs, Nat.le_succ _, fun _ _ _ h => h,
+    raceHostsPreserved_append m [_]⟩
+
+theorem StateStep.countdownEdits (p : NativeEff) (table : RowTable) (completed)
+    {m : NativeMachine} (state : GuardState m) (f : NFiber) (targets : List FiberId)
+    (resumeWith : Resume EffName) (failFast : Bool) :
+    StateStep m (countdownParkEdits (interpAt p completed table) m f targets resumeWith failFast).1 := by
+  rw [Edits.countdown_word]
+  unfold Edits.countdownWord
+  cases found : countdownWalk {m with nextToken := m.nextToken + 1} targets [] with
+  | mk exits target =>
+    cases target with
+    | none => exact .grow state
+    | some pair => exact (StateStep.grow state).emit _
 
 theorem StateStep.countdown (p : NativeEff) (table : RowTable) (completed)
     {m : NativeMachine} (state : GuardState m) (f : NFiber) (targets : List FiberId)
     (resumeWith : Resume EffName) (failFast : Bool) :
     StateStep m (countdownPark (interpAt p completed table) m f targets resumeWith failFast).1 := by
-  unfold countdownPark
+  unfold countdownPark countdownParkEdits
   dsimp only
   split
   · exact .grow state
-  · exact ((StateStep.grow state).trans
+  · dsimp only [applyFiberEdits, List.foldl, applyFiberEdit]
+    rw [RunMachine.modify_emit]
+    exact ((StateStep.grow state).trans
       (.observer (guardState_increaseTokens state _ (Nat.le_succ _)) _ (.countdown f.id m.nextToken)
         (reservedKeys_fresh state f.id))).emit _
 
@@ -265,7 +332,7 @@ theorem StateStep.spawn (p : NativeEff) (table : RowTable) (completed)
     (sites : raceSites code = []) (options : Supervision.ForkOptions) (site : List Nat := []) :
     StateStep m (spawn (interpAt p completed table) m f code options site).1 := by
   change StateStep m (Effect4.Machine.spawn (interpOf p table) m f code options site).1
-  refine ⟨guardState_spawn p table state f code sites options site, Nat.le_refl _, ?_⟩
+  refine ⟨guardState_spawn p table state f code sites options site, Nat.le_refl _, ?_, races_same rfl⟩
   intro fiber token request hr
   rwa [requestOf_spawn (site := site)] at hr
 
@@ -295,135 +362,90 @@ theorem StateStep.interruptRecord (p : NativeEff) (table : RowTable) (completed)
     StateStep m (m.update (interruptRecord (interpAt p completed table) who extra f).1) := by
   change StateStep m (m.update (Effect4.Machine.interruptRecord (interpOf p table) who extra f).1)
   exact ⟨guardState_interruptRecord p table state hf who extra, Nat.le_refl _,
-    requestOf_interruptRecord_subset p table hf who extra⟩
+    requestOf_interruptRecord_subset p table hf who extra, races_same rfl⟩
+
+theorem StateStep.linkScopeEdits (p : NativeEff) (table : RowTable) (completed)
+    {m : NativeMachine} (state : GuardState m) (mode : Supervision.ScopeMode)
+    (scope : Nat) (target : FiberId) (who : Option FiberId) (extra : ReasonAnnotations Ann) :
+    StateStep m (linkScopeEdits (interpAt p completed table) m mode scope target who extra).1 := by
+  rw [Edits.link_plan_word]
+  change StateStep m (Edits.run (Edits.linkWord (interpOf p table) m mode scope target who) m)
+  unfold Edits.linkWord
+  cases hs : (interpOf p table).scopeStatus scope m.state with
+  | none => dsimp only; exact ⟨guardState_halt state _, Nat.le_refl _, fun _ _ _ h => h, races_same rfl⟩
+  | some status =>
+    cases status with
+    | some exit =>
+      cases hf : m.fiber? target with
+      | none => dsimp only; exact ⟨guardState_halt state _, Nat.le_refl _, fun _ _ _ h => h, races_same rfl⟩
+      | some f => dsimp only; exact (StateStep.refl state).emit _
+    | none =>
+      cases hf : m.fiber? target with
+      | none => dsimp only; exact ⟨guardState_halt state _, Nat.le_refl _, fun _ _ _ h => h, races_same rfl⟩
+      | some f =>
+        dsimp only
+        split
+        · exact .refl state
+        · cases linked : (interpOf p table).scopeLinkFiber mode scope target m.state with
+          | none => dsimp only; exact ⟨guardState_halt state _, Nat.le_refl _, fun _ _ _ h => h, races_same rfl⟩
+          | some pair =>
+            obtain ⟨stores, key⟩ := pair
+            dsimp only
+            exact (StateStep.emit (⟨guardState_scopeLinkFiber p table state mode scope target linked,
+              Nat.le_refl _, fun _ _ _ h => h, races_same rfl⟩ : StateStep m {m with state := stores}) _)
 
 theorem StateStep.linkScope (p : NativeEff) (table : RowTable) (completed)
     {m : NativeMachine} (state : GuardState m) (mode : Supervision.ScopeMode)
     (scope : Nat) (target : FiberId) (who : Option FiberId) (extra : ReasonAnnotations Ann) :
     StateStep m (linkScope (interpAt p completed table) m mode scope target who extra).1 := by
-  change StateStep m (Effect4.Machine.linkScope (interpOf p table) m mode scope target who extra).1
-  refine ⟨guardState_linkScope p table state mode scope target who extra, ?_, ?_⟩
+  have step := StateStep.linkScopeEdits p table completed state mode scope target who extra
+  refine ⟨guardState_linkScope p table state mode scope target who extra, ?_, ?_, ?_⟩
   · unfold Effect4.Machine.linkScope
-    repeat' first | exact Nat.le_refl _ | dsimp only | split | unfold RunMachine.modify
-  · intro fiber token request hr
-    unfold Effect4.Machine.linkScope at hr
-    cases hs : (interpOf p table).scopeStatus scope m.state with
-    | none => simp only [hs] at hr; exact hr
-    | some status =>
-      cases status with
-      | some exit =>
-        simp only [hs] at hr
-        cases hf : m.fiber? target with
-        | none => simp only [hf] at hr; exact hr
-        | some f =>
-          simp only [hf] at hr
-          exact requestOf_interruptRecord_subset p table
-            (by simpa only [fiber_id_of_lookup hf] using hf) who extra fiber token request hr
-      | none =>
-        simp only [hs] at hr
-        cases hf : m.fiber? target with
-        | none => simp only [hf] at hr; exact hr
-        | some f =>
-          simp only [hf] at hr
-          split at hr
-          · exact hr
-          · cases hl : (interpOf p table).scopeLinkFiber mode scope target m.state with
-            | none => simp only [hl] at hr; exact hr
-            | some result =>
-              rcases result with ⟨after, key⟩
-              simp only [hl] at hr
-              change requestOf (({m with state := after} : NativeMachine).modify target
-                (fun g => {g with observers := g.observers ++ [.dropScopeFinalizer scope key]}))
-                  fiber token = some request at hr
-              rwa [requestOf_addObserver] at hr
-
-abbrev filteredFiber (keep : Observer → Bool) (f : NFiber) : NFiber :=
-  {f with observers := f.observers.filter keep}
-
-abbrev filteredMachine (keep : Observer → Bool) (m : NativeMachine) : NativeMachine :=
-  {m with fibers := m.fibers.map (filteredFiber keep)}
-
-theorem filtered_lookup (keep : Observer → Bool) (m : NativeMachine) (fiber : FiberId) :
-    (filteredMachine keep m).fiber? fiber = (m.fiber? fiber).map (filteredFiber keep) := by
-  simp only [RunMachine.fiber?, List.find?_map, Function.comp_def]
-
-theorem filtered_request (keep : Observer → Bool) (m : NativeMachine) (fiber : FiberId) (token : Nat) :
-    requestOf (filteredMachine keep m) fiber token = requestOf m fiber token := by
-  unfold requestOf
-  rw [filtered_lookup]
-  cases hf : m.fiber? fiber <;> rfl
-
-theorem filtered_fiberKeys (keep : Observer → Bool) (f : NFiber) :
-    fiberKeys (filteredFiber keep f) ⊆ fiberKeys f := by
-  intro key hk
-  rcases List.mem_append.mp hk with hk | hk
-  · obtain ⟨obs, ho, hk⟩ := List.mem_flatMap.mp hk
-    exact List.mem_append_left _ (List.mem_flatMap.mpr ⟨obs, (List.mem_filter.mp ho).1, hk⟩)
-  · exact List.mem_append_right _ hk
-
-theorem filtered_internalKeys (keep : Observer → Bool) (m : NativeMachine) :
-    internalKeys (filteredMachine keep m) ⊆ internalKeys m := by
-  intro key hk
-  rw [internalKeys_store_decomposition] at hk ⊢
-  rcases List.mem_append.mp hk with hk | hk
-  · exact List.mem_append_left _ hk
-  · obtain ⟨f, hf, hk⟩ := List.mem_flatMap.mp hk
-    obtain ⟨old, hm, rfl⟩ := List.mem_map.mp hf
-    exact List.mem_append_right _ (List.mem_flatMap.mpr ⟨old, hm, filtered_fiberKeys keep old hk⟩)
+    rw [(RunMachine.applyFiberEdits_shape _ _).1]
+    exact step.tokens
+  · exact fun fiber token request h => step.requests fiber token request
+      (Messages.requestOf_fiberEdits_subset _ _ fiber token request h)
+  · intro id race found
+    obtain ⟨next, seen, same⟩ := step.races id race found
+    refine ⟨next, ?_, same⟩
+    unfold Effect4.Machine.linkScope
+    rw [(RunMachine.applyFiberEdits_shape _ _).1]
+    exact seen
 
 theorem StateStep.filterObservers {m : NativeMachine} (state : GuardState m) (keep : Observer → Bool) :
-    StateStep m (filteredMachine keep m) := by
-  have hall (P : NFiber → Prop) (old : ∀ f ∈ m.fibers, P (filteredFiber keep f)) :
-      ∀ f ∈ (filteredMachine keep m).fibers, P f := by
-    intro f hf
-    obtain ⟨oldf, hm, rfl⟩ := List.mem_map.mp hf
-    exact old oldf hm
-  refine ⟨?_, Nat.le_refl _, ?_⟩
-  · constructor
-    · simpa only [List.map_map, Function.comp_def] using state.fiberIds
-    · exact hall _ state.fibersBelow
-    · exact state.raceIds
-    · exact state.racesBelow
-    · intro race hr
-      obtain ⟨f, hf⟩ := state.raceHosts race hr
-      exact ⟨filteredFiber keep f, by rw [filtered_lookup, hf]; rfl⟩
-    · exact fun key hk => state.keysBelow key (filtered_internalKeys keep m hk)
-    · intro fiber token request hr
-      rw [filtered_request] at hr
-      exact state.requestsBelow fiber token request hr
-    · intro fiber token request hr hk
-      rw [filtered_request] at hr
-      exact state.requestsOwned fiber token request hr (filtered_internalKeys keep m hk)
-    · exact hall _ state.pendingShape
-    · exact hall _ state.parkedIdle
-    · exact hall _ state.parkedBelow
-    · exact hall _ state.exited
-    · exact hall _ state.deferredCause
-    · exact hall _ state.frameCodes
-    · exact ⟨hall _ state.internalCodes.1, state.internalCodes.2⟩
-  · intro fiber token request hr
-    rwa [filtered_request] at hr
+    StateStep m (filteredMachine keep m) :=
+  ⟨guardState_filterObservers_at state keep, Nat.le_refl _,
+    fun _ _ _ hr => (filtered_request keep m _ _).symm ▸ hr, races_same rfl⟩
 
 theorem StateStep.startAfter {m n : NativeMachine} (h : StateStep m n)
     (f : NFiber) (child : FiberId) (immediate : Bool) :
     StateStep m (Effect4.Machine.start n f child immediate).1 := h.trans (.start h.state f child immediate)
 
-theorem stepFrame_state (p : NativeEff) (table : RowTable) (completed)
+theorem stepFrame_step (p : NativeEff) (table : RowTable) (completed)
     {m : NativeMachine} (state : GuardState m) (f : NFiber) (yielding : Bool) :
-    StateStep m (evaluatePrim.stepFrame (interpAt p completed table) m f yielding).machine := by
+    NativeStep m (evaluatePrim.stepFrame (interpAt p completed table) m f yielding) := by
   unfold evaluatePrim.stepFrame evaluatePrim.finishFrame
   dsimp only
-  split <;> exact (StateStep.refl state).emit _
+  split <;> exact NativeStep.empty ((StateStep.refl state).emit _) rfl
+
+theorem stepFrame_state (p : NativeEff) (table : RowTable) (completed)
+    {m : NativeMachine} (state : GuardState m) (f : NFiber) (yielding : Bool) :
+    StateStep m (evaluatePrim.stepFrame (interpAt p completed table) m f yielding).machine :=
+  (stepFrame_step p table completed state f yielding).state
+
+theorem finalizerOr_step (p : NativeEff) (table : RowTable) (completed)
+    {m : NativeMachine} (state : GuardState m) (f : NFiber) (yielding : Bool) (exit : ExitV) :
+    NativeStep m (evaluatePrim.finalizerOr (interpAt p completed table) m f yielding exit) := by
+  unfold evaluatePrim.finalizerOr
+  repeat' split
+  all_goals
+    aesop (add safe 90 apply [stepFrame_step])
+      (add safe 50 apply [NativeStep.raw, StateStep.emit, StateStep.refl])
 
 theorem finalizerOr_state (p : NativeEff) (table : RowTable) (completed)
     {m : NativeMachine} (state : GuardState m) (f : NFiber) (yielding : Bool) (exit : ExitV) :
-    StateStep m (evaluatePrim.finalizerOr (interpAt p completed table) m f yielding exit).machine := by
-  unfold evaluatePrim.finalizerOr
-  repeat' first
-    | exact (StateStep.refl state).emit _
-    | exact stepFrame_state p table completed state f yielding
-    | dsimp only
-    | split
+    StateStep m (evaluatePrim.finalizerOr (interpAt p completed table) m f yielding exit).machine :=
+  (finalizerOr_step p table completed state f yielding exit).state
 
 theorem interruptAs_state (p : NativeEff) (table : RowTable) (completed)
     {m : NativeMachine} (state : GuardState m) (f : NFiber) (yielding : Bool)
@@ -432,53 +454,168 @@ theorem interruptAs_state (p : NativeEff) (table : RowTable) (completed)
   unfold evaluatePrim.interruptAs
   cases hf : m.fiber? target with
   | none => exact .refl state
-  | some targetFiber =>
-    exact (StateStep.interruptRecord p table completed state
-      (by simpa only [fiber_id_of_lookup hf] using hf) (some who) _).emit _
+  | some targetFiber => exact (StateStep.refl state).emit _
 
-theorem withFiber_state (p : NativeEff) (table : RowTable) (completed)
+theorem NativeStep.countdown (p : NativeEff) (table : RowTable) (completed)
+    {m : NativeMachine} (state : GuardState m) (f : NFiber) (targets : List FiberId)
+    (resume : Resume EffName) (failFast : Bool) (yielding : Bool) (outcome : Outcome EffName EffThunk Val Err Defect FiberId Ann) :
+    let next := countdownParkEdits (interpAt p completed table) m f targets resume failFast
+    NativeStep m ⟨next.1, next.2.1, yielding, outcome, [], next.2.2.2⟩
+      (externalRequest f.frame.current = none) := by
+  refine ⟨StateStep.countdownEdits p table completed state f targets resume failFast, ?_⟩
+  intro current
+  unfold Messages.MessageKeys countdownParkEdits
+  cases walk : countdownWalk {m with nextToken := m.nextToken + 1} targets [] with
+  | mk exits target =>
+    cases target with
+    | none =>
+      simp only [walk]
+      intro target observer observed
+      exact False.elim (List.not_mem_nil observed)
+    | some pair =>
+      obtain ⟨target, remaining⟩ := pair
+      simp only [walk]
+      intro seen observer observed
+      have selected := List.mem_singleton.mp observed
+      cases selected
+      exact Or.inr ⟨rfl, Nat.lt_succ_self _, current⟩
+
+theorem NativeStep.linkScope (p : NativeEff) (table : RowTable) (completed)
+    {m : NativeMachine} (state : GuardState m) (f : NFiber) (yielding : Bool)
+    (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId)
+    (who : Option FiberId) (extra : ReasonAnnotations Ann)
+    (outcome : Outcome EffName EffThunk Val Err Defect FiberId Ann) (permit : Prop) :
+    let next := linkScopeEdits (interpAt p completed table) m mode scope target who extra
+    NativeStep m ⟨next.1, f, yielding, outcome, [], next.2⟩ permit := by
+  refine ⟨StateStep.linkScopeEdits p table completed state mode scope target who extra, ?_⟩
+  intro _ seen observer observed
+  unfold linkScopeEdits at observed
+  repeat' split at observed
+  all_goals aesop (add simp [Messages.MessageKeys, observerKeys])
+
+theorem withFiber_step (p : NativeEff) (table : RowTable) (completed)
     {m : NativeMachine} (state : GuardState m) (f : NFiber) (yielding : Bool)
     (action : NAction) (sites : actionRaceSites action = [])
     (host : ∃ saved, m.fiber? f.id = some saved) :
-    StateStep m (evaluatePrim.withFiber (interpAt p completed table) m f yielding action).machine := by
+    NativeStep m (evaluatePrim.withFiber (interpAt p completed table) m f yielding action)
+      (externalRequest f.frame.current = none) := by
   cases action <;> simp only [actionRaceSites] at sites <;>
     unfold evaluatePrim.withFiber <;> dsimp only
   case fork code options site =>
+    apply NativeStep.keyless ?_ (by
+      intro target observer observed
+      dsimp only [spawn, start, beginRace, evaluatePrim.interruptAs] at observed
+      repeat' split at observed
+      all_goals aesop (add simp [observerKeys]))
     split
     · exact (StateStep.spawn p table completed state f code sites options site).startAfter _ _ _
     · exact (StateStep.middleware state true).trans
         ((StateStep.spawn p table completed (StateStep.middleware state true).state f code sites options site).startAfter _ _ _)
   case forkIn code options scope site =>
+    apply NativeStep.keyless ?_ (by
+      intro target observer observed
+      dsimp only [spawn, start, beginRace, evaluatePrim.interruptAs] at observed
+      repeat' split at observed
+      all_goals aesop (add simp [observerKeys]))
     exact (StateStep.spawn p table completed state f code sites _ site).startAfter _ _ _
   case forkScoped code options site =>
+    apply NativeStep.keyless ?_ (by
+      intro target observer observed
+      dsimp only [spawn, start, beginRace, evaluatePrim.interruptAs] at observed
+      repeat' split at observed
+      all_goals aesop (add simp [observerKeys]))
     split
     · exact (StateStep.spawn p table completed state f code sites _ site).startAfter _ _ _
     · exact .refl state
-  case ambientScope => split <;> exact .refl state
-  case runIn target scope => exact StateStep.linkScope p table completed state _ _ _ _ _
-  case interruptAs target who => exact interruptAs_state p table completed state f yielding target who
-  case interruptScoped target => split <;> exact .refl state
-  case awaitAll targets => exact StateStep.countdown p table completed state f targets _ _
-  case awaitAllFailFast targets => exact StateStep.countdown p table completed state f targets _ _
-  case awaitNewChildren snapshot => exact StateStep.countdown p table completed state f _ _ _
+  case ambientScope =>
+    apply NativeStep.keyless ?_ (by
+      intro target observer observed
+      repeat' split at observed
+      all_goals aesop (add simp [observerKeys]))
+    split <;> exact .refl state
+  case runIn target scope =>
+    exact NativeStep.linkScope p table completed state _ _ _ _ _ _ _ _ _
+  case interruptAs target who =>
+    apply NativeStep.keyless ?_ (by
+      intro target observer observed
+      dsimp only [spawn, start, beginRace, evaluatePrim.interruptAs] at observed
+      repeat' split at observed
+      all_goals aesop (add simp [observerKeys]))
+    exact interruptAs_state p table completed state f yielding target who
+  case interruptScoped target =>
+    apply NativeStep.keyless ?_ (by
+      intro target observer observed
+      repeat' split at observed
+      all_goals aesop (add simp [observerKeys]))
+    split <;> exact .refl state
+  case awaitAll targets => exact NativeStep.countdown p table completed state f targets _ _ _ _
+  case awaitAllFailFast targets => exact NativeStep.countdown p table completed state f targets _ _ _ _
+  case awaitNewChildren snapshot => exact NativeStep.countdown p table completed state f _ _ _ _ _
   case raceAll entrants site =>
+    apply NativeStep.keyless ?_ (by
+      intro target observer observed
+      dsimp only [spawn, start, beginRace, evaluatePrim.interruptAs] at observed
+      repeat' split at observed
+      all_goals aesop (add simp [observerKeys]))
     exact StateStep.beginRace p table completed state f yielding entrants host
       (List.flatMap_eq_nil_iff.mp sites) site
   case raceAllFirst entrants site =>
+    apply NativeStep.keyless ?_ (by
+      intro target observer observed
+      dsimp only [spawn, start, beginRace, evaluatePrim.interruptAs] at observed
+      repeat' split at observed
+      all_goals aesop (add simp [observerKeys]))
     exact StateStep.beginRace p table completed state f yielding entrants host
       (List.flatMap_eq_nil_iff.mp sites) site .firstExit
-  case setInterruptible code mask => cases mask <;> exact .refl state
+  case setInterruptible code mask =>
+    apply NativeStep.keyless ?_ (by
+      intro target observer observed
+      repeat' split at observed
+      all_goals aesop (add simp [observerKeys]))
+    cases mask <;> exact .refl state
   case closeScope scope exit =>
+    apply NativeStep.keyless ?_ (by
+      intro target observer observed
+      repeat' split at observed
+      all_goals aesop (add simp [observerKeys]))
     split
     · exact .refl state
     · rename_i stores code hs
       exact closeScope_state p table completed state scope exit _ _ stores code hs
   case closePar finalizers =>
+    apply NativeStep.keyless ?_ (by
+      intro target observer observed
+      dsimp only [spawn, start, beginRace, evaluatePrim.interruptAs] at observed
+      repeat' split at observed
+      all_goals aesop (add simp [observerKeys]))
     exact StateStep.forkFinalizers p table completed state f finalizers
       (List.flatMap_eq_nil_iff.mp sites)
-  case dropObservers token => exact StateStep.filterObservers state _
-  case cancelRace id => split <;> exact .refl state
+  case dropObservers token =>
+    apply NativeStep.keyless ?_ (by
+      intro target observer observed
+      dsimp only [spawn, start, beginRace, evaluatePrim.interruptAs] at observed
+      repeat' split at observed
+      all_goals aesop (add simp [observerKeys]))
+    exact .refl state
+  case cancelRace id =>
+    apply NativeStep.keyless ?_ (by
+      intro target observer observed
+      repeat' split at observed
+      all_goals aesop (add simp [observerKeys]))
+    split <;> exact .refl state
+  all_goals apply NativeStep.keyless ?_ (by
+    intro target observer observed
+    dsimp only [spawn, start, beginRace, evaluatePrim.interruptAs] at observed
+    repeat' split at observed
+    all_goals aesop (add simp [observerKeys]))
   all_goals aesop (rule_sets := [Effect4.Stores]) (add safe apply [StateStep.refl, StateStep.emit])
+
+theorem withFiber_state (p : NativeEff) (table : RowTable) (completed)
+    {m : NativeMachine} (state : GuardState m) (f : NFiber) (yielding : Bool)
+    (action : NAction) (sites : actionRaceSites action = [])
+    (host : ∃ saved, m.fiber? f.id = some saved) :
+    StateStep m (evaluatePrim.withFiber (interpAt p completed table) m f yielding action).machine :=
+  (withFiber_step p table completed state f yielding action sites host).state
 
 theorem StateStep.joinPark {m : NativeMachine} (state : GuardState m)
     (f : NFiber) (target : FiberId) (other : NFiber)
@@ -506,13 +643,76 @@ theorem StateStep.countdown_result (p : NativeEff) (table : RowTable) (completed
       (after, next, parked)) : StateStep m after := by
   simpa only [h] using StateStep.countdown p table completed state f targets resumeWith failFast
 
-attribute [aesop safe apply (rule_sets := [Effect4.Stores])] StateStep.registerAsync
-attribute [aesop safe forward (rule_sets := [Effect4.Stores])] StateStep.countdown_result
+theorem StateStep.countdownEdits_result (p : NativeEff) (table : RowTable) (completed)
+    {m : NativeMachine} (state : GuardState m) (f : NFiber) (targets : List FiberId)
+    (resumeWith : Resume EffName) (failFast : Bool) (after : NativeMachine) (next : NFiber)
+    (parked : Bool) (edits : List (FiberEdit Err Defect FiberId Ann))
+    (h : countdownParkEdits (interpAt p completed table) m f targets resumeWith failFast =
+      (after, next, parked, edits)) : StateStep m after := by
+  simpa only [h] using StateStep.countdownEdits p table completed state f targets resumeWith failFast
 
-theorem evaluatePrim_state (p : NativeEff) (table : RowTable) (completed)
+theorem NativeStep.countdown_result (p : NativeEff) (table : RowTable) (completed)
+    {m : NativeMachine} (state : GuardState m) (f : NFiber) (targets : List FiberId)
+    (resume : Resume EffName) (failFast : Bool) (after : NativeMachine) (next : NFiber)
+    (parked : Bool) (edits : List (FiberEdit Err Defect FiberId Ann))
+    (yielding : Bool) (outcome : Outcome EffName EffThunk Val Err Defect FiberId Ann)
+    (h : countdownParkEdits (interpAt p completed table) m f targets resume failFast =
+      (after, next, parked, edits)) :
+    NativeStep m ⟨after, next, yielding, outcome, [], edits⟩ (externalRequest f.frame.current = none) := by
+  simpa only [h] using NativeStep.countdown p table completed state f targets resume failFast yielding outcome
+
+attribute [aesop safe apply (rule_sets := [Effect4.Stores])] StateStep.registerAsync
+attribute [aesop safe forward (rule_sets := [Effect4.Stores])] StateStep.countdownEdits_result
+
+theorem withFiber_actual (p : NativeEff) (table : RowTable) (completed)
+    {m : NativeMachine} (state : GuardState m) (f : NFiber) (yielding : Bool)
+    (action : NAction) (sites : actionRaceSites action = [])
+    (host : ∃ saved, m.fiber? f.id = some saved) (thunk : EffThunk)
+    (current : f.frame.current = .withFiber thunk) :
+    NativeStep m (evaluatePrim.withFiber (interpAt p completed table) m f yielding action) := by
+  apply NativeStep.admit (withFiber_step p table completed state f yielding action sites host)
+  rw [current]
+  rfl
+
+theorem countdown_actual (p : NativeEff) (table : RowTable) (completed)
+    {m : NativeMachine} (state : GuardState m) (f : NFiber) (targets : List FiberId)
+    (after : NativeMachine) (next : NFiber) (parked : Bool)
+    (edits : List (FiberEdit Err Defect FiberId Ann)) (yielding : Bool)
+    (outcome : Outcome EffName EffThunk Val Err Defect FiberId Ann)
+    (kind : ParkKind) (park : (interpAt p completed table).parkOf f.frame.current = some (.ok kind))
+    (h : countdownParkEdits (interpAt p completed table) m f targets .exitsValue false =
+      (after, next, parked, edits)) :
+    NativeStep m ⟨after, next, yielding, outcome, [], edits⟩ :=
+  NativeStep.admit (NativeStep.countdown_result p table completed state f targets _ _
+    after next parked edits yielding _ h) (park_internal p table completed f.frame.current kind park)
+
+theorem join_actual (p : NativeEff) (table : RowTable) (completed)
+    {m : NativeMachine} (state : GuardState m) (f : NFiber) (yielding : Bool)
+    (target : FiberId) (mode : Supervision.ObserverMode)
+    (park : (interpAt p completed table).parkOf f.frame.current = some (.ok (.join target mode))) :
+    let token := m.nextToken
+    let grown : NativeMachine := {m with nextToken := token + 1}
+    let name := (interpAt p completed table).cancelName (interpAt p completed table).parkCancelName f.id token
+    let next := ({f with frame := {f.frame with stack := Prim.asyncFinalizer name :: f.frame.stack}} : NFiber).park
+      ⟨token, some target, [], [], .void, false⟩
+    NativeStep m ⟨grown.emit [RunEvent.parkedOn next.id token], next, yielding, .parked, [],
+      [.observe target (.resumeAwait f.id token mode)]⟩ := by
+  refine ⟨(StateStep.grow state).emit _, ?_⟩
+  intro _ seen observer observed
+  cases List.mem_singleton.mp observed
+  exact Or.inr ⟨rfl, Nat.lt_succ_self _, park_internal p table completed f.frame.current _ park⟩
+
+theorem NativeStep.registerRace {m : NativeMachine} (state : GuardState m)
+    (f : NFiber) (yielding : Bool) (id : Nat) :
+    NativeStep m (registerRace m f yielding id) := by
+  apply NativeStep.empty (StateStep.registerRace state f yielding id)
+  unfold Effect4.Machine.registerRace
+  split <;> rfl
+
+theorem evaluatePrim_step (p : NativeEff) (table : RowTable) (completed)
     {m : NativeMachine} (state : GuardState m) (f : NFiber) (yielding : Bool)
     (host : ∃ saved, m.fiber? f.id = some saved) :
-    StateStep m (evaluatePrim (interpAt p completed table) m f yielding).machine := by
+    NativeStep m (evaluatePrim (interpAt p completed table) m f yielding) := by
   have ha (thunk : EffThunk) (action : NAction)
       (h : (interpAt p completed table).withFiberOf thunk = some action) :
       actionRaceSites action = [] := by
@@ -520,14 +720,35 @@ theorem evaluatePrim_state (p : NativeEff) (table : RowTable) (completed)
     change (interpOf p table).withFiberOf thunk = some action at h
     rw [h] at sites
     exact sites
-  have joining := StateStep.joinPark state f
+  have parked (targets : List FiberId) (after : NativeMachine) (next : NFiber)
+      (edits : List (FiberEdit Err Defect FiberId Ann))
+      (park : (interpAt p completed table).parkOf f.frame.current = some (.ok (.awaitAll targets)))
+      (h : countdownParkEdits (interpAt p completed table) m f targets .exitsValue false =
+        (after, next, true, edits)) : NativeStep m ⟨after, next, yielding, .parked, [], edits⟩ :=
+    countdown_actual p table completed state f targets after next true edits yielding .parked _ park h
+  have continued (targets : List FiberId) (after : NativeMachine) (next : NFiber)
+      (edits : List (FiberEdit Err Defect FiberId Ann))
+      (park : (interpAt p completed table).parkOf f.frame.current = some (.ok (.awaitAll targets)))
+      (h : countdownParkEdits (interpAt p completed table) m f targets .exitsValue false =
+        (after, next, false, edits)) : NativeStep m ⟨after, next, yielding, .continue_, [], edits⟩ :=
+    countdown_actual p table completed state f targets after next false edits yielding .continue_ _ park h
+  have joining := join_actual p table completed state f yielding
   unfold evaluatePrim
   repeat' split
   all_goals
     aesop (rule_sets := [Effect4.Stores])
       (add safe apply [StateStep.refl, StateStep.emit, StateStep.arm, StateStep.grow,
-        StateStep.registerRace, withFiber_state, stepFrame_state, finalizerOr_state])
-      (add safe forward [syncState_state, ha, joining])
+        StateStep.registerRace])
+      (add safe 90 apply [NativeStep.raw, withFiber_actual, stepFrame_step, finalizerOr_step, NativeStep.registerRace])
+      (add unsafe 90% apply [parked, continued])
+      (add safe apply [joining])
+      (add safe forward [syncState_state, ha])
+
+theorem evaluatePrim_state (p : NativeEff) (table : RowTable) (completed)
+    {m : NativeMachine} (state : GuardState m) (f : NFiber) (yielding : Bool)
+    (host : ∃ saved, m.fiber? f.id = some saved) :
+    StateStep m (evaluatePrim (interpAt p completed table) m f yielding).machine :=
+  (evaluatePrim_step p table completed state f yielding host).state
 
 theorem StateStep.closeUnsafe {m n : NativeMachine} (step : StateStep m n)
     (scope : Nat) (exit : ExitV) (mask : Bool) (stores : Stores) (code : Option Effect4.Machine.Program)
@@ -537,41 +758,58 @@ theorem StateStep.closeUnsafe {m n : NativeMachine} (step : StateStep m n)
   apply step.trans (.store step.state stores ?_)
   · rw [keys]; exact fun _ h => h
 
+theorem NativeStep.before {m n : NativeMachine}
+    {next : Iter EffName EffThunk Val Err Defect FiberId Ann Ctx Stores}
+    (before : StateStep m n) (tokens : n.nextToken = m.nextToken)
+    (step : NativeStep n next) : NativeStep m next := by
+  refine ⟨before.trans step.state, ?_⟩
+  simpa only [Messages.MessageKeys, tokens] using step.messages
+
+theorem enterScoped_step (p : NativeEff) (point : Point)
+    {m : NativeMachine} (state : GuardState m) (f : NFiber) (yielding : Bool) :
+    NativeStep m (enterScoped p point m f yielding) :=
+  NativeStep.empty (.store state _ (fun _ h => h)) rfl
+
 theorem enterScoped_state (p : NativeEff) (point : Point)
     {m : NativeMachine} (state : GuardState m) (f : NFiber) (yielding : Bool) :
     StateStep m (enterScoped p point m f yielding).machine :=
-  .store state _ (fun _ h => h)
+  (enterScoped_step p point state f yielding).state
+
+theorem exitScoped_step (p : NativeEff) {m : NativeMachine}
+    (state : GuardState m) (f : NFiber) (yielding : Bool) (exit : ExitV)
+    (host : ∃ saved, m.fiber? f.id = some saved) :
+    NativeStep m (exitScoped p m f yielding exit) := by
+  unfold exitScoped
+  repeat' split
+  all_goals
+    aesop (rule_sets := [Effect4.Stores])
+      (add safe apply [evaluatePrim_step, NativeStep.raw, StateStep.refl, StateStep.emit, StateStep.closeUnsafe])
 
 theorem exitScoped_state (p : NativeEff) {m : NativeMachine}
     (state : GuardState m) (f : NFiber) (yielding : Bool) (exit : ExitV)
     (host : ∃ saved, m.fiber? f.id = some saved) :
-    StateStep m (exitScoped p m f yielding exit).machine := by
-  unfold exitScoped
-  repeat' first
-    | exact evaluatePrim_state p [] m.completedExits state f yielding host
-    | exact (StateStep.refl state).emit _
-    | exact StateStep.closeUnsafe ((StateStep.refl state).emit _) _ _ _ _ _ (by assumption)
-    | exact (StateStep.closeUnsafe ((StateStep.refl state).emit _) _ _ _ _ _ (by assumption)).emit _
-    | dsimp only
-    | split
+    StateStep m (exitScoped p m f yielding exit).machine :=
+  (exitScoped_step p state f yielding exit host).state
+
+theorem evaluateNative_step (p : NativeEff) (table : RowTable)
+    {m : NativeMachine} (state : GuardState m) (f : NFiber) (yielding : Bool)
+    (host : ∃ saved, m.fiber? f.id = some saved) :
+    NativeStep m (evaluateNative p m f yielding table) := by
+  unfold evaluateNative
+  repeat' split
+  all_goals aesop (add safe apply [evaluatePrim_step, enterScoped_step, exitScoped_step])
 
 theorem evaluateNative_state (p : NativeEff) (table : RowTable)
     {m : NativeMachine} (state : GuardState m) (f : NFiber) (yielding : Bool)
     (host : ∃ saved, m.fiber? f.id = some saved) :
-    StateStep m (evaluateNative p m f yielding table).machine := by
-  unfold evaluateNative
-  repeat' first
-    | exact evaluatePrim_state p table m.completedExits state f yielding host
-    | exact enterScoped_state p _ state f yielding
-    | exact exitScoped_state p state f yielding _ host
-    | dsimp only
-    | split
+    StateStep m (evaluateNative p m f yielding table).machine :=
+  (evaluateNative_step p table state f yielding host).state
 
-theorem iteration_state (p : NativeEff) (table : RowTable)
+theorem iteration_step (p : NativeEff) (table : RowTable)
     {m : NativeMachine} (state : GuardState m) (f : NFiber) (yielding : Bool)
     (host : ∃ saved, m.fiber? f.id = some saved) :
     letI := evaluatorFor p table
-    StateStep m (iteration (interpOf p table) m f yielding).machine := by
+    NativeStep m (iteration (interpOf p table) m f yielding) := by
   letI := evaluatorFor p table
   have hid : (countOp (runloopTop f)).id = f.id := by
     unfold runloopTop
@@ -581,14 +819,21 @@ theorem iteration_state (p : NativeEff) (table : RowTable)
   unfold iteration
   dsimp only
   cases hy : injectYield m (countOp (runloopTop f)) yielding with
-  | none => exact evaluateNative_state p table state _ _ host'
+  | none => exact evaluateNative_step p table state _ _ host'
   | some it =>
     unfold injectYield at hy
     split at hy
     · cases hy
-      apply ((StateStep.refl state).emit _).trans
-      apply evaluateNative_state p table (guardState_emit state _)
+      apply NativeStep.before ((StateStep.refl state).emit _) rfl
+      apply evaluateNative_step p table (guardState_emit state _)
       exact host'
     · cases hy
+
+theorem iteration_state (p : NativeEff) (table : RowTable)
+    {m : NativeMachine} (state : GuardState m) (f : NFiber) (yielding : Bool)
+    (host : ∃ saved, m.fiber? f.id = some saved) :
+    letI := evaluatorFor p table
+    StateStep m (iteration (interpOf p table) m f yielding).machine :=
+  (iteration_step p table state f yielding host).state
 
 end Effect4.Program.Guard.NativeState

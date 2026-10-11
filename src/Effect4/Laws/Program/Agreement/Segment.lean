@@ -346,7 +346,7 @@ theorem drive_loop_call (root : NativeEff) (cur : NCode) (K : List NCode) (i : B
           (tr ++ [RunEvent.parkedOn Api.root nt]) nt with nextToken := nt + 1 },
         (fiberAt (fiberOf (Prim.async (EffName.external (.external j) v w) false none) K i) (k + 1)).park
           ⟨nt, none, [], [], Resume.void, false⟩,
-        false, Outcome.parked, []⟩ := by
+        false, Outcome.parked, [], []⟩ := by
     rw [iteration_M root _ _ _ _ _ _ _ hk]
     simp only [evaluateNative, fiberAt_frame, fiberOf]
     simp only [evaluatePrim, fiberAt_frame, M_state, registerAsync_call root _ j v w _ _ s]

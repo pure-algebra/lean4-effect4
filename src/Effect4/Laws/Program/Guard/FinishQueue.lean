@@ -12,9 +12,9 @@ theorem controlsAway_trans {m n o : NativeMachine} {target : FiberId}
     ControlsAway m o target := by
   intro fiber f lookup other eligible
   obtain ⟨g, hg, current, parked, exited, running⟩ := first fiber f lookup other eligible
-  have eligible' : g.parked = .notParked ∨ g.exit.isSome = true := by
+  have eligible' : (g.running = true ∧ g.parked = .notParked) ∨ g.exit.isSome = true := by
     rcases eligible with hp | he
-    · exact Or.inl (parked.trans hp)
+    · exact Or.inl ⟨running hp.1, parked.trans hp.2⟩
     · exact Or.inr (exited ▸ he)
   obtain ⟨h, hh, current', parked', exited', running'⟩ := second fiber g hg other eligible'
   exact ⟨h, hh, current'.trans current, parked'.trans parked, exited'.trans exited,

@@ -1,5 +1,5 @@
 import Effect4.Laws.Program.ReleaseCustody.NativeAccounting
-import Effect4.Laws.Program.ReleaseCustody.ObserverDebit
+import Effect4.Laws.Program.ReleaseCustody.CommandStoreDebit
 
 /-!
 Concept: scope-lifetime-finalization R11.
@@ -51,7 +51,7 @@ theorem replace_current (q : List Nat) (m : NativeMachine) (fiber : Control.Fibe
     (yielding : Bool) (code : NCode) (outcome : Outcome EffName EffThunk Val Err Defect FiberId Ann)
     (held : NoAdd fiber.frame.stack)
     (carried : currentCredits q code ≤ currentCredits q fiber.frame.current) :
-    IterDebit q m fiber ⟨m, {fiber with frame := {fiber.frame with current := code}}, yielding, outcome, []⟩ := by
+    IterDebit q m fiber ⟨m, {fiber with frame := {fiber.frame with current := code}}, yielding, outcome, [], []⟩ := by
   unfold IterDebit
   simp only [List.map_nil, List.sum_nil, Nat.add_zero, fiberCredits]
   rw [noAdd_full q code _ held, noAdd_full q fiber.frame.current _ held]
@@ -195,83 +195,96 @@ theorem mask (q : List Nat) (interp : Interp) (m : NativeMachine) (fiber : Contr
     simp only [full]
   all_goals omega
 
+/-- Addressed messages spend only the fiber part of the off-owner reservation.
+Consumer: eager countdown and scope-link adapters. -/
+theorem outside_edits (q : List Nat) (m : NativeMachine) (owner : FiberId)
+    (edits : List (FiberEdit Err Defect FiberId Ann))
+    (unique : (m.fibers.map RunFiber.id).Nodup) :
+    outsideCredits q owner (applyFiberEdits edits m).1 ≤ outsideCredits q owner m := by
+  have bounded := (FiberSum.fiberEdits_le (outsideFiber q owner) (fun _ _ => rfl)
+    (fun cause fiber => ?_) edits m unique).2
+  · have fields := (RunMachine.applyFiberEdits_shape edits m).1
+    have state := congrArg RunMachine.state fields
+    have races := congrArg RunMachine.races fields
+    unfold outsideCredits
+    rw [state, races]
+    exact Nat.add_le_add_right (Nat.add_le_add_left bounded _) _
+  · dsimp only [outsideFiber]
+    simp only [(interruptWithCause_maskLater cause fiber).1]
+    split
+    · exact Nat.le_refl _
+    · exact Evaluation.interrupt_fiber_le q cause fiber
+
+/-- The canonical countdown plan adds only a zero-credit cancellation frame.
+Consumer: native await actions before settlement installs observer messages. -/
+theorem countdown_plan (q : List Nat) (root : NativeEff) (table : RowTable) (m : NativeMachine)
+    (fiber : Control.Fiber) (yielding : Bool) (targets : List FiberId) (resume : Resume EffName)
+    (failFast : Bool) (held : NoAdd fiber.frame.stack)
+    (shape : resume = .exitsValue ∨ resume = .void) :
+    let out := countdownParkEdits (interpAt root m.completedExits table) m fiber targets resume failFast
+    IterDebit q m fiber ⟨out.1, out.2.1, yielding, .continue_, [], out.2.2.2⟩ := by
+  have full (active : NCode) := noAdd_full q active fiber.frame.stack held
+  have zero (exits : List ExitV) : currentCredits q
+      (countdownPark.resumePrim (interpAt root m.completedExits table) resume exits) = 0 := by
+    rcases shape with rfl | rfl <;> rfl
+  unfold countdownParkEdits
+  dsimp only
+  split
+  · unfold IterDebit outsideCredits fiberCredits
+    simp only [List.map_nil, List.sum_nil, Nat.add_zero, full, zero]
+    omega
+  · unfold IterDebit
+    simp only [RunMachine.emit_trace, List.countP_append, List.countP_cons, List.countP_nil,
+      ReleaseTrace.releaseAt, ReleaseTrace.registeredAt, List.map_nil, List.sum_nil,
+      Nat.add_zero, fiberCredits, RunFiber.park, stackCredits, futureCredits,
+      Nat.zero_add, Bool.false_eq_true, if_false, full]
+    exact Nat.le_refl _
+
 /-- Native countdown parks add only observer metadata and an administrative cancellation frame.
-Consumer: await-all, fail-fast and new-child action clauses. -/
+Consumer: eager callers retain the original countdown claim. -/
 theorem countdown (q : List Nat) (root : NativeEff) (table : RowTable) (m : NativeMachine)
     (fiber : Control.Fiber) (yielding : Bool) (targets : List FiberId) (resume : Resume EffName)
     (failFast : Bool) (held : NoAdd fiber.frame.stack)
     (unique : (m.fibers.map RunFiber.id).Nodup)
     (shape : resume = .exitsValue ∨ resume = .void) :
     let out := countdownPark (interpAt root m.completedExits table) m fiber targets resume failFast
-    IterDebit q m fiber ⟨out.1, out.2.1, yielding, .continue_, []⟩ := by
-  have full (active : NCode) := noAdd_full q active fiber.frame.stack held
-  unfold countdownPark
-  dsimp only
-  cases walk : countdownWalk {m with nextToken := m.nextToken + 1} targets [] with
-  | mk exits waiting =>
-    cases waiting with
-    | none =>
-      have zero : currentCredits q (countdownPark.resumePrim (interpAt root m.completedExits table) resume exits) = 0 := by
-        rcases shape with rfl | rfl <;> rfl
-      unfold IterDebit outsideCredits fiberCredits
-      simp only [List.map_nil, List.sum_nil, Nat.add_zero, full]
-      rw [zero]
-      omega
-    | some pair =>
-      obtain ⟨target, remaining⟩ := pair
-      have off := CommandDebit.modify_outside q {m with nextToken := m.nextToken + 1} fiber.id target
-        (fun g => {g with observers := g.observers ++ [Observer.countdown fiber.id m.nextToken]}) unique
-        (fun _ => rfl) (fun _ => Nat.le_refl _)
-      have trace : ({m with nextToken := m.nextToken + 1}.modify target
-          (fun g => {g with observers := g.observers ++ [Observer.countdown fiber.id m.nextToken]})).trace = m.trace := by
-        unfold RunMachine.modify
-        split <;> rfl
-      unfold IterDebit
-      simp only [RunMachine.emit_trace, trace, List.countP_append,
-        List.countP_cons, List.countP_nil, ReleaseTrace.releaseAt, ReleaseTrace.registeredAt,
-        List.map_nil, List.sum_nil, Nat.add_zero, fiberCredits, RunFiber.park,
-        stackCredits, futureCredits, Nat.zero_add, Bool.false_eq_true, if_false, full]
-      change _ + outsideCredits q fiber.id _ + _ + _ ≤ _ + outsideCredits q fiber.id m + _ + _
-      have emitted : outsideCredits q fiber.id
-          (({m with nextToken := m.nextToken + 1}.modify target
-            (fun g => {g with observers := g.observers ++ [Observer.countdown fiber.id m.nextToken]})).emit
-              [.parkedOn fiber.id m.nextToken]) =
-          outsideCredits q fiber.id ({m with nextToken := m.nextToken + 1}.modify target
-            (fun g => {g with observers := g.observers ++ [Observer.countdown fiber.id m.nextToken]})) := rfl
-      rw [emitted]
-      change outsideCredits q fiber.id _ ≤ outsideCredits q fiber.id m at off
-      exact Nat.add_le_add_right (Nat.add_le_add_right (Nat.add_le_add_left off _) _) _
+    IterDebit q m fiber ⟨out.1, out.2.1, yielding, .continue_, [], []⟩ := by
+  let out := countdownParkEdits (interpAt root m.completedExits table) m fiber targets resume failFast
+  have debit := countdown_plan q root table m fiber yielding targets resume failFast held shape
+  have sameFibers : out.1.fibers = m.fibers := by
+    rw [Edits.countdown_word]
+    exact Edits.run_keeps _ _ (fun edit member => edit.keeps_fibers
+      (Edits.countdown_misses m fiber targets edit member)) m
+  have off := outside_edits q out.1 fiber.id out.2.2.2 (by rw [sameFibers]; exact unique)
+  have trace := congrArg RunMachine.trace (RunMachine.applyFiberEdits_shape out.2.2.2 out.1).1
+  unfold countdownPark IterDebit
+  change (applyFiberEdits out.2.2.2 out.1).1.trace.countP (ReleaseTrace.releaseAt q) +
+    outsideCredits q fiber.id (applyFiberEdits out.2.2.2 out.1).1 + fiberCredits q out.2.1 +
+      (List.map (commandCredits q) []).sum + m.trace.countP (ReleaseTrace.registeredAt q) ≤ _
+  rw [trace]
+  unfold IterDebit at debit
+  change out.1.trace.countP (ReleaseTrace.releaseAt q) + outsideCredits q fiber.id out.1 +
+    fiberCredits q out.2.1 + (List.map (commandCredits q) []).sum +
+    m.trace.countP (ReleaseTrace.registeredAt q) ≤ _ at debit
+  dsimp only [out] at off debit ⊢
+  omega
 
-/-- Interrupting another stored fiber discards at most its old reservation.
-Consumer: the actual interruptAs action in the evaluator census. -/
+/-- The interrupt producer emits its event and defers the addressed update to settlement.
+Consumer: the actual interruptAs action debit. -/
 theorem interruptAs (q : List Nat) (root : NativeEff) (table : RowTable) (m : NativeMachine)
     (fiber : Control.Fiber) (yielding : Bool) (target who : FiberId)
-    (unique : (m.fibers.map RunFiber.id).Nodup) :
+    (_unique : (m.fibers.map RunFiber.id).Nodup) :
     IterDebit q m fiber (evaluatePrim.interruptAs (interpAt root m.completedExits table) m fiber yielding target who) := by
   unfold evaluatePrim.interruptAs
-  cases found : m.fiber? target with
-  | none =>
-    unfold IterDebit
+  split
+  · unfold IterDebit
     simp only [List.map_nil, List.sum_nil, Nat.add_zero]
     exact Nat.le_refl _
-  | some old =>
-    dsimp only
-    have bound := outside_update_le q m fiber.id old
-      (interruptRecord (interpAt root m.completedExits table) (some who)
-        ((interpAt root m.completedExits table).stackAnnotations fiber.id) old).1 unique
-      (by simpa only [fiber_id_of_lookup found] using found)
-      (interruptRecord_id root table (some who) _ old)
-      (CommandDebit.interrupt_record root table q (some who) _ old)
-    unfold IterDebit
+  · unfold IterDebit
     simp only [RunMachine.emit_trace, List.countP_append, List.countP_cons, List.countP_nil,
-      ReleaseTrace.releaseAt, ReleaseTrace.registeredAt, RunMachine.update_trace]
-    cases applyNow : (interruptRecord (interpAt root m.completedExits table) (some who)
-      ((interpAt root m.completedExits table).stackAnnotations fiber.id) old).2
-    all_goals
-      simp only [Bool.false_eq_true, if_false, if_true, List.map_append, List.sum_append, List.map_cons, List.map_nil,
-        List.sum_cons, List.sum_nil, commandCredits, Nat.add_zero]
-      change _ + outsideCredits q fiber.id (m.update _) + _ + _ ≤ _ + outsideCredits q fiber.id m + _ + _
-      omega
+      ReleaseTrace.releaseAt, ReleaseTrace.registeredAt, List.map_cons, List.map_nil,
+      List.sum_cons, List.sum_nil, commandCredits, Nat.add_zero]
+    exact Nat.le_refl _
 
 /-- Administrative commands and answers satisfy the same local accounting inequality.
 Consumer: the actual action census. -/
@@ -285,8 +298,53 @@ theorem boundary (q : List Nat) (before : NativeMachine) (fiber : Control.Fiber)
   rw [starts, registrations, commands, Nat.add_zero]
   omega
 
+/-- The scope-link plan transfers only administrative store entries and diagnostic events.
+Consumer: native runIn and the eager link adapter. -/
+theorem link_plan (q : List Nat) (root : NativeEff) (table : RowTable) (m : NativeMachine)
+    (owner target : FiberId) (scope : Nat) (mode : Supervision.ScopeMode)
+    (who : Option FiberId) (extra : ReasonAnnotations Ann)
+    (scopes : (m.state.scopes.entries.map ScopeEntry.key).Nodup) (fresh : m.state.ScopeKeysFresh) :
+    let out := linkScopeEdits (interpAt root m.completedExits table) m mode scope target who extra
+    outsideCredits q owner out.1 ≤ outsideCredits q owner m ∧
+    out.1.trace.countP (ReleaseTrace.releaseAt q) = m.trace.countP (ReleaseTrace.releaseAt q) ∧
+    out.1.trace.countP (ReleaseTrace.registeredAt q) = m.trace.countP (ReleaseTrace.registeredAt q) := by
+  let Kept (before after : NativeMachine) : Prop :=
+    outsideCredits q owner after ≤ outsideCredits q owner before ∧
+      after.trace.countP (ReleaseTrace.releaseAt q) = before.trace.countP (ReleaseTrace.releaseAt q) ∧
+      after.trace.countP (ReleaseTrace.registeredAt q) = before.trace.countP (ReleaseTrace.registeredAt q)
+  let Edge (before after : NativeMachine)
+      (edit : Machine.Edit EffName EffThunk Val Err Defect FiberId Ann Ctx Stores NCode
+        (FrameFiber EffName EffThunk Val Err Defect FiberId Ann)
+        (FrameEvent EffName EffThunk Val Err Defect FiberId Ann)) : Prop :=
+    after = edit.apply before ∧ Kept before after
+  have emitted (before : NativeMachine) (events)
+      (release : events.countP (ReleaseTrace.releaseAt q) = 0)
+      (registered : events.countP (ReleaseTrace.registeredAt q) = 0) :
+      Edge before (before.emit events) (.emit events) := by
+    refine ⟨rfl, Nat.le_refl _, ?_, ?_⟩
+    · simp only [RunMachine.emit_trace, List.countP_append, release, Nat.add_zero]
+    · simp only [RunMachine.emit_trace, List.countP_append, registered, Nat.add_zero]
+  have path := Edits.link_plan_path (Edge := Edge) (interpAt root m.completedExits table)
+    mode scope target who m
+    (fun state key result => ?_)
+    (fun before => emitted before [.scopeClosedOnLink scope target, .interruptRecorded who target] rfl rfl)
+    (fun before key => emitted before [.scopeLinked mode scope key target] rfl rfl)
+    (fun _ _ => ⟨rfl, Nat.le_refl _, rfl, rfl⟩) extra
+  · dsimp only
+    rw [Edits.link_plan_word]
+    exact Edits.run_preserves_at (fun _ _ _ edge => edge.1) (Kept m)
+      (fun _ _ _ edge prior => ⟨Nat.le_trans edge.2.1 prior.1,
+        edge.2.2.1.trans prior.2.1, edge.2.2.2.trans prior.2.2⟩)
+      path ⟨Nat.le_refl _, rfl, rfl⟩
+  · have changed := ScopeTransfer.link q mode scope target scopes fresh result
+    unfold ScopeTransfer.storedCredits at changed
+    refine ⟨rfl, ?_, rfl, rfl⟩
+    change (state.scopes.entries.map fun e => scopeCredits q e.scope).sum + _ + _ ≤ _
+    rw [changed]
+    exact Nat.le_refl _
+
 /-- Scope linking changes only administrative finalizers, metadata or interruption state.
-Consumer: runIn action debit in the native evaluator census. -/
+Consumer: eager scope-link callers retain their existing reservation bound. -/
 theorem link (q : List Nat) (root : NativeEff) (table : RowTable) (m : NativeMachine)
     (owner target : FiberId) (scope : Nat) (mode : Supervision.ScopeMode)
     (who : Option FiberId) (extra : ReasonAnnotations Ann)
@@ -297,56 +355,27 @@ theorem link (q : List Nat) (root : NativeEff) (table : RowTable) (m : NativeMac
     out.1.trace.countP (ReleaseTrace.releaseAt q) = m.trace.countP (ReleaseTrace.releaseAt q) ∧
     out.1.trace.countP (ReleaseTrace.registeredAt q) = m.trace.countP (ReleaseTrace.registeredAt q) ∧
     (out.2.map (commandCredits q)).sum = 0 := by
-  unfold linkScope
-  cases status : (interpAt root m.completedExits table).scopeStatus scope m.state with
-  | none => exact ⟨Nat.le_refl _, rfl, rfl, rfl⟩
-  | some closing =>
-    cases closing with
-    | some exit =>
-      cases found : m.fiber? target with
-      | none => exact ⟨Nat.le_refl _, rfl, rfl, rfl⟩
-      | some fiber =>
-        dsimp only
-        have off := outside_update_le q m owner fiber
-          (interruptRecord (interpAt root m.completedExits table) who extra fiber).1 fibers
-          (by simpa only [fiber_id_of_lookup found] using found)
-          (interruptRecord_id root table who extra fiber)
-          (CommandDebit.interrupt_record root table q who extra fiber)
-        refine ⟨off, ?_, ?_, ?_⟩
-        · simp only [RunMachine.emit_trace, RunMachine.update_trace, List.countP_append,
-            List.countP_cons, List.countP_nil, ReleaseTrace.releaseAt, Bool.false_eq_true, if_false, Nat.add_zero]
-        · simp only [RunMachine.emit_trace, RunMachine.update_trace, List.countP_append,
-            List.countP_cons, List.countP_nil, ReleaseTrace.registeredAt, Bool.false_eq_true, if_false, Nat.add_zero]
-        · split <;> rfl
-    | none =>
-      cases found : m.fiber? target with
-      | none => exact ⟨Nat.le_refl _, rfl, rfl, rfl⟩
-      | some fiber =>
-        dsimp only
-        split
-        · exact ⟨Nat.le_refl _, rfl, rfl, rfl⟩
-        · cases linked : (interpAt root m.completedExits table).scopeLinkFiber mode scope target m.state with
-          | none => exact ⟨Nat.le_refl _, rfl, rfl, rfl⟩
-          | some result =>
-            obtain ⟨stores, key⟩ := result
-            have changed := ScopeTransfer.link q mode scope target scopes fresh linked
-            have off := CommandDebit.modify_outside q {m with state := stores} owner target
-              (fun f => {f with observers := f.observers ++ [Observer.dropScopeFinalizer scope key]}) fibers
-              (fun _ => rfl) (fun _ => Nat.le_refl _)
-            have old : outsideCredits q owner {m with state := stores} = outsideCredits q owner m := by
-              unfold outsideCredits
-              unfold ScopeTransfer.storedCredits at changed
-              rw [changed]
-            have trace : ({m with state := stores}.modify target
-                (fun f => {f with observers := f.observers ++ [Observer.dropScopeFinalizer scope key]})).trace = m.trace := by
-              unfold RunMachine.modify
-              split <;> rfl
-            refine ⟨?_, ?_, ?_, rfl⟩
-            · exact old ▸ off
-            · simp only [RunMachine.emit_trace, trace, List.countP_append, List.countP_cons,
-                List.countP_nil, ReleaseTrace.releaseAt, Bool.false_eq_true, if_false, Nat.add_zero]
-            · simp only [RunMachine.emit_trace, trace, List.countP_append, List.countP_cons,
-                List.countP_nil, ReleaseTrace.registeredAt, Bool.false_eq_true, if_false, Nat.add_zero]
+  let plan := linkScopeEdits (interpAt root m.completedExits table) m mode scope target who extra
+  have kept := link_plan q root table m owner target scope mode who extra scopes fresh
+  have sameFibers : plan.1.fibers = m.fibers := by
+    rw [Edits.link_plan_word]
+    exact Edits.run_keeps _ _ (fun edit member => edit.keeps_fibers
+      (Edits.link_misses _ m mode scope target who edit member)) m
+  have off := outside_edits q plan.1 owner plan.2 (by rw [sameFibers]; exact fibers)
+  have shape := RunMachine.applyFiberEdits_shape plan.2 plan.1
+  have trace := congrArg RunMachine.trace shape.1
+  change outsideCredits q owner (applyFiberEdits plan.2 plan.1).1 ≤ _ ∧ _
+  refine ⟨Nat.le_trans off kept.1, ?_, ?_, ?_⟩
+  · exact (congrArg (fun events => events.countP (ReleaseTrace.releaseAt q)) trace).trans kept.2.1
+  · exact (congrArg (fun events => events.countP (ReleaseTrace.registeredAt q)) trace).trans kept.2.2
+  · have zeroes : (applyFiberEdits plan.2 plan.1).2.map (commandCredits q) =
+        List.replicate (applyFiberEdits plan.2 plan.1).2.length 0 := by
+      apply List.map_eq_replicate_iff.mpr
+      intro command member
+      obtain ⟨id, rfl⟩ := shape.2 command member
+      rfl
+    change ((applyFiberEdits plan.2 plan.1).2.map (commandCredits q)).sum = 0
+    rw [zeroes, List.sum_replicate_nat, Nat.mul_zero]
 
 /-- Reservation required by programs an actual fiber action installs or launches.
 Consumer: actual action debit and the source/stored producer bound. -/
@@ -389,23 +418,23 @@ theorem action (q : List Nat) (root : NativeEff) (table : RowTable) (m : NativeM
   case closeScope scope exit => exact closeScope q root table m fiber yielding scope exit held scopes
   case closePar programs => exact False.elim (SourceScope.SequentialSource.not_parallel sequential source.2)
   case interruptAs target who => exact interruptAs q root table m fiber yielding target who fibers
-  case awaitAll targets => exact countdown q root table m fiber yielding targets .exitsValue false held fibers (Or.inl rfl)
-  case awaitAllFailFast targets => exact countdown q root table m fiber yielding targets .exitsValue true held fibers (Or.inl rfl)
-  case awaitNewChildren snapshot => exact countdown q root table m fiber yielding _ .void false held fibers (Or.inr rfl)
+  case awaitAll targets => exact countdown_plan q root table m fiber yielding targets .exitsValue false held (Or.inl rfl)
+  case awaitAllFailFast targets => exact countdown_plan q root table m fiber yielding targets .exitsValue true held (Or.inl rfl)
+  case awaitNewChildren snapshot => exact countdown_plan q root table m fiber yielding _ .void false held (Or.inr rfl)
   case runIn target scope =>
-    have linked := link q root table m fiber.id target scope .fiberRunIn (some target) ReasonAnnotations.empty fibers scopes fresh
+    have linked := link_plan q root table m fiber.id target scope .fiberRunIn (some target) ReasonAnnotations.empty scopes fresh
     apply boundary
     · exact linked.2.1
-    · exact linked.2.2.1
+    · exact linked.2.2
     · exact linked.1
     · simp only [evaluatePrim.withFiber, fiberCredits, currentCredits, full]
       omega
-    · exact linked.2.2.2
+    · rfl
   case dropObservers token =>
     apply boundary
     · rfl
     · rfl
-    · exact Nat.le_of_eq (drop_outside q m fiber.id token)
+    · exact Nat.le_refl _
     · simp only [evaluatePrim.withFiber, fiberCredits, currentCredits, full]
       omega
     · rfl

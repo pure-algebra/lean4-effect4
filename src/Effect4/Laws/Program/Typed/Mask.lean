@@ -150,7 +150,7 @@ theorem withFiber_getInterruptible (interp : RunInterp ν σ β ε δ ι α χ S
     evaluatePrim.withFiber interp m f yielding WithFiberAction.getInterruptible =
       ⟨m, { f with frame := { f.frame.uninterruptible with
           current := Prim.success (interp.restoreValue f.frame.interruptible) } },
-        yielding, Outcome.continue_, []⟩ := by
+        yielding, Outcome.continue_, [], []⟩ := by
   simp only [evaluatePrim.withFiber]
 
 /-- `uninterruptible(body)` (`internal/effect.ts:4302-4310`): the fiber masked, the body next. -/
@@ -160,7 +160,7 @@ theorem withFiber_setInterruptible_false (interp : RunInterp ν σ β ε δ ι �
     (body : Prim ν σ β ε δ ι α) :
     evaluatePrim.withFiber interp m f yielding (WithFiberAction.setInterruptible body false) =
       ⟨m, { f with frame := { f.frame.uninterruptible with current := body } },
-        yielding, Outcome.continue_, []⟩ := by
+        yielding, Outcome.continue_, [], []⟩ := by
   simp only [evaluatePrim.withFiber]
 
 /-- `interruptible(body)` (`internal/effect.ts:4331-4338`): the region's entry, then the body, or
@@ -172,7 +172,7 @@ theorem withFiber_setInterruptible_true (interp : RunInterp ν σ β ε δ ι α
     evaluatePrim.withFiber interp m f yielding (WithFiberAction.setInterruptible body true) =
       ⟨m, { f with frame := { f.frame.interruptibleRegion.fst with
           current := f.frame.interruptibleRegion.snd.getD body } },
-        yielding, Outcome.continue_, []⟩ := by
+        yielding, Outcome.continue_, [], []⟩ := by
   simp only [evaluatePrim.withFiber]
 
 /-- **A region's entry sets its own flag**, at every fiber and whatever stands around it: the
@@ -503,7 +503,7 @@ theorem getInterruptible_step (c : List (FiberId × ExitV)) (m : FMachine) (f : 
     evaluatePrim (interpAt root c) m f y =
       ⟨m, { f with frame := { f.frame.uninterruptible with
           current := Prim.success (Val.savedMask f.frame.interruptible) } },
-        y, Outcome.continue_, []⟩ := by
+        y, Outcome.continue_, [], []⟩ := by
   have hact : (interpOf root).withFiberOf (EffThunk.act p) =
       some WithFiberAction.getInterruptible := by
     show actionAt root p = _
@@ -522,7 +522,7 @@ theorem restore_true_step (c : List (FiberId × ExitV)) (m : FMachine) (f : FRun
     evaluatePrim (interpAt root c) m f y =
       ⟨m, { f with frame := { f.frame.interruptibleRegion.fst with
           current := f.frame.interruptibleRegion.snd.getD (compileEff body (p.child 0)) } },
-        y, Outcome.continue_, []⟩ := by
+        y, Outcome.continue_, [], []⟩ := by
   have hact : (interpOf root).withFiberOf (EffThunk.act p) =
       some (WithFiberAction.setInterruptible (compileEff body (p.child 0)) true) := by
     show actionAt root p = _

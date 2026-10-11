@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.SourceOpportunityMachine
 import Effect4.Laws.Machine.Handshake
+import Effect4.Laws.Machine.WriterWeights
 
 /-!
 Concept: scope-lifetime-finalization R11.
@@ -26,7 +27,7 @@ theorem replace_current_debit (root : NativeEff) (q : List Nat) (m : NativeMachi
     (outcome : Outcome EffName EffThunk Val Err Defect FiberId Ann)
     (carried : current root q code ≤ current root q fiber.frame.current) :
     Debit root q m fiber
-      ⟨m, {fiber with frame := {fiber.frame with current := code}}, yielding, outcome, []⟩ := by
+      ⟨m, {fiber with frame := {fiber.frame with current := code}}, yielding, outcome, [], []⟩ := by
   unfold Debit frame
   dsimp only
   omega
@@ -156,15 +157,49 @@ theorem interrupt_record_le (root : NativeEff) (q : List Nat) (table : RowTable)
     (fiber : SourceFiber) :
     frame root q (interruptRecord (interpAt root completed table) who extra fiber).1.frame ≤
       frame root q fiber.frame := by
-  unfold interruptRecord interruptWithCause
-  dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
-    FiberCore.setDeferred, FiberCore.answerWith, FiberCore.failure, frameCore]
+  exact Machine.WriterWeights.interrupt_weight_le (weightModel root q) _ fiber
+
+/-- Addressed messages cannot increase the source reservations outside a named owner.
+Consumer: eager countdown and scope-link adapters; settlement uses the shared total bound. -/
+theorem outside_edits_le (root : NativeEff) (q : List Nat) (m : NativeMachine)
+    (owner : FiberId) (edits : List (FiberEdit Err Defect FiberId Ann))
+    (unique : (m.fibers.map (fun fiber => fiber.id)).Nodup) :
+    outside root q owner (applyFiberEdits edits m).1 ≤ outside root q owner m := by
+  apply (FiberSum.fiberEdits_le (ControlWeights.omitted (fun fiber : SourceFiber => fiber.id)
+    (fun fiber : SourceFiber => frame root q fiber.frame) owner) (fun _ _ => rfl) ?_ edits m unique).2
+  intro cause fiber
+  have same := (interruptWithCause_maskLater cause fiber).1
+  dsimp only [ControlWeights.omitted]
+  simp only [same]
   split
   · exact Nat.le_refl _
-  · cases fiber.frame.interruptedCause <;> dsimp only
-    all_goals repeat' split
-    all_goals simp only [frame, current, cata_prim]
-    all_goals omega
+  · exact Machine.WriterWeights.interrupt_weight_le (weightModel root q) cause fiber
+
+/-- The countdown plan adds only a zero-weight cleanup and diagnostic event.
+Consumer: native countdown evaluation before addressed observers are installed. -/
+theorem countdown_plan_debit (root : NativeEff) (q : List Nat) (table : RowTable)
+    (m : NativeMachine) (fiber : SourceFiber) (yielding : Bool) (targets : List FiberId)
+    (resume : Resume EffName) (failFast : Bool) (shape : ResumeAt root resume) :
+    let out := countdownParkEdits (interpAt root m.completedExits table) m fiber targets resume failFast
+    Debit root q m fiber ⟨out.1, out.2.1, yielding, .continue_, [], out.2.2.2⟩ := by
+  have zero (exits : List ExitV) : current root q
+      (countdownPark.resumePrim (interpAt root m.completedExits table) resume exits) = 0 := by
+    cases resume
+    case continueWith => exact shape.elim
+    all_goals rfl
+  unfold countdownParkEdits
+  dsimp only
+  split
+  · unfold Debit frame
+    simp only [zero, Nat.zero_add]
+    change recorded q m + outside root q fiber.id m + _ ≤ recorded q m + outside root q fiber.id m + _
+    omega
+  · have cancelZero : name q ((interpAt root m.completedExits table).cancelName
+        (interpAt root m.completedExits table).parkCancelName fiber.id m.nextToken) = 0 := rfl
+    unfold Debit
+    simp only [recorded_emit, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil,
+      runEvent, Nat.add_zero, outside_emit, frame, RunFiber.park, saved, cancelZero, Nat.zero_add]
+    exact Nat.le_refl _
 
 /-- Native countdown callbacks retain the existing saved source budget.
 Consumer: awaitAll and awaitNewChildren native evaluator clauses. -/
@@ -173,76 +208,38 @@ theorem countdown_debit (root : NativeEff) (q : List Nat) (table : RowTable)
     (resume : Resume EffName) (failFast : Bool)
     (unique : (m.fibers.map (fun fiber => fiber.id)).Nodup) (shape : ResumeAt root resume) :
     let out := countdownPark (interpAt root m.completedExits table) m fiber targets resume failFast
-    Debit root q m fiber ⟨out.1, out.2.1, yielding, .continue_, []⟩ := by
-  have zero (exits : List ExitV) : current root q
-      (countdownPark.resumePrim (interpAt root m.completedExits table) resume exits) = 0 := by
-    cases resume
-    case continueWith => exact shape.elim
-    all_goals rfl
-  unfold countdownPark
-  dsimp only
-  cases walk : countdownWalk {m with nextToken := m.nextToken + 1} targets [] with
-  | mk exits waiting =>
-    cases waiting with
-    | none =>
-      unfold Debit frame
-      simp only [zero, Nat.zero_add]
-      change recorded q m + outside root q fiber.id m + _ ≤ recorded q m + outside root q fiber.id m + _
-      omega
-    | some pair =>
-      obtain ⟨target, remaining⟩ := pair
-      have off := outside_modify_le root q {m with nextToken := m.nextToken + 1} fiber.id target
-        (fun g => {g with observers := g.observers ++ [Observer.countdown fiber.id m.nextToken]}) unique
-        (fun _ => rfl) (fun _ => Nat.le_refl _)
-      have trace : ({m with nextToken := m.nextToken + 1}.modify target
-          (fun g => {g with observers := g.observers ++ [Observer.countdown fiber.id m.nextToken]})).trace = m.trace := by
-        unfold RunMachine.modify
-        split <;> rfl
-      have cancelZero : name q ((interpAt root m.completedExits table).cancelName
-          (interpAt root m.completedExits table).parkCancelName fiber.id m.nextToken) = 0 := rfl
-      unfold Debit recorded
-      simp only [RunMachine.emit_trace, trace, List.map_append, List.sum_append,
-        List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, runEvent, Nat.add_zero,
-        frame, RunFiber.park, saved, cancelZero, Nat.zero_add]
-      rw [outside_emit]
-      change outside root q fiber.id _ ≤ outside root q fiber.id m at off
-      apply Nat.le_trans (Nat.add_le_add_right (Nat.add_le_add_left off _) _)
-      omega
+    Debit root q m fiber ⟨out.1, out.2.1, yielding, .continue_, [], []⟩ := by
+  let out := countdownParkEdits (interpAt root m.completedExits table) m fiber targets resume failFast
+  have debit := countdown_plan_debit root q table m fiber yielding targets resume failFast shape
+  have sameFibers : out.1.fibers = m.fibers := by
+    rw [Edits.countdown_word]
+    exact Edits.run_keeps _ _ (fun edit member => edit.keeps_fibers
+      (Edits.countdown_misses m fiber targets edit member)) m
+  have off := outside_edits_le root q out.1 fiber.id out.2.2.2 (by rw [sameFibers]; exact unique)
+  have trace := congrArg RunMachine.trace (RunMachine.applyFiberEdits_shape out.2.2.2 out.1).1
+  unfold countdownPark Debit
+  change recorded q (applyFiberEdits out.2.2.2 out.1).1 +
+    outside root q fiber.id (applyFiberEdits out.2.2.2 out.1).1 + frame root q out.2.1.frame ≤ _
+  have count : recorded q (applyFiberEdits out.2.2.2 out.1).1 = recorded q out.1 := by
+    unfold recorded
+    rw [trace]
+  rw [count]
+  exact Nat.le_trans (Nat.add_le_add_right (Nat.add_le_add_left off _) _) debit
 
 /-- Native interruption metadata changes only discard an off-owner active reservation.
 Consumer: actual interruptAs evaluation and scope links. -/
 theorem interrupt_as_debit (root : NativeEff) (q : List Nat) (table : RowTable)
     (m : NativeMachine) (fiber : SourceFiber) (yielding : Bool) (target who : FiberId)
-    (unique : (m.fibers.map (fun fiber => fiber.id)).Nodup) :
+    (_unique : (m.fibers.map (fun fiber => fiber.id)).Nodup) :
     Debit root q m fiber
       (evaluatePrim.interruptAs (interpAt root m.completedExits table) m fiber yielding target who) := by
   unfold evaluatePrim.interruptAs
-  cases found : m.fiber? target with
-  | none => exact Nat.le_refl _
-  | some old =>
-    dsimp only
-    have off := outside_update_le root q m fiber.id old
-      (interruptRecord (interpAt root m.completedExits table) (some who)
-        ((interpAt root m.completedExits table).stackAnnotations fiber.id) old).1
-      (by
-        unfold interruptRecord interruptWithCause
-        dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
-          FiberCore.setDeferred, FiberCore.answerWith, FiberCore.failure, frameCore]
-        split
-        · rfl
-        · cases old.frame.interruptedCause <;> dsimp only
-          all_goals repeat' split
-          all_goals rfl) unique
-      (List.mem_of_find?_eq_some found)
-      (interrupt_record_le root q table m.completedExits (some who) _ old)
-    unfold Debit
-    rw [recorded_emit]
-    simp only [List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, runEvent,
-      Nat.add_zero, outside_emit]
-    have trace : recorded q (m.update (interruptRecord (interpAt root m.completedExits table)
-        (some who) ((interpAt root m.completedExits table).stackAnnotations fiber.id) old).1) = recorded q m := rfl
-    rw [trace]
-    exact Nat.add_le_add_right (Nat.add_le_add_left off _) _
+  split
+  · exact Nat.le_refl _
+  · unfold Debit
+    simp only [recorded_emit, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil,
+      runEvent, Nat.add_zero, outside_emit]
+    exact Nat.le_refl _
 
 /-- Closing a source-owned scope introduces only finalizer code outside the selected query.
 Consumer: actual closeScope evaluation in the source-use invariant. -/
@@ -325,6 +322,19 @@ theorem interpreted_fork_in_debit (root : NativeEff) (q : List Nat) (table : Row
   apply fork_in_debit
   simpa only [selected, current, cata_prim, action] using carried
 
+/-- The scope-link plan retains the source reservation and contributes no counted event.
+Consumer: runIn evaluation and the eager scope-link debit. -/
+theorem link_plan_debit (root : NativeEff) (q : List Nat) (table : RowTable) (m : NativeMachine)
+    (owner target : FiberId) (scope : Nat) (mode : Supervision.ScopeMode)
+    (who : Option FiberId) (extra : ReasonAnnotations Ann) :
+    let out := linkScopeEdits (interpAt root m.completedExits table) m mode scope target who extra
+    outside root q owner out.1 = outside root q owner m ∧ recorded q out.1 = recorded q m := by
+  unfold linkScopeEdits
+  repeat' split
+  all_goals simp only [recorded_emit, outside_emit, List.map_cons, List.map_nil,
+    List.sum_cons, List.sum_nil, runEvent, Nat.add_zero]
+  all_goals aesop
+
 /-- Scope links edit only observer metadata or discard an interrupted active program.
 Consumer: actual runIn and fork link command accounting. -/
 theorem link_debit (root : NativeEff) (q : List Nat) (table : RowTable) (m : NativeMachine)
@@ -333,54 +343,21 @@ theorem link_debit (root : NativeEff) (q : List Nat) (table : RowTable) (m : Nat
     (unique : (m.fibers.map (fun fiber => fiber.id)).Nodup) :
     let out := linkScope (interpAt root m.completedExits table) m mode scope target who extra
     outside root q owner out.1 ≤ outside root q owner m ∧ recorded q out.1 = recorded q m := by
-  unfold linkScope
-  cases status : (interpAt root m.completedExits table).scopeStatus scope m.state with
-  | none => exact ⟨Nat.le_refl _, rfl⟩
-  | some closing =>
-    cases closing with
-    | some exit =>
-      cases found : m.fiber? target with
-      | none => exact ⟨Nat.le_refl _, rfl⟩
-      | some old =>
-        dsimp only
-        have off := outside_update_le root q m owner old
-          (interruptRecord (interpAt root m.completedExits table) who extra old).1
-          (by
-            unfold interruptRecord interruptWithCause
-            dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
-              FiberCore.setDeferred, FiberCore.answerWith, FiberCore.failure, frameCore]
-            split
-            · rfl
-            · cases old.frame.interruptedCause <;> dsimp only
-              all_goals repeat' split
-              all_goals rfl) unique (List.mem_of_find?_eq_some found)
-          (interrupt_record_le root q table m.completedExits who extra old)
-        refine ⟨off, ?_⟩
-        rw [recorded_emit]
-        simp only [List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, runEvent, Nat.add_zero]
-        rfl
-    | none =>
-      cases found : m.fiber? target with
-      | none => exact ⟨Nat.le_refl _, rfl⟩
-      | some old =>
-        dsimp only
-        split
-        · exact ⟨Nat.le_refl _, rfl⟩
-        · cases linked : (interpAt root m.completedExits table).scopeLinkFiber mode scope target m.state with
-          | none => exact ⟨Nat.le_refl _, rfl⟩
-          | some result =>
-            obtain ⟨stores, key⟩ := result
-            have off := outside_modify_le root q {m with state := stores} owner target
-              (fun f => {f with observers := f.observers ++ [Observer.dropScopeFinalizer scope key]}) unique
-              (fun _ => rfl) (fun _ => Nat.le_refl _)
-            have trace : ({m with state := stores}.modify target
-                (fun f => {f with observers := f.observers ++ [Observer.dropScopeFinalizer scope key]})).trace = m.trace := by
-              unfold RunMachine.modify
-              split <;> rfl
-            refine ⟨off, ?_⟩
-            rw [recorded_emit]
-            simp only [recorded, trace, List.map_cons, List.map_nil, List.sum_cons,
-              List.sum_nil, runEvent, Nat.add_zero]
+  let interp := interpAt root m.completedExits table
+  let plan := linkScopeEdits interp m mode scope target who extra
+  have kept := link_plan_debit root q table m owner target scope mode who extra
+  have sameFibers : plan.1.fibers = m.fibers := by
+    rw [Edits.link_plan_word]
+    exact Edits.run_keeps _ _ (fun edit member => edit.keeps_fibers
+      (Edits.link_misses interp m mode scope target who edit member)) m
+  have off := outside_edits_le root q plan.1 owner plan.2 (by rw [sameFibers]; exact unique)
+  refine ⟨?_, ?_⟩
+  · exact kept.1 ▸ off
+  · change recorded q (applyFiberEdits plan.2 plan.1).1 = recorded q m
+    have trace := congrArg RunMachine.trace (RunMachine.applyFiberEdits_shape plan.2 plan.1).1
+    unfold recorded
+    rw [trace]
+    exact kept.2
 
 /-- Removing observer rows leaves source reservations unchanged.
 Consumer: cancellation cleanup action accounting. -/
@@ -414,28 +391,25 @@ theorem native_action_debit (root : NativeEff) (q : List Nat) (table : RowTable)
   case closePar => exact False.elim (SequentialSource.not_parallel sequential source.2)
   case closeScope scope exit => exact close_scope_debit root q table m fiber yielding scope exit clear scopes
   case interruptAs target who => exact interrupt_as_debit root q table m fiber yielding target who unique
-  case awaitAll targets => exact countdown_debit root q table m fiber yielding targets .exitsValue false unique trivial
-  case awaitAllFailFast targets => exact countdown_debit root q table m fiber yielding targets .exitsValue true unique trivial
-  case awaitNewChildren snapshot => exact countdown_debit root q table m fiber yielding _ .void false unique trivial
+  case awaitAll targets => exact countdown_plan_debit root q table m fiber yielding targets .exitsValue false trivial
+  case awaitAllFailFast targets => exact countdown_plan_debit root q table m fiber yielding targets .exitsValue true trivial
+  case awaitNewChildren snapshot => exact countdown_plan_debit root q table m fiber yielding _ .void false trivial
   case runIn target scope =>
-    have linked := link_debit root q table m fiber.id target scope .fiberRunIn (some target) ReasonAnnotations.empty unique
+    have linked := link_plan_debit root q table m fiber.id target scope .fiberRunIn (some target) ReasonAnnotations.empty
     unfold Debit
     dsimp only [evaluatePrim.withFiber]
     rw [linked.2]
     simp only [frame, current, cata_prim, Nat.zero_add]
-    exact Nat.le_trans (Nat.add_le_add_right (Nat.add_le_add_left linked.1 _) _) (by omega)
+    exact Nat.le_trans (Nat.add_le_add_right (Nat.add_le_add_left (Nat.le_of_eq linked.1) _) _) (by omega)
   case dropObservers token =>
-    have off := drop_outside root q m fiber.id token
     unfold Debit
     dsimp only [evaluatePrim.withFiber]
-    change recorded q m + outside root q fiber.id _ + _ ≤ recorded q m + outside root q fiber.id m + _
-    apply Nat.le_trans (Nat.add_le_add_right (Nat.add_le_add_left (Nat.le_of_eq off) _) _)
     simp only [frame, current, cata_prim, Nat.zero_add]
     omega
   case interrupt target =>
     have zero : current root q ((interpAt root m.completedExits table).interruptAsCode target fiber.id) = 0 := rfl
     simp only [evaluatePrim.withFiber]
-    apply replace_current_debit
+    apply replace_current_debit (yielding := yielding) (outcome := .continue_)
     rw [zero]
     exact Nat.zero_le _
   case interruptScoped target =>
@@ -443,7 +417,7 @@ theorem native_action_debit (root : NativeEff) (q : List Nat) (table : RowTable)
     simp only [evaluatePrim.withFiber]
     split
     · exact replace_current_debit root q m fiber yielding _ .continue_ (Nat.zero_le _)
-    · apply replace_current_debit
+    · apply replace_current_debit (yielding := yielding) (outcome := .continue_)
       rw [zero]
       exact Nat.zero_le _
   case setContext context =>

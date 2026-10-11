@@ -52,6 +52,7 @@ structure IterRel (table : RowTable) (root : NativeEff) (it₁ : FIter) (it₂ :
   yielding : it₁.yielding = it₂.yielding
   outcome : it₁.outcome = it₂.outcome
   nested : ListRel (CMeans root) it₁.nested it₂.nested
+  edits : it₁.edits = it₂.edits
 
 /-! ## Fibers, field by field -/
 

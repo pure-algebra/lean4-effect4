@@ -49,7 +49,7 @@ theorem push_exit (machine : Effect4.Program.NativeMachine) (fiber : NativeFiber
       ⟨machine.emit [.frame fiber.id (.pushed (.onExit body name false))],
         {fiber with frame := {fiber.frame with
           current := body
-          stack := .onExit body name false :: fiber.frame.stack}}, yielding, .continue_, []⟩ := by
+          stack := .onExit body name false :: fiber.frame.stack}}, yielding, .continue_, [], []⟩ := by
   have park : (interpAt HostTimeoutSource.program machine.completedExits
       Test.Dogfood.Scenario.Timeout.fetch.table).parkOf (.onExit body name false) = none := rfl
   simp only [evaluateNative, current, evaluatePrim, park,
@@ -64,7 +64,7 @@ theorem push_success (machine : Effect4.Program.NativeMachine) (fiber : NativeFi
       ⟨machine.emit [.frame fiber.id (.pushed (.onSuccess body name))],
         {fiber with frame := {fiber.frame with
           current := body
-          stack := .onSuccess body name :: fiber.frame.stack}}, yielding, .continue_, []⟩ := by
+          stack := .onSuccess body name :: fiber.frame.stack}}, yielding, .continue_, [], []⟩ := by
   have park : (interpAt HostTimeoutSource.program machine.completedExits
       Test.Dogfood.Scenario.Timeout.fetch.table).parkOf (.onSuccess body name) = none := rfl
   simp only [evaluateNative, current, evaluatePrim, park,

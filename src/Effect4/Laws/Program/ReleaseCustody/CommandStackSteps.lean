@@ -1,5 +1,7 @@
 import Effect4.Laws.Program.ReleaseCustody.CommandStacks
 import Effect4.Laws.Program.Guard.Observer
+import Effect4.Laws.Program.ReleaseCustody.NativeStacks
+import Effect4.Laws.Machine.EditObserverWords
 
 /-!
 Concept: scope-lifetime-finalization R11, serving `ReleaseCustody.Execution.history`.
@@ -48,35 +50,9 @@ theorem interruptEach_links (root : NativeEff) (table : RowTable) (who : FiberId
 theorem linkScope_links (root : NativeEff) (table : RowTable) (m : NativeMachine)
     (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId)
     (who : Option FiberId) (extra : ReasonAnnotations Ann) :
-    StackLinks m (linkScope (interpOf root table) m mode scope target who extra).1 := by
-  unfold Effect4.Machine.linkScope
-  cases statusEq : (interpOf root table).scopeStatus scope m.state with
-  | none => exact .of_fibers rfl
-  | some status =>
-    cases status with
-    | some exit =>
-      simp only []
-      cases found : m.fiber? target with
-      | none => exact .of_fibers rfl
-      | some fiber =>
-        exact (interrupt_links root table m fiber
-          (by simpa only [fiber_id_of_lookup found] using found) who extra).emit _
-    | none =>
-      simp only []
-      cases found : m.fiber? target with
-      | none => exact .of_fibers rfl
-      | some fiber =>
-        simp only []
-        split
-        · exact .refl m
-        · cases linked : (interpOf root table).scopeLinkFiber mode scope target m.state with
-          | none => exact .of_fibers rfl
-          | some result =>
-            obtain ⟨stores, key⟩ := result
-            exact (StackLinks.of_fibers (m := m) (n := {m with state := stores}) rfl |>.trans
-              (modify_links _ target (fun f =>
-                {f with observers := f.observers ++ [.dropScopeFinalizer scope key]})
-                (fun _ => rfl) (fun _ => rfl))).emit _
+    StackLinks m (linkScope (interpOf root table) m mode scope target who extra).1 :=
+  NativeStacks.lookup_links
+    (Moves.InterferesWithLookup.linkScope (interpOf root table) m mode scope target who extra).lookup
 
 /-- Posting an owed resume changes its dispatcher's task list, never a saved stack. -/
 theorem postTask_links (m : NativeMachine) (owner : FiberId) (priority : Nat)
@@ -100,72 +76,45 @@ theorem drainOwed_links (m : NativeMachine) (due : List (Owed NCode)) :
       simpa only [drainOwed, mode] using
         (postTask_links m owner priority (.resume owed.waiter owed.token owed.code)).trans (ih _)
 
-/-- A countdown observer retains the waiter's saved stack even after nested interrupts. -/
-theorem countdownObserver_links (root : NativeEff) (table : RowTable) (m : NativeMachine)
-    (id : FiberId) (exit : ExitV) (commands : List NCmd) (waiter : FiberId) (token : Nat) :
-    StackLinks m (fireObserver (interpOf root table) id exit (m, commands) (.countdown waiter token)).1 := by
-  let base := m.emit [RunEvent.observerFired id (.countdown waiter token)]
-  have emitted : StackLinks m base := .of_fibers rfl
-  simp only [fireObserver, show m.emit _ = base from rfl]
-  cases found : base.fiber? waiter with
-  | none => exact emitted
-  | some fiber =>
-    simp only []
-    cases pending : fiber.pending.find? (fun p => p.token = token) with
-    | none => exact emitted
-    | some park =>
-      simp only []
-      let collected := park.collected ++ [exit]
-      let firstFailure := park.failFast && !exit.isSuccess && park.collected.all Exit.isSuccess
-      generalize result : (if firstFailure then
-          interruptEach (interpOf root table) waiter ((interpOf root table).stackAnnotations waiter)
-            park.remaining (base, []) else (base, [])) = out
-      have middle : StackLinks base out.1 := by
-        rw [← result]
-        split
-        · exact interruptEach_links root table waiter _ park.remaining base []
-        · exact .refl base
-      have original : base.fiber? fiber.id = some fiber := by
-        simpa only [fiber_id_of_lookup found] using found
-      obtain ⟨outMachine, nested⟩ := out
-      dsimp only at middle ⊢
-      cases walked : countdownWalk outMachine park.remaining collected with
-      | mk exits next =>
-        cases next with
-        | none =>
-          exact emitted.trans (middle.update_from fiber
-            {fiber with pending := fiber.pending.map (fun p => if p.token = token then
-              {p with waitingOn := none, remaining := [], collected := exits} else p)}
-            original rfl rfl)
-        | some pair =>
-          obtain ⟨next, rest⟩ := pair
-          have observed := middle.trans (modify_links outMachine next (fun f =>
-            {f with observers := f.observers ++ [.countdown waiter token]}) (fun _ => rfl) (fun _ => rfl))
-          exact emitted.trans (observed.update_from fiber
-            {fiber with pending := fiber.pending.map (fun p => if p.token = token then
-              {p with waitingOn := some next, remaining := rest, collected := exits} else p)}
-            original rfl rfl)
-
-/-- Every observer is administrative with respect to saved continuations. -/
+/-- Every observer is an instance of the shared actual-prefix edit path.
+Consumer: administrative commands retain existing saved continuations. -/
 theorem fireObserver_links (root : NativeEff) (table : RowTable) (m : NativeMachine)
     (id : FiberId) (exit : ExitV) (commands : List NCmd) (observer : Observer) :
     StackLinks m (fireObserver (interpOf root table) id exit (m, commands) observer).1 := by
-  cases observer with
-  | countdown waiter token => exact countdownObserver_links root table m id exit commands waiter token
-  | resumeAwait waiter token mode => exact .of_fibers rfl
-  | callback key => exact .of_fibers rfl
-  | untrackChild parent =>
-    exact (StackLinks.of_fibers (m := m) (n := m.emit _) rfl).trans
-      (modify_links _ parent (fun f => {f with children := f.children.filter (fun child => child ≠ id)})
-        (fun _ => rfl) (fun _ => rfl))
-  | dropScopeFinalizer scope key =>
-    simp only [fireObserver]
-    split <;> exact .of_fibers rfl
-  | raceCallback raceId =>
-    simp only [fireObserver]
-    split
-    · exact .of_fibers rfl
-    · split <;> exact .of_fibers rfl
+  let Edge (before after : NativeMachine)
+      (edit : Machine.Edit EffName EffThunk Val Err Defect FiberId Ann Ctx Stores NCode
+        (FrameFiber EffName EffThunk Val Err Defect FiberId Ann)
+        (FrameEvent EffName EffThunk Val Err Defect FiberId Ann)) : Prop :=
+    after = edit.apply before ∧ StackLinks before after
+  have interrupted (who : FiberId) (extra : ReasonAnnotations Ann) (target : FiberId)
+      (acc : NativeMachine × List NCmd) :
+      Effect4.Contracts.Path Edge acc.1 (interruptEach (interpOf root table) who extra [target] acc).1
+        (Edits.interruptWord (interpOf root table) who extra target acc.1) := by
+    exact Edits.interrupt_path (interpOf root table) who extra
+      (fun before target old found => ⟨rfl, interrupt_links root table before old
+        (by simpa only [fiber_id_of_lookup found] using found) (some who) extra⟩)
+      (fun _ _ => ⟨rfl, .of_fibers rfl⟩) target acc
+  have path := Edits.observer_path (Edge := Edge) (interpOf root table)
+    (fun _ _ _ edge => edge.1)
+    (fun before target old next found key frame => ⟨rfl, update_links before old next
+      (by simpa only [key, fiber_id_of_lookup found] using found) (congrArg FrameFiber.stack frame)⟩)
+    (fun before target entry => ⟨rfl, modify_links before target
+      (fun f => {f with observers := f.observers ++ [entry]}) (fun _ => rfl) (fun _ => rfl)⟩)
+    (fun _ _ _ => ⟨rfl, .of_fibers rfl⟩)
+    (fun _ _ _ => ⟨rfl, .of_fibers rfl⟩)
+    (fun _ _ _ => ⟨rfl, .of_fibers rfl⟩)
+    (fun _ _ => ⟨rfl, .of_fibers rfl⟩)
+    (fun _ _ => ⟨rfl, .of_fibers rfl⟩)
+    (fun _ _ => ⟨rfl, .of_fibers rfl⟩) interrupted id exit (m, commands) observer
+  rw [Edits.observer_word]
+  exact Edits.run_preserves_at (fun _ _ _ edge => edge.1) (StackLinks m)
+    (fun _ _ _ edge kept => kept.trans edge.2) path (.refl m)
+
+/-- The countdown adapter uses the same observer path after each current-record lookup. -/
+theorem countdownObserver_links (root : NativeEff) (table : RowTable) (m : NativeMachine)
+    (id : FiberId) (exit : ExitV) (commands : List NCmd) (waiter : FiberId) (token : Nat) :
+    StackLinks m (fireObserver (interpOf root table) id exit (m, commands) (.countdown waiter token)).1 :=
+  fireObserver_links root table m id exit commands (.countdown waiter token)
 
 /-- Commands without an active owner preserve all stacks, except explicit exit clearing. -/
 theorem unowned_command_links (root : NativeEff) (table : RowTable) (m : NativeMachine)

@@ -77,7 +77,7 @@ theorem action_noAdd (interp : Interp) (m : NativeMachine) (fiber : Fiber) (yiel
     (action : Action) (held : NoAdd fiber.frame.stack) :
     NoAdd (evaluatePrim.withFiber interp m fiber yielding action).fiber.frame.stack := by
   cases action <;>
-    simp only [evaluatePrim.withFiber, evaluatePrim.interruptAs, spawn, start, countdownPark,
+    simp only [evaluatePrim.withFiber, evaluatePrim.interruptAs, spawn, start, countdownParkEdits,
       beginRace, RunFiber.park, FrameFiber.uninterruptible, FrameFiber.interruptibleRegion,
       FrameFiber.setFiberInterruptible]
   all_goals repeat' split

@@ -4,6 +4,7 @@ import Effect4.Laws.Program.Guard.DeferredCause
 import Effect4.Laws.Program.Guard.FrameOwned
 import Effect4.Laws.Program.Guard.ReturnFields
 import Effect4.Laws.Program.Guard.Finish
+import Effect4.Laws.Program.Interference
 
 set_option autoImplicit false
 set_option maxRecDepth 4096
@@ -76,6 +77,43 @@ theorem settledFiber_guardSafe (it : NIter)
   · intro token request hp _; cases hp
   · exact safe
 
+/-- The outcome word stores one completed owner and may then halt.
+Consumer: the Guard settlement endpoint. -/
+theorem settleOutcome_machine (id : FiberId) (rest : List NCmd) (it : NIter) :
+    (settleOutcome id rest it).1 =
+      match it.outcome with
+      | .stuck why => (it.machine.update (settledFiber it)).halt why
+      | _ => it.machine.update (settledFiber it) := by
+  cases outcome : it.outcome with
+  | parked =>
+    simp only [settleOutcome, settledFiber, outcome]
+    split <;> rfl
+  | _ => simp only [settleOutcome, settledFiber, outcome]
+
+theorem guardState_settleOutcome (id : FiberId) (rest : List NCmd) (it : NIter)
+    (state : GuardState it.machine (some it.fiber.id)) (old : NFiber)
+    (lookup : it.machine.fiber? it.fiber.id = some old)
+    (valid : FiberGuardState it.machine (settledFiber it))
+    (reserved : ReservedKeys it.machine (fiberKeys it.fiber))
+    (safe : ∀ token request, it.fiber.parked = .withGuard token →
+      externalRequest it.fiber.frame.current = some request →
+      (it.fiber.id, token) ∉ internalKeys it.machine ∧
+        (it.fiber.id, token) ∉ fiberKeys it.fiber) :
+    GuardState (settleOutcome id rest it).1 := by
+  have hid := fiber_id_of_lookup lookup
+  have hf : it.machine.fiber? old.id = some old := by simpa only [hid] using lookup
+  have kept : ReservedKeys it.machine (fiberKeys (settledFiber it)) :=
+    (settledFiber_keys it) ▸ reserved
+  have updated := guardState_update_finish_owner state hf
+    ((settledFiber_id it).trans hid.symm) (settledFiber_id it)
+    valid kept (settledFiber_guardSafe it safe)
+  rw [settleOutcome_machine]
+  cases it.outcome with
+  | stuck why => exact guardState_halt updated why
+  | _ => exact updated
+
+/-- Raw empty-message settlement retains the original Guard assumptions.
+Nonempty messages need the actual producer's observer-key reservation. -/
 theorem guardState_settle (id : FiberId) (rest : List NCmd) (it : NIter)
     (state : GuardState it.machine) (old : NFiber)
     (lookup : it.machine.fiber? it.fiber.id = some old)
@@ -84,43 +122,95 @@ theorem guardState_settle (id : FiberId) (rest : List NCmd) (it : NIter)
     (safe : ∀ token request, it.fiber.parked = .withGuard token →
       externalRequest it.fiber.frame.current = some request →
       (it.fiber.id, token) ∉ internalKeys it.machine ∧
-        (it.fiber.id, token) ∉ fiberKeys it.fiber) :
+        (it.fiber.id, token) ∉ fiberKeys it.fiber)
+    (edits : it.edits = []) :
     GuardState (settle id rest it).1 := by
-  have hid := fiber_id_of_lookup lookup
-  have hf : it.machine.fiber? old.id = some old := by simpa only [hid] using lookup
-  have kept : ReservedKeys it.machine (fiberKeys (settledFiber it)) :=
-    (settledFiber_keys it) ▸ reserved
-  have updated := guardState_update state hf (settledFiber it)
-    ((settledFiber_id it).trans hid.symm) valid kept (settledFiber_guardSafe it safe)
-  cases ho : it.outcome <;> simp only [settle, ho, settledFiber] at updated ⊢
-  all_goals try exact updated
-  case parked => split at updated <;> simp_all
-  case stuck why => exact guardState_halt updated why
+  simp only [settle, edits]
+  exact guardState_settleOutcome id rest it (guardState_relax state _) old lookup valid reserved safe
 
-theorem requestOf_settle_other (id : FiberId) (rest : List NCmd) (it : NIter)
+theorem requestOf_settleOutcome_other (id : FiberId) (rest : List NCmd) (it : NIter)
     (fiber : FiberId) (token : Nat) (other : it.fiber.id ≠ fiber) :
-    requestOf (settle id rest it).1 fiber token = requestOf it.machine fiber token := by
+    requestOf (settleOutcome id rest it).1 fiber token = requestOf it.machine fiber token := by
   have same := requestOf_update_other it.machine (settledFiber it) fiber token
     (by simpa only [settledFiber_id] using other)
-  cases ho : it.outcome <;> simp only [settle, ho, settledFiber] at same ⊢
-  all_goals try exact same
-  split at same <;> simp_all
+  rw [settleOutcome_machine]
+  cases it.outcome with
+  | stuck why => exact same
+  | _ => exact same
+
+theorem requestOf_settle_other (id : FiberId) (rest : List NCmd) (it : NIter)
+    (fiber : FiberId) (token : Nat) (other : it.fiber.id ≠ fiber) (edits : it.edits = []) :
+    requestOf (settle id rest it).1 fiber token = requestOf it.machine fiber token := by
+  simp only [settle, edits]
+  exact requestOf_settleOutcome_other id rest it fiber token other
+
+/-- The existing other-fiber edit relation retains interruption.
+Consumer: addressed messages in settlement and native request fate. -/
+theorem otherEdit_interrupted {f g : NFiber} (edit : Moves.OtherEdit f g)
+    (interrupted : Interrupted f) : Interrupted g := by
+  cases edit with
+  | observe => exact interrupted
+  | filterObservers => exact interrupted
+  | interruptCause cause => exact interruptWithCause_interrupted cause f
+
+theorem otherEdits_interrupted {f g : NFiber} (edits : Moves.OtherEdits f g)
+    (interrupted : Interrupted f) : Interrupted g := by
+  induction edits with
+  | refl => exact interrupted
+  | tail _ edit ih => exact otherEdit_interrupted edit ih
+
+theorem interruptedAt_fiberEdits (edits : List (FiberEdit Err Defect FiberId Ann))
+    {m : NativeMachine} {fiber : FiberId} (before : InterruptedAt m fiber) :
+    InterruptedAt (applyFiberEdits edits m).1 fiber := by
+  obtain ⟨f, lookup, interrupted⟩ := before
+  obtain ⟨g, found, word⟩ := (Moves.InterferesWithLookup.fiberEdits edits m).lookup fiber f lookup
+  exact ⟨g, found, otherEdits_interrupted word interrupted⟩
+
+theorem interruptedAt_update {m : NativeMachine} {next : NFiber} {fiber : FiberId}
+    (before : InterruptedAt m fiber) (own : next.id = fiber → Interrupted next) :
+    InterruptedAt (m.update next) fiber := by
+  obtain ⟨old, lookup, interrupted⟩ := before
+  by_cases he : next.id = fiber
+  · exact ⟨next, fiber_lookup_update_self lookup _ he, own he⟩
+  · refine ⟨old, ?_, interrupted⟩
+    simp only [fiber_lookup_update, lookup, Option.map_some, fiber_id_of_lookup lookup,
+      Ne.symm he, ↓reduceIte]
+
+theorem interruptedAt_settleOutcome (id : FiberId) (rest : List NCmd) (it : NIter)
+    (fiber : FiberId) (before : InterruptedAt it.machine fiber)
+    (own : it.fiber.id = fiber → Interrupted it.fiber) :
+    InterruptedAt (settleOutcome id rest it).1 fiber := by
+  have after := interruptedAt_update before
+    (fun same => (settledFiber_interrupted it).mpr (own ((settledFiber_id it).symm.trans same)))
+  rw [settleOutcome_machine]
+  cases it.outcome with
+  | stuck why => exact after
+  | _ => exact after
 
 theorem interruptedAt_settle (id : FiberId) (rest : List NCmd) (it : NIter)
     (fiber : FiberId) (before : InterruptedAt it.machine fiber)
     (own : it.fiber.id = fiber → Interrupted it.fiber) :
     InterruptedAt (settle id rest it).1 fiber := by
-  have after : InterruptedAt (it.machine.update (settledFiber it)) fiber := by
-    obtain ⟨old, lookup, interrupted⟩ := before
-    by_cases he : it.fiber.id = fiber
-    · exact ⟨settledFiber it, fiber_lookup_update_self lookup _ ((settledFiber_id it).trans he),
-        (settledFiber_interrupted it).mpr (own he)⟩
-    · refine ⟨old, ?_, interrupted⟩
-      simp only [fiber_lookup_update, lookup, Option.map_some, fiber_id_of_lookup lookup,
-        settledFiber_id, Ne.symm he, ↓reduceIte]
-  cases ho : it.outcome <;> simp only [settle, ho, settledFiber] at after ⊢
-  all_goals try exact after
-  split at after <;> simp_all
+  cases edits : it.edits with
+  | nil =>
+    simp only [settle, edits]
+    exact interruptedAt_settleOutcome id rest it fiber before own
+  | cons edit tail =>
+    have installed := interruptedAt_update before own
+    have after := interruptedAt_fiberEdits (edit :: tail) installed
+    simp only [settle, edits]
+    split
+    · exact after
+    · rename_i owner found
+      apply interruptedAt_settleOutcome id rest _ fiber after
+      intro same
+      obtain ⟨held, heldLookup, interrupted⟩ := after
+      change owner.id = fiber at same
+      have ownerId := fiber_id_of_lookup found
+      have ownedLookup := found
+      rw [← ownerId, same] at ownedLookup
+      have equal : owner = held := Option.some.inj (ownedLookup.symm.trans heldLookup)
+      exact equal ▸ interrupted
 
 theorem active_noExit {m : NativeMachine} {f : NFiber} (state : GuardState m)
     (lookup : m.fiber? f.id = some f) (running : f.running = true) :
@@ -131,6 +221,89 @@ theorem active_noExit {m : NativeMachine} {f : NFiber} (state : GuardState m)
     have stopped := (state.exited f (List.mem_of_find?_eq_some lookup) hx).2
     exact False.elim (Bool.noConfusion (stopped.symm.trans running))
 
+/-- Disposition closes the active-owner exception using the existing per-fiber carrier.
+Consumer: actual addressed-message settlement in NativeAssembly. -/
+theorem settledFiber_valid_of_active (it : NIter)
+    (valid : FiberGuardState it.machine it.fiber (some it.fiber.id))
+    (ready : ReadyOutcome it) : FiberGuardState it.machine (settledFiber it) := by
+  cases outcome : it.outcome with
+  | parked =>
+    simp only [settledFiber, outcome]
+    split
+    · exact ⟨valid.below, rfl, fun h => False.elim (h rfl),
+        (fun _ h => nomatch h), fun exited => ⟨rfl, (valid.exited exited).2⟩,
+        valid.deferredCause, valid.codes, valid.tasks⟩
+    · exact ⟨valid.below, valid.pending, fun _ => rfl, valid.parkedBelow,
+        fun exited => ⟨(valid.exited exited).1, rfl⟩, valid.deferredCause, valid.codes, valid.tasks⟩
+  | stuck why =>
+    simp only [settledFiber, outcome]
+    exact ⟨valid.below, valid.pending, fun _ => rfl, valid.parkedBelow,
+      fun exited => ⟨(valid.exited exited).1, rfl⟩, valid.deferredCause, valid.codes, valid.tasks⟩
+  | _ =>
+    simp only [settledFiber, outcome]
+    have park : it.fiber.parked = .notParked := by simpa only [ReadyOutcome, outcome] using ready
+    exact ⟨valid.below, valid.pending, fun h => False.elim (h park), valid.parkedBelow,
+      valid.exited, valid.deferredCause, valid.codes, valid.tasks⟩
+
+theorem native_returnedFiber_valid_at (p : NativeEff) (table : RowTable)
+    (m : NativeMachine) (f : NFiber) (yielding : Bool) (state : GuardState m)
+    (lookup : m.fiber? f.id = some f) (running : f.running = true)
+    (park : f.parked = .notParked)
+    (nextId : m.nextId ≤ (evaluateNative p m f yielding table).machine.nextId)
+    (tasks : ∀ bucket ∈ (evaluateNative p m f yielding table).fiber.dispatcher.buckets,
+      ∀ task ∈ bucket.tasks, taskRaceSites task = []) :
+    FiberGuardState (evaluateNative p m f yielding table).machine
+      (evaluateNative p m f yielding table).fiber (some (evaluateNative p m f yielding table).fiber.id) := by
+  have mem := List.mem_of_find?_eq_some lookup
+  have pending : f.pending = [] := by
+    simpa only [PendingShape, park] using state.pendingShape f mem
+  constructor
+  · rw [Effect4.Program.Guard.Interruption.evaluateNative_id]
+    exact Nat.lt_of_lt_of_le (state.fibersBelow f mem) nextId
+  · exact evaluateNative_pending p table m f yielding park pending
+  · intro different
+    exact False.elim (different rfl)
+  · exact fun token hp => (evaluateNative_freshPark p table m f yielding park token hp).2
+  · intro exited
+    rw [Effect4.Program.Guard.Interruption.evaluateNative_exit, active_noExit state lookup running] at exited
+    cases exited
+  · exact Effect4.Program.Guard.DeferredCause.evaluateNative_deferredCause p table m f yielding
+      (state.deferredCause f mem)
+  · exact Effect4.Program.Guard.FrameOwned.evaluateNative_frameOwned p table m f yielding
+      state.racesBelow (state.frameCodes f mem)
+  · exact tasks
+
+theorem iteration_returnedFiber_valid_at (p : NativeEff) (table : RowTable)
+    (m : NativeMachine) (f : NFiber) (yielding : Bool) (state : GuardState m)
+    (lookup : m.fiber? f.id = some f) (running : f.running = true)
+    (park : f.parked = .notParked) :
+    letI := evaluatorFor p table
+    m.nextId ≤ (iteration (interpOf p table) m f yielding).machine.nextId →
+    (∀ bucket ∈ (iteration (interpOf p table) m f yielding).fiber.dispatcher.buckets,
+      ∀ task ∈ bucket.tasks, taskRaceSites task = []) →
+    FiberGuardState (iteration (interpOf p table) m f yielding).machine
+      (iteration (interpOf p table) m f yielding).fiber (some (iteration (interpOf p table) m f yielding).fiber.id) := by
+  letI := evaluatorFor p table
+  intro nextId tasks
+  have mem := List.mem_of_find?_eq_some lookup
+  have pending : f.pending = [] := by
+    simpa only [PendingShape, park] using state.pendingShape f mem
+  constructor
+  · rw [Effect4.Program.Guard.Interruption.iteration_id]
+    exact Nat.lt_of_lt_of_le (state.fibersBelow f mem) nextId
+  · exact iteration_pending p table m f yielding park pending
+  · intro different
+    exact False.elim (different rfl)
+  · exact fun token hp => (iteration_freshPark p table m f yielding park token hp).2
+  · intro exited
+    rw [Effect4.Program.Guard.Interruption.iteration_exit, active_noExit state lookup running] at exited
+    cases exited
+  · exact Effect4.Program.Guard.DeferredCause.iteration_deferredCause p table m f yielding
+      (state.deferredCause f mem)
+  · exact Effect4.Program.Guard.FrameOwned.iteration_frameOwned p table m f yielding
+      state.racesBelow (state.frameCodes f mem)
+  · exact tasks
+
 theorem native_settledFiber_valid (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) (state : GuardState m)
     (lookup : m.fiber? f.id = some f) (running : f.running = true)
@@ -140,22 +313,9 @@ theorem native_settledFiber_valid (p : NativeEff) (table : RowTable)
       ∀ task ∈ bucket.tasks, taskRaceSites task = []) :
     FiberGuardState (evaluateNative p m f yielding table).machine
       (settledFiber (evaluateNative p m f yielding table)) := by
-  have mem := List.mem_of_find?_eq_some lookup
-  have pending : f.pending = [] := by
-    simpa only [PendingShape, park] using state.pendingShape f mem
-  apply settledFiber_valid
-  · rw [Effect4.Program.Guard.Interruption.evaluateNative_id]
-    exact Nat.lt_of_lt_of_le (state.fibersBelow f mem) nextId
-  · exact evaluateNative_pending p table m f yielding park pending
-  · exact evaluateNative_ready p table m f yielding park
-  · exact fun token hp => (evaluateNative_freshPark p table m f yielding park token hp).2
-  · rw [Effect4.Program.Guard.Interruption.evaluateNative_exit]
-    exact active_noExit state lookup running
-  · exact Effect4.Program.Guard.DeferredCause.evaluateNative_deferredCause p table m f yielding
-      (state.deferredCause f mem)
-  · exact Effect4.Program.Guard.FrameOwned.evaluateNative_frameOwned p table m f yielding
-      state.racesBelow (state.frameCodes f mem)
-  · exact tasks
+  exact settledFiber_valid_of_active _
+    (native_returnedFiber_valid_at p table m f yielding state lookup running park nextId tasks)
+    (evaluateNative_ready p table m f yielding park)
 
 theorem iteration_settledFiber_valid (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) (state : GuardState m)
@@ -169,22 +329,9 @@ theorem iteration_settledFiber_valid (p : NativeEff) (table : RowTable)
       (settledFiber (iteration (interpOf p table) m f yielding)) := by
   letI := evaluatorFor p table
   intro nextId tasks
-  have mem := List.mem_of_find?_eq_some lookup
-  have pending : f.pending = [] := by
-    simpa only [PendingShape, park] using state.pendingShape f mem
-  apply settledFiber_valid
-  · rw [Effect4.Program.Guard.Interruption.iteration_id]
-    exact Nat.lt_of_lt_of_le (state.fibersBelow f mem) nextId
-  · exact iteration_pending p table m f yielding park pending
-  · exact iteration_ready p table m f yielding park
-  · exact fun token hp => (iteration_freshPark p table m f yielding park token hp).2
-  · rw [Effect4.Program.Guard.Interruption.iteration_exit]
-    exact active_noExit state lookup running
-  · exact Effect4.Program.Guard.DeferredCause.iteration_deferredCause p table m f yielding
-      (state.deferredCause f mem)
-  · exact Effect4.Program.Guard.FrameOwned.iteration_frameOwned p table m f yielding
-      state.racesBelow (state.frameCodes f mem)
-  · exact tasks
+  exact settledFiber_valid_of_active _
+    (iteration_returnedFiber_valid_at p table m f yielding state lookup running park nextId tasks)
+    (iteration_ready p table m f yielding park)
 
 theorem returnedFiber_reserved (m : NativeMachine) (f : NFiber) (it : NIter)
     (state : GuardState m) (member : f ∈ m.fibers)

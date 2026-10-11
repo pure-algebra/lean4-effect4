@@ -56,8 +56,8 @@ inductive FrameEdit : NFrame → NFrame → Prop
   /-- A move of an evaluation. -/
   | move {f g : NFrame} : FrameMove f g → FrameEdit f g
   /-- An interrupt is recorded: the cause, then the deferred bit or a failure as the code. -/
-  | interrupted (interp : NInterp) (g : NFiber) (who : Option FiberId)
-      (extra : ReasonAnnotations Ann) : FrameEdit g.frame (interruptRecord interp who extra g).1.frame
+  | interruptCause (g : NFiber) (cause : Cause Err Defect FiberId Ann) :
+      FrameEdit g.frame (interruptWithCause cause g).1.frame
   /-- The deferred bit is set: the exit path clears it. -/
   | setDeferred (f : NFrame) (deferred : Bool) : FrameEdit f { f with deferredInterrupt := deferred }
   /-- The stack is cleared: an exited fiber after its observers. -/
@@ -65,6 +65,11 @@ inductive FrameEdit : NFrame → NFrame → Prop
   /-- The parallel close pushes its iterator under the await. -/
   | pushIterator (f : NFrame) (name : EffName) (cursor : Val) :
       FrameEdit f { f with stack := Prim.iterator name cursor :: f.stack }
+
+/-- The original interrupt view is the fresh-cause structural edit. -/
+theorem FrameEdit.interrupted (interp : NInterp) (g : NFiber) (who : Option FiberId)
+    (extra : ReasonAnnotations Ann) : FrameEdit g.frame (interruptRecord interp who extra g).1.frame :=
+  .interruptCause g (Machine.interruptCause interp who extra g.id)
 
 /-- Words of frame edits. -/
 inductive FrameEdits : NFrame → NFrame → Prop
@@ -98,7 +103,7 @@ theorem OtherEdits.frames {g h : NFiber} (w : OtherEdits g h) : FrameEdits g.fra
     cases e with
     | observe => exact ih
     | filterObservers => exact ih
-    | interrupted interp _ who extra => exact .tail ih (.interrupted interp _ who extra)
+    | interruptCause cause => exact .tail ih (.interruptCause _ cause)
 
 /-- **The machine's frames follow**: the id counter does not go back, and every fiber of `m'` is a
 fiber of `m` with the same id whose frame moved by a word of edits, or a new one. -/
@@ -127,11 +132,16 @@ theorem FramesFollow.trans {m m' m'' : NativeMachine} (a : FramesFollow m m')
 Consumer: live fibers in `Transport`; the frame machine's own finishing move remains explicit. -/
 inductive LiveEdit : NFrame → NFrame → Prop
   | move {f g : NFrame} : FrameMove f g → LiveEdit f g
-  | interrupted (interp : NInterp) (g : NFiber) (who : Option FiberId)
-      (extra : ReasonAnnotations Ann) : LiveEdit g.frame (interruptRecord interp who extra g).1.frame
+  | interruptCause (g : NFiber) (cause : Cause Err Defect FiberId Ann) :
+      LiveEdit g.frame (interruptWithCause cause g).1.frame
   | setDeferred (f : NFrame) (deferred : Bool) : LiveEdit f { f with deferredInterrupt := deferred }
   | pushIterator (f : NFrame) (name : EffName) (cursor : Val) :
       LiveEdit f { f with stack := Prim.iterator name cursor :: f.stack }
+
+/-- The original interrupt view is the fresh-cause structural edit. -/
+theorem LiveEdit.interrupted (interp : NInterp) (g : NFiber) (who : Option FiberId)
+    (extra : ReasonAnnotations Ann) : LiveEdit g.frame (interruptRecord interp who extra g).1.frame :=
+  .interruptCause g (Machine.interruptCause interp who extra g.id)
 
 /-- A word without stack clearing; the command census retains this word for every live fiber. -/
 inductive LiveEdits : NFrame → NFrame → Prop
@@ -162,7 +172,7 @@ theorem LiveEdits.frames {f g : NFrame} (w : LiveEdits f g) : FrameEdits f g := 
   | tail _ e ih =>
     cases e with
     | move m => exact .tail ih (.move m)
-    | interrupted interp fiber who extra => exact .tail ih (.interrupted interp fiber who extra)
+    | interruptCause fiber cause => exact .tail ih (.interruptCause fiber cause)
     | setDeferred _ flag => exact .tail ih (.setDeferred _ flag)
     | pushIterator _ name cursor => exact .tail ih (.pushIterator _ name cursor)
 
@@ -173,8 +183,8 @@ theorem LiveEdit.maskChain (base : Bool) {f g : NFrame} (edit : LiveEdit f g)
     FrameFiber.MaskChain base g.interruptible g.stack := by
   cases edit with
   | move step => exact move_maskChain base step held
-  | interrupted interp fiber who extra =>
-    unfold interruptRecord interruptWithCause
+  | interruptCause fiber cause =>
+    unfold interruptWithCause
     dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
       FiberCore.setDeferred, FiberCore.answerWith, FiberCore.failure, frameCore]
     split
@@ -270,10 +280,10 @@ theorem OtherEdits.transport {allowClear : Prop} {f g : NFiber} (w : OtherEdits 
     cases e with
     | observe => exact .edit rfl rfl (.refl _)
     | filterObservers => exact .edit rfl rfl (.refl _)
-    | interrupted interp _ who extra =>
-      exact .edit (OtherEdit.id (.interrupted interp _ who extra))
-        (OtherEdit.exit (.interrupted interp _ who extra))
-        (.single (.interrupted interp _ who extra))
+    | interruptCause cause =>
+      exact .edit (OtherEdit.id (.interruptCause _ cause))
+        (OtherEdit.exit (.interruptCause _ cause))
+        (.single (.interruptCause _ cause))
 
 /-- Joint command classification retains one initialization for each allocated id.
 The parameter distinguishes raw clearing from the guarded live word. -/
@@ -454,12 +464,12 @@ theorem Interferes.launchEntrant (interp : NInterp) (raceId : Nat) (m : NativeMa
   exact spawned
 
 /-- Settle writes the evaluated fiber, retaining its joint frame transport. -/
-theorem settle_transports {allowClear : Prop} {m : NativeMachine} {f : NFiber}
+theorem settleOutcome_transports {allowClear : Prop} {m : NativeMachine} {f : NFiber}
     (mem : f ∈ m.fibers) (id : FiberId) (rest : List NCommand) (it : NIter)
     (machine : Transports allowClear m it.machine) (fiber : Transport allowClear f it.fiber) :
-    Transports allowClear m (settle id rest it).1 := by
+    Transports allowClear m (settleOutcome id rest it).1 := by
   have source : ∃ g ∈ m.fibers, Transport allowClear g it.fiber := ⟨f, mem, fiber⟩
-  unfold settle
+  unfold settleOutcome
   split
   · exact machine.thenWrite source
   · exact machine.thenWrite source
@@ -470,6 +480,25 @@ theorem settle_transports {allowClear : Prop} {m : NativeMachine} {f : NFiber}
   · exact machine.thenWrite source
   · apply Transports.thenHalt
     exact machine.thenWrite source
+
+/-- Settlement composes local installation, the actual message word, and the selected owner.
+The structural observation needs no cause provenance or selected-owner existence premise. -/
+theorem settle_transports {allowClear : Prop} {m : NativeMachine} {f : NFiber}
+    (mem : f ∈ m.fibers) (id : FiberId) (rest : List NCommand) (it : NIter)
+    (machine : Transports allowClear m it.machine) (fiber : Transport allowClear f it.fiber) :
+    Transports allowClear m (settle id rest it).1 := by
+  unfold settle
+  split
+  · exact settleOutcome_transports mem id rest it machine fiber
+  · have installed := machine.thenWrite ⟨f, mem, fiber⟩
+    have changed := installed.trans
+      (Transports.ofInterferes (InterferesWithLookup.fiberEdits it.edits _).backward)
+    dsimp only
+    split
+    · exact changed.thenHalt _
+    · rename_i owner found
+      exact changed.trans (settleOutcome_transports (List.mem_of_find?_eq_some found)
+        id rest _ (.refl _ _) (.refl _ _))
 
 /-- A native loop iteration supplies both its other-fiber edits and its evaluated-fiber word. -/
 theorem loop_transports {allowClear : Prop} (root : NativeEff) (table : RowTable) (interp : NInterp)
@@ -544,24 +573,37 @@ theorem fireObserver_transports {allowClear : Prop} (interp : NInterp) {m : Nati
   · split
     · exact (base.thenEmit _).thenHalt _
     · exact (base.thenEmit _).thenState _
-  · split
+  · rename_i waiter token
+    split
     · exact base.thenEmit _
     · rename_i w found
       split
       · exact base.thenEmit _
       · rename_i p pending
-        have source : ∃ g ∈ acc.1.fibers, Transport allowClear g w :=
-          ⟨w, List.mem_of_find?_eq_some found, .refl _ _⟩
+        have changed : Transports allowClear acc.1
+            (if p.failFast && !exit.isSuccess && p.collected.all Exit.isSuccess then
+              interruptEach interp waiter (interp.stackAnnotations waiter) p.remaining
+                (acc.1.emit [.observerFired id (.countdown waiter token)], [])
+            else (acc.1.emit [.observerFired id (.countdown waiter token)], [])).1 := by
+          split
+          · exact interruptEach_transports interp _ _ _ _ (base.thenEmit _)
+          · exact base.thenEmit _
         split
-        · refine Transports.thenWrite ?_ source
+        · exact changed
+        · rename_i current currentFound
           split
-          · exact interruptEach_transports interp _ _ _ _ (base.thenEmit _)
-          · exact base.thenEmit _
-        · refine Transports.thenWrite ?_ source
-          refine Transports.thenModify ?_ _ _ (fun _ => rfl) (fun _ => rfl) (fun _ => rfl)
-          split
-          · exact interruptEach_transports interp _ _ _ _ (base.thenEmit _)
-          · exact base.thenEmit _
+          · exact changed
+          · split
+            · exact changed.thenUpdate (List.mem_of_find?_eq_some currentFound) (.edit rfl rfl (.refl _))
+            · rename_i exits nextTarget rest walk
+              let nextCurrent : NFiber := {current with pending := current.pending.map fun q =>
+                if q.token = token then
+                  {q with waitingOn := some nextTarget, remaining := rest, collected := exits}
+                else q}
+              exact (changed.thenUpdate (t' := nextCurrent)
+                (List.mem_of_find?_eq_some currentFound) (.edit rfl rfl (.refl _))).thenModify
+                nextTarget (fun fiber => {fiber with observers := fiber.observers ++ [.countdown waiter token]})
+                (fun _ => rfl) (fun _ => rfl) (fun _ => rfl)
   · split
     · exact base.thenEmit _
     · split

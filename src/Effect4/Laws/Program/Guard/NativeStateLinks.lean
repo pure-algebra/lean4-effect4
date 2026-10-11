@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Guard.NativeState
+import Effect4.Laws.Program.Guard.Settle
 
 set_option autoImplicit false
 set_option maxRecDepth 4096
@@ -16,6 +17,55 @@ structure Links (m n : NativeMachine) : Prop where
   requests : ∀ fiber token request, requestOf m fiber token = some request →
     requestOf n fiber token = some request ∨ InterruptedAt n fiber
   interrupted : ∀ fiber, InterruptedAt m fiber → InterruptedAt n fiber
+
+/-- The shared other-fiber edit word retains a request or records interruption.
+Consumer: the native Links reader and its addressed-message instance. -/
+theorem otherEdits_request {f g : NFiber} (word : Moves.OtherEdits f g)
+    {token : Nat} {request : NativeOp × Val}
+    (park : f.parked = .withGuard token) (code : externalRequest f.frame.current = some request) :
+    (g.parked = .withGuard token ∧ externalRequest g.frame.current = some request) ∨ Interrupted g := by
+  induction word with
+  | refl => exact Or.inl ⟨park, code⟩
+  | tail prior edit ih =>
+    rcases ih with kept | interrupted
+    · cases edit with
+      | observe => exact Or.inl kept
+      | filterObservers => exact Or.inl kept
+      | interruptCause fresh => exact Or.inr (interruptWithCause_interrupted fresh _)
+    · exact Or.inr (Settle.otherEdit_interrupted edit interrupted)
+
+/-- The shared native lookup relation carries the Guard request observation.
+Race-host transport stays an explicit input of this reader. -/
+theorem Links.of_lookup {m n : NativeMachine} (changes : Moves.InterferesWithLookup m n)
+    (races : RaceHostsPreserved m n) : Links m n := by
+  constructor
+  · constructor
+    · intro id f found running park
+      obtain ⟨g, seen, word⟩ := changes.lookup id f found
+      have fields := word.controls (Or.inl running)
+      exact ⟨g, seen, fields.2.2.2 running, fields.2.1.trans park, fields.1⟩
+    · intro id f found exited
+      obtain ⟨g, seen, word⟩ := changes.lookup id f found
+      exact ⟨g, seen, word.exit ▸ exited⟩
+  · exact races
+  · intro id token request offered
+    obtain ⟨f, found, park, code⟩ := requestOf_shape offered
+    obtain ⟨g, seen, word⟩ := changes.lookup id f found
+    rcases otherEdits_request word park code with ⟨park, code⟩ | interrupted
+    · left
+      unfold requestOf
+      rw [seen]
+      simp only [Option.bind_some, park, guard, pure, bind, ↓reduceIte]
+      exact code
+    · exact Or.inr ⟨g, seen, interrupted⟩
+  · rintro id ⟨f, found, interrupted⟩
+    obtain ⟨g, seen, word⟩ := changes.lookup id f found
+    exact ⟨g, seen, Settle.otherEdits_interrupted word interrupted⟩
+
+theorem Links.fiberEdits (edits : List (FiberEdit Err Defect FiberId Ann)) (m : NativeMachine) :
+    Links m (applyFiberEdits edits m).1 :=
+  .of_lookup (Moves.InterferesWithLookup.fiberEdits edits m)
+    (races_same (by rw [(RunMachine.applyFiberEdits_shape edits m).1]))
 
 theorem Links.same {m n : NativeMachine} (fibers : n.fibers = m.fibers)
     (races : RaceHostsPreserved m n) : Links m n := by
@@ -164,44 +214,37 @@ theorem Links.registerRace (m : NativeMachine) (f : NFiber) (yielding : Bool) (i
     · apply raceHostsPreserved_updateRace (race := race)
         (by simpa only [race_id_of_lookup hr] using hr) {race with registering := true} rfl rfl
 
+theorem Links.countdownEdits (interp : NInterp) (m : NativeMachine) (f : NFiber)
+    (targets : List FiberId) (resume : Resume EffName) (failFast : Bool) :
+    Links m (countdownParkEdits interp m f targets resume failFast).1 := by
+  rw [Edits.countdown_word]
+  unfold Edits.countdownWord
+  cases walk : countdownWalk {m with nextToken := m.nextToken + 1} targets [] with
+  | mk exits target => cases target <;> exact .sameTables rfl rfl
+
 theorem Links.countdown (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (targets : List FiberId) (resume : Resume EffName) (failFast : Bool) :
-    Links m (countdownPark interp m f targets resume failFast).1 := by
-  unfold countdownPark
-  dsimp only
-  split
-  · exact .sameTables rfl rfl
-  · exact (Links.sameTables (m := m) (n := {m with nextToken := m.nextToken + 1}) rfl rfl
-      |>.trans (Links.observer _ _ _)).emit _
+    Links m (countdownPark interp m f targets resume failFast).1 :=
+  (Links.countdownEdits interp m f targets resume failFast).trans (Links.fiberEdits _ _)
+
+theorem Links.linkScopeEdits (p : NativeEff) (table : RowTable) (completed) (m : NativeMachine)
+    (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId)
+    (who : Option FiberId) (extra : ReasonAnnotations Ann) :
+    Links m (linkScopeEdits (interpAt p completed table) m mode scope target who extra).1 := by
+  apply Links.sameTables
+  · rw [Edits.link_plan_word]
+    apply Edits.run_keeps (fun held : NativeMachine => held.fibers) _ ?_ m
+    intro edit member held
+    unfold Edits.linkWord at member
+    repeat' split at member
+    all_goals aesop (add norm simp [List.mem_cons, List.not_mem_nil, Edit.apply, RunMachine.halt, RunMachine.emit])
+  · exact Effect4.Program.Guard.FrameOwned.linkScopeEdits_races _ _ _ _ _ _ _
 
 theorem Links.linkScope (p : NativeEff) (table : RowTable) (completed) (m : NativeMachine)
     (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId)
     (who : Option FiberId) (extra : ReasonAnnotations Ann) :
-    Links m (linkScope (interpAt p completed table) m mode scope target who extra).1 := by
-  unfold Effect4.Machine.linkScope
-  cases hs : (interpAt p completed table).scopeStatus scope m.state with
-  | none => exact .sameTables rfl rfl
-  | some status =>
-    cases status with
-    | some exit =>
-      simp only []
-      cases hf : m.fiber? target with
-      | none => exact .sameTables rfl rfl
-      | some f => exact (Links.interruptRecord p table completed
-          (by simpa only [fiber_id_of_lookup hf] using hf) who extra).emit _
-    | none =>
-      simp only []
-      cases hf : m.fiber? target with
-      | none => exact .sameTables rfl rfl
-      | some f =>
-        simp only []
-        split
-        · exact .refl m
-        · cases hl : (interpAt p completed table).scopeLinkFiber mode scope target m.state with
-          | none => exact .sameTables rfl rfl
-          | some result =>
-            rcases result with ⟨stores, key⟩
-            exact ((Links.refl m).store stores |>.trans (Links.observer _ target _)).emit _
+    Links m (linkScope (interpAt p completed table) m mode scope target who extra).1 :=
+  (Links.linkScopeEdits p table completed m mode scope target who extra).trans (Links.fiberEdits _ _)
 
 theorem Links.filterObservers (m : NativeMachine) (keep : Observer → Bool) :
     Links m (filteredMachine keep m) := by
@@ -237,11 +280,7 @@ theorem interruptAs_links (p : NativeEff) (table : RowTable) (completed)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) (target who : FiberId) :
     Links m (evaluatePrim.interruptAs (interpAt p completed table) m f yielding target who).machine := by
   unfold evaluatePrim.interruptAs
-  cases hf : m.fiber? target with
-  | none => exact .refl m
-  | some targetFiber =>
-    exact (Links.interruptRecord p table completed
-      (by simpa only [fiber_id_of_lookup hf] using hf) (some who) _).emit _
+  split <;> exact .sameTables rfl rfl
 
 theorem withFiber_links (p : NativeEff) (table : RowTable) (completed)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) (action : NAction) :
@@ -258,18 +297,18 @@ theorem withFiber_links (p : NativeEff) (table : RowTable) (completed)
     · exact (Links.spawn p table completed m f code _ site).startAfter _ _ _
     · exact .refl m
   case ambientScope => split <;> exact .refl m
-  case runIn target scope => exact Links.linkScope p table completed m _ _ _ _ _
+  case runIn target scope => exact Links.linkScopeEdits p table completed m _ _ _ _ _
   case interruptAs target who => exact interruptAs_links p table completed m f yielding target who
   case interruptScoped target => split <;> exact .refl m
-  case awaitAll targets => exact Links.countdown _ m f targets _ _
-  case awaitAllFailFast targets => exact Links.countdown _ m f targets _ _
-  case awaitNewChildren snapshot => exact Links.countdown _ m f _ _ _
+  case awaitAll targets => exact Links.countdownEdits _ m f targets _ _
+  case awaitAllFailFast targets => exact Links.countdownEdits _ m f targets _ _
+  case awaitNewChildren snapshot => exact Links.countdownEdits _ m f _ _ _
   case raceAll entrants site => exact Links.beginRace _ m f yielding entrants site
   case raceAllFirst entrants site => exact Links.beginRace _ m f yielding entrants site .firstExit
   case setInterruptible code mask => cases mask <;> exact .refl m
   case closeScope scope exit => split <;> exact .sameTables rfl rfl
   case closePar codes => exact Links.forkFinalizers p table completed m f codes
-  case dropObservers token => exact Links.filterObservers m _
+  case dropObservers token => exact .sameTables rfl rfl
   case cancelRace id => split <;> exact .refl m
   all_goals aesop (rule_sets := [Effect4.Stores]) (add safe apply [Links.sameTables])
 
@@ -281,20 +320,21 @@ theorem Links.joinPark (m : NativeMachine) (f : NFiber) (target : FiberId) (othe
     (Links.observer _ target (.resumeAwait f.id m.nextToken mode))
   simpa only [RunMachine.modify, show ({m with nextToken := m.nextToken + 1} : NativeMachine).fiber? target = some other from hf] using step
 
+theorem Links.countdownEdits_result (interp : NInterp) (m : NativeMachine) (f : NFiber)
+    (targets : List FiberId) (resume : Resume EffName) (failFast : Bool)
+    (after : NativeMachine) (next : NFiber) (parked : Bool) (edits : List (FiberEdit Err Defect FiberId Ann))
+    (h : countdownParkEdits interp m f targets resume failFast = (after, next, parked, edits)) :
+    Links m after := by
+  simpa only [h] using Links.countdownEdits interp m f targets resume failFast
+
 theorem evaluatePrim_links (p : NativeEff) (table : RowTable) (completed)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) :
     Links m (evaluatePrim (interpAt p completed table) m f yielding).machine := by
   unfold evaluatePrim
-  repeat' first
-    | exact .sameTables rfl rfl
-    | exact Links.registerRace m f yielding _
-    | exact Links.countdown _ m f _ _ _
-    | exact (Links.joinPark m f _ _ (by assumption) _).emit _
-    | exact withFiber_links p table completed m f yielding _
-    | exact stepFrame_links _ _ _ _
-    | exact finalizerOr_links _ _ _ _ _
-    | dsimp only
-    | split
+  repeat' split
+  all_goals aesop (add safe apply [Links.registerRace,
+    withFiber_links, stepFrame_links, finalizerOr_links], safe forward [Links.countdownEdits_result],
+    unsafe 90% apply [Links.sameTables])
 
 theorem exitScoped_links (p : NativeEff) (m : NativeMachine) (f : NFiber)
     (yielding : Bool) (exit : ExitV) :

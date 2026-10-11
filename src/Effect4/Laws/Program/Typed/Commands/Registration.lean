@@ -430,7 +430,7 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
           (.asyncFinalizer ((interpR root.program).cancelName
             ((interpR root.program).raceCancelName raceId) f.id race.token) :: f.frame.stack) :=
         hostStack_raceFinalizer root raceId f.id race.token stackOk
-      unfold settle
+      unfold settle settleOutcome
       dsimp only
       split
       · -- a deferred interrupt: the park is cleared, the same entry continues (`:662-667`)

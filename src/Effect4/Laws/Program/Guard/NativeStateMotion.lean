@@ -18,9 +18,12 @@ theorem countdown_nextId (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (countdownPark interp m f targets resume failFast).1.nextId = m.nextId := by
   unfold countdownPark
   dsimp only
-  split
-  · rfl
-  · exact modify_nextId _ _ _
+  rw [(RunMachine.applyFiberEdits_shape _ _).1]
+  change (countdownParkEdits interp m f targets resume failFast).1.nextId = m.nextId
+  rw [Edits.countdown_word]
+  unfold Edits.countdownWord
+  cases walk : countdownWalk {m with nextToken := m.nextToken + 1} targets [] with
+  | mk exits target => cases target <;> rfl
 
 theorem forkFinalizers_nextId (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (codes : List NCode) : m.nextId ≤ (forkFinalizers interp m f codes).1.nextId := by
@@ -33,8 +36,15 @@ theorem linkScope_nextId (interp : NInterp) (m : NativeMachine) (mode : Supervis
     (scope : Nat) (target : FiberId) (who : Option FiberId) (extra : ReasonAnnotations Ann) :
     (linkScope interp m mode scope target who extra).1.nextId = m.nextId := by
   unfold linkScope
-  repeat' first | rfl | dsimp only | split
-  all_goals exact modify_nextId _ _ _
+  dsimp only
+  rw [(RunMachine.applyFiberEdits_shape _ _).1]
+  change (linkScopeEdits interp m mode scope target who extra).1.nextId = m.nextId
+  rw [Edits.link_plan_word]
+  apply Edits.run_keeps (fun held : NativeMachine => held.nextId) _ ?_ m
+  intro edit member held
+  unfold Edits.linkWord at member
+  repeat' split at member
+  all_goals aesop (add norm simp [List.mem_cons, List.not_mem_nil, Edit.apply, RunMachine.halt, RunMachine.emit])
 
 theorem stepFrame_nextId (interp : NInterp) (m : NativeMachine) (f : NFiber) (yielding : Bool) :
     (evaluatePrim.stepFrame interp m f yielding).machine.nextId = m.nextId := by

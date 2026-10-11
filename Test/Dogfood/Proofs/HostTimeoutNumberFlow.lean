@@ -347,7 +347,7 @@ theorem cleanup_native_write (view : View) (machine : Effect4.Program.NativeMach
     let next := {machine.state with refs := (image.cleanup own exit).heap}
     evaluateNative HostTimeoutSource.program machine fiber yielding Scenario.Timeout.fetch.table =
       ⟨{machine with state := next}, {fiber with frame := {fiber.frame with current := .success .unit}},
-        yielding, .answered, [.drainDue]⟩ ∧
+        yielding, .answered, [.drainDue], []⟩ ∧
       AnswerFlow.FrameAt (model view) (interpreter view).toPrimInterp next output
         {fiber.frame with current := .success .unit} := by
   dsimp only
@@ -409,7 +409,7 @@ theorem completed_native_write (view : View) (machine : Effect4.Program.NativeMa
     let next := {machine.state with refs := (image.form cleanupComplete own exit).heap}
     evaluateNative HostTimeoutSource.program machine fiber yielding Scenario.Timeout.fetch.table =
       ⟨{machine with state := next}, {fiber with frame := {fiber.frame with current := .success .unit}},
-        yielding, .answered, [.drainDue]⟩ ∧
+        yielding, .answered, [.drainDue], []⟩ ∧
       AnswerFlow.FrameAt (model view) (interpreter view).toPrimInterp next output
         {fiber.frame with current := .success .unit} := by
   dsimp only
@@ -491,7 +491,7 @@ theorem native_get (view : View) (machine : Effect4.Program.NativeMachine)
       (.read image) output fiber.frame.stack) :
     evaluateNative HostTimeoutSource.program machine fiber yielding Scenario.Timeout.fetch.table =
       ⟨machine, {fiber with frame := {fiber.frame with current := .success (.nat image.count)}},
-        yielding, .answered, [.drainDue]⟩ ∧
+        yielding, .answered, [.drainDue], []⟩ ∧
       AnswerFlow.FrameAt (model view) (interpreter view).toPrimInterp machine.state output
         {fiber.frame with current := .success (.nat image.count)} := by
   have answer : syncOpStep (.refGet ⟨0⟩) {machine.state with refs := image.heap} =

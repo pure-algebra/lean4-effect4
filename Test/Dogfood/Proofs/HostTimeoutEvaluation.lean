@@ -340,7 +340,7 @@ theorem countdown {B : List Val} {output : Kind} (view : View)
     (machine : NativeMachine) (fiber : NativeFiber) (targets : List FiberId)
     (current : CodeAt B .any fiber.frame.current) (stack : StackAt B .any output fiber.frame.stack) :
     FrameKind B output (countdownPark (interpreter view) machine fiber targets .exitsValue).2.1.frame := by
-  unfold countdownPark
+  unfold countdownPark countdownParkEdits
   dsimp only
   split
   · exact ⟨.any, .head (.success (.any _)), stack⟩
@@ -366,7 +366,7 @@ theorem external_eval {B : List Val} {output : Kind} (view : View)
   have shape : evaluatePrim (interpreter view) machine fiber yielding =
       ⟨({machine with nextToken := machine.nextToken + 1}).emit
           [.parkedOn fiber.id machine.nextToken],
-        fiber.park ⟨machine.nextToken, none, [], [], .void, false⟩, yielding, .parked, []⟩ := by
+        fiber.park ⟨machine.nextToken, none, [], [], .void, false⟩, yielding, .parked, [], []⟩ := by
     rw [evaluatePrim, current]
     kernel_rfl
   rw [shape]
@@ -400,9 +400,9 @@ theorem evaluate_head {B : List Val} {input output : Kind} (view : View)
     have dispatch : evaluatePrim (interpreter view) machine fiber yielding =
         (match (interpreter view).syncState thunk machine.state with
          | some (state, value) => ⟨{machine with state},
-             {fiber with frame := {fiber.frame with current := .success value}}, yielding, .answered, [.drainDue]⟩
+             {fiber with frame := {fiber.frame with current := .success value}}, yielding, .answered, [.drainDue], []⟩
          | none => ⟨machine, {fiber with frame := {fiber.frame with current := .success ((interpreter view).syncValue thunk)}},
-             yielding, .answered, []⟩) := by
+             yielding, .answered, [], []⟩) := by
       rw [evaluatePrim, current]
       kernel_rfl
     rw [dispatch]
@@ -434,15 +434,16 @@ theorem evaluate_head {B : List Val} {input output : Kind} (view : View)
     split <;> exact owned
   | awaitPark targets =>
     have dispatch : evaluatePrim (interpreter view) machine fiber yielding =
-        ⟨(countdownPark (interpreter view) machine fiber targets .exitsValue).1,
-          (countdownPark (interpreter view) machine fiber targets .exitsValue).2.1, yielding,
-          if (countdownPark (interpreter view) machine fiber targets .exitsValue).2.2 then .parked else .continue_, []⟩ := by
+        ⟨(countdownParkEdits (interpreter view) machine fiber targets .exitsValue).1,
+          (countdownParkEdits (interpreter view) machine fiber targets .exitsValue).2.1, yielding,
+          if (countdownParkEdits (interpreter view) machine fiber targets .exitsValue).2.2.1 then .parked else .continue_, [],
+          (countdownParkEdits (interpreter view) machine fiber targets .exitsValue).2.2.2⟩ := by
       rw [evaluatePrim, current]
       rfl
     rw [dispatch]
     have next := countdown view machine fiber targets
       (by rw [current]; exact .head (.awaitPark targets)) stack
-    cases parked : (countdownPark (interpreter view) machine fiber targets .exitsValue).2.2
+    cases parked : (countdownParkEdits (interpreter view) machine fiber targets .exitsValue).2.2.1
     all_goals simp only [IterKind, Bool.false_eq_true, ite_false, ite_true]
     all_goals exact next
   | suspend kind point body =>

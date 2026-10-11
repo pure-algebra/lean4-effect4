@@ -1,5 +1,7 @@
 import Effect4.Laws.Program.ReleaseCustody.Outside
 import Effect4.Laws.Program.ReleaseCustody.RuntimeShape
+import Effect4.Laws.Program.ReleaseCustody.Evaluation
+import Effect4.Laws.Machine.FiberSumMessages
 
 /-!
 Concept: scope-lifetime-finalization, R11.
@@ -52,37 +54,20 @@ theorem settle_funded (q : List Nat) (before : NativeMachine) (fiber : RuntimeSh
     (funded : Funded q before rest) :
     Funded q (settle fiber.id rest it).1 (settle fiber.id rest it).2 := by
   have installed := install_funded q before fiber it rest unique found afterUnique old afterFound key debit funded
-  have modified (next : RuntimeShape.Fiber) (sameKey : next.id = fiber.id)
-      (sameCredit : fiberCredits q next = fiberCredits q it.fiber) :
-      Funded q (it.machine.update next) (it.nested ++ rest) := by
-    have credit := outside_install q it.machine fiber.id old next afterUnique afterFound sameKey
-    have original := outside_install q it.machine fiber.id old it.fiber afterUnique afterFound key
-    unfold Funded at installed ⊢
-    change it.machine.trace.countP (ReleaseTrace.releaseAt q) + machineCredits q (it.machine.update next) +
-      ((it.nested ++ rest).map (commandCredits q)).sum ≤ it.machine.trace.countP (ReleaseTrace.registeredAt q)
-    rw [credit, sameCredit, ← original]
-    exact installed
-  cases outcome : it.outcome <;> simp only [settle, outcome]
-  case continue_ | answered | finished =>
-    unfold Funded at installed ⊢
-    simpa only [List.map_append, List.map_singleton, List.sum_append, List.sum_singleton,
-      commandCredits, Nat.add_zero] using installed
-  case commands => exact installed
-  case parked =>
-    split
-    · have held := modified {it.fiber with parked := .notParked, pending := []} key rfl
-      unfold Funded at held ⊢
-      simpa only [List.map_append, List.map_singleton, List.sum_append, List.sum_singleton,
-        commandCredits, Nat.add_zero] using held
-    · exact modified {it.fiber with running := false} key rfl
-  case stuck why =>
-    have held := modified {it.fiber with running := false} key rfl
-    unfold Funded at held ⊢
-    change it.machine.trace.countP (ReleaseTrace.releaseAt q) + machineCredits q (it.machine.update {it.fiber with running := false}) +
-      ((it.nested ++ rest).map (commandCredits q)).sum ≤ it.machine.trace.countP (ReleaseTrace.registeredAt q) at held
-    change it.machine.trace.countP (ReleaseTrace.releaseAt q) + machineCredits q (it.machine.update {it.fiber with running := false}) +
-      (List.map (commandCredits q) []).sum ≤ it.machine.trace.countP (ReleaseTrace.registeredAt q)
-    simp only [List.map_nil, List.sum_nil, Nat.add_zero]
-    exact Nat.le_trans (Nat.le_add_right _ _) held
+  have fibers := FiberSum.settle_le (fiberCredits q) (fun _ _ => rfl)
+    (Evaluation.interrupt_fiber_le q) (fun _ => rfl) (fun _ => rfl) fiber.id rest it afterUnique
+  have fields := FiberSum.settle_fields fiber.id rest it
+  have state := congrArg Prod.fst fields
+  have races := congrArg (fun fields => fields.2.1) fields
+  have trace := congrArg (fun fields => fields.2.2) fields
+  have commands := FiberSum.settle_commands_le (commandCredits q)
+    (fun _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) fiber.id rest it
+  unfold Funded machineCredits at installed ⊢
+  change ((settle fiber.id rest it).1.fibers.map (fiberCredits q)).sum ≤
+    ((it.machine.update it.fiber).fibers.map (fiberCredits q)).sum at fibers
+  dsimp only at state races trace
+  rw [state, races, trace]
+  dsimp only [RunMachine.update] at installed fibers
+  omega
 
 end Effect4.Program.ReleaseCustody
