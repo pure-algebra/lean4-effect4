@@ -579,7 +579,9 @@ def ambientFiberPre (root : ProgramSource) (w : World) (available : Env.Requirem
       Row.Subset cert.requires available ∧
       (∀ point ctx, body = .acquireIn point ctx → ctx.services.Satisfies available) ∧
       (∀ point previous, body = .release point previous → previous.services.Satisfies available)
-  | .scoped point | .forkScoped point _ _ =>
+  | .scoped point =>
+      PointTyped root w point cert ∧ Row.Subset (bodyRequires root.signature cert) available
+  | .forkScoped point _ _ =>
       PointTyped root w point cert ∧ Row.Subset cert.requires available
   | .forkIn point _ scope _ =>
       (PointTyped root w point cert ∧ ScopeLive w scope) ∧ Row.Subset cert.requires available

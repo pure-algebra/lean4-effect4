@@ -252,6 +252,29 @@ theorem ambient_guardBind (root : ProgramSource) {w : World} {available : Env.Re
     skip entry
 
 
+/-- Counted suspension retains the same entry row through the existing program arrow.
+Consumer: suspend, select and invocation source arms in the ambient M5 proof. -/
+theorem ambient_suspendR_typed (root : ProgramSource) {w : World} {available : Env.Requirement}
+    {position : AmbientPosition} {point : Point} {body : RProgram}
+    (entry : Row.Subset position.failureRow available)
+    (typed : ∀ later, w.leHost later → AmbientProg root later available position body) :
+    AmbientProg root w available position (suspendR point body) :=
+  .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) () True.intro (fun later ordered _ _ => typed later ordered) entry
+
+/-- Construction retains the actual completed view and the same available service row.
+Consumer: source children constructed after suspension or a saved callback in ambient M5. -/
+theorem ambient_constructR_typed (root : ProgramSource) {w : World} {available : Env.Requirement}
+    {position : AmbientPosition} {next : List (FiberId × ExitV) → RProgram}
+    (entry : Row.Subset position.failureRow available)
+    (typed : ∀ later, w.leHost later → ∀ completed,
+      (∀ id ∈ completed, ∃ ty, later.Γ id.1 = some ty ∧ ExitOk later ty id.2) →
+      AmbientProg root later available position (next completed)) :
+    AmbientProg root w available position (constructR next) :=
+  .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) () True.intro (fun later ordered completed post =>
+      typed later ordered completed post) entry
+
 /-- The real restoring finalizer returns the saved body exit with its common service guarantee.
 Consumer: provideContext's compiled restoring region and the source denotation adapter. -/
 theorem ambient_restore_finalizer (root : ProgramSource) {w : World} (available guaranteed : Env.Requirement)

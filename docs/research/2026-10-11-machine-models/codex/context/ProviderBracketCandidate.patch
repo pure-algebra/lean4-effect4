@@ -1,0 +1,27 @@
+--- a/src/Effect4/Program/Compile.lean
++++ b/src/Effect4/Program/Compile.lean
+@@ -915,9 +915,11 @@
+   | some prev =>
+     if updateKeepsIdentity update prev.services then regionCode root body
+     else
+-      Prim.onSuccess
+-        (Prim.withFiber (EffThunk.setCtx (Ctx.withServices (update.apply prev.services))))
+-        (EffName.bodyThen body prev)
++      Prim.onExit
++        (Prim.onSuccess
++          (Prim.withFiber (EffThunk.setCtx (Ctx.withServices (update.apply prev.services))))
++          (EffName.bodyThen body prev))
++        (EffName.restoreCtx prev) false
+   | none => badShape
+ 
+ /-- `Layer.buildWithScope` on the fiber context (`Layer.ts:974-979`): `forkOrCreate` first. -/
+@@ -1238,8 +1240,7 @@
+   | .provideLayerWith _, _ => badShape
+   | .provideLayerBody p, v => provideLayerBodyK root p v
+   | .updateThen update body, v => updateThenK root update body v
+-  | .bodyThen body previous, _ =>
+-    Prim.onExit (regionCode root body) (EffName.restoreCtx previous) false
++  | .bodyThen body _, _ => regionCode root body
+   | .buildWithScopeFromContext q scope, v => buildWithScopeK q scope v
+   -- `buildWithMemoMap` (`Layer.ts:756-765`) on the forked-or-created map
+   | .withMemoMapThen q scope, Val.memoMap ⟨id⟩ =>
