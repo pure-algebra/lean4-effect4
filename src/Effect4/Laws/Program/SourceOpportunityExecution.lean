@@ -50,7 +50,7 @@ theorem loop_top_frame_le (root : NativeEff) (q : List Nat) (fiber : SourceFiber
   unfold runloopTop
   split
   · dsimp only [FiberCore.pendingFailure, frameCore]
-    simp only [frame, current, Nat.zero_add]
+    simp only [frame, current, cata_prim, Nat.zero_add]
     omega
   · exact Nat.le_refl _
 
@@ -91,7 +91,7 @@ theorem iteration_debit (root : NativeEff) (q : List Nat) (fragment : Fragment r
       unfold Debit at debit ⊢
       dsimp only [FiberCore.answerWith, FiberCore.yieldBefore, FiberCore.current, frameCore] at debit ⊢
       simp only [recorded_emit, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil,
-        runEvent, Nat.add_zero, outside_emit, frame, current, Nat.zero_add] at debit
+        runEvent, Nat.add_zero, outside_emit, frame, current, cata_prim, Nat.zero_add] at debit
       change recorded q _ + outside root q fiber.id _ + frame root q _ ≤ _
       rw [key] at debit ⊢
       change recorded q _ + outside root q fiber.id _ + frame root q _ ≤

@@ -26,7 +26,7 @@ theorem fin_program_zero (root : NativeEff) (q : List Nat) (clear : ClearFinaliz
   revert owned
   fun_cases finProgram captured exit
   all_goals intro owned
-  all_goals aesop (add norm simp [current, thunk, name, push, embed]) (add safe apply [(captured_zero root q clear)])
+  all_goals aesop (add norm simp [current, cata_prim, thunk, name, push, embed]) (add safe apply [(captured_zero root q clear)])
 
 /-- Stored programs contain only administrative names and already captured finalizers.
 Consumer: stored suspension and stored value callback debit. -/
@@ -36,7 +36,7 @@ theorem prog_zero (root : NativeEff) (q : List Nat) (clear : ClearFinalizers roo
   revert owned
   fun_induction progOf program
   all_goals intro owned
-  all_goals aesop (add norm simp [current, thunk, name, push, embed, ProgAt]) (add safe apply [(fin_program_zero root q clear)])
+  all_goals aesop (add norm simp [current, cata_prim, thunk, name, push, embed, ProgAt]) (add safe apply [(fin_program_zero root q clear)])
 
 /-- An actual stored value callback reuses only administrative programs or captured releases.
 Consumer: native callback debit. -/
@@ -46,20 +46,20 @@ theorem store_contA_zero (root : NativeEff) (q : List Nat) (clear : ClearFinaliz
   revert owned
   fun_cases Machine.contAOf callback value
   all_goals intro owned
-  all_goals aesop (add norm simp [current, thunk, name, push, embed, StoreNameAt]) (add safe apply [(prog_zero root q clear), embed_exit_zero])
+  all_goals aesop (add norm simp [current, cata_prim, thunk, name, push, embed, StoreNameAt]) (add safe apply [(prog_zero root q clear), embed_exit_zero])
 
 /-- An actual stored cause callback exposes only an exit.
 Consumer: native cause callback debit. -/
 theorem store_contE_zero (root : NativeEff) (q : List Nat) (callback : Name) (cause : CauseV) :
     current root q (embed (Machine.contEOf callback cause)) = 0 := by
   fun_cases Machine.contEOf callback cause
-  all_goals aesop (add norm simp [current, thunk, embed]) (add safe apply [embed_exit_zero])
+  all_goals aesop (add norm simp [current, cata_prim, thunk, embed]) (add safe apply [embed_exit_zero])
 
 /-- A context update retains only its actual delayed program address.
 Consumer: native value callback debit. -/
 theorem update_current (root : NativeEff) (q : List Nat) (update : Env.ContextUpdate)
     (p : Point) : current root q (updateContextAt update (.program p)) = below q p.path := by
-  simp only [updateContextAt, current, thunk, name, push, Nat.zero_add, Nat.add_zero]
+  simp only [updateContextAt, current, cata_prim, thunk, name, push, Nat.zero_add, Nat.add_zero]
 
 /-- An actual source region consumes only its reserved program address.
 Consumer: native context callback debit. -/
@@ -97,7 +97,7 @@ theorem contA_le (root : NativeEff) (q : List Nat) (clear : ClearFinalizers root
   case case1 p => exact resolve_le root q (p.childWith 1 value)
   case case2 p => exact resolve_le root q (p.childWith 1 value)
   case case12 p previous =>
-    simpa only [current, name, push, Nat.add_zero, Point.child] using resolve_le root q (p.child 0)
+    simpa only [current, cata_prim, name, push, Nat.add_zero, Point.child] using resolve_le root q (p.child 0)
   case case18 p ctx scope =>
     have body := resolve_le root q (p.child 0)
     have parts := acquisition_parts_le q p.path
@@ -105,7 +105,7 @@ theorem contA_le (root : NativeEff) (q : List Nat) (clear : ClearFinalizers root
     change current root q (resolve root (p.child 0)) + (here q p.path + below q (p.path ++ [1])) + 0 ≤ below q p.path
     omega
   case case20 p ctx scope =>
-    simp only [current, thunk, name, push, Point.capture, fin, Nat.zero_add]
+    simp only [current, cata_prim, thunk, name, push, Point.capture, fin, Nat.zero_add]
     omega
   case case22 acquired captured exit different found =>
     change current root q (embed (finProgram captured exit)) + 0 + 0 ≤ fin q captured
@@ -118,15 +118,15 @@ theorem contA_le (root : NativeEff) (q : List Nat) (clear : ClearFinalizers root
       split
       · split
         · simpa only [regionCode, name] using resolve_le root q point
-        · simp only [current, thunk, name, push, Nat.zero_add, Nat.add_zero, Nat.le_refl]
+        · simp only [current, cata_prim, thunk, name, push, Nat.zero_add, Nat.add_zero, Nat.le_refl]
       · exact Nat.zero_le _
     all_goals exact owned.elim
   case case31 region previous =>
     cases region
     case program point =>
-      simpa only [regionCode, current, name, push, Nat.add_zero] using resolve_le root q point
+      simpa only [regionCode, current, cata_prim, name, push, Nat.add_zero] using resolve_le root q point
     all_goals exact owned.elim
-  all_goals aesop (add norm simp [current, thunk, name, push, NameAt, StoreNameAt,
+  all_goals aesop (add norm simp [current, cata_prim, thunk, name, push, NameAt, StoreNameAt,
     FinAt, Point.childWith, Point.child, Point.capture, fin,
     badShape, regionCode, updateThenK, addCurrentMemoMapK, combineWithK,
     mergeContextsK, serviceLookupK, bindServiceK]) (add safe apply [resolve_le, store_contA_zero, exit_zero,
@@ -144,7 +144,7 @@ theorem contE_le (root : NativeEff) (q : List Nat) (callback : EffName) (cause :
   case case2 point test body handler found value answer =>
     exact resolve_le root q (point.childWith 1 value)
   case case5 point => exact resolve_le root q (point.childWith 2 (.exitErr cause))
-  all_goals aesop (add norm simp [current, name, NameAt, store_contE_zero, exit_zero])
+  all_goals aesop (add norm simp [current, cata_prim, name, NameAt, store_contE_zero, exit_zero])
 
 /-- The live completed-exit view changes no source reservation in a value callback.
 Consumer: actual native frame value arms. -/
@@ -205,7 +205,7 @@ theorem loop_next_zero (root : NativeEff) (q : List Nat) (clear : ClearLoops roo
     change current root q (resolve root (p.childWith 0 cursor)) ≤ below q (p.path ++ [0]) at bound
     rw [loop_child_zero root q clear p test step body found] at bound
     exact Nat.le_zero.mp bound
-  all_goals aesop (add norm simp [current, badShape, loop_finish_zero])
+  all_goals aesop (add norm simp [current, cata_prim, badShape, loop_finish_zero])
 
 /-- Resuming the actual loop retains the repeated-body exclusion.
 Consumer: full native frame accounting. -/

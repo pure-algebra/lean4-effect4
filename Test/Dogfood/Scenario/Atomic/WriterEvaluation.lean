@@ -25,24 +25,26 @@ theorem step_bound (built : Api.Built) (admitted : Api.Author.build (shop .none)
   all_goals dsimp only
   case success value =>
     have bounded := resumeValue_bound built admitted id member view fiber value (some (.success value)) owned
-    simp only [frame, selected, current]
+    simp only [frame, selected, current, cata_prim]
     omega
   case failure cause =>
     have bounded := resumeCause_bound built admitted id member view fiber cause (some (.failure cause)) owned
-    simp only [frame, selected, current]
+    simp only [frame, selected, current, cata_prim]
     omega
   case sync suspended =>
     have bounded := resumeValue_bound built admitted id member view fiber
       ((interpAt built.program view built.table).toPrimInterp.syncValue suspended) none owned
-    simp only [frame, selected, current]
+    simp only [frame, selected, current, cata_prim]
     omega
   case suspend suspended =>
     have bounded := interp_suspend_bound built admitted id member view suspended source
-    simp only [Machine.FrameWeights.returned, Machine.FrameWeights.frame, model, frame, selected, current]
+    simp only [Machine.FrameWeights.returned, Machine.FrameWeights.frame, model, frame, selected, current, cata_prim]
+    dsimp only [current] at *
     omega
   case withFiber suspended =>
     have bounded := interp_suspend_bound built admitted id member view suspended source
-    simp only [Machine.FrameWeights.returned, Machine.FrameWeights.frame, model, frame, selected, current]
+    simp only [Machine.FrameWeights.returned, Machine.FrameWeights.frame, model, frame, selected, current, cata_prim]
+    dsimp only [current] at *
     omega
   case iterator callback cursor =>
     cases evaluated : Prim.armA (interpAt built.program view built.table).toPrimInterp (.iterator callback cursor) cursor none with
@@ -51,8 +53,9 @@ theorem step_bound (built : Api.Built) (admitted : Api.Author.build (shop .none)
       obtain ⟨next, pushed⟩ := parts
       have bounded := armA_bound built admitted id member view (.iterator callback cursor) cursor none next pushed source evaluated
       simp only [saved] at bounded
-      simp only [Machine.FrameWeights.returned, Machine.FrameWeights.frame, model, frame, selected, current,
+      simp only [Machine.FrameWeights.returned, Machine.FrameWeights.frame, model, frame, selected, current, cata_prim,
         List.map_append, List.sum_append]
+      dsimp only [current] at *
       omega
   case whileLoop callback cursor =>
     have zero := interp_next_zero built admitted id member view callback cursor source
@@ -60,15 +63,17 @@ theorem step_bound (built : Api.Built) (admitted : Api.Author.build (shop .none)
     | «continue» next body =>
       rw [entered] at zero
       dsimp only at zero
-      simp only [Machine.FrameWeights.returned, Machine.FrameWeights.frame, model, frame, selected, current, saved,
+      simp only [Machine.FrameWeights.returned, Machine.FrameWeights.frame, model, frame, selected, current, cata_prim, saved,
         List.map_cons, List.sum_cons]
+      dsimp only [current] at *
       omega
     | finish body =>
       rw [entered] at zero
       dsimp only at zero
-      simp only [Machine.FrameWeights.returned, Machine.FrameWeights.frame, model, frame, selected, current]
+      simp only [Machine.FrameWeights.returned, Machine.FrameWeights.frame, model, frame, selected, current, cata_prim]
+      dsimp only [current] at *
       omega
   all_goals aesop (add norm simp [Machine.FrameWeights.returned, Machine.FrameWeights.frame, model, frame,
-    selected, current, saved, List.map_cons, List.sum_cons]) (add safe tactic (by omega))
+    selected, current, cata_prim, saved, List.map_cons, List.sum_cons]) (add safe tactic (by omega))
 
 end Test.Dogfood.Scenario.Atomic.WriterEvaluation
