@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.SourceOpportunityMachine
+import Effect4.Laws.Machine.Handshake
 
 /-!
 Concept: scope-lifetime-finalization R11.
@@ -42,8 +43,8 @@ theorem outside_update_le (root : NativeEff) (q : List Nat) (m : NativeMachine)
     (unique : (m.fibers.map (fun fiber => fiber.id)).Nodup) (member : old ∈ m.fibers)
     (carried : frame root q next.frame ≤ frame root q old.frame) :
     outside root q owner (m.update next) ≤ outside root q owner m :=
-  ControlWeights.replace_omitted_le (fun fiber : SourceFiber => fiber.id)
-    (fun fiber => frame root q fiber.frame) owner old next same carried m.fibers unique member
+  FiberSum.outside_update_le (fun fiber => frame root q fiber.frame) m owner old next unique
+    (fiber_lookup_of_mem_nodup m unique old member) same carried
 
 /-- A metadata-only fiber edit retains the off-owner source reservation.
 Consumer: countdown observers, child tracking and scope links. -/

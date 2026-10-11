@@ -20,8 +20,7 @@ theorem install_le (root : NativeEff) (q : List Nat) (m : NativeMachine)
     (owner : FiberId) (next : SourceFiber) (same : next.id = owner)
     (unique : (m.fibers.map (fun fiber => fiber.id)).Nodup) :
     fibers root q (m.update next) ≤ outside root q owner m + frame root q next.frame :=
-  ControlWeights.replace_sum_le_omitted (fun fiber : SourceFiber => fiber.id)
-    (fun fiber => frame root q fiber.frame) owner next same m.fibers unique
+  FiberSum.install_le (fun fiber => frame root q fiber.frame) m owner next same unique
 
 /-- Every settlement outcome installs the acting owner at most once.
 Consumer: loop and deliver command debit, then the application history invariant. -/
