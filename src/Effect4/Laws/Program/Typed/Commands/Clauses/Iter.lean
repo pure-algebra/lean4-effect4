@@ -49,10 +49,10 @@ theorem evaluateFiberR_gen (interp : RInterp) (m : RState) (f : RFiber) (y : Boo
     (next : ExitV → RProgram) :
     evaluateFiberR interp m f y (.gen p) next =
       match (interp.iterNext (.gen p [] false) .unit).2 with
-      | .done v => ⟨m, answerR (saveAnswerR f next) (.pure (.success v)), y, .continue_, []⟩
-      | .halt c => ⟨m, answerR (saveAnswerR f next) (.pure (.failure c)), y, .continue_, []⟩
+      | .done v => ⟨m, answerR (saveAnswerR f next) (.pure (.success v)), y, .continue_, [], []⟩
+      | .halt c => ⟨m, answerR (saveAnswerR f next) (.pure (.failure c)), y, .continue_, [], []⟩
       | .resume code cont =>
-        ⟨m, answerR (pushR (saveAnswerR f next) (.iter cont)) code, y, .continue_, []⟩ := rfl
+        ⟨m, answerR (pushR (saveAnswerR f next) (.iter cont)) code, y, .continue_, [], []⟩ := rfl
 
 /-- **`gen`** from the producer's obligation: the pre types the point at `cert` and names its
 generator node (`fiberPre`'s `gen` arm; seat M6E's third finding: at a point of another node the

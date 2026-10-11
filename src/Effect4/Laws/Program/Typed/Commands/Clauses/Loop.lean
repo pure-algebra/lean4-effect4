@@ -218,8 +218,8 @@ theorem clause_loop (root : ProgramSource) (rootTy : EffTy) (p : Point) (cursor 
     (match (interpRAt root.program m.completedExits).loopEnter (.loop p) cursor with
       | .continue cursor' body =>
         (⟨m, answerR (pushR (saveAnswerR f next) (.loop (.loop p) cursor')) body, y, .continue_,
-          []⟩ : RIter)
-      | .finish code => ⟨m, answerR (saveAnswerR f next) code, y, .continue_, []⟩))
+          [], []⟩ : RIter)
+      | .finish code => ⟨m, answerR (saveAnswerR f next) code, y, .continue_, [], []⟩))
   split
   · rename_i cursor' body heq
     rw [heq] at entered
