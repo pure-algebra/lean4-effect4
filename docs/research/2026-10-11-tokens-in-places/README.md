@@ -65,10 +65,12 @@ the root program, and each registration spends one.
    weight is one `Model` instance:
    `thunk (.op (.refModify q t env)) := if q = qlog ∧ appends t env i then 1 else 0`.
 2. **The store's frame rule per key.** A store operation on key `q'` leaves the content at every
-   other key unchanged. This is the frame rule of separation logic on the store, and it replaces
-   each scenario's "writer census" premise. The tree has laws per operation
-   (`StoresLaws.syncOpStep_*`, `NativeReferences.*_refs`) and no frame rule per key of the
-   reference heap.
+   other key unchanged. This is the frame rule of separation logic on the store. The tree states
+   it for one heap step: every heap row but `refMake` is a single-cell kernel
+   (`RefKernel.refStep_cases`), and a write-back leaves every other lookup unchanged
+   (`RefKernel.refWriteBack_peek_other`, the last part of `indexed_ref_step_preserves`). It is
+   not yet lifted to a machine step. The scenarios' "writer census" premises are that lift,
+   restated per cell.
 3. **Code that is compiled later.** A continuation's source is compiled when it runs, against the
    environment of that moment. Its write sites are known only through the value bound to the
    cell's variable. The source-opportunity budget already counts source sites per path. Its leaf
@@ -103,8 +105,10 @@ The texts are not yet vendored. A packet should hold them before a proof cites a
 custody, which each build their places by hand today, become instances too. This was the
 "frame-weight ledger" of the machine-models note. The six goals add its data places.
 
-**P2. The store frame rule, once.** `Stores.frame : q' ≠ q → (op q s).refs[q'] = s.refs[q']`, over
-the key-indexed store. The per-family `*_refs` theorems become its instances.
+**P2. The store frame rule, lifted once.** One machine-step law: a step whose executed store
+operations name no kernel cell `q` leaves the lookup at `q` unchanged. It lifts
+`refWriteBack_peek_other` through the evaluator's sync arm. The scenarios' per-cell writer-census
+premises become its instances.
 
 **P3. The write census as a leaf weight.** A `PrimWeights.Model` per (cell, value). No new
 traversal. The source side extends the source-opportunity leaf with the allocation-site fact.
