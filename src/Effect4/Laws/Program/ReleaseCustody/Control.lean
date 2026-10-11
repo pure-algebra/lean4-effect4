@@ -591,6 +591,121 @@ theorem close_seq_loop_funded (root : NativeEff) (table : RowTable) (m : NativeM
   simp only [List.map_cons, commandCredits, List.sum_cons, Nat.zero_add] at funded ⊢
   omega
 
+/-- The actual scope-add callback carries exactly its response-dependent credit into the next program.
+Consumer: `after_add_deliver_funded`. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem after_add_code_credits (root : NativeEff) (q : List Nat) (a : Val) (fin : FinName) (value : Val) :
+    currentCredits q (contAOf root (.afterScopeAdd a fin) value) = afterAddCredits q fin value := by
+  change currentCredits q (if value = Val.unit then .success a else
+    match exitOfVal value with
+    | some exit => .onSuccess (embed (finProgram fin exit)) (.constant a)
+    | none => badShape) = _
+  unfold afterAddCredits
+  split
+  · rfl
+  · cases answer : exitOfVal value with
+    | none => rfl
+    | some exit => simp only [Option.isSome_some, if_true, currentCredits, fin_program_credits]
+
+/-- Delivering the actual scope-add response pops only its own callback.
+Consumer: `after_add_deliver_funded`. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem after_add_start (root : NativeEff) (table : RowTable) (m : NativeMachine)
+    (f : Fiber) (yielding : Bool) (scope : Nat) (a : Val) (fin : FinName)
+    (value : Val) (lower : List NCode)
+    (current : f.frame.current = .success value)
+    (stack : f.frame.stack = .onSuccess (.sync (.op (.scopeAdd scope fin))) (.afterScopeAdd a fin) :: lower)
+    (interrupt : f.frame.deferredInterrupt = false) :
+    evaluateNative root m f yielding table =
+      ⟨m.emit [.frame f.id (.popped (.onSuccess (.sync (.op (.scopeAdd scope fin))) (.afterScopeAdd a fin)))],
+       { f with frame := { f.frame with
+         current := contAOf root (.afterScopeAdd a fin) value
+         stack := lower
+         deferredInterrupt := false } }, yielding, .continue_, []⟩ := by
+  let template : NCode := .onSuccess (.sync (.op (.scopeAdd scope fin))) (.afterScopeAdd a fin)
+  have pop : f.frame.getCont .contA false =
+      ⟨.frame template, [template], [.popped template],
+        { f.frame with stack := lower, deferredInterrupt := false }, none⟩ := by
+    unfold FrameFiber.getCont
+    rw [interrupt, stack]
+    change FrameFiber.popFrom .contA false (template :: lower)
+      { f.frame with stack := [], deferredInterrupt := false } none = _
+    rfl
+  have frame : f.frame.step (interpAt root m.completedExits).toPrimInterp =
+      (.running { f.frame with
+        current := contAOf root (.afterScopeAdd a fin) value
+        stack := lower
+        deferredInterrupt := false }, [.popped template]) := by
+    unfold FrameFiber.step
+    rw [current]
+    unfold FrameFiber.resumeValue
+    rw [pop]
+    rfl
+  have park : (interpAt root m.completedExits).parkOf (.success value) = none := rfl
+  simp only [evaluateNative, exitScoped, evaluatePrim, current, park, evaluatePrim.finalizerOr, pop,
+    evaluatePrim.stepFrame, frame]
+  rfl
+
+/-- The actual delivery command spends the scope-add response credit on exactly its returned callback program.
+Consumer: the scope-add delivery clause of `Workers.Assertions.releases_step`.
+The lower callbacks remain reserved; the actual row table and pending suffix stay fixed. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem after_add_deliver_funded (root : NativeEff) (table : RowTable) (m : NativeMachine)
+    (id : FiberId) (f : Fiber) (yielding : Bool) (pending : List Command)
+    (q : List Nat) (scope : Nat) (a : Val) (fin : FinName) (value : Val) (lower : List NCode)
+    (unique : (m.fibers.map RunFiber.id).Nodup) (funded : Funded q m (.deliver id yielding :: pending))
+    (found : m.fiber? id = some f) (current : f.frame.current = .success value)
+    (stack : f.frame.stack = .onSuccess (.sync (.op (.scopeAdd scope fin))) (.afterScopeAdd a fin) :: lower)
+    (interrupt : f.frame.deferredInterrupt = false) :
+    Funded q (driveStep (evaluator := evaluatorFor root table) (interpOf root table) m
+      (.deliver id yielding) pending).1
+      (driveStep (evaluator := evaluatorFor root table) (interpOf root table) m
+        (.deliver id yielding) pending).2 := by
+  let next : Fiber := { f with frame := { f.frame with
+    current := contAOf root (.afterScopeAdd a fin) value
+    stack := lower
+    deferredInterrupt := false } }
+  let events : List ReleaseTrace.Event := [.frame f.id
+    (.popped (.onSuccess (.sync (.op (.scopeAdd scope fin))) (.afterScopeAdd a fin)))]
+  have delivered : driveStep (evaluator := evaluatorFor root table) (interpOf root table) m
+      (.deliver id yielding) pending = ((m.emit events).update next, .loop id yielding :: pending) := by
+    simp only [driveStep, found]
+    change settle id pending (evaluateNative root m f yielding table) = _
+    rw [after_add_start root table m f yielding scope a fin value lower current stack interrupt]
+    rfl
+  rw [delivered]
+  change Funded q ((m.emit events).update next) (.loop id yielding :: pending)
+  have bounded := stack_credits_bounded q (contAOf root (.afterScopeAdd a fin) value) lower
+  have frame : fiberCredits q next ≤ fiberCredits q f := by
+    unfold fiberCredits
+    simp only [next]
+    rw [current, stack]
+    simp only [currentCredits, stackCredits, responseCredits]
+    change currentCredits q (contAOf root (.afterScopeAdd a fin) value) +
+        stackCredits q (contAOf root (.afterScopeAdd a fin) value) lower + _ ≤
+      0 + (afterAddCredits q fin value + (lower.map (futureCredits q)).sum) + _
+    rw [after_add_code_credits]
+    omega
+  have member : f ∈ (m.emit events).fibers := List.mem_of_find?_eq_some found
+  have changed := update_credits q (m.emit events) f next unique member rfl
+  rw [emit_credits] at changed
+  have starts : ((m.emit events).update next).trace.countP (ReleaseTrace.releaseAt q) =
+      m.trace.countP (ReleaseTrace.releaseAt q) := by
+    change (m.emit events).trace.countP (ReleaseTrace.releaseAt q) = _
+    rw [RunMachine.emit_trace, List.countP_append]
+    change m.trace.countP (ReleaseTrace.releaseAt q) + 0 = _
+    exact Nat.add_zero _
+  have registered : ((m.emit events).update next).trace.countP (ReleaseTrace.registeredAt q) =
+      m.trace.countP (ReleaseTrace.registeredAt q) := by
+    change (m.emit events).trace.countP (ReleaseTrace.registeredAt q) = _
+    rw [RunMachine.emit_trace, List.countP_append]
+    change m.trace.countP (ReleaseTrace.registeredAt q) + 0 = _
+    exact Nat.add_zero _
+  unfold Funded at funded ⊢
+  rw [starts, registered]
+  simp only [List.map_cons, commandCredits, List.sum_cons, Nat.zero_add] at funded ⊢
+  omega
+
 /-- Starting the foreign release spends exactly one active credit and leaves lower callbacks intact.
 Consumer: `release_loop_funded`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
