@@ -82,9 +82,10 @@ theorem after_interrupt_command {B : List Val} {classes : Classes} (machine : Ef
   have codeGood : CodeAt B .unit code := await_void B [] targets
   let next : NativeFiber := {fiber with frame := {fiber.frame with current := code}}
   have nextGood : FiberAt B classes next := reframe_live good codeGood (demand.2 fiber found) parked live
-  let result : NativeIter := ⟨machine, next, yielding, .continue_, []⟩
+  let result : NativeIter := ⟨machine, next, yielding, .continue_, [], []⟩
   have evaluation : EvaluationAt B classes result :=
-    ⟨owned, nextGood, by intro command member; cases member⟩
+    ⟨owned, nextGood, (by intro command member; cases member),
+      (by intro message member; cases member)⟩
   have away : StackLinksAway host machine (machine.update next) := by
     have kept := update_away machine next
     change StackLinksAway fiber.id machine (machine.update next) at kept

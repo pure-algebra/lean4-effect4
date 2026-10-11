@@ -66,14 +66,8 @@ theorem origin_bound (built : Api.Built) (admitted : Api.Author.build (shop .non
     exact Nat.le_refl _
   | get =>
     obtain ⟨key, rfl⟩ := Store.get_inv produced
-    simp only [syncOpStep, refStep] at written
-    cases lookup : refPeek state.refs ⟨key⟩ with
-    | none => rw [lookup] at written; cases written
-    | some value =>
-      rw [lookup] at written
-      cases written
-      exact Nat.le_refl _
-    done
+    rw [syncOpStep_refGet_refs written]
+    exact Nat.le_refl _
   | sleep => cases produced
   | decision =>
     obtain ⟨key, rfl⟩ := Store.modify_inv produced

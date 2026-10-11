@@ -209,3 +209,21 @@ private case analyses 554 → 554, hand decision lifts 21 → 21.
 
 **Verdict: improving in structure, flat in private analyses.** The net 3,941 lines include the
 1,784 lines of the new shared alphabet. The replaced proofs keep their names.
+
+## 2026-10-11 17:30, reference footprints and Timeout transfers
+
+Range: Codex's side of the merge of `9643905ab`, measured from the merge base `4bf4435f2`. Under
+`Laws` and `Dogfood` it adds 825 lines and removes 285 in 13 files. The script's patterns over the
+changed files, before and after: shared-law uses 0 → 4, private case analyses 26 → 29, hand
+decision lifts 0 → 0.
+
+- **Shared structure.** `src/Effect4/Laws/Machine/RefFootprint.lean` (101 lines) states the
+  reference projection and frame rule of a synchronous store operation once. Store execution and
+  Atomic's reference debit consume it.
+- **A small regression in the Timeout chain.** `Test/Dogfood/Proofs/HostTimeoutLocalSteps.lean`
+  adds seven arms of `simp only [evaluatePrim, current]`. The clause bank
+  (`Laws/Machine/Clauses.lean`) states those equations once. Read them from there.
+- **Item 12 is planned** (`codex/type-profile/PLAN.md`): `mul` through `Profile.scale`, a checked
+  OCaml ingress, and warning 8 restored. It matches the type interface note's R-T2 and R-T8.
+
+**Verdict: flat.** One shared law lands, and the Timeout chain adds three private analyses.

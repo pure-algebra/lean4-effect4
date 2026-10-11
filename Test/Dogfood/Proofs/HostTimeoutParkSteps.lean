@@ -150,32 +150,32 @@ theorem observer_fiber {B : List Val} {classes : Classes} {fiber : NativeFiber}
   terminal := owned.terminal
   children := owned.children
 
-/-- The actual countdown mints arbitrary exit data while preserving the body continuation below it. -/
-theorem countdown_state {B : List Val} {classes : Classes}
+/-- The canonical countdown plan retains its freshly minted observer permission.
+Consumer: actual native await and shared message-word settlement. -/
+theorem countdown_plan_state {B : List Val} {classes : Classes}
     (machine : Effect4.Program.NativeMachine) (fiber : NativeFiber) (view : View) (targets : List FiberId)
     (owned : ConfigurationAt B classes machine) (goodFiber : FiberAt B classes fiber)
     (code : CodeAt B .any fiber.frame.current) (stack : StackAt B .any .body fiber.frame.stack)
     (parked : fiber.parked = .notParked) (live : fiber.exit.isSome = false) :
-    let result := countdownPark (interpreter view) machine fiber targets .exitsValue
-    ConfigurationAt B (classes ++ [.any]) result.1 ∧ FiberAt B (classes ++ [.any]) result.2.1 := by
+    let result := countdownParkEdits (interpreter view) machine fiber targets .exitsValue
+    ConfigurationAt B (classes ++ [.any]) result.1 ∧
+      FiberAt B (classes ++ [.any]) result.2.1 ∧ MessagesAt (classes ++ [.any]) result.2.2.2 := by
   have minted := configuration_mint owned .any (Or.inr (Or.inr rfl))
   have fresh : TokenAt (classes ++ [.any]) machine.nextToken .any := by
     rw [← owned.supply]
     exact token_fresh classes .any
   let middle : Effect4.Program.NativeMachine := {machine with nextToken := machine.nextToken + 1}
   have fiberGood := fiber_extend (ClassLe.append classes .any) goodFiber
-  unfold countdownPark
+  unfold countdownParkEdits
   dsimp only
   cases walked : countdownWalk {machine with nextToken := machine.nextToken + 1} targets [] with
   | mk exits next =>
     cases next with
     | none =>
-      exact ⟨minted, reframe_live fiberGood (CodeAt.head (HeadAt.success (ValueAt.any _))) stack parked live⟩
+      exact ⟨minted, reframe_live fiberGood (CodeAt.head (HeadAt.success (ValueAt.any _))) stack parked live,
+        by intro message member; cases member⟩
     | some pair =>
       obtain ⟨target, remaining⟩ := pair
-      have observed := configuration_modify minted target
-        (fun next => {next with observers := next.observers ++ [.countdown fiber.id machine.nextToken]})
-        (fun next good => observer_fiber good (.countdown fiber.id machine.nextToken) fresh)
       let name : EffName := .withWaiter (.store .cancelPark) fiber.id machine.nextToken
       have saved : StackAt B .any .body (.asyncFinalizer name :: fiber.frame.stack) :=
         .cons (.cancel .any name (cancel_then_failure (.park fiber.id machine.nextToken) .any)) stack
@@ -183,7 +183,22 @@ theorem countdown_state {B : List Val} {classes : Classes}
       have framed := set_frame_live fiberGood frame ⟨.any, code, saved⟩ parked live
       let pending : NPending := ⟨machine.nextToken, some target, remaining, exits, .exitsValue, false⟩
       have held := park_fiber framed pending fresh code saved ⟨.any, fresh, rfl⟩
-      exact ⟨configuration_emit observed _, held⟩
+      refine ⟨configuration_emit minted _, held, ?_⟩
+      intro message member
+      have equal := List.mem_singleton.mp member
+      subst message
+      exact fresh
+
+/-- The eager countdown reader applies the canonical plan's admitted messages. -/
+theorem countdown_state {B : List Val} {classes : Classes}
+    (machine : Effect4.Program.NativeMachine) (fiber : NativeFiber) (view : View) (targets : List FiberId)
+    (owned : ConfigurationAt B classes machine) (goodFiber : FiberAt B classes fiber)
+    (code : CodeAt B .any fiber.frame.current) (stack : StackAt B .any .body fiber.frame.stack)
+    (parked : fiber.parked = .notParked) (live : fiber.exit.isSome = false) :
+    let result := countdownPark (interpreter view) machine fiber targets .exitsValue
+    ConfigurationAt B (classes ++ [.any]) result.1 ∧ FiberAt B (classes ++ [.any]) result.2.1 := by
+  have plan := countdown_plan_state machine fiber view targets owned goodFiber code stack parked live
+  exact ⟨configuration_messages _ _ plan.2.2 plan.1, plan.2.1⟩
 
 /-- A newly queued task retains its recorded token class. -/
 theorem tasks_singleton {B : List Val} {classes : Classes} {task : NTask}
@@ -286,9 +301,9 @@ theorem await_park_state {B : List Val} {classes : Classes}
       FiberAt B (classes ++ [.any]) result.fiber ∧
         CommandsAt B (classes ++ [.any]) result.machine result.nested := by
   have code : CodeAt B .any fiber.frame.current := by rw [current]; exact .head (.awaitPark targets)
-  have parkedResult := countdown_state machine fiber view targets owned goodFiber code stack parked live
+  have parkedResult := countdown_plan_state machine fiber view targets owned goodFiber code stack parked live
   simp only [evaluatePrim, current]
-  exact ⟨parkedResult.1, parkedResult.2, by intro command member; cases member⟩
+  exact ⟨parkedResult.1, parkedResult.2.1, by intro command member; cases member⟩
 
 /-- The actual race registration retains its earlier body token while the host stays active. -/
 theorem race_park_state {B : List Val} {classes : Classes}
