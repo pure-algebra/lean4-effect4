@@ -85,3 +85,35 @@ Its answer label records input and replacement code.
 Its pop label records the actual demand, carried cause, popped frames, selected answer, and emitted events.
 The stronger evaluator classification is still open; no library declaration imports this probe.
 Its labels do not independently certify source admission or an instance's local weight bound.
+
+
+## Pop and interference integration
+
+The shared pop and first-lookup proofs pass independent checks after integration.
+The original scenario endpoints remain unchanged.
+
+Base: `e2998236e`.
+Integrated code head: `7eda5dc76`.
+The coordinator adds the `MachinePopTrace` reader to `Test/All.lean`.
+The code receipts own their placement, scope, and measured size:
+`2026-10-11-codex-stack-consolidation-receipt.md`,
+`2026-10-11-codex-worker-entry-receipt.md`, and
+`2026-10-11-machine-models/codex/timeout-pop-consolidation-receipt.md`.
+
+Verification uses `LEAN_NUM_THREADS=3` throughout:
+
+- `lake build Effect4.Laws.Program.ReleaseCustody.LoopCommand Test.Dogfood.Proofs.HostTimeoutLoop Test.Dogfood.Scenario.Workers` passes, 1206 jobs.
+- `lake build Effect4.Laws.Machine.AnswerFlowCausePop Test.Dogfood.Proofs.MachinePopTrace Test.Dogfood.Scenario.Timeout Test.Machine.AnswerFlow Test.Dogfood.Proofs.HostTimeoutNumberFormFamily` passes, 1145 jobs.
+- `lake env lean docs/research/2026-10-11-machine-models/codex/PopIntegrationAudit.lean` audits 203 declarations within `[propext, Quot.sound]`.
+- `lake env lean docs/research/2026-10-10-goals-packet/codex/MachineLookupInterference.lean` checks the controls and audits 249 declarations within that allowance.
+- The worker research modules compile in order: `MachineWorkersSlots`, `MachineWorkersConnections`, `MachineWorkersNativeSlots`, `MachineWorkersCapturedSlots`.
+- Each worker module uses `lake env lean --root=docs/research/2026-10-10-goals-packet/codex -o .lake/build/lib/lean/<module>.olean docs/research/2026-10-10-goals-packet/codex/<module>.lean`.
+- The same research root checks `MachineWorkersReleaseEntryControl.lean` and `MachineWorkersNativeSlotsAudit.lean`.
+- The worker audit checks 215 declarations within the allowance.
+- All three audits report zero planned goals and zero dependencies on planned goals.
+- `git diff --check` passes.
+
+The worker connection control is synthetic and finite.
+It does not establish a reached worker history.
+No executable definition changes; no behavior gate is reached.
+The logs sit under `2026-10-11-machine-models/codex/` with their integration check names.
