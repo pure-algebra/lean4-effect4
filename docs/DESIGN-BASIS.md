@@ -1056,6 +1056,21 @@ target into a `const L_<path>` (`printModule`) so the host sees one object. Gril
 path leaves every other path's entry untouched (`MemoWorld.find?_append_other_key`,
 `LAYER-FB-LAYER-IDENTITY`); a forged path is the refusal row.
 
+**A layer in a body is keyed by its call too** (amended 2026-10-10; decisions row 341, step 3,
+the owner's option B). `LayerId := List Nat × CallId` (`src/Effect4/Machine/Alphabets.lean`): the
+path, and the call that runs the layer when the path stands in a definition's body, `[]`
+elsewhere (`Point.layerKey`, `Point.layerCall`, `src/Effect4/Program/Compile.lean`). A call is
+named by the paths of the invocations on its chain: an invocation at `s` under call `c` runs its
+body under `s :: c`, and a parameter's run resumes its site under the caller's call, the tail.
+rc.112 makes one layer object for each evaluation of a function body (`Layer.ts`,
+`MemoMapImpl.map`), so a body's layer is built once per call. A module-level layer and every layer
+of the main program keep the path alone. Two calls that one caller makes at one site share a
+name. Their builds never meet: an entry is visible only below the provide that built it
+(`MemoWorld.get`'s parent walk), and no call starts there under the name of the call that built
+it. The name is computed from the program, so the key adds no fresh name to a schedule. The
+controls are `oneCall` (one build) and `nestedCall` (two builds) in
+`Test/Program/LayerSharingContract.lean`.
+
 **A layer is built where it was checked, and its value fits its key** (amended 2026-10-01; rows 104
 and 105, landed at `d20f3292` and `57c93ba4`). Both machines build a layer at its checked lexical
 point: the layer child with the empty environment (`Point.layerBuild`), which matches the checker's

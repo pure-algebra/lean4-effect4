@@ -234,7 +234,7 @@ theorem memoize_typed {w : World} {q : Point} {m : MemoMapId} {scope : Nat} {lt 
   refine seqGuard_typed root
     (mid := ⟨.union .unit (.prod (.deferredOf (.handle Ty.contextTarget) lt.error) Ty.memoMap),
       .never, Env.Requirement.empty⟩) ?_ (Bounds.subN_never _) (fun w2 o2 v hv => ?_)
-  · refine TypedProg.store (op := .memoGet q.path m) (cert := lt.error) ⟨l, lt, hat, hcheck, rfl⟩
+  · refine TypedProg.store (op := .memoGet q.layerKey m) (cert := lt.error) ⟨l, lt, hat, hcheck, rfl⟩
       (fun w' _ ans post => .pure (strongExit_success w' _ ans ?_))
     rcases post with rfl | ⟨cell, owner, hhit, hdecl, hpresent⟩
     · exact Or.inl trivial
@@ -250,7 +250,7 @@ theorem memoize_typed {w : World} {q : Point} {m : MemoMapId} {scope : Nat} {lt 
       rw [if_pos rfl]
       refine seqGuard_typed root (mid := EffTy.pure Ty.scope) ?_ (Bounds.subN_never _)
         (fun w3 o3 u hu => ?_)
-      · exact TypedProg.store (op := .memoBuild q.path m) (cert := (.handle Ty.contextTarget, lt.error))
+      · exact TypedProg.store (op := .memoBuild q.layerKey m) (cert := (.handle Ty.contextTarget, lt.error))
           ⟨l, lt, hat, hcheck, rfl⟩ (fun w'' _ ans post => .pure (strongExit_success w'' _ ans post))
       · obtain ⟨layerScope, rfl, hls⟩ := fits_scope_inv hu
         simp only [seqR, Val.scope?_scopeHandle]
@@ -262,7 +262,7 @@ theorem memoize_typed {w : World} {q : Point} {m : MemoMapId} {scope : Nat} {lt 
         exact onExit_typed root (b := buildTy lt) (f := EffTy.pure .unit) (Ty.subN_refl _)
           (Ty.subN_refl _) (Bounds.subN_never _)
           (hcons w4 (leHost_trans _ _ _ o13 o4) layerScope (scopeLive_mono o4.1 hls))
-          (fun w5 _ ex hex => TypedProg.store (op := .memoComplete q.path m ex) (cert := ())
+          (fun w5 _ ex hex => TypedProg.store (op := .memoComplete q.layerKey m ex) (cert := ())
             ⟨l, lt, hat, hcheck, hex⟩ (fun w6 _ ans post => by
               subst post
               exact .pure (strongExit_success w6 _ _ trivial)))

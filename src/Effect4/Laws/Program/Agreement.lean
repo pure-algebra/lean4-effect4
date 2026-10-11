@@ -804,11 +804,11 @@ theorem contAOf_fromBuildThen_other (q : Point) (m : MemoMapId) (v : Val) (hne :
 theorem contAOf_memoize_hit (q : Point) (m : MemoMapId) (scope : Nat) (cell : DeferredKey)
     (owner : MemoMapId) :
     Program.contAOf root (.memoize q m scope) (Val.memoHit cell owner) =
-      Prim.onSuccess (scopeAddAt scope (FinName.memoEntry q.path owner)) (.awaitPromise cell) := by aesop
+      Prim.onSuccess (scopeAddAt scope (FinName.memoEntry q.layerKey owner)) (.awaitPromise cell) := by aesop
 
 theorem contAOf_memoize_unit (q : Point) (m : MemoMapId) (scope : Nat) :
     Program.contAOf root (.memoize q m scope) Val.unit =
-      Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.memoBuild q.path m)))
+      Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.memoBuild q.layerKey m)))
         (.buildIntoLayerScope q m scope) := by aesop
 
 theorem contAOf_memoize_other (q : Point) (m : MemoMapId) (scope : Nat) (v : Val)
@@ -823,7 +823,7 @@ theorem contAOf_awaitPromise (cell : DeferredKey) (v : Val) :
 
 theorem contAOf_buildIntoLayerScope_scope (q : Point) (m : MemoMapId) (scope layerScope : Nat) :
     Program.contAOf root (.buildIntoLayerScope q m scope) (Val.scopeHandle layerScope) =
-      Prim.onSuccess (scopeAddAt scope (FinName.memoEntry q.path m))
+      Prim.onSuccess (scopeAddAt scope (FinName.memoEntry q.layerKey m))
         (.thenBuildInto q m layerScope) := by aesop
 
 theorem contAOf_buildIntoLayerScope_other (q : Point) (m : MemoMapId) (scope : Nat) (v : Val) (hne : ∀ x, v ≠ Val.scopeHandle x) :
@@ -833,7 +833,7 @@ theorem contAOf_buildIntoLayerScope_other (q : Point) (m : MemoMapId) (scope : N
 theorem contAOf_thenBuildInto (q : Point) (m : MemoMapId) (layerScope : Nat) (v : Val) :
     Program.contAOf root (.thenBuildInto q m layerScope) v =
       Prim.onExit (constructionAt root q layerScope)
-        (.store (Name.finalizerName (FinName.memoDone q.path m))) false := by aesop
+        (.store (Name.finalizerName (FinName.memoDone q.layerKey m))) false := by aesop
 
 theorem contAOf_freshThen_memoMap (q : Point) (scope : Nat) (id : MemoMapId) :
     Program.contAOf root (.freshThen q scope) (Val.memoMap id) = resolveLayer root q id scope := by aesop
@@ -947,7 +947,7 @@ theorem contEOf_orDie (c : CauseV) :
 
 theorem suspendBodyAt_memoLookup (q : Point) (m : MemoMapId) (scope : Nat) :
     suspendBodyAt root (.memoLookup q m scope) =
-      Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.memoGet q.path m))) (.memoize q m scope) := by aesop
+      Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.memoGet q.layerKey m))) (.memoize q m scope) := by aesop
 
 theorem withFiberOf_forkLayer (q : Point) (m : MemoMapId) (scope : Nat) :
     (interpOf root).withFiberOf (.forkLayer q m scope) =
@@ -1418,7 +1418,7 @@ theorem suspendBodyAt_call {root : NativeEff} {q : Point} {k : Nat} {index : Nat
     (h : Node.at_ (Node.eff root) q.path = some (Node.eff (.perform (.call index) r))) :
     suspendBodyAt root (EffThunk.body q) =
       match evalTerm q.env r, defBodyPath root index with
-      | some v, some path => resolve root { q.redirect path with env := [v] }
+      | some v, some path => resolve root { q.redirect path with env := [v], call := q.path :: q.call }
       | _, _ => badShape := by
   simp only [suspendBodyAt, hf, h]
   rfl
@@ -1434,7 +1434,8 @@ theorem suspendBodyAt_invoke {root : NativeEff} {q : Point} {k : Nat} {index : N
         resolve root
           { q.redirect path with
             env := [v]
-            params := argSitesAt (q.path ++ [0]) q.env args :: q.params }
+            params := argSitesAt (q.path ++ [0]) q.env args :: q.params
+            call := q.path :: q.call }
       | _, _ => badShape := by
   simp only [suspendBodyAt, hf, h]
   rfl
@@ -1450,7 +1451,8 @@ theorem suspendBodyAt_param {root : NativeEff} {q : Point} {k : Nat} {i : Nat} {
       | some v, top :: rest =>
         match top[i]? with
         | some site =>
-          resolve root { q.redirect site.path with env := site.env ++ [v], params := rest }
+          resolve root
+            { q.redirect site.path with env := site.env ++ [v], params := rest, call := q.call.tail }
         | none => badShape
       | _, _ => badShape := by
   simp only [suspendBodyAt, hf, h]

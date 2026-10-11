@@ -109,7 +109,7 @@ module Api_gen_inst = struct
   let scope_count (m : machine) : int = List.length (stores_of m).scopes
   let memo_map_count (m : machine) : int = List.length (stores_of m).memo
 
-  let memo_paths (m : machine) : (int * int list list) list =
+  let memo_paths (m : machine) : (int * (int list * int list list) list) list =
     List.map (fun (mm : memo_map) -> (mm.id, List.map fst mm.entries)) (stores_of m).memo
 
   let f_id (f : fiber) : fiber_id = f.id

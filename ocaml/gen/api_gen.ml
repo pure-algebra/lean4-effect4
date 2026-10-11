@@ -217,6 +217,7 @@ and point = {
   completed : (fiber_id * (val_, err, defect, fiber_id, unit) exit_) list;
   root : int;
   params : arg_site list list;
+  call : int list list;
 }
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'k) iter_step = IterStep_done of 'b | IterStep_halt of ('e, 'd, 'i, 'a) cause | IterStep_resume of 'k * 'nu
 and ('nu, 's, 'b, 'e, 'd, 'i, 'a) prim =
@@ -348,8 +349,8 @@ and fin_name =
   | FinName_parkThen of int
   | FinName_foreign of capture
   | FinName_closeChildOnFailure of int
-  | FinName_memoEntry of int list * memo_map_id
-  | FinName_memoDone of int list * memo_map_id
+  | FinName_memoEntry of (int list * int list list) * memo_map_id
+  | FinName_memoDone of (int list * int list list) * memo_map_id
 and scope_mode = ScopeMode_forkIn | ScopeMode_fiberRunIn
 and ctx = { services : val_ context; max_ops_before_yield : int; prevent_yield : bool }
 and observer_mode = ObserverMode_awaitValue | ObserverMode_joinEffect
@@ -382,10 +383,10 @@ and sync_op =
   | SyncOp_scopeIsClosed of int
   | SyncOp_scopeFork of int * finalizer_strategy
   | SyncOp_memoFork of memo_map_id option
-  | SyncOp_memoGet of int list * memo_map_id
-  | SyncOp_memoBuild of int list * memo_map_id
-  | SyncOp_memoComplete of int list * memo_map_id * (val_, err, defect, fiber_id, unit) exit_
-  | SyncOp_memoRelease of int list * memo_map_id
+  | SyncOp_memoGet of (int list * int list list) * memo_map_id
+  | SyncOp_memoBuild of (int list * int list list) * memo_map_id
+  | SyncOp_memoComplete of (int list * int list list) * memo_map_id * (val_, err, defect, fiber_id, unit) exit_
+  | SyncOp_memoRelease of (int list * int list list) * memo_map_id
 and context_update = ContextUpdate_setTo of val_ context | ContextUpdate_provide of val_ context | ContextUpdate_provideService of service_key * val_
 and region =
   | Region_program of point
@@ -439,6 +440,7 @@ and capture = {
   ctx : ctx;
   root : int;
   params : arg_site list list;
+  call : int list list;
 }
 and wake_key = { kind : handle_kind; index : int }
 and handle_kind =
@@ -563,7 +565,7 @@ and 'op action_term =
   | ActionTerm_closeScope of term * term
   | ActionTerm_getInterruptible
 and scope_entry = { key : int; scope : (int, fin_name, val_, err, defect, fiber_id, unit) scope }
-and memo_map = { id : memo_map_id; parent : memo_map_id option; entries : (int list * memo_entry) list }
+and memo_map = { id : memo_map_id; parent : memo_map_id option; entries : ((int list * int list list) * memo_entry) list }
 and memo_entry = {
   observers : int;
   layer_scope : int;
@@ -4508,12 +4510,12 @@ let program_native_op_sync_op_of (x_1 : native_op) (x_2 : val_ list) (x_3 : val_
 
 let program_point_child (p : point) (i : int) : point =
   match (p : point) with
-    | { path = path; env = env; fuel = fuel; tape = tape; completed = completed; root = root; params = params } -> (let _x_1 = [] in
+    | { path = path; env = env; fuel = fuel; tape = tape; completed = completed; root = root; params = params; call = call } -> (let _x_1 = [] in
       let _x_2 = i :: _x_1 in
       let _x_3 = path @ _x_2 in
       let _x_4 = 1 in
       let _x_5 = max 0 (fuel - _x_4) in
-      ({ path = _x_3; env = env; fuel = _x_5; tape = tape; completed = completed; root = root; params = params } : point))
+      ({ path = _x_3; env = env; fuel = _x_5; tape = tape; completed = completed; root = root; params = params; call = call } : point))
 
 
 
@@ -4814,13 +4816,13 @@ let rec program_run_stmts (root : native_op eff) (p : point) (x_1 : int) (x_2 : 
   let zero = 0 in
   let is_zero = x_1 = zero in
   if is_zero then (match (p : point) with
-      | { path = path; fuel = fuel; tape = tape; completed = completed; root = root_1; params = params; _ } -> (let _x_10 = [] in
+      | { path = path; fuel = fuel; tape = tape; completed = completed; root = root_1; params = params; call = call; _ } -> (let _x_10 = [] in
         let _x_11 = zero :: _x_10 in
         let _x_12 = path @ _x_11 in
         let _x_13 = _x_12 @ x_2 in
-        let _x_14 = ({ path = _x_13; env = x_3; fuel = zero; tape = tape; completed = completed; root = root_1; params = params } : point) in
+        let _x_14 = ({ path = _x_13; env = x_3; fuel = zero; tape = tape; completed = completed; root = root_1; params = params; call = call } : point) in
         let _x_15 = program_frontier _x_14 in
-        let _x_16 = ({ path = path; env = x_3; fuel = fuel; tape = tape; completed = completed; root = root_1; params = params } : point) in
+        let _x_16 = ({ path = path; env = x_3; fuel = fuel; tape = tape; completed = completed; root = root_1; params = params; call = call } : point) in
         let _x_17 = false in
         let _x_18 = EffName_gen (_x_16, x_2, _x_17) in
         let _x_19 = IterStep_resume (_x_15, _x_18) in
@@ -4884,7 +4886,7 @@ let rec program_run_stmts (root : native_op eff) (p : point) (x_1 : int) (x_2 : 
 
 and program_run_stmts_yield_of (root : native_op eff) (p : point) (e : native_op eff) (bind : bool) (fuel : int) (pc : int list) (env : val_ list) (folded : val_ list) : val_ list * (eff_name, eff_thunk, val_, err, defect, int, unit, (eff_name, eff_thunk, val_, err, defect, int, unit) prim) iter_step =
   match (p : point) with
-    | { path = path; fuel = fuel_1; tape = tape; completed = completed; root = root_1; params = params; _ } -> (let _x_1 = 0 in
+    | { path = path; fuel = fuel_1; tape = tape; completed = completed; root = root_1; params = params; call = call; _ } -> (let _x_1 = 0 in
       let _x_2 = [] in
       let _x_3 = _x_1 :: _x_2 in
       let _x_4 = path @ _x_3 in
@@ -4893,7 +4895,7 @@ and program_run_stmts_yield_of (root : native_op eff) (p : point) (e : native_op
       let _x_7 = _x_5 @ _x_6 in
       let _x_8 = 1 in
       let _x_9 = fuel + _x_8 in
-      let q = ({ path = _x_7; env = env; fuel = _x_9; tape = tape; completed = completed; root = root_1; params = params } : point) in
+      let q = ({ path = _x_7; env = env; fuel = _x_9; tape = tape; completed = completed; root = root_1; params = params; call = call } : point) in
       let _x_10 = program_compile_eff e q in
       match (_x_10 : (_, _, _, _, _, _, _) prim) with
         | Prim_success value_11 -> (let _x_12 = _x_8 :: _x_2 in
@@ -4906,7 +4908,7 @@ and program_run_stmts_yield_of (root : native_op eff) (p : point) (e : native_op
             _jp_14 _x_20) else _jp_14 env)
         | Prim_failure cause_21 -> (let _x_22 = IterStep_halt cause_21 in
           folded, _x_22)
-        | _ -> (let _x_24 = ({ path = path; env = env; fuel = fuel_1; tape = tape; completed = completed; root = root_1; params = params } : point) in
+        | _ -> (let _x_24 = ({ path = path; env = env; fuel = fuel_1; tape = tape; completed = completed; root = root_1; params = params; call = call } : point) in
           let _x_25 = _x_8 :: _x_2 in
           let _x_26 = pc @ _x_25 in
           let _x_27 = EffName_gen (_x_24, _x_26, bind) in
@@ -6218,21 +6220,37 @@ let rec list_find_opt_at_memo_world_map_at_spec_0 (id : int) (x_1 : memo_map lis
 
 
 
-(* LCNF mono: List.find?._at_.Effect4.Machine.MemoWorld.entryAt.spec_0 (layer : List Nat) (x.1 : List (Prod (List Nat) Effect4.Machine.MemoEntry)) : Option (Prod (List Nat) Effect4.Machine.MemoEntry) *)
+(* LCNF mono: Effect4.Machine.instDecidableEqFinName.decEq._lam_0 (a : List Nat) (b : List Nat) : Bool *)
 
-let rec list_find_opt_at_memo_world_entry_at_spec_0 (layer : int list) (x_1 : (int list * memo_entry) list) : (int list * memo_entry) option =
+let inst_decidable_eq_fin_name_dec_eq__lam_0 (a : int list) (b : int list) : bool =
+  let _x_1 = fun _b1 _b2 -> _b1 = _b2 in
+  inst_decidable_eq_list _x_1 a b
+
+
+
+(* LCNF mono: Effect4.Machine.instDecidableEqFinName.decEq._lam_1 (_f.1 : (List Nat) -> (List Nat) -> Bool) (a : List (List Nat)) (b : List (List Nat)) : Bool *)
+
+let inst_decidable_eq_fin_name_dec_eq__lam_1 (_f_1 : int list -> int list -> bool) (a : int list list) (b : int list list) : bool =
+  inst_decidable_eq_list _f_1 a b
+
+
+
+(* LCNF mono: List.find?._at_.Effect4.Machine.MemoWorld.entryAt.spec_0 (layer : Prod (List Nat) (List (List Nat))) (x.1 : List (Prod (Prod (List Nat) (List (List Nat))) Effect4.Machine.MemoEntry)) : Option (Prod (Prod (List Nat) (List (List Nat))) Effect4.Machine.MemoEntry) *)
+
+let rec list_find_opt_at_memo_world_entry_at_spec_0 (layer : int list * int list list) (x_1 : ((int list * int list list) * memo_entry) list) : ((int list * int list list) * memo_entry) option =
   match x_1 with
     | [] -> None
     | head_3 :: tail_4 -> (match head_3 with
-        | fst_1, _ -> (let _x_5 = fun _b1 _b2 -> _b1 = _b2 in
-          let _x_6 = inst_decidable_eq_list _x_5 fst_1 layer in
-          if _x_6 then Some head_3 else list_find_opt_at_memo_world_entry_at_spec_0 layer tail_4))
+        | fst_1, _ -> (let _f_5 = inst_decidable_eq_fin_name_dec_eq__lam_0 in
+          let _f_6 = inst_decidable_eq_fin_name_dec_eq__lam_1 _f_5 in
+          let _x_7 = inst_decidable_eq_prod _f_5 _f_6 fst_1 layer in
+          if _x_7 then Some head_3 else list_find_opt_at_memo_world_entry_at_spec_0 layer tail_4))
 
 
 
-(* LCNF mono: Effect4.Machine.MemoWorld.entryAt (w : List Effect4.Machine.MemoMap) (id : Nat) (layer : List Nat) : Option Effect4.Machine.MemoEntry *)
+(* LCNF mono: Effect4.Machine.MemoWorld.entryAt (w : List Effect4.Machine.MemoMap) (id : Nat) (layer : Prod (List Nat) (List (List Nat))) : Option Effect4.Machine.MemoEntry *)
 
-let memo_world_entry_at (w : memo_map list) (id : int) (layer : int list) : memo_entry option =
+let memo_world_entry_at (w : memo_map list) (id : int) (layer : int list * int list list) : memo_entry option =
   let _x_1 = list_find_opt_at_memo_world_map_at_spec_0 id w in
   match _x_1 with
     | None -> None
@@ -6245,9 +6263,9 @@ let memo_world_entry_at (w : memo_map list) (id : int) (layer : int list) : memo
 
 
 
-(* LCNF mono: Effect4.Machine.MemoWorld.lookup (w : List Effect4.Machine.MemoMap) (layer : List Nat) (x.1 : Nat) (x.2 : Nat) : Option (Prod Nat Effect4.Machine.MemoEntry) *)
+(* LCNF mono: Effect4.Machine.MemoWorld.lookup (w : List Effect4.Machine.MemoMap) (layer : Prod (List Nat) (List (List Nat))) (x.1 : Nat) (x.2 : Nat) : Option (Prod Nat Effect4.Machine.MemoEntry) *)
 
-let rec memo_world_lookup (w : memo_map list) (layer : int list) (x_1 : int) (x_2 : int) : (int * memo_entry) option =
+let rec memo_world_lookup (w : memo_map list) (layer : int list * int list list) (x_1 : int) (x_2 : int) : (int * memo_entry) option =
   let zero = 0 in
   let is_zero = x_1 = zero in
   if is_zero then None else (let _x_4 = memo_world_entry_at w x_2 layer in
@@ -6266,9 +6284,9 @@ let rec memo_world_lookup (w : memo_map list) (layer : int list) (x_1 : int) (x_
 
 
 
-(* LCNF mono: Effect4.Machine.MemoWorld.get (w : List Effect4.Machine.MemoMap) (layer : List Nat) (id : Nat) : Option (Prod Nat Effect4.Machine.MemoEntry) *)
+(* LCNF mono: Effect4.Machine.MemoWorld.get (w : List Effect4.Machine.MemoMap) (layer : Prod (List Nat) (List (List Nat))) (id : Nat) : Option (Prod Nat Effect4.Machine.MemoEntry) *)
 
-let memo_world_get (w : memo_map list) (layer : int list) (id : int) : (int * memo_entry) option =
+let memo_world_get (w : memo_map list) (layer : int list * int list list) (id : int) : (int * memo_entry) option =
   let _x_1 = List.length w in
   let _x_2 = 1 in
   let _x_3 = _x_1 + _x_2 in
@@ -6286,19 +6304,20 @@ let sync_op_step__lam_0 (e : memo_entry) : memo_entry =
 
 
 
-(* LCNF mono: List.mapTR.loop._at_.Effect4.Machine.MemoWorld.updateEntry.spec_0 (layer : List Nat) (f : Effect4.Machine.MemoEntry -> Effect4.Machine.MemoEntry) (a.1 : List (Prod (List Nat) Effect4.Machine.MemoEntry)) (a.2 : List (Prod (List Nat) Effect4.Machine.MemoEntry)) : List (Prod (List Nat) Effect4.Machine.MemoEntry) *)
+(* LCNF mono: List.mapTR.loop._at_.Effect4.Machine.MemoWorld.updateEntry.spec_0 (layer : Prod (List Nat) (List (List Nat))) (f : Effect4.Machine.MemoEntry -> Effect4.Machine.MemoEntry) (a.1 : List (Prod (Prod (List Nat) (List (List Nat))) Effect4.Machine.MemoEntry)) (a.2 : List (Prod (Prod (List Nat) (List (List Nat))) Effect4.Machine.MemoEntry)) : List (Prod (Prod (List Nat) (List (List Nat))) Effect4.Machine.MemoEntry) *)
 
-let rec list_map_tr_loop_at_memo_world_update_entry_spec_0 (layer : int list) (f : memo_entry -> memo_entry) (a_1 : (int list * memo_entry) list) (a_2 : (int list * memo_entry) list) : (int list * memo_entry) list =
+let rec list_map_tr_loop_at_memo_world_update_entry_spec_0 (layer : int list * int list list) (f : memo_entry -> memo_entry) (a_1 : ((int list * int list list) * memo_entry) list) (a_2 : ((int list * int list list) * memo_entry) list) : ((int list * int list list) * memo_entry) list =
   match a_1 with
     | [] -> List.rev a_2
     | head_4 :: tail_5 -> (let _jp_6 = fun _y_7 -> let _x_8 = _y_7 :: a_2 in
       list_map_tr_loop_at_memo_world_update_entry_spec_0 layer f tail_5 _x_8 in
       match head_4 with
-        | fst_1, snd_1 -> (let _x_10 = fun _b1 _b2 -> _b1 = _b2 in
-          let _x_11 = inst_decidable_eq_list _x_10 fst_1 layer in
-          if _x_11 then (let _x_12 = f snd_1 in
-            let _x_13 = fst_1, _x_12 in
-            _jp_6 _x_13) else _jp_6 head_4))
+        | fst_1, snd_1 -> (let _f_10 = inst_decidable_eq_fin_name_dec_eq__lam_0 in
+          let _f_11 = inst_decidable_eq_fin_name_dec_eq__lam_1 _f_10 in
+          let _x_12 = inst_decidable_eq_prod _f_10 _f_11 fst_1 layer in
+          if _x_12 then (let _x_13 = f snd_1 in
+            let _x_14 = fst_1, _x_13 in
+            _jp_6 _x_14) else _jp_6 head_4))
 
 
 
@@ -6324,9 +6343,9 @@ let memo_world_set_map (w : memo_map list) (m : memo_map) : memo_map list =
 
 
 
-(* LCNF mono: Effect4.Machine.MemoWorld.updateEntry (w : List Effect4.Machine.MemoMap) (id : Nat) (layer : List Nat) (f : Effect4.Machine.MemoEntry -> Effect4.Machine.MemoEntry) : List Effect4.Machine.MemoMap *)
+(* LCNF mono: Effect4.Machine.MemoWorld.updateEntry (w : List Effect4.Machine.MemoMap) (id : Nat) (layer : Prod (List Nat) (List (List Nat))) (f : Effect4.Machine.MemoEntry -> Effect4.Machine.MemoEntry) : List Effect4.Machine.MemoMap *)
 
-let memo_world_update_entry (w : memo_map list) (id : int) (layer : int list) (f : memo_entry -> memo_entry) : memo_map list =
+let memo_world_update_entry (w : memo_map list) (id : int) (layer : int list * int list list) (f : memo_entry -> memo_entry) : memo_map list =
   let _x_1 = list_find_opt_at_memo_world_map_at_spec_0 id w in
   match _x_1 with
     | None -> w
@@ -6352,9 +6371,9 @@ let val__memo_hit (c : int) (o : int) : val_ =
 
 
 
-(* LCNF mono: Effect4.Machine.MemoWorld.insertEntry (w : List Effect4.Machine.MemoMap) (id : Nat) (layer : List Nat) (entry : Effect4.Machine.MemoEntry) : List Effect4.Machine.MemoMap *)
+(* LCNF mono: Effect4.Machine.MemoWorld.insertEntry (w : List Effect4.Machine.MemoMap) (id : Nat) (layer : Prod (List Nat) (List (List Nat))) (entry : Effect4.Machine.MemoEntry) : List Effect4.Machine.MemoMap *)
 
-let memo_world_insert_entry (w : memo_map list) (id : int) (layer : int list) (entry : memo_entry) : memo_map list =
+let memo_world_insert_entry (w : memo_map list) (id : int) (layer : int list * int list list) (entry : memo_entry) : memo_map list =
   let _x_1 = list_find_opt_at_memo_world_map_at_spec_0 id w in
   match _x_1 with
     | None -> w
@@ -6377,22 +6396,23 @@ let sync_op_step__lam_1 (_x_1 : int) (e : memo_entry) : memo_entry =
 
 
 
-(* LCNF mono: List.filterTR.loop._at_.Effect4.Machine.MemoWorld.deleteEntry.spec_0 (layer : List Nat) (a.1 : List (Prod (List Nat) Effect4.Machine.MemoEntry)) (a.2 : List (Prod (List Nat) Effect4.Machine.MemoEntry)) : List (Prod (List Nat) Effect4.Machine.MemoEntry) *)
+(* LCNF mono: List.filterTR.loop._at_.Effect4.Machine.MemoWorld.deleteEntry.spec_0 (layer : Prod (List Nat) (List (List Nat))) (a.1 : List (Prod (Prod (List Nat) (List (List Nat))) Effect4.Machine.MemoEntry)) (a.2 : List (Prod (Prod (List Nat) (List (List Nat))) Effect4.Machine.MemoEntry)) : List (Prod (Prod (List Nat) (List (List Nat))) Effect4.Machine.MemoEntry) *)
 
-let rec list_filter_tr_loop_at_memo_world_delete_entry_spec_0 (layer : int list) (a_1 : (int list * memo_entry) list) (a_2 : (int list * memo_entry) list) : (int list * memo_entry) list =
+let rec list_filter_tr_loop_at_memo_world_delete_entry_spec_0 (layer : int list * int list list) (a_1 : ((int list * int list list) * memo_entry) list) (a_2 : ((int list * int list list) * memo_entry) list) : ((int list * int list list) * memo_entry) list =
   match a_1 with
     | [] -> List.rev a_2
     | head_4 :: tail_5 -> (match head_4 with
-        | fst_1, _ -> (let _x_6 = fun _b1 _b2 -> _b1 = _b2 in
-          let _x_7 = inst_decidable_eq_list _x_6 fst_1 layer in
-          if _x_7 then list_filter_tr_loop_at_memo_world_delete_entry_spec_0 layer tail_5 a_2 else (let _x_8 = head_4 :: a_2 in
-            list_filter_tr_loop_at_memo_world_delete_entry_spec_0 layer tail_5 _x_8)))
+        | fst_1, _ -> (let _f_6 = inst_decidable_eq_fin_name_dec_eq__lam_0 in
+          let _f_7 = inst_decidable_eq_fin_name_dec_eq__lam_1 _f_6 in
+          let _x_8 = inst_decidable_eq_prod _f_6 _f_7 fst_1 layer in
+          if _x_8 then list_filter_tr_loop_at_memo_world_delete_entry_spec_0 layer tail_5 a_2 else (let _x_9 = head_4 :: a_2 in
+            list_filter_tr_loop_at_memo_world_delete_entry_spec_0 layer tail_5 _x_9)))
 
 
 
-(* LCNF mono: Effect4.Machine.MemoWorld.deleteEntry (w : List Effect4.Machine.MemoMap) (id : Nat) (layer : List Nat) : List Effect4.Machine.MemoMap *)
+(* LCNF mono: Effect4.Machine.MemoWorld.deleteEntry (w : List Effect4.Machine.MemoMap) (id : Nat) (layer : Prod (List Nat) (List (List Nat))) : List Effect4.Machine.MemoMap *)
 
-let memo_world_delete_entry (w : memo_map list) (id : int) (layer : int list) : memo_map list =
+let memo_world_delete_entry (w : memo_map list) (id : int) (layer : int list * int list list) : memo_map list =
   let _x_1 = list_find_opt_at_memo_world_map_at_spec_0 id w in
   match _x_1 with
     | None -> w
@@ -7845,14 +7865,14 @@ let program_loop_finish_at (root : native_op eff) (p : point) (cursor : val_) : 
 
 let program_point_child_with (p : point) (i : int) (v : val_) : point =
   match (p : point) with
-    | { path = path; env = env; fuel = fuel; tape = tape; completed = completed; root = root; params = params } -> (let _x_1 = [] in
+    | { path = path; env = env; fuel = fuel; tape = tape; completed = completed; root = root; params = params; call = call } -> (let _x_1 = [] in
       let _x_2 = i :: _x_1 in
       let _x_3 = path @ _x_2 in
       let _x_4 = v :: _x_1 in
       let _x_5 = env @ _x_4 in
       let _x_6 = 1 in
       let _x_7 = max 0 (fuel - _x_6) in
-      ({ path = _x_3; env = _x_5; fuel = _x_7; tape = tape; completed = completed; root = root; params = params } : point))
+      ({ path = _x_3; env = _x_5; fuel = _x_7; tape = tape; completed = completed; root = root; params = params; call = call } : point))
 
 
 
@@ -8561,9 +8581,9 @@ let rec program_resolve_layer_zero (x_1 : native_op layer_term) (x_2 : point) (x
 
 let program_point_redirect (p : point) (target : int list) : point =
   match (p : point) with
-    | { env = env; fuel = fuel; tape = tape; completed = completed; root = root; params = params; _ } -> (let _x_1 = 1 in
+    | { env = env; fuel = fuel; tape = tape; completed = completed; root = root; params = params; call = call; _ } -> (let _x_1 = 1 in
       let _x_2 = max 0 (fuel - _x_1) in
-      ({ path = target; env = env; fuel = _x_2; tape = tape; completed = completed; root = root; params = params } : point))
+      ({ path = target; env = env; fuel = _x_2; tape = tape; completed = completed; root = root; params = params; call = call } : point))
 
 
 
@@ -10744,10 +10764,10 @@ let ctx_with_scope (c : ctx) (scope : int) : ctx =
 
 let program_point_capture (p : point) (a : val_) (ctx : ctx) : capture =
   match (p : point) with
-    | { path = path; env = env; fuel = fuel; tape = tape; root = root; params = params; _ } -> (let _x_1 = [] in
+    | { path = path; env = env; fuel = fuel; tape = tape; root = root; params = params; call = call; _ } -> (let _x_1 = [] in
       let _x_2 = a :: _x_1 in
       let _x_3 = env @ _x_2 in
-      ({ path = path; env = _x_3; fuel = fuel; tape = tape; ctx = ctx; root = root; params = params } : capture))
+      ({ path = path; env = _x_3; fuel = fuel; tape = tape; ctx = ctx; root = root; params = params; call = call } : capture))
 
 
 
@@ -10757,10 +10777,10 @@ let program_point_layer_build (p : point) : point =
   let _x_1 = 0 in
   let _x_2 = program_point_child p _x_1 in
   match (_x_2 : point) with
-    | { path = path; fuel = fuel; tape = tape; completed = completed; root = root; params = params; _ } -> (match (p : point) with
+    | { path = path; fuel = fuel; tape = tape; completed = completed; root = root; params = params; call = call; _ } -> (match (p : point) with
         | { env = env; _ } -> (let _x_3 = [] in
           let _x_4 = list_take_tr_go env env _x_1 _x_3 in
-          ({ path = path; env = _x_4; fuel = fuel; tape = tape; completed = completed; root = root; params = params } : point)))
+          ({ path = path; env = _x_4; fuel = fuel; tape = tape; completed = completed; root = root; params = params; call = call } : point)))
 
 
 
@@ -10974,6 +10994,34 @@ let program_inner_layer_at (root : native_op eff) (q : point) (m : int) (child :
                 | _ -> program_compile_layer l_4 q m child)
             | _ -> program_bad_shape)
         | _ -> program_bad_shape)
+
+
+
+(* LCNF mono: Effect4.Program.pathInBodies (x.1 : List Nat) : Bool *)
+
+let program_path_in_bodies (x_1 : int list) : bool =
+  match x_1 with
+    | head_2 :: _ -> (let _x_4 = 0 in
+      head_2 = _x_4)
+    | _ -> false
+
+
+
+(* LCNF mono: Effect4.Program.Point.layerCall (p : Effect4.Program.Point) : List (List Nat) *)
+
+let program_point_layer_call (p : point) : int list list =
+  match (p : point) with
+    | { path = path; call = call; _ } -> (let _x_1 = program_path_in_bodies path in
+      if _x_1 then call else [])
+
+
+
+(* LCNF mono: Effect4.Program.Point.layerKey (p : Effect4.Program.Point) : Prod (List Nat) (List (List Nat)) *)
+
+let program_point_layer_key (p : point) : int list * int list list =
+  match (p : point) with
+    | { path = path; _ } -> (let _x_1 = program_point_layer_call p in
+      path, _x_1)
 
 
 
@@ -11380,147 +11428,147 @@ let program_cont_aof (root : native_op eff) (x_1 : eff_name) (x_2 : val_) : (eff
                           | Val_handle (kind_186, key_187) -> (let _x_188 = 5 in
                             let _x_189 = kind_186 = _x_188 in
                             if _x_189 then (match tail_185 with
-                                | [] -> (match (q_173 : point) with
-                                    | { path = path; _ } -> (let _x_191 = FinName_memoEntry (path, key_187) in
-                                      let _x_192 = program_scope_add_at scope_175 _x_191 in
-                                      let _x_193 = EffName_awaitPromise key_180 in
-                                      Prim_onSuccess (_x_192, _x_193)))
+                                | [] -> (let _x_191 = program_point_layer_key q_173 in
+                                  let _x_192 = FinName_memoEntry (_x_191, key_187) in
+                                  let _x_193 = program_scope_add_at scope_175 _x_192 in
+                                  let _x_194 = EffName_awaitPromise key_180 in
+                                  Prim_onSuccess (_x_193, _x_194))
                                 | _ -> program_bad_shape) else program_bad_shape)
                           | _ -> program_bad_shape)
                       | _ -> program_bad_shape) else program_bad_shape)
                 | _ -> program_bad_shape)
             | _ -> program_bad_shape)
-        | Val_unit -> (match (q_173 : point) with
-            | { path = path_1; _ } -> (let _x_200 = SyncOp_memoBuild (path_1, memo_map_174) in
-              let _x_201 = EffThunk_op _x_200 in
-              let _x_202 = Prim_sync _x_201 in
-              let _x_203 = EffName_buildIntoLayerScope (q_173, memo_map_174, scope_175) in
-              Prim_onSuccess (_x_202, _x_203)))
+        | Val_unit -> (let _x_201 = program_point_layer_key q_173 in
+          let _x_202 = SyncOp_memoBuild (_x_201, memo_map_174) in
+          let _x_203 = EffThunk_op _x_202 in
+          let _x_204 = Prim_sync _x_203 in
+          let _x_205 = EffName_buildIntoLayerScope (q_173, memo_map_174, scope_175) in
+          Prim_onSuccess (_x_204, _x_205))
         | _ -> program_bad_shape)
-    | EffName_awaitPromise cell_206 -> (let _x_207 = EffName_registerAwait cell_206 in
-      let _x_208 = true in
-      let _x_209 = EffName_cancelAwait cell_206 in
-      let _x_210 = Some _x_209 in
-      Prim_async (_x_207, _x_208, _x_210))
-    | EffName_buildIntoLayerScope (q_212, memo_map_213, scope_214) -> (match (x_2 : val_) with
-        | Val_handle (kind_215, key_216) -> (let _x_217 = 4 in
-          let _x_218 = kind_215 = _x_217 in
-          if _x_218 then (match (q_212 : point) with
-              | { path = path_2; _ } -> (let _x_220 = FinName_memoEntry (path_2, memo_map_213) in
-                let _x_221 = program_scope_add_at scope_214 _x_220 in
-                let _x_222 = EffName_thenBuildInto (q_212, memo_map_213, key_216) in
-                Prim_onSuccess (_x_221, _x_222))) else program_bad_shape)
+    | EffName_awaitPromise cell_208 -> (let _x_209 = EffName_registerAwait cell_208 in
+      let _x_210 = true in
+      let _x_211 = EffName_cancelAwait cell_208 in
+      let _x_212 = Some _x_211 in
+      Prim_async (_x_209, _x_210, _x_212))
+    | EffName_buildIntoLayerScope (q_214, memo_map_215, scope_216) -> (match (x_2 : val_) with
+        | Val_handle (kind_217, key_218) -> (let _x_219 = 4 in
+          let _x_220 = kind_217 = _x_219 in
+          if _x_220 then (let _x_222 = program_point_layer_key q_214 in
+            let _x_223 = FinName_memoEntry (_x_222, memo_map_215) in
+            let _x_224 = program_scope_add_at scope_216 _x_223 in
+            let _x_225 = EffName_thenBuildInto (q_214, memo_map_215, key_218) in
+            Prim_onSuccess (_x_224, _x_225)) else program_bad_shape)
         | _ -> program_bad_shape)
-    | EffName_thenBuildInto (q_225, memo_map_226, layer_scope_227) -> (match (q_225 : point) with
-        | { path = path_3; _ } -> (let _x_228 = program_construction_at root q_225 layer_scope_227 in
-          let _x_229 = FinName_memoDone (path_3, memo_map_226) in
-          let _x_230 = Name_finalizerName _x_229 in
-          let _x_231 = EffName_store _x_230 in
-          let _x_232 = false in
-          Prim_onExit (_x_228, _x_231, _x_232)))
-    | EffName_freshThen (q_234, scope_235) -> (match (x_2 : val_) with
-        | Val_handle (kind_236, key_237) -> (let _x_238 = 5 in
-          let _x_239 = kind_236 = _x_238 in
-          if _x_239 then program_resolve_layer root q_234 key_237 scope_235 else program_bad_shape)
+    | EffName_thenBuildInto (q_228, memo_map_229, layer_scope_230) -> (let _x_231 = program_construction_at root q_228 layer_scope_230 in
+      let _x_232 = program_point_layer_key q_228 in
+      let _x_233 = FinName_memoDone (_x_232, memo_map_229) in
+      let _x_234 = Name_finalizerName _x_233 in
+      let _x_235 = EffName_store _x_234 in
+      let _x_236 = false in
+      Prim_onExit (_x_231, _x_235, _x_236))
+    | EffName_freshThen (q_238, scope_239) -> (match (x_2 : val_) with
+        | Val_handle (kind_240, key_241) -> (let _x_242 = 5 in
+          let _x_243 = kind_240 = _x_242 in
+          if _x_243 then program_resolve_layer root q_238 key_241 scope_239 else program_bad_shape)
         | _ -> program_bad_shape)
-    | EffName_provideThen (q_243, memo_map_244, scope_245, mode_246) -> program_provide_then_k q_243 memo_map_244 scope_245 mode_246 x_2
-    | EffName_combineWith (mode_248, that_249) -> program_combine_with_k mode_248 that_249 x_2
-    | EffName_mergeChildren (q_251, memo_map_252) -> (match (x_2 : val_) with
-        | Val_handle (kind_253, key_254) -> (let _x_255 = 4 in
-          let _x_256 = kind_253 = _x_255 in
-          if _x_256 then (let _x_258 = FinalizerStrategy_sequential in
-            let _x_259 = SyncOp_scopeFork (key_254, _x_258) in
-            let _x_260 = EffThunk_op _x_259 in
-            let _x_261 = Prim_sync _x_260 in
-            let _x_262 = 0 in
-            let _x_263 = [] in
-            let _x_264 = EffName_mergeForkOne (q_251, _x_262, memo_map_252, key_254, _x_263) in
-            Prim_onSuccess (_x_261, _x_264)) else program_bad_shape)
+    | EffName_provideThen (q_247, memo_map_248, scope_249, mode_250) -> program_provide_then_k q_247 memo_map_248 scope_249 mode_250 x_2
+    | EffName_combineWith (mode_252, that_253) -> program_combine_with_k mode_252 that_253 x_2
+    | EffName_mergeChildren (q_255, memo_map_256) -> (match (x_2 : val_) with
+        | Val_handle (kind_257, key_258) -> (let _x_259 = 4 in
+          let _x_260 = kind_257 = _x_259 in
+          if _x_260 then (let _x_262 = FinalizerStrategy_sequential in
+            let _x_263 = SyncOp_scopeFork (key_258, _x_262) in
+            let _x_264 = EffThunk_op _x_263 in
+            let _x_265 = Prim_sync _x_264 in
+            let _x_266 = 0 in
+            let _x_267 = [] in
+            let _x_268 = EffName_mergeForkOne (q_255, _x_266, memo_map_256, key_258, _x_267) in
+            Prim_onSuccess (_x_265, _x_268)) else program_bad_shape)
         | _ -> program_bad_shape)
-    | EffName_mergeForkOne (q_267, i_268, memo_map_269, parent_270, forked_271) -> (match (x_2 : val_) with
-        | Val_handle (kind_272, key_273) -> (let _x_274 = 4 in
-          let _x_275 = kind_272 = _x_274 in
-          if _x_275 then (let _x_277 = program_point_child q_267 i_268 in
-            let _x_278 = EffThunk_forkLayer (_x_277, memo_map_269, key_273) in
-            let _x_279 = Prim_withFiber _x_278 in
-            let _x_280 = EffName_mergeForkNext (q_267, i_268, memo_map_269, parent_270, forked_271) in
-            Prim_onSuccess (_x_279, _x_280)) else program_bad_shape)
+    | EffName_mergeForkOne (q_271, i_272, memo_map_273, parent_274, forked_275) -> (match (x_2 : val_) with
+        | Val_handle (kind_276, key_277) -> (let _x_278 = 4 in
+          let _x_279 = kind_276 = _x_278 in
+          if _x_279 then (let _x_281 = program_point_child q_271 i_272 in
+            let _x_282 = EffThunk_forkLayer (_x_281, memo_map_273, key_277) in
+            let _x_283 = Prim_withFiber _x_282 in
+            let _x_284 = EffName_mergeForkNext (q_271, i_272, memo_map_273, parent_274, forked_275) in
+            Prim_onSuccess (_x_283, _x_284)) else program_bad_shape)
         | _ -> program_bad_shape)
-    | EffName_mergeForkNext (q_283, i_284, memo_map_285, parent_286, forked_287) -> (match (x_2 : val_) with
-        | Val_handle (kind_288, key_289) -> (let _x_290 = 1 in
-          let _x_291 = kind_288 = _x_290 in
-          if _x_291 then (let _x_293 = 0 in
-            let _x_294 = i_284 = _x_293 in
-            if _x_294 then (let _x_302 = FinalizerStrategy_sequential in
-              let _x_303 = SyncOp_scopeFork (parent_286, _x_302) in
-              let _x_304 = EffThunk_op _x_303 in
-              let _x_305 = Prim_sync _x_304 in
-              let _x_306 = 1 in
-              let _x_307 = [] in
-              let _x_308 = key_289 :: _x_307 in
-              let _x_309 = forked_287 @ _x_308 in
-              let _x_310 = EffName_mergeForkOne (q_283, _x_306, memo_map_285, parent_286, _x_309) in
-              Prim_onSuccess (_x_305, _x_310)) else (let _x_295 = [] in
-              let _x_296 = key_289 :: _x_295 in
-              let _x_297 = forked_287 @ _x_296 in
-              let _x_298 = EffThunk_awaitAllFailFast _x_297 in
-              let _x_299 = Prim_withFiber _x_298 in
-              let _x_300 = EffName_mergeContexts in
-              Prim_onSuccess (_x_299, _x_300))) else program_bad_shape)
+    | EffName_mergeForkNext (q_287, i_288, memo_map_289, parent_290, forked_291) -> (match (x_2 : val_) with
+        | Val_handle (kind_292, key_293) -> (let _x_294 = 1 in
+          let _x_295 = kind_292 = _x_294 in
+          if _x_295 then (let _x_297 = 0 in
+            let _x_298 = i_288 = _x_297 in
+            if _x_298 then (let _x_306 = FinalizerStrategy_sequential in
+              let _x_307 = SyncOp_scopeFork (parent_290, _x_306) in
+              let _x_308 = EffThunk_op _x_307 in
+              let _x_309 = Prim_sync _x_308 in
+              let _x_310 = 1 in
+              let _x_311 = [] in
+              let _x_312 = key_293 :: _x_311 in
+              let _x_313 = forked_291 @ _x_312 in
+              let _x_314 = EffName_mergeForkOne (q_287, _x_310, memo_map_289, parent_290, _x_313) in
+              Prim_onSuccess (_x_309, _x_314)) else (let _x_299 = [] in
+              let _x_300 = key_293 :: _x_299 in
+              let _x_301 = forked_291 @ _x_300 in
+              let _x_302 = EffThunk_awaitAllFailFast _x_301 in
+              let _x_303 = Prim_withFiber _x_302 in
+              let _x_304 = EffName_mergeContexts in
+              Prim_onSuccess (_x_303, _x_304))) else program_bad_shape)
         | _ -> program_bad_shape)
-    | EffName_mergeAllChildren (q_313, memo_map_314) -> (match (x_2 : val_) with
-        | Val_handle (kind_315, key_316) -> (let _x_317 = 4 in
-          let _x_318 = kind_315 = _x_317 in
-          if _x_318 then (let _x_320 = 0 in
-            let _x_321 = program_merge_all_count root q_313 in
-            let _x_322 = _x_320 < _x_321 in
-            if _x_322 then (let _x_328 = FinalizerStrategy_sequential in
-              let _x_329 = SyncOp_scopeFork (key_316, _x_328) in
-              let _x_330 = EffThunk_op _x_329 in
-              let _x_331 = Prim_sync _x_330 in
-              let _x_332 = [] in
-              let _x_333 = EffName_mergeAllForkOne (q_313, _x_320, memo_map_314, key_316, _x_332) in
-              Prim_onSuccess (_x_331, _x_333)) else (let _x_323 = [] in
-              let _x_324 = EffThunk_awaitAllFailFast _x_323 in
-              let _x_325 = Prim_withFiber _x_324 in
-              let _x_326 = EffName_mergeContexts in
-              Prim_onSuccess (_x_325, _x_326))) else program_bad_shape)
+    | EffName_mergeAllChildren (q_317, memo_map_318) -> (match (x_2 : val_) with
+        | Val_handle (kind_319, key_320) -> (let _x_321 = 4 in
+          let _x_322 = kind_319 = _x_321 in
+          if _x_322 then (let _x_324 = 0 in
+            let _x_325 = program_merge_all_count root q_317 in
+            let _x_326 = _x_324 < _x_325 in
+            if _x_326 then (let _x_332 = FinalizerStrategy_sequential in
+              let _x_333 = SyncOp_scopeFork (key_320, _x_332) in
+              let _x_334 = EffThunk_op _x_333 in
+              let _x_335 = Prim_sync _x_334 in
+              let _x_336 = [] in
+              let _x_337 = EffName_mergeAllForkOne (q_317, _x_324, memo_map_318, key_320, _x_336) in
+              Prim_onSuccess (_x_335, _x_337)) else (let _x_327 = [] in
+              let _x_328 = EffThunk_awaitAllFailFast _x_327 in
+              let _x_329 = Prim_withFiber _x_328 in
+              let _x_330 = EffName_mergeContexts in
+              Prim_onSuccess (_x_329, _x_330))) else program_bad_shape)
         | _ -> program_bad_shape)
-    | EffName_mergeAllForkOne (q_336, i_337, memo_map_338, parent_339, forked_340) -> (match (x_2 : val_) with
-        | Val_handle (kind_341, key_342) -> (let _x_343 = 4 in
-          let _x_344 = kind_341 = _x_343 in
-          if _x_344 then (let _x_346 = program_point_spine_child q_336 i_337 in
-            let _x_347 = EffThunk_forkLayer (_x_346, memo_map_338, key_342) in
-            let _x_348 = Prim_withFiber _x_347 in
-            let _x_349 = EffName_mergeAllForkNext (q_336, i_337, memo_map_338, parent_339, forked_340) in
-            Prim_onSuccess (_x_348, _x_349)) else program_bad_shape)
+    | EffName_mergeAllForkOne (q_340, i_341, memo_map_342, parent_343, forked_344) -> (match (x_2 : val_) with
+        | Val_handle (kind_345, key_346) -> (let _x_347 = 4 in
+          let _x_348 = kind_345 = _x_347 in
+          if _x_348 then (let _x_350 = program_point_spine_child q_340 i_341 in
+            let _x_351 = EffThunk_forkLayer (_x_350, memo_map_342, key_346) in
+            let _x_352 = Prim_withFiber _x_351 in
+            let _x_353 = EffName_mergeAllForkNext (q_340, i_341, memo_map_342, parent_343, forked_344) in
+            Prim_onSuccess (_x_352, _x_353)) else program_bad_shape)
         | _ -> program_bad_shape)
-    | EffName_mergeAllForkNext (q_352, i_353, memo_map_354, parent_355, forked_356) -> (match (x_2 : val_) with
-        | Val_handle (kind_357, key_358) -> (let _x_359 = 1 in
-          let _x_360 = kind_357 = _x_359 in
-          if _x_360 then (let _x_362 = 1 in
-            let _x_363 = i_353 + _x_362 in
-            let _x_364 = program_merge_all_count root q_352 in
-            let _x_365 = _x_363 < _x_364 in
-            if _x_365 then (let _x_373 = FinalizerStrategy_sequential in
-              let _x_374 = SyncOp_scopeFork (parent_355, _x_373) in
-              let _x_375 = EffThunk_op _x_374 in
-              let _x_376 = Prim_sync _x_375 in
-              let _x_377 = [] in
-              let _x_378 = key_358 :: _x_377 in
-              let _x_379 = forked_356 @ _x_378 in
-              let _x_380 = EffName_mergeAllForkOne (q_352, _x_363, memo_map_354, parent_355, _x_379) in
-              Prim_onSuccess (_x_376, _x_380)) else (let _x_366 = [] in
-              let _x_367 = key_358 :: _x_366 in
-              let _x_368 = forked_356 @ _x_367 in
-              let _x_369 = EffThunk_awaitAllFailFast _x_368 in
-              let _x_370 = Prim_withFiber _x_369 in
-              let _x_371 = EffName_mergeContexts in
-              Prim_onSuccess (_x_370, _x_371))) else program_bad_shape)
+    | EffName_mergeAllForkNext (q_356, i_357, memo_map_358, parent_359, forked_360) -> (match (x_2 : val_) with
+        | Val_handle (kind_361, key_362) -> (let _x_363 = 1 in
+          let _x_364 = kind_361 = _x_363 in
+          if _x_364 then (let _x_366 = 1 in
+            let _x_367 = i_357 + _x_366 in
+            let _x_368 = program_merge_all_count root q_356 in
+            let _x_369 = _x_367 < _x_368 in
+            if _x_369 then (let _x_377 = FinalizerStrategy_sequential in
+              let _x_378 = SyncOp_scopeFork (parent_359, _x_377) in
+              let _x_379 = EffThunk_op _x_378 in
+              let _x_380 = Prim_sync _x_379 in
+              let _x_381 = [] in
+              let _x_382 = key_362 :: _x_381 in
+              let _x_383 = forked_360 @ _x_382 in
+              let _x_384 = EffName_mergeAllForkOne (q_356, _x_367, memo_map_358, parent_359, _x_383) in
+              Prim_onSuccess (_x_380, _x_384)) else (let _x_370 = [] in
+              let _x_371 = key_362 :: _x_370 in
+              let _x_372 = forked_360 @ _x_371 in
+              let _x_373 = EffThunk_awaitAllFailFast _x_372 in
+              let _x_374 = Prim_withFiber _x_373 in
+              let _x_375 = EffName_mergeContexts in
+              Prim_onSuccess (_x_374, _x_375))) else program_bad_shape)
         | _ -> program_bad_shape)
     | EffName_mergeContexts -> program_merge_contexts_k x_2
-    | EffName_serviceLookup key_384 -> program_service_lookup_k key_384 x_2
-    | EffName_bindService key_386 -> program_bind_service_k key_386 x_2
+    | EffName_serviceLookup key_388 -> program_service_lookup_k key_388 x_2
+    | EffName_bindService key_390 -> program_bind_service_k key_390 x_2
     | _ -> Prim_success x_2
 
 
@@ -11769,7 +11817,7 @@ let rec program_arg_sites_at (path : int list) (env : val_ list) (x_1 : native_o
 
 let program_point_of_capture (c : capture) (completed : (int * (val_, err, defect, int, unit) exit_) list) : point =
   match (c : capture) with
-    | { path = path; env = env; fuel = fuel; tape = tape; root = root; params = params; _ } -> ({ path = path; env = env; fuel = fuel; tape = tape; completed = completed; root = root; params = params } : point)
+    | { path = path; env = env; fuel = fuel; tape = tape; root = root; params = params; call = call; _ } -> ({ path = path; env = env; fuel = fuel; tape = tape; completed = completed; root = root; params = params; call = call } : point)
 
 
 
@@ -11781,7 +11829,7 @@ let program_suspend_body_at (root : native_op eff) (x_1 : eff_thunk) : (eff_name
   Prim_failure _x_4 in
   match (x_1 : eff_thunk) with
     | EffThunk_body p_6 -> (match (p_6 : point) with
-        | { path = path; env = env; fuel = fuel; params = params; _ } -> (let zero = 0 in
+        | { path = path; env = env; fuel = fuel; params = params; call = call; _ } -> (let zero = 0 in
           let is_zero = fuel = zero in
           if is_zero then program_frontier p_6 else (let _x_8 = Node_eff root in
             let _x_9 = program_node_at_ _x_8 path in
@@ -11828,65 +11876,70 @@ let program_suspend_body_at (root : native_op eff) (x_1 : eff_thunk) : (eff_name
                                         let _x_67 = [] in
                                         let _x_68 = val__61 :: _x_67 in
                                         let _x_69 = _x_66 @ _x_68 in
-                                        let _x_70 = ({ path = path_1; env = _x_69; fuel = fuel_1; tape = tape; completed = completed; root = root_1; params = params_1 } : point) in
-                                        program_resolve root _x_70))
+                                        let _x_70 = path :: call in
+                                        let _x_71 = ({ path = path_1; env = _x_69; fuel = fuel_1; tape = tape; completed = completed; root = root_1; params = params_1; call = _x_70 } : point) in
+                                        program_resolve root _x_71))
                                   | _ -> program_bad_shape)
                               | _ -> program_bad_shape)
-                          | NativeOp_param index_74 -> (let _x_75 = program_eval_term env request_58 in
-                            match _x_75 with
-                              | Some val__76 -> (match params with
-                                  | head_77 :: tail_78 -> (let _x_79 = list_get_opt_internal head_77 index_74 in
-                                    match _x_79 with
+                          | NativeOp_param index_75 -> (let _x_76 = program_eval_term env request_58 in
+                            match _x_76 with
+                              | Some val__77 -> (match params with
+                                  | head_78 :: tail_79 -> (let _x_80 = list_get_opt_internal head_78 index_75 in
+                                    match _x_80 with
                                       | None -> program_bad_shape
-                                      | Some val__81 -> (match (val__81 : arg_site) with
-                                          | { path = path_2; env = env_1 } -> (let _x_82 = program_point_redirect p_6 path_2 in
-                                            match (_x_82 : point) with
-                                              | { path = path_3; fuel = fuel_2; tape = tape_1; completed = completed_1; root = root_2; _ } -> (let _x_83 = [] in
-                                                let _x_84 = val__76 :: _x_83 in
-                                                let _x_85 = env_1 @ _x_84 in
-                                                let _x_86 = ({ path = path_3; env = _x_85; fuel = fuel_2; tape = tape_1; completed = completed_1; root = root_2; params = tail_78 } : point) in
-                                                program_resolve root _x_86))))
+                                      | Some val__82 -> (match (val__82 : arg_site) with
+                                          | { path = path_2; env = env_1 } -> (let _x_83 = program_point_redirect p_6 path_2 in
+                                            match (_x_83 : point) with
+                                              | { path = path_3; fuel = fuel_2; tape = tape_1; completed = completed_1; root = root_2; _ } -> (let _x_84 = [] in
+                                                let _x_85 = val__77 :: _x_84 in
+                                                let _x_86 = env_1 @ _x_85 in
+                                                let _jp_87 = fun _y_88 -> let _x_89 = ({ path = path_3; env = _x_86; fuel = fuel_2; tape = tape_1; completed = completed_1; root = root_2; params = tail_79; call = _y_88 } : point) in
+                                                program_resolve root _x_89 in
+                                                match call with
+                                                  | [] -> _jp_87 call
+                                                  | _ :: tail_92 -> _jp_87 tail_92))))
                                   | _ -> program_bad_shape)
                               | _ -> program_bad_shape)
                           | _ -> program_compile_eff e_11 p_6)
-                      | Eff_invoke (index_91, request_92, args_93) -> (let _x_94 = program_eval_term env request_92 in
-                        match _x_94 with
-                          | Some val__95 -> (let _x_96 = program_def_body_path root index_91 in
-                            match _x_96 with
-                              | Some val__97 -> (let _x_98 = program_point_redirect p_6 val__97 in
-                                match (_x_98 : point) with
-                                  | { path = path_4; fuel = fuel_3; tape = tape_2; completed = completed_2; root = root_3; _ } -> (let _x_99 = [] in
-                                    let _x_100 = list_take_tr_go env env zero _x_99 in
-                                    let _x_101 = [] in
-                                    let _x_102 = val__95 :: _x_101 in
-                                    let _x_103 = _x_100 @ _x_102 in
-                                    let _x_104 = zero :: _x_101 in
-                                    let _x_105 = path @ _x_104 in
-                                    let _x_106 = program_arg_sites_at _x_105 env args_93 in
-                                    let _x_107 = _x_106 :: params in
-                                    let _x_108 = ({ path = path_4; env = _x_103; fuel = fuel_3; tape = tape_2; completed = completed_2; root = root_3; params = _x_107 } : point) in
-                                    program_resolve root _x_108))
+                      | Eff_invoke (index_96, request_97, args_98) -> (let _x_99 = program_eval_term env request_97 in
+                        match _x_99 with
+                          | Some val__100 -> (let _x_101 = program_def_body_path root index_96 in
+                            match _x_101 with
+                              | Some val__102 -> (let _x_103 = program_point_redirect p_6 val__102 in
+                                match (_x_103 : point) with
+                                  | { path = path_4; fuel = fuel_3; tape = tape_2; completed = completed_2; root = root_3; _ } -> (let _x_104 = [] in
+                                    let _x_105 = list_take_tr_go env env zero _x_104 in
+                                    let _x_106 = [] in
+                                    let _x_107 = val__100 :: _x_106 in
+                                    let _x_108 = _x_105 @ _x_107 in
+                                    let _x_109 = zero :: _x_106 in
+                                    let _x_110 = path @ _x_109 in
+                                    let _x_111 = program_arg_sites_at _x_110 env args_98 in
+                                    let _x_112 = _x_111 :: params in
+                                    let _x_113 = path :: call in
+                                    let _x_114 = ({ path = path_4; env = _x_108; fuel = fuel_3; tape = tape_2; completed = completed_2; root = root_3; params = _x_112; call = _x_113 } : point) in
+                                    program_resolve root _x_114))
                               | _ -> program_bad_shape)
                           | _ -> program_bad_shape)
                       | _ -> program_compile_eff e_11 p_6)
                   | _ -> program_bad_shape)
               | _ -> program_bad_shape)))
-    | EffThunk_memoLookup (q_115, memo_map_116, scope_117) -> (match (q_115 : point) with
-        | { path = path_5; _ } -> (let _x_118 = SyncOp_memoGet (path_5, memo_map_116) in
-          let _x_119 = EffThunk_op _x_118 in
-          let _x_120 = Prim_sync _x_119 in
-          let _x_121 = EffName_memoize (q_115, memo_map_116, scope_117) in
-          Prim_onSuccess (_x_120, _x_121)))
-    | EffThunk_store thunk_123 -> (match (thunk_123 : thunk) with
-        | Thunk_body program_124 -> (let _x_125 = prog_of program_124 in
-          program_embed _x_125)
-        | Thunk_foreign (capture_127, exit__128) -> (match (capture_127 : capture) with
-            | { ctx = ctx; _ } -> (let _x_129 = EffThunk_getCtx in
-              let _x_130 = Prim_withFiber _x_129 in
-              let _x_131 = [] in
-              let _x_132 = program_point_of_capture capture_127 _x_131 in
-              let _x_133 = EffName_releaseUnder (_x_132, ctx, exit__128) in
-              Prim_onSuccess (_x_130, _x_133)))
+    | EffThunk_memoLookup (q_121, memo_map_122, scope_123) -> (let _x_124 = program_point_layer_key q_121 in
+      let _x_125 = SyncOp_memoGet (_x_124, memo_map_122) in
+      let _x_126 = EffThunk_op _x_125 in
+      let _x_127 = Prim_sync _x_126 in
+      let _x_128 = EffName_memoize (q_121, memo_map_122, scope_123) in
+      Prim_onSuccess (_x_127, _x_128))
+    | EffThunk_store thunk_130 -> (match (thunk_130 : thunk) with
+        | Thunk_body program_131 -> (let _x_132 = prog_of program_131 in
+          program_embed _x_132)
+        | Thunk_foreign (capture_134, exit__135) -> (match (capture_134 : capture) with
+            | { ctx = ctx; _ } -> (let _x_136 = EffThunk_getCtx in
+              let _x_137 = Prim_withFiber _x_136 in
+              let _x_138 = [] in
+              let _x_139 = program_point_of_capture capture_134 _x_138 in
+              let _x_140 = EffName_releaseUnder (_x_139, ctx, exit__135) in
+              Prim_onSuccess (_x_137, _x_140)))
         | _ -> _jp_2 ())
     | _ -> _jp_2 ()
 
@@ -12012,7 +12065,7 @@ let run_machine_empty state : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine =
 let program_root_point (fuel : int) (tape : bool list) : point =
   let _x_1 = [] in
   let _x_2 = 0 in
-  ({ path = _x_1; env = _x_1; fuel = fuel; tape = tape; completed = _x_1; root = _x_2; params = _x_1 } : point)
+  ({ path = _x_1; env = _x_1; fuel = fuel; tape = tape; completed = _x_1; root = _x_2; params = _x_1; call = _x_1 } : point)
 
 
 
@@ -12365,15 +12418,15 @@ let run_machine_completed_exits (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_ma
 let program_interp_at__lam_0 (completed : (int * (val_, err, defect, int, unit) exit_) list) (root : native_op eff) (name : eff_name) (value : val_) : (eff_name, eff_thunk, val_, err, defect, int, unit) prim =
   match (name : eff_name) with
     | EffName_cont p_1 -> (match (p_1 : point) with
-        | { path = path; env = env; fuel = fuel; tape = tape; root = root_1; params = params; _ } -> (let _x_2 = ({ path = path; env = env; fuel = fuel; tape = tape; completed = completed; root = root_1; params = params } : point) in
+        | { path = path; env = env; fuel = fuel; tape = tape; root = root_1; params = params; call = call; _ } -> (let _x_2 = ({ path = path; env = env; fuel = fuel; tape = tape; completed = completed; root = root_1; params = params; call = call } : point) in
           let _x_3 = EffName_cont _x_2 in
           program_cont_aof root _x_3 value))
     | EffName_onValue p_5 -> (match (p_5 : point) with
-        | { path = path_1; env = env_1; fuel = fuel_1; tape = tape_1; root = root_2; params = params_1; _ } -> (let _x_6 = ({ path = path_1; env = env_1; fuel = fuel_1; tape = tape_1; completed = completed; root = root_2; params = params_1 } : point) in
+        | { path = path_1; env = env_1; fuel = fuel_1; tape = tape_1; root = root_2; params = params_1; call = call_1; _ } -> (let _x_6 = ({ path = path_1; env = env_1; fuel = fuel_1; tape = tape_1; completed = completed; root = root_2; params = params_1; call = call_1 } : point) in
           let _x_7 = EffName_onValue _x_6 in
           program_cont_aof root _x_7 value))
     | EffName_releaseBody (p_9, exit__10, previous_11) -> (match (p_9 : point) with
-        | { path = path_2; env = env_2; fuel = fuel_2; tape = tape_2; root = root_3; params = params_2; _ } -> (let _x_12 = ({ path = path_2; env = env_2; fuel = fuel_2; tape = tape_2; completed = completed; root = root_3; params = params_2 } : point) in
+        | { path = path_2; env = env_2; fuel = fuel_2; tape = tape_2; root = root_3; params = params_2; call = call_2; _ } -> (let _x_12 = ({ path = path_2; env = env_2; fuel = fuel_2; tape = tape_2; completed = completed; root = root_3; params = params_2; call = call_2 } : point) in
           let _x_13 = EffName_releaseBody (_x_12, exit__10, previous_11) in
           program_cont_aof root _x_13 value))
     | _ -> program_cont_aof root name value
@@ -12385,15 +12438,15 @@ let program_interp_at__lam_0 (completed : (int * (val_, err, defect, int, unit) 
 let program_interp_at__lam_1 (completed : (int * (val_, err, defect, int, unit) exit_) list) (root : native_op eff) (name : eff_name) (cause : (err, defect, int, unit) reason list) : (eff_name, eff_thunk, val_, err, defect, int, unit) prim =
   match (name : eff_name) with
     | EffName_caught p_1 -> (match (p_1 : point) with
-        | { path = path; env = env; fuel = fuel; tape = tape; root = root_1; params = params; _ } -> (let _x_2 = ({ path = path; env = env; fuel = fuel; tape = tape; completed = completed; root = root_1; params = params } : point) in
+        | { path = path; env = env; fuel = fuel; tape = tape; root = root_1; params = params; call = call; _ } -> (let _x_2 = ({ path = path; env = env; fuel = fuel; tape = tape; completed = completed; root = root_1; params = params; call = call } : point) in
           let _x_3 = EffName_caught _x_2 in
           program_cont_eof root _x_3 cause))
     | EffName_caughtError p_5 -> (match (p_5 : point) with
-        | { path = path_1; env = env_1; fuel = fuel_1; tape = tape_1; root = root_2; params = params_1; _ } -> (let _x_6 = ({ path = path_1; env = env_1; fuel = fuel_1; tape = tape_1; completed = completed; root = root_2; params = params_1 } : point) in
+        | { path = path_1; env = env_1; fuel = fuel_1; tape = tape_1; root = root_2; params = params_1; call = call_1; _ } -> (let _x_6 = ({ path = path_1; env = env_1; fuel = fuel_1; tape = tape_1; completed = completed; root = root_2; params = params_1; call = call_1 } : point) in
           let _x_7 = EffName_caughtError _x_6 in
           program_cont_eof root _x_7 cause))
     | EffName_onCause p_9 -> (match (p_9 : point) with
-        | { path = path_2; env = env_2; fuel = fuel_2; tape = tape_2; root = root_3; params = params_2; _ } -> (let _x_10 = ({ path = path_2; env = env_2; fuel = fuel_2; tape = tape_2; completed = completed; root = root_3; params = params_2 } : point) in
+        | { path = path_2; env = env_2; fuel = fuel_2; tape = tape_2; root = root_3; params = params_2; call = call_2; _ } -> (let _x_10 = ({ path = path_2; env = env_2; fuel = fuel_2; tape = tape_2; completed = completed; root = root_3; params = params_2; call = call_2 } : point) in
           let _x_11 = EffName_onCause _x_10 in
           program_cont_eof root _x_11 cause))
     | _ -> program_cont_eof root name cause
@@ -12405,7 +12458,7 @@ let program_interp_at__lam_1 (completed : (int * (val_, err, defect, int, unit) 
 let program_interp_at__lam_2 (completed : (int * (val_, err, defect, int, unit) exit_) list) (root : native_op eff) (thunk : eff_thunk) : (eff_name, eff_thunk, val_, err, defect, int, unit) prim =
   match (thunk : eff_thunk) with
     | EffThunk_body p_1 -> (match (p_1 : point) with
-        | { path = path; env = env; fuel = fuel; tape = tape; root = root_1; params = params; _ } -> (let _x_2 = ({ path = path; env = env; fuel = fuel; tape = tape; completed = completed; root = root_1; params = params } : point) in
+        | { path = path; env = env; fuel = fuel; tape = tape; root = root_1; params = params; call = call; _ } -> (let _x_2 = ({ path = path; env = env; fuel = fuel; tape = tape; completed = completed; root = root_1; params = params; call = call } : point) in
           let _x_3 = EffThunk_body _x_2 in
           program_suspend_body_at root _x_3))
     | _ -> program_suspend_body_at root thunk
@@ -12417,7 +12470,7 @@ let program_interp_at__lam_2 (completed : (int * (val_, err, defect, int, unit) 
 let program_interp_at__lam_3 (completed : (int * (val_, err, defect, int, unit) exit_) list) (root : native_op eff) (name : eff_name) (value : val_) : val_ list * (eff_name, eff_thunk, val_, err, defect, int, unit, (eff_name, eff_thunk, val_, err, defect, int, unit) prim) iter_step =
   match (name : eff_name) with
     | EffName_gen (p_1, pc_2, bind_3) -> (match (p_1 : point) with
-        | { path = path; env = env; fuel = fuel; tape = tape; root = root_1; params = params; _ } -> (let _x_4 = ({ path = path; env = env; fuel = fuel; tape = tape; completed = completed; root = root_1; params = params } : point) in
+        | { path = path; env = env; fuel = fuel; tape = tape; root = root_1; params = params; call = call; _ } -> (let _x_4 = ({ path = path; env = env; fuel = fuel; tape = tape; completed = completed; root = root_1; params = params; call = call } : point) in
           let _jp_5 = fun _y_6 -> let _x_7 = [] in
           program_run_stmts root _x_4 fuel pc_2 _y_6 _x_7 in
           if bind_3 then (let _x_9 = [] in
@@ -12449,7 +12502,7 @@ let program_interp_at__lam_3 (completed : (int * (val_, err, defect, int, unit) 
 let program_interp_at__lam_4 (completed : (int * (val_, err, defect, int, unit) exit_) list) (root : native_op eff) (name : eff_name) (cursor : val_) : (val_, (eff_name, eff_thunk, val_, err, defect, int, unit) prim) loop_next =
   match (name : eff_name) with
     | EffName_loop p_1 -> (match (p_1 : point) with
-        | { path = path; env = env; fuel = fuel; tape = tape; root = root_1; params = params; _ } -> (let _x_2 = ({ path = path; env = env; fuel = fuel; tape = tape; completed = completed; root = root_1; params = params } : point) in
+        | { path = path; env = env; fuel = fuel; tape = tape; root = root_1; params = params; call = call; _ } -> (let _x_2 = ({ path = path; env = env; fuel = fuel; tape = tape; completed = completed; root = root_1; params = params; call = call } : point) in
           program_loop_next_at root _x_2 cursor))
     | _ -> (let _x_4 = Val_unit in
       let _x_5 = Prim_success _x_4 in
@@ -12462,7 +12515,7 @@ let program_interp_at__lam_4 (completed : (int * (val_, err, defect, int, unit) 
 let program_interp_at__lam_5 (completed : (int * (val_, err, defect, int, unit) exit_) list) (root : native_op eff) (name : eff_name) (cursor : val_) (answer : val_) : (val_, (eff_name, eff_thunk, val_, err, defect, int, unit) prim) loop_next =
   match (name : eff_name) with
     | EffName_loop p_1 -> (match (p_1 : point) with
-        | { path = path; env = env; fuel = fuel; tape = tape; root = root_1; params = params; _ } -> (let _x_2 = ({ path = path; env = env; fuel = fuel; tape = tape; completed = completed; root = root_1; params = params } : point) in
+        | { path = path; env = env; fuel = fuel; tape = tape; root = root_1; params = params; call = call; _ } -> (let _x_2 = ({ path = path; env = env; fuel = fuel; tape = tape; completed = completed; root = root_1; params = params; call = call } : point) in
           program_loop_resume_at root _x_2 cursor answer))
     | _ -> (let _x_4 = Val_unit in
       let _x_5 = Prim_success _x_4 in
@@ -12475,7 +12528,7 @@ let program_interp_at__lam_5 (completed : (int * (val_, err, defect, int, unit) 
 let program_interp_at__lam_6 (completed : (int * (val_, err, defect, int, unit) exit_) list) (root : native_op eff) (name : eff_name) (exit_ : (val_, err, defect, int, unit) exit_) : (eff_name, eff_thunk, val_, err, defect, int, unit) prim option =
   match (name : eff_name) with
     | EffName_fin p_1 -> (match (p_1 : point) with
-        | { path = path; env = env; fuel = fuel; tape = tape; root = root_1; params = params; _ } -> (let _x_2 = ({ path = path; env = env; fuel = fuel; tape = tape; completed = completed; root = root_1; params = params } : point) in
+        | { path = path; env = env; fuel = fuel; tape = tape; root = root_1; params = params; call = call; _ } -> (let _x_2 = ({ path = path; env = env; fuel = fuel; tape = tape; completed = completed; root = root_1; params = params; call = call } : point) in
           let _x_3 = 1 in
           let _x_4 = reify_exit_val exit_ in
           let _x_5 = program_point_child_with _x_2 _x_3 _x_4 in
@@ -13159,25 +13212,25 @@ let frame_fiber_resume_cause_at_frame_fiber_step_at_evaluate_prim_step_frame_at_
       let _x_9 = _x_7 :: _x_8 in
       let _x_10 = events @ _x_9 in
       _x_6, _x_10) in
-  let _jp_12 = fun _y_13 _y_14 _y_15 _y_16 _y_17 _y_18 -> let _x_19 = prim_arm_e_at_frame_fiber_resume_cause_at_frame_fiber_step_at_evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3_spec_7_spec_10_spec_16 interp _y_14 _y_17 _y_18 in
+  let _jp_12 = fun _y_13 _y_14 _y_15 _y_16 _y_17 _y_18 -> let _x_19 = prim_arm_e_at_frame_fiber_resume_cause_at_frame_fiber_step_at_evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3_spec_7_spec_10_spec_16 interp _y_16 _y_17 _y_18 in
   match _x_19 with
-    | None -> _jp_4 _y_16
+    | None -> _jp_4 _y_13
     | Some val__20 -> (match val__20 with
         | fst_21, _ -> (let _x_23 = [] in
-          match (_y_13 : (_, _, _, _, _, _, _) frame_fiber) with
+          match (_y_14 : (_, _, _, _, _, _, _) frame_fiber) with
             | { stack = stack; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt; _ } -> (let _x_24 = _x_23 @ stack in
               let _x_25 = ({ current = fst_21; stack = _x_24; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt } : (_, _, _, _, _, _, _) frame_fiber) in
               let _x_26 = FrameStep_running _x_25 in
-              let _x_27 = prim_finalizer_events _y_14 _y_16 in
+              let _x_27 = prim_finalizer_events _y_16 _y_13 in
               let _x_28 = _y_15 @ _x_27 in
               let _x_29 = list_map_tr_loop_at_frame_fiber_step_at_evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3_spec_7_spec_12 _x_23 _x_23 in
               let _x_30 = _x_28 @ _x_29 in
               _x_26, _x_30))) in
   let _jp_32 = fun _y_33 _y_34 _y_35 _y_36 _y_37 -> match provided with
-    | None -> _jp_12 _y_33 _y_34 _y_36 _y_35 _y_37 provided
+    | None -> _jp_12 _y_33 _y_34 _y_35 _y_36 _y_37 provided
     | Some val__38 -> (let _x_39 = frame_pop_delivered_exit pop val__38 in
       let _x_40 = Some _x_39 in
-      _jp_12 _y_33 _y_34 _y_36 _y_35 _y_37 _x_40) in
+      _jp_12 _y_33 _y_34 _y_35 _y_36 _y_37 _x_40) in
   let _jp_41 = fun _y_42 -> match (pop : (_, _, _, _, _, _, _) frame_pop) with
     | { answer = answer; events = events_1; fiber = fiber; carried_cause = carried_cause; _ } -> (let delivered = frame_pop_delivered_exit pop _y_42 in
       match (answer : (_, _, _, _, _, _, _) cont_answer) with
@@ -13191,8 +13244,8 @@ let frame_fiber_resume_cause_at_frame_fiber_step_at_evaluate_prim_step_frame_at_
               let _x_50 = FrameStep_running _x_49 in
               _x_50, events_1))
         | ContAnswer_frame frame_52 -> (match carried_cause with
-            | None -> _jp_32 fiber frame_52 delivered events_1 cause
-            | Some val__53 -> _jp_32 fiber frame_52 delivered events_1 val__53)
+            | None -> _jp_32 delivered fiber events_1 frame_52 cause
+            | Some val__53 -> _jp_32 delivered fiber events_1 frame_52 val__53)
         | ContAnswer_empty -> _jp_4 delivered) in
   match provided with
     | None -> (let _x_54 = Exit_failure cause in
@@ -14050,8 +14103,8 @@ let run_machine_race_opt (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) 
 (* LCNF mono: Effect4.Machine.evaluatePrim.withFiber._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_2.spec_4._redArg (interp : Effect4.Machine.RunInterp lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (m : Effect4.Machine.RunMachine lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameEvent lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (f : Effect4.Machine.RunFiber lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (yielding : Bool) (action : Effect4.Machine.WithFiberAction lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) : Effect4.Machine.Iter lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit lcAny lcAny (Effect4.Prim lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameEvent lcAny lcAny lcAny Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) *)
 
 let evaluate_prim_with_fiber_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_4 (interp : (_, _, _, err, defect, int, unit, _, _, (_, _, _, err, defect, int, unit) prim) run_interp) (m : (_, _, _, err, defect, int, unit, _, _, (_, _, _, err, defect, int, unit) prim, (_, _, _, err, defect, int, unit) frame_fiber, (_, _, _, err, defect, int, unit) frame_event) run_machine) (f : (_, _, _, err, defect, int, unit, _, (_, _, _, err, defect, int, unit) prim, (_, _, _, err, defect, int, unit) frame_fiber) run_fiber) (yielding : bool) (action : (_, _, _, err, defect, int, unit, _, (_, _, _, err, defect, int, unit) prim) with_fiber_action) : (_, _, _, err, defect, int, unit, _, _, (_, _, _, err, defect, int, unit) prim, (_, _, _, err, defect, int, unit) frame_fiber, (_, _, _, err, defect, int, unit) frame_event) iter =
-  let _jp_1 = fun _y_2 _y_3 _y_4 _y_5 _y_6 -> let _x_7 = _y_5 @ _y_6 in
-  ({ machine = _y_4; fiber = _y_3; yielding = yielding; outcome = _y_2; nested = _x_7 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+  let _jp_1 = fun _y_2 _y_3 _y_4 _y_5 _y_6 -> let _x_7 = _y_3 @ _y_6 in
+  ({ machine = _y_5; fiber = _y_4; yielding = yielding; outcome = _y_2; nested = _x_7 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
   match (action : (_, _, _, _, _, _, _, _, _) with_fiber_action) with
     | WithFiberAction_fork (program_9, options_10, site_11) -> (match (options_10 : fork_options) with
         | { start_immediately = start_immediately; daemon = daemon; _ } -> (let _jp_12 = fun _y_13 -> match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
@@ -14066,10 +14119,10 @@ let evaluate_prim_with_fiber_at_evaluate_prim_at_program_exit_scoped_spec_2_spec
                                   let _x_25 = evaluate_prim_with_fiber_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_4__red_arg__lam_0 fst_22 _x_24 in
                                   let _x_26 = Effect4_machine_outcome_continue_ in
                                   if daemon then (let _x_30 = [] in
-                                    _jp_1 _x_26 _x_25 fst_20 snd_23 _x_30) else (let _x_27 = Cmd_trackChild (id, snd_18) in
+                                    _jp_1 _x_26 snd_23 _x_25 fst_20 _x_30) else (let _x_27 = Cmd_trackChild (id, snd_18) in
                                     let _x_28 = [] in
                                     let _x_29 = _x_27 :: _x_28 in
-                                    _jp_1 _x_26 _x_25 fst_20 snd_23 _x_29))))))) in
+                                    _jp_1 _x_26 snd_23 _x_25 fst_20 _x_29))))))) in
           if daemon then _jp_12 m else (match (m : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) with
               | { fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; armed = armed; state = state; trace = trace; stuck = stuck; forks = forks; _ } -> (let _x_31 = true in
                 let _x_32 = ({ fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = _x_31; armed = armed; state = state; trace = trace; stuck = stuck; forks = forks } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
@@ -14360,7 +14413,7 @@ let finalizer_code (interp : (_, _, _, _, _, _, _, _, _, (_, _, _, _, _, _, _) p
 
 let evaluate_prim_finalizer_or_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_5 (interp : (_, _, _, err, defect, int, unit, _, _, (_, _, _, err, defect, int, unit) prim) run_interp) (m : (_, _, _, err, defect, int, unit, _, _, (_, _, _, err, defect, int, unit) prim, (_, _, _, err, defect, int, unit) frame_fiber, (_, _, _, err, defect, int, unit) frame_event) run_machine) (f : (_, _, _, err, defect, int, unit, _, (_, _, _, err, defect, int, unit) prim, (_, _, _, err, defect, int, unit) frame_fiber) run_fiber) (yielding : bool) (exit_ : (_, err, defect, int, unit) exit_) : (_, _, _, err, defect, int, unit, _, _, (_, _, _, err, defect, int, unit) prim, (_, _, _, err, defect, int, unit) frame_fiber, (_, _, _, err, defect, int, unit) frame_event) iter =
   let _jp_1 = fun _y_2 _y_3 _y_4 -> match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (let pop = frame_fiber_get_cont_at_program_exit_scoped_spec_0 frame _y_2 _y_3 _y_4 in
+    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (let pop = frame_fiber_get_cont_at_program_exit_scoped_spec_0 frame _y_3 _y_2 _y_4 in
       match (pop : (_, _, _, _, _, _, _) frame_pop) with
         | { answer = answer; events = events; fiber = fiber; _ } -> (match (answer : (_, _, _, _, _, _, _) cont_answer) with
             | ContAnswer_frame frame_5 -> (match (frame_5 : (_, _, _, _, _, _, _) prim) with
@@ -14385,9 +14438,9 @@ let evaluate_prim_finalizer_or_at_evaluate_prim_at_program_exit_scoped_spec_2_sp
             | _ -> evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3 interp m f yielding)) in
   let _jp_24 = fun _y_25 _y_26 -> match (exit_ : (_, _, _, _, _) exit_) with
     | Exit_success _ -> (let _x_28 = None in
-      _jp_1 _y_25 _y_26 _x_28)
+      _jp_1 _y_26 _y_25 _x_28)
     | Exit_failure cause_29 -> (let _x_30 = Some cause_29 in
-      _jp_1 _y_25 _y_26 _x_30) in
+      _jp_1 _y_26 _y_25 _x_30) in
   let _jp_31 = fun _y_32 -> match (exit_ : (_, _, _, _, _) exit_) with
     | Exit_success _ -> (let _x_34 = false in
       _jp_24 _y_32 _x_34)
@@ -14681,11 +14734,11 @@ let stores_close_scope_unsafe (scope : int) (exit_ : (val_, err, defect, int, un
 
 let program_exit_scoped (root : native_op eff) (m : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, stores, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_event) run_machine) (f : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber) run_fiber) (yielding : bool) (exit_ : (val_, err, defect, int, unit) exit_) : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, stores, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_event) iter =
   match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; _ } -> (let _jp_1 = fun _y_2 _y_3 _y_4 _y_5 _y_6 _y_7 _y_8 _y_9 _y_10 -> let _x_11 = ({ current = _y_10; stack = _y_4; interruptible = _y_3; interrupted_cause = _y_7; deferred_interrupt = _y_9 } : (_, _, _, _, _, _, _) frame_fiber) in
-      let _x_12 = ({ id = id; frame = _x_11; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = _y_2; prevent_yield = _y_6; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = _y_8 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; _ } -> (let _jp_1 = fun _y_2 _y_3 _y_4 _y_5 _y_6 _y_7 _y_8 _y_9 _y_10 -> let _x_11 = ({ current = _y_10; stack = _y_4; interruptible = _y_3; interrupted_cause = _y_9; deferred_interrupt = _y_8 } : (_, _, _, _, _, _, _) frame_fiber) in
+      let _x_12 = ({ id = id; frame = _x_11; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = _y_7; prevent_yield = _y_5; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = _y_2 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
       let _x_13 = Effect4_machine_outcome_continue_ in
       let _x_14 = [] in
-      ({ machine = _y_5; fiber = _x_12; yielding = yielding; outcome = _x_13; nested = _x_14 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+      ({ machine = _y_6; fiber = _x_12; yielding = yielding; outcome = _x_13; nested = _x_14 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
       let _x_16 = run_machine_completed_exits m in
       let _x_17 = [] in
       let interp = program_interp_at root _x_16 _x_17 in
@@ -14711,13 +14764,13 @@ let program_exit_scoped (root : native_op eff) (m : (eff_name, eff_thunk, val_, 
                                     | Some val__35 -> (match val__35 with
                                         | fst_36, snd_37 -> (let m_2 = ({ fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = fst_36; trace = trace; stuck = stuck; forks = forks } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
                                           match snd_37 with
-                                            | None -> _jp_1 max_ops_before_yield interruptible stack m_2 prevent_yield interrupted_cause previous_26 deferred_interrupt _x_29
+                                            | None -> _jp_1 previous_26 interruptible stack prevent_yield m_2 max_ops_before_yield deferred_interrupt interrupted_cause _x_29
                                             | Some val__38 -> (let _x_39 = RunEvent_finalizerProgram (id, finalizer_24, exit__2) in
                                               let _x_40 = _x_39 :: _x_17 in
                                               let _x_41 = run_machine_emit m_2 _x_40 in
                                               let _x_42 = program_embed val__38 in
                                               let _x_43 = finalizer_code interp exit__2 _x_42 in
-                                              _jp_1 max_ops_before_yield interruptible stack _x_41 prevent_yield interrupted_cause previous_26 deferred_interrupt _x_43)))))))
+                                              _jp_1 previous_26 interruptible stack prevent_yield _x_41 max_ops_before_yield deferred_interrupt interrupted_cause _x_43)))))))
                     | _ -> evaluate_prim_at_program_exit_scoped_spec_2 interp m f yielding)
                 | _ -> evaluate_prim_at_program_exit_scoped_spec_2 interp m f yielding)
             | _ -> evaluate_prim_at_program_exit_scoped_spec_2 interp m f yielding) in

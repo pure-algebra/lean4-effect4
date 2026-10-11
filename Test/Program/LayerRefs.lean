@@ -155,7 +155,7 @@ theorem effectRef_expanded_site :
 
 /-- The first memo key a build reads, along one answer per operation: a scope handle for a store
 row, the closing marker's exit, `unit` for a counted suspend. -/
-def firstMemoKey : Nat → RProgram → Option (List Nat)
+def firstMemoKey : Nat → RProgram → Option LayerId
   | 0, _ => none
   | _ + 1, .vis (.inl (.memoGet layer _)) _ => some layer
   | n + 1, .vis (.inl _) k => firstMemoKey n (k (Val.scopeHandle 5))
@@ -168,13 +168,13 @@ def firstMemoKey : Nat → RProgram → Option (List Nat)
 def siteQ : Point := { rootPoint 10 with path := [1, 0] }
 
 /-- The program as written builds the site through its target: the memo key is the target's. -/
-theorem run_key : firstMemoKey 20 (denoteLayer effectRef (.ref [0, 0]) siteQ ⟨0⟩ 0) = some [0, 0] := by
+theorem run_key : firstMemoKey 20 (denoteLayer effectRef (.ref [0, 0]) siteQ ⟨0⟩ 0) = some ([0, 0], []) := by
   decide +kernel
 
 /-- The expansion's copy at the site would key the memo on the site's own path. -/
 theorem expansion_key :
     firstMemoKey 20 (denoteLayer effectRef.expandRefs (.effect key (.succeed (.lit (.nat 7))))
-      siteQ ⟨0⟩ 0) = some [1, 0] := by
+      siteQ ⟨0⟩ 0) = some ([1, 0], []) := by
   decide +kernel
 
 /-- **Red** (proved): the run's build at a reference site is not the expansion's build at the same

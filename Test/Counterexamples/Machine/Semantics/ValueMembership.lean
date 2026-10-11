@@ -133,8 +133,8 @@ def storePre (root : ProgramSource) (w : World) (op : SyncOp) (cert : StoreCert 
   | .scopeMake _ | .scopeAdd _ _ | .scopeRemove _ _ | .scopeIsClosed _ | .scopeFork _ _ => True
   | .memoFork _ | .memoComplete _ _ _ | .memoRelease _ _ => True
   -- the looked-up layer's own checked error type (decision row 90)
-  | .memoGet layer _ => ∃ l lt, Node.at_ (.eff root.program) layer = some (.layer l) ∧
-      Checker.checkLayer (nativeSignature root.table) layer l = .ok lt ∧ lt.error = cert
+  | .memoGet layer _ => ∃ l lt, Node.at_ (.eff root.program) layer.1 = some (.layer l) ∧
+      Checker.checkLayer (nativeSignature root.table) layer.1 l = .ok lt ∧ lt.error = cert
   | .memoBuild _ _ => cert.1.closed = true ∧ cert.2.closed = true
 
 def storePost (w' : World) (op : SyncOp) (cert : StoreCert op) (ans : Val) : Prop :=

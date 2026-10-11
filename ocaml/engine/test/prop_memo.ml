@@ -22,11 +22,11 @@ module type LAYERS = sig
   type 'a t
 
   val empty : 'a t
-  val find_opt : int list -> 'a t -> 'a option
-  val insert : int list -> 'a -> 'a t -> 'a t
-  val update : int list -> ('a -> 'a) -> 'a t -> 'a t
-  val delete : int list -> 'a t -> 'a t
-  val bindings : 'a t -> (int list * 'a) list
+  val find_opt : int list * int list list -> 'a t -> 'a option
+  val insert : int list * int list list -> 'a -> 'a t -> 'a t
+  val update : int list * int list list -> ('a -> 'a) -> 'a t -> 'a t
+  val delete : int list * int list list -> 'a t -> 'a t
+  val bindings : 'a t -> ((int list * int list list) * 'a) list
 end
 
 module _ : LAYERS = E4_memo
@@ -58,17 +58,24 @@ let next () =
 
 let rand n = if n <= 0 then 0 else next () mod n
 
-(* The universe of layer paths: `LayerId := List Nat` (Stores.lean:176) — the layer's path
-   from the root program.  Short, overlapping, with prefixes, so `compare_path`'s
-   prefix-first arm is exercised. *)
+(* A layer's key outside every body: its path under no call. *)
+let k p : M.key = (p, [])
+
+(* The universe of layer keys: `LayerId := List Nat × CallId` (src/Effect4/Machine/Alphabets.lean)
+   — the layer's path from the root program and the call that runs it.  Short, overlapping,
+   with prefixes, so `compare_path`'s prefix-first arm is exercised; one path under three
+   calls, two of them a prefix of the third, so `compare_call`'s arms are too. *)
 let universe =
-  [ []; [ 0 ]; [ 1 ]; [ 0; 0 ]; [ 0; 1 ]; [ 1; 0 ]; [ 0; 0; 0 ]; [ 0; 0; 1 ]; [ 2 ]; [ 1; 0; 3 ] ]
+  List.map k
+    [ []; [ 0 ]; [ 1 ]; [ 0; 0 ]; [ 0; 1 ]; [ 1; 0 ]; [ 0; 0; 0 ]; [ 0; 0; 1 ]; [ 2 ]; [ 1; 0; 3 ] ]
+  @ [ ([ 0; 0; 1 ], [ [ 1; 0 ] ]); ([ 0; 0; 1 ], [ [ 1; 0 ]; [ 1 ] ]); ([ 0; 0; 1 ], [ [ 0; 0; 1; 2 ] ]) ]
 
 let show_path p = "[" ^ String.concat ";" (List.map string_of_int p) ^ "]"
+let show_key ((p, c) : M.key) = show_path p ^ "@" ^ String.concat "/" (List.map show_path c)
 let show_opt = function None -> "-" | Some v -> string_of_int v
 
 let show_bindings b =
-  String.concat "," (List.map (fun (p, v) -> show_path p ^ "=" ^ string_of_int v) b)
+  String.concat "," (List.map (fun (p, v) -> show_key p ^ "=" ^ string_of_int v) b)
 
 (* ------------------------------------------------------------------------ MM1 *)
 let mm1 () =
@@ -83,12 +90,12 @@ let mm1 () =
     done;
     List.iter (fun p -> if M.find_opt p !m <> L.find_opt p !l then ok := false) universe
   done;
-  check "MM1 find_opt is entryAt: the FIRST binding under the path" !ok
+  check "MM1 find_opt is entryAt: the FIRST binding under the key" !ok
 
 (* ------------------------------------------------------------------------ MM2 *)
 let mm2 () =
   let ok = ref true in
-  let p = [ 0; 1 ] in
+  let p = k [ 0; 1 ] in
   let m = M.insert p 1 M.empty and l = L.insert p 1 L.empty in
   let m = M.insert p 2 m and l = L.insert p 2 l in
   let m = M.insert p 3 m and l = L.insert p 3 l in
@@ -116,19 +123,19 @@ let mm2 () =
 (* ------------------------------------------------------------------- MM3, MM4 *)
 let mm3_mm4 () =
   let ok3 = ref true and ok4 = ref true in
-  let m = M.insert [ 0 ] 5 (M.insert [ 1 ] 6 M.empty) in
-  let l = L.insert [ 0 ] 5 (L.insert [ 1 ] 6 L.empty) in
-  let m' = M.update [ 9; 9 ] (fun v -> v + 1) m and l' = L.update [ 9; 9 ] (fun v -> v + 1) l in
+  let m = M.insert (k [ 0 ]) 5 (M.insert (k [ 1 ]) 6 M.empty) in
+  let l = L.insert (k [ 0 ]) 5 (L.insert (k [ 1 ]) 6 L.empty) in
+  let m' = M.update (k [ 9; 9 ]) (fun v -> v + 1) m and l' = L.update (k [ 9; 9 ]) (fun v -> v + 1) l in
   if M.bindings m' <> M.bindings m then ok3 := false;
   if L.bindings l' <> L.bindings l then ok3 := false;
-  if not (M.update [ 9; 9 ] (fun v -> v) m == m) then ok3 := false;
+  if not (M.update (k [ 9; 9 ]) (fun v -> v) m == m) then ok3 := false;
   (* delete removes every matching entry, including the duplicates Lean appended *)
-  let ld = L.insert [ 0 ] 7 (L.insert [ 0 ] 8 l) in
+  let ld = L.insert (k [ 0 ]) 7 (L.insert (k [ 0 ]) 8 l) in
   if L.raw_length ld <> 4 then ok4 := false;
-  let ld = L.delete [ 0 ] ld in
+  let ld = L.delete (k [ 0 ]) ld in
   if L.raw_length ld <> 1 then ok4 := false;
-  if L.find_opt [ 0 ] ld <> None then ok4 := false;
-  if M.bindings (M.delete [ 0 ] m) <> L.bindings ld then ok4 := false;
+  if L.find_opt (k [ 0 ]) ld <> None then ok4 := false;
+  if M.bindings (M.delete (k [ 0 ]) m) <> L.bindings ld then ok4 := false;
   check "MM3 update is a no-op on an absent key (physically the same table)" !ok3;
   check "MM4 delete removes EVERY matching entry" !ok4
 
@@ -140,57 +147,57 @@ let mm5 () =
   let ok = ref true in
   (* a well-formed chain: 0 <- 1 <- 2, the entry only in the root *)
   let world =
-    [ { mid = 0; parent = None; entries = M.insert [ 7 ] 70 M.empty };
+    [ { mid = 0; parent = None; entries = M.insert (k [ 7 ]) 70 M.empty };
       { mid = 1; parent = Some 0; entries = M.empty };
       { mid = 2; parent = Some 1; entries = M.empty } ]
   in
   let lk w layer start =
     M.lookup ~parent:(fun m -> m.parent) ~id:(fun m -> m.mid) ~entries:(fun m -> m.entries) w layer start
   in
-  if lk world [ 7 ] 2 <> Some (0, 70) then ok := false;
-  if lk world [ 7 ] 0 <> Some (0, 70) then ok := false;
-  if lk world [ 8 ] 2 <> None then ok := false;
-  if lk world [ 7 ] 99 <> None then ok := false;
+  if lk world (k [ 7 ]) 2 <> Some (0, 70) then ok := false;
+  if lk world (k [ 7 ]) 0 <> Some (0, 70) then ok := false;
+  if lk world (k [ 8 ]) 2 <> None then ok := false;
+  if lk world (k [ 7 ]) 99 <> None then ok := false;
   (* the nearer map wins over the parent's (`own map first`, Stores.lean:893) *)
   let shadow =
-    [ { mid = 0; parent = None; entries = M.insert [ 7 ] 70 M.empty };
-      { mid = 1; parent = Some 0; entries = M.insert [ 7 ] 71 M.empty } ]
+    [ { mid = 0; parent = None; entries = M.insert (k [ 7 ]) 70 M.empty };
+      { mid = 1; parent = Some 0; entries = M.insert (k [ 7 ]) 71 M.empty } ]
   in
-  if lk shadow [ 7 ] 1 <> Some (1, 71) then ok := false;
+  if lk shadow (k [ 7 ]) 1 <> Some (1, 71) then ok := false;
   (* a FORGED cyclic chain (Stores.lean:906-910): the fuel is what makes lookup total *)
   let cyclic =
     [ { mid = 0; parent = Some 1; entries = M.empty }; { mid = 1; parent = Some 0; entries = M.empty } ]
   in
-  if lk cyclic [ 7 ] 0 <> None then ok := false;
+  if lk cyclic (k [ 7 ]) 0 <> None then ok := false;
   (* the twin agrees, with the same fuel *)
   let lworld =
-    [ { lid = 0; lparent = None; lentries = L.insert [ 7 ] 70 L.empty };
+    [ { lid = 0; lparent = None; lentries = L.insert (k [ 7 ]) 70 L.empty };
       { lid = 1; lparent = Some 0; lentries = L.empty };
       { lid = 2; lparent = Some 1; lentries = L.empty } ]
   in
   let lk' w layer start =
     L.lookup ~parent:(fun m -> m.lparent) ~id:(fun m -> m.lid) ~entries:(fun m -> m.lentries) w layer start
   in
-  if lk' lworld [ 7 ] 2 <> Some (0, 70) then ok := false;
-  if lk' lworld [ 8 ] 2 <> None then ok := false;
+  if lk' lworld (k [ 7 ]) 2 <> Some (0, 70) then ok := false;
+  if lk' lworld (k [ 8 ]) 2 <> None then ok := false;
   check "MM5 lookup is MemoWorld.get: own map first, parent chain, fuel = |world| + 1 (a forged cycle answers None)" !ok
 
 (* ------------------------------------------------------------------ MM6a/MM6b *)
 let mm6 () =
   let ok_a = ref true and ok_b = ref true in
-  (* MM6a: bindings is ascending lexicographic on the path, prefix first *)
-  let m = List.fold_left (fun t p -> M.insert p (List.length p) t) M.empty (List.rev universe) in
+  (* MM6a: bindings is ascending by key: the path lexicographic, prefix first, then the call *)
+  let m = List.fold_left (fun t ((p, _) as q) -> M.insert q (List.length p) t) M.empty (List.rev universe) in
   let ks = List.map fst (M.bindings m) in
   let rec asc = function
-    | a :: (b :: _ as r) -> M.compare_path a b < 0 && asc r
+    | a :: (b :: _ as r) -> M.compare_key a b < 0 && asc r
     | _ -> true
   in
   if not (asc ks) then ok_a := false;
-  if ks <> List.sort M.compare_path universe then ok_a := false;
+  if ks <> List.sort M.compare_key universe then ok_a := false;
   (* MM6b: the twin's bindings — insertion order deduped and sorted — is the same list *)
-  let l = List.fold_left (fun t p -> L.insert p (List.length p) t) L.empty (List.rev universe) in
+  let l = List.fold_left (fun t ((p, _) as q) -> L.insert q (List.length p) t) L.empty (List.rev universe) in
   if M.bindings m <> L.bindings l then ok_b := false;
-  check "MM6a bindings is ascending by path (lexicographic, prefix first), NOT insertion order" !ok_a;
+  check "MM6a bindings is ascending by key (the path lexicographic, prefix first; then the call), NOT insertion order" !ok_a;
   check "MM6b the twin's observable bindings is the same list" !ok_b
 
 (* ------------------------------------------------------------------------ MM7 *)
@@ -214,7 +221,7 @@ let mm7 nops =
        | _ ->
            m := M.delete p !m;
            l := L.delete p !l);
-       (* every observation the machine can make, at every path *)
+       (* every observation the machine can make, at every key *)
        let am = String.concat "|" (List.map (fun q -> show_opt (M.find_opt q !m)) universe) in
        let al = String.concat "|" (List.map (fun q -> show_opt (L.find_opt q !l)) universe) in
        let bm = show_bindings (M.bindings !m) and bl = show_bindings (L.bindings !l) in
@@ -229,7 +236,7 @@ let mm7 nops =
   | Some (n, am, al, bm, bl) ->
       Printf.printf "  #%d find map=%s list=%s\n  bindings map=%s\n  bindings list=%s\n" n am al bm bl);
   check
-    (Printf.sprintf "MM7 agreement with the Lean list at every path over %d random ops" nops)
+    (Printf.sprintf "MM7 agreement with the Lean list at every key over %d random ops" nops)
     (match !bad with None -> true | Some _ -> false)
 
 let () =

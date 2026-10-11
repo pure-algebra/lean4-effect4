@@ -169,7 +169,7 @@ theorem layer_checks :
       .ok ⟨Env.Requirement.single natKey, .never, Env.Requirement.empty⟩ := by decide +kernel
 
 def memoAwait (m : MemoMapId) : RProgram :=
-  .vis (.inl (.memoGet [0] m)) fun v => match Val.memoHit? v with
+  .vis (.inl (.memoGet ([0], []) m)) fun v => match Val.memoHit? v with
     | some (cell, _) => .vis (.inr (.async (.registerAwait cell) (Val.promise cell))) Effects.Program.pure
     | none => .pure (.failure (Cause.interrupt none))
 

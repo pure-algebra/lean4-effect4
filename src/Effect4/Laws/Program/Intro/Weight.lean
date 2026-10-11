@@ -64,12 +64,20 @@ theorem weight_redirect_lt (p : Point) (target : List Nat) (h : p.fuel ≠ 0)
     ({ p.redirect target with completed, env } : Point).weight < p.weight := by
   simp only [Point.weight, Point.redirect]; omega
 
-/-- A hop that also sets the stack of the calls' programs (decisions row 340) spends one fuel, as
-`weight_redirect_lt`: the weight reads no stack. Its consumers are `intro_invoke` and
-`intro_param`. -/
+/-- A hop that also sets the running call (decisions row 341, step 3) spends one fuel, as
+`weight_redirect_lt`: the weight reads no call. Its consumer is `intro_call`. -/
+theorem weight_redirect_call_lt (p : Point) (target : List Nat) (h : p.fuel ≠ 0)
+    (completed : List (FiberId × ExitV)) (env : List Val) (call : CallId) :
+    ({ p.redirect target with completed, env, call } : Point).weight < p.weight := by
+  simp only [Point.weight, Point.redirect]; omega
+
+/-- A hop that also sets the stack of the calls' programs (decisions row 340) and the running
+call spends one fuel, as `weight_redirect_lt`: the weight reads no stack and no call. Its
+consumers are `intro_invoke` and `intro_param`. -/
 theorem weight_redirect_params_lt (p : Point) (target : List Nat) (h : p.fuel ≠ 0)
-    (completed : List (FiberId × ExitV)) (env : List Val) (params : List (List ArgSite)) :
-    ({ p.redirect target with completed, env, params } : Point).weight < p.weight := by
+    (completed : List (FiberId × ExitV)) (env : List Val) (params : List (List ArgSite))
+    (call : CallId) :
+    ({ p.redirect target with completed, env, params, call } : Point).weight < p.weight := by
   simp only [Point.weight, Point.redirect]; omega
 
 /-- The spine of a `mergeAll` walked `i` steps in from a point (`Node.child`'s

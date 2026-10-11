@@ -324,7 +324,7 @@ module type INSTANCE = sig
   val cell_count : machine -> int
   val scope_count : machine -> int
   val memo_map_count : machine -> int
-  val memo_paths : machine -> (int * int list list) list
+  val memo_paths : machine -> (int * (int list * int list list) list) list
   val f_id : fiber -> fiber_id
   val f_exit : fiber -> (val_, err, defect, fiber_id, unit) exit_ option
   val f_parked : fiber -> parked

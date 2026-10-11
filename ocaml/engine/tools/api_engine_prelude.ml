@@ -403,13 +403,13 @@ let sh_node_at child (n : native_op node) (p : native_op node P.t) : native_op n
   | _ -> P.walk child n (P.to_list p)
 
 (* Effect4.Program.rootPoint, src/Effect4/Program/Compile.lean
-   (`{ path := [], env := [], fuel, tape }`: the completed view, the root index and the stack of
-   passed programs (decisions row 340) start empty).  The spine has to be told which program it addresses, and
-   the generated `rootPoint` is not: `Program.compile` -- its only caller -- holds the root
+   (`{ path := [], env := [], fuel, tape }`: the completed view, the root index, the stack of
+   passed programs (decisions row 340) and the running call (row 341, step 3) start empty).
+   The spine has to be told which program it addresses, and the generated `rootPoint` is not: `Program.compile` -- its only caller -- holds the root
    under that name, so the row hands it in. *)
 let sh_root_point (root : native_op eff) (fuel : int) (tape : bool list) : point =
   ({ path = P.make (Node_eff root); env = E.empty; fuel; tape; completed = []; root = 0;
-     params = [] }
+     params = []; call = [] }
    : point)
 
 (* Effect4.Program.Point.redirect, src/Effect4/Program/Refs.lean *)

@@ -353,7 +353,7 @@ theorem countdownPark_stuck (i : FInterp) (m : FMachine) (f : FRun) (targets : L
 
 theorem iterNext_gen_congr (root : NativeEff) (cv : List (FiberId × ExitV)) {p p' : Point}
     (hp : p'.path = p.path ∧ p'.env = p.env ∧ p'.fuel = p.fuel ∧ p'.tape = p.tape ∧ p'.root = p.root ∧
-      p'.params = p.params) :
+      p'.params = p.params ∧ p'.call = p.call) :
     (interpAt root cv table).iterNext (.gen p' [] false) Val.unit =
       (interpAt root cv table).iterNext (.gen p [] false) Val.unit := by
   show runStmts root { p' with completed := cv } p'.fuel [] (if false then _ else p'.env) [] =

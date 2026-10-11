@@ -63,7 +63,7 @@ theorem memoize_intro (root : NativeEff) (q : Point) (m : MemoMapId) (scope : Na
   unfold memoizeR suspendR
   refine CodeMeans.suspendMemo q m scope _ fun completed => ?_
   rw [suspendBodyAt_memoLookup, prepareR_guardR_bind, guardR_bind]
-  refine CodeMeans.onSuccess _ _ _ (prepareR completed (storeR (.memoGet q.path m))) _
+  refine CodeMeans.onSuccess _ _ _ (prepareR completed (storeR (.memoGet q.layerKey m))) _
     (CodeMeans.syncOp _ _ (successV root)) ?_ rfl (fun _ => rfl)
   intro completed' v
   simp only [seqR]
@@ -78,7 +78,7 @@ theorem memoize_intro (root : NativeEff) (q : Point) (m : MemoMapId) (scope : Na
     dsimp only
     rw [prepareR_guardR_bind, guardR_bind]
     refine CodeMeans.onSuccess _ _ _
-      (prepareR completed' (scopeAddR scope (.memoEntry q.path owner))) _
+      (prepareR completed' (scopeAddR scope (.memoEntry q.layerKey owner))) _
       ((scopeAdd_intro root scope _ (memoEntry_means root _ _)).prepare _) ?_ rfl (fun _ => rfl)
     intro completed'' _
     show CodeMeans root (Program.contAOf root (.awaitPromise cell) _) _
@@ -94,7 +94,7 @@ theorem memoize_intro (root : NativeEff) (q : Point) (m : MemoMapId) (scope : Na
       rw [contAOf_memoize_unit]
       dsimp only
       rw [prepareR_guardR_bind, guardR_bind]
-      refine CodeMeans.onSuccess _ _ _ (prepareR completed' (storeR (.memoBuild q.path m))) _
+      refine CodeMeans.onSuccess _ _ _ (prepareR completed' (storeR (.memoBuild q.layerKey m))) _
         (CodeMeans.syncOp _ _ (successV root)) ?_ rfl (fun _ => rfl)
       intro completed'' w
       simp only [seqR]
@@ -108,7 +108,7 @@ theorem memoize_intro (root : NativeEff) (q : Point) (m : MemoMapId) (scope : Na
         dsimp only
         rw [prepareR_guardR_bind, guardR_bind]
         refine CodeMeans.onSuccess _ _ _
-          (prepareR completed'' (scopeAddR scope (.memoEntry q.path m))) _
+          (prepareR completed'' (scopeAddR scope (.memoEntry q.layerKey m))) _
           ((scopeAdd_intro root scope _ (memoEntry_means root _ _)).prepare _) ?_ rfl
           (fun _ => rfl)
         intro completed''' _
@@ -118,10 +118,10 @@ theorem memoize_intro (root : NativeEff) (q : Point) (m : MemoMapId) (scope : Na
         unfold onExitR
         rw [prepareR_guardR_bind, guardR_bind]
         refine CodeMeans.onExit _ _ _ (prepareR completed''' (constructionR layerScope))
-          (fun ex => finalizerR ex (denoteFin (.memoDone q.path m) ex))
+          (fun ex => finalizerR ex (denoteFin (.memoDone q.layerKey m) ex))
           ((hcons layerScope).prepare _) ?_ (fun _ _ => rfl) rfl (fun _ => rfl)
         intro completed'''' ex program hprog
-        have hp' : embed (finProgram (.memoDone q.path m) ex) = program := Option.some.inj hprog
+        have hp' : embed (finProgram (.memoDone q.layerKey m) ex) = program := Option.some.inj hprog
         rw [← hp']
         exact finalizer_intro root completed'''' ex ((memoDone_means root _ _ ex).prepare _)
       | none =>

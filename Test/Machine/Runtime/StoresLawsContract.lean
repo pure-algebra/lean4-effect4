@@ -93,7 +93,7 @@ def withExternalFrame : Stores := { Stores.empty with externals := externalFrame
   some externalFrame
 #guard (syncOpStep (.memoFork none) withExternalFrame).map (fun p => p.1.externals) =
   some externalFrame
-#guard (syncOpStep (.memoBuild [] ⟨0⟩) (after (.memoFork none) withExternalFrame)).map
+#guard (syncOpStep (.memoBuild ([], []) ⟨0⟩) (after (.memoFork none) withExternalFrame)).map
   (fun p => p.1.externals) = some externalFrame
 -- The law is a frame for this projection, not equality of the whole store.
 #guard (after (.refMake (.nat 5)) withExternalFrame).refs ≠ withExternalFrame.refs
@@ -133,19 +133,19 @@ section Rows
 -- present layer keys the map twice, and a later release leaves the second entry present with
 -- no observer.
 /-- The root map, one layer built under it. -/
-def m1 : Stores := after (SyncOp.memoBuild [] ⟨0⟩) (after (SyncOp.memoFork none) Stores.empty)
+def m1 : Stores := after (SyncOp.memoBuild ([], []) ⟨0⟩) (after (SyncOp.memoFork none) Stores.empty)
 /-- A hit: the entry's second observer. -/
-def m2 : Stores := after (SyncOp.memoGet [] ⟨0⟩) m1
+def m2 : Stores := after (SyncOp.memoGet ([], []) ⟨0⟩) m1
 #guard Stores.MemoKeysNodup m2 ∧ Stores.MemoObserved m2
-#guard (m2.memo.entryAt ⟨0⟩ []).map MemoEntry.observers = some 2
+#guard (m2.memo.entryAt ⟨0⟩ ([], [])).map MemoEntry.observers = some 2
 /-- The protocol: two releases, the second the last. -/
-def m3 : Stores := after (SyncOp.memoRelease [] ⟨0⟩) m2
-def m4 : Stores := after (SyncOp.memoRelease [] ⟨0⟩) m3
-#guard Stores.MemoObserved m3 ∧ (m3.memo.entryAt ⟨0⟩ []).map MemoEntry.observers = some 1
-#guard Stores.MemoObserved m4 ∧ m4.memo.entryAt ⟨0⟩ [] = none
+def m3 : Stores := after (SyncOp.memoRelease ([], []) ⟨0⟩) m2
+def m4 : Stores := after (SyncOp.memoRelease ([], []) ⟨0⟩) m3
+#guard Stores.MemoObserved m3 ∧ (m3.memo.entryAt ⟨0⟩ ([], [])).map MemoEntry.observers = some 1
+#guard Stores.MemoObserved m4 ∧ m4.memo.entryAt ⟨0⟩ ([], []) = none
 /-- Off the protocol: a second build on the present layer, then one release. -/
-def m2' : Stores := after (SyncOp.memoBuild [] ⟨0⟩) m2
-def m3' : Stores := after (SyncOp.memoRelease [] ⟨0⟩) m2'
+def m2' : Stores := after (SyncOp.memoBuild ([], []) ⟨0⟩) m2
+def m3' : Stores := after (SyncOp.memoRelease ([], []) ⟨0⟩) m2'
 #guard ¬ Stores.MemoKeysNodup m2' ∧ Stores.MemoObserved m2'
 #guard ¬ Stores.MemoObserved m3'
 #guard ((m3'.memo.mapAt ⟨0⟩).map fun m => m.entries.map fun e => e.2.observers) = some [1, 0]
@@ -265,41 +265,41 @@ section Memo
 /-- `makeMemoMapUnsafe()` on the empty store: map `⟨0⟩`. -/
 def sM : Stores := after (SyncOp.memoFork none) Stores.empty
 /-- `memoMapBuild`'s synchronous half for the layer at path `[0]`: scope `1`, Deferred `⟨0⟩`. -/
-def sB : Stores := after (SyncOp.memoBuild [0] ⟨0⟩) sM
+def sB : Stores := after (SyncOp.memoBuild ([0], []) ⟨0⟩) sM
 /-- A hit on the built entry. -/
-def sG : Stores := after (SyncOp.memoGet [0] ⟨0⟩) sB
+def sG : Stores := after (SyncOp.memoGet ([0], []) ⟨0⟩) sB
 /-- A map forked off the root: `⟨2⟩`. -/
 def sF : Stores := after (SyncOp.memoFork (some ⟨0⟩)) sB
 
 #guard answer (SyncOp.memoFork none) Stores.empty = some (Val.memoMap ⟨0⟩)
 #guard Val.validIn sM (Val.memoMap ⟨0⟩)
 #guard Val.validIn Stores.empty (Val.memoMap ⟨0⟩) = false
-#guard SyncOp.validIn Stores.empty (SyncOp.memoGet [0] ⟨0⟩) = false
-#guard answer (SyncOp.memoGet [0] ⟨0⟩) sM = some Val.unit
-#guard answer (SyncOp.memoBuild [0] ⟨0⟩) sM = some (Val.scopeHandle 1)
+#guard SyncOp.validIn Stores.empty (SyncOp.memoGet ([0], []) ⟨0⟩) = false
+#guard answer (SyncOp.memoGet ([0], []) ⟨0⟩) sM = some Val.unit
+#guard answer (SyncOp.memoBuild ([0], []) ⟨0⟩) sM = some (Val.scopeHandle 1)
 #guard sB.nextName = 2
 #guard Val.validIn sB (Val.scopeHandle 1)
 #guard Val.validIn sB (Val.promise ⟨0⟩)
 #guard Stores.WF sB
 -- a hit answers the entry's Deferred and its owner (`Val.memoHit`, decisions row 187: the product
 -- a guard keeps), and bumps the observers
-#guard answer (SyncOp.memoGet [0] ⟨0⟩) sB = some (Val.memoHit ⟨0⟩ ⟨0⟩)
-#guard (sG.memo.entryAt ⟨0⟩ [0]).map (·.observers) = some 2
-#guard (answer (SyncOp.memoGet [0] ⟨0⟩) sB).map (Val.validIn sG) = some true
+#guard answer (SyncOp.memoGet ([0], []) ⟨0⟩) sB = some (Val.memoHit ⟨0⟩ ⟨0⟩)
+#guard (sG.memo.entryAt ⟨0⟩ ([0], [])).map (·.observers) = some 2
+#guard (answer (SyncOp.memoGet ([0], []) ⟨0⟩) sB).map (Val.validIn sG) = some true
 -- the second release is the last: the entry goes, the layer scope is answered to close
-#guard answer (SyncOp.memoRelease [0] ⟨0⟩) sG = some Val.unit
-#guard answer (SyncOp.memoRelease [0] ⟨0⟩) (after (SyncOp.memoRelease [0] ⟨0⟩) sG) =
+#guard answer (SyncOp.memoRelease ([0], []) ⟨0⟩) sG = some Val.unit
+#guard answer (SyncOp.memoRelease ([0], []) ⟨0⟩) (after (SyncOp.memoRelease ([0], []) ⟨0⟩) sG) =
   some (Val.scopeHandle 1)
-#guard ((after (SyncOp.memoRelease [0] ⟨0⟩) (after (SyncOp.memoRelease [0] ⟨0⟩) sG)).memo.entryAt
-  ⟨0⟩ [0]).isNone
+#guard ((after (SyncOp.memoRelease ([0], []) ⟨0⟩) (after (SyncOp.memoRelease ([0], []) ⟨0⟩) sG)).memo.entryAt
+  ⟨0⟩ ([0], [])).isNone
 -- a forked map falls through to its parent; another path is a miss
-#guard answer (SyncOp.memoGet [0] ⟨2⟩) sF = some (Val.memoHit ⟨0⟩ ⟨0⟩)
-#guard answer (SyncOp.memoGet [1] ⟨2⟩) sF = some Val.unit
+#guard answer (SyncOp.memoGet ([0], []) ⟨2⟩) sF = some (Val.memoHit ⟨0⟩ ⟨0⟩)
+#guard answer (SyncOp.memoGet ([1], []) ⟨2⟩) sF = some Val.unit
 -- `memoComplete` completes the build's Deferred: the Deferred family's wakeup, borrowed
 #guard answer (SyncOp.deferredIsDone ⟨0⟩) sB = some (Val.bool false)
 #guard answer (SyncOp.deferredIsDone ⟨0⟩)
-  (after (SyncOp.memoComplete [0] ⟨0⟩ (Exit.success Val.unit)) sB) = some (Val.bool true)
-#guard Stores.WF (after (SyncOp.memoComplete [0] ⟨0⟩ (Exit.success Val.unit)) sB)
+  (after (SyncOp.memoComplete ([0], []) ⟨0⟩ (Exit.success Val.unit)) sB) = some (Val.bool true)
+#guard Stores.WF (after (SyncOp.memoComplete ([0], []) ⟨0⟩ (Exit.success Val.unit)) sB)
 -- `scopeForkUnsafe`: the child at the supply, linked under the shared key next
 #guard answer (SyncOp.scopeFork 0 .sequential) s3 = some (Val.scopeHandle 1)
 #guard (after (SyncOp.scopeFork 0 .sequential) s3).nextName = 3

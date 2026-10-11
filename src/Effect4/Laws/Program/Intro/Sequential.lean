@@ -33,7 +33,7 @@ theorem intro_suspend (root : NativeEff) (n : Nat) (b : NativeEff) (p : Point) (
 
 /-- **An invocation** (decisions row 328): one counted suspension on both sides, then the
 definition's body at its point of the root, the request its one variable. The hop spends one
-fuel (`weight_redirect_lt`), so the introduction at every lighter point (`hres`) closes it. A step
+fuel (`weight_redirect_call_lt`), so the introduction at every lighter point (`hres`) closes it. A step
 of `code_intro_aux`; goal G4 of the procedures note. -/
 theorem intro_call (root : NativeEff) (n : Nat) (index : Nat) (r : Term) (p : Point) (k : Nat)
     (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0) (hle : p.weight ≤ n)
@@ -52,8 +52,9 @@ theorem intro_call (root : NativeEff) (n : Nat) (index : Nat) (r : Term) (p : Po
     cases hp : defBodyPath root index with
     | none => exact codeMeans_badShape root
     | some path =>
-      have hq := hres { ({ p with completed } : Point).redirect path with env := [v] }
-        (Nat.lt_of_lt_of_le (weight_redirect_lt p path hpos completed [v]) hle)
+      have hq := hres
+        { ({ p with completed } : Point).redirect path with env := [v], call := p.path :: p.call }
+        (Nat.lt_of_lt_of_le (weight_redirect_call_lt p path hpos completed [v] _) hle)
       unfold denoteAt at hq
       unfold resolve at hq ⊢
       dsimp only [Point.redirect] at hq ⊢
@@ -96,8 +97,9 @@ theorem intro_invoke (root : NativeEff) (n : Nat) (index : Nat) (r : Term) (args
       have hq := hres
         { ({ p with completed } : Point).redirect path with
           env := [v]
-          params := argSitesAt (p.path ++ [0]) p.env args :: p.params }
-        (Nat.lt_of_lt_of_le (weight_redirect_params_lt p path hpos completed [v] _) hle)
+          params := argSitesAt (p.path ++ [0]) p.env args :: p.params
+          call := p.path :: p.call }
+        (Nat.lt_of_lt_of_le (weight_redirect_params_lt p path hpos completed [v] _ _) hle)
       unfold denoteAt at hq
       unfold resolve at hq ⊢
       dsimp only [Point.redirect] at hq ⊢
@@ -144,8 +146,9 @@ theorem intro_param (root : NativeEff) (n : Nat) (i : Nat) (r : Term) (p : Point
         have hq := hres
           { ({ p with completed } : Point).redirect site.path with
             env := site.env ++ [v]
-            params := rest }
-          (Nat.lt_of_lt_of_le (weight_redirect_params_lt p site.path hpos completed _ rest) hle)
+            params := rest
+            call := p.call.tail }
+          (Nat.lt_of_lt_of_le (weight_redirect_params_lt p site.path hpos completed _ rest _) hle)
         unfold denoteAt at hq
         unfold resolve at hq ⊢
         dsimp only [Point.redirect] at hq ⊢
@@ -209,7 +212,7 @@ theorem intro_gen (root : NativeEff) (ss : Stmts NativeOp) (p : Point) (k : Nat)
   show CodeMeans root (suspendBodyAt root (.body { p with completed }))
     (prepareR completed (.vis (.inr (.gen p)) Effects.Program.pure))
   rw [suspendBodyAt_gen (q := { p with completed }) hf h]
-  exact CodeMeans.genEntry p _ _ ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ delivers_pure
+  exact CodeMeans.genEntry p _ _ ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩ delivers_pure
 
 theorem intro_select (root : NativeEff) (n : Nat) (s : Term) (d : Decision) (a0 a1 : NativeEff) (p : Point) (k : Nat)
     (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)
@@ -276,7 +279,7 @@ theorem intro_iterate (root : NativeEff) (c : Option Ty) (i t s r : Term) (b : N
   dsimp only
   rcases hv : evalTerm p.env i with _ | cursor
   · exact codeMeans_badShape root
-  · exact CodeMeans.loopEntry p _ cursor _ ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ delivers_pure
+  · exact CodeMeans.loopEntry p _ cursor _ ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩ delivers_pure
 
 theorem intro_onExit (root : NativeEff) (n : Nat) (b f : NativeEff) (p : Point) (k : Nat)
     (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)

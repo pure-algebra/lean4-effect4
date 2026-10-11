@@ -462,16 +462,17 @@ module type TRACE = sig
   val length  : 'e t -> int
 end
 
-(* A table keyed by a layer path (`LayerId = List Nat`).  `insert` KEEPS an existing
-   binding: Lean appends and `find?` answers the first (Stores.lean:867, 880). *)
+(* A table keyed by a layer's identity, its path and the call that runs it
+   (`LayerId = List Nat × CallId`, decisions row 341, step 3).  `insert` KEEPS an existing
+   binding: Lean appends and `find?` answers the first (`MemoWorld.insertEntry`). *)
 module type LAYERS = sig
   type 'a t
   val empty     : 'a t
-  val find_opt  : int list -> 'a t -> 'a option
-  val insert    : int list -> 'a -> 'a t -> 'a t
-  val update    : int list -> ('a -> 'a) -> 'a t -> 'a t
-  val delete    : int list -> 'a t -> 'a t
-  val bindings  : 'a t -> (int list * 'a) list
+  val find_opt  : int list * int list list -> 'a t -> 'a option
+  val insert    : int list * int list list -> 'a -> 'a t -> 'a t
+  val update    : int list * int list list -> ('a -> 'a) -> 'a t -> 'a t
+  val delete    : int list * int list list -> 'a t -> 'a t
+  val bindings  : 'a t -> ((int list * int list list) * 'a) list
 end
 
 (* The per-fiber dispatcher: priority -> FIFO, persistent.  This is

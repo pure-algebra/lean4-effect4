@@ -14,7 +14,7 @@ def kRef : ServiceKey := ⟨⟨6⟩, ⟨7⟩⟩
 def layerCount : LayerTerm NativeOp :=
   .effect kA (.bind (.service kRef)
     (.bind (.perform (.refUpdateWith (FnName.image .update 1 .incr)) (.var 0)) (.succeed (.lit (.nat 5)))))
-def refTarget : LayerId := [1, 0, 0, 0]
+def refTarget : List Nat := [1, 0, 0, 0]
 def once : Api.Program :=
   .bind (.perform .refMake (.lit (.nat 0)))
     (.provideService kRef (.var 0)
@@ -33,4 +33,55 @@ def twice : Api.Program :=
 #guard twice.layerRefsWF
 #guard Api.wellTyped once
 #guard Api.wellTyped twice
+
+/-! ## A body's layer, once per call (decisions row 341, step 3)
+
+`withL : number → number`, with `f : number ⇒ number`, provides the counted layer in its body and
+again by a reference, then runs `f`. A build is keyed by the layer's path and the running call
+(`Point.layerKey`, `src/Effect4/Program/Compile.lean`): one call builds once, and a call nested
+in another, through the program that the outer one passed, builds again, as rc.112 builds one
+layer object per evaluation of the body. -/
+
+/-- `f : number ⇒ number`. -/
+def fParam : ParamDecl := { name := "f", request := .nat, answer := .nat }
+
+/-- `withL`, which reads the counter's service in its layer's build. -/
+def withLDecl : DefDecl :=
+  { name := "withL", request := .nat, answer := .nat, requires := [kRef], params := [fParam] }
+
+/-- The body of `withL`, at `[0, 0]`: its layer at `[0, 0, 0]`, provided twice. -/
+def withLBody : NativeEff :=
+  .provideLayer layerCount false
+    (.provideLayer (.ref [0, 0, 0]) false (.bind (.service kA) (.perform (.param 0) (.var 0))))
+
+/-- The counter made, `call` under it, then the count read. -/
+def counted (call : NativeEff) : Api.Program :=
+  .defs [withLDecl] (.cons withLBody .nil)
+    (.bind (.perform .refMake (.lit (.nat 0)))
+      (.provideService kRef (.var 0) (.bind call (.perform .refGet (.var 0)))))
+    .nil
+
+/-- `withL(1, (a) => succeed(3))`. -/
+def oneCall : Api.Program :=
+  counted (.invoke 0 (.lit (.nat 1)) (.cons (.succeed (.lit (.nat 3))) .nil))
+
+/-- `withL(1, (a) => withL(2, (b) => succeed(3)))`. -/
+def nestedCall : Api.Program :=
+  counted (.invoke 0 (.lit (.nat 1))
+    (.cons (.invoke 0 (.lit (.nat 2)) (.cons (.succeed (.lit (.nat 3))) .nil)) .nil))
+
+/-- The value of a successful exit. -/
+def successVal : Option ExitV → Option Val
+  | some (.success v) => some v
+  | _ => none
+
+#guard oneCall.layerRefsWF
+#guard nestedCall.layerRefsWF
+#guard Api.wellTyped oneCall
+#guard Api.wellTyped nestedCall
+-- tested: one call provides its layer twice and builds it once
+#guard successVal (Api.run oneCall 800).exit == some (.nat 1)
+-- tested: a call nested in another builds its own: two builds, where a key by path alone
+-- would hand the inner call the outer call's build
+#guard successVal (Api.run nestedCall 1600).exit == some (.nat 2)
 end Test.Program.LayerSharingContract

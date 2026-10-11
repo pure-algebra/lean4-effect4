@@ -141,6 +141,9 @@ structure Capture where
   /-- The stack of the programs that the running calls passed (decisions row 340), as
   `Point.params`: a release in a definition's body runs the body's parameters. -/
   params : List (List ArgSite) := []
+  /-- The running call (decisions row 341, step 3), as `Point.call`: a release in a definition's
+  body builds the body's layers under the call that registered it. -/
+  call : CallId := []
 deriving DecidableEq, Repr
 
 /-- The scope finalizer *name* alphabet. `Effect4.Scope` stores a `φ`; giving `φ` these arms is

@@ -36,7 +36,7 @@ theorem code_intro_aux (root : NativeEff) : ∀ (n : Nat) (p : Point), p.weight 
   cases hf : p.fuel with
   | zero =>
     rw [compileEff_at_zero e hf, denoteR_zero root e p hf]
-    exact CodeMeans.frontier p p _ _ ⟨rfl, rfl, rfl, rfl, rfl, rfl⟩ fun completed => by
+    exact CodeMeans.frontier p p _ _ ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩ fun completed => by
       rw [suspendBodyAt_zero' (q := { p with completed }) hf]; rfl
   | succ k =>
   have hpos : p.fuel ≠ 0 := by rw [hf]; exact Nat.succ_ne_zero k

@@ -67,8 +67,8 @@ def oldStorePre (root : ProgramSource) (w : W) (op : SyncOp) (cert : StoreCert o
   | .scopeMake _ | .scopeAdd _ _ | .scopeRemove _ _ | .scopeIsClosed _ | .scopeFork _ _ => True
   | .memoFork _ | .memoComplete _ _ _ | .memoRelease _ _ => True
   -- the looked-up layer's own checked error type (decision row 90)
-  | .memoGet layer _ => ∃ l lt, Node.at_ (.eff root.program) layer = some (.layer l) ∧
-      Checker.checkLayer (nativeSignature root.table) layer l = .ok lt ∧ lt.error = cert
+  | .memoGet layer _ => ∃ l lt, Node.at_ (.eff root.program) layer.1 = some (.layer l) ∧
+      Checker.checkLayer (nativeSignature root.table) layer.1 l = .ok lt ∧ lt.error = cert
   | .memoBuild _ _ => cert.1.closed = true ∧ cert.2.closed = true
 
 def oldStorePost (w' : W) (op : SyncOp) (cert : StoreCert op) (ans : Val) : Prop :=
@@ -277,23 +277,23 @@ namespace Memo
 /-- A store with one memo map holding one built entry for the layer at `[]` (one observer). -/
 def memoStore : Stores :=
   let s1 := (syncOpStep (.memoFork none) Stores.empty).map (·.1) |>.getD Stores.empty
-  (syncOpStep (.memoBuild [] ⟨0⟩) s1).map (·.1) |>.getD s1
+  (syncOpStep (.memoBuild ([], []) ⟨0⟩) s1).map (·.1) |>.getD s1
 
 theorem memoRelease_answers_scope :
-    ((syncOpStep (.memoRelease [] ⟨0⟩) memoStore).map (·.2)) = some (Val.scopeHandle 1) := by
+    ((syncOpStep (.memoRelease ([], []) ⟨0⟩) memoStore).map (·.2)) = some (Val.scopeHandle 1) := by
   decide +kernel
 
-theorem memoRelease_post_excludes (w : W) (cert : StoreCert (.memoRelease [] ⟨0⟩)) :
-    ¬ oldStorePost w (.memoRelease [] ⟨0⟩) cert (Val.scopeHandle 1) := by
+theorem memoRelease_post_excludes (w : W) (cert : StoreCert (.memoRelease ([], []) ⟨0⟩)) :
+    ¬ oldStorePost w (.memoRelease ([], []) ⟨0⟩) cert (Val.scopeHandle 1) := by
   intro h
   cases h
 
 /-- The flip: the current post admits the layer scope's handle, at a world that holds that scope
 (decisions row 156: the post carries presence; `memoRelease_implements` supplies it from the
 store's memo clause). -/
-theorem memoRelease_post_admits (w : W) (cert : StoreCert (.memoRelease [] ⟨0⟩))
+theorem memoRelease_post_admits (w : W) (cert : StoreCert (.memoRelease ([], []) ⟨0⟩))
     (live : ScopeLive w 1) :
-    storePost w (.memoRelease [] ⟨0⟩) cert (Val.scopeHandle 1) :=
+    storePost w (.memoRelease ([], []) ⟨0⟩) cert (Val.scopeHandle 1) :=
   Or.inr (fits_scopeHandle w 1 live)
 
 def natTy : EffTy := EffTy.pure .nat
@@ -302,7 +302,7 @@ def natTy : EffTy := EffTy.pure .nat
 def k : Val → RProgram := fun v =>
   if v = Val.unit then .pure (.success (.nat 0)) else .pure (.success (.str "x"))
 
-def memoCode : RProgram := .vis (.inl (.memoRelease [] ⟨0⟩)) k
+def memoCode : RProgram := .vis (.inl (.memoRelease ([], []) ⟨0⟩)) k
 
 theorem memo_admitted (root : ProgramSource) (w : W) : OldTypedProg root w natTy memoCode := by
   refine OldTypedProg.store (cert := PUnit.unit) trivial ?_
@@ -1437,19 +1437,19 @@ example (w : W) (cell : DeferredKey) (waiter : FiberId) (token : Nat)
 error: unsolved goals
 case inl
 w : W
-cert : StoreCert (SyncOp.memoRelease [] { index := 0 })
+cert : StoreCert (SyncOp.memoRelease ([], []) { index := 0 })
 h✝ : Val.scopeHandle 1 = Val.unit
 ⊢ False
 
 case inr
 w : W
-cert : StoreCert (SyncOp.memoRelease [] { index := 0 })
+cert : StoreCert (SyncOp.memoRelease ([], []) { index := 0 })
 h✝ : Typed.Fits w (Val.scopeHandle 1) Ty.scope
 ⊢ False
 -/
 #guard_msgs (error) in
-example (w : W) (cert : StoreCert (.memoRelease [] ⟨0⟩)) :
-    ¬ storePost w (.memoRelease [] ⟨0⟩) cert (Val.scopeHandle 1) := by
+example (w : W) (cert : StoreCert (.memoRelease ([], []) ⟨0⟩)) :
+    ¬ storePost w (.memoRelease ([], []) ⟨0⟩) cert (Val.scopeHandle 1) := by
   intro h
   cases h
 

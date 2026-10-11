@@ -127,7 +127,7 @@ module Api_gen_inst = struct
      entry order is unobservable (E4_memo MM6), so the projection sorts here too, as
      api_engine_inst.ml does with `E4_memo.bindings`.  The Lean corpus is what found this:
      g227 inserts two entries under one map out of path order. *)
-  let memo_paths (m : machine) : (int * int list list) list =
+  let memo_paths (m : machine) : (int * (int list * int list list) list) list =
     List.map
       (fun (mm : memo_map) -> (mm.id, List.map fst (E4_memo_list.bindings mm.entries)))
       (stores_of m).memo

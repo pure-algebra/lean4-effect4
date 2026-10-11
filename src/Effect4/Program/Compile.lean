@@ -76,7 +76,17 @@ structure Point where
   entry below is its caller's. A parameter's run pops the top entry, so the passed program runs
   at its caller's stack. Empty outside a definition's body. -/
   params : List (List ArgSite) := []
+  /-- **The running call** (decisions row 341, step 3): the paths of the invocations on the
+  chain, innermost first (`CallId`). An invocation at this point runs its body under
+  `path :: call`; a parameter's run resumes its site under the caller's call, the tail. A layer in
+  a body is keyed by its path and this call (`Point.layerKey`). Empty outside a body. -/
+  call : CallId := []
 deriving DecidableEq
+
+/-- A path in the root block's bodies, its child `0` (the first step of `Eff.scopeOf`). -/
+def pathInBodies : List Nat → Bool
+  | 0 :: _ => true
+  | _ => false
 
 namespace Point
 
@@ -104,14 +114,14 @@ theorem layerBuild_fuel (p : Point) : p.layerBuild.fuel = p.fuel - 1 := rfl
 `Point` minus that view plus the context, and this is the isomorphism's one direction. -/
 def ofCapture (c : Capture) (completed : List (FiberId × ExitV) := []) : Point :=
   { path := c.path, env := c.env, fuel := c.fuel, tape := c.tape, completed, root := c.root,
-    params := c.params }
+    params := c.params, call := c.call }
 
 /-- The capture of a release registered at this point (`internal/effect.ts:3976,3983`): the
 acquired value appended to the environment (the release is typed over `env ++ [a, exit]`,
 `Typing.lean`), and the context `contextWith` read. -/
 def capture (p : Point) (a : Val) (ctx : Ctx) : Capture :=
   { path := p.path, env := p.env ++ [a], fuel := p.fuel, tape := p.tape, ctx, root := p.root,
-    params := p.params }
+    params := p.params, call := p.call }
 
 /-- The point of the child at index `i` with a value appended to the scope. -/
 def childWith (p : Point) (i : Nat) (v : Val) : Point :=
@@ -137,6 +147,17 @@ def spineChild (p : Point) (i : Nat) : Point :=
 continuation, as a `child` is). -/
 def redirect (p : Point) (target : List Nat) : Point :=
   { p with path := target, fuel := p.fuel - 1 }
+
+/-- The call a layer at this point is built under (decisions row 341, step 3): the running call
+in the root block's bodies (`pathInBodies`), none elsewhere. A reference from a body into the
+module hops to the module's layer, which is keyed alone. -/
+def layerCall (p : Point) : CallId := if pathInBodies p.path then p.call else []
+
+/-- **A layer's identity at a point** (`LayerId`): its path and `layerCall`. A layer in a body
+is built once per call, as rc.112 builds one layer object per evaluation of the body
+(`Layer.ts`, `MemoMapImpl.map` keyed by the object); a layer of the module or of the main
+program once per memo map, under its path alone. -/
+def layerKey (p : Point) : LayerId := (p.path, p.layerCall)
 
 /-- A join/await constructed after target exit is already an Exit
 (`internal/effect.ts:767-769,814-816`). An absent entry retains the Async form. -/
@@ -767,9 +788,10 @@ def resolveLayerWith (root : NativeEff) : Nat → LayerTerm NativeOp → Point �
 /-- The layer at a point of the root, built: `compileLayer` of the node there. A reference
 (`LayerTerm.ref`, the host rows slice) is compiled as its target at the target's path, one
 hop and one fuel down (`Point.redirect`): both memo sites (`EffThunk.memoLookup`'s
-`SyncOp.memoGet q.path` and `SyncOp.memoBuild q.path`) then key on the target's path, so the
-defining occurrence and every reference share one memo entry, which is the whole of the
-memo fix (DB-12: identity is a path, the path of the definition). Well-formedness
+`SyncOp.memoGet q.layerKey` and `SyncOp.memoBuild q.layerKey`) then key on the target's path, so
+the defining occurrence and every reference share one memo entry, which is the whole of the
+memo fix (DB-12: identity is a path, the path of the definition; in a body, with the running
+call, decisions row 341, step 3). Well-formedness
 (`Refs.lean` `layerRefsWF`) forbids a reference to a reference, so a hop lands on a term that is
 no reference; a reference at the target is the refusal. A reference under an `orDie` at the
 target hops again, one more fuel down. -/
@@ -1228,21 +1250,21 @@ def contAOf (root : NativeEff) : EffName → Val → NCode
   -- owning map (`:439-440`, `:246-249`), registering the entry finalizer on the caller scope
   -- then awaiting; unit is a miss, `memoMapBuild`
   | .memoize q _ scope, Val.list [Val.promise ⟨cell⟩, Val.memoMap ⟨owner⟩] =>
-    Prim.onSuccess (scopeAddAt scope (FinName.memoEntry q.path ⟨owner⟩))
+    Prim.onSuccess (scopeAddAt scope (FinName.memoEntry q.layerKey ⟨owner⟩))
       (EffName.awaitPromise ⟨cell⟩)
   | .memoize q m scope, Val.unit =>
-    Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.memoBuild q.path m)))
+    Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.memoBuild q.layerKey m)))
       (EffName.buildIntoLayerScope q m scope)
   | .memoize _ _ _, _ => badShape
   | .awaitPromise cell, _ =>
     Prim.async (EffName.registerAwait cell) true (some (EffName.cancelAwait cell))
   | .buildIntoLayerScope q m scope, Val.scopeHandle layerScope =>
-    Prim.onSuccess (scopeAddAt scope (FinName.memoEntry q.path m))
+    Prim.onSuccess (scopeAddAt scope (FinName.memoEntry q.layerKey m))
       (EffName.thenBuildInto q m layerScope)
   | .buildIntoLayerScope _ _ _, _ => badShape
   | .thenBuildInto q m layerScope, _ =>
     Prim.onExit (constructionAt root q layerScope)
-      (EffName.store (Name.finalizerName (FinName.memoDone q.path m))) false
+      (EffName.store (Name.finalizerName (FinName.memoDone q.layerKey m))) false
   | .freshThen q scope, Val.memoMap ⟨id⟩ => resolveLayer root q ⟨id⟩ scope
   | .freshThen _ _, _ => badShape
   | .provideThen q m scope mode, v => provideThenK q m scope mode v
@@ -1395,12 +1417,13 @@ def suspendBodyAt (root : NativeEff) : EffThunk → NCode
           (EffName.provideLayerWith p)
       -- an invocation (decisions row 328): the request evaluated once here, then the body of the
       -- definition at its point of the root, with the request as its one variable, one fuel down,
-      -- on the invoking fiber
+      -- on the invoking fiber, under the call this invocation starts (row 341, step 3)
       | some (Node.eff (.perform (.call k) request)) =>
         match evalTerm p.env request, defBodyPath root k with
         -- the environment is built from the point's own (`take 0`, then the request's value), as
         -- `Point.layerBuild` builds an empty one: the engine keeps it in its environment carrier
-        | some v, some path => resolve root { p.redirect path with env := p.env.take 0 ++ [v] }
+        | some v, some path =>
+          resolve root { p.redirect path with env := p.env.take 0 ++ [v], call := p.path :: p.call }
         | _, _ => badShape
       -- an invocation with programs (decisions row 340): as an invocation, with the sites of the
       -- call's programs, under this point's environment, pushed on the stack of parameters
@@ -1410,23 +1433,26 @@ def suspendBodyAt (root : NativeEff) : EffThunk → NCode
           resolve root
             { p.redirect path with
               env := p.env.take 0 ++ [v]
-              params := argSitesAt (p.path ++ [0]) p.env args :: p.params }
+              params := argSitesAt (p.path ++ [0]) p.env args :: p.params
+              call := p.path :: p.call }
         | _, _ => badShape
       -- a parameter's run (decisions row 340): the site of the program that the innermost call
       -- passed, its environment extended by the request's value, at the stack below that call
+      -- and under the caller's call
       | some (Node.eff (.perform (.param i) request)) =>
         match evalTerm p.env request, p.params with
         | some v, top :: rest =>
           match top[i]? with
           | some site =>
-            resolve root { p.redirect site.path with env := site.env ++ [v], params := rest }
+            resolve root
+              { p.redirect site.path with env := site.env ++ [v], params := rest, call := p.call.tail }
           | none => badShape
         | _, _ => badShape
       | some (Node.eff e) => compileEff e p
       | _ => badShape
   -- `getOrElseMemoize` (`Layer.ts:451`): the lookup, then `memoize` on its answer
   | .memoLookup q m scope =>
-    Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.memoGet q.path m))) (EffName.memoize q m scope)
+    Prim.onSuccess (Prim.sync (EffThunk.op (SyncOp.memoGet q.layerKey m))) (EffName.memoize q m scope)
   | .store (Thunk.body program) => embed (progOf program)
   -- a capture's release (`FinName.foreign`, V1): `provideContext(release(a, exit), context)`
   -- (`internal/effect.ts:3983`) — read the current context, then `releaseUnder`

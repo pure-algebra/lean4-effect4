@@ -382,18 +382,18 @@ the entry finalizer on the caller's scope and awaits the entry's deferred (`:439
 construction into the layer scope under the `onExit` that completes the entry. -/
 def memoizeR (q : Point) (m : MemoMapId) (scope : Nat) (construction : Nat → RProgram) :
     RProgram :=
-  suspendR q ((guardR .onSuccess (storeR (.memoGet q.path m))).bind (seqR fun v =>
+  suspendR q ((guardR .onSuccess (storeR (.memoGet q.layerKey m))).bind (seqR fun v =>
     match Val.memoHit? v with
     | some (cell, owner) =>
-      (guardR .onSuccess (scopeAddR scope (.memoEntry q.path owner))).bind (seqR fun _ =>
+      (guardR .onSuccess (scopeAddR scope (.memoEntry q.layerKey owner))).bind (seqR fun _ =>
         .vis (.inr (.async (.registerAwait cell) (Val.promise cell))) Effects.Program.pure)
     | none =>
       if v = Val.unit then
-        (guardR .onSuccess (storeR (.memoBuild q.path m))).bind (seqR fun w =>
+        (guardR .onSuccess (storeR (.memoBuild q.layerKey m))).bind (seqR fun w =>
           match Val.scope? w with
           | some layerScope =>
-            (guardR .onSuccess (scopeAddR scope (.memoEntry q.path m))).bind (seqR fun _ =>
-              onExitR (construction layerScope) fun ex => denoteFin (.memoDone q.path m) ex)
+            (guardR .onSuccess (scopeAddR scope (.memoEntry q.layerKey m))).bind (seqR fun _ =>
+              onExitR (construction layerScope) fun ex => denoteFin (.memoDone q.layerKey m) ex)
           | none => .pure badShapeExit)
       else .pure badShapeExit))
 
@@ -609,7 +609,7 @@ def denoteEffBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
         match evalTerm p.env request, defBodyPath root k with
         | some v, some path =>
           match Node.at_ (Node.eff root) path with
-          | some (Node.eff body) => rec body { p.redirect path with completed, env := [v] }
+          | some (Node.eff body) => rec body { p.redirect path with completed, env := [v], call := p.path :: p.call }
           | _ => .pure badShapeExit
         | _, _ => .pure badShapeExit)
     -- a parameter's run (decisions row 340), as `suspendBodyAt` decides it: the counted step,
@@ -623,7 +623,8 @@ def denoteEffBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
             match Node.at_ (Node.eff root) site.path with
             | some (Node.eff body) =>
               rec body
-                { p.redirect site.path with completed, env := site.env ++ [v], params := rest }
+                { p.redirect site.path with
+                  completed, env := site.env ++ [v], params := rest, call := p.call.tail }
             | _ => .pure badShapeExit
           | none => .pure badShapeExit
         | _, _ => .pure badShapeExit)
@@ -735,7 +736,8 @@ def denoteEffBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
             { p.redirect path with
               completed
               env := [v]
-              params := argSitesAt (p.path ++ [0]) p.env args :: p.params }
+              params := argSitesAt (p.path ++ [0]) p.env args :: p.params
+              call := p.path :: p.call }
         | _ => .pure badShapeExit
       | _, _ => .pure badShapeExit)
 
@@ -989,7 +991,8 @@ theorem denoteR_perform (op : NativeOp) (r : Term) (h : p.fuel ≠ 0) :
            match evalTerm p.env r, defBodyPath root k with
            | some v, some path =>
              match Node.at_ (Node.eff root) path with
-             | some (Node.eff body) => denoteR root body { p.redirect path with completed, env := [v] }
+             | some (Node.eff body) => denoteR root body
+                 { p.redirect path with completed, env := [v], call := p.path :: p.call }
              | _ => .pure badShapeExit
            | _, _ => .pure badShapeExit)
        | .param i => suspendR p (constructR fun completed =>
@@ -1000,7 +1003,8 @@ theorem denoteR_perform (op : NativeOp) (r : Term) (h : p.fuel ≠ 0) :
                match Node.at_ (Node.eff root) site.path with
                | some (Node.eff body) =>
                  denoteR root body
-                   { p.redirect site.path with completed, env := site.env ++ [v], params := rest }
+                   { p.redirect site.path with
+                  completed, env := site.env ++ [v], params := rest, call := p.call.tail }
                | _ => .pure badShapeExit
              | none => .pure badShapeExit
            | _, _ => .pure badShapeExit)
@@ -1053,7 +1057,8 @@ theorem denoteR_invoke (k : Nat) (r : Term) (args : Effs NativeOp) (h : p.fuel �
               { p.redirect path with
                 completed
                 env := [v]
-                params := argSitesAt (p.path ++ [0]) p.env args :: p.params }
+                params := argSitesAt (p.path ++ [0]) p.env args :: p.params
+                call := p.path :: p.call }
           | _ => .pure badShapeExit
         | _, _ => .pure badShapeExit) := by
   cases hf : p.fuel with

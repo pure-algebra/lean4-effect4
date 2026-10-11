@@ -86,7 +86,7 @@ let cell_count (m : machine) : int = E4_table_list.cardinal (stores_of m).deferr
 let scope_count (m : machine) : int = E4_table_list.cardinal (stores_of m).scopes
 let memo_map_count (m : machine) : int = List.length (stores_of m).memo
 
-let memo_paths (m : machine) : (int * int list list) list =
+let memo_paths (m : machine) : (int * (int list * int list list) list) list =
   List.map
     (fun (mm : memo_map) -> (mm.id, List.map fst (E4_memo_list.bindings mm.entries)))
     (stores_of m).memo

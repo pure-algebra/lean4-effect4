@@ -46,18 +46,18 @@ theorem mapAt_setMap_other (w : MemoWorld) (m : MemoMap) (id : MemoMapId)
 theorem memoize_hit (root : NativeEff) (q : Point) (map : MemoMapId) (scope : Nat)
     (entry : MemoEntry) (owner : MemoMapId) :
     contAOf root (.memoize q map scope) (Val.memoHit entry.deferred owner) =
-      Prim.onSuccess (scopeAddAt scope (FinName.memoEntry q.path owner))
+      Prim.onSuccess (scopeAddAt scope (FinName.memoEntry q.layerKey owner))
         (EffName.awaitPromise entry.deferred) :=
   by aesop
 
 /-- The store hit and the continuation agree on the stored deferred and owner. -/
 theorem memoGet_memoize_hit (root : NativeEff) (s : Stores) (q : Point)
     (map : MemoMapId) (scope : Nat) (entry : MemoEntry) (owner : MemoMapId)
-    (h : s.memo.get q.path map = some (owner, entry)) :
-    (syncOpStep (.memoGet q.path map) s).map (fun (s', v) => (s'.refs, contAOf root (.memoize q map scope) v)) =
-      some (s.refs, Prim.onSuccess (scopeAddAt scope (FinName.memoEntry q.path owner))
+    (h : s.memo.get q.layerKey map = some (owner, entry)) :
+    (syncOpStep (.memoGet q.layerKey map) s).map (fun (s', v) => (s'.refs, contAOf root (.memoize q map scope) v)) =
+      some (s.refs, Prim.onSuccess (scopeAddAt scope (FinName.memoEntry q.layerKey owner))
         (EffName.awaitPromise entry.deferred)) := by
-  rw [syncOpStep_memoGet_some s q.path map h]
+  rw [syncOpStep_memoGet_some s q.layerKey map h]
   simp only [Option.map_some, memoize_hit]
 
 def Isolated (inside : List MemoMapId) (w : MemoWorld) : Prop :=

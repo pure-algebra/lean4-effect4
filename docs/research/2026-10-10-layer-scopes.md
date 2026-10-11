@@ -198,12 +198,16 @@ The scope rule as a table:
 
 ### 5.1 The key
 
-A build in a body is keyed by its path and the call that runs it. The machine allocates a call
-identity at each invocation (a store counter, as for scopes) and pushes it with the call's frame.
-At a point inside body `k`, the top frame belongs to the running call of `k`. That holds because
-the stack typing puts body `k`'s frame on top there (`StackTyped`). A parameter's site runs with
-its caller's rest of the stack, so a layer in the site keys on the caller's call. A
-module-level layer keys on its path alone.
+A build in a body is keyed by its path and the call that runs it. The owner ruled this form,
+option B, on 2026-10-10; sharing by argument values (Effect's `LayerMap`) is a later opt-in
+construct, scouted separately.
+
+The call is named by the program, not minted by the store. An invocation at path `s`, run under
+call `c`, runs its body under the call `s :: c` (`CallId := List (List Nat)`). A parameter's run
+resumes its site under the caller's call, the tail. A site belongs to the call that made it, so
+the tail is the site's call. The main program and the module run under no call, `[]`. A
+module-level layer keys on its path alone (`Point.layerCall`: the call only for a path in the
+root block's bodies, child `0`).
 
 | Layer | Key | rc.112 |
 | --- | --- | --- |
@@ -211,16 +215,33 @@ module-level layer keys on its path alone.
 | in body `k` | its path and the running call of `k` | one object per evaluation of the body |
 | reached by a reference in its own body | the reference's call | the same object within one call |
 
-### 5.2 What changes
+Two calls that one caller makes at one site share a name: a loop's iterations, or two fibers that
+fork one program. Their builds never meet. An entry is visible only from a memo map below the
+provide that built it (`MemoWorld.get` walks parents only). Below that provide, the code that
+runs under the caller's call `c` is the programs passed at `s`, which are children of `s`, and
+the code they reach through `c`'s own parameters runs under `c`'s caller. None of it is `s`
+itself, so no call named `s :: c` starts there. A store counter would name every call apart, but
+it costs a store step at each invocation, and its names depend on the schedule. The program's
+names do not, so the key adds no fresh name to the schedule-independence argument (DET-1 to
+DET-5).
 
-- `LayerId` gains the call: `List Nat × Option Nat`. The machine's memo operations, the compile
-  (`resolveLayer`), the reference denotation and the OCaml route read it.
-- A frame carries its call identity: `Point.params : List Frame`, with `Frame` holding the id and
-  the sites.
-- The memo invariant keeps typing a cell by its path's scope: every call of one body checks the
-  layer at one signature, so the columns do not depend on the call.
-- The printer prints a body's layers inside the definition's suspension, so rc.112 creates one
-  object per run of the body: `(a0) => Effect.suspend(() => { const L = …; return body })`.
+### 5.2 What changes (step 3a, the machine)
+
+- `LayerId := List Nat × CallId` (`src/Effect4/Machine/Alphabets.lean`). The memo operations
+  keep their shape; the compile keys its five memo sites by `Point.layerKey`
+  (`src/Effect4/Program/Compile.lean`), and the reference denotation mirrors it
+  (`src/Effect4/Laws/Program/DenoteR.lean`).
+- A point carries its call (`Point.call`), and so does a release's capture (`Capture.call`). The
+  frames of `Point.params` are unchanged.
+- The memo invariant types a cell by its key's path (`LayerCellTyped`,
+  `src/Effect4/Laws/Program/Typed/Adequacy.lean`): every call of one body checks the layer at one
+  signature, so the columns do not depend on the call.
+- The OCaml route keys its memo table by the pair (`E4_memo.key`, `compare_key`,
+  `ocaml/engine/e4_memo.mli`).
+
+Step 3b, the printer, prints a body's layers inside the definition's suspension, so rc.112
+creates one object per run of the body: `(a0) => Effect.suspend(() => { const L = …; return
+body })`.
 
 ### 5.3 What it does not establish
 

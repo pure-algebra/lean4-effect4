@@ -218,7 +218,7 @@ module type INSTANCE = sig
   val cell_count : machine -> int
   val scope_count : machine -> int
   val memo_map_count : machine -> int
-  val memo_paths : machine -> (int * int list list) list
+  val memo_paths : machine -> (int * (int list * int list list) list) list
   val f_id : fiber -> fiber_id
   val f_exit : fiber -> (val_, err, defect, fiber_id, unit) exit_ option
   val f_parked : fiber -> parked
@@ -681,7 +681,14 @@ module Make (I : INSTANCE) = struct
            (List.map
               (fun (id, ps) ->
                  Printf.sprintf "%d:%s" id
-                   (String.concat "|" (List.map ids ps)))
+                   (String.concat "|"
+                      (List.map
+                         (fun (p, c) ->
+                            ids p
+                            ^ match c with
+                              | [] -> ""
+                              | _ -> "@" ^ String.concat "/" (List.map ids c))
+                         ps)))
               (I.memo_paths t.m))
        ^ "]")
       (I.next_name t.m) (I.due_count t.m) (I.next_id t.m) (I.next_token t.m)

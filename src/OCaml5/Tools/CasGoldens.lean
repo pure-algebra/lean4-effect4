@@ -96,7 +96,9 @@ open Effect4.Machine in
 def entryVal (e : MemoEntry) : Effect4.Store.Val :=
   .ctor 0 [.nat e.observers, .nat e.layerScope, .nat e.deferred.index]
 
-def layerVal (l : List Nat) : Effect4.Store.Val := .list (l.map Val.nat)
+/-- A layer's identity (`LayerId`): its path and the call that runs it, each path a list. -/
+def layerVal (l : Effect4.Machine.LayerId) : Effect4.Store.Val :=
+  .pair (.list (l.1.map Val.nat)) (.list (l.2.map fun p => .list (p.map Val.nat)))
 
 open Effect4.Machine in
 def mapVal (m : MemoMap) : Effect4.Store.Val :=
@@ -305,20 +307,28 @@ def e2 : MemoEntry := mkEntry 3 12 102
 def e3 : MemoEntry := mkEntry 4 13 103
 def e4 : MemoEntry := mkEntry 5 14 104
 
-/-- Three maps with a parent chain `m2 → m1 → m0`; entries under `[]`, `[0]`, `[0,1]`, `[1,0]`. -/
-def world : MemoWorld :=
-  [ ⟨m0, none, [([], e0), ([0, 1], e3)]⟩
-  , ⟨m1, some m0, [([0], e1)]⟩
-  , ⟨m2, some m1, [([1, 0], e2)]⟩ ]
+/-- A layer outside every definition's body: its path under no call. -/
+def at_ (p : List Nat) : LayerId := (p, [])
 
-def worldInserted : MemoWorld := world.insertEntry m2 [2] e4
-def worldUpdated : MemoWorld := worldInserted.updateEntry m2 [1, 0] fun e => { e with observers := e.observers + 7 }
-def worldDeleted : MemoWorld := worldUpdated.deleteEntry m2 [1, 0]
+/-- The layer at `[0, 1]` under the call at `[1]` (decisions row 341, step 3). -/
+def inCall : LayerId := ([0, 1], [[1]])
+
+/-- Three maps with a parent chain `m2 → m1 → m0`; entries under `[]`, `[0]`, `[0,1]`, `[1,0]`,
+and under `[0,1]` in a call, beside its entry under no call. -/
+def world : MemoWorld :=
+  [ ⟨m0, none, [(at_ [], e0), (at_ [0, 1], e3)]⟩
+  , ⟨m1, some m0, [(at_ [0], e1), (inCall, e4)]⟩
+  , ⟨m2, some m1, [(at_ [1, 0], e2)]⟩ ]
+
+def worldInserted : MemoWorld := world.insertEntry m2 (at_ [2]) e4
+def worldUpdated : MemoWorld :=
+  worldInserted.updateEntry m2 (at_ [1, 0]) fun e => { e with observers := e.observers + 7 }
+def worldDeleted : MemoWorld := worldUpdated.deleteEntry m2 (at_ [1, 0])
 
 /-- A world whose parent chain is a cycle: `get` must answer `none` at the fuel bound. -/
 def cyclicWorld : MemoWorld :=
-  [ ⟨m0, some m1, [([], e0)]⟩
-  , ⟨m1, some m0, [([0], e1)]⟩ ]
+  [ ⟨m0, some m1, [(at_ [], e0)]⟩
+  , ⟨m1, some m0, [(at_ [0], e1)]⟩ ]
 
 def entryAnswer : Option MemoEntry → String
   | none => "none"
@@ -341,22 +351,24 @@ def g4entries (name : String) (w : MemoWorld) (id : MemoMapId) : Case :=
      | some m => s!"some {hex (Val.encode (entriesVal m.entries))}")
 
 def g4Cases : List Case :=
-  [ g4entryAt "g4-entryAt-own" world m2 [1, 0]
-  , g4entryAt "g4-entryAt-parent-miss" world m2 [0]
-  , g4entryAt "g4-entryAt-root" world m0 []
-  , g4entryAt "g4-entryAt-nested-key" world m0 [0, 1]
-  , g4get "g4-get-own" world [1, 0] m2
-  , g4get "g4-get-parent" world [0] m2
-  , g4get "g4-get-grandparent" world [] m2
-  , g4get "g4-get-grandparent-nested" world [0, 1] m2
-  , g4get "g4-get-miss" world [9] m2
-  , g4get "g4-get-cycle" cyclicWorld [9] m0
-  , g4get "g4-get-cycle-own" cyclicWorld [] m0
-  , g4entryAt "g4-after-insert" worldInserted m2 [2]
-  , g4get "g4-after-insert-get" worldInserted [2] m2
-  , g4entryAt "g4-after-update" worldUpdated m2 [1, 0]
-  , g4entryAt "g4-after-delete" worldDeleted m2 [1, 0]
-  , g4get "g4-after-delete-get" worldDeleted [1, 0] m2
+  [ g4entryAt "g4-entryAt-own" world m2 (at_ [1, 0])
+  , g4entryAt "g4-entryAt-parent-miss" world m2 (at_ [0])
+  , g4entryAt "g4-entryAt-root" world m0 (at_ [])
+  , g4entryAt "g4-entryAt-nested-key" world m0 (at_ [0, 1])
+  , g4get "g4-get-own" world (at_ [1, 0]) m2
+  , g4get "g4-get-parent" world (at_ [0]) m2
+  , g4get "g4-get-grandparent" world (at_ []) m2
+  , g4get "g4-get-grandparent-nested" world (at_ [0, 1]) m2
+  , g4get "g4-get-in-call" world inCall m2
+  , g4entryAt "g4-entryAt-in-call-not-root" world m0 inCall
+  , g4get "g4-get-miss" world (at_ [9]) m2
+  , g4get "g4-get-cycle" cyclicWorld (at_ [9]) m0
+  , g4get "g4-get-cycle-own" cyclicWorld (at_ []) m0
+  , g4entryAt "g4-after-insert" worldInserted m2 (at_ [2])
+  , g4get "g4-after-insert-get" worldInserted (at_ [2]) m2
+  , g4entryAt "g4-after-update" worldUpdated m2 (at_ [1, 0])
+  , g4entryAt "g4-after-delete" worldDeleted m2 (at_ [1, 0])
+  , g4get "g4-after-delete-get" worldDeleted (at_ [1, 0]) m2
   , g4entries "g4-entries-base" world m2
   , g4entries "g4-entries-inserted" worldInserted m2
   , g4entries "g4-entries-updated" worldUpdated m2

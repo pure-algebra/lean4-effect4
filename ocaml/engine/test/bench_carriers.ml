@@ -183,7 +183,7 @@ let c6 n =
 
 (* --------------------------------------------------------------------- the memo *)
 
-let path i = [ i / 10; i mod 10 ]
+let path i : E4_memo.key = ([ i / 10; i mod 10 ], [])
 
 let build_memo n =
   List.fold_left (fun t i -> E4_memo.insert (path i) i t) E4_memo.empty (List.init n (fun i -> i))

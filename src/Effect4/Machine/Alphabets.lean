@@ -124,11 +124,22 @@ abbrev Ann := Unit
 
 /-! ## Identities -/
 
+/-- **A call**, by the path of each invocation on its chain, innermost first (decisions row 341,
+step 3): the invocation at path `s` run under call `c` is the call `s :: c`, and the main program
+and the module run under no call, `[]`. The tail is the caller's call, the static link of an
+activation record. Two calls that one caller makes at one site share a name; their builds never
+meet, since a memo entry is visible only below the provide that built it, and no call starts
+there under the name of the call that built it (`docs/research/2026-10-10-layer-scopes.md` §5). -/
+abbrev CallId := List (List Nat)
+
 /-- A layer, by the path of its node from the root program (`Program/Compile.lean`'s `Node`;
-the join, `docs/research/2026-09-07-join-dispatch.md` §4): layers are program subterms
-addressed by path, never a table. The memo world keys on it, and two evaluations of one site
-under two memo maps are two entries — the path is the key, never an identity. -/
-abbrev LayerId := List Nat
+the join, `docs/research/2026-09-07-join-dispatch.md` §4) and the call that runs it when the node
+stands in a definition's body, `[]` elsewhere (decisions row 341, step 3; DB-12 amended).
+rc.112 keys its memo map on the layer object (`Layer.ts`, `MemoMapImpl.map`), one object for
+each evaluation of the code that makes it: a module-level `const` is one object, and a layer in
+a function body is one object per call. Layers are program subterms addressed by path, never a
+table, and two evaluations of one site under two memo maps are two entries. -/
+abbrev LayerId := List Nat × CallId
 
 /-- A `MemoMapImpl` (`Layer.ts:421-432`), by allocation order from the one supply. -/
 structure MemoMapId where

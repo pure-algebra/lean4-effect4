@@ -53,26 +53,26 @@ theorem store0 : StoreTyped memoSrc w0 :=
 /-! ## The build -/
 
 /-- `memoBuild`'s certificate: the leaf's columns. -/
-theorem build_pre : storePre memoSrc w0 (.memoBuild [0] ⟨0⟩) (.handle Ty.contextTarget, .never) :=
+theorem build_pre : storePre memoSrc w0 (.memoBuild ([0], []) ⟨0⟩) (.handle Ty.contextTarget, .never) :=
   ⟨memoLayer, _, memo_layer_node, memo_layer_check, rfl⟩
 
 /-- The store after the build: map 0 holds the leaf's entry, at cell 0 and layer scope 1. -/
-def s1 : Stores := (syncOpStep (.memoBuild [0] ⟨0⟩) s0).map Prod.fst |>.getD Stores.empty
+def s1 : Stores := (syncOpStep (.memoBuild ([0], []) ⟨0⟩) s0).map Prod.fst |>.getD Stores.empty
 
-theorem built_step : syncOpStep (.memoBuild [0] ⟨0⟩) s0 = some (s1, Val.scopeHandle 1) := rfl
+theorem built_step : syncOpStep (.memoBuild ([0], []) ⟨0⟩) s0 = some (s1, Val.scopeHandle 1) := rfl
 
-theorem s1_cells : s1.memo.layerCells = [([0], ⟨0⟩)] := rfl
+theorem s1_cells : s1.memo.layerCells = [(([0], []), ⟨0⟩)] := rfl
 
 /-- **The build establishes the memo row**: the typed store after it declares the entry's cell at
 the leaf's columns. -/
 theorem built : ∃ w1, w0.leHost w1 ∧ w1.state = s1 ∧ StoreTyped memoSrc w1 ∧
     w1.«Π» ⟨0⟩ = some (.handle Ty.contextTarget, .never) := by
   obtain ⟨st, ans, step, w1, ord, hst, store1, _⟩ :=
-    memoBuild_implements memoSrc [0] ⟨0⟩ w0 _ store0 build_pre
+    memoBuild_implements memoSrc ([0], []) ⟨0⟩ w0 _ store0 build_pre
   rw [show w0.state = s0 from rfl, built_step] at step
   cases step
   refine ⟨w1, ord, hst, store1, ?_⟩
-  have mem : ([0], (⟨0⟩ : DeferredKey)) ∈ w1.state.memo.layerCells := by
+  have mem : (([0], []), (⟨0⟩ : DeferredKey)) ∈ w1.state.memo.layerCells := by
     rw [hst, s1_cells]
     exact List.mem_singleton_self _
   exact store1.memoTable _ mem memoLayer _ memo_layer_node memo_layer_check
@@ -81,7 +81,7 @@ theorem built : ∃ w1, w0.leHost w1 ∧ w1.state = s1 ∧ StoreTyped memoSrc w1
 
 /-- `memoGet` on the built store hits: it answers the entry's cell and its map. -/
 theorem hit_step :
-    (syncOpStep (.memoGet [0] ⟨0⟩) s1).map Prod.snd = some (Val.memoHit ⟨0⟩ ⟨0⟩) := rfl
+    (syncOpStep (.memoGet ([0], []) ⟨0⟩) s1).map Prod.snd = some (Val.memoHit ⟨0⟩ ⟨0⟩) := rfl
 
 /-- **A real hit, typed**: the answer `memoGet` gives on the built store is the hit, and the row's
 post declares its cell at the leaf's columns. -/
@@ -89,7 +89,7 @@ theorem hit : ∃ (w2 : W) (cell : DeferredKey) (owner : MemoMapId), Val.memoHit
     w2.«Π» cell = some (.handle Ty.contextTarget, .never) := by
   obtain ⟨w1, _, hst, store1, _⟩ := built
   obtain ⟨st, ans, step, w2, _, _, _, post⟩ :=
-    memoGet_implements memoSrc [0] ⟨0⟩ w1 Ty.never store1
+    memoGet_implements memoSrc ([0], []) ⟨0⟩ w1 Ty.never store1
       ⟨memoLayer, _, memo_layer_node, memo_layer_check, rfl⟩
   have answer : ans = Val.memoHit ⟨0⟩ ⟨0⟩ := by
     have h := hit_step
@@ -107,12 +107,12 @@ def builtExit : ExitV := .success (Val.context emptyCtx)
 
 /-- `memoComplete` on the built store completes cell 0 with the built context. -/
 theorem completed_step :
-    ((syncOpStep (.memoComplete [0] ⟨0⟩ builtExit) s1).map Prod.fst).bind
+    ((syncOpStep (.memoComplete ([0], []) ⟨0⟩ builtExit) s1).map Prod.fst).bind
         (fun s => (s.deferreds.cellAt ⟨0⟩).bind (·.completion)) =
       some (.ofExit builtExit) := rfl
 
 theorem completed_store :
-    syncOpStep (.memoComplete [0] ⟨0⟩ builtExit) s1 =
+    syncOpStep (.memoComplete ([0], []) ⟨0⟩ builtExit) s1 =
       some ({ s1 with deferreds := (s1.deferreds.complete ⟨0⟩ (.ofExit builtExit)).1 }, Val.unit) :=
   rfl
 
@@ -121,7 +121,7 @@ theorem completed : ∃ w3, StoreTyped memoSrc w3 ∧
     w3.state.deferreds.cellAt ⟨0⟩ = (s1.deferreds.complete ⟨0⟩ (.ofExit builtExit)).1.cellAt ⟨0⟩ := by
   obtain ⟨w1, _, hst, store1, _⟩ := built
   obtain ⟨st, ans, step, w3, _, hst3, store3, _⟩ :=
-    memoComplete_implements memoSrc [0] ⟨0⟩ builtExit w1 PUnit.unit store1
+    memoComplete_implements memoSrc ([0], []) ⟨0⟩ builtExit w1 PUnit.unit store1
       ⟨memoLayer, _, memo_layer_node, memo_layer_check, ⟨emptyCtx_fits w1, trivial⟩⟩
   rw [hst, completed_store] at step
   cases step
@@ -139,8 +139,8 @@ def wBad : W :=
 `string`. -/
 theorem wrong_column_refused : ¬ StoreTyped memoSrc wBad := by
   intro store
-  have mem : ([0], (⟨0⟩ : DeferredKey)) ∈ wBad.state.memo.layerCells := by
-    change ([0], (⟨0⟩ : DeferredKey)) ∈ s1.memo.layerCells
+  have mem : (([0], []), (⟨0⟩ : DeferredKey)) ∈ wBad.state.memo.layerCells := by
+    change (([0], []), (⟨0⟩ : DeferredKey)) ∈ s1.memo.layerCells
     rw [s1_cells]
     exact List.mem_singleton_self _
   have declared := store.memoTable _ mem memoLayer _ memo_layer_node memo_layer_check
@@ -152,7 +152,7 @@ theorem wrong_column_refused : ¬ StoreTyped memoSrc wBad := by
 /-- **Refused**: a `memoGet` request certified at `string` is not admitted; the row's certificate
 is the looked-up layer's own checked error. -/
 theorem wrong_certificate_refused (w : W) :
-    ¬ storePre memoSrc w (.memoGet [0] ⟨0⟩) Ty.string := by
+    ¬ storePre memoSrc w (.memoGet ([0], []) ⟨0⟩) Ty.string := by
   rintro ⟨l, lt, node, checked, err⟩
   rw [memo_layer_node] at node
   cases node

@@ -104,19 +104,19 @@ def storePre (root : ProgramSource) (w : World) (op : SyncOp) (cert : StoreCert 
   -- the exit that completes a memo entry fits the entry's columns, the built context and the
   -- layer's own checked error type, as `deferredCompleteWith`'s exit fits its cell's; with
   -- `memoBuild`'s row, the memo-table clause `memoGet`'s post reads (decisions row 187)
-  | .memoComplete layer _ ex => ∃ l lt, Node.at_ (.eff root.program) layer = some (.layer l) ∧
-      Checker.checkLayer (root.scopeSig layer) layer (LayerTerm.expandIn root.program l) = .ok lt ∧
+  | .memoComplete layer _ ex => ∃ l lt, Node.at_ (.eff root.program) layer.1 = some (.layer l) ∧
+      Checker.checkLayer (root.scopeSig layer.1) layer.1 (LayerTerm.expandIn root.program l) = .ok lt ∧
       ExitOk w ⟨.handle Ty.contextTarget, lt.error, Env.Requirement.empty⟩ ex
   -- the looked-up layer's own checked error type (decision row 90), read through the
   -- expansion's rounds as `PointTyped` reads a node (decisions row 153 (b))
-  | .memoGet layer _ => ∃ l lt, Node.at_ (.eff root.program) layer = some (.layer l) ∧
-      Checker.checkLayer (root.scopeSig layer) layer (LayerTerm.expandIn root.program l) = .ok lt ∧
+  | .memoGet layer _ => ∃ l lt, Node.at_ (.eff root.program) layer.1 = some (.layer l) ∧
+      Checker.checkLayer (root.scopeSig layer.1) layer.1 (LayerTerm.expandIn root.program l) = .ok lt ∧
       lt.error = cert
   -- the entry's Deferred is declared at the layer's columns, the built context and the layer's
   -- own checked error type, read as `memoGet` reads them: the promise table's `memoBuild` row
   -- (`Typed/Vocabulary.lean`), the memo-table clause `memoGet`'s post relies on (decisions row 187)
-  | .memoBuild layer _ => ∃ l lt, Node.at_ (.eff root.program) layer = some (.layer l) ∧
-      Checker.checkLayer (root.scopeSig layer) layer (LayerTerm.expandIn root.program l) = .ok lt ∧
+  | .memoBuild layer _ => ∃ l lt, Node.at_ (.eff root.program) layer.1 = some (.layer l) ∧
+      Checker.checkLayer (root.scopeSig layer.1) layer.1 (LayerTerm.expandIn root.program l) = .ok lt ∧
       cert = (.handle Ty.contextTarget, lt.error)
 
 /-- What each store row's answer satisfies: the store's actual answer (decisions row 136; the
@@ -1135,21 +1135,21 @@ theorem storePre_rows_append {w : World} {op : SyncOp} {cert : StoreCert op}
     · rw [hprog]
       exact hat
     · rw [hprog]
-      exact checkLayer_ext (scopeSig_rows_append src src' t' hprog htab hsvc layer) hcheck
+      exact checkLayer_ext (scopeSig_rows_append src src' t' hprog htab hsvc layer.1) hcheck
   | memoBuild layer m =>
     obtain ⟨l, lt, hat, hcheck, hcert⟩ := h
     refine ⟨l, lt, ?_, ?_, hcert⟩
     · rw [hprog]
       exact hat
     · rw [hprog]
-      exact checkLayer_ext (scopeSig_rows_append src src' t' hprog htab hsvc layer) hcheck
+      exact checkLayer_ext (scopeSig_rows_append src src' t' hprog htab hsvc layer.1) hcheck
   | memoComplete layer m ex =>
     obtain ⟨l, lt, hat, hcheck, hex⟩ := h
     refine ⟨l, lt, ?_, ?_, hex⟩
     · rw [hprog]
       exact hat
     · rw [hprog]
-      exact checkLayer_ext (scopeSig_rows_append src src' t' hprog htab hsvc layer) hcheck
+      exact checkLayer_ext (scopeSig_rows_append src src' t' hprog htab hsvc layer.1) hcheck
   | scopeAdd scope fin =>
     exact ⟨h.1, finalizerAdmitted_rows_append src src' t' hprog htab hsvc h.2⟩
   | _ => exact h

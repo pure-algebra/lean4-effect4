@@ -1240,7 +1240,12 @@ def Satisfies (self : Context U) (r : Requirement) : Prop := r.Subset self.keysR
   its output row (`build_total` (`src/Effect4/Laws/Program/BuildTotal.lean`), restored under
   decisions row 147). The machine's build refining `build` is the row's other half, still owed.
 - **Layer sharing invariants (`layer-sharing-contract`)**: Dynamic layer memoization and sharing invariants
-  (`LayerSharingContract.lean`).
+  (`LayerSharingContract.lean`). A build is keyed by the layer's path and, in a definition's
+  body, the running call (`Point.layerKey`, `src/Effect4/Program/Compile.lean`; decisions row 341,
+  step 3): a body's layer is built once per call, as rc.112 builds one layer object per
+  evaluation of the body. The memo table types a cell by its key's path alone
+  (`LayerCellTyped`, `src/Effect4/Laws/Program/Typed/Adequacy.lean`), since every call of one
+  body checks the layer at the body's one signature.
 
 ### 2.9 Concept 9: Host Session Protocol & Boundary (`host-session-protocol`)
 
