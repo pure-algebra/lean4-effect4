@@ -233,6 +233,7 @@ import Effect4.Laws.Machine.Keeps
 import Effect4.Laws.Program.Guard.Handshake
 import Effect4.Laws.Program.Moves
 import Effect4.Laws.Program.MovesConnect
+import Effect4.Laws.Program.Footprint
 
 import Effect4.Laws.Program.Folds.Checker
 import Effect4.Laws.Program.Folds.Projections
