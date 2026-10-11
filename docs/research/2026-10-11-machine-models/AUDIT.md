@@ -62,3 +62,33 @@ lines.
 
 What to do with it: `CODEX-PROMPT.md`, items 1 to 3. The Timeout producer is written over the
 shared laws, and the ledgers become instances of `Laws/Machine/Ledger.lean`.
+
+## 2026-10-11 10:25, the first consolidation
+
+Range `0d1acfd87..e2998236e`: 13 commits, a fast-forward.
+
+| Measure | Value |
+| --- | --- |
+| lines in `Laws` and `Dogfood` | 1,823 added, 737 removed |
+| files changed, added | 20, 9 |
+| shared-law uses | 137 |
+| private case analyses | 19 |
+| hand-built decision lifts | 0 |
+
+**Consolidated.**
+- `FinalizerCommands` and `FinalizerBookkeeping` are now instances of the stack ledger: from 873
+  lines to 524 with `LedgerFinalizer`, all 48 statements unchanged (Codex's
+  `2026-10-11-codex-consolidation-receipt.md`).
+- `FinalizerCredits` reads `FrameWeights` instead of its own pop traversal.
+- `WriterWeights` is one native start bound that Atomic and Workers share.
+- The private command and settlement matches in those modules fall from 16 to zero.
+
+**Still per scenario.** `Atomic/WriterMachine` defines its own `fibers` and `outside` sums over the
+machine's fibers. They repeat `SourceOpportunityMachine.fibers` and `outside`: both are
+current-code weights, which the stack ledger does not cover. The shared replacement is the frame
+weight ledger: the stack weight plus the current code, with the `outside` frame rule. It waits for
+R2 or for the frame-weight generalization of `Ledger`.
+
+**Verdict: improving.** In the baseline, shared-law uses were 179 against 466 private case
+analyses; in this range they are 137 against 19. Lines added still exceed lines removed, by the new
+Atomic writer files (505 lines) and the Timeout form family (305 lines).
