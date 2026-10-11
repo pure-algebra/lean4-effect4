@@ -25,9 +25,26 @@ Behaviour gates only where a slice changes executable code, and then at a sweep.
 
 ## What lands beside you (verify, do not trust)
 
-- `src/Effect4/Laws/Machine/Ledger.lean` (Claude, L1): `Ledger`, `Funded`, the edit laws proved
-  once, the frame rule over unique fiber ids, and the connector of `FinalizerCredits.Funded`. Its
-  receipt section names what it proves.
+- **L1, the stack ledger (landed).** A place invariant whose places are the saved stacks:
+  - `src/Effect4/Laws/Machine/Ledger.lean`: `StackLedger` (frame-event weights `produced` and
+    `consumed`, a finalizer program's start `program`, a stack weight `stack` with `empty`),
+    `Funded`, and `Same` with the edit laws proved once (`same_emit`, `same_update`,
+    `same_modify`, `same_map`, `same_spawn`, `same_start`, `same_forkFinalizers`,
+    `same_countdown`, `same_beginRace`, `same_postTask`, `same_drainOwed`,
+    `same_interruptUpdate`, `same_linkScope`, `same_interruptEach`);
+  - the same module also holds the frame rule over distinct ids (`update_bound`) and the
+    evaluation bridge (`IterDebit`, `IterKept`, `Balanced`, `settle_balanced`, `IterKept.rebase`);
+  - `src/Effect4/Laws/Program/LedgerRun.lean`: `Kept` (what a ledger supplies: its evaluation
+    debit, and that the race's cancel frame and the parallel close's iterator add no weight),
+    `command_funded` (every command), `edits` (every edit outside the loop), `stepped`,
+    `funded_reachable` (every reachable machine);
+  - `src/Effect4/Laws/Program/LedgerFinalizer.lean`: the finalizer ledger as the first instance.
+    `funded_iff`, `iterKept` and `kept` connect it, and `funded_reachable` re-derives
+    `FinalizerRun.funded_reachable` with no command case of its own;
+  - audit: 190 declarations within `[propext, Quot.sound]`.
+  - Limit: a weight that reads the current code (`SourceOpportunities.frame`, Atomic
+    `WriterPhase`) is not a stack weight. Its interrupts and stale write-backs need R2 first, or
+    an `outside` argument as today.
 - `Test/Counterexamples/Machine/Semantics/SelfInterrupt.lean` (`E4-RUN-CE-046`, seeded): a fiber
   that interrupts itself through its own handle runs to a frontier. On rc.112 it exits interrupted.
 
@@ -58,9 +75,14 @@ Behaviour gates only where a slice changes executable code, and then at a sweep.
    Then replace the pop-chain copies (`passPushed`, `joinPushed`, `popFrom`, `getCont`,
    `resumeValue`, `resumeCause` re-walked for about 20 predicates) by instances. Do
    `FinalizerCredits` first: it is an exact instance of `FrameWeights`.
-3. **The four ledgers as instances of L1.**
-   - Replace each ledger's edit-transport lemmas and its hand `DecisionLift` by `Ledger`'s, with
-     `DecisionLift.and` for conjunctions.
+3. **The ledgers as instances of L1.**
+   - First delete what `LedgerFinalizer` makes redundant: `FinalizerCommands`' command proof and
+     `FinalizerBookkeeping`'s edit lemmas, keeping their names as one-line instances.
+   - Then each stack-weight ledger (`ReleaseCustody`'s stack credits, the release and log
+     ledgers): define its `StackLedger`, prove `Kept`, and take `funded_reachable`.
+   - The current-code weights (`SourceOpportunity`, `WriterPhase`) move after R2, or with a
+     frame-weight generalization of `Ledger` (the stack weight plus the current code), proved the
+     same way.
    - Then state the open goals `Workers.logs_step`, `QueueWorkers.logs_history` and
      `Atomic.Cleanup.log_debits` as ledger instances, and prove them.
 4. **L3, code weights as one fold.** Native code has no generated algebra, so about 25 hand folds
