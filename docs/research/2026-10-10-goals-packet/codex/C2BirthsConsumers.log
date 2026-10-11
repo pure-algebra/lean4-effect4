@@ -1,0 +1,13 @@
+✔ [882/893] Built Effect4.Laws.Program.Guard.NativeStateMotion (1.8s)
+✔ [883/893] Built Effect4.Laws.Program.ReleaseCustody.NativeMachineShape (1.7s)
+✔ [884/893] Built Effect4.Laws.Program.MaskRuns (1.0s)
+✔ [885/893] Built Effect4.Laws.Program.Guard.NativeAssembly (1.3s)
+✔ [886/893] Built Effect4.Laws.Program.Guard.NativeQueueAssembly (1.2s)
+✔ [887/893] Built Effect4.Laws.Program.Guard.Command (1.1s)
+✔ [888/893] Built Effect4.Laws.Program.Guard.CommandObservations (1.1s)
+✔ [889/893] Built Effect4.Laws.Program.Guard.Driver (1.2s)
+✔ [890/893] Built Effect4.Laws.Program.Guard.Decision (1.1s)
+✔ [891/893] Built Effect4.Laws.Program.MaskBracket (1.2s)
+✔ [892/893] Built Test.Program.CommandFrames (1.3s)
+✔ [893/893] Built Test.Machine.MaskBracket (8.1s)
+Build completed successfully (893 jobs).

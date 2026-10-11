@@ -176,20 +176,20 @@ theorem loop_next_code {B : List Val} (point : Point)
         (HostTimeoutSource.cursor n delay (.some body) .none))
       rw [loop_answer_stops B point slots n delay body .none path]
       exact .finish _ (.head (.success (.answered member)))
-    | failed error =>
+    | failed error declared =>
       change LoopAt B (loopNextAt HostTimeoutSource.program point
         (HostTimeoutSource.cursor n delay .none (.some error)))
       rw [loop_waiting B point slots n delay (.some error) path]
       by_cases allowed : n = 0 ∨ n < 4
       · rw [if_pos allowed]
-        refine .enter _ _ (.state n delay _ (.failed error)) ?_
-        have iteration := iteration_slots point slots n delay (.some error) path
+        refine .enter _ _ (.state n delay _ (.failed error declared)) ?_
+        have iteration := iteration_slots point slots n delay (.some error) path (by omega)
         have kind : kindAt (point.childWith 0 (HostTimeoutSource.cursor n delay .none (.some error))).path =
             .result := by rw [Point.childWith, path]; rfl
         rw [← kind]
         exact .source _ iteration
       · rw [if_neg allowed]
-        exact .finish _ (.head (.success (.failed error)))
+        exact .finish _ (.head (.success (.failed error declared)))
     | empty =>
       change LoopAt B (loopNextAt HostTimeoutSource.program point
         (HostTimeoutSource.cursor n delay .none .none))
@@ -197,7 +197,7 @@ theorem loop_next_code {B : List Val} (point : Point)
       by_cases allowed : n = 0 ∨ n < 4
       · rw [if_pos allowed]
         refine .enter _ _ (.state n delay _ .empty) ?_
-        have iteration := iteration_slots point slots n delay .none path
+        have iteration := iteration_slots point slots n delay .none path (by omega)
         have kind : kindAt (point.childWith 0 (HostTimeoutSource.cursor n delay .none .none)).path =
             .result := by rw [Point.childWith, path]; rfl
         rw [← kind]
@@ -250,7 +250,8 @@ theorem catch_callback {B : List Val} (point : Point)
   cases read : caughtErrorValue? point.env test cause with
   | none => exact .head (.failure _ cause)
   | some error =>
-    have good := caught_slots { point with completed := view } slots error path
+    have declared := caught_retryable { point with completed := view } slots test body handler path node cause error read
+    have good := caught_slots { point with completed := view } slots error path declared
     have kind : kindAt ({ point with completed := view }.childWith 1 error).path = kindAt point.path := by
       simp only [Point.childWith, path]
       rfl

@@ -1,0 +1,25 @@
+--- a/Test/Dogfood/Scenario/Atomic/Cleanup.lean
++++ b/Test/Dogfood/Scenario/Atomic/Cleanup.lean
+@@ -2,0 +3 @@
++import Test.Dogfood.Scenario.SourceOpportunity
+@@ -67,2 +68,18 @@
+-        (FinalizerRun.once_placed_pushes_once b.program b.table budget.compileFuel m
+-          (requestPath i) (placement b built i request) history.reachable))
++        (by
++          have once := SourceOpportunity.atomic_registrations_once budget.compileFuel b built m history i request
++          have selectors : FinalizerRun.registeredAt (requestPath i) =
++              (fun ev : ReleaseTrace.Event => match ev with
++                | .frame _ (.pushed (.onExit _ (.fin p) _)) => p.path == requestPath i
++                | _ => false) := by
++            funext ev
++            cases ev with
++            | frame owner event =>
++              cases event with
++              | pushed code =>
++                cases code with
++                | onExit body name flag => cases name <;> rfl
++                | _ => rfl
++              | _ => rfl
++            | _ => rfl
++          rw [selectors]
++          exact once))

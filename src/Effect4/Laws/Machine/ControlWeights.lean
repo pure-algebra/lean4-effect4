@@ -15,7 +15,7 @@ namespace Effect4.Machine.ControlWeights
 universe u v
 
 /-- The keyed replacement changes the weight of exactly the selected record.
-Consumer: `ReleaseCustody.Control.registration_loop_funded`. -/
+Consumer: `ReleaseCustody.Control.update_credits` and source opportunity installation. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem replace_sum {α : Type u} {K : Type v} [DecidableEq K]
     (key : α → K) (weight : α → Nat) (old next : α) (sameKey : key next = key old) :

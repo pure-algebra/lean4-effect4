@@ -1,0 +1,340 @@
+✔ [1062/1102] Built Test.Counterexamples.Machine.Semantics.InterruptEscape (2.4s)
+✔ [1069/1102] Built Test.Dogfood.P1HttpCache (2.6s)
+✔ [1071/1102] Built Effect4.Laws.Run.Journal (2.9s)
+✔ [1074/1105] Built Effect4.Laws.Machine.ControlWeights (1.2s)
+✔ [1075/1138] Built Test.Dogfood.Scenario.Timeout.Model (1.6s)
+✔ [1089/1144] Built Test.Dogfood.Proofs.HostPayloads (1.4s)
+✔ [1095/1146] Built Test.Dogfood.Proofs.HostJournal (1.7s)
+✔ [1098/1146] Built Effect4.Laws.Program.ReleaseCustody.Control (2.8s)
+✔ [1100/1149] Built Test.Dogfood.Proofs.HostTimeoutSource (2.3s)
+✔ [1102/1149] Built Effect4.Laws.Api.MaskRuns (1.7s)
+✔ [1104/1180] Built Test.Dogfood.Proofs.HostAppliedObservation (1.7s)
+✔ [1138/1180] Built Effect4.Laws.Program.ReleaseCustody.Evaluation (2.2s)
+✔ [1139/1180] Built Test.Api.HostList (1.5s)
+✔ [1140/1180] Built Effect4.Laws.Program.ReleaseCustody.Producers (1.9s)
+✔ [1141/1180] Built Effect4.Laws.Program.ReleaseCustody.Pop (2.7s)
+✔ [1142/1180] Built Test.Dogfood.Proofs.HostTimeoutSlots (7.8s)
+✔ [1143/1180] Built Effect4.Laws.Program.ReleaseCustody.CausePop (3.6s)
+✔ [1144/1180] Built Effect4.Laws.Program.ReleaseCustody.FrameDebit (2.9s)
+✔ [1145/1180] Built Test.Dogfood.Proofs.HostTimeoutFlow (4.5s)
+✔ [1146/1180] Built Effect4.Laws.Program.ReleaseCustody.Sequencing (1.4s)
+✔ [1147/1180] Built Effect4.Laws.Program.ReleaseCustody.CommandStacks (1.9s)
+✔ [1148/1180] Built Test.Dogfood.Proofs.HostTimeoutNative (3.9s)
+✔ [1149/1180] Built Effect4.Laws.Program.ReleaseCustody.PopSequencing (2.8s)
+✔ [1150/1180] Built Effect4.Laws.Program.ReleaseCustody.CommandStackSteps (1.9s)
+✔ [1151/1180] Built Effect4.Laws.Program.ReleaseCustody.FrameSequencing (1.7s)
+✔ [1152/1180] Built Test.Dogfood.Proofs.HostTimeoutFrames (2.3s)
+✔ [1153/1180] Built Effect4.Laws.Program.ReleaseCustody.RuntimeShape (1.2s)
+✔ [1154/1180] Built Test.Dogfood.Proofs.HostTimeoutEvaluation (1.9s)
+✔ [1155/1180] Built Test.Dogfood.Proofs.HostTimeoutCommands (1.5s)
+✔ [1156/1180] Built Effect4.Laws.Program.ReleaseCustody.NativeSequencing (3.4s)
+✔ [1157/1180] Built Test.Dogfood.Proofs.HostTimeoutHeap (1.6s)
+✔ [1158/1180] Built Effect4.Laws.Program.ReleaseCustody.NativeStacks (1.9s)
+✔ [1159/1180] Built Test.Dogfood.Proofs.HostTimeoutState (1.4s)
+✔ [1160/1180] Built Test.Dogfood.Proofs.HostTimeoutStateSteps (1.4s)
+✔ [1161/1180] Built Test.Dogfood.Proofs.HostTimeoutRaceSteps (1.6s)
+✔ [1162/1180] Built Test.Dogfood.Proofs.HostTimeoutQueue (1.3s)
+✔ [1163/1180] Built Test.Dogfood.Proofs.HostTimeoutParkSteps (2.3s)
+✔ [1164/1180] Built Test.Dogfood.Proofs.HostTimeoutLocalSteps (1.0s)
+✔ [1165/1180] Built Test.Dogfood.Proofs.HostTimeoutIteration (1.4s)
+✔ [1166/1180] Built Test.Dogfood.Proofs.HostTimeoutSettle (1.4s)
+✔ [1167/1180] Built Test.Dogfood.Proofs.HostTimeoutLoop (1.3s)
+✔ [1168/1180] Built Test.Dogfood.Proofs.HostTimeoutObservers (1.5s)
+✔ [1169/1180] Built Test.Dogfood.Proofs.HostTimeoutRaceCommands (2.3s)
+✔ [1170/1180] Built Test.Dogfood.Proofs.HostTimeoutCancellation (1.3s)
+✔ [1171/1180] Built Test.Dogfood.Proofs.HostTimeoutExitCommands (1.4s)
+✔ [1172/1180] Built Test.Dogfood.Proofs.HostTimeoutAdminCommands (1.5s)
+✔ [1173/1180] Built Test.Dogfood.Proofs.HostTimeoutDriver (1.4s)
+✔ [1174/1180] Built Test.Dogfood.Proofs.HostTimeoutScheduler (1.6s)
+✔ [1175/1180] Built Test.Dogfood.Proofs.HostTimeoutControls (1.4s)
+✔ [1176/1180] Built Test.Dogfood.Proofs.HostTimeoutAnswers (1.5s)
+✔ [1177/1180] Built Test.Dogfood.Proofs.HostTimeoutApplication (1.5s)
+✔ [1178/1180] Built Test.Dogfood.Proofs.HostTimeoutHistory (1.5s)
+✔ [1179/1180] Built Test.Dogfood.Scenario.Timeout (2.4s)
+✔ [1180/1180] Built Test.Codegen.TermRows (11s)
+Build completed successfully (1180 jobs).
+bun test ./harness/truth/records.test.ts ./harness/truth/catch-if.test.ts ./harness/truth/native-queries.test.ts ./harness/truth/prelude-inventory.test.ts ./harness/truth/if-case.test.ts
+bun test v1.4.2 (744846f84)
+
+harness/truth/records.test.ts:
+(pass) record target helpers > absence, present undefined, and nested none remain distinct [1.66ms]
+(pass) record target helpers > presence ignores the prototype and handles shadowed property methods [0.03ms]
+(pass) record target helpers > update evaluates each operand once in source order and leaves its input intact [0.04ms]
+(pass) record target helpers > computed prototype updates create an own value without changing the prototype [0.01ms]
+(pass) whole-record tag selection > binds the original object and constructs only the chosen callback when run [1.44ms]
+(pass) whole-record tag selection > the miss branch retains the whole object and inherited tags do not match [0.07ms]
+(pass) whole-record tag selection > literal tags include ordinary prototype names [0.03ms]
+(pass) record overwrite copies before the replacement and each impossible branch stays dormant [0.14ms]
+(pass) payload classes: one image, never a pair (decisions row 120, part E2) > a class with data beyond its message is a payload, wired whole with sorted keys [2.11ms]
+(pass) payload classes: one image, never a pair (decisions row 120, part E2) > a cause the instance holds unenumerable is still its data [0.04ms]
+(pass) payload classes: one image, never a pair (decisions row 120, part E2) > a message-only class stays the pair (ruling (c)); a pair and a plain value are no payload [0.03ms]
+(pass) payload classes: one image, never a pair (decisions row 120, part E2) > a host failure with data beyond its message is a defect at the adapter, not a pair [1.33ms]
+(pass) payload classes: one image, never a pair (decisions row 120, part E2) > keys sort by code point, which is UTF-8 byte order, not UTF-16 order [0.03ms]
+
+harness/truth/catch-if.test.ts:
+(pass) catchIf selects only the first Fail and a miss retains the entire cause [0.10ms]
+(pass) catchIf hit replaces a mixed cause including its defect and interruption [0.03ms]
+(pass) no Fail leaves the cause intact and invokes neither predicate nor handler [0.27ms]
+(pass) body state survives both catchIf hit and miss [0.32ms]
+
+harness/truth/native-queries.test.ts:
+(pass) cause query adapter covers success, empty cause and separate reason categories [0.27ms]
+(pass) mixed cause and failed exit expose the first error and all reason categories [0.05ms]
+(pass) no Fail gives none, while the ordinary string boom remains an ordinary payload [0.04ms]
+
+harness/truth/prelude-inventory.test.ts:
+(pass) actual prelude cases cover every actual generated atom and execute correctly [1.03ms]
+(pass) removing each atom's cases is independently detected [0.32ms]
+(pass) a new inventory entry cannot be hidden by an unrelated case [0.01ms]
+
+harness/truth/if-case.test.ts:
+(pass) condition, selected construction and selected effect wait for execution [0.11ms]
+(pass) each run reevaluates the condition and constructs only that run's selected arm [0.04ms]
+(pass) an unselected poisoned constructor never runs [0.03ms]
+(pass) selected combined failures retain the selected writes and the entire cause [0.18ms]
+
+ 27 pass
+ 0 fail
+ 211 expect() calls
+Ran 27 tests across 5 files. [135.00ms]
+python3 scripts/check-truth.py
+wrote 91 programs to /Users/pooks/.codex/worktrees/last-planned-goals/lean4-effect4/harness/truth/truth-check-deqap8g0/corpus.json
+{"kind":"signed-divergence-controls","checks":19,"failures":[]}
+| program | Lean exit | rc.112 exit | agree | schedule agree | runSyncExit agree | entry | notes |
+|---|---|---|---|---|---|---|---|
+| p42 | success 42 | success 42 | yes | yes | yes | runPromiseExit | runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same value |
+| pBind | success 2 | success 2 | yes | yes | yes | runPromiseExit | same value |
+| pFork | success {"success":7} | success {"success":7} | yes | yes | yes | runPromiseExit | runSyncExit: AsyncFiberError, then the fiber settled on the microtask queue: success {"success":7}; same value |
+| pAwait | parked (frontier, root parked) | parked (deadline) | yes | yes | yes | runPromiseExit | both park (deadline 300 ms on rc.112); rc.112: no exit before the deadline; the fiber was then interrupted |
+| pGen | success false | success false | yes | yes | yes | runPromiseExit | same value |
+| pLoop | success null | success null | yes | yes | yes | runPromiseExit | same value |
+| pCatch | success null | success null | yes | yes | yes | runPromiseExit | same value |
+| pScope | success null | success null | yes | yes | yes | runPromiseExit | same value |
+| pTwo | success {"success":2} | success {"success":2} | yes | yes | yes | runPromiseExit | runSyncExit: AsyncFiberError, then the fiber settled on the microtask queue: success {"success":2}; same value |
+| pAcquire | success 7 | success 7 | yes | yes | yes | runPromiseExit | same value |
+| pAcquireClosed | success 7 | success 7 | yes | yes | yes | runPromiseExit | same value |
+| pProvide | success 7 | success 7 | yes | yes | yes | runPromiseExit | same value |
+| pProvideMerge | success 2 | success 2 | yes | yes | yes | runPromiseExit | same value |
+| pProvideTwice | success 2 | success 2 | yes | yes | yes | runPromiseExit | same value |
+| pDiamond | success 1 | success 1 | yes | yes | yes | runPromiseExit | same value |
+| pMergeAll | success 3 | success 3 | yes | yes | yes | runPromiseExit | same value |
+| pAcquireHandle | success [{"external":0},1] | success [{"external":0},1] | yes | NO | NO | runPromiseExit | same value; schedule differ at row 1: Lean "parked 0", rc.112 "exited 0 success"; HC-2 signed divergence: each host call parks on the Lean face and is answered inline by rc.112 (decisions row 343) |
+| pFailTagged | fail [{"fail":["SqlError","boom"]}] | fail [{"fail":["SqlError","boom"]}] | yes | yes | yes | runPromiseExit | runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads |
+| pSqlite | success [[["a","7"],["b","\"x\""]]] | success [[["a","7"],["b","\"x\""]]] | yes | NO | NO | runPromiseExit | same value; schedule differ at row 1: Lean "parked 0", rc.112 "exited 0 success"; tape: 5 calls; HC-2 signed divergence: each host call parks on the Lean face and is answered inline by rc.112 (decisions row 343) |
+| pKv | success [{"some":"1"},true] | success [{"some":"1"},true] | yes | NO | NO | runPromiseExit | same value; schedule differ at row 1: Lean "parked 0", rc.112 "exited 0 success"; tape: 5 calls; HC-2 signed divergence: each host call parks on the Lean face and is answered inline by rc.112 (decisions row 343) |
+| pSqlFail | fail [{"fail":["UnknownError","no such table: missing"]}] | fail [{"fail":["UnknownError","no such table: missing"]}] | yes | NO | NO | runPromiseExit | same failure reasons and payloads; schedule differ at row 1: Lean "parked 0", rc.112 "exited 0 fail"; tape: 3 calls; HC-2 signed divergence: each host call parks on the Lean face and is answered inline by rc.112 (decisions row 343) |
+| pSqlCatch | success "recovered" | success "recovered" | yes | NO | NO | runPromiseExit | same value; schedule differ at row 1: Lean "parked 0", rc.112 "exited 0 success"; tape: 3 calls; HC-2 signed divergence: each host call parks on the Lean face and is answered inline by rc.112 (decisions row 343) |
+| pSqlExit | success {"failure":{"reasons":[{"fail":["UnknownError","no such table: missing"]}]}} | success {"failure":{"reasons":[{"fail":["UnknownError","no such table: missing"]}]}} | yes | NO | NO | runPromiseExit | same value; schedule differ at row 1: Lean "parked 0", rc.112 "exited 0 success"; tape: 3 calls; HC-2 signed divergence: each host call parks on the Lean face and is answered inline by rc.112 (decisions row 343) |
+| pSqlOrDie | die [{"die":{"error":["UnknownError","no such table: missing"]}}] | die [{"die":{"error":["UnknownError","no such table: missing"]}}] | yes | NO | NO | runPromiseExit | same represented-defect cause; schedule differ at row 1: Lean "parked 0", rc.112 "exited 0 die"; tape: 3 calls; HC-2 signed divergence: each host call parks on the Lean face and is answered inline by rc.112 (decisions row 343) |
+| pFailText | fail [{"fail":"lost"}] | fail [{"fail":"lost"}] | yes | yes | yes | runPromiseExit | runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads |
+| pFailBoomText | fail [{"fail":"boom"}] | fail [{"fail":"boom"}] | yes | yes | yes | runPromiseExit | runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads |
+| pTextOrDie | die [{"die":{"error":"lost"}}] | die [{"die":{"error":"lost"}}] | yes | yes | yes | runPromiseExit | same represented-defect cause |
+| pCatchError | success 7 | success 7 | yes | yes | yes | runPromiseExit | same value |
+| pCatchIfHit | success 7 | success 7 | yes | yes | yes | runPromiseExit | same value |
+| pCatchIfMiss | fail [{"fail":7},{"die":{"user":3}},{"fail":9}] | fail [{"fail":7},{"die":{"user":3}},{"fail":9}] | yes | yes | yes | runPromiseExit | same failure reasons and payloads |
+| pCatchIfRetained | success 9 | success 9 | yes | yes | yes | runPromiseExit | same value |
+| pTagHit | success 1 | success 1 | yes | yes | yes | runPromiseExit | same value |
+| pTagMiss | fail [{"fail":["A","m"]}] | fail [{"fail":["A","m"]}] | yes | yes | yes | runPromiseExit | same failure reasons and payloads |
+| pTagTwoFail | fail [{"fail":["B","x"]},{"fail":["A","m"]}] | fail [{"fail":["B","x"]},{"fail":["A","m"]}] | yes | yes | yes | runPromiseExit | same failure reasons and payloads |
+| pOptionSome | success [true,7] | success [true,7] | yes | yes | yes | runPromiseExit | same value |
+| pOptionNone | success [false,9] | success [false,9] | yes | yes | yes | runPromiseExit | same value |
+| pFailPayload | fail [{"fail":{"payload":{"id":9,"_tag":"NotFound"}}}] | fail [{"fail":{"payload":{"_tag":"NotFound","id":9}}}] | yes | yes | yes | runPromiseExit | runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads |
+| pTagPayload | success 1 | success 1 | yes | yes | yes | runPromiseExit | same value |
+| pInterruptEscape | interrupt [{"interrupt":0}] | fail [{"fail":42}] | NO | NO | yes | runPromiseExit | kind: Lean interrupt, rc.112 fail; schedule differ at row 4: Lean "exited 0 interrupt", rc.112 "exited 0 fail"; U-01 signed divergence: masked interrupt preempts catch; Lean interrupt 0, rc.112 Fail 42 |
+| pJoinedFirstNumber | success {"some":1} | success {"some":1} | yes | NO | NO | runPromiseExit | same value; schedule differ at row 1: Lean "parked 0", rc.112 "exited 0 success"; HC-2 signed divergence: each host call parks on the Lean face and is answered inline by rc.112 (decisions row 343) |
+| pJoinedFirstString | success {"some":"negative"} | success {"some":"negative"} | yes | NO | NO | runPromiseExit | same value; schedule differ at row 1: Lean "parked 0", rc.112 "exited 0 success"; HC-2 signed divergence: each host call parks on the Lean face and is answered inline by rc.112 (decisions row 343) |
+| pJoinedModifyNumber | success 1 | success 1 | yes | yes | yes | runPromiseExit | same value |
+| pJoinedModifyString | success "negative" | success "negative" | yes | yes | yes | runPromiseExit | same value |
+| pFold | success 8 | success 8 | yes | yes | yes | runPromiseExit | same value |
+| pModifyFold | success [21,7] | success [21,7] | yes | yes | yes | runPromiseExit | same value |
+| pQueueOffer | success [false,2,0] | success [false,2,0] | yes | yes | yes | runPromiseExit | same value |
+| pRateRequest | success [true,false,3,1,3] | success [true,false,3,1,3] | yes | yes | yes | runPromiseExit | same value |
+| pDeferredGate | success [false,true,false,7] | success [false,true,false,7] | yes | yes | yes | runPromiseExit | same value |
+| pInterruptedWait | success [true,1] | success [true,1] | yes | yes | yes | runPromiseExit | same value |
+| pMaskWait | success [true,1] | success [true,1] | yes | yes | yes | runPromiseExit | same value |
+| pMaskedRestore | success [1,true,18] | success [1,true,18] | yes | yes | yes | runPromiseExit | same value |
+| pLateSeen | success [{"failure":{"reasons":[{"interrupt":2}]}},{"fiber":3}] | success [{"failure":{"reasons":[{"interrupt":2}]}},{"fiber":3}] | yes | yes | yes | runPromiseExit | same value |
+| pQueueWake | success 7 | success 7 | yes | yes | yes | runPromiseExit | same value |
+| pQueueFull | success [true,1,true,2] | success [true,1,true,2] | yes | yes | yes | runPromiseExit | same value |
+| pQueueInterrupted | success [5,0] | success [5,0] | yes | yes | yes | runPromiseExit | same value |
+| pQueueMasked | success [1,9,true,0,0] | success [1,9,true,0,0] | yes | yes | yes | runPromiseExit | same value |
+| pQueueOrder | success [1,101,2] | success [1,101,2] | yes | yes | yes | runPromiseExit | runSyncExit: AsyncFiberError, then the fiber settled on the microtask queue: success [1,101,2]; same value |
+| pSemaphoreProtectedJoined | success [[2,2,[2,1],[0,1]],[2,1,[1],[1]],[22]] | success [[2,2,[2,1],[0,1]],[2,1,[1],[1]],[22]] | yes | yes | yes | runPromiseExit | runSyncExit: AsyncFiberError, then the fiber settled on the microtask queue: success [[2,2,[2,1],[0,1]],[2,1,[1],[1]],[22]]; same value |
+| pSemaphoreScan | success [[2,2,[2,1],[0,1]],1,[2,1,[2],[0]],[31]] | success [[2,2,[2,1],[0,1]],1,[2,1,[2],[0]],[31]] | yes | yes | yes | runPromiseExit | same value |
+| pSemaphoreOvertake | success [[2,2,[1,1],[0,1]],[2,1,[1],[1]],[21,22]] | success [[2,2,[1,1],[0,1]],[2,1,[1],[1]],[21,22]] | yes | yes | yes | runPromiseExit | same value |
+| pSemaphoreBodiesJoined | success [[2,2,[2,1],[0,1]],[0,0,[],[]],[22,31]] | success [[2,2,[2,1],[0,1]],[0,0,[],[]],[22,31]] | yes | yes | yes | runPromiseExit | runSyncExit: AsyncFiberError, then the fiber settled on the microtask queue: success [[2,2,[2,1],[0,1]],[0,0,[],[]],[22,31]]; same value |
+| pSemaphoreInterrupted | success [[1,1,[1],[0]],[1,0,[],[]],[1,1,[1],[1]],[1,0,[],[]],1,[0,0,[],[]]] | success [[1,1,[1],[0]],[1,0,[],[]],[1,1,[1],[1]],[1,0,[],[]],1,[0,0,[],[]]] | yes | yes | yes | runPromiseExit | same value |
+| pSemaphoreIfAvailable | success [{"some":7},[0,0,[],[]],{"none":true},true,false,[2,0,[],[]],[2]] | success [{"some":7},[0,0,[],[]],{"none":true},true,false,[2,0,[],[]],[2]] | yes | yes | yes | runPromiseExit | same value |
+| pSemaphoreMasked | success [[1,1,[1],[0]],11,true,[0,0,[],[]]] | success [[1,1,[1],[0]],11,true,[0,0,[],[]]] | yes | yes | yes | runPromiseExit | same value |
+| pSemaphoreHandoff | success [1,7] | success [1,7] | yes | yes | yes | runPromiseExit | same value |
+| pSemaphoreProtected | success [[2,2,[2,1],[0,1]],[2,1,[1],[1]],[22]] | success [[2,2,[2,1],[0,1]],[2,1,[1],[1]],[22]] | yes | yes | yes | runPromiseExit | same value; the two entries settle on two exits: runSyncExit gives success [[2,2,[2,1],[0,1]],[0,2,[2,1],[0,1]],[]] |
+| pSemaphoreBodies | success [[2,2,[2,1],[0,1]],[0,0,[],[]],[22,31]] | success [[2,2,[2,1],[0,1]],[0,0,[],[]],[22,31]] | yes | yes | yes | runPromiseExit | same value; the two entries settle on two exits: runSyncExit gives success [[2,2,[2,1],[0,1]],[0,2,[2,1],[0,1]],[]] |
+| pPoolReuse | success [[[0],[],[],0,false,2],[[1,1,1],[2,1,1],[1,2,1],[2,2,1],[9,1]]] | success [[[0],[],[],0,false,2],[[1,1,1],[2,1,1],[1,2,1],[2,2,1],[9,1]]] | yes | yes | yes | runPromiseExit | same value |
+| pPoolOrder | success [[[[1,0],[],[],0,false,2],[[],[0,1],[3,2],0,false,4]],[[1,1,1],[1,2,2],[2,1,1],[2,2,2],[1,3,2],[1,4,1],[2,3,2],[2,4,1],[9,2],[9,1]]] | success [[[[1,0],[],[],0,false,2],[[],[0,1],[3,2],0,false,4]],[[1,1,1],[1,2,2],[2,1,1],[2,2,2],[1,3,2],[1,4,1],[2,3,2],[2,4,1],[9,2],[9,1]]] | yes | yes | yes | runPromiseExit | same value |
+| pPoolWaiters | success [[[[],[0],[0],2,false,1],[[0],[],[],2,false,1],[[],[0],[1],1,false,2],[[],[0],[2],0,false,3]],[[1,9,1],[2,9,1],[1,1,1],[2,1,1],[1,2,1],[2,2,1],[9,1]]] | success [[[[],[0],[0],2,false,1],[[0],[],[],2,false,1],[[],[0],[1],1,false,2],[[],[0],[2],0,false,3]],[[1,9,1],[2,9,1],[1,1,1],[2,1,1],[1,2,1],[2,2,1],[9,1]]] | yes | yes | yes | runPromiseExit | same value; the two entries settle on two exits: runSyncExit gives success [[[[],[0],[0],2,false,1],[[0],[],[],2,false,1],[[0],[],[],2,false,1],[[0],[],[],2,false,1]],[[1,9,1],[2,9,1],[9,1]]] |
+| pPoolLateWake | success [[[[],[0],[0],2,false,1],[[0],[],[],2,false,1],[[0],[],[],1,false,1],[[],[0],[1],0,false,2]],[[1,9,1],[2,9,1],[1,2,1],[2,2,1],[9,1]]] | success [[[[],[0],[0],2,false,1],[[0],[],[],2,false,1],[[0],[],[],1,false,1],[[],[0],[1],0,false,2]],[[1,9,1],[2,9,1],[1,2,1],[2,2,1],[9,1]]] | yes | yes | yes | runPromiseExit | same value; the two entries settle on two exits: runSyncExit gives success [[[[],[0],[0],2,false,1],[[0],[],[],2,false,1],[[0],[],[],1,false,1],[[0],[],[],1,false,1]],[[1,9,1],[2,9,1],[9,1]]] |
+| pPoolWake | success [[[[],[0],[0],1,false,1],[[0],[],[],1,false,1],[[],[0],[1],0,false,2]],[[1,9,1],[2,9,1],[1,1,1],[2,1,1],[9,1]]] | success [[[[],[0],[0],1,false,1],[[0],[],[],1,false,1],[[],[0],[1],0,false,2]],[[1,9,1],[2,9,1],[1,1,1],[2,1,1],[9,1]]] | yes | yes | yes | runPromiseExit | same value; the two entries settle on two exits: runSyncExit gives success [[[[],[0],[0],1,false,1],[[0],[],[],1,false,1],[[0],[],[],1,false,1]],[[1,9,1],[2,9,1],[9,1]]] |
+| pPoolMakeFails | success [true,{"some":77},[[5],[9,1]]] | success [true,{"some":77},[[5],[9,1]]] | yes | yes | yes | runPromiseExit | same value |
+| pPoolCloseWaits | success [[[],[0],[0],1,false,1],true,false,[[0],[],[],0,true,1],[[1,9,1],[8],[2,9,1],[9,1]]] | success [[[],[0],[0],1,false,1],true,false,[[0],[],[],0,true,1],[[1,9,1],[8],[2,9,1],[9,1]]] | yes | yes | yes | runPromiseExit | runSyncExit: AsyncFiberError, then the fiber settled on the microtask queue: success [[[],[0],[0],1,false,1],true,false,[[0],[],[],0,true,1],[[1,9,1],[8],[2,9,1],[9,1]]]; same value |
+| pPoolWithdrawn | success [[[[],[0],[0],1,false,1],[[],[0],[0],0,false,1],[[0],[],[],0,false,1],[[],[0],[1],0,false,2]],[[1,9,1],[2,9,1],[1,2,1],[2,2,1],[9,1]]] | success [[[[],[0],[0],1,false,1],[[],[0],[0],0,false,1],[[0],[],[],0,false,1],[[],[0],[1],0,false,2]],[[1,9,1],[2,9,1],[1,2,1],[2,2,1],[9,1]]] | yes | yes | yes | runPromiseExit | same value |
+| pPoolClosed | success [{"failure":{"reasons":[{"interrupt":1}]}},[[0],[],[],0,true,0],[[9,1]]] | success [{"failure":{"reasons":[{"interrupt":1}]}},[[0],[],[],0,true,0],[[9,1]]] | yes | yes | yes | runPromiseExit | same value |
+| pPoolClosing | success [[[],[0],[0],1,false,1],{"failure":{"reasons":[{"interrupt":3}]}},[[],[0],[0],1,true,1],false,[[0],[],[],0,true,1],[[1,9,1],[8],[2,9,1],[9,1]]] | success [[[],[0],[0],1,false,1],{"failure":{"reasons":[{"interrupt":3}]}},[[],[0],[0],1,true,1],false,[[0],[],[],0,true,1],[[1,9,1],[8],[2,9,1],[9,1]]] | yes | yes | yes | runPromiseExit | runSyncExit: AsyncFiberError, then the fiber settled on the microtask queue: success [[[],[0],[0],1,false,1],{"failure":{"reasons":[{"interrupt":3}]}},[[],[0],[0],1,true,1],false,[[0],[],[],0,true,1],[[1,9,1],[8],[2,9,1],[9,1]]]; same value |
+| pDefsTwice | success [21,21] | success [21,21] | yes | yes | yes | runPromiseExit | same value |
+| pDefsEven | success true | success true | yes | yes | yes | runPromiseExit | same value |
+| pDefsOdd | success false | success false | yes | yes | yes | runPromiseExit | same value |
+| pDefsFork | success [4,4] | success [4,4] | yes | yes | yes | runPromiseExit | same value |
+| pDefsModuleLayer | success 7 | success 7 | yes | yes | yes | runPromiseExit | same value |
+| pDefsBodyLayerCalls | success 2 | success 2 | yes | yes | yes | runPromiseExit | same value |
+| pDefsBodyLayerShared | success 1 | success 1 | yes | yes | yes | runPromiseExit | same value |
+| pDefsBodyLayerNested | success 2 | success 2 | yes | yes | yes | runPromiseExit | same value |
+| pInvokeTwice | success 7 | success 7 | yes | yes | yes | runPromiseExit | same value |
+| pInvokeForward | success 7 | success 7 | yes | yes | yes | runPromiseExit | same value |
+| pInvokeForked | success 6 | success 6 | yes | yes | yes | runPromiseExit | same value |
+| pQueueDefs | success [true,1,true,2] | success [true,1,true,2] | yes | yes | yes | runPromiseExit | same value |
+| pQueueService | success [true,1] | success [true,1] | yes | yes | yes | runPromiseExit | same value; client through the service key: agrees (success [true,1]) |
+| pSemaphoreService | success [1,false,2] | success [1,false,2] | yes | yes | yes | runPromiseExit | same value; client through the service key: agrees (success [1,false,2]) |
+PASS: 81 programs agree on exits, schedules and sync exits; 10 signed divergence(s)
+PASS truth widening: four inferred typed fixtures; two missing-member refusals; corrupted update observed
+PASS P2b: exact consumer columns, retained negative comparisons, and missing-member refusals checked; type-only
+PASS truth: pinned corpus, bounded differential and the signed U-01 and HC-2 divergences checked; the regenerated modules type-check
+python3 scripts/check-host-protocol.py
+✔ [470/470] Built Test.Api.HostSessionContract (2.6s)
+Build completed successfully (470 jobs).
+✔ [496/496] Built Test.Api.KeyedHostContract (2.3s)
+Build completed successfully (496 jobs).
+✔ [1098/1120] Built Effect4.Laws.Program.ReleaseCustody.Outside (1.4s)
+✔ [1105/1120] Built Effect4.Laws.Program.ReleaseCustody.ScopeTransfer (1.6s)
+✔ [1107/1132] Built Effect4.Laws.Program.ReleaseCustody.IterationDebit (1.5s)
+✔ [1112/1132] Built Effect4.Laws.Program.ReleaseCustody.NativeDebit (1.4s)
+✔ [1113/1134] Built Effect4.Laws.Program.SourceOpportunityMachine (3.0s)
+✔ [1114/1134] Built Effect4.Laws.Program.ReleaseCustody.ReplySequencing (1.4s)
+✔ [1116/1136] Built Effect4.Laws.Program.ReleaseCustody.NativeAccounting (1.8s)
+✔ [1117/1137] Built Effect4.Laws.Program.ReleaseCustody.Lift (1.9s)
+✔ [1119/1153] Built Effect4.Laws.Program.ReleaseCustody.NativeMachineShape (1.4s)
+✔ [1132/1157] Built Effect4.Laws.Program.SourceOpportunityNative (2.1s)
+✔ [1133/1158] Built Effect4.Laws.Program.ReleaseCustody.CommandDebit (1.7s)
+✔ [1135/1158] Built Effect4.Laws.Program.ReleaseCustody.ScopeRows (1.5s)
+✔ [1146/1169] Built Effect4.Laws.Program.ReleaseCustody.CommandRaceDebit (1.6s)
+✔ [1147/1169] Built Effect4.Laws.Program.SourceOpportunityPrimitive (2.5s)
+✔ [1148/1169] Built Effect4.Laws.Program.ReleaseCustody.CommandStoreDebit (1.4s)
+✔ [1149/1169] Built Effect4.Laws.Program.SourceOpportunityExecution (1.4s)
+✔ [1150/1169] Built Effect4.Laws.Program.ReleaseCustody.ObserverDebit (1.5s)
+✔ [1151/1169] Built Effect4.Laws.Program.SourceOpportunityCommands (1.7s)
+✔ [1152/1169] Built Effect4.Laws.Program.ReleaseCustody.CommandFunding (1.4s)
+✔ [1153/1169] Built Effect4.Laws.Program.SourceOpportunityHistory (1.8s)
+✔ [1154/1169] Built Effect4.Laws.Program.ReleaseCustody.NativeActionDebit (3.9s)
+✔ [1155/1169] Built Effect4.Laws.Program.ReleaseCustody.NativePrimitiveDebit (1.8s)
+✔ [1156/1169] Built Test.Dogfood.Scenario.SourceOpportunity (3.5s)
+✔ [1157/1169] Built Effect4.Laws.Program.ReleaseCustody.NativeParkDebit (1.6s)
+✔ [1158/1169] Built Effect4.Laws.Program.ReleaseCustody.NativeScopeDebit (1.6s)
+✔ [1159/1169] Built Effect4.Laws.Program.ReleaseCustody.CommandSequencing (1.9s)
+✔ [1160/1169] Built Effect4.Laws.Program.ReleaseCustody.NativeIterationDebit (1.4s)
+✔ [1161/1169] Built Effect4.Laws.Program.ReleaseCustody.OuterFrames (1.4s)
+✔ [1162/1169] Built Effect4.Laws.Program.ReleaseCustody.LoopCommand (1.4s)
+✔ [1163/1169] Built Effect4.Laws.Program.ReleaseCustody.AdministrativeKept (1.5s)
+✔ [1164/1169] Built Effect4.Laws.Program.ReleaseCustody.AdministrativeQueue (2.7s)
+✔ [1165/1169] Built Effect4.Laws.Program.ReleaseCustody.CommandClosure (1.3s)
+✔ [1166/1169] Built Effect4.Laws.Program.ReleaseCustody.HistoryLift (1.4s)
+✔ [1167/1169] Built Effect4.Laws.Program.ReleaseCustody.Execution (1.3s)
+✔ [1168/1169] Built Test.Dogfood.Scenario.Workers.Assertions (1.3s)
+✔ [1169/1169] Built Test.Dogfood.Scenario.Workers (3.3s)
+Build completed successfully (1169 jobs).
+✔ [1054/1057] Built Test.Dogfood.Scenario.QueueWorkers.Model (1.5s)
+✔ [1055/1057] Built Test.Dogfood.Scenario.QueueWorkers.Ledger (1.5s)
+✔ [1056/1057] Built Test.Dogfood.Scenario.QueueWorkers.Assertions (1.5s)
+✔ [1057/1057] Built Test.Dogfood.Scenario.QueueWorkers (32s)
+Build completed successfully (1057 jobs).
+✔ [1104/1109] Built Effect4.Laws.Run.JournalPrefix (1.3s)
+✔ [1105/1109] Built Test.Dogfood.Scenario.Routing.Model (1.4s)
+✔ [1106/1109] Built Effect4.Laws.Run.CallTree (1.5s)
+✔ [1107/1109] Built Test.Dogfood.Proofs.HostRouting (2.4s)
+✔ [1108/1109] Built Test.Dogfood.Scenario.Routing.Calls (1.8s)
+✔ [1109/1109] Built Test.Dogfood.Scenario.Routing (1.9s)
+Build completed successfully (1109 jobs).
+✔ [1101/1107] Built Effect4.Laws.Machine.FinalizerBookkeeping (1.5s)
+✔ [1102/1107] Built Effect4.Laws.Machine.FinalizerEvaluation (1.6s)
+✔ [1103/1107] Built Effect4.Laws.Program.FinalizerTransfer (1.4s)
+✔ [1104/1107] Built Effect4.Laws.Program.FinalizerCommands (1.6s)
+✔ [1105/1107] Built Effect4.Laws.Program.FinalizerRun (1.2s)
+✔ [1106/1107] Built Test.Dogfood.Scenario.Atomic.Cleanup (1.7s)
+✔ [1107/1107] Built Test.Dogfood.Scenario.Atomic (3.2s)
+Build completed successfully (1107 jobs).
+Build completed successfully (1141 jobs).
+Build completed successfully (30 jobs).
++ lake query -J +Test.Dogfood.Scenario.Workers:setup +Test.Dogfood.Scenario.QueueWorkers:setup +Test.Dogfood.Scenario.Routing:setup +Test.Dogfood.Scenario.Atomic:setup +Test.Dogfood.Scenario.Timeout:setup +Tools.ProfileJson:setup
+keyed host: effect 4.0.0-rc.112 under bun 1.4.2, loaded from /Users/pooks/.codex/worktrees/last-planned-goals/lean4-effect4/ts/eff/node_modules/effect
+PASS keyed host: 57 actual rc.112 runs; 52 admitted printed programs
+PASS keyed scenarios: 72 scripts performed on actual rc.112 in 267 runs: each with no reader, with its readers, and with each reader alone; 13 scripts with no host run
+bun test v1.4.2 (744846f84)
+
+harness/truth/session/keyed-protocol.test.ts:
+(pass) projected keyed tape structure > replies arrive by key; application order remains independent [0.61ms]
+(pass) projected keyed tape structure > missing fiber is not inferred [0.47ms]
+(pass) projected keyed tape structure > missing token is not inferred [0.03ms]
+(pass) projected keyed tape structure > missing callId is not inferred [0.02ms]
+(pass) projected keyed tape structure > duplicate pending reply [0.10ms]
+(pass) projected keyed tape structure > application without a stored reply [0.02ms]
+(pass) projected keyed tape structure > one key cannot replace another key's payload [0.02ms]
+(pass) projected keyed tape structure > decimal clock transport has protocol version 3 [0.04ms]
+(pass) projected keyed tape structure > legacy version 1 requires explicit migration [0.23ms]
+(pass) projected keyed tape structure > legacy version 2 requires explicit migration
+(pass) projected keyed tape structure > version 2 clock records cannot enter a version 3 tape [0.03ms]
+(pass) projected keyed tape structure > table metadata participates in identity [0.01ms]
+(pass) projected keyed tape structure > pending and unanswered prefixes are accepted [0.04ms]
+(pass) projected keyed tape structure > unsafe and negative-zero keys refuse [0.07ms]
+(pass) projected keyed tape structure > clock and cancellation follow the generated table [0.05ms]
+(pass) projected keyed tape structure > clock transport keeps canonical decimal text beyond host integer ranges [0.11ms]
+(pass) projected keyed tape structure > Result uses failure=0/success=1, with value/error alias order [0.08ms]
+(pass) keyed clock execution > an advance is recorded before the host call it wakes [2.77ms]
+(pass) keyed clock execution > malformed and overflowing advances neither record nor mutate, and refuse the receipt [0.40ms]
+(pass) keyed clock execution > a refusal from a woken continuation rejects the advance and prevents a receipt [0.96ms]
+(pass) keyed clock execution > queued advances validate against their own input clock before recording [0.40ms]
+(pass) scripted recorder > an unmarked fixture keeps today's refusals, and it takes no scripted branch [0.42ms]
+(pass) scripted recorder > an unmarked fixture refuses an operation that completes after its cancellation [0.10ms]
+(pass) scripted recorder > a scripted fixture records a call when the script holds it [0.20ms]
+(pass) scripted recorder > a late reply is recorded, stored nowhere and predicted as noCall [0.14ms]
+(pass) scripted recorder > a stored reply stays with its retired call, and a second reply is predicted as pendingReply [0.10ms]
+(pass) scripted recorder > a call that the script never held leaves no retired record [0.04ms]
+(pass) scripted recorder > a record is its frame, and a scripted value is the frame's record [0.34ms]
+(pass) scripted recorder > saved failed exits keep exact cause images and refuse unknown identities [0.17ms]
+(pass) scripted recorder > a Deferred has an image with no identity in a cell, and it is outside the transport profile [0.10ms]
+(pass) scenario readers > the cells reader's Ref owns `make` only, and its cell is the pinned one [0.19ms]
+(pass) scenario readers > the fibers reader's Effect owns the three fork heads, in both call forms [0.25ms]
+(pass) scenario readers > the sleeps reader is off by default, and it lists a sleep from its start to its end [0.22ms]
+(pass) scenario readers > the dispatchers reader counts an armed dispatcher until its turn [0.15ms]
+(pass) scenario readers > the dispatchers reader's zero carries its limit where the run's own wait gave it [0.22ms]
+
+harness/truth/session/protocol.test.ts:
+(pass) serial scalar recorder and strict protocol > two actual Effect calls retain call-start identities [0.34ms]
+(pass) serial scalar recorder and strict protocol > valid pending and completed-call prefixes retain their records [0.12ms]
+(pass) serial scalar recorder and strict protocol > actual typed failure keeps category/tag/message [0.09ms]
+(pass) serial scalar recorder and strict protocol > independent provenance and sequencing mutants refuse [1.00ms]
+(pass) serial scalar recorder and strict protocol > bound violations are outside-profile; cannot be caught into agreement [1.56ms]
+(pass) serial scalar recorder and strict protocol > child-fiber calls cannot borrow the root identity [0.14ms]
+
+harness/truth/session/resource.test.ts:
+(pass) failed use charges state; real scoped finalization closes it once [0.57ms]
+(pass) closed use and double release retain category/message without more work [0.22ms]
+(pass) two independently owned allocations need two completed releases [0.30ms]
+(pass) public metadata cannot impersonate a registered object [0.12ms]
+(pass) foreign session and never-acquired handle refuse before mutation [0.06ms]
+(pass) interrupted pending allocation compensates the later unclaimed object [1.50ms]
+(pass) a compensated physical allocation does not consume a machine allocation index [0.12ms]
+
+harness/truth/session/clock.test.ts:
+(pass) exact clock and numeric target boundary > decimal round trips beyond both numeric target ranges [0.17ms]
+(pass) exact clock and numeric target boundary > noncanonical transport and numeric overflow refuse [0.04ms]
+(pass) exact clock and numeric target boundary > nanoseconds are checked exactly before any numeric conversion [0.02ms]
+(pass) exact clock and numeric target boundary > the provided service exposes only the pinned Clock readers and checked sleep [0.25ms]
+(pass) exact clock and numeric target boundary > in-program TestClock mutation is unsupported and cannot bypass the numeric boundary [0.84ms]
+(pass) exact clock and numeric target boundary > stock TestClock rejects an overflowing adjustment before mutation [0.12ms]
+(pass) exact clock and numeric target boundary > stock TestClock refuses an overflowing deadline without a program failure [1.46ms]
+(pass) exact clock and numeric target boundary > refusal takes precedence even after a concurrent root completes [0.28ms]
+
+ 56 pass
+ 0 fail
+ 487 expect() calls
+Ran 56 tests across 4 files. [68.00ms]
+PASS keyed differential: 57 runs, 52 programs, 30 controls; exact exits and keyed applications
+PASS keyed scenarios on effect 4.0.0-rc.112 under bun 1.4.2: routing 8 scripts (2 entries measured by the host, 1 predicted by the ledger; no entry waits); workers 17 scripts (6 entries measured by the host, 5 through a reader, 2 of them zero by the run's own wait in 12 scripts; no entry waits); timeout 14 scripts (6 entries measured by the host, 2 through a reader, timers through a reader in 9 scripts; the whole-observation comparison waits on timers in 5 scripts (parked, timed-out, late, received, eager), forms in 14 scripts (parked, 503, timed-out, four, 404, before, second, late, kept, timer-interrupt, host-interrupt, received, eager, resetting)); atomic 8 scripts (0 entries measured by the host, 5 through a reader; no entry waits); queue-workers 25 scripts (7 entries measured by the host, 8 through a reader, 2 of them zero by the run's own wait in 21 scripts; no entry waits); 13 scripts with no host run; 44 red controls
+PASS host-protocol: fresh projections, typed host programs, keyed replay and negative controls; the scenarios' scripts on their printed modules

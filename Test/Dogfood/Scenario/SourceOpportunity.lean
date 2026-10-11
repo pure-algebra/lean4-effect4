@@ -1,6 +1,6 @@
 import Test.Dogfood.Scenario.Atomic.SourcePaths
 import Test.Dogfood.Scenario.SourceUse
-import Effect4.Laws.Program.SourceOpportunityExecution
+import Effect4.Laws.Program.SourceOpportunityHistory
 import Effect4.Laws.Program.Guard.ForkLedger
 
 /-!
@@ -8,7 +8,7 @@ Concept: scope-lifetime-finalization R11.
 Consumers: FinalizerRun.once_placed_pushes_once and Workers.Assertions.registrations_step.
 These readers apply compiler initialization and actual push debits at the scenario source addresses.
 They retain every Workers job count and every source environment and compile budget.
-They establish no whole-history opportunity bound.
+The history reader establishes the bound on the original admitted-history carrier.
 -/
 set_option autoImplicit false
 set_option maxRecDepth 100000
@@ -497,5 +497,75 @@ theorem workers_loop_command_debit (total compileFuel : Nat) (b : Api.Built)
     b.program b.table compileFuel m history.reachable
   exact loop_command_debit b.program _ (SourceFragment.workers_built_fragment total b built)
     clearFin clearLoop b.table m id yielding rest control.1 control.2 source ledger
+
+/-- Every actual admitted Workers history retains at most one acquisition opportunity.
+The theorem retains every job count and compilation budget, at both actual acquisition sites. -/
+theorem workers_history_budget (total compileFuel : Nat) (b : Api.Built)
+    (built : Api.Author.build (Workers.crew total) = .ok b) (m : NativeMachine)
+    (history : Effect4.Run.HistoryOf b compileFuel m) (i : Nat) (member : i ∈ [1, 2]) :
+    recorded (Programs.crewAcquire i) m + fibers b.program (Programs.crewAcquire i) m ≤ 1 := by
+  have clearFin : ClearFinalizers b.program (Programs.crewAcquire i) := by
+    rw [Programs.workers_built_program total b built]
+    exact workers_clear total i member
+  have clearLoop : ClearLoops b.program (Programs.crewAcquire i) := by
+    rw [Programs.workers_built_program total b built]
+    exact workers_loops_clear total i member
+  have control : SourceScope.SequentialSource b.program ∧ SourceScope.RaceFreeSource b.program := by
+    rw [Programs.workers_built_program total b built]
+    exact workers_control_census total
+  exact history_budget b _ (SourceFragment.workers_built_fragment total b built)
+    clearFin clearLoop control.1 control.2 compileFuel m history
+
+/-- Every acquisition in an actual admitted Workers history registers at most once.
+The original registration observation retains all totals and compile budgets. -/
+theorem workers_registrations_once (total compileFuel : Nat) (b : Api.Built)
+    (built : Api.Author.build (Workers.crew total) = .ok b) (m : NativeMachine)
+    (history : Effect4.Run.HistoryOf b compileFuel m) :
+    ∀ i ∈ [1, 2], m.trace.countP (ReleaseTrace.registeredAt (Programs.crewAcquire i)) ≤ 1 := by
+  intro i member
+  have counted := registrations_le_recorded (Programs.crewAcquire i) m
+  have budget := workers_history_budget total compileFuel b built m history i member
+  omega
+
+/-- The actual Atomic shop uses sequential scopes and contains neither authored race form.
+Consumer: the actual request history source-use bound. -/
+theorem atomic_control_census :
+    (Atomic.Store.shopProgram.map fun root =>
+      (Node.addresses (.eff root)).all (fun path =>
+        (Node.at_ (.eff root) path).all SourceScope.sequentialHead) &&
+      (Node.addresses (.eff root)).all (fun path =>
+        (Node.at_ (.eff root) path).all SourceScope.raceFreeHead)) = some true := by
+  kernel_rfl
+
+/-- Every actual Atomic request retains at most one source opportunity over the original history.
+All six request addresses and every compile budget retain the actual admitted shop source. -/
+theorem atomic_history_budget (compileFuel : Nat) (b : Api.Built)
+    (built : Api.Author.build (Atomic.shop .none) = .ok b) (m : NativeMachine)
+    (history : Effect4.Run.HistoryOf b compileFuel m) (i : Nat) (member : i ∈ Atomic.requests) :
+    recorded (Atomic.SourcePaths.requestPath i) m +
+      fibers b.program (Atomic.SourcePaths.requestPath i) m ≤ 1 := by
+  have program : Atomic.Store.shopProgram = some b.program := by
+    unfold Atomic.Store.shopProgram
+    rw [(Api.Author.build_retains built).1]
+    rfl
+  have control := atomic_control_census
+  rw [program] at control
+  have both := Bool.and_eq_true_iff.mp (Option.some.inj control)
+  exact history_budget b _ (SourceFragment.atomic_built_fragment b built)
+    (atomic_all_clear b built i member) (atomic_loops_clear b built i member)
+    both.1 both.2 compileFuel m history
+
+/-- Each actual Atomic request pushes its finalizer at most once across every admitted history.
+The source census supplies this application bound independently of the broader placement goal. -/
+theorem atomic_registrations_once (compileFuel : Nat) (b : Api.Built)
+    (built : Api.Author.build (Atomic.shop .none) = .ok b) (m : NativeMachine)
+    (history : Effect4.Run.HistoryOf b compileFuel m) :
+    ∀ i ∈ Atomic.requests, m.trace.countP (fun ev => match ev with
+      | .frame _ (.pushed (.onExit _ (.fin p) _)) => p.path == Atomic.SourcePaths.requestPath i
+      | _ => false) ≤ 1 := by
+  intro i member
+  have counted := exit_registrations_le_recorded (Atomic.SourcePaths.requestPath i) m
+  have budget := atomic_history_budget compileFuel b built m history i member
+  exact Nat.le_trans counted (Nat.le_trans (Nat.le_add_right _ _) budget)
 
 end Test.Dogfood.Scenario.SourceOpportunity

@@ -236,6 +236,7 @@ import Effect4.Laws.Program.MovesConnect
 import Effect4.Laws.Program.Footprint
 import Effect4.Laws.Program.Interference
 import Effect4.Laws.Machine.StackLocal
+import Effect4.Laws.Machine.AnswerFlow
 import Effect4.Laws.Program.StackLocal
 import Effect4.Laws.Program.CommandFrames
 
@@ -313,6 +314,7 @@ import Effect4.Laws.Machine.RaceFirst
 import Effect4.Laws.Machine.ScopeIdentity
 import Effect4.Laws.Program.FinalizerRun
 import Effect4.Laws.Program.SourceOpportunityExecution
+import Effect4.Laws.Program.SourceOpportunityHistory
 import Effect4.Laws.Program.ReleaseCustody.Control
 import Effect4.Laws.Program.ReleaseCustody.Execution
 import Effect4.Laws.Program.ReleaseCustody.ScopeTransfer

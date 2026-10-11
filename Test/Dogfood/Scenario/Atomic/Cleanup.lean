@@ -1,5 +1,6 @@
 import Test.Dogfood.Scenario.Atomic.Store
 import Test.Dogfood.Scenario.Atomic.SourcePaths
+import Test.Dogfood.Scenario.SourceOpportunity
 import Effect4.Laws.Program.FinalizerRun
 import Effect4.Laws.Auto.KernelRfl
 
@@ -64,8 +65,24 @@ theorem cleaned (b : Api.Built) (m : NativeMachine)
     exact Nat.le_trans (debit i request)
       (Nat.le_trans (FinalizerRun.starts_le_pushes b.program b.table budget.compileFuel m
           (requestPath i) history.reachable)
-        (FinalizerRun.once_placed_pushes_once b.program b.table budget.compileFuel m
-          (requestPath i) (placement b built i request) history.reachable))
+        (by
+          have once := SourceOpportunity.atomic_registrations_once budget.compileFuel b built m history i request
+          have selectors : FinalizerRun.registeredAt (requestPath i) =
+              (fun ev : ReleaseTrace.Event => match ev with
+                | .frame _ (.pushed (.onExit _ (.fin p) _)) => p.path == requestPath i
+                | _ => false) := by
+            funext ev
+            cases ev with
+            | frame owner event =>
+              cases event with
+              | pushed code =>
+                cases code with
+                | onExit body name flag => cases name <;> rfl
+                | _ => rfl
+              | _ => rfl
+            | _ => rfl
+          rw [selectors]
+          exact once))
   · exact (List.count_eq_zero_of_not_mem present).symm ▸ Nat.zero_le 1
 
 end Test.Dogfood.Scenario.Atomic.Cleanup
