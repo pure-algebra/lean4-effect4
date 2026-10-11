@@ -23,6 +23,7 @@ structure World where
 
 inductive Kind
   | root | allocated (index : Nat) | gate
+  | connection (identity : Nat)
   | yielded (refs deferred : Nat)
 
 def bindings : List Val := [.cell ⟨0⟩, .cell ⟨1⟩, .cell ⟨2⟩, .cell ⟨3⟩, .promise ⟨0⟩]
@@ -112,35 +113,48 @@ def ValueAt (world : World) : Kind → Val → Prop
   | .gate, value => value = .promise ⟨0⟩ ∧
       4 ≤ world.state.refs.length ∧ 1 ≤ world.state.deferreds.cells.length
 
+  | .connection identity, value => Phase world ∧ value = .nat identity
   | .yielded refs deferred, value => Phase world ∧ value = .unit ∧
       world.state.refs.length = refs ∧ world.state.deferreds.cells.length = deferred
 
-inductive CodeAt (total : Nat) (world : World) : Kind → NCode → Prop
-  | success (kind : Kind) (value : Val) (good : ValueAt world kind value) :
+def Future (first last : World) : Prop :=
+  first.owner = last.owner ∧ first.state.refs.length ≤ last.state.refs.length ∧
+    first.state.deferreds.cells.length ≤ last.state.deferreds.cells.length
+
+inductive CodeAt (total : Nat) : World → Kind → NCode → Prop
+  | success {world : World} (kind : Kind) (value : Val) (good : ValueAt world kind value) :
       CodeAt total world kind (.success value)
-  | failure (kind : Kind) (cause : CauseV) (phase : Phase world) :
+  | failure {world : World} (kind : Kind) (cause : CauseV) (phase : Phase world) :
       CodeAt total world kind (.failure cause)
-  | root (index : Nat) (point : Point) (stage : RootStage world index point) :
+  | root {world : World} (index : Nat) (point : Point) (stage : RootStage world index point) :
       CodeAt total world .root (resolve (Programs.workersProgram total) point)
-  | allocating (index : Nat) (point : Point) (initial : Val) (small : index < 4)
+  | allocating {world : World} (index : Nat) (point : Point) (initial : Val) (small : index < 4)
       (valueEq : initial = initialValue index) (stage : RootStage world index point) :
       CodeAt total world (.allocated index) (.sync (.op (.refMake initial)))
-  | gateAllocating (point : Point) (stage : RootStage world 4 point) :
+  | gateAllocating {world : World} (point : Point) (stage : RootStage world 4 point) :
       CodeAt total world .gate (.sync (.op .deferredMake))
-  | stable (point : Point) (ready : 4 ≤ world.state.refs.length ∧ 1 ≤ world.state.deferreds.cells.length)
+  | stable {world : World} (point : Point) (ready : 4 ≤ world.state.refs.length ∧ 1 ≤ world.state.deferreds.cells.length)
       (lexical : SourceScope.At (Programs.workersProgram total) point)
       (leading : point.env.take 5 = bindings) :
       CodeAt total world .root (resolve (Programs.workersProgram total) point)
 
-  | yielding (priority refs deferred : Nat) (phase : Phase world)
+  | yielding {world : World} (priority refs deferred : Nat) (phase : Phase world)
       (refsEq : world.state.refs.length = refs)
       (deferredEq : world.state.deferreds.cells.length = deferred) :
       CodeAt total world (.yielded refs deferred) (.yieldNowWith priority)
 
+  | frontier {world : World} (kind : Kind) (point : Point) (zero : point.fuel = 0)
+      (phase : Phase world) : CodeAt total world kind (Effect4.Program.frontier point)
+  | bound {world : World} (input output : Kind) (body : NCode) (name : EffName)
+      (first : CodeAt total world input body)
+      (callback : ∀ nextWorld, Future world nextWorld → ∀ view table answer,
+        ValueAt nextWorld input answer → CodeAt total nextWorld output
+          ((interpAt (Programs.workersProgram total) view table).contA name answer)) :
+      CodeAt total world output (.onSuccess body name)
+
 def model (total : Nat) : AnswerFlow.Model (ν := EffName) (σ := EffThunk)
     (β := Val) (ε := Err) (δ := Defect) (ι := FiberId) (α := Ann) World Kind where
-  future first last := first.owner = last.owner ∧ first.state.refs.length ≤ last.state.refs.length ∧
-    first.state.deferreds.cells.length ≤ last.state.deferreds.cells.length
+  future := Future
   future_refl _ := ⟨rfl, Nat.le_refl _, Nat.le_refl _⟩
   future_trans _ _ _ first last :=
     ⟨first.1.trans last.1, Nat.le_trans first.2.1 last.2.1, Nat.le_trans first.2.2 last.2.2⟩
@@ -154,18 +168,21 @@ def model (total : Nat) : AnswerFlow.Model (ν := EffName) (σ := EffThunk)
 /-- The initial-stage exclusivity consumer reads the condition from every current code. -/
 theorem code_phase {total : Nat} {world : World} {kind : Kind} {code : NCode}
     (held : CodeAt total world kind code) : Phase world := by
-  cases held with
+  induction held with
   | success kind value good => cases kind with
     | root => exact good
     | allocated _ => exact good.1
     | gate => exact Or.inr good.2
     | yielded _ _ => exact good.1
+    | connection _ => exact good.1
   | failure _ _ phase => exact phase
   | root _ _ stage => exact Or.inl stage.2.1
   | allocating _ _ _ _ _ stage => exact Or.inl stage.2.1
   | gateAllocating _ stage => exact Or.inl stage.2.1
   | stable _ ready _ _ => exact Or.inr ready
   | yielding _ _ _ phase _ _ => exact phase
+  | frontier _ _ _ phase => exact phase
+  | bound _ _ _ _ _ _ first _ => exact first
 
 /-- Appending the actual allocated key extends the concrete prefix through the fourth reference. -/
 theorem prefix_append (index : Nat) (small : index < 4) :
@@ -499,7 +516,11 @@ theorem code_sizes (total : Nat) (world nextWorld : World)
       simp only [ValueAt, Phase] at good ⊢
       rw [← owner, ← refs, ← deferred]
       exact good
-  cases held with
+    | connection identity =>
+      simp only [ValueAt, Phase] at good ⊢
+      rw [← owner, ← refs, ← deferred]
+      exact good
+  induction held generalizing nextWorld with
   | success kind answer good => exact .success kind answer (value good)
   | failure kind reason good => exact .failure kind reason (phase good)
   | root index point good => exact .root index point (stage good)
@@ -510,6 +531,12 @@ theorem code_sizes (total : Nat) (world nextWorld : World)
     exact .stable point ⟨refs ▸ ready.1, deferred ▸ ready.2⟩ lexical leading
   | yielding priority count promises good countEq promisesEq =>
     exact .yielding priority count promises (phase good) (refs ▸ countEq) (deferred ▸ promisesEq)
+  | frontier kind point zero good => exact .frontier kind point zero (phase good)
+  | bound input output body name first callback ih _ =>
+    refine .bound input output body name (ih nextWorld owner refs deferred phase stage value) ?_
+    intro last later view table answer good
+    exact callback last ⟨owner.trans later.1, by rw [refs]; exact later.2.1,
+      by rw [deferred]; exact later.2.2⟩ view table answer good
 
 /-- A forced-yield saved constant consumes a response with the retained allocation sizes.
 The actual history must justify this response class while the old source body is parked. -/
@@ -596,5 +623,30 @@ theorem phase_does_not_retain_yield :
   intro good
   have impossible : 1 = 0 := good.2.2.1
   cases impossible
+
+
+/-- An annotated native success binder supplies its body class and actual saved callback.
+Consumer: the acquisition body returns its literal connection through a source binder. -/
+theorem bound_push (total : Nat) (view : List (FiberId × ExitV)) (table : RowTable)
+    (world : World) (input middle output : Kind) (body : NCode) (name : EffName)
+    (fiber : FrameFiber EffName EffThunk Val Err Defect FiberId Ann)
+    (current : fiber.current = .onSuccess body name)
+    (first : CodeAt total world input body)
+    (callback : ∀ nextWorld, Future world nextWorld → ∀ view table answer,
+      ValueAt nextWorld input answer → CodeAt total nextWorld middle
+        ((interpAt (Programs.workersProgram total) view table).contA name answer))
+    (stack : AnswerFlow.StackAt (model total)
+      (interpAt (Programs.workersProgram total) view table).toPrimInterp world middle output fiber.stack) :
+    ∃ next events,
+      fiber.step (interpAt (Programs.workersProgram total) view table).toPrimInterp = (.running next, events) ∧
+      AnswerFlow.FrameAt (model total)
+        (interpAt (Programs.workersProgram total) view table).toPrimInterp world output next := by
+  apply AnswerFlow.push_success (model total) _ world input middle output fiber body name current first
+  · apply AnswerFlow.saved_success (model total) _ world input middle body name
+    · intro nextWorld future answer good
+      exact callback nextWorld future view table answer good
+    · intro nextWorld future reason good
+      exact good
+  · exact stack
 
 end MachineWorkersSlots

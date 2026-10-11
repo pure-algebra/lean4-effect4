@@ -175,4 +175,113 @@ theorem captured_one_command (total : Nat) (table : RowTable) (machine : Api.Mac
     (MachineWorkersWriters.release_one_step machine.state (.cell ⟨0⟩) (.cell ⟨2⟩)
       (.cell ⟨3⟩) (.promise ⟨0⟩) exit ⟨1⟩ old read)
 
+
+/-- A literal return retains its exact connection class, including a live zero-budget frontier. -/
+theorem literal_code (total : Nat) (world : MachineWorkersSlots.World) (identity : Nat) (point : Point)
+    (found : Node.at_ (.eff (Programs.workersProgram total)) point.path =
+      some (.eff (.succeed (.lit (.nat identity))))) (phase : Phase world) :
+    MachineWorkersSlots.CodeAt total world (.connection identity)
+      (resolve (Programs.workersProgram total) point) := by
+  rw [Agreement.resolve_of_at found]
+  cases amount : point.fuel with
+  | zero =>
+    rw [Agreement.compileEff_at_zero _ amount]
+    exact .frontier (.connection identity) point amount phase
+  | succ fuel =>
+    rw [Agreement.compileEff_succeed _ amount]
+    exact .success (.connection identity) (.nat identity) ⟨phase, rfl⟩
+
+/-- The actual acquisition binder consumes any note answer and then returns its own literal.
+Every callback uses the actual invocation's completed-exit view. -/
+theorem acquisition_return_callback (total : Nat) (world : MachineWorkersSlots.World) (identity : Nat) (point : Point)
+    (identitySite : identity = 1 ∨ identity = 2)
+    (path : point.path = Programs.crewAcquire identity ++ [0]) :
+    ∀ nextWorld, Future world nextWorld → ∀ view table answer,
+      ValueAt nextWorld .root answer → MachineWorkersSlots.CodeAt total nextWorld (.connection identity)
+        ((interpAt (Programs.workersProgram total) view table).contA (.cont point) answer) := by
+  intro nextWorld _ view table answer good
+  change MachineWorkersSlots.CodeAt total nextWorld (.connection identity)
+    (resolve (Programs.workersProgram total) ({point with completed := view}.childWith 1 answer))
+  apply literal_code total nextWorld identity _ _ good
+  change Node.at_ (.eff (Programs.workersProgram total)) (point.path ++ [1]) = _
+  rw [path, List.append_assoc]
+  rcases identitySite with one | two
+  · subst identity
+    kernel_rfl
+  · subst identity
+    kernel_rfl
+
+/-- Both actual acquisition bodies contain one note and one literal return.
+Consumer: code annotation and the actual frame push share this source census. -/
+theorem acquisition_body_head (total identity : Nat) (point : Point)
+    (identitySite : identity = 1 ∨ identity = 2)
+    (path : point.path = Programs.crewAcquire identity ++ [0]) :
+    ∃ first, Node.at_ (.eff (Programs.workersProgram total)) point.path =
+      some (.eff (.bind first (.succeed (.lit (.nat identity))))) := by
+  rcases identitySite with one | two
+  · subst identity
+    refine ⟨.perform (.refUpdateWith (MachineWorkersWriters.appendOne 5 (.lit (.nat 1)))) (.var 0), ?_⟩
+    rw [path]
+    exact MachineWorkersWriters.acquire_one total
+  · subst identity
+    refine ⟨.perform (.refUpdateWith (MachineWorkersWriters.appendOne 6 (.lit (.nat 2)))) (.var 0), ?_⟩
+    rw [path]
+    exact MachineWorkersWriters.acquire_two total
+
+/-- The actual source note binder has a connection output class at both acquisition sites.
+Its first child uses the retained five bindings; its callback supplies the exact literal. -/
+theorem acquisition_body_code (total : Nat) (world : MachineWorkersSlots.World) (identity : Nat) (point : Point)
+    (identitySite : identity = 1 ∨ identity = 2)
+    (path : point.path = Programs.crewAcquire identity ++ [0])
+    (ready : 4 ≤ world.state.refs.length ∧ 1 ≤ world.state.deferreds.cells.length)
+    (lexical : SourceScope.At (Programs.workersProgram total) point)
+    (leading : point.env.take 5 = bindings) :
+    MachineWorkersSlots.CodeAt total world (.connection identity)
+      (resolve (Programs.workersProgram total) point) := by
+  have source := acquisition_body_head total identity point identitySite path
+  obtain ⟨first, found⟩ := source
+  rw [Agreement.resolve_of_at found]
+  cases amount : point.fuel with
+  | zero =>
+    rw [Agreement.compileEff_at_zero _ amount]
+    exact .frontier (.connection identity) point amount (Or.inr ready)
+  | succ fuel =>
+    rw [Agreement.compileEff_bind _ _ amount]
+    apply MachineWorkersSlots.CodeAt.bound .root (.connection identity) _ (.cont point)
+    · have childFound := Agreement.at_child found 0
+      change Node.at_ (.eff (Programs.workersProgram total)) (point.child 0).path = some (.eff first) at childFound
+      rw [← Agreement.resolve_of_at childFound]
+      exact .stable (point.child 0) ready
+        (SourceScope.child_at _ _ 0 (SourceScope.next_of_at _ _ _ 0 0 found lexical rfl)) leading
+    · exact acquisition_return_callback total world identity point identitySite path
+
+/-- The actual acquisition-source frame push retains its connection output class.
+Consumer: the saved acquired callback receives the literal rather than an arbitrary note answer. -/
+theorem acquisition_body_push (total : Nat) (world : MachineWorkersSlots.World) (identity : Nat) (point : Point)
+    (view : List (FiberId × ExitV)) (table : RowTable) (fuel : Nat)
+    (fiber : FrameFiber EffName EffThunk Val Err Defect FiberId Ann)
+    (identitySite : identity = 1 ∨ identity = 2)
+    (path : point.path = Programs.crewAcquire identity ++ [0])
+    (ready : 4 ≤ world.state.refs.length ∧ 1 ≤ world.state.deferreds.cells.length)
+    (lexical : SourceScope.At (Programs.workersProgram total) point)
+    (leading : point.env.take 5 = bindings) (amount : point.fuel = fuel + 1)
+    (current : fiber.current = resolve (Programs.workersProgram total) point)
+    (stack : AnswerFlow.StackAt (model total)
+      (interpAt (Programs.workersProgram total) view table).toPrimInterp
+      world (.connection identity) .root fiber.stack) :
+    ∃ next events,
+      fiber.step (interpAt (Programs.workersProgram total) view table).toPrimInterp = (.running next, events) ∧
+      AnswerFlow.FrameAt (model total)
+        (interpAt (Programs.workersProgram total) view table).toPrimInterp world .root next := by
+  have source := acquisition_body_head total identity point identitySite path
+  obtain ⟨first, found⟩ := source
+  have code := acquisition_body_code total world identity point identitySite path ready lexical leading
+  have exposed := (Agreement.resolve_of_at found).trans (Agreement.compileEff_bind _ _ amount)
+  rw [exposed] at code
+  cases code with
+  | bound input _ _ _ bodyTyped callback =>
+    exact MachineWorkersSlots.bound_push total view table world input (.connection identity) .root
+      (compileEff first (point.child 0)) (.cont point) fiber
+      (current.trans exposed) bodyTyped callback stack
+
 end MachineWorkersConnections
