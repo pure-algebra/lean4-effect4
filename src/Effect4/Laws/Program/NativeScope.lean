@@ -18,9 +18,19 @@ open Effect4 Effect4.Machine Effect4.Program
 def NextAt (root : NativeEff) (p : Point) (i added : Nat) : Prop :=
   levelAt (.eff root) 0 (p.path ++ [i]) = some (p.env.length + added)
 
+/-- A captured registration retains the actual acquisition head that creates it.
+Consumer: captured-finalizer source ownership and application source-use counts. -/
+def AcquisitionAt (root : NativeEff) (path : List Nat) : Prop :=
+  ∃ acquire release, Node.at_ (.eff root) path = some (.eff (.acquireRelease acquire release))
+
+/-- An authored finalizer callback retains the actual onExit head that creates it.
+Consumer: native finalizer source ownership and application source-use counts. -/
+def ExitAt (root : NativeEff) (path : List Nat) : Prop :=
+  ∃ body finalizer, Node.at_ (.eff root) path = some (.eff (.onExit body finalizer))
+
 /-- A stored foreign finalizer resolves one exit argument beyond its saved environment. -/
 def FinAt (root : NativeEff) : FinName → Prop
-  | .foreign capture => NextAt root (Point.ofCapture capture) 1 1
+  | .foreign capture => NextAt root (Point.ofCapture capture) 1 1 ∧ AcquisitionAt root capture.path
   | _ => True
 
 /-- Only source operations can write references; administrative operations retain captures. -/
@@ -74,15 +84,16 @@ def RegionAt (root : NativeEff) : Region → Prop
 
 /-- Source continuation names record the child length their actual invocation supplies. -/
 def NameAt (root : NativeEff) : EffName → Prop
-  | .cont p | .caught p | .onValue p | .fin p | .caughtError p => NextAt root p 1 1
+  | .cont p | .caught p | .onValue p | .caughtError p => NextAt root p 1 1
+  | .fin p => NextAt root p 1 1 ∧ ExitAt root p.path
   | .onCause p => NextAt root p 2 1
   | .loop p => At root p
   | .scopeOpen p | .scopeProvide p _ | .scopeBody p _ => NextAt root p 0 0
   | .forkScopedIn p => At root p
-  | .acquireCtx p | .acquireIn p _ => NextAt root p 0 0 ∧ NextAt root p 1 2
-  | .acquired p _ _ => NextAt root p 1 2
+  | .acquireCtx p | .acquireIn p _ => NextAt root p 0 0 ∧ NextAt root p 1 2 ∧ AcquisitionAt root p.path
+  | .acquired p _ _ => NextAt root p 1 2 ∧ AcquisitionAt root p.path
   | .afterScopeAdd _ fin => FinAt root fin
-  | .releaseUnder p _ _ | .releaseBody p _ _ => NextAt root p 1 1
+  | .releaseUnder p _ _ | .releaseBody p _ _ => NextAt root p 1 1 ∧ AcquisitionAt root p.path
   | .withWaiter base _ _ => NameAt root base
   | .store name => StoreNameAt root name
   | .updateThen _ region | .bodyThen region _ => RegionAt root region
@@ -99,7 +110,7 @@ def ThunkAt (root : NativeEff) : EffThunk → Prop
   | .pure p | .body p | .act p | .forkInAt p _ | .releaseMasked p _ => At root p
   | .op op => OpAt root op
   | .store thunk => StoreThunkAt root thunk
-  | .acquireMasked p _ => NextAt root p 0 0 ∧ NextAt root p 1 2
+  | .acquireMasked p _ => NextAt root p 0 0 ∧ NextAt root p 1 2 ∧ AcquisitionAt root p.path
   | .memoLookup _ _ _ | .forkLayer _ _ _ => False
   | _ => True
 
@@ -218,7 +229,7 @@ theorem compile_at (root : NativeEff) (fragment : Fragment root) (e : NativeEff)
     intro found hs
     exact ⟨ih (Agreement.at_child found 0)
       (child_at root p 0 (next_of_at root p _ 0 0 found hs (by rfl))),
-      next_of_at root p _ 1 1 found hs (by rfl)⟩
+      ⟨next_of_at root p _ 1 1 found hs (by rfl), ⟨body, finalizer, found⟩⟩⟩
   case case25 p n hf body noexit ih =>
     intro found hs
     exact ih (Agreement.at_child found 0)
@@ -226,7 +237,7 @@ theorem compile_at (root : NativeEff) (fragment : Fragment root) (e : NativeEff)
   case case37 p n hf acquire release =>
     intro found hs
     refine ⟨trivial, ⟨next_of_at root p _ 0 0 found hs (by rfl),
-      next_of_at root p _ 1 2 found hs (by rfl)⟩, ?_⟩
+      next_of_at root p _ 1 2 found hs (by rfl), ⟨acquire, release, found⟩⟩, ?_⟩
     intro _ _ wrong
     cases wrong
   case case40 p n hf key value body val read =>
@@ -253,8 +264,8 @@ theorem resolve_scoped (root : NativeEff) (fragment : Fragment root) (p : Point)
 
 /-- Appending the acquired value leaves precisely one future exit binder for its release. -/
 theorem capture_at (root : NativeEff) (p : Point) (value : Val) (ctx : Ctx)
-    (hs : NextAt root p 1 2) : FinAt root (.foreign (p.capture value ctx)) := by
-  unfold FinAt
+    (hs : NextAt root p 1 2) (source : AcquisitionAt root p.path) : FinAt root (.foreign (p.capture value ctx)) := by
+  refine ⟨?_, source⟩
   unfold NextAt at hs ⊢
   change levelAt (.eff root) 0 (p.path ++ [1]) = some ((p.env ++ [value]).length + 1)
   rw [List.length_append, List.length_singleton]

@@ -109,7 +109,7 @@ theorem interp_fin_at (root : NativeEff) (fragment : Fragment root) (completed) 
   cases name
   case fin p =>
     cases found
-    exact resolve_arg_at root fragment _ 1 (reifyExitVal exit) owned
+    exact resolve_arg_at root fragment _ 1 (reifyExitVal exit) owned.1
   case store name =>
     cases name
     case finalizerName fin =>
