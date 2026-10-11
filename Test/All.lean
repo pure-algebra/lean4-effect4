@@ -47,6 +47,7 @@ import Test.Counterexamples.Machine.Semantics.ActionAtRaceAllPremise
 import Test.Counterexamples.Machine.Semantics.InterruptDelivery
 import Test.Counterexamples.Machine.Semantics.SelfInterrupt
 import Test.Machine.EditMessages
+import Test.Machine.EditFields
 import Test.Machine.ReferenceFootprint
 import Test.Counterexamples.Machine.Semantics.StrongExitDefect
 import Test.Counterexamples.Machine.Semantics.InterruptEscape
@@ -363,6 +364,7 @@ import Test.Audit.SummaryControls
 import Test.Dogfood.Proofs.HostJournal
 import Test.Dogfood.Proofs.HostPayloadsAudit
 import Test.Dogfood.Proofs.MachinePopTrace
+import Test.Dogfood.Proofs.PrimitiveProducerReader
 import Test.Dogfood.Proofs.HostTimeoutSource
 import Test.Dogfood.Proofs.HostTimeoutDriver
 import Test.Dogfood.Proofs.HostTimeoutNumberLedger

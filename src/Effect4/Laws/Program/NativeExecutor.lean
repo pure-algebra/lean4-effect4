@@ -1,4 +1,4 @@
-import Effect4.Laws.Machine.Eliminators
+import Effect4.Laws.Program.PrimitiveProducer
 import Effect4.Laws.Program.NativeActions
 
 /-!
@@ -39,15 +39,30 @@ theorem primitive_at (root : NativeEff) (fragment : Fragment root) (completed) (
       ScopesAt root ((interpAt root completed table).registerAsync name fiber.id m.nextToken m.state).1.scopes ∧
       ∀ code ∈ ((interpAt root completed table).registerAsync name fiber.id m.nextToken m.state).2, CodeAt root code :=
     register_at root completed table name fiber.id m.nextToken m.state owned.scopes
-  fun_cases evaluatePrim (interpAt root completed table) m fiber yielding
-  case case1 priority current token grown before parked =>
+  have produced := Moves.evaluatePrim_producer (interpAt root completed table) m fiber yielding
+  generalize actual : evaluatePrim (interpAt root completed table) m fiber yielding = result at produced ⊢
+  cases produced with
+  | yieldNow priority current =>
+    let grown : NativeMachine := {m with nextToken := m.nextToken + 1}
+    let before : SourceFiber := {fiber with
+      frame := {fiber.frame with current := .success (interpAt root completed table).voidValue}
+      dispatcher := fiber.dispatcher.enqueue priority
+        (.resume fiber.id m.nextToken (.success (interpAt root completed table).voidValue))}
     have grownAt : ConfigurationAt root grown := ⟨owned.fibers, owned.races, owned.scopes⟩
     have beforeAt : FiberAt root before := by
       refine ⟨⟨trivial, held.frame.2⟩, held.pending, ?_⟩
       exact dispatcher_enqueue_at root fiber.dispatcher priority _ held.dispatcher ⟨trivial, .success _⟩
     exact ⟨configuration_emit root _ _ (configuration_arm root grown fiber.id grownAt),
       fiber_park_at root before _ beforeAt trivial, by intro command member; cases member⟩
-  case case3 register signal cancel current token state grown before parked registeredEq =>
+  | asyncImmediate register signal cancel state code current registeredEq =>
+    have scopesAt := registered register
+    rw [registeredEq] at scopesAt
+    exact ⟨⟨owned.fibers, owned.races, scopesAt.1⟩,
+      fiber_current_at root fiber code held (scopesAt.2 code rfl),
+      by intro command member; rcases List.mem_cons.mp member with same | impossible
+         · subst command; trivial
+         · cases impossible⟩
+  | asyncParked register signal cancel state current registeredEq =>
     have scopesAt := registered register
     rw [registeredEq] at scopesAt
     have cancelAt : NameAt root (cancel.getD .abort) := by
@@ -55,24 +70,28 @@ theorem primitive_at (root : NativeEff) (fragment : Fragment root) (completed) (
       rw [current] at source
       cases found : cancel with
       | none => trivial
-      | some name =>
-        exact (source.2 name (by rw [found]; rfl)).1
+      | some name => exact (source.2 name (by rw [found]; rfl)).1
+    let before : SourceFiber := if signal || cancel.isSome then
+      {fiber with frame := {fiber.frame with stack := Prim.asyncFinalizer ((interpAt root completed table).cancelName (cancel.getD (interpAt root completed table).abortName) fiber.id m.nextToken) :: fiber.frame.stack}}
+      else fiber
     have beforeAt : FiberAt root before := by
       dsimp only [before]
       split
       · exact fiber_cancel_at root fiber _ held cancelAt
       · exact held
-    exact ⟨configuration_emit root grown _ ⟨owned.fibers, owned.races, scopesAt.1⟩,
+    exact ⟨configuration_emit root _ _ ⟨owned.fibers, owned.races, scopesAt.1⟩,
       fiber_park_at root before _ beforeAt trivial, by intro command member; cases member⟩
-  case case9 target mode park targetFiber found noExit token grown cancel before parked noYield noAsync =>
-    have beforeAt : FiberAt root before := fiber_cancel_at root fiber _ held trivial
-    exact ⟨configuration_emit root grown _ ⟨owned.fibers, owned.races, owned.scopes⟩,
-      fiber_park_at root before _ beforeAt trivial, by intro command member; cases member⟩
-  case case6 targets current machine returned parked edits counted noYield noAsync =>
+  | countdownPark targets machine returned parked edits park counted =>
     have retained := countdown_edits_at root completed table m fiber targets .exitsValue false owned held trivial
     rw [counted] at retained
     exact ⟨retained.1, retained.2, by intro command member; cases member⟩
-  all_goals aesop (add safe constructors [EvaluationAt, ConfigurationAt, FiberAt, TerminalReply]) (add safe apply [(step_frame_at root fragment), (finalizer_at root fragment), register_race_at, (with_fiber_at root), configuration_update, configuration_emit, configuration_arm, fiber_current_at, fiber_park_at, fiber_cancel_at, dispatcher_enqueue_at, exit_value_at]) (add safe forward [actionOwned, syncOwned, registered, (countdown_edits_at root completed table)]) (add norm simp [CommandsAt, CommandAt, List.mem_cons, FrameAt, CodeAt, ThunkAt, NameAt, ResumeAt, TaskAt, RunFiber.park])
+  | joinWaiting target mode other park found live =>
+    have beforeAt : FiberAt root {fiber with frame := {fiber.frame with stack := Prim.asyncFinalizer ((interpAt root completed table).cancelName (interpAt root completed table).parkCancelName fiber.id m.nextToken) :: fiber.frame.stack}} :=
+      fiber_cancel_at root fiber _ held trivial
+    exact ⟨configuration_emit root _ _ ⟨owned.fibers, owned.races, owned.scopes⟩,
+      fiber_park_at root _ _ beforeAt trivial, by intro command member; cases member⟩
+  | racePark race park => exact register_race_at root m fiber yielding race owned held
+  | _ => aesop (add safe constructors [EvaluationAt, ConfigurationAt, FiberAt, TerminalReply]) (add safe apply [(step_frame_at root fragment), (finalizer_at root fragment), (with_fiber_at root), configuration_update, configuration_emit, configuration_arm, fiber_current_at, fiber_park_at, fiber_cancel_at, dispatcher_enqueue_at, exit_value_at]) (add safe forward [actionOwned, syncOwned, registered]) (add norm simp [CommandsAt, CommandAt, List.mem_cons, FrameAt, CodeAt, ThunkAt, NameAt, ResumeAt, TaskAt, RunFiber.park])
 
 /-- Scoped entry installs its actual zero-binder source child and a fresh empty scope. -/
 theorem enter_scoped_at (root : NativeEff) (fragment : Fragment root) (p : Point)

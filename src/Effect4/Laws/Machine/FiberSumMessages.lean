@@ -25,7 +25,7 @@ theorem fiberEdit_le
       total w (applyFiberEdit edit m).1 ≤ total w m := by
   cases edit with
   | observe target observer =>
-    simp only [applyFiberEdit, RunMachine.modify]
+    simp only [applyFiberEdit, RunMachine.observe, RunMachine.modify]
     split
     · exact ⟨rfl, Nat.le_refl _⟩
     · next old found =>
@@ -35,7 +35,7 @@ theorem fiberEdit_le
         (by rw [observers, Nat.add_zero]; exact Nat.le_refl _)
   | dropToken token =>
     refine ⟨?_, ?_⟩
-    · simp only [applyFiberEdit, List.map_map, Function.comp_def]
+    · simp only [applyFiberEdit, RunMachine.dropToken, List.map_map, Function.comp_def]
     · exact Nat.le_of_eq (total_map w m _ (fun f => observers f _))
   | interrupt target cause =>
     simp only [applyFiberEdit]
@@ -149,7 +149,7 @@ theorem settle_fields (id : FiberId) (rest : List (Cmd ν σ β ε δ ι α))
       (held.state, held.races, held.trace))
     (fun _ _ => rfl) (fun _ _ => rfl) _ (fun _ _ => rfl)
   intro target observer held
-  simp only [Edit.apply, RunMachine.modify]
+  simp only [Edit.apply, RunMachine.observe, RunMachine.modify]
   split <;> rfl
 
 omit w in

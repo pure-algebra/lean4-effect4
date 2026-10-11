@@ -269,9 +269,9 @@ theorem countdown_misses (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
   split at member
   · simp only [List.mem_append, List.mem_singleton, List.not_mem_nil, or_false] at member
     subst edit
-    exact True.intro
+    intro impossible; cases impossible
   · simp only [List.mem_append, List.mem_singleton] at member
-    rcases member with rfl | rfl <;> exact True.intro
+    rcases member with rfl | rfl <;> (intro impossible; cases impossible)
 
 def linkWord (interp : RunInterp ν σ β ε δ ι α χ St κ)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (mode : Supervision.ScopeMode)
@@ -354,7 +354,7 @@ theorem link_misses (interp : RunInterp ν σ β ε δ ι α χ St κ)
   repeat' split at member
   all_goals simp only [List.mem_cons, List.not_mem_nil, or_false] at member
   all_goals rcases member with rfl | rfl
-  all_goals exact True.intro
+  all_goals (intro impossible; cases impossible)
 
 end core
 

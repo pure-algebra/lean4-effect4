@@ -1122,7 +1122,7 @@ theorem settle_observe_park {M : RState} {g old : RFiber} {id target : FiberId} 
     let go : RFiber := {g with observers := g.observers ++ [o]}
     have lookGO : ((M.update g).update go).fiber? g.id = some go :=
       rfiber?_update_self own rfl
-    simp only [settle, applyFiberEdits, List.foldl_cons, List.foldl_nil, applyFiberEdit,
+    simp only [settle, applyFiberEdits, List.foldl_cons, List.foldl_nil, applyFiberEdit, RunMachine.observe,
       RunMachine.modify, own, List.nil_append]
     rw [lookGO]
     simp only [settleOutcome, FiberCore.deferredInterrupt, List.nil_append]
@@ -1142,7 +1142,7 @@ theorem settle_observe_park {M : RState} {g old : RFiber} {id target : FiberId} 
   · cases ht : M.fiber? target with
     | none =>
       have noTarget : (M.update g).fiber? target = none := by rw [rfiber?_update_other self, ht]
-      simp only [settle, applyFiberEdits, List.foldl_cons, List.foldl_nil, applyFiberEdit,
+      simp only [settle, applyFiberEdits, List.foldl_cons, List.foldl_nil, applyFiberEdit, RunMachine.observe,
         RunMachine.modify, noTarget, own, List.nil_append, settleOutcome, FiberCore.deferredInterrupt]
       cases hd : g.frame.deferredInterrupt with
       | true =>
@@ -1159,7 +1159,7 @@ theorem settle_observe_park {M : RState} {g old : RFiber} {id target : FiberId} 
       have other : g.id ≠ to.id := by show g.id ≠ t.id; rw [tid]; exact Ne.symm self
       have targetLook : (M.update g).fiber? target = some t := by rw [rfiber?_update_other self, ht]
       have ownerLook : ((M.update g).update to).fiber? g.id = some g := by rw [rfiber?_update_other other]; exact own
-      simp only [settle, applyFiberEdits, List.foldl_cons, List.foldl_nil, applyFiberEdit,
+      simp only [settle, applyFiberEdits, List.foldl_cons, List.foldl_nil, applyFiberEdit, RunMachine.observe,
         RunMachine.modify, targetLook, List.nil_append]
       rw [ownerLook]
       simp only [settleOutcome, FiberCore.deferredInterrupt, List.nil_append]

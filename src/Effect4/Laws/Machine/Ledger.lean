@@ -485,7 +485,7 @@ theorem fiberEdit_kept (edit : FiberEdit ε δ ι α) (m : RunMachine ν σ β �
   | observe target observer =>
     refine ⟨L.same_modify m unique target (fun f => {f with observers := f.observers ++ [observer]})
       (fun _ => rfl) (fun _ => rfl), ?_⟩
-    simp only [applyFiberEdit]
+    simp only [applyFiberEdit, RunMachine.observe]
     unfold RunMachine.modify
     dsimp only
     split
@@ -496,7 +496,7 @@ theorem fiberEdit_kept (edit : FiberEdit ε δ ι α) (m : RunMachine ν σ β �
       | .resumeAwait _ t _ => t ≠ token
       | .countdown _ t => t ≠ token
       | _ => true}) (fun _ => rfl) (fun _ => rfl), ?_⟩
-    simp only [applyFiberEdit, List.map_map, Function.comp_def]
+    simp only [applyFiberEdit, RunMachine.dropToken, List.map_map, Function.comp_def]
   | interrupt target cause =>
     simp only [applyFiberEdit]
     split

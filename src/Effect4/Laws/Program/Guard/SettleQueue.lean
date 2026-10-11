@@ -40,7 +40,7 @@ theorem settle_queue_fields (id : FiberId) (rest : List NCmd) (it : NIter) :
   apply Edits.settle_keeps (fun held : NativeMachine => (held.nextToken, held.races))
     (fun _ _ => rfl) (fun _ _ => rfl) _ (fun _ _ => rfl)
   intro target observer held
-  simp only [Edit.apply, RunMachine.modify]
+  simp only [Edit.apply, RunMachine.observe, RunMachine.modify]
   split <;> rfl
 
 theorem nextToken_settle (id : FiberId) (rest : List NCmd) (it : NIter) :

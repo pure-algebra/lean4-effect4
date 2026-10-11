@@ -1285,7 +1285,7 @@ theorem observe_countdown (root : ProgramSource) (rootTy : EffTy) {w : World} {m
               exact countdownAt_view view.fibers
                 (countdownAt_of_found look find' ⟨a, e, tt, newPayload, nextCols⟩))
           have all := configTyped_evaluates added nested evals
-          simpa only [applyFiberEdit, List.nil_append, List.append_nil] using all
+          simpa only [applyFiberEdit, RunMachine.observe, List.nil_append, List.append_nil] using all
 
 /-! ## `observe` -/
 

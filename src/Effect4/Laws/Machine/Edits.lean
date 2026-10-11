@@ -16,54 +16,10 @@ namespace Effect4.Machine
 
 universe u v w
 
-/-- Primitive machine writes, with first-order payloads. Code and frame sorts stay generic. -/
-inductive Edit (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St : Type (max u v))
-    (κ φ η : Type (max u v)) : Type (max u v) where
-  | update (fiber : RunFiber ν σ β ε δ ι α χ κ φ)
-  | emit (events : List (RunEvent ν σ β ε δ ι α χ κ η))
-  | arm (owner : FiberId)
-  | disarm (owner : FiberId)
-  | halt (why : Stuck)
-  | updateRace (race : Race ν σ β ε δ ι α κ)
-  | appendFiber (fiber : RunFiber ν σ β ε δ ι α χ κ φ)
-  | appendRace (race : Race ν σ β ε δ ι α κ)
-  | bumpId
-  | bumpToken
-  | bumpRace
-  | addFork (record : ForkRecord)
-  | setState (state : St)
-  | setMiddleware (installed : Bool)
-  | observe (target : FiberId) (observer : Observer)
-  | dropToken (token : Nat)
-
 namespace Edit
 
 variable {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
   {κ φ η : Type (max u v)}
-
-/-- Interpret a primitive write. No stored payload is a Lean function. -/
-def apply : Edit ν σ β ε δ ι α χ St κ φ η →
-    RunMachine ν σ β ε δ ι α χ St κ φ η → RunMachine ν σ β ε δ ι α χ St κ φ η
-  | .update fiber, m => m.update fiber
-  | .emit events, m => m.emit events
-  | .arm owner, m => m.arm owner
-  | .disarm owner, m => m.disarm owner
-  | .halt why, m => m.halt why
-  | .updateRace race, m => m.updateRace race
-  | .appendFiber fiber, m => {m with fibers := m.fibers ++ [fiber]}
-  | .appendRace race, m => {m with races := m.races ++ [race]}
-  | .bumpId, m => {m with nextId := m.nextId + 1}
-  | .bumpToken, m => {m with nextToken := m.nextToken + 1}
-  | .bumpRace, m => {m with nextRace := m.nextRace + 1}
-  | .addFork record, m => {m with forks := m.forks ++ [record]}
-  | .setState state, m => {m with state := state}
-  | .setMiddleware installed, m => {m with middlewareInstalled := installed}
-  | .observe target observer, m => m.modify target fun f => {f with observers := f.observers ++ [observer]}
-  | .dropToken token, m => {m with fibers := m.fibers.map fun f =>
-      {f with observers := f.observers.filter fun
-        | .resumeAwait _ t _ => t ≠ token
-        | .countdown _ t => t ≠ token
-        | _ => true}}
 
 /-- Only an emit edit contributes trace events. -/
 def events : Edit ν σ β ε δ ι α χ St κ φ η → List (RunEvent ν σ β ε δ ι α χ κ η)
@@ -76,9 +32,8 @@ def stateWrite : Edit ν σ β ε δ ι α χ St κ φ η → Option St
   | _ => none
 
 /-- Whether a primitive write misses the stored fiber table. -/
-def missesFibers : Edit ν σ β ε δ ι α χ St κ φ η → Prop
-  | .update _ | .appendFiber _ | .observe _ _ | .dropToken _ => False
-  | _ => True
+def missesFibers (edit : Edit ν σ β ε δ ι α χ St κ φ η) : Prop :=
+  edit.writes ≠ .fibers
 
 /-- The primitive writes allowed by settlement, including resolved addressed messages. -/
 def settlementWrite : Edit ν σ β ε δ ι α χ St κ φ η → Prop
@@ -89,22 +44,16 @@ def settlementWrite : Edit ν σ β ε δ ι α χ St κ φ η → Prop
 theorem keeps_fibers (edit : Edit ν σ β ε δ ι α χ St κ φ η) (miss : edit.missesFibers) :
     Keeps (fun m : RunMachine ν σ β ε δ ι α χ St κ φ η => m.fibers) edit.apply := by
   intro m
-  cases edit with
-  | update fiber => exact False.elim miss
-  | appendFiber fiber => exact False.elim miss
-  | observe target observer => exact False.elim miss
-  | dropToken token => exact False.elim miss
-  | _ => rfl
+  exact edit.frame .fibers m (Ne.symm miss)
 
 /-- The primitive store frame rule. StatePreservation consumes this projection. -/
 theorem apply_state (edit : Edit ν σ β ε δ ι α χ St κ φ η)
     (m : RunMachine ν σ β ε δ ι α χ St κ φ η) :
     (edit.apply m).state = edit.stateWrite.getD m.state := by
   cases edit with
-  | observe target observer =>
-    simp only [apply, stateWrite, Option.getD_none, RunMachine.modify]
-    split <;> rfl
-  | _ => rfl
+  | setState state => rfl
+  | _ =>
+    exact frame _ .state m (by intro impossible; cases impossible)
 
 /-- The trace equation of a primitive write. Approximation consumes it through run_trace. -/
 theorem apply_trace (edit : Edit ν σ β ε δ ι α χ St κ φ η)
@@ -115,10 +64,8 @@ theorem apply_trace (edit : Edit ν σ β ε δ ι α χ St κ φ η)
     cases events with
     | nil => exact (List.append_nil _).symm
     | cons event rest => rfl
-  | observe target observer =>
-    simp only [apply, events, RunMachine.modify]
-    split <;> exact (List.append_nil _).symm
-  | _ => exact (List.append_nil _).symm
+  | _ =>
+    exact (frame _ .trace m (by intro impossible; cases impossible)).trans (List.append_nil _).symm
 
 end Edit
 
