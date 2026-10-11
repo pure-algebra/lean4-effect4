@@ -1,6 +1,7 @@
 import Test.Dogfood.Scenario.Atomic.WriterFinalizers
 import Effect4.Laws.Machine.Approximation
 import Effect4.Laws.Program.NativeReferences
+import Effect4.Laws.Program.PlaceLedgerConnect
 
 /-!
 Concept: scope-lifetime-finalization, R11.
@@ -13,6 +14,26 @@ set_option maxHeartbeats 4000000
 namespace Test.Dogfood.Scenario.Atomic.WriterMachine
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.SourceScope Effect4.Laws.Auto
 open WriterPhase WriterEvaluation
+
+/-- The actual heap and writer reservations are places of the shared ledger. -/
+def ledger (id : Nat) : PlaceLedgerConnect.NativeWeights where
+  fiber := fun fiber => WriterPhase.frame id fiber.frame
+  race := fun _ => 0
+  state := fun state => Writer.heapCount id state.refs
+  command := fun _ => 0
+  task := fun _ => 0
+  consumed := fun _ => 0
+  produced := fun event => if FinalizerRun.startedAt (SourcePaths.requestPath id) event then 1 else 0
+
+/-- The original numeric bound is the shared ledger reading. -/
+theorem ledger_funded (id cap : Nat) (m : NativeMachine) :
+    (ledger id).Funded cap m [] [] ↔
+      Writer.heapCount id m.state.refs +
+        (m.fibers.map fun fiber => WriterPhase.frame id fiber.frame).sum ≤
+          m.trace.countP (FinalizerRun.startedAt (SourcePaths.requestPath id)) + cap := by
+  simp only [PlaceLedger.Funded, PlaceLedger.spent, PlaceLedger.held, PlaceLedger.issued, ledger,
+    PlaceLedger.zero_sum, List.map_nil, List.sum_nil, Nat.zero_add, Nat.add_zero,
+    FinalizerCredits.indicator_sum, FiberSum.total]
 
 /-- Recorded starts issue the active note budget. -/
 def issued (id : Nat) (machine : NativeMachine) : Nat :=
@@ -147,14 +168,22 @@ theorem settle_debit (id : Nat) (machine : NativeMachine) (fiber : SourceFiber)
     (same : next.fiber.id = fiber.id) (debit : Debit id machine fiber next) :
     Writer.heapCount id (settle fiber.id rest next).1.state.refs + fibers id (settle fiber.id rest next).1 + issued id machine ≤
       Writer.heapCount id machine.state.refs + fibers id machine + issued id (settle fiber.id rest next).1 := by
-  have partition := FiberSum.split (fun fiber => frame id fiber.frame) machine fiber unique member
-  change outside id fiber.id machine + frame id fiber.frame = fibers id machine at partition
-  have installed := Machine.WriterWeights.settle_bound (model id) fiber.id next rest same afterUnique
-  change fibers id (settle fiber.id rest next).1 ≤ outside id fiber.id next.machine + frame id next.fiber.frame at installed
-  have fields := Machine.WriterWeights.settle_fields fiber.id next rest
-  simp only [issued, fields.1, fields.2]
-  unfold Debit issued at debit
-  omega
+  have localDebit : (ledger id).IterDebit machine fiber next := by
+    simpa only [PlaceLedger.IterDebit, PlaceLedger.spent, PlaceLedger.issued, PlaceLedger.outside,
+      ledger, PlaceLedger.zero_sum, List.map_nil, List.sum_nil, Nat.zero_add, Nat.add_zero,
+      FinalizerCredits.indicator_sum, Debit, outside, Machine.WriterWeights.outside,
+      FiberSum.outside, FiberSum.total, issued, Machine.FrameWeights.frame, model, frame] using debit
+  have installed := (ledger id).install_balanced machine fiber next rest [] unique member
+    (FiberSum.install_le _ next.machine fiber.id next.fiber same afterUnique) localDebit
+  have settled := (ledger id).settle_balanced (fun _ _ => rfl)
+    (Machine.WriterWeights.interrupt_weight_le (model id)) (fun _ => rfl) (fun _ => rfl)
+    (fun _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl)
+    fiber.id rest next [] afterUnique
+  have balanced := installed.trans (ledger id) settled
+  simpa only [PlaceLedger.Balanced, PlaceLedger.spent, PlaceLedger.held, PlaceLedger.issued,
+    ledger, PlaceLedger.zero_sum, List.map_nil, List.sum_nil, Nat.zero_add, Nat.add_zero,
+    FinalizerCredits.indicator_sum, FiberSum.total, fibers, Machine.WriterWeights.fibers,
+    issued, Machine.FrameWeights.frame, model, frame] using balanced
 
 /-- An appended trace retains every already recorded selected start. -/
 theorem issued_mono (id : Nat) (before after : NativeMachine) (extended : RunMachine.Extends before after) :
