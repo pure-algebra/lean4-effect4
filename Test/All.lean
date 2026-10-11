@@ -376,6 +376,7 @@ import Test.Dogfood.Scenario.Atomic.Writer
 import Test.Dogfood.Scenario.Atomic.WriterPhase
 import Test.Dogfood.Scenario.Atomic.WriterOwnership
 import Test.Dogfood.Scenario.Atomic.WriterFrames
+import Test.Dogfood.Scenario.Atomic.WriterMachine
 import Test.Dogfood.Proofs.TimeoutCounterexample
 import Test.Dogfood.Scenario.QueueWorkers.Source
 import Test.Machine.RaceFirst
