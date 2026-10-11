@@ -131,3 +131,20 @@ Middleware and yield edits are proved leaves; admitted histories retain the orig
 The original Workers gate rejection is retained under an exact expected-error guard, as Atomic's is.
 Its final repair must follow a named clause to each planned subgoal.
 The original theorem is still modulo its three goals.
+
+## Owner ruling and timeout evidence
+
+The owner approves retry admission by the timeout form's completed outcome.
+The four-attempt bound remains. The original host-reply premise is withdrawn for the retry clause.
+This ruling is recorded here because the task forbids editing `docs/core/decisions.md`.
+The final register proposal must quote the same ruling.
+The old proposition and its Lean refutation remain retained evidence.
+
+`codex/timeout-contract-decision.md` states the exact proposed observation and its evidence limits.
+`RaceFirstYield.ts` and `RaceFirstYield.output.json` reproduce the issue on the pinned Effect runtime.
+The four runs cover success and nonretryable failure, each with and without a forced yield.
+Both yielded runs start a second attempt; both controls end after one.
+The probe passes strict tsgo `7.0.0-dev.20260629.1` checking and runs under Bun.
+It uses the real race and retry implementations, with a controlled callback timer.
+It does not measure a physical clock or the exponential delay.
+The waiting topology's cancellation defect remains separate from this contract amendment.

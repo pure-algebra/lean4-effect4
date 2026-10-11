@@ -78,7 +78,7 @@ flowchart TD
 
 | Question | Recommendation | Current evidence |
 | --- | --- | --- |
-| Timeout race | Repair the form to settle on an entrant's exit. Preserve the retry proposition. | The agent checks the retained counterexample against vendored rc.112. |
+| Timeout race | Follow the timeout form's returned failure and retain the four-attempt bound. The owner approves this amendment. | Both Lean and rc.112 probes refute the original host-reply premise. The runtime probes include controls without forced yield. |
 | Cleanup premise | Preserve the existing proposition. Use session-admitted history in its proof. | The scenario already passes every raw row through session admission. |
 | Stale reply provenance | Preserve clause four. Prove provenance separately from key uniqueness. | `ending_of_tape` does not imply the original clause. |
 | Routing budget | Preserve the current budget unless a checked necessity requires a ruling. | The larger generic sufficient bound alone proves no necessity. |
@@ -144,3 +144,14 @@ The packet's suggested raw-point level invariant needs a name-specific statement
 The relevant source address includes that counter; the raw point alone does not locate the active statement.
 `PointTyped` retains source typing but does not assert unique dynamic use of a source site.
 The existing typed capstones do not supply native source ownership for table-aware, variable-budget histories.
+
+## Owner ruling: timeout retries
+
+The owner selects the source-aligned contract on 2026-10-11.
+A retry follows a declared failure returned by the completed timeout form.
+The four-attempt bound remains.
+The applied host reply does not determine which entrant wins the timeout race.
+The retained decision note is `codex/timeout-contract-decision.md`.
+Its host probe checks rc.112 with tsgo `7.0.0-dev.20260629.1` and Bun.
+It uses a controlled callback timer, not a physical clock or the exponential delay.
+The canceled-waiter defect of the old timeout form remains a separate repair.
