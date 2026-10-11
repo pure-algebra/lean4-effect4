@@ -1,4 +1,4 @@
-import Test.Dogfood.Scenario.Timeout
+import Test.Dogfood.Scenario.Timeout.Model
 import Effect4.Laws.Run.Journal
 
 /-!

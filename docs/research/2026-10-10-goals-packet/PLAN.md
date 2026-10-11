@@ -239,3 +239,11 @@ The refuted internal command goal is removed from the active proof graph.
 `ReleaseCustody.Execution.history` now states the remaining obligation on actual admitted histories.
 Workers' release-step assembly keeps its original statement and extends that history before reading the bound.
 The checked local proofs remain; the replacement command decomposition must retain saved-frame and resume correlation.
+
+### Applied receipt observation
+
+`HostAppliedObservation.applied_body_seen` proves the observation reader required by timeout value flow.
+Every successful applied receipt appears as an answered HTTP call in the current fetch observation.
+The theorem covers every script and imposes no move restriction.
+`codex/HostAppliedObservationReceipt.md` records the build and the audit, with no planned dependencies.
+The native returned-body invariant remains separate and open.
