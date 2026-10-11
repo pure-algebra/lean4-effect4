@@ -7,18 +7,16 @@ you. Then read this folder's `README.md` and the earlier note
 
 ## The one thing to know first
 
-**Blocking, 2026-10-11 11:25: the integration head does not build.** At `23d070d77`,
-`lake build Effect4.Laws` fails in two modules that no slice changed:
+**Newest, 2026-10-11 13:35: handles are names (item 11), and item 10's footprint.** Two notes:
 
-- `src/Effect4/Laws/Machine/Book.lean`, `interruptRecord_pendingOk`: `dsimp` made no progress
-  after `unfold interruptRecord`;
-- `src/Effect4/Laws/Program/Guard/Observer.lean`, `interruptRecord_running_exit`: unsolved goals,
-  and seven unused `simp` arguments.
+- `../2026-10-11-handles/README.md` models handles as names, worlds and one agreement relation.
+  Its checked probe derives the handle invariant, `KeyBounded`'s support bounds and DET-3's
+  equivariance from one abstraction theorem. Item 11 below is its order. Start it after R2.
+- Your draft `Laws/Machine/Edits.lean` has exactly the sixteen edits that the driver writes. Item
+  10 below adds two points while the draft is open: one footprint function and one `dropToken`.
 
-The cause is `293ed3e85`: `interruptRecord` now delegates to `interruptWithCause`. Repair both
-proofs in the integration lane; the merge tick took nothing this hour. From now on, a slice that
-changes `src/Effect4/Machine` builds `Effect4.Laws` whole before it commits, because every law
-module reaches the machine. A narrow build of the slice's own consumers misses the rest.
+The 11:25 build break is repaired (`98567f7f2`). Its rule stays: a slice that changes
+`src/Effect4/Machine` builds `Effect4.Laws` whole before it commits.
 
 The goals lane re-builds the same structures per weight and per scenario, about 44,000 lines in two
 days.
@@ -163,13 +161,53 @@ Behaviour gates only where a slice changes executable code, and then at a sweep.
     census and order are `../2026-10-11-tokens-in-places/machine-edits.md`). Sixteen law modules
     re-prove their invariants through every driver helper, about 210 helper lemmas. Make each
     helper a word of primitive edits, proved once, and each invariant a fact per edit.
-    - The probe `../2026-10-11-tokens-in-places/probes/MachineEdits.lean` compiles: `spawn` is its
-      word by `rfl`, `start` and `postTask` by one case split, and trace growth and the frame rule
+    - The probe `../2026-10-11-tokens-in-places/probes/MachineEdits.lean` compiles. `spawn` is its
+      word by `rfl`, and `start` and `postTask` by one case split. Trace growth and the frame rule
       hold for every word by one induction each.
-    - Start right after the build repair. Steps 1 to 4 of the note's §4 do not touch R2's helpers:
-      the alphabet, the R2-free decompositions, the `Approximation` pilot, then `Ledger.Same`.
-    - R2's migration delivers its helpers' words (step 5). Then `MaskRuns`, `Handles` and the
-      guard modules move, keeping every statement.
+    - Steps 1 to 4 of the note's §4 do not touch R2's helpers: the alphabet, the R2-free
+      decompositions, the `Approximation` pilot, then `Ledger.Same`. R2's migration delivers its
+      helpers' words (step 5). Then `MaskRuns`, `Handles` and the guard modules move.
+    - **Sixteen edits cover every driver write** (census, 13:35). Each `{ m with … }` write in
+      `Machine/Fibers.lean` sets one field, or splits into one-field edits. Your draft's tags are
+      exactly those writes.
+    - **One footprint function.** Each edit writes one field of `RunMachine`. So give the
+      alphabet `Edit.writes : Edit → MachineField`, an eleven-constructor enumeration, and one
+      frame theorem: an edit keeps every field but the one it writes. `missesFibers` becomes
+      `e.writes ≠ .fibers`. `stateWrite`, `events` and the eighteen field rows of `Keeps.lean`
+      become instances. `settlementWrite` stays a sub-alphabet, because `appendFiber` also writes
+      the fibers.
+    - **Per-edit obligations come from `#frame_rules`.** For an invariant that is a structure
+      predicate over the machine, `#frame_rules` (now with `(state := …)`) generates one rule per
+      field. An edit's obligation is the rule at `e.writes`. So the matrix of invariants by edits
+      is generated, and only payload facts are written by hand.
+    - **One `dropToken`.** The observer filter is written three times in `Machine/Fibers.lean`:
+      `applyFiberEdit`'s `dropToken`, the `dropObservers` arm of the `withFiber` dispatch and
+      `dropObservers`. Your `Edit.apply` writes it a fourth time. Define `RunMachine.dropToken`
+      once beside `update`, and use it in all four places.
+
+11. **Handles: names, worlds and one relation** (theory 2026-10-11; the model, census, probe and
+    order are `../2026-10-11-handles/README.md`). Start after R2 commits and item 10's alphabet
+    lands. The probe `../2026-10-11-handles/probes/Names.lean` compiles and audits clean.
+    1. **One pointwise relation first.** The tree has two: `ListRel` (`Laws/Machine/Book.lean`)
+       and `Pointwise` (`Laws/Step/Reading.lean`). Move one to a low shared module, make the
+       other a connector, and build on it. The probe's `ListRel` is a third and does not land.
+    2. **`Rel` and the abstraction theorem for `Store.Val`.** Land the probe's §§3 to 6 as a
+       module under `Laws/Store/`, with `validIn_iff_diag`. Then `Val.keys` goes
+       (`handles_eq_cata`), and `Val.validIn`'s sixteen theorems become corollaries of the
+       diagonal.
+    3. **The generator emits it.** `tools/Effect4Gen/Fold.lean` emits, per signature, the support
+       fold, the renaming fold, `Rel`, and the abstraction theorem beside `hom_eq_cata_val`.
+    4. **The machine carriers get `Rel`.** The 48 hand support functions of `Handles` go,
+       carrier by carrier, each with a connector first.
+    5. **One world.** A partial bijection of names, with an optional type on each pair. The three
+       orders (`Machine.World.le`, `Stores.le`, `Program.Typed.World.le`) become one, and the four
+       ghost tables become one table keyed by name.
+    6. **`KeyBounded` as two shapes.** Its 34 support bounds become parametricity of the hooks.
+       Its nine store steps become one monotone store-step definition with a composition law.
+    7. **The handle invariant per edit.** With item 10's words, `MintedAt` owes one fact per edit.
+    8. **DET-3 `names-equivariant`**, per edit, from `Parametric.equivariant`.
+    - Keep every existing theorem's name and statement; connectors first, then callers, then the
+      old proof goes. Report lines before and after each step.
 
 ## How to work
 

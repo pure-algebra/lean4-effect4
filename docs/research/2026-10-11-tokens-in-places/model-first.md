@@ -35,7 +35,11 @@ This note records the loop and its current census. Claude updates the census at 
 | regions | the frame rule on stacks; scoped operations | `StackRegion`, `MaskBracket` | landed; the context region becomes an instance (F1) |
 | the store | a key-indexed heap, one kernel per row, the frame rule per key | `RefKernel` | heap step landed; the machine-step lift waits on labels (below) |
 | schedules | independence and commutation | DET-1 to DET-5 | landed |
-| fresh names | an append-only supply | `AppendOnly`, `FreshSupply` (L4 to L6) | open |
+| fresh names | an append-only supply; minting extends a world by a fresh pair | `AppendOnly`, `FreshSupply` (L4 to L6); `World.PBij.extend` (`../2026-10-11-handles/`) | open |
+| handles | names; a world as a partial bijection of names; agreement as a fold; Reynolds' abstraction theorem | one name sort, one world, `Rel` per free object (`../2026-10-11-handles/README.md`) | probe checked on `Store.Val`; Codex item 11 |
+| machine edits | a monoid of one-field writes; the frame rule per field | `Edit` with sixteen tags and one footprint `writes` | Codex's draft has the sixteen tags; item 10 |
+| pointwise list relations | the relator of `List` | one `ListRel` | two copies: `ListRel` (`Laws/Machine/Book.lean`), `Pointwise` (`Laws/Step/Reading.lean`) |
+| bound names in authoring | scope safety; a unary relation over the elaboration monad | one scoped lemma per elaboration primitive, or intrinsic scoping | about 330 `*_scoped` theorems in 1,865 lines (`Laws/Program/Authoring*`); not yet modelled |
 | names and codecs | an exact embedding | write–read pairs with retraction and exactness | landed per codec |
 | refusals | a located refusal complete against its judgment | `explain` with `explain = none ↔ valid` | landed |
 | a fiber's life, the interrupt state | a sum type each | one inductive each (R4, R5) | open |
@@ -55,9 +59,10 @@ Each item is a capability that the minimal model needs and that the language or 
 | Gap | What the model needs | Where it lands |
 | --- | --- | --- |
 | progress | a fairness assumption on the scheduler, stated as data, so that a potential bounds rounds | the scheduler's decision tape; a liveness claim form |
-| confinement | a reference as a capability whose holders the census can bound | the API's reference handles; a census law |
+| confinement | a reference as a capability whose holders the census can bound | modelled: a parametric step creates no reference but a minted one, and the support is the holder census (`../2026-10-11-handles/README.md` §6) |
 | context | a typed context reader and a providing region | rc.112's `context` and `provideContext` (row 349, in progress) |
-| fresh names | one supply for ids, keys and tokens | L4 to L6 |
+| fresh names | one supply for ids, keys and tokens | L4 to L6; every counter is a name supply (`../2026-10-11-handles/README.md` §6) |
+| typed handles | a name with a type in the world | the API's `Ref`, `Deferred`, `Fiber` and `Scope`; the typed world of item 11 step 5 |
 
 This list grows with each census pass. It is the input to the language and API work after the
 consolidation.
