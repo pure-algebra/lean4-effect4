@@ -206,6 +206,10 @@ Behaviour gates only where a slice changes executable code, and then at a sweep.
        Its nine store steps become one monotone store-step definition with a composition law.
     7. **The handle invariant per edit.** With item 10's words, `MintedAt` owes one fact per edit.
     8. **DET-3 `names-equivariant`**, per edit, from `Parametric.equivariant`.
+    9. **A protocol state per name** (the note's §2.9). Each kind declares its forward order, and
+       each store operation proves once that it moves forward. `probes/Protocols.lean` does it for
+       the Deferred store. Typing monotonicity and the stable facts (completed, closed, exited)
+       then need no per-step lemma.
     - Keep every existing theorem's name and statement; connectors first, then callers, then the
       old proof goes. Report lines before and after each step.
 

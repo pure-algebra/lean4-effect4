@@ -135,9 +135,39 @@ edits. The handle invariant then owes one fact per edit:
 - `dropToken` shrinks the support;
 - the edits that write a payload owe that payload's agreement in the new world.
 
-## 3. The probe
+### 2.9 Protocols: a state per name
 
-`probes/Names.lean` is a finite probe on the real carrier. It compiles with
+A handle has a life as well as an allocation. A Deferred cell is pending, then completed with one
+effect forever. A scope is empty, then open, then closed with one exit (`ScopeState`,
+`Machine/Scope.lean`). A fiber runs, then exits. A park token is minted, then dropped. Each life
+is a small protocol with a forward order.
+
+So a world gives each name a protocol state, and a world grows in two ways: new names, and states
+that move forward. A fact that the forward order keeps is **stable**. "Allocated" is the trivial
+protocol's stable fact; "completed with `e`" and "closed with `e`" are stable facts too. One
+theorem per operation, "it moves forward", then keeps every stable fact through every run. This
+is monotonic state: Pilkiewicz and Pottier, "The essence of monotonic state" (TLDI 2011), and
+Ahman and others, "Recalling a witness" (POPL 2018). Dreyer, Neis and Birkedal (ICFP 2010) use
+such worlds, with a state transition system per name, for relational reasoning.
+
+`probes/Protocols.lean` checks this at the real Deferred store:
+
+- `make_le`, `register_le`, `cancel_le`, `complete_le`, `wakeBatch_le` and `drainDue_le`: every
+  operation moves forward;
+- `allocated_stable` and `completedWith_stable`: two stable facts, one theorem each;
+- `stable_run`: a run of forward operations keeps every stable fact;
+- a control: an operation that clears a completion is not forward.
+
+This also places the open sum types R4 (a fiber's life) and R5 (the interrupt state) of
+`../2026-10-11-tokens-in-places/model-first.md`. Each is a protocol of this kind, and its forward
+order is what its stable facts need.
+
+## 3. The probes
+
+There are two finite probes, each on a real carrier. §2.9 describes `probes/Protocols.lean`.
+`probes/protocols.out` keeps its audit: 20 declarations within `[propext, Quot.sound]`.
+
+`probes/Names.lean` is a finite probe on the real value carrier. It compiles with
 `LEAN_NUM_THREADS=3 lake env lean -DwarningAsError=true docs/research/2026-10-11-handles/probes/Names.lean`,
 and its last command walks its own declarations with the axiom gate's walk. `probes/names.out`
 keeps the result: 99 declarations within `[propext, Quot.sound]`.
@@ -169,6 +199,7 @@ All but the first two rows are corollaries of `cata_val_related` or are short fa
 | the nine store-step fields | one monotone store-step definition with composition | with the one world |
 | per-helper preservation in `Handles` (43 helper theorems, 26 `withFiber` arms) | the per-edit invariant | after item 10's words |
 | DET-3 `names-equivariant`, not stated | `Parametric.equivariant`, applied per edit | after the machine's carriers have `Rel` |
+| the monotonicity lemmas: 131 named `mono`, of which a signature search finds 76 with an order premise | `Rel.mono` for the typing judgments; stability for the protocol facts | with the one world and its protocol states |
 
 The probe shows the mechanism on one carrier. The counts are of today's tree. No count above is a
 prediction of lines removed.
@@ -193,6 +224,9 @@ prediction of lines removed.
 - **R-H6. Two hook shapes.** A pure hook is parametric. A store hook is a monotone store step.
   `KeyBounded` becomes these two definitions applied to each field.
 - **R-H7. One fact per edit.** The handle invariant follows the machine-edit alphabet.
+- **R-H8. A protocol state per name.** Each kind declares its protocol and forward order. Each
+  store operation proves once that it moves forward. Each stable fact proves once that the order
+  keeps it.
 
 ## 6. The API reading: handles as capabilities
 
@@ -223,6 +257,7 @@ flowchart LR
   E --> F
   F --> G[7: the handle invariant per edit]
   D --> H[8: DET-3 names-equivariant per edit]
+  E --> P[9: a protocol state per name; stable facts]
 ```
 
 ## 8. Placement
@@ -235,6 +270,7 @@ flowchart LR
 - **Reach.** The probe covers `Store.Val` and its fold. Worlds are partial bijections of names.
   Parametric means "for every partial bijection".
 - **Limits.** Lean has no internal parametricity, so each map's parametricity is a theorem. The
+  protocol probe covers the Deferred store only. The
   abstraction theorem moves that work from each map and property to each algebra constructor; it
   does not remove it. A store step's monotonicity stays an obligation of each kernel. The probe
   proves nothing about the machine's carriers yet. No count in §4 is a measured removal.
@@ -261,3 +297,8 @@ note, with locators.
 - Allais, Atkey, Chapman, McBride and McKinna, "A type and scope safe universe of syntaxes with
   binding: their semantics and proofs", ICFP 2018.
 - M. S. Miller, *Robust Composition*, PhD thesis, Johns Hopkins University, 2006.
+- A. Pilkiewicz and F. Pottier, "The essence of monotonic state", TLDI 2011.
+- D. Ahman and others, "Recalling a witness: foundations and applications of monotonic state",
+  POPL 2018.
+- D. Dreyer, G. Neis and L. Birkedal, "The impact of higher-order state and control effects on
+  local relational reasoning", ICFP 2010.
