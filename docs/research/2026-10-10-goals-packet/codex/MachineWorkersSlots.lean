@@ -150,4 +150,33 @@ theorem initializer_native (total : Nat) (table : RowTable) (machine : Api.Machi
       machine.state.deferreds.cells.length = 0
     exact ⟨Or.inl owner, rfl, by rw [List.length_append, List.length_singleton, length], deferred⟩
 
+/-- The post-allocation answer resumes the real source binder in the new store.
+Consumer: the initialization prefix advances before the first worker fork. -/
+theorem initializer_resume (total : Nat) (view : List (FiberId × ExitV)) (table : RowTable)
+    (world nextWorld : World) (index : Nat) (point : Point) (body : NCode)
+    (fiber : FrameFiber EffName EffThunk Val Err Defect FiberId Ann)
+    (small : index < 4) (stage : RootStage world index point)
+    (future : (model total).future world nextWorld)
+    (good : ValueAt nextWorld (.allocated index) (.cell ⟨index⟩))
+    (noInterrupt : fiber.deferredInterrupt = false)
+    (stack : AnswerFlow.StackAt (model total)
+      (interpAt (Programs.workersProgram total) view table).toPrimInterp
+      world .root .root fiber.stack) :
+    ({fiber with stack := .onSuccess body (.cont point) :: fiber.stack}).resumeValue
+        (interpAt (Programs.workersProgram total) view table).toPrimInterp (.cell ⟨index⟩) none =
+      (.running {fiber with current :=
+        (interpAt (Programs.workersProgram total) view table).contA (.cont point) (.cell ⟨index⟩)},
+        [.popped (.onSuccess body (.cont point))]) ∧
+    AnswerFlow.FrameAt (model total)
+      (interpAt (Programs.workersProgram total) view table).toPrimInterp nextWorld .root
+      {fiber with current :=
+        (interpAt (Programs.workersProgram total) view table).contA (.cont point) (.cell ⟨index⟩)} := by
+  apply AnswerFlow.resume_success (model total) _ nextWorld (.allocated index) .root .root
+    fiber body (.cont point) (.cell ⟨index⟩) none noInterrupt good
+  · intro exit absent
+    cases absent
+  · exact AnswerFlow.saved_mono (model total) _ future
+      (initializer_saved total view table world index point body small stage)
+  · exact AnswerFlow.stack_mono (model total) _ future stack
+
 end MachineWorkersSlots
