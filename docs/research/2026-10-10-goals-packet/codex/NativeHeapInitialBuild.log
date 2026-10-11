@@ -1,0 +1,14 @@
+✔ [1062/1064] Built Effect4.Laws.Program.HeapSites (1.6s)
+✖ [1063/1064] Building Test.Dogfood.Scenario.SourceFragment (2.7s)
+trace: .> LEAN_PATH=/Users/pooks/.codex/worktrees/symbolic-programs/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/symbolic-programs/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/symbolic-programs/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/symbolic-programs/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/symbolic-programs/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/symbolic-programs/lean4-effect4/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/.codex/worktrees/symbolic-programs/lean4-effect4/Test/Dogfood/Scenario/SourceFragment.lean -o /Users/pooks/.codex/worktrees/symbolic-programs/lean4-effect4/.lake/build/lib/lean/Test/Dogfood/Scenario/SourceFragment.olean -i /Users/pooks/.codex/worktrees/symbolic-programs/lean4-effect4/.lake/build/lib/lean/Test/Dogfood/Scenario/SourceFragment.ilean -c /Users/pooks/.codex/worktrees/symbolic-programs/lean4-effect4/.lake/build/ir/Test/Dogfood/Scenario/SourceFragment.c --setup /Users/pooks/.codex/worktrees/symbolic-programs/lean4-effect4/.lake/build/ir/Test/Dogfood/Scenario/SourceFragment.setup.json --json
+error: Test/Dogfood/Scenario/SourceFragment.lean:69:70: Unknown identifier `Val`
+
+Note: It is not possible to treat `Val` as an implicitly bound variable here because the `autoImplicit` option is set to `false`.
+error: Test/Dogfood/Scenario/SourceFragment.lean:76:64: Unknown identifier `Val`
+
+Note: It is not possible to treat `Val` as an implicitly bound variable here because the `autoImplicit` option is set to `false`.
+error: Lean exited with code 1
+✔ [1064/1064] Built Test.Dogfood.Scenario.Atomic.Store (3.2s)
+Some required targets logged failures:
+- Test.Dogfood.Scenario.SourceFragment
+error: build failed

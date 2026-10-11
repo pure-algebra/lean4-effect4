@@ -2,6 +2,7 @@ import Test.Dogfood.Scenario.Programs
 import Test.Dogfood.Scenario.Atomic.Model
 import Effect4.Laws.Program.NativeHeap
 import Effect4.Laws.Program.NativeHistory
+import Effect4.Laws.Program.NativeHeapHistory
 
 /-!
 # Actual scenario sources in the lexical fragment
@@ -62,5 +63,19 @@ theorem atomic_history_at (compileFuel : Nat) (b : Api.Built)
     (built : Api.Author.build (Atomic.shop .none) = .ok b)
     (m : NativeMachine) (history : Effect4.Run.ControlHistory b compileFuel m) : ConfigurationAt b.program m :=
   history_at b (atomic_built_fragment b built) compileFuel m history
+
+/-- The actual queue's write-site laws retain their cell predicate through every control history. -/
+theorem queue_heap_at (total compileFuel : Nat) (b : Api.Built)
+    (built : Api.Author.build (QueueWorkers.crew total) = .ok b) (P : Effect4.Store.Val → Prop)
+    (sites : HeapSites.SitesKeep b.program P) (m : NativeMachine)
+    (history : Effect4.Run.ControlHistory b compileFuel m) : HeapSites.HeapOk P m.state.refs :=
+  heap_history_at b (queue_built_fragment total b built) compileFuel P sites m history
+
+/-- The actual shop's write-site laws retain their cell predicate through every control history. -/
+theorem atomic_heap_at (compileFuel : Nat) (b : Api.Built)
+    (built : Api.Author.build (Atomic.shop .none) = .ok b) (P : Effect4.Store.Val → Prop)
+    (sites : HeapSites.SitesKeep b.program P) (m : NativeMachine)
+    (history : Effect4.Run.ControlHistory b compileFuel m) : HeapSites.HeapOk P m.state.refs :=
+  heap_history_at b (atomic_built_fragment b built) compileFuel P sites m history
 
 end Test.Dogfood.Scenario.SourceFragment

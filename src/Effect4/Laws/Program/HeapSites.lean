@@ -1,13 +1,14 @@
 import Effect4.Laws.Run.Frame
 import Effect4.Laws.Program.HeapSites.Core
+import Effect4.Laws.Program.NativeHeapHistory
 import Effect4.Laws.Auto.Obligations
 
 /-!
 # A cell predicate from a program's write sites
 
-Placement: store-typing, R4. Proposed claim: cell-invariant-from-write-sites, role soundness.
+Placement: store-typing, R4. Proposed claim: cell-invariant-from-write-sites, role preservation.
 Consumer: `Atomic.bounded`, through its proved write-site census.
-Reach: the native machine, every control history, every compile budget.
+Reach: the checked lexical source fragment, every control history, every compile budget.
 The predicate describes each cell; it describes no relation between cells or fiber positions.
 It establishes no progress or agreement with an outside runtime.
 -/
@@ -20,14 +21,16 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Run
 
 
 
-/-- Every reachable store row must retain its source and environment level.
-This planned goal is the pointer of `cell-invariant-from-write-sites`.
+/-- Every reachable store row retains its source and environment level.
+This theorem is the pointer of `cell-invariant-from-write-sites`.
 The command/history induction belongs to `Machine.Lift`; the obligation is source provenance
 and store preservation. Consumer: `Atomic.bounded`. -/
 @[semantics "store-typing" (requirement := R4)]
-proof_goal heap_sites_keep (b : Api.Built) (compileFuel : Nat) (P : Val → Prop)
-    (sites : SitesKeep b.program P) :
-    ∀ m, ControlHistory b compileFuel m → HeapOk P m.state.refs
+theorem heap_sites_keep (b : Api.Built) (compileFuel : Nat) (P : Val → Prop)
+    (fragment : SourceScope.Fragment b.program) (sites : SitesKeep b.program P) :
+    ∀ m, ControlHistory b compileFuel m → HeapOk P m.state.refs := by
+  intro m history
+  exact SourceScope.heap_history_at b fragment compileFuel P sites m history
 
 /-- The `perform` sites of a program: each address of a `perform` node, its row, its request and
 its level. -/
