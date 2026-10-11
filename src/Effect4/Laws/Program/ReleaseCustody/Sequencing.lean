@@ -39,8 +39,6 @@ inductive Kept : NCode → List NCode → Prop
   | add (active : NCode) (scope : Nat) (a : Val) (fin : FinName) (rest : List NCode)
       (tail : NoAdd rest) (held : AddPhase fin active) :
       Kept active (.onSuccess (.sync (.op (.scopeAdd scope fin))) (.afterScopeAdd a fin) :: rest)
-  | mask (flag : Bool) {active : NCode} {rest : List NCode} (held : Kept active rest) :
-      Kept active (.setInterruptible flag :: rest)
   | constant (priority : Nat) {active next : NCode} {rest : List NCode}
       (phase : YieldPhase active) (held : Kept next rest) :
       Kept active (.onSuccessConst (.yieldNowWith priority) next :: rest)
@@ -76,7 +74,6 @@ theorem interrupt {active : NCode} {frames : List NCode} (held : Kept active fra
   induction held with
   | clean active frames held => exact .clean _ _ held
   | add active scope a fin rest tail phase => exact .add _ scope a fin rest tail (.cause cause)
-  | mask flag held ih => exact .mask flag ih
   | constant priority phase held ih => exact .constant priority (.cause cause) held
 
 /-- The injected constant retains the exact callback phase of its saved primitive.
@@ -87,7 +84,6 @@ theorem forced_wrapper {active : NCode} {frames : List NCode} (held : Kept activ
   induction held with
   | clean active frames held => exact .clean _ _ held
   | add active scope a fin rest tail phase => exact .add _ scope a fin rest tail (.forced priority phase)
-  | mask flag held ih => exact .mask flag ih
   | constant saved phase held ih => exact .constant saved (.forced priority phase) held
 
 /-- Pushing the injected yield leaves its saved callback phase under the constant.
@@ -118,15 +114,12 @@ theorem yield_response_full (q : List Nat) (priority : Nat) (frames : List NCode
   cases held
   case clean missing => exact noAdd_full q _ _ missing
   case add tail phase => cases phase
-  case mask => rfl
   case constant => rfl
 
 /-- Parked stacks retain their credits through every answer and interruption.
 The saved constant keeps the precise callback sequence below its own yield. -/
 inductive StableFrames : List NCode → Prop
   | clean (frames : List NCode) (held : NoAdd frames) : StableFrames frames
-  | mask (flag : Bool) {rest : List NCode} (held : StableFrames rest) :
-      StableFrames (.setInterruptible flag :: rest)
   | constant (priority : Nat) {next : NCode} {rest : List NCode} (held : Kept next rest) :
       StableFrames (.onSuccessConst (.yieldNowWith priority) next :: rest)
 
@@ -137,7 +130,6 @@ theorem stable_full (q : List Nat) (active : NCode) {frames : List NCode}
     (held : StableFrames frames) : stackCredits q active frames = stackCap q frames := by
   cases held with
   | clean frames held => exact noAdd_full q active frames held
-  | mask flag held => rfl
   | constant priority held => rfl
 
 /-- A parked success retains the saved forced-yield sequence.
@@ -147,7 +139,6 @@ theorem stable_value {frames : List NCode} (held : StableFrames frames) (value :
     Kept (.success value) frames := by
   induction held with
   | clean frames held => exact .clean _ _ held
-  | mask flag held ih => exact .mask flag ih
   | constant priority held => exact .constant priority (.value value) held
 
 /-- A parked failure retains the sequence even when interruption replaces its answer.
@@ -157,7 +148,6 @@ theorem stable_cause {frames : List NCode} (held : StableFrames frames) (cause :
     Kept (.failure cause) frames := by
   induction held with
   | clean frames held => exact .clean _ _ held
-  | mask flag held ih => exact .mask flag ih
   | constant priority held => exact .constant priority (.cause cause) held
 
 /-- The real yield producer supplies a stable stack before replacing current with unit.
@@ -168,9 +158,7 @@ theorem yield_stable {priority : Nat} {frames : List NCode}
   cases held
   case clean missing => exact .clean _ missing
   case add tail phase => cases phase
-  case mask flag rest held => exact .mask flag (yield_stable held)
   case constant priority next rest held phase => exact .constant priority held
-termination_by frames.length
 
 /-- A mask is not a scope-add callback. Consumer: opaque primitive sequencing. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
@@ -189,7 +177,6 @@ theorem opaque_noAdd {active : NCode} {frames : List NCode} (held : Kept active 
   induction held with
   | clean active frames held => exact held
   | add active scope a fin rest tail phase => exact False.elim (notAdd fin phase)
-  | mask flag held ih => exact noAdd_mask flag (ih notAdd notYield)
   | constant priority phase held ih => exact False.elim (notYield phase)
 
 /-- The async producer enters with no pending scope-add callback.
@@ -224,7 +211,6 @@ theorem value_response {active : NCode} {frames : List NCode} (held : Kept activ
   induction held with
   | clean active frames held => exact .clean _ _ held
   | add active scope a fin rest tail phase => exact .add _ scope a fin rest tail (.value value)
-  | mask flag held ih => exact .mask flag ih
   | constant priority phase held ih => exact .constant priority (.value value) held
 
 /-- The actual registration push installs its matching transient callback.

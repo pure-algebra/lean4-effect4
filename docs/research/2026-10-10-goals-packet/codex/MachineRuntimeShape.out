@@ -1,0 +1,1 @@
+docs/research/2026-10-10-goals-packet/codex/MachineRuntimeShape.lean:1:0: error: import Effect4.Laws.Program.Typing.Replace failed, environment already contains 'Effect4.Program.Node.child.eq_53' from Effect4.Laws.Program.Agreement.Machine

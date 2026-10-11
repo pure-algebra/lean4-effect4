@@ -183,26 +183,6 @@ theorem popFrom_cause_kept {active : NCode} {frames : List NCode} (held : Kept a
       List.contains_cons, List.contains_nil, ea, eAll, Bool.or_false, Bool.false_or,
       Bool.false_eq_true, Bool.true_and, Bool.false_and, if_false, if_true, FrameFiber.passOn, FrameFiber.joinPushed,
       FrameFiber.passPushed, empty, List.nil_append] using clean
-  | mask flag held ih =>
-    cases pending : fiber.interruptedCause with
-    | none =>
-      have clean := ih {fiber with interruptible := flag} cause empty
-      simpa only [FrameFiber.popFrom, Prim.ensure, pending, Prim.answerOf, Prim.hasArm, Prim.arms,
-        List.contains_cons, List.contains_nil, ea, eAll, Bool.or_false, Bool.false_or,
-      Bool.false_eq_true, Bool.true_and, Bool.false_and, if_false, if_true, FrameFiber.passOn, FrameFiber.joinPushed,
-        FrameFiber.passPushed, empty, List.nil_append] using clean
-    | some interruption =>
-      cases flag
-      · have clean := ih {fiber with interruptible := false} cause empty
-        simpa only [FrameFiber.popFrom, Prim.ensure, pending, Prim.answerOf, Prim.hasArm, Prim.arms,
-          List.contains_cons, List.contains_nil, ea, eAll, Bool.or_false, Bool.false_or,
-      Bool.false_eq_true, Bool.true_and, Bool.false_and, if_false, if_true, FrameFiber.passOn, FrameFiber.joinPushed,
-          FrameFiber.passPushed, empty, List.nil_append] using clean
-      · have clean := ih {fiber with interruptible := true} cause empty
-        simpa only [FrameFiber.popFrom, Prim.ensure, pending, Prim.answerOf, FrameFiber.interrupted,
-          FrameFiber.passOn, FrameFiber.joinPushed, FrameFiber.skippedCause, FrameFiber.popFrom_fiber_cause, Prim.hasArm, Prim.arms,
-          List.contains_cons, List.contains_nil, ea, eAll, Bool.or_false, Bool.false_or,
-          Bool.false_eq_true, Bool.true_and, Bool.false_and, Option.isSome_some, if_false, if_true, FrameFiber.passPushed, empty, List.nil_append] using clean
   | constant priority phase held ih =>
     have clean := ih fiber cause empty
     simpa only [FrameFiber.popFrom, Prim.ensure, Prim.answerOf, Prim.hasArm, Prim.arms,
@@ -235,30 +215,40 @@ theorem resumeCause_kept (root : NativeEff) (completed : List (FiberId × ExitV)
   all_goals dsimp (config := { zetaDelta := true }) only
   all_goals aesop (add safe apply [Kept.clean])
 
-/-- A value pop either applies the restoring mask or answers its pending interruption.
-Consumer: resumeValue_kept's mask case. -/
+/-- A value pop reaching an exit callback passes the transient registration completely.
+Consumer: the stateful finalizer evaluator retains a clean residual stack. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
-theorem resumeValue_mask (root : NativeEff) (completed : List (FiberId × ExitV)) (table : RowTable)
-    (fiber : Frame) (value : Val) (provided : Option ExitV) (flag : Bool)
-    (deferred : fiber.deferredInterrupt = false) :
-    (({fiber with stack := .setInterruptible flag :: fiber.stack} : Frame).resumeValue
-      (interpAt root completed table).toPrimInterp value provided).1 =
-      if flag then
-        match fiber.interruptedCause with
-        | some cause => .running {fiber with current := .failure cause, interruptible := true}
-        | none => ({fiber with interruptible := flag} : Frame).resumeValue
-            (interpAt root completed table).toPrimInterp value provided |>.1
-      else ({fiber with interruptible := flag} : Frame).resumeValue
-        (interpAt root completed table).toPrimInterp value provided |>.1 := by
-  have aAll : (Arm.contA == Arm.contAll) = false := rfl
-  cases pending : fiber.interruptedCause <;> cases flag <;>
-    simp only [FrameFiber.resumeValue, FrameFiber.getCont, deferred, Bool.false_and,
-      Bool.false_eq_true, if_false, if_true, FrameFiber.popFrom, Prim.ensure,
-      Prim.answerOf, Prim.hasArm, Prim.arms, List.contains_cons, List.contains_nil, aAll,
-      Bool.or_false, FrameFiber.passOn, FrameFiber.joinPushed, FrameFiber.passPushed,
-      List.nil_append]
-  all_goals repeat' split
-  all_goals rfl
+theorem popFrom_value_finalizer {active : NCode} {frames : List NCode}
+    (held : Kept active frames) (fiber : Frame) (empty : fiber.stack = [])
+    (body : NCode) (name : EffName) (flag : Bool)
+    (found : (FrameFiber.popFrom .contA false frames fiber).answer = .frame (.onExit body name flag)) :
+    NoAdd (FrameFiber.popFrom .contA false frames fiber).fiber.stack := by
+  have aa : (Arm.contA == Arm.contA) = true := rfl
+  induction held generalizing fiber with
+  | clean active frames clean =>
+    exact (popFrom_noAdd .contA false frames fiber none clean (by rw [empty]; exact noAdd_empty)).1
+  | add active scope acquired fin rest clean phase =>
+    simp only [FrameFiber.popFrom, Prim.ensure, Prim.answerOf, Prim.hasArm, Prim.arms,
+      List.contains_cons, List.contains_nil, aa, Bool.or_false, if_true] at found
+    cases found
+  | constant priority phase held ih =>
+    simp only [FrameFiber.popFrom, Prim.ensure, Prim.answerOf, Prim.hasArm, Prim.arms,
+      List.contains_cons, List.contains_nil, aa, Bool.or_false, if_true] at found
+    cases found
+
+/-- The actual continuation getter reaching a finalizer has no pending registration below it.
+Consumer: both native stateful exit routes. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem getCont_value_finalizer (fiber : Frame) (held : Kept fiber.current fiber.stack)
+    (body : NCode) (name : EffName) (flag : Bool)
+    (found : (fiber.getCont .contA false).answer = .frame (.onExit body name flag)) :
+    NoAdd (fiber.getCont .contA false).fiber.stack := by
+  cases deferred : fiber.deferredInterrupt
+  · simp only [FrameFiber.getCont, deferred, Bool.false_and, Bool.false_eq_true, if_false] at found ⊢
+    exact popFrom_value_finalizer held {fiber with stack := [], deferredInterrupt := false}
+      rfl body name flag found
+  · simp only [FrameFiber.getCont, deferred, Bool.not_false, Bool.true_and, if_true] at found
+    cases found
 
 /-- The ordinary value pop closes every pending callback, mask and saved-yield case.
 Consumer: resumeValue_kept's deferred-interrupt split. -/
@@ -279,20 +269,6 @@ theorem resumeValue_kept_clear (root : NativeEff) (completed : List (FiberId × 
       Prim.hasArm, Prim.arms, List.contains_cons, List.contains_nil, Bool.or_false,
       Prim.armA, List.nil_append]
     exact .clean _ _ tail
-  | mask flag held ih =>
-    rename_i active' rest
-    let base : Frame := {fiber with stack := rest}
-    have same : ({base with stack := .setInterruptible flag :: base.stack} : Frame) = fiber := by
-      change ({fiber with stack := .setInterruptible flag :: rest} : Frame) = fiber
-      rw [← stack]
-    rw [← same, resumeValue_mask root completed table base value provided flag deferred]
-    cases flag
-    · simp only [Bool.false_eq_true, if_false]
-      exact ih {base with interruptible := false} rfl deferred
-    · simp only [if_true]
-      cases pending : base.interruptedCause
-      · simpa only [pending] using ih {base with interruptible := true} rfl deferred
-      · exact interrupt held _
   | constant priority phase held ih =>
     rename_i active' next rest
     let base : Frame := {fiber with stack := rest}
@@ -326,11 +302,9 @@ theorem forced_unwrap (priority : Nat) {next : NCode} {frames : List NCode}
   case add scope a fin rest tail phase =>
     cases phase with
     | forced priority phase => exact .add _ scope a fin rest tail phase
-  case mask flag rest held => exact .mask flag (forced_unwrap priority held)
   case constant saved next' rest held phase =>
     cases phase with
     | forced priority phase => exact .constant saved phase held
-termination_by frames.length
 
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem noAdd_cons (head : NCode) {rest : List NCode}
