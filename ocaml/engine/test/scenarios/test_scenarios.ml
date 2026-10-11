@@ -14,8 +14,8 @@
 
    The adapter lives here and changes no production interface.  `E4_engine.INSTANCE` takes no
    row table: api_engine_inst.ml and api_engine_ref.ml fix it to the empty list.  This test
-   calls the generated `api_replay` itself, with the program, the command fuel, the tape, no
-   preloaded answers, the row table and the compile fuel.
+   calls the generated `api_replay` itself, with the program, the command fuel, the tape, the
+   row table and the compile fuel.
 
    Properties:
    S1  The row table is read from its wire bytes (`Eff_wire.decode_row_exact`) and converted
@@ -154,7 +154,6 @@ module type GEN = sig
     program ->
     int ->
     api_decision list ->
-    (val_, err, defect, fiber_id, unit) completion list ->
     row list ->
     int ->
     inspection
@@ -483,7 +482,7 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
   let views (program : A.program) (r : run) (table : A.row list) (tape : A.api_decision list)
     : string list =
     List.init (List.length tape + 1) (fun count ->
-        view_of (A.api_replay program r.fuel (take count tape) [] table r.compile))
+        view_of (A.api_replay program r.fuel (take count tape) table r.compile))
 
   (* The positions at which the engine's view is not the fixture's; `-1` for another length. *)
   let differs (expected : string list) (got : string list) : int list =
@@ -549,7 +548,7 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
              (match List.rev moving with
               | [] -> false
               | cut :: _ ->
-                view_of (A.api_replay program r.fuel (take cut tape) [] table r.compile)
+                view_of (A.api_replay program r.fuel (take cut tape) table r.compile)
                 <> List.nth expected (List.length tape))
          end;
          (* S4: the table and its red control, on a run with a host row. *)

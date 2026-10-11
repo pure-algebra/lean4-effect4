@@ -85,7 +85,7 @@ module Api_gen_inst = struct
 
   let interp_of (p : program) : interp = program_interp_of p []
   let load (p : program) ~(fuel : int) : machine =
-    api_load p fuel []
+    api_load p fuel
 
   (* `Effect4.Machine.stepDecisionState` at `Api.replay`'s specialisation
      (api_gen.ml); the bool is `Effect4.Machine.settled`. *)
@@ -94,7 +94,7 @@ module Api_gen_inst = struct
     step_decision_state_at_program_replay_checked_from_spec_1 p [] i fuel m d
 
   let run_api (p : program) ~(fuel : int) : outcome * machine =
-    let r = api_run p fuel [] [] fuel in
+    let r = api_run p fuel [] fuel in
     (r.outcome, r.machine)
 
   let fibers (m : machine) : (fiber_id * fiber) list =
