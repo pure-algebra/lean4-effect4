@@ -27,10 +27,26 @@ theorem ambientFiberPre_mono (root : ProgramSource) {w w' : World} (ord : w.leHo
     · refine .inr ⟨keys, same, covered, fun key member => ?_⟩
       rw [le_serviceTy ord.1]
       exact declared key member
-  | case2 =>
-    rename_i notGetter
-    rw [ambientFiberPre.eq_2 root w available op cert notGetter] at pre
-    rw [ambientFiberPre.eq_2 root w' available op cert notGetter]
+  | case2 | case3 =>
+    exact ⟨bodyTyped_mono ord pre.1, pre.2⟩
+  | case4 | case5 =>
+    exact ⟨pointTyped_mono ord pre.1, pre.2⟩
+  | case6 =>
+    exact ⟨⟨pointTyped_mono ord pre.1.1, scopeLive_mono ord.1 pre.1.2⟩, pre.2⟩
+  | case7 =>
+    exact ⟨⟨pointTyped_mono ord pre.1.1, pre.1.2⟩, pre.2⟩
+  | case8 =>
+    exact ⟨loopPointTyped_mono ord pre.1, pre.2⟩
+  | case9 | case10 =>
+    intro point member
+    obtain ⟨ty, typed, answer, error, covered⟩ := pre point member
+    exact ⟨ty, pointTyped_mono ord typed, answer, error, covered⟩
+  | case11 =>
+    rename_i notGetter notMask notFork notScoped notForkScoped notForkIn notGen notLoop notRace notFirst
+    rw [ambientFiberPre.eq_11 root w available op cert notGetter notMask notFork notScoped
+      notForkScoped notForkIn notGen notLoop notRace notFirst] at pre
+    rw [ambientFiberPre.eq_11 root w' available op cert notGetter notMask notFork notScoped
+      notForkScoped notForkIn notGen notLoop notRace notFirst]
     exact fiberPre_mono root ord op cert pre
 
 /-- The same program-arrow world law transports the ambient instance.
