@@ -61,3 +61,25 @@ The unchanged raw countdown helper does not yet bridge this different cut.
 Async, Command and Close remain outside this checkpoint.
 The coordinator owns the whole-law build and runtime gates after the R2 migration.
 This checkpoint claims no outside-runtime comparison.
+
+## Park checkpoint
+
+Base: `36a31df7b`.
+The changed module is `Effect4.Laws.Program.Typed.Commands.Clauses.Park`.
+The actual observer message changes the installed target before the parked disposition.
+`settle_observe_park` connects that result to an observer change after the existing disposition.
+`configTyped_observe` consumes `configTyped_addObserver` at the actual target record.
+Join and countdown consume these helpers with their existing fresh-token and saved-frame proofs.
+A self-target retains its observer on the installed caller.
+The exported `FiberClauseKeeps` and `CountdownParks` statements remain unchanged.
+The countdown helper now names the plan before its observer message.
+The glue helpers retain an arbitrary addressed edit word.
+
+The direct Lean command above passes with warnings treated as errors.
+The audit imports Park and runs `#axiom_audit Effect4.Laws.Program.Typed.Commands.Clauses.Park`.
+Result: 157 declarations within `[propext, Quot.sound]`, zero goals and zero declarations modulo goals.
+The private dependency snapshot still holds the earlier Observe artifact.
+The coordinator's integrated build must rebuild Observe and its dependent modules.
+The current repair fence adds Observe because its countdown callback changes the actual waiter after interruption.
+Async, Command and Close remain to check.
+No outside-runtime comparison is claimed.
