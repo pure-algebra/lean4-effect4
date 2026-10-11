@@ -1,5 +1,5 @@
 import Test.Dogfood.Scenario
-import Test.Dogfood.Scenario.QueueWorkers.Program
+import Test.Dogfood.Scenario.QueueWorkers.Model
 import Test.Dogfood.P3WorkerQueue
 import Test.Program.QueueTraces
 import Effect4.Library.Queue.Ops
@@ -68,17 +68,6 @@ resumes, and it leaves a helper that this fiber posted as posted work. So a flus
 reply application of a script. A host does the same by itself: it lets every dispatcher run
 after each act but the root's start. -/
 
-/-- The budgets of every run of this battery but the starved one: the first scenario's. -/
-def budget : Api.Budget := { fuel := 1000, compileFuel := 2000 }
-
-/-- A built program opened under the scenario's name, at a command budget and the battery's
-compile budget. -/
-def openedAt (fuel : Nat) (b : Api.Built) : Run :=
-  Run.open b "queue-workers" { budget with fuel := fuel }
-
-/-- A built program opened under the scenario's name and the battery's budgets. -/
-def opened (b : Api.Built) : Run := openedAt budget.fuel b
-
 /-- Worker 1, worker 2 and the feeder, by the fibers the root forks them as. -/
 def w1 : Sel := .fiber ⟨1⟩
 def w2 : Sel := .fiber ⟨2⟩
@@ -135,224 +124,6 @@ A driven reply is never written by hand: `Rows.reply` builds it from the call's 
 def forged (callId fiber token : Nat) (completion : Api.HostSession.Answer) : Reply :=
   ⟨Api.HostSession.version, "queue-workers", callId, ⟨⟨fiber⟩, token⟩, completion⟩
 
-/-- A move of a host: the root's start, a flush, a clock step, a cancellation, a held call, a
-reply receipt of a completion, and a reply application. A raw row is none, and no other control
-is one. -/
-def Move.hostAct : Move → Bool
-  | .control (.evaluate fiber) => fiber == Api.root
-  | .control .flush => true
-  | .control (.advance _) => true
-  | .control (.interruptFrom none _ _) => true
-  | .control _ => false
-  | .hold _ => true
-  | .receive _ (.ofExit _) => true
-  | .receive _ _ => false
-  | .apply _ => true
-  | .row _ => false
-
-/-! ## 3. The observation -/
-
-/-- The entries of a log cell. -/
-def entries : Option Val → List Val
-  | some (.list values) => values
-  | _ => []
-
-/-- The queue's cell up to its handles. A waiting taker's identity and its hint are `Deferred`
-handles, and so are a pending offer's. The view keeps how many stand in the cell, and it leaves
-out which handle stands where. -/
-structure QueueView where
-  /-- The capacity. -/
-  capacity : Nat
-  /-- The buffered jobs, the earliest first. -/
-  buffered : List Val
-  /-- Each pending offer, the earliest first: its batch flag, and the jobs not yet accepted. -/
-  offers : List (Bool × List Val)
-  /-- The count of the waiting takers. -/
-  takers : Nat
-deriving DecidableEq
-
-/-- Whether a value is a `Deferred` handle. -/
-def isDeferred : Val → Bool
-  | .handle 3 _ => true
-  | _ => false
-
-/-- A pending offer's record up to its handles: its identity and its hint are `Deferred`
-handles, and it holds a batch flag and a list. `none` for any other value. -/
-def offerView (offer : Val) : Option (Bool × List Val) :=
-  match Machine.Record.read false offer "batch", Machine.Record.read false offer "hint",
-      Machine.Record.read false offer "id", Machine.Record.read false offer "rest" with
-  | some (.bool batch), some hint, some id, some (.list rest) =>
-    if isDeferred hint && isDeferred id then some (batch, rest) else none
-  | _, _, _, _ => none
-
-/-- Whether a value is a waiting taker's record: an identity and a hint, both `Deferred`
-handles. -/
-def isTaker (taker : Val) : Bool :=
-  match Machine.Record.read false taker "hint", Machine.Record.read false taker "id" with
-  | some hint, some id => isDeferred hint && isDeferred id
-  | _, _ => false
-
-/-- The view of a value that has the shape of the queue's cell. `none` for any other value. -/
-def queueView (cell : Val) : Option QueueView :=
-  match Machine.Record.read false cell "cap", Machine.Record.read false cell "msgs",
-      Machine.Record.read false cell "offers", Machine.Record.read false cell "takers" with
-  | some (.nat capacity), some (.list buffered), some (.list offers), some (.list takers) =>
-    if takers.all isTaker then
-      (offers.mapM offerView).map fun pending => ⟨capacity, buffered, pending, takers.length⟩
-    else none
-  | _, _, _, _ => none
-
-/-- What a run shows of the queue's cell. -/
-inductive QueueCell
-  /-- The root has not made the cell. -/
-  | unmade
-  /-- The cell, up to its handles. -/
-  | holds (view : QueueView)
-  /-- A value that has not the shape of the queue's cell. -/
-  | malformed
-deriving DecidableEq
-
-/-- The reading of the queue's cell, by its allocation index. -/
-def queueCell : Option Val → QueueCell
-  | none => .unmade
-  | some cell =>
-    match queueView cell with
-    | some view => .holds view
-    | none => .malformed
-
-/-- The view that the clauses read. A cell that is not made holds nothing. -/
-def QueueCell.view : QueueCell → Option QueueView
-  | .unmade => some ⟨capacity, [], [], 0⟩
-  | .holds view => some view
-  | .malformed => none
-
-/-- The jobs that the host fed: the success value of each applied reply on `Jobs.take`, in the
-order of the reply applications. The value is the stored reply's, read at the accepted reply
-receipt of the same key. -/
-def fedOf (s : Run) : List Val :=
-  (rows s).filterMap fun
-    | (.apply key, .applied) =>
-      match seenAt s key with
-      | some seen =>
-        if seen.row == "Jobs.take" then
-          (rows s).findSome? fun
-            | (.submit reply, .preflight) =>
-              if reply.key == key then
-                match reply.completion with
-                | .ofExit (.success value) => some value
-                | _ => none
-              else none
-            | _ => none
-        else none
-      | none => none
-    | _ => none
-
-/-- The scenario's one observation. -/
-structure Observation where
-  /-- The assignment of jobs to workers: each `[job, worker]` the `assigned` cell holds, in the
-  order the workers noted them. -/
-  assignment : List Val
-  /-- The queue's cell, up to its handles. -/
-  queue : QueueCell
-  /-- The jobs that the host fed, in the order of the reply applications. -/
-  fed : List Val
-  /-- The accepted reply receipts, in order, on both host rows. -/
-  receipts : List Seen
-  /-- The reply applications the session applied, in order, on both host rows. -/
-  applications : List Seen
-  /-- The retired calls, each with whether a reply waited for it. -/
-  retired : List (Seen × Bool)
-  /-- The identities of the opened connections, in opening order. -/
-  opened : List Val
-  /-- The cleanup identities: the connections the `released` cell holds, in release order. -/
-  cleanups : List Val
-  /-- The count of finished jobs: the `count` cell. -/
-  finished : Option Val
-  /-- The root's exit, or `none` while it is live. -/
-  rootExit : Option ExitV
-  /-- The work left: runnable fibers, armed owners, live calls, stored replies and timers. -/
-  workLeft : Run.Work
-deriving DecidableEq
-
-/-- The observation of a run. -/
-def observe (s : Run) : Observation :=
-  { assignment := entries (cell s 3)
-    queue := queueCell (cell s 0)
-    fed := fedOf s
-    receipts := receipts s
-    applications := applications s
-    retired := retired s
-    opened := entries (cell s 1)
-    cleanups := entries (cell s 2)
-    finished := cell s 4
-    rootExit := s.exit
-    workLeft := s.work }
-
-/-! ### The readings of the clauses -/
-
-/-- The job of an entry of the `assigned` cell. -/
-def jobOf : Val → Option Val
-  | .list [job, _] => some job
-  | _ => none
-
-/-- The job that the root's poll took at its exit: the last part of the root's answer. -/
-def Observation.leftover (o : Observation) : List Val :=
-  match o.rootExit with
-  | some (.success (.list [_, _, _, .some job])) => [job]
-  | _ => []
-
-/-- The jobs that the queue or a worker holds or held: the buffered jobs, the jobs of the
-pending offers, the assigned jobs, and the job that the root's poll took. -/
-def Observation.held (o : Observation) : List Val :=
-  (match o.queue.view with
-    | some q => q.buffered ++ q.offers.flatMap (·.2)
-    | none => []) ++ o.assignment.filterMap jobOf ++ o.leftover
-
-/-- Whether the crew member with an identity is alive: its connection is opened and not
-released. -/
-def Observation.live (o : Observation) (id : Nat) : Bool :=
-  o.opened.contains (.nat id) && !o.cleanups.contains (.nat id)
-
-/-- Whether the crew member with an identity waits on a host call. A member's identity is its
-fiber's number. -/
-def Observation.calling (o : Observation) (id : Nat) : Bool :=
-  o.workLeft.awaiting.any fun call => call.fiber == ⟨id⟩
-
-/-- Whether the crew member with an identity is idle: alive, and waiting on no host call. At
-rest an idle worker waits at the queue, and an idle feeder waits in its offer. -/
-def Observation.idle (o : Observation) (id : Nat) : Bool := o.live id && !o.calling id
-
-/-- Whether no job is held more often than the host fed it. -/
-def Observation.heldWithin (o : Observation) : Bool :=
-  o.held.all fun job => decide (o.held.count job ≤ o.fed.count job)
-
-/-- Whether each fed job is held, but for one job of a feeder that is gone: the count of the
-fed jobs is at most the count of the held ones, plus one where the feeder is not alive. -/
-def Observation.accounted (o : Observation) : Bool :=
-  decide (o.fed.length ≤ o.held.length + (if o.live 3 then 0 else 1))
-
-/-- Whether the queue is settled. Five parts.
-
-1. The cell is not made, or it has the first profile's shape at the scenario's capacity: each
-   pending offer holds one job and no batch.
-2. The waiting takers are the idle workers, by their count.
-3. One offer pends where the feeder is idle, and none otherwise.
-4. No job is buffered while a taker waits.
-5. An offer pends only at a full buffer, and the buffer is within its capacity. -/
-def Observation.settled (o : Observation) : Bool :=
-  match o.queue.view with
-  | none => false
-  | some q =>
-    q.capacity == capacity && q.offers.all (fun offer => !offer.1 && offer.2.length == 1) &&
-    q.takers == ([1, 2].filter o.idle).length &&
-    q.offers.length == (if o.idle 3 then 1 else 0) &&
-    (q.buffered.isEmpty || q.takers == 0) &&
-    (q.offers.isEmpty || q.buffered.length == q.capacity) &&
-    decide (q.buffered.length ≤ q.capacity)
-
-/-- Whether no connection is released twice. -/
-def Observation.releasedOnce (o : Observation) : Bool := decide o.cleanups.Nodup
-
 /-! ## 4. The claim
 
 Each of the four planned goals is an instance, on this one program, of a proposed claim of the
@@ -368,13 +139,6 @@ Two premises stand in each statement, and a third in two of them.
   mask. So an interruption at a wait is taken at the wait.
 * **Rest**, for the two statements about a state between two acts of a host: `atRest`, on a
   script of host acts (`Move.hostAct`). -/
-
-/-- The proposition of `held_within_fed`. -/
-def HeldWithinFed : Prop :=
-  ∀ (total fuel : Nat) (b : Api.Built) (moves : List Move),
-    Effect4.Api.Author.build (crew total) = .ok b →
-    funded (Scenario.play (openedAt fuel b) moves) = true →
-    (observe (Scenario.play (openedAt fuel b) moves)).heldWithin = true
 
 /-- **No job is held more often than the host fed it.** Under every script of a funded run, each
 job stands among the held jobs at most as often as among the fed ones. The held jobs are the
@@ -400,14 +164,6 @@ Consumer: the scenario's claim `queueWorkers`. Its controls are finite runs, and
 receipt records a bounded search. -/
 @[semantics "translation-simulation" (requirement := R10)]
 proof_goal held_within_fed : HeldWithinFed
-
-/-- The proposition of `fed_accounted`. -/
-def FedAccounted : Prop :=
-  ∀ (total fuel : Nat) (b : Api.Built) (moves : List Move),
-    Effect4.Api.Author.build (crew total) = .ok b → moves.all Move.hostAct = true →
-    funded (Scenario.play (openedAt fuel b) moves) = true →
-    atRest (Scenario.play (openedAt fuel b) moves) = true →
-    (observe (Scenario.play (openedAt fuel b) moves)).accounted = true
 
 /-- **Each fed job is held, but for one job of a feeder that is gone.** Under every script of
 host acts, where the run is funded and at rest, the fed jobs are no more than the held ones. They
@@ -435,14 +191,6 @@ bounded search. -/
 @[semantics "reactive-scheduling" (requirement := R12)]
 proof_goal fed_accounted : FedAccounted
 
-/-- The proposition of `queue_settled`. -/
-def QueueSettled : Prop :=
-  ∀ (total fuel : Nat) (b : Api.Built) (moves : List Move),
-    Effect4.Api.Author.build (crew total) = .ok b → moves.all Move.hostAct = true →
-    funded (Scenario.play (openedAt fuel b) moves) = true →
-    atRest (Scenario.play (openedAt fuel b) moves) = true →
-    (observe (Scenario.play (openedAt fuel b) moves)).settled = true
-
 /-- **At rest the queue is settled.** Under every script of host acts, where the run is funded
 and at rest, the observation satisfies `Observation.settled`. The cell has the first profile's
 shape. The waiting takers are the idle workers, and an offer pends exactly where the feeder is
@@ -467,13 +215,6 @@ read up to its handles: the statement does not say which taker is the earliest. 
 `queueWorkers`. Its controls are finite runs, and the seat's receipt records a bounded search. -/
 @[semantics "reactive-scheduling" (requirement := R12)]
 proof_goal queue_settled : QueueSettled
-
-/-- The proposition of `releases_once`. -/
-def ReleasesOnce : Prop :=
-  ∀ (total fuel : Nat) (b : Api.Built) (moves : List Move),
-    Effect4.Api.Author.build (crew total) = .ok b →
-    funded (Scenario.play (openedAt fuel b) moves) = true →
-    (observe (Scenario.play (openedAt fuel b) moves)).releasedOnce = true
 
 /-- **Each registration cleans up at most once**, on the crew over the queue. Under every script
 of a funded run, the `released` cell holds no connection twice. It is the first scenario's
@@ -517,9 +258,6 @@ def runAt (job fiber token : Nat) : Seen := ⟨"Jobs.run", .nat job, ⟨⟨fiber
 /-- The same calls as the machine waits on them: row 0 is `Jobs.take`, row 1 is `Jobs.run`. -/
 def waitTake (token : Nat) : Await := ⟨⟨3⟩, token, .external 0, .unit⟩
 def waitRun (job fiber token : Nat) : Await := ⟨⟨fiber⟩, token, .external 1, .nat job⟩
-
-/-- A `[job, worker]` entry of the `assigned` cell. -/
-def gave (job worker : Nat) : Val := .list [.nat job, .nat worker]
 
 /-- Jobs, or identities, as values. -/
 def numbers (ns : List Nat) : List Val := ns.map Val.nat

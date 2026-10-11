@@ -1,0 +1,333 @@
+import Test.Dogfood.Scenario.QueueWorkers.Ledger
+import Test.Dogfood.Scenario.Programs
+import Test.Dogfood.Scenario.Frame
+import Effect4.Laws.Program.ReleaseTrace
+
+/-!
+# Queue assertions at every command boundary
+
+Concepts: translation-simulation R10, scope-lifetime-finalization R11 and reactive-scheduling R12.
+Question: these helpers serve the four original queue scenario clauses, consumed by `queueWorkers`.
+Reach: the actual built crew, all job counts, command budgets, raw rows and admitted host replies.
+The assertions retain job custody, withdrawn jobs and actual release-source identities.
+The rest reading requires a journal of host rows and the original rest premise.
+Three named preservation obligations retain the unfinished machine-to-model and control-source work.
+The four assemblies are proved modulo those obligations.
+They establish neither progress, fairness nor any outside-host behavior.
+Decisions rows 254 and 275 bound the scenario fragment.
+-/
+
+set_option autoImplicit false
+
+namespace Test.Dogfood.Scenario.QueueWorkers.Assertions
+
+open Effect4 Effect4.Machine Effect4.Program
+open Effect4.Api.Runner (Command)
+open Accounting
+
+/-- The rows that a host act plays: a held call, a reply receipt of a completion, a reply
+application, the root's start, a flush, a clock step and an interruption with no interruptor. -/
+def HostRow : Command → Prop
+  | .bind _ _ => True
+  | .submit reply => ∃ e, reply.completion = .ofExit e
+  | .apply _ => True
+  | .control (.evaluate fiber) => fiber = Api.root
+  | .control .flush => True
+  | .control (.advance _) => True
+  | .control (.interruptFrom none _ _) => True
+  | .control _ => False
+
+open Test.Dogfood.Scenario.QueueWorkers in
+/-- A host act plays host rows only. -/
+theorem hostAct_rows (s : Run) (m : Move) (h : Move.hostAct m = true) :
+    ∀ c ∈ m.rows s, HostRow c := by
+  intro c hc
+  cases m with
+  | control d =>
+    rw [List.mem_singleton.mp hc]
+    cases d with
+    | evaluate fiber => exact beq_iff_eq.mp h
+    | flush => trivial
+    | advance _ => trivial
+    | interruptFrom who annotations target =>
+      cases who with
+      | none => trivial
+      | some _ => exact absurd h Bool.false_ne_true
+    | fire _ => exact absurd h Bool.false_ne_true
+    | yieldVerdict _ _ => exact absurd h Bool.false_ne_true
+    | answerAsync _ _ _ => exact absurd h Bool.false_ne_true
+    | installMiddleware => exact absurd h Bool.false_ne_true
+  | hold sel =>
+    simp only [Move.rows] at hc
+    split at hc
+    · exact absurd hc List.not_mem_nil
+    · split at hc
+      · exact absurd hc List.not_mem_nil
+      · rw [List.mem_singleton.mp hc]
+        trivial
+  | receive sel completion =>
+    cases completion with
+    | ofExit e =>
+      simp only [Move.rows] at hc
+      split at hc
+      · exact absurd hc List.not_mem_nil
+      · split at hc
+        · rw [List.mem_singleton.mp hc]
+          exact ⟨e, rfl⟩
+        · unfold Rows.receive at hc
+          split at hc
+          · exact absurd hc List.not_mem_nil
+          · rcases List.mem_cons.mp hc with rfl | hc
+            · trivial
+            · rw [List.mem_singleton.mp hc]
+              exact ⟨e, rfl⟩
+    | ofRefGet _ => exact absurd h Bool.false_ne_true
+  | apply sel =>
+    simp only [Move.rows] at hc
+    split at hc
+    · exact absurd hc List.not_mem_nil
+    · rw [List.mem_singleton.mp hc]
+      trivial
+  | row _ => exact absurd h Bool.false_ne_true
+
+open Test.Dogfood.Scenario.QueueWorkers in
+/-- A script of host acts plays host rows only. -/
+theorem hostAct_scriptRows : ∀ (s : Run) (moves : List Move), moves.all Move.hostAct = true →
+    ∀ c ∈ scriptRows s moves, HostRow c
+  | _, [], _, c, hc => absurd hc List.not_mem_nil
+  | s, m :: ms, h, c, hc => by
+    rw [List.all_cons, Bool.and_eq_true] at h
+    rcases List.mem_append.mp hc with here | later
+    · exact hostAct_rows s m h.1 c here
+    · exact hostAct_scriptRows (Test.Dogfood.Scenario.step s m) ms h.2 c later
+
+/-- Every command in the actual session journal is a host row. -/
+def HostRows (s : Run) : Prop := ∀ c ∈ s.journal, HostRow c
+
+/-- A conserving ledger matches the actual observation, including unfinished command custody. -/
+def Jobs (s : Run) : Prop :=
+  ∃ a : Ledger, a.Shows (observe s) ∧ a.Conserved
+
+/-- At rest a host journal empties custody and bounds loss, with the queue's actual wait counts. -/
+def Rest (s : Run) : Prop :=
+  HostRows s → Run.atRest s = true →
+    ∃ a : Ledger, a.Shows (observe s) ∧ a.Conserved ∧ a.custody = [] ∧
+      a.lost.length ≤ (if (observe s).live 3 then 0 else 1) ∧ a.RestQueue (observe s)
+
+abbrev acquirePath := Programs.queueAcquire
+
+/-- The third allocated reference records actual cleanup identities. -/
+def log (m : NativeMachine) : List Val := entries (m.state.refs[2]?)
+
+/-- Each actual acquisition registers once, each release spends its registration, and each log
+entry spends its release start. All counters use the shared source-path classifiers. -/
+structure Cleanup (m : NativeMachine) : Prop where
+  registrations : ∀ i ∈ [1, 2, 3],
+    m.trace.countP (ReleaseTrace.registeredAt (acquirePath i)) ≤ 1
+  releases : ∀ i ∈ [1, 2, 3],
+    m.trace.countP (ReleaseTrace.releaseAt (acquirePath i)) ≤
+      m.trace.countP (ReleaseTrace.registeredAt (acquirePath i))
+  identities : ∀ v ∈ log m, ∃ i ∈ [1, 2, 3], v = .nat i
+  logs : ∀ i ∈ [1, 2, 3],
+    (log m).count (.nat i) ≤ m.trace.countP (ReleaseTrace.releaseAt (acquirePath i))
+
+/-- Concrete assertions at every command boundary, restricted to actual admitted histories. -/
+structure Basis (b : Api.Built) (s : Run) : Prop where
+  built : s.built = b
+  reached : Run.Reached s
+  history : Run.HistoryOf b s.budget.compileFuel s.machine
+  sites : ∀ i ∈ [1, 2, 3], Programs.acquisitionAt b.program (acquirePath i) = true
+  placement : ∀ i ∈ [1, 2, 3], OncePlaced (Node.eff b.program) (acquirePath i) = true
+
+/-- Conservation, rest and cleanup assertions share only the actual source and admitted history. -/
+structure Holds (b : Api.Built) (s : Run) : Prop extends Basis b s where
+  jobs : Jobs s
+  rest : Rest s
+  cleanup : Cleanup s.machine
+
+/-- Initial assertion: the universally certified source has an empty ledger and cleanup trace. -/
+theorem opened (total fuel : Nat) (b : Api.Built)
+    (hb : Api.Author.build (crew total) = .ok b) : Holds b (openedAt fuel b) := by
+  refine ⟨⟨rfl, Run.Reached.opened b "queue-workers" { budget with fuel := fuel } "",
+    ⟨[], trivial, rfl⟩, ?_, Programs.queueCrew_acquire_once_placed total b hb⟩,
+    ?_, ?_, ?_⟩
+  · rw [Programs.queue_built_program total b hb]
+    exact Programs.queue_acquisition_sites total
+  · exact ⟨Ledger.empty, ledger_opened fuel b⟩
+  · intro _ _
+    obtain ⟨shows, conserved⟩ := ledger_opened fuel b
+    refine ⟨Ledger.empty, shows, conserved, rfl, Nat.zero_le _, ?_⟩
+    exact ⟨rfl, rfl⟩
+  · refine ⟨?_, ?_, ?_, ?_⟩
+    · intro i _
+      exact Nat.zero_le 1
+    · intro i _
+      exact Nat.le_refl 0
+    · intro v hv
+      exact False.elim (List.not_mem_nil hv)
+    · intro i _
+      exact Nat.le_refl 0
+
+/-- Machine-to-model preservation for `held_within_fed` at an actual funded command boundary.
+It needs the queue-cell writer census, admitted take replies and once-entered continuations.
+Consumer: `jobs_boundary`, then the first clause. It establishes no rest or progress claim. -/
+@[semantics "translation-simulation" (requirement := R10)]
+proof_goal jobs_step :
+  ∀ (total : Nat) (b : Api.Built) (s : Run) (c : Command),
+    Api.Author.build (crew total) = .ok b → Basis b s → Jobs s → Run.rowReads s c = true →
+    Jobs (s.step c)
+
+/-- Rest preservation for `fed_accounted` and `queue_settled` at an actual command boundary.
+It needs committed delivery custody, interrupted withdrawal and queue wake-to-wait correspondence.
+Consumer: `rest_script`, then the two rest clauses. It establishes no fairness or liveness claim. -/
+@[semantics "reactive-scheduling" (requirement := R12)]
+proof_goal rest_step :
+  ∀ (total : Nat) (b : Api.Built) (s : Run) (c : Command),
+    Api.Author.build (crew total) = .ok b → Basis b s → Jobs s → Rest s → Run.rowReads s c = true →
+    Rest (s.step c)
+
+/-- Cleanup preservation for `releases_once` at an actual command boundary.
+It needs control-source provenance, registered closure ownership and cleanup-cell writer provenance.
+Consumer: `cleanup_boundary`, then the cleanup clause. It establishes no release progress or order claim. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+proof_goal cleanup_step :
+  ∀ (total : Nat) (b : Api.Built) (s : Run) (c : Command),
+    Api.Author.build (crew total) = .ok b → Basis b s → Cleanup s.machine → Run.rowReads s c = true →
+    Cleanup (s.step c).machine
+
+/-- Actual source and admission facts extend without a preservation goal. -/
+theorem basis_step (b : Api.Built) (s : Run) (c : Command) (hs : Basis b s) :
+    Basis b (s.step c) := by
+  have reached := Run.Reached.step s c hs.reached
+  have history := (Run.reached_history (s.step c) reached).2
+  rw [Run.step_built, hs.built] at history
+  exact ⟨(Run.step_built s c).trans hs.built, reached, history, hs.sites, hs.placement⟩
+
+/-- A refused row keeps the conservation assertion outright. -/
+theorem jobs_refused (s : Run) (c : Command)
+    (why : Api.HostSession.Refusal) (hlen : s.journal.length = s.phases.length)
+    (h : (Api.Runner.result s.runner c).phase = .refused why) (hs : Jobs s) :
+    Jobs (s.step c) := by
+  obtain ⟨a, shows, conserved⟩ := hs
+  exact ⟨a, shows_refused s c why hlen h shows, conserved⟩
+
+/-- A refused row keeps the cleanup assertion outright. -/
+theorem cleanup_refused (s : Run) (c : Command)
+    (why : Api.HostSession.Refusal)
+    (h : (Api.Runner.result s.runner c).phase = .refused why) (hs : Cleanup s.machine) :
+    Cleanup (s.step c).machine := by
+  rw [machine_refused s c why h]
+  exact hs
+
+/-- Actual journals retain one verdict per command. -/
+theorem reached_lengths (s : Run) (hs : Run.Reached s) :
+    s.journal.length = s.phases.length := by
+  induction hs with
+  | opened _ _ _ _ => rfl
+  | step s c _ ih =>
+    change (s.journal ++ [c]).length = (s.phases ++ [(Api.Runner.result s.runner c).phase]).length
+    rw [List.length_append, List.length_append, ih]
+    rfl
+
+/-- The command boundary uses the proved refused-row conservation leaf. -/
+theorem jobs_boundary (total : Nat) (b : Api.Built)
+    (hb : Api.Author.build (crew total) = .ok b) (s : Run) (c : Command)
+    (hs : Basis b s) (hj : Jobs s) (hc : Run.rowReads s c = true) : Jobs (s.step c) := by
+  cases hp : (Api.Runner.result s.runner c).phase with
+  | refused why => exact jobs_refused s c why (reached_lengths s hs.reached) hp hj
+  | bound | preflight | applied | progressed | frontier =>
+    exact jobs_step total b s c hb hs hj hc
+
+/-- The command boundary uses the proved refused-row cleanup leaf. -/
+theorem cleanup_boundary (total : Nat) (b : Api.Built)
+    (hb : Api.Author.build (crew total) = .ok b) (s : Run) (c : Command)
+    (hs : Basis b s) (hj : Cleanup s.machine) (hc : Run.rowReads s c = true) :
+    Cleanup (s.step c).machine := by
+  cases hp : (Api.Runner.result s.runner c).phase with
+  | refused why => exact cleanup_refused s c why hp hj
+  | bound | preflight | applied | progressed | frontier =>
+    exact cleanup_step total b s c hb hs hj hc
+
+/-- Conservation transfers over every funded raw-row script using only its own obligation. -/
+theorem jobs_script (total fuel : Nat) (b : Api.Built) (moves : List Move)
+    (hb : Api.Author.build (crew total) = .ok b)
+    (hf : funded (Scenario.play (openedAt fuel b) moves) = true) :
+    Jobs (Scenario.play (openedAt fuel b) moves) := by
+  have initial := opened total fuel b hb
+  exact (Scenario.keeps_funded (I := fun s => Basis b s ∧ Jobs s)
+    (fun s c hc hs => ⟨basis_step b s c hs.1, jobs_boundary total b hb s c hs.1 hs.2 hc.2⟩)
+    b "queue-workers" { budget with fuel := fuel } "" moves (fun _ _ => True.intro)
+    ⟨initial.toBasis, initial.jobs⟩ hf).2
+
+/-- The rest transfer adds only its custody and wait correspondence obligation. -/
+theorem rest_script (total fuel : Nat) (b : Api.Built) (moves : List Move)
+    (hb : Api.Author.build (crew total) = .ok b)
+    (hf : funded (Scenario.play (openedAt fuel b) moves) = true) :
+    Rest (Scenario.play (openedAt fuel b) moves) := by
+  have initial := opened total fuel b hb
+  exact (Scenario.keeps_funded (I := fun s => Basis b s ∧ Jobs s ∧ Rest s)
+    (fun s c hc hs => ⟨basis_step b s c hs.1,
+      jobs_boundary total b hb s c hs.1 hs.2.1 hc.2,
+      rest_step total b s c hb hs.1 hs.2.1 hs.2.2 hc.2⟩)
+    b "queue-workers" { budget with fuel := fuel } "" moves (fun _ _ => True.intro)
+    ⟨initial.toBasis, initial.jobs, initial.rest⟩ hf).2.2
+
+/-- Cleanup transfers independently of queue conservation and rest obligations. -/
+theorem cleanup_script (total fuel : Nat) (b : Api.Built) (moves : List Move)
+    (hb : Api.Author.build (crew total) = .ok b)
+    (hf : funded (Scenario.play (openedAt fuel b) moves) = true) :
+    Cleanup (Scenario.play (openedAt fuel b) moves).machine := by
+  have initial := opened total fuel b hb
+  exact (Scenario.keeps_funded (I := fun s => Basis b s ∧ Cleanup s.machine)
+    (fun s c hc hs => ⟨basis_step b s c hs.1,
+      cleanup_boundary total b hb s c hs.1 hs.2 hc.2⟩)
+    b "queue-workers" { budget with fuel := fuel } "" moves (fun _ _ => True.intro)
+    ⟨initial.toBasis, initial.cleanup⟩ hf).2
+
+/-- A host script's actual journal satisfies the rest assertion's host-row premise. -/
+theorem host_journal (fuel : Nat) (b : Api.Built) (moves : List Move)
+    (hh : moves.all Move.hostAct = true) : HostRows (Scenario.play (openedAt fuel b) moves) := by
+  unfold HostRows
+  rw [Scenario.play_scriptRows, Run.journal_play]
+  change ∀ c ∈ Scenario.scriptRows (openedAt fuel b) moves, HostRow c
+  exact hostAct_scriptRows (openedAt fuel b) moves hh
+
+/-- The concrete source-path debit bounds imply no repeated actual cleanup entry. -/
+theorem cleanup_read (m : NativeMachine) (hc : Cleanup m) : (log m).Nodup := by
+  rw [List.nodup_iff_count]
+  intro v
+  by_cases hv : v ∈ log m
+  · obtain ⟨i, hi, rfl⟩ := hc.identities v hv
+    exact Nat.le_trans (hc.logs i hi) (Nat.le_trans (hc.releases i hi) (hc.registrations i hi))
+  · exact (List.count_eq_zero_of_not_mem hv).symm ▸ Nat.zero_le 1
+
+/-- The first original universal clause, modulo the boundary preservation obligations. -/
+@[semantics "translation-simulation" (requirement := R10)]
+theorem held_within_fed : HeldWithinFed := by
+  intro total fuel b moves hb hf
+  obtain ⟨a, shows, conserved⟩ := jobs_script total fuel b moves hb hf
+  exact heldWithin_of_ledger shows conserved
+
+/-- The second original universal clause, with the original host and rest premises. -/
+@[semantics "reactive-scheduling" (requirement := R12)]
+theorem fed_accounted : FedAccounted := by
+  intro total fuel b moves hb hh hf hr
+  obtain ⟨a, shows, conserved, custody, lost, _⟩ :=
+    (rest_script total fuel b moves hb hf) (host_journal fuel b moves hh) hr
+  exact accounted_of_ledger shows conserved custody lost
+
+/-- The third original universal clause, with the original host and rest premises. -/
+@[semantics "reactive-scheduling" (requirement := R12)]
+theorem queue_settled : QueueSettled := by
+  intro total fuel b moves hb hh hf hr
+  obtain ⟨_, shows, _, _, _, rest⟩ :=
+    (rest_script total fuel b moves hb hf) (host_journal fuel b moves hh) hr
+  exact settled_of_ledger shows rest
+
+/-- The fourth original universal clause, reading actual cleanup-source debits. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem releases_once : ReleasesOnce := by
+  intro total fuel b moves hb hf
+  exact decide_eq_true (cleanup_read _ (cleanup_script total fuel b moves hb hf))
+
+end Test.Dogfood.Scenario.QueueWorkers.Assertions
