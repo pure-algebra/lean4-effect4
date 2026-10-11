@@ -193,3 +193,15 @@ The admitted-tape host refuses a reply outside the row's own admission columns.
 `lake env lean docs/research/2026-10-10-goals-packet/codex/AuditRouting.lean` passes.
 The audit reports 139 declarations, three modulo declarations, and one planned goal.
 The old scenario gate diagnostic is retained exactly until the deferred gate repair.
+
+## Finalizer continuation credits
+
+`Machine.FinalizerCredits.getCont_le` proves that continuation lookup cannot duplicate a selected finalizer registration.
+The bound counts the returned frame and the remaining stack together.
+It covers every stack, mask, deferred interrupt, carried cause, and finalizer selector.
+Its consumer is the planned whole-run finalizer debit for `Atomic.cleans_once`.
+The command-loop lift and log-writer provenance remain open.
+
+`LEAN_NUM_THREADS=3 lake build Effect4.Laws.Machine.FinalizerCredits` passes with eight jobs.
+`lake env lean docs/research/2026-10-10-goals-packet/codex/FinalizerCredits.lean` passes.
+The audit reports 48 declarations, no modulo declarations, and no planned goals.

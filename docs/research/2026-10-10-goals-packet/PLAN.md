@@ -2,7 +2,7 @@
 
 The implementation starts at `b74ebab6f2b3f39f0c60d04b25014488b274f197`.
 The working branch is `codex/last-planned-goals`.
-This plan records proposals and checked evidence. It records no owner ruling.
+This plan records checked evidence, proposed placements, and the owner-approved timeout amendment.
 
 ## Finishing criteria
 
