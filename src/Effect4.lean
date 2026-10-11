@@ -233,6 +233,8 @@ import Effect4.Library.Pool.Ops
 import Effect4.Library.Stream.Source
 import Effect4.Library.Stream.Steps
 import Effect4.Library.Stream.Ops
+-- The checked cache of a type fold, for memoized folds (the claim `fold-cache-local-agreement`).
+import Effect4.Program.TyCache
 
 /-!
 # Effect4

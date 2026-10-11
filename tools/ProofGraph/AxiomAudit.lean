@@ -1,6 +1,7 @@
 import ProofGraph.Goal
 import ProofGraph.Audit
 import ProofGraph.Why
+import ProofGraph.Summary
 
 /-!
 # `#axiom_audit`: the gate's exact walk over named modules
@@ -14,6 +15,13 @@ refusal also names its causes: the offenders that no other offender stands under
 checked path to its axiom (`auditCauses`, `ProofGraph.Why`), so a seat reads where the axiom
 enters instead of every declaration above that point.
 
+`#axiom_audit checked M₁ M₂ …` also checks the walk's answers (`checkDependencies`,
+`tools/ProofGraph/Summary.lean`). It captures the graph that the walk reads from the walked
+declarations, under the same stop. `Summary.check` must accept the walk's answer at every
+captured constant, or the command fails. An accepted answer is then the set of labels that the
+captured graph reaches (`dependency-summary-exact`). The check reads the whole captured graph
+once more, interpreted, so it is not the default.
+
 It is a seat's audit of a landing (cleanup C7 of the host-call note,
 `docs/research/2026-10-09-host-calls-and-cleanup.md`). Lean's own collector misses axioms behind
 a cycle, so a seat audits with this command, not with `#print axioms`. It applies no admission:
@@ -26,11 +34,13 @@ open Lean Elab Command
 /-- The axioms a declaration of the law graph may reach. -/
 def trustedAxioms : Array Name := #[``propext, ``Quot.sound]
 
-/-- `#axiom_audit M₁ M₂ …`: every declaration of the named modules, by the gate's exact walk. -/
-syntax (name := axiomAudit) "#axiom_audit" (ppSpace ident)+ : command
+/-- `#axiom_audit M₁ M₂ …`: every declaration of the named modules, by the gate's exact walk.
+`#axiom_audit checked M₁ M₂ …` also checks the walk's answers against their captured graph. -/
+syntax (name := axiomAudit) "#axiom_audit" (&" checked")? (ppSpace ident)+ : command
 
 @[command_elab axiomAudit] def elabAxiomAudit : CommandElab := fun stx => do
-  let modules := stx[1].getArgs.map (·.getId)
+  let checked := !stx[1].isNone
+  let modules := stx[2].getArgs.map (·.getId)
   let env ← getEnv
   for module in modules do
     unless env.header.moduleNames.contains module do
@@ -41,6 +51,13 @@ syntax (name := axiomAudit) "#axiom_audit" (ppSpace ident)+ : command
   let goals := roots.filter (isGoal env)
   let walked := roots.filter (!isGoal env ·)
   let (results, _) := reachedAxiomsMany env walked {} (isGoal env)
+  -- the checked mode: the walk's answers against the graph it reads (`ProofGraph.Summary`)
+  let note ← if checked then
+      match checkDependencies env walked (isGoal env) with
+      | .error why => throwError m!"#axiom_audit checked: {why}"
+      | .ok c => pure m!"; checked: the walk's answers at {c.snapshot.names.size} constants \
+          agree with their captured graph, over the labels {c.snapshot.labels}"
+    else pure m!""
   let mut offenders : Array MessageData := #[]
   let mut reaching : Array (Name × Array Name) := #[]
   let mut modulo : Nat := 0
@@ -55,12 +72,12 @@ syntax (name := axiomAudit) "#axiom_audit" (ppSpace ident)+ : command
         reaching := reaching.push (name, outside)
       if reached.any (isGoal env) then modulo := modulo + 1
   if offenders.isEmpty then
-    logInfo m!"#axiom_audit: {walked.size} declarations within [propext, Quot.sound], \
-      {modulo} of them modulo planned goals; {goals.size} planned goals"
+    logInfo (m!"#axiom_audit: {walked.size} declarations within [propext, Quot.sound], \
+      {modulo} of them modulo planned goals; {goals.size} planned goals" ++ note)
   else
     let causes := if reaching.isEmpty then m!"" else m!"\n" ++ auditCauses env reaching
     throwError m!"#axiom_audit: {offenders.size} of {walked.size} declarations reach axioms \
       outside [propext, Quot.sound]:{indentD (MessageData.joinSep offenders.toList Format.line)}" ++
-      causes
+      causes ++ note
 
 end ProofGraph

@@ -231,7 +231,10 @@ $(GEN)/census: $(GEN)/schema-ts generated/effect-runtime-census.tsv
 # a placed claim (decisions row 254). The recipe builds exactly these roots and the report, and
 # the group depends on the Lean sources, never on `build`: until 2026-10-09 it depended on the
 # roots' traces, whose rule is `build`, so every run first built the whole battery and the axiom
-# gate. The plan reads the ProofGraph modules.
+# gate. The plan reads the ProofGraph modules. One tool module is a root too: the flow's checked
+# reachability (`Tools.View.FlowReach`), which imports the summary law; it holds the pointers of
+# the claims `dependency-summary-exact` and `view-reachability-summary-exact`.
+SEMANTICS_TOOL_ROOTS := Tools.View.FlowReach
 SEMANTICS_DOGFOOD_NAMES := P1HttpCache P2HandlerLayers P3WorkerQueue P4RateLimiter P5LedgerService \
   Scenario Scenario/Workers Scenario/Routing Scenario/Atomic Scenario/Timeout Scenario/Tape \
   Scenario/QueueWorkers
@@ -258,7 +261,7 @@ SEMANTICS_SOURCES := tools/Tools/Semantics.lean tools/Drivers/Semantics.lean \
   $(wildcard tools/ProofGraph/*.lean) \
   Test/Counterexamples/REGISTER.md docs/core/decisions.md lean-toolchain lakefile.toml
 $(GEN)/semantics: $(SEMANTICS_SOURCES) $(LEAN_INPUTS)
-	$(LAKE) build semantics-report Effect4.Laws Test.Program.TypedProgBindRed Test.Program.ProtocolPosts $(SEMANTICS_DOGFOOD)
+	$(LAKE) build semantics-report Effect4.Laws Test.Program.TypedProgBindRed Test.Program.ProtocolPosts $(SEMANTICS_DOGFOOD) $(SEMANTICS_TOOL_ROOTS)
 	rm -rf $(GEN)/semantics-report && mkdir -p $(GEN)/semantics-report
 	$(LAKE) exe semantics-report $(GEN)/semantics-report
 	cp $(GEN)/semantics-report/semantics.md generated/semantics.md

@@ -1846,6 +1846,9 @@ Initial Algebras & Folds: Free syntax objects, catamorphisms, and fold uniquenes
 | call-instance-address | inversion | proved | Effect4.Program.callAt_rowTy | yes |  |
 | annotate-table | compatibility | proved | Effect4.Program.annotate_eq_table | yes |  |
 | term-slot-environment | inversion | proved | Effect4.Program.hasTy_extSlotEnv | yes |  |
+| fold-cache-local-agreement | compatibility | proved | Effect4.Program.TyCache.check_agreement | yes |  |
+| dependency-summary-exact | decidability | proved | Tools.Graph.Summary.check_summary_exact | yes |  |
+| view-reachability-summary-exact | decidability | proved | Tools.View.Flow.checkReach_exact | yes |  |
 
 ### Printed statements
 
@@ -2259,6 +2262,37 @@ Literature: TAPL, §16.1, p. 210 — adaptedResult
               (Eq (Effect4.Program.Node.extSlotEnv s env (Effect4.Program.Node.eff p) slot)
                 (Option.some env'))
               (Eq (Effect4.Program.termTy s env' t) (Option.some ty))
+```
+
+**fold-cache-local-agreement**
+
+```lean
+∀ {R : Type u} [inst : DecidableEq R]
+  (layer : Effect4.Program.TyCtor → List (Effect4.Program.TyArgF R) → R)
+  (entries : Effect4.Program.TyCache.Entries R),
+  Eq (Effect4.Program.TyCache.check layer entries) Bool.true →
+    ∀ (t : Effect4.Program.Ty) (r : R),
+      Eq (Effect4.Program.TyCache.lookup entries t) (Option.some r) →
+        Eq r (Effect4.Program.cata_ty (Effect4.Program.TyAlgebra.ofLayer layer) t)
+```
+
+**dependency-summary-exact**
+
+```lean
+∀ {n m : Nat} {g : Tools.Graph.Summary.Graph n m} {d : Tools.Graph.Summary.Distances n m},
+  Eq (Tools.Graph.Summary.check g d) Bool.true →
+    ∀ (u : Fin n) (l : Fin m),
+      Iff (Tools.Graph.Summary.Present d u l) (Tools.Graph.Summary.Reaches g u l)
+```
+
+**view-reachability-summary-exact**
+
+```lean
+∀ {n : Nat} {es : List Tools.View.Flow.Edge} {d : Tools.Graph.Summary.Distances n n},
+  Eq (Tools.View.Flow.checkReach n es d) Bool.true →
+    ∀ (source target : Fin n),
+      Iff (Tools.Graph.Summary.Present d source target)
+        (Tools.View.Flow.Reach es source.val target.val)
 ```
 
 ## context-requirements

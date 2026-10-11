@@ -341,6 +341,8 @@ import Test.Program.Channel
 import Test.Program.BranchAuthoring
 import Test.Program.SynchronizedRef
 import Test.Program.PubSubSingle
+import Test.Program.TyCacheControls
+import Test.Audit.SummaryControls
 
 /-!
 # Effect4 test battery
