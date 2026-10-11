@@ -14,8 +14,8 @@ The design and its rulings: `docs/research/2026-10-09-visual-pipeline.md` and de
 
 ## Commands
 
-Run from the repository's root. `v` builds the stale programs that its mode runs, writes the
-frames to `tools/view/out/`, and shows them.
+Run from the repository's root. `v` builds the Lean modules that its driver imports and the
+stale programs that its mode runs, writes the frames to `tools/view/out/`, and shows them.
 
 ```sh
 tools/view/v pFork          # build a corpus program top-down, in a window

@@ -26,6 +26,10 @@ here=$(cd "$(dirname "$0")" && pwd)
 # lake comes from elan; a shell whose profile does not add it still finds it here
 command -v lake > /dev/null 2>&1 || PATH="$HOME/.elan/bin:$PATH"
 root=$(cd "$here/../.." && pwd)
+# a driver runs against built modules: build the ones it imports first (lake skips the fresh)
+build_driver() {
+  (cd "$root" && LEAN_NUM_THREADS=3 lake build -q $(sed -n 's/^import //p' "tools/Drivers/$1.lean"))
+}
 mode=window; motion=20; file=""; plain=""; look=""; cmd=build
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -49,6 +53,7 @@ done
 if [ "$cmd" = looks ]; then
   out="$here/out/looks"
   rm -rf "$out"
+  build_driver View
   (cd "$root" && LEAN_NUM_THREADS=3 lake env lean --run tools/Drivers/View.lean looks tools/view/looks "$out")
   "$here/build.sh" draw
   for f in "$out"/*/*.draw; do "$here/draw" "$f" --png "${f%.draw}.png"; done
@@ -73,6 +78,7 @@ if [ "$mode" = live ] || [ "$mode" = check ]; then
     set -- build "$name"
   fi
   if [ -n "$look" ]; then set -- --look "$look" "$@"; fi
+  build_driver Live
   if [ "$mode" = check ]; then
     out="$here/out/$name-live"
     rm -rf "$out"; mkdir -p "$out"
@@ -99,6 +105,7 @@ else
 fi
 rm -rf "$out"
 if [ -n "$look" ]; then set -- --look "$look" "$@"; fi
+build_driver View
 (cd "$root" && LEAN_NUM_THREADS=3 lake env lean --run tools/Drivers/View.lean --motion "$motion" $plain "$@")
 # each mode builds only the program it runs: the console none, PNG files draw, the window play
 case $mode in
