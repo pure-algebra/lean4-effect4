@@ -295,3 +295,10 @@ Whole-history release custody remains open.
 The actual Workers load reader compiles with the complete sequencing proofs.
 The local command audit finds no planned dependencies.
 The whole-history custody endpoint remains open.
+
+## Checked race and store commands
+
+`codex/RaceStoreDebitReceipt.md` records race transfer, scope linking, task posting and due-resume accounting.
+It also records independent integration of source opportunities and selected-owner installation.
+Their local audits find no planned dependencies.
+Whole-history custody and source uniqueness remain open.

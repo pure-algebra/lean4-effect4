@@ -1,4 +1,4 @@
-import Effect4.Laws.Program.ReleaseCustody.CommandDebit
+import Effect4.Laws.Program.ReleaseCustody.CommandStoreDebit
 
 /-!
 Reader: execute the first native command of an actually loaded source.
@@ -15,6 +15,16 @@ example (root : NativeEff) (fuel : Nat) (table : RowTable) (q : List Nat) :
     let out := driveStep (interpOf root table) (Api.load root fuel) (.evaluate Api.root) []
     Funded q out.1 out.2 := by
   apply ReleaseCustody.CommandDebit.evaluate root table q (Api.load root fuel) Api.root []
+    (Guard.guardState_load root fuel).fiberIds
+  simpa only [Funded, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, commandCredits,
+    Nat.zero_add] using load_funded q root fuel
+
+/-- The native due drain reads the real load's empty completion store. -/
+example (root : NativeEff) (fuel : Nat) (table : RowTable) (q : List Nat) :
+    letI := evaluatorFor root table
+    let out := driveStep (interpOf root table) (Api.load root fuel) .drainDue []
+    Funded q out.1 out.2 := by
+  apply ReleaseCustody.CommandDebit.drain_due root table q (Api.load root fuel) []
     (Guard.guardState_load root fuel).fiberIds
   simpa only [Funded, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, commandCredits,
     Nat.zero_add] using load_funded q root fuel

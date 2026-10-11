@@ -356,6 +356,7 @@ import Test.Dogfood.Proofs.HostAppliedObservation
 import Test.Dogfood.Scenario.SourceFragment
 import Test.Dogfood.Scenario.NativeHeap
 import Test.Dogfood.Scenario.SourceUse
+import Test.Dogfood.Scenario.SourceOpportunity
 import Test.Dogfood.Scenario.RoutingInterrupt
 import Test.Counterexamples.Machine.Runtime.HostClockPrefix
 import Test.Dogfood.Scenario.Atomic.Writes

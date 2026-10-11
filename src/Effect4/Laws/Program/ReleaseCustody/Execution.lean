@@ -1,6 +1,8 @@
 import Effect4.Laws.Program.ReleaseCustody.Lift
 import Effect4.Laws.Program.ReleaseCustody.NativeDebit
-import Effect4.Laws.Program.ReleaseCustody.CommandDebit
+import Effect4.Laws.Program.ReleaseCustody.CommandStoreDebit
+import Effect4.Laws.Program.ReleaseCustody.NativeStacks
+import Effect4.Laws.Program.ReleaseCustody.IterationDebit
 
 /-!
 Concept: scope-lifetime-finalization, R11, at most once per registration counted by source identity.
