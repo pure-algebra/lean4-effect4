@@ -34,7 +34,8 @@ What it does not establish:
   boundary;
 - that `distances` builds an accepted table: `summarize` refuses a table that `check` refuses,
   and the battery's controls are finite;
-- a speed bound: `check` visits each reference once for each label.
+- a speed bound: no theorem counts the work of `check`, which reads each reference at most
+  twice for each label.
 -/
 
 namespace Tools.Graph.Summary
@@ -128,8 +129,8 @@ def nodeOk (g : Graph n m) (d : Distances n m) (u : Fin n) : Bool :=
       !(distance d v l).isSome || (distance d u l).isSome) &&
     (List.finRange m).all (supportedB g d u)
 
-/-- Accept a table when every node meets the three conditions. It visits each reference once for
-each label, never each pair of nodes. -/
+/-- Accept a table when every node meets the three conditions. It reads each reference at most
+twice for each label, once for inclusion and once for support, and never each pair of nodes. -/
 def check (g : Graph n m) (d : Distances n m) : Bool :=
   (List.finRange n).all (nodeOk g d)
 
