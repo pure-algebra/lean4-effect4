@@ -39,7 +39,7 @@ This note records the loop and its current census. Claude updates the census at 
 | handles | names; a world as a partial bijection of names; agreement as a fold; Reynolds' abstraction theorem | one name sort, one world, `Rel` per free object (`../2026-10-11-handles/README.md`) | probe checked on `Store.Val`; Codex item 11 |
 | machine edits | a monoid of one-field writes; the frame rule per field | `Edit` with sixteen tags and one footprint `writes` | Codex's draft has the sixteen tags; item 10 |
 | pointwise list relations | the relator of `List` | one `ListRel` | two copies: `ListRel` (`Laws/Machine/Book.lean`), `Pointwise` (`Laws/Step/Reading.lean`) |
-| bound names in authoring | scope safety; a unary relation over the elaboration monad | one scoped lemma per elaboration primitive, or intrinsic scoping | about 330 `*_scoped` theorems in 1,865 lines (`Laws/Program/Authoring*`); not yet modelled |
+| bound names in authoring | scope safety; a unary relation over the elaboration monad | one scoped lemma per elaboration primitive | generated: `Lifts`, `Atoms`, `Forms` and `Rows` under `Laws/Program/Authoring/` come from `tools/Effect4Gen`; no hand copies |
 | names and codecs | an exact embedding | write–read pairs with retraction and exactness | landed per codec |
 | refusals | a located refusal complete against its judgment | `explain` with `explain = none ↔ valid` | landed |
 | a fiber's life, the interrupt state | a sum type each | one inductive each (R4, R5) | open |
