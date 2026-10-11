@@ -1,0 +1,101 @@
+import Effect4.Laws.Program.Definitions
+import Effect4.Program.Compile
+import Effect4.Laws.Auto.Semantics
+
+/-!
+# Laws.Program.Typed.Scope — the parameters in scope at a path
+
+Slice CX1 of `docs/research/2026-10-10-cx-lexical-scope.md` (§3.3, §9). A definition block
+stands only at the root of a program, so the parameters in scope at a path are the parameters of
+the definition whose body holds the path, and none outside every body (`scopeParams`). The
+signature a node at that path is checked at is the source's signature extended by them
+(`Signature.withParams`, decisions row 340), as the module check checks a body
+(`Checker.checkBodies`). The typed points read both (`ProgramSource.scopeSig`, `StackTyped`,
+`Typed/Admission.lean`).
+
+The laws here carry the bookkeeping of a typed run: a child keeps its node's scope, the body of
+definition `k` has its parameters, and an operation that runs no parameter reads the outer
+signature's row. Concept `residual-program-typing`, claim `denote-typed`, requirement R4. They
+establish nothing of a run; their consumers are the arms of `denote-typed`
+(`Typed/Denotation.lean`).
+-/
+
+set_option autoImplicit false
+
+namespace Effect4.Program
+
+variable {Op : Type}
+
+/-- The parameters of the body that holds a path of a block's bodies' spine. In the spine the
+head is child `0` and the rest child `1`, as in `Part.bodyAt` (`Program/Typing/Parts.lean`). A
+spine node itself is inside no body. -/
+def spineParams : List DefDecl → List Nat → List ParamDecl
+  | d :: _, 0 :: _ => d.params
+  | _ :: ds, 1 :: rest => spineParams ds rest
+  | _, _ => []
+
+/-- **The parameters in scope at a path** (decisions row 340): at a root block, the parameters of
+the definition whose body holds the path (the bodies are child `0`); `[]` in the main program,
+at the block itself, and in every program with no block. -/
+def scopeParams : Eff Op → List Nat → List ParamDecl
+  | .defs decls _ _, 0 :: rest => spineParams decls rest
+  | _, _ => []
+
+/-- **A child of a program node has the node's scope.** A step of `denote-typed`; its consumer is
+`pointTyped_child` (`Typed/Denotation.lean`). -/
+@[semantics "residual-program-typing" (requirement := R4)]
+proof_goal scopeParams_child {root : Eff Op} {path : List Nat} {e : Eff Op}
+    (hat : Node.at_ (.eff root) path = some (.eff e)) (i : Nat) :
+    scopeParams root (path ++ [i]) = scopeParams root path
+
+/-- **Below a program node that is no block, every path has the node's scope.** A step of
+`denote-typed`; its consumer is `argSites_typed` (`Typed/Denotation.lean`): the sites of an
+invocation's programs stand below it. -/
+@[semantics "residual-program-typing" (requirement := R4)]
+proof_goal scopeParams_below {root : Eff Op} {path : List Nat} {e : Eff Op}
+    (hat : Node.at_ (.eff root) path = some (.eff e)) (he : ∀ d b m, e ≠ .defs d b m)
+    (q : List Nat) : scopeParams root (path ++ q) = scopeParams root path
+
+/-- **The body of definition `k` has definition `k`'s parameters.** A step of `denote-typed`;
+its consumers are `call_arm` and `invoke_arm` (`Typed/Denotation.lean`). -/
+@[semantics "residual-program-typing" (requirement := R4)]
+proof_goal scopeParams_body {root : NativeEff} {k : Nat} {path : List Nat} {d : DefDecl}
+    (hpath : defBodyPath root k = some path) (hd : root.defsOf[k]? = some d) :
+    scopeParams root path = d.params
+
+/-- **The scope is empty or some declaration's parameters.** A step of `denote-typed`; its
+consumer is `param_arm` (`Typed/Denotation.lean`), which reads the parameter's formation from its
+declaration's (`BodiesTyped`). -/
+@[semantics "residual-program-typing" (requirement := R4)]
+proof_goal scopeParams_decl (root : Eff Op) (path : List Nat) :
+    scopeParams root path = [] ∨
+      ∃ (k : Nat) (d : DefDecl), root.defsOf[k]? = some d ∧ scopeParams root path = d.params
+
+/-- **An operation that runs no parameter reads the outer signature** in a body's signature: its
+domain bit and its row. A step of `denote-typed`; its consumers are the row arms
+(`builtinPerform_inv`, `Typed/Denotation.lean`). -/
+@[semantics "residual-program-typing" (requirement := R4)]
+proof_goal Signature.withParams_of_none (sig : Signature Op) (ps : List ParamDecl) {op : Op}
+    (h : sig.paramOf op = none) :
+    (sig.withParams ps).dom op = sig.dom op ∧ (sig.withParams ps).rowOf op = sig.rowOf op
+
+/-- **A body's signature keeps the service table.** A step of `denote-typed`; its consumers are
+`service_arm` and `serviceTy_flat` (`Typed/Denotation.lean`). -/
+@[semantics "residual-program-typing" (requirement := R4)]
+proof_goal Signature.withParams_serviceTy (sig : Signature Op) (ps : List ParamDecl) :
+    (sig.withParams ps).serviceTy = sig.serviceTy
+
+/-- **A body's signature keeps the declarations.** A step of `denote-typed`; its consumer is
+`invoke_arm` (`Typed/Denotation.lean`), which reads the invoked definition's declaration. -/
+@[semantics "residual-program-typing" (requirement := R4)]
+proof_goal Signature.withParams_defOf (sig : Signature Op) (ps : List ParamDecl) :
+    (sig.withParams ps).defOf = sig.defOf
+
+/-- **A parameter's run in a body's domain reads its declaration's row.** A step of
+`denote-typed`; its consumer is `param_arm` (`Typed/Denotation.lean`). -/
+@[semantics "residual-program-typing" (requirement := R4)]
+proof_goal Signature.withParams_param (sig : Signature Op) (ps : List ParamDecl) {op : Op}
+    {i : Nat} (h : sig.paramOf op = some i) (hd : (sig.withParams ps).dom op = true) :
+    ∃ q, ps[i]? = some q ∧ (sig.withParams ps).rowOf op = q.row.normalizeTypes
+
+end Effect4.Program

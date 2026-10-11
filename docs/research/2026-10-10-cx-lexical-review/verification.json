@@ -1,0 +1,143 @@
+{
+  "reviewed_commit": "71799e477d85ff943b1c0f2f291ace98f92613f2",
+  "commands": [
+    {
+      "label": "source-diff",
+      "command": [
+        "git",
+        "diff",
+        "--exit-code",
+        "71799e477d85ff943b1c0f2f291ace98f92613f2",
+        "--",
+        ".",
+        ":(exclude)docs/research/2026-10-10-cx-lexical-review/**"
+      ],
+      "exit": 0
+    },
+    {
+      "label": "build",
+      "command": [
+        "lake",
+        "build",
+        "Effect4.Laws.Program.Typed.AdmittedSource",
+        "Test.Program.InvokeControls",
+        "ProofGraph.Why",
+        "ProofGraph.Plan",
+        "ProofGraph.AxiomAudit"
+      ],
+      "exit": 0
+    },
+    {
+      "label": "Lexical",
+      "command": [
+        "lake",
+        "env",
+        "bash",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$1/$2.olean\" \"$1/$2.lean\"",
+        "review",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-cx-lexical-review",
+        "Lexical"
+      ],
+      "exit": 0
+    },
+    {
+      "label": "Controls",
+      "command": [
+        "lake",
+        "env",
+        "bash",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$1/$2.olean\" \"$1/$2.lean\"",
+        "review",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-cx-lexical-review",
+        "Controls"
+      ],
+      "exit": 0
+    },
+    {
+      "label": "Graph",
+      "command": [
+        "lake",
+        "env",
+        "bash",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$1/$2.olean\" \"$1/$2.lean\"",
+        "review",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-cx-lexical-review",
+        "Graph"
+      ],
+      "exit": 0
+    },
+    {
+      "label": "Audit",
+      "command": [
+        "lake",
+        "env",
+        "bash",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$1/$2.olean\" \"$1/$2.lean\"",
+        "review",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-cx-lexical-review",
+        "Audit"
+      ],
+      "exit": 0
+    },
+    {
+      "label": "language",
+      "command": [
+        "python3",
+        "scripts/check-language.py",
+        "--strict",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-cx-lexical-review/README.md"
+      ],
+      "exit": 0
+    },
+    {
+      "label": "diff-check",
+      "command": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "exit": 0
+    },
+    {
+      "label": "language-after-live-resolution",
+      "command": [
+        "python3",
+        "scripts/check-language.py",
+        "--strict",
+        "docs/research/2026-10-10-cx-lexical-review/README.md"
+      ],
+      "exit": 0
+    }
+  ],
+  "finite_guard_count": 30,
+  "candidate_example_count": 6,
+  "original_lexical_probe_exact_copy": true,
+  "file_sha256": {
+    "Audit.lean": "dd5811a35772c378ea9d481ba986bddbe485f3623f0d2c3613c04cd41b44aeee",
+    "Audit.log": "f657b985ff7e6c94507fac87eec39c02fbfa04aa2fa04e7973a5e63231fc5a75",
+    "Controls.lean": "7370cb9e9311a26b36eaa6658fe03d56f8c55754089161bcbeeb5c4b97491216",
+    "Controls.log": "cee4e05ded4c4a22dfab5301df483b1ce9107bff27651c804f4d7ed0361b897a",
+    "Graph.lean": "68997aae374c350607b33bff9929380e84a8f6050f1c5c44c0476933aee1faf1",
+    "Graph.log": "89cb1b7c08e3c4830907b2888ebe326739f766d23b012e708d02129ad98be587",
+    "Lexical.lean": "c6d007a51ba47569ac5ae55bb6c104b126ebad74dfd4a0a791d67aa207fd5a46",
+    "Lexical.log": "cee4e05ded4c4a22dfab5301df483b1ce9107bff27651c804f4d7ed0361b897a",
+    "README.md": "a0a363d4238631d7efe50e55042c733851279ac6f078daed7ab34896a528cb77",
+    "Scope-draft.txt": "ae91ca33668a2f226315a523e23c23f4a961ff3555f3dfadbb1a62b987947451",
+    "Scope-revised.txt": "93f6ef9ecd2ba4d751f65b2d3d9223bdcb082f8b0c163a95fea44f85524c02ee",
+    "build.log": "4fbb80dc97f71f49854f475afd967a811f663ccb25a173d0619b0dc06147fb67",
+    "diff-check.log": "cee4e05ded4c4a22dfab5301df483b1ce9107bff27651c804f4d7ed0361b897a",
+    "language.log": "e251b09a84ddf09ce188d1dc560f06977963e940108166eb122bd1c4ae37e263",
+    "source-diff.log": "cee4e05ded4c4a22dfab5301df483b1ce9107bff27651c804f4d7ed0361b897a",
+    "verify.py": "61d51df6c6c0fb1248fd3baeca0ca546641f1fdded7600e57cfa18edbd3b21e8",
+    "working-note.diff": "87d424bc55187e45020d69e2cfc622aac5807d8a864050a754c47b79d1626f1f"
+  },
+  "live_resolution": {
+    "helper": "Signature.withParams_param",
+    "status": "missing premise added in uncommitted source; source inspected, not compiled here",
+    "remaining": "path-only context cannot transport the admitted layer reference"
+  }
+}
