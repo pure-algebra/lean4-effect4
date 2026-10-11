@@ -17,7 +17,7 @@ open HostTimeoutHeap HostTimeoutState HostTimeoutStateSteps HostTimeoutRaceSteps
 /-- The actual evaluator result retains its stored machine, returned fiber and nested commands. -/
 def EvaluationAt (B : List Val) (classes : Classes) (result : NativeIter) : Prop :=
   ConfigurationAt B classes result.machine ∧ FiberAt B classes result.fiber ∧
-    CommandsAt B classes (result.machine.update result.fiber) result.nested
+    CommandsAt B classes (result.machine.update result.fiber) result.nested ∧ MessagesAt classes result.edits
 
 /-- The ordinary primitive frame evaluator edits only its returned frame and machine events. -/
 theorem step_frame_state {B : List Val} {classes : Classes} (view : View)
@@ -35,10 +35,10 @@ theorem step_frame_state {B : List Val} {classes : Classes} (view : View)
     cases step with
     | running frame =>
       exact ⟨configuration_emit owned _, set_frame_live goodFiber frame next parked live,
-        by intro command member; cases member⟩
+        (by intro command member; cases member), (by intro message member; cases member)⟩
     | finished exit =>
       exact ⟨configuration_emit owned _, set_frame_live goodFiber _ next parked live,
-        by intro command member; cases member⟩
+        (by intro command member; cases member), (by intro message member; cases member)⟩
 
 /-- A synchronous Timeout source head changes only its proved outer cell shapes or timer registrations. -/
 theorem sync_configuration {B : List Val} {classes : Classes} (machine : Effect4.Program.NativeMachine)
@@ -71,20 +71,20 @@ theorem sync_evaluation {B : List Val} {classes : Classes} {input : Kind} (view 
   have dispatch : evaluatePrim (interpreter view) machine fiber yielding =
       (match (interpreter view).syncState thunk machine.state with
        | some (state, value) => ⟨{machine with state},
-           {fiber with frame := {fiber.frame with current := .success value}}, yielding, .answered, [.drainDue]⟩
+           {fiber with frame := {fiber.frame with current := .success value}}, yielding, .answered, [.drainDue], []⟩
        | none => ⟨machine, {fiber with frame := {fiber.frame with current := .success ((interpreter view).syncValue thunk)}},
-           yielding, .answered, []⟩) := by
+           yielding, .answered, [], []⟩) := by
     rw [evaluatePrim, current]
     kernel_rfl
   rw [dispatch]
   cases found : (interpreter view).syncState thunk machine.state with
   | none =>
     exact ⟨owned, reframe_live goodFiber (.head (.success (fallback view))) stack parked live,
-      by intro command member; cases member⟩
+      (by intro command member; cases member), (by intro message member; cases member)⟩
   | some pair =>
     obtain ⟨state, value⟩ := pair
     refine ⟨sync_configuration machine owned view thunk allowed state value found,
-      reframe_live goodFiber (.head (.success (answer view machine.state state value found))) stack parked live, ?_⟩
+      reframe_live goodFiber (.head (.success (answer view machine.state state value found))) stack parked live, ?_, (by intro message member; cases member)⟩
     intro command member
     have equal := List.mem_singleton.mp member
     subst command
@@ -115,7 +115,7 @@ theorem finalizer_evaluation {B : List Val} {classes : Classes} {input : Kind} (
       · rename_i program selected
         rw [selected] at typed
         exact ⟨configuration_emit owned _, set_frame_live goodFiber _ typed parked live,
-          by intro command member; cases member⟩
+          (by intro command member; cases member), (by intro message member; cases member)⟩
       · exact fallback
     · exact fallback
 
@@ -162,7 +162,7 @@ theorem with_fiber_evaluation {B : List Val} {classes : Classes} {input : Kind} 
   cases allowed with
   | race programs site entrants =>
     have result := begin_race_state machine fiber yielding programs site view owned goodFiber entrants stack parked live
-    refine ⟨classes ++ [.body], ClassLe.append classes .body, result.1, result.2.1, ?_⟩
+    refine ⟨classes ++ [.body], ClassLe.append classes .body, result.1, result.2.1, ?_, (by intro message member; cases member)⟩
     intro command member
     cases member
   | mask kind body flag good =>
@@ -172,28 +172,28 @@ theorem with_fiber_evaluation {B : List Val} {classes : Classes} {input : Kind} 
       dsimp only
       split
       · exact ⟨owned, set_frame_live goodFiber _ ⟨input, good, .cons (.mask input true) stack⟩ parked live,
-          by intro command member; cases member⟩
+          (by intro command member; cases member), (by intro message member; cases member)⟩
       · exact ⟨owned, set_frame_live goodFiber _ ⟨input, good, stack⟩ parked live,
-          by intro command member; cases member⟩
+          (by intro command member; cases member), (by intro message member; cases member)⟩
     · unfold EvaluationAt evaluatePrim.withFiber FrameFiber.interruptibleRegion FrameFiber.setFiberInterruptible
       dsimp only
       split
       · exact ⟨owned, set_frame_live goodFiber _ ⟨input, good, stack⟩ parked live,
-          by intro command member; cases member⟩
+          (by intro command member; cases member), (by intro message member; cases member)⟩
       · split
         · exact ⟨owned, set_frame_live goodFiber _ ⟨input, .head (.failure input _), .cons (.mask input false) stack⟩ parked live,
-            by intro command member; cases member⟩
+            (by intro command member; cases member), (by intro message member; cases member)⟩
         · exact ⟨owned, set_frame_live goodFiber _ ⟨input, good, .cons (.mask input false) stack⟩ parked live,
-            by intro command member; cases member⟩
+            (by intro command member; cases member), (by intro message member; cases member)⟩
   | cancelRace raceId =>
     refine ⟨classes, classOrder.refl classes, ?_⟩
     unfold EvaluationAt evaluatePrim.withFiber
     dsimp only
     split
     · exact ⟨owned, reframe_live goodFiber (.head (.success .unit)) stack parked live,
-        by intro command member; cases member⟩
+        (by intro command member; cases member), (by intro message member; cases member)⟩
     · rename_i race found
-      refine ⟨owned, goodFiber, ?_⟩
+      refine ⟨owned, goodFiber, ?_, (by intro message member; cases member)⟩
       intro command member
       have equal := List.mem_singleton.mp member
       subst command
@@ -205,8 +205,12 @@ theorem with_fiber_evaluation {B : List Val} {classes : Classes} {input : Kind} 
       exact stack
   | dropObservers token =>
     refine ⟨classes, classOrder.refl classes, ?_⟩
-    exact ⟨filter_observers_configuration owned _, reframe_live goodFiber (.head (.success .unit)) stack parked live,
-      by intro command member; cases member⟩
+    exact ⟨owned, reframe_live goodFiber (.head (.success .unit)) stack parked live,
+      (by intro command member; cases member), (by
+        intro message member
+        have equal := List.mem_singleton.mp member
+        subst message
+        exact True.intro)⟩
 
 /-- All fifteen native primitive source cases retain the whole Timeout assertion. -/
 theorem evaluate_head_state {B : List Val} {classes : Classes} {input : Kind} (view : View)
@@ -245,36 +249,51 @@ theorem evaluate_head_state {B : List Val} {classes : Classes} {input : Kind} (v
       (by rw [current]; exact .head (.action _ _ operation action good)) stack parked live stored
   | external op request path =>
     have result := external_park_state machine fiber yielding view op request path owned goodFiber current stack
-    refine ⟨classes ++ [.body], ClassLe.append classes .body, result.1, result.2.1, ?_⟩
-    simp only [evaluatePrim, current]
-    intro command member; cases member
+    refine ⟨classes ++ [.body], ClassLe.append classes .body, result.1, result.2.1, ?_, ?_⟩
+    · simp only [evaluatePrim, current]
+      intro command member; cases member
+    · simp only [evaluatePrim, current]
+      intro message member; cases member
   | sleep millis =>
     have result := sleep_park_state machine fiber yielding view millis owned goodFiber current stack parked live
-    refine ⟨classes ++ [.unit], ClassLe.append classes .unit, result.1, result.2.1, ?_⟩
-    simp only [evaluatePrim, current]
-    intro command member; cases member
+    refine ⟨classes ++ [.unit], ClassLe.append classes .unit, result.1, result.2.1, ?_, ?_⟩
+    · simp only [evaluatePrim, current]
+      intro command member; cases member
+    · simp only [evaluatePrim, current]
+      intro message member; cases member
   | yieldNow priority =>
     have result := yield_park_state machine fiber yielding view priority owned goodFiber current stack parked live
-    refine ⟨classes ++ [.unit], ClassLe.append classes .unit, result.1, result.2.1, ?_⟩
-    simp only [evaluatePrim, current]
-    intro command member; cases member
+    refine ⟨classes ++ [.unit], ClassLe.append classes .unit, result.1, result.2.1, ?_, ?_⟩
+    · simp only [evaluatePrim, current]
+      intro command member; cases member
+    · simp only [evaluatePrim, current]
+      intro message member; cases member
   | awaitPark targets =>
     have result := await_park_state machine fiber yielding view targets owned goodFiber current stack parked live
-    refine ⟨classes ++ [.any], ClassLe.append classes .any, result.1, result.2.1, ?_⟩
-    simp only [evaluatePrim, current]
-    intro command member; cases member
+    have code : CodeAt B .any fiber.frame.current := by rw [current]; exact .head (.awaitPark targets)
+    have plan := countdown_plan_state machine fiber view targets owned goodFiber code stack parked live
+    refine ⟨classes ++ [.any], ClassLe.append classes .any, result.1, result.2.1, ?_, ?_⟩
+    · simp only [evaluatePrim, current]
+      intro command member; cases member
+    · rw [evaluatePrim, current]
+      change MessagesAt (classes ++ [.any])
+        (countdownParkEdits (interpreter view) machine fiber targets .exitsValue).2.2.2
+      exact plan.2.2
   | racePark race =>
     have result := race_park_state machine fiber yielding view race owned goodFiber current
-    refine ⟨classes, classOrder.refl classes, result.1, result.2.1, ?_⟩
     have dispatch : evaluatePrim (interpreter view) machine fiber yielding =
         registerRace machine fiber yielding race := by rw [evaluatePrim, current]; rfl
-    rw [dispatch]
-    unfold registerRace
-    split
-    · intro command member; cases member
-    · intro command member
-      simp only [List.mem_cons, List.not_mem_nil, or_false] at member
-      rcases member with equal | equal <;> subst command <;> trivial
+    refine ⟨classes, classOrder.refl classes, result.1, result.2.1, ?_, ?_⟩
+    · rw [dispatch]
+      unfold registerRace
+      split
+      · intro command member; cases member
+      · intro command member
+        simp only [List.mem_cons, List.not_mem_nil, or_false] at member
+        rcases member with equal | equal <;> subst command <;> trivial
+    · rw [dispatch]
+      unfold registerRace
+      split <;> intro message member <;> cases member
   | suspend kind point body =>
     have dispatch : evaluatePrim (interpreter view) machine fiber yielding =
         evaluatePrim.stepFrame (interpreter view) machine fiber yielding := by rw [evaluatePrim, current]; rfl

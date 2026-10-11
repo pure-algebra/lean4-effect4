@@ -1,5 +1,6 @@
 import Test.Dogfood.Proofs.HostTimeoutState
 import Effect4.Laws.Program.ReleaseCustody.CommandStackSteps
+import Effect4.Laws.Machine.Edits
 
 /-!
 Placement: host-session-protocol R6, serving `Timeout.stale_never_applies` clause four.
@@ -201,13 +202,12 @@ theorem failed_frame {B : List Val} {fiber : NativeFiber}
   obtain ⟨input, _, stack⟩ := owned
   exact ⟨input, .head (.failure input cause), stack⟩
 
-/-- Recording an interruption preserves the source class or enters failure at its saved stack. -/
-theorem interrupted_fiber {B : List Val} {classes : Classes} (fiber : NativeFiber)
-    (owned : FiberAt B classes fiber) (who : Option FiberId) (extra : ReasonAnnotations Ann) :
-    FiberAt B classes
-      (interruptRecord (interpOf HostTimeoutSource.program Test.Dogfood.Scenario.Timeout.fetch.table)
-        who extra fiber).1 := by
-  unfold interruptRecord interruptWithCause
+/-- An addressed fresh cause preserves the source class or enters failure at its saved stack.
+Consumer: the shared message word carries actual R2 interruptions. -/
+theorem interrupted_with_cause {B : List Val} {classes : Classes} (fiber : NativeFiber)
+    (owned : FiberAt B classes fiber) (cause : CauseV) :
+    FiberAt B classes (interruptWithCause cause fiber).1 := by
+  unfold interruptWithCause
   dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
     FiberCore.setDeferred, FiberCore.answerWith, FiberCore.failure, frameCore]
   split
@@ -225,6 +225,95 @@ theorem interrupted_fiber {B : List Val} {classes : Classes} (fiber : NativeFibe
           · intro exited; exact .head (.failure .body _)
       · exact ⟨owned.frame, owned.park, owned.pending, owned.dispatcher,
           owned.observers, owned.exits, owned.terminal, owned.children⟩
+
+/-- Recording an interruption uses the same fresh-cause transport. -/
+theorem interrupted_fiber {B : List Val} {classes : Classes} (fiber : NativeFiber)
+    (owned : FiberAt B classes fiber) (who : Option FiberId) (extra : ReasonAnnotations Ann) :
+    FiberAt B classes
+      (interruptRecord (interpOf HostTimeoutSource.program Test.Dogfood.Scenario.Timeout.fetch.table)
+        who extra fiber).1 :=
+  interrupted_with_cause fiber owned _
+
+/-- Observer messages retain the token class produced by their source registration. -/
+def MessageAt (classes : Classes) : FiberEdit Err Defect FiberId Ann → Prop
+  | .observe _ observer => ObserverAt classes observer
+  | .dropToken _ | .interrupt _ _ => True
+
+/-- The message list supplies local observer permissions, not arbitrary producer provenance. -/
+def MessagesAt (classes : Classes) (messages : List (FiberEdit Err Defect FiberId Ann)) : Prop :=
+  ∀ message ∈ messages, MessageAt classes message
+
+/-- Appending a permitted observer changes only the observer field of its current target. -/
+theorem observed_fiber {B : List Val} {classes : Classes} {fiber : NativeFiber}
+    (owned : FiberAt B classes fiber) (observer : Observer) (allowed : ObserverAt classes observer) :
+    FiberAt B classes {fiber with observers := fiber.observers ++ [observer]} where
+  frame := owned.frame
+  park := owned.park
+  pending := owned.pending
+  dispatcher := owned.dispatcher
+  observers := by
+    intro next member
+    rcases List.mem_append.mp member with previous | last
+    · exact owned.observers next previous
+    · have equal := List.mem_singleton.mp last
+      subst next
+      exact allowed
+  exits := owned.exits
+  terminal := owned.terminal
+  children := owned.children
+
+/-- Each resolved message retains the assertion at its actual current lookup.
+Consumer: the shared message word supplies Timeout's R2 settlement instance. -/
+theorem configuration_message {B : List Val} {classes : Classes}
+    (machine : Effect4.Program.NativeMachine) (message : FiberEdit Err Defect FiberId Ann)
+    (allowed : MessageAt classes message) (owned : ConfigurationAt B classes machine) :
+    ConfigurationAt B classes (applyFiberEdit message machine).1 := by
+  cases message with
+  | observe target observer =>
+    simp only [applyFiberEdit, RunMachine.modify]
+    split
+    · exact owned
+    · rename_i fiber found
+      exact configuration_update owned _ (observed_fiber (configuration_fiber owned found) observer allowed)
+  | dropToken token =>
+    refine ⟨owned.supply, owned.kinds, ?_, owned.races, owned.timers,
+      owned.refs, owned.deferreds, owned.scopes⟩
+    intro next member
+    obtain ⟨fiber, previous, equal⟩ := List.mem_map.mp member
+    subst next
+    have good := owned.fibers fiber previous
+    exact ⟨good.frame, good.park, good.pending, good.dispatcher,
+      (fun observer held => good.observers observer (List.mem_filter.mp held).1),
+      good.exits, good.terminal, good.children⟩
+  | interrupt target cause =>
+    simp only [applyFiberEdit]
+    split
+    · exact owned
+    · rename_i fiber found
+      exact configuration_update owned _ (interrupted_with_cause fiber (configuration_fiber owned found) cause)
+
+/-- The existing actual-prefix word transports all admitted messages together.
+This proof does not re-walk a native evaluator or command census. -/
+theorem configuration_messages {B : List Val} {classes : Classes}
+    (machine : Effect4.Program.NativeMachine) (messages : List (FiberEdit Err Defect FiberId Ann))
+    (allowed : MessagesAt classes messages) (owned : ConfigurationAt B classes machine) :
+    ConfigurationAt B classes (applyFiberEdits messages machine).1 := by
+  let Edge (before after : Effect4.Program.NativeMachine)
+      (edit : Machine.Edit EffName EffThunk Val Err Defect FiberId Ann Ctx Stores NCode
+        (FrameFiber EffName EffThunk Val Err Defect FiberId Ann)
+        (FrameEvent EffName EffThunk Val Err Defect FiberId Ann)) : Prop :=
+    after = edit.apply before ∧
+      (ConfigurationAt B classes before → ConfigurationAt B classes after)
+  have path := Edits.fiberWords_path (Edge := Edge) messages
+    (fun message member held => Edits.fiberWord_path message held (by
+      intro edit single
+      constructor
+      · rw [Edits.fiber_word, single]
+        rfl
+      · exact configuration_message held message (allowed message member))) machine
+  rw [Edits.fiber_words]
+  exact Edits.run_preserves_at (fun _ _ _ edge => edge.1) (ConfigurationAt B classes)
+    (fun _ _ _ edge initial => edge.2 initial) path owned
 
 /-- The actual interrupt command cannot create a successful body or alter any reference cell. -/
 theorem interrupt_state {B : List Val} {classes : Classes} (machine : Effect4.Program.NativeMachine)

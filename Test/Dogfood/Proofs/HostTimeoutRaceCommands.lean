@@ -178,9 +178,10 @@ theorem registration_command {B : List Val} {classes : Classes} (machine : Effec
     have codeGood : CodeAt B .body code := race_settle (goodRace.accepted exit accepted) [] raceId race.state.cleanupNeeded
     let next : NativeFiber := {fiber with frame := {fiber.frame with current := code}}
     have nextGood : FiberAt B classes next := reframe_live good codeGood body.2 parked live
-    let result : NativeIter := ⟨middle, next, yielding, .continue_, []⟩
+    let result : NativeIter := ⟨middle, next, yielding, .continue_, [], []⟩
     have evaluation : EvaluationAt B classes result :=
-      ⟨middleGood, nextGood, by intro command member; cases member⟩
+      ⟨middleGood, nextGood, (by intro command member; cases member),
+        (by intro message member; cases member)⟩
     have tail := tail_transport (.registrationDone raceId yielding) rest fiber.id (classOrder.refl classes)
       queue owner (fun command member => commands command (List.mem_cons_of_mem _ member))
       ((middleLinks.away fiber.id).trans (update_away middle next))
@@ -195,9 +196,10 @@ theorem registration_command {B : List Val} {classes : Classes} (machine : Effec
     let next : NativeFiber := ({fiber with frame := {fiber.frame with stack := .asyncFinalizer name :: fiber.frame.stack}}).park pending
     have nextGood : FiberAt B classes next := park_fiber framed pending goodRace.token body.1 pushedStack
       ⟨.body, goodRace.token, rfl⟩
-    let result : NativeIter := ⟨middle.emit [RunEvent.parkedOn fiber.id race.token], next, yielding, .parked, []⟩
+    let result : NativeIter := ⟨middle.emit [RunEvent.parkedOn fiber.id race.token], next, yielding, .parked, [], []⟩
     have evaluation : EvaluationAt B classes result :=
-      ⟨configuration_emit middleGood _, nextGood, by intro command member; cases member⟩
+      ⟨configuration_emit middleGood _, nextGood, (by intro command member; cases member),
+        (by intro message member; cases member)⟩
     have tail := tail_transport (.registrationDone raceId yielding) rest fiber.id (classOrder.refl classes)
       queue owner (fun command member => commands command (List.mem_cons_of_mem _ member))
       (((middleLinks.emit _).away fiber.id).trans (update_away result.machine next))
