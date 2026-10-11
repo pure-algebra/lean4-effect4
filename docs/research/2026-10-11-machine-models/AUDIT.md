@@ -164,3 +164,18 @@ alternative compiles.
 **Verdict: improving.** Shared-law uses rise by 121 and private analyses fall by 11. The excess of
 lines is new shared structure.
 
+
+## 2026-10-11 13:45, the frame-rule parameter
+
+Range `1a862c4fd..b4dcef4f1`: two commits, merged as `27076ad79`. The script counts one changed
+law file, 27 lines added and 6 removed, no shared-law use, no private case analysis and no hand
+lift. The file is `src/Effect4/Laws/Auto/Frames.lean`: `#frame_rules` takes a named state
+parameter, for invariants with a later phase index such as the R2 guard state. That is shared proof
+tooling.
+
+**Open, not merged.** Codex's R2 change has 81 files open in its worktree, uncommitted. Its draft
+`Laws/Machine/Edits.lean` has the sixteen edits that the census of 13:35 finds in the driver.
+`CODEX-PROMPT.md` item 10 adds one footprint function and one `dropToken` to it, and item 11 orders
+the handle consolidation (`../2026-10-11-handles/README.md`).
+
+**Verdict: flat.** The range adds tooling and no per-scenario structure.
