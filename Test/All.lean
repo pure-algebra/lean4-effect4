@@ -7,6 +7,7 @@ import Test.Schema.AuthoringContract
 import Test.Schema.DialectContract
 import Test.Counterexamples.Codegen.TypeScriptRender
 import Test.Counterexamples.Codegen.PrintDistributes
+import Test.Counterexamples.Codegen.PrintUnsafeLiteral
 import Test.Schema.RepresentationContract
 import Test.Schema.SubAlphabetContract
 import Test.Schema.PayloadContract
@@ -60,6 +61,7 @@ import Test.Program.TypedSplit
 import Test.Counterexamples.Machine.Semantics.LayerValue
 import Test.Counterexamples.Machine.Semantics.ValueMembership
 import Test.Counterexamples.Machine.Semantics.FitsOrder
+import Test.Counterexamples.Machine.Semantics.MulOutsideProfile
 import Test.Program.TermFits
 import Test.Program.SignatureControls
 import Test.Program.SketchControls
