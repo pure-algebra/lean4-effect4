@@ -1,4 +1,4 @@
-import Effect4.Laws.Program.Moves
+import Effect4.Laws.Program.FrameMoves
 
 /-!
 # Laws.Program.Footprint — the footprint of one evaluation on the evaluated run fiber

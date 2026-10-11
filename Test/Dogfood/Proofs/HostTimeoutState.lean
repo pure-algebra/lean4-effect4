@@ -157,11 +157,6 @@ theorem configuration_fiber {B : List Val} {classes : Classes} {machine : Effect
     (found : machine.fiber? id = some fiber) : FiberAt B classes fiber :=
   owned.fibers fiber (List.mem_of_find?_eq_some found)
 
-/-- The complete assertion supplies the native evaluator's concrete ordered frame assertion. -/
-theorem configuration_frames {B : List Val} {classes : Classes} {machine : Effect4.Program.NativeMachine}
-    (owned : ConfigurationAt B classes machine) : FrameLedger B machine :=
-  fun fiber member => (owned.fibers fiber member).frame
-
 /-- A queued reply and an actually held park agree at their single immutable token entry. -/
 theorem matched_reply {B : List Val} {classes : Classes} {fiber : NativeFiber} {token : Nat} {code : NCode}
     (park : ParkAt B classes fiber) (held : fiber.parked = .withGuard token)

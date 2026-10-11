@@ -121,7 +121,7 @@ theorem FramesFollow.ofInterferes {m m' : NativeMachine} (h : Interferes m m') :
   refine ⟨h.nextId, fun g' mem => ?_⟩
   rcases h.fibers g' mem with ⟨g, memOld, w⟩ | fresh
   · exact .inl ⟨g, memOld, w.id.symm, w.frames⟩
-  · exact .inr fresh
+  · exact .inr fresh.1
 
 /-- A machine edit that keeps the fiber list, after frames that follow. -/
 theorem FramesFollow.thenSame {m m' m'' : NativeMachine} (h : FramesFollow m m')

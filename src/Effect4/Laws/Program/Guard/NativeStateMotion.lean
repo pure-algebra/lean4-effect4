@@ -1,3 +1,4 @@
+import Effect4.Laws.Program.Interference
 import Effect4.Laws.Program.Guard.NativeState
 
 set_option autoImplicit false
@@ -49,60 +50,27 @@ theorem finalizerOr_nextId (interp : NInterp) (m : NativeMachine) (f : NFiber)
 
 theorem withFiber_nextId (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (yielding : Bool) (action : NAction) :
-    m.nextId ≤ (evaluatePrim.withFiber interp m f yielding action).machine.nextId := by
-  cases action <;> simp only [evaluatePrim.withFiber, evaluatePrim.interruptAs, spawn, start, beginRace]
-  all_goals repeat' first
-    | exact Nat.le_refl _
-    | exact Nat.le_succ _
-    | exact forkFinalizers_nextId _ _ _ _
-    | solve | apply Nat.le_of_eq; exact (countdown_nextId _ _ _ _ _ _).symm
-    | solve | apply Nat.le_of_eq; exact (linkScope_nextId _ _ _ _ _ _ _).symm
-    | dsimp only
-    | split
+    m.nextId ≤ (evaluatePrim.withFiber interp m f yielding action).machine.nextId :=
+  (Moves.withFiber_interferes interp m f yielding action).nextId
 
 theorem evaluatePrim_nextId (interp : NInterp) (m : NativeMachine) (f : NFiber) (yielding : Bool) :
-    m.nextId ≤ (evaluatePrim interp m f yielding).machine.nextId := by
-  simp only [evaluatePrim, registerRace]
-  repeat' first
-    | exact Nat.le_refl _
-    | exact withFiber_nextId _ _ _ _ _
-    | solve | apply Nat.le_of_eq; exact (stepFrame_nextId _ _ _ _).symm
-    | solve | apply Nat.le_of_eq; exact (finalizerOr_nextId _ _ _ _ _).symm
-    | solve | apply Nat.le_of_eq; exact (countdown_nextId _ _ _ _ _ _).symm
-    | dsimp only
-    | split
+    m.nextId ≤ (evaluatePrim interp m f yielding).machine.nextId :=
+  (Moves.evaluatePrim_interferes interp m f yielding).nextId
 
 theorem exitScoped_nextId (p : NativeEff) (m : NativeMachine) (f : NFiber)
     (yielding : Bool) (exit : ExitV) :
-    m.nextId ≤ (exitScoped p m f yielding exit).machine.nextId := by
-  unfold exitScoped
-  repeat' first | exact Nat.le_refl _ | exact evaluatePrim_nextId _ _ _ _ | dsimp only | split
+    m.nextId ≤ (exitScoped p m f yielding exit).machine.nextId :=
+  (Moves.exitScoped_interferes p m f yielding exit).nextId
 
 theorem evaluateNative_nextId (p : NativeEff) (table : RowTable) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) :
-    m.nextId ≤ (evaluateNative p m f yielding table).machine.nextId := by
-  unfold evaluateNative
-  repeat' first
-    | exact Nat.le_refl _
-    | exact evaluatePrim_nextId _ _ _ _
-    | exact exitScoped_nextId _ _ _ _ _
-    | dsimp only
-    | split
+    m.nextId ≤ (evaluateNative p m f yielding table).machine.nextId :=
+  (Moves.evaluateNative_interferes p table m f yielding).nextId
 
 theorem iteration_nextId (p : NativeEff) (table : RowTable) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) :
     letI := evaluatorFor p table
-    m.nextId ≤ (iteration (interpOf p table) m f yielding).machine.nextId := by
-  letI := evaluatorFor p table
-  unfold iteration
-  dsimp only
-  cases hy : injectYield m (countOp (runloopTop f)) yielding with
-  | none => exact evaluateNative_nextId _ _ _ _ _
-  | some it =>
-    unfold injectYield at hy
-    split at hy
-    · cases hy
-      exact evaluateNative_nextId p table (m.emit _) _ _
-    · cases hy
+    m.nextId ≤ (iteration (interpOf p table) m f yielding).machine.nextId :=
+  (Moves.iteration_interferes p table (interpOf p table) m f yielding).nextId
 
 end Effect4.Program.Guard.NativeStateMotion

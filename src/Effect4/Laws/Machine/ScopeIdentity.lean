@@ -334,4 +334,18 @@ theorem scopeLinkFiber_allocated (mode : Supervision.ScopeMode) (scope : Nat) (f
     rw [← (Prod.mk.inj (Option.some.inj step)).1]
     exact (held.addFinalizer scope s.nextName _).mono (Nat.le_succ _)
 
+/-- Scope identities and registration keys remain below the actual fresh-name supply.
+Consumer: ReleaseCustody.Execution.ScopeRows and its shared store-preservation instance. -/
+def Rows (state : Stores) : Prop :=
+  (state.scopes.entries.map ScopeEntry.key).Nodup ∧
+    (∀ entry ∈ state.scopes.entries, entry.key < state.nextName) ∧ state.ScopeKeysFresh
+
+/-- Read the allocated identities from the joint store predicate. Consumer: native store hooks. -/
+theorem Rows.allocated {state : Stores} (held : Rows state) : Allocated state.scopes state.nextName :=
+  ⟨held.1, held.2.1⟩
+
+/-- Combine identity allocation with the separate registration-key judgment. Consumer: native store hooks. -/
+theorem Rows.of_allocated {state : Stores} (allocated : Allocated state.scopes state.nextName)
+    (fresh : state.ScopeKeysFresh) : Rows state := ⟨allocated.1, allocated.2, fresh⟩
+
 end Effect4.Machine.ScopeIdentity

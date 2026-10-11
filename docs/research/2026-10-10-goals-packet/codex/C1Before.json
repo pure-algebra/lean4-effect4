@@ -1,0 +1,11 @@
+{
+  "src/Effect4/Laws/Program/Guard/Interruption.lean": 415,
+  "src/Effect4/Laws/Program/Guard/DeferredCause.lean": 224,
+  "src/Effect4/Laws/Program/Guard/ReturnFields.lean": 450,
+  "src/Effect4/Laws/Program/Guard/NativeStateMotion.lean": 108,
+  "src/Effect4/Laws/Program/Moves.lean": 300,
+  "src/Effect4/Laws/Program/MovesConnect.lean": 151,
+  "src/Effect4/Laws/Program/Footprint.lean": 264,
+  "src/Effect4/Laws/Program/FrameMoves.lean": 0,
+  "src/Effect4/Laws/Program/Parking.lean": 0
+}

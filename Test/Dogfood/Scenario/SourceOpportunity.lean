@@ -1,6 +1,6 @@
 import Test.Dogfood.Scenario.Atomic.SourcePaths
 import Test.Dogfood.Scenario.SourceUse
-import Effect4.Laws.Program.SourceOpportunityNative
+import Effect4.Laws.Program.SourceOpportunityExecution
 import Effect4.Laws.Program.Guard.ForkLedger
 
 /-!
@@ -433,5 +433,69 @@ theorem workers_native_action_debit (total compileFuel : Nat) (b : Api.Built)
   have carried := interp_action_le b.program (Programs.crewAcquire i) clear m.completedExits b.table suspended next thunkOwned produced
   exact native_action_debit b.program _ b.table m fiber yielding next actionOwned control.1 control.2
     clear source.scopes unique (by simpa only [selected, current] using carried)
+
+/-- An actual Workers Async callback uses a native cancellation producer.
+The result follows from source ownership in every admitted job-count history. -/
+theorem workers_async_cancel_shape (total compileFuel : Nat) (b : Api.Built)
+    (built : Api.Author.build (Workers.crew total) = .ok b) (m : NativeMachine)
+    (history : Effect4.Run.HistoryOf b compileFuel m) (id : FiberId)
+    (fiber : SourceScope.SourceFiber) (lookup : m.fiber? id = some fiber)
+    (register : EffName) (signal : Bool) (cancel : Option EffName)
+    (selected : fiber.frame.current = .async register signal cancel) :
+    ∀ callback ∈ cancel, SourceScope.AsyncCancelAt callback := by
+  have source := SourceFragment.workers_admitted_history_at total compileFuel b built m history
+  have currentOwned := (SourceScope.configuration_fiber b.program m id fiber source lookup).frame.1
+  rw [selected] at currentOwned
+  exact fun callback member => (currentOwned.2 callback member).2
+
+/-- Actual Workers evaluation spends the existing source opportunity at both acquisition sites.
+The source restrictions follow from the built program for every job count. -/
+theorem workers_native_evaluation_debit (total compileFuel : Nat) (b : Api.Built)
+    (built : Api.Author.build (Workers.crew total) = .ok b) (m : NativeMachine)
+    (history : Effect4.Run.HistoryOf b compileFuel m) (id : FiberId)
+    (fiber : SourceScope.SourceFiber) (lookup : m.fiber? id = some fiber)
+    (i : Nat) (member : i ∈ [1, 2]) (yielding : Bool) :
+    Debit b.program (Programs.crewAcquire i) m fiber
+      (evaluateNative b.program m fiber yielding b.table) := by
+  have source := SourceFragment.workers_admitted_history_at total compileFuel b built m history
+  have owned := SourceScope.configuration_fiber b.program m id fiber source lookup
+  have clearFin : ClearFinalizers b.program (Programs.crewAcquire i) := by
+    rw [Programs.workers_built_program total b built]
+    exact workers_clear total i member
+  have clearLoop : ClearLoops b.program (Programs.crewAcquire i) := by
+    rw [Programs.workers_built_program total b built]
+    exact workers_loops_clear total i member
+  have control : SourceScope.SequentialSource b.program ∧ SourceScope.RaceFreeSource b.program := by
+    rw [Programs.workers_built_program total b built]
+    exact workers_control_census total
+  have unique := (Effect4.Machine.ForkLedger.Invariant.Native.reachable_corresponding
+    b.program b.table compileFuel m history.reachable).1
+  exact native_debit b.program _ (SourceFragment.workers_built_fragment total b built)
+    clearFin clearLoop b.table m fiber yielding control.1 control.2 source owned unique
+
+/-- Actual Workers loop commands retain the source opportunity budget at both acquisition sites.
+The result includes forced yields and every actual evaluator settlement outcome. -/
+theorem workers_loop_command_debit (total compileFuel : Nat) (b : Api.Built)
+    (built : Api.Author.build (Workers.crew total) = .ok b) (m : NativeMachine)
+    (history : Effect4.Run.HistoryOf b compileFuel m) (id : FiberId)
+    (i : Nat) (member : i ∈ [1, 2]) (yielding : Bool) (rest : List SourceScope.SourceCommand) :
+    letI := evaluatorFor b.program b.table
+    let next := driveStep (interpOf b.program b.table) m (.loop id yielding) rest
+    recorded (Programs.crewAcquire i) next.1 + fibers b.program (Programs.crewAcquire i) next.1 ≤
+      recorded (Programs.crewAcquire i) m + fibers b.program (Programs.crewAcquire i) m := by
+  have source := SourceFragment.workers_admitted_history_at total compileFuel b built m history
+  have clearFin : ClearFinalizers b.program (Programs.crewAcquire i) := by
+    rw [Programs.workers_built_program total b built]
+    exact workers_clear total i member
+  have clearLoop : ClearLoops b.program (Programs.crewAcquire i) := by
+    rw [Programs.workers_built_program total b built]
+    exact workers_loops_clear total i member
+  have control : SourceScope.SequentialSource b.program ∧ SourceScope.RaceFreeSource b.program := by
+    rw [Programs.workers_built_program total b built]
+    exact workers_control_census total
+  have ledger := Effect4.Machine.ForkLedger.Invariant.Native.reachable_ok
+    b.program b.table compileFuel m history.reachable
+  exact loop_command_debit b.program _ (SourceFragment.workers_built_fragment total b built)
+    clearFin clearLoop b.table m id yielding rest control.1 control.2 source ledger
 
 end Test.Dogfood.Scenario.SourceOpportunity

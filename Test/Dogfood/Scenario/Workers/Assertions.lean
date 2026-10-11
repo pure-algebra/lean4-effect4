@@ -382,7 +382,7 @@ proof_goal registrations_step :
 Reach: actual crew histories, including incomplete release commands and interruption.
 The concrete custody history supplies its command and outside-loop obligations.
 It proves no release order; consumer: `step` and then `history`.
-This assembly remains modulo `Execution.history`. -/
+The custody assertion is proved on actual sequential, race-free source histories. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem releases_step :
   ∀ (total cf : Nat) (b : Api.Built) (m : NativeMachine) (x : Nat × NativeDecision),

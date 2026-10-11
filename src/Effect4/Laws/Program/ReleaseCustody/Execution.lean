@@ -1,17 +1,26 @@
 import Effect4.Laws.Program.ReleaseCustody.Lift
+import Effect4.Laws.Program.ReleaseCustody.ScopeRows
+import Effect4.Laws.Program.ReleaseCustody.OuterFrames
+import Effect4.Laws.Program.ReleaseCustody.HistoryLift
 import Effect4.Laws.Program.ReleaseCustody.NativeAccounting
 import Effect4.Laws.Program.ReleaseCustody.NativeScopeDebit
 import Effect4.Laws.Program.ReleaseCustody.CommandFunding
 import Effect4.Laws.Program.ReleaseCustody.NativeStacks
 import Effect4.Laws.Program.ReleaseCustody.IterationDebit
 import Effect4.Laws.Program.ReleaseCustody.ReplySequencing
+import Effect4.Laws.Program.ReleaseCustody.AdministrativeKept
+import Effect4.Laws.Program.ReleaseCustody.AdministrativeQueue
+import Effect4.Laws.Program.ReleaseCustody.CommandClosure
+import Effect4.Laws.Program.ReleaseCustody.NativeMachineShape
+import Effect4.Laws.Program.ReleaseCustody.CommandSequencing
+import Effect4.Laws.Program.ReleaseCustody.NativeIterationDebit
 
 /-!
 Concept: scope-lifetime-finalization, R11, at most once per registration counted by source identity.
 Question: the native command obligation consumed by `Workers.Assertions.releases_step`.
 Reach: native programs, row tables, command budgets and admitted decision histories.
 The assertion and checked outside-loop lift live in `ReleaseCustody.Lift`.
-The admitted-history obligation remains planned. These assemblies prove no progress or source uniqueness.
+The admitted-history assembly retains custody. It proves no progress or source uniqueness.
 -/
 set_option autoImplicit false
 namespace Effect4.Program.ReleaseCustody.Execution
@@ -51,15 +60,21 @@ theorem load (root : NativeEff) (fuel : Nat) (q : List Nat) : Ready q (Api.load 
     subst fiber
     cases present
 
-/-- Custody on sequential direct-source admitted histories is the remaining R11 obligation.
+/-- Custody on sequential direct-source admitted histories retains every registration credit.
 Consumer: `Workers.Assertions.releases_step`; the source identities and original application scope are unchanged.
 The unrestricted internal command contract is refuted by `CustodyCommandControl.lean`.
-Its repair must retain actual command ownership, saved-frame positions and resume-token correlation.
-This planned endpoint assumes neither an arbitrary command contract nor the desired release bound. -/
+The checked command and scheduler assertions retain actual owners, saved frames and reply codes.
+This endpoint assumes neither an arbitrary command contract nor the desired release bound. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
-proof_goal history (b : Api.Built) (fuel : Nat) (q : List Nat) (m : NativeMachine)
+theorem history (b : Api.Built) (fuel : Nat) (q : List Nat) (m : NativeMachine)
     (fragment : SourceScope.Fragment b.program) (sequential : SourceScope.SequentialSource b.program)
     (raceFree : SourceScope.RaceFreeSource b.program)
-    (held : Run.HistoryOf b fuel m) : Ready q m
+    (held : Run.HistoryOf b fuel m) : Ready q m := by
+  have initial : CommandClosure.Held q b.program (Api.load b.program fuel) :=
+    ⟨load b.program fuel q, RuntimeShape.load b.program fuel,
+      SourceScope.load_at b.program fragment fuel, Guard.guardState_load b.program fuel⟩
+  exact (Run.history_keeps b fuel (CommandClosure.Held q b.program) initial
+    (fun before row kept _ => HistoryLift.decision q b.program b.table row.1 before row.2
+      fragment sequential raceFree kept) m held).1
 
 end Effect4.Program.ReleaseCustody.Execution

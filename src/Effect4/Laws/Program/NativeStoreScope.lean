@@ -27,7 +27,7 @@ theorem progOf_at (root : NativeEff) (name : ProgName) (owned : ProgAt root name
   revert owned
   fun_induction progOf name
   all_goals intro owned
-  all_goals aesop (add norm simp [ProgAt, CodeAt, embed, ThunkAt, StoreThunkAt,
+  all_goals aesop (add norm simp [ProgAt, CodeAt, AsyncCancelAt, embed, ThunkAt, StoreThunkAt,
     StoreActionAt, NameAt, StoreNameAt, StrategyAt]) (add safe apply [finProgram_at])
 
 /-- Stored value callbacks retain their delayed program scopes. -/

@@ -45,7 +45,7 @@ theorem contA_at (root : NativeEff) (fragment : Fragment root) (name : EffName) 
   fun_cases contAOf root name value
   all_goals intro owned
   all_goals aesop (add norm simp [(resolve_arg_at root fragment), (resolve_child_at root fragment),
-    (region_at root fragment), store_contA_at, finProgram_at, capture_at, CodeAt, ThunkAt,
+    (region_at root fragment), store_contA_at, finProgram_at, capture_at, CodeAt, AsyncCancelAt, ThunkAt,
     NameAt, StoreNameAt, OpAt, RegionAt, Prim.ofExit, badShape_at]) (add norm unfold [updateThenK, addCurrentMemoMapK, combineWithK, mergeContextsK, serviceLookupK, bindServiceK]) (add safe apply [childWith_at, (region_at root fragment)])
 
 /-- Calling a saved cause callback retains its addressed handler. -/

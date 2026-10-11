@@ -196,7 +196,13 @@ def ThunkAt (root : NativeEff) : EffThunk → Prop
   | .memoLookup _ _ _ | .forkLayer _ _ _ => False
   | _ => True
 
-/-- The finite primitive syntax retains every source-bearing residual slot. -/
+/-- Native Async producers use represented deferred or timer cancellation names.
+Consumer: source ownership through actual Async parking and source-use accounting. -/
+def AsyncCancelAt : EffName → Prop
+  | .cancelAwait _ | .store (.cancelAwait _) | .store .cancelSleep => True
+  | _ => False
+
+/-- A concrete code retains source ownership in every suspended or saved field. -/
 def CodeAt (root : NativeEff) : NCode → Prop
   | .sync thunk | .suspend thunk | .withFiber thunk => ThunkAt root thunk
   | .iterator name _ | .whileLoop name _ | .asyncFinalizer name => NameAt root name
@@ -208,7 +214,7 @@ def CodeAt (root : NativeEff) : NCode → Prop
   | .onSuccessAndFailure body success failure =>
     CodeAt root body ∧ NameAt root success ∧ NameAt root failure
   | .exitFrame body => CodeAt root body
-  | .async register _ cancel => NameAt root register ∧ ∀ name ∈ cancel, NameAt root name
+  | .async register _ cancel => NameAt root register ∧ ∀ name ∈ cancel, NameAt root name ∧ AsyncCancelAt name
   | _ => True
 
 /-- A response-sensitive callback retains the actual producer copied into its saved frame.
@@ -289,7 +295,7 @@ theorem asyncRoute_at (root : NativeEff) (row : NativeOp) (request : Term) (p : 
     (found : Node.at_ (.eff root) p.path = some (.eff (.perform row request))) :
     CodeAt root (asyncRoute row request p) := by
   fun_cases asyncRoute row request p
-  all_goals aesop (add norm simp [CodeAt, ThunkAt, NameAt, StoreNameAt, badShape])
+  all_goals aesop (add norm simp [CodeAt, ThunkAt, NameAt, StoreNameAt, AsyncCancelAt, badShape])
 
 /-- The compiler retains source scope in every residual slot of this source fragment. -/
 theorem compile_at (root : NativeEff) (fragment : Fragment root) (e : NativeEff) (p : Point)
