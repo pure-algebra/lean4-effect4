@@ -88,6 +88,13 @@ Behaviour gates only where a slice changes executable code, and then at a sweep.
    Then replace the pop-chain copies (`passPushed`, `joinPushed`, `popFrom`, `getCont`,
    `resumeValue`, `resumeCause` re-walked for about 20 predicates) by instances. Do
    `FinalizerCredits` first: it is an exact instance of `FrameWeights`.
+   - **The store through the labels (audit, 2026-10-11).** A `step` label holds the code it ran,
+     and a store step's code is `sync (op o)`. Define the cells a word writes as the homomorphism
+     from labels to `(Finset RefKey, ∪)` through `o.refKernel`. Prove one law: the iteration's
+     store is its executed operations folded over the store before. With
+     `RefKernel.refWriteBack_peek_other`, a cell outside the written set keeps its value. That
+     lift replaces each scenario's writer-census premise
+     (`../2026-10-11-tokens-in-places/model-first.md`).
 3. **The ledgers as instances of L1.**
    - First delete what `LedgerFinalizer` makes redundant: `FinalizerCommands`' command proof and
      `FinalizerBookkeeping`'s edit lemmas, keeping their names as one-line instances.
