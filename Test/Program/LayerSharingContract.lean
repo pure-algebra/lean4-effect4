@@ -84,4 +84,14 @@ def successVal : Option ExitV → Option Val
 -- tested: a call nested in another builds its own: two builds, where a key by path alone
 -- would hand the inner call the outer call's build
 #guard successVal (Api.run nestedCall 1600).exit == some (.nat 2)
+-- control: the nested call's callback needs the counter's service, which the printed parameter
+-- type cannot carry, so the printer refuses it at the callback (`passedRequirementFault`,
+-- src/Effect4/Codegen/CallbackRequirements.lean; seat 3B's finding: tsgo refused it, TS2375)
+#guard (match Api.emitModule "main" nestedCall [] with
+  | .error (.print (.callbackRequirement path)) => path == [1, 1, 0, 0, 0, 0]
+  | _ => false)
+-- reader: the single call's callback needs nothing, and the module prints
+#guard (match Api.emitModule "main" oneCall [] with
+  | .ok _ => true
+  | .error _ => false)
 end Test.Program.LayerSharingContract
