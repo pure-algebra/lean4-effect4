@@ -81,3 +81,11 @@ The native command census now retains clearing-free words for live fibers.
 The raw frame theorem projects the same census.
 See [the checked receipt](2026-10-10-goals-packet/codex/C2LiveCommandsReceipt.md).
 The complete birth witness and run stack relation remain open.
+
+## Coherent births and the native mask connection
+
+The evaluator and command classifications now retain one initialization per allocated fiber id.
+The native whole-machine mask relation follows from this witness.
+The native command mask proof now reads the shared classification.
+See [the checked receipt](2026-10-10-goals-packet/codex/C2BirthsReceipt.md).
+Source-point birth ownership, the polymorphic cleanup and the run stack relation remain open.

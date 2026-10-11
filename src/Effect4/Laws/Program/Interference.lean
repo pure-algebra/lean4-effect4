@@ -103,45 +103,75 @@ theorem OtherEdits.exit {g h : NFiber} (w : OtherEdits g h) : h.exit = g.exit :=
   | refl => rfl
   | tail _ e ih => exact e.exit.trans ih
 
-/-- **The interference of an evaluation on the machine's fibers.** The id counter does not go back,
-and every fiber of `m'` is an edited fiber of `m` or a new one. -/
+/-- The initial fields of an allocated fiber, retained as proof data.
+This witness reuses the machine's code and context; it adds no stored program syntax. -/
+structure Birth where
+  program : NCode
+  flag : Bool
+  budget : Nat × Bool
+  context : Ctx
+
+/-- A birth names the machine's existing initialization. -/
+def Birth.fiber (birth : Birth) (id : FiberId) : NFiber :=
+  RunFiber.make id birth.program birth.flag birth.budget birth.context
+
+/-- A total witness table has an irrelevant entry outside the allocated interval. -/
+def Birth.empty : Birth := ⟨.success .unit, true, (0, false), emptyCtx⟩
+
+/-- The shared table identifies every fresh fiber's initialization by its allocated id.
+The interval and the table survive composition; they serve the whole-machine mask instance. -/
 structure Interferes (m m' : NativeMachine) : Prop where
-  /-- The id counter does not go back. -/
   nextId : m.nextId ≤ m'.nextId
-  /-- Every fiber is an edited old one, or an edited initialization.
-  The initialization retains its actual program and context, without asserting source ownership. -/
-  fibers : ∀ g' ∈ m'.fibers, (∃ g ∈ m.fibers, OtherEdits g g') ∨
+  births : ∃ born : Nat → Birth, ∀ g' ∈ m'.fibers,
+    (∃ g ∈ m.fibers, OtherEdits g g') ∨
+    (m.nextId ≤ g'.id.value ∧ g'.id.value < m'.nextId ∧
+      OtherEdits ((born g'.id.value).fiber g'.id) g')
+
+/-- The existing per-fiber initialization interface forgets the shared table and upper bound. -/
+theorem Interferes.fibers {m m' : NativeMachine} (h : Interferes m m') (g' : NFiber)
+    (member : g' ∈ m'.fibers) : (∃ g ∈ m.fibers, OtherEdits g g') ∨
     (m.nextId ≤ g'.id.value ∧ ∃ program flag budget context,
-      OtherEdits (RunFiber.make g'.id program flag budget context) g')
+      OtherEdits (RunFiber.make g'.id program flag budget context) g') := by
+  obtain ⟨born, rows⟩ := h.births
+  rcases rows g' member with old | ⟨lower, _, word⟩
+  · exact .inl old
+  · exact .inr ⟨lower, (born g'.id.value).program, (born g'.id.value).flag,
+      (born g'.id.value).budget, (born g'.id.value).context, word⟩
 
-/-- No interference. -/
+/-- No interference allocates no new fiber. -/
 theorem Interferes.refl (m : NativeMachine) : Interferes m m :=
-  ⟨Nat.le_refl _, fun g' mem => .inl ⟨g', mem, .refl _⟩⟩
+  ⟨Nat.le_refl _, fun _ => Birth.empty, fun g' mem => .inl ⟨g', mem, .refl _⟩⟩
 
-/-- Interference composes. -/
+/-- Composition concatenates the allocation intervals and retains each interval's birth table. -/
 theorem Interferes.trans {m m' m'' : NativeMachine} (a : Interferes m m') (b : Interferes m' m'') :
     Interferes m m'' := by
-  refine ⟨Nat.le_trans a.nextId b.nextId, fun g'' mem => ?_⟩
-  rcases b.fibers g'' mem with ⟨g', mem', w'⟩ | fresh
-  · rcases a.fibers g' mem' with ⟨g, memOld, w⟩ | fresh'
+  obtain ⟨first, rows⟩ := a.births
+  obtain ⟨second, rows'⟩ := b.births
+  refine ⟨Nat.le_trans a.nextId b.nextId, fun n => if n < m'.nextId then first n else second n,
+    fun g'' mem => ?_⟩
+  rcases rows' g'' mem with ⟨g', mem', w'⟩ | ⟨lower, upper, born⟩
+  · rcases rows g' mem' with ⟨g, memOld, w⟩ | ⟨lower, upper, born⟩
     · exact .inl ⟨g, memOld, w.trans w'⟩
-    · obtain ⟨bound, program, flag, budget, context, born⟩ := fresh'
-      refine .inr ⟨?_, program, flag, budget, context, ?_⟩
+    · refine .inr ⟨w'.id ▸ lower, ?_, ?_⟩
       · rw [w'.id]
-        exact bound
-      · rw [w'.id]
+        exact Nat.lt_of_lt_of_le upper b.nextId
+      · dsimp only
+        rw [w'.id, if_pos upper]
         exact born.trans w'
-  · exact .inr ⟨Nat.le_trans a.nextId fresh.1, fresh.2⟩
+  · refine .inr ⟨Nat.le_trans a.nextId lower, upper, ?_⟩
+    dsimp only
+    rw [if_neg (Nat.not_lt.mpr lower)]
+    exact born
 
 /-- A machine edit that keeps the fiber list and does not lower the counter. -/
 theorem Interferes.ofFibers {m m' : NativeMachine} (fibers : m'.fibers = m.fibers)
     (nextId : m.nextId ≤ m'.nextId) : Interferes m m' :=
-  ⟨nextId, fun g' mem => .inl ⟨g', fibers ▸ mem, .refl _⟩⟩
+  ⟨nextId, fun _ => Birth.empty, fun g' mem => .inl ⟨g', fibers ▸ mem, .refl _⟩⟩
 
-/-- Replacing a fiber of the machine by an edit of it. -/
+/-- Replacing a fiber of the machine by an edit of it allocates no birth. -/
 theorem Interferes.update {m : NativeMachine} {t t' : NFiber} (mem : t ∈ m.fibers)
     (edit : OtherEdits t t') : Interferes m (m.update t') := by
-  refine ⟨Nat.le_refl _, fun g' memNew => ?_⟩
+  refine ⟨Nat.le_refl _, fun _ => Birth.empty, fun g' memNew => ?_⟩
   unfold RunMachine.update at memNew
   obtain ⟨g, memOld, eq⟩ := List.mem_map.mp memNew
   split at eq
@@ -160,12 +190,16 @@ theorem Interferes.modify {m : NativeMachine} (id : FiberId) (k : NFiber → NFi
 /-- Appending to the trace after an interference. -/
 theorem Interferes.thenEmit {m m' : NativeMachine} (h : Interferes m m') (events : List NRunEvent) :
     Interferes m (m'.emit events) :=
-  ⟨h.nextId, h.fibers⟩
+  ⟨h.nextId, h.births⟩
 
-/-- A machine edit that keeps the fiber list and the counter, after an interference. -/
+/-- A machine edit that keeps the fiber list and does not lower the counter. -/
 theorem Interferes.thenSame {m m' m'' : NativeMachine} (h : Interferes m m')
-    (fibers : m''.fibers = m'.fibers) (nextId : m'.nextId ≤ m''.nextId) : Interferes m m'' :=
-  ⟨Nat.le_trans h.nextId nextId, fun g mem => h.fibers g (fibers ▸ mem)⟩
+    (fibers : m''.fibers = m'.fibers) (nextId : m'.nextId ≤ m''.nextId) : Interferes m m'' := by
+  obtain ⟨born, rows⟩ := h.births
+  refine ⟨Nat.le_trans h.nextId nextId, born, fun g mem => ?_⟩
+  rcases rows g (fibers ▸ mem) with old | ⟨lower, upper, word⟩
+  · exact .inl old
+  · exact .inr ⟨lower, Nat.lt_of_lt_of_le upper nextId, word⟩
 
 /-- Appending one observer to the fiber an id names, after an interference. -/
 theorem Interferes.thenObserve {m m' : NativeMachine} (h : Interferes m m') (id : FiberId)
@@ -182,16 +216,21 @@ theorem Interferes.observe (m : NativeMachine) (id : FiberId) (o : Observer) :
 theorem Interferes.emit (m : NativeMachine) (events : List NRunEvent) : Interferes m (m.emit events) :=
   .ofFibers rfl (Nat.le_refl _)
 
-/-- A spawn appends one fiber, whose id is the old counter. -/
+/-- A spawn records the actual program, start flag, budget and parent's context at the new id. -/
 theorem Interferes.spawn (interp : NInterp) (m : NativeMachine) (parent : NFiber) (program : NCode)
     (options : Supervision.ForkOptions) (site : List Nat) :
     Interferes m (spawn interp m parent program options site).1 := by
-  refine ⟨Nat.le_succ _, fun g' mem => ?_⟩
+  let flag := match options.maskMode with
+    | .interruptible => true
+    | .uninterruptible => false
+    | .inherit => parent.frame.interruptible
+  refine ⟨Nat.le_succ _, fun _ => ⟨program, flag, interp.budgetOf parent.context, parent.context⟩,
+    fun g' mem => ?_⟩
   unfold Machine.spawn at mem
   rcases List.mem_append.mp mem with old | child
   · exact .inl ⟨g', old, .refl _⟩
   · rw [List.mem_singleton.mp child]
-    exact .inr ⟨Nat.le_refl _, program, _, _, parent.context, .refl _⟩
+    exact .inr ⟨Nat.le_refl _, Nat.lt_succ_self _, .refl _⟩
 
 /-- Starting a spawned child keeps the fibers. -/
 theorem Interferes.start (m : NativeMachine) (parent : NFiber) (child : FiberId) (immediately : Bool) :
@@ -249,7 +288,7 @@ theorem Interferes.linkScope (interp : NInterp) (m : NativeMachine) (mode : Supe
 /-- A park's cleanup filters every fiber's observers. -/
 theorem Interferes.filterObservers (m : NativeMachine) (keep : Observer → Bool) :
     Interferes m { m with fibers := m.fibers.map fun g => { g with observers := g.observers.filter keep } } := by
-  refine ⟨Nat.le_refl _, fun g' mem => ?_⟩
+  refine ⟨Nat.le_refl _, fun _ => Birth.empty, fun g' mem => ?_⟩
   obtain ⟨g, memOld, eq⟩ := List.mem_map.mp mem
   exact .inl ⟨g, memOld, eq ▸ .tail (.refl g) (.filterObservers g keep)⟩
 

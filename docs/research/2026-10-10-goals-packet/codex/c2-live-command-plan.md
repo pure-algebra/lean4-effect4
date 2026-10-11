@@ -18,3 +18,12 @@ It proves no progress or outside-host agreement.
 
 Completion requires the native command census, both projections, the mask-chain reader,
 a narrow build and a cycle-aware axiom audit.
+
+## Shared birth witnesses
+
+The whole-machine mask instance needs one birth flag per allocated id.
+A separate existential flag for each fiber does not supply that table.
+The evaluator and command classifiers therefore retain one initialization table and both allocation bounds.
+Composition chooses the table by the intermediate allocation boundary.
+The old per-fiber interface projects this stronger witness without choice.
+The consumer is the existing `MaskAged` relation and the native saved-mask command proof.

@@ -1,5 +1,5 @@
 import Effect4.Laws.Machine.MaskRuns
-import Effect4.Laws.Program.MovesConnect
+import Effect4.Laws.Program.CommandFrames
 import Effect4.Api
 
 /-!
@@ -66,34 +66,33 @@ theorem evaluateNative_keepsMask (root : NativeEff) (table : RowTable)
     (m : RunMachine EffName EffThunk Val Err Defect FiberId Ann Ctx Stores)
     (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) (y : Bool) :
     IterKeepsMask m f (evaluateNative root m f y table) := by
-  have ancillary : MaskAged m (evaluateNative root m f y table).machine ∧
-      noClear (evaluateNative root m f y table).nested = true := by
+  have pending : noClear (evaluateNative root m f y table).nested = true := by
     unfold evaluateNative
     split
     · split
       · unfold enterScoped
-        exact ⟨MaskAged.refl m, rfl⟩
-      · exact ⟨(evaluatePrim_keepsMask _ m f y).1, (evaluatePrim_keepsMask _ m f y).2.2.1⟩
+        rfl
+      · exact (evaluatePrim_keepsMask _ m f y).2.2.1
     · unfold exitScoped
       dsimp only
       split
       · split
-        · exact ⟨MaskAged.refl m, rfl⟩
-        · split <;> exact ⟨MaskAged.refl m, rfl⟩
-      · exact ⟨(evaluatePrim_keepsMask _ m f y).1, (evaluatePrim_keepsMask _ m f y).2.2.1⟩
+        · rfl
+        · split <;> rfl
+      · exact (evaluatePrim_keepsMask _ m f y).2.2.1
     · unfold exitScoped
       dsimp only
       split
       · split
-        · exact ⟨MaskAged.refl m, rfl⟩
-        · split <;> exact ⟨MaskAged.refl m, rfl⟩
-      · exact ⟨(evaluatePrim_keepsMask _ m f y).1, (evaluatePrim_keepsMask _ m f y).2.2.1⟩
-    · exact ⟨(evaluatePrim_keepsMask _ m f y).1, (evaluatePrim_keepsMask _ m f y).2.2.1⟩
+        · rfl
+        · split <;> rfl
+      · exact (evaluatePrim_keepsMask _ m f y).2.2.1
+    · exact (evaluatePrim_keepsMask _ m f y).2.2.1
   have footprint := Moves.evaluateNative_footprint root table m f y
-  exact ⟨ancillary.1,
+  exact ⟨(Moves.evaluateNative_interferes root table m f y).maskAged,
     ⟨footprint.id, fun live => footprint.exit.symm.trans live,
       fun _ base held => Moves.evaluateNative_maskChain base root table m f y held⟩,
-    ancillary.2, fun _ finished =>
+    pending, fun _ finished =>
       (Moves.evaluateNative_parking root table m f y).finished.stack finished⟩
 
 /-- **Each live fiber of a run of a compiled program holds the saved mask's chain at its start

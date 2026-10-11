@@ -42,6 +42,13 @@ example (p : NativeEff) (table : RowTable) (m : NativeMachine) (c : Guard.NCmd)
       (driveStep (evaluator := evaluatorFor p table) (interpOf p table) m c rest).1 :=
   guarded_driveStep_liveTransports p table m c rest queue
 
+/-- Reader: a real spawn retains a coherent birth entry for the whole-machine mask relation. -/
+example : MaskAged machine
+    (spawn (interpOf program []) machine fiber (compile program 32)
+      ⟨true, true, .inherit⟩ []).1 :=
+  (Moves.Interferes.spawn (interpOf program []) machine fiber (compile program 32)
+    ⟨true, true, .inherit⟩ []).maskAged
+
 /-- Control: the unchecked raw clear has no clearing-free live transport. -/
 example : ¬ Moves.Transports False machine after := by
   intro transported

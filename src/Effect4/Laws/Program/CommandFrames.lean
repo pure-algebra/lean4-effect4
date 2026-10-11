@@ -270,31 +270,52 @@ theorem OtherEdits.transport {allowClear : Prop} {f g : NFiber} (w : OtherEdits 
         (OtherEdit.exit (.interrupted interp _ who extra))
         (.single (.interrupted interp _ who extra))
 
-/-- Joint command classification, including the live word and each fresh fiber's initialization.
-The parameter records the raw command boundary; `False` is the guarded classification. -/
+/-- Joint command classification retains one initialization for each allocated id.
+The parameter distinguishes raw clearing from the guarded live word. -/
 structure Transports (allowClear : Prop) (m m' : NativeMachine) : Prop where
   nextId : m.nextId ≤ m'.nextId
-  fibers : ∀ g' ∈ m'.fibers,
+  births : ∃ born : Nat → Birth, ∀ g' ∈ m'.fibers,
+    (∃ g ∈ m.fibers, Transport allowClear g g') ∨
+    (m.nextId ≤ g'.id.value ∧ g'.id.value < m'.nextId ∧
+      Transport allowClear ((born g'.id.value).fiber g'.id) g')
+
+/-- The existing per-fiber interface projects the coherent birth table. -/
+theorem Transports.fibers {allowClear : Prop} {m m' : NativeMachine}
+    (h : Transports allowClear m m') (g' : NFiber) (member : g' ∈ m'.fibers) :
     (∃ g ∈ m.fibers, Transport allowClear g g') ∨
     (m.nextId ≤ g'.id.value ∧ ∃ program flag budget context,
-      Transport allowClear (RunFiber.make g'.id program flag budget context) g')
+      Transport allowClear (RunFiber.make g'.id program flag budget context) g') := by
+  obtain ⟨born, rows⟩ := h.births
+  rcases rows g' member with old | ⟨lower, _, word⟩
+  · exact .inl old
+  · exact .inr ⟨lower, (born g'.id.value).program, (born g'.id.value).flag,
+      (born g'.id.value).budget, (born g'.id.value).context, word⟩
 
 /-- No command transports every existing fiber to itself. -/
 theorem Transports.refl (allowClear : Prop) (m : NativeMachine) : Transports allowClear m m :=
-  ⟨Nat.le_refl _, fun g mem => .inl ⟨g, mem, .refl _ _⟩⟩
+  ⟨Nat.le_refl _, fun _ => Birth.empty, fun g mem => .inl ⟨g, mem, .refl _ _⟩⟩
 
-/-- Command transports compose, including births between the two cuts. -/
+/-- Command transport composes through the two adjacent allocation intervals. -/
 theorem Transports.trans {allowClear : Prop} {m m' m'' : NativeMachine}
     (a : Transports allowClear m m') (b : Transports allowClear m' m'') :
     Transports allowClear m m'' := by
-  refine ⟨Nat.le_trans a.nextId b.nextId, fun last member => ?_⟩
-  rcases b.fibers last member with ⟨middle, member', word'⟩ | born
-  · rcases a.fibers middle member' with ⟨first, before, word⟩ | ⟨lower, p, flag, budget, ctx, word⟩
-    · exact .inl ⟨first, before, word.trans word'⟩
-    · refine .inr ⟨word'.id ▸ lower, p, flag, budget, ctx, ?_⟩
-      rw [word'.id]
-      exact word.trans word'
-  · exact .inr ⟨Nat.le_trans a.nextId born.1, born.2⟩
+  obtain ⟨first, rows⟩ := a.births
+  obtain ⟨second, rows'⟩ := b.births
+  refine ⟨Nat.le_trans a.nextId b.nextId, fun n => if n < m'.nextId then first n else second n,
+    fun last member => ?_⟩
+  rcases rows' last member with ⟨middle, member', word'⟩ | ⟨lower, upper, word⟩
+  · rcases rows middle member' with ⟨initial, before, word⟩ | ⟨lower, upper, word⟩
+    · exact .inl ⟨initial, before, word.trans word'⟩
+    · refine .inr ⟨word'.id ▸ lower, ?_, ?_⟩
+      · rw [word'.id]
+        exact Nat.lt_of_lt_of_le upper b.nextId
+      · dsimp only
+        rw [word'.id, if_pos upper]
+        exact word.trans word'
+  · refine .inr ⟨Nat.le_trans a.nextId lower, upper, ?_⟩
+    dsimp only
+    rw [if_neg (Nat.not_lt.mpr lower)]
+    exact word
 
 /-- An already allocated live fiber has a live predecessor and a clearing-free frame word.
 Consumer: the goals packet's fiber positions and the region bracket's run relation. -/
@@ -308,13 +329,28 @@ theorem Transports.liveOld {m m' : NativeMachine} (h : Transports False m m')
     · exact ⟨f, before, word.id.symm, wasLive, edits⟩
   · exact False.elim (Nat.not_le_of_lt old born.1)
 
-/-- Evaluation interference has no clearing edit. -/
+/-- Evaluation interference has no clearing edit and retains the same birth table. -/
 theorem Transports.ofInterferes {allowClear : Prop} {m m' : NativeMachine} (h : Interferes m m') :
     Transports allowClear m m' := by
-  refine ⟨h.nextId, fun g mem => ?_⟩
-  rcases h.fibers g mem with ⟨f, before, edits⟩ | ⟨lower, p, flag, budget, ctx, edits⟩
+  obtain ⟨born, rows⟩ := h.births
+  refine ⟨h.nextId, born, fun g mem => ?_⟩
+  rcases rows g mem with ⟨f, before, edits⟩ | ⟨lower, upper, edits⟩
   · exact .inl ⟨f, before, edits.transport⟩
-  · exact .inr ⟨lower, p, flag, budget, ctx, edits.transport⟩
+  · exact .inr ⟨lower, upper, edits.transport⟩
+
+/-- The shared birth table supplies the whole-machine mask instance without choice.
+Consumer: the native evaluator and guarded command halves of the saved-mask chain. -/
+theorem Transports.maskAged {m m' : NativeMachine} (h : Transports False m m') :
+    MaskAged m m' := by
+  obtain ⟨born, rows⟩ := h.births
+  refine ⟨h.nextId, fun n => (born n).flag, fun g member => ?_⟩
+  rcases rows g member with ⟨f, before, word⟩ | ⟨lower, upper, word⟩
+  · exact .inl ⟨f, before, word.maskLater⟩
+  · exact .inr ⟨lower, upper, fun live => word.maskLater.2.2 live _ rfl⟩
+
+/-- Evaluation interference specializes through the same mask instance. -/
+theorem Interferes.maskAged {m m' : NativeMachine} (h : Interferes m m') : MaskAged m m' :=
+  (Transports.ofInterferes (allowClear := False) h).maskAged
 
 /-- Forget the live and initialized-frame witnesses. -/
 theorem Transports.frames {allowClear : Prop} {m m' : NativeMachine} (h : Transports allowClear m m') :
@@ -324,36 +360,44 @@ theorem Transports.frames {allowClear : Prop} {m m' : NativeMachine} (h : Transp
   · exact .inl ⟨f, before, edits.id.symm, edits.frame⟩
   · exact .inr fresh.1
 
-/-- Changes outside the fiber table retain its transport. -/
+/-- Changes outside the fiber table retain its transport and allocation interval. -/
 theorem Transports.thenSame {allowClear : Prop} {m m' m'' : NativeMachine}
     (h : Transports allowClear m m') (fibers : m''.fibers = m'.fibers)
-    (nextId : m'.nextId ≤ m''.nextId) : Transports allowClear m m'' :=
-  ⟨Nat.le_trans h.nextId nextId, fun g mem => h.fibers g (fibers ▸ mem)⟩
+    (nextId : m'.nextId ≤ m''.nextId) : Transports allowClear m m'' := by
+  obtain ⟨born, rows⟩ := h.births
+  refine ⟨Nat.le_trans h.nextId nextId, born, fun g member => ?_⟩
+  rcases rows g (fibers ▸ member) with old | ⟨lower, upper, word⟩
+  · exact .inl old
+  · exact .inr ⟨lower, Nat.lt_of_lt_of_le upper nextId, word⟩
 
-/-- Write a transported old fiber or a transported initialization. -/
+/-- Write a transported fiber from the original machine; no birth witness changes. -/
 theorem Transports.thenWrite {allowClear : Prop} {m m' : NativeMachine} {t : NFiber}
-    (h : Transports allowClear m m')
-    (source : (∃ g ∈ m.fibers, Transport allowClear g t) ∨
-      (m.nextId ≤ t.id.value ∧ ∃ program flag budget context,
-        Transport allowClear (RunFiber.make t.id program flag budget context) t)) :
+    (h : Transports allowClear m m') (source : ∃ g ∈ m.fibers, Transport allowClear g t) :
     Transports allowClear m (m'.update t) := by
-  refine ⟨h.nextId, fun g' mem => ?_⟩
+  obtain ⟨born, rows⟩ := h.births
+  refine ⟨h.nextId, born, fun g' mem => ?_⟩
   unfold RunMachine.update at mem
   obtain ⟨g, memMid, eq⟩ := List.mem_map.mp mem
   split at eq
-  · exact eq ▸ source
-  · exact eq ▸ h.fibers g memMid
+  · exact eq ▸ .inl source
+  · exact eq ▸ rows g memMid
 
-/-- Compose the transport of a table member with its next edit. -/
+/-- A table member's next edit uses its existing birth entry when the fiber is fresh. -/
 theorem Transports.thenUpdate {allowClear : Prop} {m m' : NativeMachine} {t t' : NFiber}
     (h : Transports allowClear m m') (mem : t ∈ m'.fibers) (edit : Transport allowClear t t') :
     Transports allowClear m (m'.update t') := by
-  refine h.thenWrite ?_
-  rcases h.fibers t mem with ⟨g, before, word⟩ | ⟨lower, p, flag, budget, ctx, word⟩
-  · exact .inl ⟨g, before, word.trans edit⟩
-  · refine .inr ⟨edit.id ▸ lower, p, flag, budget, ctx, ?_⟩
-    rw [edit.id]
-    exact word.trans edit
+  obtain ⟨born, rows⟩ := h.births
+  refine ⟨h.nextId, born, fun g' member => ?_⟩
+  unfold RunMachine.update at member
+  obtain ⟨g, before, same⟩ := List.mem_map.mp member
+  split at same
+  · subst g'
+    rcases rows t mem with ⟨initial, present, word⟩ | ⟨lower, upper, word⟩
+    · exact .inl ⟨initial, present, word.trans edit⟩
+    · refine .inr ⟨edit.id ▸ lower, edit.id ▸ upper, ?_⟩
+      rw [edit.id]
+      exact word.trans edit
+  · exact same ▸ rows g before
 
 /-- An edit outside a fiber's frame and exit retains its transport. -/
 theorem Transports.thenModify {allowClear : Prop} {m m' : NativeMachine}
@@ -409,10 +453,7 @@ theorem settle_transports {allowClear : Prop} {m : NativeMachine} {f : NFiber}
     (mem : f ∈ m.fibers) (id : FiberId) (rest : List NCommand) (it : NIter)
     (machine : Transports allowClear m it.machine) (fiber : Transport allowClear f it.fiber) :
     Transports allowClear m (settle id rest it).1 := by
-  have source : (∃ g ∈ m.fibers, Transport allowClear g it.fiber) ∨
-      (m.nextId ≤ it.fiber.id.value ∧ ∃ program flag budget context,
-        Transport allowClear (RunFiber.make it.fiber.id program flag budget context) it.fiber) :=
-    .inl ⟨f, mem, fiber⟩
+  have source : ∃ g ∈ m.fibers, Transport allowClear g it.fiber := ⟨f, mem, fiber⟩
   unfold settle
   split
   · exact machine.thenWrite source
@@ -488,37 +529,40 @@ theorem fireObserver_transports {allowClear : Prop} (interp : NInterp) {m : Nati
     (id : FiberId) (exit : ExitV) (acc : NativeMachine × List NCommand)
     (h : Transports allowClear m acc.1) (observer : Observer) :
     Transports allowClear m (fireObserver interp id exit acc observer).1 := by
+  apply h.trans
+  have base : Transports allowClear acc.1 acc.1 := .refl _ _
   unfold fireObserver
   dsimp only
   split
-  · exact h.thenEmit _
-  · exact (h.thenEmit _).thenModify _ _ (fun _ => rfl) (fun _ => rfl) (fun _ => rfl)
+  · exact base.thenEmit _
+  · exact (base.thenEmit _).thenModify _ _ (fun _ => rfl) (fun _ => rfl) (fun _ => rfl)
   · split
-    · exact (h.thenEmit _).thenHalt _
-    · exact (h.thenEmit _).thenState _
+    · exact (base.thenEmit _).thenHalt _
+    · exact (base.thenEmit _).thenState _
   · split
-    · exact h.thenEmit _
+    · exact base.thenEmit _
     · rename_i w found
       split
-      · exact h.thenEmit _
+      · exact base.thenEmit _
       · rename_i p pending
-        have source := (h.thenEmit _).fibers w (List.mem_of_find?_eq_some found)
+        have source : ∃ g ∈ acc.1.fibers, Transport allowClear g w :=
+          ⟨w, List.mem_of_find?_eq_some found, .refl _ _⟩
         split
         · refine Transports.thenWrite ?_ source
           split
-          · exact interruptEach_transports interp _ _ _ _ (h.thenEmit _)
-          · exact h.thenEmit _
+          · exact interruptEach_transports interp _ _ _ _ (base.thenEmit _)
+          · exact base.thenEmit _
         · refine Transports.thenWrite ?_ source
           refine Transports.thenModify ?_ _ _ (fun _ => rfl) (fun _ => rfl) (fun _ => rfl)
           split
-          · exact interruptEach_transports interp _ _ _ _ (h.thenEmit _)
-          · exact h.thenEmit _
+          · exact interruptEach_transports interp _ _ _ _ (base.thenEmit _)
+          · exact base.thenEmit _
   · split
-    · exact h.thenEmit _
+    · exact base.thenEmit _
     · split
-      · exact (((h.thenEmit _).thenUpdateRace _).thenUpdateRace _).thenEmit _
-      · exact (h.thenEmit _).thenUpdateRace _
-  · exact (h.thenEmit _).thenEmit _
+      · exact (((base.thenEmit _).thenUpdateRace _).thenUpdateRace _).thenEmit _
+      · exact (base.thenEmit _).thenUpdateRace _
+  · exact (base.thenEmit _).thenEmit _
 
 /-- Publication permits clearing only after the exit is present; the children branch retains a live word. -/
 theorem exitFiber_transports {allowClear : Prop} (interp : NInterp) {m : NativeMachine}
@@ -534,8 +578,8 @@ theorem exitFiber_transports {allowClear : Prop} (interp : NInterp) {m : NativeM
     dsimp only
     split
     · refine Transports.thenWrite ?_
-        (.inl ⟨f, mem, .exited rfl
-          (.tail (.single (.setDeferred f.frame false)) (.clearStack _)) rfl⟩)
+        ⟨f, mem, .exited rfl
+          (.tail (.single (.setDeferred f.frame false)) (.clearStack _)) rfl⟩
       apply Transports.thenEmit
       exact (Transports.refl _ m).thenUpdate mem
         (.exited rfl (.single (.setDeferred _ false)) rfl)

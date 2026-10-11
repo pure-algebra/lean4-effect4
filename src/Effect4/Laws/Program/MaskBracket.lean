@@ -146,26 +146,6 @@ theorem clearsExited_of_guard (p : NativeEff) (table : RowTable) {m : NativeMach
   rw [mem_eq_of_ids_nodup m.fibers state.fiberIds mem memg (same.trans fid.symm)]
   exact exited
 
-/-- **One command of a compiled program's loop keeps the chain's invariant, under the guard's
-queue alone.** The chain's command condition is on `Cmd.exitDone`, and the guard's queue gives
-its first alternative: the fiber has exited. A step of `LoopCut.step`. -/
-@[semantics "scope-lifetime-finalization"]
-theorem guarded_driveStep_maskRuns (p : NativeEff) (table : RowTable) (bases : List Bool)
-    (m : NativeMachine) (c : NCmd) (rest : List NCmd)
-    (queue : GuardQueue p table m (c :: rest)) (kept : MaskRuns bases m) :
-    ∃ bases', bases <+: bases' ∧ MaskRuns bases'
-      (driveStep (evaluator := evaluatorFor p table) (interpOf p table) m c rest).1 := by
-  letI := evaluatorFor p table
-  refine driveStep_maskRuns (interpOf p table)
-    (fun m f y => evaluateNative_keepsMask p table m f y) bases m c rest kept ?_
-  cases c with
-  | exitDone id =>
-    intro f found
-    obtain ⟨g, lookup, exited⟩ := queue.authority _ (List.mem_cons_self ..)
-    cases lookup.symm.trans found
-    exact Or.inl exited
-  | _ => trivial
-
 /-- The existing command authority discharges the live transport boundary.
 Consumer: run stack locality before the region bracket's entry stack is reached.
 This gives no progress and does not by itself discharge the bracket's `inside` premise. -/
@@ -181,6 +161,17 @@ theorem guarded_driveStep_liveTransports (p : NativeEff) (table : RowTable)
   obtain ⟨g, lookup, exited⟩ := queue.authority _ (List.mem_cons_self ..)
   cases lookup.symm.trans found
   exact exited
+
+/-- **One command of a compiled program's loop keeps the chain's invariant, under the guard's
+queue alone.** The chain's command condition is on `Cmd.exitDone`, and the guard's queue gives
+its first alternative: the fiber has exited. A step of `LoopCut.step`. -/
+@[semantics "scope-lifetime-finalization"]
+theorem guarded_driveStep_maskRuns (p : NativeEff) (table : RowTable) (bases : List Bool)
+    (m : NativeMachine) (c : NCmd) (rest : List NCmd)
+    (queue : GuardQueue p table m (c :: rest)) (kept : MaskRuns bases m) :
+    ∃ bases', bases <+: bases' ∧ MaskRuns bases'
+      (driveStep (evaluator := evaluatorFor p table) (interpOf p table) m c rest).1 := by
+  exact kept.aged (guarded_driveStep_liveTransports p table m c rest queue).maskAged
 
 /-! ## A cut of a compiled program's command loop -/
 
