@@ -17,8 +17,9 @@ Branch `probe/goals-store-invariants`, based on `refactor/phase1-phase3` at `5b4
 - **The large open cost is one general law the tree lacks: each fiber's position in its own code
   (G2).** All four families likely need it. Section 4.4 sizes it.
 - **No goal of the family is false, as far as this probe can tell.** The DOGFOOD seat's search
-  found no run against them in 606420 scripts. A reading of the machine finds no hostile move that
-  breaks the invariants (section 9); that reading is assumed, not proved.
+  found no run against them in 606420 scripts. This probe's own search found none in 30941
+  scripts (`Search.lean`, section 9). A reading of the machine finds no hostile move that breaks
+  the invariants (section 9); that reading is assumed, not proved.
 - **The worktree base was stale.** The seat's worktree started at `main` (`9187b9b60`), which has no
   `Test/Dogfood`. The branch was re-pointed at `refactor/phase1-phase3` (`5b40699ae`), the main
   checkout's branch. The other probe worktrees made at `9187b9b60` meet the same trap.
@@ -334,12 +335,20 @@ the used bound, gives `bounded` too. It leaves no general law for the other fami
 
 - `heap_sites_keep` and `shop_stages` are planned goals; the three goals are proved modulo them.
 - G1a and G2 are sketches, not compiled statements.
-- The search counts are the DOGFOOD seat's, not re-run here. The measured shapes are finite probes.
+- The DOGFOOD seat's search counts are not re-run here. The measured shapes are finite probes.
+- This probe's search is a finite probe, tested once in a draft. It played every script of at most
+  four moves over 13 control moves from the opened run: 30941 scripts. Its moves are control
+  decisions only, which `scenario_control` justifies. No script ran against the three goals.
+  Request 2's planted failure occurred in 1360 scripts, six completed requests in 7. A full window
+  occurred in 1517, an interruption in 2662 and a rejection in 1604.
+- Unverified at the wrap-up: `Search.lean` in its committed form was not run. Its deeper searches
+  and its red controls on the faulty shops are commented out; their one run was stopped.
 - Hostile moves examined by reading the machine, each keeping the invariants (assumed, not proved):
   - a raw `interruptFrom` with any interruptor and any annotations;
   - `installMiddleware`, `yieldVerdict`, and `fire` at any owner;
   - `advance` by any duration;
-  - `evaluate` of any fiber: a no-op on a running, parked or exited fiber (`driveStep`);
+  - `evaluate` of any fiber: a no-op on a running, parked or exited fiber (`driveStep`). On an
+    idle fiber it runs that fiber's own code early: a reordering;
   - a budget cut, which freezes a fiber at its shape;
   - interrupting the root, the daemon, or a fiber in its finalizer (masked);
   - interrupting a fiber twice: its outcome is `other`.
@@ -353,6 +362,7 @@ the used bound, gives `bounded` too. It leaves no general law for the other fami
 | `LEAN_NUM_THREADS=2 lake build Test.Dogfood.Scenario.Atomic Effect4.Laws.Auto.Obligations Effect4.Laws.Program.Guard.Core` | 1026 jobs, completed successfully |
 | `lake env lean docs/research/2026-10-10-goals-packet/store-invariants/Probe.lean` | about 9 s; no error, no warning; the standings of section 2 |
 | `lake env lean docs/research/2026-10-10-goals-packet/store-invariants/Measure.lean` | about 8 s; prints 31, 23 and 33 |
+| `lake env lean` on a draft of `Search.lean` (section 0 only) | about 14 s; 30941 scripts, none against the three goals |
 | `decide` on `(Authoring.elaborateModule (shop .none)).toOption.isSome = true` | succeeds, about 3 s |
 | `decide` on `(Effect4.Api.Author.build (shop .none)).toOption.isSome = true` | fails: admission does not reduce |
 
