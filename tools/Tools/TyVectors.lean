@@ -87,6 +87,28 @@ def literalPairs : List Ty :=
   , .union (.prod (.lit "a") .bool) (.prod (.lit "b") .bool)
   , .prod (.lit "a") .bool, .prod .string .bool ]
 
+/-- The first `k` letters as string literal types. -/
+def letters (k : Nat) : List Ty := (List.range k).map fun i => .lit (toString (Char.ofNat (97 + i)))
+
+/-- A right-nested union of a nonempty list of types. -/
+def unionOf : List Ty → Ty
+  | [] => .never
+  | [t] => t
+  | t :: ts => .union t (unionOf ts)
+
+/-- Every tuple over the alphabets of its positions. -/
+def tuplesOver : List (List Ty) → List (List Ty)
+  | [] => [[]]
+  | xs :: rest => xs.flatMap fun x => (tuplesOver rest).map (x :: ·)
+
+/-- A tuple whose positions are unions of literals, beside the union of all its tuples: three
+positions of three (27 combinations) and two of five (25). -/
+def bounds : List Ty :=
+  let wide := List.replicate 3 (letters 3)
+  let narrow := List.replicate 2 (letters 5)
+  [ .tuple (wide.map unionOf), unionOf ((tuplesOver wide).map Ty.tuple)
+  , .tuple (narrow.map unionOf), unionOf ((tuplesOver narrow).map Ty.tuple) ]
+
 /-- The alphabet each variance probe ranges over. -/
 def probe : List Ty := [.never, .unknown, .nat, .string]
 
@@ -119,7 +141,10 @@ def families : List (String × List Ty × List Ty) :=
   , ("record", records, records)
   , ("tuple", tuples, tuples)
   , ("map", maps, maps)
-  , ("literalPair", literalPairs, literalPairs) ]
+  , ("literalPair", literalPairs, literalPairs)
+    -- tsgo's bound on the decomposition (`typeRelatedToDiscriminatedType`): 27 combinations
+    -- refuse, 25 relate.
+  , ("bound", bounds, bounds) ]
 
 /-- The two gaps a pair can witness (§5.2), first. -/
 def gaps : List (String × Ty × Ty) :=

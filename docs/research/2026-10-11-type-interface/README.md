@@ -237,12 +237,12 @@ flowchart TD
 
    `E4-PRINT-CE-001` refutes it today. Repair A, with the bound, is the step that makes it
    provable. **Landed 2026-10-11:** the model `rel`/`assignable`
-   (`src/Effect4/Laws/Codegen/TargetOrder.lean`) agrees with tsgo on all 726 recorded pairs, both
+   (`src/Effect4/Laws/Codegen/TargetOrder.lean`) agrees with tsgo on all 742 recorded pairs, both
    directions (`Test/Codegen/TargetOrder.lean`). `tools/Tools/TyVectors.lean` gained the data
    wave's families: records, tuples, maps, and a pair at a literal position beside its union of
    pairs. The checker tsgo confirms the decomposition there and finds no defect. Of the pairs,
-   694 agree and 6 are cut; at 26, `Ty.sub` refuses what tsgo accepts, the safe direction. The
-   bound of 25 is still the model's reading of tsgo's source. The
+   694 agree and 6 are cut; at 26, `Ty.sub` refuses what tsgo accepts, the safe direction. The family
+   `bound` confirms the limit: 27 combinations refuse (`bound/0-1`), 25 relate (`bound/2-3`). The
    battery reads the TSV at build time, and Lake does not trace that file.
 4. **R-T4, the number tower's names now.** Print `int` as `Int` and `number` as `Num`, aliases of
    `number`, as row 309 (5) rules. Then `ofTy` is injective on the tower, and the reader is an
