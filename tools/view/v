@@ -9,6 +9,8 @@
 #   v -f FILE        the frames of a session request file (tools/Drivers/Session.lean's input)
 #   v -t NAME        the frames in this console, as characters
 #   v -p NAME        write a PNG of every frame and every picture of motion
+#   v -H NAME        the run's page in the browser: its frames as SVG, stepped like the window
+#   v -G             every kept run in the browser, newest first: tools/view/out/index.html
 #   v -m N ...       N pictures of motion between two frames (default 20; 1 draws none)
 #   v -P ...         no marks: the plain page (the marks wait for the owner's ruling)
 #   v -l LOOK ...    in a look: a name of tools/view/looks (paper, hue, sans, ...) or a token file
@@ -19,8 +21,9 @@
 #                    in C equals Lean's whole stream, byte for byte, under two sanitizers
 #
 # NAME is a program of the wire corpus: p42 pBind pFork pAwait pGen pLoop pCatch pScope.
-# The frames go to tools/view/out/NAME. In the window: Right or Space plays to the next frame,
-# Left steps back, Home and End, Q quits.
+# Every run is kept in tools/view/out/runs/TIME-NAME-MODE, with its page, index.html, and the
+# gallery tools/view/out/index.html lists them all. In the window and on a page: Right or Space
+# plays to the next frame, Left steps back, Home and End; Q quits the window, P plays a page.
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 # lake comes from elan; a shell whose profile does not add it still finds it here
@@ -35,6 +38,8 @@ while [ $# -gt 0 ]; do
   case "$1" in
     -t) mode=text ;;
     -p) mode=png ;;
+    -H) mode=html ;;
+    -G) cmd=gallery ;;
     -w) mode=live ;;
     -c) mode=check ;;
     -f) shift; file=$1 ;;
@@ -45,11 +50,19 @@ while [ $# -gt 0 ]; do
     -r) cmd=run ;;
     -g) cmd=specimen ;;
     -F) cmd=flows ;;
-    -h|--help) sed -n 2,23p "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n 2,25p "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) break ;;
   esac
   shift
 done
+# a page opens in the default browser
+browse() { if command -v open > /dev/null 2>&1; then open "$1"; else xdg-open "$1"; fi; }
+if [ "$cmd" = gallery ]; then
+  build_driver View
+  (cd "$root" && LEAN_NUM_THREADS=3 lake env lean --run tools/Drivers/View.lean gallery "$here/out")
+  browse "$here/out/index.html"
+  exit 0
+fi
 if [ "$cmd" = looks ]; then
   out="$here/out/looks"
   rm -rf "$out"
@@ -92,18 +105,25 @@ if [ "$mode" = live ] || [ "$mode" = check ]; then
     "$here/play" --live
   exit
 fi
+# a run is kept under its time, its name and its look; its label is the commit and the time
+runs="$here/out/runs"; stamp=$(date +%Y%m%d-%H%M%S)
+rev=$(cd "$root" && git rev-parse --short HEAD 2>/dev/null || echo "no commit")
+(cd "$root" && git diff --quiet HEAD -- 2>/dev/null) || rev="$rev, edited"
+suffix=""
+if [ -n "$look" ]; then suffix="-$(basename "$look" .tokens.json)"; fi
 if [ "$cmd" = specimen ] || [ "$cmd" = flows ]; then
-  name=$cmd; out="$here/out/$cmd"
+  name=$cmd; out="$runs/$stamp-$cmd$suffix"
   set -- "$cmd" "$out"
 elif [ -n "$file" ]; then
-  name=$(basename "$file" .jsonl); out="$here/out/$name"
+  name=$(basename "$file" .jsonl); out="$runs/$stamp-$name$suffix"
   file=$(cd "$(dirname "$file")" && pwd)/$(basename "$file")
   set -- session "$file" "$out"
 else
-  name=${1:?usage: v [-t | -p] [-r] [-m N] (NAME | -f FILE)}; out="$here/out/$name-$cmd"
+  name=${1:?usage: v [-t | -p | -H] [-r] [-m N] (NAME | -f FILE)}; out="$runs/$stamp-$name-$cmd$suffix"
   set -- "$cmd" "$name" "$out"
 fi
 rm -rf "$out"
+set -- --label "$rev, $(date '+%Y-%m-%d %H:%M')" --gallery "$here/out" "$@"
 if [ -n "$look" ]; then set -- --look "$look" "$@"; fi
 build_driver View
 (cd "$root" && LEAN_NUM_THREADS=3 lake env lean --run tools/Drivers/View.lean --motion "$motion" $plain "$@")
@@ -113,5 +133,6 @@ case $mode in
   png)
     "$here/build.sh" draw
     for f in "$out"/*.draw; do "$here/draw" "$f" --png "${f%.draw}.png"; done; echo "$out" ;;
+  html) browse "$out/index.html" ;;
   window) "$here/build.sh" play; exec "$here/play" "$out" ;;
 esac

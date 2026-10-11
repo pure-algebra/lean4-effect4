@@ -15,7 +15,9 @@ The design and its rulings: `docs/research/2026-10-09-visual-pipeline.md` and de
 ## Commands
 
 Run from the repository's root. `v` builds the Lean modules that its driver imports and the
-stale programs that its mode runs, writes the frames to `tools/view/out/`, and shows them.
+stale programs that its mode runs, writes the frames, and shows them. Every run is kept in
+`tools/view/out/runs/TIME-NAME-MODE/`, labelled with its commit and time, with its page
+`index.html`. The gallery `tools/view/out/index.html` lists every kept run, newest first.
 
 ```sh
 tools/view/v pFork          # build a corpus program top-down, in a window
@@ -24,6 +26,8 @@ tools/view/v -g             # the graph specimen: a graph built one edge at a ti
 tools/view/v -F             # the program graph's specimen: fork and join, waits, releases, regions, loops
 tools/view/v -t pFork       # the frames in this terminal
 tools/view/v -p pFork       # a PNG of every frame and every picture of motion
+tools/view/v -H pFork       # the run's page in the browser: its frames as SVG, stepped like the window
+tools/view/v -G             # every kept run in the browser, newest first
 tools/view/v -f FILE        # the frames of a session request file
 tools/view/v -P -m 1 pLoop  # no marks; no motion
 tools/view/v -l paper pFork # in a look of tools/view/looks/
