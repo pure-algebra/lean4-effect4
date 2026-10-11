@@ -80,6 +80,13 @@ adds one pair (`World.PBij.extend`). Three readings of one structure:
 - **Two schedules.** Two runs that minted in different orders are related by the bijection of
   their minted names. This is the relation `R` of DET-3.
 
+**Two schedules relate tables as finite maps.** Two schedules append fibers in different orders.
+So the machine's relation must read the fiber table as a finite map from names to fibers: two
+related names have related fibers. The driver reads the list in four ways (census of 13:45). A
+lookup by id, a `map` and an `all` ignore the order. `RunMachine.completedExits` returns an
+association list in allocation order, so DET-3 must check that its consumers only look it up.
+The same holds for the races. The armed list is the one table whose order `flush` reads.
+
 A typed world puts a type on each related pair. The diagonal of a typed world is a store typing:
 the ghost tables `Γ`, `Π`, `Ρ` and `Θ` of `Program.Typed.World`, keyed by one name sort. The sources
 are Pierce, *Types and Programming Languages* (2002), the chapter on references, and Ahmed's
@@ -239,6 +246,11 @@ prediction of lines removed.
   `Parametric.support` (Miller, *Robust Composition*, 2006). The support function is also the
   census of a reference's holders. This answers the confinement gap of
   `../2026-10-11-tokens-in-places/model-first.md`.
+- **Regions: a language gap.** A handle allocated inside a scope must not be used after the
+  scope closes. With protocol states, that use is a step that the forward order forbids. A static
+  form keeps a region's handles out of the region's result: the support of the result names no
+  handle the region minted. rc.112 checks none of this statically. The sources are Launchbury
+  and Peyton Jones (PLDI 1994), Tofte and Talpin (1997), and Fluet and Morrisett (2006).
 - **Fresh names.** Every counter is a name supply, and minting extends the world by a fresh pair.
   This is the model for L4 to L6.
 
@@ -302,3 +314,6 @@ note, with locators.
   POPL 2018.
 - D. Dreyer, G. Neis and L. Birkedal, "The impact of higher-order state and control effects on
   local relational reasoning", ICFP 2010.
+- J. Launchbury and S. Peyton Jones, "Lazy functional state threads", PLDI 1994.
+- M. Tofte and J.-P. Talpin, "Region-based memory management", *Information and Computation*, 1997.
+- M. Fluet and G. Morrisett, "Monadic regions", *Journal of Functional Programming*, 2006.

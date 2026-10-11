@@ -62,6 +62,7 @@ Each item is a capability that the minimal model needs and that the language or 
 | confinement | a reference as a capability whose holders the census can bound | modelled: a parametric step creates no reference but a minted one, and the support is the holder census (`../2026-10-11-handles/README.md` §6) |
 | context | a typed context reader and a providing region | rc.112's `context` and `provideContext` (row 349, in progress) |
 | fresh names | one supply for ids, keys and tokens | L4 to L6; every counter is a name supply (`../2026-10-11-handles/README.md` §6) |
+| regions | a scope's handles stay out of its result, and no step uses a closed scope's handle | a region form in the authoring surface, checked by the support; `../2026-10-11-handles/README.md` §6 |
 | typed handles | a name with a type in the world | the API's `Ref`, `Deferred`, `Fiber` and `Scope`; the typed world of item 11 step 5 |
 
 This list grows with each census pass. It is the input to the language and API work after the
