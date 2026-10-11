@@ -1,0 +1,3 @@
+import MachineWorkersExclusivity
+import ProofGraph.AxiomAudit
+#axiom_audit Effect4.Laws.Machine.AnswerFlow MachineWorkersSlots MachineWorkersExclusivity
