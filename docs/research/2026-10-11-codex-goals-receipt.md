@@ -1,8 +1,10 @@
 # Scenario goal landings
 
-The first landing adds the common proof frame. It closes no original application goal yet.
-Every original scenario proposition remains unchanged.
-The timeout race still needs repair before its retry proposition can hold.
+The goal remains active. The original timeout stale-reply claim is now proved over actual scripted runs.
+The retry and cleanup claims remain open, alongside the remaining scenario and machine-base obligations.
+The approved timeout contract follows the completed timeout form and retains the four-attempt bound.
+Earlier sections record earlier landings; their open-status statements describe those commits.
+The latest integrated checks are in [HistoryCheckpointReceipt.md](2026-10-10-goals-packet/codex/HistoryCheckpointReceipt.md).
 
 ## Branch and commits
 
@@ -285,3 +287,22 @@ The audit reports 366 declarations within `[propext, Quot.sound]`, six modulo de
 `Atomic.cleans_once` retains only `once_placed_pushes_once` and `Cleanup.log_debits`.
 The exact output is `codex/FinalizerRunAudit.out` in the goals packet.
 The landing changes proofs only; behavior gates remain owed by the earlier first-exit changes.
+
+## Shared command and history integration
+
+The native store contract now preserves scope allocation at every command prefix.
+The custody history proof also has saved-frame transports for actual scheduler and decision edits.
+The original timeout stale-reply clause is proved without planned dependencies.
+Its remaining top dependencies are the retry and cleanup clauses.
+
+The changed files, exact commands, audit output and limits are recorded in these receipts:
+
+- [ScopeRowsReceipt.md](2026-10-10-goals-packet/codex/ScopeRowsReceipt.md)
+- [OuterFramesReceipt.md](2026-10-10-goals-packet/codex/OuterFramesReceipt.md)
+- [HistoryCheckpointReceipt.md](2026-10-10-goals-packet/codex/HistoryCheckpointReceipt.md)
+- [2026-10-11-codex-base-laws-receipt.md](2026-10-11-codex-base-laws-receipt.md)
+
+The integrated scenario build passes with 1206 jobs.
+The helper audit checks 371 declarations within the allowed axioms and reports no planned-goal dependencies.
+The original timeout module retains two goals and one modulo top claim.
+The goal remains active; complete histories, source counts and the remaining machine-base laws still need work.
