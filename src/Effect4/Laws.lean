@@ -237,6 +237,7 @@ import Effect4.Laws.Program.Footprint
 import Effect4.Laws.Program.Interference
 import Effect4.Laws.Machine.StackLocal
 import Effect4.Laws.Program.StackLocal
+import Effect4.Laws.Program.CommandFrames
 
 import Effect4.Laws.Program.Folds.Checker
 import Effect4.Laws.Program.Folds.Projections
