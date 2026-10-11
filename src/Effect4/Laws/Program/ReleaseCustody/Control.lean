@@ -1,4 +1,4 @@
-import Effect4.Laws.Program.ReleaseCustody
+import Effect4.Laws.Program.ReleaseCustody.Names
 import Effect4.Laws.Machine.ControlWeights
 
 /-!
@@ -10,7 +10,7 @@ Reach: the source compile, initial machine and named native registration command
 The projection distinguishes active code from remaining stack callbacks and close iterators.
 It includes scope entries, queued resume code, unlaunched race programs and pending resume commands.
 It does not establish whole-command preservation, source-use uniqueness, progress or host behavior.
-Foreign code hidden in arbitrary synthetic store-program names requires a separate source-shape premise.
+The residual-name projection includes foreign finalizers hidden by stored program wrappers.
 Unlock: source initialization and the registration clause of a command custody invariant.
 -/
 set_option autoImplicit false
@@ -33,15 +33,19 @@ def currentCredits (q : List Nat) : NCode → Nat
   | .sync (.op op) => opCredits q op
   | .sync (.store (.op op)) => opCredits q op
   | .suspend (.store (.foreign c _)) => credit q (.foreign c)
-  | .suspend (.store (.body (.closeWalk _ order _))) => orderCredits q order
-  | .withFiber (.store (.act (.closePar order _))) => orderCredits q order
+  | .suspend (.store (.body program)) => Names.progCredits q program
+  | .withFiber (.store (.act action)) => Names.actionCredits q action
   | .iterator (.store (.closeSeq order _ _)) _ => orderCredits q order
   | .onSuccess body (.afterScopeAdd _ fin) =>
       (currentCredits q body + responseCredits q fin body) - credit q fin
   | .onSuccess body (.releaseUnder p _ _) => currentCredits q body + if p.path == q then 1 else 0
+  | .onSuccess body (.store name) => currentCredits q body + Names.contCredits q name
   | .onSuccess body _ => currentCredits q body
   | .onSuccessConst body next => currentCredits q body + currentCredits q next
+  | .onFailure body (.store name) => currentCredits q body + Names.contCredits q name
   | .onFailure body _ => currentCredits q body
+  | .onSuccessAndFailure body (.store a) (.store e) =>
+      currentCredits q body + Names.contCredits q a + Names.contCredits q e
   | .onSuccessAndFailure body _ _ => currentCredits q body
   | .exitFrame body => currentCredits q body
   | .onExit body (.store (.finalizerName fin)) _ => currentCredits q body + credit q fin
@@ -50,6 +54,9 @@ def currentCredits (q : List Nat) : NCode → Nat
 
 def futureCredits (q : List Nat) : NCode → Nat
   | .onSuccess _ (.afterScopeAdd _ fin) => credit q fin
+  | .onSuccess _ (.store name) => Names.contCredits q name
+  | .onFailure _ (.store name) => Names.contCredits q name
+  | .onSuccessAndFailure _ (.store a) (.store e) => Names.contCredits q a + Names.contCredits q e
   | .onSuccessConst _ next => currentCredits q next
   | .iterator (.store (.closeSeq order _ _)) _ => orderCredits q order
   | .onExit _ (.store (.finalizerName fin)) _ => credit q fin
@@ -410,7 +417,95 @@ theorem fin_program_credits (q : List Nat) (fin : FinName) (exit : ExitV) :
     currentCredits q (embed (finProgram fin exit)) = credit q fin := by
   fun_cases finProgram fin exit <;>
     simp only [embed, currentCredits, opCredits, credit, foreignAt, Bool.false_eq_true,
-      if_false]
+      if_false, Names.actionCredits, Names.contCredits, Nat.zero_add]
+
+/-- Interpreting every stored program constructor retains its residual credits.
+Consumer: the stored-suspension command custody clause of `Workers.Assertions.releases_step`. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem prog_of_credits (q : List Nat) (program : ProgName) :
+    currentCredits q (embed (progOf program)) = Names.progCredits q program := by
+  fun_induction progOf program <;>
+    simp (config := { failIfUnchanged := false }) only [embed, currentCredits,
+      Names.progCredits, Names.contCredits, Names.actionCredits, opCredits, fin_program_credits,
+      Nat.zero_add, Nat.add_zero]
+  case case3 =>
+    rename_i op
+    cases op <;> rfl
+  case case13 =>
+    rename_i body fin flag ih
+    exact congrArg (fun n => n + credit q fin) ih
+  case case14 =>
+    rename_i first second ih
+    exact congrArg (fun n => n + Names.progCredits q second) ih
+
+/-- A suspended stored program retains every lower callback reservation.
+Consumer: `stored_suspend_loop_funded`. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem stack_before_suspend (q : List Nat) (thunk : EffThunk) (stack : List NCode) :
+    stackCredits q (.suspend thunk) stack = (stack.map (futureCredits q)).sum := by
+  unfold stackCredits
+  split <;> rfl
+
+/-- The native suspension opens the stored program without emitting an event or changing its stack.
+Consumer: `stored_suspend_loop_funded`. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem stored_suspend_start (root : NativeEff) (table : RowTable) (m : NativeMachine)
+    (f : Fiber) (yielding : Bool) (program : ProgName)
+    (current : f.frame.current = .suspend (.store (.body program))) :
+    evaluateNative root m f yielding table =
+      ⟨m, { f with frame := { f.frame with current := embed (progOf program) } },
+        yielding, .continue_, []⟩ := by
+  have park : (interpAt root m.completedExits table).parkOf
+      (.suspend (.store (.body program))) = none := rfl
+  have frame : f.frame.step (interpAt root m.completedExits table).toPrimInterp =
+      (.running { f.frame with current := embed (progOf program) }, []) := by
+    unfold FrameFiber.step
+    rw [current]
+    rfl
+  simp only [evaluateNative, evaluatePrim, current, park, evaluatePrim.stepFrame, frame]
+  rfl
+
+/-- Opening any stored program transfers its residual credit to the actual active code.
+Consumer: the stored-suspension command clause of `Workers.Assertions.releases_step`.
+The selected fiber, operation budget and pending suffix are those of the actual command. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem stored_suspend_loop_funded (root : NativeEff) (table : RowTable) (m : NativeMachine)
+    (id : FiberId) (f : Fiber) (yielding : Bool) (pending : List Command)
+    (q : List Nat) (program : ProgName)
+    (unique : (m.fibers.map RunFiber.id).Nodup) (funded : Funded q m (.loop id yielding :: pending))
+    (found : m.fiber? id = some f)
+    (current : f.frame.current = .suspend (.store (.body program)))
+    (interrupt : f.frame.deferredInterrupt = false) (override : f.yieldOverride = none)
+    (budget : f.currentOpCount + 1 < f.maxOpsBeforeYield) :
+    Funded q (driveStep (evaluator := evaluatorFor root table) (interpOf root table) m
+      (.loop id yielding) pending).1
+      (driveStep (evaluator := evaluatorFor root table) (interpOf root table) m
+        (.loop id yielding) pending).2 := by
+  let next : Fiber := { countOp f with frame := { f.frame with current := embed (progOf program) } }
+  have stepped : driveStep (evaluator := evaluatorFor root table) (interpOf root table) m
+      (.loop id yielding) pending = (m.update next, .loop id yielding :: pending) := by
+    rw [Machine.ControlSteps.loop_of_iteration (evaluator := evaluatorFor root table) _ m id f yielding pending found]
+    rw [Machine.ControlSteps.iteration_below_budget (evaluator := evaluatorFor root table)
+      _ m f yielding interrupt override budget]
+    change settle id pending (evaluateNative root m (countOp f) yielding table) = _
+    rw [stored_suspend_start root table m (countOp f) yielding program current]
+    rfl
+  rw [stepped]
+  change Funded q (m.update next) (.loop id yielding :: pending)
+  have bounded := stack_credits_bounded q (embed (progOf program)) f.frame.stack
+  have frame : fiberCredits q next ≤ fiberCredits q f := by
+    unfold fiberCredits
+    simp only [next, countOp]
+    rw [current, stack_before_suspend, prog_of_credits]
+    change Names.progCredits q program + stackCredits q (embed (progOf program)) f.frame.stack + _ ≤
+      Names.progCredits q program + (f.frame.stack.map (futureCredits q)).sum + _
+    omega
+  have member : f ∈ m.fibers := List.mem_of_find?_eq_some found
+  have changed := update_credits q m f next unique member rfl
+  unfold Funded at funded ⊢
+  change m.trace.countP (ReleaseTrace.releaseAt q) + machineCredits q (m.update next) + _ ≤
+    m.trace.countP (ReleaseTrace.registeredAt q)
+  omega
 
 /-- The actual close result owns the exact captured close order, including singleton and empty cases.
 Consumer: `scope_close_loop_funded`. -/

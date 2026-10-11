@@ -28,5 +28,5 @@ open Test.Dogfood.Scenario Test.Dogfood.Scenario.Workers
         let registered := m.trace.countP (ReleaseTrace.registeredAt q)
         IO.println s!"{label} worker{i}: starts={starts}, custody={machineCredits q m}, registrations={registered}"
         unless decide (starts + machineCredits q m ≤ registered) do throw (IO.userError s!"custody fails at {label}, worker {i}")
-#axiom_audit Effect4.Laws.Machine.ControlWeights Effect4.Laws.Program.ReleaseCustody.Control
+#axiom_audit Effect4.Laws.Program.ReleaseCustody.Names Effect4.Laws.Machine.ControlWeights Effect4.Laws.Program.ReleaseCustody.Control
 end MachineCustodyModel
