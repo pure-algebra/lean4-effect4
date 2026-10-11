@@ -65,13 +65,12 @@ theorem loopFinish_at (root : NativeEff) (p : Point) (cursor : Val) :
 
 set_option maxHeartbeats 2000000 in
 /-- A value decision binds exactly the source branch's generated lexical length. -/
-theorem select_arg_at (root : NativeEff) (fragment : Fragment root) (p : Point)
+theorem select_scope_at (root : NativeEff) (p : Point)
     (term : Term) (decision : Decision) (yes no : NativeEff) (value : Val)
     (first : Bool) (bound : Option Val)
     (found : Node.at_ (.eff root) p.path = some (.eff (.select term decision yes no)))
     (scope : At root p) (answer : decision.decide value = some (first, bound)) :
-    CodeAt root (resolve root (p.childBind (cond first 0 1) bound)) := by
-  apply resolve_scoped root fragment
+    At root (p.childBind (cond first 0 1) bound) := by
   have path : (p.childBind (cond first 0 1) bound).path = p.path ++ [cond first 0 1] := by
     cases bound <;> rfl
   have len : (p.childBind (cond first 0 1) bound).env.length = p.env.length + bound.toList.length := by
@@ -92,6 +91,17 @@ theorem select_arg_at (root : NativeEff) (fragment : Fragment root) (p : Point)
   all_goals aesop (erase simp [Nat.left_eq_add]) (add norm simp [Decision.decide, levelAt, Node.childLevel,
     Node.closedChild, Node.binders, Node.child, Option.toList_none, Option.toList_some,
     List.length_nil, List.length_singleton]) (add safe cases [Bool])
+
+
+/-- Resolving the decided branch retains its exact generated lexical scope.
+Consumer: native source interpretation and the existing heap history invariant. -/
+theorem select_arg_at (root : NativeEff) (fragment : Fragment root) (p : Point)
+    (term : Term) (decision : Decision) (yes no : NativeEff) (value : Val)
+    (first : Bool) (bound : Option Val)
+    (found : Node.at_ (.eff root) p.path = some (.eff (.select term decision yes no)))
+    (scope : At root p) (answer : decision.decide value = some (first, bound)) :
+    CodeAt root (resolve root (p.childBind (cond first 0 1) bound)) :=
+  resolve_scoped root fragment _ (select_scope_at root p term decision yes no value first bound found scope answer)
 
 /-- The source slots returned by an iterate command. -/
 def LoopAt (root : NativeEff) : LoopNext Val NCode → Prop

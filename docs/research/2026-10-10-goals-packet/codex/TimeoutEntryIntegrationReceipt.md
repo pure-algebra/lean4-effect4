@@ -7,7 +7,7 @@ Base: `112fde500`.
 Source commit: `968e265dd`, integrated as `b470073ae`.
 `Test/All.lean` imports the new `Test.Dogfood.Proofs.HostTimeoutNumberEntry` reader.
 
-Placement: protocol-boundary R8 and scope-lifetime-finalization R11, through the existing timeout claims.
+Placement: scope-lifetime-finalization R11 and translation-simulation R10, through the existing timeout claims.
 Reach: actual counter operations and the four-command attempt entry, with its stated store and scheduling premises.
 The source receipt records the exact result classes and numeric invariants.
 The history producer must establish the entry premises before the original observation follows.

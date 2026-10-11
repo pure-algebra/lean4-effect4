@@ -38,7 +38,7 @@ theorem live_owner (total : Nat) (machine : NativeMachine)
     (held : ∀ fiber ∈ machine.fibers, fiber.exit = none →
       AnswerFlow.FrameAt (model total) interp ⟨fiber.id, machine.state⟩ .root fiber.frame)
     (emptyGate : machine.state.deferreds.cells.length = 0)
-    (fiber : Moves.NFiber) (member : fiber ∈ machine.fibers) (live : fiber.exit = none) :
+    (fiber : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) (member : fiber ∈ machine.fibers) (live : fiber.exit = none) :
     fiber.id = ⟨0⟩ :=
   initial_owner (held fiber member live) emptyGate
 
@@ -49,7 +49,7 @@ theorem unique_live (total : Nat) (machine : NativeMachine)
       AnswerFlow.FrameAt (model total) interp ⟨fiber.id, machine.state⟩ .root fiber.frame)
     (unique : (machine.fibers.map RunFiber.id).Nodup)
     (emptyGate : machine.state.deferreds.cells.length = 0)
-    (first second : Moves.NFiber)
+    (first second : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx)
     (firstMember : first ∈ machine.fibers) (secondMember : second ∈ machine.fibers)
     (firstLive : first.exit = none) (secondLive : second.exit = none) : first = second := by
   have firstOwner := live_owner total machine interp held emptyGate first firstMember firstLive
@@ -67,9 +67,9 @@ theorem other_exited (total : Nat) (machine : NativeMachine)
     (held : ∀ fiber ∈ machine.fibers, fiber.exit = none →
       AnswerFlow.FrameAt (model total) interp ⟨fiber.id, machine.state⟩ .root fiber.frame)
     (unique : (machine.fibers.map RunFiber.id).Nodup)
-    (root : Moves.NFiber) (rootMember : root ∈ machine.fibers) (rootLive : root.exit = none)
+    (root : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) (rootMember : root ∈ machine.fibers) (rootLive : root.exit = none)
     (index : Nat) (point : Point) (stage : RootStage ⟨root.id, machine.state⟩ index point)
-    (other : Moves.NFiber) (member : other ∈ machine.fibers) (different : other.id ≠ root.id) :
+    (other : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) (member : other ∈ machine.fibers) (different : other.id ≠ root.id) :
     other.exit ≠ none := by
   intro live
   have same := unique_live total machine interp held unique stage.2.2.2.2.2

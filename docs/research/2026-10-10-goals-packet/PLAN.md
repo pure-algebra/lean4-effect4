@@ -1,325 +1,187 @@
 # The final scenario goals
 
-The implementation starts at `b74ebab6f2b3f39f0c60d04b25014488b274f197`.
-The working branch is `codex/last-planned-goals`.
-This plan records checked evidence, proposed placements, and the owner-approved timeout amendment.
+The shared histories, registration bounds, and release accounting now serve the original scenario claims.
+The concrete writer, application-stage, timeout, and routing-prefix obligations remain open.
+`codex/GoalStatus.out` records their checked dependencies through the Queue cleanup source landing.
+
+Base: `b74ebab6f2b3f39f0c60d04b25014488b274f197`.
+Branch: `codex/last-planned-goals`.
+The previous plan and chronological evidence remain at `git:6dd60c882:docs/research/2026-10-10-goals-packet/PLAN.md`.
+Each retained receipt below gives its commands, audit, placement, and limits.
 
 ## Finishing criteria
 
-Each original scenario proposition has a proof, or a retained counterexample with an explicit unresolved decision.
-No proved claim depends on a planned goal.
-Every helper serves a named scenario clause or registered property.
-Every landing passes its narrow build and `#axiom_audit`.
-The final gate pass checks every changed behavior and repairs affected imports and reports.
-No work is pushed.
+Prove each original scenario proposition, unless a retained counterexample requires an unresolved owner ruling.
+A proved claim must depend on no planned goal.
+Keep every helper on a path to a scenario clause or registered property.
+Build each landing narrowly and run `#axiom_audit` over its modules.
+Repair reached behavior gates after the major structures land.
+Preserve the original statements except for the approved timeout amendment.
+Commit explicit paths and never push.
 
-## Theory and ownership
+## Checked endpoints
 
-The run frame belongs to `host-session-protocol`, requirement R13.
-The proposed claim `run-history` has role compatibility and points to `Run.reached_history`.
-Its module is `src/Effect4/Laws/Run/Frame.lean`.
-`Run.Keeps.reached` and its row induction serve that claim and the session key ledger.
-`HistoryOf` uses `Machine.Lift.Admitted` over the existing machine.
-It retains reply admission at the program's call table.
-A control history has no direct answers. Arbitrary script rows still pass session admission.
-These laws carry supplied invariants. They establish no progress or host implementation claim.
-The consumers are the thirteen scenario clauses over scripts, under R4 through R13.
+The statuses below come from `codex/GoalStatus.lean`, run through `lake env lean`.
+The reader reports nine next planned goals.
+It does not measure completion of the wider semantics.
 
-The central machine work follows `docs/core/semantics.md` concept 4.
-Its proof technique uses trace invariants and interference checks, as the Owicki and Gries connection describes.
-`Machine.Lift` already owns induction through commands, decisions and histories.
-`Book` already owns transfer between the frame and reference machines.
-A new law must use those owners and give its consumer.
-
-## Landing order
-
-The Workers comparison selects shared command laws and program-specific assertions at every command boundary.
-
-| Landing | Modules and result | Narrow build and audit |
+| Original proposition | Checked status | Remaining dependency |
 | --- | --- | --- |
-| L0 | `Effect4.Laws.Run.Frame`, shared scenario adapter, one frame for all families | Build both modules, audit both |
-| L1 | `Effect4.Laws.Api.AuthorBuild`, `Test.Dogfood.Scenario.Programs`, symbolic crew equations | Build both modules, audit both |
-| L2 | `Effect4.Laws.Run.Journal`, session key uniqueness and tape ending | Build Journal and its scenario reader, audit both |
-| L3 | General machine step laws selected by the Workers comparison | Build new law modules and actual consumers, audit each |
-| L4 | Store write discipline and Atomic invariant | Build the support module and Atomic, audit each |
-| L5 | Workers control positions and release accounting | Build the support module and Workers, audit each |
-| L6 | Queue wrapper segments and one crew invariant | Build Queue law and support modules, then QueueWorkers, audit each |
-| L7 | Correct timeout race and one fetch invariant | Build P1HttpCache, support modules and Timeout, audit each |
-| L8 | Routing segment proof and call provenance | Build Routing support and Routing, audit each |
-| L9 | Gate repair and generated proof graph | Run only the checks reached by the landed changes |
+| `Workers.releases_once` | modulo | `Workers.Assertions.logs_step` |
+| `QueueWorkers.releases_once` | modulo | `QueueWorkers.Assertions.logs_history` |
+| `Atomic.cleans_once` | modulo | `Atomic.Cleanup.log_debits` |
+| `Timeout.cleanup_keeps` | goal | Actual fixed-budget timeout phase history |
+| `Atomic.bounded` | proved | None |
+| `Atomic.counted` | modulo | `Atomic.Store.shop_stages` |
+| `Atomic.committed` | modulo | `Atomic.Store.shop_stages` |
+| `QueueWorkers.held_within_fed` | modulo | `QueueWorkers.Assertions.jobs_step` |
+| `QueueWorkers.fed_accounted` | modulo | `jobs_step` and `rest_step` |
+| `QueueWorkers.queue_settled` | modulo | `jobs_step` and `rest_step` |
+| `Timeout.stale_never_applies` | proved | None |
+| `Timeout.retries_declared` | goal | Completed-form failure and four-attempt history |
+| `Routing.unauthorized_calls_nothing` | modulo | `Run.CallTree.request_leads` |
+| `Routing.infrastructure_escapes` | proved | None |
+
+These are the original scenario names under `Test.Dogfood.Scenario`.
+Their admitted histories retain the program's actual call table and explicit budgets.
+No statement establishes progress, fairness, or whole-runtime agreement.
+
+## Shared proof owners
+
+`Run.Frame` owns the session-to-machine history connection under host-session-protocol, R13.
+`Machine.Lift` owns induction through actual commands, decisions, and histories.
+`Machine.Book` lifts a relation between two machine instances through the shared loop.
+`SourceScope.ConfigurationAt` owns source-bearing machine fields on its explicit lexical fragment.
+`SourceOpportunityHistory` counts source use through those actual histories.
+`ReleaseCustody.Execution` retains registration credit through native commands and scheduling.
+`Machine.AnswerFlow` relates actual incoming answers to ordered saved callbacks at their permitted future states.
+`Machine.FrameWeights` owns the scalar accounting of saved-frame pops.
+
+The source fragment excludes raw generators, layers, definitions, calls, and program parameters.
+The concrete Workers, QueueWorkers, and Atomic sources discharge that fragment.
+These facts do not complete the general typed-point or stack-path laws.
+A generator's effective address includes its statement counter.
+A captured release's effective destination supplies the remaining exit binder.
+Do not replace those name-specific contracts with a raw-point environment equation.
+
+## Remaining landing order
+
+The worker probes select shared machine laws with program-specific assertions at every command boundary.
+Fuel cuts and forced yields exclude an invariant restricted to ordinary resting states.
+The actual finite probes and their verdicts remain in the previous plan and packet receipts.
+
+| Landing | Concrete work and consumers | Verification |
+| --- | --- | --- |
+| L0–L3, retained | Run frame, symbolic source equations, session ledger, actual command and history structures | Existing narrow-build and audit receipts |
+| L4, active | Atomic active-writer count through actual finalizer starts; then `shop_stages` | Build Atomic writer modules and Atomic; audit touched modules |
+| L5, active | Workers exact initial slots, captured identities, and log-writer history | Build source consumers and Workers; audit touched modules |
+| L6, after L5 | Reuse cleanup writers for QueueWorkers; prove job custody and queue rest | Build Queue support and QueueWorkers; audit touched modules |
+| L7, active | Timeout concrete numeric phases and completed-form exits at the original fixed budget | Build timeout proof modules and Timeout; audit touched modules |
+| L8, independent | Routing actual request position through session prefixes | Build CallTree consumers and Routing; audit touched modules |
+| L9, after structures | Repair reached behavior gates and deterministic projections | Run only the checks reached by executable changes |
+
+Atomic, Workers, and Timeout run in separate worktrees.
+The coordinator supplies shared laws and integrates checked slices.
+Queue cleanup source bounds reuse the completed shared histories now.
+Queue writer reuse follows the Workers result; it does not duplicate that unfinished proof.
 
 ```mermaid
 flowchart TD
-  F[L0 run frame] --> J[L2 session ledger]
-  P[L1 symbolic programs] --> C[L3 machine laws]
-  F --> C
-  C --> A[L4 Atomic]
-  C --> W[L5 Workers]
-  C --> Q[L6 QueueWorkers]
-  P --> W
-  P --> Q
-  J --> Q
-  J --> T[L7 Timeout]
-  C --> T
-  J --> R[L8 Routing]
-  A --> G[L9 gate repair]
-  W --> G
-  Q --> G
-  T --> G
-  R --> G
-  subgraph parallel[Independent proof lanes]
-    P
-    J
-    R
+  Run[Actual admitted histories] --> Source[Source ownership]
+  Source --> Once[Source-use bound]
+  Source --> Custody[Registration and release custody]
+  Answers[State-indexed saved answers] --> W[Workers log history]
+  Weights[Actual saved-frame weights] --> A[Atomic log history]
+  Once --> W
+  Custody --> W
+  Once --> A
+  Custody --> A
+  W --> QL[Queue cleanup writers]
+  Run --> QJ[Queue job custody and rest]
+  Run --> R[Routing request prefix]
+  Answers --> T[Timeout numeric phase history]
+  A --> AS[Atomic request stages]
+  W --> Gate[Reached behavior gates]
+  QL --> Gate
+  QJ --> Gate
+  AS --> Gate
+  T --> Gate
+  R --> Gate
+  subgraph parallel[Current independent proof lanes]
+    W
+    A
+    T
   end
 ```
 
-## Decisions and evidence
+## Current application evidence
 
-| Question | Recommendation | Current evidence |
+Workers registration uniqueness and release-start accounting follow the shared actual histories.
+Its actual initializer and live-owner separation are checked for every job total.
+Its saved constant callbacks retain exact transient stages without unrestricted code weakening.
+The remaining log proof needs actual current-code preservation and captured identity ownership.
+Evidence: `codex/WorkersInitializerIntegrationReceipt.md` and `codex/AnswerFlowFramesReceipt.md`.
+
+QueueWorkers now uses the same registration and release histories at all three source acquisitions.
+`Assertions.cleanup_step` keeps its statement and depends only on `Assertions.logs_history`.
+Job conservation and queue rest remain separate planned goals.
+Evidence: `codex/QueueCleanupSourceReceipt.md`.
+
+Atomic cleanup identity membership holds on the original admitted history.
+The actual finalizer issues the active note allowance, and the note write consumes it.
+The remaining count proof must carry that allowance through actual callbacks and history.
+Evidence: `codex/AtomicPhaseIntegrationReceipt.md`.
+
+Timeout has checked numeric store transitions and the actual four-command counter-entry prefix.
+The original entry uses command fuel 2000; arbitrary smaller cuts do not supply the same phase invariant.
+Its whole numeric phase producer remains open.
+Evidence: `codex/TimeoutEntryIntegrationReceipt.md`.
+
+Routing's source-tree token check is proved.
+The recorded-binding reader identifies the actual preceding machine.
+`request_leads` remains the connection from that machine to a reached local call-tree position.
+Evidence: `codex/PrefixIntegrationReceipt.md` and `codex/HostSourceReceipt.md`.
+
+## Adjacent machine-base work
+
+The second packet runs beside this order: `../2026-10-11-machine-from-the-base/CODEX-PROMPT.md`.
+The native guard cleanup reuses moves and footprints with unchanged consumer statements.
+The command classification distinguishes live frame transport from exited-stack clearing.
+The birth classification records actual fresh fiber construction at the allocation boundary.
+
+The stack-region law derives the bracket's stack shape through an actual finite command prefix.
+Its premise excludes an executed detached evaluation that finishes the region.
+The outer scheduler and decision-history extension remains separate.
+Evidence: `codex/StackRegionReceipt.md`.
+
+B4's general point law and B5's call-segment and parameter-link stack law remain open.
+Reuse the checked lexical fragment and existing generated binder table when extending them.
+B6 waits for the existing owner ruling on the context note's option A.
+Do not start the services-chain lane before that ruling.
+
+## Decisions
+
+| Question | Settled direction | Evidence or boundary |
 | --- | --- | --- |
-| Timeout race | Follow the timeout form's returned failure and retain the four-attempt bound. The owner approves this amendment. | Both Lean and rc.112 probes refute the original host-reply premise. The runtime probes include controls without forced yield. |
-| Cleanup premise | Preserve the existing proposition. Use session-admitted history in its proof. | The scenario already passes every raw row through session admission. |
-| Stale reply provenance | Preserve clause four. Prove provenance separately from key uniqueness. | `ending_of_tape` does not imply the original clause. |
-| Routing budget | Preserve the current budget unless a checked necessity requires a ruling. | The larger generic sufficient bound alone proves no necessity. |
-| Unauthorized scripts | Preserve every script. | A restriction would weaken the proposition. |
-| Symbolic job count | Preserve every job count. | The symbolic-program lane checks and replaces the stalled probe. |
-| Shared machine structure | Reuse command induction and prove program-specific assertions at every command boundary. | Both Workers probes compile. Cuts and forced yields defeat the ordinary resting table. |
+| Timeout retries | Follow the completed timeout form's declared failure; retain four attempts | Owner-approved amendment; `codex/timeout-contract-decision.md` |
+| Cleanup premise | Keep the original proposition | Raw script rows still pass session admission |
+| Stale provenance | Keep all original clauses | Key uniqueness alone does not prove provenance |
+| Routing budget | Keep the original budget | The infrastructure clause is proved |
+| Unauthorized scripts | Keep every original script | The request-prefix connection remains open |
+| Symbolic job count | Keep every natural count | Actual source equations compile symbolically |
+| Shared structure | Use actual command and history laws with program-specific assertions | The resting-table probes expose missing intermediate states |
 
-## Deferred gates
+The timeout runtime probes use rc.112 and tsgo `7.0.0-dev.20260629.1`.
+Their controlled callback timer is neither a physical-clock law nor an exponential-delay law.
+No further approval of the timeout amendment is required.
 
-No behavior gate runs before the major proof structures land.
-Pure law modules change no executable behavior.
-Root import closure, semantics regeneration and scenario control repairs follow their structure landings.
-A timeout form change reaches `check-truth`, `check-target`, `check-compiler`, `check-native` and `check-ocaml`.
-The receipt records each actual command and result.
-The whole battery and whole-tree axiom gate remain owner-triggered sweeps.
+## Gate repair
 
-## Current checked evidence
-
-`LEAN_NUM_THREADS=3 lake build Effect4.Laws.Run.Tape Effect4.Laws.Program.Guard.Core ProofGraph.AxiomAudit Test.Dogfood.Scenario` passes.
-The build reports 1025 jobs.
-`LEAN_NUM_THREADS=3 lake build Effect4.Laws.Run.Frame Test.Dogfood.Scenario.Frame` passes with 1020 jobs.
-`AuditFrame.lean` audits 107 declarations within `[propext, Quot.sound]`, with no planned goals or dependencies on goals.
-The fixture checks that a direct answer as a raw session row keeps the machine unchanged.
-
-The machine lane compiles both Workers probes at one job.
-A fuel cut leaves a non-resting state.
-A forced yield leaves a resting state with a delayed entry.
-The selected route combines shared command laws with assertions at every command boundary.
-A table restricted to ordinary resting states cannot cover the existing propositions.
-This finite probe selects proof structure. It proves no scenario invariant.
-
-## Atomic proof placement
-
-`Program.HeapSites.heap_sites_keep` states the proposed `cell-invariant-from-write-sites` claim.
-Its concept is `store-typing`, its role is soundness, and its requirement is R4.
-The write-site premise covers each `perform` at its source address and binder level.
-Its reach is every control history of a built program, with any compile budget.
-It establishes no progress, multi-cell relation or outside runtime behavior.
-Its consumer is the original `Atomic.bounded` proposition.
-
-`Atomic.Store.shop_stages` is a step of the `atomic` claim, under `store-typing` and R4.
-Its consumers are the original `Atomic.counted` and `Atomic.committed` propositions.
-The premise is a successful build of the shop and a control history.
-The stage assignment relates request outcomes and the stores; it establishes no progress.
-Its existence remains a planned obligation until code-position and store preservation are proved.
-The extracted program, scripts, observations and original propositions remain unchanged.
-
-## Worker release placement
-
-`Workers.Assertions` serves the original `Workers.releases_once` clause, under `scope-lifetime-finalization` and R11.
-Its source facts hold for every job count and identify the two acquisition paths.
-It counts registrations, release starts and log writes separately.
-Its reach includes every budget, script, yield and interruption admitted by the session.
-It proves no progress or release order.
-The original clause follows from three preservation goals through the shared history law.
-The general release proof needs custody across scope entries, active close code and the registration continuation.
-The scope's `close_twice` law alone cannot supply that custody.
-
-## Source position cautions
-
-The packet's suggested raw-point level invariant needs a name-specific statement.
-`EffName.gen` keeps the generator root path while its environment advances with a separate program counter.
-The relevant source address includes that counter; the raw point alone does not locate the active statement.
-`PointTyped` retains source typing but does not assert unique dynamic use of a source site.
-The existing typed capstones do not supply native source ownership for table-aware, variable-budget histories.
-
-## Owner ruling: timeout retries
-
-The owner selects the source-aligned contract on 2026-10-11.
-A retry follows a declared failure returned by the completed timeout form.
-The four-attempt bound remains.
-The applied host reply does not determine which entrant wins the timeout race.
-The retained decision note is `codex/timeout-contract-decision.md`.
-Its host probe checks rc.112 with tsgo `7.0.0-dev.20260629.1` and Bun.
-It uses a controlled callback timer, not a physical clock or the exponential delay.
-The canceled-waiter defect of the old timeout form remains a separate repair.
-
-## Routing call-prefix structure
-
-The source tree's token check now compiles for every request and every admitted reply tape.
-`Routing.Calls.tree_needs_token` proves this check without a planned goal.
-`Run.CallTree.bound_in_tree` states the remaining connection from recorded bindings to tree waits.
-Its concept is translation-simulation, R6; its proposed registry claim is `recorded-call-tree-prefix`.
-It serves the original `Routing.unauthorized_calls_nothing` clause at its unchanged script scope.
-The generated fold supplies the no-cause-handler test.
-The connection adds no progress, fairness, fork, scope, or outside-host claim.
-
-`lake build Test.Dogfood.Scenario.Routing` passes with 1042 jobs.
-The landing audit reports 139 declarations, three modulo declarations, and one planned goal.
-The original infrastructure clause is proved; the authorization clause rests on `bound_in_tree` alone.
-
-## Atomic cleanup placement
-
-`Atomic.Cleanup.cleaned` serves the unchanged `Atomic.cleans_once` claim under R11.
-Its source placement check identifies all six request paths in the admitted shop.
-`Program.FinalizerRun.funded_reachable` carries registration custody through the native run.
-`Program.FinalizerRun.once_placed_pushes_once` connects a static once-placement to dynamic pushes.
-`Atomic.Cleanup.log_debits` connects each logged identity to its own finalizer starts.
-The three obligations establish different properties and remain separate in the proof graph.
-They cover the original scripts and budgets and establish no progress or host behavior.
-
-```mermaid
-flowchart LR
-  Static[Checked request source paths] --> Once[Dynamic source uniqueness]
-  Frames[Checked frame and evaluator debit] --> Custody[Whole-command custody]
-  Writers[Scoped writer provenance] --> Log[Cleanup-log debit]
-  Once --> Claim[Original Atomic.cleans_once]
-  Custody --> Claim
-  Log --> Claim
-```
-
-## Whole-run finalizer custody
-
-`Program.FinalizerRun.funded_reachable` now proves the custody obligation in place.
-The proof covers every native command and all decision edits through `Machine.Lift.machineFact_stepDecision`.
-The existing fork-ledger invariant supplies distinct fiber identities.
-The accounting includes frame finalizers, reified finalizer programs and native scoped exits.
-The selector and program remain arbitrary; the proof assumes no admission, fairness or sufficient budget.
-It establishes no unique source use, log-writer provenance, progress or outside behavior.
-
-The remaining dependencies of `Atomic.cleans_once` are source uniqueness and cleanup-log provenance.
-`codex/FinalizerRunAudit.out` records the checked statuses and their exact statements.
-The narrow build covers `Program.FinalizerRun` and its Atomic consumer.
-Superseded replacement helpers leave the tree when the complete command proof replaces them.
-
-## Behavior pass after the structures
-
-The first gate repair lands at `d585fdb50`.
-The custody and timeout source slices land at `7d2511cfa` and `dd7dedb93`.
-`codex/behavior-pass-receipt.md` records the generated OCaml refresh and every affected behavior gate.
-All those gates pass; the timeout host comparison retains its explicit missing readers.
-The universal source-state and custody obligations remain open and keep their scenario consumers.
-
-### Scheduler custody closure
-
-`ReleaseCustody.Execution.outer_custody` is proved in place from the explicit native command contract.
-Its direct worker consumer compiles. The audit leaves one planned goal in `Execution`: `command_custody`.
-The retained proof and audit are in `codex/CustodyOuter.lean` and `codex/CustodyOuterAudit.out`.
-The receipt is `codex/CustodyOuterReceipt.md`.
-
-### Scope-credit transfer closure
-
-`ReleaseCustody.ScopeTransfer` proves every native synchronous store-credit bound and the exact registration response split.
-It also proves administrative fiber-linkage accounting and state-first close transfer.
-`Machine.ScopeIdentity.syncOpStep_keysFresh` shares the existing freshness census with `Simulation.Hooks`.
-The reader and premise controls compile. The narrow audit reports no planned-goal dependency.
-Evidence: `codex/ScopeTransferReceipt.md` and `codex/ScopeTransferAudit.out`.
-
-### Command correlation control
-
-`codex/CustodyCommandControl.lean` compiles and refutes the unrestricted internal command contract.
-It does not refute an original application statement or an admitted run.
-`codex/CustodyLiftReceipt.md` records the missing command and saved-frame correlation.
-Retain the existing Guard ownership and token relations when repairing this internal premise.
-The checked scheduler proofs now live below execution assembly in `ReleaseCustody/Lift.lean`.
-
-The refuted internal command goal is removed from the active proof graph.
-`ReleaseCustody.Execution.history` now states the remaining obligation on actual admitted histories.
-Workers' release-step assembly keeps its original statement and extends that history before reading the bound.
-The checked local proofs remain; the replacement command decomposition must retain saved-frame and resume correlation.
-
-### Applied receipt observation
-
-`HostAppliedObservation.applied_body_seen` proves the observation reader required by timeout value flow.
-Every successful applied receipt appears as an answered HTTP call in the current fetch observation.
-The theorem covers every script and imposes no move restriction.
-`codex/HostAppliedObservationReceipt.md` records the build and the audit, with no planned dependencies.
-The native returned-body invariant remains separate and open.
-
-### Atomic capacity closure
-
-The original `Atomic.bounded` clause is proved without planned dependencies.
-The source fragment premise is discharged from the actual shop build.
-The complete source and heap history chain remains shared with the Queue reader.
-`codex/AtomicBoundReceipt.md` records the narrow build and integrated audit.
-The shared compiler case interface fixes duplicate internal names when the independently checked proof branches meet.
-The Atomic stage and cleanup obligations remain open; their statements remain unchanged.
-
-### Actual request-prefix decomposition
-
-`JournalPrefix` proves the recorded binding's actual preceding machine.
-`CallTree.tree_wait_of_leads` reads the corresponding tree wait from existing local agreement.
-The original Routing authorization clause now depends on `CallTree.request_leads` alone.
-The actual Routing interruption reader and mask control compile.
-`codex/PrefixIntegrationReceipt.md` records the narrow builds, combined audit and complete Laws-root build.
-The source-use, timeout source and release sequencing readers also join their roots.
-
-### Clock boundary and native store transitions
-
-`E4-HOST-CE-010` checks why a reply-only prefix cannot explain outside clock advances.
-The internal Routing helper now requires `NoClockRead`; the actual Routing source discharges it.
-The original application claim stays unchanged.
-`Atomic.Writes` proves the exact native admission, deposit, refill and cleanup transitions.
-Source uniqueness and the relational application history remain separate obligations.
-`codex/WritesClockReceipt.md` records the combined build, audits and full source-history integration.
-
-## Checked command stack transport
-
-`codex/CommandStacksReceipt.md` records exact saved-stack transport through administrative edits.
-Unique command owners protect the queued suffix during an active owner's stack change.
-The audit finds no planned dependencies in these helpers.
-Actual command closure and whole-history custody remain open.
-
-## Checked administrative command execution
-
-`codex/CommandStackStepsReceipt.md` records all unowned command stack transports and exited-owner separation.
-The countdown observer case includes its nested interruptions and later waiter update.
-The audit finds no planned dependencies in these helpers.
-Whole-history release custody remains open.
-
-## Checked owned command credit bounds
-
-`codex/CommandDebitReceipt.md` records actual command debits and the independent native evaluator integration.
-The actual Workers load reader compiles with the complete sequencing proofs.
-The local command audit finds no planned dependencies.
-The whole-history custody endpoint remains open.
-
-## Checked race and store commands
-
-`codex/RaceStoreDebitReceipt.md` records race transfer, scope linking, task posting and due-resume accounting.
-It also records independent integration of source opportunities and selected-owner installation.
-Their local audits find no planned dependencies.
-Whole-history custody and source uniqueness remain open.
-
-## Complete administrative funding assembly
-
-`codex/ObserverDebitReceipt.md` records all native command funding except evaluator loop and delivery.
-Countdown callbacks account for the saved waiter after their nested interrupts.
-The independent integrated audits have no planned dependencies in these local helpers.
-The parallel-close accounting control requires a design resolution before whole-history custody closes.
-
-## Actual host-prefix boundaries
-
-`codex/HostSourceReceipt.md` records two admitted controls and the internal source and table restrictions they require.
-Routing discharges both restrictions; its original authorization statement stays unchanged.
-The shared heap invariant now covers arbitrary actual host replies.
-The universal session-to-tree connection remains open.
-
-## Actual worker reply sequencing
-
-`codex/RaceSourceReceipt.md` records race origins in the existing source predicate and their exclusion by the actual Workers source.
-The checked terminal reply cases now retain saved-frame sequencing.
-The native action debit covers every constructor under the source and sequential-scope premises.
-The whole-history endpoint remains open, with every extra internal premise discharged by the original worker source.
+Pure proof additions change no executable behavior.
+Their narrow builds, touched-module audits, and root imports land with them.
+A timeout form change reaches truth, target, compiler, native, and OCaml comparisons.
+The retained behavior pass and later history sweep record the actual executed gates.
+See `codex/behavior-pass-receipt.md` and `codex/history-behavior-sweep-receipt.md`.
+The timeout host comparison retains its explicitly missing whole-observation readers.
+A passing finite comparison does not close a universal scenario goal.
+The whole Test battery, whole-tree axiom gate, policies, and document checks remain owner-triggered sweeps.

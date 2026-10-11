@@ -250,6 +250,7 @@ import Test.Program.ReleaseCustodyScope
 import Test.Program.CommandStacks
 import Test.Program.CommandDebit
 import Test.Program.CommandFrames
+import Test.Program.StackRegion
 import Test.Program.RuntimeRContract
 import Test.Program.RuntimeRShapesContract
 import Test.Program.SimulationContract
@@ -290,6 +291,7 @@ import Test.Machine.StoreKernelBank
 import Test.Machine.MaskDiscipline
 import Test.Machine.MaskRuns
 import Test.Machine.MaskBracket
+import Test.Machine.AnswerFlow
 import Test.Counterexamples.Machine.Runtime.ArmedFrontier
 import Test.Audit.Obligations
 import Test.Audit.SemanticsCensus
@@ -357,6 +359,7 @@ import Test.Dogfood.Proofs.HostTimeoutSource
 import Test.Dogfood.Proofs.HostTimeoutDriver
 import Test.Dogfood.Proofs.HostTimeoutNumberLedger
 import Test.Dogfood.Proofs.HostTimeoutNumberEntry
+import Test.Dogfood.Proofs.HostTimeoutNumberFlow
 import Test.Dogfood.Proofs.HostAppliedObservation
 import Test.Dogfood.Scenario.SourceFragment
 import Test.Dogfood.Scenario.NativeHeap
@@ -368,6 +371,9 @@ import Test.Counterexamples.Machine.Runtime.HostRefPrefix
 import Test.Counterexamples.Machine.Runtime.HostInstancePrefix
 import Test.Dogfood.Scenario.Atomic.Writes
 import Test.Dogfood.Scenario.Atomic.Writer
+import Test.Dogfood.Scenario.Atomic.WriterPhase
+import Test.Dogfood.Scenario.Atomic.WriterOwnership
+import Test.Dogfood.Scenario.Atomic.WriterFrames
 import Test.Dogfood.Proofs.TimeoutCounterexample
 import Test.Dogfood.Scenario.QueueWorkers.Source
 import Test.Machine.RaceFirst

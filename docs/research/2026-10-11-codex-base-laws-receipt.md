@@ -89,3 +89,12 @@ The native whole-machine mask relation follows from this witness.
 The native command mask proof now reads the shared classification.
 See [the checked receipt](2026-10-10-goals-packet/codex/C2BirthsReceipt.md).
 Source-point birth ownership, the polymorphic cleanup and the run stack relation remain open.
+
+## Actual command-prefix stack locality
+
+The region suffix now survives every actual command before its detached evaluation finishes.
+The finite loop lift derives the stack-shape premise for a new reader of the existing bracket.
+The boundary control distinguishes a region exit from a continuing whole fiber.
+See [the checked receipt](2026-10-10-goals-packet/codex/StackRegionReceipt.md).
+The outer scheduler and decision-history extension remains open.
+Source-point birth ownership, points and paths, and the polymorphic cleanup remain open.
