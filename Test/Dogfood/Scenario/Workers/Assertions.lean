@@ -1,4 +1,5 @@
 import Test.Dogfood.Scenario.Programs
+import Test.Dogfood.Scenario.SourceFragment
 import Test.Dogfood.Scenario.Frame
 import Effect4.Laws.Program.ReleaseCustody.Execution
 import Effect4.Laws.Program.Guard.Decision
@@ -388,11 +389,13 @@ theorem releases_step :
     Api.Author.build (crew total) = .ok b → Holds b cf m →
     Run.Accepted b.table (Api.HostSession.callTable b.program b.table) m x.2 →
     ReleaseDebits (Run.stepBy b m x) := by
-  intro _ cf b m x _ held accepted
+  intro total cf b m x built held accepted
   intro i _
   have reached := history_step b cf m x held.history accepted
   exact ReleaseCustody.Control.Funded.read
-    (ReleaseCustody.Execution.history b cf (acquirePath i) (Run.stepBy b m x) reached).funded
+    (ReleaseCustody.Execution.history b cf (acquirePath i) (Run.stepBy b m x)
+      (Scenario.SourceFragment.workers_built_fragment total b built)
+      (Scenario.SourceFragment.workers_built_sequential total b built) reached).funded
 
 /-- Store preservation obligation of `releases_once`.
 Reach: the second allocated reference in actual crew histories at every command boundary.
