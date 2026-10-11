@@ -15,6 +15,7 @@ import Effect4.Store.Domain.ProgramWire
     lake env lean --run tools/Drivers/View.lean [FLAGS] specimen OUT        a graph built one edge at a time
     lake env lean --run tools/Drivers/View.lean [FLAGS] flows OUT           the program graph's cases, one program a page
     lake env lean --run tools/Drivers/View.lean looks DIR OUT               every look of DIR, side by side
+    lake env lean --run tools/Drivers/View.lean gallery DIR                 the list of every kept run of DIR
 
 The flags: `--motion N`, the pictures of motion between two frames (default 20; 1 draws none);
 `--plain`, no marks; `--look LOOK`, the look (`Tools.View.Look`): a token file, or the name of
@@ -40,6 +41,13 @@ they lead to: `002-001.draw` comes before `002.draw` in a sorted listing. It rep
 check of each spliced edit: the lines outside the edited subtree keep their text, type and note.
 
 `build` also writes `requests.jsonl`, the requests it ran, so the session driver replays them.
+
+Every run also writes `index.html`, its player: the run's pictures in its own look, stepped as the
+window steps them (Right or Space plays the motion to the next frame, Left steps back, Home and
+End, P plays every frame), and `run.json`, what the gallery lists. With `--gallery DIR` a run kept
+at `DIR/runs/ID/` also rewrites `DIR/index.html`, the list of every kept run, newest first; the
+command `gallery DIR` rewrites it alone. `--label TEXT` names the run there (`v` writes its commit
+and time).
 -/
 
 open Tools.View Tools.View.Build
@@ -67,14 +75,114 @@ def writePage (L : Look) (out : System.FilePath) (name : String) (g : Page)
   writePicture L out name W H calls
   pure cache
 
+/-- The page rules a player and the gallery share, over a look's custom properties. -/
+def pageRules : String :=
+  "body { margin: 0; padding: 16px 16px 48px; background: var(--e4-color-ground); color: var(--e4-color-ink); font-family: var(--e4-font-name-family); }\n" ++
+  "a { color: var(--e4-color-ink); }\n" ++
+  "h1 { font-family: var(--e4-font-title-family); font-weight: var(--e4-font-title-weight); font-size: 22px; margin: 0; }\n" ++
+  ".meta { font-family: var(--e4-font-data-family); font-size: 13px; opacity: 0.75; }\n" ++
+  "header { display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: baseline; margin-bottom: 12px; }\n" ++
+  "button { font: inherit; font-size: 14px; color: var(--e4-color-ink); background: transparent; border: 1px solid var(--e4-color-rule); border-radius: 4px; padding: 2px 10px; cursor: pointer; }\n" ++
+  "img { display: block; max-width: 100%; height: auto; border: 1px solid var(--e4-color-rule); }\n"
+
+/-- **A run's player**: its pictures in order, a frame's motion pictures before it, stepped as
+`play` steps them. Picture `k` of a step's `n` stands at `k/n` of the look's step. -/
+def playerPage (L : Look) (title label : String) (pics : List (String × Bool)) (gallery : Bool) :
+    String :=
+  let list := ",".intercalate (pics.map fun (n, f) => s!"[\"{n}\",{if f then 1 else 0}]")
+  "<!doctype html>\n<html lang=\"en\" data-look=\"" ++ escape L.name ++ "\">\n<head>\n<meta charset=\"utf-8\">\n" ++
+  "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>" ++ escape title ++ "</title>\n" ++
+  "<style>\n" ++ Tokens.css L ++ pageRules ++ "</style>\n</head>\n<body>\n<header>" ++
+  (if gallery then "<a href=\"../../index.html\">All runs</a>" else "") ++
+  "<h1>" ++ escape title ++ "</h1><span class=\"meta\">" ++ escape label ++ " · " ++ escape L.name ++
+  "</span><span class=\"meta\" id=\"pos\"></span>" ++
+  "<span><button id=\"back\">◀</button> <button id=\"next\">▶</button> <button id=\"all\">play all</button></span></header>\n" ++
+  "<img id=\"pic\" alt=\"\">\n<script>\n" ++
+  "const pics = [" ++ list ++ "];\nconst step = " ++ toString L.motion.step ++ ";\n" ++
+  "const frames = pics.map((p, i) => p[1] ? i : -1).filter(i => i >= 0);\n" ++
+  "const img = document.getElementById('pic'), pos = document.getElementById('pos');\n" ++
+  "let at = 0, timer = 0, chain = false;\n" ++
+  "function show(i) { at = i; img.src = pics[i][0] + '.svg'; pos.textContent = 'frame ' + frames.filter(j => j <= i).length + ' of ' + frames.length; }\n" ++
+  "function stop() { cancelAnimationFrame(timer); clearTimeout(timer); timer = 0; }\n" ++
+  "function next() { stop(); const end = frames.find(j => j > at); if (end === undefined) { chain = false; return; }\n" ++
+  "  const start = at, n = end - start, t0 = performance.now();\n" ++
+  "  const tick = t => { const k = Math.min(n, Math.ceil((t - t0) * n / step)); if (k > 0 && start + k !== at) show(start + k);\n" ++
+  "    if (k < n) timer = requestAnimationFrame(tick); else if (chain) timer = setTimeout(next, step); };\n" ++
+  "  timer = requestAnimationFrame(tick); }\n" ++
+  "function back() { stop(); chain = false; const p = frames.filter(j => j < at).pop(); show(p === undefined ? 0 : p); }\n" ++
+  "function all() { chain = true; if (at === frames[frames.length - 1]) show(0); next(); }\n" ++
+  "document.getElementById('next').onclick = () => { chain = false; next(); };\n" ++
+  "document.getElementById('back').onclick = back; document.getElementById('all').onclick = all;\n" ++
+  "document.addEventListener('keydown', e => {\n" ++
+  "  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); chain = false; next(); }\n" ++
+  "  else if (e.key === 'ArrowLeft') back();\n" ++
+  "  else if (e.key === 'Home') { stop(); chain = false; show(0); }\n" ++
+  "  else if (e.key === 'End') { stop(); chain = false; show(frames[frames.length - 1]); }\n" ++
+  "  else if (e.key === 'p' || e.key === 'P') all(); });\n" ++
+  "pics.forEach(p => { new Image().src = p[0] + '.svg'; });\nshow(0);\n</script>\n</body>\n</html>\n"
+
+/-- One kept run, as the gallery lists it: its folder and what its `run.json` says. -/
+structure KeptRun where
+  id : String
+  title : String
+  label : String
+  look : String
+  frames : Nat
+  last : String
+
+/-- The kept runs of `dir/runs/`, newest first: a run's folder name begins with its time. -/
+def keptRuns (dir : System.FilePath) : IO (List KeptRun) := do
+  let runs := dir / "runs"
+  unless ← runs.isDir do return []
+  let mut out : Array KeptRun := #[]
+  for e in ← runs.readDir do
+    let file := e.path / "run.json"
+    unless ← file.pathExists do continue
+    let some j := (Lean.Json.parse (← IO.FS.readFile file)).toOption | continue
+    let str (k : String) := (j.getObjValAs? String k).toOption.getD ""
+    let run : KeptRun := {
+      id := e.fileName
+      title := str "title"
+      label := str "label"
+      look := str "look"
+      frames := (j.getObjValAs? Nat "frames").toOption.getD 0
+      last := str "last" }
+    out := out.push run
+  pure (out.toList.mergeSort fun a b => decide (b.id ≤ a.id))
+
+/-- **The gallery**: every kept run, newest first, its last picture linking to its player. -/
+def galleryPage (runs : List KeptRun) : String :=
+  let card (r : KeptRun) : String :=
+    "<section><a href=\"runs/" ++ escape r.id ++ "/index.html\"><img loading=\"lazy\" src=\"runs/" ++
+    escape r.id ++ "/" ++ escape r.last ++ ".svg\" alt=\"" ++ escape r.title ++ "\"></a><h2><a href=\"runs/" ++
+    escape r.id ++ "/index.html\">" ++ escape r.title ++ "</a></h2><p class=\"meta\">" ++ escape r.label ++
+    " · " ++ escape r.look ++ " · " ++ toString r.frames ++ " frames</p></section>\n"
+  "<!doctype html>\n<html lang=\"en\" data-look=\"dark\">\n<head>\n<meta charset=\"utf-8\">\n" ++
+  "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>Runs</title>\n<style>\n" ++
+  Tokens.css {} ++ pageRules ++
+  "main { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 20px; }\n" ++
+  "h2 { font-family: var(--e4-font-data-family); font-size: 15px; margin: 8px 0 2px; }\n" ++
+  "h2 a { text-decoration: none; }\nsection img { max-height: 320px; object-fit: contain; object-position: left top; }\n" ++
+  "</style>\n</head>\n<body>\n<header><h1>Runs</h1><span class=\"meta\">" ++ toString runs.length ++
+  " kept, newest first</span></header>\n<main>\n" ++ String.join (runs.map card) ++ "</main>\n</body>\n</html>\n"
+
+/-- Rewrite `dir/index.html`, the list of every kept run. -/
+def writeGallery (dir : System.FilePath) : IO Unit := do
+  let runs ← keptRuns dir
+  IO.FS.createDirAll dir
+  IO.FS.writeFile (dir / "index.html") (galleryPage runs)
+  IO.println s!"view: {runs.length} kept runs in {dir / "index.html"}"
+
 /-- Write each frame's outputs into `out`, with `motion - 1` pictures before each frame after the
 first: the moments of the step from the frame before (`sample`). Each step's moment at its end is
 the next frame by `sample_end`, so no check repeats it. One stroke cache threads the frames and the
 moments between them, so a route that only moved reuses its stroke (`Laid.cachedStroke_eq`).
 Report the splice check: the lines outside each spliced edit's subtree keep their text, type and
 note (`keptUnchanged`). -/
-def writeFrames (L : Look) (out : System.FilePath) (frames : List Build.Frame) (motion : Nat) : IO Unit := do
+def writeFrames (L : Look) (out : System.FilePath) (frames : List Build.Frame) (motion : Nat)
+    (title label : String := "") (gallery : Bool := false) : IO Unit := do
   IO.FS.createDirAll out
+  let mut pics : Array (String × Bool) := #[]
   let mut text : Array String := #[]
   let mut prev : Option Page := none
   let mut kept := 0
@@ -87,6 +195,7 @@ def writeFrames (L : Look) (out : System.FilePath) (frames : List Build.Frame) (
     if let some g0 := prev then
       for k in List.range' 1 (motion - 1) do
         cache ← writePage L out s!"{name}-{frameName k}" (sample L.motion g0 g (k * 1000 / motion)) cache
+        pics := pics.push (s!"{name}-{frameName k}", false)
       if f.spliced then
         if let some a := f.edit then
           let (n, k) := keptUnchanged g0 g (Program.bracket a)
@@ -94,9 +203,14 @@ def writeFrames (L : Look) (out : System.FilePath) (frames : List Build.Frame) (
           same := same + k
           spliced := spliced + 1
     cache ← writePage L out name g cache
+    pics := pics.push (name, true)
     text := text ++ (pageText g).toArray ++ #[""]
     prev := some g
   IO.FS.writeFile (out / "frames.txt") ("\n".intercalate text.toList)
+  IO.FS.writeFile (out / "index.html") (playerPage L title label pics.toList gallery)
+  IO.FS.writeFile (out / "run.json") (Lean.Json.compress (Lean.Json.mkObj [
+    ("title", title), ("label", label), ("look", L.name), ("frames", frames.length),
+    ("last", (pics.toList.getLast?.map (·.1)).getD "")]) ++ "\n")
   let graphs := frames.filterMap fun f => f.page.graph.map (·.laid)
   IO.println s!"view: {frames.length} frames in {out}, {motion - 1} between each two"
   IO.println s!"C\tkept-lines-unchanged\t{spliced} spliced edits\t{same} of {kept} lines"
@@ -122,6 +236,10 @@ structure Settings where
   motion : Nat := 20
   marks : Bool := true
   look : Option String := none
+  /-- The run's name in the gallery (`--label`). -/
+  label : String := ""
+  /-- The folder whose list of kept runs the run rewrites (`--gallery`). -/
+  gallery : Option String := none
 
 /-- Read the flags before the command. -/
 def settingsOf : List String → Settings × List String
@@ -134,6 +252,12 @@ def settingsOf : List String → Settings × List String
   | "--look" :: l :: rest =>
     let (st, rest) := settingsOf rest
     ({ st with look := some l }, rest)
+  | "--label" :: l :: rest =>
+    let (st, rest) := settingsOf rest
+    ({ st with label := l }, rest)
+  | "--gallery" :: d :: rest =>
+    let (st, rest) := settingsOf rest
+    ({ st with gallery := some d }, rest)
   | rest => ({}, rest)
 
 /-- The frames, with the settings' marks. -/
@@ -207,9 +331,19 @@ def writeLooks (dir out : System.FilePath) : IO UInt32 := do
   IO.println s!"C\tlook-round-trip\t{looks.length} looks\t{back.length} come back from their token files"
   return if back.length == looks.length then 0 else 1
 
+/-- Write a run's frames under the settings, then the gallery's list if one is named. -/
+def keep (st : Settings) (L : Look) (out : System.FilePath) (frames : List Build.Frame) (title : String) :
+    IO UInt32 := do
+  writeFrames L out frames st.motion title st.label st.gallery.isSome
+  if let some g := st.gallery then writeGallery g
+  return 0
+
 def main (args : List String) : IO UInt32 := do
   let (st, args) := settingsOf args
   if let ["looks", dir, out] := args then return ← writeLooks dir out
+  if let ["gallery", dir] := args then
+    writeGallery dir
+    return 0
   let L ← lookOf st.look
   match args with
   | ["build", name, out] =>
@@ -226,8 +360,7 @@ def main (args : List String) : IO UInt32 := do
         IO.FS.createDirAll out
         IO.FS.writeFile (System.FilePath.mk out / "requests.jsonl")
           ("\n".intercalate (reqs.map fun r => r.toJson.compress) ++ "\n")
-        writeFrames L out (withMarks st (Build.frames name reqs)) st.motion
-        return 0
+        keep st L out (withMarks st (Build.frames name reqs)) s!"{name}, built"
   | ["run", name, out] =>
     match List.lookup name Effect4.Program.Wire.Corpus.all with
     | none =>
@@ -239,17 +372,16 @@ def main (args : List String) : IO UInt32 := do
         IO.eprintln s!"view: {name} is not admitted, so it does not run"
         return 1
       | some pages =>
-        writeFrames L out (withMarks st (pages.map fun page => ({ page } : Build.Frame))) st.motion
-        return 0
+        keep st L out (withMarks st (pages.map fun page => ({ page } : Build.Frame))) s!"{name}, run"
   | ["specimen", out] =>
-    writeFrames L out (Tools.View.Specimen.frames.map fun page => ({ page } : Build.Frame)) st.motion
-    return 0
+    keep st L out (Tools.View.Specimen.frames.map fun page => ({ page } : Build.Frame)) "graph specimen"
   | ["flows", out] =>
-    writeFrames L out (Tools.View.FlowSpecimen.frames.map fun page => ({ page } : Build.Frame)) st.motion
-    return 0
+    keep st L out (Tools.View.FlowSpecimen.frames.map fun page => ({ page } : Build.Frame))
+      "program graph cases"
   | ["session", file, out] =>
-    writeFrames L out (withMarks st (Build.frames file (← readRequests file))) st.motion
-    return 0
+    keep st L out (withMarks st (Build.frames file (← readRequests file)))
+      ((System.FilePath.mk file).fileStem.getD file)
   | _ =>
-    IO.eprintln "usage: view [--motion N] [--plain] [--look LOOK] (build NAME | run NAME | session FILE | specimen | flows) OUT\n       view looks DIR OUT"
+    IO.eprintln ("usage: view [--motion N] [--plain] [--look LOOK] [--label TEXT] [--gallery DIR] " ++
+      "(build NAME | run NAME | session FILE | specimen | flows) OUT\n       view looks DIR OUT\n       view gallery DIR")
     return 2
