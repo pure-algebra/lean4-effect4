@@ -205,3 +205,15 @@ The command-loop lift and log-writer provenance remain open.
 `LEAN_NUM_THREADS=3 lake build Effect4.Laws.Machine.FinalizerCredits` passes with eight jobs.
 `lake env lean docs/research/2026-10-10-goals-packet/codex/FinalizerCredits.lean` passes.
 The audit reports 48 declarations, no modulo declarations, and no planned goals.
+
+## Finalizer frame-step debit
+
+`Machine.FinalizerCredits.step_debit` pays for each selected finalizer start from a removed frame.
+The inequality retains unused stack credits and accounts for every new finalizer frame in the emitted push events.
+It covers arbitrary interpreters, stacks, masks, delivered causes, and finalizer selectors.
+`resumeValue_debit` and `resumeCause_debit` connect the continuation bound to actual frame-step events.
+The whole-run lift, unique source use, and log-writer provenance remain open.
+
+`LEAN_NUM_THREADS=3 lake build Effect4.Laws.Machine.FinalizerStep` passes.
+`lake env lean docs/research/2026-10-10-goals-packet/codex/FinalizerStep.lean` passes.
+The audit reports 135 declarations, no modulo declarations, and no planned goals.
