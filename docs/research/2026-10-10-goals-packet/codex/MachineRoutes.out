@@ -1,0 +1,7 @@
+parked: rest=true, delayed=false, fibers=3, cleanups=0
+running-job: rest=true, delayed=false, fibers=3, cleanups=0
+finished: rest=true, delayed=false, fibers=3, cleanups=2
+cancelled: rest=true, delayed=false, fibers=3, cleanups=2
+cut: rest=false, delayed=false, fibers=1, cleanups=0
+forced-yield: rest=true, delayed=true, fibers=3, cleanups=0
+#axiom_audit: 6 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
