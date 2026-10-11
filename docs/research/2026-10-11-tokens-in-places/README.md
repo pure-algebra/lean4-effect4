@@ -66,8 +66,8 @@ the root program, and each registration spends one.
    `thunk (.op (.refModify q t env)) := if q = qlog ∧ appends t env i then 1 else 0`.
 2. **The store's frame rule per key.** A store operation on key `q'` leaves the content at every
    other key unchanged. This is the frame rule of separation logic on the store. The tree states
-   it for one heap step: every heap row but `refMake` is a single-cell kernel
-   (`RefKernel.refStep_cases`), and a write-back leaves every other lookup unchanged
+   it for one heap step. Every heap row but `refMake` is a single-cell kernel
+   (`RefKernel.refStep_cases`). A write-back leaves every other lookup unchanged
    (`RefKernel.refWriteBack_peek_other`, the last part of `indexed_ref_step_preserves`). It is
    not yet lifted to a machine step. The scenarios' "writer census" premises are that lift,
    restated per cell.
