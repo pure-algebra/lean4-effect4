@@ -13,7 +13,7 @@ natively, compiled through LCNF. TypeScript joins the Effect ecosystem through t
 the readers. Programs are data: a canonical `Eff` tree with a digest and a typing certificate.
 A program has folds, a journaled run with replay, and a printed image that reads back.
 
-## Where the tree stands (2026-10-08, branch `refactor/phase1-phase3`)
+## Where the tree stands (2026-10-10, branch `refactor/phase1-phase3`)
 
 - **Programs and their types.** The checker types a program with located refusal. The address
   table, the focus function and one annotating traversal give each address its environment and
@@ -47,9 +47,10 @@ A program has folds, a journaled run with replay, and a printed image that reads
   with programs as the definition's name on its request and its programs as arrows; both read
   back (HO-3a, HO-3b: one law of named rows for a block's and a body's spelling,
   `LawfulSpelling.extend`, and the laws of invocations, `LawfulInvokes`). A body's own layer is
-  built once per call (step 3a, the owner's option B): a build is keyed by its path and the
-  running call, named by the chain of invocation sites (`Point.layerKey`). A body's own layers print as constants at the top of its suspension and read back (step 3b);
-  three counted programs agree with rc.112.
+  built once per call (step 3a, the owner's option B). A build is keyed by its path and the
+  running call (`Point.layerKey`), which names the chain of invocation sites. A body's own layers
+  print as constants at the top of its suspension and read back (step 3b). Three counted
+  programs agree with rc.112.
 - **Data.** Records, required and optional reads, tags, string maps and fixed tuples are in the
   language. Integers carry, encode and compute inside the profile's bound (rows 316 to 322).
   Streams have their first profile (row 311). A Lean structure ties to its `Ty` by
@@ -66,7 +67,10 @@ A program has folds, a journaled run with replay, and a printed image that reads
 - **The machine and the session.** The frame machine agrees with the reference on a session
   (`session_eq_ref`, row 314), and the host meaning has its fast path (row 313). A session admits
   a host reply at its call's checked instance (row 323). The session's face is `Live.open`,
-  `Live.start`, `Live.feed` and `Live.view` (row 326, DI-85).
+  `Live.start`, `Live.feed` and `Live.view` (row 326, DI-85). No host answer is preloaded: every
+  host call parks, and its answer is a decision (slice HC-2, row 343). The raw statement
+  `run_eq_ref_table` is proved. A list of answers is a host that answers from a list
+  (`Test/Api/HostList.lean`).
 - **The host meaning on a run** (slices H8 and H9, row 310). `denoteRows_eq_session` and
   `denoteRows_eq_session_host` are theorems (`src/Effect4/Laws/Api/SessionMeaning.lean`). Their
   fragment is `StraightRows`, at every compile budget. A recorded run that is funded, at rest and
@@ -89,6 +93,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
   and the local run with calls moves the same way. One drive law serves H8 and the packet's
   theorem: `drive_seg` (`src/Effect4/Laws/Program/Agreement/Segment.lean`). It relates a segment
   of commands to the local run with calls and counts its steps. `run_eq_meaning` follows from it.
+  The forward agreement with calls is proved once, on loops; the straight one is its instance
+  (row 344). The six meanings of the call tree are instances of one algebra of control
+  (`denoteCtl`, `src/Effect4/Laws/Program/DenoteCtl.lean`, row 344).
 - **The coalgebra layer** (the [coalgebra note](research/2026-10-09-host-coalgebra.md)). The
   `Effects` package, version 0.10.0, holds systems, bisimulations, protocols and runs. It holds
   hosts as comodels, which compose by routing, renaming, admission, recording, and implementation
@@ -156,7 +163,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
   the program's TypeScript beside its tree. A graph of any shape lays out by ranks
   (`ranks_forward`), with cycles as back edges and every edge a curve. A run draws its fibers as
   one (`v -r NAME`). A step ends at exactly the next frame (`sample_end`). Every choice of style
-  is a look: a W3C design-token file, written as CSS for the web (`v -l LOOK`, `v -L`).
+  is a look: a W3C design-token file, written as CSS for the web (`v -l LOOK`, `v -L`). Every
+  run is kept with its page, which steps its SVG pictures as the window does (`v -H NAME`), and
+  `v -G` lists every kept run.
 - **The view's folds** (the [algebra audit](research/2026-10-09-view-algebra-audit.md)). A map
   that commutes with each layer commutes with the fold (`cata_fusion`). Several readings of a
   program are one fold (`cata_prod`). A program's lines anywhere are its lines at the root, moved
@@ -180,7 +189,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
   (rows 203 and 207). `generated/semantics.md` derives every claim's status from its proof.
   `#load_report` and `#load_map` (`tools/Tools/LoadPaths.lean`) measure which theorems carry a
   registered claim, and a landing's reuse ratio (the [load paths note](research/2026-10-08-load-paths.md)).
-  An unconsumed theorem is triaged before any removal.
+  An unconsumed theorem is triaged before any removal. A cache of a fold is checked against the
+  fold (`Effect4.Program.TyCache.check_agreement`, row 345). So are the axiom walk's distance
+  summary (`#axiom_audit checked`) and the view's reachability table.
 - **The build.** The program and dogfood batteries run the machine as native code (row 327). A
   build prints only findings and the axiom gate's summary: reports print when a script asks for
   them. A battery restates no theorem (row 301); the cleanup pause of 2026-10-07 is closed, with
@@ -205,6 +216,10 @@ A program has folds, a journaled run with replay, and a printed image that reads
 
 ## Next, in order
 
+00. **The last planned goals** (the [goals packet](research/2026-10-10-goals-packet/README.md)).
+   Fourteen goals remain, each a property of one of the five example applications. The packet
+   plans their proofs for Codex, with each goal proved modulo the lemmas it names. It also sorts
+   the 87 open parts that no goal states yet.
 0. **The host session as a coalgebra** (the
    [coalgebra note](research/2026-10-09-host-coalgebra.md), slices CO-1 to CO-7). CO-1 to CO-5
    landed, with CO-6 and the generic half of CO-7 (decisions row 338 ruled the note's questions).
@@ -227,8 +242,8 @@ A program has folds, a journaled run with replay, and a printed image that reads
    layers print and read back, and three counted builds agree with rc.112. Codex scouts a
    keyed layer, shared by argument values after Effect's `LayerMap`. Then CX3, which adds substitution and the builder's
    certificate. CX4 adds bounded unfolding. Then HO-4 (generics), HO-5 (Pool's service). Then
-   CO-7's Effect4 half: handle rows and call sites as worlds. Codex reviews the `Effects` packet. HC-2, HC-6 and HC-7 of the
-   [host-call note](research/2026-10-09-host-calls-and-cleanup.md) stand.
+   CO-7's Effect4 half: handle rows and call sites as worlds. Codex reviews the `Effects` packet. HC-6 and HC-7 of the
+   [host-call note](research/2026-10-09-host-calls-and-cleanup.md) stand; HC-2 landed (row 343).
 1. **The view and the printer**, one plan across four notes. The order:
    - the program's own graph (row 337, point 9). First its design, with an agent's place in it.
      Then the graph, its ranks and its places as folds of the program (the algebra audit's D);
@@ -274,6 +289,10 @@ owner's note of 2026-10-09: write a program, then watch its session answer calls
   confirm. What a line's width means: the organic strokes note, section 4.
 - **MCP and code mode** (the MCP note, section 10): six rulings.
 - **The push of `lean4-effects`**, before this branch: Effect4 pins its local commit.
+- **The nine legacy host fixtures of the truth lane** (row 343 (8)): sign the divergence, move
+  them to the keyed lane, or land HC-6. Until then `check-truth` refuses them.
+- **Seat FC's four proposals** (row 345 (2)): tool laws as claims, the map's height of
+  `tools/Tools/Graph`, the checked audit opt-in, and the generator's children induction.
 
 ## Process
 
