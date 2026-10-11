@@ -1500,7 +1500,7 @@ Effect4.Program.MaskRowsPremises
                   Effect4.Program.ReadsBack classes ((sig.withDefs defs).withParams p.fst.params)
                     (Effect4.Program.paramsSpell param p.fst.params
                       (Effect4.Program.defsSpell call defs spell))
-                    1 p.snd.suspend) →
+                    1 p.snd) →
               Effect4.Program.ReadsBack classes (sig.withDefs defs)
                   (Effect4.Program.defsSpell call defs spell) 0 body →
                 (∀ (l : Effect4.Program.LayerTerm Op),
@@ -1515,23 +1515,33 @@ Effect4.Program.MaskRowsPremises
                           (Option.some (Effect4.Program.Path.layerPath k))) →
                     (∀ (entry : Prod (List Nat) (Effect4.Program.LayerTerm Op)),
                         List.instMembership.mem history entry →
-                          Effect4.Program.LayerTerm.ReadsBack classes (sig.withDefs defs)
-                            (Effect4.Program.defsSpell call defs spell) entry.snd) →
+                          ∀ (d : Effect4.Program.DefDecl),
+                            Eq (Effect4.Program.bodyDeclOf defs entry.fst) (Option.some d) →
+                              Effect4.Program.LayerTerm.ReadsBack classes
+                                ((sig.withDefs defs).withParams d.params)
+                                (Effect4.Program.paramsSpell param d.params
+                                  (Effect4.Program.defsSpell call defs spell))
+                                entry.snd) →
                       (∀ (entry : Prod (List Nat) (Effect4.Program.LayerTerm Op)),
                           List.instMembership.mem history entry →
-                            Eq
-                              (Effect4.Program.LayerTerm.readRefName
-                                (Effect4.Program.LayerTerm.refName entry.fst))
-                              (Option.some entry.fst)) →
-                        ∀ {name : String} {ty : Effect4.Program.EffTy}
-                          {decls : List TypeScript.ConstDecl},
-                          Eq (Effect4.Program.printModule sig name ty root) (Except.ok decls) →
-                            Eq
-                              (Effect4.Program.readModule sig spell call param
-                                (instHAppendOfAppend.hAppend
-                                  (List.map TypeScript.Decl.classDecl classDecls)
-                                  (List.map TypeScript.Decl.const decls)))
-                              (Except.ok root)
+                            Eq (Effect4.Program.bodyDeclOf defs entry.fst) Option.none →
+                              Effect4.Program.LayerTerm.ReadsBack classes (sig.withDefs defs)
+                                (Effect4.Program.defsSpell call defs spell) entry.snd) →
+                        (∀ (entry : Prod (List Nat) (Effect4.Program.LayerTerm Op)),
+                            List.instMembership.mem history entry →
+                              Eq
+                                (Effect4.Program.LayerTerm.readRefName
+                                  (Effect4.Program.LayerTerm.refName entry.fst))
+                                (Option.some entry.fst)) →
+                          ∀ {name : String} {ty : Effect4.Program.EffTy}
+                            {decls : List TypeScript.ConstDecl},
+                            Eq (Effect4.Program.printModule sig name ty root) (Except.ok decls) →
+                              Eq
+                                (Effect4.Program.readModule sig spell call param
+                                  (instHAppendOfAppend.hAppend
+                                    (List.map TypeScript.Decl.classDecl classDecls)
+                                    (List.map TypeScript.Decl.const decls)))
+                                (Except.ok root)
 ```
 
 **modeled-codec**

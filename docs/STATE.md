@@ -48,8 +48,8 @@ A program has folds, a journaled run with replay, and a printed image that reads
   back (HO-3a, HO-3b: one law of named rows for a block's and a body's spelling,
   `LawfulSpelling.extend`, and the laws of invocations, `LawfulInvokes`). A body's own layer is
   built once per call (step 3a, the owner's option B): a build is keyed by its path and the
-  running call, named by the chain of invocation sites (`Point.layerKey`). The printer refuses a
-  body's own layer until step 3b.
+  running call, named by the chain of invocation sites (`Point.layerKey`). A body's own layers print as constants at the top of its suspension and read back (step 3b);
+  three counted programs agree with rc.112.
 - **Data.** Records, required and optional reads, tags, string maps and fixed tuples are in the
   language. Integers carry, encode and compute inside the profile's bound (rows 316 to 322).
   Streams have their first profile (row 311). A Lean structure ties to its `Ty` by
@@ -223,8 +223,8 @@ A program has folds, a journaled run with replay, and a printed image that reads
    roots, trailing names and payload classes, a service role with parameters waits for HO-5,
    and a callback that needs a service is refused at its invocation until the header carries a
    requirement variable. Step 3a landed: a body's layers are built once per call, in the machine
-   and the OCaml route ([the note](research/2026-10-10-layer-scopes.md) §5). Next, step 3b, the
-   printer and reader of a body's layers, with the truth lane's counted builds. Codex scouts a
+   and the OCaml route ([the note](research/2026-10-10-layer-scopes.md) §5). Step 3b landed: a body's
+   layers print and read back, and three counted builds agree with rc.112. Codex scouts a
    keyed layer, shared by argument values after Effect's `LayerMap`. Then CX3, which adds substitution and the builder's
    certificate. CX4 adds bounded unfolding. Then HO-4 (generics), HO-5 (Pool's service). Then
    CO-7's Effect4 half: handle rows and call sites as worlds. Codex reviews the `Effects` packet. HC-2, HC-6 and HC-7 of the

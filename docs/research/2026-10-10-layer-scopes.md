@@ -167,9 +167,7 @@ The scope rule as a table:
 - **Print** (`printModuleLayers`, `Codegen/Print.lean`): each module layer is a constant named by
   its path, `const L_2_0 = …` for `Path.layerPath 0`, after the definitions and the services
   (a layer's body may invoke them) and before the hoisted layers (which may name it). Hoisting
-  leaves the module's layers out (`Eff.refTargets`), so a reference to one prints as its name. A
-  body may hold references into the module (`Eff.layersAreModuleRefs`); its own layer stays
-  refused until step 3.
+  leaves the module's layers out (`Eff.refTargets`), so a reference to one prints as its name. A body may hold references into the module, and its own layers since step 3b (§5.4).
 - **Read** (`readModule`, `moduleLayersOf`, `Codegen/Read.lean`): the declarations whose paths
   stand in the module rebuild the layers child, and they must be `Path.layerPath 0`, `1`, … in
   order; the others are put back at their paths.
@@ -240,8 +238,24 @@ DET-5).
   `ocaml/engine/e4_memo.mli`).
 
 Step 3b, the printer, prints a body's layers inside the definition's suspension, so rc.112
-creates one object per run of the body: `(a0) => Effect.suspend(() => { const L = …; return
-body })`.
+creates one object per run of the body: `(a0) => Effect.suspend(() => { let L_<path> = …; return body })`.
+
+### 5.4 As landed: step 3b
+
+- **Print** (`printDefs`, `printLocal`, `suspension`, `src/Effect4/Codegen/Print.lean`): the
+  hoisted layers whose paths stand in body `k` (`Path.bodyIndex`) print as `let L_<path> = …` at
+  the top of its suspension, in declaration order, at the body's signature. A body with none
+  prints as before. The constant is a `let`, since the target fragment has no plain `const`
+  statement; nothing reassigns it. A body's layer that nothing names prints in place.
+- A block whose reference stands out of its scope (`Eff.inScope`) is refused by its target.
+- **Read** (`readDefBody`, `readLocal`, `src/Effect4/Codegen/Read.lean`): the constants before
+  the `return` come back at their paths, with the other hoisted layers.
+- **The round trip** (`readModule_printModule_defs`): restated. Each body reads back itself, and
+  each hoisted layer at the signature of its scope (`bodyDeclOf`).
+- **Evidence.** The truth lane runs `pDefsBodyLayerCalls` (2 builds), `pDefsBodyLayerShared` (1)
+  and `pDefsBodyLayerNested` (2) on rc.112 and agrees after step 3a. tsgo 7 admits their prints
+  (`make check-target`).
+- **Not established.** `Api.admitModule` still refuses a body that names a module layer (§4.6).
 
 ### 5.3 What it does not establish
 

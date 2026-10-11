@@ -842,8 +842,11 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   with no layer path (`DefDecl.readable`).
   The block's module layers print after the services, as constants named by their paths
   (`printModuleLayers`), and a reference to one prints as that name.
-  Each body's suspension reads back at the signature its parameters extend, through the
-  spelling map its parameters' names extend (`paramsSpell`).
+  Each body reads back at the signature its parameters extend, through the spelling map its
+  parameters' names extend (`paramsSpell`). A body's own hoisted layers print as constants at the
+  top of its suspension, named by their paths (`printDefs`, `suspension`), so each run of the body
+  makes its own layer objects, as rc.112 builds one object per evaluation of the body. They read
+  back at the body's signature (`bodyDeclOf`; row 341, step 3b).
   The main program, each layer and each module layer read back at the block's signature,
   through the block's spelling map (`defsSpell`).
   Both maps are lawful by one law of named rows (`LawfulSpelling.extend`,
@@ -857,13 +860,16 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   `defsNamed_of_fault`).
   So the program interface's module round trip holds for a program with a block
   (`Api.printModule_roundTrip`, `src/Effect4/Laws/Api/ModuleReadable.lean`).
-  The printer refuses an empty block and a definition body's own layer, by name (row 341,
-  step 3).
+  The printer refuses an empty block, and a reference out of its scope by its target
+  (`Eff.inScope`).
   The application face refuses an invocation whose programs need a service, at its path
   (`PrintRefusal.callbackRequirement`): the printed header closes a parameter's row as `never`.
   A requirement row other than `never` is printed and not read.
   It establishes nothing that tsgo accepts and nothing of a run of the printed module.
   The truth lane runs the block programs on the pin, a finite check (`make check-truth`).
+  Three counted programs compare the builds of a body's own layer with rc.112: two calls build
+  twice, one call that provides its layer twice by reference builds once, and a call nested in
+  another through the program it passed builds twice.
 - **The reader reads the typed print (`typed-print-read`)**: The statement fixes a readable
   program and a lawful spelling.
   After the named erasure, the reader reads a successful typed print back to its program
