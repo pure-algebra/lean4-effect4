@@ -78,6 +78,12 @@ Behaviour gates only where a slice changes executable code, and then at a sweep.
 3. **The ledgers as instances of L1.**
    - First delete what `LedgerFinalizer` makes redundant: `FinalizerCommands`' command proof and
      `FinalizerBookkeeping`'s edit lemmas, keeping their names as one-line instances.
+   - `FiberSum` (`src/Effect4/Laws/Machine/FiberSum.lean`, landed): a weight summed over the fiber
+     table and its frame rule (`split`, `outside_update`, `outside_update_le`, `install`,
+     `update_bound`, `update_debit`). `FiberSumConnect` shows by `rfl` that the source-opportunity
+     sums, the writer weights, release custody's fiber part and the stack ledger's holdings are
+     instances. Replace each family's own split lemmas by `FiberSum`'s, keeping names and
+     statements.
    - Then each stack-weight ledger (`ReleaseCustody`'s stack credits, the release and log
      ledgers): define its `StackLedger`, prove `Kept`, and take `funded_reachable`.
    - The current-code weights (`SourceOpportunity`, `WriterPhase`) move after R2, or with a
