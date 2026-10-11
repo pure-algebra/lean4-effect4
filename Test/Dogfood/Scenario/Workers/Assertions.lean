@@ -1,5 +1,6 @@
-import Test.Dogfood.Scenario.Workers.Program
+import Test.Dogfood.Scenario.Programs
 import Test.Dogfood.Scenario.Frame
+import Effect4.Laws.Program.ReleaseTrace
 
 /-!
 # Workers cleanup assertions at every command boundary
@@ -19,22 +20,11 @@ namespace Test.Dogfood.Scenario.Workers.Assertions
 
 open Effect4 Effect4.Machine Effect4.Program
 
-abbrev NEvent := RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx
+/-- The universally certified acquisition paths, shared with the source placement facts. -/
+abbrev acquirePath := Programs.crewAcquire
 
-/-- The two connection acquisitions in the elaborated crew. -/
-def acquirePath : Nat → List Nat
-  | 1 => [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0]
-  | _ => [1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0]
-
-/-- `resolve.acquired` pushes this frame for the acquisition at the counted source path. -/
-def registeredAt (q : List Nat) : NEvent → Bool
-  | .frame _ (.pushed (.onSuccess _ (.afterScopeAdd _ (.foreign c)))) => c.path == q
-  | _ => false
-
-/-- `suspendBodyAt.foreign` pushes this frame when that acquisition's release starts. -/
-def releaseAt (q : List Nat) : NEvent → Bool
-  | .frame _ (.pushed (.onSuccess _ (.releaseUnder p _ _))) => p.path == q
-  | _ => false
+abbrev registeredAt := ReleaseTrace.registeredAt
+abbrev releaseAt := ReleaseTrace.releaseAt
 
 /-- The release observation reads the second allocated reference cell. -/
 def log (m : NativeMachine) : List Val :=
@@ -57,12 +47,20 @@ def LogDebits (m : NativeMachine) : Prop :=
     ∀ i ∈ [1, 2], (log m).count (.nat i) ≤ m.trace.countP (releaseAt (acquirePath i))
 
 /-- Concrete trace and store assertions, restricted to the machine's actual admitted history. -/
-def Holds (b : Api.Built) (cf : Nat) (m : NativeMachine) : Prop :=
-  Run.HistoryOf b cf m ∧ Registrations m ∧ ReleaseDebits m ∧ LogDebits m
+structure Holds (b : Api.Built) (cf : Nat) (m : NativeMachine) : Prop where
+  history : Run.HistoryOf b cf m
+  sites : ∀ i ∈ [1, 2], Programs.acquisitionAt b.program (acquirePath i) = true
+  placement : ∀ i ∈ [1, 2], OncePlaced (Node.eff b.program) (acquirePath i) = true
+  registrations : Registrations m
+  releases : ReleaseDebits m
+  logs : LogDebits m
 
-/-- Load obligation of `releases_once`: no registration, release or log entry exists at load. -/
-theorem load (b : Api.Built) (cf : Nat) : Holds b cf (Api.load b.program cf) := by
-  refine ⟨⟨[], trivial, rfl⟩, ?_, ?_, ?_⟩
+/-- Load obligation of `releases_once`: certified source acquisitions exist, with no trace or log entries. -/
+theorem load (total cf : Nat) (b : Api.Built) (hb : Api.Author.build (crew total) = .ok b) :
+    Holds b cf (Api.load b.program cf) := by
+  refine ⟨⟨[], trivial, rfl⟩, ?_, Programs.crew_acquire_once_placed total b hb, ?_, ?_, ?_⟩
+  · rw [Programs.workers_built_program total b hb]
+    exact Programs.workers_acquisition_sites total
   · intro i _
     exact Nat.zero_le 1
   · intro i _
@@ -91,10 +89,32 @@ theorem history_step (b : Api.Built) (cf : Nat) (m : NativeMachine)
 The step assembly consumes this leaf without a planned preservation goal. -/
 theorem middleware_step (b : Api.Built) (cf fuel : Nat) (m : NativeMachine)
     (hm : Holds b cf m) : Holds b cf (Run.stepBy b m (fuel, .installMiddleware)) := by
-  refine ⟨history_step b cf m (fuel, .installMiddleware) hm.1 trivial, ?_, ?_, ?_⟩
-  · exact hm.2.1
-  · exact hm.2.2.1
-  · exact hm.2.2.2
+  refine ⟨history_step b cf m (fuel, .installMiddleware) hm.history trivial, hm.sites, hm.placement, ?_, ?_, ?_⟩
+  · exact hm.registrations
+  · exact hm.releases
+  · exact hm.logs
+
+/-- Yield edit leaf of `releases_once`: an override changes neither trace counts nor the log.
+The step assembly consumes this leaf without a planned preservation goal. -/
+theorem yield_step (b : Api.Built) (cf fuel : Nat) (m : NativeMachine)
+    (id : FiberId) (verdict : Bool) (hm : Holds b cf m) :
+    Holds b cf (Run.stepBy b m (fuel, .yieldVerdict id verdict)) := by
+  have same : (Run.stepBy b m (fuel, .yieldVerdict id verdict)).trace = m.trace ∧
+      (Run.stepBy b m (fuel, .yieldVerdict id verdict)).state = m.state := by
+    change (m.modify id fun f => { f with yieldOverride := some verdict }).trace = m.trace ∧
+      (m.modify id fun f => { f with yieldOverride := some verdict }).state = m.state
+    unfold RunMachine.modify
+    split <;> exact ⟨rfl, rfl⟩
+  refine ⟨history_step b cf m (fuel, .yieldVerdict id verdict) hm.history trivial, hm.sites, hm.placement, ?_, ?_, ?_⟩
+  · unfold Registrations
+    rw [same.1]
+    exact hm.registrations
+  · unfold ReleaseDebits
+    rw [same.1]
+    exact hm.releases
+  · unfold LogDebits log
+    rw [same.1, same.2]
+    exact hm.logs
 
 /-- Registration preservation obligation of `releases_once`.
 Reach: actual crew histories, all budgets, controls and admitted host answers.
@@ -138,13 +158,20 @@ theorem step (total cf : Nat) (b : Api.Built) (hb : Api.Author.build (crew total
   · have heq : x = (x.1, .installMiddleware) := Prod.ext rfl hf
     rw [heq]
     exact middleware_step b cf x.1 m hm
-  · exact ⟨history_step b cf m x hm.1 hx, registrations_step total cf b m x hb hm hx,
-      releases_step total cf b m x hb hm hx, logs_step total cf b m x hb hm hx⟩
+  · cases hd : x.2 with
+    | yieldVerdict id verdict =>
+      have heq : x = (x.1, .yieldVerdict id verdict) := Prod.ext rfl hd
+      rw [heq]
+      exact yield_step b cf x.1 m id verdict hm
+    | fire _ | flush | evaluate _ | answerAsync _ _ _ | interruptFrom _ _ _ |
+        installMiddleware | advance _ =>
+      exact ⟨history_step b cf m x hm.history hx, hm.sites, hm.placement, registrations_step total cf b m x hb hm hx,
+        releases_step total cf b m x hb hm hx, logs_step total cf b m x hb hm hx⟩
 
 /-- History assembly of `releases_once`, using the existing admitted-history lift. -/
 theorem history (total cf : Nat) (b : Api.Built) (hb : Api.Author.build (crew total) = .ok b)
     (m : NativeMachine) (hm : Run.HistoryOf b cf m) : Holds b cf m :=
-  Run.history_keeps b cf (Holds b cf) (load b cf) (step total cf b hb) m hm
+  Run.history_keeps b cf (Holds b cf) (load total cf b hb) (step total cf b hb) m hm
 
 /-- Read obligation of `releases_once`: the concrete debit assertions imply no duplicate log entry. -/
 theorem read (b : Api.Built) (cf : Nat) (m : NativeMachine) (hm : Holds b cf m) :
@@ -152,12 +179,12 @@ theorem read (b : Api.Built) (cf : Nat) (m : NativeMachine) (hm : Holds b cf m) 
   rw [List.nodup_iff_count]
   intro v
   by_cases hv : v ∈ log m
-  · rcases hm.2.2.2.1 v hv with rfl | rfl
-    · exact Nat.le_trans (hm.2.2.2.2 1 List.mem_cons_self)
-        (Nat.le_trans (hm.2.2.1 1 List.mem_cons_self) (hm.2.1 1 List.mem_cons_self))
+  · rcases hm.logs.1 v hv with rfl | rfl
+    · exact Nat.le_trans (hm.logs.2 1 List.mem_cons_self)
+        (Nat.le_trans (hm.releases 1 List.mem_cons_self) (hm.registrations 1 List.mem_cons_self))
     · have hi : 2 ∈ [1, 2] := List.mem_cons_of_mem _ List.mem_cons_self
-      exact Nat.le_trans (hm.2.2.2.2 2 hi)
-        (Nat.le_trans (hm.2.2.1 2 hi) (hm.2.1 2 hi))
+      exact Nat.le_trans (hm.logs.2 2 hi)
+        (Nat.le_trans (hm.releases 2 hi) (hm.registrations 2 hi))
   · exact (List.count_eq_zero_of_not_mem hv).symm ▸ Nat.zero_le 1
 
 end Test.Dogfood.Scenario.Workers.Assertions

@@ -13,6 +13,6 @@ theorem reader : Test.Dogfood.Scenario.Workers.ReleasesOnce := by
     total budget.compileFuel b hb _ hh
   exact Test.Dogfood.Scenario.Workers.Assertions.read b budget.compileFuel _ hs
 
-#axiom_audit Test.Dogfood.Scenario.Workers.Program Test.Dogfood.Scenario.Workers.Assertions
+#axiom_audit Effect4.Laws.Program.ReleaseTrace Test.Dogfood.Scenario.Workers.Program Test.Dogfood.Scenario.Workers.Assertions
 #plan_status Test.Dogfood.Scenario.Workers.Assertions.history
 end MachineAssertions

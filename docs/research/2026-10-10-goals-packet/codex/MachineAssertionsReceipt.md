@@ -65,3 +65,31 @@ The source modules change no machine behavior.
 The new `Test` modules need the coordinator's `Test/All.lean` integration.
 Behavior gates remain deferred until the major structure lands.
 No push.
+
+## Certified source follow-up
+
+`Holds.sites` now consumes the universal acquisition-node facts from `Programs.workers_acquisition_sites`.
+`Holds.placement` consumes `Programs.crew_acquire_once_placed`.
+The paths alias `Programs.crewAcquire`, so the assertions introduce no parallel path table.
+`yield_step` proves the yield-override edit and the step assembly consumes it.
+The shared classifiers live in `Effect4.Laws.Program.ReleaseTrace`, consumed by both crews.
+The classifier-only audit reports eleven declarations within the ceiling, without goals.
+
+Dependencies: `b67e9b9c`, `3a7b059c`, `7719b68b` from the symbolic-programs seat.
+`lake build Test.Dogfood.Scenario.Workers.Assertions` succeeds, 1034 jobs.
+The updated universal reader succeeds with this measured audit:
+
+```text
+#axiom_audit: 46 declarations within [propext, Quot.sound], 2 of them modulo planned goals; 3 planned goals
+```
+
+The generic release debit remains open, even without the per-source once bound.
+`Scope.closeState_finalizers` empties the store's registration list before finalizer code runs.
+`scopeCloseSnapshot` transfers its close order into residual store-generated programs.
+A successful `scopeAdd` also leaves the release name in `afterScopeAdd` until delivery.
+Counting both occurrences as live credits would double count one registration.
+The custody proof must distinguish the returned unit from an already-closed scope's closing exit.
+It must track residual finalizer code, stacks and commands as well as scope entries.
+The existing scope-store laws alone prove no trace-event debit inequality.
+The typed capstones apply to the reference machine and ghost admission.
+Their observation transfer supplies no native residual-source theorem at the crew's actual host table.
