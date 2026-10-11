@@ -248,8 +248,8 @@ prediction of lines removed.
   `../2026-10-11-tokens-in-places/model-first.md`.
 - **Regions: a language gap.** A handle allocated inside a scope must not be used after the
   scope closes. With protocol states, that use is a step that the forward order forbids. A static
-  form keeps a region's handles out of the region's result: the support of the result names no
-  handle the region minted. rc.112 checks none of this statically. The sources are Launchbury
+  form keeps a region's handles out of the region's result. The support of the result then names
+  no handle the region minted. rc.112 checks none of this statically. The sources are Launchbury
   and Peyton Jones (PLDI 1994), Tofte and Talpin (1997), and Fluet and Morrisett (2006).
 - **Fresh names.** Every counter is a name supply, and minting extends the world by a fresh pair.
   This is the model for L4 to L6.
