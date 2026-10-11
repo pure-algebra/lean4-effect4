@@ -40,9 +40,9 @@ inductive HeadAt (B : List Val) : Kind → NCode → Prop
         (interpreter view).syncState thunk state = some (next, value) → ValueAt B kind value)
       (fallback : ∀ view, ValueAt B kind ((interpreter view).syncValue thunk)) :
       HeadAt B kind (.sync thunk)
-  | suspend (kind : Kind) (thunk : EffThunk)
-      (body : ∀ view, CodeAt B kind ((interpreter view).suspendBody thunk)) :
-      HeadAt B kind (.suspend thunk)
+  | suspend (kind : Kind) (point : Point)
+      (body : ∀ view, CodeAt B kind ((interpreter view).suspendBody (.body point))) :
+      HeadAt B kind (.suspend (.body point))
   | action (kind : Kind) (thunk : EffThunk)
       (operation : View → WithFiberAction EffName EffThunk Val Err Defect FiberId Ann Ctx)
       (action : ∀ view, (interpreter view).withFiberOf thunk = some (operation view))
@@ -59,11 +59,11 @@ inductive HeadAt (B : List Val) : Kind → NCode → Prop
       (first : CodeAt B kind body)
       (caught : ∀ view cause, CodeAt B kind ((interpreter view).contE name cause)) :
       HeadAt B kind (.onFailure body name)
-  | onExit (kind : Kind) (body : NCode) (name : EffName) (flag : Bool)
+  | onExit (kind : Kind) (body : NCode) (point : Point) (flag : Bool)
       (first : CodeAt B kind body)
       (cleanup : ∀ view exit program, ExitAt B kind exit →
-        (interpreter view).finalizerProgram name exit = some program → CodeAt B .unit program) :
-      HeadAt B kind (.onExit body name flag)
+        (interpreter view).finalizerProgram (.fin point) exit = some program → CodeAt B .unit program) :
+      HeadAt B kind (.onExit body (.fin point) flag)
   | loop (name : EffName) (cursor : Val) (good : CursorAt B cursor)
       (enter : ∀ view next, CursorAt B next → LoopAt B ((interpreter view).loopEnter name next))
       (resume : ∀ view previous answer, CursorAt B previous → ValueAt B .result answer →
@@ -74,6 +74,8 @@ inductive HeadAt (B : List Val) : Kind → NCode → Prop
       HeadAt B .body (.async (.external op request path) false none)
   | sleep (millis : ClockMillis) : HeadAt B .unit
       (.async (.store (.registerSleep millis)) true (some (.store .cancelSleep)))
+  | racePark (race : Nat) : HeadAt B .body (.suspend (.park (.race race)))
+  | awaitPark (targets : List FiberId) : HeadAt B .any (.suspend (.park (.awaitAll targets)))
 
 /-- Loop callbacks retain the cursor's result and the exact source body. -/
 inductive LoopAt (B : List Val) : LoopNext Val NCode → Prop
@@ -104,10 +106,10 @@ inductive SavedAt (B : List Val) : Kind → Kind → NCode → Prop
   | failure (kind : Kind) (body : NCode) (name : EffName)
       (caught : ∀ view cause, CodeAt B kind ((interpreter view).contE name cause)) :
       SavedAt B kind kind (.onFailure body name)
-  | exit (kind : Kind) (body : NCode) (name : EffName) (flag : Bool)
+  | exit (kind : Kind) (body : NCode) (point : Point) (flag : Bool)
       (cleanup : ∀ view exit program, ExitAt B kind exit →
-        (interpreter view).finalizerProgram name exit = some program → CodeAt B .unit program) :
-      SavedAt B kind kind (.onExit body name flag)
+        (interpreter view).finalizerProgram (.fin point) exit = some program → CodeAt B .unit program) :
+      SavedAt B kind kind (.onExit body (.fin point) flag)
   | mask (kind : Kind) (flag : Bool) : SavedAt B kind kind (.setInterruptible flag)
   | loop (name : EffName) (cursor : Val) (good : CursorAt B cursor)
       (resume : ∀ view previous answer, CursorAt B previous → ValueAt B .result answer →

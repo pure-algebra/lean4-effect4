@@ -148,7 +148,7 @@ theorem select_head {B : List Val} (point : Point)
     (positive : point.fuel = fuel + 1) :
     HeadAt B (kindAt point.path) (resolve HostTimeoutSource.program point) := by
   rw [Agreement.resolve_of_at node, Agreement.compileEff_select term decision left right positive]
-  refine HeadAt.suspend (kindAt point.path) (.body point) ?_
+  refine HeadAt.suspend (kindAt point.path) point ?_
   intro view
   change CodeAt B (kindAt point.path)
     (suspendBodyAt HostTimeoutSource.program (.body { point with completed := view }))
@@ -284,7 +284,7 @@ theorem zero_head {B : List Val} (point : Point)
     (slots : EnvAt B point.path point.env) (zero : point.fuel = 0) :
     HeadAt B (kindAt point.path) (resolve HostTimeoutSource.program point) := by
   rw [Agreement.resolve_of_at (env_node slots), Agreement.compileEff_at_zero _ zero]
-  refine HeadAt.suspend (kindAt point.path) (.body point) ?_
+  refine HeadAt.suspend (kindAt point.path) point ?_
   intro view
   change CodeAt B (kindAt point.path)
     (suspendBodyAt HostTimeoutSource.program (.body {point with completed := view}))
@@ -349,7 +349,7 @@ theorem loop_head {B : List Val} (point : Point)
       rw [positive]
       kernel_rfl
   rw [compiled]
-  refine HeadAt.suspend (kindAt point.path) (.body point) ?_
+  refine HeadAt.suspend (kindAt point.path) point ?_
   intro view
   change CodeAt B (kindAt point.path)
     (suspendBodyAt HostTimeoutSource.program (.body {point with completed := view}))
