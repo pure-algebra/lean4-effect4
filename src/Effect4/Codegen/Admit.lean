@@ -46,6 +46,9 @@ inductive SurfaceRefusal where
   /-- The block's leading class declarations are not the payload classes the printer declares
   for the program it reads to (decisions row 120). -/
   | classDeclarations
+  /-- A natural literal above the TypeScript face's bound: JavaScript reads the module's text as
+  another number than the program holds (DI-56; `E4-PRINT-CE-002`, decisions row 357). -/
+  | outsideProfile (value : Nat)
   deriving DecidableEq
 
 /-- Every earlier declaration of a block is a plain exported layer constant: the shape
@@ -105,6 +108,7 @@ structure ModuleReading (table : RowTable) (name : String) (allowed : List Bindi
   module : TypeScript.Module
   program : NativeEff
   formed : Formation.InputFormed program table
+  inProfile : natLiteralsInProfile program = true
   typing : TypedProgram (nativeSignature table) program
   classes : Classes.Classes
   classDecls : List TypeScript.ClassDecl
@@ -130,6 +134,10 @@ def admitModule (name : String) (module : TypeScript.Module) (table : RowTable :
       match hformed : Formation.checkInput program table with
       | some why => .error (.formation why)
       | none =>
+      match hprofile : natLiteralsInProfile program with
+      | false => .error (.outsideProfile
+          (((natLiterals program).find? fun n => decide (rc112.natBound < n)).getD 0))
+      | true =>
       match checkTypedProgram (nativeSignature table) program with
       | none => .error .illTyped
       | some typing =>
@@ -142,6 +150,6 @@ def admitModule (name : String) (module : TypeScript.Module) (table : RowTable :
         match henv : envelopeCheck name typing.ty classes module.decls with
         | some why => .error why
         | none => .ok ⟨module, program, (Formation.checkInput_eq_none_iff program table).mp hformed,
-            typing, classes, classDecls, hclasses, hannotations, bound, hread, henv⟩
+            hprofile, typing, classes, classDecls, hclasses, hannotations, bound, hread, henv⟩
 
 end Effect4.Codegen

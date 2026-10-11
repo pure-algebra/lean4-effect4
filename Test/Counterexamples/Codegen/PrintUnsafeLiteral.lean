@@ -16,8 +16,8 @@ DI-56 rules that a face refuses outside its profile, and the profile's bound is 
 The repair (2026-10-11): the module emission refuses a natural literal above the profile's bound
 before it prints, with `EmissionRefusal.outsideProfile` naming the literal, and its certificate
 records the bound (`ModuleEmission.inProfile`, `src/Effect4/Codegen/Checked.lean`). The term
-printer stays total, so its round trip is unchanged. The reading boundary still reads such a
-literal: that half is open.
+printer stays total, so its round trip is unchanged. The reading boundary refuses the same
+literal (`SurfaceRefusal.outsideProfile`, `ModuleReading.inProfile`, `src/Effect4/Codegen/Admit.lean`).
 -/
 
 set_option autoImplicit false
@@ -56,5 +56,25 @@ def answersUnsafe : Eff NativeOp := .succeed (.lit (.nat beyond))
 #guard match Codegen.emitModule "answersBound" (.succeed (.lit (.nat rc112.natBound))) with
   | .ok _ => true
   | .error _ => false
+
+-- The reading boundary refuses the same program's text, written by the raw printer, which
+-- checks no profile.
+#guard match Api.typeOf answersUnsafe [] with
+  | none => false
+  | some ty => match printEntry [] (nativeSignature []) "main" ty answersUnsafe with
+    | .error _ => false
+    | .ok decls =>
+      match Codegen.admitModule "main" { header := [], imports := [], decls := decls.map .const }
+          [] Codegen.effectOrigins [.named ["Effect"] "effect"] with
+      | .error (.outsideProfile value) => value == beyond
+      | _ => false
+
+-- Control: the bound's text is admitted.
+#guard match Codegen.emitModule "main" (.succeed (.lit (.nat rc112.natBound))) with
+  | .error _ => false
+  | .ok e => match Codegen.admitModule "main" e.module [] Codegen.effectOrigins
+      [.named ["Effect"] "effect"] with
+    | .ok _ => true
+    | .error _ => false
 
 end Test.Counterexamples.Codegen.PrintUnsafeLiteral

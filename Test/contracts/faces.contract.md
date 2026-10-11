@@ -780,7 +780,9 @@ What this changes in the packet above, and nothing else:
   `emitModule_complete` take `natLiteralsInProfile program = true` as one more premise.
   `Api.printModule_roundTrip` is unchanged: it assumes a successful print. The term printer
   stays total, so the read-print laws do not move.
-- **Open.** The reading boundary still reads such a literal. A module that a person writes with
-  one is admitted, and the run of its printed text differs from the model's.
+- **The reading half.** `Codegen.admitModule` refuses the same literal after formation, as
+  `SurfaceRefusal.outsideProfile`, and its certificate records the bound in
+  `ModuleReading.inProfile`. `admitModule_complete` gains the premise. `ModuleEmission.admit`
+  supplies it from the emission's own field.
 - **Evidence.** *Proved*: the laws above, under `[propext, Quot.sound]`. *Tested*: the
   counterexample's regression and its control, and bun 1.4.2's reading of `9007199254740993`.
