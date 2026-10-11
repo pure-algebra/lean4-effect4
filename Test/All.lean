@@ -368,6 +368,8 @@ import Test.Counterexamples.Machine.Runtime.HostRefPrefix
 import Test.Counterexamples.Machine.Runtime.HostInstancePrefix
 import Test.Dogfood.Scenario.Atomic.Writes
 import Test.Dogfood.Scenario.Atomic.Writer
+import Test.Dogfood.Scenario.Atomic.WriterPhase
+import Test.Dogfood.Scenario.Atomic.WriterOwnership
 import Test.Dogfood.Proofs.TimeoutCounterexample
 import Test.Dogfood.Scenario.QueueWorkers.Source
 import Test.Machine.RaceFirst
