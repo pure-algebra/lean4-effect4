@@ -114,3 +114,32 @@ It adds no evaluator or command case analysis.
 `git diff --check` passes for the changed source.
 Apply this checkpoint after `9915c36f7`.
 No Machine source, root import, generator input or target projection changes in this checkpoint.
+
+## General provider arm checkpoint
+
+Base: `bad99e8e2`.
+`checked_provideContext_arm` handles any checked provider body through the same ambient arrow.
+Its smaller premises type the actual child and the actual immediate exit.
+The child premise consumes the body's checker result and its required-row inclusion.
+It retains the outer available row as both completion guarantees.
+The immediate premise establishes only the shortcut exit's value judgment.
+The outer pure constructor additionally retains its actual entry bound.
+These premises are inputs from the source induction and `inlineYield_typed`.
+They are not new premises of any closed reachable claim.
+
+The actual context-reader consumer now applies this general arm.
+It discharges the immediate branch because that reader has no immediate exit.
+It constructs its live child using declared carriers and the installed merged row.
+The source checker-to-member proof now occurs once.
+No duplicate source carrier or private evaluator pass is added.
+The broader `inlineYield_typed` proof needs the new provider recursion case.
+That value-only helper can retain its original header.
+The broader open `ChildDenotes` relation still needs its approved ambient migration.
+
+The same three check commands above pass again.
+Result: 489 build jobs pass; Context measures 88 seconds and Scheduler measures 110 seconds.
+The source reader passes without messages.
+The audit reports 687 declarations within `[propext, Quot.sound]`, zero planned goals and zero modulo declarations.
+The source adds 78 lines and removes 48 lines relative to `bad99e8e2`.
+`git diff --check` passes for the source.
+Apply this checkpoint after `bad99e8e2`.
