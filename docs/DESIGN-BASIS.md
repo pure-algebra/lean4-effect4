@@ -1329,6 +1329,8 @@ What this basis refuses. A `json` leaf in `Ty`: the value language is the carrie
 and a codec is a row. A record type in `Ty`: columns are pairs. `.int` stays uninhabited
 (`TYPED-FB-INT`): `Val.nat` is a `.nat`, and the printer's identification of the two as
 `number` is not the typing's.
+**Superseded in part** (census 2026-10-11): rows 119 and 165 put records in `Ty`, and row 309's
+integers inhabit `int` (`Val.negInt`). The refusal of a `json` leaf stands.
 
 Recommended beside these refusals, not ruled (scout E, 2026-09-09). All three stand, with two
 amendments: `Headers` and `File.Info` are codec-able as `list (prod string string)`, the shape

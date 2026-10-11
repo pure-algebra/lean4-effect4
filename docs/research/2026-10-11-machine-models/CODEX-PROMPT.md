@@ -237,6 +237,20 @@ Behaviour gates only where a slice changes executable code, and then at a sweep.
     - Keep every existing theorem's name and statement; connectors first, then callers, then the
       old proof goes. Report lines before and after each step.
 
+12. **Types across the faces: `mul` and the OCaml ingress** (the owner, 2026-10-11: tighten the
+    type interface between Lean, TypeScript and OCaml; the note is
+    `../2026-10-11-type-interface/README.md`). Two items are in your lane; take them after item 10.
+    1. **`mul` through the profile** (`E4-RUN-CE-047`, seeded; the note's R-T2). Lean's
+       `NativeAtom.eval` answers the exact product, the TypeScript prelude rounds above 2^53, and
+       `lcnf_nat_mul` saturates above 2^62. Mark it as row 321 marks `add`: a `Profile.scale` in
+       `Machine/Integers.lean`, its OCaml row through `E4_clock`, and `to_profile_nat`. Or remove the
+       atom, as row 309 says; `Test/Dogfood/P1HttpCache.lean` is its one user. Propose which in the
+       receipt.
+    2. **The OCaml ingress** (the note's R-T8). `E4_engine.answer_async_success` builds `Val_nat` from
+       any `int`, so a negative natural passes reply admission. Refuse it, refuse a float that
+       `Val_float` cannot hold, and turn warning 8 back on in `LcnfGen.lean`'s header. Each is a
+       finite control in `dune test`.
+
 ## How to work
 
 - Place every obligation before you work it (AGENTS.md, Trust). Each shared law's placement is

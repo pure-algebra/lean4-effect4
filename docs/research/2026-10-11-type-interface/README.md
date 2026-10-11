@@ -94,7 +94,10 @@ membership, as its criterion for a new rule. The criterion needs a second half: 
 ### 2.3 An image is exact when three laws hold
 
 1. **Monotone.** The image of the order lies in the target's order. Otherwise the checker accepts a
-   program whose printed form the target refuses.
+   program whose printed form the target refuses. For TypeScript the law is about the structural
+   printer, `ofNormalized`, applied to raw types. The checker tsgo infers a printed value's type
+   from its structure. `ofTy` normalizes first, so on two annotations it hides every identity that
+   normalization makes.
 2. **An upper section on reading.** `print (read τ) = τ` on the printer's image, and
    `t ⊑ read (print t)`. Then print-then-read loses precision, never values. This is a Galois
    insertion of the target's spellings into the types (Cousot and Cousot, 1977).
@@ -118,8 +121,10 @@ Each finding names its evidence. "Wrong" means a run gives an answer that the mo
 
 ### 3.1 Wrong
 
-1. **The projection is not monotone, and the ruled repair misses a bound.** `E4-PRINT-CE-001`:
-   `Ty.normalize` distributes a product over a union, and tsgo does not. Row 346 rules repair A:
+1. **The structural printer is not monotone, and the ruled repair misses a bound.**
+   `E4-PRINT-CE-001` is its counterexample. Through `Ty.normalize`'s distribution, `Ty.sub` relates a
+   pair of a union to the union of pairs. tsgo does not relate their structural prints. The printed
+   value carries the first type, and its annotation prints the second. Row 346 rules repair A:
    distribute only at a literal or discriminant position. tsgo's rule, read from its source at the
    pinned build's date (`sources/tsgo-discriminated-decomposition.go.txt`):
    - a property of a target union is a discriminant when its types differ across the constituents
@@ -205,7 +210,7 @@ flowchart TD
   C --> P[route mul through the profile, or refuse it]
   C --> B[amend row 346 with the bound of 25]
   B --> M[a model of tsgo's order on ofTy's image, checked by the 600 pairs]
-  M --> G[ofTy_sub_sound as a planned goal; repair A proves it]
+  M --> G[sub_print_sound as a planned goal; repair A makes it provable]
   N[aliases Int and Num, row 309 5] --> R[the reader is an upper section]
   O[owner: input positions] --> D[decode at entry, or a brand]
   S[Shape becomes a fold of Ty] --> J[one Schema rendering, one JSON codec]
@@ -219,11 +224,19 @@ flowchart TD
 2. **R-T2, `mul`.** Either mark it like `add`, or remove the atom as row 309 says. The mark is
    `Profile.grow`'s pattern: the OCaml row through `E4_clock.to_profile_nat`, and the TypeScript
    `inProfile` helper of row 321 (4). The dogfood program that uses the atom decides which.
-3. **R-T3, the target order as data.** Write `Assignable : TypeRef → TypeRef → Prop` for the image
-   of `ofTy`, transcribing tsgo's rules with their sources. `check-target`'s 600 pairs become its
-   finite check, printed through `ofTy` rather than `renderRaw`. State
-   `ofTy_sub_sound : subN a b → ofTy a = some x → ofTy b = some y → Assignable x y` as a planned
-   goal under concept `subtyping-algebra`. Repair A, with the bound, is its proof.
+3. **R-T3, the target order as data.** Write `Assignable : TypeRef → TypeRef → Prop` for the
+   image of the structural printer, transcribing tsgo's rules with their sources. Its finite check
+   is `generated/assignability.tsv`: `parseLegacy` reads each recorded spelling, and the model
+   must give tsgo's verdict. The vectors must then grow past their 19 core types to records,
+   tuples, maps and unions under products. The planned goal, under concept `subtyping-algebra`:
+
+   ```lean
+   sub_print_sound : Ty.sub a b → ofNormalized a = some x → ofNormalized b = some y →
+     Assignable x y
+   ```
+
+   `E4-PRINT-CE-001` refutes it today. Repair A, with the bound, is the step that makes it
+   provable.
 4. **R-T4, the number tower's names now.** Print `int` as `Int` and `number` as `Num`, aliases of
    `number`, as row 309 (5) rules. Then `ofTy` is injective on the tower, and the reader is an
    upper section there.
@@ -249,7 +262,7 @@ flowchart TD
 
 - **Concepts.** `subtyping-algebra` (law 1, repair A); `exact-codecs` (laws 2 and 3, the Schema
   and JSON images); `translation-simulation` (the printed module and the OCaml route).
-- **Questions.** `ofTy_sub_sound` (proposed, R-T3); the existing `profile-plus-exact` extended to
+- **Questions.** `sub_print_sound` (proposed, R-T3); the existing `profile-plus-exact` extended to
   `mul` (R-T2); decisions rows 28 (a), 108, 144, 309, 342 and 346.
 - **Reach.** The census reads the tree at `9d8b20aee`. The probes are finite evaluations. The tsgo
   rule is read from source, not run; the bound of 25 is a quotation, not a measurement.
