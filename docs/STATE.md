@@ -232,9 +232,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
 ## Next, in order
 
 00. **The last planned goals** (the [goals packet](research/2026-10-10-goals-packet/README.md)).
-   Codex's lane merges hourly (last at `39a69459a`). Of the fourteen application goals, three are
-   proved (`Atomic.bounded`, `Routing.infrastructure_escapes`, `Timeout.stale_never_applies`). Nine
-   are proved modulo nine smaller goals. Timeout's retry and cleanup goals stay open (`#plan_status`).
+   Codex's lane merges hourly. Of the fourteen application goals, three are proved
+   (`Atomic.bounded`, `Routing.infrastructure_escapes`, `Timeout.stale_never_applies`). Nine are
+   proved modulo seven smaller goals. Timeout's retry and cleanup goals stay open (`#plan_status`).
    The packet also sorts the 87 open parts that no goal states yet. Beside it: the nine legacy host fixtures of the
    truth lane move to the keyed lane (row 343 (8), signed until then), and seat FC's rulings
    land (row 345 (2): `tools/Tools/Graph` at height 0; the generator's children induction).
