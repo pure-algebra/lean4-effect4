@@ -247,3 +247,30 @@ Placement: translation simulation R10 for returned timeout outcomes; host sessio
 Dependencies: first-exit backend and source slices, source typed bridge `1b24c34a`, coordinator bookkeeping `a741a709`, and source launch clauses `32f5fdbf`.
 The coordinator owns root imports and the reached behaviour gates.
 The retained kernel counterexample follows in a separate checked slice.
+
+## Retained reply-based counterexample
+
+`TimeoutCounterexample.replyBasedRetry_refuted` refutes the retained original reply-based proposition.
+The two kernel-checked scripts apply success and nonretryable failure before forcing the attempt to yield.
+Both select the timer, return its complete Timeout exit, and start a second attempt.
+Both satisfy the amended returned-outcome predicate and refute the reply-based predicate.
+The selected identity is fiber 2, with timer role and first attempt identity.
+The host-runtime counterparts remain `RaceFirstYield.ts` and its retained output from the earlier slice.
+
+Commands:
+
+- `LEAN_NUM_THREADS=3 lake build Test.Dogfood.Proofs.TimeoutCounterexample`: passed, 1029 jobs; final module 4.6 seconds.
+- `LEAN_NUM_THREADS=3 lake env lean docs/research/2026-10-10-goals-packet/codex/TimeoutCounterexampleAudit.lean`: passed.
+
+The counterexample audit checks seven declarations within `[propext, Quot.sound]`.
+It finds zero planned goals and zero declarations depending on planned goals.
+The full observation equations use the shared `kernel_rfl`; the kernel checks their equality.
+The negation proof reads those equations through option and pair projections.
+An earlier `change` unfolded the entire run and exceeded four million elaborator heartbeats.
+The final proof removes that redundant reduction; no heartbeat or execution budget increases.
+
+Base for this slice: `a0b37e6a`.
+Placement: a red control for the amended translation-simulation R10 retry claim.
+Consumer: the retained original proposition and the amended timeout observation.
+Scope: two fixed Lean scripts and their complete observed exits; no general runtime agreement.
+The three universal timeout goals and reached behaviour gates remain open in the coordinator's lane.
