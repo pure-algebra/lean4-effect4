@@ -265,3 +265,60 @@ The retained source and output are beside the build log.
 The next instance slice replaces the duplicated family split proofs with `FiberSum`.
 The context plan now records the owner's settled row 349 option A.
 No proof endpoint closes in this integration receipt.
+
+## Interruption foundation integration repair
+
+The full law library now builds with the factored interruption helper.
+The original scenario obligations retain their statements and proof status.
+The R2 message migration is separate and remains unlanded at this checkpoint.
+
+Base: `d213c95ee`.
+Proof head: `98567f7f2`.
+Scope: the foundation at `293ed3e85`, the shared timeout connectors, and the integrated fiber sums.
+
+`interruptRecord` delegates to `interruptWithCause` in `src/Effect4/Machine/Fibers.lean`.
+Direct unfolding proofs must expose both definitions.
+The first integration build exposed additional consumers beyond the foundation's narrow build.
+The repair changes 21 proof bodies across 17 files.
+Every existing theorem statement in those files remains byte-identical.
+`codex/InterruptStatementCheck.json` records the changed declarations and their paths.
+Its full path is `docs/research/2026-10-11-machine-models/codex/InterruptStatementCheck.json`.
+
+Placement stays with each existing consumer:
+
+- scheduling proofs retain pending guards, masks, identities, exits, and the deferred interruption rule;
+- source and typing proofs retain captured program data and declared values;
+- scope lifetime proofs retain saved stacks and their existing accounting bounds;
+- the simulation equations retain the connection between the native and term frames;
+- the timeout frame instance retains its ordered continuation after interruption.
+
+These repairs introduce no new judgment, planned goal, representation, or semantic premise.
+They establish neither progress nor correspondence with the Effect host.
+Their consumers remain the original proof graph and the original scenario obligations.
+
+The checked command is:
+
+```sh
+LEAN_NUM_THREADS=3 lake build Effect4.Laws \
+  Test.Dogfood.Proofs.HostTimeoutNumberCounted \
+  Test.Dogfood.Proofs.HostTimeoutNumberFlow \
+  Test.Dogfood.Proofs.HostTimeoutNumberFormFamily \
+  Test.Dogfood.Scenario.Timeout Test.Dogfood.Scenario.Atomic
+```
+
+Result: success, 1,501 jobs.
+The log is `docs/research/2026-10-11-machine-models/codex/InterruptFoundationLawsBuild.log`.
+This includes the whole law library required by the updated machine packet.
+It does not run the whole test battery.
+
+The retained `InterruptIntegrationAudit.lean` imports every repaired module and the shared timeout connectors.
+It lives beside that build log.
+The command `LEAN_NUM_THREADS=3 lake env lean docs/research/2026-10-11-machine-models/codex/InterruptIntegrationAudit.lean` succeeds.
+The audit reports 7,742 declarations within `[propext, Quot.sound]`, zero modulo planned goals, and zero planned goals.
+`InterruptIntegrationAudit.log` retains that output beside its source.
+`git diff --check` succeeds.
+
+The code diff adds 53 lines and removes 38 lines.
+This repair removes silent fallbacks from the touched pending-guard proof.
+The original endpoints remain open where their admitted-history producers remain open.
+The packet defers reached executable behavior gates to the coordinated sweep after the major proof structures land.

@@ -1,0 +1,34 @@
+import Effect4.Machine.Fibers
+import Effect4.Laws.Machine.Clauses
+import Effect4.Laws.Machine.Handles
+import Effect4.Laws.Machine.MaskRuns
+import Effect4.Laws.Program.Interference
+import Effect4.Laws.Program.Guard.Core
+import Effect4.Laws.Machine.Ledger
+import Effect4.Laws.Program.Guard.NativeAssembly
+import Effect4.Laws.Machine.StatePreservation
+import Effect4.Laws.Program.LedgerRun
+import Effect4.Laws.Machine.Book
+import Effect4.Laws.Machine.Witnesses
+import Effect4.Laws.Program.CommandFrames
+import Effect4.Laws.Program.Guard.Observer
+import Effect4.Laws.Program.NativeEvaluation
+import Effect4.Laws.Program.ReleaseCustody.CommandDebit
+import Effect4.Laws.Program.ReleaseCustody.CommandStacks
+import Effect4.Laws.Program.ReleaseCustody.Lift
+import Effect4.Laws.Program.ReleaseCustody.NativeMachineShape
+import Effect4.Laws.Program.Simulation.Actions
+import Effect4.Laws.Program.StackRegion
+import Effect4.Laws.Program.Typed.Commands.Bookkeeping
+import Effect4.Laws.Program.Typed.Commands.Clauses.Command
+import Effect4.Laws.Program.Typed.Commands.Evaluate
+import Effect4.Laws.Program.Typed.Commands.Observe
+import Effect4.Laws.Program.StackRegionRun
+import Test.Dogfood.Proofs.HostTimeoutNumberCounted
+import Effect4.Laws.Program.ControlSteps
+import Test.Dogfood.Proofs.HostTimeoutNumberFlow
+import Effect4.Laws.Program.SourceOpportunityNative
+import Test.Dogfood.Proofs.HostTimeoutStateSteps
+import ProofGraph.AxiomAudit
+
+#axiom_audit Test.Dogfood.Proofs.HostTimeoutStateSteps Effect4.Laws.Program.SourceOpportunityNative Effect4.Machine.Fibers Effect4.Laws.Machine.Clauses Effect4.Laws.Machine.Handles Effect4.Laws.Machine.MaskRuns Effect4.Laws.Program.Interference Effect4.Laws.Program.Guard.Core Effect4.Laws.Machine.Ledger Effect4.Laws.Program.Guard.NativeAssembly Effect4.Laws.Machine.StatePreservation Effect4.Laws.Program.LedgerRun Effect4.Laws.Machine.Book Effect4.Laws.Machine.Witnesses Effect4.Laws.Program.CommandFrames Effect4.Laws.Program.Guard.Observer Effect4.Laws.Program.NativeEvaluation Effect4.Laws.Program.ReleaseCustody.CommandDebit Effect4.Laws.Program.ReleaseCustody.CommandStacks Effect4.Laws.Program.ReleaseCustody.Lift Effect4.Laws.Program.ReleaseCustody.NativeMachineShape Effect4.Laws.Program.Simulation.Actions Effect4.Laws.Program.StackRegion Effect4.Laws.Program.Typed.Commands.Bookkeeping Effect4.Laws.Program.Typed.Commands.Clauses.Command Effect4.Laws.Program.Typed.Commands.Evaluate Effect4.Laws.Program.Typed.Commands.Observe Effect4.Laws.Program.StackRegionRun Test.Dogfood.Proofs.HostTimeoutNumberCounted Effect4.Laws.Program.ControlSteps Test.Dogfood.Proofs.HostTimeoutNumberFlow
