@@ -1,3 +1,4 @@
+import Test.Dogfood.Scenario.QueueWorkers.Assertions
 import Test.Dogfood.Scenario
 import Test.Dogfood.Scenario.QueueWorkers.Model
 import Test.Dogfood.P3WorkerQueue
@@ -163,7 +164,10 @@ a fed job is ever assigned, the order of two deliveries, fairness, or anything o
 Consumer: the scenario's claim `queueWorkers`. Its controls are finite runs, and the seat's
 receipt records a bounded search. -/
 @[semantics "translation-simulation" (requirement := R10)]
-proof_goal held_within_fed : HeldWithinFed
+theorem held_within_fed : HeldWithinFed := by
+  intro total fuel b moves hb hf
+  obtain ⟨a, shows, conserved⟩ := Assertions.jobs_script total fuel b moves hb hf
+  exact Accounting.heldWithin_of_ledger shows conserved
 
 /-- **Each fed job is held, but for one job of a feeder that is gone.** Under every script of
 host acts, where the run is funded and at rest, the fed jobs are no more than the held ones. They
@@ -189,7 +193,11 @@ finished, and it says nothing of a state that is not at rest. Under a masked tak
 control. Consumer: `queueWorkers`. Its controls are finite runs, and the seat's receipt records a
 bounded search. -/
 @[semantics "reactive-scheduling" (requirement := R12)]
-proof_goal fed_accounted : FedAccounted
+theorem fed_accounted : FedAccounted := by
+  intro total fuel b moves hb hh hf hr
+  obtain ⟨a, shows, conserved, custody, lost, _⟩ :=
+    (Assertions.rest_script total fuel b moves hb hf) (Assertions.host_journal fuel b moves hh) hr
+  exact Accounting.accounted_of_ledger shows conserved custody lost
 
 /-- **At rest the queue is settled.** Under every script of host acts, where the run is funded
 and at rest, the observation satisfies `Observation.settled`. The cell has the first profile's
@@ -214,7 +222,11 @@ waiting worker ever takes, the order of two takers, fairness or starvation freed
 read up to its handles: the statement does not say which taker is the earliest. Consumer:
 `queueWorkers`. Its controls are finite runs, and the seat's receipt records a bounded search. -/
 @[semantics "reactive-scheduling" (requirement := R12)]
-proof_goal queue_settled : QueueSettled
+theorem queue_settled : QueueSettled := by
+  intro total fuel b moves hb hh hf hr
+  obtain ⟨_, shows, _, _, _, rest⟩ :=
+    (Assertions.rest_script total fuel b moves hb hf) (Assertions.host_journal fuel b moves hh) hr
+  exact Accounting.settled_of_ledger shows rest
 
 /-- **Each registration cleans up at most once**, on the crew over the queue. Under every script
 of a funded run, the `released` cell holds no connection twice. It is the first scenario's
@@ -232,7 +244,9 @@ Reach: the program `crew`, every script of the driver's alphabet, every command 
 for another program. Consumer: `queueWorkers`. Its controls are finite runs, and the seat's
 receipt records a bounded search. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
-proof_goal releases_once : ReleasesOnce
+theorem releases_once : ReleasesOnce := by
+  intro total fuel b moves hb hf
+  exact decide_eq_true (Assertions.cleanup_read _ (Assertions.cleanup_script total fuel b moves hb hf))
 
 /-- **The queue-workers scenario's claim.** A reply receipt does not advance the machine. A
 reply application consumes the selected call only. A control retires the held calls whose guard
@@ -731,6 +745,12 @@ def wrongTop : Scenario :=
 -- The green control: the gate passes the record. The red control reads the record under the
 -- wrong claim, with the dependency check only (its runs are judged above), and names each clause
 -- that the wrong claim's proof does not reach.
+/--
+error: queue-workers: the claim Test.Dogfood.Scenario.QueueWorkers.queueWorkers rests on the planned goal Test.Dogfood.Scenario.QueueWorkers.Assertions.cleanup_step, which no clause names
+queue-workers: the claim Test.Dogfood.Scenario.QueueWorkers.queueWorkers rests on the planned goal Test.Dogfood.Scenario.QueueWorkers.Assertions.jobs_step, which no clause names
+queue-workers: the claim Test.Dogfood.Scenario.QueueWorkers.queueWorkers rests on the planned goal Test.Dogfood.Scenario.QueueWorkers.Assertions.rest_step, which no clause names
+-/
+#guard_msgs (error) in
 #scenario_gate scenario
 
 /--

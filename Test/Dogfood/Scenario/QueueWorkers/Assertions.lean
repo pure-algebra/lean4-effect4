@@ -301,33 +301,4 @@ theorem cleanup_read (m : NativeMachine) (hc : Cleanup m) : (log m).Nodup := by
     exact Nat.le_trans (hc.logs i hi) (Nat.le_trans (hc.releases i hi) (hc.registrations i hi))
   · exact (List.count_eq_zero_of_not_mem hv).symm ▸ Nat.zero_le 1
 
-/-- The first original universal clause, modulo the boundary preservation obligations. -/
-@[semantics "translation-simulation" (requirement := R10)]
-theorem held_within_fed : HeldWithinFed := by
-  intro total fuel b moves hb hf
-  obtain ⟨a, shows, conserved⟩ := jobs_script total fuel b moves hb hf
-  exact heldWithin_of_ledger shows conserved
-
-/-- The second original universal clause, with the original host and rest premises. -/
-@[semantics "reactive-scheduling" (requirement := R12)]
-theorem fed_accounted : FedAccounted := by
-  intro total fuel b moves hb hh hf hr
-  obtain ⟨a, shows, conserved, custody, lost, _⟩ :=
-    (rest_script total fuel b moves hb hf) (host_journal fuel b moves hh) hr
-  exact accounted_of_ledger shows conserved custody lost
-
-/-- The third original universal clause, with the original host and rest premises. -/
-@[semantics "reactive-scheduling" (requirement := R12)]
-theorem queue_settled : QueueSettled := by
-  intro total fuel b moves hb hh hf hr
-  obtain ⟨_, shows, _, _, _, rest⟩ :=
-    (rest_script total fuel b moves hb hf) (host_journal fuel b moves hh) hr
-  exact settled_of_ledger shows rest
-
-/-- The fourth original universal clause, reading actual cleanup-source debits. -/
-@[semantics "scope-lifetime-finalization" (requirement := R11)]
-theorem releases_once : ReleasesOnce := by
-  intro total fuel b moves hb hf
-  exact decide_eq_true (cleanup_read _ (cleanup_script total fuel b moves hb hf))
-
 end Test.Dogfood.Scenario.QueueWorkers.Assertions

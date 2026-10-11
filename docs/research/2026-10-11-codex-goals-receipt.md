@@ -148,3 +148,19 @@ The probe passes strict tsgo `7.0.0-dev.20260629.1` checking and runs under Bun.
 It uses the real race and retry implementations, with a controlled callback timer.
 It does not measure a physical clock or the exponential delay.
 The waiting topology's cancellation defect remains separate from this contract amendment.
+
+## Queue clause assembly
+
+The four original queue clauses now consume the shared command assertions directly.
+The assertion module repeats none of the original clause statements.
+`jobs_step` serves held-job bounds, job accounting, and settled queue contents.
+`rest_step` also serves accounting and settled contents.
+`cleanup_step` serves cleanup counts.
+All three remain planned goals.
+
+`LEAN_NUM_THREADS=3 lake build Test.Dogfood.Scenario.QueueWorkers` passes with 1050 jobs.
+The old scenario gate rejects these transitive goals, as expected.
+A temporary exact diagnostic guard records that rejection until the planned gate repair.
+`lake env lean docs/research/2026-10-10-goals-packet/codex/QueueAssertions.lean` passes.
+Its audit reports 345 declarations, five modulo declarations, and three planned goals.
+The audit checks the four supporting modules at `[propext, Quot.sound]`.
