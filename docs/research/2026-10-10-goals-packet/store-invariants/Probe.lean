@@ -291,6 +291,120 @@ theorem history_keeps (b : Api.Built) (compileFuel : Nat) (J : NativeMachine →
     (weaken history _ adm)
   exact hj
 
+/-- A build keeps the elaborated program and the module's table. -/
+theorem build_elaborates {m : Authoring.Module NativeOp} {b : Api.Built}
+    (h : Effect4.Api.Author.build m = .ok b) :
+    Authoring.elaborateModule m = .ok b.program ∧ b.table = m.table := by
+  unfold Effect4.Api.Author.build at h
+  split at h
+  · cases h
+  · rename_i program hprog
+    dsimp only at h
+    split at h
+    · cases h
+    · unfold Effect4.Api.Author.Internal.finishBuild at h
+      split at h
+      · cases h
+        exact ⟨hprog, rfl⟩
+      · split at h <;> cases h
+      · cases h
+
+
+/-! ### Control histories: a program with no host row receives no answer
+
+With an empty row table the session accepts no reply: `admit` refuses every answer
+(`externalRow [] i = none`), and so does the instance check. So the shop's machine moves by
+controls alone. The general law of section 4 and the stages of section 5 are stated over these
+histories: the typed state (M6) carries host answers only under `AdmittedTape`, whose link to the
+session's executable admission is open (`admit_sound`, decisions rows 97 to 99). -/
+
+/-- A decision that is no host answer. -/
+def IsControl : NativeDecision → Prop
+  | .answerAsync _ _ _ => False
+  | _ => True
+
+/-- **A control history**: the load stepped by controls only. -/
+def ControlHistory (b : Api.Built) (compileFuel : Nat) (m : NativeMachine) : Prop :=
+  ∃ history : List (Nat × NativeDecision), (∀ x ∈ history, IsControl x.2) ∧
+    m = history.foldl (stepBy b) (Api.load b.program compileFuel)
+
+/-- The empty table has no external row. -/
+theorem externalRow_nil (i : Nat) : externalRow [] i = none := rfl
+
+/-- With the empty table `admit` refuses every answer. -/
+theorem admit_nil_answer (m : NativeMachine) (f : FiberId) (t : Nat)
+    (a : Completion Val Err Defect FiberId Ann) : Program.admit [] m (.answerAsync f t a) ≠ none := by
+  unfold Program.admit
+  dsimp only
+  split
+  · exact Option.some_ne_none _
+  · split
+    · exact Option.some_ne_none _
+    · split
+      · exact Option.some_ne_none _
+      · split
+        · rw [externalRow_nil]
+          exact Option.some_ne_none _
+        · exact Option.some_ne_none _
+
+/-- **With the empty table every accepted decision is a control.** -/
+theorem accepted_nil_control {calls : List (List Nat × CallInstance NativeOp)} {m : NativeMachine}
+    {d : NativeDecision} (h : Accepted [] calls m d) : IsControl d := by
+  cases d with
+  | answerAsync f t a =>
+    obtain ⟨r, hr | hr⟩ := h
+    · have henv := acceptReply_envelope [] m r _ hr
+      have hd := acceptReply_decision [] m r _ hr
+      cases hd
+      exact absurd henv.2.2 (admit_nil_answer m _ _ _)
+    · unfold acceptAtInstance at hr
+      split at hr
+      · split at hr
+        · rename_i i origin _ _
+          rw [externalRow_nil] at hr
+          cases hr
+        · cases hr
+      · cases hr
+  | fire _ => trivial
+  | flush => trivial
+  | evaluate _ => trivial
+  | yieldVerdict _ _ => trivial
+  | interruptFrom _ _ _ => trivial
+  | installMiddleware => trivial
+  | advance _ => trivial
+
+/-- **A program with no host row has control histories only.** -/
+theorem history_control {b : Api.Built} {compileFuel : Nat} {m : NativeMachine}
+    (htable : b.table = []) (h : HistoryOf b compileFuel m) : ControlHistory b compileFuel m := by
+  obtain ⟨history, adm, rfl⟩ := h
+  refine ⟨history, ?_, rfl⟩
+  have go : ∀ (xs : List (Nat × NativeDecision)) (m₀ : NativeMachine),
+      Lift.Admitted (W := Unit) (fun _ _ => True)
+        (fun _ m x => Accepted b.table (Api.HostSession.callTable b.program b.table) m x.2)
+        (stepBy b) m₀ xs → ∀ x ∈ xs, IsControl x.2 := by
+    intro xs
+    induction xs with
+    | nil => intro _ _ x hx; exact absurd hx List.not_mem_nil
+    | cons y ys ih =>
+      intro m₀ hadm x hx
+      rcases List.mem_cons.mp hx with rfl | hx
+      · have hy := hadm.1 () trivial
+        rw [htable] at hy
+        exact accepted_nil_control hy
+      · exact ih _ hadm.2 x hx
+  exact go history _ adm
+
+/-- The shop has no host row. -/
+theorem shop_table {b : Api.Built} (hb : Effect4.Api.Author.build (shop .none) = .ok b) :
+    b.table = [] :=
+  (build_elaborates hb).2
+
+/-- **The machine of every script's run on the shop is a control history.** -/
+theorem scenario_control (b : Api.Built) (hb : Effect4.Api.Author.build (shop .none) = .ok b)
+    (moves : List Move) :
+    ControlHistory b budget.compileFuel (Test.Dogfood.Scenario.play (opened b) moves).machine :=
+  history_control (shop_table hb) (scenario_history b moves)
+
 /-! ## 3. The observation of a machine -/
 
 /-- The scenario's observation, read off a machine. `observe` reads a run only through its
@@ -345,7 +459,8 @@ the clock steps and the accepted replies.
 Placement. Concept `store-typing`, requirement R4. Question: a new registry claim
 `cell-invariant-from-write-sites` (role soundness), whose pointer is this goal. Consumers:
 `bounded_modulo` here; every scenario goal that reads one cell. Reach: the native machine of a
-built program, every history the session accepts (`HistoryOf`). Not established: a relation
+built program, every control history (`ControlHistory`); a program with no host row has no
+other (`history_control`). Not established: a relation
 between cells or between a cell and a fiber's position (`counted`, `committed`: section 5);
 progress; a typed claim (the predicate is any). Route (`README.md`, section G1): a machine-wide
 invariant that every store row in the machine's code is a site's at its level, carried by the
@@ -355,7 +470,7 @@ a row. -/
 @[semantics "store-typing" (requirement := R4)]
 proof_goal heap_sites_keep (b : Api.Built) (compileFuel : Nat) (P : Val → Prop)
     (sites : SitesKeep b.program P) :
-    ∀ m, HistoryOf b compileFuel m → HeapOk P m.state.refs
+    ∀ m, ControlHistory b compileFuel m → HeapOk P m.state.refs
 
 /-- The window's used capacity bounded by three, as `natField` reads it: a value without a
 natural `used` field reads `0`. A predicate on every cell, not on the window's alone. -/
@@ -409,14 +524,14 @@ admits a stage assignment that fits its observation.
 Placement. Concept `store-typing`, requirement R4. Question: the scenario clauses `counted` and
 `committed`, whose step this is. Consumers: `counted_modulo`, `committed_modulo`; with a
 `cleaned` stage per request it also serves `cleans_once` (R11, another seat's). Reach: the
-built shop, every compile budget, every accepted history. Not established: that a request
+built shop, every compile budget, every control history. Not established: that a request
 decides (progress), anything of a lowered run. Route (`README.md`, section S2): the shop's
 per-fiber positions, by the fiber-local residual law (G2), and one check per write site and per
 interruption. -/
 @[semantics "store-typing" (requirement := R4)]
 proof_goal shop_stages (b : Api.Built) (hb : Effect4.Api.Author.build (shop .none) = .ok b)
     (compileFuel : Nat) :
-    ∀ m, HistoryOf b compileFuel m → ∃ g, StagesFit g (observeM m)
+    ∀ m, ControlHistory b compileFuel m → ∃ g, StagesFit g (observeM m)
 
 /-! ### The observation algebra (proved) -/
 
@@ -661,7 +776,7 @@ theorem committed_of_fit {g : Nat → Stage} {o : Observation} (h : StagesFit g 
 /-- **`counted`, modulo the stages.** -/
 theorem counted_modulo : Counted := by
   intro b moves hb
-  obtain ⟨g, fit⟩ := shop_stages b hb budget.compileFuel _ (scenario_history b moves)
+  obtain ⟨g, fit⟩ := shop_stages b hb budget.compileFuel _ (scenario_control b hb moves)
   rw [observe_eq]
   exact counted_of_fit fit
 
@@ -671,7 +786,7 @@ theorem committed_modulo : Committed := by
   dsimp only
   rw [observe_eq]
   intro hfail
-  obtain ⟨g, fit⟩ := shop_stages b hb budget.compileFuel _ (scenario_history b moves)
+  obtain ⟨g, fit⟩ := shop_stages b hb budget.compileFuel _ (scenario_control b hb moves)
   exact committed_of_fit fit hfail
 
 
@@ -954,24 +1069,6 @@ theorem performSites_complete {root : NativeEff} {path : List Nat} {op : NativeO
   · rw [h]
     rfl
   · rw [h]
-
-/-- A build keeps the elaborated program and the module's table. -/
-theorem build_elaborates {m : Authoring.Module NativeOp} {b : Api.Built}
-    (h : Effect4.Api.Author.build m = .ok b) :
-    Authoring.elaborateModule m = .ok b.program ∧ b.table = m.table := by
-  unfold Effect4.Api.Author.build at h
-  split at h
-  · cases h
-  · rename_i program hprog
-    dsimp only at h
-    split at h
-    · cases h
-    · unfold Effect4.Api.Author.Internal.finishBuild at h
-      split at h
-      · cases h
-        exact ⟨hprog, rfl⟩
-      · split at h <;> cases h
-      · cases h
 
 /-- The shop's elaborated program. -/
 def shopProgram : Option NativeEff := (Authoring.elaborateModule (shop .none)).toOption
@@ -1400,7 +1497,7 @@ theorem shop_sites_used (b : Api.Built)
 theorem bounded_modulo : Bounded := by
   intro b moves hb
   have heap := heap_sites_keep b budget.compileFuel UsedOk (shop_sites_used b hb) _
-    (scenario_history b moves)
+    (scenario_control b hb moves)
   rw [observe_eq]
   show natField (Test.Dogfood.Scenario.play (opened b) moves).machine.state.refs[0]? "used" ≤ 3
   cases h0 : (Test.Dogfood.Scenario.play (opened b) moves).machine.state.refs[0]? with
@@ -1419,7 +1516,8 @@ theorem family_modulo : Bounded ∧ Counted ∧ Committed :=
 write sites. -/
 
 #plan_status family_modulo bounded_modulo counted_modulo committed_modulo
-#plan_status RunKeeps.scenario reached_history scenario_history history_keeps counted_of_fit
+#plan_status RunKeeps.scenario reached_history scenario_history history_keeps scenario_control
+  counted_of_fit
   committed_of_fit shop_sites_used shop_census decision_keeps_used deposit_keeps_used
   refill_keeps_used note_keeps_used racy_breaks_used
 
