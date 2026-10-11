@@ -156,6 +156,7 @@ def flatCarrierAlg : TyAlgebra (fun _ => Bool) where
   ty_undefined := false
   ty_number := false
   ty_bytes := false
+  ty_contextOf _ := false
 
 /-- A flat carrier (row 114; row 118 owns structured carriers): the scalars, a handle that is
 neither the context nor a mask's saved state (row 244), and a cell at any type. -/

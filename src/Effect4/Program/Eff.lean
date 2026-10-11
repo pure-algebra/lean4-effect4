@@ -63,7 +63,7 @@ def payloadFieldTy : Ty → Bool
   | .tuple ts => payloadItemTys ts
   | .record fs => payloadFieldTys fs
   | .never | .handle _ | .refOf _ | .deferredOf _ _ | .fiberOf _ _ | .exitOf _ _
-  | .causeOf _ | .app _ _ | .var _ | .unknown => false
+  | .causeOf _ | .app _ _ | .var _ | .unknown | .contextOf _ => false
 /-- `payloadFieldTy` at every item of a tuple. -/
 def payloadItemTys : List Ty → Bool
   | [] => true
@@ -125,7 +125,7 @@ def rawSupportedErrTy : Ty → Bool
   | .unit | .int | .bool | .handle _ | .option _ | .list _
   | .except _ _ | .exitOf _ _ | .causeOf _ | .fiberOf _ _
   | .refOf _ | .deferredOf _ _ | .var _ | .unknown => false
-  | .map _ _ | .tuple _ | .app _ _ | .null | .undefined | .number | .bytes => false
+  | .map _ _ | .tuple _ | .app _ _ | .null | .undefined | .number | .bytes | .contextOf _ => false
 
 /-- Error support reads the raw profile of the canonical type. -/
 def supportedErrTy (t : Ty) : Bool := rawSupportedErrTy t.normalize
@@ -500,6 +500,9 @@ mutual
     parameter is invoked by `perform (.call k)` instead, so each call has one form. Appended, so
     no stored program's bytes move (`Wire.lean`). -/
     | invoke (index : Nat) (request : Term) (args : Effs Op)
+    /-- `Effect.provideContext(self, context)` (`internal/effect.ts:2180-2199`):
+    merge the supplied context around child zero, then restore the previous context. -/
+    | provideContext (context : Term) (body : Eff Op)
   /-- A statement of a generator body. -/
   inductive Stmt (Op : Type)
     /-- `const aN = yield* e`: binds the answer as the next variable. -/
@@ -533,8 +536,6 @@ mutual
     | snapshotChildren
     | awaitNewChildren (snapshot : Term)
     | raceAll (entrants : Effs Op)
-    | setContext (context : Term)
-    | getContext
     | getId
     | closeScope (scope exit : Term)
     /-- The mask at a constant body (decisions row 245):
@@ -547,6 +548,8 @@ mutual
     /-- `raceAllFirst` (`internal/effect.ts:1535`): the first observed entrant exit, with loser cleanup.
     Appended so existing source constructors and wire tags retain their meaning. -/
     | raceAllFirst (entrants : Effs Op)
+    /-- `Effect.context<R>()` (`Effect.ts:11287`): read the current context at its promised row. -/
+    | context (keys : Effect4.Row Effect4.ServiceKey)
   /-- The first-order layer term (the join, 2026-09-07; before it `Program/Provision.lean`):
   one constructor per rc.112 export, each naming the line it transcribes. A body is an `Eff`
   program — the same syntax the printer prints and the compile compiles — closed: a layer's

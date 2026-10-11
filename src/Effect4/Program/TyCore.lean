@@ -1,5 +1,8 @@
 module
 
+public import Effect4.Data.Row
+public import Effect4.Machine.Key
+
 /-!
 # The type language's declaration
 
@@ -31,6 +34,10 @@ positional (`tools/Effect4Gen/wire-tags.json`).
 @[expose] public section
 
 namespace Effect4.Program
+
+/-- The canonical row renders its stored keys, without its proof field. -/
+instance : Repr (Effect4.Row Effect4.ServiceKey) where
+  reprPrec keys precedence := reprPrec keys.elems precedence
 
 inductive Ty
   | never
@@ -92,5 +99,9 @@ inductive Ty
   | number
   /-- `Uint8Array` (decisions row 161 (a); wire tag 27), over the existing `Val.bytes` frame. -/
   | bytes
+
+  /-- `Context.Context<R>` (`Effect.ts:11287`): every promised service key is present.
+  The row is canonical data; native membership also checks service carriers in its world. -/
+  | contextOf (keys : Effect4.Row Effect4.ServiceKey)
 
 end Effect4.Program

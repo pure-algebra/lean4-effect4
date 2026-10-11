@@ -65,6 +65,7 @@ structure TyAlgebra (R : TyFam → Type u) where
   ty_undefined : R .ty
   ty_number : R .ty
   ty_bytes : R .ty
+  ty_contextOf : (Effect4.Row Effect4.ServiceKey) → R .ty
 
 /-- The map of a product's components. -/
 def prodMapSnd {α : Type u} {β : Type v} {γ : Type w} (f : β → γ) (x : α × β) : α × γ := (x.1, f x.2)
@@ -107,6 +108,7 @@ def cata_ty {R : TyFam → Type u} (alg : TyAlgebra R)
   | .undefined => alg.ty_undefined
   | .number => alg.ty_number
   | .bytes => alg.ty_bytes
+  | .contextOf a0 => alg.ty_contextOf a0
 termination_by structural node
 def cata_pos_prod_bool_ty {R : TyFam → Type u} (alg : TyAlgebra R)
     (x : Bool × Effect4.Program.Ty) : Bool × R .ty :=
@@ -301,6 +303,11 @@ theorem cata_pos_list_ty_eq {R : TyFam → Type u}
     cata_ty alg (.bytes) =
       alg.ty_bytes := rfl
 
+@[simp] theorem cata_ty_contextOf {R : TyFam → Type u}
+    (alg : TyAlgebra R) (a0 : Effect4.Row Effect4.ServiceKey) :
+    cata_ty alg (.contextOf a0) =
+      alg.ty_contextOf a0 := rfl
+
 structure TyHom {R : TyFam → Type u} (alg : TyAlgebra R) where
   f_ty : Effect4.Program.Ty → R .ty
   h_ty_never : f_ty (.never) =
@@ -359,6 +366,8 @@ structure TyHom {R : TyFam → Type u} (alg : TyAlgebra R) where
     alg.ty_number
   h_ty_bytes : f_ty (.bytes) =
     alg.ty_bytes
+  h_ty_contextOf : ∀ a0, f_ty (.contextOf a0) =
+    alg.ty_contextOf a0
 
 mutual
 theorem hom_eq_cata_ty {R : TyFam → Type u}
@@ -421,6 +430,8 @@ theorem hom_eq_cata_ty {R : TyFam → Type u}
     simp only [cata_ty, hom.h_ty_number]
   | .bytes =>
     simp only [cata_ty, hom.h_ty_bytes]
+  | .contextOf a0 =>
+    simp only [cata_ty, hom.h_ty_contextOf a0]
 termination_by structural node
 theorem hom_pos_prod_bool_ty {R : TyFam → Type u}
     {alg : TyAlgebra R} (hom : TyHom alg) (x : Bool × Effect4.Program.Ty) :
@@ -482,6 +493,7 @@ def TyAlgebra.id : TyAlgebra (TySelfCarrier) where
   ty_undefined := Effect4.Program.Ty.undefined
   ty_number := Effect4.Program.Ty.number
   ty_bytes := Effect4.Program.Ty.bytes
+  ty_contextOf a0 := Effect4.Program.Ty.contextOf a0
 
 mutual
 @[simp] theorem cata_id_ty (node : Effect4.Program.Ty) :
@@ -571,6 +583,9 @@ mutual
   | .bytes =>
     simp only [cata_ty]
     rfl
+  | .contextOf a0 =>
+    simp only [cata_ty]
+    rfl
 termination_by structural node
 theorem cata_id_pos_prod_bool_ty (x : Bool × Effect4.Program.Ty) :
     cata_pos_prod_bool_ty (TyAlgebra.id) x = x := by
@@ -656,6 +671,8 @@ def foldMap_ty {M : Type u} (unit : M) (op : M → M → M) (node : Effect4.Prog
     f_ty (.number)
   | .bytes =>
     f_ty (.bytes)
+  | .contextOf a0 =>
+    f_ty (.contextOf a0)
 termination_by structural node
 def foldMap_pos_prod_bool_ty {M : Type u} (unit : M) (op : M → M → M) (x : Bool × Effect4.Program.Ty)
     (f_ty : Effect4.Program.Ty → M := fun _ => unit) : M :=
@@ -1288,6 +1305,7 @@ structure EffAlgebra (Op : Type) (R : EffFam → Type u) where
   eff_restore : (Effect4.Program.Term) → R .eff → R .eff
   eff_defs : (List Effect4.Program.DefDecl) → R .effs → R .eff → R .layers → R .eff
   eff_invoke : (Nat) → (Effect4.Program.Term) → R .effs → R .eff
+  eff_provideContext : (Effect4.Program.Term) → R .eff → R .eff
   stmt_bindYield : R .eff → R .stmt
   stmt_yieldDiscard : R .eff → R .stmt
   stmt_ret : (Effect4.Program.Term) → R .stmt
@@ -1310,12 +1328,11 @@ structure EffAlgebra (Op : Type) (R : EffFam → Type u) where
   action_snapshotChildren : R .action
   action_awaitNewChildren : (Effect4.Program.Term) → R .action
   action_raceAll : R .effs → R .action
-  action_setContext : (Effect4.Program.Term) → R .action
-  action_getContext : R .action
   action_getId : R .action
   action_closeScope : (Effect4.Program.Term) → (Effect4.Program.Term) → R .action
   action_getInterruptible : R .action
   action_raceAllFirst : R .effs → R .action
+  action_context : (Effect4.Row Effect4.ServiceKey) → R .action
   layer_succeed : (Effect4.ServiceKey) → (Effect4.Program.Lit) → R .layer
   layer_effect : (Effect4.ServiceKey) → R .eff → R .layer
   layer_effectDiscard : R .eff → R .layer
@@ -1361,6 +1378,7 @@ def cata_eff {Op : Type} {R : EffFam → Type u} (alg : EffAlgebra Op R)
   | .restore a0 a1 => alg.eff_restore a0 (cata_eff alg a1)
   | .defs a0 a1 a2 a3 => alg.eff_defs a0 (cata_effs alg a1) (cata_eff alg a2) (cata_layers alg a3)
   | .invoke a0 a1 a2 => alg.eff_invoke a0 a1 (cata_effs alg a2)
+  | .provideContext a0 a1 => alg.eff_provideContext a0 (cata_eff alg a1)
 termination_by structural node
 def cata_stmt {Op : Type} {R : EffFam → Type u} (alg : EffAlgebra Op R)
     (node : Effect4.Program.Stmt Op) : R .stmt :=
@@ -1399,12 +1417,11 @@ def cata_action {Op : Type} {R : EffFam → Type u} (alg : EffAlgebra Op R)
   | .snapshotChildren => alg.action_snapshotChildren
   | .awaitNewChildren a0 => alg.action_awaitNewChildren a0
   | .raceAll a0 => alg.action_raceAll (cata_effs alg a0)
-  | .setContext a0 => alg.action_setContext a0
-  | .getContext => alg.action_getContext
   | .getId => alg.action_getId
   | .closeScope a0 a1 => alg.action_closeScope a0 a1
   | .getInterruptible => alg.action_getInterruptible
   | .raceAllFirst a0 => alg.action_raceAllFirst (cata_effs alg a0)
+  | .context a0 => alg.action_context a0
 termination_by structural node
 def cata_layer {Op : Type} {R : EffFam → Type u} (alg : EffAlgebra Op R)
     (node : Effect4.Program.LayerTerm Op) : R .layer :=
@@ -1464,6 +1481,7 @@ structure EffHom {Op : Type} {R : EffFam → Type u} (alg : EffAlgebra Op R) whe
   h_eff_restore : ∀ a0 a1, f_eff (.restore a0 a1) = alg.eff_restore a0 (f_eff a1)
   h_eff_defs : ∀ a0 a1 a2 a3, f_eff (.defs a0 a1 a2 a3) = alg.eff_defs a0 (f_effs a1) (f_eff a2) (f_layers a3)
   h_eff_invoke : ∀ a0 a1 a2, f_eff (.invoke a0 a1 a2) = alg.eff_invoke a0 a1 (f_effs a2)
+  h_eff_provideContext : ∀ a0 a1, f_eff (.provideContext a0 a1) = alg.eff_provideContext a0 (f_eff a1)
   h_stmt_bindYield : ∀ a0, f_stmt (.bindYield a0) = alg.stmt_bindYield (f_eff a0)
   h_stmt_yieldDiscard : ∀ a0, f_stmt (.yieldDiscard a0) = alg.stmt_yieldDiscard (f_eff a0)
   h_stmt_ret : ∀ a0, f_stmt (.ret a0) = alg.stmt_ret a0
@@ -1486,12 +1504,11 @@ structure EffHom {Op : Type} {R : EffFam → Type u} (alg : EffAlgebra Op R) whe
   h_action_snapshotChildren : f_action (.snapshotChildren) = alg.action_snapshotChildren
   h_action_awaitNewChildren : ∀ a0, f_action (.awaitNewChildren a0) = alg.action_awaitNewChildren a0
   h_action_raceAll : ∀ a0, f_action (.raceAll a0) = alg.action_raceAll (f_effs a0)
-  h_action_setContext : ∀ a0, f_action (.setContext a0) = alg.action_setContext a0
-  h_action_getContext : f_action (.getContext) = alg.action_getContext
   h_action_getId : f_action (.getId) = alg.action_getId
   h_action_closeScope : ∀ a0 a1, f_action (.closeScope a0 a1) = alg.action_closeScope a0 a1
   h_action_getInterruptible : f_action (.getInterruptible) = alg.action_getInterruptible
   h_action_raceAllFirst : ∀ a0, f_action (.raceAllFirst a0) = alg.action_raceAllFirst (f_effs a0)
+  h_action_context : ∀ a0, f_action (.context a0) = alg.action_context a0
   h_layer_succeed : ∀ a0 a1, f_layer (.succeed a0 a1) = alg.layer_succeed a0 a1
   h_layer_effect : ∀ a0 a1, f_layer (.effect a0 a1) = alg.layer_effect a0 (f_eff a1)
   h_layer_effectDiscard : ∀ a0, f_layer (.effectDiscard a0) = alg.layer_effectDiscard (f_eff a0)
@@ -1566,6 +1583,8 @@ theorem hom_eq_cata_eff {Op : Type} {R : EffFam → Type u}
     simp only [cata_eff, hom.h_eff_defs a0 a1 a2 a3, hom_eq_cata_effs hom a1, hom_eq_cata_eff hom a2, hom_eq_cata_layers hom a3]
   | .invoke a0 a1 a2 =>
     simp only [cata_eff, hom.h_eff_invoke a0 a1 a2, hom_eq_cata_effs hom a2]
+  | .provideContext a0 a1 =>
+    simp only [cata_eff, hom.h_eff_provideContext a0 a1, hom_eq_cata_eff hom a1]
 termination_by structural node
 theorem hom_eq_cata_stmt {Op : Type} {R : EffFam → Type u}
     {alg : EffAlgebra Op R} (hom : EffHom alg) (node : Effect4.Program.Stmt Op) :
@@ -1630,10 +1649,6 @@ theorem hom_eq_cata_action {Op : Type} {R : EffFam → Type u}
     simp only [cata_action, hom.h_action_awaitNewChildren a0]
   | .raceAll a0 =>
     simp only [cata_action, hom.h_action_raceAll a0, hom_eq_cata_effs hom a0]
-  | .setContext a0 =>
-    simp only [cata_action, hom.h_action_setContext a0]
-  | .getContext =>
-    simp only [cata_action, hom.h_action_getContext]
   | .getId =>
     simp only [cata_action, hom.h_action_getId]
   | .closeScope a0 a1 =>
@@ -1642,6 +1657,8 @@ theorem hom_eq_cata_action {Op : Type} {R : EffFam → Type u}
     simp only [cata_action, hom.h_action_getInterruptible]
   | .raceAllFirst a0 =>
     simp only [cata_action, hom.h_action_raceAllFirst a0, hom_eq_cata_effs hom a0]
+  | .context a0 =>
+    simp only [cata_action, hom.h_action_context a0]
 termination_by structural node
 theorem hom_eq_cata_layer {Op : Type} {R : EffFam → Type u}
     {alg : EffAlgebra Op R} (hom : EffHom alg) (node : Effect4.Program.LayerTerm Op) :
@@ -1717,6 +1734,7 @@ def EffAlgebra.id (Op : Type) : EffAlgebra Op (EffSelfCarrier Op) where
   eff_restore a0 a1 := Effect4.Program.Eff.restore a0 a1
   eff_defs a0 a1 a2 a3 := Effect4.Program.Eff.defs a0 a1 a2 a3
   eff_invoke a0 a1 a2 := Effect4.Program.Eff.invoke a0 a1 a2
+  eff_provideContext a0 a1 := Effect4.Program.Eff.provideContext a0 a1
   stmt_bindYield a0 := Effect4.Program.Stmt.bindYield a0
   stmt_yieldDiscard a0 := Effect4.Program.Stmt.yieldDiscard a0
   stmt_ret a0 := Effect4.Program.Stmt.ret a0
@@ -1739,12 +1757,11 @@ def EffAlgebra.id (Op : Type) : EffAlgebra Op (EffSelfCarrier Op) where
   action_snapshotChildren := Effect4.Program.ActionTerm.snapshotChildren
   action_awaitNewChildren a0 := Effect4.Program.ActionTerm.awaitNewChildren a0
   action_raceAll a0 := Effect4.Program.ActionTerm.raceAll a0
-  action_setContext a0 := Effect4.Program.ActionTerm.setContext a0
-  action_getContext := Effect4.Program.ActionTerm.getContext
   action_getId := Effect4.Program.ActionTerm.getId
   action_closeScope a0 a1 := Effect4.Program.ActionTerm.closeScope a0 a1
   action_getInterruptible := Effect4.Program.ActionTerm.getInterruptible
   action_raceAllFirst a0 := Effect4.Program.ActionTerm.raceAllFirst a0
+  action_context a0 := Effect4.Program.ActionTerm.context a0
   layer_succeed a0 a1 := Effect4.Program.LayerTerm.succeed a0 a1
   layer_effect a0 a1 := Effect4.Program.LayerTerm.effect a0 a1
   layer_effectDiscard a0 := Effect4.Program.LayerTerm.effectDiscard a0
@@ -1846,6 +1863,9 @@ mutual
   | .invoke a0 a1 a2 =>
     simp only [cata_eff, cata_id_effs a2]
     rfl
+  | .provideContext a0 a1 =>
+    simp only [cata_eff, cata_id_eff a1]
+    rfl
 termination_by structural node
 @[simp] theorem cata_id_stmt {Op : Type} (node : Effect4.Program.Stmt Op) :
     cata_stmt (EffAlgebra.id Op) node = node := by
@@ -1928,12 +1948,6 @@ termination_by structural node
   | .raceAll a0 =>
     simp only [cata_action, cata_id_effs a0]
     rfl
-  | .setContext a0 =>
-    simp only [cata_action]
-    rfl
-  | .getContext =>
-    simp only [cata_action]
-    rfl
   | .getId =>
     simp only [cata_action]
     rfl
@@ -1945,6 +1959,9 @@ termination_by structural node
     rfl
   | .raceAllFirst a0 =>
     simp only [cata_action, cata_id_effs a0]
+    rfl
+  | .context a0 =>
+    simp only [cata_action]
     rfl
 termination_by structural node
 @[simp] theorem cata_id_layer {Op : Type} (node : Effect4.Program.LayerTerm Op) :
@@ -2059,6 +2076,8 @@ def foldMapAt_eff {Op : Type} {M : Type u} (unit : M) (op : M → M → M) (p : 
     op (f_eff (.defs a0 a1 a2 a3) p) (op (foldMapAt_effs unit op (p ++ [0]) a1 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) (op (foldMapAt_eff unit op (p ++ [1]) a2 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) ((foldMapAt_layers unit op (p ++ [2]) a3 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))))
   | .invoke a0 a1 a2 =>
     op (f_eff (.invoke a0 a1 a2) p) ((foldMapAt_effs unit op (p ++ [0]) a2 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
+  | .provideContext a0 a1 =>
+    op (f_eff (.provideContext a0 a1) p) ((foldMapAt_eff unit op (p ++ [0]) a1 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
 termination_by structural node
 def foldMapAt_stmt {Op : Type} {M : Type u} (unit : M) (op : M → M → M) (p : List Nat) (node : Effect4.Program.Stmt Op)
     (f_eff : Effect4.Program.Eff Op → List Nat → M := fun _ _ => unit) (f_stmt : Effect4.Program.Stmt Op → List Nat → M := fun _ _ => unit) (f_stmts : Effect4.Program.Stmts Op → List Nat → M := fun _ _ => unit) (f_effs : Effect4.Program.Effs Op → List Nat → M := fun _ _ => unit) (f_action : Effect4.Program.ActionTerm Op → List Nat → M := fun _ _ => unit) (f_layer : Effect4.Program.LayerTerm Op → List Nat → M := fun _ _ => unit) (f_layers : Effect4.Program.LayerTerms Op → List Nat → M := fun _ _ => unit) : M :=
@@ -2119,10 +2138,6 @@ def foldMapAt_action {Op : Type} {M : Type u} (unit : M) (op : M → M → M) (p
     f_action (.awaitNewChildren a0) p
   | .raceAll a0 =>
     op (f_action (.raceAll a0) p) ((foldMapAt_effs unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
-  | .setContext a0 =>
-    f_action (.setContext a0) p
-  | .getContext =>
-    f_action (.getContext) p
   | .getId =>
     f_action (.getId) p
   | .closeScope a0 a1 =>
@@ -2131,6 +2146,8 @@ def foldMapAt_action {Op : Type} {M : Type u} (unit : M) (op : M → M → M) (p
     f_action (.getInterruptible) p
   | .raceAllFirst a0 =>
     op (f_action (.raceAllFirst a0) p) ((foldMapAt_effs unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
+  | .context a0 =>
+    f_action (.context a0) p
 termination_by structural node
 def foldMapAt_layer {Op : Type} {M : Type u} (unit : M) (op : M → M → M) (p : List Nat) (node : Effect4.Program.LayerTerm Op)
     (f_eff : Effect4.Program.Eff Op → List Nat → M := fun _ _ => unit) (f_stmt : Effect4.Program.Stmt Op → List Nat → M := fun _ _ => unit) (f_stmts : Effect4.Program.Stmts Op → List Nat → M := fun _ _ => unit) (f_effs : Effect4.Program.Effs Op → List Nat → M := fun _ _ => unit) (f_action : Effect4.Program.ActionTerm Op → List Nat → M := fun _ _ => unit) (f_layer : Effect4.Program.LayerTerm Op → List Nat → M := fun _ _ => unit) (f_layers : Effect4.Program.LayerTerms Op → List Nat → M := fun _ _ => unit) : M :=
@@ -2226,6 +2243,8 @@ def foldMap_eff {Op : Type} {M : Type u} (unit : M) (op : M → M → M) (node :
     op (f_eff (.defs a0 a1 a2 a3)) (op (foldMap_effs unit op a1 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) (op (foldMap_eff unit op a2 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers) ((foldMap_layers unit op a3 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))))
   | .invoke a0 a1 a2 =>
     op (f_eff (.invoke a0 a1 a2)) ((foldMap_effs unit op a2 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
+  | .provideContext a0 a1 =>
+    op (f_eff (.provideContext a0 a1)) ((foldMap_eff unit op a1 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
 termination_by structural node
 def foldMap_stmt {Op : Type} {M : Type u} (unit : M) (op : M → M → M) (node : Effect4.Program.Stmt Op)
     (f_eff : Effect4.Program.Eff Op → M := fun _ => unit) (f_stmt : Effect4.Program.Stmt Op → M := fun _ => unit) (f_stmts : Effect4.Program.Stmts Op → M := fun _ => unit) (f_effs : Effect4.Program.Effs Op → M := fun _ => unit) (f_action : Effect4.Program.ActionTerm Op → M := fun _ => unit) (f_layer : Effect4.Program.LayerTerm Op → M := fun _ => unit) (f_layers : Effect4.Program.LayerTerms Op → M := fun _ => unit) : M :=
@@ -2286,10 +2305,6 @@ def foldMap_action {Op : Type} {M : Type u} (unit : M) (op : M → M → M) (nod
     f_action (.awaitNewChildren a0)
   | .raceAll a0 =>
     op (f_action (.raceAll a0)) ((foldMap_effs unit op a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
-  | .setContext a0 =>
-    f_action (.setContext a0)
-  | .getContext =>
-    f_action (.getContext)
   | .getId =>
     f_action (.getId)
   | .closeScope a0 a1 =>
@@ -2298,6 +2313,8 @@ def foldMap_action {Op : Type} {M : Type u} (unit : M) (op : M → M → M) (nod
     f_action (.getInterruptible)
   | .raceAllFirst a0 =>
     op (f_action (.raceAllFirst a0)) ((foldMap_effs unit op a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
+  | .context a0 =>
+    f_action (.context a0)
 termination_by structural node
 def foldMap_layer {Op : Type} {M : Type u} (unit : M) (op : M → M → M) (node : Effect4.Program.LayerTerm Op)
     (f_eff : Effect4.Program.Eff Op → M := fun _ => unit) (f_stmt : Effect4.Program.Stmt Op → M := fun _ => unit) (f_stmts : Effect4.Program.Stmts Op → M := fun _ => unit) (f_effs : Effect4.Program.Effs Op → M := fun _ => unit) (f_action : Effect4.Program.ActionTerm Op → M := fun _ => unit) (f_layer : Effect4.Program.LayerTerm Op → M := fun _ => unit) (f_layers : Effect4.Program.LayerTerms Op → M := fun _ => unit) : M :=
@@ -2362,6 +2379,7 @@ structure EffMAlgebra (Op : Type) (M : Type u → Type v) (R : EffFam → Type u
   eff_restore : (Effect4.Program.Term) → R .eff → M (R .eff)
   eff_defs : (List Effect4.Program.DefDecl) → R .effs → R .eff → R .layers → M (R .eff)
   eff_invoke : (Nat) → (Effect4.Program.Term) → R .effs → M (R .eff)
+  eff_provideContext : (Effect4.Program.Term) → R .eff → M (R .eff)
   stmt_bindYield : R .eff → M (R .stmt)
   stmt_yieldDiscard : R .eff → M (R .stmt)
   stmt_ret : (Effect4.Program.Term) → M (R .stmt)
@@ -2384,12 +2402,11 @@ structure EffMAlgebra (Op : Type) (M : Type u → Type v) (R : EffFam → Type u
   action_snapshotChildren : M (R .action)
   action_awaitNewChildren : (Effect4.Program.Term) → M (R .action)
   action_raceAll : R .effs → M (R .action)
-  action_setContext : (Effect4.Program.Term) → M (R .action)
-  action_getContext : M (R .action)
   action_getId : M (R .action)
   action_closeScope : (Effect4.Program.Term) → (Effect4.Program.Term) → M (R .action)
   action_getInterruptible : M (R .action)
   action_raceAllFirst : R .effs → M (R .action)
+  action_context : (Effect4.Row Effect4.ServiceKey) → M (R .action)
   layer_succeed : (Effect4.ServiceKey) → (Effect4.Program.Lit) → M (R .layer)
   layer_effect : (Effect4.ServiceKey) → R .eff → M (R .layer)
   layer_effectDiscard : R .eff → M (R .layer)
@@ -2433,6 +2450,7 @@ def EffAlgebra.toM {Op : Type} {M : Type u → Type v} [Monad M] {R : EffFam →
   eff_restore a0 a1 := pure (alg.eff_restore a0 a1)
   eff_defs a0 a1 a2 a3 := pure (alg.eff_defs a0 a1 a2 a3)
   eff_invoke a0 a1 a2 := pure (alg.eff_invoke a0 a1 a2)
+  eff_provideContext a0 a1 := pure (alg.eff_provideContext a0 a1)
   stmt_bindYield a0 := pure (alg.stmt_bindYield a0)
   stmt_yieldDiscard a0 := pure (alg.stmt_yieldDiscard a0)
   stmt_ret a0 := pure (alg.stmt_ret a0)
@@ -2455,12 +2473,11 @@ def EffAlgebra.toM {Op : Type} {M : Type u → Type v} [Monad M] {R : EffFam →
   action_snapshotChildren := pure alg.action_snapshotChildren
   action_awaitNewChildren a0 := pure (alg.action_awaitNewChildren a0)
   action_raceAll a0 := pure (alg.action_raceAll a0)
-  action_setContext a0 := pure (alg.action_setContext a0)
-  action_getContext := pure alg.action_getContext
   action_getId := pure alg.action_getId
   action_closeScope a0 a1 := pure (alg.action_closeScope a0 a1)
   action_getInterruptible := pure alg.action_getInterruptible
   action_raceAllFirst a0 := pure (alg.action_raceAllFirst a0)
+  action_context a0 := pure (alg.action_context a0)
   layer_succeed a0 a1 := pure (alg.layer_succeed a0 a1)
   layer_effect a0 a1 := pure (alg.layer_effect a0 a1)
   layer_effectDiscard a0 := pure (alg.layer_effectDiscard a0)
@@ -2505,6 +2522,7 @@ def EffMAlgebra.map {Op : Type} {M : Type u → Type v} {N : Type u → Type w}
   eff_restore a0 a1 := φ (alg.eff_restore a0 a1)
   eff_defs a0 a1 a2 a3 := φ (alg.eff_defs a0 a1 a2 a3)
   eff_invoke a0 a1 a2 := φ (alg.eff_invoke a0 a1 a2)
+  eff_provideContext a0 a1 := φ (alg.eff_provideContext a0 a1)
   stmt_bindYield a0 := φ (alg.stmt_bindYield a0)
   stmt_yieldDiscard a0 := φ (alg.stmt_yieldDiscard a0)
   stmt_ret a0 := φ (alg.stmt_ret a0)
@@ -2527,12 +2545,11 @@ def EffMAlgebra.map {Op : Type} {M : Type u → Type v} {N : Type u → Type w}
   action_snapshotChildren := φ alg.action_snapshotChildren
   action_awaitNewChildren a0 := φ (alg.action_awaitNewChildren a0)
   action_raceAll a0 := φ (alg.action_raceAll a0)
-  action_setContext a0 := φ (alg.action_setContext a0)
-  action_getContext := φ alg.action_getContext
   action_getId := φ alg.action_getId
   action_closeScope a0 a1 := φ (alg.action_closeScope a0 a1)
   action_getInterruptible := φ alg.action_getInterruptible
   action_raceAllFirst a0 := φ (alg.action_raceAllFirst a0)
+  action_context a0 := φ (alg.action_context a0)
   layer_succeed a0 a1 := φ (alg.layer_succeed a0 a1)
   layer_effect a0 a1 := φ (alg.layer_effect a0 a1)
   layer_effectDiscard a0 := φ (alg.layer_effectDiscard a0)
@@ -2628,6 +2645,9 @@ def EffMAlgebra.toSeq {Op : Type} {M : Type u → Type v} [Monad M]
   eff_invoke a0 a1 a2 := do
     let x2 ← a2
     alg.eff_invoke a0 a1 x2
+  eff_provideContext a0 a1 := do
+    let x1 ← a1
+    alg.eff_provideContext a0 x1
   stmt_bindYield a0 := do
     let x0 ← a0
     alg.stmt_bindYield x0
@@ -2673,14 +2693,13 @@ def EffMAlgebra.toSeq {Op : Type} {M : Type u → Type v} [Monad M]
   action_raceAll a0 := do
     let x0 ← a0
     alg.action_raceAll x0
-  action_setContext a0 := alg.action_setContext a0
-  action_getContext := alg.action_getContext
   action_getId := alg.action_getId
   action_closeScope a0 a1 := alg.action_closeScope a0 a1
   action_getInterruptible := alg.action_getInterruptible
   action_raceAllFirst a0 := do
     let x0 ← a0
     alg.action_raceAllFirst x0
+  action_context a0 := alg.action_context a0
   layer_succeed a0 a1 := alg.layer_succeed a0 a1
   layer_effect a0 a1 := do
     let x1 ← a1
@@ -2799,6 +2818,9 @@ def foldM_eff {Op : Type} {M : Type u → Type v} [Monad M] {R : EffFam → Type
   | .invoke a0 a1 a2 => do
       let x2 ← foldM_effs alg a2
       alg.eff_invoke a0 a1 x2
+  | .provideContext a0 a1 => do
+      let x1 ← foldM_eff alg a1
+      alg.eff_provideContext a0 x1
 termination_by structural node
 def foldM_stmt {Op : Type} {M : Type u → Type v} [Monad M] {R : EffFam → Type u}
     (alg : EffMAlgebra Op M R) (node : Effect4.Program.Stmt Op) : M (R .stmt) :=
@@ -2860,14 +2882,13 @@ def foldM_action {Op : Type} {M : Type u → Type v} [Monad M] {R : EffFam → T
   | .raceAll a0 => do
       let x0 ← foldM_effs alg a0
       alg.action_raceAll x0
-  | .setContext a0 => alg.action_setContext a0
-  | .getContext => alg.action_getContext
   | .getId => alg.action_getId
   | .closeScope a0 a1 => alg.action_closeScope a0 a1
   | .getInterruptible => alg.action_getInterruptible
   | .raceAllFirst a0 => do
       let x0 ← foldM_effs alg a0
       alg.action_raceAllFirst x0
+  | .context a0 => alg.action_context a0
 termination_by structural node
 def foldM_layer {Op : Type} {M : Type u → Type v} [Monad M] {R : EffFam → Type u}
     (alg : EffMAlgebra Op M R) (node : Effect4.Program.LayerTerm Op) : M (R .layer) :=
@@ -2974,6 +2995,8 @@ theorem foldM_eq_cata_eff {Op : Type} {M : Type u → Type v} [Monad M]
     simp only [foldM_eff, cata_eff, EffMAlgebra.toSeq, foldM_eq_cata_effs alg a1, foldM_eq_cata_eff alg a2, foldM_eq_cata_layers alg a3]
   | .invoke a0 a1 a2 =>
     simp only [foldM_eff, cata_eff, EffMAlgebra.toSeq, foldM_eq_cata_effs alg a2]
+  | .provideContext a0 a1 =>
+    simp only [foldM_eff, cata_eff, EffMAlgebra.toSeq, foldM_eq_cata_eff alg a1]
 termination_by structural node
 theorem foldM_eq_cata_stmt {Op : Type} {M : Type u → Type v} [Monad M]
     {R : EffFam → Type u} (alg : EffMAlgebra Op M R) (node : Effect4.Program.Stmt Op) :
@@ -3038,10 +3061,6 @@ theorem foldM_eq_cata_action {Op : Type} {M : Type u → Type v} [Monad M]
     simp only [foldM_action, cata_action, EffMAlgebra.toSeq]
   | .raceAll a0 =>
     simp only [foldM_action, cata_action, EffMAlgebra.toSeq, foldM_eq_cata_effs alg a0]
-  | .setContext a0 =>
-    simp only [foldM_action, cata_action, EffMAlgebra.toSeq]
-  | .getContext =>
-    simp only [foldM_action, cata_action, EffMAlgebra.toSeq]
   | .getId =>
     simp only [foldM_action, cata_action, EffMAlgebra.toSeq]
   | .closeScope a0 a1 =>
@@ -3050,6 +3069,8 @@ theorem foldM_eq_cata_action {Op : Type} {M : Type u → Type v} [Monad M]
     simp only [foldM_action, cata_action, EffMAlgebra.toSeq]
   | .raceAllFirst a0 =>
     simp only [foldM_action, cata_action, EffMAlgebra.toSeq, foldM_eq_cata_effs alg a0]
+  | .context a0 =>
+    simp only [foldM_action, cata_action, EffMAlgebra.toSeq]
 termination_by structural node
 theorem foldM_eq_cata_layer {Op : Type} {M : Type u → Type v} [Monad M]
     {R : EffFam → Type u} (alg : EffMAlgebra Op M R) (node : Effect4.Program.LayerTerm Op) :
@@ -3191,6 +3212,8 @@ theorem foldM_natural_eff {Op : Type} {M : Type u → Type v} {N : Type u → Ty
     simp only [foldM_eff, EffMAlgebra.map, φ.map_bind, foldM_natural_effs φ alg a1, foldM_natural_eff φ alg a2, foldM_natural_layers φ alg a3]
   | .invoke a0 a1 a2 =>
     simp only [foldM_eff, EffMAlgebra.map, φ.map_bind, foldM_natural_effs φ alg a2]
+  | .provideContext a0 a1 =>
+    simp only [foldM_eff, EffMAlgebra.map, φ.map_bind, foldM_natural_eff φ alg a1]
 termination_by structural node
 theorem foldM_natural_stmt {Op : Type} {M : Type u → Type v} {N : Type u → Type w}
     [Monad M] [Monad N] {R : EffFam → Type u} (φ : MonadMorphism M N)
@@ -3259,10 +3282,6 @@ theorem foldM_natural_action {Op : Type} {M : Type u → Type v} {N : Type u →
     simp only [foldM_action, EffMAlgebra.map]
   | .raceAll a0 =>
     simp only [foldM_action, EffMAlgebra.map, φ.map_bind, foldM_natural_effs φ alg a0]
-  | .setContext a0 =>
-    simp only [foldM_action, EffMAlgebra.map]
-  | .getContext =>
-    simp only [foldM_action, EffMAlgebra.map]
   | .getId =>
     simp only [foldM_action, EffMAlgebra.map]
   | .closeScope a0 a1 =>
@@ -3271,6 +3290,8 @@ theorem foldM_natural_action {Op : Type} {M : Type u → Type v} {N : Type u →
     simp only [foldM_action, EffMAlgebra.map]
   | .raceAllFirst a0 =>
     simp only [foldM_action, EffMAlgebra.map, φ.map_bind, foldM_natural_effs φ alg a0]
+  | .context a0 =>
+    simp only [foldM_action, EffMAlgebra.map]
 termination_by structural node
 theorem foldM_natural_layer {Op : Type} {M : Type u → Type v} {N : Type u → Type w}
     [Monad M] [Monad N] {R : EffFam → Type u} (φ : MonadMorphism M N)
@@ -3348,6 +3369,7 @@ structure EffFrontierAlgebra (Op : Type) (R : EffFrontierFam → Type u) where
   eff_restore : (Effect4.Program.Term) → R .eff → R .eff
   eff_defs : (List Effect4.Program.DefDecl) → R .effs → R .eff → (Effect4.Program.LayerTerms Op) → R .eff
   eff_invoke : (Nat) → (Effect4.Program.Term) → R .effs → R .eff
+  eff_provideContext : (Effect4.Program.Term) → R .eff → R .eff
   stmt_bindYield : R .eff → R .stmt
   stmt_yieldDiscard : R .eff → R .stmt
   stmt_ret : (Effect4.Program.Term) → R .stmt
@@ -3370,12 +3392,11 @@ structure EffFrontierAlgebra (Op : Type) (R : EffFrontierFam → Type u) where
   action_snapshotChildren : R .action
   action_awaitNewChildren : (Effect4.Program.Term) → R .action
   action_raceAll : R .effs → R .action
-  action_setContext : (Effect4.Program.Term) → R .action
-  action_getContext : R .action
   action_getId : R .action
   action_closeScope : (Effect4.Program.Term) → (Effect4.Program.Term) → R .action
   action_getInterruptible : R .action
   action_raceAllFirst : R .effs → R .action
+  action_context : (Effect4.Row Effect4.ServiceKey) → R .action
 
 mutual
 def cata_frontier_eff {Op : Type} {R : EffFrontierFam → Type u} (alg : EffFrontierAlgebra Op R)
@@ -3409,6 +3430,7 @@ def cata_frontier_eff {Op : Type} {R : EffFrontierFam → Type u} (alg : EffFron
   | .restore a0 a1 => alg.eff_restore a0 (cata_frontier_eff alg a1)
   | .defs a0 a1 a2 a3 => alg.eff_defs a0 (cata_frontier_effs alg a1) (cata_frontier_eff alg a2) a3
   | .invoke a0 a1 a2 => alg.eff_invoke a0 a1 (cata_frontier_effs alg a2)
+  | .provideContext a0 a1 => alg.eff_provideContext a0 (cata_frontier_eff alg a1)
 termination_by structural node
 def cata_frontier_stmt {Op : Type} {R : EffFrontierFam → Type u} (alg : EffFrontierAlgebra Op R)
     (node : Effect4.Program.Stmt Op) : R .stmt :=
@@ -3447,12 +3469,11 @@ def cata_frontier_action {Op : Type} {R : EffFrontierFam → Type u} (alg : EffF
   | .snapshotChildren => alg.action_snapshotChildren
   | .awaitNewChildren a0 => alg.action_awaitNewChildren a0
   | .raceAll a0 => alg.action_raceAll (cata_frontier_effs alg a0)
-  | .setContext a0 => alg.action_setContext a0
-  | .getContext => alg.action_getContext
   | .getId => alg.action_getId
   | .closeScope a0 a1 => alg.action_closeScope a0 a1
   | .getInterruptible => alg.action_getInterruptible
   | .raceAllFirst a0 => alg.action_raceAllFirst (cata_frontier_effs alg a0)
+  | .context a0 => alg.action_context a0
 termination_by structural node
 end
 
@@ -3497,6 +3518,7 @@ def frontierMap {Op : Type} [Effect4.Program.ScopedOp Op] (g : Effect4.Program.T
   eff_restore a0 a1 := .restore (g a0) a1
   eff_defs a0 a1 a2 a3 := .defs a0 a1 a2 a3
   eff_invoke a0 a1 a2 := .invoke a0 (g a1) a2
+  eff_provideContext a0 a1 := .provideContext (g a0) a1
   stmt_bindYield a0 := .bindYield a0
   stmt_yieldDiscard a0 := .yieldDiscard a0
   stmt_ret a0 := .ret (g a0)
@@ -3519,12 +3541,11 @@ def frontierMap {Op : Type} [Effect4.Program.ScopedOp Op] (g : Effect4.Program.T
   action_snapshotChildren := .snapshotChildren
   action_awaitNewChildren a0 := .awaitNewChildren (g a0)
   action_raceAll a0 := .raceAll a0
-  action_setContext a0 := .setContext (g a0)
-  action_getContext := .getContext
   action_getId := .getId
   action_closeScope a0 a1 := .closeScope (g a0) (g a1)
   action_getInterruptible := .getInterruptible
   action_raceAllFirst a0 := .raceAllFirst a0
+  action_context a0 := .context a0
 
 /-- Weakening at a cut is the frontier map of the term weakening. -/
 def weakenAlg {Op : Type} [Effect4.Program.ScopedOp Op] (cut : Nat) : EffFrontierAlgebra Op (frontierSelfCarrier Op) :=
@@ -3560,6 +3581,7 @@ def Eff.weaken {Op : Type} [Effect4.Program.ScopedOp Op] (cut : Nat) : Effect4.P
   | .restore a0 a1 => .restore (Effect4.Program.Term.weaken cut a0) (Eff.weaken cut a1)
   | .defs a0 a1 a2 a3 => .defs a0 (Effs.weaken cut a1) (Eff.weaken cut a2) a3
   | .invoke a0 a1 a2 => .invoke a0 (Effect4.Program.Term.weaken cut a1) (Effs.weaken cut a2)
+  | .provideContext a0 a1 => .provideContext (Effect4.Program.Term.weaken cut a0) (Eff.weaken cut a1)
 def Stmt.weaken {Op : Type} [Effect4.Program.ScopedOp Op] (cut : Nat) : Effect4.Program.Stmt Op → Effect4.Program.Stmt Op
   | .bindYield a0 => .bindYield (Eff.weaken cut a0)
   | .yieldDiscard a0 => .yieldDiscard (Eff.weaken cut a0)
@@ -3586,12 +3608,11 @@ def ActionTerm.weaken {Op : Type} [Effect4.Program.ScopedOp Op] (cut : Nat) : Ef
   | .snapshotChildren => .snapshotChildren
   | .awaitNewChildren a0 => .awaitNewChildren (Effect4.Program.Term.weaken cut a0)
   | .raceAll a0 => .raceAll (Effs.weaken cut a0)
-  | .setContext a0 => .setContext (Effect4.Program.Term.weaken cut a0)
-  | .getContext => .getContext
   | .getId => .getId
   | .closeScope a0 a1 => .closeScope (Effect4.Program.Term.weaken cut a0) (Effect4.Program.Term.weaken cut a1)
   | .getInterruptible => .getInterruptible
   | .raceAllFirst a0 => .raceAllFirst (Effs.weaken cut a0)
+  | .context a0 => .context a0
 end
 
 mutual
@@ -3654,6 +3675,8 @@ theorem weaken_eq_cata_eff {Op : Type} [Effect4.Program.ScopedOp Op] (cut : Nat)
     simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap, weaken_eq_cata_effs cut a1, weaken_eq_cata_eff cut a2]
   | .invoke a0 a1 a2 =>
     simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap, weaken_eq_cata_effs cut a2]
+  | .provideContext a0 a1 =>
+    simp only [Effect4.Program.Eff.weaken, cata_frontier_eff, weakenAlg, frontierMap, weaken_eq_cata_eff cut a1]
 termination_by structural node
 theorem weaken_eq_cata_stmt {Op : Type} [Effect4.Program.ScopedOp Op] (cut : Nat) (node : Effect4.Program.Stmt Op) :
     Effect4.Program.Stmt.weaken cut node = cata_frontier_stmt (weakenAlg cut) node := by
@@ -3714,10 +3737,6 @@ theorem weaken_eq_cata_action {Op : Type} [Effect4.Program.ScopedOp Op] (cut : N
     simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, frontierMap]
   | .raceAll a0 =>
     simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, frontierMap, weaken_eq_cata_effs cut a0]
-  | .setContext a0 =>
-    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, frontierMap]
-  | .getContext =>
-    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, frontierMap]
   | .getId =>
     simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, frontierMap]
   | .closeScope a0 a1 =>
@@ -3726,6 +3745,8 @@ theorem weaken_eq_cata_action {Op : Type} [Effect4.Program.ScopedOp Op] (cut : N
     simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, frontierMap]
   | .raceAllFirst a0 =>
     simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, frontierMap, weaken_eq_cata_effs cut a0]
+  | .context a0 =>
+    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, frontierMap]
 termination_by structural node
 end
 
@@ -3860,6 +3881,7 @@ def EffTraversal.alg {Op : Type} {M : Type → Type} {A : Type} [Monad M]
   eff_provideLayer x0 _ x2 := s.acc s.atEff [x0, x2]
   eff_service _ := s.acc s.atEff []
   eff_provideService _ _ x2 := s.acc s.atEff [x2]
+  eff_provideContext _ x1 := s.acc s.atEff [x1]
   eff_catchIf _ x1 x2 := s.acc s.atEff [x1, x2]
   eff_select _ _ x2 x3 := s.acc s.atEff [x2, x3]
   eff_iterate _ _ _ _ _ x5 := s.acc s.atEff [x5]
@@ -3889,8 +3911,7 @@ def EffTraversal.alg {Op : Type} {M : Type → Type} {A : Type} [Monad M]
   action_awaitNewChildren _ := s.acc s.atAction []
   action_raceAll x0 := s.acc s.atAction [x0]
   action_raceAllFirst x0 := s.acc s.atAction [x0]
-  action_setContext _ := s.acc s.atAction []
-  action_getContext := s.acc s.atAction []
+  action_context _ := s.acc s.atAction []
   action_getId := s.acc s.atAction []
   action_closeScope _ _ := s.acc s.atAction []
   action_getInterruptible := s.acc s.atAction []

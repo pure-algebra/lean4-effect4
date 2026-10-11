@@ -63,6 +63,7 @@ def certNormalAlg : TyAlgebra (fun _ => Bool × Bool) where
   ty_undefined := (true, true)
   ty_number := (true, true)
   ty_bytes := (true, true)
+  ty_contextOf _ := (true, true)
 
 /-- **The certificate**: the type is its own normal form, by its shape. -/
 def Ty.certNormal (t : Ty) : Bool := (cata_ty certNormalAlg t).1

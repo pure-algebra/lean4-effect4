@@ -48,6 +48,7 @@ theorem Ty.ind {motive : _root_.Effect4.Program.Ty → Prop}
     (undefined : motive .undefined)
     (number : motive .number)
     (bytes : motive .bytes)
+    (contextOf : ∀ (keys : Effect4.Row Effect4.ServiceKey), motive (.contextOf keys))
     : ∀ t, motive t := fun t =>
   _root_.Effect4.Program.Ty.rec (motive_1 := motive)
     (motive_2 := fun e => ∀ x0 ∈ e, motive x0.2.2)
@@ -82,6 +83,7 @@ theorem Ty.ind {motive : _root_.Effect4.Program.Ty → Prop}
     undefined
     number
     bytes
+    contextOf
     (fun _ hx => nomatch hx)
     (fun _ _ ihHead ihTail => by
       intro _ hx
@@ -129,6 +131,7 @@ def Ty.beq : _root_.Effect4.Program.Ty → _root_.Effect4.Program.Ty → Bool
   | .undefined, .undefined => true
   | .number, .number => true
   | .bytes, .bytes => true
+  | .contextOf a0, .contextOf b0 => decide (a0 = b0)
   | _, _ => false
 termination_by structural a _ => a
 def Ty.beq_pos_prod_bool_ty : Bool × _root_.Effect4.Program.Ty → Bool × _root_.Effect4.Program.Ty → Bool
@@ -281,6 +284,9 @@ theorem Ty.beq_iff : ∀ a b : _root_.Effect4.Program.Ty, Ty.beq a b = true ↔ 
   | bytes =>
     intro b
     cases b <;> simp only [Ty.beq, Bool.false_eq_true, reduceCtorEq]
+  | contextOf keys =>
+    intro b
+    cases b <;> simp only [Ty.beq, Bool.false_eq_true, reduceCtorEq, decide_eq_true_eq, Effect4.Program.Ty.contextOf.injEq]
 
 /-- Decidable structural equality, by `beq` and its proof. -/
 instance instDecidableEqTy : DecidableEq _root_.Effect4.Program.Ty := fun a b =>
@@ -317,6 +323,7 @@ def Ty.repr : _root_.Effect4.Program.Ty → Nat → Std.Format
   | .undefined, prec => Repr.addAppParen (Std.Format.group (Std.Format.nest (if prec >= max_prec then 1 else 2) (Std.Format.text "Effect4.Program.Ty.undefined"))) prec
   | .number, prec => Repr.addAppParen (Std.Format.group (Std.Format.nest (if prec >= max_prec then 1 else 2) (Std.Format.text "Effect4.Program.Ty.number"))) prec
   | .bytes, prec => Repr.addAppParen (Std.Format.group (Std.Format.nest (if prec >= max_prec then 1 else 2) (Std.Format.text "Effect4.Program.Ty.bytes"))) prec
+  | .contextOf a0, prec => Repr.addAppParen (Std.Format.group (Std.Format.nest (if prec >= max_prec then 1 else 2) (Std.Format.text "Effect4.Program.Ty.contextOf" ++ Std.Format.line ++ _root_.reprArg a0))) prec
 termination_by structural t _ => t
 def Ty.repr_tuple_prod_bool_ty : Bool × _root_.Effect4.Program.Ty → List Std.Format
   | (u, v) => (_root_.repr u) :: [Ty.repr v 0]

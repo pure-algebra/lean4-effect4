@@ -435,7 +435,7 @@ context holds, as the body reads them (`provideContext`, `internal/effect.ts:219
 empty fiber context is the built context itself, `CurrentMemoMap` (key `3`) trailing,
 `Layer.ts:762`). -/
 def buildServices (l : LayerTerm NativeOp) : List (Nat × Nat) :=
-  servicesOfExit (runNative (.provideLayer l false (.withFiber .getContext)))
+  servicesOfExit (runNative (.provideLayer l false (.withFiber (.context Requirement.empty))))
 
 /-- Whether `Effect.provide(Effect.void, l)` succeeds through the compile route. -/
 def buildSucceeds (l : LayerTerm NativeOp) : Bool :=

@@ -68,6 +68,7 @@ def inhabitedAlg : TyAlgebra (fun _ => Bool) where
   ty_undefined := true
   ty_number := true
   ty_bytes := true
+  ty_contextOf _ := true
 
 /-- Whether a type has a member (`inhabitedAlg`). -/
 def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
@@ -123,6 +124,7 @@ def internalHandleScan : TyAlgebra (fun _ => Path → Option Path) where
   ty_undefined := fun _ => none
   ty_number := fun _ => none
   ty_bytes := fun _ => none
+  ty_contextOf _ := some
 
 /-- The first internal handle kind in a raw type, at its path from `pos` (`internalHandleScan`).
 Requests may pass internal handles outward; a host answer or error column may not introduce one

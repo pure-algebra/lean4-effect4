@@ -264,6 +264,13 @@ mutual
       if Ty.sub v.normalize ty.normalize then
         pure ⟨b.answer, b.error, Row.diff b.requires (Requirement.single key)⟩
       else throw ⟨p, .valueNotSubtype key v ty⟩
+    | .provideContext context body => do
+      let c ← term? sig env p context
+      match c.normalize with
+      | .contextOf supplied =>
+        let b ← check sig env (p ++ [0]) body
+        pure ⟨b.answer, b.error, Row.diff b.requires supplied⟩
+      | _ => throw ⟨p, .contextExpected c⟩
     -- a restore site (decisions rows 244 and 245): the saved term at the saved state's own
     -- type, and the node at its body's type. No other rule names the type but the getter's
     | .restore saved body => do
@@ -454,10 +461,10 @@ mutual
       else throw ⟨p, .snapshotExpected s⟩
     | .raceAll entrants => checkEffs sig env (p ++ [0]) [] entrants
     | .raceAllFirst entrants => checkEffs sig env (p ++ [0]) [] entrants
-    | .setContext context => do
-      let c ← term? sig env p context
-      if Ty.sub c.normalize Ty.context then pure (EffTy.pure .unit) else throw ⟨p, .contextExpected c⟩
-    | .getContext => pure (EffTy.pure Ty.context)
+    | .context keys => do
+      for key in keys.elems do
+        let _ ← expect ⟨p, .serviceUnknown key⟩ (sig.serviceTy key)
+      pure ⟨.contextOf keys, .never, keys⟩
     | .getId => pure (EffTy.pure .nat)
     | .closeScope scope exit => do
       let s ← term? sig env p scope

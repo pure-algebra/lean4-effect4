@@ -707,6 +707,15 @@ def compileEff : NativeEff → Point → NCode
         | some v =>
           updateContextAt (Env.ContextUpdate.provideService key v) (Region.program (p.child 0))
         | none => badShape
+      -- `provideContext` merges supplied services and restores the previous context.
+      | .provideContext context body =>
+        match (evalTerm p.env context).bind Val.context? with
+        | some built =>
+          match (compileEff body (p.child 0)).asExit? with
+          | some exit => Prim.ofExit exit
+          | none => updateContextAt (Env.ContextUpdate.provide built.services)
+              (Region.program (p.child 0))
+        | none => badShape
       -- A restore site (decisions row 245): `restore(e)` is a call made when the program is
       -- built, of the function `uninterruptibleMask` chose at its entry (`:4340-4352`:
       -- `f(identity)` or `f(interruptible)`). So the node has no step of its own. Its saved bit
@@ -1144,12 +1153,7 @@ def actionAt (root : NativeEff) (p : Point) : Option NAction :=
         | none => refuse
       | .raceAll es => WithFiberAction.raceAll (entrants es (q.child 0)) (some (q.child 0).path)
       | .raceAllFirst es => WithFiberAction.raceAllFirst (entrants es (q.child 0)) (some (q.child 0).path)
-      | .setContext context =>
-        -- the context is read back off the value (`Val.context?`); any other shape refuses
-        match (evalTerm p.env context).bind Val.context? with
-        | some ctx => WithFiberAction.setContext ctx
-        | none => refuse
-      | .getContext => WithFiberAction.getContext
+      | .context _ => WithFiberAction.getContext
       | .getId => WithFiberAction.getId
       | .closeScope scope exit =>
         match evalTerm p.env scope, (evalTerm p.env exit).bind exitOfVal with
