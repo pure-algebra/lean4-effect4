@@ -223,6 +223,146 @@ theorem registration_loop_funded (root : NativeEff) (table : RowTable) (m : Nati
   simp only [List.map_cons, commandCredits, List.sum_cons, Nat.zero_add] at funded ⊢
   omega
 
+/-- A closed scope returns its exit and retains the registration credit in the actual callback.
+Consumer: `scope_add_closed_loop_funded`. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem scope_add_closed_frame_credits (q : List Nat) (f : Fiber) (scope : Nat)
+    (a : Val) (fin : FinName) (exit : ExitV) (lower : List NCode)
+    (current : f.frame.current = .sync (.op (.scopeAdd scope fin)))
+    (stack : f.frame.stack =
+      .onSuccess (.sync (.op (.scopeAdd scope fin))) (.afterScopeAdd a fin) :: lower) :
+    fiberCredits q { countOp f with frame := { f.frame with current := .success (reifyExitVal exit) } } =
+      fiberCredits q f := by
+  simp only [fiberCredits, current, stack, currentCredits, opCredits, stackCredits,
+    responseCredits, ite_true, Nat.zero_add, after_add_exit_credit, countOp]
+
+/-- The actual closed-scope addition preserves custody in its closing-exit response.
+Consumer: the closed scope-add clause of `Workers.Assertions.releases_step`.
+The unchanged scope store needs no scope-key uniqueness premise. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem scope_add_closed_loop_funded (root : NativeEff) (table : RowTable) (m : NativeMachine)
+    (id : FiberId) (f : Fiber) (yielding : Bool) (rest : List Command)
+    (q : List Nat) (scope : Nat) (entry : ScopeEntry) (a : Val) (fin : FinName)
+    (exit : ExitV) (lower : List NCode)
+    (unique : (m.fibers.map RunFiber.id).Nodup) (funded : Funded q m (.loop id yielding :: rest))
+    (found : m.fiber? id = some f)
+    (current : f.frame.current = .sync (.op (.scopeAdd scope fin)))
+    (stack : f.frame.stack =
+      .onSuccess (.sync (.op (.scopeAdd scope fin))) (.afterScopeAdd a fin) :: lower)
+    (entryFound : m.state.scopes.entryAt scope = some entry)
+    (closing : entry.scope.closingExit? = some exit)
+    (interrupt : f.frame.deferredInterrupt = false) (override : f.yieldOverride = none)
+    (budget : f.currentOpCount + 1 < f.maxOpsBeforeYield) :
+    Funded q (driveStep (evaluator := evaluatorFor root table) (interpOf root table) m
+      (.loop id yielding) rest).1
+      (driveStep (evaluator := evaluatorFor root table) (interpOf root table) m
+        (.loop id yielding) rest).2 := by
+  have answer : syncOpStep (.scopeAdd scope fin) m.state = some (m.state, reifyExitVal exit) := by
+    simp only [syncOpStep, entryFound, closing]
+  rw [ControlSteps.loop_sync_op root table m id f (.scopeAdd scope fin) m.state
+    (reifyExitVal exit) yielding rest found current interrupt override budget answer]
+  let next : Fiber := { countOp f with frame := { f.frame with current := .success (reifyExitVal exit) } }
+  change Funded q (m.update next) ([.drainDue, .deliver id yielding] ++ rest)
+  have member : f ∈ m.fibers := List.mem_of_find?_eq_some found
+  have changed := update_credits q m f next unique member rfl
+  have frame := scope_add_closed_frame_credits q f scope a fin exit lower current stack
+  change fiberCredits q next = fiberCredits q f at frame
+  unfold Funded at funded ⊢
+  change m.trace.countP (ReleaseTrace.releaseAt q) + machineCredits q (m.update next) +
+      (([Cmd.drainDue, Cmd.deliver id yielding] ++ rest).map (commandCredits q)).sum ≤
+    m.trace.countP (ReleaseTrace.registeredAt q)
+  simp only [List.cons_append, List.nil_append, List.map_cons, commandCredits, List.sum_cons,
+    Nat.zero_add] at funded ⊢
+  omega
+
+/-- Unit response removes the active credit after the actual scope owns it.
+Consumer: `scope_add_open_loop_funded`. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem scope_add_open_frame_credits (q : List Nat) (f : Fiber) (scope : Nat)
+    (a : Val) (fin : FinName) (lower : List NCode)
+    (current : f.frame.current = .sync (.op (.scopeAdd scope fin)))
+    (stack : f.frame.stack =
+      .onSuccess (.sync (.op (.scopeAdd scope fin))) (.afterScopeAdd a fin) :: lower) :
+    fiberCredits q { countOp f with frame := { f.frame with current := .success Val.unit } } +
+      credit q fin = fiberCredits q f := by
+  simp only [fiberCredits, current, stack, currentCredits, opCredits, stackCredits,
+    responseCredits, ite_true, Nat.zero_add, after_add_unit_credit, countOp]
+  omega
+
+/-- Replacing one actual scope entry changes only its selected weight.
+Consumer: `scope_add_open_loop_funded`. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem scope_update_credits (q : List Nat) (m : NativeMachine) (entry : ScopeEntry)
+    (nextScope : ScopeV) (nextName : Nat)
+    (unique : (m.state.scopes.entries.map ScopeEntry.key).Nodup)
+    (member : entry ∈ m.state.scopes.entries) :
+    machineCredits q { m with state := { m.state with
+      scopes := m.state.scopes.setEntry { entry with scope := nextScope }
+      nextName := nextName } } + scopeCredits q entry.scope =
+      machineCredits q m + scopeCredits q nextScope := by
+  have changed := Machine.ControlWeights.replace_sum ScopeEntry.key
+    (fun e => scopeCredits q e.scope) entry { entry with scope := nextScope } rfl
+    m.state.scopes.entries unique member
+  change ((m.state.scopes.entries.map fun e => if e.key = entry.key then
+      { entry with scope := nextScope } else e).map fun e => scopeCredits q e.scope).sum +
+      scopeCredits q entry.scope =
+    (m.state.scopes.entries.map fun e => scopeCredits q e.scope).sum + scopeCredits q nextScope at changed
+  simp only [machineCredits, ScopeStore.setEntry]
+  omega
+
+/-- The actual open-scope command transfers its active credit into the selected scope entry.
+Consumer: the open scope-add clause of `Workers.Assertions.releases_step`.
+Distinct scope-entry keys and fresh finalizer keys remain explicit store premises. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem scope_add_open_loop_funded (root : NativeEff) (table : RowTable) (m : NativeMachine)
+    (id : FiberId) (f : Fiber) (yielding : Bool) (rest : List Command)
+    (q : List Nat) (scope : Nat) (entry : ScopeEntry) (a : Val) (fin : FinName)
+    (lower : List NCode)
+    (unique : (m.fibers.map RunFiber.id).Nodup)
+    (scopeUnique : (m.state.scopes.entries.map ScopeEntry.key).Nodup)
+    (funded : Funded q m (.loop id yielding :: rest))
+    (found : m.fiber? id = some f)
+    (current : f.frame.current = .sync (.op (.scopeAdd scope fin)))
+    (stack : f.frame.stack =
+      .onSuccess (.sync (.op (.scopeAdd scope fin))) (.afterScopeAdd a fin) :: lower)
+    (entryFound : m.state.scopes.entryAt scope = some entry)
+    (opened : entry.scope.isClosed = false) (fresh : m.state.nextName ∉ entry.scope.finalizerKeys)
+    (interrupt : f.frame.deferredInterrupt = false) (override : f.yieldOverride = none)
+    (budget : f.currentOpCount + 1 < f.maxOpsBeforeYield) :
+    Funded q (driveStep (evaluator := evaluatorFor root table) (interpOf root table) m
+      (.loop id yielding) rest).1
+      (driveStep (evaluator := evaluatorFor root table) (interpOf root table) m
+        (.loop id yielding) rest).2 := by
+  let state : Stores := { m.state with
+    scopes := m.state.scopes.setEntry { entry with scope := entry.scope.addUnsafe m.state.nextName fin }
+    nextName := m.state.nextName + 1 }
+  have closing : entry.scope.closingExit? = none :=
+    ScopeState.closingExit_of_not_closed entry.scope.state opened
+  have answer : syncOpStep (.scopeAdd scope fin) m.state = some (state, Val.unit) := by
+    simp only [syncOpStep, entryFound, closing]
+    rfl
+  rw [ControlSteps.loop_sync_op root table m id f (.scopeAdd scope fin) state Val.unit
+    yielding rest found current interrupt override budget answer]
+  let next : Fiber := { countOp f with frame := { f.frame with current := .success Val.unit } }
+  change Funded q (({ m with state }).update next) ([.drainDue, .deliver id yielding] ++ rest)
+  have entryMember : entry ∈ m.state.scopes.entries := List.mem_of_find?_eq_some entryFound
+  have scopeChanged := scope_update_credits q m entry
+    (entry.scope.addUnsafe m.state.nextName fin) (m.state.nextName + 1) scopeUnique entryMember
+  have registeredCredit := add_open q entry.scope m.state.nextName fin opened fresh
+  have member : f ∈ ({ m with state } : NativeMachine).fibers := List.mem_of_find?_eq_some found
+  have changed := update_credits q { m with state } f next unique member rfl
+  have frame := scope_add_open_frame_credits q f scope a fin lower current stack
+  change fiberCredits q next + credit q fin = fiberCredits q f at frame
+  change machineCredits q { m with state } + scopeCredits q entry.scope =
+    machineCredits q m + scopeCredits q (entry.scope.addUnsafe m.state.nextName fin) at scopeChanged
+  unfold Funded at funded ⊢
+  change m.trace.countP (ReleaseTrace.releaseAt q) + machineCredits q (({ m with state }).update next) +
+      (([Cmd.drainDue, Cmd.deliver id yielding] ++ rest).map (commandCredits q)).sum ≤
+    m.trace.countP (ReleaseTrace.registeredAt q)
+  simp only [List.cons_append, List.nil_append, List.map_cons, commandCredits, List.sum_cons,
+    Nat.zero_add] at funded ⊢
+  omega
+
 /-- Starting the foreign release spends exactly one active credit and leaves lower callbacks intact.
 Consumer: `release_loop_funded`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]

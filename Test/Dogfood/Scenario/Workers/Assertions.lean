@@ -199,6 +199,49 @@ theorem release_custody_command (b : Api.Built) (cf : Nat) (m : NativeMachine)
       (acquirePath i) c exit unique (funded i hi) found current interrupt override budget
   exact ⟨allFunded, fun i hi => ReleaseCustody.Control.Funded.read (allFunded i hi)⟩
 
+/-- Actual scope-add transfers the registered source credit to storage or its closing response.
+Consumer: the scope-add command clause of `releases_step`.
+The reachable scope store must still supply distinct entries and fresh registration keys. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem scope_add_custody_command (b : Api.Built) (cf : Nat) (m : NativeMachine)
+    (id : FiberId) (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx)
+    (yielding : Bool) (rest : List (Cmd EffName EffThunk Val Err Defect FiberId Ann))
+    (scope : Nat) (entry : ScopeEntry) (a : Val) (fin : FinName) (lower : List NCode)
+    (held : Holds b cf m)
+    (funded : ∀ i ∈ [1, 2], ReleaseCustody.Control.Funded (acquirePath i) m (.loop id yielding :: rest))
+    (scopeUnique : (m.state.scopes.entries.map ScopeEntry.key).Nodup)
+    (found : m.fiber? id = some f)
+    (current : f.frame.current = .sync (.op (.scopeAdd scope fin)))
+    (stack : f.frame.stack =
+      .onSuccess (.sync (.op (.scopeAdd scope fin))) (.afterScopeAdd a fin) :: lower)
+    (entryFound : m.state.scopes.entryAt scope = some entry)
+    (status : (entry.scope.isClosed = false ∧ m.state.nextName ∉ entry.scope.finalizerKeys) ∨
+      ∃ exit, entry.scope.closingExit? = some exit)
+    (interrupt : f.frame.deferredInterrupt = false) (override : f.yieldOverride = none)
+    (budget : f.currentOpCount + 1 < f.maxOpsBeforeYield) :
+    (∀ i ∈ [1, 2], ReleaseCustody.Control.Funded (acquirePath i)
+      (driveStep (evaluator := evaluatorFor b.program b.table) (interpOf b.program b.table) m
+        (.loop id yielding) rest).1
+      (driveStep (evaluator := evaluatorFor b.program b.table) (interpOf b.program b.table) m
+        (.loop id yielding) rest).2) ∧
+    ReleaseDebits (driveStep (evaluator := evaluatorFor b.program b.table) (interpOf b.program b.table) m
+      (.loop id yielding) rest).1 := by
+  have unique := (Guard.guardState_reachable b.program b.table cf m held.history.reachable).fiberIds
+  have allFunded : ∀ i ∈ [1, 2], ReleaseCustody.Control.Funded (acquirePath i)
+      (driveStep (evaluator := evaluatorFor b.program b.table) (interpOf b.program b.table) m
+        (.loop id yielding) rest).1
+      (driveStep (evaluator := evaluatorFor b.program b.table) (interpOf b.program b.table) m
+        (.loop id yielding) rest).2 := by
+    intro i hi
+    rcases status with ⟨opened, fresh⟩ | ⟨exit, closing⟩
+    · exact ReleaseCustody.Control.scope_add_open_loop_funded b.program b.table m id f yielding rest
+        (acquirePath i) scope entry a fin lower unique scopeUnique (funded i hi) found current stack
+        entryFound opened fresh interrupt override budget
+    · exact ReleaseCustody.Control.scope_add_closed_loop_funded b.program b.table m id f yielding rest
+        (acquirePath i) scope entry a fin exit lower unique (funded i hi) found current stack
+        entryFound closing interrupt override budget
+  exact ⟨allFunded, fun i hi => ReleaseCustody.Control.Funded.read (allFunded i hi)⟩
+
 /-- Registration preservation obligation of `releases_once`.
 Reach: actual crew histories, all budgets, controls and admitted host answers.
 It needs the static acquisition placement and the control-source provenance invariant.
