@@ -294,6 +294,7 @@ import Effect4.Laws.Library.PubSub.Steps
 import Effect4.Laws.Library.Pull.Protocol
 import Effect4.Laws.Library.Channel.Protocol
 import Effect4.Laws.Library.Stream.Definitions
+import Effect4.Laws.Program.Folds.TyCache
 
 /-!
 # Effect4 proof graph
