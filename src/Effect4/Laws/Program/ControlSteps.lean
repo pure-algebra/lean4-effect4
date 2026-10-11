@@ -1,4 +1,5 @@
 import Effect4.Laws.Machine.ControlSteps
+import Effect4.Laws.Machine.AnswerFlow
 import Effect4.Api
 
 /-!
@@ -32,6 +33,30 @@ theorem native_sync_op (root : NativeEff) (table : RowTable) (m : Api.Machine)
   have sync : (interpAt root m.completedExits table).syncState (.op op) m.state =
       syncOpStep op m.state := rfl
   simp only [evaluateNative, current, evaluatePrim, park, sync, answer]
+
+/-- An actual compiled store answer consumes the post-state contract on the unchanged saved stack.
+Consumer: Timeout's count read, cleanup writer and selected-exit writer.
+The world reads the actual stores; source selection and post-state admissibility remain premises. -/
+@[semantics "store-typing" (requirement := R4)]
+theorem native_sync_answer {World Kind : Type} (root : NativeEff) (table : RowTable)
+    (m : Api.Machine) (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx)
+    (yielding : Bool) (op : SyncOp) (state : Stores) (value : Val)
+    (world : Stores → World)
+    (model : AnswerFlow.Model (ν := EffName) (σ := EffThunk) (β := Val)
+      (ε := Err) (δ := Defect) (ι := FiberId) (α := Ann) World Kind)
+    (interp : PrimInterp EffName EffThunk Val Err Defect FiberId Ann) (input output : Kind)
+    (current : f.frame.current = .sync (.op op))
+    (answer : syncOpStep op m.state = some (state, value))
+    (future : model.future (world m.state) (world state))
+    (answered : model.value (world state) input value)
+    (stack : AnswerFlow.StackAt model interp (world m.state) input output f.frame.stack) :
+    evaluateNative root m f yielding table =
+      ⟨{m with state}, {f with frame := {f.frame with current := .success value}},
+        yielding, .answered, [.drainDue]⟩ ∧
+      AnswerFlow.FrameAt model interp (world state) output
+        {f.frame with current := .success value} :=
+  ⟨native_sync_op root table m f yielding op state value current answer,
+    AnswerFlow.sync_answer model interp future input output f.frame value answered stack⟩
 
 /-- One compiled store command on an arbitrary fiber commits before its owed resumes.
 A step of `heap_sites_keep` and `fiber-local-positions`; the worker probe consumes it. -/

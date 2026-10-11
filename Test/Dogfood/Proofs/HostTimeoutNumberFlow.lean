@@ -370,18 +370,15 @@ theorem cleanup_native_write (view : View) (machine : Effect4.Program.NativeMach
   rw [code] at source
   have step : syncOpStep operation machine.state =
       some ({machine.state with refs := (image.cleanup own exit).heap}, .unit) := source
-  constructor
-  · exact ControlSteps.native_sync_op HostTimeoutSource.program Scenario.Timeout.fetch.table machine fiber yielding
-      operation _ .unit (current.trans code) step
-  · have future : Future machine.state
-        {machine.state with refs := (image.cleanup own exit).heap} := by
-      constructor
-      · change machine.state.refs.length ≤ 3
-        rw [heap]
-        exact Nat.le_refl _
-      · exact Nat.le_refl _
-    exact AnswerFlow.sync_answer (model view) (interpreter view).toPrimInterp future
-      (.unit (image.cleanup own exit)) output fiber.frame .unit ⟨rfl, rfl⟩ stack
+  have future : Future machine.state {machine.state with refs := (image.cleanup own exit).heap} := by
+    constructor
+    · change machine.state.refs.length ≤ 3
+      rw [heap]
+      exact Nat.le_refl _
+    · exact Nat.le_refl _
+  exact ControlSteps.native_sync_answer HostTimeoutSource.program Scenario.Timeout.fetch.table machine fiber yielding
+    operation _ .unit id (model view) (interpreter view).toPrimInterp (.unit (image.cleanup own exit)) output
+    (current.trans code) step future ⟨rfl, rfl⟩ stack
 
 /-- The actual restore pop consumes the committed cleanup image and keeps the exact captured exit. -/
 theorem restore_pop (view : View) (state : Stores) (image : Image) (exit : ExitV) (program : NCode)
@@ -436,18 +433,15 @@ theorem completed_native_write (view : View) (machine : Effect4.Program.NativeMa
   rw [code] at source
   have step : syncOpStep operation machine.state =
       some ({machine.state with refs := (image.form cleanupComplete own exit).heap}, .unit) := source
-  constructor
-  · exact ControlSteps.native_sync_op HostTimeoutSource.program Scenario.Timeout.fetch.table machine fiber yielding
-      operation _ .unit (current.trans code) step
-  · have future : Future machine.state
-        {machine.state with refs := (image.form cleanupComplete own exit).heap} := by
-      constructor
-      · change machine.state.refs.length ≤ 3
-        rw [heap]
-        exact Nat.le_refl _
-      · exact Nat.le_refl _
-    exact AnswerFlow.sync_answer (model view) (interpreter view).toPrimInterp future
-      (.unit (image.form cleanupComplete own exit)) output fiber.frame .unit ⟨rfl, rfl⟩ stack
+  have future : Future machine.state {machine.state with refs := (image.form cleanupComplete own exit).heap} := by
+    constructor
+    · change machine.state.refs.length ≤ 3
+      rw [heap]
+      exact Nat.le_refl _
+    · exact Nat.le_refl _
+  exact ControlSteps.native_sync_answer HostTimeoutSource.program Scenario.Timeout.fetch.table machine fiber yielding
+    operation _ .unit id (model view) (interpreter view).toPrimInterp (.unit (image.form cleanupComplete own exit)) output
+    (current.trans code) step future ⟨rfl, rfl⟩ stack
 
 /-- The actual form bind push joins its read to the saved selected-exit writer. -/
 theorem completed_push (view : View) (state : Stores) (image : Image)
@@ -506,11 +500,9 @@ theorem native_get (view : View) (machine : Effect4.Program.NativeMachine)
     dsimp only [Image.heap]
     rw [← heap]
   rw [same] at answer
-  constructor
-  · exact ControlSteps.native_sync_op HostTimeoutSource.program Scenario.Timeout.fetch.table machine fiber yielding
-      (.refGet ⟨0⟩) machine.state (.nat image.count) current answer
-  · exact AnswerFlow.sync_answer (model view) (interpreter view).toPrimInterp
-      ((model view).future_refl machine.state) (.read image) output fiber.frame (.nat image.count) ⟨heap, rfl⟩ stack
+  exact ControlSteps.native_sync_answer HostTimeoutSource.program Scenario.Timeout.fetch.table machine fiber yielding
+    (.refGet ⟨0⟩) machine.state (.nat image.count) id (model view) (interpreter view).toPrimInterp
+    (.read image) output current answer ((model view).future_refl machine.state) ⟨heap, rfl⟩ stack
 
 /-- Stripping the interrupted typed failures cannot invent permission for a declared retry. -/
 theorem no_typed_strip (cause : CauseV) : NoTypedFailure cause.stripFail := by
