@@ -705,6 +705,10 @@ theorem actionAt_keys (root : NativeEff) (p : Point) (a : NAction) (h : actionAt
       simp only [] at h
       subst h
       exact entrants_keys root es _
+    | raceAllFirst es =>
+      simp only [] at h
+      subst h
+      exact entrants_keys root es _
     | setContext context =>
       simp only [] at h
       split at h
