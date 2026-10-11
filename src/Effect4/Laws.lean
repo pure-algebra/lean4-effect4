@@ -237,6 +237,7 @@ import Effect4.Laws.Program.Footprint
 import Effect4.Laws.Program.Interference
 import Effect4.Laws.Machine.StackLocal
 import Effect4.Laws.Machine.AnswerFlow
+import Effect4.Laws.Machine.AnswerFlowFrames
 import Effect4.Laws.Program.StackLocal
 import Effect4.Laws.Program.StackRegionRun
 import Effect4.Laws.Program.CommandFrames
