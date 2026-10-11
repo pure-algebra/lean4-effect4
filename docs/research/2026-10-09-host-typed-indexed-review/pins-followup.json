@@ -1,0 +1,67 @@
+{
+  "repositories": [
+    {
+      "name": "effect4",
+      "repository": "/Users/pooks/Dev/lean4-effect4",
+      "commit": "a78fcad8741d634193e568b51ab7f249c1df12e7",
+      "files": [
+        {
+          "path": "src/Effect4/Laws/Api/HostDrive.lean",
+          "sha256": "b9b30eb42f83a52b76372fff9b284c5b5f842f928d77048f14bf78e5f78858ae"
+        },
+        {
+          "path": "docs/STATE.md",
+          "sha256": "26757db997720233a36415b921a6933e49307dc98c5ebbd00eb4776969c3a648",
+          "snapshot": false
+        },
+        {
+          "path": "docs/core/decisions.md",
+          "sha256": "edcee6f0fe001b4fbd0361ab8c3629e4bd04f46b0bc66612e9c388773e2eea10",
+          "snapshot": false
+        },
+        {
+          "path": "docs/research/2026-10-09-host-coalgebra.md",
+          "sha256": "d1729ddac5c5e00ea0b249659b4e5b8077043fbe8afba7765fa9ef8460830cc0",
+          "snapshot": false
+        },
+        {
+          "path": "lake-manifest.json",
+          "sha256": "b94e6a94b029e0869ceda34ee1413a8678032e1d0c0995eab895d1ec0fa72002",
+          "snapshot": false
+        },
+        {
+          "path": "generated/semantics.md",
+          "sha256": "bbed3668f0de6837be46a54f46d3a2c21db61032f53b60a926e0c6751ff4b61f",
+          "snapshot": false
+        }
+      ]
+    },
+    {
+      "name": "effects",
+      "repository": "/Users/pooks/Dev/lean4-effects",
+      "commit": "bf5ab8fd26ee009abbf465821a3664ea20948a49",
+      "files": [
+        {
+          "path": "Effects/Coalgebra/Run.lean",
+          "sha256": "1d19407c6cc41d58c502ec0ac18a327f6357357f185fd067a801e5ac2c057f4d"
+        },
+        {
+          "path": "EffectsTest/Coalgebra/CoalgebraContract.lean",
+          "sha256": "ab7d369a6dec2f5ae421851166084cc2d91b4597b27451d2a518124e2496cc1b"
+        },
+        {
+          "path": "test/contracts/coalgebra.contract.md",
+          "sha256": "cd5bb81902af8a9246b76857485890065082312017e9423252f513ceec26df8e"
+        },
+        {
+          "path": "docs/CLAIM-BOUNDARY.md",
+          "sha256": "56195a522166ff121d47c8bbd76e77a37b6b03a0174f85ff4b2a2868182cdfce"
+        },
+        {
+          "path": "Effects/Coalgebra.lean",
+          "sha256": "bff492392d4ab4bd0639da62f5d9d28933ead0afc84331f0f2e6b5c931d563fd"
+        }
+      ]
+    }
+  ]
+}

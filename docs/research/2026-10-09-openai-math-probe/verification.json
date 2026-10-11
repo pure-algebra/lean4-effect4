@@ -1,0 +1,240 @@
+{
+  "started_utc": "2026-10-10T05:39:51.224713+00:00",
+  "build_base": "b459daecd0ce148ba9d1c44641d1735a80db97dd",
+  "lean_num_threads": "3",
+  "source_sha256": {
+    "docs/research/2026-10-09-openai-math-probe/Controls.lean": "7c2b192f90cad161e10ed403da24c24778d24102f8e7077f89005f2e4232ad3f",
+    "docs/research/2026-10-09-openai-math-probe/FlowReachability.lean": "6ca2aeaebb7d2a59709b9a9bc11a0c406f2fcb6e2607cba7acf4c36bf1ab30e6",
+    "docs/research/2026-10-09-openai-math-probe/OPERATIONAL-PLAN.md": "15cc345c934eedfb52891b72ebe265659e11402d7283d6791cdd1f6d08780d24",
+    "docs/research/2026-10-09-openai-math-probe/PreparedCodecControls.lean": "26bebbf78d9c271eb7675c3309fe28a53d96f8bceb2f353a602699138a3c19ec",
+    "docs/research/2026-10-09-openai-math-probe/PreparedCodecReuse.lean": "886443d0fc02c4b2d2097569520a197f105cbbe7d6c66ac82c8247800947a7f6",
+    "docs/research/2026-10-09-openai-math-probe/ProofGraphProbe.lean": "00f8ba76abe2e6731d384a1ea5e35aaa183e9b95f620123844b744078329dc14",
+    "docs/research/2026-10-09-openai-math-probe/README.md": "893a38c39c5eda278d9c28e5b22436e8102d642efa0551be522cbcd7c16cb15b",
+    "docs/research/2026-10-09-openai-math-probe/Reachability.lean": "fe81cfd197d15989c8b940dfcb7978df642a162f90301a26b00a50e9a90ade60",
+    "docs/research/2026-10-09-openai-math-probe/TyCache.lean": "7756a480eca41cbd8f1b920bb1623565ddb97072c057393010a2e6dede756505",
+    "docs/research/2026-10-09-openai-math-probe/check.sh": "7981b74815a27a8cdde30d8c26b7c37ea79b776646a7dd246d744230be2705a7",
+    "docs/research/2026-10-09-openai-math-probe/graph_controls.py": "5d5ef76c34214a5793ce2cd5b52d5932ab161bc8a72ca5daa0f88a776815fd21",
+    "docs/research/2026-10-09-openai-math-probe/inventory.py": "1585af8f93d49f0b72ff843c8ade4c2492e84f884c7137649e7e405d9abf8856",
+    "docs/research/2026-10-09-openai-math-probe/verify.py": "03e41d4520ecddadb6fcaea55a5187ec93b582c52a02fdaaa1f4350cd927d844",
+    "src/Effect4/Schema/Codec.lean": "2f417e14d292b815e12bcb6ac6f100ca2eea91a19386ce5feaf2f8c3f97add21",
+    "src/Effect4/Laws/Schema/Codec.lean": "693ece54b3d3deb6c75379db17abf90dd7ea894e7e30772c5710446220fe879f",
+    "src/Effect4/Laws/Program/Typed/AnswerSchema.lean": "269e8d744f45482443c9aea3d3e29907ec932558dbd1e1eb741328b925d88806",
+    "Test/Codegen/DataCodec.lean": "bec56a3945e758a7e425ef508a6fe2e05a1bc825acc66f50288fedfd760e3058",
+    "harness/truth/schema-codec/Emit.lean": "c7eb2a32329da16b05e12d56d9192b01e150c60df277f23e851c0744dd6e8d87"
+  },
+  "checks": [
+    {
+      "name": "research imports and codec laws",
+      "command": [
+        "lake",
+        "build",
+        "Tools.View.FlowLaws",
+        "Effect4.Laws.Schema.Codec",
+        "Test.Codegen.DataCodec",
+        "Test.Codegen.SchemaGenerationContract",
+        "Test.Program.AnswerSchema"
+      ],
+      "log": "docs/research/2026-10-09-openai-math-probe/narrow-build.log",
+      "exit_code": 0,
+      "elapsed_seconds": 0.381,
+      "log_sha256": "f05d1c23a25d9086f34edc47eb1939bc014cb8faf1b252bc64fd0b3503c62ffa"
+    },
+    {
+      "name": "cached fold agreement",
+      "command": [
+        "lake",
+        "env",
+        "sh",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$2\" \"$3\"",
+        "research-check",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-openai-math-probe",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-openai-math-probe/TyCache.olean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-openai-math-probe/TyCache.lean"
+      ],
+      "log": "docs/research/2026-10-09-openai-math-probe/ty-cache-check.log",
+      "exit_code": 0,
+      "elapsed_seconds": 1.588,
+      "log_sha256": "908a64ab44775e00b816b220df35395cabc5eac596643cfdf7a4f719f22d5833"
+    },
+    {
+      "name": "cyclic dependency summaries",
+      "command": [
+        "lake",
+        "env",
+        "sh",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$2\" \"$3\"",
+        "research-check",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-openai-math-probe",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-openai-math-probe/Reachability.olean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-openai-math-probe/Reachability.lean"
+      ],
+      "log": "docs/research/2026-10-09-openai-math-probe/reachability-check.log",
+      "exit_code": 0,
+      "elapsed_seconds": 1.696,
+      "log_sha256": "bc34a13880cefea3cbb959a46a1b93eaa249aa297b9b4305083731bf322299b9"
+    },
+    {
+      "name": "actual proof collector",
+      "command": [
+        "lake",
+        "env",
+        "sh",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$2\" \"$3\"",
+        "research-check",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-openai-math-probe",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-openai-math-probe/ProofGraphProbe.olean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-openai-math-probe/ProofGraphProbe.lean"
+      ],
+      "log": "docs/research/2026-10-09-openai-math-probe/proof-graph-check.log",
+      "exit_code": 0,
+      "elapsed_seconds": 1.482,
+      "log_sha256": "fefa78ab1d7571cb99645d1fc0943f35b188ffcf25206a93d78b51c5d01f3279"
+    },
+    {
+      "name": "application flow connector",
+      "command": [
+        "lake",
+        "env",
+        "sh",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$2\" \"$3\"",
+        "research-check",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-openai-math-probe",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-openai-math-probe/FlowReachability.olean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-openai-math-probe/FlowReachability.lean"
+      ],
+      "log": "docs/research/2026-10-09-openai-math-probe/flow-check.log",
+      "exit_code": 0,
+      "elapsed_seconds": 2.237,
+      "log_sha256": "f62a75542d8ba751d752482b32c189a4f7f6171f29593e657680b6ae3ccec46b"
+    },
+    {
+      "name": "inherited context control",
+      "command": [
+        "lake",
+        "env",
+        "sh",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$2\" \"$3\"",
+        "research-check",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-openai-math-probe",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-openai-math-probe/Controls.olean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-openai-math-probe/Controls.lean"
+      ],
+      "log": "docs/research/2026-10-09-openai-math-probe/context-check.log",
+      "exit_code": 0,
+      "elapsed_seconds": 0.55,
+      "log_sha256": "fbb685df04cbc52739bf05c421d98be458c508489629878cfde07b6a87a6b8ff"
+    },
+    {
+      "name": "prepared codec controls",
+      "command": [
+        "lake",
+        "env",
+        "sh",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$2\" \"$3\"",
+        "research-check",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-openai-math-probe",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-openai-math-probe/PreparedCodecControls.olean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-openai-math-probe/PreparedCodecControls.lean"
+      ],
+      "log": "docs/research/2026-10-09-openai-math-probe/prepared-codec-check.log",
+      "exit_code": 0,
+      "elapsed_seconds": 3.939,
+      "log_sha256": "dc7b8851688f03d1449a6b420bcbe891cae140b0f43eb42137dc77d97c981bdd"
+    },
+    {
+      "name": "prepared codec compiler inspection",
+      "command": [
+        "lake",
+        "env",
+        "sh",
+        "-c",
+        "LEAN_PATH=\"$1:$LEAN_PATH\" lean --root=\"$1\" -DwarningAsError=true -o \"$2\" \"$3\"",
+        "research-check",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-openai-math-probe",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-openai-math-probe/PreparedCodecReuse.olean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-openai-math-probe/PreparedCodecReuse.lean"
+      ],
+      "log": "docs/research/2026-10-09-openai-math-probe/prepared-codec-reuse.log",
+      "exit_code": 0,
+      "elapsed_seconds": 1.546,
+      "log_sha256": "89e5776e1373836ea6b1957a7afdcb5340b8f5e0504e7765f1d701f4be7f7a2d"
+    },
+    {
+      "name": "independent finite graph controls",
+      "command": [
+        "/Users/pooks/.local/share/mise/installs/python/3.13.14/bin/python3",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-openai-math-probe/graph_controls.py"
+      ],
+      "log": "docs/research/2026-10-09-openai-math-probe/graph-results.json",
+      "exit_code": 0,
+      "elapsed_seconds": 0.039,
+      "log_sha256": "943d9e3670c7e23800c02b66f2c40dc03224523118e5006e2deddebd010d331f"
+    },
+    {
+      "name": "existing codec harness",
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "--run",
+        "harness/truth/schema-codec/Emit.lean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-openai-math-probe/codec-after.ts"
+      ],
+      "log": "docs/research/2026-10-09-openai-math-probe/codec-harness.log",
+      "exit_code": 0,
+      "elapsed_seconds": 1.542,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "codec byte comparison",
+      "exit_code": 0,
+      "baseline_sha256": "6b140d10f8e5561d5a463d446686c0bbe4c6e38c6edca0716691bafdeeac9bf3",
+      "actual_sha256": "6b140d10f8e5561d5a463d446686c0bbe4c6e38c6edca0716691bafdeeac9bf3",
+      "baseline_bytes": 12655,
+      "actual_bytes": 12655
+    },
+    {
+      "name": "research prose",
+      "command": [
+        "/Users/pooks/.local/share/mise/installs/python/3.13.14/bin/python3",
+        "scripts/check-language.py",
+        "--strict",
+        "docs/research/2026-10-09-openai-math-probe/README.md",
+        "docs/research/2026-10-09-openai-math-probe/OPERATIONAL-PLAN.md"
+      ],
+      "log": "docs/research/2026-10-09-openai-math-probe/language-check.log",
+      "exit_code": 0,
+      "elapsed_seconds": 5.116,
+      "log_sha256": "16a8cf25036e1fe4feee136c669991a45607c11a69b2be3269754bea2f53fd1a"
+    }
+  ],
+  "scope": "Narrow local Lean proofs and finite controls; no upstream build, host run or full sweep.",
+  "all_passed": true,
+  "finished_utc": "2026-10-10T05:40:11.363623+00:00",
+  "documentation_finalization": {
+    "recorded_utc": "2026-10-10T05:43:02.691630+00:00",
+    "changed": {
+      "docs/research/2026-10-09-openai-math-probe/README.md": {
+        "prior_sha256": "893a38c39c5eda278d9c28e5b22436e8102d642efa0551be522cbcd7c16cb15b",
+        "final_sha256": "b7ef4de5736203843b01a44c1c37e633fd9aac65cad13e35369fad56c0154915"
+      }
+    },
+    "command": [
+      "python3",
+      "scripts/check-language.py",
+      "--strict",
+      "docs/research/2026-10-09-openai-math-probe/README.md",
+      "docs/research/2026-10-09-openai-math-probe/OPERATIONAL-PLAN.md"
+    ],
+    "exit_code": 0,
+    "evidence": "Completed command returned PASS; production and Lean probe sources remain byte-identical to the recorded checks."
+  },
+  "implementation_commit": "4bbd28a05bedc3e30f9db72e3893872a771b81da"
+}

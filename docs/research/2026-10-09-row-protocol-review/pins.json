@@ -1,0 +1,29 @@
+{
+  "commit": "b98d81c33ffa1721fe61b23d38d167b6e0dd9eca",
+  "files": [
+    {
+      "path": "src/Effect4/Laws/Program/RowProtocol.lean",
+      "sha256": "4ef058229c6636fd291b6f5b7369a19a3bb7018cef62658ce178de32b633de43"
+    },
+    {
+      "path": "Test/Api/TypedReplies.lean",
+      "sha256": "5bffcc7017bc643ebb99c141bfcd7900bb401ca4d1c767c3bc1b1a5d46bdcdcf"
+    },
+    {
+      "path": "tools/ProofGraph/Registry.lean",
+      "sha256": "243b3f4ae87a391c27e5c8a53f87361e98de88fcfed4f5194d17f58044beaf72"
+    },
+    {
+      "path": "generated/semantics.md",
+      "sha256": "3bb20eefaa488bb93b36aebae5780f0a392db9af08e9cd73d4cdab26c0c0dc16"
+    },
+    {
+      "path": "src/Effect4/Laws.lean",
+      "sha256": "8d5d8e606c22b75250dacefad9d613f8a0ecfdbd32f80b753429d03b2008710a"
+    },
+    {
+      "path": "docs/research/2026-10-09-host-coalgebra.md",
+      "sha256": "ff5f089d006a7be9b011a750eafea4f97b6247df570bd4a86419a7c53954a221"
+    }
+  ]
+}

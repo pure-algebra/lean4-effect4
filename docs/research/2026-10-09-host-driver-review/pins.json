@@ -1,0 +1,37 @@
+{
+  "commit": "e72edc4ed878af3661fa4bb0d6e6c55f8ec66cf9",
+  "files": [
+    {
+      "path": "src/Effect4/Laws/Api/HostDrive.lean",
+      "sha256": "1218fa6a35b41ff8653bd5981e42034ad8af124e45b5e4a0c7079942a0ae410c"
+    },
+    {
+      "path": "tools/ProofGraph/AxiomAudit.lean",
+      "sha256": "c8c30651f830fa455fc67ee3d7d6c9cc446352317324f4ff725f8ab1356f9e16"
+    },
+    {
+      "path": "Test/Api/SessionMeaning.lean",
+      "sha256": "99fb70dfb58814f7f62e5109e86782b8f82d834015b00a6de627b78bb963659a"
+    },
+    {
+      "path": "Test/Audit/ProofGraph.lean",
+      "sha256": "901e0e26008a8ccd69517de53c6b392b5437bc05a02ad9606c4de45c8fc9643b"
+    },
+    {
+      "path": "docs/STATE.md",
+      "sha256": "0bded33f383c186743de95e37de25be579c1ee7b6e5f7af80c22e696438b27d3"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/RowProtocol.lean",
+      "sha256": "4ef058229c6636fd291b6f5b7369a19a3bb7018cef62658ce178de32b633de43"
+    },
+    {
+      "path": "tools/ProofGraph/Registry.lean",
+      "sha256": "2b6cfaa6a56caebc2463fdfcce878892b80e47f6564ad7bad1e54bbb8ebf6b5e"
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "b4cb717fbc047215506c86b4ca10686a7db4c1cb384ea45dbe236bb66a893bda"
+    }
+  ]
+}

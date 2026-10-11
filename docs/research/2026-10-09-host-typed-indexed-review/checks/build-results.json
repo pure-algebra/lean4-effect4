@@ -1,0 +1,115 @@
+[
+  {
+    "name": "sat",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/host-coalgebra-review-overlay",
+      "-DwarningAsError=true",
+      "-DautoImplicit=false",
+      "-DrelaxedAutoImplicit=false",
+      "--root=/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-host-typed-indexed-review/snapshot/effects",
+      "-o",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/host-coalgebra-review-overlay/Effects/Coalgebra/Sat.olean",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-host-typed-indexed-review/snapshot/effects/Effects/Coalgebra/Sat.lean"
+    ],
+    "exit_code": 0
+  },
+  {
+    "name": "indexed",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/host-coalgebra-review-overlay",
+      "-DwarningAsError=true",
+      "-DautoImplicit=false",
+      "-DrelaxedAutoImplicit=false",
+      "--root=/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-host-typed-indexed-review/snapshot/effects",
+      "-o",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/host-coalgebra-review-overlay/Effects/Coalgebra/Indexed.olean",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-host-typed-indexed-review/snapshot/effects/Effects/Coalgebra/Indexed.lean"
+    ],
+    "exit_code": 0
+  },
+  {
+    "name": "coalgebra-root",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/host-coalgebra-review-overlay",
+      "-DwarningAsError=true",
+      "-DautoImplicit=false",
+      "-DrelaxedAutoImplicit=false",
+      "--root=/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-host-typed-indexed-review/snapshot/effects",
+      "-o",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/host-coalgebra-review-overlay/Effects/Coalgebra.olean",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-host-typed-indexed-review/snapshot/effects/Effects/Coalgebra.lean"
+    ],
+    "exit_code": 0
+  },
+  {
+    "name": "package-battery",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/host-coalgebra-review-overlay",
+      "-DwarningAsError=true",
+      "-DautoImplicit=false",
+      "-DrelaxedAutoImplicit=false",
+      "--root=/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-host-typed-indexed-review/snapshot/effects",
+      "-o",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/host-coalgebra-review-overlay/EffectsTest/Coalgebra/CoalgebraContract.olean",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-host-typed-indexed-review/snapshot/effects/EffectsTest/Coalgebra/CoalgebraContract.lean"
+    ],
+    "exit_code": 0
+  },
+  {
+    "name": "host-driver",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/host-coalgebra-review-overlay",
+      "-DwarningAsError=true",
+      "--root=/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-host-typed-indexed-review/snapshot/effect4/src",
+      "-o",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/host-coalgebra-review-overlay/Effect4/Laws/Api/HostDrive.olean",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-host-typed-indexed-review/snapshot/effect4/src/Effect4/Laws/Api/HostDrive.lean"
+    ],
+    "exit_code": 0
+  },
+  {
+    "name": "session-battery",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/host-coalgebra-review-overlay",
+      "-DwarningAsError=true",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-host-typed-indexed-review/snapshot/effect4/Test/Api/SessionMeaning.lean"
+    ],
+    "exit_code": 0
+  }
+]

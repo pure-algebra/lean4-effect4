@@ -1,0 +1,81 @@
+{
+  "checked_at": "2026-10-09T23:11:26.061713+00:00",
+  "effects_landed": "b0dd60797244a04b47bcb1f6eecfe71f7a02ae04",
+  "source_files": [
+    {
+      "path": "Effects/Algebra/Handler.lean",
+      "matches": true,
+      "sha256": "ee7729901db96c8f0b7bbece87a00b8b2ff00cac02f1f9269feb3f71ff646fc6"
+    },
+    {
+      "path": "Effects/Algebra/Laws.lean",
+      "matches": true,
+      "sha256": "7ff0c495d4ed4e889af3dafb1a14e45a6379fe22a173b124c4714e1553c81653"
+    },
+    {
+      "path": "Effects/Algebra/MonadLaws.lean",
+      "matches": true,
+      "sha256": "652c43f1869b5feaf055c059677b9bbde2b66fd320ce87e7fed6a05c97353976"
+    },
+    {
+      "path": "Effects/Algebra/Program.lean",
+      "matches": true,
+      "sha256": "059ead99039b3715e6823e861ac4c8e5bb59a705026d884a1eca99c5b7c1d671"
+    },
+    {
+      "path": "Effects/Algebra/Signature.lean",
+      "matches": true,
+      "sha256": "02d46d75579f703a8a07babbebcbc62e93690c49c2e1eb5c31d8ca5ce9828254"
+    },
+    {
+      "path": "Effects/Coalgebra/Bisim.lean",
+      "matches": true,
+      "sha256": "a8dfae5938813ac0a25cb90f35b0ee40cdbbfec87451e192ab52b778e88bfa60"
+    },
+    {
+      "path": "Effects/Coalgebra/Comodel.lean",
+      "matches": true,
+      "sha256": "9769b2b57b186abb5b125163615cb7bb77da677a79eb8ba9661061a35258c1b9"
+    },
+    {
+      "path": "Effects/Coalgebra/Protocol.lean",
+      "matches": true,
+      "sha256": "072db77ac76135b75fc752a04aa56b4f228bb6888b7c9ea9898155d225cdc43a"
+    },
+    {
+      "path": "Effects/Coalgebra/Run.lean",
+      "matches": true,
+      "sha256": "93e6902b0e0c6f3a1f4984b60f75a71a54da31e10538dcde2600950d300452c9"
+    },
+    {
+      "path": "Effects/Coalgebra/Step.lean",
+      "matches": true,
+      "sha256": "424bec42449b6dafcc5472507fb1c077100defb4b6933863a6fcfdf7a89176da"
+    },
+    {
+      "path": "Effects/Coalgebra/System.lean",
+      "matches": true,
+      "sha256": "20b149c7fa1fe12c2dd73ca9b6662ec7bf56d682f3054e9b0842dc99bfb60533"
+    },
+    {
+      "path": "Effects/Coalgebra.lean",
+      "matches": true,
+      "sha256": "e06ccf6a4f14bc5158d7e71e85ddce9241eefcf6c7c053d5619044671d41393e"
+    },
+    {
+      "path": "Effects/Lens.lean",
+      "matches": true,
+      "sha256": "d0937e945754ced7a0e230c203e45e37d6c8f51be110226945b3276ec6cadee2"
+    },
+    {
+      "path": "EffectsTest/Coalgebra/CoalgebraContract.lean",
+      "matches": true,
+      "sha256": "2221521a8a68837e2a7e922f0088b64c451499474c9f5a56727bef2454f5fba3"
+    }
+  ],
+  "effect4_landing": "0a108d2f91dce4a0f8a2fa7899228e2541ccf8ea",
+  "consumer_inputs": {
+    "HostRuns.lean": "20dd31d4d441e4433a2bad849be57f68ff540d17ea39c6aceaba3a4e678a09c0",
+    "note-at-landing.md": "09c296b062c91d1c5d062ab88cde239fe26f83f716b71771d6924a0d3613b060"
+  }
+}

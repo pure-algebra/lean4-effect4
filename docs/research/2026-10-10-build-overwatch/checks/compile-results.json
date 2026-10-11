@@ -1,0 +1,192 @@
+[
+  {
+    "module": "ProofGraph.GoalTag",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build-overwatch",
+      "-DwarningAsError=true",
+      "--root=/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-build-overwatch/snapshot/tools",
+      "-o",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build-overwatch/ProofGraph/GoalTag.olean",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-build-overwatch/snapshot/tools/ProofGraph/GoalTag.lean"
+    ],
+    "exit_code": 0,
+    "source_sha256": "e60a6b098413861dc1e7f52f62d63516ab5624964c33aedec7a177ca05aedabc"
+  },
+  {
+    "module": "ProofGraph.Goal",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build-overwatch",
+      "-DwarningAsError=true",
+      "--root=/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-build-overwatch/snapshot/tools",
+      "-o",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build-overwatch/ProofGraph/Goal.olean",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-build-overwatch/snapshot/tools/ProofGraph/Goal.lean"
+    ],
+    "exit_code": 0,
+    "source_sha256": "352d194071d0c001021c156570482fbee76a1749cbfd623ae107bc3f95ce9041"
+  },
+  {
+    "module": "ProofGraph.Sketch",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build-overwatch",
+      "-DwarningAsError=true",
+      "--root=/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-build-overwatch/snapshot/tools",
+      "-o",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build-overwatch/ProofGraph/Sketch.olean",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-build-overwatch/snapshot/tools/ProofGraph/Sketch.lean"
+    ],
+    "exit_code": 0,
+    "source_sha256": "b13886e1acd21c26f7d602cc12ac055f1a1d219eebb20c8585525b36ff474a6f"
+  },
+  {
+    "module": "ProofGraph.Audit",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build-overwatch",
+      "-DwarningAsError=true",
+      "--root=/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-build-overwatch/snapshot/tools",
+      "-o",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build-overwatch/ProofGraph/Audit.olean",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-build-overwatch/snapshot/tools/ProofGraph/Audit.lean"
+    ],
+    "exit_code": 0,
+    "source_sha256": "7e651a897e8c230b929dc50e417adb045838751e7a15e6df6388e22801e6a536"
+  },
+  {
+    "module": "ProofGraph.ClosureAudit",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build-overwatch",
+      "-DwarningAsError=true",
+      "--root=/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-build-overwatch/snapshot/tools",
+      "-o",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build-overwatch/ProofGraph/ClosureAudit.olean",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-build-overwatch/snapshot/tools/ProofGraph/ClosureAudit.lean"
+    ],
+    "exit_code": 0,
+    "source_sha256": "3d014e71f1a9834979a0c306644f93f50d5e68829e2fc5a3d48fa84550d04400"
+  },
+  {
+    "module": "Effect4.Laws.Auto.Semantics",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build-overwatch",
+      "-DwarningAsError=true",
+      "--root=/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-build-overwatch/snapshot/src",
+      "-o",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build-overwatch/Effect4/Laws/Auto/Semantics.olean",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-build-overwatch/snapshot/src/Effect4/Laws/Auto/Semantics.lean"
+    ],
+    "exit_code": 0,
+    "source_sha256": "7fc7719327725bf3a940528b1b371da150f10df49ce8e15d0c9fe4d803021382"
+  },
+  {
+    "module": "Effect4.Laws.Auto.Obligations",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build-overwatch",
+      "-DwarningAsError=true",
+      "--root=/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-build-overwatch/snapshot/src",
+      "-o",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build-overwatch/Effect4/Laws/Auto/Obligations.olean",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-build-overwatch/snapshot/src/Effect4/Laws/Auto/Obligations.lean"
+    ],
+    "exit_code": 0,
+    "source_sha256": "55b82b2b31842bf6f357462c17d4e13ab7e229cfa541095758fccbfc71b18db3"
+  },
+  {
+    "module": "Test.Audit.Obligations",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build-overwatch",
+      "-DwarningAsError=true",
+      "--root=/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-build-overwatch/snapshot",
+      "-o",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build-overwatch/Test/Audit/Obligations.olean",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-build-overwatch/snapshot/Test/Audit/Obligations.lean"
+    ],
+    "exit_code": 0,
+    "source_sha256": "005000cb5e275a92f0214e5adcf906c4d0774eae4fd6c561615eb2870a1003d4"
+  },
+  {
+    "module": "Test.Audit.SemanticsCensus",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build-overwatch",
+      "-DwarningAsError=true",
+      "--root=/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-build-overwatch/snapshot",
+      "-o",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build-overwatch/Test/Audit/SemanticsCensus.olean",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-build-overwatch/snapshot/Test/Audit/SemanticsCensus.lean"
+    ],
+    "exit_code": 0,
+    "source_sha256": "cb182396390b492a37edc7fc7cdb44926d9dab29d8ec5bac07a1b15891137eac"
+  },
+  {
+    "module": "Test.Audit.ClosureAudit",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build-overwatch",
+      "-DwarningAsError=true",
+      "--root=/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-build-overwatch/snapshot",
+      "-o",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build-overwatch/Test/Audit/ClosureAudit.olean",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-build-overwatch/snapshot/Test/Audit/ClosureAudit.lean"
+    ],
+    "exit_code": 0,
+    "source_sha256": "067ab6f4bea5b4dff57461e6e7313cffadab5b47bd8c3e6462267e6940a2fa49"
+  }
+]

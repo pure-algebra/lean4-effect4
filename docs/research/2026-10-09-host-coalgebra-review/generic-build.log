@@ -1,0 +1,17 @@
+info: coalgebra_review: no previous manifest, creating one from scratch
+info: toolchain not updated; already up-to-date
+✔ [2/15] Built Effects.Algebra.Signature (785ms)
+✔ [3/15] Built Effects.Algebra.MonadLaws (758ms)
+✔ [4/15] Built Effects.Algebra.Program (204ms)
+✔ [5/15] Built Effects.Coalgebra.Step (247ms)
+✔ [6/15] Built Effects.Algebra.Handler (234ms)
+✔ [7/15] Built Effects.Algebra.Laws (237ms)
+✔ [8/15] Built Effects.Lens (223ms)
+✔ [9/15] Built Effects.Coalgebra.System (219ms)
+✔ [10/15] Built Effects.Coalgebra.Bisim (211ms)
+✔ [11/15] Built Effects.Coalgebra.Comodel (269ms)
+✔ [12/15] Built Effects.Coalgebra.Protocol (217ms)
+✔ [13/15] Built Effects.Coalgebra.Run (242ms)
+✔ [14/15] Built Effects.Coalgebra (166ms)
+✔ [15/15] Built EffectsTest.Coalgebra.CoalgebraContract (319ms)
+Build completed successfully (15 jobs).

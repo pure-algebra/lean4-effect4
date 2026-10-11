@@ -1,0 +1,4 @@
+CAPTURED_LAKE_ARGS=["build"]
+find: ocaml: No such file or directory
+find: src/Effect4/Schema: No such file or directory
+find: Test/fixtures/trust-gate: No such file or directory

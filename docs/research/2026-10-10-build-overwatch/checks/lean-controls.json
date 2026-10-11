@@ -1,0 +1,62 @@
+[
+  {
+    "fixture": "TagOnly.lean",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build-overwatch",
+      "-DwarningAsError=true",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-build-overwatch/TagOnly.lean"
+    ],
+    "exit_code": 0
+  },
+  {
+    "fixture": "TagImports.lean",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build-overwatch",
+      "-DwarningAsError=true",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-build-overwatch/TagImports.lean"
+    ],
+    "exit_code": 0
+  },
+  {
+    "fixture": "ImportControls.lean",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build-overwatch",
+      "-DwarningAsError=true",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-build-overwatch/ImportControls.lean"
+    ],
+    "exit_code": 0
+  },
+  {
+    "fixture": "CacheShapeControls.lean",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build-overwatch",
+      "-DwarningAsError=true",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-build-overwatch/CacheShapeControls.lean"
+    ],
+    "exit_code": 0
+  }
+]

@@ -1,0 +1,292 @@
+{
+  "source_inventory_files": 1207,
+  "method": "Exact committed Makefile; empty source path mirror; fixed timestamps; unchanged inventory held old with -o; dry run only.",
+  "results": [
+    {
+      "target": "check-cases",
+      "case": "unchanged",
+      "command": [
+        "make",
+        "-n",
+        "-o",
+        ".lake/check/inventory",
+        "check-cases"
+      ],
+      "exit_code": 0,
+      "scheduled": false,
+      "should_schedule": false
+    },
+    {
+      "target": "check-cases",
+      "case": "core_source",
+      "command": [
+        "make",
+        "-n",
+        "-o",
+        ".lake/check/inventory",
+        "check-cases",
+        "-W",
+        "src/Effect4/Program/Authoring.lean"
+      ],
+      "exit_code": 0,
+      "scheduled": true,
+      "should_schedule": true
+    },
+    {
+      "target": "check-cases",
+      "case": "toolchain_pin",
+      "command": [
+        "make",
+        "-n",
+        "-o",
+        ".lake/check/inventory",
+        "check-cases",
+        "-W",
+        "lean-toolchain"
+      ],
+      "exit_code": 0,
+      "scheduled": true,
+      "should_schedule": true
+    },
+    {
+      "target": "check-cases",
+      "case": "package_pin",
+      "command": [
+        "make",
+        "-n",
+        "-o",
+        ".lake/check/inventory",
+        "check-cases",
+        "-W",
+        "lake-manifest.json"
+      ],
+      "exit_code": 0,
+      "scheduled": true,
+      "should_schedule": true
+    },
+    {
+      "target": "check-cases",
+      "case": "lake_configuration",
+      "command": [
+        "make",
+        "-n",
+        "-o",
+        ".lake/check/inventory",
+        "check-cases",
+        "-W",
+        "lakefile.toml"
+      ],
+      "exit_code": 0,
+      "scheduled": true,
+      "should_schedule": true
+    },
+    {
+      "target": "corpus",
+      "case": "unchanged",
+      "command": [
+        "make",
+        "-n",
+        "-o",
+        ".lake/check/inventory",
+        "corpus"
+      ],
+      "exit_code": 0,
+      "scheduled": false,
+      "should_schedule": false
+    },
+    {
+      "target": "corpus",
+      "case": "core_source",
+      "command": [
+        "make",
+        "-n",
+        "-o",
+        ".lake/check/inventory",
+        "corpus",
+        "-W",
+        "src/Effect4/Program/Authoring.lean"
+      ],
+      "exit_code": 0,
+      "scheduled": true,
+      "should_schedule": true
+    },
+    {
+      "target": "corpus",
+      "case": "toolchain_pin",
+      "command": [
+        "make",
+        "-n",
+        "-o",
+        ".lake/check/inventory",
+        "corpus",
+        "-W",
+        "lean-toolchain"
+      ],
+      "exit_code": 0,
+      "scheduled": false,
+      "should_schedule": true
+    },
+    {
+      "target": "corpus",
+      "case": "package_pin",
+      "command": [
+        "make",
+        "-n",
+        "-o",
+        ".lake/check/inventory",
+        "corpus",
+        "-W",
+        "lake-manifest.json"
+      ],
+      "exit_code": 0,
+      "scheduled": false,
+      "should_schedule": true
+    },
+    {
+      "target": "corpus",
+      "case": "lake_configuration",
+      "command": [
+        "make",
+        "-n",
+        "-o",
+        ".lake/check/inventory",
+        "corpus",
+        "-W",
+        "lakefile.toml"
+      ],
+      "exit_code": 0,
+      "scheduled": false,
+      "should_schedule": true
+    },
+    {
+      "target": "check-proof-style",
+      "case": "unchanged",
+      "command": [
+        "make",
+        "-n",
+        "-o",
+        ".lake/check/inventory",
+        "check-proof-style"
+      ],
+      "exit_code": 0,
+      "scheduled": false,
+      "should_schedule": false
+    },
+    {
+      "target": "check-proof-style",
+      "case": "core_source",
+      "command": [
+        "make",
+        "-n",
+        "-o",
+        ".lake/check/inventory",
+        "check-proof-style",
+        "-W",
+        "src/Effect4/Program/Authoring.lean"
+      ],
+      "exit_code": 0,
+      "scheduled": true,
+      "should_schedule": true
+    },
+    {
+      "target": "check-proof-style",
+      "case": "toolchain_pin",
+      "command": [
+        "make",
+        "-n",
+        "-o",
+        ".lake/check/inventory",
+        "check-proof-style",
+        "-W",
+        "lean-toolchain"
+      ],
+      "exit_code": 0,
+      "scheduled": false,
+      "should_schedule": true
+    },
+    {
+      "target": "check-proof-style",
+      "case": "package_pin",
+      "command": [
+        "make",
+        "-n",
+        "-o",
+        ".lake/check/inventory",
+        "check-proof-style",
+        "-W",
+        "lake-manifest.json"
+      ],
+      "exit_code": 0,
+      "scheduled": false,
+      "should_schedule": true
+    },
+    {
+      "target": "check-proof-style",
+      "case": "lake_configuration",
+      "command": [
+        "make",
+        "-n",
+        "-o",
+        ".lake/check/inventory",
+        "check-proof-style",
+        "-W",
+        "lakefile.toml"
+      ],
+      "exit_code": 0,
+      "scheduled": false,
+      "should_schedule": true
+    }
+  ],
+  "local_prerequisite_repair": [
+    {
+      "target": "corpus",
+      "case": "unchanged",
+      "scheduled": false
+    },
+    {
+      "target": "corpus",
+      "case": "core_source",
+      "scheduled": true
+    },
+    {
+      "target": "corpus",
+      "case": "toolchain_pin",
+      "scheduled": true
+    },
+    {
+      "target": "corpus",
+      "case": "package_pin",
+      "scheduled": true
+    },
+    {
+      "target": "corpus",
+      "case": "lake_configuration",
+      "scheduled": true
+    },
+    {
+      "target": "check-proof-style",
+      "case": "unchanged",
+      "scheduled": false
+    },
+    {
+      "target": "check-proof-style",
+      "case": "core_source",
+      "scheduled": true
+    },
+    {
+      "target": "check-proof-style",
+      "case": "toolchain_pin",
+      "scheduled": true
+    },
+    {
+      "target": "check-proof-style",
+      "case": "package_pin",
+      "scheduled": true
+    },
+    {
+      "target": "check-proof-style",
+      "case": "lake_configuration",
+      "scheduled": true
+    }
+  ]
+}

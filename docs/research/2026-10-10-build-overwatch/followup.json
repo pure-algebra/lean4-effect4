@@ -1,0 +1,40 @@
+{
+  "at_utc": "2026-10-10T03:10:52.114004+00:00",
+  "primary_head": "70840796e87480d00a1ad758884e53983c45d59d",
+  "status": " M Makefile\n M harness/truth/Truth.lean\n M harness/truth/generated/p42.ts\n M harness/truth/generated/pAcquire.ts\n M harness/truth/generated/pAcquireClosed.ts\n M harness/truth/generated/pAcquireHandle.ts\n M harness/truth/generated/pAwait.ts\n M harness/truth/generated/pBind.ts\n M harness/truth/generated/pCatch.ts\n M harness/truth/generated/pCatchError.ts\n M harness/truth/generated/pCatchIfHit.ts\n M harness/truth/generated/pCatchIfMiss.ts\n M harness/truth/generated/pCatchIfRetained.ts\n M harness/truth/generated/pDeferredGate.ts\n M harness/truth/generated/pDefsEven.ts\n M harness/truth/generated/pDefsFork.ts\n M harness/truth/generated/pDefsOdd.ts\n M harness/truth/generated/pDefsTwice.ts\n M harness/truth/generated/pDiamond.ts\n M harness/truth/generated/pFailBoomText.ts\n M harness/truth/generated/pFailPayload.ts\n M harness/truth/generated/pFailTagged.ts\n M harness/truth/generated/pFailText.ts\n M harness/truth/generated/pFold.ts\n M harness/truth/generated/pFork.ts\n M harness/truth/generated/pGen.ts\n M harness/truth/generated/pInterruptEscape.ts\n M harness/truth/generated/pInterruptedWait.ts\n M harness/truth/generated/pJoinedFirstNumber.ts\n M harness/truth/generated/pJoinedFirstString.ts\n M harness/truth/generated/pJoinedModifyNumber.ts\n M harness/truth/generated/pJoinedModifyString.ts\n M harness/truth/generated/pKv.ts\n M harness/truth/generated/pLateSeen.ts\n M harness/truth/generated/pLoop.ts\n M harness/truth/generated/pMaskWait.ts\n M harness/truth/generated/pMaskedRestore.ts\n M harness/truth/generated/pMergeAll.ts\n M harness/truth/generated/pModifyFold.ts\n M harness/truth/generated/pOptionNone.ts\n M harness/truth/generated/pOptionSome.ts\n M harness/truth/generated/pPoolCloseWaits.ts\n M harness/truth/generated/pPoolClosed.ts\n M harness/truth/generated/pPoolClosing.ts\n M harness/truth/generated/pPoolLateWake.ts\n M harness/truth/generated/pPoolMakeFails.ts\n M harness/truth/generated/pPoolOrder.ts\n M harness/truth/generated/pPoolReuse.ts\n M harness/truth/generated/pPoolWaiters.ts\n M harness/truth/generated/pPoolWake.ts\n M harness/truth/generated/pPoolWithdrawn.ts\n M harness/truth/generated/pProvide.ts\n M harness/truth/generated/pProvideMerge.ts\n M harness/truth/generated/pProvideTwice.ts\n M harness/truth/generated/pQueueDefs.ts\n M harness/truth/generated/pQueueFull.ts\n M harness/truth/generated/pQueueInterrupted.ts\n M harness/truth/generated/pQueueMasked.ts\n M harness/truth/generated/pQueueOffer.ts\n M harness/truth/generated/pQueueOrder.ts\n M harness/truth/generated/pQueueWake.ts\n M harness/truth/generated/pRateRequest.ts\n M harness/truth/generated/pScope.ts\n M harness/truth/generated/pSemaphoreBodies.ts\n M harness/truth/generated/pSemaphoreBodiesJoined.ts\n M harness/truth/generated/pSemaphoreHandoff.ts\n M harness/truth/generated/pSemaphoreIfAvailable.ts\n M harness/truth/generated/pSemaphoreInterrupted.ts\n M harness/truth/generated/pSemaphoreMasked.ts\n M harness/truth/generated/pSemaphoreOvertake.ts\n M harness/truth/generated/pSemaphoreProtected.ts\n M harness/truth/generated/pSemaphoreProtectedJoined.ts\n M harness/truth/generated/pSemaphoreScan.ts\n M harness/truth/generated/pSqlCatch.ts\n M harness/truth/generated/pSqlExit.ts\n M harness/truth/generated/pSqlFail.ts\n M harness/truth/generated/pSqlOrDie.ts\n M harness/truth/generated/pSqlite.ts\n M harness/truth/generated/pTagHit.ts\n M harness/truth/generated/pTagMiss.ts\n M harness/truth/generated/pTagPayload.ts\n M harness/truth/generated/pTagTwoFail.ts\n M harness/truth/generated/pTextOrDie.ts\n M harness/truth/generated/pTwo.ts\n M harness/truth/run-truth.ts\n M src/Effect4/Laws/Program/TyView.lean\n",
+  "snapshot_matches_reviewed_commit": [
+    "tools/ProofGraph/GoalTag.lean",
+    "tools/ProofGraph/Goal.lean",
+    "tools/ProofGraph/Sketch.lean",
+    "tools/ProofGraph/Audit.lean",
+    "tools/ProofGraph/ClosureAudit.lean",
+    "tools/ProofGraph/Population.lean",
+    "src/Effect4/Laws/Auto/Obligations.lean",
+    "src/Effect4/Laws/Auto/Semantics.lean",
+    "Test/Audit/Obligations.lean",
+    "Test/Audit/ClosureAudit.lean",
+    "Test/Audit/SemanticsCensus.lean",
+    "Makefile",
+    "scripts/lean-imports.py",
+    "scripts/check-conform.py",
+    "scripts/build-progress.sh",
+    "AGENTS.md",
+    "docs/research/2026-10-09-graph-facts-cache.md"
+  ],
+  "service_source_paths": [
+    "src/Effect4/Program/Eff.lean",
+    "src/Effect4/Codegen/Print.lean",
+    "src/Effect4/Codegen/Read.lean",
+    "src/Effect4/Codegen/Admit.lean",
+    "src/Effect4/Codegen/Checked.lean",
+    "src/Effect4/Api.lean"
+  ],
+  "service_sources_committed_diff": "",
+  "active_claude_session": "9ebf38b2-8b2f-44e5-8fd9-2dc0cb5a1f50",
+  "session_inspection": "Bounded recent tails only; confirmed repository cwd; thinking fields excluded. Latest text begins CO-6b S3 service-client work.",
+  "latest_observation_utc": "2026-10-10T03:12:23.176285+00:00",
+  "later_commit": "70840796e87480d00a1ad758884e53983c45d59d",
+  "later_commit_review_scope": "Source comparison only; author import separation and cache deferral. Independently compiled range ends at 294c89cd.",
+  "critical_committed_diff": "",
+  "current_make_working_diff": "diff --git a/Makefile b/Makefile\nindex 3ac6b57f..811756b7 100644\n--- a/Makefile\n+++ b/Makefile\n@@ -188,7 +188,7 @@ $(GEN)/readme: $(GEN)/ts ts/eff/ingest/render-readme.ts ts/eff/profile.gen.ts ts\n # The truth harness: Lean writes the corpus from the committed tapes, then the real\n # runtime prints the modules, re-records the tapes and writes the result. Both are\n # deterministic given the pinned host; the comparison against a fresh run is check-truth.\n-TRUTH_SOURCES := harness/truth/Truth.lean Test/Codegen/TermRows.lean Test/Program/MaskContract.lean Test/Program/QueueScenarios.lean Test/Program/QueueMask.lean Test/Program/SemaphoreScenarios.lean Test/Program/PoolScenarios.lean Test/Program/PoolPublic.lean Test/Program/DefinitionsControls.lean Test/Program/QueueDefs.lean harness/truth/records.ts harness/truth/tuples.ts harness/truth/control.ts harness/truth/prelude.ts harness/truth/prelude-atoms.gen.ts harness/truth/module-imports.ts harness/truth/run-truth.ts \\\n+TRUTH_SOURCES := harness/truth/Truth.lean Test/Codegen/TermRows.lean Test/Program/MaskContract.lean Test/Program/QueueScenarios.lean Test/Program/QueueMask.lean Test/Program/SemaphoreScenarios.lean Test/Program/PoolScenarios.lean Test/Program/PoolPublic.lean Test/Program/DefinitionsControls.lean Test/Program/QueueDefs.lean Test/Codegen/ServicesPrint.lean harness/truth/records.ts harness/truth/tuples.ts harness/truth/control.ts harness/truth/prelude.ts harness/truth/prelude-atoms.gen.ts harness/truth/module-imports.ts harness/truth/run-truth.ts \\\n   $(wildcard harness/truth/tapes/*.jsonl) ts/eff/package.json ts/eff/bun.lock\n $(GEN)/truth: $(GEN)/readme $(TRUTH_SOURCES) $(LEAN_SOURCES)\n \t$(call build_imports,harness/truth/Truth.lean)\n"
+}

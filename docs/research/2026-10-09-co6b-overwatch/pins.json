@@ -1,0 +1,57 @@
+{
+  "kind": "work-in-progress",
+  "base": "c2288f028fcb563c612864065d7e245ae6759bef",
+  "observed_at_utc": "2026-10-10T01:31:19.013885+00:00",
+  "previous_review": "a78fcad8741d634193e568b51ab7f249c1df12e7",
+  "previous_checkpoint": "a15eb1921b397226e5b710b76e2d2b4fdf9a0b3c",
+  "files": [
+    {
+      "path": "src/Effect4/Program/Eff.lean",
+      "sha256": "a8fb2f687147e18155e91feb055e5a223329ca01c4f000dd62e9748d74b06f89"
+    },
+    {
+      "path": "src/Effect4/Codegen/Print.lean",
+      "sha256": "ffe3fd3f6f87bbdd2ad2198c2aefdaab6bcb053db116d5c95b0a24ed16716548"
+    },
+    {
+      "path": "src/Effect4/Codegen/Read.lean",
+      "sha256": "963fd7116d798d8abc25f1418ce55253a26cf726986c44d704cc0f1831fa9f89"
+    },
+    {
+      "path": "src/Effect4/Laws/Api/ModuleReadable.lean",
+      "sha256": "827410132b5dc8b2396626c91e22978104f3c45b6e4c1a72d5d3ca467867a9dd"
+    },
+    {
+      "path": "src/Effect4/Laws/Codegen/Module.lean",
+      "sha256": "d56683e0978b65364789564279799bd44274483fa63f377dbd9b9d908b434138"
+    },
+    {
+      "path": "src/Effect4/Laws/Codegen/Services.lean",
+      "sha256": "8b1864cd1c78e7f84d4d4a34b45d20f100a771aca72773ad2c48568a5c32fe75"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/TyView.lean",
+      "sha256": "76a5db8b847839abec682eea3ecc31e2c8e01878bae3974430fea8dab5e5abf6"
+    },
+    {
+      "path": "src/Effect4/Store/Domain/Derived/Program.lean",
+      "sha256": "7e7fabd47bc73274fb25b68d2e892898f92da2bc139cb724f0327147caf32062"
+    },
+    {
+      "path": "tools/Tools/ProgramStructure.lean",
+      "sha256": "c15a204c7e1accfd3b849b42ed7bdce72a95f760dfd694142d1723b70db198ec"
+    },
+    {
+      "path": "tools/Effect4Gen/manifest.json",
+      "sha256": "3e620e108a82e7bf620e17012d1aa5fd742f8d8ab73a937310a1267ee21e65e6"
+    },
+    {
+      "path": "tools/Effect4Gen/wire-tags.json",
+      "sha256": "e99a0a42956fa3d344480ebe12b4c5ac527d648555b527449fcafb019246466c"
+    },
+    {
+      "path": "docs/research/2026-10-09-co6b-service-plan.md",
+      "sha256": "7206f2dbb6dd917ed14fab717977d2641e0af26aaccee66e6815321056344e32"
+    }
+  ]
+}

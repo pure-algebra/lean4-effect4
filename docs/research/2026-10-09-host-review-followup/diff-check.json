@@ -1,0 +1,18 @@
+{
+  "command": [
+    "git",
+    "diff",
+    "--cached",
+    "--check",
+    "--",
+    ".",
+    ":(exclude)docs/research/2026-10-09-host-review-followup/projection.log",
+    ":(exclude)docs/research/2026-10-09-host-review-followup/attempt1-projection.log"
+  ],
+  "exit_code": 0,
+  "excluded_raw_diagnostics": [
+    "docs/research/2026-10-09-host-review-followup/projection.log",
+    "docs/research/2026-10-09-host-review-followup/attempt1-projection.log"
+  ],
+  "reason": "Preserve exact Lean diagnostic bytes, including trailing spaces."
+}

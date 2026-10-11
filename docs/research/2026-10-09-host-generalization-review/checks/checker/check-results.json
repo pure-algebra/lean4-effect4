@@ -1,0 +1,65 @@
+[
+  {
+    "name": "checker-reader-import",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/host-coalgebra-review-overlay",
+      "-DwarningAsError=true",
+      "--root=/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-host-generalization-review",
+      "-o",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/host-coalgebra-review-overlay/H9Controls.olean",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-host-generalization-review/H9Controls.lean"
+    ],
+    "exit_code": 0
+  },
+  {
+    "name": "checker-controls",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/host-coalgebra-review-overlay",
+      "-DwarningAsError=true",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-host-generalization-review/CheckerControls.lean"
+    ],
+    "exit_code": 0
+  },
+  {
+    "name": "checker-axioms",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/host-coalgebra-review-overlay",
+      "-DwarningAsError=true",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-host-generalization-review/CheckerAxiomControls.lean"
+    ],
+    "exit_code": 0
+  },
+  {
+    "name": "checker-session-battery",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/host-coalgebra-review-overlay",
+      "-DwarningAsError=true",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-host-generalization-review/snapshot-checker/Test/Api/SessionMeaning.lean"
+    ],
+    "exit_code": 0
+  }
+]

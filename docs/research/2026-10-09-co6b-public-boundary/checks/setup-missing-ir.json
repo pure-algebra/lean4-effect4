@@ -1,0 +1,22 @@
+[
+  {
+    "module": "Effect4.Codegen.Print",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/co6b-public-review",
+      "-DwarningAsError=true",
+      "--root=/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-co6b-public-boundary/snapshot/src",
+      "-o",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/co6b-public-review/Effect4/Codegen/Print.olean",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-09-co6b-public-boundary/snapshot/src/Effect4/Codegen/Print.lean"
+    ],
+    "exit_code": 1,
+    "seconds": 1.6125785410404205,
+    "source_sha256": "70fc107df95d8eb6267ca78889fbf10132808526e7aa7d45baa8949688a789c4"
+  }
+]

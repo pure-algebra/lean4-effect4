@@ -1,0 +1,33 @@
+[
+  {
+    "name": "Controls",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/service-repair-overwatch",
+      "-DwarningAsError=true",
+      "--run",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-service-repair-overwatch/Controls.lean"
+    ],
+    "exit_code": 0
+  },
+  {
+    "name": "Axioms",
+    "command": [
+      "lake",
+      "env",
+      "bash",
+      "-c",
+      "export LEAN_PATH=\"$1:$LEAN_PATH\"; shift; exec lean \"$@\"",
+      "review",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/service-repair-overwatch",
+      "-DwarningAsError=true",
+      "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-service-repair-overwatch/Axioms.lean"
+    ],
+    "exit_code": 0
+  }
+]

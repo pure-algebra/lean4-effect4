@@ -1,0 +1,80 @@
+def Effect4.Schema.Codec.Prepared.decode source prepared j : Option Store.Val :=
+  let _x.1 := Effect4.Schema.Codec.Prepared.decode._redArg prepared j;
+  return _x.1
+def Effect4.Schema.Codec.Prepared.isValue._redArg prepared v : Bool :=
+  let _x.1 := Effect4.Schema.Codec.Prepared.encode._redArg prepared v;
+  cases _x.1 : Bool
+  | Option.none =>
+    let _x.2 := false;
+    return _x.2
+  | Option.some val.3 =>
+    let _x.4 := true;
+    return _x.4
+def Effect4.Schema.Codec.Prepared.decode._redArg prepared j : Option Store.Val :=
+  cases prepared : Option Store.Val
+  | Effect4.Schema.Codec.Prepared.mk normal interpreter normal_eq interpreter_eq =>
+    cases interpreter : Option Store.Val
+    | Effect4.Schema.Codec.Wire.mk type layout supported encode decode =>
+      let _x.1 := decode j;
+      cases _x.1 : Option Store.Val
+      | Option.none =>
+        return _x.1
+      | Option.some val.2 =>
+        let _x.3 := [] ◾;
+        let _x.4 := @Val.hasTy val.2 normal _x.3;
+        cases _x.4 : Option Store.Val
+        | Bool.false =>
+          let _x.5 := none ◾;
+          return _x.5
+        | Bool.true =>
+          return _x.1
+def Effect4.Schema.Codec.Prepared.encode source prepared v : Option Effect4.Json :=
+  let _x.1 := Effect4.Schema.Codec.Prepared.encode._redArg prepared v;
+  return _x.1
+def Effect4.Schema.Codec.prepare source : Schema.Codec.Prepared lcAny :=
+  let normal := Ty.normalize source;
+  let _x.1 := Schema.Codec.layout normal;
+  let _x.2 := Schema.Codec.wire _x.1;
+  let _x.3 := @Schema.Codec.Prepared.mk ◾ normal _x.2 ◾ ◾;
+  return _x.3
+def Effect4.Schema.Codec.Prepared.isValue source prepared v : Bool :=
+  let _x.1 := Effect4.Schema.Codec.Prepared.isValue._redArg prepared v;
+  return _x.1
+def Effect4.Schema.Codec.Prepared.encode._redArg prepared v : Option Effect4.Json :=
+  cases prepared : Option Effect4.Json
+  | Effect4.Schema.Codec.Prepared.mk normal interpreter normal_eq interpreter_eq =>
+    let _x.1 := [] ◾;
+    let _x.2 := @Val.hasTy v normal _x.1;
+    cases _x.2 : Option Effect4.Json
+    | Bool.false =>
+      let _x.3 := none ◾;
+      return _x.3
+    | Bool.true =>
+      cases interpreter : Option Effect4.Json
+      | Effect4.Schema.Codec.Wire.mk type layout supported encode decode =>
+        let _x.4 := encode v;
+        cases _x.4 : Option Effect4.Json
+        | Option.none =>
+          return _x.4
+        | Option.some val.5 =>
+          let _x.6 := Store.Val.instDecidableEq;
+          let _x.7 := decode val.5;
+          let _x.8 := some ◾ v;
+          let _x.9 := Option.instDecidableEq._redArg _x.6 _x.7 _x.8;
+          cases _x.9 : Option Effect4.Json
+          | Bool.false =>
+            let _x.10 := none ◾;
+            return _x.10
+          | Bool.true =>
+            return _x.4
+def MathTransferProbe.PreparedCodecReuse.roundTrip source input : Option Effect4.Json :=
+  let prepared := Schema.Codec.prepare source;
+  let _x.1 := Effect4.Schema.Codec.Prepared.decode._redArg prepared input;
+  cases _x.1 : Option Effect4.Json
+  | Option.none =>
+    let _x.2 := none ◾;
+    return _x.2
+  | Option.some val.3 =>
+    let _x.4 := Effect4.Schema.Codec.Prepared.encode._redArg prepared val.3;
+    return _x.4
+PASS: 6 prepared operation bodies contain no prepare, wire or normalize call

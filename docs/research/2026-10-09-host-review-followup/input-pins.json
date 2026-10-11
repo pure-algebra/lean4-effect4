@@ -1,0 +1,15 @@
+{
+  "head": "df9d1c408186e5967e96d658e2306a1da437d6d4",
+  "captured": "2026-10-09T22:32:42.535211+00:00",
+  "files": {
+    "tools/ProofGraph/Axioms.lean": "5ef509dd34c2ca4e284dc432593703d341163aabdeea72d5ade04ca6fdf61a0f",
+    "Test/Audit/ProofGraph.lean": "7d265f01ed26d42d250327d6f89a3f4e23c06f7db5270ce1eb338b5a7922c411",
+    "tools/ProofGraph/Registry.lean": "e736418799869b3c5dbb8c349d890562c0085a98e4c818d33a09a4880de859de",
+    "scripts/lib/lean_imports.py": "5293af09ce26c793a50f7b4173647bcdac547055fb1f5c3a5b42c812d770b19e",
+    "scripts/test-lean-imports.py": "fef74a3b3eea1243d05083beab931b476ed58a5feaa9dc3817fb6c74dfe52a17",
+    "scripts/lib/build_profile.py": "797ddff9f4d7bc8f537dbf4e073d33b429d359d9d7ffd2545ae9ec31d1ea609a",
+    "scripts/generate.py": "47fc8bc61209279a6f685a0a14087ec519000eba43d89cbf29b049da76b52fbb",
+    "scripts/check-ty-rule.py": "92c694364941014681f3cec2228852efd2db7c310edfb49dc90ac691fa98c3ef",
+    "docs/research/2026-10-09-host-calls-and-cleanup.md": "42cfb5916112b9eda04e3ae04ed7ec6b646623f05709ae8fee1cc87950a13a45"
+  }
+}

@@ -1,0 +1,5 @@
+Research.DependencySummary.no_omissions: exact axioms [propext, Quot.sound]
+Research.DependencySummary.rank_reaches: exact axioms [propext, Quot.sound]
+Research.DependencySummary.no_invented_labels: exact axioms [propext, Quot.sound]
+Research.DependencySummary.summary_exact: exact axioms [propext, Quot.sound]
+Research.DependencySummary.check_summary_exact: exact axioms [propext, Quot.sound]

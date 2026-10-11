@@ -1,0 +1,44 @@
+{
+  "reviewed_effect4": "a78fcad8741d634193e568b51ab7f249c1df12e7",
+  "reviewed_effects": "bf5ab8fd26ee009abbf465821a3664ea20948a49",
+  "source_snapshots": [
+    {
+      "commit": "39b38f068c1355b3529bc92cd6ad9848a4932299",
+      "files": 2
+    },
+    {
+      "commit": "24a91a151de80db402e38809f883ab6be59e4c8f",
+      "files": 6
+    },
+    {
+      "commit": "a78fcad8741d634193e568b51ab7f249c1df12e7",
+      "files": 6
+    },
+    {
+      "commit": "bf5ab8fd26ee009abbf465821a3664ea20948a49",
+      "files": 5
+    }
+  ],
+  "changed_effect4_sources": [
+    "Test/Api/SessionMeaning.lean",
+    "src/Effect4/Laws/Api/HostDrive.lean"
+  ],
+  "changed_package_modules": [
+    "Effects/Coalgebra.lean",
+    "Effects/Coalgebra/Indexed.lean",
+    "Effects/Coalgebra/Run.lean",
+    "Effects/Coalgebra/Sat.lean"
+  ],
+  "registry_pointer": "Effect4.Run.runWith_denotes",
+  "new_R6_helpers": [
+    "runWith_layer_denotes",
+    "sessionSystem_finished",
+    "sessionSystem_finishes"
+  ],
+  "R6": "open",
+  "new_core_import_edges": false,
+  "law_root_reaches_driver": true,
+  "axiom_audit": "#axiom_audit: 241 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals",
+  "all_recorded_checks_exit_zero": true,
+  "source_only_boundary_check": true
+}

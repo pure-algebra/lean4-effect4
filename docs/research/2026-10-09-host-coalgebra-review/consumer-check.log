@@ -1,0 +1,5 @@
+Effect4.Program.Denote.interpret_rowsHandler: [propext, Quot.sound]
+Effect4.Program.Denote.meaningUnder_eq_run: [propext, Quot.sound]
+Effect4.Program.Denote.tapeHandler_eq_replies: [propext, Quot.sound]
+Effect4.Program.Denote.meaningRows_eq_run: [propext, Quot.sound]
+PASS: 4 consumer connection laws; exact dependency walk.

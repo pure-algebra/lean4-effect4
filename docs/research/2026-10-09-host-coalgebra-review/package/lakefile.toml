@@ -1,0 +1,14 @@
+name = "coalgebra_review"
+
+[[lean_lib]]
+name = "Effects"
+globs = ["Effects.*"]
+leanOptions = { autoImplicit = false, relaxedAutoImplicit = false }
+
+[[lean_lib]]
+name = "EffectsTest"
+globs = ["EffectsTest.*"]
+
+[[lean_lib]]
+name = "ProofGraph"
+globs = ["ProofGraph.*"]

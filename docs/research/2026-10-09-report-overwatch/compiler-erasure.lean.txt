@@ -1,0 +1,17 @@
+  visitLet (e : Expr) (xs : Array Expr) : M (Arg .pure) := do
+    match e with
+    | .letE binderName type value body _ =>
+      let type := type.instantiateRev xs
+      let value := value.instantiateRev xs
+      if (← (liftMetaM <| Meta.isProp type) <||> isTypeFormerType type) then
+        visitLet body (xs.push value)
+      else
+        let type' ← toLCNFType type
+        let value' ← withExpectedType type' do
+          visit value
+        let letDecl ← mkLetDecl binderName type value type' value'
+        visitLet body (xs.push (.fvar letDecl.fvarId))
+    | _ =>
+      let e := e.instantiateRev xs
+      visit e
+

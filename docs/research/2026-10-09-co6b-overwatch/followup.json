@@ -1,0 +1,80 @@
+{
+  "observed_at_utc": "2026-10-10T01:42:38.117516+00:00",
+  "primary_head": "c2288f028fcb563c612864065d7e245ae6759bef",
+  "source_drift": [
+    {
+      "path": "src/Effect4/Codegen/Print.lean",
+      "sha256": "70fc107df95d8eb6267ca78889fbf10132808526e7aa7d45baa8949688a789c4"
+    },
+    {
+      "path": "src/Effect4/Laws/Api/ModuleReadable.lean",
+      "sha256": "acebe432ffdd7ecb29f7f7b1496205790c1381d50cc163ee50b241069935fd49"
+    },
+    {
+      "path": "src/Effect4/Laws/Codegen/Module.lean",
+      "sha256": "e261ce3af7560200309d0d9e97e94353e6fc66634fecbe30be24fe0e9a210f99"
+    },
+    {
+      "path": "docs/research/2026-10-09-co6b-service-plan.md",
+      "sha256": "629aad2125daae08956a898e02d1800d207453714c53e605339b51cf2f0509de"
+    }
+  ],
+  "live_authoring": [
+    {
+      "path": "src/Effect4/Program/Authoring.lean",
+      "sha256": "79d28d56f87a3f350990c06b4a22e00327475b93a13626780cb06d6ed02272fc"
+    },
+    {
+      "path": "src/Effect4/Library/Queue/Defs.lean",
+      "sha256": "8b3f279589f4ac2f91d6651081d3cb8bd01559bd2f8b0985ce0e08ef154393f9"
+    }
+  ],
+  "helper_sources": [
+    {
+      "path": "src/Effect4/Codegen/PrintLeaf.lean",
+      "primary": "c121b8bb67edbb634a2b7017853324f0cc88bf0cd47df6517775ddad4ab95475",
+      "review": "c121b8bb67edbb634a2b7017853324f0cc88bf0cd47df6517775ddad4ab95475",
+      "equal": true
+    },
+    {
+      "path": "src/Effect4/Codegen/Types.lean",
+      "primary": "10edeeec4968a9f3e0852f481d339593aa32e01e99a7abcdd36841f398706489",
+      "review": "10edeeec4968a9f3e0852f481d339593aa32e01e99a7abcdd36841f398706489",
+      "equal": true
+    },
+    {
+      "path": "src/Effect4/Codegen/Record.lean",
+      "primary": "8b594cbb23e894d5799bfd6aa853bf757a402e227b7dda6fc131df33b2fc2261",
+      "review": "8b594cbb23e894d5799bfd6aa853bf757a402e227b7dda6fc131df33b2fc2261",
+      "equal": true
+    },
+    {
+      "path": "src/Effect4/Codegen/SourceBindings.lean",
+      "primary": "25a0aee51b5756456335e80cee9fe4e3bf700b7f5b9498ac693d2a2a27d63b9f",
+      "review": "25a0aee51b5756456335e80cee9fe4e3bf700b7f5b9498ac693d2a2a27d63b9f",
+      "equal": true
+    },
+    {
+      "path": "src/Effect4/Codegen/ClassTable.lean",
+      "primary": "76092d8904d9e866080fef972af5ed6125f8b0eca0fe5b1200aa59591cc64e9a",
+      "review": "76092d8904d9e866080fef972af5ed6125f8b0eca0fe5b1200aa59591cc64e9a",
+      "equal": true
+    },
+    {
+      "path": "src/Effect4/Codegen/Admit.lean",
+      "primary": "564b625ce1577a4bfa748d640bbf3e8fb396e2aaaed14c76939adfef4e916781",
+      "review": "564b625ce1577a4bfa748d640bbf3e8fb396e2aaaed14c76939adfef4e916781",
+      "equal": true
+    },
+    {
+      "path": "src/Effect4/Codegen/Checked.lean",
+      "primary": "a2e0548a20476f638cf1bf7616906819a4f02e9abbff2316b0e0df92a0266fad",
+      "review": "a2e0548a20476f638cf1bf7616906819a4f02e9abbff2316b0e0df92a0266fad",
+      "equal": true
+    }
+  ],
+  "typescript_package_commit": "f5878bf879bd5712db964c2cd12802748c707605",
+  "effects_primary_commit": "bf5ab8fd26ee009abbf465821a3664ea20948a49",
+  "tsgo_version": "7.0.0-dev.20260629.1",
+  "effect_host_version": "4.0.0-rc.112"
+}

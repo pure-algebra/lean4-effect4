@@ -1,0 +1,97 @@
+{
+  "cases": [
+    {
+      "case": "comments.lean",
+      "lean": [
+        "Effect4.Program.Ty"
+      ],
+      "shared": [
+        "Effect4.Program.Ty"
+      ],
+      "agrees": true,
+      "header_errors": false
+    },
+    {
+      "case": "declaration-doc.lean",
+      "lean": [
+        "Effect4.Program.Ty"
+      ],
+      "shared": [
+        "Effect4.Program.Ty",
+        "Effect4.Program.Native"
+      ],
+      "agrees": false,
+      "header_errors": false
+    },
+    {
+      "case": "module-doc.lean",
+      "lean": [
+        "Effect4.Program.Ty"
+      ],
+      "shared": [
+        "Effect4.Program.Ty",
+        "Effect4.Program.Native"
+      ],
+      "agrees": false,
+      "header_errors": false
+    },
+    {
+      "case": "ordinary.lean",
+      "lean": [
+        "Effect4.Program.Ty",
+        "Effect4.Program.Native"
+      ],
+      "shared": [
+        "Effect4.Program.Ty",
+        "Effect4.Program.Native"
+      ],
+      "agrees": true,
+      "header_errors": false
+    },
+    {
+      "case": "public.lean",
+      "lean": [
+        "Effect4.Program.Ty"
+      ],
+      "shared": [
+        "Effect4.Program.Ty"
+      ],
+      "agrees": true,
+      "header_errors": false
+    },
+    {
+      "case": "quoted.lean",
+      "lean": [
+        "Effect4.Program.Ty"
+      ],
+      "shared": [
+        "\u00abEffect4\u00bb.Program.Ty"
+      ],
+      "agrees": false,
+      "header_errors": false
+    },
+    {
+      "case": "stopped.lean",
+      "lean": [
+        "Effect4.Program.Ty"
+      ],
+      "shared": [
+        "Effect4.Program.Ty"
+      ],
+      "agrees": true,
+      "header_errors": false
+    }
+  ],
+  "plain_graph_edges": [
+    "Effect4.Program.Ty",
+    "Effect4.Program.Native"
+  ],
+  "quoted_graph_edges": [],
+  "production_Ty_imports": [
+    "Effect4.Data.Row",
+    "Effect4.Data.FieldOrder",
+    "Effect4.Program.TyEq",
+    "Effect4.Program.TyVariance"
+  ],
+  "restored_plain_control": true
+}

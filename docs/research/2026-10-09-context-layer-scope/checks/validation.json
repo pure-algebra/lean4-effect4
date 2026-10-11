@@ -1,0 +1,9 @@
+{
+  "started_at_utc": "2026-10-10T04:38:51.368358+00:00",
+  "lean_toolchain": "leanprover/lean4:v4.33.1",
+  "controls_sha256": "0175822dc584db4a0a856b00a77598147fcfe7a368ccb778cbf71284a81b924e",
+  "check_script_sha256": "4706e7c93c94f40ad06e2bcdbb54cacf9f2ee1c014d3dc97b3274a644ee52a30",
+  "pins_sha256": "7ac204f888159406dfd619d7cf7a259e52e84921667b34b61f450d9852b5087d",
+  "input_hashes_match": true,
+  "dependency_sources_rebuilt": false
+}

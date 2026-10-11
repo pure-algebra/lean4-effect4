@@ -1,0 +1,37 @@
+{
+  "pinned": [
+    {
+      "commit": "e72edc4ed878af3661fa4bb0d6e6c55f8ec66cf9",
+      "files": 8
+    },
+    {
+      "commit": "d4c869ee321d83abdc4ee0b8d66b2007cfa06c97",
+      "files": 7
+    }
+  ],
+  "registry_pointer": "Effect4.Run.runWith_denotes",
+  "generated_claim": "proved",
+  "R6": "open",
+  "changed_source_files": [
+    "src/Effect4/Laws.lean",
+    "src/Effect4/Laws/Api/HostDrive.lean"
+  ],
+  "new_core_import_edges": false,
+  "law_root_reaches_driver": true,
+  "entry_sources_unchanged": {
+    "src/Effect4/Run.lean": "4748692c6765593da4388ab2b63ad553814f055be18ea3929a28b3cf2f795535",
+    "src/Effect4/Laws/Author.lean": "73ae6aacdafdaed9c1d79b6511d631358ae3fc94dd55e7208bb2a4cd9e5225da",
+    "tools/Tools/ArchitectureRoles.lean": "ab230d72c4ce85175401425cb73e7627e74d349aade817ca212ad01b8ead1edf"
+  },
+  "row_protocol_consumers": [
+    "d4c869ee321d83abdc4ee0b8d66b2007cfa06c97:src/Effect4/Laws.lean:46:import Effect4.Laws.Program.RowProtocol",
+    "d4c869ee321d83abdc4ee0b8d66b2007cfa06c97:src/Effect4/Laws/Api/HostDrive.lean:1:import Effect4.Laws.Program.RowProtocol",
+    "d4c869ee321d83abdc4ee0b8d66b2007cfa06c97:src/Effect4/Laws/Program/RowProtocol.lean:14:whose answers the guarded host gave (`hostAnswered_guardRows`), and the host's run of the call tree",
+    "d4c869ee321d83abdc4ee0b8d66b2007cfa06c97:src/Effect4/Laws/Program/RowProtocol.lean:45:theorem guardRows_meets (table : RowTable) {\u03c3 : Type} (host : Effects.Comodel (RowSig table) \u03c3) :",
+    "d4c869ee321d83abdc4ee0b8d66b2007cfa06c97:src/Effect4/Laws/Program/RowProtocol.lean:50:theorem guardRows_of_meets (table : RowTable) {\u03c3 : Type} {host : Effects.Comodel (RowSig table) \u03c3}",
+    "d4c869ee321d83abdc4ee0b8d66b2007cfa06c97:src/Effect4/Laws/Program/RowProtocol.lean:74:theorem hostAnswered_guardRows (table : RowTable) {\u03c3 : Type} (host : Effects.Comodel (RowSig table) \u03c3)",
+    "d4c869ee321d83abdc4ee0b8d66b2007cfa06c97:src/Effect4/Laws/Program/RowProtocol.lean:83:      hostAnswered_guardRows table host program fuel T _ st' st'' hA hrest\u27e9",
+    "d4c869ee321d83abdc4ee0b8d66b2007cfa06c97:src/Effect4/Laws/Program/RowProtocol.lean:85:    hostAnswered_guardRows table host program fuel T _ st st' h hr",
+    "d4c869ee321d83abdc4ee0b8d66b2007cfa06c97:src/Effect4/Laws/Program/RowProtocol.lean:90:    hostAnswered_guardRows table host program fuel T _ st st' h hr"
+  ]
+}

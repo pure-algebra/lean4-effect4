@@ -1,0 +1,7 @@
+Research.FlowReachability.endpoints_checked: exact axioms [Quot.sound, propext]
+Research.FlowReachability.children_exact: exact axioms [propext, Quot.sound]
+Research.FlowReachability.snapshot_to_flow: exact axioms [propext, Quot.sound]
+Research.FlowReachability.flow_to_snapshot: exact axioms [propext, Quot.sound]
+Research.FlowReachability.reaches_iff_flow: exact axioms [propext, Quot.sound]
+Research.FlowReachability.certificate_flow_exact: exact axioms [propext, Quot.sound]
+Research.FlowReachability.checkFlow_exact: exact axioms [propext, Quot.sound]

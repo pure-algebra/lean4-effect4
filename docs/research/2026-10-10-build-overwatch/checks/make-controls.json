@@ -1,0 +1,84 @@
+{
+  "reviewed_commit": "294c89cdee0fd5874c01df45fb2654c5a480b2cd",
+  "makefile_sha256": "f1c53a14e46ffd9e91a496ab0152730e2edaecaba5e34f32c8fe2ad67771631a",
+  "inventory_files": 1122,
+  "method": "Unmodified Makefile; isolated path inventory with empty source bytes and controlled old timestamps. Dry runs only.",
+  "results": [
+    {
+      "case": "unchanged",
+      "command": [
+        "make",
+        "-n",
+        "check-cases"
+      ],
+      "exit_code": 0,
+      "runs_gate": false,
+      "should_run": false
+    },
+    {
+      "case": "core_source",
+      "command": [
+        "make",
+        "-n",
+        "check-cases",
+        "-W",
+        "src/Effect4.lean"
+      ],
+      "exit_code": 0,
+      "runs_gate": true,
+      "should_run": true
+    },
+    {
+      "case": "checker_source",
+      "command": [
+        "make",
+        "-n",
+        "check-cases",
+        "-W",
+        "scripts/check-conform.py"
+      ],
+      "exit_code": 0,
+      "runs_gate": true,
+      "should_run": true
+    },
+    {
+      "case": "toolchain_pin",
+      "command": [
+        "make",
+        "-n",
+        "check-cases",
+        "-W",
+        "lean-toolchain"
+      ],
+      "exit_code": 0,
+      "runs_gate": false,
+      "should_run": true
+    },
+    {
+      "case": "package_pin",
+      "command": [
+        "make",
+        "-n",
+        "check-cases",
+        "-W",
+        "lake-manifest.json"
+      ],
+      "exit_code": 0,
+      "runs_gate": false,
+      "should_run": true
+    },
+    {
+      "case": "lake_configuration",
+      "command": [
+        "make",
+        "-n",
+        "check-cases",
+        "-W",
+        "lakefile.toml"
+      ],
+      "exit_code": 0,
+      "runs_gate": false,
+      "should_run": true
+    }
+  ]
+}

@@ -1,0 +1,232 @@
+{
+  "captured_at_utc": "2026-10-10T02:33:10.095538+00:00",
+  "primary_head": "4867cf2b2c41502460949c60143cc9ed0d97b4ab",
+  "toolchain": "leanprover/lean4:v4.33.1",
+  "artifact_origin": "Builder outputs; critical entries are recompiled independently by compile.py.",
+  "standard_library": [
+    "Lean",
+    "Lean.PrettyPrinter"
+  ],
+  "sources": [
+    {
+      "path": "tools/ProofGraph/Plan.lean",
+      "sha256": "8d30191b890b5beec37831faa70f58e84ca28e89864309878da22c528dd8916d"
+    },
+    {
+      "path": "tools/ProofGraph/ClosureAudit.lean",
+      "sha256": "9b445f7629f0e8f11988eb2f2e2dbaadf16d31912803a4e8462f2b105ec2d114"
+    },
+    {
+      "path": "tools/ProofGraph/Population.lean",
+      "sha256": "c8c6caee73192ac980f5db2ffa0eed4f230d855b2cc9ac080d7bf3eae121ce5c"
+    },
+    {
+      "path": "tools/Tools/Semantics.lean",
+      "sha256": "eae71c09f06392d149427d2df52e6363e32b02dcb9c47aaefdee7851e36a867c"
+    },
+    {
+      "path": "tools/Drivers/SemanticsControls.lean",
+      "sha256": "f341c068eaf3eb80936a65dae052516dc7c5740c93df1222cbae414dbfb179a0"
+    },
+    {
+      "path": "Test/Audit/SemanticsCensus.lean",
+      "sha256": "cb182396390b492a37edc7fc7cdb44926d9dab29d8ec5bac07a1b15891137eac"
+    },
+    {
+      "path": "Test/Audit/ClosureAudit.lean",
+      "sha256": "8338dac65a91ee1d8330dd9f94d508c772002d84fe6ff45d2dd29668f55d464b"
+    },
+    {
+      "path": "Makefile",
+      "sha256": "9864bc738331eac28d4ce824236cbc0415f0c930dc801a0496ff41fa3bfdbb1d"
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "9153d7ec46d5e4f582f0543053d24ebcce7ce37392b6d3db5166b4136d12de8a"
+    }
+  ],
+  "artifacts": [
+    {
+      "module": "Effect4.Laws.Auto.Semantics",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Auto/Semantics.olean",
+      "target": ".lake/report-overwatch/Effect4/Laws/Auto/Semantics.olean",
+      "sha256": "bb589ad337bc4e14156adaadbe7c87328c00af6edc7c2e6484d63571a2a2172a",
+      "bytes": 688592
+    },
+    {
+      "module": "Effect4.Laws.Auto.Semantics",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Auto/Semantics.ilean",
+      "target": ".lake/report-overwatch/Effect4/Laws/Auto/Semantics.ilean",
+      "sha256": "7b3b2f0a94aec1d5ded347d5d3631242f229e0a036aac14ffd92fc6863ae0c88",
+      "bytes": 16480
+    },
+    {
+      "module": "ProofGraph.Axioms",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/ProofGraph/Axioms.olean",
+      "target": ".lake/report-overwatch/ProofGraph/Axioms.olean",
+      "sha256": "68176929fa278ef1981dba1368567f3a0f26781447c0ae7cb6182cc2096219d2",
+      "bytes": 354496
+    },
+    {
+      "module": "ProofGraph.Axioms",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/ProofGraph/Axioms.ilean",
+      "target": ".lake/report-overwatch/ProofGraph/Axioms.ilean",
+      "sha256": "141587f3818fe7a0aa858cb8621463f82e9ffd3ed4fe00a0a5a824cae4620537",
+      "bytes": 15981
+    },
+    {
+      "module": "ProofGraph.ClosureAudit",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/ProofGraph/ClosureAudit.olean",
+      "target": ".lake/report-overwatch/ProofGraph/ClosureAudit.olean",
+      "sha256": "7bcb771406cf8714f091210455dd3f67efff0fe6cbacb5794a2e37ac0828324a",
+      "bytes": 386144
+    },
+    {
+      "module": "ProofGraph.ClosureAudit",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/ProofGraph/ClosureAudit.ilean",
+      "target": ".lake/report-overwatch/ProofGraph/ClosureAudit.ilean",
+      "sha256": "2b2b455996e02385841a643906f1072fbf00adf09274949a9f57173a77f38001",
+      "bytes": 8848
+    },
+    {
+      "module": "ProofGraph.Goal",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/ProofGraph/Goal.olean",
+      "target": ".lake/report-overwatch/ProofGraph/Goal.olean",
+      "sha256": "deb93e903cee8abdc58f04b7b32e2b46fc033585440bfb4bdad5f5a2b0422d43",
+      "bytes": 469360
+    },
+    {
+      "module": "ProofGraph.Goal",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/ProofGraph/Goal.ilean",
+      "target": ".lake/report-overwatch/ProofGraph/Goal.ilean",
+      "sha256": "883e5dddc98a513dd11faca82f710085ae0fa419d452b869457631761faaf074",
+      "bytes": 11443
+    },
+    {
+      "module": "ProofGraph.Plan",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/ProofGraph/Plan.olean",
+      "target": ".lake/report-overwatch/ProofGraph/Plan.olean",
+      "sha256": "f53bd154a70b568b869cf66031c33eebd468162a3d4abe51a0b030c20fd27a8a",
+      "bytes": 754112
+    },
+    {
+      "module": "ProofGraph.Plan",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/ProofGraph/Plan.ilean",
+      "target": ".lake/report-overwatch/ProofGraph/Plan.ilean",
+      "sha256": "eef94a9c2f6a73ed4217d4864e289f98db6e8d1db1503ea2fb666dd5b1772f2c",
+      "bytes": 22516
+    },
+    {
+      "module": "ProofGraph.Population",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/ProofGraph/Population.olean",
+      "target": ".lake/report-overwatch/ProofGraph/Population.olean",
+      "sha256": "4d0651bf35cf9c9c6c5ed215960741d0aedb07120fc1e4deeaec98e6190433a0",
+      "bytes": 104224
+    },
+    {
+      "module": "ProofGraph.Population",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/ProofGraph/Population.ilean",
+      "target": ".lake/report-overwatch/ProofGraph/Population.ilean",
+      "sha256": "32172dbdc0feae85efd6f30297a9ee09a21fccb3f45b607938f0c381d6d69a3d",
+      "bytes": 4308
+    },
+    {
+      "module": "ProofGraph.Proof",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/ProofGraph/Proof.olean",
+      "target": ".lake/report-overwatch/ProofGraph/Proof.olean",
+      "sha256": "07463df950c4f1e87708b5ee7223e9163abbe93c65ae7a52934a64a6ea840d38",
+      "bytes": 501984
+    },
+    {
+      "module": "ProofGraph.Proof",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/ProofGraph/Proof.ilean",
+      "target": ".lake/report-overwatch/ProofGraph/Proof.ilean",
+      "sha256": "737a3cc111525806bb15070c3502969cc932ee0c7ffae58b0c9be50f3ac63022",
+      "bytes": 20366
+    },
+    {
+      "module": "ProofGraph.Registry",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/ProofGraph/Registry.olean",
+      "target": ".lake/report-overwatch/ProofGraph/Registry.olean",
+      "sha256": "c2b515ea18d46a8709f6ff23ea2c2b42a677eba87d5c1e029d732f620c07b41d",
+      "bytes": 4239800
+    },
+    {
+      "module": "ProofGraph.Registry",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/ProofGraph/Registry.ilean",
+      "target": ".lake/report-overwatch/ProofGraph/Registry.ilean",
+      "sha256": "a4a97ae1ba18d00dcab08b4d89a3cb5dc623e17d97d0676b92ba2586a73f7bf9",
+      "bytes": 93100
+    },
+    {
+      "module": "ProofGraph.Sketch",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/ProofGraph/Sketch.olean",
+      "target": ".lake/report-overwatch/ProofGraph/Sketch.olean",
+      "sha256": "81abd4cdfeb9bcdd88436191228696d7b2986fa6ac5b479cf01e6aa9b2138ced",
+      "bytes": 584688
+    },
+    {
+      "module": "ProofGraph.Sketch",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/ProofGraph/Sketch.ilean",
+      "target": ".lake/report-overwatch/ProofGraph/Sketch.ilean",
+      "sha256": "db80b3df8e67db5455c7462ee4a41adb13b0cd1331ba33b421192cec074f0721",
+      "bytes": 14264
+    },
+    {
+      "module": "Test.Audit.SemanticsCensus",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Test/Audit/SemanticsCensus.olean",
+      "target": ".lake/report-overwatch/Test/Audit/SemanticsCensus.olean",
+      "sha256": "1583559c797d919f959ca52132d317023a6543f2ad7921da58e3f1151fcf7c5a",
+      "bytes": 29464
+    },
+    {
+      "module": "Test.Audit.SemanticsCensus",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Test/Audit/SemanticsCensus.ilean",
+      "target": ".lake/report-overwatch/Test/Audit/SemanticsCensus.ilean",
+      "sha256": "1f465a3f896553770681bce6863e7354e7db077c08ccbb756b74d5a634ef8e36",
+      "bytes": 4760
+    },
+    {
+      "module": "Tools.GeneratedStamp",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Tools/GeneratedStamp.olean",
+      "target": ".lake/report-overwatch/Tools/GeneratedStamp.olean",
+      "sha256": "db532ee3672aeec3c485b02ec8621a757fa3a37a08ad3033401eed5293b93aee",
+      "bytes": 199360
+    },
+    {
+      "module": "Tools.GeneratedStamp",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Tools/GeneratedStamp.ilean",
+      "target": ".lake/report-overwatch/Tools/GeneratedStamp.ilean",
+      "sha256": "aff054c9c3993e7d004145c9175bfd738b8fb2ce3dfa38e71986e05aacbaaa78",
+      "bytes": 7602
+    },
+    {
+      "module": "Tools.Semantics",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Tools/Semantics.olean",
+      "target": ".lake/report-overwatch/Tools/Semantics.olean",
+      "sha256": "2135168b11f77cc62302bf34d2521af27c0e25fc4a0be631e6044c8145f0241a",
+      "bytes": 4013064
+    },
+    {
+      "module": "Tools.Semantics",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Tools/Semantics.ilean",
+      "target": ".lake/report-overwatch/Tools/Semantics.ilean",
+      "sha256": "8440c2609d5122d749ede1e13ff310a5bdd9e59f318fb268f67cc3b6376dbbe8",
+      "bytes": 118797
+    },
+    {
+      "module": "Tools.SemanticsDisplay",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Tools/SemanticsDisplay.olean",
+      "target": ".lake/report-overwatch/Tools/SemanticsDisplay.olean",
+      "sha256": "e7f7939a1bfbf1f707584b20791739409be43fb72dfd0ea4c765601bd2fcaa73",
+      "bytes": 93608
+    },
+    {
+      "module": "Tools.SemanticsDisplay",
+      "source": "/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Tools/SemanticsDisplay.ilean",
+      "target": ".lake/report-overwatch/Tools/SemanticsDisplay.ilean",
+      "sha256": "c8585070c4078b8268f09fac1b72e4500cfe034fc4f52495578939a6ebf667fe",
+      "bytes": 2650
+    }
+  ]
+}

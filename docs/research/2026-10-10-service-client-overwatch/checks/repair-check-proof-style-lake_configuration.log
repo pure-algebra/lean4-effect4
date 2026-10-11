@@ -1,0 +1,5 @@
+find: ocaml: No such file or directory
+find: Test/fixtures/trust-gate: No such file or directory
+modules="$(python3 scripts/lean-imports.py Test/Audit/ProofStyle.lean)" && { [ -z "$modules" ] || lake build $modules; }
+lake env lean -DwarningAsError=true Test/Audit/ProofStyle.lean
+mkdir -p .lake/check && touch .lake/check/proof-style

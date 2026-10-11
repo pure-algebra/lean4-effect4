@@ -1,0 +1,33 @@
+{
+  "recorded_utc": "2026-10-10T05:42:19.916649+00:00",
+  "implementation_commit": "4bbd28a05bedc3e30f9db72e3893872a771b81da",
+  "implementation_base": "b459daecd0ce148ba9d1c44641d1735a80db97dd",
+  "primary_head": "52faff49324e4ef3e14d246f4460b30c44c51abe",
+  "read_only_apply_check": {
+    "command": "git diff b459daecd0ce148ba9d1c44641d1735a80db97dd 4bbd28a05bedc3e30f9db72e3893872a771b81da -- <the five production paths below> | git -C /Users/pooks/Dev/lean4-effect4 apply --check -",
+    "exit_code": 0,
+    "evidence": "Completed tool call before this record; stdout and stderr empty.",
+    "scope": "Patch application to the current working files only; no build of the primary work in progress."
+  },
+  "paths": [
+    "Test/Codegen/DataCodec.lean",
+    "harness/truth/schema-codec/Emit.lean",
+    "src/Effect4/Laws/Program/Typed/AnswerSchema.lean",
+    "src/Effect4/Laws/Schema/Codec.lean",
+    "src/Effect4/Schema/Codec.lean"
+  ],
+  "primary_file_sha256": {
+    "Test/Codegen/DataCodec.lean": "03cc77ebb007c9565e54d8499b70831afc1961c2997da50e6e1eac8ab092c5c5",
+    "harness/truth/schema-codec/Emit.lean": "4e1ba5f8876acfe1f53c3ed7f0dc01b398d457d562cce934317d9b0b4f67c298",
+    "src/Effect4/Laws/Program/Typed/AnswerSchema.lean": "014bb579fdf7da54786ce701781ad4f08b72071719a0781528774869b6e3e5f1",
+    "src/Effect4/Laws/Schema/Codec.lean": "ecf273f3e3f03469faa07c75200a4021f62ffe6413309a5426c34c6c8d495440",
+    "src/Effect4/Schema/Codec.lean": "49d6096ebd76f22acd0ea9eb6ed4e46b1610efdcec6a2f709c65b88d21aee191"
+  },
+  "implementation_file_sha256": {
+    "Test/Codegen/DataCodec.lean": "bec56a3945e758a7e425ef508a6fe2e05a1bc825acc66f50288fedfd760e3058",
+    "harness/truth/schema-codec/Emit.lean": "c7eb2a32329da16b05e12d56d9192b01e150c60df277f23e851c0744dd6e8d87",
+    "src/Effect4/Laws/Program/Typed/AnswerSchema.lean": "269e8d744f45482443c9aea3d3e29907ec932558dbd1e1eb741328b925d88806",
+    "src/Effect4/Laws/Schema/Codec.lean": "693ece54b3d3deb6c75379db17abf90dd7ea894e7e30772c5710446220fe879f",
+    "src/Effect4/Schema/Codec.lean": "2f417e14d292b815e12bcb6ac6f100ca2eea91a19386ce5feaf2f8c3f97add21"
+  }
+}

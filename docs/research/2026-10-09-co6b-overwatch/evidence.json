@@ -1,0 +1,181 @@
+{
+  "created_at_utc": "2026-10-10T01:46:30.764698+00:00",
+  "files": [
+    {
+      "path": "CHECKPOINT.json",
+      "sha256": "521246228695d353ec47be5d6200368ae0f3ebacad452221b5d5103b91923e56"
+    },
+    {
+      "path": "Controls.inc",
+      "sha256": "ca1a9e31c672df192c7a9c0bd88933b0c6be1a0f62a17b0f3c28d745e6257188"
+    },
+    {
+      "path": "ExtractedServices.lean",
+      "sha256": "025a7751234533a0f3a11ccbeacdfe706829338b02dcd47ec11713db25b1410a"
+    },
+    {
+      "path": "PLAN.md",
+      "sha256": "b89b8b1542921508cd3f7bc9988eb307b0c9207c9bec49ace4cfb34b223260e1"
+    },
+    {
+      "path": "README.md",
+      "sha256": "8376d98c9eed3f345b408fbe7f363c48336a4ed305f90a6fe39e918a74cb8001"
+    },
+    {
+      "path": "behavior.ts",
+      "sha256": "d7cee2da16d874abdd0a775caf97979612f054b1f86646c8d0e634dafc0d2c46"
+    },
+    {
+      "path": "changed-request.ts",
+      "sha256": "0f1794a7646db195153eaa52b892f0b7c9c6682187d420dbe168e29edfb7ceea"
+    },
+    {
+      "path": "check.py",
+      "sha256": "1d361860b2c224b9d7cc3d45b9b5ce368c02353d9b5f35504bf8100ea39cac8d"
+    },
+    {
+      "path": "checks/bun-version.log",
+      "sha256": "b99b4c7cdf236f59bc9f65d963deaecae3b16a7dad87939cacb9057f7664daee"
+    },
+    {
+      "path": "checks/host-behavior.log",
+      "sha256": "0b64d498c5ceaac031ac76ef9e2ad606eb3ec58c35455647957a667f78872ab2"
+    },
+    {
+      "path": "checks/language.log",
+      "sha256": "fece4f4717931f3796de62e3b2510c27f084b1a672bf9351a02d257299a2fbd7"
+    },
+    {
+      "path": "checks/lean-controls.log",
+      "sha256": "b083dc7356c8e1ffcb70c56376ad0500d0fc60d067cb35336e2d70bafa774e8e"
+    },
+    {
+      "path": "checks/results.json",
+      "sha256": "f685d28e21ba2784815220f29d1f59cdcf98c1da61f7e90c042f6f2e403c4342"
+    },
+    {
+      "path": "checks/tsgo-behavior.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "checks/tsgo-changed-request.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "checks/tsgo-collision.log",
+      "sha256": "6f6aadbe2ada8ff3a1b354f7820c60ab954475fc10f1dedfadfb5af2080430df"
+    },
+    {
+      "path": "checks/tsgo-method-name-repaired.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "checks/tsgo-method-name.log",
+      "sha256": "bae88e2eb2bc4a4f8cecfbe5d1290458cc943162445764811086a2b300925a30"
+    },
+    {
+      "path": "checks/tsgo-positive.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "checks/tsgo-prototype-name-repaired.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "checks/tsgo-version.log",
+      "sha256": "ee8745ec6090fb288d65dccfa00a909e137fa7b1a8e6b7a3ba11cca5be496339"
+    },
+    {
+      "path": "collision.ts",
+      "sha256": "44c09896d7dfb2354ba1f1a6cb6ca35990b66df7e547f7d81cffaf3eec37eab0"
+    },
+    {
+      "path": "extract.py",
+      "sha256": "5af26adf1cd05f2b52629a7ec67a94eaa03150e9022a7eac7ea96d8f7fb5dd3f"
+    },
+    {
+      "path": "extraction.json",
+      "sha256": "29a47fec1440de961d5bcc70787ebe84a3c88b795cb9debcffe4003550bfdab8"
+    },
+    {
+      "path": "followup/src/Effect4/Library/Queue/Defs.lean",
+      "sha256": "8b3f279589f4ac2f91d6651081d3cb8bd01559bd2f8b0985ce0e08ef154393f9"
+    },
+    {
+      "path": "followup/src/Effect4/Program/Authoring.lean",
+      "sha256": "79d28d56f87a3f350990c06b4a22e00327475b93a13626780cb06d6ed02272fc"
+    },
+    {
+      "path": "followup.json",
+      "sha256": "f15b4ccce094cfa51af57596e8dd61bae4411447d360172a0e66b7b336248c50"
+    },
+    {
+      "path": "method-name-repaired.ts",
+      "sha256": "cb2297014b4a932572c6ad4b8746d2602672bc3ec556dc127700926a44485403"
+    },
+    {
+      "path": "method-name.ts",
+      "sha256": "03b405aa3a553f0ded2803bdb5df1a13a4b1b7bcb47ab4f3d419ecc90635b3e4"
+    },
+    {
+      "path": "pins.json",
+      "sha256": "6e6cce8fd9f39a1866d7c990ba9432f465eab490986adbea86ebb6bc531556f2"
+    },
+    {
+      "path": "positive.ts",
+      "sha256": "84ef6c49806d13f14b9be7de8dd1dc557f45a5669f974adf154c57f6319cc224"
+    },
+    {
+      "path": "prototype-name-repaired.ts",
+      "sha256": "2fa85c985261f5f09deef70b4c1c56373502f981aa64d9b84136518698af209b"
+    },
+    {
+      "path": "snapshot/docs/research/2026-10-09-co6b-service-plan.md",
+      "sha256": "7206f2dbb6dd917ed14fab717977d2641e0af26aaccee66e6815321056344e32"
+    },
+    {
+      "path": "snapshot/src/Effect4/Codegen/Print.lean",
+      "sha256": "ffe3fd3f6f87bbdd2ad2198c2aefdaab6bcb053db116d5c95b0a24ed16716548"
+    },
+    {
+      "path": "snapshot/src/Effect4/Codegen/Read.lean",
+      "sha256": "963fd7116d798d8abc25f1418ce55253a26cf726986c44d704cc0f1831fa9f89"
+    },
+    {
+      "path": "snapshot/src/Effect4/Laws/Api/ModuleReadable.lean",
+      "sha256": "827410132b5dc8b2396626c91e22978104f3c45b6e4c1a72d5d3ca467867a9dd"
+    },
+    {
+      "path": "snapshot/src/Effect4/Laws/Codegen/Module.lean",
+      "sha256": "d56683e0978b65364789564279799bd44274483fa63f377dbd9b9d908b434138"
+    },
+    {
+      "path": "snapshot/src/Effect4/Laws/Codegen/Services.lean",
+      "sha256": "8b1864cd1c78e7f84d4d4a34b45d20f100a771aca72773ad2c48568a5c32fe75"
+    },
+    {
+      "path": "snapshot/src/Effect4/Laws/Program/TyView.lean",
+      "sha256": "76a5db8b847839abec682eea3ecc31e2c8e01878bae3974430fea8dab5e5abf6"
+    },
+    {
+      "path": "snapshot/src/Effect4/Program/Eff.lean",
+      "sha256": "a8fb2f687147e18155e91feb055e5a223329ca01c4f000dd62e9748d74b06f89"
+    },
+    {
+      "path": "snapshot/src/Effect4/Store/Domain/Derived/Program.lean",
+      "sha256": "7e7fabd47bc73274fb25b68d2e892898f92da2bc139cb724f0327147caf32062"
+    },
+    {
+      "path": "snapshot/tools/Effect4Gen/manifest.json",
+      "sha256": "3e620e108a82e7bf620e17012d1aa5fd742f8d8ab73a937310a1267ee21e65e6"
+    },
+    {
+      "path": "snapshot/tools/Effect4Gen/wire-tags.json",
+      "sha256": "e99a0a42956fa3d344480ebe12b4c5ac527d648555b527449fcafb019246466c"
+    },
+    {
+      "path": "snapshot/tools/Tools/ProgramStructure.lean",
+      "sha256": "c15a204c7e1accfd3b849b42ed7bdce72a95f760dfd694142d1723b70db198ec"
+    }
+  ]
+}
