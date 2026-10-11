@@ -1,9 +1,7 @@
-#probe_audit: 142 declarations walked, 4 planned goals [Probe.HostProtocol.held_in_tree,
+#probe_audit: 173 declarations walked, 3 planned goals [Probe.HostProtocol.held_in_tree,
  Probe.HostProtocol.root_answers_applied,
- Probe.HostProtocol.tree_needs_token,
  Probe.HostProtocol.escape_session]; 0 outside [propext, Quot.sound]
 resting on planned goals:
   Probe.HostProtocol.infrastructure_escapes_modulo rests on [Probe.HostProtocol.escape_session]
-  Probe.HostProtocol.unauthorized_calls_nothing_modulo rests on [Probe.HostProtocol.held_in_tree,
-   Probe.HostProtocol.tree_needs_token]
+  Probe.HostProtocol.unauthorized_calls_nothing_modulo rests on [Probe.HostProtocol.held_in_tree]
   Probe.HostProtocol.stale_never_applies_modulo rests on [Probe.HostProtocol.root_answers_applied]
