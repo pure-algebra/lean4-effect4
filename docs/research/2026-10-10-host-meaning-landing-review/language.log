@@ -1,0 +1,3 @@
+PASS check-language: no finding in docs/research/2026-10-10-host-meaning-landing-review/README.md; the other documents carry 1767 finding(s) (report: python3 scripts/check-language.py)
+
+Exit: 0

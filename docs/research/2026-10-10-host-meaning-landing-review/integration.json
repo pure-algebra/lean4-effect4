@@ -1,0 +1,14 @@
+{
+  "registered_loop_claims": [
+    "rows-loop-session",
+    "rows-loop-host",
+    "rows-loop-straight",
+    "rows-loop-looped"
+  ],
+  "claims_absent_from_generated_report": [
+    "rows-loop-session",
+    "rows-loop-host",
+    "rows-loop-straight",
+    "rows-loop-looped"
+  ]
+}
