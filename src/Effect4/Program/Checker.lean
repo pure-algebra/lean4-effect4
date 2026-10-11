@@ -453,6 +453,7 @@ mutual
       if Ty.sub s.normalize (.list (.fiberOf .unknown .unknown)) then pure (EffTy.pure .unit)
       else throw ⟨p, .snapshotExpected s⟩
     | .raceAll entrants => checkEffs sig env (p ++ [0]) [] entrants
+    | .raceAllFirst entrants => checkEffs sig env (p ++ [0]) [] entrants
     | .setContext context => do
       let c ← term? sig env p context
       if Ty.sub c.normalize Ty.context then pure (EffTy.pure .unit) else throw ⟨p, .contextExpected c⟩

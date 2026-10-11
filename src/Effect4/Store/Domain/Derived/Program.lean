@@ -2099,7 +2099,8 @@ def ActionTermShape : Shape :=
       ("getId", 14, []),
       ("closeScope", 15, [("scope", (shape _root_.Effect4.Program.Term).root),
         ("exit", (shape _root_.Effect4.Program.Term).root)]),
-      ("getInterruptible", 16, [])]
+      ("getInterruptible", 16, []),
+      ("raceAllFirst", 17, [("entrants", .named "Effs")])]
 
 def LayerTermShape : Shape :=
   .sum "LayerTerm"
@@ -2199,6 +2200,7 @@ def toValActionTerm : @_root_.Effect4.Program.ActionTerm (_root_.Effect4.Program
   | .getId => .ctor 14 []
   | .closeScope a0 a1 => .ctor 15 [Canonical.toVal a0, Canonical.toVal a1]
   | .getInterruptible => .ctor 16 []
+  | .raceAllFirst a0 => .ctor 17 [toValEffs a0]
 def toValLayerTerm : @_root_.Effect4.Program.LayerTerm (_root_.Effect4.Program.NativeOp) → Val
   | .succeed a0 a1 => .ctor 0 [Canonical.toVal a0, Canonical.toVal a1]
   | .effect a0 a1 => .ctor 1 [Canonical.toVal a0, toValEff a1]
@@ -2442,6 +2444,10 @@ def rawActionTerm :
     | some a0, some a1 => some (.closeScope a0 a1)
     | _, _ => none
   | .ctor 16 [] => some .getInterruptible
+  | .ctor 17 [v0] =>
+    match rawEffs v0 with
+    | some a0 => some (.raceAllFirst a0)
+    | _ => none
   | _ => none
 def rawLayerTerm :
   Val → Option (@_root_.Effect4.Program.LayerTerm (_root_.Effect4.Program.NativeOp))
@@ -2625,6 +2631,8 @@ theorem rawActionTerm_toValActionTerm
   | «closeScope» a0 a1 =>
     simp only [toValActionTerm, rawActionTerm, Canonical.ofVal_toVal]
   | «getInterruptible» => rfl
+  | «raceAllFirst» a0 =>
+    simp only [toValActionTerm, rawActionTerm, rawEffs_toValEffs a0]
 termination_by structural a
 theorem rawLayerTerm_toValLayerTerm
   (a : @_root_.Effect4.Program.LayerTerm (_root_.Effect4.Program.NativeOp)) :
@@ -2992,6 +3000,9 @@ theorem fitsActionTerm
         (acceptsFields_cons _ _ _ _ _ _ (lift_Term a1) (acceptsFields_nil _)))
   | «getInterruptible» =>
     exact acceptsAt_sum _ _ _ 16 "getInterruptible" [] [] rfl (acceptsFields_nil _)
+  | «raceAllFirst» a0 =>
+    exact acceptsAt_sum _ _ _ 17 "raceAllFirst" _ _ rfl
+      (acceptsFields_cons _ _ _ _ _ _ (fitsEffs a0) (acceptsFields_nil _))
 termination_by structural a
 theorem fitsLayerTerm (a : @_root_.Effect4.Program.LayerTerm (_root_.Effect4.Program.NativeOp)) :
     acceptsIn defs (.named "LayerTerm") (toValLayerTerm a) = true := by

@@ -113,6 +113,7 @@ def EffAlgebra.ofLayer {Op : Type} {R : EffFam → Type u}
   action_getId := layer .action "getId" []
   action_closeScope a0 a1 := layer .action "closeScope" [.term a0, .term a1]
   action_getInterruptible := layer .action "getInterruptible" []
+  action_raceAllFirst a0 := layer .action "raceAllFirst" [.child .effs a0]
   layer_succeed a0 a1 := layer .layer "succeed" [.key a0, .lit a1]
   layer_effect a0 a1 := layer .layer "effect" [.key a0, .child .eff a1]
   layer_effectDiscard a0 := layer .layer "effectDiscard" [.child .eff a0]
@@ -184,6 +185,7 @@ def argSorts : EffFam → String → Option (List ArgSort)
   | .action, "getId" => some []
   | .action, "closeScope" => some [.term, .term]
   | .action, "getInterruptible" => some []
+  | .action, "raceAllFirst" => some [.child .effs]
   | .layer, "succeed" => some [.key, .lit]
   | .layer, "effect" => some [.key, .child .eff]
   | .layer, "effectDiscard" => some [.child .eff]
@@ -204,7 +206,7 @@ def ctorNames : EffFam → List String
   | .stmt => ["bindYield", "yieldDiscard", "ret", "ifElse", "whileTrue", "breakLoop"]
   | .stmts => ["nil", "cons"]
   | .effs => ["nil", "cons"]
-  | .action => ["fork", "forkIn", "forkScoped", "runIn", "interrupt", "interruptScoped", "interruptAll", "awaitAll", "awaitAllFailFast", "snapshotChildren", "awaitNewChildren", "raceAll", "setContext", "getContext", "getId", "closeScope", "getInterruptible"]
+  | .action => ["fork", "forkIn", "forkScoped", "runIn", "interrupt", "interruptScoped", "interruptAll", "awaitAll", "awaitAllFailFast", "snapshotChildren", "awaitNewChildren", "raceAll", "setContext", "getContext", "getId", "closeScope", "getInterruptible", "raceAllFirst"]
   | .layer => ["succeed", "effect", "effectDiscard", "provide", "provideMerge", "merge", "fresh", "orDie", "ref", "mergeAll"]
   | .layers => ["nil", "cons"]
 
@@ -276,7 +278,8 @@ def makers {Op : Type} : (fam : EffFam) → List (Maker Op fam)
     , ⟨"getContext", fun | [] => some (Effect4.Program.ActionTerm.getContext) | _ => none⟩
     , ⟨"getId", fun | [] => some (Effect4.Program.ActionTerm.getId) | _ => none⟩
     , ⟨"closeScope", fun | [.term a0, .term a1] => some (Effect4.Program.ActionTerm.closeScope a0 a1) | _ => none⟩
-    , ⟨"getInterruptible", fun | [] => some (Effect4.Program.ActionTerm.getInterruptible) | _ => none⟩ ]
+    , ⟨"getInterruptible", fun | [] => some (Effect4.Program.ActionTerm.getInterruptible) | _ => none⟩
+    , ⟨"raceAllFirst", fun | [.child .effs a0] => some (Effect4.Program.ActionTerm.raceAllFirst a0) | _ => none⟩ ]
   | .layer =>
     [ ⟨"succeed", fun | [.key a0, .lit a1] => some (Effect4.Program.LayerTerm.succeed a0 a1) | _ => none⟩
     , ⟨"effect", fun | [.key a0, .child .eff a1] => some (Effect4.Program.LayerTerm.effect a0 a1) | _ => none⟩
@@ -412,6 +415,8 @@ theorem build_action_closeScope {Op : Type} (a0 : Effect4.Program.Term) (a1 : Ef
     build (Op := Op) .action "closeScope" [.term a0, .term a1] = some (Effect4.Program.ActionTerm.closeScope a0 a1) := rfl
 theorem build_action_getInterruptible {Op : Type} :
     build (Op := Op) .action "getInterruptible" [] = some (Effect4.Program.ActionTerm.getInterruptible) := rfl
+theorem build_action_raceAllFirst {Op : Type} (a0 : EffSelfCarrier Op .effs) :
+    build (Op := Op) .action "raceAllFirst" [.child .effs a0] = some (Effect4.Program.ActionTerm.raceAllFirst a0) := rfl
 theorem build_layer_succeed {Op : Type} (a0 : Effect4.ServiceKey) (a1 : Effect4.Program.Lit) :
     build (Op := Op) .layer "succeed" [.key a0, .lit a1] = some (Effect4.Program.LayerTerm.succeed a0 a1) := rfl
 theorem build_layer_effect {Op : Type} (a0 : Effect4.ServiceKey) (a1 : EffSelfCarrier Op .eff) :
@@ -493,7 +498,7 @@ theorem makers_cata {Op : Type} {R : EffFam → Type u}
       (simp only at h; split at h <;> first | (cases h; rfl) | cases h)
   | .action, m, hm, args, e, h => by
     simp only [makers, List.mem_cons, List.mem_nil_iff, or_false] at hm
-    rcases hm with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
+    rcases hm with rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl | rfl <;>
       (simp only at h; split at h <;> first | (cases h; rfl) | cases h)
   | .layer, m, hm, args, e, h => by
     simp only [makers, List.mem_cons, List.mem_nil_iff, or_false] at hm
@@ -606,6 +611,7 @@ def view_action {Op : Type} : Effect4.Program.ActionTerm Op → String × List (
   | .getId => ("getId", [])
   | .closeScope a0 a1 => ("closeScope", [.term a0, .term a1])
   | .getInterruptible => ("getInterruptible", [])
+  | .raceAllFirst a0 => ("raceAllFirst", [.child .effs a0])
 
 theorem build_view_action {Op : Type} (e : Effect4.Program.ActionTerm Op) :
     build .action (view_action e).1 (view_action e).2 = some e := by

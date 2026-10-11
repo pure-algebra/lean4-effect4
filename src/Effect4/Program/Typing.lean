@@ -206,7 +206,7 @@ mutual
         termTy_weaken]
     | .fork _ _ | .forkIn _ _ _ | .forkScoped _ _ | .runIn _ _ | .interrupt _
     | .interruptScoped _ | .awaitAll _ | .awaitAllFailFast _ | .snapshotChildren
-    | .awaitNewChildren _ | .raceAll _ | .setContext _ | .getContext | .getId
+    | .awaitNewChildren _ | .raceAll _ | .raceAllFirst _ | .setContext _ | .getContext | .getId
     | .closeScope _ _ | .getInterruptible => by
       simp only [ActionTerm.weaken, checkAction, toOption_bind, toOption_pure, toOption_throw,
         toOption_expect, toOption_term?, apply_ite Except.toOption, termTy_weaken,

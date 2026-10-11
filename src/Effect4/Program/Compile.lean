@@ -444,6 +444,7 @@ def embedAction : WithFiberAction Name Thunk Val Err Defect FiberId Ann Ctx → 
   | .snapshotChildren => .snapshotChildren
   | .awaitNewChildren s => .awaitNewChildren s
   | .raceAll es site => .raceAll (es.map embed) site
+  | .raceAllFirst es site => .raceAllFirst (es.map embed) site
   | .setInterruptible body flag => .setInterruptible (embed body) flag
   | .setContext c => .setContext c
   | .getContext => .getContext
@@ -1142,6 +1143,7 @@ def actionAt (root : NativeEff) (p : Point) : Option NAction :=
         | some ids => WithFiberAction.awaitNewChildren ids
         | none => refuse
       | .raceAll es => WithFiberAction.raceAll (entrants es (q.child 0)) (some (q.child 0).path)
+      | .raceAllFirst es => WithFiberAction.raceAllFirst (entrants es (q.child 0)) (some (q.child 0).path)
       | .setContext context =>
         -- the context is read back off the value (`Val.context?`); any other shape refuses
         match (evalTerm p.env context).bind Val.context? with

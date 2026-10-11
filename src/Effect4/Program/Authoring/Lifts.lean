@@ -273,6 +273,12 @@ def Action.closeScope {Op : Type} (scope : TermSrc) (exit : TermSrc) : ActionSrc
 def Action.getInterruptible {Op : Type} : ActionSrc Op :=
   fun _ _ => .ok (.getInterruptible)
 
+/-- `Effect4.Program.ActionTerm.raceAllFirst`. -/
+def Action.raceAllFirst {Op : Type} (entrants : List (Src Op)) : ActionSrc Op :=
+  fun env p => do
+    let x0 ← elabEffs entrants env (p ++ [0])
+    .ok (.raceAllFirst x0)
+
 /-- `Effect4.Program.LayerTerm.succeed`. -/
 def Layer.succeed {Op : Type} (key : Effect4.ServiceKey) (value : Effect4.Program.Lit) : LayerSrc Op :=
   fun _ _ => .ok (.succeed key value)

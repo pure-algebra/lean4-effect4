@@ -470,6 +470,9 @@ mutual
     | .raceAll entrants =>
       let c := checkEffs s env (p ++ [0]) [] entrants
       atNode p (.env env) c.2 c.1
+    | .raceAllFirst entrants =>
+      let c := checkEffs s env (p ++ [0]) [] entrants
+      atNode p (.env env) c.2 c.1
     | .setContext context =>
       atNode p (.env env) (Checker.checkAction s env p (.setContext context)) []
     | .getContext => atNode p (.env env) (Checker.checkAction s env p .getContext) []

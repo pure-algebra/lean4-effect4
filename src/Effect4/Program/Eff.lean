@@ -544,6 +544,9 @@ mutual
     `bind (withFiber getInterruptible) (uninterruptible body)`, whose body names the answer at a
     restore site (`Eff.restore`). Appended, so no stored program's bytes move. -/
     | getInterruptible
+    /-- `raceAllFirst` (`internal/effect.ts:1535`): the first observed entrant exit, with loser cleanup.
+    Appended so existing source constructors and wire tags retain their meaning. -/
+    | raceAllFirst (entrants : Effs Op)
   /-- The first-order layer term (the join, 2026-09-07; before it `Program/Provision.lean`):
   one constructor per rc.112 export, each naming the line it transcribes. A body is an `Eff`
   program — the same syntax the printer prints and the compile compiles — closed: a layer's

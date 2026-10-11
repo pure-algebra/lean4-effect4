@@ -1315,6 +1315,7 @@ structure EffAlgebra (Op : Type) (R : EffFam → Type u) where
   action_getId : R .action
   action_closeScope : (Effect4.Program.Term) → (Effect4.Program.Term) → R .action
   action_getInterruptible : R .action
+  action_raceAllFirst : R .effs → R .action
   layer_succeed : (Effect4.ServiceKey) → (Effect4.Program.Lit) → R .layer
   layer_effect : (Effect4.ServiceKey) → R .eff → R .layer
   layer_effectDiscard : R .eff → R .layer
@@ -1403,6 +1404,7 @@ def cata_action {Op : Type} {R : EffFam → Type u} (alg : EffAlgebra Op R)
   | .getId => alg.action_getId
   | .closeScope a0 a1 => alg.action_closeScope a0 a1
   | .getInterruptible => alg.action_getInterruptible
+  | .raceAllFirst a0 => alg.action_raceAllFirst (cata_effs alg a0)
 termination_by structural node
 def cata_layer {Op : Type} {R : EffFam → Type u} (alg : EffAlgebra Op R)
     (node : Effect4.Program.LayerTerm Op) : R .layer :=
@@ -1489,6 +1491,7 @@ structure EffHom {Op : Type} {R : EffFam → Type u} (alg : EffAlgebra Op R) whe
   h_action_getId : f_action (.getId) = alg.action_getId
   h_action_closeScope : ∀ a0 a1, f_action (.closeScope a0 a1) = alg.action_closeScope a0 a1
   h_action_getInterruptible : f_action (.getInterruptible) = alg.action_getInterruptible
+  h_action_raceAllFirst : ∀ a0, f_action (.raceAllFirst a0) = alg.action_raceAllFirst (f_effs a0)
   h_layer_succeed : ∀ a0 a1, f_layer (.succeed a0 a1) = alg.layer_succeed a0 a1
   h_layer_effect : ∀ a0 a1, f_layer (.effect a0 a1) = alg.layer_effect a0 (f_eff a1)
   h_layer_effectDiscard : ∀ a0, f_layer (.effectDiscard a0) = alg.layer_effectDiscard (f_eff a0)
@@ -1637,6 +1640,8 @@ theorem hom_eq_cata_action {Op : Type} {R : EffFam → Type u}
     simp only [cata_action, hom.h_action_closeScope a0 a1]
   | .getInterruptible =>
     simp only [cata_action, hom.h_action_getInterruptible]
+  | .raceAllFirst a0 =>
+    simp only [cata_action, hom.h_action_raceAllFirst a0, hom_eq_cata_effs hom a0]
 termination_by structural node
 theorem hom_eq_cata_layer {Op : Type} {R : EffFam → Type u}
     {alg : EffAlgebra Op R} (hom : EffHom alg) (node : Effect4.Program.LayerTerm Op) :
@@ -1739,6 +1744,7 @@ def EffAlgebra.id (Op : Type) : EffAlgebra Op (EffSelfCarrier Op) where
   action_getId := Effect4.Program.ActionTerm.getId
   action_closeScope a0 a1 := Effect4.Program.ActionTerm.closeScope a0 a1
   action_getInterruptible := Effect4.Program.ActionTerm.getInterruptible
+  action_raceAllFirst a0 := Effect4.Program.ActionTerm.raceAllFirst a0
   layer_succeed a0 a1 := Effect4.Program.LayerTerm.succeed a0 a1
   layer_effect a0 a1 := Effect4.Program.LayerTerm.effect a0 a1
   layer_effectDiscard a0 := Effect4.Program.LayerTerm.effectDiscard a0
@@ -1937,6 +1943,9 @@ termination_by structural node
   | .getInterruptible =>
     simp only [cata_action]
     rfl
+  | .raceAllFirst a0 =>
+    simp only [cata_action, cata_id_effs a0]
+    rfl
 termination_by structural node
 @[simp] theorem cata_id_layer {Op : Type} (node : Effect4.Program.LayerTerm Op) :
     cata_layer (EffAlgebra.id Op) node = node := by
@@ -2120,6 +2129,8 @@ def foldMapAt_action {Op : Type} {M : Type u} (unit : M) (op : M → M → M) (p
     f_action (.closeScope a0 a1) p
   | .getInterruptible =>
     f_action (.getInterruptible) p
+  | .raceAllFirst a0 =>
+    op (f_action (.raceAllFirst a0) p) ((foldMapAt_effs unit op (p ++ [0]) a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
 termination_by structural node
 def foldMapAt_layer {Op : Type} {M : Type u} (unit : M) (op : M → M → M) (p : List Nat) (node : Effect4.Program.LayerTerm Op)
     (f_eff : Effect4.Program.Eff Op → List Nat → M := fun _ _ => unit) (f_stmt : Effect4.Program.Stmt Op → List Nat → M := fun _ _ => unit) (f_stmts : Effect4.Program.Stmts Op → List Nat → M := fun _ _ => unit) (f_effs : Effect4.Program.Effs Op → List Nat → M := fun _ _ => unit) (f_action : Effect4.Program.ActionTerm Op → List Nat → M := fun _ _ => unit) (f_layer : Effect4.Program.LayerTerm Op → List Nat → M := fun _ _ => unit) (f_layers : Effect4.Program.LayerTerms Op → List Nat → M := fun _ _ => unit) : M :=
@@ -2285,6 +2296,8 @@ def foldMap_action {Op : Type} {M : Type u} (unit : M) (op : M → M → M) (nod
     f_action (.closeScope a0 a1)
   | .getInterruptible =>
     f_action (.getInterruptible)
+  | .raceAllFirst a0 =>
+    op (f_action (.raceAllFirst a0)) ((foldMap_effs unit op a0 f_eff f_stmt f_stmts f_effs f_action f_layer f_layers))
 termination_by structural node
 def foldMap_layer {Op : Type} {M : Type u} (unit : M) (op : M → M → M) (node : Effect4.Program.LayerTerm Op)
     (f_eff : Effect4.Program.Eff Op → M := fun _ => unit) (f_stmt : Effect4.Program.Stmt Op → M := fun _ => unit) (f_stmts : Effect4.Program.Stmts Op → M := fun _ => unit) (f_effs : Effect4.Program.Effs Op → M := fun _ => unit) (f_action : Effect4.Program.ActionTerm Op → M := fun _ => unit) (f_layer : Effect4.Program.LayerTerm Op → M := fun _ => unit) (f_layers : Effect4.Program.LayerTerms Op → M := fun _ => unit) : M :=
@@ -2376,6 +2389,7 @@ structure EffMAlgebra (Op : Type) (M : Type u → Type v) (R : EffFam → Type u
   action_getId : M (R .action)
   action_closeScope : (Effect4.Program.Term) → (Effect4.Program.Term) → M (R .action)
   action_getInterruptible : M (R .action)
+  action_raceAllFirst : R .effs → M (R .action)
   layer_succeed : (Effect4.ServiceKey) → (Effect4.Program.Lit) → M (R .layer)
   layer_effect : (Effect4.ServiceKey) → R .eff → M (R .layer)
   layer_effectDiscard : R .eff → M (R .layer)
@@ -2446,6 +2460,7 @@ def EffAlgebra.toM {Op : Type} {M : Type u → Type v} [Monad M] {R : EffFam →
   action_getId := pure alg.action_getId
   action_closeScope a0 a1 := pure (alg.action_closeScope a0 a1)
   action_getInterruptible := pure alg.action_getInterruptible
+  action_raceAllFirst a0 := pure (alg.action_raceAllFirst a0)
   layer_succeed a0 a1 := pure (alg.layer_succeed a0 a1)
   layer_effect a0 a1 := pure (alg.layer_effect a0 a1)
   layer_effectDiscard a0 := pure (alg.layer_effectDiscard a0)
@@ -2517,6 +2532,7 @@ def EffMAlgebra.map {Op : Type} {M : Type u → Type v} {N : Type u → Type w}
   action_getId := φ alg.action_getId
   action_closeScope a0 a1 := φ (alg.action_closeScope a0 a1)
   action_getInterruptible := φ alg.action_getInterruptible
+  action_raceAllFirst a0 := φ (alg.action_raceAllFirst a0)
   layer_succeed a0 a1 := φ (alg.layer_succeed a0 a1)
   layer_effect a0 a1 := φ (alg.layer_effect a0 a1)
   layer_effectDiscard a0 := φ (alg.layer_effectDiscard a0)
@@ -2662,6 +2678,9 @@ def EffMAlgebra.toSeq {Op : Type} {M : Type u → Type v} [Monad M]
   action_getId := alg.action_getId
   action_closeScope a0 a1 := alg.action_closeScope a0 a1
   action_getInterruptible := alg.action_getInterruptible
+  action_raceAllFirst a0 := do
+    let x0 ← a0
+    alg.action_raceAllFirst x0
   layer_succeed a0 a1 := alg.layer_succeed a0 a1
   layer_effect a0 a1 := do
     let x1 ← a1
@@ -2846,6 +2865,9 @@ def foldM_action {Op : Type} {M : Type u → Type v} [Monad M] {R : EffFam → T
   | .getId => alg.action_getId
   | .closeScope a0 a1 => alg.action_closeScope a0 a1
   | .getInterruptible => alg.action_getInterruptible
+  | .raceAllFirst a0 => do
+      let x0 ← foldM_effs alg a0
+      alg.action_raceAllFirst x0
 termination_by structural node
 def foldM_layer {Op : Type} {M : Type u → Type v} [Monad M] {R : EffFam → Type u}
     (alg : EffMAlgebra Op M R) (node : Effect4.Program.LayerTerm Op) : M (R .layer) :=
@@ -3026,6 +3048,8 @@ theorem foldM_eq_cata_action {Op : Type} {M : Type u → Type v} [Monad M]
     simp only [foldM_action, cata_action, EffMAlgebra.toSeq]
   | .getInterruptible =>
     simp only [foldM_action, cata_action, EffMAlgebra.toSeq]
+  | .raceAllFirst a0 =>
+    simp only [foldM_action, cata_action, EffMAlgebra.toSeq, foldM_eq_cata_effs alg a0]
 termination_by structural node
 theorem foldM_eq_cata_layer {Op : Type} {M : Type u → Type v} [Monad M]
     {R : EffFam → Type u} (alg : EffMAlgebra Op M R) (node : Effect4.Program.LayerTerm Op) :
@@ -3245,6 +3269,8 @@ theorem foldM_natural_action {Op : Type} {M : Type u → Type v} {N : Type u →
     simp only [foldM_action, EffMAlgebra.map]
   | .getInterruptible =>
     simp only [foldM_action, EffMAlgebra.map]
+  | .raceAllFirst a0 =>
+    simp only [foldM_action, EffMAlgebra.map, φ.map_bind, foldM_natural_effs φ alg a0]
 termination_by structural node
 theorem foldM_natural_layer {Op : Type} {M : Type u → Type v} {N : Type u → Type w}
     [Monad M] [Monad N] {R : EffFam → Type u} (φ : MonadMorphism M N)
@@ -3349,6 +3375,7 @@ structure EffFrontierAlgebra (Op : Type) (R : EffFrontierFam → Type u) where
   action_getId : R .action
   action_closeScope : (Effect4.Program.Term) → (Effect4.Program.Term) → R .action
   action_getInterruptible : R .action
+  action_raceAllFirst : R .effs → R .action
 
 mutual
 def cata_frontier_eff {Op : Type} {R : EffFrontierFam → Type u} (alg : EffFrontierAlgebra Op R)
@@ -3425,6 +3452,7 @@ def cata_frontier_action {Op : Type} {R : EffFrontierFam → Type u} (alg : EffF
   | .getId => alg.action_getId
   | .closeScope a0 a1 => alg.action_closeScope a0 a1
   | .getInterruptible => alg.action_getInterruptible
+  | .raceAllFirst a0 => alg.action_raceAllFirst (cata_frontier_effs alg a0)
 termination_by structural node
 end
 
@@ -3496,6 +3524,7 @@ def frontierMap {Op : Type} [Effect4.Program.ScopedOp Op] (g : Effect4.Program.T
   action_getId := .getId
   action_closeScope a0 a1 := .closeScope (g a0) (g a1)
   action_getInterruptible := .getInterruptible
+  action_raceAllFirst a0 := .raceAllFirst a0
 
 /-- Weakening at a cut is the frontier map of the term weakening. -/
 def weakenAlg {Op : Type} [Effect4.Program.ScopedOp Op] (cut : Nat) : EffFrontierAlgebra Op (frontierSelfCarrier Op) :=
@@ -3562,6 +3591,7 @@ def ActionTerm.weaken {Op : Type} [Effect4.Program.ScopedOp Op] (cut : Nat) : Ef
   | .getId => .getId
   | .closeScope a0 a1 => .closeScope (Effect4.Program.Term.weaken cut a0) (Effect4.Program.Term.weaken cut a1)
   | .getInterruptible => .getInterruptible
+  | .raceAllFirst a0 => .raceAllFirst (Effs.weaken cut a0)
 end
 
 mutual
@@ -3694,6 +3724,8 @@ theorem weaken_eq_cata_action {Op : Type} [Effect4.Program.ScopedOp Op] (cut : N
     simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, frontierMap]
   | .getInterruptible =>
     simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, frontierMap]
+  | .raceAllFirst a0 =>
+    simp only [Effect4.Program.ActionTerm.weaken, cata_frontier_action, weakenAlg, frontierMap, weaken_eq_cata_effs cut a0]
 termination_by structural node
 end
 
@@ -3856,6 +3888,7 @@ def EffTraversal.alg {Op : Type} {M : Type → Type} {A : Type} [Monad M]
   action_snapshotChildren := s.acc s.atAction []
   action_awaitNewChildren _ := s.acc s.atAction []
   action_raceAll x0 := s.acc s.atAction [x0]
+  action_raceAllFirst x0 := s.acc s.atAction [x0]
   action_setContext _ := s.acc s.atAction []
   action_getContext := s.acc s.atAction []
   action_getId := s.acc s.atAction []

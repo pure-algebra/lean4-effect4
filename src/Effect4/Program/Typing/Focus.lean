@@ -205,6 +205,7 @@ def childEnv (s : Signature Op) (ctx : NodeEnv) : Node Op → Nat → Option Nod
   | action (.forkIn _ _ _), 0 => some (.env ctx.tyEnv)
   | action (.forkScoped _ _), 0 => some (.env ctx.tyEnv)
   | action (.raceAll _), 0 => some (.env ctx.tyEnv)
+  | action (.raceAllFirst _), 0 => some (.env ctx.tyEnv)
   -- the body of a layer is typed at the empty environment
   | layer (.effect _ _), 0 => some (.env [])
   | layer (.effectDiscard _), 0 => some (.env [])

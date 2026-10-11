@@ -114,6 +114,7 @@ inductive Head
   body and a saved value, is a restore site's, `pipe(body, saved)`. Both are reserved, so no row
   of a signature takes either spelling and the table's separation covers both rows. -/
   | uninterruptibleMask | pipe
+  | raceAllFirst
 deriving DecidableEq, Repr
 
 /-- The spelling of each head, exactly as `print` emits it. -/
@@ -152,6 +153,7 @@ def Head.spelling : Head → String
   | .interruptAllAs => "Fiber.interruptAllAs"
   | .awaitAll => "Fiber.awaitAll"
   | .raceAll => "Effect.raceAll"
+  | .raceAllFirst => "Effect.raceAllFirst"
   | .context => "Effect.context"
   | .fiberId => "Effect.fiberId"
   | .scopeClose => "Scope.close"
@@ -185,7 +187,7 @@ def heads : List Head :=
   [ .succeed, .fail, .failCause, .sync, .suspend, .flatMap, .gen, .catchCause
   , .matchCauseEffect, .onExit, .exit, .uninterruptible, .interruptible, .whileLoop
   , .yieldNowWith, .join, .await, .forkChild, .forkDetach, .forkIn, .forkScoped, .runIn
-  , .interrupt, .interruptAll, .interruptAllAs, .awaitAll, .raceAll, .context, .fiberId
+  , .interrupt, .interruptAll, .interruptAllAs, .awaitAll, .raceAll, .raceAllFirst, .context, .fiberId
   , .scopeClose, .scoped, .acquireRelease, .causeFail, .causeDie, .causeInterrupt
   , .causeCombine, .undefined, .withFiber
   , .contextService, .scopeService, .provide, .service, .provideService

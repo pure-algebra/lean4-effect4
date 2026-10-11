@@ -99,7 +99,7 @@
       "retired": {}
     },
     "Effect4.Program.ActionTerm": {
-      "active": {"fork": 0, "forkIn": 1, "forkScoped": 2, "runIn": 3, "interrupt": 4, "interruptScoped": 5, "interruptAll": 6, "awaitAll": 7, "awaitAllFailFast": 8, "snapshotChildren": 9, "awaitNewChildren": 10, "raceAll": 11, "setContext": 12, "getContext": 13, "getId": 14, "closeScope": 15, "getInterruptible": 16},
+      "active": {"fork": 0, "forkIn": 1, "forkScoped": 2, "runIn": 3, "interrupt": 4, "interruptScoped": 5, "interruptAll": 6, "awaitAll": 7, "awaitAllFailFast": 8, "snapshotChildren": 9, "awaitNewChildren": 10, "raceAll": 11, "setContext": 12, "getContext": 13, "getId": 14, "closeScope": 15, "getInterruptible": 16, "raceAllFirst": 17},
       "retired": {}
     },
     "Effect4.Program.LayerTerm": {

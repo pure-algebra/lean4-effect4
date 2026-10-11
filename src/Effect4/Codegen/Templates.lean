@@ -227,6 +227,7 @@ def actionRows : List Row :=
   , ⟨.action, "snapshotChildren", [], .refuse "snapshotChildren"⟩
   , ⟨.action, "awaitNewChildren", [], .refuse "awaitNewChildren"⟩
   , ⟨.action, "raceAll", [], .tpl (call "Effect.raceAll" [.arrHole 0])⟩
+  , ⟨.action, "raceAllFirst", [], .tpl (call "Effect.raceAllFirst" [.arrHole 0])⟩
   , ⟨.action, "setContext", [], .refuse "setContext"⟩
   , ⟨.action, "getContext", [], .tpl (call "Effect.context" [])⟩
   , ⟨.action, "getId", [], .tpl (.ident "Effect.fiberId")⟩

@@ -434,6 +434,15 @@ theorem Action.getInterruptible_scoped {Op : Type} [ScopedOp Op] :
   cases h
   simp
 
+theorem Action.raceAllFirst_scoped {Op : Type} [ScopedOp Op] {entrants : List (Src Op)} (h0 : ∀ s ∈ entrants, s.Scoped) :
+    ((Action.raceAllFirst entrants) : ActionSrc Op).Scoped := by
+  refine ⟨fun env p e h => ?_⟩
+  unfold Action.raceAllFirst at h
+  obtain ⟨x0, hx0, h⟩ := bind_ok h
+  cases h
+  have s0 := elabEffs_scoped h0 hx0
+  simp [s0]
+
 theorem Layer.succeed_scoped {Op : Type} [ScopedOp Op] (key : Effect4.ServiceKey) (value : Effect4.Program.Lit) :
     ((Layer.succeed key value) : LayerSrc Op).Scoped := by
   refine ⟨fun env p e h => ?_⟩
