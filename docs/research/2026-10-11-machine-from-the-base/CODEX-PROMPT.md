@@ -1,0 +1,85 @@
+# Prompt for Codex: the machine's base laws, and the cleanup they allow
+
+Work in the lean4-effect4 repository, branch `refactor/phase1-phase3`, from commit `c4d0728e8` or
+later. Read `AGENTS.md` first; it binds you. Then read this folder's `README.md` (the machine from
+its base) and `context-transformers.md` (the dynamic context). This lane runs beside the goals
+packet's lane. Do not reorder that lane; take this one when it has room.
+
+## What already landed (verify, do not trust)
+
+- `src/Effect4/Laws/Program/Moves.lean`: one native evaluation edits the evaluated fiber's frame
+  part by a word of eight moves (`FrameMove`, `Moves`): answer, push a park's cancel frame, a frame
+  step that goes on, one that finishes, a pop, the mask, the unmask, the loop's pending failure.
+  Proved at every level: `evaluatePrim_moves`, `withFiber_moves`, `exitScoped_moves`,
+  `evaluateNative_moves`, `iteration_moves`. The induction is `Moves.keeps`.
+- `src/Effect4/Laws/Program/MovesConnect.lean`: connectors. The guard's `interruptedCause` and
+  `deferredCause` chains, and the evaluation half of `MaskRuns` (`evaluateNative_maskChain`), are
+  each one fact per move plus `Moves.keeps`.
+- `src/Effect4/Laws/Program/Footprint.lean`: one evaluation's footprint on the run fiber
+  (`Footprint`): the frame moves, and the id, exit, running bit, finalizing exit, own observers
+  and children are kept. Connectors: `iteration_id`, `iteration_exit`, `iteration_running`.
+- `Test/Counterexamples/Program/ContextReset.lean` (`E4-CTX-CE-001`) and
+  `Test/Counterexamples/Codegen/PrintDistributes.lean` (`E4-PRINT-CE-001`), both seeded.
+
+All three modules audit within `[propext, Quot.sound]` (`probes/AuditMoves.lean`).
+
+## The work, in order
+
+1. **The guard cleanup (C1).** About ten invariants each re-prove their preservation by their own
+   case analysis over the same evaluator arms (README §4). The guard bundle
+   (`src/Effect4/Laws/Program/Guard/`, 14,321 lines) holds per-field chains through the evaluator's
+   ten levels, written with `repeat' first | … | split` and `simp_all`.
+   - Replace each chain's evaluator-level lemmas (`stepFrame_X`, `finalizerOr_X`, `withFiber_X`,
+     `evaluatePrim_X`, `exitScoped_X`, `evaluateNative_X`, `iteration_X`) by the moves or the
+     footprint. Keep each lemma's name and statement, so no consumer moves.
+   - A chain over a field the footprint does not yet name: extend `Footprint` with the field, or
+     add the field's per-move fact. A chain that reads the outcome (`ReadyOutcome`,
+     `PendingShape`): extend the classification with the outcome first (C2).
+   - `Guard/DeferredCause.lean` lines 23–75 repeat `Guard/Interruption.lean` lines 8–63; remove the
+     copy and import the original.
+   - Then `MaskRuns`'s evaluation half (`evaluatePrim_keepsMask`, `withFiber_keepsMask`) by
+     `evaluateNative_maskChain`, and the other invariants of README §4 where the moves serve.
+   - This rebuilds the law graph above the guard. Land it as one sweep, after the goals lane's
+     current landing, not between its commits.
+2. **The outcome and the machine (C2, base law B2).** Extend the classification to the outcome
+   (parked exactly after a park move; finished exactly after a finish) and to the machine: after
+   one evaluation, each other fiber of the machine is unchanged, newly spawned (its frame a
+   compiled program, its context the parent's), or edited in a listed field (an observer added, an
+   interrupt recorded, observers filtered by a token). Then the same for `driveStep`'s sixteen
+   commands and `settle`. This is Owicki and Gries's non-interference made one theorem
+   (`MaskAged` is its mask instance). It is the generic half of the goals packet's G2, and the
+   goals lane's per-program assertions can then cite it instead of re-deriving it.
+3. **Stack locality (B3).** At one evaluation: if the evaluation of `f` does not finish, the
+   evaluation of `f` with frames `below` under its stack is the same evaluation, with `below` under
+   the result's stack, and the same machine. The frame machine's form is `step_under`, with
+   `getCont_under_answered`, `resumeValue_under`, `resumeCause_under`
+   (`src/Effect4/Laws/Machine/MaskBracket.lean`). Then along a run through `Machine.Lift`, which
+   discharges the premise `inside` of `compiled_region_bracket`
+   (`src/Effect4/Laws/Program/MaskBracket.lean`). Consumers: Semaphore's protected permit and
+   Pool's `use` (R11).
+4. **Points well formed (B4, the goals packet's G1a)**, then **the stack is a path (B5)**: in each
+   call segment the frames' nodes are a chain of proper prefixes, a segment opens at a call site,
+   and a parameter's frames hang off its call site (the topology note's probe,
+   `../2026-10-11-topology-graphs/probes/StackPaths.lean`).
+5. **The services' chain (B6)** waits for the owner's ruling on the context note's option A. Do not
+   start it before.
+
+## How to work
+
+- Place every obligation before you work it (AGENTS.md, Trust): concept, question, reach, limits,
+  consumer. The README's §6 table gives each base law's placement.
+- Compile first: state a structure as `proof_goal` with `@[semantics …]`, prove it by narrow
+  builds, replace the goal in place.
+- Write the case analysis arm by arm, as `Moves.lean` does: `split`, `cases`, `exact`. No
+  `repeat' first`, `first`, `try` or `simp_all` in new or touched proofs. aesop did not apply the
+  move constructors through the record projections (tested); a plain `exact` did.
+- Narrow builds only (`LEAN_NUM_THREADS=3 lake build <Module>`), then `#axiom_audit` over the
+  touched modules. The gates run at a sweep.
+- Do not edit `docs/core/decisions.md` or `lakefile.toml`; propose rows in the receipt.
+
+## Deliverable
+
+A receipt, `docs/research/<date>-codex-base-laws-receipt.md`: first the one thing to know before
+merging, then base and head, changed files, commands and results, the audit output, the open goals,
+the deferred gates, and the line count the cleanup removed (`wc -l` before and after, per module).
+Never push. Commit by explicit paths; `git add -f` for `docs/research`.

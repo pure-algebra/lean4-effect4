@@ -1,0 +1,12 @@
+     as is Effect4.Laws.Program.Typed.Commands.Clauses.All: critical 58506 lines; cone 298 modules, 168733 lines; codegen-side 21
+     as is Effect4.Laws.Program.RuntimeR: critical 31426 lines; cone 200 modules, 92250 lines; codegen-side 21
+     as is Effect4.Laws: critical 58904 lines; cone 665 modules, 282480 lines; codegen-side 28
+     as is edit Effect4.Codegen.Print: rebuilds 283 modules, of them 44 typed-state law modules, 8 simulation modules
+     as is edit Effect4.Codegen.Read: rebuilds 280 modules, of them 44 typed-state law modules, 8 simulation modules
+law modules importing Effect4.Api: 13
+     split Effect4.Laws.Program.Typed.Commands.Clauses.All: critical 57063 lines; cone 269 modules, 155077 lines; codegen-side 0
+     split Effect4.Laws.Program.RuntimeR: critical 29983 lines; cone 167 modules, 75345 lines; codegen-side 0
+     split Effect4.Laws: critical 57461 lines; cone 666 modules, 282799 lines; codegen-side 28
+     split edit Effect4.Codegen.Print: rebuilds 146 modules, of them 2 typed-state law modules, 0 simulation modules
+     split edit Effect4.Codegen.Read: rebuilds 143 modules, of them 2 typed-state law modules, 0 simulation modules
+Api.Machine would import: ['Effect4.Api.Derived', 'Effect4.Program.Admission', 'Effect4.Program.Admit', 'Effect4.Program.Authoring', 'Effect4.Program.Authoring.Folds', 'Effect4.Program.Authoring.Lifts', 'Effect4.Program.Authoring.Maps', 'Effect4.Program.Authoring.Records', 'Effect4.Program.Authoring.Tuples', 'Effect4.Program.Packages', 'Effect4.Program.Table', 'Effect4.Program.Typing.Agreement', 'Effect4.Program.Typing.Blame']
