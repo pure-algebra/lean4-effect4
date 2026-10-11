@@ -9,13 +9,20 @@ import ProofGraph.AxiomAudit
 # The host-protocol family: the probe
 
 The probe of `docs/research/2026-10-10-goals-packet/host-protocol/README.md`. It compiles with
-`lake env lean` in the worktree, and it edits no scenario file: it restates each goal's
-proposition by its name (`RetriesDeclared`, `StaleNeverApplies`, `UnauthorizedCallsNothing`,
-`InfrastructureEscapes`) and proves it, refutes it, or proves it modulo the planned goals below.
+`lake env lean` in the worktree, and it edits no scenario file. It names each goal's proposition
+(`RetriesDeclared`, `StaleNeverApplies`, `UnauthorizedCallsNothing`, `InfrastructureEscapes`) and
+refutes it, or proves it modulo the planned goals below.
 
-Part A is a general law of the machine: a guard key that holds no request keeps holding none
-through every decision (`reservedKeys_steppedBy`). It is assembled from the guard tree's
-existing per-decision lemmas.
+* **A.** A law of the machine: a guard key that holds no request keeps holding none through every
+  decision (`reservedKeys_steppedBy`), assembled from the guard tree's per-decision lemmas.
+* **B.** The key ledger of a run (`Ledger`), kept by every row of every program: each key is
+  bound, received and applied once, and no retired call is applied (`session_keys_once`).
+* **C.** The timeout scenario: `stale_never_applies` modulo `root_answers_applied`, and
+  `retries_declared_refuted`, two kernel-checked counterexamples.
+* **D.** The routing scenario: `infrastructure_escapes` modulo `escape_session` (its meaning half
+  `escape_meaning` proved), and `unauthorized_calls_nothing` modulo `held_in_tree` and
+  `tree_needs_token`.
+* **Z.** `#probe_audit`, the axiom gate's exact walk over this file's declarations.
 -/
 
 set_option autoImplicit false
@@ -55,8 +62,8 @@ open Lean Elab Command in
 /-- **Close an equation by the kernel's definitional check alone.** The goal is assigned
 `Eq.refl lhs` without the elaborator's check, and the kernel checks the declaration. It is what
 `decide +kernel` does for a closed decision, for an equation with free variables. It adds no
-axiom. The elaborator's own `rfl` fails here: it does not unfold definitions by well-founded
-recursion. -/
+axiom. The elaborator's own `rfl` failed on these runs (`scratch/Symbolic1.lean`, before this
+tactic). A wrong equation fails at the declaration, as a kernel type mismatch. -/
 syntax (name := kernelRfl) "kernel_rfl" : tactic
 
 open Lean Elab Tactic Meta in
@@ -1886,6 +1893,30 @@ tape's head; the admitted answer at the configuration's column is a canonical re
 slice S9). -/
 @[semantics "context-requirements" (requirement := R5)]
 proof_goal tree_needs_token : TreeNeedsToken
+
+/-! Finite controls of `tree_needs_token`'s formulation, each checked by the kernel at the
+request's own token, id and id text (tested, not proved for every tape). -/
+
+/-- Green: the configuration with the token, then nothing: the tree waits at the repository with
+the caller's id. -/
+theorem tree_green : treeWaits (request "secret" 2 "2").table (progOf "secret" 2 "2")
+    [.success (configOf "secret" 20)] = .waiting 1 (.nat 1) := by
+  decide +kernel
+
+/-- Red: the configuration with another token: the tree finishes with the 401 response and
+never reaches the repository. -/
+theorem tree_red_token : treeWaits (request "secret" 2 "2").table (progOf "secret" 2 "2")
+    [.success (configOf "wrong" 20)] =
+      .finished (.success (Test.Dogfood.P2HandlerLayers.recordVal ["status", "body"]
+        [.nat 401, .str "bad token"])) := by
+  decide +kernel
+
+/-- Red: the fields in another order are no admitted configuration: the tree still waits at the
+configuration call. -/
+theorem tree_red_frame : treeWaits (request "secret" 2 "2").table (progOf "secret" 2 "2")
+    [.success (Effect4.Machine.Record.frame [("pageSize", .nat 20), ("adminToken", .str "secret")])] =
+      .waiting 0 .unit := by
+  decide +kernel
 
 /-- The routing table's rows by spelling: the repository is position 1. -/
 theorem repo_position (token : String) (id : Nat) (idText : String) (i : Nat)
