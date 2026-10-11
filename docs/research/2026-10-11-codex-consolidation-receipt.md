@@ -157,3 +157,87 @@ The archive is `docs/research/2026-10-11-docgen/retained-ignored-probe-evidence.
 Its adjacent `retained-ignored-probe-evidence.tar.sha256.json` records the verification manifest.
 The measured archive size is 183265851 bytes.
 No dependency cache or tracked source change is claimed as a proof result.
+
+## L2: exact labelled words and the finalizer instance
+
+The native classifier now records the exact emitted event word.
+It does not certify an arbitrary replacement's source or stored-value effect.
+The numeric history producers still owe those premises.
+
+Base: `0a41c816e`.
+Head: the commit containing this section.
+The slice reads the primary audit section dated `2026-10-11 10:25`.
+
+### Placement and changes
+
+Concept: reactive-scheduling and scope-lifetime-finalization, R11.
+Question: the proposed `evaluation-moves` structure claim, consumed by finalizer registration accounting.
+Reach: every native evaluator, interpreter, frame, row table, and loop latch.
+Limit: no source admission, command closure, progress, host agreement, or completed numeric history.
+
+`TracedMoves.lean` labels the existing frame operations and proves their erasure and composition.
+`Moves.balance` sums local inequalities without truncated subtraction.
+An administrative event carries no frame event or finalizer start.
+A selected finalizer's actual pop and replacement form one accounting operation.
+Its start requires the actual selected finalizer frame.
+This keeps the selected credit until the program start consumes it.
+
+`Footprint.lean` strengthens its existing evaluation census with those labels.
+Its old classification theorems become projections in the same change.
+The guard interfaces retain their names and statements.
+
+`FinalizerMoves.lean` supplies the concrete finalizer instance of each labelled operation.
+Its word theorem uses `Moves.balance` and the actual trace extension.
+`FinalizerTransfer.exitScoped_debit` becomes that instance.
+The native scoped-exit debit removes its private pop and evaluator analysis.
+The compatibility premise remains in its statement.
+
+The stronger footprint does not change executable code.
+Existing root imports reach both new library modules through their actual consumers.
+No new planned goal enters the graph.
+
+### Verification
+
+Commands use `LEAN_NUM_THREADS=3`.
+
+```text
+lake build Effect4.Laws.Program.Footprint Effect4.Laws.Program.FiberSumConnect Effect4.Laws.Machine.AnswerFlowCausePop Effect4.Laws.Program.Typed.HostWalk Test.Machine.AnswerFlow Test.Machine.AnswerFlowLoop Test.Dogfood.Proofs.HostTimeoutNumberFormFamily Test.Dogfood.Scenario.Timeout
+Build completed successfully (1191 jobs).
+
+lake build Effect4.Laws.Program.FinalizerTransfer Effect4.Laws.Program.FinalizerCommands Effect4.Laws.Program.Guard.NativeAssembly Test.Dogfood.Scenario.Atomic
+Build completed successfully (1128 jobs).
+
+lake env lean docs/research/2026-10-11-machine-models/codex/LabelledMovesAudit.lean
+#axiom_audit: 330 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+
+git diff --check
+exit 0
+```
+
+The first audit found `Classical.choice` through `List.countP_eq_zero`.
+The final proof replaces that lemma with direct list induction.
+The retained audit and dependent Atomic build pass after that repair.
+
+The normalized statement comparison checks all 18 old theorems in `Footprint` and `FinalizerTransfer`.
+All names and statements remain unchanged.
+
+Logs and audit sources are under `docs/research/2026-10-11-machine-models/codex/`.
+Their names start with `LabelledMoves` and `SharedIntegration`.
+The probe and placement remain in `LabelledMoves.lean` and `labelled-moves-plan.md`.
+No behaviour gate is owed because executable code does not change.
+
+### Size and remaining work
+
+| Module | Before | After |
+| --- | --- | --- |
+| `TracedMoves` | 0 | 279 |
+| `Footprint` | 264 | 436 |
+| `FinalizerMoves` | 0 | 117 |
+| `FinalizerTransfer` | 148 | 99 |
+| Total | 412 | 931 |
+
+This foundation adds 519 lines while replacing one existing census and one private debit proof.
+It is not a net deletion claim.
+The stronger classifier has a checked consumer in this slice.
+Current-code and stored-value weights still need exact source and state transfer premises.
+The original scenario goals retain their prior status.

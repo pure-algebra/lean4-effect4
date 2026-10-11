@@ -13,6 +13,27 @@ open Effect4 Effect4.Machine Effect4.Program
 
 abbrev REvent := RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx
 
+/-- Administrative events contain neither a frame event nor a finalizer start. -/
+def administrative : REvent → Bool
+  | .frame .. | .finalizerProgram .. => false
+  | _ => true
+
+/-- An administrative list cannot invent a frame debit or registration. -/
+def Administrative (events : List REvent) : Prop := events.all administrative = true
+
+/-- The exact pop selected by a completed exit. -/
+abbrev popExit (f : NFrame) (exit : ExitV) :=
+  f.getCont (match exit with | .success _ => .contA | .failure _ => .contE)
+    (match exit with | .success _ => false | .failure _ => true)
+    (match exit with | .success _ => none | .failure cause => some cause)
+
+/-- A finalizer start follows its real pop in the same evaluation. -/
+abbrev exitEvents (id : FiberId) (f : NFrame) (exit : ExitV) (started : Option EffName) : List REvent :=
+  (popExit f exit).events.map (.frame id) ++
+    (match started with
+     | none => []
+     | some name => [.finalizerProgram id name ((popExit f exit).deliveredExit exit)])
+
 /-- The operation retains the code source and the actual pop result. -/
 inductive MoveKind where
   | answer (input output : NCode)
@@ -21,6 +42,9 @@ inductive MoveKind where
   | finish (input : NCode) (exit : ExitV)
   | pop (demand : Effect4.Arm) (skip : Bool) (cause : Option CauseV)
       (popped : List NCode) (answer : ContAnswer EffName EffThunk Val Err Defect FiberId Ann)
+  | popAnswer (exit : ExitV) (popped : List NCode)
+      (answer : ContAnswer EffName EffThunk Val Err Defect FiberId Ann)
+      (output : NCode) (started : Option EffName)
   | mask
   | unmask
   | pendingFailure
@@ -34,8 +58,10 @@ structure MoveLabel where
 /-- The labelled refinement of the existing frame shapes. -/
 inductive LabelledMove : MoveLabel → NFrame → NFrame → Prop
   | answer (f : NFrame) (code : NCode) (events : List REvent) :
+      Administrative events →
       LabelledMove ⟨.answer f.current code, events⟩ f {f with current := code}
   | push (f : NFrame) (name : EffName) (events : List REvent) :
+      Administrative events →
       LabelledMove ⟨.push name, events⟩ f {f with stack := Prim.asyncFinalizer name :: f.stack}
   | step (id : FiberId) (interp : NPrim) (f g : NFrame) (events : List NEvent) :
       f.step interp = (.running g, events) →
@@ -49,25 +75,33 @@ inductive LabelledMove : MoveLabel → NFrame → NFrame → Prop
           (f.getCont demand skip cause).answer,
           (f.getCont demand skip cause).events.map (.frame id)⟩
         f (f.getCont demand skip cause).fiber
+  | popAnswer (id : FiberId) (f : NFrame) (exit : ExitV) (code : NCode) (started : Option EffName) :
+      (∀ name, started = some name → ∃ body flag,
+        (popExit f exit).answer = .frame (.onExit body name flag)) →
+      LabelledMove
+        ⟨.popAnswer exit (popExit f exit).popped (popExit f exit).answer code started,
+          exitEvents id f exit started⟩
+        f {(popExit f exit).fiber with current := code}
   | mask (f : NFrame) : LabelledMove ⟨.mask, []⟩ f f.uninterruptible
   | unmask (f : NFrame) : LabelledMove ⟨.unmask, []⟩ f f.interruptibleRegion.1
   | pendingFailure (f : NFrame) : LabelledMove ⟨.pendingFailure, []⟩ f
       {f with deferredInterrupt := false, current := Prim.failure f.pendingCause}
-  | idle (f : NFrame) (events : List REvent) : LabelledMove ⟨.idle, events⟩ f f
+  | idle (f : NFrame) (events : List REvent) : Administrative events → LabelledMove ⟨.idle, events⟩ f f
 
 /-- Erasing labels recovers the existing frame shape. -/
 theorem LabelledMove.shape {label : MoveLabel} {f g : NFrame}
-    (move : LabelledMove label f g) : FrameMove f g := by
+    (move : LabelledMove label f g) : Moves f g := by
   cases move with
-  | answer => exact .answer _ _
-  | push => exact .push _ _
-  | step _ interp f g events found => exact .step interp f g events found
-  | finish _ interp f exit events found => exact .finish interp f exit events found
-  | pop => exact .pop _ _ _ _
-  | mask => exact .mask _
-  | unmask => exact .unmask _
-  | pendingFailure => exact .pendingFailure _
-  | idle f => exact .answer f f.current
+  | answer => exact .single (.answer _ _)
+  | push => exact .single (.push _ _)
+  | step _ interp f g events found => exact .single (.step interp f g events found)
+  | finish _ interp f exit events found => exact .single (.finish interp f exit events found)
+  | pop => exact .single (.pop _ _ _ _)
+  | popAnswer => exact .two (.pop _ _ _ _) (.answer _ _)
+  | mask => exact .single (.mask _)
+  | unmask => exact .single (.unmask _)
+  | pendingFailure => exact .single (.pendingFailure _)
+  | idle f => exact .single (.answer f f.current)
 
 /-- A labelled word is built at its end. -/
 inductive LabelledMoves : List MoveLabel → NFrame → NFrame → Prop
@@ -94,7 +128,7 @@ theorem LabelledMoves.shape {labels : List MoveLabel} {f g : NFrame}
     (word : LabelledMoves labels f g) : Moves f g := by
   induction word with
   | refl => exact .refl _
-  | tail _ move ih => exact .tail ih move.shape
+  | tail _ move ih => exact ih.trans move.shape
 
 /-- Actual events concatenate in the word's order. -/
 def events (labels : List MoveLabel) : List REvent := labels.flatMap MoveLabel.events

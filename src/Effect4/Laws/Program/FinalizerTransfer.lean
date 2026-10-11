@@ -1,4 +1,5 @@
 import Effect4.Laws.Machine.FinalizerEvaluation
+import Effect4.Laws.Program.FinalizerMoves
 import Effect4.Laws.Program.Guard.ForkLedger
 
 /-!
@@ -21,58 +22,8 @@ open Effect4.Program.Guard
 theorem exitScoped_debit (choose : EffName → Bool) (p : NativeEff) (m : NativeMachine)
     (f : NFiber) (y : Bool) (exit : ExitV) (ok : Ok m) :
     IterDebit choose m f (exitScoped p m f y exit) := by
-  let demand := match exit with | .success _ => Arm.contA | .failure _ => Arm.contE
-  let skip := match exit with | .success _ => false | .failure _ => true
-  let cause := match exit with | .success _ => none | .failure cause => some cause
-  have debit := getCont_le choose f.frame demand skip cause
-  have silent := getCont_no_start choose f.frame demand skip cause
-  unfold exitScoped
-  dsimp only
-  split
-  · rename_i body previous scope flag answered
-    change (f.frame.getCont demand skip cause).answer = .frame (.onExit body (.scopedExit previous scope) flag) at answered
-    rw [pop, answered] at debit
-    change (if choose (.scopedExit previous scope) then 1 else 0) +
-      stack choose (f.frame.getCont demand skip cause).fiber.stack ≤ stack choose f.frame.stack at debit
-    split
-    · simp only [IterDebit, RunMachine.emit_trace, List.countP_append, frame_starts, frame_registrations]
-      change m.trace.countP (runStarted choose) +
-        (f.frame.getCont demand skip cause).events.countP (started choose) +
-        stack choose (f.frame.getCont demand skip cause).fiber.stack +
-        m.trace.countP (runRegistered choose) ≤
-        m.trace.countP (runStarted choose) + stack choose f.frame.stack +
-        (m.trace.countP (runRegistered choose) +
-          (f.frame.getCont demand skip cause).events.countP (registered choose))
-      rw [silent]
-      omega
-    · rename_i state program _
-      cases program with
-      | none =>
-        simp only [IterDebit, RunMachine.emit_trace, List.countP_append, frame_starts, frame_registrations]
-        change m.trace.countP (runStarted choose) +
-          (f.frame.getCont demand skip cause).events.countP (started choose) +
-          stack choose (f.frame.getCont demand skip cause).fiber.stack +
-          m.trace.countP (runRegistered choose) ≤
-          m.trace.countP (runStarted choose) + stack choose f.frame.stack +
-          (m.trace.countP (runRegistered choose) +
-            (f.frame.getCont demand skip cause).events.countP (registered choose))
-        rw [silent]
-        omega
-      | some code =>
-        simp only [IterDebit, RunMachine.emit_trace, List.countP_append, frame_starts,
-          frame_registrations, List.countP_singleton, runStarted, runRegistered,
-          Bool.false_eq_true, ↓reduceIte]
-        change m.trace.countP (runStarted choose) +
-          (f.frame.getCont demand skip cause).events.countP (started choose) +
-          (if choose (.scopedExit previous scope) then 1 else 0) +
-          stack choose (f.frame.getCont demand skip cause).fiber.stack +
-          m.trace.countP (runRegistered choose) ≤
-          m.trace.countP (runStarted choose) + stack choose f.frame.stack +
-          (m.trace.countP (runRegistered choose) +
-            (f.frame.getCont demand skip cause).events.countP (registered choose) + 0)
-        rw [silent]
-        omega
-  · exact (evaluatePrim_kept choose _ m ok.idsUnique f y).2.2.2
+  have _ := ok
+  exact (Moves.exitScoped_tracedFootprint p m f y exit).frame.finalizer choose
 
 /-- The native scoped exit retains the table before the driver replaces its selected row. -/
 theorem exitScoped_kept (choose : EffName → Bool) (p : NativeEff) (m : NativeMachine)
