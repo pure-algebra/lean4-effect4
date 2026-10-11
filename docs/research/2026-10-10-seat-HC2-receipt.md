@@ -18,6 +18,14 @@ The nine fixtures: `pAcquireHandle`, `pJoinedFirstNumber`, `pJoinedFirstString`,
 - Commits: `da26f6e9` (the Lean side), `6086bb39` (the OCaml regeneration), then this
   receipt and the semantics report (the head is in the final message).
 
+## Shared files touched
+
+- `tools/ProofGraph/Registry.lean` (seat FC's tree): the two claims `run-eq-ref-table` and
+  `run-eq-ref-table-no-preload` merge, `session-eq-ref`'s title names `run_eq_ref_table`, and
+  R6 loses its DI-23 open part. Nothing else in `tools/` is edited.
+- The coordinator's `Laws/Program/Denote*.lean`, `Agreement/Calls.lean` and
+  `Agreement/LoopCalls.lean` are not touched; no preloaded answer reached them.
+
 ## What moved where
 
 | Before | After |
@@ -70,6 +78,7 @@ the calls in the order the session meets them, so it suits one fiber, as the pre
 | `python3 scripts/generate.py --only lcnf`, twice (the second after the prelude spelled the trivial store) | passes; no extern row went stale |
 | `python3 scripts/generate.py --only eff` | passes; no file changed |
 | `opam exec --switch=effect4 -- dune build` in `ocaml/` | passes |
+| `#proof_style_record "src/Effect4" "Test/fixtures/proof-style/baseline.tsv"` | 1581 uses and 54 unread commands; the baseline loses two rows and gains none (`external_registration_typed`, deleted; `registerExternal_internal_state`, whose two `try` are gone) |
 | `make gen-semantics` | passes, 1311 jobs; `generated/semantics.md`: `run-eq-ref-table` proved, the no-preload claim merged, the next goals 15 to 14, the open parts 88 to 87 |
 
 Not run, on the sprint's rule: `lake build Test`, every `make check-*`, `dune test`, the truth
