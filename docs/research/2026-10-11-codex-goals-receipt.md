@@ -101,3 +101,33 @@ The unchanged scenario gate rejects planned subgoals beneath proved clauses.
 An exact expected-error guard retains that rejection until the final gate repair.
 The guard fails if the diagnostic changes; the proof declarations still compile and undergo the axiom audit.
 The final pass must admit a goal only when a named clause reaches it.
+
+## L1, L2, L3 and L5 integration
+
+The universal Workers and QueueWorkers elaboration equations retain every job count.
+`Author.build_retains` identifies the built program and table.
+`Program.Placement` classifies source paths; `Scenario.Programs` proves the actual acquisition sites.
+The symbolic lane's audit reports 99 declarations, no modulo declarations and no planned goals.
+Its receipt is `docs/research/2026-10-10-goals-packet/codex/symbolic-programs-receipt.md`.
+
+`Run.Journal` proves key uniqueness and retirement clauses for every program.
+The original reply-value provenance clause remains separate.
+The command law modules compile exact transitions for arbitrary fibers at a synchronous store operation.
+They establish neither source provenance nor a whole-run application invariant.
+
+The original `Workers.releases_once` now consumes `Workers.Assertions.history` and its concrete log reading.
+Its proposition remains unchanged, including all budgets and all scripts.
+The source assertions consume the actual acquisition sites and their universal placement proofs.
+The three remaining goals are registration preservation, release debit preservation and log debit preservation.
+Middleware and yield edits are proved leaves; admitted histories retain the original command boundaries.
+
+`LEAN_NUM_THREADS=3 lake build Test.Dogfood.Scenario.Workers` passes with 1039 jobs.
+`LEAN_NUM_THREADS=3 lake env lean docs/research/2026-10-10-goals-packet/codex/AuditWorkers.lean` passes.
+
+```text
+#axiom_audit: 151 declarations within [propext, Quot.sound], 4 of them modulo planned goals; 3 planned goals
+```
+
+The original Workers gate rejection is retained under an exact expected-error guard, as Atomic's is.
+Its final repair must follow a named clause to each planned subgoal.
+The original theorem is still modulo its three goals.

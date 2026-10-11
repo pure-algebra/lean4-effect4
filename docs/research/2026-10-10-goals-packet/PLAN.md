@@ -125,3 +125,22 @@ The premise is a successful build of the shop and a control history.
 The stage assignment relates request outcomes and the stores; it establishes no progress.
 Its existence remains a planned obligation until code-position and store preservation are proved.
 The extracted program, scripts, observations and original propositions remain unchanged.
+
+## Worker release placement
+
+`Workers.Assertions` serves the original `Workers.releases_once` clause, under `scope-lifetime-finalization` and R11.
+Its source facts hold for every job count and identify the two acquisition paths.
+It counts registrations, release starts and log writes separately.
+Its reach includes every budget, script, yield and interruption admitted by the session.
+It proves no progress or release order.
+The original clause follows from three preservation goals through the shared history law.
+The general release proof needs custody across scope entries, active close code and the registration continuation.
+The scope's `close_twice` law alone cannot supply that custody.
+
+## Source position cautions
+
+The packet's suggested raw-point level invariant needs a name-specific statement.
+`EffName.gen` keeps the generator root path while its environment advances with a separate program counter.
+The relevant source address includes that counter; the raw point alone does not locate the active statement.
+`PointTyped` retains source typing but does not assert unique dynamic use of a source site.
+The existing typed capstones do not supply native source ownership for table-aware, variable-budget histories.

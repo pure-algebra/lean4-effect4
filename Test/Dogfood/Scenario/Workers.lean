@@ -1,3 +1,4 @@
+import Test.Dogfood.Scenario.Workers.Assertions
 import Test.Dogfood.Scenario
 import Test.Dogfood.Scenario.Workers.Program
 import Test.Audit.ScenarioGate
@@ -159,7 +160,11 @@ is open (`docs/core/system-map.md` §8, R11). Consumer: the workers scenario. It
 finite runs. A bounded search over every script of 23 moves up to length 4, from three states,
 found no repeated identity: a finite probe, recorded in the seat's receipt. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
-proof_goal releases_once : ReleasesOnce
+theorem releases_once : ReleasesOnce := by
+  intro total budget b moves hb
+  have history := Scenario.history b "workers" budget "" moves
+  have holds := Assertions.history total budget.compileFuel b hb _ history
+  exact Assertions.read b budget.compileFuel _ holds
 
 /-- **The workers scenario's claim.** A reply receipt does not advance the machine. A reply
 application consumes the selected call only. A control retires the held calls whose guard it
@@ -402,6 +407,13 @@ def wrongTop : Scenario :=
 -- The green control: the gate passes the record. The red control reads the record under the
 -- wrong claim, with the dependency check only (its runs are judged above), and names each clause
 -- that the wrong claim's proof does not reach.
+-- The final gate pass follows each clause to its planned preservation subgoals.
+/--
+error: workers: the claim Test.Dogfood.Scenario.Workers.workers rests on the planned goal Test.Dogfood.Scenario.Workers.Assertions.logs_step, which no clause names
+workers: the claim Test.Dogfood.Scenario.Workers.workers rests on the planned goal Test.Dogfood.Scenario.Workers.Assertions.registrations_step, which no clause names
+workers: the claim Test.Dogfood.Scenario.Workers.workers rests on the planned goal Test.Dogfood.Scenario.Workers.Assertions.releases_step, which no clause names
+-/
+#guard_msgs (error) in
 #scenario_gate scenario
 
 /--
