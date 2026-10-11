@@ -436,6 +436,31 @@ theorem entry {w : World} {input : Input} {ty : Object} {p : RProgram}
     Entry input ty := by
   cases h <;> assumption
 
+/-- Changing only the output object uses one constructor proof for every program instance.
+Consumer: type-column widening and ambient provider completion guarantees. -/
+theorem outputMap {w : World} {input : Input} {ty ty' : Object} {program : RProgram}
+    (typed : ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry w input ty program)
+    (exits : ∀ world input exit, Ex world input ty exit → Ex world input ty' exit)
+    (entries : ∀ input, Entry input ty → Entry input ty') :
+    ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry w input ty' program := by
+  induction typed with
+  | pure payload entry => exact .pure (exits _ _ _ payload) (entries _ entry)
+  | store cert pre _ entry ih =>
+    exact .store cert pre (fun later ordered answer post => ih later ordered answer post exits entries)
+      (entries _ entry)
+  | fiber notGuard notUnguard notFinish notScopeExit cert pre _ entry ih =>
+    exact .fiber notGuard notUnguard notFinish notScopeExit cert pre
+      (fun later ordered answer post => ih later ordered answer post exits entries) (entries _ entry)
+  | guard mid body _ skip entry _ ihRun =>
+    exact .guard mid body (fun later ordered exit post => ihRun later ordered exit post exits entries)
+      (fun later ordered exit payload absent => exits _ _ _ (skip later ordered exit payload absent))
+      (entries _ entry)
+  | unguard payload entry => exact .unguard (exits _ _ _ payload) (entries _ entry)
+  | finishFinalizer payload entry => exact .finishFinalizer (exits _ _ _ payload) (entries _ entry)
+  | scopedGuard mid previous scope body callback live services widen entry _ =>
+    exact .scopedGuard mid previous scope body callback live services
+      (fun later ordered exit payload => exits _ _ _ (widen later ordered exit payload)) (entries _ entry)
+
 /-- World transport uses the same seven program constructors for every input index.
 `typedProg_mono` and the ambient context instance consume this law. -/
 theorem mono
@@ -533,6 +558,9 @@ def ambientFiberInput (available : Env.Requirement) (op : FiberOp)
     (_answer : op.answer) : Env.Requirement :=
   match op with
   | .setContext ctx => ctx.services.keysRow
+  | .getContext => match Val.context? _answer with
+    | some ctx => ctx.services.keysRow
+    | none => available
   | _ => available
 
 /-- The row-indexed instance of the same residual program arrows.
@@ -570,7 +598,27 @@ theorem ambient_getContext_typed (root : ProgramSource) (w : World) (keys availa
   refine .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ _ _ h => nomatch h) (.contextOf keys) (.inr ⟨keys, rfl, covered, declared⟩) ?_ (Row.subset_refl available)
   intro _ _ answer post
-  exact .pure ⟨strongExit_success _ _ _ post.1, Row.subset_refl available⟩ (Row.subset_refl available)
+  obtain ⟨members, ctx, decoded, coverage⟩ := post
+  have bound := (Provision.satisfies_iff_subset_keysRow ctx.services available).mp coverage
+  change AmbientProg root _ (match Val.context? answer with
+    | some ctx => ctx.services.keysRow
+    | none => available) _ _
+  rw [decoded]
+  exact .pure ⟨strongExit_success _ _ _ members, bound⟩ bound
+
+/-- An internal setter gives its actual success row and a failure row covered at both cuts.
+Consumer: provider entry and captured-context restoration through the existing program arrow. -/
+theorem ambient_setContext_guarantees (root : ProgramSource) (w : World)
+    (available failure : Env.Requirement) (ctx : Ctx) (services : ServicesFit w ctx.services)
+    (entry : Row.Subset failure available) (returned : Row.Subset failure ctx.services.keysRow) :
+    AmbientProg root w available (EffTy.pure .unit, ctx.services.keysRow, failure)
+      (fiberValR (.setContext ctx) rfl) := by
+  refine .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) () services ?_ entry
+  intro _ _ answer post
+  change answer = Val.unit at post
+  subst answer
+  exact .pure ⟨strongExit_success _ _ _ True.intro, Row.subset_refl _⟩ returned
 
 /-- The internal setter enters its actual supplied key row, rather than retaining the entry row.
 The provider and restoration callbacks use this transition. -/
@@ -578,13 +626,8 @@ theorem ambient_setContext_typed (root : ProgramSource) (w : World) (available :
     (ctx : Ctx) (services : ServicesFit w ctx.services)
     (kept : Row.Subset available ctx.services.keysRow) :
     AmbientProg root w available (EffTy.pure .unit, ctx.services.keysRow, available)
-      (fiberValR (.setContext ctx) rfl) := by
-  refine .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) () services ?_ (Row.subset_refl available)
-  intro _ _ answer post
-  change answer = Val.unit at post
-  subst answer
-  exact .pure ⟨strongExit_success _ _ _ True.intro, Row.subset_refl _⟩ kept
+      (fiberValR (.setContext ctx) rfl) :=
+  ambient_setContext_guarantees root w available available ctx services (Row.subset_refl available) kept
 
 namespace TypedProg
 

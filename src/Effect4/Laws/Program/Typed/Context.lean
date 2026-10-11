@@ -145,4 +145,108 @@ theorem ambient_scoped_frame (root : ProgramSource) (w : World) (ty : EffTy)
       (.resume (.onExit false) next) :=
   .scopedResume next previous scope shape hook (fun _ _ ex exit => ⟨exit.1, by cases ex <;> exact restored⟩)
 
+/-- The shared output law weakens type columns and guaranteed rows without changing execution.
+Consumer: provider bodies and captured-context finalizers in the source denotation path. -/
+theorem ambientProg_widen (root : ProgramSource) {w : World} {available : Env.Requirement}
+    {before after : AmbientPosition} {code : RProgram}
+    (answer : Ty.subN before.1.answer after.1.answer = true)
+    (error : Ty.subN before.1.error after.1.error = true)
+    (success : Row.Subset after.2.1 before.2.1) (failure : Row.Subset after.2.2 before.2.2)
+    (typed : AmbientProg root w available before code) :
+    AmbientProg root w available after code := by
+  refine ProgramArrow.outputMap typed ?_ ?_
+  · intro world input exit payload
+    refine ⟨exitOk_widen answer error payload.1, ?_⟩
+    cases exit with
+    | success value => exact Row.subset_trans success payload.2
+    | failure cause => exact Row.subset_trans failure payload.2
+  · intro input bound
+    exact Row.subset_trans failure bound
+
+/-- The shared guarded composition carries actual completion rows into its saved callback.
+Consumer: context setter and restoring finalizer composition for provideContext. -/
+theorem ambient_guardBind (root : ProgramSource) {w : World} {available : Env.Requirement}
+    {mid result : AmbientPosition} {kind : GuardKind} {body : RProgram} {next : ExitV → RProgram}
+    (typed : AmbientProg root w available mid body)
+    (run : ∀ later, w.leHost later → ∀ exit, kind.hasExitArm exit = true →
+      AmbientExit later (ambientInput mid exit) mid exit →
+      AmbientProg root later (ambientInput mid exit) result (next exit))
+    (skip : ∀ later, w.leHost later → ∀ exit,
+      AmbientExit later (ambientInput mid exit) mid exit → kind.hasExitArm exit = false →
+      AmbientExit later (ambientInput mid exit) result exit)
+    (entry : Row.Subset result.2.2 available) :
+    AmbientProg root w available result ((guardR kind body).bind next) :=
+  ProgramArrow.guardBind typed (fun later ordered exit post => run later ordered exit post.1 post.2)
+    skip entry
+
+
+/-- The real restoring finalizer returns the saved body exit with its common service guarantee.
+Consumer: provideContext's compiled restoring region and the source denotation adapter. -/
+theorem ambient_restore_finalizer (root : ProgramSource) {w : World} (available guaranteed : Env.Requirement)
+    (previous : Ctx) (services : ServicesFit w previous.services)
+    (entry : Row.Subset guaranteed available) (restored : Row.Subset guaranteed previous.services.keysRow)
+    (ty : EffTy) (bodyExit : ExitV) (payload : ExitOk w ty bodyExit) :
+    AmbientProg root w available (ty, guaranteed, guaranteed)
+      (finalizerR bodyExit (fiberValR (.setContext previous) rfl)) := by
+  have cleanup := ambient_setContext_guarantees root w available guaranteed previous services entry restored
+  have work : ∀ originalExit, ExitOk w ty originalExit → AmbientProg root w available
+      (⟨.unit, ty.error, Env.Requirement.empty⟩, previous.services.keysRow, guaranteed)
+      (match originalExit with
+      | .success _ => fiberValR (.setContext previous) rfl
+      | .failure _ => (guardR .onFailure (fiberValR (.setContext previous) rfl)).bind fun
+          | .success value => .pure (.success value)
+          | .failure cause => .pure (Exit.restoreAfterFinalizer originalExit (.failure cause))) := by
+    intro originalExit originalPayload
+    cases originalExit with
+    | success value =>
+      exact ambientProg_widen root
+        (before := (EffTy.pure .unit, previous.services.keysRow, guaranteed))
+        (Ty.subN_refl _) (Bounds.subN_never _) (Row.subset_refl _) (Row.subset_refl _) cleanup
+    | failure cause =>
+      refine ambient_guardBind root cleanup (fun later ordered exit arm clean => ?_)
+        (fun later ordered exit clean absent => ?_) entry
+      · cases exit with
+        | success value => exact Bool.noConfusion arm
+        | failure cleanupCause =>
+          refine .pure ⟨?_, Row.subset_refl guaranteed⟩ (Row.subset_refl guaranteed)
+          exact exitOk_restore (strongExit_mono _ _ _ _ ordered originalPayload)
+            (exitOk_failure_of_errorN (Bounds.subN_never _) clean.1)
+      · cases exit with
+        | success value =>
+          exact ⟨exitOk_success_of_answerN (Ty.subN_refl _) clean.1, Row.subset_refl _⟩
+        | failure cleanupCause => exact Bool.noConfusion absent
+  unfold finalizerR
+  refine ambient_guardBind root (work bodyExit payload) (fun later ordered exit arm clean => ?_)
+    (fun later ordered exit clean absent => ?_) entry
+  · cases exit with
+    | success value =>
+      refine .finishFinalizer ⟨strongExit_mono _ _ _ _ ordered payload, ?_⟩ restored
+      cases bodyExit <;> exact restored
+    | failure cause => exact Bool.noConfusion arm
+  · cases exit with
+    | success value => exact Bool.noConfusion absent
+    | failure cause =>
+      exact ⟨exitOk_failure_of_errorN (Ty.subN_refl _) clean.1, Row.subset_refl guaranteed⟩
+
+/-- The existing onExit region runs the actual captured-context restoring finalizer.
+Consumer: provideContext's bodyThen region and the source admission-to-execution adapter. -/
+theorem ambient_onExit_restore (root : ProgramSource) {w : World}
+    {available guaranteed : Env.Requirement} {ty : EffTy} {body : RProgram}
+    (previous : Ctx) (services : ServicesFit w previous.services)
+    (restored : Row.Subset guaranteed previous.services.keysRow)
+    (typed : AmbientProg root w available (ty, guaranteed, guaranteed) body) :
+    AmbientProg root w available (ty, guaranteed, guaranteed)
+      (onExitR body fun _ => fiberValR (.setContext previous) rfl) := by
+  unfold onExitR
+  refine ambient_guardBind root typed (fun later ordered exit _ payload => ?_)
+    (fun _ _ exit _ absent => by cases exit <;> exact Bool.noConfusion absent) (ambient_entry typed)
+  have selected : ambientInput (ty, guaranteed, guaranteed) exit = guaranteed := by
+    cases exit <;> rfl
+  rw [selected]
+  have members : ServicesFit later previous.services :=
+    servicesFit_map ordered.1.2.1 ordered.1.2.2.1 ordered.1.2.2.2.1 ordered.2 ordered.1.1.2
+      (serviceTy_of_le ordered.1) services
+  exact ambient_restore_finalizer root guaranteed guaranteed previous members
+    (Row.subset_refl _) restored ty exit payload.1
+
 end Effect4.Program.Typed
