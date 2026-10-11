@@ -1187,6 +1187,15 @@ theorem raceAll_frame {root : ProgramSource} {w : World} {outer : EffTy} {entran
     (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
   exact ⟨cert, answerFrame_typed (fun _ _ _ hex => hex) typed⟩
 
+/-- First-exit races save the same typed answer frame for the accepted exit. -/
+theorem raceAllFirst_frame {root : ProgramSource} {w : World} {outer : EffTy} {entrants : List Point} {site : List Nat}
+    {next : ExitV → RProgram} (h : TypedProg root w outer (.vis (.inr (.raceAllFirst entrants site)) next)) :
+    ∃ cert : EffTy, FrameAccepts (TypedProg root) ExitOk (frameProtocols root) w cert outer
+      (.answer next) := by
+  obtain ⟨cert, _, typed⟩ := TypedProg.fiber_inv h (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  exact ⟨cert, answerFrame_typed (fun _ _ _ hex => hex) typed⟩
+
 theorem raceRegister_frame {root : ProgramSource} {w : World} {outer : EffTy} {race : Nat}
     {next : ExitV → RProgram} (h : TypedProg root w outer (.vis (.inr (.raceRegister race)) next)) :
     ∃ cert : EffTy, FrameAccepts (TypedProg root) ExitOk (frameProtocols root) w cert outer

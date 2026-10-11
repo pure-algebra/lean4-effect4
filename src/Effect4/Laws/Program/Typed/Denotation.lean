@@ -104,6 +104,11 @@ private theorem rounds_raceAll : ∀ (xs : List Nat) (es : Effs NativeOp),
   | [], _ => rfl
   | _ :: xs, es => rounds_raceAll xs (Effs.expandRound orig es)
 
+private theorem rounds_raceAllFirst : ∀ (xs : List Nat) (es : Effs NativeOp),
+    rounds orig xs (.withFiber (.raceAllFirst es)) = .withFiber (.raceAllFirst (effsRounds orig xs es))
+  | [], _ => rfl
+  | _ :: xs, es => rounds_raceAllFirst xs (Effs.expandRound orig es)
+
 /-- The rounds on an invocation's spine (decisions row 340), as on a race's. A step of
 `Eff.expandIn_invoke`. -/
 private theorem rounds_invoke (k : Nat) (r : Term) : ∀ (xs : List Nat) (es : Effs NativeOp),
@@ -282,6 +287,13 @@ private theorem Eff.expandIn_raceAll (es : Effs NativeOp) :
       .withFiber (.raceAll
         (effsRounds (Node.eff root) (List.range ((root.refSites []).length + 1)) es)) :=
   rounds_raceAll _ _ es
+
+/-- The first-exit expansion serves `raceAllFirst_arm`. -/
+private theorem Eff.expandIn_raceAllFirst (es : Effs NativeOp) :
+    Eff.expandIn root (.withFiber (.raceAllFirst es)) =
+      .withFiber (.raceAllFirst
+        (effsRounds (Node.eff root) (List.range ((root.refSites []).length + 1)) es)) :=
+  rounds_raceAllFirst _ _ es
 
 /-- An invocation's expansion is the invocation of its spine's rounds (decisions row 340; private
 like `Eff.expandIn_raceAll`). A step of `invoke_arm`. -/
@@ -2545,6 +2557,33 @@ theorem raceAll_arm {es : Effs NativeOp}
     (fun _ _ _ h => nomatch h) ⟨A, E, ty.requires⟩ hpre
     (fun w' _ ans post => .pure (exitOk_widen hA hE post))
 
+/-- First-exit entrant typing serves `withFiber_arm` at the same checked joined columns. -/
+theorem raceAllFirst_arm {es : Effs NativeOp}
+    (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber (.raceAllFirst es))))
+    (hpt : PointTyped root w p ty) : TypedProg root w ty (denoteAction root.program p) := by
+  obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
+  rw [Eff.expandIn_raceAllFirst] at hcheck
+  have hc := Checker.inv_action_raceAllFirst _ _ _ _ _ (Checker.inv_withFiber _ _ _ _ _ hcheck)
+  obtain ⟨A, E, hpre, hA, hE⟩ := raceEntrants_typed es ((p.child 0).child 0) ty
+    (fun x hx => scopeParams_prefix hat (fun _ _ _ _ h => nomatch h)
+      (((List.prefix_append _ _).trans (List.prefix_append _ _)).trans hx))
+    (node_at_child (node_at_child hat rfl) rfl) hc henv hview hstack
+  obtain ⟨ents, hact⟩ : ∃ ents, actionAt root.program p =
+      some (WithFiberAction.raceAllFirst ents (some ((p.child 0).child 0).path)) := by
+    unfold actionAt
+    rw [hat]
+    exact ⟨_, rfl⟩
+  rw [denoteAction_of _ _ hact]
+  have hrace : racePoints root.program p = entrantPoints es ((p.child 0).child 0) := by
+    unfold racePoints
+    rw [hat]
+  show TypedProg root w ty (.vis (.inr (.raceAllFirst (racePoints root.program p)
+    (some ((p.child 0).child 0).path))) Effects.Program.pure)
+  rw [hrace]
+  exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) ⟨A, E, ty.requires⟩ hpre
+    (fun w' _ ans post => .pure (exitOk_widen hA hE post))
+
 /-- **`setContext`**: the context term a context whose services fit (`fits_context_inv`), the
 row's pre; it answers `unit`. -/
 theorem setContext_arm {context : Term}
@@ -2670,6 +2709,7 @@ theorem withFiber_arm {a : ActionTerm NativeOp} (hfuel : p.fuel ≠ 0)
   | snapshotChildren => exact snapshotChildren_arm hat hpt
   | awaitNewChildren snapshot => exact awaitNewChildren_arm hat hpt
   | raceAll es => exact raceAll_arm hat hpt
+  | raceAllFirst es => exact raceAllFirst_arm hat hpt
   | setContext context => exact setContext_arm hat hpt
   | getContext => exact getContext_arm hat hpt
   | getId => exact getId_arm hat hpt
