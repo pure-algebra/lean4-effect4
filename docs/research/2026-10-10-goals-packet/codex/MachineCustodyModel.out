@@ -1,0 +1,15 @@
+load worker1: starts=0, custody=0, registrations=0
+load worker2: starts=0, custody=0, registrations=0
+parked worker1: starts=0, custody=1, registrations=1
+parked worker2: starts=0, custody=1, registrations=1
+cancel-cut-1 worker1: starts=0, custody=1, registrations=1
+cancel-cut-1 worker2: starts=0, custody=1, registrations=1
+cancel-cut-8 worker1: starts=0, custody=1, registrations=1
+cancel-cut-8 worker2: starts=0, custody=1, registrations=1
+cancel-cut-24 worker1: starts=0, custody=1, registrations=1
+cancel-cut-24 worker2: starts=1, custody=0, registrations=1
+cancel-cut-64 worker1: starts=1, custody=0, registrations=1
+cancel-cut-64 worker2: starts=1, custody=0, registrations=1
+cancel-cut-1000 worker1: starts=1, custody=0, registrations=1
+cancel-cut-1000 worker2: starts=1, custody=0, registrations=1
+#axiom_audit: 336 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals

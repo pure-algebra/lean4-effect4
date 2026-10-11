@@ -1,6 +1,7 @@
 import Test.Dogfood.Scenario.Programs
 import Test.Dogfood.Scenario.Frame
-import Effect4.Laws.Program.ReleaseCustody
+import Effect4.Laws.Program.ReleaseCustody.Control
+import Effect4.Laws.Program.Guard.Decision
 
 /-!
 # Workers cleanup assertions at every command boundary
@@ -135,6 +136,68 @@ theorem release_command (b : Api.Built) (m : NativeMachine) (id : FiberId)
   intro i hi
   exact ReleaseCustody.release_loop_debit b.program b.table m id f yielding rest
     (acquirePath i) c exit found current interrupt override budget (available i hi)
+
+/-- The actual workers load satisfies the concrete cleanup-credit assertion.
+Consumer: the load clause of the command custody proof for `releases_step`. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem load_custody (b : Api.Built) (cf : Nat) :
+    ∀ i ∈ [1, 2], ReleaseCustody.Control.Funded (acquirePath i) (Api.load b.program cf) [] := by
+  intro i _
+  exact ReleaseCustody.Control.load_funded (acquirePath i) b.program cf
+
+/-- Registration preserves cleanup custody on the actual selected worker command.
+Consumer: the registration frame clause of `releases_step`.
+The pending command suffix and all other fibers remain in the concrete assertion. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem registration_custody_command (b : Api.Built) (cf : Nat) (m : NativeMachine)
+    (id : FiberId) (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx)
+    (yielding : Bool) (rest : List (Cmd EffName EffThunk Val Err Defect FiberId Ann))
+    (scope : Nat) (a : Val) (fin : FinName) (held : Holds b cf m)
+    (funded : ∀ i ∈ [1, 2], ReleaseCustody.Control.Funded (acquirePath i) m (.loop id yielding :: rest))
+    (found : m.fiber? id = some f)
+    (current : f.frame.current = .onSuccess (.sync (.op (.scopeAdd scope fin))) (.afterScopeAdd a fin))
+    (interrupt : f.frame.deferredInterrupt = false) (override : f.yieldOverride = none)
+    (budget : f.currentOpCount + 1 < f.maxOpsBeforeYield) :
+    ∀ i ∈ [1, 2], ReleaseCustody.Control.Funded (acquirePath i)
+      (driveStep (evaluator := evaluatorFor b.program b.table) (interpOf b.program b.table) m
+        (.loop id yielding) rest).1
+      (driveStep (evaluator := evaluatorFor b.program b.table) (interpOf b.program b.table) m
+        (.loop id yielding) rest).2 := by
+  intro i hi
+  have unique := (Guard.guardState_reachable b.program b.table cf m held.history.reachable).fiberIds
+  exact ReleaseCustody.Control.registration_loop_funded b.program b.table m id f yielding rest
+    (acquirePath i) scope a fin unique (funded i hi) found current interrupt override budget
+
+/-- Starting a release preserves concrete custody and supplies the original release-debit assertion.
+Consumer: the counted release-start command clause of `releases_step`.
+Its credit is read from the actual configuration, without a separate available-credit premise. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem release_custody_command (b : Api.Built) (cf : Nat) (m : NativeMachine)
+    (id : FiberId) (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx)
+    (yielding : Bool) (rest : List (Cmd EffName EffThunk Val Err Defect FiberId Ann))
+    (c : Capture) (exit : ExitV) (held : Holds b cf m)
+    (funded : ∀ i ∈ [1, 2], ReleaseCustody.Control.Funded (acquirePath i) m (.loop id yielding :: rest))
+    (found : m.fiber? id = some f)
+    (current : f.frame.current = suspendBodyAt b.program (.store (.foreign c exit)))
+    (interrupt : f.frame.deferredInterrupt = false) (override : f.yieldOverride = none)
+    (budget : f.currentOpCount + 1 < f.maxOpsBeforeYield) :
+    (∀ i ∈ [1, 2], ReleaseCustody.Control.Funded (acquirePath i)
+      (driveStep (evaluator := evaluatorFor b.program b.table) (interpOf b.program b.table) m
+        (.loop id yielding) rest).1
+      (driveStep (evaluator := evaluatorFor b.program b.table) (interpOf b.program b.table) m
+        (.loop id yielding) rest).2) ∧
+    ReleaseDebits (driveStep (evaluator := evaluatorFor b.program b.table) (interpOf b.program b.table) m
+      (.loop id yielding) rest).1 := by
+  have unique := (Guard.guardState_reachable b.program b.table cf m held.history.reachable).fiberIds
+  have allFunded : ∀ i ∈ [1, 2], ReleaseCustody.Control.Funded (acquirePath i)
+      (driveStep (evaluator := evaluatorFor b.program b.table) (interpOf b.program b.table) m
+        (.loop id yielding) rest).1
+      (driveStep (evaluator := evaluatorFor b.program b.table) (interpOf b.program b.table) m
+        (.loop id yielding) rest).2 := by
+    intro i hi
+    exact ReleaseCustody.Control.release_loop_funded b.program b.table m id f yielding rest
+      (acquirePath i) c exit unique (funded i hi) found current interrupt override budget
+  exact ⟨allFunded, fun i hi => ReleaseCustody.Control.Funded.read (allFunded i hi)⟩
 
 /-- Registration preservation obligation of `releases_once`.
 Reach: actual crew histories, all budgets, controls and admitted host answers.

@@ -179,6 +179,54 @@ theorem scope_add_closed (root : NativeEff) (table : RowTable) (m : NativeMachin
   rw [ControlSteps.native_sync_op root table m f yielding (.scopeAdd scope fin) _ _ current answer]
   exact ⟨rfl, rfl, after_add_exit_credit q fin exit⟩
 
+/-- The actual native close iterator transfers its head credit to the selected finalizer,
+retains its tail in the pushed iterator, and emits no release-start event yet.
+Consumer: the close-iterator command custody clause of `Workers.Assertions.releases_step`. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem close_seq_command (root : NativeEff) (table : RowTable) (m : NativeMachine)
+    (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) (yielding : Bool)
+    (q : List Nat) (fin : FinName) (rest : List FinName) (exit : ExitV)
+    (captured : List (Reason Err Defect FiberId Ann)) (cursor : Val)
+    (current : f.frame.current = .iterator (.store (.closeSeq (fin :: rest) exit captured)) cursor) :
+    (evaluateNative root m f yielding table).fiber.frame.current = .exitFrame (embed (finProgram fin exit)) ∧
+    (evaluateNative root m f yielding table).fiber.frame.stack =
+      .iterator (.store (.closeSeq rest exit (captured ++ reasonsOfVal cursor))) cursor :: f.frame.stack ∧
+    (evaluateNative root m f yielding table).machine.trace.countP (ReleaseTrace.releaseAt q) =
+      m.trace.countP (ReleaseTrace.releaseAt q) ∧
+    credit q fin + orderCredits q rest = orderCredits q (fin :: rest) := by
+  have next : ((interpAt root m.completedExits table).toPrimInterp.iterNext
+      (.store (.closeSeq (fin :: rest) exit captured)) cursor).snd =
+      .resume (.exitFrame (embed (finProgram fin exit)))
+        (.store (.closeSeq rest exit (captured ++ reasonsOfVal cursor))) := rfl
+  have arm := Prim.armA_iterator_resume (interpAt root m.completedExits table).toPrimInterp
+    (.store (.closeSeq (fin :: rest) exit captured)) cursor cursor
+    (.exitFrame (embed (finProgram fin exit)))
+    (.store (.closeSeq rest exit (captured ++ reasonsOfVal cursor))) none next
+  have frame : f.frame.step (interpAt root m.completedExits table).toPrimInterp =
+      (.running { f.frame with
+        current := .exitFrame (embed (finProgram fin exit))
+        stack := .iterator (.store (.closeSeq rest exit (captured ++ reasonsOfVal cursor))) cursor :: f.frame.stack },
+      [.pushed (.iterator (.store (.closeSeq rest exit (captured ++ reasonsOfVal cursor))) cursor)]) := by
+    simp only [FrameFiber.step, current, arm]
+    rfl
+  have park : (interpAt root m.completedExits table).parkOf
+      (.iterator (.store (.closeSeq (fin :: rest) exit captured)) cursor) = none := rfl
+  have evaluated : evaluateNative root m f yielding table =
+      ⟨m.emit [.frame f.id (.pushed (.iterator
+          (.store (.closeSeq rest exit (captured ++ reasonsOfVal cursor))) cursor))],
+       { f with frame := { f.frame with
+         current := .exitFrame (embed (finProgram fin exit))
+         stack := .iterator (.store (.closeSeq rest exit (captured ++ reasonsOfVal cursor))) cursor :: f.frame.stack } },
+       yielding, .continue_, []⟩ := by
+    simp only [evaluateNative, evaluatePrim, current, park, evaluatePrim.stepFrame, frame]
+    rfl
+  rw [evaluated]
+  refine ⟨rfl, rfl, ?_, ?_⟩
+  · rw [RunMachine.emit_trace, List.countP_append]
+    change m.trace.countP (ReleaseTrace.releaseAt q) + 0 = _
+    exact Nat.add_zero _
+  · simp only [orderCredits, List.countP_cons, credit, Nat.add_comm]
+
 /-- The actual release-start command pushes one source-identified frame on the arbitrary fiber.
 Consumer: `release_start_count`, then the frame-push custody clause of `releases_step`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
