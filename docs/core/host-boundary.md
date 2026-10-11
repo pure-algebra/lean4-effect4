@@ -261,7 +261,7 @@ external allocation.
   handle-free (`valOfErr_keys`, `causeImage_handleFree`).
 - **Reserved defects are refused (row 191).** A failure whose cause dies with `badName` or
   `notImplemented` is refused before its error column is read (`reservedDie`, `Program/Typed.lean`),
-  on the decision path and in the row's own admission (`externalAdmits`) alike. Every other defect and every interrupt stays
+  on the decision path and in `externalAdmits` alike. Every other defect and every interrupt stays
   admitted at every error column. An accepted failure therefore satisfies the typed judgment's
   defect exclusion (`preflight_failure_noShapeDefect`, `Laws/Api/HostSession.lean`).
 - **One test fixture falls under the rule:** the row `"cell"` of `Test/Api/ExternalContract.lean`,
