@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.ReleaseCustody.Lift
 import Effect4.Laws.Program.ReleaseCustody.ScopeRows
+import Effect4.Laws.Program.ReleaseCustody.OuterFrames
 import Effect4.Laws.Program.ReleaseCustody.NativeAccounting
 import Effect4.Laws.Program.ReleaseCustody.NativeScopeDebit
 import Effect4.Laws.Program.ReleaseCustody.CommandFunding
