@@ -32,20 +32,12 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Machine.StackLedger Effect4
 open Effect4.Machine.ForkLedger.Invariant Effect4.Program.Guard
 
 /-- **The finalizer ledger** of the chosen names. -/
-def finalizer (choose : EffName → Bool) : NLedger where
-  produced event := if registered choose event then 1 else 0
-  consumed event := if started choose event then 1 else 0
-  program name := if choose name then 1 else 0
-  stack := FinalizerCredits.stack choose
-  empty := rfl
+def finalizer (choose : EffName → Bool) : NLedger := FinalizerCredits.ledger choose
 
 /-- A sum of indicators is a count. -/
 theorem indicator_sum {γ : Type _} (p : γ → Bool) :
-    ∀ (items : List γ), (items.map fun x => if p x then 1 else 0).sum = items.countP p
-  | [] => rfl
-  | x :: rest => by
-    rw [List.map_cons, List.sum_cons, indicator_sum p rest, List.countP_cons]
-    exact Nat.add_comm _ _
+    ∀ (items : List γ), (items.map fun x => if p x then 1 else 0).sum = items.countP p :=
+  FinalizerCredits.indicator_sum p
 
 /-- What a run event consumes is its finalizer-start indicator. -/
 theorem eventConsumed_eq (choose : EffName → Bool) :
@@ -60,39 +52,27 @@ theorem eventProduced_eq (choose : EffName → Bool) :
   cases e <;> rfl
 
 theorem consumedIn_eq (choose : EffName → Bool) (trace : List (RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx)) :
-    (finalizer choose).consumedIn trace = trace.countP (runStarted choose) := by
-  unfold consumedIn
-  rw [eventConsumed_eq]
-  exact indicator_sum _ trace
+    (finalizer choose).consumedIn trace = trace.countP (runStarted choose) :=
+  FinalizerCredits.ledger_consumed choose trace
 
 theorem producedIn_eq (choose : EffName → Bool) (trace : List (RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx)) :
-    (finalizer choose).producedIn trace = trace.countP (runRegistered choose) := by
-  unfold producedIn
-  rw [eventProduced_eq]
-  exact indicator_sum _ trace
+    (finalizer choose).producedIn trace = trace.countP (runRegistered choose) :=
+  FinalizerCredits.ledger_produced choose trace
 
 /-- **The place invariants agree.** -/
 theorem funded_iff (choose : EffName → Bool) (m : NativeMachine) :
-    FinalizerCredits.Funded choose m ↔ (finalizer choose).Funded 0 m := by
-  unfold FinalizerCredits.Funded StackLedger.Funded
-  rw [consumedIn_eq, producedIn_eq, Nat.add_zero]
-  exact Iff.rfl
+    FinalizerCredits.Funded choose m ↔ (finalizer choose).Funded 0 m :=
+  (FinalizerCredits.ledger_funded choose m).symm
 
 /-- **An evaluation's debit agrees.** -/
 theorem iterKept (choose : EffName → Bool) (m : NativeMachine) (f : NFiber) (next : Native.NIter)
-    (kept : FinalizerCredits.IterKept choose m f next) : (finalizer choose).IterKept m f next := by
-  obtain ⟨total, at_, key, debit⟩ := kept
-  refine ⟨total, at_, key, ?_⟩
-  unfold StackLedger.IterDebit
-  rw [consumedIn_eq, consumedIn_eq, producedIn_eq, producedIn_eq]
-  exact debit
+    (kept : FinalizerCredits.IterKept choose m f next) : (finalizer choose).IterKept m f next :=
+  (FinalizerCredits.ledger_iterKept choose m f next).mpr kept
 
 /-- **The finalizer ledger supplies the run law's premises.** -/
 theorem kept (choose : EffName → Bool) (p : NativeEff) (table : RowTable) :
-    (finalizer choose).Kept p table where
-  evaluate m f y ok := iterKept choose m f _ (FinalizerTransfer.evaluate_kept choose p table m f y ok)
-  cancel _ _ := Nat.le_refl _
-  iterator _ _ _ := Nat.le_refl _
+    (finalizer choose).Kept p table :=
+  FinalizerTransfer.ledger_kept choose p table
 
 /-- **The run law's instance**: finalizer custody at every reachable machine, re-derived through
 `StackLedger.funded_reachable` with no command case of its own. -/
