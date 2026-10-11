@@ -1,0 +1,20 @@
+{
+  "base": "f00008eeaef00b67fe93cfd0327754c9f42694ee",
+  "reviewed": "9e818b39596971d62b89299ca9ccc4e96ad8ea07",
+  "changed_library_paths": [
+    "src/Effect4/Laws/Program/MeaningSound.lean",
+    "src/Effect4/Laws/Program/Typed/Adequacy.lean",
+    "src/Effect4/Laws/Program/Typed/Admission.lean",
+    "src/Effect4/Laws/Program/Typed/Assembly.lean",
+    "src/Effect4/Laws/Program/Typed/Body.lean",
+    "src/Effect4/Laws/Program/Typed/Commands/Bookkeeping.lean",
+    "src/Effect4/Laws/Program/Typed/Commands/Clauses/Gen.lean",
+    "src/Effect4/Laws/Program/Typed/Commands/Clauses/Loop.lean",
+    "src/Effect4/Laws/Program/Typed/Denotation.lean",
+    "src/Effect4/Laws/Program/Typed/LayerArm.lean",
+    "src/Effect4/Laws/Program/Typed/Mask.lean",
+    "src/Effect4/Laws/Program/Typed/Residual.lean",
+    "src/Effect4/Laws/Program/Typed/Scope.lean"
+  ],
+  "changed_non_law_library_paths": []
+}

@@ -1,0 +1,16 @@
+$ lake build Effect4.Laws.Program.MeaningSound Effect4.Laws.Program.Typed.Adequacy Effect4.Laws.Program.Typed.Admission Effect4.Laws.Program.Typed.Assembly Effect4.Laws.Program.Typed.Body Effect4.Laws.Program.Typed.Commands.Bookkeeping Effect4.Laws.Program.Typed.Commands.Clauses.Gen Effect4.Laws.Program.Typed.Commands.Clauses.Loop Effect4.Laws.Program.Typed.Denotation Effect4.Laws.Program.Typed.LayerArm Effect4.Laws.Program.Typed.Mask Effect4.Laws.Program.Typed.Residual Effect4.Laws.Program.Typed.Scope Effect4.Laws.Program.Typed.Commands.Clauses.All ProofGraph.AxiomAudit ProofGraph.Plan
+✔ [518/534] Built Effect4.Laws.Program.Typed.Commands.Clauses.Answer (4.6s)
+✔ [519/534] Built Effect4.Laws.Program.Typed.Commands.Clauses.Store (4.6s)
+✔ [523/534] Built Effect4.Laws.Program.Typed.Commands.Clauses.Park (5.9s)
+✔ [525/538] Built Effect4.Laws.Program.Typed.Commands.Clauses.StoreScope (1.7s)
+✔ [526/538] Built Effect4.Laws.Program.Typed.Edits (1.8s)
+✔ [528/538] Built Effect4.Laws.Program.Typed.Commands.Clauses.StoreRef (1.4s)
+✔ [529/538] Built Effect4.Laws.Program.Typed.Commands.Clauses.Spawn (2.1s)
+✔ [532/538] Built Effect4.Laws.Program.Typed.Commands.Clauses.StoreDeferred (1.6s)
+✔ [535/538] Built Effect4.Laws.Program.Typed.Commands.Clauses.Async (2.8s)
+✔ [536/538] Built Effect4.Laws.Program.Typed.Commands.Clauses.Command (2.0s)
+✔ [537/538] Built Effect4.Laws.Program.Typed.Commands.Clauses.Close (1.5s)
+✔ [538/538] Built Effect4.Laws.Program.Typed.Commands.Clauses.All (1.3s)
+Build completed successfully (538 jobs).
+
+Exit: 0
