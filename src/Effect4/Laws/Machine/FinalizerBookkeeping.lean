@@ -1,7 +1,5 @@
 import Effect4.Laws.Machine.FinalizerRun
-import Effect4.Laws.Machine.ControlWeights
-import Effect4.Laws.Machine.Keeps
-import Effect4.Laws.Machine.ForkLedgerInvariant
+import Effect4.Laws.Machine.Ledger
 
 /-!
 # Finalizer credits through machine bookkeeping
@@ -19,6 +17,53 @@ namespace Effect4.Machine.FinalizerCredits
 universe u v
 variable {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
 
+/-- The finalizer count is an instance of the shared saved-stack ledger. -/
+def ledger (choose : ν → Bool) : StackLedger ν σ β ε δ ι α where
+  produced event := if registered choose event then 1 else 0
+  consumed event := if started choose event then 1 else 0
+  program name := if choose name then 1 else 0
+  stack := stack choose
+  empty := rfl
+
+/-- The existing count is the sum of its event indicators. -/
+theorem indicator_sum {γ : Type _} (p : γ → Bool) :
+    ∀ (items : List γ), (items.map fun x => if p x then 1 else 0).sum = items.countP p
+  | [] => rfl
+  | x :: rest => by
+    rw [List.map_cons, List.sum_cons, indicator_sum p rest, List.countP_cons]
+    exact Nat.add_comm _ _
+
+/-- The shared consumed sum is the existing finalizer-start count. -/
+theorem ledger_consumed (choose : ν → Bool) (trace : List (RunEvent ν σ β ε δ ι α χ)) :
+    (ledger choose).consumedIn trace = trace.countP (runStarted choose) := by
+  have weight : (ledger choose).eventConsumed (χ := χ) = fun e : RunEvent ν σ β ε δ ι α χ => if runStarted choose e then 1 else 0 := by
+    funext e
+    cases e <;> rfl
+  rw [StackLedger.consumedIn, weight]
+  exact indicator_sum _ trace
+
+/-- The shared produced sum is the existing finalizer-registration count. -/
+theorem ledger_produced (choose : ν → Bool) (trace : List (RunEvent ν σ β ε δ ι α χ)) :
+    (ledger choose).producedIn trace = trace.countP (runRegistered choose) := by
+  have weight : (ledger choose).eventProduced (χ := χ) = fun e : RunEvent ν σ β ε δ ι α χ => if runRegistered choose e then 1 else 0 := by
+    funext e
+    cases e <;> rfl
+  rw [StackLedger.producedIn, weight]
+  exact indicator_sum _ trace
+
+/-- The complete ledger and the existing credit bound have the same reading. -/
+theorem ledger_funded (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ St) :
+    (ledger choose).Funded 0 m ↔ Funded choose m := by
+  simp only [StackLedger.Funded, ledger_consumed, ledger_produced, Nat.add_zero]
+  exact Iff.rfl
+
+/-- The shared local debit is exactly the existing local debit. -/
+theorem ledger_debit (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ St)
+    (f : RunFiber ν σ β ε δ ι α χ) (next : Iter ν σ β ε δ ι α χ St) :
+    (ledger choose).IterDebit m f next ↔ IterDebit choose m f next := by
+  simp only [StackLedger.IterDebit, ledger_consumed, ledger_produced]
+  exact Iff.rfl
+
 /-- All outstanding frame credits in the actual fiber table. -/
 def total (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ St) : Nat :=
   (m.fibers.map (fiberCredits choose)).sum
@@ -33,6 +78,12 @@ def Same (choose : ν → Bool) (m n : RunMachine ν σ β ε δ ι α χ St) : 
   (∀ id, atFiber choose n id = atFiber choose m id) ∧
   n.trace.countP (runStarted choose) = m.trace.countP (runStarted choose) ∧
   n.trace.countP (runRegistered choose) = m.trace.countP (runRegistered choose)
+
+/-- The shared bookkeeping projection agrees with the existing one. -/
+theorem ledger_same (choose : ν → Bool) (m n : RunMachine ν σ β ε δ ι α χ St) :
+    (ledger choose).Same m n ↔ Same choose m n := by
+  simp only [StackLedger.Same, ledger_consumed, ledger_produced]
+  exact Iff.rfl
 
 theorem Same.refl (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ St) : Same choose m m :=
   ⟨rfl, fun _ => rfl, rfl, rfl⟩
@@ -54,31 +105,17 @@ theorem same_emit (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ
     (events : List (RunEvent ν σ β ε δ ι α χ))
     (starts : events.countP (runStarted choose) = 0)
     (pushes : events.countP (runRegistered choose) = 0) : Same choose m (m.emit events) := by
-  refine ⟨rfl, fun _ => rfl, ?_, ?_⟩
-  · rw [RunMachine.emit_trace, List.countP_append, starts, Nat.add_zero]
-  · rw [RunMachine.emit_trace, List.countP_append, pushes, Nat.add_zero]
+  apply (ledger_same choose _ _).mp
+  exact (ledger choose).same_emit m events
+    (by rwa [ledger_consumed]) (by rwa [ledger_produced])
 
 /-- Replacing a looked-up fiber by one with the same credits keeps the complete projection. -/
 theorem same_update (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ St)
     (old next : RunFiber ν σ β ε δ ι α χ)
     (unique : (m.fibers.map RunFiber.id).Nodup) (found : m.fiber? old.id = some old)
     (sameId : next.id = old.id) (sameCredit : fiberCredits choose next = fiberCredits choose old) :
-    Same choose m (m.update next) := by
-  have member := RunMachine.mem_of_fiber? found
-  have changed := ControlWeights.replace_sum RunFiber.id (fiberCredits choose)
-    old next sameId m.fibers unique member
-  refine ⟨?_, ?_, rfl, rfl⟩
-  · change ((m.fibers.map fun f => if f.id = next.id then next else f).map (fiberCredits choose)).sum = _
-    rw [sameCredit] at changed
-    exact Nat.add_right_cancel changed
-  · intro id
-    by_cases equal : id = next.id
-    · subst id
-      unfold atFiber
-      rw [RunMachine.fiber?_update_self next m ⟨old, member, sameId.symm⟩, sameId, found]
-      exact sameCredit
-    · unfold atFiber
-      rw [RunMachine.fiber?_update_other next m id equal]
+    Same choose m (m.update next) :=
+  (ledger_same choose _ _).mp ((ledger choose).same_update m old next unique found sameId sameCredit)
 
 /-- A metadata edit of a looked-up fiber keeps its credits. -/
 theorem same_modify (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ St)
@@ -86,101 +123,49 @@ theorem same_modify (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α 
     (edit : RunFiber ν σ β ε δ ι α χ → RunFiber ν σ β ε δ ι α χ)
     (ids : ∀ f, (edit f).id = f.id)
     (credits : ∀ f, fiberCredits choose (edit f) = fiberCredits choose f) :
-    Same choose m (m.modify id edit) := by
-  unfold RunMachine.modify
-  split
-  · exact .refl choose m
-  · rename_i old found
-    apply same_update choose m old (edit old) unique
-    · simpa only [RunMachine.id_of_fiber? found] using found
-    · exact ids old
-    · exact credits old
+    Same choose m (m.modify id edit) :=
+  (ledger_same choose _ _).mp ((ledger choose).same_modify m unique id edit ids credits)
 
 /-- A pointwise metadata edit retains both the total and each lookup's credits. -/
 theorem same_map (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ St)
     (edit : RunFiber ν σ β ε δ ι α χ → RunFiber ν σ β ε δ ι α χ)
     (ids : ∀ f, (edit f).id = f.id)
     (credits : ∀ f, fiberCredits choose (edit f) = fiberCredits choose f) :
-    Same choose m { m with fibers := m.fibers.map edit } := by
-  refine ⟨?_, ?_, rfl, rfl⟩
-  · simp only [total, List.map_map, Function.comp_def, credits]
-  · intro id
-    unfold atFiber RunMachine.fiber?
-    rw [List.find?_map]
-    have predicate : ((fun f : RunFiber ν σ β ε δ ι α χ => decide (f.id = id)) ∘ edit) =
-        (fun f => decide (f.id = id)) := by
-      funext f
-      simp only [Function.comp_def, ids]
-    rw [predicate]
-    cases m.fibers.find? (fun f => decide (f.id = id)) with
-    | none => rfl
-    | some f => exact credits f
+    Same choose m { m with fibers := m.fibers.map edit } :=
+  (ledger_same choose _ _).mp ((ledger choose).same_map m edit ids credits)
 
 /-- An empty newborn stack contributes zero, at every lookup and to the total. -/
 theorem same_append_empty (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ St)
     (child : RunFiber ν σ β ε δ ι α χ) (empty : fiberCredits choose child = 0) :
-    Same choose m { m with fibers := m.fibers ++ [child] } := by
-  refine ⟨?_, ?_, rfl, rfl⟩
-  · simp only [total, List.map_append, List.map_cons, List.map_nil, List.sum_append,
-      List.sum_cons, List.sum_nil, empty, Nat.add_zero]
-  · intro id
-    unfold atFiber RunMachine.fiber?
-    rw [List.find?_append]
-    cases found : m.fibers.find? (fun f => decide (f.id = id)) with
-    | some f => rfl
-    | none =>
-      simp only [Option.none_or, List.find?_cons, List.find?_nil]
-      split
-      · exact empty
-      · rfl
-
+    Same choose m { m with fibers := m.fibers ++ [child] } :=
+  (ledger_same choose _ _).mp ((ledger choose).same_append_empty m child empty)
 
 /-- The spawn appends an empty frame stack and records no finalizer event. -/
 theorem same_spawn (choose : ν → Bool) (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (parent : RunFiber ν σ β ε δ ι α χ)
     (program : Prim ν σ β ε δ ι α) (options : Supervision.ForkOptions) (site : List Nat) :
-    Same choose m (spawn interp m parent program options site).1 := by
-  have born := same_append_empty choose m
-    (RunFiber.make (ν := ν) (σ := σ) (β := β) (ε := ε) (δ := δ) (ι := ι) (α := α)
-      ⟨m.nextId⟩ program
-      (match options.maskMode with
-       | .interruptible => true | .uninterruptible => false | .inherit => parent.frame.interruptible)
-      (interp.budgetOf parent.context) parent.context) rfl
-  exact born.trans (same_emit choose _ [.forked parent.id ⟨m.nextId⟩ options.daemon] rfl rfl)
+    Same choose m (spawn interp m parent program options site).1 :=
+  (ledger_same choose _ _).mp ((ledger choose).same_spawn interp m parent program options site)
 
 /-- Starting a child only changes dispatcher metadata and records a scheduling event. -/
 theorem same_start (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ St)
     (parent : RunFiber ν σ β ε δ ι α χ) (child : FiberId) (immediately : Bool) :
-    Same choose m (start m parent child immediately).1 := by
-  cases immediately
-  · exact same_emit choose m [.scheduledTask parent.id 0 (.start child)] rfl rfl
-  · exact .refl choose m
+    Same choose m (start m parent child immediately).1 :=
+  (ledger_same choose _ _).mp ((ledger choose).same_start m parent child immediately)
 
 /-- Every parallel finalizer child starts with an empty frame stack. -/
 theorem same_forkFinalizers (choose : ν → Bool) (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (parent : RunFiber ν σ β ε δ ι α χ)
     (programs : List (Prim ν σ β ε δ ι α)) :
-    Same choose m (forkFinalizers interp m parent programs).1 := by
-  induction programs generalizing m with
-  | nil => exact .refl choose m
-  | cons program rest ih =>
-    exact (same_spawn choose interp m parent program ⟨true, true, .inherit⟩ []).trans (ih _)
+    Same choose m (forkFinalizers interp m parent programs).1 :=
+  (ledger_same choose _ _).mp ((ledger choose).same_forkFinalizers interp m parent programs)
 
 /-- A countdown edits observers, while its callback frame owns no selected credit. -/
 theorem same_countdown (choose : ν → Bool) (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (unique : (m.fibers.map RunFiber.id).Nodup)
     (f : RunFiber ν σ β ε δ ι α χ) (targets : List FiberId) (resume : Resume ν) (fast : Bool) :
-    Same choose m (countdownPark interp m f targets resume fast).1 := by
-  unfold countdownPark
-  dsimp only
-  split
-  · exact .refl choose m
-  · rename_i exits target remaining found
-    let edit (g : RunFiber ν σ β ε δ ι α χ) : RunFiber ν σ β ε δ ι α χ :=
-      { g with observers := g.observers ++ [Observer.countdown f.id m.nextToken] }
-    let bumped : RunMachine ν σ β ε δ ι α χ St := { m with nextToken := m.nextToken + 1 }
-    exact (same_modify choose bumped unique target edit (fun _ => rfl) (fun _ => rfl)).trans
-      (same_emit choose (bumped.modify target edit) [.parkedOn f.id m.nextToken] rfl rfl)
+    Same choose m (countdownPark interp m f targets resume fast).1 :=
+  (ledger_same choose _ _).mp ((ledger choose).same_countdown interp m unique f targets resume fast)
 
 /-- Countdown's asynchronous callback frame contributes no finalizer registration credit. -/
 theorem countdown_credit (choose : ν → Bool) (interp : RunInterp ν σ β ε δ ι α χ St)
@@ -196,18 +181,14 @@ variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
 /-- Interrupt delivery changes the current code but retains every frame credit. -/
 theorem interruptRecord_credit (choose : ν → Bool) (interp : RunInterp ν σ β ε δ ι α χ St)
     (who : Option FiberId) (extra : ReasonAnnotations α) (f : RunFiber ν σ β ε δ ι α χ) :
-    fiberCredits choose (interruptRecord interp who extra f).1 = fiberCredits choose f := by
-  unfold interruptRecord
-  dsimp only
-  (repeat' split) <;> rfl
+    fiberCredits choose (interruptRecord interp who extra f).1 = fiberCredits choose f :=
+  (ledger choose).interruptRecord_held interp who extra f
 
 /-- Interrupt delivery keeps the selected table key. -/
 theorem interruptRecord_key (interp : RunInterp ν σ β ε δ ι α χ St)
     (who : Option FiberId) (extra : ReasonAnnotations α) (f : RunFiber ν σ β ε δ ι α χ) :
-    (interruptRecord interp who extra f).1.id = f.id := by
-  unfold interruptRecord
-  dsimp only
-  (repeat' split) <;> rfl
+    (interruptRecord interp who extra f).1.id = f.id :=
+  StackLedger.interruptRecord_key interp who extra f
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
 
@@ -217,34 +198,18 @@ theorem same_beginRace (choose : ν → Bool) (interp : RunInterp ν σ β ε δ
     (yielding : Bool) (programs : List (Prim ν σ β ε δ ι α)) (site : Option (List Nat))
     (mode : Supervision.RaceMode) :
     Same choose m (beginRace interp m f yielding programs site mode).machine :=
-  same_emit choose m [.raceStarted m.nextRace f.id programs.length] rfl rfl
+  (ledger_same choose _ _).mp ((ledger choose).same_beginRace interp m f yielding programs site mode)
 
 /-- Updating an absent key leaves the actual machine unchanged. -/
 theorem update_absent (m : RunMachine ν σ β ε δ ι α χ St)
-    (next : RunFiber ν σ β ε δ ι α χ) (missing : m.fiber? next.id = none) : m.update next = m := by
-  have unchanged : (m.fibers.map fun g => if g.id = next.id then next else g) = m.fibers := by
-    calc
-      _ = m.fibers.map id := List.map_congr_left fun g member => by
-        have no := List.find?_eq_none.mp missing g member
-        exact if_neg (fun equal => no (decide_eq_true equal))
-      _ = m.fibers := List.map_id _
-  simp only [RunMachine.update, unchanged]
+    (next : RunFiber ν σ β ε δ ι α χ) (missing : m.fiber? next.id = none) : m.update next = m :=
+  StackLedger.update_absent m next missing
 
 /-- Replacing a fiber spends its previous lookup credit; an absent key creates no table row. -/
 theorem update_bound (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ St)
     (next : RunFiber ν σ β ε δ ι α χ) (unique : (m.fibers.map RunFiber.id).Nodup) :
-    total choose (m.update next) + atFiber choose m next.id ≤ total choose m + fiberCredits choose next := by
-  cases found : m.fiber? next.id with
-  | none =>
-    rw [update_absent m next found]
-    simp only [atFiber, found, Option.map_none, Option.getD_none, Nat.add_zero]
-    exact Nat.le_add_right _ _
-  | some old =>
-    have changed := ControlWeights.replace_sum RunFiber.id (fiberCredits choose)
-      old next (RunMachine.id_of_fiber? found).symm m.fibers unique (RunMachine.mem_of_fiber? found)
-    change _ + ((m.fiber? next.id).map (fiberCredits choose)).getD 0 ≤ _
-    rw [found]
-    exact Nat.le_of_eq changed
+    total choose (m.update next) + atFiber choose m next.id ≤ total choose m + fiberCredits choose next :=
+  (ledger choose).update_bound m next unique
 
 /-- The complete iteration debit includes the selected fiber outside the stored table. -/
 def Balanced (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ St)
@@ -254,31 +219,29 @@ def Balanced (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ St)
     m.trace.countP (runStarted choose) + total choose m +
       atFiber choose next.machine next.fiber.id + next.machine.trace.countP (runRegistered choose)
 
+/-- The shared complete iteration debit agrees with the existing one. -/
+theorem ledger_balanced (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ St)
+    (next : Iter ν σ β ε δ ι α χ St) : (ledger choose).Balanced m next ↔ Balanced choose m next := by
+  simp only [StackLedger.Balanced, ledger_consumed, ledger_produced]
+  exact Iff.rfl
+
 /-- The local evaluator debit combines with the unchanged table projection. -/
 theorem balanced_of_debit (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ St)
     (old : RunFiber ν σ β ε δ ι α χ) (next : Iter ν σ β ε δ ι α χ St)
     (sum : total choose next.machine = total choose m)
     (stored : atFiber choose next.machine next.fiber.id = fiberCredits choose old)
-    (debit : IterDebit choose m old next) : Balanced choose m next := by
-  unfold Balanced
-  rw [sum, stored]
-  unfold IterDebit at debit
-  change _ + _ + stack choose next.fiber.frame.stack + _ ≤
-    _ + _ + stack choose old.frame.stack + _
-  omega
+    (debit : IterDebit choose m old next) : Balanced choose m next :=
+  (ledger_balanced choose _ _).mp ((ledger choose).balanced_of_debit m old next sum stored
+    ((ledger_debit choose _ _ _).mpr debit))
 
 /-- The balanced iteration preserves the complete machine bound when written back. -/
 theorem update_balanced (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ St)
     (next : Iter ν σ β ε δ ι α χ St)
     (unique : (next.machine.fibers.map RunFiber.id).Nodup)
     (funded : Funded choose m) (balanced : Balanced choose m next) :
-    Funded choose (next.machine.update next.fiber) := by
-  have replaced := update_bound choose next.machine next.fiber unique
-  unfold Balanced at balanced
-  change _ + total choose m ≤ _ at funded
-  change next.machine.trace.countP (runStarted choose) + total choose (next.machine.update next.fiber) ≤
-    next.machine.trace.countP (runRegistered choose)
-  omega
+    Funded choose (next.machine.update next.fiber) :=
+  (ledger_funded choose _).mp ((ledger choose).update_balanced m next unique
+    ((ledger_funded choose _).mpr funded) ((ledger_balanced choose _ _).mpr balanced))
 
 /-- Settling edits no credited frame in the iteration's result. -/
 theorem settle_balanced (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ St)
@@ -286,51 +249,21 @@ theorem settle_balanced (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι
     (unique : (next.machine.fibers.map RunFiber.id).Nodup)
     (funded : Funded choose m) (balanced : Balanced choose m next)
     (id : FiberId) (rest : List (Cmd ν σ β ε δ ι α)) :
-    Funded choose (settle id rest next).1 := by
-  have changed (f : RunFiber ν σ β ε δ ι α χ)
-      (key : f.id = next.fiber.id) (credit : fiberCredits choose f = fiberCredits choose next.fiber) :
-      Funded choose (next.machine.update f) := by
-    apply update_balanced choose m { next with fiber := f } unique funded
-    change next.machine.trace.countP (runStarted choose) + total choose next.machine +
-      fiberCredits choose f + m.trace.countP (runRegistered choose) ≤
-      m.trace.countP (runStarted choose) + total choose m +
-      atFiber choose next.machine f.id + next.machine.trace.countP (runRegistered choose)
-    rw [key, credit]
-    exact balanced
-  unfold settle
-  split
-  · exact changed _ rfl rfl
-  · exact changed _ rfl rfl
-  · split <;> exact changed _ rfl rfl
-  · exact changed _ rfl rfl
-  · exact changed _ rfl rfl
-  · exact changed _ rfl rfl
+    Funded choose (settle id rest next).1 :=
+  (ledger_funded choose _).mp ((ledger choose).settle_balanced m next unique
+    ((ledger_funded choose _).mpr funded) ((ledger_balanced choose _ _).mpr balanced) id rest)
 
 /-- Posting a task edits dispatcher metadata and records no finalizer event. -/
 theorem same_postTask (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ St)
     (unique : (m.fibers.map RunFiber.id).Nodup) (owner : FiberId) (priority : Nat)
-    (task : Task ν σ β ε δ ι α) : Same choose m (m.postTask owner priority task) := by
-  unfold RunMachine.postTask
-  split
-  · exact .refl choose m
-  · rename_i old found
-    have same := same_update choose m old
-      { old with dispatcher := old.dispatcher.enqueue priority task } unique
-      (by simpa only [RunMachine.id_of_fiber? found] using found) rfl rfl
-    exact same.trans (same_emit choose _ [.scheduledTask owner priority task] rfl rfl)
+    (task : Task ν σ β ε δ ι α) : Same choose m (m.postTask owner priority task) :=
+  (ledger_same choose _ _).mp ((ledger choose).same_postTask m unique owner priority task)
 
 /-- Draining store work only posts tasks; evaluation runs in subsequent commands. -/
 theorem same_drainOwed (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ St)
     (ok : ForkLedger.Invariant.Ok m) (owed : List (Owed (Prim ν σ β ε δ ι α))) :
-    Same choose m (drainOwed m owed).1 := by
-  induction owed generalizing m with
-  | nil => exact .refl choose m
-  | cons entry rest ih =>
-    unfold drainOwed
-    split
-    · exact ih m ok
-    · exact (same_postTask choose m ok.idsUnique _ _ _).trans
-        (ih _ (ForkLedger.Invariant.postTask_ok ok _ _ _))
+    Same choose m (drainOwed m owed).1 :=
+  (ledger_same choose _ _).mp ((ledger choose).same_drainOwed m ok owed)
 
 variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
 
@@ -340,53 +273,26 @@ theorem same_interruptUpdate (choose : ν → Bool) (interp : RunInterp ν σ β
     (id : FiberId) (old : RunFiber ν σ β ε δ ι α χ) (found : m.fiber? id = some old)
     (who : Option FiberId) (extra : ReasonAnnotations α) :
     Same choose m (m.update (interruptRecord interp who extra old).1) :=
-  same_update choose m old _ unique
-    (by simpa only [RunMachine.id_of_fiber? found] using found)
-    (interruptRecord_key interp who extra old) (interruptRecord_credit choose interp who extra old)
+  (ledger_same choose _ _).mp
+    ((ledger choose).same_interruptUpdate interp m unique id old found who extra)
 
 /-- Scope linking writes observers or records an interrupt, without executing a finalizer. -/
 theorem same_linkScope (choose : ν → Bool) (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (unique : (m.fibers.map RunFiber.id).Nodup)
     (mode : Supervision.ScopeMode) (scope : Nat) (target : FiberId)
     (who : Option FiberId) (extra : ReasonAnnotations α) :
-    Same choose m (linkScope interp m mode scope target who extra).1 := by
-  unfold linkScope
-  split
-  · exact .refl choose m
-  · split
-    · exact .refl choose m
-    · rename_i old found
-      exact (same_interruptUpdate choose interp m unique target old found who extra).trans
-        (same_emit choose _ [.scopeClosedOnLink scope target, .interruptRecorded who target] rfl rfl)
-  · split
-    · exact .refl choose m
-    · split
-      · exact .refl choose m
-      · split
-        · exact .refl choose m
-        · rename_i state key _
-          exact (same_modify choose { m with state } unique target
-            (fun f => { f with observers := f.observers ++ [.dropScopeFinalizer scope key] })
-            (fun _ => rfl) (fun _ => rfl)).trans
-            (same_emit choose _ [.scopeLinked mode scope key target] rfl rfl)
+    Same choose m (linkScope interp m mode scope target who extra).1 :=
+  (ledger_same choose _ _).mp
+    ((ledger choose).same_linkScope interp m unique mode scope target who extra)
 
 /-- Interrupting a sequence retains each row's credits. The nested commands have not run. -/
 theorem same_interruptEach (choose : ν → Bool) (interp : RunInterp ν σ β ε δ ι α χ St)
     (who : FiberId) (extra : ReasonAnnotations α) (targets : List FiberId)
     (acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α))
     (ok : ForkLedger.Invariant.Ok acc.1) :
-    Same choose acc.1 (interruptEach interp who extra targets acc).1 := by
-  unfold interruptEach
-  induction targets generalizing acc with
-  | nil => exact .refl choose acc.1
-  | cons target rest ih =>
-    rw [List.foldl_cons]
-    split
-    · exact ih acc ok
-    · rename_i old found
-      exact ((same_interruptUpdate choose interp acc.1 ok.idsUnique target old found (some who) extra).trans
-        (same_emit choose _ [.interruptRecorded (some who) target] rfl rfl)).trans
-        (ih _ (ForkLedger.Invariant.emit_ok (ForkLedger.Invariant.update_ok ok _) _))
+    Same choose acc.1 (interruptEach interp who extra targets acc).1 :=
+  (ledger_same choose _ _).mp
+    ((ledger choose).same_interruptEach interp who extra targets acc ok)
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
 
@@ -397,53 +303,46 @@ def IterKept (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ St)
   (∀ id, atFiber choose next.machine id = atFiber choose m id) ∧
   next.fiber.id = f.id ∧ IterDebit choose m f next
 
+/-- The shared evaluation projection agrees with the existing one. -/
+theorem ledger_iterKept (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ St)
+    (f : RunFiber ν σ β ε δ ι α χ) (next : Iter ν σ β ε δ ι α χ St) :
+    (ledger choose).IterKept m f next ↔ IterKept choose m f next := by
+  rw [StackLedger.IterKept, ledger_debit]
+  exact Iff.rfl
+
 /-- A neutral table edit and equal stack credit suffice for the evaluator relation. -/
 theorem IterKept.of_same {choose : ν → Bool} {m : RunMachine ν σ β ε δ ι α χ St}
     {f : RunFiber ν σ β ε δ ι α χ} {next : Iter ν σ β ε δ ι α χ St}
     (same : Same choose m next.machine) (key : next.fiber.id = f.id)
-    (credit : fiberCredits choose next.fiber = fiberCredits choose f) : IterKept choose m f next := by
-  refine ⟨same.1, same.2.1, key, ?_⟩
-  unfold IterDebit
-  rw [same.2.2.1, same.2.2.2]
-  change _ + fiberCredits choose next.fiber + _ ≤ _ + fiberCredits choose f + _
-  rw [credit]
-  exact Nat.le_refl _
+    (credit : fiberCredits choose next.fiber = fiberCredits choose f) : IterKept choose m f next :=
+  (ledger_iterKept choose _ _ _).mp
+    (StackLedger.IterKept.of_same ((ledger_same choose _ _).mpr same) key credit)
 
 /-- Reading the selected row turns the evaluator relation into the complete debit. -/
 theorem IterKept.balanced {choose : ν → Bool} {m : RunMachine ν σ β ε δ ι α χ St}
     {f : RunFiber ν σ β ε δ ι α χ} {next : Iter ν σ β ε δ ι α χ St}
-    (kept : IterKept choose m f next) (found : m.fiber? f.id = some f) : Balanced choose m next := by
-  apply balanced_of_debit choose m f next kept.1 _ kept.2.2.2
-  rw [kept.2.1, kept.2.2.1]
-  simp only [atFiber, found, Option.map_some, Option.getD_some]
+    (kept : IterKept choose m f next) (found : m.fiber? f.id = some f) : Balanced choose m next :=
+  (ledger_balanced choose _ _).mp
+    (((ledger_iterKept choose _ _ _).mpr kept).balanced found)
 
 /-- The credit at a found key is the found row's credit. -/
 theorem atFiber_found (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ St)
     (id : FiberId) (f : RunFiber ν σ β ε δ ι α χ) (found : m.fiber? id = some f) :
-    atFiber choose m id = fiberCredits choose f := by
-  simp only [atFiber, found, Option.map_some, Option.getD_some]
+    atFiber choose m id = fiberCredits choose f :=
+  (ledger choose).atFiber_found m id f found
 
 /-- A replacement may use the credit view instead of the old row's complete metadata. -/
 theorem same_update_view (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ St)
     (unique : (m.fibers.map RunFiber.id).Nodup) (next : RunFiber ν σ β ε δ ι α χ)
-    (credit : atFiber choose m next.id = fiberCredits choose next) : Same choose m (m.update next) := by
-  cases found : m.fiber? next.id with
-  | none => rw [update_absent m next found]; exact .refl choose m
-  | some old =>
-    exact same_update choose m old next unique
-      (by simpa only [RunMachine.id_of_fiber? found] using found)
-      (RunMachine.id_of_fiber? found).symm
-      (credit.symm.trans (atFiber_found choose m next.id old found))
+    (credit : atFiber choose m next.id = fiberCredits choose next) : Same choose m (m.update next) :=
+  (ledger_same choose _ _).mp ((ledger choose).same_update_view m unique next credit)
 
 /-- A replacement that discards credits cannot overspend the registration bound. -/
 theorem update_funded_le (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ St)
     (unique : (m.fibers.map RunFiber.id).Nodup) (next : RunFiber ν σ β ε δ ι α χ)
     (credit : fiberCredits choose next ≤ atFiber choose m next.id) (funded : Funded choose m) :
-    Funded choose (m.update next) := by
-  have bound := update_bound choose m next unique
-  change _ + total choose m ≤ _ at funded
-  change m.trace.countP (runStarted choose) + total choose (m.update next) ≤
-    m.trace.countP (runRegistered choose)
-  omega
+    Funded choose (m.update next) :=
+  (ledger_funded choose _).mp
+    ((ledger choose).update_funded_le m unique next credit ((ledger_funded choose _).mpr funded))
 
 end Effect4.Machine.FinalizerCredits

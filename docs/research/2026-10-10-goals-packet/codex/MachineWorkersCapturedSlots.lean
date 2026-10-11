@@ -17,12 +17,7 @@ open Test.Dogfood.Scenario MachineWorkersSlots MachineWorkersConnections Machine
 
 /-- The foreign capture retains the exact connection slot and the existing lexical ownership.
 Administrative finalizers carry no source connection slot. -/
-def CapturedSlots (total : Nat) : FinName → Prop
-  | .foreign capture => SourceScope.FinAt (Programs.workersProgram total) (.foreign capture) ∧
-      ((capture.path = Programs.crewAcquire 1 ∧ capture.env = bindings ++ [.nat 1]) ∨
-        ∃ previous, capture.path = Programs.crewAcquire 2 ∧
-          capture.env = bindings ++ [previous, .nat 2])
-  | _ => True
+abbrev CapturedSlots := MachineWorkersSlots.CapturedSlots
 
 /-- The same scope-field census retains exact captures without constraining allocation strategy. -/
 def scopeModel (total : Nat) : ScopeFields.Model where

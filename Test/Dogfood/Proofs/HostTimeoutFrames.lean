@@ -1,5 +1,6 @@
 import Test.Dogfood.Proofs.HostTimeoutNative
 import Effect4.Laws.Program.Simulation.Deliver
+import Effect4.Laws.Machine.PopTrace
 
 /-!
 # Ordered timeout values through actual frame pops
@@ -44,12 +45,11 @@ theorem stack_append {B : List Val} {input middle output : Kind} {first second :
 
 /-- Every actual frame hook retains the administrative scratch assertion. -/
 theorem ensure_masks {B : List Val} {input output : Kind} {frame : NCode}
-    (owned : SavedAt B input output frame) (fiber : NativeFrame)
+    (_owned : SavedAt B input output frame) (fiber : NativeFrame)
     (scratch : Masks fiber.stack) : Masks (frame.ensure fiber).1.stack := by
-  cases owned
-  all_goals simp only [Prim.ensure]
-  all_goals repeat' split
-  all_goals aesop (add safe constructors [Masks])
+  rcases FrameFiber.ensure_stack_cases frame fiber with kept | ⟨pushed, _, _⟩
+  · rw [kept]; exact scratch
+  · rw [pushed]; exact .cons true scratch
 
 /-- A hook replacement is a failure, so it introduces no successful value. -/
 theorem ensure_failure (frame : NCode) (fiber : NativeFrame) (next : NCode)
@@ -153,13 +153,7 @@ theorem selected_answer {B : List Val} {input middle output : Kind} {frame : NCo
 /-- No answer at a value pop means the saved frame has no value arm. -/
 theorem answer_missing (frame : NCode) (demand : Effect4.Arm) (replacement : Option NCode)
     (missing : frame.answerOf demand replacement = none) : frame.hasArm demand = false := by
-  unfold Prim.answerOf at missing
-  cases replacement with
-  | some _ => cases missing
-  | none =>
-    cases arm : frame.hasArm demand with
-    | false => rfl
-    | true => rw [arm] at missing; cases missing
+  exact PopTrace.answer_missing frame demand replacement missing
 
 /-- The actual fused pop retains the ordered continuation through every hook and skip. -/
 theorem pop_from {B : List Val} (demand : Effect4.Arm) (normal : demand = .contA ∨ demand = .contE) (skip : Bool)
@@ -167,45 +161,48 @@ theorem pop_from {B : List Val} (demand : Effect4.Arm) (normal : demand = .contA
     {input output : Kind} {frames : List NCode} (fiber : NativeFrame) (cause : Option CauseV)
     (owned : StackAt B input output frames) (scratch : Masks fiber.stack) :
     PopAt B demand input output (FrameFiber.popFrom demand skip frames fiber cause) := by
-  induction owned generalizing fiber cause with
-  | nil kind => exact ⟨fun _ => rfl, ⟨kind, masks_stack kind scratch⟩, scratch⟩
-  | @cons input middle output frame frames saved rest ih =>
-    have ensured := ensure_masks saved fiber scratch
-    have joined (nextCause : Option CauseV) :
-        PopAt B demand middle output
-          (FrameFiber.joinPushed demand skip (frame.ensure fiber).1 frames
-            (FrameFiber.popFrom demand skip frames
-              (FrameFiber.passPushed demand skip (frame.ensure fiber).1 nextCause).fiber
-              (FrameFiber.passPushed demand skip (frame.ensure fiber).1 nextCause).carriedCause)
-            nextCause) := by
-      exact join_pushed demand normal skip (frame.ensure fiber).1 frames _ nextCause middle output ensured rest
-        (ih _ _ (pushed_masks demand normal skip (frame.ensure fiber).1 nextCause ensured).1)
-    unfold FrameFiber.popFrom
-    dsimp only
-    split
-    · rename_i answer found
-      split
-      · rename_i skipped
-        refine pop_input (next := middle) ?_ (pass_on frame _ (joined _))
-        intro demanded
-        have stopped := safe demanded
-        simp only [stopped, Bool.false_and, Bool.false_eq_true] at skipped
-      · exact selected_answer demand fiber frames answer saved rest scratch found
-    · rename_i missing
-      refine pop_input (next := middle) ?_ (pass_on frame _ (joined cause))
+  obtain ⟨parts, suffix, trace⟩ := Effect4.Machine.PopTrace.popFrom_spec demand skip frames fiber cause
+  generalize result : FrameFiber.popFrom demand skip frames fiber cause = popped at trace ⊢
+  clear result
+  induction trace generalizing input output with
+  | nil fiber cause =>
+    cases owned
+    exact ⟨fun _ => rfl, ⟨_, masks_stack _ scratch⟩, scratch⟩
+  | selected frame frames fiber cause answer chosen kept =>
+    cases owned with
+    | cons saved rest => exact selected_answer demand fiber frames answer saved rest scratch chosen
+  | continued frame frames fiber before after parts suffix tail passed empty next ih =>
+    cases owned with
+    | @cons _ middle _ _ _ saved rest =>
+      have ensured := ensure_masks saved fiber scratch
+      have answered := ih rest (pushed_masks demand normal skip (frame.ensure fiber).1 after ensured).1
+      refine pop_input (next := middle) ?_ (pass_on frame _
+        (join_pushed demand normal skip (frame.ensure fiber).1 frames tail after middle output ensured rest answered))
       intro demanded
-      subst demand
-      exact value_pass saved (answer_missing frame .contA _ missing)
+      rcases passed with ⟨missing, _⟩ | ⟨answer, chosen, skipped, _⟩
+      · subst demand; exact value_pass saved (answer_missing frame .contA _ missing)
+      · rw [safe demanded] at skipped
+        cases skipped
+  | hooked frame frames fiber before after tail passed answered =>
+    cases owned with
+    | @cons _ middle _ _ _ saved rest =>
+      have ensured := ensure_masks saved fiber scratch
+      obtain ⟨masks, empty | ⟨error, failed⟩⟩ := pushed_masks demand normal skip (frame.ensure fiber).1 after ensured
+      · exact False.elim (answered empty)
+      · simp only [FrameFiber.passOn, FrameFiber.joinPushed, failed, PopAt]
+        exact ⟨middle, .head (.failure middle error), stack_append (masks_stack middle masks) rest⟩
 
 /-- The actual continuation pop retains its typed answer and saved suffix. -/
 theorem get_cont {B : List Val} {input output : Kind} (fiber : NativeFrame)
     (demand : Effect4.Arm) (normal : demand = .contA ∨ demand = .contE) (skip : Bool) (cause : Option CauseV)
     (safe : demand = .contA → skip = false) (owned : StackAt B input output fiber.stack) :
     PopAt B demand input output (fiber.getCont demand skip cause) := by
-  unfold FrameFiber.getCont
-  split
-  · exact ⟨input, owned⟩
-  · exact pop_from demand normal skip safe _ cause owned .nil
+  rcases Effect4.Machine.PopTrace.getCont_spec fiber demand skip cause with
+    ⟨_, deferred⟩ | ⟨ordinary, _⟩
+  · rw [deferred]
+    exact ⟨input, owned⟩
+  · rw [FrameFiber.getCont, ordinary]
+    exact pop_from demand normal skip safe _ cause owned .nil
 
 /-- An empty actual pop leaves only identity masks in its stored frame. -/
 theorem get_cont_empty_masks {B : List Val} {input output : Kind} (fiber : NativeFrame)

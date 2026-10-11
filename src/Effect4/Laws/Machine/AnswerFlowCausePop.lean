@@ -74,46 +74,53 @@ theorem popFrom_cause_selected (world : World) (input output : Kind)
       model.cause world incoming delivered ∧ SavedAt model interp world incoming middle selected ∧
       StackAt model interp world middle output
         (FrameFiber.popFrom .contE true frames fiber (some cause)).fiber.stack := by
-  induction frames generalizing input fiber cause with
+  obtain ⟨parts, suffix, trace⟩ := PopTrace.popFrom_spec .contE true frames fiber (some cause)
+  generalize result : FrameFiber.popFrom .contE true frames fiber (some cause) = popped at trace found ⊢
+  clear result
+  generalize incoming : some cause = carried at trace
+  induction trace generalizing input cause with
   | nil => cases found
-  | cons head tail ih =>
+  | selected head tail fiber before answer chosen kept =>
     cases stack with
     | @cons _ _ middle _ _ _ callback suffix =>
-      cases chosen : Prim.answerOf head .contE (head.ensure fiber).2 with
-      | none =>
-        have missing : head.hasArm .contE = false := by
-          unfold Prim.answerOf at chosen
-          split at chosen
-          · cases chosen
-          · split at chosen
-            · cases chosen
-            · rename_i absent; exact Bool.eq_false_iff.mpr absent
-        have nextGood : model.cause world middle cause := by
+      have shape := Prim.answerOf_frame_eq head selected .contE _
+        (chosen.trans (congrArg some found))
+      rw [shape.1]
+      have scratch : StackAt model interp world middle middle fiber.stack := by
+        rw [empty]; exact .nil world middle
+      exact ⟨input, middle, cause, incoming.symm, good, callback,
+        stack_append model interp (ensure_stack model interp world middle middle head fiber scratch) suffix⟩
+  | continued head tail fiber before after parts suffix tailPop passed drained next ih =>
+    cases stack with
+    | @cons _ _ middle _ _ _ callback suffix =>
+      have advanced : ∃ delivered, after = some delivered ∧ model.cause world middle delivered := by
+        rcases passed with ⟨chosen, unchanged⟩ | ⟨answer, _, skipped, changed⟩
+        · have missing := PopTrace.answer_missing head .contE _ chosen
           cases callback with
-          | mk _ _ _ _ _ skip _ _ _ _ => exact skip world (model.future_refl world) cause good missing
-        have drained := drain_cause head fiber cause empty
-        simp only [FrameFiber.popFrom, chosen, FrameFiber.passOn, FrameFiber.joinPushed,
-          drained.1, drained.2, FrameFiber.passPushed_fiber_cause] at found ⊢
-        exact ih _ _ cause (drain_empty .contE true head fiber empty) nextGood suffix found
-      | some answer =>
-        cases interrupted : (head.ensure fiber).1.interrupted with
-        | false =>
-          simp only [FrameFiber.popFrom, chosen, interrupted, Bool.and_false, Bool.false_eq_true,
-            ↓reduceIte] at found ⊢
-          have shape := Prim.answerOf_frame_eq head selected .contE _ (chosen.trans (congrArg some found))
-          rw [shape.1]
-          have scratch : StackAt model interp world middle middle fiber.stack := by
-            rw [empty]; exact .nil world middle
-          exact ⟨input, middle, cause, rfl, good, callback,
-            stack_append model interp (ensure_stack model interp world middle middle head fiber scratch) suffix⟩
-        | true =>
-          rcases saved_discard_cause model interp world input middle head fiber cause callback good interrupted with
-            ⟨delivered, changed, nextGood⟩
-          have drained := drain_cause head fiber delivered empty
-          simp only [FrameFiber.popFrom, chosen, interrupted, Bool.and_self, ↓reduceIte, changed,
-            FrameFiber.passOn, FrameFiber.joinPushed, drained.1, drained.2,
-            FrameFiber.passPushed_fiber_cause] at found ⊢
-          exact ih _ _ delivered (drain_empty .contE true head fiber empty) nextGood suffix found
+          | mk _ _ _ _ _ skip _ _ _ _ =>
+            exact ⟨cause, unchanged.trans incoming.symm,
+              skip world (model.future_refl world) cause good missing⟩
+        · rcases saved_discard_cause model interp world input middle head fiber cause callback good
+            (by simpa only [Bool.true_and] using skipped) with ⟨delivered, equation, nextGood⟩
+          exact ⟨delivered, changed.trans (by rw [← incoming]; exact equation), nextGood⟩
+      rcases advanced with ⟨delivered, changed, nextGood⟩
+      have causeKept := (drain_cause head fiber delivered empty).2
+      simp only [FrameFiber.passOn, FrameFiber.joinPushed, drained] at found ⊢
+      exact ih middle delivered
+        (by rw [FrameFiber.passPushed_fiber_cause]; exact drain_empty .contE true head fiber empty)
+        nextGood suffix found (by rw [changed]; exact causeKept.symm)
+  | hooked head tail fiber before after tailPop passed answered =>
+    cases stack with
+    | @cons _ _ middle _ _ _ callback suffix =>
+      have produced : ∃ delivered, after = some delivered := by
+        rcases passed with ⟨_, unchanged⟩ | ⟨answer, _, skipped, changed⟩
+        · exact ⟨cause, unchanged.trans incoming.symm⟩
+        · rcases saved_discard_cause model interp world input middle head fiber cause callback good
+            (by simpa only [Bool.true_and] using skipped) with ⟨delivered, equation, _⟩
+          exact ⟨delivered, changed.trans (by rw [← incoming]; exact equation)⟩
+      rcases produced with ⟨delivered, changed⟩
+      rw [changed, (drain_cause head fiber delivered empty).1] at answered
+      exact False.elim (answered rfl)
 
 /-- Actual getCont selects a failure callback at the class of its delivered cause. -/
 theorem getCont_cause_selected (world : World) (input output : Kind)
