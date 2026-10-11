@@ -220,7 +220,7 @@ theorem StateStep.countdown (p : NativeEff) (table : RowTable) (completed)
   dsimp only
   split
   · exact .grow state
-  · dsimp only [applyFiberEdits, List.foldl, applyFiberEdit]
+  · dsimp only [applyFiberEdits, List.foldl, applyFiberEdit, RunMachine.observe]
     rw [RunMachine.modify_emit]
     exact ((StateStep.grow state).trans
       (.observer (guardState_increaseTokens state _ (Nat.le_succ _)) _ (.countdown f.id m.nextToken)

@@ -689,6 +689,15 @@ def update (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (f : RunFiber ν
     RunMachine ν σ β ε δ ι α χ St κ φ η :=
   { m with fibers := m.fibers.map fun g => if g.id = f.id then f else g }
 
+/-- Remove the canceled park token's resume and countdown observers from every stored fiber.
+This is the cleanup splice of internal/effect.ts:773,812,821. -/
+def dropToken (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (token : Nat) :
+    RunMachine ν σ β ε δ ι α χ St κ φ η :=
+  {m with fibers := m.fibers.map fun f => {f with observers := f.observers.filter fun
+    | .resumeAwait _ t _ => t ≠ token
+    | .countdown _ t => t ≠ token
+    | _ => true}}
+
 /-- Append events to the trace. The guard is field-local (direction L4, 2026-09-07): an empty
 emit leaves the machine's trace field untouched rather than rebuilding it, and nothing else
 about `emit` changes — `emit_trace` (`Approximation.lean`) still reads
@@ -703,6 +712,12 @@ def modify (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (id : FiberId)
   match m.fiber? id with
   | none => m
   | some f => m.update (k f)
+
+/-- Attach an observer to the current target record, as internal/effect.ts:773,812,821 does.
+An absent target leaves the machine unchanged. -/
+def observe (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (target : FiberId)
+    (observer : Observer) : RunMachine ν σ β ε δ ι α χ St κ φ η :=
+  m.modify target fun f => {f with observers := f.observers ++ [observer]}
 
 def halt (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (why : Stuck) :
     RunMachine ν σ β ε δ ι α χ St κ φ η :=
@@ -879,12 +894,9 @@ def applyFiberEdit (edit : FiberEdit ε δ ι α) (m : RunMachine ν σ β ε δ
     RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ) :=
   match edit with
   | .observe target observer =>
-    (m.modify target fun f => {f with observers := f.observers ++ [observer]}, [])
+    (m.observe target observer, [])
   | .dropToken token =>
-    ({m with fibers := m.fibers.map fun f => {f with observers := f.observers.filter fun
-      | .resumeAwait _ t _ => t ≠ token
-      | .countdown _ t => t ≠ token
-      | _ => true}}, [])
+    (m.dropToken token, [])
   | .interrupt target cause =>
     match m.fiber? target with
     | none => (m, [])

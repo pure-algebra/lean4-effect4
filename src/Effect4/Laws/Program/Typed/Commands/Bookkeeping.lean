@@ -2802,7 +2802,7 @@ theorem link_preserves (root : ProgramSource) (rootTy : EffTy) (mode : Supervisi
             rw [rmodify_state]
             exact ScopeStore.entryAt_setEntry_isSome _ _ scope live)
         (fun _ _ kept => Or.inl kept)
-      simp only [applyFiberEdits, List.foldl_cons, List.foldl_nil, applyFiberEdit, List.nil_append]
+      simp only [applyFiberEdits, List.foldl_cons, List.foldl_nil, applyFiberEdit, RunMachine.observe, List.nil_append]
       rw [RunMachine.modify_emit]
       exact ⟨{ w with state := s }, ord, configTyped_emit modified _⟩
 

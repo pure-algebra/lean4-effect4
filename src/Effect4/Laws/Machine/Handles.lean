@@ -2804,7 +2804,7 @@ theorem fireObserver_countdown_minted (hb : KeyBounded nk sk interp ambient) (id
             · next exits nextTarget remaining walk =>
               rw [walk] at hwalk
               obtain ⟨hnext, hrest⟩ := hwalk.2 nextTarget remaining rfl
-              simpa only [FiredMinted, applyFiberEdit, List.append_nil] using
+              simpa only [FiredMinted, applyFiberEdit, RunMachine.observe, List.append_nil] using
                 countdown_next_minted nk sk acc waiter token exit current p R exits nextTarget remaining
                   hle currentBase hwalk.1 hnext hrest
 

@@ -227,3 +227,26 @@ decision lifts 0 → 0.
   OCaml ingress, and warning 8 restored. It matches the type interface note's R-T2 and R-T8.
 
 **Verdict: flat.** One shared law lands, and the Timeout chain adds three private analyses.
+
+## 2026-10-11 18:30, item 10 landed in full, and the place ledger
+
+Range: Codex's side of the merge of `1591530e9`, measured from the merge base `9643905ab`. Under
+`Laws` and `Dogfood` it adds 955 lines and removes 261 in 29 files. The script's patterns over the
+changed files, before and after: shared-law uses 4 → 18, private case analyses 142 → 135, hand
+decision lifts 0 → 0.
+
+- **Item 10 has landed in full.** `Laws/Machine/Edit.lean` gives the alphabet one footprint function,
+  `Edit.writes : Edit → MachineField`, and one `frame` theorem. `Machine/Fibers.lean` writes
+  the observer filter once, as `RunMachine.dropToken`, and an attachment once, as
+  `RunMachine.observe`; the driver and `Edit.apply` both call them.
+- **The place ledger.** `Laws/Machine/PlaceLedger.lean` (157 lines) states accounting over every
+  machine place: fibers, races, state, pending commands, detached tasks and trace events.
+  `PlaceLedgerConnect.lean` connects it, and release custody, source opportunities, saved-stack
+  credits and Atomic's writer credits are its named consumers.
+- **The Timeout regression of 17:30 is repaired.** `HostTimeoutLocalSteps.lean` drops from nine
+  private analyses to two.
+- `Laws/Machine/Clauses.lean` gains one clause equation (18 → 19), in the shared clause bank.
+
+**Verdict: improving.** Shared-law uses rise by 14, and private analyses fall by 7. The net 694
+lines include 414 lines of new shared structure: the place ledger, the primitive producer and the
+footprint.

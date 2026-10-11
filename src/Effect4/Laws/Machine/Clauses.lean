@@ -319,6 +319,23 @@ theorem flushRoot_round (interp : RunInterp ν σ β ε δ ι α χ St) (fuel ro
 
 /-! ## Yield now, and the resume guard -/
 
+/-- The complete yield result retains both empty command and message lists.
+Concept: reactive-scheduling R11; consumer: native Timeout yield transport.
+census: scheduler.yield-now-resume-guard -/
+theorem evaluatePrim_yieldNowWith_eq (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
+    (priority : Nat) (current : f.frame.current = Prim.yieldNowWith priority) :
+    evaluatePrim interp m f yielding =
+      (let grown := {m with nextToken := m.nextToken + 1}
+       let before := {f with
+         frame := {f.frame with current := Prim.success interp.voidValue}
+         dispatcher := f.dispatcher.enqueue priority
+           (Task.resume f.id m.nextToken (Prim.success interp.voidValue))}
+       let parked := before.park ⟨m.nextToken, none, [], [], Resume.void, false⟩
+       ⟨(grown.arm parked.id).emit [RunEvent.parkedOn parked.id m.nextToken],
+         parked, yielding, Outcome.parked, [], []⟩) := by
+  simp only [evaluatePrim, current]
+
 /-- `yieldNowWith` (`:982-990`): the fiber parks behind a fresh guard, its resume queued at
 the given priority with `exitVoid`, and its current primitive is already the void success.
 census: scheduler.yield-now-resume-guard -/
@@ -334,7 +351,10 @@ theorem evaluatePrim_yieldNowWith (interp : RunInterp ν σ β ε δ ι α χ St
       it.fiber.dispatcher =
         f.dispatcher.enqueue priority (Task.resume f.id m.nextToken (Prim.success interp.voidValue)) ∧
       it.machine.nextToken = m.nextToken + 1 ∧
-      it.nested = [] := by aesop
+      it.nested = [] := by
+  dsimp only
+  rw [evaluatePrim_yieldNowWith_eq interp m _ yielding priority rfl]
+  aesop
 
 /-- `Yield` is overloaded (`:656-668`): where rc.112 reads `_yielded` as an exit the fiber is
 finished, and where it reads a thunk the fiber is parked; the machine's loop takes the two
@@ -852,7 +872,7 @@ theorem linkScope_open_linked {κ φ η : Type (max u v)}
         (fun f => { f with observers := f.observers ++ [Observer.dropScopeFinalizer scope key] })).emit
         [RunEvent.scopeLinked mode scope key target], []) := by
   simp only [linkScope, linkScopeEdits, hopen, hlookup, hlive, Bool.false_eq_true,
-    ↓reduceIte, hlink, applyFiberEdits, List.foldl_cons, List.foldl_nil, applyFiberEdit,
+    ↓reduceIte, hlink, applyFiberEdits, List.foldl_cons, List.foldl_nil, applyFiberEdit, RunMachine.observe,
     List.nil_append]
   rw [RunMachine.modify_emit]
 
@@ -1262,7 +1282,7 @@ theorem countdownPark_parks (interp : RunInterp ν σ β ε δ ι α χ St)
        ((m'.modify target fun g => { g with observers := g.observers ++ [Observer.countdown f.id m.nextToken] }).emit
           [RunEvent.parkedOn f.id m.nextToken], g, true)) := by
   simp only [countdownPark, countdownParkEdits, hwalk, applyFiberEdits,
-    List.foldl_cons, List.foldl_nil, applyFiberEdit]
+    List.foldl_cons, List.foldl_nil, applyFiberEdit, RunMachine.observe]
   rw [RunMachine.modify_emit]
   rfl
 
@@ -1305,7 +1325,7 @@ theorem fireObserver_countdown_next (interp : RunInterp ν σ β ε δ ι α χ 
           (fun g => { g with observers := g.observers ++ [Observer.countdown waiter token] }),
         acc.2) := by
   simp only [fireObserver, RunMachine.fiber?_emit, hw, hp, hff, Bool.false_eq_true,
-    Bool.false_and, ↓reduceIte, hwalk, applyFiberEdit, List.append_nil]
+    Bool.false_and, ↓reduceIte, hwalk, applyFiberEdit, RunMachine.observe, List.append_nil]
 
 /-- The settling arm of a race callback (`:1503-1514`, R2-12): the race is marked settled;
 while its registration is still running the answer is only buffered (`:1120-1126`, D6a),
@@ -1573,7 +1593,7 @@ theorem linkScope_open (interp : RunInterp ν σ β ε δ ι α χ St)
         [RunEvent.scopeLinked mode scope key target], []) := by
   simp only [linkScope, linkScopeEdits, hopen, ht, hlive, Option.isSome_none,
     Bool.false_eq_true, ↓reduceIte, hlink, applyFiberEdits, List.foldl_cons,
-    List.foldl_nil, applyFiberEdit, List.nil_append]
+    List.foldl_nil, applyFiberEdit, RunMachine.observe, List.nil_append]
   rw [RunMachine.modify_emit]
 
 /-- An exited fiber is not linked (`:5367`, `:5451-5452`; R2-9). census: fork.fiber-run-in -/

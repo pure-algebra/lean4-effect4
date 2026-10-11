@@ -270,7 +270,7 @@ theorem configuration_message {B : List Val} {classes : Classes}
     ConfigurationAt B classes (applyFiberEdit message machine).1 := by
   cases message with
   | observe target observer =>
-    simp only [applyFiberEdit, RunMachine.modify]
+    simp only [applyFiberEdit, RunMachine.observe, RunMachine.modify]
     split
     · exact owned
     · rename_i fiber found

@@ -1,7 +1,7 @@
 import Effect4.Laws.Program.ReleaseCustody.Outside
 import Effect4.Laws.Program.ReleaseCustody.RuntimeShape
 import Effect4.Laws.Program.ReleaseCustody.Evaluation
-import Effect4.Laws.Machine.FiberSumMessages
+import Effect4.Laws.Program.PlaceLedgerConnect
 
 /-!
 Concept: scope-lifetime-finalization, R11.
@@ -34,14 +34,18 @@ theorem install_funded (q : List Nat) (before : NativeMachine) (fiber : RuntimeS
     (key : it.fiber.id = fiber.id) (debit : IterDebit q before fiber it)
     (funded : Funded q before rest) :
     Funded q (it.machine.update it.fiber) (it.nested ++ rest) := by
-  have first := outside_split q before fiber.id fiber unique found
-  have last := outside_install q it.machine fiber.id old it.fiber afterUnique afterFound key
-  unfold IterDebit at debit
-  unfold Funded at funded ⊢
-  change it.machine.trace.countP (ReleaseTrace.releaseAt q) + machineCredits q (it.machine.update it.fiber) +
-      ((it.nested ++ rest).map (commandCredits q)).sum ≤ it.machine.trace.countP (ReleaseTrace.registeredAt q)
-  rw [last, List.map_append, List.sum_append]
-  omega
+  have omitted : ControlWeights.omitted RunFiber.id (fiberCredits q) fiber.id =
+      outsideFiber q fiber.id := rfl
+  have localDebit : (PlaceLedgerConnect.custody q).IterDebit before fiber it := by
+    simpa only [PlaceLedger.IterDebit, PlaceLedger.spent, PlaceLedger.issued, PlaceLedger.outside,
+      PlaceLedgerConnect.custody, FinalizerCredits.indicator_sum, List.map_nil, List.sum_nil,
+      Nat.zero_add, Nat.add_zero, IterDebit, outsideCredits, FiberSum.outside, FiberSum.total,
+      omitted, Nat.add_assoc, Nat.add_left_comm, Nat.add_comm] using debit
+  have balanced := (PlaceLedgerConnect.custody q).install_balanced before fiber it rest []
+    unique (RunMachine.mem_of_fiber? found)
+    (Nat.le_of_eq (FiberSum.install _ it.machine fiber.id old it.fiber afterUnique afterFound key)) localDebit
+  exact (PlaceLedgerConnect.custody_funded q _ _).mp
+    (balanced.funded _ ((PlaceLedgerConnect.custody_funded q _ _).mpr funded))
 
 /-- Every actual scheduler outcome uses the same single-owner installation debit.
 Consumer: whole native loop and deliver command funding in Execution.history. -/
@@ -53,21 +57,11 @@ theorem settle_funded (q : List Nat) (before : NativeMachine) (fiber : RuntimeSh
     (key : it.fiber.id = fiber.id) (debit : IterDebit q before fiber it)
     (funded : Funded q before rest) :
     Funded q (settle fiber.id rest it).1 (settle fiber.id rest it).2 := by
-  have installed := install_funded q before fiber it rest unique found afterUnique old afterFound key debit funded
-  have fibers := FiberSum.settle_le (fiberCredits q) (fun _ _ => rfl)
-    (Evaluation.interrupt_fiber_le q) (fun _ => rfl) (fun _ => rfl) fiber.id rest it afterUnique
-  have fields := FiberSum.settle_fields fiber.id rest it
-  have state := congrArg Prod.fst fields
-  have races := congrArg (fun fields => fields.2.1) fields
-  have trace := congrArg (fun fields => fields.2.2) fields
-  have commands := FiberSum.settle_commands_le (commandCredits q)
-    (fun _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) (fun _ _ => rfl) fiber.id rest it
-  unfold Funded machineCredits at installed ⊢
-  change ((settle fiber.id rest it).1.fibers.map (fiberCredits q)).sum ≤
-    ((it.machine.update it.fiber).fibers.map (fiberCredits q)).sum at fibers
-  dsimp only at state races trace
-  rw [state, races, trace]
-  dsimp only [RunMachine.update] at installed fibers
-  omega
+  apply (PlaceLedgerConnect.custody_funded q _ _).mp
+  apply (PlaceLedgerConnect.custody q).settle_funded (fun _ _ => rfl) (Evaluation.interrupt_fiber_le q)
+    (fun _ => rfl) (fun _ => rfl) (fun _ => rfl) (fun _ _ => rfl)
+    (fun _ _ => rfl) (fun _ _ => rfl) 0 fiber.id rest it [] afterUnique
+  exact (PlaceLedgerConnect.custody_funded q _ _).mpr
+    (install_funded q before fiber it rest unique found afterUnique old afterFound key debit funded)
 
 end Effect4.Program.ReleaseCustody

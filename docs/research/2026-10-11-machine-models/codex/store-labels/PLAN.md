@@ -79,3 +79,30 @@ Its numeric annotation must follow the executed source position and returned fra
 The native transport pass should expose these facts once.
 Parameterize that pass before adding a store-certificate or scenario consumer.
 The existing `Lift` transports its command contract; it does not produce that contract.
+
+## Checked word annotation
+
+Keep `MoveLabel` and annotate each label with an optional actual synchronous operation and answer.
+Use `Contracts.Path` over the existing reference heaps.
+An executed edge requires its real store-step equation and matching answer label.
+A quiet edge requires equality of the complete reference heap.
+This adds proof evidence, not executable program syntax.
+
+The reference reading folds the annotated operations in order.
+A successful store operation with no reference projection leaves this observation unchanged.
+The edge certificate remains required; the reading alone admits no operation.
+
+The footprint is conservative and includes reads and allocation's actual key.
+Represent its finite union by list membership; duplicate entries change no membership judgment.
+The checked concatenation law supplies union under that observation.
+The frame rule keeps every cell outside that footprint, including absent cells.
+
+`RefWordsProbe.lean` checks the fold, frame rule, annotation erasure, and composition.
+Its readers compose a write and allocation, retain untouched existing and absent cells, and record a successful read.
+The audit checks 35 declarations within the allowed axioms, with no planned goals.
+The actual primitive producer connector remains open; the library representation has not landed.
+
+Next strengthen the shared primitive store projection with this certificate.
+Derive its existing `RefTransfer` theorem as a projection and delete the replaced proof.
+Retain the synchronous annotation even when the operation leaves references unchanged.
+Do not add another evaluator or command classification.

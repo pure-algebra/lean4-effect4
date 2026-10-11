@@ -1,0 +1,32 @@
+{
+  "src/Effect4/Laws/Machine/Keeps.lean": {
+    "headers": 28,
+    "changed": [],
+    "before": 239,
+    "after": 244
+  },
+  "src/Effect4/Laws/Machine/Edits.lean": {
+    "headers": 20,
+    "changed": [],
+    "before": 329,
+    "after": 276
+  },
+  "src/Effect4/Laws/Machine/EditWords.lean": {
+    "headers": 34,
+    "changed": [],
+    "before": 599,
+    "after": 599
+  },
+  "src/Effect4/Laws/Machine/FiberSumMessages.lean": {
+    "headers": 7,
+    "changed": [],
+    "before": 205,
+    "after": 205
+  },
+  "src/Effect4/Laws/Machine/Ledger.lean": {
+    "headers": 48,
+    "changed": [],
+    "before": 738,
+    "after": 738
+  }
+}
