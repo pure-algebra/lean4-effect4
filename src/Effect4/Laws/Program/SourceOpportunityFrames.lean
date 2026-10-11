@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.SourceOpportunityCallbacks
+import Effect4.Laws.Machine.FrameWeights
 
 /-!
 Concept: scope-lifetime-finalization, R11.
@@ -30,12 +31,27 @@ theorem ensure_answer_zero (root : NativeEff) (q : List Nat) (code : NCode)
   all_goals intro found
   all_goals aesop (add norm simp [current])
 
+/-- The shared frame scalar model reads the existing source projections.
+Consumer: actual saved-frame pop and registration-history transport. -/
+def weightModel (root : NativeEff) (q : List Nat) :
+    Machine.FrameWeights.Model EffName EffThunk Val Err Defect FiberId Ann where
+  current := current root q
+  saved := saved root q
+  ensure_stack := fun code fiber => Nat.le_of_eq (ensure_saved root q code fiber)
+  ensure_replacement := ensure_answer_zero root q
+
 /-- The selected pop answer uses the reservation of its actual saved frame. -/
 def answer (root : NativeEff) (q : List Nat) :
     ContAnswer EffName EffThunk Val Err Defect FiberId Ann → Nat
   | .frame code => saved root q code
   | .replacement code => current root q code
   | _ => 0
+
+/-- The generic selected-answer projection agrees on each actual answer constructor. -/
+theorem weightModel_answer (root : NativeEff) (q : List Nat)
+    (selected : ContAnswer EffName EffThunk Val Err Defect FiberId Ann) :
+    Machine.FrameWeights.answer (weightModel root q) selected = answer root q selected := by
+  cases selected <;> rfl
 
 /-- Answer selection retains the saved frame's bound or a zero-opportunity hook replacement.
 Consumer: actual continuation pop debit. -/
@@ -44,9 +60,9 @@ theorem answerOf_le (root : NativeEff) (q : List Nat) (code : NCode) (demand : E
     (hook : ∀ next ∈ replacement, current root q next = 0)
     (found : Prim.answerOf code demand replacement = some result) :
     answer root q result ≤ saved root q code := by
-  unfold Prim.answerOf at found
-  repeat' split at found
-  all_goals aesop (add norm simp [answer, Option.mem_def])
+  have bounded := Machine.FrameWeights.answerOf_le (weightModel root q) code demand replacement result hook found
+  rw [weightModel_answer] at bounded
+  exact bounded
 
 /-- Draining one pushed administrative hook retains the remaining saved reservations.
 Consumer: fused continuation pop accounting. -/
@@ -55,27 +71,9 @@ theorem passPushed_le (root : NativeEff) (q : List Nat) (demand : Effect4.Arm) (
     ((FrameFiber.passPushed demand skip fiber cause).fiber.stack.map (saved root q)).sum +
       answer root q (FrameFiber.passPushed demand skip fiber cause).answer ≤
       (fiber.stack.map (saved root q)).sum := by
-  unfold FrameFiber.passPushed
-  cases stored : fiber.stack with
-  | nil => simp only [stored, answer, List.map_nil, List.sum_nil, Nat.add_zero, Nat.le_refl]
-  | cons head tail =>
-    have kept := ensure_saved root q head {fiber with stack := tail}
-    have hook : ∀ next ∈ (head.ensure {fiber with stack := tail}).2, current root q next = 0 := by
-      intro next member
-      exact ensure_answer_zero root q head _ next (Option.mem_def.mp member)
-    have selected (result : ContAnswer EffName EffThunk Val Err Defect FiberId Ann)
-        (found : Prim.answerOf head demand (head.ensure {fiber with stack := tail}).2 = some result) :=
-      answerOf_le root q head demand _ result hook found
-    dsimp only
-    split
-    · split
-      · simp only [answer, Nat.add_zero, List.map_cons, List.sum_cons, kept]
-        omega
-      · have bound := selected _ (by assumption)
-        simp only [List.map_cons, List.sum_cons, kept]
-        omega
-    · simp only [answer, Nat.add_zero, List.map_cons, List.sum_cons, kept]
-      omega
+  have bounded := Machine.FrameWeights.passPushed_le (weightModel root q) demand skip fiber cause
+  rw [weightModel_answer] at bounded
+  exact bounded
 
 /-- The actual fused pop retains the answering reservation and every unconsumed frame.
 Consumer: native success, cause and finalizer pop debit. -/
@@ -85,39 +83,9 @@ theorem popFrom_le (root : NativeEff) (q : List Nat) (demand : Effect4.Arm) (ski
     ((FrameFiber.popFrom demand skip frames fiber cause).fiber.stack.map (saved root q)).sum +
       answer root q (FrameFiber.popFrom demand skip frames fiber cause).answer ≤
       (frames.map (saved root q)).sum + (fiber.stack.map (saved root q)).sum := by
-  induction frames generalizing fiber cause with
-  | nil => simp only [FrameFiber.popFrom, answer, List.map_nil, List.sum_nil, Nat.add_zero, Nat.zero_add, Nat.le_refl]
-  | cons head tail ih =>
-    have kept := ensure_saved root q head fiber
-    have hook : ∀ next ∈ (head.ensure fiber).2, current root q next = 0 := by
-      intro next member
-      exact ensure_answer_zero root q head fiber next (Option.mem_def.mp member)
-    have selected (result : ContAnswer EffName EffThunk Val Err Defect FiberId Ann)
-        (found : Prim.answerOf head demand (head.ensure fiber).2 = some result) :=
-      answerOf_le root q head demand _ result hook found
-    have pushed := passPushed_le root q demand skip (head.ensure fiber).1 none
-    have recursive := ih (FrameFiber.passPushed demand skip (head.ensure fiber).1 none).fiber none
-    simp only [FrameFiber.passPushed_fiber_cause, FrameFiber.passPushed_answer_cause,
-      FrameFiber.popFrom_fiber_cause, FrameFiber.popFrom_answer_cause] at pushed recursive
-    unfold FrameFiber.popFrom
-    dsimp only
-    split
-    · split
-      · simp only [FrameFiber.passOn, FrameFiber.joinPushed]
-        split
-        all_goals simp only [List.map_append, List.sum_append, List.map_cons, List.sum_cons,
-          FrameFiber.passPushed_fiber_cause, FrameFiber.passPushed_answer_cause,
-          FrameFiber.popFrom_fiber_cause, FrameFiber.popFrom_answer_cause]
-        all_goals omega
-      · have selected := selected _ (by assumption)
-        simp only [List.map_append, List.sum_append, List.map_cons, List.sum_cons, kept]
-        omega
-    · simp only [FrameFiber.passOn, FrameFiber.joinPushed]
-      split
-      all_goals simp only [List.map_append, List.sum_append, List.map_cons, List.sum_cons,
-        FrameFiber.passPushed_fiber_cause, FrameFiber.passPushed_answer_cause,
-        FrameFiber.popFrom_fiber_cause, FrameFiber.popFrom_answer_cause]
-      all_goals omega
+  have bounded := Machine.FrameWeights.popFrom_le (weightModel root q) demand skip frames fiber cause
+  rw [weightModel_answer] at bounded
+  exact bounded
 
 /-- Actual getCont retains the sum of its answering reservation and remaining saved frames.
 Consumer: native finalizer and frame resume accounting. -/
@@ -127,11 +95,9 @@ theorem getCont_le (root : NativeEff) (q : List Nat)
     ((fiber.getCont demand skip cause).fiber.stack.map (saved root q)).sum +
       answer root q (fiber.getCont demand skip cause).answer ≤
       (fiber.stack.map (saved root q)).sum := by
-  unfold FrameFiber.getCont
-  split
-  · simp only [answer, Nat.add_zero, Nat.le_refl]
-  · simpa only [List.map_nil, List.sum_nil, Nat.add_zero] using
-      popFrom_le root q demand skip fiber.stack {fiber with stack := [], deferredInterrupt := false} cause
+  have bounded := Machine.FrameWeights.getCont_le (weightModel root q) fiber demand skip cause
+  rw [weightModel_answer] at bounded
+  exact bounded
 
 /-- The actual loop's returned body has zero selected source opportunity.
 Consumer: full frame value-arm accounting. -/
