@@ -3,7 +3,7 @@ import { allows, decodeKeyed, hostProtocol, transition, type KeyedHeader, type K
 import { KeyedRecorder, cellJson, valueJson, wireValue, type KeyedFixture } from "./keyed-recorder.ts"
 import { ArmedDispatchers, ScriptedHost, bindScenario, declareScenario, scenarioEffect, scenarioRef } from "./keyed-bindings.ts"
 import { measure, type HostEnd, type ScenarioFixture } from "./keyed-observation.ts"
-import { Data, Deferred, Effect, Fiber, Option, Ref, Result } from "effect"
+import { Cause, Context, Data, Deferred, Effect, Exit, Fiber, Option, Ref, Result } from "effect"
 import { setImmediate as nextTurn } from "node:timers/promises"
 import { ProfileRefusal, Rc112ClockBoundary } from "./clock.ts"
 const expected = { program: "two", table: [{}] }
@@ -253,6 +253,22 @@ describe("scripted recorder", () => {
     expect(wireValue({ some: { ctor: 0, args: [["id", "name"], [2, "bob"]] } })).toEqual(Option.some({ id: 2, name: "bob" }))
     expect(wireValue(null)).toBeUndefined()
     expect(() => wireValue({ ctor: 1, args: [1] })).toThrow("outside the selected transport profile")
+  })
+
+  test("saved failed exits keep exact cause images and refuse unknown identities", () => {
+    const annotations = { ctor: 0, args: [[]] }
+    const reason = { ctor: 0, args: [{ ctor: 2, args: ["Timeout", "deadline"] }, annotations] }
+    expect(cellJson([1, Exit.fail(["Timeout", "deadline"])]))
+      .toEqual([1, { ctor: 1, args: [{ ctor: 0, args: [[reason]] }] }])
+    expect(cellJson(Exit.succeed("body"))).toEqual({ ctor: 0, args: ["body"] })
+    expect(cellJson(Exit.interrupt(77), new Map([[77, 2]])))
+      .toEqual({ ctor: 1, args: [{ ctor: 0, args: [[{ ctor: 2, args: [{ some: { ctor: 0, args: [2] } }, annotations] }]] }] })
+    expect(() => cellJson(Exit.interrupt(77))).toThrow("unassociated nested interruptor")
+    expect(() => cellJson(Exit.fail({ unexpected: true }))).toThrow("nested error outside")
+    class Note extends Context.Service<Note, string>()("cause-image-test/note") {}
+    const annotated = Cause.annotate(Cause.fail("x"), Context.make(Note, "x"))
+    expect(() => cellJson(Exit.failCause(annotated)))
+      .toThrow("annotated nested cause")
   })
 
   // The cells reader's writer and the transport profile's writer, on a `Deferred`. Lean's pair

@@ -407,13 +407,6 @@ def wrongTop : Scenario :=
 -- The green control: the gate passes the record. The red control reads the record under the
 -- wrong claim, with the dependency check only (its runs are judged above), and names each clause
 -- that the wrong claim's proof does not reach.
--- The final gate pass follows each clause to its planned preservation subgoals.
-/--
-error: workers: the claim Test.Dogfood.Scenario.Workers.workers rests on the planned goal Test.Dogfood.Scenario.Workers.Assertions.logs_step, which no clause names
-workers: the claim Test.Dogfood.Scenario.Workers.workers rests on the planned goal Test.Dogfood.Scenario.Workers.Assertions.registrations_step, which no clause names
-workers: the claim Test.Dogfood.Scenario.Workers.workers rests on the planned goal Test.Dogfood.Scenario.Workers.Assertions.releases_step, which no clause names
--/
-#guard_msgs (error) in
 #scenario_gate scenario
 
 /--

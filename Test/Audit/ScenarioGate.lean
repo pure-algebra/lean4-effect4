@@ -41,7 +41,7 @@ reads. It fails, naming every finding, when:
   clauses. A planned goal is reached when the claim rests on it (`Node.restsOn`). A theorem is
   reached when the walk from the claim's proof reaches it through the batteries' declarations
   (`Node.nearest`);
-* the claim rests on a planned goal that no clause names;
+* the claim rests on a planned goal that no clause names or depends on;
 * a clause or a law has no green control, or no red control (`Scenario.problems`);
 * the record lists one run's name twice (`Scenario.problems`);
 * no control reads a named run of the record (`Scenario.unread`, `Scenario.problems`);
@@ -106,10 +106,11 @@ def scenarioGateExpansion (scenarios : Array (TSyntax `term)) (records : Bool) :
             if placed clause.claim && !reached.contains clause.claim then
               findings := findings.push
                 s!"{scenario.name}: the proof of {scenario.claim} does not reach the clause \"{clause.name}\" ({clause.claim})"
+          let clauseGoals := plan.next (scenario.clauses.map (·.claim)).toArray
           for goal in ((plan.find? scenario.claim).map (·.restsOn)).getD #[] do
-            unless scenario.clauses.any (·.claim == goal) do
+            unless clauseGoals.contains goal do
               findings := findings.push
-                s!"{scenario.name}: the claim {scenario.claim} rests on the planned goal {goal}, which no clause names"
+                s!"{scenario.name}: the claim {scenario.claim} rests on the planned goal {goal}, which no clause names or depends on"
         if $(quote records) then findings := findings ++ scenario.problems.toArray
       unless findings.isEmpty do
         throwError (String.intercalate "\n" findings.toList))

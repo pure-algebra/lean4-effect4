@@ -510,6 +510,15 @@ structure Scope (κ φ β ε δ ι α : Type u) where
 in the typed world is governed by `ScopeLive w sc` (World.lean (`src/Effect4/Laws/Program/Typed/World.lean`)), witnessed by `fits_scope_inv`.
 
 #### 4. Required Properties and Obligations
+- **Finalizer starts spend registrations (`finalizer-starts-bounded`)**: Every native decision prefix starts each source's finalizer no more often than it pushes that finalizer's frame.
+  `Program.FinalizerRun.starts_le_pushes` states the bound in `src/Effect4/Laws/Program/FinalizerRun.lean`.
+  The program, row table and compile budget remain arbitrary.
+  The proof counts retained finalizer frames through every command and decision edit.
+  It establishes no source uniqueness, cleanup-log provenance, progress or host behavior.
+- **Source uniqueness for finalizers (`once-placed-finalizer`)**: A once-placed source pushes its finalizer frame at most once across all fibers.
+  `Program.FinalizerRun.once_placed_pushes_once` states the obligation in `src/Effect4/Laws/Program/FinalizerRun.lean`.
+  Its premise is `OncePlaced` and native reachability.
+  It serves the original Atomic cleanup bound and establishes no progress or log-writer provenance.
 - **Close idempotence (`close-idempotent`)**: Closing an already closed scope is a no-op.
   (`close_idempotent` (`src/Effect4/Machine/Scope.lean`)).
 - **Consecutive close idempotence (`close-twice`)**: Applying close twice produces void.
@@ -1317,6 +1326,10 @@ def allows (source : State) (label : Label) (target : State) : Bool :=
 (`src/Effect4/Api/HostProtocol.lean:48`). External answers are submitted through `HostSession.submit` and applied via `HostSession.applyReply`.
 
 #### 4. Required Properties and Obligations
+- **Recorded runs have admitted histories (`run-admitted-history`)**: Every reached run holds its built program's call table and an admitted native history.
+  `Run.reached_history` states the connection in `src/Effect4/Laws/Run/Frame.lean`.
+  The history keeps the run's compile budget and records each accepted decision with its command budget.
+  It covers arbitrary recorded commands and establishes no progress or outside-host behavior.
 - **Allowed answer step (`allows-answer`)**: Async answering is an allowed transition from `.awaitingAsync`.
   (`allows_answer` (`src/Effect4/Laws/Run.lean`)).
 - **Host reply commutativity (`reply-commute`)**: Independent host answers commute in session queues.
@@ -1366,6 +1379,11 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
 (`run_eq_meaning` in `src/Effect4/Laws/Program/Agreement/Segment.lean`, `M7Fragment` in `src/Effect4/Laws/Program/Typed/Assembly.lean`).
 
 #### 4. Required Properties and Obligations
+- **Recorded calls occur in the admitted call tree (`recorded-call-tree-prefix`)**: Each recorded call binding names a wait in that program's admitted call tree.
+  `Run.CallTree.bound_in_tree` states the obligation in `src/Effect4/Laws/Run/CallTree.lean`.
+  Its premises are `StraightRows`, no cause handlers and a reached run.
+  The tree uses exits from replies submitted in that run.
+  It covers arbitrary command budgets and establishes no progress, fork behavior or scope behavior.
 - **Straight program agreement (`run-eq-meaning`)**: Frame machine execution matches denotational meaning on `Straight`.
   (`run_eq_meaning` (`src/Effect4/Laws/Program/Agreement/Segment.lean`)).
 - **Loop agreement (`loop-agreement`)**: Replay agreement holds across straight loop steps

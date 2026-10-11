@@ -315,6 +315,7 @@ partial def actionV : ActionTerm NativeOp → V
   | .snapshotChildren => .ctor ``ActionTerm.snapshotChildren []
   | .awaitNewChildren s => .ctor ``ActionTerm.awaitNewChildren [termV s]
   | .raceAll es => .ctor ``ActionTerm.raceAll [effsV es]
+  | .raceAllFirst es => .ctor ``ActionTerm.raceAllFirst [effsV es]
   | .setContext c => .ctor ``ActionTerm.setContext [termV c]
   | .getContext => .ctor ``ActionTerm.getContext []
   | .getId => .ctor ``ActionTerm.getId []

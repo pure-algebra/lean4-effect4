@@ -155,6 +155,11 @@ end
 #guard [Val.unit, .nat 3, .bool true, .str "a", .none, .some (.nat 1), .list [.nat 1, .str "b"],
     .ctor 1 [.nat 2], .handle 0 4].all fun v => cellJson v == valJson v
 
+-- The completion log stores the native failed-exit image, including its empty annotations.
+-- The host reader pins the same bytes in keyed-protocol.test.ts.
+#guard (Json.parse "{\"ctor\":1,\"args\":[{\"ctor\":0,\"args\":[[{\"ctor\":0,\"args\":[{\"ctor\":2,\"args\":[\"Timeout\",\"deadline\"]},{\"ctor\":0,\"args\":[[]]}]}]]}]}").toOption ==
+  some (cellJson (exitImage.toVal (.failure (Cause.fail (.tagged "Timeout" "deadline")))))
+
 def reasonJson : Reason Err Defect FiberId Ann → J
   | .fail (.tagged tag msg) _ => Json.mkObj [("fail", toJson [tag, msg])]
   | .fail (.text msg) _ => Json.mkObj [("fail", toJson msg)]
@@ -652,13 +657,13 @@ def makesCell (program : Api.Program) : Bool :=
 in it. -/
 def makesFiber (program : Api.Program) : Bool :=
   foldMap_eff false (· || ·) program (f_action := fun
-    | .fork _ _ | .forkIn _ _ _ | .forkScoped _ _ | .runIn _ _ | .raceAll _ => true
+    | .fork _ _ | .forkIn _ _ _ | .forkScoped _ _ | .runIn _ _ | .raceAll _ | .raceAllFirst _ => true
     | _ => false)
 
 /-- Whether a program holds a race. A race forks its entrants through no fork head. -/
 def races (program : Api.Program) : Bool :=
   foldMap_eff false (· || ·) program (f_action := fun
-    | .raceAll _ => true
+    | .raceAll _ | .raceAllFirst _ => true
     | _ => false)
 
 /-- Whether a forked program of a program makes a fiber. A fork that starts at once runs its
@@ -685,6 +690,10 @@ def cellsFirst : Api.Program → Bool
 #guard !cellsFirst (.withFiber (.fork (.perform .refMake (.lit (.nat 0))) opts))
 #guard makesFiber two && !makesCell two && !races two && !forksInFork two
 #guard races (.withFiber (.raceAll (.cons two .nil))) && forksInFork (.withFiber (.fork two opts))
+#guard races (.withFiber (.raceAllFirst (.cons two .nil))) &&
+  makesFiber (.withFiber (.raceAllFirst (.cons two .nil))) &&
+  !cellsFirst (.bind (.withFiber (.raceAllFirst (.cons two .nil)))
+    (.perform .refMake (.lit (.nat 0))))
 
 /-- The readers that a run gets, each with what the host must find, and the readers that it is
 refused, each with the reason. The third part gives the premise of each of the four readers on
@@ -912,8 +921,8 @@ def endingJson : Scenario.Timeout.Ending → J
   | .interrupted => Json.mkObj [("interrupted", true)]
   | .other => Json.mkObj [("other", true)]
 
-/-- The timeout scenario (`Test/Dogfood/Scenario/Timeout.lean`), with its observation's nine
-fields. -/
+/-- The timeout scenario, including complete timeout-form outcomes.
+The host has no reader for a race's selected entrant; that field remains explicit in the wire. -/
 def timeout : Wire :=
   { scenario := Scenario.Timeout.scenario
     observed := fun run =>
@@ -927,7 +936,12 @@ def timeout : Wire :=
       , ("attempts", toJson o.attempts)
       , ("cleanups", toJson (o.cleanups.map valJson))
       , ("root", endingJson o.root)
-      , ("timers", toJson (o.timers.map fun timer => [timer.1, timer.2])) ]
+      , ("timers", toJson (o.timers.map fun timer => [timer.1, timer.2]))
+      , ("forms", toJson (o.forms.map fun form => Json.mkObj
+          [("attempt", toJson form.attempt)
+          , ("selected", toJson (form.selected.map FiberId.value))
+          , ("role", .str (match form.role with | .attempt => "attempt" | .timer => "timer" | .unknown => "unknown"))
+          , ("exit", exitJson form.exit)])) ]
     same := fun a b => Scenario.Timeout.observe a == Scenario.Timeout.observe b
     asks := [.cells, .sleeps] }
 

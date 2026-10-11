@@ -5,7 +5,7 @@ import Effect4.Program.Fold
 /-!
 # Recorded calls and the admitted call tree
 
-Concept: translation-simulation, R6. Proposed claim: recorded-call-tree-prefix, role soundness.
+Concept: translation-simulation, R6. Claim: recorded-call-tree-prefix, role inversion.
 Consumer: `Routing.unauthorized_calls_nothing`, through its proved token check in the call tree.
 Reach: `StraightRows`, no cause handlers, every recorded script and every command budget.
 The claim extends `rows_loop_frontier` to calls observed before a run settles.

@@ -6,11 +6,11 @@ import Test.Audit.ScenarioGate
 # Test.Dogfood.Scenario.Gate — controls of the scenario gate
 
 `#scenario_gate` (`Test/Dogfood/Scenario.lean`) refuses a record that says more than its
-declarations give. This battery runs the gate once over fourteen fixture records: three that it
-accepts, and eleven that it refuses by name.
+declarations give. The main call checks the fixture records and their run controls.
+The dependency controls also check clauses whose proofs depend on planned subgoals.
 
-The fixtures name the driver's declarations and the law graph's. Twelve of the fourteen stand on
-a claim that is a planned goal: its node costs no walk of the proof graph. That goal is this
+The fixtures name the driver's declarations and the law graph's.
+The run controls use a claim that is a planned goal. That goal is this
 battery's own, `Fixture.pending`. A scenario's goal cannot serve: it stops being a goal when it
 is proved, as the driver's `tape_replays` did. This module is no root of the semantics report
 (`tools/ProofGraph/Registry.lean`), so the plan does not show the fixture goal.
@@ -73,7 +73,7 @@ def unplacedLaw : Scenario :=
   { planned with name := "unplacedLaw", laws := [⟨"inert", ``Effect4.Run.step_id⟩]
                  controls := both "machine" ++ both "inert" }
 
-/-- Red control: a claim that rests on a planned goal which no clause names. -/
+/-- Red control: a claim that rests on a planned goal which no clause names or depends on. -/
 def unlisted : Scenario :=
   { planned with name := "unlisted", clauses := [], laws := [⟨"inert", ``receipt_inert⟩]
                  controls := both "inert" }
@@ -165,7 +165,7 @@ unresolved: Nowhere.program does not resolve to a declaration
 noTheorem: the claim Test.Dogfood.Scenario.play is no theorem and no planned goal
 unplaced: the claim Test.Dogfood.Scenario.play_opened has no placement at a requirement
 unplacedLaw: the claim Effect4.Run.step_id has no placement: no semantics attribute and no row of the semantics registry
-unlisted: the claim Test.Dogfood.Scenario.Fixture.pending rests on the planned goal Test.Dogfood.Scenario.Fixture.pending, which no clause names
+unlisted: the claim Test.Dogfood.Scenario.Fixture.pending rests on the planned goal Test.Dogfood.Scenario.Fixture.pending, which no clause names or depends on
 loose: the clause "machine" has no red control
 loose: the law "inert" has no green control
 loose: the control "a stray run" names no clause and no law
@@ -188,5 +188,57 @@ unread: no control reads the run "opened"
 #guard Fixture.twiceListed.repeated = ["opened"] && Fixture.played.repeated = []
 #guard Fixture.unread.unread = ["opened"] && Fixture.played.unread = []
 #guard Fixture.unread.problems = ["unread: no control reads the run \"opened\""]
+
+
+/-! The dependency gate follows the actual proof of an assembled clause. -/
+namespace Fixture
+
+/-- A clause may have a checked proof that still depends on a planned subgoal. -/
+@[semantics "host-session-protocol" (requirement := R6)]
+theorem decomposed : True := pending
+
+/-- The scenario assembles the clause through its theorem. -/
+@[semantics "host-session-protocol" (requirement := R6)]
+theorem assembled : True ∧ True := ⟨decomposed, True.intro⟩
+
+/-- This separate goal controls an unaccounted dependency of the top claim. -/
+@[semantics "host-session-protocol" (requirement := R6)]
+proof_goal hidden : True
+
+/-- The second component uses a goal that the named clause does not cover. -/
+@[semantics "host-session-protocol" (requirement := R6)]
+theorem withHidden : True ∧ True := ⟨decomposed, hidden⟩
+
+/-- This theorem controls a spurious clause that the assembled proof never uses. -/
+@[semantics "host-session-protocol" (requirement := R6)]
+theorem independent : True := True.intro
+
+/-- Green control: the clause's proof accounts for the top claim's planned dependency. -/
+def throughClause : Scenario :=
+  { planned with
+    name := "throughClause", claim := ``assembled
+    clauses := [⟨"decomposed", ``decomposed⟩], controls := both "decomposed" }
+
+/-- Red control: the top claim has a planned dependency outside all named clauses. -/
+def hiddenDependency : Scenario :=
+  { throughClause with name := "hiddenDependency", claim := ``withHidden }
+
+/-- Red control: covering the goals does not excuse an unused clause. -/
+def extraClause : Scenario :=
+  { throughClause with
+    name := "extraClause"
+    clauses := throughClause.clauses ++ [⟨"unused", ``independent⟩]
+    controls := throughClause.controls ++ both "unused" }
+
+end Fixture
+
+#scenario_reach Fixture.throughClause
+
+/--
+error: hiddenDependency: the claim Test.Dogfood.Scenario.Fixture.withHidden rests on the planned goal Test.Dogfood.Scenario.Fixture.hidden, which no clause names or depends on
+extraClause: the proof of Test.Dogfood.Scenario.Fixture.assembled does not reach the clause "unused" (Test.Dogfood.Scenario.Fixture.independent)
+-/
+#guard_msgs (error) in
+#scenario_reach Fixture.hiddenDependency Fixture.extraClause
 
 end Test.Dogfood.Scenario

@@ -48,3 +48,15 @@ Keep interrupted or incomplete forms outside the completed-outcome premise.
 
 This note proposes the observation and predicate.
 It changes no statement, representation, budget, or timeout behaviour.
+
+## Owner ruling and retained evidence
+
+The owner selects the source-aligned contract on 2026-10-11.
+A retry follows a declared failure returned by the completed timeout form.
+The four-attempt bound remains.
+
+`Timeout.RetriesDeclared` in `Test/Dogfood/Scenario/Timeout.lean` records this contract.
+`replyBasedRetry_refuted` in `Test/Dogfood/Proofs/TimeoutCounterexample.lean` retains the original statement's refutation.
+The two observation equations retain the successful-reply and nonretryable-reply witnesses.
+`E4-HOST-CE-009` in `Test/Counterexamples/REGISTER.md` records the amendment.
+The universal proof remains an obligation.

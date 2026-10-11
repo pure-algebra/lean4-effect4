@@ -91,7 +91,7 @@ theorem Race.afterExit_first (race : Race ν σ β ε δ ι α κ) (child : Fibe
     (race.afterExit child exit).selected = some child ∧
       (race.afterExit child exit).state.accepted = some exit := by
   have haccept := Supervision.raceCompleteFirst_accepts race.state child exit hlive hopen
-  simp only [Race.afterExit, hmode, hopen, Supervision.raceCompleteWith, haccept]
+  simp only [hmode, hopen, Supervision.raceCompleteWith, haccept]
   aesop
 
 end Effect4.Machine

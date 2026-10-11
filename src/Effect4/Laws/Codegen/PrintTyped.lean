@@ -5088,7 +5088,7 @@ theorem childEnv_length (s : Signature Op) (parent : NodeEnv) (node : Node Op) (
       cases invoked
       simp only [NodeEnv.tyEnv, List.length_append, List.length_singleton]
       rfl
-  case case52 head tail =>
+  case case53 head tail =>
     simp only [Node.childEnv] at found
     cases found
     cases parent with
@@ -5096,19 +5096,19 @@ theorem childEnv_length (s : Signature Op) (parent : NodeEnv) (node : Node Op) (
     | env tys => rfl
     | body tys loop => rfl
     | closed => rfl
-  case case53 head tail tys q0 q qs =>
+  case case54 head tail tys q0 q qs =>
     simp only [Node.childEnv] at found
     cases found
     simp only [NodeEnv.tyEnv, List.length_append, List.length_singleton]
     rfl
-  case case54 head tail env qs notTwo =>
+  case case55 head tail env qs notTwo =>
     cases qs with
     | nil => simp only [Node.childEnv, reduceCtorEq] at found
     | cons q0 rest =>
       cases rest with
       | nil => simp only [Node.childEnv, reduceCtorEq] at found
       | cons q qs => exact (notTwo q0 q qs rfl).elim
-  case case55 head tail notTwo notSlots =>
+  case case56 head tail notTwo notSlots =>
     cases parent with
     | slots tys qs => exact (notSlots tys qs rfl).elim
     | env tys => simp only [Node.childEnv] at found; cases found; rfl

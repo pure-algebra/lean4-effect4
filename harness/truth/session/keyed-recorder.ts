@@ -33,7 +33,7 @@ export interface LedgerRefusal { readonly at: number; readonly row: "submit" | "
 export type Pair = readonly [string, string]
 export interface ExternalHandle { readonly index: number; readonly session: string }
 /** The image of a value, under one choice: whether a `Deferred` has an image. */
-const imageOf = (deferred: boolean): ((value: unknown) => Json) => {
+const imageOf = (deferred: boolean, fibers: ReadonlyMap<number, number> = new Map()): ((value: unknown) => Json) => {
   const image = (value: unknown): Json => {
     if (value === undefined || value === null) return null
     if (typeof value === "boolean" || typeof value === "string") return value
@@ -41,8 +41,30 @@ const imageOf = (deferred: boolean): ((value: unknown) => Json) => {
     if (Array.isArray(value)) return value.map(image)
     if (Option.isOption(value)) return Option.isNone(value) ? { none: true } : { some: image(value.value) }
     if (Exit.isExit(value)) {
-      if (Exit.isFailure(value)) throw Error("nested failed Exit requires an explicit cause image")
-      return { ctor: 0, args: [image(value.value)] }
+      if (Exit.isSuccess(value)) return { ctor: 0, args: [image(value.value)] }
+      // Value.exit/cause/reason and Err.image in Machine/{Value,Alphabets}.lean.
+      // This profile carries unannotated causes and associated interruptor identities only.
+      const ctor = (tag: number, args: Json[]): Json => ({ ctor: tag, args })
+      const error = (value: unknown): Json => {
+        if (typeof value === "string") return ctor(3, [value])
+        if (typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && !Object.is(value, -0)) return ctor(1, [value])
+        if (Array.isArray(value) && value.length === 2 && value.every(v => typeof v === "string")) return ctor(2, value)
+        throw Error("nested error outside the selected cause image")
+      }
+      const reasons = value.cause.reasons.map(reason => {
+        if (reason.annotations.size !== 0) throw Error("annotated nested cause outside the selected cause image")
+        const annotations = ctor(0, [[]])
+        if (Cause.isFailReason(reason)) return ctor(0, [error(reason.error), annotations])
+        if (Cause.isDieReason(reason)) {
+          const defect = typeof reason.defect === "number" ? ctor(4, [image(reason.defect)]) : ctor(5, [error(reason.defect)])
+          return ctor(1, [defect, annotations])
+        }
+        if (reason.fiberId === undefined) return ctor(2, [{ none: true }, annotations])
+        const fiber = fibers.get(reason.fiberId)
+        if (fiber === undefined) throw Error("unassociated nested interruptor")
+        return ctor(2, [{ some: ctor(0, [fiber]) }, annotations])
+      })
+      return ctor(1, [ctor(0, [reasons])])
     }
     if (Result.isResult(value)) return Result.isFailure(value)
       ? { ctor: 0, args: [image(value.failure)] } : { ctor: 1, args: [image(value.success)] }
@@ -72,7 +94,7 @@ export const valueJson = imageOf(false)
  * writer of the same name (`cellJson`, `Keyed.lean`): for a module's private cell, whose waiting
  * requests hold `Deferred` handles. The lane then compares such a cell up to its handles. It
  * does not compare which handle stands where. */
-export const cellJson = imageOf(true)
+export const cellJson = (value: unknown, fibers: ReadonlyMap<number, number> = new Map()): Json => imageOf(true, fibers)(value)
 /** The inverse of `valueJson` on a scripted completion: unit, a number, a boolean, a string, a
  * list, an option and a record. A record's frame has two columns of one length, and its first
  * column holds its names. Any other frame is refused. */
@@ -284,6 +306,8 @@ export class KeyedRecorder {
     })
     return exitJson(exit, fibers)
   }
+  /** A cell image retains associated interruptor identities inside saved failed exits. */
+  cellOf(value: unknown): Json { return cellJson(value, this.fibers) }
   /** The machine's number of a runtime fiber: the root's, or a caller's. */
   fiberOf(runtime: Fiber.Fiber<unknown, unknown>): number | undefined { return this.fibers.get(runtime.id) }
   /** The recording so far, by name `snapshot`: a script may end before the root does, so no

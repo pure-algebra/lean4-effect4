@@ -433,10 +433,12 @@ decisions row 340) is not drawn: the printer refuses it until slice HO-3. -/
 def pendingEffs : List String :=
   ["iterate", "restore", "defs", "invoke"]
 
-/-- A fiber action the printer accepts and the corpus does not draw, for the same reason as
-`restore`: `getInterruptible` (decisions row 245). -/
+/-- Fiber actions outside the fixed seed stream. `getInterruptible` follows decisions row 245.
+`raceAllFirst` keeps the existing draws unchanged. Its print/read and codec controls are in
+`Test/Program/FirstExitSource.lean`; both foreign readers have `ingest/test/first-exit.test.ts`.
+Neither entry claims randomized coverage. -/
 def pendingActions : List String :=
-  ["getInterruptible"]
+  ["getInterruptible", "raceAllFirst"]
 
 /-- Every case the printer accepts and the corpus currently draws. -/
 def expected : List (Head × String) :=

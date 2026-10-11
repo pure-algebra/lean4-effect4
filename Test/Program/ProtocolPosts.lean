@@ -117,6 +117,8 @@ def oldFiberPost (w' : W) (op : FiberOp) (cert : FiberCert op) (ans : op.answer)
   | .forkScoped _ _ _ => ∃ id : FiberId, ans = .success (Val.fiber id) ∧ w'.Γ id = some cert
   | .mask _ _ | .scoped _ | .raceAll _ _ | .raceRegister _ | .async _ _ | .gen _ | .loop _ _ =>
     ExitOk w' cert ans
+  -- The new race form has no historical counterexample; use its current exit contract.
+  | .raceAllFirst _ _ => ExitOk w' cert ans
   | .unguard ex | .finishFinalizer ex | .closeScope _ ex | .scopeExit _ _ ex | .closeIter _ _ ex => ans = ex
   | .guard_ kind => match ans with
     | none => True

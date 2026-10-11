@@ -211,7 +211,8 @@ const scenarios: Record<string, Scenario> = {
       }, limit: ({ waited }) => waited ? "zero by the run's own wait" : undefined }
     }
   },
-  // Test/Dogfood/Scenario/Timeout.lean, `Observation`. The cells are `count` and `ended`. Lean
+  // Test/Dogfood/Scenario/Timeout.lean, `Observation`. The cells hold attempts, cleanup and completed forms.
+  // The forms field waits: the host has no reader for the selected race entrant. Lean
   // grants the sleeps reader in a script where every sleeping fiber is the root or made a call.
   // In any other script the timers wait: a timer's fiber makes no call, so it has no number on
   // the host.

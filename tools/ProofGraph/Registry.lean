@@ -440,6 +440,12 @@ def registry : Registry where
       pointer := .witness `Effect4.Program.Typed.scoped_body_substitution_boundary },
 
     -- 3. scope-lifetime-finalization
+    { id := "finalizer-starts-bounded", concept := "scope-lifetime-finalization", role := .preservation
+      title := "Every native decision prefix starts an onExit finalizer no more often than it pushes that source's finalizer frame; arbitrary program, table and budget; no progress, source uniqueness or cleanup-log claim"
+      pointer := .witness `Effect4.Program.FinalizerRun.starts_le_pushes },
+    { id := "once-placed-finalizer", concept := "scope-lifetime-finalization", role := .preservation
+      title := "A once-placed source pushes its finalizer frame at most once across every fiber of a native decision prefix; no progress or log-writer claim"
+      pointer := .witness `Effect4.Program.FinalizerRun.once_placed_pushes_once },
     { id := "close-idempotent", concept := "scope-lifetime-finalization", role := .preservation
       title := "Closing an already-closed scope returns void without re-running finalizers"
       pointer := .witness `Effect4.Scope.close_idempotent
@@ -866,6 +872,9 @@ def registry : Registry where
       pointer := .witness `Effect4.Program.Provision.build_total },
 
     -- 9. host-session-protocol
+    { id := "run-admitted-history", concept := "host-session-protocol", role := .compatibility
+      title := "Every reached recorded run has its built program's call table and a history of session-admitted native decisions, at its compile budget; no progress or outside-host claim"
+      pointer := .witness `Effect4.Run.reached_history },
     { id := "allows-answer", concept := "host-session-protocol", role := .preservation
       title := "Answering an async request is an allowed transition from awaitingAsync"
       pointer := .witness `Effect4.Run.allows_answer
@@ -899,6 +908,9 @@ def registry : Registry where
       pointer := .assumed "docs/core/host-boundary.md" "Host session progress is subject to external driver execution; outside closed runtime" },
 
     -- 10. translation-simulation
+    { id := "recorded-call-tree-prefix", concept := "translation-simulation", role := .inversion
+      title := "Each recorded call binding on StraightRows without cause handlers names a wait in the admitted call tree, using replies submitted in that run; arbitrary command budget, no progress"
+      pointer := .witness `Effect4.Run.CallTree.bound_in_tree },
     { id := "run-eq-meaning", concept := "translation-simulation", role := .simulation
       title := "Frame machine execution matches denotational meaning on Straight fragment"
       pointer := .witness `Effect4.Program.Agreement.run_eq_meaning

@@ -297,10 +297,6 @@ def scenario : Scenario :=
     runs := runsAndControls.1
     controls := runsAndControls.2 }
 
-/--
-error: routing: the claim Test.Dogfood.Scenario.Routing.routing rests on the planned goal Effect4.Run.CallTree.bound_in_tree, which no clause names
--/
-#guard_msgs (error) in
 #scenario_gate scenario
 
 end Test.Dogfood.Scenario.Routing

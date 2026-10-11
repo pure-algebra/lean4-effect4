@@ -298,6 +298,18 @@ import Effect4.Laws.Library.Channel.Protocol
 import Effect4.Laws.Library.Stream.Definitions
 import Effect4.Laws.Program.Folds.TyCache
 
+-- Scenario proof structures and their independent controls.
+import Effect4.Laws.Api.AuthorBuild
+import Effect4.Laws.Auto.KernelRfl
+import Effect4.Laws.Library.Queue.Execution
+import Effect4.Laws.Machine.RaceFirst
+import Effect4.Laws.Machine.ScopeIdentity
+import Effect4.Laws.Program.FinalizerRun
+import Effect4.Laws.Program.ReleaseCustody.Control
+import Effect4.Laws.Program.WriterScope
+import Effect4.Laws.Run.CallTree
+import Effect4.Laws.Run.Journal
+
 /-!
 # Effect4 proof graph
 
