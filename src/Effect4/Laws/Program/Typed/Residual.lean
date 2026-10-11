@@ -174,7 +174,7 @@ typed-state admission audit: a `True` post refused every program consuming the a
 (`E4-SCHED-CE-013`). -/
 def FiberCert : FiberOp → Type
   | .fork _ _ _ | .forkIn _ _ _ _ | .forkScoped _ _ _ | .mask _ _ | .guard_ _ | .scoped _
-  | .raceAll _ _ | .raceRegister _ | .async _ _ | .gen _ | .loop _ _ => EffTy
+  | .raceAll _ _ | .raceAllFirst _ _ | .raceRegister _ | .async _ _ | .gen _ | .loop _ _ => EffTy
   | .awaitAll _ | .awaitAllFailFast _ | .snapshotChildren | .getContext => Ty
   | _ => PUnit
 
@@ -244,7 +244,7 @@ def fiberPre (root : ProgramSource) (w : World) (op : FiberOp) (cert : FiberCert
   | .awaitAll targets | .awaitAllFailFast targets =>
     ∃ a e, cert = .list (.exitOf a e) ∧ ∀ t ∈ targets, ∃ fty, w.Γ t = some fty ∧
       fty.answer.sub a = true ∧ fty.error.sub e = true
-  | .raceAll entrants _ => ∀ p ∈ entrants, ∃ ty, PointTyped root w p ty ∧
+  | .raceAll entrants _ | .raceAllFirst entrants _ => ∀ p ∈ entrants, ∃ ty, PointTyped root w p ty ∧
       ty.answer.sub cert.answer = true ∧ ty.error.sub cert.error = true
   | .async register _ => asyncPre root w register cert
   | .suspend _ | .awaitNewChildren _ => True
@@ -310,7 +310,7 @@ def fiberPost (w' : World) (op : FiberOp) (cert : FiberCert op) (ans : op.answer
     | .awaitValue => ∃ ty, w'.Γ target = some ty ∧ Fits w' ans (.exitOf ty.answer ty.error)
   | .fork _ _ _ | .forkIn _ _ _ _ => ∃ id : FiberId, ans = Val.fiber id ∧ w'.Γ id = some cert
   | .forkScoped _ _ _ => ∃ id : FiberId, ans = .success (Val.fiber id) ∧ w'.Γ id = some cert
-  | .mask _ _ | .scoped _ | .raceAll _ _ | .raceRegister _ | .async _ _ | .gen _ | .loop _ _ =>
+  | .mask _ _ | .scoped _ | .raceAll _ _ | .raceAllFirst _ _ | .raceRegister _ | .async _ _ | .gen _ | .loop _ _ =>
     ExitOk w' cert ans
   | .unguard ex | .finishFinalizer ex | .scopeExit _ _ ex => ans = ex
   -- `Scope.close` answers `void` and the close walk its merged exit: a success or a clean
@@ -914,7 +914,7 @@ theorem fiberPre_mono (root : ProgramSource) (ord : w.leHost w') (op : FiberOp)
     refine ⟨a, e, hc, fun t ht => ?_⟩
     obtain ⟨fty, hf, ha, he⟩ := hall t ht
     exact ⟨fty, hGamma _ _ hf, ha, he⟩
-  | raceAll entrants _ =>
+  | raceAll entrants _ | raceAllFirst entrants _ =>
     simp only [fiberPre] at h ⊢
     intro p hp
     obtain ⟨ty, hpt, ha, he⟩ := h p hp
@@ -1165,7 +1165,7 @@ theorem asyncPre_rows_append {w : World} {register : EffName} {cert : EffTy}
 theorem fiberPre_rows_append {w : World} {op : FiberOp} {cert : FiberCert op}
     (h : fiberPre src w op cert) : fiberPre src' w op cert := by
   cases op with
-  | raceAll entrants race =>
+  | raceAll entrants race | raceAllFirst entrants race =>
     intro p hp
     obtain ⟨ty, hpt, ha, he⟩ := h p hp
     exact ⟨ty, pointTyped_rows_append src src' t' hprog htab hsvc hpt, ha, he⟩

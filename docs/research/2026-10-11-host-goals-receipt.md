@@ -190,3 +190,24 @@ The audit checks 2162 declarations within `[propext, Quot.sound]`.
 It finds zero planned goals and zero declarations depending on planned goals.
 Consumer: source handle proofs, observer preservation and simulation frame ownership.
 Open work: simulation consumers, typed residual connector, timeout observation and reached behaviour gates.
+
+## First-exit simulation slice
+
+The simulation retains the extended race data across registration, launch, callback and settlement.
+The new action uses the same registration relation in first-exit mode.
+The code relation closes under delivery and binding with the separate first-exit operation.
+The typed residual operation has the same entrant columns and exit postcondition as first success.
+The first-success operation remains separate and unchanged.
+
+Commands:
+
+- `LEAN_NUM_THREADS=3 lake build Effect4.Laws.Program.Simulation.Drive Effect4.Laws.Program.Simulation.Pending Effect4.Laws.Program.Simulation.Evaluate Effect4.Laws.Program.Typed.Residual`: passed, 460 jobs.
+- `LEAN_NUM_THREADS=3 lake env lean docs/research/2026-10-10-goals-packet/codex/FirstExitSimulationAudit.lean`: passed.
+
+Consumers: `RuntimeR`, typed source denotation, and the timeout form's existing proof path.
+Placement: reactive scheduling R4, serving translation simulation R10.
+This slice extends the existing relation; it establishes no new outside-runtime agreement by itself.
+Open work: timeout observation, retained counterexample and the coordinator's reached behaviour gates.
+
+The audit checks 910 declarations within `[propext, Quot.sound]`.
+It finds zero planned goals and zero declarations depending on planned goals.

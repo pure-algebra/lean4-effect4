@@ -510,27 +510,25 @@ theorem fireObserver_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (h
     · rw [h₁, h₂]
       exact CmdsRel.mk' hok' hm' hn
     · rw [h₁, h₂]
-      obtain ⟨id₁, host₁, token₁, state₁, settled₁, progs₁, reg₁, site₁⟩ := r₁
-      obtain ⟨id₂, host₂, token₂, state₂, settled₂, progs₂, reg₂, site₂⟩ := r₂
+      obtain ⟨id₁, host₁, token₁, state₁, settled₁, progs₁, reg₁, site₁, mode₁, selected₁⟩ := r₁
+      obtain ⟨id₂, host₂, token₂, state₂, settled₂, progs₂, reg₂, site₂, mode₂, selected₂⟩ := r₂
       dsimp only [RaceMeans] at hr
-      obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl, hprog, rfl⟩ := hr
+      obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl, hprog, rfl, rfl, rfl⟩ := hr
       dsimp only
-      have hrace : RaceMeans (CodeMeans root)
-          ⟨id₁, host₁, token₁, Supervision.raceComplete state₁ id exit, settled₁, progs₁, reg₁, site₁⟩
-          ⟨id₁, host₁, token₁, Supervision.raceComplete state₁ id exit, settled₁, progs₂, reg₁, site₁⟩ :=
-        raceMeans_mk' rfl rfl rfl rfl rfl rfl hprog rfl
+      dsimp only [Race.afterExit]
       cases settled₁ with
       | true =>
-        cases hacc : (Supervision.raceComplete state₁ id exit).accepted <;>
-          exact CmdsRel.mk' (machineOk_updateRace hok' _) (hm'.updateRace hrace) hn
+        cases hacc : (Supervision.raceCompleteWith mode₁ state₁ id exit).accepted <;>
+          exact CmdsRel.mk' (machineOk_updateRace hok' _) (hm'.updateRace (raceMeans_mk' rfl rfl rfl rfl rfl rfl hprog rfl rfl rfl)) hn
       | false =>
-        cases hacc : (Supervision.raceComplete state₁ id exit).accepted with
-        | none => exact CmdsRel.mk' (machineOk_updateRace hok' _) (hm'.updateRace hrace) hn
+        cases hacc : (Supervision.raceCompleteWith mode₁ state₁ id exit).accepted with
+        | none =>
+          exact CmdsRel.mk' (machineOk_updateRace hok' _) (hm'.updateRace (raceMeans_mk' rfl rfl rfl rfl rfl rfl hprog rfl rfl rfl)) hn
         | some accepted =>
           dsimp only
           refine CmdsRel.mk' (machineOk_emit (machineOk_updateRace (machineOk_updateRace hok' _) _) _)
-            (BMeans.emit ((hm'.updateRace hrace).updateRace
-              (raceMeans_mk' rfl rfl rfl rfl rfl rfl hprog rfl)) _ _)
+            (BMeans.emit ((hm'.updateRace (raceMeans_mk' rfl rfl rfl rfl rfl rfl hprog rfl rfl rfl)).updateRace
+              (raceMeans_mk' rfl rfl rfl rfl rfl rfl hprog rfl rfl rfl)) _ _)
             (ListRel.append hn ?_)
           cases reg₁ with
           | true => exact ListRel.nil
@@ -713,10 +711,10 @@ theorem drive_launch (raceId : Nat) :
   · rw [h₁, h₂]
     exact CmdsRel.mk' hok hm hr
   · rw [h₁, h₂]
-    obtain ⟨id₁, host₁, token₁, state₁, settled₁, progs₁, reg₁, site₁⟩ := r₁'
-    obtain ⟨id₂, host₂, token₂, state₂, settled₂, progs₂, reg₂, site₂⟩ := r₂'
+    obtain ⟨id₁, host₁, token₁, state₁, settled₁, progs₁, reg₁, site₁, mode₁, selected₁⟩ := r₁'
+    obtain ⟨id₂, host₂, token₂, state₂, settled₂, progs₂, reg₂, site₂, mode₂, selected₂⟩ := r₂'
     dsimp only [RaceMeans] at hrace
-    obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl, hprog, rfl⟩ := hrace
+    obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl, hprog, rfl, rfl, rfl⟩ := hrace
     dsimp only
     cases hprog with
     | nil => exact CmdsRel.mk' hok hm hr
@@ -737,7 +735,7 @@ theorem drive_launch (raceId : Nat) :
           obtain ⟨hsok, hsm, -, hchild⟩ := hs
           dsimp only
           exact CmdsRel.mk' (machineOk_emit (machineOk_updateRace hsok _) _)
-            (BMeans.emit (hsm.updateRace (raceMeans_mk' rfl rfl rfl rfl rfl rfl hrest rfl)) _ _)
+            (BMeans.emit (hsm.updateRace (raceMeans_mk' rfl rfl rfl rfl rfl rfl hrest rfl rfl rfl)) _ _)
             (ListRel.cons (cmeans_evaluate root hchild)
               (ListRel.cons (cmeans_enrollRace' root raceId hchild)
                 (ListRel.cons (cmeans_launch root raceId) hr)))
@@ -756,15 +754,15 @@ theorem drive_enrollRace (raceId : Nat) (child : FiberId) :
     · rw [hc₁, hc₂]
       exact CmdsRel.mk' hok hm hr
     · rw [hc₁, hc₂]
-      obtain ⟨id₁, host₁, token₁, state₁, settled₁, progs₁, reg₁, site₁⟩ := r₁'
-      obtain ⟨id₂, host₂, token₂, state₂, settled₂, progs₂, reg₂, site₂⟩ := r₂'
+      obtain ⟨id₁, host₁, token₁, state₁, settled₁, progs₁, reg₁, site₁, mode₁, selected₁⟩ := r₁'
+      obtain ⟨id₂, host₂, token₂, state₂, settled₂, progs₂, reg₂, site₂, mode₂, selected₂⟩ := r₂'
       dsimp only [RaceMeans] at hrace
-      obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl, hprog, rfl⟩ := hrace
+      obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl, hprog, rfl, rfl, rfl⟩ := hrace
       dsimp only
       have hrace' : RaceMeans (CodeMeans root)
-          ⟨id₁, host₁, token₁, { state₁ with live := state₁.live ++ [child] }, settled₁, progs₁, reg₁, site₁⟩
-          ⟨id₁, host₁, token₁, { state₁ with live := state₁.live ++ [child] }, settled₁, progs₂, reg₁, site₁⟩ :=
-        raceMeans_mk' rfl rfl rfl rfl rfl rfl hprog rfl
+          ⟨id₁, host₁, token₁, { state₁ with live := state₁.live ++ [child] }, settled₁, progs₁, reg₁, site₁, mode₁, selected₁⟩
+          ⟨id₁, host₁, token₁, { state₁ with live := state₁.live ++ [child] }, settled₁, progs₂, reg₁, site₁, mode₁, selected₁⟩ :=
+        raceMeans_mk' rfl rfl rfl rfl rfl rfl hprog rfl rfl rfl
       simp only [hc.exit]
       cases hex : c₂.exit with
       | some exit =>
@@ -789,18 +787,18 @@ theorem drive_registrationDone (raceId : Nat) (y : Bool) :
   · rw [h₁, h₂]
     exact CmdsRel.mk' hok hm hr
   · rw [h₁, h₂]
-    obtain ⟨id₁, host₁, token₁, state₁, settled₁, progs₁, reg₁, site₁⟩ := r₁'
-    obtain ⟨id₂, host₂, token₂, state₂, settled₂, progs₂, reg₂, site₂⟩ := r₂'
+    obtain ⟨id₁, host₁, token₁, state₁, settled₁, progs₁, reg₁, site₁, mode₁, selected₁⟩ := r₁'
+    obtain ⟨id₂, host₂, token₂, state₂, settled₂, progs₂, reg₂, site₂, mode₂, selected₂⟩ := r₂'
     dsimp only [RaceMeans] at hrace
-    obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl, hprog, rfl⟩ := hrace
+    obtain ⟨rfl, rfl, rfl, rfl, rfl, rfl, hprog, rfl, rfl, rfl⟩ := hrace
     dsimp only
     have hok' := machineOk_updateRace hok
-      (⟨id₁, host₁, token₁, state₁, settled₁, progs₁, false, site₁⟩ : FRace)
-    have hm' := hm.updateRace (r₁ := ⟨id₁, host₁, token₁, state₁, settled₁, progs₁, false, site₁⟩)
-      (r₂ := ⟨id₁, host₁, token₁, state₁, settled₁, progs₂, false, site₁⟩)
-      (raceMeans_mk' rfl rfl rfl rfl rfl rfl hprog rfl)
-    generalize m₁.updateRace ⟨id₁, host₁, token₁, state₁, settled₁, progs₁, false, site₁⟩ = M₁ at hok' hm' ⊢
-    generalize m₂.updateRace ⟨id₁, host₁, token₁, state₁, settled₁, progs₂, false, site₁⟩ = M₂ at hm' ⊢
+      (⟨id₁, host₁, token₁, state₁, settled₁, progs₁, false, site₁, mode₁, selected₁⟩ : FRace)
+    have hm' := hm.updateRace (r₁ := ⟨id₁, host₁, token₁, state₁, settled₁, progs₁, false, site₁, mode₁, selected₁⟩)
+      (r₂ := ⟨id₁, host₁, token₁, state₁, settled₁, progs₂, false, site₁, mode₁, selected₁⟩)
+      (raceMeans_mk' rfl rfl rfl rfl rfl rfl hprog rfl rfl rfl)
+    generalize m₁.updateRace ⟨id₁, host₁, token₁, state₁, settled₁, progs₁, false, site₁, mode₁, selected₁⟩ = M₁ at hok' hm' ⊢
+    generalize m₂.updateRace ⟨id₁, host₁, token₁, state₁, settled₁, progs₂, false, site₁, mode₁, selected₁⟩ = M₂ at hm' ⊢
     rcases hm'.fiber?_cases host₁ with ⟨hh₁, hh₂⟩ | ⟨f₁, f₂, hh₁, hh₂, hf⟩
     · rw [hh₁, hh₂]
       exact CmdsRel.mk' hok' hm' hr

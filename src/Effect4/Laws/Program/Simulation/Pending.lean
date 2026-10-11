@@ -47,8 +47,8 @@ theorem registerRace_pendingOk (m : FMachine) (f : FRun) (y : Bool) (raceId : Na
 
 @[aesop safe apply (rule_sets := [Effect4.Stores])]
 theorem beginRace_pendingOk (i : FInterp) (m : FMachine) (f : FRun) (y : Bool) (entrants : List NCode)
-    (hf : PendingOk f) (site : Option (List Nat) := none) :
-    PendingOk (beginRace i m f y entrants site).fiber := by aesop
+    (hf : PendingOk f) (site : Option (List Nat) := none) (mode : Supervision.RaceMode := .firstSuccess) :
+    PendingOk (beginRace i m f y entrants site mode).fiber := by aesop
 
 theorem finishFrame_pendingOk (m : FMachine) (f : FRun) (y : Bool)
     (next : FrameStep EffName EffThunk Val Err Defect FiberId Ann)
@@ -169,6 +169,7 @@ theorem withFiber_pendingOk (i : FInterp) (m : FMachine) (f : FRun) (y : Bool) (
   | snapshotChildren => exact pendingOk_of_fields hf rfl
   | awaitNewChildren snapshot => exact awaitNewChildren_pendingOk i m f y hf snapshot
   | raceAll entrants site => exact beginRace_pendingOk i m f y entrants hf site
+  | raceAllFirst entrants site => exact beginRace_pendingOk i m f y entrants hf site .firstExit
   | setInterruptible body flag =>
     cases flag with
     | false => exact pendingOk_of_fields hf rfl

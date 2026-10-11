@@ -320,13 +320,13 @@ theorem countdownPark_rel (root : NativeEff) (c : List (FiberId × ExitV)) {m₁
 theorem beginRace_rel (root : NativeEff) (c : List (FiberId × ExitV)) {m₁ : FMachine} {m₂ : RState}
     (hok : MachineOk (StoresOk table) m₁) (hm : BMeans root m₁ m₂) {f₁ : FRun} {f₂ : RFiber}
     (hf : FMeans root f₁ f₂) (y : Bool) {e₁ : List NCode} {e₂ : List RProgram}
-    (he : ListRel (CodeMeans root) e₁ e₂) (site : Option (List Nat) := none) :
-    IterRel table root (beginRace (interpAt root c table) m₁ f₁ y e₁ site) (beginRace (interpRAt root c table) m₂ f₂ y e₂ site) := by
+    (he : ListRel (CodeMeans root) e₁ e₂) (site : Option (List Nat) := none) (mode : Supervision.RaceMode := .firstSuccess) :
+    IterRel table root (beginRace (interpAt root c table) m₁ f₁ y e₁ site mode) (beginRace (interpRAt root c table) m₂ f₂ y e₂ site mode) := by
   unfold beginRace
   dsimp only
   rw [hm.nextRace, hm.nextToken, ListRel.length he]
   exact ⟨machineOk_emit (machineOk_appendRace hok _ _ _) _,
-    BMeans.emit (hm.appendRace (raceMeans_mk' rfl hf.id rfl rfl rfl rfl he rfl) _ _) _ _,
+    BMeans.emit (hm.appendRace (raceMeans_mk' rfl hf.id rfl rfl rfl rfl he rfl rfl rfl) _ _) _ _,
     hf.withFrame (means_answerWith hf.means (parkCode_means (table := table) root _)), rfl, rfl, ListRel.nil⟩
 
 theorem registerRace_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hok : MachineOk (StoresOk table) m₁)
@@ -760,6 +760,12 @@ theorem raceAll_rel {e₁ : List NCode} {e₂ : List RProgram} (he : ListRel (Co
     IterRel table root (FiberAction.raceAll (interpAt root c table) m₁ f₁ y e₁ site)
       (FiberAction.raceAll (interpRAt root c table) m₂ f₂ y e₂ site) :=
   beginRace_rel root c hok hm hf y he site
+
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
+theorem raceAllFirst_rel {e₁ : List NCode} {e₂ : List RProgram} (he : ListRel (CodeMeans root) e₁ e₂) (site : Option (List Nat) := none) :
+    IterRel table root (FiberAction.raceAllFirst (interpAt root c table) m₁ f₁ y e₁ site)
+      (FiberAction.raceAllFirst (interpRAt root c table) m₂ f₂ y e₂ site) :=
+  beginRace_rel root c hok hm hf y he site .firstExit
 
 theorem yieldNow_rel (priority : Nat) :
     IterRel table root (FiberAction.yieldNow (interpAt root c table) m₁ f₁ y priority)

@@ -377,15 +377,16 @@ theorem raceMeans_programs {r₁ : FRace} {r₂ : RRace} (h : RaceMeans (CodeMea
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem raceMeans_nextSite {r₁ : FRace} {r₂ : RRace} (h : RaceMeans (CodeMeans root) r₁ r₂) :
-    r₁.nextSite = r₂.nextSite := h.2.2.2.2.2.2.2
+    r₁.nextSite = r₂.nextSite := h.2.2.2.2.2.2.2.1
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem raceMeans_mk' {r₁ : FRace} {r₂ : RRace} (hid : r₁.id = r₂.id) (hhost : r₁.host = r₂.host)
     (htok : r₁.token = r₂.token) (hst : r₁.state = r₂.state) (hsettled : r₁.settled = r₂.settled)
     (hreg : r₁.registering = r₂.registering) (hprog : ListRel (CodeMeans root) r₁.programs r₂.programs)
-    (hsite : r₁.nextSite = r₂.nextSite) :
+    (hsite : r₁.nextSite = r₂.nextSite) (hmode : r₁.mode = r₂.mode)
+    (hselected : r₁.selected = r₂.selected) :
     RaceMeans (CodeMeans root) r₁ r₂ :=
-  ⟨hid, hhost, htok, hst, hsettled, hreg, hprog, hsite⟩
+  ⟨hid, hhost, htok, hst, hsettled, hreg, hprog, hsite, hmode, hselected⟩
 
 theorem listRel_findRace {l₁ : List FRace} {l₂ : List RRace}
     (h : ListRel (RaceMeans (CodeMeans root)) l₁ l₂) (id : Nat) :

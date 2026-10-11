@@ -916,6 +916,10 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
     rw [evaluateNative_action root m₁ f₁ y hc₁ ht, hcomp, evaluateRawR_fiber _ _ _ _ hc₂]
     exact iterRel_prepare (raceAll_rel root _ hok hm (hf'.saveAnswer hk) y
       (listRel_of_zip (by rw [List.length_map]; exact hlen) hc) (site := _))
+  | actRaceAllFirst t entrants points k ht hlen hc hk =>
+    rw [evaluateNative_action root m₁ f₁ y hc₁ ht, hcomp, evaluateRawR_fiber _ _ _ _ hc₂]
+    exact iterRel_prepare (raceAllFirst_rel root _ hok hm (hf'.saveAnswer hk) y
+      (listRel_of_zip (by rw [List.length_map]; exact hlen) hc) (site := _))
   | actMask t body flag b k ht hc hk =>
     rw [evaluateNative_action root m₁ f₁ y hc₁ ht, hcomp, evaluateRawR_fiber _ _ _ _ hc₂]
     refine iterRelP_prepare ?_ ⟨nofun, nofun⟩
