@@ -12,10 +12,11 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Typed Effect4.Progr
 
 -- A program certificate describes successful provision, not already-present entry services.
 example (root : ProgramSource) (world : Typed.World) (entry : Env.Requirement) (supplied : Ctx)
-    (services : ServicesFit world supplied.services) :
+    (services : ServicesFit world supplied.services)
+    (kept : Row.Subset entry supplied.services.keysRow) :
     AmbientProg root world entry (EffTy.pure .unit, supplied.services.keysRow, entry)
       (fiberValR (.setContext supplied) rfl) :=
-  ambient_setContext_typed root world entry supplied services
+  ambient_setContext_typed root world entry supplied services kept
 
 -- A failure delivered before the setter cannot use that enlarged completion demand.
 example (world : Typed.World) (entry : Env.Requirement) (supplied : Ctx) (cause : CauseV)

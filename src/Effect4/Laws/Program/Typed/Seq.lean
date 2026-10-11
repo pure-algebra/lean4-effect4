@@ -177,16 +177,16 @@ theorem typedProg_widen (root : ProgramSource) {w : World} {T T' : EffTy} {p : R
   clear unit_eq
   induction h with
   | pure exit => exact .pure (exitOk_widen hans herr exit)
-  | store cert pre _ ih => exact .store cert pre (fun w' o ans post => ih w' o ans post hans herr)
-  | fiber notGuard notUnguard notFinish notScopeExit cert pre _ ih =>
+  | store cert pre _ _entry ih => exact .store cert pre (fun w' o ans post => ih w' o ans post hans herr)
+  | fiber notGuard notUnguard notFinish notScopeExit cert pre _ _entry ih =>
     exact .fiber notGuard notUnguard notFinish notScopeExit cert pre
       (fun w' o ans post => ih w' o ans post hans herr)
-  | guard mid body _ skip _ ihRun =>
+  | guard mid body _ skip _entry _ ihRun =>
     exact .guard mid body (fun w' o ex post => ihRun w' o ex post hans herr)
       (fun w' o ex hfit harm => exitOk_widen hans herr (skip w' o ex hfit harm))
   | unguard payload => exact .unguard (exitOk_widen hans herr payload)
   | finishFinalizer payload => exact .finishFinalizer (exitOk_widen hans herr payload)
-  | scopedGuard mid prev sc body callback live services widen _ =>
+  | scopedGuard mid prev sc body callback live services widen _entry _ =>
     exact .scopedGuard mid prev sc body callback live services
       (fun w' o ex hex => exitOk_widen hans herr (widen w' o ex hex))
 

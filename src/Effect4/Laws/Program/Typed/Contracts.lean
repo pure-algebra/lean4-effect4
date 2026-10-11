@@ -128,6 +128,14 @@ abbrev scopedResume := @FrameArrow.scopedResume EffTy Unit (fun w (_ : Unit) => 
   (fun w (_ : Unit) => Ex w) hooks (fun _ _ => ()) (fun _ => ()) w
 end FrameAccepts
 
+/-- The shared stack path retains the complete annotated position at each saved frame.
+Consumer: the type-only stack and its ambient context instance. -/
+abbrev StackArrow {Object Input : Type}
+    (TP : World → Input → Object → RProgram → Prop)
+    (Ex : World → Input → Object → ExitV → Prop) (hooks : FrameProtocols Object)
+    (inputOf : Object → ExitV → Input) (restoreInput : Ctx → Input) (w : World) :=
+  Effect4.Contracts.Path (FrameArrow TP Ex hooks inputOf restoreInput w)
+
 section
 variable (TypedProg : World → EffTy → RProgram → Prop)
   (Exits : World → EffTy → ExitV → Prop) (hooks : FrameProtocols)
@@ -145,10 +153,21 @@ structure InterruptProvenance (x : RSaved) : Prop where
     ∀ reason ∈ cause.reasons, reason.tag = .interrupt
   deferred : x.deferredInterrupt = true → x.interruptedCause.isSome = true
 
+/-- Current code and the shared saved path meet at one annotated completion position.
+The entry input remains separate from the saved completion positions. -/
+def SavedArrow {Object Input : Type}
+    (TP : World → Input → Object → RProgram → Prop)
+    (Ex : World → Input → Object → ExitV → Prop) (hooks : FrameProtocols Object)
+    (inputOf : Object → ExitV → Input) (restoreInput : Ctx → Input)
+    (w : World) (input : Input) (final : Object) (saved : RSaved) : Prop :=
+  ∃ tin, TP w input tin saved.current ∧
+    StackArrow TP Ex hooks inputOf restoreInput w tin final saved.stack ∧
+    InterruptProvenance saved
+
 /-- Current code and stack meet at the same existentially chosen intermediate type. -/
-def SavedOk (w : World) (final : EffTy) (x : RSaved) : Prop :=
-  ∃ tin, TypedProg w tin x.current ∧ StackAccepts TypedProg Exits hooks w tin final x.stack ∧
-    InterruptProvenance x
+abbrev SavedOk (w : World) (final : EffTy) (x : RSaved) : Prop :=
+  SavedArrow (fun w (_ : Unit) => TypedProg w) (fun w (_ : Unit) => Exits w)
+    hooks (fun _ _ => ()) (fun _ => ()) w () final x
 
 /-- A resume reads the target's own token declaration, not the fiber's final type. Active
 parking supplies the lookup in the future machine relation; absent/stale tokens impose no
@@ -215,14 +234,27 @@ theorem stackAccepts_mono {w w' : World} (ord : w.leHost w') {a b : EffTy} {s : 
   | nil ty => exact .nil ty
   | cons head _ ih => exact .cons (frameAccepts_mono ord head) ih
 
+/-- World growth transports the same annotated code and saved path.
+Consumer: savedOk_mono and the ambient saved-position instance. -/
+theorem savedArrow_mono {Object Input : Type}
+    {TP : World → Input → Object → RProgram → Prop}
+    {Ex : World → Input → Object → ExitV → Prop} {hooks : FrameProtocols Object}
+    {inputOf : Object → ExitV → Input} {restoreInput : Ctx → Input}
+    (tp : ∀ {w w' input ty p}, w.leHost w' → TP w input ty p → TP w' input ty p)
+    {w w' : World} {input : Input} {final : Object} {saved : RSaved} (ord : w.leHost w')
+    (h : SavedArrow TP Ex hooks inputOf restoreInput w input final saved) :
+    SavedArrow TP Ex hooks inputOf restoreInput w' input final saved := by
+  obtain ⟨tin, code, stack, provenance⟩ := h
+  exact ⟨tin, tp ord code, stack.map (fun _ _ _ edge => frameArrow_mono ord edge), provenance⟩
+
 /-- A saved frame transports along the host order once its program judgment does
 (`Typed/Residual.lean` instantiates this with `typedProg_mono`). -/
 theorem savedOk_mono (tp : ∀ {w w' : World} {ty : EffTy} {p : RProgram}, w.leHost w' →
       TP w ty p → TP w' ty p)
     {w w' : World} (ord : w.leHost w') {final : EffTy} {x : RSaved}
-    (h : SavedOk TP Ex hooks w final x) : SavedOk TP Ex hooks w' final x := by
-  obtain ⟨tin, code, stack, provenance⟩ := h
-  exact ⟨tin, tp ord code, stackAccepts_mono ord stack, provenance⟩
+    (h : SavedOk TP Ex hooks w final x) : SavedOk TP Ex hooks w' final x :=
+  savedArrow_mono (TP := fun w (_ : Unit) => TP w)
+    (fun ord typed => tp ord typed) ord h
 
 /-! ## The frame category
 

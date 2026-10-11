@@ -13,6 +13,15 @@ set_option autoImplicit false
 namespace Effect4.Program.Typed
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Program.Denote
 
+/-- The ambient instance exposes the bound at the actual current entry.
+Consumer: interruption and current-code entry in the existing runtime typing relation. -/
+theorem ambient_entry {root : ProgramSource} {w : World} {available : Env.Requirement}
+    {position : AmbientPosition} {code : RProgram}
+    (typed : AmbientProg root w available position code) :
+    Row.Subset position.2.2 available := by
+  have bound := ProgramArrow.entry typed
+  exact bound
+
 /-- The admitted source reader lowers to the existing context operation and uses its typed row.
 Consumer: the context arm of the source denotation proof. -/
 theorem checked_context_arm (root : ProgramSource) (w : World) (p : Point)
@@ -56,18 +65,21 @@ Consumer: the context provider arm, before its body and restored tail are constr
 theorem provider_entry (root : ProgramSource) (w : World) (available required keys : Env.Requirement)
     (previous supplied : Ctx)
     (ambient : Fits w (Val.context previous) (.contextOf (Row.diff required keys)))
-    (given : Fits w (Val.context supplied) (.contextOf keys)) :
+    (given : Fits w (Val.context supplied) (.contextOf keys))
+    (entryCoverage : previous.services.Satisfies available) :
     let next := Ctx.withServices (previous.services.merge supplied.services)
     Fits w (Val.context next) (.contextOf required) ∧
       AmbientProg root w available (EffTy.pure .unit, next.services.keysRow, available)
         (fiberValR (.setContext next) rfl) := by
   have members := fits_contextOf_provide ambient given
-  refine ⟨members, ambient_setContext_typed root w available _ ?_⟩
-  obtain ⟨next, decoded, serviceMembers, _, _⟩ := fits_contextOf_inv members
-  have same : next = Ctx.withServices (previous.services.merge supplied.services) :=
-    Option.some.inj (decoded.symm.trans (Val.context?_context _))
-  subst next
-  exact serviceMembers
+  refine ⟨members, ambient_setContext_typed root w available _ ?_ ?_⟩
+  · obtain ⟨next, decoded, serviceMembers, _, _⟩ := fits_contextOf_inv members
+    have same : next = Ctx.withServices (previous.services.merge supplied.services) :=
+      Option.some.inj (decoded.symm.trans (Val.context?_context _))
+    subst next
+    exact serviceMembers
+  · exact (Provision.satisfies_iff_subset_keysRow _ available).mp
+      (Provision.satisfies_merge_left previous.services supplied.services available entryCoverage)
 
 /-- The shared frame hooks retain the original hook contracts and their exact row index.
 The scope callback restores its captured row through the existing scope-exit contract. -/
@@ -79,6 +91,13 @@ def ambientFrameProtocols (root : ProgramSource) : Contracts.FrameProtocols Ambi
   loop w before after name cursor := before.2 = after.2 ∧
     (frameProtocols root).loop w before.1 after.1 name cursor
   scopeExit := (frameProtocols root).scopeExit
+
+/-- The existing saved-code relation uses the same complete ambient frame positions.
+Consumer: actual parked and resumed code in the runtime typing relation. -/
+abbrev AmbientSaved (root : ProgramSource) (w : World) (available : Env.Requirement)
+    (final : AmbientPosition) (saved : RSaved) : Prop :=
+  Contracts.SavedArrow (AmbientProg root) AmbientExit (ambientFrameProtocols root)
+    ambientInput (fun ctx => ctx.services.keysRow) w available final saved
 
 /-- The existing scoped frame returns to services covered by its actual captured context.
 Consumer: scoped body delivery in the indexed typed-state preservation path. -/
