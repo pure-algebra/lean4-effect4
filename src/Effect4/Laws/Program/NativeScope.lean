@@ -107,14 +107,31 @@ def ThunkAt (root : NativeEff) : EffThunk → Prop
 def CodeAt (root : NativeEff) : NCode → Prop
   | .sync thunk | .suspend thunk | .withFiber thunk => ThunkAt root thunk
   | .iterator name _ | .whileLoop name _ | .asyncFinalizer name => NameAt root name
-  | .onSuccess body name | .onFailure body name | .onExit body name _ =>
-    CodeAt root body ∧ NameAt root name
+  | .onSuccess body name => CodeAt root body ∧ NameAt root name ∧
+      ∀ acquired fin, name = .afterScopeAdd acquired fin →
+        ∃ scope, body = .sync (.op (.scopeAdd scope fin))
+  | .onFailure body name | .onExit body name _ => CodeAt root body ∧ NameAt root name
   | .onSuccessConst body next => CodeAt root body ∧ CodeAt root next
   | .onSuccessAndFailure body success failure =>
     CodeAt root body ∧ NameAt root success ∧ NameAt root failure
   | .exitFrame body => CodeAt root body
   | .async register _ cancel => NameAt root register ∧ ∀ name ∈ cancel, NameAt root name
   | _ => True
+
+/-- A response-sensitive callback retains the actual producer copied into its saved frame.
+Consumer: registration sequencing and the existing custody and registration goals. -/
+theorem registration_body (root : NativeEff) (body : NCode) (acquired : Val) (fin : FinName)
+    (owned : CodeAt root (.onSuccess body (.afterScopeAdd acquired fin))) :
+    ∃ scope, body = .sync (.op (.scopeAdd scope fin)) :=
+  owned.2.2 acquired fin rfl
+
+/-- Restoring a completed exit uses no registration response callback.
+Consumer: native fiber exit and awaited-child cleanup. -/
+theorem success_restore_at (root : NativeEff) (body : NCode) (exit : ExitV)
+    (owned : CodeAt root body) : CodeAt root (.onSuccess body (.restore exit)) := by
+  refine ⟨owned, trivial, ?_⟩
+  intro _ _ wrong
+  cases wrong
 
 /-- The source walk transports a generated child level to a saved callback address. -/
 theorem next_of_at (root : NativeEff) (p : Point) (e : NativeEff) (i added : Nat)
@@ -176,9 +193,11 @@ theorem compile_at (root : NativeEff) (fragment : Fragment root) (e : NativeEff)
     exact opAt_origin root operation ⟨p, row, request, value, found, hs, hval, hop⟩
   case case18 p n hf first rest ih =>
     intro found hs
-    exact ⟨ih (Agreement.at_child found 0)
+    refine ⟨ih (Agreement.at_child found 0)
       (child_at root p 0 (next_of_at root p _ 0 0 found hs (by rfl))),
-      next_of_at root p _ 1 1 found hs (by rfl)⟩
+      next_of_at root p _ 1 1 found hs (by rfl), ?_⟩
+    intro _ _ wrong
+    cases wrong
   case case20 p n hf body handler ih =>
     intro found hs
     exact ⟨ih (Agreement.at_child found 0)
@@ -206,11 +225,15 @@ theorem compile_at (root : NativeEff) (fragment : Fragment root) (e : NativeEff)
       (child_at root p 0 (next_of_at root p _ 0 0 found hs (by rfl)))
   case case37 p n hf acquire release =>
     intro found hs
-    exact ⟨trivial, next_of_at root p _ 0 0 found hs (by rfl),
-      next_of_at root p _ 1 2 found hs (by rfl)⟩
+    refine ⟨trivial, ⟨next_of_at root p _ 0 0 found hs (by rfl),
+      next_of_at root p _ 1 2 found hs (by rfl)⟩, ?_⟩
+    intro _ _ wrong
+    cases wrong
   case case40 p n hf key value body val read =>
     intro found hs
-    exact ⟨trivial, child_at root p 0 (next_of_at root p _ 0 0 found hs (by rfl))⟩
+    refine ⟨trivial, child_at root p 0 (next_of_at root p _ 0 0 found hs (by rfl)), ?_⟩
+    intro _ _ wrong
+    cases wrong
   case case43 p n hf saved body mask ih =>
     intro found hs
     exact ih (Agreement.at_child found 0)

@@ -138,7 +138,9 @@ theorem interp_action_at (root : NativeEff) (fragment : Fragment root) (complete
     all_goals cases found
   case acquireMasked p ctx =>
     cases found
-    exact ⟨trivial, owned⟩
+    refine ⟨trivial, owned, ?_⟩
+    intro _ _ wrong
+    cases wrong
   case releaseMasked p previous =>
     cases found
     exact ⟨resolve_scoped root fragment p owned, trivial⟩

@@ -84,4 +84,16 @@ theorem atomic_duplicate_stack (b : Api.Built)
     cases rest
     exact owned
 
+/-- The actual acquisition's response callback cannot be attached to a success producer.
+This control records why matching producer identity is part of the source invariant. -/
+theorem worker_unmatched_response (total : Nat) (env : List Val) (fuel : Nat)
+    (context : Ctx) (acquired : Val) :
+    let point : Point := {path := Programs.crewAcquire 1, env, fuel, tape := []}
+    ¬ SourceScope.CodeAt (Programs.workersProgram total)
+      (.onSuccess (.success .unit) (.afterScopeAdd acquired (.foreign (point.capture acquired context)))) := by
+  dsimp only
+  intro owned
+  obtain ⟨scope, impossible⟩ := SourceScope.registration_body _ _ _ _ owned
+  cases impossible
+
 end Test.Dogfood.Scenario.SourceUse

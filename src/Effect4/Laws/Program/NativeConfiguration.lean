@@ -20,7 +20,8 @@ abbrev SourceBucket := Bucket EffName EffThunk Val Err Defect FiberId Ann
 
 /-- A countdown retains the continuation it can invoke after its final observation. -/
 def ResumeAt (root : NativeEff) : Resume EffName → Prop
-  | .continueWith name => NameAt root name
+  | .continueWith name => NameAt root name ∧
+      ∀ acquired fin, name ≠ .afterScopeAdd acquired fin
   | _ => True
 
 /-- A queued resume retains the actual primitive program it installs. -/

@@ -32,8 +32,10 @@ theorem region_at (root : NativeEff) (fragment : Fragment root) (region : Region
 
 /-- A context update retains the source region in its callback. -/
 theorem update_at (root : NativeEff) (update : Env.ContextUpdate) (region : Region)
-    (owned : RegionAt root region) : CodeAt root (updateContextAt update region) :=
-  ⟨trivial, owned⟩
+    (owned : RegionAt root region) : CodeAt root (updateContextAt update region) := by
+  refine ⟨trivial, owned, ?_⟩
+  intro _ _ wrong
+  cases wrong
 
 set_option maxHeartbeats 2000000 in
 /-- Calling a saved value callback retains every residual source address it exposes. -/

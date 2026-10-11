@@ -80,7 +80,9 @@ theorem race_settle_at (root : NativeEff) (table : RowTable) (race : Nat) (clean
   change CodeAt root (embed (raceSettleProgram race cleanup exit))
   unfold raceSettleProgram
   split
-  · exact ⟨trivial, trivial⟩
+  · refine ⟨trivial, trivial, ?_⟩
+    intro _ _ wrong
+    cases wrong
   · cases exit <;> trivial
 
 /-- A native owed completion embeds only a completion primitive. -/
@@ -136,7 +138,7 @@ theorem exit_fiber_at (root : NativeEff) (table : RowTable) (m : NativeMachine) 
   unfold exitFiber
   split
   · exact ⟨configuration_emit root _ _ (configuration_update root m _ owned
-      ⟨⟨⟨trivial, trivial⟩, held.frame.2⟩, held.pending, held.dispatcher⟩),
+      ⟨⟨success_restore_at root _ exit trivial, held.frame.2⟩, held.pending, held.dispatcher⟩),
       by intro c member; rw [List.mem_singleton.mp member]; trivial⟩
   · have published := publish_at root fiber exit held
     have stored := configuration_emit root _ [RunEvent.exited fiber.id exit] (configuration_update root m _ owned published)
@@ -390,7 +392,8 @@ theorem command_at (root : NativeEff) (fragment : Fragment root) (table : RowTab
   case case27 host yielding kind fiber found changed =>
     have held := looked host fiber found
     apply settle_at root _ rest _ _ suffix
-    exact ⟨owned, fiber_current_at root fiber _ held ⟨await_code_at root table m kind, trivial⟩, by intro c member; cases member⟩
+    exact ⟨owned, fiber_current_at root fiber _ held
+      (success_restore_at root _ _ (await_code_at root table m kind)), by intro c member; cases member⟩
   case case34 parent child fiber found live =>
     exact ⟨configuration_modify root _ child _
       (configuration_modify root m parent _ owned (fun fiber held => ⟨held.frame, held.pending, held.dispatcher⟩))

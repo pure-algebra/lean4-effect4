@@ -21,8 +21,12 @@ theorem finalizer_code_at (root : NativeEff) (completed) (table : RowTable) (exi
     (program : NCode) (owned : CodeAt root program) :
     CodeAt root (finalizerCode (interpAt root completed table) exit program) := by
   cases exit
-  · exact ⟨owned, trivial⟩
-  · exact ⟨⟨owned, trivial⟩, trivial⟩
+  · refine ⟨owned, trivial, ?_⟩
+    intro _ _ wrong
+    cases wrong
+  · refine ⟨⟨owned, trivial⟩, trivial, ?_⟩
+    intro _ _ wrong
+    cases wrong
 
 /-- The native exit-value hook introduces no source writer. -/
 theorem exit_value_at (root : NativeEff) (completed) (table : RowTable) (exit : ExitV)
@@ -167,7 +171,9 @@ theorem countdown_program_at (root : NativeEff) (completed) (table : RowTable)
   cases resume
   · trivial
   · trivial
-  · exact ⟨trivial, owned⟩
+  · refine ⟨trivial, owned.1, ?_⟩
+    intro acquired fin wrong
+    exact False.elim (owned.2 acquired fin wrong)
 
 /-- Native countdown parks retain the pending continuation and actual cleanup frame. -/
 theorem countdown_at (root : NativeEff) (completed) (table : RowTable) (m : NativeMachine)

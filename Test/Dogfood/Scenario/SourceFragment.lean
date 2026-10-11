@@ -2,6 +2,7 @@ import Test.Dogfood.Scenario.Programs
 import Test.Dogfood.Scenario.Atomic.Model
 import Effect4.Laws.Program.NativeHeap
 import Effect4.Laws.Program.NativeHistory
+import Effect4.Laws.Program.NativeReplies
 import Effect4.Laws.Program.NativeHeapHistory
 
 /-!
@@ -22,6 +23,17 @@ open Effect4 Effect4.Program Effect4.Laws.Auto Effect4.Program.SourceScope
 theorem queue_fragment (total : Nat) : Fragment (Programs.queueProgram total) := by
   unfold Fragment
   kernel_rfl
+
+/-- The actual Workers crew belongs to the lexical fragment at every job count. -/
+theorem workers_fragment (total : Nat) : Fragment (Programs.workersProgram total) := by
+  unfold Fragment
+  kernel_rfl
+
+/-- A successful Workers build retains the checked fragment for its actual source. -/
+theorem workers_built_fragment (total : Nat) (b : Api.Built)
+    (built : Api.Author.build (Workers.crew total) = .ok b) : Fragment b.program := by
+  rw [Programs.workers_built_program total b built]
+  exact workers_fragment total
 
 /-- A successful queue build retains the checked fragment for its actual source. -/
 theorem queue_built_fragment (total : Nat) (b : Api.Built)
@@ -77,5 +89,23 @@ theorem atomic_heap_at (compileFuel : Nat) (b : Api.Built)
     (sites : HeapSites.SitesKeep b.program P) (m : NativeMachine)
     (history : Effect4.Run.ControlHistory b compileFuel m) : HeapSites.HeapOk P m.state.refs :=
   heap_history_at b (atomic_built_fragment b built) compileFuel P sites m history
+
+/-- Every actual Workers history retains source slots, including all admitted host replies. -/
+theorem workers_admitted_history_at (total compileFuel : Nat) (b : Api.Built)
+    (built : Api.Author.build (Workers.crew total) = .ok b) (m : NativeMachine)
+    (history : Effect4.Run.HistoryOf b compileFuel m) : ConfigurationAt b.program m :=
+  admitted_history_at b (workers_built_fragment total b built) compileFuel m history
+
+/-- The actual Workers saved response frame retains its matching registration producer. -/
+theorem workers_saved_registration (total compileFuel : Nat) (b : Api.Built)
+    (built : Api.Author.build (Workers.crew total) = .ok b) (m : NativeMachine)
+    (history : Effect4.Run.HistoryOf b compileFuel m) (id : Effect4.FiberId)
+    (fiber : SourceFiber) (found : m.fiber? id = some fiber) (body : NCode)
+    (acquired : Effect4.Store.Val) (fin : Effect4.Machine.FinName)
+    (saved : .onSuccess body (.afterScopeAdd acquired fin) ∈ fiber.frame.stack) :
+    ∃ scope, body = .sync (.op (.scopeAdd scope fin)) := by
+  have owned := workers_admitted_history_at total compileFuel b built m history
+  exact registration_body b.program body acquired fin
+    ((configuration_fiber b.program m id fiber owned found).frame.2 _ saved)
 
 end Test.Dogfood.Scenario.SourceFragment

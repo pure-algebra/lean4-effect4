@@ -96,7 +96,10 @@ theorem cancel_at (root : NativeEff) (name : EffName) : CodeAt root (cancelProgr
 theorem interp_cancel_at (root : NativeEff) (completed) (table : RowTable)
     (name : EffName) (cause : CauseV) :
     CodeAt root ((interpAt root completed table).cancelThenFail name cause) :=
-  ⟨cancel_at root name, trivial⟩
+  by
+    refine ⟨cancel_at root name, trivial, ?_⟩
+    intro _ _ wrong
+    cases wrong
 
 /-- A registered source finalizer retains the release child at its actual exit invocation. -/
 theorem interp_fin_at (root : NativeEff) (fragment : Fragment root) (completed) (table : RowTable)
