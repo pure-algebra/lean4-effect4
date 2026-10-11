@@ -241,3 +241,27 @@ It is not a net deletion claim.
 The stronger classifier has a checked consumer in this slice.
 Current-code and stored-value weights still need exact source and state transfer premises.
 The original scenario goals retain their prior status.
+
+## Independent integration of the shared pop family and fiber sum
+
+The integration retains the continuing-loop control and the original Timeout goal statements.
+The family transport supplies one-step partial correctness, not loop termination or numeric history.
+
+Integrated code: `df12a159e`, with receipt `0a41c816e`.
+The generic fiber sum enters through merge `dbfad3190` from `ea9891eb1`.
+Independent verification runs at `0a41c816e` with the labelled classifier staged.
+
+The `SharedIntegrationBuild.log` command passes with 1191 jobs.
+It checks the typed host walk, semantic cause transport, continuing-loop reader, Timeout form family, and original Timeout scenario.
+It also builds `Effect4.Laws.Program.FiberSumConnect`.
+
+```text
+LEAN_NUM_THREADS=3 lake env lean docs/research/2026-10-11-machine-models/codex/SharedIntegrationAudit.lean
+#axiom_audit: 391 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
+
+The audit names every changed pop-family module and both fiber-sum modules.
+The retained source and output are beside the build log.
+The next instance slice replaces the duplicated family split proofs with `FiberSum`.
+The context plan now records the owner's settled row 349 option A.
+No proof endpoint closes in this integration receipt.
