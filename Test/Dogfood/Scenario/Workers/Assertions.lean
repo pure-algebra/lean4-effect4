@@ -1,6 +1,6 @@
 import Test.Dogfood.Scenario.Programs
 import Test.Dogfood.Scenario.Frame
-import Effect4.Laws.Program.ReleaseCustody.Control
+import Effect4.Laws.Program.ReleaseCustody.Execution
 import Effect4.Laws.Program.Guard.Decision
 
 /-!
@@ -379,14 +379,20 @@ proof_goal registrations_step :
 
 /-- Release preservation obligation of `releases_once`.
 Reach: actual crew histories, including incomplete release commands and interruption.
-It needs each released closure to originate in its own registered scope entry.
-It proves no release order; consumer: `step` and then `history`. -/
+The concrete custody history supplies its command and outside-loop obligations.
+It proves no release order; consumer: `step` and then `history`.
+This assembly remains modulo `Execution.command_custody` and `Execution.outer_custody`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
-proof_goal releases_step :
+theorem releases_step :
   ∀ (total cf : Nat) (b : Api.Built) (m : NativeMachine) (x : Nat × NativeDecision),
     Api.Author.build (crew total) = .ok b → Holds b cf m →
     Run.Accepted b.table (Api.HostSession.callTable b.program b.table) m x.2 →
-    ReleaseDebits (Run.stepBy b m x)
+    ReleaseDebits (Run.stepBy b m x) := by
+  intro _ cf b m x _ held accepted
+  intro i _
+  have custody := ReleaseCustody.Execution.history b cf (acquirePath i) m held.history
+  exact ReleaseCustody.Control.Funded.read
+    (ReleaseCustody.Execution.decision b (acquirePath i) m x custody accepted).funded
 
 /-- Store preservation obligation of `releases_once`.
 Reach: the second allocated reference in actual crew histories at every command boundary.

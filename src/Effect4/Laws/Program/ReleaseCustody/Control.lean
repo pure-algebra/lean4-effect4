@@ -27,7 +27,13 @@ def responseCredits (q : List Nat) (fin : FinName) : NCode → Nat
   | .success v => afterAddCredits q fin v
   | .failure _ => 0
   | .sync (.op (.scopeAdd _ pending)) => if pending = fin then 0 else credit q fin
+  | .onSuccessConst _ next => responseCredits q fin next
   | _ => credit q fin
+
+def nameCredits (q : List Nat) : EffName → Nat
+  | .afterScopeAdd _ fin => credit q fin
+  | .store name => Names.contCredits q name
+  | _ => 0
 
 def currentCredits (q : List Nat) : NCode → Nat
   | .sync (.op op) => opCredits q op
@@ -35,6 +41,8 @@ def currentCredits (q : List Nat) : NCode → Nat
   | .suspend (.store (.foreign c _)) => credit q (.foreign c)
   | .suspend (.store (.body program)) => Names.progCredits q program
   | .withFiber (.store (.act action)) => Names.actionCredits q action
+  | .withFiber (.store (.body program)) => Names.progCredits q program
+  | .withFiber (.store (.foreign c _)) => credit q (.foreign c)
   | .iterator (.store (.closeSeq order _ _)) _ => orderCredits q order
   | .onSuccess body (.afterScopeAdd _ fin) =>
       (currentCredits q body + responseCredits q fin body) - credit q fin
@@ -42,11 +50,8 @@ def currentCredits (q : List Nat) : NCode → Nat
   | .onSuccess body (.store name) => currentCredits q body + Names.contCredits q name
   | .onSuccess body _ => currentCredits q body
   | .onSuccessConst body next => currentCredits q body + currentCredits q next
-  | .onFailure body (.store name) => currentCredits q body + Names.contCredits q name
-  | .onFailure body _ => currentCredits q body
-  | .onSuccessAndFailure body (.store a) (.store e) =>
-      currentCredits q body + Names.contCredits q a + Names.contCredits q e
-  | .onSuccessAndFailure body _ _ => currentCredits q body
+  | .onFailure body name => currentCredits q body + nameCredits q name
+  | .onSuccessAndFailure body a e => currentCredits q body + nameCredits q a + nameCredits q e
   | .exitFrame body => currentCredits q body
   | .onExit body (.store (.finalizerName fin)) _ => currentCredits q body + credit q fin
   | .onExit body _ _ => currentCredits q body
@@ -55,18 +60,26 @@ def currentCredits (q : List Nat) : NCode → Nat
 def futureCredits (q : List Nat) : NCode → Nat
   | .onSuccess _ (.afterScopeAdd _ fin) => credit q fin
   | .onSuccess _ (.store name) => Names.contCredits q name
-  | .onFailure _ (.store name) => Names.contCredits q name
-  | .onSuccessAndFailure _ (.store a) (.store e) => Names.contCredits q a + Names.contCredits q e
+  | .onFailure _ name => nameCredits q name
+  | .onSuccessAndFailure _ a e => nameCredits q a + nameCredits q e
   | .onSuccessConst _ next => currentCredits q next
   | .iterator (.store (.closeSeq order _ _)) _ => orderCredits q order
   | .onExit _ (.store (.finalizerName fin)) _ => credit q fin
   | _ => 0
 
-def stackCredits (q : List Nat) (active : NCode) : List NCode → Nat
-  | .onSuccess _ (.afterScopeAdd _ fin) :: rest =>
-      responseCredits q fin active + (rest.map (futureCredits q)).sum
-  | head :: rest => futureCredits q head + (rest.map (futureCredits q)).sum
-  | [] => 0
+mutual
+  def stackCredits (q : List Nat) (active : NCode) : List NCode → Nat
+    | .onSuccessConst _ next :: rest => currentCredits q next + stackCredits q next rest
+    | .onSuccess _ (.afterScopeAdd _ fin) :: rest => responseCredits q fin active + stackCap q rest
+    | head :: rest => futureCredits q head + stackCap q rest
+    | [] => 0
+
+  def stackCap (q : List Nat) : List NCode → Nat
+    | .onSuccessConst _ next :: rest => currentCredits q next + stackCredits q next rest
+    | .onSuccess _ (.afterScopeAdd _ fin) :: rest => credit q fin + stackCap q rest
+    | head :: rest => futureCredits q head + stackCap q rest
+    | [] => 0
+end
 
 def taskCredits (q : List Nat) : Task EffName EffThunk Val Err Defect FiberId Ann → Nat
   | .resume _ _ answer => currentCredits q answer
@@ -100,9 +113,9 @@ theorem registration_template (q : List Nat) (scope : Nat) (a : Val) (fin : FinN
 Consumer: `registration_frame_credits`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem stack_before_push (q : List Nat) (body : NCode) (name : EffName) (stack : List NCode) :
-    stackCredits q (.onSuccess body name) stack = (stack.map (futureCredits q)).sum := by
+    stackCredits q (.onSuccess body name) stack = stackCap q stack := by
   unfold stackCredits
-  split <;> rfl
+  split <;> simp only [stackCap, responseCredits]
 
 /-- Pushing the registration template creates exactly the credit its trace registration funds.
 Consumer: `registration_loop_funded`. -/
@@ -370,35 +383,54 @@ theorem scope_add_open_loop_funded (root : NativeEff) (table : RowTable) (m : Na
     Nat.zero_add] at funded ⊢
   omega
 
+/-- A forced yield above scope-add reserves its saved operation once, including the lower callback.
+Consumer: the yield-injection clause of `Execution.command_custody`. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem scope_add_yield_frame_credits (q : List Nat) (f : Fiber) (scope : Nat)
+    (a : Val) (fin : FinName) (lower : List NCode)
+    (current : f.frame.current = .sync (.op (.scopeAdd scope fin)))
+    (stack : f.frame.stack = .onSuccess (.sync (.op (.scopeAdd scope fin))) (.afterScopeAdd a fin) :: lower) :
+    fiberCredits q { countOp f with
+      frame := { f.frame with
+        current := .yieldNowWith 0
+        stack := .onSuccessConst (.yieldNowWith 0) (.sync (.op (.scopeAdd scope fin))) :: f.frame.stack }
+      yieldOverride := none } = fiberCredits q f := by
+  unfold fiberCredits
+  rw [current, stack]
+  simp only [countOp, currentCredits, opCredits, stackCredits, responseCredits,
+    ite_true, Nat.zero_add]
+
 /-- Any actual scope-add response owns at most its reserved finalizer credit.
 Consumer: `stack_credits_bounded`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem response_credits_bounded (q : List Nat) (fin : FinName) (body : NCode) :
     responseCredits q fin body ≤ credit q fin := by
-  unfold responseCredits
-  split
-  · unfold afterAddCredits
+  fun_induction responseCredits q fin body
+  case case1 value =>
+    unfold afterAddCredits
     split
     · exact Nat.zero_le _
     · split
       · exact Nat.le_refl _
       · exact Nat.zero_le _
-  · exact Nat.zero_le _
-  · split
-    · exact Nat.zero_le _
-    · exact Nat.le_refl _
-  · exact Nat.le_refl _
+  case case2 => exact Nat.zero_le _
+  case case3 => exact Nat.zero_le _
+  case case4 => exact Nat.le_refl _
+  case case5 => assumption
+  case case6 => exact Nat.le_refl _
 
 /-- The active response cannot exceed the lower stack's reserved credit.
 Consumer: the actual scope-close command custody clause. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem stack_credits_bounded (q : List Nat) (body : NCode) (stack : List NCode) :
-    stackCredits q body stack ≤ (stack.map (futureCredits q)).sum := by
+    stackCredits q body stack ≤ stackCap q stack := by
   unfold stackCredits
   split
-  · simp only [List.map_cons, List.sum_cons, futureCredits]
+  · simp only [stackCap]
+    exact Nat.le_refl _
+  · simp only [stackCap]
     exact Nat.add_le_add_right (response_credits_bounded q _ body) _
-  · simp only [List.map_cons, List.sum_cons]
+  · simp only [stackCap]
     exact Nat.le_refl _
   · exact Nat.le_refl _
 
@@ -406,9 +438,9 @@ theorem stack_credits_bounded (q : List Nat) (body : NCode) (stack : List NCode)
 Consumer: the actual scope-close command custody clause. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem stack_before_action (q : List Nat) (action : EffThunk) (stack : List NCode) :
-    stackCredits q (.withFiber action) stack = (stack.map (futureCredits q)).sum := by
+    stackCredits q (.withFiber action) stack = stackCap q stack := by
   unfold stackCredits
-  split <;> rfl
+  split <;> simp only [stackCap, responseCredits]
 
 /-- The store's finalizer program owns exactly its source-indexed foreign credit.
 Consumer: the actual scope-close command custody clause. -/
@@ -442,9 +474,9 @@ theorem prog_of_credits (q : List Nat) (program : ProgName) :
 Consumer: `stored_suspend_loop_funded`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem stack_before_suspend (q : List Nat) (thunk : EffThunk) (stack : List NCode) :
-    stackCredits q (.suspend thunk) stack = (stack.map (futureCredits q)).sum := by
+    stackCredits q (.suspend thunk) stack = stackCap q stack := by
   unfold stackCredits
-  split <;> rfl
+  split <;> simp only [stackCap, responseCredits]
 
 /-- The native suspension opens the stored program without emitting an event or changing its stack.
 Consumer: `stored_suspend_loop_funded`. -/
@@ -498,8 +530,77 @@ theorem stored_suspend_loop_funded (root : NativeEff) (table : RowTable) (m : Na
     simp only [next, countOp]
     rw [current, stack_before_suspend, prog_of_credits]
     change Names.progCredits q program + stackCredits q (embed (progOf program)) f.frame.stack + _ ≤
-      Names.progCredits q program + (f.frame.stack.map (futureCredits q)).sum + _
+      Names.progCredits q program + stackCap q f.frame.stack + _
     omega
+  have member : f ∈ m.fibers := List.mem_of_find?_eq_some found
+  have changed := update_credits q m f next unique member rfl
+  unfold Funded at funded ⊢
+  change m.trace.countP (ReleaseTrace.releaseAt q) + machineCredits q (m.update next) + _ ≤
+    m.trace.countP (ReleaseTrace.registeredAt q)
+  omega
+
+/-- A stored mask transfers the named body's credit through the actual restoring frame.
+Consumer: `stored_mask_loop_funded`. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem stored_mask_frame_credits (q : List Nat) (f : Fiber) (program : ProgName)
+    (current : f.frame.current = .withFiber (.store (.act (.setInterruptible program false)))) :
+    fiberCredits q { countOp f with
+      frame := { f.frame.uninterruptible with current := embed (progOf program) } } ≤ fiberCredits q f := by
+  have bounded := stack_credits_bounded q (embed (progOf program)) f.frame.stack
+  unfold fiberCredits
+  rw [current, stack_before_action]
+  simp only [currentCredits, Names.actionCredits]
+  cases masked : f.frame.interruptible
+  · simp only [FrameFiber.uninterruptible, masked, Bool.false_eq_true, if_false, countOp, prog_of_credits]
+    omega
+  · simp only [FrameFiber.uninterruptible, masked, if_true, countOp, prog_of_credits,
+      stackCredits, futureCredits, Nat.zero_add]
+    exact Nat.le_refl _
+
+/-- The actual native mask installs the named body beneath its existing restore frame.
+Consumer: `stored_mask_loop_funded`. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem stored_mask_start (root : NativeEff) (table : RowTable) (m : NativeMachine)
+    (f : Fiber) (yielding : Bool) (program : ProgName)
+    (current : f.frame.current = .withFiber (.store (.act (.setInterruptible program false)))) :
+    evaluateNative root m f yielding table =
+      ⟨m, { f with frame := { f.frame.uninterruptible with current := embed (progOf program) } },
+        yielding, .continue_, []⟩ := by
+  have park : (interpAt root m.completedExits table).parkOf
+      (.withFiber (.store (.act (.setInterruptible program false)))) = none := rfl
+  have action : (interpAt root m.completedExits table).withFiberOf
+      (.store (.act (.setInterruptible program false))) =
+      some (.setInterruptible (embed (progOf program)) false) := rfl
+  simp only [evaluateNative, current, evaluatePrim, park, action, evaluatePrim.withFiber]
+
+/-- Entering the actual stored mask preserves cleanup funding, including its restoring frame.
+Consumer: the masking command clause of `Workers.Assertions.releases_step`. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem stored_mask_loop_funded (root : NativeEff) (table : RowTable) (m : NativeMachine)
+    (id : FiberId) (f : Fiber) (yielding : Bool) (pending : List Command)
+    (q : List Nat) (program : ProgName)
+    (unique : (m.fibers.map RunFiber.id).Nodup) (funded : Funded q m (.loop id yielding :: pending))
+    (found : m.fiber? id = some f)
+    (current : f.frame.current = .withFiber (.store (.act (.setInterruptible program false))))
+    (interrupt : f.frame.deferredInterrupt = false) (override : f.yieldOverride = none)
+    (budget : f.currentOpCount + 1 < f.maxOpsBeforeYield) :
+    Funded q (driveStep (evaluator := evaluatorFor root table) (interpOf root table) m
+      (.loop id yielding) pending).1
+      (driveStep (evaluator := evaluatorFor root table) (interpOf root table) m
+        (.loop id yielding) pending).2 := by
+  let next : Fiber := { countOp f with
+    frame := { f.frame.uninterruptible with current := embed (progOf program) } }
+  have stepped : driveStep (evaluator := evaluatorFor root table) (interpOf root table) m
+      (.loop id yielding) pending = (m.update next, .loop id yielding :: pending) := by
+    rw [Machine.ControlSteps.loop_of_iteration (evaluator := evaluatorFor root table) _ m id f yielding pending found]
+    rw [Machine.ControlSteps.iteration_below_budget (evaluator := evaluatorFor root table)
+      _ m f yielding interrupt override budget]
+    change settle id pending (evaluateNative root m (countOp f) yielding table) = _
+    rw [stored_mask_start root table m (countOp f) yielding program current]
+    rfl
+  rw [stepped]
+  change Funded q (m.update next) (.loop id yielding :: pending)
+  have frame : fiberCredits q next ≤ fiberCredits q f := stored_mask_frame_credits q f program current
   have member : f ∈ m.fibers := List.mem_of_find?_eq_some found
   have changed := update_credits q m f next unique member rfl
   unfold Funded at funded ⊢
@@ -621,9 +722,9 @@ theorem scope_close_loop_funded (root : NativeEff) (table : RowTable) (m : Nativ
 Consumer: `close_seq_loop_funded`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem stack_before_iterator (q : List Nat) (name : EffName) (cursor : Val) (stack : List NCode) :
-    stackCredits q (.iterator name cursor) stack = (stack.map (futureCredits q)).sum := by
+    stackCredits q (.iterator name cursor) stack = stackCap q stack := by
   unfold stackCredits
-  split <;> rfl
+  split <;> simp only [stackCap, responseCredits]
 
 /-- The actual iterator command transfers head credit into the selected finalizer and tail credit into its frame.
 Consumer: the close-iterator command clause of `Workers.Assertions.releases_step`. -/
@@ -778,7 +879,7 @@ theorem after_add_deliver_funded (root : NativeEff) (table : RowTable) (m : Nati
     simp only [currentCredits, stackCredits, responseCredits]
     change currentCredits q (contAOf root (.afterScopeAdd a fin) value) +
         stackCredits q (contAOf root (.afterScopeAdd a fin) value) lower + _ ≤
-      0 + (afterAddCredits q fin value + (lower.map (futureCredits q)).sum) + _
+      0 + (afterAddCredits q fin value + stackCap q lower) + _
     rw [after_add_code_credits]
     omega
   have member : f ∈ (m.emit events).fibers := List.mem_of_find?_eq_some found

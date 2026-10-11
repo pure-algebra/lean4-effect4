@@ -1,0 +1,44 @@
+import Effect4.Laws.Program.ReleaseCustody.Control
+import ProofGraph.AxiomAudit
+
+/-! Reader for the forced-yield clause of Execution.command_custody.
+The old independent stack sum duplicates scope-add credit beneath the saved constant.
+The new projection follows the actual saved continuation and retains one credit.
+These equations inspect the assertion; they establish no whole-command preservation. -/
+set_option autoImplicit false
+open Effect4 Effect4.Machine Effect4.Program
+open Effect4.Program.ReleaseCustody Effect4.Program.ReleaseCustody.Control
+
+example (q : List Nat) (scope : Nat) (a : Val) (fin : FinName)
+    (one : credit q fin = 1) :
+    currentCredits q (.yieldNowWith 0) +
+      ([.onSuccessConst (.yieldNowWith 0) (.sync (.op (.scopeAdd scope fin))),
+        .onSuccess (.sync (.op (.scopeAdd scope fin))) (.afterScopeAdd a fin)].map
+        (futureCredits q)).sum = 2 := by
+  simp only [List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, futureCredits,
+    currentCredits, opCredits, one]
+  omega
+
+example (q : List Nat) (scope : Nat) (a : Val) (fin : FinName)
+    (one : credit q fin = 1) :
+    currentCredits q (.yieldNowWith 0) +
+      stackCredits q (.yieldNowWith 0)
+        [.onSuccessConst (.yieldNowWith 0) (.sync (.op (.scopeAdd scope fin))),
+         .onSuccess (.sync (.op (.scopeAdd scope fin))) (.afterScopeAdd a fin)] = 1 := by
+  simp only [currentCredits, stackCredits, opCredits, responseCredits, stackCap,
+    ite_true, one]
+
+/-- The actual charged fiber frame consumes the corrected equation. -/
+example (q : List Nat) (f : Fiber) (scope : Nat) (a : Val) (fin : FinName)
+    (lower : List NCode)
+    (current : f.frame.current = .sync (.op (.scopeAdd scope fin)))
+    (stack : f.frame.stack = .onSuccess (.sync (.op (.scopeAdd scope fin)))
+      (.afterScopeAdd a fin) :: lower) :
+    fiberCredits q { countOp f with
+      frame := { f.frame with
+        current := .yieldNowWith 0
+        stack := .onSuccessConst (.yieldNowWith 0) (.sync (.op (.scopeAdd scope fin))) :: f.frame.stack }
+      yieldOverride := none } = fiberCredits q f :=
+  scope_add_yield_frame_credits q f scope a fin lower current stack
+
+#axiom_audit Effect4.Laws.Program.ReleaseCustody.Names Effect4.Laws.Program.ReleaseCustody.Control
