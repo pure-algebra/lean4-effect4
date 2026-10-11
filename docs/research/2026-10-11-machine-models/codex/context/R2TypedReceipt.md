@@ -106,3 +106,33 @@ The removed lines include the duplicated observer placement and cached waiter re
 `git diff --check` passes.
 Command and Close remain outside this checkpoint.
 The coordinator owns the whole-law build and outside-runtime gates.
+
+## Command and Close checkpoint
+
+Base: `372af35e6`.
+The changed modules are Clauses.Command and Clauses.Close under `Effect4.Laws.Program.Typed.Commands`.
+The exported `FiberClauseKeeps` statements remain unchanged.
+Their placement is typed-state-reachable preservation, R4.
+
+`Evaluating.prepare_continue` exposes the existing typed preparation of the actual caller.
+`settle_continue_edits_typed` consumes the actual edit-word result and retains its selected owner.
+Both helpers serve `clause_dropObservers` and `clause_runIn` immediately.
+The token removal filters the installed caller as well as every other retained fiber.
+The scope link retains its actual self-interruption or newly installed drop observer.
+The open-scope arm consumes `link_preserves` for the store world before preparing the answer.
+It then consumes `configTyped_observe` on the prepared caller's machine.
+The closed-scope arm consumes `configTyped_interruptRecord` on that machine.
+No additional command premise, carrier, planned goal or eager fallback enters the proofs.
+The obsolete unconsumed `Evaluating.dropObs` helper leaves the module.
+No frozen contract, semantics claim or source consumer names it in the checked tree.
+Close adds the empty edit word to its three passive iteration literals.
+
+Direct Lean checks pass with warnings treated as errors.
+The measured Command check takes 5.89 seconds; Close takes 2.65 seconds.
+The audit imports Close and names Command and Close.
+Result: 99 declarations within `[propext, Quot.sound]`, zero goals and zero declarations modulo goals.
+`git diff --check` passes.
+The source diff adds 194 lines and removes 213 lines: 19 fewer lines.
+All eight assigned R2 proof modules now have checked snapshots.
+The coordinator still owns the integrated whole-law build and outside-runtime gates.
+This checkpoint claims no outside-runtime comparison.

@@ -126,11 +126,11 @@ theorem clause_closeIter_sequential (root : ProgramSource) (rootTy : EffTy) (ord
   show SettlesTyped root rootTy w f.id rest (prepareIterR
     (match ((interpRAt root.program m.completedExits).iterNext
         (.store (.closeSeq order ex [])) .unit).2 with
-      | .done v => (⟨m, answerR (saveAnswerR f next) (.pure (.success v)), y, .continue_, []⟩ :
+      | .done v => (⟨m, answerR (saveAnswerR f next) (.pure (.success v)), y, .continue_, [], []⟩ :
           RIter)
-      | .halt c => ⟨m, answerR (saveAnswerR f next) (.pure (.failure c)), y, .continue_, []⟩
+      | .halt c => ⟨m, answerR (saveAnswerR f next) (.pure (.failure c)), y, .continue_, [], []⟩
       | .resume code cont =>
-        ⟨m, answerR (pushR (saveAnswerR f next) (.iter cont)) code, y, .continue_, []⟩))
+        ⟨m, answerR (pushR (saveAnswerR f next) (.iter cont)) code, y, .continue_, [], []⟩))
   have hstep : ((interpRAt root.program m.completedExits).iterNext
       (.store (.closeSeq order ex [])) .unit).2 = closeSeqStepR order ex [] .unit := rfl
   rw [hstep]
