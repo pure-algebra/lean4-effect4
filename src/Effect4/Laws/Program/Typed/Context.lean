@@ -81,6 +81,36 @@ theorem checked_context_arm (root : ProgramSource) (w : World) (p : Point)
   rw [present']
   rfl
 
+/-- The source reader's full denotation retains actual requirements and a live fuel frontier.
+Consumer: the ambient M5 withFiber arm and checked_provideContext_reader. -/
+theorem checked_context_denotation (root : ProgramSource) (w : World) (p : Point)
+    (env : TyEnv) (keys available : Env.Requirement) (ty : EffTy)
+    (node : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber (.context keys))))
+    (checked : Checker.check (root.scopeSig p.path) env p.path (.withFiber (.context keys)) = .ok ty)
+    (services : w.serviceTy = root.sig.serviceTy) (coverage : Row.Subset ty.requires available) :
+    AmbientProg root w available (ty, available, available)
+      (denoteR root.program (.withFiber (.context keys)) p) := by
+  have actionCheck := Checker.inv_withFiber _ _ _ _ _ checked
+  obtain ⟨declared, same⟩ := Checker.inv_action_context _ _ _ _ _ actionCheck
+  have required : Row.Subset keys available := by
+    rw [same] at coverage
+    exact coverage
+  have actionHere : Checker.checkAction (root.scopeSig p.path) env p.path (.context keys) = .ok ty := by
+    rw [same]
+    have loop := (Checker.context_keys_eq_ok (root.scopeSig p.path) p.path keys.elems).mpr declared
+    simp only [Checker.checkAction, bind_pure_comp, List.forIn_yield_eq_foldlM]
+    rw [loop]
+    rfl
+  by_cases exhausted : p.fuel = 0
+  · rw [denoteR_zero _ _ _ exhausted]
+    refine .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+      (fun _ _ _ h => nomatch h) () True.intro ?_ (Row.subset_refl _)
+    intro _ _ _ impossible
+    exact impossible.elim
+  · rw [denoteR_withFiber _ _ _ exhausted]
+    exact checked_context_arm root w p env keys available ty node actionHere services required
+
+
 /-- The actual native getter satisfies the indexed answer protocol in the current context.
 Consumer: the typed getter evaluation clause. -/
 theorem native_context_answer (root : ProgramSource) (table : RowTable) (m : NativeMachine)
@@ -415,9 +445,6 @@ theorem checked_provideContext_reader (root : ProgramSource) (w : World) (p : Po
       (denoteR root.program (.provideContext context (.withFiber (.context required))) p) := by
   have childNode : Node.at_ (.eff root.program) (p.child 0).path =
       some (.eff (.withFiber (.context required))) := Node.at_child node rfl
-  have action : actionAt root.program (p.child 0) = some WithFiberAction.getContext := by
-    unfold actionAt
-    rw [childNode]
   refine checked_provideContext_arm root w p env context (.withFiber (.context required))
     available ty supplied checked values evaluated coverage budget ?_ ?_
   · intro bodyTy bodyCheck exit head
@@ -427,30 +454,17 @@ theorem checked_provideContext_reader (root : ProgramSource) (w : World) (p : Po
     rw [noInline] at head
     cases head
   · intro bodyTy bodyCheck later ordered input requiredCovered guaranteedCovered
-    obtain ⟨declared, rfl⟩ := Checker.inv_action_context _ _ _ _ _
-      (Checker.inv_withFiber _ _ _ _ _ bodyCheck)
-    by_cases exhausted : (p.child 0).fuel = 0
-    · rw [denoteR_zero _ _ _ exhausted]
-      refine .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-        (fun _ _ _ h => nomatch h) () True.intro ?_ guaranteedCovered
-      intro _ _ _ impossible
-      exact impossible.elim
-    · rw [denoteR_withFiber _ _ _ exhausted]
-      unfold denoteAction
-      rw [action]
-      refine ambientProg_widen root
-        (before := ((⟨.contextOf required, .never, required⟩ : EffTy), input, input))
-        (Ty.subN_refl _) (Ty.subN_refl _) guaranteedCovered guaranteedCovered ?_
-      refine ambient_getContext_typed root later required input requiredCovered ?_
-      intro key member
-      obtain ⟨carrier, present⟩ := declared key member
-      have presentLater : later.serviceTy key = some carrier := by
-        rw [le_serviceTy ordered.1, services]
-        change root.signature.serviceTy key = some carrier
-        rw [← root.scopeSig_serviceTy p.path]
-        exact present
-      rw [presentLater]
-      rfl
+    have childCheck : Checker.check (root.scopeSig (p.child 0).path) env (p.child 0).path
+        (.withFiber (.context required)) = .ok bodyTy := by
+      change Checker.check (root.scopeSig (p.path ++ [0])) env (p.path ++ [0]) _ = _
+      rw [root.scopeSig_child node 0]
+      exact bodyCheck
+    have futureServices : later.serviceTy = root.sig.serviceTy :=
+      (le_serviceTy ordered.1).trans services
+    refine ambientProg_widen root (before := (bodyTy, input, input))
+      (Ty.subN_refl _) (Ty.subN_refl _) guaranteedCovered guaranteedCovered ?_
+    exact checked_context_denotation root later (p.child 0) env required input bodyTy
+      childNode childCheck futureServices requiredCovered
 
 
 end Effect4.Program.Typed

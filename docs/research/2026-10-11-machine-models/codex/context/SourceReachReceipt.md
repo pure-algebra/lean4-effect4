@@ -163,3 +163,25 @@ The audit reports 687 declarations within `[propext, Quot.sound]`, zero planned 
 The source adds 78 lines and removes 48 lines relative to `bad99e8e2`.
 `git diff --check` passes for the source.
 Apply this checkpoint after `bad99e8e2`.
+
+## Full source getter checkpoint
+
+Base: `d9a9a170d`.
+`checked_context_denotation` handles the actual reader source node at every fuel.
+It consumes the successful source checker result, the declared service table and actual required-row inclusion.
+The successful checker result transports its path through the existing `context_keys_eq_ok` law.
+It does not transport a refused diagnostic between paths.
+The zero-fuel branch retains the live frontier.
+The positive-fuel branch consumes `checked_context_arm`.
+The actual provider reader now consumes this single source getter theorem.
+Its installed-context and completion-row premises remain explicit.
+No source judgment header or type-only operation precondition changes.
+
+The same three check commands above pass.
+Result: 489 build jobs pass; Context measures 24 seconds and Scheduler measures 50 seconds.
+The source reader passes without messages.
+The audit reports 688 declarations within `[propext, Quot.sound]`, zero planned goals and zero modulo declarations.
+The source adds 41 lines and removes 27 lines relative to the base.
+`git diff --check` passes for the source and receipt.
+Apply this checkpoint after `d9a9a170d`.
+The open source induction and actual current, saved and queued ambient positions remain the next consumers.
