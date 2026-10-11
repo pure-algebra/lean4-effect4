@@ -179,3 +179,33 @@ tooling.
 the handle consolidation (`../2026-10-11-handles/README.md`).
 
 **Verdict: flat.** The range adds tooling and no per-scenario structure.
+
+## 2026-10-11 15:40, R2 committed
+
+Range `a9e7a8551..6c4bb709d`: three commits, a fast-forward. Under `Laws` and `Dogfood` the
+range adds 7,962 lines and removes 4,021 in 109 files. Six new files hold 1,784 of the added
+lines:
+
+- the edit alphabet, `src/Effect4/Laws/Machine/Edits.lean` (329 lines);
+- the driver's helpers as words, `EditWords.lean` (599) and `EditObserverWords.lean` (380);
+- `FiberSumMessages.lean` (205), `Laws/Program/Guard/Messages.lean` (252) and `Eliminators.lean`
+  (19).
+
+Over the changed files, measured before and after by the script's patterns: shared-law uses
+86 → 99, private case analyses 554 → 554, hand decision lifts 21 → 21.
+
+- **The consolidation is item 10's alphabet.** Each driver helper has a word and an equation
+  (`start_word`, `spawn_word`, `drain_word`, `exit_word`, `observer_word` and the rest).
+  `Edits.run_preserves` lifts a fact per edit to every word. `Approximation`, `Ledger`,
+  `MaskRuns`, `Handles` and the guard modules read the words.
+- **Item 10's two open points are in Codex's open tree** (`codex/machine-fields`, uncommitted
+  at 15:20): `MachineField` with its agreement relation, and one `RunMachine.dropToken`. The
+  `observe` write is still spelled twice, in `Edit.apply` and in `applyFiberEdit`.
+- `Laws/Machine/Clauses.lean` gains eight evaluator unfoldings (10 → 18). They are clause
+  equations for R2's new step result, in the shared clause bank, not a private pass.
+- `Laws/Machine/Handles.lean` gains `FiberEdit.keys`, a 49th hand support function, and per-edit
+  facts (`fiberEdit_world`, `fiberEdits_minted`). The facts are item 11 step 7's shape. The
+  support function is what item 11 step 3 generates.
+
+**Verdict: improving in structure, flat in private analyses.** The net 3,941 lines include the
+1,784 lines of the new shared alphabet. The replaced proofs keep their names.

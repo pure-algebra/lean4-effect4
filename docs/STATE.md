@@ -210,9 +210,10 @@ A program has folds, a journaled run with replay, and a printed image that reads
   scenario: consumed plus held is at most produced, along every reachable machine
   (`src/Effect4/Laws/Machine/Ledger.lean`, `src/Effect4/Laws/Program/LedgerRun.lean`). The
   finalizer custody law is its first instance. Codex replaces the other ledgers, and each merge is
-  audited for consolidation (`docs/research/2026-10-11-machine-models/AUDIT.md`). A fiber that
-  interrupts itself through its own handle runs to a frontier, where rc.112 exits interrupted
-  (`E4-RUN-CE-046`).
+  audited for consolidation (`docs/research/2026-10-11-machine-models/AUDIT.md`). The driver's
+  helpers are words of one edit alphabet (`src/Effect4/Laws/Machine/Edits.lean`). Edits of
+  another fiber's record apply after the running fiber's write-back, so a fiber that interrupts
+  itself exits interrupted, as rc.112 does (`E4-RUN-CE-046`, repaired).
 - **The first-exit race** (row 352). `raceAllFirst` selects the first observed entrant exit and
   awaits the losers' cleanup before the parent sees it, as rc.112 does. It repairs the timeout form.
 - **The build.** The program and dogfood batteries run the machine as native code (row 327). A
