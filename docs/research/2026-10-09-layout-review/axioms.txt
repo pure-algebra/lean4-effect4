@@ -1,0 +1,4 @@
+'Tools.View.Flow.lay_good' depends on axioms: [propext, Quot.sound]
+'Tools.View.Flow.assign_meets' depends on axioms: [propext, Quot.sound]
+'Tools.View.Flow.place_descends' depends on axioms: [propext, Quot.sound]
+'Tools.View.Flow.place_apart' depends on axioms: [propext, Quot.sound]
