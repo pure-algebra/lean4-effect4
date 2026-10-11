@@ -120,15 +120,15 @@ theorem Evaluating.settle_nested {root : ProgramSource} {rootTy : EffTy} {w : Wo
       ConfigTyped root rootTy w (m.update g) (.loop f.id y' :: rest) →
       ConfigTyped root rootTy w (m.update g) (nested ++ [.loop f.id y'] ++ rest)) :
     SettlesTyped root rootTy w f.id rest
-      (prepareIterR ⟨m, { f with frame := fr }, y', .continue_, nested⟩) := by
+      (prepareIterR ⟨m, { f with frame := fr }, y', .continue_, nested, []⟩) := by
   have view := ev.view
   let fr' : RSaved := { fr with current := prepareR m.completedExits fr.current }
   have code' : ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty fr' :=
     fun ty declared => codeOk_prepare m.completedExits view (code ty declared)
   obtain ⟨ty, declared⟩ := ev.declared
   obtain ⟨tin, current, _, _⟩ := code' ty declared
-  have glue : prepareIterR ⟨m, { f with frame := fr }, y', .continue_, nested⟩ =
-      ⟨m, { f with frame := fr' }, y', .continue_, nested⟩ := prepareScopedExitR_of_typed current
+  have glue : prepareIterR ⟨m, { f with frame := fr }, y', .continue_, nested, []⟩ =
+      ⟨m, { f with frame := fr' }, y', .continue_, nested, []⟩ := prepareScopedExitR_of_typed current
   rw [glue]
   have step := (configTyped_frame_step ev.typed rfl ev.look ev.running fr' code'
     (raceRegistrationR_typed current)).1 y'
@@ -156,7 +156,7 @@ theorem Evaluating.spawn_settles {root : ProgramSource} {rootTy : EffTy} {w : Wo
           options.startImmediately).2.1 code, y, .continue_,
         (start (spawn interp m f program options site).1 f ⟨m.nextId⟩
           options.startImmediately).2.2 ++ tail (start (spawn interp m f program options site).1 f
-            ⟨m.nextId⟩ options.startImmediately).2.1⟩) := by
+            ⟨m.nextId⟩ options.startImmediately).2.1, []⟩) := by
   have hmem : f ∈ (m.update f).fibers := rfiber?_mem ev.look
   have old := ev.typed.machine.fiber hmem
   have ne : (⟨m.nextId⟩ : FiberId) ≠ f.id := Ne.symm (ne_next (m := m) old.below)

@@ -136,3 +136,16 @@ The source diff adds 194 lines and removes 213 lines: 19 fewer lines.
 All eight assigned R2 proof modules now have checked snapshots.
 The coordinator still owns the integrated whole-law build and outside-runtime gates.
 This checkpoint claims no outside-runtime comparison.
+
+## Spawn follow-up
+
+Base: `08d36537f`.
+The coordinator's whole-law build finds four stale passive iteration literals in Clauses.Spawn.
+The private dependency overlay had not rebuilt that module in the earlier Command check.
+The four literals now carry their explicit empty edit words.
+Their exported statements retain the same operations, queues and typing premises.
+Direct Lean compiles Spawn with warnings treated as errors.
+The audit imports Spawn and names `Effect4.Laws.Program.Typed.Commands.Clauses.Spawn`.
+Result: 114 declarations within `[propext, Quot.sound]`, zero goals and zero declarations modulo goals.
+The source diff replaces four lines; it adds no command case or context signature change.
+The coordinator's whole-law rebuild remains the integration check.
