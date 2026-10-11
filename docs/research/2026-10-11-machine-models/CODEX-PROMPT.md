@@ -106,7 +106,21 @@ Behaviour gates only where a slice changes executable code, and then at a sweep.
      is a frozen census law: propose its amendment in the receipt.
    - Read the yield budget from `budgetOf` and drop the fiber's copy.
    - Cut the scheduled wake branch, or record why it stays.
-7. **L4 to L6** at any time: `AppendOnly` and `FreshSupply` for ids, keys and tokens; `Census` and
+7. **Context writes as a typed region** (decisions row 349, option A, ruled 2026-10-11; repairs
+   `E4-CTX-CE-001`). A program-syntax change: follow the new-constructor checklist (the generated
+   families, the LCNF roots, the golden tree, the OCaml bridge, the compatibility and case
+   policies).
+   - Replace the raw `setContext` and `getContext` actions with rc.112's `context` reader, whose
+     type carries its row, and the `provideContext c body` region, which removes `c`'s keys from
+     `body`'s row (`../2026-10-11-machine-from-the-base/context-transformers.md`, §4 and §6).
+   - Then B6, the services' chain (`CtxChain`), and a definition's context transformer per
+     parameter.
+   - It changes executable code: regenerate what it reaches and run the gates at the sweep. Turn
+     `E4-CTX-CE-001`'s attack guards into the repaired regression.
+8. **Housekeeping.** The owner deleted `codex/schedule-independence-review-20261010` (row 353);
+   its tip is the tag `archive/docgen-probe-20261010`. Remove your clean worktree
+   `~/.codex/worktrees/module-design-review/lean4-effect4`, then delete the branch.
+9. **L4 to L6** at any time: `AppendOnly` and `FreshSupply` for ids, keys and tokens; `Census` and
    `Linear` for the static site analyses. Reconcile `OncePlaced` with `Linear` in the receipt.
 
 ## How to work

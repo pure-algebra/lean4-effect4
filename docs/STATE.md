@@ -203,8 +203,16 @@ A program has folds, a journaled run with replay, and a printed image that reads
   frame followed from an old one by listed edits, or the fiber is new (`driveStep_framesFollow`).
   Five guard chains and the evaluation
   half of `MaskRuns` follow as instances; replacing the old chains is Codex's lane. A raw context
-  write lets a checked program at a closed row die with `missingService` (`E4-CTX-CE-001`, row 349).
+  write lets a checked program at a closed row die with `missingService` (`E4-CTX-CE-001`). Row 349
+  ruled option A: a typed `context` reader and a `provideContext` region, in Codex's lane.
   The printer spells a pair of a union as a union of pairs (`E4-PRINT-CE-001`, row 346, ruled).
+- **Shared accounting** (row 355). A stack ledger states once what the goals lane re-proved per
+  scenario: consumed plus held is at most produced, along every reachable machine
+  (`src/Effect4/Laws/Machine/Ledger.lean`, `src/Effect4/Laws/Program/LedgerRun.lean`). The
+  finalizer custody law is its first instance. Codex replaces the other ledgers, and each merge is
+  audited for consolidation (`docs/research/2026-10-11-machine-models/AUDIT.md`). A fiber that
+  interrupts itself through its own handle runs to a frontier, where rc.112 exits interrupted
+  (`E4-RUN-CE-046`).
 - **The first-exit race** (row 352). `raceAllFirst` selects the first observed entrant exit and
   awaits the losers' cleanup before the parent sees it, as rc.112 does. It repairs the timeout form.
 - **The build.** The program and dogfood batteries run the machine as native code (row 327). A
@@ -304,11 +312,9 @@ owner's note of 2026-10-09: write a program, then watch its session answer calls
 - **The marks of an operation** (the forms note's proposal A, 1): drawn in the view by each
   operation's row, and removed by `v -P`.
 - **The program's graph** (the design note, section 7): its marks, built as recommended, to
-  confirm. What a line's width means: the organic strokes note, section 4.
+  confirm.
 - **MCP and code mode** (the MCP note, section 10): six rulings.
 - **The push of `lean4-effects`**, before this branch: Effect4 pins its local commit.
-- **Context writes** (row 349). Option A puts rc.112's typed `context` reader and `provideContext`
-  region in place of the raw pair; option C is the stopgap. The context transformers wait on it.
 
 
 ## Process
