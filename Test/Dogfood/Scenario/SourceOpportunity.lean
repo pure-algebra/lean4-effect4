@@ -1,6 +1,7 @@
 import Test.Dogfood.Scenario.Atomic.SourcePaths
 import Test.Dogfood.Scenario.SourceUse
-import Effect4.Laws.Program.SourceOpportunityEvaluation
+import Effect4.Laws.Program.SourceOpportunityMachine
+import Effect4.Laws.Program.Guard.ForkLedger
 
 /-!
 Concept: scope-lifetime-finalization R11.
@@ -308,5 +309,49 @@ theorem atomic_frame_step_debit (compileFuel : Nat) (b : Api.Built)
   have owned := (Effect4.Program.SourceScope.configuration_fiber b.program m id fiber source found).frame
   exact frame_step_debit b.program _ fragment (atomic_all_clear b built i member)
     (atomic_loops_clear b built i member) m.completedExits b.table fiber.frame owned
+
+/-- The actual Workers frame evaluator spends the global stored-row and recorded-event budget.
+Both acquisitions retain every job count and every admitted decision history. -/
+theorem workers_frame_install_debit (total compileFuel : Nat) (b : Api.Built)
+    (built : Api.Author.build (Workers.crew total) = .ok b) (m : NativeMachine)
+    (history : Effect4.Run.HistoryOf b compileFuel m) (id : FiberId)
+    (fiber : Effect4.Program.SourceScope.SourceFiber) (found : m.fiber? id = some fiber)
+    (i : Nat) (member : i ∈ [1, 2]) (yielding : Bool) :
+    let next := evaluatePrim.stepFrame (interpAt b.program m.completedExits b.table) m fiber yielding
+    recorded (Programs.crewAcquire i) (next.machine.update next.fiber) +
+      fibers b.program (Programs.crewAcquire i) (next.machine.update next.fiber) ≤
+      recorded (Programs.crewAcquire i) m + fibers b.program (Programs.crewAcquire i) m := by
+  have source := SourceFragment.workers_admitted_history_at total compileFuel b built m history
+  have owned := (Effect4.Program.SourceScope.configuration_fiber b.program m id fiber source found).frame
+  have clearFin : ClearFinalizers b.program (Programs.crewAcquire i) := by
+    rw [Programs.workers_built_program total b built]
+    exact workers_clear total i member
+  have clearLoop : ClearLoops b.program (Programs.crewAcquire i) := by
+    rw [Programs.workers_built_program total b built]
+    exact workers_loops_clear total i member
+  have unique := (Effect4.Machine.ForkLedger.Invariant.Native.reachable_corresponding
+    b.program b.table compileFuel m history.reachable).1
+  exact step_frame_install_debit b.program _ (SourceFragment.workers_built_fragment total b built)
+    clearFin clearLoop m.completedExits b.table m fiber yielding owned unique
+    (List.mem_of_find?_eq_some found)
+
+/-- The actual Atomic frame evaluator spends its stored-row and event budget at every request site. -/
+theorem atomic_frame_install_debit (compileFuel : Nat) (b : Api.Built)
+    (built : Api.Author.build (Atomic.shop .none) = .ok b) (m : NativeMachine)
+    (history : Effect4.Run.HistoryOf b compileFuel m) (id : FiberId)
+    (fiber : Effect4.Program.SourceScope.SourceFiber) (found : m.fiber? id = some fiber)
+    (i : Nat) (member : i ∈ Atomic.requests) (yielding : Bool) :
+    let next := evaluatePrim.stepFrame (interpAt b.program m.completedExits b.table) m fiber yielding
+    recorded (Atomic.SourcePaths.requestPath i) (next.machine.update next.fiber) +
+      fibers b.program (Atomic.SourcePaths.requestPath i) (next.machine.update next.fiber) ≤
+      recorded (Atomic.SourcePaths.requestPath i) m + fibers b.program (Atomic.SourcePaths.requestPath i) m := by
+  have fragment := SourceFragment.atomic_built_fragment b built
+  have source := Effect4.Program.SourceScope.admitted_history_at b fragment compileFuel m history
+  have owned := (Effect4.Program.SourceScope.configuration_fiber b.program m id fiber source found).frame
+  have unique := (Effect4.Machine.ForkLedger.Invariant.Native.reachable_corresponding
+    b.program b.table compileFuel m history.reachable).1
+  exact step_frame_install_debit b.program _ fragment (atomic_all_clear b built i member)
+    (atomic_loops_clear b built i member) m.completedExits b.table m fiber yielding owned unique
+    (List.mem_of_find?_eq_some found)
 
 end Test.Dogfood.Scenario.SourceOpportunity
