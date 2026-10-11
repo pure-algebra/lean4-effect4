@@ -1,3 +1,4 @@
+import Effect4.Laws.Program.Parking
 import Effect4.Laws.Program.Guard.Core
 import Effect4.Laws.Program.Guard.Interruption
 import Effect4.Laws.Program.Guard.DeferredCause
@@ -13,70 +14,38 @@ abbrev NAction := WithFiberAction EffName EffThunk Val Err Defect FiberId Ann Ct
 theorem stepFrame_running (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) :
     (evaluatePrim.stepFrame interp m f yielding).fiber.running =
-      f.running := by
-  unfold evaluatePrim.stepFrame
-  cases hs : f.frame.step interp.toPrimInterp with
-  | mk step events => cases step <;> rfl
+      f.running :=
+  (Moves.stepFrame_footprint interp m f yielding).running
 
 theorem finalizerOr_running (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (exit : ExitV) :
     (evaluatePrim.finalizerOr interp m f yielding exit).fiber.running =
-      f.running := by
-  cases exit <;> unfold evaluatePrim.finalizerOr <;> dsimp only
-  all_goals
-    split
-    · split
-      · rfl
-      · exact stepFrame_running _ _ _ _
-    · exact stepFrame_running _ _ _ _
+      f.running :=
+  (Moves.finalizerOr_footprint interp m f yielding exit).running
 
 theorem withFiber_running (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (action : NAction) :
     (evaluatePrim.withFiber interp m f yielding action).fiber.running =
-      f.running := by
-  cases action <;>
-    simp only [evaluatePrim.withFiber,
-      evaluatePrim.interruptAs, spawn, start, countdownPark, beginRace,
-      RunFiber.park, FrameFiber.uninterruptible, FrameFiber.interruptibleRegion,
-      FrameFiber.setFiberInterruptible]
-  all_goals repeat' first | rfl | split
-  all_goals simp_all
+      f.running :=
+  (Moves.withFiber_footprint interp m f yielding action).running
 
 theorem evaluatePrim_running (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) :
     (evaluatePrim interp m f yielding).fiber.running =
-      f.running := by
-  simp only [evaluatePrim, registerRace, countdownPark, RunFiber.park]
-  repeat' first
-    | exact stepFrame_running _ _ _ _
-    | exact finalizerOr_running _ _ _ _ _
-    | exact withFiber_running _ _ _ _ _
-    | rfl
-    | split
-  all_goals simp_all
-  all_goals repeat' first | rfl | split
+      f.running :=
+  (Moves.evaluatePrim_footprint interp m f yielding).running
 
 theorem exitScoped_running (p : NativeEff) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (exit : ExitV) :
     (exitScoped p m f yielding exit).fiber.running =
-      f.running := by
-  cases exit <;> simp only [exitScoped]
-  all_goals repeat' first
-    | exact evaluatePrim_running _ _ _ _
-    | rfl
-    | rfl
-    | split
+      f.running :=
+  (Moves.exitScoped_footprint p m f yielding exit).running
 
 theorem evaluateNative_running (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) :
     (evaluateNative p m f yielding table).fiber.running =
-      f.running := by
-  simp only [evaluateNative]
-  repeat' first
-    | exact evaluatePrim_running _ _ _ _
-    | exact exitScoped_running _ _ _ _ _
-    | rfl
-    | split
+      f.running :=
+  (Moves.evaluateNative_footprint p table m f yielding).running
 
 theorem runloopTop_running (f : NFiber) :
     (runloopTop f).running = f.running := by
@@ -96,17 +65,8 @@ theorem iteration_running (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) :
     letI := evaluatorFor p table
     (iteration (interpOf p table) m f yielding).fiber.running =
-      f.running := by
-  letI := evaluatorFor p table
-  cases hi : injectYield m (countOp (runloopTop f)) yielding with
-  | none =>
-    simpa only [iteration, hi] using
-      (evaluateNative_running p table m (countOp (runloopTop f)) yielding).trans
-        (runloopTop_running f)
-  | some it =>
-    simpa only [iteration, hi] using
-      (evaluateNative_running p table it.machine it.fiber it.yielding).trans
-        ((injectYield_running m _ yielding it hi).trans (runloopTop_running f))
+      f.running :=
+  (Moves.iteration_footprint p table (interpOf p table) m f yielding).running
 
 theorem pendingShape_of_unparked (f : NFiber) (park : f.parked = .notParked)
     (pending : f.pending = []) : PendingShape f := by
@@ -116,66 +76,46 @@ theorem pendingShape_park (f : NFiber) (wait : Pending EffName Val Err Defect Fi
     (hp : f.pending = []) : PendingShape (f.park wait) := by
   exact ⟨wait, by simp only [RunFiber.park, hp, List.nil_append], rfl⟩
 
+/-- The shared classification retains the existing guard pending judgment.
+Consumer: every evaluator-level pending chain below. -/
+theorem parking_pending {m : NativeMachine} {f : NFiber} {it : Moves.ParkIter}
+    (held : Moves.Parking m f it) (park : f.parked = .notParked) (pending : f.pending = []) :
+    PendingShape it.fiber := by
+  cases held with
+  | kept hp hn _ => simp only [PendingShape, hp, park, hn, pending]
+  | installed wait _ _ hp hn _ =>
+    simp only [PendingShape, hp]
+    exact ⟨wait, hn.trans (by rw [pending]; rfl), rfl⟩
+
 theorem stepFrame_pending (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (park : f.parked = .notParked) (hp : f.pending = []) :
-    PendingShape (evaluatePrim.stepFrame interp m f yielding).fiber := by
-  unfold evaluatePrim.stepFrame
-  cases hs : f.frame.step interp.toPrimInterp with
-  | mk step events => cases step <;> exact pendingShape_of_unparked _ park hp
+    PendingShape (evaluatePrim.stepFrame interp m f yielding).fiber :=
+  parking_pending (Moves.stepFrame_parking interp m f yielding) park hp
 
 theorem finalizerOr_pending (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (exit : ExitV) (park : f.parked = .notParked) (hp : f.pending = []) :
-    PendingShape (evaluatePrim.finalizerOr interp m f yielding exit).fiber := by
-  cases exit <;> unfold evaluatePrim.finalizerOr <;> dsimp only
-  all_goals repeat' first
-    | exact pendingShape_of_unparked _ park hp
-    | exact stepFrame_pending _ _ _ _ park hp
-    | split
+    PendingShape (evaluatePrim.finalizerOr interp m f yielding exit).fiber :=
+  parking_pending (Moves.finalizerOr_parking interp m f yielding exit) park hp
 
 theorem withFiber_pending (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (action : NAction) (park : f.parked = .notParked) (hp : f.pending = []) :
-    PendingShape (evaluatePrim.withFiber interp m f yielding action).fiber := by
-  cases action <;>
-    simp only [evaluatePrim.withFiber,
-      evaluatePrim.interruptAs, spawn, start, countdownPark, beginRace]
-  all_goals repeat' first
-    | exact pendingShape_of_unparked _ park hp
-    | exact pendingShape_park _ _ hp
-    | split
-  all_goals simp_all
+    PendingShape (evaluatePrim.withFiber interp m f yielding action).fiber :=
+  parking_pending (Moves.withFiber_parking interp m f yielding action) park hp
 
 theorem evaluatePrim_pending (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (park : f.parked = .notParked) (hp : f.pending = []) :
-    PendingShape (evaluatePrim interp m f yielding).fiber := by
-  simp only [evaluatePrim, registerRace, countdownPark]
-  repeat' first
-    | exact stepFrame_pending _ _ _ _ park hp
-    | exact finalizerOr_pending _ _ _ _ _ park hp
-    | exact withFiber_pending _ _ _ _ _ park hp
-    | exact pendingShape_of_unparked _ park hp
-    | exact pendingShape_park _ _ hp
-    | split
-  all_goals simp only
-  all_goals repeat' first | exact pendingShape_of_unparked _ park hp | exact pendingShape_park _ _ hp | split
+    PendingShape (evaluatePrim interp m f yielding).fiber :=
+  parking_pending (Moves.evaluatePrim_parking interp m f yielding) park hp
 
 theorem exitScoped_pending (p : NativeEff) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (exit : ExitV) (park : f.parked = .notParked) (hp : f.pending = []) :
-    PendingShape (exitScoped p m f yielding exit).fiber := by
-  cases exit <;> simp only [exitScoped]
-  all_goals repeat' first
-    | exact evaluatePrim_pending _ _ _ _ park hp
-    | exact pendingShape_of_unparked _ park hp
-    | split
+    PendingShape (exitScoped p m f yielding exit).fiber :=
+  parking_pending (Moves.exitScoped_parking p m f yielding exit) park hp
 
 theorem evaluateNative_pending (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) (park : f.parked = .notParked) (hp : f.pending = []) :
-    PendingShape (evaluateNative p m f yielding table).fiber := by
-  simp only [evaluateNative]
-  repeat' first
-    | exact evaluatePrim_pending _ _ _ _ park hp
-    | exact exitScoped_pending _ _ _ _ _ park hp
-    | exact pendingShape_of_unparked _ park hp
-    | split
+    PendingShape (evaluateNative p m f yielding table).fiber :=
+  parking_pending (Moves.evaluateNative_parking p table m f yielding) park hp
 
 theorem runloopTop_parked (f : NFiber) : (runloopTop f).parked = f.parked := by
   unfold runloopTop
@@ -198,17 +138,8 @@ theorem iteration_pending (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool)
     (park : f.parked = .notParked) (pending : f.pending = []) :
     letI := evaluatorFor p table
-    PendingShape (iteration (interpOf p table) m f yielding).fiber := by
-  letI := evaluatorFor p table
-  have hp : (countOp (runloopTop f)).parked = .notParked := (runloopTop_parked f).trans park
-  have hn : (countOp (runloopTop f)).pending = [] := (runloopTop_pending_eq f).trans pending
-  cases hi : injectYield m (countOp (runloopTop f)) yielding with
-  | none =>
-    simpa only [iteration, hi] using evaluateNative_pending p table m _ yielding hp hn
-  | some it =>
-    have fields := injectYield_waitFields m _ yielding it hi
-    simpa only [iteration, hi] using evaluateNative_pending p table it.machine it.fiber it.yielding
-      (fields.1.trans hp) (fields.2.trans hn)
+    PendingShape (iteration (interpOf p table) m f yielding).fiber :=
+  parking_pending (Moves.iteration_parking p table (interpOf p table) m f yielding) park pending
 
 abbrev NIter := Iter EffName EffThunk Val Err Defect FiberId Ann Ctx Stores
 /-- Only a parked or stuck result may carry a park into `settle`. -/
@@ -217,22 +148,27 @@ def ReadyOutcome (it : NIter) : Prop :=
   | .parked | .stuck _ => True
   | _ => it.fiber.parked = .notParked
 
+/-- The installed-park outcome clause discharges the existing ready judgment. -/
+theorem parking_ready {m : NativeMachine} {f : NFiber} {it : Moves.ParkIter}
+    (held : Moves.Parking m f it) (park : f.parked = .notParked) : ReadyOutcome it := by
+  cases held with
+  | kept hp _ _ =>
+    cases outcome : it.outcome <;> simp only [ReadyOutcome, outcome]
+    all_goals exact hp.trans park
+  | installed _ _ _ _ _ outcome =>
+    rcases outcome with parked | ⟨why, stuck⟩
+    · simp only [ReadyOutcome, parked]
+    · simp only [ReadyOutcome, stuck]
+
 theorem stepFrame_ready (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (park : f.parked = .notParked) :
-    ReadyOutcome (evaluatePrim.stepFrame interp m f yielding) := by
-  unfold evaluatePrim.stepFrame
-  cases hs : f.frame.step interp.toPrimInterp with
-  | mk step events => cases step <;> exact park
+    ReadyOutcome (evaluatePrim.stepFrame interp m f yielding) :=
+  parking_ready (Moves.stepFrame_parking interp m f yielding) park
 
 theorem finalizerOr_ready (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (exit : ExitV) (park : f.parked = .notParked) :
-    ReadyOutcome (evaluatePrim.finalizerOr interp m f yielding exit) := by
-  cases exit <;> unfold evaluatePrim.finalizerOr <;> dsimp only
-  all_goals repeat' first
-    | exact park
-    | exact True.intro
-    | exact stepFrame_ready _ _ _ _ park
-    | split
+    ReadyOutcome (evaluatePrim.finalizerOr interp m f yielding exit) :=
+  parking_ready (Moves.finalizerOr_parking interp m f yielding exit) park
 
 theorem countdownPark_unparked (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (targets : List FiberId) (resume : Resume EffName) (failFast : Bool)
@@ -268,65 +204,29 @@ theorem countdown_readyOf (interp : NInterp) (m : NativeMachine) (f : NFiber)
 
 theorem withFiber_ready (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (action : NAction) (park : f.parked = .notParked) :
-    ReadyOutcome (evaluatePrim.withFiber interp m f yielding action) := by
-  cases action <;>
-    simp only [evaluatePrim.withFiber,
-      evaluatePrim.interruptAs, spawn, start, beginRace]
-  all_goals repeat' first
-    | exact countdown_ready _ _ _ _ _ _ _ park
-    | exact countdown_readyOf _ _ _ _ _ _ _ park
-    | exact park
-    | exact True.intro
-    | split
+    ReadyOutcome (evaluatePrim.withFiber interp m f yielding action) :=
+  parking_ready (Moves.withFiber_parking interp m f yielding action) park
 
 theorem evaluatePrim_ready (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (park : f.parked = .notParked) :
-    ReadyOutcome (evaluatePrim interp m f yielding) := by
-  simp only [evaluatePrim, registerRace]
-  repeat' first
-    | exact stepFrame_ready _ _ _ _ park
-    | exact finalizerOr_ready _ _ _ _ _ park
-    | exact withFiber_ready _ _ _ _ _ park
-    | exact countdown_ready _ _ _ _ _ _ _ park
-    | exact countdown_readyOf _ _ _ _ _ _ _ park
-    | exact park
-    | exact True.intro
-    | split
+    ReadyOutcome (evaluatePrim interp m f yielding) :=
+  parking_ready (Moves.evaluatePrim_parking interp m f yielding) park
 
 theorem exitScoped_ready (p : NativeEff) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (exit : ExitV) (park : f.parked = .notParked) :
-    ReadyOutcome (exitScoped p m f yielding exit) := by
-  cases exit <;> simp only [exitScoped]
-  all_goals repeat' first
-    | exact evaluatePrim_ready _ _ _ _ park
-    | exact park
-    | exact True.intro
-    | split
+    ReadyOutcome (exitScoped p m f yielding exit) :=
+  parking_ready (Moves.exitScoped_parking p m f yielding exit) park
 
 theorem evaluateNative_ready (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) (park : f.parked = .notParked) :
-    ReadyOutcome (evaluateNative p m f yielding table) := by
-  simp only [evaluateNative]
-  repeat' first
-    | exact evaluatePrim_ready _ _ _ _ park
-    | exact exitScoped_ready _ _ _ _ _ park
-    | exact park
-    | exact True.intro
-    | split
+    ReadyOutcome (evaluateNative p m f yielding table) :=
+  parking_ready (Moves.evaluateNative_parking p table m f yielding) park
 
 theorem iteration_ready (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) (park : f.parked = .notParked) :
     letI := evaluatorFor p table
-    ReadyOutcome (iteration (interpOf p table) m f yielding) := by
-  letI := evaluatorFor p table
-  have hp : (countOp (runloopTop f)).parked = .notParked := (runloopTop_parked f).trans park
-  cases hi : injectYield m (countOp (runloopTop f)) yielding with
-  | none =>
-    simpa only [iteration, hi] using evaluateNative_ready p table m _ yielding hp
-  | some it =>
-    have fields := injectYield_waitFields m _ yielding it hi
-    simpa only [iteration, hi] using evaluateNative_ready p table it.machine it.fiber it.yielding
-      (fields.1.trans hp)
+    ReadyOutcome (iteration (interpOf p table) m f yielding) :=
+  parking_ready (Moves.iteration_parking p table (interpOf p table) m f yielding) park
 
 /-- A park installed by one evaluation uses exactly the input machine's next token. -/
 def FreshPark (m : NativeMachine) (it : NIter) : Prop :=
@@ -346,21 +246,23 @@ theorem freshPark_minted {m : NativeMachine} {it : NIter}
   have ht : m.nextToken = token := Parked.withGuard.inj (park.symm.trans hp)
   exact ⟨ht.symm, ht ▸ bound⟩
 
+/-- The same classification exposes the minted token and its current bound. -/
+theorem parking_fresh {m : NativeMachine} {f : NFiber} {it : Moves.ParkIter}
+    (held : Moves.Parking m f it) (park : f.parked = .notParked) : FreshPark m it := by
+  cases held with
+  | kept hp _ _ => exact freshPark_unparked m it (hp.trans park)
+  | installed wait token fresh hp _ _ =>
+    exact freshPark_minted (hp.trans (congrArg Parked.withGuard token)) fresh
+
 theorem stepFrame_freshPark (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (park : f.parked = .notParked) :
-    FreshPark m (evaluatePrim.stepFrame interp m f yielding) := by
-  unfold evaluatePrim.stepFrame
-  cases hs : f.frame.step interp.toPrimInterp with
-  | mk step events => cases step <;> exact freshPark_unparked _ _ park
+    FreshPark m (evaluatePrim.stepFrame interp m f yielding) :=
+  parking_fresh (Moves.stepFrame_parking interp m f yielding) park
 
 theorem finalizerOr_freshPark (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (exit : ExitV) (park : f.parked = .notParked) :
-    FreshPark m (evaluatePrim.finalizerOr interp m f yielding exit) := by
-  cases exit <;> unfold evaluatePrim.finalizerOr <;> dsimp only
-  all_goals repeat' first
-    | exact freshPark_unparked _ _ park
-    | exact stepFrame_freshPark _ _ _ _ park
-    | split
+    FreshPark m (evaluatePrim.finalizerOr interp m f yielding exit) :=
+  parking_fresh (Moves.finalizerOr_parking interp m f yielding exit) park
 
 theorem countdown_freshPark (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (yielding : Bool) (targets : List FiberId) (resume : Resume EffName) (failFast : Bool)
@@ -382,69 +284,28 @@ theorem countdown_freshPark (interp : NInterp) (m : NativeMachine) (f : NFiber)
 
 theorem withFiber_freshPark (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (action : NAction) (park : f.parked = .notParked) :
-    FreshPark m (evaluatePrim.withFiber interp m f yielding action) := by
-  cases action <;>
-    simp only [evaluatePrim.withFiber,
-      evaluatePrim.interruptAs, spawn, start, beginRace]
-  all_goals repeat' first
-    | exact countdown_freshPark _ _ _ _ _ _ _ _ _ park
-    | exact freshPark_unparked _ _ park
-    | exact freshPark_minted rfl (Nat.lt_succ_self _)
-    | split
+    FreshPark m (evaluatePrim.withFiber interp m f yielding action) :=
+  parking_fresh (Moves.withFiber_parking interp m f yielding action) park
 
 theorem evaluatePrim_freshPark (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (park : f.parked = .notParked) :
-    FreshPark m (evaluatePrim interp m f yielding) := by
-  simp only [evaluatePrim, registerRace]
-  repeat' first
-    | exact stepFrame_freshPark _ _ _ _ park
-    | exact finalizerOr_freshPark _ _ _ _ _ park
-    | exact withFiber_freshPark _ _ _ _ _ park
-    | exact countdown_freshPark _ _ _ _ _ _ _ _ _ park
-    | exact freshPark_unparked _ _ park
-    | exact freshPark_minted rfl (Nat.lt_succ_self _)
-    | split
+    FreshPark m (evaluatePrim interp m f yielding) :=
+  parking_fresh (Moves.evaluatePrim_parking interp m f yielding) park
 
 theorem exitScoped_freshPark (p : NativeEff) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (exit : ExitV) (park : f.parked = .notParked) :
-    FreshPark m (exitScoped p m f yielding exit) := by
-  cases exit <;> simp only [exitScoped]
-  all_goals repeat' first
-    | exact evaluatePrim_freshPark _ _ _ _ park
-    | exact freshPark_unparked _ _ park
-    | split
+    FreshPark m (exitScoped p m f yielding exit) :=
+  parking_fresh (Moves.exitScoped_parking p m f yielding exit) park
 
 theorem evaluateNative_freshPark (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) (park : f.parked = .notParked) :
-    FreshPark m (evaluateNative p m f yielding table) := by
-  simp only [evaluateNative]
-  repeat' first
-    | exact evaluatePrim_freshPark _ _ _ _ park
-    | exact exitScoped_freshPark _ _ _ _ _ park
-    | exact freshPark_unparked _ _ park
-    | split
+    FreshPark m (evaluateNative p m f yielding table) :=
+  parking_fresh (Moves.evaluateNative_parking p table m f yielding) park
 
 theorem iteration_freshPark (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) (park : f.parked = .notParked) :
     letI := evaluatorFor p table
-    FreshPark m (iteration (interpOf p table) m f yielding) := by
-  letI := evaluatorFor p table
-  have hp : (countOp (runloopTop f)).parked = .notParked := (runloopTop_parked f).trans park
-  cases hi : injectYield m (countOp (runloopTop f)) yielding with
-  | none =>
-    simpa only [iteration, hi] using evaluateNative_freshPark p table m _ yielding hp
-  | some it =>
-    have fields := injectYield_waitFields m _ yielding it hi
-    have next : it.machine.nextToken = m.nextToken := by
-      unfold injectYield at hi
-      split at hi
-      · injection hi with h; subst h; rfl
-      · cases hi
-    have result := evaluateNative_freshPark p table it.machine it.fiber it.yielding
-      (fields.1.trans hp)
-    intro token hpark
-    have out := result token (by simpa only [iteration, hi] using hpark)
-    refine ⟨out.1.trans next, ?_⟩
-    simpa only [iteration, hi] using out.2
+    FreshPark m (iteration (interpOf p table) m f yielding) :=
+  parking_fresh (Moves.iteration_parking p table (interpOf p table) m f yielding) park
 
 end Effect4.Program.Guard.ReturnFields

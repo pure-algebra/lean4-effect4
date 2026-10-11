@@ -1,4 +1,4 @@
-import Effect4.Api
+import Effect4.Laws.Program.Guard.Interruption
 
 /-! Local deferred-cause consistency for the native evaluator and one iteration.
 The input implication is the only premise; no machine or queue invariant is used.
@@ -12,6 +12,7 @@ set_option maxHeartbeats 800000
 
 namespace Effect4.Program.Guard.DeferredCause
 open Effect4 Effect4.Machine Effect4.Program
+open Effect4.Program.Guard.Interruption (frame_step_interruptedCause)
 
 abbrev NFrame := FrameFiber EffName EffThunk Val Err Defect FiberId Ann
 abbrev NFiber := RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx
@@ -19,59 +20,6 @@ abbrev NInterp := RunInterp EffName EffThunk Val Err Defect FiberId Ann Ctx Stor
 
 def DeferredCause (frame : NFrame) : Prop :=
   frame.deferredInterrupt = true → frame.interruptedCause.isSome = true
-
-theorem getCont_interruptedCause (self : NFrame) (demand : Effect4.Arm) (skip : Bool) :
-    (self.getCont demand skip).fiber.interruptedCause = self.interruptedCause := by
-  unfold FrameFiber.getCont
-  split
-  · rfl
-  · exact FrameFiber.popFrom_interruptedCause _ _ _ _
-
-theorem getCont_interruptedCause_carried (self : NFrame) (demand : Effect4.Arm)
-    (skip : Bool) (cause : Option CauseV) :
-    (self.getCont demand skip cause).fiber.interruptedCause = self.interruptedCause := by
-  rw [FrameFiber.getCont_fiber_cause]
-  exact getCont_interruptedCause _ _ _
-
-theorem resumeValue_interruptedCause (interp : PrimInterp EffName EffThunk Val Err Defect FiberId Ann)
-    (self next : NFrame) (value : Val) (provided : Option ExitV)
-    (h : (self.resumeValue interp value provided).fst = FrameStep.running next) :
-    next.interruptedCause = self.interruptedCause := by
-  have hc := getCont_interruptedCause self Effect4.Arm.contA false
-  unfold FrameFiber.resumeValue at h
-  split at h
-  · exact absurd h (by simp)
-  · injection h with h'; subst h'; exact hc
-  · injection h with h'; subst h'; exact hc
-  · split at h
-    · injection h with h'; subst h'; exact hc
-    · exact absurd h (by simp)
-
-theorem resumeCause_interruptedCause (interp : PrimInterp EffName EffThunk Val Err Defect FiberId Ann)
-    (self next : NFrame) (cause : Cause Err Defect FiberId Ann) (provided : Option ExitV)
-    (h : (self.resumeCause interp cause provided).fst = FrameStep.running next) :
-    next.interruptedCause = self.interruptedCause := by
-  have hc := getCont_interruptedCause_carried self Effect4.Arm.contE true (some cause)
-  unfold FrameFiber.resumeCause at h
-  dsimp only at h
-  split at h
-  · cases h
-  · injection h with h'; subst h'; exact hc
-  · injection h with h'; subst h'; exact hc
-  · split at h
-    · injection h with h'; subst h'; exact hc
-    · cases h
-
-theorem frame_step_interruptedCause (interp : PrimInterp EffName EffThunk Val Err Defect FiberId Ann)
-    (self next : NFrame) (h : (self.step interp).fst = FrameStep.running next) :
-    next.interruptedCause = self.interruptedCause := by
-  unfold FrameFiber.step at h
-  split at h
-  all_goals first
-    | exact resumeValue_interruptedCause interp self next _ _ h
-    | exact resumeCause_interruptedCause interp self next _ _ h
-    | (injection h with h'; subst h'; rfl)
-    | (split at h <;> (injection h with h'; subst h'; rfl))
 
 theorem getCont_deferred_false (self : NFrame) (demand : Effect4.Arm) (skip : Bool) :
     (self.getCont demand skip).fiber.deferredInterrupt = false := by
@@ -114,62 +62,59 @@ theorem frameExitState_deferredCause (self : NFrame) :
   unfold frameExitState
   split <;> exact getCont_deferredCause _ _ _
 
+theorem move_deferredCause {f g : NFrame} (m : Moves.FrameMove f g)
+    (kept : DeferredCause f) : DeferredCause g := by
+  cases m with
+  | answer => exact kept
+  | push => exact kept
+  | step interp _ _ _ h =>
+    exact frame_step_deferredCause interp _ _ kept (congrArg Prod.fst h)
+  | finish => exact frameExitState_deferredCause _
+  | pop => exact getCont_deferredCause_carried _ _ _ _
+  | mask =>
+    unfold FrameFiber.uninterruptible
+    split
+    · exact kept
+    · exact kept
+  | unmask =>
+    unfold FrameFiber.interruptibleRegion FrameFiber.setFiberInterruptible
+    split
+    · exact kept
+    · exact kept
+  | pendingFailure =>
+    intro deferred
+    cases deferred
+
+/-- A word of frame moves retains the deferred-cause implication.
+This serves the existing guard consistency claim at every evaluator level. -/
+theorem moves_deferredCause {f g : NFrame} (word : Moves.Moves f g)
+    (held : DeferredCause f) : DeferredCause g :=
+  word.keeps DeferredCause (fun _ _ changed kept => move_deferredCause changed kept) held
+
 theorem stepFrame_deferredCause (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (hf : DeferredCause f.frame) :
-    DeferredCause (evaluatePrim.stepFrame interp m f yielding).fiber.frame := by
-  unfold evaluatePrim.stepFrame
-  cases hs : f.frame.step interp.toPrimInterp with
-  | mk step events =>
-    cases step with
-    | running next =>
-      exact frame_step_deferredCause interp.toPrimInterp f.frame next hf (congrArg Prod.fst hs)
-    | finished exit => exact frameExitState_deferredCause f.frame
+    DeferredCause (evaluatePrim.stepFrame interp m f yielding).fiber.frame :=
+  moves_deferredCause (Moves.stepFrame_moves interp m f yielding) hf
 
 theorem finalizerOr_deferredCause (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (exit : ExitV) (hf : DeferredCause f.frame) :
-    DeferredCause (evaluatePrim.finalizerOr interp m f yielding exit).fiber.frame := by
-  cases exit <;> unfold evaluatePrim.finalizerOr <;> dsimp only
-  all_goals
-    split
-    · split
-      · exact getCont_deferredCause_carried _ _ _ _
-      · exact stepFrame_deferredCause _ _ _ _ hf
-    · exact stepFrame_deferredCause _ _ _ _ hf
+    DeferredCause (evaluatePrim.finalizerOr interp m f yielding exit).fiber.frame :=
+  moves_deferredCause (Moves.finalizerOr_moves interp m f yielding exit) hf
 
 theorem withFiber_deferredCause (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (action : NAction) (hf : DeferredCause f.frame) :
-    DeferredCause (evaluatePrim.withFiber interp m f yielding action).fiber.frame := by
-  cases action <;>
-    simp only [evaluatePrim.withFiber,
-      evaluatePrim.interruptAs, spawn, start, countdownPark, beginRace,
-      RunFiber.park, FrameFiber.uninterruptible, FrameFiber.interruptibleRegion,
-      FrameFiber.setFiberInterruptible]
-  all_goals repeat' first | exact hf | split
-  all_goals simp_all [DeferredCause]
+    DeferredCause (evaluatePrim.withFiber interp m f yielding action).fiber.frame :=
+  moves_deferredCause (Moves.withFiber_moves interp m f yielding action) hf
 
 theorem evaluatePrim_deferredCause (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (hf : DeferredCause f.frame) :
-    DeferredCause (evaluatePrim interp m f yielding).fiber.frame := by
-  simp only [evaluatePrim, registerRace, countdownPark, RunFiber.park]
-  repeat' first
-    | exact stepFrame_deferredCause _ _ _ _ hf
-    | exact finalizerOr_deferredCause _ _ _ _ _ hf
-    | exact withFiber_deferredCause _ _ _ _ _ hf
-    | exact hf
-    | split
-  all_goals simp_all [DeferredCause]
-  all_goals repeat' first | assumption | split
+    DeferredCause (evaluatePrim interp m f yielding).fiber.frame :=
+  moves_deferredCause (Moves.evaluatePrim_moves interp m f yielding) hf
 
 theorem exitScoped_deferredCause (p : NativeEff) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (exit : ExitV) (hf : DeferredCause f.frame) :
-    DeferredCause (exitScoped p m f yielding exit).fiber.frame := by
-  cases exit <;> simp only [exitScoped]
-  all_goals
-    split
-    · split
-      · exact getCont_deferredCause_carried _ _ _ _
-      · exact getCont_deferredCause_carried _ _ _ _
-    · exact evaluatePrim_deferredCause _ _ _ _ hf
+    DeferredCause (exitScoped p m f yielding exit).fiber.frame :=
+  moves_deferredCause (Moves.exitScoped_moves p m f yielding exit) hf
 
 /-- Native evaluation retains the deferred-cause implication for its returned
 fiber, for every root, table, machine, fiber, and yielding latch. -/
@@ -177,14 +122,8 @@ theorem evaluateNative_deferredCause (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool)
     (hf : f.frame.deferredInterrupt = true → f.frame.interruptedCause.isSome = true) :
     (evaluateNative p m f yielding table).fiber.frame.deferredInterrupt = true →
-      (evaluateNative p m f yielding table).fiber.frame.interruptedCause.isSome = true := by
-  change DeferredCause (evaluateNative p m f yielding table).fiber.frame
-  simp only [evaluateNative]
-  repeat' first
-    | exact evaluatePrim_deferredCause _ _ _ _ hf
-    | exact exitScoped_deferredCause _ _ _ _ _ hf
-    | exact hf
-    | split
+      (evaluateNative p m f yielding table).fiber.frame.interruptedCause.isSome = true :=
+  moves_deferredCause (Moves.evaluateNative_moves p table m f yielding) hf
 
 theorem runloopTop_deferredCause (f : NFiber) (hf : DeferredCause f.frame) :
     DeferredCause (runloopTop f).frame := by
@@ -209,16 +148,7 @@ theorem iteration_deferredCause (p : NativeEff) (table : RowTable)
     (hf : f.frame.deferredInterrupt = true → f.frame.interruptedCause.isSome = true) :
     letI := evaluatorFor p table
     (iteration (interpOf p table) m f yielding).fiber.frame.deferredInterrupt = true →
-      (iteration (interpOf p table) m f yielding).fiber.frame.interruptedCause.isSome = true := by
-  letI := evaluatorFor p table
-  have ht : DeferredCause (countOp (runloopTop f)).frame := runloopTop_deferredCause f hf
-  cases hi : injectYield m (countOp (runloopTop f)) yielding with
-  | none =>
-    simpa only [iteration, hi] using
-      evaluateNative_deferredCause p table m (countOp (runloopTop f)) yielding ht
-  | some it =>
-    simpa only [iteration, hi] using
-      evaluateNative_deferredCause p table it.machine it.fiber it.yielding
-        (injectYield_deferredCause m _ yielding it ht hi)
+      (iteration (interpOf p table) m f yielding).fiber.frame.interruptedCause.isSome = true :=
+  moves_deferredCause (Moves.iteration_moves p table (interpOf p table) m f yielding) hf
 
 end Effect4.Program.Guard.DeferredCause

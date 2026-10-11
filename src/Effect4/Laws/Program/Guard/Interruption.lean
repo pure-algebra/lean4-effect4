@@ -1,4 +1,4 @@
-import Effect4.Api
+import Effect4.Laws.Program.Moves
 
 set_option autoImplicit false
 namespace Effect4.Program.Guard.Interruption
@@ -66,80 +66,65 @@ theorem frameExitState_interruptedCause (self : NFrame) :
   unfold frameExitState
   split <;> exact getCont_interruptedCause _ _ _
 
+theorem move_interruptedCause {f g : NFrame} (m : Moves.FrameMove f g) :
+    g.interruptedCause = f.interruptedCause := by
+  cases m with
+  | answer => rfl
+  | push => rfl
+  | step interp _ _ _ h =>
+    exact frame_step_interruptedCause interp _ _ (congrArg Prod.fst h)
+  | finish => exact frameExitState_interruptedCause _
+  | pop => exact getCont_interruptedCause_carried _ _ _ _
+  | mask =>
+    unfold FrameFiber.uninterruptible
+    split <;> rfl
+  | unmask =>
+    unfold FrameFiber.interruptibleRegion FrameFiber.setFiberInterruptible
+    split <;> rfl
+  | pendingFailure => rfl
+
+/-- A word of frame moves retains the recorded cause.
+This serves the existing guard interruption claim through each evaluator level. -/
+theorem moves_interruptedCause {f g : NFrame} (word : Moves.Moves f g) :
+    g.interruptedCause = f.interruptedCause :=
+  word.keeps (fun next => next.interruptedCause = f.interruptedCause)
+    (fun _ _ changed held => (move_interruptedCause changed).trans held) rfl
+
 theorem stepFrame_interruptedCause (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) :
     (evaluatePrim.stepFrame interp m f yielding).fiber.frame.interruptedCause =
-      f.frame.interruptedCause := by
-  unfold evaluatePrim.stepFrame
-  cases hs : f.frame.step interp.toPrimInterp with
-  | mk step events =>
-    cases step with
-    | running next =>
-      exact frame_step_interruptedCause interp.toPrimInterp f.frame next
-        (congrArg Prod.fst hs)
-    | finished exit =>
-      exact frameExitState_interruptedCause f.frame
+      f.frame.interruptedCause :=
+  moves_interruptedCause (Moves.stepFrame_moves interp m f yielding)
 
 theorem finalizerOr_interruptedCause (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (exit : ExitV) :
     (evaluatePrim.finalizerOr interp m f yielding exit).fiber.frame.interruptedCause =
-      f.frame.interruptedCause := by
-  cases exit <;> unfold evaluatePrim.finalizerOr <;> dsimp only
-  all_goals
-    split
-    · split
-      · exact getCont_interruptedCause_carried _ _ _ _
-      · exact stepFrame_interruptedCause _ _ _ _
-    · exact stepFrame_interruptedCause _ _ _ _
+      f.frame.interruptedCause :=
+  moves_interruptedCause (Moves.finalizerOr_moves interp m f yielding exit)
 
 theorem withFiber_interruptedCause (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (action : NAction) :
     (evaluatePrim.withFiber interp m f yielding action).fiber.frame.interruptedCause =
-      f.frame.interruptedCause := by
-  cases action <;>
-    simp only [evaluatePrim.withFiber,
-      evaluatePrim.interruptAs, spawn, start, countdownPark, beginRace,
-      RunFiber.park, FrameFiber.uninterruptible, FrameFiber.interruptibleRegion,
-      FrameFiber.setFiberInterruptible]
-  all_goals repeat' first | rfl | split
-  all_goals simp_all
+      f.frame.interruptedCause :=
+  moves_interruptedCause (Moves.withFiber_moves interp m f yielding action)
 
 theorem evaluatePrim_interruptedCause (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) :
     (evaluatePrim interp m f yielding).fiber.frame.interruptedCause =
-      f.frame.interruptedCause := by
-  simp only [evaluatePrim, registerRace, countdownPark, RunFiber.park]
-  repeat' first
-    | exact stepFrame_interruptedCause _ _ _ _
-    | exact finalizerOr_interruptedCause _ _ _ _ _
-    | exact withFiber_interruptedCause _ _ _ _ _
-    | rfl
-    | split
-  all_goals simp_all
-  all_goals repeat' first | rfl | split
+      f.frame.interruptedCause :=
+  moves_interruptedCause (Moves.evaluatePrim_moves interp m f yielding)
 
 theorem exitScoped_interruptedCause (p : NativeEff) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (exit : ExitV) :
     (exitScoped p m f yielding exit).fiber.frame.interruptedCause =
-      f.frame.interruptedCause := by
-  cases exit <;> simp only [exitScoped]
-  all_goals
-    split
-    · split
-      · exact getCont_interruptedCause_carried _ _ _ _
-      · exact getCont_interruptedCause_carried _ _ _ _
-    · exact evaluatePrim_interruptedCause _ _ _ _
+      f.frame.interruptedCause :=
+  moves_interruptedCause (Moves.exitScoped_moves p m f yielding exit)
 
 theorem evaluateNative_interruptedCause (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) :
     (evaluateNative p m f yielding table).fiber.frame.interruptedCause =
-      f.frame.interruptedCause := by
-  simp only [evaluateNative]
-  repeat' first
-    | exact evaluatePrim_interruptedCause _ _ _ _
-    | exact exitScoped_interruptedCause _ _ _ _ _
-    | rfl
-    | split
+      f.frame.interruptedCause :=
+  moves_interruptedCause (Moves.evaluateNative_moves p table m f yielding)
 
 theorem runloopTop_interruptedCause (f : NFiber) :
     (runloopTop f).frame.interruptedCause = f.frame.interruptedCause := by
@@ -159,85 +144,44 @@ theorem iteration_interruptedCause (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) :
     letI := evaluatorFor p table
     (iteration (interpOf p table) m f yielding).fiber.frame.interruptedCause =
-      f.frame.interruptedCause := by
-  letI := evaluatorFor p table
-  cases hi : injectYield m (countOp (runloopTop f)) yielding with
-  | none =>
-    simpa only [iteration, hi] using
-      (evaluateNative_interruptedCause p table m (countOp (runloopTop f)) yielding).trans
-        (runloopTop_interruptedCause f)
-  | some it =>
-    simpa only [iteration, hi] using
-      (evaluateNative_interruptedCause p table it.machine it.fiber it.yielding).trans
-        ((injectYield_interruptedCause m _ yielding it hi).trans (runloopTop_interruptedCause f))
+      f.frame.interruptedCause :=
+  moves_interruptedCause (Moves.iteration_moves p table (interpOf p table) m f yielding)
 
 theorem stepFrame_id (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) :
     (evaluatePrim.stepFrame interp m f yielding).fiber.id =
-      f.id := by
-  unfold evaluatePrim.stepFrame
-  cases hs : f.frame.step interp.toPrimInterp with
-  | mk step events => cases step <;> rfl
+      f.id :=
+  (Moves.stepFrame_footprint interp m f yielding).id
 
 theorem finalizerOr_id (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (exit : ExitV) :
     (evaluatePrim.finalizerOr interp m f yielding exit).fiber.id =
-      f.id := by
-  cases exit <;> unfold evaluatePrim.finalizerOr <;> dsimp only
-  all_goals
-    split
-    · split
-      · rfl
-      · exact stepFrame_id _ _ _ _
-    · exact stepFrame_id _ _ _ _
+      f.id :=
+  (Moves.finalizerOr_footprint interp m f yielding exit).id
 
 theorem withFiber_id (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (action : NAction) :
     (evaluatePrim.withFiber interp m f yielding action).fiber.id =
-      f.id := by
-  cases action <;>
-    simp only [evaluatePrim.withFiber,
-      evaluatePrim.interruptAs, spawn, start, countdownPark, beginRace,
-      RunFiber.park, FrameFiber.uninterruptible, FrameFiber.interruptibleRegion,
-      FrameFiber.setFiberInterruptible]
-  all_goals repeat' first | rfl | split
-  all_goals simp_all
+      f.id :=
+  (Moves.withFiber_footprint interp m f yielding action).id
 
 theorem evaluatePrim_id (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) :
     (evaluatePrim interp m f yielding).fiber.id =
-      f.id := by
-  simp only [evaluatePrim, registerRace, countdownPark, RunFiber.park]
-  repeat' first
-    | exact stepFrame_id _ _ _ _
-    | exact finalizerOr_id _ _ _ _ _
-    | exact withFiber_id _ _ _ _ _
-    | rfl
-    | split
-  all_goals simp_all
-  all_goals repeat' first | rfl | split
+      f.id :=
+  (Moves.evaluatePrim_footprint interp m f yielding).id
 
 theorem exitScoped_id (p : NativeEff) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (exit : ExitV) :
     (exitScoped p m f yielding exit).fiber.id =
-      f.id := by
-  cases exit <;> simp only [exitScoped]
-  all_goals repeat' first
-    | exact evaluatePrim_id _ _ _ _
-    | rfl
-    | rfl
-    | split
+      f.id :=
+  (Moves.exitScoped_footprint p m f yielding exit).id
 
 theorem evaluateNative_id (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) :
     (evaluateNative p m f yielding table).fiber.id =
-      f.id := by
-  simp only [evaluateNative]
-  repeat' first
-    | exact evaluatePrim_id _ _ _ _
-    | exact exitScoped_id _ _ _ _ _
-    | rfl
-    | split
+      f.id :=
+  (Moves.evaluateNative_footprint p table m f yielding).id
 
 theorem runloopTop_id (f : NFiber) :
     (runloopTop f).id = f.id := by
@@ -257,85 +201,44 @@ theorem iteration_id (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) :
     letI := evaluatorFor p table
     (iteration (interpOf p table) m f yielding).fiber.id =
-      f.id := by
-  letI := evaluatorFor p table
-  cases hi : injectYield m (countOp (runloopTop f)) yielding with
-  | none =>
-    simpa only [iteration, hi] using
-      (evaluateNative_id p table m (countOp (runloopTop f)) yielding).trans
-        (runloopTop_id f)
-  | some it =>
-    simpa only [iteration, hi] using
-      (evaluateNative_id p table it.machine it.fiber it.yielding).trans
-        ((injectYield_id m _ yielding it hi).trans (runloopTop_id f))
+      f.id :=
+  (Moves.iteration_footprint p table (interpOf p table) m f yielding).id
 
 theorem stepFrame_exit (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) :
     (evaluatePrim.stepFrame interp m f yielding).fiber.exit =
-      f.exit := by
-  unfold evaluatePrim.stepFrame
-  cases hs : f.frame.step interp.toPrimInterp with
-  | mk step events => cases step <;> rfl
+      f.exit :=
+  (Moves.stepFrame_footprint interp m f yielding).exit
 
 theorem finalizerOr_exit (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (exit : ExitV) :
     (evaluatePrim.finalizerOr interp m f yielding exit).fiber.exit =
-      f.exit := by
-  cases exit <;> unfold evaluatePrim.finalizerOr <;> dsimp only
-  all_goals
-    split
-    · split
-      · rfl
-      · exact stepFrame_exit _ _ _ _
-    · exact stepFrame_exit _ _ _ _
+      f.exit :=
+  (Moves.finalizerOr_footprint interp m f yielding exit).exit
 
 theorem withFiber_exit (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (action : NAction) :
     (evaluatePrim.withFiber interp m f yielding action).fiber.exit =
-      f.exit := by
-  cases action <;>
-    simp only [evaluatePrim.withFiber,
-      evaluatePrim.interruptAs, spawn, start, countdownPark, beginRace,
-      RunFiber.park, FrameFiber.uninterruptible, FrameFiber.interruptibleRegion,
-      FrameFiber.setFiberInterruptible]
-  all_goals repeat' first | rfl | split
-  all_goals simp_all
+      f.exit :=
+  (Moves.withFiber_footprint interp m f yielding action).exit
 
 theorem evaluatePrim_exit (interp : NInterp) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) :
     (evaluatePrim interp m f yielding).fiber.exit =
-      f.exit := by
-  simp only [evaluatePrim, registerRace, countdownPark, RunFiber.park]
-  repeat' first
-    | exact stepFrame_exit _ _ _ _
-    | exact finalizerOr_exit _ _ _ _ _
-    | exact withFiber_exit _ _ _ _ _
-    | rfl
-    | split
-  all_goals simp_all
-  all_goals repeat' first | rfl | split
+      f.exit :=
+  (Moves.evaluatePrim_footprint interp m f yielding).exit
 
 theorem exitScoped_exit (p : NativeEff) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (exit : ExitV) :
     (exitScoped p m f yielding exit).fiber.exit =
-      f.exit := by
-  cases exit <;> simp only [exitScoped]
-  all_goals repeat' first
-    | exact evaluatePrim_exit _ _ _ _
-    | rfl
-    | rfl
-    | split
+      f.exit :=
+  (Moves.exitScoped_footprint p m f yielding exit).exit
 
 theorem evaluateNative_exit (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) :
     (evaluateNative p m f yielding table).fiber.exit =
-      f.exit := by
-  simp only [evaluateNative]
-  repeat' first
-    | exact evaluatePrim_exit _ _ _ _
-    | exact exitScoped_exit _ _ _ _ _
-    | rfl
-    | split
+      f.exit :=
+  (Moves.evaluateNative_footprint p table m f yielding).exit
 
 theorem runloopTop_exit (f : NFiber) :
     (runloopTop f).exit = f.exit := by
@@ -355,17 +258,8 @@ theorem iteration_exit (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) :
     letI := evaluatorFor p table
     (iteration (interpOf p table) m f yielding).fiber.exit =
-      f.exit := by
-  letI := evaluatorFor p table
-  cases hi : injectYield m (countOp (runloopTop f)) yielding with
-  | none =>
-    simpa only [iteration, hi] using
-      (evaluateNative_exit p table m (countOp (runloopTop f)) yielding).trans
-        (runloopTop_exit f)
-  | some it =>
-    simpa only [iteration, hi] using
-      (evaluateNative_exit p table it.machine it.fiber it.yielding).trans
-        ((injectYield_exit m _ yielding it hi).trans (runloopTop_exit f))
+      f.exit :=
+  (Moves.iteration_footprint p table (interpOf p table) m f yielding).exit
 
 /-- The owner-approved interruption observation; consistency is an internal invariant. -/
 def Interrupted (f : NFiber) : Prop := f.interruptPending = true ∨ f.exit.isSome = true

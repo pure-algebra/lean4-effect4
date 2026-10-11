@@ -34,21 +34,8 @@ open Effect4 Effect4.Machine Effect4.Program
 
 /-- Each move keeps the recorded interrupt. -/
 theorem move_interruptedCause {f g : NFrame} (m : FrameMove f g) :
-    g.interruptedCause = f.interruptedCause := by
-  cases m with
-  | answer => rfl
-  | push => rfl
-  | step interp _ _ _ h =>
-    exact Guard.Interruption.frame_step_interruptedCause interp _ _ (congrArg Prod.fst h)
-  | finish => exact Guard.Interruption.frameExitState_interruptedCause _
-  | pop => exact Guard.Interruption.getCont_interruptedCause_carried _ _ _ _
-  | mask =>
-    unfold FrameFiber.uninterruptible
-    split <;> rfl
-  | unmask =>
-    unfold FrameFiber.interruptibleRegion FrameFiber.setFiberInterruptible
-    split <;> rfl
-  | pendingFailure => rfl
+    g.interruptedCause = f.interruptedCause :=
+  Guard.Interruption.move_interruptedCause m
 
 /-- A word keeps the recorded interrupt. -/
 theorem Moves.interruptedCause {f g : NFrame} (w : Moves f g) :
@@ -77,27 +64,8 @@ theorem iteration_interruptedCause (p : NativeEff) (table : RowTable)
 
 /-- Each move keeps "a deferred interrupt has a recorded cause". -/
 theorem move_deferredCause {f g : NFrame} (m : FrameMove f g)
-    (kept : Guard.DeferredCause.DeferredCause f) : Guard.DeferredCause.DeferredCause g := by
-  cases m with
-  | answer => exact kept
-  | push => exact kept
-  | step interp _ _ _ h =>
-    exact Guard.DeferredCause.frame_step_deferredCause interp _ _ kept (congrArg Prod.fst h)
-  | finish => exact Guard.DeferredCause.frameExitState_deferredCause _
-  | pop => exact Guard.DeferredCause.getCont_deferredCause_carried _ _ _ _
-  | mask =>
-    unfold FrameFiber.uninterruptible
-    split
-    · exact kept
-    · exact kept
-  | unmask =>
-    unfold FrameFiber.interruptibleRegion FrameFiber.setFiberInterruptible
-    split
-    · exact kept
-    · exact kept
-  | pendingFailure =>
-    intro deferred
-    cases deferred
+    (kept : Guard.DeferredCause.DeferredCause f) : Guard.DeferredCause.DeferredCause g :=
+  Guard.DeferredCause.move_deferredCause m kept
 
 /-- Connector of `Guard.DeferredCause.evaluateNative_deferredCause`. -/
 @[semantics "reactive-scheduling"]
