@@ -226,3 +226,11 @@ It also proves administrative fiber-linkage accounting and state-first close tra
 `Machine.ScopeIdentity.syncOpStep_keysFresh` shares the existing freshness census with `Simulation.Hooks`.
 The reader and premise controls compile. The narrow audit reports no planned-goal dependency.
 Evidence: `codex/ScopeTransferReceipt.md` and `codex/ScopeTransferAudit.out`.
+
+### Command correlation control
+
+`codex/CustodyCommandControl.lean` compiles and refutes the unrestricted internal command contract.
+It does not refute an original application statement or an admitted run.
+`codex/CustodyLiftReceipt.md` records the missing command and saved-frame correlation.
+Retain the existing Guard ownership and token relations when repairing this internal premise.
+The checked scheduler proofs now live below execution assembly in `ReleaseCustody/Lift.lean`.
