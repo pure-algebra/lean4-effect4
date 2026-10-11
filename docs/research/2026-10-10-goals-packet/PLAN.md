@@ -302,3 +302,10 @@ The whole-history custody endpoint remains open.
 It also records independent integration of source opportunities and selected-owner installation.
 Their local audits find no planned dependencies.
 Whole-history custody and source uniqueness remain open.
+
+## Complete administrative funding assembly
+
+`codex/ObserverDebitReceipt.md` records all native command funding except evaluator loop and delivery.
+Countdown callbacks account for the saved waiter after their nested interrupts.
+The independent integrated audits have no planned dependencies in these local helpers.
+The parallel-close accounting control requires a design resolution before whole-history custody closes.

@@ -1,4 +1,4 @@
-import Effect4.Laws.Program.ReleaseCustody.CommandStoreDebit
+import Effect4.Laws.Program.ReleaseCustody.CommandFunding
 
 /-!
 Reader: execute the first native command of an actually loaded source.
