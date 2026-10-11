@@ -83,3 +83,26 @@ The coordinator's integrated build must rebuild Observe and its dependent module
 The current repair fence adds Observe because its countdown callback changes the actual waiter after interruption.
 Async, Command and Close remain to check.
 No outside-runtime comparison is claimed.
+
+## Observer and Async checkpoint
+
+Base: `283bc57cf`.
+Integrate Observe and Park together because their shared typing helpers move to Observe.
+The helper names and signatures remain unchanged.
+The countdown callback uses the actual waiter after each interruption.
+Its pending replacement uses the existing typed machine and countdown payload laws once.
+The observer message then changes that installed machine through `configTyped_observe`.
+Async adds empty edit words and unfolds the shared settlement definition.
+No endpoint statement, premise, carrier or planned goal changes.
+
+The changed modules are Observe, Clauses.Park and Clauses.Async under `Effect4.Laws.Program.Typed.Commands`.
+Their consumer is the existing typed command preservation path, R4.
+Direct Lean checks pass with warnings treated as errors.
+The dependency rebuild checks Evaluate in 6.18 seconds, Park in 3.96 seconds and Async in 6.35 seconds.
+The audit imports Park and Async and names all three changed modules.
+Result: 418 declarations within `[propext, Quot.sound]`, zero goals and zero declarations modulo goals.
+The source diff adds 346 lines and removes 514 lines: 168 fewer lines.
+The removed lines include the duplicated observer placement and cached waiter reconstruction.
+`git diff --check` passes.
+Command and Close remain outside this checkpoint.
+The coordinator owns the whole-law build and outside-runtime gates.

@@ -1109,89 +1109,6 @@ theorem Evaluating.park_fresh {root : ProgramSource} {rootTy : EffTy} {w : World
       bumped.queue.registration c hc h)
     (fun h => Bool.noConfusion h) fresh⟩
 
-/-- **An observer at a fresh key appended to a fiber keeps `I`** (the target of a park): its keys are
-below the counter and unrequested, its waiter below `nextId`, it holds no race's key, and it is typed
-on the edited machine; nothing else about the fiber moves. -/
-theorem configTyped_addObserver {root : ProgramSource} {rootTy : EffTy} {w : World} {M : RState}
-    {q : List RCmd} (typed : ConfigTyped root rootTy w M q) {t : RFiber}
-    (ht : M.fiber? t.id = some t) (o : Observer)
-    (keysOk : ∀ k ∈ Guard.observerKeys o,
-      k.2 < M.nextToken ∧ requestOfR M k.1 k.2 = none ∧ k.1.value < M.nextId)
-    (raceOff : ∀ raceId race, M.race? raceId = some race → (race.host, race.token) ∉ Guard.observerKeys o)
-    (ok : StoredObserverOk root w (M.update { t with observers := t.observers ++ [o] }) t.id o) :
-    ConfigTyped root rootTy w (M.update { t with observers := t.observers ++ [o] }) q := by
-  let t' : RFiber := { t with observers := t.observers ++ [o] }
-  have hmem : t ∈ M.fibers := rfiber?_mem ht
-  have old := typed.machine.fiber hmem
-  have lookT : (M.update t').fiber? t'.id = some t' := rfiber?_update_self ht rfl
-  have view : ObsView M (M.update t') := obsView_rupdate ht rfl (PendingWeaker.refl _)
-  have moved := fiberTyped_transport old view (Nat.le_refl _) (Nat.le_refl _)
-  have ctl : ∀ id, ((M.update t').fiber? id).map ctlView = (M.fiber? id).map ctlView := by
-    intro id
-    rw [rfiber?_update]
-    cases h : M.fiber? id with
-    | none => rfl
-    | some x =>
-      by_cases hx : x.id = t'.id
-      · rw [Option.map_some, if_pos hx]
-        have xt : x = t := rfiber?_same ht h hx
-        subst xt
-        rfl
-      · rw [Option.map_some, if_neg hx]
-  have newOf : ∀ o' ∈ t'.observers, o' ∈ t.observers ∨ o' = o := fun o' ho' => by
-    rcases List.mem_append.mp ho' with h | h
-    · exact Or.inl h
-    · exact Or.inr (List.mem_singleton.mp h)
-  refine configTyped_rupdate_code typed ht rfl (PendingWeaker.refl _) rfl id ?_ ?_
-    (fun c _ h => commandAuthority_view ctl view.races c h)
-    (fun hrun reads marker ty d => ((typed.code t hmem hrun reads marker ty d).races
-      (racesKept_of_eq view.races)).congr rfl rfl) ?_
-  · intro k hk
-    unfold Guard.fiberKeys at hk
-    rcases List.mem_append.mp hk with ho | hb
-    · obtain ⟨o', ho', hk'⟩ := List.mem_flatMap.mp ho
-      rcases newOf o' ho' with hold | rfl
-      · exact Or.inl (fiberKeys_internal hmem (List.mem_append_left _
-          (List.mem_flatMap.mpr ⟨o', hold, hk'⟩)))
-      · exact Or.inr ⟨(keysOk k hk').1, (keysOk k hk').2.1⟩
-    · exact Or.inl (fiberKeys_internal hmem (List.mem_append_right _ hb))
-  · intro token r hr
-    by_cases hp : t.parked = .withGuard token
-    · rw [requestOfR_of_parked lookT hp] at hr
-      rw [requestOfR_of_parked ht hp]
-      exact hr
-    · rw [requestOfR_of_not_parked lookT hp] at hr
-      cases hr
-  · obtain ⟨⟨c0⟩, c1, c2, c3, ⟨c4⟩, c5⟩ := moved.ok
-    exact
-      { ok := ⟨⟨c0⟩, c1, c2, c3, ⟨c4⟩, c5⟩
-        delivery := moved.delivery
-        below := moved.below
-        pendingShape := moved.pendingShape
-        parkedIdle := moved.parkedIdle
-        parkedBelow := moved.parkedBelow
-        exited := moved.exited
-        exitedStack := moved.exitedStack
-        deferredCause := moved.deferredCause
-        pendingOwner := moved.pendingOwner
-        observers := fun o' ho' => by
-          rcases newOf o' ho' with hold | rfl
-          · exact moved.observers o' hold
-          · exact ok
-        registration := moved.registration
-        code := moved.code
-        tokens := moved.tokens
-        raceObservers := fun r race hr o' ho' => by
-          rcases newOf o' ho' with hold | rfl
-          · exact moved.raceObservers r race hr o' hold
-          · exact raceOff r race hr
-        targetsBelow := moved.targetsBelow
-        observersBelow := fun o' ho' k hk => by
-          rcases newOf o' ho' with hold | rfl
-          · exact moved.observersBelow o' hold k hk
-          · exact (keysOk k hk).2.2
-        children := moved.children }
-
 /-- The observer message commutes with the parked disposition; its target is the installed owner. -/
 theorem settle_observe_park {M : RState} {g old : RFiber} {id target : FiberId} {rest : List RCmd} {y : Bool} {o : Observer}
     (hg : M.fiber? g.id = some old) :
@@ -1259,47 +1176,6 @@ theorem settle_observe_park {M : RState} {g old : RFiber} {id target : FiberId} 
         rw [rupdate_comm _ (show ({g with running := false} : RFiber).id ≠ to.id from other)]
         simp only [rupdate_rupdate]
         rfl
-
-/-- A changed machine with the same relevant fields keeps a typed observer edit. -/
-theorem configTyped_observe_congr {root : ProgramSource} {rootTy : EffTy} {w : World} {M M' : RState}
-    {q : List RCmd} (fibers : M'.fibers = M.fibers) (races : M'.races = M.races)
-    (state : M'.state = M.state) (nextId : M'.nextId = M.nextId)
-    (nextToken : M'.nextToken = M.nextToken) (nextRace : M'.nextRace = M.nextRace)
-    (stuck : M'.stuck = M.stuck) (target : FiberId) (o : Observer)
-    (typed : ConfigTyped root rootTy w (M.modify target (fun f => {f with observers := f.observers ++ [o]})) q) :
-    ConfigTyped root rootTy w (M'.modify target (fun f => {f with observers := f.observers ++ [o]})) q := by
-  have lookup : M'.fiber? target = M.fiber? target := by
-    unfold RunMachine.fiber?
-    rw [fibers]
-  unfold RunMachine.modify at typed ⊢
-  rw [lookup]
-  cases ht : M.fiber? target with
-  | none =>
-    rw [ht] at typed
-    exact configTyped_congr fibers races state nextId nextToken nextRace stuck typed
-  | some t =>
-    rw [ht] at typed
-    refine configTyped_congr (m := M.update {t with observers := t.observers ++ [o]})
-      (m' := M'.update {t with observers := t.observers ++ [o]}) ?_ races state nextId nextToken nextRace stuck typed
-    unfold RunMachine.update
-    dsimp only
-    rw [fibers]
-
-/-- Applying an observer message keeps the configuration at its actual target record. -/
-theorem configTyped_observe {root : ProgramSource} {rootTy : EffTy} {w : World} {M : RState}
-    {q : List RCmd} (typed : ConfigTyped root rootTy w M q) (target : FiberId) (o : Observer)
-    (keysOk : ∀ k ∈ Guard.observerKeys o,
-      k.2 < M.nextToken ∧ requestOfR M k.1 k.2 = none ∧ k.1.value < M.nextId)
-    (raceOff : ∀ raceId race, M.race? raceId = some race → (race.host, race.token) ∉ Guard.observerKeys o)
-    (ok : ∀ t, M.fiber? target = some t →
-      StoredObserverOk root w (M.update {t with observers := t.observers ++ [o]}) t.id o) :
-    ConfigTyped root rootTy w (M.modify target (fun f => {f with observers := f.observers ++ [o]})) q := by
-  unfold RunMachine.modify
-  cases ht : M.fiber? target with
-  | none => exact typed
-  | some t =>
-    have tid := rfiber?_id ht
-    exact configTyped_addObserver typed (by rw [tid]; exact ht) o keysOk raceOff (ok t ht)
 
 /-- `configTyped_cons_loop` for a fiber whose read code is `ReadOk` at the new queue (the stack
 half alone when a deferred interrupt makes the loop top replace its code, decisions 2026-10-02). -/
