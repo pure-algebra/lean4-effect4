@@ -1,5 +1,5 @@
 import Effect4.Laws.Run.Frame
-import Effect4.Program.Binders
+import Effect4.Laws.Program.SourceScope
 import Effect4.Laws.Auto.Obligations
 
 /-!
@@ -30,9 +30,7 @@ def OpKeeps (P : Val → Prop) (o : SyncOp) : Prop :=
 /-- **The level of an address**: the count of values in scope there, by the one binder table
 (`Node.childLevel`, `Program/Binders.lean`), from level `n` at the node. `none` where the path
 leaves the node. -/
-def levelAt : Node NativeOp → Nat → List Nat → Option Nat
-  | _, n, [] => some n
-  | node, n, i :: rest => (node.child i).bind fun c => levelAt c (node.childLevel n i) rest
+abbrev levelAt := SourceScope.levelAt
 
 /-- **The write sites of a root keep a cell predicate**: every store row that a `perform` node of
 the root makes, at an environment of the node's level, keeps it. -/
