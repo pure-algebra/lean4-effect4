@@ -44,14 +44,14 @@ theorem ambientProg_mono (root : ProgramSource) {w w' : World} {available : Env.
   · intro before after input op cert ordered pre
     exact ambientFiberPre_mono root ordered input op cert pre
   · intro before after input position exit ordered payload
-    exact ⟨strongExit_mono before after position.1 exit ordered payload.1, payload.2⟩
+    exact ⟨strongExit_mono before after position.type exit ordered payload.1, payload.2⟩
 
 /-- The ambient instance exposes the bound at the actual current entry.
 Consumer: interruption and current-code entry in the existing runtime typing relation. -/
 theorem ambient_entry {root : ProgramSource} {w : World} {available : Env.Requirement}
     {position : AmbientPosition} {code : RProgram}
     (typed : AmbientProg root w available position code) :
-    Row.Subset position.2.2 available := by
+    Row.Subset position.failureRow available := by
   have bound := ProgramArrow.entry typed
   exact bound
 
@@ -93,6 +93,25 @@ theorem native_context_answer (root : ProgramSource) (table : RowTable) (m : Nat
     ambientFiberPost w available .getContext cert (Val.context f.context) :=
   ⟨rfl, ambient_getContext_answers services coverage pre⟩
 
+/-- The getter's saved completion owns the actual returned context and its guaranteed services.
+Consumer: the provider's merge, identity branch and captured-context restoration. -/
+theorem ambient_captured_context {w : World} {guaranteed : Env.Requirement} {ctx : Ctx}
+    (payload : AmbientExit w
+      (ambientInput (.capturedContext guaranteed) (.success (Val.context ctx)))
+      (.capturedContext guaranteed) (.success (Val.context ctx))) :
+    ServicesFit w ctx.services ∧ ctx.services.Satisfies guaranteed := by
+  have member : Fits w (Val.context ctx) Ty.context := payload.1.1
+  obtain ⟨returned, decoded, services⟩ := fits_context_inv member
+  have same : returned = ctx := Option.some.inj (decoded.symm.trans (Val.context?_context _))
+  subst returned
+  refine ⟨services, (Provision.satisfies_iff_subset_keysRow _ guaranteed).mpr ?_⟩
+  have bound := payload.2.1
+  change Row.Subset guaranteed (match Val.context? (Val.context ctx) with
+    | some ctx => ctx.services.keysRow
+    | none => guaranteed) at bound
+  rw [Val.context?_context] at bound
+  exact bound
+
 /-- The provider's actual entry merges services and supplies the body's checked requirements.
 Consumer: the context provider arm, before its body and restored tail are constructed. -/
 theorem provider_entry (root : ProgramSource) (w : World) (available required keys : Env.Requirement)
@@ -117,12 +136,18 @@ theorem provider_entry (root : ProgramSource) (w : World) (available required ke
 /-- The shared frame hooks retain the original hook contracts and their exact row index.
 The scope callback restores its captured row through the existing scope-exit contract. -/
 def ambientFrameProtocols (root : ProgramSource) : Contracts.FrameProtocols AmbientPosition where
-  asyncFinalizer w before after name := before.2 = after.2 ∧
-    (frameProtocols root).asyncFinalizer w before.1 after.1 name
-  iterator w before after name := before.2 = after.2 ∧
-    (frameProtocols root).iterator w before.1 after.1 name
-  loop w before after name cursor := before.2 = after.2 ∧
-    (frameProtocols root).loop w before.1 after.1 name cursor
+  asyncFinalizer w before after name := match before, after with
+    | .result a success failure, .result b success' failure' =>
+      (success, failure) = (success', failure') ∧ (frameProtocols root).asyncFinalizer w a b name
+    | _, _ => False
+  iterator w before after name := match before, after with
+    | .result a success failure, .result b success' failure' =>
+      (success, failure) = (success', failure') ∧ (frameProtocols root).iterator w a b name
+    | _, _ => False
+  loop w before after name cursor := match before, after with
+    | .result a success failure, .result b success' failure' =>
+      (success, failure) = (success', failure') ∧ (frameProtocols root).loop w a b name cursor
+    | _, _ => False
   scopeExit := (frameProtocols root).scopeExit
 
 /-- The existing saved-code relation uses the same complete ambient frame positions.
@@ -148,7 +173,7 @@ theorem ambient_scoped_frame (root : ProgramSource) (w : World) (ty : EffTy)
 /-- The shared output law weakens type columns and guaranteed rows without changing execution.
 Consumer: provider bodies and captured-context finalizers in the source denotation path. -/
 theorem ambientProg_widen (root : ProgramSource) {w : World} {available : Env.Requirement}
-    {before after : AmbientPosition} {code : RProgram}
+    {before after : EffTy × Env.Requirement × Env.Requirement} {code : RProgram}
     (answer : Ty.subN before.1.answer after.1.answer = true)
     (error : Ty.subN before.1.error after.1.error = true)
     (success : Row.Subset after.2.1 before.2.1) (failure : Row.Subset after.2.2 before.2.2)
@@ -174,7 +199,7 @@ theorem ambient_guardBind (root : ProgramSource) {w : World} {available : Env.Re
     (skip : ∀ later, w.leHost later → ∀ exit,
       AmbientExit later (ambientInput mid exit) mid exit → kind.hasExitArm exit = false →
       AmbientExit later (ambientInput mid exit) result exit)
-    (entry : Row.Subset result.2.2 available) :
+    (entry : Row.Subset result.failureRow available) :
     AmbientProg root w available result ((guardR kind body).bind next) :=
   ProgramArrow.guardBind typed (fun later ordered exit post => run later ordered exit post.1 post.2)
     skip entry
@@ -190,7 +215,7 @@ theorem ambient_restore_finalizer (root : ProgramSource) {w : World} (available 
       (finalizerR bodyExit (fiberValR (.setContext previous) rfl)) := by
   have cleanup := ambient_setContext_guarantees root w available guaranteed previous services entry restored
   have work : ∀ originalExit, ExitOk w ty originalExit → AmbientProg root w available
-      (⟨.unit, ty.error, Env.Requirement.empty⟩, previous.services.keysRow, guaranteed)
+      ((⟨.unit, ty.error, Env.Requirement.empty⟩ : EffTy), previous.services.keysRow, guaranteed)
       (match originalExit with
       | .success _ => fiberValR (.setContext previous) rfl
       | .failure _ => (guardR .onFailure (fiberValR (.setContext previous) rfl)).bind fun

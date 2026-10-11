@@ -522,19 +522,51 @@ abbrev TypedProg (root : ProgramSource) (w : World) (ty : EffTy) (p : RProgram) 
     (fun w (_ : Unit) kind mid ex => fiberPost w (.guard_ kind) mid (some ex))
     (fun _ _ => ()) (fun _ => ()) (fun _ _ => True) w () ty p
 
-/-- Completion positions retain separate guaranteed service rows for success and failure.
-The typed context preservation path consumes both at its actual exit cut. -/
-abbrev AmbientPosition := EffTy × Env.Requirement × Env.Requirement
+/-- Completion positions index the existing program arrow, not stored program syntax.
+The captured getter carries its returned context's row into the provider callback. -/
+inductive AmbientPosition where
+  | result (type : EffTy) (success failure : Env.Requirement)
+  | capturedContext (guaranteed : Env.Requirement)
 
-/-- Select a guaranteed row with the existing exit classifier, rather than future success.
+namespace AmbientPosition
+/-- Ordinary result positions retain their original tuple spelling. -/
+instance : Coe (EffTy × Env.Requirement × Env.Requirement) AmbientPosition :=
+  ⟨fun position => .result position.1 position.2.1 position.2.2⟩
+
+/-- The scheduler reads the same declared result type from each completion position. -/
+def type : AmbientPosition → EffTy
+  | .result type _ _ => type
+  | .capturedContext _ => EffTy.pure .context
+
+/-- Entry coverage is independent of later success, including a captured getter's failure. -/
+def failureRow : AmbientPosition → Env.Requirement
+  | .result _ _ failure => failure
+  | .capturedContext guaranteed => guaranteed
+end AmbientPosition
+
+/-- Select an input at the delivered exit, including the getter's actual decoded context.
 Consumer: the shared program and frame input projection. -/
 def ambientInput (position : AmbientPosition) (exit : ExitV) : Env.Requirement :=
-  if exit.isSuccess then position.2.1 else position.2.2
+  match position with
+  | .result _ success failure => if exit.isSuccess then success else failure
+  | .capturedContext guaranteed => match exit with
+    | .success value => match Val.context? value with
+      | some ctx => ctx.services.keysRow
+      | none => guaranteed
+    | .failure _ => guaranteed
+
+/-- A captured context preserves both its guaranteed row and its decoded answer row.
+Consumer: the provider callback; ordinary positions retain their original row judgment. -/
+def AmbientBounds (available : Env.Requirement) (position : AmbientPosition) (exit : ExitV) : Prop :=
+  match position with
+  | .result _ _ _ => Row.Subset (ambientInput position exit) available
+  | .capturedContext guaranteed => Row.Subset guaranteed available ∧
+      Row.Subset (ambientInput position exit) available
 
 /-- The selected row describes runtime coverage; membership still reads the existing world. -/
 def AmbientExit (w : World) (available : Env.Requirement) (position : AmbientPosition)
     (exit : ExitV) : Prop :=
-  ExitOk w position.1 exit ∧ Row.Subset (ambientInput position exit) available
+  ExitOk w position.type exit ∧ AmbientBounds available position exit
 
 /-- A typed context reader uses both ambient coverage and the world's declared service carriers.
 The coarse getter remains available for internal capture and restoration. -/
@@ -572,7 +604,7 @@ abbrev AmbientProg (root : ProgramSource) (w : World) (available : Env.Requireme
     (ambientFiberPre root) ambientFiberPost ambientFiberInput AmbientExit
     (fun w input kind mid ex => kind.hasExitArm ex = true ∧ AmbientExit w input mid ex)
     ambientInput (fun ctx => ctx.services.keysRow)
-    (fun available position => Row.Subset position.2.2 available) w available position p
+    (fun available position => Row.Subset position.failureRow available) w available position p
 
 /-- The actual context answer satisfies the row-indexed protocol.
 No key-presence predicate substitutes for the declared service membership. -/
@@ -594,7 +626,7 @@ theorem ambient_getContext_typed (root : ProgramSource) (w : World) (keys availa
     (covered : Row.Subset keys available)
     (declared : ∀ key ∈ keys.elems, (w.serviceTy key).isSome = true) :
     AmbientProg root w available
-      (⟨.contextOf keys, .never, keys⟩, available, available) (fiberValR .getContext rfl) := by
+      ((⟨.contextOf keys, .never, keys⟩ : EffTy), available, available) (fiberValR .getContext rfl) := by
   refine .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ _ _ h => nomatch h) (.contextOf keys) (.inr ⟨keys, rfl, covered, declared⟩) ?_ (Row.subset_refl available)
   intro _ _ answer post
@@ -605,6 +637,27 @@ theorem ambient_getContext_typed (root : ProgramSource) (w : World) (keys availa
     | none => available) _ _
   rw [decoded]
   exact .pure ⟨strongExit_success _ _ _ members, bound⟩ bound
+
+/-- The actual coarse getter retains value-correlated coverage at its saved callback.
+Consumer: the compiled provider's captured previous-context continuation. -/
+theorem ambient_captureContext_typed (root : ProgramSource) (w : World)
+    (available : Env.Requirement) :
+    AmbientProg root w available (.capturedContext available) (fiberValR .getContext rfl) := by
+  refine .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) .context (.inl rfl) ?_ (Row.subset_refl available)
+  intro _ _ answer post
+  obtain ⟨members, ctx, decoded, coverage⟩ := post
+  have bound := (Provision.satisfies_iff_subset_keysRow ctx.services available).mp coverage
+  change AmbientProg root _ (match Val.context? answer with
+    | some ctx => ctx.services.keysRow
+    | none => available) _ _
+  rw [decoded]
+  refine .pure ⟨strongExit_success _ _ _ members, bound, ?_⟩ bound
+  change Row.Subset (match Val.context? answer with
+    | some ctx => ctx.services.keysRow
+    | none => available) ctx.services.keysRow
+  rw [decoded]
+  exact Row.subset_refl _
 
 /-- An internal setter gives its actual success row and a failure row covered at both cuts.
 Consumer: provider entry and captured-context restoration through the existing program arrow. -/

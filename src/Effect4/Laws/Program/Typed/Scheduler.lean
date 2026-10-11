@@ -345,7 +345,7 @@ def AmbientCodeOk (root : ProgramSource) (w : World) (m : RState) (fiber : RFibe
     (final : EffTy) : Prop :=
   ∃ available, fiber.context.services.Satisfies available ∧
     CodeArrow (AmbientProg root) AmbientExit (ambientFrameProtocols root) ambientInput
-      (fun ctx => ctx.services.keysRow) Prod.fst w m fiber.id available
+      (fun ctx => ctx.services.keysRow) AmbientPosition.type w m fiber.id available
       (final, Env.Requirement.empty, Env.Requirement.empty) fiber.frame
 
 /-- An actual readable ambient fiber covers its current interruption guarantee.
@@ -353,7 +353,7 @@ Consumer: the loop-top interruption arm of the ambient current-code preservation
 theorem AmbientCodeOk.failure_covered {root : ProgramSource} {w : World} {m : RState}
     {fiber : RFiber} {final : EffTy} (typed : AmbientCodeOk root w m fiber final) :
     ∃ available tin, AmbientProg root w available tin fiber.frame.current ∧
-      fiber.context.services.Satisfies tin.2.2 := by
+      fiber.context.services.Satisfies tin.failureRow := by
   obtain ⟨available, coverage, tin, code, _⟩ := typed
   exact ⟨available, tin, code,
     fiber.context.services.satisfies_weaken coverage (ambient_entry code)⟩
@@ -368,9 +368,11 @@ theorem AmbientCodeOk.runloopTop {root : ProgramSource} {w : World} {m : RState}
   · obtain ⟨available, coverage, tin, code, stack, provenance⟩ := typed
     have entryBound := ambient_entry code
     refine ⟨available, coverage, tin, ?_, stack, ?_⟩
-    · exact .pure ⟨strongExit_of_clean w tin.1 fiber.frame.pendingCause
-        (pendingCause_clean provenance) (pendingCause_noShapeDefect tin.1 provenance),
-        entryBound⟩ entryBound
+    · exact .pure ⟨strongExit_of_clean w tin.type fiber.frame.pendingCause
+        (pendingCause_clean provenance) (pendingCause_noShapeDefect tin.type provenance),
+        by cases tin with
+        | result type success failure => exact entryBound
+        | capturedContext guaranteed => exact ⟨entryBound, entryBound⟩⟩ entryBound
     · exact ⟨provenance.recorded, fun impossible => Bool.noConfusion impossible⟩
   · exact typed
 
