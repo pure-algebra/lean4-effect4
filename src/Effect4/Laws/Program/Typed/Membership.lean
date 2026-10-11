@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Typed.Validity
+import Effect4.Laws.Program.Handles.Layer
 import Effect4.Laws.Program.Typed.RecordValues
 import Effect4.Laws.Program.Typed.MapValues
 import Effect4.Program.FoldOf
@@ -271,6 +272,12 @@ def Fits (w : World) (v : Val) : Ty → Prop
   | .undefined => match v with | .unit => True | _ => False
   | .number => numberImage v = true
   | .bytes => match v with | .bytes _ => True | _ => False
+  | .contextOf keys =>
+    ∃ ctx, Val.context? v = some ctx ∧ ctx.services.Satisfies keys ∧
+      ServicesFit w ctx.services ∧ Live w v ∧
+      ∀ key ∈ keys.elems, ∃ carrier value,
+        w.serviceTy key = some carrier ∧ ctx.services.getV key = some value ∧
+          FlatFits w value carrier
 /-- The field-list companion of `Fits`: one membership predicate per written field. -/
 def fitters (w : World) : List (String × Bool × Ty) → List (String × Bool × (Val → Prop))
   | [] => []
@@ -640,6 +647,11 @@ theorem fits_hasTy (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty →
     Val.hasTy v ty w.state.externals.allocated = true := by
   intro ty
   induction ty with
+  | contextOf keys =>
+    intro v h
+    obtain ⟨ctx, hc, hs, _, _, _⟩ := h
+    simp only [Val.hasTy, hc]
+    exact List.all_eq_true.mpr hs
   | never => intro v h; exact h.elim
   | unit =>
     intro v h
@@ -1020,6 +1032,10 @@ theorem itemsFit_live {w : World} :
 theorem fits_live (w : World) : ∀ (ty : Ty) (v : Val), Fits w v ty → Live w v := by
   intro ty
   induction ty with
+  | contextOf keys =>
+    intro v h
+    obtain ⟨ctx, hc, hs, hfit, hl, hkeys⟩ := h
+    exact hl
   | never => intro v h; exact h.elim
   | unit =>
     intro v h
@@ -1353,10 +1369,20 @@ theorem fits_map {w1 w2 : World}
     (hΓ : TableExtends w1.Γ w2.Γ) (hPi : TableExtends w1.«Π» w2.«Π») (hRho : TableExtends w1.Ρ w2.Ρ)
     (halloc : Extends w1.state.externals.allocated w2.state.externals.allocated)
     (hstore : w1.state.le w2.state)
-    (hsvc : ∀ key sty, w2.serviceTy key = some sty → w1.serviceTy key = some sty) :
+    (hservice : w2.serviceTy = w1.serviceTy) :
     ∀ (ty : Ty) (v : Val), Fits w1 v ty → Fits w2 v ty := by
+  have hsvc : ∀ key sty, w2.serviceTy key = some sty → w1.serviceTy key = some sty :=
+    fun key sty hk => hservice ▸ hk
   intro ty
   induction ty with
+  | contextOf keys =>
+    intro v h
+    obtain ⟨ctx, hc, hs, hfit, hl, hkeys⟩ := h
+    refine ⟨ctx, hc, hs, servicesFit_map hΓ hPi hRho halloc hstore hsvc hfit,
+      live_map hΓ hPi hRho halloc hstore hl, ?_⟩
+    intro key hk
+    obtain ⟨carrier, value, hdecl, hget, hv⟩ := hkeys key hk
+    exact ⟨carrier, value, hservice.symm ▸ hdecl, hget, flatFits_map hRho halloc hstore hv⟩
   | never => intro v h; exact h.elim
   | unit => intro v h; exact h
   | nat => intro v h; exact h
@@ -1493,7 +1519,7 @@ theorem serviceTy_of_le {w w' : World} (ordered : w.le w') :
 theorem fits_mono {w w' : World} (ordered : w.leHost w') {ty : Ty} {v : Val} (h : Fits w v ty) :
     Fits w' v ty :=
   fits_map ordered.1.2.1 ordered.1.2.2.1 ordered.1.2.2.2.1 ordered.2 ordered.1.1.2
-    (serviceTy_of_le ordered.1) ty v h
+    (le_serviceTy ordered.1) ty v h
 
 /-! ## Scope handles: membership owns presence (decisions row 156) -/
 
@@ -1789,7 +1815,13 @@ theorem fits_sub (w : World) {a b : Ty} (hsub : Ty.sub a b = true) : ∀ v, Fits
     subst hn'
     intro v h
     exact h
-  case case20 => exact Bool.noConfusion hsub
+  case case20 available promised _ _ =>
+    have hkeys : Effect4.Row.Subset promised available := of_decide_eq_true hsub
+    intro v h
+    obtain ⟨ctx, hc, hs, hfit, hl, hdecl⟩ := h
+    exact ⟨ctx, hc, fun key hk => hs key (hkeys key hk), hfit, hl,
+      fun key hk => hdecl key (hkeys key hk)⟩
+  case case21 => exact Bool.noConfusion hsub
 
 /-! ## Normalization and the checker's order (decisions row 137)
 
@@ -1839,6 +1871,7 @@ theorem fits_members (w : World) (v : Val) (t : Ty) :
     · rintro (⟨x, hx, hv⟩ | ⟨x, hx, hv⟩)
       · exact ⟨x, List.mem_append_left _ hx, hv⟩
       · exact ⟨x, List.mem_append_right _ hx, hv⟩
+  | contextOf _ => exact exists_mem_singleton_iff _ _
   | unknown => exact exists_mem_singleton_iff _ _
   | unit => exact exists_mem_singleton_iff _ _
   | nat => exact exists_mem_singleton_iff _ _
@@ -2002,6 +2035,7 @@ theorem fits_normalize_tuple (w : World) (ts : List Ty) (v : Val)
 theorem fits_normalize (w : World) : ∀ (t : Ty) (v : Val), Fits w v t.normalize ↔ Fits w v t := by
   intro t
   induction t with
+  | contextOf _ => intro v; exact Iff.rfl
   | never => intro v; exact Iff.rfl
   | unknown => intro v; exact Iff.rfl
   | unit => intro v; exact Iff.rfl
@@ -2399,6 +2433,10 @@ judgment; the store rows that overwrite a `nat` cell read it). -/
 theorem fits_nat_irrel (w : World) (n m : Nat) : ∀ t, Fits w (Val.nat n) t → Fits w (Val.nat m) t := by
   intro t
   induction t with
+  | contextOf keys =>
+    intro h
+    obtain ⟨ctx, hc, _⟩ := h
+    nomatch hc
   | nat => intro _; trivial
   | union l r ihl ihr =>
     intro h
@@ -2608,6 +2646,7 @@ theorem fits_instantiate_widens {σ σ' : Ty.Subst} (hw : Ty.WidensSub σ σ') (
       ∀ v, Fits w v (Ty.instantiate σ t) → Fits w v (Ty.instantiate σ' t) := by
   intro t
   induction t with
+  | contextOf _ => intro _ v h; exact h
   | var i =>
     intro _ v h
     change Fits w v ((σ.lookup i).getD .never) at h
@@ -3552,7 +3591,7 @@ theorem inhabited_of_hasTy :
   | never => intro v alloc h; exact Bool.noConfusion h
   | var _ => intro v alloc h; exact Bool.noConfusion h
   | unit | nat | int | string | bool | option | list | exitOf | causeOf | fiberOf | lit
-  | refOf | deferredOf | unknown | map | null | undefined | number | bytes => intro _ _ _; rfl
+  | refOf | deferredOf | unknown | map | null | undefined | number | bytes | contextOf => intro _ _ _; rfl
   | handle target =>
     intro v alloc h
     cases hr : retiredHandleTargets.contains target
@@ -3735,7 +3774,7 @@ theorem fits_of_hasTy_shapeDecides (w : World) :
     exact Bool.noConfusion hv
   | int | number => intro _ v allocated hv; exact hv
   | handle _ | fiberOf _ _ _ _ | refOf _ _ | deferredOf _ _ _ _ | exitOf _ _ _ _ | unknown
-  | app _ _ _ =>
+  | app _ _ _ | contextOf _ =>
     intro hs
     exact Bool.noConfusion hs
   | map k t ihk iht =>
@@ -3827,6 +3866,7 @@ theorem fits_of_inhabited_handleFree :
     ∀ t : Ty, handleFree t = true → inhabited t = true → ∃ v : Val, ∀ w : World, Fits w v t := by
   intro t
   induction t with
+  | contextOf _ => intro hf; exact Bool.noConfusion hf
   | never => intro _ hi; exact Bool.noConfusion hi
   | int => intro _ _; exact ⟨.nat 0, fun _ => rfl⟩
   | number => intro _ _; exact ⟨.nat 0, fun _ => rfl⟩
@@ -3942,7 +3982,60 @@ theorem Grows.trans {a b c : World} (hab : Grows a b) (hbc : Grows b c) : Grows 
 theorem Grows.fits {w w' : World} (h : Grows w w') {t : Ty} {v : Val} (hv : Fits w v t) :
     Fits w' v t :=
   fits_map h.fiber h.promise h.cell h.alloc h.store
-    (fun key sty hk => by rw [← h.service]; exact hk) t v hv
+    h.service t v hv
+
+/-- Each service has an actual declared carrier and a live member at that carrier.
+`fits_of_inhabited_fresh` consumes this premise; `Grows.services` transports it. -/
+def ServiceRealizable (w : World) : Prop :=
+  ∀ key : ServiceKey, ∃ carrier value, w.serviceTy key = some carrier ∧
+    FlatFits w value carrier ∧ Live w value
+
+/-- Service realizability survives the exact service-table agreement in `Grows`.
+It serves the record and product construction in `fits_of_inhabited_fresh`. -/
+theorem Grows.services {w w' : World} (hg : Grows w w') (hs : ServiceRealizable w) :
+    ServiceRealizable w' := by
+  intro key
+  obtain ⟨carrier, value, hdecl, hv, hl⟩ := hs key
+  exact ⟨carrier, value, hg.service.symm ▸ hdecl,
+    flatFits_map hg.cell hg.alloc hg.store hv,
+    live_map hg.fiber hg.promise hg.cell hg.alloc hg.store hl⟩
+
+/-- Adding a realized service retains typed and live services.
+The finite context construction in `context_services_fresh` consumes this step. -/
+theorem servicesFit_addV {w : World} {services : Env.Ctx} {key : ServiceKey}
+    {carrier : Ty} {value : Val} (hs : ServicesFit w services)
+    (hd : w.serviceTy key = some carrier) (hv : FlatFits w value carrier) (hl : Live w value) :
+    ServicesFit w (services.addV key value) := by
+  refine ⟨?_, entriesLive_addV hl hs.2⟩
+  intro other v ty hget hdecl
+  by_cases heq : other = key
+  · subst other
+    rw [Env.Context.getV_addV_same] at hget
+    have same := Option.some.inj (hd.symm.trans hdecl)
+    cases same
+    cases hget
+    exact hv
+  · rw [Env.Context.getV_addV_other _ _ _ _ heq] at hget
+    exact hs.1 other v ty hget hdecl
+
+/-- A finite promised row receives actual service members without changing the world.
+It supplies the context case of `fits_of_inhabited_fresh`. -/
+theorem context_services_fresh (w : World) (hr : ServiceRealizable w) :
+    ∀ keys : List ServiceKey, ∃ services : Env.Ctx, ServicesFit w services ∧
+      ∀ key ∈ keys, ∃ carrier value, w.serviceTy key = some carrier ∧
+        services.getV key = some value ∧ FlatFits w value carrier
+  | [] => ⟨Env.Context.empty, servicesFit_empty w, fun _ h => nomatch h⟩
+  | key :: keys => by
+    obtain ⟨services, hs, hkeys⟩ := context_services_fresh w hr keys
+    obtain ⟨carrier, value, hd, hv, hl⟩ := hr key
+    refine ⟨services.addV key value, servicesFit_addV hs hd hv hl, ?_⟩
+    intro other hother
+    by_cases heq : other = key
+    · subst other
+      exact ⟨carrier, value, hd, Env.Context.getV_addV_same _ _ _, hv⟩
+    · have htail : other ∈ keys := (List.mem_cons.mp hother).resolve_left heq
+      obtain ⟨ty, v, ht, hg, hf⟩ := hkeys other htail
+      exact ⟨ty, v, ht, (Env.Context.getV_addV_other _ _ _ _ heq).trans hg, hf⟩
 
 /-- Declaring fiber `n` keeps every earlier membership and frees the keys above it. -/
 theorem FreshFrom.addFiber {w : World} {n : Nat} (h : FreshFrom w n) (ty : EffTy) :
@@ -4080,31 +4173,31 @@ theorem fits_handle_fresh (target : String) (hr : retiredHandleTargets.contains 
 /-- The record case's induction: one world threaded through the canonical fields; an optional
 field is left out of both lists, a required one gets a witness built in the grown world. -/
 theorem namedFit_fresh (fs : List (String × Bool × Ty))
-    (ih : ∀ p ∈ fs, inhabited p.2.2 = true → ∀ (w : World) (n : Nat), FreshFrom w n →
+    (ih : ∀ p ∈ fs, inhabited p.2.2 = true → ∀ (w : World) (n : Nat), FreshFrom w n → ServiceRealizable w →
       ∃ (w' : World) (n' : Nat) (v : Val), Grows w w' ∧ FreshFrom w' n' ∧ Fits w' v p.2.2) :
     ∀ (l : List (String × Bool × Ty)), (∀ q ∈ l, q ∈ fs) → (l.map Prod.fst).Nodup →
       (∀ q ∈ l, (q.2.1 || inhabited q.2.2) = true) →
-      ∀ (w : World) (n : Nat), FreshFrom w n →
+      ∀ (w : World) (n : Nat), FreshFrom w n → ServiceRealizable w →
       ∃ (w' : World) (n' : Nat) (ns xs : List Val), Grows w w' ∧ FreshFrom w' n' ∧
         (∀ k, Val.str k ∈ ns → k ∈ l.map Prod.fst) ∧
         NamedFit (l.map (fun q => (q.1, fitterOf w' q.2))) ns xs
-  | [], _, _, _, w, n, hn => ⟨w, n, [], [], Grows.refl w, hn, fun _ h => absurd h List.not_mem_nil, trivial⟩
-  | (m, o, t) :: l, hsub, hnd, hall, w, n, hn => by
+  | [], _, _, _, w, n, hn, hr => ⟨w, n, [], [], Grows.refl w, hn, fun _ h => absurd h List.not_mem_nil, trivial⟩
+  | (m, o, t) :: l, hsub, hnd, hall, w, n, hn, hr => by
     rw [List.map_cons, List.nodup_cons] at hnd
     have hsub' : ∀ q ∈ l, q ∈ fs := fun q hq => hsub q (List.mem_cons_of_mem _ hq)
     have hall' : ∀ q ∈ l, (q.2.1 || inhabited q.2.2) = true :=
       fun q hq => hall q (List.mem_cons_of_mem _ hq)
     cases o with
     | true =>
-      obtain ⟨w', n', ns, xs, hg, hf, hnames, hv⟩ := namedFit_fresh fs ih l hsub' hnd.2 hall' w n hn
+      obtain ⟨w', n', ns, xs, hg, hf, hnames, hv⟩ := namedFit_fresh fs ih l hsub' hnd.2 hall' w n hn hr
       refine ⟨w', n', ns, xs, hg, hf, fun k hk => List.mem_cons_of_mem _ (hnames k hk), ?_⟩
       refine namedFit_skip m true (fun x => Fits w' x t) _ ns xs hv rfl ?_
       intro k hk hkm
       exact hnd.1 (hkm ▸ hnames k hk)
     | false =>
       have hi : inhabited t = true := hall (m, false, t) List.mem_cons_self
-      obtain ⟨w1, n1, x, hg1, hf1, hx⟩ := ih (m, false, t) (hsub _ List.mem_cons_self) hi w n hn
-      obtain ⟨w2, n2, ns, xs, hg2, hf2, hnames, hv⟩ := namedFit_fresh fs ih l hsub' hnd.2 hall' w1 n1 hf1
+      obtain ⟨w1, n1, x, hg1, hf1, hx⟩ := ih (m, false, t) (hsub _ List.mem_cons_self) hi w n hn hr
+      obtain ⟨w2, n2, ns, xs, hg2, hf2, hnames, hv⟩ := namedFit_fresh fs ih l hsub' hnd.2 hall' w1 n1 hf1 (hg1.services hr)
       refine ⟨w2, n2, .str m :: ns, x :: xs, hg1.trans hg2, hf2, ?_, ?_⟩
       · intro k hk
         rcases List.mem_cons.mp hk with hk | hk
@@ -4116,110 +4209,123 @@ theorem namedFit_fresh (fs : List (String × Bool × Ty))
 
 /-- The tuple case's induction: one world threaded through the items. -/
 theorem itemsFit_fresh (ts : List Ty)
-    (ih : ∀ t ∈ ts, inhabited t = true → ∀ (w : World) (n : Nat), FreshFrom w n →
+    (ih : ∀ t ∈ ts, inhabited t = true → ∀ (w : World) (n : Nat), FreshFrom w n → ServiceRealizable w →
       ∃ (w' : World) (n' : Nat) (v : Val), Grows w w' ∧ FreshFrom w' n' ∧ Fits w' v t) :
     ∀ (l : List Ty), (∀ t ∈ l, t ∈ ts) → (∀ t ∈ l, inhabited t = true) →
-      ∀ (w : World) (n : Nat), FreshFrom w n →
+      ∀ (w : World) (n : Nat), FreshFrom w n → ServiceRealizable w →
       ∃ (w' : World) (n' : Nat) (xs : List Val), Grows w w' ∧ FreshFrom w' n' ∧
         ItemsFit (l.map (fun t x => Fits w' x t)) xs
-  | [], _, _, w, n, hn => ⟨w, n, [], Grows.refl w, hn, trivial⟩
-  | t :: l, hsub, hall, w, n, hn => by
-    obtain ⟨w1, n1, x, hg1, hf1, hx⟩ := ih t (hsub t List.mem_cons_self) (hall t List.mem_cons_self) w n hn
+  | [], _, _, w, n, hn, hr => ⟨w, n, [], Grows.refl w, hn, trivial⟩
+  | t :: l, hsub, hall, w, n, hn, hr => by
+    obtain ⟨w1, n1, x, hg1, hf1, hx⟩ := ih t (hsub t List.mem_cons_self) (hall t List.mem_cons_self) w n hn hr
     obtain ⟨w2, n2, xs, hg2, hf2, hv⟩ := itemsFit_fresh ts ih l
-      (fun u hu => hsub u (List.mem_cons_of_mem _ hu)) (fun u hu => hall u (List.mem_cons_of_mem _ hu)) w1 n1 hf1
+      (fun u hu => hsub u (List.mem_cons_of_mem _ hu)) (fun u hu => hall u (List.mem_cons_of_mem _ hu)) w1 n1 hf1 (hg1.services hr)
     exact ⟨w2, n2, x :: xs, hg1.trans hg2, hf2, hg2.fits hx, hv⟩
 
 /-- **One world for several handles (proved).** An `inhabited` type has a member in a world grown
-from any world whose keys are fresh from `n` on: each handle position is declared at its own
+from a world with realized services and keys fresh from `n` on: each handle position is declared at its own
 fresh key (`FreshFrom.addFiber`, `addRef`, `addPromise`) or allocated at the end of the external
 table, and a product carries its first column's member into the world the second one grows
 (`Grows.fits`). -/
 theorem fits_of_inhabited_fresh : ∀ (t : Ty), inhabited t = true → ∀ (w : World) (n : Nat),
-    FreshFrom w n → ∃ (w' : World) (n' : Nat) (v : Val), Grows w w' ∧ FreshFrom w' n' ∧ Fits w' v t := by
+    FreshFrom w n → ServiceRealizable w → ∃ (w' : World) (n' : Nat) (v : Val), Grows w w' ∧ FreshFrom w' n' ∧ Fits w' v t := by
   intro t
   induction t with
+  | contextOf keys =>
+    intro _ w n hn hr
+    obtain ⟨services, hs, hkeys⟩ := context_services_fresh w hr keys.elems
+    let ctx := Ctx.withServices services
+    have hl : Live w (Val.context ctx) := fun x hx =>
+      flatMap_live hs.2 x (by rw [Effect4.Program.Val.handles_context] at hx; exact hx)
+    refine ⟨w, n, Val.context ctx, Grows.refl w, hn, ctx,
+      ctxImage.ofVal_toVal ctx, ?_, hs, hl, hkeys⟩
+    intro key hk
+    obtain ⟨carrier, value, _, hg, _⟩ := hkeys key hk
+    show (services.getV key).isSome = true
+    rw [hg]
+    rfl
   | never => intro hi; exact Bool.noConfusion hi
-  | int => intro _ w n hn; exact ⟨w, n, .nat 0, Grows.refl w, hn, rfl⟩
-  | number => intro _ w n hn; exact ⟨w, n, .nat 0, Grows.refl w, hn, rfl⟩
-  | null => intro _ w n hn; exact ⟨w, n, .none, Grows.refl w, hn, trivial⟩
-  | undefined => intro _ w n hn; exact ⟨w, n, .unit, Grows.refl w, hn, trivial⟩
-  | bytes => intro _ w n hn; exact ⟨w, n, .bytes [], Grows.refl w, hn, trivial⟩
-  | app name _ _ => intro hi w n hn; exact fits_handle_fresh name (not_retired_of_inhabited hi) w n hn
+  | int => intro _ w n hn hr; exact ⟨w, n, .nat 0, Grows.refl w, hn, rfl⟩
+  | number => intro _ w n hn hr; exact ⟨w, n, .nat 0, Grows.refl w, hn, rfl⟩
+  | null => intro _ w n hn hr; exact ⟨w, n, .none, Grows.refl w, hn, trivial⟩
+  | undefined => intro _ w n hn hr; exact ⟨w, n, .unit, Grows.refl w, hn, trivial⟩
+  | bytes => intro _ w n hn hr; exact ⟨w, n, .bytes [], Grows.refl w, hn, trivial⟩
+  | app name _ _ => intro hi w n hn hr; exact fits_handle_fresh name (not_retired_of_inhabited hi) w n hn
   | map _ _ _ _ =>
-    intro _ w n hn
+    intro _ w n hn hr
     exact ⟨w, n, .list [], Grows.refl w, hn, rfl, fun _ he => nomatch he⟩
   | tuple ts ih =>
-    intro hi w n hn
+    intro hi w n hn hr
     rw [inhabited_tuple, List.all_eq_true] at hi
-    obtain ⟨w', n', xs, hg, hf, hv⟩ := itemsFit_fresh ts (fun t ht => ih t ht) ts (fun _ h => h) hi w n hn
+    obtain ⟨w', n', xs, hg, hf, hv⟩ := itemsFit_fresh ts (fun t ht => ih t ht) ts (fun _ h => h) hi w n hn hr
     exact ⟨w', n', .list xs, hg, hf, (fits_tuple w' xs ts).mpr hv⟩
   | record fs ih =>
-    intro hi w n hn
+    intro hi w n hn hr
     rw [inhabited_record, List.all_eq_true] at hi
     obtain ⟨w', n', ns, xs, hg, hf, _, hv⟩ := namedFit_fresh fs (fun p hp => ih p hp) (Ty.canon fs)
-      (fun q hq => Ty.mem_canon hq) (Field.canonBy_names_nodup _) hi w n hn
+      (fun q hq => Ty.mem_canon hq) (Field.canonBy_names_nodup _) hi w n hn hr
     exact ⟨w', n', .ctor 0 [.list ns, .list xs], hg, hf, (fits_record w' rfl fs).mpr hv⟩
   | var _ => intro hi; exact Bool.noConfusion hi
-  | unit => intro _ w n hn; exact ⟨w, n, .unit, Grows.refl w, hn, trivial⟩
-  | nat => intro _ w n hn; exact ⟨w, n, .nat 0, Grows.refl w, hn, trivial⟩
-  | string => intro _ w n hn; exact ⟨w, n, .str "", Grows.refl w, hn, trivial⟩
-  | bool => intro _ w n hn; exact ⟨w, n, .bool true, Grows.refl w, hn, trivial⟩
-  | lit s => intro _ w n hn; exact ⟨w, n, .str s, Grows.refl w, hn, rfl⟩
-  | option _ _ => intro _ w n hn; exact ⟨w, n, .none, Grows.refl w, hn, trivial⟩
-  | unknown => intro _ w n hn; exact ⟨w, n, .unit, Grows.refl w, hn, live_of_handles_nil rfl⟩
+  | unit => intro _ w n hn hr; exact ⟨w, n, .unit, Grows.refl w, hn, trivial⟩
+  | nat => intro _ w n hn hr; exact ⟨w, n, .nat 0, Grows.refl w, hn, trivial⟩
+  | string => intro _ w n hn hr; exact ⟨w, n, .str "", Grows.refl w, hn, trivial⟩
+  | bool => intro _ w n hn hr; exact ⟨w, n, .bool true, Grows.refl w, hn, trivial⟩
+  | lit s => intro _ w n hn hr; exact ⟨w, n, .str s, Grows.refl w, hn, rfl⟩
+  | option _ _ => intro _ w n hn hr; exact ⟨w, n, .none, Grows.refl w, hn, trivial⟩
+  | unknown => intro _ w n hn hr; exact ⟨w, n, .unit, Grows.refl w, hn, live_of_handles_nil rfl⟩
   | list _ _ =>
-    intro _ w n hn
+    intro _ w n hn hr
     exact ⟨w, n, .list [], Grows.refl w, hn, fun x hx => nomatch hx⟩
   | exitOf a e _ _ =>
-    intro _ w n hn
+    intro _ w n hn hr
     exact ⟨w, n, Val.exitErr ⟨[]⟩, Grows.refl w, hn,
       (fitsExit_failure_iff w ⟨a, e, Env.Requirement.empty⟩ ⟨[]⟩).mpr
         ⟨(fun _ hr => nomatch hr), (fun _ hr => nomatch hr)⟩⟩
   | causeOf e _ =>
-    intro _ w n hn
+    intro _ w n hn hr
     refine ⟨w, n, Val.exitErr ⟨[]⟩, Grows.refl w, hn, ?_⟩
     have hc : Val.cause? (Val.exitErr ⟨[]⟩) = some ⟨[]⟩ := causeImage.ofVal_toVal ⟨[]⟩
     simp only [Fits, hc]
     intro _ hr
     nomatch hr
   | handle target =>
-    intro hi w n hn
+    intro hi w n hn hr
     exact fits_handle_fresh target (not_retired_of_inhabited hi) w n hn
   | fiberOf a e _ _ =>
-    intro _ w n hn
+    intro _ w n hn hr
     obtain ⟨hg, hf⟩ := hn.addFiber ⟨a, e, Env.Requirement.empty⟩
     exact ⟨_, n + 1, Val.fiber ⟨n⟩, hg, hf, _, insert_here _ _ _, Ty.subN_refl _, Ty.subN_refl _⟩
   | refOf t _ =>
-    intro _ w n hn
+    intro _ w n hn hr
     obtain ⟨hg, hf⟩ := hn.addRef t
     exact ⟨_, n + 1, Val.cell ⟨n⟩, hg, hf, t, insert_here _ _ _, Ty.subN_refl _, Ty.subN_refl _⟩
   | deferredOf a e _ _ =>
-    intro _ w n hn
+    intro _ w n hn hr
     obtain ⟨hg, hf⟩ := hn.addPromise (a, e)
     exact ⟨_, n + 1, Val.promise ⟨n⟩, hg, hf, a, e, insert_here _ _ _,
       ⟨Ty.subN_refl _, Ty.subN_refl _⟩, ⟨Ty.subN_refl _, Ty.subN_refl _⟩⟩
   | prod a b iha ihb =>
-    intro hi w n hn
+    intro hi w n hn hr
     have hi' : (inhabited a && inhabited b) = true := hi
     obtain ⟨hia, hib⟩ := Bool.and_eq_true_iff.mp hi'
-    obtain ⟨w1, n1, va, hg1, hf1, hva⟩ := iha hia w n hn
-    obtain ⟨w2, n2, vb, hg2, hf2, hvb⟩ := ihb hib w1 n1 hf1
+    obtain ⟨w1, n1, va, hg1, hf1, hva⟩ := iha hia w n hn hr
+    obtain ⟨w2, n2, vb, hg2, hf2, hvb⟩ := ihb hib w1 n1 hf1 (hg1.services hr)
     exact ⟨w2, n2, .list [va, vb], hg1.trans hg2, hf2, fits_pair (hg2.fits hva) hvb⟩
   | except e a ihe iha =>
-    intro hi w n hn
+    intro hi w n hn hr
     have hi' : (inhabited e || inhabited a) = true := hi
     rcases Bool.or_eq_true_iff.mp hi' with hie | hia
-    · obtain ⟨w', n', v, hg, hf, hv⟩ := ihe hie w n hn
+    · obtain ⟨w', n', v, hg, hf, hv⟩ := ihe hie w n hn hr
       exact ⟨w', n', .ctor 0 [v], hg, hf, hv⟩
-    · obtain ⟨w', n', v, hg, hf, hv⟩ := iha hia w n hn
+    · obtain ⟨w', n', v, hg, hf, hv⟩ := iha hia w n hn hr
       exact ⟨w', n', .ctor 1 [v], hg, hf, hv⟩
   | union l r ihl ihr =>
-    intro hi w n hn
+    intro hi w n hn hr
     have hi' : (inhabited l || inhabited r) = true := hi
     rcases Bool.or_eq_true_iff.mp hi' with hil | hir
-    · obtain ⟨w', n', v, hg, hf, hv⟩ := ihl hil w n hn
+    · obtain ⟨w', n', v, hg, hf, hv⟩ := ihl hil w n hn hr
       exact ⟨w', n', v, hg, hf, Or.inl hv⟩
-    · obtain ⟨w', n', v, hg, hf, hv⟩ := ihr hir w n hn
+    · obtain ⟨w', n', v, hg, hf, hv⟩ := ihr hir w n hn hr
       exact ⟨w', n', v, hg, hf, Or.inr hv⟩
 
 /-- The initial world declares only the root fiber, so every key from 1 on is fresh. -/
@@ -4236,8 +4342,12 @@ when some world has a member. Row 127's agreement theorem. -/
 theorem inhabited_iff_fits (t : Ty) : inhabited t = true ↔ ∃ (w : World) (v : Val), Fits w v t := by
   constructor
   · intro hi
-    obtain ⟨w', _, v, _, _, hv⟩ :=
-      fits_of_inhabited_fresh t hi (initialWorld (EffTy.pure .unit)) 1 (initialWorld_freshFrom _)
+    let w : World := { initialWorld (EffTy.pure .unit) with serviceTy := fun _ => some .unit }
+    have hf0 := initialWorld_freshFrom (EffTy.pure .unit)
+    have hf : FreshFrom w 1 := ⟨hf0.fiber, hf0.promise, hf0.cell⟩
+    have hr : ServiceRealizable w := fun _ =>
+      ⟨.unit, .unit, rfl, trivial, live_of_handles_nil rfl⟩
+    obtain ⟨w', _, v, _, _, hv⟩ := fits_of_inhabited_fresh t hi w 1 hf hr
     exact ⟨w', v, hv⟩
   · rintro ⟨w, v, h⟩
     exact inhabited_of_fits w t v h

@@ -239,17 +239,14 @@ mutual
           pure ⟨bt.answer, bt.error, Row.diff bt.requires (Requirement.single key)⟩
         else throw ⟨p, .valueNotSubtype key v ty⟩) b.1
     | .provideContext context body =>
-      match Checker.term? s env p context with
-      | .ok ct =>
+      let b := check s env (p ++ [0]) body
+      atProgram p env (do
+        let ct ← Checker.term? s env p context
         match ct.normalize with
         | .contextOf supplied =>
-          let b := check s env (p ++ [0]) body
-          atProgram p env (do
-            let bt ← b.2
-            pure ⟨bt.answer, bt.error, Row.diff bt.requires supplied⟩) b.1
-        | _ => atProgram p env (.error ⟨p, .contextExpected ct⟩)
-            (unreached (p ++ [0]) (.eff body))
-      | .error e => atProgram p env (.error e) (unreached (p ++ [0]) (.eff body))
+          let bt ← b.2
+          pure ⟨bt.answer, bt.error, Row.diff bt.requires supplied⟩
+        | _ => throw ⟨p, .contextExpected ct⟩) b.1
     | .restore saved body =>
       let b := check s env (p ++ [0]) body
       atProgram p env (do

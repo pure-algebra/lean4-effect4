@@ -323,7 +323,7 @@ theorem polarity_args : ∀ (t : Ty) {v : Ty.Variance} {x : Ty}, (v, x) ∈ t.ar
       exact List.mem_map.mpr ⟨(y, k), hy, rfl⟩
     exact appPolarity_le (HeadReading.sub.app n) _ 0 k _ hmem
   | never | unit | nat | int | string | bool | handle _ | lit _ | var _ | unknown | null
-    | undefined | number | bytes =>
+    | undefined | number | bytes | contextOf _ =>
     simp only [Ty.args, List.not_mem_nil] at hx
 
 /-- An instance's arguments are the template's, instantiated, at the same variances. -/
@@ -346,7 +346,8 @@ theorem args_instantiate (σ : Ty.Subst) : ∀ t : Ty, (∀ i, t ≠ .var i) →
   | .never, _ | .unit, _ | .nat, _ | .int, _ | .string, _ | .bool, _ | .handle _, _
   | .option _, _ | .list _, _ | .prod _ _, _ | .except _ _, _ | .exitOf _ _, _ | .causeOf _, _
   | .fiberOf _ _, _ | .union _ _, _ | .lit _, _ | .refOf _, _ | .deferredOf _ _, _
-  | .unknown, _ | .map _ _, _ | .null, _ | .undefined, _ | .number, _ | .bytes, _ => rfl
+  | .unknown, _ | .map _ _, _ | .null, _ | .undefined, _ | .number, _ | .bytes, _
+  | .contextOf _, _ => rfl
 
 /-- Two instances of one template that is no parameter and no union have one head. -/
 theorem sameHead_instantiate (σ σ' : Ty.Subst) : ∀ t : Ty, (∀ i, t ≠ .var i) →
@@ -375,6 +376,8 @@ theorem sameHead_instantiate (σ σ' : Ty.Subst) : ∀ t : Ty, (∀ i, t ≠ .va
   | .causeOf _, _, _ | .fiberOf _ _, _, _ | .refOf _, _, _ | .deferredOf _ _, _, _
   | .unknown, _, _ | .map _ _, _, _ | .null, _, _ | .undefined, _, _ | .number, _, _
   | .bytes, _, _ => rfl
+  | .contextOf keys, _, _ => by
+    simp only [Ty.instantiate, Ty.sameHead, decide_true]
 
 /-- A list zipped with itself through two maps is the list read at both. -/
 theorem all_zip_map {α β γ : Type} (L : List α) (f : α → β) (g : α → γ) (P : β × γ → Bool) :
@@ -400,20 +403,23 @@ theorem sub_instantiate_of_args (t : Ty) (σ σ' : Ty.Subst) (hv : ∀ i, t ≠ 
       PolarityRelated (fun i => x.polarity .sub i) ρ ρ' →
         Ty.sub (Ty.instantiate ρ x) (Ty.instantiate ρ' x) = true) :
     Ty.sub (Ty.instantiate σ t) (Ty.instantiate σ' t) = true := by
-  rw [Ty.sub_eq_args _ _ (hm σ) (hm σ') hl ht, sameHead_instantiate σ σ' t hv hu, Bool.true_and]
-  unfold Ty.argsBelow
-  rw [args_instantiate σ t hv, args_instantiate σ' t hv, all_zip_map]
-  refine List.all_eq_true.mpr fun ⟨v, x⟩ hp => ?_
-  have hsize := Ty.sizeOf_args hp
-  show v.holds Ty.sub (Ty.instantiate σ x) (Ty.instantiate σ' x) = true
-  rw [Ty.Variance.holds_eq_select, Ty.Variance.select_toVar4]
-  apply Var4.select_of
-  · intro hpos
-    exact ih x hsize σ σ' (PolarityRelated.mono
-      (fun i => Var4.le_trans (Var4.le_self_mul _ _ hpos) (polarity_args t hp i)) h)
-  · intro hneg
-    exact ih x hsize σ' σ (PolarityRelated.swap (PolarityRelated.mono
-      (fun i => Var4.le_trans (Var4.le_contra_mul _ _ hneg) (polarity_args t hp i)) h))
+  cases hp : Ty.payloadRule (Ty.instantiate σ t) (Ty.instantiate σ' t) with
+  | true => exact Ty.payloadRule_sub hp
+  | false =>
+    rw [Ty.sub_eq_args _ _ (hm σ) (hm σ') hl ht hp, sameHead_instantiate σ σ' t hv hu, Bool.true_and]
+    unfold Ty.argsBelow
+    rw [args_instantiate σ t hv, args_instantiate σ' t hv, all_zip_map]
+    refine List.all_eq_true.mpr fun ⟨v, x⟩ hp => ?_
+    have hsize := Ty.sizeOf_args hp
+    show v.holds Ty.sub (Ty.instantiate σ x) (Ty.instantiate σ' x) = true
+    rw [Ty.Variance.holds_eq_select, Ty.Variance.select_toVar4]
+    apply Var4.select_of
+    · intro hpos
+      exact ih x hsize σ σ' (PolarityRelated.mono
+        (fun i => Var4.le_trans (Var4.le_self_mul _ _ hpos) (polarity_args t hp i)) h)
+    · intro hneg
+      exact ih x hsize σ' σ (PolarityRelated.swap (PolarityRelated.mono
+        (fun i => Var4.le_trans (Var4.le_contra_mul _ _ hneg) (polarity_args t hp i)) h))
 
 /-- **Instantiation respects polarity** (claim `instantiate-respects-polarity`, slice VAR-2): if
 every parameter's two bindings are related by `Ty.sub` at the parameter's polarity in `t` (a
@@ -460,6 +466,7 @@ theorem Ty.sub_instantiate_polarity : ∀ (t : Ty) (σ σ' : Ty.Subst),
   | .undefined, _, _, _ => Ty.sub_refl _
   | .number, _, _, _ => Ty.sub_refl _
   | .bytes, _, _, _ => Ty.sub_refl _
+  | .contextOf _, _, _, _ => Ty.sub_refl _
   | .option a, σ, σ', h =>
     sub_instantiate_of_args (.option a) σ σ' (fun _ hi => by cases hi)
       (fun _ _ hab => by cases hab) (fun _ => rfl) rfl rfl h

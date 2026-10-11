@@ -200,6 +200,7 @@ theorem defs_check_agreeOn (sig : Signature Op) (decls : List DefDecl) :
     eff_provideLayer := rfl
     eff_service := fun _ _ => by simp only [Checker.check.alg, hservice]
     eff_provideService := fun _ _ => by simp only [Checker.check.alg, hservice, hterm]
+    eff_provideContext := by simp only [Checker.check.alg, hterm]
     eff_catchIf := by simp only [Checker.check.alg, hterm]
     eff_select := by simp only [Checker.check.alg, hterm]
     eff_iterate := by simp only [Checker.check.alg, hterm]
@@ -229,8 +230,7 @@ theorem defs_check_agreeOn (sig : Signature Op) (decls : List DefDecl) :
     action_awaitNewChildren := by simp only [Checker.check.alg, hterm]
     action_raceAll := rfl
     action_raceAllFirst := rfl
-    action_setContext := by simp only [Checker.check.alg, hterm]
-    action_getContext := rfl
+    action_context := fun _ _ => by simp only [Checker.check.alg, hservice]
     action_getId := rfl
     action_closeScope := by simp only [Checker.check.alg, hterm]
     action_getInterruptible := rfl

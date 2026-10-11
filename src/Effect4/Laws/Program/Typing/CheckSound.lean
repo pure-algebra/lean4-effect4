@@ -144,6 +144,11 @@ theorem check_sound (sig : Signature Op) (e : Eff Op) :
     obtain ⟨ty, valueTy, b, hty, hval, heq, hb, rfl⟩ :=
       inv_provideService sig env p key value body t h
     exact .provideService hty hval heq (check_sound sig body env _ b hb)
+  | provideContext context body =>
+    intro env p t h
+    obtain ⟨contextTy, supplied, b, hc, hs, hb, rfl⟩ :=
+      inv_provideContext sig env p context body t h
+    exact .provideContext hc hs (check_sound sig body env _ b hb)
   | restore saved body =>
     intro env p t h
     obtain ⟨savedTy, hs, hsub, hb⟩ := inv_restore sig env p saved body t h
@@ -289,14 +294,10 @@ theorem checkAction_sound (sig : Signature Op) (action : ActionTerm Op) :
   | raceAllFirst entrants =>
     intro env p t h
     exact .raceAllFirst (checkEffs_sound sig entrants env _ [] t (inv_action_raceAllFirst sig env p entrants t h))
-  | setContext context =>
+  | context keys =>
     intro env p t h
-    obtain ⟨contextTy, hc, hsub, rfl⟩ := inv_action_setContext sig env p context t h
-    exact .setContext hc hsub
-  | getContext =>
-    intro env p t h
-    obtain rfl := inv_action_getContext sig env p t h
-    exact .getContext
+    obtain ⟨hkeys, rfl⟩ := inv_action_context sig env p keys t h
+    exact .context hkeys
   | getId =>
     intro env p t h
     obtain rfl := inv_action_getId sig env p t h
@@ -478,6 +479,11 @@ theorem check_complete (sig : Signature Op) (e : Eff Op) :
     intro env t hd p; cases hd
     have ih := check_complete sig body _ _ ‹HasTy sig _ body _› (p ++ [0])
     aesop (rule_sets := [Effect4.Checker])
+  | provideContext context body =>
+    intro env t hd p
+    cases hd
+    have ih := check_complete sig body _ _ ‹HasTy sig _ body _› (p ++ [0])
+    aesop (rule_sets := [Effect4.Checker])
   | restore saved body =>
     intro env t hd p; cases hd
     have ih := check_complete sig body _ _ ‹HasTy sig _ body _› (p ++ [0])
@@ -583,8 +589,13 @@ theorem checkAction_complete (sig : Signature Op) (action : ActionTerm Op) :
     intro env t hd p; cases hd
     have ih := checkEffs_complete sig entrants _ _ _ ‹EffsHasTy sig _ [] entrants _› (p ++ [0])
     aesop (rule_sets := [Effect4.Checker])
-  | setContext context => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
-  | getContext => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
+  | context keys =>
+    intro env t hd p
+    cases hd
+    have loop := (context_keys_eq_ok sig p keys.elems).mpr ‹∀ key ∈ keys.elems, ∃ carrier, sig.serviceTy key = some carrier›
+    simp only [checkAction, bind_pure_comp, List.forIn_yield_eq_foldlM]
+    rw [loop]
+    rfl
   | getId => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
   | closeScope scope exitTerm => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
   | getInterruptible => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])

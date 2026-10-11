@@ -35,12 +35,6 @@ theorem Val.keys_builtContext (s : Env.Ctx) :
   rw [Val.keys_context, Ctx.keys_eq_handleKeys]
   rfl
 
-/-- A context read back with `Val.context?`: its map's handles are the value's. -/
-theorem Val.context?_keys {v : Val} {ctx : Ctx} (h : Val.context? v = some ctx) :
-    Env.Context.handleKeys ctx.services ⊆ Val.keys v := by
-  rw [Val.context?_exact h, Val.keys_context, Ctx.keys_eq_handleKeys]
-  exact List.Subset.refl _
-
 /-! ### Raw handle frames of a context (finding F-WF)
 
 The raw frames (`Store.Val.handles`, unregistered bytes included) a context value carries are
@@ -709,18 +703,7 @@ theorem actionAt_keys (root : NativeEff) (p : Point) (a : NAction) (h : actionAt
       simp only [] at h
       subst h
       exact entrants_keys root es _
-    | setContext context =>
-      simp only [] at h
-      split at h
-      · rename_i ctx hctx
-        subst h
-        obtain ⟨w, hw, hctx'⟩ := Option.bind_eq_some_iff.mp hctx
-        rw [Val.context?_exact hctx'] at hw
-        have hkeys := evalTerm_point_keys context p (Val.context ctx) hw
-        rw [Val.keys_context] at hkeys
-        exact hkeys
-      · subst h; exact List.nil_subset _
-    | getContext =>
+    | context keys =>
       simp only [] at h
       subst h
       exact List.nil_subset _

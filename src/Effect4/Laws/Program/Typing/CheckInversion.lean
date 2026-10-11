@@ -236,6 +236,15 @@ theorem inv_provideService (sig : Signature Op) (env : TyEnv) (p : List Nat) (ke
         t = ⟨b.answer, b.error, Row.diff b.requires (Requirement.single key)⟩ := by
   aesop (rule_sets := [Effect4.Checker])
 
+theorem inv_provideContext (sig : Signature Op) (env : TyEnv) (p : List Nat)
+    (context : Term) (body : Eff Op) :
+    ∀ t, check sig env p (.provideContext context body) = .ok t →
+      ∃ contextTy supplied b, termTy sig env context = some contextTy ∧
+        contextTy.normalize = .contextOf supplied ∧
+        check sig env (p ++ [0]) body = .ok b ∧
+        t = ⟨b.answer, b.error, Row.diff b.requires supplied⟩ := by
+  aesop (rule_sets := [Effect4.Checker])
+
 /-- A restore site (decisions rows 244 and 245): the saved term has the saved state's own type,
 and the body checks at child 0 at the node's type. -/
 theorem inv_restore (sig : Signature Op) (env : TyEnv) (p : List Nat) (saved : Term)
@@ -444,16 +453,33 @@ theorem inv_action_raceAllFirst (sig : Signature Op) (env : TyEnv) (p : List Nat
       checkEffs sig env (p ++ [0]) [] entrants = .ok t := by
   aesop (rule_sets := [Effect4.Checker])
 
-theorem inv_action_setContext (sig : Signature Op) (env : TyEnv) (p : List Nat) (context : Term) :
-    ∀ t, checkAction sig env p (.setContext context) = .ok t →
-      ∃ contextTy, termTy sig env context = some contextTy ∧
-        Ty.sub contextTy.normalize Ty.context = true ∧ t = EffTy.pure .unit := by
-  aesop (rule_sets := [Effect4.Checker])
+/-- The reader's existing list loop succeeds exactly when each service is declared.
+It serves `inv_action_context` and `checkAction_complete`. -/
+@[aesop norm simp (rule_sets := [Effect4.Checker])]
+theorem context_keys_eq_ok (sig : Signature Op) (p : List Nat) (keys : List ServiceKey) :
+    keys.foldlM (fun (_ : PUnit) key =>
+      (fun _ => PUnit.unit) <$> expect ⟨p, .serviceUnknown key⟩ (sig.serviceTy key)) PUnit.unit =
+      .ok PUnit.unit ↔ ∀ key ∈ keys, ∃ carrier, sig.serviceTy key = some carrier := by
+  induction keys with
+  | nil => simp only [List.foldlM_nil, pure, Except.pure, List.not_mem_nil, false_implies, implies_true]
+  | cons key keys ih =>
+    rw [List.foldlM_cons]
+    cases hs : sig.serviceTy key with
+    | none => simp only [expect, hs, Functor.map, Except.map, bind, Except.bind,
+        reduceCtorEq, List.mem_cons, forall_eq_or_imp, exists_false, false_and]
+    | some carrier =>
+      change (_ >>= fun result => keys.foldlM _ result) = _ ↔ _
+      simp only [expect, Functor.map, Except.map, bind, Except.bind] at ih ⊢
+      rw [ih]
+      simp only [List.mem_cons, forall_eq_or_imp, hs, Option.some.injEq]
+      exact ⟨fun h => ⟨⟨carrier, rfl⟩, h⟩, fun h => h.2⟩
 
-theorem inv_action_getContext (sig : Signature Op) (env : TyEnv) (p : List Nat) :
-    ∀ t, checkAction sig env p (.getContext : ActionTerm Op) = .ok t →
-      t = EffTy.pure Ty.context := by
-  aesop (rule_sets := [Effect4.Checker])
+theorem inv_action_context (sig : Signature Op) (env : TyEnv) (p : List Nat)
+    (keys : Requirement) :
+    ∀ t, checkAction sig env p (.context keys) = .ok t →
+      (∀ key ∈ keys.elems, ∃ carrier, sig.serviceTy key = some carrier) ∧
+        t = ⟨.contextOf keys, .never, keys⟩ := by
+  aesop (add safe cases PUnit) (rule_sets := [Effect4.Checker])
 
 theorem inv_action_getId (sig : Signature Op) (env : TyEnv) (p : List Nat) :
     ∀ t, checkAction sig env p (.getId : ActionTerm Op) = .ok t → t = EffTy.pure .nat := by

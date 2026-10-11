@@ -287,6 +287,7 @@
     {
       "Note": "The relational view of `Ty` (tooling plan 1.4): the children of a node with the variance the order reads them at, the head test, and the one law `sub_eq_args` -- `sub` between members is the variance-wise comparison of corresponding arguments -- so the proofs of the order name no constructor. Variance is NOT declared here: tools/Tools/Variances.lean reads it off rc.112 into tools/Effect4Gen/variances.json. The output is under Laws because the one proof is `fun_cases` plus `aesop`, and nothing under the core root imports aesop.",
       "Name": "TyView",
+      "Flags": ["--payload-orders", "tools/Effect4Gen/payload-orders.json"],
       "Tool": "tools/Effect4Gen/View.lean",
       "Imports": "Effect4.Laws.Program.Folds.Ty,Effect4.Laws.Auto.RuleSets",
       "Out": "src\\Effect4\\Laws\\Program\\TyView.lean",

@@ -493,6 +493,20 @@ theorem compileEff_provideService (key : ServiceKey) (value : Term) (b : NativeE
   simp only [compileEff, hf]
   rfl
 
+/-- The typed context source region uses the existing native context update.
+`intro_provideContext` consumes this actual compiler equation. -/
+theorem compileEff_provideContext (context : Term) (b : NativeEff)
+    {p : Point} {k : Nat} (hf : p.fuel = k + 1) :
+    compileEff (.provideContext context b) p =
+      match (evalTerm p.env context).bind Val.context? with
+      | none => badShape
+      | some ctx => match (compileEff b (p.child 0)).asExit? with
+        | some exit => Prim.ofExit exit
+        | none => updateContextAt (.provide ctx.services) (Region.program (p.child 0)) := by
+  simp only [compileEff, hf]
+  cases (evalTerm p.env context).bind Val.context? <;> rfl
+
+
 /-- `perform` at positive fuel: an external index registers; a built-in dispatches on its
 row's kind. Every arm of `compileEff` that `simp` cannot reach through the row table. -/
 theorem compileEff_perform (op : NativeOp) (r : Term) (hf : p.fuel = k + 1) :

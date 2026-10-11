@@ -61,6 +61,12 @@ theorem Point.awaitExit_keys (p : Point) (target : FiberId) (mode : Supervision.
   · simpa only [exitKeys, Machine.reifyExitVal_keys] using hkeys
   · exact hkeys
 
+/-- A context read back with `Val.context?`: its map's handles are the value's. -/
+theorem Val.context?_keys {v : Val} {ctx : Ctx} (h : Val.context? v = some ctx) :
+    Env.Context.handleKeys ctx.services ⊆ Val.keys v := by
+  rw [Val.context?_exact h, Val.keys_context, Ctx.keys_eq_handleKeys]
+  exact List.Subset.refl _
+
 /-- A context update's handles: the map it sets or merges, or the value it adds. -/
 def _root_.Effect4.Machine.Env.ContextUpdate.keys : Env.ContextUpdate → List Handle
   | .setTo context => Env.Context.handleKeys context

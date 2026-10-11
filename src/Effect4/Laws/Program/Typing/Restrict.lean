@@ -81,6 +81,7 @@ theorem Annotate.check_alg_agreeOn {s s' : Signature Op} (h : SigExtends s s') :
     eff_provideService := fun key hk => by
       obtain ⟨ty, hty⟩ := Option.isSome_iff_exists.mp hk
       simp only [Annotate.check.alg, h.service key ty hty, hty, hterm]
+    eff_provideContext := by simp only [Annotate.check.alg, hterm]
     eff_catchIf := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
     eff_select := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
     eff_iterate := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
@@ -112,8 +113,19 @@ theorem Annotate.check_alg_agreeOn {s s' : Signature Op} (h : SigExtends s s') :
     action_awaitNewChildren := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
     action_raceAll := rfl
     action_raceAllFirst := rfl
-    action_setContext := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
-    action_getContext := rfl
+    action_context := fun keys hk => by
+      apply Prod.ext
+      · rfl
+      · funext env p
+        have old : ∀ key ∈ keys.elems, ∃ carrier, s.serviceTy key = some carrier :=
+          fun key hkey => Option.isSome_iff_exists.mp (hk key hkey)
+        have newer : ∀ key ∈ keys.elems, ∃ carrier, s'.serviceTy key = some carrier := by
+          intro key hkey
+          obtain ⟨carrier, hc⟩ := old key hkey
+          exact ⟨carrier, h.service key carrier hc⟩
+        simp only [Annotate.check.alg]
+        rw [checkAction_complete s' (.context keys) env _ (.context newer) p,
+          checkAction_complete s (.context keys) env _ (.context old) p]
     action_getId := rfl
     action_closeScope := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
     action_getInterruptible := rfl
@@ -251,6 +263,9 @@ theorem hasTy_sigProgram {s : Signature Op} :
   | _, _, _, .service hk => sigOkKey_of_serviceTy hk
   | _, _, _, .provideService hk _ _ hb =>
     And.intro (sigOkKey_of_serviceTy hk) (hasTy_sigProgram hb)
+  | _, _, _, .provideContext _ _ hb =>
+    have hchild := hasTy_sigProgram hb
+    hchild
   | _, _, _, .restore _ _ hb =>
     have hbody := hasTy_sigProgram hb
     hbody
@@ -307,8 +322,9 @@ theorem actionHasTy_sigProgram {s : Signature Op} :
   | _, _, _, .raceAll he | _, _, _, .raceAllFirst he =>
     have hchild := effsHasTy_sigProgram he
     hchild
-  | _, _, _, .setContext _ _ => True.intro
-  | _, _, _, .getContext => True.intro
+  | _, _, _, .context hk => fun key hkey =>
+    let ⟨_carrier, hc⟩ := hk key hkey
+    sigOkKey_of_serviceTy hc
   | _, _, _, .getId => True.intro
   | _, _, _, .closeScope _ _ _ _ => True.intro
   | _, _, _, .getInterruptible => True.intro

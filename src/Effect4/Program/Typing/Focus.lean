@@ -183,6 +183,7 @@ def childEnv (s : Signature Op) (ctx : NodeEnv) : Node Op → Nat → Option Nod
   | eff (.provideLayer _ _ _), 0 => some .closed
   | eff (.provideLayer _ _ _), 1 => some (.env ctx.tyEnv)
   | eff (.provideService _ _ _), 0 => some (.env ctx.tyEnv)
+  | eff (.provideContext _ _), 0 => some (.env ctx.tyEnv)
   | eff (.catchIf _ _ _), 0 => some (.env ctx.tyEnv)
   -- the handler reads the body's error
   | eff (.catchIf _ a1 _), 1 =>

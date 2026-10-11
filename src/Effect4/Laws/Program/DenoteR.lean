@@ -524,6 +524,10 @@ def inlineYield : NativeEff → Point → Option ExitV
     -- `provideService` of a value that does not evaluate is the wrong-shape refusal
     | .provideService _ value _ => match evalTerm p.env value with
       | some _ => none | none => some badShapeExit
+    | .provideContext context body =>
+      match (evalTerm p.env context).bind Val.context? with
+      | none => some badShapeExit
+      | some _ => inlineYield body (p.child 0)
     -- a restore site has no step of its own: at a false bit it is its body's own head, at a
     -- true bit a `WithFiber`, and at any other value the wrong-shape refusal
     | .restore saved body => match (evalTerm p.env saved).bind Val.savedMask? with
@@ -716,6 +720,13 @@ def denoteEffBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
     match evalTerm p.env value with
     | some v => updateContextR (.provideService key v) (rec body (p.child 0))
     | none => .pure badShapeExit
+  | .provideContext context body, p =>
+    match (evalTerm p.env context).bind Val.context? with
+    | none => .pure badShapeExit
+    | some ctx =>
+      match inlineYield body (p.child 0) with
+      | some exit => .pure exit
+      | none => updateContextR (.provide ctx.services) (rec body (p.child 0))
   -- a restore site (decisions row 245), as `compileEff` reads it: the saved bit at the node's
   -- point chooses `interruptible` over the body (the action at the point, a mask at child 0)
   -- or the body as it is, built with the node; the node spends no step of its own
@@ -1201,6 +1212,19 @@ theorem denoteR_provideService (key : ServiceKey) (value : Term) (b : NativeEff)
   | zero => exact (h hf).elim
   | succ f => budget hf; try rfl
 
+/-- The typed context region uses the existing restoring context protocol.
+`prepareR_denoteR` consumes this equation at the source constructor. -/
+theorem denoteR_provideContext (context : Term) (b : NativeEff) (h : p.fuel ≠ 0) :
+    denoteR root (.provideContext context b) p =
+      (match (evalTerm p.env context).bind Val.context? with
+       | none => .pure badShapeExit
+       | some ctx => match inlineYield b (p.child 0) with
+         | some exit => .pure exit
+         | none => updateContextR (.provide ctx.services) (denoteR root b (p.child 0))) := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f => budget hf
+
 end denoteEqs
 
 /-! ## The build, one constructor at a time
@@ -1458,6 +1482,15 @@ theorem inlineYield_eq_headExit (e : NativeEff) (p : Point) :
     | provideService key value body =>
       simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
       cases evalTerm p.env value <;> rfl
+    | provideContext context body =>
+      simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
+      cases (evalTerm p.env context).bind Val.context? with
+      | none => rfl
+      | some ctx =>
+        rw [inlineYield_eq_headExit body (p.child 0), headExit_eq_asExit?]
+        cases hx : (compileEff body (p.child 0)).asExit? with
+        | none => rfl
+        | some exit => cases exit <;> rfl
     -- a restore site: the body's own head at a false bit, a `WithFiber` at a true one
     | restore saved body =>
       simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
@@ -1548,7 +1581,7 @@ theorem denote_of_inlineYield : ∀ (b : NativeEff) (q : Point) {exit : ExitV},
   | .awaitFiber _ _, _, _, hs, _ | .withFiber _, _, _, hs, _ | .«scoped» _, _, _, hs, _
   | .acquireRelease _ _, _, _, hs, _
   | .provideLayer _ _ _, _, _, hs, _ | .service _, _, _, hs, _
-  | .provideService _ _ _, _, _, hs, _
+  | .provideService _ _ _, _, _, hs, _ | .provideContext _ _, _, _, hs, _
   | .catchIf _ _ _, _, _, hs, _ | .restore _ _, _, _, hs, _ => by
     simp [Straight] at hs
 
@@ -1729,7 +1762,7 @@ theorem denoteR_straight (root : NativeEff) : ∀ (e : NativeEff) (p : Point),
   | .awaitFiber _ _, _, hs, _ | .withFiber _, _, hs, _ | .«scoped» _, _, hs, _
   | .acquireRelease _ _, _, hs, _
   | .provideLayer _ _ _, _, hs, _ | .service _, _, hs, _
-  | .provideService _ _ _, _, hs, _
+  | .provideService _ _ _, _, hs, _ | .provideContext _ _, _, hs, _
   | .catchIf _ _ _, _, hs, _ | .restore _ _, _, hs, _ => by
     simp only [Straight, Bool.false_eq_true] at hs
 

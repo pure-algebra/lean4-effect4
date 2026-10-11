@@ -94,4 +94,29 @@ theorem intro_provideService (root : NativeEff) (n : Nat) (key : ServiceKey) (va
     exact ih _ (hw0 0) b hb
   | none => exact codeMeans_badShape root
 
+/-- The new source region reuses the existing context-update introduction.
+It serves `code_intro_aux` and introduces no new evaluator. -/
+theorem intro_provideContext (root : NativeEff) (n : Nat) (context : Term)
+    (b : NativeEff) (p : Point) (k : Nat)
+    (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)
+    (hw0 : ∀ i, (p.child i).weight < n)
+    (h : Node.at_ (.eff root) p.path = some (.eff (.provideContext context b)))
+    (ih : ∀ (p : Point), p.weight < n → ∀ (e : NativeEff),
+      Node.at_ (.eff root) p.path = some (.eff e) → CodeMeans root (compileEff e p) (denoteR root e p)) :
+    CodeMeans root (compileEff (.provideContext context b) p)
+      (denoteR root (.provideContext context b) p) := by
+  rw [compileEff_provideContext context b hf, denoteR_provideContext root context b hpos]
+  cases (evalTerm p.env context).bind Val.context? with
+  | none => exact codeMeans_badShape root
+  | some ctx =>
+    rw [inlineYield_eq_headExit b (p.child 0), headExit_eq_asExit?]
+    cases (compileEff b (p.child 0)).asExit? with
+    | some exit => exact codeMeans_ofExit_pure root exit
+    | none =>
+      have hb := at_child_of h 0
+      refine updateContext_intro root _ (Region.program (p.child 0)) (denoteR root b (p.child 0)) ?_
+      show CodeMeans root (resolve root (p.child 0)) _
+      rw [resolve_of_at hb]
+      exact ih _ (hw0 0) b hb
+
 end Effect4.Program.Sched

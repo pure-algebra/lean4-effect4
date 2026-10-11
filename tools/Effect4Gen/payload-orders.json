@@ -1,0 +1,10 @@
+[
+  {
+    "head": "contextOf",
+    "relation": "Effect4.Row.Subset",
+    "subLaw": "Effect4.Program.Ty.sub_contextOf",
+    "transLaw": "Effect4.Row.subset_trans",
+    "extLaw": "Effect4.Row.eq_of_mem_iff",
+    "normalizeLaw": "Effect4.Program.Ty.normalize_contextOf"
+  }
+]

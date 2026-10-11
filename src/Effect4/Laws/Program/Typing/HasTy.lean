@@ -251,6 +251,14 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
       HasTy sig env body b →
       HasTy sig env (.provideService key value body)
         ⟨b.answer, b.error, Row.diff b.requires (Requirement.single key)⟩
+  /-- A typed context region removes exactly the supplied keys from its body's requirements. -/
+  | provideContext {env : TyEnv} {context : Term} {body : Eff Op}
+      {contextTy : Ty} {supplied : Requirement} {b : EffTy} :
+      termTy sig env context = some contextTy →
+      contextTy.normalize = .contextOf supplied →
+      HasTy sig env body b →
+      HasTy sig env (.provideContext context body)
+        ⟨b.answer, b.error, Row.diff b.requires supplied⟩
   /-- A restore site (`pipe(body, saved)`, `internal/effect.ts:4340-4352`; decisions rows 244
   and 245): the saved term has the saved state's own opaque type, and the node has its body's
   type. A mask changes no column of the type, as `interruptible` changes none. -/
@@ -452,14 +460,10 @@ inductive ActionHasTy (sig : Signature Op) : TyEnv → ActionTerm Op → EffTy �
   | raceAllFirst {env : TyEnv} {entrants : Effs Op} {t : EffTy} :
       EffsHasTy sig env [] entrants t →
       ActionHasTy sig env (.raceAllFirst entrants) t
-  /-- `setContext` (`:709-727`): a `Context.Context<unknown>` handle in, `void` out. -/
-  | setContext {env : TyEnv} {context : Term} {contextTy : Ty} :
-      termTy sig env context = some contextTy →
-      Ty.sub contextTy.normalize Ty.context = true →
-      ActionHasTy sig env (.setContext context) (EffTy.pure .unit)
-  /-- `fiber.context` as a value (`getContext`, `:2153`). -/
-  | getContext {env : TyEnv} :
-      ActionHasTy sig env .getContext (EffTy.pure Ty.context)
+  /-- The typed context reader requires every promised service declaration. -/
+  | context {env : TyEnv} {keys : Requirement} :
+      (∀ key ∈ keys.elems, ∃ carrier, sig.serviceTy key = some carrier) →
+      ActionHasTy sig env (.context keys) ⟨.contextOf keys, .never, keys⟩
   /-- `withFiberId`: the running fiber's id, a `nat`. -/
   | getId {env : TyEnv} :
       ActionHasTy sig env .getId (EffTy.pure .nat)

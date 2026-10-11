@@ -432,16 +432,28 @@ theorem servicesFit_restrict (app : SigApp) (w : World) (services : Env.Ctx)
       exact hty
     exact h.1 key sv sty hget hty'
 
-/-- Along an extension of the application's signature, membership survives the restriction to
-the smaller table: the restriction reads no carrier the world does not. -/
+/-- Restriction retains membership when it keeps every declared service carrier.
+Strong context promises make service retention explicit; `servicesFit_restrict` remains local. -/
 theorem fits_restrict {app app' : SigApp} (hext : SigExtends app.signature app'.signature)
-    (w : World) (hw : w.serviceTy = app'.serviceTy) (ty : Ty) (v : Val) (h : Fits w v ty) :
-    Fits (restrictWorld app w) v ty :=
-  @fits_map w (restrictWorld app w) (table_refl _) (table_refl _) (table_refl _) (fun _ _ hx => hx)
-    (Stores.le_refl _)
-    (fun key sty hk => by
-      change app.serviceTy key = some sty at hk
-      rw [hw]
-      exact hext.service key sty hk) ty v h
+    (w : World) (hw : w.serviceTy = app'.serviceTy)
+    (hkeep : TableExtends w.serviceTy app.serviceTy) (ty : Ty) (v : Val) (h : Fits w v ty) :
+    Fits (restrictWorld app w) v ty := by
+  have same : app.serviceTy = w.serviceTy := by
+    funext key
+    cases ha : app.serviceTy key with
+    | some carrier =>
+      have hc : w.serviceTy key = some carrier := by
+        rw [hw]
+        exact hext.service key carrier ha
+      exact hc.symm
+    | none =>
+      cases hb : w.serviceTy key with
+      | none => rfl
+      | some carrier =>
+        have hc := hkeep key carrier hb
+        rw [ha] at hc
+        cases hc
+  exact @fits_map w (restrictWorld app w) (table_refl _) (table_refl _) (table_refl _)
+    (fun _ _ hx => hx) (Stores.le_refl _) same ty v h
 
 end Effect4.Program.Typed

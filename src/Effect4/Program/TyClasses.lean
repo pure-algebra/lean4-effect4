@@ -67,5 +67,6 @@ def tyClasses : TyTable ClassRow where
   undefined := ⟨true, true⟩
   number := ⟨true, true⟩
   bytes := ⟨true, true⟩
+  contextOf := ⟨false, false⟩
 
 end Effect4.Program

@@ -1068,6 +1068,10 @@ def normalizeFields : List (String × Bool × Ty) → List (String × Bool × Ty
   | (n, o, t) :: rest => (n, o, normalize t) :: normalizeFields rest
 end
 
+/-- Context rows keep their canonical key payload; consumed by the generated payload-order laws. -/
+theorem normalize_contextOf (keys : Effect4.Row Effect4.ServiceKey) :
+    normalize (.contextOf keys) = .contextOf keys := rfl
+
 /-- A field's payload, normalized: the flag kept, the type normalized. -/
 def normPayload (c : Bool × Ty) : Bool × Ty := (c.1, normalize c.2)
 
