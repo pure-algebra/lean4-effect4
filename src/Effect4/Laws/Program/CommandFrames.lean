@@ -1,6 +1,7 @@
 import Effect4.Laws.Program.Interference
 import Effect4.Laws.Program.Footprint
 import Effect4.Laws.Program.StackLocal
+import Effect4.Laws.Program.MovesConnect
 
 /-!
 # Laws.Program.CommandFrames — what one command can do to every fiber's frame
@@ -16,7 +17,11 @@ command once:
   parallel close's iterator pushed.
 * **The machine's frames follow** (`FramesFollow m m'`): the id counter does not go back, and every
   fiber of `m'` is a fiber of `m` with the same id whose frame moved by a word of edits, or a new one.
-* **The classification** (`driveStep_framesFollow`): every command of the native loop.
+* **The classification** (`driveStep_transports`): one census for raw and guarded commands.
+* **The live word** (`driveStep_liveTransports`): an exited target is required for `exitDone`.
+  A live successor retains a live predecessor and a word without `clearStack`.
+* **The old interface** (`driveStep_framesFollow`): the raw projection of the same census.
+* **The mask instance** (`Transport.maskLater`): induction over the live word.
 
 So a frame invariant that each edit keeps, and that holds of a new fiber's frame, holds after every
 command. `MaskRuns`'s command half is such an invariant, and so is the shape stack locality asks
@@ -24,12 +29,15 @@ for, between the edits that reach the entry's stack.
 
 Placement (AGENTS.md, Trust):
 
-- concept `reactive-scheduling` (`docs/core/semantics.md` §2.4); the proposed registry claim
-  `command-moves`, role structure, of which this is the frame half;
+- concept `reactive-scheduling` (`docs/core/semantics.md` §2.4), serving requirement R11;
+- registry question `saved-mask-region-bracket`, role preservation, at `compiled_region_bracket`.
+  These helpers supply its command transport; the run stack premise remains open;
+- `Transport.maskLater` also serves `saved-mask-chain-runs`, at `compiled_mask_chain_runs`;
 - reach: every command of the native loop (`driveStep` at `evaluatorFor root table`), every
   interpreter, machine and pending list;
-- it states frames and ids alone: the stores, the queues, the races, the scheduling fields and a new
-  fiber's frame are outside it, and so is which command runs;
+- it retains frames, ids, live predecessors and initialized fresh fibers.
+  Stores, queues, races, source ownership and the choice of command remain outside it;
+- the initialized frame retains its program and context, without a parent-context or source-point witness;
 - consumers: `MaskRuns`'s command half (decisions row 350's cleanup), stack locality along a run,
   and the goals packet's fiber positions (G2).
 -/
@@ -115,23 +123,220 @@ theorem FramesFollow.trans {m m' m'' : NativeMachine} (a : FramesFollow m m')
     · exact .inr (id' ▸ fresh')
   · exact .inr (Nat.le_trans a.nextId fresh)
 
-/-- An evaluation's interference: other fibers' frames follow. -/
-theorem FramesFollow.ofInterferes {m m' : NativeMachine} (h : Interferes m m') :
+/-- The command edits that do not clear a stack.
+Consumer: live fibers in `Transport`; the frame machine's own finishing move remains explicit. -/
+inductive LiveEdit : NFrame → NFrame → Prop
+  | move {f g : NFrame} : FrameMove f g → LiveEdit f g
+  | interrupted (interp : NInterp) (g : NFiber) (who : Option FiberId)
+      (extra : ReasonAnnotations Ann) : LiveEdit g.frame (interruptRecord interp who extra g).1.frame
+  | setDeferred (f : NFrame) (deferred : Bool) : LiveEdit f { f with deferredInterrupt := deferred }
+  | pushIterator (f : NFrame) (name : EffName) (cursor : Val) :
+      LiveEdit f { f with stack := Prim.iterator name cursor :: f.stack }
+
+/-- A word without stack clearing; the command census retains this word for every live fiber. -/
+inductive LiveEdits : NFrame → NFrame → Prop
+  | refl (f : NFrame) : LiveEdits f f
+  | tail {f g h : NFrame} : LiveEdits f g → LiveEdit g h → LiveEdits f h
+
+/-- Clearing-free words compose. -/
+theorem LiveEdits.trans {f g h : NFrame} (a : LiveEdits f g) (b : LiveEdits g h) :
+    LiveEdits f h := by
+  induction b with
+  | refl => exact a
+  | tail _ e ih => exact .tail ih e
+
+/-- One clearing-free edit is a word. -/
+theorem LiveEdits.single {f g : NFrame} (e : LiveEdit f g) : LiveEdits f g :=
+  .tail (.refl f) e
+
+/-- An evaluation's moves clear no stack outside the finishing frame step. -/
+theorem LiveEdits.ofMoves {f g : NFrame} (w : Moves f g) : LiveEdits f g := by
+  induction w with
+  | refl => exact .refl _
+  | tail _ m ih => exact .tail ih (.move m)
+
+/-- Forget the live restriction; consumer: the original raw command interface. -/
+theorem LiveEdits.frames {f g : NFrame} (w : LiveEdits f g) : FrameEdits f g := by
+  induction w with
+  | refl => exact .refl _
+  | tail _ e ih =>
+    cases e with
+    | move m => exact .tail ih (.move m)
+    | interrupted interp fiber who extra => exact .tail ih (.interrupted interp fiber who extra)
+    | setDeferred _ flag => exact .tail ih (.setDeferred _ flag)
+    | pushIterator _ name cursor => exact .tail ih (.pushIterator _ name cursor)
+
+/-- Every clearing-free command edit keeps the saved mask chain.
+Consumer: `Transport.maskLater`, the mask instance of the command classification. -/
+theorem LiveEdit.maskChain (base : Bool) {f g : NFrame} (edit : LiveEdit f g)
+    (held : FrameFiber.MaskChain base f.interruptible f.stack) :
+    FrameFiber.MaskChain base g.interruptible g.stack := by
+  cases edit with
+  | move step => exact move_maskChain base step held
+  | interrupted interp fiber who extra =>
+    unfold interruptRecord
+    dsimp only
+    (repeat' split) <;> exact held
+  | setDeferred => exact held
+  | pushIterator => exact held
+
+/-- The mask instance follows the word, without another command case analysis. -/
+theorem LiveEdits.maskChain (base : Bool) {f g : NFrame} (word : LiveEdits f g)
+    (held : FrameFiber.MaskChain base f.interruptible f.stack) :
+    FrameFiber.MaskChain base g.interruptible g.stack := by
+  induction word with
+  | refl => exact held
+  | tail _ edit ih => exact edit.maskChain base ih
+
+/-- The same transport serves raw and guarded commands.
+Only raw commands may use the `allowClear` escape; guarded commands instantiate it with `False`. -/
+def Transport (allowClear : Prop) (f g : NFiber) : Prop :=
+  g.id = f.id ∧ FrameEdits f.frame g.frame ∧
+    (g.exit = none → f.exit = none ∧ (allowClear ∨ LiveEdits f.frame g.frame))
+
+/-- Transport retains the fiber id. -/
+theorem Transport.id {allowClear : Prop} {f g : NFiber} (h : Transport allowClear f g) :
+    g.id = f.id := h.1
+
+/-- Transport retains the unrestricted frame word. -/
+theorem Transport.frame {allowClear : Prop} {f g : NFiber} (h : Transport allowClear f g) :
+    FrameEdits f.frame g.frame := h.2.1
+
+/-- The live projection reads the predecessor and the clearing restriction together. -/
+theorem Transport.live {allowClear : Prop} {f g : NFiber} (h : Transport allowClear f g)
+    (live : g.exit = none) : f.exit = none ∧ (allowClear ∨ LiveEdits f.frame g.frame) := h.2.2 live
+
+/-- Unchanged frame, id and exit give reflexive transport. -/
+theorem Transport.refl (allowClear : Prop) (f : NFiber) : Transport allowClear f f :=
+  ⟨rfl, .refl _, fun live => ⟨live, .inr (.refl _)⟩⟩
+
+/-- A clearing-free edit that retains the exit transports a fiber. -/
+theorem Transport.edit {allowClear : Prop} {f g : NFiber} (id : g.id = f.id)
+    (exit : g.exit = f.exit) (frame : LiveEdits f.frame g.frame) : Transport allowClear f g :=
+  ⟨id, frame.frames, fun live => ⟨exit.symm.trans live, .inr frame⟩⟩
+
+/-- A published exit admits clearing, but never establishes a live successor. -/
+theorem Transport.exited {allowClear : Prop} {f g : NFiber} (id : g.id = f.id)
+    (frame : FrameEdits f.frame g.frame) (exited : g.exit.isSome = true) : Transport allowClear f g := by
+  refine ⟨id, frame, ?_⟩
+  intro live
+  rw [live] at exited
+  cases exited
+
+/-- A raw clear needs explicit permission when its target remains live. -/
+theorem Transport.clear {allowClear : Prop} {f g : NFiber} (id : g.id = f.id)
+    (exit : g.exit = f.exit) (frame : g.frame = { f.frame with stack := [] })
+    (allowed : f.exit = none → allowClear) : Transport allowClear f g := by
+  refine ⟨id, frame ▸ .single (.clearStack _), ?_⟩
+  intro live
+  have before := exit.symm.trans live
+  exact ⟨before, .inl (allowed before)⟩
+
+/-- Transport composes; a live successor has a live predecessor at every intermediate cut. -/
+theorem Transport.trans {allowClear : Prop} {f g h : NFiber}
+    (a : Transport allowClear f g) (b : Transport allowClear g h) : Transport allowClear f h := by
+  refine ⟨b.id.trans a.id, a.frame.trans b.frame, ?_⟩
+  intro live
+  obtain ⟨middle, bword⟩ := b.live live
+  obtain ⟨before, aword⟩ := a.live middle
+  refine ⟨before, ?_⟩
+  rcases aword with allowed | aword
+  · exact .inl allowed
+  rcases bword with allowed | bword
+  · exact .inl allowed
+  · exact .inr (aword.trans bword)
+
+/-- A guarded command transport is the existing mask relation's native instance. -/
+theorem Transport.maskLater {f g : NFiber} (transport : Transport False f g) :
+    MaskLater f g := by
+  refine ⟨transport.id, fun live => (transport.live live).1, ?_⟩
+  intro live base held
+  rcases (transport.live live).2 with impossible | word
+  · exact False.elim impossible
+  · exact word.maskChain base held
+
+/-- Observer and interrupt edits retain live transport. -/
+theorem OtherEdits.transport {allowClear : Prop} {f g : NFiber} (w : OtherEdits f g) :
+    Transport allowClear f g := by
+  induction w with
+  | refl => exact .refl _ _
+  | tail _ e ih =>
+    apply ih.trans
+    cases e with
+    | observe => exact .edit rfl rfl (.refl _)
+    | filterObservers => exact .edit rfl rfl (.refl _)
+    | interrupted interp _ who extra =>
+      exact .edit (OtherEdit.id (.interrupted interp _ who extra))
+        (OtherEdit.exit (.interrupted interp _ who extra))
+        (.single (.interrupted interp _ who extra))
+
+/-- Joint command classification, including the live word and each fresh fiber's initialization.
+The parameter records the raw command boundary; `False` is the guarded classification. -/
+structure Transports (allowClear : Prop) (m m' : NativeMachine) : Prop where
+  nextId : m.nextId ≤ m'.nextId
+  fibers : ∀ g' ∈ m'.fibers,
+    (∃ g ∈ m.fibers, Transport allowClear g g') ∨
+    (m.nextId ≤ g'.id.value ∧ ∃ program flag budget context,
+      Transport allowClear (RunFiber.make g'.id program flag budget context) g')
+
+/-- No command transports every existing fiber to itself. -/
+theorem Transports.refl (allowClear : Prop) (m : NativeMachine) : Transports allowClear m m :=
+  ⟨Nat.le_refl _, fun g mem => .inl ⟨g, mem, .refl _ _⟩⟩
+
+/-- Command transports compose, including births between the two cuts. -/
+theorem Transports.trans {allowClear : Prop} {m m' m'' : NativeMachine}
+    (a : Transports allowClear m m') (b : Transports allowClear m' m'') :
+    Transports allowClear m m'' := by
+  refine ⟨Nat.le_trans a.nextId b.nextId, fun last member => ?_⟩
+  rcases b.fibers last member with ⟨middle, member', word'⟩ | born
+  · rcases a.fibers middle member' with ⟨first, before, word⟩ | ⟨lower, p, flag, budget, ctx, word⟩
+    · exact .inl ⟨first, before, word.trans word'⟩
+    · refine .inr ⟨word'.id ▸ lower, p, flag, budget, ctx, ?_⟩
+      rw [word'.id]
+      exact word.trans word'
+  · exact .inr ⟨Nat.le_trans a.nextId born.1, born.2⟩
+
+/-- An already allocated live fiber has a live predecessor and a clearing-free frame word.
+Consumer: the goals packet's fiber positions and the region bracket's run relation. -/
+theorem Transports.liveOld {m m' : NativeMachine} (h : Transports False m m')
+    {g : NFiber} (member : g ∈ m'.fibers) (live : g.exit = none) (old : g.id.value < m.nextId) :
+    ∃ f ∈ m.fibers, f.id = g.id ∧ f.exit = none ∧ LiveEdits f.frame g.frame := by
+  rcases h.fibers g member with ⟨f, before, word⟩ | born
+  · obtain ⟨wasLive, noClear⟩ := word.live live
+    rcases noClear with impossible | edits
+    · exact False.elim impossible
+    · exact ⟨f, before, word.id.symm, wasLive, edits⟩
+  · exact False.elim (Nat.not_le_of_lt old born.1)
+
+/-- Evaluation interference has no clearing edit. -/
+theorem Transports.ofInterferes {allowClear : Prop} {m m' : NativeMachine} (h : Interferes m m') :
+    Transports allowClear m m' := by
+  refine ⟨h.nextId, fun g mem => ?_⟩
+  rcases h.fibers g mem with ⟨f, before, edits⟩ | ⟨lower, p, flag, budget, ctx, edits⟩
+  · exact .inl ⟨f, before, edits.transport⟩
+  · exact .inr ⟨lower, p, flag, budget, ctx, edits.transport⟩
+
+/-- Forget the live and initialized-frame witnesses. -/
+theorem Transports.frames {allowClear : Prop} {m m' : NativeMachine} (h : Transports allowClear m m') :
     FramesFollow m m' := by
-  refine ⟨h.nextId, fun g' mem => ?_⟩
-  rcases h.fibers g' mem with ⟨g, memOld, w⟩ | fresh
-  · exact .inl ⟨g, memOld, w.id.symm, w.frames⟩
+  refine ⟨h.nextId, fun g mem => ?_⟩
+  rcases h.fibers g mem with ⟨f, before, edits⟩ | fresh
+  · exact .inl ⟨f, before, edits.id.symm, edits.frame⟩
   · exact .inr fresh.1
 
-/-- A machine edit that keeps the fiber list, after frames that follow. -/
-theorem FramesFollow.thenSame {m m' m'' : NativeMachine} (h : FramesFollow m m')
-    (fibers : m''.fibers = m'.fibers) (nextId : m'.nextId ≤ m''.nextId) : FramesFollow m m'' :=
+/-- Changes outside the fiber table retain its transport. -/
+theorem Transports.thenSame {allowClear : Prop} {m m' m'' : NativeMachine}
+    (h : Transports allowClear m m') (fibers : m''.fibers = m'.fibers)
+    (nextId : m'.nextId ≤ m''.nextId) : Transports allowClear m m'' :=
   ⟨Nat.le_trans h.nextId nextId, fun g mem => h.fibers g (fibers ▸ mem)⟩
 
-/-- Writing one fiber whose frame follows from an old fiber of the same id, or which is new. -/
-theorem FramesFollow.thenWrite {m m' : NativeMachine} {t : NFiber} (h : FramesFollow m m')
-    (source : (∃ g ∈ m.fibers, g.id = t.id ∧ FrameEdits g.frame t.frame) ∨ m.nextId ≤ t.id.value) :
-    FramesFollow m (m'.update t) := by
+/-- Write a transported old fiber or a transported initialization. -/
+theorem Transports.thenWrite {allowClear : Prop} {m m' : NativeMachine} {t : NFiber}
+    (h : Transports allowClear m m')
+    (source : (∃ g ∈ m.fibers, Transport allowClear g t) ∨
+      (m.nextId ≤ t.id.value ∧ ∃ program flag budget context,
+        Transport allowClear (RunFiber.make t.id program flag budget context) t)) :
+    Transports allowClear m (m'.update t) := by
   refine ⟨h.nextId, fun g' mem => ?_⟩
   unfold RunMachine.update at mem
   obtain ⟨g, memMid, eq⟩ := List.mem_map.mp mem
@@ -139,49 +344,52 @@ theorem FramesFollow.thenWrite {m m' : NativeMachine} {t : NFiber} (h : FramesFo
   · exact eq ▸ source
   · exact eq ▸ h.fibers g memMid
 
-/-- Writing a fiber of `m'` back after editing its frame and keeping its id. -/
-theorem FramesFollow.thenUpdate {m m' : NativeMachine} {t t' : NFiber} (h : FramesFollow m m')
-    (mem : t ∈ m'.fibers) (id : t'.id = t.id) (edits : FrameEdits t.frame t'.frame) :
-    FramesFollow m (m'.update t') := by
+/-- Compose the transport of a table member with its next edit. -/
+theorem Transports.thenUpdate {allowClear : Prop} {m m' : NativeMachine} {t t' : NFiber}
+    (h : Transports allowClear m m') (mem : t ∈ m'.fibers) (edit : Transport allowClear t t') :
+    Transports allowClear m (m'.update t') := by
   refine h.thenWrite ?_
-  rcases h.fibers t mem with ⟨g, memOld, idOld, w⟩ | fresh
-  · exact .inl ⟨g, memOld, idOld.trans id.symm, w.trans edits⟩
-  · exact .inr (id ▸ fresh)
+  rcases h.fibers t mem with ⟨g, before, word⟩ | ⟨lower, p, flag, budget, ctx, word⟩
+  · exact .inl ⟨g, before, word.trans edit⟩
+  · refine .inr ⟨edit.id ▸ lower, p, flag, budget, ctx, ?_⟩
+    rw [edit.id]
+    exact word.trans edit
 
-/-- Editing the fiber an id names, keeping its frame and its id. -/
-theorem FramesFollow.thenModify {m m' : NativeMachine} (h : FramesFollow m m') (id : FiberId)
-    (k : NFiber → NFiber) (frame : ∀ g, (k g).frame = g.frame) (keepsId : ∀ g, (k g).id = g.id) :
-    FramesFollow m (m'.modify id k) := by
+/-- An edit outside a fiber's frame and exit retains its transport. -/
+theorem Transports.thenModify {allowClear : Prop} {m m' : NativeMachine}
+    (h : Transports allowClear m m') (id : FiberId) (k : NFiber → NFiber)
+    (frame : ∀ g, (k g).frame = g.frame) (keepsId : ∀ g, (k g).id = g.id)
+    (exit : ∀ g, (k g).exit = g.exit) : Transports allowClear m (m'.modify id k) := by
   unfold RunMachine.modify
   split
   · exact h
   · rename_i g found
-    exact h.thenUpdate (List.mem_of_find?_eq_some found) (keepsId g) (frame g ▸ .refl _)
+    exact h.thenUpdate (List.mem_of_find?_eq_some found)
+      (.edit (keepsId g) (exit g) (frame g ▸ .refl _))
 
-/-- Appending to the trace, after frames that follow. -/
-theorem FramesFollow.thenEmit {m m' : NativeMachine} (h : FramesFollow m m') (events : List NRunEvent) :
-    FramesFollow m (m'.emit events) :=
+/-- Trace append retains transport. -/
+theorem Transports.thenEmit {allowClear : Prop} {m m' : NativeMachine}
+    (h : Transports allowClear m m') (events : List NRunEvent) : Transports allowClear m (m'.emit events) :=
   h.thenSame rfl (Nat.le_refl _)
 
-/-- Halting, after frames that follow. -/
-theorem FramesFollow.thenHalt {m m' : NativeMachine} (h : FramesFollow m m') (why : Stuck) :
-    FramesFollow m (m'.halt why) :=
+/-- Halting retains transport. -/
+theorem Transports.thenHalt {allowClear : Prop} {m m' : NativeMachine}
+    (h : Transports allowClear m m') (why : Stuck) : Transports allowClear m (m'.halt why) :=
   h.thenSame rfl (Nat.le_refl _)
 
-/-- Writing the stores, after frames that follow. -/
-theorem FramesFollow.thenState {m m' : NativeMachine} (h : FramesFollow m m') (state : Stores) :
-    FramesFollow m { m' with state := state } :=
+/-- A store write retains transport. -/
+theorem Transports.thenState {allowClear : Prop} {m m' : NativeMachine}
+    (h : Transports allowClear m m') (state : Stores) : Transports allowClear m { m' with state := state } :=
   h.thenSame rfl (Nat.le_refl _)
 
-/-- Writing a race, after frames that follow. -/
-theorem FramesFollow.thenUpdateRace {m m' : NativeMachine} (h : FramesFollow m m')
-    (race : Race EffName EffThunk Val Err Defect FiberId Ann) :
-    FramesFollow m (m'.updateRace race) :=
-  h.thenSame rfl (Nat.le_refl _)
+/-- A race write retains transport. -/
+theorem Transports.thenUpdateRace {allowClear : Prop} {m m' : NativeMachine}
+    (h : Transports allowClear m m') (race : Race EffName EffThunk Val Err Defect FiberId Ann) :
+    Transports allowClear m (m'.updateRace race) := h.thenSame rfl (Nat.le_refl _)
 
-/-- Arming a dispatcher, after frames that follow. -/
-theorem FramesFollow.thenArm {m m' : NativeMachine} (h : FramesFollow m m') (owner : FiberId) :
-    FramesFollow m (m'.arm owner) :=
+/-- Arming retains transport. -/
+theorem Transports.thenArm {allowClear : Prop} {m m' : NativeMachine}
+    (h : Transports allowClear m m') (owner : FiberId) : Transports allowClear m (m'.arm owner) :=
   h.thenSame rfl (Nat.le_refl _)
 
 /-- A race's entrant is a spawn. -/
@@ -196,14 +404,15 @@ theorem Interferes.launchEntrant (interp : NInterp) (raceId : Nat) (m : NativeMa
   rw [split] at spawned
   exact spawned
 
-/-- **Where the loop leaves an evaluated fiber**: it writes the evaluation's fiber back, whose frame
-followed from the old one. -/
-theorem settle_follows {m : NativeMachine} {f : NFiber} (mem : f ∈ m.fibers) (id : FiberId)
-    (rest : List NCommand) (it : NIter) (machine : FramesFollow m it.machine)
-    (frame : FrameEdits f.frame it.fiber.frame) (sameId : it.fiber.id = f.id) :
-    FramesFollow m (settle id rest it).1 := by
-  have source : (∃ g ∈ m.fibers, g.id = it.fiber.id ∧ FrameEdits g.frame it.fiber.frame) ∨
-      m.nextId ≤ it.fiber.id.value := .inl ⟨f, mem, sameId.symm, frame⟩
+/-- Settle writes the evaluated fiber, retaining its joint frame transport. -/
+theorem settle_transports {allowClear : Prop} {m : NativeMachine} {f : NFiber}
+    (mem : f ∈ m.fibers) (id : FiberId) (rest : List NCommand) (it : NIter)
+    (machine : Transports allowClear m it.machine) (fiber : Transport allowClear f it.fiber) :
+    Transports allowClear m (settle id rest it).1 := by
+  have source : (∃ g ∈ m.fibers, Transport allowClear g it.fiber) ∨
+      (m.nextId ≤ it.fiber.id.value ∧ ∃ program flag budget context,
+        Transport allowClear (RunFiber.make it.fiber.id program flag budget context) it.fiber) :=
+    .inl ⟨f, mem, fiber⟩
   unfold settle
   split
   · exact machine.thenWrite source
@@ -213,261 +422,283 @@ theorem settle_follows {m : NativeMachine} {f : NFiber} (mem : f ∈ m.fibers) (
     · exact machine.thenWrite source
   · exact machine.thenWrite source
   · exact machine.thenWrite source
-  · apply FramesFollow.thenHalt
+  · apply Transports.thenHalt
     exact machine.thenWrite source
 
-/-- A loop command: one iteration of the native loop, settled. -/
-theorem loop_follows (root : NativeEff) (table : RowTable) (interp : NInterp) {m : NativeMachine}
-    {f : NFiber} (mem : f ∈ m.fibers) (id : FiberId) (yielding : Bool) (rest : List NCommand) :
-    FramesFollow m
-      (settle id rest (iteration (evaluator := evaluatorFor root table) interp m f yielding)).1 :=
-  settle_follows mem id rest _ (.ofInterferes (iteration_interferes root table interp m f yielding))
-    (.ofMoves (iteration_moves root table interp m f yielding))
-    (iteration_footprint root table interp m f yielding).id
+/-- A native loop iteration supplies both its other-fiber edits and its evaluated-fiber word. -/
+theorem loop_transports {allowClear : Prop} (root : NativeEff) (table : RowTable) (interp : NInterp)
+    {m : NativeMachine} {f : NFiber} (mem : f ∈ m.fibers) (id : FiberId)
+    (yielding : Bool) (rest : List NCommand) :
+    Transports allowClear m
+      (settle id rest (iteration (evaluator := evaluatorFor root table) interp m f yielding)).1 := by
+  have footprint := iteration_footprint root table interp m f yielding
+  exact settle_transports mem id rest _
+    (.ofInterferes (iteration_interferes root table interp m f yielding))
+    (.edit footprint.id footprint.exit (.ofMoves footprint.frame))
 
-/-- A delivery: one native evaluation, settled. -/
-theorem deliver_follows (root : NativeEff) (table : RowTable) {m : NativeMachine}
-    {f : NFiber} (mem : f ∈ m.fibers) (id : FiberId) (yielding : Bool) (rest : List NCommand) :
-    FramesFollow m (settle id rest (evaluateNative root m f yielding table)).1 :=
-  settle_follows mem id rest _ (.ofInterferes (evaluateNative_interferes root table m f yielding))
-    (.ofMoves (evaluateNative_moves root table m f yielding))
-    (evaluateNative_footprint root table m f yielding).id
+/-- A native delivery supplies the same joint transport. -/
+theorem deliver_transports {allowClear : Prop} (root : NativeEff) (table : RowTable)
+    {m : NativeMachine} {f : NFiber} (mem : f ∈ m.fibers) (id : FiberId)
+    (yielding : Bool) (rest : List NCommand) :
+    Transports allowClear m (settle id rest (evaluateNative root m f yielding table)).1 := by
+  have footprint := evaluateNative_footprint root table m f yielding
+  exact settle_transports mem id rest _
+    (.ofInterferes (evaluateNative_interferes root table m f yielding))
+    (.edit footprint.id footprint.exit (.ofMoves footprint.frame))
 
-/-- Interrupts recorded on each target in turn. -/
-theorem interruptEach_follows (interp : NInterp) (who : FiberId) (extra : ReasonAnnotations Ann) :
+/-- Interrupt each target through the same clearing-free record edit. -/
+theorem interruptEach_transports {allowClear : Prop} (interp : NInterp) (who : FiberId)
+    (extra : ReasonAnnotations Ann) :
     ∀ (targets : List FiberId) {m : NativeMachine} (acc : NativeMachine × List NCommand),
-      FramesFollow m acc.1 → FramesFollow m (interruptEach interp who extra targets acc).1
+      Transports allowClear m acc.1 → Transports allowClear m (interruptEach interp who extra targets acc).1
   | [], _, acc, h => h
   | t :: rest, m, acc, h => by
     unfold interruptEach
     simp only [List.foldl_cons]
-    apply interruptEach_follows interp who extra rest
+    apply interruptEach_transports interp who extra rest
     split
     · exact h
     · rename_i g found
-      apply FramesFollow.thenEmit
-      exact h.thenUpdate (List.mem_of_find?_eq_some found) (OtherEdit.interrupted interp g (some who) extra).id
-        (.single (.interrupted interp g (some who) extra))
+      apply Transports.thenEmit
+      exact h.thenUpdate (List.mem_of_find?_eq_some found)
+        (.edit (OtherEdit.id (.interrupted interp g (some who) extra))
+          (OtherEdit.exit (.interrupted interp g (some who) extra))
+          (.single (.interrupted interp g (some who) extra)))
 
-/-- The resumes a store owes, posted or run. -/
-theorem drainOwed_follows {m : NativeMachine} :
-    ∀ (m' : NativeMachine) (owed : List (Owed NCode)), FramesFollow m m' →
-      FramesFollow m (drainOwed m' owed).1
+/-- Store wakeups preserve frame transport while posting their commands. -/
+theorem drainOwed_transports {allowClear : Prop} {m : NativeMachine} :
+    ∀ (m' : NativeMachine) (owed : List (Owed NCode)), Transports allowClear m m' →
+      Transports allowClear m (drainOwed m' owed).1
   | m', [], h => h
   | m', d :: rest, h => by
     unfold drainOwed
     split
-    · exact drainOwed_follows m' rest h
-    · apply drainOwed_follows
+    · exact drainOwed_transports m' rest h
+    · apply drainOwed_transports
       unfold RunMachine.postTask
       split
       · exact h.thenHalt _
       · rename_i o found
-        apply FramesFollow.thenEmit
-        apply FramesFollow.thenArm
-        exact h.thenUpdate (List.mem_of_find?_eq_some found) rfl (.refl _)
+        apply Transports.thenEmit
+        apply Transports.thenArm
+        exact h.thenUpdate (List.mem_of_find?_eq_some found) (.edit rfl rfl (.refl _))
 
-/-- One observer of an exited fiber runs. -/
-theorem fireObserver_follows (interp : NInterp) {m : NativeMachine} (id : FiberId) (exit : ExitV)
-    (acc : NativeMachine × List NCommand) (h : FramesFollow m acc.1) (observer : Observer) :
-    FramesFollow m (fireObserver interp id exit acc observer).1 := by
+/-- An observer changes bookkeeping or records an interrupt; it clears no live frame. -/
+theorem fireObserver_transports {allowClear : Prop} (interp : NInterp) {m : NativeMachine}
+    (id : FiberId) (exit : ExitV) (acc : NativeMachine × List NCommand)
+    (h : Transports allowClear m acc.1) (observer : Observer) :
+    Transports allowClear m (fireObserver interp id exit acc observer).1 := by
   unfold fireObserver
   dsimp only
   split
   · exact h.thenEmit _
-  · refine FramesFollow.thenModify ?_ _ _ (fun _ => rfl) (fun _ => rfl)
-    exact h.thenEmit _
+  · exact (h.thenEmit _).thenModify _ _ (fun _ => rfl) (fun _ => rfl) (fun _ => rfl)
   · split
     · exact (h.thenEmit _).thenHalt _
-    · apply FramesFollow.thenState
-      exact h.thenEmit _
+    · exact (h.thenEmit _).thenState _
   · split
     · exact h.thenEmit _
     · rename_i w found
       split
       · exact h.thenEmit _
       · rename_i p pending
-        have source : (∃ g ∈ m.fibers, g.id = w.id ∧ FrameEdits g.frame w.frame) ∨
-            m.nextId ≤ w.id.value := by
-          rcases (h.thenEmit _).fibers w (List.mem_of_find?_eq_some found) with
-            ⟨g, mem, idEq, edits⟩ | fresh
-          · exact .inl ⟨g, mem, idEq, edits⟩
-          · exact .inr fresh
+        have source := (h.thenEmit _).fibers w (List.mem_of_find?_eq_some found)
         split
-        · refine FramesFollow.thenWrite ?_ source
+        · refine Transports.thenWrite ?_ source
           split
-          · exact interruptEach_follows interp _ _ _ _ (h.thenEmit _)
+          · exact interruptEach_transports interp _ _ _ _ (h.thenEmit _)
           · exact h.thenEmit _
-        · refine FramesFollow.thenWrite ?_ source
-          refine FramesFollow.thenModify ?_ _ _ (fun _ => rfl) (fun _ => rfl)
+        · refine Transports.thenWrite ?_ source
+          refine Transports.thenModify ?_ _ _ (fun _ => rfl) (fun _ => rfl) (fun _ => rfl)
           split
-          · exact interruptEach_follows interp _ _ _ _ (h.thenEmit _)
+          · exact interruptEach_transports interp _ _ _ _ (h.thenEmit _)
           · exact h.thenEmit _
   · split
     · exact h.thenEmit _
     · split
-      · apply FramesFollow.thenEmit
-        apply FramesFollow.thenUpdateRace
-        apply FramesFollow.thenUpdateRace
-        exact h.thenEmit _
-      · apply FramesFollow.thenUpdateRace
-        exact h.thenEmit _
+      · exact (((h.thenEmit _).thenUpdateRace _).thenUpdateRace _).thenEmit _
+      · exact (h.thenEmit _).thenUpdateRace _
   · exact (h.thenEmit _).thenEmit _
 
-/-- The exit path of a fiber whose frame follows from an old one: publish (the deferred bit
-cleared), clear when no observer waits, or re-enter with the children's interrupt. -/
-theorem exitFiber_follows (interp : NInterp) {m : NativeMachine} {f : NFiber} (mem : f ∈ m.fibers)
-    (exit : ExitV) : FramesFollow m (exitFiber interp m { f with running := false } exit).1 := by
+/-- Publication permits clearing only after the exit is present; the children branch retains a live word. -/
+theorem exitFiber_transports {allowClear : Prop} (interp : NInterp) {m : NativeMachine}
+    {f : NFiber} (mem : f ∈ m.fibers) (exit : ExitV) :
+    Transports allowClear m (exitFiber interp m { f with running := false } exit).1 := by
   unfold exitFiber
   split
   · unfold exitFiber.exitInterruptChildren
-    apply FramesFollow.thenEmit
-    exact (FramesFollow.refl m).thenUpdate mem rfl
-      (.tail (.single (.setDeferred _ false)) (.move (.answer _ _)))
+    apply Transports.thenEmit
+    exact (Transports.refl _ m).thenUpdate mem
+      (.edit rfl rfl (.tail (.single (.setDeferred _ false)) (.move (.answer _ _))))
   · unfold exitFiber.exitStore
     dsimp only
     split
-    · refine FramesFollow.thenWrite ?_
-        (.inl ⟨f, mem, rfl, .tail (.single (.setDeferred f.frame false)) (.clearStack _)⟩)
-      apply FramesFollow.thenEmit
-      exact (FramesFollow.refl m).thenUpdate mem rfl (.single (.setDeferred _ false))
-    · apply FramesFollow.thenEmit
-      exact (FramesFollow.refl m).thenUpdate mem rfl (.single (.setDeferred _ false))
+    · refine Transports.thenWrite ?_
+        (.inl ⟨f, mem, .exited rfl
+          (.tail (.single (.setDeferred f.frame false)) (.clearStack _)) rfl⟩)
+      apply Transports.thenEmit
+      exact (Transports.refl _ m).thenUpdate mem
+        (.exited rfl (.single (.setDeferred _ false)) rfl)
+    · apply Transports.thenEmit
+      exact (Transports.refl _ m).thenUpdate mem
+        (.exited rfl (.single (.setDeferred _ false)) rfl)
 
-/-- **Every command of the native loop**: the frames of the machine after it follow from the frames
-before it, by a word of frame edits per fiber, or the fiber is new. The pointer of the frame half of
-the proposed claim `command-moves`. -/
+/-- One census serves raw commands and commands whose clear target has exited.
+The guarded instance supplies a live word with no `clearStack` edit.
+It retains actual initialized fibers without asserting ownership of their source program. -/
 @[semantics "reactive-scheduling"]
-theorem driveStep_framesFollow (root : NativeEff) (table : RowTable) (interp : NInterp)
-    (m : NativeMachine) (c : NCommand) (rest : List NCommand) :
-    FramesFollow m (driveStep (evaluator := evaluatorFor root table) interp m c rest).1 := by
+theorem driveStep_transports {allowClear : Prop} (root : NativeEff) (table : RowTable)
+    (interp : NInterp) (m : NativeMachine) (c : NCommand) (rest : List NCommand)
+    (clear : ∀ id, c = .exitDone id → ∀ f, m.fiber? id = some f → f.exit = none → allowClear) :
+    Transports allowClear m (driveStep (evaluator := evaluatorFor root table) interp m c rest).1 := by
   cases c with
   | evaluate id =>
     simp only [driveStep]
     split
-    · exact .refl _
+    · exact .refl _ _
     · rename_i f found
       split
-      · exact .refl _
-      · apply FramesFollow.thenEmit
-        exact (FramesFollow.refl m).thenUpdate (List.mem_of_find?_eq_some found) rfl (.refl _)
+      · exact .refl _ _
+      · apply Transports.thenEmit
+        exact (Transports.refl _ m).thenUpdate (List.mem_of_find?_eq_some found)
+          (.edit rfl rfl (.refl _))
   | loop id yielding =>
     simp only [driveStep]
     split
-    · exact .refl _
+    · exact .refl _ _
     · rename_i f found
-      exact loop_follows root table interp (List.mem_of_find?_eq_some found) id yielding rest
+      exact loop_transports root table interp (List.mem_of_find?_eq_some found) id yielding rest
   | deliver id yielding =>
     simp only [driveStep]
     split
-    · exact .refl _
+    · exact .refl _ _
     · rename_i f found
-      exact deliver_follows root table (List.mem_of_find?_eq_some found) id yielding rest
+      exact deliver_transports root table (List.mem_of_find?_eq_some found) id yielding rest
   | finish id exit =>
     simp only [driveStep]
     split
-    · exact .refl _
+    · exact .refl _ _
     · rename_i f found
-      exact exitFiber_follows interp (List.mem_of_find?_eq_some found) exit
+      exact exitFiber_transports interp (List.mem_of_find?_eq_some found) exit
   | resume id token answer =>
     simp only [driveStep]
     split
-    · exact .refl _
+    · exact .refl _ _
     · rename_i t found
       split
       · split
-        · apply FramesFollow.thenEmit
-          exact (FramesFollow.refl m).thenUpdate (List.mem_of_find?_eq_some found) rfl
-            (.single (.move (.answer _ _)))
-        · exact .refl _
-      · exact .refl _
+        · apply Transports.thenEmit
+          exact (Transports.refl _ m).thenUpdate (List.mem_of_find?_eq_some found)
+            (.edit rfl rfl (.single (.move (.answer _ _))))
+        · exact .refl _ _
+      · exact .refl _ _
   | launch raceId =>
     simp only [driveStep]
     split
-    · exact .refl _
+    · exact .refl _ _
     · split
-      · exact .refl _
+      · exact .refl _ _
       · split
-        · exact .refl _
+        · exact .refl _ _
         · split
-          · exact .refl _
-          · apply FramesFollow.thenEmit
-            apply FramesFollow.thenUpdateRace
-            exact .ofInterferes (Interferes.launchEntrant _ _ _ _ _ _)
+          · exact .refl _ _
+          · exact ((Transports.ofInterferes (Interferes.launchEntrant _ _ _ _ _ _)).thenUpdateRace _).thenEmit _
   | enrollRace raceId child =>
     simp only [driveStep]
     split
     · split
-      · exact fireObserver_follows interp _ _ _ ((FramesFollow.refl m).thenUpdateRace _) _
-      · exact ((FramesFollow.refl m).thenUpdateRace _).thenModify _ _ (fun _ => rfl) (fun _ => rfl)
-    · exact .refl _
+      · exact fireObserver_transports interp _ _ _ ((Transports.refl _ m).thenUpdateRace _) _
+      · exact ((Transports.refl _ m).thenUpdateRace _).thenModify _ _
+          (fun _ => rfl) (fun _ => rfl) (fun _ => rfl)
+    · exact .refl _ _
   | registrationDone raceId yielding =>
     simp only [driveStep]
     split
-    · exact .refl _
+    · exact .refl _ _
     · split
-      · exact (FramesFollow.refl m).thenUpdateRace _
+      · exact (Transports.refl _ m).thenUpdateRace _
       · rename_i f foundHost
         split
-        · exact settle_follows (m := m) (List.mem_of_find?_eq_some foundHost) _ rest _
-            ((FramesFollow.refl m).thenUpdateRace _) (.single (.move (.answer _ _))) rfl
-        · exact settle_follows (m := m) (List.mem_of_find?_eq_some foundHost) _ rest _
-            (((FramesFollow.refl m).thenUpdateRace _).thenEmit _) (.single (.move (.push _ _))) rfl
+        · exact settle_transports (m := m) (List.mem_of_find?_eq_some foundHost) _ rest _
+            ((Transports.refl _ m).thenUpdateRace _) (.edit rfl rfl (.single (.move (.answer _ _))))
+        · exact settle_transports (m := m) (List.mem_of_find?_eq_some foundHost) _ rest _
+            (((Transports.refl _ m).thenUpdateRace _).thenEmit _) (.edit rfl rfl (.single (.move (.push _ _))))
   | interruptTarget target who extra =>
     simp only [driveStep]
     split
-    · exact .refl _
+    · exact .refl _ _
     · rename_i g found
-      apply FramesFollow.thenEmit
-      exact (FramesFollow.refl m).thenUpdate (List.mem_of_find?_eq_some found)
-        (OtherEdit.interrupted interp g who extra).id (.single (.interrupted interp g who extra))
+      exact ((Transports.refl _ m).thenUpdate (List.mem_of_find?_eq_some found)
+        (.edit (OtherEdit.id (.interrupted interp g who extra))
+          (OtherEdit.exit (.interrupted interp g who extra))
+          (.single (.interrupted interp g who extra)))).thenEmit _
   | afterInterrupt host yielding kind =>
     simp only [driveStep]
     split
-    · exact .refl _
+    · exact .refl _ _
     · rename_i f found
-      exact settle_follows (List.mem_of_find?_eq_some found) _ rest _ (.refl m)
-        (.single (.move (.answer _ _))) rfl
+      exact settle_transports (List.mem_of_find?_eq_some found) _ rest _ (.refl _ m)
+        (.edit rfl rfl (.single (.move (.answer _ _))))
   | raceCancel raceId host yielding remaining visited =>
     simp only [driveStep]
     split
-    · exact .refl _
+    · exact .refl _ _
     · split
-      · exact .refl _
-      · split <;> exact .refl _
+      · exact .refl _ _
+      · split <;> exact .refl _ _
   | trackChild parent child =>
     simp only [driveStep]
     split
-    · exact .refl _
+    · exact .refl _ _
     · split
-      · exact .refl _
-      · refine FramesFollow.thenModify ?_ _ _ (fun _ => rfl) (fun _ => rfl)
-        exact (FramesFollow.refl m).thenModify _ _ (fun _ => rfl) (fun _ => rfl)
+      · exact .refl _ _
+      · refine Transports.thenModify ?_ _ _ (fun _ => rfl) (fun _ => rfl) (fun _ => rfl)
+        exact (Transports.refl _ m).thenModify _ _ (fun _ => rfl) (fun _ => rfl) (fun _ => rfl)
   | observe id exit observer =>
     simp only [driveStep]
-    exact fireObserver_follows interp id exit (m, []) (.refl m) observer
+    exact fireObserver_transports interp id exit (m, []) (.refl _ m) observer
   | exitDone id =>
     simp only [driveStep]
     split
-    · exact .refl _
+    · exact .refl _ _
     · rename_i f found
-      exact (FramesFollow.refl m).thenUpdate (List.mem_of_find?_eq_some found) rfl
-        (.single (.clearStack _))
+      exact (Transports.refl _ m).thenUpdate (List.mem_of_find?_eq_some found)
+        (.clear rfl rfl rfl (clear id rfl f found))
   | closeParAwait host yielding fibers =>
     simp only [driveStep]
     split
-    · exact .refl _
+    · exact .refl _ _
     · rename_i f found
-      exact settle_follows (List.mem_of_find?_eq_some found) _ rest _ (.refl m)
-        (.tail (.single (.pushIterator _ _ _)) (.move (.answer _ _))) rfl
+      exact settle_transports (List.mem_of_find?_eq_some found) _ rest _ (.refl _ m)
+        (.edit rfl rfl (.tail (.single (.pushIterator _ _ _)) (.move (.answer _ _))))
   | link mode scope target interruptor extra =>
     simp only [driveStep]
     exact .ofInterferes (Interferes.linkScope _ _ _ _ _ _ _)
   | drainDue =>
     simp only [driveStep]
-    exact drainOwed_follows _ _ ((FramesFollow.refl m).thenState _)
+    exact drainOwed_transports _ _ ((Transports.refl _ m).thenState _)
   | wake list phase =>
     simp only [driveStep]
-    exact (FramesFollow.refl m).thenState _
+    exact (Transports.refl _ m).thenState _
+
+/-- The original raw frame classification is a projection of the joint command census. -/
+@[semantics "reactive-scheduling"]
+theorem driveStep_framesFollow (root : NativeEff) (table : RowTable) (interp : NInterp)
+    (m : NativeMachine) (c : NCommand) (rest : List NCommand) :
+    FramesFollow m (driveStep (evaluator := evaluatorFor root table) interp m c rest).1 :=
+  (driveStep_transports (allowClear := True) root table interp m c rest
+    (fun _ _ _ _ _ => True.intro)).frames
+
+/-- An admitted clear command targets an exited fiber; every live successor retains a clearing-free word. -/
+@[semantics "reactive-scheduling"]
+theorem driveStep_liveTransports (root : NativeEff) (table : RowTable) (interp : NInterp)
+    (m : NativeMachine) (c : NCommand) (rest : List NCommand)
+    (clear : ∀ id, c = .exitDone id → ∀ f, m.fiber? id = some f → f.exit.isSome = true) :
+    Transports False m (driveStep (evaluator := evaluatorFor root table) interp m c rest).1 := by
+  apply driveStep_transports
+  intro id command f found live
+  have exited := clear id command f found
+  rw [live] at exited
+  cases exited
 
 end Effect4.Program.Moves

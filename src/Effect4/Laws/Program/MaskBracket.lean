@@ -1,5 +1,6 @@
 import Effect4.Laws.Machine.MaskBracket
 import Effect4.Laws.Program.MaskRuns
+import Effect4.Laws.Program.CommandFrames
 import Effect4.Laws.Program.Guard.Decision
 
 /-!
@@ -164,6 +165,22 @@ theorem guarded_driveStep_maskRuns (p : NativeEff) (table : RowTable) (bases : L
     cases lookup.symm.trans found
     exact Or.inl exited
   | _ => trivial
+
+/-- The existing command authority discharges the live transport boundary.
+Consumer: run stack locality before the region bracket's entry stack is reached.
+This gives no progress and does not by itself discharge the bracket's `inside` premise. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem guarded_driveStep_liveTransports (p : NativeEff) (table : RowTable)
+    (m : NativeMachine) (c : NCmd) (rest : List NCmd)
+    (queue : GuardQueue p table m (c :: rest)) :
+    Moves.Transports False m
+      (driveStep (evaluator := evaluatorFor p table) (interpOf p table) m c rest).1 := by
+  apply Moves.driveStep_liveTransports
+  intro id command f found
+  subst c
+  obtain ⟨g, lookup, exited⟩ := queue.authority _ (List.mem_cons_self ..)
+  cases lookup.symm.trans found
+  exact exited
 
 /-! ## A cut of a compiled program's command loop -/
 

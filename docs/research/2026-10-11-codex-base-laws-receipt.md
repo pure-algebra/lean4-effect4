@@ -74,3 +74,10 @@ The native mask proof consumes that witness and the existing moves.
 The receipt retains its narrow build, audit, changed files and measured line counts.
 Its raw-command control establishes why live-frame classification needs the existing command authority.
 The original scenario and remaining base-law obligations stay open as recorded above.
+
+## Guarded live command words
+
+The native command census now retains clearing-free words for live fibers.
+The raw frame theorem projects the same census.
+See [the checked receipt](2026-10-10-goals-packet/codex/C2LiveCommandsReceipt.md).
+The complete birth witness and run stack relation remain open.
