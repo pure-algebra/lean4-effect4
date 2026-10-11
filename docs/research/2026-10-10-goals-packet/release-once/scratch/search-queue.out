@@ -1,0 +1,12 @@
+one script from parked: a flush: none
+  (244 ms)
+one script from parked: a cancellation of worker 1: none
+  (239 ms)
+the named run closed, checked at every prefix: none
+  (252 ms)
+total 3: depth 1 from parked, running and blocked: 57 scripts, 0 failing
+  (750 ms)
+total 3: fuel 0, 8, .., 200 on two scripts, every run checked, funded or cut: 52 runs, 32 cut, 0 failing, first none
+  (27973 ms)
+red control, twice crew: fuel 0, 8, .., 200 on two scripts: 52 runs, 47 cut, 32 failing, first some (80, 0)
+  (29923 ms)

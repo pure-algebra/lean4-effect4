@@ -1,0 +1,44 @@
+total 0: depth 3 from parked: 6859 scripts, 0 failing, first none
+  (3761 ms)
+total 0: depth 3 from running: 6859 scripts, 0 failing, first none
+  (5746 ms)
+total 0: depth 3 from the cancelled run: 6859 scripts, 0 failing, first none
+  (5222 ms)
+total 0: fuel 0..300, compile fuel 2000: 1505 runs, 0 failing, first none
+  (30245 ms)
+total 0: compile fuel 0..120, fuel 1000: 605 runs, 0 failing, first none
+  (10569 ms)
+total 1: depth 3 from parked: 6859 scripts, 0 failing, first none
+  (4991 ms)
+total 1: depth 3 from running: 6859 scripts, 0 failing, first none
+  (6115 ms)
+total 1: depth 3 from the cancelled run: 6859 scripts, 0 failing, first none
+  (5589 ms)
+total 1: fuel 0..300, compile fuel 2000: 1505 runs, 0 failing, first none
+  (21986 ms)
+total 1: compile fuel 0..120, fuel 1000: 605 runs, 0 failing, first none
+  (8371 ms)
+total 2: depth 3 from parked: 6859 scripts, 0 failing, first none
+  (5552 ms)
+total 2: depth 3 from running: 6859 scripts, 0 failing, first none
+  (6550 ms)
+total 2: depth 3 from the cancelled run: 6859 scripts, 0 failing, first none
+  (5508 ms)
+total 2: fuel 0..300, compile fuel 2000: 1505 runs, 0 failing, first none
+  (18482 ms)
+total 2: compile fuel 0..120, fuel 1000: 605 runs, 0 failing, first none
+  (8008 ms)
+total 3: depth 3 from parked: 6859 scripts, 0 failing, first none
+  (4027 ms)
+total 3: depth 3 from running: 6859 scripts, 0 failing, first none
+  (7549 ms)
+total 3: depth 3 from the cancelled run: 6859 scripts, 0 failing, first none
+  (7121 ms)
+total 3: fuel 0..300, compile fuel 2000: 1505 runs, 0 failing, first none
+  (23589 ms)
+total 3: compile fuel 0..120, fuel 1000: 605 runs, 0 failing, first none
+  (8522 ms)
+red control, twice crew: depth 2 from parked: 361 scripts, 135 failing, first some 2
+  (261 ms)
+red control, twice crew: fuel 0..300: 1505 runs, 1282 failing, first some (41, 1)
+  (22005 ms)

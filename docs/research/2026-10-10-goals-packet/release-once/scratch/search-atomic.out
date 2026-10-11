@@ -1,0 +1,8 @@
+depth 4 from the open program: 50625 scripts, 0 failing, first none
+  (29275 ms)
+depth 3 from started: 3375 scripts, 0 failing, first none
+  (9022 ms)
+depth 3 from the root's start alone: 3375 scripts, 0 failing, first none
+  (10481 ms)
+red control, the finalizer that notes twice: depth 2 from the open program: 225 scripts, 7 failing, first some 2
+  (1209 ms)
