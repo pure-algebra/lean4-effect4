@@ -1,4 +1,5 @@
-import Effect4.Laws.Program.ReleaseCustody.Control
+import Effect4.Laws.Program.ReleaseCustody.Evaluation
+import Effect4.Laws.Machine.ScopeIdentity
 import Effect4.Laws.Machine.ForkLedgerInvariant
 import Effect4.Laws.Run.Frame
 import ProofGraph.Registry
@@ -47,6 +48,51 @@ structure Ready (q : List Nat) (m : NativeMachine) : Prop where
   pending : PendingShape m
   dispatcher : DispatcherZero q m
   funded : Funded q m []
+
+/-- Updating one existing row preserves native shapes and consumes only its own credits.
+Consumer: the actual yield, interrupt and dispatcher edits in `outer_custody`. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem ready_update (q : List Nat) (m : NativeMachine) (old next : Fiber)
+    (held : Ready q m) (found : m.fiber? old.id = some old) (key : next.id = old.id)
+    (pending : ∀ p ∈ next.pending, p.resumeWith = .exitsValue ∨ p.resumeWith = .void ∨
+      ∃ exit, p.resumeWith = .continueWith (.restore exit))
+    (dispatcher : ∀ bucket ∈ next.dispatcher.buckets, TasksZero q bucket.tasks)
+    (credit : fiberCredits q next ≤ fiberCredits q old) : Ready q (m.update next) := by
+  have member : old ∈ m.fibers := List.mem_of_find?_eq_some found
+  refine ⟨ForkLedger.Invariant.update_ok held.fibers next, held.scopes, ?_, ?_, ?_⟩
+  · intro fiber present p queued
+    change fiber ∈ m.fibers.map (fun g => if g.id = next.id then next else g) at present
+    obtain ⟨before, before_mem, equal⟩ := List.mem_map.mp present
+    rw [← equal] at queued
+    split at queued
+    · exact pending p queued
+    · exact held.pending before before_mem p queued
+  · intro fiber present bucket queued
+    change fiber ∈ m.fibers.map (fun g => if g.id = next.id then next else g) at present
+    obtain ⟨before, before_mem, equal⟩ := List.mem_map.mp present
+    rw [← equal] at queued
+    split at queued
+    · exact dispatcher bucket queued
+    · exact held.dispatcher before before_mem bucket queued
+  · have changed := update_credits q m old next held.fibers.idsUnique member key
+    have funded := held.funded
+    unfold Funded at funded ⊢
+    change m.trace.countP (ReleaseTrace.releaseAt q) + machineCredits q (m.update next) + 0 ≤
+      m.trace.countP (ReleaseTrace.registeredAt q)
+    omega
+
+/-- A zero-count event emission retains the concrete ready assertion.
+Consumer: task execution, interruption and actual scheduler bookkeeping in `outer_custody`. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem ready_emit (q : List Nat) (m : NativeMachine) (events : List ReleaseTrace.Event)
+    (held : Ready q m) (starts : events.countP (ReleaseTrace.releaseAt q) = 0)
+    (registrations : events.countP (ReleaseTrace.registeredAt q) = 0) : Ready q (m.emit events) := by
+  refine ⟨held.fibers, held.scopes, held.pending, held.dispatcher, ?_⟩
+  have funded := held.funded
+  unfold Funded at funded ⊢
+  rw [emit_credits, RunMachine.emit_trace, List.countP_append, List.countP_append,
+    starts, registrations, Nat.add_zero, Nat.add_zero]
+  exact funded
 
 /-- The exact command interface already carried by Machine.Lift, with its actual drained snapshot.
 Consumer: `outer_custody`. -/

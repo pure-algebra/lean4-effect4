@@ -1,4 +1,4 @@
-import Effect4.Laws.Program.ReleaseCustody.Control
+import Effect4.Laws.Program.ReleaseCustody.Evaluation
 import ProofGraph.AxiomAudit
 
 /-! Reader for the forced-yield clause of Execution.command_custody.
@@ -41,4 +41,23 @@ example (q : List Nat) (f : Fiber) (scope : Nat) (a : Val) (fin : FinName)
       yieldOverride := none } = fiberCredits q f :=
   scope_add_yield_frame_credits q f scope a fin lower current stack
 
+/-- The direct interruption edit consumes the checked callback-sensitive stack bound. -/
+example (q : List Nat) (f : Fiber) (cause : CauseV) :
+    fiberCredits q { f with frame := { f.frame with current := .failure cause } } ≤ fiberCredits q f :=
+  Evaluation.failure_fiber_le q f cause
+
+/-- Actual yield injection consumes the arbitrary selected machine row and pending command suffix. -/
+example (root : NativeEff) (table : RowTable) (m : NativeMachine) (id : FiberId)
+    (f : Fiber) (pending : List Command) (q : List Nat)
+    (unique : (m.fibers.map RunFiber.id).Nodup)
+    (funded : Funded q m (.loop id false :: pending)) (found : m.fiber? id = some f)
+    (interrupt : f.frame.deferredInterrupt = false)
+    (verdict : yieldVerdict (countOp f) = true) (prevent : f.preventYield = false) :
+    Funded q (driveStep (evaluator := evaluatorFor root table) (interpOf root table) m
+      (.loop id false) pending).1
+      (driveStep (evaluator := evaluatorFor root table) (interpOf root table) m
+        (.loop id false) pending).2 :=
+  Evaluation.forced_yield_loop_funded root table m id f pending q unique funded found interrupt verdict prevent
+
 #axiom_audit Effect4.Laws.Program.ReleaseCustody.Names Effect4.Laws.Program.ReleaseCustody.Control
+  Effect4.Laws.Program.ReleaseCustody.Evaluation
