@@ -116,4 +116,44 @@ theorem intAddIn_eq_some_iff (bound : Nat) (x y v : Val)
     | _ => exact ⟨fun h => (nomatch h), fun h => (nomatch h.1)⟩
   | _ => exact ⟨fun h => (nomatch h), fun h => (nomatch h.1)⟩
 
+/-- Checked multiplication tests the quotient before computing the product.
+Consumer: the profile-mul-exact compatibility claim and its actual atom reader. -/
+def scaleIn (bound a b : Nat) : Option Nat :=
+  if b = 0 then some 0 else if a ≤ bound / b then some (a * b) else none
+
+/-- The checked multiplication answers exactly for the reference product inside the bound.
+This is a proof-side judgment; target rows still require their external controls. -/
+theorem scaleIn_eq_some_iff (bound a b n : Nat) :
+    scaleIn bound a b = some n ↔ a * b = n ∧ n ≤ bound := by
+  unfold scaleIn
+  by_cases zero : b = 0
+  · rw [if_pos zero, zero, Nat.mul_zero]
+    constructor
+    · intro accepted
+      cases accepted
+      exact ⟨rfl, Nat.zero_le _⟩
+    · rintro ⟨rfl, _⟩
+      rfl
+  · rw [if_neg zero]
+    have positive : 0 < b := Nat.pos_of_ne_zero zero
+    constructor
+    · intro accepted
+      split at accepted
+      · rename_i fits
+        cases accepted
+        exact ⟨rfl, (Nat.le_div_iff_mul_le positive).mp fits⟩
+      · cases accepted
+    · rintro ⟨rfl, fits⟩
+      rw [if_pos ((Nat.le_div_iff_mul_le positive).mpr fits)]
+
+/-- The represented natural multiplication uses exactly the checked product judgment.
+Claim: profile-mul-exact, translation-simulation R8. Target execution remains a separate control. -/
+theorem mulIn_eq_some_iff (bound a b n : Nat) :
+    scaleIn bound a b = some n ↔
+      NativeAtom.eval .mul [.nat a, .nat b] = some (.nat n) ∧ Within bound (.nat n) = true := by
+  change scaleIn bound a b = some n ↔
+    some (Val.nat (a * b)) = some (Val.nat n) ∧ decide (n ≤ bound) = true
+  simp only [Option.some.injEq, Store.Val.nat.injEq, decide_eq_true_eq]
+  exact scaleIn_eq_some_iff bound a b n
+
 end Effect4.Program

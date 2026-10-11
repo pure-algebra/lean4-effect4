@@ -49,6 +49,7 @@ import Test.Counterexamples.Machine.Semantics.SelfInterrupt
 import Test.Machine.EditMessages
 import Test.Machine.EditFields
 import Test.Machine.ReferenceFootprint
+import Test.Machine.NaturalProfile
 import Test.Counterexamples.Machine.Semantics.StrongExitDefect
 import Test.Counterexamples.Machine.Semantics.InterruptEscape
 import Test.Counterexamples.Machine.Semantics.InterruptCarrier
