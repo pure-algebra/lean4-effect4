@@ -1,6 +1,6 @@
 import Test.Dogfood.Proofs.HostTimeoutNative
 import Effect4.Laws.Program.Simulation.Deliver
-import Effect4.Laws.Machine.PopTrace
+import Effect4.Laws.Machine.PopTraceFamily
 
 /-!
 # Ordered timeout values through actual frame pops
@@ -28,6 +28,23 @@ inductive Masks : List NCode → Prop
   | cons (flag : Bool) {rest : List NCode} (tail : Masks rest) :
       Masks (.setInterruptible flag :: rest)
 
+/-- The exact source saved stack is an instance of the shared ordered path.
+Consumer: actual pop family transport, including source loop frames. -/
+theorem stack_path {B : List Val} {input output : Kind} {frames : List NCode}
+    (stack : StackAt B input output frames) :
+    Effect4.Contracts.Path (SavedAt B) input output frames := by
+  induction stack with
+  | nil kind => exact .nil kind
+  | cons head tail ih => exact .cons head ih
+
+/-- Reading the shared path retains the exact source saved-frame witnesses. -/
+theorem path_stack {B : List Val} {input output : Kind} {frames : List NCode}
+    (path : Effect4.Contracts.Path (SavedAt B) input output frames) :
+    StackAt B input output frames := by
+  induction path with
+  | nil kind => exact .nil kind
+  | cons head tail ih => exact .cons head ih
+
 /-- Administrative masks have the same input and output value class. -/
 theorem masks_stack {B : List Val} (kind : Kind) {frames : List NCode}
     (owned : Masks frames) : StackAt B kind kind frames := by
@@ -39,9 +56,7 @@ theorem masks_stack {B : List Val} (kind : Kind) {frames : List NCode}
 theorem stack_append {B : List Val} {input middle output : Kind} {first second : List NCode}
     (left : StackAt B input middle first) (right : StackAt B middle output second) :
     StackAt B input output (first ++ second) := by
-  induction left with
-  | nil => exact right
-  | cons head tail ih => exact .cons head (ih right)
+  exact path_stack (Effect4.Contracts.Path.append (stack_path left) (stack_path right))
 
 /-- Every actual frame hook retains the administrative scratch assertion. -/
 theorem ensure_masks {B : List Val} {input output : Kind} {frame : NCode}
@@ -161,21 +176,18 @@ theorem pop_from {B : List Val} (demand : Effect4.Arm) (normal : demand = .contA
     {input output : Kind} {frames : List NCode} (fiber : NativeFrame) (cause : Option CauseV)
     (owned : StackAt B input output frames) (scratch : Masks fiber.stack) :
     PopAt B demand input output (FrameFiber.popFrom demand skip frames fiber cause) := by
-  obtain ⟨parts, suffix, trace⟩ := Effect4.Machine.PopTrace.popFrom_spec demand skip frames fiber cause
-  generalize result : FrameFiber.popFrom demand skip frames fiber cause = popped at trace ⊢
-  clear result
-  induction trace generalizing input output with
-  | nil fiber cause =>
-    cases owned
-    exact ⟨fun _ => rfl, ⟨_, masks_stack _ scratch⟩, scratch⟩
-  | selected frame frames fiber cause answer chosen kept =>
-    cases owned with
-    | cons saved rest => exact selected_answer demand fiber frames answer saved rest scratch chosen
-  | continued frame frames fiber before after parts suffix tail passed empty next ih =>
-    cases owned with
-    | @cons _ middle _ _ _ saved rest =>
+  have family : PopTrace.Family demand skip (SavedAt B)
+      (fun fiber => Masks fiber.stack) (fun input output _ pop => PopAt B demand input output pop) := by
+    constructor
+    · intro kind fiber cause scratch
+      exact ⟨fun _ => rfl, ⟨_, masks_stack _ scratch⟩, scratch⟩
+    · intro input middle output frame frames fiber cause answer saved path scratch chosen kept
+      exact selected_answer demand fiber frames answer saved (path_stack path) scratch chosen
+    · intro input middle frame fiber after saved scratch
+      exact (pushed_masks demand normal skip (frame.ensure fiber).1 after (ensure_masks saved fiber scratch)).1
+    · intro input middle output frame frames fiber before after tail saved path scratch passed empty answered
+      have rest := path_stack path
       have ensured := ensure_masks saved fiber scratch
-      have answered := ih rest (pushed_masks demand normal skip (frame.ensure fiber).1 after ensured).1
       refine pop_input (next := middle) ?_ (pass_on frame _
         (join_pushed demand normal skip (frame.ensure fiber).1 frames tail after middle output ensured rest answered))
       intro demanded
@@ -183,14 +195,14 @@ theorem pop_from {B : List Val} (demand : Effect4.Arm) (normal : demand = .contA
       · subst demand; exact value_pass saved (answer_missing frame .contA _ missing)
       · rw [safe demanded] at skipped
         cases skipped
-  | hooked frame frames fiber before after tail passed answered =>
-    cases owned with
-    | @cons _ middle _ _ _ saved rest =>
+    · intro input middle output frame frames fiber before after tail saved path scratch passed answered
+      have rest := path_stack path
       have ensured := ensure_masks saved fiber scratch
       obtain ⟨masks, empty | ⟨error, failed⟩⟩ := pushed_masks demand normal skip (frame.ensure fiber).1 after ensured
       · exact False.elim (answered empty)
       · simp only [FrameFiber.passOn, FrameFiber.joinPushed, failed, PopAt]
         exact ⟨middle, .head (.failure middle error), stack_append (masks_stack middle masks) rest⟩
+  exact family.popFrom input output frames fiber cause (stack_path owned) scratch
 
 /-- The actual continuation pop retains its typed answer and saved suffix. -/
 theorem get_cont {B : List Val} {input output : Kind} (fiber : NativeFrame)

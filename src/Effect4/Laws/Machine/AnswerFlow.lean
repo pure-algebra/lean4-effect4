@@ -1,4 +1,5 @@
 import Effect4.Machine.Frames
+import Effect4.Laws.Contracts.FramePath
 import Effect4.Laws.Auto.RuleSets
 
 /-!
@@ -103,6 +104,26 @@ inductive ResultAt
       ResultAt model interp world output next pushed
 end
 
+/-- The semantic saved stack is an instance of the shared ordered path.
+Consumer: native pop family transport. -/
+theorem stack_path {world : World} {input output : Kind} {frames : List (Prim ν σ β ε δ ι α)}
+    (stack : StackAt model interp world input output frames) :
+    Effect4.Contracts.Path (SavedAt model interp world) input output frames := by
+  induction frames generalizing input output with
+  | nil => cases stack; exact .nil input
+  | cons frame rest ih =>
+    cases stack with
+    | cons head tail => exact .cons head (ih tail)
+
+/-- The shared path retains every semantic saved-frame witness.
+Consumer: callback suffixes returned by native pop family transport. -/
+theorem path_stack {world : World} {input output : Kind} {frames : List (Prim ν σ β ε δ ι α)}
+    (path : Effect4.Contracts.Path (SavedAt model interp world) input output frames) :
+    StackAt model interp world input output frames := by
+  induction path with
+  | nil kind => exact .nil world kind
+  | cons head tail ih => exact .cons head ih
+
 /-- The current answer class joins the saved list's input class.
 Consumer: state-changing native operations and actual primitive frame steps. -/
 def FrameAt (world : World) (output : Kind) (frame : FrameFiber ν σ β ε δ ι α) : Prop :=
@@ -129,11 +150,8 @@ theorem stack_mono {world nextWorld : World} (future : model.future world nextWo
     {input output : Kind} {frames : List (Prim ν σ β ε δ ι α)}
     (held : StackAt model interp world input output frames) :
     StackAt model interp nextWorld input output frames := by
-  induction frames generalizing input output with
-  | nil => cases held; exact .nil nextWorld input
-  | cons frame rest ih =>
-    cases held with
-    | cons head tail => exact .cons (saved_mono model interp future head) (ih tail)
+  exact path_stack model interp (Effect4.Contracts.Path.map
+    (fun _ _ _ saved => saved_mono model interp future saved) (stack_path model interp held))
 
 /-- A state-changing sync answer joins the same saved input class in the new state.
 Consumer: real native store-operation equations supply the returned value and future relation. -/

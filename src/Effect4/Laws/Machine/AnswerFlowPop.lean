@@ -1,5 +1,5 @@
 import Effect4.Laws.Machine.AnswerFlowHooks
-import Effect4.Laws.Machine.PopTrace
+import Effect4.Laws.Machine.PopTraceFamily
 
 /-!
 Concepts: store-typing R4 and scope-lifetime-finalization R11.
@@ -45,26 +45,26 @@ theorem popFrom_value_selected (world : World) (input output : Kind)
     ∃ incoming middle, model.value world incoming value ∧
       SavedAt model interp world incoming middle selected ∧
       StackAt model interp world middle output (FrameFiber.popFrom .contA false frames fiber).fiber.stack := by
-  obtain ⟨parts, suffix, trace⟩ := PopTrace.popFrom_spec .contA false frames fiber none
-  generalize result : FrameFiber.popFrom .contA false frames fiber = popped at trace found ⊢
-  clear result
-  generalize incoming : (none : Option (Cause ε δ ι α)) = cause at trace
-  clear incoming
-  induction trace generalizing input with
-  | nil => cases found
-  | selected head tail fiber cause answer chosen kept =>
-    cases stack with
-    | @cons _ _ middle _ _ _ callback suffix =>
+  have family : PopTrace.Family .contA false (SavedAt model interp world)
+      (fun fiber => fiber.stack = [])
+      (fun input output _ pop => model.value world input value → pop.answer = .frame selected →
+        ∃ incoming middle, model.value world incoming value ∧ SavedAt model interp world incoming middle selected ∧
+          StackAt model interp world middle output pop.fiber.stack) := by
+    constructor
+    · intro kind fiber cause scratch good found
+      cases found
+    · intro input middle output head tail fiber cause answer callback path empty chosen kept good found
       have shape := Prim.answerOf_frame_eq head selected .contA _
         (chosen.trans (congrArg some found))
       rw [shape.1]
       have scratch : StackAt model interp world middle middle fiber.stack := by
         rw [empty]; exact .nil world middle
       exact ⟨input, middle, good, callback,
-        stack_append model interp (ensure_stack model interp world middle middle head fiber scratch) suffix⟩
-  | continued head tail fiber before after parts suffix tailPop passed drained next ih =>
-    cases stack with
-    | @cons _ _ middle _ _ _ callback suffix =>
+        stack_append model interp (ensure_stack model interp world middle middle head fiber scratch)
+          (path_stack model interp path)⟩
+    · intro input middle head fiber after callback empty
+      rw [FrameFiber.passPushed_fiber_cause]; exact drain_empty .contA false head fiber empty
+    · intro input middle output head tail fiber before after tailPop callback path empty passed drained next good found
       have missing : head.hasArm .contA = false := by
         rcases passed with ⟨chosen, _⟩ | ⟨answer, _, skipped, _⟩
         · exact PopTrace.answer_missing head .contA _ chosen
@@ -73,14 +73,14 @@ theorem popFrom_value_selected (world : World) (input output : Kind)
         cases callback with
         | mk _ _ _ _ skip _ _ _ _ => exact skip world (model.future_refl world) value good missing
       simp only [FrameFiber.passOn, FrameFiber.joinPushed, drained] at found ⊢
-      exact ih middle (by rw [FrameFiber.passPushed_fiber_cause]; exact drain_empty .contA false head fiber empty)
-        nextGood suffix found
-  | hooked head tail fiber before after tailPop passed answered =>
-    unfold FrameFiber.passOn FrameFiber.joinPushed at found
-    split at found
-    · rename_i drained; exact False.elim (answered drained)
-    · rw [FrameFiber.passPushed_answer_cause] at found
-      exact False.elim (drain_not_frame .contA false rfl head selected fiber empty found)
+      exact next nextGood found
+    · intro input middle output head tail fiber before after tailPop callback path empty passed answered good found
+      unfold FrameFiber.passOn FrameFiber.joinPushed at found
+      split at found
+      · rename_i drained; exact False.elim (answered drained)
+      · rw [FrameFiber.passPushed_answer_cause] at found
+        exact False.elim (drain_not_frame .contA false rfl head selected fiber empty found)
+  exact family.popFrom input output frames fiber none (stack_path model interp stack) empty good found
 
 /-- Actual getCont retains the selected callback and its ordered suffix.
 Deferred and replacement answers cannot inhabit this selected-frame branch. -/

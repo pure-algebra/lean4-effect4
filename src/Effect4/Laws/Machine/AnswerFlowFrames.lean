@@ -24,11 +24,8 @@ theorem stack_append {world : World} {input middle output : Kind}
     (front : StackAt model interp world input middle first)
     (suffix : StackAt model interp world middle output rest) :
     StackAt model interp world input output (first ++ rest) := by
-  induction first generalizing input with
-  | nil => cases front; exact suffix
-  | cons frame frames ih =>
-    cases front with
-    | cons head tail => exact .cons head (ih tail)
+  exact path_stack model interp (Effect4.Contracts.Path.append
+    (stack_path model interp front) (stack_path model interp suffix))
 
 /-- A callback's actual pushed frames join the older saved suffix. -/
 theorem result_attach {world : World} {middle output : Kind}

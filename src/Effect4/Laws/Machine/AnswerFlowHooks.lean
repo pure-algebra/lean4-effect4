@@ -34,23 +34,9 @@ theorem ensure_stack (world : World) (input output : Kind)
     (code : Prim ν σ β ε δ ι α) (fiber : FrameFiber ν σ β ε δ ι α)
     (stack : StackAt model interp world input output fiber.stack) :
     StackAt model interp world input output (code.ensure fiber).1.stack := by
-  cases code with
-  | onExit body name flag =>
-    simp only [Prim.ensure]
-    split
-    · exact .cons (saved_mask model interp world input true) stack
-    · exact stack
-  | asyncFinalizer name =>
-    simp only [Prim.ensure]
-    split
-    · exact .cons (saved_mask model interp world input true) stack
-    · exact stack
-  | setInterruptible flag =>
-    simp only [Prim.ensure]
-    split
-    · split <;> exact stack
-    · exact stack
-  | _ => exact stack
+  rcases FrameFiber.ensure_stack_cases code fiber with kept | ⟨pushed, _, _⟩
+  · rw [kept]; exact stack
+  · rw [pushed]; exact .cons (saved_mask model interp world input true) stack
 
 /-- A hook's substituted failure consumes its actual stored interruption cause.
 A mask frame's saved contract transports that cause to the class expected by its older suffix. -/

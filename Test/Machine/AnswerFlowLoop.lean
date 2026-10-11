@@ -1,4 +1,5 @@
 import Effect4.Laws.Machine.AnswerFlow
+import Effect4.Laws.Machine.PopTraceFamily
 import Effect4.Laws.Program.Typed.Contracts
 
 /-!
@@ -76,6 +77,37 @@ theorem loop_step_closed : StepClosed (fun frame => frame = loop) := by
   have result := Option.some.inj (actual.symm.trans answered)
   cases result
   exact ⟨rfl, fun saved member => (List.mem_singleton.mp member)⟩
+
+/-- The external loop family consumes the shared native pop transport.
+The selected frame retains the exact loop witness without an inductive SavedAt proof. -/
+theorem loop_pop (fiber : FrameFiber Unit Unit Unit Unit Unit Unit Unit)
+    (scratch : fiber.stack = []) :
+    ∀ selected, (FrameFiber.popFrom .contA false [loop] fiber).answer = .frame selected → selected = loop := by
+  have family : PopTrace.Family .contA false (fun (_ _ : Unit) frame => frame = loop)
+      (fun fiber => fiber.stack = [])
+      (fun _ _ _ pop => ∀ selected, pop.answer = .frame selected → selected = loop) := by
+    constructor
+    · intro kind fiber cause empty selected found
+      cases found
+    · intro input middle output frame rest fiber cause answer saved path empty chosen kept selected found
+      have shape := Prim.answerOf_frame_eq frame selected .contA _ (chosen.trans (congrArg some found))
+      exact shape.1.trans saved
+    · intro input middle frame fiber after saved empty
+      rw [FrameFiber.passPushed_fiber_cause]
+      exact PopTrace.drain_empty .contA false frame fiber empty
+    · intro input middle output frame rest fiber before after tail saved path empty passed drained next
+      rcases passed with ⟨absent, _⟩ | ⟨answer, chosen, skipped, _⟩
+      · have missing := PopTrace.answer_missing frame .contA _ absent
+        rw [saved] at missing
+        cases missing
+      · cases skipped
+    · intro input middle output frame rest fiber before after tail saved path empty passed answered selected found
+      unfold FrameFiber.passOn FrameFiber.joinPushed at found
+      split at found
+      · rename_i drained; exact False.elim (answered drained)
+      · rw [FrameFiber.passPushed_answer_cause] at found
+        exact False.elim (PopTrace.drain_not_frame .contA false rfl frame selected fiber empty found)
+  exact family.popFrom () () [loop] fiber none (.cons rfl (.nil ())) scratch
 
 private def loopStep (family : Unit → Prop) (cursor : Unit) : Prop :=
   ∀ value, match interp.loopResume () cursor value with

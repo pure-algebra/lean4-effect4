@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Typed.Validity
+import Effect4.Laws.Contracts.FramePath
 
 /-!
 Typed saved-stack interfaces (foundations plan D3–D5). These are judgments over the existing
@@ -227,38 +228,27 @@ adds machine-correlated registration arrows (`HostStack`) and their machine-free
 (`PositionStack`). One path type over an edge relation owns identity, composition, decomposition
 and mapping; each instance keeps its own edge relation, and an edge map carries the semantic
 proof (forgetting a correlation is one-way). -/
-inductive FramePath (Edge : EffTy → EffTy → ScopeFrame → Prop) :
-    EffTy → EffTy → List ScopeFrame → Prop
-  | nil (ty : EffTy) : FramePath Edge ty ty []
-  | cons {tin middle tout : EffTy} {frame : ScopeFrame} {rest : List ScopeFrame}
-      (head : Edge tin middle frame) (tail : FramePath Edge middle tout rest) :
-      FramePath Edge tin tout (frame :: rest)
+abbrev FramePath (Edge : EffTy → EffTy → ScopeFrame → Prop) :=
+  Effect4.Contracts.Path Edge
 
 namespace FramePath
 variable {E E' : EffTy → EffTy → ScopeFrame → Prop}
 
+abbrev nil (ty : EffTy) : FramePath E ty ty [] := Effect4.Contracts.Path.nil ty
+abbrev cons {tin middle tout : EffTy} {frame : ScopeFrame} {rest : List ScopeFrame}
+    (head : E tin middle frame) (tail : FramePath E middle tout rest) :
+    FramePath E tin tout (frame :: rest) := Effect4.Contracts.Path.cons head tail
+
 /-- An edge map, endpoints and frames kept, maps paths. -/
 theorem map (f : ∀ a b frame, E a b frame → E' a b frame) {a b : EffTy} {s : List ScopeFrame}
-    (h : FramePath E a b s) : FramePath E' a b s := by
-  induction h with
-  | nil ty => exact .nil ty
-  | cons head _ ih => exact .cons (f _ _ _ head) ih
+    (h : FramePath E a b s) : FramePath E' a b s := Effect4.Contracts.Path.map f h
 
 theorem append {a b c : EffTy} {s₁ s₂ : List ScopeFrame} (h₁ : FramePath E a b s₁)
-    (h₂ : FramePath E b c s₂) : FramePath E a c (s₁ ++ s₂) := by
-  induction h₁ with
-  | nil ty => exact h₂
-  | cons head _ ih => exact .cons head (ih h₂)
+    (h₂ : FramePath E b c s₂) : FramePath E a c (s₁ ++ s₂) :=
+  Effect4.Contracts.Path.append h₁ h₂
 
-theorem split : ∀ (s₁ s₂ : List ScopeFrame) {a c : EffTy}, FramePath E a c (s₁ ++ s₂) →
-    ∃ b, FramePath E a b s₁ ∧ FramePath E b c s₂
-  | [], _, a, _, h => ⟨a, .nil a, h⟩
-  | f :: s₁, s₂, _, _, h => by
-    rw [List.cons_append] at h
-    cases h with
-    | cons head tail =>
-      obtain ⟨b, h₁, h₂⟩ := split s₁ s₂ tail
-      exact ⟨b, .cons head h₁, h₂⟩
+theorem split (s₁ s₂ : List ScopeFrame) {a c : EffTy} (h : FramePath E a c (s₁ ++ s₂)) :
+    ∃ b, FramePath E a b s₁ ∧ FramePath E b c s₂ := Effect4.Contracts.Path.split s₁ s₂ h
 
 end FramePath
 
