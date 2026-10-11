@@ -50,14 +50,14 @@ type program = native_op eff
 let interp_of (p : program) : interp = program_interp_of p []
 
 let load (p : program) ~(fuel : int) : machine =
-  sh_api_load program_compile empty_ctx stores p fuel []
+  sh_api_load program_compile empty_ctx stores p fuel
 
 let step (p : program) (i : interp) ~(fuel : int) (m : machine) (d : api_decision)
   : machine * bool =
   step_decision_state_at_program_replay_checked_from_spec_1 p [] i fuel m d
 
 let run_api (p : program) ~(fuel : int) : outcome * machine =
-  let r = api_run p fuel [] [] fuel in
+  let r = api_run p fuel [] fuel in
   (r.outcome, r.machine)
 
 (* -- the free rows -------------------------------------------------------------------- *)

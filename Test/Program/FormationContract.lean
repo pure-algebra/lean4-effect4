@@ -57,10 +57,10 @@ def typedBadTable : TypedProgram (nativeSignature badTable) pureProgram :=
   | .error (.formation why) => why.ty = duplicate
   | _ => false
 #guard Api.printDecl "main" pureProgram badTable = none
-#guard match Api.replayChecked pureProgram 10 [] [] badTable with
+#guard match Api.replayChecked pureProgram 10 [] badTable with
   | .inr (.formation why) => why.ty = duplicate
   | _ => false
-#guard match Api.replayChecked pureProgram 10 [Api.evaluate] [] badTable with
+#guard match Api.replayChecked pureProgram 10 [Api.evaluate] badTable with
   | .inr (.formation why) => why.ty = duplicate
   | _ => false
 
@@ -76,7 +76,7 @@ def source : TypeScript.Module :=
 #guard (admitProgram pureProgram ⟨validTable, []⟩).isOk
 #guard (Effect4.Codegen.emitModule "main" pureProgram validTable).isOk
 #guard (Effect4.Codegen.admitModule "main" source validTable).isOk
-#guard match Api.replayChecked pureProgram 10 [Api.evaluate] [] validTable with
+#guard match Api.replayChecked pureProgram 10 [Api.evaluate] validTable with
   | .inl run => run.exit = some (.success (.nat 1))
   | _ => false
 -- control (decisions row 317): an integer column of the table is admitted
@@ -150,7 +150,7 @@ example (emission : Effect4.Codegen.ModuleEmission pureProgram validTable "main"
     Formation.InputFormed pureProgram validTable := emission.formed
 
 example {fuel : Nat} {tape : List Api.Decision} {inspection : Api.Inspection}
-    (accepted : Api.replayChecked pureProgram fuel tape [] validTable = .inl inspection) :
+    (accepted : Api.replayChecked pureProgram fuel tape validTable = .inl inspection) :
     Formation.InputFormed pureProgram validTable := Api.replayChecked_formed accepted
 
 /-! The formation rule on a deferred's error column (the state plan's T3a, its D4): a deferred

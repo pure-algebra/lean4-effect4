@@ -1,9 +1,11 @@
 import Effect4.Laws.Api.HostSession
 import Effect4.Program.Profile
 import Effect4.Program.Stream
+import Test.Api.HostList
 
-/-! Finite v3 controls and retained T-12 counterexamples. No oracle answers are loaded.
-The general receipt/storage law is reply_commute, not the bounded machine probes below. -/
+/-! Finite v3 controls and retained T-12 counterexamples. A host answer is a decision of the
+session (DI-23). The general receipt/storage law is reply_commute, not the bounded machine
+probes below. -/
 set_option autoImplicit false
 set_option maxRecDepth 8192
 set_option maxHeartbeats 2000000
@@ -90,13 +92,14 @@ def shared : Api.Program := .bind (.perform .refMake (.lit (.nat 0)))
 def da : Api.Decision := .answerAsync ⟨1⟩ 0 (.ofExit (.success (.nat 1)))
 def db : Api.Decision := .answerAsync ⟨2⟩ 1 (.ofExit (.success (.nat 2)))
 #guard (Api.admitProgram shared ⟨table, []⟩).isOk
-#guard match Api.replayChecked shared 1000 [Api.evaluate, da, db, .flush] [] table with
+#guard match Api.replayChecked shared 1000 [Api.evaluate, da, db, .flush] table with
   | .inl run => run.exit = some (.success (.nat 2)) | .inr _ => false
-#guard match Api.replayChecked shared 1000 [Api.evaluate, db, da, .flush] [] table with
+#guard match Api.replayChecked shared 1000 [Api.evaluate, db, da, .flush] table with
   | .inl run => run.exit = some (.success (.nat 1)) | .inr _ => false
 
--- E4-HOST-CE-006: the unkeyed answer queue attaches results in registration order.
-#guard (Api.run program 1000 [b.completion, a.completion] table).exit =
+-- E4-HOST-CE-006: a host that answers from a list attaches its answers in the order the
+-- session meets the calls, so the reversed list gives the second child 2.
+#guard Test.Api.HostList.exit program table [.success (.nat 3), .success (.nat 2)] =
   some (.success (Val.exitOk (.nat 2)))
 #guard (inspect (applyReply (applyReply ab a.key 1000).session b.key 1000).session).exit =
   some (.success (Val.exitOk (.nat 3)))

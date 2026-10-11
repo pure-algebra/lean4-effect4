@@ -64,7 +64,6 @@ inductive Refusal
   malformed code (decisions row 191, `E4-HOST-CE-008`). -/
   | reservedDefect (fiber : FiberId) (token : Nat)
   | unknownCell (cell : RefKey)
-  | oracleType (position : Nat) (expected : Ty)
 deriving DecidableEq, Repr
 
 /-- Check the answer's type before liveness, so a typed but unallocated handle
@@ -107,21 +106,9 @@ def admit (table : RowTable) (m : NativeMachine) : NativeDecision → Option Ref
           | _ => some (.notExternal fiber token)
   | _ => none
 
-/-- The first rejected registration remains visible even when another fiber
-subsequently consumes the oracle head or the rejecting fiber is interrupted. -/
-def oracleRefusal (answers : List (Completion Val Err Defect FiberId Ann)) (table : RowTable)
-    (m : NativeMachine) : Option Refusal := do
-  let (i, answer, remaining) ← m.state.externals.rejected
-  let expected := match externalRow table i, answer with
-    | some row, .ofExit (.failure _) => row.error
-    | some row, _ => row.answer
-    | none, _ => Ty.never
-  some (.oracleType (answers.length - remaining) expected)
-
 /-- The same stopping rules as `replayEval` and `answersValid`: no decision
 beyond a stuck state or exhausted driver fuel is inspected. -/
-def replayCheckedFrom (program : NativeEff) (fuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann)) (table : RowTable)
+def replayCheckedFrom (program : NativeEff) (fuel : Nat) (table : RowTable)
     (position : Nat) (tape : List NativeDecision) (m : NativeMachine) :
     NativeReplay ⊕ (Nat × NativeDecision × Refusal × NativeMachine) :=
   letI := evaluatorFor program table
@@ -135,11 +122,8 @@ def replayCheckedFrom (program : NativeEff) (fuel : Nat)
       | some why => .inr (position, decision, why, m)
       | none =>
         let r := stepDecisionState (interpOf program table) fuel m decision
-        match oracleRefusal answers table r.1 with
-        | some why => .inr (position, decision, why, r.1)
-        | none =>
-          if r.2 then replayCheckedFrom program fuel answers table (position + 1) rest r.1
-          else .inl (.frontier .fuel r.1)
+        if r.2 then replayCheckedFrom program fuel table (position + 1) rest r.1
+        else .inl (.frontier .fuel r.1)
 termination_by tape
 
 /-- Every external frontier after each applied decision, in fiber order. -/

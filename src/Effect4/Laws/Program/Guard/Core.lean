@@ -7,9 +7,8 @@ import Effect4.Laws.Machine.WakeKeys
 
 /-!
 DI-68 guard ownership for the owner-approved reachable-machine scope. A prefix is raw
-decision data with an explicit command budget for each step. The program, table,
-compile budget and initial oracle answers stay fixed. No decision
-admission or sufficiency assumption is built into reachability.
+decision data with an explicit command budget for each step. The program, table and compile
+budget stay fixed. No decision admission or sufficiency assumption is built into reachability.
 
 Existing invariants reviewed: Machine.Book.MachineOk/PendingOk, the concrete
 Simulation.Hooks.StoresOk, Stores.WF, and the handle-minting predicates. Their
@@ -31,20 +30,17 @@ def executePrefix (p : NativeEff) (table : RowTable) (m : NativeMachine)
   history.foldl (fun m s => steppedBy p s.1 table m s.2) m
 
 def Reachable (p : NativeEff) (table : RowTable) (compileFuel : Nat)
- (answers : List (Completion Val Err Defect FiberId Ann))
     (m : NativeMachine) : Prop :=
-  ∃ history : Prefix, m = executePrefix p table (Api.load p compileFuel answers) history
+  ∃ history : Prefix, m = executePrefix p table (Api.load p compileFuel) history
 
-theorem reachable_load (p : NativeEff) (table : RowTable) (compileFuel : Nat)
- (answers : List (Completion Val Err Defect FiberId Ann)) :
-    Reachable p table compileFuel answers (Api.load p compileFuel answers) :=
+theorem reachable_load (p : NativeEff) (table : RowTable) (compileFuel : Nat) :
+    Reachable p table compileFuel (Api.load p compileFuel) :=
   ⟨[], rfl⟩
 
 theorem reachable_step {p : NativeEff} {table : RowTable} {compileFuel : Nat}
- {answers : List (Completion Val Err Defect FiberId Ann)}
-    {m : NativeMachine} (h : Reachable p table compileFuel answers m)
+    {m : NativeMachine} (h : Reachable p table compileFuel m)
     (fuel : Nat) (d : NativeDecision) :
-    Reachable p table compileFuel answers (steppedBy p fuel table m d) := by
+    Reachable p table compileFuel (steppedBy p fuel table m d) := by
   obtain ⟨history, rfl⟩ := h
   refine ⟨history ++ [(fuel, d)], ?_⟩
   simp only [executePrefix, List.foldl_append, List.foldl_cons, List.foldl_nil]
@@ -63,16 +59,15 @@ variable {W : Type w}
 /-- An invariant of the loaded native machine that every admitted decision keeps holds
 after every admitted prefix. The admission premise follows the prefix's actual states. -/
 theorem reachable_lift (p : NativeEff) (table : RowTable) (compileFuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann))
     (o : Effect4.Laws.Effects.WorldOrder W) (J : W → NativeMachine → Prop)
     (A : W → NativeMachine → Nat × NativeDecision → Prop)
-    (load : ∃ w, J w (Api.load p compileFuel answers))
+    (load : ∃ w, J w (Api.load p compileFuel))
     (pres : ∀ w m fuel d, J w m → A w m (fuel, d) →
       ∃ w', o.le w w' ∧ J w' (steppedBy p fuel table m d))
     (history : Prefix)
     (adm : Lift.Admitted J A (fun m s => steppedBy p s.1 table m s.2)
-      (Api.load p compileFuel answers) history) :
-    ∃ w, J w (executePrefix p table (Api.load p compileFuel answers) history) := by
+      (Api.load p compileFuel) history) :
+    ∃ w, J w (executePrefix p table (Api.load p compileFuel) history) := by
   obtain ⟨w₀, h₀⟩ := load
   obtain ⟨w, _, hw⟩ := Lift.foldl_lift o J A (fun m s => steppedBy p s.1 table m s.2)
     (fun w m s hj ha => pres w m s.1 s.2 hj ha) history w₀ _ h₀ adm
@@ -81,12 +76,12 @@ theorem reachable_lift (p : NativeEff) (table : RowTable) (compileFuel : Nat)
 /-- A fact about the machine alone, kept by every decision, holds at every reachable
 native machine. No decision admission premise is added to `Reachable`. -/
 theorem reachable_lift_pure (p : NativeEff) (table : RowTable) (compileFuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann)) (J : NativeMachine → Prop)
-    (load : J (Api.load p compileFuel answers))
+    (J : NativeMachine → Prop)
+    (load : J (Api.load p compileFuel))
     (pres : ∀ m fuel d, J m → J (steppedBy p fuel table m d)) (m : NativeMachine)
-    (reachable : Reachable p table compileFuel answers m) : J m := by
+    (reachable : Reachable p table compileFuel m) : J m := by
   obtain ⟨history, rfl⟩ := reachable
-  obtain ⟨_, hw⟩ := reachable_lift p table compileFuel answers Lift.unitOrder (fun _ m => J m)
+  obtain ⟨_, hw⟩ := reachable_lift p table compileFuel Lift.unitOrder (fun _ m => J m)
     (fun _ _ _ => True) ⟨(), load⟩ (fun _ m fuel d hj _ => ⟨(), trivial, pres m fuel d hj⟩)
     history (Lift.admitted_true _ _ history _)
   exact hw
@@ -141,8 +136,8 @@ theorem requestOf_shape {m : NativeMachine} {fiber : FiberId} {token : Nat}
       cases h
 
 theorem requestOf_load (p : NativeEff) (compileFuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann)) (fiber : FiberId) (token : Nat) :
-    requestOf (Api.load p compileFuel answers) fiber token = none := by
+    (fiber : FiberId) (token : Nat) :
+    requestOf (Api.load p compileFuel) fiber token = none := by
   unfold requestOf
   simp only [Api.load, RunMachine.fiber?, List.find?_cons, RunFiber.make, List.find?_nil]
   split <;> simp [guard]
@@ -180,20 +175,17 @@ def InternalKeysBelow {Code Saved Event : Type}
     (m : RunMachine EffName EffThunk Val Err Defect FiberId Ann Ctx Stores Code Saved Event) : Prop :=
   ∀ k ∈ internalKeys m, k.2 < m.nextToken
 
-theorem internalKeys_load (p : NativeEff) (compileFuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann)) :
-    internalKeys (Api.load p compileFuel answers) = [] := by aesop
+theorem internalKeys_load (p : NativeEff) (compileFuel : Nat) :
+    internalKeys (Api.load p compileFuel) = [] := by aesop
 
-theorem requestsOwned_load (p : NativeEff) (compileFuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann)) :
-    RequestsOwned (Api.load p compileFuel answers) := by
+theorem requestsOwned_load (p : NativeEff) (compileFuel : Nat) :
+    RequestsOwned (Api.load p compileFuel) := by
   intro fiber token request h
   rw [requestOf_load] at h
   cases h
 
-theorem internalKeysBelow_load (p : NativeEff) (compileFuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann)) :
-    InternalKeysBelow (Api.load p compileFuel answers) := by
+theorem internalKeysBelow_load (p : NativeEff) (compileFuel : Nat) :
+    InternalKeysBelow (Api.load p compileFuel) := by
   intro k hk
   rw [internalKeys_load] at hk
   cases hk
@@ -313,23 +305,16 @@ theorem internalKeysBelow_prepareExternalAnswer {m : NativeMachine} (h : Interna
   rw [internalKeys_prepareExternalAnswer] at hk
   exact h key hk
 
+/-- A host call's registration keeps the timers and the Deferreds: it answers nothing and leaves
+the stores as they are (DI-23). -/
 theorem registerExternal_internal_state (p : NativeEff) (table : RowTable)
     (op : NativeOp) (request : Val) (origin : List Nat) (fiber : FiberId) (token : Nat)
     (state : Stores) :
     ((interpOf p table).registerAsync (.external op request origin) fiber token state).1.timers =
         state.timers ∧
       ((interpOf p table).registerAsync (.external op request origin) fiber token state).1.deferreds =
-        state.deferreds := by
-  cases op <;> simp only [interpOf]
-  all_goals try trivial
-  all_goals try exact ⟨rfl, rfl⟩
-  split
-  · exact ⟨rfl, rfl⟩
-  · split
-    · exact ⟨rfl, rfl⟩
-    · split
-      · exact prepareExternalAnswer_internal_state _ _ _ _
-      · exact ⟨rfl, rfl⟩
+        state.deferreds :=
+  ⟨rfl, rfl⟩
 
 theorem interruptRecord_id (p : NativeEff) (table : RowTable) (who : Option FiberId)
     (extra : ReasonAnnotations Ann) (f : NFiber) :
@@ -1126,9 +1111,8 @@ theorem raceCodeOwned_park_host (p : NativeEff) (table : RowTable)
     cases hpark
     exact List.mem_cons_self ..
 
-theorem raceIdsBelow_load (p : NativeEff) (compileFuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann)) :
-    RaceIdsBelow (Api.load p compileFuel answers) := by
+theorem raceIdsBelow_load (p : NativeEff) (compileFuel : Nat) :
+    RaceIdsBelow (Api.load p compileFuel) := by
   intro race hr
   cases hr
 
@@ -1232,16 +1216,14 @@ theorem guardQueue_nil (p : NativeEff) (table : RowTable) (m : NativeMachine) :
   · intro command h; cases h
   · intro command h; cases h
 
-theorem requestsBelow_load (p : NativeEff) (compileFuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann)) :
-    RequestsBelow (Api.load p compileFuel answers) := by
+theorem requestsBelow_load (p : NativeEff) (compileFuel : Nat) :
+    RequestsBelow (Api.load p compileFuel) := by
   intro fiber token request h
   rw [requestOf_load] at h
   cases h
 
-theorem guardState_load (p : NativeEff) (compileFuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann)) :
-    GuardState (Api.load p compileFuel answers) := by
+theorem guardState_load (p : NativeEff) (compileFuel : Nat) :
+    GuardState (Api.load p compileFuel) := by
   constructor
   · exact List.nodup_cons.mpr ⟨List.not_mem_nil, List.nodup_nil⟩
   · intro f hf
@@ -1249,11 +1231,11 @@ theorem guardState_load (p : NativeEff) (compileFuel : Nat)
     subst f
     exact Nat.zero_lt_succ _
   · exact List.nodup_nil
-  · exact raceIdsBelow_load p compileFuel answers
+  · exact raceIdsBelow_load p compileFuel
   · intro race hr; cases hr
-  · exact internalKeysBelow_load p compileFuel answers
-  · exact requestsBelow_load p compileFuel answers
-  · exact requestsOwned_load p compileFuel answers
+  · exact internalKeysBelow_load p compileFuel
+  · exact requestsBelow_load p compileFuel
+  · exact requestsOwned_load p compileFuel
   · intro f hf
     have he := List.mem_singleton.mp hf
     subst f

@@ -28,25 +28,21 @@ def program (i : Nat := 0) : NativeEff := .perform (.external i) (.lit (.nat 1))
 def accepted : Completion Val Err Defect FiberId Ann := .ofExit (.success (.nat 7))
 def wrong : Completion Val Err Defect FiberId Ann := .ofExit (.success (.bool true))
 
-def refusal (p : NativeEff) (tape : List Api.Decision)
-    (answers : List (Completion Val Err Defect FiberId Ann) := []) : Option Refusal :=
-  match Api.replayChecked p 1000 tape answers table with
+def refusal (p : NativeEff) (tape : List Api.Decision) : Option Refusal :=
+  match Api.replayChecked p 1000 tape table with
   | .inl _ => none
   | .inr (.formation _) => none
   | .inr (.decision _ _ why _) => some why
 
+/-- The tape of a run whose root makes one host call: the root evaluated, the call at its first
+guard token answered, the dispatcher flushed. A host answer is a decision (DI-23). -/
+def answered (answer : Completion Val Err Defect FiberId Ann) : List Api.Decision :=
+  [Api.evaluate, .answerAsync Api.root 0 answer, Api.flush]
+
 #guard Api.typeOf (program 0) table = some (.pure .nat)
 #guard Api.roundTrip (program 0) table = .ok (program 0)
-#guard refusal (program 0) [Api.evaluate] [accepted] = none
-#guard (Api.run (program 0) 1000 [accepted] table).exit = some (.success (.nat 7))
-#guard refusal (program 0) [Api.evaluate] [wrong] = some (.oracleType 0 .nat)
--- E4-HOST-CE-001: the current decision's rejected oracle head is reported even at a fuel frontier.
-#guard match Api.replayChecked (program 0) 2 [Api.evaluate] [wrong] table with
-  | .inr (.decision 0 _ (.oracleType 0 .nat) _) => true
-  | _ => false
-#guard match Api.replayChecked (program 0) 2 [Api.evaluate] [accepted] table with
-  | .inl _ => true
-  | _ => false
+#guard refusal (program 0) [Api.evaluate, .answerAsync Api.root 0 accepted] = none
+#guard (Api.replay (program 0) 1000 (answered accepted) table).exit = some (.success (.nat 7))
 #guard refusal (program 0) [.answerAsync ⟨99⟩ 0 accepted] = some (.notParked ⟨99⟩)
 #guard refusal (program 0) [.answerAsync Api.root 0 accepted] = some (.notParked Api.root)
 #guard refusal (program 0) [Api.evaluate, .answerAsync Api.root 1 accepted] =
@@ -66,18 +62,13 @@ def refusal (p : NativeEff) (tape : List Api.Decision)
   some (.unknownCell ⟨0⟩)
 #guard refusal (program 0) [Api.evaluate, .answerAsync Api.root 0 accepted,
   .answerAsync Api.root 0 accepted] = some (.notParked Api.root)
-#guard (Api.replaySteps (program 0) 1000 [Api.evaluate] [] table).map (fun step => step.2.2) =
+#guard (Api.replaySteps (program 0) 1000 [Api.evaluate] table).map (fun step => step.2.2) =
   [[⟨Api.root, 0, .external 0, Val.nat 1⟩]]
 
 /-- A live cell alone is not enough: its value must inhabit the awaited type. -/
 def boolAfterCell : NativeEff := .bind (.perform .refMake (.lit (.nat 7))) (program 2)
 #guard refusal boolAfterCell [Api.evaluate, .answerAsync Api.root 0 (.ofRefGet ⟨0⟩)] =
   some (.answerType Api.root 0 .bool)
-
-/-- E4-HOST-CE-002: an eager child rejects the head before the root accepts it at another row. -/
-def twoRegistrations : NativeEff :=
-  .bind (.withFiber (.fork (program 0) { daemon := false, startImmediately := true, maskMode := .inherit })) (program 2)
-#guard refusal twoRegistrations [Api.evaluate] [wrong] = some (.oracleType 0 .nat)
 
 /-- Receiver methods cover zero, one and two arguments, and explicit type arguments. -/
 def methodTable : RowTable :=
@@ -97,15 +88,13 @@ def methodPrograms : List NativeEff :=
 #guard methodPrograms.all fun p => Api.typeOf p methodTable = some (.pure .nat)
 #guard methodPrograms.all fun p => Api.roundTrip p methodTable = .ok p
 #guard methodPrograms.all fun p =>
-  (Api.run p 1000 [accepted] methodTable).exit = some (.success (.nat 7))
+  (Api.replay p 1000 (answered accepted) methodTable).exit = some (.success (.nat 7))
 
-/-- The tagged package error (DB-15): admitted at a `prod string string` error column on both
-the oracle and the delayed path, refused at a numeric or empty one, and a numeric tag is
-refused at the pair column. -/
+/-- The tagged package error (DB-15): admitted at a `prod string string` error column, refused
+at a numeric or empty one, and a numeric tag is refused at the pair column. -/
 def failed : Completion Val Err Defect FiberId Ann :=
   .ofExit (.failure (Cause.fail (.tagged "SqlError" "no such table: t")))
-#guard refusal (program 4) [Api.evaluate] [failed] = none
-#guard (Api.run (program 4) 1000 [failed] table).exit =
+#guard (Api.replay (program 4) 1000 (answered failed) table).exit =
   some (.failure (Cause.fail (.tagged "SqlError" "no such table: t")))
 #guard refusal (program 4) [Api.evaluate, .answerAsync Api.root 0 failed] = none
 #guard refusal (program 4) [Api.evaluate,
@@ -115,7 +104,6 @@ def failed : Completion Val Err Defect FiberId Ann :=
   some (.errorType Api.root 0 .nat)
 #guard refusal (program 0) [Api.evaluate, .answerAsync Api.root 0 failed] =
   some (.errorType Api.root 0 .never)
-#guard (refusal (program 3) [Api.evaluate] [failed]).isSome
 
 -- The finite table admits exactly its indexed rows; duplicates and built-in collisions fail.
 #guard !(nativeSignature table).dom (.external table.length)
@@ -125,13 +113,13 @@ def failed : Completion Val Err Defect FiberId Ann :=
 /-- DI-62: a text failure is checked against an explicit text error column. -/
 def failedText : Completion Val Err Defect FiberId Ann :=
   .ofExit (.failure (Cause.fail (.text "lost")))
-#guard refusal (program 5) [Api.evaluate] [failedText] = none
 #guard refusal (program 5) [Api.evaluate, .answerAsync Api.root 0 failedText] = none
-#guard (Api.run (program 5) 1000 [failedText] table).exit =
+#guard (Api.replay (program 5) 1000 (answered failedText) table).exit =
   some (.failure (Cause.fail (.text "lost")))
 #guard refusal (program 3) [Api.evaluate, .answerAsync Api.root 0 failedText] =
   some (.errorType Api.root 0 .nat)
-#guard (refusal (program 4) [Api.evaluate] [failedText]).isSome
+#guard refusal (program 4) [Api.evaluate, .answerAsync Api.root 0 failedText] =
+  some (.errorType Api.root 0 (.prod .string .string))
 #guard refusal (program 5) [Api.evaluate,
   .answerAsync Api.root 0 (.ofExit (.failure (Cause.fail (.tag 1))))] =
   some (.errorType Api.root 0 .string)

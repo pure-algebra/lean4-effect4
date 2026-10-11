@@ -555,24 +555,6 @@ theorem point_bind_keys (p : Point) (v : Val) (bind : Bool) :
     rw [Point.childWith_keys]
     exact List.Subset.refl _
 
-/-- A scalar oracle completion contributes no unallocated handle to resumed code. -/
-theorem externalAdmits_keys (table : RowTable) (i : Nat)
-    (answer : Completion Val Err Defect FiberId Ann) (allocated : List String)
-    (h : externalAdmits table i answer allocated = true) :
-    answer.keys = [] := by
-  cases answer with
-  | ofExit exit =>
-    cases exit with
-    | failure cause => rfl
-    | success value =>
-      cases hr : externalRow table i with
-      | none => simp only [externalAdmits, hr, Bool.false_eq_true] at h
-      | some row =>
-        simp only [externalAdmits, hr, Bool.and_eq_true_iff, List.isEmpty_iff] at h
-        simp only [Completion.keys, exitKeys, Val.keys_eq_handles, h.2, List.filterMap_nil]
-  | ofRefGet cell =>
-    cases hr : externalRow table i <;> simp only [externalAdmits, hr, Bool.false_eq_true] at h
-
 /-- A converted reply grows only the external allocation list. Its value is handle-free
 or exactly the fresh external handle; existing store handles remain valid. -/
 theorem externalValue_minted (ty : Ty) (s : Stores) (ids : List FiberId)
@@ -868,29 +850,8 @@ theorem interpOf_keyBounded (root : NativeEff) (table : RowTable := []) :
         simp only [interpOf]
         exact ⟨Stores.le_refl _, Ok_of_subset (by sub_tac) hok⟩
     | external op request origin =>
-      cases op with
-      | external i =>
-        simp only [interpOf]
-        split
-        · exact ⟨Stores.le_refl _, Ok_of_subset (by sub_tac) hok⟩
-        · cases hq : s.externals.answers with
-          | nil =>
-            simp only
-            exact ⟨Stores.le_refl _, Ok_of_subset (by sub_tac) hok⟩
-          | cons answer rest =>
-            simp only
-            split
-            · rename_i ha
-              have hinput : Ok ⟨ids, s⟩ (answer.keys ++ s.keys) := by
-                rw [externalAdmits_keys table i answer s.externals.allocated ha]
-                exact Ok_of_subset (by sub_tac) hok
-              exact prepareExternalAnswer_minted table
-                (some (.async (.external (.external i) request origin) false none)) answer s ids
-                hinput
-            · exact ⟨Stores.le_refl _, Ok_of_subset (by sub_tac) hok⟩
-      | _ =>
-        simp only [interpOf]
-        exact ⟨Stores.le_refl _, Ok_of_subset (by sub_tac) hok⟩
+      simp only [interpOf]
+      exact ⟨Stores.le_refl _, Ok_of_subset (by sub_tac) hok⟩
     | cont p | caught p | caughtError p | onValue p | onCause p | fin p | restore e | merge e | gen p pc bind | loop p
     | cancelAwait cell | withWaiter base waiter token' | abort | reFail c | scopeOpen p | scopeProvide p sc
     | scopeBody p previous | scopedExit previous scope | scopeClose scope | restoreCtx previous | constant w

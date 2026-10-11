@@ -120,7 +120,7 @@ theorem prepareExternalAnswer_ok (table : RowTable) (cur : Option NCode)
       · exact hs
       · split
         · exact hs
-        · exact ⟨hs.keysFresh, fun h => absurd h hne, hs.answers⟩
+        · exact ⟨hs.keysFresh, fun h => absurd h hne⟩
     · exact hs
 
 /-- The frame's prepared answer keeps the store invariant (`prepareExternalAnswer_ok`). -/

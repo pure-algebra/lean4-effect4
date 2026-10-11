@@ -169,7 +169,8 @@ theorem external_answer_typed (table : RowTable) (m : NativeMachine)
     exact ⟨i, request, row, allocated, result, hp, hr, hv,
       externalValue_typed _ _ _ _ _ hv⟩
 
-/-- The oracle has the same typed conversion as the delayed decision path. -/
+/-- A row's own admission (`externalAdmits`, the row protocol's check) has the same typed
+conversion as the decision path. -/
 theorem external_oracle_typed (table : RowTable) (i : Nat) (value : Val)
     (allocated : List String)
     (h : externalAdmits table i (.ofExit (.success value)) allocated = true) :
@@ -796,7 +797,8 @@ theorem admit_failure_reservedFree (table : RowTable) (m : NativeMachine)
   | false => rfl
   | true => rw [if_pos hany] at ha; cases ha
 
-/-- The oracle registration path refuses the reserved defects too (`externalAdmits`). -/
+/-- A row's own admission refuses the reserved defects too (`externalAdmits`, the row
+protocol's check). -/
 theorem externalAdmits_failure_reservedFree (table : RowTable) (i : Nat) (c : CauseV)
     (allocated : List String)
     (h : externalAdmits table i (.ofExit (.failure c)) allocated = true) :
@@ -807,8 +809,8 @@ theorem externalAdmits_failure_reservedFree (table : RowTable) (i : Nat) (c : Ca
     simp only [externalAdmits, hr, Bool.and_eq_true, Bool.not_eq_eq_eq_not, Bool.not_true] at h
     exact h.1
 
-/-- The oracle registration path has the same failure-branch guarantee as the delayed
-decision path (`external_oracle_typed` is its success half). -/
+/-- A row's own admission has the same failure-branch guarantee as the decision path
+(`external_error_typed`): an admitted failure's error has the row's error type. -/
 theorem external_oracle_error_typed (table : RowTable) (i : Nat) (c : CauseV)
     (allocated : List String)
     (h : externalAdmits table i (.ofExit (.failure c)) allocated = true) :
@@ -820,36 +822,6 @@ theorem external_oracle_error_typed (table : RowTable) (i : Nat) (c : CauseV)
     rw [hasTyCause_exitErr]
     simp only [externalAdmits, hr, Bool.and_eq_true] at h
     exact h.2
-
-/-- A successful oracle registration resumes with its converted value, typed against
-exactly the allocations in the store it produces. -/
-theorem external_registration_typed (program : NativeEff) (table : RowTable)
-    (i : Nat) (request : Val) (origin : List Nat) (row : Row) (fiber : FiberId) (token : Nat)
-    (before after : Stores) (value : Val)
-    (rest : List (Completion Val Err Defect FiberId Ann)) (code : NCode)
-    (hrow : externalRow table i = some row)
-    (hhead : before.externals.answers = .ofExit (.success value) :: rest)
-    (hreg : (interpOf program table).registerAsync (.external (.external i) request origin)
-      fiber token before = (after, some code)) :
-    ∃ result, code = .success result ∧ Val.hasTy result row.answer after.externals.allocated = true := by
-  have hne : table.isEmpty = false := by
-    cases table with
-    | nil => simp [externalRow] at hrow
-    | cons row rest => rfl
-  by_cases ha : externalAdmits table i (.ofExit (.success value)) before.externals.allocated = true
-  · cases hv : externalValue row.answer before.externals.allocated value with
-    | none => simp [externalAdmits, hrow, hv] at ha
-    | some converted =>
-      obtain ⟨allocated, result⟩ := converted
-      simp only [interpOf, hrow, Option.isNone_some, Bool.false_eq_true, if_false,
-        hhead, ha, if_true, prepareExternalAnswer, hv, hne] at hreg
-      obtain ⟨rfl, hc⟩ := Prod.mk.inj hreg
-      have hc := Option.some.inj hc
-      exact ⟨result, hc.symm, externalValue_typed _ _ _ _ _ hv⟩
-  · simp only [interpOf, hrow, Option.isNone_some, Bool.false_eq_true, if_false,
-      hhead, ha] at hreg
-    have hc := congrArg Prod.snd hreg
-    cases hc
 
 /-- The request projection identifies the exact current code at the matching guard. -/
 theorem requestOf_current (m : NativeMachine) (fiber : FiberId) (token : Nat)
@@ -965,10 +937,9 @@ theorem admitted_decision_minted (table : RowTable) (m : NativeMachine) (d : Nat
 
 /-- A checked replay which returns a run satisfies `AnswersValidAt`'s exact walk,
 including its stopping rules at a stuck machine or exhausted driver fuel. -/
-theorem replayCheckedFrom_answersValid (program : NativeEff) (fuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann)) (table : RowTable)
+theorem replayCheckedFrom_answersValid (program : NativeEff) (fuel : Nat) (table : RowTable)
     (position : Nat) (tape : List NativeDecision) (m : NativeMachine) (r : NativeReplay)
-    (h : replayCheckedFrom program fuel answers table position tape m = .inl r) :
+    (h : replayCheckedFrom program fuel table position tape m = .inl r) :
     letI := evaluatorFor program table
     AnswersValidAt (interpOf program table) fuel tape m := by
   letI := evaluatorFor program table
@@ -994,17 +965,12 @@ theorem replayCheckedFrom_answersValid (program : NativeEff) (fuel : Nat)
           | false => rfl
           | true =>
             simp only [replayCheckedFrom, hs, ha, he, if_true] at h
-            cases ho : oracleRefusal answers table m' with
-            | some why => simp only [ho] at h; cases h
-            | none =>
-              simp only [ho] at h
-              exact ih (position + 1) m' r h
+            exact ih (position + 1) m' r h
 
 /-- Successful checking returns the very run obtained by the original tape walker. -/
-theorem replayCheckedFrom_eq_replay (program : NativeEff) (fuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann)) (table : RowTable)
+theorem replayCheckedFrom_eq_replay (program : NativeEff) (fuel : Nat) (table : RowTable)
     (position : Nat) (tape : List NativeDecision) (m : NativeMachine) (r : NativeReplay)
-    (h : replayCheckedFrom program fuel answers table position tape m = .inl r) :
+    (h : replayCheckedFrom program fuel table position tape m = .inl r) :
     letI := evaluatorFor program table
     r = replayEval (interpOf program table) fuel tape m := by
   letI := evaluatorFor program table
@@ -1026,15 +992,11 @@ theorem replayCheckedFrom_eq_replay (program : NativeEff) (fuel : Nat)
         simp only [replayEval, hs]
         generalize he : stepDecisionState (interpOf program table) fuel m decision = next at h ⊢
         rcases next with ⟨m', continued⟩
-        cases ho : oracleRefusal answers table m' with
-        | some why => simp only [ho] at h; cases h
-        | none =>
-          simp only [ho] at h
-          cases continued with
-          | false => exact Sum.inl.inj h.symm
-          | true =>
-            simp only [if_true] at h ⊢
-            exact ih (position + 1) m' r h
+        cases continued with
+        | false => exact Sum.inl.inj h.symm
+        | true =>
+          simp only [if_true] at h ⊢
+          exact ih (position + 1) m' r h
 
 /-! ## Environments at a compiled point
 

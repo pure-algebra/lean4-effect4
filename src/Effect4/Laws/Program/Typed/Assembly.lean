@@ -1730,8 +1730,7 @@ theorem reestablishes (root : ProgramSource) (rootTy : EffTy) : Reestablishes ro
 M7 transfers `J` from the term reference to the frame machine that runs `compileEff`'s first-order
 code (`Api.replay`) along `run_eq_ref`'s relation (`replay_rel`, `BMeans`): every exit the
 observation `obs` records fits its fiber's declared type (M7a), the stores fit (M7b), and the run
-never halts (M7c). The fragment is `run_eq_ref`'s: the empty host table, the empty oracle,
-answer-free tapes, every command budget, the compile budget equal to it. M7 is about the frame
+never halts (M7c). The fragment is `run_eq_ref`'s: the empty host table, answer-free tapes, every command budget, the compile budget equal to it. M7 is about the frame
 machine, not "the compiled machine": the OCaml engine (the LCNF route) is outside it until
 decisions row 28 is ruled, and nothing here is verified lowering or host safety.
 
@@ -1891,7 +1890,7 @@ theorem replayEval_machine_prefix (e : NativeEff) (fuel : Nat) :
 /-- **R4's bridge.** Every machine the reference replay reaches at the empty table is related by
 `BMeans` to a `Guard.Reachable` native machine: the frame machine's replay of the same tape. -/
 theorem replayR_bmeans_reachable (e : NativeEff) (fuel : Nat) (tape : List Api.Decision) :
-    ∃ m₁, Guard.Reachable e [] fuel [] m₁ ∧ BMeans e m₁ (replayR e fuel tape).machine := by
+    ∃ m₁, Guard.Reachable e [] fuel m₁ ∧ BMeans e m₁ (replayR e fuel tape).machine := by
   letI := evaluatorFor e
   obtain ⟨k, prefixFold⟩ := replayEval_machine_prefix e fuel tape (Api.load e fuel)
   refine ⟨(Api.replay e fuel tape).machine, ⟨(tape.take k).map fun d => (fuel, d), ?_⟩, ?_⟩

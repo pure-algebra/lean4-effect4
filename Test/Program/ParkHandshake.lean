@@ -16,7 +16,7 @@ def firstFiber : NFiber :=
     parked := .withGuard 7 }
 def waiter : Waiter Unit := ⟨Api.root, 7, 0, ()⟩
 def active : NativeMachine :=
-  { Api.load program 10 [] with
+  { Api.load program 10 with
     fibers := [firstFiber]
     state := { Stores.empty with timers := TimerStore.empty.sleep Api.root 7 100 } }
 def unparked : NativeMachine :=

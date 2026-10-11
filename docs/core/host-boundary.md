@@ -60,9 +60,9 @@ lane lands (row 99).
   - `Api.replay`, `Typed.replay` and `replayAdmitted` do not admit decisions; by their
     documentation the caller does.
 - **The reference machine takes the row table** (decisions rows 313 and 314). The frame
-  machine and the reference machine agree at every row table when no answer is preloaded
-  (`run_eq_ref_table_noPreload`, `src/Effect4/Laws/Program/Table/Agreement.lean`). The case
-  with preloaded answers waits on their deletion (DI-23).
+  machine and the reference machine agree at every row table (`run_eq_ref_table`,
+  `src/Effect4/Laws/Program/Table/Agreement.lean`). A host answer reaches either machine only as
+  a decision: no load holds an answer (DI-23).
 
 ### 2.1 TypeScript print: a host template’s type arguments
 
@@ -216,7 +216,7 @@ accepted.
 | `Typed.replay` | consumes a session header and a `Runner.Command` journal through the checked keyed session, with both budgets and phases that can refuse (row 98) |
 | `Api.replayChecked` | low-level evidence; budgets separated; no claim of host-envelope conformance |
 | raw `Api.replay`, `replayAdmitted` | low-level; the caller admits decisions |
-| the preloaded external answer list | migrated with its provenance and removed from production paths (DI-23, DI-58) |
+| a list of host answers | deleted from the machine and the run entries (DI-23, DI-58). A host that answers from a list drives the session: `Run.runWith` (`src/Effect4/Run/Basic.lean`) with `Reactor.ofHost` (`src/Effect4/Laws/Api/HostDrive.lean`) over `tapeHost` (`src/Effect4/Laws/Program/HostRuns.lean`) |
 | timers, yields, deferred deliveries | typed through their own delivery paths, never through external admission |
 | the OCaml engine | needs a table-aware keyed entry path of its own |
 
@@ -261,7 +261,7 @@ external allocation.
   handle-free (`valOfErr_keys`, `causeImage_handleFree`).
 - **Reserved defects are refused (row 191).** A failure whose cause dies with `badName` or
   `notImplemented` is refused before its error column is read (`reservedDie`, `Program/Typed.lean`),
-  on the decision path and the oracle path alike. Every other defect and every interrupt stays
+  on the decision path and in `externalAdmits` alike. Every other defect and every interrupt stays
   admitted at every error column. An accepted failure therefore satisfies the typed judgment's
   defect exclusion (`preflight_failure_noShapeDefect`, `Laws/Api/HostSession.lean`).
 - **One test fixture falls under the rule:** the row `"cell"` of `Test/Api/ExternalContract.lean`,

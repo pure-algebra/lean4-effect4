@@ -31,7 +31,8 @@
 (* -- carriers of a whole store ---------------------------------------------------------- *)
 
 (* Effect4.Machine.Stores.empty, src/Effect4/Machine/Stores.lean:1987 (`⟨[], ⟨[], []⟩, ⟨[]⟩, [], 0⟩`).
-   `scope_store` is a trivial structure, so it IS the carrier. *)
+   `scope_store` is a trivial structure, so it IS the carrier; so is `external_store`, whose one
+   field is the list of allocated targets (DI-23 deleted the preloaded answers). *)
 let sh_stores_empty : stores =
   { refs = M.empty;
     deferreds = { cells = M.empty; due = [] };
@@ -39,7 +40,7 @@ let sh_stores_empty : stores =
     memo = [];
     timers = { now = E4_clock.zero; wake = { waiters = []; batch = None; phase = 0 }; target = None };
     next_name = 0;
-    externals = { answers = []; allocated = []; rejected = None } }
+    externals = [] }
 
 (* Effect4.Machine.RunMachine.empty, src/Effect4/Machine/Fibers.lean:681-692, including the empty fork ledger. *)
 let sh_machine_empty state =
@@ -111,9 +112,8 @@ let sh_run_fiber_make id current interruptible (budget : int * bool) context =
    `compile` (`Program.compile`), `ectx` (`emptyCtx`) and `interp` (`Machine.stores`) are
    generated and come AFTER this prelude, so the row hands them in at the call site; `emit`
    adds the emission-order edge that keeps each of them above its user. *)
-let sh_api_load compile ectx interp program fuel answers =
-  let stores = { sh_stores_empty with externals = { answers; allocated = []; rejected = None } } in
-  let m = sh_machine_empty stores in
+let sh_api_load compile ectx interp program fuel =
+  let m = sh_machine_empty sh_stores_empty in
   let root = sh_run_fiber_make 0 (compile program fuel []) true (interp.budget_of ectx) ectx in
   { m with fibers = F.add ~exit_of:sh_fiber_exit 0 root F.empty; next_id = 1 }
 

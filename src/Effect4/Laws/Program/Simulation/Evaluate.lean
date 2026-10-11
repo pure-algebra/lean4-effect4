@@ -388,31 +388,18 @@ theorem registerAsyncR_await (root : NativeEff) (c : List (FiberId × ExitV)) (c
         (s.deferreds.register cell fid tok).2.map denoteCompletion) :=
   by aesop
 
-/-- **With no preloaded answer the external registration answers nothing**, at any row table
-(`StoresOk.answers`). The registration arm of `hooksAgree_of` at a row table (slice H6a). -/
+/-- **The external registration answers nothing**, at any row table: a host call parks, and
+its answer is a decision (DI-23). The registration arm of `hooksAgree_of` at a row table. -/
 theorem registerAsync_foreign (root : NativeEff) (c : List (FiberId × ExitV))
-    (op : NativeOp) (request : Val) (origin : List Nat) (fid : FiberId) (tok : Nat) (s : Stores)
-    (h : s.externals.answers = []) :
-    (interpAt root c table).registerAsync (.external op request origin) fid tok s = (s, none) := by
-  cases op with
-  | external i =>
-    show (interpOf root table).registerAsync (.external (.external i) request origin) fid tok s =
-      (s, none)
-    simp only [interpOf, h, ite_self]
-  | _ => rfl
+    (op : NativeOp) (request : Val) (origin : List Nat) (fid : FiberId) (tok : Nat) (s : Stores) :
+    (interpAt root c table).registerAsync (.external op request origin) fid tok s = (s, none) :=
+  rfl
 
-/-- The reference's registration arm, under the same premise. -/
+/-- The reference's registration arm answers nothing either. -/
 theorem registerAsyncR_foreign (root : NativeEff) (c : List (FiberId × ExitV))
-    (op : NativeOp) (request : Val) (origin : List Nat) (fid : FiberId) (tok : Nat) (s : Stores)
-    (h : s.externals.answers = []) :
-    (interpRAt root c table).registerAsync (.external op request origin) fid tok s = (s, none) := by
-  cases op with
-  | external i =>
-    show (if table.isEmpty then (s, none) else registerExternalR table i s) = (s, none)
-    simp only [registerExternalR, h, ite_self]
-  | _ =>
-    show (if table.isEmpty then (s, none) else (s, none)) = (s, none)
-    exact ite_self _
+    (op : NativeOp) (request : Val) (origin : List Nat) (fid : FiberId) (tok : Nat) (s : Stores) :
+    (interpRAt root c table).registerAsync (.external op request origin) fid tok s = (s, none) :=
+  rfl
 
 theorem registerAsync_external (root : NativeEff) (c : List (FiberId × ExitV)) (slot : Nat)
     (fid : FiberId) (tok : Nat) (s : Stores) :
@@ -798,12 +785,10 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
     exact iterRel_prepare ⟨machineOk_emit (machineOk_withStateToken hok (hm.state ▸ hok.state) _) _,
       BMeans.emit (hm.withStateToken _ _) _ _, (hf'.saveAnswer hk).park _, rfl, rfl, ListRel.nil⟩
   | asyncForeign op request origin hnode k hk =>
-    have hans : m₂.state.externals.answers = [] := (hm.state ▸ hok.state).answers
     rw [evaluateNative_plain root m₁ f₁ y hc₁ rfl, hcomp, evaluateRawR_fiber _ _ _ _ hc₂]
     dsimp only [evaluateFiberR, saveAnswerR, pushR]
-    simp only [registerAsyncR_foreign _ _ _ _ _ _ _ _ hans]
-    rw [evaluatePrim_async_none root _ m₁ f₁ y hc₁
-      (registerAsync_foreign _ _ _ _ _ _ _ _ hok.state.answers)]
+    simp only [registerAsyncR_foreign]
+    rw [evaluatePrim_async_none root _ m₁ f₁ y hc₁ (registerAsync_foreign _ _ _ _ _ _ _ _)]
     dsimp only
     simp only [Bool.false_or, Option.isSome_none, Bool.false_eq_true, ↓reduceIte]
     rw [hm.nextToken, hm.state]
@@ -1031,7 +1016,7 @@ theorem evaluate_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (hstuc
     -- the supply past its handle, so the registration-key bound survives
     refine iterRelP_prepare ⟨machineOk_stateOf hok
         ⟨(ScopeStore.keysBelow_make (hm.state ▸ hok.state).keysFresh).mono (Nat.le_succ _),
-          (hm.state ▸ hok.state).externals, (hm.state ▸ hok.state).answers⟩,
+          (hm.state ▸ hok.state).externals⟩,
       hm.stateOf _, ?_, rfl, rfl, ListRel.nil⟩ ⟨nofun, nofun⟩
     refine FMeans.mk' hf'.id hf'.parked rfl hf'.running hf'.pending hf'.finalizing hf'.exit hf'.opCount rfl rfl
       hf'.yieldOverride hf'.observers hf'.children hf'.dispatcher

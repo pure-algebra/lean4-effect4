@@ -13,7 +13,9 @@ nor a missing service when the program requires none.
 
 This is an empirical check over a finite program and tape family, for the fragment where type
 soundness has no proof yet. It observes the root fiber's exit only; forked fibers' exits are
-not checked. Host rows answer from a fixed well-typed reply.
+not checked. A host call is answered by a decision with a fixed well-typed reply: after each
+decision of a tape, every call the machine waits on is answered, up to eight answers a run
+(`hosted`, DI-23).
 -/
 
 set_option autoImplicit false
@@ -42,13 +44,38 @@ def fits (ty : EffTy) (allocated : List String) : ExitV → Bool
   | .failure c => causeAdmits (fun v t => Val.hasTy v t allocated) ty.error c &&
       !(c.reasons.any (badDefect ty))
 
-/-- The fixed replies host rows read, one per call. -/
-def hostReplies : List (Completion Val Err Defect FiberId Ann) :=
-  List.replicate 8 (.ofExit (.success (Val.nat 5)))
+/-- The fixed reply every host call reads. -/
+def hostReply : Completion Val Err Defect FiberId Ann := .ofExit (.success (Val.nat 5))
+
+/-- The answers to the calls the machine waits on, in the machine's order of fibers, at most
+`n` of them: each a decision with the fixed reply. -/
+def answerCalls (e : Entry) (fuel : Nat) : Nat → NativeMachine → List Api.Decision
+  | 0, _ => []
+  | n + 1, m =>
+    match (Program.awaits m).head? with
+    | none => []
+    | some w =>
+      let d : Api.Decision := .answerAsync w.fiber w.token hostReply
+      d :: answerCalls e fuel n (Program.steppedBy e.program fuel e.table m d)
+
+/-- A tape with the host's answers: each decision of the tape, then an answer to every call the
+machine waits on after it, at most `n` answers in all. -/
+def hostedFrom (e : Entry) (fuel : Nat) : Nat → NativeMachine → List Api.Decision →
+    List Api.Decision
+  | _, _, [] => []
+  | n, m, d :: rest =>
+    let m₁ := Program.steppedBy e.program fuel e.table m d
+    let answers := answerCalls e fuel n m₁
+    d :: answers ++ hostedFrom e fuel (n - answers.length)
+      (answers.foldl (Program.steppedBy e.program fuel e.table) m₁) rest
+
+/-- The tape with the host's answers, from the loaded program, at most eight answers a run. -/
+def hosted (e : Entry) (fuel : Nat) (tape : List Api.Decision) : List Api.Decision :=
+  hostedFrom e fuel 8 (Api.load e.program fuel) tape
 
 /-- One run: `none` when the root has not exited (a parked timer or a frontier). -/
 def verdict (e : Entry) (ty : EffTy) (tape : List Api.Decision) : Option Bool :=
-  let r := Api.replay e.program 4000 tape hostReplies e.table
+  let r := Api.replay e.program 4000 (hosted e 4000 tape) e.table
   r.exit.map (fits ty r.machine.state.externals.allocated)
 
 /-- The lane's programs: the typed corpus, its interleaving pairs, and the random corpus's typed

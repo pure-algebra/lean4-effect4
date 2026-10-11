@@ -215,17 +215,17 @@ theorem book_reasons_eq_ref {e : NativeEff} {m : NativeMachine} {r : RState}
 /-- The public replay exposes the driver's reason projection. -/
 theorem replay_reasons (e : NativeEff) (fuel : Nat) (tape : List Api.Decision)
     (compileFuel : Nat) :
-    (Api.replay e fuel tape [] [] compileFuel).reasons =
+    (Api.replay e fuel tape [] compileFuel).reasons =
       replayReasons (replayEval (evaluator := evaluatorFor e) (interpOf e) fuel tape
         (Api.load e compileFuel)) := by
   unfold Api.replay
   split <;> rename_i heq <;> rw [heq] <;> rfl
 
-/-- At the empty table and oracle, the public run and reference agree on every
+/-- At the empty table, the public run and reference agree on every
 reason except the separately stated per-fiber compile observation obligation. -/
 theorem reasons_eq_ref (e : NativeEff) (compileFuel fuel : Nat)
     (tape : List Api.Decision) :
-    ((Api.replay e fuel tape [] [] compileFuel).reasons).filter nonCompile =
+    ((Api.replay e fuel tape [] compileFuel).reasons).filter nonCompile =
       (replayReasonsR (replayR e fuel tape compileFuel)).filter nonCompile := by
   rw [replay_reasons]
   exact replayReasons_eq_ref e compileFuel fuel tape

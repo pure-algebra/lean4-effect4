@@ -76,10 +76,7 @@ says nothing about well-formedness, allocated labels or host admission. -/
 example : ∀ (o : SyncOp) (s s' : Stores) (v : Val),
     syncOpStep o s = some (s', v) → s'.externals = s.externals := @syncOpStep_externals
 
-def externalFrame : ExternalStore :=
-  { answers := [.ofExit (.success (.nat 29))]
-    allocated := ["fixture/resource"]
-    rejected := some (7, .ofExit (.success (.nat 31)), 1) }
+def externalFrame : ExternalStore := { allocated := ["fixture/resource"] }
 
 def withExternalFrame : Stores := { Stores.empty with externals := externalFrame }
 

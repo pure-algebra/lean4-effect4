@@ -30,27 +30,24 @@ variable {table : RowTable}
 Deferred completion shape is now guaranteed by its data type. -/
 structure StoresOk (table : RowTable) (s : Stores) : Prop where
   keysFresh : s.ScopeKeysFresh
-  /-- At the empty row table no external handle is allocated. There the external registration
-  and `prepareExternalAnswer` fall back without minting (`Program/Compile.lean`), no store step
-  writes the external store, and the reference mints none either (`prepareAtR`). At another
+  /-- At the empty row table no external handle is allocated. The external registration mints
+  nothing at any row table, there `prepareExternalAnswer` falls back without minting
+  (`Program/Compile.lean`), no store step writes the external store, and the reference mints
+  none either (`prepareAtR`). At another
   row table a host's answer at a row that answers a handle allocates one, on both machines.
   The exit connector's allocation premise (`exitHasTy_of_fitsExit`) reads this clause through
   `replay_externals`. -/
   externals : table = [] → s.externals.allocated = []
-  /-- No preloaded answer stands: a session loads none, and DI-23 deletes the list. So the
-  external registration answers nothing on both machines, at any row table
-  (`registerAsync_foreign`). Slice H6a of the host packet. -/
-  answers : s.externals.answers = []
 
-/-- info: frame rules: 7 checked theorems, 17 reused clauses, 4 explicit premises -/
+/-- info: frame rules: 7 checked theorems, 11 reused clauses, 3 explicit premises -/
 #guard_msgs in
 #frame_rules StoresOk
 
-/-- A store with the same external store keeps the two external clauses: what is left is its
-fresh scope keys. -/
+/-- A store with the same external store keeps the external clause: what is left is its fresh
+scope keys. -/
 theorem StoresOk.of_externals {s s' : Stores} (hs : StoresOk table s)
     (fresh : s'.ScopeKeysFresh) (h : s'.externals = s.externals) : StoresOk table s' :=
-  ⟨fresh, by rw [h]; exact hs.externals, by rw [h]; exact hs.answers⟩
+  ⟨fresh, by rw [h]; exact hs.externals⟩
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
 theorem storesOk_empty : StoresOk table Stores.empty := by

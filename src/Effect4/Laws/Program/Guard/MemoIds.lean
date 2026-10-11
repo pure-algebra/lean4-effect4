@@ -62,19 +62,6 @@ theorem registerAsync (p : NativeEff) (table : RowTable) (name : EffName)
     ((interpOf p table).registerAsync name fiber token s).1.MemoIdsOk := by
   cases name with
   | store name => cases name <;> exact hs
-  | external op request _ =>
-    cases op with
-    | external i =>
-      simp only [interpOf]
-      split
-      · exact hs
-      · split
-        · exact hs
-        · rename_i answer rest _
-          split
-          · exact prepareAnswer table _ answer s hs
-          · exact hs
-    | _ => exact hs
   | _ => exact hs
 
 theorem dueResumes (p : NativeEff) (table : RowTable) (s : Stores) (hs : s.MemoIdsOk) :
@@ -443,9 +430,9 @@ theorem steppedBy_memoIdsOk (p : NativeEff) (table : RowTable) (fuel : Nat)
 `nextName`. Reachability quantifies over raw decisions and all per-decision fuel budgets;
 no host-answer admission or reference-machine claim is added. -/
 theorem reachable_memoIdsOk (p : NativeEff) (table : RowTable) (compileFuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann)) (m : NativeMachine)
-    (reachable : Reachable p table compileFuel answers m) : m.state.MemoIdsOk := by
-  apply reachable_lift_pure p table compileFuel answers (fun m => m.state.MemoIdsOk)
+    (m : NativeMachine)
+    (reachable : Reachable p table compileFuel m) : m.state.MemoIdsOk := by
+  apply reachable_lift_pure p table compileFuel (fun m => m.state.MemoIdsOk)
     (load := Stores.empty_memoIdsOk)
     (pres := fun m fuel d h => steppedBy_memoIdsOk p table fuel m d h) m reachable
 

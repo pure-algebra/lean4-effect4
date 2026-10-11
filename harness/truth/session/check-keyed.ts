@@ -7,7 +7,7 @@ import type { ScenarioFixture, ScenarioManifest, ScenarioResult } from "./keyed-
 const [runPath, leanPath, controlsPath, scenariosPath, scenarioLeanPath, scenarioControlsPath] = process.argv.slice(2)
 if (!runPath || !leanPath || !controlsPath) throw Error("usage: check-keyed.ts RUN LEAN_RESULTS CONTROL_RESULTS [SCENARIOS SCENARIO_RESULTS SCENARIO_CONTROL_RESULTS]")
 const read = async <T>(path: string): Promise<T> => JSON.parse(await readFile(path, "utf8")) as T
-interface Receipt { status?: string; refused?: string; position?: number; exit?: Json; pending?: number[]; consumed?: number[]; awaits?: unknown[]; oracleAnswers?: number; retired?: number[] }
+interface Receipt { status?: string; refused?: string; position?: number; exit?: Json; pending?: number[]; consumed?: number[]; awaits?: unknown[]; retired?: number[] }
 const hosts = await read<Array<{ name: string; exit: Json }>>(resolve(runPath, "host.json"))
 const cases = await read<Array<{ name: string; recording: KeyedRecording }>>(resolve(runPath, "cases.json"))
 const lean = await read<Array<{ name: string; result: Receipt }>>(leanPath)
@@ -21,7 +21,6 @@ for (const { name, result } of lean) {
   deepStrictEqual(result.exit, host.exit, `${name}: full ordered exit observation`)
   deepStrictEqual(result.pending, [], `${name}: no pending completion lost at exit`)
   deepStrictEqual(result.awaits, [], `${name}: no outstanding callback`)
-  deepStrictEqual(result.oracleAnswers, 0, `${name}: no preloaded answer bypass`)
   const associations = new Map(tape.records.filter(r => r.kind === "call").map(r => [keyText(recordKey(r)), r.callId]))
   const applied = tape.records.filter(r => r.kind === "apply").map(r => associations.get(keyText(recordKey(r))))
   deepStrictEqual(result.consumed, applied, `${name}: exact keyed application sequence`)

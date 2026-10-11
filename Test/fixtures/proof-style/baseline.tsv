@@ -342,7 +342,6 @@ src/Effect4/Laws/Program/Admit.lean	external_answer_typed	simp-without-only	1
 src/Effect4/Laws/Program/Admit.lean	external_oracle_error_typed	simp-without-only	1
 src/Effect4/Laws/Program/Admit.lean	external_oracle_typed	simp-without-only	2
 src/Effect4/Laws/Program/Admit.lean	external_prepared_answer_typed	simp-without-only	1
-src/Effect4/Laws/Program/Admit.lean	external_registration_typed	simp-without-only	2
 src/Effect4/Laws/Program/Admit.lean	handleLive_eq	simp-without-only	1
 src/Effect4/Laws/Program/Admit.lean	hasTy_join_left	simp-without-only	1
 src/Effect4/Laws/Program/Admit.lean	hasTy_join_right	simp-without-only	1
@@ -586,7 +585,6 @@ src/Effect4/Laws/Program/Guard/Core.lean	interruptRecord_interrupted	simp-withou
 src/Effect4/Laws/Program/Guard/Core.lean	raceCodeOwned_park_host	simp-without-only	5
 src/Effect4/Laws/Program/Guard/Core.lean	raceCodeOwned_park_host	try	3
 src/Effect4/Laws/Program/Guard/Core.lean	raceIds_update	simp_all	1
-src/Effect4/Laws/Program/Guard/Core.lean	registerExternal_internal_state	try	2
 src/Effect4/Laws/Program/Guard/Core.lean	requestOf_interruptRecord_subset	simp-without-only	1
 src/Effect4/Laws/Program/Guard/Core.lean	requestOf_load	simp-without-only	1
 src/Effect4/Laws/Program/Guard/Core.lean	requestOf_of_shape	simp_all	2

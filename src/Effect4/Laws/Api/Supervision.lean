@@ -556,10 +556,9 @@ universe u v
 /-! ## Origins, machine half: the record each fork appends to the machine ledger -/
 
 @[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
-theorem load_origins (program : NativeEff) (fuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann)) :
-    originEntries (Api.load program fuel answers) = [] ∧
-      (Api.load program fuel answers).originOf Api.root = some .root := by
+theorem load_origins (program : NativeEff) (fuel : Nat) :
+    originEntries (Api.load program fuel) = [] ∧
+      (Api.load program fuel).originOf Api.root = some .root := by
   constructor <;> rfl
 
 section OriginFacts

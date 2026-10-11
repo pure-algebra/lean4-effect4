@@ -878,7 +878,7 @@ theorem m7_no_halt_at_cut : (Api.replay prog 6 tape).machine.stuck = none :=
 
 /-- R4's bridge at the cut: the reference machine is in the book with a native reachable one. -/
 theorem cut_native_reachable :
-    ∃ m₁, Guard.Reachable prog [] 6 [] m₁ ∧ BMeans prog m₁ m6 :=
+    ∃ m₁, Guard.Reachable prog [] 6 m₁ ∧ BMeans prog m₁ m6 :=
   replayR_bmeans_reachable prog 6 tape
 
 /-! ## Row 139 beside probe C

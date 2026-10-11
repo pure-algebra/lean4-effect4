@@ -56,9 +56,9 @@ the pinned daemon is alive when the run ends. -/
 def pinnedDaemon : Api.Program :=
   .scoped (.bind (.withFiber (.forkScoped (wait 2) ⟨true, false, .inherit⟩)) (wait 3))
 
-def childRun : Api.Inspection := Api.run childFork 400 [] table
-def looseRun : Api.Inspection := Api.run looseDaemon 400 [] table
-def pinnedRun : Api.Inspection := Api.run pinnedDaemon 400 [] table
+def childRun : Api.Inspection := Api.run childFork 400 table
+def looseRun : Api.Inspection := Api.run looseDaemon 400 table
+def pinnedRun : Api.Inspection := Api.run pinnedDaemon 400 table
 
 /-! ## Supervision before the run: one site each, of three different kinds -/
 

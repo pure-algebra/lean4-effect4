@@ -1,5 +1,6 @@
 import Effect4.Api
 import Effect4.Program.Profile
+import Test.Api.HostList
 
 /-!
 # Host specification contract — the envelope, the frontier, and two models
@@ -41,9 +42,10 @@ specification steps on the same call and is refuted as unlawful, which is what m
 `step_retains` more than decoration.
 
 **The relations against a real machine.** `RelatedState` and `observe` are checked against the
-stores an actual run leaves: the tree's own acquire/read/close program at this model's target
-allocates exactly one external handle, which is the model's one slot; the observation holds
-when the slot is closed and fails when it is left open (the leak check).
+stores an actual run leaves, under a host that answers from a list (`Test.Api.HostList`): the
+tree's own acquire/read/close program at this model's target allocates exactly one external
+handle, which is the model's one slot; the observation holds when the slot is closed and fails
+when it is left open (the leak check).
 -/
 
 set_option autoImplicit false
@@ -100,11 +102,10 @@ open Effect4.Program.Profile
 #guard (Scalar.step? Scalar.waitRow .unit ()).isNone
 #guard (Scalar.step? { Scalar.waitRow with name := "other" } (.nat 3) ()).isNone
 
--- the two relations, on stores the model can meet
+-- the two relations, on stores the model can meet; red: a pure row mints no handle
 #guard Scalar.RelatedState Stores.empty ()
 #guard Scalar.observe Stores.empty ()
-#guard ¬ Scalar.observe
-  { Stores.empty with externals := ExternalStore.ofAnswers [.ofExit (.success (.nat 9))] } ()
+#guard ¬ Scalar.observe { Stores.empty with externals := ⟨[Resource.target]⟩ } ()
 
 end ScalarModel
 
@@ -174,19 +175,20 @@ def resourceProgram : NativeEff :=
       (.perform (.external 1) (.var 0)))
     (.perform (.external 2) (.var 0)))
 
-def resourceAnswers : List (Completion Val Err Defect FiberId Ann) :=
-  [.ofExit (.success (.nat 0)), .ofExit (.success (.nat 7)), .ofExit (.success .unit)]
+def resourceExits : List ExitV := [.success (.nat 0), .success (.nat 7), .success .unit]
 
-def resourceRun : Api.Inspection := Api.run resourceProgram 1000 resourceAnswers resourceTable
+/-- The stores the run leaves under a host that answers from a list. -/
+def resourceStores : Option Stores :=
+  Test.Api.HostList.stores resourceProgram resourceTable resourceExits
 
-#guard resourceRun.exit = some (.success (.nat 7))
-#guard resourceRun.stores.externals.allocated = [Resource.target]
+#guard Test.Api.HostList.exit resourceProgram resourceTable resourceExits = some (.success (.nat 7))
+#guard resourceStores.map (·.externals.allocated) = some [Resource.target]
 -- one machine handle, one model slot: the state relation holds at the run's end
-#guard Resource.RelatedState resourceRun.stores ⟨[false], 1⟩
-#guard ¬ Resource.RelatedState resourceRun.stores ⟨[false, false], 1⟩
+#guard resourceStores.any fun s => decide (Resource.RelatedState s ⟨[false], 1⟩)
+#guard resourceStores.any fun s => decide (¬ Resource.RelatedState s ⟨[false, false], 1⟩)
 -- the observation holds when the slot is closed, and fails when it is left open (the leak)
-#guard Resource.observe resourceRun.stores ⟨[false], 1⟩
-#guard ¬ Resource.observe resourceRun.stores ⟨[true], 1⟩
+#guard resourceStores.any fun s => decide (Resource.observe s ⟨[false], 1⟩)
+#guard resourceStores.any fun s => decide (¬ Resource.observe s ⟨[true], 1⟩)
 
 end ResourceModel
 
@@ -208,7 +210,7 @@ def program : NativeEff := .perform (.external 0) (.lit (.nat 7))
 def reply : Completion Val Err Defect FiberId Ann := .ofExit (.success (.nat 9))
 
 /-- The machine after one `evaluate`: the root is parked on the external registration. -/
-def parked : NativeMachine := (Api.replay program 40 [Api.evaluate] [] table).machine
+def parked : NativeMachine := (Api.replay program 40 [Api.evaluate] table).machine
 
 /-- The correct record of that call's reply. -/
 def record : RecordedReply := ⟨table, Api.root, 0, .external 0, .nat 7, reply⟩
@@ -261,9 +263,9 @@ end Envelope
 
 section Frontier
 
-/-- The same program, the ordinary tape, and **no** recorded answer supplied to the oracle. -/
+/-- The same program, the ordinary tape, and **no** recorded answer. -/
 def exhausted : Api.Inspection ⊕ Api.ReplayCheckRefusal :=
-  Api.replayChecked program 40 [Api.evaluate, Api.flush] [] table
+  Api.replayChecked program 40 [Api.evaluate, Api.flush] table
 
 -- the tape ran out with the call outstanding: a live frontier, and no refusal
 #guard match exhausted with
@@ -283,7 +285,7 @@ def exhausted : Api.Inspection ⊕ Api.ReplayCheckRefusal :=
 /-- The same run with the reply fed in as a decision: the frontier is not a dead end. -/
 def completed : Api.Inspection ⊕ Api.ReplayCheckRefusal :=
   Api.replayChecked program 40
-    [Api.evaluate, .answerAsync Api.root 0 reply, Api.flush] [] table
+    [Api.evaluate, .answerAsync Api.root 0 reply, Api.flush] table
 
 #guard match completed with
   | .inl run => run.outcome == Api.Outcome.finished
@@ -297,7 +299,7 @@ side of the rule: a valid prefix parks, a malformed envelope refuses. -/
 def refused : Api.Inspection ⊕ Api.ReplayCheckRefusal :=
   Api.replayChecked program 40
     [Api.evaluate, .answerAsync Api.root 0 (.ofExit (.success (.str "9"))), Api.flush]
-     [] table
+    table
 
 #guard match refused with
   | .inl _ => false
