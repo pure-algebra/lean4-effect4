@@ -192,6 +192,14 @@ A program has folds, a journaled run with replay, and a printed image that reads
   An unconsumed theorem is triaged before any removal. A cache of a fold is checked against the
   fold (`Effect4.Program.TyCache.check_agreement`, row 345). So are the axiom walk's distance
   summary (`#axiom_audit checked`) and the view's reachability table.
+- **The machine's base laws** (row 350, the
+  [machine-from-the-base note](research/2026-10-11-machine-from-the-base/README.md)). One native
+  evaluation edits the evaluated fiber's frame by a word of eight moves (`iteration_moves`,
+  `src/Effect4/Laws/Program/Moves.lean`), and its footprint on the run fiber keeps six fields
+  (`iteration_footprint`). Five guard chains and the evaluation half of `MaskRuns` follow as
+  instances; replacing the old chains is Codex's lane. A raw context write makes a checked program at
+  a closed row die with `missingService` (`E4-CTX-CE-001`, row 349), and the printer spells a pair of
+  a union as a union of pairs (`E4-PRINT-CE-001`, row 346, ruled).
 - **The build.** The program and dogfood batteries run the machine as native code (row 327). A
   build prints only findings and the axiom gate's summary: reports print when a script asks for
   them. A battery restates no theorem (row 301); the cleanup pause of 2026-10-07 is closed, with
@@ -291,6 +299,8 @@ owner's note of 2026-10-09: write a program, then watch its session answer calls
   confirm. What a line's width means: the organic strokes note, section 4.
 - **MCP and code mode** (the MCP note, section 10): six rulings.
 - **The push of `lean4-effects`**, before this branch: Effect4 pins its local commit.
+- **Context writes** (row 349): option A, rc.112's typed `context` reader and `provideContext`
+  region in place of the raw pair, or the stopgap C. The context transformers wait on it.
 
 
 ## Process
