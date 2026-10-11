@@ -185,3 +185,38 @@ The source adds 41 lines and removes 27 lines relative to the base.
 `git diff --check` passes for the source and receipt.
 Apply this checkpoint after `d9a9a170d`.
 The open source induction and actual current, saved and queued ambient positions remain the next consumers.
+
+## Closed service provider checkpoint
+
+Base: `443f44597`.
+`checked_provideService_arm` consumes the same `ambient_updateContext_provide` protocol.
+The exact singleton update gives the existing service provider its actual context addition.
+The supplied service value fits its declared carrier before the provider installs it.
+The source checker supplies the carrier declaration and value order.
+The existing term membership theorem supplies the evaluated value's membership.
+The lawful flat-carrier premise serves `serviceTy_flat` in the existing M5 source induction.
+It is not an additional premise of any closed reachable claim.
+`checked_provideService_reader` consumes this general arm and the full source getter.
+
+`ClosedProviderSourceReader.lean` applies the producer to an actual numeric service and typed context reader.
+Its source passes admission and has an empty requirement row.
+Its semantic reader discharges the flat-carrier premise from the actual numeric declaration.
+The native result returns the installed singleton context.
+This kernel-checked native result is a finite evaluation.
+It does not establish whole-history typing or physical all-exit restoration.
+No outside implementation comparison is claimed.
+The source assembly and current, saved and queued ambient entry migration remain open.
+
+```sh
+LEAN_NUM_THREADS=3 lake build Effect4.Laws.Program.Typed.Context Effect4.Laws.Program.Typed.Scheduler
+LEAN_NUM_THREADS=3 lake env lean -DwarningAsError=true docs/research/2026-10-11-machine-models/codex/context/ClosedProviderSourceReader.lean
+LEAN_NUM_THREADS=3 lake env lean -DwarningAsError=true /private/tmp/context-scheduler-audit.lean
+```
+
+Result: 489 build jobs pass; Context measures 60 seconds and Scheduler measures 73 seconds.
+The closed source reader passes without messages.
+The audit reports 701 declarations within `[propext, Quot.sound]`, zero planned goals and zero modulo declarations.
+The source adds 96 lines and removes zero lines relative to the base.
+`git diff --check` passes for the three assigned paths.
+Apply this checkpoint after `443f44597`.
+No Machine source, root import, generated family or target projection changes.

@@ -467,4 +467,100 @@ theorem checked_provideContext_reader (root : ProgramSource) (w : World) (p : Po
       childNode childCheck futureServices requiredCovered
 
 
+/-- The checked service provider consumes the common restoring provider protocol.
+Consumer: ambient M5 source denotation and checked_provideService_reader. -/
+theorem checked_provideService_arm (root : ProgramSource) (w : World) (p : Point)
+    (env : TyEnv) (key : ServiceKey) (value : Term) (body : NativeEff)
+    (available : Env.Requirement) (ty : EffTy) (provided : Val)
+    (checked : Checker.check (root.scopeSig p.path) env p.path
+      (.provideService key value body) = .ok ty)
+    (values : EnvTyped w env p.env) (evaluated : evalTerm p.env value = some provided)
+    (services : w.serviceTy = root.sig.serviceTy)
+    (carriers : ∀ carrier, root.sig.serviceTy key = some carrier → flatCarrier carrier = true)
+    (coverage : Row.Subset ty.requires available) (budget : p.fuel ≠ 0)
+    (child : ∀ bodyTy, Checker.check (root.scopeSig p.path) env (p.path ++ [0]) body = .ok bodyTy →
+      ∀ later, w.leHost later → ∀ input, Row.Subset bodyTy.requires input →
+      Row.Subset available input → AmbientProg root later input (bodyTy, available, available)
+        (denoteR root.program body (p.child 0))) :
+    AmbientProg root w available (ty, available, available)
+      (denoteR root.program (.provideService key value body) p) := by
+  obtain ⟨carrier, valueTy, bodyTy, declared, termCheck, orderedValue, bodyCheck, rfl⟩ :=
+    Checker.inv_provideService _ _ _ _ _ _ _ checked
+  have declaredRoot : root.sig.serviceTy key = some carrier := by
+    rw [root.scopeSig_serviceTy] at declared
+    exact declared
+  have declaredWorld : w.serviceTy key = some carrier := services ▸ declaredRoot
+  have constants : (root.scopeSig p.path).constAtom = nativeConstAtom :=
+    (root.scopeSig_extends p.path).constAtom.trans rfl
+  have atoms : (root.scopeSig p.path).atomOf = nativeAtomTy :=
+    (root.scopeSig_extends p.path).atomOf.trans rfl
+  have valueFit := evalTerm_fits (sig := root.scopeSig p.path) atoms constants values termCheck evaluated
+  have carrierFit : Fits w provided carrier := fits_subN w orderedValue provided valueFit
+  let supplied : Ctx := Ctx.withServices ((Env.Context.empty : Env.Ctx).addV key provided)
+  have given : Fits w (Val.context supplied) (.contextOf (Env.Requirement.single key)) := by
+    refine fits_contextOf_intro (servicesFit_addV (servicesFit_empty w) declaredWorld
+      (fits_flatFits (carriers carrier declaredRoot) carrierFit) (fits_live w _ _ carrierFit))
+      (Provision.satisfies_single_addV key provided) ?_
+    intro other member
+    have same : other = key := (Row.mem_singleton key other).mp member
+    subst other
+    rw [declaredWorld]
+    rfl
+  rw [denoteR_provideService _ _ _ _ budget, evaluated]
+  dsimp only
+  have singletonUpdate (next : RProgram) :
+      updateContextR (.provideService key provided) next =
+        updateContextR (.provide supplied.services) next := by
+    have nonempty : supplied.services.entries ≠ [] := by
+      change [({ key := key, value := provided } : Env.Service Env.ValU)] ≠ []
+      exact List.cons_ne_nil _ _
+    have identity (previous : Env.Ctx) : updateKeepsIdentity (.provide supplied.services) previous = false := by
+      unfold updateKeepsIdentity
+      rw [decide_eq_false_iff_not]
+      exact fun h => nonempty h.2
+    simp only [updateContextR]
+    simp only [identity]
+    simp only [updateKeepsIdentity, Bool.false_eq_true, ↓reduceIte]
+    rfl
+  rw [singletonUpdate]
+  refine ambient_updateContext_provide root available available bodyTy.requires
+    (Env.Requirement.single key) supplied given coverage (Row.subset_refl _) _ _ ?_
+  intro later ordered input needed guaranteed
+  refine ambientProg_widen root (before := (bodyTy, available, available))
+    (Ty.subN_refl _) (Ty.subN_refl _) (Row.subset_refl _) (Row.subset_refl _) ?_
+  exact child bodyTy bodyCheck later ordered input needed guaranteed
+
+/-- The real service provider installs the checked carrier before its context reader.
+Consumer: the closed provider reader and ambient M5 source denotation. -/
+theorem checked_provideService_reader (root : ProgramSource) (w : World) (p : Point)
+    (env : TyEnv) (key : ServiceKey) (value : Term) (required available : Env.Requirement)
+    (ty : EffTy) (provided : Val)
+    (node : Node.at_ (.eff root.program) p.path =
+      some (.eff (.provideService key value (.withFiber (.context required)))))
+    (checked : Checker.check (root.scopeSig p.path) env p.path
+      (.provideService key value (.withFiber (.context required))) = .ok ty)
+    (values : EnvTyped w env p.env) (evaluated : evalTerm p.env value = some provided)
+    (services : w.serviceTy = root.sig.serviceTy)
+    (carriers : ∀ carrier, root.sig.serviceTy key = some carrier → flatCarrier carrier = true)
+    (coverage : Row.Subset ty.requires available) (budget : p.fuel ≠ 0) :
+    AmbientProg root w available (ty, available, available)
+      (denoteR root.program (.provideService key value (.withFiber (.context required))) p) := by
+  have childNode : Node.at_ (.eff root.program) (p.child 0).path =
+      some (.eff (.withFiber (.context required))) := Node.at_child node rfl
+  refine checked_provideService_arm root w p env key value (.withFiber (.context required))
+    available ty provided checked values evaluated services carriers coverage budget ?_
+  intro bodyTy bodyCheck later ordered input requiredCovered guaranteedCovered
+  have childCheck : Checker.check (root.scopeSig (p.child 0).path) env (p.child 0).path
+      (.withFiber (.context required)) = .ok bodyTy := by
+    change Checker.check (root.scopeSig (p.path ++ [0])) env (p.path ++ [0]) _ = _
+    rw [root.scopeSig_child node 0]
+    exact bodyCheck
+  have futureServices : later.serviceTy = root.sig.serviceTy :=
+    (le_serviceTy ordered.1).trans services
+  refine ambientProg_widen root (before := (bodyTy, input, input))
+    (Ty.subN_refl _) (Ty.subN_refl _) guaranteedCovered guaranteedCovered ?_
+  exact checked_context_denotation root later (p.child 0) env required input bodyTy
+    childNode childCheck futureServices requiredCovered
+
+
 end Effect4.Program.Typed
