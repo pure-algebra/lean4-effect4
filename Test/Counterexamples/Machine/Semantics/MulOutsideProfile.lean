@@ -1,0 +1,44 @@
+import Effect4.Api
+
+/-!
+# `E4-RUN-CE-047`: `mul` answers outside the profile, three ways (seeded)
+
+Row 321 marks every growing natural operation with `Profile.grow`, so that a face can refuse a
+result above the profile's bound (DI-56): `succ`, `add`, `plus` and `minus`
+(`src/Effect4/Machine/Integers.lean`). The atom `mul` is not marked. Lean's evaluator answers the
+exact product (`NativeAtom.eval`, `src/Effect4/Machine/Term.lean`), and the two faces answer
+otherwise, with no refusal:
+
+- the TypeScript prelude is `(a: number, b: number): number => a * b`, which rounds above 2^53:
+  under bun 1.4.2, `(2^27 + 1) * (2^27 + 1)` is `18014398777917440` (2026-10-11, this session);
+- the OCaml route lowers it to `lcnf_nat_mul`, which saturates at `max_int` above 2^62
+  (`ocaml/gen/api_gen.ml`).
+
+Row 309 says that no multiplication enters, yet the name resolves, and
+`Test/Dogfood/P1HttpCache.lean` uses it. The forced repair: mark `mul` like `add`, with its OCaml
+and TypeScript refusals, or remove the atom.
+-/
+
+set_option autoImplicit false
+
+namespace Test.Counterexamples.Machine.Semantics.MulOutsideProfile
+
+open Effect4 Effect4.Program
+
+def a : Nat := 2 ^ 27 + 1
+
+-- The name resolves to the atom.
+#guard NativeAtom.ofName? "mul" = some .mul
+
+-- The attack: both arguments are inside the profile, and Lean answers the exact product above it.
+#guard a ≤ rc112.natBound
+#guard NativeAtom.eval .mul [.nat a, .nat a] = some (.nat 18014398777917441)
+#guard rc112.natBound < 18014398777917441
+
+-- The TypeScript prelude multiplies binary64 numbers.
+#guard (NativeAtom.row .mul).prelude = "(a: number, b: number): number => a * b"
+
+-- Control: `add` goes through the profile's mark, so its faces can refuse.
+#guard NativeAtom.eval .add [.nat a, .nat a] = some (.nat (Profile.grow a a))
+
+end Test.Counterexamples.Machine.Semantics.MulOutsideProfile

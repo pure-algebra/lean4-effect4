@@ -7,13 +7,28 @@ you. Then read this folder's `README.md` and the earlier note
 
 ## The one thing to know first
 
-**Newest, 2026-10-11 13:35: handles are names (item 11), and item 10's footprint.** Two notes:
+**Newest, 2026-10-11 15:45: R2 is merged; item 11's first two steps landed beside you.**
 
-- `../2026-10-11-handles/README.md` models handles as names, worlds and one agreement relation.
-  Its checked probe derives the handle invariant, `KeyBounded`'s support bounds and DET-3's
-  equivariance from one abstraction theorem. Item 11 below is its order. Start it after R2.
-- Your draft `Laws/Machine/Edits.lean` has exactly the sixteen edits that the driver writes. Item
-  10 below adds two points while the draft is open: one footprint function and one `dropToken`.
+- R2 merged by fast-forward at `6c4bb709d` (`AUDIT.md`, section 15:40: improving in structure,
+  private analyses flat). `E4-RUN-CE-046` is repaired; its behaviour gates are owed at the sweep.
+- Item 10's two open points are in your `codex/machine-fields` tree: keep going. Add one more:
+  the `observe` write is spelled in `Edit.apply` and in `applyFiberEdit`. Give it one
+  `RunMachine.observe` beside `dropToken`.
+- Item 11, steps 1 and 2, landed at `58e25fd59`, with no existing module edited:
+  - `Effect4.ListRel` (`Laws/Data/ListRel.lean`) carries `Book.lean`'s lemmas under their names
+    and statements. `Laws/Data/ListRelConnectors.lean` connects `Machine.ListRel`,
+    `Modules.Pointwise` and `Program.Fits` to it.
+  - `Laws/Store/Names.lean` holds names, correspondences, `Rel`, `cata_val_related`, the
+    support and renaming folds, `Rel.mono`, `validIn_iff_diag` and `Parametric`.
+- Your next steps in item 11, in order:
+  1. Delete `Book.lean`'s `ListRel` in a slice that touches `Book.lean` anyway: 190 modules
+     rebuild once. Inside `namespace Effect4.Machine` the name then resolves to
+     `Effect4.ListRel`, so callers do not change. Rename only qualified `Machine.ListRel` uses.
+  2. Move `Pointwise`'s 23 uses to `ListRel`; keep `Fits` through `fits_iff` until a slice
+     touches `Typed.lean`.
+  3. Make `Val.validIn`'s theorems corollaries of `validIn_iff_diag`.
+  4. Then steps 3 to 9 below. `FiberEdit.keys`, the 49th hand support function, is step 4's
+     first carrier.
 
 The 11:25 build break is repaired (`98567f7f2`). Its rule stays: a slice that changes
 `src/Effect4/Machine` builds `Effect4.Laws` whole before it commits.
@@ -221,6 +236,20 @@ Behaviour gates only where a slice changes executable code, and then at a sweep.
        then need no per-step lemma.
     - Keep every existing theorem's name and statement; connectors first, then callers, then the
       old proof goes. Report lines before and after each step.
+
+12. **Types across the faces: `mul` and the OCaml ingress** (the owner, 2026-10-11: tighten the
+    type interface between Lean, TypeScript and OCaml; the note is
+    `../2026-10-11-type-interface/README.md`). Two items are in your lane; take them after item 10.
+    1. **`mul` through the profile** (`E4-RUN-CE-047`, seeded; the note's R-T2). Lean's
+       `NativeAtom.eval` answers the exact product, the TypeScript prelude rounds above 2^53, and
+       `lcnf_nat_mul` saturates above 2^62. Mark it as row 321 marks `add`: a `Profile.scale` in
+       `Machine/Integers.lean`, its OCaml row through `E4_clock`, and `to_profile_nat`. Or remove the
+       atom, as row 309 says; `Test/Dogfood/P1HttpCache.lean` is its one user. Propose which in the
+       receipt.
+    2. **The OCaml ingress** (the note's R-T8). `E4_engine.answer_async_success` builds `Val_nat` from
+       any `int`, so a negative natural passes reply admission. Refuse it, refuse a float that
+       `Val_float` cannot hold, and turn warning 8 back on in `LcnfGen.lean`'s header. Each is a
+       finite control in `dune test`.
 
 ## How to work
 
