@@ -1,6 +1,6 @@
 import Effect4.Laws.Machine.FrameWeights
 import Effect4.Laws.Machine.FinalizerRun
-import Effect4.Laws.Machine.ControlWeights
+import Effect4.Laws.Machine.FiberSum
 
 /-!
 Concept: scope-lifetime-finalization, R11.
@@ -112,8 +112,8 @@ theorem settle_bound (model : FrameWeights.Model ν σ β ε δ ι α) (owner : 
   have changed (fiber : RunFiber ν σ β ε δ ι α χ) (key : fiber.id = owner)
       (weight : FrameWeights.frame model fiber.frame = FrameWeights.frame model next.fiber.frame) :
       fibers model (next.machine.update fiber) ≤ outside model owner next.machine + FrameWeights.frame model next.fiber.frame := by
-    have bounded := ControlWeights.replace_sum_le_omitted (fun fiber : RunFiber ν σ β ε δ ι α χ => fiber.id)
-      (fun fiber => FrameWeights.frame model fiber.frame) owner fiber key next.machine.fibers unique
+    have bounded := FiberSum.install_le (fun fiber => FrameWeights.frame model fiber.frame)
+      next.machine owner fiber key unique
     rw [weight] at bounded
     exact bounded
   have original := changed next.fiber same rfl

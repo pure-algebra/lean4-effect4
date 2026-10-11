@@ -240,7 +240,7 @@ theorem begin_race_at (root : NativeEff) (completed) (table : RowTable)
 theorem interrupt_record_at (root : NativeEff) (completed) (table : RowTable)
     (who : Option FiberId) (extra : ReasonAnnotations Ann) (fiber : SourceFiber) (held : FiberAt root fiber) :
     FiberAt root (interruptRecord (interpAt root completed table) who extra fiber).1 := by
-  unfold interruptRecord
+  unfold interruptRecord interruptWithCause
   dsimp only
   repeat' split
   all_goals aesop (add safe constructors [FiberAt]) (add norm simp [FrameAt, CodeAt]) (add safe cases [FiberAt])

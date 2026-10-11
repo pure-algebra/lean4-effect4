@@ -1,4 +1,5 @@
 import Effect4.Laws.Machine.AnswerFlowHooks
+import Effect4.Laws.Machine.PopTraceFamily
 
 /-!
 Concepts: store-typing R4 and scope-lifetime-finalization R11.
@@ -18,42 +19,19 @@ variable {World Kind : Type w}
 variable (model : Model (ν := ν) (σ := σ) (β := β) (ε := ε) (δ := δ) (ι := ι) (α := α) World Kind)
 variable (interp : PrimInterp ν σ β ε δ ι α)
 
-/-- Draining the actual hook's scratch stack leaves it empty.
-Consumer: the structural induction over the original saved list. -/
+/-- Draining the actual hook's scratch stack leaves it empty. -/
 theorem drain_empty (demand : Arm) (skip : Bool) (code : Prim ν σ β ε δ ι α) (fiber : FrameFiber ν σ β ε δ ι α)
     (empty : fiber.stack = []) :
-    (FrameFiber.passPushed demand skip (code.ensure fiber).1).fiber.stack = [] := by
-  rcases FrameFiber.ensure_stack_cases code fiber with kept | ⟨pushed, _, _⟩
-  · rw [FrameFiber.passPushed_nil _ _ _ (kept.trans empty)]
-    exact kept.trans empty
-  · rw [FrameFiber.passPushed_fiber _ _ _ (.setInterruptible true) [] (by rw [pushed, empty])]
-    exact Prim.ensure_setInterruptible_stack true _
+    (FrameFiber.passPushed demand skip (code.ensure fiber).1).fiber.stack = [] :=
+  PopTrace.drain_empty demand skip code fiber empty
 
-/-- A pushed mask can replace an answer, but cannot select a value callback.
-Consumer: value selection comes from the original ordered saved list. -/
+/-- A pushed mask cannot select a callback at an absent arm. -/
 theorem drain_not_frame (demand : Arm) (skip : Bool)
     (missing : (Prim.setInterruptible true : Prim ν σ β ε δ ι α).hasArm demand = false)
     (code selected : Prim ν σ β ε δ ι α)
     (fiber : FrameFiber ν σ β ε δ ι α) (empty : fiber.stack = []) :
-    (FrameFiber.passPushed demand skip (code.ensure fiber).1).answer ≠ .frame selected := by
-  rcases FrameFiber.ensure_stack_cases code fiber with kept | ⟨pushed, _, _⟩
-  · rw [FrameFiber.passPushed_nil _ _ _ (kept.trans empty)]
-    intro impossible; cases impossible
-  · have shape : (code.ensure fiber).1.stack = [.setInterruptible true] := by rw [pushed, empty]
-    rw [FrameFiber.passPushed_answer _ _ _ (.setInterruptible true) [] shape]
-    intro selectedAnswer
-    cases found : Prim.answerOf (.setInterruptible true) demand
-        ((Prim.setInterruptible true).ensure {(code.ensure fiber).1 with stack := []}).2 with
-    | none => rw [found] at selectedAnswer; cases selectedAnswer
-    | some answer =>
-      rw [found] at selectedAnswer
-      dsimp only at selectedAnswer
-      split at selectedAnswer
-      · cases selectedAnswer
-      have arm := Prim.answerOf_frame_eq (.setInterruptible true) selected demand _
-        (found.trans (congrArg some selectedAnswer))
-      rw [missing] at arm
-      cases arm.2
+    (FrameFiber.passPushed demand skip (code.ensure fiber).1).answer ≠ .frame selected :=
+  PopTrace.drain_not_frame demand skip missing code selected fiber empty
 
 /-- The actual value pop carries its incoming value into the selected saved callback.
 It retains the suffix after that callback's actual mask hook. -/
@@ -67,41 +45,42 @@ theorem popFrom_value_selected (world : World) (input output : Kind)
     ∃ incoming middle, model.value world incoming value ∧
       SavedAt model interp world incoming middle selected ∧
       StackAt model interp world middle output (FrameFiber.popFrom .contA false frames fiber).fiber.stack := by
-  induction frames generalizing input fiber with
-  | nil => cases found
-  | cons head tail ih =>
-    cases stack with
-    | @cons _ _ middle _ _ _ callback suffix =>
-      cases chosen : Prim.answerOf head .contA (head.ensure fiber).2 with
-      | none =>
-        have missing : head.hasArm .contA = false := by
-          unfold Prim.answerOf at chosen
-          split at chosen
-          · cases chosen
-          · split at chosen
-            · cases chosen
-            · rename_i absent
-              exact Bool.eq_false_iff.mpr absent
-        have nextGood : model.value world middle value := by
-          cases callback with
-          | mk _ _ _ _ skip _ _ _ _ => exact skip world (model.future_refl world) value good missing
-        rw [FrameFiber.popFrom_continue_answer _ _ _ _ _ (Or.inl chosen)] at found
-        rw [FrameFiber.popFrom_continue_fiber _ _ _ _ _ (Or.inl chosen)]
-        rcases FrameFiber.continueFrom_cases .contA false head tail fiber with continued | drained
-        · rw [continued] at found ⊢
-          exact ih _ _ (drain_empty .contA false head fiber empty) nextGood suffix found
-        · rw [drained] at found
-          exact False.elim (drain_not_frame .contA false rfl head selected fiber empty found)
-      | some answer =>
-        rw [FrameFiber.popFrom_answer_answer _ _ _ _ _ answer chosen rfl] at found
-        have shape := Prim.answerOf_frame_eq head selected .contA _
-          (chosen.trans (congrArg some found))
-        rw [shape.1]
-        rw [FrameFiber.popFrom_answer_fiber _ _ _ _ _ answer chosen rfl]
-        have scratch : StackAt model interp world middle middle fiber.stack := by
-          rw [empty]; exact .nil world middle
-        exact ⟨input, middle, good, callback,
-          stack_append model interp (ensure_stack model interp world middle middle head fiber scratch) suffix⟩
+  have family : PopTrace.Family .contA false (SavedAt model interp world)
+      (fun fiber => fiber.stack = [])
+      (fun input output _ pop => model.value world input value → pop.answer = .frame selected →
+        ∃ incoming middle, model.value world incoming value ∧ SavedAt model interp world incoming middle selected ∧
+          StackAt model interp world middle output pop.fiber.stack) := by
+    constructor
+    · intro kind fiber cause scratch good found
+      cases found
+    · intro input middle output head tail fiber cause answer callback path empty chosen kept good found
+      have shape := Prim.answerOf_frame_eq head selected .contA _
+        (chosen.trans (congrArg some found))
+      rw [shape.1]
+      have scratch : StackAt model interp world middle middle fiber.stack := by
+        rw [empty]; exact .nil world middle
+      exact ⟨input, middle, good, callback,
+        stack_append model interp (ensure_stack model interp world middle middle head fiber scratch)
+          (path_stack model interp path)⟩
+    · intro input middle head fiber after callback empty
+      rw [FrameFiber.passPushed_fiber_cause]; exact drain_empty .contA false head fiber empty
+    · intro input middle output head tail fiber before after tailPop callback path empty passed drained next good found
+      have missing : head.hasArm .contA = false := by
+        rcases passed with ⟨chosen, _⟩ | ⟨answer, _, skipped, _⟩
+        · exact PopTrace.answer_missing head .contA _ chosen
+        · cases skipped
+      have nextGood : model.value world middle value := by
+        cases callback with
+        | mk _ _ _ _ skip _ _ _ _ => exact skip world (model.future_refl world) value good missing
+      simp only [FrameFiber.passOn, FrameFiber.joinPushed, drained] at found ⊢
+      exact next nextGood found
+    · intro input middle output head tail fiber before after tailPop callback path empty passed answered good found
+      unfold FrameFiber.passOn FrameFiber.joinPushed at found
+      split at found
+      · rename_i drained; exact False.elim (answered drained)
+      · rw [FrameFiber.passPushed_answer_cause] at found
+        exact False.elim (drain_not_frame .contA false rfl head selected fiber empty found)
+  exact family.popFrom input output frames fiber none (stack_path model interp stack) empty good found
 
 /-- Actual getCont retains the selected callback and its ordered suffix.
 Deferred and replacement answers cannot inhabit this selected-frame branch. -/

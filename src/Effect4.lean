@@ -56,6 +56,7 @@ import Effect4.Machine.Key
 import Effect4.Machine.Scope
 import Effect4.Program.Decision
 import Effect4.Machine.Frames
+import Effect4.Machine.Fold
 -- Fiber ids and the supervision vocabulary the machine speaks.
 import Effect4.Machine.Fiber
 import Effect4.Machine.Supervision

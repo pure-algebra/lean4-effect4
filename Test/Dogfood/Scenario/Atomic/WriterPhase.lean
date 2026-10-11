@@ -1,6 +1,7 @@
 import Test.Dogfood.Scenario.Atomic.Writer
 import Effect4.Laws.Program.SourceOpportunities
 import Effect4.Laws.Machine.FrameWeights
+import Effect4.Laws.Machine.PrimWeights
 import Effect4.Laws.Program.FinalizerRun
 
 /-!
@@ -70,17 +71,14 @@ def thunk (id : Nat) : EffThunk → Nat
   | .store (.act action) => storeAction id action
   | _ => 0
 
+/-- Leaf weights for the shared generated native-code fold. -/
+abbrev nativeWeights (id : Nat) : Machine.PrimWeights.Model EffName EffThunk where
+  name := name id
+  thunk := thunk id
+
 /-- Active code counts its next note and future ordinary callbacks. -/
-def current (id : Nat) : NCode → Nat
-  | .sync suspended | .suspend suspended | .withFiber suspended => thunk id suspended
-  | .onSuccess body callback | .onFailure body callback | .onExit body callback _ =>
-      current id body + name id callback
-  | .onSuccessConst body next => current id body + current id next
-  | .onSuccessAndFailure body success failure => current id body + name id success + name id failure
-  | .exitFrame body => current id body
-  | .iterator callback _ | .whileLoop callback _ | .asyncFinalizer callback => name id callback
-  | .async _ _ cancel => (cancel.map (name id)).getD 0
-  | _ => 0
+abbrev current (id : Nat) (code : NCode) : Nat :=
+  cata_prim (Machine.PrimWeights.currentAlgebra (nativeWeights id)) code
 
 /-- Saved code counts only its future callback, excluding its copied active body. -/
 def saved (id : Nat) : NCode → Nat
@@ -94,21 +92,24 @@ def saved (id : Nat) : NCode → Nat
 theorem program_exact (id : Nat) (body : ProgName) :
     current id (embed (progOf body)) = program id body := by
   fun_induction progOf body
-  all_goals aesop (add norm simp [program, current, thunk, name, storeName, storeAction,
+  all_goals aesop (add norm simp [program, current, cata_prim, thunk, name, storeName, storeAction,
     embed, finProgram]) (add safe cases [FinalizerStrategy])
 
 /-- Stored value callbacks spend only the reservation retained by their name. -/
 theorem store_value_bound (id : Nat) (callback : Name) (value : Val) :
     current id (embed (Machine.contAOf callback value)) ≤ storeName id callback := by
+  have folded (body : ProgName) :
+      cata_prim (PrimWeights.currentAlgebra (nativeWeights id)) (embed (progOf body)) = program id body :=
+    program_exact id body
   fun_cases Machine.contAOf callback value
-  all_goals aesop (add norm simp [program_exact, current, thunk, name, storeName,
+  all_goals aesop (add norm simp [folded, current, cata_prim, thunk, name, storeName,
     storeAction, operation, embed, Prim.ofExit])
 
 /-- Stored cause callbacks introduce no active note operation. -/
 theorem store_cause_zero (id : Nat) (callback : Name) (cause : CauseV) :
     current id (embed (Machine.contEOf callback cause)) = 0 := by
   fun_cases Machine.contEOf callback cause
-  all_goals aesop (add norm simp [current, name, embed, Prim.ofExit])
+  all_goals aesop (add norm simp [current, cata_prim, name, embed, Prim.ofExit])
 
 /-- An actual mask hook preserves the ordered saved-note reservation sum. -/
 theorem ensure_saved (id : Nat) (code : NCode)
@@ -124,7 +125,7 @@ theorem ensure_answer_zero (id : Nat) (code : NCode)
   revert selected
   fun_cases Prim.ensure code fiber
   all_goals intro selected
-  all_goals aesop (add norm simp [current])
+  all_goals aesop (add norm simp [current, cata_prim])
 
 /-- The shared scalar pop law applies to the active cleanup-note projection. -/
 def model (id : Nat) : Machine.FrameWeights.Model EffName EffThunk Val Err Defect FiberId Ann where
@@ -181,18 +182,18 @@ theorem compile_read_zero (id : Nat) (point : Point) (request : Term)
     (excluded : below id point.path = 0) :
     current id (compileEff (.perform .refGet request) point) = 0 := by
   cases fuel : point.fuel with
-  | zero => simp only [compileEff, fuel, frontier, current, thunk, excluded]
+  | zero => simp only [compileEff, fuel, frontier, current, cata_prim, thunk, excluded]
   | succ count =>
     simp only [compileEff, fuel, NativeOp.kind]
     cases evaluated : evalTerm point.env request with
-    | none => simp only [badShape, current]
+    | none => simp only [badShape, current, cata_prim]
     | some value =>
       cases selected : NativeOp.syncOpOf .refGet point.env value with
-      | none => simp only [selected, badShape, current]
+      | none => simp only [selected, badShape, current, cata_prim]
       | some op =>
         have zero := read_operation_zero id point.env value
         rw [selected] at zero
-        simpa only [selected, current, thunk] using zero
+        simpa only [selected, current, cata_prim, thunk] using zero
 
 /-- The active address projection never contains more than one selected note. -/
 theorem below_le_one (id : Nat) (path : List Nat) : below id path ≤ 1 := by
@@ -269,11 +270,13 @@ theorem entry_bound (built : Api.Built) (admitted : Api.Author.build (shop .none
   rw [SourceScope.resolve_at _ _ _ actual]
   cases fuel : point.fuel with
   | zero =>
-    simp only [compileEff, fuel, frontier, current, thunk]
+    simp only [compileEff, fuel, frontier, current, cata_prim, thunk]
     exact below_le_one id point.path
   | succ count =>
-    rw [compile_bind _ _ point count fuel, current]
+    rw [compile_bind _ _ point count fuel, current, cata_prim]
     have excluded : below id (point.child 0).path = 0 := read_child_zero id point.path source
+    change current id (compileEff (.perform .refGet (.var 0)) (point.child 0)) +
+      name id (.cont point) ≤ 1
     rw [compile_read_zero id _ (.var 0) excluded]
     change 0 + below id (point.path ++ [1]) ≤ 1
     simpa only [Nat.zero_add] using below_le_one id (point.path ++ [1])

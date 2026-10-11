@@ -320,7 +320,7 @@ theorem KeptFields.trans {x'' x' x : RFiber} (a : KeptFields x'' x') (b : KeptFi
 theorem interruptRecord_fields (root : ProgramSource) (who : Option FiberId)
     (extra : ReasonAnnotations Ann) (t : RFiber) :
     KeptFields (interruptRecord (interpR root.program) who extra t).1 t := by
-  unfold interruptRecord
+  unfold interruptRecord interruptWithCause
   by_cases hx : t.exit.isSome = true
   · rw [if_pos hx]
     exact KeptFields.refl t
@@ -502,7 +502,7 @@ theorem configTyped_interruptEach (root : ProgramSource) (rootTy : EffTy) {w : W
           have e2 : g' = (interruptRecord (interpR root.program) (some who) extra x).1 := by
             rw [hrec]
           rw [e2]
-          unfold interruptRecord
+          unfold interruptRecord interruptWithCause
           by_cases hxe : x.exit.isSome = true
           · rw [if_pos hxe]
             exact Or.inl rfl

@@ -1,4 +1,5 @@
 import Test.Dogfood.Proofs.HostTimeoutNumberFinalizers
+import Effect4.Laws.Program.StackRegionRun
 
 /-!
 Placement: scope-lifetime-finalization R11 and translation-simulation R10.
@@ -134,6 +135,65 @@ theorem count_prefix_typed (view : View) (machine : Effect4.Program.NativeMachin
   · exact counted_lookup machine fiber captured (fuel + 1) delay image.count n error image.cleanups image.completed found
   · exact counted_frame view machine fiber image n cleanupComplete formComplete cursor
       captured fuel delay error output heap stack
+
+/-- The attempt's exact saved onExit forms the entry suffix after the committed source count.
+Consumer: the numeric region producer follows the callback above that suffix. -/
+def attemptRegion (fiber : NativeFiber) (captured : Point) (fuel delay : Nat) (n : Fin 4)
+    (error : Val) : List NCode :=
+  let point := attemptPoint captured fuel delay n error
+  let sync : NCode := .sync (.op (.refUpdate ⟨0⟩ countTerm point.env))
+  .onExit (.onSuccess sync (.cont (point.child 0))) (.fin point) false :: fiber.frame.stack
+
+/-- The checked count prefix establishes its numeric frame and actual finalizer region entry.
+The remaining budget follows the shared region law up to its explicit detached-exit boundary.
+This supplies no post-prefix heap preservation or reached history without those operation laws. -/
+theorem count_prefix_region (view : View) (machine : Effect4.Program.NativeMachine) (fiber : NativeFiber)
+    (image : Image) (n : Fin 4) (cleanupComplete : image.cleanups.length = image.count)
+    (formComplete : image.exits.length = image.count) (cursor : image.count = n.val)
+    (captured : Point) (fuel delay : Nat) (error : Val) (output : HostTimeoutNumberFlow.Kind)
+    (rest : List (Cmd EffName EffThunk Val Err Defect FiberId Ann))
+    {bases : List Bool} (entry : LoopCut HostTimeoutSource.program Scenario.Timeout.fetch.table bases machine
+      (.loop fiber.id false :: rest))
+    (live : machine.stuck = none) (found : machine.fiber? fiber.id = some fiber)
+    (current : fiber.frame.current = resolve HostTimeoutSource.program (attemptPoint captured (fuel + 1) delay n error))
+    (heap : ImageAt image machine.state)
+    (interrupt : fiber.frame.deferredInterrupt = false) (override : fiber.yieldOverride = none)
+    (budget : fiber.currentOpCount + 3 < fiber.maxOpsBeforeYield)
+    (stack : AnswerFlow.StackAt (model view) (interpreter view).toPrimInterp machine.state
+      (.cleanupExit (nextImage image n cleanupComplete formComplete (Nat.le_of_eq cursor))
+        (by change image.count + 1 = image.cleanups.length + 1; rw [cleanupComplete]))
+      output fiber.frame.stack)
+    (remaining : Nat)
+    (permitted : Lift.PrefixAllows (evaluator := evaluatorFor HostTimeoutSource.program Scenario.Timeout.fetch.table)
+      (interpOf HostTimeoutSource.program Scenario.Timeout.fetch.table)
+      (fun next head _ => StackRegion.Continues HostTimeoutSource.program Scenario.Timeout.fetch.table
+        (interpOf HostTimeoutSource.program Scenario.Timeout.fetch.table) fiber.id
+        (attemptRegion fiber captured (fuel + 1) delay n error) next head) remaining
+      (countedMachine machine fiber captured (fuel + 1) delay image.count n error image.cleanups image.completed)
+      ([.drainDue, .deliver fiber.id false] ++ rest)) :
+    let entered := countedMachine machine fiber captured (fuel + 1) delay image.count n error image.cleanups image.completed
+    let counted := countedFiber fiber captured (fuel + 1) delay n error
+    let next := nextImage image n cleanupComplete formComplete (Nat.le_of_eq cursor)
+    let out := driveState (evaluator := evaluatorFor HostTimeoutSource.program Scenario.Timeout.fetch.table)
+      (interpOf HostTimeoutSource.program Scenario.Timeout.fetch.table) (3 + remaining) machine (.loop fiber.id false :: rest)
+    ImageAt next entered.state ∧
+      AnswerFlow.FrameAt (model view) (interpreter view).toPrimInterp entered.state output counted.frame ∧
+      StackRegion.Held fiber.id (attemptRegion fiber captured (fuel + 1) delay n error) out.1 ∧
+      ∃ laterBases, bases <+: laterBases ∧ LoopCut HostTimeoutSource.program Scenario.Timeout.fetch.table laterBases out.1 out.2 := by
+  dsimp only
+  have ran := count_prefix_exact machine fiber captured (fuel + 1) delay image.count n error
+    image.cleanups image.completed rest live found current heap interrupt override budget
+  have stored := counted_lookup machine fiber captured (fuel + 1) delay image.count n error
+    image.cleanups image.completed found
+  have inside : StackRegion.Inside (attemptRegion fiber captured (fuel + 1) delay n error)
+      (countedFiber fiber captured (fuel + 1) delay n error) := by
+    exact ⟨[.onSuccess (.sync (.op (.refUpdate ⟨0⟩ countTerm
+      (attemptPoint captured (fuel + 1) delay n error).env)))
+      (.cont ((attemptPoint captured (fuel + 1) delay n error).child 0))], rfl⟩
+  have region := StackRegion.drive_from_prefix HostTimeoutSource.program Scenario.Timeout.fetch.table
+    machine (.loop fiber.id false :: rest) 3 remaining _ _ entry ran fiber.id _ stored _ inside permitted
+  exact ⟨rfl, counted_frame view machine fiber image n cleanupComplete formComplete cursor
+    captured fuel delay error output heap stack, region.1, region.2⟩
 
 /-- The actual evaluate command resets the counter and produces the committed numeric frame in four commands. -/
 theorem count_entry_typed (view : View) (machine : Effect4.Program.NativeMachine) (fiber : NativeFiber)

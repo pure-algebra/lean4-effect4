@@ -60,7 +60,7 @@ theorem next_zero (built : Api.Built) (admitted : Api.Author.build (shop .none) 
     change current id (resolve built.program (point.childWith 0 cursor)) ≤ WriterPhase.below id (point.path ++ [0]) at bound
     dsimp only
     omega
-  all_goals aesop (add norm simp [current, badShape, finish_zero])
+  all_goals aesop (add norm simp [current, cata_prim, badShape, finish_zero])
 
 /-- An actual loop reply cannot recreate a cleanup-note reservation. -/
 theorem resume_zero (built : Api.Built) (admitted : Api.Author.build (shop .none) = .ok built)

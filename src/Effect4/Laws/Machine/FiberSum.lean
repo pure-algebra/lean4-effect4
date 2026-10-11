@@ -100,6 +100,14 @@ theorem update_bound (m : RunMachine ν σ β ε δ ι α χ St) (next : RunFibe
     rw [found]
     exact Nat.le_of_eq changed
 
+/-- Installing an owner counts its returned row at most once, even when its stored row is absent.
+Consumers: source-opportunity installation and writer settlement retain their distinct-id premise. -/
+theorem install_le (m : RunMachine ν σ β ε δ ι α χ St) (owner : FiberId)
+    (next : RunFiber ν σ β ε δ ι α χ) (key : next.id = owner)
+    (unique : (m.fibers.map RunFiber.id).Nodup) :
+    total w (m.update next) ≤ outside w owner m + w next :=
+  ControlWeights.replace_sum_le_omitted RunFiber.id w owner next key m.fibers unique
+
 /-- **Writing the owner back** gives the rest plus the new row. -/
 theorem install (m : RunMachine ν σ β ε δ ι α χ St) (id : FiberId) (old next : RunFiber ν σ β ε δ ι α χ)
     (unique : (m.fibers.map RunFiber.id).Nodup) (found : m.fiber? id = some old) (key : next.id = id) :

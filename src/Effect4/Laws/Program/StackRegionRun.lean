@@ -29,6 +29,19 @@ theorem entry_held (root : NativeEff) (table : RowTable) {bases : List Bool}
     subst other
     exact ⟨[], rfl⟩
 
+/-- A checked entry suffix becomes a region at the actual stored row.
+Consumer: Timeout's counted attempt retains its onExit beneath the count callback. -/
+theorem entry_suffix_held (root : NativeEff) (table : RowTable) {bases : List Bool}
+    {machine : NativeMachine} {commands : List NCommand} (entry : LoopCut root table bases machine commands)
+    (id : FiberId) (fiber : NFiber) (found : machine.fiber? id = some fiber)
+    (below : List NCode) (inside : Inside below fiber) : Held id below machine := by
+  have whole := entry_held root table entry id fiber found
+  refine ⟨whole.allocated, ?_⟩
+  intro other member selected live
+  obtain ⟨above, old⟩ := whole.frames other member selected live
+  obtain ⟨own, suffix⟩ := inside
+  exact ⟨above ++ own, by rw [old, suffix, List.append_assoc]⟩
+
 /-- The compiled queue rules out clearing a live row without adding an owner assumption. -/
 theorem command_clear (root : NativeEff) (table : RowTable) (machine : NativeMachine)
     (head : NCommand) (rest : List NCommand) (queue : Guard.GuardQueue root table machine (head :: rest)) :
@@ -62,6 +75,33 @@ theorem drive (root : NativeEff) (table : RowTable) {bases : List Bool}
       (command_clear root table next head rest cut.queue), laterBases, grown.trans grown', later⟩
   · exact ⟨held, bases, List.prefix_refl _, entry⟩
   · exact permitted
+
+/-- A checked local prefix supplies the entry of the remaining region execution.
+The boundary premise names each actual detached evaluation before its exit.
+Consumer: numeric attempt entry, without a fixed scenario-budget partition. -/
+theorem drive_from_prefix (root : NativeEff) (table : RowTable) {bases : List Bool}
+    (machine : NativeMachine) (commands : List NCommand) (prefixFuel remainingFuel : Nat)
+    (entered : NativeMachine) (pending : List NCommand)
+    (entry : LoopCut root table bases machine commands)
+    (ran : driveState (evaluator := evaluatorFor root table) (interpOf root table)
+      prefixFuel machine commands = (entered, pending))
+    (id : FiberId) (fiber : NFiber) (found : entered.fiber? id = some fiber)
+    (below : List NCode) (inside : Inside below fiber)
+    (permitted : Lift.PrefixAllows (evaluator := evaluatorFor root table) (interpOf root table)
+      (fun next head _ => Continues root table (interpOf root table) id below next head)
+      remainingFuel entered pending) :
+    let out := driveState (evaluator := evaluatorFor root table) (interpOf root table)
+      (prefixFuel + remainingFuel) machine commands
+    Held id below out.1 ∧ ∃ laterBases, bases <+: laterBases ∧ LoopCut root table laterBases out.1 out.2 := by
+  letI := evaluatorFor root table
+  obtain ⟨entryBases, grown, cut⟩ := entry.drive prefixFuel
+  rw [ran] at cut
+  have region := drive root table entered pending id below remainingFuel cut
+    (entry_suffix_held root table cut id fiber found below inside) permitted
+  dsimp only
+  rw [driveState_add _ prefixFuel remainingFuel, ran]
+  obtain ⟨kept, laterBases, laterGrown, later⟩ := region
+  exact ⟨kept, laterBases, grown.trans laterGrown, later⟩
 
 /-- The suffix determines its region-owned prefix without choosing a witness. -/
 theorem inside_take {below : List NCode} {fiber : NFiber} (held : Inside below fiber) :

@@ -66,7 +66,7 @@ theorem store_action_zero (root : NativeEff) (q : List Nat) (clear : ClearFinali
     exact zero order owned.1
   case raceAll race =>
     cases race
-    all_goals aesop (add norm simp [actionOf, embedAction, action, raceEntrants, current, thunk, name, push, embed, StoreActionAt]) (add safe apply [(prog_zero root q clear)])
+    all_goals aesop (add norm simp [actionOf, embedAction, action, raceEntrants, current, cata_prim, thunk, name, push, embed, StoreActionAt]) (add safe apply [(prog_zero root q clear)])
   all_goals rfl
 
 /-- A source action reserves only descendants of its existing suspension point.
@@ -143,10 +143,10 @@ theorem interp_action_le (root : NativeEff) (q : List Nat) (clear : ClearFinaliz
     all_goals cases found
   case acquireMasked point context =>
     cases found
-    simp only [action, current, thunk, name, push, Nat.zero_add, Nat.add_zero, Nat.le_refl]
+    simp only [action, current, cata_prim, thunk, name, push, Nat.zero_add, Nat.add_zero, Nat.le_refl]
   case releaseMasked point previous =>
     cases found
-    simpa only [action, current, name, push, Nat.add_zero, thunk] using resolve_le root q point
+    simpa only [action, current, cata_prim, name, push, Nat.add_zero, thunk] using resolve_le root q point
   case forkLayer => exact owned.elim
   all_goals aesop (add norm simp [interpAt, interpOf, action, thunk])
 

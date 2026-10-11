@@ -24,3 +24,19 @@ It establishes no progress, command closure, host agreement, or completed scenar
 
 Probe the word, erasure, and balance before replacing the single classifier.
 Build its existing guard consumers and audit the changed modules before committing.
+
+
+A selected finalizer transfers its saved credit to a program start within one evaluation.
+Keep that actual pop and replacement in one labelled operation.
+Its erasure consists of the old pop and answer moves.
+Splitting them would discard the selected credit before the start charges it.
+The operation records the actual selected frame, delivered exit, and emitted start.
+A replacement without a program start uses the same operation with no start label.
+
+Answer, push, and identity labels admit only administrative events.
+Those events contain no frame event or finalizer program start.
+This restriction lets a saved-stack ledger prove its local bound without arbitrary event premises.
+Current-code weights still require source contracts; input and output code alone do not certify their admission.
+
+Finishing criteria for this slice: one strengthened Footprint census, exact trace concatenation,
+old interfaces as projections, a checked ledger consumer, and a narrow audit.

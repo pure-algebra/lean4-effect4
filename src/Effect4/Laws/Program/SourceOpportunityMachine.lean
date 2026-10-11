@@ -1,5 +1,5 @@
 import Effect4.Laws.Program.SourceOpportunityActions
-import Effect4.Laws.Machine.ControlWeights
+import Effect4.Laws.Machine.FiberSum
 
 /-!
 Concept: scope-lifetime-finalization, R11.
@@ -33,15 +33,13 @@ def outside (root : NativeEff) (q : List Nat) (owner : FiberId) (m : NativeMachi
 theorem outside_split (root : NativeEff) (q : List Nat) (m : NativeMachine) (fiber : SourceFiber)
     (unique : (m.fibers.map (fun fiber => fiber.id)).Nodup) (member : fiber ∈ m.fibers) :
     outside root q fiber.id m + frame root q fiber.frame = fibers root q m := by
-  exact ControlWeights.omit_sum (fun fiber : SourceFiber => fiber.id)
-    (fun fiber => frame root q fiber.frame) fiber m.fibers unique member
+  exact FiberSum.split (fun fiber => frame root q fiber.frame) m fiber unique member
 
 /-- Installing the selected row retains every other row's source reservation. -/
 theorem outside_update (root : NativeEff) (q : List Nat) (owner : FiberId) (m : NativeMachine)
     (fiber : SourceFiber) (selected : fiber.id = owner) :
     outside root q owner (m.update fiber) = outside root q owner m :=
-  ControlWeights.replace_omitted (fun fiber : SourceFiber => fiber.id)
-    (fun fiber => frame root q fiber.frame) owner fiber selected m.fibers
+  FiberSum.outside_update (fun fiber => frame root q fiber.frame) m owner fiber selected
 
 /-- An actual keyed installation spends only its selected fiber's old reservation. -/
 theorem update_debit (root : NativeEff) (q : List Nat) (m : NativeMachine) (old next : SourceFiber)
@@ -49,11 +47,7 @@ theorem update_debit (root : NativeEff) (q : List Nat) (m : NativeMachine) (old 
     (member : old ∈ m.fibers) (cost : Nat)
     (bounded : frame root q next.frame + cost ≤ frame root q old.frame) :
     fibers root q (m.update next) + cost ≤ fibers root q m := by
-  have installed := ControlWeights.replace_sum (fun fiber : SourceFiber => fiber.id)
-    (fun fiber => frame root q fiber.frame) old next same m.fibers unique member
-  change fibers root q (m.update next) + frame root q old.frame =
-    fibers root q m + frame root q next.frame at installed
-  omega
+  exact FiberSum.update_debit (fun fiber => frame root q fiber.frame) m old next same unique member cost bounded
 
 /-- Emitting events appends exactly their opportunity count to the actual trace. -/
 theorem recorded_emit (q : List Nat) (m : NativeMachine) (events) :
@@ -236,13 +230,13 @@ theorem step_frame_install_debit (root : NativeEff) (q : List Nat) (fragment : F
   let next := evaluatePrim.stepFrame (interpAt root completed table) m fiber yielding
   have bounded := step_frame_debit root q fragment clearFin clearLoop completed table m fiber yielding owned
   have shape := step_frame_table root completed table m fiber yielding
-  have installed := ControlWeights.replace_sum (fun fiber : SourceFiber => fiber.id)
-    (fun fiber => frame root q fiber.frame) fiber next.fiber shape.2 next.machine.fibers
-    (shape.1.symm ▸ unique) (shape.1.symm ▸ member)
-  change fibers root q (next.machine.update next.fiber) + frame root q fiber.frame =
-    fibers root q next.machine + frame root q next.fiber.frame at installed
-  have oldRows : fibers root q next.machine = fibers root q m := by
-    unfold fibers
+  have installed := FiberSum.install_le (fun fiber => frame root q fiber.frame)
+    next.machine fiber.id next.fiber shape.2 (shape.1.symm ▸ unique)
+  change fibers root q (next.machine.update next.fiber) ≤
+    outside root q fiber.id next.machine + frame root q next.fiber.frame at installed
+  have partition := outside_split root q m fiber unique member
+  have oldRows : outside root q fiber.id next.machine = outside root q fiber.id m := by
+    unfold outside
     rw [shape.1]
   have sameTrace : recorded q (next.machine.update next.fiber) = recorded q next.machine := rfl
   change recorded q (next.machine.update next.fiber) + fibers root q (next.machine.update next.fiber) ≤ _
@@ -298,7 +292,7 @@ theorem enter_scoped_debit (root : NativeEff) (q : List Nat) (point : Point) (bo
     let next := enterScoped root point m fiber yielding
     recorded q next.machine + frame root q next.fiber.frame ≤ recorded q m + frame root q fiber.frame := by
   have bounded := Nat.le_trans (resolve_le root q (point.child 0)) (child_le q point.path 0)
-  simp only [enterScoped, frame, current, name, push, selected, thunk, found, Nat.add_zero]
+  simp only [enterScoped, frame, current, cata_prim, name, push, selected, thunk, found, Nat.add_zero]
   change recorded q m + (current root q (resolve root (point.child 0)) + _) ≤ recorded q m + (below q point.path + _)
   omega
 
@@ -332,17 +326,17 @@ theorem exit_scoped_debit (root : NativeEff) (q : List Nat) (fragment : Fragment
     split
     · split
       · aesop (add norm simp [recorded, RunMachine.emit_trace, List.map_append, List.sum_append, Function.comp_def, runEvent, frame_events_recorded, getCont_events_zero,
-          frame, exit_zero, Prim.ofExit, current, FrameFiber.getCont_fiber_cause]) (add safe tactic (by omega))
+          frame, exit_zero, Prim.ofExit, current, cata_prim, FrameFiber.getCont_fiber_cause]) (add safe tactic (by omega))
       · rename_i state program closed
         have programs := close_unsafe_zero root q clearFin _ _ _ m.state state program configuration.scopes closed
         cases program
         case none =>
           aesop (add norm simp [recorded, RunMachine.emit_trace, List.map_append, List.sum_append, Function.comp_def, runEvent, frame_events_recorded, getCont_events_zero,
-            frame, exit_zero, Prim.ofExit, current, FrameFiber.getCont_fiber_cause]) (add safe tactic (by omega))
+            frame, exit_zero, Prim.ofExit, current, cata_prim, FrameFiber.getCont_fiber_cause]) (add safe tactic (by omega))
         case some code =>
           have zero := programs code rfl
           aesop (add norm simp [recorded, RunMachine.emit_trace, List.map_append, List.sum_append, Function.comp_def, frame_events_recorded, getCont_events_zero,
-            frame, exit_zero, Prim.ofExit, current, finalizer_code_weight, runEvent, FrameFiber.getCont_fiber_cause]) (add safe tactic (by omega))
+            frame, exit_zero, Prim.ofExit, current, cata_prim, finalizer_code_weight, runEvent, FrameFiber.getCont_fiber_cause]) (add safe tactic (by omega))
     · exact fallback
 
 end Effect4.Program.SourceScope.Opportunities

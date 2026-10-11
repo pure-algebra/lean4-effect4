@@ -29,7 +29,7 @@ theorem ensure_answer_zero (root : NativeEff) (q : List Nat) (code : NCode)
   revert found
   fun_cases Prim.ensure code fiber
   all_goals intro found
-  all_goals aesop (add norm simp [current])
+  all_goals aesop (add norm simp [current, cata_prim])
 
 /-- The shared frame scalar model reads the existing source projections.
 Consumer: actual saved-frame pop and registration-history transport. -/
@@ -136,7 +136,7 @@ theorem armA_le (root : NativeEff) (q : List Nat) (clearFin : ClearFinalizers ro
       name q onValue + name q onCause
     have bound := interp_contA_le root q clearFin completed table onValue value owned.2.1
     omega
-  all_goals aesop (add norm simp [saved, CodeAt, current, iterCurrent, exit_zero]) (add safe apply [(interp_contA_le root q clearFin)]) (add safe forward [(loop_return_zero root q clearLoop), (iter_return_zero root q clearFin)]) (add safe tactic (by omega))
+  all_goals aesop (add norm simp [saved, CodeAt, current, cata_prim, iterCurrent, exit_zero]) (add safe apply [(interp_contA_le root q clearFin)]) (add safe forward [(loop_return_zero root q clearLoop), (iter_return_zero root q clearFin)]) (add safe tactic (by omega))
 
 /-- Stored cancellation exposes only administrative cleanup.
 Consumer: native cancellation debit. -/
@@ -150,7 +150,7 @@ Consumer: native failure-frame opportunity debit. -/
 theorem cancel_zero (root : NativeEff) (q : List Nat) (callback : EffName) :
     current root q (cancelProgramOf callback) = 0 := by
   fun_cases cancelProgramOf callback
-  all_goals aesop (add norm simp [current, thunk, name, push, embed, store_cancel_zero])
+  all_goals aesop (add norm simp [current, cata_prim, thunk, name, push, embed, store_cancel_zero])
 
 /-- A cause arm spends only its actual saved handler reservation.
 Consumer: native cause resume and source registration history debit. -/
@@ -172,7 +172,7 @@ theorem armE_le (root : NativeEff) (q : List Nat) (completed) (table : RowTable)
       name q onValue + name q onCause
     have bound := interp_contE_le root q completed table onCause cause owned.2.2
     omega
-  all_goals aesop (add norm simp [saved, CodeAt, current, exit_zero, interpAt, interpOf,
+  all_goals aesop (add norm simp [saved, CodeAt, current, cata_prim, exit_zero, interpAt, interpOf,
     RunInterp.toPrimInterp, cancel_zero, name, push]) (add safe apply [(interp_contE_le root q)]) (add safe tactic (by omega))
 
 /-- A finished frame has no remaining active source opportunity.
@@ -205,7 +205,7 @@ theorem resumeValue_le (root : NativeEff) (q : List Nat) (clearFin : ClearFinali
     simp only [answer] at popped
     simp only [returned, frame, List.map_append, List.sum_append]
     omega
-  all_goals aesop (add norm simp [returned, frame, current, answer, List.map_append, List.sum_append,
+  all_goals aesop (add norm simp [returned, frame, current, cata_prim, answer, List.map_append, List.sum_append,
     FrameFiber.getCont_fiber_cause, FrameFiber.getCont_answer_cause]) (add safe forward [arms]) (add safe tactic (by omega))
 
 /-- The actual native cause resume spends only saved handler reservations.
@@ -232,7 +232,7 @@ theorem resumeCause_le (root : NativeEff) (q : List Nat) (completed) (table : Ro
     simp only [returned, frame, List.map_append, List.sum_append]
     dsimp only [pop] at bounded ⊢
     omega
-  all_goals aesop (add norm simp [returned, frame, current, answer, List.map_append, List.sum_append,
+  all_goals aesop (add norm simp [returned, frame, current, cata_prim, answer, List.map_append, List.sum_append,
     FrameFiber.getCont_fiber_cause, FrameFiber.getCont_answer_cause]) (add safe forward [arms]) (add safe tactic (by omega))
 
 end Effect4.Program.SourceScope.Opportunities

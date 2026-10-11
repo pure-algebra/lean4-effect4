@@ -85,3 +85,240 @@ Its answer label records input and replacement code.
 Its pop label records the actual demand, carried cause, popped frames, selected answer, and emitted events.
 The stronger evaluator classification is still open; no library declaration imports this probe.
 Its labels do not independently certify source admission or an instance's local weight bound.
+
+
+## Pop and interference integration
+
+The shared pop and first-lookup proofs pass independent checks after integration.
+The original scenario endpoints remain unchanged.
+
+Base: `e2998236e`.
+Integrated code head: `7eda5dc76`.
+The coordinator adds the `MachinePopTrace` reader to `Test/All.lean`.
+The code receipts own their placement, scope, and measured size:
+`2026-10-11-codex-stack-consolidation-receipt.md`,
+`2026-10-11-codex-worker-entry-receipt.md`, and
+`2026-10-11-machine-models/codex/timeout-pop-consolidation-receipt.md`.
+
+Verification uses `LEAN_NUM_THREADS=3` throughout:
+
+- `lake build Effect4.Laws.Program.ReleaseCustody.LoopCommand Test.Dogfood.Proofs.HostTimeoutLoop Test.Dogfood.Scenario.Workers` passes, 1206 jobs.
+- `lake build Effect4.Laws.Machine.AnswerFlowCausePop Test.Dogfood.Proofs.MachinePopTrace Test.Dogfood.Scenario.Timeout Test.Machine.AnswerFlow Test.Dogfood.Proofs.HostTimeoutNumberFormFamily` passes, 1145 jobs.
+- `lake env lean docs/research/2026-10-11-machine-models/codex/PopIntegrationAudit.lean` audits 203 declarations within `[propext, Quot.sound]`.
+- `lake env lean docs/research/2026-10-10-goals-packet/codex/MachineLookupInterference.lean` checks the controls and audits 249 declarations within that allowance.
+- The worker research modules compile in order: `MachineWorkersSlots`, `MachineWorkersConnections`, `MachineWorkersNativeSlots`, `MachineWorkersCapturedSlots`.
+- Each worker module uses `lake env lean --root=docs/research/2026-10-10-goals-packet/codex -o .lake/build/lib/lean/<module>.olean docs/research/2026-10-10-goals-packet/codex/<module>.lean`.
+- The same research root checks `MachineWorkersReleaseEntryControl.lean` and `MachineWorkersNativeSlotsAudit.lean`.
+- The worker audit checks 215 declarations within the allowance.
+- All three audits report zero planned goals and zero dependencies on planned goals.
+- `git diff --check` passes.
+
+The worker connection control is synthetic and finite.
+It does not establish a reached worker history.
+No executable definition changes; no behavior gate is reached.
+The logs sit under `2026-10-11-machine-models/codex/` with their integration check names.
+
+
+## Generated native fold integration
+
+The two native code-weight instances pass independent agreement and consumer checks.
+The response-dependent stack projection remains unchanged.
+No original scenario endpoint closes in this slice.
+
+Base: `b39d89388`.
+Integrated fold head: `6aa87bc70`; continuing-loop control head: `5abf70d6b`.
+The coordinator adds the core fold, law table, and loop control to their roots.
+`docs/GENERATED.md` records the new manifest group.
+The code receipts own placement and measured size.
+
+Commands use `LEAN_NUM_THREADS=3`:
+
+- `lake build Effect4.Laws.Program.SourceOpportunityHistory Test.Dogfood.Scenario.Atomic.WriterMachine Test.Machine.AnswerFlowLoop effect4gen` passes, 1154 jobs.
+- `lake env lean -DwarningAsError=true docs/research/2026-10-11-machine-models/codex/NativeFoldAgreement.lean` passes; audit 668 declarations.
+- The same command checks `StackCreditContext.lean`; audit 338 declarations.
+- The same command checks `NativeFoldAudit.lean`; audit 1992 declarations.
+- Each audit stays within `[propext, Quot.sound]`, with zero goals and zero dependencies on goals.
+- `python3 scripts/generate.py --only derived` passes every producer stage.
+- A byte comparison checks every manifest output against the integrated commit after regeneration; the retained log gives the measured count.
+
+The continuing-loop control uses an actual self-resaving loop.
+It distinguishes an inductive contract limitation from unsafe execution.
+It establishes no termination, reached Timeout history, or host agreement.
+No executable machine definition changes in this integration.
+
+## Approved worktree cleanup
+
+The owner-approved docgen probe checkout and branch are removed.
+The tag `archive/docgen-probe-20261010` retains the exact tip `fa309511d`.
+The checkout was clean before removal.
+Its ignored research evidence included files absent from the primary checkout.
+Before removal, an archive retained 1781 such entries and verified every regular file hash and symbolic-link target.
+The archive is `docs/research/2026-10-11-docgen/retained-ignored-probe-evidence.tar.gz` in the primary checkout.
+Its adjacent `retained-ignored-probe-evidence.tar.sha256.json` records the verification manifest.
+The measured archive size is 183265851 bytes.
+No dependency cache or tracked source change is claimed as a proof result.
+
+## L2: exact labelled words and the finalizer instance
+
+The native classifier now records the exact emitted event word.
+It does not certify an arbitrary replacement's source or stored-value effect.
+The numeric history producers still owe those premises.
+
+Base: `0a41c816e`.
+Head: the commit containing this section.
+The slice reads the primary audit section dated `2026-10-11 10:25`.
+
+### Placement and changes
+
+Concept: reactive-scheduling and scope-lifetime-finalization, R11.
+Question: the proposed `evaluation-moves` structure claim, consumed by finalizer registration accounting.
+Reach: every native evaluator, interpreter, frame, row table, and loop latch.
+Limit: no source admission, command closure, progress, host agreement, or completed numeric history.
+
+`TracedMoves.lean` labels the existing frame operations and proves their erasure and composition.
+`Moves.balance` sums local inequalities without truncated subtraction.
+An administrative event carries no frame event or finalizer start.
+A selected finalizer's actual pop and replacement form one accounting operation.
+Its start requires the actual selected finalizer frame.
+This keeps the selected credit until the program start consumes it.
+
+`Footprint.lean` strengthens its existing evaluation census with those labels.
+Its old classification theorems become projections in the same change.
+The guard interfaces retain their names and statements.
+
+`FinalizerMoves.lean` supplies the concrete finalizer instance of each labelled operation.
+Its word theorem uses `Moves.balance` and the actual trace extension.
+`FinalizerTransfer.exitScoped_debit` becomes that instance.
+The native scoped-exit debit removes its private pop and evaluator analysis.
+The compatibility premise remains in its statement.
+
+The stronger footprint does not change executable code.
+Existing root imports reach both new library modules through their actual consumers.
+No new planned goal enters the graph.
+
+### Verification
+
+Commands use `LEAN_NUM_THREADS=3`.
+
+```text
+lake build Effect4.Laws.Program.Footprint Effect4.Laws.Program.FiberSumConnect Effect4.Laws.Machine.AnswerFlowCausePop Effect4.Laws.Program.Typed.HostWalk Test.Machine.AnswerFlow Test.Machine.AnswerFlowLoop Test.Dogfood.Proofs.HostTimeoutNumberFormFamily Test.Dogfood.Scenario.Timeout
+Build completed successfully (1191 jobs).
+
+lake build Effect4.Laws.Program.FinalizerTransfer Effect4.Laws.Program.FinalizerCommands Effect4.Laws.Program.Guard.NativeAssembly Test.Dogfood.Scenario.Atomic
+Build completed successfully (1128 jobs).
+
+lake env lean docs/research/2026-10-11-machine-models/codex/LabelledMovesAudit.lean
+#axiom_audit: 330 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+
+git diff --check
+exit 0
+```
+
+The first audit found `Classical.choice` through `List.countP_eq_zero`.
+The final proof replaces that lemma with direct list induction.
+The retained audit and dependent Atomic build pass after that repair.
+
+The normalized statement comparison checks all 18 old theorems in `Footprint` and `FinalizerTransfer`.
+All names and statements remain unchanged.
+
+Logs and audit sources are under `docs/research/2026-10-11-machine-models/codex/`.
+Their names start with `LabelledMoves` and `SharedIntegration`.
+The probe and placement remain in `LabelledMoves.lean` and `labelled-moves-plan.md`.
+No behaviour gate is owed because executable code does not change.
+
+### Size and remaining work
+
+| Module | Before | After |
+| --- | --- | --- |
+| `TracedMoves` | 0 | 279 |
+| `Footprint` | 264 | 436 |
+| `FinalizerMoves` | 0 | 117 |
+| `FinalizerTransfer` | 148 | 99 |
+| Total | 412 | 931 |
+
+This foundation adds 519 lines while replacing one existing census and one private debit proof.
+It is not a net deletion claim.
+The stronger classifier has a checked consumer in this slice.
+Current-code and stored-value weights still need exact source and state transfer premises.
+The original scenario goals retain their prior status.
+
+## Independent integration of the shared pop family and fiber sum
+
+The integration retains the continuing-loop control and the original Timeout goal statements.
+The family transport supplies one-step partial correctness, not loop termination or numeric history.
+
+Integrated code: `df12a159e`, with receipt `0a41c816e`.
+The generic fiber sum enters through merge `dbfad3190` from `ea9891eb1`.
+Independent verification runs at `0a41c816e` with the labelled classifier staged.
+
+The `SharedIntegrationBuild.log` command passes with 1191 jobs.
+It checks the typed host walk, semantic cause transport, continuing-loop reader, Timeout form family, and original Timeout scenario.
+It also builds `Effect4.Laws.Program.FiberSumConnect`.
+
+```text
+LEAN_NUM_THREADS=3 lake env lean docs/research/2026-10-11-machine-models/codex/SharedIntegrationAudit.lean
+#axiom_audit: 391 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
+
+The audit names every changed pop-family module and both fiber-sum modules.
+The retained source and output are beside the build log.
+The next instance slice replaces the duplicated family split proofs with `FiberSum`.
+The context plan now records the owner's settled row 349 option A.
+No proof endpoint closes in this integration receipt.
+
+## Interruption foundation integration repair
+
+The full law library now builds with the factored interruption helper.
+The original scenario obligations retain their statements and proof status.
+The R2 message migration is separate and remains unlanded at this checkpoint.
+
+Base: `d213c95ee`.
+Proof head: `98567f7f2`.
+Scope: the foundation at `293ed3e85`, the shared timeout connectors, and the integrated fiber sums.
+
+`interruptRecord` delegates to `interruptWithCause` in `src/Effect4/Machine/Fibers.lean`.
+Direct unfolding proofs must expose both definitions.
+The first integration build exposed additional consumers beyond the foundation's narrow build.
+The repair changes 21 proof bodies across 17 files.
+Every existing theorem statement in those files remains byte-identical.
+`codex/InterruptStatementCheck.json` records the changed declarations and their paths.
+Its full path is `docs/research/2026-10-11-machine-models/codex/InterruptStatementCheck.json`.
+
+Placement stays with each existing consumer:
+
+- scheduling proofs retain pending guards, masks, identities, exits, and the deferred interruption rule;
+- source and typing proofs retain captured program data and declared values;
+- scope lifetime proofs retain saved stacks and their existing accounting bounds;
+- the simulation equations retain the connection between the native and term frames;
+- the timeout frame instance retains its ordered continuation after interruption.
+
+These repairs introduce no new judgment, planned goal, representation, or semantic premise.
+They establish neither progress nor correspondence with the Effect host.
+Their consumers remain the original proof graph and the original scenario obligations.
+
+The checked command is:
+
+```sh
+LEAN_NUM_THREADS=3 lake build Effect4.Laws \
+  Test.Dogfood.Proofs.HostTimeoutNumberCounted \
+  Test.Dogfood.Proofs.HostTimeoutNumberFlow \
+  Test.Dogfood.Proofs.HostTimeoutNumberFormFamily \
+  Test.Dogfood.Scenario.Timeout Test.Dogfood.Scenario.Atomic
+```
+
+Result: success, 1,501 jobs.
+The log is `docs/research/2026-10-11-machine-models/codex/InterruptFoundationLawsBuild.log`.
+This includes the whole law library required by the updated machine packet.
+It does not run the whole test battery.
+
+The retained `InterruptIntegrationAudit.lean` imports every repaired module and the shared timeout connectors.
+It lives beside that build log.
+The command `LEAN_NUM_THREADS=3 lake env lean docs/research/2026-10-11-machine-models/codex/InterruptIntegrationAudit.lean` succeeds.
+The audit reports 7,742 declarations within `[propext, Quot.sound]`, zero modulo planned goals, and zero planned goals.
+`InterruptIntegrationAudit.log` retains that output beside its source.
+`git diff --check` succeeds.
+
+The code diff adds 53 lines and removes 38 lines.
+This repair removes silent fallbacks from the touched pending-guard proof.
+The original endpoints remain open where their admitted-history producers remain open.
+The packet defers reached executable behavior gates to the coordinated sweep after the major proof structures land.

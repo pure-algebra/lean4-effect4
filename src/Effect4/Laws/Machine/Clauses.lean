@@ -514,7 +514,7 @@ theorem drive_resume_not_parked (interp : RunInterp ν σ β ε δ ι α χ St) 
 theorem interruptRecord_exited (interp : RunInterp ν σ β ε δ ι α χ St)
     (interruptor : Option FiberId) (extra : ReasonAnnotations α) (f : RunFiber ν σ β ε δ ι α χ)
     (h : f.exit.isSome = true) : interruptRecord interp interruptor extra f = (f, false) := by
-  simp [interruptRecord, h]
+  simp only [interruptRecord, interruptWithCause, h, ↓reduceIte]
 
 /-- The cause an interrupt records: the interruptor's, annotated by the target's stack frame
 and the caller's annotations, combined with what was already recorded (`:578-587`).
@@ -534,11 +534,13 @@ theorem interruptRecord_records (interp : RunInterp ν σ β ε δ ι α χ St)
     (h : f.exit = none) :
     (interruptRecord interp interruptor extra f).1.frame.interruptedCause =
       some (interruptCauseOf interp interruptor extra f) := by
-  unfold interruptRecord interruptCauseOf
+  unfold interruptRecord interruptWithCause interruptCause interruptCauseOf
   dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
     FiberCore.answerWith, FiberCore.failure, FiberCore.setDeferred, frameCore]
   simp only [h, Option.isSome_none, Bool.false_eq_true, ↓reduceIte]
-  cases f.frame.interruptedCause <;> simp only <;> split <;> (try split) <;> rfl
+  cases f.frame.interruptedCause <;> simp only
+  all_goals split
+  all_goals aesop
 
 /-- Successive interruptors accumulate by `causeCombine` (`:585-587`).
 census: interrupt.accumulate -/
@@ -560,11 +562,11 @@ theorem interruptRecord_running_defers (interp : RunInterp ν σ β ε δ ι α 
     (h : f.exit = none) (hi : f.frame.interruptible = true) (hr : f.running = true) :
     (interruptRecord interp interruptor extra f).2 = false ∧
       (interruptRecord interp interruptor extra f).1.frame.deferredInterrupt = true := by
-  unfold interruptRecord
+  unfold interruptRecord interruptWithCause
   dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
     FiberCore.answerWith, FiberCore.failure, FiberCore.setDeferred, frameCore]
   simp only [h, Option.isSome_none, Bool.false_eq_true, ↓reduceIte]
-  cases f.frame.interruptedCause <;> simp [hi, hr]
+  cases f.frame.interruptedCause <;> simp only [hi, hr, ↓reduceIte, and_self]
 
 /-- Interruptible and idle: the interrupt is applied now — the fiber is unparked, its pending
 parks dropped, and its current primitive is the accumulated cause's failure (`:591-594`).
@@ -577,11 +579,11 @@ theorem interruptRecord_idle_applies (interp : RunInterp ν σ β ε δ ι α χ
       (interruptRecord interp interruptor extra f).1.pending = [] ∧
       (interruptRecord interp interruptor extra f).1.frame.current =
         Prim.failure (interruptCauseOf interp interruptor extra f) := by
-  unfold interruptRecord interruptCauseOf
+  unfold interruptRecord interruptWithCause interruptCause interruptCauseOf
   dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
     FiberCore.answerWith, FiberCore.failure, FiberCore.setDeferred, frameCore]
   simp only [h, Option.isSome_none, Bool.false_eq_true, ↓reduceIte]
-  cases f.frame.interruptedCause <;> simp [hi, hr]
+  cases f.frame.interruptedCause <;> simp only [hi, hr, Bool.false_eq_true, ↓reduceIte, and_self]
 
 /-- Masked: recorded, never applied (`:588`, the `else` of `:595`).
 census: rule.record-and-apply-separate -/
@@ -592,11 +594,11 @@ theorem interruptRecord_masked (interp : RunInterp ν σ β ε δ ι α χ St)
       (interruptRecord interp interruptor extra f).1.frame.deferredInterrupt =
         f.frame.deferredInterrupt ∧
       (interruptRecord interp interruptor extra f).1.frame.current = f.frame.current := by
-  unfold interruptRecord
+  unfold interruptRecord interruptWithCause
   dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
     FiberCore.answerWith, FiberCore.failure, FiberCore.setDeferred, frameCore]
   simp only [h, Option.isSome_none, Bool.false_eq_true, ↓reduceIte]
-  cases f.frame.interruptedCause <;> simp [hi]
+  cases f.frame.interruptedCause <;> simp only [hi, Bool.false_eq_true, ↓reduceIte, and_self]
 
 /-- A parked fiber holding a deferred interrupt fires its park's cancel on the way out
 (`:656-668`): the interrupt applies now because the fiber is idle, and the failure it installs

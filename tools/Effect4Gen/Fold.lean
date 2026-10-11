@@ -2620,6 +2620,68 @@ def runExtras (args : Args) : MetaM (Array String) := do
     lines := lines ++ (txt.splitOn "\n").toArray.map (·.replace "\r" "")
   return lines
 
+/-- A plain, uniformly parameterized family uses its declared parameter telescope.
+This emission omits monadic and path folds; native weights consume its algebra and uniqueness.
+The existing one-parameter and nested emissions retain their bytes. -/
+def emitParameterizedBlock (root : Name) : MetaM String := do
+  let iv ← getConstInfoInduct root
+  unless iv.all == [root] && iv.numIndices == 0 do
+    throwError "parameterized fold: {root} must be a plain, unindexed family"
+  let (_, blockName, block) ← readBlock root
+  if blockNested block then
+    throwError "parameterized fold: {root} has a nested recursive position"
+  let [(label, fam, rows)] := block | throwError "parameterized fold: expected one family"
+  let params ← forallBoundedTelescope iv.type iv.numParams fun xs _ => do
+    xs.toList.mapM fun x => do
+      let name := (← x.fvarId!.getUserName).toString
+      return (name, ← srcOf (← inferType x))
+  let explicit := String.join (params.map fun (n, t) => s!"({n} : {t}) ")
+  let implicit := String.join (params.map fun (n, t) => s!"\{{n} : {t}} ")
+  let app := String.join (params.map fun (n, _) => " " ++ n)
+  let alg := s!"{blockName}Algebra"
+  let hom := s!"{blockName}Hom"
+  let nodeT := s!"{fam}{app}"
+  let pat (r : CtorRow) := s!".{r.ctor}" ++ String.join (r.args.map fun a => " " ++ a.name)
+  let callArgs (r : CtorRow) (fn : String) := String.join (r.args.map fun a =>
+    " " ++ if a.recFam.isSome then s!"({fn} {a.name})" else a.name)
+  let mut s := s!"structure {alg} {explicit}(R : Type w) where\n"
+  for r in rows do
+    let fields := r.args.map fun a => if a.recFam.isSome then "R" else s!"({a.tyText})"
+    s := s ++ s!"  {r.field} : " ++ String.intercalate " → " (fields ++ ["R"]) ++ "\n"
+  s := s ++ s!"\n@[reducible] def cata_{label} {implicit}\{R : Type w} (alg : {alg}{app} R)\n    (node : {nodeT}) : R :=\n  match node with\n"
+  for r in rows do
+    s := s ++ s!"  | {pat r} => alg.{r.field}{callArgs r s!"cata_{label} alg"}\n"
+  s := s ++ "termination_by structural node\n\n"
+  for r in rows do
+    let binders := String.intercalate " " (r.args.map (·.name))
+    let quant := if binders.isEmpty then "" else s!"∀ {binders}, "
+    s := s ++ s!"@[simp] theorem cata_{label}_{r.ctor} {implicit}\{R : Type w} (alg : {alg}{app} R) :\n    {quant}cata_{label} alg ({pat r}) = alg.{r.field}{callArgs r s!"cata_{label} alg"} := by\n"
+    if !binders.isEmpty then s := s ++ s!"  intro {binders}\n"
+    s := s ++ "  rfl\n\n"
+  s := s ++ s!"structure {hom} {implicit}\{R : Type w} (alg : {alg}{app} R) where\n  f_{label} : {nodeT} → R\n"
+  for r in rows do
+    let binders := String.intercalate " " (r.args.map (·.name))
+    let quant := if binders.isEmpty then "" else s!"∀ {binders}, "
+    s := s ++ s!"  h_{r.field} : {quant}f_{label} ({pat r}) = alg.{r.field}{callArgs r s!"f_{label}"}\n"
+  s := s ++ s!"\ntheorem hom_eq_cata_{label} {implicit}\{R : Type w}\n    \{alg : {alg}{app} R} (hom : {hom} alg) (node : {nodeT}) :\n    hom.f_{label} node = cata_{label} alg node := by\n  match node with\n"
+  for r in rows do
+    let names := String.intercalate " " (r.args.map (·.name))
+    let eq := s!"hom.h_{r.field}" ++ if names.isEmpty then "" else " " ++ names
+    let ihs := r.args.filterMap fun a => if a.recFam.isSome then some s!"hom_eq_cata_{label} hom {a.name}" else none
+    s := s ++ s!"  | {pat r} =>\n    simp only [cata_{label}, " ++ String.intercalate ", " (eq :: ihs) ++ "]\n"
+  s := s ++ "termination_by structural node\n\n"
+  s := s ++ s!"def {alg}.id {explicit}: {alg}{app} ({nodeT}) where\n"
+  for r in rows do
+    let names := String.join (r.args.map fun a => " " ++ a.name)
+    s := s ++ s!"  {r.field}{names} := {pat r}\n"
+  s := s ++ s!"\n@[simp] theorem cata_id_{label} {implicit}(node : {nodeT}) :\n    cata_{label} ({alg}.id{app}) node = node :=\n  (hom_eq_cata_{label} (alg := {alg}.id{app})\n    \{ f_{label} := fun node => node\n"
+  for r in rows do
+    let names := String.intercalate " " (r.args.map (·.name))
+    let lambda := if names.isEmpty then "rfl" else "fun " ++ String.intercalate " " (r.args.map fun _ => "_") ++ " => rfl"
+    s := s ++ s!"      h_{r.field} := {lambda}\n"
+  s := s ++ "    } node).symm\n"
+  return s
+
 def run (args : Args) : MetaM (Array String) := do
   if args.extras then return ← runExtras args
   -- The blocks first: the emitted header depends on whether any of them has a monadic half,
@@ -2640,6 +2702,10 @@ def run (args : Args) : MetaM (Array String) := do
       blockTexts := blockTexts.push (← Elim.emitElim root pfx)
       continue
     | none => pure ()
+    let iv ← getConstInfoInduct root
+    if iv.numParams > 1 then
+      blockTexts := blockTexts.push (← emitParameterizedBlock root)
+      continue
     let (_, _, block) ← readBlock root
     if blockNested block then
       let (blockText, _, aux) ← emitNestedBlock namespaceName root emittedAux

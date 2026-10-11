@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.NativeReplies
 import Effect4.Laws.Program.Placement
+import Effect4.Laws.Machine.PrimWeights
 
 /-!
 Concept: scope-lifetime-finalization R11.
@@ -105,18 +106,16 @@ def push (q : List Nat) : NCode → Nat
   | .onSuccess _ (.afterScopeAdd _ (.foreign capture)) => here q capture.path
   | _ => 0
 
+/-- Leaf reservations and recorded pushes instantiate the shared native-code fold. -/
+abbrev nativeWeights (root : NativeEff) (q : List Nat) : Machine.PrimWeights.Model EffName EffThunk where
+  name := name q
+  thunk := thunk root q
+  successPush callback := push q (.onSuccess (.success .unit) callback)
+  exitPush callback flag := push q (.onExit (.success .unit) callback flag)
+
 /-- Active code includes its body, future callback and not-yet-recorded registration. -/
-def current (root : NativeEff) (q : List Nat) : NCode → Nat
-  | .sync suspended | .suspend suspended | .withFiber suspended => thunk root q suspended
-  | .onSuccess body callback => current root q body + name q callback + push q (.onSuccess body callback)
-  | .onFailure body callback => current root q body + name q callback
-  | .onExit body callback flag => current root q body + name q callback + push q (.onExit body callback flag)
-  | .onSuccessConst body next => current root q body + current root q next
-  | .onSuccessAndFailure body success failure => current root q body + name q success + name q failure
-  | .exitFrame body => current root q body
-  | .iterator callback _ | .whileLoop callback _ | .asyncFinalizer callback => name q callback
-  | .async _ _ cancel => (cancel.map (name q)).getD 0
-  | _ => 0
+abbrev current (root : NativeEff) (q : List Nat) (code : NCode) : Nat :=
+  cata_prim (Machine.PrimWeights.currentAlgebra (nativeWeights root q)) code
 
 /-- A saved frame's body is already active elsewhere; its push has already been recorded. -/
 def saved (root : NativeEff) (q : List Nat) : NCode → Nat
@@ -190,11 +189,14 @@ Consumer: load initialization and actual scenario opportunity readers. -/
 theorem compile_le (root : NativeEff) (q : List Nat) (e : NativeEff) (p : Point)
     (found : Node.at_ (.eff root) p.path = some (.eff e)) :
     current root q (compileEff e p) ≤ below q p.path := by
+  have foldedAsync (op : NativeOp) (request : Term) (point : Point) :
+      cata_prim (PrimWeights.currentAlgebra (nativeWeights root q)) (asyncRoute op request point) = 0 :=
+    async_zero root q op request point
   revert found
   fun_induction compileEff e p
   all_goals intro found
   case case13 p n hf op request kind value valueFound operation operationFound notExternal notCall notParam =>
-    simp only [kind, valueFound, operationFound, current, thunk]
+    simp only [kind, valueFound, operationFound, current, cata_prim, thunk]
     exact Nat.zero_le _
   case case18 p n hf first rest ih =>
     change current root q (compileEff first (p.child 0)) + below q (p.path ++ [1]) + 0 ≤ below q p.path
@@ -240,13 +242,13 @@ theorem compile_le (root : NativeEff) (q : List Nat) (e : NativeEff) (p : Point)
   case case45 p n hf definitions declarations body exports ih =>
     exact Nat.le_trans (ih (Agreement.at_child found 1)) (child_le q p.path 1)
   case case34 p n hf body options =>
-    simp only [current, thunk, name, push, found, Nat.zero_add, Nat.add_zero]
+    simp only [current, cata_prim, thunk, name, push, found, Nat.zero_add, Nat.add_zero]
     exact Nat.le_refl _
   case case40 p n hf key value body v term =>
-    simp only [updateContextAt, current, thunk, name, push, Nat.zero_add, Nat.add_zero]
+    simp only [updateContextAt, current, cata_prim, thunk, name, push, Nat.zero_add, Nat.add_zero]
     exact child_le q p.path 0
-  all_goals aesop (add norm simp [current, thunk, name, push, frontier, badShape,
-    Prim.ofExit, updateContextAt, found, async_zero]) (add safe apply [child_le])
+  all_goals aesop (add norm simp [current, cata_prim, thunk, name, push, frontier, badShape,
+    Prim.ofExit, updateContextAt, found, foldedAsync]) (add safe apply [child_le])
 
 
 /-- Resolving an existing source point retains the compiler's opportunity bound.
@@ -299,7 +301,7 @@ theorem exit_push (root : NativeEff) (q : List Nat)
       (.running {f with current := body, stack := .onExit body (.fin p) flag :: f.stack},
         [.pushed (.onExit body (.fin p) flag)]) := by
   refine ⟨?_, FrameFiber.step_onExit interp f body (.fin p) flag⟩
-  simp only [frame, current, saved, event, push, List.map_cons, List.sum_cons]
+  simp only [frame, current, cata_prim, saved, event, push, List.map_cons, List.sum_cons]
   omega
 
 /-- An actual acquisition registration push consumes its source opportunity.
@@ -318,7 +320,7 @@ theorem registration_push (root : NativeEff) (q : List Nat)
         [.pushed (.onSuccess body callback)]) := by
   dsimp only
   refine ⟨?_, FrameFiber.step_onSuccess interp f _ _⟩
-  simp only [frame, current, saved, event, push, List.map_cons, List.sum_cons]
+  simp only [frame, current, cata_prim, saved, event, push, List.map_cons, List.sum_cons]
   omega
 
 
@@ -335,14 +337,15 @@ theorem acquired_child_zero (root : NativeEff) (p : Point) :
 Consumer: Workers acquisition-to-registration source flow. -/
 theorem acquire_in_one (root : NativeEff) (p : Point) (context : Ctx) (scope : Nat) :
     current root p.path (contAOf root (.acquireIn p context) (.scopeHandle scope)) = 1 := by
-  simp only [contAOf, current, name, push, acquired_child_zero, child_self_zero,
-    here, ↓reduceIte, Nat.zero_add, Nat.add_zero]
+  change current root p.path (resolve root (p.child 0)) +
+    (here p.path p.path + below p.path (p.path ++ [1])) + 0 = 1
+  simp only [acquired_child_zero, child_self_zero, here, ↓reduceIte, Nat.zero_add, Nat.add_zero]
 
 /-- Acquiring a value turns its one opportunity into the matching registration template.
 Consumer: Workers registration push debit. -/
 theorem acquired_one (root : NativeEff) (p : Point) (context : Ctx) (scope : Nat) (acquired : Val) :
     current root p.path (contAOf root (.acquired p context scope) acquired) = 1 := by
-  simp only [contAOf, current, thunk, name, push, fin_self_zero, Nat.zero_add]
+  simp only [contAOf, current, cata_prim, thunk, name, push, fin_self_zero, Nat.zero_add]
   simp only [here, Point.capture, ↓reduceIte]
 
 /-- Every response to that exact registration resolves no second acquisition opportunity.
@@ -353,7 +356,7 @@ theorem response_zero (root : NativeEff) (p : Point) (context : Ctx) (acquired a
   split
   · rfl
   · split
-    · simp only [finProgram, embed, current, thunk, name, push, fin_self_zero, Nat.add_zero]
+    · simp only [finProgram, embed, current, cata_prim, thunk, name, push, fin_self_zero, Nat.add_zero]
     · rfl
 
 

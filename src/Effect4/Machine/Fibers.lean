@@ -111,6 +111,15 @@ inductive Observer
   | callback (key : Nat)
 deriving DecidableEq
 
+/-- The native edits applied after a local fiber's write-back (R2, CE046).
+The cause is a newly constructed delta, never an accumulated record snapshot.
+The observer cancellation carries a token, not a stored predicate. -/
+inductive FiberEdit (ε δ ι α : Type u)
+  | observe (target : FiberId) (observer : Observer)
+  | dropToken (token : Nat)
+  | interrupt (target : FiberId) (cause : Cause ε δ ι α)
+deriving DecidableEq
+
 /-- The task shapes rc.112 enqueues (`scheduleTask`'s seven library sites,
 `docs/research/2026-09-04-effect-internals-proof-map.md` §1.6): a deferred child start
 (`internal/effect.ts:5277`), a resume of one parked fiber — the yield's own (`:986`) and the
@@ -826,21 +835,19 @@ variable {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (ma
 variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
 variable {κ φ η : Type (max u v)} [core : FiberCore ν β ε δ ι α κ φ]
 
-/-- `interruptUnsafe(fiberId, annotations)` (`:574-595`) on one fiber, without the
-apply-now re-entry, which the loop performs as a command. The cause is annotated from the
-target's stack frame and from the caller (`:578-584`, S2-M5). Returns the fiber and whether to
-evaluate it now. When the fiber was parked on an `Async` that pushed an `AsyncFinalizer`,
-applying the interrupt means failing through that frame, whose `contE` runs the cancel
-(`:1155-1159`) — the frame machine does that; nothing here has to. -/
-def interruptRecord (interp : RunInterp ν σ β ε δ ι α χ St κ) (interruptor : Option FiberId)
-    (extra : ReasonAnnotations α) (f : RunFiber ν σ β ε δ ι α χ κ φ) :
-    RunFiber ν σ β ε δ ι α χ κ φ × Bool :=
+/-- Construct the native interrupt's cause delta from caller and target annotations. -/
+def interruptCause (interp : RunInterp ν σ β ε δ ι α χ St κ)
+    (interruptor : Option FiberId) (extra : ReasonAnnotations α) (target : FiberId) : Cause ε δ ι α :=
+  Cause.annotate
+    (Supervision.interruptCause interp.encodeFiber interruptor (interp.stackAnnotations target))
+    extra false
+
+/-- Apply one interrupt delta to the current record through the existing FiberCore.
+Combining happens here, after any local write-back. -/
+def interruptWithCause (cause : Cause ε δ ι α)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) : RunFiber ν σ β ε δ ι α χ κ φ × Bool :=
   if f.exit.isSome then (f, false)                                     -- :575-577
   else
-    let cause : Cause ε δ ι α :=
-      Cause.annotate
-        (Supervision.interruptCause interp.encodeFiber interruptor (interp.stackAnnotations f.id))
-        extra false
     let accumulated : Cause ε δ ι α :=
       match core.interruptedCause f.frame with                         -- :585-587
       | none => cause
@@ -854,6 +861,44 @@ def interruptRecord (interp : RunInterp ν σ β ε δ ι α χ St κ) (interrup
             pending := []
             frame := core.answerWith f.frame (core.failure accumulated) }, true)
     else (f, false)
+
+/-- `interruptUnsafe(fiberId, annotations)` (`:574-595`) on one fiber, without the
+apply-now re-entry, which the loop performs as a command. The cause is annotated from the
+target's stack frame and from the caller (`:578-584`, S2-M5). Returns the fiber and whether to
+evaluate it now. When the fiber was parked on an `Async` that pushed an `AsyncFinalizer`,
+applying the interrupt means failing through that frame, whose `contE` runs the cancel
+(`:1155-1159`) — the frame machine does that; nothing here has to. -/
+def interruptRecord (interp : RunInterp ν σ β ε δ ι α χ St κ) (interruptor : Option FiberId)
+    (extra : ReasonAnnotations α) (f : RunFiber ν σ β ε δ ι α χ κ φ) :
+    RunFiber ν σ β ε δ ι α χ κ φ × Bool :=
+  interruptWithCause (interruptCause interp interruptor extra f.id) f
+
+/-- Apply a first-order native edit without capturing an interpreter or an old target record.
+The idle-target commands run before the producer's existing nested continuation. -/
+def applyFiberEdit (edit : FiberEdit ε δ ι α) (m : RunMachine ν σ β ε δ ι α χ St κ φ η) :
+    RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ) :=
+  match edit with
+  | .observe target observer =>
+    (m.modify target fun f => {f with observers := f.observers ++ [observer]}, [])
+  | .dropToken token =>
+    ({m with fibers := m.fibers.map fun f => {f with observers := f.observers.filter fun
+      | .resumeAwait _ t _ => t ≠ token
+      | .countdown _ t => t ≠ token
+      | _ => true}}, [])
+  | .interrupt target cause =>
+    match m.fiber? target with
+    | none => (m, [])
+    | some f =>
+      let (next, now) := interruptWithCause cause f
+      (m.update next, if now then [Cmd.evaluate target] else [])
+
+/-- Apply the native edit word in evaluation order. -/
+def applyFiberEdits (edits : List (FiberEdit ε δ ι α))
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) :
+    RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ) :=
+  edits.foldl (fun (held : RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ)) edit =>
+    let next := applyFiberEdit edit held.1
+    (next.1, held.2 ++ next.2)) (m, [])
 
 /-- `interruptUnsafe` on each target in list order (`fiberInterruptAll`, `:892-896`;
 `fiberInterruptAllAs`, `:910-913`; the exit path's children, `:5449`): recorded with `who`

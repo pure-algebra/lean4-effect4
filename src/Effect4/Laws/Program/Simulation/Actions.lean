@@ -116,7 +116,7 @@ theorem interruptRecord_frame_eq (i : FInterp) (who : Option FiberId) (extra : R
                 current := Prim.failure (accumulatedCause i who extra f) } }, true)
       else ({ f with frame := { f.frame with interruptedCause := some (accumulatedCause i who extra f) } },
         false) := by
-  unfold interruptRecord accumulatedCause
+  unfold interruptRecord interruptWithCause accumulatedCause
   dsimp only [FiberCore.interruptible, FiberCore.recordCause, FiberCore.setDeferred,
     FiberCore.answerWith, FiberCore.failure, FiberCore.interruptedCause, frameCore]
   cases f.frame.interruptedCause <;> rfl
@@ -139,7 +139,7 @@ theorem interruptRecord_term_eq (i : RInterp) (who : Option FiberId) (extra : Re
                 current := .pure (.failure (accumulatedCause i who extra f)) } }, true)
       else ({ f with frame := { f.frame with interruptedCause := some (accumulatedCause i who extra f) } },
         false) := by
-  unfold interruptRecord accumulatedCause
+  unfold interruptRecord interruptWithCause accumulatedCause
   dsimp only [FiberCore.interruptible, FiberCore.recordCause, FiberCore.setDeferred,
     FiberCore.answerWith, FiberCore.failure, FiberCore.interruptedCause, termCore]
   cases f.frame.interruptedCause <;> rfl

@@ -72,7 +72,9 @@ The self-interrupt repair first probes self-aliasing join, countdown, and scope-
 Its implementation moves record edits after the running fiber's write-back.
 Retain `E4-RUN-CE-046` as a repaired regression and run the packet's truth and compiler gates at the sweep.
 FreshSupply, AppendOnly, Census, and Linear follow their placed consumers.
-B6 still waits for the existing context ruling.
+Row 349 now rules option A at `1cda0752d`: typed context reading and a provideContext region.
+The constructor migration precedes B6 and context transformers.
+Remove the clean docgen probe worktree only after verifying its archived tip and current status.
 
 ## Preserved work
 

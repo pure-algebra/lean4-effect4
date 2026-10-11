@@ -52,7 +52,7 @@ theorem armA_bound (built : Api.Built) (admitted : Api.Author.build (shop .none)
       name id onValue + name id onCause
     have bound := interp_value_bound built admitted id member view onValue value owned.2.1
     omega
-  all_goals aesop (add norm simp [saved, CodeAt, current, iterMass, exit_zero]) (add safe apply [(interp_value_bound built admitted id member)]) (add safe forward [(loop_return_zero built admitted id member), iter_return_zero]) (add safe tactic (by omega))
+  all_goals aesop (add norm simp [saved, CodeAt, current, cata_prim, iterMass, exit_zero]) (add safe apply [(interp_value_bound built admitted id member)]) (add safe forward [(loop_return_zero built admitted id member), iter_return_zero]) (add safe tactic (by omega))
 
 /-- Stored cancellation performs no cleanup-note write. -/
 theorem store_cancel_zero (id : Nat) (callback : Name) :
@@ -63,7 +63,7 @@ theorem store_cancel_zero (id : Nat) (callback : Name) :
 /-- Actual cancellation exposes no cleanup-note write reservation. -/
 theorem cancel_zero (id : Nat) (callback : EffName) : current id (cancelProgramOf callback) = 0 := by
   fun_cases cancelProgramOf callback
-  all_goals aesop (add norm simp [current, thunk, name, operation, embed, store_cancel_zero])
+  all_goals aesop (add norm simp [current, cata_prim, thunk, name, operation, embed, store_cancel_zero])
 
 /-- An actual cause arm spends only its saved handler note reservation. -/
 theorem armE_bound (built : Api.Built) (admitted : Api.Author.build (shop .none) = .ok built)
@@ -85,7 +85,7 @@ theorem armE_bound (built : Api.Built) (admitted : Api.Author.build (shop .none)
       name id onValue + name id onCause
     have bound := interp_cause_bound built admitted id member view onCause cause owned.2.2
     omega
-  all_goals aesop (add norm simp [saved, CodeAt, current, exit_zero, interpAt, interpOf,
+  all_goals aesop (add norm simp [saved, CodeAt, current, cata_prim, exit_zero, interpAt, interpOf,
     RunInterp.toPrimInterp, cancel_zero, name]) (add safe apply [(interp_cause_bound built admitted id member)]) (add safe tactic (by omega))
 
 /-- The actual value resume consumes its existing saved note reservations. -/

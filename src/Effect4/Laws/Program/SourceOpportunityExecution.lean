@@ -20,8 +20,7 @@ theorem install_le (root : NativeEff) (q : List Nat) (m : NativeMachine)
     (owner : FiberId) (next : SourceFiber) (same : next.id = owner)
     (unique : (m.fibers.map (fun fiber => fiber.id)).Nodup) :
     fibers root q (m.update next) ≤ outside root q owner m + frame root q next.frame :=
-  ControlWeights.replace_sum_le_omitted (fun fiber : SourceFiber => fiber.id)
-    (fun fiber => frame root q fiber.frame) owner next same m.fibers unique
+  FiberSum.install_le (fun fiber => frame root q fiber.frame) m owner next same unique
 
 /-- Every settlement outcome installs the acting owner at most once.
 Consumer: loop and deliver command debit, then the application history invariant. -/
@@ -50,7 +49,7 @@ theorem loop_top_frame_le (root : NativeEff) (q : List Nat) (fiber : SourceFiber
   unfold runloopTop
   split
   · dsimp only [FiberCore.pendingFailure, frameCore]
-    simp only [frame, current, Nat.zero_add]
+    simp only [frame, current, cata_prim, Nat.zero_add]
     omega
   · exact Nat.le_refl _
 
@@ -91,7 +90,7 @@ theorem iteration_debit (root : NativeEff) (q : List Nat) (fragment : Fragment r
       unfold Debit at debit ⊢
       dsimp only [FiberCore.answerWith, FiberCore.yieldBefore, FiberCore.current, frameCore] at debit ⊢
       simp only [recorded_emit, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil,
-        runEvent, Nat.add_zero, outside_emit, frame, current, Nat.zero_add] at debit
+        runEvent, Nat.add_zero, outside_emit, frame, current, cata_prim, Nat.zero_add] at debit
       change recorded q _ + outside root q fiber.id _ + frame root q _ ≤ _
       rw [key] at debit ⊢
       change recorded q _ + outside root q fiber.id _ + frame root q _ ≤

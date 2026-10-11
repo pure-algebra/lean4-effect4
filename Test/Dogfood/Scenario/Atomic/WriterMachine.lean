@@ -147,8 +147,7 @@ theorem settle_debit (id : Nat) (machine : NativeMachine) (fiber : SourceFiber)
     (same : next.fiber.id = fiber.id) (debit : Debit id machine fiber next) :
     Writer.heapCount id (settle fiber.id rest next).1.state.refs + fibers id (settle fiber.id rest next).1 + issued id machine ≤
       Writer.heapCount id machine.state.refs + fibers id machine + issued id (settle fiber.id rest next).1 := by
-  have partition := ControlWeights.omit_sum (fun fiber : SourceFiber => fiber.id)
-    (fun fiber => frame id fiber.frame) fiber machine.fibers unique member
+  have partition := FiberSum.split (fun fiber => frame id fiber.frame) machine fiber unique member
   change outside id fiber.id machine + frame id fiber.frame = fibers id machine at partition
   have installed := Machine.WriterWeights.settle_bound (model id) fiber.id next rest same afterUnique
   change fibers id (settle fiber.id rest next).1 ≤ outside id fiber.id next.machine + frame id next.fiber.frame at installed

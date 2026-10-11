@@ -2092,7 +2092,7 @@ theorem interruptRecord_keys_subset (interp : RunInterp ν σ Val Err Defect Fib
     (interruptor : Option FiberId) (extra : ReasonAnnotations Ann)
     (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) :
     (interruptRecord interp interruptor extra f).1.keys nk sk ⊆ f.keys nk sk := by
-  unfold interruptRecord
+  unfold interruptRecord interruptWithCause
   try dsimp only
   (repeat' split) <;> first
     | exact List.Subset.refl _

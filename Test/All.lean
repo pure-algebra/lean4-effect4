@@ -293,6 +293,7 @@ import Test.Machine.MaskDiscipline
 import Test.Machine.MaskRuns
 import Test.Machine.MaskBracket
 import Test.Machine.AnswerFlow
+import Test.Machine.AnswerFlowLoop
 import Test.Counterexamples.Machine.Runtime.ArmedFrontier
 import Test.Audit.Obligations
 import Test.Audit.SemanticsCensus
@@ -356,6 +357,7 @@ import Test.Audit.SummaryControls
 -- Scenario proof structures and their independent controls.
 import Test.Dogfood.Proofs.HostJournal
 import Test.Dogfood.Proofs.HostPayloadsAudit
+import Test.Dogfood.Proofs.MachinePopTrace
 import Test.Dogfood.Proofs.HostTimeoutSource
 import Test.Dogfood.Proofs.HostTimeoutDriver
 import Test.Dogfood.Proofs.HostTimeoutNumberLedger

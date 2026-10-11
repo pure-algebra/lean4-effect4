@@ -270,7 +270,7 @@ theorem rmodify_found {M : RState} {id : FiberId} {x : RFiber} (k : RFiber → R
 /-- An interrupt record keeps the fiber's exit. -/
 theorem interruptRecord_exit (interp : RInterp) (who : Option FiberId) (extra : ReasonAnnotations Ann)
     (t : RFiber) : (interruptRecord interp who extra t).1.exit = t.exit := by
-  unfold interruptRecord
+  unfold interruptRecord interruptWithCause
   aesop
 
 section LinkScope

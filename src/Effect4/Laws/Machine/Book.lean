@@ -324,12 +324,18 @@ theorem machineOk_modify (h : MachineOk StOk m) (id : FiberId)
 theorem interruptRecord_pendingOk (i : RunInterp ν σ β ε δ ι α χ St κ) (who : Option FiberId)
     (extra : ReasonAnnotations α) {f : RunFiber ν σ β ε δ ι α χ κ φ} (hf : PendingOk f) :
     PendingOk (interruptRecord i who extra f).1 := by
-  unfold interruptRecord
+  unfold interruptRecord interruptWithCause
   dsimp only
-  repeat' split
-  all_goals first
-    | exact hf
-    | exact fun p hp => by simp at hp
+  split
+  · exact hf
+  · split
+    all_goals
+      split
+      · split
+        · exact hf
+        · intro p member
+          cases member
+      · exact hf
 
 end Invariant
 

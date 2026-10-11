@@ -207,7 +207,7 @@ theorem interrupted_fiber {B : List Val} {classes : Classes} (fiber : NativeFibe
     FiberAt B classes
       (interruptRecord (interpOf HostTimeoutSource.program Test.Dogfood.Scenario.Timeout.fetch.table)
         who extra fiber).1 := by
-  unfold interruptRecord
+  unfold interruptRecord interruptWithCause
   dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
     FiberCore.setDeferred, FiberCore.answerWith, FiberCore.failure, frameCore]
   split

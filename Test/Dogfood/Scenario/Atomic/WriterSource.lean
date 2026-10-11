@@ -185,7 +185,7 @@ theorem compile_bound (built : Api.Built) (admitted : Api.Author.build (shop .no
   fun_induction compileEff body point
   all_goals intro found scope
   case case13 point n fuel row request kind value evaluated op produced notExternal notCall notParam =>
-    simp only [kind, evaluated, produced, current, thunk]
+    simp only [kind, evaluated, produced, current, cata_prim, thunk]
     exact operation_bound built admitted id member point row request value op found scope produced
   case case18 point n fuel first rest ih =>
     change current id (compileEff first (point.child 0)) + WriterPhase.below id (point.path ++ [1]) ≤ _
@@ -235,7 +235,7 @@ theorem compile_bound (built : Api.Built) (admitted : Api.Author.build (shop .no
     rw [action_zero built admitted id member point _ found]
     omega
   case case40 point n fuel key value body v evaluated =>
-    simpa only [updateContextAt, current, thunk, name, operation, Point.child, Nat.zero_add] using
+    simpa only [updateContextAt, current, cata_prim, thunk, name, operation, Point.child, Nat.zero_add, Nat.add_zero] using
       child_zero_le id point.path
   case case25 point n fuel body noExit ih =>
     exact Nat.le_trans (ih (Agreement.at_child found 0)
@@ -246,7 +246,7 @@ theorem compile_bound (built : Api.Built) (admitted : Api.Author.build (shop .no
       (child_at built.program point 0 (next_of_at built.program point _ 0 0 found scope (by rfl))))
       (child_zero_le id point.path)
   all_goals have head := fragment.at found
-  all_goals aesop (add norm simp [current, thunk, name, program, storeName, storeAction, operation,
+  all_goals aesop (add norm simp [current, cata_prim, thunk, name, program, storeName, storeAction, operation,
     frontier, badShape, Prim.ofExit, updateContextAt, directHead, async_zero]) (add safe apply [child_zero_le])
 
 /-- Resolving any existing scoped source point retains its active note reservation. -/

@@ -2057,7 +2057,7 @@ theorem emit_update_comm (m : RState) (g : RFiber)
 /-- An interrupt record keeps the fiber's id. -/
 theorem interruptRecord_id (interp : RInterp) (who : Option FiberId) (extra : ReasonAnnotations Ann)
     (t : RFiber) : (interruptRecord interp who extra t).1.id = t.id := by
-  unfold interruptRecord
+  unfold interruptRecord interruptWithCause
   aesop
 
 /-- **`interruptAs`** (`:871-884`, D6b): the target is declared (the pre), so it is a fiber of the

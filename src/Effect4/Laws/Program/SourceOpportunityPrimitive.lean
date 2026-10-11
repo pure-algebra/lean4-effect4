@@ -154,7 +154,7 @@ theorem primitive_debit (root : NativeEff) (q : List Nat) (fragment : Fragment r
     have nextOwned := interp_action_at root fragment m.completedExits table suspended next thunkOwned produced
     have carried := interp_action_le root q clearFin m.completedExits table suspended next thunkOwned produced
     exact native_action_debit root q table m fiber yielding next nextOwned sequential raceFree clearFin
-      owned.scopes unique (by simpa only [selected, current] using carried)
+      owned.scopes unique (by simpa only [selected, current, cata_prim] using carried)
   have cancellation (register : EffName) (signal : Bool) (cancel : Option EffName)
       (selected : fiber.frame.current = .async register signal cancel) :
       ∀ callback ∈ cancel, name q callback = 0 := by
@@ -170,7 +170,7 @@ theorem primitive_debit (root : NativeEff) (q : List Nat) (fragment : Fragment r
     simp only [recorded_emit, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, runEvent, Nat.add_zero]
     change recorded q m + outside root q fiber.id m + frame root q _ ≤ _
     dsimp only [parked, before, RunFiber.park]
-    simp only [frame, current, Nat.zero_add]
+    simp only [frame, current, cata_prim, Nat.zero_add]
     omega
   case case3 register signal cancel selected token state grown before parked produced =>
     have empty := cancellation register signal cancel selected
@@ -215,7 +215,7 @@ theorem primitive_debit (root : NativeEff) (q : List Nat) (fragment : Fragment r
   case case12 park thunk selected state value produced noYield noAsync =>
     exact answer_debit root q m {m with state} fiber yielding (.success value) .answered [.drainDue] rfl rfl rfl
   all_goals
-    aesop (add safe apply [actionDebit, frames, finalizers, answer_debit, (register_race_debit root q m fiber yielding _ noRaces), exit_answer_zero]) (add norm simp [Debit, frame, current, saved, recorded_emit, outside_emit, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, runEvent, Nat.zero_add, Nat.add_zero]) (add safe tactic (by omega))
+    aesop (add safe apply [actionDebit, frames, finalizers, answer_debit, (register_race_debit root q m fiber yielding _ noRaces), exit_answer_zero]) (add norm simp [Debit, frame, current, cata_prim, saved, recorded_emit, outside_emit, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, runEvent, Nat.zero_add, Nat.add_zero]) (add safe tactic (by omega))
 
 /-- A primitive exit does not edit the stored fiber rows before settlement.
 Consumer: scoped-exit and native evaluator debit. -/
