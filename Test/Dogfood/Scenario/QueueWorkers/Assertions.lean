@@ -1,4 +1,5 @@
 import Test.Dogfood.Scenario.QueueWorkers.Ledger
+import Test.Dogfood.Scenario.QueueWorkers.CleanupSource
 import Test.Dogfood.Scenario.Programs
 import Test.Dogfood.Scenario.Frame
 import Effect4.Laws.Program.ReleaseTrace
@@ -186,14 +187,31 @@ proof_goal rest_step :
     Api.Author.build (crew total) = .ok b → Basis b s → Jobs s → Rest s → Run.rowReads s c = true →
     Rest (s.step c)
 
-/-- Cleanup preservation for `releases_once` at an actual command boundary.
-It needs control-source provenance, registered closure ownership and cleanup-cell writer provenance.
-Consumer: `cleanup_boundary`, then the cleanup clause. It establishes no release progress or order claim. -/
+/-- The remaining cleanup writer obligation on the original actual history.
+Each observed identity spends a release start at its own source acquisition.
+Consumer: `cleanup_step`, then the unchanged `releases_once`; no progress or release order follows. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
-proof_goal cleanup_step :
+proof_goal logs_history (total compileFuel : Nat) (b : Api.Built) (machine : NativeMachine)
+    (built : Api.Author.build (crew total) = .ok b) (history : Run.HistoryOf b compileFuel machine) :
+    (∀ value ∈ log machine, ∃ i ∈ [1, 2, 3], value = .nat i) ∧
+      ∀ i ∈ [1, 2, 3], (log machine).count (.nat i) ≤
+        machine.trace.countP (ReleaseTrace.releaseAt (acquirePath i))
+
+/-- Cleanup preservation now uses proved source uniqueness and actual release custody.
+Only the concrete log-writer history remains open.
+Consumer: `cleanup_boundary`, then the unchanged cleanup clause; no progress or order follows. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem cleanup_step :
   ∀ (total : Nat) (b : Api.Built) (s : Run) (c : Command),
     Api.Author.build (crew total) = .ok b → Basis b s → Cleanup s.machine → Run.rowReads s c = true →
-    Cleanup (s.step c).machine
+    Cleanup (s.step c).machine := by
+  intro total b s command built held _ _
+  have reached := Run.Reached.step s command held.reached
+  have history := (Run.reached_history (s.step command) reached).2
+  rw [Run.step_built, held.built] at history
+  have logs := logs_history total (s.step command).budget.compileFuel b (s.step command).machine built history
+  exact ⟨CleanupSource.registrations total _ b built _ history,
+    CleanupSource.releases total _ b built _ history, logs.1, logs.2⟩
 
 /-- Actual source and admission facts extend without a preservation goal. -/
 theorem basis_step (b : Api.Built) (s : Run) (c : Command) (hs : Basis b s) :
