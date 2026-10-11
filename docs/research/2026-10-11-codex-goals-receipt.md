@@ -233,3 +233,15 @@ The observer proof now dispatches through both selection modes and retains the a
 `beginRace_keepsMask` covers both modes; the new action preserves the existing saved-mask invariant.
 The narrow builds pass for `Typed.Commands.Bookkeeping` and `Machine.MaskRuns`.
 `codex/FirstExitBookkeepingAudit.lean` audits 856 declarations within `[propext, Quot.sound]`, with no goals or modulo declarations.
+
+## Finalizer transfer into the fiber evaluator
+
+`FinalizerCredits.finalizerOr_debit` accounts for both pure and reified finalizer starts.
+`stepFrame_debit` consumes the checked frame-step debit.
+`settle_funded` transfers that debit through an actual fiber replacement with distinct fiber identifiers.
+The statement covers arbitrary interpreters, masks, causes, and selected finalizer names.
+Whole-command preservation, source-use uniqueness, and log-writer provenance remain open.
+
+`LEAN_NUM_THREADS=3 lake build Effect4.Laws.Machine.FinalizerRun` passes with 211 jobs.
+`lake env lean docs/research/2026-10-10-goals-packet/codex/FinalizerRun.lean` passes.
+The audit reports 58 declarations, no modulo declarations, and no planned goals.
