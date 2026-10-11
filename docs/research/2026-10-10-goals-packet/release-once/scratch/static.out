@@ -1,0 +1,64 @@
+["crew 0, worker 1's acquireRelease: kind acquireRelease, once-placed true, first loop on the path none",
+  "crew 0, worker 2's acquireRelease: kind acquireRelease, once-placed true, first loop on the path none",
+  "crew 1, worker 1's acquireRelease: kind acquireRelease, once-placed true, first loop on the path none",
+  "crew 1, worker 2's acquireRelease: kind acquireRelease, once-placed true, first loop on the path none",
+  "crew 2, worker 1's acquireRelease: kind acquireRelease, once-placed true, first loop on the path none",
+  "crew 2, worker 2's acquireRelease: kind acquireRelease, once-placed true, first loop on the path none",
+  "crew 3, worker 1's acquireRelease: kind acquireRelease, once-placed true, first loop on the path none",
+  "crew 3, worker 2's acquireRelease: kind acquireRelease, once-placed true, first loop on the path none",
+  "crew 7, worker 1's acquireRelease: kind acquireRelease, once-placed true, first loop on the path none",
+  "crew 7, worker 2's acquireRelease: kind acquireRelease, once-placed true, first loop on the path none"]
+["queue crew 1, worker 1: kind acquireRelease, once-placed true, first loop on the path none",
+  "queue crew 1, worker 2: kind acquireRelease, once-placed true, first loop on the path none",
+  "queue crew 1, feeder: kind acquireRelease, once-placed true, first loop on the path none",
+  "queue crew 1, red: the take's onExit under worker 2's loop: kind onExit, once-placed false, first loop on the path some [1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1]",
+  "queue crew 3, worker 1: kind acquireRelease, once-placed true, first loop on the path none",
+  "queue crew 3, worker 2: kind acquireRelease, once-placed true, first loop on the path none",
+  "queue crew 3, feeder: kind acquireRelease, once-placed true, first loop on the path none",
+  "queue crew 3, red: the take's onExit under worker 2's loop: kind onExit, once-placed false, first loop on the path some [1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1]"]
+["shop, request 1: kind onExit, once-placed true, first loop on the path none",
+  "shop, request 2: kind onExit, once-placed true, first loop on the path none",
+  "shop, request 3: kind onExit, once-placed true, first loop on the path none",
+  "shop, request 4: kind onExit, once-placed true, first loop on the path none",
+  "shop, request 5: kind onExit, once-placed true, first loop on the path none",
+  "shop, request 6: kind onExit, once-placed true, first loop on the path none",
+  "fetch, red: the attempt's onExit under the retry loop: kind onExit, once-placed false, first loop on the path some [1, 1, 0]"]
+docs/research/2026-10-10-goals-packet/release-once/scratch/Static.lean:108:87: error: unexpected token '#eval'; expected '#guard_msgs', 'abbrev', 'add_decl_doc', 'alias', 'axiom', 'binder_predicate', 'builtin_cbv_simproc', 'builtin_cbv_simproc_decl', 'builtin_dsimproc', 'builtin_dsimproc_decl', 'builtin_grind_propagator', 'builtin_initialize', 'builtin_simproc', 'builtin_simproc_decl', 'cbv_simproc', 'cbv_simproc_decl', 'class', 'coinductive', 'declare_command_config_elab', 'declare_command_config_elab_legacy', 'declare_config_elab', 'declare_config_elab_legacy', 'declare_core_config_elab', 'declare_simp_like_tactic', 'declare_syntax_cat', 'declare_term_config_elab', 'def', 'def_eval_config_item', 'def_wanted', 'dsimproc', 'dsimproc_decl', 'eff_module', 'elab', 'elab_rules', 'example', 'grind_propagator', 'inductive', 'infix', 'infixl', 'infixr', 'initialize', 'instance', 'instance_wanted', 'macro', 'macro_rules', 'notation', 'opaque', 'postfix', 'prefix', 'proof_goal', 'proof_wanted', 'recommended_spelling', 'register_builtin_option', 'register_error_explanation', 'register_grind_attr', 'register_label_attr', 'register_linter_set', 'register_option', 'register_simp_attr', 'register_sym_simp_attr', 'register_tactic_tag', 'register_try?_tactic', 'simproc', 'simproc_decl', 'step_context%', 'structure', 'syntax', 'tactic_extension', 'theorem', 'theorem_wanted' or 'unif_hint'
+docs/research/2026-10-10-goals-packet/release-once/scratch/Static.lean:110:56: error(lean.invalidField): Invalid field notation: Type of
+  r
+is not known; cannot resolve field `child`
+
+Hint: Consider replacing the field projection with a call to one of the following:
+  • `Api.FiberStatus.child`
+  • `Api.ForkKind.child`
+  • `ForkRecord.child`
+  • `ArgF.child`
+  • `ArgSort.child`
+  • `Node.child`
+  • `Point.child`
+  • `TyArgF.child`
+  • `Typed.RestoreBodyBoundary.child`
+  • `Laws.Auto.Positions.Edge.child`
+docs/research/2026-10-10-goals-packet/release-once/scratch/Static.lean:110:71: error(lean.invalidField): Invalid field notation: Type of
+  r
+is not known; cannot resolve field `parent`
+
+Hint: Consider replacing the field projection with a call to one of the following:
+  • `Aesop.AddRapp.parent`
+  • `Aesop.Goal.parent`
+  • `Aesop.GoalData.parent`
+  • `Aesop.Rapp.parent`
+  • `Aesop.RappData.parent`
+  • `System.FilePath.parent`
+  • `Api.ForkSite.parent`
+  • `ForkRecord.parent`
+  • `MemoMap.parent`
+  • `Std.Http.URI.Path.parent`
+  • `Laws.Auto.Positions.Edge.parent`
+docs/research/2026-10-10-goals-packet/release-once/scratch/Static.lean:110:87: error(lean.invalidField): Invalid field notation: Type of
+  r
+is not known; cannot resolve field `site`
+
+Hint: Consider replacing the field projection with a call to one of the following:
+  • `ForkRecord.site`
+  • `Lean.Doc.DeferredCheck.site`

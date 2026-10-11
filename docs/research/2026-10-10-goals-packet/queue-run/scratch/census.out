@@ -1,0 +1,226 @@
+host acts, depth 3: nodes=36200 funded=36200 atRest=23600 maxOps=48 runningBetween=0 shapes=12 restShapes=7 bad: within=[] accounted=[] settled=[]
+--- shapes at rest
+feeder guard running=false intr=true deferred=false pending=false override=none
+    async(registerAwait)
+    | asyncFinalizer(withWaiter(cancelAwait))
+    | setInterruptible(false)
+    | onExit(fin[1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0],false)
+    | setInterruptible(true)
+    | whileLoop(loop[1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1])
+    | onExit(scopedExit,false)
+worker guard running=false intr=true deferred=false pending=false override=none
+    async(external[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0])
+    | onFailure(caughtError[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0])
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1])
+    | whileLoop(loop[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1])
+    | onExit(scopedExit,false)
+feeder guard running=false intr=true deferred=false pending=false override=none
+    async(external[1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0])
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0])
+    | whileLoop(loop[1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1])
+    | onExit(scopedExit,false)
+worker guard running=false intr=true deferred=false pending=false override=none
+    async(external[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0])
+    | onFailure(caughtError[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0])
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1])
+    | whileLoop(loop[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1])
+    | onExit(scopedExit,false)
+root guard running=false intr=true deferred=false pending=false override=none
+    async(registerAwait)
+    | asyncFinalizer(withWaiter(cancelAwait))
+    | onExit(scopedExit,false)
+    | onSuccess(cont[1, 1, 1, 1, 1, 1])
+worker guard running=false intr=true deferred=false pending=false override=none
+    async(registerAwait)
+    | asyncFinalizer(withWaiter(cancelAwait))
+    | setInterruptible(false)
+    | onExit(fin[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0],false)
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0])
+    | whileLoop(loop[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0])
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
+    | setInterruptible(true)
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0])
+    | whileLoop(loop[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1])
+    | onExit(scopedExit,false)
+worker guard running=false intr=true deferred=false pending=false override=none
+    async(registerAwait)
+    | asyncFinalizer(withWaiter(cancelAwait))
+    | setInterruptible(false)
+    | onExit(fin[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0],false)
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0])
+    | whileLoop(loop[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0])
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
+    | setInterruptible(true)
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0])
+    | whileLoop(loop[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1])
+    | onExit(scopedExit,false)
+--- shapes not at rest
+worker free running=false intr=true deferred=false pending=false override=none
+    withFiber(act[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0])
+worker free running=false intr=true deferred=false pending=false override=none
+    withFiber(act[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0])
+feeder free running=false intr=true deferred=false pending=false override=none
+    withFiber(act[1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0])
+helper free running=false intr=false deferred=false pending=false override=none
+    sync(op)
+helper free running=false intr=false deferred=false pending=true override=none
+    sync(op)
+every move kind, depth 2: nodes=4965 funded=4965 atRest=3128 maxOps=49 runningBetween=0 shapes=36 restShapes=14 bad: within=[] accounted=[] settled=[]
+--- shapes the host acts did not reach at depth 3
+feeder guard running=false intr=true deferred=false pending=false override=some true
+    async(external[1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0])
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0])
+    | whileLoop(loop[1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1])
+    | onExit(scopedExit,false)
+feeder guard running=false intr=true deferred=false pending=true override=none
+    success
+    | onSuccessConst
+root guard running=false intr=true deferred=false pending=true override=none
+    success
+    | onSuccessConst
+    | asyncFinalizer(withWaiter(cancelAwait))
+    | onExit(scopedExit,false)
+    | onSuccess(cont[1, 1, 1, 1, 1, 1])
+worker guard running=false intr=true deferred=false pending=false override=some true
+    async(registerAwait)
+    | asyncFinalizer(withWaiter(cancelAwait))
+    | setInterruptible(false)
+    | onExit(fin[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0],false)
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0])
+    | whileLoop(loop[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0])
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
+    | setInterruptible(true)
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0])
+    | whileLoop(loop[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1])
+    | onExit(scopedExit,false)
+worker guard running=false intr=true deferred=false pending=false override=none
+    success
+    | onSuccessConst
+    | asyncFinalizer(withWaiter(cancelAwait))
+    | setInterruptible(false)
+    | onExit(fin[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0],false)
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0])
+    | whileLoop(loop[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0])
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
+    | setInterruptible(true)
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0])
+    | whileLoop(loop[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1])
+    | onExit(scopedExit,false)
+feeder guard running=false intr=true deferred=false pending=true override=none
+    success
+    | onSuccessConst
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0])
+    | whileLoop(loop[1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1])
+    | onExit(scopedExit,false)
+root guard running=false intr=true deferred=false pending=false override=some true
+    async(registerAwait)
+    | asyncFinalizer(withWaiter(cancelAwait))
+    | onExit(scopedExit,false)
+    | onSuccess(cont[1, 1, 1, 1, 1, 1])
+feeder free running=false intr=true deferred=false pending=false override=some true
+    withFiber(act[1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0])
+helper free running=false intr=false deferred=false pending=true override=some true
+    sync(op)
+worker free running=false intr=true deferred=false pending=false override=some true
+    withFiber(act[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0])
+worker free running=false intr=true deferred=false pending=false override=some true
+    withFiber(act[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0])
+worker guard running=false intr=true deferred=false pending=false override=some true
+    async(external[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0])
+    | onFailure(caughtError[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0])
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1])
+    | whileLoop(loop[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1])
+    | onExit(scopedExit,false)
+root guard running=false intr=false deferred=false pending=true override=none
+    suspend(park)
+    | asyncFinalizer(withWaiter(store))
+    | onSuccess(restore)
+    | exitFrame
+    | iterator(store)
+    | onFailure(merge)
+    | onSuccess(restore)
+    | setInterruptible(true)
+    | onSuccess(cont[1, 1, 1, 1, 1, 1])
+worker guard running=false intr=true deferred=false pending=true override=none
+    success
+    | onSuccessConst
+    | asyncFinalizer(withWaiter(cancelAwait))
+    | setInterruptible(false)
+    | onExit(fin[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0],false)
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0])
+    | whileLoop(loop[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0])
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
+    | setInterruptible(true)
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0])
+    | whileLoop(loop[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1])
+    | onExit(scopedExit,false)
+worker guard running=false intr=true deferred=false pending=true override=none
+    success
+    | onSuccessConst
+    | onFailure(caughtError[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0])
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1])
+    | whileLoop(loop[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1])
+    | onExit(scopedExit,false)
+worker guard running=false intr=true deferred=false pending=false override=some true
+    async(external[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0])
+    | onFailure(caughtError[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0])
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1])
+    | whileLoop(loop[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1])
+    | onExit(scopedExit,false)
+feeder guard running=false intr=true deferred=false pending=false override=some true
+    async(registerAwait)
+    | asyncFinalizer(withWaiter(cancelAwait))
+    | setInterruptible(false)
+    | onExit(fin[1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0],false)
+    | setInterruptible(true)
+    | whileLoop(loop[1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1])
+    | onExit(scopedExit,false)
+worker guard running=false intr=true deferred=false pending=true override=none
+    success
+    | onSuccessConst
+worker guard running=false intr=true deferred=false pending=true override=none
+    success
+    | onSuccessConst
+    | asyncFinalizer(withWaiter(cancelAwait))
+    | setInterruptible(false)
+    | onExit(fin[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0],false)
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0])
+    | whileLoop(loop[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0])
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
+    | setInterruptible(true)
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0])
+    | whileLoop(loop[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1])
+    | onExit(scopedExit,false)
+worker guard running=false intr=true deferred=false pending=true override=none
+    success
+    | onSuccessConst
+    | onFailure(caughtError[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0])
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1])
+    | whileLoop(loop[1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1])
+    | onExit(scopedExit,false)
+helper free running=false intr=false deferred=false pending=false override=some true
+    sync(op)
+helper guard running=false intr=false deferred=false pending=false override=none
+    success
+    | onSuccessConst
+worker guard running=false intr=true deferred=false pending=false override=some true
+    async(registerAwait)
+    | asyncFinalizer(withWaiter(cancelAwait))
+    | setInterruptible(false)
+    | onExit(fin[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0],false)
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0])
+    | whileLoop(loop[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0])
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1])
+    | setInterruptible(true)
+    | onSuccess(cont[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0])
+    | whileLoop(loop[1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1])
+    | onExit(scopedExit,false)
+feeder guard running=false intr=true deferred=false pending=true override=none
+    success
+    | onSuccessConst
+    | asyncFinalizer(withWaiter(cancelAwait))
+    | setInterruptible(false)
+    | onExit(fin[1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0],false)
+    | setInterruptible(true)
+    | whileLoop(loop[1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1])
+    | onExit(scopedExit,false)

@@ -1,0 +1,12 @@
+total 3: depth 3 from parked: 6859 scripts, 0 failing, first none
+  (5149 ms)
+total 3: depth 2 from running: 361 scripts, 0 failing, first none
+  (722 ms)
+total 3: depth 2 from blocked: 361 scripts, 0 failing, first none
+  (784 ms)
+total 1: depth 2 from parked: 361 scripts, 0 failing, first none
+  (479 ms)
+total 3: fuel 0, 2, .., 200 on five scripts, every run checked, funded or cut: 505 runs, 294 cut, 0 failing, first none
+  (349504 ms)
+red control, twice crew: fuel 0, 4, .., 200 on five scripts: 255 runs, 205 cut, 161 failing, first some (72, 4)
+  (230692 ms)

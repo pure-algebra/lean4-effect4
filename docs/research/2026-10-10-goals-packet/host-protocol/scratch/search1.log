@@ -1,0 +1,3 @@
+["yield 1 true, receive, apply", "yield 3 true, receive, apply", "cancel 3, receive, apply",
+  "receive, yield 1 true, apply", "receive, yield 3 true, apply", "receive, cancel 3, apply"]
+6

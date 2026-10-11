@@ -1,0 +1,90 @@
+docs/research/2026-10-10-goals-packet/queue-run/scratch/Positions.lean:45:14: warning: Variable name `op` is not explicitly referenced.
+
+Hint: The binding can be removed (if unused) or named `_` (if used implicitly). Alternatively, prefix the name with `_` to silence this warning:
+  [apply] _op
+
+Note: This linter can be disabled with `set_option linter.unusedVariables false`
+armed=[] nextId=4 nextToken=4 atRest=true funded=true
+fiber 0: exit=false running=false parked=guard 0 ops=34 intr=true deferred=false disp=0
+  current: async(registerAwait 0)
+  | asyncFinalizer(withWaiter(cancelAwait 0, 0, 0))
+  | onExit(scopedExit s0, false)
+  | onSuccess(cont [1, 1, 1, 1, 1, 1]|e6|f1994)
+fiber 1: exit=false running=false parked=guard 1 ops=48 intr=true deferred=false disp=0
+  current: async(registerAwait 2)
+  | asyncFinalizer(withWaiter(cancelAwait 2, 1, 1))
+  | setInterruptible(false)
+  | onExit(fin [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0]|e15|f1974, false)
+  | onSuccess(cont [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0]|e15|f1975)
+  | whileLoop(loop [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0]|e10|f1981)
+  | onSuccess(cont [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1]|e10|f1982)
+  | setInterruptible(true)
+  | onSuccess(cont [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0]|e8|f1986)
+  | whileLoop(loop [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1]|e7|f1987)
+  | onExit(scopedExit s4, false)
+fiber 2: exit=false running=false parked=guard 2 ops=48 intr=true deferred=false disp=0
+  current: async(registerAwait 4)
+  | asyncFinalizer(withWaiter(cancelAwait 4, 2, 2))
+  | setInterruptible(false)
+  | onExit(fin [1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0, 0]|e16|f1973, false)
+  | onSuccess(cont [1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1, 1, 1, 1, 0]|e16|f1974)
+  | whileLoop(loop [1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1, 0]|e11|f1980)
+  | onSuccess(cont [1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1]|e11|f1981)
+  | setInterruptible(true)
+  | onSuccess(cont [1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0]|e9|f1985)
+  | whileLoop(loop [1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1]|e8|f1986)
+  | onExit(scopedExit s6, false)
+fiber 3: exit=false running=false parked=guard 3 ops=23 intr=true deferred=false disp=0
+  current: async(external [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0])
+  | onSuccess(cont [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0]|e10|f1984)
+  | whileLoop(loop [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1]|e9|f1985)
+  | onExit(scopedExit s8, false)
+armed=[] nextId=6 nextToken=8 atRest=true funded=true
+fiber 0: exit=false running=false parked=guard 0 ops=34 intr=true deferred=false disp=0
+  current: async(registerAwait 0)
+  | asyncFinalizer(withWaiter(cancelAwait 0, 0, 0))
+  | onExit(scopedExit s0, false)
+  | onSuccess(cont [1, 1, 1, 1, 1, 1]|e6|f1994)
+fiber 1: exit=false running=false parked=guard 5 ops=28 intr=true deferred=false disp=0
+  current: async(external [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0])
+  | onFailure(caughtError [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0]|e10|f1983)
+  | onSuccess(cont [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1]|e10|f1984)
+  | whileLoop(loop [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1]|e7|f1987)
+  | onExit(scopedExit s4, false)
+fiber 2: exit=false running=false parked=guard 7 ops=28 intr=true deferred=false disp=0
+  current: async(external [1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0])
+  | onFailure(caughtError [1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0]|e11|f1982)
+  | onSuccess(cont [1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1]|e11|f1983)
+  | whileLoop(loop [1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1]|e8|f1986)
+  | onExit(scopedExit s6, false)
+fiber 3: exit=false running=false parked=guard 6 ops=24 intr=true deferred=false disp=0
+  current: async(external [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0])
+  | onSuccess(cont [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0]|e10|f1984)
+  | whileLoop(loop [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1]|e9|f1985)
+  | onExit(scopedExit s8, false)
+armed=[] nextId=6 nextToken=10 atRest=true funded=true
+fiber 0: exit=false running=false parked=guard 0 ops=34 intr=true deferred=false disp=0
+  current: async(registerAwait 0)
+  | asyncFinalizer(withWaiter(cancelAwait 0, 0, 0))
+  | onExit(scopedExit s0, false)
+  | onSuccess(cont [1, 1, 1, 1, 1, 1]|e6|f1994)
+fiber 1: exit=false running=false parked=guard 5 ops=28 intr=true deferred=false disp=0
+  current: async(external [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0])
+  | onFailure(caughtError [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 0]|e10|f1983)
+  | onSuccess(cont [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1]|e10|f1984)
+  | whileLoop(loop [1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1]|e7|f1987)
+  | onExit(scopedExit s4, false)
+fiber 2: exit=false running=false parked=guard 7 ops=28 intr=true deferred=false disp=0
+  current: async(external [1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 0])
+  | onFailure(caughtError [1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0]|e11|f1982)
+  | onSuccess(cont [1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1]|e11|f1983)
+  | whileLoop(loop [1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 1]|e8|f1986)
+  | onExit(scopedExit s6, false)
+fiber 3: exit=false running=false parked=guard 9 ops=19 intr=true deferred=false disp=0
+  current: async(registerAwait 14)
+  | asyncFinalizer(withWaiter(cancelAwait 14, 3, 9))
+  | setInterruptible(false)
+  | onExit(fin [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0]|e16|f1976, false)
+  | setInterruptible(true)
+  | whileLoop(loop [1, 1, 1, 1, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 1]|e9|f1985)
+  | onExit(scopedExit s8, false)

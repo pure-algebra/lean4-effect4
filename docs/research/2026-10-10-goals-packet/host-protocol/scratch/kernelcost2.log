@@ -1,0 +1,33 @@
+[Elab.async] [0.380785] ✅️ elaborating proof of build_isOk
+  [Elab.definition.value] [0.380623] ✅️ build_isOk
+    [Elab.step] [0.380513] ✅️ decide +kernel
+      [Elab.step] [0.380500] ✅️ decide +kernel
+        [Elab.step] [0.380482] ✅️ decide +kernel
+          [addDecl] [0.380167] ✅️ adding declarations [build_isOk._proof_1_1]
+            [Kernel] [0.380127] ✅️ typechecking declarations [build_isOk._proof_1_1]
+[Elab.async] [1.281819] ✅️ elaborating proof of cx_refutes
+  [Elab.definition.value] [1.281646] ✅️ cx_refutes
+    [Elab.step] [1.281566] ✅️ decide +kernel
+      [Elab.step] [1.281560] ✅️ decide +kernel
+        [Elab.step] [1.281544] ✅️ decide +kernel
+          [addDecl] [1.281185] ✅️ adding declarations [cx_refutes._proof_1_1]
+            [Kernel] [1.281152] ✅️ typechecking declarations [cx_refutes._proof_1_1]
+        4.58 real         1.72 user         1.09 sys
+          2174648320  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+              143750  page reclaims
+               13797  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                   1  signals received
+                3956  voluntary context switches
+               11579  involuntary context switches
+            14298493  instructions retired
+             8827590  cycles elapsed
+              917792  peak memory footprint
+exit 0
