@@ -13,7 +13,7 @@ natively, compiled through LCNF. TypeScript joins the Effect ecosystem through t
 the readers. Programs are data: a canonical `Eff` tree with a digest and a typing certificate.
 A program has folds, a journaled run with replay, and a printed image that reads back.
 
-## Where the tree stands (2026-10-10, branch `refactor/phase1-phase3`)
+## Where the tree stands (2026-10-11, branch `refactor/phase1-phase3`)
 
 - **Programs and their types.** The checker types a program with located refusal. The address
   table, the focus function and one annotating traversal give each address its environment and
@@ -205,6 +205,8 @@ A program has folds, a journaled run with replay, and a printed image that reads
   half of `MaskRuns` follow as instances; replacing the old chains is Codex's lane. A raw context
   write lets a checked program at a closed row die with `missingService` (`E4-CTX-CE-001`, row 349).
   The printer spells a pair of a union as a union of pairs (`E4-PRINT-CE-001`, row 346, ruled).
+- **The first-exit race** (row 352). `raceAllFirst` selects the first observed entrant exit and
+  awaits the losers' cleanup before the parent sees it, as rc.112 does. It repairs the timeout form.
 - **The build.** The program and dogfood batteries run the machine as native code (row 327). A
   build prints only findings and the axiom gate's summary: reports print when a script asks for
   them. A battery restates no theorem (row 301); the cleanup pause of 2026-10-07 is closed, with
@@ -230,9 +232,10 @@ A program has folds, a journaled run with replay, and a printed image that reads
 ## Next, in order
 
 00. **The last planned goals** (the [goals packet](research/2026-10-10-goals-packet/README.md)).
-   Fourteen goals remain, each a property of one of the five example applications. The packet
-   plans their proofs for Codex, with each goal proved modulo the lemmas it names. It also sorts
-   the 87 open parts that no goal states yet. Beside it: the nine legacy host fixtures of the
+   Codex's night lane merged at `7c69f880e`. Of the fourteen application goals, two are proved
+   (`Atomic.bounded`, `Routing.infrastructure_escapes`). Nine are proved modulo ten smaller goals,
+   and the three Timeout goals stay open under row 351's amended retry clause (`#plan_status`).
+   The packet also sorts the 87 open parts that no goal states yet. Beside it: the nine legacy host fixtures of the
    truth lane move to the keyed lane (row 343 (8), signed until then), and seat FC's rulings
    land (row 345 (2): `tools/Tools/Graph` at height 0; the generator's children induction).
 0. **The host session as a coalgebra** (the
