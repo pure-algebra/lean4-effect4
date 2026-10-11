@@ -44,6 +44,26 @@ That result fits no world at the reader's nonempty promised row.
 This is a finite execution control with a universal value-boundary proof.
 It is not a refutation of a closed-row reachable claim.
 
+## Fundamental source header
+
+`DenotesTyped` in `src/Effect4/Laws/Program/Typed/Assembly.lean` currently states:
+
+```lean
+def DenotesTyped (root : ProgramSource) : Prop :=
+  SourceWF root →
+    ∀ (w : World), w.serviceTy = root.sig.serviceTy →
+    ∀ (p : Point) (e : NativeEff) (ty : EffTy),
+      Node.at_ (.eff root.program) p.path = some (.eff e) →
+      PointTyped root w p ty → TypedProg root w ty (denoteR root.program e p)
+```
+
+`denotesTyped` in `Typed/LayerArm.lean` assembles this open-point source property.
+`loadsTyped` and `load_typed` in that file already require the closed row at the actual load.
+The open source property's approved migration adds an available input and its checked requirement inclusion.
+Its conclusion uses the same `AmbientProg` instance and ordinary common completion guarantees.
+The loaded empty context discharges the available input at the empty row under row 117.
+The shared unit-input arrows retain their original laws; they do not supply this native source coverage.
+
 ## Approved ambient reach
 
 The existing `ProgramArrow` carries the approved entry and completion inputs.
