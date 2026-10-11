@@ -5,7 +5,7 @@ Status: a research note (history, not authority). It rules nothing. Base `5b4069
 goals: `stale_never_applies` and `retries_declared` (`Test/Dogfood/Scenario/Timeout.lean`),
 `unauthorized_calls_nothing` and `infrastructure_escapes` (`Test/Dogfood/Scenario/Routing.lean`).
 The probe is `Probe.lean` in this folder. It compiles with `lake env lean` in the worktree in
-11 s, and it edits no file outside this folder.
+about 12 s, and it edits no file outside this folder.
 
 ## 1. The one thing to know first
 
@@ -13,19 +13,20 @@ The probe is `Probe.lean` in this folder. It compiles with `lake env lean` in th
 `Probe.lean`). Two scripts of plain moves make `fetch` retry after its first call was answered.
 The cause is `timeoutForm` (`Test/Dogfood/P1HttpCache.lean`). Its race awaits the attempt
 through a forked fiber, so the timer can win after the attempt finished. rc.112's race has no
-such gap.
-The repair is the owner's (section 3.2).
+such gap. The repair is the owner's (section 3.2).
 
-The other three goals stand:
+The other three goals stand, each proved in the probe modulo one planned goal:
 
 - **`stale_never_applies` is a session law in three clauses of four.** The probe proves clauses
   one to three for every program (`session_keys_once`), from one new machine law
-  (`reservedKeys_steppedBy`). Clause four is a data-flow fact of `fetch` alone.
-- **`infrastructure_escapes` rests on one planned goal**, the run's budget premise
-  (`escape_session`). The probe proves the meaning half (`escape_meaning`) for every tag, and the
-  whole goal at any fixed tag by the kernel (`escapes_sqlError`).
-- **`unauthorized_calls_nothing` needs a general law**: the calls of a run are calls of the
-  one-fiber call tree, under every script (`held_in_tree`).
+  (`reservedKeys_steppedBy`). Clause four is a data-flow fact of `fetch` alone
+  (`root_answers_applied`).
+- **`infrastructure_escapes` rests on the run's budget premise** (`escape_session`). The probe
+  proves the meaning half (`escape_meaning`) for every tag, and the whole goal at any fixed tag
+  by the kernel (`escapes_sqlError`).
+- **`unauthorized_calls_nothing` rests on one general law**: the calls of a run are calls of
+  the one-fiber call tree, under every script (`held_in_tree`). The program's half
+  (`tree_needs_token`) is proved.
 
 ## 2. The summary
 
@@ -34,7 +35,7 @@ The other three goals stand:
 | `stale_never_applies` | true | the key ledger, then clause four | `reservedKeys_steppedBy`, `below_steppedBy`, `session_keys_once` (all proved) | `root_answers_applied` (planned) | clauses 1–3: 3 h to land; clause 4: 2–4 weeks, or 1 h if the owner restates it | clauses 1–3: high; clause 4 as written: low |
 | `retries_declared` | false | `retries_declared_refuted` (proved) | none | none | owner decision first; a repaired claim costs what clause 4 costs | high |
 | `infrastructure_escapes` | true at every fixed tag (proved); true on every finite instance tested | `denoteRows_eq_session` plus `escape_meaning` (proved) | a budget law for host-driven runs of `StraightRows` programs (planned) | `escape_session` (planned) | 2–4 days; 1–2 days if the owner raises the battery's fuel | medium-high |
-| `unauthorized_calls_nothing` | true on every finite instance tested | `held_in_tree` plus `tree_needs_token` | `held_in_tree` (planned) | `tree_needs_token` (planned; three controls proved) | 1–2 weeks as written; 3–4 days if restated to host-driven scripts | medium |
+| `unauthorized_calls_nothing` | true on every finite instance tested | `held_in_tree` plus `tree_needs_token` (proved) | `held_in_tree` (planned) | none left | 1–2 weeks as written; 3–4 days if restated to host-driven scripts | medium |
 
 ## 3. The goals
 
@@ -246,20 +247,21 @@ applied exits. Two facts carry it:
    The goal's scripts add interruptions, clock steps, yield verdicts, fires and budget cuts. For
    a program whose code catches no interruption (`NoCauseHandler`), each only stops or delays
    the root.
-2. **The tree needs the token** (`tree_needs_token`, planned, specific). The tree waits at the
-   repository only after a first answer that is the configuration with the request's token.
-   Admission takes only the canonical record frame at the configuration's column (tested,
-   `scratch/Explore2.lean`). Three controls are proved by the kernel: `tree_green`,
-   `tree_red_token` and `tree_red_frame`.
+2. **The tree needs the token** (`tree_needs_token`, proved, specific). The tree waits at the
+   repository only after a first answer that is the configuration with the request's token. The
+   proof runs the tree's sequence (`runRowsO_pbind`, `andThen_eq_waiting`). The 200 response
+   and the two handlers answer terms, so they never wait (`catchK_done`, `seqSucceed_done`).
+   The configuration column admits only the canonical record frame (`admitted_config`, from
+   `Val.hasTy`'s record arm). The token check then decides (`denote_routeSel`, by the kernel).
+   Three controls validate the formulation: `tree_green`, `tree_red_token` and `tree_red_frame`.
 
-`unauthorized_calls_nothing_modulo` proves the goal from the two. The premise excludes the reply
-that the tree needs.
+`unauthorized_calls_nothing_modulo` proves the goal from `held_in_tree`. The premise excludes the
+reply that the tree needs.
 
-**The sizes.** `tree_needs_token`: 1 day, a case analysis on the tape's head with the record
-inversion of `Val.hasTy` (`src/Effect4/Program/Typed.lean`). `held_in_tree` as stated: 1–2 weeks,
-an extension of the agreement layer's forms (`Holds`, `Settled`) to an interrupted root, a yield
-verdict and a cut segment. The owner may restrict the goal to host-driven scripts at the raised
-fuel of 3.3. `held_in_tree` then reduces to `rows_loop_frontier` at each bind: 3–4 days in all.
+**The size.** `held_in_tree` as stated: 1–2 weeks, an extension of the agreement layer's forms
+(`Holds`, `Settled`) to an interrupted root, a yield verdict and a cut segment. The owner may
+restrict the goal to host-driven scripts at the raised fuel of 3.3. `held_in_tree` then reduces
+to `rows_loop_frontier` at each bind: 2–3 days.
 
 **What it does not establish.** What an authorized request calls. A handler that looks the
 caller up first (a red control). A host that withholds the configuration forever.
@@ -297,7 +299,8 @@ flowchart TD
   O2{owner: timeout form} --> S7
   S5[S5 escape meaning and program facts] --> S6[S6 budget law and escape_session]
   O3{owner: routing fuel} --> S6
-  S8[S8 held_in_tree] --> S9[S9 tree_needs_token and the goal]
+  S5 --> S9[S9 tree_needs_token and the goal]
+  S8[S8 held_in_tree] --> S9
 ```
 
 | Slice | Content | Depends on | Parallel with | Narrow build | Audit |
@@ -310,7 +313,7 @@ flowchart TD
 | S6 | the budget law into `src/Effect4/Laws/Program/Agreement/Hosted.lean`; `escape_session`; `infrastructure_escapes` a theorem | S5, owner if the fuel moves | S8 | `lake build Effect4.Laws.Program.Agreement.Hosted` | `#axiom_audit` on it and on the battery |
 | S7 | `fetch`'s program invariant: `root_answers_applied` if kept, then the repaired `retries_declared` | owner | — | the timeout battery | the battery |
 | S8 | `held_in_tree` for every script into `src/Effect4/Laws/Api/SessionMeaningLoop.lean` | — | S1, S5 | `lake build Effect4.Laws.Api.SessionMeaningLoop` | `#axiom_audit` on it |
-| S9 | `tree_needs_token`; `unauthorized_calls_nothing` a theorem | S8 | — | the routing battery | the battery |
+| S9 | `tree_needs_token` and its helpers into the routing battery (proved in the probe: a move, 2 h); `unauthorized_calls_nothing` a theorem | S5, S8 | — | the routing battery | the battery |
 
 `kernel_rfl` (section 6) is a tactic, and the coordinator places it. The law graph's tactics stand
 in `src/Effect4/Laws/Auto/`.
@@ -340,6 +343,9 @@ Each item below serves other families too.
   it.
 - **The budget law for host-driven runs of `StraightRows` programs.** Every one-fiber scenario
   claim that goes through `denoteRows_eq_session` needs a funded run.
+- **The tree-stepping kit.** `runRowsO_pbind`, `andThen_eq_waiting`, `runRowsO_admitted_vis`,
+  `catchK_done` and the record inversion `namedHasTy_cons_required`. Any fact of the form "the
+  tree reaches this call only after that answer" uses them, as `tree_needs_token` does.
 - **`held_in_tree`.** Every "calls nothing" claim of a one-fiber program, under every script,
   such as the draft's `add_empty_calls_nothing`
   (`docs/research/2026-10-07-packet-application-claims.md`, section 3.7).
@@ -354,10 +360,12 @@ are those of `docs/core/controlled-english.md` §3.8: proved means the kernel ac
 | --- | --- |
 | `LEAN_NUM_THREADS=2 lake build Test.Dogfood.Scenario.Timeout Test.Dogfood.Scenario.Routing ProofGraph.AxiomAudit Effect4.Laws.Program.Guard.Decision` | restored from the cache, 1057 jobs, 2 s |
 | `LEAN_NUM_THREADS=2 lake build Effect4.Laws.Api.SessionMeaning Effect4.Laws.Api.SessionMeaningLoop` | restored, 493 jobs, 33 s |
-| `LEAN_NUM_THREADS=2 lake env lean docs/research/2026-10-10-goals-packet/host-protocol/Probe.lean` | no error, no warning, 11.3 s; the audit below (`probe-run.log`) |
+| `LEAN_NUM_THREADS=2 lake env lean docs/research/2026-10-10-goals-packet/host-protocol/Probe.lean` | no error, no warning, about 12 s; the audit below (`probe-run.log`) |
 | `lake env lean …/scratch/KernelCost.lean` | the kernel checks `build fetch` in 0.38 s and the first counterexample's run in 1.28 s |
 | `lake env lean …/scratch/Search1.lean` | 70644 words, 6 failures (section 3.2) |
+| `lake env lean …/scratch/Search2.lean` | 97338 words; 15 failures of `retriesDeclared`, none on a fair host's words; no failure of `staleNeverApplies` |
 | `lake env lean …/scratch/Symbolic1.lean` | free message: accepted in 0.65 s; free id and id text through the build: refused by the kernel |
+| `lake env lean …/scratch/Symbolic2.lean` | `fetch`'s answered run with a free body: accepted in 1.4 s |
 | `lake env lean …/scratch/Explore2.lean` | the escape run; the fragment; the canonical frame and the negative integer refused at their columns |
 
 The probe's audit (`#probe_audit`): the axiom gate's exact walk (`ProofGraph.reachedAxiomsMany`,
@@ -365,16 +373,16 @@ planned goals as leaves) over every declaration under `Probe.HostProtocol`. `#ax
 only imported modules, and the probe is no module.
 
 ```text
-#probe_audit: 142 declarations walked, 4 planned goals [held_in_tree, root_answers_applied,
- tree_needs_token, escape_session]; 0 outside [propext, Quot.sound]
+#probe_audit: 173 declarations walked, 3 planned goals [held_in_tree, root_answers_applied,
+ escape_session]; 0 outside [propext, Quot.sound]
 resting on planned goals:
   infrastructure_escapes_modulo rests on [escape_session]
-  unauthorized_calls_nothing_modulo rests on [held_in_tree, tree_needs_token]
+  unauthorized_calls_nothing_modulo rests on [held_in_tree]
   stale_never_applies_modulo rests on [root_answers_applied]
 ```
 
-`retries_declared_refuted`, `session_keys_once`, `escape_meaning` and `escapes_sqlError` rest on
-no planned goal.
+`retries_declared_refuted`, `session_keys_once`, `escape_meaning`, `escapes_sqlError` and
+`tree_needs_token` rest on no planned goal.
 
 ## 8. The decisions for the owner
 
