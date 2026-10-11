@@ -50,7 +50,7 @@ No statement establishes progress, fairness, or whole-runtime agreement.
 
 `Run.Frame` owns the session-to-machine history connection under host-session-protocol, R13.
 `Machine.Lift` owns induction through actual commands, decisions, and histories.
-`Program.Book` owns the frame-to-reference machine relation.
+`Machine.Book` lifts a relation between two machine instances through the shared loop.
 `SourceScope.ConfigurationAt` owns source-bearing machine fields on its explicit lexical fragment.
 `SourceOpportunityHistory` counts source use through those actual histories.
 `ReleaseCustody.Execution` retains registration credit through native commands and scheduling.
@@ -181,7 +181,7 @@ Pure proof additions change no executable behavior.
 Their narrow builds, touched-module audits, and root imports land with them.
 A timeout form change reaches truth, target, compiler, native, and OCaml comparisons.
 The retained behavior pass and later history sweep record the actual executed gates.
-See `codex/behavior-pass-receipt.md` and `codex/HistoryBehaviorSweepReceipt.md`.
+See `codex/behavior-pass-receipt.md` and `codex/history-behavior-sweep-receipt.md`.
 The timeout host comparison retains its explicitly missing whole-observation readers.
 A passing finite comparison does not close a universal scenario goal.
 The whole Test battery, whole-tree axiom gate, policies, and document checks remain owner-triggered sweeps.

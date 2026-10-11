@@ -1,4 +1,4 @@
-import Effect4.Laws.Machine.AnswerFlowFrames
+import Effect4.Laws.Machine.AnswerFlowHooks
 import Effect4.Program.Compile
 import Effect4.Laws.Auto.KernelRfl
 
@@ -55,5 +55,17 @@ example : (match (({frame with interruptedCause := some reason, stack := [.onFai
     | .finished _ => true
     | .running _ => false) = true := by
   kernel_rfl
+
+/-- A real onExit mask hook inserts a saved identity frame above its existing suffix. -/
+example : StackAt stage interp 1 1 1 ((Prim.onExit (.success .unit) name false).ensure frame).1.stack := by
+  exact ensure_stack stage interp 1 1 1 (.onExit (.success .unit) name false) frame (.nil 1 1)
+
+/-- A restoring mask types its actual pending failure at the committed answer stage. -/
+example : FrameAt stage interp 1 1
+    {((Prim.setInterruptible true).ensure {frame with interruptedCause := some reason}).1 with
+      current := .failure reason} := by
+  exact ensure_replacement stage interp 1 1 1 1 (.setInterruptible true) (.failure reason)
+    {frame with interruptedCause := some reason} (saved_mask stage interp 1 1 true)
+    (fun _ _ => rfl) (.nil 1 1) (by kernel_rfl)
 
 end Test.Machine.AnswerFlow

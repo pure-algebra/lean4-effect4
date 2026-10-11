@@ -1,0 +1,11 @@
+✔ [1085/1094] Built Effect4.Laws.Program.SourceOpportunityFrames (6.7s)
+✔ [1086/1094] Built Effect4.Laws.Program.SourceOpportunityEvaluation (1.0s)
+✔ [1087/1094] Built Effect4.Laws.Program.SourceOpportunityActions (19s)
+✔ [1088/1094] Built Effect4.Laws.Program.SourceOpportunityMachine (2.7s)
+✔ [1089/1094] Built Effect4.Laws.Program.SourceOpportunityNative (1.8s)
+✔ [1090/1094] Built Effect4.Laws.Program.SourceOpportunityPrimitive (2.3s)
+✔ [1091/1094] Built Effect4.Laws.Program.SourceOpportunityExecution (1.4s)
+✔ [1092/1094] Built Effect4.Laws.Program.SourceOpportunityCommands (1.6s)
+✔ [1093/1094] Built Effect4.Laws.Program.SourceOpportunityHistory (1.7s)
+✔ [1094/1094] Built Test.Dogfood.Scenario.SourceOpportunity (3.8s)
+Build completed successfully (1094 jobs).
