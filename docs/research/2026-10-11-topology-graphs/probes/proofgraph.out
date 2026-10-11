@@ -1,0 +1,183 @@
+constants by kind: {'ctor': 2356, 'def': 9219, 'thm': 14167, 'ind': 719, 'opaque': 1}
+theorems: 14167 edges: 35117
+tops found: 38
+theorems under the tops: 4512
+
+proof height (longest chain of theorems) per top:
+    47  Effect4.Program.Typed.exitHandles_valid
+    47  Effect4.Program.Typed.exits_hasTy
+    46  Effect4.Program.Typed.m7_proved
+    28  Effect4.Program.Typed.invoke_arm
+    28  Effect4.Program.Typed.param_arm
+    27  Effect4.Program.Typed.m7_of_ledger
+    26  Effect4.Run.session_eq_ref
+    25  Effect4.Program.Sched.run_eq_ref
+    25  Effect4.Program.Sched.run_eq_ref_table
+    24  Effect4.Program.read_exact
+    23  Effect4.Program.read_print
+    20  Effect4.Program.refusals_nil_iff
+    20  Effect4.Program.Sketch.refusals_nil_iff
+    19  Effect4.Run.runWith_layer_denotes
+    17  Effect4.Program.Typed.fits_sub
+    16  Effect4.Run.runWith_denotes
+    15  Effect4.Run.denoteRows_eq_session
+    15  Effect4.Run.denoteRows_eq_session_host
+    15  Effect4.Run.h8_loopedRows
+    15  Effect4.Run.denoteRowsB_eq_session_host
+    13  Effect4.Program.Agreement.run_eq_meaning
+    12  Effect4.Program.Agreement.loopAgreement
+    10  Effect4.Program.compiled_region_bracket
+    10  Effect4.Program.holes_conservative
+     9  Effect4.Program.Agreement.drive_seg
+     8  Conform.Effect4.Typing.check_sound
+     7  Conform.Effect4.Typing.check_complete
+     4  Effect4.Api.Runner.replay_unique
+     3  Effect4.Store.ShapeDoc.read_exact
+     3  Effect4.Run.journal_replays
+     2  Effect4.Api.explain_none_iff
+     2  Effect4.Program.explain_none_iff
+     2  Effect4.Codegen.ListFold.read_exact
+     2  Effect4.Machine.Map.read_exact
+     2  Effect4.Api.frontier_empty_iff_deadlocked
+     1  Effect4.Codegen.Binders.read_exact
+     1  Effect4.Program.Var.read_exact
+     1  Effect4.Data.NatDecimal.read_exact
+
+longest chain from Effect4.Program.Typed.exitHandles_valid (47 theorems), modules along it:
+    Effect4.Laws.Program.Typed.Commands.Clauses.All :: exitHandles_valid
+    Effect4.Laws.Program.Typed.Commands.Clauses.Loop :: clause_loop
+    Effect4.Laws.Program.Typed.Body :: denoteAt_typed
+    Effect4.Laws.Program.Typed.LayerArm :: denotesTyped
+    Effect4.Laws.Program.Typed.Seq :: onExit_typed
+    Effect4.Laws.Program.Typed.Membership :: fitsExit_subN
+    Effect4.Laws.Program.TypeAlgebra :: sub_le_subN
+    Effect4.Laws.Program.TyView :: sub_eq_args
+    Effect4.Program.Ty :: sub_refl
+    Effect4.Data.FieldOrder :: mem_canonBy
+
+narrow waists: theorems that dominate the most theorems (reached from the tops only through them)
+   1215  Effect4.Program.Typed.decision_preserves  [Effect4.Laws.Program.Typed.Commands.Clauses.All]
+    811  Effect4.Program.Typed.steps_preserve  [Effect4.Laws.Program.Typed.Commands.Clauses.All]
+    386  Effect4.Program.Sched.stepAgrees  [Effect4.Laws.Program.Simulation.Drive]
+    276  Effect4.Program.read_print (top)  [Effect4.Laws.Codegen.ReadPrint]
+    275  Effect4.Program.printsBackUpTo  [Effect4.Laws.Codegen.ReadPrint]
+    253  Effect4.Program.Typed.fiberClauses  [Effect4.Laws.Program.Typed.Commands.Clauses.All]
+    244  Effect4.Program.Sched.evaluate_rel  [Effect4.Laws.Program.Simulation.Evaluate]
+    167  Effect4.Program.Sched.code_intro  [Effect4.Laws.Program.Intro]
+    166  Effect4.Program.Sched.code_intro_aux  [Effect4.Laws.Program.Intro]
+    146  Effect4.Program.holes_conservative (top)  [Effect4.Laws.Program.Sketch]
+    142  Effect4.Program.check_restrict  [Effect4.Laws.Program.Signature]
+    135  Effect4.Program.readT_print_step  [Effect4.Laws.Codegen.ReadPrint]
+    134  Effect4.Program.readT_print  [Effect4.Laws.Codegen.ReadPrint]
+    115  Effect4.Program.Typed.storeClauses  [Effect4.Laws.Program.Typed.Commands.Clauses.All]
+    104  Effect4.Program.Typed.evalTerm_progress  [Effect4.Laws.Program.Typed.Denotation]
+     99  Effect4.Program.Typed.childDenotes_upto  [Effect4.Laws.Program.Typed.Denotation]
+     96  Effect4.Program.read_exact (top)  [Effect4.Laws.Codegen.Read]
+     95  Effect4.Program.Agreement.drive_seg (top)  [Effect4.Laws.Program.Agreement.Segment]
+     94  Effect4.Program.exactUpTo  [Effect4.Laws.Codegen.Read]
+     91  Effect4.Program.Sched.deliver_rel  [Effect4.Laws.Program.Simulation.Deliver]
+     80  Effect4.Program.Sched.intro_provideLayer  [Effect4.Laws.Program.Intro.Scope]
+     77  Effect4.Program.Typed.layerBuild_typed  [Effect4.Laws.Program.Typed.LayerArm]
+     76  Effect4.Program.Sched.provideLayer_intro  [Effect4.Laws.Program.Intro.Layer]
+     76  Effect4.Program.Typed.layerTerm_typed  [Effect4.Laws.Program.Typed.LayerArm]
+     68  Effect4.Program.Checker.check.eq_cata  [Effect4.Laws.Program.Folds.Checker]
+     67  Effect4.Program.hom_eq_cata_eff  [Effect4.Program.Fold]
+     67  Effect4.Program.cata_eff_congr_on  [Effect4.Laws.Program.Signature]
+     67  Effect4.Program.readRow_rowCall_print  [Effect4.Laws.Codegen.ReadPrint]
+     67  Effect4.Program.Typed.decisionKeeps_of_ledger  [Effect4.Laws.Program.Typed.Assembly]
+     66  Effect4.Program.readPerform_printPerform  [Effect4.Laws.Codegen.ReadLeaf]
+
+waists that are not tops, dominating >= 40:
+   1215  Effect4.Program.Typed.decision_preserves  [Effect4.Laws.Program.Typed.Commands.Clauses.All]  idom=<root>
+    811  Effect4.Program.Typed.steps_preserve  [Effect4.Laws.Program.Typed.Commands.Clauses.All]  idom=Effect4.Program.Typed.decision_preserves
+    386  Effect4.Program.Sched.stepAgrees  [Effect4.Laws.Program.Simulation.Drive]  idom=<root>
+    275  Effect4.Program.printsBackUpTo  [Effect4.Laws.Codegen.ReadPrint]  idom=Effect4.Program.read_print
+    253  Effect4.Program.Typed.fiberClauses  [Effect4.Laws.Program.Typed.Commands.Clauses.All]  idom=Effect4.Program.Typed.steps_preserve
+    244  Effect4.Program.Sched.evaluate_rel  [Effect4.Laws.Program.Simulation.Evaluate]  idom=Effect4.Program.Sched.stepAgrees
+    167  Effect4.Program.Sched.code_intro  [Effect4.Laws.Program.Intro]  idom=<root>
+    166  Effect4.Program.Sched.code_intro_aux  [Effect4.Laws.Program.Intro]  idom=Effect4.Program.Sched.code_intro
+    142  Effect4.Program.check_restrict  [Effect4.Laws.Program.Signature]  idom=Effect4.Program.holes_conservative
+    135  Effect4.Program.readT_print_step  [Effect4.Laws.Codegen.ReadPrint]  idom=Effect4.Program.printsBackUpTo
+    134  Effect4.Program.readT_print  [Effect4.Laws.Codegen.ReadPrint]  idom=Effect4.Program.readT_print_step
+    115  Effect4.Program.Typed.storeClauses  [Effect4.Laws.Program.Typed.Commands.Clauses.All]  idom=Effect4.Program.Typed.steps_preserve
+    104  Effect4.Program.Typed.evalTerm_progress  [Effect4.Laws.Program.Typed.Denotation]  idom=<root>
+     99  Effect4.Program.Typed.childDenotes_upto  [Effect4.Laws.Program.Typed.Denotation]  idom=<root>
+     94  Effect4.Program.exactUpTo  [Effect4.Laws.Codegen.Read]  idom=Effect4.Program.read_exact
+     91  Effect4.Program.Sched.deliver_rel  [Effect4.Laws.Program.Simulation.Deliver]  idom=Effect4.Program.Sched.evaluate_rel
+     80  Effect4.Program.Sched.intro_provideLayer  [Effect4.Laws.Program.Intro.Scope]  idom=Effect4.Program.Sched.code_intro_aux
+     77  Effect4.Program.Typed.layerBuild_typed  [Effect4.Laws.Program.Typed.LayerArm]  idom=<root>
+     76  Effect4.Program.Sched.provideLayer_intro  [Effect4.Laws.Program.Intro.Layer]  idom=Effect4.Program.Sched.intro_provideLayer
+     76  Effect4.Program.Typed.layerTerm_typed  [Effect4.Laws.Program.Typed.LayerArm]  idom=Effect4.Program.Typed.layerBuild_typed
+     68  Effect4.Program.Checker.check.eq_cata  [Effect4.Laws.Program.Folds.Checker]  idom=Effect4.Program.check_restrict
+     67  Effect4.Program.hom_eq_cata_eff  [Effect4.Program.Fold]  idom=Effect4.Program.Checker.check.eq_cata
+     67  Effect4.Program.cata_eff_congr_on  [Effect4.Laws.Program.Signature]  idom=Effect4.Program.check_restrict
+     67  Effect4.Program.readRow_rowCall_print  [Effect4.Laws.Codegen.ReadPrint]  idom=Effect4.Program.readT_print
+     67  Effect4.Program.Typed.decisionKeeps_of_ledger  [Effect4.Laws.Program.Typed.Assembly]  idom=Effect4.Program.Typed.decision_preserves
+     66  Effect4.Program.readPerform_printPerform  [Effect4.Laws.Codegen.ReadLeaf]  idom=Effect4.Program.readRow_rowCall_print
+     63  Effect4.Program.Sched.walk_rel_carried  [Effect4.Laws.Program.Simulation.Walk]  idom=Effect4.Program.Sched.deliver_rel
+     63  Effect4.Program.Sched.layer_intro  [Effect4.Laws.Program.Intro.Layer]  idom=Effect4.Program.Sched.provideLayer_intro
+     62  Effect4.Program.Agreement.localRunC_compileB  [Effect4.Laws.Program.Agreement.LoopCalls]  idom=<root>
+     62  Effect4.Program.Sched.layerTerm_intro  [Effect4.Laws.Program.Intro.Layer]  idom=Effect4.Program.Sched.layer_intro
+     61  Effect4.Program.Sched.walk_rel  [Effect4.Laws.Program.Simulation.Walk]  idom=Effect4.Program.Sched.walk_rel_carried
+     59  Effect4.Program.Agreement.localRunC_compileBO  [Effect4.Laws.Program.Agreement.LoopCalls]  idom=Effect4.Program.Agreement.localRunC_compileB
+     58  Effect4.Program.Agreement.compilesBO  [Effect4.Laws.Program.Agreement.LoopCalls]  idom=Effect4.Program.Agreement.localRunC_compileBO
+     54  Effect4.Program.readTerm_printTerm  [Effect4.Laws.Codegen.ReadLeaf]  idom=Effect4.Program.printsBackUpTo
+     53  Effect4.Program.readCall_printCall  [Effect4.Laws.Codegen.ReadLeaf]  idom=Effect4.Program.readPerform_printPerform
+     50  Effect4.Program.Typed.genProtocol  [Effect4.Laws.Program.Typed.Commands.Clauses.Gen]  idom=Effect4.Program.Typed.fiberClauses
+     47  Effect4.Program.Typed.observe_preserves  [Effect4.Laws.Program.Typed.Commands.Observe]  idom=Effect4.Program.Typed.steps_preserve
+     43  Effect4.Run.runWith_session  [Effect4.Laws.Api.HostDrive]  idom=Effect4.Run.runWith_denotes
+     42  Effect4.Program.Typed.genSt_closed  [Effect4.Laws.Program.Typed.Commands.Clauses.Gen]  idom=Effect4.Program.Typed.genProtocol
+     42  Effect4.Program.Typed.observe_countdown  [Effect4.Laws.Program.Typed.Commands.Observe]  idom=Effect4.Program.Typed.observe_preserves
+     41  Effect4.Program.Typed.walk_typed  [Effect4.Laws.Program.Typed.Commands.Clauses.Gen]  idom=Effect4.Program.Typed.genSt_closed
+     41  Effect4.Machine.syncOpStep_wf  [Effect4.Laws.Machine.StoresLaws]  idom=Effect4.Program.Typed.steps_preserve
+     40  Effect4.Program.read_printRow  [Effect4.Laws.Codegen.ReadLeaf]  idom=Effect4.Program.readCall_printCall
+     40  Effect4.Machine.refStep_valid  [Effect4.Laws.Machine.StoresLaws]  idom=Effect4.Machine.syncOpStep_wf
+
+interface pressure: definitions named by the most theorem statements
+    4501  Effect4.Machine.Val  [Effect4.Machine.Alphabets]
+    3755  Effect4.FiberId  [Effect4.Machine.Fiber]
+    3143  Effect4.Machine.Err  [Effect4.Machine.Alphabets]
+    3135  Effect4.Machine.Defect  [Effect4.Machine.Alphabets]
+    3104  Effect4.Machine.Ann  [Effect4.Machine.Alphabets]
+    2685  Effect4.Program.Ty  [Effect4.Program.TyCore]
+    2526  Effect4.Prim  [Effect4.Machine.Frames]
+    2481  Effect4.Program.EffName  [Effect4.Program.Compile]
+    2437  Effect4.Machine.Stores  [Effect4.Machine.Stores]
+    2419  Effect4.Program.EffThunk  [Effect4.Program.Compile]
+    2198  Effect4.Machine.Ctx  [Effect4.Machine.Stores]
+    2034  Effect4.FrameFiber  [Effect4.Machine.Frames]
+    1780  Effect4.Program.NativeEff  [Effect4.Program.Native]
+    1738  Effect4.FrameEvent  [Effect4.Machine.Frames]
+    1279  Effect4.Machine.RunMachine  [Effect4.Machine.Fibers]
+    1228  Effect4.Program.NativeOp  [Effect4.Program.Native]
+    1196  Effect4.Program.RowTable  [Effect4.Program.Native]
+    1189  Effect4.Program.Signature  [Effect4.Program.Typing.Rules]
+    1170  Effect4.Program.EffTy  [Effect4.Program.Typing.Rules]
+    1156  Effect4.Program.Typed.World  [Effect4.Laws.Program.Typed.World]
+    1072  Effect4.Machine.ExitV  [Effect4.Machine.Alphabets]
+    1052  Effect4.Program.Sched.RProgram  [Effect4.Laws.Program.Sched]
+     969  Effect4.Program.NativeMachine  [Effect4.Program.Admit]
+     963  Effect4.Program.Eff  [Effect4.Program.Eff]
+     915  Effect4.Machine.RunFiber  [Effect4.Machine.Fibers]
+     915  Effect4.Store.Val  [Effect4.Store.Carrier.Val]
+     901  Effect4.Program.Typed.ProgramSource  [Effect4.Laws.Program.Typed.Admission]
+     835  Effect4.Machine.frameCore  [Effect4.Machine.Fibers]
+     821  Effect4.Machine.Cmd  [Effect4.Machine.Fibers]
+     747  Effect4.Program.Term  [Effect4.Machine.Term]
+
+joints: theorems used by the most theorems under the tops
+    116  Effect4.Program.Typed.ConfigTyped.machine
+     81  Effect4.Program.Typed.MachineTyped.wide
+     71  Effect4.Program.Typed.Evaluating.typed
+     64  Effect4.Program.Typed.rfiber?_mem
+     63  Effect4.Program.Typed.MachineTyped.fiber
+     55  Effect4.Program.Typed.racesKept_of_eq
+     51  Effect4.Program.Typed.Contracts.InterruptProvenance.recorded
+     51  Effect4.Laws.Auto.bind_eq_ok
+     48  Effect4.Program.Typed.Contracts.InterruptProvenance.deferred
+     48  Effect4.Program.Typed.Evaluating.code
+     47  Effect4.Program.Typed.ConfigTyped.queue
+     47  Effect4.Program.Typed.strongExit_success
+     47  Effect4.Program.Typed.leHost_refl
+     46  Effect4.Program.Typed.FiberTyped.ok
+     46  Effect4.Program.Typed.PointTyped.at_node

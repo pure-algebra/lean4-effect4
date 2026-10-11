@@ -6,6 +6,7 @@ import Test.Schema.DataBridge
 import Test.Schema.AuthoringContract
 import Test.Schema.DialectContract
 import Test.Counterexamples.Codegen.TypeScriptRender
+import Test.Counterexamples.Codegen.PrintDistributes
 import Test.Schema.RepresentationContract
 import Test.Schema.SubAlphabetContract
 import Test.Schema.PayloadContract
@@ -146,6 +147,7 @@ import Test.Counterexamples.Machine.Runtime.HostHandleForgery
 import Test.Counterexamples.Machine.Runtime.HostReservedDefect
 import Test.Counterexamples.Machine.Runtime.LayerEnvironment
 import Test.Counterexamples.Program.AdmissionUnserved
+import Test.Counterexamples.Program.ContextReset
 import Test.Machine.Runtime.StoresLawsContract
 import Test.Machine.Runtime.CompletionDataContract
 import Test.Machine.Runtime.ApproximationContract

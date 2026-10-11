@@ -231,6 +231,13 @@ import Effect4.Laws.Auto.AnswerGate
 import Effect4.Laws.Machine.Handshake
 import Effect4.Laws.Machine.Keeps
 import Effect4.Laws.Program.Guard.Handshake
+import Effect4.Laws.Program.Moves
+import Effect4.Laws.Program.MovesConnect
+import Effect4.Laws.Program.Footprint
+import Effect4.Laws.Program.Interference
+import Effect4.Laws.Machine.StackLocal
+import Effect4.Laws.Program.StackLocal
+import Effect4.Laws.Program.CommandFrames
 
 import Effect4.Laws.Program.Folds.Checker
 import Effect4.Laws.Program.Folds.Projections

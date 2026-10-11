@@ -1,0 +1,11 @@
+Codegen-side modules in the typed chain's cone: 22
+  Effect4.Laws.Program.Agreement.Machine -> Effect4.Api; names from the codegen side: ['Effect4.Api']
+  Effect4.Laws.Program.Guard.Core -> Effect4.Api; names from the codegen side: ['Effect4.Api']
+  Effect4.Laws.Program.Guard.DeferredCause -> Effect4.Api; names from the codegen side: []
+  Effect4.Laws.Program.Guard.FrameOwned -> Effect4.Api; names from the codegen side: []
+  Effect4.Laws.Program.Guard.Interruption -> Effect4.Api; names from the codegen side: []
+  Effect4.Laws.Program.Guard.RaceSites -> Effect4.Api; names from the codegen side: []
+  Effect4.Laws.Program.Handles.Alphabet -> Effect4.Api; names from the codegen side: []
+  Effect4.Laws.Program.Means -> Effect4.Api; names from the codegen side: []
+  Effect4.Laws.Program.RuntimeR -> Effect4.Api; names from the codegen side: ['Effect4.Api']
+  Effect4.Store.Domain.ProgramWire -> Effect4.Store.Domain.Derived.Program; names from the codegen side: ['Effect4.Store.Domain.Derived.Program']
