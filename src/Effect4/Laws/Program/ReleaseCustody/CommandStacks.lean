@@ -109,16 +109,14 @@ theorem append_links (m : NativeMachine) (next : Guard.NFiber) :
 theorem interrupt_stack (root : NativeEff) (table : RowTable) (who : Option FiberId)
     (extra : ReasonAnnotations Ann) (fiber : Guard.NFiber) :
     (interruptRecord (interpOf root table) who extra fiber).1.frame.stack = fiber.frame.stack := by
-  unfold interruptRecord
+  unfold interruptRecord interruptWithCause
   dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
     FiberCore.setDeferred, FiberCore.answerWith, FiberCore.failure, frameCore]
   split
   · rfl
-  · cases fiber.frame.interruptedCause <;> dsimp only
-    all_goals
-      split
-      · split <;> rfl
-      · rfl
+  · split
+    · split <;> rfl
+    · rfl
 
 /-- A recorded interruption retains every old saved stack. -/
 theorem interrupt_links (root : NativeEff) (table : RowTable) (m : NativeMachine)

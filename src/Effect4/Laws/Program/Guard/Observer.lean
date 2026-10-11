@@ -96,9 +96,14 @@ theorem interruptRecord_running_exit (p : NativeEff) (table : RowTable)
     (who : Option FiberId) (extra : ReasonAnnotations Ann) (f : NFiber) :
     (interruptRecord (interpOf p table) who extra f).1.running = f.running ∧
     (interruptRecord (interpOf p table) who extra f).1.exit = f.exit := by
-  cases he : f.exit <;> cases hi : f.frame.interruptible <;> cases hr : f.running <;>
-    simp [interruptRecord, FiberCore.interruptible, FiberCore.recordCause,
-      FiberCore.setDeferred, FiberCore.answerWith, he, hi, hr]
+  unfold interruptRecord interruptWithCause
+  dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
+    FiberCore.setDeferred, FiberCore.answerWith, FiberCore.failure, frameCore]
+  split
+  · exact ⟨rfl, rfl⟩
+  · split
+    · split <;> exact ⟨rfl, rfl⟩
+    · exact ⟨rfl, rfl⟩
 
 theorem fiber_lookup_interruptRecord_fields (p : NativeEff) (table : RowTable)
     {m : NativeMachine} {target : NFiber} (ht : m.fiber? target.id = some target)

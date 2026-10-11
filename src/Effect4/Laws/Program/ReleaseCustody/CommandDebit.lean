@@ -79,7 +79,7 @@ theorem replace_code (q : List Nat) (fiber : Fiber) (code : NCode)
 theorem interrupt_record (root : NativeEff) (table : RowTable) (q : List Nat)
     (who : Option FiberId) (extra : ReasonAnnotations Ann) (fiber : Fiber) :
     fiberCredits q (interruptRecord (interpOf root table) who extra fiber).1 ≤ fiberCredits q fiber := by
-  unfold interruptRecord
+  unfold interruptRecord interruptWithCause
   dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
     FiberCore.setDeferred, FiberCore.answerWith, FiberCore.failure, frameCore]
   split

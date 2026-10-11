@@ -1425,8 +1425,9 @@ theorem forbidden_interrupt_while_running (who : Option FiberId)
     (hmask : f.frame.interruptible = true) :
     (interruptRecord stores who extra f).2 = false ∧
       (interruptRecord stores who extra f).1.frame.deferredInterrupt = true := by
-  simp [interruptRecord, FiberCore.interruptedCause, FiberCore.recordCause,
-    FiberCore.interruptible, FiberCore.setDeferred, hexit, hrunning, hmask]
+  simp only [interruptRecord, interruptWithCause, FiberCore.recordCause,
+    FiberCore.interruptible, FiberCore.setDeferred, hexit, hrunning, hmask,
+    Option.isSome_none, Bool.false_eq_true, ↓reduceIte, and_self]
 
 /-- Forbidden 3: a `SetInterruptible` frame *evaluated as `current`* is `defaultEvaluate`'s
 defect, never a mask change — the mask change is the frame's `contAll` on the way out. -/

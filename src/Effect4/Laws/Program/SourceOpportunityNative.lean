@@ -156,7 +156,7 @@ theorem interrupt_record_le (root : NativeEff) (q : List Nat) (table : RowTable)
     (fiber : SourceFiber) :
     frame root q (interruptRecord (interpAt root completed table) who extra fiber).1.frame ≤
       frame root q fiber.frame := by
-  unfold interruptRecord
+  unfold interruptRecord interruptWithCause
   dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
     FiberCore.setDeferred, FiberCore.answerWith, FiberCore.failure, frameCore]
   split
@@ -225,7 +225,7 @@ theorem interrupt_as_debit (root : NativeEff) (q : List Nat) (table : RowTable)
       (interruptRecord (interpAt root m.completedExits table) (some who)
         ((interpAt root m.completedExits table).stackAnnotations fiber.id) old).1
       (by
-        unfold interruptRecord
+        unfold interruptRecord interruptWithCause
         dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
           FiberCore.setDeferred, FiberCore.answerWith, FiberCore.failure, frameCore]
         split
@@ -346,7 +346,7 @@ theorem link_debit (root : NativeEff) (q : List Nat) (table : RowTable) (m : Nat
         have off := outside_update_le root q m owner old
           (interruptRecord (interpAt root m.completedExits table) who extra old).1
           (by
-            unfold interruptRecord
+            unfold interruptRecord interruptWithCause
             dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
               FiberCore.setDeferred, FiberCore.answerWith, FiberCore.failure, frameCore]
             split

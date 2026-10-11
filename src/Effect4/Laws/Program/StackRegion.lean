@@ -63,7 +63,7 @@ theorem other_edit_stack {first last : NFiber} (edit : OtherEdit first last) :
   | observe => rfl
   | filterObservers => rfl
   | interrupted interp fiber who extra =>
-    unfold interruptRecord
+    unfold interruptRecord interruptWithCause
     dsimp only
     repeat' split
     all_goals rfl

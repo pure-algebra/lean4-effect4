@@ -164,7 +164,7 @@ theorem interrupt (root : NativeEff) (table : RowTable) (q : List Nat) (m : Nati
   have member := List.mem_of_find?_eq_some found
   let interp := interpOf root table
   have key : (interruptRecord interp who extra fiber).1.id = fiber.id := by
-    unfold interruptRecord
+    unfold interruptRecord interruptWithCause
     dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
       FiberCore.setDeferred, FiberCore.answerWith, FiberCore.failure, frameCore]
     split
@@ -177,7 +177,7 @@ theorem interrupt (root : NativeEff) (table : RowTable) (q : List Nat) (m : Nati
   have pending : ∀ p ∈ (interruptRecord interp who extra fiber).1.pending,
       p.resumeWith = .exitsValue ∨ p.resumeWith = .void ∨
         ∃ exit, p.resumeWith = .continueWith (.restore exit) := by
-    unfold interruptRecord
+    unfold interruptRecord interruptWithCause
     dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
       FiberCore.setDeferred, FiberCore.answerWith, FiberCore.failure, frameCore]
     split
@@ -192,7 +192,7 @@ theorem interrupt (root : NativeEff) (table : RowTable) (q : List Nat) (m : Nati
         · exact held.pending fiber member
   have dispatcher : ∀ bucket ∈ (interruptRecord interp who extra fiber).1.dispatcher.buckets,
       TasksZero q bucket.tasks := by
-    unfold interruptRecord
+    unfold interruptRecord interruptWithCause
     dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
       FiberCore.setDeferred, FiberCore.answerWith, FiberCore.failure, frameCore]
     split
@@ -203,7 +203,7 @@ theorem interrupt (root : NativeEff) (table : RowTable) (q : List Nat) (m : Nati
         · split <;> exact held.dispatcher fiber member
         · exact held.dispatcher fiber member
   have credit : fiberCredits q (interruptRecord interp who extra fiber).1 ≤ fiberCredits q fiber := by
-    unfold interruptRecord
+    unfold interruptRecord interruptWithCause
     dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
       FiberCore.setDeferred, FiberCore.answerWith, FiberCore.failure, frameCore]
     split

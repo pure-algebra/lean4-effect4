@@ -2238,7 +2238,7 @@ theorem interruptRecord_shape (root : ProgramSource) (who : Option FiberId)
        (t.frame.interruptible = true ∧ t.running = false ∧
           interruptRecord (interpR root.program) who extra t = (appliedFiber t acc, true)))) := by
   have cause := interruptCause_interrupts root who extra t.id
-  unfold interruptRecord
+  unfold interruptRecord interruptWithCause
   by_cases hx : t.exit.isSome = true
   · exact Or.inl ⟨hx, if_pos hx⟩
   · rw [if_neg hx]

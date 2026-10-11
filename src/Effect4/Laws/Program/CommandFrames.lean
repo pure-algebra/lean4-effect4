@@ -174,9 +174,14 @@ theorem LiveEdit.maskChain (base : Bool) {f g : NFrame} (edit : LiveEdit f g)
   cases edit with
   | move step => exact move_maskChain base step held
   | interrupted interp fiber who extra =>
-    unfold interruptRecord
-    dsimp only
-    (repeat' split) <;> exact held
+    unfold interruptRecord interruptWithCause
+    dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible,
+      FiberCore.setDeferred, FiberCore.answerWith, FiberCore.failure, frameCore]
+    split
+    · exact held
+    · split
+      · split <;> exact held
+      · exact held
   | setDeferred => exact held
   | pushIterator => exact held
 
