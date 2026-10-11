@@ -274,3 +274,10 @@ The original application claim stays unchanged.
 `Atomic.Writes` proves the exact native admission, deposit, refill and cleanup transitions.
 Source uniqueness and the relational application history remain separate obligations.
 `codex/WritesClockReceipt.md` records the combined build, audits and full source-history integration.
+
+## Checked command stack transport
+
+`codex/CommandStacksReceipt.md` records exact saved-stack transport through administrative edits.
+Unique command owners protect the queued suffix during an active owner's stack change.
+The audit finds no planned dependencies in these helpers.
+Actual command closure and whole-history custody remain open.
