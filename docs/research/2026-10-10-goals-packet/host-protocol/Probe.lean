@@ -1223,11 +1223,24 @@ theorem ledger_open (b : Api.Built) (id : String) (budget : Api.Budget) (profile
     List.nodup_nil, ?_, ?_, ?_, ?_, ?_⟩ <;>
     intro k hk <;> exact absurd hk List.not_mem_nil
 
-/-- Every recorded run keeps the ledger. -/
-theorem ledger_reached (s : Run) (h : Run.Reached s) : Ledger s := by
+/-- **The frame: a property of runs that every row keeps.** The coordinator's unification point
+for the four seats' invariants. A scenario's script reaches only recorded runs
+(`Test.Dogfood.Scenario.reached_play`), so `reached_keeps` turns a kept property of the opened
+runs into a property of every run a script reaches. -/
+def RunKeeps (I : Run → Prop) : Prop := ∀ (s : Run) (c : Api.Runner.Command), I s → I (s.step c)
+
+/-- A property that every opened run has and every row keeps holds of every recorded run. -/
+theorem reached_keeps {I : Run → Prop}
+    (opened : ∀ b id budget profile, I (Run.open b id budget profile)) (keeps : RunKeeps I) :
+    ∀ s, Run.Reached s → I s := by
+  intro s h
   induction h with
-  | opened b id budget profile => exact ledger_open b id budget profile
-  | step s c _ ih => exact ledger_step s c ih
+  | opened b id budget profile => exact opened b id budget profile
+  | step s c _ ih => exact keeps s c ih
+
+/-- Every recorded run keeps the ledger. -/
+theorem ledger_reached (s : Run) (h : Run.Reached s) : Ledger s :=
+  reached_keeps ledger_open ledger_step s h
 
 /-- **Each key is bound once, received once and applied once, and a retired call is never
 applied.** In every recorded run of every program: the session binds a key at most once, accepts
@@ -1585,6 +1598,156 @@ theorem escapes_sqlError (id : Nat) (idText message : String) (b : Api.Built)
 def escapeTape (tag message : String) : ReplyTape :=
   [.success (configOf "secret" 20), .failure (Cause.fail (.tagged tag message))]
 
+/-! #### The routing program, written out
+
+The normal form of `progOf` (`scratch/reduce1.log`), split at its two handlers. `progOf_eq`
+checks it with the kernel. -/
+
+/-- A handler's test: `tagIs(literal, e)`. -/
+def tagTest (lit : String) : Term :=
+  Term.app "tagIs" (Terms.cons (Term.lit (Lit.str lit)) (Terms.cons (Term.var 0) Terms.nil))
+
+/-- A `Response` record of a status and a body term. -/
+def responseTerm (status : Nat) (body : Term) : Term :=
+  Term.record [("status", false, Ty.nat), ("body", false, Ty.string)] ["status", "body"]
+    (Terms.cons (Term.lit (Lit.nat status)) (Terms.cons body Terms.nil))
+
+/-- The handled body: the configuration, the token check, the two lookups, the 200 response. -/
+def routeBody (token : String) (id : Nat) (idText : String) : NativeEff :=
+  ((Eff.perform (NativeOp.external 0) (Term.lit Lit.unit)).bind
+      (Eff.select
+        (Term.app "not"
+          (Terms.cons
+            (Term.app "eq"
+              (Terms.cons (Term.lit (Lit.str token))
+                (Terms.cons (Term.field FieldReadMode.required (Term.var 0) "adminToken")
+                  Terms.nil)))
+            Terms.nil))
+        Decision.bool
+        (Eff.fail
+          (Term.app "pair"
+            (Terms.cons (Term.lit (Lit.str "Unauthorized"))
+              (Terms.cons (Term.lit (Lit.str "bad token")) Terms.nil))))
+        (((Eff.perform (NativeOp.external 1) (Term.lit (Lit.nat 1))).bind
+              (Eff.select (Term.var 1) Decision.option
+                (Eff.fail
+                  (Term.app "pair"
+                    (Terms.cons (Term.lit (Lit.str "NotFound"))
+                      (Terms.cons (Term.lit (Lit.str "1")) Terms.nil))))
+                (Eff.succeed (Term.var 2)))).bind
+          (Eff.select
+            (Term.app "and"
+              (Terms.cons
+                (Term.app "not"
+                  (Terms.cons
+                    (Term.app "eq"
+                      (Terms.cons (Term.field FieldReadMode.required (Term.var 1) "role")
+                        (Terms.cons (Term.lit (Lit.str "admin")) Terms.nil)))
+                    Terms.nil))
+                (Terms.cons
+                  (Term.app "not"
+                    (Terms.cons
+                      (Term.app "eq"
+                        (Terms.cons (Term.field FieldReadMode.required (Term.var 1) "id")
+                          (Terms.cons (Term.lit (Lit.nat id)) Terms.nil)))
+                      Terms.nil))
+                  Terms.nil)))
+            Decision.bool
+            (Eff.fail
+              (Term.app "pair"
+                (Terms.cons (Term.lit (Lit.str "Unauthorized"))
+                  (Terms.cons (Term.lit (Lit.str "not yours")) Terms.nil))))
+            ((Eff.perform (NativeOp.external 1) (Term.lit (Lit.nat id))).bind
+              (Eff.select (Term.var 2) Decision.option
+                (Eff.fail
+                  (Term.app "pair"
+                    (Terms.cons (Term.lit (Lit.str "NotFound"))
+                      (Terms.cons (Term.lit (Lit.str idText)) Terms.nil))))
+                (Eff.succeed (Term.var 3)))))))).bind
+    (Eff.succeed (responseTerm 200 (Term.field FieldReadMode.required (Term.var 0) "name")))
+
+/-- The 401 handler. -/
+def route401 : NativeEff :=
+  Eff.succeed (responseTerm 401 (Term.app "snd" (Terms.cons (Term.var 0) Terms.nil)))
+
+/-- The 404 handler. -/
+def route404 : NativeEff :=
+  Eff.succeed (responseTerm 404 (Term.app "concat" (Terms.cons (Term.lit (Lit.str "no user "))
+    (Terms.cons (Term.app "snd" (Terms.cons (Term.var 0) Terms.nil)) Terms.nil))))
+
+/-- The routing program, written out. -/
+def routeProg (token : String) (id : Nat) (idText : String) : NativeEff :=
+  Eff.catchIf (tagTest "NotFound")
+    (Eff.catchIf (tagTest "Unauthorized") (routeBody token id idText) route401) route404
+
+/-- The written-out program is the elaborated one, for every token, id and id text. -/
+theorem progOf_eq (token : String) (id : Nat) (idText : String) :
+    progOf token id idText = routeProg token id idText := by
+  kernel_rfl
+
+/-- The run of a `catchIf` under a host: the body's run, then its handler's continuation. -/
+theorem hostRun_catchIf {σ : Type} {table : RowTable} (host : Effects.Comodel (RowSig table) σ)
+    (test : Term) (b h : NativeEff) (env : List Val) (s : Stores) (st : σ) :
+    hostRun host (.catchIf test b h) env s st =
+      (hostRun host b env s st).bind fun x => runRowsH host
+        (match x.1 with
+          | Exit.success v => pure (Exit.success v)
+          | Exit.failure cause =>
+            match caughtErrorValue? env test cause with
+            | some value => denoteRows table h (env ++ [value])
+            | none => pure (Exit.failure cause)) x.2.1 x.2.2 :=
+  hostRun_bindExit host b env s st _
+
+/-- A handler's test is false on a tagged failure with another tag: the failure escapes. -/
+theorem caught_tagged_none (tag message lit : String) (h : tag ≠ lit) :
+    caughtErrorValue? [] (tagTest lit) (Cause.fail (.tagged tag message)) = none := by
+  have heval : evalTerm [Val.list [Val.str tag, Val.str message]] (tagTest lit) =
+      some (.bool (tag == lit)) := by
+    kernel_rfl
+  have hfirst : firstErrorValue? (Cause.fail (.tagged tag message) : CauseV) =
+      some (Val.list [Val.str tag, Val.str message]) := by
+    kernel_rfl
+  have hne : (tag == lit) = false := beq_eq_false_iff_ne.mpr h
+  unfold caughtErrorValue?
+  rw [hfirst]
+  show (if evalTerm ([] ++ [Val.list [Val.str tag, Val.str message]]) (tagTest lit) =
+      some (.bool true) then some (Val.list [Val.str tag, Val.str message]) else none) = none
+  rw [List.nil_append, heval, hne]
+  rfl
+
+/-- The handled body under the escape's answers fails with the repository's failure, at every
+tag: the body compares no tag. The kernel computes it with every value free. -/
+theorem escape_body (id : Nat) (idText tag message : String) :
+    hostRun (tapeHost (request "secret" id idText).table) (routeBody "secret" id idText) []
+        Stores.empty (escapeTape tag message) =
+      some (.failure (Cause.fail (.tagged tag message)), (Stores.empty, [])) := by
+  kernel_rfl
+
+/-- **The escape's meaning, proved.** The planned goal `escape_meaning`'s statement: the body
+fails with the repository's failure (`escape_body`), and each handler's test is false on it
+(`caught_tagged_none`). -/
+theorem escape_meaning_proof : ∀ (id : Nat) (idText tag message : String),
+    tag ≠ "NotFound" → tag ≠ "Unauthorized" →
+    ∃ st, meaningRows (request "secret" id idText).table (progOf "secret" id idText) []
+      Stores.empty (escapeTape tag message) =
+        some ((.failure (Cause.fail (.tagged tag message)), st), []) := by
+  intro id idText tag message hNF hU
+  refine ⟨Stores.empty, ?_⟩
+  rw [progOf_eq, meaningRows_eq_hostRun]
+  unfold routeProg
+  rw [hostRun_catchIf, hostRun_catchIf, escape_body]
+  show (Option.map _ (Option.bind (runRowsH (tapeHost (request "secret" id idText).table)
+    (match caughtErrorValue? [] (tagTest "Unauthorized") (Cause.fail (.tagged tag message)) with
+      | some value => denoteRows (request "secret" id idText).table route401 ([] ++ [value])
+      | none => pure (Exit.failure (Cause.fail (.tagged tag message)))) Stores.empty []) _)) = _
+  rw [caught_tagged_none tag message "Unauthorized" hU]
+  show (Option.map _ (runRowsH (tapeHost (request "secret" id idText).table)
+    (match caughtErrorValue? [] (tagTest "NotFound") (Cause.fail (.tagged tag message)) with
+      | some value => denoteRows (request "secret" id idText).table route404 ([] ++ [value])
+      | none => pure (Exit.failure (Cause.fail (.tagged tag message)))) Stores.empty [])) = _
+  rw [caught_tagged_none tag message "NotFound" hNF]
+  rfl
+
 /-- The proposition of `escape_meaning`. -/
 def EscapeMeaning : Prop :=
   ∀ (id : Nat) (idText tag message : String), tag ≠ "NotFound" → tag ≠ "Unauthorized" →
@@ -1592,14 +1755,13 @@ def EscapeMeaning : Prop :=
       Stores.empty (escapeTape tag message) =
         some ((.failure (Cause.fail (.tagged tag message)), st), [])
 
-/-- **The escape's meaning** (planned). Under the two answers, the call tree of the handler
-fails with the repository's failure: each handler's test is false on it. Placement: concept
-`translation-simulation`, R10, the handler form's behaviour law at the meaning; consumer
-`infrastructure_escapes_modulo`. Route: `simp only` over `denoteRows` on the explicit program
-(its normal form is small, `scratch/reduce1.log`), with `tag ≠ "Unauthorized"` and
-`tag ≠ "NotFound"` rewriting the two tests (README, slice S5). -/
+/-- **The escape's meaning** (proved; it was planned). Under the two answers, the call tree of
+the handler fails with the repository's failure: each handler's test is false on it. Placement:
+concept `translation-simulation`, R10, the handler form's behaviour law at the meaning; consumer
+`infrastructure_escapes_modulo`. The kernel runs the handled body with every value free
+(`escape_body`), and `caught_tagged_none` rewrites the two tests. -/
 @[semantics "translation-simulation" (requirement := R10)]
-proof_goal escape_meaning : EscapeMeaning
+theorem escape_meaning : EscapeMeaning := escape_meaning_proof
 
 /-- The proposition of `escape_session`. -/
 def EscapeSession : Prop :=
