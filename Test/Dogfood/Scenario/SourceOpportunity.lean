@@ -1,6 +1,6 @@
 import Test.Dogfood.Scenario.Atomic.SourcePaths
 import Test.Dogfood.Scenario.SourceUse
-import Effect4.Laws.Program.SourceOpportunityMachine
+import Effect4.Laws.Program.SourceOpportunityNative
 import Effect4.Laws.Program.Guard.ForkLedger
 
 /-!
@@ -353,5 +353,85 @@ theorem atomic_frame_install_debit (compileFuel : Nat) (b : Api.Built)
   exact step_frame_install_debit b.program _ fragment (atomic_all_clear b built i member)
     (atomic_loops_clear b built i member) m.completedExits b.table m fiber yielding owned unique
     (List.mem_of_find?_eq_some found)
+
+/-- Actual Workers child launches transfer their reservation at every job count.
+The suspension and action come from the fiber in the admitted history. -/
+theorem workers_native_fork_in_debit (total compileFuel : Nat) (b : Api.Built)
+    (built : Api.Author.build (Workers.crew total) = .ok b) (m : NativeMachine)
+    (history : Effect4.Run.HistoryOf b compileFuel m) (id : FiberId)
+    (fiber : SourceScope.SourceFiber) (lookup : m.fiber? id = some fiber)
+    (i : Nat) (member : i ∈ [1, 2]) (yielding : Bool) (suspended : EffThunk)
+    (program : NCode) (options : Supervision.ForkOptions) (scope : Nat) (site : List Nat)
+    (selected : fiber.frame.current = .withFiber suspended)
+    (produced : (interpAt b.program m.completedExits b.table).withFiberOf suspended = some (.forkIn program options scope site)) :
+    Debit b.program (Programs.crewAcquire i) m fiber
+      (evaluatePrim.withFiber (interpAt b.program m.completedExits b.table) m fiber yielding (.forkIn program options scope site)) := by
+  have source := SourceFragment.workers_admitted_history_at total compileFuel b built m history
+  have owned := (SourceScope.configuration_fiber b.program m id fiber source lookup).frame
+  have clear : ClearFinalizers b.program (Programs.crewAcquire i) := by
+    rw [Programs.workers_built_program total b built]
+    exact workers_clear total i member
+  exact interpreted_fork_in_debit b.program _ b.table m fiber yielding suspended program options scope site clear owned selected produced
+
+/-- Every queued Workers resume retains the actual global source reservation.
+The queued callback is read from a dispatcher in the admitted history. -/
+theorem workers_queued_resume_debit (total compileFuel : Nat) (b : Api.Built)
+    (built : Api.Author.build (Workers.crew total) = .ok b) (m : NativeMachine)
+    (history : Effect4.Run.HistoryOf b compileFuel m) (holder : FiberId)
+    (fiber : SourceScope.SourceFiber) (lookup : m.fiber? holder = some fiber)
+    (bucket : SourceScope.SourceBucket) (stored : bucket ∈ fiber.dispatcher.buckets)
+    (id : FiberId) (token : Nat) (code : NCode)
+    (queued : .resume id token code ∈ bucket.tasks)
+    (i : Nat) (_member : i ∈ [1, 2]) (rest : List SourceScope.SourceCommand) :
+    letI := evaluatorFor b.program b.table
+    let next := driveStep (interpOf b.program b.table) m (.resume id token code) rest
+    recorded (Programs.crewAcquire i) next.1 + fibers b.program (Programs.crewAcquire i) next.1 ≤
+      recorded (Programs.crewAcquire i) m + fibers b.program (Programs.crewAcquire i) m := by
+  have source := SourceFragment.workers_admitted_history_at total compileFuel b built m history
+  have owner := SourceScope.configuration_fiber b.program m holder fiber source lookup
+  have reply := (owner.dispatcher bucket stored (.resume id token code) queued).2
+  have unique := (Effect4.Machine.ForkLedger.Invariant.Native.reachable_corresponding
+    b.program b.table compileFuel m history.reachable).1
+  exact resume_command_debit b.program _ b.table m id token code rest unique reply
+
+/-- The actual Workers source allocates sequential scopes and contains no race actions.
+Both facts retain every job count through the checked generated address census. -/
+theorem workers_control_census (total : Nat) :
+    SourceScope.SequentialSource (Programs.workersProgram total) ∧
+      SourceScope.RaceFreeSource (Programs.workersProgram total) := by
+  constructor
+  · unfold SourceScope.SequentialSource
+    kernel_rfl
+  · unfold SourceScope.RaceFreeSource
+    kernel_rfl
+
+/-- Every actual Workers fiber action spends the reservation of its source suspension.
+The source restrictions follow from the built program at every job count. -/
+theorem workers_native_action_debit (total compileFuel : Nat) (b : Api.Built)
+    (built : Api.Author.build (Workers.crew total) = .ok b) (m : NativeMachine)
+    (history : Effect4.Run.HistoryOf b compileFuel m) (id : FiberId)
+    (fiber : SourceScope.SourceFiber) (lookup : m.fiber? id = some fiber)
+    (i : Nat) (member : i ∈ [1, 2]) (yielding : Bool) (suspended : EffThunk) (next : NAction)
+    (selected : fiber.frame.current = .withFiber suspended)
+    (produced : (interpAt b.program m.completedExits b.table).withFiberOf suspended = some next) :
+    Debit b.program (Programs.crewAcquire i) m fiber
+      (evaluatePrim.withFiber (interpAt b.program m.completedExits b.table) m fiber yielding next) := by
+  have source := SourceFragment.workers_admitted_history_at total compileFuel b built m history
+  have owned := (SourceScope.configuration_fiber b.program m id fiber source lookup).frame
+  have thunkOwned := owned.1
+  rw [selected] at thunkOwned
+  have actionOwned := SourceScope.interp_action_at b.program
+    (SourceFragment.workers_built_fragment total b built) m.completedExits b.table suspended next thunkOwned produced
+  have clear : ClearFinalizers b.program (Programs.crewAcquire i) := by
+    rw [Programs.workers_built_program total b built]
+    exact workers_clear total i member
+  have control : SourceScope.SequentialSource b.program ∧ SourceScope.RaceFreeSource b.program := by
+    rw [Programs.workers_built_program total b built]
+    exact workers_control_census total
+  have unique := (Effect4.Machine.ForkLedger.Invariant.Native.reachable_corresponding
+    b.program b.table compileFuel m history.reachable).1
+  have carried := interp_action_le b.program (Programs.crewAcquire i) clear m.completedExits b.table suspended next thunkOwned produced
+  exact native_action_debit b.program _ b.table m fiber yielding next actionOwned control.1 control.2
+    clear source.scopes unique (by simpa only [selected, current] using carried)
 
 end Test.Dogfood.Scenario.SourceOpportunity

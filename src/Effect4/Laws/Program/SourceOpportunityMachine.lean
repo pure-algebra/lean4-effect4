@@ -60,6 +60,56 @@ theorem recorded_emit (q : List Nat) (m : NativeMachine) (events) :
     recorded q (m.emit events) = recorded q m + (events.map (runEvent q)).sum := by
   simp only [recorded, RunMachine.emit_trace, List.map_append, List.sum_append]
 
+/-- Native reply producers introduce no selected source opportunity.
+Consumer: actual resume commands and their scheduler and host decision lifts. -/
+theorem terminal_reply_zero (root : NativeEff) (q : List Nat) (code : NCode)
+    (held : TerminalReply code) : current root q code = 0 := by
+  cases held <;> rfl
+
+/-- Replacing current code with an actual reply retains only the existing saved reservations.
+Consumer: native resume command debit. -/
+theorem terminal_frame_le (root : NativeEff) (q : List Nat)
+    (fiber : FrameFiber EffName EffThunk Val Err Defect FiberId Ann) (code : NCode)
+    (held : TerminalReply code) :
+    frame root q {fiber with current := code} ≤ frame root q fiber := by
+  have zero := terminal_reply_zero root q code held
+  simp only [frame, zero, Nat.zero_add]
+  exact Nat.le_add_left _ _
+
+/-- Actual token-matched and stale native resumes cannot recreate source opportunities.
+Consumer: the complete native source-use command contract. -/
+theorem resume_command_debit (root : NativeEff) (q : List Nat) (table : RowTable)
+    (m : NativeMachine) (id : FiberId) (token : Nat) (code : NCode) (rest : List SourceCommand)
+    (unique : (m.fibers.map (fun fiber => fiber.id)).Nodup) (reply : TerminalReply code) :
+    letI := evaluatorFor root table
+    let next := driveStep (interpOf root table) m (.resume id token code) rest
+    recorded q next.1 + fibers root q next.1 ≤ recorded q m + fibers root q m := by
+  letI := evaluatorFor root table
+  unfold driveStep
+  split
+  · exact Nat.le_refl _
+  · rename_i fiber found
+    split
+    · split
+      · have frameBound := terminal_frame_le root q fiber.frame code reply
+        let changed : SourceFiber := {fiber with
+          parked := .notParked
+          pending := fiber.pending.filter (fun pending => pending.token ≠ token)
+          frame := {fiber.frame with current := code}}
+        have installed := update_debit root q m fiber changed rfl unique
+          (List.mem_of_find?_eq_some found) 0 (by simpa only [Nat.add_zero] using frameBound)
+        change recorded q ((m.update changed).emit [RunEvent.resumedWith id token code]) +
+          fibers root q (m.update changed) ≤ recorded q m + fibers root q m
+        have noPush : recorded q
+            ((m.update changed).emit [RunEvent.resumedWith id token code]) = recorded q m := by
+          simp only [recorded_emit, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil,
+            runEvent, Nat.add_zero]
+          rfl
+        rw [noPush]
+        simpa only [Nat.add_zero] using Nat.add_le_add_left installed (recorded q m)
+      · exact Nat.le_refl _
+    · exact Nat.le_refl _
+
 /-- Embedding frame events in the machine trace retains their exact push count. -/
 theorem frame_events_recorded (q : List Nat) (id : FiberId)
     (events : List (FrameEvent EffName EffThunk Val Err Defect FiberId Ann)) :
