@@ -1,12 +1,13 @@
 # Context completion input review receipt
 
-Review the proposed shared signature before applying its change.
-The implementation still uses one completion input per object.
+The owner approves the proposed shared signature.
+The approval selects success and failure service guarantees.
+The implementation still uses one completion input per object until the approved migration lands.
 
 Base and head: `e4e1f6814`, branch `codex/symbolic-native-fold`.
 Proposal: `ExitInputProposal.md`.
 Independent control: `ExitDemandProbe.lean`.
-Evidence status: checked local runtime control; proposed shared signature.
+Evidence status: checked local runtime control; owner-approved shared signature.
 Proof role: dependency of `typed-state-reachable` preservation, R4 and R9.
 Scope: decisions rows 117 and 349; actual service membership and phase capability lower bounds.
 
@@ -41,7 +42,7 @@ Result: 1,281 declarations within `[propext, Quot.sound]`.
 The audit reports zero planned goals and zero declarations modulo planned goals.
 These staged source files are not part of this research-only checkpoint.
 
-## Shared structure and pending review
+## Shared structure and owner approval
 
 The staged `FrameArrow` generalizes the existing frame relation by its input type.
 The staged `ProgramArrow` generalizes the existing residual relation by its input type.
@@ -49,9 +50,12 @@ The old type-only judgments are unit-input aliases of those same relations.
 There is no parallel program representation or evaluator.
 The world transport and program closing cases occur once in the shared relations.
 
-The proposed additional exit-dependent input projection remains unapplied.
-Automatic approval review rejects that interface mutation pending explicit signature review.
-The coordinator requests this concrete proposal and submits it for owner review.
+The approved additional exit-dependent input projection remains unapplied in this checkpoint.
+Automatic approval review earlier refuses that interface mutation pending explicit signature review.
+The owner now supplies that explicit approval.
+The owner selects “Approve success/failure service guarantees (Recommended)”.
+This approval permits the shared `Object → ExitV → Input` projection.
+It retains actual-cut interruption coverage and unchanged unit-input judgments.
 No failure coverage follows merely from a setter's future successful completion row.
 The original typed endpoints remain unfinished until actual phase coverage transports through their existing relations.
 

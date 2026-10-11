@@ -5,8 +5,9 @@ Keep the physical context and its service membership in the existing machine rel
 Treat row indices as guaranteed capabilities at a phase, never as an exact runtime context.
 
 Base: `e4e1f6814` on `codex/symbolic-native-fold`.
-The shared signature change below is proposed, not applied.
-Automatic approval review rejects that change pending explicit review of its signature.
+The owner approves the shared signature change below; implementation remains staged.
+The owner selects “Approve success/failure service guarantees (Recommended)”.
+The earlier automatic-review refusal no longer leaves an approval pending.
 The existing typed reader, setter, provider entry and scoped frame consumers compile.
 The unchanged stack consumer compiles too.
 Their build reports 473 jobs.
@@ -16,7 +17,7 @@ Their build reports 473 jobs.
 Concept: residual-program-typing and service-context, R4 and R9.
 Question: `typed-state-reachable`, under decisions rows 117 and 349.
 Role: preservation dependency.
-Evidence: checked producer equations and a proposed shared relation change.
+Evidence: checked producer equations and an owner-approved shared relation change.
 Reach: actual source context readers and merged context provider regions.
 Limit: these producers do not yet prove configuration preservation or progress.
 
