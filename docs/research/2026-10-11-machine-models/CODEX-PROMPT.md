@@ -7,6 +7,19 @@ you. Then read this folder's `README.md` and the earlier note
 
 ## The one thing to know first
 
+**Blocking, 2026-10-11 11:25: the integration head does not build.** At `23d070d77`,
+`lake build Effect4.Laws` fails in two modules that no slice changed:
+
+- `src/Effect4/Laws/Machine/Book.lean`, `interruptRecord_pendingOk`: `dsimp` made no progress
+  after `unfold interruptRecord`;
+- `src/Effect4/Laws/Program/Guard/Observer.lean`, `interruptRecord_running_exit`: unsolved goals,
+  and seven unused `simp` arguments.
+
+The cause is `293ed3e85`: `interruptRecord` now delegates to `interruptWithCause`. Repair both
+proofs in the integration lane; the merge tick took nothing this hour. From now on, a slice that
+changes `src/Effect4/Machine` builds `Effect4.Laws` whole before it commits, because every law
+module reaches the machine. A narrow build of the slice's own consumers misses the rest.
+
 The goals lane re-builds the same structures per weight and per scenario, about 44,000 lines in two
 days.
 

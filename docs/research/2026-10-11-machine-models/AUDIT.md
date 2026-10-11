@@ -92,3 +92,39 @@ R2 or for the frame-weight generalization of `Ledger`.
 **Verdict: improving.** In the baseline, shared-law uses were 179 against 466 private case
 analyses; in this range they are 137 against 19. Lines added still exceed lines removed, by the new
 Atomic writer files (505 lines) and the Timeout form family (305 lines).
+
+## 2026-10-11 11:25, the second range (not merged)
+
+Range `e2998236e..23d070d77`: 23 commits on the integration branch, measured from git without a
+merge. The merge was aborted: the head does not build (`CODEX-PROMPT.md`, "Blocking"). The counts
+leave out `FiberSum` and `FiberSumConnect`, which are Claude's. They are diff counts: what the
+range adds and removes, not totals over the changed files.
+
+| Measure | Added | Removed |
+| --- | --- | --- |
+| lines in `Laws`, `Dogfood` and `Machine` | 1,851 | 782 |
+| shared-law uses | 182 | 74 |
+| private case analyses | 2 | 13 |
+| hand-built decision lifts | 0 | 0 |
+
+**Consolidated.**
+- New shared structure:
+  - `PopTrace` and `PopTraceFamily`, one pop provenance;
+  - `TracedMoves` and `FinalizerMoves`, the labelled moves of item 2;
+  - `Contracts/FramePath`;
+  - `PrimWeights` with the generated `Machine/Fold.lean`, the one code-weight fold of item 4.
+- `ReleaseCustody/NativeStacks` falls from 148 lines to 34 on the shared interference census.
+- `FinalizerTransfer` drops 52 lines to the shared finalizer debit.
+- The Timeout chain's region prefix, sync transfer and pop now read the shared laws (four
+  receipts).
+
+**Still per family.** No family has moved onto `FiberSum` yet. Its own split declarations remain
+in `SourceOpportunityMachine` (5), `ReleaseCustody/Outside` (4), `WriterWeights` (2) and Atomic
+`WriterMachine` (2). That is item 3's second half.
+
+**Largest private analyses left** (whole-file counts): `Handles` 51, `Guard/Core` 32,
+`MaskRuns` 26. The range touched each by one or two lines.
+
+**Verdict: improving.** Shared-law uses rise by 108 and private analyses fall by 11. Lines added
+exceed lines removed by 1,069, and the excess is new shared structure. The one defect is the build
+break.
