@@ -1,0 +1,197 @@
+{
+  "run_at": "2026-10-10T19:53:37.898872+00:00",
+  "owner_head": "41151468ffd97d0df25ed7d13080eee783ab199e",
+  "review_parent": "648fe735cc3a143aa7e3817a3f7cb420552c5727",
+  "source_modules": 176,
+  "changed_inputs": [],
+  "commands": [
+    {
+      "name": "tsgo-version",
+      "argv": [
+        "/Users/pooks/Dev/lean4-effect4/harness/truth/node_modules/.bin/tsgo",
+        "--version"
+      ],
+      "expected_exit": 0,
+      "exit": 0,
+      "seconds": 0.311,
+      "output": "Version 7.0.0-dev.20260629.1\n",
+      "expected_diagnostics_present": true
+    },
+    {
+      "name": "plain-positive",
+      "argv": [
+        "/Users/pooks/Dev/lean4-effect4/harness/truth/node_modules/.bin/tsgo",
+        "--project",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-1945/plain-positive.json"
+      ],
+      "expected_exit": 0,
+      "exit": 0,
+      "seconds": 1.043,
+      "output": "",
+      "expected_diagnostics_present": true
+    },
+    {
+      "name": "payload-negative",
+      "argv": [
+        "/Users/pooks/Dev/lean4-effect4/harness/truth/node_modules/.bin/tsgo",
+        "--project",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-1945/payload-negative.json"
+      ],
+      "expected_exit": 1,
+      "exit": 1,
+      "seconds": 0.846,
+      "output": "docs/research/2026-10-10-ho3-print-review/followup-1945/payload-negative.ts(11,181): error TS7009: 'new' expression, whose target lacks a construct signature, implicitly has an 'any' type.\ndocs/research/2026-10-10-ho3-print-review/followup-1945/payload-negative.ts(11,193): error TS2345: Argument of type '{ id: number; }' is not assignable to parameter of type 'number'.\n",
+      "expected_diagnostics_present": true
+    },
+    {
+      "name": "payload-positive",
+      "argv": [
+        "/Users/pooks/Dev/lean4-effect4/harness/truth/node_modules/.bin/tsgo",
+        "--project",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-1945/payload-positive.json"
+      ],
+      "expected_exit": 0,
+      "exit": 0,
+      "seconds": 0.591,
+      "output": "",
+      "expected_diagnostics_present": true
+    },
+    {
+      "name": "qualified-negative",
+      "argv": [
+        "/Users/pooks/Dev/lean4-effect4/harness/truth/node_modules/.bin/tsgo",
+        "--project",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-1945/qualified-negative.json"
+      ],
+      "expected_exit": 1,
+      "exit": 1,
+      "seconds": 0.583,
+      "output": "docs/research/2026-10-10-ho3-print-review/followup-1945/qualified-negative.ts(9,171): error TS2339: Property 'run' does not exist on type '(a0: number) => Effect<number, never, never>'.\n",
+      "expected_diagnostics_present": true
+    },
+    {
+      "name": "qualified-positive",
+      "argv": [
+        "/Users/pooks/Dev/lean4-effect4/harness/truth/node_modules/.bin/tsgo",
+        "--project",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-1945/qualified-positive.json"
+      ],
+      "expected_exit": 0,
+      "exit": 0,
+      "seconds": 0.674,
+      "output": "",
+      "expected_diagnostics_present": true
+    },
+    {
+      "name": "trailing-negative",
+      "argv": [
+        "/Users/pooks/Dev/lean4-effect4/harness/truth/node_modules/.bin/tsgo",
+        "--project",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-1945/trailing-negative.json"
+      ],
+      "expected_exit": 1,
+      "exit": 1,
+      "seconds": 0.598,
+      "output": "docs/research/2026-10-10-ho3-print-review/followup-1945/trailing-negative.ts(9,178): error TS2345: Argument of type '(a0: number) => Effect<number, never, never>' is not assignable to parameter of type 'number'.\n",
+      "expected_diagnostics_present": true
+    },
+    {
+      "name": "trailing-positive",
+      "argv": [
+        "/Users/pooks/Dev/lean4-effect4/harness/truth/node_modules/.bin/tsgo",
+        "--project",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-1945/trailing-positive.json"
+      ],
+      "expected_exit": 0,
+      "exit": 0,
+      "seconds": 0.519,
+      "output": "",
+      "expected_diagnostics_present": true
+    },
+    {
+      "name": "service-positive",
+      "argv": [
+        "/Users/pooks/Dev/lean4-effect4/harness/truth/node_modules/.bin/tsgo",
+        "--project",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-1945/service-positive.json"
+      ],
+      "expected_exit": 0,
+      "exit": 0,
+      "seconds": 0.569,
+      "output": "",
+      "expected_diagnostics_present": true
+    },
+    {
+      "name": "service-method-negative",
+      "argv": [
+        "/Users/pooks/Dev/lean4-effect4/harness/truth/node_modules/.bin/tsgo",
+        "--project",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-1945/service-method-negative.json"
+      ],
+      "expected_exit": 1,
+      "exit": 1,
+      "seconds": 0.674,
+      "output": "docs/research/2026-10-10-ho3-print-review/followup-1945/service-method-negative.ts(16,24): error TS2554: Expected 2 arguments, but got 1.\n",
+      "expected_diagnostics_present": true
+    },
+    {
+      "name": "service-init-negative",
+      "argv": [
+        "/Users/pooks/Dev/lean4-effect4/harness/truth/node_modules/.bin/tsgo",
+        "--project",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-1945/service-init-negative.json"
+      ],
+      "expected_exit": 1,
+      "exit": 1,
+      "seconds": 0.715,
+      "output": "docs/research/2026-10-10-ho3-print-review/followup-1945/service-init-negative.ts(15,62): error TS2554: Expected 2 arguments, but got 0.\n",
+      "expected_diagnostics_present": true
+    },
+    {
+      "name": "parameter-class-negative",
+      "argv": [
+        "/Users/pooks/Dev/lean4-effect4/harness/truth/node_modules/.bin/tsgo",
+        "--project",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-1945/parameter-class-negative.json"
+      ],
+      "expected_exit": 1,
+      "exit": 1,
+      "seconds": 0.569,
+      "output": "docs/research/2026-10-10-ho3-print-review/followup-1945/parameter-class-negative.ts(9,50): error TS2304: Cannot find name 'OnlyParam'.\n",
+      "expected_diagnostics_present": true
+    },
+    {
+      "name": "parameter-class-positive",
+      "argv": [
+        "/Users/pooks/Dev/lean4-effect4/harness/truth/node_modules/.bin/tsgo",
+        "--project",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-1945/parameter-class-positive.json"
+      ],
+      "expected_exit": 0,
+      "exit": 0,
+      "seconds": 0.42,
+      "output": "",
+      "expected_diagnostics_present": true
+    },
+    {
+      "name": "audit",
+      "argv": [
+        "lean",
+        "-M6144",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-1945/Audit.lean"
+      ],
+      "expected_exit": 0,
+      "exit": 0,
+      "seconds": 22.585,
+      "output": "#axiom_audit: 486 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals\n",
+      "expected_diagnostics_present": true
+    }
+  ],
+  "lean_path": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-module-layer-step2b-review/.audit-lib:/Users/pooks/Dev/lean4-effect4-wt/module-layers/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean",
+  "limits": [
+    "Owner compiled imports were reused, not rebuilt from source",
+    "Generated declarations remain unchanged; explicit fixture imports and globals are prepended",
+    "Finite target type checks only; no universal translation or scheduling theorem"
+  ]
+}

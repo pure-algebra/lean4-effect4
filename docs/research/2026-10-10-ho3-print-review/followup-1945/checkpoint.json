@@ -1,0 +1,36 @@
+{
+  "observed_at": "2026-10-10T19:59:02.429717+00:00",
+  "primary_head": "41151468ffd97d0df25ed7d13080eee783ab199e",
+  "owner_head": "41151468ffd97d0df25ed7d13080eee783ab199e",
+  "owner_branch": "claude/ho3",
+  "review_parent": "648fe735cc3a143aa7e3817a3f7cb420552c5727",
+  "owner_diff_sha256": "bbc5db0f3453a5aa5ed0693c0e51ae99170b0be9cd70408b0e8360e49d4e163e",
+  "owner_session": "9ebf38b2-8b2f-44e5-8fd9-2dc0cb5a1f50",
+  "session_cwd_verified": "/Users/pooks/Dev/lean4-effect4",
+  "session_scope": "bounded recent 80000 bytes; only text, tool commands/results, and cwd; no thinking fields",
+  "session_last_action": "waiting for ho3a-laws.log completion at 2026-10-10T19:47:27.867Z; HO-3b reader work inspected",
+  "new_confirmed_findings": [
+    "HO3-ANN-01: omitted callback columns cause missing target class and accept repeated raw record fields"
+  ],
+  "evidence_upgrades": [
+    "HO3-NAME-01: actual generated modules fail pinned tsgo; positive twins pass",
+    "HO3-SVC-01: actual generated service wrappers omit callback arguments"
+  ],
+  "meaningful_resolutions": [
+    "paired definition/body context is connected through G6 and ModuleEmission.readModule; 486-declaration audit passes"
+  ],
+  "open_unchanged": [
+    "HO3-REQ-01",
+    "LV-OW-01"
+  ],
+  "audit": "checked-results-targets-audit.json",
+  "probes": [
+    "checked-results-generate.json",
+    "checked-results-inventory.json",
+    "checked-results-runtime.json"
+  ],
+  "no_production_edits": true,
+  "no_push_or_merge": true,
+  "no_claude_message": true,
+  "next_action": "extend Formation.declAnnotations and its ArgAll/declAnnotations_all proof correspondence with all three callback columns; retain target name and service refusal repairs"
+}

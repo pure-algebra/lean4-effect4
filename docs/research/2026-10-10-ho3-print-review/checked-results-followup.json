@@ -1,0 +1,38 @@
+{
+  "run_at": "2026-10-10T19:37:45.154298+00:00",
+  "owner_head": "41151468ffd97d0df25ed7d13080eee783ab199e",
+  "review_parent": "5046ebc2c799377db2a9056347030ff7dd86d081",
+  "source_modules": 129,
+  "changed_inputs": [],
+  "commands": [
+    {
+      "name": "lean-names-services",
+      "argv": [
+        "lean",
+        "-M6144",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/NamesAndServices.lean"
+      ],
+      "expected_exit": 0,
+      "exit": 0,
+      "seconds": 0.555,
+      "output": "(none, none, none)\n"
+    }
+  ],
+  "lean_path": "/Users/pooks/Dev/lean4-effect4-wt/module-layers/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean",
+  "source_differences_from_primary": [
+    "src/Effect4/Api.lean",
+    "src/Effect4/Codegen/Admit.lean",
+    "src/Effect4/Codegen/Read.lean",
+    "src/Effect4/Codegen/Print.lean"
+  ],
+  "guards": {
+    "Requirements.lean": 9,
+    "NamesAndServices.lean": 18
+  },
+  "limits": [
+    "Owner compiled imports were reused, not rebuilt from source",
+    "Handwritten TypeScript design projections, not generated modules",
+    "Finite value observations only; no universal translation or scheduling theorem"
+  ]
+}

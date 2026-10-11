@@ -1,0 +1,41 @@
+{
+  "run_at": "2026-10-10T20:25:30.879402+00:00",
+  "owner_head": "000bcd7ad68e7bbbe4f3478831982a7f9f2f1a42",
+  "review_parent": "d5110c598a952b090d1939ef7a15f628c05a318a",
+  "source_modules": 135,
+  "changed_inputs": [],
+  "commands": [
+    {
+      "name": "tsgo-version",
+      "argv": [
+        "/Users/pooks/Dev/lean4-effect4/harness/truth/node_modules/.bin/tsgo",
+        "--version"
+      ],
+      "expected_exit": 0,
+      "exit": 0,
+      "seconds": 0.508,
+      "output": "Version 7.0.0-dev.20260629.1\n",
+      "expected_diagnostics_present": true
+    },
+    {
+      "name": "typed-sites",
+      "argv": [
+        "lean",
+        "-M6144",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-2016/TypedSites.lean"
+      ],
+      "expected_exit": 0,
+      "exit": 1,
+      "seconds": 11.889,
+      "output": "Except.error (Effect4.Program.PrintRefusal.internalAction \"typed:missing context\")\n/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-2016/TypedSites.lean:25:0: error: Expression\n  decide\n    (Except.map (expr house0 0) (printTyped s [u, u] requestSite) =\n      Except.ok \"useProduct(tuple(a0, a1), (a2) => Effect.succeed(undefined))\")\ndid not evaluate to `true`\nExcept.error (Effect4.Program.PrintRefusal.internalAction \"typed:missing context\")\n/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-2016/TypedSites.lean:42:0: error: Expression\n  decide\n    (Except.map (expr house0 0) (printTyped callbackSig [u, u] callbackSite) =\n      Except.ok \"useCallback(undefined, (a2) => Effect.succeed(tuple<number | string, number | string>(a0, a1)))\")\ndid not evaluate to `true`\n/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-2016/TypedSites.lean:53:0: error: Expression\n  roundTrip s spell [u, u] requestSite\ndid not evaluate to `true`\n/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-2016/TypedSites.lean:54:0: error: Expression\n  roundTrip callbackSig callbackSpell [u, u] callbackSite\ndid not evaluate to `true`\n/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-2016/TypedSites.lean:66:0: error: invoke-request\n",
+      "expected_diagnostics_present": true
+    }
+  ],
+  "lean_path": "/Users/pooks/Dev/lean4-effect4-wt/module-layers/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean",
+  "limits": [
+    "Owner compiled imports reused, not rebuilt from source",
+    "Generated declarations unchanged; explicit Effect imports prepended",
+    "Finite values and reconstruction only; no universal target or scheduling theorem"
+  ]
+}

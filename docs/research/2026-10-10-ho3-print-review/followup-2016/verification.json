@@ -1,0 +1,108 @@
+{
+  "checked_at": "2026-10-10T20:35:33.761821+00:00",
+  "checks": {
+    "generate-runtime": {
+      "run_at": "2026-10-10T20:23:26.871364+00:00",
+      "commands": [
+        {
+          "name": "tsgo-version",
+          "exit": 0,
+          "seconds": 1.112
+        },
+        {
+          "name": "generate",
+          "exit": 0,
+          "seconds": 8.541
+        },
+        {
+          "name": "runtime-typecheck",
+          "exit": 0,
+          "seconds": 0.455
+        },
+        {
+          "name": "bun-version",
+          "exit": 0,
+          "seconds": 0.032
+        },
+        {
+          "name": "positive-runtime",
+          "exit": 0,
+          "seconds": 0.272
+        }
+      ],
+      "unchanged_inputs": true
+    },
+    "typed": {
+      "run_at": "2026-10-10T20:34:34.466147+00:00",
+      "commands": [
+        {
+          "name": "tsgo-version",
+          "exit": 0,
+          "seconds": 0.3
+        },
+        {
+          "name": "compile-erasure",
+          "exit": 0,
+          "seconds": 35.429
+        },
+        {
+          "name": "typed-sites",
+          "exit": 0,
+          "seconds": 11.945
+        }
+      ],
+      "unchanged_inputs": true
+    }
+  },
+  "generated_cases": 10,
+  "package_versions": {
+    "effect": "4.0.0-rc.112",
+    "@typescript/native-preview": "7.0.0-dev.20260629.1"
+  },
+  "local_links": "all resolve",
+  "proof_source_restrictions": "no forbidden tokens in probe Lean files",
+  "documentation_check": "PASS check-language --strict on PLAN.md PROOF-DAG.md README.md",
+  "production_edits": false,
+  "file_hashes": {
+    ".gitignore": "a77109732978882f75c0f282a948866a05bbd661b47ff1ea6d09899a1a218048",
+    "Generated.lean": "24948e905424c7f1a33a442ce94e6857c5699a1676061bf6ecc49c387ae55661",
+    "PLAN.md": "04aa211869d061295912d1e2ead2f3d683e77130ddda13cb05cafc0851f3c61e",
+    "PROOF-DAG.md": "f3dffb6186b15aee48222d0a72ff9e583c0a8b1f36baa203c2aa68ac89db5d78",
+    "README.md": "9d9192802a459e48f0e2f3080ef3726b88a060a99cc001ba8afec83948232dcc",
+    "TypedSites.lean": "abf04ada54a808ae9e3c76ae06f8a5932a0a4a5740e1601cc422943a1fa32492",
+    "capture-outer.generated.ts": "bca2f61ced328819b381ac6afb803ac1192bed21d6cf3109c921c403cb00f61b",
+    "capture-outer.ts": "c3b532a6332946b220468adc10c181dd22846907d946cb10120a9744cdfa1417",
+    "capture-request.generated.ts": "72ac8d7d3af4c486817cd33f54411a6518e74ecee1869a7c4fccbe534f914ce1",
+    "capture-request.ts": "61d66721786494898a75c51d0e5c89b3fbca8e294dd6f2a5aa83ddb4ef07ca53",
+    "checked-results-generate-runtime.json": "35adaba717fdd0c3ef21468b8c4cf722870c0521302e8caae8facdcc95e779d7",
+    "checked-results-typed.json": "faf2fb5aa05a015c9d903f99648786bf296dd1f35d23033b0f70970865608e37",
+    "checkpoint.json": "1e5785d619dd93b78ed3ac53d6d2df6e675a7fa6a115ccffab97e65fc4671c89",
+    "discovery-results-typed.json": "effd2fa617a89eecac1b3fdbeb9f4dfe62beb6e934269fc672b76e193af37c2b",
+    "forked-capture.generated.ts": "e664b7a4f785e0003125b1c8348e1a1cd9e1a5057065f2a1296cd1e69e233b1f",
+    "forked-capture.ts": "d8655d48b27a73d4ab73b5df669e5167f6c16a4a6d56f7e100a620e675a6ec38",
+    "forwarded.generated.ts": "99a1ffdd1a1ded67f0e40493ce24d33681b581ec7df645cae8781b45d98c4213",
+    "forwarded.ts": "825de3c85fcbe47450ff3515f801075f054078730121e62b422d7f365521c8aa",
+    "generated-output.json": "9b06627997ba8243aaf2840b186b4be83cc18ab452e1f6212c5178c5c1ec2be4",
+    "identity.generated.ts": "45a5c2c8bceb53673a09b5dc5e823f298c2db915e6ab540e491194f227cfd432",
+    "identity.ts": "1efee2ced647a57dfa8ba300449d2f476bc75806c26a701eed066804014743ad",
+    "inputs-after-generate-runtime.json": "e87563fbe77016f6333e947149408ac38a70b2e9a593ce67910470fabb00bc77",
+    "inputs-after-typed.json": "d4eff0815d07fbb2251cc234035825820e2ca32a4b1096db1fbc00115fc9f5db",
+    "inputs-before-generate-runtime.json": "e87563fbe77016f6333e947149408ac38a70b2e9a593ce67910470fabb00bc77",
+    "inputs-before-typed.json": "d4eff0815d07fbb2251cc234035825820e2ca32a4b1096db1fbc00115fc9f5db",
+    "nested-inner.generated.ts": "9d83f4773f8180eb0c50e8a9a4ec405df60d319ebc5ca840e4e85b6f25212050",
+    "nested-inner.ts": "1357f33697c9b761a5ff161548901efdf802bdf52f7476196b941a3f5cf03810",
+    "nested-middle.generated.ts": "9fdef837c7530317fd4348143df890e11f43a502dbd2e6c3f6a6332dbcaa5322",
+    "nested-middle.ts": "5cf8d2fd1799feabf6773d44ee6c36aa0dccfd8e041b690358ce89d81e0239b5",
+    "nested-outer.generated.ts": "9bfd90870b2c8915550bf82f3cae0cd22cd77a6edb61d4998839653f92673df6",
+    "nested-outer.ts": "37e154cd023080b5115e6fa7a67e222da3505ae087e0751ffc679968c60fd0ab",
+    "owner-draft.json": "069e2369076c88cff63ccce5e1731332c654e496774199d0a8dbeca22fcf20d3",
+    "positive-runtime.json": "7b1e620b5bf966a92738bccb4433cb55b28d979293855a3c29604fd72992b0a3",
+    "positive-runtime.ts": "036c03a155550aa7da5f137ed456ec2236e2fad216d38031de9325daf6063a51",
+    "reviewers.json": "c15b4983ca7cf555f4bb83a9389b240eeb090627ba6ffafc055e4859f8e7ef9b",
+    "run_probes.py": "8bd003617a0a02f9ca48ef729ac4e61b268dfe482fd83bedf5083b0bb8278330",
+    "select-first.generated.ts": "74a29f1bfd79bcb43decfc6154da6b81d442bb2d0613b11c348f80d94450b43e",
+    "select-first.ts": "10cefefc05bfbc9ff956d6b7ffabb6ecaaa56bcc487ca1cc546faf201d9ef940",
+    "select-second.generated.ts": "8b6e409be7ca5f6f9db6b55fae3c58079c022e1691b50cda3d30a33572cc454a",
+    "select-second.ts": "9d31af27217a0bcf5566450cbd1ef60072c42f014fab4eadd60b7d9b161fa961"
+  }
+}

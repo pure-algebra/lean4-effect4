@@ -1,0 +1,78 @@
+{
+  "run_at": "2026-10-10T19:54:51.775234+00:00",
+  "owner_head": "41151468ffd97d0df25ed7d13080eee783ab199e",
+  "review_parent": "648fe735cc3a143aa7e3817a3f7cb420552c5727",
+  "source_modules": 176,
+  "changed_inputs": [],
+  "commands": [
+    {
+      "name": "tsgo-version",
+      "argv": [
+        "/Users/pooks/Dev/lean4-effect4/harness/truth/node_modules/.bin/tsgo",
+        "--version"
+      ],
+      "expected_exit": 0,
+      "exit": 0,
+      "seconds": 0.218,
+      "output": "Version 7.0.0-dev.20260629.1\n",
+      "expected_diagnostics_present": true
+    },
+    {
+      "name": "inventory",
+      "argv": [
+        "lean",
+        "-M6144",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-1945/AnnotationFormation.lean"
+      ],
+      "expected_exit": 0,
+      "exit": 1,
+      "seconds": 5.064,
+      "output": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-1945/AnnotationFormation.lean:24:0: error: Expression\n  !Api.wellTyped (sample repeated false)\ndid not evaluate to `true`\n{\"annotationCount\":3,\"name\":\"callback-good\",\"rawFormationAccepted\":true,\"sourceTypingAccepted\":true}\n{\"annotationCount\":3,\"name\":\"callback-repeated\",\"rawFormationAccepted\":true,\"sourceTypingAccepted\":true}\n{\"annotationCount\":3,\"name\":\"ordinary-good\",\"rawFormationAccepted\":true,\"sourceTypingAccepted\":true}\n{\"annotationCount\":3,\"name\":\"ordinary-repeated\",\"rawFormationAccepted\":false,\"sourceTypingAccepted\":true}\n",
+      "expected_diagnostics_present": true
+    },
+    {
+      "name": "runtime-typecheck",
+      "argv": [
+        "/Users/pooks/Dev/lean4-effect4/harness/truth/node_modules/.bin/tsgo",
+        "--project",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-1945/positive-runtime.json"
+      ],
+      "expected_exit": 0,
+      "exit": 0,
+      "seconds": 0.474,
+      "output": "",
+      "expected_diagnostics_present": true
+    },
+    {
+      "name": "bun-version",
+      "argv": [
+        "bun",
+        "--version"
+      ],
+      "expected_exit": 0,
+      "exit": 0,
+      "seconds": 0.031,
+      "output": "1.4.2\n",
+      "expected_diagnostics_present": true
+    },
+    {
+      "name": "positive-runtime",
+      "argv": [
+        "bun",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-ho3-print-review/followup-1945/positive-runtime.ts"
+      ],
+      "expected_exit": 0,
+      "exit": 0,
+      "seconds": 0.237,
+      "output": "{\"values\":[7,7,8,7,7,1]}\n",
+      "expected_diagnostics_present": true
+    }
+  ],
+  "lean_path": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-module-layer-step2b-review/.audit-lib:/Users/pooks/Dev/lean4-effect4-wt/module-layers/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/.lake/build/lib/lean:/Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lib/lean",
+  "limits": [
+    "Owner compiled imports were reused, not rebuilt from source",
+    "Generated declarations remain unchanged; explicit fixture imports and globals are prepended",
+    "Finite target type checks only; no universal translation or scheduling theorem"
+  ]
+}
