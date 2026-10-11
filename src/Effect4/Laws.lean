@@ -30,6 +30,8 @@ import Effect4.Laws.Program.Folds.Looped
 import Effect4.Laws.Program.Folds.Denote
 import Effect4.Laws.Program.DenoteRows
 import Effect4.Laws.Program.Folds.DenoteRows
+import Effect4.Laws.Program.Folds.DenoteRowsB
+import Effect4.Laws.Program.DenoteCtl
 import Effect4.Laws.Program.DenoteRowsB
 import Effect4.Laws.Program.DenoteRowsAppend
 import Effect4.Laws.Machine.Folds.Val
