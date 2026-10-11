@@ -36,6 +36,19 @@ at `codex/last-planned-goals` `23d070d77`:
 `Machine/Clauses` also has 43 helper theorems. It stays: each is a census witness of one rc.112
 arm, a clause of what the machine does. It proves no invariant.
 
+**The alphabet, census of 13:35.** Every `{ m with … }` write of `src/Effect4/Machine/Fibers.lean`
+sets one field of `RunMachine`, or splits into one-field edits (`spawn`, `beginRace` and the root's
+creation). Sixteen edits cover the eleven fields:
+
+- `update`, `appendFiber`, `observe` and `dropToken` write the fibers;
+- `updateRace` and `appendRace` write the races;
+- `bumpId`, `bumpToken` and `bumpRace` write the three counters;
+- `arm` and `disarm` write the armed list;
+- `setMiddleware`, `setState`, `emit`, `halt` and `addFork` write one field each.
+
+The observer filter of `dropToken` is written three times in the driver. `Keeps.lean` states
+eighteen field rows by `rfl`, each an instance of "an edit keeps every field but the one it writes".
+
 `Handles` splits by section:
 
 - about 730 lines collect the handles of values and code: folds;
