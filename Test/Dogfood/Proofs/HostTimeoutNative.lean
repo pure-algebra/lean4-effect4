@@ -393,17 +393,28 @@ inductive SourceRow : Kind → NativeOp → Prop
 /-- The actual operation thunk satisfies its source row's successful value assertion. -/
 theorem source_sync_head {B : List Val} {kind : Kind} {op : NativeOp}
     (allowed : SourceRow kind op) (env : List Val) (request : Val) (operation : SyncOp)
+    (writes : WritesAt op env request)
     (found : NativeOp.syncOpOf op env request = some operation) :
     HeadAt B kind (.sync (.op operation)) := by
   cases allowed with
-  | make | get => exact .sync .any _ (fun _ _ _ value _ => .any value) (fun _ => .any _)
+  | make =>
+    have shape : operation = .refMake request := Option.some.inj found.symm
+    subst operation
+    exact .sync .any _ (fun _ _ _ value _ => .any value) (fun _ => .any _) (.make request writes)
+  | get =>
+    have shape : ∃ key, operation = .refGet ⟨key⟩ := by
+      unfold NativeOp.syncOpOf at found
+      repeat' split at found
+      all_goals aesop
+    rcases shape with ⟨key, rfl⟩
+    exact .sync .any _ (fun _ _ _ value _ => .any value) (fun _ => .any _) (.get ⟨key⟩)
   | update term =>
     have shape : ∃ key, operation = .refUpdate ⟨key⟩ term env := by
       unfold NativeOp.syncOpOf at found
       repeat' split at found
       all_goals aesop
     rcases shape with ⟨key, rfl⟩
-    refine .sync .unit _ ?_ (fun _ => .unit)
+    refine .sync .unit _ ?_ (fun _ => .unit) (.update ⟨key⟩ term env writes)
     intro view state next value step
     change syncOpStep (.refUpdate ⟨key⟩ term env) state = some (next, value) at step
     rw [update_answer _ _ _ _ _ _ step]
@@ -433,34 +444,36 @@ theorem source_async_head {B : List Val} {kind : Kind} {op : NativeOp}
 
 /-- The synchronous dispatch consumes the exact selected operation thunk. -/
 theorem sync_source_dispatch {B : List Val} {kind : Kind} {op : NativeOp}
-    (allowed : SourceRow kind op) (point : Point) (term : Term) :
+    (allowed : SourceRow kind op) (point : Point) (term : Term)
+    (writes : ∀ request, evalTerm point.env term = some request → WritesAt op point.env request) :
     HeadAt B kind (match evalTerm point.env term with
       | some request => match NativeOp.syncOpOf op point.env request with
         | some operation => .sync (.op operation)
         | none => badShape
       | none => badShape) := by
-  cases evalTerm point.env term with
+  cases result : evalTerm point.env term with
   | none => exact .failure _ _
   | some request =>
     dsimp only
     cases found : NativeOp.syncOpOf op point.env request with
     | none => exact .failure _ _
-    | some operation => exact source_sync_head allowed point.env request operation found
+    | some operation => exact source_sync_head allowed point.env request operation (writes request result) found
 
 /-- Every admitted concrete source row expands to the appropriate native head. -/
 theorem perform_head {B : List Val} (point : Point) (op : NativeOp) (term : Term)
     (allowed : SourceRow (kindAt point.path) op) (fuel : Nat)
     (node : Node.at_ (.eff HostTimeoutSource.program) point.path = some (.eff (.perform op term)))
-    (positive : point.fuel = fuel + 1) :
+    (positive : point.fuel = fuel + 1)
+    (writes : ∀ request, evalTerm point.env term = some request → WritesAt op point.env request) :
     HeadAt B (kindAt point.path) (resolve HostTimeoutSource.program point) := by
   rw [Agreement.resolve_of_at node, Agreement.compileEff_perform op term positive]
   generalize expected : kindAt point.path = kind at allowed ⊢
   cases allowed with
   | external index => exact source_async_head (.external index) point term
   | sleep => exact source_async_head .sleep point term
-  | make => exact sync_source_dispatch .make point term
-  | get => exact sync_source_dispatch .get point term
-  | update update => exact sync_source_dispatch (.update update) point term
+  | make => exact sync_source_dispatch .make point term writes
+  | get => exact sync_source_dispatch .get point term writes
+  | update update => exact sync_source_dispatch (.update update) point term writes
 
 /-- Source descriptors only expose existing constructor fields at a concrete source point. -/
 def bindParts (path : List Nat) : NativeEff × NativeEff :=
@@ -557,6 +570,11 @@ theorem race_head {B : List Val} (point : Point)
   rw [kind]
   exact .action .body (.act point) (fun _ => race) operation (fun _ => .race _ _ entrants)
 
+/-- The existing application signature supplies its argument data for exact source equations. -/
+def writeArgs : Term → Terms
+  | .app _ args => args
+  | _ => .nil
+
 /-- Every concrete lexical assertion expands to an asserted actual native head.
 The complete source census supplies all thirty-eight cases, at every compilation fuel. -/
 theorem source_head {B : List Val} (point : Point)
@@ -577,7 +595,12 @@ theorem source_head {B : List Val} (point : Point)
           rw [row]
           exact .make
         exact perform_head _ (performParts [0]).1 (performParts [0]).2
-          allowed fuel (by kernel_rfl) rfl
+          allowed fuel (by kernel_rfl) rfl (by
+            intro value found
+            rw [row]
+            have term : (performParts [0]).2 = .lit (.nat 0) := by kernel_rfl
+            rw [term] at found
+            exact nat_outer _ 0 value found)
       case endedMakeBind =>
         exact bind_head _ kept (bindParts [1]).1 (bindParts [1]).2 fuel (by kernel_rfl) rfl
       case endedMake =>
@@ -586,7 +609,14 @@ theorem source_head {B : List Val} (point : Point)
           rw [row]
           exact .make
         exact perform_head _ (performParts [1,0]).1 (performParts [1,0]).2
-          allowed fuel (by kernel_rfl) rfl
+          allowed fuel (by kernel_rfl) rfl (by
+            intro value found
+            rw [row]
+            have empty : ∀ env, evalTerm env (performParts [1,0]).2 = some (.list []) := by
+              intro env; kernel_rfl
+            rw [empty] at found
+            cases found
+            exact .list [])
       case completedMakeBind =>
         exact bind_head _ kept (bindParts [1,1]).1 (bindParts [1,1]).2 fuel (by kernel_rfl) rfl
       case completedMake =>
@@ -595,7 +625,14 @@ theorem source_head {B : List Val} (point : Point)
           rw [row]
           exact .make
         exact perform_head _ (performParts [1,1,0]).1 (performParts [1,1,0]).2
-          allowed fuel (by kernel_rfl) rfl
+          allowed fuel (by kernel_rfl) rfl (by
+            intro value found
+            rw [row]
+            have empty : ∀ env, evalTerm env (performParts [1,1,0]).2 = some (.list []) := by
+              intro env; kernel_rfl
+            rw [empty] at found
+            cases found
+            exact .list [])
       case finishBind =>
         exact bind_head _ kept (bindParts [1,1,1]).1 (bindParts [1,1,1]).2 fuel (by kernel_rfl) rfl
       case loop =>
@@ -611,7 +648,7 @@ theorem source_head {B : List Val} (point : Point)
           rw [row]
           exact .sleep
         exact perform_head _ (performParts [1,1,1,0,0,0,0]).1 (performParts [1,1,1,0,0,0,0]).2
-          allowed fuel (by kernel_rfl) rfl
+          allowed fuel (by kernel_rfl) rfl (fun _ _ => True.intro)
       case delayZero =>
         exact success_head _ kept (succeedPart [1,1,1,0,0,0,1]) fuel (by kernel_rfl) rfl
       case «catch» =>
@@ -633,14 +670,21 @@ theorem source_head {B : List Val} (point : Point)
           rw [row]
           exact .update _
         exact perform_head _ (performParts [1,1,1,0,0,1,0,0,0,0,0,0,0,0]).1 (performParts [1,1,1,0,0,1,0,0,0,0,0,0,0,0]).2
-          allowed fuel (by kernel_rfl) rfl
+          allowed fuel (by kernel_rfl) rfl (by
+            intro request _
+            rw [row]
+            intro old value found
+            have term : updatePart [1,1,1,0,0,1,0,0,0,0,0,0,0,0] = .app "succ"
+                (writeArgs (updatePart [1,1,1,0,0,1,0,0,0,0,0,0,0,0])) := by kernel_rfl
+            rw [term] at found
+            exact app_outer .succ _ _ value found)
       case http =>
         have row : (performParts [1,1,1,0,0,1,0,0,0,0,0,0,0,1]).1 = .external 0 := by kernel_rfl
         have allowed : SourceRow (kindAt [1,1,1,0,0,1,0,0,0,0,0,0,0,1]) (performParts [1,1,1,0,0,1,0,0,0,0,0,0,0,1]).1 := by
           rw [row]
           exact .external _
         exact perform_head _ (performParts [1,1,1,0,0,1,0,0,0,0,0,0,0,1]).1 (performParts [1,1,1,0,0,1,0,0,0,0,0,0,0,1]).2
-          allowed fuel (by kernel_rfl) rfl
+          allowed fuel (by kernel_rfl) rfl (fun _ _ => True.intro)
       case cleanupBind =>
         exact bind_head _ kept (bindParts [1,1,1,0,0,1,0,0,0,0,0,0,1]).1 (bindParts [1,1,1,0,0,1,0,0,0,0,0,0,1]).2 fuel (by kernel_rfl) rfl
       case cleanupRead =>
@@ -649,7 +693,7 @@ theorem source_head {B : List Val} (point : Point)
           rw [row]
           exact .get
         exact perform_head _ (performParts [1,1,1,0,0,1,0,0,0,0,0,0,1,0]).1 (performParts [1,1,1,0,0,1,0,0,0,0,0,0,1,0]).2
-          allowed fuel (by kernel_rfl) rfl
+          allowed fuel (by kernel_rfl) rfl (fun _ _ => True.intro)
       case cleanupNoteBind =>
         exact bind_head _ kept (bindParts [1,1,1,0,0,1,0,0,0,0,0,0,1,1]).1 (bindParts [1,1,1,0,0,1,0,0,0,0,0,0,1,1]).2 fuel (by kernel_rfl) rfl
       case cleanupNote =>
@@ -658,7 +702,14 @@ theorem source_head {B : List Val} (point : Point)
           rw [row]
           exact .update _
         exact perform_head _ (performParts [1,1,1,0,0,1,0,0,0,0,0,0,1,1,0]).1 (performParts [1,1,1,0,0,1,0,0,0,0,0,0,1,1,0]).2
-          allowed fuel (by kernel_rfl) rfl
+          allowed fuel (by kernel_rfl) rfl (by
+            intro request _
+            rw [row]
+            intro old value found
+            have term : updatePart [1,1,1,0,0,1,0,0,0,0,0,0,1,1,0] = .app "append"
+                (writeArgs (updatePart [1,1,1,0,0,1,0,0,0,0,0,0,1,1,0])) := by kernel_rfl
+            rw [term] at found
+            exact app_outer .append _ _ value found)
       case cleanupDone =>
         exact success_head _ kept (succeedPart [1,1,1,0,0,1,0,0,0,0,0,0,1,1,1]) fuel (by kernel_rfl) rfl
       case timerBind =>
@@ -669,7 +720,7 @@ theorem source_head {B : List Val} (point : Point)
           rw [row]
           exact .sleep
         exact perform_head _ (performParts [1,1,1,0,0,1,0,0,0,0,0,1,0,0]).1 (performParts [1,1,1,0,0,1,0,0,0,0,0,1,0,0]).2
-          allowed fuel (by kernel_rfl) rfl
+          allowed fuel (by kernel_rfl) rfl (fun _ _ => True.intro)
       case timerFail =>
         exact fail_head _ (failPart [1,1,1,0,0,1,0,0,0,0,0,1,0,1]) fuel (by kernel_rfl) rfl
       case completeBind =>
@@ -680,14 +731,21 @@ theorem source_head {B : List Val} (point : Point)
           rw [row]
           exact .get
         exact perform_head _ (performParts [1,1,1,0,0,1,0,0,1,0]).1 (performParts [1,1,1,0,0,1,0,0,1,0]).2
-          allowed fuel (by kernel_rfl) rfl
+          allowed fuel (by kernel_rfl) rfl (fun _ _ => True.intro)
       case completeNote =>
         have row : (performParts [1,1,1,0,0,1,0,0,1,1]).1 = .refUpdateWith (updatePart [1,1,1,0,0,1,0,0,1,1]) := by kernel_rfl
         have allowed : SourceRow (kindAt [1,1,1,0,0,1,0,0,1,1]) (performParts [1,1,1,0,0,1,0,0,1,1]).1 := by
           rw [row]
           exact .update _
         exact perform_head _ (performParts [1,1,1,0,0,1,0,0,1,1]).1 (performParts [1,1,1,0,0,1,0,0,1,1]).2
-          allowed fuel (by kernel_rfl) rfl
+          allowed fuel (by kernel_rfl) rfl (by
+            intro request _
+            rw [row]
+            intro old value found
+            have term : updatePart [1,1,1,0,0,1,0,0,1,1] = .app "append"
+                (writeArgs (updatePart [1,1,1,0,0,1,0,0,1,1])) := by kernel_rfl
+            rw [term] at found
+            exact app_outer .append _ _ value found)
       case answer =>
         exact success_head _ kept (succeedPart [1,1,1,0,0,1,0,1]) fuel (by kernel_rfl) rfl
       case caught =>

@@ -23,6 +23,87 @@ abbrev View := List (FiberId × ExitV)
 def interpreter (view : View) :=
   interpAt HostTimeoutSource.program view Test.Dogfood.Scenario.Timeout.fetch.table
 
+/-- Timeout allocates and writes only number or list outer shapes in reference cells. -/
+inductive OuterValue : Val → Prop
+  | nat (n : Nat) : OuterValue (.nat n)
+  | list (values : List Val) : OuterValue (.list values)
+
+/-- Every allocated timeout cell has one of the source's two outer shapes. -/
+def OuterHeap (heap : RefHeap) : Prop := ∀ value ∈ heap, OuterValue value
+
+/-- Appending an allocated source cell keeps its outer shape. -/
+theorem OuterHeap.append {heap : RefHeap} (good : OuterHeap heap) {value : Val}
+    (written : OuterValue value) : OuterHeap (heap ++ [value]) := by
+  intro v member
+  rcases List.mem_append.mp member with old | fresh
+  · exact good v old
+  · rw [List.mem_singleton.mp fresh]
+    exact written
+
+/-- Replacing an allocated source cell keeps every cell's outer shape. -/
+theorem OuterHeap.poke {heap : RefHeap} (good : OuterHeap heap) (cell : RefKey) {value : Val}
+    (written : OuterValue value) : OuterHeap (refPoke heap cell value) := by
+  intro v member
+  rcases List.mem_or_eq_of_mem_set member with old | equal
+  · exact good v old
+  · rw [equal]
+    exact written
+
+/-- The source's three write atoms always produce a number or list outer shape. -/
+inductive OuterAtom : String → Prop
+  | succ : OuterAtom "succ"
+  | nil : OuterAtom "nil"
+  | append : OuterAtom "append"
+
+/-- Successful evaluation of an allowed write atom cannot return a top-level string. -/
+theorem atom_outer {atom : String} (allowed : OuterAtom atom) (values : List Val) (value : Val)
+    (found : nativeAtom atom values = some value) : OuterValue value := by
+  cases allowed with
+  | succ =>
+    change NativeAtom.eval .succ values = some value at found
+    unfold NativeAtom.eval at found
+    split at found
+    all_goals aesop (add safe constructors [OuterValue])
+  | nil =>
+    change NativeAtom.eval .listNil values = some value at found
+    unfold NativeAtom.eval at found
+    split at found
+    all_goals aesop (add safe constructors [OuterValue])
+  | append =>
+    change NativeAtom.eval .listAppend values = some value at found
+    unfold NativeAtom.eval at found
+    split at found
+    all_goals aesop (add norm simp [Option.bind_eq_some_iff, Option.map_eq_some_iff]) (add safe constructors [OuterValue])
+
+/-- Successful evaluation of an allowed source write expression has its atom's outer shape. -/
+theorem app_outer {atom : String} (allowed : OuterAtom atom) (env : List Val) (args : Terms)
+    (value : Val) (found : evalTerm env (.app atom args) = some value) : OuterValue value := by
+  change (evalTerms env args).bind (nativeAtom atom) = some value at found
+  obtain ⟨values, _, result⟩ := Option.bind_eq_some_iff.mp found
+  exact atom_outer allowed values value result
+
+/-- Literal counter allocation always produces a number. -/
+theorem nat_outer (env : List Val) (n : Nat) (value : Val)
+    (found : evalTerm env (.lit (.nat n)) = some value) : OuterValue value := by
+  cases found
+  exact .nat n
+
+/-- Each actual source reference write owes its outer value shape. -/
+def WritesAt (op : NativeOp) (env : List Val) (request : Val) : Prop :=
+  match op with
+  | .refMake => OuterValue request
+  | .refUpdateWith term => ∀ old value, evalTerm (env ++ [old]) term = some value → OuterValue value
+  | _ => True
+
+/-- Only reference operations and sleep cancellation occur in Timeout's synchronous heads. -/
+inductive SyncAt : EffThunk → Prop
+  | make (value : Val) (outer : OuterValue value) : SyncAt (.op (.refMake value))
+  | get (cell : RefKey) : SyncAt (.op (.refGet cell))
+  | update (cell : RefKey) (term : Term) (env : List Val)
+      (outer : ∀ old value, evalTerm (env ++ [old]) term = some value → OuterValue value) :
+      SyncAt (.op (.refUpdate cell term env))
+  | cancel (waiter : FiberId) (token : Nat) : SyncAt (.store (.op (.sleepCancel waiter token)))
+
 mutual
 /-- A native code position expects one successful value class. -/
 inductive CodeAt (B : List Val) : Kind → NCode → Prop
@@ -38,7 +119,8 @@ inductive HeadAt (B : List Val) : Kind → NCode → Prop
   | sync (kind : Kind) (thunk : EffThunk)
       (answer : ∀ view state next value,
         (interpreter view).syncState thunk state = some (next, value) → ValueAt B kind value)
-      (fallback : ∀ view, ValueAt B kind ((interpreter view).syncValue thunk)) :
+      (fallback : ∀ view, ValueAt B kind ((interpreter view).syncValue thunk))
+      (operation : SyncAt thunk) :
       HeadAt B kind (.sync thunk)
   | suspend (kind : Kind) (point : Point)
       (body : ∀ view, CodeAt B kind ((interpreter view).suspendBody (.body point))) :

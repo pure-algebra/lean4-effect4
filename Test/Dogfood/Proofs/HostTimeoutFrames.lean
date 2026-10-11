@@ -1,4 +1,5 @@
 import Test.Dogfood.Proofs.HostTimeoutNative
+import Effect4.Laws.Program.Simulation.Deliver
 
 /-!
 # Ordered timeout values through actual frame pops
@@ -67,7 +68,7 @@ theorem value_pass {B : List Val} {input output : Kind} {frame : NCode}
 def PopAt (B : List Val) (demand : Effect4.Arm) (input output : Kind) (pop : NativePop) : Prop :=
   match pop.answer with
   | .empty => (demand = .contA → input = output) ∧
-      ∃ middle, StackAt B middle output pop.fiber.stack
+      (∃ middle, StackAt B middle output pop.fiber.stack) ∧ Masks pop.fiber.stack
   | .frame frame => ∃ incoming middle,
       SavedAt B incoming middle frame ∧ StackAt B middle output pop.fiber.stack ∧
         (demand = .contA → incoming = input)
@@ -167,7 +168,7 @@ theorem pop_from {B : List Val} (demand : Effect4.Arm) (normal : demand = .contA
     (owned : StackAt B input output frames) (scratch : Masks fiber.stack) :
     PopAt B demand input output (FrameFiber.popFrom demand skip frames fiber cause) := by
   induction owned generalizing fiber cause with
-  | nil kind => exact ⟨fun _ => rfl, kind, masks_stack kind scratch⟩
+  | nil kind => exact ⟨fun _ => rfl, ⟨kind, masks_stack kind scratch⟩, scratch⟩
   | @cons input middle output frame frames saved rest ih =>
     have ensured := ensure_masks saved fiber scratch
     have joined (nextCause : Option CauseV) :
@@ -205,6 +206,25 @@ theorem get_cont {B : List Val} {input output : Kind} (fiber : NativeFrame)
   split
   · exact ⟨input, owned⟩
   · exact pop_from demand normal skip safe _ cause owned .nil
+
+/-- An empty actual pop leaves only identity masks in its stored frame. -/
+theorem get_cont_empty_masks {B : List Val} {input output : Kind} (fiber : NativeFrame)
+    (demand : Effect4.Arm) (normal : demand = .contA ∨ demand = .contE) (skip : Bool)
+    (safe : demand = .contA → skip = false) (owned : StackAt B input output fiber.stack)
+    (empty : (fiber.getCont demand skip).answer = .empty) :
+    Masks (fiber.getCont demand skip).fiber.stack := by
+  have assertion := get_cont fiber demand normal skip none safe owned
+  unfold PopAt at assertion
+  rw [show (fiber.getCont demand skip none).answer = .empty from empty] at assertion
+  exact assertion.2.2
+
+/-- Popping saved continuations keeps the code whose terminal exit is stored. -/
+theorem get_cont_current (fiber : NativeFrame) (demand : Effect4.Arm) (skip : Bool) :
+    (fiber.getCont demand skip).fiber.current = fiber.current := by
+  unfold FrameFiber.getCont
+  split
+  · rfl
+  · rw [Sched.popFrom_current]
 
 /-- Restoring a finalizer's outcome never substitutes a new successful body. -/
 theorem restored_exit {B : List Val} {kind : Kind} {original : ExitV}
@@ -356,6 +376,62 @@ theorem resume_cause {B : List Val} {input output : Kind} (view : View) (fiber :
     rw [arm]
     exact ⟨middle, codeGood, stack_append pushedGood rest⟩
 
+/-- A terminal value step has consumed every value continuation. -/
+theorem value_finished_empty {B : List Val} {input output : Kind} (view : View)
+    (fiber : NativeFrame) (value : Val) (provided : Option ExitV) (answer : ExitV)
+    (good : ValueAt B input value) (exit : ExitAt B input (provided.getD (.success value)))
+    (stack : StackAt B input output fiber.stack)
+    (finished : (fiber.resumeValue (interpreter view).toPrimInterp value provided).1 = .finished answer) :
+    (fiber.getCont .contA false).answer = .empty := by
+  unfold FrameFiber.resumeValue at finished
+  cases found : (fiber.getCont .contA false).answer with
+  | empty => rfl
+  | deferred cause => rw [found] at finished; cases finished
+  | replacement next => rw [found] at finished; cases finished
+  | frame chosen =>
+    have owned := get_cont fiber .contA (.inl rfl) false none (fun _ => rfl) stack
+    unfold PopAt at owned
+    rw [found] at owned finished
+    obtain ⟨incoming, middle, saved, rest, same⟩ := owned
+    have equal := same rfl
+    subst incoming
+    obtain ⟨next, pushed, arm, _, _⟩ := value_arm view value provided saved
+      (FrameFiber.getCont_answer_hasArm fiber .contA false chosen found) good exit
+    dsimp only at finished
+    rw [arm] at finished
+    cases finished
+
+/-- A terminal failure step has consumed every cause continuation. -/
+theorem cause_finished_empty {B : List Val} {input output : Kind} (view : View)
+    (fiber : NativeFrame) (cause : CauseV) (answer : ExitV)
+    (stack : StackAt B input output fiber.stack)
+    (finished : (fiber.resumeCause (interpreter view).toPrimInterp cause
+      (some (.failure cause))).1 = .finished answer) :
+    (fiber.getCont .contE true (some cause)).answer = .empty := by
+  unfold FrameFiber.resumeCause at finished
+  dsimp only at finished
+  cases found : (fiber.getCont .contE true (some cause)).answer with
+  | empty => rfl
+  | deferred cause => rw [found] at finished; cases finished
+  | replacement next => rw [found] at finished; cases finished
+  | frame chosen =>
+    have owned := get_cont fiber .contE (.inr rfl) true (some cause) (fun h => by cases h) stack
+    unfold PopAt at owned
+    rw [found] at owned finished
+    obtain ⟨incoming, middle, saved, rest, _⟩ := owned
+    have selected : chosen.hasArm .contE = true := by
+      apply FrameFiber.getCont_answer_hasArm fiber .contE true chosen
+      rw [← FrameFiber.getCont_answer_cause fiber .contE true (some cause)]
+      exact found
+    obtain ⟨next, pushed, arm, _, _⟩ := cause_arm view
+      ((fiber.getCont .contE true (some cause)).carriedCause.getD cause)
+      (some ((fiber.getCont .contE true (some cause)).deliveredExit (.failure cause))) saved selected
+      (delivered_failure incoming (fiber.getCont .contE true (some cause)) cause)
+    dsimp only at finished
+    simp only [Option.map_some] at finished
+    rw [arm] at finished
+    cases finished
+
 /-- A code assertion exposes its actual primitive head through the complete source proof. -/
 theorem code_head {B : List Val} {kind : Kind} {code : NCode} (good : CodeAt B kind code) :
     HeadAt B kind code := by
@@ -378,7 +454,7 @@ theorem step_head {B : List Val} {input output : Kind} (view : View) (fiber : Na
   | failure kind cause =>
     simp only [FrameFiber.step, current]
     exact resume_cause view fiber cause (some cause) stack
-  | sync kind thunk answer fallback =>
+  | sync kind thunk answer fallback operation =>
     simp only [FrameFiber.step, current]
     exact resume_value view fiber _ none (fallback view) (fallback view) stack
   | suspend kind point body =>
@@ -424,6 +500,92 @@ theorem step_head {B : List Val} {input output : Kind} (view : View) (fiber : Na
     exact ⟨.unit, by rw [current]; exact .head (.sleep millis), stack⟩
   | racePark race => rw [current] at regular; cases regular
   | awaitPark targets => rw [current] at regular; cases regular
+
+/-- A completed primitive keeps a well-classified stored frame after its actual exit pop. -/
+theorem finished_head {B : List Val} {input output : Kind} (view : View) (fiber : NativeFrame)
+    (head : HeadAt B input fiber.current) (stack : StackAt B input output fiber.stack)
+    (regular : (interpreter view).parkOf fiber.current = none)
+    (ordinary : ∀ thunk, fiber.current = .withFiber thunk →
+      (interpreter view).withFiberOf thunk = none) (exit : ExitV)
+    (finished : (fiber.step (interpreter view).toPrimInterp).1 = .finished exit) :
+    CodeAt B output (frameExitState fiber).current ∧ Masks (frameExitState fiber).stack := by
+  generalize current : fiber.current = code at head
+  cases head with
+  | success good =>
+    have empty := value_finished_empty view fiber _ (some (.success _)) exit good good stack
+      (by simpa only [FrameFiber.step, current] using finished)
+    have assertion := get_cont fiber .contA (.inl rfl) false none (fun _ => rfl) stack
+    unfold PopAt at assertion
+    rw [empty] at assertion
+    have same := assertion.1 rfl
+    rw [frameExitState, current]
+    refine ⟨?_, assertion.2.2⟩
+    rw [get_cont_current, current]
+    exact .head (.success (same ▸ good))
+  | failure kind cause =>
+    have empty := cause_finished_empty view fiber cause exit stack
+      (by simpa only [FrameFiber.step, current] using finished)
+    have plain : (fiber.getCont .contE true).answer = .empty := by
+      rw [← FrameFiber.getCont_answer_cause fiber .contE true (some cause)]
+      exact empty
+    rw [frameExitState, current]
+    refine ⟨?_, get_cont_empty_masks fiber .contE (.inr rfl) true (fun h => by cases h) stack plain⟩
+    rw [get_cont_current, current]
+    exact .head (.failure output cause)
+  | sync kind thunk answer fallback operation =>
+    have empty := value_finished_empty view fiber _ none exit (fallback view) (fallback view) stack
+      (by simpa only [FrameFiber.step, current] using finished)
+    have assertion := get_cont fiber .contA (.inl rfl) false none (fun _ => rfl) stack
+    unfold PopAt at assertion
+    rw [empty] at assertion
+    have same := assertion.1 rfl
+    rw [frameExitState, current]
+    refine ⟨?_, assertion.2.2⟩
+    rw [get_cont_current, current]
+    exact same ▸ CodeAt.head (.sync input thunk answer fallback operation)
+  | action kind thunk operation action good =>
+    have absent := ordinary thunk current
+    rw [action view] at absent
+    cases absent
+  | loop name cursor cursorGood enter resume =>
+    simp only [FrameFiber.step, current] at finished
+    split at finished <;> cases finished
+  | racePark race => rw [current] at regular; cases regular
+  | awaitPark targets => rw [current] at regular; cases regular
+  | suspend kind point body =>
+    simp only [FrameFiber.step, current] at finished
+    cases finished
+  | onSuccess incoming middle body name first next =>
+    simp only [FrameFiber.step, current] at finished
+    cases finished
+  | constant middle body next first saved =>
+    simp only [FrameFiber.step, current] at finished
+    cases finished
+  | onFailure kind body name first caught =>
+    simp only [FrameFiber.step, current] at finished
+    cases finished
+  | onExit kind body name flag first cleanup =>
+    simp only [FrameFiber.step, current] at finished
+    cases finished
+  | yieldNow priority =>
+    simp only [FrameFiber.step, current] at finished
+    cases finished
+  | external op request path =>
+    simp only [FrameFiber.step, current] at finished
+    cases finished
+  | sleep millis =>
+    simp only [FrameFiber.step, current] at finished
+    cases finished
+
+/-- Installing a finished frame retains the same ordered body assertion as a running frame. -/
+theorem finished_frame {B : List Val} {output : Kind} (view : View) (fiber : NativeFrame)
+    (owned : FrameKind B output fiber) (regular : (interpreter view).parkOf fiber.current = none)
+    (ordinary : ∀ thunk, fiber.current = .withFiber thunk →
+      (interpreter view).withFiberOf thunk = none) (exit : ExitV)
+    (finished : (fiber.step (interpreter view).toPrimInterp).1 = .finished exit) :
+    CodeAt B output (frameExitState fiber).current ∧ Masks (frameExitState fiber).stack := by
+  obtain ⟨input, code, stack⟩ := owned
+  exact finished_head view fiber (code_head code) stack regular ordinary exit finished
 
 /-- Native frame delegation retains its expected successful result, including every saved callback. -/
 theorem step_frame {B : List Val} {output : Kind} (view : View) (fiber : NativeFrame)

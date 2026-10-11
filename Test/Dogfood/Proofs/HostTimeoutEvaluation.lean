@@ -61,7 +61,7 @@ theorem finalizer_code {B : List Val} {kind : Kind} {exit : ExitV} {program : NC
 /-- An evaluator iteration either retains its ordered frame or finishes at its expected class. -/
 def IterKind (B : List Val) (kind : Kind) (iter : NativeIter) : Prop :=
   match iter.outcome with
-  | .finished exit => ExitAt B kind exit
+  | .finished exit => ExitAt B kind exit ∧ CodeAt B kind iter.fiber.frame.current ∧ Masks iter.fiber.frame.stack
   | _ => FrameKind B kind iter.fiber.frame
 
 /-- Delegating the primitive frame step retains the successful output class. -/
@@ -73,9 +73,23 @@ theorem step_frame {B : List Val} {kind : Kind} (view : View) (machine : NativeM
     IterKind B kind (evaluatePrim.stepFrame (interpreter view) machine fiber yielding) := by
   have good := HostTimeoutFrames.step_frame view fiber.frame owned regular ordinary
   unfold evaluatePrim.stepFrame evaluatePrim.finishFrame
-  cases step : (fiber.frame.step (interpreter view).toPrimInterp).1 with
-  | running next => simpa only [step, StepKind, IterKind] using good
-  | finished exit => simpa only [step, StepKind, IterKind] using good
+  cases pair : fiber.frame.step (interpreter view).toPrimInterp with
+  | mk next events =>
+    cases next with
+    | running frame => simpa only [pair, StepKind, IterKind] using good
+    | finished exit =>
+      have terminal := finished_frame view fiber.frame owned regular ordinary exit
+        (congrArg Prod.fst pair)
+      have answer : ExitAt B kind exit := by simpa only [pair, StepKind] using good
+      simpa only [pair, IterKind] using And.intro answer terminal
+
+/-- Every evaluator result keeps its stored frame, including terminal frames awaiting publication. -/
+theorem IterKind.frame {B : List Val} {kind : Kind} {iter : NativeIter}
+    (owned : IterKind B kind iter) : FrameKind B kind iter.fiber.frame := by
+  cases outcome : iter.outcome
+  all_goals simp only [IterKind, outcome] at owned
+  case finished exit => exact ⟨kind, owned.2.1, masks_stack kind owned.2.2⟩
+  all_goals exact owned
 
 /-- Selecting an actual source finalizer retains the saved exit and its ordered suffix. -/
 theorem finalizer_answer {B : List Val} {input output : Kind} (view : View)
@@ -163,7 +177,7 @@ theorem cancel_program {B : List Val} {name : EffName} (owned : CancelAt name) :
   cases owned with
   | sleep waiter token =>
     apply CodeAt.head
-    refine HeadAt.sync .unit _ ?_ (fun _ => .unit)
+    refine HeadAt.sync .unit _ ?_ (fun _ => .unit) (.cancel waiter token)
     intro view state next value found
     change some ({state with timers := state.timers.cancel waiter token}, Val.unit) = some (next, value) at found
     cases found
@@ -220,6 +234,75 @@ theorem push_cancel {B : List Val} {input output : Kind} {frame : NativeFrame}
     (stack : StackAt B input output frame.stack) (cancel : CancelAt name) :
     FrameKind B output {frame with stack := .asyncFinalizer name :: frame.stack} := by
   exact ⟨input, good, .cons (.cancel input name (cancel_then_failure cancel input)) stack⟩
+
+/-- A synchronous timeout head changes only refs or removes its sleep registration. -/
+theorem sync_state_shape {thunk : EffThunk} (allowed : SyncAt thunk) (view : View)
+    (state next : Stores) (value : Val)
+    (found : (interpreter view).syncState thunk state = some (next, value)) :
+    (∃ refs, next = {state with refs}) ∨
+      ∃ waiter token, next = {state with timers := state.timers.cancel waiter token} := by
+  cases allowed with
+  | make initial outer =>
+    change (refStep (.refMake initial) state.refs).map (fun step => ({state with refs := step.2}, step.1)) =
+      some (next, value) at found
+    obtain ⟨step, _, equal⟩ := Option.map_eq_some_iff.mp found
+    exact .inl ⟨step.2, (congrArg Prod.fst equal).symm⟩
+  | get cell =>
+    change (refStep (.refGet cell) state.refs).map (fun step => ({state with refs := step.2}, step.1)) =
+      some (next, value) at found
+    obtain ⟨step, _, equal⟩ := Option.map_eq_some_iff.mp found
+    exact .inl ⟨step.2, (congrArg Prod.fst equal).symm⟩
+  | update cell term env outer =>
+    change (refStep (.refUpdate cell term env) state.refs).map (fun step => ({state with refs := step.2}, step.1)) =
+      some (next, value) at found
+    obtain ⟨step, _, equal⟩ := Option.map_eq_some_iff.mp found
+    exact .inl ⟨step.2, (congrArg Prod.fst equal).symm⟩
+  | cancel waiter token =>
+    change some ({state with timers := state.timers.cancel waiter token}, Val.unit) = some (next, value) at found
+    exact .inr ⟨waiter, token, (congrArg Prod.fst (Option.some.inj found)).symm⟩
+
+/-- The actual synchronous write keeps every timeout cell's number or list outer shape. -/
+theorem sync_state_outer {thunk : EffThunk} (allowed : SyncAt thunk) (view : View)
+    (state next : Stores) (value : Val) (heap : OuterHeap state.refs)
+    (found : (interpreter view).syncState thunk state = some (next, value)) : OuterHeap next.refs := by
+  cases allowed with
+  | make initial outer =>
+    change some ({state with refs := state.refs ++ [initial]}, Val.cell ⟨state.refs.length⟩) =
+      some (next, value) at found
+    cases found
+    exact heap.append outer
+  | get cell =>
+    change (refStep (.refGet cell) state.refs).map
+      (fun step => ({state with refs := step.2}, step.1)) = some (next, value) at found
+    obtain ⟨step, result, equal⟩ := Option.map_eq_some_iff.mp found
+    change (refPeek state.refs cell).map (fun read => (read, state.refs)) = some step at result
+    obtain ⟨read, _, same⟩ := Option.map_eq_some_iff.mp result
+    cases same
+    cases equal
+    exact heap
+  | update cell term env outer =>
+    change ((refPeek state.refs cell).bind fun old =>
+      (evalTerm (env ++ [old]) term).map fun written =>
+        (Val.unit, refPoke state.refs cell written)).map
+      (fun step => ({state with refs := step.2}, step.1)) = some (next, value) at found
+    obtain ⟨step, result, equal⟩ := Option.map_eq_some_iff.mp found
+    obtain ⟨old, _, result⟩ := Option.bind_eq_some_iff.mp result
+    obtain ⟨written, computed, same⟩ := Option.map_eq_some_iff.mp result
+    cases same
+    cases equal
+    exact heap.poke cell (outer old written computed)
+  | cancel waiter token =>
+    change some ({state with timers := state.timers.cancel waiter token}, Val.unit) = some (next, value) at found
+    cases found
+    exact heap
+
+/-- Synchronous timeout evaluation cannot create a deferred cell or a scope. -/
+theorem sync_state_stores {thunk : EffThunk} (allowed : SyncAt thunk) (view : View)
+    (state next : Stores) (value : Val)
+    (found : (interpreter view).syncState thunk state = some (next, value)) :
+    next.deferreds = state.deferreds ∧ next.scopes = state.scopes := by
+  rcases sync_state_shape allowed view state next value found with ⟨refs, rfl⟩ | ⟨waiter, token, rfl⟩
+  all_goals exact ⟨rfl, rfl⟩
 
 /-- Actual race, mask and cancellation actions retain the expected successful result. -/
 theorem with_fiber {B : List Val} {input output : Kind} (view : View)
@@ -313,7 +396,7 @@ theorem evaluate_head {B : List Val} {input output : Kind} (view : View)
       rfl
     rw [dispatch]
     exact finalizer_or view machine fiber yielding _ current trivial stack
-  | sync kind thunk answer fallback =>
+  | sync kind thunk answer fallback operation =>
     have dispatch : evaluatePrim (interpreter view) machine fiber yielding =
         (match (interpreter view).syncState thunk machine.state with
          | some (state, value) => ⟨{machine with state},
@@ -462,7 +545,7 @@ theorem evaluate_native_head {B : List Val} {input output : Kind}
         cases absent
       · exact basic
     all_goals exact basic
-  | sync kind thunk answer fallback => rw [evaluateNative, current]; exact basic
+  | sync kind thunk answer fallback operation => rw [evaluateNative, current]; exact basic
   | suspend kind point body => rw [evaluateNative, current]; exact basic
   | onSuccess incoming middle body name first next => rw [evaluateNative, current]; exact basic
   | constant middle body next first saved => rw [evaluateNative, current]; exact basic
