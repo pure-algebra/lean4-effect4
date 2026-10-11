@@ -1,6 +1,6 @@
 # Machine base laws: native field sweep
 
-The sweep keeps 61 theorem statements and removes 278 source lines overall.
+The initial sweep keeps 61 theorem statements and removes 278 source lines overall.
 The original scenario goals remain open where their history or source-use obligations remain planned.
 
 Base: `5df94b30`. Head: the commit containing this receipt.
@@ -65,3 +65,12 @@ No behavior gate is run during this proof-only sweep.
 The previously scheduled behavior pass remains after the major scenario proof structures.
 The full battery, policy and whole-tree axiom gates are not run.
 No runtime, source language or original scenario statement changes here.
+
+## Completed-outcome extension
+
+[C2FinishedReceipt.md](2026-10-10-goals-packet/codex/C2FinishedReceipt.md) records the next checked landing.
+The shared outcome census now retains the finishing frame step.
+The native mask proof consumes that witness and the existing moves.
+The receipt retains its narrow build, audit, changed files and measured line counts.
+Its raw-command control establishes why live-frame classification needs the existing command authority.
+The original scenario and remaining base-law obligations stay open as recorded above.

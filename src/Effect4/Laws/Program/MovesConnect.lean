@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Moves
+import Effect4.Laws.Program.Parking
 import Effect4.Laws.Program.Guard.Interruption
 import Effect4.Laws.Program.Guard.DeferredCause
 import Effect4.Laws.Machine.MaskRuns
@@ -87,6 +88,16 @@ theorem iteration_deferredCause (p : NativeEff) (table : RowTable)
       (iteration (interpOf p table) m f yielding).fiber.frame.interruptedCause.isSome = true :=
   (iteration_moves p table (interpOf p table) m f yielding).keeps
     Guard.DeferredCause.DeferredCause (fun _ _ mv kept => move_deferredCause mv kept) hf
+
+/-! ## The finishing outcome -/
+
+/-- The finishing witness gives the empty returned stack.
+Consumer: `evaluateNative_keepsMask`, then the region bracket. -/
+theorem FinishOrigin.stack {it : ParkIter} (origin : FinishOrigin it) {exit : ExitV}
+    (finished : it.outcome = .finished exit) : it.fiber.frame.stack = [] := by
+  obtain ⟨interp, frame, events, step, returned⟩ := origin exit finished
+  rw [returned]
+  exact Machine.step_finished_stack interp frame exit (congrArg Prod.fst step)
 
 /-! ## The saved mask's chain -/
 

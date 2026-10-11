@@ -1,4 +1,5 @@
 import Effect4.Laws.Machine.MaskRuns
+import Effect4.Laws.Program.MovesConnect
 import Effect4.Api
 
 /-!
@@ -65,35 +66,35 @@ theorem evaluateNative_keepsMask (root : NativeEff) (table : RowTable)
     (m : RunMachine EffName EffThunk Val Err Defect FiberId Ann Ctx Stores)
     (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) (y : Bool) :
     IterKeepsMask m f (evaluateNative root m f y table) := by
-  unfold evaluateNative
-  split
-  · split
-    · unfold enterScoped
-      exact ⟨MaskAged.refl m, MaskLater.refl f, rfl, fun _ h => nomatch h⟩
-    · exact evaluatePrim_keepsMask _ m f y
-  · unfold exitScoped
-    dsimp only
+  have ancillary : MaskAged m (evaluateNative root m f y table).machine ∧
+      noClear (evaluateNative root m f y table).nested = true := by
+    unfold evaluateNative
     split
     · split
-      · exact ⟨MaskAged.refl m,
-          ⟨rfl, fun live => live, fun _ base valid => getCont_maskChain base f.frame _ _ _ valid⟩,
-          rfl, fun _ h => nomatch h⟩
-      · split <;> exact ⟨MaskAged.refl m,
-          ⟨rfl, fun live => live, fun _ base valid => getCont_maskChain base f.frame _ _ _ valid⟩,
-          rfl, fun _ h => nomatch h⟩
-    · exact evaluatePrim_keepsMask _ m f y
-  · unfold exitScoped
-    dsimp only
-    split
-    · split
-      · exact ⟨MaskAged.refl m,
-          ⟨rfl, fun live => live, fun _ base valid => getCont_maskChain base f.frame _ _ _ valid⟩,
-          rfl, fun _ h => nomatch h⟩
-      · split <;> exact ⟨MaskAged.refl m,
-          ⟨rfl, fun live => live, fun _ base valid => getCont_maskChain base f.frame _ _ _ valid⟩,
-          rfl, fun _ h => nomatch h⟩
-    · exact evaluatePrim_keepsMask _ m f y
-  · exact evaluatePrim_keepsMask _ m f y
+      · unfold enterScoped
+        exact ⟨MaskAged.refl m, rfl⟩
+      · exact ⟨(evaluatePrim_keepsMask _ m f y).1, (evaluatePrim_keepsMask _ m f y).2.2.1⟩
+    · unfold exitScoped
+      dsimp only
+      split
+      · split
+        · exact ⟨MaskAged.refl m, rfl⟩
+        · split <;> exact ⟨MaskAged.refl m, rfl⟩
+      · exact ⟨(evaluatePrim_keepsMask _ m f y).1, (evaluatePrim_keepsMask _ m f y).2.2.1⟩
+    · unfold exitScoped
+      dsimp only
+      split
+      · split
+        · exact ⟨MaskAged.refl m, rfl⟩
+        · split <;> exact ⟨MaskAged.refl m, rfl⟩
+      · exact ⟨(evaluatePrim_keepsMask _ m f y).1, (evaluatePrim_keepsMask _ m f y).2.2.1⟩
+    · exact ⟨(evaluatePrim_keepsMask _ m f y).1, (evaluatePrim_keepsMask _ m f y).2.2.1⟩
+  have footprint := Moves.evaluateNative_footprint root table m f y
+  exact ⟨ancillary.1,
+    ⟨footprint.id, fun live => footprint.exit.symm.trans live,
+      fun _ base held => Moves.evaluateNative_maskChain base root table m f y held⟩,
+    ancillary.2, fun _ finished =>
+      (Moves.evaluateNative_parking root table m f y).finished.stack finished⟩
 
 /-- **Each live fiber of a run of a compiled program holds the saved mask's chain at its start
 flag** (the proposed registry claim `saved-mask-chain-runs`; concept

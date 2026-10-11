@@ -82,7 +82,7 @@ theorem parking_pending {m : NativeMachine} {f : NFiber} {it : Moves.ParkIter}
     (held : Moves.Parking m f it) (park : f.parked = .notParked) (pending : f.pending = []) :
     PendingShape it.fiber := by
   cases held with
-  | kept hp hn _ => simp only [PendingShape, hp, park, hn, pending]
+  | kept hp hn _ _ => simp only [PendingShape, hp, park, hn, pending]
   | installed wait _ _ hp hn _ =>
     simp only [PendingShape, hp]
     exact ⟨wait, hn.trans (by rw [pending]; rfl), rfl⟩
@@ -152,7 +152,7 @@ def ReadyOutcome (it : NIter) : Prop :=
 theorem parking_ready {m : NativeMachine} {f : NFiber} {it : Moves.ParkIter}
     (held : Moves.Parking m f it) (park : f.parked = .notParked) : ReadyOutcome it := by
   cases held with
-  | kept hp _ _ =>
+  | kept hp _ _ _ =>
     cases outcome : it.outcome <;> simp only [ReadyOutcome, outcome]
     all_goals exact hp.trans park
   | installed _ _ _ _ _ outcome =>
@@ -250,7 +250,7 @@ theorem freshPark_minted {m : NativeMachine} {it : NIter}
 theorem parking_fresh {m : NativeMachine} {f : NFiber} {it : Moves.ParkIter}
     (held : Moves.Parking m f it) (park : f.parked = .notParked) : FreshPark m it := by
   cases held with
-  | kept hp _ _ => exact freshPark_unparked m it (hp.trans park)
+  | kept hp _ _ _ => exact freshPark_unparked m it (hp.trans park)
   | installed wait token fresh hp _ _ =>
     exact freshPark_minted (hp.trans (congrArg Parked.withGuard token)) fresh
 

@@ -6,7 +6,9 @@ Question: one evaluation either keeps the waiting fields or installs its fresh p
 This is a step of registry claim `stepped-fiber-live`, through guard state and queue preservation.
 Reach: every native evaluator and iteration, at arbitrary input fibers and row tables.
 Consumers: the guard's pending shape, ready outcome, and fresh park chains.
-Limits: this classification proves no command closure, progress, or completed-exit stack property.
+A completed outcome retains the exact finishing frame step and its returned frame.
+Limits: this classification proves no command closure or progress.
+The finishing witness serves `compiled_mask_chain_runs` and the region bracket, R11.
 -/
 set_option autoImplicit false
 namespace Effect4.Program.Moves
@@ -14,23 +16,44 @@ open Effect4 Effect4.Machine Effect4.Program
 
 abbrev ParkIter := Iter EffName EffThunk Val Err Defect FiberId Ann Ctx Stores
 
+/-- A completed evaluation comes from a finishing frame step.
+The witness retains the exact interpreter, events and returned frame.
+Consumer: the completed-stack part of `compiled_mask_chain_runs`, then the region bracket. -/
+def FinishOrigin (it : ParkIter) : Prop :=
+  ∀ exit, it.outcome = .finished exit → ∃ interp frame events,
+    frame.step interp = (FrameStep.finished exit, events) ∧
+    it.fiber.frame = frameExitState frame
+
 /-- The waiting fields and outcome share one classification.
 A newly installed park holds the exact pending entry and the minted token. -/
 inductive Parking (m : NativeMachine) (f : NFiber) (it : ParkIter) : Prop
   | kept (park : it.fiber.parked = f.parked) (pending : it.fiber.pending = f.pending)
-      (outcome : it.outcome ≠ .parked) : Parking m f it
+      (outcome : it.outcome ≠ .parked) (finished : FinishOrigin it) : Parking m f it
   | installed (wait : Pending EffName Val Err Defect FiberId Ann)
       (token : wait.token = m.nextToken) (fresh : m.nextToken < it.machine.nextToken)
       (park : it.fiber.parked = .withGuard wait.token)
       (pending : it.fiber.pending = f.pending ++ [wait])
       (outcome : it.outcome = .parked ∨ ∃ why, it.outcome = .stuck why) : Parking m f it
 
+/-- Every completed outcome retains its finishing step; an installed park cannot finish. -/
+theorem Parking.finished {m : NativeMachine} {f : NFiber} {it : ParkIter}
+    (held : Parking m f it) : FinishOrigin it := by
+  cases held with
+  | kept _ _ _ origin => exact origin
+  | installed _ _ _ _ _ outcome =>
+    intro exit finished
+    rcases outcome with parked | ⟨why, stuck⟩
+    · rw [parked] at finished
+      cases finished
+    · rw [stuck] at finished
+      cases finished
+
 /-- Preparatory edits with unchanged waiting fields and token counter transport the classification. -/
 theorem Parking.before {m n : NativeMachine} {f g : NFiber} {it : ParkIter}
     (held : Parking n g it) (token : n.nextToken = m.nextToken)
     (park : g.parked = f.parked) (pending : g.pending = f.pending) : Parking m f it := by
   cases held with
-  | kept hp hn ho => exact .kept (hp.trans park) (hn.trans pending) ho
+  | kept hp hn ho hf => exact .kept (hp.trans park) (hn.trans pending) ho hf
   | installed wait ht hf hp hn ho =>
     exact .installed wait (ht.trans token) (token ▸ hf) hp
       (hn.trans (congrArg (fun xs => xs ++ [wait]) pending)) ho
@@ -41,7 +64,13 @@ theorem stepFrame_parking (interp : NInterp) (m : NativeMachine) (f : NFiber) (y
   unfold evaluatePrim.stepFrame
   cases stepped : f.frame.step interp.toPrimInterp with
   | mk step events =>
-    cases step <;> exact .kept rfl rfl (by intro h; cases h)
+    cases step with
+    | running next => exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
+    | finished exit =>
+      refine .kept rfl rfl (by intro h; cases h) ?_
+      intro result ended
+      cases ended
+      exact ⟨interp.toPrimInterp, f.frame, events, stepped, rfl⟩
 
 /-- A finalizer entry keeps waiting fields; its fallback uses the frame step. -/
 theorem finalizerOr_parking (interp : NInterp) (m : NativeMachine) (f : NFiber)
@@ -51,7 +80,7 @@ theorem finalizerOr_parking (interp : NInterp) (m : NativeMachine) (f : NFiber)
   all_goals
     split
     · split
-      · exact .kept rfl rfl (by intro h; cases h)
+      · exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
       · exact stepFrame_parking _ _ _ _
     · exact stepFrame_parking _ _ _ _
 
@@ -64,7 +93,7 @@ theorem countdown_parking (interp : NInterp) (m : NativeMachine) (f : NFiber)
   unfold countdownPark
   dsimp only
   split
-  · exact .kept rfl rfl (by intro h; cases h)
+  · exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
   · refine .installed _ rfl ?_ rfl rfl (.inl rfl)
     simp only [RunMachine.emit, RunMachine.modify]
     split <;> exact Nat.lt_succ_self _
@@ -80,7 +109,10 @@ theorem countdown_parkingOf (interp : NInterp) (m : NativeMachine) (f : NFiber)
   | none => simpa only [FiberAction.outcomeOf, stuck] using held
   | some why =>
     cases held with
-    | kept hp hn _ => exact .kept hp hn (by simp only [FiberAction.outcomeOf, stuck]; intro h; cases h)
+    | kept hp hn _ _ =>
+      exact .kept hp hn
+        (by simp only [FiberAction.outcomeOf, stuck]; intro h; cases h)
+        (by intro _ h; simp only [FiberAction.outcomeOf, stuck] at h; cases h)
     | installed wait ht hf hp hn _ =>
       exact .installed wait ht hf hp hn (.inr ⟨why, by simp only [FiberAction.outcomeOf, stuck]⟩)
 
@@ -90,51 +122,54 @@ theorem withFiber_parking (interp : NInterp) (m : NativeMachine) (f : NFiber) (y
   cases action with
   | fork program options site =>
     simp only [evaluatePrim.withFiber, spawn, start]
-    split <;> split <;> exact .kept rfl rfl (by intro h; cases h)
+    split <;> split <;> exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
   | forkIn program options scope site =>
     simp only [evaluatePrim.withFiber, spawn, start]
-    split <;> exact .kept rfl rfl (by intro h; cases h)
+    split <;> exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
   | forkScoped program options site =>
     simp only [evaluatePrim.withFiber, spawn, start]
     split
-    · split <;> exact .kept rfl rfl (by intro h; cases h)
-    · exact .kept rfl rfl (by intro h; cases h)
+    · split <;> exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
+    · exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
   | ambientScope =>
     simp only [evaluatePrim.withFiber]
-    split <;> exact .kept rfl rfl (by intro h; cases h)
+    split <;> exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
   | runIn target scope =>
-    refine .kept rfl rfl ?_
-    simp only [evaluatePrim.withFiber]
-    split <;> intro h <;> cases h
-  | interrupt target => exact .kept rfl rfl (by intro h; cases h)
+    refine .kept rfl rfl ?_ ?_
+    · simp only [evaluatePrim.withFiber]
+      split <;> intro h <;> cases h
+    · intro _ h
+      simp only [evaluatePrim.withFiber] at h
+      split at h <;> cases h
+  | interrupt target => exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
   | interruptAs target who =>
     simp only [evaluatePrim.withFiber, evaluatePrim.interruptAs]
-    split <;> exact .kept rfl rfl (by intro h; cases h)
+    split <;> exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
   | interruptScoped target =>
     simp only [evaluatePrim.withFiber]
-    split <;> exact .kept rfl rfl (by intro h; cases h)
-  | interruptAll targets who => exact .kept rfl rfl (by intro h; cases h)
+    split <;> exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
+  | interruptAll targets who => exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
   | awaitAll targets => exact countdown_parkingOf _ _ _ _ _ _ _
   | awaitAllFailFast targets => exact countdown_parkingOf _ _ _ _ _ _ _
-  | snapshotChildren => exact .kept rfl rfl (by intro h; cases h)
+  | snapshotChildren => exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
   | awaitNewChildren snapshot => exact countdown_parkingOf _ _ _ _ _ _ _
-  | raceAll entrants site => exact .kept rfl rfl (by intro h; cases h)
-  | raceAllFirst entrants site => exact .kept rfl rfl (by intro h; cases h)
+  | raceAll entrants site => exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
+  | raceAllFirst entrants site => exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
   | setInterruptible body flag =>
-    cases flag <;> exact .kept rfl rfl (by intro h; cases h)
-  | setContext context => exact .kept rfl rfl (by intro h; cases h)
-  | getContext => exact .kept rfl rfl (by intro h; cases h)
-  | getId => exact .kept rfl rfl (by intro h; cases h)
+    cases flag <;> exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
+  | setContext context => exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
+  | getContext => exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
+  | getId => exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
   | closeScope scope exit =>
     simp only [evaluatePrim.withFiber]
-    split <;> exact .kept rfl rfl (by intro h; cases h)
-  | closePar finalizers => exact .kept rfl rfl (by intro h; cases h)
-  | refuse cause => exact .kept rfl rfl (by intro h; cases h)
-  | dropObservers token => exact .kept rfl rfl (by intro h; cases h)
+    split <;> exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
+  | closePar finalizers => exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
+  | refuse cause => exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
+  | dropObservers token => exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
   | cancelRace race =>
     simp only [evaluatePrim.withFiber]
-    split <;> exact .kept rfl rfl (by intro h; cases h)
-  | getInterruptible => exact .kept rfl rfl (by intro h; cases h)
+    split <;> exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
+  | getInterruptible => exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
 
 /-- One primitive evaluation keeps its waiting fields or installs the fresh park. -/
 @[semantics "reactive-scheduling"]
@@ -145,23 +180,23 @@ theorem evaluatePrim_parking (interp : NInterp) (m : NativeMachine) (f : NFiber)
   · exact .installed _ rfl (Nat.lt_succ_self _) rfl rfl (.inl rfl)
   · dsimp only
     split
-    · exact .kept rfl rfl (by intro h; cases h)
+    · exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
     · split <;> exact .installed _ rfl (Nat.lt_succ_self _) rfl rfl (.inl rfl)
   · split
-    · exact .kept rfl rfl (by intro h; cases h)
+    · exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
     · unfold registerRace
-      split <;> exact .kept rfl rfl (by intro h; cases h)
+      split <;> exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
     · exact countdown_parking _ _ _ _ _ _ _
     · split
-      · exact .kept rfl rfl (by intro h; cases h)
+      · exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
       · split
-        · exact .kept rfl rfl (by intro h; cases h)
+        · exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
         · exact .installed _ rfl (Nat.lt_succ_self _) rfl rfl (.inl rfl)
     · split
       · split
         · exact withFiber_parking _ _ _ _ _
         · exact stepFrame_parking _ _ _ _
-      · split <;> exact .kept rfl rfl (by intro h; cases h)
+      · split <;> exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
       · exact finalizerOr_parking _ _ _ _ _
       · exact finalizerOr_parking _ _ _ _ _
       · exact stepFrame_parking _ _ _ _
@@ -172,7 +207,7 @@ theorem exitScoped_parking (root : NativeEff) (m : NativeMachine) (f : NFiber)
   unfold exitScoped
   dsimp only
   split
-  · split <;> exact .kept rfl rfl (by intro h; cases h)
+  · split <;> exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
   · exact evaluatePrim_parking _ _ _ _
 
 /-- The complete native evaluator has the same waiting-field classification. -/
@@ -182,7 +217,7 @@ theorem evaluateNative_parking (root : NativeEff) (table : RowTable) (m : Native
   unfold evaluateNative
   split
   · split
-    · exact .kept rfl rfl (by intro h; cases h)
+    · exact .kept rfl rfl (by intro h; cases h) (by intro _ h; cases h)
     · exact evaluatePrim_parking _ _ _ _
   · exact exitScoped_parking _ _ _ _ _
   · exact exitScoped_parking _ _ _ _ _
