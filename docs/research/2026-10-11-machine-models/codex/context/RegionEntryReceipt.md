@@ -1,6 +1,7 @@
 # Context region entry checkpoint
 
 The physical restoration repair remains a proposal in a temporary compiler copy.
+Its finite cuts use the old runtime pin, not the integrated R2 runtime.
 The production compiler and reference denotation stay unchanged.
 The full M5 Denotation migration remains open.
 
@@ -170,3 +171,19 @@ Compile that copy into a copy-on-write artifact overlay.
 Use the existing driver and the actual `evaluatorFor` instance from that temporary output.
 The baseline evidence uses the unchanged compiler in a separate overlay.
 No old compiler laws from the baseline serve as candidate agreement evidence.
+
+## Runtime pin boundary
+
+The finite baseline and candidate use this worktree's existing checked runtime artifacts.
+The Fibers source last changes at `d6ac567a1` in this branch.
+Its SHA-256 is `79985b80f758c7c29af6c9b54f34afb826a5da1fac4c01dd6ed8b5378ab9220c`.
+The artifact overlay copies that worktree's Fibers output, dated October 11 at 00:56.
+All finite fuel numbers in this receipt apply only at that old runtime pin.
+
+The coordinator's `6eb40cccd` checkpoint has the later R2 and machine-field changes.
+Its Fibers source SHA-256 is `090844e028492f04809d292eff691628ec8ac01dfd67b6d12050e67cb56f97fa`.
+This receipt does not certify that checkpoint's provider behavior.
+The compiler ordering equations still show the separate setter and restoring-frame construction.
+Their structural gap motivates the proposed repair but establishes no current-root execution result.
+Rerun the controls against the integrated context/R2/field checkpoint before production compiler changes.
+The candidate's separate audit and that rerun wait for the coordinator's build slot.
