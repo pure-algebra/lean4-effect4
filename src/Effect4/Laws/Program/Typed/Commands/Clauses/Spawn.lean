@@ -701,7 +701,7 @@ theorem clause_raceAll (root : ProgramSource) (rootTy : EffTy) (entrants : List 
   let programs := entrants.map fun p => bodyR (interpRAt root.program m.completedExits) (.at_ p)
   let race : RRace := ⟨m.nextRace, f.id, m.nextToken,
     { Supervision.RaceAllState.initial [] with remaining := programs.length }, false, programs,
-    false, site⟩
+    false, site, .firstSuccess, none⟩
   have payload : RacePayload root (w.addToken f.id m.nextToken cert) race cert :=
     { token := addToken_Θ_self
       failures := strongExit_of_clean _ cert _ rfl (fun _ h => nomatch h)
@@ -747,6 +747,90 @@ theorem clause_raceAll (root : ProgramSource) (rootTy : EffTy) (entrants : List 
   show SettlesTyped root rootTy w f.id rest (prepareIterR (FiberAction.raceAll _ m
     (saveAnswerR f next) y programs site))
   unfold FiberAction.raceAll beginRace
+  refine SettlesTyped.mono ord (Evaluating.settle_marker ?_ fr declared
+    ⟨m.nextRace, race, cert, rfl, ?_, rfl, addToken_Θ_self, hostStack_races ?_ hstack,
+      ⟨prov.recorded, prov.deferred⟩⟩)
+  · obtain ⟨f0, hf0, exit0⟩ := ev.stale
+    exact ⟨configTyped_congr (by rfl) (by rfl) (by rfl) (by rfl) (by rfl) (by rfl) (by rfl)
+      appended, ⟨f0, hf0, exit0⟩, ev.running, ev.live⟩
+  · show (m.races ++ [race]).find? (fun s => decide (s.id = m.nextRace)) = some race
+    rw [List.find?_append, fresh, Option.none_or, List.find?_cons, decide_eq_true rfl]
+  · intro r old h
+    refine ⟨old, ?_, rfl, rfl⟩
+    have h' : m.races.find? (fun s => decide (s.id = r)) = some old := h
+    show (m.races ++ [race]).find? (fun s => decide (s.id = r)) = some old
+    rw [List.find?_append, h']
+    rfl
+
+/-- First-exit race launch serves `fiberClauses` with the same entrant custody. -/
+theorem clause_raceAllFirst (root : ProgramSource) (rootTy : EffTy) (entrants : List Point)
+    (site : Option (List Nat)) : FiberClauseKeeps root rootTy (.raceAllFirst entrants site) := by
+  intro w m rest f y next ev hc
+  obtain ⟨ty, declared⟩ := ev.declared
+  obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  rw [hc] at current
+  obtain ⟨cert, pre, typedNext⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  have wide := ev.typed.machine.wide
+  have hmem : f ∈ (m.update f).fibers := rfiber?_mem ev.look
+  have old := ev.typed.machine.fiber hmem
+  have notParked : f.parked = .notParked := by
+    cases hp : f.parked with
+    | notParked => rfl
+    | withGuard _ =>
+      have idle := old.parkedIdle (by rw [hp]; exact fun h => nomatch h)
+      rw [ev.running] at idle
+      cases idle
+  obtain ⟨ord, tokened⟩ := configTyped_token ev.typed (n := f.id) (by rw [declared]; rfl) cert
+  let programs := entrants.map fun p => bodyR (interpRAt root.program m.completedExits) (.at_ p)
+  let race : RRace := ⟨m.nextRace, f.id, m.nextToken,
+    { Supervision.RaceAllState.initial [] with remaining := programs.length }, false, programs,
+    false, site, .firstExit, none⟩
+  have payload : RacePayload root (w.addToken f.id m.nextToken cert) race cert :=
+    { token := addToken_Θ_self
+      failures := strongExit_of_clean _ cert _ rfl (fun _ h => nomatch h)
+      winner := fun _ h => nomatch h
+      accepted := fun _ h => nomatch h
+      cleanup := fun _ h => nomatch h
+      live := fun _ h => nomatch h
+      programs := fun code hcode => by
+        obtain ⟨p, hp, rfl⟩ := List.mem_map.mp hcode
+        obtain ⟨pty, ptyped, ha, he⟩ := pre p hp
+        exact ⟨pty, typedProg_mono root w _ pty _ ord
+          (denoteAt_typed root ev.typed.machine.sourceWF ev.typed.machine.services ptyped),
+          Ty.sub_le_subN ha, Ty.sub_le_subN he⟩ }
+  have internal : ∀ k ∈ Guard.internalKeys (m.update f), k ≠ (f.id, m.nextToken) :=
+    fun k hk same => by
+      have lt := wide.keysBelow k hk
+      rw [same] at lt
+      exact Nat.lt_irrefl _ lt
+  have queued : ∀ k ∈ (Cmd.deliver f.id y :: rest).flatMap Guard.commandKeys,
+      k ≠ (f.id, m.nextToken) := fun k hk same => by
+    have lt := ev.typed.queue.keys.below k hk
+    rw [same] at lt
+    exact Nat.lt_irrefl _ lt
+  have noRequest : requestOfR (m.update f) f.id m.nextToken = none :=
+    requestOfR_of_not_parked ev.look (by rw [notParked]; exact fun h => nomatch h)
+  have appended := configTyped_addRace tokened (race := race) rfl payload rfl
+    (by show ((m.update f).fiber? f.id).isSome = true; rw [ev.look]; rfl) internal queued
+    (Nat.lt_succ_self _) noRequest
+  let fr : RSaved := { f.frame with
+    current := .vis (.inr (.raceRegister m.nextRace)) Effects.Program.pure
+    stack := .answer next :: f.frame.stack }
+  have hstack : HostStack root (w.addToken f.id m.nextToken cert) (m.update f) f.id cert ty fr.stack :=
+    hostStack_push (answerFrame_typed (fun _ _ _ hex => hex)
+      (fun w'' o ans post => typedNext w'' (leHost_trans _ _ _ ord o) ans post))
+      (hostStack_mono ord stack)
+  have fresh : m.races.find? (fun s => decide (s.id = m.nextRace)) = none := by
+    cases hr : (m.update f).race? m.nextRace with
+    | none => exact hr
+    | some r =>
+      have lt := wide.racesBelow r (List.mem_of_find?_eq_some hr)
+      rw [rrace?_id hr] at lt
+      exact absurd lt (Nat.lt_irrefl _)
+  show SettlesTyped root rootTy w f.id rest (prepareIterR (FiberAction.raceAllFirst _ m
+    (saveAnswerR f next) y programs site))
+  unfold FiberAction.raceAllFirst beginRace
   refine SettlesTyped.mono ord (Evaluating.settle_marker ?_ fr declared
     ⟨m.nextRace, race, cert, rfl, ?_, rfl, addToken_Θ_self, hostStack_races ?_ hstack,
       ⟨prov.recorded, prov.deferred⟩⟩)

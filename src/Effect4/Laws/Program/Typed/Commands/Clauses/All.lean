@@ -70,6 +70,7 @@ theorem fiberClauses (root : ProgramSource) (rootTy : EffTy) :
   | scopeExit prev scope ex => exact clause_scopeExit root rootTy prev scope ex
   | foreignRelease c ex => exact clause_foreignRelease root rootTy c ex
   | raceAll entrants site => exact clause_raceAll root rootTy entrants site
+  | raceAllFirst entrants site => exact clause_raceAllFirst root rootTy entrants site
   | raceRegister race => exact clause_raceRegister root rootTy race
   | cancelRace race => exact clause_cancelRace root rootTy race
   | getId => exact clause_getId root rootTy
