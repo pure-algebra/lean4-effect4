@@ -1,0 +1,8 @@
+REPRODUCED: newer independent Test root trace does not regenerate report
+REPRODUCED: missing report does not regenerate report
+PASS: newer declared registry input invokes fake producer and replaces report
+Rule SHA256: 20fb18ccc11dc96e5da1b6997f5aa27a4d980ea73edc4dba9f4052069e91cdff
+Scope: actual Make rule in isolated fixture; fake Lake only; no repository mutation or Lean execution
+REPRODUCED: externs.txt, .mli, dune and .tsv changes are absent from Conform manifest
+PASS: changed .ml file changes Conform manifest
+Scope: production manifest function on isolated representative files; no target or Lean execution
