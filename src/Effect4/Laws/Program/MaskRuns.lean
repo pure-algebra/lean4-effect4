@@ -143,19 +143,18 @@ theorem steppedBy_maskRuns (program : NativeEff) (fuel : Nat) (table : RowTable)
 /-- **The entry `replayCheckedFrom` keeps the invariant** (`src/Effect4/Program/Admit.lean`), at
 each machine that it returns: the machine of its result, and the machine of a refused decision.
 The checked replay applies each admitted decision by the step of `steppedBy`. A refusal returns
-the machine before the decision, or the machine after it.
+the machine before the decision.
 
 A step of the proposed registry claim `saved-mask-chain-runs`. Its consumer is
 `Api.replayChecked_maskRuns`. -/
 @[semantics "scope-lifetime-finalization"]
-theorem replayCheckedFrom_maskRuns (program : NativeEff) (fuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann)) (table : RowTable) :
+theorem replayCheckedFrom_maskRuns (program : NativeEff) (fuel : Nat) (table : RowTable) :
     ∀ (tape : List NativeDecision) (position : Nat) (m : NativeMachine) (bases : List Bool),
       MaskRuns bases m →
-        (∀ result, replayCheckedFrom program fuel answers table position tape m = .inl result →
+        (∀ result, replayCheckedFrom program fuel table position tape m = .inl result →
           ∃ bases', bases <+: bases' ∧ MaskRuns bases' result.machine) ∧
         (∀ refusedAt decision why refused,
-          replayCheckedFrom program fuel answers table position tape m =
+          replayCheckedFrom program fuel table position tape m =
               .inr (refusedAt, decision, why, refused) →
             ∃ bases', bases <+: bases' ∧ MaskRuns bases' refused)
   | [], position, m, bases, kept => by
@@ -179,20 +178,16 @@ theorem replayCheckedFrom_maskRuns (program : NativeEff) (fuel : Nat)
       · obtain ⟨bases₁, le₁, kept₁⟩ := steppedBy_maskRuns program fuel table bases m decision kept
         dsimp only
         split
-        · refine ⟨fun _ same => (nomatch same), fun _ _ _ refused same => ?_⟩
+        · obtain ⟨results, refusals⟩ := replayCheckedFrom_maskRuns program fuel table
+            rest (position + 1) _ bases₁ kept₁
+          refine ⟨fun result same => ?_, fun refusedAt decision why refused same => ?_⟩
+          · obtain ⟨bases₂, le₂, kept₂⟩ := results result same
+            exact ⟨bases₂, List.IsPrefix.trans le₁ le₂, kept₂⟩
+          · obtain ⟨bases₂, le₂, kept₂⟩ := refusals refusedAt decision why refused same
+            exact ⟨bases₂, List.IsPrefix.trans le₁ le₂, kept₂⟩
+        · refine ⟨fun result same => ?_, fun _ _ _ _ same => nomatch same⟩
           cases same
           exact ⟨bases₁, le₁, kept₁⟩
-        · split
-          · obtain ⟨results, refusals⟩ := replayCheckedFrom_maskRuns program fuel answers table
-              rest (position + 1) _ bases₁ kept₁
-            refine ⟨fun result same => ?_, fun refusedAt decision why refused same => ?_⟩
-            · obtain ⟨bases₂, le₂, kept₂⟩ := results result same
-              exact ⟨bases₂, List.IsPrefix.trans le₁ le₂, kept₂⟩
-            · obtain ⟨bases₂, le₂, kept₂⟩ := refusals refusedAt decision why refused same
-              exact ⟨bases₂, List.IsPrefix.trans le₁ le₂, kept₂⟩
-          · refine ⟨fun result same => ?_, fun _ _ _ _ same => nomatch same⟩
-            cases same
-            exact ⟨bases₁, le₁, kept₁⟩
 
 end Effect4.Program
 
@@ -203,9 +198,8 @@ open Effect4 Effect4.Machine Effect4.Program
 /-- **A loaded machine holds the invariant at the table of its root.** `Api.load` starts the root
 at flag true, over an empty stack. A step of `replay_maskRuns`. -/
 @[semantics "scope-lifetime-finalization"]
-theorem load_maskRuns (program : Program) (compileFuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann)) :
-    MaskRuns [true] (load program compileFuel answers) := by
+theorem load_maskRuns (program : Program) (compileFuel : Nat) :
+    MaskRuns [true] (load program compileFuel) := by
   refine ⟨rfl, ?_⟩
   intro f mem
   have same := List.mem_singleton.mp mem
@@ -222,12 +216,11 @@ permit and Pool's `use`. `Api.runSync` is no replay of a tape: its statement is
 `runSync_maskRuns`. -/
 @[semantics "scope-lifetime-finalization"]
 theorem replay_maskRuns (program : Program) (fuel : Nat) (tape : List Decision)
-    (answers : List (Completion Val Err Defect FiberId Ann)) (table : RowTable)
-    (compileFuel : Nat) :
+    (table : RowTable) (compileFuel : Nat) :
     ∃ bases, [true] <+: bases ∧
-      MaskRuns bases (replay program fuel tape answers table compileFuel).machine := by
+      MaskRuns bases (replay program fuel tape table compileFuel).machine := by
   have reached := compiled_mask_chain_runs program table fuel tape [true]
-    (load program compileFuel answers) (load_maskRuns program compileFuel answers)
+    (load program compileFuel) (load_maskRuns program compileFuel)
   unfold replay
   split
   · rename_i m result
@@ -248,16 +241,14 @@ premise, as `replay_maskRuns` takes none.
 A step of the proposed registry claim `saved-mask-chain-runs`. Its consumers read the law at
 the program interface: the bracket's law, then the protected permit and Pool's `use`. -/
 @[semantics "scope-lifetime-finalization"]
-theorem runSync_maskRuns (program : Program) (fuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann)) (table : RowTable)
+theorem runSync_maskRuns (program : Program) (fuel : Nat) (table : RowTable)
     (compileFuel : Nat) :
     ∃ bases, [true] <+: bases ∧
-      MaskRuns bases (runSync program fuel answers table compileFuel).1 :=
+      MaskRuns bases (runSync program fuel table compileFuel).1 :=
   letI := evaluatorFor program table
   runSyncExit_maskRuns (interpOf program table)
     (fun m f y => evaluateNative_keepsMask program table m f y) fuel []
-    (RunMachine.empty { Stores.empty with externals := ExternalStore.ofAnswers answers })
-    (compile program compileFuel) emptyCtx (maskRuns_empty _)
+    (RunMachine.empty Stores.empty) (compile program compileFuel) emptyCtx (maskRuns_empty _)
 
 /-- **The entry `Api.replayChecked` keeps the invariant**, at each machine that it returns: the
 machine of its reading, and the machine of a refused decision. A formation refusal returns no
@@ -267,15 +258,15 @@ A step of the proposed registry claim `saved-mask-chain-runs`. Its consumers rea
 the program interface, as `replay_maskRuns`'s do. -/
 @[semantics "scope-lifetime-finalization"]
 theorem replayChecked_maskRuns (program : Program) (fuel : Nat) (tape : List Decision)
-    (answers : List (Completion Val Err Defect FiberId Ann)) (table : RowTable) :
-    (∀ reading, replayChecked program fuel tape answers table = .inl reading →
+    (table : RowTable) :
+    (∀ reading, replayChecked program fuel tape table = .inl reading →
       ∃ bases, [true] <+: bases ∧ MaskRuns bases reading.machine) ∧
     (∀ position input why machine,
-      replayChecked program fuel tape answers table =
+      replayChecked program fuel tape table =
           .inr (.decision position input why machine) →
         ∃ bases, [true] <+: bases ∧ MaskRuns bases machine) := by
-  obtain ⟨results, refusals⟩ := replayCheckedFrom_maskRuns program fuel answers table tape 0
-    (load program fuel answers) [true] (load_maskRuns program fuel answers)
+  obtain ⟨results, refusals⟩ := replayCheckedFrom_maskRuns program fuel table tape 0
+    (load program fuel) [true] (load_maskRuns program fuel)
   unfold replayChecked
   split
   · exact ⟨fun _ same => (nomatch same), fun _ _ _ _ same => nomatch same⟩

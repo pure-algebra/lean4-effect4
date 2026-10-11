@@ -307,9 +307,10 @@ def Rep (ty : Ty) (value : Val) (hostValue : HostVal) : Prop :=
 def RelatedState (stores : Stores) (_state : State) : Prop :=
   stores.externals.allocated = []
 
-/-- What the differential compares: every recorded answer was consumed. -/
+/-- What the differential compares: the run minted no external handle. A pure row has no host
+state, so this is all its stores and its host can agree on. -/
 def observe (stores : Stores) (_state : State) : Prop :=
-  stores.externals.answers = []
+  stores.externals.allocated = []
 
 instance (stores : Stores) (state : State) : Decidable (RelatedState stores state) :=
   inferInstanceAs (Decidable (_ = _))

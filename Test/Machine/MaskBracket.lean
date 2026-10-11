@@ -602,11 +602,11 @@ private def loopCuts (p : NativeEff) :
 private def cutsOf (src : Src NativeOp) (n : Nat) : List (NativeMachine × List NCmd) :=
   match buildOf (mk src) with
   | none => []
-  | some p => loopCuts p n (Api.load p fuel []) [Cmd.evaluate Api.root, Cmd.drainDue]
+  | some p => loopCuts p n (Api.load p fuel) [Cmd.evaluate Api.root, Cmd.drainDue]
 
 /-- The decision cut of the same run: the machine after the root's evaluation. -/
 private def decided (src : Src NativeOp) : Option NativeMachine :=
-  (buildOf (mk src)).map fun p => (Api.replay p fuel [Api.evaluate] [] [] fuel).machine
+  (buildOf (mk src)).map fun p => (Api.replay p fuel [Api.evaluate] [] fuel).machine
 
 /-- The saved flags of a stack, from the top: the flags of its restoring frames. -/
 private def savedFlags (stack : List NCode) : List Bool :=
@@ -804,11 +804,11 @@ example (id fiber : FiberId) (y : Bool) :
 the program. -/
 example (p : NativeEff) (n : Nat) :
     ∃ bases, [true] <+: bases ∧ LoopCut p [] bases
-      (driveState (evaluator := evaluatorFor p []) (interpOf p []) n (Api.load p fuel [])
+      (driveState (evaluator := evaluatorFor p []) (interpOf p []) n (Api.load p fuel)
         [Cmd.evaluate Api.root, Cmd.drainDue]).1
-      (driveState (evaluator := evaluatorFor p []) (interpOf p []) n (Api.load p fuel [])
+      (driveState (evaluator := evaluatorFor p []) (interpOf p []) n (Api.load p fuel)
         [Cmd.evaluate Api.root, Cmd.drainDue]).2 :=
-  (LoopCut.load p [] fuel []).drive n
+  (LoopCut.load p [] fuel).drive n
 
 /-- The second fact at such a cut: a fiber that a pending command steps has not exited. -/
 example (p : NativeEff) (bases : List Bool) (m : NativeMachine) (cmds : List NCmd)

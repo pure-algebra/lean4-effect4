@@ -1711,22 +1711,16 @@ theorem mergeAwaited_eq_mergeExits (exits : List ExitV) :
 
 /-! ## The service state -/
 
-/-- Answers supplied by the host, in encounter order, and the target spellings
-of resources minted by the machine. A refused head stays available to admission. -/
+/-- The target spellings of the resources the machine minted, in allocation order. A host
+answer reaches a program only as a decision of the keyed session, never from the store
+(DI-23). -/
 structure ExternalStore where
-  answers : List (Completion Val Err Defect FiberId Ann)
   allocated : List String
-  /-- First rejected registration: row index, offered completion, queue length.
-  It stays visible even if another fiber consumes that head before the decision ends. -/
-  rejected : Option (Nat × Completion Val Err Defect FiberId Ann × Nat)
 deriving DecidableEq
 
 namespace ExternalStore
 
-def empty : ExternalStore := ⟨[], [], none⟩
-
-def ofAnswers (answers : List (Completion Val Err Defect FiberId Ann)) : ExternalStore :=
-  ⟨answers, [], none⟩
+def empty : ExternalStore := ⟨[]⟩
 
 end ExternalStore
 

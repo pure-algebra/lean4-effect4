@@ -1547,9 +1547,9 @@ def prepareExternalAnswer (table : RowTable) (current : Option NCode)
         ({ state with externals := { state.externals with allocated } }, .success value)
   | _, _ => fallback
 
-/-- Registration consumes a typed, handle-free oracle completion with no reserved defect
-(decisions row 191). A reference read is an effect and is admitted only by the later decision
-check, with its heap. -/
+/-- A row's own columns admit a typed, handle-free completion with no reserved defect (decisions
+row 191), at the allocations given. The row protocol and a host's guard read it. A reference read
+is an effect and is admitted only by the decision check, with its heap. -/
 def externalAdmits (table : RowTable) (i : Nat) (answer : Completion Val Err Defect FiberId Ann)
     (allocated : List String := []) : Bool :=
   match externalRow table i, answer with
@@ -1636,18 +1636,7 @@ def interpOf (root : NativeEff) (table : RowTable := []) :
       ({ state with deferreds := deferreds }, immediate.map (fun c => embed (completionPrim c)))
     | .store (Name.registerSleep millis) =>
       ({ state with timers := state.timers.sleep fiber token millis }, none)
-    | .external (.external i) _ _ =>
-      if (externalRow table i).isNone then (state, none)
-      else match state.externals.answers with
-      | [] => (state, none)
-      | answer :: rest =>
-        if externalAdmits table i answer state.externals.allocated then
-          let (next, code) := prepareExternalAnswer table (some (.async name false none)) answer state
-          ({ next with externals := { next.externals with answers := rest } }, some code)
-        else
-          let rejected := state.externals.rejected.orElse
-            (fun _ => some (i, answer, state.externals.answers.length))
-          ({ state with externals := { state.externals with rejected } }, none)
+    -- a host call registers and answers nothing: its answer is a decision (DI-23)
     | _ => (state, none)
   dueResumes := fun state =>
     let (due, deferreds) := state.deferreds.drainDue

@@ -249,12 +249,11 @@ theorem LoopCut.task (p : NativeEff) (table : RowTable) {bases : List Bool} {m :
 /-- **The loaded machine under its first commands is a cut**, at the table of its root. So each
 cut of the root's first command loop is a cut, with no premise on the program. -/
 @[semantics "scope-lifetime-finalization"]
-theorem LoopCut.load (p : NativeEff) (table : RowTable) (compileFuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann)) :
-    LoopCut p table [true] (Api.load p compileFuel answers)
+theorem LoopCut.load (p : NativeEff) (table : RowTable) (compileFuel : Nat) :
+    LoopCut p table [true] (Api.load p compileFuel)
       [Cmd.evaluate Api.root, Cmd.drainDue] :=
-  LoopCut.evaluate p table (guardState_load p compileFuel answers)
-    (Api.load_maskRuns p compileFuel answers) Api.root
+  LoopCut.evaluate p table (guardState_load p compileFuel)
+    (Api.load_maskRuns p compileFuel) Api.root
 
 /-! ## The placed theorem -/
 

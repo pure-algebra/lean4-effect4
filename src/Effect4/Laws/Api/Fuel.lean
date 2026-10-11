@@ -11,18 +11,18 @@ open Effect4 Effect4.Machine Effect4.Program
 including its store, trace and observed reasons. -/
 theorem finished_mono_fuel (p : Api.Program) (f f' : Nat)
     (tape : List Api.Decision)
-    (answers : List (Completion Val Err Defect FiberId Ann)) (table : RowTable) (cf : Nat)
-    (h : (Api.replay p f tape answers table cf).outcome = .finished)
+    (table : RowTable) (cf : Nat)
+    (h : (Api.replay p f tape table cf).outcome = .finished)
     (hle : f ≤ f') :
-    Api.replay p f' tape answers table cf = Api.replay p f tape answers table cf := by
+    Api.replay p f' tape table cf = Api.replay p f tape table cf := by
   letI := evaluatorFor p table
-  have ht : (replayEval (interpOf p table) f tape (Api.load p cf answers)).terminal = true := by
-    cases hr : replayEval (interpOf p table) f tape (Api.load p cf answers) <;>
+  have ht : (replayEval (interpOf p table) f tape (Api.load p cf)).terminal = true := by
+    cases hr : replayEval (interpOf p table) f tape (Api.load p cf) <;>
       simp [Api.replay, hr, ReplayResult.terminal] at h ⊢
   have hs := Suffices_of_replay_terminal (interpOf p table) f tape
-    (Api.load p cf answers) ht
+    (Api.load p cf) ht
   obtain ⟨k, rfl⟩ := Nat.exists_eq_add_of_le hle
   unfold Api.replay
-  rw [replay_stable (interpOf p table) f tape (Api.load p cf answers) hs k]
+  rw [replay_stable (interpOf p table) f tape (Api.load p cf) hs k]
 
 end Effect4.Api

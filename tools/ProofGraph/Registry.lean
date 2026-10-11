@@ -924,13 +924,10 @@ def registry : Registry where
       title := "The reference machine's term of a StraightRows program, its control markers erased, is the program's call tree read into the reference machine's signature, when the compile budget covers the program's depth (a step of rows-denotation-session on the reference route; decisions row 310)"
       pointer := .witness `Effect4.Program.Sched.denoteR_straightRows },
     { id := "run-eq-ref-table", concept := "translation-simulation", role := .simulation
-      title := "The frame machine and the reference machine agree at every row table: on every program, decision tape, list of preloaded answers and pair of budgets, the same class and the same observation obs (no premise on the tape; nothing of reply admission, reply typing, a host's conformance or the session's ledger; DI-57, decisions row 310)"
+      title := "The frame machine and the reference machine agree at every row table: on every program, decision tape and pair of budgets, the same class and the same observation obs (no premise on the tape; a host answer reaches either machine only as a decision, DI-23; nothing of reply admission, reply typing, a host's conformance or the session's ledger; DI-57, decisions rows 310 and 314)"
       pointer := .witness `Effect4.Program.Sched.run_eq_ref_table },
-    { id := "run-eq-ref-table-no-preload", concept := "translation-simulation", role := .simulation
-      title := "The frame machine and the reference machine agree at every row table from the loads with no preloaded answer, the form every session runs: on every program, decision tape and pair of budgets, the same class and the same observation obs (the part of run-eq-ref-table with no preloaded answer; nothing of reply admission, reply typing, a host's conformance or the session's ledger; DI-57, decisions row 314)"
-      pointer := .witness `Effect4.Program.Sched.run_eq_ref_table_noPreload },
     { id := "session-eq-ref", concept := "translation-simulation", role := .simulation
-      title := "A session's reading is the reference machine's replay of the run's own tape: for a recorded, funded run, the same class and the same observation (proved by session_eq_ref_of_raw from run_eq_ref_table_noPreload; nothing about a run with a stopped row, the session's ledger or reply admission; DI-57, decisions rows 310 and 314)"
+      title := "A session's reading is the reference machine's replay of the run's own tape: for a recorded, funded run, the same class and the same observation (proved by session_eq_ref_of_raw from run_eq_ref_table; nothing about a run with a stopped row, the session's ledger or reply admission; DI-57, decisions rows 310 and 314)"
       pointer := .witness `Effect4.Run.session_eq_ref },
     { id := "rows-denotation-session", concept := "translation-simulation", role := .simulation
       title := "The meaning of a StraightRows program under a run's reply tape is the root's exit with the stores, or the frontier: for a recorded run that is funded, at rest and driven by a host (one fiber; nothing about an interruption, a clock step, a delayed cell read or a handle row; DI-69, decisions row 310)"
@@ -1220,7 +1217,6 @@ def registry : Registry where
         `Effect4.Run.denoteRowsB_eq_session_host,
         `Effect4.Run.runWith_denotesB]
       openParts := [.ruling "decisions row 97: the handle declarations, parked by the owner on 2026-09-30" "admit_sound's value half: executable admission implies the ghost AnswerOk on success values (waits on decisions row 97's handle declarations)",
-        .ruling "DI-23: the preloaded answers are deleted" "the raw agreement with preloaded answers, the rest of the planned goal run_eq_ref_table (slice H6b): no consumer on the spine; session_eq_ref reads run_eq_ref_table_noPreload (decisions row 314)",
         .definition "the host as a relation between the machine's calls and its answers (`HostSpec`), in place of a predicate on tapes" "H related to the machine: M6's premise is a predicate on tapes (decisions row 95), not a host relation",
         .ruling "decisions rows 98 to 100: the typed replay route, when the guarantee is claimed, host resources" "receipt and application on the keyed lifecycle, and their converse (host-boundary §4.5; decisions rows 98–100, parked by the owner, 2026-09-30)",
         "a world extension meeting C5, a retirement edge, per-row cancellation, one root (DI-58, DI-65)",

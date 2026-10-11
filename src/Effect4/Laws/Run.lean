@@ -830,14 +830,14 @@ def runOf : NativeReplay → Api.Inspection
 /-- The raw replay entry point, in the two pieces above. -/
 theorem replay_eq (program : Api.Program) (fuel : Nat) (tape : List Api.Decision)
     (table : RowTable) (compileFuel : Nat) :
-    Api.replay program fuel tape [] table compileFuel =
+    Api.replay program fuel tape table compileFuel =
       runOf (replayFrom program table fuel tape (Api.load program compileFuel)) :=
   by aesop
 
 /-- However a replay ended, the run it reports carries the machine it reached. -/
 theorem replay_machine (program : Api.Program) (fuel : Nat) (tape : List Api.Decision)
     (table : RowTable) (compileFuel : Nat) :
-    (Api.replay program fuel tape [] table compileFuel).machine =
+    (Api.replay program fuel tape table compileFuel).machine =
       machineOf (replayFrom program table fuel tape (Api.load program compileFuel)) := by
   rw [replay_eq]
   aesop (add norm unfold [runOf, machineOf])
@@ -945,7 +945,7 @@ theorem play_controls_eq_replay (s : Run) (tape : List Api.Decision)
 theorem runPure_eq_run (b : Api.Built) (id : String) (budget : Api.Budget)
     (h : (Run.runPure b id budget).phases = [.progressed, .progressed]) :
     (Run.runPure b id budget).machine =
-      (Api.run b.program budget.fuel [] b.table budget.compileFuel).machine := by
+      (Api.run b.program budget.fuel b.table budget.compileFuel).machine := by
   have replay := play_controls_eq_replay (Run.open b id budget) [Api.evaluate, Api.flush] h
   rw [Api.run, replay_machine]
   exact replay
@@ -958,7 +958,7 @@ theorem runClock_eq_run (b : Api.Built) (adjusts : List ClockMillis) (id : Strin
     (h : (Run.runClock b adjusts id budget).phases =
       List.replicate (Api.TestClock.tape adjusts).length Phase.progressed) :
     (Run.runClock b adjusts id budget).machine =
-      (Api.TestClock.run b.program budget.fuel adjusts [] b.table budget.compileFuel).machine := by
+      (Api.TestClock.run b.program budget.fuel adjusts b.table budget.compileFuel).machine := by
   have replay := play_controls_eq_replay (Run.open b id budget) (Api.TestClock.tape adjusts) h
   rw [Api.TestClock.run, replay_machine]
   exact replay

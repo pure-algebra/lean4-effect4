@@ -154,11 +154,11 @@ example (s : Run) :
 
 -- Ordinary and clock-driven runs on a nonempty table agree even while waiting for a host.
 example : (Run.runPure twice).machine =
-    (Api.run twice.program 1000 [] twice.table 1000).machine := by
+    (Api.run twice.program 1000 twice.table 1000).machine := by
   exact Run.runPure_eq_run twice "run" {} (by decide +kernel)
 
 example : (Run.runClock twice [5]).machine =
-    (Api.TestClock.run twice.program 1000 [5] [] twice.table 1000).machine := by
+    (Api.TestClock.run twice.program 1000 [5] twice.table 1000).machine := by
   exact Run.runClock_eq_run twice [5] "run" {} (by decide +kernel)
 
 -- The child sleeps and returns a value; the parent awaits it. Compile and command budgets
@@ -187,7 +187,7 @@ def clockBudget : Api.Budget := { compileFuel := 40, fuel := 1000 }
   [.progressed, .progressed, .progressed, .progressed]
 
 example : (Run.runClock timed [4, 1] (budget := clockBudget)).machine =
-    (Api.TestClock.run timed.program clockBudget.fuel [4, 1] [] [] clockBudget.compileFuel).machine := by
+    (Api.TestClock.run timed.program clockBudget.fuel [4, 1] [] clockBudget.compileFuel).machine := by
   exact Run.runClock_eq_run timed [4, 1] "run" clockBudget (by decide +kernel)
 
 -- Only the added phases must progress: an earlier refusal does not poison later controls.

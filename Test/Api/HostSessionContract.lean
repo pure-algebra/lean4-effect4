@@ -41,7 +41,6 @@ def finished : Session program table := (applyPending pending1 100).session
 #guard match start program table "serial-root-scalar-v1" { header with version := 2 } 100 with | .error .version => true | _ => false
 #guard match start program table "serial-root-scalar-v1" { header with version := 99 } 100 with | .error .version => true | _ => false
 #guard outstanding parked = [⟨Api.root, 0, .external 0, .nat 2⟩]
-#guard parked.machine.state.externals.answers = []
 #guard (bindCall parked call0 0).phase = .bound
 #guard (submit bound0 reply0).phase = .preflight
 #guard pending0.applied = 0
@@ -64,7 +63,7 @@ def finished : Session program table := (applyPending pending1 100).session
 
 -- DI-58 / P2b: a bare evaluate cannot replace a guarded callback's token.
 def repeatedEvaluation : Api.Inspection :=
-  Api.replay program 100 [Api.evaluate, Api.evaluate] [] table
+  Api.replay program 100 [Api.evaluate, Api.evaluate] table
 def evaluatedAgain : Session program table := (advance bound0 100 Api.evaluate).session
 def replyAfterEvaluate : Session program table := (submit evaluatedAgain reply0).session
 

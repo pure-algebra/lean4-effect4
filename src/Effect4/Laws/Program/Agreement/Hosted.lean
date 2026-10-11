@@ -84,13 +84,12 @@ def Pos.hostAnswer {σ : Type} (host : Effects.Comodel (RowSig table) σ) : Pos 
   | .done _ _, _ => none
 
 /-- **The machine at rest between decisions, at a position**: the root parked on a yield or
-on a host call over a fiber of the fragment's code, or exited; the stores quiet with no
-preloaded answer. -/
+on a host call over a fiber of the fragment's code, or exited; the stores quiet. -/
 def Settled (root : NativeEff) (m : Api.Machine) (p : Pos) : Prop :=
   (∃ cur K i s k tr t, m = Myield (fiberOf cur K i) s k tr t ∧ p = .live (fiberOf cur K i) s ∧
-      PlainCode cur = true ∧ PlainStack K ∧ Quiet s ∧ s.externals.answers = []) ∨
+      PlainCode cur = true ∧ PlainStack K ∧ Quiet s) ∨
   (∃ cur K i s k tr t, m = Mcall (fiberOf cur K i) s k tr t ∧ p = .live (fiberOf cur K i) s ∧
-      IsCall cur = true ∧ PlainStack K ∧ Quiet s ∧ s.externals.answers = []) ∨
+      IsCall cur = true ∧ PlainStack K ∧ Quiet s) ∨
   (∃ ex fr s k tr nt, m = Mexit root ex fr s k tr nt ∧ p = .done ex s ∧ Quiet s)
 
 /-- The forms a host's decisions keep: the loaded root, at the start of its compiled code over
@@ -104,18 +103,17 @@ fiber, the loop and its drain settle in a form of `Settled` within a bound of co
 local run with calls leads to its position with no reply read. -/
 theorem seg_settles (root : NativeEff) (hroot : LoopedRows root = true) (cur : NCode)
     (K : List NCode) (i : Bool) (s : Stores) (k : Nat) (tr : NTrace) (nt : Nat)
-    (hpl : PlainCode cur = true) (hK : PlainStack K) (hq : Quiet s)
-    (hans : s.externals.answers = []) :
+    (hpl : PlainCode cur = true) (hK : PlainStack K) (hq : Quiet s) :
     ∃ c m' p', c ≤ 4 * defaultBudget + 5 ∧ Settled root m' p' ∧
       LeadsQ (table := table) root (.live (fiberOf cur K i) s) p' ∧
       ∀ fuel, driveState (evaluator := evaluatorFor root table) (interpOf root table) (fuel + c)
         (M (fiberOf cur K i) s k tr nt) [Cmd.loop Api.root false, Cmd.drainDue] = (m', []) := by
   obtain ⟨c, hc, h⟩ := drive_seg (table := table) root hroot (2 * defaultBudget) cur K i s k tr nt
-    [Cmd.drainDue] false (by simp only [Bool.toNat_false, Nat.add_zero]; omega) hpl hK hq hans
+    [Cmd.drainDue] false (by simp only [Bool.toNat_false, Nat.add_zero]; omega) hpl hK hq
     (fun h => by cases h)
-  rcases h with ⟨ex, s', fr, k', tr', l, -, hq', hans', hrun, hX⟩ |
-    ⟨cur₁, K₁, i₁, s₁, k₁, tr', l, -, hc₁, hK₁, hq₁, hans₁, hr, hX⟩ |
-    ⟨cur₁, K₁, i₁, s₁, k₁, tr', l, -, -, hpl₁, hK₁, hq₁, hans₁, hr, hX⟩ <;> simp only [cmdOf] at hX
+  rcases h with ⟨ex, s', fr, k', tr', l, -, hq', hrun, hX⟩ |
+    ⟨cur₁, K₁, i₁, s₁, k₁, tr', l, -, hc₁, hK₁, hq₁, hr, hX⟩ |
+    ⟨cur₁, K₁, i₁, s₁, k₁, tr', l, -, -, hpl₁, hK₁, hq₁, hr, hX⟩ <;> simp only [cmdOf] at hX
   · obtain ⟨tr'', hfin⟩ := drive_finish_M (table := table) root ex fr s' k' tr' nt [Cmd.drainDue]
     refine ⟨c + 3, Mexit root ex fr s' k' tr'' nt, .done ex s', by omega,
       Or.inr (Or.inr ⟨ex, fr, s', k', tr'', nt, rfl, rfl, hq'⟩), fun host r => ⟨l + 1, (hrun host r).2⟩,
@@ -123,12 +121,12 @@ theorem seg_settles (root : NativeEff) (hroot : LoopedRows root = true) (cur : N
     rw [show fuel + (c + 3) = fuel + 1 + 1 + 1 + c by omega, hX, hfin,
       drive_drainDue root _ _ _ rfl hq', drive_drainDue root _ _ _ rfl hq', drive_nil]
   · refine ⟨c + 1, Mcall (fiberOf cur₁ K₁ i₁) s₁ k₁ tr' nt, .live (fiberOf cur₁ K₁ i₁) s₁,
-      by omega, Or.inr (Or.inl ⟨cur₁, K₁, i₁, s₁, k₁, tr', nt, rfl, rfl, hc₁, hK₁, hq₁, hans₁⟩),
+      by omega, Or.inr (Or.inl ⟨cur₁, K₁, i₁, s₁, k₁, tr', nt, rfl, rfl, hc₁, hK₁, hq₁⟩),
       fun host r => ⟨l, hr host r⟩, fun fuel => ?_⟩
     rw [show fuel + (c + 1) = fuel + 1 + c by omega, hX, drive_drainDue root _ _ _ rfl hq₁,
       drive_nil]
   · refine ⟨c + 1, Myield (fiberOf cur₁ K₁ i₁) s₁ k₁ tr' nt, .live (fiberOf cur₁ K₁ i₁) s₁,
-      by omega, Or.inl ⟨cur₁, K₁, i₁, s₁, k₁, tr', nt, rfl, rfl, hpl₁, hK₁, hq₁, hans₁⟩,
+      by omega, Or.inl ⟨cur₁, K₁, i₁, s₁, k₁, tr', nt, rfl, rfl, hpl₁, hK₁, hq₁⟩,
       fun host r => ⟨l, hr host r⟩, fun fuel => ?_⟩
     rw [show fuel + (c + 1) = fuel + 1 + c by omega, hX, drive_drainDue root _ _ _ rfl hq₁,
       drive_nil]
@@ -153,7 +151,7 @@ theorem load_evaluate (root : NativeEff) (hroot : LoopedRows root = true) (cf : 
         (fuel + c) (Api.load root cf) Api.evaluate = (m', true) := by
   obtain ⟨c, m', p', -, hS, hL, hd⟩ := seg_settles (table := table) root hroot (compile root cf) []
     true Stores.empty 0 [RunEvent.started Api.root] 0
-    (plainCode_compileEff root _ hroot) PlainStack.nil Quiet.empty rfl
+    (plainCode_compileEff root _ hroot) PlainStack.nil Quiet.empty
   refine ⟨c + 1, m', p', hS, hL, fun fuel => ?_⟩
   change stepDecisionState.loop (driveState (evaluator := evaluatorFor root table) _ _ _ _) = _
   rw [show fuel + (c + 1) = fuel + c + 1 by omega, drive_evaluate_load root cf _ _, hd]
@@ -199,20 +197,19 @@ theorem flush_Myield (root : NativeEff) (hroot : LoopedRows root = true) :
     ∀ (rounds : Nat) (cur : NCode) (K : List NCode) (i : Bool) (s : Stores) (k : Nat)
       (tr : NTrace) (t : Nat) (fuel : Nat),
       4 * defaultBudget + 8 ≤ fuel → PlainCode cur = true → PlainStack K → Quiet s →
-      s.externals.answers = [] →
       (flushAllState (evaluator := evaluatorFor root table) (interpOf root table) fuel rounds
         (Myield (fiberOf cur K i) s k tr t)).2 = true →
       ∃ p', Settled root (flushAllState (evaluator := evaluatorFor root table)
           (interpOf root table) fuel rounds (Myield (fiberOf cur K i) s k tr t)).1 p' ∧
         LeadsQ (table := table) root (.live (fiberOf cur K i) s) p'
-  | 0, cur, K, i, s, k, tr, t, fuel, _, _, _, _, _, h => by
+  | 0, cur, K, i, s, k, tr, t, fuel, _, _, _, _, h => by
     simp only [flushAllState, Myield_armed, List.isEmpty_cons, Myield_stuck, Option.isSome_none,
       Bool.or_self, Bool.false_eq_true] at h
-  | rounds + 1, cur, K, i, s, k, tr, t, fuel, hf, hpl, hK, hq, hans, h => by
+  | rounds + 1, cur, K, i, s, k, tr, t, fuel, hf, hpl, hK, hq, h => by
     obtain ⟨n, rfl⟩ : ∃ n, fuel = n + 1 + 1 + 1 := ⟨fuel - 3, by omega⟩
     obtain ⟨tr₁, hfire⟩ := fire_Myield (table := table) root cur K i s k tr t
     obtain ⟨c, m', p', hc, hS, hL, hd⟩ :=
-      seg_settles (table := table) root hroot cur K i s 1 tr₁ (t + 1) hpl hK hq hans
+      seg_settles (table := table) root hroot cur K i s 1 tr₁ (t + 1) hpl hK hq
     have hdn := hd (n - c)
     rw [Nat.sub_add_cancel (by omega : c ≤ n)] at hdn
     have hround : fireState (evaluator := evaluatorFor root table) (interpOf root table)
@@ -226,16 +223,16 @@ theorem flush_Myield (root : NativeEff) (hroot : LoopedRows root = true) :
       simp only [flushAllState, Myield_armed, Myield_stuck, Option.isSome_none,
         Bool.false_eq_true, ↓reduceIte, hround]
     rw [hstep] at h ⊢
-    rcases hS with ⟨cur₁, K₁, i₁, s₁, k₁, tr₂, t₁, rfl, rfl, hpl₁, hK₁, hq₁, hans₁⟩ |
-      ⟨cur₁, K₁, i₁, s₁, k₁, tr₂, t₁, rfl, rfl, hc₁, hK₁, hq₁, hans₁⟩ |
+    rcases hS with ⟨cur₁, K₁, i₁, s₁, k₁, tr₂, t₁, rfl, rfl, hpl₁, hK₁, hq₁⟩ |
+      ⟨cur₁, K₁, i₁, s₁, k₁, tr₂, t₁, rfl, rfl, hc₁, hK₁, hq₁⟩ |
       ⟨ex, fr, s', k', tr', nt', rfl, rfl, hq'⟩
     · -- a yield again: the next round
       obtain ⟨p'', hS'', hL''⟩ :=
-        flush_Myield root hroot rounds cur₁ K₁ i₁ s₁ k₁ tr₂ t₁ _ hf hpl₁ hK₁ hq₁ hans₁ h
+        flush_Myield root hroot rounds cur₁ K₁ i₁ s₁ k₁ tr₂ t₁ _ hf hpl₁ hK₁ hq₁ h
       exact ⟨p'', hS'', hL.trans hL''⟩
     · -- a host call: nothing armed
       rw [flushAllState_unarmed root _ _ (Mcall_armed _ _ _ _ _)]
-      exact ⟨_, Or.inr (Or.inl ⟨cur₁, K₁, i₁, s₁, k₁, tr₂, t₁, rfl, rfl, hc₁, hK₁, hq₁, hans₁⟩),
+      exact ⟨_, Or.inr (Or.inl ⟨cur₁, K₁, i₁, s₁, k₁, tr₂, t₁, rfl, rfl, hc₁, hK₁, hq₁⟩),
         hL⟩
     · -- the exit: nothing armed
       rw [flushAllState_unarmed root _ _ (Mexit_armed _ _ _ _ _ _ _)]
@@ -244,23 +241,21 @@ theorem flush_Myield (root : NativeEff) (hroot : LoopedRows root = true) :
 /-! ### The answer at a host call -/
 
 /-- The answer the machine prepares from an exit is code of the fragment, over stores whose
-cells and preloaded answers are as they were (`prepareExternalAnswer`). -/
+cells are as they were (`prepareExternalAnswer`). -/
 theorem prepareExternalAnswer_ofExit (c : Option NCode) (ex : ExitV) (s : Stores) :
     PlainCode (prepareExternalAnswer table c (.ofExit ex) s).2 = true ∧
-      (prepareExternalAnswer table c (.ofExit ex) s).1.deferreds = s.deferreds ∧
-      (prepareExternalAnswer table c (.ofExit ex) s).1.externals.answers =
-        s.externals.answers := by
+      (prepareExternalAnswer table c (.ofExit ex) s).1.deferreds = s.deferreds := by
   have hfall : PlainCode (embed (completionPrim (.ofExit ex))) = true := by cases ex <;> rfl
   unfold prepareExternalAnswer
   split
-  · exact ⟨hfall, rfl, rfl⟩
+  · exact ⟨hfall, rfl⟩
   · split
     · split
-      · exact ⟨hfall, rfl, rfl⟩
+      · exact ⟨hfall, rfl⟩
       · split
-        · exact ⟨hfall, rfl, rfl⟩
-        · exact ⟨rfl, rfl, rfl⟩
-    · exact ⟨hfall, rfl, rfl⟩
+        · exact ⟨hfall, rfl⟩
+        · exact ⟨rfl, rfl⟩
+    · exact ⟨hfall, rfl⟩
 
 /-- A machine of one fiber finds that fiber at its own id and nothing else. -/
 theorem fiber?_one {m : Api.Machine} {g : NRunFiber} (hm : m.fibers = [g]) {f : FiberId}
@@ -366,16 +361,16 @@ theorem holds_evaluate (root : NativeEff) (hroot : LoopedRows root = true) (cf :
       Api.evaluate).2 = true) :
     ∃ p', Holds root cf (stepDecisionState (evaluator := evaluatorFor root table)
         (interpOf root table) F m Api.evaluate).1 p' ∧ LeadsQ (table := table) root p p' := by
-  rcases hH with ⟨rfl, rfl⟩ | ⟨cur, K, i, s, k, tr, t, rfl, rfl, hpl, hK, hq, hans⟩ |
-    ⟨cur, K, i, s, k, tr, t, rfl, rfl, hc, hK, hq, hans⟩ | ⟨ex, fr, s, k, tr, nt, rfl, rfl, hq⟩
+  rcases hH with ⟨rfl, rfl⟩ | ⟨cur, K, i, s, k, tr, t, rfl, rfl, hpl, hK, hq⟩ |
+    ⟨cur, K, i, s, k, tr, t, rfl, rfl, hc, hK, hq⟩ | ⟨ex, fr, s, k, tr, nt, rfl, rfl, hq⟩
   · obtain ⟨c, m', p', hS, hL, hR⟩ := load_evaluate (table := table) root hroot cf
     rw [step_of_receipt hR h]
     exact ⟨p', Or.inr hS, hL⟩
   · rw [step_of_receipt (evaluate_inert root _ _ rfl (Myield_fiber? _ _ _ _ _) rfl hq) h]
-    exact ⟨_, Or.inr (Or.inl ⟨cur, K, i, s, k, tr, t, rfl, rfl, hpl, hK, hq, hans⟩),
+    exact ⟨_, Or.inr (Or.inl ⟨cur, K, i, s, k, tr, t, rfl, rfl, hpl, hK, hq⟩),
       LeadsQ.refl root _⟩
   · rw [step_of_receipt (evaluate_inert root _ _ rfl (Mcall_fiber? _ _ _ _ _) rfl hq) h]
-    exact ⟨_, Or.inr (Or.inr (Or.inl ⟨cur, K, i, s, k, tr, t, rfl, rfl, hc, hK, hq, hans⟩)),
+    exact ⟨_, Or.inr (Or.inr (Or.inl ⟨cur, K, i, s, k, tr, t, rfl, rfl, hc, hK, hq⟩)),
       LeadsQ.refl root _⟩
   · rw [step_of_receipt (evaluate_inert root _ (exitedAt root ex fr k) rfl rfl rfl hq) h]
     exact ⟨_, Or.inr (Or.inr (Or.inr ⟨ex, fr, s, k, tr, nt, rfl, rfl, hq⟩)), LeadsQ.refl root _⟩
@@ -388,18 +383,18 @@ theorem holds_flush (root : NativeEff) (hroot : LoopedRows root = true) (cf : Na
       Api.flush).2 = true) :
     ∃ p', Holds root cf (stepDecisionState (evaluator := evaluatorFor root table)
         (interpOf root table) F m Api.flush).1 p' ∧ LeadsQ (table := table) root p p' := by
-  rcases hH with ⟨rfl, rfl⟩ | ⟨cur, K, i, s, k, tr, t, rfl, rfl, hpl, hK, hq, hans⟩ |
-    ⟨cur, K, i, s, k, tr, t, rfl, rfl, hc, hK, hq, hans⟩ | ⟨ex, fr, s, k, tr, nt, rfl, rfl, hq⟩
+  rcases hH with ⟨rfl, rfl⟩ | ⟨cur, K, i, s, k, tr, t, rfl, rfl, hpl, hK, hq⟩ |
+    ⟨cur, K, i, s, k, tr, t, rfl, rfl, hc, hK, hq⟩ | ⟨ex, fr, s, k, tr, nt, rfl, rfl, hq⟩
   · rw [flush_unarmed root _ rfl F]
     exact ⟨_, Or.inl ⟨rfl, rfl⟩, LeadsQ.refl root _⟩
   · have hst := stepDecisionState_stable (evaluator := evaluatorFor root table) _ F _ Api.flush h
       (4 * defaultBudget + 8)
     rw [← hst] at h ⊢
     obtain ⟨p', hS, hL⟩ := flush_Myield (table := table) root hroot (F + (4 * defaultBudget + 8))
-      cur K i s k tr t (F + (4 * defaultBudget + 8)) (by omega) hpl hK hq hans h
+      cur K i s k tr t (F + (4 * defaultBudget + 8)) (by omega) hpl hK hq h
     exact ⟨p', Or.inr hS, hL⟩
   · rw [flush_unarmed root _ rfl F]
-    exact ⟨_, Or.inr (Or.inr (Or.inl ⟨cur, K, i, s, k, tr, t, rfl, rfl, hc, hK, hq, hans⟩)),
+    exact ⟨_, Or.inr (Or.inr (Or.inl ⟨cur, K, i, s, k, tr, t, rfl, rfl, hc, hK, hq⟩)),
       LeadsQ.refl root _⟩
   · rw [flush_unarmed root _ rfl F]
     exact ⟨_, Or.inr (Or.inr (Or.inr ⟨ex, fr, s, k, tr, nt, rfl, rfl, hq⟩)), LeadsQ.refl root _⟩
@@ -416,17 +411,17 @@ theorem holds_answer (root : NativeEff) (hroot : LoopedRows root = true) (cf : N
         (interpOf root table) F m (RunDecision.answerAsync f t₀ (.ofExit ex))).1 p' ∧
       ∀ {σ : Type} (host : Effects.Comodel (RowSig table) σ) (r r' : σ),
         p.hostAnswer host r = some (ex, r') → Leads host root p r p' r' := by
-  rcases hH with ⟨rfl, rfl⟩ | ⟨cur, K, i, s, k, tr, t, rfl, rfl, hpl, hK, hq, hans⟩ |
-    ⟨cur, K, i, s, k, tr, t, rfl, rfl, hc, hK, hq, hans⟩ | ⟨ex', fr, s, k, tr, nt, rfl, rfl, hq⟩
+  rcases hH with ⟨rfl, rfl⟩ | ⟨cur, K, i, s, k, tr, t, rfl, rfl, hpl, hK, hq⟩ |
+    ⟨cur, K, i, s, k, tr, t, rfl, rfl, hc, hK, hq⟩ | ⟨ex', fr, s, k, tr, nt, rfl, rfl, hq⟩
   · exact (requestOf_load hreq).elim
   · exact (requestOf_Myield hreq).elim
   · obtain ⟨rfl, rfl⟩ := requestOf_Mcall hreq
-    obtain ⟨hpc, hdef, hans'⟩ := prepareExternalAnswer_ofExit (table := table) (some cur) ex s
+    obtain ⟨hpc, hdef⟩ := prepareExternalAnswer_ofExit (table := table) (some cur) ex s
     rcases hp : prepareExternalAnswer table (some cur) (.ofExit ex) s with ⟨s', code⟩
-    rw [hp] at hpc hdef hans'
+    rw [hp] at hpc hdef
     obtain ⟨tr', hstep⟩ := answer_Mcall (table := table) root cur K i s k tr t₀ ex hp
     obtain ⟨c, m', p', -, hS, hL, hd⟩ := seg_settles (table := table) root hroot code K i s' 0 tr'
-      (t₀ + 1) hpc hK (Quiet.of_deferreds_eq hdef hq) (hans'.trans hans)
+      (t₀ + 1) hpc hK (Quiet.of_deferreds_eq hdef hq)
     have hR : ∀ fuel, stepDecisionState (evaluator := evaluatorFor root table) (interpOf root table)
         (fuel + (c + 2)) (Mcall (fiberOf cur K i) s k tr t₀)
         (RunDecision.answerAsync Api.root t₀ (.ofExit ex)) = (m', true) := by

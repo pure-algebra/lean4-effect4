@@ -40,10 +40,9 @@ def tape (adjusts : List ClockMillis) : List Decision :=
 
 /-- `Api.replay` under the test clock: the root evaluated, the clock adjusted in order, the
 dispatcher flushed. -/
-def run (program : Program) (fuel : Nat) (adjusts : List ClockMillis)
-    (answers : List (Completion Val Err Defect FiberId Ann) := []) (table : RowTable := [])
+def run (program : Program) (fuel : Nat) (adjusts : List ClockMillis) (table : RowTable := [])
     (compileFuel : Nat := fuel) : Inspection :=
-  replay program fuel (tape adjusts) answers table compileFuel
+  replay program fuel (tape adjusts) table compileFuel
 
 /-- Every literal sleep of a program, in program order: the durations a sequential program
 needs adjusted, one per sleep. The monoid fold over the tree. -/
@@ -58,10 +57,9 @@ def synthesize (program : Program) : List Decision := tape ((sleepDeadlines prog
 
 /-- The run under the synthesized tape: a program whose sleeps run in sequence finishes with
 the clock at the sum of its literal sleeps. -/
-def runSequential (program : Program) (fuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann) := []) (table : RowTable := [])
+def runSequential (program : Program) (fuel : Nat) (table : RowTable := [])
     (compileFuel : Nat := fuel) : Inspection :=
-  run program fuel ((sleepDeadlines program).map ClockMillis.ofNat) answers table compileFuel
+  run program fuel ((sleepDeadlines program).map ClockMillis.ofNat) table compileFuel
 
 /-- Every sleep an immediate success: the identity fold with the invocation slot replaced. -/
 def fastForwardAlgebra : EffAlgebra NativeOp (EffSelfCarrier NativeOp) :=
@@ -84,9 +82,8 @@ def dilateAlgebra (k : Nat) : EffAlgebra NativeOp (EffSelfCarrier NativeOp) :=
 def dilateTime (k : Nat) (program : Program) : Program := cata_eff (dilateAlgebra k) program
 
 /-- The dilated program under its own synthesized tape: the caller scales nothing. -/
-def runDilated (k : Nat) (program : Program) (fuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann) := []) (table : RowTable := [])
+def runDilated (k : Nat) (program : Program) (fuel : Nat) (table : RowTable := [])
     (compileFuel : Nat := fuel) : Inspection :=
-  runSequential (dilateTime k program) fuel answers table compileFuel
+  runSequential (dilateTime k program) fuel table compileFuel
 
 end Effect4.Api.TestClock

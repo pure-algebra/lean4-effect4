@@ -112,8 +112,8 @@ def goodRow : Row :=
   { name := "wait", spelling := "Host.wait", kind := .async, registration := .external,
     request := .nat, answer := .nat, error := .nat, cite := "scratch" }
 
-/-- Lawful by name, typed, printable — and not registrable: the external oracle does not
-answer a `.deferred` row. -/
+/-- Lawful by name, typed, printable — and not registrable: the checked replay admits no answer
+at a `.deferred` row. -/
 def malformedRow : Row := { goodRow with registration := .deferred }
 
 /-- Registered externally, but not an asynchronous row. -/
@@ -125,15 +125,22 @@ def performExternal : Api.Program := .perform (.external 0) (.lit (.nat 7))
 
 #guard LawfulTable [goodRow]
 #guard LawfulTable [malformedRow]
+/-- The tape that answers the root's one call: the root evaluated, the call at its first guard
+token answered, the dispatcher flushed. A host answer is a decision (DI-23). -/
+def replyTape : List Api.Decision := [Api.evaluate, .answerAsync Api.root 0 reply, Api.flush]
+
 #guard (Api.typeOf performExternal [goodRow]).isSome
-#guard (Api.run performExternal 100 [reply] [goodRow]).exit = some (.success (.nat 9))
--- The wrong registration parks with the answer unused. A park is a frontier, not a refusal;
--- `checkTable` is what refuses the table.
-#guard (Api.run performExternal 100 [reply] [malformedRow]).exit = none
--- The reply is consumed. Removing it leaves a live frontier.
-#guard (Api.run performExternal 100 [reply] [goodRow]).stores.externals.answers.length = 0
-#guard (Api.run performExternal 100 [] [goodRow]).exit = none
-#guard (Api.run performExternal 100 [] [goodRow]).outcome = .frontier
+#guard (Api.replay performExternal 100 replyTape [goodRow]).exit = some (.success (.nat 9))
+-- The wrong registration parks, a frontier and not a refusal; `checkTable` is what refuses the
+-- table, and the checked replay refuses the answer at the parked call.
+#guard (Api.run performExternal 100 [malformedRow]).outcome = .frontier
+#guard match Api.replayChecked performExternal 100 replyTape [malformedRow] with
+  | .inr (.decision 1 _ (.notExternal _ 0) _) => true
+  | _ => false
+-- The reply is consumed: no call waits after it. Removing it leaves a live frontier.
+#guard Program.awaits (Api.replay performExternal 100 replyTape [goodRow]).machine = []
+#guard (Api.run performExternal 100 [goodRow]).exit = none
+#guard (Api.run performExternal 100 [goodRow]).outcome = .frontier
 #guard externalRow [goodRow] 0 = some goodRow
 
 -- DI-61's two-spelling receipts (`sleep_print_same`, `replay_perform_external_eq_callback`)
@@ -238,27 +245,25 @@ def refusal (program : Api.Program) (table : RowTable := []) : Option Api.AdmitR
 The exit criterion of S1a: `runAdmitted` runs what `run` runs on every admitted fixture. The
 certificate is consumed as an argument, so a caller cannot reach these without building it. -/
 
-def runAdmittedExit (program : Api.Program) (table : RowTable) (fuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann) := []) : Option ExitV :=
+def runAdmittedExit (program : Api.Program) (table : RowTable) (fuel : Nat) : Option ExitV :=
   match Api.admitProgram program ⟨table, []⟩ with
-  | .ok certificate => (Api.runAdmitted certificate fuel answers).exit
+  | .ok certificate => (Api.runAdmitted certificate fuel).exit
   | .error _ => none
 
 def replayAdmittedExit (program : Api.Program) (table : RowTable) (fuel : Nat)
-    (tape : List Api.Decision)
-    (answers : List (Completion Val Err Defect FiberId Ann) := []) : Option ExitV :=
+    (tape : List Api.Decision) : Option ExitV :=
   match Api.admitProgram program ⟨table, []⟩ with
-  | .ok certificate => (Api.replayAdmitted certificate fuel tape answers).exit
+  | .ok certificate => (Api.replayAdmitted certificate fuel tape).exit
   | .error _ => none
 
 #guard runAdmittedExit Wire.Corpus.pAwait [] 100 = (Api.run Wire.Corpus.pAwait 100).exit
-#guard runAdmittedExit performExternal [goodRow] 100 [reply]
-  = (Api.run performExternal 100 [reply] [goodRow]).exit
+#guard replayAdmittedExit performExternal [goodRow] 100 replyTape
+  = (Api.replay performExternal 100 replyTape [goodRow]).exit
 #guard runAdmittedExit performSleep [] 100 = (Api.run performSleep 100).exit
 #guard replayAdmittedExit performSleep [] 100 sleepTape = some (.success .unit)
-#guard runAdmittedExit performExternal [goodRow] 100 [reply] = some (.success (.nat 9))
+#guard replayAdmittedExit performExternal [goodRow] 100 replyTape = some (.success (.nat 9))
 -- The admitted entry points exercise the same positive routing behavior.
-#guard runAdmittedExit performExternal [goodRow] 0 [reply] = none
-#guard (Api.run performExternal 0 [reply] [goodRow]).outcome = .frontier
+#guard replayAdmittedExit performExternal [goodRow] 0 replyTape = none
+#guard (Api.replay performExternal 0 replyTape [goodRow]).outcome = .frontier
 
 end Test.Program.InvocationContract

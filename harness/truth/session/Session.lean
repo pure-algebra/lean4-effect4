@@ -190,7 +190,7 @@ def receipt {p : Api.Program} {rows : RowTable} (r : Walk p rows) : J :=
   Json.mkObj [("status", .str r.status), ("position", toJson r.position),
     ("applied", toJson r.session.applied), ("pending", .bool (!(pendingReplies r.session).isEmpty)),
     ("outcome", outcomeJson run.outcome), ("exit", (run.exit.map exitJson).getD .null),
-    ("remaining", toJson r.remaining.length), ("allocated", toJson r.session.machine.state.externals.allocated), ("oracleAnswers", toJson r.session.machine.state.externals.answers.length),
+    ("remaining", toJson r.remaining.length), ("allocated", toJson r.session.machine.state.externals.allocated),
     ("awaits", .arr ((outstanding r.session).map fun ⟨fiber, token, op, req⟩ => Json.mkObj [
       ("fiber", toJson fiber.value), ("token", toJson token),
       ("row", match op with | .external i => toJson i | _ => .null),

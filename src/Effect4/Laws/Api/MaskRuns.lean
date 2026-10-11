@@ -76,7 +76,7 @@ theorem start_maskRuns (program : Api.Program) (table : RowTable) (expectedProfi
         · split at started
           · cases started
           · cases started
-            exact Api.load_maskRuns program compileFuel []
+            exact Api.load_maskRuns program compileFuel
 
 /-- A binding writes the ledger alone: the machine is the same. A step of
 `Runner.step_maskRuns`. -/
@@ -313,7 +313,7 @@ A step of the proposed registry claim `saved-mask-chain-runs`. Its consumer is
 @[semantics "scope-lifetime-finalization"]
 theorem open_maskRuns (b : Api.Built) (id : String) (budget : Api.Budget) (profile : String) :
     MaskRuns [true] (Run.open b id budget profile).machine :=
-  Api.load_maskRuns b.program budget.compileFuel []
+  Api.load_maskRuns b.program budget.compileFuel
 
 /-- **The entry `Run.step` keeps the invariant**: one row played is the runner's step.
 

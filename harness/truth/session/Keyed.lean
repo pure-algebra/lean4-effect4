@@ -287,8 +287,7 @@ def receipt {p : Api.Program} {rows : RowTable} (w : Walk p rows) : J :=
     ("awaits", toJson ((outstanding s).map awaitJson)),
     ("consumed", toJson s.consumed), ("pending", toJson ((pendingReplies s).map Reply.callId)),
     ("retired", toJson (s.retired.map (fun r => r.bound.call.callId))),
-    ("allocated", toJson s.machine.state.externals.allocated),
-    ("oracleAnswers", toJson s.machine.state.externals.answers.length)]
+    ("allocated", toJson s.machine.state.externals.allocated)]
 
 def replay (j : J) (fuel : Nat := 1000) : Except String J := do
   keys j ["header", "records"]

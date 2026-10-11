@@ -531,7 +531,7 @@ private def flushes : List Api.Decision := [Api.evaluate, Api.flush, Api.flush, 
 private def cuts (src : Src NativeOp) (upTo : Nat) : List Api.Machine :=
   match buildOf (mk src) with
   | none => []
-  | some p => (List.range upTo ++ [fuel]).map fun n => (Api.replay p n flushes [] [] fuel).machine
+  | some p => (List.range upTo ++ [fuel]).map fun n => (Api.replay p n flushes [] fuel).machine
 
 private def tablesOf : Nat → List (List Bool)
   | 0 => [[]]
@@ -600,7 +600,7 @@ and the reading of a run. -/
 private def syncCuts (src : Src NativeOp) (upTo : Nat) : List Api.Machine :=
   match buildOf (mk src) with
   | none => []
-  | some p => (List.range upTo ++ [fuel]).map fun n => (Api.runSync p n [] [] fuel).1
+  | some p => (List.range upTo ++ [fuel]).map fun n => (Api.runSync p n [] fuel).1
 
 -- `Api.runSync`: one table fits every cut, and a cut holds a child masked over both saved flags.
 #guard (syncCuts s6 160).length == 161

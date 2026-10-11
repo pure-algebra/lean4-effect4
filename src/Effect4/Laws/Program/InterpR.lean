@@ -319,21 +319,6 @@ def prepareAtR (table : RowTable) (index : Option Nat)
         ({ state with externals := { state.externals with allocated } }, .pure (.success value))
   | _, _ => fallback
 
-/-- The frame's external registration (`interpOf`'s `registerAsync`), with the reference's
-prepared answer: the preloaded answers, kept until DI-23's migration deletes them. -/
-def registerExternalR (table : RowTable) (i : Nat) (state : Stores) : Stores × Option RProgram :=
-  if (externalRow table i).isNone then (state, none)
-  else match state.externals.answers with
-  | [] => (state, none)
-  | answer :: rest =>
-    if externalAdmits table i answer state.externals.allocated then
-      let (next, code) := prepareAtR table (some i) answer state
-      ({ next with externals := { next.externals with answers := rest } }, some code)
-    else
-      let rejected := state.externals.rejected.orElse
-        (fun _ => some (i, answer, state.externals.answers.length))
-      ({ state with externals := { state.externals with rejected } }, none)
-
 /-- The actual loop and generator hooks, with the same non-code fields as `interpOf`.
 Frame-only hooks have explicit refusal bodies and are not read by `evaluateR`. -/
 def interpR (root : NativeEff) (table : RowTable := []) : RInterp where
@@ -386,13 +371,7 @@ def interpR (root : NativeEff) (table : RowTable := []) : RInterp where
       ({ state with deferreds }, immediate.map denoteCompletion)
     | .store (.registerSleep millis) =>
       ({ state with timers := state.timers.sleep fiber token millis }, none)
-    -- the table is tested before the row, so at the default empty table this arm is the old
-    -- identity for every operation, whatever its constructor
-    | .external op _ _ =>
-      if table.isEmpty then (state, none) else
-      match op with
-      | .external i => registerExternalR table i state
-      | _ => (state, none)
+    -- a host call registers and answers nothing, as on the frame machine (DI-23)
     | _ => (state, none)
   answerCode := denoteCompletion
   prepareAnswer := fun current answer state => prepareAtR table (externalIndexR current) answer state

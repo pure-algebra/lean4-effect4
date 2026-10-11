@@ -737,39 +737,37 @@ theorem runCallback_ok (p : NativeEff) (table : RowTable) (fuel : Nat)
   exact drive_ok p table fuel _ _ (appendRoot_ok h _)
 
 /-- Initial load has neither fork records nor fork events. -/
-theorem load_agrees (p : NativeEff) (compileFuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann)) :
-    Agrees (Api.load p compileFuel answers) := rfl
+theorem load_agrees (p : NativeEff) (compileFuel : Nat) :
+    Agrees (Api.load p compileFuel) := rfl
 
 /-- The lift note's exact history wrapper, now using the library's pure history lift. -/
 theorem reachable_agrees_of (program : NativeEff) (table : RowTable) (compileFuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann))
-    (load : Agrees (Api.load program compileFuel answers))
-    (step : ∀ m, Reachable program table compileFuel answers m → Agrees m →
+    (load : Agrees (Api.load program compileFuel))
+    (step : ∀ m, Reachable program table compileFuel m → Agrees m →
       ∀ fuel decision, Agrees (steppedBy program fuel table m decision))
-    (m : NativeMachine) (reachable : Reachable program table compileFuel answers m) :
+    (m : NativeMachine) (reachable : Reachable program table compileFuel m) :
     forkedOf m.trace = originForks m :=
-  (reachable_lift_pure program table compileFuel answers
-    (fun m => Reachable program table compileFuel answers m ∧ Agrees m)
-    ⟨reachable_load program table compileFuel answers, load⟩
+  (reachable_lift_pure program table compileFuel
+    (fun m => Reachable program table compileFuel m ∧ Agrees m)
+    ⟨reachable_load program table compileFuel, load⟩
     (fun m fuel d h => ⟨reachable_step h.1 fuel d, step m h.1 h.2 fuel d⟩) m reachable).2
 
 /-- Exact M1Trace.step_agrees proposition, with all native commands proved above. -/
 theorem step_agrees (program : NativeEff) (table : RowTable) (compileFuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann)) (m : NativeMachine)
-    (_reachable : Reachable program table compileFuel answers m)
+    (m : NativeMachine)
+    (_reachable : Reachable program table compileFuel m)
     (agrees : Agrees m) (fuel : Nat) (decision : NativeDecision) :
     Agrees (steppedBy program fuel table m decision) :=
   steppedBy_ok program table fuel m decision agrees
 
 /-- Exact M1Trace.reachable_agrees proposition; no command-preservation premise remains. -/
 theorem reachable_agrees (program : NativeEff) (table : RowTable) (compileFuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann)) (m : NativeMachine)
-    (reachable : Reachable program table compileFuel answers m) :
+    (m : NativeMachine)
+    (reachable : Reachable program table compileFuel m) :
     forkedOf m.trace = originForks m :=
-  reachable_agrees_of program table compileFuel answers (load_agrees program compileFuel answers)
+  reachable_agrees_of program table compileFuel (load_agrees program compileFuel)
     (fun m hr ha fuel decision =>
-      step_agrees program table compileFuel answers m hr ha fuel decision) m reachable
+      step_agrees program table compileFuel m hr ha fuel decision) m reachable
 
 end Native
 end Effect4.Api.TraceFacts.Agreement

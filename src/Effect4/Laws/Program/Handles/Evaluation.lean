@@ -318,9 +318,8 @@ theorem Api.replay_machine (program : Api.Program) (fuel : Nat) (tape : List Api
 
 /-- A loaded program holds no handle: a literal is a unit, a number or a boolean, and the root
 point has nothing in scope. -/
-theorem load_minted (program : Api.Program) (fuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann) := []) :
-    Minted (Api.load program fuel answers) := by
+theorem load_minted (program : Api.Program) (fuel : Nat) :
+    Minted (Api.load program fuel) := by
   have hcode : nativeKeys (compile program fuel) ⊆ [] := compileEff_keys program (rootPoint fuel)
   have hmake := make_keys_subset (nk := EffName.keys) (sk := EffThunk.keys) Api.root (compile program fuel)
     true (stores.budgetOf emptyCtx) emptyCtx
@@ -329,7 +328,7 @@ theorem load_minted (program : Api.Program) (fuel : Nat)
     List.Subset.trans hmake (List.append_subset.mpr ⟨hcode, List.Subset.refl _⟩)
   unfold Minted MintedAt MintedIn
   refine Ok_of_subset (b := []) ?_ (Ok_nil _)
-  have hempty : ({ Stores.empty with externals := ExternalStore.ofAnswers answers } : Stores).keys = [] := rfl
+  have hempty : Stores.empty.keys = [] := rfl
   simp only [Api.load, Api.compile, RunMachine.keys, RunMachine.empty, List.flatMap_cons,
     List.flatMap_nil, List.map_nil, List.append_nil, hempty]
   exact hfiber
@@ -344,28 +343,26 @@ theorem handles_minted (program : Api.Program) (fuel : Nat) (tape : List Api.Dec
   exact (replayEval_minted_of_evaluator EffName.keys EffThunk.keys (interpOf_keyBounded program)
     (evaluatorFor_minted program) fuel tape _ h.2 h.1).2
 
-/-- A run returned by checked replay has only live collected handles, for the supplied table
-and oracle. The unconsumed oracle remains input data; admission checks it before use. -/
+/-- A run returned by checked replay has only live collected handles, for the supplied
+table. -/
 theorem checked_replay_minted (program : Api.Program) (fuel : Nat) (tape : List Api.Decision)
- (answers : List (Completion Val Err Defect FiberId Ann))
     (table : RowTable) (run : Api.Inspection)
-    (h : Api.replayChecked program fuel tape answers table = .inl run) :
+    (h : Api.replayChecked program fuel tape table = .inl run) :
     Minted run.machine := by
   letI := evaluatorFor program table
   unfold Api.replayChecked at h
   split at h
   · cases h
-  · cases hc : replayCheckedFrom program fuel answers table 0 tape
-        (Api.load program fuel answers) with
+  · cases hc : replayCheckedFrom program fuel table 0 tape (Api.load program fuel) with
     | inr refusal =>
       obtain ⟨position, input, why, machine⟩ := refusal
       simp only [hc, reduceCtorEq] at h
     | inl result =>
-      have hv := replayCheckedFrom_answersValid program fuel answers table 0 tape _ result hc
-      have he := replayCheckedFrom_eq_replay program fuel answers table 0 tape _ result hc
+      have hv := replayCheckedFrom_answersValid program fuel table 0 tape _ result hc
+      have he := replayCheckedFrom_eq_replay program fuel table 0 tape _ result hc
       have hm := (replayEval_minted_of_evaluator EffName.keys EffThunk.keys
         (interpOf_keyBounded program table) (evaluatorFor_minted program table) fuel tape _ hv
-        (load_minted program fuel answers)).2
+        (load_minted program fuel)).2
       rw [← he] at hm
       cases result <;> simp only [hc, Sum.inl.injEq] at h <;> cases h <;> exact hm
 

@@ -16,6 +16,7 @@ import Effect4.Api
 import Effect4.Laws.Api.Frontier
 import Effect4.Laws.Program.Denote
 import Test.Program.Gen
+import Test.Api.HostList
 import TypeScript.Render
 import Lean.Data.Json
 
@@ -55,14 +56,17 @@ Manifest (`format: effect4-truth-manifest-v1`), one entry per program:
   `TypeScript.Render.constDecl house0`, or `null` (ill-typed, or refused);
 * `declInferred`: the same block with no type annotation on any declaration, the module the
   type oracle reads so that the host's compiler infers the program's type on its own;
-* `run`: `Api.run p fuel` — `outcome` (`finished`, `frontier`, `stuck …`), `exit` (the root's
+* `run`: `Api.run p fuel`, or for a program with host answers its run under a host that answers
+  from a list (`Test.Api.HostList`: the session, each answer a decision, DI-23) — `outcome`
+  (`finished`, `frontier`, `stuck …`), `exit` (the root's
   exit in the wire below, `null` while the root is live), `fibers` (id, exited, parked token),
   `events` (the machine events with an rc.112 counterpart, in order), `schedule` (the same
   events reduced to the alphabet the runner can observe, each fiber under its number in the
   recorder's order, `numbering`), `internal` (the other non-frame events, recorded, never
   compared), `frames` (how many frame rows were dropped);
 * `runSync`: `Api.runSync p fuel` — `Effect.runSyncExit`'s exit, and `sync`, whether the
-  program settled inside it (its exit is not the `AsyncFiberError` defect).
+  program settled inside it (its exit is not the `AsyncFiberError` defect). A host call parks and
+  this entry answers none, so a root that waits on its host ends with that defect.
 
 The value wire: `unit` ↦ `null`, `nat` ↦ number,
 `bool` ↦ boolean, a tuple / exit list ↦ JSON array, `fiber k` ↦ `{"fiber":n}`, where `n` is
@@ -81,8 +85,8 @@ Behaviours held:
 
 * deterministic — the manifest is a function of the corpus and the fuel (by construction:
   no IO above `main`);
-* total under fuel — every run is `Api.run`/`Api.runSync` at the given fuel, a frontier when
-  it runs out, never a hang (by construction);
+* total under fuel — every run is `Api.run`/`Api.runSync`, or the list host's run, at the given
+  fuel, a frontier when it runs out, never a hang (by construction);
 * complete over the corpus — every program of `corpus` has one entry, names are unique
   (tested: the `#guard`s at the end);
 * honest about refusals — a print refusal or an ill-typed program is recorded as such.
@@ -292,7 +296,7 @@ def pairT (a b : Term) : Term := .app "pair" (.cons a (.cons b .nil))
 /-- The sqlite fixture over the canonical `SqliteBun` table (host rows step 6): open the
 `:memory:` client, create, insert through `strings` parameters (JSON text, decoded by the
 host before binding), select, and close at the scope's end. The answers come from the tape
-rc.112 recorded (`harness/truth/tapes/pSqlite.jsonl`), never from a Lean-side list. -/
+rc.112 recorded (`harness/truth/tapes/pSqlite.jsonl`), read by a host that answers from a list. -/
 def pSqlite : Api.Program :=
   .scoped (.bind (.acquireRelease (.perform (.external 0) (.lit (.str ":memory:")))
                                   (.perform (.external 2) (.var 0)))
@@ -357,7 +361,7 @@ def pSqlOrDie : Api.Program :=
 def sqliteFixtures : List String := ["pSqlite", "pSqlFail", "pSqlCatch", "pSqlExit", "pSqlOrDie"]
 
 /-- Per-fixture input data supplied beside the canonical program: the row table, and the
-built-in oracle answers of a unit-declared fixture (`pAcquireHandle`); a canonical package
+built-in host answers of a unit-declared fixture (`pAcquireHandle`); a canonical package
 fixture's answers come from its tape, appended by `main`. -/
 def hostInputs (name : String) : RowTable × List (Completion Val Err Defect FiberId Ann) :=
   if name == "pAcquireHandle" then (acquireHandleTable, acquireHandleAnswers)
@@ -1581,13 +1585,23 @@ def fiberJson (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) : J
 
 def strings (xs : List String) : J := Lean.Json.arr (xs.map Lean.Json.str).toArray
 
-/-- U-01 replays the same explicit decisions as the counterexample; other fixtures use
-ordinary run/flush. The host recorder executes these decisions at the masked park. -/
+/-- The exits of a list of host answers. A tape row decodes to an exit alone (`tapeAnswer`). -/
+def exitsOf (answers : List (Completion Val Err Defect FiberId Ann)) : List ExitV :=
+  answers.filterMap fun | .ofExit ex => some ex | .ofRefGet _ => none
+
+/-- U-01 replays the same explicit decisions as the counterexample; the host recorder executes
+these decisions at the masked park. A fixture with host answers runs under a host that answers
+from a list (`Test.Api.HostList`): each answer is a decision of the session, taken in the order
+the session meets the calls (DI-23). Other fixtures use ordinary run/flush. -/
 def fixtureRun (name : String) (p : Api.Program) (fuel : Nat) (table : RowTable)
     (answers : List (Completion Val Err Defect FiberId Ann)) : Api.Inspection :=
   if name == "pInterruptEscape" then
-    Api.replay p fuel Test.Counterexamples.InterruptEscape.poisoned answers table
-  else Api.run p fuel answers table
+    Api.replay p fuel Test.Counterexamples.InterruptEscape.poisoned table
+  else if answers.isEmpty then Api.run p fuel table
+  else
+    match Test.Api.HostList.run p table (exitsOf answers) { fuel, compileFuel := fuel } with
+    | some run => run.inspect
+    | none => Api.run p fuel table
 
 def runJson (p : Api.Program) (fuel : Nat) (table : RowTable := [])
     (answers : List (Completion Val Err Defect FiberId Ann) := []) (name : String := "") : J :=
@@ -1609,9 +1623,8 @@ def runJson (p : Api.Program) (fuel : Nat) (table : RowTable := [])
     , ("internal", strings (trace.filterMap internal))
     , ("frames", toJson (trace.filter isFrame).length) ]
 
-def runSyncJson (p : Api.Program) (fuel : Nat) (table : RowTable := [])
-    (answers : List (Completion Val Err Defect FiberId Ann) := []) : J :=
-  let (machine, exit) := Api.runSync p fuel answers table
+def runSyncJson (p : Api.Program) (fuel : Nat) (table : RowTable := []) : J :=
+  let (machine, exit) := Api.runSync p fuel table
   Lean.Json.mkObj
     -- the sync run has its own trace, and so its own numbering
     [ ("exit", exitJsonAt (numberOf machine.trace) ((Api.typeOf p table).map (·.error)) exit)
@@ -1694,7 +1707,7 @@ def entry (fuel : Nat) (tapes : String → List (Completion Val Err Defect Fiber
         | some text => Lean.Json.str text
         | none => Lean.Json.null)
     , ("run", (runtimeTable.map fun rows => runJson p fuel rows answers name).getD Lean.Json.null)
-    , ("runSync", (runtimeTable.map fun rows => runSyncJson p fuel rows answers).getD Lean.Json.null) ] ++
+    , ("runSync", (runtimeTable.map fun rows => runSyncJson p fuel rows).getD Lean.Json.null) ] ++
     (if name == "pJoinedFirstNumber" || name == "pJoinedFirstString" then
       [("genericRows", Lean.Json.arr (table.map Tools.ProfileJson.rowJson).toArray),
        ("runtimeInstanceRows", match runtimeTable with
@@ -1736,22 +1749,27 @@ def corpusManifest (fuel count depth : Nat) : J :=
     , ("programs", Lean.Json.arr
         ((corpusPrograms count depth).map fun (name, p) => entry fuel (fun _ => []) name p).toArray)]
 
-/-! ## The tapes: rc.112's recorded answers, decoded into the oracle
+/-! ## The tapes: rc.112's recorded answers, read by a host that answers from a list
 
 **What a tape is, and the quantifier on the claim it supports (DI-23).** A tape is the list
 of package-row completions rc.112 gave *one* program on *one* run of the pinned host, in call
 order, one JSON Lines row per call (`harness/truth/tapes/<name>.jsonl`, written by
 `harness/truth/run-truth.ts`). Replaying it here is an agreement claim of exactly this shape:
 
-* **single-fiber.** The rows carry the calling fiber's index but are consumed in file order,
-  so a tape is a faithful oracle only while every row of a program is made by one fiber. Every
-  fixture with a tape is single-fiber today, and there is no fork-using host fixture. The
-  first one is an obligation, not an extension: rows would have to be selected per fiber, and
-  a schedule the machine chose differently would consume them in a different order. Nothing in
-  this file detects that; the fixture's author must.
-* **the schedule comparison is untouched by tapes.** `compareSchedules` (`run-truth.ts`)
-  compares the two faces' `started`/`forked`/`parked`/`resumed`/`ran`/`exited` rows and is not
-  a function of the tape. A tape decides what a row *answered*, never when a fiber ran.
+* **single-fiber.** The rows carry the calling fiber's index but are taken in file order, in
+  the order the session meets the calls, so a tape is a faithful host only while every row of a
+  program is made by one fiber. Every fixture with a tape is single-fiber today, and there is no
+  fork-using host fixture. The first one is an obligation, not an extension: rows would have to
+  be selected per fiber, and a schedule the machine chose differently would take them in a
+  different order. Nothing in this file detects that; the fixture's author must.
+* **a host call parks.** On this face every host call parks its fiber, and the answer resumes
+  it, so a host program's compared schedule holds a `parked` and a `resumed` row for each call,
+  and its `runSync` exit is the `AsyncFiberError` defect when its root waits on its host. The
+  pinned host answers a package row inside the call, with no park. `compareSchedules`
+  (`run-truth.ts`) compares the two faces' `started`/`forked`/`parked`/`resumed`/`ran`/`exited`
+  rows, so a host fixture's schedule and sync exit differ on the two faces until its host
+  answers after a park on rc.112 too (the keyed lane) or the immediate-answer lowering lands
+  (HC-6 of `docs/research/2026-10-09-host-calls-and-cleanup.md`).
 * **pinned host.** `effect@4.0.0-rc.112` and `@effect/sql-sqlite-bun@4.0.0-rc.112`, the
   versions `scripts/check-truth.py` refuses to run without, on bun. A tape is evidence about
   those bytes and no others.
@@ -1784,7 +1802,7 @@ partial def jsonToVal : J → Option Val
       | .ok v => (jsonToVal v).map .some
       | .error _ => match j.getObjVal? "none" with | .ok _ => some .none | .error _ => none
 
-/-- An oracle answer: what a tape row decodes to. -/
+/-- A host answer: what a tape row decodes to. -/
 abbrev Answer := Completion Val Err Defect FiberId Ann
 
 /-- One tape row as a completion: `answer` a success, `failed` the tagged pair of DB-15 (the
@@ -1966,7 +1984,7 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
   let (table, answers) := hostInputs name
   let pinned := (lateSights.lookup name).getD []
   moved (fixtureRun name p 1000 table answers).trace == pinned &&
-    moved (Api.runSync p 1000 answers table).1.trace == (lateSightsSync.lookup name).getD pinned
+    moved (Api.runSync p 1000 table).1.trace == (lateSightsSync.lookup name).getD pinned
 -- No program is in both tables, and each sync pin moves a fiber.
 #guard lateSightsSync.all fun entry => (lateSights.lookup entry.1).isNone && entry.2 != []
 #guard moved (Api.run pQueueOrder 1000).trace = [(4, 3), (3, 4)] &&
@@ -2466,10 +2484,10 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
 
 #guard LawfulTable acquireHandleTable
 #guard Api.wellTyped pAcquireHandle acquireHandleTable
-#guard (Api.run pAcquireHandle 1000 acquireHandleAnswers acquireHandleTable).exit =
+#guard (fixtureRun "pAcquireHandle" pAcquireHandle 1000 acquireHandleTable acquireHandleAnswers).exit =
   some (.success (.list [.handle 7 0, .nat 1]))
-#guard (Api.run pAcquireHandle 1000 acquireHandleAnswers acquireHandleTable).stores.externals.allocated =
-  ["Host.Resource"]
+#guard (fixtureRun "pAcquireHandle" pAcquireHandle 1000 acquireHandleTable
+  acquireHandleAnswers).stores.externals.allocated = ["Host.Resource"]
 
 /-- P2b finite check of the amended observation equations on a final machine. The decision
 reason names a runnable fiber or an armed owner (decisions row 201 (b), `awaitDecision_iff`). -/
@@ -2487,17 +2505,16 @@ def observesReasons (why : Exhaustion) (m : Api.Machine) : Bool :=
   let m := (fixtureRun name p 1000 table answers).machine
   observesReasons .fuel m && observesReasons .tape m
 
--- The universal law instantiates at every corpus member, for any actual host replies.
-example (p : Api.Program) (fuel : Nat) (answers : List Answer) (table : RowTable)
-    (why : Exhaustion) :
-    Api.HostProtocol.observe (Api.run p fuel answers table).machine = .awaitingAsync ↔
-      ∃ key, .awaitHost key ∈ Api.frontierReasons why (Api.run p fuel answers table).machine :=
+-- The universal law instantiates at every corpus member.
+example (p : Api.Program) (fuel : Nat) (table : RowTable) (why : Exhaustion) :
+    Api.HostProtocol.observe (Api.run p fuel table).machine = .awaitingAsync ↔
+      ∃ key, .awaitHost key ∈ Api.frontierReasons why (Api.run p fuel table).machine :=
   (Api.observe_of_reasons why _).1
 
 end OCaml5.Truth
 
 /-- The tapes under `dir`: `<name>.jsonl` per corpus program that has one, decoded into that
-program's oracle answers; a program without a tape gets none. A row that does not decode is an
+program's host answers; a program without a tape gets none. A row that does not decode is an
 error, not a guess. -/
 def readTapes (dir : System.FilePath) : IO (String → List OCaml5.Truth.Answer) := do
   let mut table : List (String × List OCaml5.Truth.Answer) := []

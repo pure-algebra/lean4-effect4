@@ -785,9 +785,9 @@ theorem contAOf_closeIfLast_scope (exit : ExitV) (scope : Nat) :
 `run-eq-ref` through `Sched.M1Hooks.storesOk_syncOpStep` and its no-external-allocation clause.
 It says nothing about host-answer preparation, which can allocate an external handle. -/
 
-/-- Every successful synchronous store primitive keeps the queued external answers,
-allocations and rejected-answer marker. No heap-validity or empty-external-store premise is
-needed. Consumer: `Sched.storesOk_syncOpStep`, whose external clause is framed once. -/
+/-- Every successful synchronous store primitive keeps the external allocations. No
+heap-validity or empty-external-store premise is needed. Consumer: `Sched.storesOk_syncOpStep`,
+whose external clause is framed once. -/
 theorem syncOpStep_externals (o : SyncOp) (s s' : Stores) (v : Val)
     (step : syncOpStep o s = some (s', v)) : s'.externals = s.externals := by
   fun_cases syncOpStep o s <;>

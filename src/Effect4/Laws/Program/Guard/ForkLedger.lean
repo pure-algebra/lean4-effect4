@@ -8,8 +8,7 @@ set_option autoImplicit false
 namespace Effect4.Machine.ForkLedger.Invariant
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Guard
 
-theorem load_ok (p : NativeEff) (compileFuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann)) : Ok (Api.load p compileFuel answers) := by
+theorem load_ok (p : NativeEff) (compileFuel : Nat) : Ok (Api.load p compileFuel) := by
   change ViewOk [Api.root] [] 1
   refine ⟨List.nodup_cons.mpr ⟨List.not_mem_nil, List.nodup_nil⟩,
     List.nodup_nil, ?_, (fun _ hm => nomatch hm), (fun _ hm => nomatch hm)⟩
@@ -232,38 +231,37 @@ theorem runCallback_ok (p : NativeEff) (table : RowTable) (fuel : Nat)
   exact drive_ok p table fuel _ _ (appendRoot_ok h _ rfl)
 
 theorem reachable_ok (p : NativeEff) (table : RowTable) (compileFuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann))
-    (m : NativeMachine) (reachable : Reachable p table compileFuel answers m) : Ok m :=
-  reachable_lift_pure p table compileFuel answers Ok (load_ok p compileFuel answers)
+    (m : NativeMachine) (reachable : Reachable p table compileFuel m) : Ok m :=
+  reachable_lift_pure p table compileFuel Ok (load_ok p compileFuel)
     (fun m fuel decision hm => steppedBy_ok p table fuel m decision hm) m reachable
 
 /-- These four public consequences answer the four facts in the plan, on raw native prefixes. -/
 theorem reachable_unique (p : NativeEff) (table : RowTable) (fuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann)) (m : NativeMachine)
-    (hr : Reachable p table fuel answers m) : (m.forks.map (·.child)).Nodup :=
-  (reachable_ok p table fuel answers m hr).childrenUnique
+    (m : NativeMachine)
+    (hr : Reachable p table fuel m) : (m.forks.map (·.child)).Nodup :=
+  (reachable_ok p table fuel m hr).childrenUnique
 
 theorem reachable_bounded (p : NativeEff) (table : RowTable) (fuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann)) (m : NativeMachine)
-    (hr : Reachable p table fuel answers m) :
+    (m : NativeMachine)
+    (hr : Reachable p table fuel m) :
     (∀ f ∈ m.fibers, f.id.value < m.nextId) ∧
     (∀ r ∈ m.forks, r.child.value < m.nextId) :=
-  ⟨fiber_below (reachable_ok p table fuel answers m hr),
-    record_below (reachable_ok p table fuel answers m hr)⟩
+  ⟨fiber_below (reachable_ok p table fuel m hr),
+    record_below (reachable_ok p table fuel m hr)⟩
 
 theorem reachable_corresponding (p : NativeEff) (table : RowTable) (fuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann)) (m : NativeMachine)
-    (hr : Reachable p table fuel answers m) :
+    (m : NativeMachine)
+    (hr : Reachable p table fuel m) :
     (m.fibers.map (·.id)).Nodup ∧ (∀ r ∈ m.forks, ∃ f ∈ m.fibers, f.id = r.child) :=
-  ⟨(reachable_ok p table fuel answers m hr).idsUnique,
-    record_corresponds (reachable_ok p table fuel answers m hr)⟩
+  ⟨(reachable_ok p table fuel m hr).idsUnique,
+    record_corresponds (reachable_ok p table fuel m hr)⟩
 
 theorem reachable_fresh (p : NativeEff) (table : RowTable) (fuel : Nat)
-    (answers : List (Completion Val Err Defect FiberId Ann)) (m : NativeMachine)
-    (hr : Reachable p table fuel answers m) :
+    (m : NativeMachine)
+    (hr : Reachable p table fuel m) :
     (⟨m.nextId⟩ : FiberId) ∉ m.fibers.map (·.id) ∧
     (⟨m.nextId⟩ : FiberId) ∉ m.forks.map (·.child) :=
-  fresh (reachable_ok p table fuel answers m hr)
+  fresh (reachable_ok p table fuel m hr)
 
 end Native
 end Effect4.Machine.ForkLedger.Invariant

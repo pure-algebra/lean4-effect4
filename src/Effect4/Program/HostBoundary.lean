@@ -117,7 +117,7 @@ def spec : HostSpec Nat Nat where
     row = Scalar.waitRow ∧ request = .nat 0 ∧
       ((completion = .ofExit (.success (.nat 1)) ∧ after = before + 1) ∨
        (completion = .ofExit (.success (.nat 2)) ∧ after = before + 2))
-  observe := fun stores _ => stores.externals.answers = []
+  observe := fun stores _ => stores.externals.allocated = []
 
 end Profile.Choice
 

@@ -82,10 +82,10 @@ def Lowered.shown (l : Lowered) : Shown :=
   let budget := l.opened.budget
   let prefixes := (List.range (decisions.length + 1)).map decisions.take
   let raw := prefixes.map fun taken =>
-    let replayed := Api.replay built.program budget.fuel taken [] built.table budget.compileFuel
+    let replayed := Api.replay built.program budget.fuel taken built.table budget.compileFuel
     (replayed.outcome, machineViewOf replayed.machine)
   let bare := prefixes.map fun taken =>
-    machineViewOf (Api.replay built.program budget.fuel taken [] [] budget.compileFuel).machine
+    machineViewOf (Api.replay built.program budget.fuel taken [] budget.compileFuel).machine
   { positions := tape.1
     left := tape.2.length
     views := machineView l.opened :: tape.1.map fun position => machineView position.after
@@ -375,7 +375,7 @@ theorem shown_views_opened (l : Lowered) (b : Api.Built) (id : String) (budget :
     rw [fresh]
     exact Run.open_machine b id budget profile
   have raw : ∀ taken : List Api.Decision,
-      (Api.replay l.opened.built.program l.opened.budget.fuel taken [] l.opened.built.table
+      (Api.replay l.opened.built.program l.opened.budget.fuel taken l.opened.built.table
         l.opened.budget.compileFuel).machine =
       Run.machineOf (Run.replayFrom l.opened.built.program l.opened.built.table
         l.opened.budget.fuel taken l.opened.machine) := by

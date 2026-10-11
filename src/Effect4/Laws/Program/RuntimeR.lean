@@ -39,9 +39,8 @@ abbrev RReplay := ReplayResult EffName EffThunk Val Err Defect FiberId Ann Ctx S
 
 /-- `Api.load` with the structural term in place of compiled frame code. -/
 def loadR (program : NativeEff) (fuel : Nat)
-    (compileFuel : Nat := fuel)
-    (answers : List (Completion Val Err Defect FiberId Ann) := []) : RState :=
-  { (RunMachine.empty { Stores.empty with externals := ExternalStore.ofAnswers answers } : RState) with
+    (compileFuel : Nat := fuel) : RState :=
+  { (RunMachine.empty Stores.empty : RState) with
     fibers := [RunFiber.make Api.root (denoteR program program (rootPoint compileFuel)) true
       (stores.budgetOf emptyCtx) emptyCtx]
     nextId := 1 }
@@ -50,10 +49,9 @@ def obsR (m : RState) : Obs := obs m
 
 /-- The same Completion data and decision alphabet as `Api.replay`. -/
 def replayR (program : NativeEff) (fuel : Nat) (tape : List Api.Decision)
-    (compileFuel : Nat := fuel) (table : RowTable := [])
-    (answers : List (Completion Val Err Defect FiberId Ann) := []) : RReplay :=
+    (compileFuel : Nat := fuel) (table : RowTable := []) : RReplay :=
   letI := termEvaluatorFor program table
-  replayEval (interpR program table) fuel tape (loadR program fuel compileFuel answers)
+  replayEval (interpR program table) fuel tape (loadR program fuel compileFuel)
 
 /-- The loaded term stays fixed when comparing command budgets. -/
 def SufficientR (program : NativeEff) (commandFuel : Nat) (m : RState)
@@ -161,7 +159,7 @@ theorem load_rel (e : NativeEff) (fuel : Nat) :
     ListRel.nil rfl rfl rfl rfl rfl rfl rfl rfl
 
 /-- Every tape replays to related results, at every row table, any compile budget and any
-command budget, from the loads with no preloaded answer. -/
+command budget, from the loads. -/
 theorem replay_rel {table : RowTable} (e : NativeEff) (cfuel fuel : Nat) (tape : List Api.Decision) :
     letI := evaluatorFor e table
     letI := termEvaluatorFor e table
@@ -184,7 +182,7 @@ theorem replayRel_classify_obs {e : NativeEff} {r₁ : FReplay} {r₂ : RReplay}
 
 theorem replay_outcome (e : NativeEff) (fuel : Nat) (tape : List Api.Decision) (table : RowTable)
     (compileFuel : Nat) :
-    (Api.replay e fuel tape [] table compileFuel).outcome =
+    (Api.replay e fuel tape table compileFuel).outcome =
       classify (replayEval (evaluator := evaluatorFor e table) (interpOf e table) fuel tape
         (Api.load e compileFuel)) := by
   unfold Api.replay
@@ -192,7 +190,7 @@ theorem replay_outcome (e : NativeEff) (fuel : Nat) (tape : List Api.Decision) (
 
 theorem replay_machine (e : NativeEff) (fuel : Nat) (tape : List Api.Decision) (table : RowTable)
     (compileFuel : Nat) :
-    (Api.replay e fuel tape [] table compileFuel).machine =
+    (Api.replay e fuel tape table compileFuel).machine =
       (replayEval (evaluator := evaluatorFor e table) (interpOf e table) fuel tape
         (Api.load e compileFuel)).machine := by
   unfold Api.replay
@@ -204,14 +202,10 @@ the same way and observe the same thing: every fiber's exit and the whole
 stores. No premise: the relation is inhabited at the load and preserved by every command.
 Nothing is said about an external host.
 
-**At the empty table, with no oracle answers** (DI-57). `Api.replay` takes a `RowTable` and a
-list of external answers; this theorem takes neither, so both stay at their defaults — the
-empty table and the empty oracle. The reference takes the row table too (`interpR`, `replayR`),
-and the agreement at every row table with no preloaded answer is
-`run_eq_ref_table_noPreload` (`Laws/Program/Table/Agreement.lean`, decisions row 314). The
-case of preloaded answers is the rest of the planned goal `run_eq_ref_table`, whose
-proposition is filed in `Test/contracts/machine-scheduler-core.contract.md`, "Table-aware
-agreement (DI-57)". -/
+**At the empty table** (DI-57). `Api.replay` takes a `RowTable`; this theorem takes none, so
+it stays at its default, the empty table. The reference takes the row table too (`interpR`,
+`replayR`), and the agreement at every row table is `run_eq_ref_table`
+(`Laws/Program/Table/Agreement.lean`, decisions row 314). -/
 theorem run_eq_ref (e : NativeEff) (fuel : Nat) (tape : List Api.Decision)
  :
     (Api.replay e fuel tape).outcome = classify (replayR e fuel tape) ∧
