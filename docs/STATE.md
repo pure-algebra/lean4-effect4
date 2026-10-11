@@ -219,7 +219,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
 00. **The last planned goals** (the [goals packet](research/2026-10-10-goals-packet/README.md)).
    Fourteen goals remain, each a property of one of the five example applications. The packet
    plans their proofs for Codex, with each goal proved modulo the lemmas it names. It also sorts
-   the 87 open parts that no goal states yet.
+   the 87 open parts that no goal states yet. Beside it: the nine legacy host fixtures of the
+   truth lane move to the keyed lane (row 343 (8), signed until then), and seat FC's rulings
+   land (row 345 (2): `tools/Tools/Graph` at height 0; the generator's children induction).
 0. **The host session as a coalgebra** (the
    [coalgebra note](research/2026-10-09-host-coalgebra.md), slices CO-1 to CO-7). CO-1 to CO-5
    landed, with CO-6 and the generic half of CO-7 (decisions row 338 ruled the note's questions).
@@ -289,10 +291,7 @@ owner's note of 2026-10-09: write a program, then watch its session answer calls
   confirm. What a line's width means: the organic strokes note, section 4.
 - **MCP and code mode** (the MCP note, section 10): six rulings.
 - **The push of `lean4-effects`**, before this branch: Effect4 pins its local commit.
-- **The nine legacy host fixtures of the truth lane** (row 343 (8)): sign the divergence, move
-  them to the keyed lane, or land HC-6. Until then `check-truth` refuses them.
-- **Seat FC's four proposals** (row 345 (2)): tool laws as claims, the map's height of
-  `tools/Tools/Graph`, the checked audit opt-in, and the generator's children induction.
+
 
 ## Process
 

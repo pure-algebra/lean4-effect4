@@ -20,14 +20,14 @@ effect 4.0.0-rc.112, bun 1.4.2, deadline 300 ms
 | pProvideTwice | success 2 | success 2 | yes | yes | yes | runPromiseExit | same value |
 | pDiamond | success 1 | success 1 | yes | yes | yes | runPromiseExit | same value |
 | pMergeAll | success 3 | success 3 | yes | yes | yes | runPromiseExit | same value |
-| pAcquireHandle | success [{"external":0},1] | success [{"external":0},1] | yes | yes | yes | runPromiseExit | same value |
+| pAcquireHandle | success [{"external":0},1] | success [{"external":0},1] | yes | NO | NO | runPromiseExit | same value; schedule differ at row 1: Lean "parked 0", rc.112 "exited 0 success"; HC-2 signed divergence: each host call parks on the Lean face and is answered inline by rc.112 (decisions row 343) |
 | pFailTagged | fail [{"fail":["SqlError","boom"]}] | fail [{"fail":["SqlError","boom"]}] | yes | yes | yes | runPromiseExit | runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads |
-| pSqlite | success [[["a","7"],["b","\"x\""]]] | success [[["a","7"],["b","\"x\""]]] | yes | yes | yes | runPromiseExit | same value; tape: 5 calls |
-| pKv | success [{"some":"1"},true] | success [{"some":"1"},true] | yes | yes | yes | runPromiseExit | same value; tape: 5 calls |
-| pSqlFail | fail [{"fail":["UnknownError","no such table: missing"]}] | fail [{"fail":["UnknownError","no such table: missing"]}] | yes | yes | yes | runPromiseExit | same failure reasons and payloads; tape: 3 calls |
-| pSqlCatch | success "recovered" | success "recovered" | yes | yes | yes | runPromiseExit | same value; tape: 3 calls |
-| pSqlExit | success {"failure":{"reasons":[{"fail":["UnknownError","no such table: missing"]}]}} | success {"failure":{"reasons":[{"fail":["UnknownError","no such table: missing"]}]}} | yes | yes | yes | runPromiseExit | same value; tape: 3 calls |
-| pSqlOrDie | die [{"die":{"error":["UnknownError","no such table: missing"]}}] | die [{"die":{"error":["UnknownError","no such table: missing"]}}] | yes | yes | yes | runPromiseExit | same represented-defect cause; tape: 3 calls |
+| pSqlite | success [[["a","7"],["b","\"x\""]]] | success [[["a","7"],["b","\"x\""]]] | yes | NO | NO | runPromiseExit | same value; schedule differ at row 1: Lean "parked 0", rc.112 "exited 0 success"; tape: 5 calls; HC-2 signed divergence: each host call parks on the Lean face and is answered inline by rc.112 (decisions row 343) |
+| pKv | success [{"some":"1"},true] | success [{"some":"1"},true] | yes | NO | NO | runPromiseExit | same value; schedule differ at row 1: Lean "parked 0", rc.112 "exited 0 success"; tape: 5 calls; HC-2 signed divergence: each host call parks on the Lean face and is answered inline by rc.112 (decisions row 343) |
+| pSqlFail | fail [{"fail":["UnknownError","no such table: missing"]}] | fail [{"fail":["UnknownError","no such table: missing"]}] | yes | NO | NO | runPromiseExit | same failure reasons and payloads; schedule differ at row 1: Lean "parked 0", rc.112 "exited 0 fail"; tape: 3 calls; HC-2 signed divergence: each host call parks on the Lean face and is answered inline by rc.112 (decisions row 343) |
+| pSqlCatch | success "recovered" | success "recovered" | yes | NO | NO | runPromiseExit | same value; schedule differ at row 1: Lean "parked 0", rc.112 "exited 0 success"; tape: 3 calls; HC-2 signed divergence: each host call parks on the Lean face and is answered inline by rc.112 (decisions row 343) |
+| pSqlExit | success {"failure":{"reasons":[{"fail":["UnknownError","no such table: missing"]}]}} | success {"failure":{"reasons":[{"fail":["UnknownError","no such table: missing"]}]}} | yes | NO | NO | runPromiseExit | same value; schedule differ at row 1: Lean "parked 0", rc.112 "exited 0 success"; tape: 3 calls; HC-2 signed divergence: each host call parks on the Lean face and is answered inline by rc.112 (decisions row 343) |
+| pSqlOrDie | die [{"die":{"error":["UnknownError","no such table: missing"]}}] | die [{"die":{"error":["UnknownError","no such table: missing"]}}] | yes | NO | NO | runPromiseExit | same represented-defect cause; schedule differ at row 1: Lean "parked 0", rc.112 "exited 0 die"; tape: 3 calls; HC-2 signed divergence: each host call parks on the Lean face and is answered inline by rc.112 (decisions row 343) |
 | pFailText | fail [{"fail":"lost"}] | fail [{"fail":"lost"}] | yes | yes | yes | runPromiseExit | runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads |
 | pFailBoomText | fail [{"fail":"boom"}] | fail [{"fail":"boom"}] | yes | yes | yes | runPromiseExit | runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads |
 | pTextOrDie | die [{"die":{"error":"lost"}}] | die [{"die":{"error":"lost"}}] | yes | yes | yes | runPromiseExit | same represented-defect cause |
@@ -43,8 +43,8 @@ effect 4.0.0-rc.112, bun 1.4.2, deadline 300 ms
 | pFailPayload | fail [{"fail":{"payload":{"id":9,"_tag":"NotFound"}}}] | fail [{"fail":{"payload":{"_tag":"NotFound","id":9}}}] | yes | yes | yes | runPromiseExit | runSyncExit built no fiber: a bare Exit is returned as is (`effectIsExit`, internal/effect.ts:5539); the compared schedule is the runFork entry's, which does start one; same failure reasons and payloads |
 | pTagPayload | success 1 | success 1 | yes | yes | yes | runPromiseExit | same value |
 | pInterruptEscape | interrupt [{"interrupt":0}] | fail [{"fail":42}] | NO | NO | yes | runPromiseExit | kind: Lean interrupt, rc.112 fail; schedule differ at row 4: Lean "exited 0 interrupt", rc.112 "exited 0 fail"; U-01 signed divergence: masked interrupt preempts catch; Lean interrupt 0, rc.112 Fail 42 |
-| pJoinedFirstNumber | success {"some":1} | success {"some":1} | yes | yes | yes | runPromiseExit | same value |
-| pJoinedFirstString | success {"some":"negative"} | success {"some":"negative"} | yes | yes | yes | runPromiseExit | same value |
+| pJoinedFirstNumber | success {"some":1} | success {"some":1} | yes | NO | NO | runPromiseExit | same value; schedule differ at row 1: Lean "parked 0", rc.112 "exited 0 success"; HC-2 signed divergence: each host call parks on the Lean face and is answered inline by rc.112 (decisions row 343) |
+| pJoinedFirstString | success {"some":"negative"} | success {"some":"negative"} | yes | NO | NO | runPromiseExit | same value; schedule differ at row 1: Lean "parked 0", rc.112 "exited 0 success"; HC-2 signed divergence: each host call parks on the Lean face and is answered inline by rc.112 (decisions row 343) |
 | pJoinedModifyNumber | success 1 | success 1 | yes | yes | yes | runPromiseExit | same value |
 | pJoinedModifyString | success "negative" | success "negative" | yes | yes | yes | runPromiseExit | same value |
 | pFold | success 8 | success 8 | yes | yes | yes | runPromiseExit | same value |
@@ -96,4 +96,4 @@ effect 4.0.0-rc.112, bun 1.4.2, deadline 300 ms
 | pQueueService | success [true,1] | success [true,1] | yes | yes | yes | runPromiseExit | same value; client through the service key: agrees (success [true,1]) |
 | pSemaphoreService | success [1,false,2] | success [1,false,2] | yes | yes | yes | runPromiseExit | same value; client through the service key: agrees (success [1,false,2]) |
 
-PASS: 90 programs agree on exits, schedules and sync exits; 1 signed divergence(s)
+PASS: 81 programs agree on exits, schedules and sync exits; 10 signed divergence(s)

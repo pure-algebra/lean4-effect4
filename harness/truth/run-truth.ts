@@ -798,6 +798,41 @@ const signedU01 = (name: string, scenario: string | null | undefined, lean: Json
   deepEqual(hostSchedule.filter((row) => !isScheduledRow(row)),
     ["started 0", "parked 0", "resumed 0", "started 0", "exited 0 fail"])
 
+/** HC-2 (decisions row 343 (8)) signs the legacy host fixtures, whose host calls park on the
+ * Lean face and are answered inline by rc.112's package host, until the keyed lane runs them.
+ * Exact pair: the same fork exit, rc.112 never parked; the Lean schedule is rc.112's with at
+ * least one `parked F`, `resumed F`, `started F` triple, one per call where rc.112's tape records
+ * the calls (a handle or a joined fiber's call is not taped); Lean's sync entry ends in the
+ * async-fiber defect, while rc.112's sync entry answers with the fork exit. */
+const HOST_PARK_SIGNED = ["pAcquireHandle", "pSqlite", "pKv", "pSqlFail", "pSqlCatch", "pSqlExit",
+  "pSqlOrDie", "pJoinedFirstNumber", "pJoinedFirstString"]
+
+/** The schedule with every park, resume and restart triple of one fiber removed, and their count. */
+const withoutParks = (schedule: string[]): { rows: string[]; parks: number } => {
+  const rows: string[] = []
+  let parks = 0
+  for (let i = 0; i < schedule.length; i++) {
+    const row = schedule[i] ?? ""
+    const m = /^parked (\d+)$/.exec(row)
+    if (m && schedule[i + 1] === `resumed ${m[1]}` && schedule[i + 2] === `started ${m[1]}`) {
+      parks++
+      i += 2
+    } else rows.push(row)
+  }
+  return { rows, parks }
+}
+
+const signedHostPark = (name: string, scenario: string | null | undefined, lean: Json | null,
+  host: Json | null, leanSchedule: string[], hostSchedule: string[], calls: number,
+  leanSync: Json | null, hostSync: Json | null, parked: boolean): boolean => {
+  if (!HOST_PARK_SIGNED.includes(name) || scenario != null || parked) return false
+  if (!deepEqual(lean, host) || !deepEqual(hostSync, host)) return false
+  if (!deepEqual(leanSync, { failure: { reasons: [{ die: "asyncFiber" }] } })) return false
+  const l = withoutParks(leanSchedule.filter((row) => !isScheduledRow(row)))
+  return l.parks >= 1 && (calls === 0 || l.parks === calls) &&
+    deepEqual(l.rows, hostSchedule.filter((row) => !isScheduledRow(row)))
+}
+
 const selfTestDivergence = (): number => {
   const lean: Json = { failure: { reasons: [{ interrupt: 0 }] } }
   const host: Json = { failure: { reasons: [{ fail: 42 }] } }
@@ -816,6 +851,24 @@ const selfTestDivergence = (): number => {
     ["sync disagreement rejected", !check(lean, host, "pInterruptEscape", "U-01", ls, false)],
     ["parked host rejected", !check(lean, host, "pInterruptEscape", "U-01", ls, true, true)]
   ]
+  const ok: Json = { success: 7 }
+  const die: Json = { failure: { reasons: [{ die: "asyncFiber" }] } }
+  const parkedRun = ["started 0", "parked 0", "resumed 0", "started 0", "exited 0 success"]
+  const inline = ["started 0", "exited 0 success"]
+  const park = (n = "pSqlite", l = ok, h = ok, sched = parkedRun, calls = 1, ls = die, hs = ok,
+    sc: string | null = null, parked = false) =>
+    signedHostPark(n, sc, l, h, sched, inline, calls, ls, hs, parked)
+  cases.push(
+    ["host park: exact signed pair", park()],
+    ["host park: unsigned fixture rejected", !park("pKvOther")],
+    ["host park: changed exit rejected", !park("pSqlite", ok, { success: 8 })],
+    ["host park: extra park rejected", !park("pSqlite", ok, ok, parkedRun, 2)],
+    ["host park: untaped calls signed", park("pSqlite", ok, ok, parkedRun, 0)],
+    ["host park: no park rejected", !park("pSqlite", ok, ok, inline, 0)],
+    ["host park: altered schedule rejected", !park("pSqlite", ok, ok, ["started 0", "parked 0", "exited 0 success"])],
+    ["host park: settled sync entry rejected", !park("pSqlite", ok, ok, parkedRun, 1, ok)],
+    ["host park: scenario rejected", !park("pSqlite", ok, ok, parkedRun, 1, die, ok, "U-01")],
+    ["host park: parked host rejected", !park("pSqlite", ok, ok, parkedRun, 1, die, ok, null, true)])
   const failures = cases.filter(([, pass]) => !pass).map(([name]) => name)
   console.log(JSON.stringify({ kind: "signed-divergence-controls", checks: cases.length, failures }))
   return failures.length === 0 ? 0 : 1
@@ -833,7 +886,7 @@ interface Row {
   /** Present when the program has a client through a service's key: whether the client's exit
    * on rc.112 is the machine's exit of `main`, the same client over the definitions. */
   clientAgree?: boolean
-  exception?: "U-01"
+  exception?: "U-01" | "HC-2"
   scenario?: string
   notes: string[]
   host: Observation | null
@@ -951,11 +1004,16 @@ const main = async (): Promise<number> => {
         notes.push(`client through the service key: ${clientExits.agree ? "agrees" : "disagrees"} (${renderExit(hostClient.exit)})`)
       }
     }
-    const exception = signedU01(entry.name, entry.scenario, entry.run.exit, hostFork.exit,
+    const u01 = signedU01(entry.name, entry.scenario, entry.run.exit, hostFork.exit,
       entry.run.schedule, hostFork.schedule, runSyncAgree, hostFork.parked)
-    if (exception) notes.push("U-01 signed divergence: masked interrupt preempts catch; Lean interrupt 0, rc.112 Fail 42")
+    if (u01) notes.push("U-01 signed divergence: masked interrupt preempts catch; Lean interrupt 0, rc.112 Fail 42")
+    const hc2 = signedHostPark(entry.name, entry.scenario, entry.run.exit, hostFork.exit,
+      entry.run.schedule, hostFork.schedule, hostFork.tape.length, entry.runSync.exit, hostSync.exit,
+      hostFork.parked)
+    if (hc2) notes.push("HC-2 signed divergence: each host call parks on the Lean face and is answered inline by rc.112 (decisions row 343)")
+    const exception = u01 ? "U-01" as const : hc2 ? "HC-2" as const : undefined
     rows.push({
-      ...(exception ? { exception: "U-01" as const } : {}),
+      ...(exception ? { exception } : {}),
       ...(entry.scenario == null ? {} : { scenario: entry.scenario }),
       program: entry.name, leanExit: lean.text, hostExit: host.parked ? "parked (deadline)" : renderExit(host.exit),
       entry: host.entry, exitAgree: exits.agree, scheduleAgree: schedule.agree, runSyncAgree,
@@ -975,9 +1033,9 @@ const main = async (): Promise<number> => {
   // Every compared dimension counts: the fork entry's exit, the fork entry's schedule, and
   // the sync entry's exit (a program whose `runSyncExit` disagrees is a disagreement, whatever
   // the other two say).
-  const disagreements = rows.filter((r) => r.exception !== "U-01" &&
+  const disagreements = rows.filter((r) => r.exception === undefined &&
     (r.program === "pInterruptEscape" || r.scenario != null || r.exitAgree === false || r.scheduleAgree === false || r.runSyncAgree === false || r.clientAgree === false))
-  const signed = rows.filter((r) => r.exception === "U-01").length
+  const signed = rows.filter((r) => r.exception !== undefined).length
   const summary = disagreements.length === 0
     ? `PASS: ${rows.length - signed} programs agree on exits, schedules and sync exits; ${signed} signed divergence(s)`
     : `FAIL: ${disagreements.length} of ${rows.length} programs disagree with rc.112 (${disagreements.map((r) => r.program).join(", ")})`

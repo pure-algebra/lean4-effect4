@@ -171,6 +171,12 @@ def main():
                   if row.get('exception') == 'U-01']
         if len(signed) != 1 or signed[0]['program'] != 'pInterruptEscape':
             sys.exit('FAIL truth: the exact signed U-01 fixture must run once')
+        # HC-2 (decisions row 343 (8)): the legacy host fixtures, signed until the keyed lane runs them.
+        parks = sorted(row['program'] for row in json.loads((Path(work)/'result.json').read_text())['rows']
+                       if row.get('exception') == 'HC-2')
+        if parks != sorted(['pAcquireHandle', 'pSqlite', 'pKv', 'pSqlFail', 'pSqlCatch', 'pSqlExit',
+                            'pSqlOrDie', 'pJoinedFirstNumber', 'pJoinedFirstString']):
+            sys.exit(f'FAIL truth: the HC-2 signed fixtures are {parks}, not the nine of decisions row 343')
         # DI-49: the modules rc.112 just ran, and the adapter they call, under the pinned
         # compiler. The config is copied beside them so that `generated/` and `prelude.ts`
         # resolve as they do in the tree, and `effect`/`@types/bun` through the link above.
@@ -217,7 +223,7 @@ def main():
         for file in fresh.glob('*') if fresh.is_dir() else []:
             if file.read_bytes() != (tapes/file.name).read_bytes():
                 sys.exit(f'FAIL truth: tape {file.name} drifted; rc.112 answered differently from the committed tape')
-    print('PASS truth: pinned corpus, bounded differential and signed U-01 divergence checked; '
+    print('PASS truth: pinned corpus, bounded differential and the signed U-01 and HC-2 divergences checked; '
           'the regenerated modules type-check')
     return 0
 

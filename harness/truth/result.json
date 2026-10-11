@@ -5,7 +5,7 @@
   "effect": "4.0.0-rc.112",
   "bun": "1.4.2",
   "timeoutMs": 300,
-  "summary": "PASS: 90 programs agree on exits, schedules and sync exits; 1 signed divergence(s)",
+  "summary": "PASS: 81 programs agree on exits, schedules and sync exits; 10 signed divergence(s)",
   "rows": [
     {
       "program": "p42",
@@ -2733,15 +2733,18 @@
       }
     },
     {
+      "exception": "HC-2",
       "program": "pAcquireHandle",
       "leanExit": "success [{\"external\":0},1]",
       "hostExit": "success [{\"external\":0},1]",
       "entry": "runPromiseExit",
       "exitAgree": true,
-      "scheduleAgree": true,
-      "runSyncAgree": true,
+      "scheduleAgree": false,
+      "runSyncAgree": false,
       "notes": [
-        "same value"
+        "same value",
+        "schedule differ at row 1: Lean \"parked 0\", rc.112 \"exited 0 success\"",
+        "HC-2 signed divergence: each host call parks on the Lean face and is answered inline by rc.112 (decisions row 343)"
       ],
       "host": {
         "entry": "runPromiseExit",
@@ -2902,16 +2905,19 @@
       }
     },
     {
+      "exception": "HC-2",
       "program": "pSqlite",
       "leanExit": "success [[[\"a\",\"7\"],[\"b\",\"\\\"x\\\"\"]]]",
       "hostExit": "success [[[\"a\",\"7\"],[\"b\",\"\\\"x\\\"\"]]]",
       "entry": "runPromiseExit",
       "exitAgree": true,
-      "scheduleAgree": true,
-      "runSyncAgree": true,
+      "scheduleAgree": false,
+      "runSyncAgree": false,
       "notes": [
         "same value",
-        "tape: 5 calls"
+        "schedule differ at row 1: Lean \"parked 0\", rc.112 \"exited 0 success\"",
+        "tape: 5 calls",
+        "HC-2 signed divergence: each host call parks on the Lean face and is answered inline by rc.112 (decisions row 343)"
       ],
       "host": {
         "entry": "runPromiseExit",
@@ -3349,16 +3355,19 @@
       }
     },
     {
+      "exception": "HC-2",
       "program": "pKv",
       "leanExit": "success [{\"some\":\"1\"},true]",
       "hostExit": "success [{\"some\":\"1\"},true]",
       "entry": "runPromiseExit",
       "exitAgree": true,
-      "scheduleAgree": true,
-      "runSyncAgree": true,
+      "scheduleAgree": false,
+      "runSyncAgree": false,
       "notes": [
         "same value",
-        "tape: 5 calls"
+        "schedule differ at row 1: Lean \"parked 0\", rc.112 \"exited 0 success\"",
+        "tape: 5 calls",
+        "HC-2 signed divergence: each host call parks on the Lean face and is answered inline by rc.112 (decisions row 343)"
       ],
       "host": {
         "entry": "runPromiseExit",
@@ -3582,16 +3591,19 @@
       }
     },
     {
+      "exception": "HC-2",
       "program": "pSqlFail",
       "leanExit": "fail [{\"fail\":[\"UnknownError\",\"no such table: missing\"]}]",
       "hostExit": "fail [{\"fail\":[\"UnknownError\",\"no such table: missing\"]}]",
       "entry": "runPromiseExit",
       "exitAgree": true,
-      "scheduleAgree": true,
-      "runSyncAgree": true,
+      "scheduleAgree": false,
+      "runSyncAgree": false,
       "notes": [
         "same failure reasons and payloads",
-        "tape: 3 calls"
+        "schedule differ at row 1: Lean \"parked 0\", rc.112 \"exited 0 fail\"",
+        "tape: 3 calls",
+        "HC-2 signed divergence: each host call parks on the Lean face and is answered inline by rc.112 (decisions row 343)"
       ],
       "host": {
         "entry": "runPromiseExit",
@@ -3917,16 +3929,19 @@
       }
     },
     {
+      "exception": "HC-2",
       "program": "pSqlCatch",
       "leanExit": "success \"recovered\"",
       "hostExit": "success \"recovered\"",
       "entry": "runPromiseExit",
       "exitAgree": true,
-      "scheduleAgree": true,
-      "runSyncAgree": true,
+      "scheduleAgree": false,
+      "runSyncAgree": false,
       "notes": [
         "same value",
-        "tape: 3 calls"
+        "schedule differ at row 1: Lean \"parked 0\", rc.112 \"exited 0 success\"",
+        "tape: 3 calls",
+        "HC-2 signed divergence: each host call parks on the Lean face and is answered inline by rc.112 (decisions row 343)"
       ],
       "host": {
         "entry": "runPromiseExit",
@@ -4238,16 +4253,19 @@
       }
     },
     {
+      "exception": "HC-2",
       "program": "pSqlExit",
       "leanExit": "success {\"failure\":{\"reasons\":[{\"fail\":[\"UnknownError\",\"no such table: missing\"]}]}}",
       "hostExit": "success {\"failure\":{\"reasons\":[{\"fail\":[\"UnknownError\",\"no such table: missing\"]}]}}",
       "entry": "runPromiseExit",
       "exitAgree": true,
-      "scheduleAgree": true,
-      "runSyncAgree": true,
+      "scheduleAgree": false,
+      "runSyncAgree": false,
       "notes": [
         "same value",
-        "tape: 3 calls"
+        "schedule differ at row 1: Lean \"parked 0\", rc.112 \"exited 0 success\"",
+        "tape: 3 calls",
+        "HC-2 signed divergence: each host call parks on the Lean face and is answered inline by rc.112 (decisions row 343)"
       ],
       "host": {
         "entry": "runPromiseExit",
@@ -4579,16 +4597,19 @@
       }
     },
     {
+      "exception": "HC-2",
       "program": "pSqlOrDie",
       "leanExit": "die [{\"die\":{\"error\":[\"UnknownError\",\"no such table: missing\"]}}]",
       "hostExit": "die [{\"die\":{\"error\":[\"UnknownError\",\"no such table: missing\"]}}]",
       "entry": "runPromiseExit",
       "exitAgree": true,
-      "scheduleAgree": true,
-      "runSyncAgree": true,
+      "scheduleAgree": false,
+      "runSyncAgree": false,
       "notes": [
         "same represented-defect cause",
-        "tape: 3 calls"
+        "schedule differ at row 1: Lean \"parked 0\", rc.112 \"exited 0 die\"",
+        "tape: 3 calls",
+        "HC-2 signed divergence: each host call parks on the Lean face and is answered inline by rc.112 (decisions row 343)"
       ],
       "host": {
         "entry": "runPromiseExit",
@@ -6113,15 +6134,18 @@
       }
     },
     {
+      "exception": "HC-2",
       "program": "pJoinedFirstNumber",
       "leanExit": "success {\"some\":1}",
       "hostExit": "success {\"some\":1}",
       "entry": "runPromiseExit",
       "exitAgree": true,
-      "scheduleAgree": true,
-      "runSyncAgree": true,
+      "scheduleAgree": false,
+      "runSyncAgree": false,
       "notes": [
-        "same value"
+        "same value",
+        "schedule differ at row 1: Lean \"parked 0\", rc.112 \"exited 0 success\"",
+        "HC-2 signed divergence: each host call parks on the Lean face and is answered inline by rc.112 (decisions row 343)"
       ],
       "host": {
         "entry": "runPromiseExit",
@@ -6173,15 +6197,18 @@
       }
     },
     {
+      "exception": "HC-2",
       "program": "pJoinedFirstString",
       "leanExit": "success {\"some\":\"negative\"}",
       "hostExit": "success {\"some\":\"negative\"}",
       "entry": "runPromiseExit",
       "exitAgree": true,
-      "scheduleAgree": true,
-      "runSyncAgree": true,
+      "scheduleAgree": false,
+      "runSyncAgree": false,
       "notes": [
-        "same value"
+        "same value",
+        "schedule differ at row 1: Lean \"parked 0\", rc.112 \"exited 0 success\"",
+        "HC-2 signed divergence: each host call parks on the Lean face and is answered inline by rc.112 (decisions row 343)"
       ],
       "host": {
         "entry": "runPromiseExit",
