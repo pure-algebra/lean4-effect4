@@ -17,19 +17,21 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Run
 theorem external_reply_at (root : NativeEff) (table : RowTable) (current : Option NCode)
     (answer : Completion Val Err Defect FiberId Ann) (state : Stores) :
     (prepareExternalAnswer table current answer state).1.scopes = state.scopes ∧
-      CodeAt root (prepareExternalAnswer table current answer state).2 := by
+      CodeAt root (prepareExternalAnswer table current answer state).2 ∧
+      TerminalReply (prepareExternalAnswer table current answer state).2 := by
   unfold prepareExternalAnswer
   repeat' split
-  all_goals aesop (add norm simp [CodeAt]) (add safe apply [completion_at])
+  all_goals aesop (add norm simp [CodeAt]) (add safe apply [completion_at, completion_reply, TerminalReply.success])
 
 /-- Actual reply preparation retains every source-bearing scope entry. -/
 theorem prepare_reply_at (root : NativeEff) (table : RowTable) (m : NativeMachine)
     (id : FiberId) (token : Nat) (answer : Completion Val Err Defect FiberId Ann) :
     (prepareAsyncAnswer (interpOf root table) m id token answer).1.scopes = m.state.scopes ∧
-      CodeAt root (prepareAsyncAnswer (interpOf root table) m id token answer).2 := by
+      CodeAt root (prepareAsyncAnswer (interpOf root table) m id token answer).2 ∧
+      TerminalReply (prepareAsyncAnswer (interpOf root table) m id token answer).2 := by
   unfold prepareAsyncAnswer
   split
-  · exact ⟨rfl, completion_at root answer⟩
+  · exact ⟨rfl, completion_at root answer, completion_reply answer⟩
   · exact external_reply_at root table _ answer m.state
 
 /-- The existing decision lift now permits arbitrary replies for source ownership alone. -/

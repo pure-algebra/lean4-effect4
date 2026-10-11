@@ -26,7 +26,7 @@ theorem dispatcher_drain_at (root : NativeEff) (dispatcher : SourceDispatcher)
 theorem clock_at (root : NativeEff) (table : RowTable) (millis : ClockMillis) (state : Stores)
     (held : ScopesAt root state.scopes) :
     ScopesAt root ((interpOf root table).clockStep millis state).2.scopes ∧
-      ∀ owed ∈ ((interpOf root table).clockStep millis state).1, CodeAt root owed.code := by
+      ∀ owed ∈ ((interpOf root table).clockStep millis state).1, CodeAt root owed.code ∧ TerminalReply owed.code := by
   refine ⟨held, ?_⟩
   intro owed member
   rw [Option.mem_def] at member

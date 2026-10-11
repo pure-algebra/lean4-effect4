@@ -18,15 +18,41 @@ abbrev SourceCommand := Cmd EffName EffThunk Val Err Defect FiberId Ann
 abbrev SourceDispatcher := Dispatcher EffName EffThunk Val Err Defect FiberId Ann
 abbrev SourceBucket := Bucket EffName EffThunk Val Err Defect FiberId Ann
 
-/-- A countdown retains the continuation it can invoke after its final observation. -/
-def ResumeAt (root : NativeEff) : Resume EffName → Prop
-  | .continueWith name => NameAt root name ∧
-      ∀ acquired fin, name ≠ .afterScopeAdd acquired fin
+/-- Actual native resume producers return exits, represented reference reads or race cleanup.
+Consumer: resume source ownership and source-use command accounting. -/
+inductive TerminalReply : NCode → Prop
+  | success (value : Val) : TerminalReply (.success value)
+  | failure (cause : CauseV) : TerminalReply (.failure cause)
+  | refGet (cell : RefKey) : TerminalReply (.sync (.store (.op (.refGet cell))))
+  | raceCleanup (race : Nat) (exit : ExitV) : TerminalReply
+      (.onSuccess (.withFiber (.store (.act (.setInterruptible (.cancelRace race) false))))
+        (.store (.restore exit)))
+
+/-- Every actual resume payload has source ownership without a source callback.
+Consumer: installation of queued resume code. -/
+theorem TerminalReply.code_at (root : NativeEff) (code : NCode) (held : TerminalReply code) :
+    CodeAt root code := by
+  cases held
+  all_goals aesop (add norm simp [CodeAt, ThunkAt, StoreThunkAt, OpAt, StoreActionAt,
+    ProgAt, NameAt, StoreNameAt])
+
+/-- Represented completions produce only native resume payloads.
+Consumer: due drains, clock answers and host reply preparation. -/
+theorem completion_reply (answer : Completion Val Err Defect FiberId Ann) :
+    TerminalReply (embed (completionPrim answer)) := by
+  cases answer with
+  | ofExit exit => cases exit <;> constructor
+  | ofRefGet cell => exact .refGet cell
+
+/-- Native countdown producers use only exit values or void answers.
+Consumer: source ownership and source-use accounting through actual countdown resumes. -/
+def ResumeAt (_root : NativeEff) : Resume EffName → Prop
+  | .continueWith _ => False
   | _ => True
 
 /-- A queued resume retains the actual primitive program it installs. -/
 def TaskAt (root : NativeEff) : SourceTask → Prop
-  | .resume _ _ code => CodeAt root code
+  | .resume _ _ code => CodeAt root code ∧ TerminalReply code
   | _ => True
 
 /-- A drained snapshot retains each queued resume program. -/
@@ -47,7 +73,7 @@ def RaceAt (root : NativeEff) (race : SourceRace) : Prop := ∀ code ∈ race.pr
 
 /-- A command retains its resume code outside the stored machine. -/
 def CommandAt (root : NativeEff) : SourceCommand → Prop
-  | .resume _ _ code => CodeAt root code
+  | .resume _ _ code => CodeAt root code ∧ TerminalReply code
   | _ => True
 
 /-- The actual pending command list retains every program it can install. -/

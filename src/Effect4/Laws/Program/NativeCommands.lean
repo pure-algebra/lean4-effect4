@@ -85,14 +85,27 @@ theorem race_settle_at (root : NativeEff) (table : RowTable) (race : Nat) (clean
     cases wrong
   · cases exit <;> trivial
 
+/-- Race callbacks return a fixed administrative cleanup or the accepted exit.
+Consumer: the race observer's actual queued resume. -/
+theorem race_settle_reply (root : NativeEff) (table : RowTable) (race : Nat)
+    (cleanup : Bool) (exit : ExitV) :
+    TerminalReply ((interpOf root table).raceSettle race cleanup exit) := by
+  change TerminalReply (embed (raceSettleProgram race cleanup exit))
+  unfold raceSettleProgram
+  split
+  · exact .raceCleanup race exit
+  · cases exit <;> constructor
+
 /-- A native owed completion embeds only a completion primitive. -/
 theorem owed_completion_at (root : NativeEff) (owed : Owed (Completion Val Err Defect FiberId Ann)) :
-    CodeAt root (Owed.mapCode (fun c => embed (completionPrim c)) owed).code := completion_at root owed.code
+    CodeAt root (Owed.mapCode (fun c => embed (completionPrim c)) owed).code ∧
+      TerminalReply (Owed.mapCode (fun c => embed (completionPrim c)) owed).code :=
+    ⟨completion_at root owed.code, completion_reply owed.code⟩
 
 /-- The due drain retains its scope captures and every actual completion program. -/
 theorem due_at (root : NativeEff) (table : RowTable) (state : Stores) (owned : ScopesAt root state.scopes) :
     ScopesAt root ((interpOf root table).dueResumes state).2.scopes ∧
-      ∀ owed ∈ ((interpOf root table).dueResumes state).1, CodeAt root owed.code := by
+      ∀ owed ∈ ((interpOf root table).dueResumes state).1, CodeAt root owed.code ∧ TerminalReply owed.code := by
   refine ⟨owned, ?_⟩
   intro owed member
   obtain ⟨completion, _, eq⟩ := List.mem_map.mp member
@@ -101,13 +114,13 @@ theorem due_at (root : NativeEff) (table : RowTable) (state : Stores) (owned : S
 
 /-- Draining owned completions retains the posted tasks and returned resumes. -/
 theorem drain_at (root : NativeEff) (m : NativeMachine) (due : List (Owed NCode))
-    (owned : ConfigurationAt root m) (saved : ∀ owed ∈ due, CodeAt root owed.code) :
+    (owned : ConfigurationAt root m) (saved : ∀ owed ∈ due, CodeAt root owed.code ∧ TerminalReply owed.code) :
     ConfigurationAt root (drainOwed m due).1 ∧ CommandsAt root (drainOwed m due).2 := by
   induction due generalizing m with
   | nil => exact ⟨owned, by intro c member; cases member⟩
   | cons first rest ih =>
     have code := saved first (.head _)
-    have tail : ∀ owed ∈ rest, CodeAt root owed.code := fun owed member => saved owed (.tail _ member)
+    have tail : ∀ owed ∈ rest, CodeAt root owed.code ∧ TerminalReply owed.code := fun owed member => saved owed (.tail _ member)
     simp only [drainOwed]
     cases mode : first.mode with
     | now =>
@@ -237,7 +250,7 @@ theorem observer_at (root : NativeEff) (table : RowTable) (id : FiberId) (exit :
       exact ⟨base, by intro c member; cases member⟩
   fun_cases fireObserver (interpOf root table) id exit acc observer
   case case1 waiter token mode emitted =>
-    exact ⟨base, commands_append root _ _ pending (by intro c member; rw [List.mem_singleton.mp member]; exact exit_value_at root [] table exit mode)⟩
+    exact ⟨base, commands_append root _ _ pending (by intro c member; rw [List.mem_singleton.mp member]; exact ⟨exit_value_at root [] table exit mode, exit_value_reply root [] table exit mode⟩)⟩
   case case2 parent emitted =>
     exact ⟨configuration_modify root m parent _ base (fun fiber held => ⟨held.frame, held.pending, held.dispatcher⟩), pending⟩
   case case3 scope key emitted found => exact ⟨configuration_halt root m _ base, pending⟩
@@ -255,7 +268,8 @@ theorem observer_at (root : NativeEff) (table : RowTable) (id : FiberId) (exit :
       split <;> rfl
     exact ⟨configuration_update root next changed moved.1 changedAt,
       commands_append root _ _ (commands_append root _ _ pending moved.2)
-        (by intro c member; rw [List.mem_singleton.mp member]; exact countdown_program_at root [] table p.resumeWith exits resumed)⟩
+        (by intro c member; rw [List.mem_singleton.mp member]; exact ⟨countdown_program_at root [] table p.resumeWith exits resumed,
+          countdown_program_reply root [] table p.resumeWith exits resumed⟩)⟩
   case case8 waiter token fiber p selected collected failure next nested exits target rest walk observing changed emitted found counted =>
     have moved := first_failed waiter p.remaining failure next nested counted
     have held := looked waiter fiber found
@@ -277,7 +291,8 @@ theorem observer_at (root : NativeEff) (table : RowTable) (id : FiberId) (exit :
     split
     · intro c member; cases member
     · intro c member; rw [List.mem_singleton.mp member]
-      exact race_settle_at root table race state.cleanupNeeded accepted
+      exact ⟨race_settle_at root table race state.cleanupNeeded accepted,
+        race_settle_reply root table race state.cleanupNeeded accepted⟩
   case case11 race previous changed state stopped emitted found updated =>
     exact ⟨configuration_race_update root m changed base (configuration_race root m race previous base found), pending⟩
   case case12 key emitted => exact ⟨configuration_emit root m _ base, pending⟩
@@ -342,7 +357,7 @@ theorem command_at (root : NativeEff) (fragment : Fragment root) (table : RowTab
   case case9 id answer fiber found token parked changed =>
     have held := looked id fiber found
     have changedAt : FiberAt root changed := by
-      refine ⟨⟨head, held.frame.2⟩, ?_, held.dispatcher⟩
+      refine ⟨⟨head.1, held.frame.2⟩, ?_, held.dispatcher⟩
       intro p member
       exact held.pending p ((List.mem_filter.mp member).1)
     exact ⟨configuration_emit root _ _ (configuration_update root m changed owned changedAt),

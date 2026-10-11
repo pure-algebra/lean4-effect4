@@ -171,9 +171,26 @@ theorem countdown_program_at (root : NativeEff) (completed) (table : RowTable)
   cases resume
   · trivial
   · trivial
-  · refine ⟨trivial, owned.1, ?_⟩
-    intro acquired fin wrong
-    exact False.elim (owned.2 acquired fin wrong)
+  · exact False.elim owned
+
+/-- Native countdown producers resume with exits or void, never a source callback.
+Consumer: the countdown observer's queued resume. -/
+theorem countdown_program_reply (root : NativeEff) (completed) (table : RowTable)
+    (resume : Resume EffName) (exits : List ExitV) (owned : ResumeAt root resume) :
+    TerminalReply (countdownPark.resumePrim (interpAt root completed table) resume exits) := by
+  cases resume
+  · constructor
+  · constructor
+  · exact False.elim owned
+
+/-- Native observed exits contain no delayed source code.
+Consumer: join and observer resume producers. -/
+theorem exit_value_reply (root : NativeEff) (completed) (table : RowTable) (exit : ExitV)
+    (mode : Supervision.ObserverMode) :
+    TerminalReply ((interpAt root completed table).exitValue exit mode) := by
+  cases mode
+  · constructor
+  · cases exit <;> constructor
 
 /-- Native countdown parks retain the pending continuation and actual cleanup frame. -/
 theorem countdown_at (root : NativeEff) (completed) (table : RowTable) (m : NativeMachine)

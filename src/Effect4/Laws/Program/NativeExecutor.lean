@@ -43,7 +43,7 @@ theorem primitive_at (root : NativeEff) (fragment : Fragment root) (completed) (
     have grownAt : ConfigurationAt root grown := ⟨owned.fibers, owned.races, owned.scopes⟩
     have beforeAt : FiberAt root before := by
       refine ⟨⟨trivial, held.frame.2⟩, held.pending, ?_⟩
-      exact dispatcher_enqueue_at root fiber.dispatcher priority _ held.dispatcher trivial
+      exact dispatcher_enqueue_at root fiber.dispatcher priority _ held.dispatcher ⟨trivial, .success _⟩
     exact ⟨configuration_emit root _ _ (configuration_arm root grown fiber.id grownAt),
       fiber_park_at root before _ beforeAt trivial, by intro command member; cases member⟩
   case case3 register signal cancel current token state grown before parked registeredEq =>
@@ -75,7 +75,7 @@ theorem primitive_at (root : NativeEff) (fragment : Fragment root) (completed) (
     have retained := countdown_at root completed table m fiber targets .exitsValue false owned held trivial
     rw [counted] at retained
     exact ⟨retained.1, retained.2, by intro command member; cases member⟩
-  all_goals aesop (add safe constructors [EvaluationAt, ConfigurationAt, FiberAt]) (add safe apply [(step_frame_at root fragment), (finalizer_at root fragment), register_race_at, (with_fiber_at root), configuration_update, configuration_emit, configuration_arm, fiber_current_at, fiber_park_at, fiber_cancel_at, dispatcher_enqueue_at, exit_value_at]) (add safe forward [actionOwned, syncOwned, registered, (countdown_at root completed table)]) (add norm simp [CommandsAt, CommandAt, List.mem_cons, FrameAt, CodeAt, ThunkAt, NameAt, ResumeAt, TaskAt, RunFiber.park])
+  all_goals aesop (add safe constructors [EvaluationAt, ConfigurationAt, FiberAt, TerminalReply]) (add safe apply [(step_frame_at root fragment), (finalizer_at root fragment), register_race_at, (with_fiber_at root), configuration_update, configuration_emit, configuration_arm, fiber_current_at, fiber_park_at, fiber_cancel_at, dispatcher_enqueue_at, exit_value_at]) (add safe forward [actionOwned, syncOwned, registered, (countdown_at root completed table)]) (add norm simp [CommandsAt, CommandAt, List.mem_cons, FrameAt, CodeAt, ThunkAt, NameAt, ResumeAt, TaskAt, RunFiber.park])
 
 /-- Scoped entry installs its actual zero-binder source child and a fresh empty scope. -/
 theorem enter_scoped_at (root : NativeEff) (fragment : Fragment root) (p : Point)
