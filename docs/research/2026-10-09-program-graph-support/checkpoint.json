@@ -1,0 +1,66 @@
+{
+  "draftBase": "88d4a1f5a8e28d84d039788a2fab4011dbabc742",
+  "capturedAt": "2026-10-09T17:32:30.264280+00:00",
+  "reviewedCommit": "78f7bcbef09fc286242eedc549462e647c7c0b33",
+  "runtimeBase": "78f7bcbe",
+  "resolved": [
+    "PGS-1 binding levels and closed scope",
+    "PGS-4 visible implicit spawn join",
+    "PGS-5 branch marks"
+  ],
+  "open": [
+    "PGS-2 cleanup sequencing",
+    "PGS-3 empty composition geometry",
+    "PGS-6 projected wait targets"
+  ],
+  "evidence": "finite Lean evaluations and source inspection; no new theorem or host check",
+  "runtimeControls": 17,
+  "bindingControls": 8,
+  "draftBindingFailures": [
+    "alias-is-outside-direct-spawn-reading",
+    "first-of-two-fibers",
+    "generator-bindings",
+    "release-has-two-binders",
+    "second-of-two-fibers",
+    "unrelated-newer-value"
+  ],
+  "partialRepairFailures": [
+    "closed-layer-resets-bindings"
+  ],
+  "repairedBindingFailures": [],
+  "landedBindingFailures": [],
+  "projectionWaits": {
+    "actual": [
+      [
+        "[1 1]",
+        "[0 0]"
+      ],
+      [
+        "[1 1]",
+        "[1 0 0]"
+      ]
+    ],
+    "admitted": true,
+    "expected": [
+      [
+        "[1 1]",
+        "[0 0]"
+      ]
+    ],
+    "matches": false,
+    "name": "tuple-projection-waits-for-first-fiber-only"
+  },
+  "candidateRepairStatus": "superseded by Claude's landed fix; do not apply to the landed tree",
+  "cleanupRuntimeOrder": [
+    10,
+    20,
+    30
+  ],
+  "cleanupDrawnOrder": [
+    10,
+    30,
+    20
+  ],
+  "emptyRaceWidth": -16,
+  "bindingRepairSha256": "a3c509f352b6e4e53c4d8232fd90e3560574c38f1bad7f01a58dcb869690640b"
+}
