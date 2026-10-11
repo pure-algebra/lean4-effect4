@@ -1,4 +1,5 @@
 import Test.Dogfood.Proofs.HostTimeoutParkSteps
+import Effect4.Laws.Machine.Clauses
 
 /-!
 Placement: host-session-protocol R6, serving `Timeout.stale_never_applies` clause four.
@@ -249,35 +250,42 @@ theorem evaluate_head_state {B : List Val} {classes : Classes} {input : Kind} (v
       (by rw [current]; exact .head (.action _ _ operation action good)) stack parked live stored
   | external op request path =>
     have result := external_park_state machine fiber yielding view op request path owned goodFiber current stack
+    have reset : {fiber with frame := {fiber.frame with current := .async (.external op request path) false none}} = fiber := by
+      rw [← current]
+    have dispatch := evaluatePrim_async_parks (interpreter view) machine fiber yielding
+      (.external op request path) false none machine.state rfl
+    dsimp only at dispatch
+    rw [reset] at dispatch
     refine ⟨classes ++ [.body], ClassLe.append classes .body, result.1, result.2.1, ?_, ?_⟩
-    · simp only [evaluatePrim, current]
-      intro command member; cases member
-    · simp only [evaluatePrim, current]
-      intro message member; cases member
+    · rw [dispatch]; intro command member; cases member
+    · rw [dispatch]; intro message member; cases member
   | sleep millis =>
     have result := sleep_park_state machine fiber yielding view millis owned goodFiber current stack parked live
+    have reset : {fiber with frame := {fiber.frame with current := .async (.store (.registerSleep millis)) true (some (.store .cancelSleep))}} = fiber := by
+      rw [← current]
+    have dispatch := evaluatePrim_async_parks (interpreter view) machine fiber yielding
+      (.store (.registerSleep millis)) true (some (.store .cancelSleep))
+      {machine.state with timers := machine.state.timers.sleep fiber.id machine.nextToken millis} rfl
+    dsimp only at dispatch
+    rw [reset] at dispatch
     refine ⟨classes ++ [.unit], ClassLe.append classes .unit, result.1, result.2.1, ?_, ?_⟩
-    · simp only [evaluatePrim, current]
-      intro command member; cases member
-    · simp only [evaluatePrim, current]
-      intro message member; cases member
+    · rw [dispatch]; intro command member; cases member
+    · rw [dispatch]; intro message member; cases member
   | yieldNow priority =>
     have result := yield_park_state machine fiber yielding view priority owned goodFiber current stack parked live
+    have dispatch := evaluatePrim_yieldNowWith_eq (interpreter view) machine fiber yielding priority current
     refine ⟨classes ++ [.unit], ClassLe.append classes .unit, result.1, result.2.1, ?_, ?_⟩
-    · simp only [evaluatePrim, current]
-      intro command member; cases member
-    · simp only [evaluatePrim, current]
-      intro message member; cases member
+    · rw [dispatch]; intro command member; cases member
+    · rw [dispatch]; intro message member; cases member
   | awaitPark targets =>
     have result := await_park_state machine fiber yielding view targets owned goodFiber current stack parked live
     have code : CodeAt B .any fiber.frame.current := by rw [current]; exact .head (.awaitPark targets)
     have plan := countdown_plan_state machine fiber view targets owned goodFiber code stack parked live
+    have dispatch := evaluatePrim_awaitAllPark (interpreter view) machine fiber yielding
+      (.park (.awaitAll targets)) targets current rfl
     refine ⟨classes ++ [.any], ClassLe.append classes .any, result.1, result.2.1, ?_, ?_⟩
-    · simp only [evaluatePrim, current]
-      intro command member; cases member
-    · rw [evaluatePrim, current]
-      change MessagesAt (classes ++ [.any])
-        (countdownParkEdits (interpreter view) machine fiber targets .exitsValue).2.2.2
+    · rw [dispatch]; intro command member; cases member
+    · rw [dispatch]
       exact plan.2.2
   | racePark race =>
     have result := race_park_state machine fiber yielding view race owned goodFiber current

@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.TracedMoves
+import Effect4.Laws.Program.PrimitiveProducer
 
 /-!
 # Laws.Program.Footprint — the footprint of one evaluation on the evaluated run fiber
@@ -243,47 +244,57 @@ theorem withFiber_tracedFootprint (interp : NInterp) (m : NativeMachine) (f : NF
     exact ⟨⟨_, .two (.mask _) (.answer _ _ [] rfl), (List.append_nil _).symm⟩,
       rfl, rfl, rfl, rfl, rfl, rfl⟩
 
+/-- Each actual producer supplies its frame and event footprint without reclassifying evaluation. -/
+theorem PrimitiveProducer.tracedFootprint {interp : NInterp} {m : NativeMachine} {f : NFiber}
+    {yielding : Bool} {result : NIteration}
+    (producer : PrimitiveProducer interp m f yielding result) :
+    TracedFootprint m f result.machine result.fiber := by
+  cases producer with
+  | step unparked ordinary noSync noSuccess noFailure noYield noAsync => exact stepFrame_tracedFootprint _ _ _ _
+  | finalizer exit current => exact finalizerOr_tracedFootprint _ _ _ _ _
+  | action thunk action current unparked found => exact withFiber_tracedFootprint _ _ _ _ _
+  | sync thunk state value current unparked found =>
+    exact ⟨(AdministrativeTrace.of_eq rfl).answer _ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  | fallback thunk current unparked missing =>
+    exact ⟨(AdministrativeTrace.of_eq rfl).answer _ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  | yieldNow priority current =>
+    refine ⟨AdministrativeTrace.answer ?_ _ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    refine ⟨[.parkedOn f.id m.nextToken], rfl, ?_⟩
+    simp only [RunMachine.emit_trace, RunMachine.arm_trace]
+  | asyncImmediate register signal cancel state code current registered =>
+    exact ⟨(AdministrativeTrace.of_eq rfl).answer _ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  | asyncParked register signal cancel state current registered =>
+    dsimp only
+    split
+    · refine ⟨AdministrativeTrace.push ?_ _ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
+      exact ⟨[.parkedOn f.id m.nextToken], rfl, RunMachine.emit_trace _ _⟩
+    · refine ⟨AdministrativeTrace.idle ?_ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
+      exact ⟨[.parkedOn f.id m.nextToken], rfl, RunMachine.emit_trace _ _⟩
+  | rejectedPark cause park =>
+    exact ⟨(AdministrativeTrace.of_eq rfl).answer _ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  | racePark race park =>
+    unfold registerRace
+    split <;> exact ⟨(AdministrativeTrace.of_eq rfl).idle _, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  | countdownPark targets next returned parked edits park counted =>
+    have retained := countdownParkEdits_tracedFootprint interp m f targets .exitsValue false
+    rw [counted] at retained
+    exact retained
+  | joinMissing target mode park missing =>
+    exact ⟨(AdministrativeTrace.of_eq rfl).idle _, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  | joinExited target mode other exit park found exited =>
+    exact ⟨(AdministrativeTrace.of_eq rfl).answer _ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  | joinWaiting target mode other park found live =>
+    refine ⟨AdministrativeTrace.push ?_ _ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
+    refine ⟨[.parkedOn f.id m.nextToken], rfl, ?_⟩
+    simp only [RunMachine.emit_trace]
+
 /-- A primitive evaluation has one exact labelled word. -/
 @[semantics "reactive-scheduling"]
 theorem evaluatePrim_tracedFootprint (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (yielding : Bool) :
     TracedFootprint m f (evaluatePrim interp m f yielding).machine
-      (evaluatePrim interp m f yielding).fiber := by
-  unfold evaluatePrim
-  split
-  · refine ⟨AdministrativeTrace.answer ?_ _ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
-    refine ⟨[.parkedOn f.id m.nextToken], rfl, ?_⟩
-    simp only [RunMachine.emit_trace, RunMachine.arm_trace]
-    rfl
-  · dsimp only
-    split
-    · exact ⟨(AdministrativeTrace.of_eq rfl).answer _ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
-    · split
-      · refine ⟨AdministrativeTrace.push ?_ _ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
-        exact ⟨[.parkedOn f.id m.nextToken], rfl, RunMachine.emit_trace _ _⟩
-      · refine ⟨AdministrativeTrace.idle ?_ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
-        exact ⟨[.parkedOn f.id m.nextToken], rfl, RunMachine.emit_trace _ _⟩
-  · split
-    · exact ⟨(AdministrativeTrace.of_eq rfl).answer _ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
-    · unfold registerRace
-      split <;> exact ⟨(AdministrativeTrace.of_eq rfl).idle _, rfl, rfl, rfl, rfl, rfl, rfl⟩
-    · exact countdownParkEdits_tracedFootprint _ _ _ _ _ _
-    · split
-      · exact ⟨(AdministrativeTrace.of_eq rfl).idle _, rfl, rfl, rfl, rfl, rfl, rfl⟩
-      · split
-        · exact ⟨(AdministrativeTrace.of_eq rfl).answer _ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
-        · refine ⟨AdministrativeTrace.push ?_ _ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
-          refine ⟨[.parkedOn f.id m.nextToken], rfl, ?_⟩
-          simp only [RunMachine.emit_trace]
-          rfl
-    · split
-      · split
-        · exact withFiber_tracedFootprint _ _ _ _ _
-        · exact stepFrame_tracedFootprint _ _ _ _
-      · split <;> exact ⟨(AdministrativeTrace.of_eq rfl).answer _ _, rfl, rfl, rfl, rfl, rfl, rfl⟩
-      · exact finalizerOr_tracedFootprint _ _ _ _ _
-      · exact finalizerOr_tracedFootprint _ _ _ _ _
-      · exact stepFrame_tracedFootprint _ _ _ _
+      (evaluatePrim interp m f yielding).fiber :=
+  (evaluatePrim_producer interp m f yielding).tracedFootprint
 
 /-- A scoped exit retains the pop events and the optional finalizer start. -/
 theorem exitScoped_tracedFootprint (root : NativeEff) (m : NativeMachine) (f : NFiber)

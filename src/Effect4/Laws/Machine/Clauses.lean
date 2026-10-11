@@ -319,6 +319,23 @@ theorem flushRoot_round (interp : RunInterp ν σ β ε δ ι α χ St) (fuel ro
 
 /-! ## Yield now, and the resume guard -/
 
+/-- The complete yield result retains both empty command and message lists.
+Concept: reactive-scheduling R11; consumer: native Timeout yield transport.
+census: scheduler.yield-now-resume-guard -/
+theorem evaluatePrim_yieldNowWith_eq (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
+    (priority : Nat) (current : f.frame.current = Prim.yieldNowWith priority) :
+    evaluatePrim interp m f yielding =
+      (let grown := {m with nextToken := m.nextToken + 1}
+       let before := {f with
+         frame := {f.frame with current := Prim.success interp.voidValue}
+         dispatcher := f.dispatcher.enqueue priority
+           (Task.resume f.id m.nextToken (Prim.success interp.voidValue))}
+       let parked := before.park ⟨m.nextToken, none, [], [], Resume.void, false⟩
+       ⟨(grown.arm parked.id).emit [RunEvent.parkedOn parked.id m.nextToken],
+         parked, yielding, Outcome.parked, [], []⟩) := by
+  simp only [evaluatePrim, current]
+
 /-- `yieldNowWith` (`:982-990`): the fiber parks behind a fresh guard, its resume queued at
 the given priority with `exitVoid`, and its current primitive is already the void success.
 census: scheduler.yield-now-resume-guard -/
@@ -334,7 +351,10 @@ theorem evaluatePrim_yieldNowWith (interp : RunInterp ν σ β ε δ ι α χ St
       it.fiber.dispatcher =
         f.dispatcher.enqueue priority (Task.resume f.id m.nextToken (Prim.success interp.voidValue)) ∧
       it.machine.nextToken = m.nextToken + 1 ∧
-      it.nested = [] := by aesop
+      it.nested = [] := by
+  dsimp only
+  rw [evaluatePrim_yieldNowWith_eq interp m _ yielding priority rfl]
+  aesop
 
 /-- `Yield` is overloaded (`:656-668`): where rc.112 reads `_yielded` as an exit the fiber is
 finished, and where it reads a thunk the fiber is parked; the machine's loop takes the two
