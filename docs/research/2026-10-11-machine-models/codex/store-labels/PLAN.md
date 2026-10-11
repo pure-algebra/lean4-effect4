@@ -62,3 +62,20 @@ Keep `RefKernel` unchanged so unrelated kernel consumers do not rebuild for futu
 The native connectors extend `StoreExecution.RefTransfer` in `NativeHeapExecution`.
 They classify represented operations without another evaluator traversal.
 Keep the compilation module `StoreExecution` unchanged; it has many unrelated source-proof consumers.
+
+## Producer refinement after R2
+
+`Footprint.evaluatePrim_tracedFootprint` uses `AdministrativeTrace.answer` for both synchronous execution and administrative replacements.
+An existing synchronous-looking head can also be parked or replaced by yield injection.
+Therefore, an `answer` label's input code does not prove that its synchronous operation ran.
+
+The shared producer must retain the actual returned frame together with each store equation.
+An executed synchronous branch supplies its operation, answer, and `syncOpStep` equation.
+A branch that leaves references alone supplies reference equality.
+`CommandRefTransfer` and the old lexical source statements remain projections.
+
+The Timeout generation instance needs the same distinction when an operation advances its phase without changing the heap.
+Its numeric annotation must follow the executed source position and returned frame.
+The native transport pass should expose these facts once.
+Parameterize that pass before adding a store-certificate or scenario consumer.
+The existing `Lift` transports its command contract; it does not produce that contract.
