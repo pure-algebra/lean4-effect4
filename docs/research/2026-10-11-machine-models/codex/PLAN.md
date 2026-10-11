@@ -25,9 +25,9 @@ Never push.
 | Atomic | Generated native primitive fold; response-dependent stack-credit probe | Code weights and four ledgers |
 
 `Machine.Ledger` is assigned to the adjacent L1 seat by the packet.
-It is absent at the rebased base; do not invent a competing API.
-Integrate and independently check that module when it lands.
-Then migrate the four ledgers and their decision lifts through its actual interface.
+It lands at `0d1acfd87` as `StackLedger` and passes the independent integration build.
+It accounts for saved stacks; active-code weights wait for the edit-message repair or a justified generalization.
+The first replacement removes the duplicate FinalizerBookkeeping and FinalizerCommands proofs through exact reading connectors.
 
 ## Placement and limits
 
