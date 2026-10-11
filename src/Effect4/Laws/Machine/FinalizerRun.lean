@@ -1,6 +1,5 @@
 import Effect4.Laws.Machine.FinalizerStep
 import Effect4.Laws.Machine.MaskRuns
-import Effect4.Laws.Machine.ControlWeights
 
 /-!
 # Finalizer credit transfer to the fiber machine
@@ -131,48 +130,5 @@ def fiberCredits (choose : ν → Bool) (fiber : RunFiber ν σ β ε δ ι α �
 def Funded (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ St) : Prop :=
   m.trace.countP (runStarted choose) + (m.fibers.map (fiberCredits choose)).sum ≤
     m.trace.countP (runRegistered choose)
-
-/-- Replacing one distinct fiber transports its debit to the complete machine. -/
-theorem update_funded (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ St)
-    (fiber : RunFiber ν σ β ε δ ι α χ) (next : Iter ν σ β ε δ ι α χ St)
-    (unique : (m.fibers.map RunFiber.id).Nodup) (present : fiber ∈ m.fibers)
-    (sameId : next.fiber.id = fiber.id) (sameFibers : next.machine.fibers = m.fibers)
-    (funded : Funded choose m) (debit : IterDebit choose m fiber next) :
-    Funded choose (next.machine.update next.fiber) := by
-  have transport := ControlWeights.replace_sum RunFiber.id (fiberCredits choose)
-    fiber next.fiber sameId m.fibers unique present
-  unfold Funded RunMachine.update
-  rw [sameFibers]
-  dsimp only
-  unfold Funded at funded
-  unfold IterDebit at debit
-  simp only [fiberCredits] at transport
-  omega
-
-/-- Settling the iteration only edits flags or parking metadata around the credited frame. -/
-theorem settle_funded (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ St)
-    (fiber : RunFiber ν σ β ε δ ι α χ) (next : Iter ν σ β ε δ ι α χ St)
-    (unique : (m.fibers.map RunFiber.id).Nodup) (present : fiber ∈ m.fibers)
-    (sameId : next.fiber.id = fiber.id) (sameFibers : next.machine.fibers = m.fibers)
-    (funded : Funded choose m) (debit : IterDebit choose m fiber next)
-    (id : FiberId) (rest : List (Cmd ν σ β ε δ ι α)) :
-    Funded choose (settle id rest next).1 := by
-  have updated := update_funded choose m fiber next unique present sameId sameFibers funded debit
-  have changed (f : RunFiber ν σ β ε δ ι α χ)
-      (sameKey : f.id = next.fiber.id) (sameStack : f.frame.stack = next.fiber.frame.stack) :
-      Funded choose (next.machine.update f) := by
-    apply update_funded choose m fiber { next with fiber := f } unique present
-      (sameKey.trans sameId) sameFibers funded
-    simpa only [IterDebit, sameStack] using debit
-  unfold settle
-  split
-  · exact updated
-  · exact updated
-  · split
-    · exact changed _ rfl rfl
-    · exact changed _ rfl rfl
-  · exact updated
-  · exact updated
-  · exact changed _ rfl rfl
 
 end Effect4.Machine.FinalizerCredits

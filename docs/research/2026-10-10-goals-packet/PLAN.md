@@ -189,3 +189,17 @@ flowchart LR
   Custody --> Claim
   Log --> Claim
 ```
+
+## Whole-run finalizer custody
+
+`Program.FinalizerRun.funded_reachable` now proves the custody obligation in place.
+The proof covers every native command and all decision edits through `Machine.Lift.machineFact_stepDecision`.
+The existing fork-ledger invariant supplies distinct fiber identities.
+The accounting includes frame finalizers, reified finalizer programs and native scoped exits.
+The selector and program remain arbitrary; the proof assumes no admission, fairness or sufficient budget.
+It establishes no unique source use, log-writer provenance, progress or outside behavior.
+
+The remaining dependencies of `Atomic.cleans_once` are source uniqueness and cleanup-log provenance.
+`codex/FinalizerRunAudit.out` records the checked statuses and their exact statements.
+The narrow build covers `Program.FinalizerRun` and its Atomic consumer.
+Superseded replacement helpers leave the tree when the complete command proof replaces them.

@@ -1,4 +1,4 @@
-import Effect4.Laws.Machine.FinalizerRun
+import Effect4.Laws.Program.FinalizerCommands
 import Effect4.Laws.Program.Guard.Core
 import Effect4.Laws.Program.Placement
 
@@ -6,7 +6,7 @@ import Effect4.Laws.Program.Placement
 # Finalizer accounting along native runs
 
 Concept: scope-lifetime-finalization, R11, at most one start per registration.
-The planned custody law lifts `Machine.FinalizerCredits` through the native command loop.
+The custody law lifts `Machine.FinalizerCredits` through the native command loop.
 The planned placement law connects a once-placed source to its pushed frames.
 Their consumer is `Atomic.cleans_once` through the cleanup-log debit.
 Reach: every native program, table, compile budget and decision history.
@@ -35,17 +35,20 @@ abbrev startedAt (q : List Nat) := runStarted (σ := EffThunk) (β := Val)
 theorem load_funded (p : NativeEff) (cf : Nat) (q : List Nat) :
     Funded (atPath q) (Api.load p cf) := Nat.le_refl 0
 
-/-- Whole-run custody obligation of the at-most-once claim.
-The command lift consumes `stepFrame_debit`, `finalizerOr_debit` and `settle_funded`.
-Its remaining clauses cover native scoped evaluation and machine bookkeeping.
+/-- Whole-run custody law of the at-most-once claim.
+The command lift consumes the checked evaluator, native scoped exit, observer and bookkeeping clauses.
 Consumer: `starts_le_pushes`, then the atomic cleanup-log claim. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
-proof_goal funded_reachable (p : NativeEff) (table : RowTable) (cf : Nat)
+theorem funded_reachable (p : NativeEff) (table : RowTable) (cf : Nat)
     (m : NativeMachine) (q : List Nat) :
-    Guard.Reachable p table cf m → Funded (atPath q) m
+    Guard.Reachable p table cf m → Funded (atPath q) m := by
+  intro reached
+  exact (Guard.reachable_lift_pure p table cf (FinalizerTransfer.Holds (atPath q))
+    ⟨ForkLedger.Invariant.load_ok p cf, load_funded p cf q⟩
+    (fun m fuel d h => FinalizerTransfer.stepped (atPath q) p table fuel m d h) m reached).2
 
 /-- Finalizer starts spend recorded pushes, retaining any unspent stack credits.
-This statement is proved modulo whole-run custody. -/
+Every native decision prefix satisfies the bound. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem starts_le_pushes (p : NativeEff) (table : RowTable) (cf : Nat)
     (m : NativeMachine) (q : List Nat) (reached : Guard.Reachable p table cf m) :

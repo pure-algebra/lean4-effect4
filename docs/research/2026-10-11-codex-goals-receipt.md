@@ -266,3 +266,22 @@ The integrated Atomic and QueueWorkers.Source build passes with 1058 jobs.
 It reports seven modulo declarations and three planned goals in the audited modules.
 `#plan_status` confirms the original cleanup clause depends on precisely those three goals.
 The deferred scenario-gate diagnostic retains all five dependencies of the complete Atomic claim.
+
+## Whole-run finalizer custody
+
+The shared custody obligation is proved; the original Atomic cleanup claim still has two open dependencies.
+The parent commit is `4c4343329`.
+The changed modules are `Machine.FinalizerRun`, `Machine.FinalizerBookkeeping`, `Machine.FinalizerEvaluation`, `Program.FinalizerTransfer`, `Program.FinalizerCommands` and `Program.FinalizerRun`.
+The Atomic consumer retains its proposition and budgets.
+The proof serves scope-lifetime-finalization, R11, through `Atomic.cleans_once`.
+It counts starts and remaining stack frames against actual registration events.
+It covers arbitrary native programs, tables, decision prefixes and command budgets.
+It establishes no source uniqueness, log provenance, progress or host behavior.
+
+`LEAN_NUM_THREADS=3 lake build Effect4.Laws.Program.FinalizerRun Test.Dogfood.Scenario.Atomic` passes with 1056 jobs.
+`LEAN_NUM_THREADS=3 lake env lean docs/research/2026-10-10-goals-packet/codex/FinalizerRunAudit.lean` passes.
+The audit reports 366 declarations within `[propext, Quot.sound]`, six modulo declarations and two planned goals.
+`#plan_status` reports `funded_reachable` proved, with no remaining goals.
+`Atomic.cleans_once` retains only `once_placed_pushes_once` and `Cleanup.log_debits`.
+The exact output is `codex/FinalizerRunAudit.out` in the goals packet.
+The landing changes proofs only; behavior gates remain owed by the earlier first-exit changes.

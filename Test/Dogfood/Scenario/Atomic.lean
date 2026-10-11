@@ -410,8 +410,7 @@ def scenario : Scenario :=
 
 -- The final gate pass teaches the record checker about clauses proved modulo subgoals.
 /--
-error: atomic: the claim Test.Dogfood.Scenario.Atomic.atomic rests on the planned goal Effect4.Program.FinalizerRun.funded_reachable, which no clause names
-atomic: the claim Test.Dogfood.Scenario.Atomic.atomic rests on the planned goal Effect4.Program.FinalizerRun.once_placed_pushes_once, which no clause names
+error: atomic: the claim Test.Dogfood.Scenario.Atomic.atomic rests on the planned goal Effect4.Program.FinalizerRun.once_placed_pushes_once, which no clause names
 atomic: the claim Test.Dogfood.Scenario.Atomic.atomic rests on the planned goal Effect4.Program.HeapSites.heap_sites_keep, which no clause names
 atomic: the claim Test.Dogfood.Scenario.Atomic.atomic rests on the planned goal Test.Dogfood.Scenario.Atomic.Cleanup.log_debits, which no clause names
 atomic: the claim Test.Dogfood.Scenario.Atomic.atomic rests on the planned goal Test.Dogfood.Scenario.Atomic.Store.shop_stages, which no clause names
