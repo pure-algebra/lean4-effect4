@@ -3,6 +3,7 @@ module
 public import Effect4.Data.ClockMillis
 public import Effect4.Machine.Frames
 public import Effect4.Machine.Supervision
+public import Effect4.Machine.Supervision.FirstExit
 public import Effect4.Machine.Completion
 public import Effect4.Machine.Wake
 
@@ -351,6 +352,9 @@ inductive WithFiberAction (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type 
   /-- `raceAll`: immediate daemons in order until an observed success, failures in order,
   the empty race pending until interrupted (`Supervision.RaceAllState`). -/
   | raceAll (entrants : List κ) (site : Option (List Nat) := none)
+  /-- `raceAllFirst`: immediate daemons until the first observed exit; cleanup precedes
+  parent publication (`vendor/effect-4.0.0-rc.112/src/internal/effect.ts:1535-1580`). -/
+  | raceAllFirst (entrants : List κ) (site : Option (List Nat) := none)
   /-- `uninterruptible`/`interruptible` bodies (`:4302-4310`, `:4331-4352`): set the flag,
   push the restoring frame, and fail now if a cause is pending (M2). -/
   | setInterruptible (body : κ) (flag : Bool)
@@ -441,6 +445,10 @@ structure Race (ν σ : Type u) (β : Type v) (ε δ ι α : Type u)
   /-- The source `effs.cons` path of the next entrant. Advancing the program list advances
   its source-list path with `[1]`; internal races without a source Point use `none`. -/
   nextSite : Option (List Nat) := none
+  /-- The first-success default retains the existing race semantics. -/
+  mode : Supervision.RaceMode := .firstSuccess
+  /-- First-exit mode records the selected child at its actual exit observer. -/
+  selected : Option FiberId := none
 
 /-- The process: every live fiber, the races, the id and token counters, the global
 middleware latch (`:6656-6658`), the service state the stores live in, the trace, and the
@@ -931,7 +939,8 @@ structure Iter (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St : Ty
 token, and return the counted `Async` registration as the next program. Nothing is forked
 or parked here; the registration is the next counted iteration (source-repairs §16, D6a). -/
 def beginRace (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
-    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (entrants : List κ) (site : Option (List Nat) := none) :
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (entrants : List κ) (site : Option (List Nat) := none)
+    (mode : Supervision.RaceMode := .firstSuccess) :
     Iter ν σ β ε δ ι α χ St κ φ η :=
   let raceId := m.nextRace
   let token := m.nextToken
@@ -939,7 +948,7 @@ def beginRace (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine
   let race : Race ν σ β ε δ ι α κ :=
     ⟨raceId, f.id, token,
       { Supervision.RaceAllState.initial [] with remaining := entrants.length },
-      false, entrants, false, site⟩
+      false, entrants, false, site, mode, none⟩
   let m := { m with races := m.races ++ [race] }
   let f := { f with frame := core.answerWith f.frame (interp.parkCode (ParkKind.race raceId)) }
   ⟨m.emit [RunEvent.raceStarted raceId f.id entrants.length], f, yielding, Outcome.continue_, []⟩
@@ -1327,6 +1336,8 @@ where
       -- the `WithFiber` returns the counted `Async` registration; the register loop, the
       -- cancel frame and the park belong to that later iteration (source-repairs §16)
       beginRace interp m f yielding entrants site
+    | WithFiberAction.raceAllFirst entrants site =>                       -- :1548
+      beginRace interp m f yielding entrants site .firstExit
     | WithFiberAction.setInterruptible body false =>                    -- :4302-4310 (M2)
       ⟨m, { f with frame := { f.frame.uninterruptible with current := body } },
         yielding, Outcome.continue_, []⟩
@@ -1727,8 +1738,11 @@ def fireObserver (interp : RunInterp ν σ β ε δ ι α χ St κ) (id : FiberI
     match m.race? raceId with
     | none => (m, acc.2)
     | some race =>
-      let state := Supervision.raceComplete race.state id exit                 -- frozen bookkeeping
-      let race := { race with state := state }
+      let state := Supervision.raceCompleteWith race.mode race.state id exit
+      let selected := match race.mode, race.state.accepted, state.accepted with
+        | .firstExit, none, some _ => some id
+        | _, _, _ => race.selected
+      let race := { race with state := state, selected := selected }
       let m := m.updateRace race
       match state.accepted, race.settled with
       | some accepted, false =>

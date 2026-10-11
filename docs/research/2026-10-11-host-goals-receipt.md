@@ -106,3 +106,27 @@ The symbolic seat owns that module and its exact implementation exception.
 Dependencies: coordinator frame `a70ea309`, routing model `b6ee8c9b`, shared author build `7719b68b`, and symbolic tactic `3a7b059c`.
 The coordinator adds the test import and replaces the original planned goal in place.
 Behavior gates still wait for the coordinator's repair pass.
+
+## First-exit backend interface slice
+
+The approved design is `docs/research/2026-10-11-first-exit-plan.md`.
+The backend keeps the first-success constructor and worker unchanged.
+It adds the separate first-exit action and records its selected child in retained race data.
+It preserves the complete accepted exit and uses the existing cleanup-before-publication path.
+
+Changed core modules: `Machine.Supervision.FirstExit` and `Machine.Fibers`.
+Consumer: source compilation, supplied by the symbolic seat, then the amended timeout form.
+Placement: reactive scheduling, R4; exact first-exit selection serves the timeout form's R10 behaviour law.
+Limit: this interface slice alone supplies no source admission, generated target, or general scenario proof.
+
+Commands:
+
+- `LEAN_NUM_THREADS=3 lake build Effect4.Machine.Supervision.FirstExit`: passed, 6 jobs.
+- `LEAN_NUM_THREADS=3 lake build Effect4.Machine.Fibers Effect4.Machine.Stores`: passed, 32 jobs.
+- `LEAN_NUM_THREADS=3 lake env lean docs/research/2026-10-10-goals-packet/codex/FirstExitMachineAudit.lean`: passed.
+
+The audit checks 1720 declarations within `[propext, Quot.sound]`.
+It finds zero planned goals and zero declarations depending on planned goals.
+The source/API lane follows this interface commit.
+Focused completion and callback laws follow in this lane.
+The coordinator runs the reached behaviour gates after both halves compile.
