@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Guard.Decision
+import Effect4.Laws.Run.Frame
 import Effect4.Laws.Run.Rows
 import Effect4.Laws.Run.Tape
 
@@ -1176,10 +1177,7 @@ theorem ledger_open (b : Api.Built) (id : String) (budget : Api.Budget) (profile
 
 /-- Every recorded run keeps the ledger. -/
 theorem ledger_reached (s : Run) (h : Run.Reached s) : Ledger s :=
-by
-  induction h with
-  | opened b id budget profile => exact ledger_open b id budget profile
-  | step s c _ ih => exact ledger_step s c ih
+  Keeps.reached (fun s c _ h => ledger_step s c h) ledger_open s h
 
 /-- **Each key is bound once, received once and applied once, and a retired call is never
 applied.** In every recorded run of every program: the session binds a key at most once, accepts

@@ -73,3 +73,36 @@ This probe does not prove a general theorem or replay the exact scenario script.
 `timeout-contract-decision.md` proposes source-aligned and stronger contract choices.
 It recommends reading completed timeout-form outcomes, paired with attempt and entrant identities.
 No scenario proposition, timeout form or budget changes.
+
+## Routing closure and frame integration
+
+The exact `InfrastructureEscapes` proposition is proved at its original budget.
+Its consumer is the original routing scenario's `infrastructure_escapes` theorem.
+The support imports the neutral `Routing.Model` to avoid a consumer cycle.
+
+Placement: concept `translation-simulation`, required form behaviour law, requirement R10.
+Reach: the existing authorized request and failing script, every identifier, message and nonbusiness tag.
+Limit: no other script, progress property, or runtime agreement.
+
+`HostRouting.infrastructureEscapes`, in `Test/Dogfood/Proofs/HostRouting.lean`, is the final proof.
+Its helpers compute the request and session prefix, then prove the last six machine commands.
+The final adapter proves reply admission, application, and the root's recorded failure.
+`build_program` reads the shared `Author.build_retains` theorem.
+The normal-form helpers also serve the coordinator's routing call-tree proof.
+
+`ledger_reached` now uses the coordinator's `Keeps.reached` theorem.
+The frame uses the trivial command admission predicate for this invariant.
+
+Commands:
+
+- `LEAN_NUM_THREADS=3 lake build Effect4.Laws.Run.Journal Test.Dogfood.Proofs.HostJournal Test.Dogfood.Proofs.HostRouting`: passed, 1069 jobs.
+- `LEAN_NUM_THREADS=3 lake env lean docs/research/2026-10-10-goals-packet/codex/HostRoutingAudit.lean`: passed.
+
+The audit checks 144 declarations within `[propext, Quot.sound]`.
+It finds zero planned goals and zero declarations depending on planned goals.
+The audit scopes the three named host modules, not the tactic implementation module.
+The symbolic seat owns that module and its exact implementation exception.
+
+Dependencies: coordinator frame `a70ea309`, routing model `b6ee8c9b`, shared author build `7719b68b`, and symbolic tactic `3a7b059c`.
+The coordinator adds the test import and replaces the original planned goal in place.
+Behavior gates still wait for the coordinator's repair pass.
