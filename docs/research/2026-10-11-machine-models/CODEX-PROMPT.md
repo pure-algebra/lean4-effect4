@@ -106,6 +106,13 @@ Behaviour gates only where a slice changes executable code, and then at a sweep.
    - It changes executable code: regenerate what it reaches, run `check-truth` and
      `check-compiler` at the sweep, and turn the counterexample's attack guard into the repaired
      regression.
+   - **Coordinator review, 2026-10-11 11:25: approved as written.** The plan
+     `docs/research/2026-10-11-codex-r2-message-plan.md` sharpens this item. The messages apply
+     after the local write-back and *before* the outcome disposition, not after the whole
+     `settle`. The three tags `observe`, `dropToken` and `interrupt` are first-order data. Its
+     seven pinned cuts are the regression set. Proceed with its migration steps 1 to 12 in the
+     machine-structure lane. State the selected-owner retention as a premise; no `getD`
+     fallback. Behaviour gates run at the sweep, as the plan says.
 6. **R1, R3, R7** (`README.md` §3).
    - Cut `Resume.continueWith`, `Dispatcher.armed`, `Pending.waitingOn`, the five dead
      `RaceAllState` fields and `Race.settled`. Make `finalizing` a `Bool`. `RaceAllState.initial_eq`
