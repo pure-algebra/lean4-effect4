@@ -3,7 +3,7 @@ import Effect4.Laws.Program.Agreement.HostedLoop
 import Effect4.Laws.Run.JournalPrefix
 import Effect4.Laws.Auto.Obligations
 import Effect4.Program.Fold
-import Effect4.Laws.Program.HostSource
+import Effect4.Laws.Program.HostReplyTape
 
 /-!
 # Recorded calls and the admitted call tree

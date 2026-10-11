@@ -164,6 +164,8 @@ def RegionAt (root : NativeEff) : Region → Prop
 
 /-- Source continuation names record the child length their actual invocation supplies. -/
 def NameAt (root : NativeEff) : EffName → Prop
+  | .external op _ origin =>
+    ∃ request, Node.at_ (.eff root) origin = some (.eff (.perform op request))
   | .cont p | .caught p | .onValue p | .caughtError p => NextAt root p 1 1
   | .fin p => NextAt root p 1 1 ∧ ExitAt root p.path
   | .onCause p => NextAt root p 2 1
@@ -283,7 +285,8 @@ theorem opAt_origin (root : NativeEff) (op : SyncOp) (origin : OpOrigin root op)
 theorem badShape_at (root : NativeEff) : CodeAt root badShape := trivial
 
 /-- Asynchronous rows only produce registration and cancel names, without reference writers. -/
-theorem asyncRoute_at (root : NativeEff) (row : NativeOp) (request : Term) (p : Point) :
+theorem asyncRoute_at (root : NativeEff) (row : NativeOp) (request : Term) (p : Point)
+    (found : Node.at_ (.eff root) p.path = some (.eff (.perform row request))) :
     CodeAt root (asyncRoute row request p) := by
   fun_cases asyncRoute row request p
   all_goals aesop (add norm simp [CodeAt, ThunkAt, NameAt, StoreNameAt, badShape])
