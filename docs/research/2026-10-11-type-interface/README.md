@@ -244,6 +244,21 @@ flowchart TD
    694 agree and 6 are cut; at 26, `Ty.sub` refuses what tsgo accepts, the safe direction. The family
    `bound` confirms the limit: 27 combinations refuse (`bound/0-1`), 25 relate (`bound/2-3`). The
    battery reads the TSV at build time, and Lake does not trace that file.
+   **Repair A, as the model specifies it.** The checker tsgo decomposes at a position whose types
+   differ across the target's constituents and include a literal. So:
+   - `Ty.normalize` distributes a product-like head (`prod`, a tuple, a record field) over a
+     position's union only when that union has a literal member;
+   - it distributes only while the member counts of those positions multiply to at most 25;
+   - past that bound, the unions stay inside the head;
+   - elsewhere a union stays inside the head, as tsgo infers it.
+
+   The laws to restate are those of `normTuple` and `productMembers`
+   (`src/Effect4/Program/Ty.lean`). They include `hasTy_normalize`, which still holds, since
+   partial distribution keeps each member set. They also include the class laws of DI-15:
+   normalization's idempotence, and mutual `sub` iff equal normal forms. The evidence:
+   `E4-PRINT-CE-001`'s pair turns into two types that the order separates, as tsgo does, and the
+   `bound` and `literalPair` rows stay agreed. A column of `subN` in the differential then makes
+   the distribution visible to `check-target`.
 4. **R-T4, the number tower's names now.** Print `int` as `Int` and `number` as `Num`, aliases of
    `number`, as row 309 (5) rules. Then `ofTy` is injective on the tower, and the reader is an
    upper section there.
