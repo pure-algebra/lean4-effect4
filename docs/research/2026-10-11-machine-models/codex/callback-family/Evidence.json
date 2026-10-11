@@ -1,0 +1,61 @@
+{
+  "base": "8eb8290c89f3b425dc1de08de66fbe075c33740f",
+  "files": [
+    {
+      "path": "src/Effect4/Laws/Machine/AnswerFlowFamily.lean",
+      "before_lines": 0,
+      "after_lines": 117,
+      "before_sha256": null,
+      "after_sha256": "e59bf150e90085536bfd00b9aa582d85d4309c64839a7954b928e0bdbc820fc7",
+      "unchanged_old_theorem_headers": 0
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/AnswerFlowFamilyPop.lean",
+      "before_lines": 0,
+      "after_lines": 300,
+      "before_sha256": null,
+      "after_sha256": "6aa5d2adcef05f5376431fe9d152f6b4f783d0ba19a6fa8b9811cd6ef1bc63e1",
+      "unchanged_old_theorem_headers": 0
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/AnswerFlowPop.lean",
+      "before_lines": 156,
+      "after_lines": 122,
+      "before_sha256": "e4f7ff652ebff8ffd48835546b80c60982827ed43c315c52ed7a6817cf03edc1",
+      "after_sha256": "07a78c4438947b0a6d1ea4d886c08004581ef03c039bac6e53cfe99d67f909dd",
+      "unchanged_old_theorem_headers": 6
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/AnswerFlowCausePop.lean",
+      "before_lines": 182,
+      "after_lines": 113,
+      "before_sha256": "994485e0d203e41033c4f7854a443bb40af7c839574799e74e347c6f9e13aeba",
+      "after_sha256": "e159d886b6669220730345b2a2fe6a9c2bca03b0247a87a58761e533f8e2d93d",
+      "unchanged_old_theorem_headers": 6
+    },
+    {
+      "path": "src/Effect4/Laws/Program/NativeFrameScope.lean",
+      "before_lines": 254,
+      "after_lines": 333,
+      "before_sha256": "d35111868e05ddf64c53658fb20c066aa87f2c667a36fe16d356b64fb72575d7",
+      "after_sha256": "cb6d7a96f080836787a98013d5de6641804c2b568da630718f185c42e0a06426",
+      "unchanged_old_theorem_headers": 18
+    },
+    {
+      "path": "Test/Dogfood/Proofs/AnswerFlowFamilyReader.lean",
+      "before_lines": 0,
+      "after_lines": 51,
+      "before_sha256": null,
+      "after_sha256": "216d06b11aea851fa9dc8c80e15997a88d0708f272f9eae7163edb096ff4b79d",
+      "unchanged_old_theorem_headers": 0
+    }
+  ],
+  "audit_modules": [
+    "Effect4.Laws.Machine.AnswerFlowFamily",
+    "Effect4.Laws.Machine.AnswerFlowFamilyPop",
+    "Effect4.Laws.Machine.AnswerFlowPop",
+    "Effect4.Laws.Machine.AnswerFlowCausePop",
+    "Effect4.Laws.Program.NativeFrameScope",
+    "Test.Dogfood.Proofs.AnswerFlowFamilyReader"
+  ]
+}

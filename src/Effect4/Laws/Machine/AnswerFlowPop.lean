@@ -1,5 +1,5 @@
 import Effect4.Laws.Machine.AnswerFlowHooks
-import Effect4.Laws.Machine.PopTraceFamily
+import Effect4.Laws.Machine.AnswerFlowFamilyPop
 
 /-!
 Concepts: store-typing R4 and scope-lifetime-finalization R11.
@@ -45,42 +45,11 @@ theorem popFrom_value_selected (world : World) (input output : Kind)
     ∃ incoming middle, model.value world incoming value ∧
       SavedAt model interp world incoming middle selected ∧
       StackAt model interp world middle output (FrameFiber.popFrom .contA false frames fiber).fiber.stack := by
-  have family : PopTrace.Family .contA false (SavedAt model interp world)
-      (fun fiber => fiber.stack = [])
-      (fun input output _ pop => model.value world input value → pop.answer = .frame selected →
-        ∃ incoming middle, model.value world incoming value ∧ SavedAt model interp world incoming middle selected ∧
-          StackAt model interp world middle output pop.fiber.stack) := by
-    constructor
-    · intro kind fiber cause scratch good found
-      cases found
-    · intro input middle output head tail fiber cause answer callback path empty chosen kept good found
-      have shape := Prim.answerOf_frame_eq head selected .contA _
-        (chosen.trans (congrArg some found))
-      rw [shape.1]
-      have scratch : StackAt model interp world middle middle fiber.stack := by
-        rw [empty]; exact .nil world middle
-      exact ⟨input, middle, good, callback,
-        stack_append model interp (ensure_stack model interp world middle middle head fiber scratch)
-          (path_stack model interp path)⟩
-    · intro input middle head fiber after callback empty
-      rw [FrameFiber.passPushed_fiber_cause]; exact drain_empty .contA false head fiber empty
-    · intro input middle output head tail fiber before after tailPop callback path empty passed drained next good found
-      have missing : head.hasArm .contA = false := by
-        rcases passed with ⟨chosen, _⟩ | ⟨answer, _, skipped, _⟩
-        · exact PopTrace.answer_missing head .contA _ chosen
-        · cases skipped
-      have nextGood : model.value world middle value := by
-        cases callback with
-        | mk _ _ _ _ skip _ _ _ _ => exact skip world (model.future_refl world) value good missing
-      simp only [FrameFiber.passOn, FrameFiber.joinPushed, drained] at found ⊢
-      exact next nextGood found
-    · intro input middle output head tail fiber before after tailPop callback path empty passed answered good found
-      unfold FrameFiber.passOn FrameFiber.joinPushed at found
-      split at found
-      · rename_i drained; exact False.elim (answered drained)
-      · rw [FrameFiber.passPushed_answer_cause] at found
-        exact False.elim (drain_not_frame .contA false rfl head selected fiber empty found)
-  exact family.popFrom input output frames fiber none (stack_path model interp stack) empty good found
+  obtain ⟨incoming, middle, good, callback, suffix⟩ :=
+    External.popFrom_value_selected model interp (SavedAt model interp) (saved_family model interp)
+      (fun world kind => saved_mask model interp world kind true) world input output frames fiber value selected
+      empty good (stack_path model interp stack) found
+  exact ⟨incoming, middle, good, callback, path_stack model interp suffix⟩
 
 /-- Actual getCont retains the selected callback and its ordered suffix.
 Deferred and replacement answers cannot inhabit this selected-frame branch. -/
@@ -120,23 +89,20 @@ theorem resumeValue_selected (world : World) (input output : Kind)
       FrameAt model interp world output {(fiber.getCont .contA false).fiber with
         current := next
         stack := pushed ++ (fiber.getCont .contA false).fiber.stack} := by
-  rcases getCont_value_selected model interp world input output fiber value selected good stack found with
-    ⟨incoming, middle, incomingGood, callback, suffix⟩
-  refine ⟨_, FrameFiber.resumeValue_frame interp fiber value provided selected next pushed found evaluated, ?_⟩
-  have supplied : ∀ exit ∈ provided, ExitAt model world incoming exit := by
+  have supplied (incoming : Kind) (incomingGood : model.value world incoming value) :
+      ∀ exit ∈ provided, ExitAt model world incoming exit := by
     rcases same with absent | present
     · rw [absent]; intro exit member; cases member
-    · rw [present]; intro exit member
-      cases Option.some.inj member
-      exact incomingGood
+    · rw [present]; intro exit member; cases Option.some.inj member; exact incomingGood
   have original : provided.getD (.success value) = .success value := by
     rcases same with absent | present
     · rw [absent]; rfl
     · rw [present]; rfl
-  cases callback with
-  | mk _ _ _ _ _ _ answer _ _ =>
-    exact result_attach model interp _ (answer world (model.future_refl world) value provided next pushed
-      incomingGood supplied (by rw [original]; exact pure) evaluated) suffix
+  obtain ⟨events, equation, head, code, path⟩ :=
+    External.resumeValue_selected model interp (SavedAt model interp) (saved_family model interp)
+      (fun world kind => saved_mask model interp world kind true) world input output fiber value selected next pushed
+      provided good (stack_path model interp stack) found supplied (by rw [original]; exact pure) evaluated
+  exact ⟨events, equation, head, code, path_stack model interp path⟩
 
 /-- Native value finalization consumes the selected saved frame's actual program clause.
 The pop has already run its mask hooks and retained the older typed suffix. -/
@@ -148,9 +114,9 @@ theorem getCont_value_finalizer (world : World) (input output : Kind)
     (found : (fiber.getCont .contA false).answer = .frame (.onExit body name flag))
     (installed : model.finalizer world name (.success value) = some next) :
     FrameAt model interp world output {(fiber.getCont .contA false).fiber with current := next} := by
-  rcases getCont_value_selected model interp world input output fiber value (.onExit body name flag)
-    good stack found with ⟨incoming, middle, incomingGood, callback, suffix⟩
-  exact install_finalizer model interp world incoming middle output _ body name flag (.success value) next
-    incomingGood callback installed suffix
+  obtain ⟨input, code, path⟩ := External.getCont_value_finalizer model interp (SavedAt model interp)
+    (saved_family model interp) (fun world kind => saved_mask model interp world kind true)
+    world input output fiber value (.onExit body name flag) next good (stack_path model interp stack) found installed
+  exact ⟨input, code, path_stack model interp path⟩
 
 end Effect4.Machine.AnswerFlow

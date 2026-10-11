@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.NativeInterpScope
+import Effect4.Laws.Machine.AnswerFlowFamilyPop
 
 /-!
 # Source scope through the actual frame machine
@@ -9,10 +10,29 @@ The pop proof retains the actual answering frame and every remaining stack slot.
 -/
 set_option autoImplicit false
 namespace Effect4.Program.SourceScope
-open Effect4 Effect4.Machine Effect4.Program
+open Effect4 Effect4.Machine Effect4.Program Effect4.Contracts
 
 /-- Every saved primitive frame retains its source-bearing slots. -/
 def StackAt (root : NativeEff) (frames : List NCode) : Prop := ∀ code ∈ frames, CodeAt root code
+
+/-- The existing lexical saved predicate is the Unit instance of the shared ordered path. -/
+theorem stack_path_at (root : NativeEff) (frames : List NCode) (owned : StackAt root frames) :
+    Effect4.Contracts.Path (fun (_ _ : Unit) code => CodeAt root code) () () frames := by
+  induction frames with
+  | nil => exact .nil ()
+  | cons head rest ih =>
+    exact .cons (owned head (.head _)) (ih (fun code member => owned code (.tail _ member)))
+
+/-- Reading the shared path retains every existing lexical saved primitive. -/
+theorem path_stack_at (root : NativeEff) {input output : Unit} {frames : List NCode}
+    (path : Effect4.Contracts.Path (fun (_ _ : Unit) code => CodeAt root code) input output frames) : StackAt root frames := by
+  induction path with
+  | nil => intro code member; cases member
+  | cons head tail ih =>
+    intro code member
+    rcases List.mem_cons.mp member with same | later
+    · rw [same]; exact head
+    · exact ih code later
 
 /-- A frame-machine fiber retains its current primitive and saved frames. -/
 def FrameAt (root : NativeEff) (fiber : FrameFiber EffName EffThunk Val Err Defect FiberId Ann) : Prop :=
@@ -82,23 +102,28 @@ theorem popFrom_at (root : NativeEff) (demand : Effect4.Arm) (skip : Bool) (fram
     (owned : StackAt root frames) (scratch : StackAt root fiber.stack) :
     StackAt root (FrameFiber.popFrom demand skip frames fiber cause).fiber.stack ∧
       AnswerAt root (FrameFiber.popFrom demand skip frames fiber cause).answer := by
-  induction frames generalizing fiber cause with
-  | nil => exact ⟨scratch, trivial⟩
-  | cons frame rest ih =>
-    have head : CodeAt root frame := owned frame (.head _)
-    have tail : StackAt root rest := fun code member => owned code (.tail _ member)
-    have ensured := ensure_stack_at root frame fiber scratch
-    have hook := ensure_replacement_at root frame fiber
-    have pushed := passPushed_at root demand skip (frame.ensure fiber).1 none ensured
-    have recursive := ih (FrameFiber.passPushed demand skip (frame.ensure fiber).1 none).fiber
-      none tail pushed.1
-    have answering (answer : ContAnswer EffName EffThunk Val Err Defect FiberId Ann)
-        (h : Prim.answerOf frame demand (frame.ensure fiber).2 = some answer) : AnswerAt root answer :=
-      answerOf_at root frame demand _ answer head hook h
-    unfold FrameFiber.popFrom
-    dsimp only
-    repeat' split
-    all_goals aesop (add norm simp [FrameFiber.passOn, FrameFiber.joinPushed, FrameFiber.passPushed_fiber_cause, FrameFiber.passPushed_answer_cause, FrameFiber.popFrom_fiber_cause, FrameFiber.popFrom_answer_cause]) (add safe apply [answering, stack_append_at])
+  have family : PopTrace.Family demand skip
+      (fun (_ _ : Unit) code => CodeAt root code) (fun fiber => StackAt root fiber.stack)
+      (fun _ _ _ pop => StackAt root pop.fiber.stack ∧ AnswerAt root pop.answer) := by
+    constructor
+    · intro kind fiber cause owned; exact ⟨owned, trivial⟩
+    · intro input middle output head tail fiber cause answer owned path scratch chosen kept
+      exact ⟨stack_append_at root _ _ (ensure_stack_at root head fiber scratch) (path_stack_at root path),
+        answerOf_at root head demand _ answer owned (ensure_replacement_at root head fiber) chosen⟩
+    · intro input middle head fiber after owned scratch
+      exact (passPushed_at root demand skip (head.ensure fiber).1 after
+        (ensure_stack_at root head fiber scratch)).1
+    · intro input middle output head tail fiber before after tailPop owned path scratch passed drained next
+      simp only [FrameFiber.passOn, FrameFiber.joinPushed, drained]
+      exact next
+    · intro input middle output head tail fiber before after tailPop owned path scratch passed answered
+      have pushed := passPushed_at root demand skip (head.ensure fiber).1 after
+        (ensure_stack_at root head fiber scratch)
+      unfold FrameFiber.passOn FrameFiber.joinPushed
+      split
+      · rename_i drained; exact False.elim (answered drained)
+      · exact ⟨stack_append_at root _ _ pushed.1 (path_stack_at root path), pushed.2⟩
+  exact family.popFrom () () frames fiber cause (stack_path_at root frames owned) scratch
 
 /-- The actual continuation pop retains its answer and every remaining saved frame. -/
 theorem getCont_at (root : NativeEff)
@@ -134,6 +159,44 @@ theorem armE_at (root : NativeEff) (fragment : Fragment root) (completed) (table
   fun_cases Prim.armE (interpAt root completed table).toPrimInterp frame cause provided
   all_goals aesop (add norm simp [CodeAt, StackAt, Prim.armE]) (add safe apply [ofExit_at, (interp_contE_at root fragment), interp_cancel_at])
 
+/-- The lexical frame instance keeps its existing source predicate and admits every answer. -/
+def lexicalModel (root : NativeEff) :
+    AnswerFlow.Model (ν := EffName) (σ := EffThunk) (β := Val) (ε := Err)
+      (δ := Defect) (ι := FiberId) (α := Ann) Unit Unit where
+  future := fun _ _ => True
+  future_refl := fun _ => trivial
+  future_trans := fun _ _ _ _ _ => trivial
+  value := fun _ _ _ => True
+  cause := fun _ _ _ => True
+  code := fun _ _ => CodeAt root
+  finalizer := fun _ _ _ => none
+  success := fun _ _ _ _ => trivial
+  failure := fun _ _ _ _ => trivial
+
+/-- Every existing lexical saved primitive is an external edge, including recursive loop callbacks. -/
+def lexicalEdge (root : NativeEff) (_ : Unit) (_ _ : Unit) :
+    Prim EffName EffThunk Val Err Defect FiberId Ann → Prop := CodeAt root
+
+/-- The lexical callback equations instantiate all six obligations without finite loop unrolling. -/
+theorem lexical_family (root : NativeEff) (fragment : Fragment root)
+    (completed : List (FiberId × Exit Val Err Defect FiberId Ann)) (table : RowTable) :
+    AnswerFlow.SavedFamily (lexicalModel root) (interpAt root completed table).toPrimInterp
+      (lexicalEdge root) := by
+  constructor
+  · intro world input output frame held nextWorld future value good absent; trivial
+  · intro world input output frame held nextWorld future cause good absent; trivial
+  · intro world input output frame held nextWorld future value provided next pushed good supplied absent arm
+    obtain ⟨code, stack⟩ := armA_at root fragment completed table frame value provided next pushed held arm
+    exact ⟨(), code, stack_path_at root pushed stack⟩
+  · intro world input output frame held nextWorld future cause provided next pushed good supplied absent arm
+    obtain ⟨code, stack⟩ := armE_at root fragment completed table frame cause provided next pushed held arm
+    exact ⟨(), code, stack_path_at root pushed stack⟩
+  · intro world input output frame held nextWorld future exit next good installed
+    have absent := AnswerFlow.programOf_none (lexicalModel root) nextWorld frame exit (fun _ => rfl)
+    rw [absent] at installed
+    cases installed
+  · intro world input output frame held nextWorld future fiber cause delivered good arm interrupted skipped; trivial
+
 /-- A frame step retains every source slot of its running fiber. -/
 def FrameStepAt (root : NativeEff) : FrameStep EffName EffThunk Val Err Defect FiberId Ann → Prop
   | .running fiber => FrameAt root fiber
@@ -145,8 +208,16 @@ theorem resumeValue_at (root : NativeEff) (fragment : Fragment root) (completed)
     (provided : Option ExitV) (owned : FrameAt root fiber) :
     FrameStepAt root ((fiber.resumeValue (interpAt root completed table).toPrimInterp value provided).1) := by
   have popped := getCont_at root fiber .contA false none owned.2
+  have callback (frame : NCode) (next : NCode) (pushed : List NCode)
+      (held : CodeAt root frame)
+      (found : frame.armA (interpAt root completed table).toPrimInterp value provided = some (next, pushed)) :
+      CodeAt root next ∧ StackAt root pushed := by
+    obtain ⟨input, code, path⟩ := (lexical_family root fragment completed table).answer () () () frame held
+      () trivial value provided next pushed trivial (by intro exit member; cases exit <;> trivial)
+      (AnswerFlow.programOf_none (lexicalModel root) () frame _ (fun _ => rfl)) found
+    exact ⟨code, path_stack_at root path⟩
   fun_cases FrameFiber.resumeValue (interpAt root completed table).toPrimInterp fiber value provided
-  all_goals aesop (add norm simp [FrameStepAt, FrameAt, AnswerAt, CodeAt, FrameFiber.getCont_fiber_cause, FrameFiber.getCont_answer_cause]) (add safe apply [stack_append_at]) (add safe forward [(armA_at root fragment completed table)])
+  all_goals aesop (add norm simp [FrameStepAt, FrameAt, AnswerAt, CodeAt, FrameFiber.getCont_fiber_cause, FrameFiber.getCont_answer_cause]) (add safe apply [stack_append_at]) (add safe forward [callback])
 
 /-- Resuming a cause uses the actual owned pop answer and source cause arm. -/
 theorem resumeCause_at (root : NativeEff) (fragment : Fragment root) (completed) (table : RowTable)
@@ -154,6 +225,14 @@ theorem resumeCause_at (root : NativeEff) (fragment : Fragment root) (completed)
     (provided : Option ExitV) (owned : FrameAt root fiber) :
     FrameStepAt root ((fiber.resumeCause (interpAt root completed table).toPrimInterp cause provided).1) := by
   have remaining := (getCont_at root fiber .contE true none owned.2).1
+  have callback (frame : NCode) (delivered : CauseV) (given : Option ExitV)
+      (next : NCode) (pushed : List NCode) (held : CodeAt root frame)
+      (found : frame.armE (interpAt root completed table).toPrimInterp delivered given = some (next, pushed)) :
+      CodeAt root next ∧ StackAt root pushed := by
+    obtain ⟨input, code, path⟩ := (lexical_family root fragment completed table).cause () () () frame held
+      () trivial delivered given next pushed trivial (by intro exit member; cases exit <;> trivial)
+      (AnswerFlow.programOf_none (lexicalModel root) () frame _ (fun _ => rfl)) found
+    exact ⟨code, path_stack_at root path⟩
   have answering (frame : NCode) (found : (fiber.getCont .contE true).answer = .frame frame) : CodeAt root frame := by
     have answer := (getCont_at root fiber .contE true none owned.2).2
     rw [found] at answer
@@ -165,7 +244,7 @@ theorem resumeCause_at (root : NativeEff) (fragment : Fragment root) (completed)
   unfold FrameFiber.resumeCause
   dsimp only
   repeat' split
-  all_goals aesop (add norm simp [FrameStepAt, FrameAt, AnswerAt, CodeAt, FrameFiber.getCont_fiber_cause, FrameFiber.getCont_answer_cause]) (add safe apply [stack_append_at]) (add safe forward [answering, replacing, (armE_at root fragment completed table)])
+  all_goals aesop (add norm simp [FrameStepAt, FrameAt, AnswerAt, CodeAt, FrameFiber.getCont_fiber_cause, FrameFiber.getCont_answer_cause]) (add safe apply [stack_append_at]) (add safe forward [answering, replacing, callback])
 
 /-- One actual frame step retains the source addresses of its running residual. -/
 theorem frame_step_at (root : NativeEff) (fragment : Fragment root) (completed) (table : RowTable)
