@@ -1,5 +1,7 @@
 import Effect4
 import Tools.Semantics
+import Tools.SemanticsDocument
+import Tools.Document.Html
 import ProofGraph.ClosureAudit
 
 /-!

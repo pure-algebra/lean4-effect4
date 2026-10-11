@@ -1,4 +1,4 @@
-import Tools.Semantics
+import Tools.SemanticsDocument
 
 /-!
 Finite acceptance and refusal controls for the semantics report. The fixture is imported at
@@ -68,7 +68,7 @@ private def expectString (value : Json) (key expected : String) : MetaM Unit := 
 
 private def accepted (label : String) (registry : Registry) : MetaM Json := do
   match ← buildReport registry registers toolchain with
-  | .ok report => return report
+  | .ok report => return report.toJson
   | .error refusals => throwError "semantics controls: positive {label} refused: {refusals}"
 
 /-- Every expected location/reason pair must occur together in one returned refusal. -/

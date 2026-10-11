@@ -97,9 +97,6 @@ def parseRegisters (counterexamplesText decisionsText : String) : Except (Array 
         else result := { result with decisions := result.decisions.push (row, who) }
   return if errors.isEmpty then .ok result else .error errors
 
-private def text (s : String) : Json := toJson s
-private def names (ns : List Name) : Json := toJson (ns.map Name.toString)
-private def obj := Json.mkObj
 private def nonblank (s : String) : Bool := !s.trimAscii.toString.isEmpty
 
 def roleName (r : Role) : String := match r with
@@ -110,6 +107,253 @@ def roleName (r : Role) : String := match r with
   | .antisymmetry => "antisymmetry" | .decidability => "decidability"
   | .adequacy => "adequacy" | .simulation => "simulation"
   | .compatibility => "compatibility" | .fundamentalProperty => "fundamentalProperty"
+
+/-! ## The report as data
+
+`buildReport` measures once and returns a `Report`. Its JSON (`Report.toJson`, schema six) and its
+document (`Report.document`, `Tools/SemanticsDocument.lean`) are both read from this value, so no
+output parses another. -/
+
+/-- A declaration as the report shows it: its printed statement, the axioms it reaches and the
+planned goals it rests on, both sorted by name. -/
+structure DeclarationEntry where
+  name : Name
+  module : Name
+  levels : List Name
+  statement : String
+  axioms : List Name
+  restsOn : List Name
+  deriving Inhabited
+
+/-- No axiom outside the semantic ceiling. `buildReport` refuses a declaration that reaches one, so
+a report's entries all answer yes; the field stays in the JSON as the check it states. -/
+def DeclarationEntry.withinCeiling (d : DeclarationEntry) : Bool :=
+  (ProofGraph.disallowedAxioms d.axioms.toArray).isEmpty
+
+/-- A register row that a claim cites, with the refuting theorem when the row refutes the claim. -/
+structure RegisterRow where
+  id : String
+  registerStatus : String
+  record : String
+  witness : Option DeclarationEntry := none
+  deriving Inhabited
+
+/-- A claim's evidence, derived from its pointer (decisions row 203), never authored. -/
+inductive Evidence where
+  /-- the pointer is a planned goal -/
+  | wanted (goal : DeclarationEntry)
+  /-- a theorem that rests on planned goals (its `restsOn`) -/
+  | modulo (witness : DeclarationEntry)
+  | proved (witness : DeclarationEntry)
+  | refuted (row : RegisterRow)
+  | absent (reason : String)
+  | assumed (source reason : String)
+  deriving Inhabited
+
+/-- The evidence's word in the report. -/
+def Evidence.tag : Evidence → String
+  | .wanted _ => "wanted" | .modulo _ => "modulo" | .proved _ => "proved"
+  | .refuted _ => "refuted" | .absent _ => "absent" | .assumed _ _ => "assumed"
+
+/-- The declaration the evidence prints: the goal, the witness, or the refuting theorem. -/
+def Evidence.declaration? : Evidence → Option DeclarationEntry
+  | .wanted d | .modulo d | .proved d => some d
+  | .refuted row => row.witness
+  | .absent _ | .assumed _ _ => none
+
+/-- A registry claim with its derived evidence and the register rows that contest it. -/
+structure ClaimEntry where
+  claim : Claim
+  evidence : Evidence
+  contestedBy : List RegisterRow
+  deriving Inhabited
+
+/-- An applicability decision with the owner its decisions row names. -/
+structure CutEntry where
+  cut : Cut
+  who : String
+
+/-- A plan node as the report shows it (`ProofGraph.Node`, with its kind, module, placement and
+statement). -/
+structure NodeEntry where
+  name : Name
+  goal : Bool
+  standing : String
+  restsOn : List Name
+  module : Name
+  placement : Option Placement
+  statement : String
+  axioms : List Name
+  nearest : List Name
+  lemmas : Nat
+  definitions : Nat
+  deriving Inhabited
+
+/-- A requirement with its derived status, its top and placed nodes with theirs, and its next goals. -/
+structure RequirementEntry where
+  requirement : Requirement
+  proved : Bool
+  top : List (Name × String)
+  placed : List (Name × String)
+  next : List Name
+  deriving Inhabited
+
+/-- The plan section (`ProofGraph.Plan`). -/
+structure PlanEntry where
+  requirements : List RequirementEntry
+  nodes : List NodeEntry
+  next : List Name
+  /-- the goals that no requirement reaches -/
+  unplacedGoals : List Name
+  deriving Inhabited
+
+/-- An acceptance program's stage, as its battery's `Reach` literal states it. -/
+structure Stage where
+  refused : List (String × String)
+  admitted : Bool
+  answer : String
+  printed : Bool
+  readBack : Bool
+
+/-- An acceptance program (decisions row 206): its stage and the requirements it waits on. -/
+structure AcceptanceEntry where
+  program : Name
+  stage : Stage
+  waitsOn : List String
+
+/-- An eligible theorem with the concept it is placed at, by a tag or by its module. -/
+structure PlacedTheorem where
+  name : Name
+  module : Name
+  concept : String
+  tagged : Bool
+
+/-- The placement census: the placed theorems, and the unplaced ones counted by module. -/
+structure PlacementEntry where
+  declarations : List PlacedTheorem
+  unplacedByModule : List (Name × Nat)
+  deriving Inhabited
+
+/-- The measured report. -/
+structure Report where
+  toolchain : String
+  roots : List Name
+  concepts : List Concept
+  claims : List ClaimEntry
+  cuts : List CutEntry
+  plan : PlanEntry
+  acceptance : List AcceptanceEntry
+  placement : PlacementEntry
+  deriving Inhabited
+
+/-! ## Its JSON (schema six) -/
+
+private def text (s : String) : Json := Lean.toJson s
+private def names (ns : List Name) : Json := Lean.toJson (ns.map Name.toString)
+private def obj := Json.mkObj
+
+def DeclarationEntry.toJson (d : DeclarationEntry) : Json := obj [
+  ("name", text d.name.toString), ("module", text d.module.toString),
+  ("levels", names d.levels), ("statement", text d.statement),
+  ("axioms", names d.axioms), ("restsOn", names d.restsOn),
+  ("withinSemanticAxiomCeiling", Lean.toJson d.withinCeiling)]
+
+def RegisterRow.toJson (r : RegisterRow) : Json := obj [
+  ("id", text r.id), ("registerStatus", text r.registerStatus), ("record", text r.record),
+  ("witness", match r.witness with | some d => d.toJson | none => .null)]
+
+def Evidence.toJson : Evidence → Json
+  | .wanted d => obj [("_tag", text "wanted"), ("by", text "goal"), ("goal", d.toJson)]
+  | .modulo d => obj [("_tag", text "modulo"), ("by", text "theorem"), ("witness", d.toJson),
+      ("restsOn", names d.restsOn)]
+  | .proved d => obj [("_tag", text "proved"), ("by", text "theorem"), ("witness", d.toJson),
+      ("goal", .null)]
+  | .refuted row => obj [("_tag", text "refuted"), ("counterexample", row.toJson)]
+  | .absent reason => obj [("_tag", text "absent"), ("reason", text reason)]
+  | .assumed source reason => obj [("_tag", text "assumed"), ("source", text source), ("reason", text reason)]
+
+def ClaimEntry.toJson (c : ClaimEntry) : Json := obj [
+  ("id", text c.claim.id), ("concept", text c.claim.concept), ("role", text (roleName c.claim.role)),
+  ("title", text c.claim.title), ("status", c.evidence.toJson),
+  ("contestedBy", Lean.toJson (c.contestedBy.map RegisterRow.toJson)),
+  ("literature", Lean.toJson (c.claim.literature.map fun r =>
+    obj [("work", text r.work), ("locator", text r.locator), ("relation", text r.relation)]))]
+
+private def nodeStatus (n : Name × String) : Json := obj [("name", text n.1.toString), ("status", text n.2)]
+
+def PlanEntry.toJson (p : PlanEntry) : Json := obj [
+  ("requirements", Lean.toJson (p.requirements.map fun r => obj [
+    ("id", text r.requirement.id), ("title", text r.requirement.title),
+    ("status", text (if r.proved then "proved" else "open")),
+    ("openParts", Lean.toJson (r.requirement.openParts.map fun part =>
+      obj [("text", text part.text), ("state", text part.state.word), ("on", text part.state.on)])),
+    ("top", Lean.toJson (r.top.map nodeStatus)), ("placed", Lean.toJson (r.placed.map nodeStatus)),
+    ("next", names r.next)])),
+  ("nodes", Lean.toJson (p.nodes.map fun n => obj [
+    ("name", text n.name.toString), ("kind", text (if n.goal then "goal" else "theorem")),
+    ("status", text n.standing), ("restsOn", names n.restsOn),
+    ("module", text n.module.toString),
+    ("placement", match n.placement with
+      | some p => obj [("concept", text p.concept),
+          ("requirement", match p.requirement with | some r => text r | none => .null)]
+      | none => .null),
+    ("statement", text n.statement), ("axioms", names n.axioms),
+    ("broughtIn", obj [("nearest", names n.nearest),
+      ("lemmas", Lean.toJson n.lemmas), ("definitions", Lean.toJson n.definitions)])])),
+  ("next", names p.next), ("unplacedGoals", names p.unplacedGoals)]
+
+def AcceptanceEntry.toJson (a : AcceptanceEntry) : Json := obj [
+  ("program", text a.program.toString),
+  ("stage", obj [
+    ("refused", Lean.toJson (a.stage.refused.map fun (part, verdict) =>
+      obj [("part", text part), ("verdict", text verdict)])),
+    ("admitted", Lean.toJson a.stage.admitted), ("answer", text a.stage.answer),
+    ("printed", Lean.toJson a.stage.printed), ("readBack", Lean.toJson a.stage.readBack)]),
+  ("waitsOn", Lean.toJson a.waitsOn)]
+
+/-- The tags a concept's claims are counted by. -/
+def evidenceTags : List String := ["proved", "modulo", "wanted", "refuted", "absent", "assumed"]
+
+/-- The report's producer line and its declared inputs. -/
+def producer : String := Tools.GeneratedStamp.note "tools/Drivers/Semantics.lean (make gen-semantics)"
+def command : String := "make gen-semantics"
+def inputs : List String := ["tools/ProofGraph/Registry.lean", "tools/Tools/Semantics.lean",
+  "tools/Drivers/Semantics.lean", "tools/Tools/SemanticsDisplay.lean",
+  "tools/Tools/SemanticsDocument.lean", "tools/Tools/Document.lean", "tools/Tools/Document/Html.lean",
+  "src/Effect4/Laws/Auto/Semantics.lean",
+  "Test/Counterexamples/REGISTER.md", "docs/core/decisions.md", "lean-toolchain"]
+/-- The placement universe, in words. -/
+def placementUniverse : String :=
+  "theorems of the registry's concept-named modules; auxiliary names and planned goals excluded"
+
+def Report.toJson (r : Report) : Json := obj [
+  ("format", text "effect4-semantics-report"), ("schemaVersion", Lean.toJson (6 : Nat)),
+  ("producer", text producer), ("command", text command), ("inputs", Lean.toJson inputs),
+  ("provenance", obj [("toolchain", text r.toolchain), ("roots", names r.roots),
+    ("policy", obj [("gate", text "Test/Audit/AxiomGate.lean"),
+      ("ceiling", Lean.toJson (["propext", "Quot.sound"] : List String))])]),
+  ("concepts", Lean.toJson (r.concepts.map fun concept =>
+    let members := r.claims.filter (·.claim.concept == concept.id)
+    obj [("id", text concept.id), ("title", text concept.title),
+      ("defaultModules", names concept.defaultModules),
+      ("counts", obj (("claims", Lean.toJson members.length) :: evidenceTags.map fun tag =>
+        (tag, Lean.toJson (members.filter (·.evidence.tag == tag)).length)))])),
+  ("claims", Lean.toJson (r.claims.map ClaimEntry.toJson)),
+  ("cuts", Lean.toJson (r.cuts.map fun c => obj [("concept", text c.cut.concept),
+    ("decisionRow", Lean.toJson c.cut.decisionRow), ("excluded", text c.cut.excluded),
+    ("reason", text c.cut.reason), ("who", text c.who)])),
+  ("plan", r.plan.toJson),
+  ("acceptance", Lean.toJson (r.acceptance.map AcceptanceEntry.toJson)),
+  ("placement", obj [
+    ("universe", text placementUniverse),
+    ("declarations", Lean.toJson (r.placement.declarations.map fun d => obj [
+      ("name", text d.name.toString), ("module", text d.module.toString), ("concept", text d.concept),
+      ("placement", text (if d.tagged then "tagged" else "inherited"))])),
+    ("unplacedCount", Lean.toJson (r.placement.unplacedByModule.foldl (fun total row => total + row.2) 0)),
+    ("unplacedByModule", Lean.toJson (r.placement.unplacedByModule.map fun (mod, count) =>
+      obj [("module", text mod.toString), ("count", Lean.toJson count)]))])]
+
+/-! ## Measuring it -/
 
 /-- What the report computes once and reads many times: the axioms each constant reaches
 (`ProofGraph.AxiomMemo`), and each declaration's printed statement, which a claim's witness and
@@ -135,7 +379,7 @@ private def statementOf (memo : Memo) (name : Name) : MetaM String := do
   memo.statements.modify (·.insert name printed)
   return printed
 
-private def declaration (memo : Memo) (name : Name) : MetaM Json := do
+private def declaration (memo : Memo) (name : Name) : MetaM DeclarationEntry := do
   let ci ← getConstInfo name
   let env ← getEnv
   unless (env.getModuleIdxFor? name).isSome do
@@ -149,14 +393,10 @@ private def declaration (memo : Memo) (name : Name) : MetaM Json := do
   let axioms := reached.qsort (·.toString < ·.toString)
   let disallowed := ProofGraph.disallowedAxioms axioms
   unless disallowed.isEmpty do throwError "{name}: disallowed axioms {disallowed}"
-  return obj [
-    ("name", text name.toString), ("module", text (moduleOf memo env name).toString),
-    ("levels", names ci.levelParams), ("statement", text printed),
-    ("axioms", names axioms.toList),
-    ("restsOn", names (goals.qsort (·.toString < ·.toString)).toList),
-    ("withinSemanticAxiomCeiling", toJson (ProofGraph.disallowedAxioms axioms).isEmpty)]
+  return { name, module := moduleOf memo env name, levels := ci.levelParams, statement := printed,
+           axioms := axioms.toList, restsOn := (goals.qsort (·.toString < ·.toString)).toList }
 
-private def witness (memo : Memo) (name : Name) : MetaM Json := do
+private def witness (memo : Memo) (name : Name) : MetaM DeclarationEntry := do
   -- `ProofRef.validate`'s checks at the theorem's own proposition, with the axioms memoized
   let t ← match (← getEnv).find? name with
     | some (.thmInfo t) => pure t
@@ -173,83 +413,55 @@ private def counterexample (index : Registers) (id : String) : MetaM Counterexam
   unless nonblank row.row do throwError "missing register context for {id}"
   return row
 
-private def claimStatus (memo : Memo) (index : Registers) (pointer : Pointer) :
-    MetaM (String × Json) := do
-  match pointer with
-  | .witness name =>
+private def evidence (memo : Memo) (index : Registers) : Pointer → MetaM Evidence
+  | .witness name => do
     -- the standing is derived (decisions row 203): an open goal, a theorem that rests on goals,
     -- or a theorem that reaches none
-    let evidence ← witness memo name
-    let env ← getEnv
-    if ProofGraph.isGoal env name then
-      return ("wanted", obj [("_tag", text "wanted"), ("by", text "goal"), ("goal", evidence)])
-    let goals := ((evidence.getObjValAs? (Array String) "restsOn").toOption.getD #[])
-    unless goals.isEmpty do
-      return ("modulo", obj [("_tag", text "modulo"), ("by", text "theorem"),
-        ("witness", evidence), ("restsOn", toJson goals)])
-    return ("proved", obj [("_tag", text "proved"), ("by", text "theorem"),
-      ("witness", evidence), ("goal", .null)])
-  | .refutedBy id name =>
+    let d ← witness memo name
+    if ProofGraph.isGoal (← getEnv) name then return .wanted d
+    return if d.restsOn.isEmpty then .proved d else .modulo d
+  | .refutedBy id name => do
     let status ← counterexample index id
     if status.status == "RETIRED" then throwError "retired counterexample id {id}"
     if ProofGraph.isGoal (← getEnv) name then throwError "{name}: a refutation is a planned goal"
-    let evidence ← witness memo name
-    unless ((evidence.getObjValAs? (Array String) "restsOn").toOption.getD #[]).isEmpty do
-      throwError "{name}: a refutation rests on planned goals"
-    return ("refuted", obj [("_tag", text "refuted"), ("counterexample", obj [
-      ("id", text id), ("registerStatus", text status.status), ("record", text status.row), ("witness", evidence)])])
-  | .absent reason =>
+    let d ← witness memo name
+    unless d.restsOn.isEmpty do throwError "{name}: a refutation rests on planned goals"
+    return .refuted { id, registerStatus := status.status, record := status.row, witness := some d }
+  | .absent reason => do
     unless nonblank reason do throwError "blank absent reason"
-    return ("absent", obj [("_tag", text "absent"), ("reason", text reason)])
-  | .assumed source reason =>
+    return .absent reason
+  | .assumed source reason => do
     unless nonblank source && nonblank reason do throwError "blank assumed source or reason"
-    return ("assumed", obj [("_tag", text "assumed"), ("source", text source), ("reason", text reason)])
+    return .assumed source reason
 
-private def literatureJson (r : LiteratureRef) : Json :=
-  obj [("work", text r.work), ("locator", text r.locator), ("relation", text r.relation)]
-
-/-- The plan's report section: the requirements with their derived statuses, every node with its
-standing, its placement and what its proof brings in, the edges to its nearest nodes, and the next
-goals (`ProofGraph.Plan`). A requirement's nodes are its registry top nodes and the declarations
-placed at it (`placed`, decisions row 207). -/
-private def planJson (memo : Memo) (plan : ProofGraph.Plan) (requirements : List Requirement)
-    (placed : Array (Name × String)) : MetaM Json := do
+/-- The plan section: the requirements with their derived statuses, every node with its standing,
+its placement and what its proof brings in, the edges to its nearest nodes, and the next goals
+(`ProofGraph.Plan`). A requirement's nodes are its registry top nodes and the declarations placed
+at it (`placed`, decisions row 207). -/
+private def planEntry (memo : Memo) (plan : ProofGraph.Plan) (requirements : List Requirement)
+    (placed : Array (Name × String)) : MetaM PlanEntry := do
   let env ← getEnv
   let placedAt (r : Requirement) : List Name := (placed.filter (·.2 == r.id)).toList.map (·.1)
   let nodesOf (r : Requirement) : List Name := r.top ++ (placedAt r).filter (!r.top.contains ·)
   let tops := requirements.foldl (init := #[]) fun acc r => acc ++ (nodesOf r).toArray
-  let mut nodes : Array Json := #[]
+  let mut nodes : Array NodeEntry := #[]
   for n in plan.nodes do
-    let placement := match semanticsAttribute.getParam? env n.name with
-      | some p => obj [("concept", text p.concept),
-          ("requirement", match p.requirement with | some r => text r | none => .null)]
-      | none => .null
-    nodes := nodes.push (obj [("name", text n.name.toString),
-      ("kind", text (if ProofGraph.isGoal env n.name then "goal" else "theorem")),
-      ("status", text n.standing.word),
-      ("restsOn", names n.restsOn.toList),
-      ("module", text (moduleOf memo env n.name).toString),
-      ("placement", placement),
-      ("statement", text (← statementOf memo n.name)),
-      ("axioms", names (n.axioms.qsort (·.toString < ·.toString)).toList),
-      ("broughtIn", obj [("nearest", names n.nearest.toList),
-        ("lemmas", toJson n.lemmas), ("definitions", toJson n.definitions)])])
+    nodes := nodes.push {
+      name := n.name, goal := ProofGraph.isGoal env n.name,
+      standing := n.standing.word, restsOn := n.restsOn.toList, module := moduleOf memo env n.name,
+      placement := semanticsAttribute.getParam? env n.name, statement := ← statementOf memo n.name,
+      axioms := (n.axioms.qsort (·.toString < ·.toString)).toList, nearest := n.nearest.toList,
+      lemmas := n.lemmas, definitions := n.definitions }
   let index : Std.HashMap Name ProofGraph.Node := plan.nodes.foldl (fun m n => m.insert n.name n) {}
   let word (n : Name) : String := ((index[n]?).map (·.standing.word)).getD "missing"
-  let status (n : Name) : Json := obj [("name", text n.toString), ("status", text (word n))]
-  let reqs := requirements.toArray.map fun r =>
-    let proved := r.openParts.isEmpty && (nodesOf r).all (word · == "proved")
-    obj [("id", text r.id), ("title", text r.title), ("status", text (if proved then "proved" else "open")),
-      ("openParts", toJson (r.openParts.map fun part =>
-        obj [("text", text part.text), ("state", text part.state.word), ("on", text part.state.on)])),
-      ("top", toJson (r.top.map status)),
-      ("placed", toJson ((placedAt r).map status)),
-      ("next", names (plan.next (nodesOf r).toArray).toList)]
+  let reqs : List RequirementEntry := requirements.map fun r =>
+    { requirement := r, proved := r.openParts.isEmpty && (nodesOf r).all (word · == "proved"),
+      top := r.top.map fun n => (n, word n), placed := (placedAt r).map fun n => (n, word n),
+      next := (plan.next (nodesOf r).toArray).toList }
   let next := plan.next tops
   -- a goal no requirement reaches is planned work without a place in the requirements
   let unplaced := (plan.nodes.filter fun n => ProofGraph.isGoal env n.name && !next.contains n.name).map (·.name)
-  return obj [("requirements", toJson reqs), ("nodes", toJson nodes),
-    ("next", names next.toList), ("unplacedGoals", names unplaced.toList)]
+  return { requirements := reqs, nodes := nodes.toList, next := next.toList, unplacedGoals := unplaced.toList }
 
 /-! ## The acceptance programs (decisions row 206)
 
@@ -275,26 +487,24 @@ private def boolLit? : Expr → Option Bool
   | .mdata _ e => boolLit? e
   | _ => none
 
-/-- A `Test.Dogfood.Reach` literal as JSON: the refused parts with their verdicts, and the four
-stages. `none` if the value is not such a literal. -/
-private def reachJson? (e : Expr) : Option Json := do
+/-- A `Test.Dogfood.Reach` literal: the refused parts with their verdicts, and the four stages.
+`none` if the value is not such a literal. -/
+private def stage? (e : Expr) : Option Stage := do
   let e := e.consumeMData
   guard (e.getAppFn.constName? == some `Test.Dogfood.Reach.mk && e.getAppNumArgs == 5)
   let args := e.getAppArgs
   let refused ← (← listLit? args[0]!).mapM fun pair => do
     let pair := pair.consumeMData
     guard (pair.getAppFn.constName? == some ``Prod.mk && pair.getAppNumArgs == 4)
-    return obj [("part", text (← strLit? pair.getAppArgs[2]!)),
-      ("verdict", text (← strLit? pair.getAppArgs[3]!))]
+    return (← strLit? pair.getAppArgs[2]!, ← strLit? pair.getAppArgs[3]!)
   let some answer := args[2]!.consumeMData.constName? | none
   guard (answer.getPrefix == `Test.Dogfood.Answer)
-  return obj [("refused", toJson refused), ("admitted", toJson (← boolLit? args[1]!)),
-    ("answer", text answer.getString!), ("printed", toJson (← boolLit? args[3]!)),
-    ("readBack", toJson (← boolLit? args[4]!))]
+  return { refused, admitted := ← boolLit? args[1]!, answer := answer.getString!,
+           printed := ← boolLit? args[3]!, readBack := ← boolLit? args[4]! }
 
 /-- One acceptance program: its stage and the requirements it waits on, read from its battery. -/
-private def acceptanceJson (battery : Name) (requirements : List String) :
-    MetaM (Except String Json) := do
+private def acceptanceEntry (battery : Name) (requirements : List String) :
+    MetaM (Except String AcceptanceEntry) := do
   let env ← getEnv
   let some (.defnInfo stage) := env.find? (battery ++ `stage)
     | return .error s!"acceptance {battery}: no `stage` definition"
@@ -305,13 +515,13 @@ private def acceptanceJson (battery : Name) (requirements : List String) :
   for id in ids do
     unless requirements.contains id do
       return .error s!"acceptance {battery}: unknown requirement {id}"
-  let some reach := reachJson? stage.value
+  let some reach := stage? stage.value
     | return .error s!"acceptance {battery}: `stage` is not a `Reach` literal"
-  return .ok (obj [("program", text battery.toString), ("stage", reach), ("waitsOn", toJson ids)])
+  return .ok { program := battery, stage := reach, waitsOn := ids }
 
 /-- Validate and collect all located refusals. No status is accepted from authored input. -/
 def buildReport (registry : Registry) (registers : Registers) (toolchain : String) :
-    MetaM (Except (Array String) Json) := do
+    MetaM (Except (Array String) Report) := do
   let env ← getEnv
   let memo : Memo :=
     { axioms := ← IO.mkRef {}, statements := ← IO.mkRef {}, modules := env.header.moduleNames }
@@ -337,7 +547,7 @@ def buildReport (registry : Registry) (registers : Registers) (toolchain : Strin
         errors := errors.push s!"concept {concept.id}: default module {mod} is not loaded"
   let mut claimIds : List String := []
   let mut goals : List Name := []
-  let mut rows : Array (String × String × Json) := #[]
+  let mut claims : Array ClaimEntry := #[]
   for claim in registry.claims do
     let location := s!"claim {claim.id}"
     unless semanticsId claim.id do errors := errors.push s!"{location}: invalid id"
@@ -354,30 +564,24 @@ def buildReport (registry : Registry) (registers : Registers) (toolchain : Strin
           ["definitionUsed", "proofTechnique", "adaptedResult", "analogy", "excludedFeature"].contains ref.relation do
         errors := errors.push s!"{location}: invalid literature reference"
     try
-      let (tag, status) ← claimStatus memo registers claim.pointer
-      let mut contests : Array Json := #[]
+      let ev ← evidence memo registers claim.pointer
+      let mut contests : Array RegisterRow := #[]
       let mut contestIds : List String := []
       for id in claim.contestedBy do
         if contestIds.contains id then throwError "duplicate contested counterexample id {id}"
         contestIds := id :: contestIds
         let status ← counterexample registers id
-        contests := contests.push (obj [("id", text id), ("registerStatus", text status.status),
-          ("record", text status.row), ("witness", .null)])
-      let item := obj [("id", text claim.id), ("concept", text claim.concept),
-        ("role", text (roleName claim.role)), ("title", text claim.title), ("status", status),
-        ("contestedBy", toJson contests), ("literature", toJson (claim.literature.map literatureJson))]
-      rows := rows.push (claim.concept, tag, item)
+        contests := contests.push { id, registerStatus := status.status, record := status.row }
+      claims := claims.push { claim, evidence := ev, contestedBy := contests.toList }
     catch ex => errors := errors.push s!"{location}: {← ex.toMessageData.toString}"
-  let mut cuts : Array Json := #[]
+  let mut cuts : Array CutEntry := #[]
   for cut in registry.cuts do
     let location := s!"cut {cut.concept} row {cut.decisionRow}"
     unless ids.contains cut.concept do errors := errors.push s!"{location}: unknown concept"
     unless nonblank cut.excluded && nonblank cut.reason do errors := errors.push s!"{location}: blank exclusion or reason"
     match registers.decisions.find? (·.1 == cut.decisionRow) with
     | none => errors := errors.push s!"{location}: unknown decision row"
-    | some (_, who) =>
-      cuts := cuts.push (obj [("concept", text cut.concept), ("decisionRow", toJson cut.decisionRow),
-        ("excluded", text cut.excluded), ("reason", text cut.reason), ("who", text who)])
+    | some (_, who) => cuts := cuts.push { cut, who }
   -- A registry that fails its own checks is refused before the environment is scanned.
   if !errors.isEmpty then return .error errors
   -- Tags outside the committed population must still refer to a known concept, and a placement
@@ -397,7 +601,7 @@ def buildReport (registry : Registry) (registers : Registers) (toolchain : Strin
       if registry.requirements.any (·.id == req) then placed := placed.push (name, req)
       else errors := errors.push s!"tag {name}: unknown requirement {req}"
   placed := placed.qsort (·.1.toString < ·.1.toString)
-  let mut placements : Array Json := #[]
+  let mut placements : Array PlacedTheorem := #[]
   let mut unplaced : Array (Name × Nat) := #[]
   -- the eligible theorems (`semanticsTheorems`' population) of the concept-named modules only:
   -- every other module's theorems are skipped by the placement universe anyway
@@ -412,11 +616,8 @@ def buildReport (registry : Registry) (registers : Registers) (toolchain : Strin
     let mod := moduleOf memo env name
     let tagged := (semanticsAttribute.getParam? env name).map (·.concept)
     let inherited := registry.concepts.find? (·.defaultModules.contains mod)
-    let concept := tagged.orElse (fun _ => inherited.map (·.id))
-    match concept with
-    | some id => placements := placements.push (obj [("name", text name.toString),
-        ("module", text mod.toString), ("concept", text id),
-        ("placement", text (if tagged.isSome then "tagged" else "inherited"))])
+    match tagged.orElse (fun _ => inherited.map (·.id)) with
+    | some id => placements := placements.push { name, module := mod, concept := id, tagged := tagged.isSome }
     | none =>
       let old := (unplaced.find? (·.1 == mod)).map (·.2) |>.getD 0
       unplaced := (unplaced.filter (·.1 != mod)).push (mod, old + 1)
@@ -437,7 +638,7 @@ def buildReport (registry : Registry) (registers : Registers) (toolchain : Strin
       errors := errors.push s!"plan scope {pre}: matches no loaded module"
   -- The plan (`ProofGraph.Plan`): the requirements' top and placed nodes, the claims' witnesses
   -- and every planned goal of the plan scope are the nodes; the edges are read from their proofs.
-  let mut plan : Json := .null
+  let mut plan : PlanEntry := default
   try
     let mut named := registry.requirements.foldl (init := #[]) fun acc r => acc ++ r.top.toArray
     for (n, _) in placed do
@@ -446,45 +647,24 @@ def buildReport (registry : Registry) (registers : Registers) (toolchain : Strin
       if let .witness w := claim.pointer then
         unless named.contains w do named := named.push w
     let built ← ProofGraph.buildPlan registry.planScope named memo.axioms
-    plan ← planJson memo built registry.requirements placed
+    plan ← planEntry memo built registry.requirements placed
   catch ex => errors := errors.push s!"plan: {← ex.toMessageData.toString}"
   -- The acceptance programs (decisions row 206): each battery's own stage and requirements.
-  let mut acceptance : Array Json := #[]
+  let mut acceptance : Array AcceptanceEntry := #[]
   for battery in registry.acceptance do
-    match ← acceptanceJson battery (registry.requirements.map (·.id)) with
+    match ← acceptanceEntry battery (registry.requirements.map (·.id)) with
     | .ok row => acceptance := acceptance.push row
     | .error why => errors := errors.push why
-  let concepts := registry.concepts.map fun concept =>
-    let members := rows.filter (·.1 == concept.id)
-    let counts := ("claims", toJson members.size) ::
-      (["proved", "modulo", "wanted", "refuted", "absent", "assumed"].map fun tag =>
-        (tag, toJson (members.filter (·.2.1 == tag)).size))
-    obj [("id", text concept.id), ("title", text concept.title),
-      ("defaultModules", names concept.defaultModules), ("counts", obj counts)]
   if !errors.isEmpty then return .error errors
-  unplaced := unplaced.qsort (·.1.toString < ·.1.toString)
-  return .ok <| obj [
-    ("format", text "effect4-semantics-report"), ("schemaVersion", toJson (6 : Nat)),
-    ("producer", text (Tools.GeneratedStamp.note "tools/Drivers/Semantics.lean (make gen-semantics)")),
-    ("command", text "make gen-semantics"),
-    ("inputs", toJson (["tools/ProofGraph/Registry.lean", "tools/Tools/Semantics.lean",
-      "tools/Drivers/Semantics.lean", "tools/Tools/SemanticsDisplay.lean",
-      "src/Effect4/Laws/Auto/Semantics.lean",
-      "Test/Counterexamples/REGISTER.md", "docs/core/decisions.md", "lean-toolchain"] : List String)),
-    ("provenance", obj [("toolchain", text toolchain), ("roots", names registry.roots),
-      ("policy", obj [("gate", text "Test/Audit/AxiomGate.lean"),
-        ("ceiling", toJson (["propext", "Quot.sound"] : List String))])]),
-    ("concepts", toJson concepts), ("claims", toJson (rows.map (·.2.2))), ("cuts", toJson cuts), ("plan", plan),
-    ("acceptance", toJson acceptance),
-    ("placement", obj [
-      ("universe", text "theorems of the registry's concept-named modules; auxiliary names and planned goals excluded"),
-      ("declarations", toJson placements),
-      ("unplacedCount", toJson (unplaced.foldl (fun total row => total + row.2) 0)),
-      ("unplacedByModule", toJson (unplaced.map fun (mod, count) =>
-        obj [("module", text mod.toString), ("count", toJson count)]))])]
+  return .ok {
+    toolchain, roots := registry.roots, concepts := registry.concepts,
+    claims := claims.toList, cuts := cuts.toList, plan, acceptance := acceptance.toList,
+    placement := {
+      declarations := placements.toList,
+      unplacedByModule := (unplaced.qsort (·.1.toString < ·.1.toString)).toList } }
 
 /-- Load exactly the declared roots after registering the attribute in this process. -/
-def loadReport (registry : Registry) : IO (Except (Array String) Json) := do
+def loadReport (registry : Registry) : IO (Except (Array String) Report) := do
   let counterexamples ← IO.FS.readFile "Test/Counterexamples/REGISTER.md"
   let decisions ← IO.FS.readFile "docs/core/decisions.md"
   let registers ← match parseRegisters counterexamples decisions with
@@ -504,254 +684,4 @@ def loadReport (registry : Registry) : IO (Except (Array String) Json) := do
     return report
   catch ex => return .error #[s!"roots: {ex}"]
 
-private def field (j : Json) (name : String) : String := (j.getObjValAs? String name).toOption.getD ""
-private def array (j : Json) (name : String) : Array Json := (j.getObjValAs? (Array Json) name).toOption.getD #[]
-private def nested (j : Json) (name : String) : Json := (j.getObjVal? name).toOption.getD .null
-private def codeFence (s : String) : String :=
-  let (_, longest) := s.toList.foldl (fun (run, longest) c =>
-    let run := if c == '`' then run + 1 else 0
-    (run, max longest run)) (0, 0)
-  String.ofList (List.replicate (max 3 (longest + 1)) '`')
-
-private def cell (s : String) : String := s.replace "|" "\\|" |>.replace "\n" " "
-
-/-- Display a validated report. Generated statements/statuses have one owner; handwritten
-language explanations live in docs/core. Code fences are longer than any statement run. -/
-private def shortName (name : String) : String := (name.splitOn ".").getLast!
-
-/-- A list without its repeats, each name at its first place, as `List.eraseDups` gives it, with
-a hash set in place of a scan of the names kept so far. -/
-def dedup (names : List String) : List String :=
-  (names.foldl (init := (#[], ({} : Std.HashSet String))) fun (kept, seen) n =>
-    if seen.contains n then (kept, seen) else (kept.push n, seen.insert n)).1.toList
-
-/-- The acceptance section (decisions row 206): one row per program, its stage as its battery
-declares it, and the programs each requirement keeps waiting. -/
-private def renderAcceptance (programs : Array Json) : String := Id.run do
-  if programs.isEmpty then return ""
-  let shortProgram (p : Json) : String := shortName (field p "program")
-  let yes (j : Json) (name : String) : String :=
-    match j.getObjValAs? Bool name with | .ok true => "yes" | .ok false => "no" | .error _ => "?"
-  let strings (j : Json) (name : String) : List String :=
-    (array j name).toList.map fun s => s.getStr?.toOption.getD ""
-  let mut out := "\n## Acceptance programs\n\nThe rc.112 probe programs as acceptance tests (decisions row 206; `Test/Dogfood/README.md`). Each row is the `stage` its battery declares, which a guard ties to the battery's own measurement, and the requirements it `waitsOn`. A slice that moves a program edits both.\n\n"
-  out := out ++ "| Program | Admitted | Answer | Printed | Read back | Refused parts | Waits on |\n| --- | --- | --- | --- | --- | --- | --- |\n"
-  for p in programs do
-    let stage := nested p "stage"
-    let refused := (array stage "refused").toList.map fun r => s!"{field r "part"} ({field r "verdict"})"
-    let refusedText := if refused.isEmpty then "—" else String.intercalate "; " refused
-    out := out ++ s!"| `{shortProgram p}` | {yes stage "admitted"} | {field stage "answer"} | {yes stage "printed"} | {yes stage "readBack"} | {cell refusedText} | {String.intercalate ", " (strings p "waitsOn")} |\n"
-  let ids := (programs.toList.flatMap (strings · "waitsOn")).eraseDups
-  let ordered := ids.toArray.qsort fun a b => (a.drop 1).toNat! < (b.drop 1).toNat!
-  out := out ++ "\nThe programs each requirement keeps waiting:\n\n"
-  for id in ordered do
-    let waiting := programs.toList.filter (strings · "waitsOn" |>.contains id)
-    out := out ++ s!"- {id}: {String.intercalate ", " (waiting.map fun p => s!"`{shortProgram p}`")}\n"
-  return out
-
-/-- The names that a list of names reaches through `nearestOf`, breadth first, and the names
-still queued when the bound ran out. A name is queued once: when it is neither reached nor
-queued. So each step reaches one new name, and a bound of the count of distinct names is
-enough. A queue that is not empty at the end is answered, never dropped. Before 2026-10-05 the
-loop queued a name at every edge into it, and the repeated visits spent the bound: a node
-below a shared dependency could be left out (Codex's dogfooding review). -/
-def reachThrough (nearestOf : String → List String) (bound : Nat) (start : List String) :
-    List String × List String := Id.run do
-  let mut reach : Array String := #[]
-  let mut todo : Array String := (dedup start).toArray
-  -- the queue is `todo` from `head` on; `known` is every name reached or queued
-  let mut head := 0
-  let mut known : Std.HashSet String := Std.HashSet.ofArray todo
-  for _ in [0:bound] do
-    let some n := todo[head]? | break
-    head := head + 1
-    reach := reach.push n
-    for d in nearestOf n do
-      unless known.contains d do
-        known := known.insert d
-        todo := todo.push d
-  return (reach.toList, (todo.extract head todo.size).toList)
-
-/-- A name by the fewest of its last components that no other name of a list shares. One
-component is enough for most names, and `shortName` is that case. Two modules that state a step
-of one name need more: `Effect4.Queue.Model.takeStep_types` and
-`Effect4.Semaphore.Model.takeStep_types` print as `Queue.Model.takeStep_types` and
-`Semaphore.Model.takeStep_types`. A name whose every run of last components another name
-shares prints in full. The list is the names that one requirement's row and section print, so a
-name is told from the names beside it and no further (seat SEM's receipt, item 10, row 6). -/
-def displayName (among : List String) (name : String) : String := Id.run do
-  let parts := name.splitOn "."
-  let others := (among.eraseDups.filter (· != name)).map (·.splitOn ".")
-  for count in [1:parts.length] do
-    let tail := parts.drop (parts.length - count)
-    unless others.any (fun other => other.drop (other.length - count) == tail) do
-      return String.intercalate "." tail
-  return name
-
-/-- `displayName among` for every name of `among` at once, as a table. Each run of last components
-of each distinct name is counted once, so a name's display is its shortest run that only it ends
-in: the count is one. A component holds no dot, so a run is told by its spelling. The answer is
-data, not a closure: a definition that returns a closure is compiled with the closure's argument
-as one more parameter, and its tables would be built again at every call. -/
-def displayNames (among : List String) : Std.HashMap String String :=
-  let distinct := dedup among
-  let runs (name : String) : List String :=
-    let parts := name.splitOn "."
-    (List.range parts.length).map fun k => String.intercalate "." (parts.drop k)
-  let counts : Std.HashMap String Nat := distinct.foldl (init := {}) fun m name =>
-    (runs name).foldl (fun m run => m.insert run (m.getD run 0 + 1)) m
-  let shown : Std.HashMap String String := distinct.foldl (init := {}) fun m name =>
-    -- the runs from the longest, so the last one counted once is the shortest; the whole name
-    -- is no candidate, as in `displayName`
-    let unique := ((runs name).drop 1).filter (counts.getD · 0 == 1)
-    m.insert name (unique.getLast?.getD name)
-  shown
-
-/-- A name as `displayNames` shows it, and by `displayName` when the table lacks it. -/
-def shownIn (table : Std.HashMap String String) (among : List String) (name : String) : String :=
-  match table[name]? with
-  | some shown => shown
-  | none => displayName among name
-
-/-- The plan section: the requirements table, the next goals, the loose premises, and one Mermaid
-diagram per requirement over the nodes it reaches. A name prints by `displayName`, among the
-names of its own row and section. -/
-private def renderPlan (plan : Json) : String := Id.run do
-  if plan == .null then return ""
-  let nodes := array plan "nodes"
-  let strings (j : Json) : List String := (j.getArr?.toOption.getD #[]).toList.map fun n =>
-    n.getStr?.toOption.getD ""
-  let index : Std.HashMap String Json := nodes.foldl (fun m n => m.insert (field n "name") n) {}
-  let nodeOf (name : String) : Option Json := index[name]?
-  let statusOf (name : String) : String := ((nodeOf name).map (field · "status")).getD "missing"
-  let nearestOf (name : String) : List String :=
-    ((nodeOf name).map fun n => strings (nested (nested n "broughtIn") "nearest")).getD []
-  let restsOnOf (name : String) : List String :=
-    ((nodeOf name).map fun n => strings (nested n "restsOn")).getD []
-  let ticked (shown : String → String) (names : List String) : String :=
-    if names.isEmpty then "—" else String.intercalate ", " (names.map fun n => s!"`{shown n}`")
-  let mut out := "\n## Plan\n\nThe requirements and their nodes. A node is a planned goal (a theorem whose body is `sorry`, declared by `proof_goal`) or a theorem a requirement names. Its status is derived from its proof, with goals as leaves (`tools/ProofGraph/Plan.lean`, decisions row 203): goal, modulo (proved from the goals it rests on), or proved. An edge goes from a node to the nodes its proof reaches first.\n\n"
-  out := out ++ "A requirement's nodes are its top nodes, named by the registry, and the declarations placed at it (`@[semantics \"concept\" (requirement := Rn)]`, decisions row 207). A requirement is proved when every node is proved and no open part remains. An open part is one not yet stated as a goal.\n\n"
-  out := out ++ "| Requirement | Status | Top nodes | Placed nodes | Next goals |\n| --- | --- | --- | --- | --- |\n"
-  let listed (shown : String → String) (items : Array Json) : String :=
-    if items.isEmpty then "—" else String.intercalate ", " (items.toList.map fun t =>
-      s!"`{shown (field t "name")}` ({field t "status"})")
-  -- every name that a traversal can meet: the nodes, and every name a node's edge names
-  let names := dedup (nodes.toList.flatMap fun n =>
-    field n "name" :: strings (nested (nested n "broughtIn") "nearest"))
-  -- the nodes the requirement's top and placed nodes reach through their nearest nodes, the
-  -- names still queued, and every name that the requirement's row and section print
-  let sectionOf (req : Json) : List String × List String × List String :=
-    let start := ((array req "top") ++ (array req "placed")).toList.map (field · "name")
-    let (reach, pending) := reachThrough nearestOf (names.length + start.length) start
-    let printed := start ++ strings (nested req "next") ++ reach ++ pending ++
-      reach.flatMap (fun n => restsOnOf n ++ nearestOf n)
-    (reach, pending, dedup printed)
-  -- each requirement's section, traversed once for its row and its section
-  let sections := (array plan "requirements").map fun req => (req, sectionOf req)
-  for (req, (_, _, printed)) in sections do
-    let table := displayNames printed
-    let shown := shownIn table printed
-    out := out ++ s!"| {field req "id"} | {field req "status"} | {listed shown (array req "top")} | {listed shown (array req "placed")} | {ticked shown (strings (nested req "next"))} |\n"
-  let next := strings (nested plan "next")
-  let unplaced := strings (nested plan "unplacedGoals")
-  let looseTable := displayNames (next ++ unplaced)
-  let loose := shownIn looseTable (next ++ unplaced)
-  out := out ++ s!"\n**Next goals** ({next.length}): {ticked loose next}\n"
-  -- the open parts by state: what no planned goal states yet, and why
-  let parts := (array plan "requirements").toList.flatMap fun req => (array req "openParts").toList
-  let count (state : String) : Nat := (parts.filter fun part => field part "state" == state).length
-  out := out ++ s!"\n**Open parts, with no planned goal** ({parts.length}): not triaged {count "untriaged"}; " ++
-    s!"worded as a proposed claim {count "proposed"}; waits on a ruling {count "ruling"}; " ++
-    s!"needs a definition {count "definition"}; after other work {count "work"}\n"
-  unless unplaced.isEmpty do
-    out := out ++ s!"\n**Goals no requirement reaches** ({unplaced.length}): {ticked loose unplaced}\n"
-  for (req, (reach, pending, printed)) in sections do
-    let table := displayNames printed
-    let shown := shownIn table printed
-    let reached := Std.HashSet.ofList reach
-    out := out ++ s!"\n### {field req "id"}: {field req "title"}\n\n"
-    unless pending.isEmpty do
-      out := out ++ s!"- **Incomplete:** the traversal stopped with {pending.length} names not visited ({ticked shown pending}).\n"
-    for part in array req "openParts" do
-      let waits := field part "on"
-      let label := match field part "state" with
-        | "proposed" => "Open, worded as a proposed claim"
-        | "ruling" => s!"Open, waits on a ruling ({waits})"
-        | "definition" => s!"Open, needs a definition ({waits})"
-        | "work" => s!"Open, after other work ({waits})"
-        | _ => "Open, not triaged"
-      out := out ++ s!"- {label}: {field part "text"}\n"
-    -- A node's id is a hash of its name, so a new node adds lines and renumbers none. The counts of
-    -- what a proof brings in stay in the JSON report: they move with every upstream edit.
-    let nodeId := fun (n : String) => "n" ++ String.ofList (Nat.toDigits 16 ((hash n).toNat % 0x100000000))
-    out := out ++ "\n```mermaid\nflowchart LR\n"
-    for n in reach do
-      out := out ++ s!"  {nodeId n}[\"{shown n}<br/>{statusOf n}\"]\n"
-    for n in reach do
-      for d in nearestOf n do
-        if reached.contains d then out := out ++ s!"  {nodeId n} --> {nodeId d}\n"
-    out := out ++ "```\n\n| Node | Status | Rests on | Nearest nodes |\n| --- | --- | --- | --- |\n"
-    for n in reach do
-      if (nodeOf n).isNone then continue
-      out := out ++ s!"| `{shown n}` | {statusOf n} | {ticked shown (restsOnOf n)} | {ticked shown (nearestOf n)} |\n"
-  return out
-
-def renderMarkdown (report : Json) : String := Id.run do
-  let inputs := String.intercalate ", " ((array report "inputs").toList.map fun value => value.getStr?.toOption.getD "")
-  let mut out := s!"<!-- {field report "producer"}\nformat: {field report "format"} v{(nested report "schemaVersion").compress}\ncommand: {field report "command"}\ninputs: {inputs}\n-->\n# Semantics evidence\n\n"
-  out := out ++ "Selected evidence only. English associations are authored; inherited placement is provisional. The semantic axiom ceiling is not a whole-library gate verdict.\n\n"
-  for concept in array report "concepts" do
-    out := out ++ s!"## {field concept "id"}\n\n{field concept "title"}\n\n"
-    out := out ++ "| Claim | Role | Status | Evidence | Evidence at the ceiling | Contested by |\n| --- | --- | --- | --- | --- | --- |\n"
-    for claim in (array report "claims").filter (field · "concept" == field concept "id") do
-      let status := nested claim "status"
-      let tag := field status "_tag"
-      let evidence := match tag with
-        | "proved" | "modulo" => nested status "witness"
-        | "wanted" => nested status "goal"
-        | "refuted" => nested (nested status "counterexample") "witness"
-        | _ => .null
-      let contests := String.intercalate ", " ((array claim "contestedBy").toList.map fun r => field r "id")
-      let ceiling := if evidence == .null then "—" else
-        if (evidence.getObjValAs? Bool "withinSemanticAxiomCeiling").toOption == some true then "yes" else "no"
-      let restsOn := ((nested status "restsOn").getArr?.toOption.getD #[]).toList.map fun n =>
-        shortName (n.getStr?.toOption.getD "")
-      let evidenceText := if evidence == .null then field status "reason"
-        else if restsOn.isEmpty then field evidence "name"
-        else s!"{field evidence "name"}, modulo {String.intercalate ", " restsOn}"
-      out := out ++ s!"| {cell (field claim "id")} | {field claim "role"} | {tag} | {cell evidenceText} | {ceiling} | {cell contests} |\n"
-    out := out ++ "\n### Printed statements\n\n"
-    for claim in (array report "claims").filter (field · "concept" == field concept "id") do
-      let status := nested claim "status"
-      let evidence := if field status "_tag" == "wanted" then nested status "goal"
-        else if field status "_tag" == "refuted" then nested (nested status "counterexample") "witness"
-        else nested status "witness"
-      if evidence != .null then
-        let statement := field evidence "statement"
-        let fence := codeFence statement
-        out := out ++ s!"**{field claim "id"}**\n\n{fence}lean\n{statement}\n{fence}\n\n"
-      for reference in array claim "literature" do
-        out := out ++ s!"Literature: {cell (field reference "work")}, {cell (field reference "locator")} — {cell (field reference "relation")}\n\n"
-  out := out ++ "## Register context\n\nThese are authored links to historical attacks. Read each full row: a leading status word may coexist with a later repair. It does not by itself refute the currently printed proposition. Source: [counterexample register](../Test/Counterexamples/REGISTER.md).\n\n"
-  for claim in array report "claims" do
-    let status := nested claim "status"
-    let refs := if field status "_tag" == "refuted" then
-        (array claim "contestedBy").push (nested status "counterexample")
-      else array claim "contestedBy"
-    for reference in refs do
-      let row := field reference "record"
-      let fence := codeFence row
-      out := out ++ s!"**{field claim "id"}: {field reference "id"}**\n\n{fence}text\n{row}\n{fence}\n\n"
-  out := out ++ "## Applicability decisions\n\n| Concept | Row | Who | Excluded |\n| --- | --- | --- | --- |\n"
-  for cut in array report "cuts" do
-    out := out ++ s!"| {field cut "concept"} | {(nested cut "decisionRow").compress} | {cell (field cut "who")} | {cell (field cut "excluded")} |\n"
-  let placement := nested report "placement"
-  let declarations := array placement "declarations"
-  let tagged := declarations.filter (field · "placement" == "tagged")
-  let inherited := declarations.filter (field · "placement" == "inherited")
-  out := out ++ s!"\n## Placement\n\n{field placement "universe"}\n\nTagged: {tagged.size}; inherited (provisional): {inherited.size}; unplaced: {(nested placement "unplacedCount").compress}.\n"
-  out := out ++ renderPlan (nested report "plan")
-  out := out ++ renderAcceptance (array report "acceptance")
-  return out
 end Tools.Semantics
