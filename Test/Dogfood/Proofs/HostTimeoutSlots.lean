@@ -24,6 +24,16 @@ open HostTimeoutSource
 inductive Kind
   | any | unit | nat | cell (key : Nat) | body | result
 
+/-- The concrete handler test is read from its existing source node. -/
+def retryTest : Term :=
+  match Node.at_ (.eff HostTimeoutSource.program) [1,1,1,0,0,1] with
+  | some (.eff (.catchIf test _ _)) => test
+  | _ => .lit (.bool false)
+
+/-- A returned handler payload passes the declared source test. -/
+def Retryable (error : Val) : Prop :=
+  evalTerm [.unit, .unit, .unit, .unit, .unit, error] retryTest = some (.bool true)
+
 /-- Source results retain body membership while allowing arbitrary failure values. -/
 inductive ValueAt (B : List Val) : Kind → Val → Prop
   | any (value : Val) : ValueAt B .any value
@@ -33,7 +43,7 @@ inductive ValueAt (B : List Val) : Kind → Val → Prop
   | body {value : Val} (member : value ∈ B) : ValueAt B .body value
   | answered {value : Val} (member : value ∈ B) :
       ValueAt B .result (.list [.some value, .none])
-  | failed (error : Val) : ValueAt B .result (.list [.none, .some error])
+  | failed (error : Val) (declared : Retryable error) : ValueAt B .result (.list [.none, .some error])
   | empty : ValueAt B .result (.list [.none, .none])
 
 /-- Failures cannot introduce a successful body at any expected source result. -/
@@ -63,31 +73,31 @@ inductive EnvAt (B : List Val) : List Nat → List Val → Prop
   | completedMake (a b : Val) : EnvAt B [1,1,0] ([a, b])
   | finishBind (a b c : Val)   : EnvAt B [1,1,1] (cells a b c)
   | loop (a b c : Val)   : EnvAt B [1,1,1,0] (cells a b c)
-  | iteration (a b c : Val) (n delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0] (running a b c n delay error)
-  | delaySelect (a b c : Val) (n delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0,0] (running a b c n delay error)
-  | delaySleep (a b c : Val) (n delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0,0,0] (running a b c n delay error)
-  | delayZero (a b c : Val) (n delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0,0,1] (running a b c n delay error)
-  | catch (a b c : Val) (n delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0,1] (ready a b c n delay error)
-  | answerBind (a b c : Val) (n delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0,1,0] (ready a b c n delay error)
-  | completeExit (a b c : Val) (n delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0,1,0,0] (ready a b c n delay error)
-  | race (a b c : Val) (n delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0,1,0,0,0] (ready a b c n delay error)
-  | attemptExit (a b c : Val) (n delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0,1,0,0,0,0,0,0] (ready a b c n delay error)
-  | countBind (a b c : Val) (n delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0,1,0,0,0,0,0,0,0] (ready a b c n delay error)
-  | countUpdate (a b c : Val) (n delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0,1,0,0,0,0,0,0,0,0] (ready a b c n delay error)
-  | http (a b c : Val) (n delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0,1,0,0,0,0,0,0,0,1] (ready a b c n delay error ++ [.unit])
-  | cleanupBind (a b c : Val) (n delay : Nat) (error : Val) (exit : ExitV) (good : ExitAt B .body exit) : EnvAt B [1,1,1,0,0,1,0,0,0,0,0,0,1] (ready a b c n delay error ++ [reifyExitVal exit])
-  | cleanupRead (a b c : Val) (n delay : Nat) (error : Val) (exit : ExitV) (good : ExitAt B .body exit) : EnvAt B [1,1,1,0,0,1,0,0,0,0,0,0,1,0] (ready a b c n delay error ++ [reifyExitVal exit])
-  | cleanupNoteBind (a b c : Val) (n delay : Nat) (count : Val) (error : Val) (exit : ExitV) (good : ExitAt B .body exit) : EnvAt B [1,1,1,0,0,1,0,0,0,0,0,0,1,1] (ready a b c n delay error ++ [reifyExitVal exit, count])
-  | cleanupNote (a b c : Val) (n delay : Nat) (count : Val) (error : Val) (exit : ExitV) (good : ExitAt B .body exit) : EnvAt B [1,1,1,0,0,1,0,0,0,0,0,0,1,1,0] (ready a b c n delay error ++ [reifyExitVal exit, count])
-  | cleanupDone (a b c : Val) (n delay : Nat) (count : Val) (error : Val) (exit : ExitV) (good : ExitAt B .body exit) : EnvAt B [1,1,1,0,0,1,0,0,0,0,0,0,1,1,1] (ready a b c n delay error ++ [reifyExitVal exit, count, .unit])
-  | timerBind (a b c : Val) (n delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0,1,0,0,0,0,0,1,0] (ready a b c n delay error)
-  | timerSleep (a b c : Val) (n delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0,1,0,0,0,0,0,1,0,0] (ready a b c n delay error)
-  | timerFail (a b c : Val) (n delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0,1,0,0,0,0,0,1,0,1] (ready a b c n delay error ++ [.unit])
-  | completeBind (a b c : Val) (n delay : Nat) (error : Val) (exit : ExitV) (good : ExitAt B .body exit) : EnvAt B [1,1,1,0,0,1,0,0,1] (ready a b c n delay error ++ [reifyExitVal exit])
-  | completeRead (a b c : Val) (n delay : Nat) (error : Val) (exit : ExitV) (good : ExitAt B .body exit) : EnvAt B [1,1,1,0,0,1,0,0,1,0] (ready a b c n delay error ++ [reifyExitVal exit])
-  | completeNote (a b c : Val) (n delay : Nat) (count : Val) (error : Val) (exit : ExitV) (good : ExitAt B .body exit) : EnvAt B [1,1,1,0,0,1,0,0,1,1] (ready a b c n delay error ++ [reifyExitVal exit, count])
-  | answer (a b c : Val) (n delay : Nat) (error value : Val) (good : value ∈ B) : EnvAt B [1,1,1,0,0,1,0,1] (ready a b c n delay error ++ [value])
-  | caught (a b c : Val) (n delay : Nat) (error failure : Val)  : EnvAt B [1,1,1,0,0,1,1] (ready a b c n delay error ++ [failure])
+  | iteration (a b c : Val) (n : Fin 4) (delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0] (running a b c n delay error)
+  | delaySelect (a b c : Val) (n : Fin 4) (delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0,0] (running a b c n delay error)
+  | delaySleep (a b c : Val) (n : Fin 4) (delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0,0,0] (running a b c n delay error)
+  | delayZero (a b c : Val) (n : Fin 4) (delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0,0,1] (running a b c n delay error)
+  | catch (a b c : Val) (n : Fin 4) (delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0,1] (ready a b c n delay error)
+  | answerBind (a b c : Val) (n : Fin 4) (delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0,1,0] (ready a b c n delay error)
+  | completeExit (a b c : Val) (n : Fin 4) (delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0,1,0,0] (ready a b c n delay error)
+  | race (a b c : Val) (n : Fin 4) (delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0,1,0,0,0] (ready a b c n delay error)
+  | attemptExit (a b c : Val) (n : Fin 4) (delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0,1,0,0,0,0,0,0] (ready a b c n delay error)
+  | countBind (a b c : Val) (n : Fin 4) (delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0,1,0,0,0,0,0,0,0] (ready a b c n delay error)
+  | countUpdate (a b c : Val) (n : Fin 4) (delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0,1,0,0,0,0,0,0,0,0] (ready a b c n delay error)
+  | http (a b c : Val) (n : Fin 4) (delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0,1,0,0,0,0,0,0,0,1] (ready a b c n delay error ++ [.unit])
+  | cleanupBind (a b c : Val) (n : Fin 4) (delay : Nat) (error : Val) (exit : ExitV) (good : ExitAt B .body exit) : EnvAt B [1,1,1,0,0,1,0,0,0,0,0,0,1] (ready a b c n delay error ++ [reifyExitVal exit])
+  | cleanupRead (a b c : Val) (n : Fin 4) (delay : Nat) (error : Val) (exit : ExitV) (good : ExitAt B .body exit) : EnvAt B [1,1,1,0,0,1,0,0,0,0,0,0,1,0] (ready a b c n delay error ++ [reifyExitVal exit])
+  | cleanupNoteBind (a b c : Val) (n : Fin 4) (delay : Nat) (count : Val) (error : Val) (exit : ExitV) (good : ExitAt B .body exit) : EnvAt B [1,1,1,0,0,1,0,0,0,0,0,0,1,1] (ready a b c n delay error ++ [reifyExitVal exit, count])
+  | cleanupNote (a b c : Val) (n : Fin 4) (delay : Nat) (count : Val) (error : Val) (exit : ExitV) (good : ExitAt B .body exit) : EnvAt B [1,1,1,0,0,1,0,0,0,0,0,0,1,1,0] (ready a b c n delay error ++ [reifyExitVal exit, count])
+  | cleanupDone (a b c : Val) (n : Fin 4) (delay : Nat) (count : Val) (error : Val) (exit : ExitV) (good : ExitAt B .body exit) : EnvAt B [1,1,1,0,0,1,0,0,0,0,0,0,1,1,1] (ready a b c n delay error ++ [reifyExitVal exit, count, .unit])
+  | timerBind (a b c : Val) (n : Fin 4) (delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0,1,0,0,0,0,0,1,0] (ready a b c n delay error)
+  | timerSleep (a b c : Val) (n : Fin 4) (delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0,1,0,0,0,0,0,1,0,0] (ready a b c n delay error)
+  | timerFail (a b c : Val) (n : Fin 4) (delay : Nat) (error : Val)  : EnvAt B [1,1,1,0,0,1,0,0,0,0,0,1,0,1] (ready a b c n delay error ++ [.unit])
+  | completeBind (a b c : Val) (n : Fin 4) (delay : Nat) (error : Val) (exit : ExitV) (good : ExitAt B .body exit) : EnvAt B [1,1,1,0,0,1,0,0,1] (ready a b c n delay error ++ [reifyExitVal exit])
+  | completeRead (a b c : Val) (n : Fin 4) (delay : Nat) (error : Val) (exit : ExitV) (good : ExitAt B .body exit) : EnvAt B [1,1,1,0,0,1,0,0,1,0] (ready a b c n delay error ++ [reifyExitVal exit])
+  | completeNote (a b c : Val) (n : Fin 4) (delay : Nat) (count : Val) (error : Val) (exit : ExitV) (good : ExitAt B .body exit) : EnvAt B [1,1,1,0,0,1,0,0,1,1] (ready a b c n delay error ++ [reifyExitVal exit, count])
+  | answer (a b c : Val) (n : Fin 4) (delay : Nat) (error value : Val) (good : value ∈ B) : EnvAt B [1,1,1,0,0,1,0,1] (ready a b c n delay error ++ [value])
+  | caught (a b c : Val) (n : Fin 4) (delay : Nat) (error failure : Val) (declared : Retryable failure) : EnvAt B [1,1,1,0,0,1,1] (ready a b c n delay error ++ [failure])
   | result (a b c : Val) (value : Val) (good : ValueAt B .result value) : EnvAt B [1,1,1,1] (cells a b c ++ [value])
   | errorSelect (a b c : Val) (error : Val)  : EnvAt B [1,1,1,1,0] (cells a b c ++ [.list [.none, error]])
   | emptyFail (a b c : Val)   : EnvAt B [1,1,1,1,0,0] (cells a b c ++ [.list [.none, .none]])
@@ -186,7 +196,7 @@ theorem success_value {B : List Val} {path : List Nat} {env : List Val}
       exact ValueAt.answered good
   · subst path
     cases slots with
-    | caught a b c n delay error failure =>
+    | caught a b c n delay error failure declared =>
       have node : Node.at_ (.eff HostTimeoutSource.program) [1,1,1,0,0,1,1] =
           some (.eff (.succeed (.app "pair"
             (.cons (.app "none" .nil) (.cons (.app "some" (.cons (.var 5) .nil)) .nil))))) := by
@@ -199,7 +209,7 @@ theorem success_value {B : List Val} {path : List Nat} {env : List Val}
           some (.list [.none, .some failure]) := by kernel_rfl
       rw [eval] at evaluates
       cases evaluates
-      exact ValueAt.failed failure
+      exact ValueAt.failed failure declared
   · subst path
     cases slots with
     | rootAnswer a b c body error good =>
@@ -223,7 +233,7 @@ theorem ValueAt.mono {B C : List Val} (sub : B ⊆ C) {kind : Kind} {value : Val
   | cell key => exact .cell key
   | body member => exact .body (sub member)
   | answered member => exact .answered (sub member)
-  | failed error => exact .failed error
+  | failed error declared => exact .failed error declared
   | empty => exact .empty
 
 /-- Prefix growth retains saved exits across cleanup. -/
@@ -509,7 +519,7 @@ theorem select_slots (B : List Val) (point : Point)
           rw [test] at selected
           cases selected
           exact .rootAnswer a b c _ .none good
-        | failed error =>
+        | failed error declared =>
           have test : evalTerm (cells a b c ++ [.list [.none, .some error]])
               (.app "fst" (.cons (.var 3) .nil)) = some .none := by kernel_rfl
           rw [test] at selected
@@ -678,7 +688,7 @@ theorem first_slots {B : List Val} {path : List Nat} {env : List Val}
 /-- A loop body can start only with an empty answer column. -/
 theorem iteration_slots {B : List Val} (point : Point)
     (slots : EnvAt B point.path point.env) (n delay : Nat) (error : Val)
-    (path : point.path = [1,1,1,0]) :
+    (path : point.path = [1,1,1,0]) (bounded : n < 4) :
     EnvAt B (point.childWith 0 (cursor n delay .none error)).path
       (point.childWith 0 (cursor n delay .none error)).env := by
   cases point with
@@ -686,19 +696,63 @@ theorem iteration_slots {B : List Val} (point : Point)
     dsimp only at path slots ⊢
     subst path
     cases slots with
-    | loop a b c => exact .iteration a b c n delay error
+    | loop a b c => exact .iteration a b c ⟨n, bounded⟩ delay error
+
+/-- The handler predicate ignores every lexical value except its new error binder. -/
+theorem retry_test_env (a b c : Val) (n : Nat) (delay : Nat) (previous error : Val) :
+    evalTerm (ready a b c n delay previous ++ [error]) retryTest =
+      evalTerm [.unit, .unit, .unit, .unit, .unit, error] retryTest := by kernel_rfl
+
+/-- An actual accepted typed-error callback passes the declared retry test.
+Consumer: the handler source slot, then the saved loop continuation assertion. -/
+theorem caught_retryable {B : List Val} (point : Point)
+    (slots : EnvAt B point.path point.env) (test : Term) (body handler : NativeEff)
+    (path : point.path = [1,1,1,0,0,1])
+    (node : Node.at_ (.eff HostTimeoutSource.program) point.path =
+      some (.eff (.catchIf test body handler))) (cause : CauseV) (error : Val)
+    (selected : caughtErrorValue? point.env test cause = some error) : Retryable error := by
+  have tested : evalTerm (point.env ++ [error]) test = some (.bool true) := by
+    change ((firstErrorValue? cause).bind fun value =>
+      if evalTerm (point.env ++ [value]) test = some (.bool true) then some value else none) =
+      some error at selected
+    obtain ⟨value, _, picked⟩ := Option.bind_eq_some_iff.mp selected
+    split at picked
+    · rename_i holds
+      cases picked
+      exact holds
+    · cases picked
+  have specification : test = retryTest := by
+    rw [path] at node
+    have known : Node.at_ (.eff HostTimeoutSource.program) [1,1,1,0,0,1] =
+      some (.eff (.catchIf retryTest
+        (match Node.at_ (.eff HostTimeoutSource.program) [1,1,1,0,0,1,0] with
+          | some (.eff effect) => effect | _ => .succeed (.lit .unit))
+        (match Node.at_ (.eff HostTimeoutSource.program) [1,1,1,0,0,1,1] with
+          | some (.eff effect) => effect | _ => .succeed (.lit .unit)))) := by kernel_rfl
+    rw [known] at node
+    cases node
+    rfl
+  rw [specification] at tested
+  cases point with
+  | mk p env fuel tape completed root params call =>
+    dsimp only at path slots tested
+    subst p
+    cases slots with
+    | «catch» a b c n delay previous =>
+      rw [retry_test_env] at tested
+      exact tested
 
 /-- The catch callback appends only its failure value, never an answer body. -/
 theorem caught_slots {B : List Val} (point : Point)
     (slots : EnvAt B point.path point.env) (error : Val)
-    (path : point.path = [1,1,1,0,0,1]) :
+    (path : point.path = [1,1,1,0,0,1]) (declared : Retryable error) :
     EnvAt B (point.childWith 1 error).path (point.childWith 1 error).env := by
   cases point with
   | mk path env fuel tape completed root params call =>
     dsimp only at path slots ⊢
     subst path
     cases slots with
-    | «catch» a b c n delay previous => exact .caught a b c n delay previous error
+    | «catch» a b c n delay previous => exact .caught a b c n delay previous error declared
 
 /-- The source effect is a projection of the existing addressed node. -/
 def sourceAt (path : List Nat) : NativeEff :=
