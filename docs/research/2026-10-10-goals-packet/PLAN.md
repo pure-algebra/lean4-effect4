@@ -66,6 +66,11 @@ Do not replace those name-specific contracts with a raw-point environment equati
 
 ## Remaining landing order
 
+The [shared accounting plan](../2026-10-11-machine-models/codex/PLAN.md) now orders the remaining landings.
+It consolidates the scenario traversals before completing their history producers.
+Read the latest [consolidation audit](../2026-10-11-machine-models/AUDIT.md) before each slice.
+The family rows below identify consumers; they do not authorize another private evaluator or command pass.
+
 The worker probes select shared machine laws with program-specific assertions at every command boundary.
 Fuel cuts and forced yields exclude an invariant restricted to ordinary resting states.
 The actual finite probes and their verdicts remain in the previous plan and packet receipts.
