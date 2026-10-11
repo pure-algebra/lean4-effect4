@@ -143,6 +143,10 @@ Behaviour gates only where a slice changes executable code, and then at a sweep.
      parameter.
    - It changes executable code: regenerate what it reaches and run the gates at the sweep. Turn
      `E4-CTX-CE-001`'s attack guards into the repaired regression.
+   - **The region is an instance (audit, 2026-10-11).** Compile `provideContext` to a frame that
+     restores the context on every exit. Prove its bracket as an instance of
+     `MaskBracket.compiled_region_bracket` and `StackRegionRun.compiled_region_bracket_of_prefix`,
+     not as a new region law (`../2026-10-11-tokens-in-places/README.md`, F1).
 8. **Housekeeping.** The owner deleted `codex/schedule-independence-review-20261010` (row 353);
    its tip is the tag `archive/docgen-probe-20261010`. Remove your clean worktree
    `~/.codex/worktrees/module-design-review/lean4-effect4`, then delete the branch.
