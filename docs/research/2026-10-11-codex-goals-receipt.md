@@ -64,3 +64,40 @@ Preserve stale reply provenance, the routing budget, every unauthorized script a
 Repair the timeout form while retaining the original retry proposition and its counterexample evidence.
 Use shared command laws with program assertions at every command boundary.
 The plan records these recommendations. It changes no decision register.
+
+## L4: Atomic structure
+
+The original three store clauses now use the shared history and two explicit obligations.
+They remain proved modulo those obligations. They are not completed claims.
+The capacity clause uses `Program.HeapSites.heap_sites_keep`.
+The count and committed-state clauses use `Atomic.Store.shop_stages`.
+The cleanup clause remains its original planned goal.
+Their propositions, source program, scripts and observations remain byte-identical.
+A comparison against the base commit verifies that extraction.
+
+Changed files:
+
+- `src/Effect4/Laws/Program/HeapSites.lean`
+- `Test/Dogfood/Scenario/Atomic/Model.lean`
+- `Test/Dogfood/Scenario/Atomic/Store.lean`
+- `Test/Dogfood/Scenario/Atomic.lean`
+- `docs/research/2026-10-10-goals-packet/codex/AuditAtomic.lean`
+- The plan and this receipt.
+
+The write-site census and the request-stage observation algebra compile from the retained probe.
+They use `Run.ControlHistory` and `Author.build_retains`; no second history or author-build law remains.
+The plan records both obligations' placement, scope, consumers and exclusions.
+
+`LEAN_NUM_THREADS=3 lake build Test.Dogfood.Scenario.Atomic` passes with 1033 jobs.
+`LEAN_NUM_THREADS=3 lake env lean docs/research/2026-10-10-goals-packet/codex/AuditAtomic.lean` passes.
+
+```text
+#axiom_audit: 464 declarations within [propext, Quot.sound], 4 of them modulo planned goals; 3 planned goals
+```
+
+The first integration build found a missing binder-table import and a namespace collision.
+Both are repaired before the passing build.
+The unchanged scenario gate rejects planned subgoals beneath proved clauses.
+An exact expected-error guard retains that rejection until the final gate repair.
+The guard fails if the diagnostic changes; the proof declarations still compile and undergo the axiom audit.
+The final pass must admit a goal only when a named clause reaches it.

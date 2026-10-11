@@ -109,3 +109,19 @@ A forced yield leaves a resting state with a delayed entry.
 The selected route combines shared command laws with assertions at every command boundary.
 A table restricted to ordinary resting states cannot cover the existing propositions.
 This finite probe selects proof structure. It proves no scenario invariant.
+
+## Atomic proof placement
+
+`Program.HeapSites.heap_sites_keep` states the proposed `cell-invariant-from-write-sites` claim.
+Its concept is `store-typing`, its role is soundness, and its requirement is R4.
+The write-site premise covers each `perform` at its source address and binder level.
+Its reach is every control history of a built program, with any compile budget.
+It establishes no progress, multi-cell relation or outside runtime behavior.
+Its consumer is the original `Atomic.bounded` proposition.
+
+`Atomic.Store.shop_stages` is a step of the `atomic` claim, under `store-typing` and R4.
+Its consumers are the original `Atomic.counted` and `Atomic.committed` propositions.
+The premise is a successful build of the shop and a control history.
+The stage assignment relates request outcomes and the stores; it establishes no progress.
+Its existence remains a planned obligation until code-position and store preservation are proved.
+The extracted program, scripts, observations and original propositions remain unchanged.
