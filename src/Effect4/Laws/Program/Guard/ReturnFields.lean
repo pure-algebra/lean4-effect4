@@ -279,7 +279,7 @@ theorem countdown_freshPark (interp : NInterp) (m : NativeMachine) (f : NFiber)
     | some wait =>
       simp only [countdownPark, countdownParkEdits, hw, applyFiberEdits, List.foldl, applyFiberEdit]
       apply freshPark_minted rfl
-      simp only [RunMachine.emit, RunMachine.modify]
+      simp only [RunMachine.observe, RunMachine.emit, RunMachine.modify]
       split <;> exact Nat.lt_succ_self _
 
 theorem withFiber_freshPark (interp : NInterp) (m : NativeMachine)

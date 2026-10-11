@@ -35,6 +35,16 @@ example : ((Edit.setState 8 : E).apply initial).trace = initial.trace :=
   Edit.frame (.setState 8) .trace initial (by intro impossible; cases impossible)
 example : (initial.update peer).trace = initial.trace := RunMachine.update_keeps_trace peer initial
 
+-- Both edit interpretations attach to the same current record and leave missing owners alone.
+example : (applyFiberEdit (.observe ⟨0⟩ (.callback 8)) initial).1 =
+    initial.observe ⟨0⟩ (.callback 8) := rfl
+example : (Edit.observe ⟨0⟩ (.callback 8) : E).apply initial =
+    initial.observe ⟨0⟩ (.callback 8) := rfl
+#guard ((initial.observe ⟨0⟩ (.callback 8)).fibers.map (·.observers)) ==
+  [owner.observers ++ [.callback 8], peer.observers]
+#guard ((initial.observe ⟨9⟩ (.callback 8)).fibers.map (·.observers)) ==
+  [owner.observers, peer.observers]
+
 -- An emit misses stored fibers; a new fiber does not, and it is not a settlement write.
 example : ((Edit.emit [] : E).apply initial).fibers = initial.fibers :=
   Edit.keeps_fibers (.emit []) (by intro impossible; cases impossible) initial

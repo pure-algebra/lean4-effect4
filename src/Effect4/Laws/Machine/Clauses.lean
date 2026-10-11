@@ -852,7 +852,7 @@ theorem linkScope_open_linked {κ φ η : Type (max u v)}
         (fun f => { f with observers := f.observers ++ [Observer.dropScopeFinalizer scope key] })).emit
         [RunEvent.scopeLinked mode scope key target], []) := by
   simp only [linkScope, linkScopeEdits, hopen, hlookup, hlive, Bool.false_eq_true,
-    ↓reduceIte, hlink, applyFiberEdits, List.foldl_cons, List.foldl_nil, applyFiberEdit,
+    ↓reduceIte, hlink, applyFiberEdits, List.foldl_cons, List.foldl_nil, applyFiberEdit, RunMachine.observe,
     List.nil_append]
   rw [RunMachine.modify_emit]
 
@@ -1262,7 +1262,7 @@ theorem countdownPark_parks (interp : RunInterp ν σ β ε δ ι α χ St)
        ((m'.modify target fun g => { g with observers := g.observers ++ [Observer.countdown f.id m.nextToken] }).emit
           [RunEvent.parkedOn f.id m.nextToken], g, true)) := by
   simp only [countdownPark, countdownParkEdits, hwalk, applyFiberEdits,
-    List.foldl_cons, List.foldl_nil, applyFiberEdit]
+    List.foldl_cons, List.foldl_nil, applyFiberEdit, RunMachine.observe]
   rw [RunMachine.modify_emit]
   rfl
 
@@ -1305,7 +1305,7 @@ theorem fireObserver_countdown_next (interp : RunInterp ν σ β ε δ ι α χ 
           (fun g => { g with observers := g.observers ++ [Observer.countdown waiter token] }),
         acc.2) := by
   simp only [fireObserver, RunMachine.fiber?_emit, hw, hp, hff, Bool.false_eq_true,
-    Bool.false_and, ↓reduceIte, hwalk, applyFiberEdit, List.append_nil]
+    Bool.false_and, ↓reduceIte, hwalk, applyFiberEdit, RunMachine.observe, List.append_nil]
 
 /-- The settling arm of a race callback (`:1503-1514`, R2-12): the race is marked settled;
 while its registration is still running the answer is only buffered (`:1120-1126`, D6a),
@@ -1573,7 +1573,7 @@ theorem linkScope_open (interp : RunInterp ν σ β ε δ ι α χ St)
         [RunEvent.scopeLinked mode scope key target], []) := by
   simp only [linkScope, linkScopeEdits, hopen, ht, hlive, Option.isSome_none,
     Bool.false_eq_true, ↓reduceIte, hlink, applyFiberEdits, List.foldl_cons,
-    List.foldl_nil, applyFiberEdit, List.nil_append]
+    List.foldl_nil, applyFiberEdit, RunMachine.observe, List.nil_append]
   rw [RunMachine.modify_emit]
 
 /-- An exited fiber is not linked (`:5367`, `:5451-5452`; R2-9). census: fork.fiber-run-in -/

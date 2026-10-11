@@ -81,7 +81,7 @@ def apply : Edit ν σ β ε δ ι α χ St κ φ η →
   | .addFork record, m => {m with forks := m.forks ++ [record]}
   | .setState state, m => {m with state := state}
   | .setMiddleware installed, m => {m with middlewareInstalled := installed}
-  | .observe target observer, m => m.modify target fun f => {f with observers := f.observers ++ [observer]}
+  | .observe target observer, m => m.observe target observer
   | .dropToken token, m => m.dropToken token
 
 /-- Each edit declares the one machine field it may write. -/
@@ -105,7 +105,7 @@ theorem frame (edit : Edit ν σ β ε δ ι α χ St κ φ η) (field : Machine
   fun_cases writes edit <;> cases field
   all_goals dsimp only [writes] at miss
   all_goals aesop (add simp [MachineField.Agrees, Edit.apply, RunMachine.update, RunMachine.updateRace,
-    RunMachine.emit, RunMachine.arm, RunMachine.disarm, RunMachine.halt, RunMachine.modify, RunMachine.dropToken])
+    RunMachine.emit, RunMachine.arm, RunMachine.disarm, RunMachine.halt, RunMachine.modify, RunMachine.observe, RunMachine.dropToken])
 
 end Edit
 end Effect4.Machine

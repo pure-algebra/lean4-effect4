@@ -179,7 +179,7 @@ theorem applyFiberEdit_shape (edit : FiberEdit ε δ ι α)
     ∀ command ∈ (applyFiberEdit edit m).2, ∃ target, command = Cmd.evaluate target := by
   cases edit with
   | observe target observer =>
-    simp only [applyFiberEdit, modify]
+    simp only [applyFiberEdit, observe, modify]
     split
     all_goals exact ⟨rfl, by intro command member; cases member⟩
   | dropToken token => exact ⟨rfl, by intro command member; cases member⟩

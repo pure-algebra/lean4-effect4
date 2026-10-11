@@ -3340,7 +3340,7 @@ theorem requestOrInterrupted_linkScope (p : NativeEff) (table : RowTable)
         exact Or.inl hrequest
           | some result =>
             rcases result with ⟨state, key⟩
-            dsimp only [applyFiberEdits, List.foldl, applyFiberEdit]
+            dsimp only [applyFiberEdits, List.foldl, applyFiberEdit, RunMachine.observe]
             rw [RunMachine.modify_emit]
             left
             exact (requestOf_modify_view ({ m with state := state } : NativeMachine)
@@ -3387,7 +3387,7 @@ theorem interruptedAt_linkScope (p : NativeEff) (table : RowTable)
         exact h
           | some result =>
             rcases result with ⟨state, key⟩
-            dsimp only [applyFiberEdits, List.foldl, applyFiberEdit]
+            dsimp only [applyFiberEdits, List.foldl, applyFiberEdit, RunMachine.observe]
             rw [RunMachine.modify_emit]
             exact interruptedAt_modify_view target
               (fun f => { f with observers := f.observers ++ [.dropScopeFinalizer scope key] })
@@ -3441,7 +3441,7 @@ theorem guardState_linkScope (p : NativeEff) (table : RowTable)
         exact guardState_halt state _
           | some result =>
             rcases result with ⟨after, key⟩
-            dsimp only [applyFiberEdits, List.foldl, applyFiberEdit]
+            dsimp only [applyFiberEdits, List.foldl, applyFiberEdit, RunMachine.observe]
             rw [RunMachine.modify_emit]
             have valid := guardState_scopeLinkFiber p table state mode scope target hl
             apply guardState_emit
@@ -3499,7 +3499,7 @@ theorem guardQueue_linkScope (p : NativeEff) (table : RowTable)
         exact guardQueue_halt p table queue _
           | some result =>
             rcases result with ⟨after, key⟩
-            dsimp only [applyFiberEdits, List.foldl, applyFiberEdit]
+            dsimp only [applyFiberEdits, List.foldl, applyFiberEdit, RunMachine.observe]
             rw [RunMachine.modify_emit]
             exact guardQueue_emit p table
               (guardQueue_modify_fields p table (guardQueue_withState p table queue after) target
@@ -3559,7 +3559,7 @@ theorem reservedKeys_linkScope (p : NativeEff) (table : RowTable)
         exact reservedKeys_halt reserved _
           | some result =>
             rcases result with ⟨after, key⟩
-            dsimp only [applyFiberEdits, List.foldl, applyFiberEdit]
+            dsimp only [applyFiberEdits, List.foldl, applyFiberEdit, RunMachine.observe]
             rw [RunMachine.modify_emit]
             exact reservedKeys_emit (reservedKeys_modify_view (reservedKeys_withState reserved after) target
               (fun g => { g with observers := g.observers ++ [.dropScopeFinalizer scope key] })

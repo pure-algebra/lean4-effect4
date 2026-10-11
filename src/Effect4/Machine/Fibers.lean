@@ -713,6 +713,12 @@ def modify (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (id : FiberId)
   | none => m
   | some f => m.update (k f)
 
+/-- Attach an observer to the current target record, as internal/effect.ts:773,812,821 does.
+An absent target leaves the machine unchanged. -/
+def observe (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (target : FiberId)
+    (observer : Observer) : RunMachine ν σ β ε δ ι α χ St κ φ η :=
+  m.modify target fun f => {f with observers := f.observers ++ [observer]}
+
 def halt (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (why : Stuck) :
     RunMachine ν σ β ε δ ι α χ St κ φ η :=
   { m with stuck := some why }
@@ -888,7 +894,7 @@ def applyFiberEdit (edit : FiberEdit ε δ ι α) (m : RunMachine ν σ β ε δ
     RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ) :=
   match edit with
   | .observe target observer =>
-    (m.modify target fun f => {f with observers := f.observers ++ [observer]}, [])
+    (m.observe target observer, [])
   | .dropToken token =>
     (m.dropToken token, [])
   | .interrupt target cause =>

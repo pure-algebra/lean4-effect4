@@ -335,7 +335,7 @@ theorem linkScope_open {s : Stores} {key : Nat} (hentry : M.state.scopes.entryAt
   rw [scopeStatus_entry root hentry, hopen]
   simp only [ht]
   rw [if_neg hx, hlink]
-  simp only [applyFiberEdits, List.foldl, applyFiberEdit, List.nil_append]
+  simp only [applyFiberEdits, List.foldl, applyFiberEdit, RunMachine.observe, List.nil_append]
   rw [RunMachine.modify_emit]
   show ((({ M with state := s } : RState).modify target fun t =>
     { t with observers := t.observers ++ [.dropScopeFinalizer scope key] }).emit

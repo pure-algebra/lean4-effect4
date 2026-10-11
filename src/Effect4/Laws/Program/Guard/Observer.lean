@@ -506,7 +506,7 @@ theorem nextToken_fireObserver (p : NativeEff) (table : RowTable)
     (fireObserver (interpOf p table) id exit (m, commands) observer).1.nextToken = m.nextToken := by
   cases observer <;> simp only [fireObserver]
   all_goals repeat' split
-  all_goals simp only [applyFiberEdit, RunMachine.update, RunMachine.updateRace,
+  all_goals simp only [applyFiberEdit, RunMachine.observe, RunMachine.update, RunMachine.updateRace,
     RunMachine.emit, RunMachine.halt, nextToken_modify, nextToken_interruptEach]
 
 theorem requestOf_fireObserver_countdown_subset (p : NativeEff) (table : RowTable)
@@ -566,7 +566,7 @@ theorem requestOf_fireObserver_countdown_subset (p : NativeEff) (table : RowTabl
               exact subset fiber offered request hr
             | some pair =>
               obtain ⟨next, rest⟩ := pair
-              dsimp only [applyFiberEdit] at hr
+              dsimp only [applyFiberEdit, RunMachine.observe] at hr
               rw [requestOf_addObserver, preserves (fun q => if q.token = token then
                 {q with waitingOn := some next, remaining := rest, collected := exits} else q)] at hr
               exact subset fiber offered request hr
