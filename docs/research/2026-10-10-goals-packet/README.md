@@ -20,9 +20,37 @@ runs under every command, joined to facts about one program's code. The fourteen
 | The queue under a run | `held_within_fed`, `fed_accounted`, `queue_settled` (QueueWorkers) | R10, R12 | [queue-run](queue-run/README.md) |
 | Host protocol and handlers | `stale_never_applies`, `retries_declared` (Timeout), `unauthorized_calls_nothing`, `infrastructure_escapes` (Routing) | R5, R6, R10 | [host-protocol](host-protocol/README.md) |
 
-## Order of work
+## What the probes found
 
-Filled in by the coordinator after the four probes report.
+Each family's `Probe.lean` compiles and proves its goals modulo named planned goals, within
+`[propext, Quot.sound]`. Codex orders the landing ([the prompt](CODEX-PROMPT.md)). The seats'
+hour estimates are discarded: the owner expects most goals to land within hours.
+
+- **Two goals are false as stated.**
+  - `retries_declared` (Timeout): `retries_declared_refuted` (`host-protocol/Probe.lean`) proves
+    its negation by the kernel. The form `timeoutForm` (`Test/Dogfood/P1HttpCache.lean`) races
+    two forked awaits, so the timer can win after the attempt has finished. rc.112's
+    `raceAllFirst` settles the race at the body's own exit. The seat recommends repairing the
+    form.
+  - `cleanup_keeps` (Timeout): one direct answer to the root's join lets attempt 2 count while
+    attempt 1 is never cleaned. The goal holds on runs whose decisions a run can make
+    (`RunReachable`, `release-once/Probe.lean`).
+- **One frame, four spellings.** Every family wrote the same frame: a run property that every
+  row keeps (`RunKeeps`, `RowKeeps`, `MachineKeeps` with `RunReachable`, `scenario_keeps`).
+  Unify it first.
+- **One large shared law.** The goals over forked programs need a step law of the frame machine
+  for many fibers: each fiber's position in its own code. The seats name it three ways: control
+  linearity (`once_placed_*`, release-once), fiber-local positions (G2, store-invariants), and a
+  stage table of every fiber (`crew_invariant`, queue-run). It is one law.
+- **Smaller general laws.** A cell invariant from its write sites (`heap_sites_keep`, G1); R11
+  per registration (`release_starts_le_registrations`, `finalizer_starts_le_pushes`); a join law;
+  the session's keys once (`Ledger`, `session_keys_once`, proved); `ending_of_tape` (proved).
+- **Cheap now.** `stale_never_applies` clauses 1 to 3 are proved for every program, and clause 4
+  restated as `ending_of_tape` is proved. `bounded` rests on `heap_sites_keep` alone.
+  `infrastructure_escapes` rests on `escape_session`, a budget fact of one funded run.
+- **A trap.** The crew's elaboration at a symbolic job count does not reduce: a generated binder
+  name takes its digits from `toString` of the scope's length, and `whnf` folds `Nat.mod` only on
+  closed arguments. A repair is drafted and not verified (`queue-run/scratch/StuckFix.lean`).
 
 ## Beyond the fourteen goals: the open parts
 
