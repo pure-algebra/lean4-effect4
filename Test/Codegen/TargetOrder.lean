@@ -26,6 +26,26 @@ open TypeScript Effect4 Effect4.Program Effect4.Codegen.TargetOrder
 open Lean Elab Command in
 run_cmd do
   let text ← IO.FS.readFile "generated/assignability.tsv"
+  -- `parseLegacy` reads no object type, so the recorded object spellings,
+  -- `{ readonly a: A; readonly b?: B }`, are read here, their field types by `parseLegacy`.
+  let readObject? : String → Option TypeRef := fun text => do
+    let t := text.trimAscii.toString
+    guard (t.startsWith "{" && t.endsWith "}")
+    let inner := ((t.drop 1).dropEnd 1).trimAscii.toString
+    if inner.isEmpty then return .object []
+    let fields ← (inner.splitOn "; ").mapM fun field => do
+      let readonly := field.startsWith "readonly "
+      let body := if readonly then (field.drop 9).toString else field
+      match body.splitOn ": " with
+      | [lhs, rhs] =>
+        let optional := lhs.endsWith "?"
+        let name := if optional then (lhs.dropEnd 1).toString else lhs
+        let type ← Codegen.Types.parseLegacy rhs
+        pure ({ name, readonly, optional, type } : TypeRef.Field)
+      | _ => none
+    return .object fields
+  let read : String → Option TypeRef := fun text =>
+    (Codegen.Types.parseLegacy text).orElse fun _ => readObject? text
   let mut checked := 0
   let mut unread := 0
   let mut wrong : Array String := #[]
@@ -33,7 +53,7 @@ run_cmd do
     if line.startsWith "#" || line.isEmpty then continue
     let cols := (line.splitOn "\t").toArray
     if cols.size < 7 then continue
-    match Codegen.Types.parseLegacy cols[1]!, Codegen.Types.parseLegacy cols[2]! with
+    match read cols[1]!, read cols[2]! with
     | some l, some r =>
       checked := checked + 1
       let lr := cols[5]! == "true"

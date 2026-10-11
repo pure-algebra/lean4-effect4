@@ -604,3 +604,129 @@ spelling/3-0	Ref.Ref<number>	number	false	false	false	false	false	false	agree
 spelling/3-1	Ref.Ref<number>	number	false	false	false	false	false	false	agree	
 spelling/3-2	Ref.Ref<number>	Ref.Ref<number>	false	false	true	true	true	true	cut	cut/spelling: `Ty.renderRaw` is not injective (`nat` and `int` both print `number`; `refOf nat` prints the handle target `Ref.Ref<number>` a `.handle` prints verbatim), so the target cannot see a difference the order can
 spelling/3-3	Ref.Ref<number>	Ref.Ref<number>	true	true	true	true	true	true	agree	
+record/0-0	{ readonly a: number }	{ readonly a: number }	true	true	true	true	true	true	agree	
+record/0-1	{ readonly a: number }	{ readonly a?: number }	false	false	true	false	true	false	incomplete	the order refuses what the target accepts
+record/0-2	{ readonly a: number }	{ readonly a: number; readonly b: string }	false	false	false	true	false	true	incomplete	the order refuses what the target accepts
+record/0-3	{ readonly a: number }	{ readonly a: unknown }	true	false	true	false	true	false	agree	
+record/0-4	{ readonly a: number }	{}	false	false	true	false	true	false	incomplete	the order refuses what the target accepts
+record/0-5	{ readonly a: number }	unknown	true	false	true	false	true	false	agree	
+record/0-6	{ readonly a: number }	never	false	true	false	true	false	true	agree	
+record/1-0	{ readonly a?: number }	{ readonly a: number }	false	false	false	true	false	true	incomplete	the order refuses what the target accepts
+record/1-1	{ readonly a?: number }	{ readonly a?: number }	true	true	true	true	true	true	agree	
+record/1-2	{ readonly a?: number }	{ readonly a: number; readonly b: string }	false	false	false	true	false	true	incomplete	the order refuses what the target accepts
+record/1-3	{ readonly a?: number }	{ readonly a: unknown }	false	false	false	false	false	false	agree	
+record/1-4	{ readonly a?: number }	{}	false	false	true	true	true	true	incomplete	the order refuses what the target accepts
+record/1-5	{ readonly a?: number }	unknown	true	false	true	false	true	false	agree	
+record/1-6	{ readonly a?: number }	never	false	true	false	true	false	true	agree	
+record/2-0	{ readonly a: number; readonly b: string }	{ readonly a: number }	false	false	true	false	true	false	incomplete	the order refuses what the target accepts
+record/2-1	{ readonly a: number; readonly b: string }	{ readonly a?: number }	false	false	true	false	true	false	incomplete	the order refuses what the target accepts
+record/2-2	{ readonly a: number; readonly b: string }	{ readonly a: number; readonly b: string }	true	true	true	true	true	true	agree	
+record/2-3	{ readonly a: number; readonly b: string }	{ readonly a: unknown }	false	false	true	false	true	false	incomplete	the order refuses what the target accepts
+record/2-4	{ readonly a: number; readonly b: string }	{}	false	false	true	false	true	false	incomplete	the order refuses what the target accepts
+record/2-5	{ readonly a: number; readonly b: string }	unknown	true	false	true	false	true	false	agree	
+record/2-6	{ readonly a: number; readonly b: string }	never	false	true	false	true	false	true	agree	
+record/3-0	{ readonly a: unknown }	{ readonly a: number }	false	true	false	true	false	true	agree	
+record/3-1	{ readonly a: unknown }	{ readonly a?: number }	false	false	false	false	false	false	agree	
+record/3-2	{ readonly a: unknown }	{ readonly a: number; readonly b: string }	false	false	false	true	false	true	incomplete	the order refuses what the target accepts
+record/3-3	{ readonly a: unknown }	{ readonly a: unknown }	true	true	true	true	true	true	agree	
+record/3-4	{ readonly a: unknown }	{}	false	false	true	false	true	false	incomplete	the order refuses what the target accepts
+record/3-5	{ readonly a: unknown }	unknown	true	false	true	false	true	false	agree	
+record/3-6	{ readonly a: unknown }	never	false	true	false	true	false	true	agree	
+record/4-0	{}	{ readonly a: number }	false	false	false	true	false	true	incomplete	the order refuses what the target accepts
+record/4-1	{}	{ readonly a?: number }	false	false	true	true	true	true	incomplete	the order refuses what the target accepts
+record/4-2	{}	{ readonly a: number; readonly b: string }	false	false	false	true	false	true	incomplete	the order refuses what the target accepts
+record/4-3	{}	{ readonly a: unknown }	false	false	false	true	false	true	incomplete	the order refuses what the target accepts
+record/4-4	{}	{}	true	true	true	true	true	true	agree	
+record/4-5	{}	unknown	true	false	true	false	true	false	agree	
+record/4-6	{}	never	false	true	false	true	false	true	agree	
+record/5-0	unknown	{ readonly a: number }	false	true	false	true	false	true	agree	
+record/5-1	unknown	{ readonly a?: number }	false	true	false	true	false	true	agree	
+record/5-2	unknown	{ readonly a: number; readonly b: string }	false	true	false	true	false	true	agree	
+record/5-3	unknown	{ readonly a: unknown }	false	true	false	true	false	true	agree	
+record/5-4	unknown	{}	false	true	false	true	false	true	agree	
+record/5-5	unknown	unknown	true	true	true	true	true	true	agree	
+record/5-6	unknown	never	false	true	false	true	false	true	agree	
+record/6-0	never	{ readonly a: number }	true	false	true	false	true	false	agree	
+record/6-1	never	{ readonly a?: number }	true	false	true	false	true	false	agree	
+record/6-2	never	{ readonly a: number; readonly b: string }	true	false	true	false	true	false	agree	
+record/6-3	never	{ readonly a: unknown }	true	false	true	false	true	false	agree	
+record/6-4	never	{}	true	false	true	false	true	false	agree	
+record/6-5	never	unknown	true	false	true	false	true	false	agree	
+record/6-6	never	never	true	true	true	true	true	true	agree	
+tuple/0-0	readonly []	readonly []	true	true	true	true	true	true	agree	
+tuple/0-1	readonly []	readonly [number]	false	false	false	false	false	false	agree	
+tuple/0-2	readonly []	readonly [number, string, boolean]	false	false	false	false	false	false	agree	
+tuple/0-3	readonly []	readonly [never, string, boolean]	false	false	false	false	false	false	agree	
+tuple/0-4	readonly []	ReadonlyArray<number>	false	false	true	false	true	false	incomplete	the order refuses what the target accepts
+tuple/0-5	readonly []	unknown	true	false	true	false	true	false	agree	
+tuple/1-0	readonly [number]	readonly []	false	false	false	false	false	false	agree	
+tuple/1-1	readonly [number]	readonly [number]	true	true	true	true	true	true	agree	
+tuple/1-2	readonly [number]	readonly [number, string, boolean]	false	false	false	false	false	false	agree	
+tuple/1-3	readonly [number]	readonly [never, string, boolean]	false	false	false	false	false	false	agree	
+tuple/1-4	readonly [number]	ReadonlyArray<number>	false	false	true	false	true	false	incomplete	the order refuses what the target accepts
+tuple/1-5	readonly [number]	unknown	true	false	true	false	true	false	agree	
+tuple/2-0	readonly [number, string, boolean]	readonly []	false	false	false	false	false	false	agree	
+tuple/2-1	readonly [number, string, boolean]	readonly [number]	false	false	false	false	false	false	agree	
+tuple/2-2	readonly [number, string, boolean]	readonly [number, string, boolean]	true	true	true	true	true	true	agree	
+tuple/2-3	readonly [number, string, boolean]	readonly [never, string, boolean]	false	true	false	true	false	true	agree	
+tuple/2-4	readonly [number, string, boolean]	ReadonlyArray<number>	false	false	false	false	false	false	agree	
+tuple/2-5	readonly [number, string, boolean]	unknown	true	false	true	false	true	false	agree	
+tuple/3-0	readonly [never, string, boolean]	readonly []	false	false	false	false	false	false	agree	
+tuple/3-1	readonly [never, string, boolean]	readonly [number]	false	false	false	false	false	false	agree	
+tuple/3-2	readonly [never, string, boolean]	readonly [number, string, boolean]	true	false	true	false	true	false	agree	
+tuple/3-3	readonly [never, string, boolean]	readonly [never, string, boolean]	true	true	true	true	true	true	agree	
+tuple/3-4	readonly [never, string, boolean]	ReadonlyArray<number>	false	false	false	false	false	false	agree	
+tuple/3-5	readonly [never, string, boolean]	unknown	true	false	true	false	true	false	agree	
+tuple/4-0	ReadonlyArray<number>	readonly []	false	false	false	true	false	true	incomplete	the order refuses what the target accepts
+tuple/4-1	ReadonlyArray<number>	readonly [number]	false	false	false	true	false	true	incomplete	the order refuses what the target accepts
+tuple/4-2	ReadonlyArray<number>	readonly [number, string, boolean]	false	false	false	false	false	false	agree	
+tuple/4-3	ReadonlyArray<number>	readonly [never, string, boolean]	false	false	false	false	false	false	agree	
+tuple/4-4	ReadonlyArray<number>	ReadonlyArray<number>	true	true	true	true	true	true	agree	
+tuple/4-5	ReadonlyArray<number>	unknown	true	false	true	false	true	false	agree	
+tuple/5-0	unknown	readonly []	false	true	false	true	false	true	agree	
+tuple/5-1	unknown	readonly [number]	false	true	false	true	false	true	agree	
+tuple/5-2	unknown	readonly [number, string, boolean]	false	true	false	true	false	true	agree	
+tuple/5-3	unknown	readonly [never, string, boolean]	false	true	false	true	false	true	agree	
+tuple/5-4	unknown	ReadonlyArray<number>	false	true	false	true	false	true	agree	
+tuple/5-5	unknown	unknown	true	true	true	true	true	true	agree	
+map/0-0	Readonly<Record<string, number>>	Readonly<Record<string, number>>	true	true	true	true	true	true	agree	
+map/0-1	Readonly<Record<string, number>>	Readonly<Record<string, unknown>>	true	false	true	false	true	false	agree	
+map/0-2	Readonly<Record<string, number>>	Readonly<Record<string, never>>	false	true	false	true	false	true	agree	
+map/0-3	Readonly<Record<string, number>>	{ readonly a: number }	false	false	false	true	false	true	incomplete	the order refuses what the target accepts
+map/0-4	Readonly<Record<string, number>>	unknown	true	false	true	false	true	false	agree	
+map/1-0	Readonly<Record<string, unknown>>	Readonly<Record<string, number>>	false	true	false	true	false	true	agree	
+map/1-1	Readonly<Record<string, unknown>>	Readonly<Record<string, unknown>>	true	true	true	true	true	true	agree	
+map/1-2	Readonly<Record<string, unknown>>	Readonly<Record<string, never>>	false	true	false	true	false	true	agree	
+map/1-3	Readonly<Record<string, unknown>>	{ readonly a: number }	false	false	false	true	false	true	incomplete	the order refuses what the target accepts
+map/1-4	Readonly<Record<string, unknown>>	unknown	true	false	true	false	true	false	agree	
+map/2-0	Readonly<Record<string, never>>	Readonly<Record<string, number>>	true	false	true	false	true	false	agree	
+map/2-1	Readonly<Record<string, never>>	Readonly<Record<string, unknown>>	true	false	true	false	true	false	agree	
+map/2-2	Readonly<Record<string, never>>	Readonly<Record<string, never>>	true	true	true	true	true	true	agree	
+map/2-3	Readonly<Record<string, never>>	{ readonly a: number }	false	false	false	false	false	false	agree	
+map/2-4	Readonly<Record<string, never>>	unknown	true	false	true	false	true	false	agree	
+map/3-0	{ readonly a: number }	Readonly<Record<string, number>>	false	false	true	false	true	false	incomplete	the order refuses what the target accepts
+map/3-1	{ readonly a: number }	Readonly<Record<string, unknown>>	false	false	true	false	true	false	incomplete	the order refuses what the target accepts
+map/3-2	{ readonly a: number }	Readonly<Record<string, never>>	false	false	false	false	false	false	agree	
+map/3-3	{ readonly a: number }	{ readonly a: number }	true	true	true	true	true	true	agree	
+map/3-4	{ readonly a: number }	unknown	true	false	true	false	true	false	agree	
+map/4-0	unknown	Readonly<Record<string, number>>	false	true	false	true	false	true	agree	
+map/4-1	unknown	Readonly<Record<string, unknown>>	false	true	false	true	false	true	agree	
+map/4-2	unknown	Readonly<Record<string, never>>	false	true	false	true	false	true	agree	
+map/4-3	unknown	{ readonly a: number }	false	true	false	true	false	true	agree	
+map/4-4	unknown	unknown	true	true	true	true	true	true	agree	
+literalPair/0-0	readonly ["a" | "b", boolean]	readonly ["a" | "b", boolean]	true	true	true	true	true	true	agree	
+literalPair/0-1	readonly ["a" | "b", boolean]	readonly ["a", boolean] | readonly ["b", boolean]	false	true	true	true	true	true	incomplete	the order refuses what the target accepts
+literalPair/0-2	readonly ["a" | "b", boolean]	readonly ["a", boolean]	false	true	false	true	false	true	agree	
+literalPair/0-3	readonly ["a" | "b", boolean]	readonly [string, boolean]	true	false	true	false	true	false	agree	
+literalPair/1-0	readonly ["a", boolean] | readonly ["b", boolean]	readonly ["a" | "b", boolean]	true	false	true	true	true	true	incomplete	the order refuses what the target accepts
+literalPair/1-1	readonly ["a", boolean] | readonly ["b", boolean]	readonly ["a", boolean] | readonly ["b", boolean]	true	true	true	true	true	true	agree	
+literalPair/1-2	readonly ["a", boolean] | readonly ["b", boolean]	readonly ["a", boolean]	false	true	false	true	false	true	agree	
+literalPair/1-3	readonly ["a", boolean] | readonly ["b", boolean]	readonly [string, boolean]	true	false	true	false	true	false	agree	
+literalPair/2-0	readonly ["a", boolean]	readonly ["a" | "b", boolean]	true	false	true	false	true	false	agree	
+literalPair/2-1	readonly ["a", boolean]	readonly ["a", boolean] | readonly ["b", boolean]	true	false	true	false	true	false	agree	
+literalPair/2-2	readonly ["a", boolean]	readonly ["a", boolean]	true	true	true	true	true	true	agree	
+literalPair/2-3	readonly ["a", boolean]	readonly [string, boolean]	true	false	true	false	true	false	agree	
+literalPair/3-0	readonly [string, boolean]	readonly ["a" | "b", boolean]	false	true	false	true	false	true	agree	
+literalPair/3-1	readonly [string, boolean]	readonly ["a", boolean] | readonly ["b", boolean]	false	true	false	true	false	true	agree	
+literalPair/3-2	readonly [string, boolean]	readonly ["a", boolean]	false	true	false	true	false	true	agree	
+literalPair/3-3	readonly [string, boolean]	readonly [string, boolean]	true	true	true	true	true	true	agree	

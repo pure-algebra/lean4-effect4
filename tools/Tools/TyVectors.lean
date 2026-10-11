@@ -65,6 +65,28 @@ def core : List Ty :=
   , .exitOf .nat .string, .causeOf .string, .fiberOf .nat .string, .union .nat .string
   , .refOf .nat, .deferredOf .nat .string, refT, Ty.scope ]
 
+/-- Records: one required field, the same field optional, a wider record, the empty record. -/
+def records : List Ty :=
+  [ .record [("a", false, .nat)], .record [("a", true, .nat)]
+  , .record [("a", false, .nat), ("b", false, .string)], .record [("a", false, .unknown)]
+  , .record [], .unknown, .never ]
+
+/-- Tuples at arities zero, one and three, and one with an element below another's. -/
+def tuples : List Ty :=
+  [ .tuple [], .tuple [.nat], .tuple [.nat, .string, .bool], .tuple [.never, .string, .bool]
+  , .list .nat, .unknown ]
+
+/-- String-keyed maps at three value types. -/
+def maps : List Ty :=
+  [ .map .string .nat, .map .string .unknown, .map .string .never, .record [("a", false, .nat)]
+  , .unknown ]
+
+/-- A pair at a literal position, its union of pairs, and their parts. -/
+def literalPairs : List Ty :=
+  [ .prod (.union (.lit "a") (.lit "b")) .bool
+  , .union (.prod (.lit "a") .bool) (.prod (.lit "b") .bool)
+  , .prod (.lit "a") .bool, .prod .string .bool ]
+
 /-- The alphabet each variance probe ranges over. -/
 def probe : List Ty := [.never, .unknown, .nat, .string]
 
@@ -90,7 +112,14 @@ def families : List (String × List Ty × List Ty) :=
              [.union .nat .string, .nat, .string, .never, .unknown, .union .nat (.lit "a")])
     -- where the printer is not injective: two `Ty` with one target spelling. The order can
     -- tell them apart and the target cannot, which is a cut, not a disagreement.
-  , ("spelling", [.nat, .int, .refOf .nat, refT], [.nat, .int, .refOf .nat, refT]) ]
+  , ("spelling", [.nat, .int, .refOf .nat, refT], [.nat, .int, .refOf .nat, refT])
+    -- the data wave's heads (rows 119, 125, 159; the type interface note, R-T3): records with
+    -- required and optional fields, tuples at three arities, string-keyed maps, and a pair at a
+    -- literal position beside its union of pairs, where tsgo decomposes.
+  , ("record", records, records)
+  , ("tuple", tuples, tuples)
+  , ("map", maps, maps)
+  , ("literalPair", literalPairs, literalPairs) ]
 
 /-- The two gaps a pair can witness (§5.2), first. -/
 def gaps : List (String × Ty × Ty) :=

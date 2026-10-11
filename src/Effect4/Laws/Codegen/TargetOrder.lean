@@ -177,6 +177,18 @@ def rel : Nat → TypeRef → TypeRef → Bool
       ss.length == ts.length && (tr || !sr) && (ss.zip ts).all fun (a, b) => rel n a b
     -- A tuple is an array of its elements' union: below `ReadonlyArray<A>` when each element is.
     | .tuple ss _, .name ["ReadonlyArray"] [a] => ss.all fun x => rel n x a
+    -- `typeRelatedToIndexInfo`: an object type literal has an inferable index
+    -- (`isObjectTypeWithInferableIndex`), so it is below a string index signature when each of
+    -- its members is below the signature's type (`membersRelatedToIndexInfo`).
+    | .object fs, .name ["Readonly"] [.name ["Record"] [.name ["string"] [], v]] =>
+      fs.all fun f => rel n f.type v
+    -- A target with no members takes every type but the nullish ones, and `unknown`, which
+    -- holds them.
+    | .name ["unknown"] [], .object [] => false
+    | .name ["null"] [], .object [] => false
+    | .name ["undefined"] [], .object [] => false
+    | .name ["void"] [], .object [] => false
+    | _, .object [] => true
     -- `propertiesRelatedTo` on objects: each target field is present in the source, required
     -- only if the source's is, and related; a source keeps any other field (width). `readonly`
     -- is not compared.
