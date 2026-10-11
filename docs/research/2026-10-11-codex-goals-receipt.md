@@ -306,3 +306,11 @@ The integrated scenario build passes with 1206 jobs.
 The helper audit checks 371 declarations within the allowed axioms and reports no planned-goal dependencies.
 The original timeout module retains two goals and one modulo top claim.
 The goal remains active; complete histories, source counts and the remaining machine-base laws still need work.
+
+## Original worker counting checkpoint
+
+[SourceCustodyIntegrationReceipt.md](2026-10-10-goals-packet/codex/SourceCustodyIntegrationReceipt.md) records the checked complete-history integration.
+The original worker registration and release-count obligations are proved.
+The worker cleanup claim depends only on its log-writer obligation.
+The integration removes obsolete command wrappers and redundant imports.
+The receipt retains the exact audit, build, dependency status and unchanged application scope.

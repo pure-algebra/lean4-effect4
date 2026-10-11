@@ -1,19 +1,4 @@
-import Effect4.Laws.Program.ReleaseCustody.Lift
-import Effect4.Laws.Program.ReleaseCustody.ScopeRows
-import Effect4.Laws.Program.ReleaseCustody.OuterFrames
 import Effect4.Laws.Program.ReleaseCustody.HistoryLift
-import Effect4.Laws.Program.ReleaseCustody.NativeAccounting
-import Effect4.Laws.Program.ReleaseCustody.NativeScopeDebit
-import Effect4.Laws.Program.ReleaseCustody.CommandFunding
-import Effect4.Laws.Program.ReleaseCustody.NativeStacks
-import Effect4.Laws.Program.ReleaseCustody.IterationDebit
-import Effect4.Laws.Program.ReleaseCustody.ReplySequencing
-import Effect4.Laws.Program.ReleaseCustody.AdministrativeKept
-import Effect4.Laws.Program.ReleaseCustody.AdministrativeQueue
-import Effect4.Laws.Program.ReleaseCustody.CommandClosure
-import Effect4.Laws.Program.ReleaseCustody.NativeMachineShape
-import Effect4.Laws.Program.ReleaseCustody.CommandSequencing
-import Effect4.Laws.Program.ReleaseCustody.NativeIterationDebit
 
 /-!
 Concept: scope-lifetime-finalization, R11, at most once per registration counted by source identity.
