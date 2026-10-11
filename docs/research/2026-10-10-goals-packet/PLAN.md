@@ -288,3 +288,10 @@ Actual command closure and whole-history custody remain open.
 The countdown observer case includes its nested interruptions and later waiter update.
 The audit finds no planned dependencies in these helpers.
 Whole-history release custody remains open.
+
+## Checked owned command credit bounds
+
+`codex/CommandDebitReceipt.md` records actual command debits and the independent native evaluator integration.
+The actual Workers load reader compiles with the complete sequencing proofs.
+The local command audit finds no planned dependencies.
+The whole-history custody endpoint remains open.

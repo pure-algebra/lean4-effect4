@@ -1,0 +1,7 @@
+✔ [1313/1318] Built Test.Program.CommandDebit (1.4s)
+✔ [1314/1318] Built Effect4.Laws.Program.ReleaseCustody.Execution (1.6s)
+✔ [1315/1318] Built Effect4.Laws.Program.WriterScope (1.6s)
+✔ [1316/1318] Built Test.Dogfood.Scenario.Workers.Assertions (1.6s)
+✔ [1317/1318] Built Effect4.Laws (1.0s)
+✔ [1318/1318] Built Test.Dogfood.Scenario.Workers (2.3s)
+Build completed successfully (1318 jobs).
