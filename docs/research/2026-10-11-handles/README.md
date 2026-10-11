@@ -86,9 +86,9 @@ related names have related fibers. The driver reads the list in four ways (censu
 lookup by id, a `map` and an `all` ignore the order. `RunMachine.completedExits` returns an
 association list in allocation order, so DET-3 must check that its consumers only look it up.
 The same holds for the races. The armed list is the one table whose order `flush` reads.
-`probes/Tables.lean` checks the fibers' half on the real `RunMachine.fiber?` and `update`: lookup,
-update at related ids, appending fresh fibers on both sides, and a pointwise map such as
-`dropToken`'s filter each keep the relation. Update is where the world must be a partial bijection.
+`probes/Tables.lean` checks the fibers' half on the real `RunMachine.fiber?` and `update`. Four
+operations keep the relation: lookup, update at related ids, appending fresh fibers on both
+sides, and a pointwise map such as `dropToken`'s filter. Update is where the world must be a partial bijection.
 
 A typed world puts a type on each related pair. The diagonal of a typed world is a store typing:
 the ghost tables `Γ`, `Π`, `Ρ` and `Θ` of `Program.Typed.World`, keyed by one name sort. The sources
