@@ -32,4 +32,13 @@ structure WholeFits (P : Pair → Prop) (s : Pair) : Prop where
 example (P : Pair → Prop) (s : Pair) (h : WholeFits P s) (key : Nat)
     (fresh : P { s with key := key }) : WholeFits P { s with key := key } :=
   WholeFits.frame_key P s h key fresh
+-- The explicit state selector retains a later phase parameter in generated rules.
+structure Phased (s : Pair) (active : Bool := false) : Prop where
+  related : s.value = s.key
+  idle : active = false → s.value > 0
+#frame_rules Phased (state := s)
+example (s : Pair) (active : Bool) (h : Phased s active) (key : Nat)
+    (relation : s.value = key) : Phased {s with key} active :=
+  Phased.frame_key s active h key relation
+
 end Test.FrameRules

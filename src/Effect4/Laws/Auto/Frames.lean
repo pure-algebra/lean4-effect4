@@ -34,9 +34,10 @@ private def fill (invariant : Name) (old : Expr) : Nat → Nat → Expr → Meta
           return (← mkLambdaFVars #[h] proof, reused, required + 1)
     | _ => return (ctor, 0, 0)
 
-/-- Generate one rule per state field. `invariant` must be a structure predicate whose final
-parameter is the state record. This explicit shape is checked, not inferred from names. -/
-def generate (invariant : Name) : MetaM (Array Result) := do
+/-- Generate one rule per state field. The final parameter is the default state record.
+An explicit parameter permits predicates with a later phase index, such as GuardState.
+Both routes check the selected record; neither guesses from its name or its fields. -/
+def generate (invariant : Name) (stateParameter : Option Name := none) : MetaM (Array Result) := do
   let env ← getEnv
   unless isStructure env invariant do throwError "frame rules: {invariant} is not a structure predicate"
   let info ← getConstInfoInduct invariant
@@ -44,10 +45,20 @@ def generate (invariant : Name) : MetaM (Array Result) := do
   forallTelescope info.type fun params result => do
     unless result.isProp do throwError "frame rules: {invariant} is not a predicate"
     if params.isEmpty then throwError "frame rules: {invariant} has no state parameter"
-    let state := params.back!
+    let stateIndex ← match stateParameter with
+      | none => pure (params.size - 1)
+      | some name => do
+        let mut found := none
+        for i in [:params.size] do
+          if (← params[i]!.fvarId!.getDecl).userName == name then
+            found := some i
+        match found with
+        | some index => pure index
+        | none => throwError "frame rules: {invariant} has no parameter named {name}"
+    let state := params[stateIndex]!
     let stateTy ← whnf (← inferType state)
     let .const owner ownerLevels := stateTy.getAppFn
-      | throwError "frame rules: final parameter of {invariant} is not a record"
+      | throwError "frame rules: selected parameter of {invariant} is not a record"
     unless isStructure env owner do throwError "frame rules: {owner} is not a structure"
     let fields := getStructureFields env owner
     let some ownerCtor := (← getConstInfoInduct owner).ctors.head?
@@ -62,7 +73,7 @@ def generate (invariant : Name) : MetaM (Array Result) := do
         let r ← withLocalDeclD `value fieldTy fun value => do
           let values := fields.mapIdx fun j _ => if j == i then value else mkProj owner j state
           let updated := mkAppN (mkConst ownerCtor ownerLevels) (stateTy.getAppArgs ++ values)
-          let newParams := params.set! (params.size - 1) updated
+          let newParams := params.set! stateIndex updated
           let ctor := mkAppN (mkConst invCtor levels) newParams
           let (body, reused, required) ← fill invariant before 10000 0 ctor
           let proof ← mkLambdaFVars (params ++ #[before, value]) body
@@ -85,5 +96,15 @@ syntax (name := frameRules) "#frame_rules " ident+ : command
       reused := reused + r.reused
       required := required + r.required
   logInfo m!"frame rules: {rules} checked theorems, {reused} reused clauses, {required} explicit premises"
+
+syntax (name := frameRulesAt) "#frame_rules " ident " (" &"state" " := " ident ")" : command
+@[command_elab frameRulesAt] def elabFrameRulesAt : CommandElab := fun stx => do
+  let `(command| #frame_rules $name:ident (state := $parameter:ident)) := stx
+    | throwUnsupportedSyntax
+  let results ← liftTermElabM do
+    generate (← realizeGlobalConstNoOverloadWithInfo name) (some parameter.getId)
+  let reused := results.foldl (fun n r => n + r.reused) 0
+  let required := results.foldl (fun n r => n + r.required) 0
+  logInfo m!"frame rules: {results.size} checked theorems, {reused} reused clauses, {required} explicit premises"
 
 end Effect4.Laws.Auto.Frames
