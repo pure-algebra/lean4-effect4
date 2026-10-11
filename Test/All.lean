@@ -349,12 +349,14 @@ import Test.Audit.SummaryControls
 import Test.Dogfood.Proofs.HostJournal
 import Test.Dogfood.Proofs.HostPayloadsAudit
 import Test.Dogfood.Proofs.HostTimeoutSource
-import Test.Dogfood.Proofs.HostTimeoutNative
+import Test.Dogfood.Proofs.HostTimeoutEvaluation
 import Test.Dogfood.Proofs.HostAppliedObservation
 import Test.Dogfood.Scenario.SourceFragment
 import Test.Dogfood.Scenario.NativeHeap
 import Test.Dogfood.Scenario.SourceUse
 import Test.Dogfood.Scenario.RoutingInterrupt
+import Test.Counterexamples.Machine.Runtime.HostClockPrefix
+import Test.Dogfood.Scenario.Atomic.Writes
 import Test.Dogfood.Proofs.TimeoutCounterexample
 import Test.Dogfood.Scenario.QueueWorkers.Source
 import Test.Machine.RaceFirst

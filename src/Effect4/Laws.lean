@@ -309,6 +309,7 @@ import Effect4.Laws.Program.ReleaseCustody.Control
 import Effect4.Laws.Program.ReleaseCustody.Execution
 import Effect4.Laws.Program.ReleaseCustody.ScopeTransfer
 import Effect4.Laws.Program.HeapSites
+import Effect4.Laws.Program.NativeReplies
 import Effect4.Laws.Program.WriterScope
 import Effect4.Laws.Run.CallTree
 import Effect4.Laws.Run.Journal

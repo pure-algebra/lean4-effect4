@@ -26,10 +26,16 @@ theorem noCauseHandler_free (token : String) (id : Nat) (idText : String) :
     NoCauseHandler (progOf token id idText) = true := by
   kernel_rfl
 
+/-- The actual Routing program reads no outside clock state. -/
+theorem noClockRead_free (token : String) (id : Nat) (idText : String) :
+    NoClockRead (progOf token id idText) = true := by
+  kernel_rfl
+
 /-- The scenario's held-call observation reads exactly the accepted binding rows. -/
 theorem held_in_tree (s : Run) (reached : Run.Reached s)
     (fragment : StraightRows s.built.table s.built.program = true)
     (noCause : NoCauseHandler s.built.program = true)
+    (noClock : NoClockRead s.built.program = true)
     (seen : Seen) (mem : seen ∈ held s) :
     ∃ (i : Nat) (row : Program.Row) (T : ReplyTape),
       externalRow s.built.table i = some row ∧ row.spelling = seen.row ∧
@@ -42,7 +48,7 @@ theorem held_in_tree (s : Run) (reached : Run.Reached s)
   · next call token =>
     cases decoded
     obtain ⟨i, row, T, operation, present, journal, wait⟩ :=
-      bound_in_tree s reached fragment noCause call token recorded
+      bound_in_tree s reached fragment noCause noClock call token recorded
     have found : s.rowOf call.op = some row := by
       rw [operation]
       exact present

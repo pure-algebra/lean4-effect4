@@ -265,3 +265,12 @@ The original Routing authorization clause now depends on `CallTree.request_leads
 The actual Routing interruption reader and mask control compile.
 `codex/PrefixIntegrationReceipt.md` records the narrow builds, combined audit and complete Laws-root build.
 The source-use, timeout source and release sequencing readers also join their roots.
+
+### Clock boundary and native store transitions
+
+`E4-HOST-CE-010` checks why a reply-only prefix cannot explain outside clock advances.
+The internal Routing helper now requires `NoClockRead`; the actual Routing source discharges it.
+The original application claim stays unchanged.
+`Atomic.Writes` proves the exact native admission, deposit, refill and cleanup transitions.
+Source uniqueness and the relational application history remain separate obligations.
+`codex/WritesClockReceipt.md` records the combined build, audits and full source-history integration.
