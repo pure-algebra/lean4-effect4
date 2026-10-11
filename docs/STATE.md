@@ -199,7 +199,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
   (`iteration_footprint`). Every other fiber after an evaluation is an old one under three listed
   edits, or a new one (`iteration_interferes`). An iteration that does not finish is the same over
   more frames, with the same machine (`iteration_under`, `src/Effect4/Laws/Program/StackLocal.lean`):
-  the evaluation's half of `compiled_region_bracket`'s premise. Five guard chains and the evaluation
+  the evaluation's half of `compiled_region_bracket`'s premise. After any command, every fiber's
+  frame followed from an old one by listed edits, or the fiber is new (`driveStep_framesFollow`).
+  Five guard chains and the evaluation
   half of `MaskRuns` follow as instances; replacing the old chains is Codex's lane. A raw context
   write lets a checked program at a closed row die with `missingService` (`E4-CTX-CE-001`, row 349).
   The printer spells a pair of a union as a union of pairs (`E4-PRINT-CE-001`, row 346, ruled).

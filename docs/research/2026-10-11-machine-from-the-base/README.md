@@ -36,9 +36,10 @@ open laws into instances:
 **Landed the same night** (§9): the classification at one evaluation, for the frame part
 (`Laws/Program/Moves.lean`), for the run fiber's footprint (`Laws/Program/Footprint.lean`), and for
 the machine's other fibers (`Laws/Program/Interference.lean`: every fiber after an evaluation is an
-old one under three listed edits, or a new one), and the fiber machine's frame rule at one
+old one under three listed edits, or a new one), the fiber machine's frame rule at one
 evaluation (`Laws/Program/StackLocal.lean`: an iteration that does not finish is the same over more
-frames, with the same machine).
+frames, with the same machine), and every command's effect on every fiber's frame
+(`Laws/Program/CommandFrames.lean`: `driveStep_framesFollow`).
 Connectors re-derive five guard chains and the evaluation half of `MaskRuns` from it
 (`Laws/Program/MovesConnect.lean`, `Laws/Program/Footprint.lean`). The old chains stay; their
 replacement is Codex's lane C1 ([the prompt](CODEX-PROMPT.md)).
@@ -313,7 +314,8 @@ Placement of each base law:
 | B1 `iteration_moves` (landed) | `reactive-scheduling`; invariants over execution traces | `evaluation-moves`, role structure: an evaluation's frame edit is a word of moves | every native evaluation and iteration, at every machine, fiber, interpreter, row table and latch | which word; progress; the machine | every per-fiber invariant; the guard chains |
 | B1' `iteration_footprint` (landed) | the same | `evaluation-moves`, the run fiber's half | the same | the outcome; the machine; the other fibers | the guard's run-fiber chains |
 | B2, evaluation half `iteration_interferes` (landed) | `reactive-scheduling`; the same | `command-moves`, role structure: an evaluation's effect on the machine's other fibers | every native evaluation and iteration | the stores; the commands around an evaluation | G2; the goals lane's assertions |
-| B2, command half `driveStep_moves` | the same | `command-moves`: a command's effect on each fiber | every command and machine, with `settle` | anything about the stores' contents | B3, B5, B6, G2; `MaskRuns` |
+| B2, command half, frames `driveStep_framesFollow` (landed) | the same | `command-moves`: a command's effect on every fiber's frame | every command of the native loop | the stores; the scheduling fields; which edits | B3, B5, G2 |
+| B2, command half, liveness | the same | the same, with "only an exited fiber's stack is cleared" | every command | as above | `MaskRuns`'s command half as an instance |
 | B3, evaluation half `iteration_under` (landed) | `scope-lifetime-finalization`; the region bracket | `stack-local`, role invariant: an iteration that does not finish is the same over more frames | every native evaluation and iteration, every stack under it | the run-level shape; cleanup counts; liveness | the run-level lift below |
 | B3, run half | the same | `stack-local`: along a run, a fiber's stack keeps its entry stack under it until a pop reaches it | live fibers of a run, through `Machine.Lift` | cleanup counts; liveness | `saved-mask-region-bracket` without its premise; R11 consumers (Semaphore's protected permit, Pool's `use`) |
 | B4 points well formed | `residual-program-typing`; typed points | the goals packet's G1a | every point of a control history | the values' types | `heap_sites_keep` (G1); B5 |
@@ -339,8 +341,8 @@ run them as a second lane, not to reorder the goals lane.
 
 ## 8. What this note does not establish
 
-- B1, its footprint, B2's evaluation half and B3's evaluation half are proved (§9). B2's command
-  half, B3's run half and B4 to B6 are proposals with placements. The connectors
+- B1, its footprint, B2's evaluation half and frame half, and B3's evaluation half are proved (§9).
+  B2's liveness refinement, B3's run half and B4 to B6 are proposals with placements. The connectors
   restate laws already proved; they remove nothing until the cleanup replaces the old chains.
 - The line counts of §4 are sizes of modules and of named lemma groups. They measure where the
   case analysis lives, not how much of it an instance would remove.
@@ -362,6 +364,7 @@ run them as a second lane, not to reorder the goals lane.
 | the footprint and connectors | commit `c4d0728e8`; `lake build Effect4.Laws.Program.Footprint Effect4.Laws` |
 | the machine's interference | commit `603a44a32`; `lake build Effect4.Laws.Program.Interference Effect4.Laws` |
 | stack locality at one evaluation | commit `938d2ea4e`; `lake build Effect4.Laws.Machine.StackLocal Effect4.Laws.Program.StackLocal Effect4.Laws` |
-| the audit | `lake env lean probes/AuditMoves.lean`: 590 declarations within `[propext, Quot.sound]`, none modulo planned goals |
+| every command's frames | commit `87d117009`; `lake build Effect4.Laws.Program.CommandFrames Effect4.Laws` |
+| the audit | `lake env lean probes/AuditMoves.lean`: 706 declarations within `[propext, Quot.sound]`, none modulo planned goals |
 | the two counterexamples | commit `05254399c`; `lake env lean` on each battery; `Test/Counterexamples/REGISTER.md` |
 | the first compiled probe of B1 | `probes/FrameMoves.lean` (probe style; the landing restyled it) |

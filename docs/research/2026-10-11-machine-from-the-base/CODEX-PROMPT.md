@@ -1,6 +1,6 @@
 # Prompt for Codex: the machine's base laws, and the cleanup they allow
 
-Work in the lean4-effect4 repository, branch `refactor/phase1-phase3`, from commit `938d2ea4e` or
+Work in the lean4-effect4 repository, branch `refactor/phase1-phase3`, from commit `87d117009` or
 later. Read `AGENTS.md` first; it binds you. Then read this folder's `README.md` (the machine from
 its base) and `context-transformers.md` (the dynamic context). This lane runs beside the goals
 packet's lane. Do not reorder that lane; take this one when it has room.
@@ -27,10 +27,14 @@ packet's lane. Do not reorder that lane; take this one when it has room.
   more frames, events included (`step_under_pair`). A native iteration that does not finish
   (`GoesOn`) is the same over more frames, with the same machine (`iteration_under`, down through
   every level and all 24 actions).
+- `src/Effect4/Laws/Program/CommandFrames.lean`: after any command of the native loop, every fiber
+  is an old fiber (same id) whose frame moved by a word of frame edits, or a new one
+  (`driveStep_framesFollow`). The edits: an evaluation's moves, an interrupt recorded, the deferred
+  bit set, the stack cleared, the parallel close's iterator pushed.
 - `Test/Counterexamples/Program/ContextReset.lean` (`E4-CTX-CE-001`) and
   `Test/Counterexamples/Codegen/PrintDistributes.lean` (`E4-PRINT-CE-001`), both seeded.
 
-All six modules audit within `[propext, Quot.sound]` (`probes/AuditMoves.lean`, 590 declarations).
+All seven modules audit within `[propext, Quot.sound]` (`probes/AuditMoves.lean`, 706 declarations).
 
 ## The work, in order
 
@@ -50,11 +54,13 @@ All six modules audit within `[propext, Quot.sound]` (`probes/AuditMoves.lean`, 
      `evaluateNative_maskChain`, and the other invariants of README §4 where the moves serve.
    - This rebuilds the law graph above the guard. Land it as one sweep, after the goals lane's
      current landing, not between its commits.
-2. **The outcome and the commands (C2, base law B2).** The evaluation's half landed
-   (`Interference.lean`). Extend the classification to the outcome (parked exactly after a park
-   move; finished exactly after a finish), record what a spawned fiber starts as (its frame a
-   compiled program, its context the parent's), then the same for `driveStep`'s sixteen commands
-   and `settle`. This is Owicki and Gries's non-interference made one theorem
+2. **The outcome and liveness (C2, base law B2).** The evaluation's half and the commands' frame
+   half landed (`Interference.lean`, `CommandFrames.lean`). Refine `FramesFollow` so that a fiber
+   whose exit is still `none` reached its frame by edits without `clearStack` (only an exited fiber
+   is cleared); with it, `MaskRuns`'s command half is an instance (`move_maskChain` plus one fact
+   per edit). Extend the classification to the outcome (parked exactly after a park move; finished
+   exactly after a finish) and record what a spawned fiber starts as (its frame a compiled program,
+   its context the parent's). This is Owicki and Gries's non-interference made one theorem
    (`MaskAged` is its mask instance). It is the generic half of the goals packet's G2, and the
    goals lane's per-program assertions can then cite it instead of re-deriving it.
 3. **Stack locality along a run (B3's run half).** The evaluation's half landed
