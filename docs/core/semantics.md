@@ -762,8 +762,9 @@ and checked/wanted evidence remain available through the existing report and arc
   recovery. The public encoder (`Schema.encode`) refuses those values, so every successful encoding still
   round-trips (`decode_of_encode`, at every type), and `decode_iff` stays exact modulo `normJ`.
 - **Records (rows 119, 165)**: a record value carries its canonical field names (row 165 (a), ruled). The
-  Schema bridge, which describes record types, refuses `record` by name, and the JSON codec, which
-  encodes record values, has no record arm yet, so record codecs (`record-codec-layout`) are open.
+  Schema bridge describes a record type as a struct (`schemaAlg.ty_record`, `src/Effect4/Schema/Bridge.lean`),
+  and the JSON codec encodes a record value by its own arm (`wireAlgebra.ty_record`,
+  `src/Effect4/Schema/Codec.lean`). The claim `record-codec-layout` is proved by `decode_iff`.
 
 #### 3. Project Definition and Judgment
 Data plane conversions in Effect4 are exact embeddings between syntactic carriers and serializable formats:
@@ -772,7 +773,7 @@ theorem decode_iff {t : Ty} {j : Json} {v : Val} :
     decode t j = some v ↔ ∃ j', encode t v = some j' ∧ Codec.normJ j' = Codec.normJ j
 theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → normS r = schema t
 ```
-(`src/Effect4/Laws/Schema/Codec.lean:1052`, `src/Effect4/Schema/Bridge.lean:492`).
+(`decode_iff`, `src/Effect4/Laws/Schema/Codec.lean`; `ofSchema_exact`, `src/Effect4/Schema/Bridge.lean`).
 
 #### 4. Required Properties and Obligations
 - **Exactness modulo key sorting (`decode-iff`)**: JSON decoding is exact modulo `normJ`

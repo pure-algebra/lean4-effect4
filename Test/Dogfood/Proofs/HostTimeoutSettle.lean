@@ -112,35 +112,35 @@ theorem finish_command {B : List Val} {classes : Classes} (result : NativeIter) 
   exact masks
 
 /-- Settling an actual iteration keeps the configuration and the entire resulting command queue. -/
-theorem settle_state {B : List Val} {classes : Classes} (result : NativeIter) (rest : List NCmd)
+theorem settleOutcome_state {B : List Val} {classes : Classes} (result : NativeIter) (rest : List NCmd)
     (owned : EvaluationAt B classes result) (typed : IterKind B .body result)
     (tail : CommandsAt B classes (result.machine.update result.fiber) rest) :
-    ConfigurationAt B classes (settle result.fiber.id rest result).1 ∧
-      CommandsAt B classes (settle result.fiber.id rest result).1 (settle result.fiber.id rest result).2 := by
+    ConfigurationAt B classes (settleOutcome result.fiber.id rest result).1 ∧
+      CommandsAt B classes (settleOutcome result.fiber.id rest result).1 (settleOutcome result.fiber.id rest result).2 := by
   have installed := configuration_update owned.1 _ owned.2.1
   cases outcome : result.outcome with
   | continue_ =>
-    simp only [settle, outcome]
-    refine ⟨installed, commands_append (commands_append owned.2.2 ?_) tail⟩
+    simp only [settleOutcome, outcome]
+    refine ⟨installed, commands_append (commands_append owned.2.2.1 ?_) tail⟩
     intro command member
     have same := List.mem_singleton.mp member; subst command; trivial
   | answered =>
-    simp only [settle, outcome]
-    refine ⟨installed, commands_append (commands_append owned.2.2 ?_) tail⟩
+    simp only [settleOutcome, outcome]
+    refine ⟨installed, commands_append (commands_append owned.2.2.1 ?_) tail⟩
     intro command member
     have same := List.mem_singleton.mp member; subst command; trivial
   | commands =>
-    simp only [settle, outcome]
-    exact ⟨installed, commands_append owned.2.2 tail⟩
+    simp only [settleOutcome, outcome]
+    exact ⟨installed, commands_append owned.2.2.1 tail⟩
   | finished exit =>
     simp only [IterKind, outcome] at typed
-    simp only [settle, outcome]
-    refine ⟨installed, commands_append (commands_append owned.2.2 ?_) tail⟩
+    simp only [settleOutcome, outcome]
+    refine ⟨installed, commands_append (commands_append owned.2.2.1 ?_) tail⟩
     intro command member
     have same := List.mem_singleton.mp member; subst command
     exact finish_command result exit typed.1 typed.2.2
   | parked =>
-    simp only [settle, outcome]
+    simp only [settleOutcome, outcome]
     split
     · let next : NativeFiber := {result.fiber with parked := .notParked, pending := []}
       have good : FiberAt B classes next :=
@@ -148,7 +148,7 @@ theorem settle_state {B : List Val} {classes : Classes} (result : NativeIter) (r
           owned.2.1.dispatcher, owned.2.1.observers, owned.2.1.exits, owned.2.1.terminal, owned.2.1.children⟩
       have back := installs_stack_links result.machine next result.fiber rfl rfl
       have nested : CommandsAt B classes (result.machine.update next) result.nested :=
-        fun command member => command_stack_back command (owned.2.2 command member) back
+        fun command member => command_stack_back command (owned.2.2.1 command member) back
       have tailNext : CommandsAt B classes (result.machine.update next) rest :=
         fun command member => command_stack_back command (tail command member) back
       refine ⟨configuration_update owned.1 next good, commands_append (commands_append nested ?_) tailNext⟩
@@ -160,14 +160,85 @@ theorem settle_state {B : List Val} {classes : Classes} (result : NativeIter) (r
           owned.2.1.observers, owned.2.1.exits, owned.2.1.terminal, owned.2.1.children⟩
       have back := installs_stack_links result.machine next result.fiber rfl rfl
       refine ⟨configuration_update owned.1 next good, commands_append ?_ ?_⟩
-      · exact fun command member => command_stack_back command (owned.2.2 command member) back
+      · exact fun command member => command_stack_back command (owned.2.2.1 command member) back
       · exact fun command member => command_stack_back command (tail command member) back
   | stuck why =>
-    simp only [settle, outcome]
+    simp only [settleOutcome, outcome]
     have good : FiberAt B classes {result.fiber with running := false} :=
       ⟨owned.2.1.frame, owned.2.1.park, owned.2.1.pending, owned.2.1.dispatcher,
         owned.2.1.observers, owned.2.1.exits, owned.2.1.terminal, owned.2.1.children⟩
     exact ⟨configuration_halt (configuration_update owned.1 _ good) why,
       by intro command member; cases member⟩
+
+/-- The shared backward lookup reader supplies the old stack at every surviving key. -/
+theorem interference_stack_back {before after : Effect4.Program.NativeMachine}
+    (transport : Moves.InterferesWithLookup before after) (same : after.nextId = before.nextId) :
+    StackLinks after before := by
+  intro id next found
+  obtain ⟨old, seen, edits⟩ := transport.backward_lookup same id next found
+  exact ⟨old, seen, (StackRegion.other_edits_stack edits).symm⟩
+
+/-- Actual settlement installs the local owner, applies admitted messages, and reads that owner again.
+The shared message path and lookup relation supply the complete source-value transport. -/
+theorem settle_state {B : List Val} {classes : Classes} (result : NativeIter) (rest : List NCmd)
+    (owned : EvaluationAt B classes result) (typed : IterKind B .body result)
+    (tail : CommandsAt B classes (result.machine.update result.fiber) rest) :
+    ConfigurationAt B classes (settle result.fiber.id rest result).1 ∧
+      CommandsAt B classes (settle result.fiber.id rest result).1 (settle result.fiber.id rest result).2 := by
+  cases messages : result.edits with
+  | nil =>
+    simpa only [settle, messages] using settleOutcome_state result rest owned typed tail
+  | cons message remaining =>
+    let base := result.machine.update result.fiber
+    let changed := applyFiberEdits (message :: remaining) base
+    have installed : ConfigurationAt B classes base := configuration_update owned.1 _ owned.2.1
+    have allowed : MessagesAt classes (message :: remaining) := by
+      rw [← messages]
+      exact owned.2.2.2
+    have current : ConfigurationAt B classes changed.1 := configuration_messages base _ allowed installed
+    have transport := Moves.InterferesWithLookup.fiberEdits (message :: remaining) base
+    have same : changed.1.nextId = base.nextId := by rw [(RunMachine.applyFiberEdits_shape _ base).1]
+    have back := interference_stack_back transport same
+    cases found : changed.1.fiber? result.fiber.id with
+    | none =>
+      have absent := found
+      dsimp only [changed, base] at absent
+      simpa only [settle, messages, absent, changed, base] using
+        And.intro (configuration_halt current (.unknownFiber result.fiber.id))
+          (show CommandsAt B classes (changed.1.halt (.unknownFiber result.fiber.id)) [] from
+            by intro command member; cases member)
+    | some owner =>
+      have key : owner.id = result.fiber.id := fiber_id_of_lookup found
+      have good := configuration_fiber current found
+      have returned := interference_stack_back (Moves.InterferesWithLookup.update found (.refl owner)) rfl
+      have queueBack := returned.trans back
+      have nested : CommandsAt B classes (changed.1.update owner) (changed.2 ++ result.nested) := by
+        apply commands_append
+        · intro command member
+          obtain ⟨target, equal⟩ := (RunMachine.applyFiberEdits_shape _ base).2 command member
+          subst command
+          trivial
+        · exact fun command member => command_stack_back command (owned.2.2.1 command member) queueBack
+      have tailNext : CommandsAt B classes (changed.1.update owner) rest :=
+        fun command member => command_stack_back command (tail command member) queueBack
+      let next : NativeIter :=
+        {result with machine := changed.1, fiber := owner, nested := changed.2 ++ result.nested, edits := []}
+      have evaluation : EvaluationAt B classes next :=
+        ⟨current, good, nested, by intro edit member; cases member⟩
+      have nextTyped : IterKind B .body next := by
+        cases outcome : result.outcome with
+        | finished exit =>
+          simp only [IterKind, next, outcome]
+          simp only [IterKind, outcome] at typed
+          obtain ⟨old, seen, stack⟩ := back result.fiber.id owner found
+          have equal := installed_self seen
+          subst old
+          have masks : Masks owner.frame.stack := stack.symm ▸ typed.2.2
+          exact ⟨typed.1, masks_current good.frame masks, masks⟩
+        | _ => simpa only [IterKind, next, outcome] using good.frame
+      have settled := settleOutcome_state next rest evaluation nextTyped tailNext
+      have present := found
+      dsimp only [changed, base] at present
+      simpa only [settle, messages, present, next, changed, base, key] using settled
 
 end Test.Dogfood.Proofs.HostTimeoutSettle

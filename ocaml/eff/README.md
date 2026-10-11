@@ -23,7 +23,7 @@ Standard library only. OCaml 5.1.1 / dune 3.24 (opam switch `effect4`).
 | `eff_native.ml` | **generated** | the native alphabet as data: atom names and const-generic metadata, the op values `all_ops` (`NativeOp.spelled`, one per spelling key; a read-modify-write row stands once, at its face), `scope_key`, the scope and context types; typing remains in Lean |
 | `eff_manifest.txt` | **generated** | one line per family: name, OCaml type, constructors and their carriers, in order |
 | `program-structure.json` | **generated** | the constructor families the engine's layout check reads |
-| `goldens/` | **generated** | for 48 programs: `<name>.bin` (the canonical bytes), `<name>.json` (the Lean JSON printer's output), `<name>.ty` (Lean's `typeOf`); `corpus.txt` (each name with Lean's `wellTyped` verdict); `coverage.txt` (constructor counts over the corpus) |
+| `goldens/` | **generated** | for each program of the corpus (89 at 2026-10-11): `<name>.bin` (the canonical bytes), `<name>.json` (the Lean JSON printer's output), `<name>.ty` (Lean's `typeOf`); `corpus.txt` (each name with Lean's `wellTyped` verdict); `coverage.txt` (constructor counts over the corpus) |
 | `goldens/val_*.hex` | **hand-derived** | `val_handle.hex`, `val_ref.hex` — two `Store.Val` trees derived by hand from `Val.lean`'s encoder on 2026-09-07, pending a Lean cut |
 | `test/test_eff.ml` | hand | the golden battery and the wire kernel |
 | `test/prop_wire.ml` | hand | the wire property test on random untyped values |
@@ -84,8 +84,10 @@ bytes.
 | constructor `i`, args `a₁…aₙ` | `framed 10 (encode (i : Nat) ++ encode a₁ ++ … ++ encode aₙ)` |
 | a structure (one constructor) | as constructor 0 with its fields in declaration order |
 
-`i` is the constructor's 0-based index in declaration order as the Lean environment reports
-it. `Var` is a `Nat`. The list families (`Terms`, `Stmts`, `Effs`) are inductives: `nil` = 0,
+`i` is the constructor's wire tag. For `Eff` and `NativeOp` it is the tag in
+`tools/Effect4Gen/wire-tags.json`, which keeps a retired constructor's number, so it is not the
+position (`yieldNow` is position 14 and tag 17). For the other families it is the 0-based index
+in declaration order. `Var` is a `Nat`. The list families (`Terms`, `Stmts`, `Effs`) are inductives: `nil` = 0,
 `cons head tail` = 1. `Op` is `NativeOp` throughout.
 
 Decoding is length-directed — every frame is self-delimiting — and **exact**: trailing bytes,
@@ -176,7 +178,8 @@ cheapest way to strengthen it.
 
 ## What remains owed
 
-* T2 is open.
+* T2 is open on the OCaml side only: Lean's `ProgramWire.decode_encode` and `decode_exact`
+  (`src/Effect4/Store/Domain/ProgramWire.lean`) are proved, and Lean = OCaml stays empirical.
 * `goldens/val_handle.hex` and `goldens/val_ref.hex` are hand-derived from `Val.lean`'s
   encoder, not cut by Lean; `src/OCaml5/Tools/EffWire.lean` is the tool that would cut them.
 * Naturals above 2⁶² − 1 are refused, not encoded.

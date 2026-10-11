@@ -119,8 +119,8 @@ theorem interrupt_commands_cost (interp : RunInterp ν σ β ε δ ι α χ St �
     (fun target => ⟨evaluateCost target, True.intro⟩) who extra targets acc).1
 
 /-- One actual observer path retains administrative payloads and generated command cost.
-Consumers: release custody and the existing machine-only observer path. -/
-theorem observer_producer_path
+Consumers: release custody, Timeout metadata, and the existing machine-only observer path. -/
+theorem observer_producer_path_metadata
     {Edge : RunMachine ν σ β ε δ ι α χ St κ φ η → RunMachine ν σ β ε δ ι α χ St κ φ η →
       Edit ν σ β ε δ ι α χ St κ φ η → Prop}
     (interp : RunInterp ν σ β ε δ ι α χ St κ)
@@ -130,8 +130,12 @@ theorem observer_producer_path
     (observer : Observer)
     (update : ∀ m target old next, m.fiber? target = some old → next.id = old.id →
       next.frame = old.frame → next.dispatcher = old.dispatcher → next.parked = old.parked →
+      (∀ pending ∈ next.pending, ∃ prior ∈ old.pending,
+        pending.token = prior.token ∧ pending.resumeWith = prior.resumeWith) →
+      next.observers = old.observers → next.exit = old.exit → next.children ⊆ old.children →
       Edge m ((Edit.update next).apply m) (.update next))
-    (observe : ∀ m target observer, Edge m ((Edit.observe target observer).apply m) (.observe target observer))
+    (observe : ∀ m target observed, observed = observer →
+      Edge m ((Edit.observe target observed).apply m) (.observe target observed))
     (fired : ∀ m id observer, Edge m (m.emit [.observerFired id observer]) (.emit [.observerFired id observer]))
     (settled : ∀ m id exit, Edge m (m.emit [.raceSettled id exit]) (.emit [.raceSettled id exit]))
     (callback : ∀ m key exit, Edge m (m.emit [.callback key exit]) (.emit [.callback key exit]))
@@ -152,7 +156,7 @@ theorem observer_producer_path
       weight (.resume host token (interp.raceSettle raceId cleanup accepted)) = 0 ∧
       Allowed (.resume host token (interp.raceSettle raceId cleanup accepted)))
     (countdownProducer : ∀ waiter token fiber pending exits, observer = .countdown waiter token →
-      (acc.1.emit [.observerFired id observer]).fiber? waiter = some fiber → pending ∈ fiber.pending →
+      (acc.1.emit [.observerFired id observer]).fiber? waiter = some fiber → pending ∈ fiber.pending → pending.token = token →
       weight (.resume waiter token (countdownPark.resumePrim (core := core) interp pending.resumeWith exits)) = 0 ∧
       Allowed (.resume waiter token (countdownPark.resumePrim (core := core) interp pending.resumeWith exits))) :
     Effect4.Contracts.Path Edge acc.1 (fireObserver interp id exit acc observer).1
@@ -162,8 +166,8 @@ theorem observer_producer_path
   have awaitCost := fun waiter token mode matching => (awaitProducer waiter token mode matching).1
   have raceCost := fun raceId host token cleanup accepted matching =>
     (raceProducer raceId host token cleanup accepted matching).1
-  have countdownCost := fun waiter token fiber pending exits matching found member =>
-    (countdownProducer waiter token fiber pending exits matching found member).1
+  have countdownCost := fun waiter token fiber pending exits matching found member tokenSame =>
+    (countdownProducer waiter token fiber pending exits matching found member tokenSame).1
   have appended (added : List (Cmd ν σ β ε δ ι α κ))
       (good : ∀ command ∈ added, Allowed command) :
       ∀ command ∈ acc.2 ++ added, command ∈ acc.2 ∨ Allowed command :=
@@ -206,7 +210,9 @@ theorem observer_producer_path
       exact .nil _
     · rename_i fiber found
       simp only [found]
-      exact .cons (update _ _ fiber _ found rfl rfl rfl rfl) (.nil _)
+      exact .cons (update _ _ fiber _ found rfl rfl rfl rfl
+        (fun pending member => ⟨pending, member, rfl, rfl⟩) rfl rfl
+        (fun child member => (List.mem_filter.mp member).1)) (.nil _)
   case case3.refine_1 => exact .cons (halt _ _ _ rfl (by assumption)) (.nil _)
   case case4.refine_1 => exact .cons (state _ _ _ _ rfl (by assumption)) (.nil _)
   case case14.refine_1 => exact .cons (callback _ _ _) (.nil _)
@@ -223,16 +229,29 @@ theorem observer_producer_path
     rename_i waiter token original pending pendingFound collected fails changed nested current currentFound currentPending currentPendingFound exits walked installed base initialFound choice
     have prior := chosen _ _ _ _ _ _ _ choice
     apply prior.1.append
-    exact .cons (update changed waiter current _ currentFound rfl rfl rfl rfl) (.nil _)
+    exact .cons (update changed waiter current _ currentFound rfl rfl rfl rfl
+      (by
+        intro pending member
+        obtain ⟨prior, held, equal⟩ := List.mem_map.mp member
+        subst pending
+        refine ⟨prior, held, ?_, ?_⟩
+        all_goals split <;> rfl) rfl rfl (fun _ member => member)) (.nil _)
   case case10.refine_1 =>
     rename_i waiter token original pending pendingFound collected fails changed nested current currentFound currentPending currentPendingFound exits next rest walked installed observed base initialFound choice
     have prior := chosen _ _ _ _ _ _ _ choice
     apply prior.1.append
-    exact .cons (update changed waiter current _ currentFound rfl rfl rfl rfl) (.cons (observe _ _ _) (.nil _))
+    exact .cons (update changed waiter current _ currentFound rfl rfl rfl rfl
+      (by
+        intro pending member
+        obtain ⟨prior, held, equal⟩ := List.mem_map.mp member
+        subst pending
+        refine ⟨prior, held, ?_, ?_⟩
+        all_goals split <;> rfl) rfl rfl (fun _ member => member)) (.cons (observe _ _ _ rfl) (.nil _))
   case case9.refine_2 =>
-    rename_i choice
+    rename_i waiter token original pending pendingFound collected fails changed nested current currentFound currentPending currentPendingFound exits walked installed base initialFound choice
     have prior := chosen _ _ _ _ _ _ _ choice
-    rw [prior.2.1, countdownCost _ _ _ _ _ rfl (by assumption) (List.mem_of_find?_eq_some (by assumption))]
+    rw [prior.2.1, countdownCost _ _ _ _ _ rfl (by assumption) (List.mem_of_find?_eq_some (by assumption))
+      (of_decide_eq_true (List.find?_some (p := fun p : Pending ν β ε δ ι α => decide (p.token = token)) pendingFound))]
     simp only [Nat.add_zero]
   case case12.refine_1 =>
     exact (Effect4.Contracts.Path.cons (race _ _ _ rfl) (.nil _)).append
@@ -256,7 +275,7 @@ theorem observer_producer_path
     have prior := chosen _ _ _ _ _ _ _ choice
     exact appended _ prior.2.2
   case case9.refine_3 =>
-    rename_i choice
+    rename_i waiter token original pending pendingFound collected fails changed nested current currentFound currentPending currentPendingFound exits walked installed base initialFound choice
     have prior := chosen _ _ _ _ _ _ _ choice
     rw [List.append_assoc]
     apply appended
@@ -265,7 +284,8 @@ theorem observer_producer_path
     · exact prior.2.2 command nested
     · rcases List.mem_cons.mp resumed with rfl | impossible
       · exact (countdownProducer _ _ _ _ _ rfl (by assumption)
-          (List.mem_of_find?_eq_some (by assumption))).2
+          (List.mem_of_find?_eq_some pendingFound)
+          (of_decide_eq_true (List.find?_some (p := fun p : Pending ν β ε δ ι α => decide (p.token = token)) pendingFound))).2
       · cases impossible
   case case10.refine_3 =>
     rename_i choice
@@ -280,6 +300,55 @@ theorem observer_producer_path
     · rcases List.mem_cons.mp member with rfl | impossible
       · exact (raceProducer _ _ _ _ _ rfl).2
       · cases impossible
+
+/-- One actual observer path retains administrative payloads and generated command cost.
+Consumers: release custody and the existing machine-only observer path. -/
+theorem observer_producer_path
+    {Edge : RunMachine ν σ β ε δ ι α χ St κ φ η → RunMachine ν σ β ε δ ι α χ St κ φ η →
+      Edit ν σ β ε δ ι α χ St κ φ η → Prop}
+    (interp : RunInterp ν σ β ε δ ι α χ St κ)
+    (weight : Cmd ν σ β ε δ ι α κ → Nat) (Allowed : Cmd ν σ β ε δ ι α κ → Prop)
+    (id : FiberId) (exit : Exit β ε δ ι α)
+    (acc : RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ))
+    (observer : Observer)
+    (update : ∀ m target old next, m.fiber? target = some old → next.id = old.id →
+      next.frame = old.frame → next.dispatcher = old.dispatcher → next.parked = old.parked →
+      Edge m ((Edit.update next).apply m) (.update next))
+    (observe : ∀ m target observer, Edge m ((Edit.observe target observer).apply m) (.observe target observer))
+    (fired : ∀ m id observer, Edge m (m.emit [.observerFired id observer]) (.emit [.observerFired id observer]))
+    (settled : ∀ m id exit, Edge m (m.emit [.raceSettled id exit]) (.emit [.raceSettled id exit]))
+    (callback : ∀ m key exit, Edge m (m.emit [.callback key exit]) (.emit [.callback key exit]))
+    (state : ∀ m scope key s, observer = .dropScopeFinalizer scope key →
+      interp.dropFinalizer scope key m.state = some s →
+      Edge m ((Edit.setState s).apply m) (.setState s))
+    (halt : ∀ m scope key, observer = .dropScopeFinalizer scope key →
+      interp.dropFinalizer scope key m.state = none →
+      Edge m (m.halt (.unknownScope scope)) (.halt (.unknownScope scope)))
+    (race : ∀ m raceId r, observer = .raceCallback raceId → Edge m (m.updateRace r) (.updateRace r))
+    (interrupted : ∀ who extra targets held, Effect4.Contracts.Path Edge held.1
+      (interruptEach interp who extra targets held).1 (interruptWords interp who extra targets held))
+    (evaluateProducer : ∀ target, weight (.evaluate target) = 0 ∧ Allowed (.evaluate target))
+    (awaitProducer : ∀ waiter token mode, observer = .resumeAwait waiter token mode →
+      weight (.resume waiter token (interp.exitValue exit mode)) = 0 ∧
+      Allowed (.resume waiter token (interp.exitValue exit mode)))
+    (raceProducer : ∀ raceId host token cleanup accepted, observer = .raceCallback raceId →
+      weight (.resume host token (interp.raceSettle raceId cleanup accepted)) = 0 ∧
+      Allowed (.resume host token (interp.raceSettle raceId cleanup accepted)))
+    (countdownProducer : ∀ waiter token fiber pending exits, observer = .countdown waiter token →
+      (acc.1.emit [.observerFired id observer]).fiber? waiter = some fiber → pending ∈ fiber.pending →
+      weight (.resume waiter token (countdownPark.resumePrim (core := core) interp pending.resumeWith exits)) = 0 ∧
+      Allowed (.resume waiter token (countdownPark.resumePrim (core := core) interp pending.resumeWith exits))) :
+    Effect4.Contracts.Path Edge acc.1 (fireObserver interp id exit acc observer).1
+      (observerWord interp id exit acc.1 observer) ∧
+    (((fireObserver interp id exit acc observer).2).map weight).sum = (acc.2.map weight).sum ∧
+      ∀ command ∈ (fireObserver interp id exit acc observer).2, command ∈ acc.2 ∨ Allowed command := by
+  exact observer_producer_path_metadata interp weight Allowed id exit acc observer
+    (fun m target old next found key frame dispatcher parked _ _ _ _ =>
+      update m target old next found key frame dispatcher parked)
+    (fun m target observed _ => observe m target observed)
+    fired settled callback state halt race interrupted evaluateProducer awaitProducer
+    raceProducer (fun waiter token fiber pending exits same found member _ =>
+      countdownProducer waiter token fiber pending exits same found member)
 
 /-- The shared producer transports any command predicate without a machine invariant.
 Consumer: administrative queued-stack constraints. -/

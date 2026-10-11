@@ -256,6 +256,8 @@ import Effect4.Laws.Program.Folds.Term
 import Effect4.Laws.Program.Folds.Ty
 import Effect4.Laws.Machine.Folds.Stores
 import Effect4.Laws.Store.Folds.Val
+import Effect4.Laws.Store.Names
+import Effect4.Laws.Data.ListRelConnectors
 import Effect4.Laws.Program.Typing.FoldAgreement
 import Effect4.Laws.Step.Table
 import Effect4.Laws.Step.Reading
@@ -325,6 +327,7 @@ import Effect4.Laws.Program.LedgerRun
 import Effect4.Laws.Program.LedgerFinalizer
 import Effect4.Laws.Machine.FiberSum
 import Effect4.Laws.Program.FiberSumConnect
+import Effect4.Laws.Program.PlaceLedgerConnect
 import Effect4.Laws.Program.SourceOpportunityExecution
 import Effect4.Laws.Program.SourceOpportunityHistory
 import Effect4.Laws.Program.ReleaseCustody.Control

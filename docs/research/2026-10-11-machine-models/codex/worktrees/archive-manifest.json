@@ -1,0 +1,1947 @@
+[
+  {
+    "worktree": "/Users/pooks/.codex/worktrees/live-graph-index/lean4-effect4",
+    "head": "33bea44899e138cc379830d230cfec54086e076e",
+    "branch": "codex/live-graph-index",
+    "patch_comparison": "",
+    "archive": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-11-machine-models/codex/worktrees/archives/live-graph-index.tar.gz",
+    "archive_sha256": "57f95a46442ac6a0438b4e1df19aaae3f9989061091f57022923077736f4d90f",
+    "files": [
+      {
+        "path": "docs/research/2026-10-10-live-graph-support/index/index-build.log",
+        "bytes": 2171,
+        "sha256": "e1f3da55a187817f0390e1aba2d4b70c9133bb9f3ca17d178a5393041051503f"
+      }
+    ]
+  },
+  {
+    "worktree": "/Users/pooks/.codex/worktrees/module-authoring/lean4-effect4",
+    "head": "f1e89dcfc3316fbe1743cedbd6f83f0ec35a05bb",
+    "branch": "codex/partitioned-behavior-probes",
+    "patch_comparison": "- f1e89dcfc3316fbe1743cedbd6f83f0ec35a05bb\n",
+    "archive": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-11-machine-models/codex/worktrees/archives/module-authoring.tar.gz",
+    "archive_sha256": "506f1037fe3de9191daa19b93ab6a571f2e54b80d3b097613d3cdc569a7c7277",
+    "files": [
+      {
+        "path": "docs/research/__pycache__/2026-10-08-module-compatibility-host.cpython-313.pyc",
+        "bytes": 8637,
+        "sha256": "8cc68ab9a2cdab0b851c7cdc873d91f4994905e8b022244b8c3daa97d7709954"
+      }
+    ]
+  },
+  {
+    "worktree": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4",
+    "head": "cb5e109ac38634b498e0b785bfcd7e9bd76b29ae",
+    "branch": "codex/ts-packet-retention",
+    "patch_comparison": "- 0e6b49d4b516b47c5f835c110aafe43fea42fbc8\n- 4306535a0df8fab92411382c2cd0dc0d7996fb86\n- 209cd67c5698cb4d976d25387acdbb558305110a\n- d45ee275540b96958518b9ac6b9b9ef5a320ff11\n- d50961eb2f9dec8db9e3f3266ec3aff7d177caa8\n- cb5e109ac38634b498e0b785bfcd7e9bd76b29ae\n",
+    "archive": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-11-machine-models/codex/worktrees/archives/module-field-inference.tar.gz",
+    "archive_sha256": "3aa8896d7a40e678d84f6bd6dfac62dd0749939666c150b4446a295a6552b4ed",
+    "files": [
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Api",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Api"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Api.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Api.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Api.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Api.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Api.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Api.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Api.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Api.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Api.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Api.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Author.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Author.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Author.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Author.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Author.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Author.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Author.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Author.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Author.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Author.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Codegen",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Data",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Data"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Emit.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Emit.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Emit.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Emit.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Emit.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Emit.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Emit.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Emit.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Emit.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Emit.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Ingest",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Ingest"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Author/Explain.olean",
+        "bytes": 2036808,
+        "sha256": "39f57b6837a85c396bd3099e9901721d11299f0ef235fe0bc7ceba6942349c7c"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Auto",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Auto"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Codegen",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Codegen"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Data",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Data"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Effects",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Effects"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Machine",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Machine"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Modules",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Modules"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Program",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Program"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Schema",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Schema"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Step",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Step"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Step.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Step.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Step.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Step.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Step.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Step.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Step.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Step.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Step.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Step.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Library",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Library"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Library.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Library.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Library.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Library.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Library.ir",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Library.ir"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Library.ir.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Library.ir.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Library.ir.sig",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Library.ir.sig"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Library.ir.sig.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Library.ir.sig.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Library.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Library.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Library.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Library.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Library.olean.private",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Library.olean.private"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Library.olean.private.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Library.olean.private.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Library.olean.server",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Library.olean.server"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Library.olean.server.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Library.olean.server.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Library.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Library.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Machine",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Machine"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Modules",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Modules"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Program",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Program"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Run",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Run"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Run.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Run.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Run.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Run.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Run.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Run.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Run.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Run.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Run.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Run.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Schema",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Schema"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Step",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Step"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Step.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Step.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Step.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Step.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Step.ir",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Step.ir"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Step.ir.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Step.ir.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Step.ir.sig",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Step.ir.sig"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Step.ir.sig.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Step.ir.sig.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Step.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Step.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Step.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Step.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Step.olean.private",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Step.olean.private"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Step.olean.private.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Step.olean.private.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Step.olean.server",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Step.olean.server"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Step.olean.server.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Step.olean.server.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Step.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Step.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Store",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Store"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Api",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Api"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Api.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Api.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Api.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Api.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Api.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Api.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Api.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Api.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Api.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Api.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Author.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Author.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Author.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Author.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Author.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Author.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Author.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Author.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Author.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Author.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Codegen",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Data",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Data"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Emit.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Emit.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Emit.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Emit.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Emit.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Emit.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Emit.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Emit.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Emit.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Emit.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Ingest",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Ingest"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Author/Explain.olean",
+        "bytes": 2027360,
+        "sha256": "aeebd0a295d3ae2a166b74031018843947fd4a5be37cd9b64107a474e0fc7d1e"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Auto",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Auto"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Codegen",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Codegen"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Data",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Data"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Effects",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Effects"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Machine",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Machine"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Modules",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Modules"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Program",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Program"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Schema",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Schema"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Step",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Step"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Step.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Step.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Step.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Step.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Step.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Step.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Step.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Step.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Step.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Step.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Library",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Library"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Library.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Library.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Library.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Library.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Library.ir",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Library.ir"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Library.ir.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Library.ir.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Library.ir.sig",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Library.ir.sig"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Library.ir.sig.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Library.ir.sig.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Library.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Library.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Library.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Library.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Library.olean.private",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Library.olean.private"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Library.olean.private.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Library.olean.private.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Library.olean.server",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Library.olean.server"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Library.olean.server.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Library.olean.server.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Library.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Library.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Machine",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Machine"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Modules",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Modules"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Program",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Program"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Run",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Run"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Run.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Run.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Run.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Run.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Run.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Run.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Run.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Run.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Run.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Run.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Schema",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Schema"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Step",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Step"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Step.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Step.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Step.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Step.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Step.ir",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Step.ir"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Step.ir.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Step.ir.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Step.ir.sig",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Step.ir.sig"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Step.ir.sig.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Step.ir.sig.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Step.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Step.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Step.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Step.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Step.olean.private",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Step.olean.private"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Step.olean.private.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Step.olean.private.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Step.olean.server",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Step.olean.server"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Step.olean.server.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Step.olean.server.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Step.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Step.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Store",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-field-inference/lean4-effect4/.lake/build/lib/lean/Effect4/Store"
+      }
+    ]
+  },
+  {
+    "worktree": "/Users/pooks/.codex/worktrees/module-folds/lean4-effect4",
+    "head": "9da08c2d1743c2a9c57bf947765f1aa83fcb7f3e",
+    "branch": "codex/synchronized-ref-pure",
+    "patch_comparison": "- 760b5d14ffec3e37b9c53c55f1c7a56358f1f6eb\n- 9f46d1fe11119e039c9dfcc767f0fa81885f5001\n- 0f2bc4104d791d837b6cfc54b7aa83e092161583\n- d8daa1b052bccfd3ce91d6bd0a6a514a8eb4be12\n- 42d0a6db5f80f4a4da32a9b032d1e4949698210a\n- 86992abd7c5df97ff23596aababc6e976f5e7553\n- 957b969144e3f1c10d955aef0d073c0c09099231\n- bcf8a2514b6eb5efc5742297c6fbcf2172fd4ba4\n- 7eb45da53262bb36f8e5342dcf43200d628884ed\n- 9da08c2d1743c2a9c57bf947765f1aa83fcb7f3e\n",
+    "archive": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-11-machine-models/codex/worktrees/archives/module-folds.tar.gz",
+    "archive_sha256": "e4a6f6adddf13b1679efecc73ec4a6b01603a9cf157aa4f50133158a670cda29",
+    "files": [
+      {
+        "path": "docs/research/2026-10-08-load-path-probes-receipt.md",
+        "bytes": 8661,
+        "sha256": "09ca47452becbc511e952f1781f5df7d030434308bfa4d766f1991e57a963719"
+      },
+      {
+        "path": "docs/research/2026-10-08-load-path-probes.lean",
+        "bytes": 8100,
+        "sha256": "995eba2bd46ec68de65842a0a700456964759ddb129c6b35511fced5a316b338"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-authoring-probe/Model.olean",
+        "bytes": 181152,
+        "sha256": "7ba159f24401ff4bfc07bd62731bcf3b636d201b0a13a2389acbb9953580be9d"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-authoring-probe/Probe.olean",
+        "bytes": 309640,
+        "sha256": "351450b3ccf5e128d896e005146b4de135d793617906adba57cdd0ed4644ca07"
+      }
+    ]
+  },
+  {
+    "worktree": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4",
+    "head": "0e4f21d1a4ed3049c91bf41926064be436a40685",
+    "branch": "codex/authoring-branches",
+    "patch_comparison": "",
+    "archive": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-11-machine-models/codex/worktrees/archives/module-semaphore.tar.gz",
+    "archive_sha256": "5931d112b04ba5e983c35738e3905dcd467543eb1fdabef43bb400b2722ead9d",
+    "files": [
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Api",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Api"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Api.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Api.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Api.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Api.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Api.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Api.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Api.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Api.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Api.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Api.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Author.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Author.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Author.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Author.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Author.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Author.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Author.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Author.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Author.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Author.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Codegen",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Data",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Data"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Emit.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Emit.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Emit.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Emit.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Emit.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Emit.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Emit.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Emit.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Emit.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Emit.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Ingest",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Ingest"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Api",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Api"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Author.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Author.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Author.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Author.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Author.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Author.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Author.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Author.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Author.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Author.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Author/Explain.olean",
+        "bytes": 2036808,
+        "sha256": "39f57b6837a85c396bd3099e9901721d11299f0ef235fe0bc7ceba6942349c7c"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Auto",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Auto"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Codegen",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Codegen"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Data",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Data"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Effects",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Effects"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Library",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Library"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Machine",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Machine"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Modules",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Modules"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Program",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Program"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Run",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Run"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Run.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Run.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Run.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Run.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Run.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Run.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Run.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Run.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Run.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Run.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Schema",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Schema"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Slice",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Slice"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Step",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Step"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Step.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Step.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Step.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Step.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Step.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Step.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Step.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Step.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Step.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Step.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Laws/Store",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Store"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Library",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Library"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Library.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Library.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Library.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Library.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Library.ir",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Library.ir"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Library.ir.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Library.ir.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Library.ir.sig",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Library.ir.sig"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Library.ir.sig.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Library.ir.sig.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Library.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Library.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Library.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Library.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Library.olean.private",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Library.olean.private"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Library.olean.private.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Library.olean.private.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Library.olean.server",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Library.olean.server"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Library.olean.server.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Library.olean.server.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Library.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Library.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Machine",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Machine"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Modules",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Modules"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Program",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Program"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Run",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Run"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Run.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Run.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Run.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Run.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Run.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Run.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Run.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Run.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Run.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Run.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Schema",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Schema"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Step",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Step"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Step.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Step.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Step.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Step.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Step.ir",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Step.ir"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Step.ir.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Step.ir.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Step.ir.sig",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Step.ir.sig"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Step.ir.sig.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Step.ir.sig.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Step.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Step.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Step.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Step.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Step.olean.private",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Step.olean.private"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Step.olean.private.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Step.olean.private.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Step.olean.server",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Step.olean.server"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Step.olean.server.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Step.olean.server.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Step.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Step.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-clean/Effect4/Store",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Store"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Api",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Api"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Api.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Api.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Api.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Api.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Api.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Api.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Api.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Api.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Api.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Api.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Author.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Author.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Author.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Author.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Author.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Author.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Author.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Author.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Author.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Author.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Codegen",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Codegen"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Data",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Data"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Emit.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Emit.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Emit.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Emit.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Emit.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Emit.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Emit.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Emit.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Emit.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Emit.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Ingest",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Ingest"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Api",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Api"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Author.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Author.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Author.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Author.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Author.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Author.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Author.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Author.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Author.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Author.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Author/Explain.olean",
+        "bytes": 2027360,
+        "sha256": "aeebd0a295d3ae2a166b74031018843947fd4a5be37cd9b64107a474e0fc7d1e"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Auto",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Auto"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Codegen",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Codegen"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Data",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Data"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Effects",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Effects"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Library",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Library"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Machine",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Machine"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Modules",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Modules"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Program",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Program"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Run",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Run"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Run.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Run.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Run.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Run.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Run.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Run.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Run.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Run.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Run.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Run.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Schema",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Schema"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Slice",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Slice"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Step",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Step"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Step.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Step.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Step.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Step.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Step.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Step.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Step.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Step.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Step.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Step.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Laws/Store",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Store"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Library",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Library"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Library.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Library.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Library.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Library.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Library.ir",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Library.ir"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Library.ir.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Library.ir.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Library.ir.sig",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Library.ir.sig"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Library.ir.sig.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Library.ir.sig.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Library.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Library.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Library.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Library.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Library.olean.private",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Library.olean.private"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Library.olean.private.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Library.olean.private.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Library.olean.server",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Library.olean.server"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Library.olean.server.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Library.olean.server.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Library.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Library.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Machine",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Machine"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Modules",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Modules"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Program",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Program"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Run",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Run"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Run.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Run.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Run.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Run.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Run.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Run.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Run.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Run.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Run.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Run.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Schema",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Schema"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Step",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Step"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Step.ilean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Step.ilean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Step.ilean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Step.ilean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Step.ir",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Step.ir"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Step.ir.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Step.ir.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Step.ir.sig",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Step.ir.sig"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Step.ir.sig.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Step.ir.sig.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Step.olean",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Step.olean"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Step.olean.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Step.olean.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Step.olean.private",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Step.olean.private"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Step.olean.private.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Step.olean.private.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Step.olean.server",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Step.olean.server"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Step.olean.server.hash",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Step.olean.server.hash"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Step.trace",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Step.trace"
+      },
+      {
+        "path": "docs/research/2026-10-08-explain-admission-probe-fixture-mutant/Effect4/Store",
+        "bytes": 0,
+        "link": "/Users/pooks/.codex/worktrees/module-semaphore/lean4-effect4/.lake/build/lib/lean/Effect4/Store"
+      },
+      {
+        "path": "docs/research/2026-10-08-module-survey.json",
+        "bytes": 14926564,
+        "sha256": "684976de9dd30457bac6390e11bc2e486ee5e4fc69cc97f9628e8985332b25f6"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-authoring-probe/Model.olean",
+        "bytes": 181152,
+        "sha256": "7ba159f24401ff4bfc07bd62731bcf3b636d201b0a13a2389acbb9953580be9d"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-authoring-probe/Probe.olean",
+        "bytes": 309640,
+        "sha256": "351450b3ccf5e128d896e005146b4de135d793617906adba57cdd0ed4644ca07"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/compiled-inputs/excessive.ts",
+        "bytes": 1866,
+        "sha256": "b27cede6f5e6e60de888d057c9545e2806952e3a47db2170a61f3d87df834e79"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/compiled-inputs/forgotDeduction.ts",
+        "bytes": 1297,
+        "sha256": "e319e02289048d67edfcbe86d3b0375f503ce2ae41606985a223ac707214ef58"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/compiled-inputs/initialFive.ts",
+        "bytes": 1201,
+        "sha256": "6e588524e0fe6af175967ca804676957cb6c6e664b44c8c5036e488f05be3698"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/compiled-inputs/initialZero.ts",
+        "bytes": 1201,
+        "sha256": "9e022ea7666bbeae6225376961495bae75bccc2a31af1511d16eb87eb12f5b2d"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/compiled-inputs/insufficient.ts",
+        "bytes": 1866,
+        "sha256": "11828e4bd3c0cf819bd81a272897112d9f0d09df98158bc14512c5a73d1dce03"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/compiled-inputs/manifest.json",
+        "bytes": 1236,
+        "sha256": "d046253b833bf0f78829ff1a1fe2c351e4dd45453084d7e130c5babcfa48eecd"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/compiled-inputs/observe.ts",
+        "bytes": 510,
+        "sha256": "0bd1b15cbcaacb0a7f277dc03253385b8f328d94c821b760b1e0b0d882463ee5"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/compiled-inputs/positiveOnZero.ts",
+        "bytes": 1866,
+        "sha256": "a27055b021843c3c53b6094540bcc8ac7938e9b2b2ec7948b1afb48e6dc2a087"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/compiled-inputs/prelude-atoms.gen.ts",
+        "bytes": 14607,
+        "sha256": "46e2cc594cd94d2c2fd86b222eb67717853ed63f5a3d7ff11b339d4f0cbed0d1"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/compiled-inputs/prelude.ts",
+        "bytes": 96,
+        "sha256": "00a9898dca96955da272e3b31de05f5367d6aeb3d3380f99daf5a3da1bbe5191"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/compiled-inputs/records.ts",
+        "bytes": 2644,
+        "sha256": "684483a4bc40437f31893362aecef728a68d86108ec612032c117e706dcf0dee"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/compiled-inputs/reserveCapacity.ts",
+        "bytes": 1834,
+        "sha256": "f8de77b2601a5803e3b8323f5419fdf3333ba5f2f631650ffbc30f70723c24ab"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/compiled-inputs/reserveEmpty.ts",
+        "bytes": 1834,
+        "sha256": "ff0366baa8f76cf9a930a4da03d381c3fa75df704bbd901d88a141759df4de13"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/compiled-inputs/reservePartial.ts",
+        "bytes": 1834,
+        "sha256": "2d6d0b3cf6eede718dd479ebd2ed80f74238cf9955bb336cb279e811e027d0a9"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/compiled-inputs/secondTake.ts",
+        "bytes": 1866,
+        "sha256": "31b41578c96d02879b37d510673d551eda8212e9e3a901f06b495ee7f097f77b"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/compiled-inputs/takeCapacity.ts",
+        "bytes": 1866,
+        "sha256": "b753b32f1b4c9602f70e4037b86ebfd08eac7381cb680f05d58a24d24d3687dd"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/compiled-inputs/tsconfig.json",
+        "bytes": 744,
+        "sha256": "c2027e61ec9f7df80478d319b4cca68f145125813a00fceac237d20e7605eea7"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/compiled-inputs/tuples.ts",
+        "bytes": 344,
+        "sha256": "35c5136fba447eb3d143642be0728127f16c99829dcff34a991fc204e5b644de"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/compiled-inputs/twoReservations.ts",
+        "bytes": 2120,
+        "sha256": "7f63cdab50968d2365520b13d64e6742397c1559d31e419c39d3530f62945fea"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/compiled-inputs/zeroAfterTake.ts",
+        "bytes": 1866,
+        "sha256": "68b734ee7b19bd0f33105279c8fa053dc9d9afebbd9128d7aaef8ba260e9dfe4"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/compiled-inputs/zeroOnZero.ts",
+        "bytes": 1866,
+        "sha256": "c509d154c88e7f8e812a8572faaa76a7a1df676bf64497192661717c4cf100be"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/excessive.ts",
+        "bytes": 1298,
+        "sha256": "88201daf266f0a41c73140b5bc54e3dba616ba8705b60f005ffecce1d8296147"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/forgotDeduction.ts",
+        "bytes": 729,
+        "sha256": "a94091d58197d27506cf5d224a29aacafe1fc2045df6832d27f99382b4d599f3"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/initialFive.ts",
+        "bytes": 633,
+        "sha256": "90a5b41e04e2da8994722a7104ac59ad497cdc9797bf6eb318982358a9198514"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/initialZero.ts",
+        "bytes": 633,
+        "sha256": "6939301ba510aa99d1ec9f5d735d9bc2ef89d187d670dda10e99f3acd375edb1"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/insufficient.ts",
+        "bytes": 1298,
+        "sha256": "afcaed1fb5e1e1b042fa0e5d5e5a00bbdb01666e7dd5b0f9595241504076d790"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/manifest.json",
+        "bytes": 1236,
+        "sha256": "d046253b833bf0f78829ff1a1fe2c351e4dd45453084d7e130c5babcfa48eecd"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/positiveOnZero.ts",
+        "bytes": 1298,
+        "sha256": "8ea5ca52590d5c422b79d3cdc74e274a36698bd8ef33376d114bd0e67cd2b9f0"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/receipt.json",
+        "bytes": 6589,
+        "sha256": "e64f62b155f44fa150ea6b164f008ccd865d78f0eb741683cb1dd23389b31eca"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/reserveCapacity.ts",
+        "bytes": 1266,
+        "sha256": "868ce6d5a90c1928c3450250f4bfc3ca9e159571e6273bd7fc5f9c74653cd20d"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/reserveEmpty.ts",
+        "bytes": 1266,
+        "sha256": "0051dcf3cc9b608063281ab849d432c1e15134d8ecc874a0b9a8dd40675e4292"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/reservePartial.ts",
+        "bytes": 1266,
+        "sha256": "cf3a2b643dc8a4c211260e10f8161e779d680acdab04d718681643d4f54be18d"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/scoped-audit.txt",
+        "bytes": 1455,
+        "sha256": "6be965fd95d6f7271b8d3010416b1577055561e5282bdad258bf61cd61a5224a"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/secondTake.ts",
+        "bytes": 1298,
+        "sha256": "90b2873015ef2c70789ecdc03419af7a38523fda9ed5ea0afcd9fa74f13168ba"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/takeCapacity.ts",
+        "bytes": 1298,
+        "sha256": "b9dcfda91eb259090cd7edee1146cfcb6cfc1d6a52ceef38ef03d88f71b9e0e7"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/twoReservations.ts",
+        "bytes": 1552,
+        "sha256": "8d272c6ac8aea173ecb384d310462445a78c207284b4421829fc3b7cf51cd828"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/zeroAfterTake.ts",
+        "bytes": 1298,
+        "sha256": "4ea1a6a72db2b179e0b3bd924661510f7a2f174079e5086486cbb8e8406ae985"
+      },
+      {
+        "path": "docs/research/2026-10-08-partitioned-bookkeeping-evidence/zeroOnZero.ts",
+        "bytes": 1298,
+        "sha256": "d8b63b725bdad7eaf2a36592c6b48465a96348841248bccad8ffaffcda48064f"
+      }
+    ]
+  },
+  {
+    "worktree": "/Users/pooks/.codex/worktrees/prepared-run-view/lean4-effect4",
+    "head": "8d0dfb652efec437f7691d28ac279d3f090fddaa",
+    "branch": "codex/cx-refusal-review-20261010",
+    "patch_comparison": "",
+    "archive": "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-11-machine-models/codex/worktrees/archives/prepared-run-view.tar.gz",
+    "archive_sha256": "eb739e0abfbb942588e2718c4c4639fac0164848be143e3003b7936325af5554",
+    "files": [
+      {
+        "path": "docs/research/2026-10-10-live-graph-support/run-view/Baseline.olean",
+        "bytes": 408624,
+        "sha256": "a01b102a24974cdba7b21c9eb920af153fd206320ad20a14b350e6f4a12ce490"
+      },
+      {
+        "path": "docs/research/2026-10-10-live-graph-support/run-view/Compare.olean",
+        "bytes": 34232,
+        "sha256": "8ce0199fc268bcfe83fea3723ea704fe0a06740531e91c3fd0c4cc68c207e3c3"
+      },
+      {
+        "path": "docs/research/2026-10-10-live-graph-support/run-view/render/001.draw",
+        "bytes": 4185,
+        "sha256": "06defc5e1af7679c66bb4e4b3990f5e6afd58cebdcffaf5d0e7be25b3cebda5c"
+      },
+      {
+        "path": "docs/research/2026-10-10-live-graph-support/run-view/render/001.svg",
+        "bytes": 14799,
+        "sha256": "1078fcc0c6bc12d87bf82f9781667a8ccf410feefa4c16ec979aa595301281b0"
+      },
+      {
+        "path": "docs/research/2026-10-10-live-graph-support/run-view/render/002.draw",
+        "bytes": 7230,
+        "sha256": "8c7f78af6a10b6eed3845c58735a850dd8a641fe90e190a2def3c07cead2e247"
+      },
+      {
+        "path": "docs/research/2026-10-10-live-graph-support/run-view/render/002.svg",
+        "bytes": 19224,
+        "sha256": "e999b4b2a7dcf1abb9e406c321e06713b46b76069b5c9936e9f6aa602969f89b"
+      },
+      {
+        "path": "docs/research/2026-10-10-live-graph-support/run-view/render/003.draw",
+        "bytes": 6942,
+        "sha256": "071fcdd003710f3dd9eda9f7b3126478de493bd2cd02f2f19c9cc6e3c8c35e77"
+      },
+      {
+        "path": "docs/research/2026-10-10-live-graph-support/run-view/render/frames.txt",
+        "bytes": 4252,
+        "sha256": "3085ac2949b7979952bde3dd271baf71ca1ab0134ede5397904f34293c226bf7"
+      }
+    ]
+  }
+]

@@ -377,4 +377,28 @@ theorem reference_primitive_heap (machine : Effect4.Program.NativeMachine)
   rw [current] at transfer
   exact reference_refTransfer machine.completedExits point machine.state _ transfer heap reference
 
+/-- The actual command consumes a captured point only at its looked-up synchronous writer.
+History still owes this permission and its cleanup/count order. -/
+theorem reference_command_heap (machine : Effect4.Program.NativeMachine) (command : Effect4.Program.SourceScope.SourceCommand)
+    (rest : List Effect4.Program.SourceScope.SourceCommand) (heap : HeapAt machine.state.refs)
+    (permission : ∀ id yielding fiber thunk next value, machine.fiber? id = some fiber →
+      (command = .loop id yielding ∨ command = .deliver id yielding) →
+      fiber.frame.current = .sync thunk →
+      (interpreter machine.completedExits).syncState thunk machine.state = some (next, value) →
+      next.refs = machine.state.refs ∨ ∃ point,
+        fiber.frame.current = resolve HostTimeoutSource.program point ∧
+        ReferenceAtPoint point machine.state.refs) :
+    HeapAt (driveStep (evaluator := evaluatorFor HostTimeoutSource.program
+        Test.Dogfood.Scenario.Timeout.fetch.table)
+      (interpOf HostTimeoutSource.program Test.Dogfood.Scenario.Timeout.fetch.table)
+      machine command rest).1.state.refs := by
+  apply (StoreExecution.command_refTransfer HostTimeoutSource.program Test.Dogfood.Scenario.Timeout.fetch.table
+    machine command rest).preserves HeapAt heap
+  intro id yielding fiber thunk next value found runs current unparked answer
+  rcases permission id yielding fiber thunk next value found runs current answer with same | ⟨point, source, allowed⟩
+  · exact same ▸ heap
+  · rw [source] at current unparked
+    exact reference_refTransfer machine.completedExits point machine.state next
+      (.sync thunk next value current unparked answer) heap allowed
+
 end Test.Dogfood.Proofs.HostTimeoutNumberState
