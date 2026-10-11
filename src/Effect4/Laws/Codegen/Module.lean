@@ -622,7 +622,7 @@ theorem printModule_shape {sig : Signature Op} {name : String} {ty : EffTy} {roo
       printDecl name ty body sig.scopeKey = .ok main := by
   unfold printModule at printed
   cases hoisted : root.hoistAll with
-  | error target => rw [hoisted] at printed; simp at printed
+  | error target => rw [hoisted] at printed; simp only [reduceCtorEq] at printed
   | ok pair =>
     obtain ⟨main, history⟩ := pair
     rw [hoisted] at printed
