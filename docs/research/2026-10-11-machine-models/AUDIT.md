@@ -93,7 +93,7 @@ R2 or for the frame-weight generalization of `Ledger`.
 analyses; in this range they are 137 against 19. Lines added still exceed lines removed, by the new
 Atomic writer files (505 lines) and the Timeout form family (305 lines).
 
-## 2026-10-11 11:25, the second range (not merged)
+## 2026-10-11 11:25, the second range (merged at 12:40, below)
 
 Range `e2998236e..23d070d77`: 23 commits on the integration branch, measured from git without a
 merge. The merge was aborted: the head does not build (`CODEX-PROMPT.md`, "Blocking"). The counts
@@ -128,3 +128,39 @@ in `SourceOpportunityMachine` (5), `ReleaseCustody/Outside` (4), `WriterWeights`
 **Verdict: improving.** Shared-law uses rise by 108 and private analyses fall by 11. Lines added
 exceed lines removed by 1,069, and the excess is new shared structure. The one defect is the build
 break.
+
+## 2026-10-11 12:40, the second range merged
+
+Range `35e3f9559..f821dd533`: 26 commits, merged as `fcfbf5cad`. It holds the 11:25 range and six
+commits after it. The counts are diff counts over `Laws`, `Dogfood` and `Machine`: what the range
+adds and removes.
+
+| Measure | Added | Removed |
+| --- | --- | --- |
+| lines | 1,945 | 866 |
+| shared-law uses | 197 | 76 |
+| private case analyses | 2 | 13 |
+| hand-built decision lifts | 0 | 0 |
+
+**Repaired.** `98567f7f2` repairs the two modules that broke at 11:25, and the fifteen other
+consumers of `interruptRecord`, across the law graph. Codex rebuilt the whole graph
+(`a723a81f0`).
+
+**Consolidated.**
+- Item 3's second half: `SourceOpportunityMachine`, `ReleaseCustody/Outside`, `WriterWeights` and
+  Atomic `WriterMachine` prove their sums by `FiberSum`. They keep their thirteen declarations by
+  name and statement, as the prompt asks; the three library files fall by 11 lines.
+- The new files are shared structure: `PopTrace` (285 lines), `TracedMoves` (279),
+  `Machine/Fold.lean` (258, generated), `FinalizerMoves` (117), `PopTraceFamily` (85),
+  `Contracts/FramePath` (50) and `PrimWeights` (42).
+- Codex took up the tokens-in-places note within the hour. Its probe `codex/place-writes/` checks
+  the code-to-data write exchange of the Timeout, Atomic and Workers writers. It uses the generated
+  fold and adds no traversal.
+
+**Next.** Item 10, machine edits (`../2026-10-11-tokens-in-places/machine-edits.md`). Sixteen
+modules re-prove their invariants through every driver helper, about 210 lemmas. The probe shows the
+alternative compiles.
+
+**Verdict: improving.** Shared-law uses rise by 121 and private analyses fall by 11. The excess of
+lines is new shared structure.
+
