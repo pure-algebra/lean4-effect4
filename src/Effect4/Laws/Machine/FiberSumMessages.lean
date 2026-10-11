@@ -35,7 +35,7 @@ theorem fiberEdit_le
         (by rw [observers, Nat.add_zero]; exact Nat.le_refl _)
   | dropToken token =>
     refine ⟨?_, ?_⟩
-    · simp only [applyFiberEdit, List.map_map, Function.comp_def]
+    · simp only [applyFiberEdit, RunMachine.dropToken, List.map_map, Function.comp_def]
     · exact Nat.le_of_eq (total_map w m _ (fun f => observers f _))
   | interrupt target cause =>
     simp only [applyFiberEdit]
