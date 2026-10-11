@@ -5,6 +5,7 @@ import Effect4.Laws.Program.ReleaseCustody.CommandFunding
 import Effect4.Laws.Program.ReleaseCustody.NativeStacks
 import Effect4.Laws.Program.ReleaseCustody.IterationDebit
 import Effect4.Laws.Program.ReleaseCustody.ReplySequencing
+import Effect4.Laws.Program.ReleaseCustody.NativeMachineShape
 
 /-!
 Concept: scope-lifetime-finalization, R11, at most once per registration counted by source identity.

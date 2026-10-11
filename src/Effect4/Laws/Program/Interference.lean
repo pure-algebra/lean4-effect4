@@ -11,7 +11,7 @@ observers by a cancelled token. This module states that list once:
   filtered, an interrupt recorded (`interruptRecord`). Nothing else of another fiber changes.
 * **The machine's interference** (`Interferes m m'`): the id counter does not go back, and every
   fiber of `m'` is a fiber of `m` with the same id under a word of edits, or is new: its id is at
-  least `m`'s counter.
+  least `m`'s counter, with its initial program, flags, budget and context retained through edits.
 * **The classification** (`evaluatePrim_interferes`, `exitScoped_interferes`,
   `evaluateNative_interferes`, `iteration_interferes`).
 
@@ -108,8 +108,11 @@ and every fiber of `m'` is an edited fiber of `m` or a new one. -/
 structure Interferes (m m' : NativeMachine) : Prop where
   /-- The id counter does not go back. -/
   nextId : m.nextId ≤ m'.nextId
-  /-- Every fiber is an edited old one, or new. -/
-  fibers : ∀ g' ∈ m'.fibers, (∃ g ∈ m.fibers, OtherEdits g g') ∨ m.nextId ≤ g'.id.value
+  /-- Every fiber is an edited old one, or an edited initialization.
+  The initialization retains its actual program and context, without asserting source ownership. -/
+  fibers : ∀ g' ∈ m'.fibers, (∃ g ∈ m.fibers, OtherEdits g g') ∨
+    (m.nextId ≤ g'.id.value ∧ ∃ program flag budget context,
+      OtherEdits (RunFiber.make g'.id program flag budget context) g')
 
 /-- No interference. -/
 theorem Interferes.refl (m : NativeMachine) : Interferes m m :=
@@ -122,8 +125,13 @@ theorem Interferes.trans {m m' m'' : NativeMachine} (a : Interferes m m') (b : I
   rcases b.fibers g'' mem with ⟨g', mem', w'⟩ | fresh
   · rcases a.fibers g' mem' with ⟨g, memOld, w⟩ | fresh'
     · exact .inl ⟨g, memOld, w.trans w'⟩
-    · exact .inr (by rw [w'.id]; exact fresh')
-  · exact .inr (Nat.le_trans a.nextId fresh)
+    · obtain ⟨bound, program, flag, budget, context, born⟩ := fresh'
+      refine .inr ⟨?_, program, flag, budget, context, ?_⟩
+      · rw [w'.id]
+        exact bound
+      · rw [w'.id]
+        exact born.trans w'
+  · exact .inr ⟨Nat.le_trans a.nextId fresh.1, fresh.2⟩
 
 /-- A machine edit that keeps the fiber list and does not lower the counter. -/
 theorem Interferes.ofFibers {m m' : NativeMachine} (fibers : m'.fibers = m.fibers)
@@ -183,7 +191,7 @@ theorem Interferes.spawn (interp : NInterp) (m : NativeMachine) (parent : NFiber
   rcases List.mem_append.mp mem with old | child
   · exact .inl ⟨g', old, .refl _⟩
   · rw [List.mem_singleton.mp child]
-    exact .inr (Nat.le_refl _)
+    exact .inr ⟨Nat.le_refl _, program, _, _, parent.context, .refl _⟩
 
 /-- Starting a spawned child keeps the fibers. -/
 theorem Interferes.start (m : NativeMachine) (parent : NFiber) (child : FiberId) (immediately : Bool) :
