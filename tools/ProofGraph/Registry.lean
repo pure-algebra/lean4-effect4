@@ -161,7 +161,10 @@ def registry : Registry where
     -- the lowered run's tape, for its placed consumer of the journal's position law
     `Test.Dogfood.Scenario.Tape,
     -- the crew over the public Queue: its claim and its four planned goals (seat WORKQ)
-    `Test.Dogfood.Scenario.QueueWorkers]
+    `Test.Dogfood.Scenario.QueueWorkers,
+    -- the tool laws of the checked summaries: the flow's connector, which imports the summary
+    -- law (claims dependency-summary-exact and view-reachability-summary-exact; seat FC)
+    `Tools.View.FlowReach]
   acceptance := [`Test.Dogfood.P1HttpCache, `Test.Dogfood.P2HandlerLayers,
     `Test.Dogfood.P3WorkerQueue, `Test.Dogfood.P4RateLimiter, `Test.Dogfood.P5LedgerService]
   concepts := [
@@ -1064,7 +1067,18 @@ def registry : Registry where
       pointer := .witness `Effect4.Stream.arrayStep_agrees },
     { id := "ref-steps-agree", concept := "translation-simulation", role := .simulation
       title := "Each of Ref's thirteen effectful operations agrees with the independent model of latest's Ref (Effect 4.0.1): allocation appends the initial value; on one allocated cell holding the encoded value, with a callback that evaluates to the encoded next value, each operation's reply and final stores are the model's; the laws compare replies and final stores under their allocation and callback-evaluation premises, not write events, so they say nothing of whether an operation writes an unchanged value; no scheduling, whole run, host object identity, callback exception or reentrant mutation (decisions row 335)"
-      pointer := .witness `Effect4.Ref.ref_steps_agree }
+      pointer := .witness `Effect4.Ref.ref_steps_agree },
+    -- the checked caches and summaries of the openai/math probe
+    -- (docs/research/2026-10-09-openai-math-probe/OPERATIONAL-PLAN.md; seat FC)
+    { id := "fold-cache-local-agreement", concept := "initial-algebras-folds", role := .compatibility
+      title := "Every answer that accepted entries of a type-fold cache hold is cata_ty of the same layer at its own source type: check accepts entries whose children stand in earlier entries and whose answers meet the layer's local equation over the generated view, so payloads, names, flags and child order are part of each equation; check accepts the entries that prepare builds at every type, so answer returns the fold at every type (answer_eq); nothing of speed, of reuse after an edit, of a typing judgment, or of an input the layer inherits (slice D6, serving R14)"
+      pointer := .witness `Effect4.Program.TyCache.check_agreement },
+    { id := "dependency-summary-exact", concept := "initial-algebras-folds", role := .decidability
+      title := "A distance table that check accepts on a finite graph with cycles reports a label at a node if and only if a directed path from the node reaches a node that seeds the label: each seed and each child's label has an entry, and each entry is a seed or has a child at a smaller distance, one distance per node and label; #axiom_audit checked runs it over the axiom walk's answers and their captured graph (ProofGraph.checkDependencies); nothing of the capture's fidelity to the environment, of a theorem that a node names, or of speed"
+      pointer := .witness `Tools.Graph.Summary.check_summary_exact },
+    { id := "view-reachability-summary-exact", concept := "initial-algebras-folds", role := .decidability
+      title := "A flow's distance table that checkReach accepts (every edge's ends below the position bound, and check on the reach graph) reports a target at a source if and only if Flow.Reach leads from the source to the target; an end at or above the bound is refused, never dropped; ReachTable answers directed queries under this law; nothing of a schedule, a layout, a forest or weak connectedness"
+      pointer := .witness `Tools.View.Flow.checkReach_exact }
   ]
   cuts := [
     -- 1. store-typing

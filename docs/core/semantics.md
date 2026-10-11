@@ -1189,6 +1189,35 @@ def inhabited (t : Ty) : Bool := cata_ty inhabitedAlg t
   each slot has a type there (`hasTy_extSlotEnv`
   (`src/Effect4/Laws/Program/Typing/Table.lean`)). The property does not say that the
   environment is the only one, and it says nothing at a node that the checker refuses.
+- **Local agreement of a type-fold cache (`fold-cache-local-agreement`)**: a cache holds
+  entries, each a source type and an answer, the newest first
+  (`src/Effect4/Program/TyCache.lean`). `check` accepts entries whose children stand in earlier
+  entries and whose answers meet the layer's local equation at their own sources. Every
+  answer of accepted entries is `cata_ty` of the same layer at its source (`check_agreement`
+  (`src/Effect4/Laws/Program/Folds/TyCache.lean`)). The equation reads the generated view, so
+  a payload, a field name, a flag and the order of two children are part of it. `check`
+  accepts the entries that `prepare` builds, so `answer` returns the fold at every type
+  (`answer_eq`). The property establishes no speed and no reuse after an edit. It reads no
+  typing judgment and no input that the layer inherits: the type is the whole key. Its consumer
+  is slice D6 of `docs/research/2026-10-09-program-graph-design.md`, serving R14.
+- **A checked summary of cyclic dependencies (`dependency-summary-exact`)**: a finite graph
+  gives each node its seeded labels and its ordered children (`Tools.Graph.Summary.Graph`,
+  `tools/Tools/Graph/Summary.lean`). Cycles are allowed. A summary is a table with a distance
+  for each node and label. `check` accepts a table when each seed and each child's label has an
+  entry. Each entry must also be a seed, or have a child at a smaller distance. An
+  accepted table holds an entry if and only if a directed path reaches a seed of the label
+  (`check_summary_exact`). One distance per node would refuse valid summaries on a cycle, so a
+  distance belongs to a node and a label. `#axiom_audit checked` runs this check over the axiom
+  walk's answers and the graph they read (`checkDependencies`,
+  `tools/ProofGraph/Summary.lean`). The property says nothing of the capture's fidelity to the
+  Lean environment, and nothing of a theorem that a node names.
+- **A checked reachability of a flow (`view-reachability-summary-exact`)**: the reach graph of a
+  flow has a node for each item position below a bound (`Tools.View.Flow.reachGraph`,
+  `tools/Tools/View/FlowReach.lean`). Each node seeds its own position. When `checkReach` accepts
+  a table, the table reports a target at a source if and only if `Flow.Reach` leads there
+  (`checkReach_exact`). An edge with an end at or above the bound is refused, since dropping
+  it could lose a path. `ReachTable` answers directed queries under this law. The property
+  establishes no schedule, no layout and no weak connectedness.
 
 ### 2.8 Concept 8: Context Requirements & Provision (`context-requirements`)
 
