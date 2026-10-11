@@ -21,12 +21,13 @@ variable (interp : PrimInterp ν σ β ε δ ι α)
 /-- A restoring mask's saved answer classes agree; its hook has a separate cause obligation. -/
 theorem saved_mask (world : World) (kind : Kind) (flag : Bool) :
     SavedAt model interp world kind kind (.setInterruptible flag) := by
-  refine .mk world kind kind _ ?_ ?_ ?_ ?_ ?_
+  refine .mk world kind kind _ ?_ ?_ ?_ ?_ ?_ ?_
   · intro _ _ _ good _; exact good
   · intro _ _ _ good _; exact good
   · intro _ _ _ _ _ _ _ _ _ impossible; cases impossible
   · intro _ _ _ _ _ _ _ _ _ impossible; cases impossible
   · intro _ _ _ _ _ impossible; cases impossible
+  · intro _ _ _ _ _ _ arm; cases arm
 
 /-- Every actual hook retains the ordered suffix, inserting only an identity mask frame. -/
 theorem ensure_stack (world : World) (input output : Kind)
@@ -97,5 +98,13 @@ theorem install_finalizer_after_ensure (world : World) (input middle output : Ki
     FrameAt model interp world output {((Prim.onExit body name flag).ensure fiber).1 with current := next} :=
   install_finalizer model interp world input middle output _ body name flag exit next good callback installed
     (ensure_stack model interp world middle output (.onExit body name flag) fiber stack)
+
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+/-- An actual protected finalizer hook cannot be discarded by the interrupted-handler branch. -/
+theorem ensure_protected_not_interrupted (body : Prim ν σ β ε δ ι α) (name : ν)
+    (fiber : FrameFiber ν σ β ε δ ι α) :
+    ((Prim.onExit body name false).ensure fiber).1.interrupted = false := by
+  cases fiber with
+  | mk current stack flag pending deferred => cases flag <;> rfl
 
 end Effect4.Machine.AnswerFlow

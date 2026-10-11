@@ -1,4 +1,4 @@
-import Effect4.Laws.Machine.AnswerFlowPop
+import Effect4.Laws.Machine.AnswerFlowCausePop
 import Effect4.Program.Compile
 import Effect4.Laws.Auto.KernelRfl
 
@@ -42,6 +42,7 @@ example : FrameAt stage interp 1 1 {frame with current := .success .unit} := by
 example : FrameAt stage interp 1 1 {frame with current := interp.contE name reason} := by
   have saved := saved_failure stage interp 1 1 1 (.success .unit) name
     (fun _ _ _ good => good) (fun _ _ cause good => ⟨good, Or.inr ⟨cause, rfl⟩⟩)
+    (fun _ _ _ _ _ good _ _ => good)
   exact (resume_failure stage interp 1 1 1 1 frame (.success .unit) name reason none
     rfl rfl rfl (by intro exit member; cases member) saved (.nil 1 1)).2
 
@@ -75,6 +76,7 @@ example : ∃ next events,
       (.running next, events) ∧ FrameAt stage interp 1 1 next := by
   have failed := saved_failure stage interp 1 1 1 (.success .unit) name
     (fun _ _ _ good => good) (fun _ _ cause good => ⟨good, Or.inr ⟨cause, rfl⟩⟩)
+    (fun _ _ _ _ _ good _ _ => good)
   have constant := saved_constant stage interp 1 1 1 (.yieldNowWith 0) (.success .unit)
     (fun _ _ _ good => ⟨good.1, Or.inl rfl⟩) (fun _ _ _ good => good)
   have result := resumeValue_selected stage interp 1 1 1
@@ -93,5 +95,26 @@ example : (({frame with
     stack := [.setInterruptible true, .onSuccessConst (.yieldNowWith 0) (.success .unit)]}).getCont .contA false).answer =
     .replacement (.failure reason) := by
   kernel_rfl
+
+/-- The native failure pop discards an interrupted handler, passes a mask, then invokes the remaining handler. -/
+example : ∃ next events,
+    ({frame with
+      interruptedCause := some reason
+      stack := [.onFailure (.success .unit) name, .setInterruptible false,
+        .onFailure (.success .unit) name]}).resumeCause interp reason none =
+      (.running next, events) ∧ FrameAt stage interp 1 1 next := by
+  have saved := saved_failure stage interp 1 1 1 (.success .unit) name
+    (fun _ _ _ good => good) (fun _ _ cause good => ⟨good, Or.inr ⟨cause, rfl⟩⟩)
+    (fun _ _ _ _ _ good _ _ => good)
+  have result := resumeCause_selected stage interp 1 1 1
+    {frame with
+      interruptedCause := some reason
+      stack := [.onFailure (.success .unit) name, .setInterruptible false,
+        .onFailure (.success .unit) name]}
+    reason (.onFailure (.success .unit) name) (.failure reason) [] rfl
+    (.cons saved (.cons (saved_mask stage interp 1 1 false) (.cons saved (.nil 1 1))))
+    (by kernel_rfl) rfl (by kernel_rfl)
+  rcases result with ⟨events, equation, typed⟩
+  exact ⟨_, events, equation, typed⟩
 
 end Test.Machine.AnswerFlow

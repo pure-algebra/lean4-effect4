@@ -47,6 +47,8 @@ theorem merge_saved (view : View) (state : Stores) (image : Image) (exit : ExitV
     exact good
   · intro next future cause good
     exact False.elim good
+  · intro next future fiber cause delivered good interrupted skipped
+    exact False.elim good
 
 /-- The actual source cleanup wrapper keeps a fixed stack class while restoring its captured exit. -/
 theorem cleanup_finalizer_code (view : View) (state : Stores) (image : Image)
@@ -146,7 +148,7 @@ theorem attempt_saved (view : View) (state : Stores) (image : Image)
     AnswerFlow.SavedAt (model view) (interpreter view).toPrimInterp state
       (.at image) (.cleanupExit image own) (.onExit body (.fin point) false) := by
   dsimp only
-  refine AnswerFlow.SavedAt.mk state (HostTimeoutNumberFlow.Kind.at image) (HostTimeoutNumberFlow.Kind.cleanupExit image own) _ ?_ ?_ ?_ ?_ ?_
+  refine AnswerFlow.SavedAt.mk state (HostTimeoutNumberFlow.Kind.at image) (HostTimeoutNumberFlow.Kind.cleanupExit image own) _ ?_ ?_ ?_ ?_ ?_ ?_
   · intro next future value good absent
     cases absent
   · intro next future cause good absent
@@ -180,6 +182,9 @@ theorem attempt_saved (view : View) (state : Stores) (image : Image)
     rw [← exactCode]
     exact cleanup_finalizer_code view next image own exit _
       (CodeAt.cleanup image own {captured with completed := view} fuel delay n error exit count heap)
+  · intro next future fiber cause delivered good arm interrupted skipped
+    rw [AnswerFlow.ensure_protected_not_interrupted] at interrupted
+    cases interrupted
 
 /-- The actual saved form finalizer consumes only the completed attempt-cleanup heap. -/
 theorem form_saved (view : View) (state : Stores) (image : Image)
@@ -190,7 +195,7 @@ theorem form_saved (view : View) (state : Stores) (image : Image)
     AnswerFlow.SavedAt (model view) (interpreter view).toPrimInterp state
       (.at image) (.formExit image cleanupComplete own) (.onExit body (.fin point) false) := by
   dsimp only
-  refine AnswerFlow.SavedAt.mk state (HostTimeoutNumberFlow.Kind.at image) (HostTimeoutNumberFlow.Kind.formExit image cleanupComplete own) _ ?_ ?_ ?_ ?_ ?_
+  refine AnswerFlow.SavedAt.mk state (HostTimeoutNumberFlow.Kind.at image) (HostTimeoutNumberFlow.Kind.formExit image cleanupComplete own) _ ?_ ?_ ?_ ?_ ?_ ?_
   · intro next future value good absent
     cases absent
   · intro next future cause good absent
@@ -221,6 +226,9 @@ theorem form_saved (view : View) (state : Stores) (image : Image)
     rw [← exactCode]
     exact form_finalizer_code view next image cleanupComplete own exit _
       (CodeAt.completed image cleanupComplete own {captured with completed := view} fuel delay n error exit count heap)
+  · intro next future fiber cause delivered good arm interrupted skipped
+    rw [AnswerFlow.ensure_protected_not_interrupted] at interrupted
+    cases interrupted
 
 /-- Actual attempt finalizer installation applies its native mask hook to the real older stack. -/
 theorem attempt_install (view : View) (state : Stores) (image : Image)

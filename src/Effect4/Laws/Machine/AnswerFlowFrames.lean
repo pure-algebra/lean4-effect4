@@ -47,9 +47,14 @@ theorem saved_failure (world : World) (input output : Kind)
     (skip : ∀ nextWorld, model.future world nextWorld → ∀ value,
       model.value nextWorld input value → model.value nextWorld output value)
     (callback : ∀ nextWorld, model.future world nextWorld → ∀ cause,
-      model.cause nextWorld input cause → model.code nextWorld output (interp.contE name cause)) :
+      model.cause nextWorld input cause → model.code nextWorld output (interp.contE name cause))
+    (discard : ∀ nextWorld, model.future world nextWorld →
+      ∀ (fiber : FrameFiber ν σ β ε δ ι α) cause delivered,
+      model.cause nextWorld input cause → fiber.interrupted = true →
+      FrameFiber.skippedCause .contE (.onFailure body name) fiber (some cause) = some delivered →
+      model.cause nextWorld output delivered) :
     SavedAt model interp world input output (.onFailure body name) := by
-  refine .mk world input output _ ?_ ?_ ?_ ?_ ?_
+  refine .mk world input output _ ?_ ?_ ?_ ?_ ?_ ?_
   · intro nextWorld future value good absent
     exact skip nextWorld future value good
   · intro nextWorld future cause good absent
@@ -62,6 +67,8 @@ theorem saved_failure (world : World) (input output : Kind)
     exact .mk nextWorld output output _ [] (callback nextWorld future cause good) (.nil nextWorld output)
   · intro nextWorld future exit next good program
     cases program
+  · intro nextWorld future fiber cause delivered good _ interrupted skipped
+    exact discard nextWorld future fiber cause delivered good interrupted skipped
 
 /-- Pushing an actual failure frame retains its body and the older suffix. -/
 theorem push_failure (world : World) (input middle output : Kind)
@@ -115,7 +122,7 @@ theorem saved_constant (world : World) (input output : Kind)
     (skipCause : ∀ nextWorld, model.future world nextWorld → ∀ cause,
       model.cause nextWorld input cause → model.cause nextWorld output cause) :
     SavedAt model interp world input output (.onSuccessConst body next) := by
-  refine .mk world input output _ ?_ ?_ ?_ ?_ ?_
+  refine .mk world input output _ ?_ ?_ ?_ ?_ ?_ ?_
   · intro nextWorld future value good absent
     cases absent
   · intro nextWorld future cause good absent
@@ -128,6 +135,8 @@ theorem saved_constant (world : World) (input output : Kind)
     cases arm
   · intro nextWorld future exit code good program
     cases program
+  · intro _ _ _ _ _ _ arm
+    cases arm
 
 /-- Pushing the actual constant frame preserves the ordered saved answer classes. -/
 theorem push_constant (world : World) (input middle output : Kind)

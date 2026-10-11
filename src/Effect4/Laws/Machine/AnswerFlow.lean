@@ -72,7 +72,13 @@ inductive SavedAt
         ResultAt model interp nextWorld output next pushed)
       (program : ∀ nextWorld, model.future world nextWorld → ∀ exit next,
         ExitAt model nextWorld input exit → programOf model nextWorld frame exit = some next →
-        model.code nextWorld output next) :
+        model.code nextWorld output next)
+      (discard : ∀ nextWorld, model.future world nextWorld →
+        ∀ (fiber : FrameFiber ν σ β ε δ ι α) cause delivered,
+        model.cause nextWorld input cause → frame.hasArm .contE = true →
+        (frame.ensure fiber).1.interrupted = true →
+        FrameFiber.skippedCause .contE frame (frame.ensure fiber).1 (some cause) = some delivered →
+        model.cause nextWorld output delivered) :
       SavedAt model interp world input output frame
 
 /-- The actual saved list composes frame contracts through their intermediate answer classes. -/
@@ -109,13 +115,14 @@ theorem saved_mono {world nextWorld : World} (future : model.future world nextWo
     (held : SavedAt model interp world input output frame) :
     SavedAt model interp nextWorld input output frame := by
   cases held with
-  | mk _ _ _ _ skip skipCause answer cause program =>
+  | mk _ _ _ _ skip skipCause answer cause program discard =>
     exact .mk nextWorld input output frame
       (fun last later => skip last (model.future_trans world nextWorld last future later))
       (fun last later => skipCause last (model.future_trans world nextWorld last future later))
       (fun last later => answer last (model.future_trans world nextWorld last future later))
       (fun last later => cause last (model.future_trans world nextWorld last future later))
       (fun last later => program last (model.future_trans world nextWorld last future later))
+      (fun last later => discard last (model.future_trans world nextWorld last future later))
 
 /-- The ordered saved suffix moves to the state after a successful store operation. -/
 theorem stack_mono {world nextWorld : World} (future : model.future world nextWorld)
@@ -146,7 +153,7 @@ theorem saved_success (world : World) (input output : Kind)
     (skipCause : ∀ nextWorld, model.future world nextWorld → ∀ cause,
       model.cause nextWorld input cause → model.cause nextWorld output cause) :
     SavedAt model interp world input output (.onSuccess body name) := by
-  refine .mk world input output _ ?_ ?_ ?_ ?_ ?_
+  refine .mk world input output _ ?_ ?_ ?_ ?_ ?_ ?_
   · intro nextWorld future value good absent
     cases absent
   · intro nextWorld future cause good absent
@@ -159,6 +166,8 @@ theorem saved_success (world : World) (input output : Kind)
     cases arm
   · intro nextWorld future exit next good program
     cases program
+  · intro _ _ _ _ _ _ arm
+    cases arm
 
 /-- A pushed success frame retains the original body only as inert saved data.
 Consumer: the native source body's actual bind push. -/
