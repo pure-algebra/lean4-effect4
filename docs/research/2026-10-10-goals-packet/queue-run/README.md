@@ -20,11 +20,17 @@ general machine law (section 6.2).
 
 Two traps stand before any proof.
 
-1. **The elaboration of `crew total` does not reduce at a symbolic `total`**, and every goal
-   quantifies over `total` (tested; section 8.3). At a fixed `total` it reduces: `rfl` takes 4.7
-   seconds and `decide` 20 seconds. The stuck step is `elaborateModule`'s pass that places the
-   module's layers, over a tree with a minted loop and a symbolic literal. It is the first slice's
-   work.
+1. **The elaboration of `crew total` does not reduce by `rfl` at a symbolic `total`**, and every
+   goal quantifies over `total` (tested; section 8.3). At a fixed `total` it reduces: `rfl` takes
+   4.7 seconds and `decide` 20 seconds. The stuck step is located (tested, `scratch/StuckStep.lean`).
+   It is not the literal. It is a minted binder name, whose digits come from `toString` of the
+   scope's length. `whnf` folds `Nat.mod` and `Nat.div` only on an argument with no free variable
+   (`withNatValue`, `Lean/Meta/WHNF.lean` in the toolchain). The scope that
+   `elaborateModule` builds reads `(crew total).rowDefs`, so the argument carries `total`. At full
+   transparency `#reduce` reaches `true` (tested). The repair is to rewrite the module's three
+   closed fields to their values at `0` before `rfl` (`scratch/StuckFix.lean`). It is not
+   verified: the run was stopped at the wrap-up. If it fails, the fallback is a choice for the
+   owner (section 9.1).
 2. **Need 5's reason is the op budget, not the mask.** The docstring says that no interruption is
    taken between a take's commit and its note "because the caller holds no mask". The operative
    fact is that the commit and the note run in one entry of the worker's fiber. An entry's op
@@ -268,7 +274,7 @@ general laws' conventions (N3).
 
 | Id | Lemma | General or `crew` | Placement | Route | Hours | Traps |
 | --- | --- | --- | --- | --- | --- | --- |
-| N1 | `crew_built : build (crew total) = .ok b → b.program = crewProgram total ∧ b.table = crewTable` | `crew`, with one general lemma | `translation-simulation`, R10 (a fact of the program) | Find the stuck step of `elaborateModule` at a symbolic `total` (section 8.3). Prove that its pass that places the module's layers (`placeholderSites`, `placeRounds`, `pointAtPlaced`) is the identity on a tree that names no layer, by the program family's generated fold. Then the main program's elaboration reduces by `rfl`: the minted loop alone reduces at a symbolic literal (tested). Write `crewProgram` as that reduct | 8–16 | `decide` refuses free variables; `rfl` gives up in 0.2 s; each re-reduction of the program costs 5 s, so state the equation once |
+| N1 | `crew_built : build (crew total) = .ok b → b.program = crewProgram total ∧ b.table = crewTable` | `crew`, with general lemmas on the authoring elaborator | `translation-simulation`, R10 (a fact of the program) | The stuck step is located (section 8.3): a minted name's digits under a scope that carries `total`. First the general lemma `build_ok`: `build m = .ok b → elaborateModule m = .ok b.program ∧ b.table = m.table` (written in `scratch/StuckFix.lean`, not verified). Then rewrite the module's closed fields to their values at `0` and close the equation by `rfl`. Write `crewProgram` once from `#reduce`'s output. If `rfl` still fails, prove the equation through lemmas on the builders it passes | 2–6 if the repair holds (suspected, not verified); 8–16 otherwise (section 9.1) | `decide` refuses free variables; `rfl` gives up in 0.07 to 0.2 s; each re-reduction of the program at a fixed count costs 5 s, so state the equation once |
 | N2 | `JournalOk` with `journalOk_open`, `journalOk_step : RowKeeps (fun _ => True) JournalOk`, and `fedOf_step : JournalOk s → fedOf (s.step c) = fedOf s ++ fedRow s c` | general: write `fedOf` as `appliedOn "Jobs.take"` | `host-session-protocol`, R6 and R13 | `JournalOk`: each active call has its accepted `bind` row, each stored reply its accepted `submit` row, each applied key its earlier `bind` and `submit`, and no key is bound twice (tokens are fresh: `nextToken` grows). Then `seenAt` and the `submit` lookup of an earlier applied key are stable under an appended row (`find_append_fresh`, `src/Effect4/Laws/Run.lean`) | 12–20 | `fedOf` reads the whole journal of the final run, not the run at its row |
 | N3 | The command laws on any machine, for a fiber whose current primitive is plain (`PlainCode`): a loop step, a store operation, a finish, with the op count below the budget, no override and no deferred interruption; the other fibers untouched | general | `translation-simulation`, R8, beside `drive_loop_running` | Generalize `src/Effect4/Laws/Program/Agreement/Machine.lean` from its one-fiber machine `M` to `m.update`, and carry the count: it starts at zero at each `Cmd.evaluate` and grows by one at each iteration | 25–40 | `rfl` on whole commands does not scale (section 8.4) |
 | N4 | The fiber-level arms on any machine: a fork with a deferred start; `Deferred` make, completion with its resumes now, and the await's registration, park and cancel; an external call's park and its answer decision; a scope's open and its sequential close, which awaits each fiber; `acquireRelease`; the mask's frames; an interruption, through `interruptRecord` and the failure's pop through `asyncFinalizer`, `onExit` and `setInterruptible` frames; the loop's frames; `catchIf`; a flush as rounds of `fireState`; an answer decision as preparation and resume | general | `translation-simulation`, R8 to R12; each a step of `posted-task-decision-preserves`, `waiting-request-obligation-preserved` or the scope laws | One law per arm of `evaluatePrim` and `driveStep` that the crew reaches (`src/Effect4/Machine/Fibers.lean`), each on `m.update`, each with the frame fact that the stack below the arm's frames is not read | 95–145 | a store operation's compile reads its handle's shape, so a law takes a cell or `Deferred` handle, not a free value (section 8.4); `stepDecisionState` drops a loop's leftover commands, so a law takes `rowReads`, not `funded` |
@@ -375,7 +381,12 @@ above its calling frames, with the reply's value as its answer. That job is P7's
 | `rfl` of the same | 4.7 s (`scratch/KernelSymbolic.lean`) |
 | `rfl` at a symbolic `total` | fails after 0.2 s |
 | `decide +kernel` at a symbolic `total` | refused: the goal holds a free variable |
-| Bisection (`scratch/KernelBisect0.lean`, `scratch/KernelBisect.lean`, `scratch/KernelBisect2.lean`) | a module whose main is a test on the symbolic literal reduces, and so does that test in a scope; the same test inside `iterateWith` does not, nor does one worker; one worker at three jobs does. A literal inside `iterateWith` does not reduce; the raw `iterate` lift with written names does; `iterateWith` alone, outside `elaborateModule`, does. So the stuck step is in `elaborateModule`'s pass over the finished tree |
+| Bisection (`scratch/KernelBisect0.lean`, `scratch/KernelBisect.lean`, `scratch/KernelBisect2.lean`) | a module whose main is a test on the symbolic literal reduces, and so does that test in a scope; the same test inside `iterateWith` does not, nor does one worker; one worker at three jobs does. A literal inside `iterateWith` does not reduce through `elaborateModule`; the raw `iterate` lift with written names does; `iterateWith` alone, at the empty scope, does |
+| The crew's main program alone, in the scope that `elaborateModule` gives it (`scratch/KernelMain.lean`) | `rfl` fails after 0.07 s at a symbolic `total`, and so does `refSites` on its tree. So the stuck step is not only `elaborateModule`'s pass over the finished tree: the bisection does not locate it |
+| The same with every definition unfoldable (`with_unfolding_all rfl`, `scratch/KernelMain2.lean`) | no verdict on the first example after 16 minutes; stopped |
+| `#reduce` at full transparency on a minted loop's module (`scratch/KernelMain3.lean`, `kernelmain3.out`) | `true` at a symbolic `total`, for the loop, its layer sites and its module |
+| The stuck chain under `rfl`'s transparency (`scratch/StuckStep.lean`, `stuckstep.out`) | for the loop's module, the crew's main program and the crew's module, the same step: `minted` compares byte lists (`List.hasDecEq`), and the tail `(toString (List.length env.names)).toByteArray.data.toList` does not reduce. `env` carries `total` through `(crew total).rowDefs`, and `withNatValue` refuses an argument with a free variable |
+| The repair: rewrite `(crew total).layers`, `.rowDefs` and `.defs` to their values at `0`, then `rfl`; and the general lemma `build_ok` (`scratch/StuckFix.lean`) | not verified: stopped after 10 minutes at the coordinator's wrap-up, with no output |
 
 ### 8.4 Symbolic execution on the machine
 
@@ -427,6 +438,21 @@ nothing of another client of the Queue. An invariant at rest is no progress. Fiv
 5. **The goals quantify over every job count**, `0` included: at `0` the gate never completes, and
    the statements still hold. That quantification is trap 1 (N1).
 
+### 9.1 A choice for the owner: the job count
+
+N1 is the first slice. Its stuck step is located, and its repair is written but not verified
+(section 8.3). If the repair fails, the way forward changes a statement or the program, and that
+choice is the owner's.
+
+| Option | What changes | Cost | What the claim loses |
+| --- | --- | --- | --- |
+| (a) Prove N1 at every job count, as planned | nothing | 2 to 6 hours if the repair holds, else 8 to 16 | nothing |
+| (b) Restate the three goals at the battery's job count, `crew 3` | the three propositions | none: the elaboration reduces in 4.7 seconds at a fixed count | every count but 3. The controls and the census run at 3, and seat WORKQ's part B at 1 to 3 |
+| (c) Make the job count an input of the run, not a literal of the program | the program `crew`, its faces, its lowered runs and its fixtures | a scenario slice of its own | nothing, once done |
+
+The recommendation is (a) with a box of 16 hours, then (b). The machine laws (N3 to N5) do not
+depend on the choice, so slices 2 to 5 can start at once.
+
 ## 10. Shared machinery
 
 The general parts that another family likely needs too. The coordinator unifies the four seats'
@@ -465,7 +491,9 @@ before each build: 16 GB, then 14 GB).
 | `lake build Effect4.Laws.Library.Queue.Invariant` | `Build completed successfully (8 jobs).` |
 | `lake build Effect4.Laws.Library.Queue.Steps` | `Build completed successfully (534 jobs).` |
 | `lake env lean docs/research/2026-10-10-goals-packet/queue-run/Probe.lean` | exit 0, no warning; its one output line is the audit below |
-| `lake env lean` on each scratch probe | the outputs in `scratch/*.out`. Four exit 1 by design: `KernelBisect0.lean`, `KernelBisect.lean`, `KernelSymbolic.lean` and `SymbolicSteps.lean`. Each of their errors is an expected failure that section 8 reads |
+| `lake env lean` on each scratch probe | the outputs in `scratch/*.out`. Five exit 1 by design: `KernelBisect0.lean`, `KernelBisect.lean`, `KernelSymbolic.lean`, `KernelMain.lean` and `SymbolicSteps.lean`. Each of their errors is an expected failure that section 8 reads |
+| `lake env lean` on `scratch/KernelMain2.lean` and `scratch/StuckFix.lean` | stopped with no output: the first after 16 minutes, the second after 10 at the coordinator's wrap-up. Neither verdict is known |
+| `lake env lean` on `scratch/KernelMain3.lean` and `scratch/StuckStep.lean` | exit 0; outputs `kernelmain3.out` and `stuckstep.out` |
 
 **Axioms.** `#packet_audit` at the foot of `Probe.lean` runs the gate's exact walk
 (`ProofGraph.reachedAxiomsMany`) over every declaration of the probe's namespace, with the planned
@@ -479,7 +507,9 @@ goals as stops. Its output:
   QueueRunPacket.queue_settled_probe rests on [QueueRunPacket.crew_host_invariant]
 ```
 
-**Open obligations.** The two planned goals, and N1 to N10 of section 6.2 under them.
+**Open obligations.** The two planned goals, and N1 to N10 of section 6.2 under them. Not
+verified: N1's repair and the lemma `build_ok` in `scratch/StuckFix.lean` (written, never
+compiled). `Probe.lean` compiles whole; nothing in it is commented out.
 
 **Bounded or host-only evidence.** Every test of section 8 is finite, on the Lean machine. No run is
 a host run. The census and the classifier's check are bounded: one program at three jobs, scripts
