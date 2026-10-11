@@ -196,8 +196,11 @@ A program has folds, a journaled run with replay, and a printed image that reads
   [machine-from-the-base note](research/2026-10-11-machine-from-the-base/README.md)). One native
   evaluation edits the evaluated fiber's frame by a word of eight moves (`iteration_moves`,
   `src/Effect4/Laws/Program/Moves.lean`), and its footprint on the run fiber keeps six fields
-  (`iteration_footprint`). Five guard chains and the evaluation half of `MaskRuns` follow as
-  instances; replacing the old chains is Codex's lane. A raw context write makes a checked program at
+  (`iteration_footprint`). Every other fiber after an evaluation is an old one under three listed
+  edits, or a new one (`iteration_interferes`). An iteration that does not finish is the same over
+  more frames, with the same machine (`iteration_under`, `src/Effect4/Laws/Program/StackLocal.lean`):
+  the evaluation's half of `compiled_region_bracket`'s premise. Five guard chains and the evaluation
+  half of `MaskRuns` follow as instances; replacing the old chains is Codex's lane. A raw context write makes a checked program at
   a closed row die with `missingService` (`E4-CTX-CE-001`, row 349), and the printer spells a pair of
   a union as a union of pairs (`E4-PRINT-CE-001`, row 346, ruled).
 - **The build.** The program and dogfood batteries run the machine as native code (row 327). A

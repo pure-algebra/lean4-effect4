@@ -1,6 +1,6 @@
 # Prompt for Codex: the machine's base laws, and the cleanup they allow
 
-Work in the lean4-effect4 repository, branch `refactor/phase1-phase3`, from commit `603a44a32` or
+Work in the lean4-effect4 repository, branch `refactor/phase1-phase3`, from commit `938d2ea4e` or
 later. Read `AGENTS.md` first; it binds you. Then read this folder's `README.md` (the machine from
 its base) and `context-transformers.md` (the dynamic context). This lane runs beside the goals
 packet's lane. Do not reorder that lane; take this one when it has room.
@@ -22,10 +22,15 @@ packet's lane. Do not reorder that lane; take this one when it has room.
   the machine is an old fiber (same id) under a word of three listed edits (an observer appended,
   observers filtered, an interrupt recorded), or a new one (`Interferes`, `iteration_interferes`).
   No edit changes another fiber's id or exit (`OtherEdits.id`, `OtherEdits.exit`).
+- `src/Effect4/Laws/Machine/StackLocal.lean` and `src/Effect4/Laws/Program/StackLocal.lean`: the
+  fiber machine's frame rule at one evaluation. A frame-machine step that goes on is the same over
+  more frames, events included (`step_under_pair`). A native iteration that does not finish
+  (`GoesOn`) is the same over more frames, with the same machine (`iteration_under`, down through
+  every level and all 24 actions).
 - `Test/Counterexamples/Program/ContextReset.lean` (`E4-CTX-CE-001`) and
   `Test/Counterexamples/Codegen/PrintDistributes.lean` (`E4-PRINT-CE-001`), both seeded.
 
-All four modules audit within `[propext, Quot.sound]` (`probes/AuditMoves.lean`, 475 declarations).
+All six modules audit within `[propext, Quot.sound]` (`probes/AuditMoves.lean`, 590 declarations).
 
 ## The work, in order
 
@@ -52,12 +57,11 @@ All four modules audit within `[propext, Quot.sound]` (`probes/AuditMoves.lean`,
    and `settle`. This is Owicki and Gries's non-interference made one theorem
    (`MaskAged` is its mask instance). It is the generic half of the goals packet's G2, and the
    goals lane's per-program assertions can then cite it instead of re-deriving it.
-3. **Stack locality (B3).** At one evaluation: if the evaluation of `f` does not finish, the
-   evaluation of `f` with frames `below` under its stack is the same evaluation, with `below` under
-   the result's stack, and the same machine. The frame machine's form is `step_under`, with
-   `getCont_under_answered`, `resumeValue_under`, `resumeCause_under`
-   (`src/Effect4/Laws/Machine/MaskBracket.lean`). Then along a run through `Machine.Lift`, which
-   discharges the premise `inside` of `compiled_region_bracket`
+3. **Stack locality along a run (B3's run half).** The evaluation's half landed
+   (`iteration_under`). Next the commands that touch the fiber's frame (`deliver`, `resume`,
+   `interruptTarget`, `afterInterrupt`, `closeParAwait`, and `settle`'s write-back), then the lift
+   through `Machine.Lift`: until a pop reaches the entry's stack, the fiber's stack is its own
+   frames over that stack. That discharges the premise `inside` of `compiled_region_bracket`
    (`src/Effect4/Laws/Program/MaskBracket.lean`). Consumers: Semaphore's protected permit and
    Pool's `use` (R11).
 4. **Points well formed (B4, the goals packet's G1a)**, then **the stack is a path (B5)**: in each
