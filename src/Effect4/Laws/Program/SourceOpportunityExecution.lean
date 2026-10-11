@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.SourceOpportunityPrimitive
+import Effect4.Laws.Machine.WriterWeights
 import Effect4.Laws.Program.Footprint
 import Effect4.Laws.Program.Guard.ForkLedger
 import Effect4.Laws.Machine.MaskRuns
@@ -32,23 +33,15 @@ theorem settle_debit (root : NativeEff) (q : List Nat) (m : NativeMachine)
     recorded q (settle fiber.id rest next).1 + fibers root q (settle fiber.id rest next).1 ≤
       recorded q m + fibers root q m := by
   have partition := outside_split root q m fiber unique member
-  have changed (newFiber : SourceFiber) (key : newFiber.id = fiber.id)
-      (weight : frame root q newFiber.frame = frame root q next.fiber.frame) :
-      recorded q (next.machine.update newFiber) + fibers root q (next.machine.update newFiber) ≤
-        recorded q m + fibers root q m := by
-    have bounded := install_le root q next.machine fiber.id newFiber key afterUnique
-    rw [weight] at bounded
-    unfold Debit at debit
-    change recorded q next.machine + fibers root q (next.machine.update newFiber) ≤ _
-    omega
-  have original := changed next.fiber same rfl
-  cases outcome : next.outcome <;> simp only [settle, outcome]
-  case continue_ | answered | commands | finished => exact original
-  case parked =>
-    split
-    · exact changed {next.fiber with parked := .notParked, pending := []} same rfl
-    · exact changed {next.fiber with running := false} same rfl
-  case stuck => exact changed {next.fiber with running := false} same rfl
+  have installed := Machine.WriterWeights.settle_bound (weightModel root q) fiber.id next rest same afterUnique
+  change fibers root q (settle fiber.id rest next).1 ≤ outside root q fiber.id next.machine + frame root q next.fiber.frame at installed
+  have fields := Machine.WriterWeights.settle_fields fiber.id next rest
+  have recordedSame : recorded q (settle fiber.id rest next).1 = recorded q next.machine := by
+    unfold recorded
+    rw [fields.2]
+  rw [recordedSame]
+  unfold Debit at debit
+  omega
 
 /-- Applying the deferred interrupt discards only the active source reservation.
 Consumer: actual native loop iteration. -/
