@@ -258,6 +258,7 @@ import Effect4.Laws.Machine.Folds.Stores
 import Effect4.Laws.Store.Folds.Val
 import Effect4.Laws.Store.Names
 import Effect4.Laws.Data.ListRelConnectors
+import Effect4.Laws.Codegen.TargetOrder
 import Effect4.Laws.Program.Typing.FoldAgreement
 import Effect4.Laws.Step.Table
 import Effect4.Laws.Step.Reading

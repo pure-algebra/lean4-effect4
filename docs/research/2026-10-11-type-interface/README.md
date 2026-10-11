@@ -236,7 +236,12 @@ flowchart TD
    ```
 
    `E4-PRINT-CE-001` refutes it today. Repair A, with the bound, is the step that makes it
-   provable.
+   provable. **Landed 2026-10-11:** the model `rel`/`assignable`
+   (`src/Effect4/Laws/Codegen/TargetOrder.lean`) agrees with tsgo on all 600 recorded pairs, both
+   directions (`Test/Codegen/TargetOrder.lean`). The battery also states three facts in the
+   model's terms: `E4-PRINT-CE-001`, the literal decomposition and the bound of 25. They are the
+   model's reading of tsgo's source, not yet tsgo's verdicts. The battery reads the TSV at build time,
+   and Lake does not trace that file.
 4. **R-T4, the number tower's names now.** Print `int` as `Int` and `number` as `Num`, aliases of
    `number`, as row 309 (5) rules. Then `ofTy` is injective on the tower, and the reader is an
    upper section there.
