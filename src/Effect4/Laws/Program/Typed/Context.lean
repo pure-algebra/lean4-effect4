@@ -13,6 +13,39 @@ set_option autoImplicit false
 namespace Effect4.Program.Typed
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Program.Denote
 
+/-- The ambient reader demand transports declared carriers through the existing host order.
+Consumer: ambient current-code world transport. -/
+theorem ambientFiberPre_mono (root : ProgramSource) {w w' : World} (ord : w.leHost w')
+    (available : Env.Requirement) (op : FiberOp) (cert : FiberCert op)
+    (pre : ambientFiberPre root w available op cert) :
+    ambientFiberPre root w' available op cert := by
+  fun_cases ambientFiberPre root w available op cert with
+  | case1 =>
+    rcases pre with coarse | ⟨keys, same, covered, declared⟩
+    · exact .inl coarse
+    · refine .inr ⟨keys, same, covered, fun key member => ?_⟩
+      rw [le_serviceTy ord.1]
+      exact declared key member
+  | case2 =>
+    rename_i notGetter
+    rw [ambientFiberPre.eq_2 root w available op cert notGetter] at pre
+    rw [ambientFiberPre.eq_2 root w' available op cert notGetter]
+    exact fiberPre_mono root ord op cert pre
+
+/-- The same program-arrow world law transports the ambient instance.
+Consumer: current, saved and queued ambient entry positions. -/
+theorem ambientProg_mono (root : ProgramSource) {w w' : World} {available : Env.Requirement}
+    {position : AmbientPosition} {code : RProgram} (ord : w.leHost w')
+    (typed : AmbientProg root w available position code) :
+    AmbientProg root w' available position code := by
+  refine ProgramArrow.mono ?_ ?_ ?_ ord typed
+  · intro before after input op cert ordered pre
+    exact storePre_mono root ordered op cert pre
+  · intro before after input op cert ordered pre
+    exact ambientFiberPre_mono root ordered input op cert pre
+  · intro before after input position exit ordered payload
+    exact ⟨strongExit_mono before after position.1 exit ordered payload.1, payload.2⟩
+
 /-- The ambient instance exposes the bound at the actual current entry.
 Consumer: interruption and current-code entry in the existing runtime typing relation. -/
 theorem ambient_entry {root : ProgramSource} {w : World} {available : Env.Requirement}

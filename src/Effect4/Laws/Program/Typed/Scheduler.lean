@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Typed.Stack
+import Effect4.Laws.Program.Typed.Context
 import Effect4.Laws.Program.Typed.State
 import Effect4.Laws.Program.Guard.Core
 import Effect4.Laws.Program.Guard.RegistrationQueue
@@ -278,34 +279,100 @@ token's declared type: every success answer returns race `raceId`'s marker, the 
 this machine with this host, and a failure skips into the rest at the token's type (the reply
 `registrationDone` delivers once the walk makes the marker current again, `RegistrationState`).
 The correlation sits on the arrow, so typed code cannot forge it. -/
-inductive RegistrationArrow (w : World) (m : RState) (host : FiberId) :
-    EffTy → EffTy → ScopeFrame → Prop
-  | mk {tin resultTy : EffTy} {next : ExitV → RProgram} {raceId : Nat} {race : RRace}
+inductive RegistrationArrowAt {Object Input : Type}
+    (Ex : World → Input → Object → ExitV → Prop) (inputOf : Object → ExitV → Input)
+    (typeOf : Object → EffTy) (w : World) (m : RState) (host : FiberId) :
+    Object → Object → ScopeFrame → Prop
+  | mk {tin result : Object} {next : ExitV → RProgram} {raceId : Nat} {race : RRace}
       (marker : ∀ v, raceRegistrationR (next (.success v)) = some raceId)
-      (skip : ∀ w', w.leHost w' → ∀ c, ExitOk w' tin (.failure c) → ExitOk w' resultTy (.failure c))
+      (skip : ∀ w', w.leHost w' → ∀ c,
+        Ex w' (inputOf tin (.failure c)) tin (.failure c) →
+        Ex w' (inputOf tin (.failure c)) result (.failure c))
       (found : m.race? raceId = some race) (hosted : race.host = host)
-      (token : w.Θ race.host race.token = some resultTy) :
-      RegistrationArrow w m host tin resultTy (.resume .onSuccess next)
+      (token : w.Θ race.host race.token = some (typeOf result)) :
+      RegistrationArrowAt Ex inputOf typeOf w m host tin result (.resume .onSuccess next)
 
-/-- A host stack's arrows: the ordinary frames and the registration arrows. -/
-def HostEdge (root : ProgramSource) (w : World) (m : RState) (host : FiberId)
-    (tin tout : EffTy) (frame : ScopeFrame) : Prop :=
-  Contracts.FrameAccepts (TypedProg root) ExitOk (frameProtocols root) w tin tout frame ∨
-    RegistrationArrow w m host tin tout frame
+/-- The original registration judgment is the unit-input instance of the same arrows. -/
+abbrev RegistrationArrow :=
+  RegistrationArrowAt (fun w (_ : Unit) => ExitOk w) (fun _ _ => ()) id
 
-/-- **A host's saved stack**: the frame path over `HostEdge` (any number of registration arrows
-compose, `hostStack_push`). With no registration arrow it is `StackAccepts`
-(`hostStack_of_stackAccepts`). -/
-abbrev HostStack (root : ProgramSource) (w : World) (m : RState) (host : FiberId) :
-    EffTy → EffTy → List ScopeFrame → Prop :=
-  Contracts.FramePath (HostEdge root w m host)
+/-- A host stack's arrows retain the full completion position and the actual race correlation. -/
+def HostEdgeAt {Object Input : Type}
+    (TP : World → Input → Object → RProgram → Prop)
+    (Ex : World → Input → Object → ExitV → Prop) (hooks : Contracts.FrameProtocols Object)
+    (inputOf : Object → ExitV → Input) (restoreInput : Ctx → Input) (typeOf : Object → EffTy)
+    (w : World) (m : RState) (host : FiberId) (tin tout : Object) (frame : ScopeFrame) : Prop :=
+  Contracts.FrameArrow TP Ex hooks inputOf restoreInput w tin tout frame ∨
+    RegistrationArrowAt Ex inputOf typeOf w m host tin tout frame
 
-/-- A host's saved frame at `final`: its current code typed over a `HostStack`, with recorded
-interrupts only. With no registration arrow in the stack this is `SavedOk` (`codeOk_of_saved`). -/
-def CodeOk (root : ProgramSource) (w : World) (m : RState) (host : FiberId) (final : EffTy)
+/-- The original type-only host edge specializes the shared annotated edge. -/
+abbrev HostEdge (root : ProgramSource) :=
+  HostEdgeAt (fun w (_ : Unit) => TypedProg root w) (fun w (_ : Unit) => ExitOk w)
+    (frameProtocols root) (fun _ _ => ()) (fun _ => ()) id
+
+/-- A host's saved stack is the existing ordered path over its complete edge positions. -/
+abbrev HostStackAt {Object Input : Type}
+    (TP : World → Input → Object → RProgram → Prop)
+    (Ex : World → Input → Object → ExitV → Prop) (hooks : Contracts.FrameProtocols Object)
+    (inputOf : Object → ExitV → Input) (restoreInput : Ctx → Input) (typeOf : Object → EffTy)
+    (w : World) (m : RState) (host : FiberId) :=
+  Effect4.Contracts.Path (HostEdgeAt TP Ex hooks inputOf restoreInput typeOf w m host)
+
+/-- The original type-only stack is the unit-input instance of the same path. -/
+abbrev HostStack (root : ProgramSource) :=
+  HostStackAt (fun w (_ : Unit) => TypedProg root w) (fun w (_ : Unit) => ExitOk w)
+    (frameProtocols root) (fun _ _ => ()) (fun _ => ()) id
+
+/-- Current code and the correlated host path meet at the same complete position. -/
+def CodeArrow {Object Input : Type}
+    (TP : World → Input → Object → RProgram → Prop)
+    (Ex : World → Input → Object → ExitV → Prop) (hooks : Contracts.FrameProtocols Object)
+    (inputOf : Object → ExitV → Input) (restoreInput : Ctx → Input) (typeOf : Object → EffTy)
+    (w : World) (m : RState) (host : FiberId) (input : Input) (final : Object) (saved : RSaved) : Prop :=
+  ∃ tin, TP w input tin saved.current ∧
+    HostStackAt TP Ex hooks inputOf restoreInput typeOf w m host tin final saved.stack ∧
+    Contracts.InterruptProvenance saved
+
+/-- The original type-only current-code judgment is the unit-input shared instance. -/
+abbrev CodeOk (root : ProgramSource) (w : World) (m : RState) (host : FiberId) (final : EffTy)
     (x : RSaved) : Prop :=
-  ∃ tin, TypedProg root w tin x.current ∧ HostStack root w m host tin final x.stack ∧
-    Contracts.InterruptProvenance x
+  CodeArrow (fun w (_ : Unit) => TypedProg root w) (fun w (_ : Unit) => ExitOk w)
+    (frameProtocols root) (fun _ _ => ()) (fun _ => ()) id w m host () final x
+
+/-- Actual context coverage indexes the ambient instance at the current read cut.
+Membership remains in the existing ServiceOk field, separately from these row bounds. -/
+def AmbientCodeOk (root : ProgramSource) (w : World) (m : RState) (fiber : RFiber)
+    (final : EffTy) : Prop :=
+  ∃ available, fiber.context.services.Satisfies available ∧
+    CodeArrow (AmbientProg root) AmbientExit (ambientFrameProtocols root) ambientInput
+      (fun ctx => ctx.services.keysRow) Prod.fst w m fiber.id available
+      (final, Env.Requirement.empty, Env.Requirement.empty) fiber.frame
+
+/-- An actual readable ambient fiber covers its current interruption guarantee.
+Consumer: the loop-top interruption arm of the ambient current-code preservation path. -/
+theorem AmbientCodeOk.failure_covered {root : ProgramSource} {w : World} {m : RState}
+    {fiber : RFiber} {final : EffTy} (typed : AmbientCodeOk root w m fiber final) :
+    ∃ available tin, AmbientProg root w available tin fiber.frame.current ∧
+      fiber.context.services.Satisfies tin.2.2 := by
+  obtain ⟨available, coverage, tin, code, _⟩ := typed
+  exact ⟨available, tin, code,
+    fiber.context.services.satisfies_weaken coverage (ambient_entry code)⟩
+
+/-- The actual loop top injects a typed interruption with the capabilities at that cut.
+Consumer: the queued loop arm of the ambient current-code preservation path. -/
+theorem AmbientCodeOk.runloopTop {root : ProgramSource} {w : World} {m : RState}
+    {fiber : RFiber} {final : EffTy} (typed : AmbientCodeOk root w m fiber final) :
+    AmbientCodeOk root w m (runloopTop fiber) final := by
+  unfold Effect4.Machine.runloopTop
+  split
+  · obtain ⟨available, coverage, tin, code, stack, provenance⟩ := typed
+    have entryBound := ambient_entry code
+    refine ⟨available, coverage, tin, ?_, stack, ?_⟩
+    · exact .pure ⟨strongExit_of_clean w tin.1 fiber.frame.pendingCause
+        (pendingCause_clean provenance) (pendingCause_noShapeDefect tin.1 provenance),
+        entryBound⟩ entryBound
+    · exact ⟨provenance.recorded, fun impossible => Bool.noConfusion impossible⟩
+  · exact typed
 
 /-- The race facts the registration arrows read move to a machine whose races keep their host
 and token. -/
@@ -316,13 +383,23 @@ def RacesKept (m m' : RState) : Prop :=
 theorem racesKept_of_eq {m m' : RState} (races : ∀ r, m'.race? r = m.race? r) : RacesKept m m' :=
   fun r race h => ⟨race, (races r).trans h, rfl, rfl⟩
 
-theorem registrationArrow_mono {w w' : World} {m : RState} {host : FiberId} {a b : EffTy}
-    {frame : ScopeFrame} (ord : w.leHost w') (h : RegistrationArrow w m host a b frame) :
-    RegistrationArrow w' m host a b frame := by
+/-- Registration callbacks transport their complete positions through the existing world order.
+Consumer: host stack transport at both unit and ambient instances. -/
+theorem registrationArrowAt_mono {Object Input : Type}
+    {Ex : World → Input → Object → ExitV → Prop} {inputOf : Object → ExitV → Input}
+    {typeOf : Object → EffTy} {w w' : World} {m : RState} {host : FiberId}
+    {a b : Object} {frame : ScopeFrame} (ord : w.leHost w')
+    (h : RegistrationArrowAt Ex inputOf typeOf w m host a b frame) :
+    RegistrationArrowAt Ex inputOf typeOf w' m host a b frame := by
   cases h with
   | mk marker skip found hosted token =>
     exact .mk marker (fun w'' o c hc => skip w'' (leHost_trans _ _ _ ord o) c hc) found hosted
       (ord.1.2.2.2.2.2.1 _ _ _ token)
+
+theorem registrationArrow_mono {w w' : World} {m : RState} {host : FiberId} {a b : EffTy}
+    {frame : ScopeFrame} (ord : w.leHost w') (h : RegistrationArrow w m host a b frame) :
+    RegistrationArrow w' m host a b frame :=
+  registrationArrowAt_mono ord h
 
 theorem registrationArrow_races {w : World} {m m' : RState} {host : FiberId} {a b : EffTy}
     {frame : ScopeFrame} (kept : RacesKept m m') (h : RegistrationArrow w m host a b frame) :
@@ -345,10 +422,45 @@ theorem codeOk_of_saved {root : ProgramSource} {w : World} {m : RState} {host : 
   obtain ⟨tin, code, stack, provenance⟩ := h
   exact ⟨tin, code, hostStack_of_stackAccepts stack, provenance⟩
 
+/-- World growth retains the full correlated host path without changing its entry positions.
+Consumer: unit and ambient current-code world transport. -/
+theorem hostStackAt_mono {Object Input : Type}
+    {TP : World → Input → Object → RProgram → Prop}
+    {Ex : World → Input → Object → ExitV → Prop} {hooks : Contracts.FrameProtocols Object}
+    {inputOf : Object → ExitV → Input} {restoreInput : Ctx → Input} {typeOf : Object → EffTy}
+    {w w' : World} {m : RState} {host : FiberId} {tin final : Object} {stack : List ScopeFrame}
+    (ord : w.leHost w')
+    (h : HostStackAt TP Ex hooks inputOf restoreInput typeOf w m host tin final stack) :
+    HostStackAt TP Ex hooks inputOf restoreInput typeOf w' m host tin final stack :=
+  h.map fun _ _ _ edge => edge.imp (Contracts.frameArrow_mono ord) (registrationArrowAt_mono ord)
+
+/-- The current entry and the complete host path transport through the same shared laws.
+Consumer: CodeOk and AmbientCodeOk at the existing machine's world-growth cuts. -/
+theorem CodeArrow.mono {Object Input : Type}
+    {TP : World → Input → Object → RProgram → Prop}
+    {Ex : World → Input → Object → ExitV → Prop} {hooks : Contracts.FrameProtocols Object}
+    {inputOf : Object → ExitV → Input} {restoreInput : Ctx → Input} {typeOf : Object → EffTy}
+    (tp : ∀ {w w' input ty code}, w.leHost w' → TP w input ty code → TP w' input ty code)
+    {w w' : World} {m : RState} {host : FiberId} {input : Input} {final : Object} {saved : RSaved}
+    (ord : w.leHost w')
+    (typed : CodeArrow TP Ex hooks inputOf restoreInput typeOf w m host input final saved) :
+    CodeArrow TP Ex hooks inputOf restoreInput typeOf w' m host input final saved := by
+  obtain ⟨tin, code, stack, provenance⟩ := typed
+  exact ⟨tin, tp ord code, hostStackAt_mono ord stack, provenance⟩
+
+/-- The actual fiber keeps its context while world declarations grow.
+Consumer: ambient machine and queue world-transport adapters. -/
+theorem AmbientCodeOk.mono {root : ProgramSource} {w w' : World} {m : RState}
+    {fiber : RFiber} {final : EffTy} (ord : w.leHost w')
+    (typed : AmbientCodeOk root w m fiber final) : AmbientCodeOk root w' m fiber final := by
+  obtain ⟨available, coverage, code⟩ := typed
+  exact ⟨available, coverage,
+    CodeArrow.mono (TP := AmbientProg root) (fun ordered h => ambientProg_mono root ordered h) ord code⟩
+
 theorem hostStack_mono {root : ProgramSource} {w w' : World} {m : RState} {host : FiberId}
     {tin final : EffTy} {stack : List ScopeFrame} (ord : w.leHost w')
     (h : HostStack root w m host tin final stack) : HostStack root w' m host tin final stack :=
-  h.map fun _ _ _ e => e.imp (Contracts.frameAccepts_mono ord) (registrationArrow_mono ord)
+  hostStackAt_mono ord h
 
 theorem hostStack_races {root : ProgramSource} {w : World} {m m' : RState} {host : FiberId}
     {tin final : EffTy} {stack : List ScopeFrame} (kept : RacesKept m m')
@@ -364,9 +476,9 @@ theorem hostStack_push {root : ProgramSource} {w : World} {m : RState} {host : F
 
 theorem codeOk_mono {root : ProgramSource} {w w' : World} {m : RState} {host : FiberId}
     {final : EffTy} {x : RSaved} (ord : w.leHost w') (h : CodeOk root w m host final x) :
-    CodeOk root w' m host final x := by
-  obtain ⟨tin, code, stack, provenance⟩ := h
-  exact ⟨tin, typedProg_mono root w w' tin x.current ord code, hostStack_mono ord stack, provenance⟩
+    CodeOk root w' m host final x :=
+  CodeArrow.mono (TP := fun w (_ : Unit) => TypedProg root w)
+    (fun {w w'} {_ ty code} ordered typed => typedProg_mono root w w' ty code ordered typed) ord h
 
 theorem codeOk_races {root : ProgramSource} {w : World} {m m' : RState} {host : FiberId}
     {final : EffTy} {x : RSaved} (kept : RacesKept m m') (h : CodeOk root w m host final x) :
@@ -377,19 +489,43 @@ theorem codeOk_races {root : ProgramSource} {w : World} {m m' : RState} {host : 
 /-- **A position arrow** (decisions row 188 (b)), for the generated position clause, which reads no
 machine: a success callback whose every success answer is a registration marker, typed by the
 failures it skips alone. Its race correlation is the machine clauses' (`RegistrationArrow`). -/
-inductive PositionArrow (w : World) : EffTy → EffTy → ScopeFrame → Prop
-  | mk {tin middle : EffTy} {next : ExitV → RProgram}
+inductive PositionArrowAt {Object Input : Type}
+    (Ex : World → Input → Object → ExitV → Prop) (inputOf : Object → ExitV → Input)
+    (w : World) : Object → Object → ScopeFrame → Prop
+  | mk {tin middle : Object} {next : ExitV → RProgram}
       (marker : ∀ v, (raceRegistrationR (next (.success v))).isSome = true)
-      (skip : ∀ w', w.leHost w' → ∀ c, ExitOk w' tin (.failure c) → ExitOk w' middle (.failure c)) :
-      PositionArrow w tin middle (.resume .onSuccess next)
+      (skip : ∀ w', w.leHost w' → ∀ c,
+        Ex w' (inputOf tin (.failure c)) tin (.failure c) →
+        Ex w' (inputOf tin (.failure c)) middle (.failure c)) :
+      PositionArrowAt Ex inputOf w tin middle (.resume .onSuccess next)
 
-def PositionEdge (root : ProgramSource) (w : World) (tin tout : EffTy) (frame : ScopeFrame) : Prop :=
-  Contracts.FrameAccepts (TypedProg root) ExitOk (frameProtocols root) w tin tout frame ∨
-    PositionArrow w tin tout frame
+/-- The original saved-position registration shape is the unit-input instance. -/
+abbrev PositionArrow :=
+  PositionArrowAt (fun w (_ : Unit) => ExitOk w) (fun _ _ => ())
 
-/-- **The generated position clause's path**: ordinary arrows and position arrows. -/
-abbrev PositionStack (root : ProgramSource) (w : World) : EffTy → EffTy → List ScopeFrame → Prop :=
-  Contracts.FramePath (PositionEdge root w)
+/-- An annotated saved position forgets race identity, retaining its capability guarantees. -/
+def PositionEdgeAt {Object Input : Type}
+    (TP : World → Input → Object → RProgram → Prop)
+    (Ex : World → Input → Object → ExitV → Prop) (hooks : Contracts.FrameProtocols Object)
+    (inputOf : Object → ExitV → Input) (restoreInput : Ctx → Input)
+    (w : World) (tin tout : Object) (frame : ScopeFrame) : Prop :=
+  Contracts.FrameArrow TP Ex hooks inputOf restoreInput w tin tout frame ∨
+    PositionArrowAt Ex inputOf w tin tout frame
+
+/-- The generated saved-position clause retains the same shared annotated path. -/
+abbrev PositionStackAt {Object Input : Type}
+    (TP : World → Input → Object → RProgram → Prop)
+    (Ex : World → Input → Object → ExitV → Prop) (hooks : Contracts.FrameProtocols Object)
+    (inputOf : Object → ExitV → Input) (restoreInput : Ctx → Input) (w : World) :=
+  Effect4.Contracts.Path (PositionEdgeAt TP Ex hooks inputOf restoreInput w)
+
+abbrev PositionEdge (root : ProgramSource) :=
+  PositionEdgeAt (fun w (_ : Unit) => TypedProg root w) (fun w (_ : Unit) => ExitOk w)
+    (frameProtocols root) (fun _ _ => ()) (fun _ => ())
+
+abbrev PositionStack (root : ProgramSource) :=
+  PositionStackAt (fun w (_ : Unit) => TypedProg root w) (fun w (_ : Unit) => ExitOk w)
+    (frameProtocols root) (fun _ _ => ()) (fun _ => ())
 
 theorem positionArrow_mono {w w' : World} {a b : EffTy} {frame : ScopeFrame} (ord : w.leHost w')
     (h : PositionArrow w a b frame) : PositionArrow w' a b frame := by
