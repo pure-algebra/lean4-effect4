@@ -1,6 +1,6 @@
 import Test.Dogfood.Scenario.Atomic.SourcePaths
 import Test.Dogfood.Scenario.SourceUse
-import Effect4.Laws.Program.SourceOpportunityPrimitive
+import Effect4.Laws.Program.SourceOpportunityExecution
 import Effect4.Laws.Program.Guard.ForkLedger
 
 /-!
@@ -472,5 +472,30 @@ theorem workers_native_evaluation_debit (total compileFuel : Nat) (b : Api.Built
     b.program b.table compileFuel m history.reachable).1
   exact native_debit b.program _ (SourceFragment.workers_built_fragment total b built)
     clearFin clearLoop b.table m fiber yielding control.1 control.2 source owned unique
+
+/-- Actual Workers loop commands retain the source opportunity budget at both acquisition sites.
+The result includes forced yields and every actual evaluator settlement outcome. -/
+theorem workers_loop_command_debit (total compileFuel : Nat) (b : Api.Built)
+    (built : Api.Author.build (Workers.crew total) = .ok b) (m : NativeMachine)
+    (history : Effect4.Run.HistoryOf b compileFuel m) (id : FiberId)
+    (i : Nat) (member : i ∈ [1, 2]) (yielding : Bool) (rest : List SourceScope.SourceCommand) :
+    letI := evaluatorFor b.program b.table
+    let next := driveStep (interpOf b.program b.table) m (.loop id yielding) rest
+    recorded (Programs.crewAcquire i) next.1 + fibers b.program (Programs.crewAcquire i) next.1 ≤
+      recorded (Programs.crewAcquire i) m + fibers b.program (Programs.crewAcquire i) m := by
+  have source := SourceFragment.workers_admitted_history_at total compileFuel b built m history
+  have clearFin : ClearFinalizers b.program (Programs.crewAcquire i) := by
+    rw [Programs.workers_built_program total b built]
+    exact workers_clear total i member
+  have clearLoop : ClearLoops b.program (Programs.crewAcquire i) := by
+    rw [Programs.workers_built_program total b built]
+    exact workers_loops_clear total i member
+  have control : SourceScope.SequentialSource b.program ∧ SourceScope.RaceFreeSource b.program := by
+    rw [Programs.workers_built_program total b built]
+    exact workers_control_census total
+  have ledger := Effect4.Machine.ForkLedger.Invariant.Native.reachable_ok
+    b.program b.table compileFuel m history.reachable
+  exact loop_command_debit b.program _ (SourceFragment.workers_built_fragment total b built)
+    clearFin clearLoop b.table m id yielding rest control.1 control.2 source ledger
 
 end Test.Dogfood.Scenario.SourceOpportunity

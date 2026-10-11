@@ -1,0 +1,38 @@
+--- a/src/Effect4/Laws/Machine/ControlWeights.lean
++++ b/src/Effect4/Laws/Machine/ControlWeights.lean
+@@ -111,0 +112,35 @@
++/-- Installing a uniquely keyed owner spends at most its new weight.
++Consumer: source opportunity settlement across every scheduler outcome. -/
++@[semantics "scope-lifetime-finalization" (requirement := R11)]
++theorem replace_sum_le_omitted {α : Type u} {K : Type v} [DecidableEq K]
++    (key : α → K) (weight : α → Nat) (owner : K) (next : α)
++    (selected : key next = owner) (rows : List α) (unique : (rows.map key).Nodup) :
++    ((rows.map fun row => if key row = key next then next else row).map weight).sum ≤
++      (rows.map (omitted key weight owner)).sum + weight next := by
++  by_cases present : ∃ old ∈ rows, key old = owner
++  · obtain ⟨old, member, same⟩ := present
++    have installed := replace_sum key weight old next (selected.trans same.symm) rows unique member
++    have partition := omit_sum key weight old rows unique member
++    change (rows.map (omitted key weight (key old))).sum + weight old =
++      (rows.map weight).sum at partition
++    rw [same] at partition
++    omega
++  · have unchanged : (rows.map fun row => if key row = key next then next else row) = rows := by
++      calc
++        _ = rows.map id := List.map_congr_left fun row member => by
++          have different : key row ≠ key next := by
++            intro same
++            exact present ⟨row, member, same.trans selected⟩
++          simp only [if_neg different, id_eq]
++        _ = rows := List.map_id rows
++    have full : rows.map (omitted key weight owner) = rows.map weight := by
++      apply List.map_congr_left
++      intro row member
++      have different : key row ≠ owner := by
++        intro same
++        exact present ⟨row, member, same⟩
++      exact if_neg different
++    rw [unchanged, full]
++    exact Nat.le_add_right _ _
++
++
