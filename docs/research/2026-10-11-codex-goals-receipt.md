@@ -217,3 +217,11 @@ The whole-run lift, unique source use, and log-writer provenance remain open.
 `LEAN_NUM_THREADS=3 lake build Effect4.Laws.Machine.FinalizerStep` passes.
 `lake env lean docs/research/2026-10-10-goals-packet/codex/FinalizerStep.lean` passes.
 The audit reports 135 declarations, no modulo declarations, and no planned goals.
+
+## First-exit observer ownership
+
+The native observer's state and queued-command proofs now follow `Race.afterExit` in either selection mode.
+The queue proof chooses the registration branch explicitly, keeping selected-entrant bookkeeping inside the race value.
+`LEAN_NUM_THREADS=3 lake build Effect4.Laws.Program.Guard.Observer` passes with 370 jobs.
+The module audit is recorded by `codex/FirstExitObserverAudit.lean`.
+The observer audit reports 84 declarations, no modulo declarations, and no planned goals.

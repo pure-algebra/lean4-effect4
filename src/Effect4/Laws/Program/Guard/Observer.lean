@@ -438,7 +438,7 @@ theorem guardState_fireObserver (p : NativeEff) (table : RowTable)
     | some race =>
       have hr' : base.race? race.id = some race := by simpa only [race_id_of_lookup hr] using hr
       have programs := before.internalCodes.2 race (List.mem_of_find?_eq_some hr)
-      let next : NRace := { race with state := Supervision.raceComplete race.state id exit }
+      let next : NRace := race.afterExit id exit
       have updated := guardState_updateRace before hr' next rfl rfl rfl programs
       have hn : (base.updateRace next).race? next.id = some next := by
         simp only [race_lookup_updateRace, show next.id = race.id from rfl, hr', Option.map_some, ↓reduceIte]
@@ -483,7 +483,7 @@ theorem guardQueue_fireObserver (p : NativeEff) (table : RowTable)
     | none => simpa only [fireObserver, show m.emit _ = base from rfl, hr] using before
     | some race =>
       have hr' : base.race? race.id = some race := by simpa only [race_id_of_lookup hr] using hr
-      let next : NRace := { race with state := Supervision.raceComplete race.state id exit }
+      let next : NRace := race.afterExit id exit
       have updated := guardQueue_updateRace p table before hr' next rfl rfl
       have hn : (base.updateRace next).race? next.id = some next := by
         simp only [race_lookup_updateRace, show next.id = race.id from rfl, hr', Option.map_some, ↓reduceIte]
@@ -493,9 +493,11 @@ theorem guardQueue_fireObserver (p : NativeEff) (table : RowTable)
         have settled := guardQueue_emit p table
           (guardQueue_updateRace p table updated hn { next with settled := true } rfl rfl)
           [RunEvent.raceSettled raceId accepted]
-        split
-        · simpa only [List.append_nil] using settled
-        · apply guardQueue_snoc_resume p table settled race.host race.token
+        by_cases registering : race.registering = true
+        · rw [if_pos registering, List.append_nil]
+          exact settled
+        · rw [if_neg registering]
+          apply guardQueue_snoc_resume p table settled race.host race.token
           · exact reservedKeys_emit
               (reservedKeys_updateRace (reservedKeys_updateRace
                 (reservedKeys_race baseState (List.mem_of_find?_eq_some hr)) next)
