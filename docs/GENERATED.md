@@ -142,6 +142,10 @@ bytes), has no carrier since the labels went; every committed group is *reproduc
 
 ## Fragment predicates
 
+The derived group includes `PrimFold` from `tools/Effect4Gen/Fold.lean`.
+It generates `src/Effect4/Machine/Fold.lean` from `Effect4.Prim` in `src/Effect4/Machine/Frames.lean`.
+Native code weights consume its algebra, fold, and uniqueness law.
+
 The derived group includes `Fragments`, `FragmentLooped`, `FragmentRows`, and `FragmentLoopedRows` from `tools/Effect4Gen/Fragments.lean`.
 They generate the existing fragment predicates from one classification table and the program family metadata.
 The outputs are `src/Effect4/Program/Fragment.lean` and `src/Effect4/Laws/Program/Fragment{Looped,Rows,LoopedRows}.lean`.

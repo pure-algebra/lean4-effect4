@@ -117,3 +117,43 @@ The worker connection control is synthetic and finite.
 It does not establish a reached worker history.
 No executable definition changes; no behavior gate is reached.
 The logs sit under `2026-10-11-machine-models/codex/` with their integration check names.
+
+
+## Generated native fold integration
+
+The two native code-weight instances pass independent agreement and consumer checks.
+The response-dependent stack projection remains unchanged.
+No original scenario endpoint closes in this slice.
+
+Base: `b39d89388`.
+Integrated fold head: `6aa87bc70`; continuing-loop control head: `5abf70d6b`.
+The coordinator adds the core fold, law table, and loop control to their roots.
+`docs/GENERATED.md` records the new manifest group.
+The code receipts own placement and measured size.
+
+Commands use `LEAN_NUM_THREADS=3`:
+
+- `lake build Effect4.Laws.Program.SourceOpportunityHistory Test.Dogfood.Scenario.Atomic.WriterMachine Test.Machine.AnswerFlowLoop effect4gen` passes, 1154 jobs.
+- `lake env lean -DwarningAsError=true docs/research/2026-10-11-machine-models/codex/NativeFoldAgreement.lean` passes; audit 668 declarations.
+- The same command checks `StackCreditContext.lean`; audit 338 declarations.
+- The same command checks `NativeFoldAudit.lean`; audit 1992 declarations.
+- Each audit stays within `[propext, Quot.sound]`, with zero goals and zero dependencies on goals.
+- `python3 scripts/generate.py --only derived` passes every producer stage.
+- A byte comparison checks every manifest output against the integrated commit after regeneration; the retained log gives the measured count.
+
+The continuing-loop control uses an actual self-resaving loop.
+It distinguishes an inductive contract limitation from unsafe execution.
+It establishes no termination, reached Timeout history, or host agreement.
+No executable machine definition changes in this integration.
+
+## Approved worktree cleanup
+
+The owner-approved docgen probe checkout and branch are removed.
+The tag `archive/docgen-probe-20261010` retains the exact tip `fa309511d`.
+The checkout was clean before removal.
+Its ignored research evidence included files absent from the primary checkout.
+Before removal, an archive retained 1781 such entries and verified every regular file hash and symbolic-link target.
+The archive is `docs/research/2026-10-11-docgen/retained-ignored-probe-evidence.tar.gz` in the primary checkout.
+Its adjacent `retained-ignored-probe-evidence.tar.sha256.json` records the verification manifest.
+The measured archive size is 183265851 bytes.
+No dependency cache or tracked source change is claimed as a proof result.
