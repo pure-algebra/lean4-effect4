@@ -212,7 +212,9 @@ Behaviour gates only where a slice changes executable code, and then at a sweep.
     6. **`KeyBounded` as two shapes.** Its 34 support bounds become parametricity of the hooks.
        Its nine store steps become one monotone store-step definition with a composition law.
     7. **The handle invariant per edit.** With item 10's words, `MintedAt` owes one fact per edit.
-    8. **DET-3 `names-equivariant`**, per edit, from `Parametric.equivariant`.
+    8. **DET-3 `names-equivariant`**, per edit, from `Parametric.equivariant`. The fiber table
+       relates as a finite map: `../2026-10-11-handles/probes/Tables.lean` proves lookup, update,
+       append and pointwise map for it, generic in the relation on fibers.
     9. **A protocol state per name** (the note's §2.9). Each kind declares its forward order, and
        each store operation proves once that it moves forward. `probes/Protocols.lean` does it for
        the Deferred store. Typing monotonicity and the stable facts (completed, closed, exited)
