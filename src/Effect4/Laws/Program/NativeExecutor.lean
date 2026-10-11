@@ -55,7 +55,7 @@ theorem primitive_at (root : NativeEff) (fragment : Fragment root) (completed) (
       cases found : cancel with
       | none => trivial
       | some name =>
-        exact source.2 name (by rw [found]; rfl)
+        exact (source.2 name (by rw [found]; rfl)).1
     have beforeAt : FiberAt root before := by
       dsimp only [before]
       split

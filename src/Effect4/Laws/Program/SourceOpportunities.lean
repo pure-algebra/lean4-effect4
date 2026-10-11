@@ -115,6 +115,7 @@ def current (root : NativeEff) (q : List Nat) : NCode → Nat
   | .onSuccessAndFailure body success failure => current root q body + name q success + name q failure
   | .exitFrame body => current root q body
   | .iterator callback _ | .whileLoop callback _ | .asyncFinalizer callback => name q callback
+  | .async _ _ cancel => (cancel.map (name q)).getD 0
   | _ => 0
 
 /-- A saved frame's body is already active elsewhere; its push has already been recorded. -/

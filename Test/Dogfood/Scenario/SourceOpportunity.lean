@@ -434,4 +434,18 @@ theorem workers_native_action_debit (total compileFuel : Nat) (b : Api.Built)
   exact native_action_debit b.program _ b.table m fiber yielding next actionOwned control.1 control.2
     clear source.scopes unique (by simpa only [selected, current] using carried)
 
+/-- An actual Workers Async callback uses a native cancellation producer.
+The result follows from source ownership in every admitted job-count history. -/
+theorem workers_async_cancel_shape (total compileFuel : Nat) (b : Api.Built)
+    (built : Api.Author.build (Workers.crew total) = .ok b) (m : NativeMachine)
+    (history : Effect4.Run.HistoryOf b compileFuel m) (id : FiberId)
+    (fiber : SourceScope.SourceFiber) (lookup : m.fiber? id = some fiber)
+    (register : EffName) (signal : Bool) (cancel : Option EffName)
+    (selected : fiber.frame.current = .async register signal cancel) :
+    ∀ callback ∈ cancel, SourceScope.AsyncCancelAt callback := by
+  have source := SourceFragment.workers_admitted_history_at total compileFuel b built m history
+  have currentOwned := (SourceScope.configuration_fiber b.program m id fiber source lookup).frame.1
+  rw [selected] at currentOwned
+  exact fun callback member => (currentOwned.2 callback member).2
+
 end Test.Dogfood.Scenario.SourceOpportunity
