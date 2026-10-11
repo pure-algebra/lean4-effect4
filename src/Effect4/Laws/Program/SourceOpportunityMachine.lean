@@ -298,7 +298,7 @@ theorem enter_scoped_debit (root : NativeEff) (q : List Nat) (point : Point) (bo
     let next := enterScoped root point m fiber yielding
     recorded q next.machine + frame root q next.fiber.frame ≤ recorded q m + frame root q fiber.frame := by
   have bounded := Nat.le_trans (resolve_le root q (point.child 0)) (child_le q point.path 0)
-  simp only [enterScoped, frame, current, name, push, selected, thunk, found, Nat.add_zero]
+  simp only [enterScoped, frame, current, cata_prim, name, push, selected, thunk, found, Nat.add_zero]
   change recorded q m + (current root q (resolve root (point.child 0)) + _) ≤ recorded q m + (below q point.path + _)
   omega
 
@@ -332,17 +332,17 @@ theorem exit_scoped_debit (root : NativeEff) (q : List Nat) (fragment : Fragment
     split
     · split
       · aesop (add norm simp [recorded, RunMachine.emit_trace, List.map_append, List.sum_append, Function.comp_def, runEvent, frame_events_recorded, getCont_events_zero,
-          frame, exit_zero, Prim.ofExit, current, FrameFiber.getCont_fiber_cause]) (add safe tactic (by omega))
+          frame, exit_zero, Prim.ofExit, current, cata_prim, FrameFiber.getCont_fiber_cause]) (add safe tactic (by omega))
       · rename_i state program closed
         have programs := close_unsafe_zero root q clearFin _ _ _ m.state state program configuration.scopes closed
         cases program
         case none =>
           aesop (add norm simp [recorded, RunMachine.emit_trace, List.map_append, List.sum_append, Function.comp_def, runEvent, frame_events_recorded, getCont_events_zero,
-            frame, exit_zero, Prim.ofExit, current, FrameFiber.getCont_fiber_cause]) (add safe tactic (by omega))
+            frame, exit_zero, Prim.ofExit, current, cata_prim, FrameFiber.getCont_fiber_cause]) (add safe tactic (by omega))
         case some code =>
           have zero := programs code rfl
           aesop (add norm simp [recorded, RunMachine.emit_trace, List.map_append, List.sum_append, Function.comp_def, frame_events_recorded, getCont_events_zero,
-            frame, exit_zero, Prim.ofExit, current, finalizer_code_weight, runEvent, FrameFiber.getCont_fiber_cause]) (add safe tactic (by omega))
+            frame, exit_zero, Prim.ofExit, current, cata_prim, finalizer_code_weight, runEvent, FrameFiber.getCont_fiber_cause]) (add safe tactic (by omega))
     · exact fallback
 
 end Effect4.Program.SourceScope.Opportunities

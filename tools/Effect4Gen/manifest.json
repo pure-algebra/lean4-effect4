@@ -297,6 +297,21 @@
       ]
     },
     {
+      "Note": "Native Prim weights use the declared seven-parameter syntax, its algebra and fold uniqueness. Response-dependent stack weights keep their active-code context.",
+      "Name": "PrimFold",
+      "Flags": [
+        "--module"
+      ],
+      "Tool": "tools/Effect4Gen/Fold.lean",
+      "Imports": "Effect4.Machine.Frames",
+      "Out": "src\\Effect4\\Machine\\Fold.lean",
+      "Guards": "",
+      "Kinds": [],
+      "Types": [
+        "Effect4.Prim"
+      ]
+    },
+    {
       "Note": "The fold of the value sort's free object: one algebra over Store.Val, its children under List (`list`, `ctor`) as positional folds. No guards yet: the fold's first customers are the seventeen hand traversals of Val the census lists, converted by fold_of.",
       "Name": "ValFold",
       "Flags": ["--module"],

@@ -69,7 +69,7 @@ theorem suspend_bound (built : Api.Built) (admitted : Api.Author.build (shop .no
   case case9 point n fuel key request found value path body evaluated => have impossible := fragment.at found; cases impossible
   case case11 point n fuel key request args found value path body evaluated => have impossible := fragment.at found; cases impossible
   case case13 point n fuel index request found value top rest params evaluated site selected => have impossible := fragment.at found; cases impossible
-  all_goals aesop (add norm simp [current, thunk, name, program, storeName, storeAction, operation,
+  all_goals aesop (add norm simp [current, cata_prim, thunk, name, program, storeName, storeAction, operation,
     program_exact, (acquisition_absent built admitted), ThunkAt, StoreThunkAt, FinAt, frontier, badShape, directHead, embed, Point.ofCapture]) (add safe apply [(compile_bound built admitted id member), child_zero_le]) (add safe forward [Fragment.at])
 
 /-- The interpreter's completed-exit view changes no suspended note reservation. -/

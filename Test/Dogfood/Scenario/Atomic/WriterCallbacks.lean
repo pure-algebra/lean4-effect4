@@ -26,7 +26,7 @@ theorem value_bound (built : Api.Built) (admitted : Api.Author.build (shop .none
     exact resolve_bound built admitted id member (point.childWith 1 value)
       (childWith_at built.program point 1 value owned.1)
   case case12 point previous =>
-    simpa only [current, name, Point.child, Nat.add_zero] using resolve_bound built admitted id member (point.child 0)
+    simpa only [current, cata_prim, name, Point.child, Nat.add_zero] using resolve_bound built admitted id member (point.child 0)
       (child_at built.program point 0 owned)
   case case18 point context scope =>
     have first := resolve_bound built admitted id member (point.child 0)
@@ -51,7 +51,7 @@ theorem value_bound (built : Api.Built) (admitted : Api.Author.build (shop .none
       split
       · split
         · simpa only [regionCode, name] using resolve_bound built admitted id member point owned
-        · simp only [current, thunk, name, Nat.zero_add, Nat.le_refl]
+        · simp only [current, cata_prim, thunk, name, Nat.zero_add, Nat.add_zero, Nat.le_refl]
       · exact Nat.zero_le _
     | build _ _ _ => exact owned.elim
     | buildAdding _ _ _ => exact owned.elim
@@ -59,11 +59,11 @@ theorem value_bound (built : Api.Built) (admitted : Api.Author.build (shop .none
   case case31 region previous =>
     cases region with
     | program point =>
-      simpa only [regionCode, current, name, Nat.add_zero] using resolve_bound built admitted id member point owned
+      simpa only [regionCode, current, cata_prim, name, Nat.add_zero] using resolve_bound built admitted id member point owned
     | build _ _ _ => exact owned.elim
     | buildAdding _ _ _ => exact owned.elim
     | construct _ _ => exact owned.elim
-  all_goals aesop (add norm simp [current, thunk, name, program, storeName, storeAction, operation,
+  all_goals aesop (add norm simp [current, cata_prim, thunk, name, program, storeName, storeAction, operation,
     NameAt, StoreNameAt, RegionAt, Point.childWith, Point.child, badShape, regionCode, Prim.ofExit,
     updateThenK, addCurrentMemoMapK, combineWithK, mergeContextsK, serviceLookupK, bindServiceK]) (add safe apply [store_value_bound, (resolve_bound built admitted id member), child_at, childWith_at])
 
@@ -84,7 +84,7 @@ theorem cause_bound (built : Api.Built) (admitted : Api.Author.build (shop .none
   case case5 point =>
     exact resolve_bound built admitted id member (point.childWith 2 (.exitErr cause))
       (childWith_at built.program point 2 (.exitErr cause) owned)
-  all_goals aesop (add norm simp [current, name, NameAt, store_cause_zero, Prim.ofExit])
+  all_goals aesop (add norm simp [current, cata_prim, name, NameAt, store_cause_zero, Prim.ofExit])
 
 /-- The native interpreter's completed view changes no source callback reservation. -/
 theorem interp_value_bound (built : Api.Built) (admitted : Api.Author.build (shop .none) = .ok built)

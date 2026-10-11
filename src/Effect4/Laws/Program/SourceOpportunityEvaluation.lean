@@ -35,7 +35,7 @@ theorem suspend_le (root : NativeEff) (q : List Nat) (fragment : Fragment root)
   case case3 p n fuel s d arm0 arm1 found first bound result =>
     exact resolve_childBind_le root q p (bif first then 0 else 1) bound
   case case5 p n fuel body found =>
-    simpa only [current, thunk, name, List.append_nil] using child_le q p.path 0
+    simpa only [current, cata_prim, thunk, name, List.append_nil] using child_le q p.path 0
   case case9 p n fuel k request found v path body evaluated =>
     have rejected := Fragment.at fragment found
     cases rejected
@@ -45,7 +45,7 @@ theorem suspend_le (root : NativeEff) (q : List Nat) (fragment : Fragment root)
   case case13 p n fuel i request found v top rest params evaluated site selected =>
     have rejected := Fragment.at fragment found
     cases rejected
-  all_goals aesop (add norm simp [current, thunk, name, push, ThunkAt, StoreThunkAt, FinAt,
+  all_goals aesop (add norm simp [current, cata_prim, thunk, name, push, ThunkAt, StoreThunkAt, FinAt,
     frontier, badShape, directHead, embed, Point.ofCapture, fin]) (add safe apply [resolve_childBind_le, compile_le, (prog_zero root q clear)]) (add safe forward [Fragment.at])
 
 /-- Updating the completed-exit view retains the actual suspended source reservation.
@@ -187,25 +187,27 @@ theorem frame_step_debit (root : NativeEff) (q : List Nat) (fragment : Fragment 
   case success value =>
     rw [resumeValue_events_zero]
     have bounded := resumeValue_le root q clearFin clearLoop completed table fiber value (some (.success value)) owned
-    simp only [frame, selected, current]
+    simp only [frame, selected, current, cata_prim]
     omega
   case failure cause =>
     rw [resumeCause_events_zero]
     have bounded := resumeCause_le root q completed table fiber cause (some (.failure cause)) owned
-    simp only [frame, selected, current]
+    simp only [frame, selected, current, cata_prim]
     omega
   case sync suspended =>
     rw [resumeValue_events_zero]
     have bounded := resumeValue_le root q clearFin clearLoop completed table fiber ((interpAt root completed table).toPrimInterp.syncValue suspended) none owned
-    simp only [frame, selected, current]
+    simp only [frame, selected, current, cata_prim]
     omega
   case suspend suspended =>
     have bounded := interp_suspend_le root q fragment clearFin completed table suspended source
-    simp only [returned, frame, selected, current, List.map_nil, List.sum_nil, Nat.add_zero]
+    simp only [returned, frame, selected, current, cata_prim, List.map_nil, List.sum_nil, Nat.add_zero]
+    dsimp only [current] at *
     omega
   case withFiber suspended =>
     have bounded := interp_suspend_le root q fragment clearFin completed table suspended source
-    simp only [returned, frame, selected, current, List.map_nil, List.sum_nil, Nat.add_zero]
+    simp only [returned, frame, selected, current, cata_prim, List.map_nil, List.sum_nil, Nat.add_zero]
+    dsimp only [current] at *
     omega
   case iterator callback cursor =>
     cases evaluated : Prim.armA (interpAt root completed table).toPrimInterp (.iterator callback cursor) cursor none with
@@ -216,8 +218,9 @@ theorem frame_step_debit (root : NativeEff) (q : List Nat) (fragment : Fragment 
       have zero := armA_push_zero q _ (.iterator callback cursor) cursor none next pushed evaluated
       change (pushed.map (fun x => push q x)).sum = 0 at zero
       simp only [saved] at bounded
-      simp only [returned, frame, selected, current, List.map_append, List.sum_append, List.map_map, Function.comp_def, event]
+      simp only [returned, frame, selected, current, cata_prim, List.map_append, List.sum_append, List.map_map, Function.comp_def, event]
       rw [zero]
+      dsimp only [current] at *
       omega
   case whileLoop callback cursor =>
     have zero := interp_loopEnter_zero root q clearLoop completed table callback cursor
@@ -225,14 +228,16 @@ theorem frame_step_debit (root : NativeEff) (q : List Nat) (fragment : Fragment 
     | «continue» next body =>
       rw [entered] at zero
       dsimp only at zero
-      simp only [returned, frame, selected, current, saved, List.map_cons, List.sum_cons, List.map_nil, List.sum_nil, event, push]
+      simp only [returned, frame, selected, current, cata_prim, saved, List.map_cons, List.sum_cons, List.map_nil, List.sum_nil, event, push]
+      dsimp only [current] at *
       omega
     | finish body =>
       rw [entered] at zero
       dsimp only at zero
-      simp only [returned, frame, selected, current, List.map_nil, List.sum_nil, Nat.add_zero]
+      simp only [returned, frame, selected, current, cata_prim, List.map_nil, List.sum_nil, Nat.add_zero]
+      dsimp only [current] at *
       omega
-  all_goals aesop (add norm simp [returned, frame, selected, current, saved, List.map_cons,
+  all_goals aesop (add norm simp [returned, frame, selected, current, cata_prim, saved, List.map_cons,
     List.sum_cons, List.map_nil, List.sum_nil, event, push]) (add safe tactic (by omega))
 
 end Effect4.Program.SourceScope.Opportunities
