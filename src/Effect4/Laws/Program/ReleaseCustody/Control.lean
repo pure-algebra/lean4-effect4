@@ -522,6 +522,75 @@ theorem scope_close_loop_funded (root : NativeEff) (table : RowTable) (m : Nativ
   simp only [List.map_cons, commandCredits, List.sum_cons, Nat.zero_add] at funded ⊢
   omega
 
+/-- An active close iterator retains every lower callback reservation.
+Consumer: `close_seq_loop_funded`. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem stack_before_iterator (q : List Nat) (name : EffName) (cursor : Val) (stack : List NCode) :
+    stackCredits q (.iterator name cursor) stack = (stack.map (futureCredits q)).sum := by
+  unfold stackCredits
+  split <;> rfl
+
+/-- The actual iterator command transfers head credit into the selected finalizer and tail credit into its frame.
+Consumer: the close-iterator command clause of `Workers.Assertions.releases_step`. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem close_seq_loop_funded (root : NativeEff) (table : RowTable) (m : NativeMachine)
+    (id : FiberId) (f : Fiber) (yielding : Bool) (pending : List Command)
+    (q : List Nat) (fin : FinName) (rest : List FinName) (exit : ExitV)
+    (captured : List (Reason Err Defect FiberId Ann)) (cursor : Val)
+    (unique : (m.fibers.map RunFiber.id).Nodup) (funded : Funded q m (.loop id yielding :: pending))
+    (found : m.fiber? id = some f)
+    (current : f.frame.current = .iterator (.store (.closeSeq (fin :: rest) exit captured)) cursor)
+    (interrupt : f.frame.deferredInterrupt = false) (override : f.yieldOverride = none)
+    (budget : f.currentOpCount + 1 < f.maxOpsBeforeYield) :
+    Funded q (driveStep (evaluator := evaluatorFor root table) (interpOf root table) m
+      (.loop id yielding) pending).1
+      (driveStep (evaluator := evaluatorFor root table) (interpOf root table) m
+        (.loop id yielding) pending).2 := by
+  let next : Fiber := { countOp f with frame := { f.frame with
+    current := .exitFrame (embed (finProgram fin exit))
+    stack := .iterator (.store (.closeSeq rest exit (captured ++ reasonsOfVal cursor))) cursor :: f.frame.stack } }
+  let events : List ReleaseTrace.Event := [.frame f.id (.pushed
+    (.iterator (.store (.closeSeq rest exit (captured ++ reasonsOfVal cursor))) cursor))]
+  have loop : driveStep (evaluator := evaluatorFor root table) (interpOf root table) m
+      (.loop id yielding) pending = ((m.emit events).update next, .loop id yielding :: pending) := by
+    rw [Machine.ControlSteps.loop_of_iteration (evaluator := evaluatorFor root table)
+      _ m id f yielding pending found]
+    rw [Machine.ControlSteps.iteration_below_budget (evaluator := evaluatorFor root table)
+      _ m f yielding interrupt override budget]
+    change settle id pending (evaluateNative root m (countOp f) yielding table) = _
+    rw [close_seq_start root table m (countOp f) yielding fin rest exit captured cursor current]
+    rfl
+  rw [loop]
+  change Funded q ((m.emit events).update next) (.loop id yielding :: pending)
+  have order : orderCredits q (fin :: rest) = credit q fin + orderCredits q rest := by
+    simp only [orderCredits, List.countP_cons, credit, Nat.add_comm]
+  have frame : fiberCredits q next = fiberCredits q f := by
+    unfold fiberCredits
+    simp only [next, countOp]
+    rw [current, stack_before_iterator]
+    simp only [currentCredits, fin_program_credits, stackCredits, futureCredits]
+    rw [order]
+    omega
+  have member : f ∈ (m.emit events).fibers := List.mem_of_find?_eq_some found
+  have changed := update_credits q (m.emit events) f next unique member rfl
+  rw [emit_credits] at changed
+  have starts : ((m.emit events).update next).trace.countP (ReleaseTrace.releaseAt q) =
+      m.trace.countP (ReleaseTrace.releaseAt q) := by
+    change (m.emit events).trace.countP (ReleaseTrace.releaseAt q) = _
+    rw [RunMachine.emit_trace, List.countP_append]
+    change m.trace.countP (ReleaseTrace.releaseAt q) + 0 = _
+    exact Nat.add_zero _
+  have registered : ((m.emit events).update next).trace.countP (ReleaseTrace.registeredAt q) =
+      m.trace.countP (ReleaseTrace.registeredAt q) := by
+    change (m.emit events).trace.countP (ReleaseTrace.registeredAt q) = _
+    rw [RunMachine.emit_trace, List.countP_append]
+    change m.trace.countP (ReleaseTrace.registeredAt q) + 0 = _
+    exact Nat.add_zero _
+  unfold Funded at funded ⊢
+  rw [starts, registered]
+  simp only [List.map_cons, commandCredits, List.sum_cons, Nat.zero_add] at funded ⊢
+  omega
+
 /-- Starting the foreign release spends exactly one active credit and leaves lower callbacks intact.
 Consumer: `release_loop_funded`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
