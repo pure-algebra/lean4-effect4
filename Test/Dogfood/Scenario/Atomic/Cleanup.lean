@@ -1,4 +1,5 @@
 import Test.Dogfood.Scenario.Atomic.Store
+import Test.Dogfood.Scenario.Atomic.SourcePaths
 import Effect4.Laws.Program.FinalizerRun
 import Effect4.Laws.Auto.KernelRfl
 
@@ -21,13 +22,7 @@ namespace Test.Dogfood.Scenario.Atomic.Cleanup
 open Effect4 Effect4.Machine Effect4.Program Effect4.Laws.Auto
 
 /-- The finalizer source of each of the six request identities. -/
-def requestPath : Nat → List Nat
-  | 1 => [1, 1, 1, 1, 0, 0, 0]
-  | 2 => [1, 1, 1, 1, 1, 0, 0, 0]
-  | 3 => [1, 1, 1, 1, 1, 1, 0, 0, 0]
-  | 4 => [1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
-  | 5 => [1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
-  | _ => [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0]
+abbrev requestPath := SourcePaths.requestPath
 
 /-- The closed source certifies all six placement paths. Consumer: `placement`. -/
 theorem static_placement :
