@@ -354,6 +354,32 @@ theorem InterferesWithLookup.trans {m n o : NativeMachine}
     (first : InterferesWithLookup m n) (second : InterferesWithLookup n o) :
     InterferesWithLookup m o := ⟨first.backward.trans second.backward, first.lookup.trans second.lookup⟩
 
+/-- Without allocation, forward first lookups also recover every final first lookup.
+Concept: reactive-scheduling, R11, serving command-moves.
+Consumer: Timeout command assertions across settlement messages.
+The existing birth interval excludes new rows; this needs neither unique ids nor inverse edits. -/
+theorem InterferesWithLookup.backward_lookup {m n : NativeMachine}
+    (transport : InterferesWithLookup m n) (same : n.nextId = m.nextId)
+    (id : FiberId) (next : NFiber) (found : n.fiber? id = some next) :
+    ∃ old, m.fiber? id = some old ∧ OtherEdits old next := by
+  have key : next.id = id := of_decide_eq_true
+    (List.find?_some (p := fun fiber : NFiber => decide (fiber.id = id)) found)
+  obtain ⟨born, rows⟩ := transport.backward.births
+  have oldMember : ∃ old ∈ m.fibers, old.id = id := by
+    rcases rows next (List.mem_of_find?_eq_some found) with ⟨old, member, word⟩ | ⟨lower, upper, _⟩
+    · exact ⟨old, member, word.id.symm.trans key⟩
+    · rw [same] at upper
+      omega
+  cases before : m.fiber? id with
+  | none =>
+    obtain ⟨old, member, oldKey⟩ := oldMember
+    have absent := List.find?_eq_none.mp before old member
+    simp only [oldKey, decide_true, not_true_eq_false] at absent
+  | some old =>
+    obtain ⟨actual, seen, word⟩ := transport.lookup id old before
+    have equal : actual = next := Option.some.inj (seen.symm.trans found)
+    exact ⟨old, rfl, equal ▸ word⟩
+
 theorem InterferesWithLookup.update {m : NativeMachine} {target : FiberId} {fiber next : NFiber}
     (found : m.fiber? target = some fiber) (edits : OtherEdits fiber next) :
     InterferesWithLookup m (m.update next) :=
