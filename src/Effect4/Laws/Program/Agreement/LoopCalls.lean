@@ -1,4 +1,4 @@
-import Effect4.Laws.Program.Agreement.Hosted
+import Effect4.Laws.Program.Agreement.Calls
 import Effect4.Laws.Program.Agreement.Loop
 import Effect4.Laws.Program.DenoteRowsB
 
@@ -8,8 +8,9 @@ import Effect4.Laws.Program.DenoteRowsB
 Slices L1 and L4 of `docs/research/2026-10-10-host-meaning-widening/README.md` (§5.1 Q5, and the
 detailed frontier of Q4 and Q6b; L4's plan is `docs/research/2026-10-10-l4-frontiers.md`): the
 local run with calls goes where the budgeted row meaning (`denoteRowsB`) goes, at every budget.
-It joins two proved inductions: `localRunC_compile` (`Agreement/Calls.lean`, host calls on
-`StraightRows`) and `localRun_compileB` (`Agreement/Loop.lean`, loops without host calls).
+It joins the atoms with host calls (`Agreement/Calls.lean`) and the loop rounds of
+`localRun_compileB` (`Agreement/Loop.lean`, loops without host calls). The straight agreement
+with calls, `localRunC_compile`, is its instance on `StraightRows`, at the end of this module.
 
 **The plan.** `CompilesBO host root k e` says that `e`, compiled at any address of the root that
 holds it, runs where its detailed run at budget `k` goes (`RunsToDO`): to its exit; past the
@@ -18,12 +19,12 @@ at its stores and host state, which the host does not answer. The local run's wa
 same data (`RunEnd.waits`), so the relation pins them. The proof is one induction over the row
 fragment with loops (`compilesBO`):
 
-- an atom finishes, and reads the straight agreement through the detailed run's projection
-  (`compilesBO_of_finishes`), or it is a host call, which waits where it is compiled
-  (`compilesBO_perform`);
-- each composite arm is the corresponding arm of `localRunC_compile` with the cut and the wait
-  passed through (`RunsToDO.pre`); the loop arm is `loop_reaches` (`Agreement/Loop.lean`) under
-  a host, where every test costs one step.
+- an atom finishes, and reads its agreement (`CompilesD`, `Agreement/Calls.lean`) through the
+  detailed run's projection (`compilesBO_of_finishes`), or it is a host call, which waits where
+  it is compiled (`compilesBO_perform`);
+- each composite arm pushes its frame, runs its parts, and passes a cut or a wait through
+  (`RunsToDO.pre`); the loop arm is `loop_reaches` (`Agreement/Loop.lean`) under a host, where
+  every test costs one step.
 
 The coarse agreement on the host run (`localRunC_compileB`, `RunsToDB`) is the detailed one's
 projection (`RunsToDO.project`). Concept `translation-simulation`, requirements R6 and R12; the
@@ -301,14 +302,15 @@ def CompilesBO {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root : Na
       RunsToDO host root K i k (fiberOf (compileEff e p) K i) s r
         (runRowsO host (denoteRowsB table k e p.env) s r)
 
-/-- **A `StraightRows` program whose host run finishes** compiles to its finished detailed run:
-the straight agreement (`localRunC_compile`) read through `runRowsO_of_runRowsH`. -/
+/-- **A `StraightRows` atom whose host run finishes** compiles to its finished detailed run: its
+agreement (`CompilesD`) read through `runRowsO_of_runRowsH`. -/
 theorem compilesBO_of_finishes {σ : Type} (host : Effects.Comodel (RowSig table) σ)
     (root : NativeEff) (k : Nat) {e : NativeEff} (h : StraightRows table e = true)
+    (hc : CompilesD host root e)
     (hfin : ∀ (env : List Val) (s : Stores) (r : σ), ∃ x, hostRun host e env s r = some x) :
     CompilesBO host root k e := by
   intro p K i s r hat
-  have hd := localRunC_compile host root e p K i s r h hat
+  have hd := hc p K i s r hat
   obtain ⟨⟨ex, s', r'⟩, hx⟩ := hfin p.env s r
   have hB : hostRunB host k e p.env s r = some (some ex, (s', r')) := by
     rw [hostRunB_of_straightRows host k e p.env s r h, hx]
@@ -326,8 +328,8 @@ theorem finishes_of_pure {σ : Type} (host : Effects.Comodel (RowSig table) σ) 
   exact ⟨_, hostRun_pure host e env s r hex⟩
 
 /-- **A host call**, detailed: at an unanswered call the compiled call itself waits, with the
-call's row and request, the stores and the host's state; an answered one is the straight
-agreement's. Every other `perform` of the fragment calls no host and finishes
+call's row and request, the stores and the host's state; an answered one is the atom's
+agreement (`compilesD_perform`). Every other `perform` of the fragment calls no host and finishes
 (`hostRun_straight`). -/
 theorem compilesBO_perform {σ : Type} (host : Effects.Comodel (RowSig table) σ)
     (root : NativeEff) (k : Nat) {op : NativeOp} {q : Term}
@@ -336,7 +338,7 @@ theorem compilesBO_perform {σ : Type} (host : Effects.Comodel (RowSig table) σ
   rcases hext : externalIndex? op with _ | j
   · -- no host row: the straight meaning, finished
     have hst := straight_of_performRows h (ne_external_of_index hext)
-    exact compilesBO_of_finishes host root k h fun env s r =>
+    exact compilesBO_of_finishes host root k h (compilesD_perform host root h) fun env s r =>
       ⟨_, hostRun_straight host _ env s r hst⟩
   · rw [eq_external_of_index hext] at h ⊢
     have hrow : dataRow table j = true := h
@@ -344,7 +346,7 @@ theorem compilesBO_perform {σ : Type} (host : Effects.Comodel (RowSig table) σ
     intro p K i s r hat
     rcases hfu : p.fuel with _ | n
     · exact RunsToDO.of_zero hfu
-    have hd := localRunC_compile host root _ p K i s r h hat
+    have hd := compilesD_perform host root h p K i s r hat
     rcases hx : evalTerm p.env q with _ | v
     · -- no request: the wrong-shape exit, finished
       have hR : hostRun host (.perform (.external j) q) p.env s r = some (badShapeExit, (s, r)) :=
@@ -553,10 +555,11 @@ theorem loop_reachesCO {σ : Type} (host : Effects.Comodel (RowSig table) σ) (r
 
 /-! ## The composite arms, placed
 
-Each is the arm of `localRunC_compile` (`Agreement/Calls.lean`) named in its docstring, with the
-cut outcome added. -/
+Each pushes its frame and runs its parts as the local run with calls does; a cut or a wait of a
+part is the whole's. On `StraightRows` no part is cut, and the arms are the straight agreement's
+(`localRunC_compile`). -/
 
-/-- The suspension arm: `localRunC_compile`'s `.suspend` arm; a cut passes through. -/
+/-- The suspension arm: a cut passes through. -/
 @[semantics "translation-simulation" (requirement := R6)]
 theorem compilesBO_suspend {σ : Type} (host : Effects.Comodel (RowSig table) σ)
     (root : NativeEff) (k : Nat) {b : NativeEff} (hb : CompilesBO host root k b) :
@@ -574,7 +577,7 @@ theorem compilesBO_suspend {σ : Type} (host : Effects.Comodel (RowSig table) σ
   rw [suspendBodyAt_suspend (q := { p with completed := [] }) hfu h, resolve_of_at hb'] at hs
   exact RunsToDO.pre (ReachesC.step (host := host) hs rfl r) ih
 
-/-- The sequence arm: `localRunC_compile`'s `.bind` arm; a cut of either part cuts the whole. -/
+/-- The sequence arm: a cut of either part cuts the whole. -/
 @[semantics "translation-simulation" (requirement := R6)]
 theorem compilesBO_bind {σ : Type} (host : Effects.Comodel (RowSig table) σ)
     (root : NativeEff) (k : Nat) {a b : NativeEff} (ha : CompilesBO host root k a)
@@ -616,7 +619,7 @@ theorem compilesBO_bind {σ : Type} (host : Effects.Comodel (RowSig table) σ)
         step_failure_pass_onSuccess root c (compileEff a (p.child 0)) (EffName.cont p) K i s) rfl rfl
       exact Or.inl ⟨1 + ca + 0, (hpush.trans hra).trans hpass⟩
 
-/-- The decision arm: `localRunC_compile`'s `.select` arm; the chosen branch's outcome. -/
+/-- The decision arm: the chosen branch's outcome. -/
 @[semantics "translation-simulation" (requirement := R6)]
 theorem compilesBO_select {σ : Type} (host : Effects.Comodel (RowSig table) σ)
     (root : NativeEff) (k : Nat) {t : Term} {d : Decision} {a b : NativeEff}
@@ -685,8 +688,7 @@ theorem compilesBO_select {σ : Type} (host : Effects.Comodel (RowSig table) σ)
         simp only [Option.toList]
         exact RunsToDO.pre (ReachesC.step (host := host) hs rfl r) ih
 
-/-- The reified exit arm: `localRunC_compile`'s `.exit` arm, its fold case through
-`straight_of_asExit`; a cut of the body cuts the whole. -/
+/-- The reified exit arm: its fold case through `straight_of_asExit`; a cut of the body cuts the whole. -/
 @[semantics "translation-simulation" (requirement := R6)]
 theorem compilesBO_exit {σ : Type} (host : Effects.Comodel (RowSig table) σ)
     (root : NativeEff) (k : Nat) {b : NativeEff} (hfrag : LoopedDataRows table b = true)
@@ -723,7 +725,7 @@ theorem compilesBO_exit {σ : Type} (host : Effects.Comodel (RowSig table) σ)
     rw [compileEff_exit_fold b hfu hx, hmb]
     exact Or.inl ⟨0, ReachesC.refl host root _ s r⟩
 
-/-- The handler arm: `localRunC_compile`'s `.catchCause` arm; a cut of the body or the handler
+/-- The handler arm: a cut of the body or the handler
 cuts the whole. -/
 @[semantics "translation-simulation" (requirement := R6)]
 theorem compilesBO_catchCause {σ : Type} (host : Effects.Comodel (RowSig table) σ)
@@ -766,7 +768,7 @@ theorem compilesBO_catchCause {σ : Type} (host : Effects.Comodel (RowSig table)
       rw [contEOf_caught, resolve_of_at hh'] at hpop
       exact RunsToDO.pre ((hpush.trans hrb).trans hpop) ihh
 
-/-- The typed-failure handler arm: `localRunC_compile`'s `.catchIf` arm. -/
+/-- The typed-failure handler arm; a cut of the body or the handler cuts the whole. -/
 @[semantics "translation-simulation" (requirement := R6)]
 theorem compilesBO_catchIf {σ : Type} (host : Effects.Comodel (RowSig table) σ)
     (root : NativeEff) (k : Nat) {test : Term} {b h : NativeEff} (hb : CompilesBO host root k b)
@@ -830,7 +832,7 @@ theorem compilesBO_catchIf {σ : Type} (host : Effects.Comodel (RowSig table) σ
         rw [resolve_of_at hh'] at hpop
         exact RunsToDO.pre ((hpush.trans hrb).trans hpop) ihh
 
-/-- The two-way handler arm: `localRunC_compile`'s `.matchCause` arm. -/
+/-- The two-way handler arm; a cut of the body or either arm cuts the whole. -/
 @[semantics "translation-simulation" (requirement := R6)]
 theorem compilesBO_matchCause {σ : Type} (host : Effects.Comodel (RowSig table) σ)
     (root : NativeEff) (k : Nat) {b v c : NativeEff} (hb : CompilesBO host root k b)
@@ -882,7 +884,7 @@ theorem compilesBO_matchCause {σ : Type} (host : Effects.Comodel (RowSig table)
       rw [contEOf_onCause, resolve_of_at hc'] at hpop
       exact RunsToDO.pre ((hpush.trans hrb).trans hpop) ihc
 
-/-- The finalizer arm: `localRunC_compile`'s `.onExit` arm; a cut of the body cuts the whole
+/-- The finalizer arm: a cut of the body cuts the whole
 before the finalizer starts, and a cut of the finalizer cuts the whole. -/
 @[semantics "translation-simulation" (requirement := R6)]
 theorem compilesBO_onExit {σ : Type} (host : Effects.Comodel (RowSig table) σ)
@@ -1050,8 +1052,18 @@ theorem compilesBO_iterate {σ : Type} (host : Effects.Comodel (RowSig table) σ
 /-- **Every program of the row fragment with loops compiles to its detailed budgeted run.** -/
 theorem compilesBO {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root : NativeEff)
     (k : Nat) : ∀ (e : NativeEff), LoopedDataRows table e = true → CompilesBO host root k e
-  | .succeed _, h | .fail _, h | .failCause _, h | .sync _, h =>
-    compilesBO_of_finishes host root k h (finishes_of_pure host fun _ => ⟨_, rfl⟩)
+  | .succeed v, h =>
+    compilesBO_of_finishes host root k h (compilesD_succeed host root v)
+      (finishes_of_pure host fun _ => ⟨_, rfl⟩)
+  | .fail e, h =>
+    compilesBO_of_finishes host root k h (compilesD_fail host root e)
+      (finishes_of_pure host fun _ => ⟨_, rfl⟩)
+  | .failCause c, h =>
+    compilesBO_of_finishes host root k h (compilesD_failCause host root c)
+      (finishes_of_pure host fun _ => ⟨_, rfl⟩)
+  | .sync t, h =>
+    compilesBO_of_finishes host root k h (compilesD_sync host root t)
+      (finishes_of_pure host fun _ => ⟨_, rfl⟩)
   | .perform _ _, h => compilesBO_perform host root k h
   | .suspend b, h => compilesBO_suspend host root k (compilesBO host root k b h)
   | .exit b, h => compilesBO_exit host root k h (compilesBO host root k b h)
@@ -1110,7 +1122,7 @@ an address of the root, runs with calls where its budgeted meaning goes at any b
 outer stack, or diverges at the compile's frontier; at a budget cut the run is still going after
 the budget's count of steps. The detailed agreement's projection (`RunsToDO.project`).
 `localRunC_compile` is its straight instance, `localRun_compileB` its host-free one. A step of
-`h8_loopedRows` and `denoteRowsB_eq_session_host`. -/
+`h8_loopedRows`, `denoteRowsB_eq_session_host` and `localRunC_compile`. -/
 @[semantics "translation-simulation" (requirement := R6)]
 theorem localRunC_compileB {σ : Type} (host : Effects.Comodel (RowSig table) σ)
     (root : NativeEff) (k : Nat) (e : NativeEff) (p : Point) (K : List NCode) (i : Bool)
@@ -1120,5 +1132,55 @@ theorem localRunC_compileB {σ : Type} (host : Effects.Comodel (RowSig table) σ
   have h := (localRunC_compileBO host root k e p K i s r hfrag hat).project
   rw [← runRowsH_eq_project] at h
   exact h
+
+/-! ## The straight instance -/
+
+/-- **`StraightRows` lies inside the row fragment with loops**: the two algebras differ only in
+the loop clause, which `StraightRows` refuses. A step of `localRunC_compile`. -/
+theorem loopedDataRows_of_straightRows :
+    ∀ (e : NativeEff), StraightRows table e = true → LoopedDataRows table e = true
+  | .succeed _, h | .fail _, h | .failCause _, h | .sync _, h | .perform _ _, h => h
+  | .suspend b, h | .exit b, h => loopedDataRows_of_straightRows b h
+  | .bind a b, h | .select _ _ a b, h | .catchCause a b, h | .catchIf _ a b, h
+  | .onExit a b, h => by
+    have h' : (StraightRows table a && StraightRows table b) = true := h
+    rw [Bool.and_eq_true] at h'
+    show (LoopedDataRows table a && LoopedDataRows table b) = true
+    rw [loopedDataRows_of_straightRows a h'.1, loopedDataRows_of_straightRows b h'.2]
+    rfl
+  | .matchCause b v c, h => by
+    have h' : (StraightRows table b && StraightRows table v && StraightRows table c) = true := h
+    rw [Bool.and_eq_true, Bool.and_eq_true] at h'
+    show (LoopedDataRows table b && LoopedDataRows table v && LoopedDataRows table c) = true
+    rw [loopedDataRows_of_straightRows b h'.1.1, loopedDataRows_of_straightRows v h'.1.2,
+      loopedDataRows_of_straightRows c h'.2]
+    rfl
+  | .gen _, h | .uninterruptible _, h | .interruptible _, h | .yieldNow _, h
+  | .awaitFiber _ _, h | .withFiber _, h | .scoped _, h | .acquireRelease _ _, h
+  | .provideLayer _ _ _, h | .service _, h | .provideService _ _ _, h | .iterate _ _ _ _ _ _, h
+  | .restore _ _, h | .defs _ _ _ _, h | .invoke _ _ _, h => absurd (h : false = true) Bool.false_ne_true
+
+/-- **A program of the fragment, compiled at an address of the root, runs with calls where its
+meaning under the reply tape goes** (slice H8): from any outer stack `K` and mask `i`, to its
+exit's fiber over its stores with the replies left; or, when the meaning is the frontier, to a
+host call with no reply left. Where the compile budget does not reach, the run may instead
+diverge at the compile's frontier (`RunsToD`). The loop agreement (`localRunC_compileB`) at any
+budget, read through the conservative connector (`hostRunB_of_straightRows`): a straight program
+is never cut. A step of `denoteRows_eq_session` (concept `translation-simulation`, R6); its
+consumer is `meaning_settled` (`Agreement/Hosted.lean`). Reach: `StraightRows`, every compile
+budget, every root, every reply tape. It does not establish a run of the machine, nor anything
+of a fiber, a scope or a loop. -/
+theorem localRunC_compile {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root : NativeEff) :
+    ∀ (e : NativeEff) (p : Point) (K : List NCode) (i : Bool) (s : Stores) (r : σ),
+      StraightRows table e = true → Node.at_ (Node.eff root) p.path = some (Node.eff e) →
+      RunsToD host root K i (fiberOf (compileEff e p) K i) s r (hostRun host e p.env s r) := by
+  intro e p K i s r hst hat
+  have h := localRunC_compileB host root 0 e p K i s r (loopedDataRows_of_straightRows e hst) hat
+  rw [hostRunB_of_straightRows host 0 e p.env s r hst] at h
+  rcases hx : hostRun host e p.env s r with _ | ⟨ex, st⟩
+  · rw [hx] at h
+    exact h
+  · rw [hx] at h
+    exact h
 
 end Effect4.Program.Agreement

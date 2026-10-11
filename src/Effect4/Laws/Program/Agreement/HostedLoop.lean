@@ -1,3 +1,4 @@
+import Effect4.Laws.Program.Agreement.Hosted
 import Effect4.Laws.Program.Agreement.LoopCalls
 
 /-!

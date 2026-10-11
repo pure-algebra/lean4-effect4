@@ -1,4 +1,4 @@
-import Effect4.Laws.Program.Agreement.Calls
+import Effect4.Laws.Program.Agreement.LoopCalls
 
 /-!
 # Program.Agreement.Hosted — the command loop over one fiber with host calls
