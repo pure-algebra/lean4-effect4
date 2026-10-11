@@ -200,9 +200,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
   edits, or a new one (`iteration_interferes`). An iteration that does not finish is the same over
   more frames, with the same machine (`iteration_under`, `src/Effect4/Laws/Program/StackLocal.lean`):
   the evaluation's half of `compiled_region_bracket`'s premise. Five guard chains and the evaluation
-  half of `MaskRuns` follow as instances; replacing the old chains is Codex's lane. A raw context write makes a checked program at
-  a closed row die with `missingService` (`E4-CTX-CE-001`, row 349), and the printer spells a pair of
-  a union as a union of pairs (`E4-PRINT-CE-001`, row 346, ruled).
+  half of `MaskRuns` follow as instances; replacing the old chains is Codex's lane. A raw context
+  write lets a checked program at a closed row die with `missingService` (`E4-CTX-CE-001`, row 349).
+  The printer spells a pair of a union as a union of pairs (`E4-PRINT-CE-001`, row 346, ruled).
 - **The build.** The program and dogfood batteries run the machine as native code (row 327). A
   build prints only findings and the axiom gate's summary: reports print when a script asks for
   them. A battery restates no theorem (row 301); the cleanup pause of 2026-10-07 is closed, with
@@ -302,8 +302,8 @@ owner's note of 2026-10-09: write a program, then watch its session answer calls
   confirm. What a line's width means: the organic strokes note, section 4.
 - **MCP and code mode** (the MCP note, section 10): six rulings.
 - **The push of `lean4-effects`**, before this branch: Effect4 pins its local commit.
-- **Context writes** (row 349): option A, rc.112's typed `context` reader and `provideContext`
-  region in place of the raw pair, or the stopgap C. The context transformers wait on it.
+- **Context writes** (row 349). Option A puts rc.112's typed `context` reader and `provideContext`
+  region in place of the raw pair; option C is the stopgap. The context transformers wait on it.
 
 
 ## Process
