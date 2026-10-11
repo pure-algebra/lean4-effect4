@@ -143,6 +143,39 @@ theorem scenario_keeps {allowed : Command → Prop} {I : Run → Prop} (keeps : 
   rw [play_scriptRows]
   exact play_keeps keeps _ _ rowsAllowed (funded_rows fuel b moves h) start
 
+/-! ### The frame of a goal with no budget premise
+
+A goal that does not assume `funded` reads its invariant after every row, cut or not. The frame
+is the same induction with no reads premise. A frame of this kind gives the other. -/
+
+/-- **A run invariant kept by every allowed row**, read or not. -/
+def RowKeepsAll (allowed : Command → Prop) (I : Run → Prop) : Prop :=
+  ∀ s c, allowed c → I s → I (s.step c)
+
+/-- An invariant kept by every row is kept by every row that the tape reads. -/
+theorem RowKeepsAll.reads {allowed : Command → Prop} {I : Run → Prop}
+    (h : RowKeepsAll allowed I) : RowKeeps allowed I :=
+  fun s c ha _ hi => h s c ha hi
+
+/-- **Rows keep an invariant that every allowed row keeps.** -/
+theorem play_keepsAll {allowed : Command → Prop} {I : Run → Prop} (keeps : RowKeepsAll allowed I) :
+    ∀ (rows : List Command) (s : Run), (∀ c ∈ rows, allowed c) → I s → I (s.play rows)
+  | [], s, _, h => by
+    rw [Run.play_nil]
+    exact h
+  | c :: rest, s, hall, h => by
+    rw [Run.play_cons]
+    exact play_keepsAll keeps rest (s.step c) (fun c' hc' => hall c' (List.mem_cons_of_mem c hc'))
+      (keeps s c (hall c List.mem_cons_self) h)
+
+/-- **The frame of a scenario goal with no budget premise.** -/
+theorem scenario_keepsAll {allowed : Command → Prop} {I : Run → Prop}
+    (keeps : RowKeepsAll allowed I) (start : Run) (moves : List Move)
+    (rowsAllowed : ∀ c ∈ scriptRows start moves, allowed c) (h : I start) :
+    I (Test.Dogfood.Scenario.play start moves) := by
+  rw [play_scriptRows]
+  exact play_keepsAll keeps _ _ rowsAllowed h
+
 /-! ### Host rows -/
 
 /-- The rows that a host act plays: a held call, a reply receipt of a completion, a reply
@@ -632,6 +665,178 @@ theorem withdrawOffer_jobs {s : State} (h : FirstProfile s) (id : Nat) :
   exact (flatMap_split (fun o => o.id != id) s.offers).append_left s.messages
 
 end Conservation
+
+/-! ### Cases of the invariant proved outright
+
+The frame's start, and one row: a refused row. Each shows that the route reads the run as the
+planned invariant will. -/
+
+/-- **The root's exit is the machine's**: a frontier reading with no tape keeps the machine.
+General: any run. -/
+theorem exit_eq (s : Run) : s.exit = (s.machine.fiber? Api.root).bind RunFiber.exit := by
+  show (Api.HostSession.inspect s.session).exit = _
+  unfold Api.HostSession.inspect
+  cases hst : s.session.machine.stuck with
+  | some why =>
+    simp only [replayEval, hst]
+    rfl
+  | none =>
+    cases hfin : s.session.machine.finished with
+    | true =>
+      simp only [replayEval, hst, hfin]
+      rfl
+    | false =>
+      simp only [replayEval, hst, hfin, Bool.false_eq_true, if_false]
+      rfl
+
+/-- The opened run's root has not exited. -/
+theorem opened_exit (fuel : Nat) (b : Api.Built) : (openedAt fuel b).exit = none := by
+  rw [exit_eq]
+  rfl
+
+/-- The empty ledger. -/
+def Ledger.empty : Ledger := ⟨none, [], [], [], [], []⟩
+
+/-- **The ledger at the opened run**: nothing made, nothing fed, nothing held. It is the ledger's
+part of the frame's start. -/
+theorem ledger_opened (fuel : Nat) (b : Api.Built) :
+    Ledger.empty.Shows (observe (openedAt fuel b)) ∧ Ledger.empty.Conserved := by
+  refine ⟨⟨rfl, rfl, rfl, ?_⟩, List.Perm.refl _⟩
+  unfold Observation.leftover observe
+  rw [opened_exit]
+  rfl
+
+/-- The value of an accepted reply receipt at a key, as `fedOf` reads it. -/
+def submitValue (key : Key) : Command × Phase → Option Val
+  | (.submit reply, .preflight) =>
+    if reply.key == key then
+      match reply.completion with
+      | .ofExit (.success value) => some value
+      | _ => none
+    else none
+  | _ => none
+
+/-- The fed job of one row, as `fedOf` reads it. -/
+def appliedValue (rs : List (Command × Phase)) (seen : Key → Option Test.Dogfood.Scenario.Seen) :
+    Command × Phase → Option Val
+  | (.apply key, .applied) =>
+    match seen key with
+    | some call => if call.row == "Jobs.take" then rs.findSome? (submitValue key) else none
+    | none => none
+  | _ => none
+
+/-- `fedOf`, with its two readers named. -/
+theorem fedOf_eq (s : Run) :
+    fedOf s = (Test.Dogfood.Scenario.rows s).filterMap
+      (appliedValue (Test.Dogfood.Scenario.rows s) (Test.Dogfood.Scenario.seenAt s)) := rfl
+
+/-- Playing one row appends it, with its verdict, to the run's rows. -/
+theorem rows_step (s : Run) (c : Command) (hlen : s.journal.length = s.phases.length) :
+    Test.Dogfood.Scenario.rows (s.step c) =
+      Test.Dogfood.Scenario.rows s ++ [(c, (Api.Runner.result s.runner c).phase)] := by
+  show (s.journal ++ [c]).zip (s.phases ++ [(Api.Runner.result s.runner c).phase]) = _
+  rw [List.zip_append hlen]
+  rfl
+
+/-- A refused row keeps the machine (`Api.Runner.step_refused`: it keeps the session). -/
+theorem machine_refused (s : Run) (c : Command) (why : Api.HostSession.Refusal)
+    (h : (Api.Runner.result s.runner c).phase = .refused why) :
+    (s.step c).machine = s.machine := by
+  have kept := Api.Runner.step_refused s.runner c why h
+  show (Api.Runner.step s.runner c).1.session.machine = s.session.machine
+  rw [kept]
+  rfl
+
+/-- A refused row binds no call. -/
+theorem bound_refused (s : Run) (c : Command) (why : Api.HostSession.Refusal)
+    (hlen : s.journal.length = s.phases.length)
+    (h : (Api.Runner.result s.runner c).phase = .refused why) :
+    Test.Dogfood.Scenario.bound (s.step c) = Test.Dogfood.Scenario.bound s := by
+  unfold Test.Dogfood.Scenario.bound
+  rw [rows_step s c hlen, h, List.filterMap_append]
+  cases c <;> simp only [List.filterMap_cons, List.filterMap_nil, List.append_nil]
+
+/-- A refused row changes no call that the host holds or held. -/
+theorem seenAt_refused (s : Run) (c : Command) (why : Api.HostSession.Refusal)
+    (hlen : s.journal.length = s.phases.length)
+    (h : (Api.Runner.result s.runner c).phase = .refused why) :
+    Test.Dogfood.Scenario.seenAt (s.step c) = Test.Dogfood.Scenario.seenAt s := by
+  funext key
+  show ((Test.Dogfood.Scenario.bound (s.step c)).filterMap
+      (Test.Dogfood.Scenario.seenOf (s.step c))).find? (·.key == key) =
+    ((Test.Dogfood.Scenario.bound s).filterMap (Test.Dogfood.Scenario.seenOf s)).find? (·.key == key)
+  rw [bound_refused s c why hlen h]
+  rfl
+
+/-- A refused row's receipt reads no value. -/
+theorem submitValue_refused (key : Key) (c : Command) (why : Api.HostSession.Refusal) :
+    [(c, Phase.refused why)].findSome? (submitValue key) = none := by
+  cases c <;> rfl
+
+/-- A refused row changes no row's fed job. -/
+theorem appliedValue_refused (rs : List (Command × Phase))
+    (seen : Key → Option Test.Dogfood.Scenario.Seen) (c : Command)
+    (why : Api.HostSession.Refusal) (row : Command × Phase) :
+    appliedValue (rs ++ [(c, .refused why)]) seen row = appliedValue rs seen row := by
+  rcases row with ⟨cmd, phase⟩
+  cases cmd with
+  | apply key =>
+    cases phase with
+    | applied =>
+      show (match seen key with
+          | some call =>
+            if call.row == "Jobs.take" then
+              (rs ++ [(c, Phase.refused why)]).findSome? (submitValue key) else none
+          | none => none) =
+        (match seen key with
+          | some call => if call.row == "Jobs.take" then rs.findSome? (submitValue key) else none
+          | none => none)
+      rw [List.findSome?_append, submitValue_refused, Option.or_none]
+    | bound => rfl
+    | preflight => rfl
+    | progressed => rfl
+    | frontier => rfl
+    | refused _ => rfl
+  | bind _ _ => rfl
+  | submit _ => rfl
+  | control _ => rfl
+
+/-- **A refused row feeds nothing.** General in its proof: it reads only the journal's lookups. -/
+theorem fedOf_refused (s : Run) (c : Command) (why : Api.HostSession.Refusal)
+    (hlen : s.journal.length = s.phases.length)
+    (h : (Api.Runner.result s.runner c).phase = .refused why) :
+    fedOf (s.step c) = fedOf s := by
+  rw [fedOf_eq, fedOf_eq, seenAt_refused s c why hlen h, rows_step s c hlen, h,
+    List.filterMap_append]
+  have same : appliedValue (Test.Dogfood.Scenario.rows s ++ [(c, .refused why)])
+      (Test.Dogfood.Scenario.seenAt s) =
+      appliedValue (Test.Dogfood.Scenario.rows s) (Test.Dogfood.Scenario.seenAt s) :=
+    funext (appliedValue_refused _ _ c why)
+  have none : [(c, Phase.refused why)].filterMap
+      (appliedValue (Test.Dogfood.Scenario.rows s) (Test.Dogfood.Scenario.seenAt s)) = [] := by
+    cases c <;> rfl
+  rw [same, none, List.append_nil]
+
+/-- **A refused row keeps what the observation shows of a ledger.** One row of the invariant's
+step, proved outright: the session, so the machine, stays, and the fed jobs stay. -/
+theorem shows_refused {a : Ledger} (s : Run) (c : Command) (why : Api.HostSession.Refusal)
+    (hlen : s.journal.length = s.phases.length)
+    (h : (Api.Runner.result s.runner c).phase = .refused why)
+    (shows : a.Shows (observe s)) : a.Shows (observe (s.step c)) := by
+  have machine : (s.step c).machine = s.machine := machine_refused s c why h
+  have exit : (s.step c).exit = s.exit := by rw [exit_eq, exit_eq, machine]
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · rw [← shows.queue]
+    show queueCell ((s.step c).machine.state.refs[0]?) = queueCell (s.machine.state.refs[0]?)
+    rw [machine]
+  · rw [← shows.assignment]
+    show entries ((s.step c).machine.state.refs[3]?) = entries (s.machine.state.refs[3]?)
+    rw [machine]
+  · rw [← shows.fed]
+    exact fedOf_refused s c why hlen h
+  · rw [← shows.leftover]
+    unfold Observation.leftover observe
+    rw [exit]
 
 /-! ## 3. The planned parts
 

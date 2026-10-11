@@ -1,4 +1,4 @@
-#packet_audit: 107 declarations within [propext, Quot.sound]; 2 planned goals: [QueueRunPacket.crew_host_invariant,
+#packet_audit: 131 declarations within [propext, Quot.sound]; 2 planned goals: [QueueRunPacket.crew_host_invariant,
  QueueRunPacket.crew_invariant]; 3 declarations rest on goals:
   QueueRunPacket.fed_accounted_probe rests on [QueueRunPacket.crew_host_invariant]
   QueueRunPacket.held_within_fed_probe rests on [QueueRunPacket.crew_invariant]
