@@ -1,6 +1,7 @@
 import Test.Dogfood.Scenario.Timeout
 import Test.Dogfood.Scenario.Routing
 import Effect4.Laws.Program.Guard.Decision
+import Effect4.Laws.Api.SessionMeaning
 import Effect4.Laws.Auto.Obligations
 import ProofGraph.AxiomAudit
 
@@ -50,6 +51,23 @@ open Lean Elab Command in
     {goals}; {offenders.size} outside [propext, Quot.sound]" ++
     (if offenders.isEmpty then m!"" else indentD (MessageData.joinSep offenders.toList Format.line)) ++
     m!"\nresting on planned goals:" ++ indentD (MessageData.joinSep modulo.toList Format.line))
+
+/-- **Close an equation by the kernel's definitional check alone.** The goal is assigned
+`Eq.refl lhs` without the elaborator's check, and the kernel checks the declaration. It is what
+`decide +kernel` does for a closed decision, for an equation with free variables. It adds no
+axiom. The elaborator's own `rfl` fails here: it does not unfold definitions by well-founded
+recursion. -/
+syntax (name := kernelRfl) "kernel_rfl" : tactic
+
+open Lean Elab Tactic Meta in
+@[tactic kernelRfl] def evalKernelRfl : Tactic := fun _ => do
+  let goal ← getMainGoal
+  let ty ← instantiateMVars (← goal.getType)
+  match ty.consumeMData.eq? with
+  | some (_, lhs, _) =>
+    goal.assign (← mkEqRefl lhs)
+    replaceMainGoal []
+  | none => throwError "kernel_rfl: the goal is not an equation"
 
 namespace Probe.HostProtocol
 
@@ -1487,6 +1505,288 @@ theorem retries_declared_refuted : ¬ RetriesDeclared := by
     cases hfalse
 
 end Timeout
+
+/-! ## D. The routing scenario
+
+The kernel computes the escape run with a free id, id text and message once the program is read
+off the elaboration instead of the build (`escapes_sqlError`, at one tag). A free tag stops the
+kernel at the handlers' two string tests, so `infrastructure_escapes` goes through the
+denotation: `escape_meaning` (planned) and `escape_session` (planned), joined by
+`denoteRows_eq_session`. `unauthorized_calls_nothing` rests on a general law of the calls of a
+run (`held_in_tree`, planned) and the program's tree (`tree_needs_token`, planned). -/
+
+section Routing
+
+open Effect4.Api.HostSession (Key)
+open Effect4.Api.Runner (Command)
+open Effect4.Program.Denote
+open Test.Dogfood.Scenario (Move Seen)
+open Test.Dogfood.Scenario.Routing
+
+/-- A build's program is its elaboration. A step of the routing goals: it reads the program off
+the elaboration, which the kernel computes with free leaves, where the build's checker does not. -/
+theorem build_program {m : Authoring.Module NativeOp} {b : Api.Built}
+    (h : Effect4.Api.Author.build m = .ok b) : Authoring.elaborateModule m = .ok b.program := by
+  unfold Effect4.Api.Author.build at h
+  split at h
+  · cases h
+  · next program hprog =>
+    dsimp only at h
+    split at h
+    · cases h
+    · unfold Effect4.Api.Author.Internal.finishBuild at h
+      split at h
+      · cases h
+        exact hprog
+      · split at h <;> cases h
+      · cases h
+
+/-- The routing program, read off the elaboration. -/
+def progOf (token : String) (id : Nat) (idText : String) : Api.Program :=
+  match Authoring.elaborateModule (request token id idText) with
+  | .ok p => p
+  | .error _ => .succeed (.lit .unit)
+
+/-- The kernel elaborates the request with a free token, id and id text. -/
+theorem elaborate_free (token : String) (id : Nat) (idText : String) :
+    Authoring.elaborateModule (request token id idText) = .ok (progOf token id idText) := by
+  kernel_rfl
+
+/-- A built request's program and table. -/
+theorem built_request {token : String} {id : Nat} {idText : String} {b : Api.Built}
+    (hb : Effect4.Api.Author.build (request token id idText) = .ok b) :
+    b.program = progOf token id idText ∧ b.table = (request token id idText).table := by
+  refine ⟨?_, (Effect4.Program.Authoring.build_table hb).1⟩
+  have h := build_program hb
+  rw [elaborate_free] at h
+  exact (Except.ok.inj h).symm
+
+/-- The request is in the row fragment, for every token, id and id text. -/
+theorem straight_free (token : String) (id : Nat) (idText : String) :
+    StraightRows (request token id idText).table (progOf token id idText) = true := by
+  kernel_rfl
+
+/-- **The escape at one tag, for every id, id text and message**, by the kernel (0.4 s). Any
+fixed tag goes the same way. The universally quantified tag does not: the kernel cannot decide
+`tag = "Unauthorized"` for a free `tag`. -/
+theorem escapes_sqlError (id : Nat) (idText message : String) (b : Api.Built)
+    (hb : Effect4.Api.Author.build (request "secret" id idText) = .ok b) :
+    (observe (Test.Dogfood.Scenario.play (opened b) (failing "SqlError" message))).outcome =
+      some (.failure (Cause.fail (.tagged "SqlError" message))) := by
+  obtain ⟨hprog, htable⟩ := built_request hb
+  obtain ⟨table, program, admitted, rowNames⟩ := b
+  have hp : program = progOf "secret" id idText := hprog
+  have ht : table = (request "secret" id idText).table := htable
+  subst hp
+  subst ht
+  kernel_rfl
+
+/-- The escape script's two answers: the configuration, then the repository's failure. -/
+def escapeTape (tag message : String) : ReplyTape :=
+  [.success (configOf "secret" 20), .failure (Cause.fail (.tagged tag message))]
+
+/-- The proposition of `escape_meaning`. -/
+def EscapeMeaning : Prop :=
+  ∀ (id : Nat) (idText tag message : String), tag ≠ "NotFound" → tag ≠ "Unauthorized" →
+    ∃ st, meaningRows (request "secret" id idText).table (progOf "secret" id idText) []
+      Stores.empty (escapeTape tag message) =
+        some ((.failure (Cause.fail (.tagged tag message)), st), [])
+
+/-- **The escape's meaning** (planned). Under the two answers, the call tree of the handler
+fails with the repository's failure: each handler's test is false on it. Placement: concept
+`translation-simulation`, R10, the handler form's behaviour law at the meaning; consumer
+`infrastructure_escapes_modulo`. Route: `simp only` over `denoteRows` on the explicit program
+(its normal form is small, `scratch/reduce1.log`), with `tag ≠ "Unauthorized"` and
+`tag ≠ "NotFound"` rewriting the two tests (README, slice S5). -/
+@[semantics "translation-simulation" (requirement := R10)]
+proof_goal escape_meaning : EscapeMeaning
+
+/-- The proposition of `escape_session`. -/
+def EscapeSession : Prop :=
+  ∀ (id : Nat) (idText tag message : String) (b : Api.Built),
+    Effect4.Api.Author.build (request "secret" id idText) = .ok b →
+    Run.funded (Test.Dogfood.Scenario.play (opened b) (failing tag message)) = true ∧
+      Run.atRest (Test.Dogfood.Scenario.play (opened b) (failing tag message)) = true ∧
+      Run.hostDriven (Test.Dogfood.Scenario.play (opened b) (failing tag message)) = true ∧
+      Run.appliedExits (Test.Dogfood.Scenario.play (opened b) (failing tag message)) =
+        escapeTape tag message
+
+/-- **The escape run meets the denotation's premises** (planned). For every tag, the run of
+the script `failing` is funded, at rest and driven by a host, and the session applied the two
+answers. Placement: concept `translation-simulation`, R6; consumer
+`infrastructure_escapes_modulo`. Route: the kernel computes the five rows before the last
+application with free values; the last application is `holds_answer`
+(`src/Effect4/Laws/Program/Agreement/Hosted.lean`), whose budget premise needs a general bound
+for straight segments or a larger scenario budget (README, slice S6). -/
+@[semantics "translation-simulation" (requirement := R6)]
+proof_goal escape_session : EscapeSession
+
+/-- **`infrastructure_escapes`, proved modulo `escape_meaning` and `escape_session`.** The
+denotation carries the run: `denoteRows_eq_session` turns the meaning into the root's exit. -/
+theorem infrastructure_escapes_modulo : InfrastructureEscapes := by
+  intro id idText tag message b hb hNF hU
+  obtain ⟨hfund, hrest, hhost, hexits⟩ := escape_session id idText tag message b hb
+  obtain ⟨hprog, htable⟩ := built_request hb
+  generalize hs : Test.Dogfood.Scenario.play (opened b) (failing tag message) = s at *
+  have hreach : Run.Reached s := by
+    rw [← hs]
+    exact Test.Dogfood.Scenario.reached_play _ _ (Run.Reached.opened _ _ _ _)
+  have hbuilt : s.built = b := by
+    rw [← hs]
+    exact (Test.Dogfood.Scenario.play_opened (opened b) (failing tag message)).1
+  have h1 : s.built.table = (request "secret" id idText).table := by rw [hbuilt, htable]
+  have h2 : s.built.program = progOf "secret" id idText := by rw [hbuilt, hprog]
+  have hfrag : StraightRows s.built.table s.built.program = true := by
+    rw [h1, h2]
+    exact straight_free "secret" id idText
+  have hmean := Run.denoteRows_eq_session s hreach hfund hrest hhost hfrag
+  obtain ⟨st, hm⟩ := escape_meaning id idText tag message hNF hU
+  have key : some ((Exit.failure (Cause.fail (.tagged tag message)), st), ([] : ReplyTape)) =
+      s.exit.map fun ex => ((ex, s.machine.state), []) := by
+    rw [← hm, ← h1, ← h2, ← hexits]
+    exact hmean
+  show s.exit = _
+  cases hexit : s.exit with
+  | none =>
+    rw [hexit] at key
+    cases key
+  | some ex =>
+    rw [hexit] at key
+    have hpair := Option.some.inj key
+    have hex : Exit.failure (Cause.fail (.tagged tag message)) = ex :=
+      congrArg (fun r => r.1.1) hpair
+    rw [hex]
+
+/-! ### `unauthorized_calls_nothing` -/
+
+/-- A program of the row fragment whose code catches no interruption: no `catchCause`,
+`matchCause`, `onExit` or `exit`. An interruption then only stops the root. -/
+def NoCauseHandler : NativeEff → Bool
+  | .suspend a => NoCauseHandler a
+  | .bind a b => NoCauseHandler a && NoCauseHandler b
+  | .catchIf _ a b => NoCauseHandler a && NoCauseHandler b
+  | .select _ _ a b => NoCauseHandler a && NoCauseHandler b
+  | .catchCause _ _ => false
+  | .matchCause _ _ _ => false
+  | .onExit _ _ => false
+  | .exit _ => false
+  | _ => true
+
+theorem noCauseHandler_free (token : String) (id : Nat) (idText : String) :
+    NoCauseHandler (progOf token id idText) = true := by
+  kernel_rfl
+
+/-- The reply host that answers a call with the tape's next exit only where the row's own
+columns admit it (`externalAdmits`). It is the reply tape as the session reads it. -/
+def admittedTapeHost (table : RowTable) : Effects.Comodel (RowSig table) ReplyTape where
+  answer op tape :=
+    match tape with
+    | [] => none
+    | ex :: rest => if externalAdmits table op.1.val (.ofExit ex) then some (ex, rest) else none
+
+/-- Where a tree waits under a tape: the row and the request of the call that found the tape
+empty, or no wait. -/
+def treeWaits (table : RowTable) (program : NativeEff) (T : ReplyTape) : RowsStop :=
+  (observeRows (admittedTapeHost table) (some <$> denoteRows table program []) Stores.empty T).stop
+
+/-- The proposition of `held_in_tree`. -/
+def HeldInTree : Prop :=
+  ∀ (s : Run), Run.Reached s → StraightRows s.built.table s.built.program = true →
+    NoCauseHandler s.built.program = true →
+    ∀ seen ∈ Test.Dogfood.Scenario.held s, ∃ (i : Nat) (row : Program.Row) (T : ReplyTape),
+      externalRow s.built.table i = some row ∧ row.spelling = seen.row ∧
+      (∀ ex ∈ T, ∃ reply, Command.submit reply ∈ s.journal ∧ reply.completion = .ofExit ex) ∧
+      treeWaits s.built.table s.built.program T = .waiting i seen.request
+
+/-- **The calls of a run are calls of its tree** (planned, general). In every recorded run of a
+program of the row fragment that catches no interruption, under every script, each call the
+host held is a wait of the program's call tree under a tape of exits that replies in the journal
+carried, each admitted at its row. Placement: concept `translation-simulation`, R6; it extends
+`rows_loop_frontier` (`src/Effect4/Laws/Api/SessionMeaningLoop.lean`) from funded, at-rest,
+host-driven runs to every script: interruptions, clock steps, yield verdicts and budget cuts.
+Consumer: `unauthorized_calls_nothing_modulo`, and every "calls nothing" claim of a one-fiber
+program. It does not establish progress, or anything of a fork, a scope or a loop. -/
+@[semantics "translation-simulation" (requirement := R6)]
+proof_goal held_in_tree : HeldInTree
+
+/-- The proposition of `tree_needs_token`. -/
+def TreeNeedsToken : Prop :=
+  ∀ (token : String) (id : Nat) (idText : String) (T : ReplyTape) (v : Val),
+    treeWaits (request token id idText).table (progOf token id idText) T = .waiting 1 v →
+    ∃ pageSize rest, T = .success (configOf token pageSize) :: rest
+
+/-- **The routing tree reaches the repository only past the token** (planned, specific). In the
+request's call tree, under any tape that the row columns admit, a wait at the repository row
+follows a first answer that is the configuration with the request's token. Placement: concept
+`context-requirements`, R5; consumer `unauthorized_calls_nothing_modulo`. Route: case on the
+tape's head; the admitted answer at the configuration's column is a canonical record (tested,
+`scratch/Explore2.lean`); the check `not (eq token adminToken)` decides the branch (README,
+slice S9). -/
+@[semantics "context-requirements" (requirement := R5)]
+proof_goal tree_needs_token : TreeNeedsToken
+
+/-- The routing table's rows by spelling: the repository is position 1. -/
+theorem repo_position (token : String) (id : Nat) (idText : String) (i : Nat)
+    (row : Program.Row) (hrow : externalRow (request token id idText).table i = some row)
+    (hspell : row.spelling = "UserRepo.findById") : i = 1 := by
+  match i, hrow with
+  | 0, hrow =>
+    have hs : (externalRow (request token id idText).table 0).map (·.spelling) =
+        some "AppConfig.get" := by
+      kernel_rfl
+    rw [hrow] at hs
+    have hname : row.spelling = "AppConfig.get" := Option.some.inj hs
+    rw [hspell] at hname
+    exact absurd hname (by decide)
+  | 1, _ => rfl
+  | n + 2, hrow =>
+    have hr : externalRow (request token id idText).table (n + 2) = none := by
+      kernel_rfl
+    rw [hr] at hrow
+    cases hrow
+
+/-- **`unauthorized_calls_nothing`, proved modulo `held_in_tree` and `tree_needs_token`.** A held
+repository call is a wait of the tree; the tree needs the configuration with the token first;
+that answer is a reply in the journal, which the premise excludes. -/
+theorem unauthorized_calls_nothing_modulo : UnauthorizedCallsNothing := by
+  intro token id idText b moves hb hnone
+  obtain ⟨hprog, htable⟩ := built_request hb
+  have hreach : Run.Reached (Test.Dogfood.Scenario.play (opened b) moves) :=
+    Test.Dogfood.Scenario.reached_play _ _ (Run.Reached.opened _ _ _ _)
+  have hbuilt : (Test.Dogfood.Scenario.play (opened b) moves).built = b :=
+    (Test.Dogfood.Scenario.play_opened (opened b) moves).1
+  cases hcalls : (observe (Test.Dogfood.Scenario.play (opened b) moves)).repositoryCalls with
+  | nil => rfl
+  | cons v rest =>
+    exfalso
+    have hmem : v ∈ Test.Dogfood.Scenario.requestsOn (Test.Dogfood.Scenario.play (opened b) moves)
+        "UserRepo.findById" := by
+      have : v ∈ (observe (Test.Dogfood.Scenario.play (opened b) moves)).repositoryCalls := by
+        rw [hcalls]
+        exact List.mem_cons_self
+      exact this
+    obtain ⟨seen, hseenf, rfl⟩ := List.mem_map.mp hmem
+    obtain ⟨hseen, hrowname⟩ := List.mem_filter.mp hseenf
+    have hfrag : StraightRows (Test.Dogfood.Scenario.play (opened b) moves).built.table
+        (Test.Dogfood.Scenario.play (opened b) moves).built.program = true := by
+      rw [hbuilt, hprog, htable]
+      exact straight_free token id idText
+    have hcause : NoCauseHandler (Test.Dogfood.Scenario.play (opened b) moves).built.program =
+        true := by
+      rw [hbuilt, hprog]
+      exact noCauseHandler_free token id idText
+    obtain ⟨i, row, T, hrow, hspell, hjournal, hwait⟩ :=
+      held_in_tree _ hreach hfrag hcause seen hseen
+    rw [hbuilt, hprog, htable] at hwait
+    rw [hbuilt, htable] at hrow
+    have hi : i = 1 := repo_position token id idText i row hrow
+      (hspell.trans (beq_iff_eq.mp hrowname))
+    subst hi
+    obtain ⟨pageSize, rest', hT⟩ := tree_needs_token token id idText T seen.request hwait
+    obtain ⟨reply, hsub, hcomp⟩ := hjournal _ (by rw [hT]; exact List.mem_cons_self)
+    exact hnone reply pageSize hsub hcomp
+
+end Routing
 
 end Probe.HostProtocol
 
