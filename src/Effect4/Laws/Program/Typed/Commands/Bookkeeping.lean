@@ -2917,6 +2917,53 @@ theorem racePayload_complete {root : ProgramSource} {w : World} {race : RRace} {
   · rw [if_neg hl]
     exact h
 
+/-- First-exit completion accepts the live entrant's exact typed exit. -/
+theorem racePayload_completeFirst {root : ProgramSource} {w : World} {race : RRace}
+    {resultTy : EffTy} (h : RacePayload root w race resultTy) (id : FiberId) (exit : ExitV)
+    (typed : id ∈ race.state.live → ExitOk w resultTy exit) :
+    RacePayload root w { race with state := Supervision.raceCompleteFirst race.state id exit }
+      resultTy := by
+  unfold Supervision.raceCompleteFirst
+  by_cases live : id ∈ race.state.live
+  · rw [if_pos live]
+    cases accepted : race.state.accepted with
+    | some old => exact racePayload_complete h id exit typed
+    | none =>
+      have ex := typed live
+      refine ⟨h.token, h.failures, ?_, ?_, ?_, ?_, h.programs⟩
+      · intro pair present
+        cases exit with
+        | success value =>
+          cases present
+          exact ex.1
+        | failure cause => cases present
+      · intro value present
+        cases present
+        exact ex
+      · intro value present
+        cases present
+      · intro child present
+        exact h.live child (List.mem_filter.mp present).1
+  · rw [if_neg live]
+    exact h
+
+/-- Observer dispatch keeps the race payload in either selection mode. -/
+theorem racePayload_afterExit {root : ProgramSource} {w : World} {race : RRace}
+    {resultTy : EffTy} (h : RacePayload root w race resultTy) (id : FiberId) (exit : ExitV)
+    (typed : id ∈ race.state.live → ExitOk w resultTy exit) :
+    RacePayload root w (race.afterExit id exit) resultTy := by
+  have next : RacePayload root w
+      { race with state := Supervision.raceCompleteWith race.mode race.state id exit }
+      resultTy := by
+    cases mode : race.mode with
+    | firstSuccess =>
+      have fact := racePayload_complete h id exit typed
+      exact ⟨fact.token, fact.failures, fact.winner, fact.accepted, fact.cleanup, fact.live, fact.programs⟩
+    | firstExit =>
+      have fact := racePayload_completeFirst h id exit typed
+      exact ⟨fact.token, fact.failures, fact.winner, fact.accepted, fact.cleanup, fact.live, fact.programs⟩
+  exact ⟨next.token, next.failures, next.winner, next.accepted, next.cleanup, next.live, next.programs⟩
+
 /-- A race's type is pinned by its token's declaration. -/
 theorem racePayload_unique {root : ProgramSource} {w : World} {r r' : RRace} {ty ty' : EffTy}
     (h : RacePayload root w r ty) (h' : RacePayload root w r' ty') (host : r'.host = r.host)
@@ -3278,6 +3325,26 @@ theorem raceComplete_live (s : Supervision.RaceAllState Val Err Defect FiberId A
         · exact sub x hx
   · exact hx
 
+/-- Both selection modes remove only live entrants. -/
+theorem raceCompleteWith_live (mode : Supervision.RaceMode)
+    (s : Supervision.RaceAllState Val Err Defect FiberId Ann) (id : FiberId) (exit : ExitV) :
+    ∀ x ∈ (Supervision.raceCompleteWith mode s id exit).live, x ∈ s.live := by
+  cases mode with
+  | firstSuccess => exact raceComplete_live s id exit
+  | firstExit =>
+    intro child present
+    change child ∈ (Supervision.raceCompleteFirst s id exit).live at present
+    unfold Supervision.raceCompleteFirst at present
+    split at present
+    · cases accepted : s.accepted with
+      | none =>
+        rw [accepted] at present
+        exact (List.mem_filter.mp present).1
+      | some old =>
+        rw [accepted] at present
+        exact raceComplete_live s id exit child present
+    · exact present
+
 /-- The race callback arm of `observe`: the callback's exit updates the race's bookkeeping, and a
 first accepted answer settles the race and, unless its registration is still running, resumes
 the host with the settle program. -/
@@ -3306,33 +3373,35 @@ theorem observe_raceCallback (root : ProgramSource) (rootTy : EffTy) {w : World}
       rw [hr] at obs
       exact obs
     obtain ⟨resultTy, payload, liveTyped⟩ := obs'
-    have payload1 := racePayload_complete payload id exit liveTyped
+    have payload1 := racePayload_afterExit payload id exit liveTyped
     have hr1 : (m.emit [RunEvent.observerFired id (.raceCallback raceId)]).race? race.id =
         some race := by
       rw [hrid]
       exact hr
     have m2 := configTyped_updateRace tail1 hr1 rfl rfl rfl
-      (new := { race with state := Supervision.raceComplete race.state id exit }) payload1
-      (fun src h => Or.inl (raceComplete_live race.state id exit src h))
+      (new := (race.afterExit id exit)) payload1
+      (fun src h => Or.inl (raceCompleteWith_live race.mode race.state id exit src h))
     split
     · rename_i accepted hacc _
       have hr2 : ((m.emit [RunEvent.observerFired id (.raceCallback raceId)]).updateRace
-          { race with state := Supervision.raceComplete race.state id exit }).race?
-            race.id = some { race with state := Supervision.raceComplete race.state id exit } := by
+          (race.afterExit id exit)).race?
+            race.id = some (race.afterExit id exit) := by
         rw [rrace?_updateRace, hr1, Option.map_some, if_pos rfl]
       have m3 := configTyped_updateRace m2 hr2 rfl rfl rfl
-        (old := { race with state := Supervision.raceComplete race.state id exit })
-        (new := { race with state := Supervision.raceComplete race.state id exit, settled := true })
+        (old := (race.afterExit id exit))
+        (new := { race.afterExit id exit with settled := true })
         (racePayload_settled payload1 true) (fun src h => Or.inl h)
       have m4 := configTyped_emit m3 [RunEvent.raceSettled raceId accepted]
-      split
-      · exact m4
-      · have acceptedTyped : ExitOk w resultTy accepted := payload1.accepted accepted hacc
+      by_cases registering : race.registering = true
+      · rw [if_pos registering]
+        exact m4
+      · rw [if_neg registering]
+        have acceptedTyped : ExitOk w resultTy accepted := payload1.accepted accepted hacc
         have code := raceSettle_typed root (w := w) raceId
-          (Supervision.raceComplete race.state id exit).cleanupNeeded acceptedTyped
+          (race.afterExit id exit).state.cleanupNeeded acceptedTyped
         have resumeOk : Contracts.ResumeOk (TypedProg root) w race.host race.token
             ((interpR root.program).raceSettle raceId
-              (Supervision.raceComplete race.state id exit).cleanupNeeded accepted) := by
+              (race.afterExit id exit).state.cleanupNeeded accepted) := by
           intro ty declared
           rw [payload.token] at declared
           cases declared

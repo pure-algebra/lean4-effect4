@@ -1265,8 +1265,9 @@ theorem injectYield_keepsMask {m : RunMachine ν σ β ε δ ι α χ St} {f : R
 @[semantics "scope-lifetime-finalization"]
 theorem beginRace_keepsMask (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (y : Bool)
-    (entrants : List (Prim ν σ β ε δ ι α)) (site : Option (List Nat)) :
-    IterKeepsMask m f (beginRace interp m f y entrants site) :=
+    (entrants : List (Prim ν σ β ε δ ι α)) (site : Option (List Nat))
+    (mode : Supervision.RaceMode := .firstSuccess) :
+    IterKeepsMask m f (beginRace interp m f y entrants site mode) :=
   ⟨MaskAged.refl m, MaskLater.refl f, rfl, fun _ h => nomatch h⟩
 
 /-- A race's registration marks the race, and its two commands clear nothing. A step of
@@ -1669,6 +1670,7 @@ theorem withFiber_keepsMask (interp : RunInterp ν σ β ε δ ι α χ St)
     exact ⟨facts.1, facts.2, rfl,
       fun exit finished => (outcomeOf_unfinished _ _ exit finished).elim⟩
   · exact beginRace_keepsMask interp m f y _ _
+  · exact beginRace_keepsMask interp m f y _ _ .firstExit
   · exact ⟨MaskAged.refl m,
       ⟨rfl, fun live => live, fun _ base valid => uninterruptible_maskChain base f.frame valid⟩,
       rfl, fun _ h => nomatch h⟩

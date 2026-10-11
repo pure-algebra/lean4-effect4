@@ -225,3 +225,11 @@ The queue proof chooses the registration branch explicitly, keeping selected-ent
 `LEAN_NUM_THREADS=3 lake build Effect4.Laws.Program.Guard.Observer` passes with 370 jobs.
 The module audit is recorded by `codex/FirstExitObserverAudit.lean`.
 The observer audit reports 84 declarations, no modulo declarations, and no planned goals.
+
+## First-exit callback typing and masks
+
+`racePayload_completeFirst` retains the live entrant's exact typed exit.
+The observer proof now dispatches through both selection modes and retains the accepted exit's typing.
+`beginRace_keepsMask` covers both modes; the new action preserves the existing saved-mask invariant.
+The narrow builds pass for `Typed.Commands.Bookkeeping` and `Machine.MaskRuns`.
+`codex/FirstExitBookkeepingAudit.lean` audits 856 declarations within `[propext, Quot.sound]`, with no goals or modulo declarations.
