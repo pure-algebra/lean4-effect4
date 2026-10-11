@@ -71,8 +71,9 @@ theorem interruptEach_result_ok (interp : NInterp) (who : FiberId)
   exact kept
 
 theorem beginRace_ok (interp : NInterp) (m : NativeMachine) (f : NFiber) (yielding : Bool)
-    (programs : List NCode) (site : Option (List Nat)) (h : Ok m) :
-    Ok (beginRace interp m f yielding programs site).machine := h
+    (programs : List NCode) (site : Option (List Nat)) (h : Ok m)
+    (mode : Supervision.RaceMode := .firstSuccess) :
+    Ok (beginRace interp m f yielding programs site mode).machine := h
 
 theorem registerRace_ok (m : NativeMachine) (f : NFiber) (yielding : Bool)
     (race : Nat) (h : Ok m) : Ok (registerRace m f yielding race).machine := by

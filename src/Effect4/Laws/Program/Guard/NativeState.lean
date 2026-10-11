@@ -141,8 +141,9 @@ theorem guardState_appendRace {m : NativeMachine} (state : GuardState m)
 theorem StateStep.beginRace (p : NativeEff) (table : RowTable) (completed)
     {m : NativeMachine} (state : GuardState m) (f : NFiber) (yielding : Bool)
     (entrants : List NCode) (host : ∃ saved, m.fiber? f.id = some saved)
-    (programs : ∀ code ∈ entrants, raceSites code = []) (site : Option (List Nat) := none) :
-    StateStep m (beginRace (interpAt p completed table) m f yielding entrants site).machine := by
+    (programs : ∀ code ∈ entrants, raceSites code = []) (site : Option (List Nat) := none)
+    (mode : Supervision.RaceMode := .firstSuccess) :
+    StateStep m (beginRace (interpAt p completed table) m f yielding entrants site mode).machine := by
   apply StateStep.emit
   exact ⟨guardState_appendRace state _ rfl rfl host programs, Nat.le_succ _, fun _ _ _ h => h⟩
 
@@ -463,6 +464,9 @@ theorem withFiber_state (p : NativeEff) (table : RowTable) (completed)
   case raceAll entrants site =>
     exact StateStep.beginRace p table completed state f yielding entrants host
       (List.flatMap_eq_nil_iff.mp sites) site
+  case raceAllFirst entrants site =>
+    exact StateStep.beginRace p table completed state f yielding entrants host
+      (List.flatMap_eq_nil_iff.mp sites) site .firstExit
   case setInterruptible code mask => cases mask <;> exact .refl state
   case closeScope scope exit =>
     split

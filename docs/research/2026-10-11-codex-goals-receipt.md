@@ -245,3 +245,11 @@ Whole-command preservation, source-use uniqueness, and log-writer provenance rem
 `LEAN_NUM_THREADS=3 lake build Effect4.Laws.Machine.FinalizerRun` passes with 211 jobs.
 `lake env lean docs/research/2026-10-10-goals-packet/codex/FinalizerRun.lean` passes.
 The audit reports 58 declarations, no modulo declarations, and no planned goals.
+
+## First-exit native state and allocation invariants
+
+The race allocation helper now accepts either selection mode.
+Native state, race-host links and the fork ledger retain their existing invariants.
+The integrated Workers, Timeout and timeout-counterexample modules build with 1077 jobs.
+`codex/FirstExitGuardAudit.lean` audits 569 declarations within `[propext, Quot.sound]`.
+It reports no goals or modulo declarations.

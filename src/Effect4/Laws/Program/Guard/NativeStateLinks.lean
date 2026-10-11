@@ -148,8 +148,9 @@ theorem Links.forkFinalizers (p : NativeEff) (table : RowTable) (completed)
     exact (Links.spawn p table completed m f code ⟨true,true,.inherit⟩).trans (ih _)
 
 theorem Links.beginRace (interp : NInterp) (m : NativeMachine) (f : NFiber)
-    (yielding : Bool) (codes : List NCode) (site : Option (List Nat) := none) :
-    Links m (beginRace interp m f yielding codes site).machine :=
+    (yielding : Bool) (codes : List NCode) (site : Option (List Nat) := none)
+    (mode : Supervision.RaceMode := .firstSuccess) :
+    Links m (beginRace interp m f yielding codes site mode).machine :=
   .same rfl (raceHostsPreserved_append m [_])
 
 theorem Links.registerRace (m : NativeMachine) (f : NFiber) (yielding : Bool) (id : Nat) :
@@ -264,6 +265,7 @@ theorem withFiber_links (p : NativeEff) (table : RowTable) (completed)
   case awaitAllFailFast targets => exact Links.countdown _ m f targets _ _
   case awaitNewChildren snapshot => exact Links.countdown _ m f _ _ _
   case raceAll entrants site => exact Links.beginRace _ m f yielding entrants site
+  case raceAllFirst entrants site => exact Links.beginRace _ m f yielding entrants site .firstExit
   case setInterruptible code mask => cases mask <;> exact .refl m
   case closeScope scope exit => split <;> exact .sameTables rfl rfl
   case closePar codes => exact Links.forkFinalizers p table completed m f codes
