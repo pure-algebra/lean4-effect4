@@ -1,4 +1,4 @@
-import Effect4.Laws.Machine.AnswerFlowHooks
+import Effect4.Laws.Machine.AnswerFlowPop
 import Effect4.Program.Compile
 import Effect4.Laws.Auto.KernelRfl
 
@@ -67,5 +67,31 @@ example : FrameAt stage interp 1 1
   exact ensure_replacement stage interp 1 1 1 1 (.setInterruptible true) (.failure reason)
     {frame with interruptedCause := some reason} (saved_mask stage interp 1 1 true)
     (fun _ _ => rfl) (.nil 1 1) (by kernel_rfl)
+
+/-- The native resume crosses a mask and a missing value arm before invoking its actual callback. -/
+example : ∃ next events,
+    ({frame with stack := [.setInterruptible false, .onFailure (.success .unit) name,
+      .onSuccessConst (.yieldNowWith 0) (.success .unit)]}).resumeValue interp .unit none =
+      (.running next, events) ∧ FrameAt stage interp 1 1 next := by
+  have failed := saved_failure stage interp 1 1 1 (.success .unit) name
+    (fun _ _ _ good => good) (fun _ _ cause good => ⟨good, Or.inr ⟨cause, rfl⟩⟩)
+  have constant := saved_constant stage interp 1 1 1 (.yieldNowWith 0) (.success .unit)
+    (fun _ _ _ good => ⟨good.1, Or.inl rfl⟩) (fun _ _ _ good => good)
+  have result := resumeValue_selected stage interp 1 1 1
+    {frame with stack := [.setInterruptible false, .onFailure (.success .unit) name,
+      .onSuccessConst (.yieldNowWith 0) (.success .unit)]}
+    .unit (.onSuccessConst (.yieldNowWith 0) (.success .unit)) (.success .unit) [] none
+    (Or.inl rfl) ⟨rfl, rfl⟩
+    (.cons (saved_mask stage interp 1 1 false) (.cons failed (.cons constant (.nil 1 1))))
+    (by kernel_rfl) rfl rfl
+  rcases result with ⟨events, equation, typed⟩
+  exact ⟨_, events, equation, typed⟩
+
+/-- A pending mask replacement does not satisfy the selected-frame premise of the callback law. -/
+example : (({frame with
+    interruptedCause := some reason
+    stack := [.setInterruptible true, .onSuccessConst (.yieldNowWith 0) (.success .unit)]}).getCont .contA false).answer =
+    .replacement (.failure reason) := by
+  kernel_rfl
 
 end Test.Machine.AnswerFlow
