@@ -211,3 +211,10 @@ The custody and timeout source slices land at `7d2511cfa` and `dd7dedb93`.
 `codex/behavior-pass-receipt.md` records the generated OCaml refresh and every affected behavior gate.
 All those gates pass; the timeout host comparison retains its explicit missing readers.
 The universal source-state and custody obligations remain open and keep their scenario consumers.
+
+### Scheduler custody closure
+
+`ReleaseCustody.Execution.outer_custody` is proved in place from the explicit native command contract.
+Its direct worker consumer compiles. The audit leaves one planned goal in `Execution`: `command_custody`.
+The retained proof and audit are in `codex/CustodyOuter.lean` and `codex/CustodyOuterAudit.out`.
+The receipt is `codex/CustodyOuterReceipt.md`.
