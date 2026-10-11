@@ -152,9 +152,16 @@ Behaviour gates only where a slice changes executable code, and then at a sweep.
      restores the context on every exit. Prove its bracket as an instance of
      `MaskBracket.compiled_region_bracket` and `StackRegionRun.compiled_region_bracket_of_prefix`,
      not as a new region law (`../2026-10-11-tokens-in-places/README.md`, F1).
-8. **Housekeeping.** The owner deleted `codex/schedule-independence-review-20261010` (row 353);
-   its tip is the tag `archive/docgen-probe-20261010`. Remove your clean worktree
-   `~/.codex/worktrees/module-design-review/lean4-effect4`, then delete the branch.
+8. **Housekeeping: worktrees** (owner, 2026-10-11: worktree cleanup; the disk has 15 GB free).
+   The module-design-review worktree is gone. Survey of 14:05, `refactor/phase1-phase3` at
+   `0d2687767`:
+   - **Merged and clean; remove each, then `git branch -d`:** `unguard` (3.3 GB),
+     `module-semaphore` (2.5 GB), `prepared-run-view`, `live-graph-index`, `live-graph-routes`.
+   - **Idle since 2026-10-08, every commit's subject already in the integration branch:**
+     `module-authoring`, `module-construction`, `module-field-inference`, `module-folds`,
+     `step-captured-folds`. Check each with `git cherry`, then remove the worktree.
+   - Run `git status --short --ignored -- docs/research` in each tree first: research files are
+     ignored, and a removal loses them.
 9. **L4 to L6** at any time: `AppendOnly` and `FreshSupply` for ids, keys and tokens; `Census` and
    `Linear` for the static site analyses. Reconcile `OncePlaced` with `Linear` in the receipt.
 10. **Machine edits: one word per helper, one fact per edit** (audit, 2026-10-11; the design,
