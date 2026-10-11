@@ -347,6 +347,7 @@ import Test.Audit.SummaryControls
 -- Scenario proof structures and their independent controls.
 import Test.Dogfood.Proofs.HostJournal
 import Test.Dogfood.Proofs.HostPayloadsAudit
+import Test.Dogfood.Proofs.HostTimeoutSource
 import Test.Dogfood.Proofs.TimeoutCounterexample
 import Test.Dogfood.Scenario.QueueWorkers.Source
 import Test.Machine.RaceFirst

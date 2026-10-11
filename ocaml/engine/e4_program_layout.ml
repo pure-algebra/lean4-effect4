@@ -151,6 +151,7 @@ module type PROGRAM_TYPES = sig
   | ActionTerm_getId
   | ActionTerm_closeScope of term * term
   | ActionTerm_getInterruptible
+  | ActionTerm_raceAllFirst of 'op effs
   and 'op layer_term = | LayerTerm_succeed of service_key * lit
   | LayerTerm_effect of service_key * 'op eff
   | LayerTerm_effectDiscard of 'op eff
@@ -227,7 +228,7 @@ let engine_ctor_names = [
   ("stmt", ["bindYield"; "yieldDiscard"; "ret"; "ifElse"; "whileTrue"; "breakLoop"]);
   ("stmts", ["nil"; "cons"]);
   ("effs", ["nil"; "cons"]);
-  ("action_term", ["fork"; "forkIn"; "forkScoped"; "runIn"; "interrupt"; "interruptScoped"; "interruptAll"; "awaitAll"; "awaitAllFailFast"; "snapshotChildren"; "awaitNewChildren"; "raceAll"; "setContext"; "getContext"; "getId"; "closeScope"; "getInterruptible"]);
+  ("action_term", ["fork"; "forkIn"; "forkScoped"; "runIn"; "interrupt"; "interruptScoped"; "interruptAll"; "awaitAll"; "awaitAllFailFast"; "snapshotChildren"; "awaitNewChildren"; "raceAll"; "setContext"; "getContext"; "getId"; "closeScope"; "getInterruptible"; "raceAllFirst"]);
   ("layer_term", ["succeed"; "effect"; "effectDiscard"; "provide"; "provideMerge"; "merge"; "fresh"; "orDie"; "ref"; "mergeAll"]);
   ("layer_terms", ["nil"; "cons"]);
   ("row_kind", ["sync"; "async"; "program"]);

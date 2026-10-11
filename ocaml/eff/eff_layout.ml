@@ -23,7 +23,7 @@ let wire_families = [
   ("Stmt", ["bindYield"; "yieldDiscard"; "ret"; "ifElse"; "whileTrue"; "breakLoop"]);
   ("Stmts", ["nil"; "cons"]);
   ("Effs", ["nil"; "cons"]);
-  ("ActionTerm", ["fork"; "forkIn"; "forkScoped"; "runIn"; "interrupt"; "interruptScoped"; "interruptAll"; "awaitAll"; "awaitAllFailFast"; "snapshotChildren"; "awaitNewChildren"; "raceAll"; "setContext"; "getContext"; "getId"; "closeScope"; "getInterruptible"]);
+  ("ActionTerm", ["fork"; "forkIn"; "forkScoped"; "runIn"; "interrupt"; "interruptScoped"; "interruptAll"; "awaitAll"; "awaitAllFailFast"; "snapshotChildren"; "awaitNewChildren"; "raceAll"; "setContext"; "getContext"; "getId"; "closeScope"; "getInterruptible"; "raceAllFirst"]);
   ("LayerTerm", ["succeed"; "effect"; "effectDiscard"; "provide"; "provideMerge"; "merge"; "fresh"; "orDie"; "ref"; "mergeAll"]);
   ("LayerTerms", ["nil"; "cons"]);
   ("RowKind", ["sync"; "async"; "program"]);
@@ -53,7 +53,7 @@ let wire_tags = [
   ("Stmt", [("bindYield", 0); ("yieldDiscard", 1); ("ret", 2); ("ifElse", 3); ("whileTrue", 4); ("breakLoop", 5)]);
   ("Stmts", [("nil", 0); ("cons", 1)]);
   ("Effs", [("nil", 0); ("cons", 1)]);
-  ("ActionTerm", [("fork", 0); ("forkIn", 1); ("forkScoped", 2); ("runIn", 3); ("interrupt", 4); ("interruptScoped", 5); ("interruptAll", 6); ("awaitAll", 7); ("awaitAllFailFast", 8); ("snapshotChildren", 9); ("awaitNewChildren", 10); ("raceAll", 11); ("setContext", 12); ("getContext", 13); ("getId", 14); ("closeScope", 15); ("getInterruptible", 16)]);
+  ("ActionTerm", [("fork", 0); ("forkIn", 1); ("forkScoped", 2); ("runIn", 3); ("interrupt", 4); ("interruptScoped", 5); ("interruptAll", 6); ("awaitAll", 7); ("awaitAllFailFast", 8); ("snapshotChildren", 9); ("awaitNewChildren", 10); ("raceAll", 11); ("setContext", 12); ("getContext", 13); ("getId", 14); ("closeScope", 15); ("getInterruptible", 16); ("raceAllFirst", 17)]);
   ("LayerTerm", [("succeed", 0); ("effect", 1); ("effectDiscard", 2); ("provide", 3); ("provideMerge", 4); ("merge", 5); ("fresh", 6); ("orDie", 7); ("ref", 8); ("mergeAll", 9)]);
   ("LayerTerms", [("nil", 0); ("cons", 1)]);
   ("RowKind", [("sync", 0); ("async", 1); ("program", 2)]);

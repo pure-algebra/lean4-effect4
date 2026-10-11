@@ -587,6 +587,7 @@ and action_term =
   | Action_term_getId
   | Action_term_closeScope of term * term
   | Action_term_getInterruptible
+  | Action_term_raceAllFirst of effs
 
 and layer_term =
   | Layer_term_succeed of service_key * lit
@@ -756,6 +757,7 @@ let ctor_index_action_term : action_term -> int = function
   | Action_term_getId -> 14
   | Action_term_closeScope _ -> 15
   | Action_term_getInterruptible -> 16
+  | Action_term_raceAllFirst _ -> 17
 let wire_tag_action_term : action_term -> int = function
   | Action_term_fork _ -> 0
   | Action_term_forkIn _ -> 1
@@ -774,6 +776,7 @@ let wire_tag_action_term : action_term -> int = function
   | Action_term_getId -> 14
   | Action_term_closeScope _ -> 15
   | Action_term_getInterruptible -> 16
+  | Action_term_raceAllFirst _ -> 17
 let ctor_name_action_term : action_term -> string = function
   | Action_term_fork _ -> "fork"
   | Action_term_forkIn _ -> "forkIn"
@@ -792,7 +795,8 @@ let ctor_name_action_term : action_term -> string = function
   | Action_term_getId -> "getId"
   | Action_term_closeScope _ -> "closeScope"
   | Action_term_getInterruptible -> "getInterruptible"
-let ctor_names_action_term : string list = ["fork"; "forkIn"; "forkScoped"; "runIn"; "interrupt"; "interruptScoped"; "interruptAll"; "awaitAll"; "awaitAllFailFast"; "snapshotChildren"; "awaitNewChildren"; "raceAll"; "setContext"; "getContext"; "getId"; "closeScope"; "getInterruptible"]
+  | Action_term_raceAllFirst _ -> "raceAllFirst"
+let ctor_names_action_term : string list = ["fork"; "forkIn"; "forkScoped"; "runIn"; "interrupt"; "interruptScoped"; "interruptAll"; "awaitAll"; "awaitAllFailFast"; "snapshotChildren"; "awaitNewChildren"; "raceAll"; "setContext"; "getContext"; "getId"; "closeScope"; "getInterruptible"; "raceAllFirst"]
 
 let ctor_index_layer_term : layer_term -> int = function
   | Layer_term_succeed _ -> 0

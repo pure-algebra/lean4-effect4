@@ -866,6 +866,7 @@ and emit_action_term (b : Buffer.t) (v : action_term) : unit =
   | Action_term_getId -> Eff_frame.emit_ctor b 14 (fun _ -> ())
   | Action_term_closeScope (a0, a1) -> Eff_frame.emit_ctor b 15 (fun b -> emit_term b a0; emit_term b a1)
   | Action_term_getInterruptible -> Eff_frame.emit_ctor b 16 (fun _ -> ())
+  | Action_term_raceAllFirst a0 -> Eff_frame.emit_ctor b 17 (fun b -> emit_effs b a0)
 and emit_layer_term (b : Buffer.t) (v : layer_term) : unit =
   match v with
   | Layer_term_succeed (a0, a1) -> Eff_frame.emit_ctor b 0 (fun b -> emit_service_key b a0; emit_lit b a1)
@@ -1291,6 +1292,11 @@ and decode_action_term (s : string) (pos : int) (limit : int) : (action_term * i
           if p = e then Some (Action_term_closeScope (a0, a1), next) else None))
     | 16 ->
       if p = e then Some (Action_term_getInterruptible, next) else None
+    | 17 ->
+      (match decode_effs s p e with
+       | None -> None
+       | Some (a0, p) ->
+        if p = e then Some (Action_term_raceAllFirst a0, next) else None)
     | _ -> None)
 and decode_layer_term (s : string) (pos : int) (limit : int) : (layer_term * int) option =
   match Eff_frame.read_ctor s pos limit with

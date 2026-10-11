@@ -203,3 +203,11 @@ The remaining dependencies of `Atomic.cleans_once` are source uniqueness and cle
 `codex/FinalizerRunAudit.out` records the checked statuses and their exact statements.
 The narrow build covers `Program.FinalizerRun` and its Atomic consumer.
 Superseded replacement helpers leave the tree when the complete command proof replaces them.
+
+## Behavior pass after the structures
+
+The first gate repair lands at `d585fdb50`.
+The custody and timeout source slices land at `7d2511cfa` and `dd7dedb93`.
+`codex/behavior-pass-receipt.md` records the generated OCaml refresh and every affected behavior gate.
+All those gates pass; the timeout host comparison retains its explicit missing readers.
+The universal source-state and custody obligations remain open and keep their scenario consumers.

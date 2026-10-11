@@ -394,7 +394,7 @@ def pStmts : P :=
   .gen (st [ .bindYield (.succeed (n 0))
            , .whileTrue (st [.ifElse (.app "lt" (ts [v 0, n 3])) (st [.yieldDiscard (.yieldNow 0)]) (st [.breakLoop])])
            , .ret (v 0) ])
-/-- Every fiber action, one after another; `raceAll` last. -/
+/-- The legacy fiber actions, with `raceAll` last. The first-exit form has its own golden. -/
 def pActions : P :=
   binds
     [ .withFiber (.forkScoped child opts)                                  -- v0 : fiberOf nat never
@@ -414,6 +414,9 @@ def pActions : P :=
     , .exit (.succeed (n 1))                                              -- v14 : exitOf nat never
     , .withFiber (.closeScope (v 1) (v 14)) ]                             -- v15
     (.withFiber (.raceAll (es [child, .succeed (n 3)])))
+/-- The first-exit race retains a failure beside a successful entrant. -/
+def pRaceFirst : P := .withFiber (.raceAllFirst (es [.fail (.lit (.str "first")), .succeed (n 3)]))
+
 /-- Every native operation, one after another; the asynchronous row last. The statement at
 index `i` sits under `i` binders, so a read-modify-write row carries its name's image at level
 `i` (`FnName.image`): the same eight functions the rows named before they carried terms. -/
@@ -673,7 +676,7 @@ def corpus : List (String × P) :=
   , ("pSelectBool", pSelectBool), ("pSelectOption", pSelectOption), ("pSelectTag", pSelectTag)
   , ("pIterate", pIterate), ("pIterateAnswer", pIterateAnswer)
   , ("pCallback", pCallback), ("pJoin", pJoin), ("pScoped", pScoped), ("pAcquire", pAcquire)
-  , ("pPair", pPair), ("pStmts", pStmts), ("pActions", pActions), ("pOps", pOps)
+  , ("pPair", pPair), ("pStmts", pStmts), ("pActions", pActions), ("pRaceFirst", pRaceFirst), ("pOps", pOps)
   , ("pIll", pIll), ("pIllRet", pIllRet), ("pIllReq", pIllReq), ("pIllBreak", pIllBreak)
   , ("pIllBranch", pIllBranch), ("pIllJoin", pIllJoin), ("pIllVar", pIllVar)
   , ("pIllCallback", pIllCallback), ("pIllStep", pIllStep), ("pIllInterruptor", pIllInterruptor)

@@ -1,0 +1,1 @@
+["withFiber",["raceAllFirst",["cons",["fail",["lit",["str","first"]]],["cons",["succeed",["lit",["nat",3]]],["nil"]]]]]

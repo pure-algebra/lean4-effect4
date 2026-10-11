@@ -171,7 +171,7 @@ and rand_effs d = if d <= 0 || ri 3 = 0 then Effs_nil else Effs_cons (rand_eff (
 
 and rand_action d =
   let t () = rand_term (min d 2) in
-  match ri 17 with
+  match ri 18 with
   | 0 -> Action_term_fork (rand_eff d, rand_options ())
   | 1 -> Action_term_forkIn (rand_eff d, rand_options (), t ())
   | 2 -> Action_term_forkScoped (rand_eff d, rand_options ())
@@ -188,7 +188,8 @@ and rand_action d =
   | 13 -> Action_term_getContext
   | 14 -> Action_term_getId
   | 15 -> Action_term_getInterruptible
-  | _ -> Action_term_closeScope (t (), t ())
+  | 16 -> Action_term_closeScope (t (), t ())
+  | _ -> Action_term_raceAllFirst (rand_effs d)
 
 let rec rand_ty d =
   match if d <= 0 then ri 7 else ri 15 with

@@ -55,6 +55,7 @@ let children (f : family) (c : int) : (int * family) list =
   | Action, 1 -> [ (0, Eff) ] (* forkIn *)
   | Action, 2 -> [ (0, Eff) ] (* forkScoped *)
   | Action, 11 -> [ (0, Effs) ] (* raceAll *)
+  | Action, 17 -> [ (0, Effs) ] (* raceAllFirst *)
   | Effs, 1 -> [ (0, Eff); (1, Effs) ] (* cons *)
   | Layer, 1 -> [ (1, Eff) ] (* effect *)
   | Layer, 2 -> [ (0, Eff) ] (* effectDiscard *)
@@ -124,6 +125,7 @@ let position_of_tag (f : family) (tag : int) : int option =
   | Action, 14 -> Some 14 (* getId *)
   | Action, 15 -> Some 15 (* closeScope *)
   | Action, 16 -> Some 16 (* getInterruptible *)
+  | Action, 17 -> Some 17 (* raceAllFirst *)
   | Effs, 0 -> Some 0 (* nil *)
   | Effs, 1 -> Some 1 (* cons *)
   | Layer, 0 -> Some 0 (* succeed *)
@@ -220,6 +222,7 @@ let child (n : node) (i : int) : node option =
   | N_action (Eff_types.Action_term_forkIn (a0, _, _)), 0 -> Some (N_eff a0)
   | N_action (Eff_types.Action_term_forkScoped (a0, _)), 0 -> Some (N_eff a0)
   | N_action (Eff_types.Action_term_raceAll a0), 0 -> Some (N_effs a0)
+  | N_action (Eff_types.Action_term_raceAllFirst a0), 0 -> Some (N_effs a0)
   | N_effs (Eff_types.Effs_cons (a0, _)), 0 -> Some (N_eff a0)
   | N_effs (Eff_types.Effs_cons (_, a1)), 1 -> Some (N_effs a1)
   | N_layer (Eff_types.Layer_term_effect (_, a1)), 0 -> Some (N_eff a1)
@@ -291,6 +294,7 @@ let witnesses : node list = [
   N_action (Eff_types.Action_term_getId);
   N_action (Eff_types.Action_term_closeScope ((Eff_types.Term_var 1), (Eff_types.Term_var 2)));
   N_action (Eff_types.Action_term_getInterruptible);
+  N_action (Eff_types.Action_term_raceAllFirst (Eff_types.Effs_cons ((Eff_types.Eff_succeed (Eff_types.Term_var 1)), (Eff_types.Effs_nil))));
   N_effs (Eff_types.Effs_nil);
   N_effs (Eff_types.Effs_cons ((Eff_types.Eff_succeed (Eff_types.Term_var 1)), (Eff_types.Effs_cons ((Eff_types.Eff_succeed (Eff_types.Term_var 2)), (Eff_types.Effs_nil)))));
   N_layer (Eff_types.Layer_term_succeed ({ Eff_types.service_key_name = { Eff_types.service_name_value = 1 }; service_key_service = { Eff_types.service_type_code_value = 1 } }, (Eff_types.Lit_nat 2)));

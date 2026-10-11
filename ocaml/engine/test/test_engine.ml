@@ -517,7 +517,8 @@ let sample_actions =
     E.Action_term_getContext;
     E.Action_term_getId;
     E.Action_term_closeScope (a_term, a_term);
-    E.Action_term_getInterruptible ]
+    E.Action_term_getInterruptible;
+    E.Action_term_raceAllFirst E.Effs_nil ]
 
 module Ord (A : E4_program.PROGRAM_TYPES) = struct
   module P = E4_program.Make (A)

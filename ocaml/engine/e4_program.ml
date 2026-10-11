@@ -382,6 +382,7 @@ module Make (A : PROGRAM_TYPES) = struct
     | Eff_types.Action_term_closeScope (a, b) ->
       A.ActionTerm_closeScope (of_term a, of_term b)
     | Eff_types.Action_term_getInterruptible -> A.ActionTerm_getInterruptible
+    | Eff_types.Action_term_raceAllFirst es -> A.ActionTerm_raceAllFirst (of_effs es)
 
   let load p = pin_exn (); of_eff p
 
@@ -507,4 +508,5 @@ module Make (A : PROGRAM_TYPES) = struct
     | A.ActionTerm_getId -> 14
     | A.ActionTerm_closeScope _ -> 15
     | A.ActionTerm_getInterruptible -> 16
+    | A.ActionTerm_raceAllFirst _ -> 17
 end

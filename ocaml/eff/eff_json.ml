@@ -244,6 +244,7 @@ and json_action_term (v : action_term) : Eff_json_text.t =
   | Action_term_getId -> Eff_json_text.Array [Eff_json_text.String "getId"]
   | Action_term_closeScope (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "closeScope"; json_term a0; json_term a1]
   | Action_term_getInterruptible -> Eff_json_text.Array [Eff_json_text.String "getInterruptible"]
+  | Action_term_raceAllFirst a0 -> Eff_json_text.Array [Eff_json_text.String "raceAllFirst"; json_effs a0]
 and json_layer_term (v : layer_term) : Eff_json_text.t =
   match v with
   | Layer_term_succeed (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "succeed"; json_service_key a0; json_lit a1]

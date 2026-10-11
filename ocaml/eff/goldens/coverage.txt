@@ -1,11 +1,11 @@
 Effect4.Program.Lit.unit	17
-Effect4.Program.Lit.nat	130
+Effect4.Program.Lit.nat	131
 Effect4.Program.Lit.bool	16
-Effect4.Program.Lit.str	14
+Effect4.Program.Lit.str	15
 Effect4.Program.FieldReadMode.required	2
 Effect4.Program.FieldReadMode.optional	2
 Effect4.Program.Term.var	119
-Effect4.Program.Term.lit	173
+Effect4.Program.Term.lit	175
 Effect4.Program.Term.app	86
 Effect4.Program.Term.record	10
 Effect4.Program.Term.field	4
@@ -60,8 +60,8 @@ Effect4.Program.DefRole.serviceInit	1
 Effect4.Program.DefRole.serviceMethod	1
 Effect4.Program.ParamDecl.mk	2
 Effect4.Program.DefDecl.mk	8
-Effect4.Program.Eff.succeed	83
-Effect4.Program.Eff.fail	11
+Effect4.Program.Eff.succeed	84
+Effect4.Program.Eff.fail	12
 Effect4.Program.Eff.failCause	3
 Effect4.Program.Eff.sync	1
 Effect4.Program.Eff.suspend	1
@@ -76,7 +76,7 @@ Effect4.Program.Eff.uninterruptible	5
 Effect4.Program.Eff.interruptible	1
 Effect4.Program.Eff.yieldNow	11
 Effect4.Program.Eff.awaitFiber	4
-Effect4.Program.Eff.withFiber	25
+Effect4.Program.Eff.withFiber	26
 Effect4.Program.Eff.scoped	1
 Effect4.Program.Eff.acquireRelease	1
 Effect4.Program.Eff.provideLayer	4
@@ -96,8 +96,8 @@ Effect4.Program.Stmt.whileTrue	1
 Effect4.Program.Stmt.breakLoop	2
 Effect4.Program.Stmts.nil	7
 Effect4.Program.Stmts.cons	11
-Effect4.Program.Effs.nil	10
-Effect4.Program.Effs.cons	11
+Effect4.Program.Effs.nil	11
+Effect4.Program.Effs.cons	13
 Effect4.Program.ActionTerm.fork	4
 Effect4.Program.ActionTerm.forkIn	1
 Effect4.Program.ActionTerm.forkScoped	1
@@ -115,6 +115,7 @@ Effect4.Program.ActionTerm.getContext	1
 Effect4.Program.ActionTerm.getId	1
 Effect4.Program.ActionTerm.closeScope	1
 Effect4.Program.ActionTerm.getInterruptible	5
+Effect4.Program.ActionTerm.raceAllFirst	1
 Effect4.Program.LayerTerm.succeed	4
 Effect4.Program.LayerTerm.effect	4
 Effect4.Program.LayerTerm.effectDiscard	1

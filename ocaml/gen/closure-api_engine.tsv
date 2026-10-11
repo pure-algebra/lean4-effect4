@@ -10,7 +10,7 @@ Effect4.Machine.RunFiber.make._redArg	run_fiber_make	false	8	0	0	0	2	1	0	1	0	0	6
 Effect4.Machine.emptyCtx	empty_ctx	false	4	0	0	0	0	1	0	1	0	0	3	0	1	0	0	0	0	0	0	1	3	0	0	0	1	0	13879202924284214584
 Effect4.Program.compile	program_compile	false	2	0	0	0	0	1	0	0	0	0	2	0	0	0	0	0	0	0	0	0	4	0	0	0	1	0	5239775195872838985
 Effect4.Machine.stores	stores	false	55	0	0	0	0	1	0	0	0	0	55	0	0	0	0	0	0	0	0	18	55	0	0	0	1	0	8009230429121391728
-Effect4.Program.Node.child._redArg	program_node_child	false	234	0	8	28	65	83	0	57	0	0	177	0	57	0	0	0	0	0	0	120	216	0	160	7	1	0	17712204916286198922
+Effect4.Program.Node.child._redArg	program_node_child	false	237	0	9	30	66	84	0	58	0	0	179	0	58	0	0	0	0	0	0	121	220	0	163	7	1	0	2938959338411803410
 Effect4.Api.evaluate	api_evaluate	false	2	0	0	0	0	1	0	1	0	0	1	0	1	0	0	0	0	0	0	7	1	0	0	0	1	0	6503242508184499272
 Effect4.Program.interpOf	program_interp_of	false	57	0	0	0	0	1	0	0	0	0	57	0	0	0	0	0	0	0	0	18	67	0	0	0	1	0	1275069497137399671
 Effect4.Machine.replayEval._at_.Effect4.Program.replayCheckedFrom.spec_0	replay_eval_at_program_replay_checked_from_spec_0	true	10	0	0	0	8	6	0	0	0	0	10	0	0	0	0	0	0	0	0	60	22	0	13	0	1	0	9028814964921071593
@@ -23,7 +23,7 @@ Effect4.Machine.RunMachine.modify._redArg	run_machine_modify	false	3	0	0	0	1	2	0
 Effect4.Machine.prepareAsyncAnswer._redArg	prepare_async_answer	false	10	0	1	3	8	2	0	0	0	0	7	3	0	0	0	0	0	0	0	5	16	0	11	0	1	0	6357717479202407684
 Effect4.Machine.interruptRecord._redArg	interrupt_record	false	22	0	1	2	7	4	0	0	0	0	15	7	0	0	0	0	0	0	0	39	77	0	11	0	1	0	7033128789610768937
 Effect4.Machine.advanceState._redArg	advance_state	true	24	0	0	0	12	6	0	2	0	0	21	1	2	0	0	0	0	0	0	43	76	0	17	0	1	0	14026825438797643529
-Effect4.Machine.driveStep._redArg	drive_step	false	205	0	4	8	72	46	0	2	0	0	189	14	2	0	0	0	0	0	0	446	582	0	119	2	1	0	15381521217995001094
+Effect4.Machine.driveStep._redArg	drive_step	false	205	0	4	8	72	46	0	2	0	0	189	14	2	0	0	0	0	0	0	446	588	0	119	2	1	0	5185254763275109722
 Effect4.Scope.closingExit?._redArg	scope_closing_exit_opt	false	1	0	0	0	1	1	0	0	0	0	1	0	0	0	0	0	0	0	0	0	1	0	1	0	1	0	15970080174521194172
 Effect4.Scope.addUnsafe._redArg	scope_add_unsafe	false	2	0	0	0	1	1	0	0	0	0	2	0	0	0	0	0	0	0	0	7	6	0	1	0	1	0	18020399837817758849
 Effect4.Program.compileEff	program_compile_eff	true	102	0	2	5	20	41	0	3	0	0	99	0	2	0	1	0	0	0	0	175	133	0	58	5	1	0	6194836822978098587
@@ -133,7 +133,7 @@ Effect4.Machine.RunMachine.race?._redArg	run_machine_race_opt	false	1	0	0	0	1	1	
 Effect4.Machine.RunMachine.updateRace._redArg	run_machine_update_race	false	3	0	0	0	1	1	0	0	0	0	3	0	0	0	0	0	0	0	0	13	14	0	1	0	1	0	16307795434081744397
 Effect4.Machine.launchEntrant._redArg	launch_entrant	false	5	0	0	0	2	1	0	0	0	0	5	0	0	0	0	0	0	0	0	2	12	0	2	0	1	0	7132313727364813966
 Effect4.Machine.driveStep._redArg._lam_1	drive_step__red_arg__lam_1	false	5	0	0	0	1	1	0	0	0	0	5	0	0	0	0	0	0	0	0	12	20	0	1	0	1	0	16279886124776307110
-Effect4.Machine.fireObserver._redArg	fire_observer	false	73	0	3	7	25	13	0	0	0	0	69	4	0	0	0	0	0	0	0	143	209	0	39	2	1	0	13385342185884804143
+Effect4.Machine.fireObserver._redArg	fire_observer	false	74	0	4	11	30	13	0	0	0	0	70	4	0	0	0	0	0	0	0	144	221	0	44	5	1	0	2320873781062040112
 Effect4.Machine.RunFiber.park._redArg	run_fiber_park	false	5	0	0	0	2	1	0	0	0	0	5	0	0	0	0	0	0	0	0	12	20	0	2	0	1	0	18330838094744363479
 Effect4.Machine.awaitCode._redArg	await_code	false	4	0	1	2	7	3	0	0	0	0	1	3	0	0	0	0	0	0	0	0	6	0	9	1	1	0	15939164772554082982
 Effect4.Machine.asVoidCode._redArg	as_void_code	false	3	0	0	0	2	1	0	0	0	0	1	2	0	0	0	0	0	0	0	5	4	0	2	0	1	0	1340529005978421980
@@ -197,9 +197,9 @@ Effect4.Program.loopNextAt	program_loop_next_at	false	15	0	1	2	6	4	0	1	0	0	14	0	
 Effect4.Program.loopResumeAt	program_loop_resume_at	false	11	0	0	0	5	3	0	0	0	0	11	0	0	0	0	0	0	0	0	7	15	0	7	0	1	0	7837584005819646778
 Effect4.Program.cancelProgramOf	program_cancel_program_of	false	10	0	1	2	2	4	0	0	0	0	10	0	0	0	0	0	0	0	0	14	13	0	4	2	1	0	12298872831998226143
 Effect4.Program.embed	program_embed	true	41	0	0	0	2	19	0	0	0	0	41	0	0	0	0	0	0	0	0	135	53	0	20	0	1	0	9135394307271402944
-Effect4.Program.actionAt	program_action_at	false	136	0	0	0	41	56	0	10	0	0	126	0	4	0	6	0	0	0	0	258	159	0	78	18	1	0	2063900332087835681
+Effect4.Program.actionAt	program_action_at	false	141	0	0	0	42	57	0	10	0	0	131	0	4	0	6	0	0	0	0	269	167	0	80	18	1	0	14807853024491763165
 Effect4.Program.forkScopedAt	program_fork_scoped_at	false	12	0	0	0	6	5	0	1	0	0	11	0	1	0	0	0	0	0	0	15	14	0	6	4	1	0	16943617825656961748
-Effect4.Program.embedAction	program_embed_action	false	32	0	0	0	1	24	0	0	0	0	32	0	0	0	0	0	0	0	0	218	40	0	24	0	1	0	18162835144880257238
+Effect4.Program.embedAction	program_embed_action	false	35	0	0	0	1	25	0	0	0	0	35	0	0	0	0	0	0	0	0	228	44	0	25	0	1	0	1852357625472285072
 Effect4.Program.resolve	program_resolve	false	5	0	0	0	3	3	0	0	0	0	5	0	0	0	0	0	0	0	0	1	5	0	3	2	1	0	15354917648831643751
 Effect4.Program.resolveLayer	program_resolve_layer	false	5	0	0	0	3	3	0	0	0	0	5	0	0	0	0	0	0	0	0	1	8	0	3	2	1	0	12599027864172464629
 List.mapTR.loop._at_.Effect4.Program.interpOf.spec_0	list_map_tr_loop_at_program_interp_of_spec_0	true	5	0	0	0	1	2	0	0	0	0	5	0	0	0	0	0	0	0	0	1	7	0	2	0	1	0	5298371631574867264
@@ -261,8 +261,8 @@ Effect4.Machine.injectYield._redArg	inject_yield	false	16	0	0	0	5	4	0	0	0	0	13	3
 Effect4.Machine.RunMachine.halt._redArg	run_machine_halt	false	2	0	0	0	1	1	0	0	0	0	2	0	0	0	0	0	0	0	0	13	12	0	1	0	1	0	17806732775924128868
 Effect4.Machine.exitFiber.exitStore._redArg	exit_fiber_exit_store	false	22	0	0	0	2	2	0	0	0	0	22	0	0	0	0	0	0	0	0	44	34	0	2	1	1	0	588517792301513907
 Effect4.Machine.exitFiber.exitInterruptChildren._redArg	exit_fiber_exit_interrupt_children	false	16	0	0	0	3	1	0	0	0	0	11	5	0	0	0	0	0	0	0	34	37	0	3	0	1	0	2656289749834442515
-List.find?._at_.Effect4.Machine.RunMachine.race?.spec_0._redArg	list_find_opt_at_run_machine_race_opt_spec_0	true	4	0	0	0	3	3	0	0	0	0	4	0	0	0	0	0	0	0	0	2	5	0	5	0	1	0	7163454274731504365
-List.mapTR.loop._at_.Effect4.Machine.RunMachine.updateRace.spec_0._redArg	list_map_tr_loop_at_run_machine_update_race_spec_0	true	4	0	1	2	4	2	0	0	0	0	4	0	0	0	0	0	0	0	0	1	10	0	6	0	1	0	2030575854521651834
+List.find?._at_.Effect4.Machine.RunMachine.race?.spec_0._redArg	list_find_opt_at_run_machine_race_opt_spec_0	true	4	0	0	0	3	3	0	0	0	0	4	0	0	0	0	0	0	0	0	2	5	0	5	0	1	0	2570796441644526874
+List.mapTR.loop._at_.Effect4.Machine.RunMachine.updateRace.spec_0._redArg	list_map_tr_loop_at_run_machine_update_race_spec_0	true	4	0	1	2	4	2	0	0	0	0	4	0	0	0	0	0	0	0	0	1	10	0	6	0	1	0	4049610614559986871
 Effect4.Machine.fireObserver._redArg._lam_0	fire_observer__red_arg__lam_0	false	3	0	0	0	1	2	0	0	0	0	3	0	0	0	0	0	0	0	0	0	2	0	2	0	1	0	9570014953883535186
 Effect4.Machine.fireObserver._redArg._lam_1	fire_observer__red_arg__lam_1	false	3	0	0	0	1	1	0	0	0	0	3	0	0	0	0	0	0	0	0	11	18	0	1	0	1	0	15261416096234606897
 Effect4.Machine.fireObserver._redArg._lam_2	fire_observer__red_arg__lam_2	false	1	0	0	0	1	1	0	0	0	0	1	0	0	0	0	0	0	0	0	0	2	0	1	0	1	0	6834401632959679402
@@ -274,7 +274,7 @@ Effect4.Machine.countdownPark.resumePrim._redArg	countdown_park_resume_prim	fals
 Effect4.Machine.fireObserver._redArg._lam_5	fire_observer__red_arg__lam_5	false	3	0	0	0	2	2	0	0	0	0	3	0	0	0	0	0	0	0	0	7	9	0	3	0	1	0	12177393142965181030
 Effect4.Exit.isSuccess._redArg	exit__is_success	false	2	0	0	0	1	2	0	0	0	0	2	0	0	0	0	0	0	0	0	0	0	0	2	0	1	0	8604033932537796157
 Effect4.Machine.interruptEach._redArg	interrupt_each	false	2	0	0	0	0	1	0	0	0	0	2	0	0	0	0	0	0	0	0	0	11	0	0	0	1	0	7423614074240752475
-Effect4.Supervision.raceComplete._redArg	supervision_race_complete	false	40	0	2	4	9	6	0	3	0	0	37	0	3	0	0	0	0	0	0	42	102	0	16	0	1	0	9268260052666755279
+Effect4.Supervision.raceCompleteWith._redArg	supervision_race_complete_with	false	2	0	0	0	1	2	0	0	0	0	2	0	0	0	0	0	0	0	0	0	6	0	2	0	1	0	15577373968764244132
 Effect4.Machine.linkScope._redArg._lam_0	link_scope__red_arg__lam_0	false	5	0	0	0	1	1	0	0	0	0	5	0	0	0	0	0	0	0	0	12	21	0	1	0	1	0	6289424556924549337
 Effect4.Scope.tableInsert._redArg	scope_table_insert	false	9	0	0	0	1	2	0	0	0	0	9	0	0	0	0	0	0	0	0	5	16	0	2	0	1	0	12331999865380952528
 Effect4.Program.Lit.toVal	program_lit_to_val	false	8	0	0	0	1	4	0	0	0	0	8	0	0	0	0	0	0	0	0	4	7	0	4	0	1	0	3130000584017964643
@@ -379,7 +379,7 @@ Effect4.Program.Val.hasTy	program_val__has_ty	true	126	0	4	8	62	88	0	14	0	0	111	
 Effect4.Store.Val.handles	store_val__handles	true	10	0	0	0	1	6	0	0	0	0	10	0	0	0	0	0	0	0	0	5	11	0	5	1	1	0	6870892908959676800
 Effect4.Program.externalHandleTarget	program_external_handle_target	false	4	0	0	0	1	2	0	0	0	0	4	0	0	0	0	0	0	0	0	0	2	0	2	0	1	0	12312087727131094187
 List.foldl._at_.Effect4.Machine.fireState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_1.spec_3	list_foldl_at_fire_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_1_spec_3	true	2	0	0	0	1	2	0	0	0	0	2	0	0	0	0	0	0	0	0	0	14	0	2	0	1	0	780093433882649175
-Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6	drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6	false	207	0	4	8	72	46	0	2	0	0	198	7	2	0	0	0	0	0	0	497	569	0	119	2	1	0	1992344113350120051
+Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6	drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6	false	207	0	4	8	72	46	0	2	0	0	198	7	2	0	0	0	0	0	0	497	575	0	119	2	1	0	3801500872373022342
 Effect4.Api.isCompileFrontier	api_is_compile_frontier	false	4	0	0	0	3	3	0	1	0	0	3	0	1	0	0	0	0	0	0	0	2	0	3	2	1	0	10198278753275430835
 List.filterMapTR.go._at_.Effect4.Program.awaits.spec_0	list_filter_map_tr_go_at_program_awaits_spec_0	true	7	0	0	0	5	4	0	0	0	0	7	0	0	0	0	0	0	0	0	2	19	0	8	0	1	0	259510177071607578
 Effect4.Api.isRunnable	api_is_runnable	false	3	0	0	0	2	2	0	0	0	0	3	0	0	0	0	0	0	0	0	0	2	0	3	0	1	0	12304203648360206191
@@ -390,9 +390,8 @@ Effect4.Machine.yieldVerdict._redArg	yield_verdict	false	1	0	0	0	2	2	0	0	0	0	1	0
 Effect4.Machine.RunFiber.publish._redArg	run_fiber_publish	false	7	0	0	0	2	1	0	0	0	0	6	1	0	0	0	0	0	0	0	13	18	0	2	0	1	0	16870095408877000143
 Effect4.Machine.exitFiber.exitStore._redArg._lam_0	exit_fiber_exit_store__red_arg__lam_0	false	1	0	0	0	0	1	0	0	0	0	1	0	0	0	0	0	0	0	0	8	3	0	0	0	1	0	12523158544739984524
 Effect4.Machine.interruptEach._redArg._lam_0	interrupt_each__red_arg__lam_0	false	12	0	1	2	4	2	0	0	0	0	12	0	0	0	0	0	0	0	0	24	29	0	6	0	1	0	13821645561868063849
-List.filterTR.loop._at_.Effect4.Supervision.raceComplete.spec_0	list_filter_tr_loop_at_supervision_race_complete_spec_0	true	5	0	0	0	2	3	0	0	0	0	5	0	0	0	0	0	0	0	0	1	11	0	4	0	1	0	700761300740038917
-Effect4.Exit.causeReasons._redArg	exit__cause_reasons	false	1	0	0	0	1	2	0	0	0	0	1	0	0	0	0	0	0	0	0	1	0	0	2	0	1	0	10354834121175226058
-Effect4.Supervision.WaitState.pending._redArg	supervision_wait_state_pending	false	2	0	0	0	1	1	0	0	0	0	2	0	0	0	0	0	0	0	0	1	3	0	1	0	1	0	14953679686653513911
+Effect4.Supervision.raceComplete._redArg	supervision_race_complete	false	40	0	2	4	9	6	0	3	0	0	37	0	3	0	0	0	0	0	0	42	102	0	16	0	1	0	9268260052666755279
+Effect4.Supervision.raceCompleteFirst._redArg	supervision_race_complete_first	false	17	0	2	4	5	3	0	1	0	0	16	0	1	0	0	0	0	0	0	12	36	0	9	0	1	0	7428412449506093527
 Effect4.Scope.tableInsert._redArg._lam_0	scope_table_insert__red_arg__lam_0	false	1	0	0	0	1	1	0	0	0	0	0	1	0	0	0	0	0	0	0	0	2	0	1	0	1	0	4278384790786312298
 Effect4.Scope.tableInsert._redArg._lam_1	scope_table_insert__red_arg__lam_1	false	2	0	0	0	2	2	0	0	0	0	1	1	0	0	0	0	0	0	0	2	4	0	3	0	1	0	14895759257778845209
 Effect4.Program.NativeAtom.ofName?	program_native_atom_of_name_opt	false	181	0	0	0	45	46	0	45	0	0	136	0	0	45	0	0	0	0	0	46	135	0	90	0	1	0	18236467099286070220
@@ -494,7 +493,7 @@ Effect4.Machine.exitFiber._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.dr
 List.filterTR.loop._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6.spec_11	list_filter_tr_loop_at_drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6_spec_11	true	5	0	0	0	3	3	0	0	0	0	5	0	0	0	0	0	0	0	0	1	11	0	5	0	1	0	15068096749925595887
 Effect4.Machine.launchEntrant._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6.spec_12._redArg	launch_entrant_at_drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6_spec_12	false	5	0	0	0	2	1	0	0	0	0	5	0	0	0	0	0	0	0	0	2	11	0	2	0	1	0	3862111841762195672
 Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6._lam_0	drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6__lam_0	false	5	0	0	0	1	1	0	0	0	0	5	0	0	0	0	0	0	0	0	12	20	0	1	0	1	0	1826411265164172238
-Effect4.Machine.fireObserver._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6.spec_13._redArg	fire_observer_at_drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6_spec_13	false	68	0	3	7	25	13	0	0	0	0	64	4	0	0	0	0	0	0	0	138	198	0	39	2	1	0	5662894441611514532
+Effect4.Machine.fireObserver._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6.spec_13._redArg	fire_observer_at_drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6_spec_13	false	69	0	4	11	30	13	0	0	0	0	65	4	0	0	0	0	0	0	0	139	210	0	44	5	1	0	16621739425948958332
 Effect4.Machine.asVoidCode._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6.spec_14._redArg	as_void_code_at_drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6_spec_14	false	3	0	0	0	1	1	0	0	0	0	2	1	0	0	0	0	0	0	0	12	4	0	1	0	1	0	6772320640487663813
 Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6._lam_1	drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6__lam_1	false	4	0	0	0	1	1	0	0	0	0	4	0	0	0	0	0	0	0	0	12	19	0	1	0	1	0	9703896904080300912
 Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6._lam_2	drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6__lam_2	false	5	0	0	0	1	1	0	0	0	0	5	0	0	0	0	0	0	0	0	12	20	0	1	0	1	0	15774285343327889636
@@ -504,7 +503,10 @@ Effect4.Program.requestOf	program_request_of	false	9	0	0	0	6	5	0	0	0	0	9	0	0	0	0
 Effect4.ReasonAnnotations.annotateEntries._redArg	reason_annotations_annotate_entries	false	4	0	0	0	0	1	0	0	0	0	4	0	0	0	0	0	0	0	0	1	9	0	0	0	1	0	26194177036384998
 Effect4.instDecidableEqReason.decEq._redArg	inst_decidable_eq_reason_dec_eq	false	9	0	0	0	7	9	0	0	0	0	7	2	0	0	0	0	0	0	0	0	16	0	12	3	1	0	16710702113939345489
 List.elem._at_.Effect4.Machine.RunMachine.arm.spec_0	list_elem_at_run_machine_arm_spec_0	true	3	0	0	0	2	3	0	0	0	0	3	0	0	0	0	0	0	0	0	0	4	0	4	0	1	0	8368514761791495183
-List.filterTR.loop._at_.Effect4.Supervision.WaitState.pending.spec_0._redArg	list_filter_tr_loop_at_supervision_wait_state_pending_spec_0	true	7	0	0	0	3	3	0	0	0	0	7	0	0	0	0	0	0	0	0	1	13	0	5	0	1	0	3719921678165437281
+List.filterTR.loop._at_.Effect4.Supervision.raceComplete.spec_0	list_filter_tr_loop_at_supervision_race_complete_spec_0	true	5	0	0	0	2	3	0	0	0	0	5	0	0	0	0	0	0	0	0	1	11	0	4	0	1	0	700761300740038917
+Effect4.Exit.causeReasons._redArg	exit__cause_reasons	false	1	0	0	0	1	2	0	0	0	0	1	0	0	0	0	0	0	0	0	1	0	0	2	0	1	0	10354834121175226058
+Effect4.Supervision.WaitState.pending._redArg	supervision_wait_state_pending	false	2	0	0	0	1	1	0	0	0	0	2	0	0	0	0	0	0	0	0	1	3	0	1	0	1	0	14953679686653513911
+List.filterTR.loop._at_.Effect4.Supervision.raceCompleteFirst.spec_0	list_filter_tr_loop_at_supervision_race_complete_first_spec_0	true	5	0	0	0	2	3	0	0	0	0	5	0	0	0	0	0	0	0	0	1	11	0	4	0	1	0	12724570988548175758
 Effect4.Program.intLt	program_int_lt	false	15	0	0	0	3	7	0	0	0	0	15	0	0	0	0	0	0	0	0	7	12	0	6	3	1	0	13311139112649701503
 Effect4.Program.intEq	program_int_eq	false	9	0	2	4	3	5	0	0	0	0	9	0	0	0	0	0	0	0	0	5	10	0	6	3	1	0	17036326942296886795
 Effect4.Program.stringsAtom	program_strings_atom	false	4	0	0	0	1	2	0	0	0	0	4	0	0	0	0	0	0	0	0	2	3	0	2	0	1	0	10036156746018718570
@@ -582,7 +584,7 @@ Effect4.Machine.injectYield._at_.Effect4.Machine.iteration._at_.Effect4.Machine.
 Effect4.Program.interpAt	program_interp_at	false	19	0	0	0	2	1	0	0	0	0	19	0	0	0	0	0	0	0	0	18	72	0	2	0	1	0	4509524310592239082
 Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_2._redArg	evaluate_prim_at_program_exit_scoped_spec_2	false	122	0	4	8	32	16	0	3	0	0	111	8	3	0	0	0	0	0	0	540	411	0	49	2	1	0	12422482238064628177
 Effect4.Program.enterScoped	program_enter_scoped	false	18	0	0	0	5	1	0	2	0	0	16	0	2	0	0	0	0	0	0	56	59	0	5	0	1	0	9566248201640787616
-Effect4.Program.exitScoped	program_exit_scoped	false	34	0	4	8	14	5	0	0	0	0	34	0	0	0	0	0	0	0	0	99	136	0	19	3	1	0	15486604810161060237
+Effect4.Program.exitScoped	program_exit_scoped	false	34	0	4	8	14	5	0	0	0	0	34	0	0	0	0	0	0	0	0	99	136	0	19	3	1	0	5273378047734867983
 Effect4.Machine.exitFiber.exitStore._at_.Effect4.Machine.exitFiber._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6.spec_10.spec_15._redArg	exit_fiber_exit_store_at_exit_fiber_at_drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6_spec_10_spec_15	false	21	0	0	0	2	2	0	0	0	0	21	0	0	0	0	0	0	0	0	44	31	0	2	1	1	0	15595474647082969041
 Effect4.Machine.exitFiber.exitInterruptChildren._at_.Effect4.Machine.exitFiber._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6.spec_10.spec_16._redArg	exit_fiber_exit_interrupt_children_at_exit_fiber_at_drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6_spec_10_spec_16	false	15	0	0	0	3	1	0	0	0	0	13	2	0	0	0	0	0	0	0	48	38	0	3	0	1	0	1124328687656459677
 Effect4.Machine.fireObserver._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6.spec_13._redArg._lam_0	fire_observer_at_drive_step_at_drive_state_at_step_decision_state_at_program_replay_checked_from_spec_1_spec_3_spec_6_spec_13__red_arg__lam_0	false	3	0	0	0	1	1	0	0	0	0	3	0	0	0	0	0	0	0	0	11	18	0	1	0	1	0	10030017507885477809
@@ -597,6 +599,7 @@ Effect4.Machine.linkScope._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.dr
 List.mapTR.loop._at_.Effect4.ReasonAnnotations.annotateEntries.spec_0._redArg	list_map_tr_loop_at_reason_annotations_annotate_entries_spec_0	true	5	0	1	3	4	2	0	0	0	0	5	0	0	0	0	0	0	0	0	3	14	0	7	0	1	0	4042450505273672491
 List.filterTR.loop._at_.Effect4.ReasonAnnotations.annotateEntries.spec_1._redArg	list_filter_tr_loop_at_reason_annotations_annotate_entries_spec_1	true	8	0	0	0	3	3	0	0	0	0	8	0	0	0	0	0	0	0	0	1	14	0	5	0	1	0	13876033518428110931
 Effect4.instDecidableEqReasonAnnotations.decEq._redArg	inst_decidable_eq_reason_annotations_dec_eq	false	2	0	0	0	0	1	0	0	0	0	2	0	0	0	0	0	0	0	0	0	4	0	0	0	1	0	8190202502108969402
+List.filterTR.loop._at_.Effect4.Supervision.WaitState.pending.spec_0._redArg	list_filter_tr_loop_at_supervision_wait_state_pending_spec_0	true	7	0	0	0	3	3	0	0	0	0	7	0	0	0	0	0	0	0	0	1	13	0	5	0	1	0	3719921678165437281
 List.all._at_.Effect4.Program.stringsAtom.spec_0	list_all_at_program_strings_atom_spec_0	true	3	0	0	0	2	3	0	0	0	0	3	0	0	0	0	0	0	0	0	0	1	0	3	1	1	0	13517934322442177125
 Effect4.Program.queryReasons?	program_query_reasons_opt	false	9	0	1	4	5	3	0	1	0	0	8	0	1	0	0	0	0	0	0	4	13	0	7	3	1	0	15128540791951619176
 List.any._at_.Effect4.Program.queryTag.spec_0	list_any_at_program_query_tag_spec_0	true	4	0	0	0	2	3	0	0	0	0	4	0	0	0	0	0	0	0	0	0	5	0	4	0	1	0	11071611085291567909
@@ -641,9 +644,9 @@ Effect4.Program.interpAt._lam_4	program_interp_at__lam_4	false	5	0	0	0	2	2	0	0	0
 Effect4.Program.interpAt._lam_5	program_interp_at__lam_5	false	5	0	0	0	2	2	0	0	0	0	5	0	0	0	0	0	0	0	0	9	14	0	2	1	1	0	18060270959185457518
 Effect4.Program.interpAt._lam_6	program_interp_at__lam_6	false	17	0	0	0	3	2	0	1	0	0	15	1	1	0	0	0	0	0	0	2	21	0	3	1	1	0	2606458441214103498
 Effect4.Machine.evaluatePrim.stepFrame._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_2.spec_3._redArg	evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3	false	3	0	0	0	3	1	0	0	0	0	3	0	0	0	0	0	0	0	0	1	8	0	3	0	1	0	18046402269360134153
-Effect4.Machine.evaluatePrim.withFiber._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_2.spec_4._redArg	evaluate_prim_with_fiber_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_4	false	203	0	3	6	87	30	0	0	0	0	187	16	0	0	0	0	0	0	0	831	595	0	119	0	1	0	6963183851071684051
+Effect4.Machine.evaluatePrim.withFiber._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_2.spec_4._redArg	evaluate_prim_with_fiber_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_4	false	206	0	3	6	87	31	0	0	0	0	190	16	0	0	0	0	0	0	0	831	603	0	120	0	1	0	5252868791116504339
 Effect4.Machine.evaluatePrim.finalizerOr._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_2.spec_5._redArg	evaluate_prim_finalizer_or_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_5	false	23	0	3	6	10	4	0	0	0	0	22	1	0	0	0	0	0	0	0	50	73	0	14	2	1	0	17571118649586620085
-Effect4.Machine.registerRace._redArg	register_race	false	15	0	0	0	2	2	0	0	0	0	15	0	0	0	0	0	0	0	0	66	31	0	3	0	1	0	12814743079736324571
+Effect4.Machine.registerRace._redArg	register_race	false	15	0	0	0	2	2	0	0	0	0	15	0	0	0	0	0	0	0	0	66	33	0	3	0	1	0	14371655519104585236
 Effect4.Machine.countdownPark._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_2.spec_6._redArg	countdown_park_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_6	false	27	0	0	0	10	2	0	1	0	0	25	1	1	0	0	0	0	0	0	81	93	0	11	0	1	0	13656305144220465618
 Effect4.FrameFiber.getCont._at_.Effect4.Program.exitScoped.spec_0._redArg	frame_fiber_get_cont_at_program_exit_scoped_spec_0	false	11	0	1	2	3	2	0	0	0	0	11	0	0	0	0	0	0	0	0	38	27	0	5	0	1	0	7160688537206105189
 List.mapTR.loop._at_.Effect4.Program.exitScoped.spec_1	list_map_tr_loop_at_program_exit_scoped_spec_1	true	4	0	0	0	1	2	0	0	0	0	4	0	0	0	0	0	0	0	0	11	8	0	2	0	1	0	11624316689068403097
@@ -693,7 +696,7 @@ Effect4.Machine.evaluatePrim.withFiber._at_.Effect4.Machine.evaluatePrim._at_.Ef
 Effect4.Machine.evaluatePrim.interruptAs._at_.Effect4.Machine.evaluatePrim.withFiber._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_2.spec_4.spec_12._redArg	evaluate_prim_interrupt_as_at_evaluate_prim_with_fiber_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_4_spec_12	false	22	0	1	2	5	2	0	0	0	0	21	1	0	0	0	0	0	0	0	70	42	0	7	0	1	0	9835098028076437295
 List.mapTR.loop._at_.Effect4.Machine.evaluatePrim.withFiber._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_2.spec_4.spec_13._redArg	list_map_tr_loop_at_evaluate_prim_with_fiber_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_4_spec_13	true	6	0	1	2	5	2	0	0	0	0	5	1	0	0	0	0	0	0	0	10	15	0	7	0	1	0	3241875410646379038
 List.filterTR.loop._at_.Effect4.Machine.evaluatePrim.withFiber._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_2.spec_4.spec_14	list_filter_tr_loop_at_evaluate_prim_with_fiber_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_4_spec_14	true	5	0	0	0	2	3	0	0	0	0	5	0	0	0	0	0	0	0	0	1	11	0	4	0	1	0	9349279063110637608
-Effect4.Machine.beginRace._at_.Effect4.Machine.evaluatePrim.withFiber._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_2.spec_4.spec_15._redArg	begin_race_at_evaluate_prim_with_fiber_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_4_spec_15	false	22	0	0	0	5	1	0	1	0	0	20	1	1	0	0	0	0	0	0	75	74	0	5	0	1	0	12011104345131702408
+Effect4.Machine.beginRace._at_.Effect4.Machine.evaluatePrim.withFiber._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_2.spec_4.spec_15._redArg	begin_race_at_evaluate_prim_with_fiber_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_4_spec_15	false	22	0	0	0	5	1	0	1	0	0	20	1	1	0	0	0	0	0	0	75	76	0	5	0	1	0	11604171225615797593
 Effect4.FrameFiber.uninterruptible._redArg	frame_fiber_uninterruptible	false	4	0	0	0	2	2	0	0	0	0	4	0	0	0	0	0	0	0	0	15	8	0	3	0	1	0	16133353557171513674
 Effect4.FrameFiber.interruptibleRegion._redArg	frame_fiber_interruptible_region	false	3	0	0	0	2	2	0	0	0	0	3	0	0	0	0	0	0	0	0	3	3	0	3	0	1	0	3892617544334369281
 Effect4.Machine.forkFinalizers._at_.Effect4.Machine.evaluatePrim.withFiber._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_2.spec_4.spec_16._redArg	fork_finalizers_at_evaluate_prim_with_fiber_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_4_spec_16	true	10	0	0	0	4	2	0	0	0	0	10	0	0	0	0	0	0	0	0	7	19	0	5	0	1	0	14136846870608579642
@@ -726,7 +729,7 @@ Effect4.Program.Ty.Variance.select	program_ty_variance_select	false	0	0	0	0	2	4	
 Effect4.Program.Ty.instDecidableLT	program_ty_inst_decidable_lt	false	3	0	0	0	0	1	0	0	0	0	3	0	0	0	0	0	0	0	0	0	4	0	0	0	1	0	5834197421232353259
 List.all._at_.Effect4.Row.antichain.spec_0._redArg	list_all_at_row_antichain_spec_0	true	5	0	0	0	3	4	0	0	0	0	3	2	0	0	0	0	0	0	0	0	10	0	6	0	1	0	10814374054164044233
 Effect4.FrameFiber.resumeValue._at_.Effect4.FrameFiber.step._at_.Effect4.Machine.evaluatePrim.stepFrame._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_2.spec_3.spec_7.spec_9._redArg	frame_fiber_resume_value_at_frame_fiber_step_at_evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3_spec_7_spec_9	false	33	0	3	6	10	4	0	0	0	0	33	0	0	0	0	0	0	0	0	86	61	0	16	0	1	0	16502646222624902013
-Effect4.FrameFiber.resumeCause._at_.Effect4.FrameFiber.step._at_.Effect4.Machine.evaluatePrim.stepFrame._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_2.spec_3.spec_7.spec_10._redArg	frame_fiber_resume_cause_at_frame_fiber_step_at_evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3_spec_7_spec_10	false	31	0	4	8	11	4	0	0	0	0	31	0	0	0	0	0	0	0	0	81	84	0	18	0	1	0	1645573903711668020
+Effect4.FrameFiber.resumeCause._at_.Effect4.FrameFiber.step._at_.Effect4.Machine.evaluatePrim.stepFrame._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_2.spec_3.spec_7.spec_10._redArg	frame_fiber_resume_cause_at_frame_fiber_step_at_evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3_spec_7_spec_10	false	31	0	4	8	11	4	0	0	0	0	31	0	0	0	0	0	0	0	0	81	84	0	18	0	1	0	5877916154459385584
 Effect4.Prim.armA._at_.Effect4.FrameFiber.step._at_.Effect4.Machine.evaluatePrim.stepFrame._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_2.spec_3.spec_7.spec_11._redArg	prim_arm_a_at_frame_fiber_step_at_evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3_spec_7_spec_11	false	48	0	2	4	12	11	0	0	0	0	42	6	0	0	0	0	0	0	0	88	62	0	23	1	1	0	14659630824676960946
 List.mapTR.loop._at_.Effect4.FrameFiber.step._at_.Effect4.Machine.evaluatePrim.stepFrame._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_2.spec_3.spec_7.spec_12._redArg	list_map_tr_loop_at_frame_fiber_step_at_evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3_spec_7_spec_12	true	4	0	0	0	1	2	0	0	0	0	4	0	0	0	0	0	0	0	0	8	6	0	2	0	1	0	7419329766023472127
 Effect4.Machine.frameExitState._at_.Effect4.Machine.evaluatePrim.finishFrame._at_.Effect4.Machine.evaluatePrim.stepFrame._at_.Effect4.Machine.evaluatePrim._at_.Effect4.Program.exitScoped.spec_2.spec_3.spec_8.spec_14._redArg	frame_exit_state_at_evaluate_prim_finish_frame_at_evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3_spec_8_spec_14	false	8	0	0	0	4	2	0	0	0	0	8	0	0	0	0	0	0	0	0	2	8	0	4	1	1	0	17948564841033570622

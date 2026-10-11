@@ -28,6 +28,7 @@ pAcquire	well-typed
 pPair	well-typed
 pStmts	well-typed
 pActions	well-typed
+pRaceFirst	well-typed
 pOps	well-typed
 pIll	ill-typed
 pIllRet	ill-typed
