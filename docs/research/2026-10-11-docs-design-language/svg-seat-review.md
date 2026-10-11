@@ -6,6 +6,9 @@ schema and its battery. The owner wants this package held to
 the standard of lean4-effect4. Its design rests on a theory we can reason with, not on its
 literal cases.
 
+**Owner rulings.** The owner ruled on the four open decisions "as recommended":
+`docs/research/2026-10-11-svg-owner-rulings.md`. Record them as R-S4.
+
 **First, before you continue.** S0 and S1 stand as landed, and S2 continues. Before S3, rewrite
 sections 4, 5.2, 5.3 and 6 of `docs/SVG-PACKAGE-PLAN.md` on the model of section 2 below:
 
