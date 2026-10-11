@@ -85,6 +85,9 @@ walk (section 7):
 | `stale_clauses` | clauses one to three of the observation, for every built program and script | nothing |
 | `stale_never_applies_modulo` | `StaleNeverApplies` | `root_answers_applied` |
 
+Clause four, tested: no word of the searches of section 3.2 (97338 words, with yield verdicts and
+interruptions at every fiber) breaks `staleNeverApplies`.
+
 **The decomposition.**
 
 | Lemma | Lean statement (short) | Status | Scope | Placement | Size to land |
@@ -144,12 +147,22 @@ The race then takes the timer, and the retry form retries a `Timeout` after a su
 `vendor/effect-4.0.0-rc.112/src/internal/effect.ts:1535-1580`). The body's own exit observer
 decides the race (line 1568). So the gap is the form's.
 
-**The evidence.** A bounded search played every word of length 3 or less over 41 moves from
-`parked`, then a fixed tail (`scratch/Search1.lean`, `scratch/search1.log`; tested). The moves are
-fire, evaluate, a yield verdict and an interruption at each of the fibers 0 to 8. Three clock
-steps, the reply's receipt and its application are the other five. Of 70644 words, 6 fail. Each failing word holds a
-yield verdict at fiber 1 or 3, or an interruption of fiber 3. The DOGFOOD search (16 plain moves,
-length 4) held none of these moves.
+**The evidence.** Two bounded searches played every short word over a scheduling alphabet (tested;
+finite probes). A fixed tail then lets a second attempt start and be held.
+
+| Search | Alphabet | Words | `retriesDeclared` fails | on a fair host's words | `staleNeverApplies` fails |
+| --- | --- | --- | --- | --- | --- |
+| `scratch/Search1.lean` | 41 moves, length 3, from `parked` | 70644 | 6 | — | — |
+| `scratch/Search2.lean` | 45 moves, length 3, from `parked` | 93196 | 12 | 0 | 0 |
+| same | 45 moves, length 2, from the timed-out run | 2071 | 0 | 0 | 0 |
+| same | 45 moves, length 2, from a received first reply | 2071 | 3 | 0 | 0 |
+
+Of the 41 moves, 36 are a fire, an evaluation, a yield verdict and an interruption at each of the
+fibers 0 to 8. A flush, two clock steps, the reply's receipt and its application are the other
+five.
+`Search2` adds three failing answers and the hold. A fair host plays no yield verdict and interrupts only an attempt's
+caller, fiber 1 or 5. Each failing word holds a yield verdict at fiber 1 or 3, or an interruption
+of fiber 3. The DOGFOOD search (16 plain moves, length 4) held none of these moves.
 
 **The decision it needs.** The owner chooses one:
 
