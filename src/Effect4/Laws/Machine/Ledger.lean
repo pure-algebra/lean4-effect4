@@ -350,7 +350,7 @@ variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
 theorem interruptRecord_held (interp : RunInterp ν σ β ε δ ι α χ St) (who : Option FiberId)
     (extra : ReasonAnnotations α) (f : RunFiber ν σ β ε δ ι α χ) :
     L.held (interruptRecord interp who extra f).1 = L.held f := by
-  unfold interruptRecord
+  unfold interruptRecord interruptWithCause
   dsimp only
   (repeat' split) <;> rfl
 
@@ -358,7 +358,7 @@ theorem interruptRecord_held (interp : RunInterp ν σ β ε δ ι α χ St) (wh
 theorem interruptRecord_key (interp : RunInterp ν σ β ε δ ι α χ St) (who : Option FiberId)
     (extra : ReasonAnnotations α) (f : RunFiber ν σ β ε δ ι α χ) :
     (interruptRecord interp who extra f).1.id = f.id := by
-  unfold interruptRecord
+  unfold interruptRecord interruptWithCause
   dsimp only
   (repeat' split) <;> rfl
 

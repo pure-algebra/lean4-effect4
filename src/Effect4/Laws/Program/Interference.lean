@@ -76,7 +76,7 @@ theorem OtherEdit.id {g h : NFiber} (e : OtherEdit g h) : h.id = g.id := by
   | observe => rfl
   | filterObservers => rfl
   | interrupted interp g who extra =>
-    unfold interruptRecord
+    unfold interruptRecord interruptWithCause
     dsimp only
     repeat' split
     all_goals rfl
@@ -93,7 +93,7 @@ theorem OtherEdit.exit {g h : NFiber} (e : OtherEdit g h) : h.exit = g.exit := b
   | observe => rfl
   | filterObservers => rfl
   | interrupted interp g who extra =>
-    unfold interruptRecord
+    unfold interruptRecord interruptWithCause
     dsimp only
     repeat' split
     all_goals rfl

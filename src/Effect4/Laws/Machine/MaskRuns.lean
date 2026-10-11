@@ -1390,7 +1390,7 @@ flag and the stack. A step of `driveStep_keepsMask`. -/
 theorem interruptRecord_maskLater (interp : RunInterp ν σ β ε δ ι α χ St) (who : Option FiberId)
     (extra : ReasonAnnotations α) (f : RunFiber ν σ β ε δ ι α χ) :
     MaskLater f (interruptRecord interp who extra f).1 := by
-  unfold interruptRecord
+  unfold interruptRecord interruptWithCause
   dsimp only
   (repeat' split) <;> exact MaskLater.refl f
 

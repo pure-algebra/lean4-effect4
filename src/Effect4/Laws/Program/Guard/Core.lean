@@ -319,16 +319,18 @@ theorem registerExternal_internal_state (p : NativeEff) (table : RowTable)
 theorem interruptRecord_id (p : NativeEff) (table : RowTable) (who : Option FiberId)
     (extra : ReasonAnnotations Ann) (f : NFiber) :
     (interruptRecord (interpOf p table) who extra f).1.id = f.id := by
-  cases he : f.exit <;> cases hi : f.frame.interruptible <;> cases hr : f.running <;>
-    simp [interruptRecord, FiberCore.interruptible, FiberCore.recordCause, he, hi, hr]
+  unfold interruptRecord interruptWithCause
+  dsimp only
+  (repeat' split) <;> rfl
 
 theorem interruptRecord_interrupted (p : NativeEff) (table : RowTable) (who : Option FiberId)
     (extra : ReasonAnnotations Ann) (f : NFiber) :
     Interrupted (interruptRecord (interpOf p table) who extra f).1 := by
   cases he : f.exit <;> cases hi : f.frame.interruptible <;> cases hr : f.running <;>
-    simp [interruptRecord, Interrupted, RunFiber.interruptPending,
+    simp only [interruptRecord, interruptWithCause, Interrupted, RunFiber.interruptPending,
       FiberCore.interruptible, FiberCore.recordCause, FiberCore.deferredInterrupt,
-      FiberCore.interruptedCause, FiberCore.setDeferred, FiberCore.answerWith, he, hi, hr]
+      FiberCore.interruptedCause, FiberCore.setDeferred, FiberCore.answerWith, he, hi, hr,
+      Option.isSome_none, Option.isSome_some, Bool.false_eq_true, ↓reduceIte, Bool.or_true, or_true, true_or]
 
 abbrev NCmd := Cmd EffName EffThunk Val Err Defect FiberId Ann
 
@@ -2244,7 +2246,7 @@ theorem fiberGuardState_interruptRecord (p : NativeEff) (table : RowTable)
     (who : Option FiberId) (extra : ReasonAnnotations Ann) :
     FiberGuardState m (interruptRecord (interpOf p table) who extra f).1 := by
   cases he : f.exit <;> cases hi : f.frame.interruptible <;> cases hr : f.running
-  all_goals simp only [interruptRecord, FiberCore.interruptible, FiberCore.recordCause,
+  all_goals simp only [interruptRecord, interruptWithCause, FiberCore.interruptible, FiberCore.recordCause,
     FiberCore.interruptedCause, FiberCore.setDeferred, FiberCore.answerWith,
     he, hi, hr, Option.isSome_none, Option.isSome_some, Bool.false_eq_true, ↓reduceIte]
   all_goals first | exact old | skip
@@ -2270,7 +2272,7 @@ theorem guardState_interruptRecord (p : NativeEff) (table : RowTable)
   have hmem : f ∈ m.fibers := List.mem_of_find?_eq_some hf
   have valid := fiberGuardState_interruptRecord p table (guardState_fiber state hmem) who extra
   cases he : f.exit <;> cases hi : f.frame.interruptible <;> cases hr : f.running
-  all_goals simp only [interruptRecord, FiberCore.interruptible, FiberCore.recordCause,
+  all_goals simp only [interruptRecord, interruptWithCause, FiberCore.interruptible, FiberCore.recordCause,
     FiberCore.interruptedCause, FiberCore.setDeferred, FiberCore.answerWith,
     he, hi, hr, Option.isSome_none, Option.isSome_some, Bool.false_eq_true, ↓reduceIte] at valid ⊢
   all_goals first
@@ -2289,8 +2291,9 @@ theorem requestOf_interruptRecord_subset (p : NativeEff) (table : RowTable)
   · exact requestOf_update_unparked_subset m g hpark fiber token request hrequest
   · have view : RequestView f g := by
       cases he : f.exit <;> cases hi : f.frame.interruptible <;> cases hr : f.running <;>
-        simp [g, interruptRecord, RequestView, FiberCore.interruptible, FiberCore.recordCause,
-          FiberCore.setDeferred, FiberCore.answerWith, he, hi, hr] at hpark ⊢
+        simp only [g, interruptRecord, interruptWithCause, RequestView, FiberCore.interruptible, FiberCore.recordCause,
+          FiberCore.setDeferred, FiberCore.answerWith, he, hi, hr, Option.isSome_none,
+          Option.isSome_some, Bool.false_eq_true, ↓reduceIte, and_self, not_true_eq_false] at hpark ⊢
     exact (requestOf_update_view (f := f) hf g view fiber token) ▸ hrequest
 
 theorem guardState_driveStep_interruptTarget (p : NativeEff) (table : RowTable)
@@ -2394,8 +2397,9 @@ theorem commandControls_interruptRecord (p : NativeEff) (table : RowTable)
       subst old
       refine ⟨g, fiber_lookup_update_self hold g (hid.trans (fiber_id_of_lookup hold)), ?_⟩
       cases hx : f.exit <;> cases hi : f.frame.interruptible <;>
-        simp [g, interruptRecord, FiberCore.interruptible, FiberCore.recordCause,
-          FiberCore.setDeferred, hx, hi, hrun, hpark]
+        simp only [g, interruptRecord, interruptWithCause, FiberCore.interruptible, FiberCore.recordCause,
+          FiberCore.setDeferred, hx, hi, hrun, hpark, Option.isSome_none, Option.isSome_some,
+          Bool.false_eq_true, ↓reduceIte, and_self]
     · refine ⟨old, ?_, hrun, hpark, rfl⟩
       change (m.update g).fiber? fiber = some old
       simp only [fiber_lookup_update, hold, Option.map_some, hid, he, ↓reduceIte]
@@ -2405,7 +2409,7 @@ theorem commandControls_interruptRecord (p : NativeEff) (table : RowTable)
         simpa only [← he, fiber_id_of_lookup hold] using hold
       have heq : old = f := Option.some.inj (hlookup.symm.trans hf)
       subst old
-      have hg : g = f := by simp only [g, interruptRecord, hexit, ↓reduceIte]
+      have hg : g = f := by simp only [g, interruptRecord, interruptWithCause, hexit, ↓reduceIte]
       refine ⟨f, ?_, hexit⟩
       change (m.update g).fiber? fiber = some f
       simpa only [hg] using fiber_lookup_update_self hold g (hid.trans (fiber_id_of_lookup hold))
