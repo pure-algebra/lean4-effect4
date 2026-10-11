@@ -1,4 +1,4 @@
-#probe_audit: 173 declarations walked, 3 planned goals [Probe.HostProtocol.held_in_tree,
+#probe_audit: 174 declarations walked, 3 planned goals [Probe.HostProtocol.held_in_tree,
  Probe.HostProtocol.root_answers_applied,
  Probe.HostProtocol.escape_session]; 0 outside [propext, Quot.sound]
 resting on planned goals:

@@ -20,7 +20,8 @@ The other three goals stand, each proved in the probe modulo one planned goal:
 - **`stale_never_applies` is a session law in three clauses of four.** The probe proves clauses
   one to three for every program (`session_keys_once`), from one new machine law
   (`reservedKeys_steppedBy`). Clause four is a data-flow fact of `fetch` alone
-  (`root_answers_applied`).
+  (`root_answers_applied`). Its R6 content, restated, is proved for funded runs
+  (`ending_of_tape`).
 - **`infrastructure_escapes` rests on the run's budget premise** (`escape_session`). The probe
   proves the meaning half (`escape_meaning`) for every tag, and the whole goal at any fixed tag
   by the kernel (`escapes_sqlError`).
@@ -32,7 +33,7 @@ The other three goals stand, each proved in the probe modulo one planned goal:
 
 | Goal | Verdict | Route | New lemmas, general | New lemmas, specific | Size | Confidence |
 | --- | --- | --- | --- | --- | --- | --- |
-| `stale_never_applies` | true | the key ledger, then clause four | `reservedKeys_steppedBy`, `below_steppedBy`, `session_keys_once` (all proved) | `root_answers_applied` (planned) | clauses 1–3: 3 h to land; clause 4: 2–4 weeks, or 1 h if the owner restates it | clauses 1–3: high; clause 4 as written: low |
+| `stale_never_applies` | true | the key ledger, then clause four | `reservedKeys_steppedBy`, `below_steppedBy`, `session_keys_once`, `ending_of_tape` (all proved) | `root_answers_applied` (planned) | clauses 1–3: 3 h to land; clause 4: 2–4 weeks, or 1 h if the owner restates it (`ending_of_tape`) | clauses 1–3: high; clause 4 as written: low |
 | `retries_declared` | false | `retries_declared_refuted` (proved) | none | none | owner decision first; a repaired claim costs what clause 4 costs | high |
 | `infrastructure_escapes` | true at every fixed tag (proved); true on every finite instance tested | `denoteRows_eq_session` plus `escape_meaning` (proved) | a budget law for host-driven runs of `StraightRows` programs (planned) | `escape_session` (planned) | 2–4 days; 1–2 days if the owner raises the battery's fuel | medium-high |
 | `unauthorized_calls_nothing` | true on every finite instance tested | `held_in_tree` plus `tree_needs_token` (proved) | `held_in_tree` (planned) | none left | 1–2 weeks as written; 3–4 days if restated to host-driven scripts | medium |
@@ -85,6 +86,7 @@ walk (section 7):
 | `session_keys_once` | bound, received and applied keys each appear once, and no retired key is applied | nothing |
 | `stale_clauses` | clauses one to three of the observation, for every built program and script | nothing |
 | `stale_never_applies_modulo` | `StaleNeverApplies` | `root_answers_applied` |
+| `ending_of_tape` | two funded recorded runs of one built program, at one budget, with one tape, have one exit | nothing |
 
 Clause four, tested: no word of the searches of section 3.2 (97338 words, with yield verdicts and
 interruptions at every fiber) breaks `staleNeverApplies`.
@@ -108,7 +110,9 @@ interruptions at every fiber) breaks `staleNeverApplies`.
    call's reply out of them. For a funded run the machine is the replay of its tape
    (`funded_replays`, `src/Effect4/Laws/Run/Tape.lean`). The owner may replace clause four by
    "the root's ending is a function of the decisions", which those laws carry. The provenance
-   statement then moves to a separate R10 goal.
+   statement then moves to a separate R10 goal. The probe proves the restated clause:
+   `ending_of_tape`, a corollary of `funded_replays`. It takes `funded` as its premise, as the
+   queue-workers goals do (`Test/Dogfood/Scenario/QueueWorkers.lean`).
 2. **A program invariant over `fetch`'s reachable machines.** Templates of machine states with
    free values (reply bodies, the clock, the counters), each transition checked by the kernel
    (`kernel_rfl`, section 6). The kernel runs `fetch` with a free reply body, since the program
@@ -121,6 +125,20 @@ interruptions at every fiber) breaks `staleNeverApplies`.
 **What it does not establish.** `session_keys_once` says nothing of which reply a host sends: a
 host may answer the second call with the first call's body. It says nothing of reply admission
 at the application, of the order of two applications, or of the retirement edge.
+`ending_of_tape` says nothing of a run that a budget cut, and nothing of which body the root
+answers.
+
+**Existing laws it reads.** `FreshPark` (`src/Effect4/Laws/Program/Guard/ReturnFields.lean`);
+`guardState_reachable` and `guardState_steppedBy` (`src/Effect4/Laws/Program/Guard/Decision.lean`);
+`reached_play` (`Test/Dogfood/Scenario.lean`); `funded_replays`
+(`src/Effect4/Laws/Run/Tape.lean`). Every lemma of the tables above is new, and the probe holds
+each.
+
+**Traps.** `List.nodup_singleton` does not exist: write
+`List.nodup_cons.mpr ⟨List.not_mem_nil, List.nodup_nil⟩`. `List.Sublist.cons₂` is deprecated,
+and a warning fails the tree's build: write `List.Sublist.cons_cons`. `List.filter_true` does
+not exist: the probe proves `filter_all_true`. `reservedKeys_steppedBy` needs its program and
+table explicit. Bind `List.find?_some h` with `have` before using it.
 
 ### 3.2 `retries_declared`
 
@@ -164,6 +182,11 @@ five.
 `Search2` adds three failing answers and the hold. A fair host plays no yield verdict and interrupts only an attempt's
 caller, fiber 1 or 5. Each failing word holds a yield verdict at fiber 1 or 3, or an interruption
 of fiber 3. The DOGFOOD search (16 plain moves, length 4) held none of these moves.
+
+**The refutation's declarations.** All are new and in the probe: `cx`, `cxYield` (the scripts),
+`cx_plain`, `cxYield_plain` (by `decide`), `cx_refutes`, `cxYield_refutes`, `cx_calls` (by
+`decide +kernel`) and `retries_declared_refuted`. Trap: inside the scenario's namespace
+`Scenario.play` names the structure's field; write `Test.Dogfood.Scenario.play`.
 
 **The decision it needs.** The owner chooses one:
 
@@ -227,6 +250,25 @@ the default fuel, 1000 (`Api.Budget`, `src/Effect4/Api.lean`). Two ways close th
    node at most once, so its commands are bounded by the program's size. This general law
    (2–3 days) keeps the fuel at 1000.
 
+**The route of `escape_session`, in part unverified.** The script plays seven rows. Only the
+last, the repository's failure applied, compares the tag. The error column is
+`.prod .string .string`, so the receipt compares none. At the tag `SqlError` the first six rows
+give the verdicts `progressed, bound, preflight, applied, bound, preflight`. That prefix is
+funded, host-driven and at rest, with a tape of two decisions (`scratch/Prefix.lean`, `#eval`,
+tested). The same file states `pre_free`: these facts for every tag, message, id and id text, by
+`kernel_rfl`. Its run ended when the coordinator stopped the work, and its result was not
+captured: **unverified**. The last row then needs `holds_answer` and the budget law.
+
+**Existing laws it reads.** `denoteRows_eq_session`
+(`src/Effect4/Laws/Api/SessionMeaning.lean`); `holds_answer`, `seg_settles` and `load_evaluate`
+(`src/Effect4/Laws/Program/Agreement/Hosted.lean`); `stepDecisionState_stable`
+(`src/Effect4/Laws/Machine/Approximation.lean`); `Authoring.build_table`. `caught_tagged_none`
+is the probe's.
+
+**Traps.** The build's checker reads literals, so the kernel refuses a free id through `build`:
+read the program off the elaboration (`build_program`). The elaborator's `whnf` times out on the
+played run: `generalize` it first. The kernel cannot decide `tag = "NotFound"` for a free tag.
+
 **What it does not establish.** Another script; a business tag; a record payload.
 
 ### 3.4 `unauthorized_calls_nothing`
@@ -262,6 +304,23 @@ reply that the tree needs.
 (`Holds`, `Settled`) to an interrupted root, a yield verdict and a cut segment. The owner may
 restrict the goal to host-driven scripts at the raised fuel of 3.3. `held_in_tree` then reduces
 to `rows_loop_frontier` at each bind: 2–3 days.
+
+**The decomposition.**
+
+| Lemma | Statement (short) | Status | Scope | Placement | Size |
+| --- | --- | --- | --- | --- | --- |
+| `held_in_tree` | a held call of a reached run of a `StraightRows` program with `NoCauseHandler` is a wait of `treeWaits` under a tape of submitted exits | planned | general | `translation-simulation`, R6; consumer the goal | 1–2 weeks; 2–3 days restricted |
+| `tree_needs_token` | a wait at row 1 of the routing tree follows a first answer `configOf token pageSize` | proved | specific | `context-requirements`, R5 | 2 h to move |
+| `repo_position`, `noCauseHandler_free`, `straight_free` | the repository is row 1; the program catches no cause; it is in the fragment | proved | specific | steps of the goal | with the above |
+| `unauthorized_calls_nothing_modulo` | `UnauthorizedCallsNothing` | proved modulo `held_in_tree` | specific | consumer `routing` | with the above |
+
+**Existing laws it reads.** `rows_loop_frontier` (`src/Effect4/Laws/Api/SessionMeaningLoop.lean`)
+for the restricted route; `Val.hasTy`'s record arm for the column. The tree-stepping lemmas are
+new.
+
+**Traps.** In `andThen_eq_waiting` the waiting case needs `cases h` before `Or.inl rfl`: the
+type parameters differ. `catchK_done` needs `simp only [catchK]` first. In `first_call` write
+`⟨⟨0, _⟩, .unit⟩`; an explicit `Nat.zero_lt_succ` breaks type correctness.
 
 **What it does not establish.** What an authorized request calls. A handler that looks the
 caller up first (a red control). A host that withholds the configuration forever.
@@ -308,7 +367,7 @@ flowchart TD
 | S1 | `reservedKeys_steppedBy`, `below_steppedBy` and the two helpers into `src/Effect4/Laws/Program/Guard/Decision.lean` | — | S5, S8 | `LEAN_NUM_THREADS=3 lake build Effect4.Laws.Program.Guard.Decision` | `#axiom_audit Effect4.Laws.Program.Guard.Decision` |
 | S2 | `Ledger`, `ledger_reached`, `session_keys_once` and `RunKeeps` in a new `src/Effect4/Laws/Run/Keys.lean`; registry claim `keys-once`; root import at the coordinator's anchor | S1 | S5, S8 | `lake build Effect4.Laws.Run.Keys` | `#axiom_audit Effect4.Laws.Run.Keys` |
 | S3 | `stale_clauses` and the sublist lemmas beside the observation (`Test/Dogfood/Scenario/Timeout.lean`) | S2 | — | `lake env lean Test/Dogfood/Scenario/Timeout.lean` | `#axiom_audit` on the battery's module |
-| S4 | clause four restated; `stale_never_applies` a theorem | S3, owner | — | same | same |
+| S4 | `ending_of_tape` into S2's module, not the widely imported `Tape.lean`; clause four restated with `funded`; `stale_never_applies` a theorem | S3, owner | — | same | same |
 | S5 | `build_program` into `src/Effect4/Laws/Program/Author.lean`; `progOf_eq`, `escape_meaning` into the routing battery | — | S1, S2 | `lake build Effect4.Laws.Program.Author`; the battery | both |
 | S6 | the budget law into `src/Effect4/Laws/Program/Agreement/Hosted.lean`; `escape_session`; `infrastructure_escapes` a theorem | S5, owner if the fuel moves | S8 | `lake build Effect4.Laws.Program.Agreement.Hosted` | `#axiom_audit` on it and on the battery |
 | S7 | `fetch`'s program invariant: `root_answers_applied` if kept, then the repaired `retries_declared` | owner | — | the timeout battery | the battery |
@@ -328,6 +387,8 @@ Each item below serves other families too.
 - **`Ledger` and `session_keys_once`.** Every scenario's receipts, applications and retirements.
   The workers scenario's clauses "selection" and "retirement" read single steps of it.
 - **`RunKeeps` and `reached_keeps`.** The frame every seat's run invariant fits.
+- **`ending_of_tape`.** Any scenario claim that a reply the session never applied changes no
+  outcome. It reads only `funded_replays`.
 - **`kernel_rfl`** (`Probe.lean`, top). It assigns `Eq.refl` and lets the kernel check an
   equation with free variables. The elaborator's `rfl` failed on the same runs
   (`scratch/Symbolic1.lean`). With it the kernel runs a whole machine run with free values that
@@ -360,7 +421,8 @@ are those of `docs/core/controlled-english.md` §3.8: proved means the kernel ac
 | --- | --- |
 | `LEAN_NUM_THREADS=2 lake build Test.Dogfood.Scenario.Timeout Test.Dogfood.Scenario.Routing ProofGraph.AxiomAudit Effect4.Laws.Program.Guard.Decision` | restored from the cache, 1057 jobs, 2 s |
 | `LEAN_NUM_THREADS=2 lake build Effect4.Laws.Api.SessionMeaning Effect4.Laws.Api.SessionMeaningLoop` | restored, 493 jobs, 33 s |
-| `LEAN_NUM_THREADS=2 lake env lean docs/research/2026-10-10-goals-packet/host-protocol/Probe.lean` | no error, no warning, about 12 s; the audit below (`probe-run.log`) |
+| `LEAN_NUM_THREADS=2 lake env lean docs/research/2026-10-10-goals-packet/host-protocol/Probe.lean` | no error, no warning; 46.6 s wall and 24.4 s user under `/usr/bin/time -p`, with other seats building; the audit below (`probe-run.log`). After that run two docstrings changed, and no Lean run checked them |
+| `lake env lean …/scratch/Prefix.lean` | the `#eval` at the tag `SqlError`: six verdicts, funded, host-driven, at rest, two decisions. `pre_free` with free values: **unverified**, its result was not captured |
 | `lake env lean …/scratch/KernelCost.lean` | the kernel checks `build fetch` in 0.38 s and the first counterexample's run in 1.28 s |
 | `lake env lean …/scratch/Search1.lean` | 70644 words, 6 failures (section 3.2) |
 | `lake env lean …/scratch/Search2.lean` | 97338 words; 15 failures of `retriesDeclared`, none on a fair host's words; no failure of `staleNeverApplies` |
@@ -373,7 +435,7 @@ planned goals as leaves) over every declaration under `Probe.HostProtocol`. `#ax
 only imported modules, and the probe is no module.
 
 ```text
-#probe_audit: 173 declarations walked, 3 planned goals [held_in_tree, root_answers_applied,
+#probe_audit: 174 declarations walked, 3 planned goals [held_in_tree, root_answers_applied,
  escape_session]; 0 outside [propext, Quot.sound]
 resting on planned goals:
   infrastructure_escapes_modulo rests on [escape_session]
@@ -381,15 +443,15 @@ resting on planned goals:
   stale_never_applies_modulo rests on [root_answers_applied]
 ```
 
-`retries_declared_refuted`, `session_keys_once`, `escape_meaning`, `escapes_sqlError` and
-`tree_needs_token` rest on no planned goal.
+`retries_declared_refuted`, `session_keys_once`, `ending_of_tape`, `escape_meaning`,
+`escapes_sqlError` and `tree_needs_token` rest on no planned goal.
 
 ## 8. The decisions for the owner
 
 | Decision | Options | Recommendation |
 | --- | --- | --- |
 | `retries_declared` is false | repair `timeoutForm`; narrow `Move.plain`; keep the counterexample as a red control | repair the form |
-| clause four of `stale_never_applies` | keep it (a program invariant of `fetch`); restate it as "the root's ending is a function of the decisions" and move provenance to an R10 goal | restate |
+| clause four of `stale_never_applies` | keep it (a program invariant of `fetch`); restate it as "the root's ending is a function of the decisions" and move provenance to an R10 goal | restate: `ending_of_tape` proves it for funded runs |
 | the routing battery's fuel | raise it to at least 8200; keep 1000 and land the size bound | raise it |
 | `unauthorized_calls_nothing`'s scripts | every script (`held_in_tree` as stated); host-driven scripts | every script if S8 is scheduled anyway; otherwise host-driven |
 

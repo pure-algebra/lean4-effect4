@@ -17,11 +17,12 @@ refutes it, or proves it modulo the planned goals below.
   decision (`reservedKeys_steppedBy`), assembled from the guard tree's per-decision lemmas.
 * **B.** The key ledger of a run (`Ledger`), kept by every row of every program: each key is
   bound, received and applied once, and no retired call is applied (`session_keys_once`).
-* **C.** The timeout scenario: `stale_never_applies` modulo `root_answers_applied`, and
-  `retries_declared_refuted`, two kernel-checked counterexamples.
+* **C.** The timeout scenario: `stale_never_applies` modulo `root_answers_applied`; the
+  restated clause four, `ending_of_tape`, proved for funded runs; and `retries_declared_refuted`,
+  two kernel-checked counterexamples.
 * **D.** The routing scenario: `infrastructure_escapes` modulo `escape_session` (its meaning half
-  `escape_meaning` proved), and `unauthorized_calls_nothing` modulo `held_in_tree` and
-  `tree_needs_token`.
+  `escape_meaning` proved), and `unauthorized_calls_nothing` modulo `held_in_tree` (its tree half
+  `tree_needs_token` proved).
 * **Z.** `#probe_audit`, the axiom gate's exact walk over this file's declarations.
 -/
 
@@ -1414,7 +1415,7 @@ R10, a behaviour law of p1's two forms on one program; consumer `stale_never_app
 clause four. Reach: the program `fetch`, the battery's budgets, every script of the driver's
 alphabet with its raw rows. It is a fact of the program's data flow, not of the session: no
 session law can show it, since a program can answer a constant. Its proof needs an invariant of
-`fetch`'s reachable machines (README, slice T3). It does not establish which reply the host
+`fetch`'s reachable machines (README, slice S7). It does not establish which reply the host
 sends. -/
 @[semantics "translation-simulation" (requirement := R10)]
 proof_goal root_answers_applied : RootAnswersApplied
@@ -1467,6 +1468,35 @@ theorem stale_never_applies_modulo : StaleNeverApplies := by
       rw [if_pos (List.contains_iff_mem.mpr hseen), hstored]
       rfl
   · rfl
+
+/-! ### Clause four, restated
+
+A candidate for the owner (README, section 3.1, route 1): the R6 content of clause four without
+its provenance. A stale reply is on no tape (clause one), so it decides nothing. -/
+
+/-- **The root's ending is a function of the tape** (proved). Two funded recorded runs of one
+built program, at one budget, with one tape, end the same way. A reply that the session never
+applied, a stale one among them, is on neither tape. Placement: concept `host-session-protocol`,
+R6; the candidate restatement of `stale_never_applies`'s clause four. It reads
+`funded_replays` (`src/Effect4/Laws/Run/Tape.lean`). It says nothing of a run that a budget cut,
+and nothing of which body the root answers. -/
+theorem ending_of_tape (s₁ s₂ : Run) (h₁ : Run.Reached s₁) (h₂ : Run.Reached s₂)
+    (hb : s₁.built = s₂.built) (hbud : s₁.budget = s₂.budget)
+    (f₁ : Run.funded s₁ = true) (f₂ : Run.funded s₂ = true)
+    (ht : Run.tapeOf s₁ = Run.tapeOf s₂) : s₁.exit = s₂.exit := by
+  have m₁ := Run.funded_replays s₁ h₁ f₁
+  have m₂ := Run.funded_replays s₂ h₂ f₂
+  obtain ⟨built₁, budget₁, session₁, journal₁, phases₁⟩ := s₁
+  obtain ⟨built₂, budget₂, session₂, journal₂, phases₂⟩ := s₂
+  simp only at hb hbud
+  subst hb hbud
+  have hm : session₁.machine = session₂.machine := by
+    have e₁ : session₁.machine = _ := m₁
+    have e₂ : session₂.machine = _ := m₂
+    rw [e₁, e₂, ht]
+  show (Api.HostSession.inspect session₁).exit = (Api.HostSession.inspect session₂).exit
+  unfold Api.HostSession.inspect
+  rw [hm]
 
 /-! ### `retries_declared` is false -/
 
@@ -1531,9 +1561,9 @@ end Timeout
 The kernel computes the escape run with a free id, id text and message once the program is read
 off the elaboration instead of the build (`escapes_sqlError`, at one tag). A free tag stops the
 kernel at the handlers' two string tests, so `infrastructure_escapes` goes through the
-denotation: `escape_meaning` (planned) and `escape_session` (planned), joined by
+denotation: `escape_meaning` (proved) and `escape_session` (planned), joined by
 `denoteRows_eq_session`. `unauthorized_calls_nothing` rests on a general law of the calls of a
-run (`held_in_tree`, planned) and the program's tree (`tree_needs_token`, planned). -/
+run (`held_in_tree`, planned) and the program's tree (`tree_needs_token`, proved). -/
 
 section Routing
 
@@ -1744,8 +1774,8 @@ theorem escape_body (id : Nat) (idText tag message : String) :
       some (.failure (Cause.fail (.tagged tag message)), (Stores.empty, [])) := by
   kernel_rfl
 
-/-- **The escape's meaning, proved.** The planned goal `escape_meaning`'s statement: the body
-fails with the repository's failure (`escape_body`), and each handler's test is false on it
+/-- **The escape's meaning, proved.** The statement of `escape_meaning`: the body fails with the
+repository's failure (`escape_body`), and each handler's test is false on it
 (`caught_tagged_none`). -/
 theorem escape_meaning_proof : ∀ (id : Nat) (idText tag message : String),
     tag ≠ "NotFound" → tag ≠ "Unauthorized" →
@@ -1776,7 +1806,7 @@ def EscapeMeaning : Prop :=
       Stores.empty (escapeTape tag message) =
         some ((.failure (Cause.fail (.tagged tag message)), st), [])
 
-/-- **The escape's meaning** (proved; it was planned). Under the two answers, the call tree of
+/-- **The escape's meaning** (proved). Under the two answers, the call tree of
 the handler fails with the repository's failure: each handler's test is false on it. Placement:
 concept `translation-simulation`, R10, the handler form's behaviour law at the meaning; consumer
 `infrastructure_escapes_modulo`. The kernel runs the handled body with every value free
@@ -1797,15 +1827,17 @@ def EscapeSession : Prop :=
 /-- **The escape run meets the denotation's premises** (planned). For every tag, the run of
 the script `failing` is funded, at rest and driven by a host, and the session applied the two
 answers. Placement: concept `translation-simulation`, R6; consumer
-`infrastructure_escapes_modulo`. Route: the kernel computes the five rows before the last
-application with free values; the last application is `holds_answer`
+`infrastructure_escapes_modulo`. Route: the rows before the last application compare no tag
+(the repository's error column is `.prod .string .string`), so the kernel can compute them with
+free values; the last application is `holds_answer`
 (`src/Effect4/Laws/Program/Agreement/Hosted.lean`), whose budget premise needs a general bound
 for straight segments or a larger scenario budget (README, slice S6). -/
 @[semantics "translation-simulation" (requirement := R6)]
 proof_goal escape_session : EscapeSession
 
-/-- **`infrastructure_escapes`, proved modulo `escape_meaning` and `escape_session`.** The
-denotation carries the run: `denoteRows_eq_session` turns the meaning into the root's exit. -/
+/-- **`infrastructure_escapes`, proved modulo `escape_session`.** The denotation carries the
+run: `denoteRows_eq_session` turns the meaning (`escape_meaning`, proved) into the root's
+exit. -/
 theorem infrastructure_escapes_modulo : InfrastructureEscapes := by
   intro id idText tag message b hb hNF hU
   obtain ⟨hfund, hrest, hhost, hexits⟩ := escape_session id idText tag message b hb
@@ -2125,7 +2157,7 @@ theorem denote_routeSel (token : String) (id : Nat) (idText t : String) (n : Nat
         denoteRows (request token id idText).table (routeLookups id idText) [configFrame t n] := by
   kernel_rfl
 
-/-- **The routing tree reaches the repository only past the token** (proved; it was planned). In
+/-- **The routing tree reaches the repository only past the token** (proved). In
 the request's call tree, under any tape that the row columns admit, a wait at the repository row
 follows a first answer that is the configuration with the request's token. Placement: concept
 `context-requirements`, R5; consumer `unauthorized_calls_nothing_modulo`. It reads the tree, not
@@ -2275,9 +2307,10 @@ theorem repo_position (token : String) (id : Nat) (idText : String) (i : Nat)
     rw [hr] at hrow
     cases hrow
 
-/-- **`unauthorized_calls_nothing`, proved modulo `held_in_tree` and `tree_needs_token`.** A held
-repository call is a wait of the tree; the tree needs the configuration with the token first;
-that answer is a reply in the journal, which the premise excludes. -/
+/-- **`unauthorized_calls_nothing`, proved modulo `held_in_tree`.** A held repository call is a
+wait of the tree (`held_in_tree`); the tree needs the configuration with the token first
+(`tree_needs_token`, proved); that answer is a reply in the journal, which the premise
+excludes. -/
 theorem unauthorized_calls_nothing_modulo : UnauthorizedCallsNothing := by
   intro token id idText b moves hb hnone
   obtain ⟨hprog, htable⟩ := built_request hb
