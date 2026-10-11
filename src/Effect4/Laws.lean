@@ -322,6 +322,8 @@ import Effect4.Laws.Program.FinalizerRun
 import Effect4.Laws.Machine.Ledger
 import Effect4.Laws.Program.LedgerRun
 import Effect4.Laws.Program.LedgerFinalizer
+import Effect4.Laws.Machine.FiberSum
+import Effect4.Laws.Program.FiberSumConnect
 import Effect4.Laws.Program.SourceOpportunityExecution
 import Effect4.Laws.Program.SourceOpportunityHistory
 import Effect4.Laws.Program.ReleaseCustody.Control
