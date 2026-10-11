@@ -28,6 +28,21 @@ inductive Kind
 
 def bindings : List Val := [.cell ⟨0⟩, .cell ⟨1⟩, .cell ⟨2⟩, .cell ⟨3⟩, .promise ⟨0⟩]
 
+/-- Ordinary source entry excludes the two release destinations.
+Those destinations require an actual capture with its connection value. -/
+def OrdinaryPoint (point : Point) : Prop :=
+  point.path ≠ Programs.crewAcquire 1 ++ [1] ∧
+  point.path ≠ Programs.crewAcquire 2 ++ [1]
+
+/-- A foreign capture retains its actual connection and effective release destination.
+This predicate annotates existing finalizer names; it stores no new syntax. -/
+def CapturedSlots (total : Nat) : FinName → Prop
+  | .foreign capture => SourceScope.FinAt (Programs.workersProgram total) (.foreign capture) ∧
+      ((capture.path = Programs.crewAcquire 1 ∧ capture.env = bindings ++ [.nat 1]) ∨
+        ∃ previous, capture.path = Programs.crewAcquire 2 ∧
+          capture.env = bindings ++ [previous, .nat 2])
+  | _ => True
+
 def initialRequest : Nat → Term
   | 0 | 1 => .field .required (.record [("v", false, .list .nat)] ["v"]
       (.cons (.app "nil" .nil) .nil)) "v"
@@ -135,8 +150,9 @@ inductive CodeAt (total : Nat) : World → Kind → NCode → Prop
       CodeAt total world .gate (.sync (.op .deferredMake))
   | stable {world : World} (point : Point) (ready : 4 ≤ world.state.refs.length ∧ 1 ≤ world.state.deferreds.cells.length)
       (lexical : SourceScope.At (Programs.workersProgram total) point)
-      (leading : point.env.take 5 = bindings) :
+      (leading : point.env.take 5 = bindings) (ordinary : OrdinaryPoint point) :
       CodeAt total world .root (resolve (Programs.workersProgram total) point)
+
 
   | yielding {world : World} (priority refs deferred : Nat) (phase : Phase world)
       (refsEq : world.state.refs.length = refs)
@@ -179,7 +195,7 @@ theorem code_phase {total : Nat} {world : World} {kind : Kind} {code : NCode}
   | root _ _ stage => exact Or.inl stage.2.1
   | allocating _ _ _ _ _ stage => exact Or.inl stage.2.1
   | gateAllocating _ stage => exact Or.inl stage.2.1
-  | stable _ ready _ _ => exact Or.inr ready
+  | stable _ ready _ _ _ => exact Or.inr ready
   | yielding _ _ _ phase _ _ => exact phase
   | frontier _ _ _ phase => exact phase
   | bound _ _ _ _ _ _ first _ => exact first
@@ -352,14 +368,19 @@ theorem gate_callback (total : Nat) (view : List (FiberId × ExitV)) (table : Ro
   subst value
   change CodeAt total nextWorld .root
     (resolve (Programs.workersProgram total) ({point with completed := view}.childWith 1 (.promise ⟨0⟩)))
-  refine .stable _ ready ?_ ?_
+  refine .stable _ ready ?_ ?_ ?_
   · change SourceScope.levelAt (.eff (Programs.workersProgram total)) 0 (point.path ++ [1]) =
       some (point.env ++ [Val.promise ⟨0⟩]).length
     rw [stage.2.2.1, stage.2.2.2.1]
     kernel_rfl
-  change (point.env ++ [Val.promise ⟨0⟩]).take 5 = bindings
-  rw [stage.2.2.2.1]
-  kernel_rfl
+  · change (point.env ++ [Val.promise ⟨0⟩]).take 5 = bindings
+    rw [stage.2.2.2.1]
+    kernel_rfl
+  · change OrdinaryPoint ({point with completed := view}.childWith 1 (.promise ⟨0⟩))
+    unfold OrdinaryPoint
+    change point.path ++ [1] ≠ _ ∧ point.path ++ [1] ≠ _
+    rw [stage.2.2.1]
+    constructor <;> decide
 
 /-- The actual gate binder consumes its post-allocation class in the shared saved contract. -/
 theorem gate_saved (total : Nat) (view : List (FiberId × ExitV)) (table : RowTable)
@@ -424,13 +445,35 @@ theorem gate_native (total : Nat) (table : RowTable) (machine : Api.Machine)
       rw [deferred]
       exact Nat.le_refl _
 
+/-- An actual bind callback cannot enter either acquireRelease release child.
+Consumer: ordinary live source entry never supplies captured connection slots. -/
+theorem bind_destination_ordinary (total : Nat) (point : Point) (first rest : NativeEff)
+    (found : Node.at_ (.eff (Programs.workersProgram total)) point.path =
+      some (.eff (.bind first rest))) (value : Val) : OrdinaryPoint (point.childWith 1 value) := by
+  constructor
+  all_goals
+    intro equal
+    have parent : point.path = _ := List.append_cancel_right equal
+    rw [parent] at found
+  · have source := Programs.workers_acquisition_sites total 1 List.mem_cons_self
+    unfold Programs.acquisitionAt at source
+    rw [found] at source
+    cases source
+  · have source := Programs.workers_acquisition_sites total 2
+      (List.mem_cons_of_mem 1 List.mem_cons_self)
+    unfold Programs.acquisitionAt at source
+    rw [found] at source
+    cases source
+
 /-- Later source binders retain the five actual values through arbitrary added answers.
 Only nondecreasing store sizes are used; no current initializer receives a weakening rule. -/
 theorem stable_bind_callback (total : Nat) (view : List (FiberId × ExitV)) (table : RowTable)
     (world : World) (point : Point)
     (ready : 4 ≤ world.state.refs.length ∧ 1 ≤ world.state.deferreds.cells.length)
     (leading : point.env.take 5 = bindings)
-    (next : SourceScope.NextAt (Programs.workersProgram total) point 1 1) :
+    (next : SourceScope.NextAt (Programs.workersProgram total) point 1 1)
+    (source : ∃ first rest, Node.at_ (.eff (Programs.workersProgram total)) point.path =
+      some (.eff (.bind first rest))) :
     ∀ nextWorld, (model total).future world nextWorld → ∀ value,
       ValueAt nextWorld .root value →
       CodeAt total nextWorld .root
@@ -438,8 +481,9 @@ theorem stable_bind_callback (total : Nat) (view : List (FiberId × ExitV)) (tab
   intro nextWorld future value _
   change CodeAt total nextWorld .root
     (resolve (Programs.workersProgram total) ({point with completed := view}.childWith 1 value))
+  obtain ⟨first, rest, found⟩ := source
   refine .stable _ ⟨Nat.le_trans ready.1 future.2.1, Nat.le_trans ready.2 future.2.2⟩
-    (SourceScope.childWith_at _ _ 1 value next) ?_
+    (SourceScope.childWith_at _ _ 1 value next) ?_ (bind_destination_ordinary total point first rest found value)
   change (point.env ++ [value]).take 5 = bindings
   have length : 5 ≤ point.env.length := by
     have bound := List.length_take_le' (i := 5) (l := point.env)
@@ -452,11 +496,13 @@ theorem stable_bind_saved (total : Nat) (view : List (FiberId × ExitV)) (table 
     (world : World) (point : Point) (body : NCode)
     (ready : 4 ≤ world.state.refs.length ∧ 1 ≤ world.state.deferreds.cells.length)
     (leading : point.env.take 5 = bindings)
-    (next : SourceScope.NextAt (Programs.workersProgram total) point 1 1) :
+    (next : SourceScope.NextAt (Programs.workersProgram total) point 1 1)
+    (source : ∃ first rest, Node.at_ (.eff (Programs.workersProgram total)) point.path =
+      some (.eff (.bind first rest))) :
     AnswerFlow.SavedAt (model total) (interpAt (Programs.workersProgram total) view table).toPrimInterp
       world .root .root (.onSuccess body (.cont point)) :=
   AnswerFlow.saved_success (model total) _ world .root .root body (.cont point)
-    (stable_bind_callback total view table world point ready leading next) (fun _ _ _ good => good)
+    (stable_bind_callback total view table world point ready leading next source) (fun _ _ _ good => good)
 
 /-- The actual loaded machine supplies the first source stage without a history assumption.
 Consumer: initialization exclusivity starts from this live root frame. -/
@@ -527,8 +573,8 @@ theorem code_sizes (total : Nat) (world nextWorld : World)
   | allocating index point initial small valueEq good =>
     exact .allocating index point initial small valueEq (stage good)
   | gateAllocating point good => exact .gateAllocating point (stage good)
-  | stable point ready lexical leading =>
-    exact .stable point ⟨refs ▸ ready.1, deferred ▸ ready.2⟩ lexical leading
+  | stable point ready lexical leading ordinary =>
+    exact .stable point ⟨refs ▸ ready.1, deferred ▸ ready.2⟩ lexical leading ordinary
   | yielding priority count promises good countEq promisesEq =>
     exact .yielding priority count promises (phase good) (refs ▸ countEq) (deferred ▸ promisesEq)
   | frontier kind point zero good => exact .frontier kind point zero (phase good)

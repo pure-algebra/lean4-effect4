@@ -252,7 +252,15 @@ theorem acquisition_body_code (total : Nat) (world : MachineWorkersSlots.World) 
       change Node.at_ (.eff (Programs.workersProgram total)) (point.child 0).path = some (.eff first) at childFound
       rw [← Agreement.resolve_of_at childFound]
       exact .stable (point.child 0) ready
-        (SourceScope.child_at _ _ 0 (SourceScope.next_of_at _ _ _ 0 0 found lexical rfl)) leading
+        (SourceScope.child_at _ _ 0 (SourceScope.next_of_at _ _ _ 0 0 found lexical rfl)) leading (by
+          unfold OrdinaryPoint
+          change point.path ++ [0] ≠ _ ∧ point.path ++ [0] ≠ _
+          rw [path]
+          rcases identitySite with one | two
+          · rw [one]
+            constructor <;> decide
+          · rw [two]
+            constructor <;> decide)
     · exact acquisition_return_callback total world identity point identitySite path
 
 /-- The actual acquisition-source frame push retains its connection output class.
