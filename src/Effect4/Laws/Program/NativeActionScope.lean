@@ -14,7 +14,8 @@ open Effect4 Effect4.Machine Effect4.Program
 /-- Native fiber actions retain every program they can launch. -/
 def ActionAt (root : NativeEff) : NAction → Prop
   | .fork body _ _ | .forkIn body _ _ _ | .forkScoped body _ _ | .setInterruptible body _ => CodeAt root body
-  | .raceAll bodies _ | .raceAllFirst bodies _ | .closePar bodies => ∀ body ∈ bodies, CodeAt root body
+  | .raceAll bodies _ | .raceAllFirst bodies _ => ∀ body ∈ bodies, CodeAt root body
+  | .closePar bodies => (∀ body ∈ bodies, CodeAt root body) ∧ ParallelAllowed root
   | _ => True
 
 /-- A zero-binder child retains both its actual node and lexical scope. -/
@@ -54,12 +55,13 @@ theorem store_action_at (root : NativeEff) (name : ActionName) (owned : StoreAct
   cases name
   case fork | forkIn | forkScoped | setInterruptible => exact progOf_at root _ owned
   case closePar order exit =>
+    refine ⟨?_, owned.2⟩
     change ∀ body ∈ (order.map (fun fin => finProgram fin exit)).map embed, CodeAt root body
     rw [List.map_map]
     intro body member
     obtain ⟨fin, present, eq⟩ := List.mem_map.mp member
     rw [← eq]
-    exact finProgram_at root fin exit (owned fin present)
+    exact finProgram_at root fin exit (owned.1 fin present)
   case raceAll race =>
     cases race <;> aesop (add norm simp [actionOf, embedAction, ActionAt, raceEntrants,
       List.mem_cons, CodeAt, embed, ThunkAt, StoreThunkAt, ProgAt, NameAt, StoreNameAt]) (add safe apply [progOf_at])

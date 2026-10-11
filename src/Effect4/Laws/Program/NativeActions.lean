@@ -69,7 +69,7 @@ theorem with_fiber_at (root : NativeEff) (completed) (table : RowTable)
     have countdown := countdown_at root completed table m fiber (fiber.children.filter (fun child => !(snapshot.contains child))) .void false owned held trivial
     exact ⟨countdown.1, countdown.2, by intro command member; cases member⟩
   case closePar programs =>
-    exact ⟨fork_finalizers_at root completed table m fiber programs owned source, held,
+    exact ⟨fork_finalizers_at root completed table m fiber programs owned source.1, held,
       by intro command member
          rcases List.mem_append.mp member with evaluated | finished
          · obtain ⟨child, _, same⟩ := List.mem_map.mp evaluated

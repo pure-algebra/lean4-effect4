@@ -85,7 +85,7 @@ theorem enter_scoped_at (root : NativeEff) (fragment : Fragment root) (p : Point
     EvaluationAt root (enterScoped root p m fiber yielding) := by
   have child := node_child_at root p (.eff (.scoped body)) (.eff body) 0 found point rfl rfl
   have code := resolve_scoped root fragment (p.child 0) child.2
-  exact ⟨⟨owned.fibers, owned.races, scope_make_at root m.state.scopes _ _ owned.scopes⟩,
+  exact ⟨⟨owned.fibers, owned.races, scope_make_at root m.state.scopes _ _ owned.scopes (Or.inl rfl)⟩,
     ⟨⟨⟨code, trivial⟩, held.frame.2⟩, held.pending, held.dispatcher⟩,
     by intro command member; cases member⟩
 

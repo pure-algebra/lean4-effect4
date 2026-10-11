@@ -29,6 +29,18 @@ theorem workers_fragment (total : Nat) : Fragment (Programs.workersProgram total
   unfold Fragment
   kernel_rfl
 
+/-- Workers allocates only sequential scopes at every job count.
+Consumer: original Workers release custody, through actual source histories. -/
+theorem workers_sequential_source (total : Nat) : SequentialSource (Programs.workersProgram total) := by
+  unfold SequentialSource
+  kernel_rfl
+
+/-- The actual admitted Workers source retains the sequential allocation census. -/
+theorem workers_built_sequential (total : Nat) (b : Api.Built)
+    (built : Api.Author.build (Workers.crew total) = .ok b) : SequentialSource b.program := by
+  rw [Programs.workers_built_program total b built]
+  exact workers_sequential_source total
+
 /-- A successful Workers build retains the checked fragment for its actual source. -/
 theorem workers_built_fragment (total : Nat) (b : Api.Built)
     (built : Api.Author.build (Workers.crew total) = .ok b) : Fragment b.program := by
@@ -107,5 +119,30 @@ theorem workers_saved_registration (total compileFuel : Nat) (b : Api.Built)
   have owned := workers_admitted_history_at total compileFuel b built m history
   exact registration_body b.program body acquired fin
     ((configuration_fiber b.program m id fiber owned found).frame.2 _ saved)
+
+/-- Every actual Workers scope reached by admitted decisions closes sequentially.
+Consumer: original Workers release custody and exclusion of parallel-close cuts. -/
+theorem workers_scope_sequential (total compileFuel : Nat) (b : Api.Built)
+    (built : Api.Author.build (Workers.crew total) = .ok b) (m : NativeMachine)
+    (history : Run.HistoryOf b compileFuel m) (entry : Effect4.Machine.ScopeEntry)
+    (member : entry ∈ m.state.scopes.entries) : entry.scope.strategy = .sequential :=
+  ((workers_admitted_history_at total compileFuel b built m history).scopes entry member).2.sequential
+    (workers_built_sequential total b built)
+
+/-- An actual Workers action cannot produce the parallel cleanup cut.
+Consumer: remaining native evaluator debit in original Workers release custody. -/
+theorem workers_no_parallel_action (total compileFuel : Nat) (b : Api.Built)
+    (built : Api.Author.build (Workers.crew total) = .ok b) (m : NativeMachine)
+    (history : Run.HistoryOf b compileFuel m) (id : Effect4.FiberId)
+    (fiber : SourceFiber) (found : m.fiber? id = some fiber) (thunk : EffThunk)
+    (current : fiber.frame.current = .withFiber thunk) (programs : List NCode)
+    (action : (interpAt b.program m.completedExits b.table).withFiberOf thunk = some (.closePar programs)) : False := by
+  have owned := configuration_fiber b.program m id fiber
+    (workers_admitted_history_at total compileFuel b built m history) found
+  have code := owned.frame.1
+  rw [current] at code
+  have selected := interp_action_at b.program (workers_built_fragment total b built)
+    m.completedExits b.table thunk (.closePar programs) code action
+  exact (workers_built_sequential total b built).not_parallel selected.2
 
 end Test.Dogfood.Scenario.SourceFragment

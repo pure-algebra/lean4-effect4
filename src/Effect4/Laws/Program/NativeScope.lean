@@ -14,6 +14,43 @@ set_option autoImplicit false
 namespace Effect4.Program.SourceScope
 open Effect4 Effect4.Machine Effect4.Program
 
+/-- An explicit source allocation is the only parallel-scope producer in this direct fragment.
+Consumer: sequential Workers custody through the existing source-history carrier. -/
+def ParallelAllowed (root : NativeEff) : Prop :=
+  ∃ path request, Node.at_ (.eff root) path = some (.eff (.perform (.scopeMake .parallel) request))
+
+/-- Administrative scope construction is sequential unless the source admits parallel allocation.
+Consumer: operation, stored close-walk and scope-store ownership. -/
+def StrategyAt (root : NativeEff) (strategy : FinalizerStrategy) : Prop :=
+  strategy = .sequential ∨ ParallelAllowed root
+
+/-- The existing address census rejects explicit parallel scope allocations.
+Consumer: actual Workers source restriction for release custody. -/
+def sequentialHead : Node NativeOp → Bool
+  | .eff (.perform (.scopeMake .parallel) _) => false
+  | _ => true
+
+def SequentialSource (root : NativeEff) : Prop :=
+  (Node.addresses (.eff root)).all (fun path =>
+    (Node.at_ (.eff root) path).all sequentialHead) = true
+
+/-- The finite source census excludes every parallel-allocation witness.
+Consumer: source-owned scope strategy and parallel-action exclusion. -/
+theorem SequentialSource.not_parallel {root : NativeEff} (held : SequentialSource root) :
+    ¬ ParallelAllowed root := by
+  rintro ⟨path, request, found⟩
+  have member : path ∈ Node.addresses (.eff root) :=
+    (mem_addresses_iff (.eff root) path).mpr (by rw [found]; rfl)
+  have head := List.all_eq_true.mp held path member
+  rw [found] at head
+  cases head
+
+/-- A checked sequential source discharges the existing strategy alternative.
+Consumer: actual scopes reached by Workers history. -/
+theorem StrategyAt.sequential {root : NativeEff} {strategy : FinalizerStrategy}
+    (held : StrategyAt root strategy) (source : SequentialSource root) : strategy = .sequential :=
+  held.resolve_right source.not_parallel
+
 /-- The lexical length at the child a callback resolves after appending its arguments. -/
 def NextAt (root : NativeEff) (p : Point) (i added : Nat) : Prop :=
   levelAt (.eff root) 0 (p.path ++ [i]) = some (p.env.length + added)
@@ -41,6 +78,7 @@ def OpAt (root : NativeEff) (op : SyncOp) : Prop :=
   | .refUpdateSome _ _ _ | .refGetAndUpdateSome _ _ _ | .refUpdateSomeAndGet _ _ _
   | .refModify _ _ _ | .refModifySome _ _ _ => OpOrigin root op
   | .scopeAdd _ fin => FinAt root fin
+  | .scopeMake strategy | .scopeFork _ strategy => StrategyAt root strategy
   | _ => True
 
 /-- Stored program wrappers retain every operation and finalizer they can expose. -/
@@ -51,7 +89,7 @@ def ProgAt (root : NativeEff) : ProgName → Prop
   | .finalizerOf fin _ => FinAt root fin
   | .onExitOf body fin _ => ProgAt root body ∧ FinAt root fin
   | .seqOf first second => ProgAt root first ∧ ProgAt root second
-  | .closeWalk _ order _ => ∀ fin ∈ order, FinAt root fin
+  | .closeWalk strategy order _ => (∀ fin ∈ order, FinAt root fin) ∧ StrategyAt root strategy
   | _ => True
 
 /-- Stored continuation wrappers retain their delayed programs and captures. -/
@@ -66,7 +104,7 @@ def StoreNameAt (root : NativeEff) : Name → Prop
 def StoreActionAt (root : NativeEff) : ActionName → Prop
   | .fork body _ | .forkIn body _ _ | .forkScoped body _ | .setInterruptible body _ =>
     ProgAt root body
-  | .closePar order _ => ∀ fin ∈ order, FinAt root fin
+  | .closePar order _ => (∀ fin ∈ order, FinAt root fin) ∧ ParallelAllowed root
   | _ => True
 
 /-- Stored thunks retain the syntax they expose when evaluated. -/
@@ -172,6 +210,18 @@ theorem source_no_scopeAdd (row : NativeOp) (env : List Val) (value : Val)
   fun_cases NativeOp.syncOpOf row env value
   all_goals aesop
 
+/-- A source scope allocation supplies its actual parallel-allocation witness when needed.
+Consumer: opAt_origin and admitted Workers strategy provenance. -/
+theorem strategyAt_origin (root : NativeEff) (strategy : FinalizerStrategy)
+    (origin : OpOrigin root (.scopeMake strategy)) : StrategyAt root strategy := by
+  cases strategy with
+  | sequential => exact Or.inl rfl
+  | parallel =>
+    obtain ⟨p, row, request, value, found, _, _, operation⟩ := origin
+    refine Or.inr ⟨p.path, request, ?_⟩
+    fun_cases NativeOp.syncOpOf row p.env value
+    all_goals aesop (add norm simp [NativeOp.syncOpOf])
+
 /-- A source-owned operation supplies every residual scope condition of its native operation. -/
 theorem opAt_origin (root : NativeEff) (op : SyncOp) (origin : OpOrigin root op) :
     OpAt root op := by
@@ -181,6 +231,10 @@ theorem opAt_origin (root : NativeEff) (op : SyncOp) (origin : OpOrigin root op)
     rw [eq] at operation
     exact source_no_scopeAdd row p.env value scope fin operation
   cases op <;> dsimp only [OpAt]
+  case scopeMake strategy => exact strategyAt_origin root strategy origin
+  case scopeFork scope strategy =>
+    obtain ⟨p, row, request, value, _, _, _, operation⟩ := origin
+    fun_cases NativeOp.syncOpOf row p.env value <;> aesop (add norm simp [NativeOp.syncOpOf])
   all_goals aesop
 
 /-- A refused shape carries no callback or writer. -/

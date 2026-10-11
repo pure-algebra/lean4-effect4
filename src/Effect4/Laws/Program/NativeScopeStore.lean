@@ -11,7 +11,7 @@ open Effect4 Effect4.Machine Effect4.Program
 
 /-- Registered finalizers retain their actual captured release scopes. -/
 def ScopeAt (root : NativeEff) (scope : ScopeV) : Prop :=
-  ∀ entry ∈ scope.finalizers, FinAt root entry.2
+  (∀ entry ∈ scope.finalizers, FinAt root entry.2) ∧ StrategyAt root scope.strategy
 
 /-- Every scope row retains the captures it can later close. -/
 def ScopesAt (root : NativeEff) (store : ScopeStore) : Prop :=
@@ -39,7 +39,7 @@ theorem table_insert_at (root : NativeEff) (table : List (Nat × FinName)) (key 
 theorem scope_add_at (root : NativeEff) (scope : ScopeV) (key : Nat) (fin : FinName)
     (owned : ScopeAt root scope) (capture : FinAt root fin) :
     ScopeAt root (scope.addUnsafe key fin) := by
-  unfold ScopeAt
+  refine ⟨?_, owned.2⟩
   change ∀ entry ∈ (scope.addUnsafe key fin).state.entries, FinAt root entry.2
   cases h : scope.state
   case empty =>
@@ -56,7 +56,7 @@ theorem scope_add_at (root : NativeEff) (scope : ScopeV) (key : Nat) (fin : FinN
     rw [Scope.addUnsafe_openInline scope oldKey key old fin h]
     apply table_insert_at root _ key fin _ capture
     intro entry member
-    apply owned entry
+    apply owned.1 entry
     change entry ∈ scope.state.entries
     rw [h]
     exact member
@@ -64,7 +64,7 @@ theorem scope_add_at (root : NativeEff) (scope : ScopeV) (key : Nat) (fin : FinN
     rw [Scope.addUnsafe_openMap scope table key fin h]
     apply table_insert_at root table key fin _ capture
     intro entry member
-    apply owned entry
+    apply owned.1 entry
     change entry ∈ scope.state.entries
     rw [h]
     exact member
@@ -90,13 +90,12 @@ theorem scope_lookup_at (root : NativeEff) (store : ScopeStore) (key : Nat) (ent
 
 /-- A newly allocated scope has no source-bearing finalizer. -/
 theorem scope_make_at (root : NativeEff) (store : ScopeStore) (key : Nat) (strategy : FinalizerStrategy)
-    (owned : ScopesAt root store) : ScopesAt root (store.make key strategy) := by
+    (owned : ScopesAt root store) (strategyOwned : StrategyAt root strategy) : ScopesAt root (store.make key strategy) := by
   intro entry member
   rcases List.mem_append.mp member with old | new
   · exact owned entry old
   · rw [List.mem_singleton.mp new]
-    intro fin present
-    cases present
+    exact ⟨fun _ present => False.elim (List.not_mem_nil present), strategyOwned⟩
 
 /-- Registering into an actual store keeps its captured release points. -/
 theorem scope_register_at (root : NativeEff) (store : ScopeStore) (scope key : Nat) (fin : FinName)
@@ -121,8 +120,9 @@ theorem scope_remove_at (root : NativeEff) (store : ScopeStore) (scope key : Nat
   · exact owned
   · rename_i entry found
     apply scope_set_at root store _ owned
+    refine ⟨?_, (scope_lookup_at root store scope entry owned found).2⟩
     intro fin member
-    apply scope_lookup_at root store scope entry owned found fin
+    apply (scope_lookup_at root store scope entry owned found).1 fin
     exact (Scope.removeUnsafe_finalizers_sublist entry.scope key).subset member
 
 /-- Closing removes registered captures from the state before running them. -/
@@ -131,14 +131,18 @@ theorem scope_close_at (root : NativeEff) (store : ScopeStore) (scope : Nat) (ex
   unfold ScopeStore.closeState
   split
   · exact owned
-  · apply scope_set_at root store _ owned
-    intro fin member
-    rw [Scope.closeState_finalizers] at member
-    cases member
+  · rename_i entry found
+    apply scope_set_at root store _ owned
+    refine ⟨?_, ?_⟩
+    · intro fin member
+      rw [Scope.closeState_finalizers] at member
+      cases member
+    · simpa only [Scope.closeState_strategy] using (scope_lookup_at root store scope entry owned found).2
+
 
 /-- Forked scopes add only administrative close and detach finalizers. -/
 theorem scope_fork_at (root : NativeEff) (store : ScopeStore) (parent child shared : Nat)
-    (strategy : FinalizerStrategy) (owned : ScopesAt root store) :
+    (strategy : FinalizerStrategy) (owned : ScopesAt root store) (strategyOwned : StrategyAt root strategy) :
     ScopesAt root (store.forkChild parent child shared strategy) := by
   unfold ScopeStore.forkChild
   split
@@ -152,15 +156,13 @@ theorem scope_fork_at (root : NativeEff) (store : ScopeStore) (parent child shar
       rcases List.mem_append.mp member with before | fresh
       · exact scope_set_at root store _ owned old other before
       · rw [List.mem_singleton.mp fresh]
-        intro fin present
-        cases present
+        exact ⟨fun _ present => False.elim (List.not_mem_nil present), strategyOwned⟩
     · intro other member
       rcases List.mem_append.mp member with before | fresh
       · exact scope_set_at root store _ owned (scope_add_at root entry.scope shared (.closeChildScope child) old trivial) other before
       · rw [List.mem_singleton.mp fresh]
         apply scope_add_at root (Scope.make strategy) shared (.detachFromParent parent shared) _ trivial
-        intro fin present
-        cases present
+        exact ⟨fun _ present => False.elim (List.not_mem_nil present), strategyOwned⟩
 
 /-- A close order contains only registered source captures. -/
 theorem close_order_at (root : NativeEff) (scope : ScopeV) (owned : ScopeAt root scope) :
@@ -169,7 +171,7 @@ theorem close_order_at (root : NativeEff) (scope : ScopeV) (owned : ScopeAt root
   intro fin member
   obtain ⟨entry, present, eq⟩ := List.mem_map.mp (List.mem_reverse.mp member)
   rw [← eq]
-  exact owned entry present
+  exact owned.1 entry present
 
 /-- The native synchronous store command retains every saved finalizer capture. -/
 theorem sync_scopes_at (root : NativeEff) (op : SyncOp) (state next : Stores) (answer : Val)
@@ -178,13 +180,13 @@ theorem sync_scopes_at (root : NativeEff) (op : SyncOp) (state next : Stores) (a
   cases op
   all_goals unfold syncOpStep at found
   all_goals repeat' split at found
-  all_goals aesop (add norm simp [OpAt]) (add norm unfold [syncOpStep, refStep]) (add safe apply [scope_set_at, scope_make_at, scope_add_at, scope_remove_at, scope_fork_at]) (add safe forward [scope_lookup_at])
+  all_goals aesop (add norm simp [OpAt, StrategyAt]) (add norm unfold [syncOpStep, refStep]) (add safe apply [scope_set_at, scope_make_at, scope_add_at, scope_remove_at, scope_fork_at]) (add safe forward [scope_lookup_at])
 
 /-- State-first close retains the store and the actual captured close order. -/
 theorem close_snapshot_at (root : NativeEff) (scope : Nat) (exit : ExitV) (state next : Stores)
     (strategy : FinalizerStrategy) (order : List FinName) (owned : ScopesAt root state.scopes)
     (found : scopeCloseSnapshot scope exit state = some (next, strategy, order)) :
-    ScopesAt root next.scopes ∧ ∀ fin ∈ order, FinAt root fin := by
+    ScopesAt root next.scopes ∧ (∀ fin ∈ order, FinAt root fin) ∧ StrategyAt root strategy := by
   unfold scopeCloseSnapshot at found
   cases h : state.scopes.entryAt scope with
   | none => rw [h] at found; cases found
@@ -192,7 +194,8 @@ theorem close_snapshot_at (root : NativeEff) (scope : Nat) (exit : ExitV) (state
     simp only [h, Option.pure_def] at found
     rcases found with ⟨rfl, rfl, rfl⟩
     exact ⟨scope_close_at root state.scopes scope exit owned,
-      close_order_at root entry.scope (scope_lookup_at root state.scopes scope entry owned h)⟩
+      close_order_at root entry.scope (scope_lookup_at root state.scopes scope entry owned h),
+      (scope_lookup_at root state.scopes scope entry owned h).2⟩
 
 /-- Unsafe close returns only programs from the captured finalizer order. -/
 theorem close_unsafe_at (root : NativeEff) (scope : Nat) (exit : ExitV) (flag : Bool)
@@ -217,7 +220,7 @@ theorem close_unsafe_at (root : NativeEff) (scope : Nat) (exit : ExitV) (flag : 
         exact ⟨slots.1, fun code member => by
           rw [Option.mem_def] at member
           cases member
-          exact finProgram_at root fin exit (slots.2 fin (.head _))⟩
+          exact finProgram_at root fin exit (slots.2.1 fin (.head _))⟩
       | cons second tail =>
         cases found
         exact ⟨slots.1, fun code member => by
@@ -243,7 +246,7 @@ theorem close_public_at (root : NativeEff) (scope : Nat) (exit : ExitV) (flag : 
       cases rest with
       | nil =>
         cases found
-        exact ⟨slots.1, finProgram_at root fin exit (slots.2 fin (.head _)), trivial⟩
+        exact ⟨slots.1, finProgram_at root fin exit (slots.2.1 fin (.head _)), trivial⟩
       | cons second tail => cases found; exact ⟨slots.1, slots.2⟩
 
 end Effect4.Program.SourceScope
