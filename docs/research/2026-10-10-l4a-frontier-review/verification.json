@@ -1,0 +1,87 @@
+{
+  "reviewed_commit": "4a83527ac91e6df820d3a13d422cec9c3a6a0b1d",
+  "previous_reviewed_commit": "9e818b39596971d62b89299ca9ccc4e96ad8ea07",
+  "recorded_utc": "2026-10-10T14:05:19.084899+00:00",
+  "environment": {
+    "LEAN_NUM_THREADS": "3",
+    "LEAN_PATH": "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-l4a-frontier-review"
+  },
+  "checks": {
+    "source-diff": {
+      "command": [
+        "git",
+        "diff",
+        "--exit-code",
+        "4a83527ac91e6df820d3a13d422cec9c3a6a0b1d",
+        "--",
+        "src",
+        "Test",
+        "tools",
+        "lakefile.toml",
+        "lake-manifest.json"
+      ],
+      "exit": 0,
+      "log_sha256": "cee4e05ded4c4a22dfab5301df483b1ce9107bff27651c804f4d7ed0361b897a"
+    },
+    "build": {
+      "command": [
+        "lake",
+        "build",
+        "Effect4.Laws.Program.Agreement.Segment",
+        "Effect4.Laws.Program.Agreement.Hosted",
+        "Effect4.Laws.Program.Agreement.HostedLoop",
+        "Effect4.Laws.Program.Agreement.Calls",
+        "Effect4.Laws.Program.Agreement.LoopCalls",
+        "Effect4.Laws.Program.LoopAgreement",
+        "Effect4.Laws.Program.RuntimeR",
+        "Effect4.Laws.Program.MeaningSound",
+        "Effect4.Laws.Program.MeaningEq",
+        "Effect4.Laws.Api.SessionMeaning",
+        "Effect4.Laws.Api.SessionMeaningLoop",
+        "Test.Program.AgreementContract",
+        "Test.Program.QueueWorkload",
+        "ProofGraph.AxiomAudit",
+        "ProofGraph.Plan"
+      ],
+      "exit": 0,
+      "log_sha256": "48b26bea687b3937b22c100d7e2b0863db8a25b1253083f59e9a72ee875f41c2"
+    },
+    "controls": {
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "-o",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-l4a-frontier-review/Controls.olean",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-l4a-frontier-review/Controls.lean"
+      ],
+      "exit": 0,
+      "log_sha256": "cee4e05ded4c4a22dfab5301df483b1ce9107bff27651c804f4d7ed0361b897a"
+    },
+    "audit": {
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/.codex/worktrees/module-design-review/lean4-effect4/docs/research/2026-10-10-l4a-frontier-review/Audit.lean"
+      ],
+      "exit": 0,
+      "log_sha256": "20d01284c81e35b81f718557d0ad2242a862978c0cd061753dc9126d34d20a87"
+    }
+  },
+  "finite_guards": 19,
+  "kernel_readers_and_controls": 6,
+  "audit_summary": "#axiom_audit: 345 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals",
+  "source_sha256": {
+    "src/Effect4/Laws/Program/Agreement/Segment.lean": "13af51a5ec7b93515d1058de08641905faf904988da797f7fa60a473e7dce2e8",
+    "src/Effect4/Laws/Program/Agreement/Hosted.lean": "6fdd1865a3cb4370deb8228dc1ed1a4ea8b51dd9bd98cb907d6e3aa6510db7a6",
+    "src/Effect4/Laws/Program/Agreement/HostedLoop.lean": "7a8c8a6cdfba3dd078935bb7854bb405a7d8fd8e77127e285a8ad52470efe401"
+  },
+  "probe_sha256": {
+    "Controls.lean": "52026b936c262a5e4e10e9cb3a5cea7ec9d766444732dcf7b53301c19c719304",
+    "Audit.lean": "eae0ade343ed42b741d962b0d70f2e7e1c574a03166372e9c748e92e0964e9c4"
+  },
+  "all_recorded_passed": true
+}
