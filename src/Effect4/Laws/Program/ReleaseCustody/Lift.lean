@@ -23,8 +23,7 @@ open Effect4.Program.ReleaseCustody.Control
 /-- Existing scope rows have unique keys below the actual allocation supply.
 Consumer: `history`, including scope creation and keyed scope credit transfer. -/
 def ScopeRows (m : NativeMachine) : Prop :=
-  (m.state.scopes.entries.map ScopeEntry.key).Nodup ∧
-    (∀ entry ∈ m.state.scopes.entries, entry.key < m.state.nextName) ∧ m.state.ScopeKeysFresh
+  ScopeIdentity.Rows m.state
 
 /-- Native countdowns resume with exits, void, or the saved exit's restore continuation.
 Consumer: `history`, at the actual countdown observer transfer. -/
@@ -119,7 +118,7 @@ theorem state (q : List Nat) (m : NativeMachine) (next : Stores) (held : Ready q
     (scopes : next.scopes = m.state.scopes) (supply : next.nextName = m.state.nextName) :
     Ready q {m with state := next} := by
   refine ⟨held.fibers, ?_, held.pending, held.dispatcher, ?_⟩
-  · simpa only [ScopeRows, Stores.ScopeKeysFresh, scopes, supply] using held.scopes
+  · simpa only [ScopeRows, ScopeIdentity.Rows, Stores.ScopeKeysFresh, scopes, supply] using held.scopes
   · simpa only [Funded, machineCredits, scopes] using held.funded
 
 /-- Draining a dispatcher discards zero-credit tasks and retains their snapshot assertion. -/
