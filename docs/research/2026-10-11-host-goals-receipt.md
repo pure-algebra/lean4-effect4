@@ -152,3 +152,23 @@ Its omitted-bank control fails, and two finite checks distinguish the two modes.
 No frozen contract names the changed callback laws.
 The source lane and machine simulation cases remain open.
 The coordinator runs reached behaviour gates after integration.
+
+## First-exit term dependency slice
+
+The term signature has a separate first-exit operation.
+Its denotation, evaluator and code relation retain that operation rather than lower it to first success.
+The common race relation now reads selection mode and selected child.
+The race-site collector and ownership connector cover both modes.
+The pure `Race.afterExit` helper is reducible so observer proof reductions keep their decision instances aligned.
+
+Commands:
+
+- `LEAN_NUM_THREADS=3 lake build Effect4.Machine.Fibers Effect4.Laws.Machine.Book Effect4.Laws.Program.Sched Effect4.Laws.Program.DenoteR Effect4.Laws.Program.EvaluateR Effect4.Laws.Program.Means Effect4.Laws.Program.Guard.RaceSites`: passed, 360 jobs.
+- `LEAN_NUM_THREADS=3 lake env lean docs/research/2026-10-10-goals-packet/codex/FirstExitTermAudit.lean`: passed.
+
+The audit checks 3948 declarations within `[propext, Quot.sound]`.
+It finds zero planned goals and zero declarations depending on planned goals.
+Dependencies: symbolic source `6aba81de` and source typing `677cb391`.
+The latter restores its checked placement module in this worktree.
+Consumers: the symbolic source bridge, simulation action clauses and the timeout form.
+Open work: simulation consumers, backend handle law, typed residual connector, timeout observation and reached behaviour gates.

@@ -287,6 +287,12 @@ inductive CodeMeans (root : NativeEff) : NCode → RProgram → Prop
       (hc : ∀ x ∈ entrants.zip (points.map (denoteAt root)), CodeMeans root x.1 x.2)
       (hk : Delivers k) :
       CodeMeans root (Prim.withFiber t) (.vis (.inr (.raceAll points site)) k)
+  | actRaceAllFirst {site : Option (List Nat)} (t : EffThunk) (entrants : List NCode) (points : List Point) (k : ExitV → RProgram)
+      (ht : (interpOf root).withFiberOf t = some (.raceAllFirst entrants site))
+      (hlen : entrants.length = points.length)
+      (hc : ∀ x ∈ entrants.zip (points.map (denoteAt root)), CodeMeans root x.1 x.2)
+      (hk : Delivers k) :
+      CodeMeans root (Prim.withFiber t) (.vis (.inr (.raceAllFirst points site)) k)
   | actMask (t : EffThunk) (body : NCode) (flag : Bool) (b : Body) (k : ExitV → RProgram)
       (ht : (interpOf root).withFiberOf t = some (.setInterruptible body flag))
       (hc : CodeMeans root body (denoteBody root b)) (hk : Delivers k) :
@@ -687,6 +693,8 @@ theorem CodeMeans.bindTail {root : NativeEff} {c : NCode} {r : RProgram} (h : Co
     exact CodeMeans.actAwaitNewChildren t' snapshot _ ht' (delivers_seqR_bind hk ht)
   | actRaceAll t' entrants points k ht' hlen hc hk ihc =>
     exact CodeMeans.actRaceAll t' entrants points _ ht' hlen hc (delivers_bind hk ht)
+  | actRaceAllFirst t' entrants points k ht' hlen hc hk ihc =>
+    exact CodeMeans.actRaceAllFirst t' entrants points _ ht' hlen hc (delivers_bind hk ht)
   | actMask t' body flag b k ht' hc hk ihc => exact CodeMeans.actMask t' body flag b _ ht' hc (delivers_bind hk ht)
   | actSetContext t' context k ht' hk ihk => exact CodeMeans.actSetContext t' context _ ht' ihk
   | actGetContext t' k ht' hk ihk => exact CodeMeans.actGetContext t' _ ht' ihk
@@ -785,6 +793,7 @@ theorem CodeMeans.prepare {root : NativeEff} {c : NCode} {r : RProgram} (h : Cod
   | actSnapshotChildren t k ht hk _ => exact CodeMeans.actSnapshotChildren t k ht hk
   | actAwaitNewChildren t snapshot k ht hk => exact CodeMeans.actAwaitNewChildren t snapshot k ht hk
   | actRaceAll t entrants points k ht hlen hc hk _ => exact CodeMeans.actRaceAll t entrants points k ht hlen hc hk
+  | actRaceAllFirst t entrants points k ht hlen hc hk _ => exact CodeMeans.actRaceAllFirst t entrants points k ht hlen hc hk
   | actMask t body flag b k ht hc hk _ => exact CodeMeans.actMask t body flag b k ht hc hk
   | actSetContext t context k ht hk _ => exact CodeMeans.actSetContext t context k ht hk
   | actGetContext t k ht hk _ => exact CodeMeans.actGetContext t k ht hk

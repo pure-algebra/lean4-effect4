@@ -452,7 +452,7 @@ structure Race (ν σ : Type u) (β : Type v) (ε δ ι α : Type u)
 
 /-- Apply one observed entrant exit, retaining first-exit child identity.
 The observer callback consumes this update before settlement. -/
-def Race.afterExit (race : Race ν σ β ε δ ι α κ) (child : FiberId)
+abbrev Race.afterExit (race : Race ν σ β ε δ ι α κ) (child : FiberId)
     (exit : Exit β ε δ ι α) : Race ν σ β ε δ ι α κ :=
   let state := Supervision.raceCompleteWith race.mode race.state child exit
   let selected := match race.mode, race.state.accepted, state.accepted with
@@ -1629,6 +1629,11 @@ def raceAll (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine �
     (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (entrants : List κ) (site : Option (List Nat) := none) :
     Iter ν σ β ε δ ι α χ St κ φ η :=
   beginRace interp m f yielding entrants site
+
+def raceAllFirst (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
+    (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (entrants : List κ) (site : Option (List Nat) := none) :
+    Iter ν σ β ε δ ι α χ St κ φ η :=
+  beginRace interp m f yielding entrants site .firstExit
 
 def yieldNow (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
     (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (priority : Nat) :

@@ -166,7 +166,8 @@ def entrantPoints : Effs NativeOp → Point → List Point
 
 def racePoints (root : NativeEff) (p : Point) : List Point :=
   match Node.at_ (.eff root) p.path with
-  | some (.eff (.withFiber (.raceAll es))) => entrantPoints es ((p.child 0).child 0)
+  | some (.eff (.withFiber (.raceAll es)))
+  | some (.eff (.withFiber (.raceAllFirst es))) => entrantPoints es ((p.child 0).child 0)
   | _ => []
 
 /-- The term of the fiber action `actionAt` answers at a point. Program-valued fields of
@@ -193,6 +194,7 @@ def denoteFiberAction (root : NativeEff) (p : Point) : NAction → RProgram
   | .awaitNewChildren snapshot =>
     .vis (.inr (.awaitNewChildren snapshot)) fun v => .pure (.success v)
   | .raceAll _ site => .vis (.inr (.raceAll (racePoints root p) site)) Effects.Program.pure
+  | .raceAllFirst _ site => .vis (.inr (.raceAllFirst (racePoints root p) site)) Effects.Program.pure
   | .setInterruptible _ flag =>
     .vis (.inr (.mask flag (.at_ (p.child 0)))) Effects.Program.pure
   | .setContext ctx => .vis (.inr (.setContext ctx)) fun v => .pure (.success v)

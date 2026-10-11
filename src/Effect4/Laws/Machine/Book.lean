@@ -140,12 +140,13 @@ def DispatcherMeans (C : κ₁ → κ₂ → Prop)
     (d₁ : Dispatcher ν σ β ε δ ι α κ₁) (d₂ : Dispatcher ν σ β ε δ ι α κ₂) : Prop :=
   ListRel (BucketMeans C) d₁.buckets d₂.buckets ∧ d₁.armed = d₂.armed
 
-/-- `Race`: seven code-free fields, including the next source site, and the unforked entrant programs. -/
+/-- `Race`: nine code-free fields, including selection mode and selected child, and the unforked entrant programs. -/
 def RaceMeans (C : κ₁ → κ₂ → Prop)
     (r₁ : Race ν σ β ε δ ι α κ₁) (r₂ : Race ν σ β ε δ ι α κ₂) : Prop :=
   r₁.id = r₂.id ∧ r₁.host = r₂.host ∧ r₁.token = r₂.token ∧
     r₁.state = r₂.state ∧ r₁.settled = r₂.settled ∧ r₁.registering = r₂.registering ∧
-    ListRel C r₁.programs r₂.programs ∧ r₁.nextSite = r₂.nextSite
+    ListRel C r₁.programs r₂.programs ∧ r₁.nextSite = r₂.nextSite ∧
+    r₁.mode = r₂.mode ∧ r₁.selected = r₂.selected
 
 /-! ## The control projection -/
 

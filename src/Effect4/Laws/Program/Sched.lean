@@ -120,6 +120,7 @@ inductive FiberOp : Type
   `Prim.suspend (Thunk.foreign c exit)`, answering unit before the release. -/
   | foreignRelease (capture : Capture) (exit : ExitV)
   | raceAll (entrants : List Point) (site : Option (List Nat) := none)
+  | raceAllFirst (entrants : List Point) (site : Option (List Nat) := none)
   /-- The counted `Async` registration a race's entry returns (`internal/effect.ts:1493`,
   D6a): the term instance of `RunInterp.parkCode` at `ParkKind.race`. -/
   | raceRegister (race : Nat)
@@ -173,7 +174,7 @@ abbrev FiberOp.answer : FiberOp → Type
   | .guard_ _ => Option ExitV
   | .unguard _ | .finishFinalizer _ => ExitV
   | .scoped _ | .scopeExit _ _ _
-  | .mask _ _ | .closeScope _ _ | .raceAll _ _ | .raceRegister _
+  | .mask _ _ | .closeScope _ _ | .raceAll _ _ | .raceAllFirst _ _ | .raceRegister _
   | .async _ _ | .forkScoped _ _ _ | .frontier _ _ | .gen _ | .loop _ _ | .closeIter _ _ _ => ExitV
   | .await _ .joinEffect => ExitV
   | _ => Val
@@ -184,7 +185,7 @@ def FiberOp.defaultAnswer : (op : FiberOp) → op.answer
   | .guard_ _ => none
   | .unguard ex | .finishFinalizer ex => ex
   | .scoped _ | .scopeExit _ _ _
-  | .mask _ _ | .closeScope _ _ | .raceAll _ _ | .raceRegister _
+  | .mask _ _ | .closeScope _ _ | .raceAll _ _ | .raceAllFirst _ _ | .raceRegister _
   | .async _ _ | .forkScoped _ _ _ | .frontier _ _ | .gen _ | .loop _ _ | .closeIter _ _ _ =>
     Exit.success Val.unit
   | .await _ .joinEffect => Exit.success Val.unit

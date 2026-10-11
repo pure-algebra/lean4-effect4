@@ -351,7 +351,7 @@ def actionRaceSites : NAction → List Nat
   | .forkIn code _ _ _ => raceSites code
   | .forkScoped code _ _ => raceSites code
   | .setInterruptible code _ => raceSites code
-  | .raceAll codes _ => codes.flatMap raceSites
+  | .raceAll codes _ | .raceAllFirst codes _ => codes.flatMap raceSites
   | .closePar codes => codes.flatMap raceSites
   | _ => []
 
@@ -482,15 +482,15 @@ theorem race_lookup_fresh {m : NativeMachine} (bounds : RaceIdsBelow m) :
 
 theorem raceCodeOwned_beginRace (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) (entrants : List NCode)
-    (bounds : RaceIdsBelow m) (site : Option (List Nat) := none) :
-    RaceCodeOwned (beginRace (interpOf p table) m f yielding entrants site).machine f.id
-      (beginRace (interpOf p table) m f yielding entrants site).fiber.frame.current := by
+    (bounds : RaceIdsBelow m) (site : Option (List Nat) := none) (mode : Supervision.RaceMode := .firstSuccess) :
+    RaceCodeOwned (beginRace (interpOf p table) m f yielding entrants site mode).machine f.id
+      (beginRace (interpOf p table) m f yielding entrants site mode).fiber.frame.current := by
   intro raceId hr
   change raceId ∈ [m.nextRace] at hr
   have hid := List.mem_singleton.mp hr
   subst raceId
   let race : NRace := ⟨m.nextRace, f.id, m.nextToken,
-    { Supervision.RaceAllState.initial [] with remaining := entrants.length }, false, entrants, false, site⟩
+    { Supervision.RaceAllState.initial [] with remaining := entrants.length }, false, entrants, false, site, mode, none⟩
   refine ⟨race, ?_, rfl⟩
   change (m.races ++ [race]).find? (fun r => r.id = m.nextRace) = some race
   have hf : m.races.find? (fun r => r.id = m.nextRace) = none := race_lookup_fresh bounds

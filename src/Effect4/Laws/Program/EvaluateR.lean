@@ -262,6 +262,9 @@ def evaluateFiberR (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool
   | .raceAll entrants site =>
     FiberAction.raceAll interp m (saveAnswerR f next) yielding
       (entrants.map fun p => bodyR interp (.at_ p)) site
+  | .raceAllFirst entrants site =>
+    FiberAction.raceAllFirst interp m (saveAnswerR f next) yielding
+      (entrants.map fun p => bodyR interp (.at_ p)) site
   | .raceRegister race => registerRace m f yielding race
   | .mask flag body =>
     let f := saveAnswerR f next
