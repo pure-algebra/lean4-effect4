@@ -1,3 +1,4 @@
+import Effect4.Laws.Program.CompileInduction
 import Effect4.Laws.Program.SourceScope
 
 /-!

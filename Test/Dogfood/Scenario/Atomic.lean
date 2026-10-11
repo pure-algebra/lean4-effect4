@@ -1,6 +1,7 @@
 import Test.Dogfood.Scenario.Atomic.Model
 import Test.Dogfood.Scenario.Atomic.Store
 import Test.Dogfood.Scenario.Atomic.Cleanup
+import Test.Dogfood.Scenario.SourceFragment
 import Test.Dogfood.Scenario
 import Effect4.Author
 import Test.Dogfood.P4RateLimiter
@@ -77,7 +78,7 @@ bounded search. -/
 theorem bounded : Bounded := by
   intro b moves hb
   have heap := Effect4.Program.HeapSites.heap_sites_keep b budget.compileFuel Store.UsedOk
-    (Store.shop_sites_used b hb) _ (Store.scenario_control b hb moves)
+    (SourceFragment.atomic_built_fragment b hb) (Store.shop_sites_used b hb) _ (Store.scenario_control b hb moves)
   rw [Store.observe_eq]
   show natField (Scenario.play (opened b) moves).machine.state.refs[0]? "used" ≤ 3
   cases h0 : (Scenario.play (opened b) moves).machine.state.refs[0]? with
@@ -199,8 +200,7 @@ theorem unsuspended_runs : Unsuspended :=
 /-- **The atomic scenario's claim.** Between refills the used capacity stays bounded. The stores
 count each request's outcome once. A request that fails behind its commits leaves them in the
 stores. The cleanup log holds each request once. Removing a straight program's suspensions keeps
-its exit and its stores. The first four are planned goals, so this theorem is proved modulo
-them. The fifth is proved. It does not establish a scheduler guarantee without a bound, a host
+its exit and its stores. The proof graph records the unfinished dependencies of each clause. It does not establish a scheduler guarantee without a bound, a host
 transaction or a whole-run resource theorem. -/
 @[semantics "store-typing" (requirement := R4)]
 theorem atomic : Bounded ∧ Counted ∧ Committed ∧ CleansOnce ∧ Unsuspended :=

@@ -351,6 +351,7 @@ import Test.Dogfood.Proofs.HostPayloadsAudit
 import Test.Dogfood.Proofs.HostTimeoutSource
 import Test.Dogfood.Proofs.HostAppliedObservation
 import Test.Dogfood.Scenario.SourceFragment
+import Test.Dogfood.Scenario.NativeHeap
 import Test.Dogfood.Proofs.TimeoutCounterexample
 import Test.Dogfood.Scenario.QueueWorkers.Source
 import Test.Machine.RaceFirst

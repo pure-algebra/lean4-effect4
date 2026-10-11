@@ -247,3 +247,12 @@ Every successful applied receipt appears as an answered HTTP call in the current
 The theorem covers every script and imposes no move restriction.
 `codex/HostAppliedObservationReceipt.md` records the build and the audit, with no planned dependencies.
 The native returned-body invariant remains separate and open.
+
+### Atomic capacity closure
+
+The original `Atomic.bounded` clause is proved without planned dependencies.
+The source fragment premise is discharged from the actual shop build.
+The complete source and heap history chain remains shared with the Queue reader.
+`codex/AtomicBoundReceipt.md` records the narrow build and integrated audit.
+The shared compiler case interface fixes duplicate internal names when the independently checked proof branches meet.
+The Atomic stage and cleanup obligations remain open; their statements remain unchanged.

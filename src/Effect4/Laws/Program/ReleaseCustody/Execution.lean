@@ -1,6 +1,5 @@
 import Effect4.Laws.Program.ReleaseCustody.Lift
-import Effect4.Laws.Program.ReleaseCustody.Pop
-import Effect4.Laws.Program.ReleaseCustody.CausePop
+import Effect4.Laws.Program.ReleaseCustody.FrameDebit
 
 /-!
 Concept: scope-lifetime-finalization, R11, at most once per registration counted by source identity.
