@@ -355,6 +355,7 @@ import Test.Dogfood.Proofs.HostJournal
 import Test.Dogfood.Proofs.HostPayloadsAudit
 import Test.Dogfood.Proofs.HostTimeoutSource
 import Test.Dogfood.Proofs.HostTimeoutDriver
+import Test.Dogfood.Proofs.HostTimeoutNumberLedger
 import Test.Dogfood.Proofs.HostAppliedObservation
 import Test.Dogfood.Scenario.SourceFragment
 import Test.Dogfood.Scenario.NativeHeap
@@ -365,6 +366,7 @@ import Test.Counterexamples.Machine.Runtime.HostClockPrefix
 import Test.Counterexamples.Machine.Runtime.HostRefPrefix
 import Test.Counterexamples.Machine.Runtime.HostInstancePrefix
 import Test.Dogfood.Scenario.Atomic.Writes
+import Test.Dogfood.Scenario.Atomic.Writer
 import Test.Dogfood.Proofs.TimeoutCounterexample
 import Test.Dogfood.Scenario.QueueWorkers.Source
 import Test.Machine.RaceFirst
