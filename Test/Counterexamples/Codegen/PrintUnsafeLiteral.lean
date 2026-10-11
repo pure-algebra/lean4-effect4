@@ -1,7 +1,7 @@
 import Effect4.Api
 
 /-!
-# `E4-PRINT-CE-002`: a natural literal outside the profile prints as another number (seeded)
+# `E4-PRINT-CE-002`: a natural literal outside the profile prints as another number (repaired)
 
 The checker types a natural literal at `nat` whatever its size, and the term printer writes it in
 decimal (`printLit`, `src/Effect4/Codegen/PrintLeaf.lean`). JavaScript reads a decimal integer
@@ -13,8 +13,11 @@ DI-56 rules that a face refuses outside its profile, and the profile's bound is 
 (`rc112.natBound`, `src/Effect4/Program/Profile.lean`). Lean's own round trip holds
 (`readLiteral_print`): Lean reads the decimal exactly. The defect is the target's reading.
 
-The forced repair: the module printer refuses a natural literal above the profile's bound, with a
-refusal that names the literal.
+The repair (2026-10-11): the module emission refuses a natural literal above the profile's bound
+before it prints, with `EmissionRefusal.outsideProfile` naming the literal, and its certificate
+records the bound (`ModuleEmission.inProfile`, `src/Effect4/Codegen/Checked.lean`). The term
+printer stays total, so its round trip is unchanged. The reading boundary still reads such a
+literal: that half is open.
 -/
 
 set_option autoImplicit false
@@ -43,5 +46,15 @@ def answersUnsafe : Eff NativeOp := .succeed (.lit (.nat beyond))
 #guard match printLit (.nat rc112.natBound) with
   | .int value => value == 9007199254740991
   | _ => false
+
+-- The repair: the emission refuses the program, naming the literal.
+#guard match Codegen.emitModule "answersUnsafe" answersUnsafe with
+  | .error (.outsideProfile value) => value == beyond
+  | _ => false
+
+-- Control: the bound itself emits.
+#guard match Codegen.emitModule "answersBound" (.succeed (.lit (.nat rc112.natBound))) with
+  | .ok _ => true
+  | .error _ => false
 
 end Test.Counterexamples.Codegen.PrintUnsafeLiteral

@@ -74,7 +74,8 @@ invocation's programs need a service the printed header cannot carry (Codex's HO
 `Codegen/CallbackRequirements.lean`). -/
 theorem printModule_erasure (name : String) (program : Program) (table : RowTable)
     (formed : Formation.InputFormed program table)
-    (callbacks : Effect4.Codegen.invokeRequirementFault (nativeSignature table) program = none) :
+    (callbacks : Effect4.Codegen.invokeRequirementFault (nativeSignature table) program = none)
+    (inProfile : Effect4.Codegen.natLiteralsInProfile program = true) :
     printModule name program table =
       match typeOf program table with
       | some ty =>
@@ -86,7 +87,7 @@ theorem printModule_erasure (name : String) (program : Program) (table : RowTabl
         | _, _ => none
       | none => none := by
   simp only [printModule, emitModule, callbacks]
-  exact Effect4.Codegen.emitModule_erasure name program table formed
+  exact Effect4.Codegen.emitModule_erasure name program table formed inProfile
 
 /-- On formed input with supported stored annotations, evidence retention retains the declaration result. -/
 theorem printDecl_erasure (name : String) (program : Program) (table : RowTable)

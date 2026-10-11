@@ -766,3 +766,21 @@ What this changes in the packet above, and nothing else:
   *Tested* by guards of `harness/truth/Truth.lean`: each of the three sync exits is one text
   under the machine's ids and under the sync run's numbers, and the sync run of every other
   program of Pool is in the allocation order.
+
+## Amendment, 2026-10-11: a natural literal outside the face's profile (decisions row 357)
+
+- **The defect.** The term printer writes a natural literal in decimal, and JavaScript reads a
+  decimal above `Number.MAX_SAFE_INTEGER` as another number (`E4-PRINT-CE-002`). Lean's own round
+  trip `readLiteral_print` holds; the loss is the target's reading.
+- **The rule.** `Codegen.emitModule` refuses a program that states a natural literal above
+  `rc112.natBound`, as `EmissionRefusal.outsideProfile`, before it prints. Its certificate
+  records the bound in the field `ModuleEmission.inProfile`. `Codegen.natLiterals` collects the
+  literals through the generated program and term folds.
+- **The statements that change.** `emitModule_erasure`, `Api.printModule_erasure` and
+  `emitModule_complete` take `natLiteralsInProfile program = true` as one more premise.
+  `Api.printModule_roundTrip` is unchanged: it assumes a successful print. The term printer
+  stays total, so the read-print laws do not move.
+- **Open.** The reading boundary still reads such a literal. A module that a person writes with
+  one is admitted, and the run of its printed text differs from the model's.
+- **Evidence.** *Proved*: the laws above, under `[propext, Quot.sound]`. *Tested*: the
+  counterexample's regression and its control, and bun 1.4.2's reading of `9007199254740993`.
