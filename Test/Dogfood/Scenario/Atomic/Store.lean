@@ -843,19 +843,9 @@ theorem make_keeps {P : Val → Prop} (v : Val) (hv : P v) : OpKeeps P (.refMake
 
 /-- A read keeps every cell predicate. -/
 theorem get_keeps {P : Val → Prop} (q : RefKey) : OpKeeps P (.refGet q) := by
-  intro s s' ans h hok
-  have h' : (refStep (.refGet q) s.refs).map
-      (fun step => ({ s with refs := step.2 }, step.1)) = some (s', ans) := h
-  cases hp : refPeek s.refs q with
-  | none =>
-    simp only [refStep, hp, Option.map_none] at h'
-    cases h'
-  | some a =>
-    simp only [refStep, hp, Option.map_some] at h'
-    have hs : s.refs = s'.refs :=
-      congrArg (fun p : Stores × Val => p.1.refs) (Option.some.inj h')
-    rw [← hs]
-    exact hok
+  intro before after answer step held
+  rw [syncOpStep_refGet_refs step]
+  exact held
 
 /-- A record set's evaluation: the target and the value evaluate, and the set answers. -/
 theorem eval_recordSet {env : List Val} {target value : Term} {name : String} {v : Val}

@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.NativeReferences
 import Effect4.Laws.Program.StoreExecution
+import Effect4.Laws.Machine.RefFootprint
 
 /-!
 Concept: store-typing R4, serving `HeapSites.heap_sites_keep`.
@@ -9,6 +10,38 @@ Administrative scheduler and scope transitions retain references.
 set_option autoImplicit false
 namespace Effect4.Program.StoreExecution
 open Effect4 Effect4.Machine Effect4.Program
+
+/-- The existing native transfer exposes its actual represented synchronous operation.
+This eliminates native thunk wrappers once, without another evaluator census. -/
+theorem RefTransfer.native_row (root : NativeEff) (completed) (table : RowTable)
+    {input : NCode} {before after : Stores}
+    (step : RefTransfer (interpAt root completed table) input before after) :
+    after.refs = before.refs ∨ ∃ op value,
+      (input = .sync (.op op) ∨ input = .sync (.store (.op op))) ∧
+      syncOpStep op before = some (after, value) := by
+  cases step with
+  | same _ refs => exact .inl refs
+  | sync thunk next value current unparked answer =>
+    cases thunk
+    case op op => exact .inr ⟨op, value, .inl current, answer⟩
+    case store stored =>
+      cases stored
+      case op op => exact .inr ⟨op, value, .inr current, answer⟩
+      all_goals cases answer
+    all_goals cases answer
+
+/-- Every native reference transfer keeps a lookup outside its actual operation footprint.
+The source premise names the represented operation and its actual answer. -/
+theorem RefTransfer.refPeek_other (root : NativeEff) (completed) (table : RowTable)
+    {input : NCode} {before after : Stores}
+    (step : RefTransfer (interpAt root completed table) input before after) (cell : RefKey)
+    (outside : ∀ op value,
+      (input = .sync (.op op) ∨ input = .sync (.store (.op op))) →
+      syncOpStep op before = some (after, value) → op.refFootprint value ≠ some cell) :
+    refPeek after.refs cell = refPeek before.refs cell := by
+  rcases step.native_row root completed table with same | ⟨op, value, current, actual⟩
+  · exact same ▸ rfl
+  · exact syncOpStep_refPeek_other actual cell (outside op value current actual)
 
 /-- The generated primitive eliminator exposes the actual store action once.
 The existing administrative projections supply all non-synchronous reference effects. -/
@@ -49,6 +82,19 @@ theorem primitive_refTransfer (root : NativeEff) (completed) (table : RowTable)
   case case16 noPark noWithFiber noSync noSuccess noFailure noYield noAsync =>
     exact .same _ (SourceScope.step_frame_refs root completed table m fiber yielding)
   all_goals exact .same _ rfl
+
+/-- The native evaluator keeps a cell outside its actual synchronous operation footprint.
+Consumer: the reference lookup component of Atomic, Workers, and Timeout accounting.
+This exposes source permission; it does not assume a separate per-scenario evaluator census. -/
+theorem primitive_refPeek_other (root : NativeEff) (completed) (table : RowTable)
+    (m : NativeMachine) (fiber : SourceScope.SourceFiber) (yielding : Bool) (cell : RefKey)
+    (outside : ∀ op value,
+      (fiber.frame.current = .sync (.op op) ∨ fiber.frame.current = .sync (.store (.op op))) →
+      syncOpStep op m.state = some ((evaluatePrim (interpAt root completed table) m fiber yielding).machine.state, value) →
+      op.refFootprint value ≠ some cell) :
+    refPeek (evaluatePrim (interpAt root completed table) m fiber yielding).machine.state.refs cell =
+      refPeek m.state.refs cell :=
+  (primitive_refTransfer root completed table m fiber yielding).refPeek_other root completed table cell outside
 
 
 end Effect4.Program.StoreExecution
