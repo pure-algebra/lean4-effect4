@@ -50,3 +50,26 @@ The common frame integration waits for the coordinator's frame commit.
 The behavior gate is `check-host-protocol`, with `check-truth` if the timeout form changes later.
 All behavior gates remain deferred until the coordinator's repair pass.
 No push occurs.
+
+## Runtime decision follow-up
+
+The original retry predicate is stronger than rc.112's direct first-exit race.
+Changing the form's waiting topology does not establish that predicate.
+
+`RaceFirstYield.ts`, in the packet's `codex` directory, runs the actual pinned `Effect.raceFirst` and `Effect.retry`.
+The scheduler forces one yield on the attempt after reply application.
+Both success and nonretryable `BadRequest` replies produce a second attempt when the timer wins.
+The controls omit the yield and produce one attempt.
+`RaceFirstYield.output.json` retains the output.
+
+Commands:
+
+- `node /Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo --version`: `7.0.0-dev.20260629.1`.
+- `node /Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/@typescript/native-preview/bin/tsgo --ignoreConfig --strict --noEmit --target esnext --module esnext --moduleResolution bundler --skipLibCheck docs/research/2026-10-10-goals-packet/codex/RaceFirstYield.ts`: passed.
+- `bun docs/research/2026-10-10-goals-packet/codex/RaceFirstYield.ts`: passed; four cases match their expected attempt counts.
+
+Evidence kind: finite host probe, with a synthetic timer and no exponential delays.
+This probe does not prove a general theorem or replay the exact scenario script.
+`timeout-contract-decision.md` proposes source-aligned and stronger contract choices.
+It recommends reading completed timeout-form outcomes, paired with attempt and entrant identities.
+No scenario proposition, timeout form or budget changes.
