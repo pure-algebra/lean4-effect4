@@ -1,0 +1,27 @@
+#axiom_audit: 364 declarations within [propext, Quot.sound], 3 of them modulo planned goals; 2 planned goals
+Test.Dogfood.Scenario.Atomic.cleans_once: modulo [Test.Dogfood.Scenario.Atomic.Cleanup.log_debits]; nearest []; 0 lemmas, 0 definitions
+next goals: 1
+  goal Test.Dogfood.Scenario.Atomic.Cleanup.log_debits : ∀ (b : Effect4.Api.Built) (m : Effect4.Program.NativeMachine),
+  Effect4.Api.Author.build (Test.Dogfood.Scenario.Atomic.shop Test.Dogfood.Scenario.Atomic.Fault.none) = Except.ok b →
+    Effect4.Run.HistoryOf b Test.Dogfood.Scenario.Atomic.budget.compileFuel m →
+      (∀ (i : Nat),
+          i ∈ (Test.Dogfood.Scenario.Atomic.Store.observeM m).cleaned → i ∈ Test.Dogfood.Scenario.Atomic.requests) ∧
+        ∀ (i : Nat),
+          i ∈ Test.Dogfood.Scenario.Atomic.requests →
+            List.count i (Test.Dogfood.Scenario.Atomic.Store.observeM m).cleaned ≤
+              List.countP (Effect4.Program.FinalizerRun.startedAt (Test.Dogfood.Scenario.Atomic.Cleanup.requestPath i))
+                (m.trace
+                  (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val Effect4.Machine.Err
+                    Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+                  (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+                    Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann)
+                  (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Machine.Val
+                    Effect4.Machine.Err Effect4.Machine.Defect Effect4.FiberId Effect4.Machine.Ann))
+Test.Dogfood.Scenario.Workers.releases_once: modulo [Test.Dogfood.Scenario.Workers.Assertions.logs_step]; nearest []; 0 lemmas, 0 definitions
+next goals: 1
+  goal Test.Dogfood.Scenario.Workers.Assertions.logs_step : ∀ (total cf : Nat) (b : Effect4.Api.Built) (m : Effect4.Program.NativeMachine)
+  (x : Nat × Effect4.Program.NativeDecision),
+  Effect4.Api.Author.build (Test.Dogfood.Scenario.Workers.crew total) = Except.ok b →
+    Test.Dogfood.Scenario.Workers.Assertions.Holds b cf m →
+      Effect4.Run.Accepted b.table (Effect4.Api.HostSession.callTable b.program b.table) m x.snd →
+        Test.Dogfood.Scenario.Workers.Assertions.LogDebits (Effect4.Run.stepBy b m x)
