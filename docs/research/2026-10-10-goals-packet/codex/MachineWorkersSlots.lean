@@ -1,4 +1,5 @@
 import MachineAnswerFlow
+import Effect4.Laws.Machine.AnswerFlowFrames
 import MachineWorkersWriters
 import Effect4.Laws.Program.NativeScope
 
@@ -22,6 +23,7 @@ structure World where
 
 inductive Kind
   | root | allocated (index : Nat) | gate
+  | yielded (refs deferred : Nat)
 
 def bindings : List Val := [.cell ⟨0⟩, .cell ⟨1⟩, .cell ⟨2⟩, .cell ⟨3⟩, .promise ⟨0⟩]
 
@@ -110,6 +112,9 @@ def ValueAt (world : World) : Kind → Val → Prop
   | .gate, value => value = .promise ⟨0⟩ ∧
       4 ≤ world.state.refs.length ∧ 1 ≤ world.state.deferreds.cells.length
 
+  | .yielded refs deferred, value => Phase world ∧ value = .unit ∧
+      world.state.refs.length = refs ∧ world.state.deferreds.cells.length = deferred
+
 inductive CodeAt (total : Nat) (world : World) : Kind → NCode → Prop
   | success (kind : Kind) (value : Val) (good : ValueAt world kind value) :
       CodeAt total world kind (.success value)
@@ -126,6 +131,11 @@ inductive CodeAt (total : Nat) (world : World) : Kind → NCode → Prop
       (lexical : SourceScope.At (Programs.workersProgram total) point)
       (leading : point.env.take 5 = bindings) :
       CodeAt total world .root (resolve (Programs.workersProgram total) point)
+
+  | yielding (priority refs deferred : Nat) (phase : Phase world)
+      (refsEq : world.state.refs.length = refs)
+      (deferredEq : world.state.deferreds.cells.length = deferred) :
+      CodeAt total world (.yielded refs deferred) (.yieldNowWith priority)
 
 def model (total : Nat) : AnswerFlow.Model (ν := EffName) (σ := EffThunk)
     (β := Val) (ε := Err) (δ := Defect) (ι := FiberId) (α := Ann) World Kind where
@@ -149,11 +159,13 @@ theorem code_phase {total : Nat} {world : World} {kind : Kind} {code : NCode}
     | root => exact good
     | allocated _ => exact good.1
     | gate => exact Or.inr good.2
+    | yielded _ _ => exact good.1
   | failure _ _ phase => exact phase
   | root _ _ stage => exact Or.inl stage.2.1
   | allocating _ _ _ _ _ stage => exact Or.inl stage.2.1
   | gateAllocating _ stage => exact Or.inl stage.2.1
   | stable _ ready _ _ => exact Or.inr ready
+  | yielding _ _ _ phase _ _ => exact phase
 
 /-- Appending the actual allocated key extends the concrete prefix through the fourth reference. -/
 theorem prefix_append (index : Nat) (small : index < 4) :
@@ -449,5 +461,140 @@ theorem load_frames (total : Nat) (fuel : Nat) (table : RowTable) :
   · apply CodeAt.root 0 (rootPoint fuel)
     exact ⟨by omega, rfl, rfl, rfl, rfl, rfl⟩
   · exact .nil _ Kind.root
+
+
+/-- Current annotations transport under exact owner and allocation-size agreement.
+This does not weaken a transient initializer to an arbitrary later store. -/
+theorem code_sizes (total : Nat) (world nextWorld : World)
+    (owner : world.owner = nextWorld.owner)
+    (refs : world.state.refs.length = nextWorld.state.refs.length)
+    (deferred : world.state.deferreds.cells.length = nextWorld.state.deferreds.cells.length)
+    {kind : Kind} {code : NCode} (held : CodeAt total world kind code) :
+    CodeAt total nextWorld kind code := by
+  have phase (good : Phase world) : Phase nextWorld := by
+    change nextWorld.owner = ⟨0⟩ ∨
+      (4 ≤ nextWorld.state.refs.length ∧ 1 ≤ nextWorld.state.deferreds.cells.length)
+    rw [← owner, ← refs, ← deferred]
+    exact good
+  have stage {index : Nat} {point : Point} (good : RootStage world index point) :
+      RootStage nextWorld index point := by
+    obtain ⟨bound, initialOwner, path, env, refLength, deferredLength⟩ := good
+    exact ⟨bound, owner ▸ initialOwner, path, env, refs ▸ refLength, deferred ▸ deferredLength⟩
+  have value {kind : Kind} {answer : Val} (good : ValueAt world kind answer) :
+      ValueAt nextWorld kind answer := by
+    cases kind with
+    | gate =>
+      simp only [ValueAt] at good ⊢
+      rw [← refs, ← deferred]
+      exact good
+    | root =>
+      simp only [ValueAt, Phase] at good ⊢
+      rw [← owner, ← refs, ← deferred]
+      exact good
+    | allocated index =>
+      simp only [ValueAt, Phase] at good ⊢
+      rw [← owner, ← refs, ← deferred]
+      exact good
+    | yielded count promises =>
+      simp only [ValueAt, Phase] at good ⊢
+      rw [← owner, ← refs, ← deferred]
+      exact good
+  cases held with
+  | success kind answer good => exact .success kind answer (value good)
+  | failure kind reason good => exact .failure kind reason (phase good)
+  | root index point good => exact .root index point (stage good)
+  | allocating index point initial small valueEq good =>
+    exact .allocating index point initial small valueEq (stage good)
+  | gateAllocating point good => exact .gateAllocating point (stage good)
+  | stable point ready lexical leading =>
+    exact .stable point ⟨refs ▸ ready.1, deferred ▸ ready.2⟩ lexical leading
+  | yielding priority count promises good countEq promisesEq =>
+    exact .yielding priority count promises (phase good) (refs ▸ countEq) (deferred ▸ promisesEq)
+
+/-- A forced-yield saved constant consumes a response with the retained allocation sizes.
+The actual history must justify this response class while the old source body is parked. -/
+theorem yield_saved (total : Nat) (view : List (FiberId × ExitV)) (table : RowTable)
+    (world : World) (kind : Kind) (priority : Nat) (code : NCode)
+    (held : CodeAt total world kind code) :
+    AnswerFlow.SavedAt (model total) (interpAt (Programs.workersProgram total) view table).toPrimInterp
+      world (.yielded world.state.refs.length world.state.deferreds.cells.length) kind
+      (.onSuccessConst (.yieldNowWith priority) code) := by
+  apply AnswerFlow.saved_constant (model total) _ world _ kind (.yieldNowWith priority) code
+  · intro nextWorld future answer good
+    exact code_sizes total world nextWorld future.1 good.2.2.1.symm good.2.2.2.symm held
+  · intro nextWorld future reason good
+    exact good
+
+/-- The actual forced-yield push retains an initializer body through the saved constant.
+No copy of the source body becomes a second active annotation. -/
+theorem yield_push (total : Nat) (view : List (FiberId × ExitV)) (table : RowTable)
+    (world : World) (input output : Kind) (priority : Nat) (code : NCode)
+    (fiber : FrameFiber EffName EffThunk Val Err Defect FiberId Ann)
+    (current : fiber.current = .onSuccessConst (.yieldNowWith priority) code)
+    (held : CodeAt total world input code)
+    (stack : AnswerFlow.StackAt (model total)
+      (interpAt (Programs.workersProgram total) view table).toPrimInterp world input output fiber.stack) :
+    ∃ next events,
+      fiber.step (interpAt (Programs.workersProgram total) view table).toPrimInterp = (.running next, events) ∧
+      AnswerFlow.FrameAt (model total)
+        (interpAt (Programs.workersProgram total) view table).toPrimInterp world output next := by
+  exact AnswerFlow.push_constant (model total) _ world _ input output fiber
+    (.yieldNowWith priority) code current
+    (.yielding priority _ _ (code_phase held) rfl rfl)
+    (yield_saved total view table world input priority code held) stack
+
+/-- A real unit yield response resumes the saved original source body in the matching store.
+Consumer: scheduler resumes at a transient initializer or the later stable phase. -/
+theorem yield_resume (total : Nat) (view : List (FiberId × ExitV)) (table : RowTable)
+    (world nextWorld : World) (input output : Kind) (priority : Nat) (code : NCode)
+    (fiber : FrameFiber EffName EffThunk Val Err Defect FiberId Ann)
+    (future : (model total).future world nextWorld)
+    (good : ValueAt nextWorld (.yielded world.state.refs.length world.state.deferreds.cells.length) .unit)
+    (held : CodeAt total world input code) (noInterrupt : fiber.deferredInterrupt = false)
+    (stack : AnswerFlow.StackAt (model total)
+      (interpAt (Programs.workersProgram total) view table).toPrimInterp world input output fiber.stack) :
+    ({fiber with stack := .onSuccessConst (.yieldNowWith priority) code :: fiber.stack}).resumeValue
+        (interpAt (Programs.workersProgram total) view table).toPrimInterp .unit none =
+      (.running {fiber with current := code}, [.popped (.onSuccessConst (.yieldNowWith priority) code)]) ∧
+    AnswerFlow.FrameAt (model total)
+      (interpAt (Programs.workersProgram total) view table).toPrimInterp nextWorld output
+      {fiber with current := code} := by
+  apply AnswerFlow.resume_constant (model total) _ nextWorld
+    (.yielded world.state.refs.length world.state.deferreds.cells.length) input output fiber
+    (.yieldNowWith priority) code .unit none noInterrupt good
+  · intro exit absent
+    cases absent
+  · exact AnswerFlow.saved_mono (model total) _ future (yield_saved total view table world input priority code held)
+  · exact AnswerFlow.stack_mono (model total) _ future stack
+
+
+/-- The real native yield producer supplies the unit class in its unchanged store.
+The returned fiber is parked; its saved original body remains on the same ordered stack. -/
+theorem yield_native (total : Nat) (table : RowTable) (machine : Api.Machine)
+    (fiber : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx)
+    (priority : Nat) (output : Kind) (yielding : Bool)
+    (phase : Phase ⟨fiber.id, machine.state⟩)
+    (current : fiber.frame.current = .yieldNowWith priority)
+    (stack : AnswerFlow.StackAt (model total)
+      (interpAt (Programs.workersProgram total) machine.completedExits table).toPrimInterp
+      ⟨fiber.id, machine.state⟩ (.yielded machine.state.refs.length machine.state.deferreds.cells.length)
+      output fiber.frame.stack) :
+    AnswerFlow.FrameAt (model total)
+      (interpAt (Programs.workersProgram total) machine.completedExits table).toPrimInterp
+      ⟨fiber.id, (evaluateNative (Programs.workersProgram total) machine fiber yielding table).machine.state⟩
+      output (evaluateNative (Programs.workersProgram total) machine fiber yielding table).fiber.frame := by
+  simp only [evaluateNative, current, evaluatePrim]
+  exact AnswerFlow.sync_answer (model total) _ ((model total).future_refl _)
+    (.yielded machine.state.refs.length machine.state.deferreds.cells.length) output fiber.frame .unit
+    ⟨phase, rfl, rfl, rfl⟩ stack
+
+/-- Retaining the phase alone does not retain a transient yield's allocation sizes.
+This is a finite response-class control, not a counterexample to the history log bound. -/
+theorem phase_does_not_retain_yield :
+    ∃ world : World, Phase world ∧ ¬ ValueAt world (.yielded 0 0) .unit := by
+  refine ⟨⟨⟨0⟩, {Stores.empty with refs := [.nat 0]}⟩, Or.inl rfl, ?_⟩
+  intro good
+  have impossible : 1 = 0 := good.2.2.1
+  cases impossible
 
 end MachineWorkersSlots
