@@ -1,0 +1,88 @@
+--- a/src/Effect4/Program/Compile.lean
++++ b/src/Effect4/Program/Compile.lean
+@@ -274,10 +274,11 @@
+   | provideLayerBody (p : Point)
+   /-- `updateContext` read the fiber context, the value (`internal/effect.ts:2089`): apply the
+   update, set the next context, and run the region under the restoring finalizer. -/
+-  | updateThen (update : Env.ContextUpdate) (body : Region)
++  | provideMask (update : Env.ContextUpdate) (body : Region)
++  | updateThen (update : Env.ContextUpdate) (body : Region) (previousFlag : Bool)
+   /-- The next context is set (`:2091`): the region under the finalizer that restores
+   `previous` (`:2092-2095`). -/
+-  | bodyThen (body : Region) (previous : Ctx)
++  | bodyThen (body : Region) (previous : Ctx) (previousFlag : Bool)
+   /-- `Layer.buildWithScope` read the fiber context, the value (`Layer.ts:974-979`): fork or
+   create the memo map (`CurrentMemoMap.forkOrCreate`, `:585-592`), then build into `scope`. -/
+   | buildWithScopeFromContext (q : Point) (scope : Nat)
+@@ -363,6 +364,9 @@
+   options at the point, and the scope. -/
+   | forkInAt (p : Point) (scope : Nat)
+   | getCtx
++  | captureMask
++  | provideMasked (update : Env.ContextUpdate) (body : Region) (previousFlag : Bool)
++  | restoreRegion (body : Region) (previousFlag : Bool)
+   | setCtx (context : Ctx)
+   | closeScope (scope : Nat) (exit : ExitV)
+   /-- A thunk of the stores' own alphabet, embedded. -/
+@@ -515,7 +519,7 @@
+ /-- `updateContext(self, f)` (`internal/effect.ts:2087-2096`): read the fiber context, then
+ `updateThen` on it. -/
+ def updateContextAt (update : Env.ContextUpdate) (body : Region) : NCode :=
+-  Prim.onSuccess (Prim.withFiber EffThunk.getCtx) (EffName.updateThen update body)
++  Prim.onSuccess (Prim.withFiber EffThunk.captureMask) (EffName.provideMask update body)
+ 
+ /-- `scopeAddFinalizerExit(scope, fin)` (`internal/effect.ts:3847-3858`): the `sync` half and
+ the continuation that runs the finalizer now when the scope had already closed; unit either
+@@ -909,15 +913,17 @@
+ 
+ /-- `updateContext` on the previous context (`internal/effect.ts:2088-2095`): `f(prev)`; the
+ same object runs the body as is (`:2090`), else `setContext(next)` and the restoring frame. -/
+-def updateThenK (root : NativeEff) (update : Env.ContextUpdate) (body : Region) (v : Val) :
++def updateThenK (_root : NativeEff) (update : Env.ContextUpdate) (body : Region)
++    (previousFlag : Bool) (v : Val) :
+     NCode :=
+   match Val.context? v with
+   | some prev =>
+-    if updateKeepsIdentity update prev.services then regionCode root body
++    if updateKeepsIdentity update prev.services then
++      Prim.withFiber (EffThunk.restoreRegion body previousFlag)
+     else
+       Prim.onSuccess
+         (Prim.withFiber (EffThunk.setCtx (Ctx.withServices (update.apply prev.services))))
+-        (EffName.bodyThen body prev)
++        (EffName.bodyThen body prev previousFlag)
+   | none => badShape
+ 
+ /-- `Layer.buildWithScope` on the fiber context (`Layer.ts:974-979`): `forkOrCreate` first. -/
+@@ -1237,9 +1243,14 @@
+   | .provideLayerWith p, Val.scopeHandle scope => provideLayerWithK root p scope
+   | .provideLayerWith _, _ => badShape
+   | .provideLayerBody p, v => provideLayerBodyK root p v
+-  | .updateThen update body, v => updateThenK root update body v
+-  | .bodyThen body previous, _ =>
+-    Prim.onExit (regionCode root body) (EffName.restoreCtx previous) false
++  | .provideMask update body, v =>
++    match Val.savedMask? v with
++    | some flag => Prim.withFiber (EffThunk.provideMasked update body flag)
++    | none => badShape
++  | .updateThen update body previousFlag, v => updateThenK root update body previousFlag v
++  | .bodyThen body previous previousFlag, _ =>
++    Prim.onExit (Prim.withFiber (EffThunk.restoreRegion body previousFlag))
++      (EffName.restoreCtx previous) false
+   | .buildWithScopeFromContext q scope, v => buildWithScopeK q scope v
+   -- `buildWithMemoMap` (`Layer.ts:756-765`) on the forked-or-created map
+   | .withMemoMapThen q scope, Val.memoMap ⟨id⟩ =>
+@@ -1607,6 +1618,13 @@
+     | EffThunk.act p => actionAt root p
+     | EffThunk.forkInAt p scope => forkScopedAt root p scope
+     | EffThunk.getCtx => some WithFiberAction.getContext
++    | EffThunk.captureMask => some WithFiberAction.getInterruptible
++    | EffThunk.provideMasked update body flag =>
++      some (WithFiberAction.setInterruptible
++        (Prim.onSuccess (Prim.withFiber EffThunk.getCtx)
++          (EffName.updateThen update body flag)) false)
++    | EffThunk.restoreRegion body flag =>
++      some (WithFiberAction.setInterruptible (regionCode root body) flag)
+     | EffThunk.setCtx context => some (WithFiberAction.setContext context)
+     | EffThunk.closeScope scope exit => some (WithFiberAction.closeScope scope exit)
+     | EffThunk.store (Thunk.act action) => some (embedAction (actionOf action))
