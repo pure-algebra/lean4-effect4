@@ -381,7 +381,7 @@ proof_goal registrations_step :
 Reach: actual crew histories, including incomplete release commands and interruption.
 The concrete custody history supplies its command and outside-loop obligations.
 It proves no release order; consumer: `step` and then `history`.
-This assembly remains modulo `Execution.command_custody` and `Execution.outer_custody`. -/
+This assembly remains modulo `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem releases_step :
   ∀ (total cf : Nat) (b : Api.Built) (m : NativeMachine) (x : Nat × NativeDecision),
@@ -390,9 +390,9 @@ theorem releases_step :
     ReleaseDebits (Run.stepBy b m x) := by
   intro _ cf b m x _ held accepted
   intro i _
-  have custody := ReleaseCustody.Execution.history b cf (acquirePath i) m held.history
+  have reached := history_step b cf m x held.history accepted
   exact ReleaseCustody.Control.Funded.read
-    (ReleaseCustody.Execution.decision b (acquirePath i) m x custody accepted).funded
+    (ReleaseCustody.Execution.history b cf (acquirePath i) (Run.stepBy b m x) reached).funded
 
 /-- Store preservation obligation of `releases_once`.
 Reach: the second allocated reference in actual crew histories at every command boundary.

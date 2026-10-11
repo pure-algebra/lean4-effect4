@@ -234,3 +234,8 @@ It does not refute an original application statement or an admitted run.
 `codex/CustodyLiftReceipt.md` records the missing command and saved-frame correlation.
 Retain the existing Guard ownership and token relations when repairing this internal premise.
 The checked scheduler proofs now live below execution assembly in `ReleaseCustody/Lift.lean`.
+
+The refuted internal command goal is removed from the active proof graph.
+`ReleaseCustody.Execution.history` now states the remaining obligation on actual admitted histories.
+Workers' release-step assembly keeps its original statement and extends that history before reading the bound.
+The checked local proofs remain; the replacement command decomposition must retain saved-frame and resume correlation.

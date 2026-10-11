@@ -2,7 +2,7 @@ import Effect4.Laws.Program.ReleaseCustody.Control
 
 /-!
 Concept: scope-lifetime-finalization, R11, at most once per registered source identity.
-Question: callback and evaluator clauses of `Execution.command_custody`.
+Question: callback and evaluator clauses of `Execution.history`.
 Reach: the existing native code, callbacks and stored programs, at the actual supplied root.
 Limit: these producer bounds alone establish no whole-command or outside-loop preservation.
 Unlock: continuation pop and native evaluator debit reuse the same residual credit projection.
@@ -20,7 +20,7 @@ theorem store_exit_credits (q : List Nat) (exit : ExitV) :
   cases exit <;> rfl
 
 /-- Store value callbacks retain only their explicitly saved program credits.
-Consumer: the native continuation-pop clause of `Execution.command_custody`. -/
+Consumer: the native continuation-pop clause of `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem store_contA_credits (q : List Nat) (name : Name) (value : Val) :
     currentCredits q (embed (Machine.contAOf name value)) = Names.contCredits q name := by
@@ -29,7 +29,7 @@ theorem store_contA_credits (q : List Nat) (name : Name) (value : Val) :
       prog_of_credits, store_exit_credits, credit, foreignAt, Bool.false_eq_true, if_false, Nat.add_zero]
 
 /-- Store cause callbacks produce exits, without new foreign release custody.
-Consumer: the native continuation-pop clause of `Execution.command_custody`. -/
+Consumer: the native continuation-pop clause of `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem store_contE_credits (q : List Nat) (name : Name) (cause : CauseV) :
     currentCredits q (embed (Machine.contEOf name cause)) = 0 := by
@@ -37,7 +37,7 @@ theorem store_contE_credits (q : List Nat) (name : Name) (cause : CauseV) :
     simp only [store_exit_credits, embed, currentCredits]
 
 /-- Every compiled source callback starts with zero outstanding foreign custody.
-Consumer: the native continuation and suspension clauses of `Execution.command_custody`. -/
+Consumer: the native continuation and suspension clauses of `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem resolve_credits (q : List Nat) (root : NativeEff) (point : Point) :
     currentCredits q (resolve root point) = 0 := by
@@ -82,7 +82,7 @@ theorem layer_with_credits (q : List Nat) (root : NativeEff) (fuel : Nat)
   all_goals assumption
 
 /-- Looking up the native layer producer introduces no foreign credit.
-Consumer: native layer and value callback clauses of `Execution.command_custody`. -/
+Consumer: native layer and value callback clauses of `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem layer_resolve_credits (q : List Nat) (root : NativeEff) (point : Point)
     (memo : MemoMapId) (scope : Nat) :
@@ -91,7 +91,7 @@ theorem layer_resolve_credits (q : List Nat) (root : NativeEff) (point : Point)
     simp only [resolveLayer.resolveLayerTerm, layer_with_credits, badShape, currentCredits]
 
 /-- Native region bodies retain zero custody before their registrations run.
-Consumer: the native value continuation clause of `Execution.command_custody`. -/
+Consumer: the native value continuation clause of `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem region_credits (q : List Nat) (root : NativeEff) (region : Region) :
     currentCredits q (regionCode root region) = 0 := by
@@ -99,13 +99,13 @@ theorem region_credits (q : List Nat) (root : NativeEff) (region : Region) :
     simp only [currentCredits, resolve_credits, layer_resolve_credits]
 
 /-- Context administration introduces no foreign release custody.
-Consumer: the native layer callback clauses of `Execution.command_custody`. -/
+Consumer: the native layer callback clauses of `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem context_credits (q : List Nat) (update : Env.ContextUpdate) (body : Region) :
     currentCredits q (updateContextAt update body) = 0 := rfl
 
 /-- This native value producer introduces no foreign release custody.
-Consumer: `contA_credits`, then `Execution.command_custody`. -/
+Consumer: `contA_credits`, then `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem layer_inner_credits (q : List Nat) (root : NativeEff) (point : Point) (memo : MemoMapId) (child : Nat) :
     currentCredits q (innerLayerAt root point memo child) = 0 := by
@@ -113,7 +113,7 @@ theorem layer_inner_credits (q : List Nat) (root : NativeEff) (point : Point) (m
     simp only [currentCredits, opCredits, badShape, layer_resolve_credits, layer_compile_credits]
 
 /-- This native value producer introduces no foreign release custody.
-Consumer: `contA_credits`, then `Execution.command_custody`. -/
+Consumer: `contA_credits`, then `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem layer_construction_credits (q : List Nat) (root : NativeEff) (point : Point) (scope : Nat) :
     currentCredits q (constructionAt root point scope) = 0 := by
@@ -121,7 +121,7 @@ theorem layer_construction_credits (q : List Nat) (root : NativeEff) (point : Po
     simp only [currentCredits, context_credits, badShape]
 
 /-- This native value producer introduces no foreign release custody.
-Consumer: `contA_credits`, then `Execution.command_custody`. -/
+Consumer: `contA_credits`, then `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem provide_layer_credits (q : List Nat) (root : NativeEff) (point : Point) (scope : Nat) :
     currentCredits q (provideLayerWithK root point scope) = 0 := by
@@ -131,7 +131,7 @@ theorem provide_layer_credits (q : List Nat) (root : NativeEff) (point : Point) 
   split <;> rfl
 
 /-- This native value producer introduces no foreign release custody.
-Consumer: `contA_credits`, then `Execution.command_custody`. -/
+Consumer: `contA_credits`, then `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem provide_body_credits (q : List Nat) (root : NativeEff) (point : Point) (value : Val) :
     currentCredits q (provideLayerBodyK root point value) = 0 := by
@@ -139,7 +139,7 @@ theorem provide_body_credits (q : List Nat) (root : NativeEff) (point : Point) (
     simp only [currentCredits, context_credits, exit_credits, badShape]
 
 /-- This native value producer introduces no foreign release custody.
-Consumer: `contA_credits`, then `Execution.command_custody`. -/
+Consumer: `contA_credits`, then `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem update_body_credits (q : List Nat) (root : NativeEff) (update : Env.ContextUpdate) (body : Region) (value : Val) :
     currentCredits q (updateThenK root update body value) = 0 := by
@@ -148,7 +148,7 @@ theorem update_body_credits (q : List Nat) (root : NativeEff) (update : Env.Cont
 
 
 /-- This native value producer introduces no foreign release custody.
-Consumer: `contA_credits`, then `Execution.command_custody`. -/
+Consumer: `contA_credits`, then `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem build_scope_credits (q : List Nat) (point : Point) (scope : Nat) (value : Val) :
     currentCredits q (buildWithScopeK point scope value) = 0 := by
@@ -156,7 +156,7 @@ theorem build_scope_credits (q : List Nat) (point : Point) (scope : Nat) (value 
     simp only [currentCredits, opCredits, badShape]
 
 /-- This native value producer introduces no foreign release custody.
-Consumer: `contA_credits`, then `Execution.command_custody`. -/
+Consumer: `contA_credits`, then `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem add_memo_credits (q : List Nat) (memo : MemoMapId) (value : Val) :
     currentCredits q (addCurrentMemoMapK memo value) = 0 := by
@@ -164,7 +164,7 @@ theorem add_memo_credits (q : List Nat) (memo : MemoMapId) (value : Val) :
     simp only [currentCredits, badShape]
 
 /-- This native value producer introduces no foreign release custody.
-Consumer: `contA_credits`, then `Execution.command_custody`. -/
+Consumer: `contA_credits`, then `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem provide_then_credits (q : List Nat) (point : Point) (memo : MemoMapId) (scope : Nat) (mode : CombineMode) (value : Val) :
     currentCredits q (provideThenK point memo scope mode value) = 0 := by
@@ -172,7 +172,7 @@ theorem provide_then_credits (q : List Nat) (point : Point) (memo : MemoMapId) (
     simp only [currentCredits, context_credits, badShape]
 
 /-- This native value producer introduces no foreign release custody.
-Consumer: `contA_credits`, then `Execution.command_custody`. -/
+Consumer: `contA_credits`, then `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem combine_credits (q : List Nat) (mode : CombineMode) (that : Env.Ctx) (value : Val) :
     currentCredits q (combineWithK mode that value) = 0 := by
@@ -180,7 +180,7 @@ theorem combine_credits (q : List Nat) (mode : CombineMode) (that : Env.Ctx) (va
     simp only [currentCredits, badShape]
 
 /-- This native value producer introduces no foreign release custody.
-Consumer: `contA_credits`, then `Execution.command_custody`. -/
+Consumer: `contA_credits`, then `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem merge_context_credits (q : List Nat) (value : Val) :
     currentCredits q (mergeContextsK value) = 0 := by
@@ -188,7 +188,7 @@ theorem merge_context_credits (q : List Nat) (value : Val) :
     simp only [currentCredits, badShape]
 
 /-- This native value producer introduces no foreign release custody.
-Consumer: `contA_credits`, then `Execution.command_custody`. -/
+Consumer: `contA_credits`, then `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem bind_service_credits (q : List Nat) (key : Option ServiceKey) (value : Val) :
     currentCredits q (bindServiceK key value) = 0 := by
@@ -196,7 +196,7 @@ theorem bind_service_credits (q : List Nat) (key : Option ServiceKey) (value : V
     simp only [currentCredits]
 
 /-- This native value producer introduces no foreign release custody.
-Consumer: `contA_credits`, then `Execution.command_custody`. -/
+Consumer: `contA_credits`, then `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem service_lookup_credits (q : List Nat) (key : ServiceKey) (value : Val) :
     currentCredits q (serviceLookupK key value) = 0 := by
@@ -204,7 +204,7 @@ theorem service_lookup_credits (q : List Nat) (key : ServiceKey) (value : Val) :
     simp only [currentCredits, badShape]
 
 /-- Every native value callback fits the reservation of its existing name.
-Consumer: the value-pop clause of `Execution.command_custody`. -/
+Consumer: the value-pop clause of `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem contA_credits (q : List Nat) (root : NativeEff) (name : EffName) (value : Val) :
     currentCredits q (Program.contAOf root name value) ≤ nameCredits q name := by
@@ -219,7 +219,7 @@ theorem contA_credits (q : List Nat) (root : NativeEff) (name : EffName) (value 
       Nat.sub_self, Nat.le_refl, Nat.zero_le]
 
 /-- Every native failure callback has zero outstanding foreign release custody.
-Consumer: the cause-pop clause of `Execution.command_custody`. -/
+Consumer: the cause-pop clause of `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem contE_credits (q : List Nat) (root : NativeEff) (name : EffName) (cause : CauseV) :
     currentCredits q (Program.contEOf root name cause) = 0 := by
@@ -227,7 +227,7 @@ theorem contE_credits (q : List Nat) (root : NativeEff) (name : EffName) (cause 
     simp only [resolve_credits, exit_credits, store_contE_credits, currentCredits]
 
 /-- Opening every native suspension retains exactly the credits of its stored residual.
-Consumer: the suspension and with-fiber fallback clauses of `Execution.command_custody`. -/
+Consumer: the suspension and with-fiber fallback clauses of `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem suspend_credits (q : List Nat) (root : NativeEff) (thunk : EffThunk) :
     currentCredits q (suspendBodyAt root thunk) = currentCredits q (.suspend thunk) := by
@@ -243,7 +243,7 @@ theorem suspend_credits (q : List Nat) (root : NativeEff) (thunk : EffThunk) :
       all_goals aesop (rule_sets := [Effect4.Stores])
 
 /-- The saved constant determines response custody beneath a wrapper.
-Consumer: the complete forced-yield clause of `Execution.command_custody`. -/
+Consumer: the complete forced-yield clause of `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem constant_stack_credits (q : List Nat) (body next : NCode) (stack : List NCode) :
     stackCredits q (.onSuccessConst body next) stack = stackCredits q next stack := by
@@ -251,7 +251,7 @@ theorem constant_stack_credits (q : List Nat) (body next : NCode) (stack : List 
   split <;> rfl
 
 /-- Injecting a yield keeps the selected fiber's full residual credit.
-Consumer: the complete loop injection clause of `Execution.command_custody`. -/
+Consumer: the complete loop injection clause of `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem yield_wrapper_credits (q : List Nat) (fiber : Fiber) :
     fiberCredits q { fiber with
@@ -260,7 +260,7 @@ theorem yield_wrapper_credits (q : List Nat) (fiber : Fiber) :
   simp only [fiberCredits, currentCredits, Nat.zero_add, constant_stack_credits]
 
 /-- Pushing any constant continuation transfers its saved code without duplicating lower custody.
-Consumer: the full frame-step clause of `Execution.command_custody`. -/
+Consumer: the full frame-step clause of `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem constant_push_credits (q : List Nat) (fiber : Fiber) (body next : NCode)
     (current : fiber.frame.current = .onSuccessConst body next) :
@@ -272,7 +272,7 @@ theorem constant_push_credits (q : List Nat) (fiber : Fiber) (body next : NCode)
   simp only [currentCredits, stackCredits, constant_stack_credits, Nat.add_assoc]
 
 /-- Replacing active code by an interruption cause can only discard response custody.
-Consumer: loop-top interruption in `Execution.command_custody`. -/
+Consumer: loop-top interruption in `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem failure_stack_le (q : List Nat) (cause : CauseV) (active : NCode) (stack : List NCode) :
     stackCredits q (.failure cause) stack ≤ stackCredits q active stack := by
@@ -295,7 +295,7 @@ theorem failure_fiber_le (q : List Nat) (fiber : Fiber) (cause : CauseV) :
   omega
 
 /-- The actual loop-top edit never increases selected control custody.
-Consumer: the full iteration clause of `Execution.command_custody`. -/
+Consumer: the full iteration clause of `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem loop_top_credits (q : List Nat) (fiber : Fiber) :
     fiberCredits q (countOp (runloopTop fiber)) ≤ fiberCredits q fiber := by
@@ -307,7 +307,7 @@ theorem loop_top_credits (q : List Nat) (fiber : Fiber) :
   · exact Nat.le_refl _
 
 /-- The native evaluator pushes every constant continuation with its actual frame event.
-Consumer: the actual forced-yield command clause of `Execution.command_custody`. -/
+Consumer: the actual forced-yield command clause of `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem constant_start (root : NativeEff) (table : RowTable) (machine : NativeMachine)
     (fiber : Fiber) (yielding : Bool) (body next : NCode)
@@ -329,7 +329,7 @@ theorem constant_start (root : NativeEff) (table : RowTable) (machine : NativeMa
   rfl
 
 /-- A true charged yield verdict injects and pushes the saved constant at one charged checkpoint.
-Consumer: the full yield branch of `Execution.command_custody`. -/
+Consumer: the full yield branch of `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem forced_yield_iteration (root : NativeEff) (table : RowTable) (machine : NativeMachine)
     (fiber : Fiber) (interrupt : fiber.frame.deferredInterrupt = false)
@@ -358,7 +358,7 @@ theorem forced_yield_iteration (root : NativeEff) (table : RowTable) (machine : 
   rfl
 
 /-- The actual forced-yield command retains full custody on every selected native fiber.
-Consumer: the yield-injection branch of `Execution.command_custody`.
+Consumer: the yield-injection branch of `Execution.history`.
 The arbitrary pending suffix, actual operation count and stored continuation remain explicit. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem forced_yield_loop_funded (root : NativeEff) (table : RowTable) (machine : NativeMachine)

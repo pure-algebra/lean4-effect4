@@ -42,3 +42,18 @@ The original scenario claims and the owner-approved timeout contract remain unch
 
 This extraction changes no runtime or generated input. It reaches no additional behavior gate.
 The previously recorded behavior pass remains the relevant external evidence.
+
+## Checked repair of the proof boundary
+
+Remove the refuted `command_custody` planned statement and its arbitrary-state `decision` assembly.
+Place the remaining obligation at `Execution.history`, over actual admitted histories.
+The original `Workers.Assertions.releases_step` statement stays unchanged.
+It extends the actual history before reading custody at the next machine.
+This is an internal proof repair, not a completed custody proof or an application amendment.
+
+The narrow build passes with 1077 jobs.
+`CustodyHistoryAudit.lean` audits the affected modules and their Workers consumer.
+`CustodyHistoryAudit.out` records its exact result.
+The retained counterexample still compiles after the repair.
+All checked producer, stack, scope-store and scheduler-edit lemmas remain available.
+The new command decomposition must prove saved-frame and resume correlation before the history endpoint closes.

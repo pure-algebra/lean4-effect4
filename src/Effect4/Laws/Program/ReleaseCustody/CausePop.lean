@@ -2,7 +2,7 @@ import Effect4.Laws.Program.ReleaseCustody.Pop
 
 /-!
 Concept: scope-lifetime-finalization, R11.
-Question: failure continuation debit serves Execution.command_custody and Workers.Assertions.releases_step.
+Question: failure continuation debit serves Execution.history and Workers.Assertions.releases_step.
 Reach: the actual failure pop and its interrupted-handler skipping and live mask hooks.
 Limit: the helper proves no source uniqueness, progress or host agreement.
 Unlock: the native evaluator's failure branch.
@@ -171,7 +171,7 @@ theorem armE (q : List Nat) (root : NativeEff) (completed : List (FiberId × Exi
     exact stack_credits_bounded q _ rest
 
 /-- Native failure resumption consumes the actual saved stack reservation.
-Consumer: evaluator debit in Execution.command_custody. -/
+Consumer: evaluator debit in Execution.history. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem resumeCause (q : List Nat) (root : NativeEff) (completed : List (FiberId × ExitV))
     (table : RowTable) (fiber : Frame) (cause : CauseV) (provided : Option ExitV) :

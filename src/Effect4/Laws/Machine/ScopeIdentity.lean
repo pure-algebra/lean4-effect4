@@ -5,7 +5,7 @@ import Effect4.Laws.Auto.RuleSets
 # Scope entry identities through native store steps
 
 Concept: scope-lifetime-finalization, R11; helper of registration custody.
-Consumer: `Program.ReleaseCustody.Execution.command_custody` and its native evaluator clauses.
+Consumer: `Program.ReleaseCustody.Execution.history` and its native evaluator clauses.
 The invariant reads distinct scope-entry keys and their bound by the fresh-name supply.
 Registration keys remain the separate `Stores.ScopeKeysFresh` predicate.
 Reach: actual native store steps, with the invariant as premise.
@@ -203,7 +203,7 @@ theorem syncOpStep_allocated {s s' : Stores} {o : SyncOp} {v : Val} (hs : Alloca
     rw [← (Prod.mk.inj hf).1]; exact hs
 
 /-- Native store steps keep every finalizer registration key below the actual supply.
-Consumer: `Program.Sched.storesOk_syncOpStep` and `ReleaseCustody.Execution.command_custody`.
+Consumer: `Program.Sched.storesOk_syncOpStep` and `ReleaseCustody.Execution.history`.
 The proof is the existing store-freshness census, shared without its independent external-store premise. -/
 theorem syncOpStep_keysFresh {s s' : Stores} {o : SyncOp} {v : Val} (hs : s.ScopeKeysFresh)
     (h : syncOpStep o s = some (s', v)) : s'.ScopeKeysFresh := by
@@ -320,7 +320,7 @@ theorem Allocated.addFinalizer {s : ScopeStore} {n : Nat} (h : Allocated s n)
   · exact h.setEntry _
 
 /-- Linking a fiber retains scope identities and advances the actual allocation supply.
-Consumer: `ReleaseCustody.Execution.command_custody`, at its native `link` command. -/
+Consumer: `ReleaseCustody.Execution.history`, at its native `link` command. -/
 theorem scopeLinkFiber_allocated (mode : Supervision.ScopeMode) (scope : Nat) (fiber : FiberId)
     {s next : Stores} {key : Nat} (held : Allocated s.scopes s.nextName)
     (step : stores.scopeLinkFiber mode scope fiber s = some (next, key)) :

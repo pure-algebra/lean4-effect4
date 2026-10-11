@@ -3,7 +3,7 @@ import Effect4.Laws.Machine.ScopeIdentity
 
 /-!
 Concept: scope-lifetime-finalization, R11, at most one release per registration.
-Question: scope-store accounting consumed by `ReleaseCustody.Execution.command_custody`.
+Question: scope-store accounting consumed by `ReleaseCustody.Execution.history`.
 Reach: every native store operation, with distinct scope identities and fresh registration keys.
 The returned value remains the actual operation result, including the closed-scope response.
 These local transfers establish no source-use bound, execution progress or host behavior.
@@ -135,7 +135,7 @@ theorem add (q : List Nat) (s next : Stores) (scope : Nat) (fin : FinName) (valu
       omega
 
 /-- Any native synchronous operation adds at most its explicitly carried finalizer credit.
-Consumer: the native evaluator clause of `Execution.command_custody`.
+Consumer: the native evaluator clause of `Execution.history`.
 The stronger `add` equation accounts for the response-sensitive continuation separately. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem syncOp (q : List Nat) {s next : Stores} {op : SyncOp} {value : Val}
@@ -235,7 +235,7 @@ theorem add_admin (q : List Nat) (s : ScopeStore) (scope key : Nat) (fin : FinNa
       exact Nat.add_right_cancel changed
 
 /-- Linking a fiber registers an administrative cleanup with no foreign release credit.
-Consumer: the actual `link` command clause of `Execution.command_custody`. -/
+Consumer: the actual `link` command clause of `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem link (q : List Nat) (mode : Supervision.ScopeMode) (scope : Nat) (fiber : FiberId)
     {s next : Stores} {key : Nat} (unique : (s.scopes.entries.map ScopeEntry.key).Nodup)
@@ -252,7 +252,7 @@ theorem link (q : List Nat) (mode : Supervision.ScopeMode) (scope : Nat) (fiber 
     exact add_admin q s.scopes scope s.nextName _ unique fresh rfl
 
 /-- State-first close transfers all selected credits to the actual returned close program.
-Consumer: the scope-close evaluator clause of `Execution.command_custody`. -/
+Consumer: the scope-close evaluator clause of `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem close (q : List Nat) (scope : Nat) (exit : ExitV) (masked : Bool)
     {s next : Stores} {program : Program} (unique : (s.scopes.entries.map ScopeEntry.key).Nodup)

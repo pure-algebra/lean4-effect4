@@ -384,7 +384,7 @@ theorem scope_add_open_loop_funded (root : NativeEff) (table : RowTable) (m : Na
   omega
 
 /-- A forced yield above scope-add reserves its saved operation once, including the lower callback.
-Consumer: the yield-injection clause of `Execution.command_custody`. -/
+Consumer: the yield-injection clause of `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem scope_add_yield_frame_credits (q : List Nat) (f : Fiber) (scope : Nat)
     (a : Val) (fin : FinName) (lower : List NCode)

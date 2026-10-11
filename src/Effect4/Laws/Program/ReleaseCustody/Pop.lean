@@ -2,7 +2,7 @@ import Effect4.Laws.Program.ReleaseCustody.Producers
 
 /-!
 Concept: scope-lifetime-finalization, R11.
-Question: continuation removal serves Execution.command_custody, then Workers.Assertions.releases_step.
+Question: continuation removal serves Execution.history, then Workers.Assertions.releases_step.
 Reach: the actual native frame pop, including constant continuations and response-sensitive scope callbacks.
 Limit: the helpers establish no progress, source-use uniqueness or host agreement.
 Unlock: the evaluator clause of the existing Machine.Lift command interface.
@@ -15,7 +15,7 @@ abbrev Frame := FrameFiber EffName EffThunk Val Err Defect FiberId Ann
 abbrev Result := FramePop EffName EffThunk Val Err Defect FiberId Ann
 
 /-- The actual value answer retains the code or callback removed from the stack.
-Consumer: value continuation debit in Execution.command_custody. -/
+Consumer: value continuation debit in Execution.history. -/
 def valueAnswer (q : List Nat) (active : NCode)
     (answer : ContAnswer EffName EffThunk Val Err Defect FiberId Ann) (stack : List NCode) : Nat :=
   match answer with
@@ -100,7 +100,7 @@ theorem value_cap (q : List Nat) (active : NCode) (frames : List NCode) (fiber :
       all_goals exact Nat.le_refl _
 
 /-- The actual value pop consumes the active response projection rather than an independent stack sum.
-Consumer: native resumeValue debit in Execution.command_custody. -/
+Consumer: native resumeValue debit in Execution.history. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem getCont_value (q : List Nat) (active : NCode) (fiber : Frame) :
     valueCredits q active (fiber.getCont .contA false) ≤ stackCredits q active fiber.stack := by
@@ -128,7 +128,7 @@ theorem getCont_value (q : List Nat) (active : NCode) (fiber : Frame) :
       all_goals exact bound
 
 /-- Invoking the selected native value arm consumes its retained answer reservation.
-Consumer: resumeValue debit in Execution.command_custody. -/
+Consumer: resumeValue debit in Execution.history. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem armA (q : List Nat) (root : NativeEff) (completed : List (FiberId × ExitV))
     (table : RowTable) (frame : NCode) (value : Val) (provided : Option ExitV)
@@ -209,13 +209,13 @@ theorem armA (q : List Nat) (root : NativeEff) (completed : List (FiberId × Exi
     exact Nat.le_trans (stack_credits_bounded q _ rest) (Nat.le_add_left _ _)
 
 /-- A running frame step retains its active code and remaining continuation credits.
-Consumer: native evaluator debit in Execution.command_custody. -/
+Consumer: native evaluator debit in Execution.history. -/
 def stepCredits (q : List Nat) : FrameStep EffName EffThunk Val Err Defect FiberId Ann → Nat
   | .running frame => currentCredits q frame.current + stackCredits q frame.current frame.stack
   | .finished _ => 0
 
 /-- Resuming an actual native value consumes the credits transferred by getCont.
-Consumer: native evaluator debit in Execution.command_custody. -/
+Consumer: native evaluator debit in Execution.history. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem resumeValue (q : List Nat) (root : NativeEff) (completed : List (FiberId × ExitV))
     (table : RowTable) (fiber : Frame) (value : Val) (provided : Option ExitV) :

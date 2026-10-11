@@ -2,7 +2,7 @@ import Effect4.Laws.Program.ReleaseCustody.Evaluation
 
 /-!
 Concept: scope-lifetime-finalization, R11.
-Question: native iterator and arm producers serve Execution.command_custody.
+Question: native iterator and arm producers serve Execution.history.
 Reach: actual native callbacks, generator cursors, stored close iterators and loop cursors.
 Limit: no source-use uniqueness, progress or host agreement follows.
 Unlock: native arm debit and the full evaluator clause.
@@ -13,7 +13,7 @@ open Effect4 Effect4.Machine Effect4.Program
 open Effect4.Program.ReleaseCustody.Control
 
 /-- The current completed-exit view changes no callback credit.
-Consumer: native value-arm debit in Execution.command_custody. -/
+Consumer: native value-arm debit in Execution.history. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem interp_contA (q : List Nat) (root : NativeEff) (completed : List (FiberId × ExitV))
     (table : RowTable) (name : EffName) (value : Val) :
@@ -26,7 +26,7 @@ theorem interp_contA (q : List Nat) (root : NativeEff) (completed : List (FiberI
   all_goals exact producer _ value
 
 /-- Every native cause callback carries no release registration credit.
-Consumer: native cause-arm debit in Execution.command_custody. -/
+Consumer: native cause-arm debit in Execution.history. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem interp_contE (q : List Nat) (root : NativeEff) (completed : List (FiberId × ExitV))
     (table : RowTable) (name : EffName) (cause : CauseV) :
@@ -35,7 +35,7 @@ theorem interp_contE (q : List Nat) (root : NativeEff) (completed : List (FiberI
   all_goals exact Evaluation.contE_credits q root _ cause
 
 /-- A stored iterator's reservation depends on its saved finalizers, not its answer cursor.
-Consumer: native iterator-arm debit in Execution.command_custody. -/
+Consumer: native iterator-arm debit in Execution.history. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem iterator_future (q : List Nat) (name : EffName) (a b : Val) :
     futureCredits q (.iterator name a) = futureCredits q (.iterator name b) := by
@@ -44,7 +44,7 @@ theorem iterator_future (q : List Nat) (name : EffName) (a b : Val) :
   all_goals rfl
 
 /-- A returned iterator body and its saved cursor split the iterator's credits.
-Consumer: native iterator-arm debit in Execution.command_custody. -/
+Consumer: native iterator-arm debit in Execution.history. -/
 def iterCredits (q : List Nat) : IterStep EffName EffThunk Val Err Defect FiberId Ann → Nat
   | .resume body name => currentCredits q body + futureCredits q (.iterator name Val.unit)
   | _ => 0
@@ -124,7 +124,7 @@ theorem closeSeq_credits (q : List Nat) (order : List FinName) (exit : ExitV)
     exact Nat.le_refl _
 
 /-- Every native iterator transfers only credits already present in its saved name.
-Consumer: native iterator-arm debit in Execution.command_custody. -/
+Consumer: native iterator-arm debit in Execution.history. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem interp_iter (q : List Nat) (root : NativeEff) (completed : List (FiberId × ExitV))
     (table : RowTable) (name : EffName) (value : Val) :
@@ -147,7 +147,7 @@ theorem interp_iter (q : List Nat) (root : NativeEff) (completed : List (FiberId
   all_goals exact Nat.le_refl _
 
 /-- Native loop callbacks produce source code whose registrations are not pushed yet.
-Consumer: native loop-arm debit in Execution.command_custody. -/
+Consumer: native loop-arm debit in Execution.history. -/
 def loopCredits (q : List Nat) : LoopNext Val NCode → Nat
   | .continue _ body | .finish body => currentCredits q body
 
@@ -170,7 +170,7 @@ theorem loopResume_credits (q : List Nat) (root : NativeEff) (p : Point) (cursor
   all_goals rfl
 
 /-- The actual completed-exit loop callback creates no prior registration credits.
-Consumer: native loop-arm debit in Execution.command_custody. -/
+Consumer: native loop-arm debit in Execution.history. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem interp_loopResume (q : List Nat) (root : NativeEff) (completed : List (FiberId × ExitV))
     (table : RowTable) (name : EffName) (cursor answer : Val) :
@@ -187,7 +187,7 @@ theorem store_cancel (q : List Nat) (name : Name) : currentCredits q (embed (can
     simp only [embed, currentCredits, opCredits, Names.actionCredits]
 
 /-- Actual asynchronous cancellation introduces no release registration credit.
-Consumer: native cause-arm debit in Execution.command_custody. -/
+Consumer: native cause-arm debit in Execution.history. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem cancel (q : List Nat) (name : EffName) : currentCredits q (cancelProgramOf name) = 0 := by
   fun_cases cancelProgramOf name <;>

@@ -7,7 +7,7 @@ import ProofGraph.Registry
 
 /-!
 Concept: scope-lifetime-finalization, R11, at most once per registration counted by source identity.
-Question: the assertion and decision lift consumed by `Execution.command_custody` and `Workers.Assertions.releases_step`.
+Question: the assertion and decision lift consumed by `Execution.history` and `Workers.Assertions.releases_step`.
 Reach: the actual native evaluator, scope allocation, native pending continuations, task snapshots and admitted decisions.
 Limit: the decision lift takes a command contract as premise and proves no progress or host behavior.
 Unlock: existing Machine.Lift transports the concrete custody assertion to whole admitted histories.
@@ -21,13 +21,13 @@ open Effect4 Effect4.Machine Effect4.Program
 open Effect4.Program.ReleaseCustody.Control
 
 /-- Existing scope rows have unique keys below the actual allocation supply.
-Consumer: `command_custody`, including scope creation and keyed scope credit transfer. -/
+Consumer: `history`, including scope creation and keyed scope credit transfer. -/
 def ScopeRows (m : NativeMachine) : Prop :=
   (m.state.scopes.entries.map ScopeEntry.key).Nodup ∧
     (∀ entry ∈ m.state.scopes.entries, entry.key < m.state.nextName) ∧ m.state.ScopeKeysFresh
 
 /-- Native countdowns resume with exits, void, or the saved exit's restore continuation.
-Consumer: `command_custody`, at the actual countdown observer transfer. -/
+Consumer: `history`, at the actual countdown observer transfer. -/
 def PendingShape (m : NativeMachine) : Prop :=
   ∀ fiber ∈ m.fibers, ∀ pending ∈ fiber.pending,
     pending.resumeWith = .exitsValue ∨ pending.resumeWith = .void ∨
