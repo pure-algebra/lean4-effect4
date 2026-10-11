@@ -1,4 +1,4 @@
-#axiom_audit: 441 declarations within [propext, Quot.sound], 2 of them modulo planned goals; 3 planned goals
+#axiom_audit: 505 declarations within [propext, Quot.sound], 2 of them modulo planned goals; 3 planned goals
 Test.Dogfood.Scenario.Workers.Assertions.history: modulo [Test.Dogfood.Scenario.Workers.Assertions.logs_step, Test.Dogfood.Scenario.Workers.Assertions.registrations_step, Test.Dogfood.Scenario.Workers.Assertions.releases_step]; nearest []; 0 lemmas, 0 definitions
 next goals: 3
   goal Test.Dogfood.Scenario.Workers.Assertions.logs_step : ∀ (total cf : Nat) (b : Api.Built) (m : Program.NativeMachine) (x : Nat × Program.NativeDecision),

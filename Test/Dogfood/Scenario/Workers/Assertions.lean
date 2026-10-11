@@ -242,6 +242,40 @@ theorem scope_add_custody_command (b : Api.Built) (cf : Nat) (m : NativeMachine)
         entryFound closing interrupt override budget
   exact ⟨allFunded, fun i hi => ReleaseCustody.Control.Funded.read (allFunded i hi)⟩
 
+/-- Actual scope close consumes the entry and carries its credit in the returned close program.
+Consumer: the scope-close command clause of `releases_step`.
+Distinct reachable scope-entry keys remain an explicit store premise. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem scope_close_custody_command (b : Api.Built) (cf : Nat) (m : NativeMachine)
+    (id : FiberId) (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx)
+    (yielding : Bool) (rest : List (Cmd EffName EffThunk Val Err Defect FiberId Ann))
+    (scope : Nat) (entry : ScopeEntry) (exit : ExitV) (held : Holds b cf m)
+    (funded : ∀ i ∈ [1, 2], ReleaseCustody.Control.Funded (acquirePath i) m (.loop id yielding :: rest))
+    (scopeUnique : (m.state.scopes.entries.map ScopeEntry.key).Nodup)
+    (found : m.fiber? id = some f)
+    (current : f.frame.current = .withFiber (.closeScope scope exit))
+    (entryFound : m.state.scopes.entryAt scope = some entry)
+    (interrupt : f.frame.deferredInterrupt = false) (override : f.yieldOverride = none)
+    (budget : f.currentOpCount + 1 < f.maxOpsBeforeYield) :
+    (∀ i ∈ [1, 2], ReleaseCustody.Control.Funded (acquirePath i)
+      (driveStep (evaluator := evaluatorFor b.program b.table) (interpOf b.program b.table) m
+        (.loop id yielding) rest).1
+      (driveStep (evaluator := evaluatorFor b.program b.table) (interpOf b.program b.table) m
+        (.loop id yielding) rest).2) ∧
+    ReleaseDebits (driveStep (evaluator := evaluatorFor b.program b.table) (interpOf b.program b.table) m
+      (.loop id yielding) rest).1 := by
+  have unique := (Guard.guardState_reachable b.program b.table cf m held.history.reachable).fiberIds
+  have allFunded : ∀ i ∈ [1, 2], ReleaseCustody.Control.Funded (acquirePath i)
+      (driveStep (evaluator := evaluatorFor b.program b.table) (interpOf b.program b.table) m
+        (.loop id yielding) rest).1
+      (driveStep (evaluator := evaluatorFor b.program b.table) (interpOf b.program b.table) m
+        (.loop id yielding) rest).2 := by
+    intro i hi
+    exact ReleaseCustody.Control.scope_close_loop_funded b.program b.table m id f yielding rest
+      (acquirePath i) scope entry exit unique scopeUnique (funded i hi) found current entryFound
+      interrupt override budget
+  exact ⟨allFunded, fun i hi => ReleaseCustody.Control.Funded.read (allFunded i hi)⟩
+
 /-- Registration preservation obligation of `releases_once`.
 Reach: actual crew histories, all budgets, controls and admitted host answers.
 It needs the static acquisition placement and the control-source provenance invariant.
