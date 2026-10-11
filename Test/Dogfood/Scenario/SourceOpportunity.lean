@@ -1,6 +1,6 @@
 import Test.Dogfood.Scenario.Atomic.SourcePaths
 import Test.Dogfood.Scenario.SourceUse
-import Effect4.Laws.Program.SourceOpportunityFrames
+import Effect4.Laws.Program.SourceOpportunityEvaluation
 
 /-!
 Concept: scope-lifetime-finalization R11.
@@ -270,5 +270,43 @@ theorem atomic_resume_value_debit (compileFuel : Nat) (b : Api.Built)
   have owned := (Effect4.Program.SourceScope.configuration_fiber b.program m id fiber source found).frame
   exact resumeValue_le b.program _ (atomic_all_clear b built i member) (atomic_loops_clear b built i member)
     m.completedExits b.table fiber.frame value provided owned
+
+/-- Every actual Workers frame step spends its recorded source opportunity.
+Both acquisitions retain every job count, compile budget and admitted decision history. -/
+theorem workers_frame_step_debit (total compileFuel : Nat) (b : Api.Built)
+    (built : Api.Author.build (Workers.crew total) = .ok b) (m : NativeMachine)
+    (history : Effect4.Run.HistoryOf b compileFuel m) (id : FiberId)
+    (fiber : Effect4.Program.SourceScope.SourceFiber) (found : m.fiber? id = some fiber)
+    (i : Nat) (member : i ∈ [1, 2]) :
+    let stepped := fiber.frame.step (interpAt b.program m.completedExits b.table).toPrimInterp
+    returned b.program (Programs.crewAcquire i) stepped.1 +
+      (stepped.2.map (event (Programs.crewAcquire i))).sum ≤
+      frame b.program (Programs.crewAcquire i) fiber.frame := by
+  have source := SourceFragment.workers_admitted_history_at total compileFuel b built m history
+  have owned := (Effect4.Program.SourceScope.configuration_fiber b.program m id fiber source found).frame
+  have clearFin : ClearFinalizers b.program (Programs.crewAcquire i) := by
+    rw [Programs.workers_built_program total b built]
+    exact workers_clear total i member
+  have clearLoop : ClearLoops b.program (Programs.crewAcquire i) := by
+    rw [Programs.workers_built_program total b built]
+    exact workers_loops_clear total i member
+  exact frame_step_debit b.program _ (SourceFragment.workers_built_fragment total b built)
+    clearFin clearLoop m.completedExits b.table fiber.frame owned
+
+/-- Every actual Atomic frame step funds its push at all six request addresses. -/
+theorem atomic_frame_step_debit (compileFuel : Nat) (b : Api.Built)
+    (built : Api.Author.build (Atomic.shop .none) = .ok b) (m : NativeMachine)
+    (history : Effect4.Run.HistoryOf b compileFuel m) (id : FiberId)
+    (fiber : Effect4.Program.SourceScope.SourceFiber) (found : m.fiber? id = some fiber)
+    (i : Nat) (member : i ∈ Atomic.requests) :
+    let stepped := fiber.frame.step (interpAt b.program m.completedExits b.table).toPrimInterp
+    returned b.program (Atomic.SourcePaths.requestPath i) stepped.1 +
+      (stepped.2.map (event (Atomic.SourcePaths.requestPath i))).sum ≤
+      frame b.program (Atomic.SourcePaths.requestPath i) fiber.frame := by
+  have fragment := SourceFragment.atomic_built_fragment b built
+  have source := Effect4.Program.SourceScope.admitted_history_at b fragment compileFuel m history
+  have owned := (Effect4.Program.SourceScope.configuration_fiber b.program m id fiber source found).frame
+  exact frame_step_debit b.program _ fragment (atomic_all_clear b built i member)
+    (atomic_loops_clear b built i member) m.completedExits b.table fiber.frame owned
 
 end Test.Dogfood.Scenario.SourceOpportunity
