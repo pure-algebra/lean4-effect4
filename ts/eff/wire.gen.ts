@@ -434,6 +434,7 @@ const writeActionTerm = (w: Writer, v: ActionTerm): void => {
     case "getId": return w.ctor(14, [])
     case "closeScope": return w.ctor(15, [() => writeTerm(w, v.scope), () => writeTerm(w, v.exit)])
     case "getInterruptible": return w.ctor(16, [])
+    case "raceAllFirst": return w.ctor(17, [() => writeEffs(w, v.entrants)])
     default: throw new TypeError("wire ActionTerm constructor")
   }
 }

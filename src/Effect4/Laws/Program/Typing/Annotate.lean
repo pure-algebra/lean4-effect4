@@ -697,7 +697,7 @@ theorem Annotate.checkAction_eq (s : Signature Op) (a : ActionTerm Op) (env : Ty
     conv in (occs := *) Node.child _ _ => all_goals whnf
     simp only [Option.bind_some, Node.childEnv, NodeEnv.tyEnv, List.append_nil]
     rfl
-  | .raceAll entrants => by
+  | .raceAll entrants | .raceAllFirst entrants => by
     rw [tableAt_eq_cons]
     simp only [Annotate.checkAction, Annotate.checkEffs_eq s entrants, nodeAnswer, childTableAt]
     conv in (occs := *) Node.child _ _ => all_goals whnf

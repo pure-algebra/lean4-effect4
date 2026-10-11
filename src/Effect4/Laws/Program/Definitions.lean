@@ -228,6 +228,7 @@ theorem defs_check_agreeOn (sig : Signature Op) (decls : List DefDecl) :
     action_snapshotChildren := rfl
     action_awaitNewChildren := by simp only [Checker.check.alg, hterm]
     action_raceAll := rfl
+    action_raceAllFirst := rfl
     action_setContext := by simp only [Checker.check.alg, hterm]
     action_getContext := rfl
     action_getId := rfl

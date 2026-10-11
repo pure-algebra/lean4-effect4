@@ -286,6 +286,9 @@ theorem checkAction_sound (sig : Signature Op) (action : ActionTerm Op) :
   | raceAll entrants =>
     intro env p t h
     exact .raceAll (checkEffs_sound sig entrants env _ [] t (inv_action_raceAll sig env p entrants t h))
+  | raceAllFirst entrants =>
+    intro env p t h
+    exact .raceAllFirst (checkEffs_sound sig entrants env _ [] t (inv_action_raceAllFirst sig env p entrants t h))
   | setContext context =>
     intro env p t h
     obtain ⟨contextTy, hc, hsub, rfl⟩ := inv_action_setContext sig env p context t h
@@ -573,6 +576,10 @@ theorem checkAction_complete (sig : Signature Op) (action : ActionTerm Op) :
   | snapshotChildren => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
   | awaitNewChildren snapshot => intro env t hd p; cases hd; aesop (rule_sets := [Effect4.Checker])
   | raceAll entrants =>
+    intro env t hd p; cases hd
+    have ih := checkEffs_complete sig entrants _ _ _ ‹EffsHasTy sig _ [] entrants _› (p ++ [0])
+    aesop (rule_sets := [Effect4.Checker])
+  | raceAllFirst entrants =>
     intro env t hd p; cases hd
     have ih := checkEffs_complete sig entrants _ _ _ ‹EffsHasTy sig _ [] entrants _› (p ++ [0])
     aesop (rule_sets := [Effect4.Checker])

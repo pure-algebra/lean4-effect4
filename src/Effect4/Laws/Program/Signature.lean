@@ -235,6 +235,7 @@ theorem actionHasTy_ext (h : SigExtends s s') :
   | _, _, _, .snapshotChildren => .snapshotChildren
   | _, _, _, .awaitNewChildren ht hsub => .awaitNewChildren ((h.termTy _ _).trans ht) hsub
   | _, _, _, .raceAll he => .raceAll (effsHasTy_ext h he)
+  | _, _, _, .raceAllFirst he => .raceAllFirst (effsHasTy_ext h he)
   | _, _, _, .setContext ht hsub => .setContext ((h.termTy _ _).trans ht) hsub
   | _, _, _, .getContext => .getContext
   | _, _, _, .getId => .getId
@@ -439,6 +440,7 @@ structure EffAlgebra.AgreeOn {Op : Type} {R : EffFam → Type u} (alg₁ alg₂ 
   action_snapshotChildren : alg₁.action_snapshotChildren = alg₂.action_snapshotChildren
   action_awaitNewChildren : alg₁.action_awaitNewChildren = alg₂.action_awaitNewChildren
   action_raceAll : alg₁.action_raceAll = alg₂.action_raceAll
+  action_raceAllFirst : alg₁.action_raceAllFirst = alg₂.action_raceAllFirst
   action_setContext : alg₁.action_setContext = alg₂.action_setContext
   action_getContext : alg₁.action_getContext = alg₂.action_getContext
   action_getId : alg₁.action_getId = alg₂.action_getId
@@ -512,6 +514,7 @@ def readsAlg {Op : Type} (okOp : Op → Prop) (okKey : ServiceKey → Prop) (okD
   action_snapshotChildren := True
   action_awaitNewChildren _ := True
   action_raceAll r0 := r0
+  action_raceAllFirst r0 := r0
   action_setContext _ := True
   action_getContext := True
   action_getId := True
@@ -728,6 +731,9 @@ theorem cata_action_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey okDef) (e : A
   | raceAll a0 =>
     show alg₁.action_raceAll (cata_effs alg₁ a0) = alg₂.action_raceAll (cata_effs alg₂ a0)
     rw [h.action_raceAll, cata_effs_congr_on h a0 hr]
+  | raceAllFirst a0 =>
+    show alg₁.action_raceAllFirst (cata_effs alg₁ a0) = alg₂.action_raceAllFirst (cata_effs alg₂ a0)
+    rw [h.action_raceAllFirst, cata_effs_congr_on h a0 hr]
   | setContext a0 =>
     show alg₁.action_setContext a0 = alg₂.action_setContext a0
     rw [h.action_setContext]
@@ -921,6 +927,7 @@ theorem check_alg_agreeOn {Op : Type} {s s' : Signature Op} (h : SigExtends s s'
     action_snapshotChildren := rfl
     action_awaitNewChildren := by simp only [Checker.check.alg, hterm]
     action_raceAll := rfl
+    action_raceAllFirst := rfl
     action_setContext := by simp only [Checker.check.alg, hterm]
     action_getContext := rfl
     action_getId := rfl

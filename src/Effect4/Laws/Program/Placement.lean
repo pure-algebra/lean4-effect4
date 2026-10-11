@@ -40,6 +40,7 @@ def onceChild : Node NativeOp → Nat → Bool
   | .action (.forkIn _ _ _), 0 => true
   | .action (.forkScoped _ _), 0 => true
   | .action (.raceAll _), 0 => true
+  | .action (.raceAllFirst _), 0 => true
   | .effs (.cons _ _), _ => true
   | .stmts (.cons _ _), _ => true
   | .stmt (.bindYield _), 0 => true

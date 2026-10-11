@@ -133,6 +133,7 @@ theorem actionHasTy_expandRound :
   | _, _, _, .snapshotChildren => rfl
   | _, _, _, .awaitNewChildren _ _ => rfl
   | _, _, _, .raceAll he => congrArg ActionTerm.raceAll (effsHasTy_expandRound he)
+  | _, _, _, .raceAllFirst he => congrArg ActionTerm.raceAllFirst (effsHasTy_expandRound he)
   | _, _, _, .setContext _ _ => rfl
   | _, _, _, .getContext => rfl
   | _, _, _, .getId => rfl

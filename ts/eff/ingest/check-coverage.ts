@@ -72,7 +72,8 @@ function action(v: unknown): void {
     case "snapshotChildren": case "awaitNewChildren": case "setContext": case "getContext": case "getId": case "closeScope":
     case "getInterruptible": return
     case "fork": case "forkIn": case "forkScoped": eff(a[1]); return
-    case "raceAll": chain(a[1], eff); return
+    case "raceAll":
+    case "raceAllFirst": chain(a[1], eff); return
     default: return noCase(tag, "ActionTerm")
   }
 }

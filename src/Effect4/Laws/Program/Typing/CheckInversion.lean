@@ -439,6 +439,11 @@ theorem inv_action_raceAll (sig : Signature Op) (env : TyEnv) (p : List Nat) (en
       checkEffs sig env (p ++ [0]) [] entrants = .ok t := by
   aesop (rule_sets := [Effect4.Checker])
 
+theorem inv_action_raceAllFirst (sig : Signature Op) (env : TyEnv) (p : List Nat) (entrants : Effs Op) :
+    ∀ t, checkAction sig env p (.raceAllFirst entrants) = .ok t →
+      checkEffs sig env (p ++ [0]) [] entrants = .ok t := by
+  aesop (rule_sets := [Effect4.Checker])
+
 theorem inv_action_setContext (sig : Signature Op) (env : TyEnv) (p : List Nat) (context : Term) :
     ∀ t, checkAction sig env p (.setContext context) = .ok t →
       ∃ contextTy, termTy sig env context = some contextTy ∧

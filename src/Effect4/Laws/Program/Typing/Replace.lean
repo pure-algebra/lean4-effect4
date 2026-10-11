@@ -385,6 +385,10 @@ theorem NodeHasTy.child_step {s : Signature Op} {n c : Node Op} {τ : NodeTy Op}
   · cases hn with | action ha => cases ha with | raceAll he =>
     exact ⟨_, .effs he, rfl, fun _ hc' hs => by
       cases hc' with | effs hx => cases hs; exact .action (.raceAll hx)⟩
+  -- action (.raceAllFirst a0), 0
+  · cases hn with | action ha => cases ha with | raceAllFirst he =>
+    exact ⟨_, .effs he, rfl, fun _ hc' hs => by
+      cases hc' with | effs hx => cases hs; exact .action (.raceAllFirst hx)⟩
   -- layer (.effect _ a1), 0
   · cases hn with | layer hl => cases hl with | effect hb hk hsub =>
     exact ⟨_, .eff hb, rfl, fun h hc' hs => by

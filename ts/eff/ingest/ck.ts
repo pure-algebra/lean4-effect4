@@ -148,7 +148,8 @@ function walkProgram(program: Eff, onLayer: (l: LayerTerm, path: readonly number
   const action = (a: ActionTerm, path: readonly number[]): ActionTerm => {
     switch (a._tag) {
       case "fork": case "forkIn": case "forkScoped": return { ...a, program: eff(a.program, [...path, 0]) }
-      case "raceAll": return { ...a, entrants: spine(a.entrants, [...path, 0], eff) }
+      case "raceAll":
+      case "raceAllFirst": return { ...a, entrants: spine(a.entrants, [...path, 0], eff) }
       case "runIn": case "interrupt": case "interruptScoped": case "interruptAll": case "awaitAll": case "awaitAllFailFast":
       case "snapshotChildren": case "awaitNewChildren": case "setContext": case "getContext": case "getId": case "closeScope":
       case "getInterruptible": return a
@@ -599,6 +600,7 @@ class CompilerReader {
       case "Effect.context": this.arity(a, 0); return { _tag: "withFiber", action: { _tag: "getContext" } }
       case "Scope.close": this.arity(a, 2); return { _tag: "withFiber", action: { _tag: "closeScope", scope: t(0), exit: t(1) } }
       case "Effect.raceAll": { this.arity(a, 1); const list = this.unwrap(arg(0)); if (list.type !== "ArrayExpression") return bad("entrants"); return { _tag: "withFiber", action: { _tag: "raceAll", entrants: elementsOf(list).map(y => this.eff(y, env)) } } }
+      case "Effect.raceAllFirst": { this.arity(a, 1); const list = this.unwrap(arg(0)); if (list.type !== "ArrayExpression") return bad("entrants"); return { _tag: "withFiber", action: { _tag: "raceAllFirst", entrants: elementsOf(list).map(y => this.eff(y, env)) } } }
       case "Effect.withFiber": {
         this.arity(a, 1); const fn = this.arrow(arg(0), env, 0)
         if (fn.body.type !== "BlockStatement" || fn.body.body.length !== 2) return bad("runIn callback")

@@ -1515,6 +1515,7 @@ theorem actionHasTy_closed (hsig : ClosedSig sig) :
   | _, _, _, .snapshotChildren, _, _ => ⟨rfl, rfl⟩
   | _, _, _, .awaitNewChildren _ _, _, _ => ⟨rfl, rfl⟩
   | _, _, _, .raceAll he, henv, hs => effsHasTy_closed hsig he henv hs.2
+  | _, _, _, .raceAllFirst he, henv, hs => effsHasTy_closed hsig he henv hs.2
   | _, _, _, .setContext _ _, _, _ => ⟨rfl, rfl⟩
   | _, _, _, .getContext, _, _ => ⟨rfl, rfl⟩
   | _, _, _, .getId, _, _ => ⟨rfl, rfl⟩

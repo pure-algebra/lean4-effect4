@@ -243,6 +243,7 @@ export const actionTermJson = (v: ActionTerm): Json => {
     case "getId": return ["getId"]
     case "closeScope": return ["closeScope", termJson(v.scope), termJson(v.exit)]
     case "getInterruptible": return ["getInterruptible"]
+    case "raceAllFirst": return ["raceAllFirst", effsJson(v.entrants)]
   }
 }
 

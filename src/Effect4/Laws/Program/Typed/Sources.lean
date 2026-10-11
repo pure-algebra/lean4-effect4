@@ -101,6 +101,7 @@ def hookSources : List Row := [
   ("Effect4.Machine.WithFiberAction.forkIn.program", .hook none),
   ("Effect4.Machine.WithFiberAction.forkScoped.program", .hook none),
   ("Effect4.Machine.WithFiberAction.raceAll.entrants", .hook none),
+  ("Effect4.Machine.WithFiberAction.raceAllFirst.entrants", .hook none),
   ("Effect4.Machine.WithFiberAction.setInterruptible.body", .hook none),
   ("Effect4.Machine.WithFiberAction.closeScope.exit", .hook none),
   ("Effect4.Machine.WithFiberAction.closePar.finalizers", .hook none),

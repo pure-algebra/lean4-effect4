@@ -2229,7 +2229,7 @@ export const childrenOf = (n: IrNode): ReadonlyArray<Child> => {
         case "fork": return [atEff(a.program, (program) => kAction({ ...a, program }))]
         case "forkIn": return [atEff(a.program, (program) => kAction({ ...a, program }))]
         case "forkScoped": return [atEff(a.program, (program) => kAction({ ...a, program }))]
-        case "raceAll": return [atEffs(a.entrants, (entrants) => kAction({ ...a, entrants }))]
+        case "raceAll": case "raceAllFirst": return [atEffs(a.entrants, (entrants) => kAction({ ...a, entrants }))]
         case "runIn": case "interrupt": case "interruptScoped": case "interruptAll": case "awaitAll": case "awaitAllFailFast":
         case "snapshotChildren": case "awaitNewChildren": case "setContext": case "getContext": case "getId": case "closeScope":
         case "getInterruptible":

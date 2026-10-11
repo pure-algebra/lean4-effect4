@@ -448,6 +448,10 @@ inductive ActionHasTy (sig : Signature Op) : TyEnv → ActionTerm Op → EffTy �
   | raceAll {env : TyEnv} {entrants : Effs Op} {t : EffTy} :
       EffsHasTy sig env [] entrants t →
       ActionHasTy sig env (.raceAll entrants) t
+  /-- `raceAllFirst`: the same joined entrant type, with first-exit selection. -/
+  | raceAllFirst {env : TyEnv} {entrants : Effs Op} {t : EffTy} :
+      EffsHasTy sig env [] entrants t →
+      ActionHasTy sig env (.raceAllFirst entrants) t
   /-- `setContext` (`:709-727`): a `Context.Context<unknown>` handle in, `void` out. -/
   | setContext {env : TyEnv} {context : Term} {contextTy : Ty} :
       termTy sig env context = some contextTy →

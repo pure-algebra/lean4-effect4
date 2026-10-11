@@ -33,7 +33,7 @@
 //   Stmt (Effect4.Program.Stmt, tagged union): bindYield(effect: Eff) yieldDiscard(effect: Eff) ret(value: Term) ifElse(test: Term, thenB: ReadonlyArray<Stmt>, elseB: ReadonlyArray<Stmt>) whileTrue(body: ReadonlyArray<Stmt>) breakLoop
 //   Stmts (Effect4.Program.Stmts, ReadonlyArray<Stmt>): nil cons(head: Stmt, tail: ReadonlyArray<Stmt>)
 //   Effs (Effect4.Program.Effs, ReadonlyArray<Eff>): nil cons(head: Eff, tail: ReadonlyArray<Eff>)
-//   ActionTerm (Effect4.Program.ActionTerm, tagged union): fork(program: Eff, options: ForkOptions) forkIn(program: Eff, options: ForkOptions, scope: Term) forkScoped(program: Eff, options: ForkOptions) runIn(target: Term, scope: Term) interrupt(target: Term) interruptScoped(target: Term) interruptAll(targets: Term, interruptor: Term | null) awaitAll(targets: Term) awaitAllFailFast(targets: Term) snapshotChildren awaitNewChildren(snapshot: Term) raceAll(entrants: ReadonlyArray<Eff>) setContext(context: Term) getContext getId closeScope(scope: Term, exit: Term) getInterruptible
+//   ActionTerm (Effect4.Program.ActionTerm, tagged union): fork(program: Eff, options: ForkOptions) forkIn(program: Eff, options: ForkOptions, scope: Term) forkScoped(program: Eff, options: ForkOptions) runIn(target: Term, scope: Term) interrupt(target: Term) interruptScoped(target: Term) interruptAll(targets: Term, interruptor: Term | null) awaitAll(targets: Term) awaitAllFailFast(targets: Term) snapshotChildren awaitNewChildren(snapshot: Term) raceAll(entrants: ReadonlyArray<Eff>) setContext(context: Term) getContext getId closeScope(scope: Term, exit: Term) getInterruptible raceAllFirst(entrants: ReadonlyArray<Eff>)
 //   LayerTerm (Effect4.Program.LayerTerm, tagged union): succeed(key: ServiceKey, value: Lit) effect(key: ServiceKey, body: Eff) effectDiscard(body: Eff) provide(self: LayerTerm, that: LayerTerm) provideMerge(self: LayerTerm, that: LayerTerm) merge(left: LayerTerm, right: LayerTerm) fresh(inner: LayerTerm) orDie(inner: LayerTerm) ref(target: ReadonlyArray<number>) mergeAll(layers: ReadonlyArray<LayerTerm>)
 //   LayerTerms (Effect4.Program.LayerTerms, ReadonlyArray<LayerTerm>): nil cons(head: LayerTerm, tail: ReadonlyArray<LayerTerm>)
 //   RowKind (Effect4.Program.RowKind, literals): sync async program
@@ -388,6 +388,7 @@ export type ActionTerm =
   | { readonly _tag: "getId" }
   | { readonly _tag: "closeScope"; readonly scope: Term; readonly exit: Term }
   | { readonly _tag: "getInterruptible" }
+  | { readonly _tag: "raceAllFirst"; readonly entrants: ReadonlyArray<Eff> }
 
 export const ActionTerm = Schema.TaggedUnion({
   fork: { program: Schema.suspend((): Schema.Codec<Eff> => Eff), options: ForkOptions },
@@ -407,6 +408,7 @@ export const ActionTerm = Schema.TaggedUnion({
   getId: {},
   closeScope: { scope: Schema.suspend((): Schema.Codec<Term> => Term), exit: Schema.suspend((): Schema.Codec<Term> => Term) },
   getInterruptible: {},
+  raceAllFirst: { entrants: Schema.Array(Schema.suspend((): Schema.Codec<Eff> => Eff)) },
 })
 
 export type LayerTerm =

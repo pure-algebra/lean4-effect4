@@ -111,6 +111,7 @@ theorem Annotate.check_alg_agreeOn {s s' : Signature Op} (h : SigExtends s s') :
     action_snapshotChildren := rfl
     action_awaitNewChildren := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
     action_raceAll := rfl
+    action_raceAllFirst := rfl
     action_setContext := by simp only [Annotate.check.alg, Checker.check, Checker.checkAction, Checker.checkStmt, Checker.checkLayer, hterm, hcause, hbody, h.scopeKey]
     action_getContext := rfl
     action_getId := rfl
@@ -303,7 +304,7 @@ theorem actionHasTy_sigProgram {s : Signature Op} :
   | _, _, _, .awaitAllFailFast _ _ _ => True.intro
   | _, _, _, .snapshotChildren => True.intro
   | _, _, _, .awaitNewChildren _ _ => True.intro
-  | _, _, _, .raceAll he =>
+  | _, _, _, .raceAll he | _, _, _, .raceAllFirst he =>
     have hchild := effsHasTy_sigProgram he
     hchild
   | _, _, _, .setContext _ _ => True.intro

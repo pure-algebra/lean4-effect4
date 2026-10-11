@@ -589,7 +589,7 @@ class Normalize {
       return call(h, [{ _tag: "arrow", body: this.program(body, env) }])
     }
     if (h === "Effect.failCause") { arity(1); return call(h, [this.cause(arg(0), env)]) }
-    if (h === "Effect.raceAll") { arity(1); const a = unwrap(arg(0)); if (a.type !== "ArrayExpression") return reject("E-BIND-SHAPE", "entrants"); return call(h, [{ _tag: "arr", items: list(a, "elements").map(x => this.program(x, env)) }]) }
+    if (h === "Effect.raceAll" || h === "Effect.raceAllFirst") { arity(1); const a = unwrap(arg(0)); if (a.type !== "ArrayExpression") return reject("E-BIND-SHAPE", "entrants"); return call(h, [{ _tag: "arr", items: list(a, "elements").map(x => this.program(x, env)) }]) }
     if (h === "Effect.withFiber") {
       arity(1); const f = unwrap(arg(0)), ss = list(node(f, "body"), "body")
       if (f.type !== "ArrowFunctionExpression" || list(f, "params").length || ss.length !== 2 || ss[0]!.type !== "ExpressionStatement" || ss[1]!.type !== "ReturnStatement") return reject("E-ARG-CLOSURE", "withFiber")
