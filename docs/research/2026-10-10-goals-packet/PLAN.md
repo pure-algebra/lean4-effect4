@@ -281,3 +281,10 @@ Source uniqueness and the relational application history remain separate obligat
 Unique command owners protect the queued suffix during an active owner's stack change.
 The audit finds no planned dependencies in these helpers.
 Actual command closure and whole-history custody remain open.
+
+## Checked administrative command execution
+
+`codex/CommandStackStepsReceipt.md` records all unowned command stack transports and exited-owner separation.
+The countdown observer case includes its nested interruptions and later waiter update.
+The audit finds no planned dependencies in these helpers.
+Whole-history release custody remains open.

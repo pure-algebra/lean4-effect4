@@ -1,4 +1,4 @@
-import Effect4.Laws.Program.ReleaseCustody.CommandStacks
+import Effect4.Laws.Program.ReleaseCustody.CommandStackSteps
 import Effect4.Api
 
 /-!
@@ -19,5 +19,15 @@ example (root : NativeEff) (fuel : Nat) (table : RowTable) (who : Option FiberId
   dsimp only
   apply interrupt_links
   rfl
+
+/-- A resume offered to the loaded root retains the original stack. -/
+example (root : NativeEff) (fuel : Nat) (table : RowTable) (answer : Val) :
+    letI := evaluatorFor root table
+    StackLinks (Api.load root fuel)
+      (driveStep (interpOf root table) (Api.load root fuel)
+        (.resume Api.root 0 (.success answer)) []).1 := by
+  apply unowned_command_links root table _ _ [] rfl
+  intro id equal
+  cases equal
 
 end Test.Program.CommandStacks
