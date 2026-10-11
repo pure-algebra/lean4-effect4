@@ -34,7 +34,7 @@ at `codex/last-planned-goals` `23d070d77`:
 | `Machine/Ledger` | 520 | 15 (`same_*`) | — | the stack ledger's bookkeeping |
 
 `Machine/Clauses` also has 43 helper theorems. It stays: each is a census witness of one rc.112
-arm, a clause of what the machine does, not a preservation proof.
+arm, a clause of what the machine does. It proves no invariant.
 
 `Handles` splits by section:
 
