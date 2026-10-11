@@ -16,6 +16,9 @@ days.
 - **The Timeout chain re-does every command and evaluator arm**, over 36 files. Its open numeric
   producer would do them a third time.
 
+**Read `AUDIT.md` in this folder at the start of every slice.** Claude appends to it at each merge,
+and its newest section names the regressions to replace first.
+
 **Stop adding per-scenario machinery.** Each new fact goes into a shared structure below, or is an
 instance of one. Speed rules (owner, 2026-10-11): narrow builds and `#axiom_audit` per slice.
 Behaviour gates only where a slice changes executable code, and then at a sweep.
