@@ -159,6 +159,17 @@ Behaviour gates only where a slice changes executable code, and then at a sweep.
    `~/.codex/worktrees/module-design-review/lean4-effect4`, then delete the branch.
 9. **L4 to L6** at any time: `AppendOnly` and `FreshSupply` for ids, keys and tokens; `Census` and
    `Linear` for the static site analyses. Reconcile `OncePlaced` with `Linear` in the receipt.
+10. **Machine edits: one word per helper, one fact per edit** (audit, 2026-10-11; the design,
+    census and order are `../2026-10-11-tokens-in-places/machine-edits.md`). Sixteen law modules
+    re-prove their invariants through every driver helper, about 210 helper lemmas. Make each
+    helper a word of primitive edits, proved once, and each invariant a fact per edit.
+    - The probe `../2026-10-11-tokens-in-places/probes/MachineEdits.lean` compiles: `spawn` is its
+      word by `rfl`, `start` and `postTask` by one case split, and trace growth and the frame rule
+      hold for every word by one induction each.
+    - Start right after the build repair. Steps 1 to 4 of the note's §4 do not touch R2's helpers:
+      the alphabet, the R2-free decompositions, the `Approximation` pilot, then `Ledger.Same`.
+    - R2's migration delivers its helpers' words (step 5). Then `MaskRuns`, `Handles` and the
+      guard modules move, keeping every statement.
 
 ## How to work
 
