@@ -274,3 +274,32 @@ Placement: a red control for the amended translation-simulation R10 retry claim.
 Consumer: the retained original proposition and the amended timeout observation.
 Scope: two fixed Lean scripts and their complete observed exits; no general runtime agreement.
 The three universal timeout goals and reached behaviour gates remain open in the coordinator's lane.
+
+## Current-prefix payload support
+
+The remaining stale-reply clause needs reachable source value flow.
+The new payload ledger does not close that clause.
+`application_payload` identifies the exact accepted receipt selected at a successful application.
+It reads the current journal prefix and preserves the complete completion.
+It admits no future submitted value into that receipt set.
+
+- Base: `40e9f7ed7483742411e7dd51d78ad42817cf2994`.
+- Files: `Test/Dogfood/Proofs/HostPayloads.lean`, `Test/Dogfood/Proofs/HostPayloadsAudit.lean`, and this receipt.
+- Command: `LEAN_NUM_THREADS=3 lake build Test.Dogfood.Proofs.HostPayloads`.
+- Result: all 967 jobs pass; the support module builds in 2.8 seconds.
+- Command: `LEAN_NUM_THREADS=3 lake env lean Test/Dogfood/Proofs/HostPayloadsAudit.lean`.
+- Axiom result: 17 declarations within `[propext, Quot.sound]`; zero modulo declarations; zero planned goals.
+- Placement: `host-session-protocol`, R6, the value-flow step of `stale_never_applies` clause four.
+- Consumer: `application_payload` uses the reached payload ledger and the existing preflight envelope law.
+- Open: the attempt, race and retry cursor must carry that exact receipt's successful body to the root.
+
+`Typed.Commands.Clauses.All.reachable_typed` requires ghost `AdmittedTape` and runs the reference interpreter at the empty row table.
+`Typed.Results.root_exit_hasTy` retains both limits.
+`Typed.AnswerSchema.answerOk_of_decode` requires a supplied token declaration in the ghost world.
+These endpoints do not establish the needed table-aware session admission connector.
+No annotation-erasure change follows from that inspection.
+
+An early-interruption finite probe tests four start, yield, flush and cancel scripts.
+Each satisfies the cleanup predicate.
+The probe does not prove cleanup over arbitrary scripts.
+The root-answer clause, the returned-failure retry clause and the cleanup clause remain planned goals.
