@@ -1,6 +1,6 @@
 import Test.Dogfood.Scenario.Programs
 import Test.Dogfood.Scenario.Frame
-import Effect4.Laws.Program.ReleaseTrace
+import Effect4.Laws.Program.ReleaseCustody
 
 /-!
 # Workers cleanup assertions at every command boundary
@@ -115,6 +115,26 @@ theorem yield_step (b : Api.Built) (cf fuel : Nat) (m : NativeMachine)
   · unfold LogDebits log
     rw [same.1, same.2]
     exact hm.logs
+
+/-- The actual crew release-start loop consumes available credits at its certified acquisition paths.
+Step of `releases_step`: whole-configuration custody must supply `available` at each pending start.
+This local clause keeps the native table, other fibers, stack and unfinished commands. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem release_command (b : Api.Built) (m : NativeMachine) (id : FiberId)
+    (f : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) (yielding : Bool)
+    (rest : List (Cmd EffName EffThunk Val Err Defect FiberId Ann)) (c : Capture) (exit : ExitV)
+    (found : m.fiber? id = some f)
+    (current : f.frame.current = suspendBodyAt b.program (.store (.foreign c exit)))
+    (interrupt : f.frame.deferredInterrupt = false) (override : f.yieldOverride = none)
+    (budget : f.currentOpCount + 1 < f.maxOpsBeforeYield)
+    (available : ∀ i ∈ [1, 2], m.trace.countP (releaseAt (acquirePath i)) +
+      ReleaseCustody.credit (acquirePath i) (.foreign c) ≤
+      m.trace.countP (registeredAt (acquirePath i))) :
+    ReleaseDebits (driveStep (evaluator := evaluatorFor b.program b.table)
+      (interpOf b.program b.table) m (.loop id yielding) rest).1 := by
+  intro i hi
+  exact ReleaseCustody.release_loop_debit b.program b.table m id f yielding rest
+    (acquirePath i) c exit found current interrupt override budget (available i hi)
 
 /-- Registration preservation obligation of `releases_once`.
 Reach: actual crew histories, all budgets, controls and admitted host answers.
