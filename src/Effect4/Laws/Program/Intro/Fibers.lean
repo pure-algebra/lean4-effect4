@@ -170,6 +170,16 @@ theorem intro_withFiber (root : NativeEff) (n : Nat) (a : ActionTerm NativeOp) (
         at_child_of (n := .action (.raceAll es)) (at_child_of h 0) 0
       obtain ⟨hlen, hc⟩ := entrants_intro root n ih es _ hw00 hes
       exact CodeMeans.actRaceAll _ _ _ _ ht hlen hc delivers_pure
+    | raceAllFirst entrants site =>
+      obtain ⟨es, rfl, rfl⟩ := actionAt_raceAllFirst h hact
+      have hpts : racePoints root p = entrantPoints es ((p.child 0).child 0) := by
+        simp only [racePoints, h]
+      show CodeMeans root _ (.vis (.inr (.raceAllFirst (racePoints root p) site)) Effects.Program.pure)
+      rw [hpts]
+      have hes : Node.at_ (.eff root) ((p.child 0).child 0).path = some (.effs es) :=
+        at_child_of (n := .action (.raceAllFirst es)) (at_child_of h 0) 0
+      obtain ⟨hlen, hc⟩ := entrants_intro root n ih es _ hw00 hes
+      exact CodeMeans.actRaceAllFirst _ _ _ _ ht hlen hc delivers_pure
     | setInterruptible body flag => exact (actionAt_not_setInterruptible h hact).elim
     | setContext ctx => exact CodeMeans.actSetContext _ _ _ ht (successV root)
     | getContext => exact CodeMeans.actGetContext _ _ ht (successV root)

@@ -192,6 +192,12 @@ theorem actionAt_raceAll {site : Option (List Nat)} {entrants : List NCode}
     ∃ es, a = .raceAll es ∧ entrants = actionAt.entrants es ((p.child 0).child 0) := by
   cases a <;> simp only [actionAt, h, Option.some.injEq] at hact <;> (repeat' split at hact) <;>
     cases hact; exact ⟨_, rfl, rfl⟩
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
+theorem actionAt_raceAllFirst {site : Option (List Nat)} {entrants : List NCode}
+    (hact : actionAt root p = some (.raceAllFirst entrants site)) :
+    ∃ es, a = .raceAllFirst es ∧ entrants = actionAt.entrants es ((p.child 0).child 0) := by
+  cases a <;> simp only [actionAt, h, Option.some.injEq] at hact <;> (repeat' split at hact) <;>
+    cases hact; exact ⟨_, rfl, rfl⟩
 
 theorem actionAt_not_setInterruptible {body : NCode} {flag : Bool}
     (hact : actionAt root p = some (.setInterruptible body flag)) : False := by

@@ -6,8 +6,9 @@ The backend observer and declarative proof bridge remain in their assigned slice
 
 ## Placement and reach
 
-The changed checker proofs serve program formation, R1.
-The signature, annotation and replacement proofs serve initial-algebras-folds, R14.
+The checker agreement serves initial-algebras-folds, R14, at every signature as required by R1.
+The signature extension serves R2.
+The annotation and replacement proofs serve initial-algebras-folds, R14.
 The generated target readers serve translation-simulation, R10.
 The source position registry records the new entrant field as the same external hook as first-success entrants.
 The static placement predicate serves scope-lifetime-finalization, R11.
@@ -23,7 +24,7 @@ The consumers are source admission, typed printing and the first-exit timeout fo
 - `LEAN_NUM_THREADS=3 lake env lean docs/research/2026-10-10-goals-packet/codex/FirstExitTypingAudit.lean`: passes.
 - The audit walks 2554 declarations within `[propext, Quot.sound]`, with zero goals and zero declarations modulo goals.
 - `LEAN_NUM_THREADS=3 python3 scripts/generate.py --only ts`: passes.
-- `ts/eff/node_modules/.bin/tsgo --noEmit -p ts/eff/tsconfig.json`: passes from the TypeScript package directory with relative paths.
+- `node_modules/.bin/tsgo --noEmit -p tsconfig.json`: passes from `ts/eff`.
 - The compiler reports `7.0.0-dev.20260629.1`.
 - `bun test ./ingest/test/first-exit.test.ts ./ingest/test/printer.test.ts ./test/read.test.ts`: 162 pass, zero fail, 382 assertions.
 

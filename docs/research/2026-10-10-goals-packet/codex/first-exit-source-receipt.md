@@ -7,7 +7,7 @@ This slice depends on backend commits `3933c9f3` and `e39ae9c7`.
 ## Placement and reach
 
 The source constructor serves the frozen first-exit timeout repair plan and translation-simulation, R10.
-The generated authoring scope theorem serves program formation, R1.
+The generated authoring scope theorem serves initial-algebras-folds, R14.
 The consumer is the timeout source form and its native compilation.
 The fixture reads closed source admission, codec, compilation and printing.
 It establishes no selection, cleanup, host execution or target typing claim.
