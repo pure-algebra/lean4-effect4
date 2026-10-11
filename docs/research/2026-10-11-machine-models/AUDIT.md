@@ -191,8 +191,8 @@ lines:
 - `FiberSumMessages.lean` (205), `Laws/Program/Guard/Messages.lean` (252) and `Eliminators.lean`
   (19).
 
-Over the changed files, measured before and after by the script's patterns: shared-law uses
-86 → 99, private case analyses 554 → 554, hand decision lifts 21 → 21.
+The script's patterns over the changed files, before and after: shared-law uses 86 → 99,
+private case analyses 554 → 554, hand decision lifts 21 → 21.
 
 - **The consolidation is item 10's alphabet.** Each driver helper has a word and an equation
   (`start_word`, `spawn_word`, `drain_word`, `exit_word`, `observer_word` and the rest).
