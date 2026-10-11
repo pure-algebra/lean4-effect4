@@ -1,0 +1,18 @@
+#axiom_audit: 30 declarations within [propext, Quot.sound], 2 of them modulo planned goals; 3 planned goals
+Test.Dogfood.Scenario.Workers.Assertions.history: modulo [Test.Dogfood.Scenario.Workers.Assertions.logs_step, Test.Dogfood.Scenario.Workers.Assertions.registrations_step, Test.Dogfood.Scenario.Workers.Assertions.releases_step]; nearest []; 0 lemmas, 0 definitions
+next goals: 3
+  goal Test.Dogfood.Scenario.Workers.Assertions.logs_step : ∀ (total cf : Nat) (b : Api.Built) (m : Program.NativeMachine) (x : Nat × Program.NativeDecision),
+  Api.Author.build (Test.Dogfood.Scenario.Workers.crew total) = Except.ok b →
+    Test.Dogfood.Scenario.Workers.Assertions.Holds b cf m →
+      Run.Accepted b.table (Api.HostSession.callTable b.program b.table) m x.snd →
+        Test.Dogfood.Scenario.Workers.Assertions.LogDebits (Run.stepBy b m x)
+  goal Test.Dogfood.Scenario.Workers.Assertions.registrations_step : ∀ (total cf : Nat) (b : Api.Built) (m : Program.NativeMachine) (x : Nat × Program.NativeDecision),
+  Api.Author.build (Test.Dogfood.Scenario.Workers.crew total) = Except.ok b →
+    Test.Dogfood.Scenario.Workers.Assertions.Holds b cf m →
+      Run.Accepted b.table (Api.HostSession.callTable b.program b.table) m x.snd →
+        Test.Dogfood.Scenario.Workers.Assertions.Registrations (Run.stepBy b m x)
+  goal Test.Dogfood.Scenario.Workers.Assertions.releases_step : ∀ (total cf : Nat) (b : Api.Built) (m : Program.NativeMachine) (x : Nat × Program.NativeDecision),
+  Api.Author.build (Test.Dogfood.Scenario.Workers.crew total) = Except.ok b →
+    Test.Dogfood.Scenario.Workers.Assertions.Holds b cf m →
+      Run.Accepted b.table (Api.HostSession.callTable b.program b.table) m x.snd →
+        Test.Dogfood.Scenario.Workers.Assertions.ReleaseDebits (Run.stepBy b m x)

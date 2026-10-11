@@ -1,0 +1,163 @@
+import Test.Dogfood.Scenario.Workers.Program
+import Test.Dogfood.Scenario.Frame
+
+/-!
+# Workers cleanup assertions at every command boundary
+
+Concept: scope-lifetime-finalization, R11, at most once per registration counted by identity.
+Question: each helper serves `Workers.releases_once`, consumed by the workers claim.
+Reach: the actual built crew, all totals, budgets and session-admitted decision histories.
+Each counted trace event names the acquisition source path, rather than a fiber number.
+These assertions retain unfinished commands, yields and interruption through `HistoryOf`.
+They establish neither progress nor release order, and leave the host boundary unchanged.
+Unlock: the R11 whole-run observation follows from three named preservation obligations.
+-/
+
+set_option autoImplicit false
+
+namespace Test.Dogfood.Scenario.Workers.Assertions
+
+open Effect4 Effect4.Machine Effect4.Program
+
+abbrev NEvent := RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx
+
+/-- The two connection acquisitions in the elaborated crew. -/
+def acquirePath : Nat → List Nat
+  | 1 => [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0]
+  | _ => [1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0]
+
+/-- `resolve.acquired` pushes this frame for the acquisition at the counted source path. -/
+def registeredAt (q : List Nat) : NEvent → Bool
+  | .frame _ (.pushed (.onSuccess _ (.afterScopeAdd _ (.foreign c)))) => c.path == q
+  | _ => false
+
+/-- `suspendBodyAt.foreign` pushes this frame when that acquisition's release starts. -/
+def releaseAt (q : List Nat) : NEvent → Bool
+  | .frame _ (.pushed (.onSuccess _ (.releaseUnder p _ _))) => p.path == q
+  | _ => false
+
+/-- The release observation reads the second allocated reference cell. -/
+def log (m : NativeMachine) : List Val :=
+  match (m.state.refs[1]? : Option Val) with
+  | some (.list values) => values
+  | _ => []
+
+/-- Each source acquisition registers at most once. -/
+def Registrations (m : NativeMachine) : Prop :=
+  ∀ i ∈ [1, 2], m.trace.countP (registeredAt (acquirePath i)) ≤ 1
+
+/-- A release start spends a registration at that same source acquisition. -/
+def ReleaseDebits (m : NativeMachine) : Prop :=
+  ∀ i ∈ [1, 2], m.trace.countP (releaseAt (acquirePath i)) ≤
+    m.trace.countP (registeredAt (acquirePath i))
+
+/-- Each recorded identity spends one release start at its own acquisition source. -/
+def LogDebits (m : NativeMachine) : Prop :=
+  (∀ v ∈ log m, v = .nat 1 ∨ v = .nat 2) ∧
+    ∀ i ∈ [1, 2], (log m).count (.nat i) ≤ m.trace.countP (releaseAt (acquirePath i))
+
+/-- Concrete trace and store assertions, restricted to the machine's actual admitted history. -/
+def Holds (b : Api.Built) (cf : Nat) (m : NativeMachine) : Prop :=
+  Run.HistoryOf b cf m ∧ Registrations m ∧ ReleaseDebits m ∧ LogDebits m
+
+/-- Load obligation of `releases_once`: no registration, release or log entry exists at load. -/
+theorem load (b : Api.Built) (cf : Nat) : Holds b cf (Api.load b.program cf) := by
+  refine ⟨⟨[], trivial, rfl⟩, ?_, ?_, ?_⟩
+  · intro i _
+    exact Nat.zero_le 1
+  · intro i _
+    exact Nat.le_refl 0
+  · refine ⟨?_, ?_⟩
+    · intro v hv
+      change v ∈ ([] : List Val) at hv
+      exact False.elim (List.not_mem_nil hv)
+    · intro i _
+      exact Nat.le_refl 0
+
+/-- History extension of `releases_once`: retain the exact admission predicate and call table. -/
+theorem history_step (b : Api.Built) (cf : Nat) (m : NativeMachine)
+    (x : Nat × NativeDecision) (hm : Run.HistoryOf b cf m)
+    (hx : Run.Accepted b.table (Api.HostSession.callTable b.program b.table) m x.2) :
+    Run.HistoryOf b cf (Run.stepBy b m x) := by
+  obtain ⟨history, adm, heq⟩ := hm
+  refine ⟨history ++ [x], ?_, ?_⟩
+  · apply Run.admitted_snoc _ _ (Run.stepBy b) history _ x adm
+    intro _ _
+    rw [← heq]
+    exact hx
+  · rw [List.foldl_append, List.foldl_cons, List.foldl_nil, ← heq]
+
+/-- Flag edit leaf of `releases_once`: installing middleware writes no trace or store cell.
+The step assembly consumes this leaf without a planned preservation goal. -/
+theorem middleware_step (b : Api.Built) (cf fuel : Nat) (m : NativeMachine)
+    (hm : Holds b cf m) : Holds b cf (Run.stepBy b m (fuel, .installMiddleware)) := by
+  refine ⟨history_step b cf m (fuel, .installMiddleware) hm.1 trivial, ?_, ?_, ?_⟩
+  · exact hm.2.1
+  · exact hm.2.2.1
+  · exact hm.2.2.2
+
+/-- Registration preservation obligation of `releases_once`.
+Reach: actual crew histories, all budgets, controls and admitted host answers.
+It needs the static acquisition placement and the control-source provenance invariant.
+It proves no release progress; consumer: `step` and then `history`. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+proof_goal registrations_step :
+  ∀ (total cf : Nat) (b : Api.Built) (m : NativeMachine) (x : Nat × NativeDecision),
+    Api.Author.build (crew total) = .ok b → Holds b cf m →
+    Run.Accepted b.table (Api.HostSession.callTable b.program b.table) m x.2 →
+    Registrations (Run.stepBy b m x)
+
+/-- Release preservation obligation of `releases_once`.
+Reach: actual crew histories, including incomplete release commands and interruption.
+It needs each released closure to originate in its own registered scope entry.
+It proves no release order; consumer: `step` and then `history`. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+proof_goal releases_step :
+  ∀ (total cf : Nat) (b : Api.Built) (m : NativeMachine) (x : Nat × NativeDecision),
+    Api.Author.build (crew total) = .ok b → Holds b cf m →
+    Run.Accepted b.table (Api.HostSession.callTable b.program b.table) m x.2 →
+    ReleaseDebits (Run.stepBy b m x)
+
+/-- Store preservation obligation of `releases_once`.
+Reach: the second allocated reference in actual crew histories at every command boundary.
+It needs the cell's writer census and the value captured at each acquisition source.
+It proves no host behavior; consumer: `step` and then `history`. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+proof_goal logs_step :
+  ∀ (total cf : Nat) (b : Api.Built) (m : NativeMachine) (x : Nat × NativeDecision),
+    Api.Author.build (crew total) = .ok b → Holds b cf m →
+    Run.Accepted b.table (Api.HostSession.callTable b.program b.table) m x.2 →
+    LogDebits (Run.stepBy b m x)
+
+/-- Step assembly of `releases_once`, modulo its three preservation obligations. -/
+theorem step (total cf : Nat) (b : Api.Built) (hb : Api.Author.build (crew total) = .ok b)
+    (m : NativeMachine) (x : Nat × NativeDecision) (hm : Holds b cf m)
+    (hx : Run.Accepted b.table (Api.HostSession.callTable b.program b.table) m x.2) :
+    Holds b cf (Run.stepBy b m x) := by
+  by_cases hf : x.2 = .installMiddleware
+  · have heq : x = (x.1, .installMiddleware) := Prod.ext rfl hf
+    rw [heq]
+    exact middleware_step b cf x.1 m hm
+  · exact ⟨history_step b cf m x hm.1 hx, registrations_step total cf b m x hb hm hx,
+      releases_step total cf b m x hb hm hx, logs_step total cf b m x hb hm hx⟩
+
+/-- History assembly of `releases_once`, using the existing admitted-history lift. -/
+theorem history (total cf : Nat) (b : Api.Built) (hb : Api.Author.build (crew total) = .ok b)
+    (m : NativeMachine) (hm : Run.HistoryOf b cf m) : Holds b cf m :=
+  Run.history_keeps b cf (Holds b cf) (load b cf) (step total cf b hb) m hm
+
+/-- Read obligation of `releases_once`: the concrete debit assertions imply no duplicate log entry. -/
+theorem read (b : Api.Built) (cf : Nat) (m : NativeMachine) (hm : Holds b cf m) :
+    (log m).Nodup := by
+  rw [List.nodup_iff_count]
+  intro v
+  by_cases hv : v ∈ log m
+  · rcases hm.2.2.2.1 v hv with rfl | rfl
+    · exact Nat.le_trans (hm.2.2.2.2 1 List.mem_cons_self)
+        (Nat.le_trans (hm.2.2.1 1 List.mem_cons_self) (hm.2.1 1 List.mem_cons_self))
+    · have hi : 2 ∈ [1, 2] := List.mem_cons_of_mem _ List.mem_cons_self
+      exact Nat.le_trans (hm.2.2.2.2 2 hi)
+        (Nat.le_trans (hm.2.2.1 2 hi) (hm.2.1 2 hi))
+  · exact (List.count_eq_zero_of_not_mem hv).symm ▸ Nat.zero_le 1
+
+end Test.Dogfood.Scenario.Workers.Assertions
