@@ -602,11 +602,11 @@ attribute [aesop norm -1 apply (rule_sets := [Effect4.Stores])] registerAsync_si
 
 theorem beginRace_owned (p : NativeEff) (completed : List (FiberId × ExitV)) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) (entrants : List NCode)
-    (bounds : RaceIdsBelow m) (hf : FrameCodeOwned m f) (site : Option (List Nat) := none) :
-    FrameCodeOwned (beginRace (interpAt p completed table) m f yielding entrants site).machine
-      (beginRace (interpAt p completed table) m f yielding entrants site).fiber := by
+    (bounds : RaceIdsBelow m) (hf : FrameCodeOwned m f) (site : Option (List Nat) := none) (mode : Supervision.RaceMode := .firstSuccess) :
+    FrameCodeOwned (beginRace (interpAt p completed table) m f yielding entrants site mode).machine
+      (beginRace (interpAt p completed table) m f yielding entrants site mode).fiber := by
   constructor
-  · exact raceCodeOwned_beginRace p table m f yielding entrants bounds site
+  · exact raceCodeOwned_beginRace p table m f yielding entrants bounds site mode
   · intro code hc
     apply raceCodeOwned_transport (raceHostsPreserved_append m _) (hf.2 code hc)
 
@@ -677,6 +677,8 @@ theorem withFiber_owned (p : NativeEff) (completed : List (FiberId × ExitV)) (t
   cases action <;> simp only [actionRaceSites] at ha
   case raceAll entrants site =>
     exact beginRace_owned p completed table m f yielding entrants bounds hf site
+  case raceAllFirst entrants site =>
+    exact beginRace_owned p completed table m f yielding entrants bounds hf site .firstExit
   all_goals simp only [evaluatePrim.withFiber, evaluatePrim.interruptAs, spawn, start,
     countdownPark, RunFiber.park, FrameFiber.uninterruptible, FrameFiber.interruptibleRegion,
     FrameFiber.setFiberInterruptible]

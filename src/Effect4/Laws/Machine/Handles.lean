@@ -647,7 +647,7 @@ def WithFiberAction.keys (nk : ν → List Handle) (sk : σ → List Handle) :
   | WithFiberAction.awaitAllFailFast targets => targets.map Handle.fiber
   | WithFiberAction.snapshotChildren => []
   | WithFiberAction.awaitNewChildren snapshot => snapshot.map Handle.fiber
-  | WithFiberAction.raceAll entrants _ => entrants.flatMap (primKeys nk sk)
+  | WithFiberAction.raceAll entrants _ | WithFiberAction.raceAllFirst entrants _ => entrants.flatMap (primKeys nk sk)
   | WithFiberAction.setInterruptible body _ => primKeys nk sk body
   | WithFiberAction.setContext context => context.keys
   | WithFiberAction.getContext => []
@@ -2392,6 +2392,35 @@ theorem raceComplete_accepted_keys (s : Supervision.RaceAllState Val Err Defect 
         · exact List.subset_append_left _ _
   · exact List.subset_append_left _ _
 
+theorem raceCompleteWith_live_subset (mode : Supervision.RaceMode)
+    (s : Supervision.RaceAllState Val Err Defect FiberId Ann) (child : FiberId) (exit : ExitV) :
+    (Supervision.raceCompleteWith mode s child exit).live ⊆ s.live := by
+  cases mode with
+  | firstSuccess => exact raceComplete_live_subset s child exit
+  | firstExit =>
+    simp only [Supervision.raceCompleteWith]
+    unfold Supervision.raceCompleteFirst
+    split
+    · split
+      · exact raceComplete_live_subset s child exit
+      · exact fun _ h => (List.mem_filter.mp h).1
+    · exact List.Subset.refl _
+
+theorem raceCompleteWith_accepted_keys (mode : Supervision.RaceMode)
+    (s : Supervision.RaceAllState Val Err Defect FiberId Ann) (child : FiberId) (exit : ExitV) :
+    optExitKeys (Supervision.raceCompleteWith mode s child exit).accepted ⊆
+      optExitKeys s.accepted ++ exitKeys exit := by
+  cases mode with
+  | firstSuccess => exact raceComplete_accepted_keys s child exit
+  | firstExit =>
+    simp only [Supervision.raceCompleteWith]
+    unfold Supervision.raceCompleteFirst
+    split
+    · split
+      · exact raceComplete_accepted_keys s child exit
+      · exact List.subset_append_right _ _
+    · exact List.subset_append_left _ _
+
 theorem race_state_keys_subset (r : Race ν σ Val Err Defect FiberId Ann)
     (state : Supervision.RaceAllState Val Err Defect FiberId Ann) (settled : Bool) (extra : List Handle)
     (hlive : state.live ⊆ r.state.live) (hacc : optExitKeys state.accepted ⊆ optExitKeys r.state.accepted ++ extra) :
@@ -2684,24 +2713,28 @@ theorem fireObserver_raceCallback_minted (hb : KeyBounded nk sk interp ambient) 
       sub_tac
     · next race hrace =>
       have hrk : race.keys nk sk ⊆ acc.1.keys nk sk := race?_keys_subset nk sk hrace
-      have hrk' : ({ race with state := Supervision.raceComplete race.state id exit } :
+      have hrk' : ({ race with state := Supervision.raceCompleteWith race.mode race.state id exit, selected :=
+        (match race.mode, race.state.accepted, (Supervision.raceCompleteWith race.mode race.state id exit).accepted with
+        | .firstExit, none, some _ => some id | _, _, _ => race.selected) } :
           Race ν σ Val Err Defect FiberId Ann).keys nk sk ⊆ race.keys nk sk ++ exitKeys exit :=
-        race_state_keys_subset nk sk race _ race.settled (exitKeys exit) (raceComplete_live_subset _ _ _)
-          (raceComplete_accepted_keys _ _ _)
-      have hrk'' : ({ race with state := Supervision.raceComplete race.state id exit, settled := true } :
+        race_state_keys_subset nk sk race _ race.settled (exitKeys exit) (raceCompleteWith_live_subset _ _ _ _)
+          (raceCompleteWith_accepted_keys _ _ _ _)
+      have hrk'' : ({ race with state := Supervision.raceCompleteWith race.mode race.state id exit, settled := true, selected :=
+        (match race.mode, race.state.accepted, (Supervision.raceCompleteWith race.mode race.state id exit).accepted with
+        | .firstExit, none, some _ => some id | _, _, _ => race.selected) } :
           Race ν σ Val Err Defect FiberId Ann).keys nk sk ⊆ race.keys nk sk ++ exitKeys exit :=
-        race_state_keys_subset nk sk race _ true (exitKeys exit) (raceComplete_live_subset _ _ _)
-          (raceComplete_accepted_keys _ _ _)
+        race_state_keys_subset nk sk race _ true (exitKeys exit) (raceCompleteWith_live_subset _ _ _ _)
+          (raceCompleteWith_accepted_keys _ _ _ _)
       split
       · next accepted hacc hsettled =>
         refine ⟨by rw [world_emit, world_updateRace, world_updateRace, world_emit]; exact World.le_refl _, ?_⟩
         simp only [MintedIn]
         rw [world_emit, world_updateRace, world_updateRace, world_emit]
         have hsettle : primKeys nk sk (interp.raceSettle raceId
-            (Supervision.raceComplete race.state id exit).cleanupNeeded accepted) ⊆
+            (Supervision.raceCompleteWith race.mode race.state id exit).cleanupNeeded accepted) ⊆
             race.keys nk sk ++ exitKeys exit := by
           refine List.Subset.trans (hb.raceSettle _ _ _) ?_
-          have := raceComplete_accepted_keys race.state id exit
+          have := raceCompleteWith_accepted_keys race.mode race.state id exit
           rw [hacc] at this
           simp only [optExitKeys] at this
           refine List.Subset.trans this ?_
@@ -2719,10 +2752,12 @@ theorem fireObserver_raceCallback_minted (hb : KeyBounded nk sk interp ambient) 
             · sub_tac
             · refine List.Subset.trans hrk' ?_; sub_tac
           · refine List.Subset.trans hrk'' ?_; sub_tac
-        · split
-          · simp only [cmdsKeys, List.append_nil]
+        · by_cases hreg : race.registering = true
+          · rw [if_pos hreg]
+            simp only [cmdsKeys, List.append_nil]
             sub_tac
-          · simp only [cmdsKeys, List.flatMap_append, List.flatMap_cons, List.flatMap_nil, Cmd.keys,
+          · rw [if_neg hreg]
+            simp only [cmdsKeys, List.flatMap_append, List.flatMap_cons, List.flatMap_nil, Cmd.keys,
               List.append_nil]
             refine List.append_subset.mpr ⟨?_, ?_⟩
             · sub_tac
@@ -3355,6 +3390,25 @@ theorem withFiber_raceAll_minted (hb : KeyBounded nk sk interp ambient)
   refine Ok_of_subset ?_ (Ok_append.mpr ⟨hm, hpark⟩)
   sub_tac
 
+@[aesop unsafe 90% apply (rule_sets := [Effect4.Fibers])]
+theorem withFiber_raceAllFirst_minted (hb : KeyBounded nk sk interp ambient)
+    (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
+    (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (yielding : Bool)
+    (entrants : List (Prim ν σ Val Err Defect FiberId Ann))
+    {site : Option (List Nat)}
+    (hm : MintedIn m (Handle.fiber f.id :: m.keys nk sk ++ f.keys nk sk ++
+      (WithFiberAction.raceAllFirst entrants site).keys nk sk)) :
+    IterMinted nk sk m (evaluatePrim.withFiber interp m f yielding (WithFiberAction.raceAllFirst entrants site)) := by
+  unfold IterMinted
+  simp only [evaluatePrim.withFiber, beginRace]
+  -- the registration code names no handle: a race identity is a lookup key (D6a)
+  have hpark : Ok m.world (primKeys nk sk (interp.parkCode (ParkKind.race m.nextRace))) :=
+    Ok_of_subset (hb.parkCode _) (by simp only [ParkKind.keys]; exact Ok_nil _)
+  -- the counters and the appended race leave the world as it was (definitionally)
+  refine ⟨⟨fun _ h => h, Stores.le_refl _⟩, ?_⟩
+  refine Ok_of_subset ?_ (Ok_append.mpr ⟨hm, hpark⟩)
+  sub_tac
+
 theorem withFiber_setInterruptible_minted
     (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (yielding : Bool)
@@ -3630,6 +3684,7 @@ theorem withFiber_minted (hb : KeyBounded nk sk interp ambient)
   | snapshotChildren => exact withFiber_snapshotChildren_minted nk sk hb m f yielding hm
   | awaitNewChildren snapshot => exact withFiber_awaitNewChildren_minted nk sk hb m f yielding snapshot hm
   | raceAll entrants site => exact withFiber_raceAll_minted (site := site) nk sk hb m f yielding entrants hm
+  | raceAllFirst entrants site => exact withFiber_raceAllFirst_minted (site := site) nk sk hb m f yielding entrants hm
   | setInterruptible body flag => exact withFiber_setInterruptible_minted nk sk m f yielding body flag hm
   | setContext context => exact withFiber_setContext_minted nk sk hb m f yielding context hm
   | getContext => exact withFiber_getContext_minted nk sk hb m f yielding hm

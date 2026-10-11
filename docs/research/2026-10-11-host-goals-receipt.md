@@ -172,3 +172,21 @@ Dependencies: symbolic source `6aba81de` and source typing `677cb391`.
 The latter restores its checked placement module in this worktree.
 Consumers: the symbolic source bridge, simulation action clauses and the timeout form.
 Open work: simulation consumers, backend handle law, typed residual connector, timeout observation and reached behaviour gates.
+
+## First-exit handle and ownership slice
+
+The handle collector traverses the new action's entrant programs.
+The observer's handle proof covers each mode through live-set and accepted-exit subset laws.
+The first-exit action allocates no additional handle outside the existing registration path.
+The frame ownership proof uses the generalized race-site connector.
+The selected child is diagnostic identity, like the existing winner identity; it is not an operation handle.
+
+Commands:
+
+- `LEAN_NUM_THREADS=3 lake build Effect4.Laws.Machine.Handles Effect4.Laws.Program.Guard.FrameOwned`: passed, 342 jobs.
+- `LEAN_NUM_THREADS=3 lake env lean docs/research/2026-10-10-goals-packet/codex/FirstExitHandlesAudit.lean`: passed.
+
+The audit checks 2162 declarations within `[propext, Quot.sound]`.
+It finds zero planned goals and zero declarations depending on planned goals.
+Consumer: source handle proofs, observer preservation and simulation frame ownership.
+Open work: simulation consumers, typed residual connector, timeout observation and reached behaviour gates.
