@@ -143,10 +143,18 @@ theorem printModule_readable {sig : Signature Op} {root : Eff Op}
 
 /-! ## A program with a definition block (decisions row 328, slice PROC-3) -/
 
+/-- The signature a hoisted layer of a block prints and reads at (decisions row 341, step 3): a
+body's own layer at the signature the body's parameters extend, any other at the block's. -/
+def layerSigOf (sig : Signature Op) (defs : List DefDecl) (t : List Nat) : Signature Op :=
+  match bodyDeclOf defs t with
+  | some d => (sig.withDefs defs).withParams d.params
+  | none => sig.withDefs defs
+
 /-- The pieces of a hoisted program with a definition block are readable at the block's
-signature: each declaration (`DefDecl.readable`), each body's suspension at environment length
-`1` at the signature its parameters extend (slice HO-3), the main program, each module layer (decisions row 341, step 2) and each hoisted layer, and
-the layers' declared names decode. -/
+signature: each declaration (`DefDecl.readable`), each body at environment length `1` at the
+signature its parameters extend (slice HO-3), the main program, each module layer (decisions row
+341, step 2) and each hoisted layer, a body's own at its body's signature (step 3,
+`layerSigOf`), and the layers' declared names decode. -/
 def blockReadable (classes : Classes) (sig : Signature Op) (root : Eff Op) : Bool :=
   match root.hoistAll with
   | .ok (main, history) =>
@@ -154,14 +162,14 @@ def blockReadable (classes : Classes) (sig : Signature Op) (root : Eff Op) : Boo
     | some (defs, bodies, body, layers) =>
       defs.all DefDecl.readable &&
         (defs.zip bodies.toList).all (fun p =>
-          Readable classes ((sig.withDefs defs).withParams p.1.params) 1 (.suspend p.2)) &&
+          Readable classes ((sig.withDefs defs).withParams p.1.params) 1 p.2) &&
         Readable classes (sig.withDefs defs) 0 body &&
         layers.toList.all (fun l => (cata_layer (readableAlg classes (sig.withDefs defs)) l 0).isSome) &&
         (List.range layers.toList.length).all (fun k =>
           decide (LayerTerm.readRefName (LayerTerm.refName (Path.layerPath k)) =
             some (Path.layerPath k))) &&
         history.all fun entry =>
-          (cata_layer (readableAlg classes (sig.withDefs defs)) entry.2 0).isSome &&
+          (cata_layer (readableAlg classes (layerSigOf sig defs entry.1)) entry.2 0).isSome &&
             decide (LayerTerm.readRefName (LayerTerm.refName entry.1) = some entry.1)
     | _ => false
   | .error _ => false
@@ -172,12 +180,13 @@ theorem blockReadable_pieces {sig : Signature Op} {root : Eff Op}
     ∃ main history defs bodies body layers, root.hoistAll = .ok (main, history) ∧
       main.block? = some (defs, bodies, body, layers) ∧ (∀ d ∈ defs, d.readable = true) ∧
       (∀ p ∈ defs.zip bodies.toList,
-        Readable classes ((sig.withDefs defs).withParams p.1.params) 1 (.suspend p.2) = true) ∧
+        Readable classes ((sig.withDefs defs).withParams p.1.params) 1 p.2 = true) ∧
       Readable classes (sig.withDefs defs) 0 body = true ∧
       (∀ l ∈ layers.toList, ReadableAt classes (sig.withDefs defs) .layer l 0) ∧
       (∀ k < layers.toList.length,
         LayerTerm.readRefName (LayerTerm.refName (Path.layerPath k)) = some (Path.layerPath k)) ∧
-      (∀ entry ∈ history, ReadableAt classes (sig.withDefs defs) .layer entry.2 0) ∧
+      (∀ entry ∈ history,
+        ReadableAt classes (layerSigOf sig defs entry.1) .layer entry.2 0) ∧
       (∀ entry ∈ history, LayerTerm.readRefName (LayerTerm.refName entry.1) = some entry.1) := by
   unfold blockReadable at hr
   split at hr
@@ -202,9 +211,10 @@ the module printer prints of a program with a block whose pieces are readable re
 program, at a lawful spelling whose invocations and parameter runs are lawful (`LawfulCalls`,
 `LawfulParams`, apart from each other) and whose block and parameter names are readable
 (`DefsNamed`, `ParamsNamed`). The reader's laws hold at the block's signature
-(`LawfulSpelling.withDefs`) and at each body's (`LawfulSpelling.withParams`, slice HO-3), and the
-module law with a block composes them (`readModule_printModule_defs`). A step of the claim `module-defs-round-trip`; its consumer is
-`ModuleEmission.readModule`. -/
+(`LawfulSpelling.withDefs`) and at each body's (`LawfulSpelling.withParams`, slice HO-3), where a
+body and its own layers are read (decisions row 341, step 3), and the module law with a block
+composes them (`readModule_printModule_defs`). A step of the claim `module-defs-round-trip`; its
+consumer is `ModuleEmission.readModule`. -/
 theorem readModule_printModule_defs_readable {sig : Signature Op}
     {spell : String → List RowArg → Option Op} {call param : Nat → Op}
     (hl : LawfulSpelling sig spell) (calls : LawfulCalls sig spell call)
@@ -226,12 +236,21 @@ theorem readModule_printModule_defs_readable {sig : Signature Op}
   rw [same] at named paramsNamed
   have hl' := hl.withDefs calls named
   have params' := params.withDefs calls apart defs
-  exact readModule_printModule_defs hoisted block classesRead heads
+  refine readModule_printModule_defs hoisted block classesRead heads
     (fun p mem => ReadsBack.of_Readable
       (hl'.withParams params' apart (paramsNamed p.1 (List.of_mem_zip mem).1)) (hbodies p mem))
     (ReadsBack.of_Readable hl' hmain)
     (fun l hm x hp => readLayer_print hl' (hmods l hm) hp) hmodNames
-    (fun entry hm x hp => readLayer_print hl' (hlayers entry hm) hp) hnames printed
+    (fun entry hm d hd x hp => ?_) (fun entry hm hd x hp => ?_) hnames printed
+  · -- a body's own layer, read at the signature its parameters extend
+    have hread := hlayers entry hm
+    simp only [layerSigOf, hd] at hread
+    exact readLayer_print (hl'.withParams params' apart (paramsNamed d (bodyDeclOf_mem hd)))
+      hread hp
+  · -- any other hoisted layer, read at the block's signature
+    have hread := hlayers entry hm
+    simp only [layerSigOf, hd] at hread
+    exact readLayer_print hl' hread hp
 
 end Effect4.Program
 

@@ -71,7 +71,6 @@ src/Effect4/Laws/Codegen/Bindings.lean	ofImports_append	simp-without-only	1
 src/Effect4/Laws/Codegen/Bindings.lean	resolve_iff	simp-without-only	3
 src/Effect4/Laws/Codegen/Bindings.lean	resolve_shadowed	simp-without-only	1
 src/Effect4/Laws/Codegen/Module.lean	printCaptured_plain	simp-without-only	1
-src/Effect4/Laws/Codegen/Module.lean	printModule_shape	simp-without-only	1
 src/Effect4/Laws/Codegen/Module.lean	readCaptured_mapM	simp-without-only	2
 src/Effect4/Laws/Codegen/Module.lean	readCaptured_printCaptured	simp-without-only	1
 src/Effect4/Laws/Codegen/Module.lean	readModule_printModule	simp-without-only	1

@@ -943,9 +943,11 @@ of an operation's binder term (the fold in a `Ref.modify`, and a step of the Que
 the rate limiter's request, a gate at `Deferred<void, never>`, a parked fiber that an
 interrupt wakes, the two programs of the mask that restores, the five programs of the
 Queue's first operations, the ten programs of Semaphore's first operations, the ten
-programs of Pool's first operations, four programs with a definition block, the Queue's
-scenario R4 over its definitions, and the Queue and the Semaphore as services, each with its
-client through the key. Every listed program contributes one manifest entry. -/
+programs of Pool's first operations, the programs with a definition block (four plain ones, one
+with a module layer, three whose body counts its own layer's builds, and three invocations with
+programs), the Queue's scenario R4 over its definitions, and the Queue and the Semaphore as
+services, each with its client through the key. Every listed program contributes one manifest
+entry. -/
 def pInterruptEscape : Api.Program := Test.Counterexamples.InterruptEscape.escape
 
 /-- Four programs with a definition block (decisions row 328, slice PROC-3): one invocation,
@@ -960,6 +962,67 @@ def pDefsFork : Api.Program := Test.Program.DefinitionsControls.forkProg
 program each provide the module's one layer by reference. It prints as a module whose layer is
 one constant, `L_2_0`, named in both. -/
 def pDefsModuleLayer : Api.Program := Test.Program.DefinitionsControls.moduleLayerProg
+
+/-! ### A body's own layer, built once per call (decisions row 341, step 3; DI-71's counted builds)
+
+Three blocks whose definition's body provides its own counted layer, `layerCount kA`. The counter
+is the module's layer `[2, 0]`, `Layer.effect(kRef, Ref.make(0))`: the main program provides it
+around the calls, and each body provides it again by reference, which finds the main program's
+build, so every build of the counted layer bumps the one cell. No header needs a service, so a
+call can pass a program that calls again (a callback that needs one is refused,
+`callbackRequirement`). Each program answers the count. rc.112 builds one layer object per run
+of the body, which the module prints as a body's layer in its suspension (`printDefs`). -/
+
+/-- The module's counter: one cell, made by the module's one layer. -/
+def counterLayers : LayerTerms NativeOp :=
+  .cons (.effect kRef (.perform .refMake (.lit (.nat 0)))) .nil
+
+/-- The body of `withCount`: the module's counter, then its own counted layer at `[0, 0, 1, 0]`,
+around `inner`. -/
+def countedBody (inner : NativeEff) : NativeEff :=
+  .provideLayer (.ref [2, 0]) false (.provideLayer (layerCount kA) false inner)
+
+/-- `withCount : number → number`. -/
+def countedDecl : DefDecl := { name := "withCount", request := .nat, answer := .nat }
+
+/-- **Two calls, one after the other, build twice**: the first call's build ends with its
+provide, so the second builds its own. The count is `2` on both faces, under the key by path
+alone or by path and call. -/
+def pDefsBodyLayerCalls : Api.Program :=
+  .defs [countedDecl] (.cons (countedBody (.service kA)) .nil)
+    (.provideLayer (.ref [2, 0]) false
+      (.bind (.perform (.call 0) (.lit (.nat 1)))
+        (.bind (.perform (.call 0) (.lit (.nat 2)))
+          (.bind (.service kRef) (.perform .refGet (.var 2))))))
+    counterLayers
+
+/-- **One call provides its layer twice, by a reference, and builds once**: the reference names
+the body's own layer, the one object of the call's suspension, and the inner provide finds the
+outer one's build. The count is `1`. -/
+def pDefsBodyLayerShared : Api.Program :=
+  .defs [countedDecl]
+    (.cons (countedBody (.provideLayer (.ref [0, 0, 1, 0]) false (.service kA))) .nil)
+    (.provideLayer (.ref [2, 0]) false
+      (.bind (.perform (.call 0) (.lit (.nat 1)))
+        (.bind (.service kRef) (.perform .refGet (.var 1)))))
+    counterLayers
+
+/-- `withCount : number → number`, which runs its parameter `f` inside its counted layer. -/
+def countedParamDecl : DefDecl :=
+  { countedDecl with params := [{ name := "f", request := .nat, answer := .nat }] }
+
+/-- **A call nested in another, through the program the outer one passed, builds again**:
+`withCount(1, (a0) => withCount(a0, (a1) => Effect.succeed(a1)))`. rc.112's inner run of the body
+makes a new layer object, which the outer build's memo map does not hold, so the count is `2`;
+the machine keys the build by its path and the running call (step 3a), and the two calls are
+apart. A key by path alone would hand the inner call the outer build, and count `1`. -/
+def pDefsBodyLayerNested : Api.Program :=
+  .defs [countedParamDecl] (.cons (countedBody (.perform (.param 0) (.var 0))) .nil)
+    (.provideLayer (.ref [2, 0]) false
+      (.bind (.invoke 0 (.lit (.nat 1))
+          (.cons (.invoke 0 (.var 0) (.cons (.succeed (.var 1)) .nil)) .nil))
+        (.bind (.service kRef) (.perform .refGet (.var 1)))))
+    counterLayers
 
 /-- Invocations with programs (decisions row 340, slice HO-3b): `twice` runs its parameter on its
 request and on the answer; `outer` passes its own parameter on to `twice`; `forked` runs its
@@ -1045,6 +1108,8 @@ def corpus : List (String × Api.Program) :=
     ("pPoolClosing", pPoolClosing),
     ("pDefsTwice", pDefsTwice), ("pDefsEven", pDefsEven), ("pDefsOdd", pDefsOdd),
     ("pDefsFork", pDefsFork), ("pDefsModuleLayer", pDefsModuleLayer),
+    ("pDefsBodyLayerCalls", pDefsBodyLayerCalls), ("pDefsBodyLayerShared", pDefsBodyLayerShared),
+    ("pDefsBodyLayerNested", pDefsBodyLayerNested),
     ("pInvokeTwice", pInvokeTwice), ("pInvokeForward", pInvokeForward),
     ("pInvokeForked", pInvokeForked), ("pQueueDefs", pQueueDefs),
     ("pQueueService", pQueueService),
@@ -1827,7 +1892,8 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
    "pSemaphoreIfAvailable", "pSemaphoreMasked", "pSemaphoreHandoff", "pSemaphoreProtected",
    "pSemaphoreBodies", "pPoolReuse", "pPoolOrder", "pPoolWaiters", "pPoolLateWake", "pPoolWake",
    "pPoolMakeFails", "pPoolCloseWaits", "pPoolWithdrawn", "pPoolClosed", "pPoolClosing",
-   "pDefsTwice", "pDefsEven", "pDefsOdd", "pDefsFork", "pDefsModuleLayer", "pInvokeTwice",
+   "pDefsTwice", "pDefsEven", "pDefsOdd", "pDefsFork", "pDefsModuleLayer",
+   "pDefsBodyLayerCalls", "pDefsBodyLayerShared", "pDefsBodyLayerNested", "pInvokeTwice",
    "pInvokeForward", "pInvokeForked", "pQueueDefs",
    "pQueueService", "pSemaphoreService"]
 -- Decisions row 228: the fold with an outer capture and a nested fold types at a number,
