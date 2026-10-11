@@ -164,3 +164,19 @@ A temporary exact diagnostic guard records that rejection until the planned gate
 `lake env lean docs/research/2026-10-10-goals-packet/codex/QueueAssertions.lean` passes.
 Its audit reports 345 declarations, five modulo declarations, and three planned goals.
 The audit checks the four supporting modules at `[propext, Quot.sound]`.
+
+## Routing failure clause
+
+`Routing.infrastructure_escapes` is proved at its original declaration and original budgets.
+The supporting module holds only the source equations and machine/session proof steps.
+It repeats no theorem with the original proposition.
+
+The claim covers every requested identifier, message, and tag outside the two business tags.
+The proof retains the default command budget of 1000.
+It establishes no arbitrary-script claim.
+
+`LEAN_NUM_THREADS=3 lake build Test.Dogfood.Scenario.Routing` passes with 1040 jobs.
+`lake env lean docs/research/2026-10-10-goals-packet/codex/AuditRouting.lean` passes.
+The audit reports 73 declarations, one modulo declaration, and one planned goal.
+`#plan_status` reports `infrastructure_escapes` proved, with no remaining goals.
+The separate `unauthorized_calls_nothing` claim remains open at this landing.

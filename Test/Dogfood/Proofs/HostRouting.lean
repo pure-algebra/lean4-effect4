@@ -11,8 +11,7 @@ import Effect4.Laws.Auto.KernelRfl
 Concept: translation-simulation. Requirement: R10.
 Claim: the existing routing scenario's `infrastructure_escapes`.
 Reach: the authorized request, its failure script, default budgets, and every nonbusiness tag.
-The normal-form and machine helpers serve `infrastructureEscapes`.
-The scenario consumes that proof at its original proposition.
+The normal-form and machine helpers serve the original scenario clause `infrastructure_escapes`.
 This proof establishes no general script law or runtime agreement.
 -/
 
@@ -367,48 +366,6 @@ theorem appliedExit (s : Run) (id : Nat) (idText tag message : String) (tr : NTr
   rw [happly]
   kernel_rfl
 
-set_option maxHeartbeats 200000 in
-@[semantics "translation-simulation" (requirement := R10)]
-theorem infrastructureEscapes : InfrastructureEscapes := by
-  intro id idText tag message b hb hNF hU
-  simp only [observe]
-  obtain ⟨hprog, htable⟩ := built_request hb
-  generalize hs : Test.Dogfood.Scenario.play (opened b) (beforeApply tag message) = s
-  have hsbuild : s.built = b := by
-    rw [← hs]
-    exact (Test.Dogfood.Scenario.play_opened (opened b) (beforeApply tag message)).1
-  have hbudget := (Test.Dogfood.Scenario.play_opened (opened b) (beforeApply tag message)).2.2.1
-  rw [hs] at hbudget
-  have hsfuel : s.budget.fuel = 1000 := congrArg Api.Budget.fuel hbudget
-  obtain ⟨tr, hraw⟩ := rawFinish id idText tag message b hb hNF hU
-  rw [hs] at hraw
-  let ended := Mexit (routeProg "secret" id idText) (.failure (Cause.fail (.tagged tag message)))
-    (frameExitState (fiberOf (Prim.failure (Cause.fail (.tagged tag message))) [] true))
-    Stores.empty 3 tr 2
-  have hm : Program.steppedBy s.built.program 1000 s.built.table s.machine
-      (.answerAsync Api.root 1 (failed tag message)) = ended := by
-    rw [hsbuild, hprog, htable, progOf_eq]
-    exact congrArg Prod.fst hraw
-  have hlook := lookupFacts id idText tag message b hb
-  rw [hs] at hlook
-  have hbound := congrArg (fun x => x.1) hlook
-  have hreply := congrArg (fun x => x.2.1) hlook
-  have hpre := congrArg (fun x => x.2.2) hlook
-  change s.session.active.find? (fun bound => bound.key == (⟨Api.root, 1⟩ : Api.HostSession.Key)) =
-    some (boundOf id idText) at hbound
-  change Api.HostSession.readReply s.session.pending ⟨Api.root, 1⟩ = some (replyOf tag message) at hreply
-  change Api.HostSession.preflight s.session (replyOf tag message) =
-    .ok (.answerAsync Api.root 1 (failed tag message)) at hpre
-  have hshape := machineShape id idText tag message b hb
-  rw [hs] at hshape
-  have hmachine := applyFinishes s id idText tag message tr hshape hbound hreply hpre hm
-  have hlast := lastRow id idText tag message b hb
-  have hstep : (Test.Dogfood.Scenario.play (opened b) (beforeApply tag message)).step
-      (.apply ⟨Api.root, 1⟩) = s.step (.apply ⟨Api.root, 1⟩) :=
-    congrArg (fun q : Run => q.step (.apply ⟨Api.root, 1⟩)) hs
-  have hfinish := appliedExit s id idText tag message tr hsfuel hmachine
-  have htotal := (congrArg Run.exit hlast).trans ((congrArg Run.exit hstep).trans hfinish)
-  exact htotal
 
 
 end Test.Dogfood.Proofs.HostRouting

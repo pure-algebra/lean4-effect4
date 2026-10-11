@@ -1,4 +1,5 @@
 import Test.Dogfood.Scenario.Routing.Model
+import Test.Dogfood.Proofs.HostRouting
 import Test.Dogfood.Scenario
 import Test.Dogfood.P2HandlerLayers
 import Test.Audit.ScenarioGate
@@ -43,6 +44,8 @@ set_option maxHeartbeats 4000000
 namespace Test.Dogfood.Scenario.Routing
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
+open Test.Dogfood.Proofs.HostRouting
+open Effect4.Program.Agreement
 open Test.Dogfood.P2HandlerLayers (getConfig findById response userTy recordVal user caseModule)
 
 /-! ## 4. The claim -/
@@ -67,7 +70,46 @@ then routes it as the business failure (a red control). Concept `translation-sim
 statement is the handler form's behaviour, R10's "one behaviour law" for `catchTag`, on one
 program. Consumer: the routing scenario. Its controls are finite runs. -/
 @[semantics "translation-simulation" (requirement := R10)]
-proof_goal infrastructure_escapes : InfrastructureEscapes
+theorem infrastructure_escapes : InfrastructureEscapes := by
+  intro id idText tag message b hb hNF hU
+  simp only [observe]
+  obtain ⟨hprog, htable⟩ := built_request hb
+  generalize hs : Test.Dogfood.Scenario.play (opened b) (beforeApply tag message) = s
+  have hsbuild : s.built = b := by
+    rw [← hs]
+    exact (Test.Dogfood.Scenario.play_opened (opened b) (beforeApply tag message)).1
+  have hbudget := (Test.Dogfood.Scenario.play_opened (opened b) (beforeApply tag message)).2.2.1
+  rw [hs] at hbudget
+  have hsfuel : s.budget.fuel = 1000 := congrArg Api.Budget.fuel hbudget
+  obtain ⟨tr, hraw⟩ := rawFinish id idText tag message b hb hNF hU
+  rw [hs] at hraw
+  let ended := Mexit (routeProg "secret" id idText) (.failure (Cause.fail (.tagged tag message)))
+    (frameExitState (fiberOf (Prim.failure (Cause.fail (.tagged tag message))) [] true))
+    Stores.empty 3 tr 2
+  have hm : Program.steppedBy s.built.program 1000 s.built.table s.machine
+      (.answerAsync Api.root 1 (failed tag message)) = ended := by
+    rw [hsbuild, hprog, htable, progOf_eq]
+    exact congrArg Prod.fst hraw
+  have hlook := lookupFacts id idText tag message b hb
+  rw [hs] at hlook
+  have hbound := congrArg (fun x => x.1) hlook
+  have hreply := congrArg (fun x => x.2.1) hlook
+  have hpre := congrArg (fun x => x.2.2) hlook
+  change s.session.active.find? (fun bound => bound.key == (⟨Api.root, 1⟩ : Api.HostSession.Key)) =
+    some (boundOf id idText) at hbound
+  change Api.HostSession.readReply s.session.pending ⟨Api.root, 1⟩ = some (replyOf tag message) at hreply
+  change Api.HostSession.preflight s.session (replyOf tag message) =
+    .ok (.answerAsync Api.root 1 (failed tag message)) at hpre
+  have hshape := machineShape id idText tag message b hb
+  rw [hs] at hshape
+  have hmachine := applyFinishes s id idText tag message tr hshape hbound hreply hpre hm
+  have hlast := lastRow id idText tag message b hb
+  have hstep : (Test.Dogfood.Scenario.play (opened b) (beforeApply tag message)).step
+      (.apply ⟨Api.root, 1⟩) = s.step (.apply ⟨Api.root, 1⟩) :=
+    congrArg (fun q : Run => q.step (.apply ⟨Api.root, 1⟩)) hs
+  have hfinish := appliedExit s id idText tag message tr hsfuel hmachine
+  have htotal := (congrArg Run.exit hlast).trans ((congrArg Run.exit hstep).trans hfinish)
+  exact htotal
 
 /-- **An unauthorized request makes no call of the repository.** Under every script, if no reply
 in the journal carries a configuration whose token is the request's, the host holds no
