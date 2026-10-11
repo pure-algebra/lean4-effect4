@@ -149,12 +149,16 @@ theorem unauthorized_calls_nothing : UnauthorizedCallsNothing := by
         true := by
       rw [hbuilt, hprog]
       exact noCauseHandler_free token id idText
-    have hclock : NoClockRead (Test.Dogfood.Scenario.play (opened b) moves).built.program =
-        true := by
+    have hexternal : SourceScope.ExternalOnly
+        (Test.Dogfood.Scenario.play (opened b) moves).built.program := by
       rw [hbuilt, hprog]
-      exact noClockRead_free token id idText
+      exact externalOnly_free token id idText
+    have hconcrete : SourceScope.ConcreteReplies
+        (Test.Dogfood.Scenario.play (opened b) moves).built.table := by
+      rw [hbuilt, htable]
+      exact concreteReplies_free token id idText
     obtain ⟨i, row, T, hrow, hspell, hjournal, hwait⟩ :=
-      held_in_tree _ hreach hfrag hcause hclock seen hseen
+      held_in_tree _ hreach hfrag hcause hexternal hconcrete seen hseen
     rw [hbuilt, hprog, htable] at hwait
     rw [hbuilt, htable] at hrow
     have hi : i = 1 := repo_position token id idText i row hrow

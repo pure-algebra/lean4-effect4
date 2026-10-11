@@ -359,6 +359,8 @@ import Test.Dogfood.Scenario.SourceUse
 import Test.Dogfood.Scenario.SourceOpportunity
 import Test.Dogfood.Scenario.RoutingInterrupt
 import Test.Counterexamples.Machine.Runtime.HostClockPrefix
+import Test.Counterexamples.Machine.Runtime.HostRefPrefix
+import Test.Counterexamples.Machine.Runtime.HostInstancePrefix
 import Test.Dogfood.Scenario.Atomic.Writes
 import Test.Dogfood.Proofs.TimeoutCounterexample
 import Test.Dogfood.Scenario.QueueWorkers.Source

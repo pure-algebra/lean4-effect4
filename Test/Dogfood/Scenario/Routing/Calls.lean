@@ -26,16 +26,33 @@ theorem noCauseHandler_free (token : String) (id : Nat) (idText : String) :
     NoCauseHandler (progOf token id idText) = true := by
   kernel_rfl
 
-/-- The actual Routing program reads no outside clock state. -/
-theorem noClockRead_free (token : String) (id : Nat) (idText : String) :
-    NoClockRead (progOf token id idText) = true := by
+/-- The actual Routing program calls only its external rows at every source address. -/
+theorem externalOnly_free (token : String) (id : Nat) (idText : String) :
+    SourceScope.ExternalOnly (progOf token id idText) := by
+  unfold SourceScope.ExternalOnly
   kernel_rfl
+
+/-- Routing's actual reply columns contain no uninstantiated type parameter. -/
+theorem concreteReplies_free (token : String) (id : Nat) (idText : String) :
+    SourceScope.ConcreteReplies (request token id idText).table := by
+  unfold SourceScope.ConcreteReplies
+  kernel_rfl
+
+/-- The actual Routing heap is empty after every admitted history, at every command budget. -/
+theorem empty_heap (token : String) (id : Nat) (idText : String) (b : Api.Built)
+    (built : Api.Author.build (request token id idText) = .ok b) (compileFuel : Nat)
+    (m : NativeMachine) (history : Run.HistoryOf b compileFuel m) : m.state.refs = [] := by
+  have source : SourceScope.ExternalOnly b.program := by
+    rw [(built_request built).1]
+    exact externalOnly_free token id idText
+  exact source.empty_heap compileFuel m history
 
 /-- The scenario's held-call observation reads exactly the accepted binding rows. -/
 theorem held_in_tree (s : Run) (reached : Run.Reached s)
     (fragment : StraightRows s.built.table s.built.program = true)
     (noCause : NoCauseHandler s.built.program = true)
-    (noClock : NoClockRead s.built.program = true)
+    (external : SourceScope.ExternalOnly s.built.program)
+    (concrete : SourceScope.ConcreteReplies s.built.table)
     (seen : Seen) (mem : seen ∈ held s) :
     ∃ (i : Nat) (row : Program.Row) (T : ReplyTape),
       externalRow s.built.table i = some row ∧ row.spelling = seen.row ∧
@@ -48,7 +65,7 @@ theorem held_in_tree (s : Run) (reached : Run.Reached s)
   · next call token =>
     cases decoded
     obtain ⟨i, row, T, operation, present, journal, wait⟩ :=
-      bound_in_tree s reached fragment noCause noClock call token recorded
+      bound_in_tree s reached fragment noCause external concrete call token recorded
     have found : s.rowOf call.op = some row := by
       rw [operation]
       exact present

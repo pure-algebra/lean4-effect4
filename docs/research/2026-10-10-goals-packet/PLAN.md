@@ -309,3 +309,10 @@ Whole-history custody and source uniqueness remain open.
 Countdown callbacks account for the saved waiter after their nested interrupts.
 The independent integrated audits have no planned dependencies in these local helpers.
 The parallel-close accounting control requires a design resolution before whole-history custody closes.
+
+## Actual host-prefix boundaries
+
+`codex/HostSourceReceipt.md` records two admitted controls and the internal source and table restrictions they require.
+Routing discharges both restrictions; its original authorization statement stays unchanged.
+The shared heap invariant now covers arbitrary actual host replies.
+The universal session-to-tree connection remains open.

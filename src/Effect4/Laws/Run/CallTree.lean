@@ -3,13 +3,14 @@ import Effect4.Laws.Program.Agreement.HostedLoop
 import Effect4.Laws.Run.JournalPrefix
 import Effect4.Laws.Auto.Obligations
 import Effect4.Program.Fold
+import Effect4.Laws.Program.HostSource
 
 /-!
 # Recorded calls and the admitted call tree
 
 Concept: translation-simulation, R6. Claim: recorded-call-tree-prefix, role inversion.
 Consumer: `Routing.unauthorized_calls_nothing`, through its proved token check in the call tree.
-Reach: `StraightRows`, no cause handlers or clock reads, every recorded script and every command budget.
+Reach: `StraightRows`, no cause handlers, external-only source operations, concrete reply columns, every recorded script and every command budget.
 The claim extends `rows_loop_frontier` to calls observed before a run settles.
 It establishes no progress, fairness, fork behavior, scope behavior, or outside-host agreement.
 The host boundary remains `docs/core/host-boundary.md`.
@@ -30,7 +31,7 @@ def NoCauseHandler (program : NativeEff) : Bool :=
     | _ => true
 
 /-- A reply-only tape cannot describe external clock advances.
-Consumer: `request_leads`; the actual Routing program discharges this source restriction. -/
+Consumer: the retained clock boundary control; `ExternalOnly` supplies the active source restriction. -/
 def NoClockRead (program : NativeEff) : Bool :=
   foldMap_eff true (· && ·) program fun
     | .perform .clockNow _ => false
@@ -87,7 +88,8 @@ The existing local agreement theorem supplies the subsequent call-tree observati
 proof_goal request_leads (s : Run) (reached : Run.Reached s)
     (fragment : StraightRows s.built.table s.built.program = true)
     (noCause : NoCauseHandler s.built.program = true)
-    (noClock : NoClockRead s.built.program = true)
+    (external : SourceScope.ExternalOnly s.built.program)
+    (concrete : SourceScope.ConcreteReplies s.built.table)
     (call : Call) (token : Nat)
     (request : Program.requestOf s.machine call.fiber token = some (call.op, call.request)) :
     ∃ (i : Nat) (row : Program.Row) (tape : ReplyTape) (frame : NFiber) (stores : Stores),
@@ -104,7 +106,8 @@ The operational prefix obligation remains explicit in `request_leads`. -/
 theorem request_in_tree (s : Run) (reached : Run.Reached s)
     (fragment : StraightRows s.built.table s.built.program = true)
     (noCause : NoCauseHandler s.built.program = true)
-    (noClock : NoClockRead s.built.program = true)
+    (external : SourceScope.ExternalOnly s.built.program)
+    (concrete : SourceScope.ConcreteReplies s.built.table)
     (call : Call) (token : Nat)
     (request : Program.requestOf s.machine call.fiber token = some (call.op, call.request)) :
     ∃ (i : Nat) (row : Program.Row) (T : ReplyTape),
@@ -113,7 +116,7 @@ theorem request_in_tree (s : Run) (reached : Run.Reached s)
         reply.completion = .ofExit ex) ∧
       treeWaits s.built.table s.built.program T = .waiting i call.request := by
   obtain ⟨i, row, tape, frame, stores, op, declared, submitted, leads, callAt, requestAt⟩ :=
-    request_leads s reached fragment noCause noClock call token request
+    request_leads s reached fragment noCause external concrete call token request
   exact ⟨i, row, tape, op, declared, submitted,
     tree_wait_of_leads s.built.table s.built.program fragment s.budget.compileFuel tape
       frame stores i call.request leads callAt requestAt⟩
@@ -125,7 +128,8 @@ This is the command-prefix connection consumed by the original routing clause. -
 theorem bound_in_tree (s : Run) (reached : Run.Reached s)
     (fragment : StraightRows s.built.table s.built.program = true)
     (noCause : NoCauseHandler s.built.program = true)
-    (noClock : NoClockRead s.built.program = true)
+    (external : SourceScope.ExternalOnly s.built.program)
+    (concrete : SourceScope.ConcreteReplies s.built.table)
     (call : Call) (token : Nat)
     (bound : ((Command.bind call token), .bound) ∈ s.journal.zip s.phases) :
     ∃ (i : Nat) (row : Program.Row) (T : ReplyTape),
@@ -141,11 +145,14 @@ theorem bound_in_tree (s : Run) (reached : Run.Reached s)
   have handlers : NoCauseHandler before.built.program = true := by
     rw [built]
     exact noCause
-  have clocks : NoClockRead before.built.program = true := by
+  have operations : SourceScope.ExternalOnly before.built.program := by
     rw [built]
-    exact noClock
+    exact external
+  have concreteRows : SourceScope.ConcreteReplies before.built.table := by
+    rw [built]
+    exact concrete
   obtain ⟨i, row, tape, op, declared, submitted, waiting⟩ :=
-    request_in_tree before actual admitted handlers clocks call token request
+    request_in_tree before actual admitted handlers operations concreteRows call token request
   rw [built] at declared waiting
   refine ⟨i, row, tape, op, declared, ?_, waiting⟩
   intro ex member
