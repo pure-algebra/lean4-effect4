@@ -1,4 +1,5 @@
 import Effect4.Laws.Machine.AnswerFlowCausePop
+import Effect4.Laws.Machine.AnswerFlowActions
 import Effect4.Program.Compile
 import Effect4.Laws.Auto.KernelRfl
 
@@ -25,8 +26,13 @@ private def stage : Model (ν := EffName) (σ := EffThunk) (β := Val)
     exact ⟨good.1, Or.inl (congrArg Prim.success good.2)⟩
   failure := fun _ _ cause good => ⟨good, Or.inr ⟨cause, rfl⟩⟩
 
-private def interp : PrimInterp EffName EffThunk Val Err Defect FiberId Ann :=
-  (interpOf (.succeed (.lit .unit)) []).toPrimInterp
+private def native : RunInterp EffName EffThunk Val Err Defect FiberId Ann Ctx Stores :=
+  interpOf (.succeed (.lit .unit)) []
+private def interp : PrimInterp EffName EffThunk Val Err Defect FiberId Ann := native.toPrimInterp
+private def acting : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx :=
+  RunFiber.make ⟨0⟩ (.success .unit) true (2048, false) emptyCtx
+private def machine : RunMachine EffName EffThunk Val Err Defect FiberId Ann Ctx Stores :=
+  RunMachine.empty Stores.empty
 private def frame : FrameFiber EffName EffThunk Val Err Defect FiberId Ann := FrameFiber.start (.success .unit)
 private def name : EffName := .restore (.success .unit)
 private def reason : CauseV := .empty
@@ -116,5 +122,47 @@ example : ∃ next events,
     (by kernel_rfl) rfl (by kernel_rfl)
   rcases result with ⟨events, equation, typed⟩
   exact ⟨_, events, equation, typed⟩
+
+/-- The actual native mask producer consumes a pending cause only at interruptible entry. -/
+example : FrameAt stage interp 1 1
+    (evaluatePrim.withFiber native machine
+      {acting with frame := {acting.frame with interruptible := false, interruptedCause := some reason}}
+      false (.setInterruptible (.success .unit) true)).fiber.frame := by
+  exact withFiber_mask stage native 1 1 1 machine _ false true (.success .unit)
+    ⟨rfl, Or.inl rfl⟩ (.nil 1 1) (fun _ _ _ _ => rfl)
+
+/-- The actual context setter returns the native unit answer above its existing saved suffix. -/
+example : FrameAt stage interp 1 1
+    (evaluatePrim.withFiber native machine acting false (.setContext emptyCtx)).fiber.frame := by
+  exact withFiber_setContext stage native 1 1 1 machine acting false emptyCtx ⟨rfl, rfl⟩ (.nil 1 1)
+
+private def exactAnswer : Model (ν := EffName) (σ := EffThunk) (β := Val)
+    (ε := Err) (δ := Defect) (ι := FiberId) (α := Ann) Unit Val where
+  future := Eq
+  future_refl := Eq.refl
+  future_trans := fun _ _ _ first second => first.trans second
+  value _ expected value := value = expected
+  cause _ _ _ := True
+  code _ expected code := code = .success expected ∨ ∃ cause, code = .failure cause
+  finalizer _ _ _ := none
+  success := fun _ _ _ good => Or.inl (congrArg Prim.success good)
+  failure := fun _ _ cause _ => Or.inr ⟨cause, rfl⟩
+
+/-- The actual native fork returns precisely the allocated child handle to its parent. -/
+example : FrameAt exactAnswer interp () (.fiber ⟨machine.nextId⟩)
+    (evaluatePrim.withFiber native machine acting false
+      (.fork (.success .unit) ⟨false, true, .inherit⟩ [2,1])).fiber.frame := by
+  exact withFiber_fork_parent exactAnswer native () (.fiber ⟨machine.nextId⟩) (.fiber ⟨machine.nextId⟩)
+    machine acting false (.success .unit) ⟨false, true, .inherit⟩ [2,1] rfl (.nil () _)
+
+/-- The same native fork retains the existing row and types the newly initialized child body. -/
+example : ∀ row ∈ (evaluatePrim.withFiber native {machine with fibers := [acting], nextId := 1}
+    acting false (.fork (.success .unit) ⟨false, true, .inherit⟩ [2,1])).machine.fibers,
+    FrameAt stage interp 1 1 row.frame := by
+  apply withFiber_fork_rows stage native (fun _ => 1) (fun _ => 1)
+  · intro row member
+    rw [List.mem_singleton.mp member]
+    exact ⟨1, ⟨rfl, Or.inl rfl⟩, .nil 1 1⟩
+  · exact ⟨rfl, Or.inl rfl⟩
 
 end Test.Machine.AnswerFlow
