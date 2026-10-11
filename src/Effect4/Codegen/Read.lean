@@ -1211,23 +1211,50 @@ def paramsSpell (param : Nat → Op) (ps : List ParamDecl)
     (spell : String → List RowArg → Option Op) : String → List RowArg → Option Op :=
   namedSpell param (fun s => ps.findIdx? (·.name == s)) spell
 
-/-- A definition's body from its printed suspension, read at environment length `1`. -/
+/-- A body's own layer from its constant at the top of the suspension, `let L_<path> = <layer>`
+(decisions row 341, step 3), the inverse of `printLocal`: the path its name carries, and the
+layer. A name that is no canonical path spelling, and an annotated constant, are refused. -/
+def readLocal (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
+    (spell : String → List RowArg → Option Op) :
+    TypeScript.Stmt → Except ReadRefusal (List Nat × LayerTerm Op)
+  | .letInit name value none =>
+    match LayerTerm.readRefName name with
+    | some t =>
+      if LayerTerm.refName t = name then
+        readLayer classes sig spell value >>= fun l => .ok (t, l)
+      else .error (.shape "definition")
+    | none => .error (.shape "definition")
+  | _ => .error (.shape "definition")
+
+/-- A definition's body from its printed suspension, read at environment length `1`, with the
+body's own layers (decisions row 341, step 3): the inverse of `suspension`. The plain form
+`Effect.suspend(() => body)` holds none; the block form
+`Effect.suspend(() => { let L_<path> = …; return body })` holds one per constant before the
+`return`, each at the path its name carries. -/
 def readDefBody (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
-    (spell : String → List RowArg → Option Op) (x : Expr) : Except ReadRefusal (Eff Op) := do
-  match ← readEff classes sig spell 1 x with
-  | .suspend body => .ok body
+    (spell : String → List RowArg → Option Op) (x : Expr) :
+    Except ReadRefusal (Eff Op × List (List Nat × LayerTerm Op)) :=
+  match x with
+  | .call (.ident "Effect.suspend") [.arrow none y] =>
+    readEff classes sig spell 1 y >>= fun body => .ok (body, [])
+  | .call (.ident "Effect.suspend") [.arrowBlock [] stmts none] =>
+    match stmts.getLast? with
+    | some (.ret y) =>
+      stmts.dropLast.mapM (readLocal classes sig spell) >>= fun locals =>
+      readEff classes sig spell 1 y >>= fun body => .ok (body, locals)
+    | _ => .error (.shape "definition")
   | _ => .error (.shape "definition")
 
 /-- The bodies of a block, in order, each at the signature and the spelling map its parameters
-extend (slice HO-3). -/
+extend (slice HO-3), and the bodies' own layers, body after body (decisions row 341, step 3). -/
 def readDefBodies (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
     (spell : String → List RowArg → Option Op) (param : Nat → Op) :
-    List (DefDecl × Expr) → Except ReadRefusal (Effs Op)
-  | [] => .ok .nil
-  | (d, x) :: rest => do
-    let body ← readDefBody classes (sig.withParams d.params) (paramsSpell param d.params spell) x
-    let bodies ← readDefBodies classes sig spell param rest
-    .ok (.cons body bodies)
+    List (DefDecl × Expr) → Except ReadRefusal (Effs Op × List (List Nat × LayerTerm Op))
+  | [] => .ok (.nil, [])
+  | (d, x) :: rest =>
+    readDefBody classes (sig.withParams d.params) (paramsSpell param d.params spell) x >>= fun b =>
+    readDefBodies classes sig spell param rest >>= fun bs =>
+    .ok (.cons b.1 bs.1, b.2 ++ bs.2)
 
 /-- A layer declaration back to its path and its layer: `const L_<path> = <layer>`. -/
 def readLayerDecl (classes : Effect4.Codegen.Classes.Classes) (sig : Signature Op)
@@ -1272,7 +1299,8 @@ operation that invokes definition `k` (`NativeOp.call` at the native signature),
 the run of a body's parameter `i` (`NativeOp.param`), whose name its body's spelling map reads
 (`paramsSpell`, slice HO-3). The layers whose
 paths stand in the module (`2 :: …`, decisions row 341, step 2) are the block's module layers,
-the `k`-th at `Path.layerPath k` (`moduleLayersOf`); the others are put back at their paths. -/
+the `k`-th at `Path.layerPath k` (`moduleLayersOf`); the others, and each body's own layers from
+its suspension (step 3), are put back at their paths. -/
 def readModule (sig : Signature Op) (spell : String → List RowArg → Option Op)
     (call : Nat → Op) (param : Nat → Op) (decls : List TypeScript.Decl) :
     Except ReadRefusal (Eff Op) :=
@@ -1299,7 +1327,8 @@ def readModule (sig : Signature Op) (spell : String → List RowArg → Option O
         let e ← readEff classes sig' spell' 0 main.value
         let ds ← layerDecls.mapM (readLayerDecl classes sig' spell')
         let some layers := moduleLayersOf ds | .error (.shape "module")
-        match (Eff.defs defs bodies e layers).restoreAll (ds.filter fun d => !inModulePath d.1) with
+        match (Eff.defs defs bodies.1 e layers).restoreAll
+            (bodies.2 ++ ds.filter fun d => !inModulePath d.1) with
         | some e' => .ok e'
         | none => .error (.shape "module")
     | _, _ => .error (.shape "module")

@@ -155,13 +155,38 @@ def typeRefOf (ty : Ty) : Except PrintRefusal TypeScript.TypeRef :=
 /-- A definition's declared type: its answer and error columns, and its requirement row. -/
 def DefDecl.effTy (d : DefDecl) : EffTy := ⟨d.answer, d.error, Requirement.ofList d.requires⟩
 
-/-- Every layer of a body is a reference into the module's layers (decisions row 341, step 2):
-the body names module layers and holds none of its own. -/
-def Eff.layersAreModuleRefs (body : Eff Op) : Bool :=
-  (body.layerPaths []).all fun p =>
-    match (Node.eff body).layerAt p with
-    | some (.ref t) => t.head? == some 2
-    | _ => false
+/-! ### A body's own layers (decisions row 341, step 3)
+
+A layer written in a definition's body belongs to one call of the body: rc.112 builds one layer
+object per evaluation of the body, and its memo map is keyed by the object
+(`vendor/effect-4.0.0-rc.112/src/Layer.ts`, `MemoMapImpl.map`). So a body's hoisted layers print
+as constants at the top of the body's suspension, `Effect.suspend(() => { let L_<path> = …;
+return body })`, and each run of the body makes its own objects. -/
+
+/-- The definition whose body holds a path of a block: `k` when the path stands under body `k`,
+the block's child `0` at position `k`; `none` outside every body. It is `Eff.scopeOf` of a block,
+read off the path alone. -/
+def Path.bodyIndex : List Nat → Option Nat
+  | 0 :: rest => Path.spineIndex rest
+  | _ => none
+
+/-- A body's own layer as a constant at the top of its suspension, `let L_<path> = <layer>`,
+found by its path among the body's hoisted layers. -/
+def printLocal (sig : Signature Op) (locals : List (List Nat × LayerTerm Op)) (t : List Nat) :
+    Except PrintRefusal TypeScript.Stmt :=
+  match locals.find? (·.1 == t) with
+  | some (_, l) => do
+    let x ← printLayer sig l
+    .ok (.letInit (LayerTerm.refName t) x none)
+  | none => .error (.layerRef t)
+
+/-- A definition's suspension: `Effect.suspend(() => body)`, and with the body's own layers
+`Effect.suspend(() => { let L_<path> = …; return body })`. The block runs at each run of the
+suspension, so each call makes its own layer objects. -/
+def suspension : List TypeScript.Stmt → TypeScript.Expr → TypeScript.Expr
+  | [], body => .call (.ident "Effect.suspend") [.arrow none body]
+  | locals@(_ :: _), body =>
+    .call (.ident "Effect.suspend") [.arrowBlock [] (locals ++ [.ret body])]
 
 /-- A parameter's type in its definition's header (decisions row 340, slice HO-3): a function
 from its request to an Effect of its declared columns, `(a0: Request) => Effect.Effect<A, E,
@@ -177,34 +202,43 @@ Effect.Effect<…>, …): Effect.Effect<A, E, R> => Effect.suspend(() => body)`.
 is the request, the body's one variable, so the body prints at environment length `1`. Each
 parameter whose value is a program follows it, named by its declaration and typed by
 `paramType`; the body prints at the signature its parameters extend (`Signature.withParams`),
-so the run of parameter `i` prints as the row call of its name (slice HO-3). The body is a suspension, so an invocation is one
-`Effect.suspend`, as the machine's is. The result type is `declarationType` of the declared
-columns: a recursive arrow needs it (TS7023). A body's own layer is refused by name: printed
-inside the arrow, rc.112 would build one layer object per invocation, where the machine keeps
-one memo entry per path (DB-12; per-call layers are decisions row 341's step 3). A reference to
-a module layer is admitted (step 2): it prints as the module constant's name, one object. -/
-def printDef (sig : Signature Op) (d : DefDecl) (body : Eff Op) :
-    Except PrintRefusal TypeScript.ConstDecl :=
-  if !body.layersAreModuleRefs then .error (.internalAction "defs:layer")
-  else
-    typeRefOf d.request >>= fun request =>
-    d.params.mapM (paramType sig) >>= fun fns =>
-    declarationType d.effTy sig.scopeKey >>= fun result =>
-    print (sig.withParams d.params) 1 (.suspend body) >>= fun value =>
-    .ok { doc := [], name := d.name,
-          value := .lambda ({ name := Var.name 0, type := some request } ::
-            (d.params.zip fns).map fun p => { name := p.1.name, type := some p.2 }) value result }
+so the run of parameter `i` prints as the row call of its name (slice HO-3). The body is a
+suspension, so an invocation is one `Effect.suspend`, as the machine's is. The result type is
+`declarationType` of the declared columns: a recursive arrow needs it (TS7023).
 
-/-- The definitions of a block, in order, each against its body. A block whose declarations
-and bodies differ in number is refused, as the checker refuses it. -/
-def printDefs (sig : Signature Op) : List DefDecl → Effs Op →
-    Except PrintRefusal (List TypeScript.ConstDecl)
-  | [], .nil => .ok []
-  | d :: ds, .cons body rest => do
-    let c ← printDef sig d body
-    let cs ← printDefs sig ds rest
-    .ok (c :: cs)
-  | _, _ => .error (.internalAction "defs")
+The body's own hoisted layers (`locals`) print at the top of the suspension (`suspension`), in
+declaration order (`Path.declBefore`), at the body's signature, so a layer may run the body's
+parameters. A reference to one prints as its constant's name, and each run of the body makes its
+own objects, as the machine keys a body's build by its path and the running call (decisions row
+341, step 3). A reference to a module layer prints as the module constant's name (step 2). -/
+def printDef (sig : Signature Op) (d : DefDecl) (body : Eff Op)
+    (locals : List (List Nat × LayerTerm Op)) : Except PrintRefusal TypeScript.ConstDecl :=
+  typeRefOf d.request >>= fun request =>
+  d.params.mapM (paramType sig) >>= fun fns =>
+  declarationType d.effTy sig.scopeKey >>= fun result =>
+  (Path.sortBy Path.declBefore (locals.map (·.1))).mapM
+    (printLocal (sig.withParams d.params) locals) >>= fun ls =>
+  print (sig.withParams d.params) 1 body >>= fun value =>
+  .ok { doc := [], name := d.name,
+        value := .lambda ({ name := Var.name 0, type := some request } ::
+          (d.params.zip fns).map fun p => { name := p.1.name, type := some p.2 })
+          (suspension ls value) result }
+
+/-- The definitions of a block, in order, each against its body, from position `k`. Each takes
+into its suspension the hoisted layers of `rest` whose paths stand in its body
+(`Path.bodyIndex`), and passes the others on: the answer is the constants and the layers no body
+took. A block whose declarations and bodies differ in number is refused, as the checker refuses
+it. -/
+def printDefs (sig : Signature Op) : Nat → List DefDecl → Effs Op →
+    List (List Nat × LayerTerm Op) →
+    Except PrintRefusal (List TypeScript.ConstDecl × List (List Nat × LayerTerm Op))
+  | _, [], .nil, rest => .ok ([], rest)
+  | k, d :: ds, .cons body bodies, rest =>
+    printDef sig d body (rest.filter fun e => decide (Path.bodyIndex e.1 = some k)) >>= fun c =>
+    printDefs sig (k + 1) ds bodies
+      (rest.filter fun e => !decide (Path.bodyIndex e.1 = some k)) >>= fun out =>
+    .ok (c :: out.1, out.2)
+  | _, _, _, _ => .error (.internalAction "defs")
 
 /-! ## A block's services (decisions rows 338 and 339, slice CO-6b)
 
@@ -402,9 +436,15 @@ is the inverse on what this prints.
 
 A program with a definition block prints its definitions first (`printDef`), each at the
 block's signature, so that an invocation prints as the definition's name. They stand before the
-layers: a layer's body runs when its constant is evaluated, and it may invoke a definition. The
-module's layers come next (`printModuleLayers`), then the hoisted ones, which may name them. The
-main declaration is the block's main program. -/
+layers: a layer's body runs when its constant is evaluated, and it may invoke a definition. A
+body's own hoisted layers stand at the top of its suspension (`printDefs`, decisions row 341,
+step 3). The module's layers come next (`printModuleLayers`), then the hoisted ones no body took,
+which may name them. The main declaration is the block's main program.
+
+A block's references must stand in their scopes (`Eff.inScope`, decisions row 341): a body names
+its own layers, declared in its suspension, and the module's; the main program names its own and
+the module's. Otherwise a printed name would be declared where its site cannot see it, so the
+first reference out of its scope is refused by its target. -/
 def printModule (sig : Signature Op) (name : String) (ty : EffTy) (e : Eff Op) :
     Except PrintRefusal (List TypeScript.ConstDecl) :=
   match e.hoistAll with
@@ -424,22 +464,25 @@ def printModule (sig : Signature Op) (name : String) (ty : EffTy) (e : Eff Op) :
       .ok (ds ++ [declaration])
     -- an empty block would print as its main program alone, and read back as it
     | some ([], _, _, _) => .error (.internalAction "defs")
-    | some (d :: ds, bodies, body, layers) => do
-      let defs := d :: ds
-      let sig' := sig.withDefs defs
-      let cs ← printDefs sig' defs bodies
-      let svc ← printServices sig' defs
-      let ms ← printModuleLayers sig' layers
-      let ordered := Path.sortBy Path.declBefore (decls.map (·.1))
-      let ds ← ordered.mapM fun t =>
-        match decls.find? (·.1 == t) with
-        | some (_, l) => do
-          let x ← printLayer sig' l
-          .ok ({ doc := [], name := LayerTerm.refName t, value := x } : TypeScript.ConstDecl)
-        | none => .error (.layerRef t)
-      let m ← print sig' 0 body
-      let declaration ← printDecl name ty m sig.scopeKey
-      .ok (cs ++ svc ++ ms ++ ds ++ [declaration])
+    | some (d :: ds, bodies, body, layers) =>
+      match (e.refSites []).find? fun x => !e.inScope x.1 x.2 with
+      | some x => .error (.layerRef x.2)
+      | none => do
+        let defs := d :: ds
+        let sig' := sig.withDefs defs
+        let out ← printDefs sig' 0 defs bodies decls
+        let svc ← printServices sig' defs
+        let ms ← printModuleLayers sig' layers
+        let ordered := Path.sortBy Path.declBefore (out.2.map (·.1))
+        let ds ← ordered.mapM fun t =>
+          match out.2.find? (·.1 == t) with
+          | some (_, l) => do
+            let x ← printLayer sig' l
+            .ok ({ doc := [], name := LayerTerm.refName t, value := x } : TypeScript.ConstDecl)
+          | none => .error (.layerRef t)
+        let m ← print sig' 0 body
+        let declaration ← printDecl name ty m sig.scopeKey
+        .ok (out.1 ++ svc ++ ms ++ ds ++ [declaration])
 
 variable [ScopedOp Op]
 

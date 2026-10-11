@@ -110,16 +110,100 @@ def printRefusal (p : NativeEff) : Option PrintRefusal :=
 #guard (Program.printModule (nativeSignature []) "main" (EffTy.pure .nat)
     (.defs [] .nil (.succeed (.lit (.nat 1))) .nil : NativeEff)).toOption.isNone
 
-/-- `twice` with a layer inside its body. -/
+/-! ## A body's own layers (decisions row 341, step 3) -/
+
+/-- A service key that a body's own layer provides. -/
+def bodyKey : ServiceKey := ⟨⟨5⟩, ⟨4⟩⟩
+
+/-- **A block whose definition body holds its own layer**: `readBoth : number → number` provides
+its own layer, at `[0, 0, 0]`, around the module's layer `[2, 0]` and a second provision of its
+own layer by reference, and adds the two services. -/
+def bodyLayered : NativeEff :=
+  .defs [{ name := "readBoth", request := .nat, answer := .nat }]
+    (.cons (.provideLayer (.succeed bodyKey (.nat 3)) false
+       (.provideLayer (.ref [2, 0]) false
+         (.provideLayer (.ref [0, 0, 0]) false
+           (.bind (.service bodyKey) (.bind (.service layerKey)
+             (.succeed (ap "add" [.var 1, .var 2]))))))) .nil)
+    (.perform (.call 0) (.lit (.nat 1)))
+    (.cons (.succeed layerKey (.nat 7)) .nil)
+
+-- the module types, and runs to the sum of the two services
+#guard Api.typeOf bodyLayered == some (EffTy.pure .nat)
+#guard (match (Api.run bodyLayered 300).exit with
+  | some (.success v) => v == .nat 10
+  | _ => false)
+-- the body's own layer is a constant at the top of its suspension, named by its path, and both
+-- of its uses print as that name; the module layer stays a module constant
+#guard (Api.printModule "main" bodyLayered).map
+    (fun m => String.join (m.decls.map (TypeScript.Render.decl TypeScript.house0))) =
+  some ("export const readBoth = (a0: number): Effect.Effect<number, never, never> => " ++
+    "Effect.suspend(() => {\n" ++
+    "  let L_0_0_0 = Layer.succeed(Context.Service<\"k5_4\", number>(\"k5_4\"), 3)\n" ++
+    "  return Effect.provide(Effect.provide(Effect.provide(Effect.flatMap(" ++
+    "Effect.service(Context.Service<\"k5_4\", number>(\"k5_4\")), (a1) => Effect.flatMap(" ++
+    "Effect.service(Context.Service<\"k4_4\", number>(\"k4_4\")), (a2) => " ++
+    "Effect.succeed(add(a1, a2)))), L_0_0_0), L_2_0), L_0_0_0)\n" ++
+    "})\n" ++
+    "export const L_2_0 = Layer.succeed(Context.Service<\"k4_4\", number>(\"k4_4\"), 7)\n" ++
+    "export const main: Effect.Effect<number, never, never> = readBoth(1)\n")
+-- the program is in the readable domain of a block, and its module reads back to it
+#guard blockReadable [] (nativeSignature []) bodyLayered
+#guard (Api.printModule "main" bodyLayered).map (fun m =>
+  decide (Api.readModule m [] = .ok bodyLayered)) = some true
+
+/-- `twice` with a layer inside its body that nothing names. -/
 def layerInBody : NativeEff :=
   .defs [twiceDecl]
     (.cons (.provideLayer (.succeed ⟨⟨1⟩, ⟨1⟩⟩ .unit) false
       (.succeed (ap "pair" [.var 0, .var 0]))) .nil)
     (.perform (.call 0) (.lit (.nat 21))) .nil
 
--- a layer inside a body is refused by name: rc.112 would build one layer object per invocation
+-- a layer that nothing names prints in place, inside the body's suspension, so each run of the
+-- body evaluates it again; the module reads back
 #guard (Program.printModule (nativeSignature []) "main" (EffTy.pure (.prod .nat .nat))
-    layerInBody).toOption.isNone
+    layerInBody).toOption.map
+    (fun ds => String.join (ds.map fun c => TypeScript.Render.decl TypeScript.house0 (.const c))) =
+  some ("export const twice = (a0: number): Effect.Effect<readonly [number, number], never, " ++
+    "never> => Effect.suspend(() => Effect.provide(Effect.succeed(pair(a0, a0)), " ++
+    "Layer.succeed(Context.Service(\"k1_1\"), undefined)))\n" ++
+    "export const main: Effect.Effect<readonly [number, number], never, never> = twice(21)\n")
+#guard (Program.printModule (nativeSignature []) "main" (EffTy.pure (.prod .nat .nat))
+    layerInBody).toOption.map (fun ds =>
+  decide (Program.readModule (nativeSignature []) (nativeSpell []) NativeOp.call NativeOp.param
+    (ds.map TypeScript.Decl.const) = .ok layerInBody)) = some true
+
+/-- Two definitions; the second names the first's own layer. -/
+def otherBodyRef : NativeEff :=
+  .defs [{ name := "first", request := .nat, answer := .nat },
+      { name := "second", request := .nat, answer := .nat }]
+    (.cons (.provideLayer (.succeed bodyKey (.nat 3)) false (.service bodyKey))
+      (.cons (.provideLayer (.ref [0, 0, 0]) false (.service bodyKey)) .nil))
+    (.perform (.call 1) (.lit (.nat 1))) .nil
+
+/-- A definition, and a main program that names its body's own layer. -/
+def mainBodyRef : NativeEff :=
+  .defs [{ name := "first", request := .nat, answer := .nat }]
+    (.cons (.provideLayer (.succeed bodyKey (.nat 3)) false (.service bodyKey)) .nil)
+    (.provideLayer (.ref [0, 0, 0]) false (.service bodyKey)) .nil
+
+/-- The raw module printer's refusal of a program, when it refuses. -/
+def rawRefusal (p : NativeEff) : Option PrintRefusal :=
+  match Program.printModule (nativeSignature []) "main" (EffTy.pure .nat) p with
+  | .error why => some why
+  | .ok _ => none
+
+-- control: a body's layer is its constant, declared in its suspension, so a reference from another
+-- body or from the main program would name what its site cannot see; the printer refuses it by its
+-- target, as the checker refuses it at the site (`otherScope`)
+#guard rawRefusal otherBodyRef = some (.layerRef [0, 0, 0])
+#guard rawRefusal mainBodyRef = some (.layerRef [0, 0, 0])
+#guard (Api.explain otherBodyRef).bind (fun r => match r.reason with
+  | .referenceIllFormed t why => some (r.path, t, why)
+  | _ => none) = some ([0, 1, 0, 0], [0, 0, 0], .otherScope)
+#guard (Api.explain mainBodyRef).bind (fun r => match r.reason with
+  | .referenceIllFormed t why => some (r.path, t, why)
+  | _ => none) = some ([1, 0], [0, 0, 0], .otherScope)
 
 /-! ## A definition's parameters (decisions row 340, slice HO-3) -/
 
