@@ -28,14 +28,6 @@ inductive TerminalReply : NCode → Prop
       (.onSuccess (.withFiber (.store (.act (.setInterruptible (.cancelRace race) false))))
         (.store (.restore exit)))
 
-/-- Every actual resume payload has source ownership without a source callback.
-Consumer: installation of queued resume code. -/
-theorem TerminalReply.code_at (root : NativeEff) (code : NCode) (held : TerminalReply code) :
-    CodeAt root code := by
-  cases held
-  all_goals aesop (add norm simp [CodeAt, ThunkAt, StoreThunkAt, OpAt, StoreActionAt,
-    ProgAt, NameAt, StoreNameAt])
-
 /-- Represented completions produce only native resume payloads.
 Consumer: due drains, clock answers and host reply preparation. -/
 theorem completion_reply (answer : Completion Val Err Defect FiberId Ann) :
@@ -69,7 +61,8 @@ structure FiberAt (root : NativeEff) (fiber : SourceFiber) : Prop where
   dispatcher : DispatcherAt root fiber.dispatcher
 
 /-- Every program still waiting to launch from a race retains its source scope. -/
-def RaceAt (root : NativeEff) (race : SourceRace) : Prop := ∀ code ∈ race.programs, CodeAt root code
+def RaceAt (root : NativeEff) (race : SourceRace) : Prop :=
+  (∀ code ∈ race.programs, CodeAt root code) ∧ RaceAllowed root
 
 /-- A command retains its resume code outside the stored machine. -/
 def CommandAt (root : NativeEff) : SourceCommand → Prop
@@ -248,7 +241,7 @@ theorem configuration_spawn (root : NativeEff) (completed) (table : RowTable)
 theorem configuration_begin_race (root : NativeEff) (completed) (table : RowTable)
     (m : NativeMachine) (fiber : SourceFiber) (yielding : Bool) (entrants : List NCode)
     (site : Option (List Nat)) (mode : Supervision.RaceMode) (owned : ConfigurationAt root m)
-    (new : ∀ code ∈ entrants, CodeAt root code) :
+    (new : (∀ code ∈ entrants, CodeAt root code) ∧ RaceAllowed root) :
     ConfigurationAt root (beginRace (interpAt root completed table) m fiber yielding entrants site mode).machine := by
   unfold beginRace
   apply configuration_emit

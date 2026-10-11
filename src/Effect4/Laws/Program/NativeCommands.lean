@@ -75,12 +75,13 @@ theorem settle_at (root : NativeEff) (id : FiberId) (rest : List SourceCommand) 
   · exact ⟨configuration_halt root _ _ halted, by intro c member; cases member⟩
 
 /-- Race settlement introduces only administrative cleanup and the accepted exit. -/
-theorem race_settle_at (root : NativeEff) (table : RowTable) (race : Nat) (cleanup : Bool) (exit : ExitV) :
+theorem race_settle_at (root : NativeEff) (table : RowTable) (race : Nat) (cleanup : Bool) (exit : ExitV)
+    (allowed : RaceAllowed root) :
     CodeAt root ((interpOf root table).raceSettle race cleanup exit) := by
   change CodeAt root (embed (raceSettleProgram race cleanup exit))
   unfold raceSettleProgram
   split
-  · refine ⟨trivial, trivial, ?_⟩
+  · refine ⟨allowed, trivial, ?_⟩
     intro _ _ wrong
     cases wrong
   · cases exit <;> trivial
@@ -291,7 +292,7 @@ theorem observer_at (root : NativeEff) (table : RowTable) (id : FiberId) (exit :
     split
     · intro c member; cases member
     · intro c member; rw [List.mem_singleton.mp member]
-      exact ⟨race_settle_at root table race state.cleanupNeeded accepted,
+      exact ⟨race_settle_at root table race state.cleanupNeeded accepted raceAt.2,
         race_settle_reply root table race state.cleanupNeeded accepted⟩
   case case11 race previous changed state stopped emitted found updated =>
     exact ⟨configuration_race_update root m changed base (configuration_race root m race previous base found), pending⟩
@@ -366,12 +367,13 @@ theorem command_at (root : NativeEff) (fragment : Fragment root) (table : RowTab
          · exact suffix c later⟩
   case case16 id race raceFound program more programs blocked host hostFound spawned child spawnedEq updated =>
     have raceAt := races id race raceFound
-    have programAt := raceAt program (by rw [programs]; exact .head _)
+    have programAt := raceAt.1 program (by rw [programs]; exact .head _)
     have spawnedAt := launch_at root table id m host program (race.nextSite.getD []) owned programAt
     rw [spawnedEq] at spawnedAt
     have moreAt : RaceAt root {race with programs := more, nextSite := race.nextSite.map (fun site => site ++ [1])} := by
+      refine ⟨?_, raceAt.2⟩
       intro code member
-      exact raceAt code (by rw [programs]; exact .tail _ member)
+      exact raceAt.1 code (by rw [programs]; exact .tail _ member)
     exact ⟨configuration_emit root _ _ (configuration_race_update root spawned _ spawnedAt moreAt),
       by aesop (add norm simp [CommandsAt, CommandAt, List.mem_cons])⟩
   case case17 id child race fiber fiberFound raceFound updated exit exited changed nested observed =>
@@ -388,7 +390,7 @@ theorem command_at (root : NativeEff) (fragment : Fragment root) (table : RowTab
     have updatedAt : ConfigurationAt root updated := configuration_race_update root m _ owned (races id race raceFound)
     have held := configuration_fiber root updated race.host fiber updatedAt found
     apply settle_at root _ rest _ _ suffix
-    exact ⟨updatedAt, fiber_current_at root fiber code held (race_settle_at root table id _ exit), by intro c member; cases member⟩
+    exact ⟨updatedAt, fiber_current_at root fiber code held (race_settle_at root table id _ exit (races id race raceFound).2), by intro c member; cases member⟩
   case case23 id yielding race raceFound updated fiber found missing name before parked =>
     have updatedAt : ConfigurationAt root updated := configuration_race_update root m _ owned (races id race raceFound)
     have held := configuration_fiber root updated race.host fiber updatedAt found

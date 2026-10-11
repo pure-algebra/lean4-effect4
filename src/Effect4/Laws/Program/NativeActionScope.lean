@@ -14,7 +14,7 @@ open Effect4 Effect4.Machine Effect4.Program
 /-- Native fiber actions retain every program they can launch. -/
 def ActionAt (root : NativeEff) : NAction → Prop
   | .fork body _ _ | .forkIn body _ _ _ | .forkScoped body _ _ | .setInterruptible body _ => CodeAt root body
-  | .raceAll bodies _ | .raceAllFirst bodies _ => ∀ body ∈ bodies, CodeAt root body
+  | .raceAll bodies _ | .raceAllFirst bodies _ => (∀ body ∈ bodies, CodeAt root body) ∧ RaceAllowed root
   | .closePar bodies => (∀ body ∈ bodies, CodeAt root body) ∧ ParallelAllowed root
   | _ => True
 
@@ -102,6 +102,13 @@ theorem source_action_at (root : NativeEff) (fragment : Fragment root) (p : Poin
       have child := node_child_at root (p.child 0) (.action a) (.effs bodies) 0 q.1 q.2 h rfl
       exact entrants_at root fragment bodies _ child.1 child.2
     simp only [actionAt, source] at found
+    have allowed : match a with
+      | .raceAll _ | .raceAllFirst _ => RaceAllowed root
+      | _ => True := by
+      cases a with
+      | raceAll bodies => exact raceAllowed_firstSuccess root _ bodies q.1
+      | raceAllFirst bodies => exact raceAllowed_firstExit root _ bodies q.1
+      | _ => trivial
     cases a
     all_goals repeat' split at found
     all_goals aesop (add norm simp [ActionAt, Node.child]) (add safe apply [bodyScope, raceScope])

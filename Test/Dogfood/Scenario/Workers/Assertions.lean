@@ -395,7 +395,8 @@ theorem releases_step :
   exact ReleaseCustody.Control.Funded.read
     (ReleaseCustody.Execution.history b cf (acquirePath i) (Run.stepBy b m x)
       (Scenario.SourceFragment.workers_built_fragment total b built)
-      (Scenario.SourceFragment.workers_built_sequential total b built) reached).funded
+      (Scenario.SourceFragment.workers_built_sequential total b built)
+      (Scenario.SourceFragment.workers_built_race_free total b built) reached).funded
 
 /-- Store preservation obligation of `releases_once`.
 Reach: the second allocated reference in actual crew histories at every command boundary.

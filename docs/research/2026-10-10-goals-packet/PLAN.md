@@ -316,3 +316,10 @@ The parallel-close accounting control requires a design resolution before whole-
 Routing discharges both restrictions; its original authorization statement stays unchanged.
 The shared heap invariant now covers arbitrary actual host replies.
 The universal session-to-tree connection remains open.
+
+## Actual worker reply sequencing
+
+`codex/RaceSourceReceipt.md` records race origins in the existing source predicate and their exclusion by the actual Workers source.
+The checked terminal reply cases now retain saved-frame sequencing.
+The native action debit covers every constructor under the source and sequential-scope premises.
+The whole-history endpoint remains open, with every extra internal premise discharged by the original worker source.

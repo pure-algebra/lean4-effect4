@@ -231,7 +231,7 @@ theorem register_race_at (root : NativeEff) (m : NativeMachine) (fiber : SourceF
 theorem begin_race_at (root : NativeEff) (completed) (table : RowTable)
     (m : NativeMachine) (fiber : SourceFiber) (yielding : Bool) (programs : List NCode)
     (site : Option (List Nat)) (mode : Supervision.RaceMode) (owned : ConfigurationAt root m)
-    (held : FiberAt root fiber) (entrants : ∀ code ∈ programs, CodeAt root code) :
+    (held : FiberAt root fiber) (entrants : (∀ code ∈ programs, CodeAt root code) ∧ RaceAllowed root) :
     EvaluationAt root (beginRace (interpAt root completed table) m fiber yielding programs site mode) :=
   ⟨configuration_begin_race root completed table m fiber yielding programs site mode owned entrants,
     fiber_current_at root fiber _ held trivial, by intro command member; cases member⟩

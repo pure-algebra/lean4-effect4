@@ -51,6 +51,46 @@ theorem StrategyAt.sequential {root : NativeEff} {strategy : FinalizerStrategy}
     (held : StrategyAt root strategy) (source : SequentialSource root) : strategy = .sequential :=
   held.resolve_right source.not_parallel
 
+/-- A runtime race retains a race action at an actual source address.
+Consumer: Workers release custody excludes race-cleanup replies through the existing source carrier. -/
+def RaceAllowed (root : NativeEff) : Prop :=
+  ∃ path bodies, Node.at_ (.eff root) path = some (.action (.raceAll bodies)) ∨
+    Node.at_ (.eff root) path = some (.action (.raceAllFirst bodies))
+
+/-- The generated address census rejects both authored race forms.
+Consumer: the actual Workers source restriction in release custody. -/
+def raceFreeHead : Node NativeOp → Bool
+  | .action (.raceAll _) | .action (.raceAllFirst _) => false
+  | _ => true
+
+def RaceFreeSource (root : NativeEff) : Prop :=
+  (Node.addresses (.eff root)).all (fun path =>
+    (Node.at_ (.eff root) path).all raceFreeHead) = true
+
+/-- The checked source census excludes every runtime race witness.
+Consumer: terminal resume sequencing and the actual race-store reader. -/
+theorem RaceFreeSource.not_race {root : NativeEff} (held : RaceFreeSource root) :
+    ¬ RaceAllowed root := by
+  rintro ⟨path, bodies, found | found⟩
+  all_goals
+    have member : path ∈ Node.addresses (.eff root) :=
+      (mem_addresses_iff (.eff root) path).mpr (by rw [found]; rfl)
+    have head := List.all_eq_true.mp held path member
+    rw [found] at head
+    cases head
+
+/-- A first-success race supplies its actual authored action.
+Consumer: the native source-action interpreter. -/
+theorem raceAllowed_firstSuccess (root : NativeEff) (path : List Nat) (bodies : Effs NativeOp)
+    (found : Node.at_ (.eff root) path = some (.action (.raceAll bodies))) : RaceAllowed root :=
+  ⟨path, bodies, Or.inl found⟩
+
+/-- A first-exit race supplies its actual authored action.
+Consumer: the native source-action interpreter. -/
+theorem raceAllowed_firstExit (root : NativeEff) (path : List Nat) (bodies : Effs NativeOp)
+    (found : Node.at_ (.eff root) path = some (.action (.raceAllFirst bodies))) : RaceAllowed root :=
+  ⟨path, bodies, Or.inr found⟩
+
 /-- The lexical length at the child a callback resolves after appending its arguments. -/
 def NextAt (root : NativeEff) (p : Point) (i added : Nat) : Prop :=
   levelAt (.eff root) 0 (p.path ++ [i]) = some (p.env.length + added)
@@ -84,6 +124,7 @@ def OpAt (root : NativeEff) (op : SyncOp) : Prop :=
 /-- Stored program wrappers retain every operation and finalizer they can expose. -/
 def ProgAt (root : NativeEff) : ProgName → Prop
   | .syncOp op => OpAt root op
+  | .raceOf _ | .cancelRace _ => RaceAllowed root
   | .intoDeferred body _ | .intoBody body _ | .forkThen body _ _ | .forkOnly body _
   | .forkInScope body _ _ | .forkScopedOf body _ | .awaitAllNew body => ProgAt root body
   | .finalizerOf fin _ => FinAt root fin
@@ -102,6 +143,7 @@ def StoreNameAt (root : NativeEff) : Name → Prop
 
 /-- Stored fiber actions retain their forked, masked and finalizer programs. -/
 def StoreActionAt (root : NativeEff) : ActionName → Prop
+  | .raceAll _ => RaceAllowed root
   | .fork body _ | .forkIn body _ _ | .forkScoped body _ | .setInterruptible body _ =>
     ProgAt root body
   | .closePar order _ => (∀ fin ∈ order, FinAt root fin) ∧ ParallelAllowed root

@@ -41,6 +41,18 @@ theorem workers_built_sequential (total : Nat) (b : Api.Built)
   rw [Programs.workers_built_program total b built]
   exact workers_sequential_source total
 
+/-- Workers contains no race action at any job count.
+Consumer: terminal resume sequencing in the original release-custody claim. -/
+theorem workers_race_free_source (total : Nat) : RaceFreeSource (Programs.workersProgram total) := by
+  unfold RaceFreeSource
+  kernel_rfl
+
+/-- The actual admitted Workers program retains the checked absence of race actions. -/
+theorem workers_built_race_free (total : Nat) (b : Api.Built)
+    (built : Api.Author.build (Workers.crew total) = .ok b) : RaceFreeSource b.program := by
+  rw [Programs.workers_built_program total b built]
+  exact workers_race_free_source total
+
 /-- A successful Workers build retains the checked fragment for its actual source. -/
 theorem workers_built_fragment (total : Nat) (b : Api.Built)
     (built : Api.Author.build (Workers.crew total) = .ok b) : Fragment b.program := by

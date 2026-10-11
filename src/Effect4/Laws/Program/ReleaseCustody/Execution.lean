@@ -1,9 +1,10 @@
 import Effect4.Laws.Program.ReleaseCustody.Lift
 import Effect4.Laws.Program.ReleaseCustody.NativeAccounting
+import Effect4.Laws.Program.ReleaseCustody.NativeActionDebit
 import Effect4.Laws.Program.ReleaseCustody.CommandFunding
 import Effect4.Laws.Program.ReleaseCustody.NativeStacks
 import Effect4.Laws.Program.ReleaseCustody.IterationDebit
-import Effect4.Laws.Program.NativeReplies
+import Effect4.Laws.Program.ReleaseCustody.ReplySequencing
 
 /-!
 Concept: scope-lifetime-finalization, R11, at most once per registration counted by source identity.
@@ -58,6 +59,7 @@ This planned endpoint assumes neither an arbitrary command contract nor the desi
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 proof_goal history (b : Api.Built) (fuel : Nat) (q : List Nat) (m : NativeMachine)
     (fragment : SourceScope.Fragment b.program) (sequential : SourceScope.SequentialSource b.program)
+    (raceFree : SourceScope.RaceFreeSource b.program)
     (held : Run.HistoryOf b fuel m) : Ready q m
 
 end Effect4.Program.ReleaseCustody.Execution
