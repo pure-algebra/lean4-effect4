@@ -152,6 +152,42 @@ def bodyLayered : NativeEff :=
 #guard (Api.printModule "main" bodyLayered).map (fun m =>
   decide (Api.readModule m [] = .ok bodyLayered)) = some true
 
+/-- A block whose body holds its own layer and a reference to it, and names no module layer. -/
+def ownLayerOnly : NativeEff :=
+  .defs [{ name := "readOwn", request := .nat, answer := .nat }]
+    (.cons (.provideLayer (.succeed bodyKey (.nat 3)) false
+       (.provideLayer (.ref [0, 0, 0]) false (.service bodyKey))) .nil)
+    (.perform (.call 0) (.lit (.nat 1))) .nil
+
+/-- The verdict of the checked reading (`Api.admitModule`) on a program's emitted module, under
+the effect namespaces: `some true` when it admits the program itself, `some false` when it
+refuses the module as unbound. -/
+def admitted (p : NativeEff) : Option Bool :=
+  match Api.emitModule "main" p with
+  | .error _ => none
+  | .ok e =>
+    match Api.admitModule "main" e.module [] Effect4.Codegen.effectOrigins
+        [.named ["Effect", "Layer", "Context"] "effect"] with
+    | .ok reading => if reading.program == p then some true else none
+    | .error .unbound => some false
+    | .error _ => none
+
+/-- `ownLayerOnly` with the module's layer `[2, 0]` provided in the body by reference too. -/
+def ownAndModuleLayer : NativeEff :=
+  .defs [{ name := "readOwn", request := .nat, answer := .nat }]
+    (.cons (.provideLayer (.succeed bodyKey (.nat 3)) false
+       (.provideLayer (.ref [2, 0]) false
+         (.provideLayer (.ref [0, 0, 0]) false (.service bodyKey)))) .nil)
+    (.perform (.call 0) (.lit (.nat 1)))
+    (.cons (.succeed layerKey (.nat 7)) .nil)
+
+-- the checked reading admits a body's own layer: its constant is declared in the suspension,
+-- before the uses that follow it
+#guard admitted ownLayerOnly = some true
+-- control: a module layer named from a body stays refused as unbound, as at step 2: the
+-- definition is printed before the module constant it names (`SourceBindings`)
+#guard admitted ownAndModuleLayer = some false
+
 /-- `twice` with a layer inside its body that nothing names. -/
 def layerInBody : NativeEff :=
   .defs [twiceDecl]
