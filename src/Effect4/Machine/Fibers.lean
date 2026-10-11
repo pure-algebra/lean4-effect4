@@ -450,6 +450,16 @@ structure Race (ν σ : Type u) (β : Type v) (ε δ ι α : Type u)
   /-- First-exit mode records the selected child at its actual exit observer. -/
   selected : Option FiberId := none
 
+/-- Apply one observed entrant exit, retaining first-exit child identity.
+The observer callback consumes this update before settlement. -/
+def Race.afterExit (race : Race ν σ β ε δ ι α κ) (child : FiberId)
+    (exit : Exit β ε δ ι α) : Race ν σ β ε δ ι α κ :=
+  let state := Supervision.raceCompleteWith race.mode race.state child exit
+  let selected := match race.mode, race.state.accepted, state.accepted with
+    | .firstExit, none, some _ => some child
+    | _, _, _ => race.selected
+  { race with state := state, selected := selected }
+
 /-- The process: every live fiber, the races, the id and token counters, the global
 middleware latch (`:6656-6658`), the service state the stores live in, the trace, and the
 stuck marker. -/
@@ -1738,11 +1748,8 @@ def fireObserver (interp : RunInterp ν σ β ε δ ι α χ St κ) (id : FiberI
     match m.race? raceId with
     | none => (m, acc.2)
     | some race =>
-      let state := Supervision.raceCompleteWith race.mode race.state id exit
-      let selected := match race.mode, race.state.accepted, state.accepted with
-        | .firstExit, none, some _ => some id
-        | _, _, _ => race.selected
-      let race := { race with state := state, selected := selected }
+      let race := race.afterExit id exit
+      let state := race.state
       let m := m.updateRace race
       match state.accepted, race.settled with
       | some accepted, false =>

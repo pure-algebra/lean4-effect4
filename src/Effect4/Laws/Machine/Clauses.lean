@@ -1279,16 +1279,15 @@ theorem fireObserver_raceCallback_settles (interp : RunInterp ν σ β ε δ ι 
     (exit : Exit β ε δ ι α) (acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α))
     (raceId : Nat) (race : Race ν σ β ε δ ι α) (accepted : Exit β ε δ ι α)
     (hr : acc.1.race? raceId = some race)
-    (hacc : (Supervision.raceComplete race.state id exit).accepted = some accepted)
+    (hacc : (Supervision.raceCompleteWith race.mode race.state id exit).accepted = some accepted)
     (hset : race.settled = false) :
     fireObserver interp id exit acc (Observer.raceCallback raceId) =
-      (let state := Supervision.raceComplete race.state id exit
-       let race := { race with state := state }
+      (let state := Supervision.raceCompleteWith race.mode race.state id exit
+       let race := race.afterExit id exit
        settleRace interp
          ((acc.1.emit [RunEvent.observerFired id (Observer.raceCallback raceId)]).updateRace race)
          acc.2 raceId race state accepted) := by
-  simp only [fireObserver, RunMachine.race?_emit, hr, hacc, hset]
-  try rfl
+  simp only [fireObserver, RunMachine.race?_emit, hr, Race.afterExit, hacc, hset, settleRace]
 
 /-- A callback after the race has settled only updates the frozen bookkeeping: the first
 accepted result is stable (`race_first_accepted_stable`). census: fork.race-all -/
@@ -1298,9 +1297,9 @@ theorem fireObserver_raceCallback_late (interp : RunInterp ν σ β ε δ ι α 
     (hr : acc.1.race? raceId = some race) (hset : race.settled = true) :
     fireObserver interp id exit acc (Observer.raceCallback raceId) =
       ((acc.1.emit [RunEvent.observerFired id (Observer.raceCallback raceId)]).updateRace
-        { race with state := Supervision.raceComplete race.state id exit }, acc.2) := by
-  simp only [fireObserver, RunMachine.race?_emit, hr, hset]
-  cases (Supervision.raceComplete race.state id exit).accepted <;> rfl
+        (race.afterExit id exit), acc.2) := by
+  simp only [fireObserver, RunMachine.race?_emit, hr, Race.afterExit, hset]
+  cases (Supervision.raceCompleteWith race.mode race.state id exit).accepted <;> rfl
 
 /-- A callback that does not yet accept (a loser before the winner) only updates the frozen
 bookkeeping. census: fork.race-all -/
@@ -1308,11 +1307,11 @@ theorem fireObserver_raceCallback_pending (interp : RunInterp ν σ β ε δ ι 
     (exit : Exit β ε δ ι α) (acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α))
     (raceId : Nat) (race : Race ν σ β ε δ ι α)
     (hr : acc.1.race? raceId = some race)
-    (hacc : (Supervision.raceComplete race.state id exit).accepted = none) :
+    (hacc : (Supervision.raceCompleteWith race.mode race.state id exit).accepted = none) :
     fireObserver interp id exit acc (Observer.raceCallback raceId) =
       ((acc.1.emit [RunEvent.observerFired id (Observer.raceCallback raceId)]).updateRace
-        { race with state := Supervision.raceComplete race.state id exit }, acc.2) := by
-  simp only [fireObserver, RunMachine.race?_emit, hr, hacc]
+        (race.afterExit id exit), acc.2) := by
+  simp only [fireObserver, RunMachine.race?_emit, hr, Race.afterExit, hacc]
 
 /-- A launch after the race has accepted forks nothing: the register loop has broken
 (`if (done) break`, `:1527`; R2-11), and the entrant that was next never exists.
@@ -1712,7 +1711,7 @@ theorem withFiber_raceAll (interp : RunInterp ν σ β ε δ ι α χ St)
        let race : Race ν σ β ε δ ι α :=
          ⟨raceId, f.id, token,
            { Supervision.RaceAllState.initial [] with remaining := entrants.length }, false, entrants,
-           false, site⟩
+           false, site, .firstSuccess, none⟩
        let m := { m with races := m.races ++ [race] }
        ⟨m.emit [RunEvent.raceStarted raceId f.id entrants.length],
         { f with frame := { f.frame with current := interp.parkCode (ParkKind.race raceId) } },

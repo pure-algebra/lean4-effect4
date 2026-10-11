@@ -130,3 +130,25 @@ It finds zero planned goals and zero declarations depending on planned goals.
 The source/API lane follows this interface commit.
 Focused completion and callback laws follow in this lane.
 The coordinator runs the reached behaviour gates after both halves compile.
+
+## First-exit law slice
+
+The callback laws now cover each race mode through the machine's actual `Race.afterExit` operation.
+The first-success specialization retains the existing result and selected-child data.
+First-exit selection retains an arbitrary exit and records its child at the same callback.
+The new action uses the existing registration mechanism in first-exit mode.
+The timeout observation and source simulation consume these laws.
+The laws establish selection stability, not progress or runtime agreement.
+
+Commands:
+
+- `LEAN_NUM_THREADS=3 lake build Effect4.Laws.Machine.RaceFirst Effect4.Laws.Machine.Clauses Test.Machine.RaceFirst`: passed, 198 jobs.
+- `LEAN_NUM_THREADS=3 lake env lean docs/research/2026-10-10-goals-packet/codex/FirstExitLawsAudit.lean`: passed.
+
+The audit checks 2146 declarations within `[propext, Quot.sound]`.
+It finds zero planned goals and zero declarations depending on planned goals.
+The fixture reads the law through the Fibers search bank.
+Its omitted-bank control fails, and two finite checks distinguish the two modes.
+No frozen contract names the changed callback laws.
+The source lane and machine simulation cases remain open.
+The coordinator runs reached behaviour gates after integration.
