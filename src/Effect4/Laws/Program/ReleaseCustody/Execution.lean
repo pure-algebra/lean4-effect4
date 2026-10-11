@@ -1,5 +1,5 @@
 import Effect4.Laws.Program.ReleaseCustody.Lift
-import Effect4.Laws.Program.ReleaseCustody.FrameDebit
+import Effect4.Laws.Program.ReleaseCustody.Sequencing
 
 /-!
 Concept: scope-lifetime-finalization, R11, at most once per registration counted by source identity.

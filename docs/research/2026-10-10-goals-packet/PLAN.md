@@ -256,3 +256,12 @@ The complete source and heap history chain remains shared with the Queue reader.
 `codex/AtomicBoundReceipt.md` records the narrow build and integrated audit.
 The shared compiler case interface fixes duplicate internal names when the independently checked proof branches meet.
 The Atomic stage and cleanup obligations remain open; their statements remain unchanged.
+
+### Actual request-prefix decomposition
+
+`JournalPrefix` proves the recorded binding's actual preceding machine.
+`CallTree.tree_wait_of_leads` reads the corresponding tree wait from existing local agreement.
+The original Routing authorization clause now depends on `CallTree.request_leads` alone.
+The actual Routing interruption reader and mask control compile.
+`codex/PrefixIntegrationReceipt.md` records the narrow builds, combined audit and complete Laws-root build.
+The source-use, timeout source and release sequencing readers also join their roots.
