@@ -351,7 +351,7 @@ import Test.Audit.SummaryControls
 import Test.Dogfood.Proofs.HostJournal
 import Test.Dogfood.Proofs.HostPayloadsAudit
 import Test.Dogfood.Proofs.HostTimeoutSource
-import Test.Dogfood.Proofs.HostTimeoutParkSteps
+import Test.Dogfood.Proofs.HostTimeoutSettle
 import Test.Dogfood.Proofs.HostAppliedObservation
 import Test.Dogfood.Scenario.SourceFragment
 import Test.Dogfood.Scenario.NativeHeap

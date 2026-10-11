@@ -1,6 +1,6 @@
 import Effect4.Laws.Program.ReleaseCustody.Lift
 import Effect4.Laws.Program.ReleaseCustody.NativeAccounting
-import Effect4.Laws.Program.ReleaseCustody.NativeActionDebit
+import Effect4.Laws.Program.ReleaseCustody.NativeScopeDebit
 import Effect4.Laws.Program.ReleaseCustody.CommandFunding
 import Effect4.Laws.Program.ReleaseCustody.NativeStacks
 import Effect4.Laws.Program.ReleaseCustody.IterationDebit
