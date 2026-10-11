@@ -1,0 +1,7 @@
+import Effect4.Laws.Program.SourceOpportunityPrimitive
+import Effect4.Laws.Program.ReleaseCustody.NativeIterationDebit
+import Effect4.Laws.Program.ReleaseCustody.CommandSequencing
+import Test.Dogfood.Proofs.HostTimeoutDriver
+import ProofGraph.AxiomAudit
+
+#axiom_audit Effect4.Laws.Program.NativeScope Effect4.Laws.Program.NativeCallbacks Effect4.Laws.Program.NativeExecutor Effect4.Laws.Program.NativeStoreScope Effect4.Laws.Program.SourceOpportunities Effect4.Laws.Program.SourceOpportunityPrimitive Effect4.Laws.Program.ReleaseCustody.CommandSequencing Effect4.Laws.Program.ReleaseCustody.NativeIterationDebit Test.Dogfood.Proofs.HostTimeoutAdminCommands Test.Dogfood.Proofs.HostTimeoutCancellation Test.Dogfood.Proofs.HostTimeoutDriver Test.Dogfood.Proofs.HostTimeoutExitCommands Test.Dogfood.Proofs.HostTimeoutLoop Test.Dogfood.Proofs.HostTimeoutObservers Test.Dogfood.Proofs.HostTimeoutRaceCommands
