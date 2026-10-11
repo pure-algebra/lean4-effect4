@@ -166,7 +166,14 @@ def RegionAt (root : NativeEff) : Region → Prop
 def NameAt (root : NativeEff) : EffName → Prop
   | .external op _ origin =>
     ∃ request, Node.at_ (.eff root) origin = some (.eff (.perform op request))
-  | .cont p | .caught p | .onValue p | .caughtError p => NextAt root p 1 1
+  | .cont p => NextAt root p 1 1 ∧
+    ∃ first rest, Node.at_ (.eff root) p.path = some (.eff (.bind first rest))
+  | .caught p => NextAt root p 1 1 ∧
+    ∃ body handler, Node.at_ (.eff root) p.path = some (.eff (.catchCause body handler))
+  | .caughtError p => NextAt root p 1 1 ∧
+    ∃ test body handler, Node.at_ (.eff root) p.path = some (.eff (.catchIf test body handler))
+  | .onValue p => NextAt root p 1 1 ∧
+    ∃ body success failure, Node.at_ (.eff root) p.path = some (.eff (.matchCause body success failure))
   | .fin p => NextAt root p 1 1 ∧ ExitAt root p.path
   | .onCause p => NextAt root p 2 1
   | .loop p => At root p
@@ -311,24 +318,24 @@ theorem compile_at (root : NativeEff) (fragment : Fragment root) (e : NativeEff)
     intro found hs
     refine ⟨ih (Agreement.at_child found 0)
       (child_at root p 0 (next_of_at root p _ 0 0 found hs (by rfl))),
-      next_of_at root p _ 1 1 found hs (by rfl), ?_⟩
+      ⟨next_of_at root p _ 1 1 found hs (by rfl), ⟨first, rest, found⟩⟩, ?_⟩
     intro _ _ wrong
     cases wrong
   case case20 p n hf body handler ih =>
     intro found hs
     exact ⟨ih (Agreement.at_child found 0)
       (child_at root p 0 (next_of_at root p _ 0 0 found hs (by rfl))),
-      next_of_at root p _ 1 1 found hs (by rfl)⟩
+      ⟨next_of_at root p _ 1 1 found hs (by rfl), ⟨body, handler, found⟩⟩⟩
   case case21 p n hf test body handler ih =>
     intro found hs
     exact ⟨ih (Agreement.at_child found 0)
       (child_at root p 0 (next_of_at root p _ 0 0 found hs (by rfl))),
-      next_of_at root p _ 1 1 found hs (by rfl)⟩
+      ⟨next_of_at root p _ 1 1 found hs (by rfl), ⟨test, body, handler, found⟩⟩⟩
   case case22 p n hf body success failure ih =>
     intro found hs
     exact ⟨ih (Agreement.at_child found 0)
       (child_at root p 0 (next_of_at root p _ 0 0 found hs (by rfl))),
-      next_of_at root p _ 1 1 found hs (by rfl),
+      ⟨next_of_at root p _ 1 1 found hs (by rfl), ⟨body, success, failure, found⟩⟩,
       next_of_at root p _ 2 1 found hs (by rfl)⟩
   case case23 p n hf body finalizer ih =>
     intro found hs
