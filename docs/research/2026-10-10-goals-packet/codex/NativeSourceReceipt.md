@@ -55,3 +55,12 @@ The HeapSites history goal remains open in this dependency commit.
 Its next slice combines the checked source history with reference preservation through each transition.
 Atomic and Queue original scenario statements remain unchanged.
 The ordered finalizer uniqueness proof must retain the actual stack and overwrite-command correlation.
+
+## Coordinator integration
+
+The dependency commit is integrated as `60c95b062`.
+The library root imports `NativeHistory`; the test root imports the actual `SourceFragment` readers.
+`LEAN_NUM_THREADS=3 lake build Effect4.Laws.Program.NativeHistory Test.Dogfood.Scenario.SourceFragment` passes with 1059 jobs.
+The source audit passes independently in the coordinator worktree.
+Its output is retained as `NativeSourceIntegratedAudit.out` beside this receipt.
+This proof-only slice changes no runtime or generated input and reaches no additional behavior gate.
