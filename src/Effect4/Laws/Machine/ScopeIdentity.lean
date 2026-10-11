@@ -202,4 +202,136 @@ theorem syncOpStep_allocated {s s' : Stores} {o : SyncOp} {v : Val} (hs : Alloca
     obtain ⟨_, _, hf⟩ := h
     rw [← (Prod.mk.inj hf).1]; exact hs
 
+/-- Native store steps keep every finalizer registration key below the actual supply.
+Consumer: `Program.Sched.storesOk_syncOpStep` and `ReleaseCustody.Execution.command_custody`.
+The proof is the existing store-freshness census, shared without its independent external-store premise. -/
+theorem syncOpStep_keysFresh {s s' : Stores} {o : SyncOp} {v : Val} (hs : s.ScopeKeysFresh)
+    (h : syncOpStep o s = some (s', v)) : s'.ScopeKeysFresh := by
+  cases o with
+  | deferredMake =>
+    have h' := Prod.mk.inj (Option.some.inj h)
+    rw [← h'.1]; exact hs
+  | deferredIsDone cell =>
+    simp only [syncOpStep, Option.map_eq_some_iff] at h
+    obtain ⟨_, _, hf⟩ := h
+    rw [← (Prod.mk.inj hf).1]; exact hs
+  | deferredPoll cell =>
+    simp only [syncOpStep, Option.map_eq_some_iff] at h
+    obtain ⟨_, _, hf⟩ := h
+    rw [← (Prod.mk.inj hf).1]; exact hs
+  | deferredCompleteWith cell completion =>
+    have h' := Prod.mk.inj (Option.some.inj h)
+    rw [← h'.1]; exact hs
+  | deferredInterruptWith cell interruptor =>
+    have h' := Prod.mk.inj (Option.some.inj h)
+    rw [← h'.1]; exact hs
+  | deferredAwaitCleanup cell waiter token =>
+    have h' := Prod.mk.inj (Option.some.inj h)
+    rw [← h'.1]; exact hs
+  | clockNow =>
+    have h' := Prod.mk.inj (Option.some.inj h)
+    rw [← h'.1]; exact hs
+  | sleepCancel waiter token =>
+    -- the invariant reads nothing of the timer store
+    have h' := Prod.mk.inj (Option.some.inj h)
+    rw [← h'.1]; exact hs
+  | scopeMake strategy =>
+    -- a new scope holds no registrations, and the supply advances past its handle
+    have h' := Prod.mk.inj (Option.some.inj h)
+    rw [← h'.1]
+    exact (ScopeStore.keysBelow_make hs).mono (Nat.le_succ _)
+  | scopeAdd scope finalizer =>
+    cases hentry : s.scopes.entryAt scope with
+    | none => rw [syncOpStep_scopeAdd_none s scope finalizer hentry] at h; cases h
+    | some entry =>
+      cases hclose : entry.scope.closingExit? with
+      | some exit =>
+        -- a closed scope answers its exit and keeps the store
+        rw [syncOpStep_scopeAdd_closed s scope finalizer hentry hclose] at h
+        rw [← (Prod.mk.inj (Option.some.inj h)).1]; exact hs
+      | none =>
+        -- the registration key is the supply's own value, and the supply advances past it
+        rw [syncOpStep_scopeAdd_open s scope finalizer hentry hclose] at h
+        rw [← (Prod.mk.inj (Option.some.inj h)).1]
+        exact ScopeStore.keysBelow_addUnsafe_entry hs hentry
+  | scopeRemove scope key =>
+    have h' := Prod.mk.inj (Option.some.inj h)
+    rw [← h'.1]
+    exact ScopeStore.keysBelow_removeFinalizer hs
+  | scopeIsClosed scope =>
+    simp only [syncOpStep, Option.map_eq_some_iff] at h
+    obtain ⟨_, _, hf⟩ := h
+    rw [← (Prod.mk.inj hf).1]; exact hs
+  | scopeFork parent strategy =>
+    cases hentry : s.scopes.entryAt parent with
+    | none => rw [syncOpStep_scopeFork_none s parent strategy hentry] at h; cases h
+    | some entry =>
+      rw [syncOpStep_scopeFork_some s parent strategy hentry] at h
+      rw [← (Prod.mk.inj (Option.some.inj h)).1]
+      -- the shared key is the supply's successor, and the supply advances past both keys
+      exact ScopeStore.keysBelow_forkChild (m := s.nextName + 2) (shared := s.nextName + 1)
+        hs (Nat.le_add_right _ _) (Nat.lt_succ_self _)
+  | memoFork parent =>
+    have h' := Prod.mk.inj (Option.some.inj h)
+    rw [← h'.1]
+    exact hs.mono (Nat.le_succ _)
+  | memoGet layer memoMap =>
+    obtain ⟨_, _, hsc, hn, _⟩ := syncOpStep_memoGet_families s s' layer memoMap v h
+    change ScopeStore.KeysBelow s'.scopes s'.nextName
+    rw [hsc, hn]
+    exact hs
+  | memoBuild layer memoMap =>
+    -- a layer scope holds no registrations; the Deferred is fresh; the supply advances
+    have h' := Prod.mk.inj (Option.some.inj h)
+    rw [← h'.1]
+    exact (ScopeStore.keysBelow_make hs).mono (Nat.le_succ _)
+  | memoComplete layer memoMap exit =>
+    cases hentry : s.memo.entryAt memoMap layer with
+    | none =>
+      rw [syncOpStep_memoComplete_none s layer memoMap exit hentry] at h
+      rw [← (Prod.mk.inj (Option.some.inj h)).1]; exact hs
+    | some entry =>
+      rw [syncOpStep_memoComplete_some s layer memoMap exit hentry] at h
+      rw [← (Prod.mk.inj (Option.some.inj h)).1]
+      exact hs
+  | memoRelease layer memoMap =>
+    cases hentry : s.memo.entryAt memoMap layer with
+    | none =>
+      rw [syncOpStep_memoRelease_none s layer memoMap hentry] at h
+      rw [← (Prod.mk.inj (Option.some.inj h)).1]; exact hs
+    | some entry =>
+      by_cases hobs : entry.observers ≤ 1
+      · rw [syncOpStep_memoRelease_last s layer memoMap hentry hobs] at h
+        rw [← (Prod.mk.inj (Option.some.inj h)).1]; exact hs
+      · rw [syncOpStep_memoRelease_dec s layer memoMap hentry hobs] at h
+        rw [← (Prod.mk.inj (Option.some.inj h)).1]; exact hs
+  | _ =>
+    -- every remaining operation is a `refStep`: only the heap changes
+    simp only [syncOpStep, Option.map_eq_some_iff] at h
+    obtain ⟨_, _, hf⟩ := h
+    rw [← (Prod.mk.inj hf).1]; exact hs
+
+/-- Administrative registration retains the allocated scope identities. -/
+theorem Allocated.addFinalizer {s : ScopeStore} {n : Nat} (h : Allocated s n)
+    (scope key : Nat) (fin : FinName) : Allocated (s.addFinalizer scope key fin).1 n := by
+  unfold ScopeStore.addFinalizer
+  split
+  · exact h
+  · exact h.setEntry _
+
+/-- Linking a fiber retains scope identities and advances the actual allocation supply.
+Consumer: `ReleaseCustody.Execution.command_custody`, at its native `link` command. -/
+theorem scopeLinkFiber_allocated (mode : Supervision.ScopeMode) (scope : Nat) (fiber : FiberId)
+    {s next : Stores} {key : Nat} (held : Allocated s.scopes s.nextName)
+    (step : stores.scopeLinkFiber mode scope fiber s = some (next, key)) :
+    Allocated next.scopes next.nextName := by
+  dsimp only [stores] at step
+  cases found : s.scopes.entryAt scope with
+  | none => rw [found] at step; cases step
+  | some entry =>
+    rw [found] at step
+    dsimp only at step
+    rw [← (Prod.mk.inj (Option.some.inj step)).1]
+    exact (held.addFinalizer scope s.nextName _).mono (Nat.le_succ _)
+
 end Effect4.Machine.ScopeIdentity

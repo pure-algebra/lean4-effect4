@@ -218,3 +218,11 @@ The universal source-state and custody obligations remain open and keep their sc
 Its direct worker consumer compiles. The audit leaves one planned goal in `Execution`: `command_custody`.
 The retained proof and audit are in `codex/CustodyOuter.lean` and `codex/CustodyOuterAudit.out`.
 The receipt is `codex/CustodyOuterReceipt.md`.
+
+### Scope-credit transfer closure
+
+`ReleaseCustody.ScopeTransfer` proves every native synchronous store-credit bound and the exact registration response split.
+It also proves administrative fiber-linkage accounting and state-first close transfer.
+`Machine.ScopeIdentity.syncOpStep_keysFresh` shares the existing freshness census with `Simulation.Hooks`.
+The reader and premise controls compile. The narrow audit reports no planned-goal dependency.
+Evidence: `codex/ScopeTransferReceipt.md` and `codex/ScopeTransferAudit.out`.
