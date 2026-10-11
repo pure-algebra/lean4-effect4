@@ -253,3 +253,16 @@ Native state, race-host links and the fork ledger retain their existing invarian
 The integrated Workers, Timeout and timeout-counterexample modules build with 1077 jobs.
 `codex/FirstExitGuardAudit.lean` audits 569 declarations within `[propext, Quot.sound]`.
 It reports no goals or modulo declarations.
+
+## Atomic cleanup assembly
+
+The original `Atomic.cleans_once` declaration now consumes three placed obligations.
+Its proposition, scripts and budgets remain unchanged.
+The static placement check for all six request paths is kernel checked.
+Registration custody, dynamic source uniqueness and log-writer provenance remain open.
+
+The integrated Atomic and QueueWorkers.Source build passes with 1058 jobs.
+`codex/AtomicCleanupAudit.lean` audits 65 declarations within `[propext, Quot.sound]`.
+It reports seven modulo declarations and three planned goals in the audited modules.
+`#plan_status` confirms the original cleanup clause depends on precisely those three goals.
+The deferred scenario-gate diagnostic retains all five dependencies of the complete Atomic claim.

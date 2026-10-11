@@ -169,3 +169,23 @@ The connection adds no progress, fairness, fork, scope, or outside-host claim.
 `lake build Test.Dogfood.Scenario.Routing` passes with 1042 jobs.
 The landing audit reports 139 declarations, three modulo declarations, and one planned goal.
 The original infrastructure clause is proved; the authorization clause rests on `bound_in_tree` alone.
+
+## Atomic cleanup placement
+
+`Atomic.Cleanup.cleaned` serves the unchanged `Atomic.cleans_once` claim under R11.
+Its source placement check identifies all six request paths in the admitted shop.
+`Program.FinalizerRun.funded_reachable` carries registration custody through the native run.
+`Program.FinalizerRun.once_placed_pushes_once` connects a static once-placement to dynamic pushes.
+`Atomic.Cleanup.log_debits` connects each logged identity to its own finalizer starts.
+The three obligations establish different properties and remain separate in the proof graph.
+They cover the original scripts and budgets and establish no progress or host behavior.
+
+```mermaid
+flowchart LR
+  Static[Checked request source paths] --> Once[Dynamic source uniqueness]
+  Frames[Checked frame and evaluator debit] --> Custody[Whole-command custody]
+  Writers[Scoped writer provenance] --> Log[Cleanup-log debit]
+  Once --> Claim[Original Atomic.cleans_once]
+  Custody --> Claim
+  Log --> Claim
+```

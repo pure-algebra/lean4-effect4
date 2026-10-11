@@ -1,5 +1,6 @@
 import Test.Dogfood.Scenario.Atomic.Model
 import Test.Dogfood.Scenario.Atomic.Store
+import Test.Dogfood.Scenario.Atomic.Cleanup
 import Test.Dogfood.Scenario
 import Effect4.Author
 import Test.Dogfood.P4RateLimiter
@@ -131,7 +132,10 @@ a finalizer that writes its entry twice in one invocation. It does not establish
 finalizer runs. Concept `scope-lifetime-finalization`, R11. Consumer: the atomic scenario. Its
 controls are finite runs, and the seat's receipt records a bounded search. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
-proof_goal cleans_once : CleansOnce
+theorem cleans_once : CleansOnce := by
+  intro b moves built
+  rw [Store.observe_eq]
+  exact Cleanup.cleaned b _ built (Scenario.history b "atomic" budget "" moves)
 
 /-- A program without its suspensions, on the straight fragment's constructors. Any other node
 stays as it is. -/
@@ -406,7 +410,10 @@ def scenario : Scenario :=
 
 -- The final gate pass teaches the record checker about clauses proved modulo subgoals.
 /--
-error: atomic: the claim Test.Dogfood.Scenario.Atomic.atomic rests on the planned goal Effect4.Program.HeapSites.heap_sites_keep, which no clause names
+error: atomic: the claim Test.Dogfood.Scenario.Atomic.atomic rests on the planned goal Effect4.Program.FinalizerRun.funded_reachable, which no clause names
+atomic: the claim Test.Dogfood.Scenario.Atomic.atomic rests on the planned goal Effect4.Program.FinalizerRun.once_placed_pushes_once, which no clause names
+atomic: the claim Test.Dogfood.Scenario.Atomic.atomic rests on the planned goal Effect4.Program.HeapSites.heap_sites_keep, which no clause names
+atomic: the claim Test.Dogfood.Scenario.Atomic.atomic rests on the planned goal Test.Dogfood.Scenario.Atomic.Cleanup.log_debits, which no clause names
 atomic: the claim Test.Dogfood.Scenario.Atomic.atomic rests on the planned goal Test.Dogfood.Scenario.Atomic.Store.shop_stages, which no clause names
 -/
 #guard_msgs (error) in
