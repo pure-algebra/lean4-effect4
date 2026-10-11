@@ -7,6 +7,19 @@ you. Then read this folder's `README.md` and the earlier note
 
 ## The one thing to know first
 
+**Blocking, 2026-10-11 11:25: the integration head does not build.** At `23d070d77`,
+`lake build Effect4.Laws` fails in two modules that no slice changed:
+
+- `src/Effect4/Laws/Machine/Book.lean`, `interruptRecord_pendingOk`: `dsimp` made no progress
+  after `unfold interruptRecord`;
+- `src/Effect4/Laws/Program/Guard/Observer.lean`, `interruptRecord_running_exit`: unsolved goals,
+  and seven unused `simp` arguments.
+
+The cause is `293ed3e85`: `interruptRecord` now delegates to `interruptWithCause`. Repair both
+proofs in the integration lane; the merge tick took nothing this hour. From now on, a slice that
+changes `src/Effect4/Machine` builds `Effect4.Laws` whole before it commits, because every law
+module reaches the machine. A narrow build of the slice's own consumers misses the rest.
+
 The goals lane re-builds the same structures per weight and per scenario, about 44,000 lines in two
 days.
 
@@ -75,6 +88,13 @@ Behaviour gates only where a slice changes executable code, and then at a sweep.
    Then replace the pop-chain copies (`passPushed`, `joinPushed`, `popFrom`, `getCont`,
    `resumeValue`, `resumeCause` re-walked for about 20 predicates) by instances. Do
    `FinalizerCredits` first: it is an exact instance of `FrameWeights`.
+   - **The store through the labels (audit, 2026-10-11).** A `step` label holds the code it ran,
+     and a store step's code is `sync (op o)`. Define the cells a word writes as the homomorphism
+     from labels to `(Finset RefKey, ∪)` through `o.refKernel`. Prove one law: the iteration's
+     store is its executed operations folded over the store before. With
+     `RefKernel.refWriteBack_peek_other`, a cell outside the written set keeps its value. That
+     lift replaces each scenario's writer-census premise
+     (`../2026-10-11-tokens-in-places/model-first.md`).
 3. **The ledgers as instances of L1.**
    - First delete what `LedgerFinalizer` makes redundant: `FinalizerCommands`' command proof and
      `FinalizerBookkeeping`'s edit lemmas, keeping their names as one-line instances.
@@ -106,6 +126,13 @@ Behaviour gates only where a slice changes executable code, and then at a sweep.
    - It changes executable code: regenerate what it reaches, run `check-truth` and
      `check-compiler` at the sweep, and turn the counterexample's attack guard into the repaired
      regression.
+   - **Coordinator review, 2026-10-11 11:25: approved as written.** The plan
+     `docs/research/2026-10-11-codex-r2-message-plan.md` sharpens this item. The messages apply
+     after the local write-back and *before* the outcome disposition, not after the whole
+     `settle`. The three tags `observe`, `dropToken` and `interrupt` are first-order data. Its
+     seven pinned cuts are the regression set. Proceed with its migration steps 1 to 12 in the
+     machine-structure lane. State the selected-owner retention as a premise; no `getD`
+     fallback. Behaviour gates run at the sweep, as the plan says.
 6. **R1, R3, R7** (`README.md` §3).
    - Cut `Resume.continueWith`, `Dispatcher.armed`, `Pending.waitingOn`, the five dead
      `RaceAllState` fields and `Race.settled`. Make `finalizing` a `Bool`. `RaceAllState.initial_eq`
@@ -123,6 +150,10 @@ Behaviour gates only where a slice changes executable code, and then at a sweep.
      parameter.
    - It changes executable code: regenerate what it reaches and run the gates at the sweep. Turn
      `E4-CTX-CE-001`'s attack guards into the repaired regression.
+   - **The region is an instance (audit, 2026-10-11).** Compile `provideContext` to a frame that
+     restores the context on every exit. Prove its bracket as an instance of
+     `MaskBracket.compiled_region_bracket` and `StackRegionRun.compiled_region_bracket_of_prefix`,
+     not as a new region law (`../2026-10-11-tokens-in-places/README.md`, F1).
 8. **Housekeeping.** The owner deleted `codex/schedule-independence-review-20261010` (row 353);
    its tip is the tag `archive/docgen-probe-20261010`. Remove your clean worktree
    `~/.codex/worktrees/module-design-review/lean4-effect4`, then delete the branch.
