@@ -2,6 +2,8 @@ import Effect4.Laws.Program.NativeReferences
 import Effect4.Laws.Program.PrimitiveProducer
 import Effect4.Laws.Program.StoreExecution
 import Effect4.Laws.Machine.RefFootprint
+import Effect4.Laws.Program.Footprint
+import Effect4.Laws.Program.RefWords
 
 /-!
 Concept: store-typing R4, serving `HeapSites.heap_sites_keep`.
@@ -15,6 +17,21 @@ set_option autoImplicit false
 namespace Effect4.Program.StoreExecution
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.SourceScope
 
+/-- An actual native synchronous answer names its represented operation once.
+Consumers: the old reference transfer and the annotated word from that same producer. -/
+theorem native_sync_row (root : NativeEff) (completed) (table : RowTable)
+    (thunk : EffThunk) (before after : Stores) (value : Val)
+    (actual : (interpAt root completed table).syncState thunk before = some (after, value)) :
+    ∃ op, (thunk = .op op ∨ thunk = .store (.op op)) ∧
+      syncOpStep op before = some (after, value) := by
+  cases thunk
+  case op op => exact ⟨op, .inl rfl, actual⟩
+  case store stored =>
+    cases stored
+    case op op => exact ⟨op, .inr rfl, actual⟩
+    all_goals cases actual
+  all_goals cases actual
+
 /-- The existing native transfer exposes its actual represented synchronous operation.
 This eliminates native thunk wrappers once, without another evaluator census. -/
 theorem RefTransfer.native_row (root : NativeEff) (completed) (table : RowTable)
@@ -26,13 +43,11 @@ theorem RefTransfer.native_row (root : NativeEff) (completed) (table : RowTable)
   cases step with
   | same _ refs => exact .inl refs
   | sync thunk next value current unparked answer =>
-    cases thunk
-    case op op => exact .inr ⟨op, value, .inl current, answer⟩
-    case store stored =>
-      cases stored
-      case op op => exact .inr ⟨op, value, .inr current, answer⟩
-      all_goals cases answer
-    all_goals cases answer
+    obtain ⟨op, represented, actual⟩ := native_sync_row root completed table thunk _ _ value answer
+    refine .inr ⟨op, value, ?_, actual⟩
+    rcases represented with direct | stored
+    · exact .inl (current.trans (congrArg Prim.sync direct))
+    · exact .inr (current.trans (congrArg Prim.sync stored))
 
 /-- Every native reference transfer keeps a lookup outside its actual operation footprint.
 The source premise names the represented operation and its actual answer. -/
@@ -47,40 +62,75 @@ theorem RefTransfer.refPeek_other (root : NativeEff) (completed) (table : RowTab
   · exact same ▸ rfl
   · exact syncOpStep_refPeek_other actual cell (outside op value current actual)
 
-/-- The generated primitive eliminator exposes the actual store action once.
-The existing administrative projections supply all non-synchronous reference effects. -/
-theorem primitive_refTransfer (root : NativeEff) (completed) (table : RowTable)
-    (m : NativeMachine) (fiber : SourceScope.SourceFiber) (yielding : Bool) :
-    RefTransfer (interpAt root completed table) fiber.frame.current m.state
-      (evaluatePrim (interpAt root completed table) m fiber yielding).machine.state := by
-  have produced := Moves.evaluatePrim_producer (interpAt root completed table) m fiber yielding
-  generalize actual : evaluatePrim (interpAt root completed table) m fiber yielding = result at produced ⊢
+/-- The native reference projection and annotated word read the same actual producer.
+A synchronous branch retains its operation even when its reference heap stays equal.
+The producer still owns execution and source-phase permission remains a separate premise. -/
+theorem primitive_refEffects (root : NativeEff) (completed) (table : RowTable)
+    (m : NativeMachine) (fiber : SourceScope.SourceFiber) (yielding : Bool)
+    (result : Moves.NIteration)
+    (produced : Moves.PrimitiveProducer (interpAt root completed table) m fiber yielding result) :
+    RefTransfer (interpAt root completed table) fiber.frame.current m.state result.machine.state ∧
+      Moves.RefWords.Certified m fiber.frame result.machine result.fiber.frame := by
+  have shape := produced.tracedFootprint.frame
+  have quiet : ∀ n : NativeMachine, ∀ f : Moves.NFrame,
+      Moves.TracedMoves m fiber.frame n f → n.state.refs = m.state.refs →
+      RefTransfer (interpAt root completed table) fiber.frame.current m.state n.state ∧
+        Moves.RefWords.Certified m fiber.frame n f := by
+    intro n f traced refs
+    exact ⟨.same _ refs, .of_refs traced refs⟩
   cases produced with
-  | step unparked ordinary noSync noSuccess noFailure noYield noAsync => exact .same _ (SourceScope.step_frame_refs root completed table m fiber yielding)
-  | finalizer exit current => exact .same _ (SourceScope.finalizer_refs root completed table m fiber yielding exit)
+  | step unparked ordinary noSync noSuccess noFailure noYield noAsync =>
+    exact quiet _ _ shape (SourceScope.step_frame_refs root completed table m fiber yielding)
+  | finalizer exit current =>
+    exact quiet _ _ shape (SourceScope.finalizer_refs root completed table m fiber yielding exit)
   | action thunk action current unparked found =>
-    exact .same _ (SourceScope.action_refs root completed table m fiber yielding action)
-  | sync thunk state value current unparked found => exact .sync thunk state value current unparked found
+    exact quiet _ _ shape (SourceScope.action_refs root completed table m fiber yielding action)
+  | sync thunk state value current unparked found =>
+    refine ⟨.sync thunk state value current unparked found, ?_⟩
+    obtain ⟨op, represented, actual⟩ := native_sync_row root completed table thunk _ _ value found
+    apply Moves.RefWords.Certified.sync m fiber.frame op value state _ actual
+    rcases represented with direct | stored
+    · exact .inl (current.trans (congrArg Prim.sync direct))
+    · exact .inr (current.trans (congrArg Prim.sync stored))
   | asyncImmediate register signal cancel state code current registered =>
-    apply RefTransfer.same
+    apply quiet _ _ shape
     have kept := SourceScope.register_refs root completed table register fiber.id m.nextToken m.state
     rw [registered] at kept
     exact kept
   | asyncParked register signal cancel state current registered =>
-    apply RefTransfer.same
+    apply quiet _ _ shape
     have kept := SourceScope.register_refs root completed table register fiber.id m.nextToken m.state
     rw [registered] at kept
     exact kept
   | racePark race park =>
+    apply quiet _ _ shape
     unfold registerRace
-    split <;> exact .same _ rfl
+    split <;> rfl
   | countdownPark targets next returned waiting edits park counted =>
-    apply RefTransfer.same
+    apply quiet _ _ shape
     have kept := congrArg Stores.refs (StatePreservation.countdown_plan_state
       (interpAt root completed table) m fiber targets .exitsValue false)
     rw [counted] at kept
     exact kept
-  | _ => exact .same _ rfl
+  | _ => exact quiet _ _ shape rfl
+
+/-- The existing reference transfer is the projection of the actual producer's two readings. -/
+theorem primitive_refTransfer (root : NativeEff) (completed) (table : RowTable)
+    (m : NativeMachine) (fiber : SourceScope.SourceFiber) (yielding : Bool) :
+    RefTransfer (interpAt root completed table) fiber.frame.current m.state
+      (evaluatePrim (interpAt root completed table) m fiber yielding).machine.state :=
+  (primitive_refEffects root completed table m fiber yielding _
+    (Moves.evaluatePrim_producer (interpAt root completed table) m fiber yielding)).1
+
+/-- Actual primitive evaluation supplies a composable annotated reference word.
+The accompanying primitive producer supplies the operation's execution and source position. -/
+theorem primitive_refWord (root : NativeEff) (completed) (table : RowTable)
+    (m : NativeMachine) (fiber : SourceScope.SourceFiber) (yielding : Bool) :
+    Moves.RefWords.Certified m fiber.frame
+      (evaluatePrim (interpAt root completed table) m fiber yielding).machine
+      (evaluatePrim (interpAt root completed table) m fiber yielding).fiber.frame :=
+  (primitive_refEffects root completed table m fiber yielding _
+    (Moves.evaluatePrim_producer (interpAt root completed table) m fiber yielding)).2
 
 /-- The native evaluator keeps a cell outside its actual synchronous operation footprint.
 Consumer: the reference lookup component of Atomic, Workers, and Timeout accounting.
@@ -105,32 +155,68 @@ theorem RefTransfer.table (root : NativeEff) (view : List (FiberId × ExitV)) (l
   | sync thunk next value current unparked answer =>
     exact .sync thunk _ value current unparked answer
 
+/-- Scoped exits either retain references or use the shared primitive producer. -/
+theorem exitScoped_refEffects (root : NativeEff) (m : NativeMachine) (fiber : SourceFiber)
+    (yielding : Bool) (exit : ExitV) :
+    RefTransfer (interpAt root m.completedExits) fiber.frame.current m.state
+      (exitScoped root m fiber yielding exit).machine.state ∧
+    Moves.RefWords.Certified m fiber.frame (exitScoped root m fiber yielding exit).machine
+      (exitScoped root m fiber yielding exit).fiber.frame := by
+  have shape := (Moves.exitScoped_tracedFootprint root m fiber yielding exit).frame
+  generalize actual : exitScoped root m fiber yielding exit = result at shape ⊢
+  unfold exitScoped at actual
+  dsimp only at actual
+  split at actual
+  · split at actual
+    · cases actual
+      exact ⟨.same _ rfl, .of_refs shape rfl⟩
+    · rename_i state program closed
+      have kept := close_unsafe_refs _ _ _ m.state state program closed
+      cases program <;> cases actual <;> exact ⟨.same _ kept, .of_refs shape kept⟩
+  · cases actual
+    exact primitive_refEffects root m.completedExits [] m fiber yielding _
+      (Moves.evaluatePrim_producer _ _ _ _)
+
 theorem exitScoped_refTransfer (root : NativeEff) (m : NativeMachine) (fiber : SourceFiber)
     (yielding : Bool) (exit : ExitV) :
     RefTransfer (interpAt root m.completedExits) fiber.frame.current m.state
-      (exitScoped root m fiber yielding exit).machine.state := by
-  unfold exitScoped
-  dsimp only
-  split
-  · split
-    · exact .same _ rfl
-    · rename_i state program closed
-      have kept := close_unsafe_refs _ _ _ m.state state program closed
-      cases program <;> exact .same _ kept
-  · exact primitive_refTransfer root m.completedExits [] m fiber yielding
+      (exitScoped root m fiber yielding exit).machine.state :=
+  (exitScoped_refEffects root m fiber yielding exit).1
+
+/-- The native wrapper retains both readings through its existing alternatives. -/
+theorem native_refEffects (root : NativeEff) (table : RowTable) (m : NativeMachine)
+    (fiber : SourceFiber) (yielding : Bool) :
+    RefTransfer (interpAt root m.completedExits table) fiber.frame.current m.state
+      (evaluateNative root m fiber yielding table).machine.state ∧
+    Moves.RefWords.Certified m fiber.frame (evaluateNative root m fiber yielding table).machine
+      (evaluateNative root m fiber yielding table).fiber.frame := by
+  have shape := (Moves.evaluateNative_tracedFootprint root table m fiber yielding).frame
+  generalize actual : evaluateNative root m fiber yielding table = result at shape ⊢
+  unfold evaluateNative at actual
+  split at actual
+  · split at actual
+    · cases actual
+      exact ⟨.same _ rfl, .of_refs shape rfl⟩
+    · cases actual
+      exact primitive_refEffects root m.completedExits table m fiber yielding _
+        (Moves.evaluatePrim_producer _ _ _ _)
+  · rename_i value current
+    cases actual
+    have effects := exitScoped_refEffects root m fiber yielding (.success value)
+    exact ⟨effects.1.table root m.completedExits [] table, effects.2⟩
+  · rename_i cause current
+    cases actual
+    have effects := exitScoped_refEffects root m fiber yielding (.failure cause)
+    exact ⟨effects.1.table root m.completedExits [] table, effects.2⟩
+  · cases actual
+    exact primitive_refEffects root m.completedExits table m fiber yielding _
+      (Moves.evaluatePrim_producer _ _ _ _)
 
 theorem native_refTransfer (root : NativeEff) (table : RowTable) (m : NativeMachine)
     (fiber : SourceFiber) (yielding : Bool) :
     RefTransfer (interpAt root m.completedExits table) fiber.frame.current m.state
-      (evaluateNative root m fiber yielding table).machine.state := by
-  unfold evaluateNative
-  split
-  · split
-    · exact .same _ rfl
-    · exact primitive_refTransfer root m.completedExits table m fiber yielding
-  · exact RefTransfer.table root m.completedExits [] table (exitScoped_refTransfer root m fiber yielding _)
-  · exact RefTransfer.table root m.completedExits [] table (exitScoped_refTransfer root m fiber yielding _)
-  · exact primitive_refTransfer root m.completedExits table m fiber yielding
+      (evaluateNative root m fiber yielding table).machine.state :=
+  (native_refEffects root table m fiber yielding).1
 
 /-- Runloop interruption can replace code only with failure, which writes no references. -/
 theorem runloopTop_refTransfer (root : NativeEff) (view : List (FiberId × ExitV)) (table : RowTable)
@@ -144,15 +230,27 @@ theorem runloopTop_refTransfer (root : NativeEff) (view : List (FiberId × ExitV
     | sync thunk next value current unparked answer => cases current
   · exact held
 
-/-- A charged iteration executes only the original synchronous head or leaves references alone. -/
-theorem iteration_refTransfer (root : NativeEff) (table : RowTable) (m : NativeMachine)
+/-- A charged iteration composes its administrative prefix with the native reference word. -/
+theorem iteration_refEffects (root : NativeEff) (table : RowTable) (m : NativeMachine)
     (fiber : SourceFiber) (yielding : Bool) :
     RefTransfer (interpAt root m.completedExits table) fiber.frame.current m.state
-      (iteration (evaluator := evaluatorFor root table) (interpOf root table) m fiber yielding).machine.state := by
-  unfold iteration
-  dsimp only
-  split
-  · rename_i result injected
+      (iteration (evaluator := evaluatorFor root table) (interpOf root table) m fiber yielding).machine.state ∧
+    Moves.RefWords.Certified m fiber.frame
+      (iteration (evaluator := evaluatorFor root table) (interpOf root table) m fiber yielding).machine
+      (iteration (evaluator := evaluatorFor root table) (interpOf root table) m fiber yielding).fiber.frame := by
+  have top : Moves.RefWords.Certified m fiber.frame m (countOp (runloopTop fiber)).frame := by
+    apply Moves.RefWords.Certified.of_refs _ rfl
+    unfold countOp runloopTop
+    split
+    · exact .single (.pendingFailure _) (List.append_nil _).symm
+    · exact .refl _ _
+  have shape := (Moves.iteration_tracedFootprint root table (interpOf root table) m fiber yielding).frame
+  generalize actual : iteration (evaluator := evaluatorFor root table) (interpOf root table) m fiber yielding = result at shape ⊢
+  unfold iteration at actual
+  dsimp only at actual
+  split at actual
+  · rename_i injectedResult injected
+    cases actual
     unfold injectYield at injected
     split at injected
     · cases injected
@@ -160,11 +258,28 @@ theorem iteration_refTransfer (root : NativeEff) (table : RowTable) (m : NativeM
         (m.emit [.yieldInjected (countOp (runloopTop fiber)).id (countOp (runloopTop fiber)).currentOpCount])
         {(countOp (runloopTop fiber)) with yieldOverride := none, frame := {(countOp (runloopTop fiber)).frame with current := .onSuccessConst (.yieldNowWith 0) (countOp (runloopTop fiber)).frame.current}} true
       cases step with
-      | same next refs => exact .same _ refs
+      | same next refs => exact ⟨.same _ refs, .of_refs shape refs⟩
       | sync thunk next value current unparked answer => cases current
     · cases injected
-  · exact runloopTop_refTransfer root m.completedExits table fiber
-      (native_refTransfer root table m (countOp (runloopTop fiber)) yielding)
+  · cases actual
+    have effects := native_refEffects root table m (countOp (runloopTop fiber)) yielding
+    exact ⟨runloopTop_refTransfer root m.completedExits table fiber effects.1, top.trans effects.2⟩
+
+/-- A charged iteration executes only the original synchronous head or leaves references alone. -/
+theorem iteration_refTransfer (root : NativeEff) (table : RowTable) (m : NativeMachine)
+    (fiber : SourceFiber) (yielding : Bool) :
+    RefTransfer (interpAt root m.completedExits table) fiber.frame.current m.state
+      (iteration (evaluator := evaluatorFor root table) (interpOf root table) m fiber yielding).machine.state :=
+  (iteration_refEffects root table m fiber yielding).1
+
+/-- The iteration's reference heap is the fold of its certified annotated operations.
+Cells outside the conservative footprint keep their exact lookup, including absence. -/
+theorem iteration_refWord (root : NativeEff) (table : RowTable) (m : NativeMachine)
+    (fiber : SourceFiber) (yielding : Bool) :
+    Moves.RefWords.Certified m fiber.frame
+      (iteration (evaluator := evaluatorFor root table) (interpOf root table) m fiber yielding).machine
+      (iteration (evaluator := evaluatorFor root table) (interpOf root table) m fiber yielding).fiber.frame :=
+  (iteration_refEffects root table m fiber yielding).2
 
 /-- An actual command either retains references or executes the synchronous head of its looked-up owner. -/
 inductive CommandRefTransfer (root : NativeEff) (table : RowTable) (m : NativeMachine)
