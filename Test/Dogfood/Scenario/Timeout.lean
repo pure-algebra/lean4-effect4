@@ -1,4 +1,5 @@
 import Test.Dogfood.Scenario.Timeout.Model
+import Test.Dogfood.Proofs.HostTimeoutHistory
 
 set_option autoImplicit false
 set_option maxRecDepth 8192
@@ -51,7 +52,18 @@ nothing of a host that answers the second call with the first call's body by its
 Concept `host-session-protocol`, R6. Consumer: the timeout scenario. Its controls are finite
 runs, and the seat's receipt records a bounded search. -/
 @[semantics "host-session-protocol" (requirement := R6)]
-proof_goal stale_never_applies : StaleNeverApplies
+theorem stale_never_applies : StaleNeverApplies := by
+  intro built moves checked
+  have clauses := Test.Dogfood.Proofs.HostJournal.stale_clauses built moves
+  unfold Observation.staleNeverApplies
+  rw [clauses.1, clauses.2.1, clauses.2.2]
+  simp only [Bool.true_and]
+  cases returned : (observe (Scenario.play (opened built) moves)).root with
+  | running => rfl
+  | answered body => exact Test.Dogfood.Proofs.HostTimeoutHistory.successful_body_seen built moves checked body returned
+  | failed tag message => rfl
+  | interrupted => rfl
+  | other => rfl
 
 /-- The proposition of `cleanup_keeps`. -/
 def CleanupKeeps : Prop :=
@@ -71,7 +83,7 @@ runs, and the seat's receipt records a bounded search. -/
 proof_goal cleanup_keeps : CleanupKeeps
 
 /-- **The timeout scenario's claim.** Only the declared failures retry. A reply of a timed-out
-attempt never applies to a later attempt. Cleanup keeps the committed count. The three are
+attempt never applies to a later attempt. Cleanup keeps the committed count. The retry and cleanup clauses remain
 planned goals, so this theorem is proved modulo them. It does not establish a Cache contract,
 deadline fairness or a physical clock. -/
 @[semantics "host-session-protocol" (requirement := R6)]
