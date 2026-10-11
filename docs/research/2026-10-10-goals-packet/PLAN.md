@@ -155,3 +155,17 @@ The retained decision note is `codex/timeout-contract-decision.md`.
 Its host probe checks rc.112 with tsgo `7.0.0-dev.20260629.1` and Bun.
 It uses a controlled callback timer, not a physical clock or the exponential delay.
 The canceled-waiter defect of the old timeout form remains a separate repair.
+
+## Routing call-prefix structure
+
+The source tree's token check now compiles for every request and every admitted reply tape.
+`Routing.Calls.tree_needs_token` proves this check without a planned goal.
+`Run.CallTree.bound_in_tree` states the remaining connection from recorded bindings to tree waits.
+Its concept is translation-simulation, R6; its proposed registry claim is `recorded-call-tree-prefix`.
+It serves the original `Routing.unauthorized_calls_nothing` clause at its unchanged script scope.
+The generated fold supplies the no-cause-handler test.
+The connection adds no progress, fairness, fork, scope, or outside-host claim.
+
+`lake build Test.Dogfood.Scenario.Routing` passes with 1042 jobs.
+The landing audit reports 139 declarations, three modulo declarations, and one planned goal.
+The original infrastructure clause is proved; the authorization clause rests on `bound_in_tree` alone.

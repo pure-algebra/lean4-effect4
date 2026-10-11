@@ -1,5 +1,6 @@
 import Test.Dogfood.Scenario.Routing.Model
 import Test.Dogfood.Proofs.HostRouting
+import Test.Dogfood.Scenario.Routing.Calls
 import Test.Dogfood.Scenario
 import Test.Dogfood.P2HandlerLayers
 import Test.Audit.ScenarioGate
@@ -45,7 +46,8 @@ namespace Test.Dogfood.Scenario.Routing
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Test.Dogfood.Proofs.HostRouting
-open Effect4.Program.Agreement
+open Effect4.Run.CallTree Test.Dogfood.Scenario.Routing.Calls
+open Effect4.Program.Agreement Effect4.Program.Denote
 open Test.Dogfood.P2HandlerLayers (getConfig findById response userTy recordVal user caseModule)
 
 /-! ## 4. The claim -/
@@ -120,7 +122,43 @@ repository is the service the handler may use only after the check, R5. Consumer
 scenario. Its controls are finite runs, and a bounded search over every script of 14 moves up to
 length 5 found no repository call without the token: a finite probe, in the seat's receipt. -/
 @[semantics "context-requirements" (requirement := R5)]
-proof_goal unauthorized_calls_nothing : UnauthorizedCallsNothing
+theorem unauthorized_calls_nothing : UnauthorizedCallsNothing := by
+  intro token id idText b moves hb hnone
+  obtain ⟨hprog, htable⟩ := built_request hb
+  have hreach : Run.Reached (Test.Dogfood.Scenario.play (opened b) moves) :=
+    Test.Dogfood.Scenario.reached_play _ _ (Run.Reached.opened _ _ _ _)
+  have hbuilt : (Test.Dogfood.Scenario.play (opened b) moves).built = b :=
+    (Test.Dogfood.Scenario.play_opened (opened b) moves).1
+  cases hcalls : (observe (Test.Dogfood.Scenario.play (opened b) moves)).repositoryCalls with
+  | nil => rfl
+  | cons v rest =>
+    exfalso
+    have hmem : v ∈ Test.Dogfood.Scenario.requestsOn (Test.Dogfood.Scenario.play (opened b) moves)
+        "UserRepo.findById" := by
+      have : v ∈ (observe (Test.Dogfood.Scenario.play (opened b) moves)).repositoryCalls := by
+        rw [hcalls]
+        exact List.mem_cons_self
+      exact this
+    obtain ⟨seen, hseenf, rfl⟩ := List.mem_map.mp hmem
+    obtain ⟨hseen, hrowname⟩ := List.mem_filter.mp hseenf
+    have hfrag : StraightRows (Test.Dogfood.Scenario.play (opened b) moves).built.table
+        (Test.Dogfood.Scenario.play (opened b) moves).built.program = true := by
+      rw [hbuilt, hprog, htable]
+      exact straight_free token id idText
+    have hcause : NoCauseHandler (Test.Dogfood.Scenario.play (opened b) moves).built.program =
+        true := by
+      rw [hbuilt, hprog]
+      exact noCauseHandler_free token id idText
+    obtain ⟨i, row, T, hrow, hspell, hjournal, hwait⟩ :=
+      held_in_tree _ hreach hfrag hcause seen hseen
+    rw [hbuilt, hprog, htable] at hwait
+    rw [hbuilt, htable] at hrow
+    have hi : i = 1 := repo_position token id idText i row hrow
+      (hspell.trans (beq_iff_eq.mp hrowname))
+    subst hi
+    obtain ⟨pageSize, rest', hT⟩ := tree_needs_token token id idText T seen.request hwait
+    obtain ⟨reply, hsub, hcomp⟩ := hjournal _ (by rw [hT]; exact List.mem_cons_self)
+    exact hnone reply pageSize hsub hcomp
 
 /-- **The routing scenario's claim.** The handler's test is exact on the pair spelling. An
 infrastructure failure escapes the business handlers. An unauthorized request makes no call of
@@ -259,6 +297,10 @@ def scenario : Scenario :=
     runs := runsAndControls.1
     controls := runsAndControls.2 }
 
+/--
+error: routing: the claim Test.Dogfood.Scenario.Routing.routing rests on the planned goal Effect4.Run.CallTree.bound_in_tree, which no clause names
+-/
+#guard_msgs (error) in
 #scenario_gate scenario
 
 end Test.Dogfood.Scenario.Routing

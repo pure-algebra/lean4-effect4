@@ -180,3 +180,16 @@ It establishes no arbitrary-script claim.
 The audit reports 73 declarations, one modulo declaration, and one planned goal.
 `#plan_status` reports `infrastructure_escapes` proved, with no remaining goals.
 The separate `unauthorized_calls_nothing` claim remains open at this landing.
+
+## Routing call-prefix assembly
+
+The original authorization clause now consumes the proved token check and one shared connection.
+`Effect4.Run.CallTree.bound_in_tree` remains open for arbitrary recorded scripts.
+The observation, script alphabet, and budgets are unchanged.
+The source check uses the generated traversal fold.
+The admitted-tape host refuses a reply outside the row's own admission columns.
+
+`LEAN_NUM_THREADS=3 lake build Test.Dogfood.Scenario.Routing` passes with 1042 jobs.
+`lake env lean docs/research/2026-10-10-goals-packet/codex/AuditRouting.lean` passes.
+The audit reports 139 declarations, three modulo declarations, and one planned goal.
+The old scenario gate diagnostic is retained exactly until the deferred gate repair.
