@@ -250,6 +250,7 @@ import Test.Program.ReleaseCustodyScope
 import Test.Program.CommandStacks
 import Test.Program.CommandDebit
 import Test.Program.CommandFrames
+import Test.Program.StackRegion
 import Test.Program.RuntimeRContract
 import Test.Program.RuntimeRShapesContract
 import Test.Program.SimulationContract

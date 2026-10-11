@@ -323,3 +323,20 @@ The universal session-to-tree connection remains open.
 The checked terminal reply cases now retain saved-frame sequencing.
 The native action debit covers every constructor under the source and sequential-scope premises.
 The whole-history endpoint remains open, with every extra internal premise discharged by the original worker source.
+
+## Current shared structures and remaining consumers
+
+The shared custody history and source-opportunity history now supply Workers registration and release-start bounds.
+The remaining Workers obligation is the actual cleanup-log writer history.
+State-indexed saved answers and initial-owner exclusivity supply its allocation and callback steps.
+Their checked receipts are `codex/MachineAnswerFlowLanding.md` and `codex/MachineWorkersExclusivityReceipt.md`.
+
+Atomic cleanup identity membership holds on the original admitted history.
+Its actual finalizer issuance and note-consumption laws still need the count-bound history assembly.
+See `codex/AtomicPhaseIntegrationReceipt.md`.
+Timeout has checked numeric state and actual count-entry equations; its phase producer remains open.
+See `codex/TimeoutEntryIntegrationReceipt.md`.
+
+The adjacent base-law lane now derives the saved-mask bracket's stack shape from an actual finite command prefix.
+See `codex/StackRegionReceipt.md` for its precise detached-exit boundary and remaining outer-history scope.
+These landings do not close the remaining original scenario propositions by adding premises.
