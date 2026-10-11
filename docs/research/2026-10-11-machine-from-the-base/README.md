@@ -34,7 +34,9 @@ open laws into instances:
 - the services' chain of the companion note, which row 117's part two needs.
 
 **Landed the same night** (§9): the classification at one evaluation, for the frame part
-(`Laws/Program/Moves.lean`) and for the run fiber's footprint (`Laws/Program/Footprint.lean`).
+(`Laws/Program/Moves.lean`), for the run fiber's footprint (`Laws/Program/Footprint.lean`), and for
+the machine's other fibers (`Laws/Program/Interference.lean`: every fiber after an evaluation is an
+old one under three listed edits, or a new one).
 Connectors re-derive five guard chains and the evaluation half of `MaskRuns` from it
 (`Laws/Program/MovesConnect.lean`, `Laws/Program/Footprint.lean`). The old chains stay; their
 replacement is Codex's lane C1 ([the prompt](CODEX-PROMPT.md)).
@@ -308,7 +310,8 @@ Placement of each base law:
 | --- | --- | --- | --- | --- | --- |
 | B1 `iteration_moves` (landed) | `reactive-scheduling`; invariants over execution traces | `evaluation-moves`, role structure: an evaluation's frame edit is a word of moves | every native evaluation and iteration, at every machine, fiber, interpreter, row table and latch | which word; progress; the machine | every per-fiber invariant; the guard chains |
 | B1' `iteration_footprint` (landed) | the same | `evaluation-moves`, the run fiber's half | the same | the outcome; the machine; the other fibers | the guard's run-fiber chains |
-| B2 `driveStep_moves` | `reactive-scheduling`; the same | `command-moves`, role structure: a command's effect on each fiber and on the stores | every command and machine | anything about the stores' contents | B3, B5, B6, G2; `MaskRuns` |
+| B2, evaluation half `iteration_interferes` (landed) | `reactive-scheduling`; the same | `command-moves`, role structure: an evaluation's effect on the machine's other fibers | every native evaluation and iteration | the stores; the commands around an evaluation | G2; the goals lane's assertions |
+| B2, command half `driveStep_moves` | the same | `command-moves`: a command's effect on each fiber | every command and machine, with `settle` | anything about the stores' contents | B3, B5, B6, G2; `MaskRuns` |
 | B3 stack locality | `scope-lifetime-finalization`; the region bracket | `stack-local`, role invariant | live fibers of a run, through `Machine.Lift` | cleanup counts; liveness | `saved-mask-region-bracket` without its premise; R11 consumers (Semaphore's protected permit, Pool's `use`) |
 | B4 points well formed | `residual-program-typing`; typed points | the goals packet's G1a | every point of a control history | the values' types | `heap_sites_keep` (G1); B5 |
 | B5 the stack is a path | `reactive-scheduling`; the topology note's `stack-ancestor-chain` | `stack-ancestor-chain`, role invariant | every fiber of a compiled program | typing; liveness | G2; the view; agents' stack queries |
@@ -333,7 +336,8 @@ run them as a second lane, not to reorder the goals lane.
 
 ## 8. What this note does not establish
 
-- B1 and its footprint are proved (§9). B2 to B6 are proposals with placements. The connectors
+- B1, its footprint and B2's evaluation half are proved (§9). B2's command half and B3 to B6 are
+  proposals with placements. The connectors
   restate laws already proved; they remove nothing until the cleanup replaces the old chains.
 - The line counts of §4 are sizes of modules and of named lemma groups. They measure where the
   case analysis lives, not how much of it an instance would remove.
@@ -353,6 +357,7 @@ run them as a second lane, not to reorder the goals lane.
 | stacks as paths | `../2026-10-11-topology-graphs/probes/StackPaths.lean`, `stackpaths.out` |
 | B1 and connectors | commit `aa9ae5067`; `lake build Effect4.Laws.Program.Moves Effect4.Laws.Program.MovesConnect Effect4.Laws` |
 | the footprint and connectors | commit `c4d0728e8`; `lake build Effect4.Laws.Program.Footprint Effect4.Laws` |
-| the audit | `lake env lean probes/AuditMoves.lean`: 307 declarations within `[propext, Quot.sound]`, none modulo planned goals |
+| the machine's interference | commit `603a44a32`; `lake build Effect4.Laws.Program.Interference Effect4.Laws` |
+| the audit | `lake env lean probes/AuditMoves.lean`: 475 declarations within `[propext, Quot.sound]`, none modulo planned goals |
 | the two counterexamples | commit `05254399c`; `lake env lean` on each battery; `Test/Counterexamples/REGISTER.md` |
 | the first compiled probe of B1 | `probes/FrameMoves.lean` (probe style; the landing restyled it) |

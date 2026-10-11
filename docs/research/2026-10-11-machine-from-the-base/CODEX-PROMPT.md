@@ -1,6 +1,6 @@
 # Prompt for Codex: the machine's base laws, and the cleanup they allow
 
-Work in the lean4-effect4 repository, branch `refactor/phase1-phase3`, from commit `c4d0728e8` or
+Work in the lean4-effect4 repository, branch `refactor/phase1-phase3`, from commit `603a44a32` or
 later. Read `AGENTS.md` first; it binds you. Then read this folder's `README.md` (the machine from
 its base) and `context-transformers.md` (the dynamic context). This lane runs beside the goals
 packet's lane. Do not reorder that lane; take this one when it has room.
@@ -18,10 +18,14 @@ packet's lane. Do not reorder that lane; take this one when it has room.
 - `src/Effect4/Laws/Program/Footprint.lean`: one evaluation's footprint on the run fiber
   (`Footprint`): the frame moves, and the id, exit, running bit, finalizing exit, own observers
   and children are kept. Connectors: `iteration_id`, `iteration_exit`, `iteration_running`.
+- `src/Effect4/Laws/Program/Interference.lean`: after one evaluation or iteration, every fiber of
+  the machine is an old fiber (same id) under a word of three listed edits (an observer appended,
+  observers filtered, an interrupt recorded), or a new one (`Interferes`, `iteration_interferes`).
+  No edit changes another fiber's id or exit (`OtherEdits.id`, `OtherEdits.exit`).
 - `Test/Counterexamples/Program/ContextReset.lean` (`E4-CTX-CE-001`) and
   `Test/Counterexamples/Codegen/PrintDistributes.lean` (`E4-PRINT-CE-001`), both seeded.
 
-All three modules audit within `[propext, Quot.sound]` (`probes/AuditMoves.lean`).
+All four modules audit within `[propext, Quot.sound]` (`probes/AuditMoves.lean`, 475 declarations).
 
 ## The work, in order
 
@@ -41,12 +45,11 @@ All three modules audit within `[propext, Quot.sound]` (`probes/AuditMoves.lean`
      `evaluateNative_maskChain`, and the other invariants of README §4 where the moves serve.
    - This rebuilds the law graph above the guard. Land it as one sweep, after the goals lane's
      current landing, not between its commits.
-2. **The outcome and the machine (C2, base law B2).** Extend the classification to the outcome
-   (parked exactly after a park move; finished exactly after a finish) and to the machine: after
-   one evaluation, each other fiber of the machine is unchanged, newly spawned (its frame a
-   compiled program, its context the parent's), or edited in a listed field (an observer added, an
-   interrupt recorded, observers filtered by a token). Then the same for `driveStep`'s sixteen
-   commands and `settle`. This is Owicki and Gries's non-interference made one theorem
+2. **The outcome and the commands (C2, base law B2).** The evaluation's half landed
+   (`Interference.lean`). Extend the classification to the outcome (parked exactly after a park
+   move; finished exactly after a finish), record what a spawned fiber starts as (its frame a
+   compiled program, its context the parent's), then the same for `driveStep`'s sixteen commands
+   and `settle`. This is Owicki and Gries's non-interference made one theorem
    (`MaskAged` is its mask instance). It is the generic half of the goals packet's G2, and the
    goals lane's per-program assertions can then cite it instead of re-deriving it.
 3. **Stack locality (B3).** At one evaluation: if the evaluation of `f` does not finish, the
