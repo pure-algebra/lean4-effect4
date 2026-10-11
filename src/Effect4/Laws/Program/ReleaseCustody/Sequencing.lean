@@ -16,10 +16,11 @@ open Effect4.Program.ReleaseCustody.Pop (Frame)
 def NoAdd (frames : List NCode) : Prop :=
   ∀ frame ∈ frames, ∀ body a fin, frame ≠ .onSuccess body (.afterScopeAdd a fin)
 
-/-- A saved forced yield runs only a yield, its response, or another forced-yield wrapper. -/
+/-- A saved forced yield runs a yield, an admitted response, or another forced-yield wrapper. -/
 inductive YieldPhase : NCode → Prop
   | value (value : Val) : YieldPhase (.success value)
   | cause (cause : CauseV) : YieldPhase (.failure cause)
+  | refGet (cell : RefKey) : YieldPhase (.sync (.store (.op (.refGet cell))))
   | yielding (priority : Nat) : YieldPhase (.yieldNowWith priority)
   | forced (priority : Nat) {next : NCode} (held : YieldPhase next) :
       YieldPhase (.onSuccessConst (.yieldNowWith priority) next)
@@ -149,6 +150,15 @@ theorem stable_cause {frames : List NCode} (held : StableFrames frames) (cause :
   induction held with
   | clean frames held => exact .clean _ _ held
   | constant priority held => exact .constant priority (.cause cause) held
+
+/-- A delayed reference answer retains the saved forced-yield sequence.
+Consumer: native completion resumes in the actual admitted command history. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+theorem stable_refGet {frames : List NCode} (held : StableFrames frames) (cell : RefKey) :
+    Kept (.sync (.store (.op (.refGet cell)))) frames := by
+  cases held with
+  | clean frames missing => exact .clean _ _ missing
+  | constant priority saved => exact .constant priority (.refGet cell) saved
 
 /-- The real yield producer supplies a stable stack before replacing current with unit.
 Consumer: evaluatePrim's raw and injected yield parks. -/
