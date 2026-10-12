@@ -11,7 +11,10 @@
 // ReadonlyArray<head>; a family whose constructors are all nullary is a union of string literals.
 // Nat is number, Option is `| null`, List is ReadonlyArray.
 // Families:
-//   Ty (Effect4.Program.Ty, tagged union): never unit nat int string bool handle(target: string) option(inner: Ty) list(inner: Ty) prod(left: Ty, right: Ty) except(error: Ty, value: Ty) exitOf(value: Ty, error: Ty) causeOf(error: Ty) fiberOf(value: Ty, error: Ty) union(left: Ty, right: Ty) lit(value: string) refOf(value: Ty) deferredOf(value: Ty, error: Ty) var(index: number) unknown record(fields: ReadonlyArray<readonly [string, readonly [boolean, Ty]]>) map(key: Ty, value: Ty) tuple(items: ReadonlyArray<Ty>) app(name: string, args: ReadonlyArray<Ty>) null undefined number bytes
+//   ServiceName (Effect4.ServiceName, struct): mk(value: number)
+//   ServiceTypeCode (Effect4.ServiceTypeCode, struct): mk(value: number)
+//   ServiceKey (Effect4.ServiceKey, struct): mk(name: ServiceName, service: ServiceTypeCode)
+//   Ty (Effect4.Program.Ty, tagged union): never unit nat int string bool handle(target: string) option(inner: Ty) list(inner: Ty) prod(left: Ty, right: Ty) except(error: Ty, value: Ty) exitOf(value: Ty, error: Ty) causeOf(error: Ty) fiberOf(value: Ty, error: Ty) union(left: Ty, right: Ty) lit(value: string) refOf(value: Ty) deferredOf(value: Ty, error: Ty) var(index: number) unknown record(fields: ReadonlyArray<readonly [string, readonly [boolean, Ty]]>) map(key: Ty, value: Ty) tuple(items: ReadonlyArray<Ty>) app(name: string, args: ReadonlyArray<Ty>) null undefined number bytes contextOf(keys: ReadonlyArray<ServiceKey>)
 //   Lit (Effect4.Program.Lit, tagged union): unit nat(value: number) bool(value: boolean) str(value: string)
 //   FieldReadMode (Effect4.Program.FieldReadMode, literals): required optional
 //   Term (Effect4.Program.Term, tagged union): var(index: number) lit(value: Lit) app(atom: string, args: ReadonlyArray<Term>) record(fields: ReadonlyArray<readonly [string, readonly [boolean, Ty]]>, presentNames: ReadonlyArray<string>, values: ReadonlyArray<Term>) field(mode: FieldReadMode, target: Term, name: string) recordSet(target: Term, name: string, value: Term) tupleAt(target: Term, index: number) fold(accTy: Ty | null, list: Term, init: Term, body: Term)
@@ -22,18 +25,15 @@
 //   ObserverMode (Effect4.Supervision.ObserverMode, literals): awaitValue joinEffect
 //   FinalizerStrategy (Effect4.FinalizerStrategy, literals): sequential parallel
 //   NativeOp (Effect4.Program.NativeOp, tagged union): refMake refGet refSet refGetAndSet refSetAndGet deferredIsDone deferredPoll deferredSucceed deferredFail deferredAwait scopeMake(strategy: FinalizerStrategy) sleep clockNow external(index: number) deferredMakeOf(value: Ty, error: Ty) refUpdateWith(f: Term) refGetAndUpdateWith(f: Term) refUpdateAndGetWith(f: Term) refUpdateSomeWith(f: Term) refGetAndUpdateSomeWith(f: Term) refUpdateSomeAndGetWith(f: Term) refModifyWith(f: Term) refModifySomeWith(f: Term) call(index: number) param(index: number)
-//   ServiceName (Effect4.ServiceName, struct): mk(value: number)
-//   ServiceTypeCode (Effect4.ServiceTypeCode, struct): mk(value: number)
-//   ServiceKey (Effect4.ServiceKey, struct): mk(name: ServiceName, service: ServiceTypeCode)
 //   Decision (Effect4.Program.Decision, tagged union): bool option tag(tag: string) recordTag(tag: string)
 //   DefRole (Effect4.Program.DefRole, tagged union): plain serviceInit(service: string) serviceMethod(service: string, method: string, arity: number)
 //   ParamDecl (Effect4.Program.ParamDecl, struct): mk(name: string, request: Ty, answer: Ty, error: Ty)
 //   DefDecl (Effect4.Program.DefDecl, struct): mk(name: string, request: Ty, answer: Ty, error: Ty, requires: ReadonlyArray<ServiceKey>, role: DefRole, params: ReadonlyArray<ParamDecl>)
-//   Eff (Effect4.Program.Eff, tagged union): succeed(value: Term) fail(error: Term) failCause(cause: CauseTerm) sync(thunk: Term) suspend(body: Eff) perform(op: NativeOp, request: Term) bind(first: Eff, rest: Eff) gen(body: ReadonlyArray<Stmt>) catchCause(body: Eff, handler: Eff) matchCause(body: Eff, onValue: Eff, onCause: Eff) onExit(body: Eff, finalizer: Eff) exit(body: Eff) uninterruptible(body: Eff) interruptible(body: Eff) yieldNow(priority: number) awaitFiber(fiber: Term, mode: ObserverMode) withFiber(action: ActionTerm) scoped(body: Eff) acquireRelease(acquire: Eff, release: Eff) provideLayer(layer: LayerTerm, isLocal: boolean, body: Eff) service(key: ServiceKey) provideService(key: ServiceKey, value: Term, body: Eff) catchIf(test: Term, body: Eff, handler: Eff) select(scrutinee: Term, decision: Decision, arm0: Eff, arm1: Eff) iterate(cursorTy: Ty | null, initial: Term, test: Term, step: Term, result: Term, body: Eff) restore(saved: Term, body: Eff) defs(decls: ReadonlyArray<DefDecl>, bodies: ReadonlyArray<Eff>, main: Eff, layers: ReadonlyArray<LayerTerm>) invoke(index: number, request: Term, args: ReadonlyArray<Eff>)
+//   Eff (Effect4.Program.Eff, tagged union): succeed(value: Term) fail(error: Term) failCause(cause: CauseTerm) sync(thunk: Term) suspend(body: Eff) perform(op: NativeOp, request: Term) bind(first: Eff, rest: Eff) gen(body: ReadonlyArray<Stmt>) catchCause(body: Eff, handler: Eff) matchCause(body: Eff, onValue: Eff, onCause: Eff) onExit(body: Eff, finalizer: Eff) exit(body: Eff) uninterruptible(body: Eff) interruptible(body: Eff) yieldNow(priority: number) awaitFiber(fiber: Term, mode: ObserverMode) withFiber(action: ActionTerm) scoped(body: Eff) acquireRelease(acquire: Eff, release: Eff) provideLayer(layer: LayerTerm, isLocal: boolean, body: Eff) service(key: ServiceKey) provideService(key: ServiceKey, value: Term, body: Eff) catchIf(test: Term, body: Eff, handler: Eff) select(scrutinee: Term, decision: Decision, arm0: Eff, arm1: Eff) iterate(cursorTy: Ty | null, initial: Term, test: Term, step: Term, result: Term, body: Eff) restore(saved: Term, body: Eff) defs(decls: ReadonlyArray<DefDecl>, bodies: ReadonlyArray<Eff>, main: Eff, layers: ReadonlyArray<LayerTerm>) invoke(index: number, request: Term, args: ReadonlyArray<Eff>) provideContext(context: Term, body: Eff)
 //   Stmt (Effect4.Program.Stmt, tagged union): bindYield(effect: Eff) yieldDiscard(effect: Eff) ret(value: Term) ifElse(test: Term, thenB: ReadonlyArray<Stmt>, elseB: ReadonlyArray<Stmt>) whileTrue(body: ReadonlyArray<Stmt>) breakLoop
 //   Stmts (Effect4.Program.Stmts, ReadonlyArray<Stmt>): nil cons(head: Stmt, tail: ReadonlyArray<Stmt>)
 //   Effs (Effect4.Program.Effs, ReadonlyArray<Eff>): nil cons(head: Eff, tail: ReadonlyArray<Eff>)
-//   ActionTerm (Effect4.Program.ActionTerm, tagged union): fork(program: Eff, options: ForkOptions) forkIn(program: Eff, options: ForkOptions, scope: Term) forkScoped(program: Eff, options: ForkOptions) runIn(target: Term, scope: Term) interrupt(target: Term) interruptScoped(target: Term) interruptAll(targets: Term, interruptor: Term | null) awaitAll(targets: Term) awaitAllFailFast(targets: Term) snapshotChildren awaitNewChildren(snapshot: Term) raceAll(entrants: ReadonlyArray<Eff>) setContext(context: Term) getContext getId closeScope(scope: Term, exit: Term) getInterruptible raceAllFirst(entrants: ReadonlyArray<Eff>)
+//   ActionTerm (Effect4.Program.ActionTerm, tagged union): fork(program: Eff, options: ForkOptions) forkIn(program: Eff, options: ForkOptions, scope: Term) forkScoped(program: Eff, options: ForkOptions) runIn(target: Term, scope: Term) interrupt(target: Term) interruptScoped(target: Term) interruptAll(targets: Term, interruptor: Term | null) awaitAll(targets: Term) awaitAllFailFast(targets: Term) snapshotChildren awaitNewChildren(snapshot: Term) raceAll(entrants: ReadonlyArray<Eff>) getId closeScope(scope: Term, exit: Term) getInterruptible raceAllFirst(entrants: ReadonlyArray<Eff>) context(keys: ReadonlyArray<ServiceKey>)
 //   LayerTerm (Effect4.Program.LayerTerm, tagged union): succeed(key: ServiceKey, value: Lit) effect(key: ServiceKey, body: Eff) effectDiscard(body: Eff) provide(self: LayerTerm, that: LayerTerm) provideMerge(self: LayerTerm, that: LayerTerm) merge(left: LayerTerm, right: LayerTerm) fresh(inner: LayerTerm) orDie(inner: LayerTerm) ref(target: ReadonlyArray<number>) mergeAll(layers: ReadonlyArray<LayerTerm>)
 //   LayerTerms (Effect4.Program.LayerTerms, ReadonlyArray<LayerTerm>): nil cons(head: LayerTerm, tail: ReadonlyArray<LayerTerm>)
 //   RowKind (Effect4.Program.RowKind, literals): sync async program
@@ -44,6 +44,22 @@
 //   EffTy (Effect4.Program.EffTy, struct): mk(answer: Ty, error: Ty, requires: ReadonlyArray<ServiceKey>)
 
 import { Schema } from "effect"
+
+export const ServiceName = Schema.Struct({
+  value: Schema.Int,
+})
+export type ServiceName = typeof ServiceName.Type
+
+export const ServiceTypeCode = Schema.Struct({
+  value: Schema.Int,
+})
+export type ServiceTypeCode = typeof ServiceTypeCode.Type
+
+export const ServiceKey = Schema.Struct({
+  name: ServiceName,
+  service: ServiceTypeCode,
+})
+export type ServiceKey = typeof ServiceKey.Type
 
 export type Ty =
   | { readonly _tag: "never" }
@@ -74,6 +90,7 @@ export type Ty =
   | { readonly _tag: "undefined" }
   | { readonly _tag: "number" }
   | { readonly _tag: "bytes" }
+  | { readonly _tag: "contextOf"; readonly keys: ReadonlyArray<ServiceKey> }
 
 export const Ty = Schema.TaggedUnion({
   never: {},
@@ -104,6 +121,7 @@ export const Ty = Schema.TaggedUnion({
   undefined: {},
   number: {},
   bytes: {},
+  contextOf: { keys: Schema.Array(Schema.suspend((): Schema.Codec<ServiceKey> => ServiceKey)).check(Schema.makeFilter((xs) => xs.every((b, i) => i === 0 || ((a) => a !== undefined && (a.name.value < b.name.value || (a.name.value === b.name.value && a.service.value < b.service.value)))(xs[i - 1])))) },
 })
 
 export type Lit =
@@ -229,22 +247,6 @@ export const NativeOp = Schema.TaggedUnion({
   param: { index: Schema.Int },
 })
 
-export const ServiceName = Schema.Struct({
-  value: Schema.Int,
-})
-export type ServiceName = typeof ServiceName.Type
-
-export const ServiceTypeCode = Schema.Struct({
-  value: Schema.Int,
-})
-export type ServiceTypeCode = typeof ServiceTypeCode.Type
-
-export const ServiceKey = Schema.Struct({
-  name: ServiceName,
-  service: ServiceTypeCode,
-})
-export type ServiceKey = typeof ServiceKey.Type
-
 export type Decision =
   | { readonly _tag: "bool" }
   | { readonly _tag: "option" }
@@ -317,6 +319,7 @@ export type Eff =
   | { readonly _tag: "restore"; readonly saved: Term; readonly body: Eff }
   | { readonly _tag: "defs"; readonly decls: ReadonlyArray<DefDecl>; readonly bodies: ReadonlyArray<Eff>; readonly main: Eff; readonly layers: ReadonlyArray<LayerTerm> }
   | { readonly _tag: "invoke"; readonly index: number; readonly request: Term; readonly args: ReadonlyArray<Eff> }
+  | { readonly _tag: "provideContext"; readonly context: Term; readonly body: Eff }
 
 export const Eff = Schema.TaggedUnion({
   succeed: { value: Schema.suspend((): Schema.Codec<Term> => Term) },
@@ -347,6 +350,7 @@ export const Eff = Schema.TaggedUnion({
   restore: { saved: Schema.suspend((): Schema.Codec<Term> => Term), body: Schema.suspend((): Schema.Codec<Eff> => Eff) },
   defs: { decls: Schema.Array(DefDecl), bodies: Schema.Array(Schema.suspend((): Schema.Codec<Eff> => Eff)), main: Schema.suspend((): Schema.Codec<Eff> => Eff), layers: Schema.Array(Schema.suspend((): Schema.Codec<LayerTerm> => LayerTerm)) },
   invoke: { index: Schema.Int, request: Schema.suspend((): Schema.Codec<Term> => Term), args: Schema.Array(Schema.suspend((): Schema.Codec<Eff> => Eff)) },
+  provideContext: { context: Schema.suspend((): Schema.Codec<Term> => Term), body: Schema.suspend((): Schema.Codec<Eff> => Eff) },
 })
 
 export type Stmt =
@@ -383,12 +387,11 @@ export type ActionTerm =
   | { readonly _tag: "snapshotChildren" }
   | { readonly _tag: "awaitNewChildren"; readonly snapshot: Term }
   | { readonly _tag: "raceAll"; readonly entrants: ReadonlyArray<Eff> }
-  | { readonly _tag: "setContext"; readonly context: Term }
-  | { readonly _tag: "getContext" }
   | { readonly _tag: "getId" }
   | { readonly _tag: "closeScope"; readonly scope: Term; readonly exit: Term }
   | { readonly _tag: "getInterruptible" }
   | { readonly _tag: "raceAllFirst"; readonly entrants: ReadonlyArray<Eff> }
+  | { readonly _tag: "context"; readonly keys: ReadonlyArray<ServiceKey> }
 
 export const ActionTerm = Schema.TaggedUnion({
   fork: { program: Schema.suspend((): Schema.Codec<Eff> => Eff), options: ForkOptions },
@@ -403,12 +406,11 @@ export const ActionTerm = Schema.TaggedUnion({
   snapshotChildren: {},
   awaitNewChildren: { snapshot: Schema.suspend((): Schema.Codec<Term> => Term) },
   raceAll: { entrants: Schema.Array(Schema.suspend((): Schema.Codec<Eff> => Eff)) },
-  setContext: { context: Schema.suspend((): Schema.Codec<Term> => Term) },
-  getContext: {},
   getId: {},
   closeScope: { scope: Schema.suspend((): Schema.Codec<Term> => Term), exit: Schema.suspend((): Schema.Codec<Term> => Term) },
   getInterruptible: {},
   raceAllFirst: { entrants: Schema.Array(Schema.suspend((): Schema.Codec<Eff> => Eff)) },
+  context: { keys: Schema.Array(Schema.suspend((): Schema.Codec<ServiceKey> => ServiceKey)).check(Schema.makeFilter((xs) => xs.every((b, i) => i === 0 || ((a) => a !== undefined && (a.name.value < b.name.value || (a.name.value === b.name.value && a.service.value < b.service.value)))(xs[i - 1])))) },
 })
 
 export type LayerTerm =
@@ -475,7 +477,7 @@ export type Row = typeof Row.Type
 export const EffTy = Schema.Struct({
   answer: Schema.suspend((): Schema.Codec<Ty> => Ty),
   error: Schema.suspend((): Schema.Codec<Ty> => Ty),
-  requires: Schema.Array(ServiceKey).check(Schema.makeFilter((xs) => xs.every((b, i) => i === 0 || ((a) => a !== undefined && (a.name.value < b.name.value || (a.name.value === b.name.value && a.service.value < b.service.value)))(xs[i - 1])))),
+  requires: Schema.Array(Schema.suspend((): Schema.Codec<ServiceKey> => ServiceKey)).check(Schema.makeFilter((xs) => xs.every((b, i) => i === 0 || ((a) => a !== undefined && (a.name.value < b.name.value || (a.name.value === b.name.value && a.service.value < b.service.value)))(xs[i - 1])))),
 })
 export type EffTy = typeof EffTy.Type
 

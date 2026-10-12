@@ -111,20 +111,20 @@ theorem contA_le (root : NativeEff) (q : List Nat) (clear : ClearFinalizers root
     change current root q (embed (finProgram captured exit)) + 0 + 0 ≤ fin q captured
     rw [fin_program_zero root q clear captured exit owned]
     omega
-  case case30 update region =>
+  -- the provider's update and its restore hold the region's point, as their names do
+  case case32 update region flag =>
     cases region
     case program point =>
       unfold updateThenK
       split
-      · split
-        · simpa only [regionCode, name] using resolve_le root q point
-        · simp only [current, cata_prim, thunk, name, push, Nat.zero_add, Nat.add_zero, Nat.le_refl]
+      · split <;> simp only [current, cata_prim, thunk, name, push, Nat.zero_add, Nat.add_zero,
+          Nat.le_refl]
       · exact Nat.zero_le _
     all_goals exact owned.elim
-  case case31 region previous =>
+  case case33 region previous flag =>
     cases region
     case program point =>
-      simpa only [regionCode, current, cata_prim, name, push, Nat.add_zero] using resolve_le root q point
+      simp only [current, cata_prim, thunk, name, push, Nat.add_zero, Nat.le_refl]
     all_goals exact owned.elim
   all_goals aesop (add norm simp [current, cata_prim, thunk, name, push, NameAt, StoreNameAt,
     FinAt, Point.childWith, Point.child, Point.capture, fin,

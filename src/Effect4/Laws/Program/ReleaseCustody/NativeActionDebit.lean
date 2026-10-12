@@ -560,7 +560,8 @@ theorem producer_demand (q : List Nat) (root : NativeEff) (completed : List (Fib
     rw [show demand q (.fork (resolveLayer root point memo scope) _ _) = 0 from
       Evaluation.layer_resolve_credits q root point memo scope]
     exact Nat.zero_le _
-  all_goals aesop (add norm simp [interpAt, interpOf, demand, currentCredits])
+  all_goals aesop (add norm simp [interpAt, interpOf, demand, currentCredits,
+    Evaluation.region_credits])
 
 /-- The actual native fiber-action boundary discharges its program demand and source premises.
 Consumer: complete primitive evaluator debit in the original Workers history proof. -/

@@ -12,12 +12,25 @@
 // ReadonlyArray<head>; a family whose constructors are all nullary is a union of string literals.
 // Nat is number, Option is `| null`, List is ReadonlyArray.
 
-import type { Ty, Lit, FieldReadMode, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, NativeOp, ServiceName, ServiceTypeCode, ServiceKey, Decision, DefRole, ParamDecl, DefDecl, Eff, Stmt, ActionTerm, LayerTerm, RowKind, RowShape, Registration, RowArg, Row, EffTy } from "./eff.gen.ts"
+import type { ServiceName, ServiceTypeCode, ServiceKey, Ty, Lit, FieldReadMode, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, NativeOp, Decision, DefRole, ParamDecl, DefDecl, Eff, Stmt, ActionTerm, LayerTerm, RowKind, RowShape, Registration, RowArg, Row, EffTy } from "./eff.gen.ts"
 
 export type Json = string | number | boolean | null | ReadonlyArray<Json> | { readonly [key: string]: Json }
 
 const consList = <A>(items: ReadonlyArray<A>, each: (a: A) => Json): Json =>
   items.reduceRight<Json>((tail, item) => ["cons", each(item), tail], ["nil"])
+
+export const serviceNameJson = (v: ServiceName): Json => ({
+  value: v.value,
+})
+
+export const serviceTypeCodeJson = (v: ServiceTypeCode): Json => ({
+  value: v.value,
+})
+
+export const serviceKeyJson = (v: ServiceKey): Json => ({
+  name: serviceNameJson(v.name),
+  service: serviceTypeCodeJson(v.service),
+})
 
 export const tyJson = (v: Ty): Json => {
   switch (v._tag) {
@@ -49,6 +62,7 @@ export const tyJson = (v: Ty): Json => {
     case "undefined": return ["undefined"]
     case "number": return ["number"]
     case "bytes": return ["bytes"]
+    case "contextOf": return ["contextOf", v.keys.map(serviceKeyJson)]
   }
 }
 
@@ -129,19 +143,6 @@ export const nativeOpJson = (v: NativeOp): Json => {
   }
 }
 
-export const serviceNameJson = (v: ServiceName): Json => ({
-  value: v.value,
-})
-
-export const serviceTypeCodeJson = (v: ServiceTypeCode): Json => ({
-  value: v.value,
-})
-
-export const serviceKeyJson = (v: ServiceKey): Json => ({
-  name: serviceNameJson(v.name),
-  service: serviceTypeCodeJson(v.service),
-})
-
 export const decisionJson = (v: Decision): Json => {
   switch (v._tag) {
     case "bool": return ["bool"]
@@ -206,6 +207,7 @@ export const effJson = (v: Eff): Json => {
     case "restore": return ["restore", termJson(v.saved), effJson(v.body)]
     case "defs": return ["defs", v.decls.map((y) => defDeclJson(y)), effsJson(v.bodies), effJson(v.main), layerTermsJson(v.layers)]
     case "invoke": return ["invoke", v.index, termJson(v.request), effsJson(v.args)]
+    case "provideContext": return ["provideContext", termJson(v.context), effJson(v.body)]
   }
 }
 
@@ -238,12 +240,11 @@ export const actionTermJson = (v: ActionTerm): Json => {
     case "snapshotChildren": return ["snapshotChildren"]
     case "awaitNewChildren": return ["awaitNewChildren", termJson(v.snapshot)]
     case "raceAll": return ["raceAll", effsJson(v.entrants)]
-    case "setContext": return ["setContext", termJson(v.context)]
-    case "getContext": return ["getContext"]
     case "getId": return ["getId"]
     case "closeScope": return ["closeScope", termJson(v.scope), termJson(v.exit)]
     case "getInterruptible": return ["getInterruptible"]
     case "raceAllFirst": return ["raceAllFirst", effsJson(v.entrants)]
+    case "context": return ["context", v.keys.map(serviceKeyJson)]
   }
 }
 

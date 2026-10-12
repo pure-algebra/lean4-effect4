@@ -155,9 +155,10 @@ partial def tsTy (fs : List Family) : OTy → String
     | none => "never"
 
 /-- The schema of a carrier. A reference to a tagged family is suspended: the families are
-mutually recursive and the schema constants are declared in dependency order. -/
+mutually recursive and the schema constants are declared in dependency order. A row of keys is
+suspended too: `Ty.contextOf` reaches it before `ServiceKey` is declared. -/
 partial def tsSchema (fs : List Family) : OTy → String
-  | .requirements => "Schema.Array(ServiceKey).check(Schema.makeFilter((xs) => xs.every((b, i) => i === 0 || ((a) => a !== undefined && (a.name.value < b.name.value || (a.name.value === b.name.value && a.service.value < b.service.value)))(xs[i - 1]))))"
+  | .requirements => "Schema.Array(Schema.suspend((): Schema.Codec<ServiceKey> => ServiceKey)).check(Schema.makeFilter((xs) => xs.every((b, i) => i === 0 || ((a) => a !== undefined && (a.name.value < b.name.value || (a.name.value === b.name.value && a.service.value < b.service.value)))(xs[i - 1]))))"
   | .int => "Schema.Int"
   | .bool => "Schema.Boolean"
   | .string => "Schema.String"
@@ -482,6 +483,8 @@ def metadataShape (self : String) : OTy → Except String String
   | .prod left right => do
       pure (obj [("kind", lit "pair"), ("left", ← metadataShape self left),
         ("right", ← metadataShape self right)])
+  -- a canonical row of keys (`Effect4.Row ServiceKey`): a strictly ascending list of key structures
+  | .requirements => pure (obj [("kind", lit "list"), ("inner", "{\"kind\":\"key\"}")])
   | _ => throw "unsupported type metadata carrier"
 
 /-- A finite constructor witness uses existing canonical field values. -/
@@ -490,7 +493,7 @@ def metadataSample (self : String) (emptyTag : Nat) : OTy → Except String Effe
   | .bool => pure (.bool false)
   | .string => pure (.str "")
   | .named name => if name == self then pure (.ctor emptyTag []) else throw s!"unknown sample family {name}"
-  | .list _ => pure (.list [])
+  | .list _ | .requirements => pure (.list [])
   | .prod left right => do pure (.pair (← metadataSample self emptyTag left) (← metadataSample self emptyTag right))
   | _ => throw "unsupported type metadata sample"
 
@@ -515,7 +518,7 @@ def emitTypeMetadata (fs : List Family) : Except String String := do
   let edges := Effect4.Program.Ty.leafEdges.map fun (a, b) => arr [lit (leafName a), lit (leafName b)]
   pure ("\n/** Existing Ty canonical value fields, read from the closed world. */\n" ++
     "export type TypeMetadataShape =\n" ++
-    "  | { readonly kind: \"nat\" | \"bool\" | \"string\" | \"ty\" }\n" ++
+    "  | { readonly kind: \"nat\" | \"bool\" | \"string\" | \"ty\" | \"key\" }\n" ++
     "  | { readonly kind: \"list\"; readonly inner: TypeMetadataShape }\n" ++
     "  | { readonly kind: \"pair\"; readonly left: TypeMetadataShape; readonly right: TypeMetadataShape }\n" ++
     "export interface TypeMetadataConstructor { readonly name: string; readonly tag: number; readonly keyTag: number; readonly fields: ReadonlyArray<{ readonly name: string; readonly shape: TypeMetadataShape }> }\n" ++

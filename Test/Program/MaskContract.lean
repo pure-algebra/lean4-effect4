@@ -382,22 +382,29 @@ def cutLog (src : Src NativeOp) : Option Nat :=
 -- The checker refuses the budget's provision, so the programs are raw.
 #guard verdict (mk (cut false 12)) = "typing: serviceUnknown"
 
--- An interruptible caller. The child's operations 10 to 13 are the form's entry: the `bind`,
+-- The budget's provision enters through the masked provider region (decisions row 349). Its
+-- entry is five operations longer than the unmasked one, so every cut below is five later.
+-- An interruptible caller. The child's operations 15 to 18 are the form's entry: the `bind`,
 -- the getter, the getter's answer through its restoring frame, and the body's mask. A cut
--- before each of them ends the form before its body. Operation 12 is the first checkpoint of
+-- before each of them ends the form before its body. Operation 17 is the first checkpoint of
 -- F6, inside the getter: the fiber is masked there, the interrupt stays pending, and the
--- getter's restoring frame fails the fiber. Operation 13 is the second: between the getter
+-- getter's restoring frame fails the fiber. Operation 18 is the second: between the getter
 -- and the body's mask the fiber is interruptible again.
-#guard (List.range 4).map (fun i => cutLog (cut false (10 + i))) =
+#guard (List.range 4).map (fun i => cutLog (cut false (15 + i))) =
   [some 100, some 100, some 100, some 100]
--- From operation 14 the body is masked: it runs to its end, and the fiber is interrupted after.
-#guard (List.range 5).all fun i => cutLog (cut false (14 + i)) = some 111
+-- From operation 19 the body is masked: it runs to its end, and the fiber is interrupted after.
+#guard (List.range 5).all fun i => cutLog (cut false (19 + i)) = some 111
 -- A cut before the first mark is an interrupt before the form.
-#guard (List.range 8).all fun i => cutLog (cut false (2 + i)) = some 0
+#guard (List.range 12).all fun i => cutLog (cut false (3 + i)) = some 0
 
 -- A masked caller still enters the body, at every cut after its own mask: no log is `100`.
-#guard (List.range 11).all fun i => cutLog (cut true (9 + i)) = some 111
-#guard (List.range 7).all fun i => cutLog (cut true (2 + i)) = some 0
+#guard (List.range 11).all fun i => cutLog (cut true (14 + i)) = some 111
+#guard (List.range 11).all fun i => cutLog (cut true (3 + i)) = some 0
+
+-- Open (row 349): at budget 2 the park falls inside the provision's masked entry, and the run
+-- reaches the command fuel; the unmasked entry reached the interrupt before the form there.
+-- A live frontier, not a refusal.
+#guard ((rawOf (cut false 2)).map fun p => (Api.run p fuel).outcome) = some .frontier
 
 /-! ## The control of F3: the body's address
 

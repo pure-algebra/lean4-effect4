@@ -10,7 +10,7 @@
 // nowhere else: a family whose constructors are exactly `nil` and `cons head tail` is
 // ReadonlyArray<head>; a family whose constructors are all nullary is a union of string literals.
 // Nat is number, Option is `| null`, List is ReadonlyArray.
-import type { Ty, Lit, FieldReadMode, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, NativeOp, ServiceName, ServiceTypeCode, ServiceKey, Decision, DefRole, ParamDecl, DefDecl, Eff, Stmt, ActionTerm, LayerTerm, RowKind, RowShape, Registration, RowArg, Row, EffTy } from "./eff.gen.ts"
+import type { ServiceName, ServiceTypeCode, ServiceKey, Ty, Lit, FieldReadMode, Term, CauseTerm, MaskMode, ForkOptions, ObserverMode, FinalizerStrategy, NativeOp, Decision, DefRole, ParamDecl, DefDecl, Eff, Stmt, ActionTerm, LayerTerm, RowKind, RowShape, Registration, RowArg, Row, EffTy } from "./eff.gen.ts"
 
 // The frame algebra of Store.Val. Work is scheduled explicitly: nested programs and
 // inductive lists do not consume the JavaScript call stack. Frame lengths are patched
@@ -94,6 +94,30 @@ class Writer {
   }
 }
 
+const writeServiceName = (w: Writer, v: ServiceName): void => {
+  w.ctor(0, [() => w.nat(v.value)])
+}
+export const serviceNameWire = (v: ServiceName): Uint8Array => {
+  const w = new Writer()
+  return w.finish(() => writeServiceName(w, v))
+}
+
+const writeServiceTypeCode = (w: Writer, v: ServiceTypeCode): void => {
+  w.ctor(0, [() => w.nat(v.value)])
+}
+export const serviceTypeCodeWire = (v: ServiceTypeCode): Uint8Array => {
+  const w = new Writer()
+  return w.finish(() => writeServiceTypeCode(w, v))
+}
+
+const writeServiceKey = (w: Writer, v: ServiceKey): void => {
+  w.ctor(0, [() => writeServiceName(w, v.name), () => writeServiceTypeCode(w, v.service)])
+}
+export const serviceKeyWire = (v: ServiceKey): Uint8Array => {
+  const w = new Writer()
+  return w.finish(() => writeServiceKey(w, v))
+}
+
 const writeTy = (w: Writer, v: Ty): void => {
   switch (v._tag) {
     case "never": return w.ctor(0, [])
@@ -124,6 +148,7 @@ const writeTy = (w: Writer, v: Ty): void => {
     case "undefined": return w.ctor(25, [])
     case "number": return w.ctor(26, [])
     case "bytes": return w.ctor(27, [])
+    case "contextOf": return w.ctor(28, [() => (() => { if (!v.keys.every((b, i) => i === 0 || ((a) => a !== undefined && (a.name.value < b.name.value || (a.name.value === b.name.value && a.service.value < b.service.value)))(v.keys[i - 1]))) throw new TypeError("noncanonical requirements"); w.list(v.keys, (y) => writeServiceKey(w, y)) })()])
     default: throw new TypeError("wire Ty constructor")
   }
 }
@@ -278,30 +303,6 @@ export const nativeOpWire = (v: NativeOp): Uint8Array => {
   return w.finish(() => writeNativeOp(w, v))
 }
 
-const writeServiceName = (w: Writer, v: ServiceName): void => {
-  w.ctor(0, [() => w.nat(v.value)])
-}
-export const serviceNameWire = (v: ServiceName): Uint8Array => {
-  const w = new Writer()
-  return w.finish(() => writeServiceName(w, v))
-}
-
-const writeServiceTypeCode = (w: Writer, v: ServiceTypeCode): void => {
-  w.ctor(0, [() => w.nat(v.value)])
-}
-export const serviceTypeCodeWire = (v: ServiceTypeCode): Uint8Array => {
-  const w = new Writer()
-  return w.finish(() => writeServiceTypeCode(w, v))
-}
-
-const writeServiceKey = (w: Writer, v: ServiceKey): void => {
-  w.ctor(0, [() => writeServiceName(w, v.name), () => writeServiceTypeCode(w, v.service)])
-}
-export const serviceKeyWire = (v: ServiceKey): Uint8Array => {
-  const w = new Writer()
-  return w.finish(() => writeServiceKey(w, v))
-}
-
 const writeDecision = (w: Writer, v: Decision): void => {
   switch (v._tag) {
     case "bool": return w.ctor(0, [])
@@ -375,6 +376,7 @@ const writeEff = (w: Writer, v: Eff): void => {
     case "restore": return w.ctor(29, [() => writeTerm(w, v.saved), () => writeEff(w, v.body)])
     case "defs": return w.ctor(30, [() => w.list(v.decls, (y) => writeDefDecl(w, y)), () => writeEffs(w, v.bodies), () => writeEff(w, v.main), () => writeLayerTerms(w, v.layers)])
     case "invoke": return w.ctor(31, [() => w.nat(v.index), () => writeTerm(w, v.request), () => writeEffs(w, v.args)])
+    case "provideContext": return w.ctor(32, [() => writeTerm(w, v.context), () => writeEff(w, v.body)])
     default: throw new TypeError("wire Eff constructor")
   }
 }
@@ -429,12 +431,11 @@ const writeActionTerm = (w: Writer, v: ActionTerm): void => {
     case "snapshotChildren": return w.ctor(9, [])
     case "awaitNewChildren": return w.ctor(10, [() => writeTerm(w, v.snapshot)])
     case "raceAll": return w.ctor(11, [() => writeEffs(w, v.entrants)])
-    case "setContext": return w.ctor(12, [() => writeTerm(w, v.context)])
-    case "getContext": return w.ctor(13, [])
     case "getId": return w.ctor(14, [])
     case "closeScope": return w.ctor(15, [() => writeTerm(w, v.scope), () => writeTerm(w, v.exit)])
     case "getInterruptible": return w.ctor(16, [])
     case "raceAllFirst": return w.ctor(17, [() => writeEffs(w, v.entrants)])
+    case "context": return w.ctor(18, [() => (() => { if (!v.keys.every((b, i) => i === 0 || ((a) => a !== undefined && (a.name.value < b.name.value || (a.name.value === b.name.value && a.service.value < b.service.value)))(v.keys[i - 1]))) throw new TypeError("noncanonical requirements"); w.list(v.keys, (y) => writeServiceKey(w, y)) })()])
     default: throw new TypeError("wire ActionTerm constructor")
   }
 }
@@ -542,11 +543,11 @@ export const encodeProgram = effWire
 
 /** Existing Ty canonical value fields, read from the closed world. */
 export type TypeMetadataShape =
-  | { readonly kind: "nat" | "bool" | "string" | "ty" }
+  | { readonly kind: "nat" | "bool" | "string" | "ty" | "key" }
   | { readonly kind: "list"; readonly inner: TypeMetadataShape }
   | { readonly kind: "pair"; readonly left: TypeMetadataShape; readonly right: TypeMetadataShape }
 export interface TypeMetadataConstructor { readonly name: string; readonly tag: number; readonly keyTag: number; readonly fields: ReadonlyArray<{ readonly name: string; readonly shape: TypeMetadataShape }> }
-export const typeMetadataConstructors: ReadonlyArray<TypeMetadataConstructor> = [{"name":"never","tag":0,"keyTag":0,"fields":[]},{"name":"unit","tag":1,"keyTag":1,"fields":[]},{"name":"nat","tag":2,"keyTag":2,"fields":[]},{"name":"int","tag":3,"keyTag":3,"fields":[]},{"name":"string","tag":4,"keyTag":4,"fields":[]},{"name":"bool","tag":5,"keyTag":5,"fields":[]},{"name":"handle","tag":6,"keyTag":6,"fields":[{"name":"target","shape":{"kind":"string"}}]},{"name":"option","tag":7,"keyTag":7,"fields":[{"name":"inner","shape":{"kind":"ty"}}]},{"name":"list","tag":8,"keyTag":8,"fields":[{"name":"inner","shape":{"kind":"ty"}}]},{"name":"prod","tag":9,"keyTag":9,"fields":[{"name":"left","shape":{"kind":"ty"}},{"name":"right","shape":{"kind":"ty"}}]},{"name":"except","tag":10,"keyTag":10,"fields":[{"name":"error","shape":{"kind":"ty"}},{"name":"value","shape":{"kind":"ty"}}]},{"name":"exitOf","tag":11,"keyTag":11,"fields":[{"name":"value","shape":{"kind":"ty"}},{"name":"error","shape":{"kind":"ty"}}]},{"name":"causeOf","tag":12,"keyTag":12,"fields":[{"name":"error","shape":{"kind":"ty"}}]},{"name":"fiberOf","tag":13,"keyTag":13,"fields":[{"name":"value","shape":{"kind":"ty"}},{"name":"error","shape":{"kind":"ty"}}]},{"name":"union","tag":14,"keyTag":14,"fields":[{"name":"left","shape":{"kind":"ty"}},{"name":"right","shape":{"kind":"ty"}}]},{"name":"lit","tag":15,"keyTag":15,"fields":[{"name":"value","shape":{"kind":"string"}}]},{"name":"refOf","tag":16,"keyTag":16,"fields":[{"name":"value","shape":{"kind":"ty"}}]},{"name":"deferredOf","tag":17,"keyTag":17,"fields":[{"name":"value","shape":{"kind":"ty"}},{"name":"error","shape":{"kind":"ty"}}]},{"name":"var","tag":18,"keyTag":18,"fields":[{"name":"index","shape":{"kind":"nat"}}]},{"name":"unknown","tag":19,"keyTag":19,"fields":[]},{"name":"record","tag":20,"keyTag":20,"fields":[{"name":"fields","shape":{"kind":"list","inner":{"kind":"pair","left":{"kind":"string"},"right":{"kind":"pair","left":{"kind":"bool"},"right":{"kind":"ty"}}}}}]},{"name":"map","tag":21,"keyTag":21,"fields":[{"name":"key","shape":{"kind":"ty"}},{"name":"value","shape":{"kind":"ty"}}]},{"name":"tuple","tag":22,"keyTag":22,"fields":[{"name":"items","shape":{"kind":"list","inner":{"kind":"ty"}}}]},{"name":"app","tag":23,"keyTag":23,"fields":[{"name":"name","shape":{"kind":"string"}},{"name":"args","shape":{"kind":"list","inner":{"kind":"ty"}}}]},{"name":"null","tag":24,"keyTag":24,"fields":[]},{"name":"undefined","tag":25,"keyTag":25,"fields":[]},{"name":"number","tag":26,"keyTag":26,"fields":[]},{"name":"bytes","tag":27,"keyTag":27,"fields":[]}]
+export const typeMetadataConstructors: ReadonlyArray<TypeMetadataConstructor> = [{"name":"never","tag":0,"keyTag":0,"fields":[]},{"name":"unit","tag":1,"keyTag":1,"fields":[]},{"name":"nat","tag":2,"keyTag":2,"fields":[]},{"name":"int","tag":3,"keyTag":3,"fields":[]},{"name":"string","tag":4,"keyTag":4,"fields":[]},{"name":"bool","tag":5,"keyTag":5,"fields":[]},{"name":"handle","tag":6,"keyTag":6,"fields":[{"name":"target","shape":{"kind":"string"}}]},{"name":"option","tag":7,"keyTag":7,"fields":[{"name":"inner","shape":{"kind":"ty"}}]},{"name":"list","tag":8,"keyTag":8,"fields":[{"name":"inner","shape":{"kind":"ty"}}]},{"name":"prod","tag":9,"keyTag":9,"fields":[{"name":"left","shape":{"kind":"ty"}},{"name":"right","shape":{"kind":"ty"}}]},{"name":"except","tag":10,"keyTag":10,"fields":[{"name":"error","shape":{"kind":"ty"}},{"name":"value","shape":{"kind":"ty"}}]},{"name":"exitOf","tag":11,"keyTag":11,"fields":[{"name":"value","shape":{"kind":"ty"}},{"name":"error","shape":{"kind":"ty"}}]},{"name":"causeOf","tag":12,"keyTag":12,"fields":[{"name":"error","shape":{"kind":"ty"}}]},{"name":"fiberOf","tag":13,"keyTag":13,"fields":[{"name":"value","shape":{"kind":"ty"}},{"name":"error","shape":{"kind":"ty"}}]},{"name":"union","tag":14,"keyTag":14,"fields":[{"name":"left","shape":{"kind":"ty"}},{"name":"right","shape":{"kind":"ty"}}]},{"name":"lit","tag":15,"keyTag":15,"fields":[{"name":"value","shape":{"kind":"string"}}]},{"name":"refOf","tag":16,"keyTag":16,"fields":[{"name":"value","shape":{"kind":"ty"}}]},{"name":"deferredOf","tag":17,"keyTag":17,"fields":[{"name":"value","shape":{"kind":"ty"}},{"name":"error","shape":{"kind":"ty"}}]},{"name":"var","tag":18,"keyTag":18,"fields":[{"name":"index","shape":{"kind":"nat"}}]},{"name":"unknown","tag":19,"keyTag":19,"fields":[]},{"name":"record","tag":20,"keyTag":20,"fields":[{"name":"fields","shape":{"kind":"list","inner":{"kind":"pair","left":{"kind":"string"},"right":{"kind":"pair","left":{"kind":"bool"},"right":{"kind":"ty"}}}}}]},{"name":"map","tag":21,"keyTag":21,"fields":[{"name":"key","shape":{"kind":"ty"}},{"name":"value","shape":{"kind":"ty"}}]},{"name":"tuple","tag":22,"keyTag":22,"fields":[{"name":"items","shape":{"kind":"list","inner":{"kind":"ty"}}}]},{"name":"app","tag":23,"keyTag":23,"fields":[{"name":"name","shape":{"kind":"string"}},{"name":"args","shape":{"kind":"list","inner":{"kind":"ty"}}}]},{"name":"null","tag":24,"keyTag":24,"fields":[]},{"name":"undefined","tag":25,"keyTag":25,"fields":[]},{"name":"number","tag":26,"keyTag":26,"fields":[]},{"name":"bytes","tag":27,"keyTag":27,"fields":[]},{"name":"contextOf","tag":28,"keyTag":28,"fields":[{"name":"keys","shape":{"kind":"list","inner":{"kind":"key"}}}]}]
 export const metadataFrameTags = {"nat":2,"bool":1,"string":3,"list":4,"pair":5,"ctor":10} as const
 export const typeLeafEdges: ReadonlyArray<readonly [string, string]> = [["lit","string"],["nat","int"],["int","number"],["undefined","unit"]]
 export const targetReservedIdentifiers: ReadonlyArray<string> = ["await","break","case","catch","class","const","continue","debugger","default","delete","do","else","enum","export","extends","false","finally","for","function","if","import","in","instanceof","let","new","null","return","super","switch","this","throw","true","try","typeof","var","void","while","with","yield","interface","implements","package","private","protected","public","static"]

@@ -46,6 +46,7 @@ let children (f : family) (c : int) : (int * family) list =
   | Eff, 25 -> [ (1, Eff) ] (* restore *)
   | Eff, 26 -> [ (1, Effs); (2, Eff); (3, Layers) ] (* defs *)
   | Eff, 27 -> [ (2, Effs) ] (* invoke *)
+  | Eff, 28 -> [ (1, Eff) ] (* provideContext *)
   | Stmts, 1 -> [ (0, Stmt); (1, Stmts) ] (* cons *)
   | Stmt, 0 -> [ (0, Eff) ] (* bindYield *)
   | Stmt, 1 -> [ (0, Eff) ] (* yieldDiscard *)
@@ -55,7 +56,7 @@ let children (f : family) (c : int) : (int * family) list =
   | Action, 1 -> [ (0, Eff) ] (* forkIn *)
   | Action, 2 -> [ (0, Eff) ] (* forkScoped *)
   | Action, 11 -> [ (0, Effs) ] (* raceAll *)
-  | Action, 17 -> [ (0, Effs) ] (* raceAllFirst *)
+  | Action, 15 -> [ (0, Effs) ] (* raceAllFirst *)
   | Effs, 1 -> [ (0, Eff); (1, Effs) ] (* cons *)
   | Layer, 1 -> [ (1, Eff) ] (* effect *)
   | Layer, 2 -> [ (0, Eff) ] (* effectDiscard *)
@@ -100,6 +101,7 @@ let position_of_tag (f : family) (tag : int) : int option =
   | Eff, 29 -> Some 25 (* restore *)
   | Eff, 30 -> Some 26 (* defs *)
   | Eff, 31 -> Some 27 (* invoke *)
+  | Eff, 32 -> Some 28 (* provideContext *)
   | Stmts, 0 -> Some 0 (* nil *)
   | Stmts, 1 -> Some 1 (* cons *)
   | Stmt, 0 -> Some 0 (* bindYield *)
@@ -120,12 +122,11 @@ let position_of_tag (f : family) (tag : int) : int option =
   | Action, 9 -> Some 9 (* snapshotChildren *)
   | Action, 10 -> Some 10 (* awaitNewChildren *)
   | Action, 11 -> Some 11 (* raceAll *)
-  | Action, 12 -> Some 12 (* setContext *)
-  | Action, 13 -> Some 13 (* getContext *)
-  | Action, 14 -> Some 14 (* getId *)
-  | Action, 15 -> Some 15 (* closeScope *)
-  | Action, 16 -> Some 16 (* getInterruptible *)
-  | Action, 17 -> Some 17 (* raceAllFirst *)
+  | Action, 14 -> Some 12 (* getId *)
+  | Action, 15 -> Some 13 (* closeScope *)
+  | Action, 16 -> Some 14 (* getInterruptible *)
+  | Action, 17 -> Some 15 (* raceAllFirst *)
+  | Action, 18 -> Some 16 (* context *)
   | Effs, 0 -> Some 0 (* nil *)
   | Effs, 1 -> Some 1 (* cons *)
   | Layer, 0 -> Some 0 (* succeed *)
@@ -211,6 +212,7 @@ let child (n : node) (i : int) : node option =
   | N_eff (Eff_types.Eff_defs (_, _, a2, _)), 1 -> Some (N_eff a2)
   | N_eff (Eff_types.Eff_defs (_, _, _, a3)), 2 -> Some (N_layers a3)
   | N_eff (Eff_types.Eff_invoke (_, _, a2)), 0 -> Some (N_effs a2)
+  | N_eff (Eff_types.Eff_provideContext (_, a1)), 0 -> Some (N_eff a1)
   | N_stmts (Eff_types.Stmts_cons (a0, _)), 0 -> Some (N_stmt a0)
   | N_stmts (Eff_types.Stmts_cons (_, a1)), 1 -> Some (N_stmts a1)
   | N_stmt (Eff_types.Stmt_bindYield a0), 0 -> Some (N_eff a0)
@@ -269,6 +271,7 @@ let witnesses : node list = [
   N_eff (Eff_types.Eff_restore ((Eff_types.Term_var 1), (Eff_types.Eff_succeed (Eff_types.Term_var 2))));
   N_eff (Eff_types.Eff_defs ([], (Eff_types.Effs_cons ((Eff_types.Eff_succeed (Eff_types.Term_var 2)), (Eff_types.Effs_nil))), (Eff_types.Eff_succeed (Eff_types.Term_var 3)), (Eff_types.Layer_terms_cons ((Eff_types.Layer_term_succeed ({ Eff_types.service_key_name = { Eff_types.service_name_value = 4 }; service_key_service = { Eff_types.service_type_code_value = 4 } }, (Eff_types.Lit_nat 4))), (Eff_types.Layer_terms_nil)))));
   N_eff (Eff_types.Eff_invoke (1, (Eff_types.Term_var 2), (Eff_types.Effs_cons ((Eff_types.Eff_succeed (Eff_types.Term_var 3)), (Eff_types.Effs_nil)))));
+  N_eff (Eff_types.Eff_provideContext ((Eff_types.Term_var 1), (Eff_types.Eff_succeed (Eff_types.Term_var 2))));
   N_stmts (Eff_types.Stmts_nil);
   N_stmts (Eff_types.Stmts_cons ((Eff_types.Stmt_bindYield (Eff_types.Eff_succeed (Eff_types.Term_var 1))), (Eff_types.Stmts_cons ((Eff_types.Stmt_bindYield (Eff_types.Eff_succeed (Eff_types.Term_var 2))), (Eff_types.Stmts_nil)))));
   N_stmt (Eff_types.Stmt_bindYield (Eff_types.Eff_succeed (Eff_types.Term_var 1)));
@@ -289,12 +292,11 @@ let witnesses : node list = [
   N_action (Eff_types.Action_term_snapshotChildren);
   N_action (Eff_types.Action_term_awaitNewChildren (Eff_types.Term_var 1));
   N_action (Eff_types.Action_term_raceAll (Eff_types.Effs_cons ((Eff_types.Eff_succeed (Eff_types.Term_var 1)), (Eff_types.Effs_nil))));
-  N_action (Eff_types.Action_term_setContext (Eff_types.Term_var 1));
-  N_action (Eff_types.Action_term_getContext);
   N_action (Eff_types.Action_term_getId);
   N_action (Eff_types.Action_term_closeScope ((Eff_types.Term_var 1), (Eff_types.Term_var 2)));
   N_action (Eff_types.Action_term_getInterruptible);
   N_action (Eff_types.Action_term_raceAllFirst (Eff_types.Effs_cons ((Eff_types.Eff_succeed (Eff_types.Term_var 1)), (Eff_types.Effs_nil))));
+  N_action (Eff_types.Action_term_context []);
   N_effs (Eff_types.Effs_nil);
   N_effs (Eff_types.Effs_cons ((Eff_types.Eff_succeed (Eff_types.Term_var 1)), (Eff_types.Effs_cons ((Eff_types.Eff_succeed (Eff_types.Term_var 2)), (Eff_types.Effs_nil)))));
   N_layer (Eff_types.Layer_term_succeed ({ Eff_types.service_key_name = { Eff_types.service_name_value = 1 }; service_key_service = { Eff_types.service_type_code_value = 1 } }, (Eff_types.Lit_nat 2)));

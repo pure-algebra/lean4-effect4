@@ -18,6 +18,10 @@ open Lean Effect4.Program
 def tagged (name : String) (fields : List (String × Json)) : Json :=
   Json.mkObj (("_tag", Json.str name) :: fields)
 
+def keyJson (key : Effect4.ServiceKey) : Json :=
+  Json.mkObj [("name", Json.mkObj [("value", toJson key.name.value)]),
+    ("service", Json.mkObj [("value", toJson key.service.value)])]
+
 mutual
 def tyJson : Ty → Json
   | .never => tagged "never" []
@@ -48,6 +52,7 @@ def tyJson : Ty → Json
   | .undefined => tagged "undefined" []
   | .number => tagged "number" []
   | .bytes => tagged "bytes" []
+  | .contextOf keys => tagged "contextOf" [("keys", Json.arr (keys.elems.map keyJson).toArray)]
 /-- A record's fields: each `String × Bool × Ty` a nested pair, `[name, [optional, type]]`, the
 generated codec's product spelling. -/
 def fieldsJson : List (String × Bool × Ty) → List Json
@@ -73,10 +78,6 @@ def kindJson : RowKind → Json
   | .sync => .str "sync"
   | .async => .str "async"
   | .program => .str "program"
-
-def keyJson (key : Effect4.ServiceKey) : Json :=
-  Json.mkObj [("name", Json.mkObj [("value", toJson key.name.value)]),
-    ("service", Json.mkObj [("value", toJson key.service.value)])]
 
 def flatKeyJson (key : Effect4.ServiceKey) : Json :=
   Json.mkObj [("name", toJson key.name.value), ("service", toJson key.service.value)]

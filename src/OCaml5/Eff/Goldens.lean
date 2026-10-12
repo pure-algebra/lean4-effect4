@@ -86,6 +86,11 @@ partial def V.names : V → List Name
 
 /-! ### The conversions, one per family, total by pattern matching -/
 
+def keyV (k : ServiceKey) : V :=
+  .struct ``Effect4.ServiceKey
+    [ ("name", .struct ``Effect4.ServiceName [("value", .nat k.name.value)])
+    , ("service", .struct ``Effect4.ServiceTypeCode [("value", .nat k.service.value)]) ]
+
 mutual
 def tyV : Ty → V
   | .never => .ctor ``Ty.never []
@@ -116,6 +121,7 @@ def tyV : Ty → V
   | .undefined => .ctor ``Ty.undefined []
   | .number => .ctor ``Ty.number []
   | .bytes => .ctor ``Ty.bytes []
+  | .contextOf keys => .ctor ``Ty.contextOf [.list (keys.elems.map keyV)]
 /-- A record's fields, each the nested pair `(name, (optional, type))`. -/
 def fieldsV : List (String × Bool × Ty) → List V
   | [] => []
@@ -209,11 +215,6 @@ def opV : NativeOp → V
   | .call k => .ctor ``NativeOp.call [.nat k]
   | .param i => .ctor ``NativeOp.param [.nat i]
 
-def keyV (k : ServiceKey) : V :=
-  .struct ``Effect4.ServiceKey
-    [ ("name", .struct ``Effect4.ServiceName [("value", .nat k.name.value)])
-    , ("service", .struct ``Effect4.ServiceTypeCode [("value", .nat k.service.value)]) ]
-
 /-- A definition's role in its block's services (decisions row 339). -/
 def defRoleV : DefRole → V
   | .plain => .ctor ``DefRole.plain []
@@ -274,6 +275,7 @@ partial def effV : Eff NativeOp → V
   | .defs decls bodies main ls =>
     .ctor ``Eff.defs [.list (decls.map defDeclV), effsV bodies, effV main, layersV ls]
   | .invoke k r args => .ctor ``Eff.invoke [.nat k, termV r, effsV args]
+  | .provideContext c b => .ctor ``Eff.provideContext [termV c, effV b]
 partial def layerV : LayerTerm NativeOp → V
   | .succeed k v => .ctor ``LayerTerm.succeed [keyV k, litV v]
   | .effect k b => .ctor ``LayerTerm.effect [keyV k, effV b]
@@ -316,8 +318,7 @@ partial def actionV : ActionTerm NativeOp → V
   | .awaitNewChildren s => .ctor ``ActionTerm.awaitNewChildren [termV s]
   | .raceAll es => .ctor ``ActionTerm.raceAll [effsV es]
   | .raceAllFirst es => .ctor ``ActionTerm.raceAllFirst [effsV es]
-  | .setContext c => .ctor ``ActionTerm.setContext [termV c]
-  | .getContext => .ctor ``ActionTerm.getContext []
+  | .context keys => .ctor ``ActionTerm.context [.list (keys.elems.map keyV)]
   | .getId => .ctor ``ActionTerm.getId []
   | .closeScope s e => .ctor ``ActionTerm.closeScope [termV s, termV e]
   | .getInterruptible => .ctor ``ActionTerm.getInterruptible []
@@ -404,8 +405,8 @@ def pActions : P :=
     , .withFiber (.interruptScoped (v 0))                                 -- v4
     , .withFiber .snapshotChildren                                        -- v5 : list (fiberOf unknown unknown)
     , .withFiber (.awaitNewChildren (v 5))                                -- v6
-    , .withFiber .getContext                                              -- v7 : context
-    , .withFiber (.setContext (v 7))                                      -- v8
+    , .withFiber (.context .empty)                                        -- v7 : contextOf empty
+    , .provideContext (v 7) (.succeed u)                                  -- v8
     , .withFiber .getId                                                   -- v9 : nat
     , .withFiber (.interruptAll (v 5) (some (v 9)))                       -- v10
     , .withFiber (.interruptAll (v 5) none)                               -- v11

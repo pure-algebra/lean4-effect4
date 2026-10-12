@@ -63,7 +63,8 @@ def types : List (String × Ty) := [
   ("lit", .lit "tag"), ("refOf", .refOf .nat), ("deferredOf", .deferredOf .nat .string),
   ("var", .var 0), ("record", .record [("a", false, .nat), ("b", true, .string)]),
   ("map", .map .string .nat), ("tuple", .tuple [.nat, .string, .bool]), ("app", .app "Option" [.nat]),
-  ("null", .null), ("undefined", .undefined), ("number", .number), ("bytes", .bytes)]
+  ("null", .null), ("undefined", .undefined), ("number", .number), ("bytes", .bytes),
+  ("contextOf", .contextOf ⟨[⟨⟨1⟩, ⟨2⟩⟩, ⟨⟨1⟩, ⟨3⟩⟩], by decide⟩)]
 
 def keys : List Effect4.ServiceKey := [⟨⟨1⟩, ⟨2⟩⟩, ⟨⟨1⟩, ⟨3⟩⟩, ⟨⟨2⟩, ⟨0⟩⟩]
 

@@ -678,7 +678,7 @@ theorem finished_pop_state (m : Api.Machine)
     (nested : List (Cmd EffName EffThunk Val Err Defect FiberId Ann)) :
     evaluatePrim.finishFrame m f y (.finished ex) events nested =
       ⟨m.emit (events.map (RunEvent.frame f.id)),
-        { f with frame := frameExitState f.frame }, y, .finished ex, nested⟩ := rfl
+        { f with frame := frameExitState f.frame }, y, .finished ex, nested, []⟩ := rfl
 
 /-- The old terminal-only mask exception missed this live, unfinished command
 boundary (`E4-RTERM-CE-005`). Both machines now retain the completed pop. -/
@@ -745,17 +745,20 @@ def injectedInterruptTape : List Api.Decision :=
 #guard obs (frameRun injectedCaught injectedInterruptTape 4).machine =
   obsR (termRun injectedCaught injectedInterruptTape 4).machine
 
--- The wave-2 audit's scheduling witnesses: a context budget of six supplied through
--- Completion, then a sync; both machines now finish.
+-- The wave-2 audit's scheduling witnesses: a context budget supplied through Completion, then
+-- a sync in the provider region it opens (decisions row 349). From budget 17 both machines
+-- finish. At budget 6 both stop at the same unanswered yield inside the region.
 def withBudgetProgram : NativeEff :=
   .bind (.perform (.deferredMakeOf .nat .nat) (.lit .unit))
     (.bind (.perform .deferredAwait (.var 0))
-      (.provideContext (.var 0) (.sync (.lit (.nat 5)))))
+      (.provideContext (.var 1) (.sync (.lit (.nat 5)))))
 def budgetTape (n : Nat) : List Api.Decision :=
   [Api.evaluate, .answerAsync Api.root 0
     (.ofExit (.success (.context (emptyCtx.provide Env.maxOpsKey (.nat n)))))]
-#guard rootExit (frameRun withBudgetProgram (budgetTape 6)) = some (.success (.nat 5))
-#guard rootExit (termRun withBudgetProgram (budgetTape 6)) = some (.success (.nat 5))
+#guard rootExit (frameRun withBudgetProgram (budgetTape 17)) = some (.success (.nat 5))
+#guard rootExit (termRun withBudgetProgram (budgetTape 17)) = some (.success (.nat 5))
+#guard termObs withBudgetProgram (budgetTape 17) = frameObs withBudgetProgram (budgetTape 17)
+#guard (rootExit (frameRun withBudgetProgram (budgetTape 6))).isNone
 #guard termObs withBudgetProgram (budgetTape 6) = frameObs withBudgetProgram (budgetTape 6)
 
 -- A chain of allocations long enough to cross the default budget (two counted steps per

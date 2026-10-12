@@ -2232,6 +2232,8 @@ export const childrenOf = (n: IrNode): ReadonlyArray<Child> => {
           return [atLayer(e.layer, (layer) => kEff({ ...e, layer })), atEff(e.body, (body) => kEff({ ...e, body }))]
         case "provideService": return [atEff(e.body, (body) => kEff({ ...e, body }))]
         case "restore": return [atEff(e.body, (body) => kEff({ ...e, body }))]
+        // a provider region (decisions row 349): its body is child 0
+        case "provideContext": return [atEff(e.body, (body) => kEff({ ...e, body }))]
         // a definition block (decisions row 328): its bodies' spine is child 0, its main program
         // child 1, the module's layers' spine child 2 (decisions row 341)
         case "defs":

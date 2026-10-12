@@ -69,8 +69,9 @@ def type_shape(text):
     if len(parts) > 1: return ('prod', tuple(type_shape(p) for p in parts))
     if text.startswith('(') and text.endswith(')'):
         return type_shape(text[1:-1])
-    for suffix in [' option', ' list']:
-        if text.endswith(suffix): return (suffix.strip(), type_shape(text[:-len(suffix)]))
+    # The engine carries a canonical row as `'a effect4_row = 'a list` (`Effect4.Row α`).
+    for suffix, kind in [(' option', 'option'), (' list', 'list'), (' effect4_row', 'list')]:
+        if text.endswith(suffix): return (kind, type_shape(text[:-len(suffix)]))
     if text == "'op": return ('parameter', 'op')
     if text.startswith("'op "): return ('applied', text[4:])
     if re.fullmatch(r'[a-z][a-z0-9_]*', text): return ('name', text)

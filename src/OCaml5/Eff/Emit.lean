@@ -362,6 +362,12 @@ def manifest (bs : List (List Family)) : String :=
 
 /-! ## eff_native.ml — the alphabet as data, rendered from Lean values -/
 
+def keyO (k : ServiceKey) : String :=
+  "{ " ++ ofield "service_key" "name" ++ " = { " ++ ofield "service_name" "value" ++ " = " ++
+  toString k.name.value ++ " }; " ++
+  ofield "service_key" "service" ++ " = { " ++ ofield "service_type_code" "value" ++ " = " ++
+  toString k.service.value ++ " } }"
+
 mutual
 def tyO : Ty → String
   | .never => octor "ty" "never"
@@ -392,6 +398,7 @@ def tyO : Ty → String
   | .undefined => octor "ty" "undefined"
   | .number => octor "ty" "number"
   | .bytes => octor "ty" "bytes"
+  | .contextOf keys => s!"({octor "ty" "contextOf"} [{"; ".intercalate (keys.elems.map keyO)}])"
 /-- A record's fields, `(string * (bool * ty))` each. -/
 def fieldsO : List (String × Bool × Ty) → List String
   | [] => []
@@ -402,11 +409,6 @@ def itemsO : List Ty → List String
   | t :: rest => tyO t :: itemsO rest
 end
 
-def keyO (k : ServiceKey) : String :=
-  "{ " ++ ofield "service_key" "name" ++ " = { " ++ ofield "service_name" "value" ++ " = " ++
-  toString k.name.value ++ " }; " ++
-  ofield "service_key" "service" ++ " = { " ++ ofield "service_type_code" "value" ++ " = " ++
-  toString k.service.value ++ " } }"
 
 def listO (xs : List String) : String := "[" ++ "; ".intercalate xs ++ "]"
 

@@ -15,7 +15,12 @@ abbrev Ctor := Conform.Source.Ctor
 abbrev Family := Conform.Source.Family
 
 def blocks : List (List Spec) :=
-  [ [⟨`Effect4.Program.Ty, "ty", []⟩]
+  -- the service key first since the typed context (decisions row 349): `Ty.contextOf` carries a
+  -- row of keys, and `provideLayer`, `service`, `provideService` and `LayerTerm` carry one key
+  [ [⟨`Effect4.ServiceName, "service_name", []⟩]
+  , [⟨`Effect4.ServiceTypeCode, "service_type_code", []⟩]
+  , [⟨`Effect4.ServiceKey, "service_key", []⟩]
+  , [⟨`Effect4.Program.Ty, "ty", []⟩]
   , [⟨`Effect4.Program.Lit, "lit", []⟩]
   , [⟨`Effect4.Program.FieldReadMode, "field_read_mode", []⟩]
   , [⟨`Effect4.Program.Term, "term", []⟩, ⟨`Effect4.Program.Terms, "terms", []⟩]
@@ -25,11 +30,6 @@ def blocks : List (List Spec) :=
   , [⟨`Effect4.Supervision.ObserverMode, "observer_mode", []⟩]
   , [⟨`Effect4.FinalizerStrategy, "finalizer_strategy", []⟩]
   , [⟨`Effect4.Program.NativeOp, "native_op", []⟩]
-  -- the service key before the `Eff` group since the join (2026-09-07): `provideLayer`,
-  -- `service`, `provideService` and `LayerTerm` carry a `ServiceKey`
-  , [⟨`Effect4.ServiceName, "service_name", []⟩]
-  , [⟨`Effect4.ServiceTypeCode, "service_type_code", []⟩]
-  , [⟨`Effect4.ServiceKey, "service_key", []⟩]
   -- the decision carrier before the `Eff` group (the `select` packet, 2026-09-16): `select`
   -- carries a `Decision`
   , [⟨`Effect4.Program.Decision, "decision", []⟩]

@@ -455,6 +455,17 @@ let supervision_interrupt_cause (encode : int -> _) (requester : int option) (an
 
 
 
+(* LCNF mono: Effect4.Machine.interruptCause._redArg (interp : Effect4.Machine.RunInterp lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (interruptor : Option Nat) (extra : List (Prod String lcAny)) (target : Nat) : List (Effect4.Reason lcAny lcAny lcAny lcAny) *)
+
+let interrupt_cause (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) (interruptor : int option) (extra : (string * _) list) (target : int) : (_, _, _, _) reason list =
+  match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
+    | { encode_fiber = encode_fiber; stack_annotations = stack_annotations; _ } -> (let _x_1 = stack_annotations target in
+      let _x_2 = supervision_interrupt_cause encode_fiber interruptor _x_1 in
+      let _x_3 = false in
+      cause_annotate _x_2 extra _x_3)
+
+
+
 (* LCNF mono: instDecidableEqProd._redArg (inst.1 : lcAny -> lcAny -> Bool) (inst.2 : lcAny -> lcAny -> Bool) (x.3 : Prod lcAny lcAny) (x.4 : Prod lcAny lcAny) : Bool *)
 
 let inst_decidable_eq_prod (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (x_3 : _ * _) (x_4 : _ * _) : bool =
@@ -586,36 +597,41 @@ let cause_combine (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : 
 
 
 
-(* LCNF mono: Effect4.Machine.interruptRecord._redArg (inst.1 : lcAny -> lcAny -> Bool) (inst.2 : lcAny -> lcAny -> Bool) (inst.3 : lcAny -> lcAny -> Bool) (inst.4 : lcAny -> lcAny -> Bool) (core : Effect4.Machine.FiberCore lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (interp : Effect4.Machine.RunInterp lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (interruptor : Option Nat) (extra : List (Prod String lcAny)) (f : Effect4.Machine.RunFiber lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) : lcAny *)
+(* LCNF mono: Effect4.Machine.interruptWithCause._redArg (inst.1 : lcAny -> lcAny -> Bool) (inst.2 : lcAny -> lcAny -> Bool) (inst.3 : lcAny -> lcAny -> Bool) (inst.4 : lcAny -> lcAny -> Bool) (core : Effect4.Machine.FiberCore lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (cause : List (Effect4.Reason lcAny lcAny lcAny lcAny)) (f : Effect4.Machine.RunFiber lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) : lcAny *)
 
-let interrupt_record (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : _ -> _ -> bool) (inst_4 : _ -> _ -> bool) (core : (_, _, _, _, _, _, _, _) fiber_core) (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) (interruptor : int option) (extra : (string * _) list) (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) =
+let interrupt_with_cause (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : _ -> _ -> bool) (inst_4 : _ -> _ -> bool) (core : (_, _, _, _, _, _, _, _) fiber_core) (cause : (_, _, _, _) reason list) (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) =
   match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
     | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } -> (match exit_ with
-        | None -> (match (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) with
-            | { encode_fiber = encode_fiber; stack_annotations = stack_annotations; _ } -> (match (core : (_, _, _, _, _, _, _, _) fiber_core) with
-                | { answer_with = answer_with; interruptible = interruptible; interrupted_cause = interrupted_cause; record_cause = record_cause; set_deferred = set_deferred; failure = failure; _ } -> (let _x_5 = false in
-                  let _x_6 = true in
-                  let _jp_7 = fun _y_8 -> let _x_9 = record_cause frame _y_8 in
-                  let f_1 = ({ id = id; frame = _x_9; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
-                  let _x_10 = interruptible _x_9 in
-                  if _x_10 then (if running then (let _x_18 = set_deferred _x_9 _x_6 in
-                      let _x_19 = ({ id = id; frame = _x_18; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
-                      _x_19, _x_5) else (let _x_12 = failure _y_8 in
-                      let _x_13 = answer_with _x_9 _x_12 in
-                      let _x_14 = Parked_notParked in
-                      let _x_15 = [] in
-                      let _x_16 = ({ id = id; frame = _x_13; running = running; parked = _x_14; pending = _x_15; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
-                      _x_16, _x_6)) else f_1, _x_5 in
-                  let _x_21 = stack_annotations id in
-                  let _x_22 = supervision_interrupt_cause encode_fiber interruptor _x_21 in
-                  let cause = cause_annotate _x_22 extra _x_5 in
-                  let _x_23 = interrupted_cause frame in
-                  match _x_23 with
-                    | None -> _jp_7 cause
-                    | Some val__24 -> (let _x_25 = cause_combine inst_1 inst_2 inst_3 inst_4 val__24 cause in
-                      _jp_7 _x_25))))
-        | Some _ -> (let _x_27 = false in
-          f, _x_27))
+        | None -> (match (core : (_, _, _, _, _, _, _, _) fiber_core) with
+            | { answer_with = answer_with; interruptible = interruptible; interrupted_cause = interrupted_cause; record_cause = record_cause; set_deferred = set_deferred; failure = failure; _ } -> (let _x_5 = false in
+              let _x_6 = true in
+              let _jp_7 = fun _y_8 -> let _x_9 = record_cause frame _y_8 in
+              let f_1 = ({ id = id; frame = _x_9; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+              let _x_10 = interruptible _x_9 in
+              if _x_10 then (if running then (let _x_18 = set_deferred _x_9 _x_6 in
+                  let _x_19 = ({ id = id; frame = _x_18; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                  _x_19, _x_5) else (let _x_12 = failure _y_8 in
+                  let _x_13 = answer_with _x_9 _x_12 in
+                  let _x_14 = Parked_notParked in
+                  let _x_15 = [] in
+                  let _x_16 = ({ id = id; frame = _x_13; running = running; parked = _x_14; pending = _x_15; finalizing = finalizing; exit_ = exit_; current_op_count = current_op_count; max_ops_before_yield = max_ops_before_yield; prevent_yield = prevent_yield; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = context } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+                  _x_16, _x_6)) else f_1, _x_10 in
+              let _x_21 = interrupted_cause frame in
+              match _x_21 with
+                | None -> _jp_7 cause
+                | Some val__22 -> (let _x_23 = cause_combine inst_1 inst_2 inst_3 inst_4 val__22 cause in
+                  _jp_7 _x_23)))
+        | Some _ -> (let _x_25 = false in
+          f, _x_25))
+
+
+
+(* LCNF mono: Effect4.Machine.interruptRecord._redArg (inst.1 : lcAny -> lcAny -> Bool) (inst.2 : lcAny -> lcAny -> Bool) (inst.3 : lcAny -> lcAny -> Bool) (inst.4 : lcAny -> lcAny -> Bool) (core : Effect4.Machine.FiberCore lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (interp : Effect4.Machine.RunInterp lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) (interruptor : Option Nat) (extra : List (Prod String lcAny)) (f : Effect4.Machine.RunFiber lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) : Prod (Effect4.Machine.RunFiber lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny lcAny) Bool *)
+
+let interrupt_record (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : _ -> _ -> bool) (inst_4 : _ -> _ -> bool) (core : (_, _, _, _, _, _, _, _) fiber_core) (interp : (_, _, _, _, _, _, _, _, _, _) run_interp) (interruptor : int option) (extra : (string * _) list) (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) : (_, _, _, _, _, _, _, _, _, _) run_fiber * bool =
+  match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
+    | { id = id; _ } -> (let _x_5 = interrupt_cause interp interruptor extra id in
+      interrupt_with_cause inst_1 inst_2 inst_3 inst_4 core _x_5 f)
 
 
 

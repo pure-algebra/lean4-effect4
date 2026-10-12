@@ -41,6 +41,7 @@ export const key = (type: Ty): number[] => {
     case "app": return [head, ...prefixed(bytes(type.name)), ...itemKeys(type.args)]
     case "never": case "unit": case "nat": case "int": case "string": case "bool":
     case "unknown": case "null": case "undefined": case "number": case "bytes": return [head]
+    case "contextOf": return [head, ...type.keys.flatMap(k => [k.name.value, k.service.value])]
     default: return unrecognized(type)
   }
 }
@@ -99,6 +100,9 @@ export const subtype = (a: Ty, b: Ty): boolean => {
         return variance === "co" ? subtype(value, other) : variance === "contra" ? subtype(other, value) :
           subtype(value, other) && subtype(other, value)
       })
+    // a context with more keys is below one that promises fewer (`Ty.sub`, decisions row 349)
+    case "contextOf": return b._tag === "contextOf" &&
+      b.keys.every(k => a.keys.some(j => j.name.value === k.name.value && j.service.value === k.service.value))
     default: return false
   }
 }
@@ -135,7 +139,7 @@ export const normalize = (type: Ty): Ty => {
     case "app": return type.args.length === 0 ? { _tag: "handle", target: type.name } : { ...type, args: type.args.map(normalize) }
     case "never": case "unit": case "nat": case "int": case "string": case "bool":
     case "unknown": case "null": case "undefined": case "number": case "bytes":
-    case "handle": case "lit": case "var": return type
+    case "handle": case "lit": case "var": case "contextOf": return type
     default: return unrecognized(type)
   }
 }
@@ -258,7 +262,8 @@ export const targetType = (raw: Ty, legacy: (text: string) => string | undefined
         if (values.some(value => value === undefined)) return undefined
         return [...new Set(values.flatMap(value => unionParts(value!)))].join(" | ")
       }
-      case "var": case "app": return undefined
+      // no printed form: `Codegen.Types.ofTy` refuses a context type (decisions row 349)
+      case "var": case "app": case "contextOf": return undefined
       default: return unrecognized(type)
     }
   }

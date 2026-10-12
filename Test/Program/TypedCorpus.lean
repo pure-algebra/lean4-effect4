@@ -92,6 +92,7 @@ def raw : List (String × E × RowTable) := [
   ("snapshotChildren", .withFiber .snapshotChildren, []),
   ("awaitNewChildren", .bind (.withFiber .snapshotChildren) (.withFiber (.awaitNewChildren (v 0))), []),
   ("raceAll", .withFiber (.raceAll (es [.succeed (n 1), .succeed (n 2)])), []),
+  ("raceAllFirst", .withFiber (.raceAllFirst (es [.succeed (n 1), .succeed (n 2)])), []),
   ("context", .withFiber (.context .empty), []),
   ("provideContext", .bind (.withFiber (.context .empty)) (.provideContext (v 0) (.succeed (n 1))), []),
   ("getId", .withFiber .getId, []),

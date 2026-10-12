@@ -148,6 +148,19 @@ theorem interp_action_le (root : NativeEff) (q : List Nat) (clear : ClearFinaliz
     cases found
     simpa only [action, current, cata_prim, name, push, Nat.add_zero, thunk] using resolve_le root q point
   case forkLayer => exact owned.elim
+  -- a masked provider's update holds its region's point; a restore resolves it
+  case provideMasked update body flag =>
+    cases found
+    cases body
+    case program point =>
+      simp only [action, current, cata_prim, thunk, name, push, Nat.zero_add, Nat.add_zero,
+        Nat.le_refl]
+    all_goals exact owned.elim
+  case restoreRegion body flag =>
+    cases found
+    cases body
+    case program point => simpa only [action, regionCode, thunk] using resolve_le root q point
+    all_goals exact owned.elim
   all_goals aesop (add norm simp [interpAt, interpOf, action, thunk])
 
 end Effect4.Program.SourceScope.Opportunities

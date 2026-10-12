@@ -308,43 +308,44 @@ def stopsBetween (k : Nat) : Bool :=
 
 -- The checker refuses the budget's provision, so the programs are raw.
 #guard verdict (notified 25) = "typing: serviceUnknown"
--- The budgets that stop the taker between its registration and its await: 21 to 33. Below 21
--- the taker yields before its step, and from 34 it reaches its await with no yield.
-#guard (List.range 40).filter stopsBetween = List.range' 21 13
+-- The budgets that stop the taker between its registration and its await: 26 to 38. Below 26
+-- the taker yields before its step, and from 39 it reaches its await with no yield. The
+-- provision's masked entry (decisions row 349) put each five operations later.
+#guard (List.range 45).filter stopsBetween = List.range' 26 13
 
 -- At each such budget, on both tapes: no attempt runs before the helper's task and the taker's
 -- resume have both run. After the first of the two dispatchers the message is still buffered
 -- and the taker is still enrolled. At the end the taker has taken the message, and the root has
 -- exited with it.
-#guard (List.range' 21 13).all fun k =>
+#guard (List.range' 26 13).all fun k =>
   [awaitFirst, taskFirst].all fun tape =>
     (stages tape (notified k)).take 2 == [(some (1, 1), false), (some (1, 1), false)] &&
       (stages tape (notified k)).drop 3 == [(some (0, 0), true)] &&
       ((rawOn tape (notified k)).bind (·.exit)) == some (.success (.nat 7))
 -- On the first tape the helper's task resumes the parked taker, and the taker's attempt runs
 -- inside that task: the message has left the buffer when the root's dispatcher has fired.
-#guard (List.range' 21 13).all fun k =>
+#guard (List.range' 26 13).all fun k =>
   ((stages awaitFirst (notified k))[2]?).map (·.1) == some (some (0, 0))
 
 /-- The rows of a raw run on a tape. -/
 def rawRows (tape : List Api.Decision) (src : Src NativeOp) : List Row :=
   ((rawOn tape src).map fun r => r.machine.trace.filterMap rowOf).getD []
 
--- The await before the task, at the budget 25. The taker's dispatcher runs: the taker parks at
+-- The await before the task, at the budget 30. The taker's dispatcher runs: the taker parks at
 -- its hint. Then the root's dispatcher runs the helper, fiber 2, which resumes the taker.
-#guard (rawRows awaitFirst (notified 25)).take 16 =
+#guard (rawRows awaitFirst (notified 30)).take 16 =
   [.started 0, .forked 0 1 false, .started 1, .yielded 1, .parked 1, .forked 0 2 true,
    .scheduled 0, .parked 0, .ran 1, .resumed 1, .started 1, .parked 1, .ran 0, .started 2,
    .resumed 1, .started 1]
 -- The task before the await. The helper runs and exits, and it resumes nobody. The taker's
 -- dispatcher then runs: the taker's await answers at once, so no park follows its resume. Its
 -- next row is the budget's second yield, inside the attempt that takes the message.
-#guard (rawRows taskFirst (notified 25)).take 16 =
+#guard (rawRows taskFirst (notified 30)).take 16 =
   [.started 0, .forked 0 1 false, .started 1, .yielded 1, .parked 1, .forked 0 2 true,
    .scheduled 0, .parked 0, .ran 0, .started 2, .exited 2 true, .ran 1, .resumed 1, .started 1,
    .yielded 1, .parked 1]
 -- Red control of the two tapes: they are two schedules.
-#guard rawRows awaitFirst (notified 25) != rawRows taskFirst (notified 25)
+#guard rawRows awaitFirst (notified 30) != rawRows taskFirst (notified 30)
 
 /-! ## 2. A cancellation after the selection and before the delivery
 

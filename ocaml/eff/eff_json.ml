@@ -4,6 +4,21 @@
 
 open Eff_types
 
+let rec json_service_name (r : service_name) : Eff_json_text.t =
+  Eff_json_text.Object [("value", Eff_json_text.Int r.service_name_value)]
+
+let print_service_name (v : service_name) : string = Eff_json_text.render (json_service_name v)
+
+let rec json_service_type_code (r : service_type_code) : Eff_json_text.t =
+  Eff_json_text.Object [("value", Eff_json_text.Int r.service_type_code_value)]
+
+let print_service_type_code (v : service_type_code) : string = Eff_json_text.render (json_service_type_code v)
+
+let rec json_service_key (r : service_key) : Eff_json_text.t =
+  Eff_json_text.Object [("name", json_service_name r.service_key_name); ("service", json_service_type_code r.service_key_service)]
+
+let print_service_key (v : service_key) : string = Eff_json_text.render (json_service_key v)
+
 let rec json_ty (v : ty) : Eff_json_text.t =
   match v with
   | Ty_never -> Eff_json_text.Array [Eff_json_text.String "never"]
@@ -34,6 +49,7 @@ let rec json_ty (v : ty) : Eff_json_text.t =
   | Ty_undefined -> Eff_json_text.Array [Eff_json_text.String "undefined"]
   | Ty_number -> Eff_json_text.Array [Eff_json_text.String "number"]
   | Ty_bytes -> Eff_json_text.Array [Eff_json_text.String "bytes"]
+  | Ty_contextOf a0 -> Eff_json_text.Array [Eff_json_text.String "contextOf"; Eff_json_text.Array (List.map json_service_key a0)]
 
 let print_ty (v : ty) : string = Eff_json_text.render (json_ty v)
 
@@ -137,21 +153,6 @@ let rec json_native_op (v : native_op) : Eff_json_text.t =
 
 let print_native_op (v : native_op) : string = Eff_json_text.render (json_native_op v)
 
-let rec json_service_name (r : service_name) : Eff_json_text.t =
-  Eff_json_text.Object [("value", Eff_json_text.Int r.service_name_value)]
-
-let print_service_name (v : service_name) : string = Eff_json_text.render (json_service_name v)
-
-let rec json_service_type_code (r : service_type_code) : Eff_json_text.t =
-  Eff_json_text.Object [("value", Eff_json_text.Int r.service_type_code_value)]
-
-let print_service_type_code (v : service_type_code) : string = Eff_json_text.render (json_service_type_code v)
-
-let rec json_service_key (r : service_key) : Eff_json_text.t =
-  Eff_json_text.Object [("name", json_service_name r.service_key_name); ("service", json_service_type_code r.service_key_service)]
-
-let print_service_key (v : service_key) : string = Eff_json_text.render (json_service_key v)
-
 let rec json_decision (v : decision) : Eff_json_text.t =
   match v with
   | Decision_bool -> Eff_json_text.Array [Eff_json_text.String "bool"]
@@ -209,6 +210,7 @@ let rec json_eff (v : eff) : Eff_json_text.t =
   | Eff_restore (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "restore"; json_term a0; json_eff a1]
   | Eff_defs (a0, a1, a2, a3) -> Eff_json_text.Array [Eff_json_text.String "defs"; Eff_json_text.Array (List.map (fun y -> json_def_decl y) a0); json_effs a1; json_eff a2; json_layer_terms a3]
   | Eff_invoke (a0, a1, a2) -> Eff_json_text.Array [Eff_json_text.String "invoke"; Eff_json_text.Int a0; json_term a1; json_effs a2]
+  | Eff_provideContext (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "provideContext"; json_term a0; json_eff a1]
 and json_stmt (v : stmt) : Eff_json_text.t =
   match v with
   | Stmt_bindYield a0 -> Eff_json_text.Array [Eff_json_text.String "bindYield"; json_eff a0]
@@ -239,12 +241,11 @@ and json_action_term (v : action_term) : Eff_json_text.t =
   | Action_term_snapshotChildren -> Eff_json_text.Array [Eff_json_text.String "snapshotChildren"]
   | Action_term_awaitNewChildren a0 -> Eff_json_text.Array [Eff_json_text.String "awaitNewChildren"; json_term a0]
   | Action_term_raceAll a0 -> Eff_json_text.Array [Eff_json_text.String "raceAll"; json_effs a0]
-  | Action_term_setContext a0 -> Eff_json_text.Array [Eff_json_text.String "setContext"; json_term a0]
-  | Action_term_getContext -> Eff_json_text.Array [Eff_json_text.String "getContext"]
   | Action_term_getId -> Eff_json_text.Array [Eff_json_text.String "getId"]
   | Action_term_closeScope (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "closeScope"; json_term a0; json_term a1]
   | Action_term_getInterruptible -> Eff_json_text.Array [Eff_json_text.String "getInterruptible"]
   | Action_term_raceAllFirst a0 -> Eff_json_text.Array [Eff_json_text.String "raceAllFirst"; json_effs a0]
+  | Action_term_context a0 -> Eff_json_text.Array [Eff_json_text.String "context"; Eff_json_text.Array (List.map json_service_key a0)]
 and json_layer_term (v : layer_term) : Eff_json_text.t =
   match v with
   | Layer_term_succeed (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "succeed"; json_service_key a0; json_lit a1]

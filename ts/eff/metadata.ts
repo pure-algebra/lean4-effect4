@@ -32,6 +32,27 @@ const frame = (expression: Expr, tag: number, length: number): ReadonlyArray<Exp
   return items?.length === length && items[0]?._tag === "int" && items[0].value === tag ? items : undefined
 }
 
+/** A structure's fields: constructor 0 with exactly `length` fields. */
+const structure = (expression: Expr, length: number): ReadonlyArray<Expr> | undefined => {
+  const items = frame(expression, metadataFrameTags.ctor, 3)
+  const fields = items && natural(items[1]!) === 0 ? array(items[2]!) : undefined
+  return fields?.length === length ? fields : undefined
+}
+
+/** A one-natural structure's value: a key's name or service code. */
+const code = (expression: Expr): number | undefined => {
+  const fields = structure(expression, 1)
+  return fields && (readShape({ kind: "nat" }, fields[0]!) as number | undefined)
+}
+
+type Key = { readonly name: { readonly value: number }; readonly service: { readonly value: number } }
+
+/** `ServiceKey.Lt`: by name, then by service. */
+const keyBefore = (a: unknown, b: unknown): boolean => {
+  const x = a as Key, y = b as Key
+  return x.name.value < y.name.value || (x.name.value === y.name.value && x.service.value < y.service.value)
+}
+
 const readShape = (shape: TypeMetadataShape, expression: Expr): unknown => {
   switch (shape.kind) {
     case "nat": {
@@ -49,6 +70,12 @@ const readShape = (shape: TypeMetadataShape, expression: Expr): unknown => {
       return textDecoder.decode(textEncoder.encode(value)) === value ? value : undefined
     }
     case "ty": return readRawType(expression)
+    // a service key: the structure of its two codes (`Effect4.ServiceKey`, constructor 0)
+    case "key": {
+      const fields = structure(expression, 2)
+      const name = fields && code(fields[0]!), service = fields && code(fields[1]!)
+      return name === undefined || service === undefined ? undefined : { name: { value: name }, service: { value: service } }
+    }
     case "list": {
       const items = frame(expression, metadataFrameTags.list, 2)
       const values = items && array(items[1]!)
@@ -59,6 +86,8 @@ const readShape = (shape: TypeMetadataShape, expression: Expr): unknown => {
         if (value === undefined) return undefined
         result.push(value)
       }
+      // a row of keys decodes only strictly ascending (`Store/Domain/RowCanonical.lean`)
+      if (shape.inner.kind === "key" && !result.every((key, index) => index === 0 || keyBefore(result[index - 1], key))) return undefined
       return result
     }
     case "pair": {

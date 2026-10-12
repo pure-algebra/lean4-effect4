@@ -83,6 +83,7 @@ The following tables are generated from the profile, forms and taxonomy.
 | Fiber.interruptAllAs |
 | Fiber.awaitAll |
 | Effect.raceAll |
+| Effect.raceAllFirst |
 | Effect.context |
 | Effect.fiberId |
 | Scope.close |
@@ -99,6 +100,7 @@ The following tables are generated from the profile, forms and taxonomy.
 | Effect.provide |
 | Effect.service |
 | Effect.provideService |
+| Effect.provideContext |
 | Layer.succeed |
 | Layer.effect |
 | Layer.effectDiscard |

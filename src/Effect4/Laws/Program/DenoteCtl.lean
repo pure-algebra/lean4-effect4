@@ -196,7 +196,7 @@ theorem denoteWith_eq_ctl (bad : ExitV) : ∀ (e : NativeEff) (env : List Val),
   | .uninterruptible _, _ | .interruptible _, _ | .yieldNow _, _ | .awaitFiber _ _, _
   | .withFiber _, _ | .scoped _, _ | .acquireRelease _ _, _ | .provideLayer _ _ _, _
   | .service _, _ | .provideService _ _ _, _ | .catchIf _ _ _, _ | .iterate _ _ _ _ _ _, _
-  | .restore _ _, _ | .defs _ _ _ _, _ | .invoke _ _ _, _ => rfl
+  | .restore _ _, _ | .defs _ _ _ _, _ | .invoke _ _ _, _ | .provideContext _ _, _ => rfl
 
 /-- At the wrong-shape exit the parameters are the stores' meaning's (`denoteWith_badShape`). -/
 theorem storeCtlWith₀_badShape : storeCtlWith₀ badShapeExit = storeCtl₀ := by
@@ -279,7 +279,7 @@ theorem denoteRows_eq_ctl (table : RowTable) : ∀ (e : NativeEff) (env : List V
   | .uninterruptible _, _ | .interruptible _, _ | .yieldNow _, _ | .awaitFiber _ _, _
   | .withFiber _, _ | .scoped _, _ | .acquireRelease _ _, _ | .provideLayer _ _ _, _
   | .service _, _ | .provideService _ _ _, _ | .iterate _ _ _ _ _ _, _
-  | .restore _ _, _ | .defs _ _ _ _, _ | .invoke _ _ _, _ => rfl
+  | .restore _ _, _ | .defs _ _ _ _, _ | .invoke _ _ _, _ | .provideContext _ _, _ => rfl
 
 
 end Effect4.Program.Denote
