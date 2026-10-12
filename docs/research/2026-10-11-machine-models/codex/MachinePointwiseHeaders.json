@@ -1,0 +1,108 @@
+{
+  "src/Effect4/Laws/Data/ListRel.lean": {
+    "beforeLines": 171,
+    "afterLines": 171,
+    "existingNamedHeaders": 19,
+    "unchangedNamedHeaders": 19,
+    "changedHeaders": [],
+    "removedNames": []
+  },
+  "src/Effect4/Laws/Data/ListRelConnectors.lean": {
+    "beforeLines": 60,
+    "afterLines": 51,
+    "existingNamedHeaders": 3,
+    "unchangedNamedHeaders": 2,
+    "changedHeaders": [
+      {
+        "name": "pointwise_iff",
+        "before": "theorem pointwise_iff {\u03b1 \u03b2 : Type} {r : \u03b1 \u2192 \u03b2 \u2192 Prop} {l : List \u03b1} {l' : List \u03b2} : Modules.Pointwise r l l' \u2194 _root_.Effect4.ListRel r l l'",
+        "after": "theorem pointwise_iff {\u03b1 \u03b2 : Type} {r : \u03b1 \u2192 \u03b2 \u2192 Prop} {l : List \u03b1} {l' : List \u03b2} : _root_.Effect4.ListRel r l l' \u2194 _root_.Effect4.ListRel r l l'"
+      }
+    ],
+    "removedNames": []
+  },
+  "src/Effect4/Laws/Step/Reading.lean": {
+    "beforeLines": 790,
+    "afterLines": 782,
+    "existingNamedHeaders": 91,
+    "unchangedNamedHeaders": 85,
+    "changedHeaders": [
+      {
+        "name": "Pointwise.of_map",
+        "before": "theorem Pointwise.of_map {\u03b1 \u03b2 \u03b3 : Type} {r : \u03b2 \u2192 \u03b3 \u2192 Prop} {f : \u03b1 \u2192 \u03b2} : \u2200 {xs : List \u03b1} {ys : List \u03b3}, Pointwise r (xs.map f) ys \u2192 Pointwise (fun x y => r (f x) y) xs ys",
+        "after": "theorem Pointwise.of_map {\u03b1 \u03b2 \u03b3 : Type} {r : \u03b2 \u2192 \u03b3 \u2192 Prop} {f : \u03b1 \u2192 \u03b2} : \u2200 {xs : List \u03b1} {ys : List \u03b3}, ListRel r (xs.map f) ys \u2192 ListRel (fun x y => r (f x) y) xs ys"
+      },
+      {
+        "name": "ReadsAll.trees",
+        "before": "theorem ReadsAll.trees {srcs : List TermSrc} {env : Env} {path : List Nat} {vals vs : List Val} (h : ReadsAll srcs env path vals vs) : \u2203 ts, Pointwise (fun (src : TermSrc) t => src env path = .ok t) srcs ts \u2227 Pointwise (fun t v => evalTerm vals t = some v) ts vs",
+        "after": "theorem ReadsAll.trees {srcs : List TermSrc} {env : Env} {path : List Nat} {vals vs : List Val} (h : ReadsAll srcs env path vals vs) : \u2203 ts, ListRel (fun (src : TermSrc) t => src env path = .ok t) srcs ts \u2227 ListRel (fun t v => evalTerm vals t = some v) ts vs"
+      },
+      {
+        "name": "evalTerms_ok",
+        "before": "theorem evalTerms_ok (vals : List Val) : \u2200 (ts : List Term) (vs : List Val), Pointwise (fun t v => evalTerm vals t = some v) ts vs \u2192 evalTerms vals (termsOfList ts) = some vs",
+        "after": "theorem evalTerms_ok (vals : List Val) : \u2200 (ts : List Term) (vs : List Val), ListRel (fun t v => evalTerm vals t = some v) ts vs \u2192 evalTerms vals (termsOfList ts) = some vs"
+      },
+      {
+        "name": "mapM_loop_ok",
+        "before": "theorem mapM_loop_ok {\u03b1 \u03b2 \u03b5 : Type} (f : \u03b1 \u2192 Except \u03b5 \u03b2) : \u2200 (xs : List \u03b1) (ys acc : List \u03b2), Pointwise (fun x y => f x = .ok y) xs ys \u2192 List.mapM.loop f xs acc = .ok (acc.reverse ++ ys)",
+        "after": "theorem mapM_loop_ok {\u03b1 \u03b2 \u03b5 : Type} (f : \u03b1 \u2192 Except \u03b5 \u03b2) : \u2200 (xs : List \u03b1) (ys acc : List \u03b2), ListRel (fun x y => f x = .ok y) xs ys \u2192 List.mapM.loop f xs acc = .ok (acc.reverse ++ ys)"
+      },
+      {
+        "name": "mapM_ok",
+        "before": "theorem mapM_ok {\u03b1 \u03b2 \u03b5 : Type} (f : \u03b1 \u2192 Except \u03b5 \u03b2) (xs : List \u03b1) (ys : List \u03b2) (h : Pointwise (fun x y => f x = .ok y) xs ys) : xs.mapM f = .ok ys",
+        "after": "theorem mapM_ok {\u03b1 \u03b2 \u03b5 : Type} (f : \u03b1 \u2192 Except \u03b5 \u03b2) (xs : List \u03b1) (ys : List \u03b2) (h : ListRel (fun x y => f x = .ok y) xs ys) : xs.mapM f = .ok ys"
+      }
+    ],
+    "removedNames": [
+      "Pointwise"
+    ]
+  },
+  "src/Effect4/Laws/Step/Checking.lean": {
+    "beforeLines": 628,
+    "afterLines": 628,
+    "existingNamedHeaders": 64,
+    "unchangedNamedHeaders": 62,
+    "changedHeaders": [
+      {
+        "name": "TypesAll.trees",
+        "before": "theorem TypesAll.trees {srcs : List TermSrc} {const : Bool} {Ts : List Ty} (h : TypesAll sig srcs env path types const Ts) : \u2203 ts, Pointwise (fun (src : TermSrc) t => src env path = .ok t) srcs ts \u2227 Pointwise (fun t T => argTy sig types const t = some T) ts Ts",
+        "after": "theorem TypesAll.trees {srcs : List TermSrc} {const : Bool} {Ts : List Ty} (h : TypesAll sig srcs env path types const Ts) : \u2203 ts, ListRel (fun (src : TermSrc) t => src env path = .ok t) srcs ts \u2227 ListRel (fun t T => argTy sig types const t = some T) ts Ts"
+      },
+      {
+        "name": "argsTy_ok",
+        "before": "theorem argsTy_ok (sig : Signature Op) (types : List Ty) (const : Bool) : \u2200 (ts : List Term) (Ts : List Ty), Pointwise (fun t T => argTy sig types const t = some T) ts Ts \u2192 argsTy sig types const (termsOfList ts) = some Ts",
+        "after": "theorem argsTy_ok (sig : Signature Op) (types : List Ty) (const : Bool) : \u2200 (ts : List Term) (Ts : List Ty), ListRel (fun t T => argTy sig types const t = some T) ts Ts \u2192 argsTy sig types const (termsOfList ts) = some Ts"
+      }
+    ],
+    "removedNames": []
+  },
+  "src/Effect4/Laws/Library/Pool/Ops.lean": {
+    "beforeLines": 1182,
+    "afterLines": 1182,
+    "existingNamedHeaders": 71,
+    "unchangedNamedHeaders": 67,
+    "changedHeaders": [
+      {
+        "name": "make_makes",
+        "before": "theorem make_makes (tb : Table) (res : Nat \u2192 Val) (A : Ty) {env : Env} {path : List Nat} {vals : List Val} {resources : List TermSrc} {names : List Nat} (stores : Stores) (each : Pointwise (fun src r => Reads src env path vals (res r)) resources names) : Profile (Model.initial names) \u2227 Reads (initial A resources) env path vals (cellVal tb res (Model.initial names)) \u2227 syncOpStep (.refMake (cellVal tb res (Model.initial names))) stores = some ({ stores with refs := stores.refs ++ [cellVal tb res (Model.initial names)] }, Val.cell \u27e8stores.refs.length\u27e9)",
+        "after": "theorem make_makes (tb : Table) (res : Nat \u2192 Val) (A : Ty) {env : Env} {path : List Nat} {vals : List Val} {resources : List TermSrc} {names : List Nat} (stores : Stores) (each : ListRel (fun src r => Reads src env path vals (res r)) resources names) : Profile (Model.initial names) \u2227 Reads (initial A resources) env path vals (cellVal tb res (Model.initial names)) \u2227 syncOpStep (.refMake (cellVal tb res (Model.initial names))) stores = some ({ stores with refs := stores.refs ++ [cellVal tb res (Model.initial names)] }, Val.cell \u27e8stores.refs.length\u27e9)"
+      },
+      {
+        "name": "reads_initial",
+        "before": "theorem reads_initial (tb : Table) (res : Nat \u2192 Val) (A : Ty) {env : Env} {path : List Nat} {vals : List Val} {resources : List TermSrc} {names : List Nat} (each : Pointwise (fun src r => Reads src env path vals (res r)) resources names) : Reads (initial A resources) env path vals (cellVal tb res (Model.initial names))",
+        "after": "theorem reads_initial (tb : Table) (res : Nat \u2192 Val) (A : Ty) {env : Env} {path : List Nat} {vals : List Val} {resources : List TermSrc} {names : List Nat} (each : ListRel (fun src r => Reads src env path vals (res r)) resources names) : Reads (initial A resources) env path vals (cellVal tb res (Model.initial names))"
+      },
+      {
+        "name": "reads_itemsFrom",
+        "before": "theorem reads_itemsFrom (A : Ty) (res : Nat \u2192 Val) {env : Env} {path : List Nat} {vals : List Val} : \u2200 (stamp : Nat) {resources : List TermSrc} {names : List Nat}, Pointwise (fun src r => Reads src env path vals (res r)) resources names \u2192 ReadsAll (itemsFrom A stamp resources) env path vals ((Model.itemsFrom stamp names).map (itemVal res))",
+        "after": "theorem reads_itemsFrom (A : Ty) (res : Nat \u2192 Val) {env : Env} {path : List Nat} {vals : List Val} : \u2200 (stamp : Nat) {resources : List TermSrc} {names : List Nat}, ListRel (fun src r => Reads src env path vals (res r)) resources names \u2192 ReadsAll (itemsFrom A stamp resources) env path vals ((Model.itemsFrom stamp names).map (itemVal res))"
+      },
+      {
+        "name": "reads_stampsFrom",
+        "before": "theorem reads_stampsFrom (res : Nat \u2192 Val) {env : Env} {path : List Nat} {vals : List Val} : \u2200 (stamp : Nat) {resources : List TermSrc} {names : List Nat}, Pointwise (fun src r => Reads src env path vals (res r)) resources names \u2192 ReadsAll (stampsFrom stamp resources) env path vals (((Model.itemsFrom stamp names).map (\u00b7.stamp)).map Val.nat)",
+        "after": "theorem reads_stampsFrom (res : Nat \u2192 Val) {env : Env} {path : List Nat} {vals : List Val} : \u2200 (stamp : Nat) {resources : List TermSrc} {names : List Nat}, ListRel (fun src r => Reads src env path vals (res r)) resources names \u2192 ReadsAll (stampsFrom stamp resources) env path vals (((Model.itemsFrom stamp names).map (\u00b7.stamp)).map Val.nat)"
+      }
+    ],
+    "removedNames": []
+  }
+}
