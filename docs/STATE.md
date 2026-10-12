@@ -260,7 +260,12 @@ A program has folds, a journaled run with replay, and a printed image that reads
 
 000. **The runtime differences the probes found** (research notes named `2026-10-12-probe-`). The
    probes of 2026-10-12 rank each difference from Effect by its outcome in real code. Fix those
-   that change an outcome; record the rest. The restore slot is retired (the
+   that change an outcome; record the rest. Items 2 and 1 of the
+   [alignment plan](research/2026-10-12-probe-alignment-plans.md) landed (row 359, the
+   [receipt](research/2026-10-12-close-mask-receipt.md)). As in Effect 4.0.1, an explicit
+   `Scope.close` masks its closer. The failure walk adds a recorded interrupt past a skipped
+   mask. Items 3 and 4 keep rc.112's behaviour. Item 5, the operation counts, waits: 5a first.
+   The restore slot is retired (the
    [slot scout](research/2026-10-12-restore-slot-scout.md); owner, 2026-10-12). The positional
    countdown goal changes no run and stays a planned goal.
 00. **The last planned goals** (the [goals packet](research/2026-10-10-goals-packet/README.md)).
