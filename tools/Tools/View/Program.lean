@@ -109,6 +109,7 @@ def argText {R : EffFam → Type} : ArgF NativeOp R → Option String
   | .decls v => some ("{" ++ " ".intercalate (v.map fun d => d.name) ++ "}")
   | .forkOptions v => some (paren (plain (reprStr v)))
   | .optTerm v => v.map termText
+  | .keys v => some ("{" ++ " ".intercalate (v.elems.map keyText) ++ "}")
   | .lit v => some (paren (plain (reprStr v)))
   | .path v => some (bracket v)
 

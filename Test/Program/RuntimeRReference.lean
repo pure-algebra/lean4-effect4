@@ -167,7 +167,7 @@ def unmaskedInside : NativeEff := .uninterruptible (.interruptible waiting)
 
 -- 9. A scoped body's context is returned as a value, while the fiber's context
 -- is restored and the scope closed before the root exits.
-def scopedContext : NativeEff := .scoped (.withFiber .getContext)
+def scopedContext : NativeEff := .scoped (.withFiber (.context .empty))
 
 #guard (run scopedContext startTape).exit =
   some (.success (.context (emptyCtx.withScope 0)))

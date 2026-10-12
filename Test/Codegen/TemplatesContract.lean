@@ -43,14 +43,14 @@ def effSamples : List (Eff NativeOp) :=
   , .yieldNow 3, .awaitFiber t .joinEffect, .awaitFiber t .awaitValue
   , .scoped v, .acquireRelease v v
   , .provideLayer (.effectDiscard v) true v, .provideLayer (.effectDiscard v) false v
-  , .service key, .provideService key t v ]
+  , .service key, .provideService key t v, .provideContext t v ]
 
-/-- One action per constructor and classifier, the five refused ones included. -/
+/-- One action per constructor and classifier, the four refused ones included. -/
 def actionSamples : List (ActionTerm NativeOp) :=
   [ .fork v child, .fork v detached, .forkIn v child t, .forkScoped v detached, .runIn t t
   , .interrupt t, .interruptScoped t, .interruptAll t none, .interruptAll t (some t)
   , .awaitAll t, .awaitAllFailFast t, .snapshotChildren, .awaitNewChildren t
-  , .raceAll (.cons v (.cons u .nil)), .raceAll .nil, .setContext t, .getContext, .getId
+  , .raceAll (.cons v (.cons u .nil)), .raceAll .nil, .context .empty, .getId
   , .closeScope t t ]
 
 /-- One layer per constructor. -/
@@ -74,9 +74,9 @@ def isTableDefect : Except PrintRefusal TypeScript.Expr → Bool
 
 -- the defect is recognised when it is there
 #guard isTableDefect (.error (tableDefect "bind"))
-#guard !isTableDefect (.error (.internalAction "setContext"))
+#guard !isTableDefect (.error (.internalAction "snapshotChildren"))
 
-#guard printT sig 0 (.withFiber (.setContext t)) matches .error (.internalAction "setContext")
+#guard printT sig 0 (.withFiber .snapshotChildren) matches .error (.internalAction "snapshotChildren")
 #guard printT sig 0 (.iterate (some (.handle "no such spelling")) t t t t u) matches
   .error (.typeSpelling _)
 -- every sample prints or is refused by a named refusal, at two environment lengths

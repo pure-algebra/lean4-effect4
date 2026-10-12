@@ -110,7 +110,8 @@ private def unitP : Api.Program := .succeed (.lit .unit)
 #guard Api.explain (.bind (.withFiber .snapshotChildren)
     (.withFiber (.interruptAll (.var 0) (some (.lit (.bool true))))))
   = some ⟨[1, 0], .natExpected .bool⟩
-#guard Api.explain (.withFiber (.setContext (.lit (.nat 1)))) = some ⟨[0], .contextExpected .nat⟩
+#guard Api.explain (.provideContext (.lit (.nat 1)) (.succeed (.lit .unit)))
+  = some ⟨[], .contextExpected .nat⟩
 #guard Api.explain (.withFiber (.awaitNewChildren (.lit (.nat 1))))
   = some ⟨[0], .snapshotExpected .nat⟩
 #guard Api.explain (.service ⟨⟨99⟩, ⟨99⟩⟩) = some ⟨[], .serviceUnknown ⟨⟨99⟩, ⟨99⟩⟩⟩

@@ -49,6 +49,7 @@ def mapChild {R S : EffFam → Type u} (f : (fam : EffFam) → R fam → S fam) 
   | .decls v => .decls v
   | .forkOptions v => .forkOptions v
   | .optTerm v => .optTerm v
+  | .keys v => .keys v
   | .lit v => .lit v
   | .path v => .path v
 

@@ -119,6 +119,9 @@ mutual
     | .callSpread hd i, h => by
       simp only [holes, List.mem_append, List.mem_singleton] at h
       simp only [inst, inst_congr n σ τ hd (fun j hj => h j (.inl hj)), h i (.inr rfl)]
+    | .generic hd i, h => by
+      simp only [holes, List.mem_append, List.mem_singleton] at h
+      simp only [inst, inst_congr n σ τ hd (fun j hj => h j (.inl hj)), h i (.inr rfl)]
     | .arr items, h => by
       simp only [holes] at h
       simp only [inst, insts_congr n σ τ items h]
@@ -288,8 +291,20 @@ theorem lookup_of_captured : ∀ (σ : Subst) (i : Nat) (a : Arg) (h : (i, a) �
 
 /-! ## The leaves: what a leaf reader accepts prints back to what it read -/
 
+/-- A requirement row read back prints as the type it was read from: the reader's guard. -/
+theorem readKeys_exact {sig : Signature Op} {t : TypeScript.TypeRef} {row : Effect4.Row ServiceKey}
+    (h : readKeys sig t = .ok row) : requirementType sig.scopeKey row = t := by
+  unfold readKeys at h
+  split at h
+  · split at h
+    · rename_i same
+      cases h
+      exact beq_iff_eq.mp same
+    · cases h
+  · cases h
+
 attribute [aesop safe forward] readTerm_exact readCause_exact readLiteral_exact readKey_exact
-  readForkOptions_exact Effect4.Codegen.Classes.readTyChecked_exact
+  readForkOptions_exact Effect4.Codegen.Classes.readTyChecked_exact readKeys_exact
 
 set_option maxRecDepth 4096 in
 set_option maxHeartbeats 400000 in

@@ -333,13 +333,19 @@ def sig : Signature (Fin 3) :=
       (.cons (.succeed (.lit .unit)) .nil))))).map (expr house0 0)
   = .ok "Effect.raceAll([Effect.succeed(1), Effect.succeed(undefined)])"
 
-#guard (print sig 0 (.withFiber .getContext)).map (expr house0 0) = .ok "Effect.context()"
+-- The context reader states its promised row as the type argument: `never` when empty.
+#guard (print sig 0 (.withFiber (.context .empty))).map (expr house0 0)
+  = .ok "Effect.context<never>()"
+
+-- The provider region: the program first, the context second (`internal/effect.ts:2180-2199`).
+#guard (print sig 1 (.provideContext (.var 0) (.succeed (.lit (.nat 1))))).map (expr house0 0)
+  = .ok "Effect.provideContext(Effect.succeed(1), a0)"
 
 #guard (print sig 0 (.withFiber .getId)).map (expr house0 0) = .ok "Effect.fiberId"
 
 /-! ## The refused row of §5.1
 
-The five internal actions have no public rc.112 export with the
+The four internal actions have no public rc.112 export with the
 same frame shape. Each refusal names itself, so a refusal is data rather than a gap. -/
 
 #guard (print sig 1 (.withFiber (.interruptScoped (.var 0)))).map (expr house0 0)
@@ -353,9 +359,6 @@ same frame shape. Each refusal names itself, so a refusal is data rather than a 
 
 #guard (print sig 1 (.withFiber (.awaitNewChildren (.var 0)))).map (expr house0 0)
   = .error (.internalAction "awaitNewChildren")
-
-#guard (print sig 1 (.withFiber (.setContext (.var 0)))).map (expr house0 0)
-  = .error (.internalAction "setContext")
 
 /-! ## Full service identity and all three declaration parameters
 

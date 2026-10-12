@@ -12,9 +12,9 @@ this module and writes the bytes; the generator itself lives here.
 
 ## What it generates
 
-Every `Eff` constructor the printer accepts — everything but the five internal
-fiber actions (`interruptScoped`, `awaitAllFailFast`, `snapshotChildren`, `awaitNewChildren`,
-`setContext`), which `src/Effect4/Codegen/Print.lean` refuses by design. The coverage guard
+Every `Eff` constructor the printer accepts — everything but the four internal
+fiber actions (`interruptScoped`, `awaitAllFailFast`, `snapshotChildren`, `awaitNewChildren`),
+which `src/Effect4/Codegen/Print.lean` refuses by design. The coverage guard
 below states that once, against the language's own description of itself (the derived shapes
 and the generated fold), instead of once per constructor; the refused arms occur nowhere
 because the generator has no arm that draws them, not because a seed happened to miss them.
@@ -230,7 +230,7 @@ def genEffLeaf (n : Nat) : Nat → M (Eff NativeOp)
     -- the asynchronous row, a `perform` like every other since `callback` retired (same draw)
     | 0 => pure (.perform .deferredAwait (← genTerm n 1))
     | 1 => pure (.withFiber .getId)
-    | _ => pure (.withFiber .getContext)
+    | _ => pure (.withFiber (.context .empty))
 
 /-- A program at depth `0`: a leaf, drawn from the eight leaf arms. -/
 def genEff0 (n : Nat) : M (Eff NativeOp) := do genEffLeaf n (← pick 8)
@@ -418,9 +418,9 @@ def casesOf (family : String) : Effect4.Store.Shape → List (Head × String)
   | .sum _ cases => cases.map fun (n, tag, _) => ((family, tag), n)
   | _ => []
 
-/-- The five internal fiber actions the printer refuses (`src/Effect4/Codegen/Print.lean`). -/
+/-- The four internal fiber actions the printer refuses (`src/Effect4/Codegen/Print.lean`). -/
 def refusedActions : List String :=
-  ["interruptScoped", "awaitAllFailFast", "snapshotChildren", "awaitNewChildren", "setContext"]
+  ["interruptScoped", "awaitAllFailFast", "snapshotChildren", "awaitNewChildren"]
 
 /-- Forms kept out of the round-trip corpus until R5 (`docs/research/2026-09-16-select-and-iterate-ready-packet.md` §1.8).
 `select` left this list when `branch` retired into it: the corpus draws it under `.bool`, the
@@ -429,9 +429,11 @@ conditional the reader reads; its `.option` and `.tag` forms are still not drawn
 and a new arm redraws every later program. Its round trip is held on the wire corpus's programs
 and in `Test/Program/MaskContract.lean`. A definition block (`defs`, decisions row 328) is not
 drawn: the printer prints no block until slice PROC-3. An invocation with programs (`invoke`,
-decisions row 340) is not drawn: the printer refuses it until slice HO-3. -/
+decisions row 340) is not drawn: the printer refuses it until slice HO-3. A provider region
+(`provideContext`, decisions row 349) is not drawn, for the same reason as `restore`. Its round
+trip is held in `Test/Codegen/ReadContract.lean`. -/
 def pendingEffs : List String :=
-  ["iterate", "restore", "defs", "invoke"]
+  ["iterate", "restore", "defs", "invoke", "provideContext"]
 
 /-- Fiber actions outside the fixed seed stream. `getInterruptible` follows decisions row 245.
 `raceAllFirst` keeps the existing draws unchanged. Its print/read and codec controls are in

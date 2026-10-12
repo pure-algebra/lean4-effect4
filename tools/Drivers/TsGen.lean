@@ -950,6 +950,7 @@ mutual
     | .bool value => tagged "bool" [("value", toString value)]
     | .call head args => tagged "call" [("head", tplJs head), ("args", "[" ++ tplsJs args ++ "]")]
     | .callSpread head i => tagged "callSpread" [("head", tplJs head), ("i", toString i)]
+    | .generic head i => tagged "generic" [("head", tplJs head), ("i", toString i)]
     | .arr items => tagged "arr" [("items", "[" ++ tplsJs items ++ "]")]
     | .object fields => tagged "object" [("fields", "[" ++ fieldsJs fields ++ "]")]
     | .arrow body => tagged "arrow" [("body", tplJs body)]
@@ -999,7 +1000,7 @@ mutual
   the two shapes the TypeScript matcher reads. -/
   def listsClosed : Tpl → Bool
     | .call head args | .method head _ args => listsClosed head && listsClosedTs args
-    | .callSpread head _ => listsClosed head
+    | .callSpread head _ | .generic head _ => listsClosed head
     | .arr items => listsClosedTs items
     | .object fields => listsClosedFields fields
     | .arrow body | .lambda _ body => listsClosed body
@@ -1064,7 +1065,7 @@ def argSortJs : Effect4.Program.ArgSort → String
   | .term => lit "term" | .cause => lit "cause" | .op => lit "op" | .nat => lit "nat"
   | .mode => lit "mode" | .bool => lit "bool" | .key => lit "key" | .decision => lit "decision"
   | .optTy => lit "optTy" | .forkOptions => lit "forkOptions" | .optTerm => lit "optTerm"
-  | .lit => lit "lit" | .path => lit "path" | .decls => lit "decls"
+  | .lit => lit "lit" | .path => lit "path" | .decls => lit "decls" | .keys => lit "keys"
 
 def rowJs' (row : Effect4.Codegen.Templates.Row) : Except String String := do
   let fixed ← row.fixed.mapM fun (i, p) => do
@@ -1094,7 +1095,7 @@ def readFamilies : List (Effect4.Program.EffFam × Name) :=
 
 def templateTypes : String :=
   "export type Fam = \"eff\" | \"stmt\" | \"stmts\" | \"effs\" | \"action\" | \"layer\" | \"layers\"\n" ++
-  "export type ArgSort = `child:${Fam}` | \"term\" | \"cause\" | \"op\" | \"nat\" | \"mode\" | \"bool\" | \"key\" | \"decision\" | \"optTy\" | \"forkOptions\" | \"optTerm\" | \"lit\" | \"path\"\n" ++
+  "export type ArgSort = `child:${Fam}` | \"term\" | \"cause\" | \"op\" | \"nat\" | \"mode\" | \"bool\" | \"key\" | \"decision\" | \"optTy\" | \"forkOptions\" | \"optTerm\" | \"keys\" | \"lit\" | \"path\"\n" ++
   "export type Tpl =\n" ++
   "  | { readonly _tag: \"hole\" | \"strHole\" | \"intHole\" | \"arrHole\"; readonly i: number }\n" ++
   "  | { readonly _tag: \"binderRef\"; readonly k: number }\n" ++
@@ -1104,6 +1105,7 @@ def templateTypes : String :=
   "  | { readonly _tag: \"bool\"; readonly value: boolean }\n" ++
   "  | { readonly _tag: \"call\"; readonly head: Tpl; readonly args: ReadonlyArray<Tpl> }\n" ++
   "  | { readonly _tag: \"callSpread\"; readonly head: Tpl; readonly i: number }\n" ++
+  "  | { readonly _tag: \"generic\"; readonly head: Tpl; readonly i: number }\n" ++
   "  | { readonly _tag: \"arr\"; readonly items: ReadonlyArray<Tpl> }\n" ++
   "  | { readonly _tag: \"object\"; readonly fields: ReadonlyArray<readonly [string, Tpl]> }\n" ++
   "  | { readonly _tag: \"arrow\"; readonly body: Tpl }\n" ++
@@ -1174,7 +1176,7 @@ mutual
   def tplIdents : Tpl → List String
     | .ident name => [name]
     | .call head args | .method head _ args => tplIdents head ++ tplsIdents args
-    | .callSpread head _ => tplIdents head
+    | .callSpread head _ | .generic head _ => tplIdents head
     | .arr items => tplsIdents items
     | .object fields => fieldsIdents fields
     | .arrow body | .lambda _ body => tplIdents body

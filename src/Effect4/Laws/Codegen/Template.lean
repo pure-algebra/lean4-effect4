@@ -111,6 +111,9 @@ mutual
     | .callSpread hd i, e, h => by
       have ih1 := match_inst n σ hd
       aesop
+    | .generic hd i, e, h => by
+      have ih1 := match_inst n σ hd
+      aesop
     | .arr items, e, h => by
       have ih := matchs_inst n σ items
       aesop
@@ -251,6 +254,9 @@ mutual
       have ih2 := matchs_keys n args
       aesop (add safe forward [ih1, ih2])
     | .callSpread hd i, .call hd' es, σ, h => by
+      have ih1 := match_keys n hd
+      aesop (add safe forward [ih1])
+    | .generic hd i, .generic hd' [t], σ, h => by
       have ih1 := match_keys n hd
       aesop (add safe forward [ih1])
     | .arr items, .arr items', σ, h => by
@@ -443,6 +449,16 @@ mutual
         (List.nodup_append.mp nd).1 fr.left
       have hfr : Fresh (pre ++ a) [i] := fr.past (match_keys n hd hd' a ha) nd
       have h2 := lookup_mid (pre ++ a) post i (Arg.exprs es) (hfr i (List.mem_cons_self ..))
+      simp only [List.append_assoc] at h1 h2 ⊢
+      simp only [inst, h1, h2, Option.bind_eq_bind, Option.bind_some]
+    | .generic hd i, .generic hd' [t], σ, pre, post, h, nd, fr => by
+      simp only [matchT, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+      obtain ⟨a, ha, rfl⟩ := h
+      simp only [holes] at nd fr
+      have h1 := inst_match n hd hd' a pre ([(i, Arg.type t)] ++ post) ha
+        (List.nodup_append.mp nd).1 fr.left
+      have hfr : Fresh (pre ++ a) [i] := fr.past (match_keys n hd hd' a ha) nd
+      have h2 := lookup_mid (pre ++ a) post i (Arg.type t) (hfr i (List.mem_cons_self ..))
       simp only [List.append_assoc] at h1 h2 ⊢
       simp only [inst, h1, h2, Option.bind_eq_bind, Option.bind_some]
     | .arr items, .arr items', σ, pre, post, h, nd, fr => by

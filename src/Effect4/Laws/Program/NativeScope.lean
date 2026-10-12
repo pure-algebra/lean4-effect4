@@ -185,7 +185,7 @@ def NameAt (root : NativeEff) : EffName → Prop
   | .releaseUnder p _ _ | .releaseBody p _ _ => NextAt root p 1 1 ∧ AcquisitionAt root p.path
   | .withWaiter base _ _ => NameAt root base
   | .store name => StoreNameAt root name
-  | .updateThen _ region | .bodyThen region _ => RegionAt root region
+  | .provideMask _ region | .updateThen _ region _ | .bodyThen region _ _ => RegionAt root region
   | .gen _ _ _ | .provideLayerWith _ | .provideLayerBody _
   | .buildWithScopeFromContext _ _ | .withMemoMapThen _ _ | .fromBuildThen _ _
   | .memoize _ _ _ | .buildIntoLayerScope _ _ _ | .thenBuildInto _ _ _
@@ -200,6 +200,7 @@ def ThunkAt (root : NativeEff) : EffThunk → Prop
   | .op op => OpAt root op
   | .store thunk => StoreThunkAt root thunk
   | .acquireMasked p _ => NextAt root p 0 0 ∧ NextAt root p 1 2 ∧ AcquisitionAt root p.path
+  | .provideMasked _ region _ | .restoreRegion region _ => RegionAt root region
   | .memoLookup _ _ _ | .forkLayer _ _ _ => False
   | _ => True
 
@@ -304,6 +305,12 @@ theorem asyncRoute_at (root : NativeEff) (row : NativeOp) (request : Term) (p : 
   fun_cases asyncRoute row request p
   all_goals aesop (add norm simp [CodeAt, ThunkAt, NameAt, StoreNameAt, AsyncCancelAt, badShape])
 
+/-- A provider region's body is its child zero, which binds nothing. A step of `compile_at`. -/
+theorem provideContext_region (root : NativeEff) (p : Point) (context : Term) (body : NativeEff)
+    (found : Node.at_ (.eff root) p.path = some (.eff (.provideContext context body)))
+    (hs : At root p) : RegionAt root (.program (p.child 0)) :=
+  child_at root p 0 (next_of_at root p _ 0 0 found hs (by rfl))
+
 /-- The compiler retains source scope in every residual slot of this source fragment. -/
 theorem compile_at (root : NativeEff) (fragment : Fragment root) (e : NativeEff) (p : Point)
     (found : Node.at_ (.eff root) p.path = some (.eff e)) (hs : At root p) :
@@ -357,13 +364,13 @@ theorem compile_at (root : NativeEff) (fragment : Fragment root) (e : NativeEff)
     refine ⟨trivial, child_at root p 0 (next_of_at root p _ 0 0 found hs (by rfl)), ?_⟩
     intro _ _ wrong
     cases wrong
-  case case43 p n hf saved body mask ih =>
+  case case46 p n hf saved body mask ih =>
     intro found hs
     exact ih (Agreement.at_child found 0)
       (child_at root p 0 (next_of_at root p _ 0 0 found hs (by rfl)))
   all_goals intro found hs
   all_goals have head := fragment.at found
-  all_goals aesop (add norm simp [asyncRoute_at, badShape_at, CodeAt, NameAt, ThunkAt, directHead, Prim.ofExit]) (add norm unfold [frontier, badShape, updateContextAt]) (add safe apply [asyncRoute_at])
+  all_goals aesop (add norm simp [asyncRoute_at, badShape_at, CodeAt, NameAt, ThunkAt, directHead, Prim.ofExit]) (add norm unfold [frontier, badShape, updateContextAt]) (add safe apply [asyncRoute_at, provideContext_region])
 
 /-- Resolving any scoped source point retains every residual source slot. -/
 theorem resolve_scoped (root : NativeEff) (fragment : Fragment root) (p : Point)

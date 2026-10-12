@@ -44,6 +44,7 @@ mutual
     | .binderRef _ | .ident _ | .str _ | .int _ | .bool _ => []
     | .call h args => holeKinds h ++ holeKindsTs args
     | .callSpread h i => holeKinds h ++ [(i, .exprs)]
+    | .generic h i => holeKinds h ++ [(i, .type)]
     | .arr items => holeKindsTs items
     | .object fields => holeKindsFields fields
     | .arrow b => holeKinds b
@@ -136,6 +137,10 @@ mutual
     | .callSpread hd i, h => by
       have ih1 := inst_of_kinds n σ hd
       obtain ⟨a, ha, hk⟩ := h (i, .exprs) (by simp)
+      aesop
+    | .generic hd i, h => by
+      have ih1 := inst_of_kinds n σ hd
+      obtain ⟨a, ha, hk⟩ := h (i, .type) (by simp)
       aesop
     | .arr items, h => by
       have ih := insts_of_kinds n σ items
@@ -246,7 +251,7 @@ def sortKind : ArgSort → Option HoleKind
   | .child _ | .term | .optTerm | .cause | .lit | .key | .forkOptions | .path => some .expr
   | .decision => some .str
   | .nat => some .int
-  | .optTy => some .type
+  | .optTy | .keys => some .type
 
 /-- The argument chooses its capture kind when two decision forms share a sort. -/
 def argKind {R : EffFam → Type} (v : ArgF Op R) : Option HoleKind :=

@@ -1330,6 +1330,39 @@ const readKey = (x: Expr): Read<ServiceKey> => {
   return ok({ name: { value: name }, service: { value: service } })
 }
 
+/** The key order of `ServiceKey.Lt` (`src/Effect4/Machine/Key.lean`): by name, then by service. */
+const keyBefore = (a: ServiceKey, b: ServiceKey): boolean =>
+  a.name.value < b.name.value || (a.name.value === b.name.value && a.service.value < b.service.value)
+
+/** A requirement row from its printed type argument (Lean `readKeys`): `never`, one key identifier,
+ * or their union. The canonical row of the keys read is kept only when it prints back as the text
+ * read, so what the reader accepts is exact. */
+const readKeys = (text: string): Read<ReadonlyArray<ServiceKey>> => {
+  const bad = () => refuse({ _tag: "shape", what: "requirement row" })
+  const scopeKey = serviceTypes.reserved.find(entry => entry.rendered === "Scope.Scope")?.key
+  const keys: Array<ServiceKey> = []
+  for (const member of text === "never" ? [] : text.split(" | ")) {
+    if (member === "Scope.Scope") {
+      if (scopeKey === undefined) return bad()
+      keys.push(scopeKey)
+      continue
+    }
+    const fields = /^"k(0|[1-9][0-9]*)_(0|[1-9][0-9]*)"$/.exec(member)
+    if (!fields) return bad()
+    const name = Number(fields[1])
+    const service = Number(fields[2])
+    if (!Number.isSafeInteger(name) || !Number.isSafeInteger(service)) return bad()
+    keys.push({ name: { value: name }, service: { value: service } })
+  }
+  const row = keys.slice().sort((a, b) => (keyBefore(a, b) ? -1 : keyBefore(b, a) ? 1 : 0))
+    .filter((k, i, all) => i === 0 || keyBefore(all[i - 1]!, k))
+  const isScope = (k: ServiceKey) =>
+    scopeKey !== undefined && k.name.value === scopeKey.name.value && k.service.value === scopeKey.service.value
+  const printed = row.length === 0 ? "never"
+    : row.map(k => (isScope(k) ? "Scope.Scope" : `"k${k.name.value}_${k.service.value}"`)).join(" | ")
+  return printed === text ? ok(row) : bad()
+}
+
 const readLiteral = (x: Expr): Read<Lit> => {
   const term = readTerm(0, x)
   if (failed(term)) return again(term)
@@ -1358,6 +1391,8 @@ type Arg =
   | { readonly _tag: "stmts"; readonly ss: ReadonlyArray<TsStmt> }
   /** A stated type, as the checked type reader read it (Lean `Arg.type`). */
   | { readonly _tag: "type"; readonly ty: Ty }
+  /** A head's type argument, as the expression reader spelled it (Lean `Arg.type` at a generic). */
+  | { readonly _tag: "typeName"; readonly name: string }
 
 type Subst = Map<number, Arg>
 
@@ -1384,6 +1419,10 @@ const matchT = (n: number, t: Tpl, e: Expr, captured: Subst): boolean => {
     case "callSpread":
       if (e._tag !== "call" || !matchT(n, t.head, e.fn, captured)) return false
       captured.set(t.i, { _tag: "exprs", es: e.args })
+      return true
+    case "generic":
+      if (e._tag !== "generic" || e.typeArgs.length !== 1 || !matchT(n, t.head, e.fn, captured)) return false
+      captured.set(t.i, { _tag: "typeName", name: e.typeArgs[0]! })
       return true
     case "arr": return e._tag === "arr" && matchTs(n, t.items, e.items, captured)
     case "object":
@@ -1461,6 +1500,7 @@ const describe = (n: number, t: Tpl): string => {
     case "str": return `the string ${t.value}`
     case "int": case "bool": return String(t.value)
     case "call": case "callSpread": return "a call"
+    case "generic": return "a head with a type argument"
     case "object": return "an object"
     case "arrow": return "a function of no parameter"
     case "lambda": return `a function of ${binderNames(n, t.binders)}`
@@ -1503,6 +1543,7 @@ const explainT = (n: number, t: Tpl, e: Expr): Difference => {
       if (e._tag !== "call") return here(describe(n, t))
       return below("head", explainT(n, t.head, e.fn)) ?? explainTs(n, t.args, e.args)
     case "callSpread": return e._tag === "call" ? below("head", explainT(n, t.head, e.fn)) : here(describe(n, t))
+    case "generic": return e._tag === "generic" ? below("head", explainT(n, t.head, e.fn)) : here(describe(n, t))
     case "arr": return e._tag === "arr" ? explainTs(n, t.items, e.items) : here(describe(n, t))
     case "object": {
       if (e._tag !== "object") return here(describe(n, t))
@@ -1573,12 +1614,14 @@ const explainStmts = (n: number, ts: StmtTpls, ss: ReadonlyArray<TsStmt>): Diffe
 
 /** Where `x` parts from the nearest row: the first row with `x`'s head (`nearestRow`). */
 const nearestRow = (n: number, x: Expr): Difference => {
-  const head = x._tag === "ident" ? x.name : x._tag === "call" && x.fn._tag === "ident" ? x.fn.name : undefined
+  const head = x._tag === "ident" ? x.name : x._tag === "call" && x.fn._tag === "ident" ? x.fn.name
+    : x._tag === "call" && x.fn._tag === "generic" && x.fn.fn._tag === "ident" ? x.fn.fn.name : undefined
   if (head === undefined) return undefined
   for (const row of tableRows) {
     if (row.out._tag !== "tpl") continue
     const t = row.out.tpl
-    const rowHead = t._tag === "ident" ? t.name : (t._tag === "call" || t._tag === "callSpread") && t.head._tag === "ident" ? t.head.name : undefined
+    const rowHead = t._tag === "ident" ? t.name : (t._tag === "call" || t._tag === "callSpread") && t.head._tag === "ident" ? t.head.name
+      : t._tag === "call" && t.head._tag === "generic" && t.head.head._tag === "ident" ? t.head.head.name : undefined
     if (rowHead !== head) continue
     const d = explainT(n, t, x)
     if (d !== undefined) return d
@@ -1656,6 +1699,7 @@ const readLeaf = (d: number, daemon: boolean, sort: ArgSort, a: Arg): Read<unkno
   }
   // a loop's stated cursor type: the checked type reader read it where the statement was read
   if (sort === "optTy" && a._tag === "type") return ok(a.ty)
+  if (sort === "keys" && a._tag === "typeName") return readKeys(a.name)
   if (sort === "decision" && a._tag === "str") return ok({ _tag: "tag", tag: a.s })
   if (sort === "nat" && a._tag === "int") return a.v >= 0 ? ok(a.v) : refuse({ _tag: "negative", value: a.v })
   return refuse({ _tag: "shape", what: "argument" })
@@ -2231,7 +2275,7 @@ export const childrenOf = (n: IrNode): ReadonlyArray<Child> => {
         case "forkScoped": return [atEff(a.program, (program) => kAction({ ...a, program }))]
         case "raceAll": case "raceAllFirst": return [atEffs(a.entrants, (entrants) => kAction({ ...a, entrants }))]
         case "runIn": case "interrupt": case "interruptScoped": case "interruptAll": case "awaitAll": case "awaitAllFailFast":
-        case "snapshotChildren": case "awaitNewChildren": case "setContext": case "getContext": case "getId": case "closeScope":
+        case "snapshotChildren": case "awaitNewChildren": case "context": case "getId": case "closeScope":
         case "getInterruptible":
           return []
         default: return noChildCase(a)

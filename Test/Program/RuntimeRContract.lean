@@ -750,7 +750,7 @@ def injectedInterruptTape : List Api.Decision :=
 def withBudgetProgram : NativeEff :=
   .bind (.perform (.deferredMakeOf .nat .nat) (.lit .unit))
     (.bind (.perform .deferredAwait (.var 0))
-      (.bind (.withFiber (.setContext (.var 1))) (.sync (.lit (.nat 5)))))
+      (.provideContext (.var 0) (.sync (.lit (.nat 5)))))
 def budgetTape (n : Nat) : List Api.Decision :=
   [Api.evaluate, .answerAsync Api.root 0
     (.ofExit (.success (.context (emptyCtx.provide Env.maxOpsKey (.nat n)))))]

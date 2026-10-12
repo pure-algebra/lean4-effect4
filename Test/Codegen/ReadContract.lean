@@ -572,7 +572,7 @@ open Effect4.Api in
       (.cons (.succeed (.lit .unit)) .nil))))
   = .ok (.withFiber (.raceAll (.cons (.succeed (.lit (.nat 1))) (.cons (.succeed (.lit .unit)) .nil))))
 
-#guard roundTrip sig spell 0 (.withFiber .getContext) = .ok (.withFiber .getContext)
+#guard roundTrip sig spell 0 (.withFiber (.context .empty)) = .ok (.withFiber (.context .empty))
 
 #guard roundTrip sig spell 0 (.withFiber .getId) = .ok (.withFiber .getId)
 
@@ -949,6 +949,22 @@ private def joinLayers : List (LayerTerm NativeOp) :=
 #guard roundTrip nativeSignature nativeSpell 0
   (.provideService joinKey (.lit (.nat 7)) (.service joinKey)) =
   .ok (.provideService joinKey (.lit (.nat 7)) (.service joinKey))
+-- The context reader's promised row and the provider region read back
+-- (`readKeys_requirementType`).
+#guard roundTrip nativeSignature nativeSpell 0
+  (.withFiber (.context (Effect4.Row.normalize [⟨⟨5⟩, ⟨5⟩⟩, joinKey, nativeScopeKey]))) =
+  .ok (.withFiber (.context (Effect4.Row.normalize [⟨⟨5⟩, ⟨5⟩⟩, joinKey, nativeScopeKey])))
+#guard roundTrip nativeSignature nativeSpell 1 (.provideContext (.var 0) (.service joinKey)) =
+  .ok (.provideContext (.var 0) (.service joinKey))
+-- Controls of `readKeys_exact`: only the canonical spelling of a row reads. A row out of order,
+-- a repeated key, or the scope spelled as a literal is refused.
+#guard readKeys nativeSignature (.union [.literal "k4_4", .literal "k5_5"]) =
+  .ok (Effect4.Row.normalize [joinKey, ⟨⟨5⟩, ⟨5⟩⟩])
+#guard readKeys nativeSignature (.union [.literal "k5_5", .literal "k4_4"]) =
+  .error (.shape "requirement row")
+#guard readKeys nativeSignature (.union [.literal "k4_4", .literal "k4_4"]) =
+  .error (.shape "requirement row")
+#guard readKeys nativeSignature (.literal "k0_0") = .error (.shape "requirement row")
 #guard joinLayers.length = 8
 #guard joinLayers.all fun layer => [false, true].all fun isLocal =>
   let program := Eff.provideLayer layer isLocal (.service joinKey)

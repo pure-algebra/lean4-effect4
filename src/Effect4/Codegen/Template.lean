@@ -83,6 +83,8 @@ mutual
     | call (head : Tpl) (args : Tpls)
     /-- A call whose whole argument list is one captured list: `.call head es`. -/
     | callSpread (head : Tpl) (i : Nat)
+    /-- A head with one captured type argument: `.generic head [t]` (`Effect.context<R>`). -/
+    | generic (head : Tpl) (i : Nat)
     | arr (items : Tpls)
     | object (fields : Fields)
     | arrow (body : Tpl)
@@ -157,6 +159,11 @@ mutual
       let h' ← inst n σ h
       match lookup σ i with
       | some (.exprs es) => some (.call h' es)
+      | _ => none
+    | .generic h i => do
+      let h' ← inst n σ h
+      match lookup σ i with
+      | some (.type t) => some (.generic h' [t])
       | _ => none
     | .arr items => do some (.arr (← insts n σ items))
     | .object fields => do some (.object (← instFields n σ fields))
@@ -240,6 +247,9 @@ mutual
     | .callSpread h i, .call h' es => do
       let a ← matchT n h h'
       some (a ++ [(i, .exprs es)])
+    | .generic h i, .generic h' [t] => do
+      let a ← matchT n h h'
+      some (a ++ [(i, .type t)])
     | .arr items, .arr items' => matchTs n items items'
     | .object fields, .object fields' => matchFields n fields fields'
     | .arrow b, .arrow none b' => matchT n b b'
@@ -328,6 +338,7 @@ def Tpl.describe (n : Nat) : Tpl → String
   | .int v => toString v
   | .bool b => toString b
   | .call _ _ | .callSpread _ _ => "a call"
+  | .generic _ _ => "a head with a type argument"
   | .object _ => "an object"
   | .arrow _ => "a function of no parameter"
   | .lambda bs _ => "a function of " ++ binderNames n bs
@@ -371,6 +382,7 @@ mutual
       | some d => Difference.under "head" (some d)
       | none => explainTs n 0 args args'
     | .callSpread h _, .call h' _ => Difference.under "head" (explainT n h h')
+    | .generic h _, .generic h' _ => Difference.under "head" (explainT n h h')
     | .arr items, .arr items' => explainTs n 0 items items'
     | .object fields, .object fields' => explainFields n fields fields'
     | .arrow b, .arrow none b' => Difference.under "body" (explainT n b b')
@@ -463,6 +475,7 @@ mutual
     | .binderRef _ | .ident _ | .str _ | .int _ | .bool _ => []
     | .call h args => holes h ++ holesTs args
     | .callSpread h i => holes h ++ [i]
+    | .generic h i => holes h ++ [i]
     | .arr items => holesTs items
     | .object fields => holesFields fields
     | .arrow b => holes b
@@ -512,6 +525,7 @@ mutual
     | .binderRef _ | .ident _ | .str _ | .int _ | .bool _ => []
     | .call h args => levels k h ++ levelsTs k args
     | .callSpread h i => levels k h ++ [(i, k)]
+    | .generic h i => levels k h ++ [(i, k)]
     | .arr items => levelsTs k items
     | .object fields => levelsFields k fields
     | .arrow b => levels k b
@@ -557,6 +571,7 @@ both match one tree; that is the key the table is read by, as a fact and not as 
 def Tpl.head? : Tpl → Option String
   | .ident name => some name
   | .call (.ident name) _ | .callSpread (.ident name) _ => some name
+  | .call (.generic (.ident name) _) _ => some name
   | _ => none
 
 /-- A skeleton whose holes are pairwise distinct: what `inst_of_match` asks of a table row. -/
@@ -688,6 +703,12 @@ mutual
         Expr.call.sizeOf_spec hd' es
       exact Within.append ((match_within n hd hd' a ha).mono (by omega))
         (Within.single (show sizeOf es ≤ sizeOf (Expr.call hd' es) by omega))
+    | .generic hd i, .generic hd' [t], σ, h => by
+      simp only [matchT, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+      obtain ⟨a, ha, rfl⟩ := h
+      have hsz : sizeOf (Expr.generic hd' [t]) = 1 + sizeOf hd' + sizeOf [t] :=
+        Expr.generic.sizeOf_spec hd' [t]
+      exact Within.append ((match_within n hd hd' a ha).mono (by omega)) (Within.single trivial)
     | .arr items, .arr items', σ, h => by
       simp only [matchT] at h
       have hsz : sizeOf (Expr.arr items') = 1 + sizeOf items' := Expr.arr.sizeOf_spec items'
@@ -943,6 +964,12 @@ theorem match_below (n : Nat) : ∀ (t : Tpl) (e : Expr) (σ : Subst),
       Expr.call.sizeOf_spec hd' es
     exact Below.append ((match_within n hd hd' a ha).below (by omega))
       (Below.single (show sizeOf es < sizeOf (Expr.call hd' es) by omega))
+  | .generic hd i, .generic hd' [t], σ, _, h => by
+    simp only [matchT, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq] at h
+    obtain ⟨a, ha, rfl⟩ := h
+    have hsz : sizeOf (Expr.generic hd' [t]) = 1 + sizeOf hd' + sizeOf [t] :=
+      Expr.generic.sizeOf_spec hd' [t]
+    exact Below.append ((match_within n hd hd' a ha).below (by omega)) (Below.single trivial)
   | .arr items, .arr items', σ, _, h => by
     simp only [matchT] at h
     have hsz : sizeOf (Expr.arr items') = 1 + sizeOf items' := Expr.arr.sizeOf_spec items'

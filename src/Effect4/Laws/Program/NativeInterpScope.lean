@@ -116,6 +116,9 @@ theorem interp_fin_at (root : NativeEff) (fragment : Fragment root) (completed) 
       cases found
       exact finProgram_at root fin exit owned
     all_goals cases found
-  all_goals aesop (add norm simp [interpAt, interpOf, CodeAt, ThunkAt])
+  -- the two names whose finalizer is a fiber action; every other name has none
+  case scopeClose scope => cases found; trivial
+  case restoreCtx previous => cases found; trivial
+  all_goals cases found
 
 end Effect4.Program.SourceScope

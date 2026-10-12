@@ -434,6 +434,32 @@ def readKey {Op : Type} (sig : Signature Op) : Expr → Except ReadRefusal Servi
     | none => .error (.shape "service key")
   | _ => .error (.shape "service key")
 
+/-- One identifier of a requirement row back to its key: `Scope.Scope` is the signature's scope,
+and a string literal is an ordinary key's runtime spelling. -/
+def readKeyIdentifier {Op : Type} (sig : Signature Op) : TypeScript.TypeRef → Option ServiceKey
+  | .name ["Scope", "Scope"] [] => some sig.scopeKey
+  | .literal text => some (keyFromText text)
+  | _ => none
+
+/-- The identifiers of a printed requirement row: none for `never`, a union's members, or the
+one identifier. -/
+def rowIdentifiers : TypeScript.TypeRef → List TypeScript.TypeRef
+  | .name ["never"] [] => []
+  | .union members => members
+  | one => [one]
+
+/-- A requirement row from its printed type (`requirementType`): `never`, one identifier, or
+their union. The canonical row of the keys read is kept only when it prints back as the type
+read, so what the reader accepts is exact. -/
+def readKeys {Op : Type} (sig : Signature Op) (t : TypeScript.TypeRef) :
+    Except ReadRefusal (Effect4.Row ServiceKey) :=
+  match (rowIdentifiers t).mapM (readKeyIdentifier sig) with
+  | some keys =>
+    if requirementType sig.scopeKey (Effect4.Row.normalize keys) == t then
+      .ok (Effect4.Row.normalize keys)
+    else .error (.shape "requirement row")
+  | none => .error (.shape "requirement row")
+
 /-- The literal domain of `Layer.succeed`, using the ordinary term reader. A literal holds no
 record, so it reads under no class. -/
 def readLiteral (x : Expr) : Except ReadRefusal Lit := do
@@ -499,6 +525,7 @@ def readLeaf {R : EffFam → Type} (classes : Effect4.Codegen.Classes.Classes) (
   | .cause, .expr y => (readCause classes d y).map .cause
   | .lit, .expr y => (readLiteral y).map .lit
   | .key, .expr y => (readKey sig y).map .key
+  | .keys, .type t => (readKeys sig t).map .keys
   | .forkOptions, .expr y => (readForkOptions daemon y).map .forkOptions
   | .decision, .str t => .ok (.decision (.tag t))
   | .decision, .expr (.str t) => .ok (.decision (.recordTag t))
@@ -782,6 +809,7 @@ def famRank : EffFam → Nat
 def exprHead? : Expr → Option String
   | .ident name => some name
   | .call (.ident name) _ => some name
+  | .call (.generic (.ident name) _) _ => some name
   | _ => none
 
 /-- Where `x` parts from the nearest row of the families a program is read through: the first

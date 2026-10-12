@@ -190,6 +190,8 @@ def effRows : List Row :=
   , ⟨.eff, "service", [], .tpl (call "Effect.service" [h 0])⟩
   , ⟨.eff, "provideService", [],
       .tpl (call "Effect.provideService" [h 2, h 0, h 1])⟩
+  -- `Effect.provideContext(self, context)` (`internal/effect.ts:2180-2199`)
+  , ⟨.eff, "provideContext", [], .tpl (call "Effect.provideContext" [h 1, h 0])⟩
   -- a restore site (decisions row 245): the root export `pipe` applies its second argument to
   -- its first, so `pipe(body, saved)` is `saved(body)`. Its head is reserved (`Head.pipe`): a
   -- method skeleton, `body.pipe(saved)`, has no head for the separation of the rows to read
@@ -228,8 +230,8 @@ def actionRows : List Row :=
   , ⟨.action, "awaitNewChildren", [], .refuse "awaitNewChildren"⟩
   , ⟨.action, "raceAll", [], .tpl (call "Effect.raceAll" [.arrHole 0])⟩
   , ⟨.action, "raceAllFirst", [], .tpl (call "Effect.raceAllFirst" [.arrHole 0])⟩
-  , ⟨.action, "setContext", [], .refuse "setContext"⟩
-  , ⟨.action, "getContext", [], .tpl (call "Effect.context" [])⟩
+  -- `Effect.context<R>()` (`Effect.ts:11287`): the row is the call's type argument
+  , ⟨.action, "context", [], .tpl (.call (.generic (.ident "Effect.context") 0) .nil)⟩
   , ⟨.action, "getId", [], .tpl (.ident "Effect.fiberId")⟩
   , ⟨.action, "closeScope", [], .tpl (call "Scope.close" [h 0, h 1])⟩
   -- the mask at a constant body (decisions row 245): the function answers its own parameter,
@@ -391,7 +393,7 @@ def printArg (sig : Signature Op) (d : Nat) :
   | .mode _ | .bool _ | .op _ => .ok none
   -- a definition block's declarations: no template row prints a block yet (slice PROC-3)
   | .decls _ => .ok none
-  | .keys _ => .ok none
+  | .keys ks => .ok (some (.type (requirementType sig.scopeKey ks)))
 
 def printArgs (sig : Signature Op) (fam : EffFam) (n : Nat) (out : RowOut) :
     List (ArgF Op Carrier) → Nat → Except PrintRefusal Subst

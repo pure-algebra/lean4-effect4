@@ -141,10 +141,11 @@ theorem provide_body_credits (q : List Nat) (root : NativeEff) (point : Point) (
 /-- This native value producer introduces no foreign release custody.
 Consumer: `contA_credits`, then `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
-theorem update_body_credits (q : List Nat) (root : NativeEff) (update : Env.ContextUpdate) (body : Region) (value : Val) :
-    currentCredits q (updateThenK root update body value) = 0 := by
-  fun_cases updateThenK root update body value <;>
-    simp only [currentCredits, region_credits, badShape]
+theorem update_body_credits (q : List Nat) (root : NativeEff) (update : Env.ContextUpdate) (body : Region)
+    (flag : Bool) (value : Val) :
+    currentCredits q (updateThenK root update body flag value) = 0 := by
+  fun_cases updateThenK root update body flag value <;>
+    simp only [currentCredits, badShape]
 
 
 /-- This native value producer introduces no foreign release custody.
@@ -214,7 +215,7 @@ theorem contA_credits (q : List Nat) (root : NativeEff) (name : EffName) (value 
       layer_inner_credits, layer_construction_credits, provide_layer_credits,
       provide_body_credits, update_body_credits, build_scope_credits, add_memo_credits,
       provide_then_credits, combine_credits, merge_context_credits, bind_service_credits,
-      service_lookup_credits, layer_resolve_credits, region_credits, context_credits, scopeAddAt,
+      service_lookup_credits, layer_resolve_credits, context_credits, scopeAddAt,
       credit, foreignAt, badShape, Bool.false_eq_true, if_false, Nat.add_zero, 
       Nat.sub_self, Nat.le_refl, Nat.zero_le]
 

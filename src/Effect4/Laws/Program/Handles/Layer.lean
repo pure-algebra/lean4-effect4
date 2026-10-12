@@ -335,14 +335,14 @@ theorem provideLayerBodyK_keys (root : NativeEff) (p : Point) (v : Val) :
     · sub_tac using (Val.context?_keys hbuilt)
   · exact List.nil_subset _
 
-theorem updateThenK_keys (root : NativeEff) (u : Env.ContextUpdate) (body : Region) (v : Val) :
-    nativeKeys (updateThenK root u body v) ⊆ u.keys ++ body.keys ++ v.keys := by
+theorem updateThenK_keys (root : NativeEff) (u : Env.ContextUpdate) (body : Region) (flag : Bool)
+    (v : Val) : nativeKeys (updateThenK root u body flag v) ⊆ u.keys ++ body.keys ++ v.keys := by
   unfold updateThenK
   split
   · next prev hprev =>
     rw [Val.context?_exact hprev]
     split
-    · sub_tac using (regionCode_keys root body)
+    · sub_tac
     · -- `setContext(next)`'s handles are the update's and the previous map's; the restoring
       -- name carries the region's and the previous map's
       intro x hx

@@ -50,13 +50,6 @@ value (`printPerform`, `Codegen/PrintLeaf.lean`). -/
 theorem print_perform (sig : Signature Op) (n : Nat) (op : Op) (request : Term) :
     print sig n (.perform op request) = printPerform sig n op request := rfl
 
-/-- The complete requirement row as target syntax. The empty union is `never`. -/
-def requirementType (scopeKey : ServiceKey) (requires : Requirement) : TypeScript.TypeRef :=
-  match requires.elems.map (keyIdentifier scopeKey) with
-  | [] => .name ["never"] []
-  | [one] => one
-  | many => .union many
-
 /-- The complete declared type `Effect.Effect<A, E, R>`. The native API defaults to
 its reserved scope key; generic module printing passes the signature's scope key.
 This is structural annotation evidence, not a general target typing theorem. A payload type in

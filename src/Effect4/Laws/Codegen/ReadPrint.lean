@@ -56,6 +56,9 @@ mutual
     | .callSpread hd i, e, h => by
       have ih1 := holes_of_inst n σ hd
       aesop
+    | .generic hd i, e, h => by
+      have ih1 := holes_of_inst n σ hd
+      aesop
     | .arr items, e, h => by
       have ih := holess_of_insts n σ items
       aesop
@@ -169,13 +172,38 @@ theorem matchStmt_of_instStmt (n : Nat) (σ : Subst) (t : StmtTpl) (s : Stmt)
 
 open Effect4.Program (exprHead?)
 
+/-- A head with a type argument matches only that head with one type argument. A step of
+`head_of_match`. -/
+theorem matchT_generic_ident {n : Nat} {s : String} {i : Nat} {e : Expr} {σ : Subst}
+    (h : matchT n (.generic (.ident s) i) e = some σ) : ∃ t, e = .generic (.ident s) [t] := by
+  match e, h with
+  | .generic hd [t], h =>
+    cases hd <;> simp only [matchT, Option.bind_eq_bind, Option.bind_eq_some_iff, reduceCtorEq,
+      false_and, exists_false] at h
+    obtain ⟨a, ha, -⟩ := h
+    split at ha
+    · subst_vars; exact ⟨t, rfl⟩
+    · exact nomatch ha
+
+/-- A head with a type argument instantiates to that head with one type argument. A step of
+`head_of_inst`. -/
+theorem inst_generic_ident {n : Nat} {σ : Subst} {s : String} {i : Nat} {x : Expr}
+    (h : inst n σ (.generic (.ident s) i) = some x) : ∃ t, x = .generic (.ident s) [t] := by
+  simp only [inst, Option.bind_eq_bind, Option.bind_eq_some_iff, Option.some.injEq,
+    exists_eq_left'] at h
+  split at h
+  · exact ⟨_, (Option.some.inj h).symm⟩
+  · exact nomatch h
+
 theorem head_of_match (n : Nat) (t : Tpl) (x : Expr) (σ : Subst) (h : matchT n t x = some σ)
     {name : String} (hh : t.head? = some name) : exprHead? x = some name := by
-  cases t <;> cases x <;> simp_all [Tpl.head?, exprHead?] <;> aesop
+  cases t <;> cases x <;> simp_all [Tpl.head?, exprHead?] <;>
+    aesop (add safe forward matchT_generic_ident)
 
 theorem head_of_inst (n : Nat) (σ : Subst) (t : Tpl) (x : Expr) (h : inst n σ t = some x)
     {name : String} (hh : t.head? = some name) : exprHead? x = some name := by
-  cases t <;> simp_all [Tpl.head?] <;> aesop (add norm simp exprHead?)
+  cases t <;> simp_all [Tpl.head?] <;>
+    aesop (add norm simp exprHead?, safe forward inst_generic_ident)
 
 /-- A call, an identifier or a method call: what every child image is. -/
 def nodeLike : Expr → Bool
@@ -490,7 +518,7 @@ theorem readLeaf_print {sig : Signature Op} {d : Nat} {daemon : Bool}
     {a : Arg} (hp : printArg sig d (ArgF.fold (printAlg sig) v) = .ok (some a)) :
     readLeaf classes sig d daemon (argSortOf v) a = .ok v := by
   cases v <;> aesop (add norm simp [leafReadable, ArgF.fold, printArg, argSortOf, readLeaf,
-    readLiteral_print, readForkOptions_print])
+    readLiteral_print, readForkOptions_print, readKeys_requirementType])
 
 /-! ## The arguments read back -/
 
@@ -853,22 +881,25 @@ theorem withFunction_head {spelling : String} {fn call x : Expr}
   split at h
   · next head args =>
     cases h
-    exact ⟨by cases head <;> rfl, rfl⟩
+    refine ⟨?_, rfl⟩
+    cases head with
+    | generic f _ => cases f <;> rfl
+    | _ => rfl
   · cases h
     exact ⟨rfl, rfl⟩
   · exact nomatch h
 
-/-- A row call with type arguments on its head is headed by no name, and is node-like: its
-callee is a generic application. A step of `printCall_head`. -/
+/-- A row call with type arguments on its head keeps its head, or is headed by no name, and is
+node-like: its callee is a generic application of the call's head. A step of `printCall_head`. -/
 theorem withHeadTypes_head {spelling : String} {targets : List TypeScript.TypeRef}
     {call x : Expr} (h : withHeadTypes spelling targets call = .ok x) :
-    exprHead? x = none ∧ nodeLike x = true := by
+    (exprHead? x = none ∨ exprHead? x = exprHead? call) ∧ nodeLike x = true := by
   unfold withHeadTypes at h
   split at h
   · cases h
-    exact ⟨rfl, rfl⟩
+    exact ⟨.inr rfl, rfl⟩
   · cases h
-    exact ⟨rfl, rfl⟩
+    exact ⟨.inl rfl, rfl⟩
   · exact nomatch h
 
 /-- A row's call with its operation's type arguments is headed as the row's call is, or by
@@ -886,7 +917,11 @@ theorem printCall_head {sig : Signature Op} {n : Nat} {op : Op} {r : Term} {x : 
         exact nomatch h
       | ok call =>
         rw [hcall] at h
-        exact ⟨.inl (withHeadTypes_head h).1, (withHeadTypes_head h).2⟩
+        refine ⟨?_, (withHeadTypes_head h).2⟩
+        rcases (withHeadTypes_head h).1 with none | same
+        · exact .inl none
+        · rw [same]
+          exact printRow_head hcall
     · exact nomatch h
 
 /-- The row call of `perform` is headed as its row's call is: by the spelling, or by nothing.

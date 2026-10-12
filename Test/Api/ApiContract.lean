@@ -28,7 +28,7 @@ def pBind : Program :=
   .bind (.succeed (.lit (.nat 1))) (.succeed (.app "succ" (.cons (.var 0) .nil)))
 
 /-- A program the printer refuses: an internal action of the machine. -/
-def pInternal : Program := .withFiber (.setContext (.lit .unit))
+def pInternal : Program := .withFiber .snapshotChildren
 
 /-- `Effect.succeed("x")`: a string literal is a machine value on the native route (DB-15, the
 host rows slice, 2026-09-08). -/

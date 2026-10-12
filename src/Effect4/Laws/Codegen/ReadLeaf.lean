@@ -209,6 +209,50 @@ theorem readKey_printKey {Op : Type} (sig : Signature Op) (key : ServiceKey)
         subst x
         simp only [readKey, keyText, keyFromText_print, ht, hty, and_self, and_true, if_pos hs]
 
+/-- Each identifier of a requirement row reads back as its key. -/
+theorem readKeyIdentifier_keyIdentifier {Op : Type} (sig : Signature Op) (key : ServiceKey) :
+    readKeyIdentifier sig (keyIdentifier sig.scopeKey key) = some key := by
+  by_cases hs : key = sig.scopeKey
+  · subst key
+    simp only [keyIdentifier, if_true, readKeyIdentifier]
+  · obtain ⟨⟨name⟩, ⟨service⟩⟩ := key
+    simp only [keyIdentifier, if_neg hs, readKeyIdentifier, keyText, keyFromText_print]
+
+/-- A row's identifiers read back as its keys, in order. -/
+theorem mapM_readKeyIdentifier {Op : Type} (sig : Signature Op) :
+    ∀ keys : List ServiceKey,
+      (keys.map (keyIdentifier sig.scopeKey)).mapM (readKeyIdentifier sig) = some keys
+  | [] => rfl
+  | k :: rest => by
+    simp only [List.map_cons, List.mapM_cons, readKeyIdentifier_keyIdentifier,
+      mapM_readKeyIdentifier sig rest, Option.bind_eq_bind, Option.bind_some, Option.pure_def]
+
+/-- A key's identifier is neither `never` nor a union, so it splits as itself. -/
+theorem rowIdentifiers_keyIdentifier (scopeKey key : ServiceKey) :
+    rowIdentifiers (keyIdentifier scopeKey key) = [keyIdentifier scopeKey key] := by
+  by_cases hs : key = scopeKey
+  · simp only [keyIdentifier, if_pos hs]
+    rfl
+  · simp only [keyIdentifier, if_neg hs, rowIdentifiers]
+
+/-- A printed requirement row splits back into its keys' identifiers. -/
+theorem rowIdentifiers_requirementType (scopeKey : ServiceKey) (v : Effect4.Row ServiceKey) :
+    rowIdentifiers (requirementType scopeKey v) = v.elems.map (keyIdentifier scopeKey) := by
+  unfold requirementType
+  match v.elems with
+  | [] => rfl
+  | [k] => exact rowIdentifiers_keyIdentifier scopeKey k
+  | _ :: _ :: _ => rfl
+
+/-- **A requirement row's printed type reads back as the row**: the round trip of the type
+argument of `Effect.context<R>()`. -/
+theorem readKeys_requirementType {Op : Type} (sig : Signature Op) (v : Effect4.Row ServiceKey) :
+    readKeys sig (requirementType sig.scopeKey v) = .ok v := by
+  have norm : Effect4.Row.normalize v.elems = v := Effect4.Row.normalize_of_ascending v.elems v.ascending
+  unfold readKeys
+  rw [rowIdentifiers_requirementType, mapM_readKeyIdentifier]
+  simp only [norm, beq_self_eq_true, if_true]
+
 theorem printKey_readable (sig : Signature Op) (key : ServiceKey)
     (hr : keyReadable sig key = true) : ∃ x, printKey sig key = .ok x := by
   by_cases hs : key = sig.scopeKey

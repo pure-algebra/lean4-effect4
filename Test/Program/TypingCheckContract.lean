@@ -93,13 +93,12 @@ def forkOpts : Effect4.Supervision.ForkOptions := { startImmediately := true, da
 -- red: not below Ty.scope
 #guard (checkAction nativeSignature [.nat, .exitOf .unit .never] [] (.closeScope (.var 0) (.var 1))).isOk = false
 
--- 9. setContext (fixed type: Ty.context)
--- green 1: at never
-#guard (checkAction nativeSignature [.never] [] (.setContext (.var 0))).isOk
--- green 2: at raw union
-#guard (checkAction nativeSignature [.union Ty.context .never] [] (.setContext (.var 0))).isOk
--- red: not below Ty.context
-#guard (checkAction nativeSignature [.nat] [] (.setContext (.var 0))).isOk = false
+-- 9. context (the promised row: answered at `contextOf`, required at the row)
+-- green: the empty row
+#guard (checkAction nativeSignature [] [] (.context .empty)).toOption =
+  some ⟨.contextOf .empty, .never, .empty⟩
+-- red: a key the signature does not know
+#guard (checkAction nativeSignature [] [] (.context (.singleton ⟨⟨99⟩, ⟨99⟩⟩))).isOk = false
 
 -- 10. interruptAll (fixed type: .nat)
 -- green 1: at never

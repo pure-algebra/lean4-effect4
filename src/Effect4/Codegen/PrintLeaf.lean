@@ -98,7 +98,7 @@ inductive Head
   | interrupt | interruptAll | interruptAllAs | awaitAll | raceAll | context | fiberId
   | scopeClose | scoped | acquireRelease | causeFail | causeDie | causeInterrupt
   | causeCombine | undefined | withFiber
-  | contextService | scopeService | provide | service | provideService
+  | contextService | scopeService | provide | service | provideService | provideContext
   | layerSucceed | layerEffect | layerEffectDiscard | layerProvide | layerProvideMerge
   | layerMerge | layerFresh | layerOrDie
   | layerMergeAll
@@ -170,6 +170,7 @@ def Head.spelling : Head → String
   | .provide => "Effect.provide"
   | .service => "Effect.service"
   | .provideService => "Effect.provideService"
+  | .provideContext => "Effect.provideContext"
   | .layerSucceed => "Layer.succeed"
   | .layerEffect => "Layer.effect"
   | .layerEffectDiscard => "Layer.effectDiscard"
@@ -190,7 +191,7 @@ def heads : List Head :=
   , .interrupt, .interruptAll, .interruptAllAs, .awaitAll, .raceAll, .raceAllFirst, .context, .fiberId
   , .scopeClose, .scoped, .acquireRelease, .causeFail, .causeDie, .causeInterrupt
   , .causeCombine, .undefined, .withFiber
-  , .contextService, .scopeService, .provide, .service, .provideService
+  , .contextService, .scopeService, .provide, .service, .provideService, .provideContext
   , .layerSucceed, .layerEffect, .layerEffectDiscard, .layerProvide, .layerProvideMerge
   , .layerMerge, .layerFresh, .layerOrDie, .layerMergeAll, .catchError, .catchIf
   , .ifCase, .optionCase, .caseTag, .caseTagR, .map, .uninterruptibleMask, .pipe ]
@@ -543,6 +544,15 @@ def keyText (key : ServiceKey) : String :=
 ordinary services use their full key, including when their carriers coincide. -/
 def keyIdentifier (scopeKey key : ServiceKey) : TypeScript.TypeRef :=
   if key = scopeKey then .name ["Scope", "Scope"] [] else .literal (keyText key)
+
+/-- The complete requirement row as target syntax. The empty union is `never`. It spells a
+declaration's `R` and the type argument of `Effect.context<R>()`. -/
+def requirementType (scopeKey : ServiceKey) (requires : Effect4.Row ServiceKey) :
+    TypeScript.TypeRef :=
+  match requires.elems.map (keyIdentifier scopeKey) with
+  | [] => .name ["never"] []
+  | [one] => one
+  | many => .union many
 
 /-- A known ordinary key has separate Identifier and Shape arguments (rc.112
 `Context.ts:201-219`). Scope is the genuine `Scope.Scope` service (`internal/effect.ts:3772`),

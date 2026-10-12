@@ -47,12 +47,15 @@ theorem contAOf_native_keys (root : NativeEff) (n : EffName) (v : Val) :
   case provideLayerBody p =>
     rw [contAOf_provideLayerBody]
     exact List.Subset.trans (provideLayerBodyK_keys root p v) (by sub_tac)
-  case updateThen u body =>
+  case provideMask u body =>
+    simp only [Program.contAOf]
+    split <;> sub_tac
+  case updateThen u body flag =>
     rw [contAOf_updateThen]
-    exact List.Subset.trans (updateThenK_keys root u body v) (by sub_tac)
-  case bodyThen body previous =>
+    exact List.Subset.trans (updateThenK_keys root u body flag v) (by sub_tac)
+  case bodyThen body previous flag =>
     rw [contAOf_bodyThen]
-    sub_tac using (regionCode_keys root body)
+    sub_tac
   case buildWithScopeFromContext q scope =>
     rw [contAOf_buildWithScopeFromContext]
     exact List.Subset.trans (buildWithScopeK_keys q scope v) (by sub_tac)
@@ -360,7 +363,8 @@ theorem contEOf_native_keys (root : NativeEff) (n : EffName) (cause : CauseV) :
   | scopedExit previous scope | scopeClose scope | restoreCtx previous | forkScopedIn p
   | acquireCtx p | acquireIn p ctx | acquired p ctx sc | afterScopeAdd a finalizer | releaseUnder p ctx e
   | releaseBody p e previous
-  | provideLayerWith p | provideLayerBody p | updateThen u body | bodyThen body previous
+  | provideLayerWith p | provideLayerBody p | provideMask u body | updateThen u body _
+  | bodyThen body previous _
   | buildWithScopeFromContext q scope | withMemoMapThen q scope | addCurrentMemoMap m
   | fromBuildThen q m | memoize q m scope | awaitPromise cell | buildIntoLayerScope q m scope
   | thenBuildInto q m layerScope | freshThen q scope | provideThen q m scope mode
@@ -388,7 +392,8 @@ theorem syncValueAt_keys (root : NativeEff) (t : EffThunk) : (syncValueAt root t
       | none => exact List.nil_subset _
       | some val => exact evalTerm_point_keys term p val hval
     · exact List.nil_subset _
-  | body _ | op _ | park _ | act _ | forkInAt _ _ | getCtx | setCtx _ | closeScope _ _ | store _
+  | body _ | op _ | park _ | act _ | forkInAt _ _ | getCtx | captureMask | provideMasked _ _ _
+  | restoreRegion _ _ | setCtx _ | closeScope _ _ | store _
   | acquireMasked _ _ | releaseMasked _ _ | memoLookup _ _ _ | forkLayer _ _ _ | awaitAllFailFast _ =>
     simp only [syncValueAt]; exact List.nil_subset _
 
@@ -530,7 +535,8 @@ theorem suspendBodyAt_keys (root : NativeEff) (t : EffThunk) : nativeKeys (suspe
     | foreign capture exit =>
       simp only [suspendBodyAt]
       sub_tac using (Point.ofCapture_keys capture)
-  | pure _ | op _ | park _ | act _ | forkInAt _ _ | getCtx | setCtx _ | closeScope _ _
+  | pure _ | op _ | park _ | act _ | forkInAt _ _ | getCtx | captureMask | provideMasked _ _ _
+  | restoreRegion _ _ | setCtx _ | closeScope _ _
   | acquireMasked _ _ | releaseMasked _ _ | forkLayer _ _ _ | awaitAllFailFast _ =>
     simp only [suspendBodyAt]; exact List.nil_subset _
 
@@ -693,7 +699,8 @@ theorem interpOf_keyBounded (root : NativeEff) (table : RowTable := []) :
     | scopeBody p previous | scopedExit previous scope | scopeClose scope | restoreCtx previous | constant w
     | forkScopedIn p | acquireCtx p | acquireIn p ctx | acquired p ctx sc | afterScopeAdd a finalizer
     | releaseUnder p ctx e | releaseBody p e previous
-    | provideLayerWith p | provideLayerBody p | updateThen u body | bodyThen body previous
+    | provideLayerWith p | provideLayerBody p | provideMask u body | updateThen u body _
+    | bodyThen body previous _
     | buildWithScopeFromContext q scope' | withMemoMapThen q scope' | addCurrentMemoMap mm
     | fromBuildThen q mm | memoize q mm scope' | awaitPromise cell' | buildIntoLayerScope q mm scope'
     | thenBuildInto q mm layerScope | freshThen q scope' | provideThen q mm scope' mode
@@ -722,7 +729,8 @@ theorem interpOf_keyBounded (root : NativeEff) (table : RowTable := []) :
     | scopeBody p previous | scopedExit previous scope | scopeClose scope | restoreCtx previous | constant w
     | forkScopedIn p | acquireCtx p | acquireIn p ctx | acquired p ctx sc | afterScopeAdd a finalizer
     | releaseUnder p ctx e | releaseBody p e previous
-    | provideLayerWith p | provideLayerBody p | updateThen u body | bodyThen body previous
+    | provideLayerWith p | provideLayerBody p | provideMask u body | updateThen u body _
+    | bodyThen body previous _
     | buildWithScopeFromContext q scope' | withMemoMapThen q scope' | addCurrentMemoMap mm
     | fromBuildThen q mm | memoize q mm scope' | awaitPromise cell' | buildIntoLayerScope q mm scope'
     | thenBuildInto q mm layerScope | freshThen q scope' | provideThen q mm scope' mode
@@ -771,6 +779,15 @@ theorem interpOf_keyBounded (root : NativeEff) (table : RowTable := []) :
     | act p => simp only [interpOf] at h; exact actionAt_keys root p a h
     | forkInAt p scope => simp only [interpOf] at h; exact forkScopedAt_keys root p scope a h
     | getCtx => simp only [interpOf, Option.some.injEq] at h; subst h; exact List.nil_subset _
+    | captureMask => simp only [interpOf, Option.some.injEq] at h; subst h; exact List.nil_subset _
+    | provideMasked update body flag =>
+      simp only [interpOf, Option.some.injEq] at h
+      subst h
+      sub_tac
+    | restoreRegion body flag =>
+      simp only [interpOf, Option.some.injEq] at h
+      subst h
+      sub_tac using (regionCode_keys root body)
     | setCtx ctx => simp only [interpOf, Option.some.injEq] at h; subst h; exact List.Subset.refl _
     | closeScope scope exit => simp only [interpOf, Option.some.injEq] at h; subst h; exact List.Subset.refl _
     | acquireMasked p ctx =>
@@ -809,7 +826,8 @@ theorem interpOf_keyBounded (root : NativeEff) (table : RowTable := []) :
         simp only [interpOf] at h
         exact ⟨syncOpStep_le operation s s' v h, syncOpStep_keys operation s s' v ids h hok⟩
       | park _ | act _ | body _ | foreign _ _ => simp only [interpOf] at h; cases h
-    | pure _ | body _ | park _ | act _ | forkInAt _ _ | getCtx | setCtx _ | closeScope _ _
+    | pure _ | body _ | park _ | act _ | forkInAt _ _ | getCtx | captureMask | provideMasked _ _ _
+    | restoreRegion _ _ | setCtx _ | closeScope _ _
     | acquireMasked _ _ | releaseMasked _ _ | memoLookup _ _ _ | forkLayer _ _ _ | awaitAllFailFast _ =>
       simp only [interpOf] at h; cases h
   registerAsync n fiber token s ids hok := by
@@ -857,7 +875,8 @@ theorem interpOf_keyBounded (root : NativeEff) (table : RowTable := []) :
     | scopeBody p previous | scopedExit previous scope | scopeClose scope | restoreCtx previous | constant w
     | forkScopedIn p | acquireCtx p | acquireIn p ctx | acquired p ctx sc' | afterScopeAdd a finalizer
     | releaseUnder p ctx e | releaseBody p e previous
-    | provideLayerWith p | provideLayerBody p | updateThen u body | bodyThen body previous
+    | provideLayerWith p | provideLayerBody p | provideMask u body | updateThen u body _
+    | bodyThen body previous _
     | buildWithScopeFromContext q scope' | withMemoMapThen q scope' | addCurrentMemoMap mm
     | fromBuildThen q mm | memoize q mm scope' | awaitPromise cell' | buildIntoLayerScope q mm scope'
     | thenBuildInto q mm layerScope | freshThen q scope' | provideThen q mm scope' mode
