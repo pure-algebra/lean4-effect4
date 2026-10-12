@@ -1828,20 +1828,189 @@ theorem scopeExitCallback?_some {p : RProgram} {prev : Ctx} {sc : Nat} {ex : Exi
     exact ⟨_, rfl⟩
   · cases h
 
+/-- **A finalizer's boundary under any continuation, at the ambient judgment** (`finalizerR`,
+`Laws/Program/DenoteR.lean`; the ambient instance of `finalizerBind_typed`, `Typed/Seq.lean`): with
+the cleanup typed at rc.112's finalizer type `⟨unknown, never⟩` at a row (`finPosition`) and the
+body's exit at a position within that row, whose failure row the row holds, the boundary bound to
+any continuation is typed at that position, a captured context's included. A succeeding cleanup
+ends in the `finishFinalizer` marker, which reads no continuation; a failing cleanup after a failed
+body combines both causes (`exitOk_restore`); every other failure skips the bind. The cleanup's
+work is `ambient_finalizer_guarantees`'s. A step of the claim `step-deliver-preserves`; consumer:
+`Evaluating.settle_callback`. -/
+theorem ambient_finalizerBind (root : ProgramSource) {w : World} {row : Env.Requirement}
+    {result : AmbientPosition} {ex : ExitV} {cleanup : RProgram}
+    (payload : AmbientExit w row result ex) (entry : Row.Subset result.failureRow row)
+    (wf : result.WF) (cleanupTyped : AmbientProg root w row (finPosition row) cleanup)
+    (next : ExitV → RProgram) :
+    AmbientProg root w row result ((finalizerR ex cleanup).bind next) := by
+  -- the work: the cleanup after a success; after a failure, its failure combined with the body's
+  have work : ∀ originalExit, ExitOk w result.type originalExit → AmbientProg root w row
+      (((⟨.unknown, result.type.error, Env.Requirement.empty⟩ : EffTy), row, row) : AmbientPosition)
+      (match originalExit with
+      | .success _ => cleanup
+      | .failure _ => (guardR .onFailure cleanup).bind fun
+          | .success value => .pure (.success value)
+          | .failure cause => .pure (Exit.restoreAfterFinalizer originalExit (.failure cause))) := by
+    intro originalExit originalPayload
+    cases originalExit with
+    | success _ =>
+      exact ambientProg_widen root (before := (⟨.unknown, .never, Env.Requirement.empty⟩, row, row))
+        (Ty.subN_refl _) (Bounds.subN_never _) (Row.subset_refl _) (Row.subset_refl _) cleanupTyped
+    | failure _ =>
+      refine ambient_guardBind root cleanupTyped (fun _ ordered exit arm clean => ?_)
+        (fun _ _ exit clean absent => ?_) (Row.subset_refl _)
+      · cases exit with
+        | success _ => exact Bool.noConfusion arm
+        | failure _ =>
+          rw [ambientInput_const]
+          exact .pure (ambientExit_const (exitOk_restore
+              (exitOk_failure_of_errorN (Ty.subN_refl _)
+                (strongExit_mono _ _ _ _ ordered originalPayload))
+              (exitOk_failure_of_errorN (Bounds.subN_never _) clean.1)))
+            ⟨Row.subset_refl _, Row.subset_refl _⟩
+      · cases exit with
+        | success _ =>
+          rw [ambientInput_const]
+          exact ambientExit_const (exitOk_success_of_answerN (Ty.subN_refl _) clean.1)
+        | failure _ => exact Bool.noConfusion absent
+  unfold finalizerR
+  rw [Effects.Program.bind_assoc]
+  refine ambient_guardBind root (work ex payload.1) (fun _ ordered exit arm _ => ?_)
+    (fun _ _ exit done absent => ?_) entry wf
+  · cases exit with
+    | success _ =>
+      rw [ambientInput_const]
+      exact .finishFinalizer ⟨strongExit_mono _ _ _ _ ordered payload.1, payload.2⟩ ⟨entry, wf⟩
+    | failure _ => exact Bool.noConfusion arm
+  · cases exit with
+    | success _ => exact Bool.noConfusion absent
+    | failure _ =>
+      rw [ambientInput_const]
+      exact ambientExit_failure (exitOk_failure_of_errorN (Ty.subN_refl _) done.1) entry
+
+/-- **The unsafe close's program at the ambient judgment** (`closeScopeUnsafeR`,
+`Laws/Program/InterpR.lean`; the ambient instance of `closeScopeUnsafe_installs`,
+`Typed/Adequacy.lean`): at every row, at rc.112's finalizer type `⟨unknown, never⟩`
+(`internal/effect.ts:3849`). A lone finalizer runs at the row (`finalizer_ambient`: a captured
+release under its captured context merged over the current one, `releaseContext`); two or more
+are the walk, administrative code at `⟨unit, never⟩` (`closeWalk_typed`, `ambientProg_of_admin`),
+widened. The finalizers need only their admission. A step of the claim `step-deliver-preserves`;
+consumer: `Evaluating.settle_callback`. -/
+theorem closeScopeUnsafe_ambient (root : ProgramSource) (w : World) (scope : Nat) (exit : ExitV)
+    (flag : Bool) (st st' : Stores) (program : Option RProgram)
+    (admitted : ∀ entry ∈ st.scopes.entries, ∀ fin ∈ entry.scope.closeOrder,
+      FinalizerAdmitted root w fin)
+    (exitFits : FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ exit)
+    (h : closeScopeUnsafeR scope exit flag st = some (st', program)) (row : Env.Requirement) :
+    ∀ code, program = some code → AmbientProg root w row (finPosition row) code := by
+  unfold closeScopeUnsafeR at h
+  cases hs : scopeCloseSnapshot scope exit st with
+  | none =>
+    rw [hs] at h
+    cases h
+  | some snapshot =>
+    obtain ⟨state, strategy, order⟩ := snapshot
+    rw [hs] at h
+    simp only at h
+    obtain ⟨_, rfl⟩ := h
+    intro code hcode
+    match order, hs, hcode with
+    | [], _, hcode => cases hcode
+    | [fin], hs, hcode =>
+      cases hcode
+      obtain ⟨entry, hentry, hfin⟩ := lone_of_snapshot hs
+      exact finalizer_ambient root (admitted entry hentry fin hfin) exitFits
+    | _ :: _ :: _, hs, hcode =>
+      cases hcode
+      obtain ⟨entry, hentry, horder⟩ := mem_of_snapshot hs
+      refine ambientProg_widen root (before := (EffTy.pure .unit, row, row)) ?_ (Ty.subN_refl _)
+        (Row.subset_refl _) (Row.subset_refl _)
+        (ambientProg_of_admin root
+          (closeWalk_typed root w strategy _ exit
+            (fun fin hf => admitted entry hentry fin (horder ▸ hf)) exitFits)
+          (.fiber _ _ rfl fun _ => .fiber _ _ rfl fun _ => .pure _) row)
+      exact Ty.sub_unknown _
+
 /-- **The scoped exit's close settles typed** (decisions row 188 (a); finding F-CLOSE): the walk
 stopped at a `scoped` guard's slot and left the scope's exit callback current (`MHostCallback`),
 which `prepareScopedExitR` consumes (`internal/effect.ts:3944-3947`): the previous context restored,
-the scope closed with the callback's exit, and the close's program installed under the finalizer
-boundary. Planned: the close's program runs a capture's release, whose context switch the restore
-slot (owner's ruling, 2026-10-12) makes atomic; the slice that lands it proves this goal.
+its services fitting (the slot's protocol); the scope, present by the same protocol, closed with
+the callback's exit, which fits `Exit<unknown, unknown>` (`fitsExit_unknown`; the store edit is
+`configTyped_closeState`); and the code installed is the `finishFinalizer` marker carrying the exit,
+or the close's program (`closeScopeUnsafe_ambient`) under the finalizer boundary
+(`ambient_finalizerBind`). Both are typed at the callback's position at the restored context's
+keys, over the host stack below it. A captured release in the close runs under its captured context
+merged over the current one (`releaseContext`), so it is typed at that row too.
 Consumer: `Evaluating.deliver_keeps`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
-proof_goal Evaluating.settle_callback {root : ProgramSource} {rootTy : EffTy} {w : World}
+theorem Evaluating.settle_callback {root : ProgramSource} {rootTy : EffTy} {w : World}
     {m : RState} {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y)
     (fr : RSaved) {ty : EffTy} {flag : Bool} (declared : w.Γ f.id = some ty)
     (callback : MHostCallback root w (m.update f) f.id (finalPos ty flag) fr) :
     SettlesTyped root rootTy w f.id rest
-      (prepareIterR ⟨m, { f with frame := fr }, y, .continue_, [], []⟩)
+      (prepareIterR ⟨m, { f with frame := fr }, y, .continue_, [], []⟩) := by
+  have wide := ev.typed.machine.wide
+  obtain ⟨tin, prev, sc, ex, hcb, payload, ⟨live, services⟩, entry, wf, bit, stack, prov⟩ :=
+    callback
+  obtain ⟨next, hcur⟩ := scopeExitCallback?_some hcb
+  have present : (m.state.scopes.entryAt sc).isSome = true := by
+    have l : (w.state.scopes.entryAt sc).isSome = true := live
+    rw [wide.state] at l
+    exact l
+  obtain ⟨scopeEntry, hentry⟩ := Option.isSome_iff_exists.mp present
+  let s : Stores := { m.state with scopes := m.state.scopes.closeState sc ex }
+  have snap : scopeCloseSnapshot sc ex m.state =
+      some (s, scopeEntry.scope.strategy, scopeEntry.scope.closeOrder) := by
+    unfold scopeCloseSnapshot
+    rw [hentry]
+    rfl
+  obtain ⟨program, hprog⟩ :
+      ∃ program, ∀ flag, closeScopeUnsafeR sc ex flag m.state = some (s, program) :=
+    ⟨_, fun _ => by
+      unfold closeScopeUnsafeR
+      rw [snap]
+      rfl⟩
+  have hexFits : FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ ex :=
+    fitsExit_unknown payload.1.1
+  -- the store edit: the scope closed with the callback's exit
+  obtain ⟨ord, restated⟩ := configTyped_closeState ev.typed hentry hexFits
+  have ev1 : Evaluating root rootTy { w with state := s } { m with state := s } rest f y :=
+    ⟨restated, ev.stale, ev.running, ev.live⟩
+  -- any code typed at the callback's position, at the restored context's keys, settles
+  suffices settles : ∀ code, AmbientProg root w prev.services.keysRow tin.1 code →
+      SettlesTyped root rootTy w f.id rest
+        ⟨{ m with state := s }, resetFiber f prev prev.maxOpsBeforeYield prev.preventYield
+          { fr with current := code }, y, .continue_, [], []⟩ by
+    have finsAdm := finalizersAdmitted_of_typedState ev.typed.machine
+    rw [wide.state] at finsAdm
+    have installs := closeScopeUnsafe_ambient root w sc ex false m.state s program finsAdm hexFits
+      (hprog false) prev.services.keysRow
+    cases program with
+    | none =>
+      have glue : prepareIterR ⟨m, { f with frame := fr }, y, .continue_, [], []⟩ =
+          ⟨{ m with state := s }, resetFiber f prev prev.maxOpsBeforeYield prev.preventYield
+            { fr with current := .vis (.inr (.finishFinalizer ex)) next }, y, .continue_, [], []⟩ := by
+        simp only [prepareIterR, prepareScopedExitR, answerR, hcur, prepareR, hprog]
+      rw [glue]
+      exact settles _ (.finishFinalizer payload ⟨entry, wf⟩)
+    | some c =>
+      have glue : prepareIterR ⟨m, { f with frame := fr }, y, .continue_, [], []⟩ =
+          ⟨{ m with state := s }, resetFiber f prev prev.maxOpsBeforeYield prev.preventYield
+            { fr with current := (finalizerR ex c).bind next }, y, .continue_, [], []⟩ := by
+        simp only [prepareIterR, prepareScopedExitR, answerR, hcur, prepareR, hprog]
+      rw [glue]
+      exact settles _ (ambient_finalizerBind root payload entry wf (installs c rfl) next)
+  intro code typedCode
+  refine SettlesTyped.mono ord (ev1.settle_ready prev (servicesFit_mono ord services)
+    prev.maxOpsBeforeYield prev.preventYield { fr with current := code } (fun ty' declared' => ?_))
+  have same : ty' = ty := Option.some.inj (declared'.symm.trans declared)
+  subst same
+  exact ⟨prev.services.keysRow, tin, flag,
+    (Provision.satisfies_iff_subset_keysRow _ _).mpr (Row.subset_refl _), bit,
+    ambientProg_mono root ord typedCode,
+    MHostStack.races (racesKept_of_eq (m := m.update f)
+      (m' := ({ m with state := s } : RState).update f) fun _ => rfl) (MHostStack.mono ord stack),
+    ⟨prov.recorded, prov.deferred⟩⟩
 
 /-- **A walk that stopped at a registration marker settles typed**: the glue leaves the marker, and
 `settle` queues `loop`, which reads no code of a marker-current fiber. -/
@@ -2056,15 +2225,142 @@ theorem clause_ambientScope (root : ProgramSource) (rootTy : EffTy) :
 
 /-! ## `scoped`: a scope made, the context extended, the body guarded -/
 
-/-- **`scoped`** (`internal/effect.ts:3938-3948`, decisions row 188 (a)): a fresh scope made, the
-fiber's context extended with it, and the body run under the `onExit` guard bound to the scope's
-exit callback over the saved answer frame keep `I`. Planned with the scoped exit's close
-(`Evaluating.settle_callback`): the restore slot (owner's ruling, 2026-10-12) restates the guard's
-callback, and the slice that lands it proves this goal.
-Consumer: `deliver_preserves_of_clauses` through `Clauses/All.lean`. -/
+/-- **The `scoped` arm's code at the ambient judgment** (decisions row 188 (a); the ambient instance
+of `scopedGuardBind_typed`, `Typed/Seq.lean`): the `onExit false` guard over a body typed at `mid`,
+bound to the scope's exit callback, is typed at `result` when the scope is present, the context the
+callback restores fits, and every exit of `mid` lands at `result` within that context's keys
+(`ProgramArrow.scopedGuard`, `Typed/Residual.lean`, whose `widen` reads those keys). The body closes
+by `ProgramArrow.close`. A step of the claim `step-deliver-preserves`; consumer: `clause_scoped`. -/
+theorem ambient_scopedGuardBind (root : ProgramSource) {w : World} {row : Env.Requirement}
+    {mid result : AmbientPosition} {a : RProgram} {prev : Ctx} {sc : Nat}
+    {j : ExitV → RProgram} (ha : AmbientProg root w row mid a) (live : ScopeLive w sc)
+    (services : ServicesFit w prev.services)
+    (widen : ∀ w', w.leHost w' → ∀ ex, AmbientExit w' (ambientInput mid ex) mid ex →
+      AmbientExit w' prev.services.keysRow result ex)
+    (entry : Row.Subset result.failureRow row) (wf : result.WF) :
+    AmbientProg root w row result
+      ((guardR (.onExit false) a).bind fun ex => .vis (.inr (.scopeExit prev sc ex)) j) := by
+  show AmbientProg root w row result (.vis (.inr (.guard_ (.onExit false))) _)
+  refine .scopedGuard mid prev sc ?_ (fun _ => rfl) live services widen ⟨entry, wf⟩
+  show AmbientProg root w row mid
+    ((a.bind fun ex => .vis (.inr (.unguard ex)) Effects.Program.pure).bind _)
+  rw [Effects.Program.bind_assoc]
+  exact ProgramArrow.close ha fun ex => .vis (.inr (.scopeExit prev sc ex)) j
+
+/-- **`scoped`** (`internal/effect.ts:3938-3948`, decisions row 188 (a)): a fresh sequential scope
+made in the store (the `scopeMake` row's step, so the store's order, well-formedness and typing are
+the row's, and the new entry is empty), the fiber's context extended with it (`withScope`; the scope
+service fits because the scope is present), and the body run under the `onExit` guard bound to the
+scope's exit callback (`ambient_scopedGuardBind`) over the saved answer frame keep `I`. The body
+runs at the new context's keys, which hold the operation's row and the body's requirement row (the
+pre gives that row without the scope key, `bodyRequires`; the install adds the key). The guard's
+exits land at the operation's row, which the previous context's keys hold. The world grows by the
+store. Consumer: `deliver_preserves_of_clauses` through `Clauses/All.lean`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
-proof_goal clause_scoped (root : ProgramSource) (rootTy : EffTy) (body : Point) :
-    FiberClauseKeeps root rootTy (.scoped body)
+theorem clause_scoped (root : ProgramSource) (rootTy : EffTy) (body : Point) :
+    FiberClauseKeeps root rootTy (.scoped body) := by
+  intro w m rest f y next ev hc
+  have wide := ev.typed.machine.wide
+  have c5 : ServicesFit w f.context.services :=
+    (ev.typed.machine.fiber (rfiber?_mem ev.look)).ok.c5
+  obtain ⟨ty, declared⟩ := ev.declared
+  obtain ⟨row, tin, flag, covered, bit, current, stack, prov⟩ :=
+    ev.code (by rw [hc]; rfl) ty declared
+  rw [hc] at current
+  obtain ⟨cert, ⟨⟨hpt, hstk⟩, hreq⟩, typedNext, _, _⟩ := ambientProg_fiber_inv current
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  change EffTy at cert
+  change Row.Subset (Row.diff cert.requires (Env.Requirement.single Env.scopeKey)) row at hreq
+  -- the store with the new scope: the `scopeMake` row's step
+  let scope := m.state.nextName
+  let s : Stores :=
+    { m.state with scopes := m.state.scopes.make scope .sequential, nextName := scope + 1 }
+  have step : syncOpStep (.scopeMake .sequential) m.state = some (s, Val.scopeHandle scope) :=
+    syncOpStep_scopeMake m.state .sequential
+  have le : m.state.le s := syncOpStep_le _ _ _ _ step
+  have swf : s.WF := syncOpStep_wf _ _ _ _ wide.wf rfl step
+  have ord : w.leHost { w with state := s } :=
+    leHost_restate (by rw [wide.state]; exact le) (by rw [wide.state]; rfl)
+      (by rw [wide.state]; rfl) (by rw [wide.state]; rfl)
+  have stores : StoresOk (preds root) { w with state := s } Expect.root s := by
+    obtain ⟨c0, c1, c2, ⟨c3⟩, c4, _⟩ := storesOk_world ord rfl rfl rfl wide.stores
+    refine ⟨c0, c1, c2, ⟨fun e he => ?_⟩, c4, trivial⟩
+    change e ∈ m.state.scopes.entries ++ [⟨scope, Scope.make .sequential⟩] at he
+    rcases List.mem_append.mp he with old | new
+    · exact c3 e old
+    · rw [List.mem_singleton] at new
+      subst new
+      exact ⟨⟨trivial⟩⟩
+  obtain ⟨_, restated⟩ := configTyped_restate ev.typed le rfl rfl rfl swf stores
+    (Guard.internalKeys_state_subset _ s
+      (Guard.storeKeys_mono (List.Subset.refl _) (List.Subset.refl _)))
+    (fun o ho owner priority mode => wide.live.dueOwners o ho owner priority mode)
+    (List.Subset.refl _)
+  have live' : ScopeLive { w with state := s } scope := ScopeStore.entryAt_make_self _ _ _
+  have ev1 : Evaluating root rootTy { w with state := s } { m with state := s } rest f y :=
+    ⟨restated, ev.stale, ev.running, ev.live⟩
+  -- the context with the scope installed, its services fitting
+  let ctx := f.context.withScope scope
+  have handle := fits_scopeHandle _ _ live'
+  have carrier : ({ w with state := s } : World).serviceTy Env.scopeKey = some Ty.scope := by
+    show w.serviceTy Env.scopeKey = some Ty.scope
+    rw [ev.typed.machine.services]
+    exact serviceTy_scopeKey _
+  have services : ServicesFit { w with state := s } ctx.services := by
+    show ServicesFit _ (f.context.services.addV Env.scopeKey (Value.scope scope))
+    exact servicesFit_addV (servicesFit_mono ord c5) carrier (fits_flatFits rfl handle)
+      (fits_live _ _ _ handle)
+  -- the body's row: the new context's keys, which hold the operation's row and the body's
+  have kept : ctx.services.Satisfies row := satisfies_addV Env.scopeKey (Value.scope scope) covered
+  have scopeCovers : ctx.services.Satisfies cert.requires := by
+    intro k member
+    by_cases isScope : k = Env.scopeKey
+    · subst isScope
+      show ((f.context.services.addV Env.scopeKey (Value.scope scope)).getV Env.scopeKey).isSome =
+        true
+      rw [Env.Context.getV_addV_same]
+      rfl
+    · exact kept k (hreq k
+        ((Row.mem_diff k _ _).mpr ⟨member, fun h => isScope ((Row.mem_singleton _ _).mp h)⟩))
+  have rowSub : Row.Subset row ctx.services.keysRow :=
+    (Provision.satisfies_iff_subset_keysRow _ _).mp kept
+  have restored : Row.Subset row f.context.services.keysRow :=
+    (Provision.satisfies_iff_subset_keysRow _ _).mp covered
+  -- the body at the new context's keys, guarded by the scope's exit callback
+  have typedBody : AmbientProg root { w with state := s } ctx.services.keysRow
+      (((cert, ctx.services.keysRow, ctx.services.keysRow) : AmbientPosition))
+      (bodyR (interpRAt root.program m.completedExits) (.at_ body)) :=
+    denoteAt_ambient root (w := { w with state := s }) ev.typed.machine.sourceWF
+      ev.typed.machine.services (pointTyped_mono ord hpt)
+      ((Provision.satisfies_iff_subset_keysRow _ _).mp scopeCovers)
+      (ambientStackTyped_widen rowSub (ambientStackTyped_mono ord hstk))
+  have typedCode : AmbientProg root { w with state := s } ctx.services.keysRow
+      (((cert, row, row) : AmbientPosition))
+      ((guardR (.onExit false) (bodyR (interpRAt root.program m.completedExits) (.at_ body))).bind
+        fun ex => .vis (.inr (.scopeExit f.context scope ex)) Effects.Program.pure) :=
+    ambient_scopedGuardBind root (result := ((cert, row, row) : AmbientPosition))
+      (j := Effects.Program.pure) typedBody live' (servicesFit_mono ord c5)
+      (fun _ _ ex hex => ⟨hex.1, by cases ex <;> exact restored⟩) rowSub (Row.subset_refl _)
+  -- the answer frame carries the body's exit to the continuation at the operation's row
+  have answerFrame : MFrame root { w with state := s }
+      ((((cert, row, row) : AmbientPosition)), tin.2) (tin.1, tin.2) (.answer next) :=
+    .answer next fun w'' o ex hex => by
+      rw [ambientInput_const]
+      exact typedNext w'' (leHost_trans _ _ _ ord o) ex hex.1
+  let fr' : RSaved := { f.frame with
+    current := (guardR (.onExit false)
+      (bodyR (interpRAt root.program m.completedExits) (.at_ body))).bind
+        fun ex => .vis (.inr (.scopeExit f.context scope ex)) Effects.Program.pure
+    stack := .answer next :: f.frame.stack }
+  refine SettlesTyped.mono ord (ev1.settle_reset ctx services ctx.maxOpsBeforeYield
+    ctx.preventYield fr' (fun ty' declared' => ?_))
+  have same : ty' = ty := Option.some.inj (declared'.symm.trans declared)
+  subst same
+  exact ⟨ctx.services.keysRow, ((((cert, row, row) : AmbientPosition)), tin.2), flag,
+    (Provision.satisfies_iff_subset_keysRow _ _).mpr (Row.subset_refl _), bit, typedCode,
+    .cons (.inl answerFrame) (MHostStack.races (racesKept_of_eq (m := m.update f)
+      (m' := ({ m with state := s } : RState).update f) fun _ => rfl) (MHostStack.mono ord stack)),
+    ⟨prov.recorded, prov.deferred⟩⟩
 
 /-! ## `interruptScoped`: the scope's fiber finalizer -/
 
