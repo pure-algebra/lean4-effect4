@@ -65,6 +65,50 @@ def core : List Ty :=
   , .exitOf .nat .string, .causeOf .string, .fiberOf .nat .string, .union .nat .string
   , .refOf .nat, .deferredOf .nat .string, refT, Ty.scope ]
 
+/-- Records: one required field, the same field optional, a wider record, the empty record. -/
+def records : List Ty :=
+  [ .record [("a", false, .nat)], .record [("a", true, .nat)]
+  , .record [("a", false, .nat), ("b", false, .string)], .record [("a", false, .unknown)]
+  , .record [], .unknown, .never ]
+
+/-- Tuples at arities zero, one and three, and one with an element below another's. -/
+def tuples : List Ty :=
+  [ .tuple [], .tuple [.nat], .tuple [.nat, .string, .bool], .tuple [.never, .string, .bool]
+  , .list .nat, .unknown ]
+
+/-- String-keyed maps at three value types. -/
+def maps : List Ty :=
+  [ .map .string .nat, .map .string .unknown, .map .string .never, .record [("a", false, .nat)]
+  , .unknown ]
+
+/-- A pair at a literal position, its union of pairs, and their parts. -/
+def literalPairs : List Ty :=
+  [ .prod (.union (.lit "a") (.lit "b")) .bool
+  , .union (.prod (.lit "a") .bool) (.prod (.lit "b") .bool)
+  , .prod (.lit "a") .bool, .prod .string .bool ]
+
+/-- The first `k` letters as string literal types. -/
+def letters (k : Nat) : List Ty := (List.range k).map fun i => .lit (toString (Char.ofNat (97 + i)))
+
+/-- A right-nested union of a nonempty list of types. -/
+def unionOf : List Ty → Ty
+  | [] => .never
+  | [t] => t
+  | t :: ts => .union t (unionOf ts)
+
+/-- Every tuple over the alphabets of its positions. -/
+def tuplesOver : List (List Ty) → List (List Ty)
+  | [] => [[]]
+  | xs :: rest => xs.flatMap fun x => (tuplesOver rest).map (x :: ·)
+
+/-- A tuple whose positions are unions of literals, beside the union of all its tuples: three
+positions of three (27 combinations) and two of five (25). -/
+def bounds : List Ty :=
+  let wide := List.replicate 3 (letters 3)
+  let narrow := List.replicate 2 (letters 5)
+  [ .tuple (wide.map unionOf), unionOf ((tuplesOver wide).map Ty.tuple)
+  , .tuple (narrow.map unionOf), unionOf ((tuplesOver narrow).map Ty.tuple) ]
+
 /-- The alphabet each variance probe ranges over. -/
 def probe : List Ty := [.never, .unknown, .nat, .string]
 
@@ -90,7 +134,17 @@ def families : List (String × List Ty × List Ty) :=
              [.union .nat .string, .nat, .string, .never, .unknown, .union .nat (.lit "a")])
     -- where the printer is not injective: two `Ty` with one target spelling. The order can
     -- tell them apart and the target cannot, which is a cut, not a disagreement.
-  , ("spelling", [.nat, .int, .refOf .nat, refT], [.nat, .int, .refOf .nat, refT]) ]
+  , ("spelling", [.nat, .int, .refOf .nat, refT], [.nat, .int, .refOf .nat, refT])
+    -- the data wave's heads (rows 119, 125, 159; the type interface note, R-T3): records with
+    -- required and optional fields, tuples at three arities, string-keyed maps, and a pair at a
+    -- literal position beside its union of pairs, where tsgo decomposes.
+  , ("record", records, records)
+  , ("tuple", tuples, tuples)
+  , ("map", maps, maps)
+  , ("literalPair", literalPairs, literalPairs)
+    -- tsgo's bound on the decomposition (`typeRelatedToDiscriminatedType`): 27 combinations
+    -- refuse, 25 relate.
+  , ("bound", bounds, bounds) ]
 
 /-- The two gaps a pair can witness (§5.2), first. -/
 def gaps : List (String × Ty × Ty) :=

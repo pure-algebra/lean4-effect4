@@ -296,7 +296,8 @@ theorem emitModule_complete {program : NativeEff} {table : RowTable} {name : Str
       .ok (classes, classDecls))
     (readable : moduleReadable classes (nativeSignature table) program = true)
     (types : declarationTypeRepresentable typing.ty = true)
-    (annotations : annotationRefusal program = none) :
+    (annotations : annotationRefusal program = none)
+    (inProfile : natLiteralsInProfile program = true) :
     ∃ emission, emitModule name program table = .ok emission := by
   obtain ⟨decls, printed⟩ := printModule_readable readable name typing.ty types
   obtain ⟨_, _, hoisted, plain, _, _, _⟩ := moduleReadable_pieces readable
@@ -307,7 +308,7 @@ theorem emitModule_complete {program : NativeEff} {table : RowTable} {name : Str
       lawful_rowNamesSafe lawful, noDefs, defsNameFault, blockParamsFault, classNameFault,
       List.findSome?_nil, serviceNamesFault_nil, classified,
       annotations, printed]
-  exact ⟨⟨formed, typing, classes, classDecls, classified, decls, generated⟩,
+  exact ⟨⟨formed, typing, inProfile, classes, classDecls, classified, decls, generated⟩,
     ModuleEmission.recheck _⟩
 
 end Effect4.Codegen

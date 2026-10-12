@@ -7,13 +7,13 @@ you. Then read this folder's `README.md` and the earlier note
 
 ## The one thing to know first
 
-**Newest, 2026-10-11 15:45: R2 is merged; item 11's first two steps landed beside you.**
+**Newest, 2026-10-11 18:30: items 10 and R2 are merged; item 11's first two steps landed beside you.**
 
 - R2 merged by fast-forward at `6c4bb709d` (`AUDIT.md`, section 15:40: improving in structure,
   private analyses flat). `E4-RUN-CE-046` is repaired; its behaviour gates are owed at the sweep.
-- Item 10's two open points are in your `codex/machine-fields` tree: keep going. Add one more:
-  the `observe` write is spelled in `Edit.apply` and in `applyFiberEdit`. Give it one
-  `RunMachine.observe` beside `dropToken`.
+- Item 10 has landed in full (`AUDIT.md`, section 18:30): one footprint function, one frame
+  theorem, one `RunMachine.dropToken` and one `RunMachine.observe`. Next: item 12 as your plan
+  has it, then item 11's caller moves below.
 - Item 11, steps 1 and 2, landed at `58e25fd59`, with no existing module edited:
   - `Effect4.ListRel` (`Laws/Data/ListRel.lean`) carries `Book.lean`'s lemmas under their names
     and statements. `Laws/Data/ListRelConnectors.lean` connects `Machine.ListRel`,
