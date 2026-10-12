@@ -822,8 +822,7 @@ structure Wire where
 /-- The runs that the lane keeps out for a reason that no rule of `performable` measures, each by
 its name: a finding of the target type check, stated with its evidence. -/
 def keptOut : List (String × String) :=
-  [ ("routing/exact-escape",
-      "tsgo 7 refuses the printed module of the exact error column (TS2375, twice): the lane runs only a module that type-checks") ]
+  []
 
 /-- The host runs of a scenario: each named run of its battery's record, in the record's order.
 A run's name is the record's quoted name: the scenario's name, a slash and the run's name
