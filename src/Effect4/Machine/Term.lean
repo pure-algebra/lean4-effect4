@@ -349,7 +349,7 @@ def row : NativeAtom → AtomRow
         prelude := "(): Option.Option<never> => Option.none()" }
   | .mul =>
       { name := "mul", arity := some 2, constGeneric := false,
-        prelude := "(a: number, b: number): number => a * b" }
+        prelude := "(a: number, b: number): number => inProfile(a * b)" }
   | .listNil =>
       { name := "nil", arity := some 0, constGeneric := false,
         prelude := "(): ReadonlyArray<never> => []" }
@@ -537,7 +537,7 @@ def eval : NativeAtom → List Val → Option Val
   | .ite, [Val.bool c, a, b] => some (if c then a else b)
   | .optSome, [a] => some (Store.Val.some a)
   | .optNone, [] => some Store.Val.none
-  | .mul, [Val.nat a, Val.nat b] => some (Val.nat (a * b))
+  | .mul, [Val.nat a, Val.nat b] => some (Val.nat (Profile.scale a b))
   | .listNil, [] => some (Val.list [])
   | .listCons, [x, xs] => (Val.asList? xs).map fun vs => Val.list (x :: vs)
   | .listGet, [xs, Val.nat i] =>

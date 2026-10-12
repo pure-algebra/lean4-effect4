@@ -1,12 +1,12 @@
 import Effect4.Api
 
 /-!
-# `E4-RUN-CE-047`: `mul` answers outside the profile, three ways (seeded)
+# `E4-RUN-CE-047`: `mul` answers outside the profile, three ways (retained control)
 
 Row 321 marks every growing natural operation with `Profile.grow`, so that a face can refuse a
 result above the profile's bound (DI-56): `succ`, `add`, `plus` and `minus`
-(`src/Effect4/Machine/Integers.lean`). The atom `mul` is not marked. Lean's evaluator answers the
-exact product (`NativeAtom.eval`, `src/Effect4/Machine/Term.lean`), and the two faces answer
+(`src/Effect4/Machine/Integers.lean`). The original atom `mul` lacked that mark. Lean's evaluator answers the
+exact product (`NativeAtom.eval`, `src/Effect4/Machine/Term.lean`), and the original two faces answered
 otherwise, with no refusal:
 
 - the TypeScript prelude is `(a: number, b: number): number => a * b`, which rounds above 2^53:
@@ -35,8 +35,9 @@ def a : Nat := 2 ^ 27 + 1
 #guard NativeAtom.eval .mul [.nat a, .nat a] = some (.nat 18014398777917441)
 #guard rc112.natBound < 18014398777917441
 
--- The TypeScript prelude multiplies binary64 numbers.
-#guard (NativeAtom.row .mul).prelude = "(a: number, b: number): number => a * b"
+-- The repaired prelude checks its result before exposing it.
+#guard (NativeAtom.row .mul).prelude = "(a: number, b: number): number => inProfile(a * b)"
+#guard NativeAtom.eval .mul [.nat a, .nat a] = some (.nat (Profile.scale a a))
 
 -- Control: `add` goes through the profile's mark, so its faces can refuse.
 #guard NativeAtom.eval .add [.nat a, .nat a] = some (.nat (Profile.grow a a))
