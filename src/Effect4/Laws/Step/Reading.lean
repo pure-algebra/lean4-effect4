@@ -1,5 +1,6 @@
 import Effect4.Library.Words
 import Effect4.Laws.Step.Table
+import Effect4.Laws.Data.ListRel
 import Effect4.Laws.Program.Authoring.Folds
 import Effect4.Laws.Program.Typed.ListFold
 
@@ -85,19 +86,13 @@ theorem reads_nat (n : Nat) (env : Env) (path : List Nat) (vals : List Val) :
 theorem reads_bool (b : Bool) (env : Env) (path : List Nat) (vals : List Val) :
     Reads (bool b) env path vals (Val.bool b) := reads_lit _ env path vals rfl
 
-/-- Two lists related entry by entry. -/
-inductive Pointwise {α β : Type} (r : α → β → Prop) : List α → List β → Prop
-  | nil : Pointwise r [] []
-  | cons {a : α} {b : β} {as : List α} {bs : List β} :
-    r a b → Pointwise r as bs → Pointwise r (a :: as) (b :: bs)
-
 /-- The sources read the values, one by one. -/
 abbrev ReadsAll (srcs : List TermSrc) (env : Env) (path : List Nat) (vals : List Val)
     (vs : List Val) : Prop :=
-  Pointwise (fun src v => Reads src env path vals v) srcs vs
+  ListRel (fun src v => Reads src env path vals v) srcs vs
 
 theorem mapM_loop_ok {α β ε : Type} (f : α → Except ε β) :
-    ∀ (xs : List α) (ys acc : List β), Pointwise (fun x y => f x = .ok y) xs ys →
+    ∀ (xs : List α) (ys acc : List β), ListRel (fun x y => f x = .ok y) xs ys →
       List.mapM.loop f xs acc = .ok (acc.reverse ++ ys)
   | [], _, acc, h => by
     cases h
@@ -114,11 +109,11 @@ theorem mapM_loop_ok {α β ε : Type} (f : α → Except ε β) :
       rfl
 
 theorem mapM_ok {α β ε : Type} (f : α → Except ε β) (xs : List α) (ys : List β)
-    (h : Pointwise (fun x y => f x = .ok y) xs ys) : xs.mapM f = .ok ys :=
+    (h : ListRel (fun x y => f x = .ok y) xs ys) : xs.mapM f = .ok ys :=
   mapM_loop_ok f xs ys [] h
 
 theorem evalTerms_ok (vals : List Val) :
-    ∀ (ts : List Term) (vs : List Val), Pointwise (fun t v => evalTerm vals t = some v) ts vs →
+    ∀ (ts : List Term) (vs : List Val), ListRel (fun t v => evalTerm vals t = some v) ts vs →
       evalTerms vals (termsOfList ts) = some vs
   | [], _, h => by cases h; rfl
   | t :: ts, _, h => by
@@ -132,8 +127,8 @@ theorem evalTerms_ok (vals : List Val) :
 /-- The trees of sources that read values, with the values of the trees. -/
 theorem ReadsAll.trees {srcs : List TermSrc} {env : Env} {path : List Nat} {vals vs : List Val}
     (h : ReadsAll srcs env path vals vs) :
-    ∃ ts, Pointwise (fun (src : TermSrc) t => src env path = .ok t) srcs ts ∧
-      Pointwise (fun t v => evalTerm vals t = some v) ts vs := by
+    ∃ ts, ListRel (fun (src : TermSrc) t => src env path = .ok t) srcs ts ∧
+      ListRel (fun t v => evalTerm vals t = some v) ts vs := by
   induction h with
   | nil => exact ⟨[], .nil, .nil⟩
   | cons head _ ih =>
@@ -191,12 +186,9 @@ theorem reads_recordSet {target replacement : TermSrc} {env : Env} {path : List 
 
 /-- A relation on the images of a map is the relation through the map. -/
 theorem Pointwise.of_map {α β γ : Type} {r : β → γ → Prop} {f : α → β} :
-    ∀ {xs : List α} {ys : List γ}, Pointwise r (xs.map f) ys →
-      Pointwise (fun x y => r (f x) y) xs ys
-  | [], _, h => by cases h; exact .nil
-  | _ :: _, _, h => by
-    cases h with
-    | cons head tail => exact .cons head (Pointwise.of_map tail)
+    ∀ {xs : List α} {ys : List γ}, ListRel r (xs.map f) ys →
+      ListRel (fun x y => r (f x) y) xs ys :=
+  fun h => ListRel.of_map_left h
 
 /-- A record construction reads the record that its present values build. -/
 theorem reads_record {fields : List (String × Bool × Ty)} {present : List (String × TermSrc)}
