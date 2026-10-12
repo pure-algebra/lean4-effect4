@@ -36,6 +36,26 @@ theorem completion_reply (answer : Completion Val Err Defect FiberId Ann) :
   | ofExit exit => cases exit <;> constructor
   | ofRefGet cell => exact .refGet cell
 
+/-- Actual immediate asynchronous replies use the same native terminal payloads.
+Consumer: source-opportunity and Atomic writer primitive debit under R11. -/
+theorem register_reply (root : NativeEff) (view : List (FiberId × ExitV)) (table : RowTable)
+    (callback : EffName) (owner : FiberId) (token : Nat) (state : Stores) (code : NCode)
+    (produced : ((interpAt root view table).registerAsync callback owner token state).2 = some code) :
+    TerminalReply code := by
+  cases callback
+  case registerAwait cell =>
+    obtain ⟨answer, _, result⟩ := Option.map_eq_some_iff.mp produced
+    rw [← result]
+    exact completion_reply answer
+  case store callback =>
+    cases callback
+    case registerAwait cell =>
+      obtain ⟨answer, _, result⟩ := Option.map_eq_some_iff.mp produced
+      rw [← result]
+      exact completion_reply answer
+    all_goals cases produced
+  all_goals cases produced
+
 /-- Native countdown producers use only exit values or void answers.
 Consumer: source ownership and source-use accounting through actual countdown resumes. -/
 def ResumeAt (_root : NativeEff) : Resume EffName → Prop
