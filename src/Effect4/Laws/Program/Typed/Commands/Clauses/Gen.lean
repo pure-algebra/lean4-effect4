@@ -4,24 +4,30 @@ import Effect4.Laws.Program.Typed.Commands.Clauses.Iter
 # Laws.Program.Typed.Commands.Clauses.Gen — the generator producer's obligation
 
 Concept 4 (`step-deliver-preserves`, `step-loop-preserves`): `GenProtocol` (`Clauses/Iter.lean`,
-decisions row 190), the ledger goal `genProtocol`, the last premise of
-`deliver_preserves` and `step_loop`. A generator entry at a checked point is in the iterator
-protocol, by coinduction (`Contracts.Greatest.coind`) from a source-derived invariant on the walk's
-positions (`walkR`, `Laws/Program/InterpR.lean`; rc.112 `Effect.gen`, `internal/effect.ts:1175-1196`).
+decisions rows 190 and 349), the ledger goal `genProtocol`, the last premise of
+`deliver_preserves` and `step_loop`. A generator entry at a checked point is in the ambient
+iterator protocol, by coinduction (`Contracts.Greatest.coind`) from a source-derived invariant on
+the walk's positions (`walkR`, `Laws/Program/InterpR.lean`; rc.112 `Effect.gen`,
+`internal/effect.ts:1175-1196`).
 
 A position is a block context (`GenCtx`: the top of the body, an `if` branch, a `while` body,
 innermost first), a position `k` in the block, and the environment. It is typed (`PosOk`) when the
 block's suffix from `k` checks (`Checker.checkStmts`, on the expansion the checker reads,
 `Stmts.expandIn`) under a type environment the values fit, with its returns below the generator's
-answer `T` and its errors below `E`, and when what control does on leaving the block is typed:
-falling off (`Fall`: the generator's end, where `unit` must fit `T`, the reachability bit's
-reading, decisions row 190, seat M6E's option (a); the statement after the `if`; the `while` body
-again) and `break` (`Brk`: the statement after the innermost `while`). The checker's reachability
-bits (`GenTy.completes`, `breaks`) gate both: a suffix that cannot complete owes no fall-off.
+answer `T`, its errors below `E` and its requirement row within the frame's row `R`, and when what
+control does on leaving the block is typed: falling off (`Fall`: the generator's end, where `unit`
+must fit `T`, the reachability bit's reading, decisions row 190, seat M6E's option (a); the
+statement after the `if`; the `while` body again) and `break` (`Brk`: the statement after the
+innermost `while`). The checker's reachability bits (`GenTy.completes`, `breaks`) gate both: a
+suffix that cannot complete owes no fall-off.
 
 One walk (`walk_typed`, by induction on its fuel) from a typed position answers a value of `T`, a
-failure below `E`, or a yielded program typed below `E` whose advanced name resumes a typed
-position at every later world; the frontier at exhausted fuel is typed at every type.
+failure below `E`, or a yielded program typed by the ambient judgment at `R` below `E`, whose
+advanced name resumes a typed position at every later world; the frontier at exhausted fuel is
+typed at every type. A yielded program is M5's (`denotesTyped`) at the yield's point: its checked
+requirement row is within `R` (the requirement rows of the checker's statement rules are unions,
+`GenTy.seqT`, `GenTy.mergeT`), and the stack's programs' requirement rows are within `R` (the
+frame invariant carries `AmbientStackTyped` at `R`).
 
 Not established: progress; that a generator finishes.
 -/
@@ -318,13 +324,14 @@ theorem at_frame {root : NativeEff} {P : List Nat} {s : Stmt NativeOp} {rest : S
 mutual
 
 /-- **A typed walk position** at block context `ctx`, position `k`, environment `env`, for the
-generator at `P0` typed at answer `T` and error `E`: the block `block` and its suffix from `k`
-in the source; the suffix checks at `g` under `Γ`, which the environment fits; the environment is
-the block's entry environment `e0` and the block's own bindings so far (`localBinds`, what
-`blockEnv` drops on leaving); the returns lie below `T`, the errors below `E`; and what leaving the
-block owes is typed, gated by the reachability bits. -/
-inductive PosOk (root : ProgramSource) (P0 : List Nat) (w : World) (T E : Ty) :
-    GenCtx → Nat → List Val → Prop where
+generator at `P0` typed at answer `T` and error `E` under the frame's row `R`: the block `block`
+and its suffix from `k` in the source; the suffix checks at `g` under `Γ`, which the environment
+fits; the environment is the block's entry environment `e0` and the block's own bindings so far
+(`localBinds`, what `blockEnv` drops on leaving); the returns lie below `T`, the errors below `E`,
+the requirement row within `R`; and what leaving the block owes is typed, gated by the
+reachability bits. -/
+inductive PosOk (root : ProgramSource) (P0 : List Nat) (w : World) (T E : Ty)
+    (R : Env.Requirement) : GenCtx → Nat → List Val → Prop where
   | mk {ctx : GenCtx} {k : Nat} {env : List Val} (block : Stmts NativeOp) (Γ : List Ty) (g : GenTy)
       (e0 locals : List Val)
       (hblock : Node.at_ (.eff root.program) (P0 ++ [0] ++ ctx.block) = some (.stmts block))
@@ -336,20 +343,21 @@ inductive PosOk (root : ProgramSource) (P0 : List Nat) (w : World) (T E : Ty) :
       (henv : EnvTyped w Γ env) (hsplit : env = e0 ++ locals)
       (hlocals : locals.length = localBinds block k)
       (hanswer : ∀ t, g.answer = some t → Ty.subN t T = true) (herror : Ty.subN g.error E = true)
-      (hfall : g.completes = true → Fall root P0 w T E ctx e0)
-      (hbrk : g.breaks = true → Brk root P0 w T E ctx e0) :
-      PosOk root P0 w T E ctx k env
+      (hreq : Row.Subset g.requires R)
+      (hfall : g.completes = true → Fall root P0 w T E R ctx e0)
+      (hbrk : g.breaks = true → Brk root P0 w T E R ctx e0) :
+      PosOk root P0 w T E R ctx k env
 
 /-- **What falling off a block owes**, at the block's entry environment: at the top, `unit` fits
 the generator's answer; in a branch, the statement after the `if` is typed; in a loop body, the
 body is typed again (and its `break` exits typed). -/
-inductive Fall (root : ProgramSource) (P0 : List Nat) (w : World) (T E : Ty) :
+inductive Fall (root : ProgramSource) (P0 : List Nat) (w : World) (T E : Ty) (R : Env.Requirement) :
     GenCtx → List Val → Prop where
-  | top {e : List Val} (unit : Ty.subN .unit T = true) : Fall root P0 w T E .top e
+  | top {e : List Val} (unit : Ty.subN .unit T = true) : Fall root P0 w T E R .top e
   | branch {c : GenCtx} {k sel : Nat} {e : List Val} (test : Term) (a b rest : Stmts NativeOp)
       (hnode : Node.at_ (.eff root.program) (P0 ++ [0] ++ (c.block ++ List.replicate k 1)) =
         some (.stmts (.cons (.ifElse test a b) rest)))
-      (next : PosOk root P0 w T E c (k + 1) e) : Fall root P0 w T E (.branch c k sel) e
+      (next : PosOk root P0 w T E R c (k + 1) e) : Fall root P0 w T E R (.branch c k sel) e
   | body {c : GenCtx} {k : Nat} {e : List Val} (b rest : Stmts NativeOp) (Γ : List Ty) (gb : GenTy)
       (hnode : Node.at_ (.eff root.program) (P0 ++ [0] ++ (c.block ++ List.replicate k 1)) =
         some (.stmts (.cons (.whileTrue b) rest)))
@@ -358,47 +366,49 @@ inductive Fall (root : ProgramSource) (P0 : List Nat) (w : World) (T E : Ty) :
           .ok gb)
       (henv : EnvTyped w Γ e)
       (hanswer : ∀ t, gb.answer = some t → Ty.subN t T = true) (herror : Ty.subN gb.error E = true)
-      (exit : gb.breaks = true → PosOk root P0 w T E c (k + 1) e) : Fall root P0 w T E (.body c k) e
+      (hreq : Row.Subset gb.requires R)
+      (exit : gb.breaks = true → PosOk root P0 w T E R c (k + 1) e) :
+      Fall root P0 w T E R (.body c k) e
 
 /-- **What a `break` owes**, at the block's entry environment: in a loop body, the statement after
 the `while` is typed; in a branch, the enclosing block's `break`, at its entry environment. -/
-inductive Brk (root : ProgramSource) (P0 : List Nat) (w : World) (T E : Ty) :
+inductive Brk (root : ProgramSource) (P0 : List Nat) (w : World) (T E : Ty) (R : Env.Requirement) :
     GenCtx → List Val → Prop where
-  | top {e : List Val} : Brk root P0 w T E .top e
+  | top {e : List Val} : Brk root P0 w T E R .top e
   | body {c : GenCtx} {k : Nat} {e : List Val} (b rest : Stmts NativeOp)
       (hnode : Node.at_ (.eff root.program) (P0 ++ [0] ++ (c.block ++ List.replicate k 1)) =
         some (.stmts (.cons (.whileTrue b) rest)))
-      (exit : PosOk root P0 w T E c (k + 1) e) : Brk root P0 w T E (.body c k) e
+      (exit : PosOk root P0 w T E R c (k + 1) e) : Brk root P0 w T E R (.body c k) e
   | branch {c : GenCtx} {k sel : Nat} {e : List Val} (test : Term) (a b rest : Stmts NativeOp)
       (hnode : Node.at_ (.eff root.program) (P0 ++ [0] ++ (c.block ++ List.replicate k 1)) =
         some (.stmts (.cons (.ifElse test a b) rest)))
       (block : Stmts NativeOp) (e0 locals : List Val)
       (hblock : Node.at_ (.eff root.program) (P0 ++ [0] ++ c.block) = some (.stmts block))
       (hsplit : e = e0 ++ locals) (hlocals : locals.length = localBinds block k)
-      (outer : Brk root P0 w T E c e0) : Brk root P0 w T E (.branch c k sel) e
+      (outer : Brk root P0 w T E R c e0) : Brk root P0 w T E R (.branch c k sel) e
 
 end
 
 section Mono
-variable {root : ProgramSource} {P0 : List Nat} {w w' : World} {T E : Ty}
+variable {root : ProgramSource} {P0 : List Nat} {w w' : World} {T E : Ty} {R : Env.Requirement}
 
 mutual
 
 theorem PosOk.mono (o : w.leHost w') {ctx : GenCtx} {k : Nat} {env : List Val} :
-    PosOk root P0 w T E ctx k env → PosOk root P0 w' T E ctx k env
-  | .mk block Γ g e0 locals hb hs hc henv hsp hl ha he hf hbr =>
-    .mk block Γ g e0 locals hb hs hc (envTyped_mono o henv) hsp hl ha he
+    PosOk root P0 w T E R ctx k env → PosOk root P0 w' T E R ctx k env
+  | .mk block Γ g e0 locals hb hs hc henv hsp hl ha he hr hf hbr =>
+    .mk block Γ g e0 locals hb hs hc (envTyped_mono o henv) hsp hl ha he hr
       (fun h => Fall.mono o (hf h)) (fun h => Brk.mono o (hbr h))
 
 theorem Fall.mono (o : w.leHost w') {ctx : GenCtx} {e : List Val} :
-    Fall root P0 w T E ctx e → Fall root P0 w' T E ctx e
+    Fall root P0 w T E R ctx e → Fall root P0 w' T E R ctx e
   | .top unit => .top unit
   | .branch test a b rest hnode next => .branch test a b rest hnode (PosOk.mono o next)
-  | .body b rest Γ gb hnode hcheck henv ha he exit =>
-    .body b rest Γ gb hnode hcheck (envTyped_mono o henv) ha he (fun h => PosOk.mono o (exit h))
+  | .body b rest Γ gb hnode hcheck henv ha he hr exit =>
+    .body b rest Γ gb hnode hcheck (envTyped_mono o henv) ha he hr (fun h => PosOk.mono o (exit h))
 
 theorem Brk.mono (o : w.leHost w') {ctx : GenCtx} {e : List Val} :
-    Brk root P0 w T E ctx e → Brk root P0 w' T E ctx e
+    Brk root P0 w T E R ctx e → Brk root P0 w' T E R ctx e
   | .top => .top
   | .body b rest hnode exit => .body b rest hnode (PosOk.mono o exit)
   | .branch test a b rest hnode block e0 locals hblock hsplit hlocals outer =>
@@ -411,20 +421,20 @@ end Mono
 /-! ## Leaving a block -/
 
 section Leaving
-variable {root : ProgramSource} {P0 : List Nat} {w : World} {T E : Ty}
+variable {root : ProgramSource} {P0 : List Nat} {w : World} {T E : Ty} {R : Env.Requirement}
 
 /-- **A loop body's start is typed** from what falling off it owes: the falling off is the same
 obligation, and the body's `break` exits typed. -/
-theorem PosOk.loopStart {c : GenCtx} {k : Nat} {e : List Val} (h : Fall root P0 w T E (.body c k) e) :
-    PosOk root P0 w T E (.body c k) 0 e := by
+theorem PosOk.loopStart {c : GenCtx} {k : Nat} {e : List Val}
+    (h : Fall root P0 w T E R (.body c k) e) : PosOk root P0 w T E R (.body c k) 0 e := by
   cases h with
-  | body b rest Γ gb hnode hcheck henv ha he exit =>
+  | body b rest Γ gb hnode hcheck henv ha he hr exit =>
     have hblock : Node.at_ (.eff root.program) (P0 ++ [0] ++ (GenCtx.body c k).block) =
         some (.stmts b) := by
       rw [GenCtx.block, ← List.append_assoc]
       exact at_frame hnode rfl
     refine .mk b Γ gb e [] hblock ?_ ?_ henv (List.append_nil e).symm (localBinds_zero b).symm ha he
-      (fun _ => .body b rest Γ gb hnode hcheck henv ha he exit)
+      hr (fun _ => .body b rest Γ gb hnode hcheck henv ha he hr exit)
       (fun hb => .body b rest hnode (exit hb))
     · rw [List.replicate_zero, List.append_nil, stmtsDrop_zero]
       exact hblock
@@ -473,9 +483,9 @@ theorem loopExit_typed {p : Point} (hpath : p.path = P0) :
     ∀ (ctx : GenCtx) (depth k : Nat) (env e0 locals : List Val) (block : Stmts NativeOp),
       ctx.depth < depth → ctx.inLoop = true →
       Node.at_ (.eff root.program) (P0 ++ [0] ++ ctx.block) = some (.stmts block) →
-      env = e0 ++ locals → locals.length = localBinds block k → Brk root P0 w T E ctx e0 →
+      env = e0 ++ locals → locals.length = localBinds block k → Brk root P0 w T E R ctx e0 →
       ∃ ctx' k' env', loopExit root.program depth p (ctx.block ++ List.replicate k 1) env =
-        some (ctx'.block ++ List.replicate k' 1, env') ∧ PosOk root P0 w T E ctx' k' env'
+        some (ctx'.block ++ List.replicate k' 1, env') ∧ PosOk root P0 w T E R ctx' k' env'
   | .top, _, _, _, _, _, _, _, hloop, _, _, _, _ => nomatch hloop
   | .body c k', depth, k, env, e0, locals, block, hdepth, _, hblock, hsplit, hlocals, brk => by
     obtain ⟨d, rfl⟩ : ∃ d, depth = d + 1 := ⟨depth - 1, by simp only [GenCtx.depth] at hdepth; omega⟩
@@ -528,6 +538,12 @@ theorem subN_join_both {a b E : Ty} (h : Ty.subN (a.join b) E = true) :
     Ty.subN a E = true ∧ Ty.subN b E = true :=
   ⟨Ty.subN_trans (Ty.subN_join_left a b) h, Ty.subN_trans (Ty.subN_join_right a b) h⟩
 
+/-- The checker's statement rules union their parts' requirement rows (`GenTy.seqT`,
+`GenTy.mergeT`): a union within a row has both parts within it. -/
+theorem subset_union_both {a b R : Env.Requirement} (h : Row.Subset (a.union b) R) :
+    Row.Subset a R ∧ Row.Subset b R :=
+  ⟨Row.subset_trans (Row.subset_union_left a b) h, Row.subset_trans (Row.subset_union_right a b) h⟩
+
 theorem unit_le_genAnswer (g : GenTy) (hc : g.completes = true) :
     Ty.subN .unit g.genAnswer = true := by
   unfold GenTy.genAnswer
@@ -569,42 +585,54 @@ theorem seq_loop_breaks {b r : GenTy} (hb : b.breaks = true) (hr : r.breaks = tr
 
 /-! ## One walk -/
 
-/-- What one walk owes at world `w`: a finished walk's value fits `T`; a halt's cause fits `E`; a
-resumed yield's code is typed at a type whose error lies below `E`, and its advanced name resumes
-a typed position at every later world, the yielded value bound when the name says so. -/
-def WalkOk (root : ProgramSource) (P0 : List Nat) (w : World) (T E : Ty) :
+/-- A live frontier is typed by the ambient judgment at every row and every type: its post admits
+no answer (fuel exhaustion is not an exit, DB-04). -/
+theorem pending_ambient (root : ProgramSource) (w : World) (R : Env.Requirement) (ty : EffTy)
+    (reason : PendingReason) (q : Point) :
+    AmbientProg root w R ((ty, R, R) : AmbientPosition) (pending reason q) :=
+  .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) () True.intro (fun _ _ _ post => (post : False).elim)
+    ⟨Row.subset_refl _, Row.subset_refl _⟩
+
+/-- What one walk owes at world `w` under the frame's row `R`: a finished walk's value fits `T`; a
+halt's cause fits `E`; a resumed yield's code is typed by the ambient judgment at `R` at a type
+whose error lies below `E`, the stack's programs' requirement rows are within `R`, and its advanced
+name resumes a typed position at every later world, the yielded value bound when the name says
+so. -/
+def WalkOk (root : ProgramSource) (P0 : List Nat) (w : World) (T E : Ty) (R : Env.Requirement) :
     IterStep EffName EffThunk Val Err Defect FiberId Ann RProgram → Prop
   | .done v => Fits w v T
   | .halt c => ExitOk w ⟨T, E, Env.Requirement.empty⟩ (.failure c)
   | .resume code name => ∃ (ty : EffTy) (q : Point) (pc : List Nat) (bind : Bool),
       name = .gen q pc bind ∧ q.path = P0 ∧
-      StackTyped root w (scopeParams root.program P0) q.params ∧
-      TypedProg root w ty code ∧ Ty.subN ty.error E = true ∧
+      AmbientStackTyped root w R (scopeParams root.program P0) q.params ∧
+      AmbientProg root w R ((ty, R, R) : AmbientPosition) code ∧ Ty.subN ty.error E = true ∧
       ∀ w', w.leHost w' → ∀ v, Fits w' v ty.answer →
         ∃ ctx k, pc = ctx.block ++ List.replicate k 1 ∧
-          PosOk root P0 w' T E ctx k (if bind then q.env ++ [v] else q.env)
+          PosOk root P0 w' T E R ctx k (if bind then q.env ++ [v] else q.env)
 
 /-- **One walk from a typed position is typed** (`walkR`, by induction on its fuel). -/
 theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
-    (htie : w.serviceTy = root.sig.serviceTy) {P0 : List Nat} {T E : Ty} {p : Point}
-    (hpath : p.path = P0) (view : ViewTyped w p.completed)
+    (htie : w.serviceTy = root.sig.serviceTy) {P0 : List Nat} {T E : Ty} {R : Env.Requirement}
+    {p : Point} (hpath : p.path = P0) (view : ViewTyped w p.completed)
     (hscope : ∀ x, P0 <+: x → scopeParams root.program x = scopeParams root.program P0)
-    (hstack : StackTyped root w (scopeParams root.program P0) p.params) :
+    (hstack : AmbientStackTyped root w R (scopeParams root.program P0) p.params) :
     ∀ (fuel : Nat) (ctx : GenCtx) (k : Nat) (env folded : List Val),
-      PosOk root P0 w T E ctx k env →
-        WalkOk root P0 w T E (walkR root.program p fuel (ctx.block ++ List.replicate k 1) env folded).2 := by
+      PosOk root P0 w T E R ctx k env →
+        WalkOk root P0 w T E R
+          (walkR root.program p fuel (ctx.block ++ List.replicate k 1) env folded).2 := by
   intro fuel
   induction fuel with
   | zero =>
     intro ctx k env folded hpos
     rw [walkR]
     exact ⟨⟨.unit, .never, Env.Requirement.empty⟩, { p with env := env }, _, false, rfl, hpath,
-      hstack, pending_typed root w _ _ _, Bounds.subN_never _,
+      hstack, pending_ambient root w R _ _ _, Bounds.subN_never _,
       fun w' o _ _ => ⟨ctx, k, rfl, hpos.mono o⟩⟩
   | succ fuel ih =>
     intro ctx k env folded hpos
     obtain ⟨block, Γ, g, e0, locals, hblock, hsuffix, hcheck, henv, hsplit, hlocals, hanswer,
-      herror, hfall, hbrk⟩ := hpos
+      herror, hreq, hfall, hbrk⟩ := hpos
     have hat : blockAt root.program p (ctx.block ++ List.replicate k 1) = some (stmtsDrop block k) := by
       unfold blockAt
       rw [hpath, hsuffix]
@@ -623,12 +651,12 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
           (P0 ++ [0] ++ (ctx.block ++ List.replicate k 1) ++ [1])
           (Stmts.expandIn root.program rest) = .ok r →
         EnvTyped w' Γ' (env ++ new) →
-        AnsBelow r.answer T → Ty.subN r.error E = true →
+        AnsBelow r.answer T → Ty.subN r.error E = true → Row.Subset r.requires R →
         (r.completes = true → g.completes = true) → (r.breaks = true → g.breaks = true) →
-        PosOk root P0 w' T E ctx (k + 1) (env ++ new) := by
-      intro s rest r Γ' new w' o hs hnew hr henv' ha he hc hb
+        PosOk root P0 w' T E R ctx (k + 1) (env ++ new) := by
+      intro s rest r Γ' new w' o hs hnew hr henv' ha he hq hc hb
       obtain ⟨hdrop, hbinds⟩ := stmtsDrop_succ k block s rest hs
-      refine .mk block Γ' r e0 (locals ++ new) hblock ?_ ?_ henv' ?_ ?_ ha he
+      refine .mk block Γ' r e0 (locals ++ new) hblock ?_ ?_ henv' ?_ ?_ ha he hq
         (fun h => (hfall (hc h)).mono o) (fun h => (hbrk (hb h)).mono o)
       · have hsuf : Node.at_ (.eff root.program) (P0 ++ [0] ++ (ctx.block ++ List.replicate k 1)) =
             some (.stmts (.cons s rest)) := hs ▸ hsuffix
@@ -659,7 +687,7 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
       | body c k' =>
         have fall' := fall
         cases fall' with
-        | body b rest _ _ hnode _ _ _ _ _ =>
+        | body b rest _ _ hnode _ _ _ _ _ _ =>
           rw [blockExit_body hpath hblock hsplit hlocals hnode]
           exact ih (.body c k') 0 e0 folded (PosOk.loopStart fall)
     | cons s rest =>
@@ -669,6 +697,7 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
         rw [expandIn_bindYield] at hcheck
         obtain ⟨t, r, hct, hcr, rfl⟩ := Checker.inv_stmts_bindYield _ _ _ _ _ _ g hcheck
         have herr := subN_join_both herror
+        have hreqs := subset_union_both hreq
         have hnode : Node.at_ (.eff root.program)
             (p.path ++ [0] ++ (ctx.block ++ List.replicate k 1) ++ [0, 0]) = some (.eff e) := by
           rw [hpath]
@@ -680,11 +709,17 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
         have hpt : PointTyped root w
             { p with path := p.path ++ [0] ++ (ctx.block ++ List.replicate k 1) ++ [0, 0],
                      env := env, fuel := fuel + 1 } t :=
-          pointTyped_scope (hscope _ hq) hnode (by rw [hpath]; exact hct) henv view hstack
+          pointTyped_scope (hscope _ hq) hnode (by rw [hpath]; exact hct) henv view
+            (ambientStackTyped_erases hstack)
+        have hstackq : AmbientStackTyped root w R
+            (scopeParams root.program (p.path ++ [0] ++ (ctx.block ++ List.replicate k 1) ++ [0, 0]))
+            p.params := by
+          rw [hscope _ hq]
+          exact hstack
         have next : ∀ w', w.leHost w' → ∀ v, Fits w' v t.answer →
-            PosOk root P0 w' T E ctx (k + 1) (env ++ [v]) :=
+            PosOk root P0 w' T E R ctx (k + 1) (env ++ [v]) :=
           fun w' o v hv => after _ rest r _ [v] w' o hs rfl hcr
-            (envTyped_append (envTyped_mono o henv) hv) hanswer herr.2 id id
+            (envTyped_append (envTyped_mono o henv) hv) hanswer herr.2 hreqs.2 id id
         simp only
         rw [walkR.yieldOf]
         simp only
@@ -693,7 +728,7 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
                      env := env, fuel := fuel + 1 } with
         | none =>
           exact ⟨t, { p with env := env }, _, true, rfl, hpath, hstack,
-            denotesTyped root hwf w htie _ e t hnode hpt, herr.1,
+            denotesTyped root hwf w htie _ e t hnode hpt R hreqs.1 hstackq, herr.1,
             fun w' o v hv => ⟨ctx, k + 1, hpc, next w' o v hv⟩⟩
         | some ex =>
           have hex := inlineYield_typed (fuel + 1)
@@ -711,6 +746,7 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
         rw [expandIn_yieldDiscard] at hcheck
         obtain ⟨t, r, hct, hcr, rfl⟩ := Checker.inv_stmts_yieldDiscard _ _ _ _ _ _ g hcheck
         have herr := subN_join_both herror
+        have hreqs := subset_union_both hreq
         have hnode : Node.at_ (.eff root.program)
             (p.path ++ [0] ++ (ctx.block ++ List.replicate k 1) ++ [0, 0]) = some (.eff e) := by
           rw [hpath]
@@ -722,11 +758,17 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
         have hpt : PointTyped root w
             { p with path := p.path ++ [0] ++ (ctx.block ++ List.replicate k 1) ++ [0, 0],
                      env := env, fuel := fuel + 1 } t :=
-          pointTyped_scope (hscope _ hq) hnode (by rw [hpath]; exact hct) henv view hstack
-        have next : ∀ w', w.leHost w' → PosOk root P0 w' T E ctx (k + 1) env := by
+          pointTyped_scope (hscope _ hq) hnode (by rw [hpath]; exact hct) henv view
+            (ambientStackTyped_erases hstack)
+        have hstackq : AmbientStackTyped root w R
+            (scopeParams root.program (p.path ++ [0] ++ (ctx.block ++ List.replicate k 1) ++ [0, 0]))
+            p.params := by
+          rw [hscope _ hq]
+          exact hstack
+        have next : ∀ w', w.leHost w' → PosOk root P0 w' T E R ctx (k + 1) env := by
           intro w' o
           have := after _ rest r Γ [] w' o hs rfl hcr (by rw [List.append_nil]; exact envTyped_mono o henv)
-            hanswer herr.2 id id
+            hanswer herr.2 hreqs.2 id id
           rw [List.append_nil] at this
           exact this
         simp only
@@ -736,7 +778,7 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
                      env := env, fuel := fuel + 1 } with
         | none =>
           exact ⟨t, { p with env := env }, _, false, rfl, hpath, hstack,
-            denotesTyped root hwf w htie _ e t hnode hpt, herr.1,
+            denotesTyped root hwf w htie _ e t hnode hpt R hreqs.1 hstackq, herr.1,
             fun w' o _ _ => ⟨ctx, k + 1, hpc, next w' o⟩⟩
         | some ex =>
           have hex := inlineYield_typed (fuel + 1)
@@ -772,12 +814,14 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
         have hansM := ansBelow_join hans.1
         have herrs := subN_join_both herror
         have herrM := subN_join_both herrs.1
+        have hreqs := subset_union_both hreq
+        have hreqM := subset_union_both hreqs.1
         -- the statement after the `if`
         have cont : (ga.completes = true ∨ gb.completes = true) →
-            PosOk root P0 w T E ctx (k + 1) env := by
+            PosOk root P0 w T E R ctx (k + 1) env := by
           intro hbranch
           have := after _ rest r Γ [] w (leHost_refl w) hs rfl hcr
-            (by rw [List.append_nil]; exact henv) hans.2 herrs.2
+            (by rw [List.append_nil]; exact henv) hans.2 herrs.2 hreqs.2
             (fun hr => seq_merge_completes hbranch hr) (fun hr => seq_merge_breaks hbranch hr)
           rw [List.append_nil] at this
           exact this
@@ -786,17 +830,17 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
             Checker.checkStmts (root.scopeSig P0) Γ ctx.inLoop none
               (P0 ++ [0] ++ (ctx.block ++ List.replicate k 1) ++ [0, sel])
               (Stmts.expandIn root.program blk) = .ok gx →
-            AnsBelow gx.answer T → Ty.subN gx.error E = true →
+            AnsBelow gx.answer T → Ty.subN gx.error E = true → Row.Subset gx.requires R →
             (gx.completes = true → ga.completes = true ∨ gb.completes = true) →
             (gx.breaks = true → (ga.breaks || gb.breaks) = true) →
-            PosOk root P0 w T E (.branch ctx k sel) 0 env := by
-          intro sel blk gx hchild hcx hax hex hcx' hbx
+            PosOk root P0 w T E R (.branch ctx k sel) 0 env := by
+          intro sel blk gx hchild hcx hax hex hrx hcx' hbx
           have hblk : Node.at_ (.eff root.program) (P0 ++ [0] ++ (GenCtx.branch ctx k sel).block) =
               some (.stmts blk) := by
             rw [GenCtx.block, ← List.append_assoc]
             exact at_frame hsuffix hchild
           refine .mk blk Γ gx env [] hblk ?_ ?_ henv (List.append_nil env).symm
-            (localBinds_zero blk).symm hax hex
+            (localBinds_zero blk).symm hax hex hrx
             (fun h => .branch test a b rest hsuffix (cont (hcx' h)))
             (fun h => .branch test a b rest hsuffix block e0 locals hblock hsplit hlocals
               (hbrk (seq_merge_breaks_left (hbx h))))
@@ -810,7 +854,7 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
         | true =>
           simp only
           have := ih (.branch ctx k 0) 0 env folded
-            (branchStart 0 a ga rfl hca hansM.1 herrM.1 Or.inl
+            (branchStart 0 a ga rfl hca hansM.1 herrM.1 hreqM.1 Or.inl
               (fun h => by simp only [h, Bool.true_or]))
           rw [show (GenCtx.branch ctx k 0).block ++ List.replicate 0 1 =
             ctx.block ++ List.replicate k 1 ++ [0, 0] by
@@ -819,7 +863,7 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
         | false =>
           simp only
           have := ih (.branch ctx k 1) 0 env folded
-            (branchStart 1 b gb rfl hcb hansM.2 herrM.2 Or.inr
+            (branchStart 1 b gb rfl hcb hansM.2 herrM.2 hreqM.2 Or.inr
               (fun h => by simp only [h, Bool.or_true]))
           rw [show (GenCtx.branch ctx k 1).block ++ List.replicate 0 1 =
             ctx.block ++ List.replicate k 1 ++ [0, 1] by
@@ -830,15 +874,16 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
         obtain ⟨gb, r, hcb, hcr, rfl⟩ := Checker.inv_stmts_whileTrue _ _ _ _ _ _ g hcheck
         have hans := ansBelow_join hanswer
         have herrs := subN_join_both herror
-        have exit : gb.breaks = true → PosOk root P0 w T E ctx (k + 1) env := by
+        have hreqs := subset_union_both hreq
+        have exit : gb.breaks = true → PosOk root P0 w T E R ctx (k + 1) env := by
           intro hbreaks
           have := after _ rest r Γ [] w (leHost_refl w) hs rfl hcr
-            (by rw [List.append_nil]; exact henv) hans.2 herrs.2
+            (by rw [List.append_nil]; exact henv) hans.2 herrs.2 hreqs.2
             (fun hr => seq_loop_completes hbreaks hr) (fun hr => seq_loop_breaks hbreaks hr)
           rw [List.append_nil] at this
           exact this
-        have fall : Fall root P0 w T E (.body ctx k) env :=
-          .body b rest Γ gb hsuffix hcb henv hans.1 herrs.1 exit
+        have fall : Fall root P0 w T E R (.body ctx k) env :=
+          .body b rest Γ gb hsuffix hcb henv hans.1 herrs.1 hreqs.1 exit
         simp only
         have := ih (.body ctx k) 0 env folded (PosOk.loopStart fall)
         rw [show (GenCtx.body ctx k).block ++ List.replicate 0 1 =
@@ -861,24 +906,31 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
 
 /-! ## The protocol -/
 
-/-- **The generator frame's invariant**: the name is a generator position whose resumption, at
-every later world and every value its input admits, is a typed position of the generator at the
-frame's output type; the input's error is the output's. The source's layer references are well
-formed and the world carries the source's service declarations (what M5 reads at a yield). -/
-def GenSt (root : ProgramSource) : IterState → Prop
-  | (w, tin, tout, name) =>
-    SourceWF root ∧ w.serviceTy = root.sig.serviceTy ∧ tin.error = tout.error ∧
+/-- **The generator frame's invariant** at the frame's rows `s`, `f`: the rows are one row; the
+name is a generator position whose resumption, at every later world and every value its input
+admits, is a typed position of the generator at the frame's output type under that row; the
+input's error is the output's. The source's layer references are well formed, the world carries
+the source's service declarations, and the programs the position's stack passes have their
+requirement rows within the row (what M5 reads at a yield). -/
+def GenSt (root : ProgramSource) : AmbientIterState → Prop
+  | (w, s, f, tin, tout, name) =>
+    SourceWF root ∧ w.serviceTy = root.sig.serviceTy ∧ f = s ∧ tin.error = tout.error ∧
       (tout.requires = Env.Requirement.empty → tin.requires = Env.Requirement.empty) ∧
       ∃ (q : Point) (pc : List Nat) (bind : Bool), name = .gen q pc bind ∧
         (∀ x, q.path <+: x → scopeParams root.program x = scopeParams root.program q.path) ∧
-        StackTyped root w (scopeParams root.program q.path) q.params ∧
+        AmbientStackTyped root w s (scopeParams root.program q.path) q.params ∧
         ∀ w', w.leHost w' → ∀ v, Fits w' v tin.answer →
           ∃ ctx k, pc = ctx.block ++ List.replicate k 1 ∧
-            PosOk root q.path w' tout.answer tout.error ctx k (if bind then q.env ++ [v] else q.env)
+            PosOk root q.path w' tout.answer tout.error s ctx k
+              (if bind then q.env ++ [v] else q.env)
 
-/-- **The invariant is closed under one generator step** (`walk_typed` at the machine's view). -/
-theorem genSt_closed {root : ProgramSource} : ∀ s, GenSt root s → IteratorStep root (GenSt root) s := by
-  rintro ⟨w, tin, tout, name⟩ ⟨hwf, htie, herr, hreq, q, pc, bind, rfl, hscope, hstack, pos⟩
+/-- **The invariant is closed under one generator step** (`walk_typed` at the machine's view): a
+resumed yield's code, typed at the row at the yield's type, widens to the frame's input type
+`⟨answer, tout.error, tout.requires⟩` (`ambientProg_widen`). -/
+theorem genSt_closed {root : ProgramSource} :
+    ∀ st, GenSt root st → AmbientIteratorStep root (GenSt root) st := by
+  rintro ⟨w, s, f, tin, tout, name⟩ ⟨hwf, htie, hfs, herr, hreq, q, pc, bind, rfl, hscope, hstack, pos⟩
+  subst hfs
   refine ⟨herr, hreq, fun w' o C view v hv => ?_⟩
   obtain ⟨ctx, k, rfl, hpos⟩ := pos w' o v hv
   have htie' : w'.serviceTy = root.sig.serviceTy := (le_serviceTy o.1).trans htie
@@ -887,7 +939,7 @@ theorem genSt_closed {root : ProgramSource} : ∀ s, GenSt root s → IteratorSt
         (if bind then q.env ++ [v] else q.env) []).2 := rfl
   rw [hstep]
   have walk := walk_typed hwf htie' (P0 := q.path) (p := { q with completed := C }) rfl view hscope
-    (stackTyped_mono o hstack) q.fuel ctx k _ [] hpos
+    (ambientStackTyped_mono o hstack) q.fuel ctx k _ [] hpos
   revert walk
   cases (walkR root.program { q with completed := C } q.fuel (ctx.block ++ List.replicate k 1)
       (if bind then q.env ++ [v] else q.env) []).2 with
@@ -895,29 +947,32 @@ theorem genSt_closed {root : ProgramSource} : ∀ s, GenSt root s → IteratorSt
   | halt c => exact fun hc => exitOk_failure_of_errorN (Ty.subN_refl _) hc
   | resume code name' =>
     rintro ⟨ty, q', pc', bind', rfl, hq', hstack', typed, herr', next⟩
-    refine ⟨⟨ty.answer, tout.error, tout.requires⟩, typedProg_widen root (T := ty) (Ty.subN_refl _) herr' typed,
-      hwf, htie', rfl, fun h => h, q', pc', bind', rfl, ?_, ?_, fun w'' o' v' hv' => ?_⟩
+    refine ⟨⟨ty.answer, tout.error, tout.requires⟩,
+      ambientProg_widen root (before := (ty, f, f)) (after := (⟨ty.answer, tout.error, tout.requires⟩, f, f))
+        (Ty.subN_refl _) herr' (Row.subset_refl _) (Row.subset_refl _) typed,
+      hwf, htie', rfl, rfl, fun h => h, q', pc', bind', rfl, ?_, ?_, fun w'' o' v' hv' => ?_⟩
     · rw [hq']
       exact hscope
     · rw [hq']
       exact hstack'
-
     obtain ⟨ctx', k', hpc, hpos'⟩ := next w'' o' v' hv'
     rw [hq']
     exact ⟨ctx', k', hpc, hpos'⟩
 
-/-- **The generator producer's obligation holds** (decisions row 190): at a checked generator
-point, the entry's name is in the protocol, by coinduction from the body's start, a typed position
-at the top of the body (`Checker.inv_gen` on the expansion, `expandIn_gen`). -/
+/-- **The generator producer's obligation holds** (decisions rows 190 and 349): at a checked
+generator point entered at a row holding its requirement row and its stack's requirement rows, the
+entry's name is in the ambient protocol at that row, by coinduction from the body's start, a typed
+position at the top of the body (`Checker.inv_gen` on the expansion, `expandIn_gen`), whose
+requirement row is the point's. -/
 theorem genProtocol (root : ProgramSource) : GenProtocol root := by
-  intro hwf w htie p body cert hat pre
-  obtain ⟨e, Γ0, hat', hcheck, henv, _, hstack⟩ := pre
+  intro hwf w htie available p body cert hat pre coverage pstack
+  obtain ⟨e, Γ0, hat', hcheck, henv, _, _⟩ := pre
   rw [hat] at hat'
   cases hat'
   rw [expandIn_gen] at hcheck
   obtain ⟨gB, hgB, rfl⟩ := Checker.inv_gen _ _ _ _ _ hcheck
-  refine Greatest.coind genSt_closed ⟨hwf, htie, rfl, fun h => h, p, [], false, rfl,
-    fun x hx => scopeParams_prefix hat (fun _ _ _ _ h => nomatch h) hx, hstack,
+  refine Greatest.coind genSt_closed ⟨hwf, htie, rfl, rfl, fun h => h, p, [], false, rfl,
+    fun x hx => scopeParams_prefix hat (fun _ _ _ _ h => nomatch h) hx, pstack,
     fun w' o _ _ => ⟨.top, 0, rfl, ?_⟩⟩
   have hbody : Node.at_ (.eff root.program) (p.path ++ [0] ++ GenCtx.top.block) =
       some (.stmts body) := by
@@ -925,7 +980,7 @@ theorem genProtocol (root : ProgramSource) : GenProtocol root := by
     exact at_snoc1 hat 0
   refine .mk body Γ0 gB p.env [] hbody ?_ ?_ (envTyped_mono o henv) (List.append_nil _).symm
     (localBinds_zero body).symm
-    (answer_le_genAnswer gB) (Ty.subN_refl _) (fun hc => .top (unit_le_genAnswer gB hc))
+    (answer_le_genAnswer gB) (Ty.subN_refl _) coverage (fun hc => .top (unit_le_genAnswer gB hc))
     (fun _ => .top)
   · rw [List.replicate_zero, List.append_nil, stmtsDrop_zero]
     exact hbody
