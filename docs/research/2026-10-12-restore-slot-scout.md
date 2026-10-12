@@ -82,9 +82,13 @@ budget services apply to the release, as they do in Effect.
   frame is pushed one loop step later. A yield at that step lets an outside interrupt fail the
   fiber with the switched context current and no restore frame. 4.0.1 pushes the frame in the
   same step (`onExitUnsafe`). In our machines a provide region switches under a mask
-  (`updateContextR`), and a release runs inside a finalizer, which is masked. So only `scoped`
-  entry has this window, as in rc.112. The outcome: a scope that an interrupt hits exactly at its
-  entry's yield is never closed.
+  (`updateContextR`). `scoped` entry has this window, as in rc.112. The outcome: a scope that an
+  interrupt hits exactly at its entry's yield is never closed.
+- **Correction (probe, 2026-10-12).** An explicit `Scope.close` runs its close program unmasked
+  (`storesCloseScope` ignores the closer's mask), so a captured release has a two-step window there
+  and can be lost, as on rc.112. 4.0.1 masks `Scope.close`. The `EffThunk.releaseMasked` docstring
+  (`src/Effect4/Program/Compile.lean`) claims every release path is masked; that is false for this
+  path (`docs/research/2026-10-12-probe-scoped-window.md`).
 - **The operation count.** Effect's restore callback returns no effect, so the pop answers the
   exit in one loop step. Ours runs the restore as a finalizer program (`finalizerCode`), which
   takes several steps. Yield points after a region exit can move.

@@ -135,8 +135,8 @@ A program has folds, a journaled run with replay, and a printed image that reads
   `Ty` is the hub, and the JSON codec is its one exact image. A model of tsgo's assignability
   (`src/Effect4/Laws/Codegen/TargetOrder.lean`) agrees with tsgo on every recorded pair of
   `generated/assignability.tsv`. The TypeScript face refuses a natural literal above the profile,
-  on emission and on reading (row 357). `mul` answers outside the profile (`E4-RUN-CE-047`), and
-  the printed type is not monotone (`E4-PRINT-CE-001`; row 346's repair A, with tsgo's bound).
+  on emission and on reading (row 357). TypeScript and OCaml refuse a product outside the profile
+  (`E4-RUN-CE-047`, repaired 2026-10-11). The printed type is not monotone (`E4-PRINT-CE-001`; row 346's repair A, with tsgo's bound).
 - **Partial programs** (R14, row 282). A sketch is a program with its hole table (row 291). The
   replacement law holds over the six typing judgments (row 294). A sketch reads a whole program,
   definition block included: its check, focus, fill, table and refusals (cutover slice S1). An
@@ -213,11 +213,12 @@ A program has folds, a journaled run with replay, and a printed image that reads
   ruled option A: a typed `context` reader and a `provideContext` region, landed on 2026-10-12.
   One ambient judgment types the machine's code (`AmbientProg`,
   `src/Effect4/Laws/Program/Typed/Residual.lean`). Every program's failure row is within its
-  entry row, interruptible or not. Every clause of the typed state keeps it. M6 and M7 hold
-  modulo five planned goals. Four wait on the restore slot: `clause_closeScope`,
-  `Evaluating.settle_callback`, `clause_scoped` and `foreignFinalizer_ambient`. The fifth,
-  `Evaluating.countdown_parks_positional`, needs `J` to rule out a stale or a duplicate countdown
-  firing, which neither rc.112 nor 4.0.1 makes.
+  entry row, interruptible or not. Every clause of the typed state keeps it. A capture's release
+  runs under its captured context merged over the current one (`releaseContext`, Effect's
+  `provideContext`), which proves `foreignFinalizer_ambient` and `clause_closeScope`. M6 and M7
+  hold modulo three planned goals: `Evaluating.settle_callback` and `clause_scoped` (the scoped
+  exit's close), and `Evaluating.countdown_parks_positional`. The last needs `J` to rule out a
+  stale or a duplicate countdown firing, which neither rc.112 nor 4.0.1 makes.
   The printer spells a pair of a union as a union of pairs (`E4-PRINT-CE-001`, row 346, ruled).
 - **Shared accounting** (row 355). A stack ledger states once what the goals lane re-proved per
   scenario: consumed plus held is at most produced, along every reachable machine
@@ -255,11 +256,11 @@ A program has folds, a journaled run with replay, and a printed image that reads
 
 ## Next, in order
 
-000. **The restore slot** (the owner's ruling of 2026-10-12, the
-   [slot plan](research/2026-10-12-restore-slot-plan.md)). A context switch pushes the frame that
-   restores the previous context in the same step, as Effect 4.0.1's `updateContext` does
-   (`onExitUnsafe`); rc.112 leaves a window. The slice changes both machines and proves the four
-   planned goals that wait on it. Then the positional countdown goal.
+000. **The scoped exit's close** (`Evaluating.settle_callback`, `clause_scoped`). The restore
+   slot is retired: no proof needs it, and its two effects are recorded divergences (the
+   [slot scout](research/2026-10-12-restore-slot-scout.md); owner, 2026-10-12). The positional
+   countdown goal changes no run and stays a planned goal. The read-only probes of 2026-10-12
+   (research notes named `2026-10-12-probe-`) rank what comes next by runtime outcome.
 00. **The last planned goals** (the [goals packet](research/2026-10-10-goals-packet/README.md)).
    Codex reached its quota on 2026-10-12, and Claude carries its lane
    (`docs/research/2026-10-11-machine-models/CODEX-PROMPT.md`). Of the fourteen application goals, three are proved

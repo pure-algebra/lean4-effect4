@@ -7932,6 +7932,29 @@ and reasons_of_list (x_1 : val_ list) : (err, defect, int, unit) reason list =
       let _x_3 = E.snoc env a in
       ({ path = path; env = _x_3; fuel = fuel; tape = tape; ctx = ctx; root = root; params = params; call = call } : capture))
 
+  (* LCNF mono: Effect4.Machine.Env.Context.mergeEntries._redArg (self : List (Effect4.Machine.Env.Service lcAny)) (x.1 : List (Effect4.Machine.Env.Service lcAny)) : List (Effect4.Machine.Env.Service lcAny) *)
+  let rec env_context_merge_entries (self : _ service list) (x_1 : _ service list) : _ service list =
+  match x_1 with
+    | [] -> self
+    | head_2 :: tail_3 -> (match (head_2 : _ service) with
+        | { key = key; value = value } -> (let _x_4 = env_context_set_entries key value self in
+          env_context_merge_entries _x_4 tail_3))
+
+  (* LCNF mono: Effect4.Machine.Env.ContextUpdate.apply (x.1 : Effect4.Machine.Env.ContextUpdate) (x.2 : List (Effect4.Machine.Env.Service lcAny)) : List (Effect4.Machine.Env.Service lcAny) *)
+  let env_context_update_apply (x_1 : context_update) (x_2 : _ service list) : _ service list =
+  match (x_1 : context_update) with
+    | ContextUpdate_setTo context_3 -> context_3
+    | ContextUpdate_provide that_4 -> env_context_merge_entries x_2 that_4
+    | ContextUpdate_provideService (key_6, value_7) -> env_context_set_entries key_6 value_7 x_2
+
+  (* LCNF mono: Effect4.Program.releaseContext (previous : Effect4.Machine.Ctx) (captured : Effect4.Machine.Ctx) : Effect4.Machine.Ctx *)
+  let program_release_context (previous : ctx) (captured : ctx) : ctx =
+  match (captured : ctx) with
+    | { services = services; _ } -> (match (previous : ctx) with
+        | { services = services_1; _ } -> (let _x_1 = ContextUpdate_provide services in
+          let _x_2 = env_context_update_apply _x_1 services_1 in
+          ctx_with_services _x_2))
+
   (* LCNF mono: Effect4.Program.Point.layerBuild (p : Effect4.Program.Point) : Effect4.Program.Point *)
   let program_point_layer_build (p : point) : point =
   let _x_1 = 0 in
@@ -7994,21 +8017,6 @@ and reasons_of_list (x_1 : val_ list) : (err, defect, int, unit) reason list =
     | ContextUpdate_provide that_3 -> (let _x_4 = x_2 = [] in
       if _x_4 then false else that_3 = [])
     | _ -> false
-
-  (* LCNF mono: Effect4.Machine.Env.Context.mergeEntries._redArg (self : List (Effect4.Machine.Env.Service lcAny)) (x.1 : List (Effect4.Machine.Env.Service lcAny)) : List (Effect4.Machine.Env.Service lcAny) *)
-  let rec env_context_merge_entries (self : _ service list) (x_1 : _ service list) : _ service list =
-  match x_1 with
-    | [] -> self
-    | head_2 :: tail_3 -> (match (head_2 : _ service) with
-        | { key = key; value = value } -> (let _x_4 = env_context_set_entries key value self in
-          env_context_merge_entries _x_4 tail_3))
-
-  (* LCNF mono: Effect4.Machine.Env.ContextUpdate.apply (x.1 : Effect4.Machine.Env.ContextUpdate) (x.2 : List (Effect4.Machine.Env.Service lcAny)) : List (Effect4.Machine.Env.Service lcAny) *)
-  let env_context_update_apply (x_1 : context_update) (x_2 : _ service list) : _ service list =
-  match (x_1 : context_update) with
-    | ContextUpdate_setTo context_3 -> context_3
-    | ContextUpdate_provide that_4 -> env_context_merge_entries x_2 that_4
-    | ContextUpdate_provideService (key_6, value_7) -> env_context_set_entries key_6 value_7 x_2
 
   (* LCNF mono: Effect4.Program.updateThenK._redArg (update : Effect4.Machine.Env.ContextUpdate) (body : Effect4.Program.Region) (previousFlag : Bool) (v : Effect4.Store.Val) : Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit *)
   let program_update_then_k (update : context_update) (body : region) (previous_flag : bool) (v : val_) : (eff_name, eff_thunk, val_, err, defect, int, unit) prim =
@@ -8421,204 +8429,205 @@ and reasons_of_list (x_1 : val_ list) : (err, defect, int, unit) reason list =
     | EffName_releaseUnder (p_104, ctx_105, exit__106) -> (let _x_107 = val__context_opt x_2 in
       match _x_107 with
         | None -> program_bad_shape
-        | Some val__109 -> (let _x_110 = EffThunk_setCtx ctx_105 in
-          let _x_111 = Prim_withFiber _x_110 in
-          let _x_112 = EffName_releaseBody (p_104, exit__106, val__109) in
-          Prim_onSuccess (_x_111, _x_112)))
-    | EffName_releaseBody (p_114, exit__115, previous_116) -> (let _x_117 = 1 in
-      let _x_118 = reify_exit_val exit__115 in
-      let _x_119 = program_point_child_with p_114 _x_117 _x_118 in
-      let _x_120 = EffThunk_releaseMasked (_x_119, previous_116) in
-      Prim_withFiber _x_120)
-    | EffName_provideLayerWith p_122 -> (match (x_2 : val_) with
-        | Val_handle (kind_123, key_124) -> (let _x_125 = 4 in
-          let _x_126 = kind_123 = _x_125 in
-          if _x_126 then program_provide_layer_with_k root p_122 key_124 else program_bad_shape)
+        | Some val__109 -> (let _x_110 = program_release_context val__109 ctx_105 in
+          let _x_111 = EffThunk_setCtx _x_110 in
+          let _x_112 = Prim_withFiber _x_111 in
+          let _x_113 = EffName_releaseBody (p_104, exit__106, val__109) in
+          Prim_onSuccess (_x_112, _x_113)))
+    | EffName_releaseBody (p_115, exit__116, previous_117) -> (let _x_118 = 1 in
+      let _x_119 = reify_exit_val exit__116 in
+      let _x_120 = program_point_child_with p_115 _x_118 _x_119 in
+      let _x_121 = EffThunk_releaseMasked (_x_120, previous_117) in
+      Prim_withFiber _x_121)
+    | EffName_provideLayerWith p_123 -> (match (x_2 : val_) with
+        | Val_handle (kind_124, key_125) -> (let _x_126 = 4 in
+          let _x_127 = kind_124 = _x_126 in
+          if _x_127 then program_provide_layer_with_k root p_123 key_125 else program_bad_shape)
         | _ -> program_bad_shape)
-    | EffName_provideLayerBody p_130 -> program_provide_layer_body_k root p_130 x_2
-    | EffName_provideMask (update_132, body_133) -> (let _x_134 = val__saved_mask_opt x_2 in
-      match _x_134 with
+    | EffName_provideLayerBody p_131 -> program_provide_layer_body_k root p_131 x_2
+    | EffName_provideMask (update_133, body_134) -> (let _x_135 = val__saved_mask_opt x_2 in
+      match _x_135 with
         | None -> program_bad_shape
-        | Some val__136 -> (let _x_137 = EffThunk_provideMasked (update_132, body_133, val__136) in
-          Prim_withFiber _x_137))
-    | EffName_updateThen (update_139, body_140, previous_flag_141) -> program_update_then_k update_139 body_140 previous_flag_141 x_2
-    | EffName_bodyThen (body_143, previous_144, previous_flag_145) -> (let _x_146 = EffThunk_restoreRegion (body_143, previous_flag_145) in
-      let _x_147 = Prim_withFiber _x_146 in
-      let _x_148 = EffName_restoreCtx previous_144 in
-      let _x_149 = false in
-      Prim_onExit (_x_147, _x_148, _x_149))
-    | EffName_buildWithScopeFromContext (q_151, scope_152) -> program_build_with_scope_k q_151 scope_152 x_2
-    | EffName_withMemoMapThen (q_154, scope_155) -> (match (x_2 : val_) with
-        | Val_handle (kind_156, key_157) -> (let _x_158 = 5 in
-          let _x_159 = kind_156 = _x_158 in
-          if _x_159 then (let _x_161 = env_current_memo_map_key in
-            let _x_162 = Val_handle (_x_158, key_157) in
-            let _x_163 = ContextUpdate_provideService (_x_161, _x_162) in
-            let _x_164 = Region_buildAdding (q_154, key_157, scope_155) in
-            program_update_context_at _x_163 _x_164) else program_bad_shape)
+        | Some val__137 -> (let _x_138 = EffThunk_provideMasked (update_133, body_134, val__137) in
+          Prim_withFiber _x_138))
+    | EffName_updateThen (update_140, body_141, previous_flag_142) -> program_update_then_k update_140 body_141 previous_flag_142 x_2
+    | EffName_bodyThen (body_144, previous_145, previous_flag_146) -> (let _x_147 = EffThunk_restoreRegion (body_144, previous_flag_146) in
+      let _x_148 = Prim_withFiber _x_147 in
+      let _x_149 = EffName_restoreCtx previous_145 in
+      let _x_150 = false in
+      Prim_onExit (_x_148, _x_149, _x_150))
+    | EffName_buildWithScopeFromContext (q_152, scope_153) -> program_build_with_scope_k q_152 scope_153 x_2
+    | EffName_withMemoMapThen (q_155, scope_156) -> (match (x_2 : val_) with
+        | Val_handle (kind_157, key_158) -> (let _x_159 = 5 in
+          let _x_160 = kind_157 = _x_159 in
+          if _x_160 then (let _x_162 = env_current_memo_map_key in
+            let _x_163 = Val_handle (_x_159, key_158) in
+            let _x_164 = ContextUpdate_provideService (_x_162, _x_163) in
+            let _x_165 = Region_buildAdding (q_155, key_158, scope_156) in
+            program_update_context_at _x_164 _x_165) else program_bad_shape)
         | _ -> program_bad_shape)
-    | EffName_addCurrentMemoMap memo_map_167 -> program_add_current_memo_map_k memo_map_167 x_2
-    | EffName_fromBuildThen (q_169, memo_map_170) -> (match (x_2 : val_) with
-        | Val_handle (kind_171, key_172) -> (let _x_173 = 4 in
-          let _x_174 = kind_171 = _x_173 in
-          if _x_174 then (let _x_176 = program_inner_layer_at root q_169 memo_map_170 key_172 in
-            let _x_177 = FinName_closeChildOnFailure key_172 in
-            let _x_178 = Name_finalizerName _x_177 in
-            let _x_179 = EffName_store _x_178 in
-            let _x_180 = false in
-            Prim_onExit (_x_176, _x_179, _x_180)) else program_bad_shape)
+    | EffName_addCurrentMemoMap memo_map_168 -> program_add_current_memo_map_k memo_map_168 x_2
+    | EffName_fromBuildThen (q_170, memo_map_171) -> (match (x_2 : val_) with
+        | Val_handle (kind_172, key_173) -> (let _x_174 = 4 in
+          let _x_175 = kind_172 = _x_174 in
+          if _x_175 then (let _x_177 = program_inner_layer_at root q_170 memo_map_171 key_173 in
+            let _x_178 = FinName_closeChildOnFailure key_173 in
+            let _x_179 = Name_finalizerName _x_178 in
+            let _x_180 = EffName_store _x_179 in
+            let _x_181 = false in
+            Prim_onExit (_x_177, _x_180, _x_181)) else program_bad_shape)
         | _ -> program_bad_shape)
-    | EffName_memoize (q_183, memo_map_184, scope_185) -> (match (x_2 : val_) with
-        | Val_list xs_186 -> (match xs_186 with
-            | head_187 :: tail_188 -> (match (head_187 : val_) with
-                | Val_handle (kind_189, key_190) -> (let _x_191 = 3 in
-                  let _x_192 = kind_189 = _x_191 in
-                  if _x_192 then (match tail_188 with
-                      | head_194 :: tail_195 -> (match (head_194 : val_) with
-                          | Val_handle (kind_196, key_197) -> (let _x_198 = 5 in
-                            let _x_199 = kind_196 = _x_198 in
-                            if _x_199 then (match tail_195 with
-                                | [] -> (let _x_201 = program_point_layer_key q_183 in
-                                  let _x_202 = FinName_memoEntry (_x_201, key_197) in
-                                  let _x_203 = program_scope_add_at scope_185 _x_202 in
-                                  let _x_204 = EffName_awaitPromise key_190 in
-                                  Prim_onSuccess (_x_203, _x_204))
+    | EffName_memoize (q_184, memo_map_185, scope_186) -> (match (x_2 : val_) with
+        | Val_list xs_187 -> (match xs_187 with
+            | head_188 :: tail_189 -> (match (head_188 : val_) with
+                | Val_handle (kind_190, key_191) -> (let _x_192 = 3 in
+                  let _x_193 = kind_190 = _x_192 in
+                  if _x_193 then (match tail_189 with
+                      | head_195 :: tail_196 -> (match (head_195 : val_) with
+                          | Val_handle (kind_197, key_198) -> (let _x_199 = 5 in
+                            let _x_200 = kind_197 = _x_199 in
+                            if _x_200 then (match tail_196 with
+                                | [] -> (let _x_202 = program_point_layer_key q_184 in
+                                  let _x_203 = FinName_memoEntry (_x_202, key_198) in
+                                  let _x_204 = program_scope_add_at scope_186 _x_203 in
+                                  let _x_205 = EffName_awaitPromise key_191 in
+                                  Prim_onSuccess (_x_204, _x_205))
                                 | _ -> program_bad_shape) else program_bad_shape)
                           | _ -> program_bad_shape)
                       | _ -> program_bad_shape) else program_bad_shape)
                 | _ -> program_bad_shape)
             | _ -> program_bad_shape)
-        | Val_unit -> (let _x_211 = program_point_layer_key q_183 in
-          let _x_212 = SyncOp_memoBuild (_x_211, memo_map_184) in
-          let _x_213 = EffThunk_op _x_212 in
-          let _x_214 = Prim_sync _x_213 in
-          let _x_215 = EffName_buildIntoLayerScope (q_183, memo_map_184, scope_185) in
-          Prim_onSuccess (_x_214, _x_215))
+        | Val_unit -> (let _x_212 = program_point_layer_key q_184 in
+          let _x_213 = SyncOp_memoBuild (_x_212, memo_map_185) in
+          let _x_214 = EffThunk_op _x_213 in
+          let _x_215 = Prim_sync _x_214 in
+          let _x_216 = EffName_buildIntoLayerScope (q_184, memo_map_185, scope_186) in
+          Prim_onSuccess (_x_215, _x_216))
         | _ -> program_bad_shape)
-    | EffName_awaitPromise cell_218 -> (let _x_219 = EffName_registerAwait cell_218 in
-      let _x_220 = true in
-      let _x_221 = EffName_cancelAwait cell_218 in
-      let _x_222 = Some _x_221 in
-      Prim_async (_x_219, _x_220, _x_222))
-    | EffName_buildIntoLayerScope (q_224, memo_map_225, scope_226) -> (match (x_2 : val_) with
-        | Val_handle (kind_227, key_228) -> (let _x_229 = 4 in
-          let _x_230 = kind_227 = _x_229 in
-          if _x_230 then (let _x_232 = program_point_layer_key q_224 in
-            let _x_233 = FinName_memoEntry (_x_232, memo_map_225) in
-            let _x_234 = program_scope_add_at scope_226 _x_233 in
-            let _x_235 = EffName_thenBuildInto (q_224, memo_map_225, key_228) in
-            Prim_onSuccess (_x_234, _x_235)) else program_bad_shape)
+    | EffName_awaitPromise cell_219 -> (let _x_220 = EffName_registerAwait cell_219 in
+      let _x_221 = true in
+      let _x_222 = EffName_cancelAwait cell_219 in
+      let _x_223 = Some _x_222 in
+      Prim_async (_x_220, _x_221, _x_223))
+    | EffName_buildIntoLayerScope (q_225, memo_map_226, scope_227) -> (match (x_2 : val_) with
+        | Val_handle (kind_228, key_229) -> (let _x_230 = 4 in
+          let _x_231 = kind_228 = _x_230 in
+          if _x_231 then (let _x_233 = program_point_layer_key q_225 in
+            let _x_234 = FinName_memoEntry (_x_233, memo_map_226) in
+            let _x_235 = program_scope_add_at scope_227 _x_234 in
+            let _x_236 = EffName_thenBuildInto (q_225, memo_map_226, key_229) in
+            Prim_onSuccess (_x_235, _x_236)) else program_bad_shape)
         | _ -> program_bad_shape)
-    | EffName_thenBuildInto (q_238, memo_map_239, layer_scope_240) -> (let _x_241 = program_construction_at root q_238 layer_scope_240 in
-      let _x_242 = program_point_layer_key q_238 in
-      let _x_243 = FinName_memoDone (_x_242, memo_map_239) in
-      let _x_244 = Name_finalizerName _x_243 in
-      let _x_245 = EffName_store _x_244 in
-      let _x_246 = false in
-      Prim_onExit (_x_241, _x_245, _x_246))
-    | EffName_freshThen (q_248, scope_249) -> (match (x_2 : val_) with
-        | Val_handle (kind_250, key_251) -> (let _x_252 = 5 in
-          let _x_253 = kind_250 = _x_252 in
-          if _x_253 then program_resolve_layer root q_248 key_251 scope_249 else program_bad_shape)
+    | EffName_thenBuildInto (q_239, memo_map_240, layer_scope_241) -> (let _x_242 = program_construction_at root q_239 layer_scope_241 in
+      let _x_243 = program_point_layer_key q_239 in
+      let _x_244 = FinName_memoDone (_x_243, memo_map_240) in
+      let _x_245 = Name_finalizerName _x_244 in
+      let _x_246 = EffName_store _x_245 in
+      let _x_247 = false in
+      Prim_onExit (_x_242, _x_246, _x_247))
+    | EffName_freshThen (q_249, scope_250) -> (match (x_2 : val_) with
+        | Val_handle (kind_251, key_252) -> (let _x_253 = 5 in
+          let _x_254 = kind_251 = _x_253 in
+          if _x_254 then program_resolve_layer root q_249 key_252 scope_250 else program_bad_shape)
         | _ -> program_bad_shape)
-    | EffName_provideThen (q_257, memo_map_258, scope_259, mode_260) -> program_provide_then_k q_257 memo_map_258 scope_259 mode_260 x_2
-    | EffName_combineWith (mode_262, that_263) -> program_combine_with_k mode_262 that_263 x_2
-    | EffName_mergeChildren (q_265, memo_map_266) -> (match (x_2 : val_) with
-        | Val_handle (kind_267, key_268) -> (let _x_269 = 4 in
-          let _x_270 = kind_267 = _x_269 in
-          if _x_270 then (let _x_272 = FinalizerStrategy_sequential in
-            let _x_273 = SyncOp_scopeFork (key_268, _x_272) in
-            let _x_274 = EffThunk_op _x_273 in
-            let _x_275 = Prim_sync _x_274 in
-            let _x_276 = 0 in
-            let _x_277 = [] in
-            let _x_278 = EffName_mergeForkOne (q_265, _x_276, memo_map_266, key_268, _x_277) in
-            Prim_onSuccess (_x_275, _x_278)) else program_bad_shape)
+    | EffName_provideThen (q_258, memo_map_259, scope_260, mode_261) -> program_provide_then_k q_258 memo_map_259 scope_260 mode_261 x_2
+    | EffName_combineWith (mode_263, that_264) -> program_combine_with_k mode_263 that_264 x_2
+    | EffName_mergeChildren (q_266, memo_map_267) -> (match (x_2 : val_) with
+        | Val_handle (kind_268, key_269) -> (let _x_270 = 4 in
+          let _x_271 = kind_268 = _x_270 in
+          if _x_271 then (let _x_273 = FinalizerStrategy_sequential in
+            let _x_274 = SyncOp_scopeFork (key_269, _x_273) in
+            let _x_275 = EffThunk_op _x_274 in
+            let _x_276 = Prim_sync _x_275 in
+            let _x_277 = 0 in
+            let _x_278 = [] in
+            let _x_279 = EffName_mergeForkOne (q_266, _x_277, memo_map_267, key_269, _x_278) in
+            Prim_onSuccess (_x_276, _x_279)) else program_bad_shape)
         | _ -> program_bad_shape)
-    | EffName_mergeForkOne (q_281, i_282, memo_map_283, parent_284, forked_285) -> (match (x_2 : val_) with
-        | Val_handle (kind_286, key_287) -> (let _x_288 = 4 in
-          let _x_289 = kind_286 = _x_288 in
-          if _x_289 then (let _x_291 = program_point_child q_281 i_282 in
-            let _x_292 = EffThunk_forkLayer (_x_291, memo_map_283, key_287) in
-            let _x_293 = Prim_withFiber _x_292 in
-            let _x_294 = EffName_mergeForkNext (q_281, i_282, memo_map_283, parent_284, forked_285) in
-            Prim_onSuccess (_x_293, _x_294)) else program_bad_shape)
+    | EffName_mergeForkOne (q_282, i_283, memo_map_284, parent_285, forked_286) -> (match (x_2 : val_) with
+        | Val_handle (kind_287, key_288) -> (let _x_289 = 4 in
+          let _x_290 = kind_287 = _x_289 in
+          if _x_290 then (let _x_292 = program_point_child q_282 i_283 in
+            let _x_293 = EffThunk_forkLayer (_x_292, memo_map_284, key_288) in
+            let _x_294 = Prim_withFiber _x_293 in
+            let _x_295 = EffName_mergeForkNext (q_282, i_283, memo_map_284, parent_285, forked_286) in
+            Prim_onSuccess (_x_294, _x_295)) else program_bad_shape)
         | _ -> program_bad_shape)
-    | EffName_mergeForkNext (q_297, i_298, memo_map_299, parent_300, forked_301) -> (match (x_2 : val_) with
-        | Val_handle (kind_302, key_303) -> (let _x_304 = 1 in
-          let _x_305 = kind_302 = _x_304 in
-          if _x_305 then (let _x_307 = 0 in
-            let _x_308 = i_298 = _x_307 in
-            if _x_308 then (let _x_316 = FinalizerStrategy_sequential in
-              let _x_317 = SyncOp_scopeFork (parent_300, _x_316) in
-              let _x_318 = EffThunk_op _x_317 in
-              let _x_319 = Prim_sync _x_318 in
-              let _x_320 = 1 in
-              let _x_321 = [] in
-              let _x_322 = key_303 :: _x_321 in
-              let _x_323 = forked_301 @ _x_322 in
-              let _x_324 = EffName_mergeForkOne (q_297, _x_320, memo_map_299, parent_300, _x_323) in
-              Prim_onSuccess (_x_319, _x_324)) else (let _x_309 = [] in
-              let _x_310 = key_303 :: _x_309 in
-              let _x_311 = forked_301 @ _x_310 in
-              let _x_312 = EffThunk_awaitAllFailFast _x_311 in
-              let _x_313 = Prim_withFiber _x_312 in
-              let _x_314 = EffName_mergeContexts in
-              Prim_onSuccess (_x_313, _x_314))) else program_bad_shape)
+    | EffName_mergeForkNext (q_298, i_299, memo_map_300, parent_301, forked_302) -> (match (x_2 : val_) with
+        | Val_handle (kind_303, key_304) -> (let _x_305 = 1 in
+          let _x_306 = kind_303 = _x_305 in
+          if _x_306 then (let _x_308 = 0 in
+            let _x_309 = i_299 = _x_308 in
+            if _x_309 then (let _x_317 = FinalizerStrategy_sequential in
+              let _x_318 = SyncOp_scopeFork (parent_301, _x_317) in
+              let _x_319 = EffThunk_op _x_318 in
+              let _x_320 = Prim_sync _x_319 in
+              let _x_321 = 1 in
+              let _x_322 = [] in
+              let _x_323 = key_304 :: _x_322 in
+              let _x_324 = forked_302 @ _x_323 in
+              let _x_325 = EffName_mergeForkOne (q_298, _x_321, memo_map_300, parent_301, _x_324) in
+              Prim_onSuccess (_x_320, _x_325)) else (let _x_310 = [] in
+              let _x_311 = key_304 :: _x_310 in
+              let _x_312 = forked_302 @ _x_311 in
+              let _x_313 = EffThunk_awaitAllFailFast _x_312 in
+              let _x_314 = Prim_withFiber _x_313 in
+              let _x_315 = EffName_mergeContexts in
+              Prim_onSuccess (_x_314, _x_315))) else program_bad_shape)
         | _ -> program_bad_shape)
-    | EffName_mergeAllChildren (q_327, memo_map_328) -> (match (x_2 : val_) with
-        | Val_handle (kind_329, key_330) -> (let _x_331 = 4 in
-          let _x_332 = kind_329 = _x_331 in
-          if _x_332 then (let _x_334 = 0 in
-            let _x_335 = program_merge_all_count root q_327 in
-            let _x_336 = _x_334 < _x_335 in
-            if _x_336 then (let _x_342 = FinalizerStrategy_sequential in
-              let _x_343 = SyncOp_scopeFork (key_330, _x_342) in
-              let _x_344 = EffThunk_op _x_343 in
-              let _x_345 = Prim_sync _x_344 in
-              let _x_346 = [] in
-              let _x_347 = EffName_mergeAllForkOne (q_327, _x_334, memo_map_328, key_330, _x_346) in
-              Prim_onSuccess (_x_345, _x_347)) else (let _x_337 = [] in
-              let _x_338 = EffThunk_awaitAllFailFast _x_337 in
-              let _x_339 = Prim_withFiber _x_338 in
-              let _x_340 = EffName_mergeContexts in
-              Prim_onSuccess (_x_339, _x_340))) else program_bad_shape)
+    | EffName_mergeAllChildren (q_328, memo_map_329) -> (match (x_2 : val_) with
+        | Val_handle (kind_330, key_331) -> (let _x_332 = 4 in
+          let _x_333 = kind_330 = _x_332 in
+          if _x_333 then (let _x_335 = 0 in
+            let _x_336 = program_merge_all_count root q_328 in
+            let _x_337 = _x_335 < _x_336 in
+            if _x_337 then (let _x_343 = FinalizerStrategy_sequential in
+              let _x_344 = SyncOp_scopeFork (key_331, _x_343) in
+              let _x_345 = EffThunk_op _x_344 in
+              let _x_346 = Prim_sync _x_345 in
+              let _x_347 = [] in
+              let _x_348 = EffName_mergeAllForkOne (q_328, _x_335, memo_map_329, key_331, _x_347) in
+              Prim_onSuccess (_x_346, _x_348)) else (let _x_338 = [] in
+              let _x_339 = EffThunk_awaitAllFailFast _x_338 in
+              let _x_340 = Prim_withFiber _x_339 in
+              let _x_341 = EffName_mergeContexts in
+              Prim_onSuccess (_x_340, _x_341))) else program_bad_shape)
         | _ -> program_bad_shape)
-    | EffName_mergeAllForkOne (q_350, i_351, memo_map_352, parent_353, forked_354) -> (match (x_2 : val_) with
-        | Val_handle (kind_355, key_356) -> (let _x_357 = 4 in
-          let _x_358 = kind_355 = _x_357 in
-          if _x_358 then (let _x_360 = program_point_spine_child q_350 i_351 in
-            let _x_361 = EffThunk_forkLayer (_x_360, memo_map_352, key_356) in
-            let _x_362 = Prim_withFiber _x_361 in
-            let _x_363 = EffName_mergeAllForkNext (q_350, i_351, memo_map_352, parent_353, forked_354) in
-            Prim_onSuccess (_x_362, _x_363)) else program_bad_shape)
+    | EffName_mergeAllForkOne (q_351, i_352, memo_map_353, parent_354, forked_355) -> (match (x_2 : val_) with
+        | Val_handle (kind_356, key_357) -> (let _x_358 = 4 in
+          let _x_359 = kind_356 = _x_358 in
+          if _x_359 then (let _x_361 = program_point_spine_child q_351 i_352 in
+            let _x_362 = EffThunk_forkLayer (_x_361, memo_map_353, key_357) in
+            let _x_363 = Prim_withFiber _x_362 in
+            let _x_364 = EffName_mergeAllForkNext (q_351, i_352, memo_map_353, parent_354, forked_355) in
+            Prim_onSuccess (_x_363, _x_364)) else program_bad_shape)
         | _ -> program_bad_shape)
-    | EffName_mergeAllForkNext (q_366, i_367, memo_map_368, parent_369, forked_370) -> (match (x_2 : val_) with
-        | Val_handle (kind_371, key_372) -> (let _x_373 = 1 in
-          let _x_374 = kind_371 = _x_373 in
-          if _x_374 then (let _x_376 = 1 in
-            let _x_377 = i_367 + _x_376 in
-            let _x_378 = program_merge_all_count root q_366 in
-            let _x_379 = _x_377 < _x_378 in
-            if _x_379 then (let _x_387 = FinalizerStrategy_sequential in
-              let _x_388 = SyncOp_scopeFork (parent_369, _x_387) in
-              let _x_389 = EffThunk_op _x_388 in
-              let _x_390 = Prim_sync _x_389 in
-              let _x_391 = [] in
-              let _x_392 = key_372 :: _x_391 in
-              let _x_393 = forked_370 @ _x_392 in
-              let _x_394 = EffName_mergeAllForkOne (q_366, _x_377, memo_map_368, parent_369, _x_393) in
-              Prim_onSuccess (_x_390, _x_394)) else (let _x_380 = [] in
-              let _x_381 = key_372 :: _x_380 in
-              let _x_382 = forked_370 @ _x_381 in
-              let _x_383 = EffThunk_awaitAllFailFast _x_382 in
-              let _x_384 = Prim_withFiber _x_383 in
-              let _x_385 = EffName_mergeContexts in
-              Prim_onSuccess (_x_384, _x_385))) else program_bad_shape)
+    | EffName_mergeAllForkNext (q_367, i_368, memo_map_369, parent_370, forked_371) -> (match (x_2 : val_) with
+        | Val_handle (kind_372, key_373) -> (let _x_374 = 1 in
+          let _x_375 = kind_372 = _x_374 in
+          if _x_375 then (let _x_377 = 1 in
+            let _x_378 = i_368 + _x_377 in
+            let _x_379 = program_merge_all_count root q_367 in
+            let _x_380 = _x_378 < _x_379 in
+            if _x_380 then (let _x_388 = FinalizerStrategy_sequential in
+              let _x_389 = SyncOp_scopeFork (parent_370, _x_388) in
+              let _x_390 = EffThunk_op _x_389 in
+              let _x_391 = Prim_sync _x_390 in
+              let _x_392 = [] in
+              let _x_393 = key_373 :: _x_392 in
+              let _x_394 = forked_371 @ _x_393 in
+              let _x_395 = EffName_mergeAllForkOne (q_367, _x_378, memo_map_369, parent_370, _x_394) in
+              Prim_onSuccess (_x_391, _x_395)) else (let _x_381 = [] in
+              let _x_382 = key_373 :: _x_381 in
+              let _x_383 = forked_371 @ _x_382 in
+              let _x_384 = EffThunk_awaitAllFailFast _x_383 in
+              let _x_385 = Prim_withFiber _x_384 in
+              let _x_386 = EffName_mergeContexts in
+              Prim_onSuccess (_x_385, _x_386))) else program_bad_shape)
         | _ -> program_bad_shape)
     | EffName_mergeContexts -> program_merge_contexts_k x_2
-    | EffName_serviceLookup key_398 -> program_service_lookup_k key_398 x_2
-    | EffName_bindService key_400 -> program_bind_service_k key_400 x_2
+    | EffName_serviceLookup key_399 -> program_service_lookup_k key_399 x_2
+    | EffName_bindService key_401 -> program_bind_service_k key_401 x_2
     | _ -> Prim_success x_2
 
   (* LCNF mono: Effect4.Program.firstErrorValue? (cause : List (Effect4.Reason Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) : Option Effect4.Store.Val *)
@@ -11281,25 +11290,25 @@ and program_val__item_checkers__lam_0 (head_1 : ty) (allocated : string list) (x
       let _x_9 = _x_7 :: _x_8 in
       let _x_10 = events @ _x_9 in
       _x_6, _x_10) in
-  let _jp_12 = fun _y_13 _y_14 _y_15 _y_16 _y_17 _y_18 -> let _x_19 = prim_arm_e_at_frame_fiber_resume_cause_at_frame_fiber_step_at_evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3_spec_7_spec_10_spec_14 interp _y_16 _y_13 _y_18 in
+  let _jp_12 = fun _y_13 _y_14 _y_15 _y_16 _y_17 _y_18 -> let _x_19 = prim_arm_e_at_frame_fiber_resume_cause_at_frame_fiber_step_at_evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3_spec_7_spec_10_spec_14 interp _y_16 _y_17 _y_18 in
   match _x_19 with
-    | None -> _jp_4 _y_14
+    | None -> _jp_4 _y_15
     | Some val__20 -> (match val__20 with
         | fst_21, _ -> (let _x_23 = [] in
-          match (_y_17 : (_, _, _, _, _, _, _) frame_fiber) with
+          match (_y_14 : (_, _, _, _, _, _, _) frame_fiber) with
             | { stack = stack; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt; _ } -> (let _x_24 = _x_23 @ stack in
               let _x_25 = ({ current = fst_21; stack = _x_24; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt } : (_, _, _, _, _, _, _) frame_fiber) in
               let _x_26 = FrameStep_running _x_25 in
-              let _x_27 = prim_finalizer_events _y_16 _y_14 in
-              let _x_28 = _y_15 @ _x_27 in
+              let _x_27 = prim_finalizer_events _y_16 _y_15 in
+              let _x_28 = _y_13 @ _x_27 in
               let _x_29 = list_map_tr_loop_at_frame_fiber_step_at_evaluate_prim_step_frame_at_evaluate_prim_at_program_exit_scoped_spec_2_spec_3_spec_7_spec_12 _x_23 _x_23 in
               let _x_30 = _x_28 @ _x_29 in
               _x_26, _x_30))) in
   let _jp_32 = fun _y_33 _y_34 _y_35 _y_36 _y_37 -> match provided with
-    | None -> _jp_12 _y_37 _y_33 _y_34 _y_35 _y_36 provided
+    | None -> _jp_12 _y_34 _y_33 _y_35 _y_36 _y_37 provided
     | Some val__38 -> (let _x_39 = frame_pop_delivered_exit pop val__38 in
       let _x_40 = Some _x_39 in
-      _jp_12 _y_37 _y_33 _y_34 _y_35 _y_36 _x_40) in
+      _jp_12 _y_34 _y_33 _y_35 _y_36 _y_37 _x_40) in
   let _jp_41 = fun _y_42 -> match (pop : (_, _, _, _, _, _, _) frame_pop) with
     | { answer = answer; events = events_1; fiber = fiber; carried_cause = carried_cause; _ } -> (let delivered = frame_pop_delivered_exit pop _y_42 in
       match (answer : (_, _, _, _, _, _, _) cont_answer) with
@@ -11313,8 +11322,8 @@ and program_val__item_checkers__lam_0 (head_1 : ty) (allocated : string list) (x
               let _x_50 = FrameStep_running _x_49 in
               _x_50, events_1))
         | ContAnswer_frame frame_52 -> (match carried_cause with
-            | None -> _jp_32 delivered events_1 frame_52 fiber cause
-            | Some val__53 -> _jp_32 delivered events_1 frame_52 fiber val__53)
+            | None -> _jp_32 fiber events_1 delivered frame_52 cause
+            | Some val__53 -> _jp_32 fiber events_1 delivered frame_52 val__53)
         | ContAnswer_empty -> _jp_4 delivered) in
   match provided with
     | None -> (let _x_54 = Exit_failure cause in
@@ -12574,11 +12583,11 @@ and program_val__item_checkers__lam_0 (head_1 : ty) (allocated : string list) (x
   (* LCNF mono: Effect4.Program.exitScoped (root : Effect4.Program.Eff Effect4.Program.NativeOp) (m : Effect4.Machine.RunMachine Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit Effect4.Machine.Ctx Effect4.Machine.Stores (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (f : Effect4.Machine.RunFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit Effect4.Machine.Ctx (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit)) (yielding : Bool) (exit : Effect4.Exit Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) : Effect4.Machine.Iter Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit Effect4.Machine.Ctx Effect4.Machine.Stores (Effect4.Prim Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameFiber Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) (Effect4.FrameEvent Effect4.Program.EffName Effect4.Program.EffThunk Effect4.Store.Val Effect4.Machine.Err Effect4.Machine.Defect Nat PUnit) *)
   let program_exit_scoped (root : native_op eff) (m : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, stores, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_event) run_machine) (f : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber) run_fiber) (yielding : bool) (exit_ : (val_, err, defect, int, unit) exit_) : (eff_name, eff_thunk, val_, err, defect, int, unit, ctx, stores, (eff_name, eff_thunk, val_, err, defect, int, unit) prim, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_fiber, (eff_name, eff_thunk, val_, err, defect, int, unit) frame_event) iter =
   match (f : (_, _, _, _, _, _, _, _, _, _) run_fiber) with
-    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; _ } -> (let _jp_1 = fun _y_2 _y_3 _y_4 _y_5 _y_6 _y_7 _y_8 _y_9 _y_10 -> let _x_11 = ({ current = _y_10; stack = _y_6; interruptible = _y_8; interrupted_cause = _y_2; deferred_interrupt = _y_7 } : (_, _, _, _, _, _, _) frame_fiber) in
-      let _x_12 = ({ id = id; frame = _x_11; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = _y_4; prevent_yield = _y_5; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = _y_9 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
+    | { id = id; frame = frame; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; _ } -> (let _jp_1 = fun _y_2 _y_3 _y_4 _y_5 _y_6 _y_7 _y_8 _y_9 _y_10 -> let _x_11 = ({ current = _y_10; stack = _y_8; interruptible = _y_7; interrupted_cause = _y_6; deferred_interrupt = _y_5 } : (_, _, _, _, _, _, _) frame_fiber) in
+      let _x_12 = ({ id = id; frame = _x_11; running = running; parked = parked; pending = pending; finalizing = finalizing; exit_ = exit__1; current_op_count = current_op_count; max_ops_before_yield = _y_4; prevent_yield = _y_9; yield_override = yield_override; observers = observers; children = children; dispatcher = dispatcher; context = _y_3 } : (_, _, _, _, _, _, _, _, _, _) run_fiber) in
       let _x_13 = Effect4_machine_outcome_continue_ in
       let _x_14 = [] in
-      ({ machine = _y_3; fiber = _x_12; yielding = yielding; outcome = _x_13; nested = _x_14; edits = _x_14 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
+      ({ machine = _y_2; fiber = _x_12; yielding = yielding; outcome = _x_13; nested = _x_14; edits = _x_14 } : (_, _, _, _, _, _, _, _, _, _, _, _) iter) in
       let _x_16 = sh_machine_completed_exits m in
       let _x_17 = [] in
       let interp = program_interp_at root _x_16 _x_17 in
@@ -12604,13 +12613,13 @@ and program_val__item_checkers__lam_0 (head_1 : ty) (allocated : string list) (x
                                     | Some val__35 -> (match val__35 with
                                         | fst_36, snd_37 -> (let m_2 = ({ fibers = fibers; races = races; next_id = next_id; next_token = next_token; next_race = next_race; middleware_installed = middleware_installed; armed = armed; state = fst_36; trace = trace; stuck = stuck; forks = forks } : (_, _, _, _, _, _, _, _, _, _, _, _) run_machine) in
                                           match snd_37 with
-                                            | None -> _jp_1 interrupted_cause m_2 max_ops_before_yield prevent_yield stack deferred_interrupt interruptible previous_26 _x_29
+                                            | None -> _jp_1 m_2 previous_26 max_ops_before_yield deferred_interrupt interrupted_cause interruptible stack prevent_yield _x_29
                                             | Some val__38 -> (let _x_39 = RunEvent_finalizerProgram (id, finalizer_24, exit__2) in
                                               let _x_40 = _x_39 :: _x_17 in
                                               let _x_41 = sh_machine_emit m_2 _x_40 in
                                               let _x_42 = program_embed val__38 in
                                               let _x_43 = finalizer_code interp exit__2 _x_42 in
-                                              _jp_1 interrupted_cause _x_41 max_ops_before_yield prevent_yield stack deferred_interrupt interruptible previous_26 _x_43)))))))
+                                              _jp_1 _x_41 previous_26 max_ops_before_yield deferred_interrupt interrupted_cause interruptible stack prevent_yield _x_43)))))))
                     | _ -> evaluate_prim_at_program_exit_scoped_spec_2 interp m f yielding)
                 | _ -> evaluate_prim_at_program_exit_scoped_spec_2 interp m f yielding)
             | _ -> evaluate_prim_at_program_exit_scoped_spec_2 interp m f yielding) in
