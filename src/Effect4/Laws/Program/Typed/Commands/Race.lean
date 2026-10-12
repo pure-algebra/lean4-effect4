@@ -310,7 +310,7 @@ theorem configTyped_cons_loop {root : ProgramSource} {rootTy : EffTy} {w : World
     (hf : m.fiber? f.id = some f) (running : f.running = true) (parked : f.parked = .notParked)
     (free : f.id ∉ q.filterMap (Guard.commandOwner m)) (yielding : Bool)
     (code : raceRegistrationR f.frame.current = none → ∀ ty, w.Γ f.id = some ty →
-      CodeOk root w m f.id ty f.frame) :
+      MCodeOk root w m f ty) :
     ConfigTyped root rootTy w m (.loop f.id yielding :: q) := by
   have wide := typed.machine.wide
   refine ⟨typed.machine, ?_, queueOk_cons ?_ typed.queue⟩
@@ -418,6 +418,23 @@ theorem commandOwner_update (m : RState) (g : RFiber) :
   funext c
   cases c <;> rfl
 
+/-- The await an interrupt returns, made void, is administrative code. -/
+theorem afterInterruptCode_admin (root : ProgramSource) (m : RState) (kind : ParkKind) :
+    AdminCode (asVoidCode (interpR root.program) (awaitCode (interpR root.program) m kind)) := by
+  show AdminCode (restoreR (awaitCode (interpR root.program) m kind) (.restore (.success .unit)))
+  refine restoreR_admin ?_ _
+  cases kind with
+  | join target mode =>
+    cases hx : (RunMachine.fiber? m target).bind RunFiber.exit with
+    | some exit =>
+      simp only [awaitCode, hx]
+      cases mode <;> exact .pure _
+    | none =>
+      simp only [awaitCode, hx]
+      cases mode <;> exact .fiber _ _ rfl fun _ => .pure _
+  | awaitAll targets => exact .fiber _ _ rfl fun _ => .pure _
+  | race race => exact .fiber _ _ rfl fun _ => .pure _
+
 /-- **`afterInterrupt` keeps `I`** at the same world: the host's code becomes the await its
 interrupt returns, typed at the reply type its delivery fact names (`afterInterruptCode_typed`),
 over the stack that reply meets (`StackReply`); the queued `loop` reads it. -/
@@ -439,7 +456,8 @@ theorem afterInterrupt_preserves (root : ProgramSource) (rootTy : EffTy) (host :
   have hf : m.fiber? f.id = some f := by rw [fid]; exact hfound
   have hmem : f ∈ m.fibers := rfiber?_mem hf
   have freeF : f.id ∉ rest.filterMap (Guard.commandOwner m) := by rw [fid]; exact free
-  obtain ⟨replyTy, reply, final, declared, stackOk, prov⟩ := delivery f hfound
+  obtain ⟨replyTy, reply, row, final, flag, declared, covered, stackOk, prov, deferredMask⟩ :=
+    delivery f hfound
   have code := afterInterruptCode_typed root typed.machine reply
   let g : RFiber := { f with frame := { f.frame with
     current := asVoidCode (interpR root.program) (awaitCode (interpR root.program) m kind) } }
@@ -449,21 +467,20 @@ theorem afterInterrupt_preserves (root : ProgramSource) (rootTy : EffTy) (host :
   have moved := fiberTyped_transport old view (Nat.le_refl _) (Nat.le_refl _)
   have provG : InterruptProvenance g.frame := ⟨prov.recorded, prov.deferred⟩
   have notMarker : raceRegistrationR g.frame.current = none := raceRegistrationR_typed code
-  have codeG : ∀ ty, w.Γ g.id = some ty → CodeOk root w (m.update g) g.id ty g.frame := by
+  have codeG : ∀ ty, w.Γ g.id = some ty → MCodeOk root w (m.update g) g ty := by
     intro ty d
     have both : w.Γ f.id = some ty := d
     rw [declared] at both
     cases both
-    exact ⟨replyTy, code, hostStack_races (racesKept_of_eq view.races) stackOk, provG⟩
-  have frameOk : ∀ ty, w.Γ g.id = some ty →
-      ∃ tin, PositionStack root w tin ty g.frame.stack ∧ InterruptProvenance g.frame := by
+    exact ⟨row, (((replyTy, row, row) : AmbientPosition), f.frame.interruptible), flag, covered, rfl,
+      deferredMask, ambientProgAt_of_admin root code (afterInterruptCode_admin root m kind) row _,
+      stackOk.races (racesKept_of_eq view.races), provG⟩
+  have frameOk : ∀ ty, w.Γ g.id = some ty → SavedPosition root w ty g.frame := by
     intro ty d
-    obtain ⟨tin, stack', _⟩ := old.position d
-    exact ⟨tin, stack', provG⟩
+    obtain ⟨tin, flag', stack', _⟩ := old.position d
+    exact ⟨tin, flag', stack', provG⟩
   have deliveryG : ∀ token, g.parked = .withGuard token →
-      ∃ tin final, w.Θ g.id token = some tin ∧ w.Γ g.id = some final ∧
-        HostStack root w (m.update g) g.id tin final g.frame.stack ∧
-        InterruptProvenance g.frame := by
+      ∃ tin row, w.Θ g.id token = some tin ∧ StackReplyAt root w (m.update g) g tin row := by
     intro token h
     rw [show g.parked = f.parked from rfl, parked] at h
     cases h
@@ -501,7 +518,8 @@ theorem afterInterrupt_preserves (root : ProgramSource) (rootTy : EffTy) (host :
     rw [requestOfR_of_not_parked look off] at hr
     cases hr
   have edited := configTyped_rupdate_code (g := g) tail hf rfl (PendingWeaker.refl _) rfl
-    (fun p => ⟨p.recorded, p.deferred⟩) (fun k hk => Or.inl (fiberKeys_internal hmem hk)) noRequest
+    (fun p => ⟨p.recorded, p.deferred⟩) ⟨.inr rfl, rfl, fun h => h⟩
+    (fun k hk => Or.inl (fiberKeys_internal hmem hk)) noRequest
     (fun c hc h => commandAuthority_flags (g := g) hf rfl rfl rfl rfl freeF c hc h)
     (fun _ _ _ ty d => Or.inl (codeG ty d)) fresh
   have freeG : g.id ∉ rest.filterMap (Guard.commandOwner (m.update g)) := by
@@ -537,8 +555,8 @@ theorem commandDelivery_owner {root : ProgramSource} {w : World} {m : RState} {f
   | closeParAwait host _ targets =>
     intro f' hf'
     rw [rfiber?_update_other (other host rfl)] at hf'
-    obtain ⟨answer, error, cols, protocol, reply⟩ := h f' hf'
-    exact ⟨answer, error, cols, protocol, stackReply_races kept reply⟩
+    obtain ⟨answer, error, row, cols, protocol, reply⟩ := h f' hf'
+    exact ⟨answer, error, row, cols, protocol, reply.mono (leHost_refl w) kept⟩
   | finish host _ =>
     intro f' hf'
     rw [rfiber?_update_other (other host rfl)] at hf'
@@ -571,7 +589,7 @@ theorem configTyped_rupdate_owner {root : ProgramSource} {rootTy : EffTy} {w : W
       requestOfR m f.id token = some r)
     (auth : ∀ c ∈ q, CommandAuthorityR m c → CommandAuthorityR (m.update g) c)
     (readG : g.running = true → ReadsCode g.id q → raceRegistrationR g.frame.current = none →
-      ∀ ty, w.Γ g.id = some ty → CodeOk root w (m.update g) g.id ty g.frame)
+      ∀ ty, w.Γ g.id = some ty → MCodeOk root w (m.update g) g ty)
     (fresh : FiberTyped root w (m.update g) g) : ConfigTyped root rootTy w (m.update g) q := by
   have view : ObsView m (m.update g) := obsView_rupdate hf hid pending
   obtain ⟨machine, code, queue⟩ := typed
@@ -683,7 +701,8 @@ theorem closeParAwait_preserves (root : ProgramSource) (rootTy : EffTy) (host : 
   have hf : m.fiber? f.id = some f := by rw [fid]; exact hfound
   have hmem : f ∈ m.fibers := rfiber?_mem hf
   have freeF : f.id ∉ rest.filterMap (Guard.commandOwner m) := by rw [fid]; exact free
-  obtain ⟨answer, error, cols, proto, final, declared, stackOk, prov⟩ := delivery f hfound
+  obtain ⟨answer, error, row, cols, proto, final, flag, declared, covered, stackOk, prov, deferredMask⟩ :=
+    delivery f hfound
   have code := awaitAllPark_typed root cols
     ⟨.list (.exitOf answer error), error, Env.Requirement.empty⟩ rfl
   let g : RFiber := { f with frame := { f.frame with
@@ -694,28 +713,29 @@ theorem closeParAwait_preserves (root : ProgramSource) (rootTy : EffTy) (host : 
   have view : ObsView m (m.update g) := obsView_rupdate (g := g) hf rfl (PendingWeaker.refl _)
   have moved := fiberTyped_transport old view (Nat.le_refl _) (Nat.le_refl _)
   have provG : InterruptProvenance g.frame := ⟨prov.recorded, prov.deferred⟩
-  have stackG : HostStack root w m f.id
-      ⟨.list (.exitOf answer error), error, Env.Requirement.empty⟩ final g.frame.stack :=
-    hostStack_push (.iter _ fun _ o => iteratorProtocol_mono o proto) stackOk
+  have stackG : MHostStack root w m f.id
+      (((({ answer := .list (.exitOf answer error), error := error, requires := Env.Requirement.empty } : EffTy),
+        row, row) : AmbientPosition),
+        f.frame.interruptible) (finalPos final flag) g.frame.stack :=
+    .cons (.inl (.iter _ (fun _ o => ambientIteratorProtocol_mono o proto) (Row.subset_refl _))) stackOk
   have finalOf : ∀ ty, w.Γ g.id = some ty → ty = final := by
     intro ty d
     have both : w.Γ f.id = some ty := d
     rw [declared] at both
     cases both
     rfl
-  have codeG : ∀ ty, w.Γ g.id = some ty → CodeOk root w (m.update g) g.id ty g.frame := by
+  have codeG : ∀ ty, w.Γ g.id = some ty → MCodeOk root w (m.update g) g ty := by
     intro ty d
     rw [finalOf ty d]
-    exact ⟨_, code, hostStack_races (racesKept_of_eq view.races) stackG, provG⟩
-  have frameOk : ∀ ty, w.Γ g.id = some ty →
-      ∃ tin, PositionStack root w tin ty g.frame.stack ∧ InterruptProvenance g.frame := by
+    exact ⟨row, _, flag, covered, rfl, deferredMask,
+      ambientProgAt_of_admin root code (.fiber _ _ rfl fun _ => .pure _) row _,
+      stackG.races (racesKept_of_eq view.races), provG⟩
+  have frameOk : ∀ ty, w.Γ g.id = some ty → SavedPosition root w ty g.frame := by
     intro ty d
     rw [finalOf ty d]
-    exact ⟨_, positionStack_of_host stackG, provG⟩
+    exact ⟨_, flag, MPositionStack.of_host stackG, provG⟩
   have deliveryG : ∀ token, g.parked = .withGuard token →
-      ∃ tin final, w.Θ g.id token = some tin ∧ w.Γ g.id = some final ∧
-        HostStack root w (m.update g) g.id tin final g.frame.stack ∧
-        InterruptProvenance g.frame := by
+      ∃ tin row, w.Θ g.id token = some tin ∧ StackReplyAt root w (m.update g) g tin row := by
     intro token h
     rw [show g.parked = f.parked from rfl, parked] at h
     cases h
