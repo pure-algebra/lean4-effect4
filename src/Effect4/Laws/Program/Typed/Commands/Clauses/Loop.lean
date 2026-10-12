@@ -23,12 +23,9 @@ the body's answer, its value fits the cursor type, and the test either continues
 typed by M5 at its point at the row (`denoteAt_ambient`) or finishes with the result term. The
 endless loop (`E4-TYPED-CE-036`) is admitted: nothing here asks the loop to finish.
 
-Not established here: `clause_loop` itself. The `loop` arm of `ambientFiberPre`
-(`Typed/Residual.lean`) carries the loop point's typing and its requirement row, but not the
-stack's rows, which M5 needs to type a body that runs a parameter (`param_arm`'s `required`,
-`DenotesTyped`'s stack premise); M5's producer (`iterate_arm`) holds them (`ChildDenotes`'s
-`savedParams`) and drops them. `clause_loop_of_stack` takes them as its premise, so the clause is
-this theorem once the arm carries them (seat A's receipt). Not established: progress; that a loop
+The `loop` arm of `ambientFiberPre` (`Typed/Residual.lean`) carries the loop point's typing, its
+requirement row and the stack's rows at the entry row, which M5's producer (`iterate_arm`) records
+from `ChildDenotes`'s `savedParams`. Not established: progress; that a loop
 finishes; the generator entry; the other clauses.
 -/
 
@@ -219,17 +216,13 @@ end Invariant
 /-- **`loop`** from the stack's rows at the entry (`evaluateFiberR`'s `.loop` arm,
 `Laws/Program/EvaluateR.lean`): the answer frame is saved over the continuation, then the machine's
 interpreter enters the loop at the cursor (`interpRAt`'s `loopEnter`). The pre gives the loop
-point's typing and its requirement row within the fiber's row; with the stack's rows there
-(`stacked`), the invariant at that row (`loopFrameTyped_of_point`). A continue pushes the loop
+point's typing, its requirement row within the fiber's row and the stack's rows there; so the
+invariant at that row (`loopFrameTyped_of_point`). A continue pushes the loop
 frame, accepted by its protocol (`loopProtocol_of_frameTyped`, coinduction from the invariant,
 decisions row 190), over the answer frame and installs the body typed by M5 at its point at the
 row; a finish installs the result typed at the certificate. The machine and the world are
-unchanged. Consumer: `clause_loop`, once `ambientFiberPre`'s `loop` arm carries the stack's rows
-(seat A's receipt). -/
-theorem clause_loop_of_stack (root : ProgramSource) (rootTy : EffTy) (p : Point) (cursor : Val)
-    (stacked : ∀ (w : World) (row : Env.Requirement) (cert : FiberCert (.loop p cursor)),
-      ambientFiberPre root w row (.loop p cursor) cert →
-        AmbientStackTyped root w row (scopeParams root.program p.path) p.params) :
+unchanged. Consumer: `fiberClauses` (`Clauses/All.lean`). -/
+theorem clause_loop (root : ProgramSource) (rootTy : EffTy) (p : Point) (cursor : Val) :
     FiberClauseKeeps root rootTy (.loop p cursor) := by
   intro w m rest f y next ev hc
   obtain ⟨ty, declared⟩ := ev.declared
@@ -241,8 +234,7 @@ theorem clause_loop_of_stack (root : ProgramSource) (rootTy : EffTy) (p : Point)
   rw [hc] at current
   obtain ⟨cert, pre, typedNext, _⟩ := ambientProg_fiber_inv current (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
-  have params := stacked w row cert pre
-  obtain ⟨hloop, coverage⟩ := pre
+  obtain ⟨hloop, coverage, params⟩ := pre
   change EffTy at cert
   obtain ⟨tb, frame⟩ :=
     loopFrameTyped_of_point ev.typed.machine.sourceWF ev.typed.machine.services hloop coverage params

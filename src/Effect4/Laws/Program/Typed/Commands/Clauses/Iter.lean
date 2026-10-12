@@ -18,19 +18,15 @@ states the producer's obligation as one proposition, `GenProtocol`: a generator 
 the checker types at `cert`, entered at a row that holds `cert`'s requirement row and the
 requirement rows of the programs the point's stack passes (`AmbientStackTyped`), is in the ambient
 iterator protocol at that row from `⟨unit, cert.error, cert.requires⟩` to `cert`.
-`clause_gen_of_stack` derives the clause from it and from the stack's rows at the entry; the
-protocol's first step is exactly the entry's walk at the value `unit`.
+`clause_gen_of` derives the clause from it: the `gen` arm of `ambientFiberPre`
+(`Typed/Residual.lean`) carries the point's stack typing at the entry row (`AmbientPointTyped`),
+which M5's producer (`gen_arm`) records from `ChildDenotes`'s `savedParams`. The protocol's first
+step is exactly the entry's walk at the value `unit`.
 
 `GenProtocol` itself is proved in `Clauses/Gen.lean` (`genProtocol`): coinduction over typed
 generator positions. `fiberPre`'s `gen` arm names the generator node (seat M6E's third finding).
 
-Not established here: `clause_gen_of` itself. The `gen` arm of `ambientFiberPre`
-(`Typed/Residual.lean`) carries the point's type, its node and its requirement row, but not the
-stack's rows, which M5 needs to type a yielded parameter's run (`param_arm`'s `required`,
-`DenotesTyped`'s stack premise); M5's producer (`gen_arm`) holds them (`ChildDenotes`'s
-`savedParams`) and drops them. `clause_gen_of_stack` takes them as its premise, so the clause is
-this theorem once the arm carries them (seat A's receipt). Not established: that a generator
-finishes.
+Not established: that a generator finishes.
 -/
 
 set_option autoImplicit false
@@ -70,20 +66,15 @@ theorem evaluateFiberR_gen (interp : RInterp) (m : RState) (f : RFiber) (y : Boo
 /-- **`gen`** from the producer's obligation and the stack's rows at the entry: the pre types the
 point at `cert`, names its generator node (`fiberPre`'s `gen` arm; seat M6E's third finding: at a
 point of another node the walk halts with `badName`, which no exit type admits) and holds `cert`'s
-requirement row within the fiber's row; with the stack's rows there (`stacked`) the entry is in the
-protocol at that row (`GenProtocol`, at `J`'s source and service table). Its first step at the
+requirement row within the fiber's row, with the stack's rows there (`AmbientPointTyped`); the
+entry is in the protocol at that row (`GenProtocol`, at `J`'s source and service table). Its first step at the
 evaluator's view, typed by `J` (`Evaluating.view`), and the value `unit` answers a finished walk
 with an exit at `cert`, installed at the row over the answer frame, which carries it to the
 continuation at the post `ExitOk w' cert`; a resumed yield's code is typed at the row at an
 intermediate type, and its `iter` frame is the protocol of its tail, from that type to `cert`, over
-the same answer frame. Consumer: `clause_gen_of`, once `ambientFiberPre`'s `gen` arm carries the
-stack's rows (seat A's receipt). -/
-theorem clause_gen_of_stack (root : ProgramSource) (rootTy : EffTy) (producer : GenProtocol root)
-    (p : Point)
-    (stacked : ∀ (w : World) (row : Env.Requirement) (cert : FiberCert (.gen p)),
-      ambientFiberPre root w row (.gen p) cert →
-        AmbientStackTyped root w row (scopeParams root.program p.path) p.params) :
-    FiberClauseKeeps root rootTy (.gen p) := by
+the same answer frame. Consumer: `fiberClauses` (`Clauses/All.lean`). -/
+theorem clause_gen_of (root : ProgramSource) (rootTy : EffTy) (producer : GenProtocol root)
+    (p : Point) : FiberClauseKeeps root rootTy (.gen p) := by
   intro w m rest f y next ev hc
   obtain ⟨ty, declared⟩ := ev.declared
   obtain ⟨row, ⟨q, b⟩, final, covered, bit, current, stack, prov⟩ :=
@@ -94,8 +85,7 @@ theorem clause_gen_of_stack (root : ProgramSource) (rootTy : EffTy) (producer : 
   rw [hc] at current
   obtain ⟨cert, pre, typedNext, _⟩ := ambientProg_fiber_inv current (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
-  have params := stacked w row cert pre
-  obtain ⟨⟨hpt, body, hat⟩, coverage⟩ := pre
+  obtain ⟨⟨⟨hpt, params⟩, body, hat⟩, coverage⟩ := pre
   change EffTy at cert
   have answer : MFrame root w (((cert, row, row) : AmbientPosition), f.frame.interruptible)
       (q, f.frame.interruptible) (.answer next) :=

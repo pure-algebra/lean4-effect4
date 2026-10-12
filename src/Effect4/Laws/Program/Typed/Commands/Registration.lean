@@ -356,7 +356,7 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
   have hr' : m.race? race.id = some race := by rw [rid]; exact hr
   have payload' : RacePayload root w { race with registering := false } resultTy :=
     ⟨payload.token, payload.failures, payload.winner, payload.accepted, payload.cleanup,
-      payload.live, payload.programs⟩
+      payload.live⟩
   have freeF : f.id ∉ rest.filterMap (Guard.commandOwner m) := by
     rw [fid]
     exact owner_free typed.queue (by simp only [Guard.commandOwner, hr, Option.map_some])

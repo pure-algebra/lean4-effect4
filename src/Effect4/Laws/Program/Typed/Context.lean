@@ -46,17 +46,17 @@ theorem ambientFiberPre_mono (root : ProgramSource) {w w' : World} (ord : w.leHo
     · intro point memo scope same
       exact ambientStackTyped_mono ord (pre.2.2.2.2.2.2.2 point memo scope same)
   | case4 | case5 =>
-    exact ⟨pointTyped_mono ord pre.1, pre.2⟩
+    exact ⟨ambientPointTyped_mono ord pre.1, pre.2⟩
   | case6 =>
-    exact ⟨⟨pointTyped_mono ord pre.1.1, scopeLive_mono ord.1 pre.1.2⟩, pre.2⟩
+    exact ⟨⟨ambientPointTyped_mono ord pre.1.1, scopeLive_mono ord.1 pre.1.2⟩, pre.2⟩
   | case7 =>
-    exact ⟨⟨pointTyped_mono ord pre.1.1, pre.1.2⟩, pre.2⟩
+    exact ⟨⟨ambientPointTyped_mono ord pre.1.1, pre.1.2⟩, pre.2⟩
   | case8 =>
-    exact ⟨loopPointTyped_mono ord pre.1, pre.2⟩
+    exact ⟨loopPointTyped_mono ord pre.1, pre.2.1, ambientStackTyped_mono ord pre.2.2⟩
   | case9 | case10 =>
     intro point member
     obtain ⟨ty, typed, answer, error, covered⟩ := pre point member
-    exact ⟨ty, pointTyped_mono ord typed, answer, error, covered⟩
+    exact ⟨ty, ambientPointTyped_mono ord typed, answer, error, covered⟩
   | case11 =>
     rename_i notGetter notMask notFork notScoped notForkScoped notForkIn notGen notLoop notRace notFirst
     rw [ambientFiberPre.eq_11 root w available op cert notGetter notMask notFork notScoped

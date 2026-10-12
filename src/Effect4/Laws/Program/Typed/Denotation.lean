@@ -535,14 +535,16 @@ theorem onExit_arm {available : Env.Requirement} {b fin : NativeEff} (hfuel : p.
 answers is typed at the body's columns, which the region's type keeps. -/
 theorem scoped_arm {available : Env.Requirement} {b : NativeEff} (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.scoped b)))
-    (hpt : PointTyped root w p ty) (coverage : Row.Subset ty.requires available) :
+    (hpt : PointTyped root w p ty) (coverage : Row.Subset ty.requires available)
+    (savedParams : AmbientStackTyped root w available (scopeParams root.program p.path) p.params) :
     AmbientProg root w available (ty, available, available) (denoteR root.program (.scoped b) p) := by
   obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_scoped] at hcheck
   obtain ⟨tb, hcb, rfl⟩ := Checker.inv_scoped _ _ _ _ _ hcheck
   rw [denoteR_scoped _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f)]
   exact ProgramArrow.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) tb ⟨pointTyped_child hat rfl rfl hcb henv hview hstack, by
+    (fun _ _ _ h => nomatch h) tb ⟨⟨pointTyped_child hat rfl rfl hcb henv hview hstack,
+      ambientStackTyped_child hat rfl rfl savedParams⟩, by
       rw [← (root.scopeSig_extends p.path).bodyRequires]
       exact coverage⟩
     (fun _ _ exit post => .pure ⟨post, by cases exit <;> exact Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩) ⟨Row.subset_refl _, Row.subset_refl _⟩
@@ -551,14 +553,16 @@ theorem scoped_arm {available : Env.Requirement} {b : NativeEff} (hfuel : p.fuel
 point's typing and its generator node meet. -/
 theorem gen_arm {available : Env.Requirement} {body : Stmts NativeOp} (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.gen body)))
-    (hpt : PointTyped root w p ty) (coverage : Row.Subset ty.requires available) :
+    (hpt : PointTyped root w p ty) (coverage : Row.Subset ty.requires available)
+    (savedParams : AmbientStackTyped root w available (scopeParams root.program p.path) p.params) :
     AmbientProg root w available (ty, available, available) (denoteR root.program (.gen body) p) := by
   rw [denoteR_gen _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f)]
   unfold suspendR
   refine ProgramArrow.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ _ _ h => nomatch h) () trivial (fun later ordered _ _ => ?_) ⟨Row.subset_refl _, Row.subset_refl _⟩
   exact .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) ty ⟨⟨pointTyped_mono ordered hpt, body, hat⟩, coverage⟩
+    (fun _ _ _ h => nomatch h) ty
+    ⟨⟨⟨pointTyped_mono ordered hpt, ambientStackTyped_mono ordered savedParams⟩, body, hat⟩, coverage⟩
     (fun _ _ exit post => .pure ⟨post, by cases exit <;> exact Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩) ⟨Row.subset_refl _, Row.subset_refl _⟩
 
 /-- **`iterate`**: the counted step, the initial cursor (`evalTerm_progress_env`), then the loop
@@ -568,7 +572,8 @@ theorem iterate_arm {available : Env.Requirement} {cursorTy : Option Ty} {initia
     (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path =
       some (.eff (.iterate cursorTy initial test step result body)))
-    (hpt : PointTyped root w p ty) (coverage : Row.Subset ty.requires available) :
+    (hpt : PointTyped root w p ty) (coverage : Row.Subset ty.requires available)
+    (savedParams : AmbientStackTyped root w available (scopeParams root.program p.path) p.params) :
     AmbientProg root w available (ty, available, available) (denoteR root.program (.iterate cursorTy initial test step result body) p) := by
   obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   have checked := hcheck
@@ -583,7 +588,8 @@ theorem iterate_arm {available : Env.Requirement} {cursorTy : Option Ty} {initia
   refine ProgramArrow.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ _ _ h => nomatch h) () trivial (fun later ordered _ _ => ?_) ⟨Row.subset_refl _, Row.subset_refl _⟩
   exact .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) ty ⟨loopPointTyped_mono ordered pre, coverage⟩
+    (fun _ _ _ h => nomatch h) ty
+    ⟨loopPointTyped_mono ordered pre, coverage, ambientStackTyped_mono ordered savedParams⟩
     (fun _ _ exit post => .pure ⟨post, by cases exit <;> exact Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩) ⟨Row.subset_refl _, Row.subset_refl _⟩
 
 /-- **`uninterruptible`**: the mask row over the body at the child, at the body's type. -/
@@ -1094,6 +1100,18 @@ theorem exitOfVal_of_fits {w : World} {v : Val} {a e : Ty} (h : Fits w v (.exitO
     · exact h.elim
   · exact h.elim
 
+/-- An entrant point sits below the race's list node and keeps its parameters.
+Consumer: the race arms' entrant stack typing, read at the race's own point. -/
+theorem entrantPoints_shape : ∀ (es : Effs NativeOp) (q r : Point), r ∈ entrantPoints es q →
+    q.path <+: r.path ∧ r.params = q.params
+  | .nil, _, _, member => absurd member List.not_mem_nil
+  | .cons _ rest, q, r, member => by
+    simp only [entrantPoints, List.mem_cons] at member
+    rcases member with rfl | member
+    · exact ⟨List.prefix_append _ _, rfl⟩
+    · obtain ⟨below, params⟩ := entrantPoints_shape rest (q.child 1) r member
+      exact ⟨(List.prefix_append _ _).trans below, params⟩
+
 /-- The checked entrants of a race: each entrant's point is typed at its own checked type, raw
 below the raw unions of the entrants' columns, which lie below the race's checked columns in
 the checker's order. Private: the spine's rounds (`effsRounds`) are no definition of the tree. -/
@@ -1251,7 +1269,8 @@ theorem fork_arm {available : Env.Requirement} {b : NativeEff} {options : Superv
 theorem forkIn_arm {available : Env.Requirement} {b : NativeEff} {options : Supervision.ForkOptions} {scope : Term}
     (hat : Node.at_ (.eff root.program) p.path =
       some (.eff (.withFiber (.forkIn b options scope))))
-    (hpt : PointTyped root w p ty) (coverage : Row.Subset ty.requires available) :
+    (hpt : PointTyped root w p ty) (coverage : Row.Subset ty.requires available)
+    (savedParams : AmbientStackTyped root w available (scopeParams root.program p.path) p.params) :
     AmbientProg root w available (ty, available, available) (denoteAction root.program p) := by
   obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_forkIn] at hcheck
@@ -1267,10 +1286,10 @@ theorem forkIn_arm {available : Env.Requirement} {b : NativeEff} {options : Supe
     rw [hv]
     rfl
   rw [denoteAction_of _ _ hact]
-  have hbody : PointTyped root w ((p.child 0).child 0) q :=
-    pointTyped_scope (scopeParams_prefix hat (fun _ _ _ _ h => nomatch h)
+  have hbody : AmbientPointTyped root w available ((p.child 0).child 0) q :=
+    ambientPointTyped_scope (scopeParams_prefix hat (fun _ _ _ _ h => nomatch h)
       ((List.prefix_append _ _).trans (List.prefix_append _ _)))
-      (node_at_child (node_at_child hat rfl) rfl) hcq henv hview hstack
+      (node_at_child (node_at_child hat rfl) rfl) hcq henv hview savedParams
   refine ProgramArrow.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ _ _ h => nomatch h) q ⟨⟨hbody, hlive⟩, coverage⟩ (fun w' _ ans post => ?_) ⟨Row.subset_refl _, Row.subset_refl _⟩
   obtain ⟨id, rfl, hΓ⟩ := post
@@ -1282,7 +1301,8 @@ answers, a present scope's (`fits_scope_inv`). -/
 theorem forkScoped_arm {available : Env.Requirement} {b : NativeEff} {options : Supervision.ForkOptions}
     (hat : Node.at_ (.eff root.program) p.path =
       some (.eff (.withFiber (.forkScoped b options))))
-    (hpt : PointTyped root w p ty) (coverage : Row.Subset ty.requires available) :
+    (hpt : PointTyped root w p ty) (coverage : Row.Subset ty.requires available)
+    (savedParams : AmbientStackTyped root w available (scopeParams root.program p.path) p.params) :
     AmbientProg root w available (ty, available, available) (denoteAction root.program p) := by
   obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_forkScoped] at hcheck
@@ -1292,10 +1312,10 @@ theorem forkScoped_arm {available : Env.Requirement} {b : NativeEff} {options : 
     unfold actionAt
     rw [hat]
   rw [denoteAction_of _ _ hact]
-  have hbody : PointTyped root w ((p.child 0).child 0) q :=
-    pointTyped_scope (scopeParams_prefix hat (fun _ _ _ _ h => nomatch h)
+  have hbody : AmbientPointTyped root w available ((p.child 0).child 0) q :=
+    ambientPointTyped_scope (scopeParams_prefix hat (fun _ _ _ _ h => nomatch h)
       ((List.prefix_append _ _).trans (List.prefix_append _ _)))
-      (node_at_child (node_at_child hat rfl) rfl) hcq henv hview hstack
+      (node_at_child (node_at_child hat rfl) rfl) hcq henv hview savedParams
   simp only [denoteFiberAction]
   rw [hat]
   simp only []
@@ -1315,7 +1335,7 @@ theorem forkScoped_arm {available : Env.Requirement} {b : NativeEff} {options : 
       simp only [seqR, ambientInput]
       refine .fiber (fun _ impossible => nomatch impossible) (fun _ impossible => nomatch impossible)
         (fun _ impossible => nomatch impossible) (fun _ _ _ impossible => nomatch impossible)
-        q ⟨⟨pointTyped_mono ordered hbody, live⟩,
+        q ⟨⟨ambientPointTyped_mono ordered hbody, live⟩,
           Row.subset_trans (Row.subset_union_left _ _) coverage⟩
         (fun after _ answer post => ?_) ⟨Row.subset_refl _, Row.subset_refl _⟩
       obtain ⟨id, rfl, declared⟩ := post
@@ -1658,7 +1678,8 @@ theorem awaitNewChildren_arm {available : Env.Requirement} {snapshot : Term}
 unions of the entrants' columns; the race's exit fits them, so the checked join. -/
 theorem raceAll_arm {available : Env.Requirement} {es : Effs NativeOp}
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber (.raceAll es))))
-    (hpt : PointTyped root w p ty) (coverage : Row.Subset ty.requires available) :
+    (hpt : PointTyped root w p ty) (coverage : Row.Subset ty.requires available)
+    (savedParams : AmbientStackTyped root w available (scopeParams root.program p.path) p.params) :
     AmbientProg root w available (ty, available, available) (denoteAction root.program p) := by
   obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_raceAll] at hcheck
@@ -1685,12 +1706,19 @@ theorem raceAll_arm {available : Env.Requirement} {es : Effs NativeOp}
       by cases ans <;> exact Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩) ⟨Row.subset_refl _, Row.subset_refl _⟩
   intro point member
   obtain ⟨pointTy, admitted, answer, error, required⟩ := hpre point member
-  exact ⟨pointTy, admitted, answer, error, Row.subset_trans required coverage⟩
+  obtain ⟨below, params⟩ := entrantPoints_shape es _ point member
+  have scope : scopeParams root.program point.path = scopeParams root.program p.path :=
+    scopeParams_prefix hat (fun _ _ _ _ h => nomatch h)
+      (((List.prefix_append _ _).trans (List.prefix_append _ _)).trans below)
+  exact ⟨pointTy, ⟨admitted, (congrArg (fun declarations =>
+      AmbientStackTyped root w available declarations point.params) scope).mpr
+        (params ▸ savedParams)⟩, answer, error, Row.subset_trans required coverage⟩
 
 /-- First-exit entrant typing serves `withFiber_arm` at the same checked joined columns. -/
 theorem raceAllFirst_arm {available : Env.Requirement} {es : Effs NativeOp}
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber (.raceAllFirst es))))
-    (hpt : PointTyped root w p ty) (coverage : Row.Subset ty.requires available) :
+    (hpt : PointTyped root w p ty) (coverage : Row.Subset ty.requires available)
+    (savedParams : AmbientStackTyped root w available (scopeParams root.program p.path) p.params) :
     AmbientProg root w available (ty, available, available) (denoteAction root.program p) := by
   obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_raceAllFirst] at hcheck
@@ -1717,7 +1745,13 @@ theorem raceAllFirst_arm {available : Env.Requirement} {es : Effs NativeOp}
       by cases ans <;> exact Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩) ⟨Row.subset_refl _, Row.subset_refl _⟩
   intro point member
   obtain ⟨pointTy, admitted, answer, error, required⟩ := hpre point member
-  exact ⟨pointTy, admitted, answer, error, Row.subset_trans required coverage⟩
+  obtain ⟨below, params⟩ := entrantPoints_shape es _ point member
+  have scope : scopeParams root.program point.path = scopeParams root.program p.path :=
+    scopeParams_prefix hat (fun _ _ _ _ h => nomatch h)
+      (((List.prefix_append _ _).trans (List.prefix_append _ _)).trans below)
+  exact ⟨pointTy, ⟨admitted, (congrArg (fun declarations =>
+      AmbientStackTyped root w available declarations point.params) scope).mpr
+        (params ▸ savedParams)⟩, answer, error, Row.subset_trans required coverage⟩
 
 /-- **`getId`**: the fiber's id, a number. -/
 theorem getId_arm {available : Env.Requirement}
@@ -1819,8 +1853,8 @@ theorem withFiber_arm {available : Env.Requirement} {a : ActionTerm NativeOp} (h
   rw [denoteR_withFiber _ _ _ hfuel]
   cases a with
   | fork b options => exact fork_arm hat hpt coverage savedParams
-  | forkIn b options scope => exact forkIn_arm hat hpt coverage
-  | forkScoped b options => exact forkScoped_arm hat hpt coverage
+  | forkIn b options scope => exact forkIn_arm hat hpt coverage savedParams
+  | forkScoped b options => exact forkScoped_arm hat hpt coverage savedParams
   | runIn target scope => exact runIn_arm hat hpt
   | interrupt target => exact interrupt_arm hat hpt
   | interruptScoped target => exact interruptScoped_arm hat hpt
@@ -1829,8 +1863,8 @@ theorem withFiber_arm {available : Env.Requirement} {a : ActionTerm NativeOp} (h
   | awaitAllFailFast targets => exact awaitAllFailFast_arm hat hpt
   | snapshotChildren => exact snapshotChildren_arm hat hpt
   | awaitNewChildren snapshot => exact awaitNewChildren_arm hat hpt
-  | raceAll es => exact raceAll_arm hat hpt coverage
-  | raceAllFirst es => exact raceAllFirst_arm hat hpt coverage
+  | raceAll es => exact raceAll_arm hat hpt coverage savedParams
+  | raceAllFirst es => exact raceAllFirst_arm hat hpt coverage savedParams
   | context keys =>
     obtain ⟨env, checked, -, -, -⟩ := hpt.at_node hat
     rw [Eff.expandIn_of_round _ _ rfl] at checked
@@ -3355,7 +3389,7 @@ theorem childDenotes_upto (root : ProgramSource) (hlayer : ProvideLayerArm root)
       | perform op r =>
         exact perform_arm hq hat hqt htie hbodies (fun c' path' hc' => ih f (Nat.le_refl f) c' path' hc') coverage savedParams
       | bind a b => exact bind_arm hq hat hqt htie (hch a 0 rfl) (hch b 1 rfl) coverage savedParams
-      | gen body => exact gen_arm hq hat hqt coverage
+      | gen body => exact gen_arm hq hat hqt coverage savedParams
       | catchCause b h => exact catchCause_arm hq hat hqt htie (hch b 0 rfl) (hch h 1 rfl) coverage savedParams
       | matchCause b v c => exact matchCause_arm hq hat hqt htie coverage (hch b 0 rfl) (hch v 1 rfl) (hch c 2 rfl) savedParams
       | onExit b fin => exact onExit_arm hq hat hqt htie coverage (hch b 0 rfl) (hch fin 1 rfl) savedParams
@@ -3365,7 +3399,7 @@ theorem childDenotes_upto (root : ProgramSource) (hlayer : ProvideLayerArm root)
       | yieldNow priority => exact yieldNow_arm hpos hat hqt
       | awaitFiber t mode => exact awaitFiber_arm hpos hat hqt
       | withFiber a => exact withFiber_arm hpos hat hqt htie coverage savedParams
-      | «scoped» b => exact scoped_arm hq hat hqt coverage
+      | «scoped» b => exact scoped_arm hq hat hqt coverage savedParams
       | acquireRelease a r => exact acquireRelease_arm hq hat hqt coverage savedParams
       | provideContext context body => exact provideContext_arm hq hat hqt coverage savedParams
       | provideLayer l i b => exact hlayer hwf hmod f ih w htie q ty l i b hq hat hqt available coverage savedParams
@@ -3373,7 +3407,7 @@ theorem childDenotes_upto (root : ProgramSource) (hlayer : ProvideLayerArm root)
       | provideService key value b => exact provideService_arm hq hat hqt htie coverage savedParams
       | catchIf test b h => exact catchIf_arm hq hat hqt htie (hch b 0 rfl) (hch h 1 rfl) coverage savedParams
       | select s d a0 a1 => exact select_arm hq hat hqt htie (hch a0 0 rfl) (hch a1 1 rfl) coverage savedParams
-      | iterate cursorTy initial test step result body => exact iterate_arm hq hat hqt coverage
+      | iterate cursorTy initial test step result body => exact iterate_arm hq hat hqt coverage savedParams
       | restore saved b => exact restore_arm hq hat hqt htie (hch b 0 rfl) coverage savedParams
       | defs decls bodies main _ => exact (defs_not_typed hat hqt).elim
       | invoke k r args =>

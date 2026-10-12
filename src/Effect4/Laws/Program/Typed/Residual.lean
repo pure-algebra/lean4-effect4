@@ -625,19 +625,24 @@ def ambientFiberPre (root : ProgramSource) (w : World) (available : Env.Requirem
       Row.Subset cert.requires available ∧
       (∀ point ctx, body = .acquireIn point ctx → ctx.services.Satisfies available) ∧
       ReleaseMaskAllowed op ∧ BodyCoverage root w available body cert
+  -- a child point's program is entered at the operation's row, so the point carries its
+  -- parameters' stack typing there (`AmbientPointTyped`), as the `fork` body's coverage does
   | .scoped point =>
-      PointTyped root w point cert ∧ Row.Subset (bodyRequires root.signature cert) available
+      AmbientPointTyped root w available point cert ∧
+        Row.Subset (bodyRequires root.signature cert) available
   | .forkScoped point _ _ =>
-      PointTyped root w point cert ∧ Row.Subset cert.requires available
+      AmbientPointTyped root w available point cert ∧ Row.Subset cert.requires available
   | .forkIn point _ scope _ =>
-      (PointTyped root w point cert ∧ ScopeLive w scope) ∧ Row.Subset cert.requires available
-  | .gen point => (PointTyped root w point cert ∧
+      (AmbientPointTyped root w available point cert ∧ ScopeLive w scope) ∧
+        Row.Subset cert.requires available
+  | .gen point => (AmbientPointTyped root w available point cert ∧
       ∃ body, Node.at_ (.eff root.program) point.path = some (.eff (.gen body))) ∧
       Row.Subset cert.requires available
   | .loop point cursor => LoopPointTyped root w point cert cursor ∧
-      Row.Subset cert.requires available
+      Row.Subset cert.requires available ∧
+      AmbientStackTyped root w available (scopeParams root.program point.path) point.params
   | .raceAll entrants _ | .raceAllFirst entrants _ => ∀ point ∈ entrants, ∃ ty,
-      PointTyped root w point ty ∧ ty.answer.sub cert.answer = true ∧
+      AmbientPointTyped root w available point ty ∧ ty.answer.sub cert.answer = true ∧
       ty.error.sub cert.error = true ∧ Row.Subset ty.requires available
   | other => fiberPre root w other cert
 

@@ -1126,10 +1126,7 @@ theorem racePayload_world {root : ProgramSource} {race : RRace} {ty : EffTy}
     fun wait hw => strongExit_mono _ _ _ _ ord (h.cleanup wait hw),
     fun id hid => by
       obtain ⟨t, hd, ha, he⟩ := h.live id hid
-      exact ⟨t, by rw [hΓ]; exact hd, ha, he⟩,
-    fun code hc => ?_⟩
-  obtain ⟨cty, typed, ha, he⟩ := h.programs code hc
-  exact ⟨cty, typed.mono ord, ha, he⟩
+      exact ⟨t, by rw [hΓ]; exact hd, ha, he⟩⟩
 
 include hΓ hΘ in
 theorem countdownAt_world {m : RState} {waiter : FiberId} {token : Nat}
@@ -2983,7 +2980,7 @@ theorem racePayload_complete {root : ProgramSource} {w : World} {race : RRace} {
         x ∈ race.state.live := fun x hx => (List.mem_filter.mp hx).1
     split
     · refine ⟨h.token, exitOk_failure_append h.failures (exitOk_causeReasons ex), h.winner,
-        h.accepted, fun wait hw => ?_, fun x hx => h.live x (liveSub x hx), h.programs⟩
+        h.accepted, fun wait hw => ?_, fun x hx => h.live x (liveSub x hx)⟩
       cases hc : race.state.cleanup with
       | none =>
         rw [hc] at hw
@@ -2998,13 +2995,13 @@ theorem racePayload_complete {root : ProgramSource} {w : World} {race : RRace} {
     · split
       · exact ⟨h.token, h.failures, fun pair hp => by cases hp; exact ex.1,
           fun e he => by cases he; exact ex, (fun _ hw => nomatch hw),
-          fun x hx => h.live x (liveSub x hx), h.programs⟩
+          fun x hx => h.live x (liveSub x hx)⟩
       · split
         · have both := exitOk_failure_append h.failures ex
           exact ⟨h.token, both, h.winner, fun e he => by cases he; exact both,
-            (fun _ hw => nomatch hw), fun x hx => h.live x (liveSub x hx), h.programs⟩
+            (fun _ hw => nomatch hw), fun x hx => h.live x (liveSub x hx)⟩
         · exact ⟨h.token, exitOk_failure_append h.failures ex, h.winner, h.accepted, h.cleanup,
-            fun x hx => h.live x (liveSub x hx), h.programs⟩
+            fun x hx => h.live x (liveSub x hx)⟩
   · rw [if_neg hl]
     exact h
 
@@ -3021,7 +3018,7 @@ theorem racePayload_completeFirst {root : ProgramSource} {w : World} {race : RRa
     | some old => exact racePayload_complete h id exit typed
     | none =>
       have ex := typed live
-      refine ⟨h.token, h.failures, ?_, ?_, ?_, ?_, h.programs⟩
+      refine ⟨h.token, h.failures, ?_, ?_, ?_, ?_⟩
       · intro pair present
         cases exit with
         | success value =>
@@ -3049,11 +3046,11 @@ theorem racePayload_afterExit {root : ProgramSource} {w : World} {race : RRace}
     cases mode : race.mode with
     | firstSuccess =>
       have fact := racePayload_complete h id exit typed
-      exact ⟨fact.token, fact.failures, fact.winner, fact.accepted, fact.cleanup, fact.live, fact.programs⟩
+      exact ⟨fact.token, fact.failures, fact.winner, fact.accepted, fact.cleanup, fact.live⟩
     | firstExit =>
       have fact := racePayload_completeFirst h id exit typed
-      exact ⟨fact.token, fact.failures, fact.winner, fact.accepted, fact.cleanup, fact.live, fact.programs⟩
-  exact ⟨next.token, next.failures, next.winner, next.accepted, next.cleanup, next.live, next.programs⟩
+      exact ⟨fact.token, fact.failures, fact.winner, fact.accepted, fact.cleanup, fact.live⟩
+  exact ⟨next.token, next.failures, next.winner, next.accepted, next.cleanup, next.live⟩
 
 /-- A race's type is pinned by its token's declaration. -/
 theorem racePayload_unique {root : ProgramSource} {w : World} {r r' : RRace} {ty ty' : EffTy}
@@ -3399,7 +3396,7 @@ theorem raceKey_internal {m : RState} {race : RRace} (hr : race ∈ m.races) :
 /-- The race column does not read the settled flag. -/
 theorem racePayload_settled {root : ProgramSource} {w : World} {r : RRace} {ty : EffTy}
     (h : RacePayload root w r ty) (b : Bool) : RacePayload root w { r with settled := b } ty :=
-  ⟨h.token, h.failures, h.winner, h.accepted, h.cleanup, h.live, h.programs⟩
+  ⟨h.token, h.failures, h.winner, h.accepted, h.cleanup, h.live⟩
 
 /-- A callback only removes entrants from the live set. -/
 theorem raceComplete_live (s : Supervision.RaceAllState Val Err Defect FiberId Ann) (id : FiberId)

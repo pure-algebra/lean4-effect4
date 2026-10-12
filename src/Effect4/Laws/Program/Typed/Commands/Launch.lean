@@ -141,10 +141,7 @@ theorem racePayload_alloc {race : RRace} {resultTy : EffTy} (h : RacePayload roo
     fun wait hw => strongExit_mono _ _ _ _ ord (h.cleanup wait hw),
     fun id hid => by
       obtain ⟨t, declared, ha, he⟩ := h.live id hid
-      exact ⟨t, ord.1.2.1 _ _ declared, ha, he⟩,
-    fun code hc => ?_⟩
-  obtain ⟨cty, typed, ha, he⟩ := h.programs code hc
-  exact ⟨cty, typed.mono ord, ha, he⟩
+      exact ⟨t, ord.1.2.1 _ _ declared, ha, he⟩⟩
 
 omit back in
 include ord ext hΘ in
@@ -441,11 +438,12 @@ theorem fiberTyped_alloc (typed : MachineTyped root rootTy w m) {x : RFiber} (hx
     exact ((old.code hx' hr hm hp ty' declared).races kept).mono ord
 
 /-- The spawned child's per-fiber clauses: idle, unparked, no pending record, observer or exit,
-an empty stack, its typed code at its declaration. -/
+an empty stack, its typed code at its declaration, entered at a row its context covers. -/
 theorem fiberTyped_child (typed : MachineTyped root rootTy w m) {childTy : EffTy}
-    (code : ChildCode root w childTy program) (subA : Ty.subN childTy.answer ty.answer = true)
-    (subE : Ty.subN childTy.error ty.error = true) (covered : ctx.services.Satisfies childTy.requires)
-    (services : ServicesFit w ctx.services) :
+    {row success failure : Env.Requirement}
+    (code : AmbientProg root w row ((childTy, success, failure) : AmbientPosition) program)
+    (subA : Ty.subN childTy.answer ty.answer = true) (subE : Ty.subN childTy.error ty.error = true)
+    (covered : ctx.services.Satisfies row) (services : ServicesFit w ctx.services) :
     FiberTyped root (w.addFiber ⟨m.nextId⟩ ty)
       (allocR m (spawnChild m program flag budget ctx) record) (spawnChild m program flag budget ctx) := by
   have fresh := fresh_of_typed typed
@@ -467,15 +465,15 @@ theorem fiberTyped_child (typed : MachineTyped root rootTy w m) {childTy : EffTy
   · rw [declaredOnly ty' d]
     exact ⟨finalPos ty true, true, .nil _, prov⟩
   · rw [show (spawnChild m program flag budget ctx).frame.current = program from rfl,
-      raceRegistrationR_ambient (code _ (Row.subset_refl _))] at marker
+      raceRegistrationR_ambient code] at marker
     cases marker
   · rw [declaredOnly ty' d]
-    exact ⟨childTy.requires, finalPos ty flag, flag, covered, rfl,
+    exact ⟨row, finalPos ty flag, flag, covered, rfl,
       ambientProg_mono root ord (ambientProg_widen root
-        (before := (childTy, childTy.requires, childTy.requires))
+        (before := (childTy, success, failure))
         (after := (ty, Env.Requirement.empty, Env.Requirement.empty)) subA subE
         (fun a h => absurd h (Row.not_mem_empty a)) (fun a h => absurd h (Row.not_mem_empty a))
-        (code _ (Row.subset_refl _))), .nil _, prov⟩
+        code), .nil _, prov⟩
 
 theorem readCode_alloc (typed : ConfigTyped root rootTy w m q) :
     ReadCode root (w.addFiber ⟨m.nextId⟩ ty)
@@ -573,9 +571,10 @@ theorem queueOk_alloc (typed : ConfigTyped root rootTy w m q) :
 /-- **The allocation keeps `I`**: the queue unchanged, the world extended by the child's
 declaration at a closed type its code is typed at. -/
 theorem configTyped_alloc (typed : ConfigTyped root rootTy w m q) {childTy : EffTy}
-    (code : ChildCode root w childTy program) (subA : Ty.subN childTy.answer ty.answer = true)
-    (subE : Ty.subN childTy.error ty.error = true) (covered : ctx.services.Satisfies childTy.requires)
-    (services : ServicesFit w ctx.services) :
+    {row success failure : Env.Requirement}
+    (code : AmbientProg root w row ((childTy, success, failure) : AmbientPosition) program)
+    (subA : Ty.subN childTy.answer ty.answer = true) (subE : Ty.subN childTy.error ty.error = true)
+    (covered : ctx.services.Satisfies row) (services : ServicesFit w ctx.services) :
     ConfigTyped root rootTy (w.addFiber ⟨m.nextId⟩ ty)
       (allocR m (spawnChild m program flag budget ctx) record) q := by
   refine ⟨machineTyped_of (machineWide_alloc typed.machine) fun f hf => ?_,
@@ -684,9 +683,9 @@ theorem launch_preserves (root : ProgramSource) (rootTy : EffTy) (raceId : Nat) 
               have stopped := (hostTyped.exited (by rw [hx]; rfl)).2
               rw [hrun] at stopped
               cases stopped
-          obtain ⟨childTy, code, within, subA, subE⟩ :=
+          obtain ⟨childTy, entry, code, within, subA, subE⟩ :=
             entrants live program (by rw [hp]; exact List.mem_cons_self)
-          have covered : host.context.services.Satisfies childTy.requires :=
+          have covered : host.context.services.Satisfies entry :=
             host.context.services.satisfies_weaken rowCovered within
           obtain ⟨_, _, _, _, _, services⟩ := hostTyped.ok
           have ord : w.leHost (w.addFiber ⟨m.nextId⟩ resultTy) := addFiber_leHost fresh.2
@@ -696,8 +695,7 @@ theorem launch_preserves (root : ProgramSource) (rootTy : EffTy) (raceId : Nat) 
             { race with programs := more, nextSite := race.nextSite.map (fun site => site ++ [1]) }
           have payloadNew : RacePayload root (w.addFiber ⟨m.nextId⟩ resultTy) new resultTy :=
             ⟨payload'.token, payload'.failures, payload'.winner, payload'.accepted, payload'.cleanup,
-              payload'.live,
-              fun code hc => payload'.programs code (by rw [hp]; exact List.mem_cons_of_mem _ hc)⟩
+              payload'.live⟩
           let child := spawnChild m program true ((interpR root.program).budgetOf host.context)
             host.context
           let record : ForkRecord := ⟨⟨m.nextId⟩, host.id, true, race.nextSite.getD []⟩

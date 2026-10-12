@@ -52,15 +52,6 @@ theorem observer_exitValue_typed (root : ProgramSource) (w : World) (ty : EffTy)
   | awaitValue =>
     exact TypedProg.pure (strongExit_success w _ _ (reifyExitVal_fits w ty exit typed.1))
 
-/-- Code a new fiber starts with: typed at every row that covers its requirements, at that row.
-A child holds its parent's context, so it starts at the parent's covered row. -/
-def ChildCode (root : ProgramSource) (w : World) (ty : EffTy) (code : RProgram) : Prop :=
-  ∀ row, Row.Subset ty.requires row → AmbientProg root w row (ty, row, row) code
-
-theorem ChildCode.mono {root : ProgramSource} {w w' : World} (ord : w.leHost w') {ty : EffTy}
-    {code : RProgram} (h : ChildCode root w ty code) : ChildCode root w' ty code :=
-  fun row bound => ambientProg_mono root ord (h row bound)
-
 /-- Only the two exit columns are aggregated; requirement transport is H2's separate debt.
 Declared columns are compared in the checker's order (decisions row 137, `Ty.subN`). -/
 def FiberColumnsBelow (w : World) (id : FiberId) (answer error : Ty) : Prop :=
@@ -80,10 +71,6 @@ structure RacePayload (root : ProgramSource) (w : World) (race : RRace)
   2026-10-02): `raceCancel`'s reply walks the live set and reads each declaration
   (`CommandDeliveryOk`'s `FiberListColumns`); `enrollRace` supplies it (`EnrollRaceOk`). -/
   live : ∀ id ∈ race.state.live, FiberColumnsBelow w id resultTy.answer resultTy.error
-  /-- An unlaunched entrant's code is typed at every row covering its requirements: it starts in
-  a child holding the host's context. -/
-  programs : ∀ code ∈ race.programs, ∃ childTy, ChildCode root w childTy code ∧
-    Ty.subN childTy.answer resultTy.answer = true ∧ Ty.subN childTy.error resultTy.error = true
 
 /-- The finite pending record reached by a countdown observer. Joins also use Pending with
 void metadata, so this predicate is attached only through an actual countdown observer. -/
@@ -354,20 +341,23 @@ abbrev CodeOk (root : ProgramSource) (w : World) (m : RState) (host : FiberId) (
   CodeArrow (fun w (_ : Unit) => TypedProg root w) (fun w (_ : Unit) => ExitOk w)
     (frameProtocols root) (fun _ _ => ()) (fun _ => ()) (fun _ _ _ => ()) id w m host () final x
 
-/-- A race's unlaunched entrants within a row: each is child code whose requirement row the row
-holds, at the race token's columns. -/
+/-- A race's unlaunched entrants within a row: each is code typed at an entry row the row holds,
+at the race token's columns. An entrant starts in a child holding the host's context, which covers
+the row; its point's stack is typed at the registering fiber's row (`ambientFiberPre`'s race arm),
+so the entry row is that row, not every row covering the entrant's requirements. -/
 def EntrantsWithin (root : ProgramSource) (w : World) (race : RRace) (resultTy : EffTy)
     (row : Env.Requirement) : Prop :=
-  ∀ code ∈ race.programs, ∃ childTy, ChildCode root w childTy code ∧
-    Row.Subset childTy.requires row ∧
+  ∀ code ∈ race.programs, ∃ (childTy : EffTy) (entry : Env.Requirement),
+    AmbientProg root w entry ((childTy, entry, entry) : AmbientPosition) code ∧
+    Row.Subset entry row ∧
     Ty.subN childTy.answer resultTy.answer = true ∧ Ty.subN childTy.error resultTy.error = true
 
 theorem EntrantsWithin.mono {root : ProgramSource} {w w' : World} (ord : w.leHost w')
     {race : RRace} {resultTy : EffTy} {row : Env.Requirement}
     (h : EntrantsWithin root w race resultTy row) : EntrantsWithin root w' race resultTy row :=
   fun code hc => by
-  obtain ⟨childTy, child, covered⟩ := h code hc
-  exact ⟨childTy, child.mono ord, covered⟩
+  obtain ⟨childTy, entry, child, covered⟩ := h code hc
+  exact ⟨childTy, entry, ambientProg_mono root ord child, covered⟩
 
 theorem EntrantsWithin.kept {root : ProgramSource} {w : World} {race race' : RRace}
     {resultTy : EffTy} {row : Env.Requirement} (h : EntrantsWithin root w race resultTy row)

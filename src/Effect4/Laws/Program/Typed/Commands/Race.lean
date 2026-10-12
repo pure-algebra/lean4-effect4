@@ -197,7 +197,7 @@ theorem enrollRace_preserves (root : ProgramSource) (rootTy : EffTy) (raceId : N
         { race with state := { race.state with live := race.state.live ++ [child] } }
       have payload' : RacePayload root w new resultTy := by
         refine ⟨payload.token, payload.failures, payload.winner, payload.accepted, payload.cleanup,
-          fun id hid => ?_, payload.programs⟩
+          fun id hid => ?_⟩
         rcases List.mem_append.mp hid with old | h
         · exact payload.live id old
         · rw [List.mem_singleton] at h
