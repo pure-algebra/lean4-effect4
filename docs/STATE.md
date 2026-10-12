@@ -215,10 +215,10 @@ A program has folds, a journaled run with replay, and a printed image that reads
   `src/Effect4/Laws/Program/Typed/Residual.lean`). Every program's failure row is within its
   entry row, interruptible or not. Every clause of the typed state keeps it. A capture's release
   runs under its captured context merged over the current one (`releaseContext`, Effect's
-  `provideContext`), which proves `foreignFinalizer_ambient` and `clause_closeScope`. M6 and M7
-  hold modulo three planned goals: `Evaluating.settle_callback` and `clause_scoped` (the scoped
-  exit's close), and `Evaluating.countdown_parks_positional`. The last needs `J` to rule out a
-  stale or a duplicate countdown firing, which neither rc.112 nor 4.0.1 makes.
+  `provideContext`). It proves the four scope-close goals (the
+  [release merge receipt](research/2026-10-12-release-merge-receipt.md)). M6 and M7 hold modulo one
+  planned goal, `Evaluating.countdown_parks_positional`. It needs `J` to rule out a stale or a
+  duplicate countdown firing, which neither rc.112 nor 4.0.1 makes.
   The printer spells a pair of a union as a union of pairs (`E4-PRINT-CE-001`, row 346, ruled).
 - **Shared accounting** (row 355). A stack ledger states once what the goals lane re-proved per
   scenario: consumed plus held is at most produced, along every reachable machine
@@ -256,11 +256,11 @@ A program has folds, a journaled run with replay, and a printed image that reads
 
 ## Next, in order
 
-000. **The scoped exit's close** (`Evaluating.settle_callback`, `clause_scoped`). The restore
-   slot is retired: no proof needs it, and its two effects are recorded divergences (the
+000. **The runtime differences the probes found** (research notes named `2026-10-12-probe-`). The
+   probes of 2026-10-12 rank each difference from Effect by its outcome in real code. Fix those
+   that change an outcome; record the rest. The restore slot is retired (the
    [slot scout](research/2026-10-12-restore-slot-scout.md); owner, 2026-10-12). The positional
-   countdown goal changes no run and stays a planned goal. The read-only probes of 2026-10-12
-   (research notes named `2026-10-12-probe-`) rank what comes next by runtime outcome.
+   countdown goal changes no run and stays a planned goal.
 00. **The last planned goals** (the [goals packet](research/2026-10-10-goals-packet/README.md)).
    Codex reached its quota on 2026-10-12, and Claude carries its lane
    (`docs/research/2026-10-11-machine-models/CODEX-PROMPT.md`). Of the fourteen application goals, three are proved
