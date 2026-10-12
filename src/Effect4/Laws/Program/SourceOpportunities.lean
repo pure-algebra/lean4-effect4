@@ -80,7 +80,8 @@ def name (q : List Nat) : EffName → Nat
   | .gen p pc _ => below q (p.path ++ [0] ++ pc)
   | .loop p => below q p.path
   | .withWaiter base _ _ => name q base
-  | .updateThen _ (.program p) | .bodyThen (.program p) _ => below q p.path
+  | .provideMask _ (.program p) | .updateThen _ (.program p) _ | .bodyThen (.program p) _ _ =>
+    below q p.path
   | _ => 0
 
 
@@ -98,6 +99,7 @@ def thunk (root : NativeEff) (q : List Nat) : EffThunk → Nat
       | _ => below q p.path
   | .releaseMasked p _ => below q p.path
   | .store (.foreign capture _) => fin q (.foreign capture)
+  | .provideMasked _ (.program p) _ | .restoreRegion (.program p) _ => below q p.path
   | _ => 0
 
 /-- A registration push spends this selected source opportunity. -/
@@ -184,6 +186,12 @@ theorem async_zero (root : NativeEff) (q : List Nat) (op : NativeOp) (request : 
   repeat' split
   all_goals rfl
 
+/-- `child_le` at a point's child: a provider region's body is its child 0. A step of
+`compile_le`. -/
+theorem child_point_le (q : List Nat) (p : Point) (i : Nat) :
+    below q (p.child i).path ≤ below q p.path :=
+  child_le q p.path i
+
 /-- Compiling a source occurrence reserves at most its selected descendant opportunity.
 Consumer: load initialization and actual scenario opportunity readers. -/
 theorem compile_le (root : NativeEff) (q : List Nat) (e : NativeEff) (p : Point)
@@ -237,9 +245,9 @@ theorem compile_le (root : NativeEff) (q : List Nat) (e : NativeEff) (p : Point)
     omega
   case case25 p n hf body noExit ih =>
     exact Nat.le_trans (ih (Agreement.at_child found 0)) (child_le q p.path 0)
-  case case43 p n hf saved body mask ih =>
+  case case46 p n hf saved body mask ih =>
     exact Nat.le_trans (ih (Agreement.at_child found 0)) (child_le q p.path 0)
-  case case45 p n hf definitions declarations body exports ih =>
+  case case48 p n hf definitions declarations body exports ih =>
     exact Nat.le_trans (ih (Agreement.at_child found 1)) (child_le q p.path 1)
   case case34 p n hf body options =>
     simp only [current, cata_prim, thunk, name, push, found, Nat.zero_add, Nat.add_zero]
@@ -248,7 +256,7 @@ theorem compile_le (root : NativeEff) (q : List Nat) (e : NativeEff) (p : Point)
     simp only [updateContextAt, current, cata_prim, thunk, name, push, Nat.zero_add, Nat.add_zero]
     exact child_le q p.path 0
   all_goals aesop (add norm simp [current, cata_prim, thunk, name, push, frontier, badShape,
-    Prim.ofExit, updateContextAt, found, foldedAsync]) (add safe apply [child_le])
+    Prim.ofExit, updateContextAt, found, foldedAsync]) (add safe apply [child_le, child_point_le])
 
 
 /-- Resolving an existing source point retains the compiler's opportunity bound.

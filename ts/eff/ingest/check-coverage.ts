@@ -45,7 +45,7 @@ function eff(v: unknown): void {
     case "catchIf": eff(a[2]); eff(a[3]); return
     case "select": eff(a[3]); eff(a[4]); return
     case "iterate": eff(a[6]); return
-    case "restore": eff(a[2]); return
+    case "restore": case "provideContext": eff(a[2]); return
     case "gen": chain(a[1], stmt); return
     case "withFiber": action(a[1]); return
     case "provideLayer": layer(a[1]); eff(a[3]); return
@@ -69,7 +69,7 @@ function action(v: unknown): void {
   const a = array(v), tag = tagOf<ActionTerm["_tag"]>(ActionTerm.cases, "ActionTerm", a); seen.action.add(tag)
   switch (tag) {
     case "runIn": case "interrupt": case "interruptScoped": case "interruptAll": case "awaitAll": case "awaitAllFailFast":
-    case "snapshotChildren": case "awaitNewChildren": case "setContext": case "getContext": case "getId": case "closeScope":
+    case "snapshotChildren": case "awaitNewChildren": case "context": case "getId": case "closeScope":
     case "getInterruptible": return
     case "fork": case "forkIn": case "forkScoped": eff(a[1]); return
     case "raceAll":
@@ -94,7 +94,7 @@ for (const file of files.filter(f => f.endsWith(".json") && !f.endsWith(".keys.j
 const expected = {
   eff: Object.keys(Eff.cases),
   stmt: Object.keys(Stmt.cases),
-  action: Object.keys(ActionTerm.cases).filter(n => !["interruptScoped", "awaitAllFailFast", "snapshotChildren", "awaitNewChildren", "setContext"].includes(n)),
+  action: Object.keys(ActionTerm.cases).filter(n => !["interruptScoped", "awaitAllFailFast", "snapshotChildren", "awaitNewChildren"].includes(n)),
   layer: Object.keys(LayerTerm.cases),
   row: rows.map(r => rowKey(nativeOpJson(r.op)))
 }

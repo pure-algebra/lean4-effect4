@@ -286,6 +286,14 @@ theorem interp_action_at (root : NativeEff) (fragment : Fragment root) (complete
     cases found
     exact ⟨resolve_scoped root fragment p owned, trivial⟩
   case forkLayer => exact owned.elim
+  -- a masked provider runs its update under the region it owns; a restore runs the region
+  case provideMasked update body flag =>
+    cases found
+    exact (⟨trivial, owned, fun _ _ wrong => nomatch wrong⟩ :
+      CodeAt root (Prim.onSuccess (Prim.withFiber EffThunk.getCtx) (.updateThen update body flag)))
+  case restoreRegion body flag =>
+    cases found
+    exact (region_at root fragment body owned : CodeAt root (regionCode root body))
   all_goals aesop (add norm simp [interpAt, interpOf, ActionAt, ActionProgramsAt])
 
 end Effect4.Program.SourceScope

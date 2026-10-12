@@ -29,7 +29,7 @@ import type { Expr } from "../read.ts"
 // The checked type reader and the type-argument view of an operation are shared with read.ts
 // and, through its fragment reader, with the oxc engine: the three readers read a type
 // argument alike (the state plan's T5, part B). This engine keeps its own walk.
-import { readTypeText, sameRowArg, typeArgsOf, withTypeArgs } from "../read.ts"
+import { readKeysText, readTypeText, sameRowArg, typeArgsOf, withTypeArgs } from "../read.ts"
 
 class Decline extends Error {}
 const bad = (reason: string): never => { throw new Decline(reason) }
@@ -151,7 +151,7 @@ function walkProgram(program: Eff, onLayer: (l: LayerTerm, path: readonly number
       case "raceAll":
       case "raceAllFirst": return { ...a, entrants: spine(a.entrants, [...path, 0], eff) }
       case "runIn": case "interrupt": case "interruptScoped": case "interruptAll": case "awaitAll": case "awaitAllFailFast":
-      case "snapshotChildren": case "awaitNewChildren": case "setContext": case "getContext": case "getId": case "closeScope":
+      case "snapshotChildren": case "awaitNewChildren": case "context": case "getId": case "closeScope":
       case "getInterruptible": return a
       default: return noCase(a)
     }
@@ -161,6 +161,7 @@ function walkProgram(program: Eff, onLayer: (l: LayerTerm, path: readonly number
     switch (e._tag) {
       // A restore site's body is its child 0 (`Node.child`, `src/Effect4/Program/NodeLenses.lean`).
       case "suspend": case "exit": case "uninterruptible": case "interruptible": case "iterate": case "scoped": case "restore":
+      case "provideContext":
         return { ...e, body: eff(e.body, child(0)) }
       case "bind": return { ...e, first: eff(e.first, child(0)), rest: eff(e.rest, child(1)) }
       case "gen": return { ...e, body: spine(e.body, child(0), stmt) }
@@ -585,6 +586,8 @@ class CompilerReader {
       case "Effect.yieldNowWith": { this.arity(a, 1); const l = this.literal(arg(0)); return l._tag === "nat" ? { _tag: "yieldNow", priority: l.value } : bad("priority") }
       case "Effect.service": this.arity(a, 1); return { _tag: "service", key: this.key(arg(0), env) }
       case "Effect.provideService": this.arity(a, 3); return { _tag: "provideService", body: e(0), key: this.key(arg(1), env), value: t(2) }
+      // a provider region (decisions row 349): the program, then the context (`internal/effect.ts:2180-2199`)
+      case "Effect.provideContext": this.arity(a, 2); return { _tag: "provideContext", context: t(1), body: e(0) }
       case "Effect.provide": {
         if (a.length !== 2 && a.length !== 3) return bad("provide")
         if (a.length === 3) { const m = this.fields(arg(2)), l = this.literal(this.field(m, "local")); if (m.size !== 1 || l._tag !== "bool" || !l.value) return bad("local") }
@@ -597,7 +600,15 @@ class CompilerReader {
       case "Fiber.interrupt": this.arity(a, 1); return { _tag: "withFiber", action: { _tag: "interrupt", target: t(0) } }
       case "Fiber.interruptAll": case "Fiber.interruptAllAs": this.arity(a, h === "Fiber.interruptAll" ? 1 : 2); return { _tag: "withFiber", action: { _tag: "interruptAll", targets: t(0), interruptor: a.length === 1 ? null : t(1) } }
       case "Fiber.awaitAll": this.arity(a, 1); return { _tag: "withFiber", action: { _tag: "awaitAll", targets: t(0) } }
-      case "Effect.context": this.arity(a, 0); return { _tag: "withFiber", action: { _tag: "getContext" } }
+      // the promised row (decisions row 349): rc.112 defaults `R` to `never`, the empty row
+      case "Effect.context": {
+        this.arity(a, 0)
+        const params = x.typeArguments?.params ?? []
+        if (params.length > 1) return bad("context type arguments")
+        const keys = params.length === 0 ? [] : readKeysText(this.text(params[0]!))
+        if (keys === undefined) return bad("context row")
+        return { _tag: "withFiber", action: { _tag: "context", keys } }
+      }
       case "Scope.close": this.arity(a, 2); return { _tag: "withFiber", action: { _tag: "closeScope", scope: t(0), exit: t(1) } }
       case "Effect.raceAll": { this.arity(a, 1); const list = this.unwrap(arg(0)); if (list.type !== "ArrayExpression") return bad("entrants"); return { _tag: "withFiber", action: { _tag: "raceAll", entrants: elementsOf(list).map(y => this.eff(y, env)) } } }
       case "Effect.raceAllFirst": { this.arity(a, 1); const list = this.unwrap(arg(0)); if (list.type !== "ArrayExpression") return bad("entrants"); return { _tag: "withFiber", action: { _tag: "raceAllFirst", entrants: elementsOf(list).map(y => this.eff(y, env)) } } }

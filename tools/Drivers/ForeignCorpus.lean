@@ -44,6 +44,7 @@ mutual
     | .select t d a b => return .select t d (← program a) (← program b)
     | .iterate c i t s r b => return .iterate c i t s r (← program b)
     | .restore saved b => return .restore saved (← program b)
+    | .provideContext c b => return .provideContext c (← program b)
     | .yieldNow n => pure (.yieldNow n)
     | .awaitFiber t m => pure (.awaitFiber t m)
     | .withFiber a => return .withFiber (← action a)
@@ -154,6 +155,13 @@ def maskProbes : List (String × Eff NativeOp) :=
       (.bind (.provideLayer (.succeed ⟨⟨4⟩, ⟨4⟩⟩ (.nat 7)) false one)
         (.provideLayer (.ref [1, 0, 0, 0, 0]) false (.succeed (.lit (.nat 2))))))) ]
 
+/-- The typed context reader and the provider region (decisions row 349). The seeded generator
+draws the reader at the empty row and never the region (`Test.Program.Gen.pendingEffs`), so this
+probe holds the corpus's only `provideContext`: the region supplies the context it read. -/
+def contextProbes : List (String × Eff NativeOp) :=
+  [ ("context-provide", .bind (.withFiber (.context .empty))
+      (.provideContext (.var 0) (.succeed (.lit (.nat 1))))) ]
+
 def corpus (dir : System.FilePath) (skeletons : List (String × Eff NativeOp)) : IO Unit := do
   IO.FS.createDirAll dir
   let mut index := "name\tstyle\tbytes\n"
@@ -161,7 +169,8 @@ def corpus (dir : System.FilePath) (skeletons : List (String × Eff NativeOp)) :
   let mut total := 0
   for c in Tools.Styles.isolated do
     let mut count := 0
-    for (name, skeleton) in skeletons ++ Tools.Styles.probes ++ nativeProbes ++ maskProbes do
+    for (name, skeleton) in skeletons ++ Tools.Styles.probes ++ nativeProbes ++ maskProbes ++
+        contextProbes do
       let .ok kept := roundTrip nativeSignature nativeSpell 0 skeleton | throw (IO.userError s!"skeleton refused {name}")
       let (p, keys) := (program kept).run []
       -- The style renderer uses only names and values, never the main declaration's

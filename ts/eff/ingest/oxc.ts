@@ -599,7 +599,15 @@ class Normalize {
     }
     if (["Fiber.join", "Fiber.await", "Fiber.interrupt", "Fiber.interruptAll", "Fiber.awaitAll", "Effect.yieldNowWith"].includes(h)) { arity(1); return call(h, [t(0)]) }
     if (h === "Scope.close" || h === "Fiber.interruptAllAs") { arity(2); return call(h, [t(0), t(1)]) }
-    if (h === "Effect.context") { arity(0); return call(h, []) }
+    // the promised row (decisions row 349): rc.112 defaults `R` to `never`, the empty row; the
+    // fragment reader reads the row exactly (`readKeys`)
+    if (h === "Effect.context") {
+      arity(0)
+      if (typeArgs.length > 1) return reject("E-BIND-SHAPE", "context type arguments")
+      return { _tag: "call", fn: { _tag: "generic", fn: id(h), typeArgs: typeArgs.length ? typeArgs : ["never"] }, args: [] }
+    }
+    // a provider region: the program, then the context (`internal/effect.ts:2180-2199`)
+    if (h === "Effect.provideContext") { arity(2); return call(h, [p(0), t(1)]) }
     if (h === "Effect.sleep") { arity(1); return call(h, [this.duration(arg(0))]) }
     for (const row of rows.filter(r => r.row.spelling === h)) {
       const requests = row.row.shape === "tupleCall" ? 2 : row.row.request._tag === "unit" ? 0 : 1

@@ -1363,6 +1363,13 @@ const readKeys = (text: string): Read<ReadonlyArray<ServiceKey>> => {
   return printed === text ? ok(row) : bad()
 }
 
+/** A context reader's type argument as a row, for the foreign recognizers: the printer's own
+ * reader (`readKeys`), so only a printed row is admitted. */
+export const readKeysText = (text: string): ReadonlyArray<ServiceKey> | undefined => {
+  const r = readKeys(text)
+  return Result.isSuccess(r) ? r.success : undefined
+}
+
 const readLiteral = (x: Expr): Read<Lit> => {
   const term = readTerm(0, x)
   if (failed(term)) return again(term)

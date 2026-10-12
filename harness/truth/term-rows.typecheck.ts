@@ -246,10 +246,10 @@ const closeScopeGreen: Effect.Effect<void> = Scope.close((undefined as never), E
 // @ts-expect-error scope must be Scope
 Scope.close(123, Exit.void)
 
-// 9. setContext (context must be Context)
-const setContextGreen: Effect.Effect<number> = Effect.provide(Effect.succeed(1), (undefined as never))
+// 9. provideContext (context must be Context; decisions row 349)
+const provideContextGreen: Effect.Effect<number> = Effect.provideContext(Effect.succeed(1), (undefined as never))
 // @ts-expect-error context must be Context
-Effect.provide(Effect.succeed(1), 123)
+Effect.provideContext(Effect.succeed(1), 123)
 
 // 10. interruptAll (fiber id must be number)
 const interruptAllGreen: Effect.Effect<void> = Fiber.interruptAllAs([fiber0], (undefined as never))

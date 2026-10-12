@@ -556,6 +556,10 @@ theorem atAddress_getElem (path : List Nat) (args : List (ArgF Op TCarrier)) (j 
         simp only [atAddress, List.getElem?_cons_succ, List.take_succ_cons,
           List.countP_cons, isChildArg, argSortOf]
         exact ih j i
+      | keys value =>
+        simp only [atAddress, List.getElem?_cons_succ, List.take_succ_cons,
+          List.countP_cons, isChildArg, argSortOf]
+        exact ih j i
       | optTerm value =>
         simp only [atAddress, List.getElem?_cons_succ, List.take_succ_cons,
           List.countP_cons, isChildArg, argSortOf]
@@ -1245,6 +1249,7 @@ theorem eraseCapture_printLeaf (sig : Signature Op) (row : Templates.Row)
   | forkOptions value =>
     cases printed
     simp only [eraseCapture, sort, argSortOf]
+  | keys value => cases printed; rfl
   | lit value =>
     cases printed
     simp only [eraseCapture, sort, argSortOf]
@@ -1947,6 +1952,7 @@ theorem atAddress_fold_leaf (sig : Signature Op) (ann : List Nat → Option (Lis
   | decls value => rfl
   | forkOptions value => rfl
   | optTerm value => rfl
+  | keys value => rfl
   | lit value => rfl
   | path value => rfl
 
@@ -2082,29 +2088,39 @@ theorem printPerformAt_nodeLike {n : Nat} {op : Op} {r : Term}
       obtain ⟨plain, target, targets, hplain, hhead⟩ := printPerformAt_head hp
       exact (withHeadTypes_head hhead).2
 
+/-- A typed row call is headed by no name, or by its row's spelling: the type arguments keep the
+plain call's head. A step of `printPerformAt_no_reserved` and `printPerformAt_invoke_none`. -/
+theorem printPerformAt_exprHead {n : Nat} {op : Op} {r : Term} {annotation : Option (List Ty)}
+    {x : Expr} (hp : Templates.printPerformAt sig n op r annotation = .ok x) :
+    exprHead? x = none ∨ exprHead? x = some (sig.rowOf op).spelling := by
+  cases annotation with
+  | none => exact printPerform_head hp
+  | some types =>
+    cases types with
+    | nil => exact printPerform_head hp
+    | cons ty tys =>
+      obtain ⟨plain, target, targets, hplain, hhead⟩ := printPerformAt_head hp
+      rcases (withHeadTypes_head hhead).1 with hnone | hsame
+      · exact .inl hnone
+      · rw [hsame]
+        exact printPerform_head hplain
+
 /-- Reserved skeletons cannot claim an annotated row call at any matching depth. -/
 theorem printPerformAt_no_reserved (hl : LawfulSpelling sig spell) {n : Nat} {op : Op}
     {r : Term} {annotation : Option (List Ty)} {x : Expr}
     (hp : Templates.printPerformAt sig n op r annotation = .ok x)
     (d : Nat) (t : Tpl) (h : String) (hh : t.head? = some h) (hres : h ∈ reserved) :
     matchT d t x = none := by
-  cases annotation with
-  | none => exact matchT_none_of_reserved hl hp hh hres
-  | some types =>
-    cases types with
-    | nil => exact matchT_none_of_reserved hl hp hh hres
-    | cons ty tys =>
-      obtain ⟨plain, target, targets, hplain, hhead⟩ := printPerformAt_head hp
-      have hnone := (withHeadTypes_head hhead).1
-      cases hm : matchT d t x with
-      | none => rfl
-      | some substitution =>
-        have hactual := head_of_match d t x substitution hm hh
-        rw [hactual] at hnone
-        exact nomatch hnone
+  cases hm : matchT d t x with
+  | none => rfl
+  | some substitution =>
+    have hactual := head_of_match d t x substitution hm hh
+    rcases printPerformAt_exprHead hp with h2 | h2 <;> rw [hactual] at h2
+    · cases h2
+    · exact absurd (Option.some.inj h2 ▸ hres) (hl.spelling_not_reserved op)
 
 /-- A typed row call in the domain names no definition that takes programs (slice HO-3b): its
-head is its row's spelling, or no name at all when it carries type arguments. -/
+head is its row's spelling, or no name at all. -/
 theorem printPerformAt_invoke_none (hl : LawfulSpelling sig spell) {n : Nat} {op : Op}
     {r : Term} {annotation : Option (List Ty)} {x : Expr}
     (hp : Templates.printPerformAt sig n op r annotation = .ok x) (hd : sig.dom op = true)
@@ -2112,15 +2128,7 @@ theorem printPerformAt_invoke_none (hl : LawfulSpelling sig spell) {n : Nat} {op
     ∀ s rq fns, invokeView x = some (s, rq, fns) → invokedDef sig spell s = none := by
   intro s rq fns hv
   have hx := invokeView_some hv
-  have head : exprHead? x = none ∨ exprHead? x = some (sig.rowOf op).spelling := by
-    cases annotation with
-    | none => exact printPerform_head hp
-    | some types =>
-      cases types with
-      | nil => exact printPerform_head hp
-      | cons ty tys =>
-        obtain ⟨plain, target, targets, _, hhead'⟩ := printPerformAt_head hp
-        exact Or.inl (withHeadTypes_head hhead').1
+  have head := printPerformAt_exprHead hp
   rcases head with h2 | h2 <;> rw [hx] at h2 <;>
     simp only [exprHead?, reduceCtorEq, Option.some.injEq] at h2
   subst h2
@@ -2872,12 +2880,54 @@ theorem typedLayer_template (sig : Signature Op) (ann : List Nat → Option (Lis
     cases output
   · rfl
 
+/-- A head with type arguments applied to arguments: the only shape whose types the node eraser
+removes, besides the `Effect.withFiber` wrapper. -/
+def genericArgs : Expr → Bool
+  | .call (.generic _ _) (_ :: _) => true
+  | _ => false
+
+theorem genericArgs_of_ne {x : Expr} (h : ∀ f ts a as, x ≠ .call (.generic f ts) (a :: as)) :
+    genericArgs x = false := by
+  fun_cases genericArgs x
+  · exact absurd rfl (h _ _ _ _)
+  · rfl
+
 theorem eraseNode_of_exprHead_except_runIn (n : Nat) (x : Expr) {head : String}
-    (headed : exprHead? x = some head) (other : head ≠ "Effect.withFiber") :
+    (headed : exprHead? x = some head) (other : head ≠ "Effect.withFiber")
+    (bare : genericArgs x = false) :
     EraseTermTypes.eraseNode n x = x := by
   fun_cases EraseTermTypes.eraseNode n x
-  all_goals simp only [exprHead?, reduceCtorEq] at headed
-  all_goals aesop (add safe forward [other])
+  all_goals simp only [exprHead?] at headed
+  all_goals aesop (add norm simp genericArgs, safe forward [other])
+
+/-- The table applies a head with a type argument to no arguments: the one such row is
+`Effect.context<R>()`. A step of `eraseNode_of_table_inst`. -/
+def genericBare : Tpl → Bool
+  | .call (.generic _ _) .nil => true
+  | .call (.generic _ _) (.cons _ _) => false
+  | _ => true
+
+/-- `genericBare` at a row's skeleton. -/
+def rowGenericBare (row : Templates.Row) : Bool :=
+  match row.out with
+  | .tpl t => genericBare t
+  | _ => true
+
+theorem table_rowGenericBare : Templates.table.all rowGenericBare = true := by decide
+
+/-- A headed skeleton whose type-argument heads take no arguments instantiates to no head with
+type arguments applied to arguments. A step of `eraseNode_of_table_inst`. -/
+theorem inst_genericBare {n : Nat} {τ : Subst} {t : Tpl} {x : Expr}
+    (printed : inst n τ t = some x) (bare : genericBare t = true) (headed : t.head?.isSome = true) :
+    ∀ f ts a as, x ≠ .call (.generic f ts) (a :: as) := by
+  intro f ts a as hx
+  subst hx
+  fun_cases Tpl.head? t
+  case case4 name i args =>
+    cases args with
+    | cons _ _ => simp only [genericBare, Bool.false_eq_true] at bare
+    | nil => aesop (add norm simp [inst, insts])
+  all_goals aesop (add norm simp [inst, Tpl.head?, Option.bind_eq_some_iff])
 
 def rawRunInTpl : Tpl :=
   .call (.ident "Effect.withFiber")
@@ -2954,8 +3004,11 @@ theorem eraseNode_of_table_inst {row : Templates.Row} (member : row ∈ Template
       rw [actual] at printed
       obtain ⟨receiver, scope, rfl⟩ := inst_rawRunIn_shape printed
       exact eraseNode_rawRunIn n receiver scope
-    · exact eraseNode_of_exprHead_except_runIn n x
+    · have bare := table_fact table_rowGenericBare member
+      simp only [rowGenericBare, output] at bare
+      exact eraseNode_of_exprHead_except_runIn n x
         (head_of_inst n τ t x printed hhead) special
+        (genericArgs_of_ne (inst_genericBare printed bare (by rw [hhead]; rfl)))
   · cases t <;> simp only [Bool.false_eq_true] at method
     rename_i target name args
     change ((inst n τ target).bind fun target' => (insts n τ args).bind fun args' =>
@@ -3210,7 +3263,7 @@ theorem withFiber_reserved : "Effect.withFiber" ∈ reserved := by decide
 definition's name, never the transparent `Effect.withFiber`. -/
 theorem eraseNode_invoke {n : Nat} {s : String} {args : List Expr} (hs : s ∉ reserved) :
     EraseTermTypes.eraseNode n (.call (.ident s) args) = .call (.ident s) args :=
-  eraseNode_of_exprHead_except_runIn n _ rfl (fun h => hs (h ▸ withFiber_reserved))
+  eraseNode_of_exprHead_except_runIn n _ rfl (fun h => hs (h ▸ withFiber_reserved)) rfl
 
 /-- No action row erases a call headed by a name that is not reserved. -/
 theorem eraseT_action_none_of_head {s : String} {args : List Expr} (hs : s ∉ reserved) (d : Nat) :
@@ -5068,17 +5121,17 @@ theorem childEnv_length (s : Signature Op) (parent : NodeEnv) (node : Node Op) (
     {rho : NodeEnv} (found : node.childEnv s parent i = some rho) :
     rho.tyEnv.length = childScope parent.tyEnv.length node i := by
   fun_cases Node.childEnv s parent node i
-  case case24 term decision left right =>
+  case case25 term decision left right =>
     simp only [Node.childEnv] at found
     rw [childScope_select_left]
     exact select_left_map_length s parent.tyEnv term decision found
-  case case25 term decision left right =>
+  case case26 term decision left right =>
     simp only [Node.childEnv] at found
     rw [childScope_select_right]
     exact select_right_map_length s parent.tyEnv term decision found
   -- An invocation's programs and their spine (decisions row 340), by hand: a search over the
   -- spine's catch-all on the parent reaches `Classical.choice`.
-  case case28 k request args =>
+  case case29 k request args =>
     simp only [Node.childEnv] at found
     obtain ⟨d, _, invoked⟩ := Option.bind_eq_some_iff.mp found
     cases params : d.params with
@@ -5088,7 +5141,7 @@ theorem childEnv_length (s : Signature Op) (parent : NodeEnv) (node : Node Op) (
       cases invoked
       simp only [NodeEnv.tyEnv, List.length_append, List.length_singleton]
       rfl
-  case case53 head tail =>
+  case case54 head tail =>
     simp only [Node.childEnv] at found
     cases found
     cases parent with
@@ -5096,19 +5149,19 @@ theorem childEnv_length (s : Signature Op) (parent : NodeEnv) (node : Node Op) (
     | env tys => rfl
     | body tys loop => rfl
     | closed => rfl
-  case case54 head tail tys q0 q qs =>
+  case case55 head tail tys q0 q qs =>
     simp only [Node.childEnv] at found
     cases found
     simp only [NodeEnv.tyEnv, List.length_append, List.length_singleton]
     rfl
-  case case55 head tail env qs notTwo =>
+  case case56 head tail env qs notTwo =>
     cases qs with
     | nil => simp only [Node.childEnv, reduceCtorEq] at found
     | cons q0 rest =>
       cases rest with
       | nil => simp only [Node.childEnv, reduceCtorEq] at found
       | cons q qs => exact (notTwo q0 q qs rfl).elim
-  case case56 head tail notTwo notSlots =>
+  case case57 head tail notTwo notSlots =>
     cases parent with
     | slots tys qs => exact (notSlots tys qs rfl).elim
     | env tys => simp only [Node.childEnv] at found; cases found; rfl
@@ -5990,7 +6043,7 @@ theorem eraseNode_nodeLike (n : Nat) (x : Expr) :
 private theorem bare_not_runIn (n : Nat) (name : String) (args : List Expr)
     (other : name ≠ "Effect.withFiber") :
     eraseNode n (.call (.ident name) args) = .call (.ident name) args :=
-  Effect4.Codegen.eraseNode_of_exprHead_except_runIn n _ rfl other
+  Effect4.Codegen.eraseNode_of_exprHead_except_runIn n _ rfl other rfl
 
 -- A selected finite list excludes the wrapper head by a concrete Boolean witness.
 -- No variable String equality or Boolean reflexivity is simplified.
@@ -6387,7 +6440,7 @@ def ContextMatches (ctx : Context Op) (node : Node Op) (n : Nat) : Prop :=
 theorem eraseNode_bare_call (n : Nat) (head : String) (args : List Expr)
     (other : head ≠ "Effect.withFiber") :
     EraseTermTypes.eraseNode n (.call (.ident head) args) = .call (.ident head) args :=
-  Effect4.Codegen.eraseNode_of_exprHead_except_runIn n (.call (.ident head) args) (by rfl) other
+  Effect4.Codegen.eraseNode_of_exprHead_except_runIn n (.call (.ident head) args) (by rfl) other rfl
 
 -- These node statements retain typed child syntax unchanged.
 -- The contextual capture recursion subsequently erases each child exactly once.
@@ -7494,15 +7547,8 @@ theorem head_erased {n : Nat} {x : Expr} {name : String}
 theorem rawPerformAt_head {n : Nat} {op : Op} {request : Term}
     {ann : Option (List Ty)} {x : Expr}
     (hp : Templates.printPerformAt sig n op request ann = .ok x) :
-    exprHead? x = none ∨ exprHead? x = some (sig.rowOf op).spelling := by
-  cases ann with
-  | none => exact printPerform_head hp
-  | some tys =>
-    cases tys with
-    | nil => exact printPerform_head hp
-    | cons ty tys =>
-      obtain ⟨plain, target, targets, _, hhead⟩ := printPerformAt_head hp
-      exact Or.inl (withHeadTypes_head hhead).1
+    exprHead? x = none ∨ exprHead? x = some (sig.rowOf op).spelling :=
+  printPerformAt_exprHead hp
 
 end Effect4.Codegen.P2bRowSupport
 

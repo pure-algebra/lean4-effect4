@@ -42,6 +42,9 @@ let rand_options () =
 let rand_service_key () =
   { service_key_name = { service_name_value = rand_nat () }; service_key_service = { service_type_code_value = rand_nat () } }
 
+(* A canonical row of keys: strictly ascending by name, then service (`Effect4.Row`, `ServiceKey.Lt`). *)
+let rand_keys () = List.sort_uniq compare (List.init (ri 4) (fun _ -> rand_service_key ()))
+
 let rand_lit () =
   match ri 4 with
   | 0 -> Lit_unit
@@ -114,7 +117,7 @@ let rec rand_eff d =
     | _ -> Eff_perform (rand_op (), t ())
   else
     let e () = rand_eff (d - 1) in
-    match ri 28 with
+    match ri 29 with
     | 0 -> Eff_succeed (t ())
     | 1 -> Eff_fail (t ())
     | 2 -> Eff_failCause (rand_cause (d - 1))
@@ -142,6 +145,7 @@ let rec rand_eff d =
     | 24 -> Eff_service (rand_service_key ())
     | 25 -> Eff_provideService (rand_service_key (), t (), e ())
     | 26 -> Eff_restore (t (), e ())
+    | 27 -> Eff_provideContext (t (), e ())
     | _ -> Eff_catchIf (t (), e (), e ())
 
 and rand_layer d =
@@ -171,7 +175,7 @@ and rand_effs d = if d <= 0 || ri 3 = 0 then Effs_nil else Effs_cons (rand_eff (
 
 and rand_action d =
   let t () = rand_term (min d 2) in
-  match ri 18 with
+  match ri 17 with
   | 0 -> Action_term_fork (rand_eff d, rand_options ())
   | 1 -> Action_term_forkIn (rand_eff d, rand_options (), t ())
   | 2 -> Action_term_forkScoped (rand_eff d, rand_options ())
@@ -184,11 +188,10 @@ and rand_action d =
   | 9 -> Action_term_snapshotChildren
   | 10 -> Action_term_awaitNewChildren (t ())
   | 11 -> Action_term_raceAll (rand_effs d)
-  | 12 -> Action_term_setContext (t ())
-  | 13 -> Action_term_getContext
-  | 14 -> Action_term_getId
-  | 15 -> Action_term_getInterruptible
-  | 16 -> Action_term_closeScope (t (), t ())
+  | 12 -> Action_term_context (rand_keys ())
+  | 13 -> Action_term_getId
+  | 14 -> Action_term_getInterruptible
+  | 15 -> Action_term_closeScope (t (), t ())
   | _ -> Action_term_raceAllFirst (rand_effs d)
 
 let rec rand_ty d =
