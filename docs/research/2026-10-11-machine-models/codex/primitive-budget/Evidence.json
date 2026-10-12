@@ -1,0 +1,11 @@
+{
+  "base": "5c0c4eab333a4fb605bca27fda1eccad5ca9fe31",
+  "path": "src/Effect4/Laws/Program/SourceOpportunityPrimitive.lean",
+  "before_lines": 267,
+  "after_lines": 279,
+  "before_sha256": "1265d4af9768d473f6fef3d199f35714eaf54a22589ad568501dfd3386b7745c",
+  "after_sha256": "a0e1987cc4ef8dc9358acf3fa518fc6833380c6f5036c64713130e8b76de45e6",
+  "unchanged_theorem_headers": 15,
+  "private_evaluatePrim_splits_before": 1,
+  "private_evaluatePrim_splits_after": 0
+}

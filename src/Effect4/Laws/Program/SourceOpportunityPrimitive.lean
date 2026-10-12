@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.SourceOpportunityNative
+import Effect4.Laws.Program.PrimitiveProducer
 
 /-!
 Concept: scope-lifetime-finalization R11.
@@ -164,54 +165,65 @@ theorem primitive_debit (root : NativeEff) (q : List Nat) (fragment : Fragment r
   have noRaces := races_nil root m raceFree owned
   have frames := frame_primitive_debit root q fragment clearFin clearLoop table m fiber yielding held.frame
   have finalizers (exit : ExitV) := finalizer_primitive_debit root q fragment clearFin clearLoop table m fiber yielding exit held.frame
-  fun_cases evaluatePrim (interpAt root m.completedExits table) m fiber yielding
-  case case1 priority selected token grown before parked =>
+  generalize evaluated : evaluatePrim (interpAt root m.completedExits table) m fiber yielding = next
+  have actual := Moves.evaluatePrim_producer (interpAt root m.completedExits table) m fiber yielding
+  rw [evaluated] at actual
+  cases actual with
+  | yieldNow priority selected =>
     unfold Debit
     simp only [recorded_emit, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, runEvent, Nat.add_zero]
     change recorded q m + outside root q fiber.id m + frame root q _ ≤ _
-    dsimp only [parked, before, RunFiber.park]
+    dsimp only [RunFiber.park]
     simp only [frame, current, cata_prim, Nat.zero_add]
     omega
-  case case3 register signal cancel selected token state grown before parked produced =>
+  | asyncParked register signal cancel state selected produced =>
     have empty := cancellation register signal cancel selected
     have cancellationZero : name q ((interpAt root m.completedExits table).cancelName
-        (cancel.getD (interpAt root m.completedExits table).abortName) fiber.id token) = 0 := by
+        (cancel.getD (interpAt root m.completedExits table).abortName) fiber.id m.nextToken) = 0 := by
       cases cancel with
       | none => rfl
       | some callback => exact empty callback rfl
     unfold Debit
     simp only [recorded_emit, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, runEvent, Nat.add_zero]
     change recorded q m + outside root q fiber.id m + frame root q _ ≤ _
-    dsimp only [parked, before, RunFiber.park]
+    dsimp only [RunFiber.park]
     split
     · simp only [frame, List.map_cons, List.sum_cons, saved, cancellationZero, Nat.zero_add]
       exact Nat.le_refl _
     · exact Nat.le_refl _
-  case case6 targets selected machine returned parked edits counted noYield noAsync =>
+  | countdownPark targets machine returned parked edits selected counted =>
     have debit := countdown_plan_debit root q table m fiber yielding targets .exitsValue false trivial
     rw [counted] at debit
     exact debit
-  case case9 target mode park targetFiber found noExit token grown cancel before parked noYield noAsync =>
-    have cancelZero : name q cancel = 0 := rfl
+  | joinWaiting target mode targetFiber park found noExit =>
+    have cancelZero : name q ((interpAt root m.completedExits table).cancelName
+        (interpAt root m.completedExits table).parkCancelName fiber.id m.nextToken) = 0 := rfl
     unfold Debit
     simp only [recorded_emit, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, runEvent, Nat.add_zero]
     change recorded q m + outside root q fiber.id m + frame root q _ ≤ _
-    dsimp only [parked, before, RunFiber.park]
+    dsimp only [RunFiber.park]
     simp only [frame, List.map_cons, List.sum_cons, saved, cancelZero, Nat.zero_add]
     exact Nat.le_refl _
-  case case2 register signal cancel selected token state grown program produced =>
-    have zero := register_reply_zero root q table m register fiber.id token program
+  | asyncImmediate register signal cancel state program selected produced =>
+    have zero := register_reply_zero root q table m register fiber.id m.nextToken program
       (congrArg Prod.snd produced)
-    exact answer_debit root q m grown fiber yielding program .continue_ [.drainDue] rfl rfl zero
-  case case5 race park noYield noAsync =>
+    exact answer_debit root q m {m with state, nextToken := m.nextToken + 1}
+      fiber yielding program .continue_ [.drainDue] rfl rfl zero
+  | racePark race park =>
     exact register_race_debit root q m fiber yielding race noRaces
-  case case8 target mode park targetFiber found exit finished noYield noAsync =>
+  | joinExited target mode targetFiber exit park found finished =>
     exact answer_debit root q m m fiber yielding _ .continue_ [] rfl rfl
       (exit_answer_zero root q table m exit mode)
-  case case12 park thunk selected state value produced noYield noAsync =>
+  | sync thunk state value selected park produced =>
     exact answer_debit root q m {m with state} fiber yielding (.success value) .answered [.drainDue] rfl rfl rfl
-  all_goals
-    aesop (add safe apply [actionDebit, frames, finalizers, answer_debit, (register_race_debit root q m fiber yielding _ noRaces), exit_answer_zero]) (add norm simp [Debit, frame, current, cata_prim, saved, recorded_emit, outside_emit, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, runEvent, Nat.zero_add, Nat.add_zero]) (add safe tactic (by omega))
+  | step unparked ordinary noSync noSuccess noFailure noYield noAsync => exact frames
+  | finalizer exit selected => exact finalizers exit
+  | action thunk next selected park produced => exact actionDebit thunk next selected produced
+  | fallback thunk selected park missing =>
+    exact answer_debit root q m m fiber yielding _ .answered [] rfl rfl rfl
+  | rejectedPark cause park =>
+    exact answer_debit root q m m fiber yielding _ .continue_ [] rfl rfl rfl
+  | joinMissing target mode park missing => exact Nat.le_refl _
 
 /-- A primitive exit does not edit the stored fiber rows before settlement.
 Consumer: scoped-exit and native evaluator debit. -/
