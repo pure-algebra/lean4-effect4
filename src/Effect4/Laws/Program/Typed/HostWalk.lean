@@ -321,16 +321,17 @@ theorem ambient_popR_hostTyped (root : ProgramSource) (interp : RInterp) (w : Wo
           cases ic <;> exact ih _ _ self (Row.subset_trans sub hcov) rfl ⟨hp.recorded, hp.deferred⟩
 
 /-- **A delivery through a machine host stack is typed**: a success with a deferred interrupt
-installs the recorded pending cause at the position's failure row over the unchanged stack;
-otherwise the ambient walk from the frame with the deferred flag cleared. -/
+installs the recorded pending cause at the position's failure row over the unchanged stack, at
+either mask, since a deferred interrupt is delivered whatever the mask (rc.112
+`internal/effect.ts:684-686`, equal text in 4.0.1 `:679-681`); otherwise the ambient walk from
+the frame with the deferred flag cleared. -/
 theorem ambient_deliverR_hostTyped (root : ProgramSource) (interp : RInterp) (w : World) (m : RState)
     (laws : MHookLaws root interp w) (covered : Env.Requirement) (f : RFiber) (yielding : Bool)
     (ex : ExitV) {tin tout : MachinePos} (stack : MHostStack root w m f.id tin tout f.frame.stack)
     (hex : AmbientExit w (ambientInput tin.1 ex) tin.1 ex) (hcov : Row.Subset (ambientInput tin.1 ex) covered)
     (hmask : f.frame.interruptible = tin.2)
-    (deferredMask : f.frame.deferredInterrupt = true → f.frame.interruptible = true)
-    (failCov : tin.2 = true → Row.Subset tin.1.failureRow covered) (hp : InterruptProvenance f.frame)
-    (wf : tin.1.WF) :
+    (deferredCov : f.frame.deferredInterrupt = true → Row.Subset tin.1.failureRow covered)
+    (hp : InterruptProvenance f.frame) (wf : tin.1.WF) :
     MHostWalkTyped root w m f.id covered tout ((deliverR interp m f yielding ex).fiber.frame,
       walkExit (deliverR interp m f yielding ex).outcome) := by
   have walkCase : MHostWalkTyped root w m f.id covered tout ((walkIter interp m f yielding ex).fiber.frame,
@@ -349,9 +350,8 @@ theorem ambient_deliverR_hostTyped (root : ProgramSource) (interp : RInterp) (w 
     dsimp only
     split
     · rename_i deferred
-      have bit : tin.2 = true := hmask ▸ deferredMask deferred
-      exact .inl ⟨tin.1.failureRow, tin, failCov bit, hmask.symm,
-        by rw [bit]; exact .pure (ambientExit_failure (strongExit_of_clean w _ _ (pendingCause_clean hp)
+      exact .inl ⟨tin.1.failureRow, tin, deferredCov deferred, hmask.symm,
+        .pure (ambientExit_failure (strongExit_of_clean w _ _ (pendingCause_clean hp)
           (pendingCause_noShapeDefect _ hp)) (Row.subset_refl _)) ⟨Or.inr (Row.subset_refl _), wf⟩,
         stack, ⟨hp.recorded, fun h => nomatch h⟩⟩
     · exact walkCase

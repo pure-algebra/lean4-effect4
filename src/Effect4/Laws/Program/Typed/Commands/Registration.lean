@@ -344,8 +344,8 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
       have idle := (old.exited (by rw [hx]; rfl)).2
       rw [running] at idle
       cases idle
-  obtain ⟨race₀, resultTy, found₀, _, declared, ⟨row, final, flag, hfinal, covered, stackOk, prov,
-    deferredMask⟩, entrants⟩ := old.registration raceId marker
+  obtain ⟨race₀, resultTy, found₀, _, declared, ⟨row, final, flag, hfinal, covered, stackOk, prov⟩,
+    entrants⟩ := old.registration raceId marker
   have e₀ : race = race₀ := Option.some.inj (hr.symm.trans found₀)
   subst e₀
   have hrace : race ∈ m.races := List.mem_of_find?_eq_some hr
@@ -388,7 +388,7 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
       have codeG : ∀ ty, w.Γ g.id = some ty → MCodeOk root w (m.update g) g ty := by
         intro ty d
         rw [finalOf ty d]
-        exact ⟨row, _, flag, covered, rfl, deferredMask,
+        exact ⟨row, _, flag, covered, rfl, fun _ => Row.subset_refl _,
           ambientProgAt_of_admin root code (denoteRaceSettle_admin _ _ _) row _,
           stackOk.races (racesKept_of_eq view.races), provG⟩
       have frameOk : ∀ ty, w.Γ g.id = some ty → SavedPosition root w ty g.frame := by
@@ -427,7 +427,7 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
         rw [requestOfR_of_not_parked look off] at hreq
         cases hreq
       have edited := configTyped_rupdate_code (g := g) tail hf rfl (PendingWeaker.refl _) rfl
-        (fun p => ⟨p.recorded, p.deferred⟩) ⟨.inr rfl, rfl, fun h => h⟩
+        (fun p => ⟨p.recorded, p.deferred⟩) ⟨.inr rfl, rfl, Or.inl⟩
         (fun k hk => Or.inl (fiberKeys_internal hmem hk))
         noRequest (fun c hc h => commandAuthority_flags (g := g) hf rfl rfl rfl rfl freeF c hc h)
         (fun _ _ _ ty d => Or.inl (codeG ty d)) fresh
@@ -473,7 +473,7 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
           have e : raceId = raceId' := Option.some.inj (markerG.symm.trans marker')
           subst e
           exact ⟨race, resultTy, hr, fid.symm, declared, ⟨row, final, flag, hfinal, covered,
-            stackP.races (racesKept_of_eq view.races), provG, deferredMask⟩, entrants.congr rfl rfl⟩
+            stackP.races (racesKept_of_eq view.races), provG⟩, entrants.congr rfl rfl⟩
         have pendingOk : ∀ p ∈ g.pending, ∃ id, (w.Θ id p.token).isSome = true :=
           fun _ hp => absurd hp List.not_mem_nil
         have fresh : FiberTyped root w (m.update g) g :=
@@ -574,7 +574,7 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
           have e : raceId = raceId' := Option.some.inj (markerG.symm.trans marker')
           subst e
           exact ⟨race, resultTy, hr, fid.symm, declared, ⟨row, final, flag, hfinal, covered,
-            stackP.races (racesKept_of_eq view.races), provG, deferredMask⟩, entrants.congr rfl rfl⟩
+            stackP.races (racesKept_of_eq view.races), provG⟩, entrants.congr rfl rfl⟩
         have pendingOk : ∀ p ∈ g.pending, ∃ id, (w.Θ id p.token).isSome = true := by
           intro p hp
           rw [hpOf] at hp
@@ -617,7 +617,7 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
             delivery := fun token h => by
               rw [tokenOf token h]
               exact ⟨resultTy, row, declaredG, final, flag, hfinal, covered,
-                stackP.races (racesKept_of_eq view.races), provG, deferredMask⟩
+                stackP.races (racesKept_of_eq view.races), provG⟩
             below := old.below
             pendingShape := by
               show ∃ p, g.pending = [p] ∧ p.token = race.token

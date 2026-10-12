@@ -175,7 +175,7 @@ theorem evaluate_preserves (root : ProgramSource) (rootTy : EffTy) (id : FiberId
         rw [requestOfR_of_not_parked look off] at hr
         cases hr
       have edited := configTyped_rupdate_gen (g := g) tail hf rfl (PendingWeaker.refl _) rfl
-        (fun p => p) ⟨.inr rfl, rfl, fun h => h⟩ (fun k hk => Or.inl (fiberKeys_internal hmem hk)) noRequest
+        (fun p => p) ⟨.inr rfl, rfl, Or.inl⟩ (fun k hk => Or.inl (fiberKeys_internal hmem hk)) noRequest
         (fun c _ h => commandAuthority_idle (g := g) hf rfl idle live c h)
         (fun _ reads => absurd reads (not_readsCode_idle (f := f) tail.queue hf idle)) fresh
       have head : HeadOk root w (m.update g) (.loop id false) rest := by
@@ -196,7 +196,7 @@ theorem evaluate_preserves (root : ProgramSource) (rootTy : EffTy) (id : FiberId
         intro x hx running reads marker ty declared
         rcases mem_rupdate hx with rfl | ⟨hold, hne⟩
         · exact Or.inl ((old.code live idle marker notParked ty declared).of_view
-            (racesKept_of_eq (m := m) fun _ => rfl) rfl rfl rfl rfl (fun h => h) ⟨.inr rfl, rfl, fun h => h⟩)
+            (racesKept_of_eq (m := m) fun _ => rfl) rfl rfl rfl rfl (fun h => h) ⟨.inr rfl, rfl, Or.inl⟩)
         · obtain ⟨y, r⟩ := reads
           refine (edited.code x hx running ⟨y, ?_⟩ marker ty declared).cons fun y' h => ?_
           · rcases r with r | r
@@ -278,8 +278,8 @@ theorem resume_step {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RSt
             have stopped := (old.exited (by rw [hx]; rfl)).1
             rw [hp] at stopped
             cases stopped
-        obtain ⟨tin, row, declaredToken, final, flag, declaredFinal, covered, stackOk, prov,
-          deferredMask⟩ := old.delivery parkedToken hp
+        obtain ⟨tin, row, declaredToken, final, flag, declaredFinal, covered, stackOk, prov⟩ :=
+          old.delivery parkedToken hp
         have answerTyped := payload ⟨t, hfound, hp⟩ tin (by rw [← tid]; exact declaredToken)
         have shape : ∃ p0, t.pending = [p0] ∧ p0.token = parkedToken := by
           have s := old.pendingShape
@@ -332,7 +332,8 @@ theorem resume_step {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RSt
             rfl
           subst same
           exact ⟨row, (((tin, row, row) : AmbientPosition), t.frame.interruptible), flag, covered, rfl,
-            deferredMask, answerTyped row _, stackOk.races (racesKept_of_eq view.races), provG⟩
+            fun _ => Row.subset_refl _, answerTyped row _, stackOk.races (racesKept_of_eq view.races),
+            provG⟩
         have fresh : FiberTyped root w (m.update g) g :=
           { ok := ⟨⟨frameOk⟩, fun q hq => moved.ok.c1 q (List.mem_filter.mp hq).1, moved.ok.c2,
               moved.ok.c3, moved.ok.c4, moved.ok.c5⟩
@@ -369,7 +370,7 @@ theorem resume_step {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RSt
           cases hrun
         have edited := configTyped_rupdate_gen (g := g) tail hf rfl
           (pendingWeaker_filter t.pending parkedToken) rfl (fun p => ⟨p.recorded, p.deferred⟩)
-          ⟨.inr rfl, rfl, fun h => h⟩ (fun k hk => Or.inl (fiberKeys_internal hmem hk)) noRequest
+          ⟨.inr rfl, rfl, Or.inl⟩ (fun k hk => Or.inl (fiberKeys_internal hmem hk)) noRequest
           (fun c _ h => commandAuthority_idle (g := g) hf rfl idle live c h) notRunning fresh
         exact configTyped_cons_evaluate (configTyped_emit edited _) id
       · rw [if_neg same]
@@ -419,7 +420,7 @@ theorem configTyped_cleared {root : ProgramSource} {rootTy : EffTy} {w : World} 
       delivery := fun token hp => by
         obtain ⟨tin, row, d1, reply⟩ := moved.delivery token hp
         exact ⟨tin, row, d1, stackReplyAt_view (f := f) (racesKept_of_eq fun _ => rfl) rfl
-          (by rw [gframe]) (by rw [gframe]; exact id) ⟨.inl empty, by rw [gframe], by rw [gframe]; exact id⟩
+          (by rw [gframe]) (by rw [gframe]; exact id) ⟨.inl empty, by rw [gframe], by rw [gframe]; exact Or.inl⟩
           reply⟩
       below := moved.below
       pendingShape := moved.pendingShape
@@ -435,7 +436,7 @@ theorem configTyped_cleared {root : ProgramSource} {rootTy : EffTy} {w : World} 
         obtain ⟨race, resultTy, found, host, token, reply, entrants⟩ := moved.registration raceId marker
         exact ⟨race, resultTy, found, host, token,
           stackReply_view (f := f) (racesKept_of_eq fun _ => rfl) rfl (by rw [gframe])
-            (by rw [gframe]; exact id) ⟨.inl empty, by rw [gframe], by rw [gframe]; exact id⟩ reply,
+            (by rw [gframe]; exact id) ⟨.inl empty, by rw [gframe], by rw [gframe]; exact Or.inl⟩ reply,
             EntrantsCovered.of_exited exited⟩
       code := fun hx => by
         have none' : f.exit = none := hx
@@ -449,7 +450,7 @@ theorem configTyped_cleared {root : ProgramSource} {rootTy : EffTy} {w : World} 
   have look : (m.update g).fiber? g.id = some g := rfiber?_update_self hf rfl
   exact configTyped_rupdate_gen (g := g) typed hf rfl (PendingWeaker.refl _)
     (by rw [gframe]) (fun pv => by rw [gframe]; exact pv)
-    ⟨.inl empty, by rw [gframe], by rw [gframe]; exact id⟩
+    ⟨.inl empty, by rw [gframe], by rw [gframe]; exact Or.inl⟩
     (fun k hk => Or.inl (fiberKeys_internal hmem (List.mem_append_right _ hk)))
     (fun token r hr => by
       rw [requestOfR_of_not_parked look
@@ -750,7 +751,7 @@ theorem configTyped_publish {root : ProgramSource} {rootTy : EffTy} {w : World} 
         obtain ⟨race, resultTy, found, host, token, reply, entrants⟩ := moved.registration raceId marker
         exact ⟨race, resultTy, found, host, token,
           stackReply_view (f := f) (racesKept_of_eq fun _ => rfl) rfl rfl (fun _ => provP)
-            ⟨.inr rfl, rfl, fun _ h => nomatch h⟩ reply,
+            ⟨.inr rfl, rfl, fun h => nomatch h⟩ reply,
             EntrantsCovered.of_exited rfl⟩
       code := fun hx => nomatch hx
       tokens := fun _ hp => nomatch hp
@@ -759,7 +760,7 @@ theorem configTyped_publish {root : ProgramSource} {rootTy : EffTy} {w : World} 
       observersBelow := moved.observersBelow
       children := moved.children }
   exact configTyped_rupdate_gen (g := p) tail hf rfl (fun _ _ h => nomatch h) rfl (fun _ => provP)
-    ⟨.inr rfl, rfl, fun _ h => nomatch h⟩ (fun k hk => Or.inl (fiberKeys_internal hmem hk))
+    ⟨.inr rfl, rfl, fun h => nomatch h⟩ (fun k hk => Or.inl (fiberKeys_internal hmem hk))
     (fun token r hr => by
       rw [requestOfR_of_not_parked look (fun h => nomatch h)] at hr
       cases hr)
@@ -870,7 +871,7 @@ theorem finish_preserves (root : ProgramSource) (rootTy : EffTy) (id : FiberId) 
         observersBelow := moved.observersBelow
         children := moved.children }
     have edited := configTyped_rupdate_gen (g := g) tail hf rfl (PendingWeaker.refl _) rfl
-      (fun _ => provG) ⟨.inr rfl, rfl, fun _ h => nomatch h⟩ (fun k hk => Or.inl (fiberKeys_internal hmem hk))
+      (fun _ => provG) ⟨.inr rfl, rfl, fun h => nomatch h⟩ (fun k hk => Or.inl (fiberKeys_internal hmem hk))
       (fun token r hr => by
         rw [requestOfR_of_not_parked look
           (by rw [show g.parked = f.parked from rfl, parked]; exact fun h => nomatch h)] at hr

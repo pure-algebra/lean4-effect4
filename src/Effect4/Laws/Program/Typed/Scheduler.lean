@@ -717,11 +717,13 @@ abbrev finalPos (final : EffTy) (flag : Bool) : MachinePos :=
 
 /-- **A fiber's current code over its saved stack**, at a row its context covers: the code at
 that row and the fiber's mask, a host stack to the fiber's declared type, interrupt provenance,
-and a deferred interrupt only while interruptible (the loop top injects it, `runloopTop`). -/
+and, while an interrupt is deferred, the code's failure row within that row. The loop top injects
+a deferred interrupt whatever the mask (`runloopTop`; rc.112 `internal/effect.ts:639-642`, equal
+text in 4.0.1 `:632-635`), so the failure it starts must be covered at the code's own row. -/
 def MCodeOk (root : ProgramSource) (w : World) (m : RState) (f : RFiber) (final : EffTy) : Prop :=
   ∃ (row : Env.Requirement) (tin : MachinePos) (flag : Bool),
     f.context.services.Satisfies row ∧ tin.2 = f.frame.interruptible ∧
-    (f.frame.deferredInterrupt = true → f.frame.interruptible = true) ∧
+    (f.frame.deferredInterrupt = true → Row.Subset tin.1.failureRow row) ∧
     AmbientProgAt root w (row, tin.2) tin.1 f.frame.current ∧
     MHostStack root w m f.id tin (finalPos final flag) f.frame.stack ∧
     Contracts.InterruptProvenance f.frame
@@ -768,21 +770,20 @@ theorem raceRegistrationR_ambient {root : ProgramSource} {w : World} {input : Am
     | fiber _ _ _ _ _ pre _ _ => cases pre
   · rfl
 
-/-- A reply delivered to a fiber meets its saved stack at a row its context covers. -/
+/-- A reply delivered to a fiber meets its saved stack at a row its context covers. The reply's
+failure row is that row, so a deferred interrupt needs no clause of its own. -/
 def StackReplyAt (root : ProgramSource) (w : World) (m : RState) (fiber : RFiber) (replyTy : EffTy)
     (row : Env.Requirement) : Prop :=
   ∃ final flag, w.Γ fiber.id = some final ∧ fiber.context.services.Satisfies row ∧
     MHostStack root w m fiber.id (((replyTy, row, row) : AmbientPosition), fiber.frame.interruptible)
       (finalPos final flag) fiber.frame.stack ∧
-    Contracts.InterruptProvenance fiber.frame ∧
-    (fiber.frame.deferredInterrupt = true → fiber.frame.interruptible = true)
+    Contracts.InterruptProvenance fiber.frame
 
 theorem StackReplyAt.mono {root : ProgramSource} {w w' : World} {m m' : RState} {fiber : RFiber}
     {replyTy : EffTy} {row : Env.Requirement} (ord : w.leHost w') (kept : RacesKept m m')
     (h : StackReplyAt root w m fiber replyTy row) : StackReplyAt root w' m' fiber replyTy row := by
-  obtain ⟨final, flag, declared, covered, stack, provenance, deferred⟩ := h
-  exact ⟨final, flag, ord.1.2.1 _ _ declared, covered, (stack.races kept).mono ord, provenance,
-    deferred⟩
+  obtain ⟨final, flag, declared, covered, stack, provenance⟩ := h
+  exact ⟨final, flag, ord.1.2.1 _ _ declared, covered, (stack.races kept).mono ord, provenance⟩
 
 theorem StackReplyAt.congr {root : ProgramSource} {w : World} {m : RState} {f g : RFiber}
     {replyTy : EffTy} {row : Env.Requirement} (h : StackReplyAt root w m f replyTy row)
@@ -829,8 +830,8 @@ def StackReply (root : ProgramSource) (w : World) (m : RState) (fiber : RFiber) 
 theorem stackReply_races {root : ProgramSource} {w : World} {m m' : RState} {fiber : RFiber}
     {replyTy : EffTy} (kept : RacesKept m m') (h : StackReply root w m fiber replyTy) :
     StackReply root w m' fiber replyTy := by
-  obtain ⟨row, final, flag, declared, covered, stack, provenance, deferred⟩ := h
-  exact ⟨row, final, flag, declared, covered, stack.races kept, provenance, deferred⟩
+  obtain ⟨row, final, flag, declared, covered, stack, provenance⟩ := h
+  exact ⟨row, final, flag, declared, covered, stack.races kept, provenance⟩
 
 /-- The direct registration marker owns a real race on this fiber, and the race token's
 result meets this host's saved continuation. This finite current-code clause covers both
@@ -914,8 +915,8 @@ theorem stackReply_mono {root : ProgramSource} {w w' : World} {m m' : RState} {f
     {replyTy : EffTy} (ord : w.leHost w') (ext : ∀ id t, w.Γ id = some t → w'.Γ id = some t)
     (kept : RacesKept m m') (h : StackReply root w m fiber replyTy) :
     StackReply root w' m' fiber replyTy := by
-  obtain ⟨row, final, flag, declared, covered, stack, provenance, deferred⟩ := h
-  exact ⟨row, final, flag, ext _ _ declared, covered, (stack.races kept).mono ord, provenance, deferred⟩
+  obtain ⟨row, final, flag, declared, covered, stack, provenance⟩ := h
+  exact ⟨row, final, flag, ext _ _ declared, covered, (stack.races kept).mono ord, provenance⟩
 
 /-- **The delivery facts are monotone**: they read the world only positively, the machine only at
 the command's owner (`Guard.commandOwner`, the host of every command that installs a reply), and
@@ -943,8 +944,8 @@ theorem commandDelivery_mono {root : ProgramSource} {w w' : World} {m m' : RStat
     obtain ⟨answer, error, row, cols, protocol, stack⟩ := h f hf
     exact ⟨answer, error, row, fiberListColumns_mono ext cols, ambientIteratorProtocol_mono ord protocol,
       by
-        obtain ⟨final, flag, declared, covered, st, provenance, deferred⟩ := stack
-        exact ⟨final, flag, ext _ _ declared, covered, (st.races kept).mono ord, provenance, deferred⟩⟩
+        obtain ⟨final, flag, declared, covered, st, provenance⟩ := stack
+        exact ⟨final, flag, ext _ _ declared, covered, (st.races kept).mono ord, provenance⟩⟩
   | finish host _ =>
     intro f hf
     rw [owner host rfl] at hf
