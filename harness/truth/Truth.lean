@@ -687,8 +687,10 @@ promise and awaits both. The program answers `[the child's exit, causeIsFail, ca
 rc.112's walk skips the mask's restoring continuation and passes the cause on unchanged
 (`vendor/effect-4.0.0-rc.112/src/internal/core.ts:529-547`): the child's exit is `Fail(42)`.
 4.0.1 adds the recorded interrupt after the walk (`vendor/effect-4.0.1/src/internal/core.ts:580-608`):
-`Fail(42), Interrupt(2)`, the helper under the recorder's number. The machine answers as the
-pin. A source that does not elaborate is a failure with a text, never a patched program. -/
+`Fail(42), Interrupt(2)`, the helper under the recorder's number. The machine answers as 4.0.1:
+the skipped restoring mask adds the recorded interrupt (`FrameFiber.skippedCause`,
+`src/Effect4/Machine/Frames.lean`). A source that does not elaborate is a failure with a text,
+never a patched program. -/
 def poisonNoHandler : Api.Program :=
   match Effect4.Program.Authoring.elaborate poisonNoHandlerSrc with
   | .ok p => p
@@ -2093,16 +2095,18 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
 #guard pMaskWait != pMaskedRestore &&
   (Api.run pMaskWait 1000).exit != (Api.run pMaskedRestore 1000).exit
 -- The two programs of the alignment plan (2026-10-12). Each elaborates (its first node makes a
--- cell; a source that did not elaborate is a `fail`) and reads back whole. The close answers
--- latest's value: the machine masks an explicit close (Effect 4.0.1
--- `internal/effect.ts:3929-3935`), so the interrupted closer runs the release (decisions row 359).
+-- cell; a source that did not elaborate is a `fail`) and reads back whole. Both answer latest's
+-- value (decisions row 359). The failed child's exit carries the recorded interrupt beside its
+-- `Fail` (Effect 4.0.1 `internal/core.ts:580-608`). The machine masks an explicit close
+-- (`internal/effect.ts:3929-3935`), so the interrupted closer runs the release.
 #guard match poisonNoHandler, closeInterruptedMidFinalizer with
   | .bind (.perform (.deferredMakeOf .nat .never) _) _, .bind (.perform .refMake _) _ => true
   | _, _ => false
 #guard Api.roundTrip poisonNoHandler = .ok poisonNoHandler
 #guard Api.roundTrip closeInterruptedMidFinalizer = .ok closeInterruptedMidFinalizer
-#guard (Api.run poisonNoHandler 1000).exit = some (.success
-  (.list [reifyExitVal (.failure (Cause.fail (.tag 42))), .bool true, .bool false]))
+#guard match (Api.run poisonNoHandler 1000).exit with
+  | some (.success (.list [_, .bool true, .bool true])) => true
+  | _ => false
 #guard (Api.run closeInterruptedMidFinalizer 1000).exit = some (.success (.nat 1))
 -- The fiber numbers of the compared fields (`numbering`). The rule on rows: a fiber's first
 -- sight is its first `forked` row as the child or its first `started` row.

@@ -1842,15 +1842,16 @@ let cause_sanitize (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 :
 let frame_fiber_skipped_cause (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool) (inst_3 : _ -> _ -> bool) (inst_4 : _ -> _ -> bool) (demand : arm) (frame : (_, _, _, _, _, _, _) prim) (fiber : (_, _, _, _, _, _, _) frame_fiber) (x_5 : (_, _, _, _) reason list option) : (_, _, _, _) reason list option =
   match x_5 with
     | None -> x_5
-    | Some val__6 -> (let _jp_7 = fun _y_8 -> if _y_8 then (match (fiber : (_, _, _, _, _, _, _) frame_fiber) with
-          | { interrupted_cause = interrupted_cause; _ } -> (match interrupted_cause with
-              | None -> x_5
-              | Some val__9 -> (let _x_10 = cause_sanitize inst_1 inst_2 inst_3 inst_4 val__6 val__9 in
-                Some _x_10))) else x_5 in
-      let _x_12 = Arm_contE in
-      let _x_13 = inst_decidable_eq_arm demand _x_12 in
-      if _x_13 then (let _x_14 = prim_has_arm frame _x_12 in
-        _jp_7 _x_14) else _jp_7 _x_13)
+    | Some val__6 -> (match (fiber : (_, _, _, _, _, _, _) frame_fiber) with
+        | { interrupted_cause = interrupted_cause; _ } -> (match interrupted_cause with
+            | None -> x_5
+            | Some val__7 -> (let _jp_8 = fun _y_9 -> if _y_9 then (let _x_12 = cause_sanitize inst_1 inst_2 inst_3 inst_4 val__6 val__7 in
+                Some _x_12) else (let _x_10 = cause_combine inst_1 inst_2 inst_3 inst_4 val__6 val__7 in
+                Some _x_10) in
+              let _x_14 = Arm_contE in
+              let _x_15 = inst_decidable_eq_arm demand _x_14 in
+              if _x_15 then (let _x_16 = prim_has_arm frame _x_14 in
+                _jp_8 _x_16) else _jp_8 _x_15)))
 
 
 
@@ -2234,26 +2235,26 @@ let frame_fiber_resume_cause (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool)
       let _x_14 = _x_12 :: _x_13 in
       let _x_15 = events @ _x_14 in
       _x_11, _x_15) in
-  let _jp_17 = fun _y_18 _y_19 _y_20 _y_21 _y_22 _y_23 -> let _x_24 = prim_arm_e inst_1 inst_2 inst_3 inst_4 interp _y_20 _y_21 _y_23 in
+  let _jp_17 = fun _y_18 _y_19 _y_20 _y_21 _y_22 _y_23 -> let _x_24 = prim_arm_e inst_1 inst_2 inst_3 inst_4 interp _y_18 _y_20 _y_23 in
   match _x_24 with
     | None -> _jp_9 _y_22
     | Some val__25 -> (match val__25 with
         | fst_26, _ -> (let _x_28 = [] in
-          match (_y_18 : (_, _, _, _, _, _, _) frame_fiber) with
+          match (_y_21 : (_, _, _, _, _, _, _) frame_fiber) with
             | { stack = stack; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt; _ } -> (let _x_29 = _x_28 @ stack in
               let _x_30 = ({ current = fst_26; stack = _x_29; interruptible = interruptible; interrupted_cause = interrupted_cause; deferred_interrupt = deferred_interrupt } : (_, _, _, _, _, _, _) frame_fiber) in
               let _x_31 = FrameStep_running _x_30 in
-              let _x_32 = prim_finalizer_events _y_20 _y_22 in
+              let _x_32 = prim_finalizer_events _y_18 _y_22 in
               let _x_33 = _y_19 @ _x_32 in
               let _x_34 = list_map_tr_loop _f_5 _x_28 _x_28 in
               let _x_35 = _x_33 @ _x_34 in
               _x_31, _x_35))) in
   let _jp_37 = fun _y_38 _y_39 _y_40 _y_41 _y_42 -> match provided with
     | None -> (let _x_43 = None in
-      _jp_17 _y_38 _y_39 _y_40 _y_42 _y_41 _x_43)
+      _jp_17 _y_38 _y_39 _y_42 _y_40 _y_41 _x_43)
     | Some val__44 -> (let _x_45 = frame_pop_delivered_exit pop val__44 in
       let _x_46 = Some _x_45 in
-      _jp_17 _y_38 _y_39 _y_40 _y_42 _y_41 _x_46) in
+      _jp_17 _y_38 _y_39 _y_42 _y_40 _y_41 _x_46) in
   let _jp_47 = fun _y_48 -> match (pop : (_, _, _, _, _, _, _) frame_pop) with
     | { answer = answer; events = events_1; fiber = fiber; carried_cause = carried_cause; _ } -> (let delivered = frame_pop_delivered_exit pop _y_48 in
       match (answer : (_, _, _, _, _, _, _) cont_answer) with
@@ -2267,8 +2268,8 @@ let frame_fiber_resume_cause (inst_1 : _ -> _ -> bool) (inst_2 : _ -> _ -> bool)
               let _x_56 = FrameStep_running _x_55 in
               _x_56, events_1))
         | ContAnswer_frame frame_58 -> (match carried_cause with
-            | None -> _jp_37 fiber events_1 frame_58 delivered cause
-            | Some val__59 -> _jp_37 fiber events_1 frame_58 delivered val__59)
+            | None -> _jp_37 frame_58 events_1 fiber delivered cause
+            | Some val__59 -> _jp_37 frame_58 events_1 fiber delivered val__59)
         | ContAnswer_empty -> _jp_9 delivered) in
   match provided with
     | None -> (let _x_60 = Exit_failure cause in

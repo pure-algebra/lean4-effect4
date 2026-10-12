@@ -180,7 +180,7 @@ def main():
         # LATEST (decisions row 359): where the machine follows Effect 4.0.1 and rc.112 differs.
         latest = sorted(row['program'] for row in json.loads((Path(work)/'result.json').read_text())['rows']
                         if row.get('exception') == 'LATEST')
-        if latest != ['closeInterruptedMidFinalizer']:
+        if latest != ['closeInterruptedMidFinalizer', 'poisonNoHandler']:
             sys.exit(f'FAIL truth: the LATEST signed fixtures are {latest}, not those of decisions row 359')
         # DI-49: the modules rc.112 just ran, and the adapter they call, under the pinned
         # compiler. The config is copied beside them so that `generated/` and `prelude.ts`

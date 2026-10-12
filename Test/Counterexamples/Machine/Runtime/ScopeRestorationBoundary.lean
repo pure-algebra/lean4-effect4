@@ -9,7 +9,9 @@ before that adapter exists. referenceResume is a finite witness candidate,
 not a new semantic owner. The outer close uses the exit actually exposed by
 the inner frame step and the service state retained by its completed close.
 Pinned policy: vendor/effect-4.0.0-rc.112/src/internal/core.ts:529-548 and
-vendor/effect-4.0.0-rc.112/src/internal/effect.ts:4302-4320.
+vendor/effect-4.0.0-rc.112/src/internal/effect.ts:4302-4320. The failure walk is latest's
+(vendor/effect-4.0.1/src/internal/core.ts:580-608, decisions row 359): a failing exit that
+skips the restoring mask carries the pending interrupt combined in, never replaced by it.
 -/
 
 namespace Test.Counterexamples.Runtime.ScopeRestorationBoundary
@@ -72,7 +74,8 @@ def noMaskEvents : List (FrameEvent Nat Nat Nat Nat Nat Nat Nat) :=
 #guard failedClose.2 = (42,[(2,.success 5),(1,.success 5)])
 def failureCause : C := ⟨[Reason.die 2 ReasonAnnotations.empty, Reason.die 1 ReasonAnnotations.empty]⟩
 #guard referenceResume failedClose.1 successFiber =
-  some (.finished (.failure failureCause), maskEvents ++ [.yielded (.failure failureCause)])
+  some (.finished (.failure (Cause.combine failureCause pending)),
+    maskEvents ++ [.yielded (.failure (Cause.combine failureCause pending))])
 #guard referenceResume failedClose.1
     { successFiber with stack := [.setInterruptible true, .onFailure (.success 0) 77] } =
   -- U-01: passing a preempted catch adds the recorded interrupt while retaining defects.
@@ -81,16 +84,17 @@ def failureCause : C := ⟨[Reason.die 2 ReasonAnnotations.empty, Reason.die 1 R
       .yielded (.failure (Cause.combine failureCause pending))])
 #guard referenceResume failedClose.1
     { successFiber with stack := [.setInterruptible true, .onExit (.success 0) 8 false] } =
-  some (.running ⟨.failure (Cause.combine failureCause (Cause.die 8)),
+  some (.running ⟨.failure (Cause.combine (Cause.combine failureCause pending) (Cause.die 8)),
     [.setInterruptible true], false, some pending, false⟩,
     maskEvents ++ [.popped (.onExit (.success 0) 8 false),
-      .ranContAll (.onExit (.success 0) 8 false), .ranFinalizer 8 (.failure failureCause)])
+      .ranContAll (.onExit (.success 0) 8 false),
+      .ranFinalizer 8 (.failure (Cause.combine failureCause pending))])
 def singleton : S := ⟨.sequential, .openInline 1 1⟩
 def emptyFailure : R := .failure ⟨[]⟩
 def singleEmpty := runClose singleton (.success 5) (fun _ => emptyFailure) (40,[])
 def manyEmpty := runClose scope (.success 5) (fun _ => emptyFailure) (40,[])
 #guard referenceResume singleEmpty.1 successFiber =
-  some (.finished (.failure ⟨[]⟩), maskEvents ++ [.yielded (.failure ⟨[]⟩)])
+  some (.finished (.failure pending), maskEvents ++ [.yielded (.failure pending)])
 #guard referenceResume manyEmpty.1 successFiber =
   some (.running ⟨.failure pending, [], true, some pending, false⟩, maskEvents)
 def outgoing? (inner : M × W) (fiber : F) : Option E :=
@@ -109,9 +113,10 @@ def outerAfterInterrupt := outerAfter successClose successFiber
   some (.failure (Cause.combine pending failureCause))
 #guard outerAfterInterrupt.map (fun actual => ScopeMachine.journal actual.1) = some failureCause.reasons
 #guard (outerAfter failedClose successFiber).map Prod.snd =
-  some (44,[(2,.success 5),(1,.success 5),(2,.failure failureCause),(1,.failure failureCause)])
+  some (44,[(2,.success 5),(1,.success 5),(2,.failure (Cause.combine failureCause pending)),
+    (1,.failure (Cause.combine failureCause pending))])
 #guard (outerAfter failedClose successFiber).bind (fun actual => ScopeMachine.restore? actual.1) =
-  some (.failure (Cause.combine failureCause failureCause))
+  some (.failure (Cause.combine (Cause.combine failureCause pending) failureCause))
 
 -- Named acceptance candidates isolate each planted false policy.
 def immediateCandidate := referenceResume successClose.1 successFiber
@@ -119,7 +124,8 @@ def immediateCandidate := referenceResume successClose.1 successFiber
 def pausedCandidate := referenceResume (ScopeMachine.advance (ScopeMachine.start scope (.success 5))) successFiber
 #guard pausedCandidate = none
 def failedCandidate := referenceResume failedClose.1 successFiber
-#guard failedCandidate = some (.finished (.failure failureCause), maskEvents ++ [.yielded (.failure failureCause)])
+#guard failedCandidate = some (.finished (.failure (Cause.combine failureCause pending)),
+  maskEvents ++ [.yielded (.failure (Cause.combine failureCause pending))])
 def outerCandidate := outerAfterInterrupt.bind (fun actual => ScopeMachine.restore? actual.1)
 #guard outerCandidate = some (.failure (Cause.combine pending failureCause))
 def nestedCandidate := referenceResume successClose.1
@@ -127,11 +133,12 @@ def nestedCandidate := referenceResume successClose.1
 #guard nestedCandidate = some (.running ⟨.success 12, [.setInterruptible true], false, some pending, false⟩,
   [.popped (.onSuccess (.success 0) 7)])
 def singletonCandidate := referenceResume singleEmpty.1 successFiber
-#guard singletonCandidate = some (.finished (.failure ⟨[]⟩), maskEvents ++ [.yielded (.failure ⟨[]⟩)])
+#guard singletonCandidate = some (.finished (.failure pending), maskEvents ++ [.yielded (.failure pending)])
 
 theorem pending_does_not_replace_cleanup_failure :
     referenceResume failedClose.1 successFiber =
-      some (.finished (.failure failureCause), maskEvents ++ [.yielded (.failure failureCause)]) := by decide
+      some (.finished (.failure (Cause.combine failureCause pending)),
+        maskEvents ++ [.yielded (.failure (Cause.combine failureCause pending))]) := by decide
 theorem overwrite_failure_is_observably_wrong :
     referenceResume failedClose.1 successFiber ≠
       some (.running ⟨.failure pending, [], true, some pending, false⟩, maskEvents) := by decide

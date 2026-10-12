@@ -117,7 +117,7 @@ example : ∃ next events,
       interruptedCause := some reason
       stack := [.onFailure (.success .unit) name, .setInterruptible false,
         .onFailure (.success .unit) name]}
-    reason (.onFailure (.success .unit) name) (.failure reason) [] rfl
+    reason (.onFailure (.success .unit) name) (.failure reason) [] rfl (fun _ _ _ _ good => good)
     (.cons saved (.cons (saved_mask stage interp 1 1 false) (.cons saved (.nil 1 1))))
     (by kernel_rfl) rfl (by kernel_rfl)
   rcases result with ⟨events, equation, typed⟩

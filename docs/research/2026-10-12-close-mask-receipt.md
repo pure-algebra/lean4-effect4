@@ -6,6 +6,13 @@ Status: research note (history, not authority). The seat's receipt for items 2 a
 
 ## Know this first
 
+- **Both items landed on `land/close-mask`, and two outcomes now follow 4.0.1.** The truth lane
+  signs them as `LATEST`: `closeInterruptedMidFinalizer` (`1`, rc.112 `0`) and
+  `poisonNoHandler` (the recorded interrupt beside `Fail(42)`). One part of 4.0.1's walk is not
+  transcribed: its combine at the walk's end when nothing answered. It stays part of `U-01`.
+- **The release lane refuses, as at the base.** Its ledger is stale, and five generated modules
+  do not type-check on 4.0.1. One is Step 0's close program: 4.0.1's `Scope.close` takes a
+  `Closeable`.
 - **The plan's close program does not agree with rc.112 today.** The plan's design is a release
   that yields twice, closed by a forked fiber. The machine runs a capture's release masked
   (`EffThunk.releaseMasked`, `src/Effect4/Program/Compile.lean`). rc.112 runs it at the closer's
@@ -159,7 +166,8 @@ Written before the proofs, as `AGENTS.md` asks.
   the finite host runs above on bun 1.4.2.
 - **Decisions row proposed (359).** An explicit `Scope.close` masks its closer, as 4.0.1's
   `scopeClose` does (`vendor/effect-4.0.1/src/internal/effect.ts:3929-3935`). A close with no
-  finalizer is `void`, unmasked. The truth lane signs such a program as `LATEST`.
+  finalizer is `void`, unmasked. The truth lane signs such a program as `LATEST`. Step 2 adds
+  the failure walk to the same row.
 
 ## Step 2: latest's failure walk (item 1)
 
@@ -192,6 +200,57 @@ Written before the proofs, as `AGENTS.md` asks.
   - Latest's stack-frame annotation of the cause (`FRAME-FB-STACK-ANNOTATION`).
   - The host boundary stays where `docs/core/host-boundary.md` puts it.
 - **Unlock.** No node of the M5 → M6 → M7 spine. The gain is an outcome: `poisonNoHandler`.
+
+### Results
+
+- **The machine.** `FrameFiber.skippedCause` (`src/Effect4/Machine/Frames.lean`): a skipped
+  frame without a failure arm, a restoring mask's replacement, now adds the recorded interrupt
+  (`Cause.combine`). A skipped handler keeps `Cause.sanitize`. The term machine names the same
+  rule `maskPassExit` (`src/Effect4/Laws/Program/EvaluateR.lean`), read by `popR` at a mask slot.
+- **Proofs that moved.**
+  - `Simulation/Walk.lean`: `popR_mask`, `walkExit_mask_failure` (now the pending interrupt is
+    added) and `walk_mask`, whose hypothesis ranges over the exit. `run-eq-ref` keeps its
+    statement.
+  - `ScopeRestoration.lean`: `resumeClosedScope_failure_pending` and
+    `resumeClosedScope_success_cleanup_failure` now state that the tail resumes the failure with
+    the pending cause combined in. One helper, `popFrom_carriedCause_isSome`.
+  - The answer-flow transport (`AnswerFlowFamilyPop.lean`, `AnswerFlowCausePop.lean`): the
+    premise `AbsorbsInterrupt` (the model's cause classes absorb the fiber's recorded interrupt),
+    met by `absorbsInterrupt_none` for a fiber with none. `drain_cause` states both outcomes.
+    The lexical model (`NativeFrameScope.lean`) meets the premise trivially.
+  - The typed walk: `exitOk_combine_interrupts` (`Typed/Stack.lean`) and
+    `ambientExit_combine_interrupts` (`Typed/AmbientMachine.lean`), used at the mask slots of
+    `popR_typed` and `ambient_popR_typed`; `popR_cons` (`Typed/HostWalk.lean`) reads
+    `maskPassExit`.
+- **Batteries and the contract.** `ScopeRestorationBoundary.lean` (`E4-RUN-CE-025`, `-026`) and
+  `ScopeRestorationContract.lean`: every failing restored exit under a pending interrupt now
+  carries it combined in, never replaced by it. `Test/contracts/scope-restoration.contract.md`
+  is amended (a review event). `Test/Machine/AnswerFlow.lean` and the timeout dogfood
+  (`HostTimeoutNumberFormFamily.native_failure`) supply the new premise.
+- **The truth lane.** `poisonNoHandler` joins `LATEST` (`harness/truth/run-truth.ts`, two
+  controls; `scripts/check-truth.py`). `docs/UPSTREAM-BACKLOG.md`: U-01's disposition.
+- **The axiom audit.** `#axiom_audit` over the moved modules and the two batteries that state
+  the new premise: 2107 declarations within `[propext, Quot.sound]`, 0 modulo planned goals.
+- **Builds.** `lake build Effect4 Effect4.Laws`: 1079 jobs, success. `lake build Test`: every
+  battery builds except `Test.Audit.ProofStyle`: 176 findings, each in one of 40 files this
+  branch does not touch, so none comes from it.
+- **Commands and results.**
+  - `make -k gen`: `PASS: 81 programs agree on exits, schedules and sync exits; 12 signed
+    divergence(s)`. `poisonNoHandler`: Lean
+    `success [{"failure":{"reasons":[{"fail":42},{"interrupt":2}]}},true,true]`, 4.0.1's answer
+    (Step 0); rc.112 `success [{"failure":{"reasons":[{"fail":42}]}},true,false]`; the schedules
+    agree.
+  - `make check-compiler`, `check-native`: `PASS`. `make check-ocaml`: every lane `ALL PASS`.
+    The cross face reports two `DIFFERS` lines (`pAcquire`, `pProvide`), reported and not
+    gated, the same two as in Step 1's run.
+  - `make check-truth`: `PASS truth: pinned corpus, bounded differential and the signed U-01,
+    HC-2 and LATEST divergences checked; the regenerated modules type-check`.
+  - `make check-host-protocol`: `PASS`. `make check-corpus`: `PASS corpus: 400 programs match
+    the committed results; 18 registered disagreement(s)`.
+  - `make check-truth-release`: refused, the same five rows as Step 1 (four `pSql*`,
+    `closeInterruptedMidFinalizer`).
+- **Evidence kind.** Proved: the moved statements, modulo nothing new. Tested: the finite host
+  runs above on bun 1.4.2.
 
 ## Appendix: `release_probe.py`
 

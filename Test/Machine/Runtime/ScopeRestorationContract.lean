@@ -70,8 +70,9 @@ example
     (completed : ScopeMachine.restore? machine = some (.failure failed)) :
     ScopeRestoration.resumeClosedScope interp machine
       ⟨current, .setInterruptible true :: rest, false, some pending, false⟩ =
-    (let continued := FrameFiber.step interp
-       ⟨.failure failed, rest, true, some pending, false⟩
+    (let continued := (⟨.failure failed, rest, true, some pending, false⟩ :
+       FrameFiber ν τ β ε δ ι α).resumeCause interp (Cause.combine failed pending)
+         (some (.failure (Cause.combine failed pending)))
      some (continued.1,
        [.popped (.setInterruptible true), .ranContAll (.setInterruptible true),
         .substituted pending] ++ continued.2)) :=
@@ -134,8 +135,9 @@ example
     (completed : ScopeMachine.result? machine = some (.failure cleanup)) :
     ScopeRestoration.resumeClosedScope interp machine
       ⟨current, .setInterruptible true :: rest, false, some pending, false⟩ =
-    (let continued := FrameFiber.step interp
-       ⟨.failure cleanup, rest, true, some pending, false⟩
+    (let continued := (⟨.failure cleanup, rest, true, some pending, false⟩ :
+       FrameFiber ν τ β ε δ ι α).resumeCause interp (Cause.combine cleanup pending)
+         (some (.failure (Cause.combine cleanup pending)))
      some (continued.1,
        [.popped (.setInterruptible true), .ranContAll (.setInterruptible true),
         .substituted pending] ++ continued.2)) :=
@@ -157,7 +159,8 @@ open Test.Counterexamples.Runtime.ScopeRestorationBoundary
   some (.running ⟨.success 12, [.setInterruptible true], false, some pending, false⟩,
     [.popped (.onSuccess (.success 0) 7)])
 #guard ScopeRestoration.resumeClosedScope interp failedClose.1 successFiber =
-  some (.finished (.failure failureCause), maskEvents ++ [.yielded (.failure failureCause)])
+  some (.finished (.failure (Cause.combine failureCause pending)),
+    maskEvents ++ [.yielded (.failure (Cause.combine failureCause pending))])
 #guard ScopeRestoration.resumeClosedScope interp failedClose.1
     { successFiber with stack := [.setInterruptible true, .onFailure (.success 0) 77] } =
   some (.finished (.failure (Cause.combine failureCause pending)), maskEvents ++
@@ -165,12 +168,13 @@ open Test.Counterexamples.Runtime.ScopeRestorationBoundary
       .yielded (.failure (Cause.combine failureCause pending))])
 #guard ScopeRestoration.resumeClosedScope interp failedClose.1
     { successFiber with stack := [.setInterruptible true, .onExit (.success 0) 8 false] } =
-  some (.running ⟨.failure (Cause.combine failureCause (Cause.die 8)),
+  some (.running ⟨.failure (Cause.combine (Cause.combine failureCause pending) (Cause.die 8)),
     [.setInterruptible true], false, some pending, false⟩,
     maskEvents ++ [.popped (.onExit (.success 0) 8 false),
-      .ranContAll (.onExit (.success 0) 8 false), .ranFinalizer 8 (.failure failureCause)])
+      .ranContAll (.onExit (.success 0) 8 false),
+      .ranFinalizer 8 (.failure (Cause.combine failureCause pending))])
 #guard ScopeRestoration.resumeClosedScope interp singleEmpty.1 successFiber =
-  some (.finished (.failure ⟨[]⟩), maskEvents ++ [.yielded (.failure ⟨[]⟩)])
+  some (.finished (.failure pending), maskEvents ++ [.yielded (.failure pending)])
 #guard ScopeRestoration.resumeClosedScope interp manyEmpty.1 successFiber =
   some (.running ⟨.failure pending, [], true, some pending, false⟩, maskEvents)
 
@@ -197,19 +201,21 @@ def pause (budget : Nat) := ScopeMachine.runState (handler (fun _ => Exit.void))
 
 def bodyFailureClose := runClose scope (.failure before) (fun _ => Exit.void) (40,[])
 #guard ScopeRestoration.resumeClosedScope interp bodyFailureClose.1 successFiber =
-  some (.finished (.failure before), maskEvents ++ [.yielded (.failure before)])
+  some (.finished (.failure (Cause.combine before pending)),
+    maskEvents ++ [.yielded (.failure (Cause.combine before pending))])
 def bothFailureClose := runClose scope (.failure before)
   (fun n => .failure (Cause.die n)) (40,[])
 #guard ScopeRestoration.resumeClosedScope interp bothFailureClose.1 successFiber =
-  some (.finished (.failure (Cause.combine before failureCause)),
-    maskEvents ++ [.yielded (.failure (Cause.combine before failureCause))])
+  some (.finished (.failure (Cause.combine (Cause.combine before failureCause) pending)),
+    maskEvents ++ [.yielded (.failure (Cause.combine (Cause.combine before failureCause) pending))])
 #guard bothFailureClose.2 = (42,[(2,.failure before),(1,.failure before)])
 def duplicateClose := runClose scope (.failure (Cause.die 9))
   (fun _ => .failure (Cause.die 9)) (40,[])
 #guard ScopeMachine.journal duplicateClose.1 =
   [Reason.die 9 ReasonAnnotations.empty, Reason.die 9 ReasonAnnotations.empty]
 #guard ScopeRestoration.resumeClosedScope interp duplicateClose.1 successFiber =
-  some (.finished (.failure (Cause.die 9)), maskEvents ++ [.yielded (.failure (Cause.die 9))])
+  some (.finished (.failure (Cause.combine (Cause.die 9) pending)),
+    maskEvents ++ [.yielded (.failure (Cause.combine (Cause.die 9) pending))])
 #guard ScopeRestoration.resumeClosedScope interp successClose.1
     {successFiber with interruptedCause := some (Cause.combine pending (Cause.interrupt (some 102)))} =
   some (.running ⟨.failure (Cause.combine pending (Cause.interrupt (some 102))), [], true,

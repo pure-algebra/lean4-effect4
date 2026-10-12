@@ -5368,7 +5368,7 @@
    "runSync":
    {"sync": true,
     "exitKind": "success",
-    "exit": {"success": [{"failure": {"reasons": [{"fail": 42}]}}, true, false]}},
+    "exit": {"success": [{"failure": {"reasons": [{"fail": 42}, {"interrupt": 2}]}}, true, true]}},
    "run":
    {"schedule":
     ["started 0",
@@ -5393,15 +5393,16 @@
     [{"parkedToken": null,
       "id": 0,
       "exited": true,
-      "exit": {"success": [{"failure": {"reasons": [{"fail": 42}]}}, true, false]}},
+      "exit":
+      {"success": [{"failure": {"reasons": [{"fail": 42}, {"interrupt": 2}]}}, true, true]}},
      {"parkedToken": null,
       "id": 1,
       "exited": true,
-      "exit": {"failure": {"reasons": [{"fail": 42}]}}},
+      "exit": {"failure": {"reasons": [{"fail": 42}, {"interrupt": 2}]}}},
      {"parkedToken": null, "id": 2, "exited": true, "exit": {"success": null}}],
     "fiberCount": 3,
     "exitKind": "success",
-    "exit": {"success": [{"failure": {"reasons": [{"fail": 42}]}}, true, false]},
+    "exit": {"success": [{"failure": {"reasons": [{"fail": 42}, {"interrupt": 2}]}}, true, true]},
     "events":
     ["started 0",
      "forked 0->1",
@@ -5412,11 +5413,11 @@
      "parkedOn 2 token=1",
      "resumedWith 1 token=0",
      "started 1",
-     "exited 1 {\"failure\":{\"reasons\":[{\"fail\":42}]}}",
+     "exited 1 {\"failure\":{\"reasons\":[{\"fail\":42},{\"interrupt\":2}]}}",
      "resumedWith 2 token=1",
      "started 2",
      "exited 2 {\"success\":null}",
-     "exited 0 {\"success\":[{\"failure\":{\"reasons\":[{\"fail\":42}]}},true,false]}"]},
+     "exited 0 {\"success\":[{\"failure\":{\"reasons\":[{\"fail\":42},{\"interrupt\":2}]}},true,true]}"]},
    "name": "poisonNoHandler",
    "exprRefusal": null,
    "expr":

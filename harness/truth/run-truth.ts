@@ -815,7 +815,15 @@ const LATEST_SIGNED = new Map<string, { lean: Json; host: Json; leanSync: Json; 
   // (`vendor/effect-4.0.1/src/internal/effect.ts:3929-3935`); rc.112's interrupted closer
   // loses the later release (`vendor/effect-4.0.0-rc.112/src/internal/effect.ts:3775-3776`).
   ["closeInterruptedMidFinalizer",
-    { lean: { success: 1 }, host: { success: 0 }, leanSync: { success: 1 }, hostSync: { success: 0 } }]
+    { lean: { success: 1 }, host: { success: 0 }, leanSync: { success: 1 }, hostSync: { success: 0 } }],
+  // A masked region fails after an interrupt was recorded, with no handler above it: latest's
+  // walk adds the recorded interrupt (`vendor/effect-4.0.1/src/internal/core.ts:580-608`);
+  // rc.112's passes the failure unchanged (`vendor/effect-4.0.0-rc.112/src/internal/core.ts:529-547`).
+  ["poisonNoHandler", {
+    lean: { success: [{ failure: { reasons: [{ fail: 42 }, { interrupt: 2 }] } }, true, true] },
+    host: { success: [{ failure: { reasons: [{ fail: 42 }] } }, true, false] },
+    leanSync: { success: [{ failure: { reasons: [{ fail: 42 }, { interrupt: 2 }] } }, true, true] },
+    hostSync: { success: [{ failure: { reasons: [{ fail: 42 }] } }, true, false] } }]
 ])
 
 const signedLatest = (name: string, scenario: string | null | undefined, lean: Json | null,
@@ -900,6 +908,11 @@ const selfTestDivergence = (): number => {
     ["latest: sync disagreement rejected", !latest("closeInterruptedMidFinalizer", one, zero, zero)],
     ["latest: scenario rejected", !latest("closeInterruptedMidFinalizer", one, zero, one, zero, "U-01")],
     ["latest: parked host rejected", !latest("closeInterruptedMidFinalizer", one, zero, one, zero, null, true)])
+  const pinPoison: Json = { success: [{ failure: { reasons: [{ fail: 42 }] } }, true, false] }
+  const latestPoison: Json = { success: [{ failure: { reasons: [{ fail: 42 }, { interrupt: 2 }] } }, true, true] }
+  cases.push(
+    ["latest: the walk's added interrupt signed", latest("poisonNoHandler", latestPoison, pinPoison, latestPoison, pinPoison)],
+    ["latest: the pin's walk on the Lean face rejected", !latest("poisonNoHandler", pinPoison, pinPoison, pinPoison, pinPoison)])
   const failures = cases.filter(([, pass]) => !pass).map(([name]) => name)
   console.log(JSON.stringify({ kind: "signed-divergence-controls", checks: cases.length, failures }))
   return failures.length === 0 ? 0 : 1

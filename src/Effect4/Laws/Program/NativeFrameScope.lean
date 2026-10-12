@@ -254,7 +254,7 @@ theorem resumeCause_at (root : NativeEff) (fragment : Fragment root) (completed)
         AnswerFlow.External.resumeCause_provided_selected (lexicalModel root) interp
           (lexicalEdge root) (lexical_family root fragment completed table)
           (fun _ _ => trivial) () () () fiber cause provided frame next pushed trivial
-          (stack_path_at root fiber.stack owned.2) selected
+          (fun _ _ _ _ _ => trivial) (stack_path_at root fiber.stack owned.2) selected
           (by intro incoming delivered carried good exit member; cases exit <;> trivial)
           (by intro delivered carried
               exact AnswerFlow.programOf_none (lexicalModel root) () frame _ (fun _ => rfl))
