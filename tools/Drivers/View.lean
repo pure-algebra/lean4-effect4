@@ -4,6 +4,7 @@ import Tools.View.Specimen
 import Tools.View.FlowSpecimen
 import Tools.View.Tokens
 import Tools.View.Output
+import Tools.View.SvgOut
 import Effect4.Store.Domain.ProgramWire
 
 /-!
@@ -60,12 +61,16 @@ def frameName (i : Nat) : String :=
   let s := toString i
   "".pushn '0' (3 - s.length) ++ s
 
-/-- Write one picture's stream (ratio 2) and SVG (ratio 1), in a look. -/
+/-- Write one picture's stream (ratio 2) and SVG (ratio 1), in a look. The SVG is a typed tree
+(`Tools.View.SvgOut`); a picture that the content model or XML refuses stops the run with its name
+and the reason. -/
 def writePicture (L : Look) (out : System.FilePath) (name : String) (W H : Int) (calls : List (Keyed Call)) :
     IO Unit := do
   IO.FS.writeFile (out / s!"{name}.draw")
     ("\n".intercalate (stream L W.toNat H.toNat 2 (lowerAll 2 calls)) ++ "\n")
-  IO.FS.writeFile (out / s!"{name}.svg") (svg L W.toNat H.toNat 1 (lowerAll 1 calls) ++ "\n")
+  match SvgOut.fileText (SvgOut.picture L W.toNat H.toNat 1 (lowerAll 1 calls)) with
+  | .ok text => IO.FS.writeFile (out / s!"{name}.svg") (text ++ "\n")
+  | .error why => throw (IO.userError s!"{name}.svg: {why}")
 
 /-- Write one page, in a look, on a stroke cache (`Laid.StrokeCache`); answer the cache. -/
 def writePage (L : Look) (out : System.FilePath) (name : String) (g : Page)

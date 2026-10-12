@@ -114,7 +114,8 @@ go to the ends, Q quits. The corpus programs are `p42`, `pBind`, `pFork`, `pAwai
 | `tools/Tools/View/Picture.lean` | drawing calls and device calls, each with a key; the lowering; the move law |
 | `tools/Tools/View/Look.lean` | the look: palette, faces, strokes, the form of an edge, easings, transitions and the choreography |
 | `tools/Tools/View/Tokens.lean` | a look as design tokens (written and read over a base) and as CSS |
-| `tools/Tools/View/Output.lean` | the stream and SVG of a picture, in a look |
+| `tools/Tools/View/Output.lean` | the stream of a picture, in a look |
+| `tools/Tools/View/SvgOut.lean` | a picture as a typed SVG tree on the kit of `lean4-whatwg`, checked where a file is written |
 | `tools/view/looks/` | the looks besides the dark one, as token files |
 | `tools/Tools/View/Grid.lean` | the grid and every constant a picture is placed by |
 | `tools/Tools/View/Page.lean` | a page of lines, its marks, and its terminal form |
