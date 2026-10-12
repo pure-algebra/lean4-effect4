@@ -56,6 +56,7 @@ example : TyTable ClassRow where
   undefined := ⟨true, true⟩
   number := ⟨true, true⟩
   bytes := ⟨true, true⟩
+  contextOf := ⟨false, false⟩
 
 /-- error: `bigint` is not a field of structure `TyTable` -/
 #guard_msgs (error) in

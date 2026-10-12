@@ -8,10 +8,11 @@ Controls of the planning graph with planned goals (`tools/ProofGraph/Plan.lean`,
 proved, and the red controls pin each refusal:
 
 1. a theorem that uses a goal is proved modulo it, never proved. The real case is `m7_of_ledger`
-   with `LoadsTyped` proved by `loadsTyped` and `DecisionKeeps` a goal; with `decision_preserves`
-   in its place, the same statement is proved: since decisions row 341 a layer reference stands
-   in its target's scope, so no goal is left under it
-   (`docs/research/2026-10-10-cx-lexical-scope.md` §11);
+   with `LoadsTyped` proved by `loadsTyped` and `DecisionKeeps` a goal: it rests on that goal
+   alone. With `decision_preserves` in its place, the same statement (`m7_proved`) rests on
+   exactly the five planned goals of the ambient judgment (decisions row 349):
+   `Evaluating.countdown_parks_positional`, `Evaluating.settle_callback`, `clause_closeScope`,
+   `clause_scoped` and `foreignFinalizer_ambient`. Each goal's docstring says why it is open;
 2. a node whose axioms leave the semantic ceiling is refused;
 3. a hand-written `sorry` is not a goal: the plan refuses it as an axiom outside the ceiling, and
    `tagGoal` refuses to tag a theorem whose body is not `sorry`, or a definition;
@@ -75,19 +76,24 @@ theorem m7Modulo (root : ProgramSource) (rootTy : Effect4.Program.EffTy) (fuel :
       M7NoHalt root rootTy fuel tape :=
   m7_of_ledger root rootTy fuel tape (loadsTyped root rootTy fuel fuel) (keeps root rootTy fuel)
 
+-- `m7_proved` rests on exactly the five open goals of the ambient judgment, in the plan's order
+-- (by name); the next goals are `keeps` and then those five.
 run_cmd liftTermElabM do
   let plan ← buildPlan [`Test] #[``m7Modulo, ``Effect4.Program.Typed.m7_proved] (← IO.mkRef {})
   let said : Standing → String
     | .modulo goals => s!"modulo {goals}"
     | standing => standing.word
+  let open5 : Array Name := #[``Effect4.Program.Typed.Evaluating.countdown_parks_positional,
+    ``Effect4.Program.Typed.Evaluating.settle_callback, ``Effect4.Program.Typed.clause_closeScope,
+    ``Effect4.Program.Typed.clause_scoped, ``Effect4.Program.Typed.foreignFinalizer_ambient]
   let some node := plan.find? ``m7Modulo | throwError "m7Modulo is not a node"
   unless node.standing == .modulo #[``keeps] do
     throwError "m7Modulo is {said node.standing}, not modulo [keeps]"
   let some proved := plan.find? ``Effect4.Program.Typed.m7_proved | throwError "m7_proved is not a node"
-  unless proved.standing == .proved do
-    throwError "m7_proved is {said proved.standing}, not proved"
-  unless plan.next #[``m7Modulo, ``Effect4.Program.Typed.m7_proved] == #[``keeps] do
-    throwError "the next goal is not keeps"
+  unless proved.standing == .modulo open5 do
+    throwError "m7_proved is {said proved.standing}, not modulo {open5}"
+  unless plan.next #[``m7Modulo, ``Effect4.Program.Typed.m7_proved] == #[``keeps] ++ open5 do
+    throwError "the next goals are not keeps and the five open goals"
 
 -- 2. A node outside the semantic ceiling is refused.
 /-- error: plan: Classical.em: disallowed axioms [Classical.choice] -/

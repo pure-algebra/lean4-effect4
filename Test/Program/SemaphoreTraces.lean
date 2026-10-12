@@ -264,46 +264,46 @@ def stopsBetween (k : Nat) : Bool :=
 
 -- The checker refuses the budget's provision, so the programs are raw.
 #guard verdict (notified 23) = "typing: serviceUnknown"
--- The budgets that stop the taker between its registration and its await: 21 to 25. Below 21
--- the taker yields before its step, and from 26 it reaches its await with no yield.
-#guard (List.range 32).filter stopsBetween = [21, 22, 23, 24, 25]
+-- The budgets that stop the taker between its registration and its await: 26 to 30. Below 26
+-- the taker yields before its step, and from 31 it reaches its await with no yield.
+#guard (List.range 37).filter stopsBetween = [26, 27, 28, 29, 30]
 
 -- At each such budget, on both tapes: the root ends with the free count 1 and the taker's
 -- count, and the permit is taken at the end.
-#guard [21, 22, 23, 24, 25].all fun k =>
+#guard [26, 27, 28, 29, 30].all fun k =>
   [awaitFirst, taskFirst].all fun tape =>
     ((rawOn tape (notified k)).bind (·.exit)) == some (.success (.list [.nat 1, .nat 1])) &&
       (stages tape (notified k)).drop 3 == [(some (1, 0), true)]
 -- The await before the task. After the taker's dispatcher the taker is still enrolled, and
 -- nothing is taken: it parked at its hint. The root's dispatcher then runs the helper, whose
 -- visit resumes the taker, and the taker's attempt runs inside that task.
-#guard [21, 22, 23, 24, 25].all fun k =>
+#guard [26, 27, 28, 29, 30].all fun k =>
   (stages awaitFirst (notified k)).take 2 == [(some (0, 1), false), (some (0, 1), false)]
 -- The task before the await. After the root's dispatcher the visit has selected the taker:
 -- its entry left, and nothing is taken. A visit reserves nothing. The taker's dispatcher then
 -- runs: its await answers at once, and its next attempt takes.
-#guard [21, 22, 23, 24, 25].all fun k =>
+#guard [26, 27, 28, 29, 30].all fun k =>
   (stages taskFirst (notified k)).take 2 == [(some (0, 1), false), (some (0, 0), false)]
 
 /-- The rows of a raw run on a tape. -/
 def rawRows (tape : List Api.Decision) (src : Src NativeOp) : List Row :=
   ((rawOn tape src).map fun r => r.machine.trace.filterMap rowOf).getD []
 
--- The await before the task, at the budget 25. The taker's dispatcher runs: the taker parks at
+-- The await before the task, at the budget 30. The taker's dispatcher runs: the taker parks at
 -- its hint. Then the root's dispatcher runs the helper, fiber 2, which resumes the taker.
-#guard rawRows awaitFirst (notified 25) =
+#guard rawRows awaitFirst (notified 30) =
   [.started 0, .forked 0 1 false, .started 1, .yielded 1, .parked 1, .forked 0 2 true,
    .scheduled 0, .parked 0, .ran 1, .resumed 1, .started 1, .parked 1, .ran 0, .started 2,
    .resumed 1, .started 1, .exited 1 true, .resumed 0, .started 0, .exited 0 true,
    .exited 2 true]
 -- The task before the await. The helper runs and exits, and it resumes nobody. The taker's
 -- dispatcher then runs: the taker's await answers at once, so no park follows its resume.
-#guard rawRows taskFirst (notified 25) =
+#guard rawRows taskFirst (notified 30) =
   [.started 0, .forked 0 1 false, .started 1, .yielded 1, .parked 1, .forked 0 2 true,
    .scheduled 0, .parked 0, .ran 0, .started 2, .exited 2 true, .ran 1, .resumed 1, .started 1,
    .exited 1 true, .resumed 0, .started 0, .exited 0 true]
 -- Red control of the two tapes: they are two schedules.
-#guard rawRows awaitFirst (notified 25) != rawRows taskFirst (notified 25)
+#guard rawRows awaitFirst (notified 30) != rawRows taskFirst (notified 30)
 
 /-! ## 2. A cancellation between the release and the walk
 
@@ -494,22 +494,22 @@ def takenUnder (k : Nat) (use : TermSrc → TermSrc → Src NativeOp → Src Nat
   | some (.success (.list [.list (held :: _), .list (after :: _)])) => some (held, after)
   | _ => none
 
--- The library's `withPermits` under the budgets 13 and 27: A yields inside the mask, before
--- its take's step at 13 and after it at 27. The interruption waits, and the release runs:
+-- The library's `withPermits` under the budgets 18 and 32: A yields inside the mask, before
+-- its take's step at 18 and after it at 32. The interruption waits, and the release runs:
 -- nothing is taken at the end.
-#guard takenUnder 13 Semaphore.withPermits = some (.nat 0, .nat 0) &&
-  takenUnder 27 Semaphore.withPermits = some (.nat 1, .nat 0)
+#guard takenUnder 18 Semaphore.withPermits = some (.nat 0, .nat 0) &&
+  takenUnder 32 Semaphore.withPermits = some (.nat 1, .nat 0)
 -- The library's `take` and then the hook, at the same two budgets: the permit is lost.
-#guard takenUnder 13 takeThenHook = some (.nat 0, .nat 1) &&
-  takenUnder 27 takeThenHook = some (.nat 1, .nat 1)
--- Measured at each budget from 8 to 35: the two-region form loses the permit at the fifteen
--- budgets from 13 to 27, and at no other. At 12 A yields before the mask, where it is
--- interruptible: nothing is taken. At 28 the two-region form has installed its hook when A
+#guard takenUnder 18 takeThenHook = some (.nat 0, .nat 1) &&
+  takenUnder 32 takeThenHook = some (.nat 1, .nat 1)
+-- Measured at each budget from 13 to 40: the two-region form loses the permit at the fifteen
+-- budgets from 18 to 32, and at no other. At 17 A yields before the mask, where it is
+-- interruptible: nothing is taken. At 33 the two-region form has installed its hook when A
 -- yields, so its release runs.
-#guard (List.range' 8 28).filter
-    (fun k => (takenUnder k takeThenHook).map (·.2) == some (.nat 1)) = List.range' 13 15
+#guard (List.range' 13 28).filter
+    (fun k => (takenUnder k takeThenHook).map (·.2) == some (.nat 1)) = List.range' 18 15
 -- The library's form loses it at none of them.
-#guard (List.range' 8 28).all fun k =>
+#guard (List.range' 13 28).all fun k =>
   (takenUnder k Semaphore.withPermits).map (·.2) == some (.nat 0)
 
 /-! ## 5. A waiter that is interrupted under a mask of the form's making
