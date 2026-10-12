@@ -28,7 +28,14 @@ theorem ambientFiberPre_mono (root : ProgramSource) {w w' : World} (ord : w.leHo
       rw [le_serviceTy ord.1]
       exact declared key member
   | case2 | case3 =>
-    exact ⟨bodyTyped_mono ord pre.1, pre.2⟩
+    refine ⟨bodyTyped_mono ord pre.1, pre.2.1, pre.2.2.1, pre.2.2.2.1, ?_⟩
+    constructor
+    · intro region same
+      obtain ⟨intrinsic, typed, answer, error, covered⟩ := pre.2.2.2.2.1 region same
+      exact ⟨intrinsic, regionTyped_mono ord typed, answer, error, covered⟩
+    · intro update region flag same
+      obtain ⟨intrinsic, typed, answer, error, covered⟩ := pre.2.2.2.2.2 update region flag same
+      exact ⟨intrinsic, regionTyped_mono ord typed, answer, error, covered⟩
   | case4 | case5 =>
     exact ⟨pointTyped_mono ord pre.1, pre.2⟩
   | case6 =>
@@ -275,37 +282,36 @@ theorem ambient_constructR_typed (root : ProgramSource) {w : World} {available :
     (fun _ _ _ h => nomatch h) () True.intro (fun later ordered completed post =>
       typed later ordered completed post) entry
 
-/-- The real restoring finalizer returns the saved body exit with its common service guarantee.
-Consumer: provideContext's compiled restoring region and the source denotation adapter. -/
-theorem ambient_restore_finalizer (root : ProgramSource) {w : World} (available guaranteed : Env.Requirement)
-    (previous : Ctx) (services : ServicesFit w previous.services)
-    (entry : Row.Subset guaranteed available) (restored : Row.Subset guaranteed previous.services.keysRow)
-    (ty : EffTy) (bodyExit : ExitV) (payload : ExitOk w ty bodyExit) :
-    AmbientProg root w available (ty, guaranteed, guaranteed)
-      (finalizerR bodyExit (fiberValR (.setContext previous) rfl)) := by
-  have cleanup := ambient_setContext_guarantees root w available guaranteed previous services entry restored
+/-- The existing finalizer boundary retains its cleanup's actual common service guarantee.
+Consumer: source onExit and the provider's actual restoring setter adapter. -/
+theorem ambient_finalizer_typed (root : ProgramSource) {w : World}
+    {available guaranteed : Env.Requirement} {ty cleanupType : EffTy} {cleanup : RProgram}
+    (bodyExit : ExitV) (payload : ExitOk w ty bodyExit)
+    (errorBound : Ty.subN cleanupType.error ty.error = true)
+    (typed : AmbientProg root w available (cleanupType, guaranteed, guaranteed) cleanup) :
+    AmbientProg root w available (ty, guaranteed, guaranteed) (finalizerR bodyExit cleanup) := by
+  have entry := ambient_entry typed
   have work : ∀ originalExit, ExitOk w ty originalExit → AmbientProg root w available
-      ((⟨.unit, ty.error, Env.Requirement.empty⟩ : EffTy), previous.services.keysRow, guaranteed)
+      ((⟨cleanupType.answer, ty.error, cleanupType.requires⟩ : EffTy), guaranteed, guaranteed)
       (match originalExit with
-      | .success _ => fiberValR (.setContext previous) rfl
-      | .failure _ => (guardR .onFailure (fiberValR (.setContext previous) rfl)).bind fun
+      | .success _ => cleanup
+      | .failure _ => (guardR .onFailure cleanup).bind fun
           | .success value => .pure (.success value)
           | .failure cause => .pure (Exit.restoreAfterFinalizer originalExit (.failure cause))) := by
     intro originalExit originalPayload
     cases originalExit with
     | success value =>
-      exact ambientProg_widen root
-        (before := (EffTy.pure .unit, previous.services.keysRow, guaranteed))
-        (Ty.subN_refl _) (Bounds.subN_never _) (Row.subset_refl _) (Row.subset_refl _) cleanup
+      exact ambientProg_widen root (before := (cleanupType, guaranteed, guaranteed))
+        (Ty.subN_refl _) errorBound (Row.subset_refl _) (Row.subset_refl _) typed
     | failure cause =>
-      refine ambient_guardBind root cleanup (fun later ordered exit arm clean => ?_)
+      refine ambient_guardBind root typed (fun later ordered exit arm clean => ?_)
         (fun later ordered exit clean absent => ?_) entry
       · cases exit with
         | success value => exact Bool.noConfusion arm
         | failure cleanupCause =>
           refine .pure ⟨?_, Row.subset_refl guaranteed⟩ (Row.subset_refl guaranteed)
           exact exitOk_restore (strongExit_mono _ _ _ _ ordered originalPayload)
-            (exitOk_failure_of_errorN (Bounds.subN_never _) clean.1)
+            (exitOk_failure_of_errorN errorBound clean.1)
       · cases exit with
         | success value =>
           exact ⟨exitOk_success_of_answerN (Ty.subN_refl _) clean.1, Row.subset_refl _⟩
@@ -315,13 +321,49 @@ theorem ambient_restore_finalizer (root : ProgramSource) {w : World} (available 
     (fun later ordered exit clean absent => ?_) entry
   · cases exit with
     | success value =>
-      refine .finishFinalizer ⟨strongExit_mono _ _ _ _ ordered payload, ?_⟩ restored
-      cases bodyExit <;> exact restored
+      refine .finishFinalizer ⟨strongExit_mono _ _ _ _ ordered payload, ?_⟩ (Row.subset_refl _)
+      cases bodyExit <;> exact Row.subset_refl _
     | failure cause => exact Bool.noConfusion arm
   · cases exit with
     | success value => exact Bool.noConfusion absent
     | failure cause =>
       exact ⟨exitOk_failure_of_errorN (Ty.subN_refl _) clean.1, Row.subset_refl guaranteed⟩
+
+/-- The real restoring finalizer returns the saved body exit with its common service guarantee.
+Consumer: provideContext's compiled restoring region and the source denotation adapter. -/
+theorem ambient_restore_finalizer (root : ProgramSource) {w : World} (available guaranteed : Env.Requirement)
+    (previous : Ctx) (services : ServicesFit w previous.services)
+    (entry : Row.Subset guaranteed available) (restored : Row.Subset guaranteed previous.services.keysRow)
+    (ty : EffTy) (bodyExit : ExitV) (payload : ExitOk w ty bodyExit) :
+    AmbientProg root w available (ty, guaranteed, guaranteed)
+      (finalizerR bodyExit (fiberValR (.setContext previous) rfl)) := by
+  have cleanup := ambient_setContext_guarantees root w available guaranteed previous services entry restored
+  exact ambient_finalizer_typed root bodyExit payload (Bounds.subN_never _)
+    (ambientProg_widen root (before := (EffTy.pure .unit, previous.services.keysRow, guaranteed))
+      (after := (EffTy.pure .unit, guaranteed, guaranteed))
+      (Ty.subN_refl _) (Ty.subN_refl _) restored (Row.subset_refl _) cleanup)
+
+/-- The existing onExit region preserves body and cleanup membership and their actual common row.
+Consumer: the source onExit arm in the ambient M5 induction. -/
+theorem ambient_onExit_typed (root : ProgramSource) {w : World}
+    {available guaranteed : Env.Requirement} {bodyType cleanupType resultType : EffTy}
+    {body : RProgram} {cleanup : ExitV → RProgram} {flag : Bool}
+    (answerBound : Ty.subN bodyType.answer resultType.answer = true)
+    (bodyErrorBound : Ty.subN bodyType.error resultType.error = true)
+    (cleanupErrorBound : Ty.subN cleanupType.error resultType.error = true)
+    (typed : AmbientProg root w available (bodyType, guaranteed, guaranteed) body)
+    (finalizer : ∀ later, w.leHost later → ∀ exit, ExitOk later bodyType exit →
+      AmbientProg root later guaranteed (cleanupType, guaranteed, guaranteed) (cleanup exit)) :
+    AmbientProg root w available (resultType, guaranteed, guaranteed) (onExitR body cleanup flag) := by
+  unfold onExitR
+  refine ambient_guardBind root typed (fun later ordered exit _ payload => ?_)
+    (fun _ _ exit _ absent => by cases exit <;> exact Bool.noConfusion absent)
+    (show Row.Subset guaranteed available from ambient_entry typed)
+  have selected : ambientInput (bodyType, guaranteed, guaranteed) exit = guaranteed := by
+    cases exit <;> rfl
+  rw [selected]
+  exact ambient_finalizer_typed root exit (exitOk_widen answerBound bodyErrorBound payload.1)
+    cleanupErrorBound (finalizer later ordered exit payload.1)
 
 /-- The existing onExit region runs the actual captured-context restoring finalizer.
 Consumer: provideContext's bodyThen region and the source admission-to-execution adapter. -/
@@ -344,88 +386,93 @@ theorem ambient_onExit_restore (root : ProgramSource) {w : World}
   exact ambient_restore_finalizer root guaranteed guaranteed previous members
     (Row.subset_refl _) restored ty exit payload.1
 
-/-- The actual provider protocol supplies its body row and restores the captured context.
+/-- A typed store leaf preserves the available context row.
+The existing unit store certificate and answer proof remain unchanged.
+Consumer: the actual synchronous source-operation arm of M5. -/
+theorem ambient_storeR_of_typed (root : ProgramSource) {w : World} {ty : EffTy}
+    (available : Env.Requirement) {op : SyncOp} (typed : TypedProg root w ty (storeR op)) :
+    AmbientProg root w available (ty, available, available) (storeR op) := by
+  obtain ⟨cert, pre, next⟩ := TypedProg.store_inv typed
+  refine .store cert pre ?_ (Row.subset_refl _)
+  intro later ordered answer post
+  exact .pure ⟨TypedProg.pure_inv (next later ordered answer post), Row.subset_refl _⟩ (Row.subset_refl _)
+
+/-- The existing mask reader retains the ambient entry through its restored slot.
+Consumer: the provider's protected-entry program arrow. -/
+theorem ambient_captureMask_typed (root : ProgramSource) (w : World)
+    (available : Env.Requirement) :
+    AmbientProg root w available (EffTy.pure Ty.maskRestore, available, available)
+      (fiberValR .getInterruptible rfl) := by
+  refine .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) () True.intro ?_ (Row.subset_refl _)
+  intro later _ value post
+  obtain ⟨flag, rfl⟩ := post
+  exact .pure ⟨strongExit_success later _ _ (fits_savedMask later flag), Row.subset_refl _⟩
+    (Row.subset_refl _)
+
+/-- The actual provider mask checks the installed map's body requirements.
 Consumer: the typed source provider arm on the typed-state-reachable path. -/
 theorem ambient_updateContext_provide (root : ProgramSource) {w : World}
     (available guaranteed required keys : Env.Requirement) (supplied : Ctx)
     (given : Fits w (Val.context supplied) (.contextOf keys))
     (needed : Row.Subset (Row.diff required keys) available)
-    (entry : Row.Subset guaranteed available) (ty : EffTy) (body : RProgram)
-    (typedBody : ∀ later, w.leHost later → ∀ input,
-      Row.Subset required input → Row.Subset guaranteed input →
-      AmbientProg root later input (ty, guaranteed, guaranteed) body) :
+    (entry : Row.Subset guaranteed available) (ty : EffTy) (body : Region)
+    (typedBody : RegionTyped root w body ⟨ty.answer, ty.error, required⟩)
+    (update : Env.ContextUpdate)
+    (applies : ∀ previous, update.apply previous = previous.merge supplied.services) :
     AmbientProg root w available (ty, guaranteed, guaranteed)
-      (updateContextR (.provide supplied.services) body) := by
+      (updateContextR update body) := by
+  obtain ⟨provided, decoded, suppliedMembers, suppliedKeys, _⟩ := fits_contextOf_inv given
+  have same : provided = supplied := Option.some.inj
+    (decoded.symm.trans (Val.context?_context _))
+  subst provided
   unfold updateContextR
-  refine ambient_guardBind root (ambient_captureContext_typed root w available)
-    (fun later ordered exit arm payload => ?_) (fun later ordered exit payload absent => ?_) entry
+  refine ambient_guardBind root (ambient_captureMask_typed root w available)
+    (fun later ordered exit arm payload => ?_) (fun _ _ exit payload absent => ?_) entry
   · cases exit with
     | failure cause => exact Bool.noConfusion arm
     | success value =>
-      have member : Fits later value Ty.context := payload.1.1
-      obtain ⟨previous, decoded, previousMembers⟩ := fits_context_inv member
-      have valueAt : value = Val.context previous := Val.context?_exact decoded
-      subst value
-      have captured := ambient_captured_context payload
-      have bound : Row.Subset available previous.services.keysRow :=
-        (Provision.satisfies_iff_subset_keysRow _ available).mp captured.2
-      have promised : Row.Subset guaranteed previous.services.keysRow := Row.subset_trans entry bound
-      obtain ⟨provided, decodedGiven, suppliedMembers, suppliedKeys, _⟩ :=
-        fits_contextOf_inv (fits_mono ordered given)
-      have same : provided = supplied := Option.some.inj
-        (decodedGiven.symm.trans (Val.context?_context _))
-      subst provided
-      have requiredCoverage : (previous.services.merge supplied.services).Satisfies required := by
-        have fromBefore := Provision.satisfies_merge_left previous.services supplied.services
-          (Row.diff required keys) (previous.services.satisfies_weaken captured.2 needed)
-        have fromGiven := Provision.satisfies_merge_right previous.services supplied.services keys suppliedKeys
-        intro key member
-        by_cases suppliedKey : key ∈ keys
-        · exact fromGiven key suppliedKey
-        · exact fromBefore key ((Row.mem_diff key required keys).mpr ⟨member, suppliedKey⟩)
-      have requiredBound := (Provision.satisfies_iff_subset_keysRow _ required).mp requiredCoverage
-      have mergedBound := (Provision.satisfies_iff_subset_keysRow _ guaranteed).mp
-        (Provision.satisfies_merge_left previous.services supplied.services guaranteed
-          (previous.services.satisfies_weaken captured.2 entry))
-      change AmbientProg root later
-        (ambientInput (.capturedContext available) (.success (Val.context previous)))
-        (ty, guaranteed, guaranteed) (seqR _ (.success (Val.context previous)))
-      simp only [seqR, Val.context?_context, ambientInput]
-      split
-      · rename_i identity
-        have emptyEntries : supplied.services.entries = [] :=
-          (of_decide_eq_true identity).2
-        have emptyContext : supplied.services = Env.Context.empty := by
-          cases capturedServices : supplied.services with
-          | mk entries unique =>
-            rw [capturedServices] at emptyEntries
-            change entries = [] at emptyEntries
-            cases emptyEntries
-            rfl
-        rw [emptyContext, Env.Context.merge_empty_right] at requiredBound
-        exact typedBody later ordered previous.services.keysRow requiredBound promised
-      · have install := ambient_setContext_guarantees root later previous.services.keysRow guaranteed
-          (Ctx.withServices (previous.services.merge supplied.services))
-          (servicesFit_merge previousMembers suppliedMembers) promised mergedBound
-        refine ambient_guardBind root install (fun after grew delivered present clean => ?_)
-          (fun after grew delivered clean absent => ?_) promised
-        · cases delivered with
-          | failure cause => exact Bool.noConfusion present
-          | success value =>
-            simp only [seqR]
-            have previousAfter : ServicesFit after previous.services :=
-              servicesFit_map grew.1.2.1 grew.1.2.2.1 grew.1.2.2.2.1 grew.2 grew.1.1.2
-                (serviceTy_of_le grew.1) previousMembers
-            exact ambient_onExit_restore root previous previousAfter promised
-              (typedBody after (leHost_trans _ _ _ ordered grew) _ requiredBound mergedBound)
-        · cases delivered with
-          | success value => exact Bool.noConfusion absent
-          | failure cause =>
-            exact ⟨exitOk_failure_of_errorN (Bounds.subN_never _) clean.1, clean.2⟩
+      obtain ⟨flag, rfl⟩ := fits_maskRestore_inv payload.1.1
+      simp only [seqR, Val.savedMask?_savedMask]
+      let intrinsic : EffTy := ⟨ty.answer, ty.error, required⟩
+      let cut : EffTy := ⟨ty.answer, ty.error, available⟩
+      have region : RegionTyped root later body intrinsic := regionTyped_mono ordered typedBody
+      have updateTyped : ContextUpdateTyped later update := by
+        intro after grew previous members
+        rw [applies]
+        have future := leHost_trans _ _ _ ordered grew
+        exact servicesFit_merge members (servicesFit_map future.1.2.1 future.1.2.2.1
+          future.1.2.2.2.1 future.2 future.1.1.2 (serviceTy_of_le future.1) suppliedMembers)
+      refine .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+        (fun _ _ _ h => nomatch h) cut ?_ ?_ entry
+      · refine ⟨.contextEntry _ body flag intrinsic cut region (Ty.subN_refl _) (Ty.subN_refl _)
+          updateTyped, Row.subset_refl _, ?_, ?_, ?_, ?_⟩
+        · intro point ctx impossible
+          cases impossible
+        · intro point previous impossible
+          cases impossible
+        · intro actual impossible
+          cases impossible
+        · intro actual region' flag' shape
+          cases shape
+          refine ⟨intrinsic, region, Ty.subN_refl _, Ty.subN_refl _, ?_⟩
+          intro previous covered
+          rw [applies]
+          have fromBefore := Provision.satisfies_merge_left previous supplied.services
+            (Row.diff required keys) (previous.satisfies_weaken covered needed)
+          have fromGiven := Provision.satisfies_merge_right previous supplied.services keys suppliedKeys
+          refine ⟨?_, Provision.satisfies_merge_left previous supplied.services available covered⟩
+          intro key member
+          by_cases suppliedKey : key ∈ keys
+          · exact fromGiven key suppliedKey
+          · exact fromBefore key ((Row.mem_diff key required keys).mpr ⟨member, suppliedKey⟩)
+      · intro after _ delivered post
+        refine .pure ⟨post, ?_⟩ entry
+        cases delivered <;> exact entry
   · cases exit with
     | success value => exact Bool.noConfusion absent
-    | failure cause =>
-      exact ⟨exitOk_failure_of_errorN (Bounds.subN_never _) payload.1, entry⟩
+    | failure cause => exact ⟨exitOk_failure_of_errorN (Bounds.subN_never _) payload.1, entry⟩
+
 /-- The checked provider source arm uses its actual child and immediate-exit premises.
 Consumer: ambient M5 source denotation and checked_provideContext_reader. -/
 theorem checked_provideContext_arm (root : ProgramSource) (w : World) (p : Point)
@@ -438,9 +485,7 @@ theorem checked_provideContext_arm (root : ProgramSource) (w : World) (p : Point
     (immediate : ∀ bodyTy, Checker.check (root.scopeSig p.path) env (p.path ++ [0]) body = .ok bodyTy →
       ∀ exit, inlineYield body (p.child 0) = some exit → ExitOk w bodyTy exit)
     (child : ∀ bodyTy, Checker.check (root.scopeSig p.path) env (p.path ++ [0]) body = .ok bodyTy →
-      ∀ later, w.leHost later → ∀ input, Row.Subset bodyTy.requires input →
-      Row.Subset available input → AmbientProg root later input (bodyTy, available, available)
-        (denoteR root.program body (p.child 0))) :
+      PointTyped root w (p.child 0) bodyTy) :
     AmbientProg root w available (ty, available, available)
       (denoteR root.program (.provideContext context body) p) := by
   obtain ⟨contextTy, keys, bodyTy, termCheck, normalized, bodyCheck, rfl⟩ :=
@@ -461,29 +506,28 @@ theorem checked_provideContext_arm (root : ProgramSource) (w : World) (p : Point
     · exact exitOk_widen (Ty.subN_refl _) (Ty.subN_refl _) (immediate bodyTy bodyCheck exit head)
     · cases exit <;> exact Row.subset_refl available
   | none =>
-    refine ambient_updateContext_provide root available available bodyTy.requires keys supplied
-      given coverage (Row.subset_refl _) _ _ ?_
-    intro later ordered input needed guaranteed
-    refine ambientProg_widen root (before := (bodyTy, available, available))
-      (Ty.subN_refl _) (Ty.subN_refl _) (Row.subset_refl _) (Row.subset_refl _) ?_
-    exact child bodyTy bodyCheck later ordered input needed guaranteed
+    exact ambient_updateContext_provide root available available bodyTy.requires keys supplied
+      given coverage (Row.subset_refl _)
+      ⟨bodyTy.answer, bodyTy.error, Row.diff bodyTy.requires keys⟩
+      (.program (p.child 0)) (child bodyTy bodyCheck)
+      (.provide supplied.services) (fun _ => rfl)
 
 
 /-- An actual checked provider and context-reader body use the installed merged row.
 Consumer: the new source constructor's denotation clause on the typed-state-reachable path. -/
 theorem checked_provideContext_reader (root : ProgramSource) (w : World) (p : Point)
     (env : TyEnv) (context : Term) (required available : Env.Requirement) (ty : EffTy) (supplied : Ctx)
-    (node : Node.at_ (.eff root.program) p.path =
+    (_node : Node.at_ (.eff root.program) p.path =
       some (.eff (.provideContext context (.withFiber (.context required)))))
     (checked : Checker.check (root.scopeSig p.path) env p.path
       (.provideContext context (.withFiber (.context required))) = .ok ty)
     (values : EnvTyped w env p.env) (evaluated : evalTerm p.env context = some (Val.context supplied))
-    (services : w.serviceTy = root.sig.serviceTy) (coverage : Row.Subset ty.requires available)
-    (budget : p.fuel ≠ 0) :
+    (_services : w.serviceTy = root.sig.serviceTy) (coverage : Row.Subset ty.requires available)
+    (budget : p.fuel ≠ 0)
+    (admitted : ∀ bodyTy, Checker.check (root.scopeSig p.path) env (p.path ++ [0])
+      (.withFiber (.context required)) = .ok bodyTy → PointTyped root w (p.child 0) bodyTy) :
     AmbientProg root w available (ty, available, available)
       (denoteR root.program (.provideContext context (.withFiber (.context required))) p) := by
-  have childNode : Node.at_ (.eff root.program) (p.child 0).path =
-      some (.eff (.withFiber (.context required))) := Node.at_child node rfl
   refine checked_provideContext_arm root w p env context (.withFiber (.context required))
     available ty supplied checked values evaluated coverage budget ?_ ?_
   · intro bodyTy bodyCheck exit head
@@ -492,18 +536,7 @@ theorem checked_provideContext_reader (root : ProgramSource) (w : World) (p : Po
       split <;> rfl
     rw [noInline] at head
     cases head
-  · intro bodyTy bodyCheck later ordered input requiredCovered guaranteedCovered
-    have childCheck : Checker.check (root.scopeSig (p.child 0).path) env (p.child 0).path
-        (.withFiber (.context required)) = .ok bodyTy := by
-      change Checker.check (root.scopeSig (p.path ++ [0])) env (p.path ++ [0]) _ = _
-      rw [root.scopeSig_child node 0]
-      exact bodyCheck
-    have futureServices : later.serviceTy = root.sig.serviceTy :=
-      (le_serviceTy ordered.1).trans services
-    refine ambientProg_widen root (before := (bodyTy, input, input))
-      (Ty.subN_refl _) (Ty.subN_refl _) guaranteedCovered guaranteedCovered ?_
-    exact checked_context_denotation root later (p.child 0) env required input bodyTy
-      childNode childCheck futureServices requiredCovered
+  · exact admitted
 
 
 /-- The checked service provider consumes the common restoring provider protocol.
@@ -518,9 +551,7 @@ theorem checked_provideService_arm (root : ProgramSource) (w : World) (p : Point
     (carriers : ∀ carrier, root.sig.serviceTy key = some carrier → flatCarrier carrier = true)
     (coverage : Row.Subset ty.requires available) (budget : p.fuel ≠ 0)
     (child : ∀ bodyTy, Checker.check (root.scopeSig p.path) env (p.path ++ [0]) body = .ok bodyTy →
-      ∀ later, w.leHost later → ∀ input, Row.Subset bodyTy.requires input →
-      Row.Subset available input → AmbientProg root later input (bodyTy, available, available)
-        (denoteR root.program body (p.child 0))) :
+      PointTyped root w (p.child 0) bodyTy) :
     AmbientProg root w available (ty, available, available)
       (denoteR root.program (.provideService key value body) p) := by
   obtain ⟨carrier, valueTy, bodyTy, declared, termCheck, orderedValue, bodyCheck, rfl⟩ :=
@@ -547,59 +578,31 @@ theorem checked_provideService_arm (root : ProgramSource) (w : World) (p : Point
     rfl
   rw [denoteR_provideService _ _ _ _ budget, evaluated]
   dsimp only
-  have singletonUpdate (next : RProgram) :
-      updateContextR (.provideService key provided) next =
-        updateContextR (.provide supplied.services) next := by
-    have nonempty : supplied.services.entries ≠ [] := by
-      change [({ key := key, value := provided } : Env.Service Env.ValU)] ≠ []
-      exact List.cons_ne_nil _ _
-    have identity (previous : Env.Ctx) : updateKeepsIdentity (.provide supplied.services) previous = false := by
-      unfold updateKeepsIdentity
-      rw [decide_eq_false_iff_not]
-      exact fun h => nonempty h.2
-    simp only [updateContextR]
-    simp only [identity]
-    simp only [updateKeepsIdentity, Bool.false_eq_true, ↓reduceIte]
-    rfl
-  rw [singletonUpdate]
-  refine ambient_updateContext_provide root available available bodyTy.requires
-    (Env.Requirement.single key) supplied given coverage (Row.subset_refl _) _ _ ?_
-  intro later ordered input needed guaranteed
-  refine ambientProg_widen root (before := (bodyTy, available, available))
-    (Ty.subN_refl _) (Ty.subN_refl _) (Row.subset_refl _) (Row.subset_refl _) ?_
-  exact child bodyTy bodyCheck later ordered input needed guaranteed
+  exact ambient_updateContext_provide root available available bodyTy.requires
+    (Env.Requirement.single key) supplied given coverage (Row.subset_refl _)
+    ⟨bodyTy.answer, bodyTy.error, Row.diff bodyTy.requires (Env.Requirement.single key)⟩
+    (.program (p.child 0))
+    (child bodyTy bodyCheck) (.provideService key provided) (fun _ => rfl)
 
 /-- The real service provider installs the checked carrier before its context reader.
 Consumer: the closed provider reader and ambient M5 source denotation. -/
 theorem checked_provideService_reader (root : ProgramSource) (w : World) (p : Point)
     (env : TyEnv) (key : ServiceKey) (value : Term) (required available : Env.Requirement)
     (ty : EffTy) (provided : Val)
-    (node : Node.at_ (.eff root.program) p.path =
+    (_node : Node.at_ (.eff root.program) p.path =
       some (.eff (.provideService key value (.withFiber (.context required)))))
     (checked : Checker.check (root.scopeSig p.path) env p.path
       (.provideService key value (.withFiber (.context required))) = .ok ty)
     (values : EnvTyped w env p.env) (evaluated : evalTerm p.env value = some provided)
     (services : w.serviceTy = root.sig.serviceTy)
     (carriers : ∀ carrier, root.sig.serviceTy key = some carrier → flatCarrier carrier = true)
-    (coverage : Row.Subset ty.requires available) (budget : p.fuel ≠ 0) :
+    (coverage : Row.Subset ty.requires available) (budget : p.fuel ≠ 0)
+    (admitted : ∀ bodyTy, Checker.check (root.scopeSig p.path) env (p.path ++ [0])
+      (.withFiber (.context required)) = .ok bodyTy → PointTyped root w (p.child 0) bodyTy) :
     AmbientProg root w available (ty, available, available)
       (denoteR root.program (.provideService key value (.withFiber (.context required))) p) := by
-  have childNode : Node.at_ (.eff root.program) (p.child 0).path =
-      some (.eff (.withFiber (.context required))) := Node.at_child node rfl
-  refine checked_provideService_arm root w p env key value (.withFiber (.context required))
-    available ty provided checked values evaluated services carriers coverage budget ?_
-  intro bodyTy bodyCheck later ordered input requiredCovered guaranteedCovered
-  have childCheck : Checker.check (root.scopeSig (p.child 0).path) env (p.child 0).path
-      (.withFiber (.context required)) = .ok bodyTy := by
-    change Checker.check (root.scopeSig (p.path ++ [0])) env (p.path ++ [0]) _ = _
-    rw [root.scopeSig_child node 0]
-    exact bodyCheck
-  have futureServices : later.serviceTy = root.sig.serviceTy :=
-    (le_serviceTy ordered.1).trans services
-  refine ambientProg_widen root (before := (bodyTy, input, input))
-    (Ty.subN_refl _) (Ty.subN_refl _) guaranteedCovered guaranteedCovered ?_
-  exact checked_context_denotation root later (p.child 0) env required input bodyTy
-    childNode childCheck futureServices requiredCovered
+  exact checked_provideService_arm root w p env key value (.withFiber (.context required))
+    available ty provided checked values evaluated services carriers coverage budget admitted
 
 
 end Effect4.Program.Typed

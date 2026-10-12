@@ -568,6 +568,21 @@ def AmbientExit (w : World) (available : Env.Requirement) (position : AmbientPos
     (exit : ExitV) : Prop :=
   ExitOk w position.type exit ∧ AmbientBounds available position exit
 
+/-- A Region body enters with its intrinsic checked requirements.
+A protected provider checks the actual installed map, not only the world's service table.
+Consumer: ambient mask admission and the existing body-entry preservation path. -/
+def BodyCoverage (root : ProgramSource) (w : World) (available : Env.Requirement)
+    (body : Body) (cert : EffTy) : Prop :=
+  (∀ region, body = .region region → ∃ intrinsic,
+    RegionTyped root w region intrinsic ∧ Ty.subN intrinsic.answer cert.answer = true ∧
+      Ty.subN intrinsic.error cert.error = true ∧ Row.Subset intrinsic.requires available) ∧
+  (∀ update region flag, body = .contextEntry update region flag → ∃ intrinsic,
+    RegionTyped root w region intrinsic ∧ Ty.subN intrinsic.answer cert.answer = true ∧
+      Ty.subN intrinsic.error cert.error = true ∧
+      ∀ previous : Env.Ctx, previous.Satisfies available →
+        (update.apply previous).Satisfies intrinsic.requires ∧
+          (update.apply previous).Satisfies available)
+
 /-- A typed context reader uses both ambient coverage and the world's declared service carriers.
 The coarse getter remains available for internal capture and restoration. -/
 def ambientFiberPre (root : ProgramSource) (w : World) (available : Env.Requirement)
@@ -578,7 +593,8 @@ def ambientFiberPre (root : ProgramSource) (w : World) (available : Env.Requirem
   | .mask _ body | .fork body _ _ => BodyTyped root w body cert ∧
       Row.Subset cert.requires available ∧
       (∀ point ctx, body = .acquireIn point ctx → ctx.services.Satisfies available) ∧
-      (∀ point previous, body = .release point previous → previous.services.Satisfies available)
+      (∀ point previous, body = .release point previous → previous.services.Satisfies available) ∧
+      BodyCoverage root w available body cert
   | .scoped point =>
       PointTyped root w point cert ∧ Row.Subset (bodyRequires root.signature cert) available
   | .forkScoped point _ _ =>
@@ -1157,6 +1173,27 @@ theorem layerPointTyped_mono (ord : w.leHost w') {src : ProgramSource} {p : Poin
   obtain ⟨fty, hfty, hex⟩ := hview q hq
   exact ⟨fty, ord.1.2.1 _ _ hfty, strongExit_mono _ _ _ _ ord hex⟩
 
+/-- Region admission transports through the existing world order.
+Consumer: the protected provider's saved and queued body positions. -/
+theorem regionTyped_mono (ord : w.leHost w') {src : ProgramSource} {body : Region} {ty : EffTy}
+    (typed : RegionTyped src w body ty) : RegionTyped src w' body ty := by
+  fun_cases cata_region (regionTypingAlgebra src w) body with
+  | case1 => exact pointTyped_mono ord typed
+  | case2 | case3 =>
+    obtain ⟨lt, same, point, scope, memo⟩ := typed
+    exact ⟨lt, same, layerPointTyped_mono ord point, scopeLive_mono ord.1 scope,
+      memoLive_mono ord.1 memo⟩
+  | case4 =>
+    obtain ⟨bodyTy, point, same, carriers⟩ := typed
+    refine ⟨bodyTy, pointTyped_mono ord point, same, fun key keyed carrier declared => ?_⟩
+    exact carriers key keyed carrier (serviceTy_of_le ord.1 key carrier declared)
+
+/-- Protected-entry update admission uses the existing transitive host order.
+Consumer: bodyTyped_mono. -/
+theorem contextUpdateTyped_mono (ord : w.leHost w') {update : Env.ContextUpdate}
+    (typed : ContextUpdateTyped w update) : ContextUpdateTyped w' update :=
+  fun later ordered => typed later (leHost_trans _ _ _ ord ordered)
+
 /-- A finalizer's admission is upward closed (decisions row 151 (a″)): a capture's
 environment and services by membership's transport, a scope's presence by scope persistence. -/
 theorem finalizerAdmitted_mono (root : ProgramSource) (ord : w.leHost w') (fin : FinName)
@@ -1190,6 +1227,11 @@ theorem bodyTyped_mono (ord : w.leHost w') {src : ProgramSource} {b : Body} {ty 
   | layerBuild p m scope lt h live memo =>
     exact .layerBuild p m scope lt (layerPointTyped_mono ord h) (scopeLive_mono ord.1 live)
       (memoLive_mono ord.1 memo)
+  | region body bodyTy ty typed answer error =>
+    exact .region body bodyTy ty (regionTyped_mono ord typed) answer error
+  | contextEntry update body flag bodyTy ty typed answer error updateTyped =>
+    exact .contextEntry update body flag bodyTy ty (regionTyped_mono ord typed) answer error
+      (contextUpdateTyped_mono ord updateTyped)
 
 /-- Every store row's demand is upward closed (all 31 rows). -/
 theorem storePre_mono (root : ProgramSource) (ord : w.leHost w') (op : SyncOp)
@@ -1460,6 +1502,19 @@ theorem finalizerAdmitted_rows_append {w : World} {fin : FinName}
   | foreign c => exact captureTyped_rows_append src src' t' hprog htab hsvc h
   | _ => exact h
 
+/-- Region admission retains its source at an appended host-row table.
+Consumer: bodyTyped_rows_append. -/
+theorem regionTyped_rows_append {w : World} {body : Region} {ty : EffTy}
+    (typed : RegionTyped src w body ty) : RegionTyped src' w body ty := by
+  fun_cases cata_region (regionTypingAlgebra src w) body with
+  | case1 => exact pointTyped_rows_append src src' t' hprog htab hsvc typed
+  | case2 | case3 =>
+    obtain ⟨lt, same, point, scope, memo⟩ := typed
+    exact ⟨lt, same, layerPointTyped_rows_append src src' t' hprog htab hsvc point, scope, memo⟩
+  | case4 =>
+    obtain ⟨bodyTy, point, same, carriers⟩ := typed
+    exact ⟨bodyTy, pointTyped_rows_append src src' t' hprog htab hsvc point, same, carriers⟩
+
 theorem bodyTyped_rows_append {w : World} {body : Body} {ty : EffTy}
     (h : BodyTyped src w body ty) : BodyTyped src' w body ty := by
   cases h with
@@ -1476,6 +1531,12 @@ theorem bodyTyped_rows_append {w : World} {body : Body} {ty : EffTy}
   | layerBuild p m scope lt hp live memo =>
     exact .layerBuild p m scope lt (layerPointTyped_rows_append src src' t' hprog htab hsvc hp) live
       memo
+  | region body bodyTy ty typed answer error =>
+    exact .region body bodyTy ty (regionTyped_rows_append src src' t' hprog htab hsvc typed)
+      answer error
+  | contextEntry update body flag bodyTy ty typed answer error updateTyped =>
+    exact .contextEntry update body flag bodyTy ty
+      (regionTyped_rows_append src src' t' hprog htab hsvc typed) answer error updateTyped
 
 theorem storePre_rows_append {w : World} {op : SyncOp} {cert : StoreCert op}
     (h : storePre src w op cert) : storePre src' w op cert := by

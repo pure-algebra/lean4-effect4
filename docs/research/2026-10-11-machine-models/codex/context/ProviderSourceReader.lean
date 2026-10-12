@@ -33,5 +33,17 @@ example (world : Typed.World) (ctx : Ctx)
   · exact Row.subset_refl _
   · change 2 ≠ 0
     decide
+  · intro bodyTy checkedBody
+    have expected : Checker.check (source.scopeSig (point ctx).path) [.contextOf keys]
+        ((point ctx).path ++ [0]) (.withFiber (.context keys)) =
+        .ok (⟨.contextOf keys, .never, keys⟩ : EffTy) := by kernel_rfl
+    rw [expected] at checkedBody
+    cases checkedBody
+    refine ⟨.withFiber (.context keys), [.contextOf keys], ?_, ?_, values, ?_, ?_⟩
+    · kernel_rfl
+    · kernel_rfl
+    · intro row absent
+      exact nomatch absent
+    · exact stackTyped_nil source world []
 
 end Test.TypedContextProviderSource

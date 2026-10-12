@@ -38,6 +38,20 @@ example (world : Typed.World) (services : world.serviceTy = source.sig.serviceTy
   · exact Row.subset_refl _
   · change 2 ≠ 0
     decide
+  · intro bodyTy checkedBody
+    have expected : Checker.check (source.scopeSig point.path) []
+        (point.path ++ [0]) (.withFiber (.context keys)) =
+        .ok (⟨.contextOf keys, .never, keys⟩ : EffTy) := by kernel_rfl
+    rw [expected] at checkedBody
+    cases checkedBody
+    refine ⟨.withFiber (.context keys), [], ?_, ?_, ⟨rfl, fun i ty value absent _ => by
+        rw [List.getElem?_nil] at absent
+        cases absent⟩, ?_, ?_⟩
+    · kernel_rfl
+    · kernel_rfl
+    · intro row absent
+      exact nomatch absent
+    · exact stackTyped_nil source world []
 #guard (admitProgram source.program).toOption.isSome
 #guard result.requires = Row.empty
 #guard typeOfProgram source.signature source.program = some result

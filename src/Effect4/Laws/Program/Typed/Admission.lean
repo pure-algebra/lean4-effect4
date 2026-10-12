@@ -6,6 +6,7 @@ import Effect4.Laws.Program.ReferenceTyping
 import Effect4.Program.Definitions
 import Effect4.Laws.Program.Definitions
 import Effect4.Laws.Program.Typed.Scope
+import Effect4.Laws.Program.Folds.Region
 
 /-!
 # Laws.Program.Typed.Admission — source and control admission for typed programs
@@ -356,6 +357,36 @@ def FinalizerAdmitted (root : ProgramSource) (w : World) : FinName → Prop
   -- construction's, which `memoComplete`'s pre types at the layer's columns (decisions row 187)
   | .memoDone _ _ => False
 
+/-- The existing Region fold records source admission before residual program typing.
+Consumer: the provider mask's BodyTyped certificate and bodyTyped_typed. -/
+def regionTypingAlgebra (src : ProgramSource) (w : World) :
+    RegionAlgebra (fun _ => EffTy → Prop) where
+  region_program := fun point ty => PointTyped src w point ty
+  region_build := fun point memo scope ty => ∃ lt,
+      ty = ⟨.handle Ty.contextTarget, lt.error, Env.Requirement.empty⟩ ∧
+      LayerPointTyped src w point lt ∧ ScopeLive w scope ∧ MemoLive w memo
+  region_buildAdding := fun point memo scope ty => ∃ lt,
+      ty = ⟨.handle Ty.contextTarget, lt.error, Env.Requirement.empty⟩ ∧
+      LayerPointTyped src w point lt ∧ ScopeLive w scope ∧ MemoLive w memo
+  region_construct := fun point key ty => ∃ bodyTy,
+      PointTyped src w point bodyTy ∧
+      ty = ⟨.handle Ty.contextTarget, bodyTy.error, bodyTy.requires⟩ ∧
+      ∀ service, key = some service → ∀ carrier, w.serviceTy service = some carrier →
+        Ty.subN bodyTy.answer carrier = true ∧ flatCarrier carrier = true
+
+
+/-- Source admission for the existing Region data, through its generated algebra.
+Consumer: BodyTyped.region and BodyTyped.contextEntry. -/
+def RegionTyped (src : ProgramSource) (w : World) (region : Region) (ty : EffTy) : Prop :=
+  cata_region (regionTypingAlgebra src w) region ty
+
+/-- A context update retains value membership at every permitted future world.
+This judgment supplies no runtime capability coverage.
+Consumer: the protected context-entry body's admission. -/
+def ContextUpdateTyped (w : World) (update : Env.ContextUpdate) : Prop :=
+  ∀ later, w.leHost later → ∀ previous : Env.Ctx, ServicesFit later previous →
+    ServicesFit later (update.apply previous)
+
 /-- **Admitted bodies**, one arm per `Body` constructor, each what its program needs (`bodyR`,
 `Laws/Program/EvaluateR.lean`; the bridge is `bodyTyped_typed`, `Typed/Body.lean`): the pre of
 `mask` and `fork` (`fiberPre`, `Typed/Residual.lean`).
@@ -391,6 +422,15 @@ inductive BodyTyped (src : ProgramSource) (w : World) : Body → EffTy → Prop
       (h : LayerPointTyped src w p lt) (live : ScopeLive w scope) (memo : MemoLive w m) :
       BodyTyped src w (.layerBuild p m scope)
         ⟨.handle Ty.contextTarget, lt.error, Env.Requirement.empty⟩
+  | region (body : Region) (bodyTy ty : EffTy) (typed : RegionTyped src w body bodyTy)
+      (answer : Ty.subN bodyTy.answer ty.answer = true)
+      (error : Ty.subN bodyTy.error ty.error = true) :
+      BodyTyped src w (.region body) ty
+  | contextEntry (update : Env.ContextUpdate) (body : Region) (flag : Bool)
+      (bodyTy ty : EffTy) (typed : RegionTyped src w body bodyTy)
+      (answer : Ty.subN bodyTy.answer ty.answer = true)
+      (error : Ty.subN bodyTy.error ty.error = true) (updateTyped : ContextUpdateTyped w update) :
+      BodyTyped src w (.contextEntry update body flag) ty
 
 /-- Membership at the answer column gives the successful exit; its defect exclusion is vacuous. -/
 theorem strongExit_success (w : World) (ty : EffTy) (v : Val) (h : Fits w v ty.answer) :
