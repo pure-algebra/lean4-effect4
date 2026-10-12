@@ -983,7 +983,7 @@ theorem reads_mkItem (A : Ty) {stamp resource : TermSrc} {env : Env} {path : Lis
 values. -/
 theorem reads_itemsFrom (A : Ty) (res : Nat → Val) {env : Env} {path : List Nat}
     {vals : List Val} : ∀ (stamp : Nat) {resources : List TermSrc} {names : List Nat},
-      Pointwise (fun src r => Reads src env path vals (res r)) resources names →
+      ListRel (fun src r => Reads src env path vals (res r)) resources names →
         ReadsAll (itemsFrom A stamp resources) env path vals
           ((Model.itemsFrom stamp names).map (itemVal res))
   | _, _, _, .nil => .nil
@@ -993,7 +993,7 @@ theorem reads_itemsFrom (A : Ty) (res : Nat → Val) {env : Env} {path : List Na
 /-- The stamps of the initial value read the model's idle stamps as the pool is made. -/
 theorem reads_stampsFrom (res : Nat → Val) {env : Env} {path : List Nat} {vals : List Val} :
     ∀ (stamp : Nat) {resources : List TermSrc} {names : List Nat},
-      Pointwise (fun src r => Reads src env path vals (res r)) resources names →
+      ListRel (fun src r => Reads src env path vals (res r)) resources names →
         ReadsAll (stampsFrom stamp resources) env path vals
           (((Model.itemsFrom stamp names).map (·.stamp)).map Val.nat)
   | _, _, _, .nil => .nil
@@ -1004,7 +1004,7 @@ theorem reads_stampsFrom (res : Nat → Val) {env : Env} {path : List Nat} {vals
 resource's term reads its value. -/
 theorem reads_initial (tb : Table) (res : Nat → Val) (A : Ty) {env : Env} {path : List Nat}
     {vals : List Val} {resources : List TermSrc} {names : List Nat}
-    (each : Pointwise (fun src r => Reads src env path vals (res r)) resources names) :
+    (each : ListRel (fun src r => Reads src env path vals (res r)) resources names) :
     Reads (initial A resources) env path vals (cellVal tb res (Model.initial names)) :=
   reads_record (present := [("items", listOf (itemsFrom A 0 resources)),
       ("available", listOf (stampsFrom 0 resources)), ("waiters", nilT),
@@ -1022,7 +1022,7 @@ it states nothing of the acquisitions and nothing of the close's registration. -
 @[semantics "translation-simulation" (requirement := R10)]
 theorem make_makes (tb : Table) (res : Nat → Val) (A : Ty) {env : Env} {path : List Nat}
     {vals : List Val} {resources : List TermSrc} {names : List Nat} (stores : Stores)
-    (each : Pointwise (fun src r => Reads src env path vals (res r)) resources names) :
+    (each : ListRel (fun src r => Reads src env path vals (res r)) resources names) :
     Profile (Model.initial names) ∧
       Reads (initial A resources) env path vals (cellVal tb res (Model.initial names)) ∧
       syncOpStep (.refMake (cellVal tb res (Model.initial names))) stores =

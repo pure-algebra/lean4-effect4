@@ -10,9 +10,9 @@ the children with this relation, so it is the list case of each abstraction theo
 Question: a step of the proposed claim `names-parametric` (`docs/research/2026-10-11-handles/`,
 §8). Its first consumer is `Laws/Store/Names.lean`.
 
-`Book.lean` uses this relation directly. The remaining copies are `Pointwise`
-(`Laws/Step/Reading.lean`) and `Fits` (`Laws/Program/Typed.lean`).
-`Laws/Data/ListRelConnectors.lean` relates them to this one. The callers move before each copy goes.
+`Book.lean` and `Laws/Step/Reading.lean` use this relation directly.
+`Fits` (`Laws/Program/Typed.lean`) remains a copy.
+`Laws/Data/ListRelConnectors.lean` relates it to this one. The callers move before each copy goes.
 The lemmas named as `Book.lean`'s retain its statements.
 
 What this module does not claim: anything about a carrier. It is the list part of a relation.
