@@ -30,7 +30,7 @@ theorem ambientFiberPre_mono (root : ProgramSource) {w w' : World} (ord : w.leHo
       exact declared key member
   | case2 | case3 =>
     refine ⟨bodyTyped_mono ord pre.1, pre.2.1, pre.2.2.1, pre.2.2.2.1, ?_⟩
-    refine ⟨?_, ?_, ?_⟩
+    refine ⟨?_, ?_, ?_, ?_⟩
     · intro region same
       obtain ⟨intrinsic, typed, answer, error, covered, arguments⟩ := pre.2.2.2.2.1 region same
       exact ⟨intrinsic, regionTyped_mono ord typed, answer, error, covered,
@@ -42,7 +42,9 @@ theorem ambientFiberPre_mono (root : ProgramSource) {w w' : World} (ord : w.leHo
       have installed := covered previous present
       exact ⟨installed.1, installed.2.1, regionStackTyped_mono ord installed.2.2⟩
     · intro point role
-      exact ambientStackTyped_mono ord (pre.2.2.2.2.2.2 point role)
+      exact ambientStackTyped_mono ord (pre.2.2.2.2.2.2.1 point role)
+    · intro point memo scope same
+      exact ambientStackTyped_mono ord (pre.2.2.2.2.2.2.2 point memo scope same)
   | case4 | case5 =>
     exact ⟨pointTyped_mono ord pre.1, pre.2⟩
   | case6 =>
@@ -654,7 +656,66 @@ theorem ambient_captureMask_typed (root : ProgramSource) (w : World)
   exact .pure ⟨strongExit_success later _ _ (fits_savedMask later flag), Row.subset_refl _⟩
     (Row.subset_refl _)
 
-/-- The actual provider mask checks the installed map's body requirements.
+/-- **The protected context entry** at any update whose installed map covers the body's checked
+row and keeps the entry row: the mask captured, the context installed with its restoration, the
+body run at the installed row. Concept `residual-program-typing` (R4, decisions row 349); a step of
+the closed M5 source claim. Consumers: `ambient_updateContext_provide` and the layer builds'
+installs (`Typed/LayerArm.lean`). It states no machine preservation. -/
+theorem ambient_updateContext (root : ProgramSource) {w : World}
+    (available guaranteed required : Env.Requirement) (entry : Row.Subset guaranteed available)
+    (ty : EffTy) (body : Region) (typedBody : RegionTyped root w body ⟨ty.answer, ty.error, required⟩)
+    (arguments : RegionStackTyped root w available body)
+    (update : Env.ContextUpdate) (updateTyped : ContextUpdateTyped w update)
+    (covers : ∀ previous : Env.Ctx, previous.Satisfies available →
+      (update.apply previous).Satisfies required ∧ (update.apply previous).Satisfies available) :
+    AmbientProg root w available (ty, guaranteed, guaranteed)
+      (updateContextR update body) := by
+  unfold updateContextR
+  refine ambient_guardBind root (ambient_captureMask_typed root w available)
+    (fun later ordered exit arm payload => ?_) (fun _ _ exit payload absent => ?_) entry
+  · cases exit with
+    | failure cause => exact Bool.noConfusion arm
+    | success value =>
+      obtain ⟨flag, rfl⟩ := fits_maskRestore_inv payload.1.1
+      simp only [seqR, Val.savedMask?_savedMask]
+      let intrinsic : EffTy := ⟨ty.answer, ty.error, required⟩
+      let cut : EffTy := ⟨ty.answer, ty.error, available⟩
+      have region : RegionTyped root later body intrinsic := regionTyped_mono ordered typedBody
+      have laterUpdate : ContextUpdateTyped later update := fun after grew =>
+        updateTyped after (leHost_trans _ _ _ ordered grew)
+      refine .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+        (fun _ _ _ h => nomatch h) cut ?_ ?_ entry
+      · refine ⟨.contextEntry _ body flag intrinsic cut region (Ty.subN_refl _) (Ty.subN_refl _)
+          laterUpdate, Row.subset_refl _, ?_, ?_, ?_, ?_, ?_, ?_⟩
+        · intro point ctx impossible
+          cases impossible
+        · intro flag point previous impossible
+          cases impossible
+        · intro actual impossible
+          cases impossible
+        · intro actual region' flag' shape
+          cases shape
+          refine ⟨intrinsic, region, Ty.subN_refl _, Ty.subN_refl _, fun previous covered => ?_⟩
+          have installed := covers previous covered
+          exact ⟨installed.1, installed.2, regionStackTyped_widen
+            ((Provision.satisfies_iff_subset_keysRow _ available).mp installed.2)
+            (regionStackTyped_mono ordered arguments)⟩
+        · intro point role
+          rcases role with impossible | ⟨ctx, impossible | impossible⟩
+          · cases impossible
+          · cases impossible
+          · cases impossible
+        · intro point memo scope impossible
+          cases impossible
+      · intro after _ delivered post
+        refine .pure ⟨post, ?_⟩ entry
+        cases delivered <;> exact entry
+  · cases exit with
+    | success value => exact Bool.noConfusion absent
+    | failure cause => exact ⟨exitOk_failure_of_errorN (Bounds.subN_never _) payload.1, entry⟩
+
+/-- The actual provider mask checks the installed map's body requirements: the protected entry at
+the merge with a supplied context of the provided keys.
 Consumer: the typed source provider arm on the typed-state-reachable path. -/
 theorem ambient_updateContext_provide (root : ProgramSource) {w : World}
     (available guaranteed required keys : Env.Requirement) (supplied : Ctx)
@@ -671,59 +732,19 @@ theorem ambient_updateContext_provide (root : ProgramSource) {w : World}
   have same : provided = supplied := Option.some.inj
     (decoded.symm.trans (Val.context?_context _))
   subst provided
-  unfold updateContextR
-  refine ambient_guardBind root (ambient_captureMask_typed root w available)
-    (fun later ordered exit arm payload => ?_) (fun _ _ exit payload absent => ?_) entry
-  · cases exit with
-    | failure cause => exact Bool.noConfusion arm
-    | success value =>
-      obtain ⟨flag, rfl⟩ := fits_maskRestore_inv payload.1.1
-      simp only [seqR, Val.savedMask?_savedMask]
-      let intrinsic : EffTy := ⟨ty.answer, ty.error, required⟩
-      let cut : EffTy := ⟨ty.answer, ty.error, available⟩
-      have region : RegionTyped root later body intrinsic := regionTyped_mono ordered typedBody
-      have updateTyped : ContextUpdateTyped later update := by
-        intro after grew previous members
-        rw [applies]
-        have future := leHost_trans _ _ _ ordered grew
-        exact servicesFit_merge members (servicesFit_map future.1.2.1 future.1.2.2.1
-          future.1.2.2.2.1 future.2 future.1.1.2 (serviceTy_of_le future.1) suppliedMembers)
-      refine .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-        (fun _ _ _ h => nomatch h) cut ?_ ?_ entry
-      · refine ⟨.contextEntry _ body flag intrinsic cut region (Ty.subN_refl _) (Ty.subN_refl _)
-          updateTyped, Row.subset_refl _, ?_, ?_, ?_, ?_, ?_⟩
-        · intro point ctx impossible
-          cases impossible
-        · intro flag point previous impossible
-          cases impossible
-        · intro actual impossible
-          cases impossible
-        · intro actual region' flag' shape
-          cases shape
-          refine ⟨intrinsic, region, Ty.subN_refl _, Ty.subN_refl _, ?_⟩
-          intro previous covered
-          rw [applies]
-          have fromBefore := Provision.satisfies_merge_left previous supplied.services
-            (Row.diff required keys) (previous.satisfies_weaken covered needed)
-          have fromGiven := Provision.satisfies_merge_right previous supplied.services keys suppliedKeys
-          refine ⟨?_, Provision.satisfies_merge_left previous supplied.services available covered,
-            regionStackTyped_installed previous supplied.services covered
-              (regionStackTyped_mono ordered arguments)⟩
-          intro key member
-          by_cases suppliedKey : key ∈ keys
-          · exact fromGiven key suppliedKey
-          · exact fromBefore key ((Row.mem_diff key required keys).mpr ⟨member, suppliedKey⟩)
-        · intro point role
-          rcases role with impossible | ⟨ctx, impossible | impossible⟩
-          · cases impossible
-          · cases impossible
-          · cases impossible
-      · intro after _ delivered post
-        refine .pure ⟨post, ?_⟩ entry
-        cases delivered <;> exact entry
-  · cases exit with
-    | success value => exact Bool.noConfusion absent
-    | failure cause => exact ⟨exitOk_failure_of_errorN (Bounds.subN_never _) payload.1, entry⟩
+  refine ambient_updateContext root available guaranteed required entry ty body typedBody arguments
+    update (fun later grew previous members => ?_) (fun previous covered => ?_)
+  · rw [applies]
+    exact servicesFit_merge members (servicesFit_map grew.1.2.1 grew.1.2.2.1
+      grew.1.2.2.2.1 grew.2 grew.1.1.2 (serviceTy_of_le grew.1) suppliedMembers)
+  · rw [applies]
+    have fromBefore := Provision.satisfies_merge_left previous supplied.services
+      (Row.diff required keys) (previous.satisfies_weaken covered needed)
+    have fromGiven := Provision.satisfies_merge_right previous supplied.services keys suppliedKeys
+    refine ⟨fun key member => ?_, Provision.satisfies_merge_left previous supplied.services available covered⟩
+    by_cases suppliedKey : key ∈ keys
+    · exact fromGiven key suppliedKey
+    · exact fromBefore key ((Row.mem_diff key required keys).mpr ⟨member, suppliedKey⟩)
 
 /-- The checked provider source arm uses its actual child and immediate-exit premises.
 Consumer: ambient M5 source denotation and checked_provideContext_reader. -/

@@ -55,11 +55,10 @@ theorem TermMaps.widen {w : World} {f : Term} {env : List Val} {A A' R R' : Ty}
   obtain ⟨r, hr, hfit⟩ := h w' ord a (fits_subN w' hA a ha)
   exact ⟨r, hr, fits_subN w' hR r hfit⟩
 
-/-- A row's ghost certificate: the allocated type, the promise's columns, the memo hit's error
-type, or the answer column `B` of the two `modify` rows. -/
+/-- A row's ghost certificate: the allocated type, the promise's columns, the memo cell's columns, or the answer column `B` of the two `modify` rows. -/
 def StoreCert : SyncOp → Type
-  | .refMake _ | .memoGet _ _ | .refModify _ _ _ | .refModifySome _ _ _ => Ty
-  | .deferredMake | .memoBuild _ _ => Ty × Ty
+  | .refMake _ | .refModify _ _ _ | .refModifySome _ _ _ => Ty
+  | .deferredMake | .memoGet _ _ | .memoBuild _ _ => Ty × Ty
   | _ => PUnit
 
 /-- What each store row demands of its request (decisions row 136 for the scope rows). A
@@ -106,18 +105,19 @@ def storePre (root : ProgramSource) (w : World) (op : SyncOp) (cert : StoreCert 
   -- `memoBuild`'s row, the memo-table clause `memoGet`'s post reads (decisions row 187)
   | .memoComplete layer _ ex => ∃ l lt, Node.at_ (.eff root.program) layer.1 = some (.layer l) ∧
       Checker.checkLayer (root.scopeSig layer.1) layer.1 (LayerTerm.expandIn root.program l) = .ok lt ∧
-      ExitOk w ⟨.handle Ty.contextTarget, lt.error, Env.Requirement.empty⟩ ex
-  -- the looked-up layer's own checked error type (decision row 90), read through the
-  -- expansion's rounds as `PointTyped` reads a node (decisions row 153 (b))
+      ExitOk w ⟨.contextOf lt.out, lt.error, Env.Requirement.empty⟩ ex
+  -- the looked-up layer's columns, its output row's context and its own checked error type
+  -- (decision row 90), read through the expansion's rounds as `PointTyped` reads a node
+  -- (decisions row 153 (b))
   | .memoGet layer _ => ∃ l lt, Node.at_ (.eff root.program) layer.1 = some (.layer l) ∧
       Checker.checkLayer (root.scopeSig layer.1) layer.1 (LayerTerm.expandIn root.program l) = .ok lt ∧
-      lt.error = cert
+      cert = (.contextOf lt.out, lt.error)
   -- the entry's Deferred is declared at the layer's columns, the built context and the layer's
   -- own checked error type, read as `memoGet` reads them: the promise table's `memoBuild` row
   -- (`Typed/Vocabulary.lean`), the memo-table clause `memoGet`'s post relies on (decisions row 187)
   | .memoBuild layer _ => ∃ l lt, Node.at_ (.eff root.program) layer.1 = some (.layer l) ∧
       Checker.checkLayer (root.scopeSig layer.1) layer.1 (LayerTerm.expandIn root.program l) = .ok lt ∧
-      cert = (.handle Ty.contextTarget, lt.error)
+      cert = (.contextOf lt.out, lt.error)
 
 /-- What each store row's answer satisfies: the store's actual answer (decisions row 136; the
 handler's adequacy is `StoreImplements`, `Typed/Adequacy.lean`). -/
@@ -153,7 +153,7 @@ def storePost (w' : World) (op : SyncOp) (cert : StoreCert op) (ans : Val) : Pro
   | .scopeFork _ _ => Fits w' ans Ty.scope
   | .memoFork _ => ∃ id, ans = Val.memoMap id ∧ MemoLive w' id
   | .memoGet _ _ => ans = Val.unit ∨ ∃ cell owner, Val.memoHit? ans = some (cell, owner) ∧
-      w'.«Π» cell = some (.handle Ty.contextTarget, cert) ∧ MemoLive w' owner
+      w'.«Π» cell = some cert ∧ MemoLive w' owner
   | .memoBuild _ _ => Fits w' ans Ty.scope
   | .memoComplete _ _ _ => ans = Val.unit
   -- the last observer's release answers the layer's scope handle, for the caller to close; the
@@ -241,9 +241,16 @@ def fiberPre (root : ProgramSource) (w : World) (op : FiberOp) (cert : FiberCert
   | .setContext ctx => ServicesFit w ctx.services
   | .getContext => cert = .handle Ty.contextTarget
   | .await target _ => (w.Γ target).isSome = true
+  -- the exits at one pair of columns every target's declaration is below; or at each target's
+  -- own columns in input order (the countdown walks its targets in order, `countdownWalk`), which
+  -- `Layer.merge`'s union of outputs reads (decisions row 349)
   | .awaitAll targets | .awaitAllFailFast targets =>
-    ∃ a e, cert = .list (.exitOf a e) ∧ ∀ t ∈ targets, ∃ fty, w.Γ t = some fty ∧
-      fty.answer.sub a = true ∧ fty.error.sub e = true
+    (∃ a e, cert = .list (.exitOf a e) ∧ ∀ t ∈ targets, ∃ fty, w.Γ t = some fty ∧
+      fty.answer.sub a = true ∧ fty.error.sub e = true) ∨
+    ∃ cols : FiberId → Ty × Ty,
+      cert = .tuple (targets.map fun t => .exitOf (cols t).1 (cols t).2) ∧
+      ∀ t ∈ targets, ∃ fty, w.Γ t = some fty ∧ fty.answer.sub (cols t).1 = true ∧
+        fty.error.sub (cols t).2 = true
   | .raceAll entrants _ | .raceAllFirst entrants _ => ∀ p ∈ entrants, ∃ ty, PointTyped root w p ty ∧
       ty.answer.sub cert.answer = true ∧ ty.error.sub cert.error = true
   | .async register _ => asyncPre root w register cert
@@ -587,6 +594,8 @@ def BodyCoverage (root : ProgramSource) (w : World) (available : Env.Requirement
           (update.apply previous).Satisfies available ∧
           RegionStackTyped root w (update.apply previous).keysRow region)
   ∧ (∀ point, body = .at_ point ∨ (∃ ctx, body = .acquireIn point ctx ∨ body = .release point ctx) →
+      AmbientStackTyped root w available (scopeParams root.program point.path) point.params)
+  ∧ (∀ point memo scope, body = .layerBuild point memo scope →
       AmbientStackTyped root w available (scopeParams root.program point.path) point.params)
 
 /-- The actual captured release producer disables interruption before installing restoration.
@@ -1206,8 +1215,9 @@ theorem regionTyped_mono (ord : w.leHost w') {src : ProgramSource} {body : Regio
       memoLive_mono ord.1 memo⟩
   | case4 =>
     obtain ⟨bodyTy, point, same, carriers⟩ := typed
-    refine ⟨bodyTy, pointTyped_mono ord point, same, fun key keyed carrier declared => ?_⟩
-    exact carriers key keyed carrier (serviceTy_of_le ord.1 key carrier declared)
+    refine ⟨bodyTy, pointTyped_mono ord point, same, fun key keyed => ?_⟩
+    obtain ⟨carrier, declared, sub, flat⟩ := carriers key keyed
+    exact ⟨carrier, le_serviceTy ord.1 ▸ declared, sub, flat⟩
 
 /-- Protected-entry update admission uses the existing transitive host order.
 Consumer: bodyTyped_mono. -/
@@ -1336,10 +1346,13 @@ theorem fiberPre_mono (root : ProgramSource) (ord : w.leHost w') (op : FiberOp)
     exact isSome_extends hGamma h
   | awaitAll targets | awaitAllFailFast targets =>
     simp only [fiberPre] at h ⊢
-    obtain ⟨a, e, hc, hall⟩ := h
-    refine ⟨a, e, hc, fun t ht => ?_⟩
-    obtain ⟨fty, hf, ha, he⟩ := hall t ht
-    exact ⟨fty, hGamma _ _ hf, ha, he⟩
+    rcases h with ⟨a, e, hc, hall⟩ | ⟨cols, hc, hall⟩
+    · refine .inl ⟨a, e, hc, fun t ht => ?_⟩
+      obtain ⟨fty, hf, ha, he⟩ := hall t ht
+      exact ⟨fty, hGamma _ _ hf, ha, he⟩
+    · refine .inr ⟨cols, hc, fun t ht => ?_⟩
+      obtain ⟨fty, hf, ha, he⟩ := hall t ht
+      exact ⟨fty, hGamma _ _ hf, ha, he⟩
   | raceAll entrants _ | raceAllFirst entrants _ =>
     simp only [fiberPre] at h ⊢
     intro p hp

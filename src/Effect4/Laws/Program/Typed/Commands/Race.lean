@@ -367,7 +367,7 @@ theorem afterInterruptCode_typed (root : ProgramSource) {rootTy : EffTy} {w : Wo
       (fun _ _ _ _ => TypedProg.pure ⟨trivial, trivial⟩) rfl
     refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
       (fun _ _ _ h => nomatch h) (Ty.list (.exitOf .unknown .unknown)) ?_ ?_
-    · refine ⟨.unknown, .unknown, rfl, fun t ht => ?_⟩
+    · refine .inl ⟨.unknown, .unknown, rfl, fun t ht => ?_⟩
       obtain ⟨fty, declared, _, _⟩ := cols t ht
       exact ⟨fty, declared, Ty.sub_unknown _, Ty.sub_unknown _⟩
     · intro w' _ ans post
@@ -671,7 +671,7 @@ theorem awaitAllPark_typed (root : ProgramSource) {w : World} {targets : List Fi
   refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ _ _ h => nomatch h)
     (Ty.list (.exitOf (declaredUnion w EffTy.answer targets) (declaredUnion w EffTy.error targets)))
-    ⟨_, _, rfl, fun t ht => ?_⟩ ?_
+    (.inl ⟨_, _, rfl, fun t ht => ?_⟩) ?_
   · obtain ⟨fty, d, _, _⟩ := cols t ht
     exact ⟨fty, d, sub_declaredUnion (col := EffTy.answer) ht d,
       sub_declaredUnion (col := EffTy.error) ht d⟩

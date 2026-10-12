@@ -391,21 +391,29 @@ def FinalizerAdmitted (root : ProgramSource) (w : World) : FinName → Prop
   -- construction's, which `memoComplete`'s pre types at the layer's columns (decisions row 187)
   | .memoDone _ _ => False
 
+/-- The output row of a leaf's construction: its key, or nothing for a discarded answer. -/
+def constructOut : Option ServiceKey → Env.Requirement
+  | some key => Env.Requirement.single key
+  | none => Env.Requirement.empty
+
+/-- The types a layer's build runs at: the context holding the layer's output row, at the
+layer's checked error type and its requirement row (decisions rows 176 (b) and 349). -/
+def buildTy (lt : LayerTy) : EffTy := ⟨.contextOf lt.out, lt.error, lt.requires⟩
+
 /-- The existing Region fold records source admission before residual program typing.
+A build answers the context of its layer's output row, and runs at the layer's requirement row.
 Consumer: the provider mask's BodyTyped certificate and bodyTyped_typed. -/
 def regionTypingAlgebra (src : ProgramSource) (w : World) :
     RegionAlgebra (fun _ => EffTy → Prop) where
   region_program := fun point ty => PointTyped src w point ty
-  region_build := fun point memo scope ty => ∃ lt,
-      ty = ⟨.handle Ty.contextTarget, lt.error, Env.Requirement.empty⟩ ∧
+  region_build := fun point memo scope ty => ∃ lt, ty = buildTy lt ∧
       LayerPointTyped src w point lt ∧ ScopeLive w scope ∧ MemoLive w memo
-  region_buildAdding := fun point memo scope ty => ∃ lt,
-      ty = ⟨.handle Ty.contextTarget, lt.error, Env.Requirement.empty⟩ ∧
+  region_buildAdding := fun point memo scope ty => ∃ lt, ty = buildTy lt ∧
       LayerPointTyped src w point lt ∧ ScopeLive w scope ∧ MemoLive w memo
   region_construct := fun point key ty => ∃ bodyTy,
       PointTyped src w point bodyTy ∧
-      ty = ⟨.handle Ty.contextTarget, bodyTy.error, bodyTy.requires⟩ ∧
-      ∀ service, key = some service → ∀ carrier, w.serviceTy service = some carrier →
+      ty = ⟨.contextOf (constructOut key), bodyTy.error, bodyTy.requires⟩ ∧
+      ∀ service, key = some service → ∃ carrier, w.serviceTy service = some carrier ∧
         Ty.subN bodyTy.answer carrier = true ∧ flatCarrier carrier = true
 
 
@@ -471,8 +479,7 @@ inductive BodyTyped (src : ProgramSource) (w : World) : Body → EffTy → Prop
       BodyTyped src w (.release p prev) ty
   | layerBuild (p : Point) (m : MemoMapId) (scope : Nat) (lt : LayerTy)
       (h : LayerPointTyped src w p lt) (live : ScopeLive w scope) (memo : MemoLive w m) :
-      BodyTyped src w (.layerBuild p m scope)
-        ⟨.handle Ty.contextTarget, lt.error, Env.Requirement.empty⟩
+      BodyTyped src w (.layerBuild p m scope) (buildTy lt)
   | region (body : Region) (bodyTy ty : EffTy) (typed : RegionTyped src w body bodyTy)
       (answer : Ty.subN bodyTy.answer ty.answer = true)
       (error : Ty.subN bodyTy.error ty.error = true) :

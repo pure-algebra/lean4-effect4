@@ -57,7 +57,7 @@ theorem ambientFiberPre_of_admin (root : ProgramSource) {w : World} (available :
     intro admin pre
     cases body <;> simp only [adminOp, Bool.false_eq_true] at admin
     cases pre
-    refine ⟨.raceCleanup _, fun a h => absurd h (Row.not_mem_empty a), ?_, ?_, ?_, ?_, ?_⟩
+    refine ⟨.raceCleanup _, fun a h => absurd h (Row.not_mem_empty a), ?_, ?_, ?_, ?_, ?_, ?_⟩
     · intro _ _ h
       cases h
     · intro _ _ _ h
@@ -68,6 +68,8 @@ theorem ambientFiberPre_of_admin (root : ProgramSource) {w : World} (available :
       cases h
     · intro _ h
       rcases h with h | ⟨_, h | h⟩ <;> cases h
+    · intro _ _ _ h
+      cases h
   | _ => intro admin pre; simp only [adminOp, Bool.false_eq_true] at admin <;> exact pre
 
 theorem fiberPost_of_admin {w : World} (available : Env.Requirement) {op : FiberOp}

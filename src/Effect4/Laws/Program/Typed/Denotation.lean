@@ -606,12 +606,12 @@ theorem uninterruptible_arm {available : Env.Requirement} {b : NativeEff} (hfuel
     ⟨BodyTyped.at_ _ _ (pointTyped_child hat rfl rfl hcb henv hview hstack), coverage, ?_, ?_,
       (⟨(fun _ impossible => by cases impossible),
         (fun _ _ _ impossible => by cases impossible),
-        (fun point role => by
+        ⟨(fun point role => by
           rcases role with identity | ⟨ctx, impossible | impossible⟩
           · cases identity
             exact ambientStackTyped_child hat rfl rfl savedParams
           · cases impossible
-          · cases impossible)⟩ : BodyCoverage root w available (.at_ (p.child 0)) ty)⟩
+          · cases impossible), fun _ _ _ impossible => by cases impossible⟩⟩ : BodyCoverage root w available (.at_ (p.child 0)) ty)⟩
     (fun _ _ exit post => .pure ⟨post, by cases exit <;> exact Row.subset_refl _⟩ (Row.subset_refl _)) (Row.subset_refl _)
   · intro point ctx same
     cases same
@@ -638,12 +638,12 @@ theorem interruptible_arm {available : Env.Requirement} {b : NativeEff} (hfuel :
     ⟨BodyTyped.at_ _ _ (pointTyped_child hat rfl rfl hcb henv hview hstack), coverage, ?_, ?_,
       (⟨(fun _ impossible => by cases impossible),
         (fun _ _ _ impossible => by cases impossible),
-        (fun point role => by
+        ⟨(fun point role => by
           rcases role with identity | ⟨ctx, impossible | impossible⟩
           · cases identity
             exact ambientStackTyped_child hat rfl rfl savedParams
           · cases impossible
-          · cases impossible)⟩ : BodyCoverage root w available (.at_ (p.child 0)) ty)⟩
+          · cases impossible), fun _ _ _ impossible => by cases impossible⟩⟩ : BodyCoverage root w available (.at_ (p.child 0)) ty)⟩
     (fun _ _ exit post => .pure ⟨post, by cases exit <;> exact Row.subset_refl _⟩ (Row.subset_refl _)) (Row.subset_refl _)
   · intro point ctx same
     cases same
@@ -678,12 +678,12 @@ theorem acquireRelease_arm {available : Env.Requirement} {a r : NativeEff} (hfue
           Row.subset_trans coverage bound, ?_, ?_,
           (⟨(fun _ impossible => by cases impossible),
             (fun _ _ _ impossible => by cases impossible),
-            (fun point role => by
+            ⟨(fun point role => by
               rcases role with impossible | ⟨context, identity | impossible⟩
               · cases impossible
               · cases identity
                 exact ambientStackTyped_widen bound (ambientStackTyped_mono ordered savedParams)
-              · cases impossible)⟩ :
+              · cases impossible), fun _ _ _ impossible => by cases impossible⟩⟩ :
             BodyCoverage root later ctx.services.keysRow (.acquireIn p ctx) ty)⟩
         (fun _ _ returned post => .pure ⟨post, by cases returned <;> exact bound⟩ bound) bound
       · intro point context identity
@@ -1233,7 +1233,7 @@ theorem fork_arm {available : Env.Requirement} {b : NativeEff} {options : Superv
       (fun _ _ _ impossible => by cases impossible),
       ⟨(fun _ impossible => by cases impossible),
         (fun _ _ _ impossible => by cases impossible),
-        (fun point role => by
+        ⟨(fun point role => by
           rcases role with identity | ⟨ctx, impossible | impossible⟩
           · cases identity
             exact (ambientPointTyped_scope (q := (p.child 0).child 0)
@@ -1241,7 +1241,7 @@ theorem fork_arm {available : Env.Requirement} {b : NativeEff} {options : Superv
                 ((List.prefix_append _ _).trans (List.prefix_append _ _)))
               (node_at_child (node_at_child hat rfl) rfl) hcq henv hview savedParams).2
           · cases impossible
-          · cases impossible)⟩⟩
+          · cases impossible), fun _ _ _ impossible => by cases impossible⟩⟩⟩
     (fun w' _ ans post => ?_) (Row.subset_refl _)
   obtain ⟨id, rfl, hΓ⟩ := post
   exact .pure ⟨strongExit_success w' _ _ ⟨q, hΓ, Ty.subN_refl _, Ty.subN_refl _⟩,
@@ -1546,7 +1546,7 @@ theorem awaitAll_arm {available : Env.Requirement} {targets : Term}
     ?_ (fun _ pre => pre) (fun _ _ _ _ post => post) (fun _ => rfl)
     (fun answer => ⟨.success answer, rfl⟩)
   exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) (.list (.exitOf A E)) ⟨A, E, rfl, hpre⟩
+    (fun _ _ _ h => nomatch h) (.list (.exitOf A E)) (.inl ⟨A, E, rfl, hpre⟩)
     (fun w' _ ans post =>
       .pure (strongExit_success w' _ ans (fits_subN w' (subN_listExitOf hA hE) ans post)))
 
@@ -1590,7 +1590,7 @@ theorem awaitAllFailFast_arm {available : Env.Requirement} {targets : Term}
     ?_ (fun _ pre => pre) (fun _ _ _ _ post => post) (fun _ => rfl)
     (fun answer => ⟨.success answer, rfl⟩)
   exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) (.list (.exitOf A E)) ⟨A, E, rfl, hpre⟩
+    (fun _ _ _ h => nomatch h) (.list (.exitOf A E)) (.inl ⟨A, E, rfl, hpre⟩)
     (fun w' _ ans post =>
       .pure (strongExit_success w' _ ans (fits_subN w' (subN_listExitOf hA hE) ans post)))
 
@@ -3287,12 +3287,12 @@ theorem restore_arm {available : Env.Requirement} {saved : Term} {b : NativeEff}
       ⟨BodyTyped.at_ _ _ hchild, coverage, (fun _ _ impossible => by cases impossible),
         (fun _ _ _ impossible => by cases impossible),
         ⟨(fun _ impossible => by cases impossible), (fun _ _ _ impossible => by cases impossible),
-          (fun point role => by
+          ⟨(fun point role => by
             rcases role with identity | ⟨ctx, impossible | impossible⟩
             · cases identity
               exact ambientStackTyped_child hat rfl rfl savedParams
             · cases impossible
-            · cases impossible)⟩⟩
+            · cases impossible), fun _ _ _ impossible => by cases impossible⟩⟩⟩
       (fun _ _ exit post => .pure ⟨post, by cases exit <;> exact Row.subset_refl _⟩ (Row.subset_refl _)) (Row.subset_refl _)
   | false =>
     exact hb w htie (p.child 0) ty (child_fuel_eq hfuel 0) rfl hchild available coverage

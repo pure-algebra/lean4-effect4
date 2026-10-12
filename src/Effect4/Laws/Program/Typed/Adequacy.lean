@@ -51,7 +51,7 @@ def LayerCellTyped (root : ProgramSource) (w : World) (layer : LayerId) (cell : 
     Prop :=
   ∀ l lt, Node.at_ (.eff root.program) layer.1 = some (.layer l) →
     Checker.checkLayer (root.scopeSig layer.1) layer.1 (LayerTerm.expandIn root.program l) = .ok lt →
-      w.«Π» cell = some (.handle Ty.contextTarget, lt.error)
+      w.«Π» cell = some (.contextOf lt.out, lt.error)
 
 /-- **The memo table**: every entry's cell is typed at its layer, read through the memo world's
 one view of its cells (`MemoWorld.layerCells`). The promise table's `memoBuild` row
@@ -1021,7 +1021,7 @@ error type the row's certificate names; a miss answers `unit`. -/
 theorem memoGet_implements (root : ProgramSource) (layer : LayerId) (memoMap : MemoMapId) :
     StoreImplements root (.memoGet layer memoMap) := by
   intro w cert store pre
-  change Ty at cert
+  change Ty × Ty at cert
   obtain ⟨l, lt, node, checked, hcert⟩ := pre
   cases hget : w.state.memo.get layer memoMap with
   | none =>
@@ -1034,7 +1034,7 @@ theorem memoGet_implements (root : ProgramSource) (layer : LayerId) (memoMap : M
     obtain ⟨m, hm, hid, he⟩ := MemoWorld.get_mem hget
     have declared := store.memoTable (layer, entry.deferred)
       (MemoWorld.mem_layerCells.mpr ⟨m, hm, (layer, entry), he, rfl⟩) l lt node checked
-    rw [hcert] at declared
+    rw [← hcert] at declared
     -- the owner holds the entry, so it is present, and memo maps are never removed
     have present : MemoLive w owner := by
       unfold MemoLive MemoWorld.mapAt
