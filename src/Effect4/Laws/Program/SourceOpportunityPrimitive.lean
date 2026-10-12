@@ -58,20 +58,9 @@ Consumer: native Async primitive evaluation. -/
 theorem register_reply_zero (root : NativeEff) (q : List Nat) (table : RowTable)
     (m : NativeMachine) (callback : EffName) (id : FiberId) (token : Nat) (code : NCode)
     (produced : ((interpAt root m.completedExits table).registerAsync callback id token m.state).2 = some code) :
-    current root q code = 0 := by
-  cases callback
-  case registerAwait cell =>
-    obtain ⟨answer, _, result⟩ := Option.map_eq_some_iff.mp produced
-    rw [← result]
-    exact terminal_reply_zero root q _ (completion_reply answer)
-  case store callback =>
-    cases callback
-    case registerAwait cell =>
-      obtain ⟨answer, _, result⟩ := Option.map_eq_some_iff.mp produced
-      rw [← result]
-      exact terminal_reply_zero root q _ (completion_reply answer)
-    all_goals cases produced
-  all_goals cases produced
+    current root q code = 0 :=
+  terminal_reply_zero root q code
+    (register_reply root m.completedExits table callback id token m.state code produced)
 
 /-- A race-free source history contains no runtime race row.
 Consumer: actual race-park and race command exclusion in the application helper. -/
