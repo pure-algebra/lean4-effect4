@@ -122,8 +122,8 @@
     "edits": [
       {
         "path": "tools/Effect4Gen/wire-tags.json",
-        "old": "\"bytes\": 27",
-        "new": "\"bytes\": 27, \"probe\": 28"
+        "old": "\"contextOf\": 28",
+        "new": "\"contextOf\": 28, \"probe\": 29"
       },
       {
         "path": "Test/fixtures/baseline/66ee4657-supplement-v1.policy.json",
@@ -132,13 +132,13 @@
       },
       {
         "path": "ocaml/goldens/eff/manifest.txt",
-        "old": "number bytes\n",
-        "new": "number bytes probe\n"
+        "old": "bytes contextOf\n",
+        "new": "bytes contextOf probe\n"
       },
       {
         "path": "ocaml/goldens/eff/wire-tags.txt",
-        "old": "bytes=27\n",
-        "new": "bytes=27 probe=28\n"
+        "old": "contextOf=28\n",
+        "new": "contextOf=28 probe=29\n"
       },
       {
         "path": "ocaml/eff/goldens/metadata.tsv",
