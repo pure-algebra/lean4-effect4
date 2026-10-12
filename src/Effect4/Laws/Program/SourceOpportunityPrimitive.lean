@@ -45,7 +45,7 @@ theorem source_no_queue (root : NativeEff) (q : List Nat) :
 
 /-- The original local source observation is the shared place reading.
 Consumer: primitive interpretation and frame delegation. -/
-private theorem source_debit_iff (root : NativeEff) (q : List Nat) (m : NativeMachine)
+theorem source_debit_iff (root : NativeEff) (q : List Nat) (m : NativeMachine)
     (fiber : SourceFiber) (next : SourceIteration) :
     (PlaceLedgerConnect.source root q).IterDebit m fiber next ↔ Debit root q m fiber next := by
   simp only [PlaceLedger.IterDebit, PlaceLedger.outside, PlaceLedger.spent, PlaceLedger.issued,

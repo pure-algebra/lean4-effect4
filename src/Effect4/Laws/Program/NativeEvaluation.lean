@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.NativeConfiguration
 import Effect4.Laws.Program.Interference
+import Effect4.Laws.Machine.Clauses
 
 /-!
 Concept: store-typing R4, serving `HeapSites.heap_sites_keep`.
@@ -12,10 +13,39 @@ open Effect4 Effect4.Machine Effect4.Program
 abbrev SourceIteration := Iter EffName EffThunk Val Err Defect FiberId Ann Ctx Stores
 
 /-- An evaluation result retains the stored configuration, acting fiber and pending commands. -/
-structure EvaluationAt (root : NativeEff) (it : SourceIteration) : Prop where
-  machine : ConfigurationAt root it.machine
-  fiber : FiberAt root it.fiber
-  commands : CommandsAt root it.nested
+structure EvaluationAt (root : NativeEff) (it : SourceIteration)
+    (machineAt : NativeMachine → Prop := ConfigurationAt root)
+    (fiberAt : SourceFiber → Prop := FiberAt root)
+    (commandsAt : List SourceCommand → Prop := CommandsAt root) : Prop where
+  machine : machineAt it.machine
+  fiber : fiberAt it.fiber
+  commands : commandsAt it.nested
+
+/-- Actual native sync retains its executed store equation and the existing three result positions.
+Consumers: primitive_at's lexical sync projection and Timeout's count writer with its waiting owner.
+The local field contracts grant no whole-history preservation or permission to other positions. -/
+theorem sync_evaluation_fields (root : NativeEff) (interp : Moves.NInterp)
+    (machine : NativeMachine) (fiber : SourceFiber) (yielding : Bool)
+    (thunk : EffThunk) (state : Stores) (value : Val)
+    (machineAt : NativeMachine → Prop) (fiberAt : SourceFiber → Prop)
+    (commandsAt : List SourceCommand → Prop)
+    (current : fiber.frame.current = .sync thunk)
+    (unparked : interp.parkOf fiber.frame.current = none)
+    (operation : interp.syncState thunk machine.state = some (state, value))
+    (stores : machineAt {machine with state})
+    (answer : fiberAt {fiber with frame := {fiber.frame with current := .success value}})
+    (commands : commandsAt [.drainDue]) :
+    let result : SourceIteration := ⟨{machine with state},
+      {fiber with frame := {fiber.frame with current := .success value}},
+      yielding, .answered, [.drainDue], []⟩
+    evaluatePrim interp machine fiber yielding = result ∧
+      EvaluationAt root result machineAt fiberAt commandsAt := by
+  have installed : ({fiber with frame := {fiber.frame with current := .sync thunk}} : SourceFiber) = fiber := by
+    rw [← current]
+  have actual := evaluatePrim_sync_answers interp machine fiber yielding thunk state value
+    (by rw [← current]; exact unparked) operation
+  rw [installed] at actual
+  exact ⟨actual, stores, answer, commands⟩
 
 /-- Administrative finalizer composition retains the actual cleanup program. -/
 theorem finalizer_code_at (root : NativeEff) (completed) (table : RowTable) (exit : ExitV)

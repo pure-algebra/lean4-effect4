@@ -23,6 +23,18 @@ theorem NoQueue.held_eq (quiet : NoQueue L) (m : NativeMachine)
   simp only [PlaceLedger.held, funext quiet.races, funext quiet.commands, funext quiet.tasks,
     PlaceLedger.zero_sum, Nat.add_zero]
 
+/-- Local accounting installs the actual returned owner once, independently of queued weight. -/
+theorem NoQueue.install_debit {L : Ledger} (quiet : NoQueue L)
+    (m : NativeMachine) (fiber : Guard.NFiber) (it : Moves.NIteration)
+    (unique : (m.fibers.map (fun f => f.id)).Nodup) (member : fiber ∈ m.fibers)
+    (afterUnique : (it.machine.fibers.map (fun f => f.id)).Nodup)
+    (key : it.fiber.id = fiber.id) (debit : L.IterDebit m fiber it) :
+    L.Balanced m [] [] (it.machine.update it.fiber) [] [] := by
+  have installed := FiberSum.install_le L.fiber it.machine fiber.id it.fiber key afterUnique
+  have kept := L.install_balanced m fiber it [] [] unique member installed debit
+  simpa only [PlaceLedger.Balanced, quiet.held_eq] using kept
+
+
 theorem NoQueue.balance_iff (quiet : NoQueue L) (m n : NativeMachine) :
     L.Balanced m [] [] n [] [] ↔
       L.spent n + (L.state n.state + FiberSum.total L.fiber n) + L.issued m ≤
