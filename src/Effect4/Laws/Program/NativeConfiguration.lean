@@ -237,20 +237,37 @@ theorem configuration_spawn (root : NativeEff) (completed) (table : RowTable)
   · rw [List.mem_singleton.mp fresh]
     exact fiber_make_at root _ program _ _ _ new
 
+/-- Actual race entry retains the owner, token and parameterized permissions of its unlaunched programs.
+Consumers: native action source transport and Timeout's captured generation assignment. -/
+theorem configuration_begin_race_programs (root : NativeEff) (completed) (table : RowTable)
+    (m : NativeMachine) (fiber : SourceFiber) (yielding : Bool) (entrants : List NCode)
+    (site : Option (List Nat)) (mode : Supervision.RaceMode) (owned : ConfigurationAt root m)
+    (new : (∀ code ∈ entrants, CodeAt root code) ∧ RaceAllowed root)
+    (Permission : NCode → Prop) (permissions : ∀ code ∈ entrants, Permission code) :
+    let result := beginRace (interpAt root completed table) m fiber yielding entrants site mode
+    ConfigurationAt root result.machine ∧
+      ∃ race : SourceRace, result.machine.races = m.races ++ [race] ∧
+        race.id = m.nextRace ∧ race.host = fiber.id ∧ race.token = m.nextToken ∧
+        race.programs = entrants ∧ (∀ code ∈ race.programs, Permission code) := by
+  constructor
+  · unfold beginRace
+    apply configuration_emit
+    refine ⟨owned.fibers, ?_, owned.scopes⟩
+    intro race member
+    rcases List.mem_append.mp member with old | fresh
+    · exact owned.races race old
+    · rw [List.mem_singleton.mp fresh]
+      exact new
+  · exact ⟨_, rfl, rfl, rfl, rfl, rfl, permissions⟩
+
 /-- A new race stores the exact source-owned entrant list. -/
 theorem configuration_begin_race (root : NativeEff) (completed) (table : RowTable)
     (m : NativeMachine) (fiber : SourceFiber) (yielding : Bool) (entrants : List NCode)
     (site : Option (List Nat)) (mode : Supervision.RaceMode) (owned : ConfigurationAt root m)
     (new : (∀ code ∈ entrants, CodeAt root code) ∧ RaceAllowed root) :
     ConfigurationAt root (beginRace (interpAt root completed table) m fiber yielding entrants site mode).machine := by
-  unfold beginRace
-  apply configuration_emit
-  refine ⟨owned.fibers, ?_, owned.scopes⟩
-  intro race member
-  rcases List.mem_append.mp member with old | fresh
-  · exact owned.races race old
-  · rw [List.mem_singleton.mp fresh]
-    exact new
+  exact (configuration_begin_race_programs root completed table m fiber yielding entrants site mode owned new
+    (fun _ => True) (fun _ _ => True.intro)).1
 
 /-- Editing every fiber retains its source fields when each edited row does. -/
 theorem configuration_map_fibers (root : NativeEff) (m : NativeMachine) (edit : SourceFiber → SourceFiber)

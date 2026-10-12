@@ -9,6 +9,21 @@ set_option autoImplicit false
 namespace Effect4.Program.SourceScope
 open Effect4 Effect4.Machine Effect4.Program
 
+/-- The actual first-exit race action retains its allocated owner, token and unlaunched permissions.
+Consumers: the lexical action adapter and Timeout's source-qualified race assignment. -/
+theorem with_fiber_first_race_programs (root : NativeEff) (completed) (table : RowTable)
+    (m : NativeMachine) (fiber : SourceFiber) (yielding : Bool) (programs : List NCode)
+    (site : Option (List Nat)) (owned : ConfigurationAt root m) (held : FiberAt root fiber)
+    (entrants : (∀ code ∈ programs, CodeAt root code) ∧ RaceAllowed root)
+    (Permission : NCode → Prop) (permissions : ∀ code ∈ programs, Permission code) :
+    let result := evaluatePrim.withFiber (interpAt root completed table) m fiber yielding (.raceAllFirst programs site)
+    EvaluationAt root result ∧
+      ∃ race : SourceRace, result.machine.races = m.races ++ [race] ∧
+        race.id = m.nextRace ∧ race.host = fiber.id ∧ race.token = m.nextToken ∧
+        race.programs = programs ∧ (∀ code ∈ race.programs, Permission code) :=
+  begin_race_programs root completed table m fiber yielding programs site .firstExit owned held entrants
+    Permission permissions
+
 /-- Source ownership through the actual fiber-action evaluator. -/
 theorem with_fiber_at (root : NativeEff) (completed) (table : RowTable)
     (m : NativeMachine) (fiber : SourceFiber) (yielding : Bool) (action : NAction)
@@ -54,8 +69,12 @@ theorem with_fiber_at (root : NativeEff) (completed) (table : RowTable)
       · apply commands_append root _ _ started.2.2
         intro command member; rw [List.mem_singleton.mp member]; trivial
     · exact ⟨owned, fiber_current_at root fiber _ held trivial, by intro command member; cases member⟩
-  case raceAll programs site => exact begin_race_at root completed table m fiber yielding programs site .firstSuccess owned held source
-  case raceAllFirst programs site => exact begin_race_at root completed table m fiber yielding programs site .firstExit owned held source
+  case raceAll programs site =>
+    exact (begin_race_programs root completed table m fiber yielding programs site .firstSuccess owned held source
+      (CodeAt root) source.1).1
+  case raceAllFirst programs site =>
+    exact (with_fiber_first_race_programs root completed table m fiber yielding programs site owned held source
+      (CodeAt root) source.1).1
   case runIn target scope =>
     have linked := link_edits_at root completed table m .fiberRunIn scope target (some target) ReasonAnnotations.empty owned
     exact ⟨linked, fiber_current_at root fiber _ held trivial, by intro command member; cases member⟩

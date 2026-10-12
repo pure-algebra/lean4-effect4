@@ -208,14 +208,31 @@ theorem register_race_at (root : NativeEff) (m : NativeMachine) (fiber : SourceF
                  · rw [same]; trivial
                  · cases empty⟩
 
+/-- Actual race entry retains source permission together with the exact newly allocated bookkeeping record.
+The programs remain unlaunched; the command reader assigns an entrant only when launch runs. -/
+theorem begin_race_programs (root : NativeEff) (completed) (table : RowTable)
+    (m : NativeMachine) (fiber : SourceFiber) (yielding : Bool) (programs : List NCode)
+    (site : Option (List Nat)) (mode : Supervision.RaceMode) (owned : ConfigurationAt root m)
+    (held : FiberAt root fiber) (entrants : (∀ code ∈ programs, CodeAt root code) ∧ RaceAllowed root)
+    (Permission : NCode → Prop) (permissions : ∀ code ∈ programs, Permission code) :
+    let result := beginRace (interpAt root completed table) m fiber yielding programs site mode
+    EvaluationAt root result ∧
+      ∃ race : SourceRace, result.machine.races = m.races ++ [race] ∧
+        race.id = m.nextRace ∧ race.host = fiber.id ∧ race.token = m.nextToken ∧
+        race.programs = programs ∧ (∀ code ∈ race.programs, Permission code) := by
+  obtain ⟨configuration, race⟩ := configuration_begin_race_programs root completed table m fiber yielding
+    programs site mode owned entrants Permission permissions
+  exact ⟨⟨configuration, fiber_current_at root fiber _ held trivial,
+    by intro command member; cases member⟩, race⟩
+
 /-- Race entry retains its actual source programs and counted registration primitive. -/
 theorem begin_race_at (root : NativeEff) (completed) (table : RowTable)
     (m : NativeMachine) (fiber : SourceFiber) (yielding : Bool) (programs : List NCode)
     (site : Option (List Nat)) (mode : Supervision.RaceMode) (owned : ConfigurationAt root m)
     (held : FiberAt root fiber) (entrants : (∀ code ∈ programs, CodeAt root code) ∧ RaceAllowed root) :
     EvaluationAt root (beginRace (interpAt root completed table) m fiber yielding programs site mode) :=
-  ⟨configuration_begin_race root completed table m fiber yielding programs site mode owned entrants,
-    fiber_current_at root fiber _ held trivial, by intro command member; cases member⟩
+  (begin_race_programs root completed table m fiber yielding programs site mode owned held entrants
+    (fun _ => True) (fun _ _ => True.intro)).1
 
 /-- A fresh cause updates metadata or installs a failure, retaining all source captures. -/
 theorem interrupt_cause_at (root : NativeEff) (cause : CauseV)

@@ -1398,6 +1398,38 @@ theorem fireObserver_raceCallback_pending (interp : RunInterp ν σ β ε δ ι 
         (race.afterExit id exit), acc.2) := by
   simp only [fireObserver, RunMachine.race?_emit, hr, Race.afterExit, hacc]
 
+section RaceLaunchStep
+variable {κ φ η : Type (max u v)} [core : FiberCore ν β ε δ ι α κ φ]
+variable [evaluator : FiberEvaluator ν σ β ε δ ι α χ St κ φ η]
+
+/-- The actual launch step forks only its unaccepted head and returns the exact command suffix.
+Concept: reactive-scheduling R11; consumer: source-qualified Timeout entrant ownership.
+The equation retains actual race and host lookups. census: fork.race-all -/
+theorem driveStep_launch_runs (interp : RunInterp ν σ β ε δ ι α χ St κ)
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (raceId : Nat)
+    (rest : List (Cmd ν σ β ε δ ι α κ)) (race : Race ν σ β ε δ ι α κ)
+    (program : κ) (more : List κ) (host : RunFiber ν σ β ε δ ι α χ κ φ)
+    (raceFound : m.race? raceId = some race) (programs : race.programs = program :: more)
+    (unaccepted : race.state.accepted = none) (hostFound : m.fiber? race.host = some host) :
+    driveStep interp m (.launch raceId) rest =
+      (let born := launchEntrant interp raceId m host program (race.nextSite.getD [])
+       (((born.1.updateRace { race with programs := more, nextSite := race.nextSite.map (fun site => site ++ [1]) }).emit [RunEvent.raceLaunched raceId born.2]),
+         .evaluate born.2 :: .enrollRace raceId born.2 :: .launch raceId :: rest)) := by
+  simp only [driveStep, raceFound, programs, unaccepted, Option.isSome_none, Bool.false_eq_true,
+    ↓reduceIte, hostFound]
+/-- An accepted race leaves the remaining head unlaunched in the actual step.
+Concept: reactive-scheduling R11; consumer: Timeout's absent unlaunched owner roles.
+The statement retains a nonempty remainder and the actual accepted verdict. census: fork.race-all -/
+theorem driveStep_launch_accepted (interp : RunInterp ν σ β ε δ ι α χ St κ)
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (raceId : Nat)
+    (rest : List (Cmd ν σ β ε δ ι α κ)) (race : Race ν σ β ε δ ι α κ)
+    (program : κ) (more : List κ)
+    (raceFound : m.race? raceId = some race) (programs : race.programs = program :: more)
+    (accepted : race.state.accepted.isSome = true) :
+    driveStep interp m (.launch raceId) rest = (m, rest) := by
+  simp only [driveStep, raceFound, programs, accepted, ↓reduceIte]
+end RaceLaunchStep
+
 /-- A launch after the race has accepted forks nothing: the register loop has broken
 (`if (done) break`, `:1527`; R2-11), and the entrant that was next never exists.
 census: fork.race-all -/
