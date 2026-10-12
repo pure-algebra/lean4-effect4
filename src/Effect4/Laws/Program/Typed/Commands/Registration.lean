@@ -223,7 +223,7 @@ theorem configTyped_rupdate_park {root : ProgramSource} {rootTy : EffTy} {w : Wo
       requestOfR m f.id token = some r)
     (auth : ∀ c ∈ q, CommandAuthorityR m c → CommandAuthorityR (m.update g) c)
     (readG : g.running = true → ReadsCode g.id q → raceRegistrationR g.frame.current = none →
-      ∀ ty, w.Γ g.id = some ty → SavedOk (TypedProg root) ExitOk (frameProtocols root) w ty g.frame)
+      ∀ ty, w.Γ g.id = some ty → MCodeOk root w (m.update g) g ty)
     (fresh : FiberTyped root w (m.update g) g) : ConfigTyped root rootTy w (m.update g) q := by
   have view : ObsViewOff (g.id, token₀) m (m.update g) := obsViewOff_rupdate hf hid pending
   obtain ⟨machine, code, queue⟩ := typed
@@ -236,7 +236,7 @@ theorem configTyped_rupdate_park {root : ProgramSource} {rootTy : EffTy} {w : Wo
         (Nat.le_refl _)
   · intro x hx hrun reads marker ty declared
     rcases mem_rupdate hx with rfl | ⟨hold, _⟩
-    · exact Or.inl (codeOk_of_saved (readG hrun reads marker ty declared))
+    · exact Or.inl (readG hrun reads marker ty declared)
     · exact (code x hold hrun reads marker ty declared).races (racesKept_of_eq view.races)
   · intro fiber token r hr
     by_cases same : fiber = g.id
@@ -289,15 +289,27 @@ theorem stackAccepts_raceFinalizer (root : ProgramSource) {w : World} {ty final 
   .cons (.asyncFinalizer _ fun _ _ => ⟨rfl, fun _ _ _ typed _ =>
     raceCancelThenFail_typed root raceId host token typed⟩) h
 
-/-- The race's cancellation frame pushed on a host stack (decisions row 188 (b)). -/
-theorem hostStack_raceFinalizer (root : ProgramSource) {w : World} {m : RState} {ty final : EffTy}
+/-- The race's cancellation code is administrative. -/
+theorem raceCancelThenFail_admin (root : ProgramSource) (raceId : Nat) (host : FiberId) (token : Nat)
+    (cause : CauseV) : AdminCode ((interpR root.program).cancelThenFail
+      ((interpR root.program).cancelName ((interpR root.program).raceCancelName raceId) host token)
+      cause) := by
+  show AdminCode ((guardR .onSuccess (fiberValR (.cancelRace raceId) rfl)).bind
+    (seqR fun _ => .pure (.failure cause)))
+  exact (AdminCode.guard _ (AdminCode.fiberVal _ _ rfl)).bind (AdminCode.seq _)
+
+/-- The race's cancellation frame pushed on a machine host stack (decisions row 188 (b)), at the
+row the stack starts at. -/
+theorem mHostStack_raceFinalizer (root : ProgramSource) {w : World} {m : RState} {ty : EffTy}
+    {row : Env.Requirement} {b : Bool} {final : MachinePos}
     (raceId : Nat) (host : FiberId) (token : Nat) {owner : FiberId} {stack : List ScopeFrame}
-    (h : HostStack root w m owner ty final stack) :
-    HostStack root w m owner ty final
+    (h : MHostStack root w m owner (((ty, row, row) : AmbientPosition), b) final stack) :
+    MHostStack root w m owner (((ty, row, row) : AmbientPosition), b) final
       (.asyncFinalizer ((interpR root.program).cancelName
         ((interpR root.program).raceCancelName raceId) host token) :: stack) :=
-  hostStack_push (.asyncFinalizer _ fun _ _ => ⟨rfl, fun _ _ _ typed _ =>
-    raceCancelThenFail_typed root raceId host token typed⟩) h
+  .cons (.inl (.asyncFinalizer _ (fun _ _ => ⟨rfl, fun _ _ cause typed _ =>
+    ambientProg_of_admin root (raceCancelThenFail_typed root raceId host token typed)
+      (raceCancelThenFail_admin root raceId host token cause) row⟩) (Row.subset_refl _))) h
 
 /-! ## 3. The step -/
 
@@ -332,8 +344,8 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
       have idle := (old.exited (by rw [hx]; rfl)).2
       rw [running] at idle
       cases idle
-  obtain ⟨race₀, resultTy, found₀, _, declared, final, hfinal, stackOk, prov⟩ :=
-    old.registration raceId marker
+  obtain ⟨race₀, resultTy, found₀, _, declared, row, final, flag, hfinal, covered, stackOk, prov,
+    deferredMask⟩ := old.registration raceId marker
   have e₀ : race = race₀ := Option.some.inj (hr.symm.trans found₀)
   subst e₀
   have hrace : race ∈ m.races := List.mem_of_find?_eq_some hr
@@ -373,15 +385,16 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
       have moved := fiberTyped_transport old view (Nat.le_refl _) (Nat.le_refl _)
       have provG : InterruptProvenance g.frame := ⟨prov.recorded, prov.deferred⟩
       have notMarker : raceRegistrationR g.frame.current = none := raceRegistrationR_typed code
-      have codeG : ∀ ty, w.Γ g.id = some ty → CodeOk root w (m.update g) g.id ty g.frame := by
+      have codeG : ∀ ty, w.Γ g.id = some ty → MCodeOk root w (m.update g) g ty := by
         intro ty d
         rw [finalOf ty d]
-        exact ⟨resultTy, code, hostStack_races (racesKept_of_eq view.races) stackOk, provG⟩
-      have frameOk : ∀ ty, w.Γ g.id = some ty →
-          ∃ tin, PositionStack root w tin ty g.frame.stack ∧ InterruptProvenance g.frame := by
+        exact ⟨row, _, flag, covered, rfl, deferredMask,
+          ambientProgAt_of_admin root code (denoteRaceSettle_admin _ _ _) row _,
+          stackOk.races (racesKept_of_eq view.races), provG⟩
+      have frameOk : ∀ ty, w.Γ g.id = some ty → SavedPosition root w ty g.frame := by
         intro ty d
         rw [finalOf ty d]
-        exact ⟨resultTy, positionStack_of_host stackOk, provG⟩
+        exact ⟨_, flag, MPositionStack.of_host stackOk, provG⟩
       have fresh : FiberTyped root w (m.update g) g :=
         { ok := ⟨⟨frameOk⟩, moved.ok.c1, moved.ok.c2, moved.ok.c3, moved.ok.c4, moved.ok.c5⟩
           delivery := fun _ h => by
@@ -414,7 +427,8 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
         rw [requestOfR_of_not_parked look off] at hreq
         cases hreq
       have edited := configTyped_rupdate_code (g := g) tail hf rfl (PendingWeaker.refl _) rfl
-        (fun p => ⟨p.recorded, p.deferred⟩) (fun k hk => Or.inl (fiberKeys_internal hmem hk))
+        (fun p => ⟨p.recorded, p.deferred⟩) ⟨.inr rfl, rfl, fun h => h⟩
+        (fun k hk => Or.inl (fiberKeys_internal hmem hk))
         noRequest (fun c hc h => commandAuthority_flags (g := g) hf rfl rfl rfl rfl freeF c hc h)
         (fun _ _ _ ty d => Or.inl (codeG ty d)) fresh
       have freeG : g.id ∉ rest.filterMap (Guard.commandOwner (m.update g)) := by
@@ -426,10 +440,7 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
       exact configTyped_updateRace looped hrU rfl rfl rfl (new := { race with registering := false })
         payload' (fun _ h => Or.inl h)
     · -- no answer: push the race's cancel frame and park on the race token (`:1927-1931`)
-      have stackP : HostStack root w m f.id resultTy final
-          (.asyncFinalizer ((interpR root.program).cancelName
-            ((interpR root.program).raceCancelName raceId) f.id race.token) :: f.frame.stack) :=
-        hostStack_raceFinalizer root raceId f.id race.token stackOk
+      have stackP := mHostStack_raceFinalizer root raceId f.id race.token stackOk
       unfold settle settleOutcome
       dsimp only
       split
@@ -449,11 +460,10 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
         have moved := fiberTyped_transport old view (Nat.le_refl _) (Nat.le_refl _)
         have provG : InterruptProvenance g.frame := ⟨prov.recorded, prov.deferred⟩
         have markerG : raceRegistrationR g.frame.current = some raceId := marker
-        have frameOk : ∀ ty, w.Γ g.id = some ty →
-            ∃ tin, PositionStack root w tin ty g.frame.stack ∧ InterruptProvenance g.frame := by
+        have frameOk : ∀ ty, w.Γ g.id = some ty → SavedPosition root w ty g.frame := by
           intro ty d
           rw [finalOf ty d]
-          exact ⟨resultTy, positionStack_of_host stackP, provG⟩
+          exact ⟨_, flag, MPositionStack.of_host stackP, provG⟩
         have registrationG : ∀ raceId', raceRegistrationR g.frame.current = some raceId' →
             ∃ race' resultTy', (m.update g).race? raceId' = some race' ∧ race'.host = g.id ∧
               w.Θ race'.host race'.token = some resultTy' ∧
@@ -461,8 +471,8 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
           intro raceId' marker'
           have e : raceId = raceId' := Option.some.inj (markerG.symm.trans marker')
           subst e
-          exact ⟨race, resultTy, hr, fid.symm, declared, final, hfinal,
-            hostStack_races (racesKept_of_eq view.races) stackP, provG⟩
+          exact ⟨race, resultTy, hr, fid.symm, declared, row, final, flag, hfinal, covered,
+            stackP.races (racesKept_of_eq view.races), provG, deferredMask⟩
         have pendingOk : ∀ p ∈ g.pending, ∃ id, (w.Θ id p.token).isSome = true :=
           fun _ hp => absurd hp List.not_mem_nil
         have fresh : FiberTyped root w (m.update g) g :=
@@ -550,11 +560,10 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
         have declaredG : w.Θ g.id race.token = some resultTy := by
           rw [show g.id = race.host from fid]
           exact declared
-        have frameOk : ∀ ty, w.Γ g.id = some ty →
-            ∃ tin, PositionStack root w tin ty g.frame.stack ∧ InterruptProvenance g.frame := by
+        have frameOk : ∀ ty, w.Γ g.id = some ty → SavedPosition root w ty g.frame := by
           intro ty d
           rw [finalOf ty d]
-          exact ⟨resultTy, positionStack_of_host stackP, provG⟩
+          exact ⟨_, flag, MPositionStack.of_host stackP, provG⟩
         have registrationG : ∀ raceId', raceRegistrationR g.frame.current = some raceId' →
             ∃ race' resultTy', (m.update g).race? raceId' = some race' ∧ race'.host = g.id ∧
               w.Θ race'.host race'.token = some resultTy' ∧
@@ -562,8 +571,8 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
           intro raceId' marker'
           have e : raceId = raceId' := Option.some.inj (markerG.symm.trans marker')
           subst e
-          exact ⟨race, resultTy, hr, fid.symm, declared, final, hfinal,
-            hostStack_races (racesKept_of_eq view.races) stackP, provG⟩
+          exact ⟨race, resultTy, hr, fid.symm, declared, row, final, flag, hfinal, covered,
+            stackP.races (racesKept_of_eq view.races), provG, deferredMask⟩
         have pendingOk : ∀ p ∈ g.pending, ∃ id, (w.Θ id p.token).isSome = true := by
           intro p hp
           rw [hpOf] at hp
@@ -605,8 +614,8 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
           { ok := ⟨⟨frameOk⟩, pendingOk, old.ok.c2, old.ok.c3, old.ok.c4, old.ok.c5⟩
             delivery := fun token h => by
               rw [tokenOf token h]
-              exact ⟨resultTy, final, declaredG, hfinal,
-                hostStack_races (racesKept_of_eq view.races) stackP, provG⟩
+              exact ⟨resultTy, row, declaredG, final, flag, hfinal, covered,
+                stackP.races (racesKept_of_eq view.races), provG, deferredMask⟩
             below := old.below
             pendingShape := by
               show ∃ p, g.pending = [p] ∧ p.token = race.token

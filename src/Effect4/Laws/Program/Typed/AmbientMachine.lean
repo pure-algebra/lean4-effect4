@@ -217,6 +217,60 @@ theorem ambientProgAt_of_admin (root : ProgramSource) {w : World} {ty : EffTy} {
       rw [(next (some (.success .unit))).noCallback] at head
       cases head
 
+/-- **The lift into the row-only judgment**, as `ambientProgAt_of_admin`: the hook protocols type
+resumed code with `AmbientProg`. -/
+theorem ambientProg_of_admin (root : ProgramSource) {w : World} {ty : EffTy} {p : RProgram}
+    (typed : TypedProg root w ty p) (admin : AdminCode p) (row : Env.Requirement) :
+    AmbientProg root w row ((ty, row, row) : AmbientPosition) p := by
+  revert admin
+  unfold TypedProg at typed
+  generalize (() : Unit) = input at typed
+  induction typed with
+  | pure exit =>
+    intro _
+    exact .pure (ambientExit_const exit) (Row.subset_refl _)
+  | store cert pre _ _ ih =>
+    intro admin
+    cases admin with
+    | store op k notForeign next =>
+      exact .store cert ⟨pre, fun scope capture same => absurd same (notForeign scope capture)⟩
+        (fun later ordered answer post => ih later ordered answer post (next answer))
+        (Row.subset_refl _)
+  | fiber notGuard notUnguard notFinish notScopeExit cert pre _ _ ih =>
+    intro admin
+    cases admin with
+    | fiber op k isAdmin next =>
+      refine .fiber notGuard notUnguard notFinish notScopeExit cert
+        (ambientFiberPre_of_admin root row isAdmin pre) ?_ (Row.subset_refl _)
+      intro later ordered answer post
+      show AmbientProg root later (ambientFiberInput row _ answer) _ _
+      rw [ambientFiberInput_admin row answer isAdmin]
+      exact ih later ordered answer (fiberPost_of_admin row isAdmin post) (next answer)
+  | guard mid _ _ skip _ ihBody ihRun =>
+    intro admin
+    cases admin with
+    | fiber op k isAdmin next =>
+      refine .guard ((mid, row, row) : AmbientPosition) (ihBody (next none)) ?_ ?_ (Row.subset_refl _)
+      · intro later ordered exit post
+        show AmbientProg root later (ambientInput ((mid, row, row) : AmbientPosition) exit) _ _
+        rw [ambientInput_const]
+        exact ihRun later ordered exit ⟨post.1, post.2.1⟩ (next (some exit))
+      · intro later ordered exit exits arm
+        exact ⟨skip later ordered exit exits.1 arm, by cases exit <;> exact Row.subset_refl _⟩
+  | unguard payload _ =>
+    intro _
+    exact .unguard (ambientExit_const payload) (Row.subset_refl _)
+  | finishFinalizer payload _ =>
+    intro _
+    exact .finishFinalizer (ambientExit_const payload) (Row.subset_refl _)
+  | scopedGuard mid prev sc _ callback _ _ _ _ _ =>
+    intro admin
+    cases admin with
+    | fiber op k isAdmin next =>
+      have head := callback (.success .unit)
+      rw [(next (some (.success .unit))).noCallback] at head
+      cases head
+
 /-! ## Exits at a position's own row -/
 
 /-- A failure's row is the position's failure row. -/
