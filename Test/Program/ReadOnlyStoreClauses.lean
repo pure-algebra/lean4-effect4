@@ -16,19 +16,22 @@ open Effect4.Program.Typed
 /-- Answered store work drains before delivery, for every tail and machine. -/
 theorem answered_queue (m : RState) (f : RFiber) (y : Bool) (rest : List RCmd) :
     (settle f.id rest (prepareIterR
-      (⟨m, f, y, .answered, [.drainDue]⟩ : RIter))).2 =
+      ({ machine := m, fiber := f, yielding := y, outcome := .answered,
+         nested := [.drainDue] } : RIter))).2 =
       .drainDue :: .deliver f.id y :: rest := rfl
 
 theorem answered_queue_nonempty (m : RState) (f : RFiber) (y : Bool) (rest : List RCmd) :
     (settle f.id rest (prepareIterR
-      (⟨m, f, y, .answered, [.drainDue]⟩ : RIter))).2 ≠ [] := by
+      ({ machine := m, fiber := f, yielding := y, outcome := .answered,
+         nested := [.drainDue] } : RIter))).2 ≠ [] := by
   rw [answered_queue]
   intro h
   cases h
 
 theorem drain_elision_refused (m : RState) (f : RFiber) (y : Bool) (rest : List RCmd) :
     (settle f.id rest (prepareIterR
-      (⟨m, f, y, .answered, [.drainDue]⟩ : RIter))).2 ≠
+      ({ machine := m, fiber := f, yielding := y, outcome := .answered,
+         nested := [.drainDue] } : RIter))).2 ≠
       .deliver f.id y :: rest := by
   rw [answered_queue]
   intro h

@@ -40,7 +40,8 @@ def samples : List (String × NativeEff) :=
   , ("service", .service ⟨⟨0⟩, ⟨0⟩⟩), ("provideService", .provideService ⟨⟨0⟩, ⟨0⟩⟩ t u)
   , ("catchIf", .catchIf t u u), ("select", .select t .bool u u)
   , ("iterate", .iterate none t t t t u), ("restore", .restore t u)
-  , ("defs", .defs [] .nil u .nil), ("invoke", .invoke 0 t .nil) ]
+  , ("defs", .defs [] .nil u .nil), ("invoke", .invoke 0 t .nil)
+  , ("provideContext", .provideContext t u) ]
 
 -- every constructor has a sample, and nothing else does
 #guard samples.map Prod.fst = Effect4.Program.ctorNames .eff
@@ -65,7 +66,7 @@ def admitted (fragment : NativeEff → Bool) : List String :=
 #guard (samples.filter fun s => !Looped s.2).map Prod.fst =
   ["gen", "uninterruptible", "interruptible", "yieldNow", "awaitFiber", "withFiber", "scoped",
    "acquireRelease", "provideLayer", "service", "provideService", "catchIf", "restore", "defs",
-   "invoke"]
+   "invoke", "provideContext"]
 
 -- Row-aware classification adds conditional handlers, without adding loops.
 #guard admitted (StraightRows []) =

@@ -168,7 +168,9 @@ def interruptedFromNowhere : Api.Inspection :=
 -- Race settlement reads both the accepted exit and the live entrants. The duplicate
 -- winner is bookkeeping only. These probes pin the precise collected positions.
 def raceCarrier (state : Supervision.RaceAllState Val Err Defect FiberId Ann) : Api.Machine :=
-  { Api.load waiting 80 with races := [⟨0, Api.root, 0, state, false, [], false, none⟩] }
+  { Api.load waiting 80 with
+    races := [{ id := 0, host := Api.root, token := 0, state := state, settled := false,
+                programs := [], registering := false }] }
 
 #guard Minted (raceCarrier (Supervision.RaceAllState.initial []))
 #guard !(Minted (raceCarrier { Supervision.RaceAllState.initial [] with

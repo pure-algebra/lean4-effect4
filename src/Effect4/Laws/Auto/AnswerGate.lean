@@ -5,7 +5,7 @@ import Effect4.Machine.Stores
 # Laws.Auto.AnswerGate — completeness check for SyncOp and FiberOp protocols
 
 #answer_gate checks that the protocol manifest accounts for every constructor of `SyncOp`
-(31 rows) and `FiberOp` (41 rows). Rejects any missing, duplicate or stale rows, and prints
+(31 rows) and `FiberOp` (42 rows). Rejects any missing, duplicate or stale rows, and prints
 nothing when it passes. The fiber alphabet is looked up by name in the invoking file's
 environment, so this instrument does not import the scheduler it audits.
 -/
@@ -29,5 +29,5 @@ def elabAnswerGate : CommandElab := fun _ => do
   let fiberCount := fiberInduct.ctors.length
   unless syncCount = 31 do
     throwError "answer_gate: expected 31 SyncOp constructors, found {syncCount}"
-  unless fiberCount = 41 do
-    throwError "answer_gate: expected 41 FiberOp constructors, found {fiberCount}"
+  unless fiberCount = 42 do
+    throwError "answer_gate: expected 42 FiberOp constructors, found {fiberCount}"

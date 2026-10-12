@@ -12,13 +12,16 @@ callback only at the run position of the guard the `scoped` arm installs (`Typed
 and of the slot that guard saves (`FrameAccepts.scopedResume`).
 
 Controls:
-1. `marker_untyped`, `input_refused`: the witness's raw marker is no typed code at any world and
-   type, so its input (a running fiber on the marker, a queued `deliver`) is no typed
-   configuration at any world. The same refusal holds with scope 0 present (`live`): it is the
-   position, not presence, that is refused.
+1. `marker_untyped`, `input_refused`: the witness's raw marker is no typed code at any world, row
+   and position of the ambient judgment (`AmbientProg`, decisions row 349), the code judgment that
+   `J`'s code clause reads (`MCodeOk`). So its input (a running fiber on the marker, a queued
+   `deliver`) is no typed configuration at any world. The same refusal holds with scope 0 present
+   (`live`): it is the position, not presence, that is refused.
 2. `scoped_code_typed`: the code the real producer installs, the `onExit false` guard over a body
    bound to the scope's exit callback, is typed at the same world (`scopedGuardBind_typed`), and
-   its saved slot is the `scopedResume` arrow (`scoped_slot_accepted`).
+   its saved slot is the `scopedResume` arrow (`scoped_slot_accepted`). Both read the type-only
+   surface (`TypedProg`, `FrameAccepts`); the ambient `scoped` clause is the planned goal
+   `clause_scoped`.
 3. `absent_scope_refused`: the same well-shaped code is not typed where scope 0 is absent (row
    156's presence, now read at the run position): an ordinary guard would have to type the raw
    callback, and the `scopedGuard` reading needs the scope.
@@ -60,9 +63,9 @@ def commands : List RCmd := [.deliver Api.root false]
 
 theorem live : ScopeLive world 0 := by decide
 
-/-- Row 188 (a): the raw marker is no typed code, at any world and type. -/
-theorem marker_untyped (w : W) (ty : EffTy) :
-    ¬ TypedProg (rootProgram : ProgramSource) w ty marker := by
+/-- Row 188 (a): the raw marker is no typed code, at any world, row and position. -/
+theorem marker_untyped (w : W) (row : Env.Requirement) (position : AmbientPosition) :
+    ¬ AmbientProg (rootProgram : ProgramSource) w row position marker := by
   intro typed
   cases typed with
   | fiber _ _ _ notScopeExit _ _ _ => exact absurd rfl (notScopeExit _ _ _)
@@ -78,9 +81,9 @@ theorem input_refused (w : W) :
   obtain ⟨ty, declared⟩ := Option.isSome_iff_exists.mp
     ((valid.fibers Api.root).mpr (List.mem_map_of_mem member))
   have reads : ReadsCode Api.root commands := ⟨false, Or.inr List.mem_cons_self⟩
-  obtain ⟨tin, code, _, _⟩ :=
+  obtain ⟨row, tin, _, _, _, code, _, _⟩ :=
     (config.code rootFiber member rfl reads rfl ty declared).code_of_deliver List.mem_cons_self
-  exact marker_untyped w tin code
+  exact marker_untyped w row tin.1 code
 
 /-- The producer's code: the `onExit false` guard over a unit body, bound to scope 0's exit
 callback restoring the empty context (`evaluateFiberR`'s `.scoped` arm, `EvaluateR.lean`). -/

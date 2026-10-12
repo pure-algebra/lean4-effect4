@@ -200,31 +200,31 @@ def stopsBetween (k : Nat) : Bool :=
 
 -- The checker refuses the budget's provision, so the programs are raw.
 #guard verdict (notified 25) = "typing: serviceUnknown"
--- The budgets that stop the borrower between its enrolment and its await: 23 to 27. Below 23
--- the borrower yields before its step, and from 28 it reaches its await with no yield.
-#guard (List.range 40).filter stopsBetween = [23, 24, 25, 26, 27]
+-- The budgets that stop the borrower between its enrolment and its await: 28 to 32. Below 28
+-- the borrower yields before its step, and from 33 it reaches its await with no yield.
+#guard (List.range 45).filter stopsBetween = [28, 29, 30, 31, 32]
 
 -- At each such budget, on both tapes: the root ends with the resource 1, the item is idle
 -- again at the end, and nobody waits.
-#guard [23, 24, 25, 26, 27].all fun k =>
+#guard [28, 29, 30, 31, 32].all fun k =>
   [awaitFirst, taskFirst].all fun tape =>
     ((rawOn tape (notified k)).bind (·.exit)) == some (.success (.nat 1)) &&
       (stages tape (notified k)).drop 3 == [(some (1, 0, 0), true)]
 -- The await before the task. After the borrower's dispatcher the borrower is still enrolled,
 -- and the item is idle: it parked at its hint. The holder's dispatcher then runs the helper,
 -- which resumes the borrower, and the borrower's attempt runs inside that task.
-#guard [23, 24, 25, 26, 27].all fun k =>
+#guard [28, 29, 30, 31, 32].all fun k =>
   (stages awaitFirst (notified k)).take 2 == [(some (1, 0, 1), false), (some (1, 0, 1), false)]
 -- The task before the await. After the holder's dispatcher the selection has taken the
 -- borrower: its entry left, and the item is still idle. A selection reserves nothing. The
 -- borrower's dispatcher then runs: its await answers at once, and its next attempt leases.
-#guard [23, 24, 25, 26, 27].all fun k =>
+#guard [28, 29, 30, 31, 32].all fun k =>
   (stages taskFirst (notified k)).take 2 == [(some (1, 0, 1), false), (some (1, 0, 0), false)]
 
--- The await before the task, at the budget 27. The borrower's dispatcher runs: the borrower
+-- The await before the task, at the budget 28. The borrower's dispatcher runs: the borrower
 -- parks at its hint. Then the holder's dispatcher runs the helper, fiber 3, which resumes the
 -- borrower. The borrower yields once more at its budget, inside its lease.
-#guard rawRows awaitFirst (notified 27) =
+#guard rawRows awaitFirst (notified 28) =
   [.started 0, .forked 0 1 false, .started 1, .parked 1, .forked 0 2 false, .started 2,
    .yielded 2, .parked 2, .resumed 1, .started 1, .forked 1 3 true, .scheduled 1, .exited 1 true,
    .parked 0, .ran 2, .resumed 2, .started 2, .parked 2, .ran 1, .started 3, .resumed 2,
@@ -233,14 +233,14 @@ def stopsBetween (k : Nat) : Bool :=
 -- The task before the await. The helper runs and exits, and it resumes nobody. The borrower's
 -- dispatcher then runs: the borrower's await answers at once, so no park follows its resume
 -- but the park of its budget's yield.
-#guard rawRows taskFirst (notified 27) =
+#guard rawRows taskFirst (notified 28) =
   [.started 0, .forked 0 1 false, .started 1, .parked 1, .forked 0 2 false, .started 2,
    .yielded 2, .parked 2, .resumed 1, .started 1, .forked 1 3 true, .scheduled 1, .exited 1 true,
    .parked 0, .ran 1, .started 3, .exited 3 true, .ran 2, .resumed 2, .started 2, .yielded 2,
    .parked 2, .ran 2, .resumed 2, .started 2, .exited 2 true, .resumed 0, .started 0,
    .exited 0 true]
 -- Red control of the two tapes: they are two schedules.
-#guard rawRows awaitFirst (notified 27) != rawRows taskFirst (notified 27)
+#guard rawRows awaitFirst (notified 28) != rawRows taskFirst (notified 28)
 
 /-! ## 2. A cancellation between the return and the wake
 
@@ -436,21 +436,21 @@ def borrowedUnder (k : Nat) (use : Use) : Option (Nat × Nat) :=
   [snap [] [0] [0] 0 false 1, snap [] [0] [0] 0 false 1, .bool true]))
 #guard exitOf (interruptedHolder twoRegions) != exitOf (interruptedHolder oneRegion)
 
--- The library's `use` under the budgets 13 and 30: A yields inside the mask, before its lease
--- step at 13 and after it at 30. The interruption waits, and the return runs: no item is
+-- The library's `use` under the budgets 18 and 35: A yields inside the mask, before its lease
+-- step at 18 and after it at 35. The interruption waits, and the return runs: no item is
 -- borrowed at the end.
-#guard borrowedUnder 13 Pool.use = some (0, 0) && borrowedUnder 30 Pool.use = some (1, 0)
+#guard borrowedUnder 18 Pool.use = some (0, 0) && borrowedUnder 35 Pool.use = some (1, 0)
 -- The library's lease in its own mask and then the hook, at the same two budgets: the lease is
 -- lost.
-#guard borrowedUnder 13 leaseThenHook = some (0, 1) && borrowedUnder 30 leaseThenHook = some (1, 1)
--- Measured at each budget from 4 to 54: the two-region form loses the lease at the eighteen
--- budgets from 13 to 30, and at no other. At 12 A yields before the mask, where it is
--- interruptible: nothing is leased. At 31 the two-region form has installed its hook when A
+#guard borrowedUnder 18 leaseThenHook = some (0, 1) && borrowedUnder 35 leaseThenHook = some (1, 1)
+-- Measured at each budget from 9 to 59: the two-region form loses the lease at the eighteen
+-- budgets from 18 to 35, and at no other. At 17 A yields before the mask, where it is
+-- interruptible: nothing is leased. At 36 the two-region form has installed its hook when A
 -- yields, so its return runs.
-#guard (List.range' 4 51).filter
-    (fun k => (borrowedUnder k leaseThenHook).map (·.2) == some 1) = List.range' 13 18
+#guard (List.range' 9 51).filter
+    (fun k => (borrowedUnder k leaseThenHook).map (·.2) == some 1) = List.range' 18 18
 -- The library's form loses it at none of them.
-#guard (List.range' 4 51).all fun k => (borrowedUnder k Pool.use).map (·.2) == some 0
+#guard (List.range' 9 51).all fun k => (borrowedUnder k Pool.use).map (·.2) == some 0
 
 /-! ## 5. A waiter that is interrupted under a mask of the form's making
 

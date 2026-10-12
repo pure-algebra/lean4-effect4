@@ -1,5 +1,5 @@
 import Test.Program.TypedCorpus
-import Test.Counterexamples.Machine.Semantics.TrivialPosts
+import Effect4.Laws.Program.Typed.Residual
 
 /-!
 # Test.Program.AdmissionCensus — which protocol rows the generated code reaches
@@ -20,8 +20,9 @@ in a scratch file: a build prints none.
 
 This is a report, not a proof: the walk follows one answer per operation and under-approximates
 the rows a program reaches, and a program the report calls clear is a candidate, not an
-admitted program. The repaired shapes' admission is checked in
-`Test/Counterexamples/Machine/Semantics/TrivialPosts.lean` and `Test/Program/TypedControl.lean`.
+admitted program. The repaired shapes' admission is checked in `Test/Program/TypedControl.lean`;
+the shapes' controls at the type-only judgment are history at
+`git:68856e778:Test/Counterexamples/Machine/Semantics/TrivialPosts.lean`.
 -/
 
 set_option autoImplicit false

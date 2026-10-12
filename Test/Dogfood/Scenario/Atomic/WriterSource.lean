@@ -237,11 +237,14 @@ theorem compile_bound (built : Api.Built) (admitted : Api.Author.build (shop .no
   case case40 point n fuel key value body v evaluated =>
     simpa only [updateContextAt, current, cata_prim, thunk, name, operation, Point.child, Nat.zero_add, Nat.add_zero] using
       child_zero_le id point.path
+  case case43 point n fuel context body ctx evaluated direct ih =>
+    simpa only [updateContextAt, current, cata_prim, thunk, name, operation, Point.child, Nat.zero_add, Nat.add_zero] using
+      child_zero_le id point.path
   case case25 point n fuel body noExit ih =>
     exact Nat.le_trans (ih (Agreement.at_child found 0)
       (child_at built.program point 0 (next_of_at built.program point _ 0 0 found scope (by rfl))))
       (child_zero_le id point.path)
-  case case43 point n fuel saved body masked ih =>
+  case case46 point n fuel saved body masked ih =>
     exact Nat.le_trans (ih (Agreement.at_child found 0)
       (child_at built.program point 0 (next_of_at built.program point _ 0 0 found scope (by rfl))))
       (child_zero_le id point.path)

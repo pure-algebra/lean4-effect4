@@ -528,7 +528,7 @@ in the typed world is governed by `ScopeLive w sc` (World.lean (`src/Effect4/Law
 - **Re-entrant addition semantics (`close-reentrant-add`)**: Adding to closed scope executes immediately.
   (`close_reentrant_add` (`src/Effect4/Machine/Scope.lean`)).
 - **Close iterator protocol (`close-seq-protocol`)**: Close walk satisfies iterator protocol for clean finalizers
-  (`closeSeq_protocol` (`Test/Program/ProtocolPosts.lean`)).
+  (`closeSeq_protocol` (`git:68856e778:Test/Program/ProtocolPosts.lean`)).
 - **The mask's flag at the boundaries of regions (`saved-mask-restoration`)**: The claim holds
   the mask's law as one statement, `MaskRestoration`.
   The statement has five parts (decisions rows 227 and 244 to 246).

@@ -60,12 +60,14 @@ def name (id : Nat) : EffName → Nat
   | .gen p pc _ => below id (p.path ++ [0] ++ pc)
   | .loop p => below id p.path
   | .withWaiter base _ _ => name id base
-  | .updateThen _ (.program p) | .bodyThen (.program p) _ => below id p.path
+  | .provideMask _ (.program p) | .updateThen _ (.program p) _ | .bodyThen (.program p) _ _ =>
+    below id p.path
   | _ => 0
 
 /-- A synchronous note carries its reservation until the actual store update consumes it. -/
 def thunk (id : Nat) : EffThunk → Nat
   | .body p | .forkInAt p _ | .acquireMasked p _ | .act p | .releaseMasked p _ => below id p.path
+  | .provideMasked _ (.program p) _ | .restoreRegion (.program p) _ => below id p.path
   | .op op | .store (.op op) => operation id op
   | .store (.body body) => program id body
   | .store (.act action) => storeAction id action

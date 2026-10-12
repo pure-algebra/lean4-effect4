@@ -106,8 +106,25 @@ example := @AdmitsSub
 
 /-- The law as a proof obligation, so this module fails if its statement moves. -/
 example (a b : Ty) (ha : Ty.isMember a = true) (hb : Ty.isMember b = true)
-    (hleaf : Ty.leafRule a b = false) (htop : Ty.topRule a b = false) :
+    (hleaf : Ty.leafRule a b = false) (htop : Ty.topRule a b = false)
+    (hpay : Ty.payloadRule a b = false) :
     Ty.sub a b = (Ty.sameHead a b && Ty.argsBelow Ty.sub a b) :=
-  Ty.sub_eq_args a b ha hb hleaf htop
+  Ty.sub_eq_args a b ha hb hleaf htop hpay
+
+/-! ## Why the law excludes the payload order
+
+`contextOf` is the head with a declared order on its payload (`Ty.payloadRule`): a context that
+holds more keys is below one that promises fewer. The two heads differ, so the variance-wise
+comparison answers `false` where `sub` answers `true`. The red control below meets every other
+premise of `sub_eq_args`, and its conclusion fails. -/
+
+private def moreKeys : Ty := .contextOf (Effect4.Row.singleton (⟨⟨7⟩, ⟨7⟩⟩ : Effect4.ServiceKey))
+private def fewerKeys : Ty := .contextOf Effect4.Row.empty
+
+#guard Ty.isMember moreKeys && Ty.isMember fewerKeys
+#guard !Ty.leafRule moreKeys fewerKeys && !Ty.topRule moreKeys fewerKeys
+#guard Ty.payloadRule moreKeys fewerKeys
+#guard Ty.sub moreKeys fewerKeys
+#guard !(Ty.sameHead moreKeys fewerKeys && Ty.argsBelow Ty.sub moreKeys fewerKeys)
 
 end Test.Program.TyViewContract
