@@ -130,11 +130,11 @@ theorem Evaluating.store_step {root : ProgramSource} {rootTy : EffTy} {w : World
       (prepareIterR (evaluateRawR (interpRAt root.program m.completedExits) m f y)) := by
   simp only [evaluateRawR, hc, step]
   obtain ⟨ty, declared⟩ := ev.declared
-  obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  obtain ⟨row, tin, flag, covered, bit, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
   rw [hc] at current
-  obtain ⟨cert, pre, typedNext⟩ := TypedProg.store_inv current
+  obtain ⟨cert, pre, typedNext, _⟩ := ambientProg_store_inv current
   obtain ⟨w', ord, state, ids, gamma, theta, store, wf, stores, timers, waiters, post⟩ :=
-    handle cert pre
+    handle cert pre.1
   have typed' : ConfigTyped root rootTy w' ({ m with state := s }.update f) (.deliver f.id y :: rest) :=
     configTyped_store_step ev.typed step ord state ids gamma theta store wf stores timers waiters
       (fun o ho owner priority mode => by
@@ -148,9 +148,9 @@ theorem Evaluating.store_step {root : ProgramSource} {rootTy : EffTy} {w : World
     rw [gamma] at declared'
     exact Option.some.inj (declared'.symm.trans declared)
   subst same
-  exact ⟨tin, typedNext w' ord ans post,
-    hostStack_mono ord (hostStack_races (m := m.update f) (m' := ({ m with state := s } : RState).update f)
-      (racesKept_of_eq fun _ => rfl) stack), ⟨prov.recorded, prov.deferred⟩⟩
+  exact ⟨row, tin, flag, covered, bit, typedNext w' ord ans post,
+    (stack.races (m := m.update f) (m' := ({ m with state := s } : RState).update f)
+      (racesKept_of_eq fun _ => rfl)).mono ord, ⟨prov.recorded, prov.deferred⟩⟩
 
 /-- For a heap edit (a rewrite or an allocation), the new store's typing from the typed new heap:
 every other column is untouched, read at a later world with the same token and promise tables. -/
