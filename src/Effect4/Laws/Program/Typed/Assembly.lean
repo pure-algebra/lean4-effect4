@@ -151,11 +151,11 @@ theorem registrationState_races {root : ProgramSource} {w : World} {m m' : RStat
     (fibers : m'.fibers = m.fibers) (kept : RacesKept m m') (h : RegistrationState root w m) :
     RegistrationState root w m' := by
   intro fiber hf raceId marker
-  obtain ⟨race, resultTy, found, host, token, reply⟩ :=
+  obtain ⟨race, resultTy, found, host, token, reply, entrants⟩ :=
     h fiber (by rw [← fibers]; exact hf) raceId marker
-  obtain ⟨race', found', host', token'⟩ := kept raceId race found
+  obtain ⟨race', found', host', token', programs⟩ := kept raceId race found
   exact ⟨race', resultTy, found', host'.trans host, by rw [host', token']; exact token,
-    stackReply_races kept reply⟩
+    stackReply_races kept reply, entrants.kept programs⟩
 
 /-- The generated whole-state predicate and the correlations: world validity, every generated
 typed position, active delivery, the settled native guard conditions, and the exact
@@ -952,9 +952,9 @@ theorem machineTyped_congr {root : ProgramSource} {rootTy : EffTy} {w : World} {
         observersBelow := fun f hf o ho k hk => by
           rw [nextId]
           exact sched.observersBelow f (member f hf) o ho k hk }
-  · obtain ⟨race, resultTy, found, host, token, reply⟩ := reg f (member f hf) raceId marker
+  · obtain ⟨race, resultTy, found, host, token, reply, entrants⟩ := reg f (member f hf) raceId marker
     exact ⟨race, resultTy, (raceLookup raceId).trans found, host, token,
-      stackReply_races (racesKept_of_eq raceLookup) reply⟩
+      stackReply_races (racesKept_of_eq raceLookup) reply, entrants⟩
   · refine ⟨stuck.trans live.running, fun o ho owner priority mode => ?_⟩
     rw [state] at ho
     rw [lookup]

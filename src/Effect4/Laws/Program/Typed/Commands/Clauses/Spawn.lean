@@ -388,7 +388,7 @@ theorem clause_raceRegister (root : ProgramSource) (rootTy : EffTy) (raceId : Na
       (fun _ _ h => nomatch h) (fun _ _ _ h => nomatch h) (fun _ _ _ _ _ h => nomatch h)
       (fun _ _ h => nomatch h) (fun _ _ h => nomatch h)
   have edited := configTyped_updateRace launched (new := { race with registering := true }) hr rfl
-    rfl rfl ⟨payload.token, payload.failures, payload.winner, payload.accepted, payload.cleanup,
+    rfl rfl (fun _ h => h) ⟨payload.token, payload.failures, payload.winner, payload.accepted, payload.cleanup,
       payload.live, payload.programs⟩ (fun _ h => .inl h)
   have found' : m.race? raceId = some race := found
   show SettlesTyped root rootTy w f.id rest (prepareIterR (registerRace m f y raceId))

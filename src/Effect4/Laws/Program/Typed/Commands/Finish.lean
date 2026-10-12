@@ -316,7 +316,8 @@ theorem resume_step {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RSt
           cases hx
         have registrationG : ∀ raceId, raceRegistrationR g.frame.current = some raceId →
             ∃ race resultTy, (m.update g).race? raceId = some race ∧ race.host = g.id ∧
-              w.Θ race.host race.token = some resultTy ∧ StackReply root w (m.update g) g resultTy := by
+              w.Θ race.host race.token = some resultTy ∧ StackReply root w (m.update g) g resultTy ∧
+              EntrantsCovered root w race resultTy g := by
           intro raceId marker
           rw [notMarker] at marker
           cases marker
@@ -431,10 +432,11 @@ theorem configTyped_cleared {root : ProgramSource} {rootTy : EffTy} {w : World} 
       observers := fun _ h => nomatch h
       registration := fun raceId marker => by
         rw [gframe] at marker
-        obtain ⟨race, resultTy, found, host, token, reply⟩ := moved.registration raceId marker
+        obtain ⟨race, resultTy, found, host, token, reply, entrants⟩ := moved.registration raceId marker
         exact ⟨race, resultTy, found, host, token,
           stackReply_view (f := f) (racesKept_of_eq fun _ => rfl) rfl (by rw [gframe])
-            (by rw [gframe]; exact id) ⟨.inl empty, by rw [gframe], by rw [gframe]; exact id⟩ reply⟩
+            (by rw [gframe]; exact id) ⟨.inl empty, by rw [gframe], by rw [gframe]; exact id⟩ reply,
+            EntrantsCovered.of_exited exited⟩
       code := fun hx => by
         have none' : f.exit = none := hx
         rw [none'] at exited
@@ -745,10 +747,11 @@ theorem configTyped_publish {root : ProgramSource} {rootTy : EffTy} {w : World} 
       pendingOwner := fun _ h => nomatch h
       observers := moved.observers
       registration := fun raceId marker => by
-        obtain ⟨race, resultTy, found, host, token, reply⟩ := moved.registration raceId marker
+        obtain ⟨race, resultTy, found, host, token, reply, entrants⟩ := moved.registration raceId marker
         exact ⟨race, resultTy, found, host, token,
           stackReply_view (f := f) (racesKept_of_eq fun _ => rfl) rfl rfl (fun _ => provP)
-            ⟨.inr rfl, rfl, fun _ h => nomatch h⟩ reply⟩
+            ⟨.inr rfl, rfl, fun _ h => nomatch h⟩ reply,
+            EntrantsCovered.of_exited rfl⟩
       code := fun hx => nomatch hx
       tokens := fun _ hp => nomatch hp
       raceObservers := moved.raceObservers

@@ -148,9 +148,9 @@ theorem fiberTyped_transport_off {root : ProgramSource} {w : World} {m m' : RSta
     fun r race hr o ho => h.raceObservers r race ((view.races r).symm.trans hr) o ho,
     fun p hp id hid => Nat.lt_of_lt_of_le (h.targetsBelow p hp id hid) nextId,
     fun o ho k hk => Nat.lt_of_lt_of_le (h.observersBelow o ho k hk) nextId, h.children⟩
-  obtain ⟨race, resultTy, found, host, token, reply⟩ := h.registration raceId marker
+  obtain ⟨race, resultTy, found, host, token, reply, entrants⟩ := h.registration raceId marker
   exact ⟨race, resultTy, (view.races raceId).trans found, host, token,
-    stackReply_races (racesKept_of_eq view.races) reply⟩
+    stackReply_races (racesKept_of_eq view.races) reply, entrants⟩
 
 /-- `queueOk_transport` away from one key: no queued observer holds it, and the fiber-id
 supply does not shrink. -/
@@ -344,8 +344,8 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
       have idle := (old.exited (by rw [hx]; rfl)).2
       rw [running] at idle
       cases idle
-  obtain ⟨race₀, resultTy, found₀, _, declared, row, final, flag, hfinal, covered, stackOk, prov,
-    deferredMask⟩ := old.registration raceId marker
+  obtain ⟨race₀, resultTy, found₀, _, declared, ⟨row, final, flag, hfinal, covered, stackOk, prov,
+    deferredMask⟩, entrants⟩ := old.registration raceId marker
   have e₀ : race = race₀ := Option.some.inj (hr.symm.trans found₀)
   subst e₀
   have hrace : race ∈ m.races := List.mem_of_find?_eq_some hr
@@ -437,7 +437,7 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
       have looped := configTyped_cons_loop edited look running parked freeG yielding
         fun _ ty d => codeG ty d
       have hrU : (m.update g).race? race.id = some race := hr'
-      exact configTyped_updateRace looped hrU rfl rfl rfl (new := { race with registering := false })
+      exact configTyped_updateRace looped hrU rfl rfl rfl (fun _ h => h) (new := { race with registering := false })
         payload' (fun _ h => Or.inl h)
     · -- no answer: push the race's cancel frame and park on the race token (`:1927-1931`)
       have stackP := mHostStack_raceFinalizer root raceId f.id race.token stackOk
@@ -467,12 +467,13 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
         have registrationG : ∀ raceId', raceRegistrationR g.frame.current = some raceId' →
             ∃ race' resultTy', (m.update g).race? raceId' = some race' ∧ race'.host = g.id ∧
               w.Θ race'.host race'.token = some resultTy' ∧
-                StackReply root w (m.update g) g resultTy' := by
+                StackReply root w (m.update g) g resultTy' ∧
+              EntrantsCovered root w race' resultTy' g := by
           intro raceId' marker'
           have e : raceId = raceId' := Option.some.inj (markerG.symm.trans marker')
           subst e
-          exact ⟨race, resultTy, hr, fid.symm, declared, row, final, flag, hfinal, covered,
-            stackP.races (racesKept_of_eq view.races), provG, deferredMask⟩
+          exact ⟨race, resultTy, hr, fid.symm, declared, ⟨row, final, flag, hfinal, covered,
+            stackP.races (racesKept_of_eq view.races), provG, deferredMask⟩, entrants.congr rfl rfl⟩
         have pendingOk : ∀ p ∈ g.pending, ∃ id, (w.Θ id p.token).isSome = true :=
           fun _ hp => absurd hp List.not_mem_nil
         have fresh : FiberTyped root w (m.update g) g :=
@@ -526,7 +527,7 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
         have looped := configTyped_cons_loop edited look running rfl freeG yielding
           fun h => nomatch (h.symm.trans markerG)
         have hrU : (m.update g).race? race.id = some race := hr'
-        exact configTyped_emit (configTyped_updateRace looped hrU rfl rfl rfl
+        exact configTyped_emit (configTyped_updateRace looped hrU rfl rfl rfl (fun _ h => h)
           (new := { race with registering := false }) payload' (fun _ h => Or.inl h))
           [RunEvent.parkedOn f.id race.token]
       · -- the park: idle at the race key, a `void` record that no observer reads (row 134 (d))
@@ -567,12 +568,13 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
         have registrationG : ∀ raceId', raceRegistrationR g.frame.current = some raceId' →
             ∃ race' resultTy', (m.update g).race? raceId' = some race' ∧ race'.host = g.id ∧
               w.Θ race'.host race'.token = some resultTy' ∧
-                StackReply root w (m.update g) g resultTy' := by
+                StackReply root w (m.update g) g resultTy' ∧
+              EntrantsCovered root w race' resultTy' g := by
           intro raceId' marker'
           have e : raceId = raceId' := Option.some.inj (markerG.symm.trans marker')
           subst e
-          exact ⟨race, resultTy, hr, fid.symm, declared, row, final, flag, hfinal, covered,
-            stackP.races (racesKept_of_eq view.races), provG, deferredMask⟩
+          exact ⟨race, resultTy, hr, fid.symm, declared, ⟨row, final, flag, hfinal, covered,
+            stackP.races (racesKept_of_eq view.races), provG, deferredMask⟩, entrants.congr rfl rfl⟩
         have pendingOk : ∀ p ∈ g.pending, ∃ id, (w.Θ id p.token).isSome = true := by
           intro p hp
           rw [hpOf] at hp
@@ -662,7 +664,7 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
           (fun c hc h => commandAuthority_unowned (g := g) hf rfl live freeF tail.queue.registration c hc h)
           (fun h => Bool.noConfusion h) fresh
         have hrU : (m.update g).race? race.id = some race := hr'
-        exact configTyped_emit (configTyped_updateRace edited hrU rfl rfl rfl
+        exact configTyped_emit (configTyped_updateRace edited hrU rfl rfl rfl (fun _ h => h)
           (new := { race with registering := false }) payload' (fun _ h => Or.inl h))
           [RunEvent.parkedOn f.id race.token]
 

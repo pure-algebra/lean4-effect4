@@ -212,7 +212,7 @@ theorem enrollRace_preserves (root : ProgramSource) (rootTy : EffTy) (raceId : N
           subst h
           exact Or.inr ⟨⟨cty, by rw [← cid]; exact declaredC, subA, subE⟩,
             by rw [← cid]; exact (tail.machine.fiber hcmem).below⟩
-      have m1 := configTyped_updateRace tail hr' rfl rfl rfl (new := new) payload' liveNew
+      have m1 := configTyped_updateRace tail hr' rfl rfl rfl (fun _ h => h) (new := new) payload' liveNew
       have hr1 : (m.updateRace new).race? raceId = some new := by
         rw [rrace?_updateRace, hr, Option.map_some, if_pos rfl]
       cases hx : c.exit with
@@ -486,7 +486,8 @@ theorem afterInterrupt_preserves (root : ProgramSource) (rootTy : EffTy) (host :
     cases h
   have registrationG : ∀ raceId, raceRegistrationR g.frame.current = some raceId →
       ∃ race resultTy, (m.update g).race? raceId = some race ∧ race.host = g.id ∧
-        w.Θ race.host race.token = some resultTy ∧ StackReply root w (m.update g) g resultTy := by
+        w.Θ race.host race.token = some resultTy ∧ StackReply root w (m.update g) g resultTy ∧
+              EntrantsCovered root w race resultTy g := by
     intro raceId marker
     rw [notMarker] at marker
     cases marker
@@ -741,7 +742,8 @@ theorem closeParAwait_preserves (root : ProgramSource) (rootTy : EffTy) (host : 
     cases h
   have registrationG : ∀ raceId, raceRegistrationR g.frame.current = some raceId →
       ∃ race resultTy, (m.update g).race? raceId = some race ∧ race.host = g.id ∧
-        w.Θ race.host race.token = some resultTy ∧ StackReply root w (m.update g) g resultTy := by
+        w.Θ race.host race.token = some resultTy ∧ StackReply root w (m.update g) g resultTy ∧
+              EntrantsCovered root w race resultTy g := by
     intro raceId marker
     cases marker
   have fresh : FiberTyped root w (m.update g) g :=

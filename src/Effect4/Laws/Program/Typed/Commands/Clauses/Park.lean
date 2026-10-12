@@ -162,8 +162,8 @@ theorem enrollRaceOk_tok {root : ProgramSource} {m : RState} {raceId : Nat} {chi
 
 include ord back in
 theorem resumeOk_tok {root : ProgramSource} {target : FiberId} {token : Nat} {code : RProgram}
-    (off : (target, token) ≠ key) (h : Contracts.ResumeOk (TypedProg root) w target token code) :
-    Contracts.ResumeOk (TypedProg root) w' target token code := by
+    (off : (target, token) ≠ key) (h : ResumeCode root w target token code) :
+    ResumeCode root w' target token code := by
   intro ty declared
   exact typedProg_mono root w w' ty code ord (h ty (back _ _ _ declared off))
 
@@ -251,8 +251,8 @@ theorem fiberTyped_tok {root : ProgramSource} {m : RState} {x : RFiber}
   · obtain ⟨tin, final, declared, final', stack, provenance⟩ := h.delivery token hp
     exact ⟨tin, final, theta_of ord declared, by rw [hΓ]; exact final', hostStack_mono ord stack,
       provenance⟩
-  · obtain ⟨race, resultTy, found, host, token, reply⟩ := h.registration raceId marker
-    exact ⟨race, resultTy, found, host, theta_of ord token, stackReply_world ord hΓ reply⟩
+  · obtain ⟨race, resultTy, found, host, token, reply, entrants⟩ := h.registration raceId marker
+    exact ⟨race, resultTy, found, host, theta_of ord token, stackReply_world ord hΓ reply, entrants⟩
   · rw [hΓ] at declared
     exact codeOk_mono ord (h.code hx hr hm hp ty declared)
 
@@ -444,7 +444,7 @@ theorem clause_yieldNow (root : ProgramSource) (rootTy : EffTy) (priority : Nat)
   have free1 : f.id ∉ rest.filterMap (Guard.commandOwner M1) := by
     rw [commandOwner_bump]
     exact freeM0
-  have taskOk : Contracts.ResumeOk (TypedProg root) w1 f.id tok (.pure (.success .unit)) := by
+  have taskOk : ResumeCode root w1 f.id tok (.pure (.success .unit)) := by
     intro ty' d
     rw [addToken_Θ_self] at d
     cases d

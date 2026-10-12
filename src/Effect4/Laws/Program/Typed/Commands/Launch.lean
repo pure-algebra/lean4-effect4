@@ -144,7 +144,7 @@ theorem racePayload_alloc {race : RRace} {resultTy : EffTy} (h : RacePayload roo
       exact ⟨t, ord.1.2.1 _ _ declared, ha, he⟩,
     fun code hc => ?_⟩
   obtain ⟨cty, typed, ha, he⟩ := h.programs code hc
-  exact ⟨cty, typedProg_mono root w w' cty code ord typed, ha, he⟩
+  exact ⟨cty, typed.mono ord, ha, he⟩
 
 omit back in
 include ord ext hΘ in
@@ -419,8 +419,8 @@ theorem fiberTyped_alloc (typed : MachineTyped root rootTy w m) {x : RFiber} (hx
       Option.isSome_iff_exists.mpr ⟨t, addFiber_extends fresh.2 ht⟩⟩
   · change (w.addFiber ⟨m.nextId⟩ ty).Γ x.id = some ty' at declared
     rw [addFiber_Γ_other ne] at declared
-    obtain ⟨tin, stack, provenance⟩ := c0 ty' declared
-    exact ⟨tin, positionStack_mono ord stack, provenance⟩
+    obtain ⟨tin, flag', stack, provenance⟩ := c0 ty' declared
+    exact ⟨tin, flag', stack.mono ord, provenance⟩
   · change (w.addFiber ⟨m.nextId⟩ ty).Γ x.id = some ty' at declared
     rw [addFiber_Γ_other ne] at declared
     exact strongExit_mono _ _ _ _ ord (c2 v hv ty' declared)
@@ -432,19 +432,19 @@ theorem fiberTyped_alloc (typed : MachineTyped root rootTy w m) {x : RFiber} (hx
     | resume target token code => exact resumeOk_world ord rfl task
     | start _ => trivial
     | wake _ _ => trivial
-  · obtain ⟨tin, final, declared, final', stack, provenance⟩ := old.delivery token hp
-    exact ⟨tin, final, declared, addFiber_extends fresh.2 final',
-      hostStack_mono ord (hostStack_races kept stack), provenance⟩
-  · obtain ⟨race, resultTy, found, host, token, final, declared, stack, provenance⟩ :=
-      old.registration raceId marker
-    exact ⟨race, resultTy, found, host, token, final, addFiber_extends fresh.2 declared,
-      hostStack_mono ord (hostStack_races kept stack), provenance⟩
+  · obtain ⟨tin, row, declared, reply⟩ := old.delivery token hp
+    exact ⟨tin, row, declared, reply.mono ord kept⟩
+  · obtain ⟨race, resultTy, found, host, token, reply, entrants⟩ := old.registration raceId marker
+    exact ⟨race, resultTy, found, host, token,
+      stackReply_mono ord (fun _ _ h => addFiber_extends fresh.2 h) kept reply, entrants.mono ord⟩
   · rw [addFiber_Γ_other ne] at declared
-    exact codeOk_mono ord (codeOk_races kept (old.code hx' hr hm hp ty' declared))
+    exact ((old.code hx' hr hm hp ty' declared).races kept).mono ord
 
 /-- The spawned child's per-fiber clauses: idle, unparked, no pending record, observer or exit,
 an empty stack, its typed code at its declaration. -/
-theorem fiberTyped_child (typed : MachineTyped root rootTy w m) (code : TypedProg root w ty program)
+theorem fiberTyped_child (typed : MachineTyped root rootTy w m) {childTy : EffTy}
+    (code : ChildCode root w childTy program) (subA : Ty.subN childTy.answer ty.answer = true)
+    (subE : Ty.subN childTy.error ty.error = true) (covered : ctx.services.Satisfies childTy.requires)
     (services : ServicesFit w ctx.services) :
     FiberTyped root (w.addFiber ⟨m.nextId⟩ ty)
       (allocR m (spawnChild m program flag budget ctx) record) (spawnChild m program flag budget ctx) := by
@@ -465,12 +465,19 @@ theorem fiberTyped_child (typed : MachineTyped root rootTy w m) (code : TypedPro
     (fun _ _ _ _ h => nomatch h), (fun _ h => nomatch h), (fun _ h => nomatch h),
     (fun _ h => nomatch h)⟩
   · rw [declaredOnly ty' d]
-    exact ⟨ty, .nil ty, prov⟩
+    exact ⟨finalPos ty true, true, .nil _, prov⟩
   · rw [show (spawnChild m program flag budget ctx).frame.current = program from rfl,
-      raceRegistrationR_typed code] at marker
+      raceRegistrationR_ambient (ambientProg_entry root (code _ (Row.subset_refl _)) true)] at marker
     cases marker
   · rw [declaredOnly ty' d]
-    exact ⟨ty, typedProg_mono root w _ ty program ord code, .nil ty, prov⟩
+    refine ⟨childTy.requires, finalPos ty flag, flag, covered, rfl, ?_, ?_, .nil _, prov⟩
+    · intro h
+      cases h
+    · exact ambientProg_entry root (ambientProg_mono root ord (ambientProg_widen root
+        (before := (childTy, childTy.requires, childTy.requires))
+        (after := (ty, Env.Requirement.empty, Env.Requirement.empty)) subA subE
+        (fun a h => absurd h (Row.not_mem_empty a)) (fun a h => absurd h (Row.not_mem_empty a))
+        (code _ (Row.subset_refl _)))) flag
 
 theorem readCode_alloc (typed : ConfigTyped root rootTy w m q) :
     ReadCode root (w.addFiber ⟨m.nextId⟩ ty)
@@ -567,8 +574,10 @@ theorem queueOk_alloc (typed : ConfigTyped root rootTy w m q) :
 
 /-- **The allocation keeps `I`**: the queue unchanged, the world extended by the child's
 declaration at a closed type its code is typed at. -/
-theorem configTyped_alloc (typed : ConfigTyped root rootTy w m q)
-    (code : TypedProg root w ty program) (services : ServicesFit w ctx.services) :
+theorem configTyped_alloc (typed : ConfigTyped root rootTy w m q) {childTy : EffTy}
+    (code : ChildCode root w childTy program) (subA : Ty.subN childTy.answer ty.answer = true)
+    (subE : Ty.subN childTy.error ty.error = true) (covered : ctx.services.Satisfies childTy.requires)
+    (services : ServicesFit w ctx.services) :
     ConfigTyped root rootTy (w.addFiber ⟨m.nextId⟩ ty)
       (allocR m (spawnChild m program flag budget ctx) record) q := by
   refine ⟨machineTyped_of (machineWide_alloc typed.machine) fun f hf => ?_,
@@ -577,7 +586,7 @@ theorem configTyped_alloc (typed : ConfigTyped root rootTy w m q)
   · exact fiberTyped_alloc typed.machine hold
   · rw [List.mem_singleton] at hnew
     subst hnew
-    exact fiberTyped_child typed.machine code services
+    exact fiberTyped_child typed.machine code subA subE covered services
 
 end Spawn
 
@@ -656,9 +665,29 @@ theorem launch_preserves (root : ProgramSource) (rootTy : EffTy) (raceId : Nat) 
           rw [hr] at hr₀
           cases hr₀
           obtain ⟨resultTy, payload⟩ := wide.races race (List.mem_of_find?_eq_some hr)
-          obtain ⟨childTy, code, subA, subE⟩ :=
-            payload.programs program (by rw [hp]; exact List.mem_cons_self)
-          obtain ⟨_, _, _, _, _, services⟩ := (machine.fiber (rfiber?_mem hh)).ok
+          obtain ⟨yielding, queued⟩ := typed.queue.registration.1
+          obtain ⟨race₁, host₁, hr₁, hh₁, hrun, _, marker⟩ :=
+            typed.queue.authority _ (List.mem_cons_of_mem _ queued)
+          rw [hr] at hr₁
+          cases hr₁
+          rw [hh] at hh₁
+          cases hh₁
+          have hostTyped := machine.fiber (rfiber?_mem hh)
+          obtain ⟨race₂, resultTy₂, hr₂, _, token₂, _, entrants⟩ := hostTyped.registration raceId marker
+          rw [hr] at hr₂
+          cases hr₂
+          have sameTy : resultTy = resultTy₂ := Option.some.inj (payload.token.symm.trans token₂)
+          subst sameTy
+          have live : host.exit = none := by
+            cases hx : host.exit with
+            | none => rfl
+            | some _ =>
+              have stopped := (hostTyped.exited (by rw [hx]; rfl)).2
+              rw [hrun] at stopped
+              cases stopped
+          obtain ⟨childTy, code, covered, subA, subE⟩ :=
+            entrants live program (by rw [hp]; exact List.mem_cons_self)
+          obtain ⟨_, _, _, _, _, services⟩ := hostTyped.ok
           have ord : w.leHost (w.addFiber ⟨m.nextId⟩ resultTy) := addFiber_leHost fresh.2
           have payload' : RacePayload root (w.addFiber ⟨m.nextId⟩ resultTy) race resultTy :=
             racePayload_alloc ord rfl payload
@@ -673,12 +702,12 @@ theorem launch_preserves (root : ProgramSource) (rootTy : EffTy) (raceId : Nat) 
           let record : ForkRecord := ⟨⟨m.nextId⟩, host.id, true, race.nextSite.getD []⟩
           have allocated := configTyped_alloc (record := record) (flag := true)
             (budget := (interpR root.program).budgetOf host.context) typed
-            (typedProg_widen root subA subE code) services
+            code subA subE covered services
           have edited := configTyped_emit (configTyped_updateRace
             (configTyped_emit allocated [RunEvent.forked host.id ⟨m.nextId⟩ true]) (old := race)
-            (new := new) (by rw [rrace?_id hr]; exact hr) rfl rfl rfl payloadNew
+            (new := new) (by rw [rrace?_id hr]; exact hr) rfl rfl rfl
+            (fun _ h => by rw [hp]; exact List.mem_cons_of_mem _ h) payloadNew
             (fun _ h => .inl h)) [RunEvent.raceLaunched raceId ⟨m.nextId⟩]
-          obtain ⟨yielding, queued⟩ := typed.queue.registration.1
           refine ⟨w.addFiber ⟨m.nextId⟩ resultTy, ord,
             configTyped_cons_evaluate (configTyped_cons_enroll edited
               (race?_launched (m := allocR m child record) (new := new) hr rfl _ _)
