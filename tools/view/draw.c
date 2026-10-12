@@ -40,7 +40,7 @@ static int count(const char *path) {
     kinds[(unsigned char)k & 127]++;
     if (k == 'K') cuts++;
     else if (k == 'k') cuts--;
-    else if (!strchr("PRYFBCTH\n", k)) bad++;
+    else if (!strchr("PRYFBCTHS\n", k)) bad++;
   }
   free(row); fclose(fp);
   printf("fills %ld  curves %ld  shapes %ld  data texts %ld  other texts %ld  cuts %ld  pointer boxes %ld\n", kinds['F'], kinds['B'], kinds['S'], kinds['C'], kinds['T'], kinds['K'], kinds['H']);

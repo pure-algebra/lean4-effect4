@@ -329,7 +329,7 @@ CORPUS_TRACE := .lake/build/lib/lean/Drivers/Corpus.trace
 export E4_LEAN_CORPUS := $(abspath $(CORPUS))
 export EFFECT4_CORPUS := $(abspath $(CORPUS))
 
-$(CORPUS_TRACE): $(LEAN_SOURCES) $(wildcard tools/Tools/*.lean tools/Drivers/*.lean tools/TestSupport/*.lean)
+$(CORPUS_TRACE): $(LEAN_INPUTS) $(wildcard tools/Tools/*.lean tools/Drivers/*.lean tools/TestSupport/*.lean)
 	$(LAKE) build Drivers.Corpus
 
 $(CORPUS)/index.tsv: $(CORPUS_TRACE)

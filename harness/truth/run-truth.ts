@@ -918,7 +918,10 @@ const main = async (): Promise<number> => {
       rows.push({
         program: entry.name, leanExit: leanVerdict(entry.run).text, hostExit: "not run",
         entry: "—", exitAgree: null, scheduleAgree: null, runSyncAgree: null,
-        notes: [`printer refused: ${entry.exprRefusal}`], host: null, hostSync: null
+        ...(entry.client === undefined ? {} : { clientAgree: false }),
+        notes: [`printer refused: ${entry.exprRefusal}`,
+          ...(entry.client === undefined ? [] : ["client never ran: no module"])],
+        host: null, hostSync: null
       })
       continue
     }
