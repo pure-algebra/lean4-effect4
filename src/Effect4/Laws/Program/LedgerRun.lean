@@ -1,6 +1,8 @@
 import Effect4.Laws.Machine.Ledger
 import Effect4.Laws.Machine.EditObserverWords
 import Effect4.Laws.Program.FinalizerTransfer
+import Effect4.Laws.Program.PlaceFunding.Commands
+import Effect4.Laws.Program.PlaceLedgerConnect
 
 /-!
 # Laws.Program.LedgerRun — a stack ledger along every native run
@@ -8,7 +10,7 @@ import Effect4.Laws.Program.FinalizerTransfer
 The command loop and the run lift of `Laws/Machine/Ledger.lean`, proved once for every stack ledger.
 A ledger supplies one fact, **its evaluation's local debit** (`Kept`): one native evaluation of a
 looked-up fiber keeps the other fibers' bookkeeping and spends no more than its fiber held and its
-own events produced. Everything else is bookkeeping, proved here:
+own events produced. Everything else is bookkeeping. The command proof consumes the shared place-funding fold:
 
 * every command of the native loop (`command_funded`): the evaluation commands through the
   write-back, the observers, the interrupts, the exits, the races, the scope links, the drains;
@@ -31,7 +33,9 @@ set_option autoImplicit false
 namespace Effect4.Machine.StackLedger
 
 open Effect4 Effect4.Machine Effect4.Program
-open Effect4.Machine.ForkLedger.Invariant Effect4.Program.Guard
+open Effect4.Program.Guard
+open Effect4.Machine.ForkLedger.Invariant
+local notation "Ok" => Effect4.Machine.ForkLedger.Invariant.Ok
 
 /-- A stack ledger over the native machine's names. -/
 abbrev NLedger := StackLedger EffName EffThunk Val Err Defect FiberId Ann
@@ -146,6 +150,82 @@ theorem settle_view {cap : Nat} (m : NativeMachine) (next : Native.NIter) (ok : 
   rw [same.1, same.2.1, same.2.2.1, same.2.2.2]
   omega
 
+namespace PlaceInstance
+open Effect4.Program.PlaceFunding
+theorem stack_control (L : NLedger) : Control (PlaceLedgerConnect.stack L) (fun _ => True) where
+  metadata := by
+    intro old next _ _ saved _
+    change L.stack next.frame.stack ≤ L.stack old.frame.stack
+    rw [saved]
+    exact Nat.le_refl _
+  interruption := by
+    intro cause fiber
+    exact Nat.le_of_eq (L.interruptWithCause_held cause fiber)
+  replace := fun _ _ _ => Nat.le_refl _
+  entry := fun _ _ _ _ _ _ => L.empty
+  clear := fun _ => by change L.stack [] ≤ _; rw [L.empty]; exact Nat.zero_le _
+
+
+theorem stack_stores (L : NLedger) (interp : Moves.NInterp) :
+    StoreHooks (PlaceLedgerConnect.stack L) interp where
+  link := fun _ _ _ _ _ _ _ => Nat.le_refl _
+  drop := fun _ _ _ _ _ => Nat.le_refl _
+  due := fun _ => Nat.le_refl _
+  wake := fun _ _ _ => Nat.le_refl _
+
+
+theorem stack_events (L : NLedger) : Events (PlaceLedgerConnect.stack L) where
+  administrative := by
+    intro event allowed
+    cases event
+    all_goals aesop (add norm simp [PlaceLedgerConnect.stack, StackLedger.eventConsumed,
+      StackLedger.eventProduced, Moves.administrative])
+
+
+theorem stack_no_queue (L : NLedger) : NoQueue (PlaceLedgerConnect.stack L) where
+  races := fun _ => rfl
+  commands := fun _ => rfl
+  tasks := fun _ => rfl
+
+
+theorem stack_installed_balance (ledger : StackLedger.NLedger) (m : NativeMachine)
+    (fiber : NFiber) (it : Native.NIter) (unique : (it.machine.fibers.map RunFiber.id).Nodup)
+    (kept : ledger.IterKept m fiber it) (found : m.fiber? fiber.id = some fiber) :
+    (PlaceLedgerConnect.stack ledger).Balanced m [] [] (it.machine.update it.fiber) [] [] := by
+  rw [(stack_no_queue ledger).balance_iff]
+  have debit := kept.balanced found
+  have installed := ledger.update_bound it.machine it.fiber unique
+  change ledger.consumedIn it.machine.trace + (0 + ledger.total (it.machine.update it.fiber)) + ledger.producedIn m.trace ≤
+    ledger.consumedIn m.trace + (0 + ledger.total m) + ledger.producedIn it.machine.trace
+  unfold StackLedger.Balanced at debit
+  omega
+
+theorem stack_administration (ledger : StackLedger.NLedger) (root : NativeEff) (table : RowTable)
+    (kept : StackLedger.Kept ledger root table) :
+    Administration (PlaceLedgerConnect.stack ledger) (fun _ => True) (interpOf root table) where
+  race := fun _ _ _ => True.intro
+  await := fun _ _ => True.intro
+  children := fun _ _ => True.intro
+  park := fun _ => True.intro
+  cancel := fun fiber name => kept.cancel name fiber.frame.stack
+  iterator := fun fiber name cursor => kept.iterator name cursor fiber.frame.stack
+
+theorem stack_evaluation (ledger : StackLedger.NLedger) (root : NativeEff) (table : RowTable)
+    (kept : StackLedger.Kept ledger root table) :
+    Evaluation (PlaceLedgerConnect.stack ledger) (fun _ => True) root table (fun _ _ _ => 0) where
+  native := by
+    intro m fiber y ok _ found
+    exact stack_installed_balance ledger m fiber _ (Native.evaluateNative_ok root table m fiber y ok).idsUnique
+      (kept.evaluate m fiber y ok) found
+  iteration := by
+    intro m fiber y ok _ found
+    letI := evaluatorFor root table
+    rw [PlaceLedger.charged_zero]
+    exact stack_installed_balance ledger m fiber _ (Native.iteration_ok root table m fiber y ok).idsUnique
+      (ledger.iteration_kept root table kept m fiber y ok) found
+
+end PlaceInstance
+
 /-- **Every command of the native loop** keeps a ledger whose evaluations are kept. -/
 theorem command_funded {cap : Nat} (p : NativeEff) (table : RowTable) (kept : Kept L p table)
     (m : NativeMachine) (cmd : Native.NCmd) (rest : List Native.NCmd)
@@ -153,145 +233,14 @@ theorem command_funded {cap : Nat} (p : NativeEff) (table : RowTable) (kept : Ke
     letI := evaluatorFor p table
     L.Funded cap (driveStep (interpOf p table) m cmd rest).1 := by
   letI := evaluatorFor p table
-  cases cmd with
-  | evaluate id =>
-    simp only [driveStep]
-    split
-    · exact funded
-    · rename_i f found
-      split
-      · exact funded
-      · apply (L.same_emit _ [.started id] rfl rfl).funded
-        apply (L.same_update_view m ok.idsUnique _ ?_).funded funded
-        exact L.found_weight m id f found
-  | loop id y =>
-    simp only [driveStep]
-    split
-    · exact funded
-    · rename_i f found
-      exact L.settle_balanced m _ (Native.iteration_ok p table m f y ok).idsUnique funded
-        ((L.iteration_kept p table kept m f y ok).balanced
-          (by simpa only [RunMachine.id_of_fiber? found] using found)) id rest
-  | deliver id y =>
-    simp only [driveStep]
-    split
-    · exact funded
-    · rename_i f found
-      exact L.settle_balanced m _ (Native.evaluateNative_ok p table m f y ok).idsUnique funded
-        ((kept.evaluate m f y ok).balanced
-          (by simpa only [RunMachine.id_of_fiber? found] using found)) id rest
-  | resume id token answer =>
-    simp only [driveStep]
-    split
-    · exact funded
-    · rename_i f found
-      split
-      · split
-        · apply (L.same_emit _ [.resumedWith id token answer] rfl rfl).funded
-          apply (L.same_update_view m ok.idsUnique _ ?_).funded funded
-          exact L.found_weight m id f found
-        · exact funded
-      · exact funded
-  | launch raceId =>
-    simp only [driveStep]
-    split
-    · exact funded
-    · split
-      · exact funded
-      · rename_i program more _
-        split
-        · exact funded
-        · split
-          · exact funded
-          · rename_i host found
-            apply (L.same_emit _ [.raceLaunched raceId _] rfl rfl).funded
-            exact (L.same_spawn (interpOf p table) m host program
-              ⟨true, true, .interruptible⟩ _).funded funded
-  | enrollRace raceId child =>
-    simp only [driveStep]
-    split
-    · rename_i race c raceFound childFound
-      let registered := m.updateRace { race with state := { race.state with live := race.state.live ++ [child] } }
-      split
-      · exact (L.observer_same (interpOf p table) child _ (registered, [])
-          (.raceCallback raceId) ok).funded funded
-      · exact (L.same_modify registered ok.idsUnique child
-          (fun f => { f with observers := f.observers ++ [.raceCallback raceId] })
-          (fun _ => rfl) (fun _ => rfl)).funded funded
-    · exact funded
-  | registrationDone raceId y =>
-    simp only [driveStep]
-    split
-    · exact funded
-    · split
-      · exact funded
-      · rename_i f found
-        split
-        · apply L.settle_view m _ ok funded (.refl L m) _ _ rest
-          exact Nat.le_of_eq (L.found_weight m _ f found).symm
-        · apply L.settle_view m _ ok funded (L.same_emit _ [.parkedOn f.id _] rfl rfl) _ _ rest
-          show L.stack (Prim.asyncFinalizer _ :: f.frame.stack) ≤ L.atFiber m f.id
-          rw [L.found_weight m _ f found]
-          exact kept.cancel _ _
-  | interruptTarget target who extra =>
-    simp only [driveStep]
-    split
-    · exact funded
-    · rename_i f found
-      exact (L.same_emit _ [.interruptRecorded who target] rfl rfl).funded
-        ((L.same_interruptUpdate (interpOf p table) m ok.idsUnique target f found who extra).funded funded)
-  | afterInterrupt host y kind =>
-    simp only [driveStep]
-    split
-    · exact funded
-    · rename_i f found
-      apply L.settle_view m _ ok funded (.refl L m) _ _ rest
-      exact Nat.le_of_eq (L.found_weight m host f found).symm
-  | raceCancel raceId host y remaining visited =>
-    simp only [driveStep]
-    repeat' split
-    all_goals exact funded
-  | trackChild parent child =>
-    simp only [driveStep]
-    split
-    · exact funded
-    · split
-      · exact funded
-      · have first := L.same_modify m ok.idsUnique parent
-          (fun f => { f with children := f.children ++ [child] }) (fun _ => rfl) (fun _ => rfl)
-        apply (L.same_modify _ (modify_ok ok parent _).idsUnique child
-          (fun f => { f with observers := f.observers ++ [.untrackChild parent] })
-          (fun _ => rfl) (fun _ => rfl)).funded (first.funded funded)
-  | observe id exit observer =>
-    exact (L.observer_same (interpOf p table) id exit (m, []) observer ok).funded funded
-  | exitDone id =>
-    simp only [driveStep]
-    split
-    · exact funded
-    · apply L.update_funded_le m ok.idsUnique _ _ funded
-      rw [L.held_cleared]
-      exact Nat.zero_le _
-  | closeParAwait host y fibers =>
-    simp only [driveStep]
-    split
-    · exact funded
-    · rename_i f found
-      apply L.settle_view m _ ok funded (.refl L m) _ _ rest
-      rw [L.found_weight m host f found]
-      exact kept.iterator _ _ _
-  | link mode scope target who extra =>
-    exact (L.same_linkScope (interpOf p table) m ok.idsUnique mode scope target who extra).funded funded
-  | finish id exit =>
-    simp only [driveStep]
-    split
-    · exact funded
-    · rename_i f found
-      exact L.exit_funded (interpOf p table) m { f with running := false } exit ok
-        (L.found_weight m id f found) funded
-  | drainDue =>
-    exact (L.same_drainOwed { m with state := ((interpOf p table).dueResumes m.state).2 } ok
-      ((interpOf p table).dueResumes m.state).1).funded funded
-  | wake list phase => exact funded
+  have result := PlaceFunding.command_funded p table (PlaceInstance.stack_control L)
+    (PlaceInstance.stack_no_queue L) (PlaceInstance.stack_events L)
+    (PlaceInstance.stack_stores L (interpOf p table)) (PlaceInstance.stack_administration L p table kept)
+    (fun _ => True) (fun _ _ _ => 0) (PlaceInstance.stack_evaluation L p table kept)
+    m cmd rest ok True.intro (⟨fun _ _ _ _ => True.intro, fun _ _ _ _ _ _ _ => True.intro⟩)
+    ((PlaceLedgerConnect.stack_funded L cap m).mpr funded)
+  rw [PlaceFunding.commandAllowance_zero, Nat.add_zero] at result
+  exact (PlaceLedgerConnect.stack_funded L cap _).mp result
 
 /-- The interrupt decision records its events before it updates the target. -/
 theorem interrupt_same (interp : Native.NInterp) (m : NativeMachine) (ok : Ok m)
