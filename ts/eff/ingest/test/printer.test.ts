@@ -42,6 +42,51 @@ test("the printed boolean row refuses noncanonical calls and thunks", () => {
   }
 })
 
+const someOne = ["app", "some", ["cons", ["lit", ["nat", 1]], ["nil"]]]
+const consPair = ["app", "pair", ["cons", ["lit", ["str", "cons"]], ["cons", ["lit", ["nat", 1]], ["nil"]]]]
+const optionCall = (args: readonly string[], head = "optionCase") =>
+  `Effect.flatMap(Effect.succeed(some(1)), (a0) => ${head}(${args.join(", ")}))`
+const optionArgs = ["a0", "() => Effect.succeed(0)", "(a1) => Effect.succeed(a1)"]
+const tagCall = (args: readonly string[], head = "caseTag") =>
+  `Effect.flatMap(Effect.succeed(pair("cons", 1)), (a0) => ${head}(${args.join(", ")}))`
+const tagArgs = ["a0", '"cons"', "(a1) => Effect.succeed(a1)", "(a1) => Effect.succeed(0)"]
+
+test("the printed option row binds the payload in its some arm alone", () => {
+  expect(effJson(readPrintedSource(optionCall(optionArgs)))).toEqual([
+    "bind", ["succeed", someOne],
+    ["select", ["var", 0], ["option"], ["succeed", ["lit", ["nat", 0]]], ["succeed", ["var", 1]]],
+  ])
+})
+
+test("the printed option row refuses noncanonical calls and arms", () => {
+  for (const source of [
+    optionCall(optionArgs.slice(0, 2)), optionCall([...optionArgs, "0"]),
+    optionCall(optionArgs, "optionCase<number>"), optionCall(optionArgs, "optionCase?."),
+    "Effect.flatMap(Effect.succeed(some(1)), (optionCase) => optionCase(optionCase, () => Effect.succeed(0), (a1) => Effect.succeed(a1)))",
+    optionCall(["a0", "(a1) => Effect.succeed(0)", "(a1) => Effect.succeed(a1)"]),
+    optionCall(["a0", "() => Effect.succeed(0)", "() => Effect.succeed(1)"]),
+    optionCall(["a0", "() => Effect.succeed(0)", "(a1, a2) => Effect.succeed(1)"]),
+  ]) expect(() => readPrintedSource(source)).toThrow()
+})
+
+test("the printed tag row reads its literal tag and binds the scrutinee in both arms", () => {
+  expect(effJson(readPrintedSource(tagCall(tagArgs)))).toEqual([
+    "bind", ["succeed", consPair],
+    ["select", ["var", 0], ["tag", "cons"], ["succeed", ["var", 1]], ["succeed", ["lit", ["nat", 0]]]],
+  ])
+})
+
+test("the printed tag row refuses noncanonical calls, tags and arms", () => {
+  for (const source of [
+    tagCall(tagArgs.slice(0, 3)), tagCall([...tagArgs, "0"]),
+    tagCall(tagArgs, "caseTag<number>"), tagCall(tagArgs, "caseTag?."),
+    'Effect.flatMap(Effect.succeed(pair("cons", 1)), (caseTag) => caseTag(caseTag, "cons", (a1) => Effect.succeed(a1), (a1) => Effect.succeed(0)))',
+    tagCall(["a0", "a0", tagArgs[2]!, tagArgs[3]!]), tagCall(["a0", "1", tagArgs[2]!, tagArgs[3]!]),
+    tagCall(["a0", '"cons"', "() => Effect.succeed(1)", tagArgs[3]!]),
+    tagCall(["a0", '"cons"', tagArgs[2]!, "() => Effect.succeed(0)"]),
+  ]) expect(() => readPrintedSource(source)).toThrow()
+})
+
 test("printed service identifiers are preserved by the separate printer entrypoint", () => {
   expect(readPrintedSource('Effect.service(Context.Service<"k10_4", number>("k10_4"))')).toEqual({ _tag: "service", key: { name: { value: 10 }, service: { value: 4 } } })
 })
@@ -176,5 +221,15 @@ for (const recognizeSource of [foreignCk, foreignOxc]) {
     const verdicts = recognizeSource(source, "printed-boolean-foreign.ts")
     expect(verdicts.length).toBe(1)
     expect(verdicts[0]!.kind).toBe("refusal")
+  })
+  test("foreign recognition does not acquire the printed option and tag helpers", () => {
+    for (const body of [
+      "optionCase(some(1), () => Effect.succeed(0), (a1) => Effect.succeed(a1))",
+      'caseTag(pair("cons", 1), "cons", (a1) => Effect.succeed(a1), (a1) => Effect.succeed(0))',
+    ]) {
+      const verdicts = recognizeSource(`import { Effect } from "effect"\nexport const main = ${body}`, "printed-selection-foreign.ts")
+      expect(verdicts.length).toBe(1)
+      expect(verdicts[0]!.kind).toBe("refusal")
+    }
   })
 }

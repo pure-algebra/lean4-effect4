@@ -516,9 +516,35 @@ class CompilerReader {
     return { _tag: "select", scrutinee: this.term(this.at(x.arguments, 0), env), decision: { _tag: "recordTag", tag: tag.value },
       arm0: this.eff(this.expression(hit.body), hit.env), arm1: this.eff(this.expression(miss.body), miss.env) }
   }
+  /** The option row (`Codegen/Templates.lean`, `select` at `decisionOption`):
+   * `optionCase(scrutinee, () => arm0, (a) => arm1)`. The none arm is a thunk and adds no
+   * binder; the some arm binds the payload. */
+  optionSelect(x: Ex, env: readonly string[]): Eff | undefined {
+    if (x.type !== "CallExpression" || x.callee.type !== "Identifier" || x.callee.name !== "optionCase") return undefined
+    if (x.optional || x.typeArguments || env.includes("optionCase")) return bad("option decision head")
+    this.arity(x.arguments, 3)
+    const none = this.arrow(this.at(x.arguments, 1), env, 0)
+    const some = this.arrow(this.at(x.arguments, 2), env, 1)
+    return { _tag: "select", scrutinee: this.term(this.at(x.arguments, 0), env), decision: { _tag: "option" },
+      arm0: this.eff(this.expression(none.body), none.env), arm1: this.eff(this.expression(some.body), some.env) }
+  }
+  /** The tag row (`Codegen/Templates.lean`, `select` at `decisionTag`):
+   * `caseTag(scrutinee, "tag", (a) => arm0, (a) => arm1)`. The tag is a string literal, and
+   * both arms bind the scrutinee. */
+  tagSelect(x: Ex, env: readonly string[]): Eff | undefined {
+    if (x.type !== "CallExpression" || x.callee.type !== "Identifier" || x.callee.name !== "caseTag") return undefined
+    if (x.optional || x.typeArguments || env.includes("caseTag")) return bad("tag decision head")
+    this.arity(x.arguments, 4)
+    const tag = this.at(x.arguments, 1)
+    if (!isString(tag)) return bad("tag decision tag")
+    const hit = this.arrow(this.at(x.arguments, 2), env, 1)
+    const miss = this.arrow(this.at(x.arguments, 3), env, 1)
+    return { _tag: "select", scrutinee: this.term(this.at(x.arguments, 0), env), decision: { _tag: "tag", tag: tag.value },
+      arm0: this.eff(this.expression(hit.body), hit.env), arm1: this.eff(this.expression(miss.body), miss.env) }
+  }
   eff(x: Ex, env: readonly string[]): Eff {
     x = this.unwrap(x)
-    const selected = this.boolSelect(x, env) ?? this.recordSelect(x, env)
+    const selected = this.boolSelect(x, env) ?? this.optionSelect(x, env) ?? this.tagSelect(x, env) ?? this.recordSelect(x, env)
     if (selected !== undefined) return selected
     // DI-72: the three positions `deferred` names; the walk reads them as it did.
     const variable = this.variable(x, env)
@@ -901,6 +927,8 @@ class ForeignCompilerReader extends CompilerReader {
       arm0: this.eff(x.consequent, env), arm1: this.eff(x.alternate, env) }
   }
   override recordSelect(_x: Ex, _env: readonly string[]): Eff | undefined { return undefined }
+  override optionSelect(_x: Ex, _env: readonly string[]): Eff | undefined { return undefined }
+  override tagSelect(_x: Ex, _env: readonly string[]): Eff | undefined { return undefined }
   override term(x: Ex, env: readonly string[]): Term {
     const y = this.unwrap(x)
     if (y.type === "Identifier" && y.name !== "undefined" && this.variable(y, env) === undefined) return refuseForeign("E-REF-UNBOUND", y.name)

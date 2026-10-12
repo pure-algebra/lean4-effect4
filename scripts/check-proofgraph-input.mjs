@@ -13,6 +13,9 @@
 //   node's nearest node given as an object. The view reads each field in one shape only.
 // - an open part's prerequisite is a string; work, definition and ruling require a nonempty
 //   prerequisite, while untriaged and proposed allow an empty one. Whitespace remains a string.
+// - the nearest-node edges are a partial order (GT-05): a two-node cycle and a self-loop fail with
+//   a problem naming the nodes on the cycle, a node below a cycle is not named, and a diamond
+//   passes.
 //
 // Usage: node scripts/check-proofgraph-input.mjs [semantics.json]
 import { readFileSync } from 'node:fs';
@@ -34,6 +37,9 @@ const withNearest = nodes.find((n) => ((n.broughtIn || {}).nearest || []).length
 if (!withNearest || !report.plan.requirements.length) fail('the generated report has no node or requirement to break');
 
 const copy = () => JSON.parse(JSON.stringify(report));
+// Extra plan nodes in the shape of a generated one, each with the nearest nodes given at its index.
+const extraNodes = (names, nearest) => names.map((name, i) => ({ ...JSON.parse(JSON.stringify(withNearest)), name, restsOn: [],
+  broughtIn: { ...withNearest.broughtIn, nearest: nearest[i] } }));
 const cases = [
   ['no plan', (r) => { delete r.plan; }, 'no plan section'],
   ['nodes not a list', (r) => { r.plan.nodes = {}; }, 'plan.nodes is not a list'],
@@ -49,6 +55,9 @@ const cases = [
   // draw, would be drawn as no mark: the open work would be hidden.
   ['open part as a bare text', (r) => { r.plan.requirements[0].openParts = ['a part']; }, 'open part without its text or its state'],
   ['open part in an unknown state', (r) => { r.plan.requirements[0].openParts = [{ text: 'a part', state: 'done', on: '' }]; }, 'open part without its text or its state'],
+  // The view ranks the nearest-node edges as a partial order (GT-05): a cycle is refused.
+  ['two-node cycle', (r) => { r.plan.nodes = [...r.plan.nodes, ...extraNodes(['Cycle.a', 'Cycle.b'], [['Cycle.b'], ['Cycle.a']])]; }, 'cycle through Cycle.a, Cycle.b'],
+  ['self-loop', (r) => { r.plan.nodes = [...r.plan.nodes, ...extraNodes(['Cycle.self'], [['Cycle.self']])]; }, 'cycle through Cycle.self'],
 ];
 const openStates = ['untriaged', 'proposed', 'ruling', 'definition', 'work'];
 const waitingStates = ['ruling', 'definition', 'work'];
@@ -67,6 +76,16 @@ for (const [label, mutate, expected] of cases) {
   const problems = validatePlan(broken);
   if (!problems.some((p) => p.includes(expected))) fail(`${label}: expected a problem naming "${expected}", got ${JSON.stringify(problems)}`);
 }
+
+// A cycle's problem names the nodes on the cycle, not a node below it. A diamond is a partial
+// order, and it passes.
+const extended = (extra) => { const r = copy(); r.plan.nodes = [...r.plan.nodes, ...extra]; return r; };
+const tailed = validatePlan(extended(extraNodes(['Cycle.a', 'Cycle.b', 'Cycle.tail'], [['Cycle.b', 'Cycle.tail'], ['Cycle.a'], []])));
+if (JSON.stringify(tailed) !== JSON.stringify(["the plan's nearest-node edges hold a cycle through Cycle.a, Cycle.b"]))
+  fail(`a two-node cycle with a node below it: expected the cycle's two nodes alone, got ${JSON.stringify(tailed)}`);
+const diamond = validatePlan(extended(extraNodes(['Diamond.top', 'Diamond.left', 'Diamond.right', 'Diamond.bottom'],
+  [['Diamond.left', 'Diamond.right'], ['Diamond.bottom'], ['Diamond.bottom'], [withNearest.name]])));
+if (diamond.length) fail(`a diamond: expected no problem, got ${JSON.stringify(diamond.slice(0, 3))}`);
 
 const validParts = [
   ...openStates.map((state) => ({ text: 'a part', state, on: 'the prerequisite' })),
@@ -123,7 +142,7 @@ for (const [label, mutate, expected] of shapes) {
   const problems = validatePlan(reshaped);
   if (!problems.some((p) => p.includes(expected))) fail(`${label}: expected a problem naming "${expected}", got ${JSON.stringify(problems)}`);
 }
-console.log(`PASS check-proofgraph-input: the generated report passes (${nodes.length} nodes, ${report.plan.requirements.length} requirements); ${cases.length} broken copies refused; ${validParts.length} valid open parts accepted; ${fields.length} absent fields refused, and the same fields accepted when empty; ${shapes.length} references in the wrong shape refused`);
+console.log(`PASS check-proofgraph-input: the generated report passes (${nodes.length} nodes, ${report.plan.requirements.length} requirements); ${cases.length} broken copies refused; ${validParts.length} valid open parts accepted; ${fields.length} absent fields refused, and the same fields accepted when empty; ${shapes.length} references in the wrong shape refused; a diamond accepted`);
 
 
 // The model must retain a plan node's explicit concept when no named claim or population

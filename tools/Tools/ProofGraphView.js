@@ -115,6 +115,35 @@ function validatePlan(report) {
   }
   known('the next goals', plan.next);
   known('the unplaced goals', plan.unplacedGoals);
+  // The graph view reduces and ranks the nearest-node edges (`reduce`, `layoutGraph`) as a
+  // partial order. Kahn's algorithm visits every node exactly when those edges hold no cycle
+  // (GT-05, docs/research/2026-10-09-graph-tree-audit.md). An unknown endpoint is refused above.
+  const nearestOf = new Map([...names].map((name) => [name, []]));
+  for (const n of plan.nodes) {
+    if (!n || !isStr(n.name) || !n.broughtIn || typeof n.broughtIn !== 'object' || !isArr(n.broughtIn.nearest)) continue;
+    for (const t of n.broughtIn.nearest) if (isStr(t) && names.has(t)) nearestOf.get(n.name).push(t);
+  }
+  const indegree = new Map([...names].map((name) => [name, 0]));
+  for (const targets of nearestOf.values()) for (const t of targets) indegree.set(t, indegree.get(t) + 1);
+  const ready = [...names].filter((name) => indegree.get(name) === 0);
+  const visited = new Set();
+  while (ready.length) {
+    const v = ready.pop();
+    visited.add(v);
+    for (const t of nearestOf.get(v)) { indegree.set(t, indegree.get(t) - 1); if (indegree.get(t) === 0) ready.push(t); }
+  }
+  if (visited.size < names.size) {
+    // An unvisited node lies on a cycle or below one. Trimming each node that reaches no other
+    // unvisited node leaves the nodes on a cycle, and on a path between two cycles.
+    const rest = new Set([...names].filter((name) => !visited.has(name)));
+    for (let trimmed = true; trimmed;) {
+      trimmed = false;
+      for (const v of rest) if (!nearestOf.get(v).some((t) => rest.has(t))) { rest.delete(v); trimmed = true; }
+    }
+    const through = [...rest].sort();
+    problems.push(`the plan's nearest-node edges hold a cycle through ${through.slice(0, 10).join(', ')}` +
+      (through.length > 10 ? ` and ${through.length - 10} more` : ''));
+  }
   return problems;
 }
 // pg-validate:end

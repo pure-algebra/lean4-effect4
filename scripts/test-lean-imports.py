@@ -34,6 +34,18 @@ class HeaderImports(unittest.TestCase):
     def test_guillemets(self):
         self.assertEqual(header_imports('import «my mod».X\n'), ['«my mod».X'])
 
+    def test_quoted_plain_part(self):
+        # Lean reads `«Effect4»` as `Effect4` (HCF-01)
+        self.assertEqual(header_imports('import «Effect4».Program.Ty\n'), ['Effect4.Program.Ty'])
+
+    def test_module_doc_ends_header(self):
+        # `/-!` is a token of the header grammar, not a comment (HCF-02)
+        self.assertEqual(header_imports('import A\n/-! d -/\nimport B\n'), ['A'])
+
+    def test_doc_comment_ends_header(self):
+        # `/--` likewise (HCF-02)
+        self.assertEqual(header_imports('import A\n/-- d -/\nimport B\n'), ['A'])
+
     def test_tree_ty(self):
         # `Ty.lean` opens with `module` and four `public import`s (Codex's control, HC-R8)
         self.assertEqual(imports_of(ROOT / 'src/Effect4/Program/Ty.lean'),
