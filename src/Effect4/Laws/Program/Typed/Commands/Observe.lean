@@ -215,8 +215,8 @@ theorem commandDelivery_idle {root : ProgramSource} {w : World} {m : RState} {y 
   | closeParAwait host _ targets =>
     intro f' hf'
     rw [rfiber?_update_other (other host hauth)] at hf'
-    obtain ⟨answer, error, cols, protocol, reply⟩ := h f' hf'
-    exact ⟨answer, error, cols, protocol, stackReply_races kept reply⟩
+    obtain ⟨answer, error, row, cols, protocol, reply⟩ := h f' hf'
+    exact ⟨answer, error, row, cols, protocol, reply.mono (leHost_refl w) kept⟩
   | finish host _ =>
     intro f' hf'
     rw [rfiber?_update_other (other host hauth)] at hf'
@@ -728,6 +728,14 @@ theorem countdownAt_advance {w : World} {m m' : RState} {waiter : FiberId} {toke
       ptoken presume (fun x hx => exitOk_subN (collected x hx) (subN_unknown _) (subN_unknown _))
       targets lookup, widen ax ex' incx⟩
 
+/-- A countdown's resumed code is administrative: an exit, or a restore over one. -/
+theorem resumePrim_admin (root : ProgramSource) (resumeWith : Resume EffName) (exits : List ExitV) :
+    AdminCode (countdownPark.resumePrim (interpR root.program) resumeWith exits) := by
+  cases resumeWith with
+  | exitsValue => exact .pure _
+  | void => exact .pure _
+  | continueWith name => exact restoreR_admin (.pure _) name
+
 /-- **A finished countdown's continuation is typed at its token's declaration** (`resumePrim`,
 `Machine/Fibers.lean:881-886`): the exits as a value at the pinned list of exits, `void`, or the
 restoring continuation's saved exit. -/
@@ -837,10 +845,10 @@ theorem configTyped_addObserver {root : ProgramSource} {rootTy : EffTy} {w : Wor
     rcases List.mem_append.mp ho' with h | h
     · exact Or.inl h
     · exact Or.inr (List.mem_singleton.mp h)
-  refine configTyped_rupdate_code typed ht rfl (PendingWeaker.refl _) rfl id ?_ ?_
-    (fun c _ h => commandAuthority_view ctl view.races c h)
+  refine configTyped_rupdate_code typed ht rfl (PendingWeaker.refl _) rfl id ⟨.inr rfl, rfl, fun h => h⟩
+    ?_ ?_ (fun c _ h => commandAuthority_view ctl view.races c h)
     (fun hrun reads marker ty d => ((typed.code t hmem hrun reads marker ty d).races
-      (racesKept_of_eq view.races)).congr rfl rfl) ?_
+      (racesKept_of_eq view.races)).congr rfl rfl rfl) ?_
   · intro k hk
     unfold Guard.fiberKeys at hk
     rcases List.mem_append.mp hk with ho | hb
@@ -1226,7 +1234,7 @@ theorem observe_countdown (root : ProgramSource) (rootTy : EffTy) {w : World} {m
             exact wfNone
           have resumeOk : ResumeCode root w waiter token
               (countdownPark.resumePrim (interpR root.program) p.resumeWith exits) := by
-            intro ty declared
+            refine resumeCode_of_typed (fun ty declared => ?_) (resumePrim_admin root p.resumeWith exits)
             have pt := payload.token
             rw [ptok, declared] at pt
             cases pt
