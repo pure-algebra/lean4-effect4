@@ -783,12 +783,12 @@ theorem contAOf_provideLayerWith_other (p : Point) (v : Val) (hne : ∀ x, v ≠
 theorem contAOf_provideLayerBody (p : Point) (v : Val) :
     Program.contAOf root (.provideLayerBody p) v = provideLayerBodyK root p v := by aesop
 
-theorem contAOf_updateThen (u : Env.ContextUpdate) (body : Region) (v : Val) :
-    Program.contAOf root (.updateThen u body) v = updateThenK root u body v := by aesop
+theorem contAOf_updateThen (u : Env.ContextUpdate) (body : Region) (flag : Bool) (v : Val) :
+    Program.contAOf root (.updateThen u body flag) v = updateThenK root u body flag v := by aesop
 
-theorem contAOf_bodyThen (body : Region) (previous : Ctx) (v : Val) :
-    Program.contAOf root (.bodyThen body previous) v =
-      Prim.onExit (regionCode root body) (.restoreCtx previous) false := by aesop
+theorem contAOf_bodyThen (body : Region) (previous : Ctx) (flag : Bool) (v : Val) :
+    Program.contAOf root (.bodyThen body previous flag) v =
+      Prim.onExit (Prim.withFiber (.restoreRegion body flag)) (.restoreCtx previous) false := by aesop
 
 theorem contAOf_buildWithScopeFromContext (q : Point) (scope : Nat) (v : Val) :
     Program.contAOf root (.buildWithScopeFromContext q scope) v = buildWithScopeK q scope v := by aesop
@@ -1277,14 +1277,14 @@ theorem combineWithK_provideMerge (that : Env.Ctx) (merged : Ctx) :
 /-- `updateContext` on the previous context (`internal/effect.ts:2088-2095`): the body as is when
 the map is the same object, else `setContext(next)` and the restoring frame.
 census: layer.provide-effect-scope -/
-theorem updateThenK_context (u : Env.ContextUpdate) (body : Region) (prev : Ctx) :
-    updateThenK root u body (Val.context prev) =
-      (if updateKeepsIdentity u prev.services then regionCode root body
+theorem updateThenK_context (u : Env.ContextUpdate) (body : Region) (prev : Ctx) (flag : Bool) :
+    updateThenK root u body flag (Val.context prev) =
+      (if updateKeepsIdentity u prev.services then Prim.withFiber (.restoreRegion body flag)
        else
         Prim.onSuccess
           (Prim.withFiber (EffThunk.setCtx (Ctx.withServices (u.apply prev.services))))
-          (.bodyThen body prev)) := by
-  simp [updateThenK, Val.context?_context]
+          (.bodyThen body prev flag)) := by
+  simp only [updateThenK, Val.context?_context]
 
 theorem bindServiceK_some (key : ServiceKey) (v : Val) :
     bindServiceK (some key) v = Prim.success (builtContext (Env.Context.empty.addV key v)) := rfl

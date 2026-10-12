@@ -313,6 +313,17 @@
       ]
     },
     {
+      "Note": "Provider entry names retain the existing Region data. Both reference body hooks consume this generated fold and reuse Program.Fold's MonadMorphism.",
+      "Name": "RegionFold",
+      "Flags": ["--reuse-monad-morphism"],
+      "Tool": "tools/Effect4Gen/Fold.lean",
+      "Imports": "Effect4.Program.Compile,Effect4.Program.Fold",
+      "Out": "src\\Effect4\\Laws\\Program\\Folds\\Region.lean",
+      "Guards": "",
+      "Kinds": [],
+      "Types": ["Effect4.Program.Region"]
+    },
+    {
       "Note": "The fold of the value sort's free object: one algebra over Store.Val, its children under List (`list`, `ctor`) as positional folds. No guards yet: the fold's first customers are the seventeen hand traversals of Val the census lists, converted by fold_of.",
       "Name": "ValFold",
       "Flags": ["--module"],

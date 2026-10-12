@@ -55,6 +55,8 @@ def bodyR (interp : RInterp) : Body → RProgram
     onExitR (interp.suspendBody (.body q)) fun _ => fiberValR (.setContext previous) rfl
   -- a layer's build (the join), through the interpreter's body hook on the fork thunk
   | .layerBuild q m scope => interp.suspendBody (.forkLayer q m scope)
+  | .region body => regionBodyR (fun point => interp.suspendBody (.body point)) (fun point memo scope => interp.suspendBody (.forkLayer point memo scope)) body
+  | .contextEntry update body flag => contextEntryR update body flag
 
 /-- Walk saved slots in the same order as `getCont`: run hooks before testing
 the demanded arm, re-read the mask for failure skipping, and visit a cleanup's

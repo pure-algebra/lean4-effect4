@@ -194,6 +194,8 @@ def denoteBody (root : NativeEff) : Body → RProgram
   | .acquireIn p ctx => acquireInR (denoteAt root (p.child 0)) p ctx
   | .release q previous => onExitR (denoteAt root q) fun _ => fiberValR (.setContext previous) rfl
   | .layerBuild q m scope => layerBuildR root q m scope
+  | .region body => regionBodyR (denoteAt root) (layerBuildR root) body
+  | .contextEntry update body flag => contextEntryR update body flag
 
 /-- `Stores.raceSettleProgram` at the term instance: the exit alone, or the masked
 race-named cleanup then the exit (`internal/effect.ts:1510-1514`, D6a). -/
