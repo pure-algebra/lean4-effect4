@@ -58,6 +58,21 @@ def bodyR (interp : RInterp) : Body → RProgram
   | .region body => regionBodyR (fun point => interp.suspendBody (.body point)) (fun point memo scope => interp.suspendBody (.forkLayer point memo scope)) body
   | .contextEntry update body flag => contextEntryR update body flag
 
+/-- The exit a walk carries past a mask slot it does not stop at. Where the slot makes an
+interrupted fiber interruptible, latest's walk skips the restoring replacement and adds the
+recorded interrupt to a failure (Effect 4.0.1 `internal/core.ts:580-608`); rc.112 passes the
+failure unchanged. Signed divergence U-01; census: checkpoint.exit-failcause-skip -/
+def maskPassExit (flag : Bool) (interrupted : CauseV) : ExitV → ExitV
+  | .failure cause => if flag then .failure (Cause.combine cause interrupted) else .failure cause
+  | .success value => .success value
+
+@[simp] theorem maskPassExit_false (interrupted : CauseV) (ex : ExitV) :
+    maskPassExit false interrupted ex = ex := by
+  cases ex <;> rfl
+
+@[simp] theorem maskPassExit_success (flag : Bool) (interrupted : CauseV) (value : Val) :
+    maskPassExit flag interrupted (.success value) = .success value := rfl
+
 /-- Walk saved slots in the same order as `getCont`: run hooks before testing
 the demanded arm, re-read the mask for failure skipping, and visit a cleanup's
 pushed mask before the older slots. `some exit` means no slot answered. An
@@ -76,7 +91,7 @@ def popR (interp : RInterp) (ex : ExitV) : List ScopeFrame → RSaved → RSaved
       match frame.interruptedCause with
       | some cause =>
         if flag && !failing then ({ frame with current := .pure (.failure cause) }, none)
-        else popR interp ex rest frame
+        else popR interp (maskPassExit flag cause ex) rest frame
       | none => popR interp ex rest frame
     | .resume kind next =>
       let flag := frame.interruptible

@@ -164,7 +164,7 @@ theorem native_success (machine : Effect4.Program.NativeMachine) (fiber : HostTi
     (fun state kind => AnswerFlow.saved_mask (model machine.completedExits)
       (interpreter machine.completedExits).toPrimInterp state kind true)
     (interpreter machine.completedExits) machine.state input output machine fiber yielding (.success value)
-    body (.fin (formPoint captured fuel delay n error)) false program good
+    body (.fin (formPoint captured fuel delay n error)) false program good (fun _ wrong => nomatch wrong)
     (AnswerFlow.stack_path (model machine.completedExits) (interpreter machine.completedExits).toPrimInterp stack)
     chosen (form_program machine.completedExits captured fuel delay n error _) installed
   obtain ⟨stateKept, head, code, path⟩ := projected
@@ -173,12 +173,17 @@ theorem native_success (machine : Effect4.Program.NativeMachine) (fiber : HostTi
   exact ⟨head, code, AnswerFlow.path_stack (model machine.completedExits)
     (interpreter machine.completedExits).toPrimInterp path⟩
 
-/-- The real native failed form exit publishes the delivered cause after actual interrupted-handler selection. -/
+/-- The real native failed form exit publishes the delivered cause after actual interrupted-handler selection.
+Latest's walk adds a recorded interrupt past a skipped restoring mask, so the numeric cause class
+must absorb the fiber's recorded interrupt (`absorbs`); a fiber with none meets it
+(`AnswerFlow.External.absorbsInterrupt_none`). -/
 theorem native_failure (machine : Effect4.Program.NativeMachine) (fiber : HostTimeoutEvaluation.NativeFiber)
     (yielding : Bool) (input output : HostTimeoutNumberFlow.Kind) (cause : CauseV)
     (captured : Point) (fuel delay : Nat) (n : Fin 4) (error : Val) (body : NCode)
     (current : fiber.frame.current = .failure cause)
     (good : CauseAt machine.state input cause)
+    (absorbs : AnswerFlow.External.AbsorbsInterrupt (model machine.completedExits) machine.state
+      fiber.frame.interruptedCause)
     (stack : AnswerFlow.StackAt (model machine.completedExits) (interpreter machine.completedExits).toPrimInterp
       machine.state input output fiber.frame.stack)
     (chosen : (fiber.frame.getCont .contE true (some cause)).answer =
@@ -215,7 +220,7 @@ theorem native_failure (machine : Effect4.Program.NativeMachine) (fiber : HostTi
     (fun state kind => AnswerFlow.saved_mask (model machine.completedExits)
       (interpreter machine.completedExits).toPrimInterp state kind true)
     (interpreter machine.completedExits) machine.state input output machine fiber yielding (.failure cause)
-    body (.fin (formPoint captured fuel delay n error)) false program good
+    body (.fin (formPoint captured fuel delay n error)) false program good (fun _ _ => absorbs)
     (AnswerFlow.stack_path (model machine.completedExits) (interpreter machine.completedExits).toPrimInterp stack)
     chosen (form_program machine.completedExits captured fuel delay n error _) installed
   obtain ⟨stateKept, head, code, path⟩ := projected

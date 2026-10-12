@@ -52,7 +52,8 @@ theorem hooks (root : NativeEff) (table : RowTable) (completed : List (FiberId �
     exact Rows.of_allocated (scopeLinkFiber_allocated mode scope id held.allocated step)
       (Effect4.Machine.scopeLinkFiber_keysFresh mode scope id held.2.2 step)
   · intro scope exit flag id state next code held step
-    change (storesCloseScope scope exit flag state).map (fun r => (r.1, embed r.2)) = some (next, code) at step
+    change (storesCloseScope scope exit flag state).map (fun r => (r.1, r.2.map embed)) =
+      some (next, code) at step
     obtain ⟨⟨changed, program⟩, closed, eq⟩ := Option.map_eq_some_iff.mp step
     have same := (Prod.mk.inj eq).1
     change changed = next at same

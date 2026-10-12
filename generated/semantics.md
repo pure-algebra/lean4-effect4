@@ -4479,7 +4479,7 @@ Effect4.Ref.StepsAgree
 
 theorems of the registry's concept-named modules; auxiliary names and planned goals excluded
 
-Tagged: 291; inherited (provisional): 2455; unplaced: 0.
+Tagged: 291; inherited (provisional): 2456; unplaced: 0.
 
 ## Plan
 
@@ -4998,15 +4998,15 @@ flowchart LR
   ne9b72069 --> n356196cb
   ne9b72069 --> n780c81c2
   ne9b72069 --> n218454b
-  ne9b72069 --> nd518fc14
-  ne9b72069 --> n1d35585e
   ne9b72069 --> ndd979abd
   ne9b72069 --> ne59d24c0
+  ne9b72069 --> nd518fc14
   ne9b72069 --> nc3199dff
   ne9b72069 --> nec2861e7
   ne9b72069 --> nd0b1e6c2
   ne9b72069 --> n19f8d2c3
   ne9b72069 --> n75164370
+  ne9b72069 --> n1d35585e
   ne9b72069 --> nedf42a6b
   ne9b72069 --> n13d3cdb0
   n3b97d876 --> ne59d24c0
@@ -5191,7 +5191,7 @@ flowchart LR
 | `fits_scope_inv` | proved | — | — |
 | `closeSeqProtocol` | proved | — | `order_trans`, `fits_mono` |
 | `clause_scoped` | proved | — | `fits_mono`, `order_trans`, `mono`, `order_refl`, `satisfies_empty`, `denotesTyped`, `configTyped_frame`, `hom_eq_cata_ty` |
-| `clause_closeScope` | proved | — | `fits_mono`, `order_trans`, `mono`, `order_refl`, `satisfies_empty`, `subN_never`, `fits_subN`, `scopeParams_child`, `at_child`, `fits_scope_inv`, `seq_typed`, `closeOrder_eq`, `configTyped_frame`, `hom_eq_cata_ty` |
+| `clause_closeScope` | proved | — | `fits_mono`, `order_trans`, `mono`, `subN_never`, `fits_subN`, `order_refl`, `scopeParams_child`, `at_child`, `fits_scope_inv`, `seq_typed`, `closeOrder_eq`, `satisfies_empty`, `configTyped_frame`, `hom_eq_cata_ty` |
 | `scopeParams_ref` | proved | — | — |
 | `scopeParams_layer_below` | proved | — | — |
 | `satisfies_union` | proved | — | — |
@@ -7470,15 +7470,15 @@ flowchart LR
   ne9b72069 --> n356196cb
   ne9b72069 --> n780c81c2
   ne9b72069 --> n218454b
-  ne9b72069 --> nd518fc14
-  ne9b72069 --> n1d35585e
   ne9b72069 --> ndd979abd
   ne9b72069 --> ne59d24c0
+  ne9b72069 --> nd518fc14
   ne9b72069 --> nc3199dff
   ne9b72069 --> nec2861e7
   ne9b72069 --> nd0b1e6c2
   ne9b72069 --> n19f8d2c3
   ne9b72069 --> n75164370
+  ne9b72069 --> n1d35585e
   ne9b72069 --> nedf42a6b
   ne9b72069 --> n13d3cdb0
   n3b97d876 --> ne59d24c0
@@ -8133,7 +8133,7 @@ flowchart LR
 | `fits_scope_inv` | proved | — | — |
 | `closeSeqProtocol` | proved | — | `order_trans`, `fits_mono` |
 | `clause_scoped` | proved | — | `fits_mono`, `order_trans`, `mono`, `order_refl`, `satisfies_empty`, `denotesTyped`, `configTyped_frame`, `hom_eq_cata_ty` |
-| `clause_closeScope` | proved | — | `fits_mono`, `order_trans`, `mono`, `order_refl`, `satisfies_empty`, `subN_never`, `fits_subN`, `scopeParams_child`, `at_child`, `fits_scope_inv`, `seq_typed`, `closeOrder_eq`, `configTyped_frame`, `hom_eq_cata_ty` |
+| `clause_closeScope` | proved | — | `fits_mono`, `order_trans`, `mono`, `subN_never`, `fits_subN`, `order_refl`, `scopeParams_child`, `at_child`, `fits_scope_inv`, `seq_typed`, `closeOrder_eq`, `satisfies_empty`, `configTyped_frame`, `hom_eq_cata_ty` |
 | `scopeParams_ref` | proved | — | — |
 | `scopeParams_layer_below` | proved | — | — |
 | `satisfies_union` | proved | — | — |
@@ -8993,15 +8993,15 @@ flowchart LR
   ne9b72069 --> n356196cb
   ne9b72069 --> n780c81c2
   ne9b72069 --> n218454b
-  ne9b72069 --> nd518fc14
-  ne9b72069 --> n1d35585e
   ne9b72069 --> ndd979abd
   ne9b72069 --> ne59d24c0
+  ne9b72069 --> nd518fc14
   ne9b72069 --> nc3199dff
   ne9b72069 --> nec2861e7
   ne9b72069 --> nd0b1e6c2
   ne9b72069 --> n19f8d2c3
   ne9b72069 --> n75164370
+  ne9b72069 --> n1d35585e
   ne9b72069 --> nedf42a6b
   ne9b72069 --> n13d3cdb0
   n3b97d876 --> ne59d24c0
@@ -9200,7 +9200,7 @@ flowchart LR
 | `fits_scope_inv` | proved | — | — |
 | `closeSeqProtocol` | proved | — | `order_trans`, `fits_mono` |
 | `clause_scoped` | proved | — | `fits_mono`, `order_trans`, `mono`, `order_refl`, `satisfies_empty`, `denotesTyped`, `configTyped_frame`, `hom_eq_cata_ty` |
-| `clause_closeScope` | proved | — | `fits_mono`, `order_trans`, `mono`, `order_refl`, `satisfies_empty`, `subN_never`, `fits_subN`, `scopeParams_child`, `at_child`, `fits_scope_inv`, `seq_typed`, `closeOrder_eq`, `configTyped_frame`, `hom_eq_cata_ty` |
+| `clause_closeScope` | proved | — | `fits_mono`, `order_trans`, `mono`, `subN_never`, `fits_subN`, `order_refl`, `scopeParams_child`, `at_child`, `fits_scope_inv`, `seq_typed`, `closeOrder_eq`, `satisfies_empty`, `configTyped_frame`, `hom_eq_cata_ty` |
 | `scopeParams_ref` | proved | — | — |
 | `scopeParams_layer_below` | proved | — | — |
 | `satisfies_union` | proved | — | — |
@@ -11986,15 +11986,15 @@ flowchart LR
   ne9b72069 --> n356196cb
   ne9b72069 --> n780c81c2
   ne9b72069 --> n218454b
-  ne9b72069 --> nd518fc14
-  ne9b72069 --> n1d35585e
   ne9b72069 --> ndd979abd
   ne9b72069 --> ne59d24c0
+  ne9b72069 --> nd518fc14
   ne9b72069 --> nc3199dff
   ne9b72069 --> nec2861e7
   ne9b72069 --> nd0b1e6c2
   ne9b72069 --> n19f8d2c3
   ne9b72069 --> n75164370
+  ne9b72069 --> n1d35585e
   ne9b72069 --> nedf42a6b
   ne9b72069 --> n13d3cdb0
   n8a26d3b --> n356196cb
@@ -12565,7 +12565,7 @@ flowchart LR
 | `compiled_region_bracket_of_prefix` | proved | — | `compiled_region_bracket`, `stepped_live`, `drive` |
 | `drive` | proved | — | `StackRegion.command`, `evaluatePrim_producer`, `guarded_driveStep_liveTransports` |
 | `settle_callback` | proved | — | `fits_subN`, `fits_mono`, `subN_never`, `subN_refl`, `order_refl`, `scopeParams_child`, `at_child`, `order_trans`, `fits_scope_inv`, `seq_typed`, `closeOrder_eq`, `mono`, `satisfies_empty`, `configTyped_frame`, `hom_eq_cata_ty` |
-| `clause_closeScope` | proved | — | `fits_mono`, `order_trans`, `mono`, `order_refl`, `satisfies_empty`, `subN_never`, `fits_subN`, `scopeParams_child`, `at_child`, `fits_scope_inv`, `seq_typed`, `closeOrder_eq`, `configTyped_frame`, `hom_eq_cata_ty` |
+| `clause_closeScope` | proved | — | `fits_mono`, `order_trans`, `mono`, `subN_never`, `fits_subN`, `order_refl`, `scopeParams_child`, `at_child`, `fits_scope_inv`, `seq_typed`, `closeOrder_eq`, `satisfies_empty`, `configTyped_frame`, `hom_eq_cata_ty` |
 | `clause_scoped` | proved | — | `fits_mono`, `order_trans`, `mono`, `order_refl`, `satisfies_empty`, `denotesTyped`, `configTyped_frame`, `hom_eq_cata_ty` |
 | `foreignFinalizer_ambient` | proved | — | `subN_never`, `fits_subN`, `fits_mono`, `order_refl`, `scopeParams_child`, `at_child`, `order_trans` |
 | `compiled_mask_chain_runs` | proved | — | `evaluateNative_maskChain`, `evaluatePrim_producer`, `driveState_lift` |

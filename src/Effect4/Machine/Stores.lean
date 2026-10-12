@@ -1937,27 +1937,29 @@ def storesCloseScopeUnsafe (scope : Nat) (exit : ExitV) (_closerInterruptible : 
     | [fin] => some (finProgram fin exit)
     | _ => some (Prim.suspend (Thunk.body (ProgName.closeWalk strategy order exit))))
 
-/-- `Scope.close(scope, exit)` (`internal/effect.ts:3775-3776`): `scopeCloseUnsafe(...) ??
-void_`, read off the unsafe close's snapshot — void for an empty or already closed scope, the walk
-for two or more finalizers, which answers `void` itself (`exitAsVoidAll`, `:3826`). `none` is an
-unknown scope key, which the machine turns into `Stuck.unknownScope` — a live frontier, never a
-cause (S2-M7). A lone finalizer runs and the close then answers `void`
-(`Prim.onSuccessConst`; a failure, defect or interrupt of the finalizer passes through): rc.112
-declares `Scope.close` at `Effect<void>` (`Scope.ts:567`) but passes on the lone finalizer's
-effect as `scopeCloseUnsafe` returns it (`:3788-3789`, `:3794-3795`), so the value its type
-promises away is voided here, a signed divergence (decisions row 151 (a″); `U-02` in
+/-- `Scope.close(scope, exit)`, read off the unsafe close's snapshot. No program is `void_`, for an
+empty or already closed scope. The walk for two or more finalizers answers `void` itself
+(`exitAsVoidAll`, `:3826`). `none` is an unknown scope key, which the machine turns into
+`Stuck.unknownScope` — a live frontier, never a cause (S2-M7). The machine masks the closer before
+it runs a program (`RunInterp.closeScope`), as latest's `scopeClose` does
+(`vendor/effect-4.0.1/src/internal/effect.ts:3929-3935`); rc.112's close is an unmasked `suspend`
+(`internal/effect.ts:3775-3776`), a signed divergence. A lone finalizer runs and the close then
+answers `void` (`Prim.onSuccessConst`; a failure, defect or interrupt of the finalizer passes
+through): rc.112 declares `Scope.close` at `Effect<void>` (`Scope.ts:567`) but passes on the lone
+finalizer's effect as `scopeCloseUnsafe` returns it (`:3788-3789`, `:3794-3795`), so the value its
+type promises away is voided here, a signed divergence (decisions row 151 (a″); `U-02` in
 `docs/UPSTREAM-BACKLOG.md`). The unsafe close itself stays rc.112's, for the `scoped` exit. -/
 def storesCloseScope (scope : Nat) (exit : ExitV) (_closerInterruptible : Bool)
-    (state : Stores) : Option (Stores × Program) := do
+    (state : Stores) : Option (Stores × Option Program) := do
   let (state, strategy, order) ← scopeCloseSnapshot scope exit state
   return (state, match order with
-    | [] => Prim.success Val.unit
-    | [fin] => Prim.onSuccessConst (finProgram fin exit) (Prim.success Val.unit)
-    | _ => Prim.suspend (Thunk.body (ProgName.closeWalk strategy order exit)))
+    | [] => none
+    | [fin] => some (Prim.onSuccessConst (finProgram fin exit) (Prim.success Val.unit))
+    | _ => some (Prim.suspend (Thunk.body (ProgName.closeWalk strategy order exit))))
 
 /-- `Scope.close` writes the unsafe close's state: the two read one snapshot. -/
 theorem storesCloseScope_unsafe {scope : Nat} {exit : ExitV} {flag : Bool} {state s' : Stores}
-    {code : Program} (h : storesCloseScope scope exit flag state = some (s', code)) :
+    {code : Option Program} (h : storesCloseScope scope exit flag state = some (s', code)) :
     ∃ program, storesCloseScopeUnsafe scope exit flag state = some (s', program) := by
   unfold storesCloseScope at h
   unfold storesCloseScopeUnsafe

@@ -177,6 +177,11 @@ def main():
         if parks != sorted(['pAcquireHandle', 'pSqlite', 'pKv', 'pSqlFail', 'pSqlCatch', 'pSqlExit',
                             'pSqlOrDie', 'pJoinedFirstNumber', 'pJoinedFirstString']):
             sys.exit(f'FAIL truth: the HC-2 signed fixtures are {parks}, not the nine of decisions row 343')
+        # LATEST (decisions row 359): where the machine follows Effect 4.0.1 and rc.112 differs.
+        latest = sorted(row['program'] for row in json.loads((Path(work)/'result.json').read_text())['rows']
+                        if row.get('exception') == 'LATEST')
+        if latest != ['closeInterruptedMidFinalizer', 'poisonNoHandler']:
+            sys.exit(f'FAIL truth: the LATEST signed fixtures are {latest}, not those of decisions row 359')
         # DI-49: the modules rc.112 just ran, and the adapter they call, under the pinned
         # compiler. The config is copied beside them so that `generated/` and `prelude.ts`
         # resolve as they do in the tree, and `effect`/`@types/bun` through the link above.
@@ -223,7 +228,7 @@ def main():
         for file in fresh.glob('*') if fresh.is_dir() else []:
             if file.read_bytes() != (tapes/file.name).read_bytes():
                 sys.exit(f'FAIL truth: tape {file.name} drifted; rc.112 answered differently from the committed tape')
-    print('PASS truth: pinned corpus, bounded differential and the signed U-01 and HC-2 divergences checked; '
+    print('PASS truth: pinned corpus, bounded differential and the signed U-01, HC-2 and LATEST divergences checked; '
           'the regenerated modules type-check')
     return 0
 

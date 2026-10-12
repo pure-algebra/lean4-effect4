@@ -314,7 +314,7 @@ theorem closeScopeUnsafe_state (scope : Nat) (exit : ExitV) (mask : Bool)
 
 theorem closeScope_state (p : NativeEff) (table : RowTable) (completed)
     {m : NativeMachine} (state : GuardState m) (scope : Nat) (exit : ExitV)
-    (mask : Bool) (fiber : FiberId) (stores : Stores) (code : NCode)
+    (mask : Bool) (fiber : FiberId) (stores : Stores) (code : Option NCode)
     (h : (interpAt p completed table).closeScope scope exit mask fiber m.state = some (stores, code)) :
     StateStep m {m with state := stores} := by
   change Option.map _ (storesCloseScope scope exit mask m.state) = _ at h
@@ -580,8 +580,8 @@ theorem withFiber_step (p : NativeEff) (table : RowTable) (completed)
       all_goals aesop (add simp [observerKeys]))
     split
     · exact .refl state
-    · rename_i stores code hs
-      exact closeScope_state p table completed state scope exit _ _ stores code hs
+    · next stores hs => exact closeScope_state p table completed state scope exit _ _ stores none hs
+    · next stores code hs => exact closeScope_state p table completed state scope exit _ _ stores (some code) hs
   case closePar finalizers =>
     apply NativeStep.keyless ?_ (by
       intro target observer observed

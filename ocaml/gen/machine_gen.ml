@@ -61,7 +61,7 @@ and ('nu, 's, 'b, 'e, 'd, 'i, 'a, 'ch, 'st, 'k) run_interp = {
   scope_status : int -> 'st -> ('b, 'e, 'd, 'i, 'a) exit_ option option;
   scope_link_fiber : scope_mode -> int -> fiber_id -> 'st -> ('st * int) option;
   drop_finalizer : int -> int -> 'st -> 'st option;
-  close_scope : int -> ('b, 'e, 'd, 'i, 'a) exit_ -> bool -> fiber_id -> 'st -> ('st * 'k) option;
+  close_scope : int -> ('b, 'e, 'd, 'i, 'a) exit_ -> bool -> fiber_id -> 'st -> ('st * 'k option) option;
   ambient_scope : 'ch -> int option;
   budget_of : 'ch -> int * bool;
   empty_context : 'ch;
@@ -98,6 +98,7 @@ and ('nu, 'b, 'e, 'd, 'i, 'a, 'k, 'f) fiber_core = {
   failure : ('e, 'd, 'i, 'a) cause -> 'k;
   on_success : 'k -> 'nu -> 'k;
   yield_before : 'k -> 'k;
+  enter_uninterruptible : 'f -> 'f;
 }
 and parked = Parked_notParked | Parked_withGuard of int
 and ('e, 'd, 'i, 'a) reason = Reason_fail of 'e * 'a reason_annotations | Reason_die of 'd * 'a reason_annotations | Reason_interrupt of 'i option * 'a reason_annotations

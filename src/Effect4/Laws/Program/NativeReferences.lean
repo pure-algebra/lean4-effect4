@@ -37,10 +37,11 @@ theorem close_unsafe_refs (scope : Nat) (exit : ExitV) (flag : Bool) (state next
 
 /-- Public scope closure likewise retains the reference heap. -/
 theorem close_refs (root : NativeEff) (completed) (table : RowTable) (scope : Nat) (exit : ExitV)
-    (flag : Bool) (fiber : FiberId) (state next : Stores) (code : NCode)
+    (flag : Bool) (fiber : FiberId) (state next : Stores) (code : Option NCode)
     (found : (interpAt root completed table).closeScope scope exit flag fiber state = some (next, code)) :
     next.refs = state.refs := by
-  change (storesCloseScope scope exit flag state).map (fun r => (r.1, embed r.2)) = some (next, code) at found
+  change (storesCloseScope scope exit flag state).map (fun r => (r.1, r.2.map embed)) =
+    some (next, code) at found
   obtain ⟨pair, closed, eq⟩ := Option.map_eq_some_iff.mp found
   cases eq
   unfold storesCloseScope at closed
@@ -181,8 +182,10 @@ theorem action_refs (root : NativeEff) (completed) (table : RowTable) (m : Nativ
     rw [found] at kept; exact kept
   case case17 entrants site => rfl
   case case18 entrants site => rfl
-  case case25 scope exit state program found => exact close_refs root completed table scope exit _ _ m.state state program found
-  case case26 programs after children found =>
+  case case25 scope exit state found => exact close_refs root completed table scope exit _ _ m.state state none found
+  case case26 scope exit state program found =>
+    exact close_refs root completed table scope exit _ _ m.state state (some program) found
+  case case27 programs after children found =>
     have kept := fork_finalizer_refs root completed table m fiber programs
     rw [found] at kept; exact kept
   all_goals rfl

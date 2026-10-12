@@ -252,7 +252,7 @@ theorem close_scope_debit (root : NativeEff) (q : List Nat) (table : RowTable)
   | none =>
     have close : (interpAt root m.completedExits table).closeScope scope exit fiber.frame.interruptible fiber.id m.state = none := by
       change (storesCloseScope scope exit fiber.frame.interruptible m.state).map
-        (fun result => (result.1, embed result.2)) = _
+        (fun result => (result.1, result.2.map embed)) = _
       rw [step]
       rfl
     simp only [evaluatePrim.withFiber, close]
@@ -260,12 +260,13 @@ theorem close_scope_debit (root : NativeEff) (q : List Nat) (table : RowTable)
   | some next =>
     obtain ⟨state, program⟩ := next
     have close : (interpAt root m.completedExits table).closeScope scope exit fiber.frame.interruptible fiber.id m.state =
-        some (state, embed program) := by
+        some (state, program.map embed) := by
       change (storesCloseScope scope exit fiber.frame.interruptible m.state).map
-        (fun result => (result.1, embed result.2)) = _
+        (fun result => (result.1, result.2.map embed)) = _
       rw [step]
       rfl
-    have zero : current root q (embed program) = 0 := by
+    have zero : ∀ code, program = some code → current root q (embed code) = 0 := by
+      intro code same
       unfold storesCloseScope at step
       cases snapshot : scopeCloseSnapshot scope exit m.state with
       | none => rw [snapshot] at step; cases step
@@ -274,23 +275,38 @@ theorem close_scope_debit (root : NativeEff) (q : List Nat) (table : RowTable)
         have slots := close_snapshot_at root scope exit m.state after strategy order owned snapshot
         simp only [snapshot, Option.pure_def] at step
         cases order with
-        | nil => cases step; rfl
+        | nil => cases step; cases same
         | cons first rest =>
           cases rest with
           | nil =>
             cases step
+            cases same
             have finZero := fin_program_zero root q clear first exit (slots.2.1 first (.head _))
             simpa only [embed, current, cata_prim, name, push, Nat.add_zero] using finZero
           | cons second tail =>
             cases step
+            cases same
             change thunk root q (.store (.body (.closeWalk strategy (first :: second :: tail) exit))) = 0
             rfl
-    simp only [evaluatePrim.withFiber, close]
-    unfold Debit frame
-    dsimp only
-    rw [zero]
-    change recorded q m + outside root q fiber.id m + _ ≤ recorded q m + outside root q fiber.id m + _
-    omega
+    cases program with
+    | none =>
+      simp only [evaluatePrim.withFiber, close, Option.map_none]
+      unfold Debit frame
+      dsimp only
+      change recorded q m + outside root q fiber.id m + _ ≤ recorded q m + outside root q fiber.id m + _
+      simp only [current, cata_prim]
+      omega
+    | some program =>
+      have closing := zero program rfl
+      simp only [evaluatePrim.withFiber, close, Option.map_some]
+      unfold Debit frame
+      dsimp only
+      change recorded q m + outside root q fiber.id m + _ ≤ recorded q m + outside root q fiber.id m + _
+      rw [closing]
+      unfold FrameFiber.uninterruptible
+      split
+      all_goals simp only [List.map_cons, List.sum_cons, saved, Nat.zero_add]
+      all_goals omega
 
 /-- An actual interpreted fork spends the suspension reservation which produced it.
 Consumer: actual Workers and Atomic history readers. -/

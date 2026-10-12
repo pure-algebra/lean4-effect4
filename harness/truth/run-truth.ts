@@ -807,6 +807,33 @@ const signedU01 = (name: string, scenario: string | null | undefined, lean: Json
 const HOST_PARK_SIGNED = ["pAcquireHandle", "pSqlite", "pKv", "pSqlFail", "pSqlCatch", "pSqlExit",
   "pSqlOrDie", "pJoinedFirstNumber", "pJoinedFirstString"]
 
+/** LATEST signs a program where the machine follows latest (Effect 4.0.1) and rc.112 differs:
+ * one exact exit pair on each entry, fork and sync. The release lane checks the Lean exit
+ * against 4.0.1 (`check-truth-release`). */
+const LATEST_SIGNED = new Map<string, { lean: Json; host: Json; leanSync: Json; hostSync: Json }>([
+  // An explicit `Scope.close` runs its close masked, as latest's `scopeClose` does
+  // (`vendor/effect-4.0.1/src/internal/effect.ts:3929-3935`); rc.112's interrupted closer
+  // loses the later release (`vendor/effect-4.0.0-rc.112/src/internal/effect.ts:3775-3776`).
+  ["closeInterruptedMidFinalizer",
+    { lean: { success: 1 }, host: { success: 0 }, leanSync: { success: 1 }, hostSync: { success: 0 } }],
+  // A masked region fails after an interrupt was recorded, with no handler above it: latest's
+  // walk adds the recorded interrupt (`vendor/effect-4.0.1/src/internal/core.ts:580-608`);
+  // rc.112's passes the failure unchanged (`vendor/effect-4.0.0-rc.112/src/internal/core.ts:529-547`).
+  ["poisonNoHandler", {
+    lean: { success: [{ failure: { reasons: [{ fail: 42 }, { interrupt: 2 }] } }, true, true] },
+    host: { success: [{ failure: { reasons: [{ fail: 42 }] } }, true, false] },
+    leanSync: { success: [{ failure: { reasons: [{ fail: 42 }, { interrupt: 2 }] } }, true, true] },
+    hostSync: { success: [{ failure: { reasons: [{ fail: 42 }] } }, true, false] } }]
+])
+
+const signedLatest = (name: string, scenario: string | null | undefined, lean: Json | null,
+  host: Json | null, leanSync: Json | null, hostSync: Json | null, parked: boolean): boolean => {
+  const pair = LATEST_SIGNED.get(name)
+  return pair !== undefined && scenario == null && !parked &&
+    deepEqual(lean, pair.lean) && deepEqual(host, pair.host) &&
+    deepEqual(leanSync, pair.leanSync) && deepEqual(hostSync, pair.hostSync)
+}
+
 /** The schedule with every park, resume and restart triple of one fiber removed, and their count. */
 const withoutParks = (schedule: string[]): { rows: string[]; parks: number } => {
   const rows: string[] = []
@@ -869,6 +896,23 @@ const selfTestDivergence = (): number => {
     ["host park: settled sync entry rejected", !park("pSqlite", ok, ok, parkedRun, 1, ok)],
     ["host park: scenario rejected", !park("pSqlite", ok, ok, parkedRun, 1, die, ok, "U-01")],
     ["host park: parked host rejected", !park("pSqlite", ok, ok, parkedRun, 1, die, ok, null, true)])
+  const one: Json = { success: 1 }
+  const zero: Json = { success: 0 }
+  const latest = (n = "closeInterruptedMidFinalizer", l = one, h = zero, lsync = one, hsync = zero,
+    sc: string | null = null, parked = false) => signedLatest(n, sc, l, h, lsync, hsync, parked)
+  cases.push(
+    ["latest: exact signed pair", latest()],
+    ["latest: unsigned fixture rejected", !latest("pScope")],
+    ["latest: rc.112's answer on the Lean face rejected", !latest("closeInterruptedMidFinalizer", zero)],
+    ["latest: changed host exit rejected", !latest("closeInterruptedMidFinalizer", one, one)],
+    ["latest: sync disagreement rejected", !latest("closeInterruptedMidFinalizer", one, zero, zero)],
+    ["latest: scenario rejected", !latest("closeInterruptedMidFinalizer", one, zero, one, zero, "U-01")],
+    ["latest: parked host rejected", !latest("closeInterruptedMidFinalizer", one, zero, one, zero, null, true)])
+  const pinPoison: Json = { success: [{ failure: { reasons: [{ fail: 42 }] } }, true, false] }
+  const latestPoison: Json = { success: [{ failure: { reasons: [{ fail: 42 }, { interrupt: 2 }] } }, true, true] }
+  cases.push(
+    ["latest: the walk's added interrupt signed", latest("poisonNoHandler", latestPoison, pinPoison, latestPoison, pinPoison)],
+    ["latest: the pin's walk on the Lean face rejected", !latest("poisonNoHandler", pinPoison, pinPoison, pinPoison, pinPoison)])
   const failures = cases.filter(([, pass]) => !pass).map(([name]) => name)
   console.log(JSON.stringify({ kind: "signed-divergence-controls", checks: cases.length, failures }))
   return failures.length === 0 ? 0 : 1
@@ -886,7 +930,7 @@ interface Row {
   /** Present when the program has a client through a service's key: whether the client's exit
    * on rc.112 is the machine's exit of `main`, the same client over the definitions. */
   clientAgree?: boolean
-  exception?: "U-01" | "HC-2"
+  exception?: "U-01" | "HC-2" | "LATEST"
   scenario?: string
   notes: string[]
   host: Observation | null
@@ -1014,7 +1058,10 @@ const main = async (): Promise<number> => {
       entry.run.schedule, hostFork.schedule, hostFork.tape.length, entry.runSync.exit, hostSync.exit,
       hostFork.parked)
     if (hc2) notes.push("HC-2 signed divergence: each host call parks on the Lean face and is answered inline by rc.112 (decisions row 343)")
-    const exception = u01 ? "U-01" as const : hc2 ? "HC-2" as const : undefined
+    const latest = signedLatest(entry.name, entry.scenario, entry.run.exit, hostFork.exit,
+      entry.runSync.exit, hostSync.exit, hostFork.parked)
+    if (latest) notes.push("LATEST signed divergence: the machine follows Effect 4.0.1 here (decisions row 359)")
+    const exception = u01 ? "U-01" as const : hc2 ? "HC-2" as const : latest ? "LATEST" as const : undefined
     rows.push({
       ...(exception ? { exception } : {}),
       ...(entry.scenario == null ? {} : { scenario: entry.scenario }),

@@ -221,18 +221,19 @@ Consumer: the native scope-close debit and command closure. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem close_program_credits (q : List Nat) (strategy : FinalizerStrategy)
     (order : List FinName) (exit : ExitV) :
-    currentCredits q (embed (match order with
-      | [] => Prim.success Val.unit
-      | [fin] => Prim.onSuccessConst (finProgram fin exit) (Prim.success Val.unit)
-      | _ => Prim.suspend (Thunk.body (ProgName.closeWalk strategy order exit)))) =
+    (match order with
+      | [] => none
+      | [fin] => some (Prim.onSuccessConst (finProgram fin exit) (Prim.success Val.unit))
+      | _ => some (Prim.suspend (Thunk.body (ProgName.closeWalk strategy order exit)))).elim 0
+        (fun program => currentCredits q (embed program)) =
       orderCredits q order := by
   cases order with
   | nil => rfl
   | cons fin rest =>
     cases rest with
     | nil =>
-      simp only [embed, currentCredits, fin_program_credits, Nat.add_zero, orderCredits,
-        List.countP_cons, List.countP_nil, Nat.zero_add, credit]
+      simp only [Option.elim_some, embed, currentCredits, fin_program_credits, Nat.add_zero,
+        orderCredits, List.countP_cons, List.countP_nil, Nat.zero_add, credit]
     | cons second rest => rfl
 
 /-- An active close iterator retains every lower callback reservation.

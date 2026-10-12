@@ -255,9 +255,10 @@ theorem link (q : List Nat) (mode : Supervision.ScopeMode) (scope : Nat) (fiber 
 Consumer: the scope-close evaluator clause of `Execution.history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem close (q : List Nat) (scope : Nat) (exit : ExitV) (masked : Bool)
-    {s next : Stores} {program : Program} (unique : (s.scopes.entries.map ScopeEntry.key).Nodup)
+    {s next : Stores} {program : Option Program} (unique : (s.scopes.entries.map ScopeEntry.key).Nodup)
     (step : storesCloseScope scope exit masked s = some (next, program)) :
-    storedCredits q next.scopes + currentCredits q (embed program) = storedCredits q s.scopes := by
+    storedCredits q next.scopes + program.elim 0 (fun p => currentCredits q (embed p)) =
+      storedCredits q s.scopes := by
   cases found : s.scopes.entryAt scope with
   | none => rw [storesCloseScope_unknown scope exit masked s found] at step; cases step
   | some entry =>

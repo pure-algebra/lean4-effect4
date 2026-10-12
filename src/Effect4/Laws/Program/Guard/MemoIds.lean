@@ -111,7 +111,7 @@ theorem closeScopeUnsafe (scope : Nat) (exit : ExitV) (mask : Bool)
     exact hs
 
 theorem closeScope (p : NativeEff) (table : RowTable) (scope : Nat) (exit : ExitV)
-    (mask : Bool) (closer : FiberId) {s t : Stores} {code : NCode} (hs : s.MemoIdsOk)
+    (mask : Bool) (closer : FiberId) {s t : Stores} {code : Option NCode} (hs : s.MemoIdsOk)
     (step : (interpOf p table).closeScope scope exit mask closer s = some (t, code)) :
     t.MemoIdsOk := by
   change Option.map _ (storesCloseScope scope exit mask s) = _ at step
@@ -134,7 +134,7 @@ theorem registerAsyncAt (p : NativeEff) (table : RowTable) (completed : List (Fi
 
 theorem closeScopeAt (p : NativeEff) (table : RowTable) (completed : List (FiberId × ExitV))
     (scope : Nat) (exit : ExitV) (mask : Bool) (closer : FiberId)
-    {s t : Stores} {code : NCode} (hs : s.MemoIdsOk)
+    {s t : Stores} {code : Option NCode} (hs : s.MemoIdsOk)
     (step : (interpAt p completed table).closeScope scope exit mask closer s = some (t, code)) :
     t.MemoIdsOk := closeScope p table scope exit mask closer hs step
 

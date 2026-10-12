@@ -51,6 +51,8 @@ instance algebraCore : FiberCore Unit Nat Unit Unit FiberId Unit Code Saved wher
   failure := fun cause => .pure (.failure cause)
   onSuccess := fun code _ => code
   yieldBefore := fun code => .vis true (fun _ => code)
+  -- the algebra fixture has no mask frames and closes no scope: the mask entry is the identity
+  enterUninterruptible := fun f => f
 
 abbrev M := RunMachine Unit Unit Nat Unit Unit FiberId Unit Unit Nat Code Saved Unit
 abbrev F := RunFiber Unit Unit Nat Unit Unit FiberId Unit Unit Code Saved

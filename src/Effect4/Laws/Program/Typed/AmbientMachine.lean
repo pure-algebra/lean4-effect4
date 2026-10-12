@@ -228,6 +228,16 @@ theorem ambientExit_self {w : World} {row : Env.Requirement} {p : AmbientPositio
   | result t s f => exact ⟨⟨h.1, Row.subset_refl _⟩, h.2⟩
   | capturedContext g => exact ⟨⟨h.1, h.2.1, Row.subset_refl _⟩, h.2.2⟩
 
+/-- A typed failure keeps its position and bound after an interrupt-only cause is combined in.
+Consumer: the mask slots of `ambient_popR_typed` (latest's walk, `maskPassExit`; U-01). -/
+theorem ambientExit_combine_interrupts {w : World} {row : Env.Requirement} {p : AmbientPosition}
+    {cause interrupted : CauseV} (h : AmbientExit w row p (.failure cause))
+    (interrupts : ∀ reason ∈ interrupted.reasons, reason.tag = .interrupt) :
+    AmbientExit w row p (.failure (Cause.combine cause interrupted)) := by
+  cases p with
+  | result t s f => exact ⟨exitOk_combine_interrupts h.1 interrupts, h.2⟩
+  | capturedContext g => exact ⟨exitOk_combine_interrupts h.1 interrupts, h.2⟩
+
 /-- A typed failure at a position, bounded by its failure row. -/
 theorem ambientExit_failure {w : World} {row : Env.Requirement} {position : AmbientPosition}
     {c : CauseV} (typed : ExitOk w position.type (.failure c)) (bound : Row.Subset position.failureRow row) :
@@ -471,7 +481,8 @@ theorem ambient_popR_typed (root : ProgramSource) (interp : RInterp) (w : World)
       | some c =>
         cases flag with
         | false =>
-          cases ex <;> simp only [popR, Bool.false_and, Bool.false_eq_true, ↓reduceIte] <;>
+          cases ex <;> simp only [popR, maskPassExit_false, Bool.false_and, Bool.false_eq_true,
+            ↓reduceIte] <;>
             exact ih _ _ _ _ tail hex hcov rfl ⟨hp.recorded, hp.deferred⟩
         | true =>
           cases ex with
@@ -482,8 +493,10 @@ theorem ambient_popR_typed (root : ProgramSource) (interp : RInterp) (w : World)
               (recorded_noShapeDefect _ hp rfl)) (AmbientPosition.inject_bound wf hex))
               ⟨AmbientPosition.inject_bound wf hex, wf⟩
           | failure c' =>
-            simp only [popR, Bool.not_true, Bool.and_false, Bool.false_eq_true, ↓reduceIte]
-            exact ih _ _ _ _ tail hex hcov rfl ⟨hp.recorded, hp.deferred⟩
+            simp only [popR, maskPassExit, Bool.not_true, Bool.and_false, Bool.false_eq_true,
+              ↓reduceIte]
+            exact ih _ _ _ _ tail (ambientExit_combine_interrupts hex (hp.recorded c rfl))
+              (by rw [ambientInput_failure] at hcov ⊢; exact hcov) rfl ⟨hp.recorded, hp.deferred⟩
     | finalizerMask flag wf =>
       obtain ⟨current, stack, interruptible, ic, deferred⟩ := frame
       cases ic with
@@ -491,7 +504,8 @@ theorem ambient_popR_typed (root : ProgramSource) (interp : RInterp) (w : World)
       | some c =>
         cases flag with
         | false =>
-          cases ex <;> simp only [popR, Bool.false_and, Bool.false_eq_true, ↓reduceIte] <;>
+          cases ex <;> simp only [popR, maskPassExit_false, Bool.false_and, Bool.false_eq_true,
+            ↓reduceIte] <;>
             exact ih _ _ _ _ tail hex hcov rfl ⟨hp.recorded, hp.deferred⟩
         | true =>
           cases ex with
@@ -502,8 +516,10 @@ theorem ambient_popR_typed (root : ProgramSource) (interp : RInterp) (w : World)
               (recorded_noShapeDefect _ hp rfl)) (AmbientPosition.inject_bound wf hex))
               ⟨AmbientPosition.inject_bound wf hex, wf⟩
           | failure c' =>
-            simp only [popR, Bool.not_true, Bool.and_false, Bool.false_eq_true, ↓reduceIte]
-            exact ih _ _ _ _ tail hex hcov rfl ⟨hp.recorded, hp.deferred⟩
+            simp only [popR, maskPassExit, Bool.not_true, Bool.and_false, Bool.false_eq_true,
+              ↓reduceIte]
+            exact ih _ _ _ _ tail (ambientExit_combine_interrupts hex (hp.recorded c rfl))
+              (by rw [ambientInput_failure] at hcov ⊢; exact hcov) rfl ⟨hp.recorded, hp.deferred⟩
     | @resume p q b kind next ordinary run skip wf =>
       obtain ⟨current, stack, i, ic, deferred⟩ := frame
       change i = _ at hmask

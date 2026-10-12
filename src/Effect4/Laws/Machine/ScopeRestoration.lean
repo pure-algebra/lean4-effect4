@@ -59,34 +59,91 @@ theorem resumeClosedScope_success_pending (interp : PrimInterp ν τ β ε δ ι
     FrameFiber.getCont, FrameFiber.popFrom, Prim.ensure, Prim.answerOf, Prim.passEvents,
     Prim.hasArm, Prim.arms]
 
-/-- The failure arm skips the restoration replacement and steps the original failure through the actual tail. census: checkpoint.exit-failcause-skip -/
+/-- A walk that starts with a carried cause ends with one: a skip only changes the cause it
+carries. A step of `resumeClosedScope_failure_pending`, whose resumed failure is read through
+the carried cause. -/
+theorem popFrom_carriedCause_isSome (demand : Arm) (skip : Bool)
+    (frames : List (Prim ν τ β ε δ ι α)) (fiber : FrameFiber ν τ β ε δ ι α)
+    (cause : Option (Cause ε δ ι α)) :
+    (FrameFiber.popFrom demand skip frames fiber cause).carriedCause.isSome = cause.isSome := by
+  have skipped : ∀ (frame : Prim ν τ β ε δ ι α) (f : FrameFiber ν τ β ε δ ι α)
+      (c : Option (Cause ε δ ι α)), (FrameFiber.skippedCause demand frame f c).isSome = c.isSome := by
+    intro frame f c
+    cases c with
+    | none => rfl
+    | some c =>
+      simp only [FrameFiber.skippedCause]
+      split
+      · split <;> rfl
+      · rfl
+  have pushed : ∀ (f : FrameFiber ν τ β ε δ ι α) (c : Option (Cause ε δ ι α)),
+      (FrameFiber.passPushed demand skip f c).carriedCause.isSome = c.isSome := by
+    intro f c
+    unfold FrameFiber.passPushed
+    split
+    · rfl
+    · dsimp only
+      split
+      · split
+        · exact skipped _ _ _
+        · rfl
+      · rfl
+  induction frames generalizing fiber cause with
+  | nil => rfl
+  | cons frame rest ih =>
+    simp only [FrameFiber.popFrom]
+    split
+    · split
+      · simp only [FrameFiber.passOn, FrameFiber.joinPushed]
+        split <;> simp only [ih, pushed, skipped]
+      · rfl
+    · simp only [FrameFiber.passOn, FrameFiber.joinPushed]
+      split <;> simp only [ih, pushed]
+
+/-- The failure arm skips the restoration replacement. Latest's walk adds the recorded interrupt
+to the failure it carries (Effect 4.0.1 `internal/core.ts:580-608`; signed divergence U-01 from
+rc.112, which passes the failure unchanged), and the actual tail resumes that failure.
+`FrameFiber.resumeCause` reads no current primitive. census: checkpoint.exit-failcause-skip -/
 theorem resumeClosedScope_failure_pending (interp : PrimInterp ν τ β ε δ ι α)
     (machine : ScopeMachine.State κ φ β ε δ ι α) (current : Prim ν τ β ε δ ι α)
     (rest : List (Prim ν τ β ε δ ι α)) (failed pending : Cause ε δ ι α)
     (completed : ScopeMachine.restore? machine = some (.failure failed)) :
     resumeClosedScope interp machine ⟨current, .setInterruptible true :: rest, false, some pending, false⟩ =
-      let continued := FrameFiber.step interp ⟨.failure failed, rest, true, some pending, false⟩
+      let continued := (⟨.failure failed, rest, true, some pending, false⟩ :
+        FrameFiber ν τ β ε δ ι α).resumeCause interp (Cause.combine failed pending)
+          (some (.failure (Cause.combine failed pending)))
       some (continued.1,
         [.popped (.setInterruptible true), .ranContAll (.setInterruptible true), .substituted pending]
           ++ continued.2) := by
-  -- The mask hook leaves the cause alone; catches in the tail sanitize it.
   let tail : FrameFiber ν τ β ε δ ι α :=
     ⟨.failure failed, rest, true, some pending, false⟩
   have hpop :
       (⟨.failure failed, .setInterruptible true :: rest, false, some pending, false⟩ :
         FrameFiber ν τ β ε δ ι α).getCont .contE true (some failed) =
       FrameFiber.passOn (.setInterruptible true) (some (.failure pending))
-        (tail.getCont .contE true (some failed)) := by rfl
+        (tail.getCont .contE true (some (Cause.combine failed pending))) := by rfl
+  have hsome := popFrom_carriedCause_isSome .contE true rest
+    ⟨.failure failed, [], true, some pending, false⟩ (some (Cause.combine failed pending))
+  obtain ⟨carried, hcarried⟩ : ∃ carried,
+      (tail.getCont .contE true (some (Cause.combine failed pending))).carriedCause = some carried := by
+    cases he : (tail.getCont .contE true (some (Cause.combine failed pending))).carriedCause with
+    | none =>
+      change (FrameFiber.popFrom .contE true rest ⟨.failure failed, [], true, some pending, false⟩
+        (some (Cause.combine failed pending))).carriedCause = none at he
+      rw [he] at hsome
+      cases hsome
+    | some carried => exact ⟨carried, rfl⟩
   dsimp only [resumeClosedScope]
   rw [completed]
   change some ((⟨.failure failed, .setInterruptible true :: rest, false, some pending, false⟩ :
     FrameFiber ν τ β ε δ ι α).resumeCause interp failed (some (.failure failed))) =
-    let continued := tail.resumeCause interp failed (some (.failure failed))
+    let continued := tail.resumeCause interp (Cause.combine failed pending)
+      (some (.failure (Cause.combine failed pending)))
     some (continued.1,
       [.popped (.setInterruptible true), .ranContAll (.setInterruptible true), .substituted pending]
         ++ continued.2)
   simp only [FrameFiber.resumeCause, hpop, FrameFiber.passOn, Prim.passEvents,
-    Prim.hasArm, Prim.arms, Option.map_some, Option.getD_some, FramePop.deliveredExit,
+    Prim.hasArm, Prim.arms, Option.map_some, Option.getD_some, FramePop.deliveredExit, hcarried,
     show [Arm.contAll].contains Arm.contAll = true from rfl, if_true]
   split
   · rfl
@@ -174,7 +231,9 @@ theorem resumeClosedScope_failure_cleanup
   simp [resumeClosedScope, ScopeMachine.restore?, completed, original,
     Exit.restoreAfterFinalizer, Exit.mergeFinalizer, Prim.ofExit]
 
-/-- Cleanup failure follows the failure-restoration path even when interruption is pending. census: checkpoint.exit-failcause-skip -/
+/-- Cleanup failure follows the failure-restoration path even when interruption is pending: the
+tail resumes the cleanup failure with the pending cause added (latest's walk; U-01), so the
+pending interrupt never replaces it. census: checkpoint.exit-failcause-skip -/
 theorem resumeClosedScope_success_cleanup_failure
     (interp : PrimInterp ν τ β ε δ ι α)
     (machine : ScopeMachine.State κ φ β ε δ ι α)
@@ -184,8 +243,9 @@ theorem resumeClosedScope_success_cleanup_failure
     (completed : ScopeMachine.result? machine = some (.failure cleanup)) :
     resumeClosedScope interp machine
       ⟨current, .setInterruptible true :: rest, false, some pending, false⟩ =
-    (let continued := FrameFiber.step interp
-       ⟨.failure cleanup, rest, true, some pending, false⟩
+    (let continued := (⟨.failure cleanup, rest, true, some pending, false⟩ :
+       FrameFiber ν τ β ε δ ι α).resumeCause interp (Cause.combine cleanup pending)
+         (some (.failure (Cause.combine cleanup pending)))
      some (continued.1,
        [.popped (.setInterruptible true), .ranContAll (.setInterruptible true),
         .substituted pending] ++ continued.2)) := by

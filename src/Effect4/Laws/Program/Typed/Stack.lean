@@ -107,6 +107,32 @@ theorem sanitize_clean_exit {x : RSaved} (hp : InterruptProvenance x) (cause : C
   intro r hr
   exact bne_iff_ne.mpr (Cause.sanitize_clean cause ic hne r hr)
 
+/-- An `ExitOk` failure stays `ExitOk` after an interrupt-only cause is combined in: the
+interrupt reasons fit every error column and carry no shape defect. Latest's walk adds the
+recorded interrupt to a failure it carries past a skipped restoring mask (`maskPassExit`; U-01).
+Consumers: the mask slots of `popR_typed` and `ambient_popR_typed`. -/
+theorem exitOk_combine_interrupts {w : World} {ty : EffTy} {cause interrupted : CauseV}
+    (typed : ExitOk w ty (.failure cause))
+    (interrupts : ∀ reason ∈ interrupted.reasons, reason.tag = .interrupt) :
+    ExitOk w ty (.failure (Cause.combine cause interrupted)) := by
+  obtain ⟨fits, shape⟩ := typed
+  have member := ((fitsExit_failure_iff w ty cause).mp fits).1
+  have side := noShapeDefect_of_interrupts ty interrupted interrupts
+  have combined : NoShapeDefect ty (.failure (Cause.combine cause interrupted)) := by
+    intro reason found
+    rcases (Cause.mem_combine reason cause interrupted).mp found with left | right
+    · exact shape reason left
+    · exact side reason right
+  refine ⟨(fitsExit_failure_iff w ty _).mpr ⟨?_, combined⟩, combined⟩
+  intro reason found
+  rcases (Cause.mem_combine reason cause interrupted).mp found with left | right
+  · exact member reason left
+  · have tag := interrupts reason right
+    cases reason with
+    | fail _ _ => cases tag
+    | die _ _ => trivial
+    | interrupt _ _ => trivial
+
 /-- A recorded cause has only interrupt reasons, so it meets part one's exclusion. -/
 theorem recorded_noShapeDefect (ty : EffTy) {x : RSaved} (hp : InterruptProvenance x)
     {cause : CauseV} (recorded : x.interruptedCause = some cause) :
@@ -177,7 +203,8 @@ theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProto
       | some c =>
         cases flag with
         | false =>
-          cases ex <;> simp only [popR, Bool.false_and, Bool.false_eq_true, ↓reduceIte] <;>
+          cases ex <;> simp only [popR, maskPassExit_false, Bool.false_and, Bool.false_eq_true,
+            ↓reduceIte] <;>
             exact ih _ _ _ _ tail hex ⟨hp.recorded, hp.deferred⟩
         | true =>
           cases ex with
@@ -186,8 +213,10 @@ theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProto
             exact walk_saved _ (TypedProg.pure (strongExit_of_clean w _ c (recorded_clean hp rfl) (recorded_noShapeDefect _ hp rfl)))
               tail ⟨hp.recorded, hp.deferred⟩
           | failure c' =>
-            simp only [popR, Bool.not_true, Bool.and_false, Bool.false_eq_true, ↓reduceIte]
-            exact ih _ _ _ _ tail hex ⟨hp.recorded, hp.deferred⟩
+            simp only [popR, maskPassExit, Bool.not_true, Bool.and_false, Bool.false_eq_true,
+              ↓reduceIte]
+            exact ih _ _ _ _ tail (exitOk_combine_interrupts hex (hp.recorded c rfl))
+              ⟨hp.recorded, hp.deferred⟩
     | finalizerMask flag =>
       obtain ⟨current, stack, interruptible, ic, deferred⟩ := frame
       cases ic with
@@ -195,7 +224,8 @@ theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProto
       | some c =>
         cases flag with
         | false =>
-          cases ex <;> simp only [popR, Bool.false_and, Bool.false_eq_true, ↓reduceIte] <;>
+          cases ex <;> simp only [popR, maskPassExit_false, Bool.false_and, Bool.false_eq_true,
+            ↓reduceIte] <;>
             exact ih _ _ _ _ tail hex ⟨hp.recorded, hp.deferred⟩
         | true =>
           cases ex with
@@ -204,8 +234,10 @@ theorem popR_typed (root : ProgramSource) (interp : RInterp) (hooks : FrameProto
             exact walk_saved _ (TypedProg.pure (strongExit_of_clean w _ c (recorded_clean hp rfl) (recorded_noShapeDefect _ hp rfl)))
               tail ⟨hp.recorded, hp.deferred⟩
           | failure c' =>
-            simp only [popR, Bool.not_true, Bool.and_false, Bool.false_eq_true, ↓reduceIte]
-            exact ih _ _ _ _ tail hex ⟨hp.recorded, hp.deferred⟩
+            simp only [popR, maskPassExit, Bool.not_true, Bool.and_false, Bool.false_eq_true,
+              ↓reduceIte]
+            exact ih _ _ _ _ tail (exitOk_combine_interrupts hex (hp.recorded c rfl))
+              ⟨hp.recorded, hp.deferred⟩
     | resume kind next run skip =>
       obtain ⟨current, stack, i, ic, deferred⟩ := frame
       have hp' : ∀ (c : RProgram) (s : List ScopeFrame) (b : Bool),

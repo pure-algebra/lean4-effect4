@@ -377,9 +377,12 @@ inductive EffThunk
   `interruptible` option, so the acquire always runs masked. -/
   | acquireMasked (p : Point) (ctx : Ctx)
   /-- The release at its resolved point under the finalizer that restores `previous`
-  (`provideContext`, `:2180-2199`): entered through a mask that is the finalizer's own (every
-  path that runs a release is already uninterruptible, `:4021`), so the frame and the term
-  reference share one entry shape. -/
+  (`provideContext`, `:2180-2199`), entered through a mask, so the frame and the term reference
+  share one entry shape. Every path that runs a release is already uninterruptible, so the mask
+  adds no restoring frame there: a close inside a finalizer runs masked (`:4021`), and an explicit
+  `Scope.close` masks the closer first, as latest's `scopeClose` does
+  (`vendor/effect-4.0.1/src/internal/effect.ts:3929-3935`). rc.112's explicit close runs the
+  release at the closer's own mask (`:3775-3776`), a signed divergence. -/
   | releaseMasked (p : Point) (previous : Ctx)
   /-- `getOrElseMemoize`'s `suspend` (`Layer.ts:445-457`): the lookup of the layer at `q` in
   `memoMap`, for a build into `scope`, at run time. -/
@@ -1715,7 +1718,7 @@ def interpOf (root : NativeEff) (table : RowTable := []) :
     | none => none
     | some _ => some { state with scopes := state.scopes.removeFinalizer scope key }
   closeScope := fun scope exit closerInterruptible _closer state =>
-    (storesCloseScope scope exit closerInterruptible state).map fun r => (r.1, embed r.2)
+    (storesCloseScope scope exit closerInterruptible state).map fun r => (r.1, r.2.map embed)
   ambientScope := Ctx.ambientScope
   budgetOf := fun ctx => (ctx.maxOpsBeforeYield, ctx.preventYield)
   emptyContext := emptyCtx

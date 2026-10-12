@@ -88,12 +88,12 @@ theorem withFiber_nested (p : NativeEff) (table : RowTable) (interp : NInterp)
     split
     · exact .simple allSimple_nil
     · exact .owned rfl [] _ rfl allSimple_nil rfl
-  case case12 | case26 =>
+  case case12 | case27 =>
     exact .owned rfl _ _ rfl (allSimple_map _ _ (fun _ => True.intro)) rfl
   case case17 | case18 =>
     unfold beginRace
     exact .simple allSimple_nil
-  case case30 => exact .owned rfl [] _ rfl allSimple_nil rfl
+  case case31 => exact .owned rfl [] _ rfl allSimple_nil rfl
   all_goals exact .simple allSimple_nil
 
 theorem registerRace_nested (p : NativeEff) (table : RowTable)

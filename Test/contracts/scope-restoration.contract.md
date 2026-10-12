@@ -31,8 +31,11 @@ The source is `effect@4.0.0-rc.112`, upstream commit
 Consequently, successful cleanup can resume into pending interruption
 immediately at restoration, before touching an arbitrary outer continuation.
 An already failing restored exit follows the failure evaluator instead: the
-restoration hook runs, its replacement is skipped, and the original failure
-enters the remaining frame step. Arbitrary remaining handlers or cleanup
+restoration hook runs, its replacement is skipped, and the failure with the
+pending cause combined in enters the remaining frame step. This is Effect
+4.0.1's walk (`vendor/effect-4.0.1/src/internal/core.ts:580-608`); rc.112
+passes the original failure (signed divergence U-01; amended 2026-10-12, a
+review event). Arbitrary remaining handlers or cleanup
 masks may then act. Do not strengthen this into an unchanged terminal-cause
 claim for arbitrary continuations.
 
@@ -90,7 +93,7 @@ theorems are required:
 | `resumeClosedScope_unfinished` | Any machine whose phase differs from complete returns none, for every interpreter and fiber. This includes waiting and empty-pending ready states. |
 | `resumeClosedScope_complete` | Running the actual stateful close to its existing bound and adapting it gives the same FrameStep/events and final service state as existing closeExitsM, the exact zero/one/many fold, existing restoreAfterFinalizer, and the real frame step. |
 | `resumeClosedScope_success_pending` | A successful restored exit under a top SetInterruptible true frame, masked flag, pending full cause and false deferred latch becomes that failure primitive immediately. The arbitrary tail, pending cause, true restored flag and exact popped/ranContAll/substituted events are retained. |
-| `resumeClosedScope_failure_pending` | The same boundary with an already failing restored exit equals the actual remaining-tail step on that original failure, with the same three prefix events. No substitute delivery decision or terminal-cause restriction is introduced. |
+| `resumeClosedScope_failure_pending` | The same boundary with an already failing restored exit equals the actual remaining tail's resume of that failure with the pending cause combined in (`Cause.combine failed pending`, latest's walk, U-01; amended 2026-10-12), with the same three prefix events. No substitute delivery decision or terminal-cause restriction is introduced. |
 | `resumeClosedScope_success_no_pending` | With no pending cause, restoration continues the successful exit through the actual tail step and adds only popped/ranContAll events. |
 | `resumeClosedScope_already_masked` | Applying existing uninterruptible to an already masked input changes no adapter result. This is a derived composition law, not a replacement owner of masking. |
 | `resumeClosedScope_masked_continuation` | A successful close with an onSuccess frame under an outer mask takes the actual interp.contA continuation, retaining the mask, full optional pending cause and arbitrary tail. |

@@ -182,6 +182,7 @@ theorem withFiber_pendingOk (i : FInterp) (m : FMachine) (f : FRun) (y : Bool) (
     split
     · exact hf
     · exact pendingOk_of_fields hf rfl
+    · exact pendingOk_of_fields hf rfl
   | closePar finalizers => exact closePar_pendingOk i m f y hf finalizers
   | refuse cause => exact pendingOk_of_fields hf rfl
   | dropObservers token => exact pendingOk_of_fields hf rfl

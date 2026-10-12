@@ -234,8 +234,17 @@ theorem withFiber_under (interp : NInterp) (m : NativeMachine) (f : NFiber) (yie
   | getContext => rfl
   | getId => rfl
   | closeScope scope exit =>
-    cases closed : interp.closeScope scope exit f.frame.interruptible f.id m.state <;>
-      simp only [evaluatePrim.withFiber, fiberUnder, iterUnder, FrameFiber.under, closed]
+    cases closed : interp.closeScope scope exit f.frame.interruptible f.id m.state with
+    | none => simp only [evaluatePrim.withFiber, fiberUnder, iterUnder, FrameFiber.under, closed]
+    | some result =>
+      obtain ⟨state, program⟩ := result
+      cases program with
+      | none => simp only [evaluatePrim.withFiber, fiberUnder, iterUnder, FrameFiber.under, closed]
+      | some program =>
+        simp only [evaluatePrim.withFiber, fiberUnder, iterUnder, FrameFiber.under, closed]
+        cases mask : f.frame.interruptible <;>
+          simp only [FrameFiber.uninterruptible, mask, ↓reduceIte, Bool.false_eq_true]
+        all_goals rfl
   | closePar finalizers =>
     simp only [evaluatePrim.withFiber]
     rw [forkFinalizers_under]

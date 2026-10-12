@@ -172,8 +172,9 @@ theorem withFiber (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν �
     simp only [evaluatePrim.withFiber]
     split
     · exact held
-    · rename_i state code step
-      exact hooks.close scope exit f.frame.interruptible f.id m.state state code held step
+    · next state step => exact hooks.close scope exit f.frame.interruptible f.id m.state state none held step
+    · next state code step =>
+      exact hooks.close scope exit f.frame.interruptible f.id m.state state (some code) held step
   | runIn target scope => exact link_plan interp P hooks m _ scope target _ _ held
   | awaitAll targets => exact (countdown_plan_state interp m f targets .exitsValue false) ▸ held
   | awaitAllFailFast targets => exact (countdown_plan_state interp m f targets .exitsValue true) ▸ held

@@ -1469,19 +1469,21 @@ def passOn (frame : Prim ν σ β ε δ ι α) (replacement : Option (Prim ν σ
 section Carried
 variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
 
-/-- Update only the failure carried past a preempted failure handler. Mask-hook
-replacements are not handlers: `SetInterruptible` has no failure arm.
-Signed divergence U-01 from rc.112 `internal/core.ts:539-545`.
-census: checkpoint.exit-failcause-skip -/
+/-- The failure carried past a frame that the walk skips under interruption. Latest's walk
+(Effect 4.0.1 `internal/core.ts:580-608`) adds the recorded interrupt to the cause it carries,
+and drops `Fail` reasons only where it skips a failure handler. A restoring mask's
+replacement is not a handler: `SetInterruptible` has no failure arm, so its skip adds the
+interrupt alone. rc.112 (`internal/core.ts:539-545`) passes the cause unchanged: signed
+divergence U-01. census: checkpoint.exit-failcause-skip -/
 def skippedCause (demand : Arm) (frame : Prim ν σ β ε δ ι α)
     (fiber : FrameFiber ν σ β ε δ ι α) : Option (Cause ε δ ι α) → Option (Cause ε δ ι α)
   | none => none
   | some cause =>
-    if demand == .contE && frame.hasArm .contE then
-      match fiber.interruptedCause with
-      | some interrupted => some (Cause.sanitize cause interrupted)
-      | none => some cause
-    else some cause
+    match fiber.interruptedCause with
+    | some interrupted =>
+      if demand == .contE && frame.hasArm .contE then some (Cause.sanitize cause interrupted)
+      else some (Cause.combine cause interrupted)
+    | none => some cause
 
 @[simp] theorem skippedCause_none (demand : Arm) (frame : Prim ν σ β ε δ ι α)
     (fiber : FrameFiber ν σ β ε δ ι α) : skippedCause demand frame fiber none = none := rfl
@@ -2434,7 +2436,7 @@ private theorem popFrom_skip_eq_of_no_cause (demand : Arm) :
 theorem skippedCause_no_pending (demand : Arm) (frame : Prim ν σ β ε δ ι α)
     (fiber : FrameFiber ν σ β ε δ ι α) (cause : Option (Cause ε δ ι α))
     (hc : fiber.interruptedCause = none) : skippedCause demand frame fiber cause = cause := by
-  cases cause <;> simp only [skippedCause, hc, ite_self]
+  cases cause <;> simp only [skippedCause, hc]
 
 theorem passPushed_carriedCause_no_pending (demand : Arm) (skip : Bool)
     (fiber : FrameFiber ν σ β ε δ ι α) (cause : Option (Cause ε δ ι α))

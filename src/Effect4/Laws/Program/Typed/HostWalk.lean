@@ -55,12 +55,12 @@ theorem popR_cons (interp : RInterp) (ex : ExitV) (slot : ScopeFrame) (rest : Li
   cases slot with
   | restoreMask flag =>
     cases ic <;> cases flag <;> cases ex <;>
-      simp only [popR, popR_mk, List.nil_append, Bool.false_and, Bool.true_and, Bool.not_false,
-        Bool.not_true, Bool.false_eq_true, ↓reduceIte]
+      simp only [popR, popR_mk, maskPassExit, List.nil_append, Bool.false_and, Bool.true_and,
+        Bool.not_false, Bool.not_true, Bool.false_eq_true, ↓reduceIte]
   | finalizerMask flag =>
     cases ic <;> cases flag <;> cases ex <;>
-      simp only [popR, popR_mk, List.nil_append, Bool.false_and, Bool.true_and, Bool.not_false,
-        Bool.not_true, Bool.false_eq_true, ↓reduceIte]
+      simp only [popR, popR_mk, maskPassExit, List.nil_append, Bool.false_and, Bool.true_and,
+        Bool.not_false, Bool.not_true, Bool.false_eq_true, ↓reduceIte]
   | resume kind next =>
     cases kind with
     | onExit fin =>

@@ -1778,6 +1778,9 @@ theorem withFiber_keepsMask (interp : RunInterp ν σ β ε δ ι α χ St)
   · split
     · exact ⟨MaskAged.refl m, MaskLater.refl f, rfl, fun _ h => nomatch h⟩
     · exact ⟨MaskAged.refl m, MaskLater.refl f, rfl, fun _ h => nomatch h⟩
+    · exact ⟨MaskAged.refl m,
+        ⟨rfl, fun live => live, fun _ base valid => uninterruptible_maskChain base f.frame valid⟩,
+        rfl, fun _ h => nomatch h⟩
   · exact ⟨forkFinalizers_maskAged interp f _ (MaskAged.refl m), MaskLater.refl f,
       noClear_append_of (noClear_map _ (fun _ => rfl) _) rfl, fun _ h => nomatch h⟩
   · exact ⟨MaskAged.refl m, MaskLater.refl f, rfl, fun _ h => nomatch h⟩
