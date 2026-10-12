@@ -511,6 +511,9 @@ def registry : Registry where
       literature := [
         { work := "LynchVaandrager1995", locator := "audit C4", relation := "proofTechnique" }
       ] },
+    { id := "random-descent", concept := "reactive-scheduling", role := .fundamentalProperty
+      title := "Under a bisimulation that is an equivalence, and the local diamond up to it, every complete tape of a step labelled by decisions has one length and an equal end; one complete tape bounds every tape. Nothing of the machine: the checked fragment of decisions row 361 is its use"
+      pointer := .witness `Effect4.Machine.Descent.complete_unique },
     { id := "step-loop-preserves", concept := "reactive-scheduling", role := .preservation
       title := "The loop decision preserves configuration typing"
       pointer := .witness `Effect4.Program.Typed.loop_preserves

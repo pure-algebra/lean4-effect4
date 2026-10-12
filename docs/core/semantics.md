@@ -637,6 +637,13 @@ inductive RunDecision ...
 - **Finite queue fairness (`flush-fair`)**: Callback entry within rounds bound.
   `m.armed.Nodup → FlushReady interp fuel m.armed.length m = true → m.armed.length ≤ rounds → ∀ owner ∈ m.armed, FiredWithin interp fuel rounds m owner = true`
   (`flush_fair` (`src/Effect4/Laws/Machine/Scheduling.lean`)).
+- **Random descent (`random-descent`)**: Take a step labelled by decisions, and an equivalence `R`
+  that is a bisimulation of it. Under the local diamond up to `R`, every tape to a terminal state
+  has one length and an `R`-equal end. One such tape bounds every tape.
+  `Equivalence R → Bisim step R → Diamond step R → run step s c1 = some t1 → Terminal step t1 → run step s c2 = some t2 → Terminal step t2 → R t1 t2 ∧ c1.length = c2.length`
+  (`complete_unique` (`src/Effect4/Laws/Machine/Descent.lean`)). It states nothing of the machine.
+  The machine's raw decisions are no instance, since some are always enabled; its use is the
+  checked fragment of decisions row 361.
 - **Finite fair-tape endpoint (`fair-tape-drains-armed`)**: A fair finite tape that suffices leaves
   no armed owner at its live end.
   `FairTape interp fuel m tape → Suffices interp fuel tape m = true → (replayEval interp fuel tape m).machine.stuck = none → (replayEval interp fuel tape m).machine.armed = []`

@@ -8,6 +8,7 @@ import Effect4.Laws.Machine.Clock
 import Effect4.Laws.Machine.Behaviour
 import Effect4.Laws.Machine.Book
 import Effect4.Laws.Machine.ContextValue
+import Effect4.Laws.Machine.Descent
 import Effect4.Laws.Machine.Handles
 import Effect4.Laws.Machine.LiveStack
 import Effect4.Laws.Machine.MaskDiscipline

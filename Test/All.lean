@@ -146,6 +146,7 @@ import Test.Machine.Runtime.CompletionContract
 import Test.Machine.Runtime.HandlesContract
 import Test.Machine.Runtime.SchedulerCoreContract
 import Test.Machine.Runtime.SchedulingContract
+import Test.Machine.Runtime.ScheduleIndependence
 import Test.Store.Templates
 import Test.Store.StoreContract
 import Test.Store.NodeContract
