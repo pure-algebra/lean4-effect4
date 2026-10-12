@@ -55,11 +55,14 @@ theorem Evaluating.congr {root : ProgramSource} {rootTy : EffTy} {w : World} {m 
   exact hf0
 
 /-- **The allocation under the evaluated fiber**: the child appended at the old `nextId`, its code
-typed and its context the evaluated fiber's, keeps the evaluated state at the world declaring it. -/
+typed at a row the evaluated fiber's context covers and its context that fiber's, keeps the
+evaluated state at the world declaring it. -/
 theorem Evaluating.alloc {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
     {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y)
-    {program : RProgram} {cty : EffTy} (typedChild : TypedProg root w cty program)
-    (flag : Bool) (budget : Nat × Bool) (record : ForkRecord) :
+    {program : RProgram} {cty : EffTy} {row success failure : Env.Requirement}
+    (typedChild : AmbientProg root w row ((cty, success, failure) : AmbientPosition) program)
+    (covered : f.context.services.Satisfies row) (flag : Bool) (budget : Nat × Bool)
+    (record : ForkRecord) :
     Evaluating root rootTy (w.addFiber ⟨m.nextId⟩ cty)
       (allocR m (spawnChild m program flag budget f.context) record) rest f y := by
   have hmem : f ∈ (m.update f).fibers := rfiber?_mem ev.look
@@ -67,7 +70,7 @@ theorem Evaluating.alloc {root : ProgramSource} {rootTy : EffTy} {w : World} {m 
   have ne : (spawnChild m program flag budget f.context).id ≠ f.id :=
     Ne.symm (ne_next (m := m) old.below)
   have typed := configTyped_alloc (record := record) (flag := flag) (budget := budget) ev.typed
-    typedChild old.ok.c5
+    typedChild (Ty.subN_refl _) (Ty.subN_refl _) covered old.ok.c5
   obtain ⟨f0, hf0, exit0⟩ := ev.stale
   refine ⟨?_, ⟨f0, by rw [allocR_fiber_other ne]; exact hf0, exit0⟩, ev.running, ev.live⟩
   rw [allocR_update_comm m record ne]
@@ -106,7 +109,7 @@ theorem Evaluating.enqueueStart {root : ProgramSource} {rootTy : EffTy} {w : Wor
       · exact Or.inl (fiberKeys_internal hmem (List.mem_append_right _ hk))
       · exact absurd hk List.not_mem_nil
   have edited := configTyped_rupdate (g := g) ev.typed look rfl (PendingWeaker.refl _) rfl rfl rfl
-    rfl rfl (fun p => p) (fun d => d) keys fresh
+    rfl rfl (fun p => p) (fun d => d) ⟨.inr rfl, rfl⟩ rfl keys fresh
   rw [rupdate_rupdate m (show g.id = f.id from rfl)] at edited
   exact ⟨edited, ev.stale, ev.running, ev.live⟩
 
@@ -114,7 +117,8 @@ theorem Evaluating.enqueueStart {root : ProgramSource} {rootTy : EffTy} {w : Wor
 frame, `settle` queues the nested commands in front of `loop`, which `push` admits. -/
 theorem Evaluating.settle_nested {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
     {rest : List RCmd} {f : RFiber} {y y' : Bool} (ev : Evaluating root rootTy w m rest f y)
-    (fr : RSaved) (code : ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty fr)
+    (fr : RSaved)
+    (code : ∀ ty, w.Γ f.id = some ty → MCodeOk root w (m.update f) { f with frame := fr } ty)
     (nested : List RCmd)
     (push : ∀ g : RFiber, g.id = f.id →
       ConfigTyped root rootTy w (m.update g) (.loop f.id y' :: rest) →
@@ -123,30 +127,37 @@ theorem Evaluating.settle_nested {root : ProgramSource} {rootTy : EffTy} {w : Wo
       (prepareIterR ⟨m, { f with frame := fr }, y', .continue_, nested, []⟩) := by
   have view := ev.view
   let fr' : RSaved := { fr with current := prepareR m.completedExits fr.current }
-  have code' : ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty fr' :=
-    fun ty declared => codeOk_prepare m.completedExits view (code ty declared)
+  have code' : ∀ ty, w.Γ f.id = some ty → MCodeOk root w (m.update f) { f with frame := fr' } ty :=
+    fun ty declared => codeOk_prepare (f := { f with frame := fr }) m.completedExits view
+      (code ty declared)
   obtain ⟨ty, declared⟩ := ev.declared
-  obtain ⟨tin, current, _, _⟩ := code' ty declared
+  obtain ⟨_, _, _, _, _, current, _, _⟩ := code' ty declared
   have glue : prepareIterR ⟨m, { f with frame := fr }, y', .continue_, nested, []⟩ =
       ⟨m, { f with frame := fr' }, y', .continue_, nested, []⟩ := prepareScopedExitR_of_typed current
   rw [glue]
   have step := (configTyped_frame_step ev.typed rfl ev.look ev.running fr' code'
-    (raceRegistrationR_typed current)).1 y'
+    (raceRegistrationR_ambient current)).1 y'
   rw [rupdate_rupdate m (show ({ f with frame := fr' } : RFiber).id = f.id from rfl)] at step
   exact ⟨w, leHost_refl w, push _ rfl step⟩
 
 /-- **The spawn shape settles typed** (`fork`, `forkIn`, `forkScoped`, `Machine/Fibers.lean:1451-1489`):
 the child spawned over the evaluated fiber (`spawn`) at the world declaring it at `cty`, its code
-typed there; started now (an `evaluate` queued) or deferred onto the parent's dispatcher
-(`start`); the parent answered with `code`, typed at the old code's type over the unchanged stack;
-then `tail`, which `push` admits in front of the parent's `loop`. -/
+typed at a row the evaluated fiber's context covers; started now (an `evaluate` queued) or deferred
+onto the parent's dispatcher (`start`); the parent answered with `code`, typed at the row and the
+old code's position over the unchanged stack; then `tail`, which `push` admits in front of the
+parent's `loop`. -/
 theorem Evaluating.spawn_settles {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
     {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y)
-    (interp : RInterp) {program : RProgram} {cty : EffTy} (typedChild : TypedProg root w cty program)
-    (options : Supervision.ForkOptions) (site : List Nat) {ty tin : EffTy}
-    (declared : w.Γ f.id = some ty) (stack : HostStack root w (m.update f) f.id tin ty f.frame.stack)
+    (interp : RInterp) {program : RProgram} {cty : EffTy} {crow success failure : Env.Requirement}
+    (typedChild : AmbientProg root w crow ((cty, success, failure) : AmbientPosition) program)
+    (childCovered : f.context.services.Satisfies crow)
+    (options : Supervision.ForkOptions) (site : List Nat) {ty : EffTy} {row : Env.Requirement}
+    {q : AmbientPosition} {flag : Bool} (declared : w.Γ f.id = some ty)
+    (covered : f.context.services.Satisfies row)
+    (stack : MHostStack root w (m.update f) f.id (q, f.frame.interruptible) (finalPos ty flag)
+      f.frame.stack)
     (prov : InterruptProvenance f.frame) {code : RProgram}
-    (typedCode : TypedProg root (w.addFiber ⟨m.nextId⟩ cty) tin code) (tail : RFiber → List RCmd)
+    (typedCode : AmbientProg root (w.addFiber ⟨m.nextId⟩ cty) row q code) (tail : RFiber → List RCmd)
     (push : ∀ (g : RFiber) (M : RState), M.state = m.state → (M.fiber? ⟨m.nextId⟩).isSome = true →
       ConfigTyped root rootTy (w.addFiber ⟨m.nextId⟩ cty) M (.loop f.id y :: rest) →
       ConfigTyped root rootTy (w.addFiber ⟨m.nextId⟩ cty) M (tail g ++ .loop f.id y :: rest)) :
@@ -165,25 +176,26 @@ theorem Evaluating.spawn_settles {root : ProgramSource} {rootTy : EffTy} {w : Wo
     rw [← rfiber?_update_other (g := f) ne]
     exact (fresh_of_typed ev.typed.machine).1
   have ord : w.leHost (w.addFiber ⟨m.nextId⟩ cty) := addFiber_leHost freshΓ
-  obtain ⟨flag, hspawn⟩ := spawn_eq interp m f program options site
+  obtain ⟨flag', hspawn⟩ := spawn_eq interp m f program options site
   rw [hspawn]
   let record : ForkRecord := ⟨⟨m.nextId⟩, f.id, options.daemon, site⟩
-  let child := spawnChild m program flag (interp.budgetOf f.context) f.context
-  have ev1 := ev.alloc typedChild flag (interp.budgetOf f.context) record
+  let child := spawnChild m program flag' (interp.budgetOf f.context) f.context
+  have ev1 := ev.alloc typedChild childCovered flag' (interp.budgetOf f.context) record
   -- the new frame, typed at the extended world over the unchanged stack
   have codeNew : ∀ (M : RState), M.races = m.races → ∀ ty',
       (w.addFiber ⟨m.nextId⟩ cty).Γ f.id = some ty' →
-      CodeOk root (w.addFiber ⟨m.nextId⟩ cty) M f.id ty' { f.frame with current := code } := by
+      MCodeOk root (w.addFiber ⟨m.nextId⟩ cty) M
+        { f with frame := { f.frame with current := code } } ty' := by
     intro M races ty' declared'
     rw [addFiber_Γ_other ne] at declared'
     have same : ty' = ty := Option.some.inj (declared'.symm.trans declared)
     subst same
-    have kept : RacesKept (m.update f) M := racesKept_of_eq fun r => by
+    have kept : RacesKept (m.update f) M := racesKept_of_eq (m := m.update f) (m' := M) fun r => by
       unfold RunMachine.race?
       rw [races]
       rfl
-    exact ⟨tin, typedCode, hostStack_mono ord (hostStack_races kept stack),
-      ⟨prov.recorded, prov.deferred⟩⟩
+    exact ⟨row, (q, f.frame.interruptible), flag, covered, rfl, typedCode,
+      (stack.races kept).mono ord, ⟨prov.recorded, prov.deferred⟩⟩
   -- the child is present in every edit of the parent
   have present : ∀ (M : RState) (g : RFiber), M.fibers = m.fibers ++ [child] → g.id = f.id →
       ((M.update g).fiber? ⟨m.nextId⟩).isSome = true := by
@@ -232,91 +244,119 @@ theorem configTyped_cons_link {root : ProgramSource} {rootTy : EffTy} {w : World
 
 /-! ## `fork` -/
 
+/-- A body's position is a result position at its certificate. -/
+theorem bodyPosition_result (available : Env.Requirement) (body : Body) (cert : EffTy) :
+    ∃ r : Env.Requirement, bodyPosition available body cert = ((cert, r, r) : AmbientPosition) := by
+  cases body <;> exact ⟨_, rfl⟩
+
 /-- **`fork`** (`Machine/Fibers.lean:1451-1461`, `internal/effect.ts:5264-5284`): the body's program is
-typed at the certificate (`bodyTyped_typed`); the child is declared there, the parent answered its
-handle (the post), and a non-daemon child's tracking queued after its start. -/
+typed at the fiber's row at its position (`bodyTyped_ambient`); the child holds the fiber's context,
+which covers that row, and is declared at the certificate; the parent answered its handle (the
+post) at the row, and a non-daemon child's tracking queued after its start. -/
 theorem clause_fork (root : ProgramSource) (rootTy : EffTy) (child : Body)
     (options : Supervision.ForkOptions) (site : List Nat) :
     FiberClauseKeeps root rootTy (.fork child options site) := by
   intro w m rest f y next ev hc
   obtain ⟨ty, declared⟩ := ev.declared
-  obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  obtain ⟨row, ⟨q, b⟩, flag, covered, bit, current, stack, prov⟩ :=
+    ev.code (by rw [hc]; rfl) ty declared
+  change b = f.frame.interruptible at bit
+  subst bit
+  change AmbientProg root w row q f.frame.current at current
   rw [hc] at current
-  obtain ⟨cert, pre, typedNext⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
-    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
-  have typedChild : TypedProg root w cert
-      (bodyR (interpRAt root.program m.completedExits) child) :=
-    bodyTyped_typed root ev.typed.machine.sourceWF ev.typed.machine.services m.completedExits pre
+  obtain ⟨cert, ⟨typedB, requires, acquired, _, coverage⟩, typedNext, _⟩ :=
+    ambientProg_fiber_inv current (fun _ h => nomatch h) (fun _ h => nomatch h)
+      (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  change EffTy at cert
+  have typedChild := bodyTyped_ambient root ev.typed.machine.sourceWF ev.typed.machine.services
+    m.completedExits typedB requires acquired coverage
+  obtain ⟨r, hr⟩ := bodyPosition_result row child cert
+  rw [hr] at typedChild
   have freshΓ : w.Γ ⟨m.nextId⟩ = none := (fresh_of_typed ev.typed.machine).2
   have ord : w.leHost (w.addFiber ⟨m.nextId⟩ cert) := addFiber_leHost freshΓ
-  have typedCode : TypedProg root (w.addFiber ⟨m.nextId⟩ cert) tin (next (Val.fiber ⟨m.nextId⟩)) :=
+  have typedCode : AmbientProg root (w.addFiber ⟨m.nextId⟩ cert) row q (next (Val.fiber ⟨m.nextId⟩)) :=
     typedNext _ ord _ ⟨⟨m.nextId⟩, rfl, addFiber_Γ_self⟩
   show SettlesTyped root rootTy w f.id rest (prepareIterR (FiberAction.fork _ m f y
     (bodyR (interpRAt root.program m.completedExits) child) options (answerWith next) site))
   unfold FiberAction.fork
   cases hd : options.daemon with
   | true =>
-    exact ev.spawn_settles _ typedChild options site declared stack prov typedCode (fun _ => [])
-      (fun _ _ _ _ typed => typed)
+    exact ev.spawn_settles _ typedChild covered options site declared covered stack prov typedCode
+      (fun _ => []) (fun _ _ _ _ typed => typed)
   | false =>
     exact (ev.congr (m' := { m with middlewareInstalled := true }) rfl rfl rfl rfl rfl rfl
-      rfl).spawn_settles _ typedChild options site declared
-      (hostStack_races (m := m.update f) (racesKept_of_eq fun _ => rfl) stack) prov typedCode
-      (fun _ => [.trackChild f.id ⟨m.nextId⟩])
+      rfl).spawn_settles _ typedChild covered options site declared covered
+      (stack.races (racesKept_of_eq (m := m.update f)
+        (m' := ({ m with middlewareInstalled := true } : RState).update f) fun _ => rfl)) prov
+      typedCode (fun _ => [.trackChild f.id ⟨m.nextId⟩])
       (fun _ _ _ _ typed => configTyped_cons_trackChild typed _ _)
 
 /-! ## `forkIn` and `forkScoped` -/
 
 /-- **`forkIn`** (`Machine/Fibers.lean:1463-1472`, `internal/effect.ts:5364-5378`): a daemon child of
-the point's program, typed at the certificate (`denoteAt_typed`), declared there and answered as
-its handle; the link to the scope, present by the pre, queued after its start. -/
+the point's program, typed at the fiber's row (`denoteAt_ambient`, from the pre's point and stack
+typing there), declared at the certificate and answered as its handle; the link to the scope,
+present by the pre, queued after its start. -/
 theorem clause_forkIn (root : ProgramSource) (rootTy : EffTy) (child : Point)
     (options : Supervision.ForkOptions) (scope : Nat) (site : List Nat) :
     FiberClauseKeeps root rootTy (.forkIn child options scope site) := by
   intro w m rest f y next ev hc
   obtain ⟨ty, declared⟩ := ev.declared
-  obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  obtain ⟨row, ⟨q, b⟩, flag, covered, bit, current, stack, prov⟩ :=
+    ev.code (by rw [hc]; rfl) ty declared
+  change b = f.frame.interruptible at bit
+  subst bit
+  change AmbientProg root w row q f.frame.current at current
   rw [hc] at current
-  obtain ⟨cert, ⟨pre, hlive⟩, typedNext⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
-    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
-  have typedChild : TypedProg root w cert
+  obtain ⟨cert, ⟨⟨pre, hlive⟩, requires⟩, typedNext, _⟩ :=
+    ambientProg_fiber_inv current (fun _ h => nomatch h) (fun _ h => nomatch h)
+      (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  change EffTy at cert
+  have typedChild : AmbientProg root w row ((cert, row, row) : AmbientPosition)
       (bodyR (interpRAt root.program m.completedExits) (.at_ child)) :=
-    denoteAt_typed root ev.typed.machine.sourceWF ev.typed.machine.services pre
+    denoteAt_ambient root ev.typed.machine.sourceWF ev.typed.machine.services pre.1 requires pre.2
   have live : m.state.ScopeLive scope := by
     have l : w.state.ScopeLive scope := hlive
     rw [ev.typed.machine.wide.state] at l
     exact l
   have freshΓ : w.Γ ⟨m.nextId⟩ = none := (fresh_of_typed ev.typed.machine).2
   have ord : w.leHost (w.addFiber ⟨m.nextId⟩ cert) := addFiber_leHost freshΓ
-  have typedCode : TypedProg root (w.addFiber ⟨m.nextId⟩ cert) tin (next (Val.fiber ⟨m.nextId⟩)) :=
+  have typedCode : AmbientProg root (w.addFiber ⟨m.nextId⟩ cert) row q (next (Val.fiber ⟨m.nextId⟩)) :=
     typedNext _ ord _ ⟨⟨m.nextId⟩, rfl, addFiber_Γ_self⟩
   show SettlesTyped root rootTy w f.id rest (prepareIterR (FiberAction.forkIn _ m f y
     (bodyR (interpRAt root.program m.completedExits) (.at_ child)) options scope (answerWith next)
     site))
   unfold FiberAction.forkIn
-  exact ev.spawn_settles _ typedChild { options with daemon := true } site declared stack prov
-    typedCode (fun g => [.link .forkIn scope ⟨m.nextId⟩ (some g.id)
+  exact ev.spawn_settles _ typedChild covered { options with daemon := true } site declared covered
+    stack prov typedCode (fun g => [.link .forkIn scope ⟨m.nextId⟩ (some g.id)
       ((interpRAt root.program m.completedExits).stackAnnotations g.id)])
     (fun _ _ state present typed => configTyped_cons_link typed (by rw [state]; exact live) present)
 
 /-- **`forkScoped`** (`Machine/Fibers.lean:1474-1489`, `internal/effect.ts:5400-5406`): `forkIn` on the
 context's ambient scope, present by `J` (`ambientScope_live`), its handle answered as a success; with
-no ambient scope, the `missingService` defect, which the exit judgment admits at every type. -/
+no ambient scope, the `missingService` defect, which the exit judgment admits at every type, at the
+code's position. -/
 theorem clause_forkScoped (root : ProgramSource) (rootTy : EffTy) (child : Point)
     (options : Supervision.ForkOptions) (site : List Nat) :
     FiberClauseKeeps root rootTy (.forkScoped child options site) := by
   intro w m rest f y next ev hc
   obtain ⟨ty, declared⟩ := ev.declared
-  obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  obtain ⟨row, ⟨q, b⟩, flag, covered, bit, current, stack, prov⟩ :=
+    ev.code (by rw [hc]; rfl) ty declared
+  change b = f.frame.interruptible at bit
+  subst bit
+  change AmbientProg root w row q f.frame.current at current
   rw [hc] at current
-  obtain ⟨cert, pre, typedNext⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
-    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
-  have typedChild : TypedProg root w cert
+  obtain ⟨cert, ⟨pre, requires⟩, typedNext, entry, wf⟩ :=
+    ambientProg_fiber_inv current (fun _ h => nomatch h) (fun _ h => nomatch h)
+      (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  change EffTy at cert
+  have typedChild : AmbientProg root w row ((cert, row, row) : AmbientPosition)
       (bodyR (interpRAt root.program m.completedExits) (.at_ child)) :=
-    denoteAt_typed root ev.typed.machine.sourceWF ev.typed.machine.services pre
+    denoteAt_ambient root ev.typed.machine.sourceWF ev.typed.machine.services pre.1 requires pre.2
   have freshΓ : w.Γ ⟨m.nextId⟩ = none := (fresh_of_typed ev.typed.machine).2
   have ord : w.leHost (w.addFiber ⟨m.nextId⟩ cert) := addFiber_leHost freshΓ
-  have typedCode : TypedProg root (w.addFiber ⟨m.nextId⟩ cert) tin
+  have typedCode : AmbientProg root (w.addFiber ⟨m.nextId⟩ cert) row q
       (next (.success (Val.fiber ⟨m.nextId⟩))) :=
     typedNext _ ord _ ⟨⟨m.nextId⟩, rfl, addFiber_Γ_self⟩
   show SettlesTyped root rootTy w f.id rest (prepareIterR (FiberAction.forkScoped _ m f y
@@ -331,8 +371,8 @@ theorem clause_forkScoped (root : ProgramSource) (rootTy : EffTy) (child : Point
         ambientScope_live ev.typed.machine (rfiber?_mem ev.look) hscope
       rw [ev.typed.machine.wide.state] at l
       exact l
-    exact ev.spawn_settles _ typedChild { options with daemon := true } site declared stack prov
-      typedCode (fun g => [.link .forkIn scope ⟨m.nextId⟩ (some g.id)
+    exact ev.spawn_settles _ typedChild covered { options with daemon := true } site declared
+      covered stack prov typedCode (fun g => [.link .forkIn scope ⟨m.nextId⟩ (some g.id)
         ((interpRAt root.program m.completedExits).stackAnnotations g.id)])
       (fun _ _ state present typed => configTyped_cons_link typed (by rw [state]; exact live) present)
   | none =>
@@ -340,7 +380,8 @@ theorem clause_forkScoped (root : ProgramSource) (rootTy : EffTy) (child : Point
       (fun ty' declared' => ?_)
     have same : ty' = ty := Option.some.inj (declared'.symm.trans declared)
     subst same
-    refine ⟨tin, TypedProg.pure (strongExit_of_clean w tin _ rfl ?_), stack,
+    refine ⟨row, (q, f.frame.interruptible), flag, covered, rfl,
+      .pure (ambientExit_failure (strongExit_of_clean w _ _ rfl ?_) entry) ⟨entry, wf⟩, stack,
       ⟨prov.recorded, prov.deferred⟩⟩
     intro reason member
     simp only [Cause.die_reasons, List.mem_singleton] at member
@@ -389,7 +430,7 @@ theorem clause_raceRegister (root : ProgramSource) (rootTy : EffTy) (raceId : Na
       (fun _ _ h => nomatch h) (fun _ _ h => nomatch h)
   have edited := configTyped_updateRace launched (new := { race with registering := true }) hr rfl
     rfl rfl (fun _ h => h) ⟨payload.token, payload.failures, payload.winner, payload.accepted, payload.cleanup,
-      payload.live, payload.programs⟩ (fun _ h => .inl h)
+      payload.live⟩ (fun _ h => .inl h)
   have found' : m.race? raceId = some race := found
   show SettlesTyped root rootTy w f.id rest (prepareIterR (registerRace m f y raceId))
   unfold registerRace
@@ -543,7 +584,7 @@ theorem configTyped_addRace {root : ProgramSource} {rootTy : EffTy} {w : World} 
     ConfigTyped root rootTy w { M with races := M.races ++ [race], nextRace := M.nextRace + 1 } q := by
   have wide := typed.machine.wide
   have kept : RacesKept M { M with races := M.races ++ [race], nextRace := M.nextRace + 1 } :=
-    fun _ old h => ⟨old, race?_addRace_old h, rfl, rfl⟩
+    fun _ old h => ⟨old, race?_addRace_old h, rfl, rfl, fun _ h => h⟩
   have wideNew : MachineWide root rootTy w
       { M with races := M.races ++ [race], nextRace := M.nextRace + 1 } :=
     { ids := wide.ids
@@ -624,7 +665,7 @@ theorem configTyped_addRace {root : ProgramSource} {rootTy : EffTy} {w : World} 
         observers := fun o ho => storedObserverOk_addRace payload live o (old.observers o ho)
         registration := fun raceId marker => by
           obtain ⟨r, resultTy', found, host', token, reply⟩ := old.registration raceId marker
-          exact ⟨r, resultTy', race?_addRace_old found, host', token, stackReply_races kept reply⟩
+          exact ⟨r, resultTy', race?_addRace_old found, host', token, reply.races kept⟩
         code := old.code_races kept
         tokens := old.tokens
         raceObservers := fun raceId r' hr' o ho => by
@@ -676,17 +717,24 @@ theorem configTyped_addRace {root : ProgramSource} {rootTy : EffTy} {w : World} 
 
 /-- **`raceAll`** (`beginRace`, `Machine/Fibers.lean:919-933`, rc.112 `:1493`): the answer frame saved;
 the host's next token declared at the certificate (`configTyped_token`); the race appended with the
-entrants' programs, each typed at a type below the certificate (the pre, `denoteAt_typed`), and no
-live entrant (`configTyped_addRace`); the registration marker installed over the answer frame, which
-carries the race's exit to the continuation at the post (`Evaluating.settle_marker`). -/
+entrants' programs and no live entrant (`configTyped_addRace`); the registration marker installed
+over the answer frame at the fiber's row, which carries the race's exit to the continuation at the
+post, each entrant typed at that row at a type below the certificate (the pre's point and stack
+typing, `denoteAt_ambient`; `EntrantsWithin`), so its child, holding the host's context, is covered
+(`Evaluating.settle_marker`). -/
 theorem clause_raceAll (root : ProgramSource) (rootTy : EffTy) (entrants : List Point)
     (site : Option (List Nat)) : FiberClauseKeeps root rootTy (.raceAll entrants site) := by
   intro w m rest f y next ev hc
   obtain ⟨ty, declared⟩ := ev.declared
-  obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  obtain ⟨row, ⟨q, b⟩, flag, covered, bit, current, stack, prov⟩ :=
+    ev.code (by rw [hc]; rfl) ty declared
+  change b = f.frame.interruptible at bit
+  subst bit
+  change AmbientProg root w row q f.frame.current at current
   rw [hc] at current
-  obtain ⟨cert, pre, typedNext⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
+  obtain ⟨cert, pre, typedNext, _⟩ := ambientProg_fiber_inv current (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  change EffTy at cert
   have wide := ev.typed.machine.wide
   have hmem : f ∈ (m.update f).fibers := rfiber?_mem ev.look
   have old := ev.typed.machine.fiber hmem
@@ -708,13 +756,14 @@ theorem clause_raceAll (root : ProgramSource) (rootTy : EffTy) (entrants : List 
       winner := fun _ h => nomatch h
       accepted := fun _ h => nomatch h
       cleanup := fun _ h => nomatch h
-      live := fun _ h => nomatch h
-      programs := fun code hcode => by
-        obtain ⟨p, hp, rfl⟩ := List.mem_map.mp hcode
-        obtain ⟨pty, ptyped, ha, he⟩ := pre p hp
-        exact ⟨pty, typedProg_mono root w _ pty _ ord
-          (denoteAt_typed root ev.typed.machine.sourceWF ev.typed.machine.services ptyped),
-          Ty.sub_le_subN ha, Ty.sub_le_subN he⟩ }
+      live := fun _ h => nomatch h }
+  have entrants : EntrantsWithin root (w.addToken f.id m.nextToken cert) race cert row :=
+    fun code hcode => by
+      obtain ⟨p, hp, rfl⟩ := List.mem_map.mp hcode
+      obtain ⟨pty, ptyped, ha, he, required⟩ := pre p hp
+      exact ⟨pty, row, ambientProg_mono root ord (denoteAt_ambient root ev.typed.machine.sourceWF
+        ev.typed.machine.services ptyped.1 required ptyped.2), Row.subset_refl _,
+        Ty.sub_le_subN ha, Ty.sub_le_subN he⟩
   have internal : ∀ k ∈ Guard.internalKeys (m.update f), k ≠ (f.id, m.nextToken) :=
     fun k hk same => by
       have lt := wide.keysBelow k hk
@@ -733,10 +782,10 @@ theorem clause_raceAll (root : ProgramSource) (rootTy : EffTy) (entrants : List 
   let fr : RSaved := { f.frame with
     current := .vis (.inr (.raceRegister m.nextRace)) Effects.Program.pure
     stack := .answer next :: f.frame.stack }
-  have hstack : HostStack root (w.addToken f.id m.nextToken cert) (m.update f) f.id cert ty fr.stack :=
-    hostStack_push (answerFrame_typed (fun _ _ _ hex => hex)
-      (fun w'' o ans post => typedNext w'' (leHost_trans _ _ _ ord o) ans post))
-      (hostStack_mono ord stack)
+  have hstack : MHostStack root (w.addToken f.id m.nextToken cert) (m.update f) f.id
+      (((cert, row, row) : AmbientPosition), f.frame.interruptible) (finalPos ty flag) fr.stack :=
+    .cons (.inl (ambient_answerFrame
+      (fun w'' o ans post => typedNext w'' (leHost_trans _ _ _ ord o) ans post))) (stack.mono ord)
   have fresh : m.races.find? (fun s => decide (s.id = m.nextRace)) = none := by
     cases hr : (m.update f).race? m.nextRace with
     | none => exact hr
@@ -747,16 +796,16 @@ theorem clause_raceAll (root : ProgramSource) (rootTy : EffTy) (entrants : List 
   show SettlesTyped root rootTy w f.id rest (prepareIterR (FiberAction.raceAll _ m
     (saveAnswerR f next) y programs site))
   unfold FiberAction.raceAll beginRace
-  refine SettlesTyped.mono ord (Evaluating.settle_marker ?_ fr declared
-    ⟨m.nextRace, race, cert, rfl, ?_, rfl, addToken_Θ_self, hostStack_races ?_ hstack,
-      ⟨prov.recorded, prov.deferred⟩⟩)
+  refine SettlesTyped.mono ord (Evaluating.settle_marker ?_ fr declared covered
+    ⟨m.nextRace, race, cert, row, rfl, ?_, rfl, addToken_Θ_self, Row.subset_refl _, entrants,
+      hstack.races ?_, ⟨prov.recorded, prov.deferred⟩⟩)
   · obtain ⟨f0, hf0, exit0⟩ := ev.stale
     exact ⟨configTyped_congr (by rfl) (by rfl) (by rfl) (by rfl) (by rfl) (by rfl) (by rfl)
       appended, ⟨f0, hf0, exit0⟩, ev.running, ev.live⟩
   · show (m.races ++ [race]).find? (fun s => decide (s.id = m.nextRace)) = some race
     rw [List.find?_append, fresh, Option.none_or, List.find?_cons, decide_eq_true rfl]
   · intro r old h
-    refine ⟨old, ?_, rfl, rfl⟩
+    refine ⟨old, ?_, rfl, rfl, fun _ h => h⟩
     have h' : m.races.find? (fun s => decide (s.id = r)) = some old := h
     show (m.races ++ [race]).find? (fun s => decide (s.id = r)) = some old
     rw [List.find?_append, h']
@@ -767,10 +816,15 @@ theorem clause_raceAllFirst (root : ProgramSource) (rootTy : EffTy) (entrants : 
     (site : Option (List Nat)) : FiberClauseKeeps root rootTy (.raceAllFirst entrants site) := by
   intro w m rest f y next ev hc
   obtain ⟨ty, declared⟩ := ev.declared
-  obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  obtain ⟨row, ⟨q, b⟩, flag, covered, bit, current, stack, prov⟩ :=
+    ev.code (by rw [hc]; rfl) ty declared
+  change b = f.frame.interruptible at bit
+  subst bit
+  change AmbientProg root w row q f.frame.current at current
   rw [hc] at current
-  obtain ⟨cert, pre, typedNext⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
+  obtain ⟨cert, pre, typedNext, _⟩ := ambientProg_fiber_inv current (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  change EffTy at cert
   have wide := ev.typed.machine.wide
   have hmem : f ∈ (m.update f).fibers := rfiber?_mem ev.look
   have old := ev.typed.machine.fiber hmem
@@ -792,13 +846,14 @@ theorem clause_raceAllFirst (root : ProgramSource) (rootTy : EffTy) (entrants : 
       winner := fun _ h => nomatch h
       accepted := fun _ h => nomatch h
       cleanup := fun _ h => nomatch h
-      live := fun _ h => nomatch h
-      programs := fun code hcode => by
-        obtain ⟨p, hp, rfl⟩ := List.mem_map.mp hcode
-        obtain ⟨pty, ptyped, ha, he⟩ := pre p hp
-        exact ⟨pty, typedProg_mono root w _ pty _ ord
-          (denoteAt_typed root ev.typed.machine.sourceWF ev.typed.machine.services ptyped),
-          Ty.sub_le_subN ha, Ty.sub_le_subN he⟩ }
+      live := fun _ h => nomatch h }
+  have entrants : EntrantsWithin root (w.addToken f.id m.nextToken cert) race cert row :=
+    fun code hcode => by
+      obtain ⟨p, hp, rfl⟩ := List.mem_map.mp hcode
+      obtain ⟨pty, ptyped, ha, he, required⟩ := pre p hp
+      exact ⟨pty, row, ambientProg_mono root ord (denoteAt_ambient root ev.typed.machine.sourceWF
+        ev.typed.machine.services ptyped.1 required ptyped.2), Row.subset_refl _,
+        Ty.sub_le_subN ha, Ty.sub_le_subN he⟩
   have internal : ∀ k ∈ Guard.internalKeys (m.update f), k ≠ (f.id, m.nextToken) :=
     fun k hk same => by
       have lt := wide.keysBelow k hk
@@ -817,10 +872,10 @@ theorem clause_raceAllFirst (root : ProgramSource) (rootTy : EffTy) (entrants : 
   let fr : RSaved := { f.frame with
     current := .vis (.inr (.raceRegister m.nextRace)) Effects.Program.pure
     stack := .answer next :: f.frame.stack }
-  have hstack : HostStack root (w.addToken f.id m.nextToken cert) (m.update f) f.id cert ty fr.stack :=
-    hostStack_push (answerFrame_typed (fun _ _ _ hex => hex)
-      (fun w'' o ans post => typedNext w'' (leHost_trans _ _ _ ord o) ans post))
-      (hostStack_mono ord stack)
+  have hstack : MHostStack root (w.addToken f.id m.nextToken cert) (m.update f) f.id
+      (((cert, row, row) : AmbientPosition), f.frame.interruptible) (finalPos ty flag) fr.stack :=
+    .cons (.inl (ambient_answerFrame
+      (fun w'' o ans post => typedNext w'' (leHost_trans _ _ _ ord o) ans post))) (stack.mono ord)
   have fresh : m.races.find? (fun s => decide (s.id = m.nextRace)) = none := by
     cases hr : (m.update f).race? m.nextRace with
     | none => exact hr
@@ -831,16 +886,16 @@ theorem clause_raceAllFirst (root : ProgramSource) (rootTy : EffTy) (entrants : 
   show SettlesTyped root rootTy w f.id rest (prepareIterR (FiberAction.raceAllFirst _ m
     (saveAnswerR f next) y programs site))
   unfold FiberAction.raceAllFirst beginRace
-  refine SettlesTyped.mono ord (Evaluating.settle_marker ?_ fr declared
-    ⟨m.nextRace, race, cert, rfl, ?_, rfl, addToken_Θ_self, hostStack_races ?_ hstack,
-      ⟨prov.recorded, prov.deferred⟩⟩)
+  refine SettlesTyped.mono ord (Evaluating.settle_marker ?_ fr declared covered
+    ⟨m.nextRace, race, cert, row, rfl, ?_, rfl, addToken_Θ_self, Row.subset_refl _, entrants,
+      hstack.races ?_, ⟨prov.recorded, prov.deferred⟩⟩)
   · obtain ⟨f0, hf0, exit0⟩ := ev.stale
     exact ⟨configTyped_congr (by rfl) (by rfl) (by rfl) (by rfl) (by rfl) (by rfl) (by rfl)
       appended, ⟨f0, hf0, exit0⟩, ev.running, ev.live⟩
   · show (m.races ++ [race]).find? (fun s => decide (s.id = m.nextRace)) = some race
     rw [List.find?_append, fresh, Option.none_or, List.find?_cons, decide_eq_true rfl]
   · intro r old h
-    refine ⟨old, ?_, rfl, rfl⟩
+    refine ⟨old, ?_, rfl, rfl, fun _ h => h⟩
     have h' : m.races.find? (fun s => decide (s.id = r)) = some old := h
     show (m.races ++ [race]).find? (fun s => decide (s.id = r)) = some old
     rw [List.find?_append, h']
