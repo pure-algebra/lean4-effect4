@@ -236,6 +236,9 @@ def tyT : Ty → Target.TValue
   | .undefined => .ctorV (tyCtor "undefined") #[]
   | .number => .ctorV (tyCtor "number") #[]
   | .bytes => .ctorV (tyCtor "bytes") #[]
+  -- the row is the engine's `service_key effect4_row`, a list of key records; not in the vectors
+  | .contextOf keys => .ctorV (tyCtor "contextOf") #[Target.TValue.ofList (keys.elems.map fun k =>
+      .recordV #[("name", .int k.name.value), ("service", .int k.service.value)])]
 /-- A record's fields, each the OCaml tuple `(name, (optional, type))`. -/
 def fieldTs : List (String × Bool × Ty) → List Target.TValue
   | [] => []

@@ -31,7 +31,7 @@ module type PROGRAM_TYPES = sig
   | Ty_undefined
   | Ty_number
   | Ty_bytes
-  | Ty_contextOf of service_key effect4_row
+  | Ty_contextOf of service_key list
   type lit = | Lit_unit
   | Lit_nat of int
   | Lit_bool of bool
@@ -152,7 +152,7 @@ module type PROGRAM_TYPES = sig
   | ActionTerm_closeScope of term * term
   | ActionTerm_getInterruptible
   | ActionTerm_raceAllFirst of 'op effs
-  | ActionTerm_context of service_key effect4_row
+  | ActionTerm_context of service_key list
   and 'op layer_term = | LayerTerm_succeed of service_key * lit
   | LayerTerm_effect of service_key * 'op eff
   | LayerTerm_effectDiscard of 'op eff

@@ -490,7 +490,8 @@ let sample_effs =
     E.Eff_withFiber E.Action_term_getId;
     E.Eff_scoped u;
     E.Eff_acquireRelease (u, u);
-    E.Eff_restore (a_term, u) ]
+    E.Eff_restore (a_term, u);
+    E.Eff_provideContext (a_term, u) ]
 
 let sample_stmts =
   [ E.Stmt_bindYield u; E.Stmt_yieldDiscard u; E.Stmt_ret a_term;
@@ -513,8 +514,7 @@ let sample_actions =
     E.Action_term_snapshotChildren;
     E.Action_term_awaitNewChildren a_term;
     E.Action_term_raceAll E.Effs_nil;
-    E.Action_term_setContext a_term;
-    E.Action_term_getContext;
+    E.Action_term_context [];
     E.Action_term_getId;
     E.Action_term_closeScope (a_term, a_term);
     E.Action_term_getInterruptible;

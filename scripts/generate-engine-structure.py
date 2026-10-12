@@ -11,6 +11,7 @@ Products are written only after validation.
 """
 import argparse
 import json
+import re
 from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent/'lib'))
@@ -38,8 +39,11 @@ def emit(descriptor, engine, allowance=()):
     previous = None
     for family, declaration, _ in common:
         group = groups[family['name']]
+        # The engine carries a canonical row as `'a effect4_row = 'a list`; the mirror states the
+        # list it abbreviates, so the signature needs no alias of its own.
+        body = re.sub(r'\beffect4_row\b', 'list', declaration.body)
         definitions.append(('  and ' if group == previous else '  type ') +
-                           declaration.head + ' = ' + declaration.body)
+                           declaration.head + ' = ' + body)
         previous = group
     signature = 'module type PROGRAM_TYPES = sig\n' + '\n'.join(definitions) + '\nend\n'
     source_rows = []

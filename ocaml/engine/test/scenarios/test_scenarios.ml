@@ -174,6 +174,10 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
 
   (* ------------------------------------------------------------ S1: the row table *)
 
+  let of_service_key (k : Eff_types.service_key) : A.service_key =
+    { A.name = k.Eff_types.service_key_name.Eff_types.service_name_value;
+      service = k.Eff_types.service_key_service.Eff_types.service_type_code_value }
+
   let rec of_ty : Eff_types.ty -> A.ty = function
     | Eff_types.Ty_never -> A.Ty_never
     | Eff_types.Ty_unit -> A.Ty_unit
@@ -203,6 +207,7 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
     | Eff_types.Ty_undefined -> A.Ty_undefined
     | Eff_types.Ty_number -> A.Ty_number
     | Eff_types.Ty_bytes -> A.Ty_bytes
+    | Eff_types.Ty_contextOf ks -> A.Ty_contextOf (List.map of_service_key ks)
 
   (* The engine side of the ordinal check, written apart from `of_ty`: the position of each
      constructor in api_engine.ml's declaration (e4_program_layout.ml mirrors it). *)
@@ -235,6 +240,7 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
     | A.Ty_undefined -> 25
     | A.Ty_number -> 26
     | A.Ty_bytes -> 27
+    | A.Ty_contextOf _ -> 28
 
   let of_row_shape : Eff_types.row_shape -> A.row_shape = function
     | Eff_types.Row_shape_call -> A.RowShape_call
@@ -266,9 +272,6 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
     | A.Registration_deferred -> 0
     | A.Registration_external -> 1
 
-  let of_service_key (k : Eff_types.service_key) : A.service_key =
-    { A.name = k.Eff_types.service_key_name.Eff_types.service_name_value;
-      service = k.Eff_types.service_key_service.Eff_types.service_type_code_value }
 
   (* The checked conversion of one row.  `Error` names the column whose ordinal the engine
      side disagrees on; the pin refuses the whole table when the two alphabets disagree. *)

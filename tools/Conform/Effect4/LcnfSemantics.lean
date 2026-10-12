@@ -67,6 +67,10 @@ def tyValue : Ty → Value
   | .undefined => .ctor ``Ty.undefined #[]
   | .number => .ctor ``Ty.number #[]
   | .bytes => .ctor ``Ty.bytes #[]
+  -- a row and a key code are trivial structures, so the row is its list of keys; not in the
+  -- vectors
+  | .contextOf keys => .ctor ``Ty.contextOf #[Value.ofList (keys.elems.map fun k =>
+      .ctor ``Effect4.ServiceKey.mk #[.nat k.name.value, .nat k.service.value])]
 /-- A record's fields, each `Prod.mk name (Prod.mk optional type)`. -/
 def fieldValues : List (String × Bool × Ty) → List Value
   | [] => []
