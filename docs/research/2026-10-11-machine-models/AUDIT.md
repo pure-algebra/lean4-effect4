@@ -250,3 +250,23 @@ decision lifts 0 → 0.
 **Verdict: improving.** Shared-law uses rise by 14, and private analyses fall by 7. The net 694
 lines include 414 lines of new shared structure: the place ledger, the primitive producer and the
 footprint.
+
+## 2026-10-11 19:25, answer-flow families, reference words and item 12's first half
+
+Range `cf7d7b19e..b6156be41`, a fast-forward of eight commits. Under `Laws` and `Dogfood` it adds
+1,208 lines and removes 310 in 13 files. The script's patterns over the changed files, before
+and after: shared-law uses 19 → 48, private case analyses 9 → 8, hand decision lifts 1 → 3.
+
+- **The lift count rises by a shared combinator.** `Laws/Machine/LiftMachineFact.lean` holds
+  `DecisionLift.withMachineFact`: an existing lift gains one machine fact, with no lift written
+  field by field. Source-opportunity histories use it.
+- **Shared structure.** `AnswerFlowFamily.lean` and `AnswerFlowFamilyPop.lean` (443 lines) state
+  the answer flow once for a family of callbacks. `Laws/Program/RefWords.lean` (145) connects
+  native execution to the store labels' reference words.
+- **Item 12, first half.** The judgment `scaleIn` and the claim `profile-mul-exact`
+  (`mulIn_eq_some_iff`, `Laws/Machine/IntegerProfile.lean`) land. `NativeAtom.eval .mul` is not
+  yet marked, so `E4-RUN-CE-047` stays seeded. The OCaml engine refuses a negative natural and an
+  unrepresentable float, and asserts a 63-bit host (`ocaml/engine/e4_engine.ml`). Codex's receipt
+  records `dune runtest clock` and the engine test.
+
+**Verdict: improving.** Shared-law uses rise by 29, and private analyses fall by one.
