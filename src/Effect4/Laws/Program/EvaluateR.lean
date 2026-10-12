@@ -229,7 +229,7 @@ def evaluateFiberR (interp : RInterp) (m : RState) (f : RFiber) (yielding : Bool
       let f := match cancel with
         | none => f
         | some name => pushR f (.asyncFinalizer (interp.cancelName name f.id token))
-      let f := f.park ⟨token, none, [], [], .void, false⟩
+      let f := f.park ⟨token, [], [], .void, false⟩
       ⟨m.emit [.parkedOn f.id token], f, yielding, .parked, [], []⟩
   | .await target mode =>
     let f := match mode with

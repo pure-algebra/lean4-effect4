@@ -187,6 +187,36 @@ theorem saved_success (world : World) (input output : Kind)
   · intro _ _ _ _ _ _ arm
     cases arm
 
+/-- An actual bind push joins its body permission to an external ordered callback path.
+Consumers: the semantic bind adapter, lexical source bind, and numeric retry delay entry. -/
+theorem push_success_path (world : World) (input middle output : Kind)
+    (Edge : World → Kind → Kind → Prim ν σ β ε δ ι α → Prop)
+    (fiber : FrameFiber ν σ β ε δ ι α) (body : Prim ν σ β ε δ ι α) (name : ν)
+    (current : fiber.current = .onSuccess body name)
+    (first : model.code world input body)
+    (callback : Edge world input middle (.onSuccess body name))
+    (stack : Effect4.Contracts.Path (Edge world) middle output fiber.stack) :
+    ∃ next events, fiber.step interp = (.running next, events) ∧
+      model.code world input next.current ∧
+      Effect4.Contracts.Path (Edge world) input output next.stack := by
+  simp only [FrameFiber.step, current]
+  exact ⟨_, _, rfl, first, .cons callback stack⟩
+
+/-- An actual failure-handler push joins its body permission to the same ordered callback path.
+Consumers: lexical handler entry and Timeout's Ready source entry. -/
+theorem push_failure_path (world : World) (input middle output : Kind)
+    (Edge : World → Kind → Kind → Prim ν σ β ε δ ι α → Prop)
+    (fiber : FrameFiber ν σ β ε δ ι α) (body : Prim ν σ β ε δ ι α) (name : ν)
+    (current : fiber.current = .onFailure body name)
+    (first : model.code world input body)
+    (callback : Edge world input middle (.onFailure body name))
+    (stack : Effect4.Contracts.Path (Edge world) middle output fiber.stack) :
+    ∃ next events, fiber.step interp = (.running next, events) ∧
+      model.code world input next.current ∧
+      Effect4.Contracts.Path (Edge world) input output next.stack := by
+  simp only [FrameFiber.step, current]
+  exact ⟨_, _, rfl, first, .cons callback stack⟩
+
 /-- A pushed success frame retains the original body only as inert saved data.
 Consumer: the native source body's actual bind push. -/
 theorem push_success (world : World) (input middle output : Kind)
@@ -196,8 +226,9 @@ theorem push_success (world : World) (input middle output : Kind)
     (callback : SavedAt model interp world input middle (.onSuccess body name))
     (stack : StackAt model interp world middle output fiber.stack) :
     ∃ next events, fiber.step interp = (.running next, events) ∧ FrameAt model interp world output next := by
-  simp only [FrameFiber.step, current]
-  exact ⟨_, _, rfl, input, first, .cons callback stack⟩
+  obtain ⟨next, events, ran, code, path⟩ := push_success_path model interp world input middle output
+    (SavedAt model interp) fiber body name current first callback (stack_path model interp stack)
+  exact ⟨next, events, ran, input, code, path_stack model interp path⟩
 
 /-- The actual success pop consumes its saved callback without changing the older suffix.
 Consumer: the Workers root initializer resumes its source binder after allocation. -/

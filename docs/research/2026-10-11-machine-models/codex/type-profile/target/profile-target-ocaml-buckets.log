@@ -1,0 +1,35 @@
+COMMAND: opam exec --switch=effect4 -- dune exec ./engine/test/test_buckets.exe
+-- E4_buckets.Assoc: the property statements of A3 §2.1
+PASS  Assoc buckets-ascending  P-B1
+PASS  Assoc buckets-fifo  P-B2 (tail of its own bucket) and P-B6 (others untouched)
+PASS  Assoc buckets-drain-order  P-B3
+PASS  Assoc buckets-drained-once  P-B4
+PASS  Assoc buckets-exactly-once  P-B5
+PASS  Assoc buckets-armed  B6 (enqueue arms, drain disarms, arm/disarm are the flag)
+PASS  Assoc buckets-persistent  B7
+PASS  Assoc buckets-of-list  to_list/of_list round trip, and the four refusals
+-- E4_buckets.Map_variant: the property statements of A3 §2.1
+PASS  Map_variant buckets-ascending  P-B1
+PASS  Map_variant buckets-fifo  P-B2 (tail of its own bucket) and P-B6 (others untouched)
+PASS  Map_variant buckets-drain-order  P-B3
+PASS  Map_variant buckets-drained-once  P-B4
+PASS  Map_variant buckets-exactly-once  P-B5
+PASS  Map_variant buckets-armed  B6 (enqueue arms, drain disarms, arm/disarm are the flag)
+PASS  Map_variant buckets-persistent  B7
+PASS  Map_variant buckets-of-list  to_list/of_list round trip, and the four refusals
+-- the differential against the Lean transcription
+PASS  Assoc buckets-differential  100000 ops against Dispatcher_ref (Fibers.lean:115-155)
+PASS  Map_variant buckets-differential  100000 ops against Dispatcher_ref (Fibers.lean:115-155)
+-- BENCH B-Q1a/B-Q1b: 100 000 enqueues, a drain every d, p priorities (ms, best of 3)
+   carrier      p |     d=1     d=8    d=64  d=1024   d=1e5 |  enq/s at d=1024
+   Assoc         1 |    1.42    0.91    0.98    1.08    3.65 |     92.8 M/s
+   Assoc         4 |    1.43    1.38    1.27    1.49    3.52 |     66.9 M/s
+   Assoc        16 |    1.43    1.97    2.58    3.18    5.40 |     31.5 M/s
+   Assoc       256 |    1.41    2.05   25.69  109.98  112.59 |      0.9 M/s
+   Map_variant   1 |    1.73    1.29    1.35    1.47    3.18 |     67.8 M/s
+   Map_variant   4 |    1.72    2.43    1.93    2.42    4.15 |     41.3 M/s
+   Map_variant  16 |    1.76    3.97    3.33    3.63    5.13 |     27.6 M/s
+   Map_variant 256 |    1.73    3.78    6.76    6.67    9.56 |     15.0 M/s
+NOTE  the Lean carrier (Dispatcher_ref, tasks ++ [t]) needs 79 619 ms for the p=1 d=1e5 cell (design §6.2); B-Q1b asks for that cell under 10 ms
+NOTE  Dispatcher_ref at ONE TENTH the depth (1e4 enqueues, one drain, p=1): 647.26 ms
+== ALL PASS: 0 failure(s) ==

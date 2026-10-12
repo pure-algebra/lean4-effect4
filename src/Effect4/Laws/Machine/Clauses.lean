@@ -207,12 +207,14 @@ theorem Dispatcher.enqueue_empty (priority : Nat) (task : Task ν σ β ε δ ι
   by aesop
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
-/-- Enqueueing arms the dispatcher (`Scheduler.ts:207-212`); an already armed one stays
-armed, which is the "later tasks join the armed callback" clause.
+/-- Enqueueing leaves a nonempty task snapshot (`Scheduler.ts:207-212`).
+The machine's armed owner queue records the scheduled host callback.
 census: scheduler.dispatcher-arming -/
 theorem Dispatcher.enqueue_arms (d : Dispatcher ν σ β ε δ ι α) (priority : Nat)
-    (task : Task ν σ β ε δ ι α) : (d.enqueue priority task).armed = true :=
-  by aesop
+    (task : Task ν σ β ε δ ι α) : (d.enqueue priority task).buckets ≠ [] := by
+  change Dispatcher.insert priority task d.buckets ≠ []
+  fun_cases Dispatcher.insert priority task d.buckets <;>
+    aesop (add norm simp [Dispatcher.insert])
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- `runTasks` takes the whole snapshot once, in bucket order, and leaves an idle
@@ -222,10 +224,10 @@ theorem Dispatcher.drain_eq (d : Dispatcher ν σ β ε δ ι α) :
   by aesop
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
-/-- A drained dispatcher is disarmed: a task enqueued during the run re-arms it and waits
-for the next host task. census: scheduler.run-tasks-drain-once -/
-theorem Dispatcher.drain_disarms (d : Dispatcher ν σ β ε δ ι α) : (d.drain).2.armed = false :=
-  by aesop
+/-- A drained dispatcher has an empty task snapshot. A new task waits for the next host callback.
+census: scheduler.run-tasks-drain-once -/
+theorem Dispatcher.drain_disarms (d : Dispatcher ν σ β ε δ ι α) : (d.drain).2.buckets = [] :=
+  rfl
 
 /-- A `fire` on an unknown owner does nothing. census: scheduler.host-loop -/
 theorem fire_unknown (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
@@ -331,7 +333,7 @@ theorem evaluatePrim_yieldNowWith_eq (interp : RunInterp ν σ β ε δ ι α χ
          frame := {f.frame with current := Prim.success interp.voidValue}
          dispatcher := f.dispatcher.enqueue priority
            (Task.resume f.id m.nextToken (Prim.success interp.voidValue))}
-       let parked := before.park ⟨m.nextToken, none, [], [], Resume.void, false⟩
+       let parked := before.park ⟨m.nextToken, [], [], Resume.void, false⟩
        ⟨(grown.arm parked.id).emit [RunEvent.parkedOn parked.id m.nextToken],
          parked, yielding, Outcome.parked, [], []⟩) := by
   simp only [evaluatePrim, current]
@@ -784,7 +786,7 @@ theorem evaluatePrim_join_live (interp : RunInterp ν σ β ε δ ι α χ St)
           [RunEvent.parkedOn g.id m.nextToken],
         ({ g with frame := { g.frame with
             stack := Prim.asyncFinalizer (interp.cancelName interp.parkCancelName g.id m.nextToken) :: g.frame.stack } }).park
-          ⟨m.nextToken, some target, [], [], Resume.void, false⟩, yielding, Outcome.parked, [],
+          ⟨m.nextToken, [], [], Resume.void, false⟩, yielding, Outcome.parked, [],
           [.observe target (.resumeAwait g.id m.nextToken mode)]⟩ := by
   simp only [evaluatePrim, hpark, ht, hlive]
   rfl
@@ -1278,7 +1280,7 @@ theorem countdownPark_parks (interp : RunInterp ν σ β ε δ ι α χ St)
       (let m' : RunMachine ν σ β ε δ ι α χ St := { m with nextToken := m.nextToken + 1 }
        let name := interp.cancelName interp.parkCancelName f.id m.nextToken
        let g := ({ f with frame := { f.frame with stack := Prim.asyncFinalizer name :: f.frame.stack } }).park
-         ⟨m.nextToken, some target, remaining, exits, resumeWith, failFast⟩
+         ⟨m.nextToken, remaining, exits, resumeWith, failFast⟩
        ((m'.modify target fun g => { g with observers := g.observers ++ [Observer.countdown f.id m.nextToken] }).emit
           [RunEvent.parkedOn f.id m.nextToken], g, true)) := by
   simp only [countdownPark, countdownParkEdits, hwalk, applyFiberEdits,
@@ -1301,7 +1303,7 @@ theorem fireObserver_countdown_done (interp : RunInterp ν σ β ε δ ι α χ 
       ((acc.1.emit [RunEvent.observerFired id (Observer.countdown waiter token)]).update
           { w with pending := w.pending.map fun q =>
               if q.token = token then
-                { q with waitingOn := none, remaining := [], collected := exits }
+                { q with remaining := [], collected := exits }
               else q },
         acc.2 ++ [Cmd.resume waiter token (countdownPark.resumePrim interp p.resumeWith exits)]) := by
   simp [fireObserver, RunMachine.fiber?_emit, hw, hp, hff, hwalk]
@@ -1320,7 +1322,7 @@ theorem fireObserver_countdown_next (interp : RunInterp ν σ β ε δ ι α χ 
       (((acc.1.emit [RunEvent.observerFired id (Observer.countdown waiter token)]).update
           { w with pending := w.pending.map fun q =>
               if q.token = token then
-                { q with waitingOn := some next, remaining := rest, collected := exits }
+                { q with remaining := rest, collected := exits }
               else q }).modify next
           (fun g => { g with observers := g.observers ++ [Observer.countdown waiter token] }),
         acc.2) := by
@@ -1395,6 +1397,38 @@ theorem fireObserver_raceCallback_pending (interp : RunInterp ν σ β ε δ ι 
       ((acc.1.emit [RunEvent.observerFired id (Observer.raceCallback raceId)]).updateRace
         (race.afterExit id exit), acc.2) := by
   simp only [fireObserver, RunMachine.race?_emit, hr, Race.afterExit, hacc]
+
+section RaceLaunchStep
+variable {κ φ η : Type (max u v)} [core : FiberCore ν β ε δ ι α κ φ]
+variable [evaluator : FiberEvaluator ν σ β ε δ ι α χ St κ φ η]
+
+/-- The actual launch step forks only its unaccepted head and returns the exact command suffix.
+Concept: reactive-scheduling R11; consumer: source-qualified Timeout entrant ownership.
+The equation retains actual race and host lookups. census: fork.race-all -/
+theorem driveStep_launch_runs (interp : RunInterp ν σ β ε δ ι α χ St κ)
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (raceId : Nat)
+    (rest : List (Cmd ν σ β ε δ ι α κ)) (race : Race ν σ β ε δ ι α κ)
+    (program : κ) (more : List κ) (host : RunFiber ν σ β ε δ ι α χ κ φ)
+    (raceFound : m.race? raceId = some race) (programs : race.programs = program :: more)
+    (unaccepted : race.state.accepted = none) (hostFound : m.fiber? race.host = some host) :
+    driveStep interp m (.launch raceId) rest =
+      (let born := launchEntrant interp raceId m host program (race.nextSite.getD [])
+       (((born.1.updateRace { race with programs := more, nextSite := race.nextSite.map (fun site => site ++ [1]) }).emit [RunEvent.raceLaunched raceId born.2]),
+         .evaluate born.2 :: .enrollRace raceId born.2 :: .launch raceId :: rest)) := by
+  simp only [driveStep, raceFound, programs, unaccepted, Option.isSome_none, Bool.false_eq_true,
+    ↓reduceIte, hostFound]
+/-- An accepted race leaves the remaining head unlaunched in the actual step.
+Concept: reactive-scheduling R11; consumer: Timeout's absent unlaunched owner roles.
+The statement retains a nonempty remainder and the actual accepted verdict. census: fork.race-all -/
+theorem driveStep_launch_accepted (interp : RunInterp ν σ β ε δ ι α χ St κ)
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (raceId : Nat)
+    (rest : List (Cmd ν σ β ε δ ι α κ)) (race : Race ν σ β ε δ ι α κ)
+    (program : κ) (more : List κ)
+    (raceFound : m.race? raceId = some race) (programs : race.programs = program :: more)
+    (accepted : race.state.accepted.isSome = true) :
+    driveStep interp m (.launch raceId) rest = (m, rest) := by
+  simp only [driveStep, raceFound, programs, accepted, ↓reduceIte]
+end RaceLaunchStep
 
 /-- A launch after the race has accepted forks nothing: the register loop has broken
 (`if (done) break`, `:1527`; R2-11), and the entrant that was next never exists.
@@ -1493,7 +1527,7 @@ theorem drive_registrationDone_parks (interp : RunInterp ν σ β ε δ ι α χ
       (let name := interp.cancelName (interp.raceCancelName raceId) host.id race.token
        let g := ({ host with frame := { host.frame with
           stack := Prim.asyncFinalizer name :: host.frame.stack } }).park
-         ⟨race.token, none, [], [], Resume.void, false⟩
+         ⟨race.token, [], [], Resume.void, false⟩
        drive interp fuel
          (((m.updateRace { race with registering := false }).emit [RunEvent.parkedOn g.id race.token]).update
            { g with running := false })
@@ -1804,6 +1838,18 @@ theorem withFiber_raceAll (interp : RunInterp ν σ β ε δ ι α χ St)
         { f with frame := { f.frame with current := interp.parkCode (ParkKind.race raceId) } },
         yielding, Outcome.continue_, [], []⟩) := by aesop
 
+/-- The actual unparked action head executes its successful interpreter hook.
+Concept: reactive-scheduling R11; consumer: source-qualified Timeout waiting and ownership.
+The equation retains current code and the actual hook result. -/
+theorem evaluatePrim_withFiber_runs (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (fiber : RunFiber ν σ β ε δ ι α χ)
+    (yielding : Bool) (thunk : σ) (action : WithFiberAction ν σ β ε δ ι α χ)
+    (current : fiber.frame.current = .withFiber thunk)
+    (unparked : interp.parkOf (.withFiber thunk) = none)
+    (found : interp.withFiberOf thunk = some action) :
+    evaluatePrim interp m fiber yielding = evaluatePrim.withFiber interp m fiber yielding action := by
+  simp only [evaluatePrim, current, unparked, found]
+
 /-- The race's `Async` registration (`:1117-1141`, `:1520-1528`, D6a): the counted step marks
 the race registering and delegates to the register loop and to the registration's return;
 the host keeps its code, its count and its latch. census: fork.race-all -/
@@ -1991,7 +2037,7 @@ theorem evaluatePrim_async_parks (interp : RunInterp ν σ β ε δ ι α χ St)
               stack := Prim.asyncFinalizer
                 (interp.cancelName (cancel.getD interp.abortName) g.id token) :: g.frame.stack } }
          else g
-       let g := g.park ⟨token, none, [], [], Resume.void, false⟩
+       let g := g.park ⟨token, [], [], Resume.void, false⟩
        ⟨m.emit [RunEvent.parkedOn g.id token], g, yielding, Outcome.parked, [], []⟩) := by
   simp only [evaluatePrim, hreg]
 

@@ -530,7 +530,7 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
           (new := { race with registering := false }) payload' (fun _ h => Or.inl h))
           [RunEvent.parkedOn f.id race.token]
       · -- the park: idle at the race key, a `void` record that no observer reads (row 134 (d))
-        let pend : RPending := ⟨race.token, none, [], [], Resume.void, false⟩
+        let pend : RPending := ⟨race.token, [], [], Resume.void, false⟩
         let g : RFiber := { f with
           frame := { f.frame with stack := .asyncFinalizer ((interpR root.program).cancelName
             ((interpR root.program).raceCancelName raceId) f.id race.token) :: f.frame.stack }
@@ -594,7 +594,7 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
             show (w.Θ g.id race.token).isSome = true
             rw [declaredG]
             rfl
-        have targetsG : ∀ p ∈ g.pending, ∀ id ∈ p.waitingOn.toList ++ p.remaining,
+        have targetsG : ∀ p ∈ g.pending, ∀ id ∈ p.remaining,
             id.value < m.nextId := by
           intro p hp id hid
           rw [hpOf] at hp
@@ -602,7 +602,7 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
           · exact old.targetsBelow p h id hid
           · rw [List.mem_singleton] at h
             subst h
-            have hnil : pend.waitingOn.toList ++ pend.remaining = [] := rfl
+            have hnil : pend.remaining = [] := rfl
             rw [hnil] at hid
             exact absurd hid List.not_mem_nil
         have observersG : ∀ o ∈ g.observers, StoredObserverOk root w (m.update g) g.id o := by

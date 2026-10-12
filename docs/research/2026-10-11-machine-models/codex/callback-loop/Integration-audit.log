@@ -1,0 +1,2 @@
+COMMAND: lean -DwarningAsError=true /Users/pooks/.codex/worktrees/last-planned-goals/lean4-effect4/docs/research/2026-10-11-machine-models/codex/callback-loop/Audit.lean
+#axiom_audit: 549 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals

@@ -8,9 +8,9 @@
 #
 # DEVIATIONS from engine-a1 §1.4/§1.5, recorded here because lane C implements against them:
 #   D1  The dispatcher is A3's whole-dispatcher carrier (`e4_buckets.mli`, engine-a3 §1.1.1),
-#       not a TABLE of buckets holding a FIFO.  So `Effect4.Machine.Dispatcher` is an extern
-#       TYPE (`(…) task D.t`), `Effect4.Machine.Bucket` and the FIFO functor parameter are
-#       gone, and `Dispatcher.insert` is never reached.  The functor is
+#       not a TABLE of buckets holding a FIFO. R1 erases the one-field dispatcher to its list.
+#       Its type row retains `(…) task D.t`, and Dispatcher.insert
+#       calls the carrier's enqueue. The functor is
 #       `Make (M : TABLE) (T : TRACE) (L : LAYERS) (D : DISPATCHER)`.
 #   D2  TABLE/TRACE/LAYERS are emitted as A1 §1.5 prints them, byte for byte; DISPATCHER is
 #       e4_buckets.mli's own signature, so `module D = E4_buckets` needs no adapter.
@@ -22,12 +22,12 @@
 #       record field, so all of them live in the prelude
 #       (ocaml/engine/tools/api_engine_prelude.ml).  `e4_shim.{ml,mli}` is not created: a
 #       separate compilation unit cannot see the record types, which are inside the functor.
-#   D4  A1's rows for `refPeek`/`refPoke`/`Dispatcher.insert`/`ScopeStore.entryAt` are not
+#   D4  A1's rows for `refPeek`/`refPoke`/`ScopeStore.entryAt` are not
 #       here: each is inlined or reached only through a row that deletes it, so a row would be
 #       a stale ledger and the generator refuses one (G10).
-#   D5  Two constructor rows (`Dispatcher.mk`, `MemoMap.mk`) that A1 does not have: the mono
-#       phase inlines `⟨[], false⟩` into `fireState` and `⟨…, parent, []⟩` into `syncOpStep`,
-#       both of which must stay generated.
+#   D5  MemoMap.mk retains its constructor row. R1 removes Dispatcher.mk during lowering.
+#       The explicit D.t empty operation handles empty lists at the dispatcher field.
+#       fireState and syncOpStep stay generated.
 #   D6  Q6 (`Nat.div`/`Nat.mod` by zero) is two `fn?` rows: the current root set never reaches
 #       division, so a mandatory row would fail G10.  They fire the moment one does.
 #   D7  (lane G2) `Point.path` and `Point.env` are carriers too, and they are the ones the
@@ -93,11 +93,10 @@ fn Effect4.Machine.RunMachine.finished 1 sh_machine_finished
 fn Effect4.Machine.RunMachine.completedExits 1 sh_machine_completed_exits
 # P2b frontier observations read the fiber view through its existing ordered projection.
 ops F.t to_list F.to_list
-fn Effect4.Machine.spawn._at_.Effect4.Machine.evaluatePrim.withFiber.spec_0._redArg 6 sh_spawn
+fn Effect4.Machine.spawn._at_.Effect4.Machine.evaluatePrim.withFiber.spec_0 6 sh_spawn
 fn Effect4.Machine.spawn._at_.Effect4.Machine.launchEntrant._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Program.replayCheckedFrom.spec_1.spec_3.spec_6.spec_12.spec_19 6 sh_spawn
 fn Effect4.Machine.spawn 7 sh_spawn_generic run_fiber_make
-# `RunMachine.dropToken`'s map over the fibers (item 10): the observer filter by park token.
-fn List.mapTR.loop._at_.Effect4.Machine.RunMachine.dropToken.spec_1._redArg 3 sh_drop_observers
+fn Effect4.Machine.RunMachine.dropToken 2 sh_machine_drop_token
 
 # ---- E3: the ref heap ---------------------------------------------------------------------
 fn Effect4.Machine.refStep 2 sh_ref_step program_eval_term
@@ -112,10 +111,9 @@ fn List.find?._at_.Effect4.Machine.ScopeStore.entryAt.spec_0 2 sh_scope_entry_at
 fn Effect4.Machine.ScopeStore.setEntry 2 sh_scope_set_entry
 fn Effect4.Machine.ScopeStore.make 3 sh_scope_store_make scope_make
 fn Effect4.Machine.ScopeStore.forkChild 5 sh_scope_fork_child scope_fork
-fn Effect4.Machine.Dispatcher.empty 0 D.empty
-fn Effect4.Machine.Dispatcher.enqueue 3 D.enqueue _ ~priority _
+fn Effect4.Machine.Dispatcher.insert 3 sh_dispatcher_insert
 fn Effect4.Machine.Dispatcher.drain 1 D.drain
-fn Effect4.Machine.Dispatcher.mk 2 sh_dispatcher_mk
+ops D.t empty D.empty
 
 # ---- E6: the memo entries -----------------------------------------------------------------
 fn Effect4.Machine.MemoWorld.entryAt 3 sh_memo_entry_at

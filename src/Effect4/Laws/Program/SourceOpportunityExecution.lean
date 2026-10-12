@@ -122,28 +122,4 @@ theorem loop_command_debit (root : NativeEff) (q : List Nat) (fragment : Fragmen
     exact settle_debit root q m fiber _ rest (ForkLedger.Invariant.fiber_ids_unique ledger)
       (RunMachine.mem_of_fiber? found) (ForkLedger.Invariant.fiber_ids_unique after) same debit
 
-/-- Actual answer delivery uses native evaluation and the same owner installation.
-Consumer: complete command preservation and admitted-history induction. -/
-theorem deliver_command_debit (root : NativeEff) (q : List Nat) (fragment : Fragment root)
-    (clearFin : ClearFinalizers root q) (clearLoop : ClearLoops root q) (table : RowTable)
-    (m : NativeMachine) (id : FiberId) (yielding : Bool) (rest : List SourceCommand)
-    (sequential : SequentialSource root) (raceFree : RaceFreeSource root)
-    (owned : ConfigurationAt root m) (ledger : ForkLedger.Invariant.Ok m) :
-    letI := evaluatorFor root table
-    let next := driveStep (interpOf root table) m (.deliver id yielding) rest
-    recorded q next.1 + fibers root q next.1 ≤ recorded q m + fibers root q m := by
-  letI := evaluatorFor root table
-  unfold driveStep
-  split
-  · exact Nat.le_refl _
-  · rename_i fiber found
-    have held := configuration_fiber root m id fiber owned found
-    have debit := native_debit root q fragment clearFin clearLoop table m fiber yielding
-      sequential raceFree owned held (ForkLedger.Invariant.fiber_ids_unique ledger)
-    have after := ForkLedger.Invariant.Native.evaluateNative_ok root table m fiber yielding ledger
-    have same := (Moves.evaluateNative_footprint root table m fiber yielding).id
-    rw [← RunMachine.id_of_fiber? found]
-    exact settle_debit root q m fiber _ rest (ForkLedger.Invariant.fiber_ids_unique ledger)
-      (RunMachine.mem_of_fiber? found) (ForkLedger.Invariant.fiber_ids_unique after) same debit
-
 end Effect4.Program.SourceScope.Opportunities

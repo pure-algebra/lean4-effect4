@@ -1710,6 +1710,7 @@ def joinedOutput (p : Api.Program) (table : RowTable) :
     | .illTyped => "typed fixture: ordinary admission refuses typing"
     | .formation why => s!"typed fixture: ordinary admission refuses raw formation {repr why}"
     | .print why => "typed fixture: ordinary emission refuses " ++ refusalText why
+    | .outsideProfile value => s!"typed fixture: the literal {value} is above the target's safe integers"
   unless emission.classDecls.isEmpty do
     throw "typed fixture: payload classes need the ordinary module producer"
   match emission.declarations with

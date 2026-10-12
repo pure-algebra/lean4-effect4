@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.NativeConfiguration
 import Effect4.Laws.Program.Interference
+import Effect4.Laws.Machine.Clauses
 
 /-!
 Concept: store-typing R4, serving `HeapSites.heap_sites_keep`.
@@ -12,10 +13,39 @@ open Effect4 Effect4.Machine Effect4.Program
 abbrev SourceIteration := Iter EffName EffThunk Val Err Defect FiberId Ann Ctx Stores
 
 /-- An evaluation result retains the stored configuration, acting fiber and pending commands. -/
-structure EvaluationAt (root : NativeEff) (it : SourceIteration) : Prop where
-  machine : ConfigurationAt root it.machine
-  fiber : FiberAt root it.fiber
-  commands : CommandsAt root it.nested
+structure EvaluationAt (root : NativeEff) (it : SourceIteration)
+    (machineAt : NativeMachine → Prop := ConfigurationAt root)
+    (fiberAt : SourceFiber → Prop := FiberAt root)
+    (commandsAt : List SourceCommand → Prop := CommandsAt root) : Prop where
+  machine : machineAt it.machine
+  fiber : fiberAt it.fiber
+  commands : commandsAt it.nested
+
+/-- Actual native sync retains its executed store equation and the existing three result positions.
+Consumers: primitive_at's lexical sync projection and Timeout's count writer with its waiting owner.
+The local field contracts grant no whole-history preservation or permission to other positions. -/
+theorem sync_evaluation_fields (root : NativeEff) (interp : Moves.NInterp)
+    (machine : NativeMachine) (fiber : SourceFiber) (yielding : Bool)
+    (thunk : EffThunk) (state : Stores) (value : Val)
+    (machineAt : NativeMachine → Prop) (fiberAt : SourceFiber → Prop)
+    (commandsAt : List SourceCommand → Prop)
+    (current : fiber.frame.current = .sync thunk)
+    (unparked : interp.parkOf fiber.frame.current = none)
+    (operation : interp.syncState thunk machine.state = some (state, value))
+    (stores : machineAt {machine with state})
+    (answer : fiberAt {fiber with frame := {fiber.frame with current := .success value}})
+    (commands : commandsAt [.drainDue]) :
+    let result : SourceIteration := ⟨{machine with state},
+      {fiber with frame := {fiber.frame with current := .success value}},
+      yielding, .answered, [.drainDue], []⟩
+    evaluatePrim interp machine fiber yielding = result ∧
+      EvaluationAt root result machineAt fiberAt commandsAt := by
+  have installed : ({fiber with frame := {fiber.frame with current := .sync thunk}} : SourceFiber) = fiber := by
+    rw [← current]
+  have actual := evaluatePrim_sync_answers interp machine fiber yielding thunk state value
+    (by rw [← current]; exact unparked) operation
+  rw [installed] at actual
+  exact ⟨actual, stores, answer, commands⟩
 
 /-- Administrative finalizer composition retains the actual cleanup program. -/
 theorem finalizer_code_at (root : NativeEff) (completed) (table : RowTable) (exit : ExitV)
@@ -208,14 +238,31 @@ theorem register_race_at (root : NativeEff) (m : NativeMachine) (fiber : SourceF
                  · rw [same]; trivial
                  · cases empty⟩
 
+/-- Actual race entry retains source permission together with the exact newly allocated bookkeeping record.
+The programs remain unlaunched; the command reader assigns an entrant only when launch runs. -/
+theorem begin_race_programs (root : NativeEff) (completed) (table : RowTable)
+    (m : NativeMachine) (fiber : SourceFiber) (yielding : Bool) (programs : List NCode)
+    (site : Option (List Nat)) (mode : Supervision.RaceMode) (owned : ConfigurationAt root m)
+    (held : FiberAt root fiber) (entrants : (∀ code ∈ programs, CodeAt root code) ∧ RaceAllowed root)
+    (Permission : NCode → Prop) (permissions : ∀ code ∈ programs, Permission code) :
+    let result := beginRace (interpAt root completed table) m fiber yielding programs site mode
+    EvaluationAt root result ∧
+      ∃ race : SourceRace, result.machine.races = m.races ++ [race] ∧
+        race.id = m.nextRace ∧ race.host = fiber.id ∧ race.token = m.nextToken ∧
+        race.programs = programs ∧ (∀ code ∈ race.programs, Permission code) := by
+  obtain ⟨configuration, race⟩ := configuration_begin_race_programs root completed table m fiber yielding
+    programs site mode owned entrants Permission permissions
+  exact ⟨⟨configuration, fiber_current_at root fiber _ held trivial,
+    by intro command member; cases member⟩, race⟩
+
 /-- Race entry retains its actual source programs and counted registration primitive. -/
 theorem begin_race_at (root : NativeEff) (completed) (table : RowTable)
     (m : NativeMachine) (fiber : SourceFiber) (yielding : Bool) (programs : List NCode)
     (site : Option (List Nat)) (mode : Supervision.RaceMode) (owned : ConfigurationAt root m)
     (held : FiberAt root fiber) (entrants : (∀ code ∈ programs, CodeAt root code) ∧ RaceAllowed root) :
     EvaluationAt root (beginRace (interpAt root completed table) m fiber yielding programs site mode) :=
-  ⟨configuration_begin_race root completed table m fiber yielding programs site mode owned entrants,
-    fiber_current_at root fiber _ held trivial, by intro command member; cases member⟩
+  (begin_race_programs root completed table m fiber yielding programs site mode owned held entrants
+    (fun _ => True) (fun _ _ => True.intro)).1
 
 /-- A fresh cause updates metadata or installs a failure, retaining all source captures. -/
 theorem interrupt_cause_at (root : NativeEff) (cause : CauseV)

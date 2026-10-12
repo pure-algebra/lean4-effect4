@@ -343,7 +343,6 @@ module type INSTANCE = sig
   val f_prevent_yield : fiber -> bool
   val f_yield_override : fiber -> bool option
   val f_context : fiber -> ctx
-  val f_dispatcher_armed : fiber -> bool
   val f_dispatcher : fiber -> (int * int) list
 end
 

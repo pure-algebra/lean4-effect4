@@ -210,12 +210,17 @@ A program has folds, a journaled run with replay, and a printed image that reads
   Five guard chains and the evaluation
   half of `MaskRuns` follow as instances; replacing the old chains is Codex's lane. A raw context
   write lets a checked program at a closed row die with `missingService` (`E4-CTX-CE-001`). Row 349
-  ruled option A: a typed `context` reader and a `provideContext` region, in Codex's lane.
+  ruled option A: a typed `context` reader and a `provideContext` region. Its syntax, readers,
+  printers, OCaml bridge and generated files are on branch `land/typed-context`, with eight
+  behaviour gates passing there. It merges when `Effect4.Laws` builds: the machine's typed state
+  must carry context coverage through every command, in `Laws/Program/Typed/`.
   The printer spells a pair of a union as a union of pairs (`E4-PRINT-CE-001`, row 346, ruled).
 - **Shared accounting** (row 355). A stack ledger states once what the goals lane re-proved per
   scenario: consumed plus held is at most produced, along every reachable machine
   (`src/Effect4/Laws/Machine/Ledger.lean`, `src/Effect4/Laws/Program/LedgerRun.lean`). The
-  finalizer custody law is its first instance. Codex replaces the other ledgers, and each merge is
+  finalizer custody law is its first instance. Place funding states the command step once for
+  any budget (`PlaceFunding.command_funded`, `src/Effect4/Laws/Program/PlaceFunding/`); the
+  source-opportunity budget is its instance. The other ledgers move to it, and each merge is
   audited for consolidation (`docs/research/2026-10-11-machine-models/AUDIT.md`). The driver's
   helpers are words of one edit alphabet (`src/Effect4/Laws/Machine/Edits.lean`). Edits of
   another fiber's record apply after the running fiber's write-back, so a fiber that interrupts
@@ -247,7 +252,8 @@ A program has folds, a journaled run with replay, and a printed image that reads
 ## Next, in order
 
 00. **The last planned goals** (the [goals packet](research/2026-10-10-goals-packet/README.md)).
-   Codex's lane merges hourly. Of the fourteen application goals, three are proved
+   Codex reached its quota on 2026-10-12, and Claude carries its lane
+   (`docs/research/2026-10-11-machine-models/CODEX-PROMPT.md`). Of the fourteen application goals, three are proved
    (`Atomic.bounded`, `Routing.infrastructure_escapes`, `Timeout.stale_never_applies`). Nine are
    proved modulo seven smaller goals. Timeout's retry and cleanup goals stay open (`#plan_status`).
    The packet also sorts the 87 open parts that no goal states yet. Beside it: the nine legacy host fixtures of the

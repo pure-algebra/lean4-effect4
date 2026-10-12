@@ -39,6 +39,28 @@ theorem postTask_word (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (owne
     m.postTask owner priority task = run (postTaskWord m owner priority task) m := by
   cases found : m.fiber? owner <;> simp only [RunMachine.postTask, postTaskWord, found] <;> rfl
 
+/-- Actual task-post prefixes retain the lookup that produces their update.
+Consumers: stack and active/state place funding. -/
+theorem postTask_path
+    {Edge : RunMachine ν σ β ε δ ι α χ St κ φ η → RunMachine ν σ β ε δ ι α χ St κ φ η →
+      Edit ν σ β ε δ ι α χ St κ φ η → Prop}
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (owner : FiberId)
+    (priority : Nat) (task : Task ν σ β ε δ ι α κ)
+    (updated : ∀ old, m.fiber? owner = some old →
+      Edge m (m.update {old with dispatcher := old.dispatcher.enqueue priority task})
+        (.update {old with dispatcher := old.dispatcher.enqueue priority task}))
+    (armed : ∀ held, Edge held (held.arm owner) (.arm owner))
+    (scheduled : ∀ held, Edge held (held.emit [.scheduledTask owner priority task])
+      (.emit [.scheduledTask owner priority task]))
+    (halted : Edge m (m.halt (.unknownFiber owner)) (.halt (.unknownFiber owner))) :
+    Effect4.Contracts.Path Edge m (m.postTask owner priority task) (postTaskWord m owner priority task) := by
+  rw [postTask_word]
+  cases found : m.fiber? owner with
+  | none => simp only [postTaskWord, found]; exact .cons halted (.nil _)
+  | some old =>
+    simp only [postTaskWord, found]
+    exact .cons (updated old found) (.cons (armed _) (.cons (scheduled _) (.nil _)))
+
 theorem arm_word (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (owner : FiberId) :
     m.arm owner = run [.arm owner] m := rfl
 

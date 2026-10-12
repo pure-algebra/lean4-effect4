@@ -7,7 +7,46 @@ you. Then read this folder's `README.md` and the earlier note
 
 ## The one thing to know first
 
-**Newest, 2026-10-11 18:30: items 10 and R2 are merged; item 11's first two steps landed beside you.**
+**Newest, 2026-10-12 00:45: merge the landing into the seat, then finish Assembly.** The
+landing branch `land/typed-context` is at `cd913bac7` and has merged your head at `eda02fb9b`. Its
+law graph builds except `Typed/Assembly.lean`, and its audit is within `[propext, Quot.sound]`.
+Merge it into the seat before your next commit. Your Body, LayerArm and Assembly work then builds
+against the same tree. The acceptance is `lake build Effect4 Effect4.Laws` at the seat's head.
+Three notes:
+
+- `SourceScope.source_no_scopeAdd` now lives in `Laws/Program/SyncOps.lean`, upstream of
+  `Agreement`. Your `syncOpOf_not_foreign_scopeAdd` is its instance at a foreign capture. Use it.
+  Two modules that each split `NativeOp.syncOpOf` declare the same auxiliary equation, and a
+  module that imports both refuses it.
+- `Test/Program/MaskContract.lean`: at budget 2 the cut run now reaches the command fuel inside
+  the provision's masked entry. The unmasked entry reached the interrupt before the form there.
+  Check whether a masked entry can spin under a pending interrupt; the battery records it as open.
+- The behaviour gates `check-ocaml`, `check-truth`, `check-host-protocol` and `check-corpus` build
+  tools that import `Typed/Assembly`. The other eight pass on the landing.
+
+**Earlier, 2026-10-11 22:15: the landing waits for your ambient migration.** The landing branch
+`land/typed-context` (`8f1f3d1ac`) has merged your head at `fcac7de73`. It carries everything outside
+`Laws/Program/Typed/`:
+
+- the template rows: `Effect.context<R>()`, where `R` is the requirement row's type, and
+  `Effect.provideContext(self, context)`;
+- the exact row reader (`readKeys`, `readKeys_requirementType`, `readKeys_exact`);
+- the TypeScript reader, both foreign recognizers and the OCaml bridge;
+- the tests, and the laws that the new names and thunks reach outside `Typed/`.
+
+Its law graph builds except `Typed/Assembly.lean`, which your receipt names as open
+(`codex/context/SourceArgumentsReceipt.md`). Finish Body, LayerArm and Assembly on the seat, and
+keep to `Typed/`. Claude merges each new seat commit into the landing branch. The landing goes
+into `refactor/phase1-phase3` when `Effect4.Laws` builds there.
+
+**Earlier, 20:20: Claude is landing `codex/symbolic-native-fold` at `e30a74131`.** The
+owner asked for it. The landing branch is `land/typed-context`, in its own worktree. It reconciles
+the seat with R2 and items 10 to 12. It also does the plan's target lane: template rows for
+`Effect.context<Row>()` and `Effect.provideContext`, the reader, the TypeScript reader, and the
+generated and OCaml sweep. Do not redo the target lane on the seat. After the landing merges into
+`refactor/phase1-phase3`, merge it into the seat before its next commit.
+
+**Earlier, 18:30: items 10 and R2 are merged; item 11's first two steps landed beside you.**
 
 - R2 merged by fast-forward at `6c4bb709d` (`AUDIT.md`, section 15:40: improving in structure,
   private analyses flat). `E4-RUN-CE-046` is repaired; its behaviour gates are owed at the sweep.

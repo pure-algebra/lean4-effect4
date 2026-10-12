@@ -68,17 +68,16 @@ def wide : List String :=
   , ""
   ]
 
-/-- **The profile's bound on the target** (DI-56; decisions rows 108, 321 and 322). The four rows
-that grow (`succ`, `add`, `plus`, `minus`) grow through `Profile.grow` in the reference
-(`src/Effect4/Machine/Integers.lean`), and their bodies call this helper. A double holds the exact
-sum of two safe integers up to 2^53, and rounding is monotone, so the test after the sum is
-exact. Past the bound it throws `ProfileRefusal`: a refusal of the target profile, never a
-rounded value. The OCaml engine refuses at the same bound (`E4_clock.to_profile_nat`). -/
+/-- The profile checks the represented growing arithmetic at its target boundary.
+Addition uses `Profile.grow`; multiplication uses `Profile.scale` in the reference.
+For admitted integer inputs, a result within the safe-integer bound is exact.
+The helper refuses results outside that bound before exposing them.
+The OCaml target uses `E4_clock.to_profile_nat` (DI-56, decisions rows 108 and 321). -/
 def profile : List String :=
-  [ "/** The profile's bound on the target (DI-56; decisions rows 108, 321 and 322). The four rows"
-  , " * that grow call it after the sum: a double holds the exact sum of two safe integers up to"
-  , " * 2^53, and rounding is monotone, so the test is exact. Past the bound it throws"
-  , " * `ProfileRefusal`, a refusal of the profile, never a rounded value. */"
+  [ "/** The represented growing arithmetic checks its result at the profile boundary."
+  , " * For admitted integer inputs, a safe-integer sum or product is exact."
+  , " * The helper throws ProfileRefusal outside that bound before exposing a result."
+  , " * This check supplies no admission guarantee for arbitrary host arguments. */"
   , "export class ProfileRefusal extends Error {"
   , "  readonly value: number"
   , "  constructor(value: number) {"

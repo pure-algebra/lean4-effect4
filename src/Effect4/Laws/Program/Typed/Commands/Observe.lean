@@ -651,7 +651,7 @@ theorem countdownPayload_advance {w : World} {m m' : RState} {waiter : FiberId}
     {p p' : RPending} {a e : Ty} {tt : EffTy} (old : CountdownPayload w m waiter p a e tt)
     (token : p'.token = p.token) (resume : p'.resumeWith = p.resumeWith)
     (collected : ∀ ex ∈ p'.collected, ExitOk w ⟨a, e, Env.Requirement.empty⟩ ex)
-    (targets : ∀ id ∈ p'.waitingOn.toList ++ p'.remaining, id ∈ p.waitingOn.toList ++ p.remaining)
+    (targets : ∀ id ∈ p'.remaining, id ∈ p.remaining)
     (lookup : ∀ id f', m'.fiber? id = some f' → ∃ f, m.fiber? id = some f ∧ f'.id = f.id) :
     CountdownPayload w m' waiter p' a e tt := by
   refine ⟨by rw [token]; exact old.token, collected, fun id hid fiber hf => ?_, ?_⟩
@@ -714,7 +714,7 @@ theorem countdownAt_advance {w : World} {m m' : RState} {waiter : FiberId} {toke
     (findNew : g'.pending.find? (fun q => q.token = token) = some p')
     (ptoken : p'.token = p.token) (presume : p'.resumeWith = p.resumeWith)
     (collected : ∀ ex ∈ p'.collected, ExitOk w ⟨a, e, Env.Requirement.empty⟩ ex)
-    (targets : ∀ id ∈ p'.waitingOn.toList ++ p'.remaining, id ∈ p.waitingOn.toList ++ p.remaining)
+    (targets : ∀ id ∈ p'.remaining, id ∈ p.remaining)
     (lookup : ∀ id f', m'.fiber? id = some f' → ∃ f, m.fiber? id = some f ∧ f'.id = f.id) :
     CountdownAt w m' waiter token incoming := by
   obtain ⟨ax, ex', ttx, payx, incx⟩ := other
@@ -783,7 +783,7 @@ theorem fiberTyped_repend {root : ProgramSource} {w : World} {m M' : RState} {wf
     (nextToken : m.nextToken ≤ M'.nextToken) (parked : wf.parked = .withGuard token)
     (ptok : p'.token = token)
     (keyed : ∀ o ∈ wf.observers, ¬ OffKey (wf.id, token) o → StoredObserverOk root w M' wf.id o)
-    (targets : ∀ id ∈ p'.waitingOn.toList ++ p'.remaining, id.value < m.nextId) :
+    (targets : ∀ id ∈ p'.remaining, id.value < m.nextId) :
     FiberTyped root w M' { wf with pending := [p'] } := by
   have declared : (w.Θ wf.id token).isSome = true := old.tokens token parked
   refine ⟨⟨old.ok.c0, fun q hq => ?_, old.ok.c2, old.ok.c3, old.ok.c4, old.ok.c5⟩,
@@ -1104,7 +1104,7 @@ theorem observe_countdown (root : ProgramSource) (rootTy : EffTy) {w : World} {m
           obtain ⟨g0, hg0, kept⟩ := view2.lookup t g hg
           have g0x : g0.exit = some x := kept.2.1.symm.trans gx
           obtain ⟨ty, declared, sa, se⟩ :=
-            payload.targets t (List.mem_append_right _ ht) g0 hg0
+            payload.targets t ht g0 hg0
           exact exitOk_subN ((typed.machine.fiber (rfiber?_mem hg0)).ok.c3 x g0x ty declared) sa se
         have lookupBack : ∀ (g : RFiber), g.id = waiter → ∀ id f',
             (m2.update g).fiber? id = some f' → ∃ f, m.fiber? id = some f ∧ f'.id = f.id := by
@@ -1137,7 +1137,7 @@ theorem observe_countdown (root : ProgramSource) (rootTy : EffTy) {w : World} {m
         have nextWalk := walk.2
         have advancePending : ∀ (p' : RPending), p'.token = p.token → p'.resumeWith = p.resumeWith →
             (∀ ex ∈ p'.collected, ExitOk w ⟨a, e, Env.Requirement.empty⟩ ex) →
-            (∀ id ∈ p'.waitingOn.toList ++ p'.remaining, id ∈ p.waitingOn.toList ++ p.remaining) →
+            (∀ id ∈ p'.remaining, id ∈ p.remaining) →
             ConfigTyped root rootTy w (m2.update {y with pending := [p']}) rest ∧
               CountdownPayload w (m2.update {y with pending := [p']}) waiter p' a e tt := by
           intro p' tokenSame resumeSame collectedOk targets
@@ -1223,7 +1223,7 @@ theorem observe_countdown (root : ProgramSource) (rootTy : EffTy) {w : World} {m
         · rw [hwalk] at typedWalk
           dsimp only
           rw [singleY, List.map_cons, List.map_nil, if_pos ptokY]
-          let p' : RPending := {p with waitingOn := none, remaining := [], collected := exits}
+          let p' : RPending := {p with remaining := [], collected := exits}
           let g : RFiber := {y with pending := [p']}
           obtain ⟨replaced, _⟩ := advancePending p' rfl rfl typedWalk (fun _ h => nomatch h)
           have look : (m2.update g).fiber? waiter = some g := by
@@ -1247,15 +1247,10 @@ theorem observe_countdown (root : ProgramSource) (rootTy : EffTy) {w : World} {m
           dsimp only
           rw [singleY, List.map_cons, List.map_nil, if_pos ptokY]
           obtain ⟨nextMem, ⟨gn, hgn, _⟩, restSub⟩ := nextWalk next rest' rfl
-          let p' : RPending := {p with waitingOn := some next, remaining := rest', collected := exits}
+          let p' : RPending := {p with remaining := rest', collected := exits}
           let g : RFiber := {y with pending := [p']}
-          have targets : ∀ id ∈ p'.waitingOn.toList ++ p'.remaining,
-              id ∈ p.waitingOn.toList ++ p.remaining := by
-            intro id hid
-            rcases List.mem_append.mp hid with h | h
-            · rw [List.mem_singleton.mp h]
-              exact List.mem_append_right _ nextMem
-            · exact List.mem_append_right _ (restSub id h)
+          have targets : ∀ id ∈ p'.remaining, id ∈ p.remaining :=
+            fun id hid => restSub id hid
           obtain ⟨replaced, newPayload⟩ := advancePending p' rfl rfl typedWalk targets
           have look : (m2.update g).fiber? waiter = some g := by
             rw [← yid]
@@ -1283,7 +1278,7 @@ theorem observe_countdown (root : ProgramSource) (rootTy : EffTy) {w : World} {m
               have nextCols : FiberColumnsBelow w t.id a e := by
                 obtain ⟨f0, hf0, same⟩ := lookupBack g yid next t ht
                 rw [same]
-                exact payload.targets next (List.mem_append_right _ nextMem) f0 hf0
+                exact payload.targets next nextMem f0 hf0
               let t' : RFiber := {t with observers := t.observers ++ [.countdown waiter token]}
               have lookT : (m2.update g).fiber? t.id = some t := by
                 rw [rfiber?_id ht]

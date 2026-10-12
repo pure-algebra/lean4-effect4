@@ -1,0 +1,43 @@
+✖ [261/264] Building Effect4.Laws.Machine.StoresLaws (23s)
+trace: .> LEAN_PATH=/Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/src/Effect4/Laws/Machine/StoresLaws.lean -o /Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Machine/StoresLaws.olean -i /Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Machine/StoresLaws.ilean -c /Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/build/ir/Effect4/Laws/Machine/StoresLaws.c --setup /Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/build/ir/Effect4/Laws/Machine/StoresLaws.setup.json --json
+error: src/Effect4/Laws/Machine/StoresLaws.lean:79:2: Tactic `rfl` failed: The left-hand side
+  (Store.Val.handles (cell k)).all fun h => s.handleValid h.fst h.snd
+is not definitionally equal to the right-hand side
+  decide (k.index < List.length s.refs)
+
+s : Stores
+k : RefKey
+⊢ ((Store.Val.handles (cell k)).all fun h => s.handleValid h.fst h.snd) = decide (k.index < List.length s.refs)
+error: src/Effect4/Laws/Machine/StoresLaws.lean:84:2: Tactic `rfl` failed: The left-hand side
+  (Store.Val.handles (promise k)).all fun h => s.handleValid h.fst h.snd
+is not definitionally equal to the right-hand side
+  decide (k.index < (s.deferreds.cells (Completion Val Err Defect FiberId Ann)).length)
+
+s : Stores
+k : DeferredKey
+⊢ ((Store.Val.handles (promise k)).all fun h => s.handleValid h.fst h.snd) =
+    decide (k.index < (s.deferreds.cells (Completion Val Err Defect FiberId Ann)).length)
+error: src/Effect4/Laws/Machine/StoresLaws.lean:89:2: Tactic `rfl` failed: The left-hand side
+  (Store.Val.handles (scopeHandle key)).all fun h => s.handleValid h.fst h.snd
+is not definitionally equal to the right-hand side
+  (s.scopes.entryAt key).isSome
+
+s : Stores
+key : Nat
+⊢ ((Store.Val.handles (scopeHandle key)).all fun h => s.handleValid h.fst h.snd) = (s.scopes.entryAt key).isSome
+error: src/Effect4/Laws/Machine/StoresLaws.lean:94:2: Tactic `rfl` failed: The left-hand side
+  (Store.Val.handles (memoMap id)).all fun h => s.handleValid h.fst h.snd
+is not definitionally equal to the right-hand side
+  (s.memo.mapAt id).isSome
+
+s : Stores
+id : MemoMapId
+⊢ ((Store.Val.handles (memoMap id)).all fun h => s.handleValid h.fst h.snd) = (s.memo.mapAt id).isSome
+error: src/Effect4/Laws/Machine/StoresLaws.lean:105:2: unsolved goals
+s : Stores
+values : List Val
+⊢ (values.all fun a => a.handles.all fun h => s.handleValid h.fst h.snd) = values.all (validIn s)
+error: Lean exited with code 1
+Some required targets logged failures:
+- Effect4.Laws.Machine.StoresLaws
+error: build failed

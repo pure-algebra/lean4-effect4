@@ -1,0 +1,3 @@
+src/Effect4/Laws/Contracts/FramePath.lean: 3 theorem headers retained; lines 50 -> 60; baseline SHA256 e9178de1092de9e58c13791ffcb548dddded3e32cc05c3775433a0dc7bf1b977
+src/Effect4/Laws/Machine/AnswerFlowFamilyPop.lean: 12 theorem headers retained; lines 336 -> 394; baseline SHA256 943c2943bab77cfcff723db7f60e4141975a6d2f12c19795b518e22705c156e1
+Test/Dogfood/Proofs/HostTimeoutNumberFormFamily.lean: 12 theorem headers retained; lines 305 -> 315; baseline SHA256 450abbd6710d21cba687dadf1309b1d3e39e7bf53ee4fba12a4a5beda04d8661

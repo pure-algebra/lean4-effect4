@@ -1,0 +1,45 @@
+{
+  "source_base": "a0f25e5f170465ad89ee0e0d3f9b86fe3752b664",
+  "source": {
+    "src/Effect4/Laws/Machine/Clauses.lean": {
+      "sha256": "e2a336646dc53b647d3579b7829643212df025cdd739bb8bf622123273f7dd04",
+      "lines": 2132
+    },
+    "Test/Dogfood/Proofs/HostTimeoutNumberFlow.lean": {
+      "sha256": "bf581b38476043abee41e0d746a7086594d1c4a865c94296c3aafa02debee439",
+      "lines": 830
+    },
+    "docs/research/2026-10-11-machine-models/codex/callback-loop/TimeoutReadyEntryProbe.lean": {
+      "sha256": "e6e3daa6e75b4da30f68fbbf48488201dd1639ea216fb8c7bafef6bfc63cc731",
+      "lines": 202
+    },
+    "docs/research/2026-10-11-machine-models/codex/callback-loop/TimeoutRaceWaitingProbe.lean": {
+      "sha256": "519c3b7d37d7a2e1ae214738e2b3f52eb48d55934af42b8d5664fd238829d4d2",
+      "lines": 57
+    },
+    "docs/research/2026-10-11-machine-models/codex/callback-loop/TimeoutCancelPhaseProbe.lean": {
+      "sha256": "21751a7075219e964eeb40fecc069855c029908fa63c3ac4fcd8a95035a874eb",
+      "lines": 110
+    },
+    "docs/research/2026-10-11-machine-models/codex/callback-loop/TimeoutRaceSettleProbe.lean": {
+      "sha256": "89e955f9165e0d5bb5a10d1cc91a05c18c40807d0dcb31283aee30aa8052ee7d",
+      "lines": 49
+    }
+  },
+  "logs": {
+    "WaitingIntegration-CountdownJoinProbe.log": "cc2c14e04f069f82e4f90b675f5d6874f57a46e2bde55529365e69c0ed86b5b9",
+    "WaitingIntegration-TimeoutCancelPhaseProbe.log": "114ce426c7c3545b473c29474b435d7efb22fd71716176b027d157d1c8397209",
+    "WaitingIntegration-TimeoutJointGenerationProbe.log": "11851d5d0f58b9577d02d46c75d3dc95614db51534636e1553e9eb79e9955668",
+    "WaitingIntegration-TimeoutNativeRootFamilyProbe.log": "f526920a04631a9e8d5e2cd78fddac7f87430e59893856cadd9d14d0fb62c5ff",
+    "WaitingIntegration-TimeoutRaceOwnershipProbe.log": "dfc48dffc77a6cbf4a53bb8c228abd435659fd54d3ab73049308d3f0f9d89217",
+    "WaitingIntegration-TimeoutRaceSettleProbe.log": "7477db626eaeb479989526e8ad9d0bcf651305659dffc76f91b651e74855d54c",
+    "WaitingIntegration-TimeoutRaceWaitingProbe.log": "8df3b1ab1e3d8f16f90da9a79f35c1231e51a291f7ef21c7219e5b83ec272368",
+    "WaitingIntegration-TimeoutReadyEntryProbe.log": "3fd9441bc163302d516ccb66ca07e3073762826de69e47d8890b2d635d5b07c1",
+    "WaitingIntegration-TimeoutRootLoopProbe.log": "78b92f0d2f0051eb5690d64439a6440d3e4bc575ab132160f8e4db902e5c9489",
+    "WaitingIntegration-audit.log": "c4a0c5a31bd2103b10dec115096d8a3250fecb22b9de8a7f3fb6b4ea72dfbb15",
+    "WaitingIntegration-family-build.log": "3bc3c285bab35769b5514335b165b92eeb272a3542749b9544faf25b92263afe",
+    "WaitingIntegration-settlement-build.log": "fe7774eb379f01317aa295c57f3a0cc0748974f87c2ba385d8449a3095c544a9"
+  },
+  "header_comparison": "WaitingHeaders.json",
+  "wider_integration": "Running separately; not part of this receipt."
+}

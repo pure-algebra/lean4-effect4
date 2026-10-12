@@ -1,0 +1,67 @@
+{
+  "base": "722f90131e8b69942572084e63c5d7b70134d7fa",
+  "sources": {
+    "src/Effect4/Laws/Machine/AnswerFlowHead.lean": {
+      "sha256": "217ae8e4225f9cf72e05f8f477858dd1fd1ed7aa3a8f638e8f09c8d413c1ff2c",
+      "lines": 117
+    },
+    "src/Effect4/Laws/Program/NativeFrameScope.lean": {
+      "sha256": "88ca25617a5e7fce5a319f2ee1f7d13bd774398779beb9afca671d68d56e1d72",
+      "lines": 382
+    },
+    "docs/research/2026-10-11-machine-models/codex/callback-loop/TimeoutReadyEntryProbe.lean": {
+      "sha256": "e422f4d7dd497291559d067eac8f4cd9561de1ca26a21198908841054b95dc49",
+      "lines": 217
+    }
+  },
+  "evidence": {
+    "HeadIntegrationBuild.log": {
+      "sha256": "665f23f1c2e0577a4ace8cad4aa0341952898c99c71163fdc7d91b9f97d9b2bd",
+      "bytes": 1135
+    },
+    "HeadIntegrationAudit.log": {
+      "sha256": "8a57f6031c6da4582b0a7f8e51b0513e8df7d82661309dfcb6f9c1577d219c97",
+      "bytes": 283
+    },
+    "HeadIntegrationHeaders.json": {
+      "sha256": "fc3f6170e6ac8b7614b231975a8186452ffc18dd5b93b9fb47799f4261c2df7c",
+      "bytes": 598
+    },
+    "HeadAgentReceipt.md": {
+      "sha256": "7bdfdcb53e025bb95c7832d948129bdfd13861d8a1b05c752a80b60aeedbd61d",
+      "bytes": 5381
+    },
+    "HeadAgentHeaders.json": {
+      "sha256": "213294de57415b0e507c34695da1d683115e65560f31122b7d9ca8b6469a6a61",
+      "bytes": 284
+    },
+    "HeadAgentAudit.log": {
+      "sha256": "05a0a7d56ad61e62a9b3834afb70eff984289aea90d51173909f2283cea5651f",
+      "bytes": 109
+    },
+    "CheckHeadIntegration.py": {
+      "sha256": "dd7c51be5a47c9cf455ae6d0bf883270110bf94cf279139210e96fe149c52569",
+      "bytes": 1316
+    },
+    "HeadIntegration-TimeoutReadyEntryProbe.log": {
+      "sha256": "3fd9441bc163302d516ccb66ca07e3073762826de69e47d8890b2d635d5b07c1",
+      "bytes": 472
+    },
+    "HeadIntegration-TimeoutRaceOwnershipProbe.log": {
+      "sha256": "dfc48dffc77a6cbf4a53bb8c228abd435659fd54d3ab73049308d3f0f9d89217",
+      "bytes": 478
+    },
+    "HeadIntegration-TimeoutRaceWaitingProbe.log": {
+      "sha256": "8df3b1ab1e3d8f16f90da9a79f35c1231e51a291f7ef21c7219e5b83ec272368",
+      "bytes": 474
+    },
+    "HeadIntegration-TimeoutCancelPhaseProbe.log": {
+      "sha256": "114ce426c7c3545b473c29474b435d7efb22fd71716176b027d157d1c8397209",
+      "bytes": 474
+    },
+    "HeadIntegration-TimeoutRaceSettleProbe.log": {
+      "sha256": "afcdaa3dcb90bbc1a2d94dd9a0f393fcc8dab48f9e449c038162d3e69a25e663",
+      "bytes": 472
+    }
+  }
+}

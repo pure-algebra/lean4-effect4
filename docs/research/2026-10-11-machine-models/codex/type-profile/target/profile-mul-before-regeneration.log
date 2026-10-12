@@ -1,0 +1,6 @@
+PASS mul 6 7: 42
+PASS zero product at profile edge: 0
+PASS largest profile product: 9007199254740991
+FAIL first product above profile: answered
+FAIL rounded product refuses: answered
+5 multiplication controls; 2 failures

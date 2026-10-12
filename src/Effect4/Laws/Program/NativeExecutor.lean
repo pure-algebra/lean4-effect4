@@ -91,6 +91,13 @@ theorem primitive_at (root : NativeEff) (fragment : Fragment root) (completed) (
     exact ⟨configuration_emit root _ _ ⟨owned.fibers, owned.races, owned.scopes⟩,
       fiber_park_at root _ _ beforeAt trivial, by intro command member; cases member⟩
   | racePark race park => exact register_race_at root m fiber yielding race owned held
+  | sync thunk state value current unparked operation =>
+    exact (sync_evaluation_fields root (interpAt root completed table) m fiber yielding
+      thunk state value (ConfigurationAt root) (FiberAt root) (CommandsAt root)
+      current unparked operation
+      ⟨owned.fibers, owned.races, syncOwned thunk state value current operation⟩
+      (fiber_current_at root fiber _ held trivial)
+      (by intro command member; rw [List.mem_singleton.mp member]; trivial)).2
   | _ => aesop (add safe constructors [EvaluationAt, ConfigurationAt, FiberAt, TerminalReply]) (add safe apply [(step_frame_at root fragment), (finalizer_at root fragment), (with_fiber_at root), configuration_update, configuration_emit, configuration_arm, fiber_current_at, fiber_park_at, fiber_cancel_at, dispatcher_enqueue_at, exit_value_at]) (add safe forward [actionOwned, syncOwned, registered]) (add norm simp [CommandsAt, CommandAt, List.mem_cons, FrameAt, CodeAt, ThunkAt, NameAt, ResumeAt, TaskAt, RunFiber.park])
 
 /-- Scoped entry installs its actual zero-binder source child and a fresh empty scope. -/

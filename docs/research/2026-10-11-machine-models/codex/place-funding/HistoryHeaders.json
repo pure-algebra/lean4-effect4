@@ -1,0 +1,25 @@
+{
+  "src/Effect4/Laws/Machine/LiftMachineFact.lean": {
+    "before_lines": 74,
+    "after_lines": 100,
+    "retained_headers": 1,
+    "added_names": [
+      "interruptEdit_path"
+    ],
+    "sha256": "de33a985b62b1ebb73ee6acc210afbe6a42e415c8b0ddd4e635873ba29c3cac4"
+  },
+  "src/Effect4/Laws/Program/LedgerRun.lean": {
+    "before_lines": 310,
+    "after_lines": 300,
+    "retained_headers": 21,
+    "added_names": [],
+    "sha256": "5399a5d8d60e074ccd0964710c26575362b4224e8fe4beeda7cd6b7bc1ea5400"
+  },
+  "src/Effect4/Laws/Program/SourceOpportunityHistory.lean": {
+    "before_lines": 192,
+    "after_lines": 150,
+    "retained_headers": 7,
+    "added_names": [],
+    "sha256": "784b73ce97963337c6180b7ee2da1579bddfcb464720b7bf22724844a0df69f9"
+  }
+}
