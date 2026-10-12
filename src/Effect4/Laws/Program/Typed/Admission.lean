@@ -196,15 +196,29 @@ over the caller's environment extended by the parameter's request, at a type the
 admits; the site's values fit the caller's environment; and the rest of the stack is typed at
 the site's scope. With no parameter in scope it constrains nothing (`stackTyped_nil`). The
 recursion is on the stack, and it mentions no program judgment. -/
-def StackTyped (src : ProgramSource) (w : World) : List ParamDecl → List (List ArgSite) → Prop
-  | ps, [] => ps = []
-  | ps, sites :: rest => ∀ (j : Nat) (q : ParamDecl), ps[j]? = some q →
-      ∃ (site : ArgSite) (arg : NativeEff) (env : List Ty) (t : EffTy), sites[j]? = some site ∧
-        Node.at_ (.eff src.program) site.path = some (.eff arg) ∧
-        Checker.check (src.scopeSig site.path) (env ++ [q.request.normalize]) site.path
-          (Eff.expandIn src.program arg) = .ok t ∧
-        q.admits t = true ∧ EnvTyped w env site.env ∧
-        StackTyped src w (scopeParams src.program site.path) rest
+def StackCertificates (root : ProgramSource) (world : World)
+    (policy : ParamDecl → EffTy → Prop) (stack : List (List ArgSite)) : List ParamDecl → Prop :=
+  stack.foldr (fun (sites : List ArgSite) (rest : List ParamDecl → Prop) (declarations : List ParamDecl) =>
+    ∀ (index : Nat) (parameter : ParamDecl), declarations[index]? = some parameter →
+      ∃ (site : ArgSite) (program : NativeEff) (environment : List Ty) (type : EffTy), sites[index]? = some site ∧
+        Node.at_ (.eff root.program) site.path = some (.eff program) ∧
+        Checker.check (root.scopeSig site.path) (environment ++ [parameter.request.normalize])
+          site.path (Eff.expandIn root.program program) = .ok type ∧
+        policy parameter type ∧ EnvTyped world environment site.env ∧
+        rest (scopeParams root.program site.path)) (fun declarations => declarations = [])
+
+/-- The existing unit stack judgment instantiates the shared certificate fold.
+Its public type and old meaning stay unchanged; the retained candidate proves their agreement. -/
+def StackTyped (src : ProgramSource) (w : World) : List ParamDecl → List (List ArgSite) → Prop :=
+  fun declarations stack => StackCertificates src w
+    (fun parameter type => parameter.admits type = true) stack declarations
+
+/-- The ambient M5 stack input retains each actual passed program's checked requirement.
+Consumer: argSites_typed birth and param_arm execution in Typed/Denotation.lean. -/
+def AmbientStackTyped (src : ProgramSource) (w : World) (available : Env.Requirement)
+    (declarations : List ParamDecl) (stack : List (List ArgSite)) : Prop :=
+  StackCertificates src w (fun parameter type =>
+    parameter.admits type = true ∧ Row.Subset type.requires available) stack declarations
 
 /-- **With no parameter in scope every stack is typed**: outside every body, and in the body of a
 definition that takes no program. -/
@@ -242,6 +256,13 @@ def PointTyped (src : ProgramSource) (w : World) (point : Point) (ty : EffTy) : 
     EnvTyped w env point.env ∧
     (∀ q ∈ point.completed, ∃ fty, w.Γ q.1 = some fty ∧ ExitOk w fty q.2) ∧
     StackTyped src w (scopeParams src.program point.path) point.params
+
+/-- The ambient M5 input refines the unchanged point relation through the same stack fold.
+It records no second point grammar. Consumer: actual source children and parameter-call entries. -/
+def AmbientPointTyped (src : ProgramSource) (w : World) (available : Env.Requirement)
+    (point : Point) (type : EffTy) : Prop :=
+  PointTyped src w point type ∧
+    AmbientStackTyped src w available (scopeParams src.program point.path) point.params
 
 /-- **The block's bodies are typed** (decisions row 328): each declaration of the program's block
 names a body at its path (`defBodyPath`), which the checker types at the source's signature

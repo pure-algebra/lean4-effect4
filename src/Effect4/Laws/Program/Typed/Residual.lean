@@ -1442,8 +1442,8 @@ theorem stackTyped_rows_append {w : World} :
       exact hat
     · rw [hprog]
       exact check_ext (scopeSig_rows_append src src' t' hprog htab hsvc site.path) hc
-    · rw [hprog]
-      exact stackTyped_rows_append (stack := rest) hr
+    · exact (congrArg (fun program => StackTyped src' w (scopeParams program site.path) rest)
+        hprog).mpr (stackTyped_rows_append (stack := rest) hr)
 
 theorem pointTyped_rows_append {w : World} {point : Point} {ty : EffTy}
     (h : PointTyped src w point ty) : PointTyped src' w point ty := by
