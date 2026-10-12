@@ -14,7 +14,7 @@ semantics and a proof graph, all in Lean.
 What this document does not own, and who does:
 
 - the judgments, their literature and their required properties: `docs/core/semantics.md`;
-- the frame (the goal, the layers, the sorts, the arrow kinds, the requirements R1–R13):
+- the frame (the goal, the layers, the sorts, the arrow kinds, the requirements R1–R14):
   `docs/core/system-map.md`;
 - statuses, counts and dates of a run: the tools that measure them (§2.6);
 - open decisions: `docs/core/decisions.md` and `docs/DESIGN-ISSUES.md`.
@@ -336,7 +336,7 @@ Each entry is one row of six columns:
 | **conditional theorem** | A theorem whose premises imply its conclusion. It does not prove its premises. | `m7_of_ledger` (`src/Effect4/Laws/Program/Typed/Assembly.lean`) | — | — | — |
 | **route theorem** | `m7_of_ledger`: M5 and M6 imply M7. | `m7_of_ledger` (`src/Effect4/Laws/Program/Typed/Assembly.lean`) | — | — | — |
 | **milestone** (M5, M6, M7) | M5: a checked program loads into the typed state. M6: every command keeps it. M7: at the empty row table, on answer-free tapes, with observation `obs`, every exit and store fits and the run never halts. | `loadsTyped`, `denotesTyped` (`src/Effect4/Laws/Program/Typed/LayerArm.lean`); `m7_proved` (`src/Effect4/Laws/Program/Typed/Commands/Clauses/All.lean`) | — | "capstone" | — |
-| **requirement R<n>** | A theorem shape that a full program must satisfy, R1 to R13 (system map §8). A requirement row is a different term (§3.6). | `docs/core/system-map.md` | — | — | — |
+| **requirement R<n>** | A theorem shape that a full program must satisfy, R1 to R14 (system map §8). A requirement row is a different term (§3.6). | `docs/core/system-map.md` | — | — | — |
 | **counterexample** | A checked witness that a stated proposition is false, registered with an ID `E4-<domain>-CE-<n>`. An attack is an attempt to refute; a successful one yields a counterexample. | `Test/Counterexamples/REGISTER.md` | — | — | — |
 | **refutation** | A counterexample that refutes a registry claim. | `Pointer` (`tools/ProofGraph/Registry.lean`) | — | — | — |
 | **control** (red control, green control) | A fixture that shows a check refuses what it must (red) or accepts what it must (green). Every check keeps its red control. | — | — | — | — |
