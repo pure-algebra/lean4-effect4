@@ -2430,6 +2430,13 @@ theorem builtinPerform_inv {op : NativeOp} {r : Term} {q : Point} {t : EffTy}
     hrowOf] at hrow
   exact ⟨env, v, reqTy, henv, hv, hvfit, hrow⟩
 
+/-- Native source sync rows never register a foreign capture.
+Consumer: the ambient source sync arm; acquireIn registers through its explicit capture producer. -/
+theorem syncOpOf_not_foreign_scopeAdd (op : NativeOp) (env : List Val) (value : Val)
+    (scope : Nat) (capture : Capture) :
+    NativeOp.syncOpOf op env value ≠ some (.scopeAdd scope (.foreign capture)) := by
+  fun_cases NativeOp.syncOpOf op env value <;> exact nofun
+
 /-- **A `perform` at a `sync` built-in row**: the store operation at the node's checked instance
 (`syncRow_typed`). The consumer of the reference-read card. -/
 theorem syncPerform_arm {available : Env.Requirement} {op : NativeOp} {r : Term} (hk : NativeOp.kind op = .sync)
@@ -2441,7 +2448,8 @@ theorem syncPerform_arm {available : Env.Requirement} {op : NativeOp} {r : Term}
     builtinPerform_inv (by rw [hk]; exact nofun) hat hpt
   obtain ⟨o, ho, htyped⟩ := syncRow_typed root (req := ty.requires) op hk henv hrow v hfit
   rw [denoteR_perform_sync _ _ _ hfuel ((NativeOp.row_kind op).trans hk), hv, Option.bind_some, ho]
-  exact ambient_storeR_of_typed root available htyped
+  exact ambient_storeR_of_typed root available (fun scope capture identity =>
+    syncOpOf_not_foreign_scopeAdd op p.env v scope capture (identity ▸ ho)) htyped
 
 /-- **`Deferred.await`**: the registration on the request's deferred, met at the deferred's
 declared columns (`asyncPre`), which are equivalent to the instance's in the checker's order. -/
@@ -3381,5 +3389,44 @@ def LayerFree (root : NativeEff) : Prop :=
 theorem provideLayerArm_of_layerFree {root : ProgramSource} (h : LayerFree root.program) :
     ProvideLayerArm root :=
   fun _ _ _ _ _ _ p _ l i b _ hat _ _ _ _ => absurd hat (h p.path l i b)
+
+/-- The actual acquired result and checker issue the captured release callback policy.
+Concept: residual-program-typing, R4 and R9; helper of the closed M5 source claim.
+Consumer: the ambient acquireIn registration, preserving actual captured-map coverage.
+No service declaration substitutes for coverage of that map. -/
+theorem capturedReleasePolicy (root : ProgramSource) (world : World) (point : Point)
+    (acquire release : NativeEff) (env : List Ty) (type acquiredType : EffTy)
+    (available : Env.Requirement) (ctx : Ctx) (acquired : Val)
+    (node : Node.at_ (.eff root.program) point.path = some (.eff (.acquireRelease acquire release)))
+    (checked : Checker.check (root.scopeSig point.path) env point.path
+      (Eff.expandIn root.program (.acquireRelease acquire release)) = .ok type)
+    (acquireChecked : Checker.check (root.scopeSig point.path) env (point.path ++ [0])
+      (Eff.expandIn root.program acquire) = .ok acquiredType)
+    (values : EnvTyped world env point.env) (answer : Fits world acquired acquiredType.answer)
+    (requires : Row.Subset type.requires available) (covered : ctx.services.Satisfies available)
+    (arguments : AmbientStackTyped root world available
+      (scopeParams root.program point.path) point.params) :
+    AmbientCapturePolicy root world (point.capture acquired ctx) := by
+  rw [Eff.expandIn_acquireRelease] at checked
+  obtain ⟨a, r, acquiredCheck, releaseCheck, never, typeEq⟩ :=
+    Checker.inv_acquireRelease _ _ _ _ _ _ checked
+  rw [acquireChecked] at acquiredCheck
+  cases acquiredCheck
+  subst type
+  have captureBound : Row.Subset available ctx.services.keysRow :=
+    (Provision.satisfies_iff_subset_keysRow _ _).mp covered
+  have releaseBound := Row.subset_trans
+    (Row.subset_union_right acquiredType.requires r.requires)
+    (Row.subset_union_left (Row.union acquiredType.requires r.requires)
+      (Env.Requirement.single (root.scopeSig point.path).scopeKey))
+  intro future ordered completed completedTyped exitValue exitFit
+  refine ⟨r, ?_, never, Row.subset_trans releaseBound (Row.subset_trans requires captureBound)⟩
+  refine ⟨pointTyped_child node rfl rfl releaseCheck ?_ completedTyped
+    (stackTyped_mono ordered (ambientStackTyped_erases arguments)), ?_⟩
+  · have acquiredValues := envTyped_append (envTyped_mono ordered values) (fits_mono ordered answer)
+    have exitValues := envTyped_append acquiredValues exitFit
+    simpa only [Point.ofCapture, Point.capture, Point.childWith, Point.child, List.append_assoc, List.singleton_append] using exitValues
+  · exact ambientStackTyped_child (parent := point) node rfl rfl
+      (ambientStackTyped_widen captureBound (ambientStackTyped_mono ordered arguments))
 
 end Effect4.Program.Typed

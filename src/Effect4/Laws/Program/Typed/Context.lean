@@ -63,6 +63,23 @@ theorem ambientFiberPre_mono (root : ProgramSource) {w w' : World} (ord : w.leHo
       notForkScoped notForkIn notGen notLoop notRace notFirst]
     exact fiberPre_mono root ord op cert pre
 
+/-- The same captured callback transports through the existing host order.
+Consumer: ambient foreign registration and captured cleanup activation. -/
+theorem ambientCapturePolicy_mono {root : ProgramSource} {w w' : World}
+    (ordered : w.leHost w') {capture : Capture} (policy : AmbientCapturePolicy root w capture) :
+    AmbientCapturePolicy root w' capture :=
+  fun later after completed typed exit member =>
+    policy later (leHost_trans _ _ _ ordered after) completed typed exit member
+
+/-- Store admission preserves its captured callback through the same world law.
+Consumer: ProgramArrow.mono's ambient instance. -/
+theorem ambientStorePre_mono (root : ProgramSource) {w w' : World} (ordered : w.leHost w')
+    (available : Env.Requirement) (op : SyncOp) (cert : StoreCert op)
+    (pre : ambientStorePre root w available op cert) :
+    ambientStorePre root w' available op cert :=
+  ⟨storePre_mono root ordered op cert pre.1,
+    fun scope capture identity => ambientCapturePolicy_mono ordered (pre.2 scope capture identity)⟩
+
 /-- The same program-arrow world law transports the ambient instance.
 Consumer: current, saved and queued ambient entry positions. -/
 theorem ambientProg_mono (root : ProgramSource) {w w' : World} {available : Env.Requirement}
@@ -71,7 +88,7 @@ theorem ambientProg_mono (root : ProgramSource) {w w' : World} {available : Env.
     AmbientProg root w' available position code := by
   refine ProgramArrow.mono ?_ ?_ ?_ ord typed
   · intro before after input op cert ordered pre
-    exact storePre_mono root ordered op cert pre
+    exact ambientStorePre_mono root ordered input op cert pre
   · intro before after input op cert ordered pre
     exact ambientFiberPre_mono root ordered input op cert pre
   · intro before after input position exit ordered payload
@@ -433,12 +450,34 @@ theorem ambient_onExit_restore (root : ProgramSource) {w : World}
 The existing unit store certificate and answer proof remain unchanged.
 Consumer: the actual synchronous source-operation arm of M5. -/
 theorem ambient_storeR_of_typed (root : ProgramSource) {w : World} {ty : EffTy}
-    (available : Env.Requirement) {op : SyncOp} (typed : TypedProg root w ty (storeR op)) :
+    (available : Env.Requirement) {op : SyncOp}
+    (notForeign : ∀ scope capture, op ≠ .scopeAdd scope (.foreign capture))
+    (typed : TypedProg root w ty (storeR op)) :
     AmbientProg root w available (ty, available, available) (storeR op) := by
   obtain ⟨cert, pre, next⟩ := TypedProg.store_inv typed
-  refine .store cert pre ?_ (Row.subset_refl _)
+  refine .store cert ⟨pre, fun scope capture identity =>
+    False.elim (notForeign scope capture identity)⟩ ?_ (Row.subset_refl _)
   intro later ordered answer post
   exact .pure ⟨TypedProg.pure_inv (next later ordered answer post), Row.subset_refl _⟩ (Row.subset_refl _)
+
+/-- The actual foreign registration retains its captured callback and answers at the existing store columns.
+Consumer: the ambient acquireIn body, including the already-closed scope branch. -/
+theorem ambient_foreign_registration_typed (root : ProgramSource) {w : World}
+    (available : Env.Requirement) (scope : Nat) (capture : Capture)
+    (live : ScopeLive w scope) (typed : CaptureTyped root w capture)
+    (policy : AmbientCapturePolicy root w capture) :
+    AmbientProg root w available
+      ((⟨.union .unit (.exitOf .unknown .unknown), .never, Env.Requirement.empty⟩ : EffTy),
+        available, available) (storeR (.scopeAdd scope (.foreign capture))) := by
+  refine .store () ⟨⟨live, typed⟩, ?_⟩ ?_ (Row.subset_refl _)
+  · intro actualScope actualCapture identity
+    cases identity
+    exact policy
+  · intro later _ answer post
+    refine .pure ⟨⟨?_, True.intro⟩, Row.subset_refl _⟩ (Row.subset_refl _)
+    rcases post with rfl | ⟨exit, rfl, member⟩
+    · exact Or.inl True.intro
+    · exact Or.inr member
 
 /-- A terminal fiber leaf reuses its existing unit certificate and actual answer proof.
 The producer supplies ambient preconditions and the actual unchanged entry row.

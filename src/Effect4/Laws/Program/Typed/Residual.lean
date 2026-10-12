@@ -639,11 +639,19 @@ def ambientFiberInput (available : Env.Requirement) (op : FiberOp)
     | none => available
   | _ => available
 
+/-- Foreign registration retains the actual captured release permission.
+Consumer: the ambient acquireIn body, then the existing saved finalizer boundary.
+Other store operations retain the original unit protocol. -/
+def ambientStorePre (root : ProgramSource) (w : World) (_available : Env.Requirement)
+    (op : SyncOp) (cert : StoreCert op) : Prop :=
+  storePre root w op cert ∧
+    ∀ scope capture, op = .scopeAdd scope (.foreign capture) → AmbientCapturePolicy root w capture
+
 /-- The row-indexed instance of the same residual program arrows.
 Its source consumer requires entry coverage of the checked requirement row. -/
 abbrev AmbientProg (root : ProgramSource) (w : World) (available : Env.Requirement)
     (position : AmbientPosition) (p : RProgram) : Prop :=
-  ProgramArrow (fun w (_ : Env.Requirement) => storePre root w)
+  ProgramArrow (ambientStorePre root)
     (fun w (_ : Env.Requirement) => storePost w)
     (ambientFiberPre root) ambientFiberPost ambientFiberInput AmbientExit
     (fun w input kind mid ex => kind.hasExitArm ex = true ∧ AmbientExit w input mid ex)
