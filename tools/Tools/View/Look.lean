@@ -22,7 +22,8 @@ own (`Tools.View.Tokens` writes and reads them):
 The defaults are the dark look: the palette of `paint.h`'s round-3 probe, whose hues passed the
 palette validator on their ground (hues-run.txt of the round-3 probe), and the faces of
 `paint_faces_open`. Every other look is a token file that changes some of them
-(`tools/view/looks/`).
+(`tools/view/looks/`). The paper look is also a value here (`Look.paper`), for a document's light
+scheme.
 -/
 
 namespace Tools.View
@@ -282,9 +283,11 @@ deriving Repr, DecidableEq
 
 /-- **An organic stroke**: an edge drawn as a filled shape whose width follows growth rules
 (`docs/research/2026-10-09-organic-strokes.md`). Its width splits by da Vinci's rule where work
-runs in parallel; its ends widen into a collar where they meet a box or a bar; and its edges vary
-by a smooth noise, seeded by the edge's key, inside a bounded band. Lengths are in thousandths of a
-logical pixel. A `trunk` of 0 draws an edge as a plain curve of the edge's weight. -/
+runs in parallel; its ends widen into a collar where they meet a box or a bar; and a look may vary
+its edges by a smooth noise, seeded by the edge's key, inside a bounded band. The defaults keep the
+forms that carry a meaning (the width by share, the collars) and set the noise to zero (decisions
+row 354, point 9); the look `organic` turns it on. Lengths are in thousandths of a logical pixel. A
+`trunk` of 0 draws an edge as a plain curve of the edge's weight. -/
 structure Organic where
   /-- the width of a line that carries all the work: the program's main line -/
   trunk : Nat := 2400
@@ -294,8 +297,8 @@ structure Organic where
   line's collar is as much smaller as the line is -/
   flare : Nat := 6000
   /-- how far the noise moves each edge of a line, per mille of its half-width: the band it
-  stays inside -/
-  noise : Nat := 350
+  stays inside. Zero by default: no noise (decisions row 354, point 9) -/
+  noise : Nat := 0
   /-- the noise's wavelength along a line -/
   wave : Nat := 40000
 deriving Repr, DecidableEq
@@ -386,5 +389,15 @@ def Look.color (L : Look) (role : Role) : Rgb :=
   match role with
   | .host | .failure | .resource => if L.hue then L.palette.of role else L.palette.ink
   | _ => L.palette.of role
+
+/-- **The paper look**: the base look in the light scheme, on the light palette of `paint.h`'s
+round-3 probe. A document's page takes it for a reader who prefers light, and for print (decisions
+row 354, point 3). It is the look of `tools/view/looks/paper.tokens.json`, held here as a value so
+that a page reads no file; a guard of `Tools.View.Tokens` reads that file back as this value. -/
+def Look.paper : Look where
+  name := "paper"
+  description := "The paper ground: the light palette of paint.h's round-3 probe, whose hues passed the palette validator on their ground."
+  scheme := .light
+  palette := ⟨0xf7f4ee, 0x1b1f2a, 0xc9ccd3, 0xa97416, 0xac312a, 0x349470⟩
 
 end Tools.View

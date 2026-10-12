@@ -224,7 +224,9 @@ def childFlow : ArgF NativeOp FlowAt → Option (List Nat → Part)
   | _ => none
 
 /-- **A part's flow from its children's flows**, by row 337's reading. A constructor that this
-reading does not name is a node, followed by its children in series. -/
+reading does not name is a node, followed by its children in series. A definition block (its
+bodies, its main program and the module's layers) is the region `definitions` around its main
+program; the bodies and the layers stand outside the flow. -/
 def flowOf (fam : EffFam) (ctor : String) (key : Key) (leaf : Flow) (kids : List Flow) : Flow :=
   match fam, ctor, kids with
   | .eff, "bind", [a, k] => a.andThen k
@@ -237,7 +239,7 @@ def flowOf (fam : EffFam) (ctor : String) (key : Key) (leaf : Flow) (kids : List
   | .eff, "interruptible", [e] => .region "interruptible" key e
   | .eff, "restore", [e] => .region "restore" key e
   | .eff, "provideService", [e] => .region "provide" key e
-  | .eff, "defs", [_, body] => .region "definitions" key body
+  | .eff, "defs", [_, main, _] => .region "definitions" key main
   | .eff, "iterate", [body] | .stmt, "whileTrue", [body] => .loop key (leaf.andThen body)
   | .stmt, "bindYield", [e] | .stmt, "yieldDiscard", [e] => e
   | .stmts, "cons", [h, t] => h.andThen t

@@ -260,6 +260,7 @@ ENGINE_FIXTURE_WRITERS := $(wildcard ocaml/engine/test/*/write.lean)
 
 SEMANTICS_SOURCES := tools/Tools/Semantics.lean tools/Drivers/Semantics.lean \
   tools/Tools/SemanticsDocument.lean tools/Tools/Document.lean $(wildcard tools/Tools/Document/*.lean) \
+  tools/Tools/View/Picture.lean tools/Tools/View/Look.lean tools/Tools/View/Tokens.lean tools/Tools/Code/Doc.lean \
   tools/Tools/SemanticsDisplay.lean tools/Tools/GeneratedStamp.lean src/Effect4/Laws/Auto/Semantics.lean \
   $(wildcard tools/ProofGraph/*.lean) \
   Test/Counterexamples/REGISTER.md docs/core/decisions.md lean-toolchain lakefile.toml

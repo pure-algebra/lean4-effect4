@@ -1,0 +1,4 @@
+{
+  "$description": "The organic strokes with their noise on: the edges of a line move inside a band of 35% of its half-width.",
+  "organic": {"noise": {"$type": "number", "$value": 0.35}}
+}

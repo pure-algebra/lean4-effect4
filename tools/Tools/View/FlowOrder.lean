@@ -13,8 +13,10 @@ continuation: the drawing reads no order between them.
 
 **The law** (`lay_realizes`): the layout realizes the order. Every vertex of the order is a node of
 the layout, and every edge of the order runs from a node to a later node that it reaches along the
-layout's edges. With `place_descends` it gives `place_keeps_order`: when a flow orders one node
-before another, the layout draws the first above the second. "Above means before" is a theorem.
+layout's edges. With the descent of each edge (`heightsOf_edge`, which `place_descends` states at
+the placed items), taken along such a path (`heightsOf_reach`), it gives `place_keeps_order`: when a
+flow orders one node before another, the layout draws the first above the second. Structural
+precedence implies vertical separation.
 
 The proof of a series follows the left fold of `stackIn`, and turns the order's right-nested
 connects into it by the associativity of connect (`AGraph.connect_assoc`) and its unit
@@ -406,9 +408,10 @@ theorem layAll_realizes {width : GNode → Int} (hw : ∀ n, 0 ≤ width n) :
 end
 
 /-- **What a flow orders, its layout draws above** (slice D1 with D3): when a flow's order puts one
-node before another, the layout places the first's bottom at or above the second's top. "Above
-means before", for every flow and every node width no less than zero. A tool's named law; its
-consumer is the reading of the program graph. -/
+node before another, the layout places the first's bottom at or above the second's top. Structural
+precedence implies vertical separation, for every flow and every node width no less than zero; the
+converse is false (the module's header). A tool's named law; its consumer is the reading of the
+program graph. -/
 theorem place_keeps_order {width : GNode → Int} (hw : ∀ n, 0 ≤ width n) (f : Flow) {u v : Key}
     (h : (denote f.order).edge u v) :
     ∃ (i j : Nat) (p q : Placed), (placeWith width f).placed[i]? = some p ∧ p.key = u ∧ p.node.isSome ∧

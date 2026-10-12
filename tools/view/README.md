@@ -59,9 +59,10 @@ A move is shown at its end: the motion of a move is not drawn yet.
 Every choice of style is data (`tools/Tools/View/Look.lean`). A look holds the colour of each role,
 the faces, the strokes and corners, the form of an edge, and the timing of motion. An organic
 stroke follows growth rules (`docs/research/2026-10-09-organic-strokes.md`). A line's width is its
-share of the work, by da Vinci's rule. It widens into a collar where it meets a box or a bar. Its
-edges vary by noise that its key seeds, inside a bounded band. The look `classic` draws plain
-curves and square corners. A look is a file of
+share of the work, by da Vinci's rule. It widens into a collar where it meets a box or a bar. The
+dark look sets the noise to zero (decisions row 354, point 9). The look `organic` turns it on: the
+edges of a line then vary by noise that its key seeds, inside a bounded band. The look `classic`
+draws plain curves and square corners. A look is a file of
 the W3C design-token format, 2025.10, that names only what it changes from the dark look, the
 base (`tools/view/looks/`). A token the look does not have, or a value out of its range, is
 refused with its path and the reason.

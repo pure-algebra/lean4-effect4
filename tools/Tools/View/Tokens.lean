@@ -35,9 +35,11 @@ the grid sets the line, and the data face takes one cell a character.
 the document printer of the code plane (`Tools.Code.Doc`). The driver checks that each look it
 reads comes back from its own written form (`View.lean`, `look-round-trip`): a finite check.
 
-**CSS** (`css`, `rules`): a look's tokens as CSS custom properties on `[data-look="<name>"]`, and
-the class rules that colour and set the type of a picture's SVG (`Tools.View.Output`) through
-them. The names are the tokens' paths, joined by hyphens, under the prefix `--e4-`.
+**CSS** (`declarations`, `css`, `rules`): a look's tokens as CSS custom properties, on
+`[data-look="<name>"]` or on any selector (`cssRule`), and the class rules that colour and set the
+type of a picture's SVG (`Tools.View.Output`) through them. The names are the tokens' paths, joined
+by hyphens, under the prefix `--e4-`. A document's page sets the dark look's properties on its root
+and the paper look's for a light scheme (`Tools.Document.Html`).
 -/
 
 namespace Tools.View.Tokens
@@ -421,11 +423,19 @@ def roundTrips (base L : Look) : Bool :=
   | .ok L' => decide (L' = L)
   | .error _ => false
 
+-- The paper look's token file reads, over the base, as the paper look held in Lean (`Look.paper`),
+-- which a document's page takes so that it reads no file. A finite check of the two copies; Lake
+-- does not take the file as an input, so the check runs when this module is built.
+#guard match parseLook {} "paper" (include_str "../../view/looks/paper.tokens.json") with
+  | .ok L => decide (L = Look.paper)
+  | .error _ => false
+
 /-! ## CSS -/
 
-/-- **A look as CSS custom properties** on `[data-look="<name>"]`. A colour is the one each role
-is drawn in (`Look.color`), so the hue rule holds in CSS too. -/
-def css (L : Look) : String :=
+/-- **A look's CSS declarations**, in order: its `color-scheme`, then a custom property for each
+token. A colour is the one each role is drawn in (`Look.color`), so the hue rule holds in CSS
+too. -/
+def declarations (L : Look) : List String :=
   let font (face : Face) : List String :=
     let f := L.faces.of face
     [s!"--e4-font-{face.tokenName}-family: {f.cssFamily};", s!"--e4-font-{face.tokenName}-size: {f.px}px;",
@@ -434,8 +444,7 @@ def css (L : Look) : String :=
     [s!"--e4-motion-{n}-duration: {t.duration}ms;", s!"--e4-motion-{n}-delay: {t.delay}ms;",
       s!"--e4-motion-{n}-easing: {t.ease.css};"]
   let m := L.motion
-  let props :=
-    [s!"color-scheme: {L.scheme.name};"] ++
+  [s!"color-scheme: {L.scheme.name};"] ++
     Role.all.map (fun role => s!"--e4-color-{role.tokenName}: {(L.color role).css};") ++
     [s!"--e4-tone-band: {decimal L.band 3};"] ++
     Face.all.flatMap font ++
@@ -447,7 +456,13 @@ def css (L : Look) : String :=
     tr "move" m.move ++ tr "leave" m.leave ++ tr "write" m.write ++ tr "draw" m.draw ++
     tr "expand" m.expand ++
     [s!"--e4-motion-stagger: {m.stagger}ms;", s!"--e4-motion-enter: {m.enterFrom}ms;"]
-  s!"[data-look=\"{L.name}\"] " ++ "{\n" ++ String.join (props.map ("  " ++ · ++ "\n")) ++ "}\n"
+
+/-- A CSS rule set: a selector and its declarations, one a line. -/
+def cssRule (selector : String) (ds : List String) : String :=
+  selector ++ " {\n" ++ String.join (ds.map ("  " ++ · ++ "\n")) ++ "}\n"
+
+/-- **A look as CSS custom properties** on `[data-look="<name>"]`. -/
+def css (L : Look) : String := cssRule s!"[data-look=\"{L.name}\"]" (declarations L)
 
 /-- **The class rules** of a picture's SVG, the same for every look: each class takes its colour
 and its type from the look's custom properties. -/

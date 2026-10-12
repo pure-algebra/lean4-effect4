@@ -117,6 +117,22 @@ def kahnAgrees (f : Flow.Flow) : Bool :=
 #guard Flow.ordersTable (Flow.kahnTable 2 [{ fr := 0, to := 1 }, { fr := 1, to := 0 }])
   [{ fr := 0, to := 1 }, { fr := 1, to := 0 }] == false
 
+/-! ## The definition block's flow -/
+
+/-- A definition block (decisions row 328): one definition, whose body answers its request, a main
+program of two steps, and no module layer. -/
+def defsBlock : NativeEff :=
+  .defs [{ name := "echo", request := .nat, answer := .nat }] (.cons (.succeed (.var 0)) .nil)
+    (.bind (.yieldNow 0) (.succeed (.lit (.nat 1)))) .nil
+
+-- The control of the block's arm of `Flow.flowOf`: a block has three children (the bodies, the
+-- main program and the module's layers), and its flow is the region `definitions` around the main
+-- program's flow, its two steps at `[1 0]` and `[1 1]`. An arm of another arity draws the block's
+-- own node, then the bodies, then the main program, in series.
+#guard match Flow.ofProgram defsBlock with
+  | .region "definitions" "[]" (.seq [.node "[1 0]" _ _ _, .node "[1 1]" _ _ _]) => true
+  | _ => false
+
 /-! ## LV-4: the folds along an edit -/
 
 /-- A line as the checks compare it: its address, depth, text and operation. -/

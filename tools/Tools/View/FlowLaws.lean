@@ -1555,9 +1555,11 @@ theorem place_placed (width : GNode → Int) (f : Flow) (i : Nat) :
   rw [atHeights_get, Nat.zero_add, heightTable_eq, preparePlacement_height]
 
 /-- **Every edge of a flow's layout descends** (slice D3): its target's top stands at or below its
-source's bottom. For every flow, at the level of item positions; the waits accepted as edges are
-met too. A tool's named law; its consumer is the drawing, where a forward edge takes no arrowhead
-(row 337, point 1), and the finite check `graph-edges-descend`. -/
+source's bottom. For every flow, at the level of item positions, and for the edges of the fold
+(`(layWith width f).edges`) alone. It states nothing of a wait: the heights take a wait accepted as
+an edge as a constraint only when Kahn's order serves the edges and the accepted waits together
+(`orderFor`), and no law states that it does. A tool's named law; its consumer is the drawing, where
+a forward edge takes no arrowhead (row 337, point 1), and the finite check `graph-edges-descend`. -/
 theorem place_descends {width : GNode → Int} (hw : ∀ n, 0 ≤ width n) (f : Flow) {e : Edge}
     (he : e ∈ (layWith width f).edges) {p q : Placed}
     (hp : (placeWith width f).placed[e.fr]? = some p) (hq : (placeWith width f).placed[e.to]? = some q) :

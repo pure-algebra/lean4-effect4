@@ -17,8 +17,9 @@ unit; connect distributes over overlay on both sides; and a chain of three conne
 into its three pairs. The paper derives idempotence of overlay and absorption from them; both are
 stated here of the model too. Each is a tool's named law (decisions row 336, point 8), serving
 concept 7 of `docs/core/semantics.md` (`initial-algebras-folds`). The consumer is the order of a
-flow (`Tools.View.Flow.Flow.order`), a fold of the flow into this algebra, and the law that the
-layout keeps it (`Tools.View.Flow.lay_keeps_order`).
+flow (`Tools.View.Flow.Flow.order`), a fold of the flow into this algebra, and the laws that the
+layout keeps it: it realizes the order (`Tools.View.Flow.lay_realizes`), and it draws what the order
+puts first above (`Tools.View.Flow.place_keeps_order`).
 -/
 
 namespace Tools.View
