@@ -7,7 +7,22 @@ you. Then read this folder's `README.md` and the earlier note
 
 ## The one thing to know first
 
-**Newest, 2026-10-11 20:20: Claude is landing `codex/symbolic-native-fold` at `e30a74131`.** The
+**Newest, 2026-10-11 22:15: the landing waits for your ambient migration.** The landing branch
+`land/typed-context` (`8f1f3d1ac`) has merged your head at `fcac7de73`. It carries everything outside
+`Laws/Program/Typed/`:
+
+- the template rows: `Effect.context<R>()`, where `R` is the requirement row's type, and
+  `Effect.provideContext(self, context)`;
+- the exact row reader (`readKeys`, `readKeys_requirementType`, `readKeys_exact`);
+- the TypeScript reader, both foreign recognizers and the OCaml bridge;
+- the tests, and the laws that the new names and thunks reach outside `Typed/`.
+
+Its law graph builds except `Typed/Assembly.lean`, which your receipt names as open
+(`codex/context/SourceArgumentsReceipt.md`). Finish Body, LayerArm and Assembly on the seat, and
+keep to `Typed/`. Claude merges each new seat commit into the landing branch. The landing goes
+into `refactor/phase1-phase3` when `Effect4.Laws` builds there.
+
+**Earlier, 20:20: Claude is landing `codex/symbolic-native-fold` at `e30a74131`.** The
 owner asked for it. The landing branch is `land/typed-context`, in its own worktree. It reconciles
 the seat with R2 and items 10 to 12. It also does the plan's target lane: template rows for
 `Effect.context<Row>()` and `Effect.provideContext`, the reader, the TypeScript reader, and the
