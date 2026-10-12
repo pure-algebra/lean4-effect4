@@ -1,5 +1,9 @@
 # Restore slot: a context switch's restore popped with the exit (plan, 2026-10-12)
 
+**Retired (owner, 2026-10-12).** No proof needs the slot. The four goals below wait on the
+release's context merge (`docs/research/2026-10-12-restore-slot-scout.md`), which landed on
+branch `land/release-merge`. This plan stays as history.
+
 The owner ruled on 2026-10-12: a context switch restores the previous context through a stack
 slot that the walk pops with the exit. No restore code runs. This note plans the slice that lands
 it. The slice is a machine change, so this note comes first (`AGENTS.md`, Working).

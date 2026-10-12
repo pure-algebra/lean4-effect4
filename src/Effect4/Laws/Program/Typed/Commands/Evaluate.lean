@@ -1715,15 +1715,108 @@ theorem configTyped_closeState {root : ProgramSource} {rootTy : EffTy} {w : Worl
   exact ⟨ord, (configTyped_restate typed le rfl rfl rfl wf stores (fun _ h => h)
     wide.live.dueOwners (fun _ h => h)).2⟩
 
+/-- **`Scope.close`'s installed program at the ambient judgment** (decisions rows 136, 151 (a″),
+349): at every row, at `⟨unit, never⟩`. No finalizer answers `void`; a lone finalizer runs at the
+row (`finalizer_ambient`, which a captured release meets by the merge of its captured context,
+`releaseContext`) and is voided; two or more are the walk, administrative code
+(`closeWalk_typed`, `ambientProg_of_admin`). The ambient counterpart of `closeScope_installs`.
+Consumer: `clause_closeScope`. -/
+theorem closeScope_installs_ambient (root : ProgramSource) (w : World) (scope : Nat) (exit : ExitV)
+    (flag : Bool) (st st' : Stores) (code : RProgram)
+    (admitted : ∀ entry ∈ st.scopes.entries, ∀ fin ∈ entry.scope.closeOrder,
+      FinalizerAdmitted root w fin)
+    (exitFits : FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ exit)
+    (h : closeScopeR scope exit flag st = some (st', code)) (row : Env.Requirement) :
+    AmbientProg root w row ((EffTy.pure .unit, row, row) : AmbientPosition) code := by
+  unfold closeScopeR at h
+  cases hs : scopeCloseSnapshot scope exit st with
+  | none =>
+    rw [hs] at h
+    cases h
+  | some snapshot =>
+    obtain ⟨state, strategy, order⟩ := snapshot
+    rw [hs] at h
+    simp only at h
+    obtain ⟨_, rfl⟩ := h
+    match order, hs with
+    | [], _ =>
+      exact .pure (ambientExit_const ⟨trivial, trivial⟩) ⟨Row.subset_refl _, Row.subset_refl _⟩
+    | [fin], hs =>
+      obtain ⟨entry, hentry, hfin⟩ := lone_of_snapshot hs
+      exact ambient_seqGuard (mid := ⟨.unknown, .never, Env.Requirement.empty⟩)
+        (finalizer_ambient root (admitted entry hentry fin hfin) exitFits) (Bounds.subN_never _)
+        (fun _ _ _ _ =>
+          .pure (ambientExit_const ⟨trivial, trivial⟩) ⟨Row.subset_refl _, Row.subset_refl _⟩)
+    | _ :: _ :: _, hs =>
+      obtain ⟨entry, hentry, horder⟩ := mem_of_snapshot hs
+      exact ambientProg_of_admin root
+        (closeWalk_typed root w strategy _ exit (fun fin hf => admitted entry hentry fin (horder ▸ hf))
+          exitFits)
+        (.fiber _ _ rfl fun _ => .fiber _ _ rfl fun _ => .pure _) row
+
 /-- **`closeScope`** (`Scope.close`, `internal/effect.ts:3775-3776`): the close's state half
-(`configTyped_closeState`) and its installed program over the saved answer frame keep `I`.
-Planned: a capture's release switches to its captured context before its restore code runs, so the
-close's failure can leave in that context; the restore slot (owner's ruling, 2026-10-12) makes the
-restore atomic with the pop, and the slice that lands it proves this goal.
+(`configTyped_closeState`) and its installed program (`closeScope_installs_ambient`) over the saved
+answer frame keep `I`. The program runs at the operation's row: a captured release's context is
+merged over the current one, so a failure leaves at a row the entry row covers.
 Consumer: `deliver_preserves_of_clauses` through `Clauses/All.lean`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
-proof_goal clause_closeScope (root : ProgramSource) (rootTy : EffTy) (scope : Nat) (ex : ExitV) :
-    FiberClauseKeeps root rootTy (.closeScope scope ex)
+theorem clause_closeScope (root : ProgramSource) (rootTy : EffTy) (scope : Nat) (ex : ExitV) :
+    FiberClauseKeeps root rootTy (.closeScope scope ex) := by
+  intro w m rest f y next ev hc
+  have wide := ev.typed.machine.wide
+  obtain ⟨ty, declared⟩ := ev.declared
+  obtain ⟨row, ⟨q, b⟩, flag, covered, bit, current, stack, prov⟩ :=
+    ev.code (by rw [hc]; rfl) ty declared
+  change b = f.frame.interruptible at bit
+  subst bit
+  change AmbientProg root w row q f.frame.current at current
+  rw [hc] at current
+  obtain ⟨_, ⟨live, hex⟩, typedNext, _⟩ := ambientProg_fiber_inv current (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  have answer : MFrame root w (((EffTy.pure .unit, row, row) : AmbientPosition), f.frame.interruptible)
+      (q, f.frame.interruptible) (.answer next) :=
+    .answer next fun w' o ex hex => by
+      rw [ambientInput_const]
+      exact typedNext w' o ex hex.1
+  have present : (m.state.scopes.entryAt scope).isSome = true := by
+    have l : (w.state.scopes.entryAt scope).isSome = true := live
+    rw [wide.state] at l
+    exact l
+  obtain ⟨entry, hentry⟩ := Option.isSome_iff_exists.mp present
+  let s : Stores := { m.state with scopes := m.state.scopes.closeState scope ex }
+  have snap : scopeCloseSnapshot scope ex m.state =
+      some (s, entry.scope.strategy, entry.scope.closeOrder) := by
+    unfold scopeCloseSnapshot
+    rw [hentry]
+    rfl
+  obtain ⟨code, hcode⟩ : ∃ code, ∀ flag, closeScopeR scope ex flag m.state = some (s, code) :=
+    ⟨_, fun flag => by
+      unfold closeScopeR
+      rw [snap]
+      rfl⟩
+  have hmach : ∀ flag fid, (interpRAt root.program m.completedExits).closeScope scope ex flag fid
+      m.state = some (s, code) := fun flag _ => hcode flag
+  show SettlesTyped root rootTy w f.id rest (prepareIterR
+    (FiberAction.closeScope (interpRAt root.program m.completedExits) m (saveAnswerR f next) y scope ex))
+  unfold FiberAction.closeScope
+  rw [hmach]
+  dsimp only
+  obtain ⟨ord, restated⟩ := configTyped_closeState ev.typed hentry hex
+  have ev1 : Evaluating root rootTy { w with state := s } { m with state := s } rest f y :=
+    ⟨restated, ev.stale, ev.running, ev.live⟩
+  have finsAdm := finalizersAdmitted_of_typedState ev.typed.machine
+  rw [wide.state] at finsAdm
+  have typedCode := closeScope_installs_ambient root w scope ex false m.state s code finsAdm hex
+    (hcode false) row
+  let fr' : RSaved := { f.frame with current := code, stack := .answer next :: f.frame.stack }
+  refine SettlesTyped.mono ord (ev1.settle_continue fr' (fun ty' declared' => ?_))
+  have same : ty' = ty := Option.some.inj (declared'.symm.trans declared)
+  subst same
+  exact ⟨row, (((EffTy.pure .unit, row, row) : AmbientPosition), f.frame.interruptible), flag,
+    covered, rfl, ambientProg_mono root ord typedCode,
+    .cons (.inl (MFrame.mono ord answer))
+      ((MHostStack.races (m := m.update f) (m' := ({ m with state := s } : RState).update f)
+        (racesKept_of_eq fun _ => rfl) stack).mono ord), ⟨prov.recorded, prov.deferred⟩⟩
 
 /-- The callback recognizer's inversion: a scope's exit callback is that operation at the head. -/
 theorem scopeExitCallback?_some {p : RProgram} {prev : Ctx} {sc : Nat} {ex : ExitV}
