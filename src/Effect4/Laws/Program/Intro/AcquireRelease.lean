@@ -85,7 +85,8 @@ theorem foreignRelease_intro (root : NativeEff) (c : Capture) (ex : ExitV)
     | some previous =>
       dsimp only
       rw [prepareR_guardR_bind, guardR_bind]
-      refine CodeMeans.onSuccess _ _ _ (prepareR completed' (fiberValR (.setContext c.ctx) rfl)) _
+      refine CodeMeans.onSuccess _ _ _
+        (prepareR completed' (fiberValR (.setContext (releaseContext previous c.ctx)) rfl)) _
         ?_ ?_ rfl (fun _ => rfl)
       · exact CodeMeans.actSetContext _ _ _ rfl (successV root)
       · intro completed'' w

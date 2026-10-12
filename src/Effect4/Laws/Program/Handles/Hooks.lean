@@ -244,7 +244,8 @@ theorem contAOf_native_keys (root : NativeEff) (n : EffName) (v : Val) :
     split
     · next previous hprev =>
       rw [Val.context?_exact hprev]
-      sub_tac norm [Point.keys, EffName.keys, EffThunk.keys, Val.keys_context]
+      sub_tac using (releaseContext_keys previous ctx)
+        norm [Point.keys, EffName.keys, EffThunk.keys, Val.keys_context]
     · exact List.nil_subset _
   case releaseBody p exit previous =>
     -- the release's point appends the reified exit

@@ -1133,17 +1133,18 @@ theorem finalizerTyped_of_admitted (root : ProgramSource) (w : World) (fin : Fin
       obtain ⟨_, _, _, _, _, _, _, _, _, hsvc, -, -⟩ := finalizerAdmitted_mono root o12 (.foreign c) hc
       show TypedProg root w2 _ (match Val.context? v with
         | some previous =>
-          (guardR .onSuccess (fiberValR (.setContext c.ctx) rfl)).bind (seqR fun _ =>
+          (guardR .onSuccess (fiberValR (.setContext (releaseContext previous c.ctx)) rfl)).bind
+            (seqR fun _ =>
             constructR fun completed =>
               .vis (.inr (.mask false
                 (.release ((Point.ofCapture c completed).childWith 1 (reifyExitVal ex)) previous)))
                 Effects.Program.pure)
         | none => .pure badShapeExit)
       rw [hprev]
-      -- the captured context set, under its guard
+      -- the captured context merged over the current one, set under its guard
       refine seq_typed root (mid := EffTy.pure .unit) ?_ ?_ rfl
       · refine TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-          (fun _ _ _ h => nomatch h) () hsvc fun w3 _ ans post => ?_
+          (fun _ _ _ h => nomatch h) () (servicesFit_merge hprevious hsvc) fun w3 _ ans post => ?_
         subst post
         exact TypedProg.pure ⟨trivial, trivial⟩
       · intro w3 o3 _ _

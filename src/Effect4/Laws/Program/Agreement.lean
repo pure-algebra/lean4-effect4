@@ -754,7 +754,8 @@ theorem contAOf_releaseUnder (ctx : Ctx) (exit : ExitV) (v : Val) :
     Program.contAOf root (.releaseUnder p ctx exit) v =
       match Val.context? v with
       | some previous =>
-        Prim.onSuccess (Prim.withFiber (EffThunk.setCtx ctx)) (.releaseBody p exit previous)
+        Prim.onSuccess (Prim.withFiber (EffThunk.setCtx (releaseContext previous ctx)))
+          (.releaseBody p exit previous)
       | none => badShape := by aesop
 
 theorem contAOf_releaseBody (exit : ExitV) (previous : Ctx) (v : Val) :

@@ -19,7 +19,8 @@ at any completed view is typed by the ambient judgment at the row the fiber's co
 - `acquireIn`: `acquireRelease`'s masked half (`acquireInR`; `internal/effect.ts:3978-3986`): the
   `Scope` read, the acquire at the point's child 0 (M5), the release's registration (its capture is
   covered by the captured context, `CaptureTyped`), and the closed branch's release now
-  (`foreignFin_ambient`, under the captured context, which covers the row);
+  (`foreignFin_ambient`, under the captured context merged over the current one, which keeps
+  the row);
 - `release`: the release at its point under the restore of the previous context, at the keys both
   contexts hold (`ambient_release_body`, `Typed/MaskEntry.lean`);
 - `layerBuild`: the layer family's build (`layerBuild_typed`);
@@ -81,12 +82,11 @@ abbrev finPosition (available : Env.Requirement) : AmbientPosition :=
   ((⟨.unknown, .never, Env.Requirement.empty⟩ : EffTy), available, available)
 
 /-- **A foreign release, run now** (`denoteFin`'s foreign arm; `internal/effect.ts:3983`,
-`:2180-2199`), at a row its captured context covers: the counted release marker, the current
-context read, the captured one installed, the construction query, and the masked release at its
-point under the restore of the read context, which covers the row. -/
+`:2180-2199`), at any row the fiber's context covers: the counted release marker, the current
+context read, the captured one merged over it (`releaseContext`), which keeps the row, the
+construction query, and the masked release at its point under the restore of the read context. -/
 theorem foreignFin_ambient (root : ProgramSource) {w : World} {c : Capture}
-    (h : CaptureTyped root w c) {available : Env.Requirement}
-    (window : Row.Subset available c.ctx.services.keysRow) {ex : ExitV}
+    (h : CaptureTyped root w c) {available : Env.Requirement} {ex : ExitV}
     (hex : FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ ex) :
     AmbientProg root w available (finPosition available) (denoteFin (.foreign c) ex) := by
   refine ambient_fiberAdmin rfl (fun _ h => nomatch h) (fun _ h => nomatch h)
@@ -104,11 +104,21 @@ theorem foreignFin_ambient (root : ProgramSource) {w : World} {c : Capture}
         (Provision.satisfies_iff_subset_keysRow _ available).mp previousCovers
       have o12 := leHost_trans _ _ _ o1 o2
       obtain ⟨_, _, _, _, _, _, _, _, _, capturedServices, -, -⟩ := captureTyped_mono o12 h
+      let next : Ctx := releaseContext previous c.ctx
+      have nextServices : ServicesFit w2 next.services :=
+        servicesFit_merge previousServices capturedServices
+      have window : Row.Subset available next.services.keysRow :=
+        (Provision.satisfies_iff_subset_keysRow _ available).mp
+          (Provision.satisfies_merge_left previous.services c.ctx.services available previousCovers)
+      have captured : Row.Subset c.ctx.services.keysRow next.services.keysRow :=
+        (Provision.satisfies_iff_subset_keysRow _ _).mp
+          (Provision.satisfies_merge_right previous.services c.ctx.services _
+            ((Provision.satisfies_iff_subset_keysRow _ _).mpr (Row.subset_refl _)))
       simp only [seqR, ambientInput, Val.context?_context]
       refine ambient_guardBind root
-        (mid := ((EffTy.pure .unit, c.ctx.services.keysRow, available) : AmbientPosition))
-        (ambient_setContext_guarantees root w2 previous.services.keysRow available c.ctx
-          capturedServices bound window)
+        (mid := ((EffTy.pure .unit, next.services.keysRow, available) : AmbientPosition))
+        (ambient_setContext_guarantees root w2 previous.services.keysRow available next
+          nextServices bound window)
         (fun w3 o3 exit' arm' _ => ?_) (fun _ _ exit' payload' absent' => ?_) bound
       · cases exit' with
         | failure cause => exact Bool.noConfusion arm'
@@ -123,7 +133,8 @@ theorem foreignFin_ambient (root : ProgramSource) {w : World} {c : Capture}
               (reifyExitVal_fits w4 _ ex (fitsExit_mono (leHost_trans _ _ _ o12 o24) hex))
           refine .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
             (fun _ _ _ h => nomatch h) rty
-            ⟨BodyTyped.release _ previous rty hpt (servicesFit_mono o24 previousServices), hreq,
+            ⟨BodyTyped.release _ previous rty hpt (servicesFit_mono o24 previousServices),
+              Row.subset_trans hreq captured,
               (fun _ _ impossible => by cases impossible),
               (fun _ _ _ same => by cases same; rfl),
               (fun _ impossible => by cases impossible),
@@ -133,7 +144,7 @@ theorem foreignFin_ambient (root : ProgramSource) {w : World} {c : Capture}
                 · cases impossible
                 · cases impossible
                 · cases identity
-                  exact hstack),
+                  exact ambientStackTyped_widen captured hstack),
               (fun _ _ _ impossible => by cases impossible)⟩
             (fun _ _ ans post => .pure ⟨exitOk_finalizer hnever post,
                 by cases ans <;> exact subset_rowMeet bound window⟩
@@ -148,15 +159,14 @@ theorem foreignFin_ambient (root : ProgramSource) {w : World} {c : Capture}
       exact ⟨exitOk_failure_of_errorN (Bounds.subN_never _) payload.1, Row.subset_refl _⟩
 
 /-- **A registered finalizer runs at a covered row**: a foreign release under its captured
-context (`foreignFin_ambient`), every other finalizer as administrative code
-(`denoteFin_admin`). -/
+context merged over the current one (`foreignFin_ambient`), every other finalizer as
+administrative code (`denoteFin_admin`). -/
 theorem finalizer_ambient (root : ProgramSource) {w : World} {fin : FinName}
-    (h : FinalizerAdmitted root w fin) {available : Env.Requirement}
-    (window : ∀ c, fin = .foreign c → Row.Subset available c.ctx.services.keysRow) {ex : ExitV}
+    (h : FinalizerAdmitted root w fin) {available : Env.Requirement} {ex : ExitV}
     (hex : FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ ex) :
     AmbientProg root w available (finPosition available) (denoteFin fin ex) := by
   cases fin with
-  | foreign c => exact foreignFin_ambient root h (window c rfl) hex
+  | foreign c => exact foreignFin_ambient root h hex
   | _ =>
     exact ambientProg_of_admin root
       (finalizerTyped_of_admitted root w _ h w (leHost_refl w) ex hex)
@@ -231,9 +241,10 @@ theorem acquireIn_ambient (root : ProgramSource) {w : World} (hwf : SourceWF roo
       rw [hu] at hex
       exact nomatch hex
     rw [if_neg hne, hex]
-    -- the closed branch: the release now, under the captured context, then the acquired value
+    -- the closed branch: the release now, under the captured context merged over the current
+    -- one, then the acquired value
     exact ambient_seqGuard (mid := ⟨.unknown, .never, Env.Requirement.empty⟩)
-      (foreignFin_ambient root (captureTyped_mono o3 hcap) bound (fitsExit_of_exitOfVal hexit hex))
+      (foreignFin_ambient root (captureTyped_mono o3 hcap) (fitsExit_of_exitOfVal hexit hex))
       (Bounds.subN_never _) (fun w4 o4 _ _ =>
         .pure ⟨strongExit_success w4 _ aval (fits_mono o4 hval), Row.subset_refl _⟩
           ⟨Row.subset_refl _, Row.subset_refl _⟩)

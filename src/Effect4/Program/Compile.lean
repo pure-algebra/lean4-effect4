@@ -254,11 +254,11 @@ inductive EffName
   scope's closing exit (`:3851-3853`): run the release now, then answer `a`. -/
   | afterScopeAdd (a : Val) (fin : FinName)
   /-- The release, resolved when the scope closes (`provideContext(release(a, exit), context)`,
-  `:3983`, `:2180-2199`): the current context was read, the value; provide the captured one.
+  `:3983`, `:2180-2199`): the current context was read, the value; merge the captured one over it.
   `p` is the capture's point, the acquired value already in scope. -/
   | releaseUnder (p : Point) (ctx : Ctx) (exit : ExitV)
-  /-- The captured context is set: run the release, child 1 over the exit, under the
-  finalizer that restores the previous context. -/
+  /-- The captured context is merged over the current one: run the release, child 1 over the
+  exit, under the finalizer that restores the previous context. -/
   | releaseBody (p : Point) (exit : ExitV) (previous : Ctx)
   -- The join (2026-09-07): `Effect.provide`, `Effect.service`, `Effect.provideService`, and
   -- `Layer.build`'s protocol — the Layer machine's names (`Machine/Layer.lean`, `7cbd436`)
@@ -509,6 +509,13 @@ whose members are these images (`storePost`'s `memoGet` arm), so `Ty.context` ha
 Before the ruling a build answered the service spine (`Env.encode`), which `Val.context?` refuses
 and `Ty.context` admits no member of (`E4-TYPED-CE-023`, `Test/Program/LayerDenotation.lean`). -/
 def builtContext (services : Env.Ctx) : Val := Val.context (Ctx.withServices services)
+
+/-- The context a capture's release runs under (`provideContext(release(a, exit), context)`,
+`internal/effect.ts:3983`): `updateContext(self, Context.merge(context))` (`:2197`), the captured
+services merged over the current ones, which the captured ones win on a shared key. Both
+machines switch to it. -/
+def releaseContext (previous captured : Ctx) : Ctx :=
+  Ctx.withServices ((Env.ContextUpdate.provide captured.services).apply previous.services)
 
 /-- `CurrentMemoMap` in a service map (`Layer.ts:584-592`): the map a build forks, if any. -/
 def currentMemoMapOf (c : Env.Ctx) : Option MemoMapId :=
@@ -1231,11 +1238,13 @@ def contAOf (root : NativeEff) : EffName → Val → NCode
       | some exit => Prim.onSuccess (embed (finProgram fin exit)) (EffName.constant a)
       | none => badShape
   -- `provideContext(release(a, exit), context)` (`:2180-2199`): the current context read
-  -- back off the value, the captured one set, the release under the restoring finalizer
+  -- back off the value, the captured one merged over it (`releaseContext`), the release under
+  -- the restoring finalizer
   | .releaseUnder p ctx exit, v =>
     match Val.context? v with
     | some previous =>
-      Prim.onSuccess (Prim.withFiber (EffThunk.setCtx ctx)) (EffName.releaseBody p exit previous)
+      Prim.onSuccess (Prim.withFiber (EffThunk.setCtx (releaseContext previous ctx)))
+        (EffName.releaseBody p exit previous)
     | none => badShape
   | .releaseBody p exit previous, _ =>
     Prim.withFiber (EffThunk.releaseMasked (p.childWith 1 (reifyExitVal exit)) previous)

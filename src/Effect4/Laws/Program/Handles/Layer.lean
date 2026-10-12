@@ -27,6 +27,13 @@ theorem Env.ContextUpdate.apply_keys (u : Env.ContextUpdate) (c : Env.Ctx) :
     show Env.Context.handleKeys (c.add key value) ⊆ Val.keys value ++ Env.Context.handleKeys c
     exact Env.Context.handleKeys_add c key value
 
+/-- A release's context names only the captured context's handles and the current one's
+(`releaseContext`, the merge). Consumer: the release continuation's arm in `Handles/Hooks.lean`. -/
+theorem releaseContext_keys (previous captured : Ctx) :
+    (releaseContext previous captured).keys ⊆ captured.keys ++ previous.keys := by
+  rw [releaseContext, Ctx.keys_withServices, Ctx.keys_eq_handleKeys, Ctx.keys_eq_handleKeys]
+  exact Env.ContextUpdate.apply_keys (.provide captured.services) previous.services
+
 /-- A built context's handles are its map's (decisions row 176 (b): a build answers the
 fiber-context image of the map, `builtContext`). -/
 theorem Val.keys_builtContext (s : Env.Ctx) :

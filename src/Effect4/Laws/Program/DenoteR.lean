@@ -264,14 +264,16 @@ def denoteFin : FinName → ExitV → RProgram
   | .awaitNewChildren snapshot, _ => fiberValR (.awaitNewChildren snapshot) rfl
   -- a capture's release (V1): the counted suspend, then `provideContext(release(a, exit),
   -- context)` (`internal/effect.ts:3983`, `:2180-2199`): the current context read, the captured
-  -- one set, the release at the capture's point over the exit under the finalizer restoring
+  -- one merged over it (`releaseContext`), the release at the capture's point over the exit under
+  -- the finalizer restoring
   -- the previous context — constructed with the view at its invocation (`constructR`), as the
   -- frame's `interpAt` refreshes the release's name
   | .foreign c, ex => .vis (.inr (.foreignRelease c ex)) fun _ =>
       (guardR .onSuccess (fiberValR .getContext rfl)).bind (seqR fun v =>
         match Val.context? v with
         | some previous =>
-          (guardR .onSuccess (fiberValR (.setContext c.ctx) rfl)).bind (seqR fun _ =>
+          (guardR .onSuccess (fiberValR (.setContext (releaseContext previous c.ctx)) rfl)).bind
+            (seqR fun _ =>
             constructR fun completed =>
               .vis (.inr (.mask false
                 (.release ((Point.ofCapture c completed).childWith 1 (reifyExitVal ex)) previous)))

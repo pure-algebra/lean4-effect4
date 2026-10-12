@@ -15,9 +15,8 @@ Decisions row 349 types the machine's code by the row-indexed judgment. A finali
 by `AmbientFinalizerTyped`: entered at any row, its program returns at that row at
 `⟨unknown, never⟩`. Every finalizer but a captured release is administrative code
 (`denoteFin_admin`, `Typed/LayerArm.lean`), lifted from its type-only typing (`ambientProg_of_admin`). A captured release
-switches to its captured context and restores the previous one; that it returns at its entry row is
-the planned goal `foreignFinalizer_ambient`, which the restore slot (owner's ruling, 2026-10-12)
-proves. Both close walks below are proved modulo it.
+merges its captured context over the current one and restores the previous one; it returns at its
+entry row (`foreignFinalizer_ambient`).
 
 The sequential frame's protocol is proved by coinduction (`Contracts.Greatest.coind`, decisions
 row 190 (a)) from `CloseSeqTyped`: the remaining finalizers typed at the closing exit
@@ -99,19 +98,19 @@ theorem ambientFinalizerTyped_mono {root : ProgramSource} {w w' : World} {fin : 
   fun w'' o => h w'' (leHost_trans _ _ _ ord o)
 
 /-- **A captured release's finalizer returns at its entry row** (`denoteFin`'s `foreign` arm;
-rc.112 `internal/effect.ts:3983`, `:2180-2199`): it reads the current context, switches to the
-captured one, runs the release there and restores the previous context, which covers the entry
-row. Planned: the restore runs as code after the switch, so an interruption between the two leaves
-in the captured context (rc.112 leaks it there); the restore slot (owner's ruling, 2026-10-12) makes
-the restore atomic with the pop, and the slice that lands it proves this goal.
+rc.112 `internal/effect.ts:3983`, `:2180-2199`): it reads the current context, merges the captured
+one over it (`releaseContext`, `Context.merge`), runs the release there and restores the previous
+context. The merge keeps every key of the entry row, so a failure leaves at a row the entry row
+covers (`foreignFin_ambient`).
 Consumer: `ambientFinalizerTyped_of_admitted`, hence both close walks. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
-proof_goal foreignFinalizer_ambient (root : ProgramSource) (w : World) (c : Capture)
+theorem foreignFinalizer_ambient (root : ProgramSource) (w : World) (c : Capture)
     (admitted : CaptureTyped root w c) (ex : ExitV)
     (fits : FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ ex) (row : Env.Requirement) :
     AmbientProg root w row
       (((⟨.unknown, .never, Env.Requirement.empty⟩ : EffTy), row, row) : AmbientPosition)
-      (denoteFin (.foreign c) ex)
+      (denoteFin (.foreign c) ex) :=
+  foreignFin_ambient root admitted fits
 
 /-- An admitted finalizer is typed at the ambient judgment: administrative ones by their
 type-only typing (`finalizerTyped_of_admitted`, `ambientProg_of_admin`), a captured release by
