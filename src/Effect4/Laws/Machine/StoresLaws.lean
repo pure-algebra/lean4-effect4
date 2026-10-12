@@ -1,5 +1,6 @@
 import Effect4.Laws.Machine.RefKernel
 import Effect4.Laws.Machine.CompletionData
+import Effect4.Laws.Store.Names
 
 /-!
 # Machine.StoresLaws — growth, validity and well-formedness of the stores (slice 1, lane 2)
@@ -64,101 +65,61 @@ theorem Stores.le_trans {s s' s'' : Stores} (h : s.le s') (h' : s'.le s'') : s.l
 
 /-! ## Validity -/
 
-/-- One handle's kind byte and index against the store (plan §3.1, ENSURES 12): a cell byte
-needs a heap index (`Stores.lean` `refPeek`), a promise byte a Deferred cell index
-(`cellAt`), a scope byte a scope entry (`entryAt`); a fiber byte is the machine's, not the
-store's, and is accepted; a `memoMap` byte a memo map (`MemoWorld.mapAt`, the join); an
-unregistered byte names nothing this store holds. -/
-def Stores.handleValid (s : Stores) (kind : UInt8) (index : Nat) : Bool :=
-  match HandleKind.ofByte? kind with
-  | some .fiber => true
-  | some .cell => index < s.refs.length
-  | some .promise => index < s.deferreds.cells.length
-  | some .scope => (s.scopes.entryAt index).isSome
-  | some .memoMap => (s.memo.mapAt ⟨index⟩).isSome
-  | some .external => index < s.externals.allocated.length
-  | none => false
-
-mutual
-/-- A value's handles exist in the store (plan §3.1, ENSURES 12): every `handle` frame the
-carrier carries, through `Stores.handleValid` — a `Val.cell` names a heap index, a
-`Val.promise` a Deferred cell, a `Val.scopeHandle` a scope entry, a context its ambient scope;
-a reified exit, a snapshot and a list are valid when their parts are; a tree with no handle
-(a number, a reified failed exit, whose cause writes none) is valid everywhere.
-`Val.validIn_eq_handles` is the fold over `Store.Val.handles`. -/
-def Val.validIn (s : Stores) : Val → Bool
-  | .handle kind index => s.handleValid kind index
-  | .list values => Val.validInList s values
-  | .pair a b => Val.validIn s a && Val.validIn s b
-  | .some a => Val.validIn s a
-  | .ctor _ args => Val.validInList s args
-  | _ => true
-/-- Every value of a list is valid. -/
-def Val.validInList (s : Stores) : List Val → Bool
-  | [] => true
-  | value :: rest => Val.validIn s value && Val.validInList s rest
-end
+/-- Validity is the fold of `Stores.handleValid` over the carrier's `handle` frames. -/
+theorem Val.validIn_eq_handles (s : Stores) (v : Val) :
+    v.validIn s = v.handles.all fun h => s.handleValid h.1 h.2 := by
+  rw [Bool.eq_iff_iff, Store.Names.validIn_iff_diag, List.all_eq_true,
+    Store.Names.Rel.diag_iff]
 
 theorem Val.validIn_cell (s : Stores) (k : RefKey) :
-    Val.validIn s (Val.cell k) = decide (k.index < s.refs.length) :=
-  by aesop
+    Val.validIn s (Val.cell k) = decide (k.index < s.refs.length) := by
+  rw [Val.validIn_eq_handles]
+  simp only [Store.Val.handles, List.all_cons, List.all_nil, Bool.and_true]
+  rfl
 theorem Val.validIn_promise (s : Stores) (k : DeferredKey) :
-    Val.validIn s (Val.promise k) = decide (k.index < s.deferreds.cells.length) :=
-  by aesop
+    Val.validIn s (Val.promise k) = decide (k.index < s.deferreds.cells.length) := by
+  rw [Val.validIn_eq_handles]
+  simp only [Store.Val.handles, List.all_cons, List.all_nil, Bool.and_true]
+  rfl
 theorem Val.validIn_scopeHandle (s : Stores) (key : Nat) :
-    Val.validIn s (Val.scopeHandle key) = (s.scopes.entryAt key).isSome :=
-  by aesop
+    Val.validIn s (Val.scopeHandle key) = (s.scopes.entryAt key).isSome := by
+  rw [Val.validIn_eq_handles]
+  simp only [Store.Val.handles, List.all_cons, List.all_nil, Bool.and_true]
+  rfl
 theorem Val.validIn_memoMap (s : Stores) (id : MemoMapId) :
-    Val.validIn s (Val.memoMap id) = (s.memo.mapAt id).isSome :=
-  by aesop
-theorem Val.validIn_fiber (s : Stores) (id : FiberId) : Val.validIn s (Val.fiber id) = true :=
-  by aesop
+    Val.validIn s (Val.memoMap id) = (s.memo.mapAt id).isSome := by
+  rw [Val.validIn_eq_handles]
+  simp only [Store.Val.handles, List.all_cons, List.all_nil, Bool.and_true]
+  rfl
+theorem Val.validIn_fiber (s : Stores) (id : FiberId) : Val.validIn s (Val.fiber id) = true := by
+  rw [Val.validIn_eq_handles]
+  rfl
 theorem Val.validIn_exitOk (s : Stores) (v : Val) : Val.validIn s (Val.exitOk v) = Val.validIn s v := by
-  simp only [Val.validIn, Val.validInList, Bool.and_true]
-
-theorem Val.validInList_eq_all (s : Stores) (values : List Val) :
-    Val.validInList s values = values.all (Val.validIn s) := by
-  induction values with
-  | nil => rfl
-  | cons value rest ih => rw [Val.validInList, ih, List.all_cons]
+  simp only [Val.validIn_eq_handles, Store.Val.handles, Store.Val.handlesList_cons,
+    Store.Val.handlesList_nil, List.append_nil]
 
 theorem Val.validIn_list (s : Stores) (values : List Val) :
-    Val.validIn s (Val.list values) = values.all (Val.validIn s) :=
-  Val.validInList_eq_all s values
+    Val.validIn s (Val.list values) = values.all (Val.validIn s) := by
+  rw [Val.validIn_eq_handles]
+  change (Store.Val.handlesList values).all _ = _
+  rw [Store.Val.handlesList_eq_flatMap, List.all_flatMap]
+  congr 1
+  funext value
+  exact (Val.validIn_eq_handles s value).symm
 
 theorem Val.validInList_eq_handlesList (s : Stores) (values : List Val)
     (ih : ∀ x ∈ values, x.validIn s = x.handles.all fun h => s.handleValid h.1 h.2) :
     Val.validInList s values =
       (Store.Val.handlesList values).all fun h => s.handleValid h.1 h.2 := by
-  induction values with
-  | nil => rfl
-  | cons value rest ihr =>
-    rw [Val.validInList, Store.Val.handlesList_cons, List.all_append, ih value (by simp),
-      ihr (fun x hx => ih x (by simp [hx]))]
-
-/-- Validity is the fold of `Stores.handleValid` over the carrier's `handle` frames. -/
-theorem Val.validIn_eq_handles (s : Stores) (v : Val) :
-    v.validIn s = v.handles.all fun h => s.handleValid h.1 h.2 := by
-  induction v using Store.Val.ind with
-  | unit => rfl
-  | bool _ => rfl
-  | nat _ => rfl
-  | str _ => rfl
-  | bytes _ => rfl
-  | negInt _ => rfl
-  | float _ => rfl
-  | none => rfl
-  | ref _ _ => rfl
-  | handle kind index =>
-    show s.handleValid kind index = List.all [(kind, index)] fun h => s.handleValid h.1 h.2
-    rw [List.all_cons, List.all_nil, Bool.and_true]
-  | list values ih => exact Val.validInList_eq_handlesList s values ih
-  | pair a b iha ihb =>
-    show (Val.validIn s a && Val.validIn s b) =
-      List.all (a.handles ++ b.handles) fun h => s.handleValid h.1 h.2
-    rw [List.all_append, iha, ihb]
-  | some a ih => exact ih
-  | ctor _ args ih => exact Val.validInList_eq_handlesList s args ih
+  rw [Bool.eq_iff_iff, Val.validInList_eq_all, Store.Val.handlesList_eq_flatMap,
+    List.all_flatMap, List.all_eq_true, List.all_eq_true]
+  constructor
+  · intro valid x member
+    rw [← ih x member]
+    exact valid x member
+  · intro valid x member
+    rw [ih x member]
+    exact valid x member
 
 /-- A reified failed exit is valid everywhere: its cause writes no handle. -/
 theorem Val.validIn_exitErr (s : Stores) (cause : CauseV) : Val.validIn s (Val.exitErr cause) = true := by
@@ -276,7 +237,7 @@ theorem Stores.handleValid_mono {s s' : Stores} (hle : s.le s') (kind : UInt8) (
 /-- Validity survives growth (plan §3.2, ENSURES 13): every handle of the value does. -/
 theorem Val.validIn_mono {s s' : Stores} (hle : s.le s') (v : Val) (h : v.validIn s = true) :
     v.validIn s' = true := by
-  rw [Val.validIn_eq_handles, List.all_eq_true] at h ⊢
+  rw [Store.Names.validIn_iff_diag, Store.Names.Rel.diag_iff] at h ⊢
   exact fun x hx => Stores.handleValid_mono hle x.1 x.2 (h x hx)
 
 /-- Validity of an operation survives growth (plan §3.2, ENSURES 13): cases. -/
@@ -341,11 +302,11 @@ theorem refStep_length (o : SyncOp) (heap : RefHeap) (v : Val) (heap' : RefHeap)
 every frame it carries is a frame of valid values. -/
 theorem Val.validIn_framesClosed (s : Stores) : FramesClosed (·.validIn s = true) := by
   intro v L hv hL
-  rw [Val.validIn_eq_handles, List.all_eq_true]
+  rw [Store.Names.validIn_iff_diag, Store.Names.Rel.diag_iff]
   intro code hcode
   obtain ⟨x, hx, hcx⟩ := List.mem_flatMap.mp (hv hcode)
   have hxv : Val.validIn s x = true := hL x hx
-  rw [Val.validIn_eq_handles, List.all_eq_true] at hxv
+  rw [Store.Names.validIn_iff_diag, Store.Names.Rel.diag_iff] at hxv
   exact hxv code hcx
 
 /-- A heap row's own values (`SyncOp.refArgs`) are valid where the row is. -/
