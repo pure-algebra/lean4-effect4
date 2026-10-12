@@ -845,7 +845,7 @@ theorem configTyped_addObserver {root : ProgramSource} {rootTy : EffTy} {w : Wor
     rcases List.mem_append.mp ho' with h | h
     · exact Or.inl h
     · exact Or.inr (List.mem_singleton.mp h)
-  refine configTyped_rupdate_code typed ht rfl (PendingWeaker.refl _) rfl id ⟨.inr rfl, rfl, Or.inl⟩
+  refine configTyped_rupdate_code typed ht rfl (PendingWeaker.refl _) rfl id ⟨.inr rfl, rfl, fun h => h⟩
     ?_ ?_ (fun c _ h => commandAuthority_view ctl view.races c h)
     (fun hrun reads marker ty d => ((typed.code t hmem hrun reads marker ty d).races
       (racesKept_of_eq view.races)).congr rfl rfl rfl) ?_

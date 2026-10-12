@@ -456,7 +456,7 @@ theorem afterInterrupt_preserves (root : ProgramSource) (rootTy : EffTy) (host :
   have hf : m.fiber? f.id = some f := by rw [fid]; exact hfound
   have hmem : f ∈ m.fibers := rfiber?_mem hf
   have freeF : f.id ∉ rest.filterMap (Guard.commandOwner m) := by rw [fid]; exact free
-  obtain ⟨replyTy, reply, row, final, flag, declared, covered, stackOk, prov⟩ :=
+  obtain ⟨replyTy, reply, row, final, flag, declared, covered, stackOk, prov, deferredMask⟩ :=
     delivery f hfound
   have code := afterInterruptCode_typed root typed.machine reply
   let g : RFiber := { f with frame := { f.frame with
@@ -473,7 +473,7 @@ theorem afterInterrupt_preserves (root : ProgramSource) (rootTy : EffTy) (host :
     rw [declared] at both
     cases both
     exact ⟨row, (((replyTy, row, row) : AmbientPosition), f.frame.interruptible), flag, covered, rfl,
-      fun _ => Row.subset_refl _, ambientProgAt_of_admin root code (afterInterruptCode_admin root m kind) row _,
+      deferredMask, ambientProgAt_of_admin root code (afterInterruptCode_admin root m kind) row _,
       stackOk.races (racesKept_of_eq view.races), provG⟩
   have frameOk : ∀ ty, w.Γ g.id = some ty → SavedPosition root w ty g.frame := by
     intro ty d
@@ -519,7 +519,7 @@ theorem afterInterrupt_preserves (root : ProgramSource) (rootTy : EffTy) (host :
     rw [requestOfR_of_not_parked look off] at hr
     cases hr
   have edited := configTyped_rupdate_code (g := g) tail hf rfl (PendingWeaker.refl _) rfl
-    (fun p => ⟨p.recorded, p.deferred⟩) ⟨.inr rfl, rfl, Or.inl⟩
+    (fun p => ⟨p.recorded, p.deferred⟩) ⟨.inr rfl, rfl, fun h => h⟩
     (fun k hk => Or.inl (fiberKeys_internal hmem hk)) noRequest
     (fun c hc h => commandAuthority_flags (g := g) hf rfl rfl rfl rfl freeF c hc h)
     (fun _ _ _ ty d => Or.inl (codeG ty d)) fresh
@@ -702,7 +702,7 @@ theorem closeParAwait_preserves (root : ProgramSource) (rootTy : EffTy) (host : 
   have hf : m.fiber? f.id = some f := by rw [fid]; exact hfound
   have hmem : f ∈ m.fibers := rfiber?_mem hf
   have freeF : f.id ∉ rest.filterMap (Guard.commandOwner m) := by rw [fid]; exact free
-  obtain ⟨answer, error, row, cols, proto, final, flag, declared, covered, stackOk, prov⟩ :=
+  obtain ⟨answer, error, row, cols, proto, final, flag, declared, covered, stackOk, prov, deferredMask⟩ :=
     delivery f hfound
   have code := awaitAllPark_typed root cols
     ⟨.list (.exitOf answer error), error, Env.Requirement.empty⟩ rfl
@@ -728,7 +728,7 @@ theorem closeParAwait_preserves (root : ProgramSource) (rootTy : EffTy) (host : 
   have codeG : ∀ ty, w.Γ g.id = some ty → MCodeOk root w (m.update g) g ty := by
     intro ty d
     rw [finalOf ty d]
-    exact ⟨row, _, flag, covered, rfl, fun _ => Row.subset_refl _,
+    exact ⟨row, _, flag, covered, rfl, deferredMask,
       ambientProgAt_of_admin root code (.fiber _ _ rfl fun _ => .pure _) row _,
       stackG.races (racesKept_of_eq view.races), provG⟩
   have frameOk : ∀ ty, w.Γ g.id = some ty → SavedPosition root w ty g.frame := by
