@@ -68,44 +68,60 @@ theorem storeCancelThenFail_typed (root : ProgramSource) {w : World} {ty : EffTy
   rw [unit w' ans post]
   exact TypedProg.pure ⟨trivial, trivial⟩
 
-/-- A cancel frame whose program is typed at every later world, pushed on a host stack. -/
-theorem hostStack_cancelFrame (root : ProgramSource) {w : World} {m : RState} {ty final : EffTy}
-    {name : EffName}
+/-- The same program is administrative: a store row under its guard, then the failure. -/
+theorem storeCancelThenFail_admin {op : SyncOp} (notForeign : ∀ scope capture, op ≠ .scopeAdd scope (.foreign capture))
+    (cause : CauseV) :
+    AdminCode ((guardR .onSuccess (storeR op)).bind (seqR fun _ => .pure (.failure cause))) :=
+  (AdminCode.guard _ (.store _ _ notForeign fun _ => .pure _)).bind (AdminCode.seq _)
+
+/-- A cancel frame whose program is typed at every later world at a constant row, pushed on a
+machine host stack. -/
+theorem mHostStack_cancelFrame (root : ProgramSource) {w : World} {m : RState} {ty : EffTy}
+    {row : Env.Requirement} {b : Bool} {tout : MachinePos} {name : EffName}
     (cancel : ∀ w', w.leHost w' → ∀ cause, ExitOk w' ty (.failure cause) →
-      TypedProg root w' ty ((interpR root.program).cancelThenFail name cause))
-    {owner : FiberId} {stack : List ScopeFrame} (h : HostStack root w m owner ty final stack) :
-    HostStack root w m owner ty final (.asyncFinalizer name :: stack) :=
-  hostStack_push (.asyncFinalizer _ fun _ o => ⟨rfl, fun w'' o' cause typed _ =>
-    cancel w'' (leHost_trans _ _ _ o o') cause typed⟩) h
+      AmbientProg root w' row ((ty, row, row) : AmbientPosition)
+        ((interpR root.program).cancelThenFail name cause))
+    {owner : FiberId} {stack : List ScopeFrame}
+    (h : MHostStack root w m owner (((ty, row, row) : AmbientPosition), b) tout stack) :
+    MHostStack root w m owner (((ty, row, row) : AmbientPosition), b) tout
+      (.asyncFinalizer name :: stack) :=
+  .cons (.inl (.asyncFinalizer _ (fun _ o => ⟨rfl, fun w'' o' cause typed _ =>
+    cancel w'' (leHost_trans _ _ _ o o') cause typed⟩) (Row.subset_refl _))) h
 
 /-- The cancel frame of a sleep (`clearTimeout`, `internal/effect.ts:6063`). -/
-theorem hostStack_sleepCancel (root : ProgramSource) {w : World} {m : RState} {ty final : EffTy}
-    (host : FiberId) (token : Nat) {owner : FiberId} {stack : List ScopeFrame}
-    (h : HostStack root w m owner ty final stack) :
-    HostStack root w m owner ty final
+theorem mHostStack_sleepCancel (root : ProgramSource) {w : World} {m : RState} {ty : EffTy}
+    {row : Env.Requirement} {b : Bool} {tout : MachinePos} (host : FiberId) (token : Nat)
+    {owner : FiberId} {stack : List ScopeFrame}
+    (h : MHostStack root w m owner (((ty, row, row) : AmbientPosition), b) tout stack) :
+    MHostStack root w m owner (((ty, row, row) : AmbientPosition), b) tout
       (.asyncFinalizer ((interpR root.program).cancelName (.store .cancelSleep) host token) :: stack) :=
-  hostStack_cancelFrame root (name := (interpR root.program).cancelName (.store .cancelSleep) host token)
-    (fun _ _ _ typed => storeCancelThenFail_typed root (op := .sleepCancel host token) PUnit.unit
-      trivial (fun _ _ post => post) typed) h
+  mHostStack_cancelFrame root (name := (interpR root.program).cancelName (.store .cancelSleep) host token)
+    (fun _ _ cause typed => ambientProg_of_admin root
+      (storeCancelThenFail_typed root (op := .sleepCancel host token) PUnit.unit trivial
+        (fun _ _ post => post) typed) (storeCancelThenFail_admin (fun _ _ h => by cases h) cause) row) h
 
 /-- The cancel frame of a Deferred's await (`Deferred.ts:178-185`), at a declared cell; both
 spellings of the registration name the same cleanup row. -/
-theorem hostStack_awaitCancel (root : ProgramSource) {w : World} {m : RState} {ty final : EffTy}
-    {cell : DeferredKey} (declared : (w.«Π» cell).isSome = true) (host : FiberId) (token : Nat)
-    {owner : FiberId} {stack : List ScopeFrame} (h : HostStack root w m owner ty final stack) :
-    HostStack root w m owner ty final
+theorem mHostStack_awaitCancel (root : ProgramSource) {w : World} {m : RState} {ty : EffTy}
+    {row : Env.Requirement} {b : Bool} {tout : MachinePos} {cell : DeferredKey}
+    (declared : (w.«Π» cell).isSome = true) (host : FiberId) (token : Nat)
+    {owner : FiberId} {stack : List ScopeFrame}
+    (h : MHostStack root w m owner (((ty, row, row) : AmbientPosition), b) tout stack) :
+    MHostStack root w m owner (((ty, row, row) : AmbientPosition), b) tout
         (.asyncFinalizer ((interpR root.program).cancelName (.cancelAwait cell) host token) :: stack) ∧
-      HostStack root w m owner ty final
+      MHostStack root w m owner (((ty, row, row) : AmbientPosition), b) tout
         (.asyncFinalizer ((interpR root.program).cancelName (.store (.cancelAwait cell)) host token) ::
           stack) := by
   have cancel : ∀ w', w.leHost w' → ∀ cause, ExitOk w' ty (.failure cause) →
-      TypedProg root w' ty ((guardR .onSuccess (storeR (.deferredAwaitCleanup cell host token))).bind
-        (seqR fun _ => .pure (.failure cause))) := fun _ o _ typed =>
-    storeCancelThenFail_typed root (op := .deferredAwaitCleanup cell host token) PUnit.unit
-      (theta_isSome' o declared) (fun _ _ post => post) typed
-  exact ⟨hostStack_cancelFrame root
+      AmbientProg root w' row ((ty, row, row) : AmbientPosition)
+        ((guardR .onSuccess (storeR (.deferredAwaitCleanup cell host token))).bind
+          (seqR fun _ => .pure (.failure cause))) := fun _ o cause typed =>
+    ambientProg_of_admin root (storeCancelThenFail_typed root (op := .deferredAwaitCleanup cell host token)
+      PUnit.unit (theta_isSome' o declared) (fun _ _ post => post) typed)
+      (storeCancelThenFail_admin (fun _ _ h => by cases h) cause) row
+  exact ⟨mHostStack_cancelFrame root
       (name := (interpR root.program).cancelName (.cancelAwait cell) host token) cancel h,
-    hostStack_cancelFrame root
+    mHostStack_cancelFrame root
       (name := (interpR root.program).cancelName (.store (.cancelAwait cell)) host token) cancel h⟩
 where
   theta_isSome' {w w' : World} (o : w.leHost w') {cell : DeferredKey}
@@ -361,8 +377,10 @@ theorem Evaluating.async_parks {root : ProgramSource} {rootTy : EffTy} {w : Worl
     {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y)
     {register : EffName} {request : Val} {next : ExitV → RProgram}
     (hc : f.frame.current = .vis (.inr (.async register request)) next)
-    (noRequest : externalRequestR f.frame.current = none) (tin : EffTy) (stk : List ScopeFrame)
-    (stack : ∀ ty, w.Γ f.id = some ty → HostStack root w (m.update f) f.id tin ty stk) :
+    (noRequest : externalRequestR f.frame.current = none) (tin : EffTy) (row : Env.Requirement)
+    (flag : Bool) (covered : f.context.services.Satisfies row) (stk : List ScopeFrame)
+    (stack : ∀ ty, w.Γ f.id = some ty → MHostStack root w (m.update f) f.id
+      (((tin, row, row) : AmbientPosition), f.frame.interruptible) (finalPos ty flag) stk) :
     SettlesTyped root rootTy w f.id rest (prepareIterR
       ⟨({ m with nextToken := m.nextToken + 1 } : RState).emit [.parkedOn f.id m.nextToken],
         { f with frame := { f.frame with stack := stk }, parked := .withGuard m.nextToken,
@@ -375,7 +393,7 @@ theorem Evaluating.async_parks {root : ProgramSource} {rootTy : EffTy} {w : Worl
   let fr : RSaved := { f.frame with stack := stk }
   let p : RPending := ⟨tok, none, [], [], .void, false⟩
   obtain ⟨ty, declared⟩ := ev.declared
-  obtain ⟨_, _, _, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  obtain ⟨_, _, _, _, _, _, _, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
   have ord0 : w.leHost (w.addToken f.id tok tin) :=
     addToken_leHost (valid_nextToken_fresh rootTy w (m.update f) ev.typed.machine.typed.1 f.id)
   have back : ∀ id t' ty', (w.addToken f.id tok tin).Θ id t' = some ty' → (id, t') ≠ (f.id, tok) →
@@ -387,7 +405,8 @@ theorem Evaluating.async_parks {root : ProgramSource} {rootTy : EffTy} {w : Worl
     show raceRegistrationR f.frame.current = none
     rw [hc]
     rfl
-  obtain ⟨ord, parked⟩ := ev.park_fresh tin fr f.dispatcher p stack ⟨prov.recorded, prov.deferred⟩
+  obtain ⟨ord, parked⟩ := ev.park_fresh tin row flag covered fr f.dispatcher p stack
+    ⟨prov.recorded, prov.deferred⟩
     rfl (fun id hid => by rcases List.mem_append.mp hid with h | h <;> cases h) noRequest marker
     (fun b hb t' ht' => (c4 b hb).c0 t' ht') (fun k hk => Or.inl (List.mem_append_right _ hk))
   let gE : RFiber := { f with frame := fr, parked := .withGuard tok, pending := f.pending ++ [p] }
@@ -398,7 +417,8 @@ theorem Evaluating.async_parks {root : ProgramSource} {rootTy : EffTy} {w : Worl
   split
   · rename_i hd
     let gD : RFiber := { f with frame := fr, parked := .notParked, pending := [] }
-    obtain ⟨_, unparked⟩ := ev.unpark_fresh tin fr stack ⟨prov.recorded, prov.deferred⟩ hd marker y
+    obtain ⟨_, unparked⟩ := ev.unpark_fresh tin row flag covered fr stack ⟨prov.recorded, prov.deferred⟩ hd
+      marker y
     refine configTyped_congr (m := ({ (m.update f) with nextToken := tok + 1 } : RState).update gD) ?_
       rfl rfl rfl rfl rfl rfl unparked
     have ef := congrArg RunMachine.fibers (rupdate_rupdate m (f := f) (g := gD) rfl).symm
@@ -417,8 +437,10 @@ theorem Evaluating.async_parks_store {root : ProgramSource} {rootTy : EffTy} {w 
     {m : RState} {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y)
     {register : EffName} {request : Val} {next : ExitV → RProgram}
     (hc : f.frame.current = .vis (.inr (.async register request)) next)
-    (noRequest : externalRequestR f.frame.current = none) (tin : EffTy) (stk : List ScopeFrame)
-    (stack : ∀ ty, w.Γ f.id = some ty → HostStack root w (m.update f) f.id tin ty stk) (s : Stores)
+    (noRequest : externalRequestR f.frame.current = none) (tin : EffTy) (row : Env.Requirement)
+    (flag : Bool) (covered : f.context.services.Satisfies row) (stk : List ScopeFrame)
+    (stack : ∀ ty, w.Γ f.id = some ty → MHostStack root w (m.update f) f.id
+      (((tin, row, row) : AmbientPosition), f.frame.interruptible) (finalPos ty flag) stk) (s : Stores)
     (edit : ∀ (M : RState) (q : List RCmd),
       ConfigTyped root rootTy (w.addToken f.id m.nextToken tin) M q → M.state = m.state →
       m.nextToken < M.nextToken → requestOfR M f.id m.nextToken = none →
@@ -437,7 +459,7 @@ theorem Evaluating.async_parks_store {root : ProgramSource} {rootTy : EffTy} {w 
   let fr : RSaved := { f.frame with stack := stk }
   let p : RPending := ⟨tok, none, [], [], .void, false⟩
   obtain ⟨ty, declared⟩ := ev.declared
-  obtain ⟨_, _, _, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  obtain ⟨_, _, _, _, _, _, _, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
   have ord0 : w.leHost (w.addToken f.id tok tin) :=
     addToken_leHost (valid_nextToken_fresh rootTy w (m.update f) ev.typed.machine.typed.1 f.id)
   have back : ∀ id t' ty', (w.addToken f.id tok tin).Θ id t' = some ty' → (id, t') ≠ (f.id, tok) →
@@ -449,7 +471,8 @@ theorem Evaluating.async_parks_store {root : ProgramSource} {rootTy : EffTy} {w 
     show raceRegistrationR f.frame.current = none
     rw [hc]
     rfl
-  obtain ⟨ord, parked⟩ := ev.park_fresh tin fr f.dispatcher p stack ⟨prov.recorded, prov.deferred⟩
+  obtain ⟨ord, parked⟩ := ev.park_fresh tin row flag covered fr f.dispatcher p stack
+    ⟨prov.recorded, prov.deferred⟩
     rfl (fun id hid => by rcases List.mem_append.mp hid with h | h <;> cases h) noRequest marker
     (fun b hb t' ht' => (c4 b hb).c0 t' ht') (fun k hk => Or.inl (List.mem_append_right _ hk))
   let gE : RFiber := { f with frame := fr, parked := .withGuard tok, pending := f.pending ++ [p] }
@@ -468,7 +491,8 @@ theorem Evaluating.async_parks_store {root : ProgramSource} {rootTy : EffTy} {w 
   · rename_i hd
     let gD : RFiber := { f with frame := fr, parked := .notParked, pending := [] }
     let Md : RState := ({ (m.update f) with nextToken := tok + 1 } : RState).update gD
-    obtain ⟨_, unparked⟩ := ev.unpark_fresh tin fr stack ⟨prov.recorded, prov.deferred⟩ hd marker y
+    obtain ⟨_, unparked⟩ := ev.unpark_fresh tin row flag covered fr stack ⟨prov.recorded, prov.deferred⟩ hd
+      marker y
     have lookD : Md.fiber? f.id = some gD := rfiber?_update_self (f := f) ev.look rfl
     have editD := edit Md _ unparked rfl (Nat.lt_succ_self _)
       (requestOfR_of_not_parked lookD (fun h => nomatch h))
@@ -487,7 +511,7 @@ arm's immediate answer, `EvaluateR.lean`): the counter bumped, the world declari
 theorem Evaluating.settle_continue_bump_drain {root : ProgramSource} {rootTy : EffTy} {w : World}
     {m : RState} {rest : List RCmd} {f : RFiber} {y y' : Bool}
     (ev : Evaluating root rootTy w m rest f y) (fr : RSaved)
-    (code : ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty fr) :
+    (code : ∀ ty, w.Γ f.id = some ty → MCodeOk root w (m.update f) { f with frame := fr } ty) :
     SettlesTyped root rootTy w f.id rest
       (prepareIterR ⟨{ m with nextToken := m.nextToken + 1 }, { f with frame := fr }, y', .continue_,
         [.drainDue], []⟩) := by
@@ -497,21 +521,21 @@ theorem Evaluating.settle_continue_bump_drain {root : ProgramSource} {rootTy : E
   let w1 := w.addToken f.id m.nextToken (EffTy.pure .unit)
   let m1 : RState := { m with nextToken := m.nextToken + 1 }
   have ev' : Evaluating root rootTy w1 m1 rest f y := ⟨bumped, ev.stale, ev.running, ev.live⟩
-  have code1 : ∀ ty, w1.Γ f.id = some ty → CodeOk root w1 (m1.update f) f.id ty fr :=
-    fun ty' d => codeOk_races (m := m.update f) (racesKept_of_eq fun _ => rfl)
-      (codeOk_mono ord (code ty' d))
+  have code1 : ∀ ty, w1.Γ f.id = some ty → MCodeOk root w1 (m1.update f) { f with frame := fr } ty :=
+    fun ty' d => ((code ty' d).mono ord).races (racesKept_of_eq (m := m.update f) fun _ => rfl)
   obtain ⟨f0, hf0, _⟩ := ev'.stale
   have view := ev'.view
   let fr' : RSaved := { fr with current := prepareR m1.completedExits fr.current }
-  have code' : ∀ ty, w1.Γ f.id = some ty → CodeOk root w1 (m1.update f) f.id ty fr' :=
-    fun ty' d => codeOk_prepare m1.completedExits view (code1 ty' d)
-  obtain ⟨_, current, _, _⟩ := code' ty declared
+  have code' : ∀ ty, w1.Γ f.id = some ty → MCodeOk root w1 (m1.update f) { f with frame := fr' } ty :=
+    fun ty' d => codeOk_prepare (f := { f with frame := fr }) m1.completedExits view (code1 ty' d)
+  obtain ⟨_, _, _, _, _, current, _, _⟩ := code' ty declared
   have idle : prepareScopedExitR ⟨m1, { f with frame := fr' }, y', .continue_, [.drainDue], []⟩ =
       ⟨m1, { f with frame := fr' }, y', .continue_, [.drainDue], []⟩ := prepareScopedExitR_of_typed current
   have glue : prepareIterR ⟨m1, { f with frame := fr }, y', .continue_, [.drainDue], []⟩ =
       ⟨m1, { f with frame := fr' }, y', .continue_, [.drainDue], []⟩ := idle
   rw [glue]
-  obtain ⟨w', ord', typed⟩ := settle_frame_ready (y' := y') ev'.typed hf0 ev'.running fr' code'
+  obtain ⟨w', ord', typed⟩ := settle_reset_ready (y' := y') ev'.typed hf0 ev'.running f.context
+    (ev'.typed.machine.fiber (rfiber?_mem ev'.look)).ok.c5 f.maxOpsBeforeYield f.preventYield fr' code'
   exact ⟨w', leHost_trans _ _ _ ord ord', configTyped_cons_drainDue typed⟩
 
 /-! ## The clause -/
@@ -547,23 +571,29 @@ theorem clause_async_of_external (root : ProgramSource) (rootTy : EffTy) (regist
     FiberClauseKeeps root rootTy (.async register request) := by
   intro w m rest f y next ev hc
   obtain ⟨ty, declared⟩ := ev.declared
-  obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  obtain ⟨row, ⟨q, b⟩, flag, covered, bit, current, stack, prov⟩ :=
+    ev.code (by rw [hc]; rfl) ty declared
+  change b = f.frame.interruptible at bit
+  subst bit
+  change AmbientProg root w row q f.frame.current at current
   rw [hc] at current
-  obtain ⟨cert, pre, typedNext⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
+  obtain ⟨cert, pre, typedNext, _⟩ := ambientProg_fiber_inv current (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  change EffTy at cert
   have same : ∀ ty', w.Γ f.id = some ty' → ty' = ty :=
     fun _ h => Option.some.inj (h.symm.trans declared)
-  have answer : ∀ ty', w.Γ f.id = some ty' →
-      HostStack root w (m.update f) f.id cert ty' (.answer next :: f.frame.stack) := fun ty' d => by
+  have answer : ∀ ty', w.Γ f.id = some ty' → MHostStack root w (m.update f) f.id
+      (((cert, row, row) : AmbientPosition), f.frame.interruptible) (finalPos ty' flag)
+      (.answer next :: f.frame.stack) := fun ty' d => by
     rw [same ty' d]
-    exact hostStack_push (answerFrame_typed (fun _ _ _ hex => hex) typedNext) stack
+    exact .cons (.inl (ambient_answerFrame (fun w' o ex hex => typedNext w' o ex hex))) stack
   have wide := ev.typed.machine.wide
   rcases asyncPre_cases pre with ⟨millis, rfl, sub⟩ | ⟨cell, a, e, hreg, hcell, ha, he⟩ |
     ⟨op, req, origin, rfl⟩ | ⟨x, rfl⟩
   · -- a sleep: the timer registration, then the park under `clearTimeout`
     have noRequest : externalRequestR f.frame.current = none := by rw [hc]; rfl
-    exact ev.async_parks_store hc noRequest cert _
-      (fun ty' d => hostStack_sleepCancel root f.id m.nextToken (answer ty' d))
+    exact ev.async_parks_store hc noRequest cert row flag covered _
+      (fun ty' d => mHostStack_sleepCancel root f.id m.nextToken (answer ty' d))
       { m.state with timers := m.state.timers.sleep f.id m.nextToken millis }
       (fun M q typed hstate hbelow hfree => by
         have e := configTyped_sleep typed (fiber := f.id) (token := m.nextToken) millis
@@ -576,7 +606,7 @@ theorem clause_async_of_external (root : ProgramSource) (rootTy : EffTy) (regist
     obtain ⟨c, hcellAt⟩ : ∃ c, m.state.deferreds.cellAt cell = some c :=
       ⟨_, List.getElem?_eq_getElem live⟩
     have declaredCell : (w.«Π» cell).isSome = true := by rw [hcell]; rfl
-    have cancels := fun ty' d => hostStack_awaitCancel root declaredCell f.id m.nextToken (answer ty' d)
+    have cancels := fun ty' d => mHostStack_awaitCancel root declaredCell f.id m.nextToken (answer ty' d)
     cases hp : c.completion with
     | some effect =>
       -- completed: the stored effect answers at once
@@ -585,10 +615,12 @@ theorem clause_async_of_external (root : ProgramSource) (rootTy : EffTy) (regist
       have hcell' : m.state.deferreds.cells[cell.index]? = some c := hcellAt
       have strong : CompletionStrong w cert effect :=
         completionStrong_await ⟨ha, he⟩ (wide.stores.c2.c0 cell.index c hcell' a e hcell effect hp)
-      have code : ∀ ty', w.Γ f.id = some ty' → CodeOk root w (m.update f) f.id ty'
-          { f.frame with current := denoteCompletion effect, stack := .answer next :: f.frame.stack } :=
-        fun ty' d => ⟨cert, denoteCompletion_typed root strong, answer ty' d,
-          ⟨prov.recorded, prov.deferred⟩⟩
+      have code : ∀ ty', w.Γ f.id = some ty' → MCodeOk root w (m.update f) { f with frame :=
+          { f.frame with current := denoteCompletion effect, stack := .answer next :: f.frame.stack } }
+          ty' :=
+        fun ty' d => ⟨row, (((cert, row, row) : AmbientPosition), f.frame.interruptible), flag, covered,
+          rfl, ambientProg_of_admin root (denoteCompletion_typed root strong)
+            (denoteCompletion_admin effect) row, answer ty' d, ⟨prov.recorded, prov.deferred⟩⟩
       rcases hreg with rfl | rfl
       · have hr : (interpRAt root.program m.completedExits).registerAsync (.registerAwait cell) f.id
             m.nextToken m.state = (m.state, some (denoteCompletion effect)) := by
@@ -628,19 +660,21 @@ theorem clause_async_of_external (root : ProgramSource) (rootTy : EffTy) (regist
           rfl
         have noRequest : externalRequestR f.frame.current = none := by rw [hc]; rfl
         simp only [evaluateFiberR, saveAnswerR, pushR, RunFiber.park, hr]
-        exact ev.async_parks_store hc noRequest cert _ (fun ty' d => (cancels ty' d).1) _ edit
+        exact ev.async_parks_store hc noRequest cert row flag covered _ (fun ty' d => (cancels ty' d).1)
+          _ edit
       · have hr : (interpRAt root.program m.completedExits).registerAsync (.store (.registerAwait cell))
             f.id m.nextToken m.state = (awaitStore m.state cell c f.id m.nextToken, none) := by
           rw [(registerAsync_await root m.completedExits m.state cell f.id m.nextToken).2, reg]
           rfl
         have noRequest : externalRequestR f.frame.current = none := by rw [hc]; rfl
         simp only [evaluateFiberR, saveAnswerR, pushR, RunFiber.park, hr]
-        exact ev.async_parks_store hc noRequest cert _ (fun ty' d => (cancels ty' d).2) _ edit
+        exact ev.async_parks_store hc noRequest cert row flag covered _ (fun ty' d => (cancels ty' d).2)
+          _ edit
   · -- a host row: the open branch
     exact external op req request origin w m rest f y next ev hc
   · -- a host slot: no store edit, no cancel frame
     have noRequest : externalRequestR f.frame.current = none := by rw [hc]; rfl
-    exact ev.async_parks hc noRequest cert _ answer
+    exact ev.async_parks hc noRequest cert row flag covered _ answer
 
 /-! ## A park with an external request (the host row)
 
@@ -762,7 +796,7 @@ theorem configTyped_rupdate_park_request {root : ProgramSource} {rootTy : EffTy}
     (queued0 : (g.id, token₀) ∉ q.flatMap Guard.commandKeys)
     (auth : ∀ c ∈ q, CommandAuthorityR m c → CommandAuthorityR (m.update g) c)
     (readG : g.running = true → ReadsCode g.id q → raceRegistrationR g.frame.current = none →
-      ∀ ty, w.Γ g.id = some ty → SavedOk (TypedProg root) ExitOk (frameProtocols root) w ty g.frame)
+      ∀ ty, w.Γ g.id = some ty → MCodeOk root w (m.update g) g ty)
     (fresh : FiberTyped root w (m.update g) g) : ConfigTyped root rootTy w (m.update g) q := by
   have view : ObsViewOff (g.id, token₀) m (m.update g) := obsViewOff_rupdate hf hid pending
   obtain ⟨machine, code, queue⟩ := typed
@@ -776,7 +810,7 @@ theorem configTyped_rupdate_park_request {root : ProgramSource} {rootTy : EffTy}
         (Nat.le_refl _)
   · intro x hx hrun reads marker ty declared
     rcases mem_rupdate hx with rfl | ⟨hold, _⟩
-    · exact Or.inl (codeOk_of_saved (readG hrun reads marker ty declared))
+    · exact Or.inl (readG hrun reads marker ty declared)
     · exact (code x hold hrun reads marker ty declared).races (racesKept_of_eq view.races)
   · intro fiber token r hr
     by_cases same : fiber = g.id
@@ -793,8 +827,10 @@ theorem configTyped_rupdate_park_request {root : ProgramSource} {rootTy : EffTy}
 for a host row): the fiber keeps its dispatcher; its current code requests at the token. -/
 theorem Evaluating.park_fresh_request {root : ProgramSource} {rootTy : EffTy} {w : World}
     {m : RState} {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y)
-    (tin : EffTy) (fr : RSaved) (p : RPending)
-    (stack : ∀ ty, w.Γ f.id = some ty → HostStack root w (m.update f) f.id tin ty fr.stack)
+    (tin : EffTy) (row : Env.Requirement) (flag : Bool) (covered : f.context.services.Satisfies row)
+    (fr : RSaved) (p : RPending)
+    (stack : ∀ ty, w.Γ f.id = some ty → MHostStack root w (m.update f) f.id
+      (((tin, row, row) : AmbientPosition), fr.interruptible) (finalPos ty flag) fr.stack)
     (prov : InterruptProvenance fr) (ptoken : p.token = m.nextToken)
     (ptargets : ∀ id ∈ p.waitingOn.toList ++ p.remaining, id.value < m.nextId)
     (marker : raceRegistrationR fr.current = none) :
@@ -853,9 +889,9 @@ theorem Evaluating.park_fresh_request {root : ProgramSource} {rootTy : EffTy} {w
     have single := pendingWeakerOff_single p
     rwa [ptoken] at single
   have viewOff : ObsViewOff (g.id, tok) M1 (M1.update g) := obsViewOff_rupdate (g := g) hf1 rfl weakOff
-  have stackG : ∀ ty', w1.Γ g.id = some ty' → HostStack root w1 (M1.update g) g.id tin ty' g.frame.stack :=
-    fun ty' d' => hostStack_races (m := M0) (racesKept_of_eq fun _ => rfl)
-      (hostStack_mono ord (stack ty' d'))
+  have stackG : ∀ ty', w1.Γ g.id = some ty' → MHostStack root w1 (M1.update g) g.id
+      (((tin, row, row) : AmbientPosition), g.frame.interruptible) (finalPos ty' flag) g.frame.stack :=
+    fun ty' d' => ((stack ty' d').mono ord).races (racesKept_of_eq (m := M0) fun _ => rfl)
   have tokenOf : ∀ token, g.parked = .withGuard token → token = tok := by
     intro token h
     have h' : Parked.withGuard tok = .withGuard token := h
@@ -871,11 +907,11 @@ theorem Evaluating.park_fresh_request {root : ProgramSource} {rootTy : EffTy} {w
     rw [declaredG]
     rfl
   have fresh : FiberTyped root w1 (M1.update g) g :=
-    { ok := ⟨⟨fun ty' d' => ⟨tin, positionStack_of_host (stackG ty' d'), prov⟩⟩,
+    { ok := ⟨⟨fun ty' d' => ⟨_, flag, MPositionStack.of_host (stackG ty' d'), prov⟩⟩,
         fun q hq => ⟨g.id, pendOk q hq⟩, c2, c3, c4, c5⟩
       delivery := fun token h => by
         rw [tokenOf token h]
-        exact ⟨tin, ty, declaredG, declared, stackG ty declared, prov⟩
+        exact ⟨tin, row, declaredG, ty, flag, declared, covered, stackG ty declared, prov⟩
       below := old.below
       pendingShape := by
         show ∃ q, g.pending = [q] ∧ q.token = tok
@@ -946,8 +982,10 @@ theorem Evaluating.async_parks_request {root : ProgramSource} {rootTy : EffTy} {
     {m : RState} {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y)
     {register : EffName} {request : Val} {next : ExitV → RProgram}
     (hc : f.frame.current = .vis (.inr (.async register request)) next) (tin : EffTy)
+    (row : Env.Requirement) (flag : Bool) (covered : f.context.services.Satisfies row)
     (stk : List ScopeFrame)
-    (stack : ∀ ty, w.Γ f.id = some ty → HostStack root w (m.update f) f.id tin ty stk) :
+    (stack : ∀ ty, w.Γ f.id = some ty → MHostStack root w (m.update f) f.id
+      (((tin, row, row) : AmbientPosition), f.frame.interruptible) (finalPos ty flag) stk) :
     SettlesTyped root rootTy w f.id rest (prepareIterR
       ⟨({ m with nextToken := m.nextToken + 1 } : RState).emit [.parkedOn f.id m.nextToken],
         { f with frame := { f.frame with stack := stk }, parked := .withGuard m.nextToken,
@@ -957,12 +995,13 @@ theorem Evaluating.async_parks_request {root : ProgramSource} {rootTy : EffTy} {
   let fr : RSaved := { f.frame with stack := stk }
   let p : RPending := ⟨tok, none, [], [], .void, false⟩
   obtain ⟨ty, declared⟩ := ev.declared
-  obtain ⟨_, _, _, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  obtain ⟨_, _, _, _, _, _, _, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
   have marker : raceRegistrationR fr.current = none := by
     show raceRegistrationR f.frame.current = none
     rw [hc]
     rfl
-  obtain ⟨ord, parked⟩ := ev.park_fresh_request tin fr p stack ⟨prov.recorded, prov.deferred⟩
+  obtain ⟨ord, parked⟩ := ev.park_fresh_request tin row flag covered fr p stack
+    ⟨prov.recorded, prov.deferred⟩
     rfl (fun id hid => by rcases List.mem_append.mp hid with h | h <;> cases h) marker
   let gE : RFiber := { f with frame := fr, parked := .withGuard tok, pending := f.pending ++ [p] }
   rw [prepareIterR_async (g := gE) hc]
@@ -972,7 +1011,8 @@ theorem Evaluating.async_parks_request {root : ProgramSource} {rootTy : EffTy} {
   split
   · rename_i hd
     let gD : RFiber := { f with frame := fr, parked := .notParked, pending := [] }
-    obtain ⟨_, unparked⟩ := ev.unpark_fresh tin fr stack ⟨prov.recorded, prov.deferred⟩ hd marker y
+    obtain ⟨_, unparked⟩ := ev.unpark_fresh tin row flag covered fr stack ⟨prov.recorded, prov.deferred⟩ hd
+      marker y
     refine configTyped_congr (m := ({ (m.update f) with nextToken := tok + 1 } : RState).update gD) ?_
       rfl rfl rfl rfl rfl rfl unparked
     have ef := congrArg RunMachine.fibers (rupdate_rupdate m (f := f) (g := gD) rfl).symm
@@ -989,15 +1029,20 @@ host row is the identity), no cancel frame; the fiber parks with its request. -/
 theorem externalAsyncParks (root : ProgramSource) (rootTy : EffTy) : ExternalAsyncParks root rootTy := by
   intro op req request origin w m rest f y next ev hc
   obtain ⟨ty, declared⟩ := ev.declared
-  obtain ⟨tin, current, stack, _⟩ := ev.code (by rw [hc]; rfl) ty declared
+  obtain ⟨row, ⟨q, b⟩, flag, covered, bit, current, stack, _⟩ :=
+    ev.code (by rw [hc]; rfl) ty declared
+  change b = f.frame.interruptible at bit
+  subst bit
+  change AmbientProg root w row q f.frame.current at current
   rw [hc] at current
-  obtain ⟨cert, _, typedNext⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
+  obtain ⟨cert, _, typedNext, _⟩ := ambientProg_fiber_inv current (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  change EffTy at cert
   have same : ∀ ty', w.Γ f.id = some ty' → ty' = ty :=
     fun _ h => Option.some.inj (h.symm.trans declared)
-  exact ev.async_parks_request hc cert _ fun ty' d => by
+  exact ev.async_parks_request hc cert row flag covered _ fun ty' d => by
     rw [same ty' d]
-    exact hostStack_push (answerFrame_typed (fun _ _ _ hex => hex) typedNext) stack
+    exact .cons (.inl (ambient_answerFrame (fun w' o ex hex => typedNext w' o ex hex))) stack
 
 /-- **`async`** (`EvaluateR.lean`'s `async` arm), every registration: `clause_async_of_external` at
 its host-row branch (`externalAsyncParks`). -/
