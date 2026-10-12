@@ -31,6 +31,13 @@ crosses from a codegen artefact to bytes, and
 `Test/Api/ApiContract.lean` is the receipt that crosses it the way a
 caller does.
 
+A printed module type-checks under `HostConfig.pinned` (`src/Effect4/Codegen/Diagnostics.lean`):
+`strict`, `exactOptionalPropertyTypes` and `noUncheckedIndexedAccess`, with its module options.
+Its compiler is tsgo 7, the pinned `@typescript/native-preview` 7.0.0-dev.20260629.1, and
+`make check-tsdiag` tests the printed corpus under that configuration.
+Without `exactOptionalPropertyTypes`, an optional field `b?: B` also admits `undefined`, so it
+no longer means rc.112's `optionalKey`.
+
 The same import exposes concrete value images, typed effectful transformations,
 multi-tier cascading CAS stores, and checked schema endpoints.
 

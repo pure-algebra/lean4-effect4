@@ -966,10 +966,14 @@ entry's Deferred and layer scope live) and `validIn` are the hypotheses the laws
 family's conjunct so the store has a bottom.
 
 **Admission exists** (amended 2026-10-01; the 2026-09-07 text said it was owed to a later step).
-`admitProgram` (DI-61) decides a program against its row table and returns the certificate
-`AdmittedProgram`, whose fields are proofs: typed at the table's signature, a lawful table, rows
-the runner can register, no `int` in the table, the program or its type, and no internal handle
-kind in a host row's answer or error columns (row 97's interim rule). A host answer is admitted
+`admitProgram` (DI-61) decides a program against its application's signature and returns the
+certificate `AdmittedProgram`. Its fields are proofs: the program is typed at the signature, and
+the signature's admission (`admitSig`) holds. That admission covers a lawful table and rows the
+runner can register. It also refuses an internal handle kind in a host row's answer or error
+columns (row 97's interim rule). Two more fields record raw formation and no empty column in the
+program's type (rows 127, 149, 192 and 193). Since rows 317 and 318 (2026-10-07), no field
+concerns `int`: integers inhabit `int` (`Val.negInt`), and program admission admits an integer
+column (row 309). A host answer is admitted
 before it is applied: `admitAnswer` checks the answer against the row's columns and refuses a
 handle that names no live allocation. A forged handle is a refusal row (`E4-HANDLE-CE-001`), never
 a defect the model raises. Value typing is not this row's: the runtime keeps the one coarse check
@@ -998,7 +1002,7 @@ declarations in the checker's order since row 137 was ruled); DB-16 owns that de
   though empty; registered at `66aa97d7`); DI-61, DI-62, DI-67, DI-92.
   Decisions rows 97 (interim rule landed), 127 (ruled: register, then repair) and 149 (ruled: the
   frozen `uninhabited` stays for the `int` scan, the emptiness check is `emptyColumn`); status:
-  those rows.
+  those rows. Rows 317 and 318 then deleted the `int` scan and the refusal `uninhabited`.
 - **Sources.** `docs/research/2026-09-08-build-path.md` §3 (tracked; the 2026-09-07 plan);
   `docs/research/2026-09-30-model-probe/synthesis.md` §3.3, the DB-11 row (tracked);
   `docs/research/2026-10-01-data-probe/synthesis.md` §5 row 127 (tracked);
@@ -1378,9 +1382,11 @@ with variants; row 131, a number-to-text atom: proposed; row 132, `Ty` case anal
 `Laws/Program/Typed/Membership.lean`: proposed for the M5–M7 brief. Row 149 (ruled) names the two
 admission refusals; row 2's stage (b) is ruled by row 119.
 
-- **Decision.** Strings are machine values; a host row's records and errors cross as strings and
-  string pairs, with the pair made at the row adapter; a program's failure payload is restricted to
-  `never`, `nat`, `string`, `prod string string` or their unions; `int` stays uninhabited. Row 120
+- **Decision.** Strings are machine values. A host row's records and errors cross as strings and
+  string pairs, with the pair made at the row adapter. A program's failure payload is restricted to
+  `never`, `nat`, `string`, `prod string string` or their unions. Integers inhabit `int`
+  (`Val.negInt`, `src/Effect4/Store/Carrier/Val.lean`): rows 309, 317 and 318 replaced the
+  2026-09-08 decision that `int` stays uninhabited. Row 120
   adds a record with a required literal `_tag` and payload-admissible fields (`Err.payload`). Records
   are in `Ty` by row 119's ruled design, as amended by row 165 (a record value carries its names);
   the data wave landed them.

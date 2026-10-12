@@ -1301,10 +1301,44 @@ def Satisfies (self : Context U) (r : Requirement) : Prop := r.Subset self.keysR
   Duality, session sequencing, and protocol safety.
 - **I/O Automata & Labeled Transitions**: Lynch & Vaandrager (1995, *Forward and Backward Simulations I:
   Untimed Systems*, Information and Computation 121, pp. 214–233, audit C4, C47).
+- **Comodels and runners**: four texts, each locator read in
+  `docs/research/2026-10-09-comodel-papers/README.md` (decisions row 338).
+  Plotkin and Power (2008, *Tensors of Comodels and Models for Operational Semantics*, MFPS XXIV,
+  ENTCS 218).
+  Their Definition 3.1 defines a comodel of a countable Lawvere theory.
+  Their section 4 defines the tensor of a comodel with a model.
+  Uustalu (2015, *Stateful Runners of Effectful Computations*, MFPS XXXI, ENTCS 319) reads
+  runners as comodels.
+  His Proposition 3.1 puts monad morphisms from a theory's monad to the state monad of `C` in
+  bijection with comodels on `C`.
+  His section 5 separates running from handling.
+  Ahman and Bauer (2020, *Runners in Action*, ESOP 2020) define runners in their section 2.2.
+  Their Definition 2 defines a `T`-runner, whose co-operations land in a monad `T`.
+  Their Proposition 3 puts monad morphisms from the free monad to `T` in one-to-one
+  correspondence with `T`-runners.
+  Setzer and Hancock (2005, *Interactive Programs and Weakly Final Coalgebras in Dependent Type Theory*,
+  Dagstuhl Seminar Proceedings 04381).
+  Their section 3 defines a dependent interface.
+  It has states, the commands of each state, the responses to each command and the next state
+  after each response.
+  The note maps these definitions to the tree's declarations and proves nothing.
 
 #### 2. Effect4 Adaptation, Assumptions, and Exclusions
 - **Adapting 4-State Session Automaton**: The interaction between the Effect4 runtime machine and the
   external host is governed by a 4-state protocol automaton (`.idle`, `.awaitingAsync`, `.parked`, `.terminated`).
+- **A host is a comodel**: In the laws, a host of a row table is an
+  `Effects.Comodel (RowSig table) σ` (`RowSig`, `src/Effect4/Laws/Program/DenoteRows.lean`).
+  From a state of its own, it answers each operation with its next state, or gives `none`.
+  The structure is `Effects.Comodel`, in the `effects` package's
+  `Effects/Coalgebra/Comodel.lean` (decisions row 338).
+  The reply tape is one host, `tapeHost` (`src/Effect4/Laws/Program/HostRuns.lean`).
+  The comodel of the tape handler is `tapeHost` (`tapeHandler_eq_replies`, same file).
+  So the meaning under a reply tape is a run of the call tree against that host.
+  The stores are routed beside it (`rowsHost`, `meaningRows_eq_run`, same file).
+  Under any host, the host's run of the call tree is the meaning under that host read as a
+  handler (`hostRun_eq_meaningUnder`, same file).
+  These laws model a host in Lean. They do not discharge host progress, which stays the
+  external assumption below.
 - **External Driver Assumption (`host-progress`)**: Host progress (supplying answers to pending async requests)
   is an **external driver assumption** (`docs/core/host-boundary.md`), outside the closed runtime. It is **not**
   an owed internal proof obligation.
@@ -1335,6 +1369,50 @@ def allows (source : State) (label : Label) (target : State) : Bool :=
   (`allows_answer` (`src/Effect4/Laws/Run.lean`)).
 - **Host reply commutativity (`reply-commute`)**: Independent host answers commute in session queues.
   (`reply_commute` (`src/Effect4/Laws/Api/HostSession.lean`)).
+- **A reply that the session accepts fits (`session-success-prepared-membership`,
+  `session-failure-shape-free`)**: A successful reply that the session accepts prepares a member
+  of its selected shape-decided row.
+  Where the row's own columns refuse it, the session admits the reply at its call's checked
+  instance (`InstanceSuccess`, decisions row 323).
+  A failing reply that the session accepts carries no reserved defect: the failure half of the
+  statement `admit_sound` (decisions row 191, register line `E4-HOST-CE-008`).
+  (`preflight_success_prepared_fits`, `preflight_failure_noShapeDefect`
+  (`src/Effect4/Laws/Api/HostSession.lean`)).
+- **A reply at its call's instance (`reply-at-call-instance`, `block-call-instance`)**: A reply
+  admitted at its call's checked instance is a handle-free member of the instance's answer
+  column.
+  The machine prepares it unchanged, at a row whose answer column allocates nothing.
+  A failing reply admitted there holds no reserved defect.
+  The registration keeps its call's address, and the session reads the instance there from a
+  table made once at open (`Run.reached_callInstance`).
+  In a recorded, funded run that address holds a call of the operation
+  (`Run.origin_addresses_call`, `src/Effect4/Laws/Api/SessionRef.lean`).
+  On a program that the module check admits, the call instance answers at every call, with the
+  call's operation (`programCallAt`).
+  So a session that `start` made has an instance at every call of its admitted program
+  (`start_callInstance_complete`).
+  Neither law says that the expansion of layer references keeps a call at its address.
+  The second says nothing of a run (decisions rows 183, 323, 328 and 333).
+  (`instance_prepared_success` (`src/Effect4/Laws/Program/Admit.lean`);
+  `checkModule_programCallAt` (`src/Effect4/Laws/Program/Typing/Parts.lean`)).
+- **A waiting run names its wait (`rows-loop-frontier`, `rows-loop-frontier-host`)**: Each law
+  takes a recorded run of a `LoopedRows` program in `LoopedDataRows`.
+  That fragment is the row fragment with loops, and the run is funded, at rest and driven by a
+  host.
+  Every call that the machine waits on is a host row.
+  Past a budget bound, the detailed observation of the budgeted meaning under the run's reply
+  tape waits at that row and request.
+  It holds the machine's stores and reads the tape to its end.
+  Take any host whose answers are the run's and which leaves the waited call unanswered.
+  Past a budget bound, the meaning under that host waits at that call too, with the machine's
+  stores.
+  The host stays where the answers left it.
+  The host's silence is a premise.
+  A wait is a frontier, never a failure, and no progress claim follows.
+  Neither law says anything of a fork, a scope or an interruption (slice L4,
+  `docs/research/2026-10-10-l4-frontiers.md`).
+  (`Run.rows_loop_frontier`, `Run.rows_loop_frontier_host`
+  (`src/Effect4/Laws/Api/SessionMeaningLoop.lean`)).
 - **Frontier awaitHost inversion (`frontier-awaithost`)**: Machine awaitingAsync state matches frontier reason.
   characterization of frontier state matching `.awaitingAsync` (`observe_awaitingAsync_iff` (`src/Effect4/Laws/Api/Frontier.lean`)).
 - **External host progress (`host-progress`)**: External driver progress assumed under `docs/core/host-boundary.md`.
@@ -1351,18 +1429,34 @@ def allows (source : State) (label : Label) (target : State) : Bool :=
 - **Coalgebraic Moore Behaviors**: Bart Jacobs (2012 draft, *Introduction to Coalgebra: Mathematics
   of State and Observation*, ch. 2, audit P17, C23). Deterministic behavior functors on decision words.
 - **Syntactic Soundness**: Wright & Felleisen (1994, audit P36). Safety on closed programs.
+- **Comodels and runners**: the four texts of §2.9's literature, with the same locators.
+  A comodel of `Effects` is a `T`-runner of Ahman and Bauer at `T = StateT σ Option`.
+  `Comodel.run` is the induced monad morphism of their Proposition 3.
 
 #### 2. Effect4 Adaptation, Assumptions, and Exclusions
 - **Adapting Simulation Relations**: Behavioral agreement between operational execution (`Api.run`) and
   denotational meaning (`meaning`) is established as equal-observation theorems over restricted fragments
   (`Straight`, `Looped`, and `M7Fragment`).
 - **Separation of Route vs. Goals**: `m7_of_ledger` proves a **conditional implication** ($M5 \land M6 \implies M7$),
-  not the capstone premises or conclusions themselves. In the registry, `m7-route` is `.fundamentalProperty`
-  (a proved witness for the route theorem), while the capstone results are `.adequacy` (`.goal`s: `M7Exits`,
-  `M7Stores`, `M7NoHalt`, `ExitHandlesValid`).
+  not the milestones' premises or conclusions themselves. In the registry, the claim `m7-route` is
+  `.fundamentalProperty` (a witness for the route theorem). The M7 results are separate claims, listed under the
+  required properties below.
 - **Boundary & Fragment Exclusions (Rows 138, 95, 117)**: M7 is stated strictly on `M7Fragment` with the host
   row table **fixed empty** (`root.table = []`), decision tapes answer-free, and requirement rows closed
-  (`rootTy.requires = empty`). Non-empty host tables are deferred to R6 (DI-57).
+  (`rootTy.requires = empty`). The agreement at a non-empty row table is R6's (DI-57).
+- **The host meaning on a run**: The call tree `denoteRows` reads a program over the stores and
+  the host rows (`src/Effect4/Laws/Program/DenoteRows.lean`).
+  Its fragment is `StraightRows`, which admits `catchIf` (`src/Effect4/Laws/Program/FragmentRows.lean`).
+  Slice H8 of the host-meaning packet reads the meaning under a run's reply tape (decisions row 310).
+  Slice H9 reads the meaning under any host whose answers are the run's.
+  A host there is a comodel of the row signature, and the reply tape is one host (§2.9).
+  On loops both hold past a budget bound, through the budgeted meaning `denoteRowsB` on
+  `LoopedDataRows` (`src/Effect4/Laws/Program/DenoteRowsB.lean`).
+  A budget cut is no failure and no divergence.
+  Each statement of H8 and H9 takes one fiber and a recorded run that is funded, at rest and
+  driven by a host. None claims progress.
+  The packet is `docs/research/2026-10-07-packet-host-meaning.md`, and the loops are
+  `docs/research/2026-10-10-host-meaning-widening/README.md` (DI-57, DI-69).
 
 #### 3. Project Definition and Judgment
 Agreement theorems and fragment definitions are modeled in `src/Effect4/Laws/Program/Agreement/Segment.lean`
@@ -1391,10 +1485,109 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
   (`loopAgreement_of_straight` (`src/Effect4/Laws/Program/LoopAgreement.lean`)).
 - **Reference machine simulation (`run-eq-ref`)**: Frame machine replay matches term reference replay at empty host table
   (`run_eq_ref` (`src/Effect4/Laws/Program/RuntimeR.lean`)).
-- **M7 conditional route (`m7-route`)**: Derivation of M7 capstone conditionally from M5 and M6 ledger components
+- **Straight composition agrees (`straight-composition-agreement`)**: Programs related by
+  `StraightEq` run to equal exits and stores at their own sufficient budgets.
+  (`StraightEq.run_agrees` (`src/Effect4/Laws/Program/MeaningEq.lean`)).
+- **The call tree extends the meaning (`rows-denotation-straight`, `rows-denotation-append`,
+  `rows-denotation-reference`)**: On `Straight`, the call tree is `denote`'s tree, injected on the
+  left of the coproduct.
+  (`Denote.denoteRows_straight` (`src/Effect4/Laws/Program/DenoteRows.lean`)).
+  On `StraightRows`, a program's meaning under a host of an appended row table is its meaning
+  under that host restricted to its rows.
+  This is C2 of DB-01 for host rows, and outside the fragment C2 stays operational
+  (`Denote.meaningUnder_append` (`src/Effect4/Laws/Program/DenoteRowsAppend.lean`)).
+  The reference machine's term of a `StraightRows` program, its control markers erased, is the
+  call tree read into the reference machine's signature.
+  That law needs a compile budget that covers the program's depth
+  (`Sched.denoteR_straightRows` (`src/Effect4/Laws/Program/DenoteRowsR.lean`); decisions row 310).
+- **The raw agreement at every row table (`run-eq-ref-table`, `session-eq-ref`)**: The frame
+  machine and the reference machine agree at every row table.
+  On every program, decision tape and pair of budgets, they reach the same class and the same
+  observation `obs`.
+  The law takes no premise on the tape: a host answer reaches either machine only as a
+  decision (DI-23).
+  (`Sched.run_eq_ref_table` (`src/Effect4/Laws/Program/Table/Agreement.lean`)).
+  For a recorded, funded run, a session's reading is the reference machine's replay of the
+  run's own tape, with the same class and observation.
+  (`Run.session_eq_ref` (`src/Effect4/Laws/Api/SessionRef.lean`)).
+  Neither law says anything of reply admission, reply typing, a host's conformance or the
+  session's ledger.
+  The second says nothing of a run with a stopped row (DI-57, decisions rows 310 and 314).
+- **H8 and H9 on straight programs (`rows-denotation-session`, `rows-denotation-host`,
+  `rows-denotation-driver`)**: Take a recorded run of a `StraightRows` program.
+  The run is funded, at rest and driven by a host.
+  H8: the meaning of the program under the run's reply tape is the root's exit with the stores,
+  or the frontier (`Run.denoteRows_eq_session`).
+  H9: if the run is also finished, take any host whose answers are the run's.
+  The host's run of the call tree is then the root's exit with the stores, and the host ends
+  where the answers left it (`Run.denoteRows_eq_session_host`).
+  Both laws are in `src/Effect4/Laws/Api/SessionMeaning.lean`.
+  At the driver, `Run.runWith` opens a `StraightRows` program, evaluates its root and drives it
+  with a reactor.
+  The reactor stays inside the envelope and answers with exits.
+  The law's premises are that the run is funded, at rest and its root exited.
+  Then the reactor read as a host runs the call tree to that exit with the stores.
+  It ends at the drive's state (`Run.runWith_denotes` (`src/Effect4/Laws/Api/HostDrive.lean`),
+  slice CO-6).
+  Nothing shows that the drive finishes, that its rounds suffice or that the run is funded.
+  Each law takes one fiber and claims no progress.
+  None says anything of an interruption, a clock step, a delayed cell read or a handle row.
+  H9 says nothing of a run stopped at a call.
+- **H8 and H9 on loops (`rows-loop-session`, `rows-loop-host`, `rows-loop-driver`,
+  `rows-loop-straight`, `rows-loop-looped`)**: The budgeted row meaning `denoteRowsB` extends
+  both meanings.
+  On `StraightRows` it is `denoteRows` finished, at every budget
+  (`Denote.denoteRowsB_straight`).
+  On `Looped` it is `denoteB` injected on the left of the coproduct, at the same budget
+  (`Denote.denoteRowsB_looped`).
+  Both laws are in `src/Effect4/Laws/Program/DenoteRowsB.lean`.
+  Take a recorded run of a `LoopedRows` program in `LoopedDataRows`, funded, at rest and driven
+  by a host.
+  Past a budget bound, the coarse observation of the budgeted meaning under the run's reply tape
+  is the root's exit with the stores, or none.
+  (`Run.h8_loopedRows`).
+  For a finished run, take any host whose answers are the run's.
+  Past a budget bound, the budgeted meaning under that host is the root's exit with the stores.
+  The host ends where the answers left it (`Run.denoteRowsB_eq_session_host`).
+  At the driver, the reactor read as a host runs the budgeted call tree to the root's exit with
+  the stores.
+  That holds past a budget bound (`Run.runWith_denotesB`).
+  Its premises are the straight driver's: a funded run at rest whose root exited.
+  The three laws are in `src/Effect4/Laws/Api/SessionMeaningLoop.lean`.
+  No law takes a global compile-depth premise, and a budget cut is no failure and no divergence.
+  Each claims no progress.
+  None says anything of a waiting position's stores or request, a scope, a handle allocation, a
+  fork or an interruption (slice L1).
+- **M7 conditional route (`m7-route`)**: Derivation of M7 conditionally from M5 and M6 ledger components
   (`m7_of_ledger` (`src/Effect4/Laws/Program/Typed/Assembly.lean`)).
-- **Capstone M7 goals (`m7-capstone-goals`)**: Exit value agreement, final store agreement, non-halting, and exit handle
-  validity on `M7Fragment` (`m7_proved` (`src/Effect4/Laws/Program/Typed/Assembly.lean`)).
+- **M7's results (`m7-exits-typed`, `m7-stores-typed`, `m7-never-halts`, `m7-admitted`)**: On
+  `M7Fragment`, every exit that the observation records fits its fiber's declared type (M7a).
+  The observed stores fit at a world that describes them (M7b).
+  The frame machine never halts (M7c, row 139).
+  (`m7_proved` (`src/Effect4/Laws/Program/Typed/Commands/Clauses/All.lean`)).
+  M7a–c hold for a program that the API admits at the empty row table, with a closed
+  requirement row and an answer-free tape.
+  (`m7_admitted` (`src/Effect4/Laws/Program/Typed/AdmittedSource.lean`)).
+- **Typed exits and observations (`m7-exit-handles-valid`, `obs-typed-admitted`,
+  `m7-results-exit-hasty`)**: Recorded exits name only live scope handles on every reachable
+  machine (row 139, `exitHandles_valid`).
+  On every ghost-admitted tape of a checked program, the frame machine's observation is typed and
+  the run has not halted (`obs_typed`).
+  Both laws are in `src/Effect4/Laws/Program/Typed/Commands/Clauses/All.lean`.
+  Every recorded exit of a checked program's frame-machine run satisfies the meaning layer's exit
+  judgment at its declared type (T1).
+  (`exits_hasTy` (`src/Effect4/Laws/Program/Typed/Results.lean`)).
+- **A face is exact inside its profile (`profile-plus-exact`, `profile-mul-exact`)**: Take two
+  arguments inside the profile.
+  The checked integer addition answers exactly when the reference addition answers inside the
+  profile.
+  For this one operation that grows, a face equals the reference inside its profile and refuses
+  outside it (DI-56).
+  The checked natural multiplication answers exactly for the represented product inside the
+  supplied bound.
+  The OCaml row and the TypeScript helper stay trusted rows, each run by a finite control
+  (decisions rows 108 and 321).
+  (`intAddIn_eq_some_iff`, `mulIn_eq_some_iff` (`src/Effect4/Laws/Machine/IntegerProfile.lean`)).
 - **The mask's printed form (`mask-printed-form-profile`)**: The mask is a derived form: the
   getter bound to its body under `uninterruptible` (decisions rows 245 and 246).
   The surface's builder is that expansion, and the form types as its body does under the saved
@@ -1470,6 +1663,18 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
   application answers `applied` whatever fuel its step had left. The law says nothing about
   a run with a stopped row, a session ledger or a generated engine.
   (`funded_replays` (`src/Effect4/Laws/Run/Tape.lean`)).
+- **A journal's tape replays (`replay-externals`, `run-controls-replay`, `run-tape-replay`)**:
+  No replay at the empty row table allocates an external handle.
+  (`replay_externals` (`src/Effect4/Laws/Program/RuntimeR.lean`)).
+  Journaled control rows leave the raw replay's machine whenever every added phase progressed.
+  (`Run.play_controls_eq_replay` (`src/Effect4/Laws/Run.lean`)).
+  A journal's machine is the raw replay of its tape: the controls that progressed and the reply
+  applications.
+  Each enters as the decision that the session hands the machine.
+  The law holds for any run and any journal whose tape reads to its end.
+  It says nothing of a session ledger, a journal that stops at a frontier or a generated engine
+  (decisions row 254).
+  (`Run.tape_replays` (`src/Effect4/Laws/Run/Tape.lean`)).
 - **Pool's steps agree with the model (`pool-steps-agree`)**: Each of Pool's six step terms
   agrees with the model's step, on every state of the model. The lease, the withdrawal and
   the closer's step take an injective table. The agreement covers the reply, the stored
@@ -1477,6 +1682,43 @@ structure M7Fragment (root : ProgramSource) (rootTy : EffTy) (tape : List Api.De
   `pool-expansion-agrees`. It states no order of the wake across helpers, no cancellation
   law, no wait of the close along a run and no wrapper.
   (`pool_steps_agree` (`src/Effect4/Laws/Library/Pool/Steps.lean`)).
+- **More modules agree with their models (`queue-steps-agree`, `semaphore-steps-agree`,
+  `partitioned-semaphore-bookkeeping`, `pubsub-single-steps-agree`,
+  `stream-array-step-agreement`, `ref-steps-agree`)**: Each law reads a module's steps against an
+  independent model.
+  Each of the Queue's six step terms agrees with the model's step on the first profile.
+  It covers the reply, the stored value through the encoding table and the ordered signals
+  (decisions row 255).
+  (`queue_steps_agree` (`src/Effect4/Laws/Library/Queue/Steps.lean`)).
+  Each of Semaphore's five step terms agrees with the model's step on every model state.
+  It covers the reply, the stored value through the encoding table and the selected waiter's
+  record (decisions rows 259 to 261 and 265).
+  (`semaphore_steps_agree` (`src/Effect4/Laws/Library/Semaphore/Steps.lean`)).
+  Neither states delivery, an order of the wake across visits or a cancellation law.
+  PartitionedSemaphore's four scalar step terms read its natural-count model: initialization,
+  availability, attempted acquisition and reservation of the unmet need.
+  Reservation assumes insufficient availability and a request within capacity.
+  (`bookkeeping_agrees` (`src/Effect4/Laws/Library/PartitionedSemaphore/Steps.lean`)).
+  It states no waiter registration, identity allocation, wake delivery or codec admission.
+  Six pure PubSub bookkeeping sources read its capacity-one, replay-zero, natural-message model.
+  They are the initial source, subscription with a fresh logical name, `tryPublish`, `poll`,
+  `unsubscribe` and `slide`.
+  (`single_steps_agree` (`src/Effect4/Laws/Library/PubSub/Steps.lean`)).
+  It states no handle allocation, delivery, lifetime, backpressure or arbitrary capacity.
+  The Stream array source's batch extraction returns the pending list and clears its allocated
+  backing cell.
+  It needs a receiver that reads the cell handle and a cell that holds the input image.
+  (`arrayStep_agrees` (`src/Effect4/Laws/Library/Stream/Array.lean`)).
+  It states no whole pull, scope finalization, codec admission or handle allocation.
+  The PubSub and Stream laws need aligned value and source scope lengths.
+  Each of Ref's thirteen effectful operations agrees with the model of `Ref` in latest (Effect
+  4.0.1), under allocation and callback-evaluation premises.
+  The laws compare replies and final stores, not write events.
+  So they say nothing of whether an operation writes an unchanged value, a callback exception or
+  a reentrant mutation.
+  (`ref_steps_agree` (`src/Effect4/Laws/Library/Ref/Operations.lean`)).
+  None of these laws states a wrapper, a schedule, a whole run, liveness or a host's behaviour
+  (decisions rows 330, 331 and 335).
 
 ## 3. The object-language glossary (moved 2026-10-03)
 
