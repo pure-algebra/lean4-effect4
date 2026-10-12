@@ -397,6 +397,33 @@ theorem ambient_storeR_of_typed (root : ProgramSource) {w : World} {ty : EffTy}
   intro later ordered answer post
   exact .pure ⟨TypedProg.pure_inv (next later ordered answer post), Row.subset_refl _⟩ (Row.subset_refl _)
 
+/-- A terminal fiber leaf reuses its existing unit certificate and actual answer proof.
+The producer supplies ambient preconditions and the actual unchanged entry row.
+Consumer: the primitive source-action arms of the ambient M5 induction. -/
+theorem ambient_fiber_leaf_of_typed (root : ProgramSource) {w : World} {ty : EffTy}
+    (available : Env.Requirement) (op : FiberOp) (next : op.answer → RProgram)
+    (notGuard : ∀ kind, op ≠ .guard_ kind) (notUnguard : ∀ exit, op ≠ .unguard exit)
+    (notFinish : ∀ exit, op ≠ .finishFinalizer exit)
+    (notScopeExit : ∀ previous scope exit, op ≠ .scopeExit previous scope exit)
+    (typed : TypedProg root w ty (.vis (.inr op) next))
+    (preAt : ∀ cert, fiberPre root w op cert → ambientFiberPre root w available op cert)
+    (postAt : ∀ later, w.leHost later → ∀ cert answer,
+      ambientFiberPost later available op cert answer → fiberPost later op cert answer)
+    (inputAt : ∀ answer, ambientFiberInput available op answer = available)
+    (terminal : ∀ answer, ∃ exit, next answer = .pure exit) :
+    AmbientProg root w available (ty, available, available) (.vis (.inr op) next) := by
+  obtain ⟨cert, pre, answerTyped⟩ := TypedProg.fiber_inv typed notGuard notUnguard notFinish notScopeExit
+  refine .fiber notGuard notUnguard notFinish notScopeExit cert (preAt cert pre) ?_
+    (Row.subset_refl _)
+  intro later ordered answer post
+  rw [inputAt answer]
+  obtain ⟨exit, returned⟩ := terminal answer
+  rw [returned]
+  have member := answerTyped later ordered answer (postAt later ordered cert answer post)
+  rw [returned] at member
+  exact .pure ⟨TypedProg.pure_inv member, by cases exit <;> exact Row.subset_refl _⟩
+    (Row.subset_refl _)
+
 /-- The existing mask reader retains the ambient entry through its restored slot.
 Consumer: the provider's protected-entry program arrow. -/
 theorem ambient_captureMask_typed (root : ProgramSource) (w : World)
