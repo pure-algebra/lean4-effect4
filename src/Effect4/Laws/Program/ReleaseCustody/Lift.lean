@@ -3,7 +3,6 @@ import Effect4.Laws.Machine.ScopeIdentity
 import Effect4.Laws.Machine.ForkLedgerInvariant
 import Effect4.Laws.Run.Frame
 import Effect4.Laws.Program.Guard.Core
-import ProofGraph.Registry
 
 /-!
 Concept: scope-lifetime-finalization, R11, at most once per registration counted by source identity.
