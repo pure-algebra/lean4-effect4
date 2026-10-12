@@ -1,0 +1,6 @@
+COMMAND: opam exec --switch=effect4 -- ocamlc -w +8 -warn-error +8 -c /private/tmp/Carrier_missing.ml
+File "/private/tmp/Carrier_missing.ml", line 150, characters 13-17:
+150 |   ({ queue = _x_1; marker = marker } : holder)
+                   ^^^^
+Error: This expression has type 'a list
+       but an expression was expected of type int D.t

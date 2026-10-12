@@ -31,10 +31,10 @@ type WideProduct<A, B> = [A] extends [never] ? readonly [never, Wide<B>] :
   [B] extends [never] ? readonly [Wide<A>, never] :
   A extends unknown ? B extends unknown ? readonly [Wide<A>, Wide<B>] : never : never
 
-/** The profile's bound on the target (DI-56; decisions rows 108, 321 and 322). The four rows
- * that grow call it after the sum: a double holds the exact sum of two safe integers up to
- * 2^53, and rounding is monotone, so the test is exact. Past the bound it throws
- * `ProfileRefusal`, a refusal of the profile, never a rounded value. */
+/** The represented growing arithmetic checks its result at the profile boundary.
+ * For admitted integer inputs, a safe-integer sum or product is exact.
+ * The helper throws ProfileRefusal outside that bound before exposing a result.
+ * This check supplies no admission guarantee for arbitrary host arguments. */
 export class ProfileRefusal extends Error {
   readonly value: number
   constructor(value: number) {
@@ -198,7 +198,7 @@ export const none = (): Option.Option<never> => Option.none()
 /**
  * `"mul", [nat a, nat b] => nat (a * b)`
  */
-export const mul = (a: number, b: number): number => a * b
+export const mul = (a: number, b: number): number => inProfile(a * b)
 
 /**
  * `"nil", [] => list []`

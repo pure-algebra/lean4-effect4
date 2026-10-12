@@ -23,7 +23,7 @@ error, so **the table is complete iff the generated file compiles** (§1.3).
 | `type <lean> <con>…` | spell the type constant `<lean>` as the postfix chain `<con>…` applied to its own converted arguments: `type Effect4.Machine.Dispatcher task D.t` is `(…) task D.t`. Its declaration is not emitted. |
 | `field <lean-struct>.<field> <con>…` | the field's type must be spelled `τ list`; it becomes the chain applied to `τ` — and to `v` alone when `τ` is a pair `(k * v)`, which is how `List (LayerId × MemoEntry)` becomes `memo_entry L.t`. |
 | `elem <lean-type> <con>…` | **every** `List <lean-type>` — in a field, a parameter annotation or a result — becomes the chain applied to it. For a carrier the compiler erases to its element list: `ScopeStore` is a trivial structure, so its mono type *is* `List ScopeEntry` and a `field` row reaches the type declaration but not the annotations. Only for an element type that appears in no other list. |
-| `ops <key> <op> <head> [tok…]` | the OCaml form of one *operation* of the carrier whose chain ends in `<key>`: `ops P.t snoc P.snoc program_node_child` makes `x ++ [i]` on a value of that carrier read `P.snoc program_node_child x i`. The recognised `<op>`s are `snoc`, `append`, `to_list`, `get`, `length` and `take` (`Translate.carrierRewrite?`). |
+| `ops <key> <op> <head> [tok…]` | the OCaml form of one *operation* of the carrier whose chain ends in `<key>`: `ops P.t snoc P.snoc program_node_child` makes `x ++ [i]` on a value of that carrier read `P.snoc program_node_child x i`. The recognised `<op>`s are `snoc`, `append`, `to_list`, `get`, `length` and `take` (`Translate.carrierRewrite?`), and `empty` for an empty list at an explicitly substituted constructor field (`Translate.ctorApp`). |
 | `carg <lean-decl> <i> <con>…` | the *i*-th OCaml parameter of `<lean-decl>` (count them in the generated signature; erased parameters count) carries the chain's carrier rather than a list. For a carrier with no `to_list` operation (`E.t`) the generator infers these rows from the call sites (`translateClosureInferring`) and prints them in its report, so a row is written by hand only as an override: `blockExit`'s `env` is a carrier because its callers pass one. A `carg` row also **drops the declaration's result annotation**, because the carrier can sit at a nested position no chain can spell (`Option (Prod (List Nat) (List Val))`), and OCaml infers it. |
 
 A chain token that begins with `@` is a **literal type argument**: it replaces the argument
@@ -176,6 +176,16 @@ def Externs.op? (ex : Externs) (carrier op : String) : Option ExternFn :=
 /-- The carrier a field's value understands, by `<Struct>.<field>`. -/
 def Externs.fieldCarrier? (ex : Externs) (owner : Name) (field : String) : Option String :=
   ex.fieldCarrier[owner ++ Name.mkSimple field]?
+
+/-- A field carries its explicit row, or the external type named by its projection.
+The latter retains carrier information when Lean erases a one-field structure. -/
+def Externs.fieldCarrierIn? (ex : Externs) (env : Environment) (owner : Name)
+    (field : String) : Option String :=
+  (ex.fieldCarrier? owner field).orElse fun _ => do
+    let info ← env.find? (owner ++ Name.mkSimple field)
+    let head ← info.type.getForallBody.getAppFn.constName?
+    let chain ← ex.tys[head]?
+    chain.getLast?
 
 /-- The declared key in `ex.cargs` that matches `n`. -/
 def Externs.cargRowKey? (ex : Externs) (n : Name) : Option Name :=

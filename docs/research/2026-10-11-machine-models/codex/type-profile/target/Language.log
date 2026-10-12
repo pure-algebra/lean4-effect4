@@ -1,0 +1,1 @@
+PASS check-language: no finding in docs/research/2026-10-11-machine-models/codex/type-profile/TargetReceipt.md, docs/research/2026-10-11-machine-models/codex/type-profile/DispatcherPlan.md, docs/research/2026-10-11-machine-models/codex/type-profile/R1TargetPlan.md; the other documents carry 1916 finding(s) (report: python3 scripts/check-language.py)

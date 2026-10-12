@@ -148,12 +148,11 @@ module Api_gen_inst = struct
   let f_prevent_yield (f : fiber) : bool = f.prevent_yield
   let f_yield_override (f : fiber) : bool option = f.yield_override
   let f_context (f : fiber) : ctx = f.context
-  let f_dispatcher_armed (f : fiber) : bool = f.dispatcher.armed
 
   let f_dispatcher (f : fiber) : (int * int) list =
     List.map
       (fun (b : (_, _, _, _, _, _, _, _) bucket) -> (b.priority, List.length b.tasks))
-      f.dispatcher.buckets
+      f.dispatcher
 end
 
 module Gen_engine = E4_engine.Make (Api_gen_inst)

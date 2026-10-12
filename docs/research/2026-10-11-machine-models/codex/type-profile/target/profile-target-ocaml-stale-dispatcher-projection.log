@@ -1,0 +1,15 @@
+COMMAND: opam exec --switch=effect4 -- dune build engine/test/test_engine.exe engine/test/test_diff.exe engine/test/e4_engine_bench.exe gen/api_check.exe engine/test/test_buckets.exe
+File "engine/test/test_diff.ml", line 155, characters 6-18:
+155 |       f.dispatcher.buckets
+            ^^^^^^^^^^^^
+Error: This expression has type (nu, s, val_, err, defect, fiber_id, 
+                                 unit, prim_)
+                                dispatcher
+       which is not a record type.
+File "engine/test/e4_engine_bench.ml", line 135, characters 6-18:
+135 |       f.dispatcher.buckets
+            ^^^^^^^^^^^^
+Error: This expression has type (nu, s, val_, err, defect, fiber_id, 
+                                 unit, prim_)
+                                dispatcher
+       which is not a record type.

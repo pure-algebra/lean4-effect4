@@ -109,7 +109,6 @@ let f_max_ops (f : fiber) : int = f.max_ops_before_yield
 let f_prevent_yield (f : fiber) : bool = f.prevent_yield
 let f_yield_override (f : fiber) : bool option = f.yield_override
 let f_context (f : fiber) : ctx = f.context
-let f_dispatcher_armed (f : fiber) : bool = E4_buckets_list.armed f.dispatcher
 
 let f_dispatcher (f : fiber) : (int * int) list =
   List.map (fun (p, ts) -> (p, List.length ts)) (E4_buckets_list.to_list f.dispatcher)

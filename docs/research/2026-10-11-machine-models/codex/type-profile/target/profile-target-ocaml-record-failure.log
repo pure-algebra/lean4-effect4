@@ -1,0 +1,14 @@
+COMMAND: opam exec --switch=effect4 -- dune build engine/test/test_engine.exe engine/test/test_diff.exe engine/test/e4_engine_bench.exe gen/api_check.exe engine/test/test_buckets.exe
+File "engine/api_engine.ml", line 13588, characters 45-49:
+13588 |               let _x_8 = sh_machine_update m _x_7 in
+                                                     ^^^^
+Error: This expression has type 'a D.t but an expression was expected of type
+         (eff_name, eff_thunk, val_, err, defect, service_type_code,
+          service_universe, ctx,
+          (eff_name, eff_thunk, val_, err, defect, service_type_code,
+           service_universe)
+          prim,
+          (eff_name, eff_thunk, val_, err, defect, service_type_code,
+           service_universe)
+          frame_fiber)
+         run_fiber
