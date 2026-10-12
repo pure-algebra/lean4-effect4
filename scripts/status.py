@@ -11,7 +11,8 @@
 
 No Lean runs. Freshness is read from GNU make's own database (`make -pn`): a marker is fresh
 when it exists and none of its prerequisites is newer; the two inventories (`.lake/check/inventory`,
-`.lake/check/paths`) are recomputed and compared. `make status` runs it.
+`.lake/check/paths`) are recomputed and compared. A semantics report whose tables or next goals
+this reader cannot find is a refusal, never `none`. `make status` runs it.
 """
 from __future__ import annotations
 
@@ -146,34 +147,65 @@ def table_rows(path: str) -> list[list[str]]:
     return rows
 
 
+SEMANTICS = "generated/semantics.md"
+
+
+def semantics_lines() -> list[str]:
+    path = ROOT / SEMANTICS
+    if not path.is_file():
+        raise StatusError(f"{SEMANTICS} is missing (make gen-semantics)")
+    return path.read_text().split("\n")
+
+
+def unread(what: str) -> StatusError:
+    """An empty parse of the semantics report: its format changed under this reader, as it did at
+    v6 (decisions row 353), so the report refuses rather than print `none`."""
+    fmt = next((line for line in semantics_lines()[:4] if line.startswith("format:")), "no format line")
+    return StatusError(f"{SEMANTICS} ({fmt}): {what}; scripts/status.py no longer reads its format")
+
+
+def report_column(first: str, column: str) -> list[str]:
+    """One column of every table of the semantics report whose header opens with `first`, found by
+    its header, not by a cell's shape (a name is a code span since v6); a pipe the generator
+    escapes stays inside its cell (`tools/Tools/Document.lean`). No row is a refusal."""
+    values: list[str] = []
+    header: list[str] | None = None
+    for line in semantics_lines():
+        if not line.startswith("|"):
+            header = None
+            continue
+        cells = [cell.strip() for cell in re.split(r"(?<!\\)\|", line.strip()[1:-1])]
+        if header is None:
+            header = cells
+        elif not line.startswith("| ---") and header[0] == first and column in header and len(cells) == len(header):
+            values.append(cells[header.index(column)])
+    if not values:
+        raise unread(f"no `{first}` table with a `{column}` column")
+    return values
+
+
 def claims() -> Counter:
-    counts: Counter = Counter()
-    for cells in table_rows("generated/semantics.md"):
-        if len(cells) == 6 and re.fullmatch(r"[a-z0-9-]+", cells[0]) and cells[2] in (
-                "proved", "modulo", "absent", "refuted", "assumed", "wanted", "open"):
-            counts[cells[2]] += 1
-    return counts
+    """The claims by status: the `Status` column of the concepts' `Claim` tables."""
+    return Counter(report_column("Claim", "Status"))
 
 
 def plan_rows() -> str:
-    """The requirement rows of the plan section, by derived status (`| R… | status | … |`).
-    The table has five columns since decisions row 207 added the placed nodes; a requirement
-    reads `proved` or `open` (`tools/Tools/Semantics.lean`)."""
-    counts: Counter = Counter()
-    for cells in table_rows("generated/semantics.md"):
-        if len(cells) in (4, 5) and re.fullmatch(r"R\d+", cells[0]):
-            counts[cells[1]] += 1
-    return summarise(counts, ("proved", "open")) if counts else "no rows"
+    """The requirement rows of the plan section, by derived status: the `Status` column of the
+    `Requirement` table; a requirement reads `proved` or `open` (`tools/Tools/SemanticsDocument.lean`)."""
+    return summarise(Counter(report_column("Requirement", "Status")), ("proved", "open"))
 
 
 def plan_next() -> str:
-    """The plan's next goals, as the semantics report renders them (`**Next goals** (N): …`)."""
-    for line in (ROOT / "generated/semantics.md").read_text().split("\n"):
-        match = re.match(r"\*\*Next goals\*\* \((\d+)\): ?(.*)", line)
+    """The plan's next goals, as the semantics report renders them (``Next goals (N): `a`, `b` ``);
+    a count that differs from the names listed is a refusal."""
+    for line in semantics_lines():
+        match = re.match(r"Next goals \((\d+)\): (.*)", line)
         if match:
-            names = [name.rsplit(".", 1)[-1] for name in match.group(2).split(", ") if name]
-            return f"{match.group(1)} next goal(s){': ' + ' '.join(names) if names else ''}"
-    return "no plan section"
+            names = [name.rsplit(".", 1)[-1] for name in re.findall(r"`([^`]+)`", match.group(2))]
+            if len(names) != int(match.group(1)):
+                raise unread(f"the next goals line counts {match.group(1)} and names {len(names)}")
+            return f"{len(names)} next goal(s){': ' + ' '.join(names) if names else ''}"
+    raise unread("no `Next goals (N):` line")
 
 
 STATUS_WORDS = ("open", "ruled", "landed", "basis", "seeded", "repaired", "pinned", "retired", "closed")
@@ -214,14 +246,15 @@ def counterexamples() -> Counter:
 
 
 def planned_goals() -> int:
-    """The library's open goals: `proof_goal` declarations under src/ (decisions row 203). The
-    goals in Test/ test the instrument and are not the library's."""
+    """The library's open goals: `proof_goal` declarations under src/ (decisions row 203), with
+    their placement on the same line or not (`@[semantics …] proof_goal G : P`, decisions row
+    207). The goals in Test/ test the instrument and are not the library's."""
     count = 0
     for path in lean_sources():
         if not path.startswith("src/"):
             continue
         for line in (ROOT / path).read_text().split("\n"):
-            if re.match(r"^\s*proof_goal\s+\S", line):
+            if re.match(r"^\s*(?:@\[.*?\]\s*)?proof_goal\s+\S", line):
                 count += 1
     return count
 
@@ -266,6 +299,7 @@ def cache_sizes(cache: Path) -> tuple[int, int]:
 
 def main() -> int:
     rules, variables = make_database()  # first: a failed measurement prints nothing else
+    claim_counts, requirements, next_goals = claims(), plan_rows(), plan_next()  # likewise
     head, dirty = head_line()
     print(f"effect4   {head}")
     if dirty:
@@ -315,9 +349,9 @@ def main() -> int:
     drift_line = "no committed generated file differs" if not drift else f"{len(drift)} generated file(s) differ: {' '.join(drift[:4])}"
     print(f"generated {gen_line}; {drift_line}")
 
-    print(f"claims    {summarise(claims(), ('proved', 'absent', 'refuted', 'assumed', 'wanted'))}  (generated/semantics.md)")
+    print(f"claims    {summarise(claim_counts, ('proved', 'modulo', 'absent', 'refuted', 'assumed', 'wanted'))}  ({SEMANTICS})")
     print(f"goals     {planned_goals()} open planned goal(s) (proof_goal)")
-    print(f"plan      requirements {plan_rows()}; {plan_next()}  (generated/semantics.md)")
+    print(f"plan      requirements {requirements}; {next_goals}  ({SEMANTICS})")
     print(f"decisions {summarise(decisions(), ('open', 'ruled', 'landed'))}  (docs/core/decisions.md)")
     print(f"issues    {summarise(design_issues(), ('open', 'ruled', 'basis'))}  (docs/DESIGN-ISSUES.md)")
     print(f"counterex {summarise(counterexamples(), ('seeded', 'repaired', 'pinned', 'retired'))}  (Test/Counterexamples/REGISTER.md)")
