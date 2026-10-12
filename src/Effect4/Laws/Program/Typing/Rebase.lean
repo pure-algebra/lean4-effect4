@@ -122,6 +122,12 @@ theorem check_rebase (sig : Signature Op) (q : List Nat) (env : TyEnv) (p : List
   cases e
   case awaitFiber fiber mode =>
     cases mode <;> simp only [check, term?_rebase, expect_rebase, ExceptMap.mapError_bind, ExceptMap.mapError_pure]
+  case provideContext context body =>
+    simp only [check, term?_rebase, ExceptMap.mapError_bind]
+    refine congrArg (fun k => _ >>= k) (funext fun c => ?_)
+    cases c.normalize
+    all_goals simp only [List.append_assoc, check_rebase sig q, ExceptMap.mapError_bind,
+      ExceptMap.mapError_pure, ExceptMap.mapError_throw, rebase_mk]
   all_goals simp only [check, List.append_assoc, check_rebase sig q, checkLayer_rebase sig q,
     checkStmts_rebase sig q, checkEffs_rebase sig q, checkAction_rebase sig q, term?_rebase,
     cause?_rebase,
@@ -196,6 +202,9 @@ theorem checkAction_rebase (sig : Signature Op) (q : List Nat) (env : TyEnv) (p 
   case interruptAll targets interruptor =>
     cases interruptor <;> simp only [checkAction, term?_rebase, expect_rebase, ExceptMap.mapError_bind,
       ExceptMap.mapError_pure, ExceptMap.mapError_throw, ExceptMap.mapError_ite, rebase_mk]
+  case context keys =>
+    simp only [checkAction, ExceptMap.mapError_bind, ExceptMap.mapError_forIn, expect_rebase,
+      ExceptMap.mapError_pure]
   all_goals simp only [checkAction, List.append_assoc, check_rebase sig q,
     checkEffs_rebase sig q, term?_rebase, expect_rebase, ExceptMap.mapError_bind, ExceptMap.mapError_pure,
     ExceptMap.mapError_throw, ExceptMap.mapError_ite, rebase_mk]

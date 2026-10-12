@@ -28,6 +28,20 @@ theorem mapError_ite (c : Prop) [Decidable c] (a b : Except ε α) :
     (if c then a else b).mapError f = if c then a.mapError f else b.mapError f := by
   split <;> rfl
 
+/-- A loop over a list moves the error through each step: a checker's `for` over a row's keys. -/
+theorem mapError_forIn {γ : Type} (xs : List γ) (b : β) (body : γ → β → Except ε (ForInStep β)) :
+    (forIn xs b body).mapError f = forIn xs b fun x s => (body x s).mapError f := by
+  induction xs generalizing b with
+  | nil => rfl
+  | cons x rest ih =>
+    simp only [List.forIn_cons]
+    cases body x b with
+    | error e => rfl
+    | ok step =>
+      cases step with
+      | done c => rfl
+      | yield c => exact ih c
+
 theorem mapError_map_bind {γ : Type} (m : Except ε α) (g : α → β) (k : β → Except ε γ) :
     (m.map g).mapError f >>= k = m.mapError f >>= fun a => k (g a) := by
   cases m <;> rfl

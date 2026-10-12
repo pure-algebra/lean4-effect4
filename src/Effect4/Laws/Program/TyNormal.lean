@@ -55,6 +55,7 @@ theorem Ty.normalize_of_certNormal : (t : Ty) → t.certNormal = true → t.norm
   | .undefined, _ => rfl
   | .number, _ => rfl
   | .bytes, _ => rfl
+  | .contextOf _, _ => rfl
   | .option t, h => by
     show Ty.option t.normalize = .option t
     rw [Ty.normalize_of_certNormal t h]

@@ -222,6 +222,10 @@ def Val.hasTy (v : Val) (ty : Ty) (allocated : List String := []) : Bool :=
   | .undefined => match v with | .unit => true | _ => false
   | .number => numberImage v
   | .bytes => match v with | .bytes _ => true | _ => false
+  | .contextOf keys =>
+    match Val.context? v with
+    | some ctx => keys.elems.all fun key => (ctx.services.getV key).isSome
+    | none => false
 /-- The field-list companion of `Val.hasTy`: one checker per written field, in written order. -/
 def Val.fieldCheckers (fs : List (String × Bool × Ty)) (allocated : List String) :
     List (String × Bool × (Val → Bool)) :=

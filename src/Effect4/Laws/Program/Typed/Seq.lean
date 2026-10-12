@@ -48,20 +48,8 @@ type: every leaf becomes a closing marker carrying the leaf's exit. -/
 @[semantics "residual-program-typing"]
 theorem close_typed (root : ProgramSource) {w : World} {T : EffTy} {a : RProgram}
     (h : TypedProg root w T a) (g : ExitV → RProgram) :
-    TypedProg root w T (a.bind (fun ex => .vis (.inr (.unguard ex)) g)) := by
-  induction h with
-  | pure exit => exact .unguard exit
-  | store cert pre _ ih => exact .store cert pre (fun w' o ans post => ih w' o ans post)
-  | fiber notGuard notUnguard notFinish notScopeExit cert pre _ ih =>
-    exact .fiber notGuard notUnguard notFinish notScopeExit cert pre
-      (fun w' o ans post => ih w' o ans post)
-  | guard mid _ _ skip ihBody ihRun =>
-    exact .guard mid ihBody (fun w' o ex post => ihRun w' o ex post) skip
-  | unguard payload => exact .unguard payload
-  | finishFinalizer payload => exact .finishFinalizer payload
-  | scopedGuard mid prev sc _ callback live services widen ihBody =>
-    exact .scopedGuard mid prev sc ihBody
-      (fun ex => Contracts.scopeExitCallback?_bind (callback ex) _) live services widen
+    TypedProg root w T (a.bind (fun ex => .vis (.inr (.unguard ex)) g)) :=
+  ProgramArrow.close h g
 
 /-- A failed exit's judgment moves along the checker's order on error columns: only `Fail`
 reasons read the column, and the shape exclusion reads no type. -/
@@ -85,6 +73,34 @@ theorem exitOk_widen {w : World} {mid ty : EffTy} {ex : ExitV}
     (h : ExitOk w mid ex) : ExitOk w ty ex :=
   ⟨fitsExit_subN hans herr h.1, h.2⟩
 
+/-- The existing guard constructor composes annotated programs through the same closing law.
+Consumer: unit sequencing and ambient provider restoration, serving typed-state-reachable. -/
+theorem ProgramArrow.guardBind {Input Object : Type}
+    {SP : World → Input → (op : SyncOp) → StoreCert op → Prop}
+    {SQ : World → Input → (op : SyncOp) → StoreCert op → Val → Prop}
+    {FP : World → Input → (op : FiberOp) → FiberCert op → Prop}
+    {FQ : World → Input → (op : FiberOp) → FiberCert op → op.answer → Prop}
+    {stepInput : Input → (op : FiberOp) → op.answer → Input}
+    {Ex : World → Input → Object → ExitV → Prop}
+    {GP : World → Input → GuardKind → Object → ExitV → Prop}
+    {inputOf : Object → ExitV → Input} {restoreInput : Ctx → Input}
+    {Entry : Input → Object → Prop} {w : World} {input : Input} {mid ty : Object}
+    {kind : GuardKind} {body : RProgram} {next : ExitV → RProgram}
+    (typed : ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry w input mid body)
+    (run : ∀ later, w.leHost later → ∀ exit, GP later (inputOf mid exit) kind mid exit →
+      ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry
+        later (inputOf mid exit) ty (next exit))
+    (skip : ∀ later, w.leHost later → ∀ exit, Ex later (inputOf mid exit) mid exit →
+      kind.hasExitArm exit = false → Ex later (inputOf mid exit) ty exit)
+    (entry : Entry input ty) :
+    ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry
+      w input ty ((guardR kind body).bind next) := by
+  refine .guard mid ?_ run skip entry
+  show ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry w input mid
+    ((body.bind fun exit => .vis (.inr (.unguard exit)) Effects.Program.pure).bind next)
+  rw [Effects.Program.bind_assoc]
+  exact ProgramArrow.close typed next
+
 /-- **The guard compatibility lemma** (the general form of `seq_typed`, decisions row 148): a
 first program typed at `mid`, a continuation typed at `ty` at every later world on every exit the
 guard's arm takes and `mid` admits, and every exit the arm does not take admitted at `ty`: the
@@ -97,12 +113,8 @@ theorem guardBind_typed (root : ProgramSource) {w : World} {mid ty : EffTy} {kin
     (hskip : ∀ w', w.leHost w' → ∀ ex, ExitOk w' mid ex → kind.hasExitArm ex = false →
       ExitOk w' ty ex) :
     TypedProg root w ty ((guardR kind a).bind K) := by
-  show TypedProg root w ty (.vis (.inr (.guard_ kind)) _)
-  refine TypedProg.guard mid ?_ (fun w' o ex hpost => hrun w' o ex hpost.1 hpost.2) hskip
-  show TypedProg root w mid
-    ((a.bind fun ex => .vis (.inr (.unguard ex)) Effects.Program.pure).bind K)
-  rw [Effects.Program.bind_assoc]
-  exact close_typed root ha K
+  exact ProgramArrow.guardBind ha (fun w' o ex post => hrun w' o ex post.1 post.2)
+    hskip True.intro
 
 /-- **The `scoped` arm's code** (decisions row 188 (a)): `evaluateFiberR`'s `.scoped` arm
 (`EvaluateR.lean`) installs the `onExit false` guard over the body, bound to the scope's exit
@@ -184,20 +196,8 @@ type above it in both columns. Every exit the program carries moves up
 theorem typedProg_widen (root : ProgramSource) {w : World} {T T' : EffTy} {p : RProgram}
     (hans : Ty.subN T.answer T'.answer = true) (herr : Ty.subN T.error T'.error = true)
     (h : TypedProg root w T p) : TypedProg root w T' p := by
-  induction h with
-  | pure exit => exact .pure (exitOk_widen hans herr exit)
-  | store cert pre _ ih => exact .store cert pre (fun w' o ans post => ih w' o ans post hans herr)
-  | fiber notGuard notUnguard notFinish notScopeExit cert pre _ ih =>
-    exact .fiber notGuard notUnguard notFinish notScopeExit cert pre
-      (fun w' o ans post => ih w' o ans post hans herr)
-  | guard mid body _ skip _ ihRun =>
-    exact .guard mid body (fun w' o ex post => ihRun w' o ex post hans herr)
-      (fun w' o ex hfit harm => exitOk_widen hans herr (skip w' o ex hfit harm))
-  | unguard payload => exact .unguard (exitOk_widen hans herr payload)
-  | finishFinalizer payload => exact .finishFinalizer (exitOk_widen hans herr payload)
-  | scopedGuard mid prev sc body callback live services widen _ =>
-    exact .scopedGuard mid prev sc body callback live services
-      (fun w' o ex hex => exitOk_widen hans herr (widen w' o ex hex))
+  exact ProgramArrow.outputMap h
+    (fun _ _ _ payload => exitOk_widen hans herr payload) (fun _ _ => True.intro)
 
 /-- The exit a failed finalizer leaves after a failed body: both causes combined
 (`Exit.restoreAfterFinalizer`, rc.112's `combineFinalizerCause`), typed at a column both fit. -/

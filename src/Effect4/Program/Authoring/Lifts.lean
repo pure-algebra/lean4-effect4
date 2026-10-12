@@ -203,6 +203,13 @@ def restore {Op : Type} (saved : TermSrc) (body : Src Op) : Src Op :=
     let x1 ← body env (p ++ [0])
     .ok (.restore x0 x1)
 
+/-- `Effect4.Program.Eff.provideContext`: . -/
+def provideContext {Op : Type} (context : TermSrc) (body : Src Op) : Src Op :=
+  fun env p => do
+    let x0 ← context env p
+    let x1 ← body env (p ++ [0])
+    .ok (.provideContext x0 x1)
+
 /-- `Effect4.Program.ActionTerm.fork`. -/
 def Action.fork {Op : Type} (program : Src Op) (options : Effect4.Supervision.ForkOptions) : ActionSrc Op :=
   fun env p => do
@@ -254,10 +261,6 @@ def Action.raceAll {Op : Type} (entrants : List (Src Op)) : ActionSrc Op :=
     let x0 ← elabEffs entrants env (p ++ [0])
     .ok (.raceAll x0)
 
-/-- `Effect4.Program.ActionTerm.getContext`. -/
-def Action.getContext {Op : Type} : ActionSrc Op :=
-  fun _ _ => .ok (.getContext)
-
 /-- `Effect4.Program.ActionTerm.getId`. -/
 def Action.getId {Op : Type} : ActionSrc Op :=
   fun _ _ => .ok (.getId)
@@ -278,6 +281,10 @@ def Action.raceAllFirst {Op : Type} (entrants : List (Src Op)) : ActionSrc Op :=
   fun env p => do
     let x0 ← elabEffs entrants env (p ++ [0])
     .ok (.raceAllFirst x0)
+
+/-- `Effect4.Program.ActionTerm.context`: . -/
+def Action.context {Op : Type} (keys : Effect4.Row Effect4.ServiceKey) : ActionSrc Op :=
+  fun _ _ => .ok (.context keys)
 
 /-- `Effect4.Program.LayerTerm.succeed`. -/
 def Layer.succeed {Op : Type} (key : Effect4.ServiceKey) (value : Effect4.Program.Lit) : LayerSrc Op :=

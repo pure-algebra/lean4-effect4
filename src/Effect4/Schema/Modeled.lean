@@ -118,6 +118,7 @@ def algAt (L : Leaves) : TyAlgebra (fun _ => M) where
   ty_undefined := refused
   ty_number := refused
   ty_bytes := refused
+  ty_contextOf _ := refused
 
 /-- The Lean carrier of a type at an identity context. -/
 def CarrierAt (L : Leaves) (t : Ty) : Type := (cata_ty (algAt L) t).1
@@ -171,6 +172,7 @@ def refusalAlg : TyAlgebra (fun _ => Option String) where
   ty_undefined := some "undefined"
   ty_number := some "number"
   ty_bytes := some "bytes"
+  ty_contextOf _ := some "contextOf"
 
 /-- The first reason a type is outside the checked domain; `none` inside it. -/
 def refusal (t : Ty) : Option String := cata_ty refusalAlg t

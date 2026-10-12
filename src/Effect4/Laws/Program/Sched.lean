@@ -81,6 +81,10 @@ inductive Body
   /-- A layer's build at its point into a memo map and a scope (the join): what
   `mergeAllEffect` forks per sibling (`Layer.ts:1597`). -/
   | layerBuild (point : Point) (memoMap : MemoMapId) (scope : Nat)
+  /-- The existing provider body, addressed by the compiler's Region data. -/
+  | region (body : Region)
+  /-- The masked context installation and body entry after the caller's flag is captured. -/
+  | contextEntry (update : Env.ContextUpdate) (body : Region) (previousFlag : Bool)
 deriving DecidableEq
 
 /-- Continuation slots retained across suspension. These are control data, not

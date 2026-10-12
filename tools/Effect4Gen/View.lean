@@ -159,6 +159,27 @@ def readHeads (text : String) : Except String (List Head) := do
     out := out ++ [({ name := name, variance := variance, cite := cite, arity := arity } : Head)]
   return out
 
+/-- A non-recursive payload whose order differs from payload equality. -/
+structure PayloadOrder where
+  head : String
+  relation : String
+  subLaw : String
+  transLaw : String
+  extLaw : String
+  normalizeLaw : String
+
+def readPayloadOrders (text : String) : Except String (List PayloadOrder) := do
+  let j ← Json.parse text
+  let arr ← j.getArr?
+  arr.toList.mapM fun row => do
+    let head ← row.getObjValAs? String "head"
+    let relation ← row.getObjValAs? String "relation"
+    let subLaw ← row.getObjValAs? String "subLaw"
+    let transLaw ← row.getObjValAs? String "transLaw"
+    let extLaw ← row.getObjValAs? String "extLaw"
+    let normalizeLaw ← row.getObjValAs? String "normalizeLaw"
+    pure { head, relation, subLaw, transLaw, extLaw, normalizeLaw }
+
 /-! ## The constructor declarations -/
 
 /-- One field of a constructor: a `Ty` child, a payload `sameHead` compares by `==`, a list of
@@ -215,7 +236,7 @@ def payText (ps : List (String × String)) : String :=
   | _ => "(" ++ String.intercalate ", " (ps.map fun q => "p" ++ q.1) ++ ")"
 
 /-- The payload sorts `sameHead` can compare. A field of any other type is refused by name. -/
-def knownPayload : List String := ["String", "Nat"]
+def knownPayload : List String := ["String", "Nat", "Effect4.Row Effect4.ServiceKey"]
 
 /-- The payload sorts a field-list element may carry beside its name. -/
 def knownElemPayload : List String := ["String", "Nat", "Bool"]
@@ -873,11 +894,12 @@ def emitLeafLaws (t : LeafTable) (hasNormalize : Bool) : List String :=
     "exactly where the table declares none (Codex, 19:30; probe Q's `sub_eq_edgeRule_of_not_sameHead`",
     "over probe P's table). -/",
     "theorem sub_eq_leafRule_of_not_sameHead (a b : Ty) (ha : isMember a = true)",
-    "    (hb : isMember b = true) (htop : topRule a b = false) (hh : sameHead a b = false) :",
+    "    (hb : isMember b = true) (htop : topRule a b = false)",
+    "    (hpay : payloadRule a b = false) (hh : sameHead a b = false) :",
     "    sub a b = leafRule a b := by",
     "  cases hl : leafRule a b with",
     "  | true => exact sub_of_leafRule hl",
-    "  | false => exact sub_eq_false_of_not_sameHead a b ha hb hl htop hh",
+    "  | false => exact sub_eq_false_of_not_sameHead a b ha hb hl htop hpay hh",
     "" ]
 
 /-- The probes that make a wrong variance, or a crossed pair of arms, a red build. -/
@@ -1270,9 +1292,129 @@ def emitArmLemmas (rs : List Row) (table : Bool := false) : List String := Id.ru
         "" ]
   return s
 
-/-- The two directions, then the law. The `false` direction is `fun_cases Ty.sub`, where the
-catch-all is `rfl`; the `true` direction is `fun_cases Ty.sameHead`, one arm lemma per case. -/
-def emitDispatch (rs : List Row) (table : Bool := false) : List String := Id.run do
+/-- Ordered payload cases are declared as data beside recursive variances. -/
+def emitPayloadOrders (rs : List Row) (orders : List PayloadOrder) : List String := Id.run do
+  let mut s := ["/-- The declared order on non-recursive payloads; head equality stays exact. -/",
+    "def payloadRule : Ty → Ty → Bool"]
+  for order in orders do
+    s := s ++ [s!"  | .{order.head} available, .{order.head} promised => decide ({order.relation} promised available)"]
+  s := s ++ ["  | _, _ => false", ""]
+  s := s ++ ["/-- Heads with a declared non-recursive payload order. -/", "def orderedHead : Ty → Bool"]
+  for order in orders do
+    s := s ++ [s!"  | .{order.head} _ => true"]
+  s := s ++ ["  | _ => false", "",
+    "theorem payloadRule_false_left {a b : Ty} (h : orderedHead a = false) : payloadRule a b = false := by",
+    "  revert h", "  fun_cases payloadRule a b"]
+  for (_, i) in orders.zipIdx do
+    s := s ++ [s!"  case case{i+1} => intro h; exact Bool.noConfusion h"]
+  s := s ++ [s!"  case case{orders.length+1} => intro _; rfl", "",
+    "theorem payloadRule_false_right {a b : Ty} (h : orderedHead b = false) : payloadRule a b = false := by",
+    "  revert h", "  fun_cases payloadRule a b"]
+  for (_, i) in orders.zipIdx do
+    s := s ++ [s!"  case case{i+1} => intro h; exact Bool.noConfusion h"]
+  s := s ++ [s!"  case case{orders.length+1} => intro _; rfl", "",
+    "theorem payloadRule_args {a b : Ty} (h : payloadRule a b = true) : a.args = [] ∧ b.args = [] := by",
+    "  revert h", "  fun_cases payloadRule a b"]
+  for (_, i) in orders.zipIdx do
+    s := s ++ [s!"  case case{i+1} => intro _; exact ⟨rfl, rfl⟩"]
+  s := s ++ [s!"  case case{orders.length+1} => intro h; exact Bool.noConfusion h", ""]
+  for order in orders do
+    s := s ++ [s!"theorem payloadRule_{order.head} (available promised) :",
+      s!"    payloadRule (.{order.head} available) (.{order.head} promised) =",
+      s!"      decide ({order.relation} promised available) := rfl", ""]
+  s := s ++ ["theorem payloadRule_sub {a b : Ty} (h : payloadRule a b = true) : sub a b = true := by",
+    "  revert h", "  fun_cases payloadRule a b"]
+  for (order, i) in orders.zipIdx do
+    s := s ++ [s!"  case case{i+1} => intro h; rw [{order.subLaw}]; exact h"]
+  s := s ++ [s!"  case case{orders.length+1} => intro h; exact Bool.noConfusion h", "",
+    "theorem payloadRule_trans {a b c : Ty} (hab : payloadRule a b = true)",
+    "    (hbc : payloadRule b c = true) : payloadRule a c = true := by",
+    "  revert hab hbc", "  fun_cases payloadRule a b"]
+  for (order, i) in orders.zipIdx do
+    s := s ++ [s!"  case case{i+1} available promised =>",
+      "    intro hab hbc",
+      "    cases c <;> simp only [payloadRule, Bool.false_eq_true] at hbc ⊢",
+      s!"    exact decide_eq_true ({order.transLaw} (of_decide_eq_true hbc) (of_decide_eq_true hab))"]
+  s := s ++ [s!"  case case{orders.length+1} => intro hab _; exact Bool.noConfusion hab", "",
+    "theorem payloadRule_antisymm {a b : Ty} (hab : payloadRule a b = true)",
+    "    (hba : payloadRule b a = true) : a = b := by",
+    "  revert hab hba", "  fun_cases payloadRule a b"]
+  for (order, i) in orders.zipIdx do
+    s := s ++ [s!"  case case{i+1} available promised =>",
+      "    intro hab hba", "    congr 1",
+      s!"    exact {order.extLaw} (fun key => ⟨of_decide_eq_true hba key, of_decide_eq_true hab key⟩)"]
+  s := s ++ [s!"  case case{orders.length+1} => intro hab _; exact Bool.noConfusion hab", "",
+    "theorem payloadRule_normalize {a b : Ty} (h : payloadRule a b = true) :",
+    "    normalize a = a ∧ normalize b = b := by",
+    "  revert h", "  fun_cases payloadRule a b"]
+  for (order, i) in orders.zipIdx do
+    s := s ++ [s!"  case case{i+1} => intro _; exact ⟨{order.normalizeLaw} _, {order.normalizeLaw} _⟩"]
+  s := s ++ [s!"  case case{orders.length+1} => intro h; exact Bool.noConfusion h", ""]
+  for order in orders do
+    s := s ++ [s!"theorem sub_payload_{order.head}_right (a : Ty) (keys) (ha : isMember a = true)",
+      s!"    (hsub : sub a (.{order.head} keys) = true) :",
+      s!"    ∃ available, a = .{order.head} available ∧ {order.relation} keys available := by",
+      "  cases a", s!"  case {order.head} available =>",
+      s!"    rw [{order.subLaw}] at hsub",
+      "    exact ⟨available, rfl, of_decide_eq_true hsub⟩",
+      "  all_goals simp only [isMember, Bool.false_eq_true] at ha",
+      "  all_goals simp only [sub, reduceCtorEq, leafRule, leafHead, Bool.false_eq_true, ite_false] at hsub", "",
+      s!"theorem sub_payload_{order.head}_left (keys) (b : Ty) (hb : isMember b = true)",
+      s!"    (hbu : b ≠ .unknown) (hsub : sub (.{order.head} keys) b = true) :",
+      s!"    ∃ promised, b = .{order.head} promised ∧ {order.relation} promised keys := by",
+      "  cases b", s!"  case {order.head} promised =>",
+      s!"    rw [{order.subLaw}] at hsub",
+      "    exact ⟨promised, rfl, of_decide_eq_true hsub⟩",
+      "  case unknown => exact (hbu rfl).elim",
+      "  all_goals simp only [isMember, Bool.false_eq_true] at hb",
+      "  all_goals simp only [sub, reduceCtorEq, leafRule, leafHead, Bool.false_eq_true, ite_false] at hsub", ""]
+  s := s ++ ["theorem payloadRule_left_trans {a b c : Ty} (hc : isMember c = true)",
+    "    (hcu : c ≠ .unknown) (hab : payloadRule a b = true) (hbc : sub b c = true) :",
+    "    sub a c = true := by", "  revert hab hbc", "  fun_cases payloadRule a b"]
+  for (order, i) in orders.zipIdx do
+    s := s ++ [s!"  case case{i+1} available promised =>",
+      "    intro hab hbc",
+      s!"    obtain ⟨target, rfl, htarget⟩ := sub_payload_{order.head}_left promised c hc hcu hbc",
+      s!"    rw [{order.subLaw}]",
+      s!"    exact decide_eq_true ({order.transLaw} htarget (of_decide_eq_true hab))"]
+  s := s ++ [s!"  case case{orders.length+1} => intro hab _; exact Bool.noConfusion hab", "",
+    "theorem payloadRule_right_trans {a b c : Ty} (ha : isMember a = true)",
+    "    (hab : sub a b = true) (hbc : payloadRule b c = true) : sub a c = true := by",
+    "  revert hab hbc", "  fun_cases payloadRule b c"]
+  for (order, i) in orders.zipIdx do
+    s := s ++ [s!"  case case{i+1} available promised =>",
+      "    intro hab hbc",
+      s!"    obtain ⟨source, rfl, hsource⟩ := sub_payload_{order.head}_right a available ha hab",
+      s!"    rw [{order.subLaw}]",
+      s!"    exact decide_eq_true ({order.transLaw} (of_decide_eq_true hbc) hsource)"]
+  s := s ++ [s!"  case case{orders.length+1} => intro _ hbc; exact Bool.noConfusion hbc", "",
+    "theorem payloadRule_antisymm_sub {a b : Ty} (hab : payloadRule a b = true)",
+    "    (hba : sub b a = true) : a = b := by",
+    "  revert hab hba", "  fun_cases payloadRule a b"]
+  for (order, i) in orders.zipIdx do
+    s := s ++ [s!"  case case{i+1} available promised =>", "    intro hab hba",
+      s!"    rw [{order.subLaw}] at hba; exact payloadRule_antisymm hab hba"]
+  s := s ++ [s!"  case case{orders.length+1} => intro hab _; exact Bool.noConfusion hab", ""]
+  for side in ["left", "right"] do
+    let arg := if side == "left" then "a" else "b"
+    s := s ++ [s!"theorem payloadRule_leaf_{side} \{a b : Ty} \{head : LeafHead}",
+      s!"    (h : leafHead {arg} = some head) : payloadRule a b = false := by",
+      "  revert h", "  fun_cases payloadRule a b"]
+    for (_, i) in orders.zipIdx do
+      s := s ++ [s!"  case case{i+1} => intro h; cases h"]
+    s := s ++ [s!"  case case{orders.length+1} => intro _; rfl", ""]
+  s := s ++ ["theorem payloadRule_sameHead {a b : Ty} (hh : sameHead a b = true) :",
+    "    payloadRule a a = payloadRule a b := by", "  revert hh", "  fun_cases sameHead a b"]
+  let matched := rs.filter fun r => !notCongruent.any (fun pair => pair.1 == r.ctor.name)
+  for (row, i) in matched.zipIdx do
+    if orders.any (fun order => order.head == row.ctor.name) then
+      s := s ++ [s!"  case case{i+1} => intro hh; have hp := of_decide_eq_true hh; subst hp; rfl"]
+    else
+      s := s ++ [s!"  case case{i+1} => intro _; rfl"]
+  return s ++ [s!"  case case{matched.length+1} => intro hh; exact Bool.noConfusion hh", ""]
+
+
+def emitDispatch (rs : List Row) (table : Bool := false) (orders : List PayloadOrder := []) : List String := Id.run do
   -- `sub`'s arms in order: six rules, one congruence arm per head with children (declaration
   -- order, `union` excepted), then the catch-all; its `fun_cases` number is computed, not
   -- written, since every appended head moves it. A variable head's arm is not constant at a
@@ -1284,7 +1426,9 @@ def emitDispatch (rs : List Row) (table : Bool := false) : List String := Id.run
     if r.ctor.varKind?.isSome then
       some [s!"  case case{7 + k} =>", "    simp only [sameHead] at hh", "    simp only [hh, Bool.false_and]"]
     else none).flatten
-  let catchAll := 7 + cong.length
+  let catchAll := 7 + cong.length + orders.length
+  let payloadCases := orders.zipIdx.flatMap fun (_, i) =>
+    [s!"  case case{7 + cong.length + i} => exact hpay"]
   -- the six fixed cases: today `sub`'s reflexive line, its four structural arms and the literal
   -- arm; with the leaf table, the reflexive line, the table's line (`leafRule`, before the rows)
   -- and the four structural arms, so the congruences keep their numbers either way
@@ -1317,8 +1461,8 @@ def emitDispatch (rs : List Row) (table : Bool := false) : List String := Id.run
         "because the arm it takes IS `false`. -/" ]) ++
     [ "theorem sub_eq_false_of_not_sameHead (a b : Ty) (ha : isMember a = true)",
       s!"    (hb : isMember b = true) {hyp} (htop : topRule a b = false)",
-      "    (hh : sameHead a b = false) : sub a b = false := by",
-      "  fun_cases Ty.sub a b" ] ++ fixed ++ varCases ++
+      "    (hpay : payloadRule a b = false) (hh : sameHead a b = false) : sub a b = false := by",
+      "  fun_cases Ty.sub a b" ] ++ fixed ++ varCases ++ payloadCases ++
     [ s!"  case case{catchAll} => rfl",
       "  -- the congruence arms: `sameHead` answers `true` at a matching head, so `hh` is absurd",
       "  all_goals simp only [sameHead, Bool.true_eq_false] at hh",
@@ -1369,11 +1513,11 @@ def emitDispatch (rs : List Row) (table : Bool := false) : List String := Id.run
       "arms are the right-hand side. The two directions above are the proof, and neither names a",
       "constructor: a new one adds an arm lemma and a `case`, both generated. -/",
       "theorem sub_eq_args (a b : Ty) (ha : isMember a = true) (hb : isMember b = true)",
-      s!"    {hyp} (htop : topRule a b = false) :",
+      s!"    {hyp} (htop : topRule a b = false) (hpay : payloadRule a b = false) :",
       "    sub a b = (sameHead a b && argsBelow sub a b) := by",
       "  cases hh : sameHead a b",
       "  · rw [Bool.false_and]",
-      s!"    exact sub_eq_false_of_not_sameHead a b ha hb {hypName} htop hh",
+      s!"    exact sub_eq_false_of_not_sameHead a b ha hb {hypName} htop hpay hh",
       "  · rw [Bool.true_and]",
       "    exact sub_eq_argsBelow_of_sameHead a b hh",
       "" ]
@@ -1515,7 +1659,7 @@ def emitLaws (rs : List Row) : List String :=
 /-- `AdmitsSub`: one field per constructor, the condition under which an admission algebra's
 fold respects `sub`. The carrier is the paramorphic one `fold_of` gives (`Ty × Adm`), so each
 field reads the arm's second component. -/
-def emitAdmits (rs : List Row) (table : Option LeafTable := none) : List String := Id.run do
+def emitAdmits (rs : List Row) (table : Option LeafTable := none) (orders : List PayloadOrder := []) : List String := Id.run do
   let mut s : List String :=
     [ "/-- A value-admission carrier: a predicate on a value and an allocation table.",
       "`Val.hasTy` at a fixed type is one (`Folds/Ty.lean`'s `fold_of`). -/",
@@ -1576,6 +1720,10 @@ def emitAdmits (rs : List Row) (table : Option LeafTable := none) : List String 
             s!"  {x}_{y} : {pre}Adm.le {app x px} {app y py}" ]) ++
     [ "  /-- a template parameter has no inhabitant -/",
       "  var : ∀ i v al, (alg.ty_var i).2 v al = false" ]
+  for order in orders do
+    s := s ++ [s!"  /-- The declared order of the {order.head} payload. -/",
+      s!"  {order.head} : ∀ available promised, {order.relation} promised available →",
+      s!"    Adm.le (alg.ty_{order.head} available).2 (alg.ty_{order.head} promised).2"]
   for r in rs do
     let c := r.ctor
     let some h := r.head | continue
@@ -1747,6 +1895,7 @@ structure Args where
   types : List String := []
   /-- The variance table; overridable so a mutation probe can point at a scratch copy. -/
   variances : String := "tools/Effect4Gen/variances.json"
+  payloadOrders : String := "tools/Effect4Gen/payload-orders.json"
 
 partial def parseArgs : List String → Args → Except String Args
   | [], a => .ok a
@@ -1760,15 +1909,17 @@ partial def parseArgs : List String → Args → Except String Args
   | "--meta-imports" :: i :: rest, a =>
     parseArgs rest { a with metaImports := (i.splitOn ",").filter (· != "") }
   | "--variances" :: p :: rest, a => parseArgs rest { a with variances := p }
+  | "--payload-orders" :: p :: rest, a => parseArgs rest { a with payloadOrders := p }
   | t :: rest, a =>
     if t.startsWith "--" then
       if rest.isEmpty then .error s!"{t} needs a value" else .error s!"unknown option {t}"
     else parseArgs rest { a with types := a.types ++ [t] }
 
-def run (args : Args) (heads : List Head) : MetaM (Array String) := do
+def run (args : Args) (heads : List Head) (orders : List PayloadOrder) : MetaM (Array String) := do
   let outPath := (args.headerOut.orElse (fun _ => args.out) |>.getD "<stdout>").replace "\\" "/"
   let head := "lake exe effect4gen View --group " ++ args.group ++ Tools.GeneratedStamp.moduleFlags args.moduleHeader args.metaImports
     ++ " --imports " ++ String.intercalate "," args.imports
+    ++ " --payload-orders " ++ args.payloadOrders
     ++ " --out " ++ outPath
     ++ (match args.append with | some p => " --append " ++ p.replace "\\" "/" | none => "")
     ++ String.join (args.types.map fun t => " " ++ t)
@@ -1794,6 +1945,14 @@ def run (args : Args) (heads : List Head) : MetaM (Array String) := do
     let rs ← match rows ctors heads with
       | .error e => throwError e
       | .ok rs => pure rs
+    for order in orders do
+      let some row := rs.find? (fun r => r.ctor.name == order.head)
+        | throwError "View: ordered payload names absent head {order.head}"
+      unless row.ctor.children.isEmpty && row.ctor.varKind?.isNone && row.ctor.payloads.length == 1 do
+        throwError "View: ordered payload {order.head} needs exactly one non-recursive field"
+      for law in [order.subLaw, order.transLaw, order.extLaw, order.normalizeLaw] do
+        unless (← getEnv).contains law.toName do
+          throwError "View: ordered payload {order.head} names absent law {law}"
     -- what a head of variable arity reads must exist in `Ty.lean` (the canonical order and its
     -- two facts) and in the core variance module (a reference's declared variances); refused
     -- by name otherwise
@@ -1818,9 +1977,9 @@ def run (args : Args) (heads : List Head) : MetaM (Array String) := do
     let leafLaws := match table? with | some tb => emitLeafLaws tb hasNormalize | none => []
     lines := lines.push (join (["namespace Ty", ""] ++ emitVariance coreVariance ++ emitArgs rs ++
       emitSameHead rs ++ emitRules hasTable ++ emitProbes rs ++ leafProbes ++ emitVarHelpers rs ++
-      emitLaws rs ++ emitArmLemmas rs hasTable ++ emitDispatch rs hasTable ++ emitSizeOf rs ++
+      emitLaws rs ++ emitPayloadOrders rs orders ++ emitArmLemmas rs hasTable ++ emitDispatch rs hasTable orders ++ emitSizeOf rs ++
       emitOrderLaws hasVar hasTable ++ leafLaws ++
-      ["end Ty", ""] ++ emitAdmits rs table? ++ emitAdmitsMono rs ++ emitAdmitsExtend ns rs))
+      ["end Ty", ""] ++ emitAdmits rs table? orders ++ emitAdmitsMono rs ++ emitAdmitsExtend ns rs))
   lines := lines ++ #["end " ++ ns, ""]
   if let some p := args.append then
     let txt ← IO.FS.readFile p
@@ -1844,11 +2003,14 @@ def Effect4Gen.View.cli (argv : List String) : IO Unit := do
   let heads ← match readHeads variancesText with
     | .ok h => pure h
     | .error e => throw (IO.userError e)
+  let orders ← match readPayloadOrders (← IO.FS.readFile ⟨args.payloadOrders⟩) with
+    | .ok rows => pure rows
+    | .error e => throw (IO.userError e)
   Lean.initSearchPath (← Lean.findSysroot)
   let env ← Lean.importModules (args.imports.map fun i => { module := i.toName }).toArray {} 0
   let ctx : Core.Context := { fileName := "<gen>", fileMap := default }
   let act : MetaM Unit := do
-    let lines ← run args heads
+    let lines ← run args heads orders
     let stamp := Tools.GeneratedStamp.note "tools/Effect4Gen/View.lean"
     let text := Tools.GeneratedStamp.endWithOneNewline ("-- " ++ stamp ++ "\n" ++ String.intercalate "\n" lines.toList ++ "\n")
     let text := if args.moduleHeader then Tools.GeneratedStamp.moduleText args.metaImports text

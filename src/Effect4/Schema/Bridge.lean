@@ -95,6 +95,7 @@ def schemaAlg : TyAlgebra (fun _ => Representation) where
   ty_undefined := unlowered "undefined"
   ty_number := unlowered "number"
   ty_bytes := unlowered "bytes"
+  ty_contextOf _ := unlowered "contextOf"
 
 /-- Write a type through the generated fold. The public writer normalizes first. -/
 def schema (t : Ty) : Representation := cata_ty schemaAlg t
@@ -501,7 +502,7 @@ theorem normS_schema (t : Ty) : normS (schema t) = schema t := by
     intro item hitem
     simp only [Function.comp_apply, Schema.element, ElementOf.map, normElement,
       normAnn, ih item hitem]
-  | app _ _ _ | null | undefined | number | bytes => rfl
+  | app _ _ _ | null | undefined | number | bytes | contextOf _ => rfl
 
 /-! ## The retraction and exactness -/
 
@@ -535,6 +536,7 @@ def reservedProfileAlg : TyAlgebra (fun _ => Bool × Bool) where
   ty_undefined := (false, false)
   ty_number := (false, false)
   ty_bytes := (false, false)
+  ty_contextOf _ := (false, false)
 
 /-- The raw Schema profile: supported nodes, string map keys, no two-item tuple alias,
 and no reserved type-parameter handle. The public writer normalizes first. -/
@@ -637,7 +639,7 @@ theorem ofSchema_schema (t : Ty) (h : t.closed = true) (hr : reservedFree t = tr
       (if target = "effect/schema/TypeParameter" then none else some (Ty.handle target)) else none) = _
     rw [if_pos (show normAnn none = none from rfl), if_neg hne]
   | var _ => exact Bool.noConfusion h
-  | app _ _ _ | null | undefined | number | bytes => exact Bool.noConfusion hr
+  | app _ _ _ | null | undefined | number | bytes | contextOf _ => exact Bool.noConfusion hr
   | record fields ih =>
     rw [Ty.closed, Ty.closedFields_eq_all] at h
     rw [reservedFree_record] at hr

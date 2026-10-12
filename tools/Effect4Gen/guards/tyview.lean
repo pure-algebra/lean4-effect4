@@ -8,8 +8,8 @@ guards are the view's own contract, and they do not depend on which constructors
 
 1. `sub_eq_args` holds at named pairs that exercise each variance, so the law is exercised as a
    computation and not only as a theorem.
-2. The four hypotheses are each necessary: dropping any one of them makes the two sides differ
-   at a named counterexample (`never`, `union`, the leaf table's rule, the top).
+2. The five hypotheses are each necessary: dropping any one of them makes the two sides differ
+   at a named counterexample (`never`, `union`, the leaf table's rule, the top, the ordered payload).
 3. `sameHead` is an equivalence on members, and `union` is outside it.
 4. `eq_of_sameHead` and `args_congr` at a pair the printer's corpus actually carries.
 -/
@@ -42,7 +42,7 @@ private def rhs (a b : Ty) : Bool := Ty.sameHead a b && Ty.argsBelow Ty.sub a b
 /-! ### 2. Each hypothesis is necessary
 
 Every line below is a pair where the two sides of `sub_eq_args` DISAGREE, and the hypothesis
-that excludes it. Without them the law would be false, so these are what the four arguments
+that excludes it. Without them the law would be false, so these are what the five arguments
 are for. -/
 
 -- `isMember a`: `never` is below everything, and has no head
@@ -59,6 +59,16 @@ are for. -/
 -- `topRule`: everything is below the top (decisions row 46)
 #guard Ty.topRule .nat .unknown = true
 #guard lhs .nat .unknown != rhs .nat .unknown
+
+-- The ordered context payload cannot use exact head equality as its order.
+#guard Ty.payloadRule (.contextOf (Effect4.Machine.Env.Requirement.single ⟨⟨4⟩, ⟨4⟩⟩))
+  (.contextOf Effect4.Machine.Env.Requirement.empty)
+#guard !Ty.sameHead (.contextOf (Effect4.Machine.Env.Requirement.single ⟨⟨4⟩, ⟨4⟩⟩))
+  (.contextOf Effect4.Machine.Env.Requirement.empty)
+#guard lhs (.contextOf (Effect4.Machine.Env.Requirement.single ⟨⟨4⟩, ⟨4⟩⟩))
+  (.contextOf Effect4.Machine.Env.Requirement.empty) !=
+  rhs (.contextOf (Effect4.Machine.Env.Requirement.single ⟨⟨4⟩, ⟨4⟩⟩))
+    (.contextOf Effect4.Machine.Env.Requirement.empty)
 
 /-! ### 3. `sameHead` on members, and `union` outside it -/
 

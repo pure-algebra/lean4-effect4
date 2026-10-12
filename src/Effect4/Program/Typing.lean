@@ -158,6 +158,12 @@ mutual
         toOption_term?, toOption_cause?, apply_ite Except.toOption, termTy_weaken, causeTy_weaken,
         catchIfError_weaken, List.append_assoc, List.cons_append, check_weaken sig hw,
         checkStmts_weaken sig hw, checkAction_weaken sig hw]
+    | .provideContext _ _ => by
+      simp only [Eff.weaken, check, toOption_bind, toOption_term?, termTy_weaken]
+      congr 1
+      funext ct
+      cases ct.normalize <;>
+        simp only [toOption_bind, toOption_pure, toOption_throw, check_weaken sig hw]
     | .invoke _ _ _ => by
       simp only [Eff.weaken, check, toOption_bind, toOption_pure, toOption_throw, toOption_expect,
         toOption_term?, apply_ite Except.toOption, termTy_weaken, Effs.toList_length_weaken,
@@ -206,7 +212,7 @@ mutual
         termTy_weaken]
     | .fork _ _ | .forkIn _ _ _ | .forkScoped _ _ | .runIn _ _ | .interrupt _
     | .interruptScoped _ | .awaitAll _ | .awaitAllFailFast _ | .snapshotChildren
-    | .awaitNewChildren _ | .raceAll _ | .raceAllFirst _ | .setContext _ | .getContext | .getId
+    | .awaitNewChildren _ | .raceAll _ | .raceAllFirst _ | .context _ | .getId
     | .closeScope _ _ | .getInterruptible => by
       simp only [ActionTerm.weaken, checkAction, toOption_bind, toOption_pure, toOption_throw,
         toOption_expect, toOption_term?, apply_ite Except.toOption, termTy_weaken,

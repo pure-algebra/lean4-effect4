@@ -239,6 +239,39 @@ theorem bodyR_eq (root : NativeEff) (completed : List (FiberId × ExitV)) (b : B
     bodyR (interpRAt root completed table) b = denoteBody root b :=
   by aesop
 
+/-- A provider region's code means its body's denotation, by the region's four forms.
+Consumer: `body_means` at a region and at a context entry. -/
+theorem region_means (root : NativeEff) :
+    ∀ body : Region, CodeMeans root (regionCode root body) (denoteBody root (.region body))
+  | .program q => by
+    simp only [regionCode, denoteBody, regionBodyR, cata_region]
+    exact resolve_intro root q
+  | .build q m scope => by
+    simp only [regionCode, denoteBody, regionBodyR, cata_region]
+    exact layerBuild_intro root q m scope
+  | .buildAdding q m scope => by
+    simp only [regionCode, denoteBody, regionBodyR, cata_region]
+    rw [guardR_bind]
+    refine CodeMeans.onSuccess _ _ _ (layerBuildR root q m scope) _ (layerBuild_intro root q m scope)
+      ?_ rfl (fun _ => rfl)
+    intro completed v
+    show CodeMeans root (Program.contAOf root (.addCurrentMemoMap m) v) _
+    rw [contAOf_addCurrentMemoMap]
+    unfold addCurrentMemoMapK addCurrentMemoMapR
+    simp only [seqR]
+    cases Val.context? v with
+    | some ctx => simp only [prepareR_pure]; exact CodeMeans.success _
+    | none => exact codeMeans_badShape root
+  | .construct q key => by
+    simp only [regionCode, denoteBody, regionBodyR, cata_region]
+    rw [guardR_bind]
+    refine CodeMeans.onSuccess _ _ _ (denoteAt root q) _ (resolve_intro root q) ?_ rfl (fun _ => rfl)
+    intro completed v
+    show CodeMeans root (Program.contAOf root (.bindService key) v) _
+    rw [contAOf_bindService]
+    cases key <;> simp only [seqR, bindServiceK, bindServiceR, prepareR_pure] <;>
+      exact CodeMeans.success _
+
 theorem body_means (root : NativeEff) (b : Body) :
     ∀ {c : NCode}, (match b with
       | .at_ p => c = resolve root p
@@ -247,7 +280,9 @@ theorem body_means (root : NativeEff) (b : Body) :
       | .acquireIn p ctx =>
         c = Prim.onSuccess (Prim.withFiber (.store (.act .ambientScope))) (.acquireIn p ctx)
       | .release q previous => c = Prim.onExit (resolve root q) (.restoreCtx previous) false
-      | .layerBuild q m scope => c = resolveLayer root q m scope) →
+      | .layerBuild q m scope => c = resolveLayer root q m scope
+      | .region body => c = regionCode root body
+      | .contextEntry u body flag => c = .onSuccess (.withFiber .getCtx) (.updateThen u body flag)) →
       CodeMeans root c (denoteBody root b) := by
   intro c hc
   cases b with
@@ -260,6 +295,8 @@ theorem body_means (root : NativeEff) (b : Body) :
       foreignRelease_intro root _ ex fun completed => resolve_intro root _
   | release q previous => rw [hc]; exact release_intro root q previous (resolve_intro root q)
   | layerBuild q m scope => rw [hc]; exact layerBuild_intro root q m scope
+  | region body => rw [hc]; exact region_means root body
+  | contextEntry u body flag => rw [hc]; exact contextEntry_intro root u body flag (region_means root body)
 
 /-- The finalizer programs: both instances name the same finalizers, with related programs. -/
 theorem finalizerProgram_means (root : NativeEff) (completed : List (FiberId × ExitV))

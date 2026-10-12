@@ -1,0 +1,35 @@
+import Effect4.Codegen.Templates
+import Effect4.Laws.Program.Admits
+import Effect4.Laws.Program.Agreement
+import Effect4.Laws.Program.Bounds
+import Effect4.Laws.Program.Definitions
+import Effect4.Laws.Program.DenoteB
+import Effect4.Laws.Program.DenoteR
+import Effect4.Laws.Program.Eliminators
+import Effect4.Laws.Program.Handles.Alphabet
+import Effect4.Laws.Program.Handles.Compile
+import Effect4.Laws.Program.Handles.Layer
+import Effect4.Laws.Program.Intro
+import Effect4.Laws.Program.Intro.Identity
+import Effect4.Laws.Program.Intro.Scope
+import Effect4.Laws.Program.Polarity
+import Effect4.Laws.Program.Signature
+import Effect4.Laws.Program.Template
+import Effect4.Laws.Program.TyView
+import Effect4.Laws.Program.TypeAlgebra
+import Effect4.Laws.Program.Typed.Admission
+import Effect4.Laws.Program.Typed.Membership
+import Effect4.Laws.Program.Typing.Annotate
+import Effect4.Laws.Program.Typing.CheckInversion
+import Effect4.Laws.Program.Typing.CheckSound
+import Effect4.Laws.Program.Typing.HasTy
+import Effect4.Laws.Program.Typing.Replace
+import Effect4.Laws.Program.Typing.Restrict
+import Effect4.Laws.Program.Typing.Splice
+import Effect4.Program.Ty
+import Effect4.Program.TyClasses
+import Effect4.Program.Typing.Annotate
+import Effect4.Program.Typing.Focus
+import ProofGraph.AxiomAudit
+
+#axiom_audit Effect4.Codegen.Templates Effect4.Laws.Program.Admits Effect4.Laws.Program.Agreement Effect4.Laws.Program.Bounds Effect4.Laws.Program.Definitions Effect4.Laws.Program.DenoteB Effect4.Laws.Program.DenoteR Effect4.Laws.Program.Eliminators Effect4.Laws.Program.Handles.Alphabet Effect4.Laws.Program.Handles.Compile Effect4.Laws.Program.Handles.Layer Effect4.Laws.Program.Intro Effect4.Laws.Program.Intro.Identity Effect4.Laws.Program.Intro.Scope Effect4.Laws.Program.Polarity Effect4.Laws.Program.Signature Effect4.Laws.Program.Template Effect4.Laws.Program.TyView Effect4.Laws.Program.TypeAlgebra Effect4.Laws.Program.Typed.Admission Effect4.Laws.Program.Typed.Membership Effect4.Laws.Program.Typing.Annotate Effect4.Laws.Program.Typing.CheckInversion Effect4.Laws.Program.Typing.CheckSound Effect4.Laws.Program.Typing.HasTy Effect4.Laws.Program.Typing.Replace Effect4.Laws.Program.Typing.Restrict Effect4.Laws.Program.Typing.Splice Effect4.Program.Ty Effect4.Program.TyClasses Effect4.Program.Typing.Annotate Effect4.Program.Typing.Focus

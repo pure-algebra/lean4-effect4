@@ -138,17 +138,16 @@ theorem memoize_intro (root : NativeEff) (q : Point) (m : MemoMapId) (scope : Na
 /-- `buildWithMemoMap` (`Layer.ts:756-765`): the `CurrentMemoMap` region over the build, its
 answer with the map added. -/
 theorem buildWithMemoMap_intro (root : NativeEff) (q : Point) (scope : Nat)
-    (buildR : MemoMapId → RProgram)
-    (hb : ∀ m, CodeMeans root (resolveLayer root q m scope) (buildR m)) (id : MemoMapId) :
+    (hb : ∀ m, CodeMeans root (resolveLayer root q m scope) (layerBuildR root q m scope)) (id : MemoMapId) :
     CodeMeans root
       (updateContextAt (Env.ContextUpdate.provideService Env.currentMemoMapKey (Val.memoMap id))
         (Region.buildAdding q id scope))
-      (buildWithMemoMapR buildR id) := by
+      (buildWithMemoMapR q id scope) := by
   unfold buildWithMemoMapR
-  refine updateContext_intro root _ _ _ ?_
-  simp only [regionCode]
+  refine updateContext_intro root _ _ ?_
+  simp only [regionCode, denoteBody, regionBodyR, cata_region]
   rw [guardR_bind]
-  refine CodeMeans.onSuccess _ _ _ (buildR id) _ (hb id) ?_ rfl (fun _ => rfl)
+  refine CodeMeans.onSuccess _ _ _ (layerBuildR root q id scope) _ (hb id) ?_ rfl (fun _ => rfl)
   intro completed v
   show CodeMeans root (Program.contAOf root (.addCurrentMemoMap id) v) _
   rw [contAOf_addCurrentMemoMap]
@@ -160,12 +159,11 @@ theorem buildWithMemoMap_intro (root : NativeEff) (q : Point) (scope : Nat)
 
 /-- The memo map forked or created, in hand: `buildWithMemoMap` on it, or the wrong shape. -/
 theorem withMemoMapThen_intro (root : NativeEff) (q : Point) (scope : Nat)
-    (buildR : MemoMapId → RProgram)
-    (hb : ∀ m, CodeMeans root (resolveLayer root q m scope) (buildR m))
+    (hb : ∀ m, CodeMeans root (resolveLayer root q m scope) (layerBuildR root q m scope))
     (completed : List (FiberId × ExitV)) (u : Val) :
     CodeMeans root (Program.contAOf root (.withMemoMapThen q scope) u)
       (prepareR completed (match Val.memoMap? u with
-        | some id => buildWithMemoMapR buildR id
+        | some id => buildWithMemoMapR q id scope
         | none => .pure badShapeExit)) := by
   cases hid : Val.memoMap? u with
   | some id =>
@@ -173,7 +171,7 @@ theorem withMemoMapThen_intro (root : NativeEff) (q : Point) (scope : Nat)
     subst hu
     rw [contAOf_withMemoMapThen_memoMap]
     dsimp only
-    exact (buildWithMemoMap_intro root q scope buildR hb id).prepare completed
+    exact (buildWithMemoMap_intro root q scope hb id).prepare completed
   | none =>
     rw [contAOf_withMemoMapThen_other root q scope u (Val.memoMap?_none hid)]
     simp only [prepareR_pure]
@@ -182,12 +180,13 @@ theorem withMemoMapThen_intro (root : NativeEff) (q : Point) (scope : Nat)
 /-- `provideWith` (`Layer.ts:1915-1923`): the dependency built, the dependent under its
 context, the combiner. -/
 theorem provideWith_intro (root : NativeEff) (q : Point) (m : MemoMapId) (child : Nat)
-    (mode : CombineMode) (depR depdR : RProgram)
+    (mode : CombineMode) (depR : RProgram)
     (hdep : CodeMeans root (resolveLayer root (q.child 1) m child) depR)
-    (hdept : CodeMeans root (resolveLayer root (q.child 0) m child) depdR) :
+    (hdept : CodeMeans root (resolveLayer root (q.child 0) m child)
+      (layerBuildR root (q.child 0) m child)) :
     CodeMeans root
       (Prim.onSuccess (resolveLayer root (q.child 1) m child) (.provideThen q m child mode))
-      (provideWithR depR depdR mode) := by
+      (provideWithR depR (.build (q.child 0) m child) mode) := by
   unfold provideWithR
   rw [guardR_bind]
   refine CodeMeans.onSuccess _ _ _ depR _ hdep ?_ rfl (fun _ => rfl)
@@ -201,8 +200,8 @@ theorem provideWith_intro (root : NativeEff) (q : Point) (m : MemoMapId) (child 
     dsimp only
     rw [prepareR_guardR_bind, guardR_bind]
     refine CodeMeans.onSuccess _ _ _
-      (prepareR completed (updateContextR (.provide ctx.services) depdR)) _
-      ((updateContext_intro root _ (Region.build (q.child 0) m child) depdR hdept).prepare _) ?_
+      (prepareR completed (updateContextR (.provide ctx.services) (.build (q.child 0) m child))) _
+      ((updateContext_intro root _ (Region.build (q.child 0) m child) hdept).prepare _) ?_
       rfl (fun _ => rfl)
     intro completed' w
     show CodeMeans root (Program.contAOf root (.combineWith mode ctx.services) w) _

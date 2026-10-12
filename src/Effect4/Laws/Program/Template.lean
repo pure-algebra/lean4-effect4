@@ -666,6 +666,7 @@ def paramOccurrencesAlg : TyAlgebra (fun _ => OccCarrier) where
   ty_undefined := (none, [])
   ty_number := (none, [])
   ty_bytes := (none, [])
+  ty_contextOf _ := (none, [])
 
 /-- A template's parameter occurrences, each flagged when it is the direct
 argument of an invariant handle. -/
@@ -1070,9 +1071,9 @@ theorem sub_not_complete :
   -- closes this fact (TY-15, tested); the proof keeps the view's own lemmas so each step is
   -- one of the order's rules
   · have hsn : Ty.sub .string .nat = false :=
-      Ty.sub_eq_false_of_not_sameHead .string .nat rfl rfl rfl rfl rfl
+      Ty.sub_eq_false_of_not_sameHead .string .nat rfl rfl rfl rfl rfl rfl
     have hns : Ty.sub .nat .string = false :=
-      Ty.sub_eq_false_of_not_sameHead .nat .string rfl rfl rfl rfl rfl
+      Ty.sub_eq_false_of_not_sameHead .nat .string rfl rfl rfl rfl rfl rfl
     have hun : Ty.sub (.union .nat .string) .nat = false := by
       rw [Ty.sub_union_left _ _ _ (fun h => Ty.noConfusion h), hsn, Bool.and_false]
     have hus : Ty.sub (.union .nat .string) .string = false := by

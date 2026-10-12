@@ -20,6 +20,8 @@
     "`renames` gives a lift another name when the constructor's is a Lean keyword."
   ],
   "rows": [
+    { "ctor": "Effect4.Program.Eff.provideContext", "slots": [], "args": [[], []] },
+    { "ctor": "Effect4.Program.ActionTerm.context", "slots": [], "args": [[]] },
     { "ctor": "Effect4.Program.Eff.bind", "slots": ["answer"], "args": [[], [0]] },
     { "ctor": "Effect4.Program.Eff.defs", "slots": ["request"], "args": [[], [0], [], []] },
     { "ctor": "Effect4.Program.Eff.invoke", "slots": ["request"], "args": [[], [], [0]] },
@@ -48,8 +50,7 @@
     "machineOnly": [
       "Effect4.Program.Eff.defs", "Effect4.Program.Eff.invoke",
       "Effect4.Program.ActionTerm.interruptScoped", "Effect4.Program.ActionTerm.awaitAllFailFast",
-      "Effect4.Program.ActionTerm.snapshotChildren", "Effect4.Program.ActionTerm.awaitNewChildren",
-      "Effect4.Program.ActionTerm.setContext"
+      "Effect4.Program.ActionTerm.snapshotChildren", "Effect4.Program.ActionTerm.awaitNewChildren"
     ],
     "handWritten": ["Effect4.Program.LayerTerm.ref"],
     "renames": { "Effect4.Program.Eff.scoped": "scope" }

@@ -231,7 +231,7 @@ def noApp : Ty → Bool
   | .record fs => noAppFields fs
   | .tuple ts => noAppItems ts
   | .never | .unknown | .unit | .nat | .int | .string | .bool | .handle _ | .lit _ | .var _
-  | .null | .undefined | .number | .bytes => true
+  | .null | .undefined | .number | .bytes | .contextOf _ => true
 def noAppFields : List (String × Bool × Ty) → Bool
   | [] => true
   | (_, _, t) :: rest => noApp t && noAppFields rest
@@ -318,7 +318,7 @@ theorem TemplateOK.head {t : Ty} (h : TemplateOK t) (hc : closed t = false) (hv 
       rw [hf] at hc
       exact Bool.noConfusion hc
     case never | unknown | unit | nat | int | string | bool | handle _ | lit _
-       | null | undefined | number | bytes =>
+       | null | undefined | number | bytes | contextOf _ =>
       exact Bool.noConfusion hc
     case option _ | list _ | causeOf _ | refOf _ | prod _ _ | except _ _
        | exitOf _ _ | fiberOf _ _ | deferredOf _ _ | map _ _ =>
@@ -407,7 +407,7 @@ theorem cands_args (v : Variance) {t r : Ty} (hv : ∀ i, t ≠ .var i) (happ : 
     exact flatMap_congr fun a _ => by
       obtain ⟨a1, a2⟩ := a
       simp only [Prod.map, comp_co]
-  case case28 =>
+  case case29 =>
     intro _ _ _ _ hh
     exact absurd hh Bool.false_ne_true
   all_goals
@@ -475,7 +475,11 @@ theorem below_args (τ : Subst) {t r : Ty} (ht : Normal t) (hv : ∀ i, t ≠ .v
     refine topRule_eq_false fun hmu => hmargs ?_
     rw [hmu]
     rfl
-  rw [sub_eq_args r m hm hmm hleaf htop, Bool.and_eq_true] at hrm
+  have hpay : payloadRule r m = false := by
+    cases hp : payloadRule r m with
+    | false => rfl
+    | true => exact (hmargs (payloadRule_args hp).2).elim
+  rw [sub_eq_args r m hm hmm hleaf htop hpay, Bool.and_eq_true] at hrm
   obtain ⟨hrmh, hbelow⟩ := hrm
   have hrmLen := args_congr hrmh
   refine ⟨sameHead_trans htm (sameHead_symm hrmh), fun p hp => ?_⟩
@@ -719,7 +723,7 @@ theorem instance_shape (τ : Subst) {t : Ty} (ht : Normal t) (hv : ∀ i, t ≠ 
     rename_i n ts _ _ _
     exact absurd rfl (happ n ts)
   | unknown | unit | nat | int | string | bool | handle _ | lit _
-  | null | undefined | number | bytes =>
+  | null | undefined | number | bytes | contextOf _ =>
     exact absurd rfl hargs
   | option _ | list _ | except _ _ | exitOf _ _ | causeOf _ | fiberOf _ _
   | refOf _ | deferredOf _ _ | map _ _ =>
@@ -777,7 +781,11 @@ theorem above_args (σ : Subst) {t r : Ty} (ht : Normal t) (hv : ∀ i, t ≠ .v
     refine topRule_eq_false fun hmu => hma ?_
     rw [hmu]
     rfl
-  rw [sub_eq_args r _ hm hmm hleaf htop, Bool.and_eq_true]
+  have hpay : payloadRule r (instantiate σ t).normalize = false := by
+    cases hp : payloadRule r (instantiate σ t).normalize with
+    | false => rfl
+    | true => exact (hma (payloadRule_args hp).2).elim
+  rw [sub_eq_args r _ hm hmm hleaf htop hpay, Bool.and_eq_true]
   refine ⟨sameHead_trans (sameHead_symm hh) htm, ?_⟩
   unfold argsBelow
   rw [List.all_eq_true]

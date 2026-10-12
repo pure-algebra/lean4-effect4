@@ -357,6 +357,7 @@ def wireAlgebra : TyAlgebra (fun _ => Wire) where
   ty_undefined := .refused .undefined
   ty_number := numberWire
   ty_bytes := .refused .bytes
+  ty_contextOf keys := .refused (.contextOf keys)
 
 /-- The type language's generated fold supplies every recursive wire interpretation. -/
 def wire (t : Ty) : Wire := cata_ty wireAlgebra t

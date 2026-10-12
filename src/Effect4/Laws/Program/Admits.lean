@@ -236,7 +236,10 @@ theorem cata_admits_sub {alg : TyAlgebra AdmCarrier} (h : AdmitsSub alg) {a b : 
       obtain ⟨h1, h2⟩ := Bool.and_eq_true_iff.mp hsel
       exact ⟨ih12 ((x, i), (y, j)) hxy h1, ih21 ((x, i), (y, j)) hxy h2⟩
   -- every other pair: `sub` answers `false`
-  case case20 => exact Bool.noConfusion hsub
+  case case20 available promised _ _ =>
+    simp only [cata_ty]
+    exact h.contextOf available promised (of_decide_eq_true hsub)
+  case case21 => exact Bool.noConfusion hsub
 
 /-! ## The named, item and entry reads, monotone (decisions rows 125, 159, 165) -/
 
@@ -370,6 +373,14 @@ theorem Val.hasTy_admitsSub : AdmitsSub Val.hasTy.alg where
   union := fun _ _ _ _ => rfl
   top := fun _ _ => rfl
   var := fun _ _ _ => rfl
+  contextOf := by
+    intro available promised h v al hv
+    dsimp only [Val.hasTy.alg] at hv ⊢
+    cases hc : Val.context? v with
+    | none => rw [hc] at hv; exact Bool.noConfusion hv
+    | some ctx =>
+      rw [hc] at hv
+      exact List.all_eq_true.mpr (fun key hk => List.all_eq_true.mp hv key (h key hk))
   lit_string := by
     intro s v al hv
     dsimp only [Val.hasTy.alg] at hv ⊢
@@ -619,9 +630,11 @@ theorem cata_admits_extend {alg : TyAlgebra AdmCarrier} (h : AdmitsExtend alg) (
   | undefined => exact h.undefined
   | number => exact h.number
   | bytes => exact h.bytes
+  | contextOf keys => exact h.contextOf keys
 
 /-- The extension condition discharged for `Val.hasTy.alg`. -/
 theorem Val.hasTy_admitsExtend : AdmitsExtend Val.hasTy.alg where
+  contextOf := fun _ _ _ _ _ hv => hv
   never := fun _ _ _ _ hv => by
     dsimp only [Val.hasTy.alg] at hv
     exact Bool.noConfusion hv

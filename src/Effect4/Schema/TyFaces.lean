@@ -83,5 +83,6 @@ def tyFaces : TyTable FaceRow where
   undefined := .template (Schema.Bridge.unlowered "undefined")
   number := .template (Schema.Bridge.unlowered "number")
   bytes := .template (Schema.Bridge.unlowered "bytes")
+  contextOf := .template (Schema.Bridge.unlowered "contextOf")
 
 end Effect4.Program

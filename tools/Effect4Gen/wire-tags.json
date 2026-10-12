@@ -31,7 +31,7 @@
   ],
   "families": {
     "Effect4.Program.Ty": {
-      "active": {"never": 0, "unit": 1, "nat": 2, "int": 3, "string": 4, "bool": 5, "handle": 6, "option": 7, "list": 8, "prod": 9, "except": 10, "exitOf": 11, "causeOf": 12, "fiberOf": 13, "union": 14, "lit": 15, "refOf": 16, "deferredOf": 17, "var": 18, "unknown": 19, "record": 20, "map": 21, "tuple": 22, "app": 23, "null": 24, "undefined": 25, "number": 26, "bytes": 27},
+      "active": {"never": 0, "unit": 1, "nat": 2, "int": 3, "string": 4, "bool": 5, "handle": 6, "option": 7, "list": 8, "prod": 9, "except": 10, "exitOf": 11, "causeOf": 12, "fiberOf": 13, "union": 14, "lit": 15, "refOf": 16, "deferredOf": 17, "var": 18, "unknown": 19, "record": 20, "map": 21, "tuple": 22, "app": 23, "null": 24, "undefined": 25, "number": 26, "bytes": 27, "contextOf": 28},
       "retired": {}
     },
     "Effect4.Program.Lit": {
@@ -83,7 +83,7 @@
       "retired": {}
     },
     "Effect4.Program.Eff": {
-      "active": {"succeed": 0, "fail": 1, "failCause": 2, "sync": 4, "suspend": 5, "perform": 6, "bind": 7, "gen": 8, "catchCause": 9, "matchCause": 10, "onExit": 11, "exit": 12, "uninterruptible": 13, "interruptible": 14, "yieldNow": 17, "awaitFiber": 19, "withFiber": 20, "scoped": 21, "acquireRelease": 22, "provideLayer": 23, "service": 24, "provideService": 25, "catchIf": 26, "select": 27, "iterate": 28, "restore": 29, "defs": 30, "invoke": 31},
+      "active": {"succeed": 0, "fail": 1, "failCause": 2, "sync": 4, "suspend": 5, "perform": 6, "bind": 7, "gen": 8, "catchCause": 9, "matchCause": 10, "onExit": 11, "exit": 12, "uninterruptible": 13, "interruptible": 14, "yieldNow": 17, "awaitFiber": 19, "withFiber": 20, "scoped": 21, "acquireRelease": 22, "provideLayer": 23, "service": 24, "provideService": 25, "catchIf": 26, "select": 27, "iterate": 28, "restore": 29, "defs": 30, "invoke": 31, "provideContext": 32},
       "retired": {"yieldError": 3, "branch": 15, "whileLoop": 16, "callback": 18}
     },
     "Effect4.Program.Stmt": {
@@ -99,8 +99,8 @@
       "retired": {}
     },
     "Effect4.Program.ActionTerm": {
-      "active": {"fork": 0, "forkIn": 1, "forkScoped": 2, "runIn": 3, "interrupt": 4, "interruptScoped": 5, "interruptAll": 6, "awaitAll": 7, "awaitAllFailFast": 8, "snapshotChildren": 9, "awaitNewChildren": 10, "raceAll": 11, "setContext": 12, "getContext": 13, "getId": 14, "closeScope": 15, "getInterruptible": 16, "raceAllFirst": 17},
-      "retired": {}
+      "active": {"fork": 0, "forkIn": 1, "forkScoped": 2, "runIn": 3, "interrupt": 4, "interruptScoped": 5, "interruptAll": 6, "awaitAll": 7, "awaitAllFailFast": 8, "snapshotChildren": 9, "awaitNewChildren": 10, "raceAll": 11, "getId": 14, "closeScope": 15, "getInterruptible": 16, "raceAllFirst": 17, "context": 18},
+      "retired": {"setContext": 12, "getContext": 13}
     },
     "Effect4.Program.LayerTerm": {
       "active": {"succeed": 0, "effect": 1, "effectDiscard": 2, "provide": 3, "provideMerge": 4, "merge": 5, "fresh": 6, "orDie": 7, "ref": 8, "mergeAll": 9},

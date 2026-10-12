@@ -32,14 +32,14 @@ theorem compile_op_origin (root : NativeEff) (e : NativeEff) (p : Point)
     simp only [kind, hval, hop] at code
     cases code
     exact ⟨p, row, request, value, found, hs, hval, hop⟩
-  case case43 p n hf saved body mask ih =>
+  case case46 p n hf saved body mask ih =>
     intro found hs op code
     apply ih (Agreement.at_child found 0) _ op code
     unfold At at hs ⊢
     change levelAt (.eff root) 0 (p.path ++ [0]) = some p.env.length
     rw [levelAt_suffix _ _ p.path [0] 0 found, hs]
     rfl
-  case case45 p n hf decls bodies main layers ih =>
+  case case48 p n hf decls bodies main layers ih =>
     intro found hs op code
     apply ih (Agreement.at_child found 1) _ op code
     unfold At at hs ⊢

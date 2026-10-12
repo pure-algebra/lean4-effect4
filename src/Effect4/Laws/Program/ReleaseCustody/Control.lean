@@ -311,7 +311,10 @@ theorem compile_credits (q : List Nat) (e : NativeEff) (p : Point) :
   case case17 p n hf op request hk _ _ _ =>
     rw [hk]
     rfl
-  case case18 | case20 | case21 | case22 | case23 | case25 | case43 | case45 => assumption
+  case case18 | case20 | case21 | case22 | case23 | case25 | case46 | case48 => assumption
+  case case42 =>
+    rename_i exit _ _
+    cases exit <;> rfl
   case case31 p n hf fiber mode id hv exit hx => cases exit <;> rfl
 
 /-- The actual native load owns no outstanding foreign credit.

@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Sched
+import Effect4.Laws.Program.Folds.Region
 import Effect4.Laws.Program.Agreement
 import Effect4.Laws.Auto.Inversion
 
@@ -298,18 +299,31 @@ continuation of `Compile.lean`'s join arms is a `seqR` continuation here, and a 
 layer term, in the mutual block with `denoteR` — a leaf's body is a subterm. What the frame
 resolves by a lookup at a point (`resolve`, `resolveLayer`, `regionCode`) the term has in hand. -/
 
-/-- `updateContext(self, f)` (`internal/effect.ts:2087-2096`): the context read; the same object
-runs the body as is (`:2090`, `updateKeepsIdentity`); else the next context set and the body
-under the finalizer restoring the previous one (`:2091-2095`). -/
-def updateContextR (update : Env.ContextUpdate) (body : RProgram) : RProgram :=
+/-- Restore the caller's mask for the existing first-order provider body.
+Consumer: the provider's protected installation and all-exit restoration protocol. -/
+def restoreRegionR (body : Region) (previousFlag : Bool) : RProgram :=
+  .vis (.inr (.mask previousFlag (.region body))) Effects.Program.pure
+
+/-- Install the context under the provider mask, then place restoration before restoring
+body interruptibility. This is the protected half of `updateContext`. -/
+def contextEntryR (update : Env.ContextUpdate) (body : Region) (previousFlag : Bool) : RProgram :=
   (guardR .onSuccess (fiberValR .getContext rfl)).bind (seqR fun v =>
     match Val.context? v with
     | some prev =>
-      if updateKeepsIdentity update prev.services then body
+      if updateKeepsIdentity update prev.services then restoreRegionR body previousFlag
       else
         (guardR .onSuccess
           (fiberValR (.setContext (Ctx.withServices (update.apply prev.services))) rfl)).bind
-          (seqR fun _ => onExitR body fun _ => fiberValR (.setContext prev) rfl)
+          (seqR fun _ => onExitR (restoreRegionR body previousFlag)
+            fun _ => fiberValR (.setContext prev) rfl)
+    | none => .pure badShapeExit)
+
+/-- `updateContext(self, f)` (`internal/effect.ts:2087-2096`): capture the caller's mask,
+then install context and restoration together under the existing mask action. -/
+def updateContextR (update : Env.ContextUpdate) (body : Region) : RProgram :=
+  (guardR .onSuccess (fiberValR .getInterruptible rfl)).bind (seqR fun value =>
+    match Val.savedMask? value with
+    | some flag => .vis (.inr (.mask false (.contextEntry update body flag))) Effects.Program.pure
     | none => .pure badShapeExit)
 
 /-- `scopeAddFinalizerExit(scope, fin)` (`internal/effect.ts:3847-3858`): unit when the
@@ -336,6 +350,20 @@ def addCurrentMemoMapR (m : MemoMapId) (v : Val) : RProgram :=
   | some ctx =>
     .pure (.success (builtContext (ctx.services.addV Env.currentMemoMapKey (Val.memoMap m))))
   | none => .pure badShapeExit
+
+/-- The reference meaning of the existing Region data is one generated fold.
+Consumers: InterpR.denoteBody and EvaluateR.bodyR; no source traversal is added. -/
+def regionBodyR (resolve : Point → RProgram)
+    (build : Point → MemoMapId → Nat → RProgram) : Region → RProgram :=
+  cata_region (R := fun _ => RProgram) {
+    region_program := resolve
+    region_build := build
+    region_buildAdding := fun point memo scope =>
+      (guardR .onSuccess (build point memo scope)).bind (seqR fun value =>
+        addCurrentMemoMapR memo value)
+    region_construct := fun point key =>
+      (guardR .onSuccess (resolve point)).bind (seqR fun value => bindServiceR key value)
+  }
 
 /-- `f(merged, context)` (`Layer.ts:1923`) on the dependent's context: `provide`'s identity
 answers the context as read (the value itself, `Val.context?` being exact), `provideMerge`'s
@@ -366,9 +394,9 @@ def serviceLookupR (key : ServiceKey) (v : Val) : RProgram :=
 
 /-- `buildWithMemoMap` (`Layer.ts:756-765`): `provideService(CurrentMemoMap)` around the build
 through the map, `Context.add(CurrentMemoMap, _)` mapped over its answer. -/
-def buildWithMemoMapR (build : MemoMapId → RProgram) (m : MemoMapId) : RProgram :=
+def buildWithMemoMapR (point : Point) (m : MemoMapId) (scope : Nat) : RProgram :=
   updateContextR (.provideService Env.currentMemoMapKey (Val.memoMap m))
-    ((guardR .onSuccess (build m)).bind (seqR fun v => addCurrentMemoMapR m v))
+    (.buildAdding point m scope)
 
 /-- `fromBuild` (`Layer.ts:333-345`): the layer scope forked from the caller's, the inner build
 inside it under the finalizer that closes it on failure. -/
@@ -401,7 +429,7 @@ def memoizeR (q : Point) (m : MemoMapId) (scope : Nat) (construction : Nat → R
 
 /-- `provideWith` (`Layer.ts:1915-1923`): the dependency built, the dependent under
 `provideContext(context)`, the combiner. -/
-def provideWithR (dependency dependent : RProgram) (mode : CombineMode) : RProgram :=
+def provideWithR (dependency : RProgram) (dependent : Region) (mode : CombineMode) : RProgram :=
   (guardR .onSuccess dependency).bind (seqR fun v =>
     match Val.context? v with
     | some ctx =>
@@ -524,6 +552,10 @@ def inlineYield : NativeEff → Point → Option ExitV
     -- `provideService` of a value that does not evaluate is the wrong-shape refusal
     | .provideService _ value _ => match evalTerm p.env value with
       | some _ => none | none => some badShapeExit
+    | .provideContext context body =>
+      match (evalTerm p.env context).bind Val.context? with
+      | none => some badShapeExit
+      | some _ => inlineYield body (p.child 0)
     -- a restore site has no step of its own: at a false bit it is its body's own head, at a
     -- true bit a `WithFiber`, and at any other value the wrong-shape refusal
     | .restore saved body => match (evalTerm p.env saved).bind Val.savedMask? with
@@ -540,8 +572,7 @@ or a private one when `local` — the body (`bodyAt`, its `denoteR`; `bodyExit` 
 `inlineYield`) under `provideContext(built)`, the scope closed with the exit. The three
 programs are passed in so that this stays outside the mutual block. The build uses the
 layer's closed lexical environment; the body retains the enclosing environment. -/
-def provideLayerR (buildAt : Point → MemoMapId → Nat → RProgram) (bodyAt : Point → RProgram)
-    (bodyExit : Point → Option ExitV) (isLocal : Bool) (p : Point) : RProgram :=
+def provideLayerR (bodyExit : Point → Option ExitV) (isLocal : Bool) (p : Point) : RProgram :=
   (guardR .onSuccess (storeR (.scopeMake .sequential))).bind (seqR fun v =>
     match Val.scope? v with
     | some scope =>
@@ -550,7 +581,7 @@ def provideLayerR (buildAt : Point → MemoMapId → Nat → RProgram) (bodyAt :
           (if isLocal then
             (guardR .onSuccess (storeR (.memoFork none))).bind (seqR fun w =>
               match Val.memoMap? w with
-              | some id => buildWithMemoMapR (fun m => buildAt p.layerBuild m scope) id
+              | some id => buildWithMemoMapR p.layerBuild id scope
               | none => .pure badShapeExit)
           else
             (guardR .onSuccess (fiberValR .getContext rfl)).bind (seqR fun w =>
@@ -559,7 +590,7 @@ def provideLayerR (buildAt : Point → MemoMapId → Nat → RProgram) (bodyAt :
                 (guardR .onSuccess (storeR (.memoFork (currentMemoMapOf ctx.services)))).bind
                   (seqR fun u =>
                     match Val.memoMap? u with
-                    | some id => buildWithMemoMapR (fun m => buildAt p.layerBuild m scope) id
+                    | some id => buildWithMemoMapR p.layerBuild id scope
                     | none => .pure badShapeExit)
               | none => .pure badShapeExit))).bind (seqR fun built =>
           match Val.context? built with
@@ -567,7 +598,7 @@ def provideLayerR (buildAt : Point → MemoMapId → Nat → RProgram) (bodyAt :
             -- `provideContext` of an exit is that exit (`internal/effect.ts:2196`)
             match bodyExit (p.child 1) with
             | some exit => .pure exit
-            | none => updateContextR (.provide ctx.services) (bodyAt (p.child 1))
+            | none => updateContextR (.provide ctx.services) (.program (p.child 1))
           | none => .pure badShapeExit))
         (fun ex => .vis (.inr (.closeScope scope ex)) Effects.Program.pure)
     | none => .pure badShapeExit)
@@ -588,7 +619,7 @@ through `rec` (a program at its point) and `recL` (a layer at its point). Every 
 mirrors; the counted checkpoints are where the frame machine spends a primitive that the term
 would otherwise elide. -/
 def denoteEffBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
-    (recL : LayerTerm NativeOp → Point → MemoMapId → Nat → RProgram) :
+    (_recL : LayerTerm NativeOp → Point → MemoMapId → Nat → RProgram) :
     NativeEff → Point → RProgram
   | .succeed t, p => .pure (match evalTerm p.env t with
       | some v => .success v | none => badShapeExit)
@@ -705,17 +736,24 @@ def denoteEffBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
   -- (`buildWithScope` off the context's memo map, or a private map when `local`), the body
   -- under `provideContext(built)` (`internal/layer.ts:15-21`), the scope closed with the exit.
   -- `provideLayerR` closes only the build point; the body still uses the enclosing point.
-  | .provideLayer layer isLocal body, p => suspendR p (constructR fun completed =>
-      provideLayerR (fun q m s => recL layer q m s) (fun q => rec body q)
+  | .provideLayer _layer isLocal body, p => suspendR p (constructR fun completed =>
+      provideLayerR
         (fun q => inlineYield body q) isLocal { p with completed })
   -- `Effect.service(key)` (`internal/effect.ts:2059`): the context read, then the lookup
   | .service key, _ =>
     (guardR .onSuccess (fiberValR .getContext rfl)).bind (seqR fun v => serviceLookupR key v)
   -- `Effect.provideService(self, key, value)` (`:2232`): a `Context.add` region
-  | .provideService key value body, p =>
+  | .provideService key value _body, p =>
     match evalTerm p.env value with
-    | some v => updateContextR (.provideService key v) (rec body (p.child 0))
+    | some v => updateContextR (.provideService key v) (.program (p.child 0))
     | none => .pure badShapeExit
+  | .provideContext context body, p =>
+    match (evalTerm p.env context).bind Val.context? with
+    | none => .pure badShapeExit
+    | some ctx =>
+      match inlineYield body (p.child 0) with
+      | some exit => .pure exit
+      | none => updateContextR (.provide ctx.services) (.program (p.child 0))
   -- a restore site (decisions row 245), as `compileEff` reads it: the saved bit at the node's
   -- point chooses `interruptible` over the body (the action at the point, a mask at child 0)
   -- or the body as it is, built with the node; the node spends no step of its own
@@ -753,7 +791,7 @@ reference there is the wrong shape; every other constructor is a `fromBuild` wra
 `provideWith` (`:1915`), or `mergeAllEffect` (`:1587`, binary and n-ary). A reference hops to
 its target's term at the target's path one fuel down (`resolveLayer.resolveLayerTerm`, the
 predecessor budget); a hop to a reference or to no layer is the wrong shape. -/
-def denoteLayerBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
+def denoteLayerBody (root : NativeEff) (_rec : NativeEff → Point → RProgram)
     (recL : LayerTerm NativeOp → Point → MemoMapId → Nat → RProgram) :
     LayerTerm NativeOp → Point → MemoMapId → Nat → RProgram
   | .succeed key value, _, _, _ =>
@@ -771,22 +809,20 @@ def denoteLayerBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
     (guardR .onFailure (recL inner (q.child 0) m scope)).bind fun
       | .success v => .pure (.success v)
       | .failure c => .pure (.failure (orDieCause c))
-  | .effect key body, q, m, scope =>
+  | .effect key _body, q, m, scope =>
     fromBuildR scope fun child => memoizeR q m child fun layerScope =>
       updateContextR (.provideService Env.scopeKey (Val.scopeHandle layerScope))
-        ((guardR .onSuccess (rec body (q.child 0))).bind (seqR fun v =>
-          bindServiceR (some key) v))
-  | .effectDiscard body, q, m, scope =>
+        (.construct (q.child 0) (some key))
+  | .effectDiscard _body, q, m, scope =>
     fromBuildR scope fun child => memoizeR q m child fun layerScope =>
       updateContextR (.provideService Env.scopeKey (Val.scopeHandle layerScope))
-        ((guardR .onSuccess (rec body (q.child 0))).bind (seqR fun v =>
-          bindServiceR none v))
-  | .provide self that, q, m, scope =>
+        (.construct (q.child 0) none)
+  | .provide _self that, q, m, scope =>
     fromBuildR scope fun child =>
-      provideWithR (recL that (q.child 1) m child) (recL self (q.child 0) m child) .provide
-  | .provideMerge self that, q, m, scope =>
+      provideWithR (recL that (q.child 1) m child) (.build (q.child 0) m child) .provide
+  | .provideMerge _self that, q, m, scope =>
     fromBuildR scope fun child =>
-      provideWithR (recL that (q.child 1) m child) (recL self (q.child 0) m child) .provideMerge
+      provideWithR (recL that (q.child 1) m child) (.build (q.child 0) m child) .provideMerge
   | .merge _ _, q, m, scope => fromBuildR scope fun child => mergeTwoR q m child
   | .mergeAll layers, q, m, scope =>
     fromBuildR scope fun child => mergeAllR q m child layers.length
@@ -817,21 +853,19 @@ def denoteLayerZero (root : NativeEff) : LayerTerm NativeOp → Point → MemoMa
   | .effect key _body, q, m, scope =>
     fromBuildR scope fun child => memoizeR q m child fun layerScope =>
       updateContextR (.provideService Env.scopeKey (Val.scopeHandle layerScope))
-        ((guardR .onSuccess (pending .compileFuel (q.child 0))).bind (seqR fun v =>
-          bindServiceR (some key) v))
+        (.construct (q.child 0) (some key))
   | .effectDiscard _body, q, m, scope =>
     fromBuildR scope fun child => memoizeR q m child fun layerScope =>
       updateContextR (.provideService Env.scopeKey (Val.scopeHandle layerScope))
-        ((guardR .onSuccess (pending .compileFuel (q.child 0))).bind (seqR fun v =>
-          bindServiceR none v))
-  | .provide self that, q, m, scope =>
+        (.construct (q.child 0) none)
+  | .provide _self that, q, m, scope =>
     fromBuildR scope fun child =>
       provideWithR (denoteLayerZero root that (q.child 1) m child)
-        (denoteLayerZero root self (q.child 0) m child) .provide
-  | .provideMerge self that, q, m, scope =>
+        (.build (q.child 0) m child) .provide
+  | .provideMerge _self that, q, m, scope =>
     fromBuildR scope fun child =>
       provideWithR (denoteLayerZero root that (q.child 1) m child)
-        (denoteLayerZero root self (q.child 0) m child) .provideMerge
+        (.build (q.child 0) m child) .provideMerge
   | .merge _ _, q, m, scope => fromBuildR scope fun child => mergeTwoR q m child
   | .mergeAll layers, q, m, scope =>
     fromBuildR scope fun child => mergeAllR q m child layers.length
@@ -1176,13 +1210,12 @@ theorem denoteR_acquireRelease (a r : NativeEff) (h : p.fuel ≠ 0) :
 theorem denoteR_provideLayer (l : LayerTerm NativeOp) (i : Bool) (b : NativeEff) (h : p.fuel ≠ 0) :
     denoteR root (.provideLayer l i b) p =
       suspendR p (constructR fun completed =>
-        provideLayerR (fun q m s => denoteLayer root l q m s) (fun q => denoteR root b q)
+        provideLayerR
           (fun q => inlineYield b q) i { p with completed }) := by
   cases hf : p.fuel with
   | zero => exact (h hf).elim
   | succ f =>
-    simp only [denoteR, denoteLayer, hf, Point.child_fuel, Point.layerBuild_fuel,
-      Nat.add_sub_cancel, denoteRWith, denoteEffBody, provideLayerR]
+    simp only [denoteR, hf, denoteRWith, denoteEffBody, provideLayerR]
 
 theorem denoteR_service (key : ServiceKey) (h : p.fuel ≠ 0) :
     denoteR root (.service key) p =
@@ -1195,11 +1228,24 @@ theorem denoteR_provideService (key : ServiceKey) (value : Term) (b : NativeEff)
     (h : p.fuel ≠ 0) :
     denoteR root (.provideService key value b) p =
       (match evalTerm p.env value with
-       | some v => updateContextR (.provideService key v) (denoteR root b (p.child 0))
+       | some v => updateContextR (.provideService key v) (.program (p.child 0))
        | none => .pure badShapeExit) := by
   cases hf : p.fuel with
   | zero => exact (h hf).elim
   | succ f => budget hf; try rfl
+
+/-- The typed context region uses the existing restoring context protocol.
+`prepareR_denoteR` consumes this equation at the source constructor. -/
+theorem denoteR_provideContext (context : Term) (b : NativeEff) (h : p.fuel ≠ 0) :
+    denoteR root (.provideContext context b) p =
+      (match (evalTerm p.env context).bind Val.context? with
+       | none => .pure badShapeExit
+       | some ctx => match inlineYield b (p.child 0) with
+         | some exit => .pure exit
+         | none => updateContextR (.provide ctx.services) (.program (p.child 0))) := by
+  cases hf : p.fuel with
+  | zero => exact (h hf).elim
+  | succ f => budget hf
 
 end denoteEqs
 
@@ -1253,16 +1299,14 @@ theorem denoteLayer_effect (key : ServiceKey) (body : NativeEff) (q : Point) (m 
     denoteLayer root (.effect key body) q m scope =
       fromBuildR scope fun child => memoizeR q m child fun layerScope =>
         updateContextR (.provideService Env.scopeKey (Val.scopeHandle layerScope))
-          ((guardR .onSuccess (denoteR root body (q.child 0))).bind (seqR fun v =>
-            bindServiceR (some key) v)) := by
+          (.construct (q.child 0) (some key)) := by
   layerBudget q
 
 theorem denoteLayer_effectDiscard (body : NativeEff) (q : Point) (m : MemoMapId) (scope : Nat) :
     denoteLayer root (.effectDiscard body) q m scope =
       fromBuildR scope fun child => memoizeR q m child fun layerScope =>
         updateContextR (.provideService Env.scopeKey (Val.scopeHandle layerScope))
-          ((guardR .onSuccess (denoteR root body (q.child 0))).bind (seqR fun v =>
-            bindServiceR none v)) := by
+          (.construct (q.child 0) none) := by
   layerBudget q
 
 theorem denoteLayer_provide (self that : LayerTerm NativeOp) (q : Point) (m : MemoMapId)
@@ -1270,7 +1314,7 @@ theorem denoteLayer_provide (self that : LayerTerm NativeOp) (q : Point) (m : Me
     denoteLayer root (.provide self that) q m scope =
       fromBuildR scope fun child =>
         provideWithR (denoteLayer root that (q.child 1) m child)
-          (denoteLayer root self (q.child 0) m child) .provide := by
+          (.build (q.child 0) m child) .provide := by
   layerBudget q
 
 theorem denoteLayer_provideMerge (self that : LayerTerm NativeOp) (q : Point) (m : MemoMapId)
@@ -1278,7 +1322,7 @@ theorem denoteLayer_provideMerge (self that : LayerTerm NativeOp) (q : Point) (m
     denoteLayer root (.provideMerge self that) q m scope =
       fromBuildR scope fun child =>
         provideWithR (denoteLayer root that (q.child 1) m child)
-          (denoteLayer root self (q.child 0) m child) .provideMerge := by
+          (.build (q.child 0) m child) .provideMerge := by
   layerBudget q
 
 theorem denoteLayer_merge (left right : LayerTerm NativeOp) (q : Point) (m : MemoMapId)
@@ -1458,6 +1502,15 @@ theorem inlineYield_eq_headExit (e : NativeEff) (p : Point) :
     | provideService key value body =>
       simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
       cases evalTerm p.env value <;> rfl
+    | provideContext context body =>
+      simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
+      cases (evalTerm p.env context).bind Val.context? with
+      | none => rfl
+      | some ctx =>
+        rw [inlineYield_eq_headExit body (p.child 0), headExit_eq_asExit?]
+        cases hx : (compileEff body (p.child 0)).asExit? with
+        | none => rfl
+        | some exit => cases exit <;> rfl
     -- a restore site: the body's own head at a false bit, a `WithFiber` at a true one
     | restore saved body =>
       simp only [inlineYield, compileEff, hf, Nat.succ_ne_zero, ↓reduceIte]
@@ -1548,7 +1601,7 @@ theorem denote_of_inlineYield : ∀ (b : NativeEff) (q : Point) {exit : ExitV},
   | .awaitFiber _ _, _, _, hs, _ | .withFiber _, _, _, hs, _ | .«scoped» _, _, _, hs, _
   | .acquireRelease _ _, _, _, hs, _
   | .provideLayer _ _ _, _, _, hs, _ | .service _, _, _, hs, _
-  | .provideService _ _ _, _, _, hs, _
+  | .provideService _ _ _, _, _, hs, _ | .provideContext _ _, _, _, hs, _
   | .catchIf _ _ _, _, _, hs, _ | .restore _ _, _, _, hs, _ => by
     simp [Straight] at hs
 
@@ -1729,7 +1782,7 @@ theorem denoteR_straight (root : NativeEff) : ∀ (e : NativeEff) (p : Point),
   | .awaitFiber _ _, _, hs, _ | .withFiber _, _, hs, _ | .«scoped» _, _, hs, _
   | .acquireRelease _ _, _, hs, _
   | .provideLayer _ _ _, _, hs, _ | .service _, _, hs, _
-  | .provideService _ _ _, _, hs, _
+  | .provideService _ _ _, _, hs, _ | .provideContext _ _, _, hs, _
   | .catchIf _ _ _, _, hs, _ | .restore _ _, _, hs, _ => by
     simp only [Straight, Bool.false_eq_true] at hs
 

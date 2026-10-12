@@ -367,6 +367,11 @@ theorem NodeHasTy.child_step {s : Signature Op} {n c : Node Op} {τ : NodeTy Op}
     | nil => rw [hp] at hne; cases hne
     | cons q qs => simp only [Node.childEnv, hd, hp, Option.bind_some, NodeEnv.tyEnv, NodeTy.env,
         NodeEnv.spine]
+  -- eff (.provideContext _ a1), 0
+  · cases hn with | eff hp => cases hp with | provideContext ht hd hb =>
+    exact ⟨_, .eff hb, rfl, fun h hc' hs => by
+      cases hc' with | eff hx =>
+        cases hs; exact .eff (.provideContext ((h.termTy _ _).trans ht) hd hx)⟩
   -- action (.fork a0 _), 0
   · cases hn with | action ha => cases ha with | fork options hp =>
     exact ⟨_, .eff hp, rfl, fun _ hc' hs => by

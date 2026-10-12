@@ -87,7 +87,7 @@ theorem Member.fiber_eliminator : Eliminator Member.fiber (Function.uncurry Ty.f
       rw [normal.fixed] at h
       exact h
     rw [Ty.sub_eq_args m _ member rfl (Ty.leafRule_of_right_none m _ rfl)
-      (Ty.topRule_eq_false (fun h => Ty.noConfusion h)), Bool.and_eq_true] at raw
+      (Ty.topRule_eq_false (fun h => Ty.noConfusion h)) (Ty.payloadRule_false_right rfl), Bool.and_eq_true] at raw
     cases m with
     | fiberOf value error => exact ⟨(value, error), rfl⟩
     | _ => exact nomatch raw.1
@@ -171,7 +171,7 @@ theorem Member.list_eliminator : Eliminator Member.list Ty.list where
       rw [normal.fixed] at h
       exact h
     rw [Ty.sub_eq_args m _ member rfl (Ty.leafRule_of_right_none m _ rfl)
-      (Ty.topRule_eq_false (fun h => Ty.noConfusion h)), Bool.and_eq_true] at raw
+      (Ty.topRule_eq_false (fun h => Ty.noConfusion h)) (Ty.payloadRule_false_right rfl), Bool.and_eq_true] at raw
     cases m with
     | list t => exact ⟨t, rfl⟩
     | _ => exact nomatch raw.1
@@ -240,7 +240,7 @@ theorem Member.exit_eliminator : Eliminator Member.exit (Function.uncurry Ty.exi
       rw [normal.fixed] at h
       exact h
     rw [Ty.sub_eq_args m _ member rfl (Ty.leafRule_of_right_none m _ rfl)
-      (Ty.topRule_eq_false (fun h => Ty.noConfusion h)), Bool.and_eq_true] at raw
+      (Ty.topRule_eq_false (fun h => Ty.noConfusion h)) (Ty.payloadRule_false_right rfl), Bool.and_eq_true] at raw
     cases m with
     | exitOf value error => exact ⟨(value, error), rfl⟩
     | _ => exact nomatch raw.1
@@ -309,7 +309,7 @@ theorem Member.option_eliminator : Eliminator Member.option Ty.option where
       rw [normal.fixed] at h
       exact h
     rw [Ty.sub_eq_args m _ member rfl (Ty.leafRule_of_right_none m _ rfl)
-      (Ty.topRule_eq_false (fun h => Ty.noConfusion h)), Bool.and_eq_true] at raw
+      (Ty.topRule_eq_false (fun h => Ty.noConfusion h)) (Ty.payloadRule_false_right rfl), Bool.and_eq_true] at raw
     cases m with
     | option a => exact ⟨a, rfl⟩
     | _ => exact nomatch raw.1
@@ -481,7 +481,7 @@ theorem Member.cause_cases_of_below {m : Ty} {b : Ty}
     have hy : y = .causeOf b.normalize := List.mem_singleton.mp hy1
     subst hy
     rw [Ty.sub_eq_args m (.causeOf b.normalize) member rfl (Ty.leafRule_of_right_none m _ rfl)
-      (Ty.topRule_eq_false (fun h => Ty.noConfusion h)), Bool.and_eq_true] at hsub
+      (Ty.topRule_eq_false (fun h => Ty.noConfusion h)) (Ty.payloadRule_false_right rfl), Bool.and_eq_true] at hsub
     cases m with
     | causeOf e =>
       have he : e.normalize = e := by
@@ -501,7 +501,7 @@ theorem Member.cause_cases_of_below {m : Ty} {b : Ty}
     have hy : y = .exitOf .unknown b.normalize := List.mem_singleton.mp hy2
     subst hy
     rw [Ty.sub_eq_args m (.exitOf .unknown b.normalize) member rfl (Ty.leafRule_of_right_none m _ rfl)
-      (Ty.topRule_eq_false (fun h => Ty.noConfusion h)), Bool.and_eq_true] at hsub
+      (Ty.topRule_eq_false (fun h => Ty.noConfusion h)) (Ty.payloadRule_false_right rfl), Bool.and_eq_true] at hsub
     cases m with
     | exitOf v e =>
       have he : e.normalize = e := by

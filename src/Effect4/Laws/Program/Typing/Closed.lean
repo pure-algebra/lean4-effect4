@@ -1442,6 +1442,9 @@ theorem hasTy_closed (hsig : ClosedSig sig) :
   | _, _, _, .provideService _ _ _ hb, henv, hs =>
     have b := hasTy_closed hsig hb henv hs.2
     ⟨b.1, b.2⟩
+  | _, _, _, .provideContext _ _ hb, henv, hs =>
+    have b := hasTy_closed hsig hb henv hs.2
+    ⟨b.1, b.2⟩
   | _, _, _, .restore _ _ hb, henv, hs => hasTy_closed hsig hb henv hs.2
   -- an invocation answers its definition's row, instantiated: closed whatever its programs
   | _, _, _, .invoke _ _ _ _ hrow _, _, _ =>
@@ -1516,8 +1519,7 @@ theorem actionHasTy_closed (hsig : ClosedSig sig) :
   | _, _, _, .awaitNewChildren _ _, _, _ => ⟨rfl, rfl⟩
   | _, _, _, .raceAll he, henv, hs => effsHasTy_closed hsig he henv hs.2
   | _, _, _, .raceAllFirst he, henv, hs => effsHasTy_closed hsig he henv hs.2
-  | _, _, _, .setContext _ _, _, _ => ⟨rfl, rfl⟩
-  | _, _, _, .getContext, _, _ => ⟨rfl, rfl⟩
+  | _, _, _, .context _, _, _ => ⟨rfl, rfl⟩
   | _, _, _, .getId, _, _ => ⟨rfl, rfl⟩
   | _, _, _, .closeScope _ _ _ _, _, _ => ⟨rfl, rfl⟩
   | _, _, _, .getInterruptible, _, _ => ⟨rfl, rfl⟩

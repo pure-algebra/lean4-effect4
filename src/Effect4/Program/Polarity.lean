@@ -131,6 +131,7 @@ def polarityAlg (r : HeadReading) (i : Nat) : TyAlgebra (fun _ => Var4) where
   ty_undefined := .bi
   ty_number := .bi
   ty_bytes := .bi
+  ty_contextOf _ := .bi
 
 /-- **The polarity of parameter `i` in a type**, at a reading: the parities of the signed paths
 from the root to its occurrences. -/

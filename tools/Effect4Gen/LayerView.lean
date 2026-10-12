@@ -46,6 +46,7 @@ def leafSort : String → Option String
   | "Effect4.Program.CauseTerm" => some "cause"
   | "Effect4.Program.Lit" => some "lit"
   | "Effect4.ServiceKey" => some "key"
+  | "Effect4.Row Effect4.ServiceKey" => some "keys"
   | "Effect4.Program.Decision" => some "decision"
   | "Effect4.Supervision.ForkOptions" => some "forkOptions"
   | "Effect4.Supervision.ObserverMode" => some "mode"

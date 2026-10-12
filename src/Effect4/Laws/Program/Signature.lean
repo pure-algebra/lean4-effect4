@@ -192,6 +192,8 @@ theorem hasTy_ext (h : SigExtends s s') :
   | _, _, _, .service hk => .service (h.service _ _ hk)
   | _, _, _, .provideService hk hv hsub hb =>
     .provideService (h.service _ _ hk) ((h.termTy _ _).trans hv) hsub (hasTy_ext h hb)
+  | _, _, _, .provideContext hc hs hb =>
+    .provideContext ((h.termTy _ _).trans hc) hs (hasTy_ext h hb)
   | _, _, _, .restore hs hsub hb => .restore ((h.termTy _ _).trans hs) hsub (hasTy_ext h hb)
   | _, _, _, .invoke hd hne hlen hreq hrow ha =>
     .invoke (h.defOf _ _ hd) hne hlen ((h.termTy _ _).trans hreq) hrow (effsHasTy_ext h ha)
@@ -236,8 +238,9 @@ theorem actionHasTy_ext (h : SigExtends s s') :
   | _, _, _, .awaitNewChildren ht hsub => .awaitNewChildren ((h.termTy _ _).trans ht) hsub
   | _, _, _, .raceAll he => .raceAll (effsHasTy_ext h he)
   | _, _, _, .raceAllFirst he => .raceAllFirst (effsHasTy_ext h he)
-  | _, _, _, .setContext ht hsub => .setContext ((h.termTy _ _).trans ht) hsub
-  | _, _, _, .getContext => .getContext
+  | _, _, _, .context hkeys => .context fun key hk => by
+    obtain ⟨carrier, hc⟩ := hkeys key hk
+    exact ⟨carrier, h.service key carrier hc⟩
   | _, _, _, .getId => .getId
   | _, _, _, .closeScope hs hsub he hx => .closeScope ((h.termTy _ _).trans hs) hsub ((h.termTy _ _).trans he) hx
   | _, _, _, .getInterruptible => .getInterruptible
@@ -412,6 +415,7 @@ structure EffAlgebra.AgreeOn {Op : Type} {R : EffFam → Type u} (alg₁ alg₂ 
   eff_provideLayer : alg₁.eff_provideLayer = alg₂.eff_provideLayer
   eff_service : ∀ key, okKey key → alg₁.eff_service key = alg₂.eff_service key
   eff_provideService : ∀ key, okKey key → alg₁.eff_provideService key = alg₂.eff_provideService key
+  eff_provideContext : alg₁.eff_provideContext = alg₂.eff_provideContext
   eff_catchIf : alg₁.eff_catchIf = alg₂.eff_catchIf
   eff_select : alg₁.eff_select = alg₂.eff_select
   eff_iterate : alg₁.eff_iterate = alg₂.eff_iterate
@@ -441,8 +445,8 @@ structure EffAlgebra.AgreeOn {Op : Type} {R : EffFam → Type u} (alg₁ alg₂ 
   action_awaitNewChildren : alg₁.action_awaitNewChildren = alg₂.action_awaitNewChildren
   action_raceAll : alg₁.action_raceAll = alg₂.action_raceAll
   action_raceAllFirst : alg₁.action_raceAllFirst = alg₂.action_raceAllFirst
-  action_setContext : alg₁.action_setContext = alg₂.action_setContext
-  action_getContext : alg₁.action_getContext = alg₂.action_getContext
+  action_context : ∀ keys, (∀ key ∈ keys.elems, okKey key) →
+    alg₁.action_context keys = alg₂.action_context keys
   action_getId : alg₁.action_getId = alg₂.action_getId
   action_closeScope : alg₁.action_closeScope = alg₂.action_closeScope
   action_getInterruptible : alg₁.action_getInterruptible = alg₂.action_getInterruptible
@@ -486,6 +490,7 @@ def readsAlg {Op : Type} (okOp : Op → Prop) (okKey : ServiceKey → Prop) (okD
   eff_provideLayer r0 _ r2 := r0 ∧ r2
   eff_service key := okKey key
   eff_provideService key _ r2 := okKey key ∧ r2
+  eff_provideContext _ r1 := r1
   eff_catchIf _ r1 r2 := r1 ∧ r2
   eff_select _ _ r2 r3 := r2 ∧ r3
   eff_iterate _ _ _ _ _ r5 := r5
@@ -515,8 +520,7 @@ def readsAlg {Op : Type} (okOp : Op → Prop) (okKey : ServiceKey → Prop) (okD
   action_awaitNewChildren _ := True
   action_raceAll r0 := r0
   action_raceAllFirst r0 := r0
-  action_setContext _ := True
-  action_getContext := True
+  action_context keys := ∀ key ∈ keys.elems, okKey key
   action_getId := True
   action_closeScope _ _ := True
   action_getInterruptible := True
@@ -615,6 +619,10 @@ theorem cata_eff_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey okDef) (e : Eff 
     show alg₁.eff_provideService a0 a1 (cata_eff alg₁ a2) =
       alg₂.eff_provideService a0 a1 (cata_eff alg₂ a2)
     rw [h.eff_provideService a0 hr.1, cata_eff_congr_on h a2 hr.2]
+  | provideContext a0 a1 =>
+    show alg₁.eff_provideContext a0 (cata_eff alg₁ a1) =
+      alg₂.eff_provideContext a0 (cata_eff alg₂ a1)
+    rw [h.eff_provideContext, cata_eff_congr_on h a1 hr]
   | catchIf a0 a1 a2 =>
     show alg₁.eff_catchIf a0 (cata_eff alg₁ a1) (cata_eff alg₁ a2) =
       alg₂.eff_catchIf a0 (cata_eff alg₂ a1) (cata_eff alg₂ a2)
@@ -734,12 +742,9 @@ theorem cata_action_congr_on (h : alg₁.AgreeOn alg₂ okOp okKey okDef) (e : A
   | raceAllFirst a0 =>
     show alg₁.action_raceAllFirst (cata_effs alg₁ a0) = alg₂.action_raceAllFirst (cata_effs alg₂ a0)
     rw [h.action_raceAllFirst, cata_effs_congr_on h a0 hr]
-  | setContext a0 =>
-    show alg₁.action_setContext a0 = alg₂.action_setContext a0
-    rw [h.action_setContext]
-  | getContext =>
-    show alg₁.action_getContext = alg₂.action_getContext
-    rw [h.action_getContext]
+  | context keys =>
+    show alg₁.action_context keys = alg₂.action_context keys
+    rw [h.action_context keys hr]
   | getId =>
     show alg₁.action_getId = alg₂.action_getId
     rw [h.action_getId]
@@ -897,6 +902,7 @@ theorem check_alg_agreeOn {Op : Type} {s s' : Signature Op} (h : SigExtends s s'
     eff_provideService := fun key hk => by
       obtain ⟨ty, hty⟩ := Option.isSome_iff_exists.mp hk
       simp only [Checker.check.alg, h.service key ty hty, hty, hterm]
+    eff_provideContext := by simp only [Checker.check.alg, hterm]
     eff_catchIf := by simp only [Checker.check.alg, hterm]
     eff_select := by simp only [Checker.check.alg, hterm]
     eff_iterate := by simp only [Checker.check.alg, hterm]
@@ -928,8 +934,18 @@ theorem check_alg_agreeOn {Op : Type} {s s' : Signature Op} (h : SigExtends s s'
     action_awaitNewChildren := by simp only [Checker.check.alg, hterm]
     action_raceAll := rfl
     action_raceAllFirst := rfl
-    action_setContext := by simp only [Checker.check.alg, hterm]
-    action_getContext := rfl
+    action_context := fun keys hk => by
+      apply Prod.ext
+      · rfl
+      · funext env p
+        have old : ∀ key ∈ keys.elems, ∃ carrier, s.serviceTy key = some carrier :=
+          fun key hkey => Option.isSome_iff_exists.mp (hk key hkey)
+        have newer : ∀ key ∈ keys.elems, ∃ carrier, s'.serviceTy key = some carrier := by
+          intro key hkey
+          obtain ⟨carrier, hc⟩ := old key hkey
+          exact ⟨carrier, h.service key carrier hc⟩
+        exact (checkAction_complete s' (.context keys) env _ (.context newer) p).trans
+          (checkAction_complete s (.context keys) env _ (.context old) p).symm
     action_getId := rfl
     action_closeScope := by simp only [Checker.check.alg, hterm]
     action_getInterruptible := rfl

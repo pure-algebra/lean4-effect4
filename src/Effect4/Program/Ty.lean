@@ -89,6 +89,10 @@ def renderRaw : Ty → String
   | .null => "null"
   | .undefined => "undefined"
   | .bytes => "Uint8Array"
+  | .contextOf keys => "Context.Context<" ++
+      (if keys.elems.isEmpty then "never" else
+        String.intercalate " | " (keys.elems.map fun key => "\"k" ++ toString key.name.value ++
+          "_" ++ toString key.service.value ++ "\"")) ++ ">"
 /-- The item-list companion of `renderRaw`: each item's spelling. -/
 def renderItems : List Ty → List String
   | [] => []
@@ -130,6 +134,7 @@ def members : Ty → List Ty
   | .undefined => [.undefined]
   | .number => [.number]
   | .bytes => [.bytes]
+  | .contextOf keys => [.contextOf keys]
 
 mutual
 /-- An injective structural key, for ordering union members: a constructor code, then the
@@ -167,6 +172,7 @@ def key : Ty → List Nat
   | .undefined => [25]
   | .number => [26]
   | .bytes => [27]
+  | .contextOf keys => 28 :: keys.elems.flatMap (fun key => [key.name.value, key.service.value])
 /-- The item-list companion of `key`. -/
 def keyItems : List Ty → List Nat
   | [] => [0]
@@ -199,7 +205,7 @@ def isNever : Ty → Bool
   | .handle _ | .option _ | .list _ | .prod _ _
   | .except _ _ | .exitOf _ _ | .causeOf _ | .fiberOf _ _ | .union _ _
   | .lit _ | .refOf _ | .deferredOf _ _ | .var _
-  | .record _ | .map _ _ | .tuple _ | .app _ _ | .null | .undefined | .number | .bytes => false
+  | .record _ | .map _ _ | .tuple _ | .app _ _ | .null | .undefined | .number | .bytes | .contextOf _ => false
 
 mutual
 /-- No template parameter inside: a program's type. `schema` is exact on closed types only
@@ -208,7 +214,7 @@ a program is closed. -/
 def closed : Ty → Bool
   | .var _ => false
   | .never | .unknown | .unit | .nat | .int | .string | .bool | .handle _ | .lit _
-  | .null | .undefined | .number | .bytes => true
+  | .null | .undefined | .number | .bytes | .contextOf _ => true
   | .option t | .list t | .causeOf t | .refOf t => closed t
   | .prod a b | .except a b | .exitOf a b | .fiberOf a b | .union a b | .deferredOf a b
   | .map a b => closed a && closed b
@@ -347,6 +353,29 @@ private theorem keyItems_injective {ts : List Ty}
       obtain ⟨ht, hrest⟩ := List.append_inj h.2.2 h.2.1
       rw [ih t List.mem_cons_self ht, iht (fun q hq => ih q (List.mem_cons_of_mem _ hq)) hrest]
 
+/-- Fixed-width service-key encoding determines the canonical row's stored keys.
+Consumer: key_injective at contextOf. -/
+private theorem contextKeys_injective (xs ys : List Effect4.ServiceKey)
+    (same : xs.flatMap (fun key => [key.name.value, key.service.value]) =
+      ys.flatMap (fun key => [key.name.value, key.service.value])) : xs = ys := by
+  induction xs generalizing ys with
+  | nil =>
+    cases ys with
+    | nil => rfl
+    | cons key rest => simp only [List.flatMap_nil, List.flatMap_cons, List.cons_append,
+        List.nil_append, reduceCtorEq] at same
+  | cons key rest ih =>
+    cases ys with
+    | nil => simp only [List.flatMap_nil, List.flatMap_cons, List.cons_append,
+        List.nil_append, List.cons_ne_nil] at same
+    | cons other tail =>
+      simp only [List.flatMap_cons, List.cons_append, List.nil_append, List.cons.injEq] at same
+      obtain ⟨⟨kn⟩, ⟨kt⟩⟩ := key
+      obtain ⟨⟨on⟩, ⟨ot⟩⟩ := other
+      cases same.1
+      cases same.2.1
+      exact congrArg (List.cons _) (ih tail same.2.2)
+
 /-- The key is injective: one arm per head, each `simp only` closing the mismatched heads (their
 codes differ) and leaving the matched one. -/
 theorem key_injective {a b : Ty} (h : key a = key b) : a = b := by
@@ -444,6 +473,18 @@ theorem key_injective {a b : Ty} (h : key a = key b) : a = b := by
     cases b <;> simp only [key, List.cons_append, List.cons.injEq, Nat.reduceEqDiff, reduceCtorEq, false_and] at h
     rfl
 
+  | contextOf keys =>
+    cases b <;> simp only [key, List.cons_append, List.cons.injEq, Nat.reduceEqDiff,
+      reduceCtorEq, false_and, true_and] at h
+    rename_i other
+    have equal := contextKeys_injective keys.elems other.elems h
+    cases keys
+    case mk elems ascending =>
+      cases other
+      case mk otherElems ascendingOther =>
+        cases equal
+        rfl
+
 instance instLT : LT Ty where
   lt a b := ltKey a.key b.key = true
 
@@ -528,6 +569,7 @@ instance instIsLinearOrder : Std.IsLinearOrder Ty where
 instance instLawfulOrderLT : Std.LawfulOrderLT Ty where
   lt_iff := Ty.lt_iff_le_not_le
 
+
 /-- A union member has neither an empty nor a union head. -/
 def isMember : Ty → Bool
   | .never | .union _ _ => false
@@ -535,7 +577,7 @@ def isMember : Ty → Bool
   | .handle _ | .option _ | .list _ | .prod _ _
   | .except _ _ | .exitOf _ _ | .causeOf _ | .fiberOf _ _
   | .lit _ | .refOf _ | .deferredOf _ _ | .var _ | .unknown
-  | .record _ | .map _ _ | .tuple _ | .app _ _ | .null | .undefined | .number | .bytes => true
+  | .record _ | .map _ _ | .tuple _ | .app _ _ | .null | .undefined | .number | .bytes | .contextOf _ => true
 
 theorem members_isMember {t x : Ty} (h : x ∈ members t) : isMember x = true := by
   induction t with
@@ -756,8 +798,20 @@ def sub (a b : Ty) : Bool :=
         have : sizeOf pq.1.1 + sizeOf pq.2.1 < 1 + sizeOf n1 + sizeOf xs + (1 + sizeOf n2 + sizeOf ys) :=
           sizeOf_lt_of_mem_zipIdx_zip h
         (argVariance n1 pq.1.2).select (sub pq.1.1 pq.2.1) (sub pq.2.1 pq.1.1)
+  | .contextOf available, .contextOf promised => decide (Effect4.Row.Subset promised available)
   | _, _ => false
 termination_by sizeOf a + sizeOf b
+
+/-- The context subtype compares promised keys against available keys.
+Consumer: the generated ordered-payload view and typed context membership weakening. -/
+theorem sub_contextOf (available promised : Effect4.Row Effect4.ServiceKey) :
+    sub (.contextOf available) (.contextOf promised) =
+      decide (Effect4.Row.Subset promised available) := by
+  rw [sub]
+  by_cases equal : available = promised
+  · cases equal
+    simp only [ite_true, leafRule, leafHead, Effect4.Row.subset_refl, decide_true]
+  · simp only [Ty.contextOf.injEq, equal, ite_false, leafRule, leafHead, Bool.false_eq_true]
 
 /-! ### The table's line of `sub` (the four lemmas the generated view reads) -/
 
@@ -828,6 +882,7 @@ def instantiate (σ : Subst) : Ty → Ty
   | .undefined => .undefined
   | .number => .number
   | .bytes => .bytes
+  | .contextOf keys => .contextOf keys
 /-- The field-list companion of `instantiate`. -/
 def instantiateFields (σ : Subst) : List (String × Bool × Ty) → List (String × Bool × Ty)
   | [] => []
@@ -869,7 +924,7 @@ mutual
 def varsOf : Ty → List Nat
   | .var i => [i]
   | .never | .unknown | .unit | .nat | .int | .string | .bool | .handle _ | .lit _
-  | .null | .undefined | .number | .bytes => []
+  | .null | .undefined | .number | .bytes | .contextOf _ => []
   | .option t | .list t | .causeOf t | .refOf t => varsOf t
   | .prod a b | .except a b | .exitOf a b | .fiberOf a b | .union a b | .deferredOf a b
   | .map a b => varsOf a ++ varsOf b
@@ -899,7 +954,7 @@ def templateAdmissible : Ty → Bool
   | .record fs => templateAdmissibleFields fs
   | .tuple ts => templateAdmissibleItems ts
   | .never | .unknown | .unit | .nat | .int | .string | .bool | .handle _ | .lit _
-  | .var _ | .null | .undefined | .number | .bytes => true
+  | .var _ | .null | .undefined | .number | .bytes | .contextOf _ => true
 /-- The field companion of the template profile, retaining every raw field. -/
 def templateAdmissibleFields : List (String × Bool × Ty) → Bool
   | [] => true
@@ -1002,6 +1057,7 @@ def normalize : Ty → Ty
   | .undefined => .undefined
   | .number => .number
   | .bytes => .bytes
+  | .contextOf keys => .contextOf keys
 /-- The item-list companion of `normalize`. -/
 def normalizeItems : List Ty → List Ty
   | [] => []
@@ -1011,6 +1067,10 @@ def normalizeFields : List (String × Bool × Ty) → List (String × Bool × Ty
   | [] => []
   | (n, o, t) :: rest => (n, o, normalize t) :: normalizeFields rest
 end
+
+/-- Context rows keep their canonical key payload; consumed by the generated payload-order laws. -/
+theorem normalize_contextOf (keys : Effect4.Row Effect4.ServiceKey) :
+    normalize (.contextOf keys) = .contextOf keys := rfl
 
 /-- A field's payload, normalized: the flag kept, the type normalized. -/
 def normPayload (c : Bool × Ty) : Bool × Ty := (c.1, normalize c.2)
@@ -1105,6 +1165,7 @@ inductive Normal : Ty → Prop
   | undefined : Normal .undefined
   | number : Normal .number
   | bytes : Normal .bytes
+  | contextOf (keys : Effect4.Row Effect4.ServiceKey) : Normal (.contextOf keys)
 
 theorem Normal.members {t x : Ty} (h : Normal t) (hx : x ∈ t.members) : Normal x := by
   cases h
@@ -1212,6 +1273,7 @@ theorem normal_normalize (t : Ty) : Normal (normalize t) := by
   | undefined => exact .undefined
   | number => exact .number
   | bytes => exact .bytes
+  | contextOf keys => exact .contextOf keys
 
 theorem normalize_ofMembers_fixed (xs : List Ty)
     (ha : ∀ t ∈ xs, isMember t = true)
@@ -1289,6 +1351,7 @@ theorem Normal.fixed {t : Ty} (h : Normal t) : normalize t = t := by
   case undefined => rfl
   case number => rfl
   case bytes => rfl
+  case contextOf => rfl
 
 /-- Construction is total; no checked partial constructor is needed. -/
 theorem normalize_idem (t : Ty) : normalize (normalize t) = normalize t :=
@@ -1401,7 +1464,7 @@ def findRepeatedField (pos : Path) : Ty → Option (Path × String)
   | .map k v => findRepeatedField (pos ++ ["key"]) k <|> findRepeatedField (pos ++ ["value"]) v
   | .tuple ts | .app _ ts => findRepeatedItems pos 0 ts
   | .never | .unknown | .unit | .nat | .int | .string | .bool | .handle _ | .lit _ | .var _
-  | .null | .undefined | .number | .bytes => none
+  | .null | .undefined | .number | .bytes | .contextOf _ => none
 /-- The field-list companion of `findRepeatedField`. -/
 def findRepeatedFields (pos : Path) : List (String × Bool × Ty) → Option (Path × String)
   | [] => none

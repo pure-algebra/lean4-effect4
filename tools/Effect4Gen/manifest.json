@@ -135,15 +135,15 @@
         "Effect4.Supervision.MaskMode",
         "Effect4.Supervision.ObserverMode",
         "Effect4.Program.Decision",
+        "Effect4.ServiceName",
+        "Effect4.ServiceTypeCode",
+        "Effect4.ServiceKey",
         "Effect4.Program.Ty",
         "Effect4.Program.FieldReadMode",
         "Effect4.Program.Term",
         "Effect4.Program.NativeOp",
         "Effect4.Supervision.ForkOptions",
         "Effect4.Program.CauseTerm",
-        "Effect4.ServiceName",
-        "Effect4.ServiceTypeCode",
-        "Effect4.ServiceKey",
         "Effect4.Program.DefRole",
         "Effect4.Program.ParamDecl",
         "Effect4.Program.DefDecl",
@@ -287,6 +287,7 @@
     {
       "Note": "The relational view of `Ty` (tooling plan 1.4): the children of a node with the variance the order reads them at, the head test, and the one law `sub_eq_args` -- `sub` between members is the variance-wise comparison of corresponding arguments -- so the proofs of the order name no constructor. Variance is NOT declared here: tools/Tools/Variances.lean reads it off rc.112 into tools/Effect4Gen/variances.json. The output is under Laws because the one proof is `fun_cases` plus `aesop`, and nothing under the core root imports aesop.",
       "Name": "TyView",
+      "Flags": ["--payload-orders", "tools/Effect4Gen/payload-orders.json"],
       "Tool": "tools/Effect4Gen/View.lean",
       "Imports": "Effect4.Laws.Program.Folds.Ty,Effect4.Laws.Auto.RuleSets",
       "Out": "src\\Effect4\\Laws\\Program\\TyView.lean",
@@ -310,6 +311,17 @@
       "Types": [
         "Effect4.Prim"
       ]
+    },
+    {
+      "Note": "Provider entry names retain the existing Region data. Both reference body hooks consume this generated fold and reuse Program.Fold's MonadMorphism.",
+      "Name": "RegionFold",
+      "Flags": ["--reuse-monad-morphism"],
+      "Tool": "tools/Effect4Gen/Fold.lean",
+      "Imports": "Effect4.Program.Compile,Effect4.Program.Fold",
+      "Out": "src\\Effect4\\Laws\\Program\\Folds\\Region.lean",
+      "Guards": "",
+      "Kinds": [],
+      "Types": ["Effect4.Program.Region"]
     },
     {
       "Note": "The fold of the value sort's free object: one algebra over Store.Val, its children under List (`list`, `ctor`) as positional folds. No guards yet: the fold's first customers are the seventeen hand traversals of Val the census lists, converted by fold_of.",

@@ -361,6 +361,7 @@ def argSortOf {R : EffFam → Type} : ArgF Op R → ArgSort
   | .bool _ => .bool | .key _ => .key | .decision _ => .decision | .optTy _ => .optTy
   | .forkOptions _ => .forkOptions | .optTerm _ => .optTerm | .lit _ => .lit | .path _ => .path
   | .decls _ => .decls
+  | .keys _ => .keys
 
 /-- One argument as what its hole captures, by sort; `none` for an argument that is only a
 classifier. A child is its folded printer applied at the row's depth; a leaf goes through its own
@@ -390,6 +391,7 @@ def printArg (sig : Signature Op) (d : Nat) :
   | .mode _ | .bool _ | .op _ => .ok none
   -- a definition block's declarations: no template row prints a block yet (slice PROC-3)
   | .decls _ => .ok none
+  | .keys _ => .ok none
 
 def printArgs (sig : Signature Op) (fam : EffFam) (n : Nat) (out : RowOut) :
     List (ArgF Op Carrier) → Nat → Except PrintRefusal Subst

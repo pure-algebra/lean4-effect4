@@ -324,6 +324,17 @@ theorem restore_scoped {Op : Type} [ScopedOp Op] {saved : TermSrc} {body : Src O
   have s1 := h1.holds _ _ _ hx1
   simp [s0, s1]
 
+theorem provideContext_scoped {Op : Type} [ScopedOp Op] {context : TermSrc} {body : Src Op} (h0 : context.Scoped) (h1 : body.Scoped) :
+    ((provideContext context body) : Src Op).Scoped := by
+  refine ⟨fun env p e h => ?_⟩
+  unfold provideContext at h
+  obtain ⟨x0, hx0, h⟩ := bind_ok h
+  obtain ⟨x1, hx1, h⟩ := bind_ok h
+  cases h
+  have s0 := h0.holds _ _ _ hx0
+  have s1 := h1.holds _ _ _ hx1
+  simp [s0, s1]
+
 theorem Action.fork_scoped {Op : Type} [ScopedOp Op] {program : Src Op} (options : Effect4.Supervision.ForkOptions) (h0 : program.Scoped) :
     ((Action.fork program options) : ActionSrc Op).Scoped := by
   refine ⟨fun env p e h => ?_⟩
@@ -402,13 +413,6 @@ theorem Action.raceAll_scoped {Op : Type} [ScopedOp Op] {entrants : List (Src Op
   have s0 := elabEffs_scoped h0 hx0
   simp [s0]
 
-theorem Action.getContext_scoped {Op : Type} [ScopedOp Op] :
-    ((Action.getContext) : ActionSrc Op).Scoped := by
-  refine ⟨fun env p e h => ?_⟩
-  unfold Action.getContext at h
-  cases h
-  simp
-
 theorem Action.getId_scoped {Op : Type} [ScopedOp Op] :
     ((Action.getId) : ActionSrc Op).Scoped := by
   refine ⟨fun env p e h => ?_⟩
@@ -442,6 +446,13 @@ theorem Action.raceAllFirst_scoped {Op : Type} [ScopedOp Op] {entrants : List (S
   cases h
   have s0 := elabEffs_scoped h0 hx0
   simp [s0]
+
+theorem Action.context_scoped {Op : Type} [ScopedOp Op] (keys : Effect4.Row Effect4.ServiceKey) :
+    ((Action.context keys) : ActionSrc Op).Scoped := by
+  refine ⟨fun env p e h => ?_⟩
+  unfold Action.context at h
+  cases h
+  simp
 
 theorem Layer.succeed_scoped {Op : Type} [ScopedOp Op] (key : Effect4.ServiceKey) (value : Effect4.Program.Lit) :
     ((Layer.succeed key value) : LayerSrc Op).Scoped := by

@@ -339,6 +339,9 @@ private def ofNormalized : Program.Ty → Option TypeRef
   | .bytes => some (.name ["Uint8Array"] [])
   -- Nominal applications need their own resolved declaration table.
   | .app _ _ => none
+  -- `Context.Context<R>` spells its row through the module's scope key and key spellings
+  -- (`requirementType`), which this projection does not see: no printed form here.
+  | .contextOf _ => none
   | .union left right => do
       let a ← ofNormalized left
       let b ← ofNormalized right

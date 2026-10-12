@@ -233,6 +233,22 @@ theorem compileEff_keys : ∀ (e : NativeEff) (p : Point), nativeKeys (compileEf
       split
       · next v hv => sub_tac using (evalTerm_point_keys value p v hv)
       · exact List.nil_subset _
+  | .provideContext context b, p => by
+    rcases hf : p.fuel with _ | k
+    · rw [compileEff_at_zero _ hf]; exact frontier_keys p
+    · rw [compileEff_provideContext context b hf]
+      cases hd : (evalTerm p.env context).bind Val.context? with
+      | none => exact List.nil_subset _
+      | some ctx =>
+        cases hx : (compileEff b (p.child 0)).asExit? with
+        | some exit =>
+          have hb := compileEff_keys b (p.child 0)
+          rw [Prim.asExit?_eq_some _ _ hx] at hb
+          exact hb
+        | none =>
+          obtain ⟨value, hv, hc⟩ := Option.bind_eq_some_iff.mp hd
+          have bound := List.Subset.trans (Val.context?_keys hc) (evalTerm_point_keys context p value hv)
+          sub_tac using bound
   -- a restore site: the mask's action at the point, the body at child 0, or the refusal
   | .restore saved b, p => by
     rcases hf : p.fuel with _ | k

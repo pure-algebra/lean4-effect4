@@ -85,14 +85,11 @@ theorem layerTerm_intro (root : NativeEff) (n : Nat)
     rw [innerLayerAt_effect root h]
     refine memoize_intro root q m child _ fun layerScope => ?_
     rw [constructionAt_effect root h]
-    refine updateContext_intro root _ (Region.construct (q.child 0) (some key)) _ ?_
-    simp only [regionCode]
+    refine updateContext_intro root _ (Region.construct (q.child 0) (some key)) ?_
+    simp only [regionCode, denoteBody, regionBodyR, cata_region]
     rw [guardR_bind]
-    refine CodeMeans.onSuccess _ _ _ (denoteR root body (q.child 0)) _ ?_ ?_ rfl (fun _ => rfl)
-    · have hb := at_child_of h 0
-      have hr := hres (q.child 0) (Nat.lt_of_le_of_lt (weight_child q 0) hq)
-      rw [denoteAt_of_at hb] at hr
-      exact hr
+    refine CodeMeans.onSuccess _ _ _ (denoteAt root (q.child 0)) _ ?_ ?_ rfl (fun _ => rfl)
+    · exact hres (q.child 0) (Nat.lt_of_le_of_lt (weight_child q 0) hq)
     · intro completed v
       show CodeMeans root (Program.contAOf root (.bindService (some key)) v) _
       rw [contAOf_bindService]
@@ -105,14 +102,11 @@ theorem layerTerm_intro (root : NativeEff) (n : Nat)
     rw [innerLayerAt_effectDiscard root h]
     refine memoize_intro root q m child _ fun layerScope => ?_
     rw [constructionAt_effectDiscard root h]
-    refine updateContext_intro root _ (Region.construct (q.child 0) none) _ ?_
-    simp only [regionCode]
+    refine updateContext_intro root _ (Region.construct (q.child 0) none) ?_
+    simp only [regionCode, denoteBody, regionBodyR, cata_region]
     rw [guardR_bind]
-    refine CodeMeans.onSuccess _ _ _ (denoteR root body (q.child 0)) _ ?_ ?_ rfl (fun _ => rfl)
-    · have hb := at_child_of h 0
-      have hr := hres (q.child 0) (Nat.lt_of_le_of_lt (weight_child q 0) hq)
-      rw [denoteAt_of_at hb] at hr
-      exact hr
+    refine CodeMeans.onSuccess _ _ _ (denoteAt root (q.child 0)) _ ?_ ?_ rfl (fun _ => rfl)
+    · exact hres (q.child 0) (Nat.lt_of_le_of_lt (weight_child q 0) hq)
     · intro completed v
       show CodeMeans root (Program.contAOf root (.bindService none) v) _
       rw [contAOf_bindService]
@@ -125,11 +119,11 @@ theorem layerTerm_intro (root : NativeEff) (n : Nat)
     rw [innerLayerAt_provide root h]
     have hs := at_child_of h 0
     have ht := at_child_of h 1
-    refine provideWith_intro root q m child .provide _ _ ?_ ?_
+    refine provideWith_intro root q m child .provide _ ?_ ?_
     · rw [resolveLayer_of_at root ht]
       exact layerTerm_intro root n hres K hhop that (q.child 1) m child
         (Nat.le_trans (fuel_child_le q 1) hK) (Nat.lt_of_le_of_lt (weight_child q 1) hq) ht
-    · rw [resolveLayer_of_at root hs]
+    · rw [resolveLayer_of_at root hs, layerBuildR_of_at hs]
       exact layerTerm_intro root n hres K hhop self (q.child 0) m child
         (Nat.le_trans (fuel_child_le q 0) hK) (Nat.lt_of_le_of_lt (weight_child q 0) hq) hs
   | .provideMerge self that, q, m, scope, hK, hq, h => by
@@ -139,11 +133,11 @@ theorem layerTerm_intro (root : NativeEff) (n : Nat)
     rw [innerLayerAt_provideMerge root h]
     have hs := at_child_of h 0
     have ht := at_child_of h 1
-    refine provideWith_intro root q m child .provideMerge _ _ ?_ ?_
+    refine provideWith_intro root q m child .provideMerge _ ?_ ?_
     · rw [resolveLayer_of_at root ht]
       exact layerTerm_intro root n hres K hhop that (q.child 1) m child
         (Nat.le_trans (fuel_child_le q 1) hK) (Nat.lt_of_le_of_lt (weight_child q 1) hq) ht
-    · rw [resolveLayer_of_at root hs]
+    · rw [resolveLayer_of_at root hs, layerBuildR_of_at hs]
       exact layerTerm_intro root n hres K hhop self (q.child 0) m child
         (Nat.le_trans (fuel_child_le q 0) hK) (Nat.lt_of_le_of_lt (weight_child q 0) hq) hs
   | .merge left right, q, m, scope, hK, hq, h => by
@@ -257,8 +251,7 @@ theorem provideLayer_intro (root : NativeEff) (n : Nat)
       (Prim.onSuccess
         (Prim.sync (EffThunk.op (SyncOp.scopeMake FinalizerStrategy.sequential)))
         (.provideLayerWith p))
-      (prepareR completed (provideLayerR (fun q m s => denoteLayer root l q m s)
-        (fun q => denoteR root b q) (fun q => inlineYield b q) i p)) := by
+      (prepareR completed (provideLayerR (fun q => inlineYield b q) i p)) := by
   have hw : ∀ j, (p.child j).weight < n := fun j =>
     Nat.lt_of_lt_of_le (weight_child_lt p j hpos) hp
   have hl : Node.at_ (.eff root) p.layerBuild.path = some (.layer l) :=
@@ -266,9 +259,9 @@ theorem provideLayer_intro (root : NativeEff) (n : Nat)
   have hb := at_child_of h 1
   have hbuild : ∀ (m : MemoMapId) (scope : Nat),
       CodeMeans root (resolveLayer root p.layerBuild m scope)
-        (denoteLayer root l p.layerBuild m scope) := by
+        (layerBuildR root p.layerBuild m scope) := by
     intro m scope
-    rw [resolveLayer_of_at root hl]
+    rw [resolveLayer_of_at root hl, layerBuildR_of_at hl]
     exact layer_intro root n hres l p.layerBuild m scope (hw 0) hl
   unfold provideLayerR
   rw [prepareR_guardR_bind, guardR_bind]
@@ -312,7 +305,7 @@ theorem provideLayer_intro (root : NativeEff) (n : Nat)
               (CodeMeans.syncOp _ _ (successV root)) ?_ rfl (fun _ => rfl)
             intro completed''' u
             simp only [seqR]
-            exact withMemoMapThen_intro root p.layerBuild scope _ (fun m => hbuild m scope)
+            exact withMemoMapThen_intro root p.layerBuild scope (fun m => hbuild m scope)
               completed''' u
           | none => exact codeMeans_badShape root
         · -- `local`: a private map, then the build
@@ -322,7 +315,7 @@ theorem provideLayer_intro (root : NativeEff) (n : Nat)
             (CodeMeans.syncOp _ _ (successV root)) ?_ rfl (fun _ => rfl)
           intro completed'' w
           simp only [seqR]
-          exact withMemoMapThen_intro root p.layerBuild scope _ (fun m => hbuild m scope)
+          exact withMemoMapThen_intro root p.layerBuild scope (fun m => hbuild m scope)
             completed'' w
       · intro completed'' built
         show CodeMeans root (Program.contAOf root (.provideLayerBody p) built) _
@@ -338,13 +331,9 @@ theorem provideLayer_intro (root : NativeEff) (n : Nat)
             simp only [prepareR_pure]
             exact codeMeans_ofExit_pure root exit
           | none =>
-            refine (updateContext_intro root _ (Region.program (p.child 1))
-              (denoteR root b (p.child 1)) ?_).prepare _
-            show CodeMeans root (resolve root (p.child 1)) _
-            have hr := hres (p.child 1) (hw 1)
-            rw [resolve_of_at hb, denoteAt_of_at hb] at hr
-            rw [resolve_of_at hb]
-            exact hr
+            refine (updateContext_intro root _ (Region.program (p.child 1)) ?_).prepare _
+            simp only [regionCode, denoteBody, regionBodyR, cata_region]
+            exact hres (p.child 1) (hw 1)
         | none => exact codeMeans_badShape root
     · intro completed'' ex program hprog
       have hp' : Prim.withFiber (EffThunk.closeScope scope ex) = program := Option.some.inj hprog

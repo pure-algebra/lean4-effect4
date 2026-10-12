@@ -27,7 +27,7 @@ def rules : List (String × Rule) :=
    ("exit", .children), ("uninterruptible", .reject), ("interruptible", .reject),
    ("yieldNow", .reject), ("awaitFiber", .reject), ("withFiber", .reject), ("scoped", .reject),
    ("acquireRelease", .reject), ("provideLayer", .reject), ("service", .reject),
-   ("provideService", .reject), ("catchIf", .conditional), ("select", .children),
+   ("provideService", .reject), ("provideContext", .reject), ("catchIf", .conditional), ("select", .children),
    ("iterate", .loop), ("restore", .reject), ("defs", .reject),
    ("invoke", .reject)]
 

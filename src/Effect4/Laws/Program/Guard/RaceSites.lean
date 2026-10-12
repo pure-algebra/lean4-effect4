@@ -196,7 +196,7 @@ theorem raceSites_contAOf (root : NativeEff) (name : EffName) (value : Val) :
     mergeContextsK, serviceLookupK, bindServiceK, constructionAt]
   all_goals repeat' first
     | simp only [raceSites, raceSites_resolve, raceSites_resolveLayer,
-        raceSites_innerLayerAt, raceSites_regionCode, raceSites_ofExit,
+        raceSites_innerLayerAt, raceSites_ofExit,
         raceSites_store_contA, raceSites_finProgram]
     | rfl
     | split
@@ -408,6 +408,7 @@ theorem raceSites_withFiberOf (root : NativeEff) (table : RowTable) (thunk : Eff
     | exact raceSites_actionOf _
     | exact raceSites_resolve _ _
     | exact raceSites_resolveLayer _ _ _ _
+    | exact raceSites_regionCode root _
     | split
 
 def RaceCodeOwned (m : NativeMachine) (fiber : FiberId) (code : NCode) : Prop :=

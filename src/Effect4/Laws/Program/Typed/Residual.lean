@@ -347,41 +347,420 @@ installed it, and as current code reaching a counted step the evaluator answers 
 scope's callback, whose scope is present (`ScopeLive`, row 156: the machine halts on an absent
 scope, `E4-SCHED-CE-020`) and whose restored context fits; the callback carries the body's exit
 (a finalizer's failure may combine with it when the scope closes), so the guard widens its
-body's type to its own for that exit. -/
-inductive TypedProg (root : ProgramSource) : World → EffTy → RProgram → Prop
-  | pure {w : World} {ty : EffTy} {ex : ExitV} (exit : ExitOk w ty ex) :
-      TypedProg root w ty (.pure ex)
-  | store {w : World} {ty : EffTy} {op : SyncOp} {k : Val → RProgram}
-      (cert : (Ψ_S root).Cert op) (pre : (Ψ_S root).pre w op cert)
-      (next : ∀ w', w.leHost w' → ∀ ans, (Ψ_S root).post w' op cert ans → TypedProg root w' ty (k ans)) :
-      TypedProg root w ty (.vis (.inl op) k)
-  | fiber {w : World} {ty : EffTy} {op : FiberOp} {k : op.answer → RProgram}
+body's type to its own for that exit.
+
+ The existing residual program judgment also carries its entry input and completion
+position. The unit-input instance below retains the original type-only surface. Context rows
+use these same constructors, so guard bodies and their callbacks retain the input guaranteed at the actual exit. -/
+inductive ProgramArrow {Input Object : Type}
+    (storePre : World → Input → (op : SyncOp) → StoreCert op → Prop)
+    (storePost : World → Input → (op : SyncOp) → StoreCert op → Val → Prop)
+    (fiberPre : World → Input → (op : FiberOp) → FiberCert op → Prop)
+    (fiberPost : World → Input → (op : FiberOp) → FiberCert op → op.answer → Prop)
+    (fiberInput : Input → (op : FiberOp) → op.answer → Input)
+    (Exits : World → Input → Object → ExitV → Prop)
+    (guardPost : World → Input → GuardKind → Object → ExitV → Prop)
+    (inputOf : Object → ExitV → Input) (restoreInput : Ctx → Input)
+    (Entry : Input → Object → Prop) :
+    World → Input → Object → RProgram → Prop
+  | pure {w : World} {input : Input} {ty : Object} {ex : ExitV}
+      (exit : Exits w input ty ex) (entry : Entry input ty := by exact True.intro) :
+      ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry
+        w input ty (.pure ex)
+  | store {w : World} {input : Input} {ty : Object} {op : SyncOp} {k : Val → RProgram}
+      (cert : StoreCert op) (pre : storePre w input op cert)
+      (next : ∀ w', w.leHost w' → ∀ ans, storePost w' input op cert ans →
+        ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry
+          w' input ty (k ans)) (entry : Entry input ty := by exact True.intro) :
+      ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry
+        w input ty (.vis (.inl op) k)
+  | fiber {w : World} {input : Input} {ty : Object} {op : FiberOp} {k : op.answer → RProgram}
       (notGuard : ∀ kind, op ≠ .guard_ kind) (notUnguard : ∀ ex, op ≠ .unguard ex)
       (notFinish : ∀ ex, op ≠ .finishFinalizer ex)
       (notScopeExit : ∀ prev sc ex, op ≠ .scopeExit prev sc ex)
-      (cert : (Ψ_F root).Cert op) (pre : (Ψ_F root).pre w op cert)
-      (next : ∀ w', w.leHost w' → ∀ ans, (Ψ_F root).post w' op cert ans →
-        TypedProg root w' ty (k ans)) :
-      TypedProg root w ty (.vis (.inr op) k)
-  | guard {w : World} {ty : EffTy} {kind : GuardKind} {k : Option ExitV → RProgram}
-      (mid : EffTy) (body : TypedProg root w mid (k none))
-      (run : ∀ w', w.leHost w' → ∀ ex, fiberPost w' (.guard_ kind) mid (some ex) →
-        TypedProg root w' ty (k (some ex)))
-      (skip : ∀ w', w.leHost w' → ∀ ex, ExitOk w' mid ex → kind.hasExitArm ex = false →
-        ExitOk w' ty ex) :
-      TypedProg root w ty (.vis (.inr (.guard_ kind)) k)
-  | unguard {w : World} {ty : EffTy} {ex : ExitV} {k : ExitV → RProgram}
-      (payload : ExitOk w ty ex) : TypedProg root w ty (.vis (.inr (.unguard ex)) k)
-  | finishFinalizer {w : World} {ty : EffTy} {ex : ExitV} {k : ExitV → RProgram}
-      (payload : ExitOk w ty ex) : TypedProg root w ty (.vis (.inr (.finishFinalizer ex)) k)
-  | scopedGuard {w : World} {ty : EffTy} {k : Option ExitV → RProgram} (mid : EffTy) (prev : Ctx)
-      (sc : Nat) (body : TypedProg root w mid (k none))
+      (cert : FiberCert op) (pre : fiberPre w input op cert)
+      (next : ∀ w', w.leHost w' → ∀ ans, fiberPost w' input op cert ans →
+        ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry
+          w' (fiberInput input op ans) ty (k ans))
+      (entry : Entry input ty := by exact True.intro) :
+      ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry
+        w input ty (.vis (.inr op) k)
+  | guard {w : World} {input : Input} {ty : Object} {kind : GuardKind}
+      {k : Option ExitV → RProgram} (mid : Object)
+      (body : ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry
+        w input mid (k none))
+      (run : ∀ w', w.leHost w' → ∀ ex, guardPost w' (inputOf mid ex) kind mid ex →
+        ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry
+          w' (inputOf mid ex) ty (k (some ex)))
+      (skip : ∀ w', w.leHost w' → ∀ ex, Exits w' (inputOf mid ex) mid ex →
+        kind.hasExitArm ex = false → Exits w' (inputOf mid ex) ty ex)
+      (entry : Entry input ty := by exact True.intro) :
+      ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry
+        w input ty (.vis (.inr (.guard_ kind)) k)
+  | unguard {w : World} {input : Input} {ty : Object} {ex : ExitV} {k : ExitV → RProgram}
+      (payload : Exits w input ty ex) (entry : Entry input ty := by exact True.intro) :
+      ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry
+        w input ty (.vis (.inr (.unguard ex)) k)
+  | finishFinalizer {w : World} {input : Input} {ty : Object} {ex : ExitV} {k : ExitV → RProgram}
+      (payload : Exits w input ty ex) (entry : Entry input ty := by exact True.intro) :
+      ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry
+        w input ty (.vis (.inr (.finishFinalizer ex)) k)
+  | scopedGuard {w : World} {input : Input} {ty : Object} {k : Option ExitV → RProgram}
+      (mid : Object) (prev : Ctx) (sc : Nat)
+      (body : ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry
+        w input mid (k none))
       (callback : ∀ ex, Contracts.scopeExitCallback? (k (some ex)) = some (prev, sc, ex))
       (live : ScopeLive w sc) (services : ServicesFit w prev.services)
-      (widen : ∀ w', w.leHost w' → ∀ ex, ExitOk w' mid ex → ExitOk w' ty ex) :
-      TypedProg root w ty (.vis (.inr (.guard_ (.onExit false))) k)
+      (widen : ∀ w', w.leHost w' → ∀ ex, Exits w' (inputOf mid ex) mid ex →
+        Exits w' (restoreInput prev) ty ex) (entry : Entry input ty := by exact True.intro) :
+      ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry
+        w input ty (.vis (.inr (.guard_ (.onExit false))) k)
+
+namespace ProgramArrow
+section Transport
+variable {Input Object : Type}
+  {SP : World → Input → (op : SyncOp) → StoreCert op → Prop}
+  {SQ : World → Input → (op : SyncOp) → StoreCert op → Val → Prop}
+  {FP : World → Input → (op : FiberOp) → FiberCert op → Prop}
+  {FQ : World → Input → (op : FiberOp) → FiberCert op → op.answer → Prop}
+  {stepInput : Input → (op : FiberOp) → op.answer → Input}
+  {Ex : World → Input → Object → ExitV → Prop}
+  {GP : World → Input → GuardKind → Object → ExitV → Prop}
+  {inputOf : Object → ExitV → Input} {restoreInput : Ctx → Input}
+  {Entry : Input → Object → Prop}
+
+/-- Every shared program derivation supplies its entry capability bound.
+Consumer: current-code, saved callback and queued resume entry positions in typed preservation. -/
+theorem entry {w : World} {input : Input} {ty : Object} {p : RProgram}
+    (h : ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry w input ty p) :
+    Entry input ty := by
+  cases h <;> assumption
+
+/-- Changing only the output object uses one constructor proof for every program instance.
+Consumer: type-column widening and ambient provider completion guarantees. -/
+theorem outputMap {w : World} {input : Input} {ty ty' : Object} {program : RProgram}
+    (typed : ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry w input ty program)
+    (exits : ∀ world input exit, Ex world input ty exit → Ex world input ty' exit)
+    (entries : ∀ input, Entry input ty → Entry input ty') :
+    ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry w input ty' program := by
+  induction typed with
+  | pure payload entry => exact .pure (exits _ _ _ payload) (entries _ entry)
+  | store cert pre _ entry ih =>
+    exact .store cert pre (fun later ordered answer post => ih later ordered answer post exits entries)
+      (entries _ entry)
+  | fiber notGuard notUnguard notFinish notScopeExit cert pre _ entry ih =>
+    exact .fiber notGuard notUnguard notFinish notScopeExit cert pre
+      (fun later ordered answer post => ih later ordered answer post exits entries) (entries _ entry)
+  | guard mid body _ skip entry _ ihRun =>
+    exact .guard mid body (fun later ordered exit post => ihRun later ordered exit post exits entries)
+      (fun later ordered exit payload absent => exits _ _ _ (skip later ordered exit payload absent))
+      (entries _ entry)
+  | unguard payload entry => exact .unguard (exits _ _ _ payload) (entries _ entry)
+  | finishFinalizer payload entry => exact .finishFinalizer (exits _ _ _ payload) (entries _ entry)
+  | scopedGuard mid previous scope body callback live services widen entry _ =>
+    exact .scopedGuard mid previous scope body callback live services
+      (fun later ordered exit payload => exits _ _ _ (widen later ordered exit payload)) (entries _ entry)
+
+/-- World transport uses the same seven program constructors for every input index.
+`typedProg_mono` and the ambient context instance consume this law. -/
+theorem mono
+    (store : ∀ {w w' input op cert}, w.leHost w' → SP w input op cert → SP w' input op cert)
+    (fiber : ∀ {w w' input op cert}, w.leHost w' → FP w input op cert → FP w' input op cert)
+    (exits : ∀ {w w' input ty ex}, w.leHost w' → Ex w input ty ex → Ex w' input ty ex)
+    {w w' : World} {input : Input} {ty : Object} {p : RProgram}
+    (ord : w.leHost w')
+    (h : ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry w input ty p) :
+    ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry w' input ty p := by
+  induction h generalizing w' with
+  | pure exit entry => exact .pure (exits ord exit) entry
+  | store cert pre next entry _ =>
+    exact .store cert (store ord pre)
+      (fun w'' o ans post => next w'' (leHost_trans _ _ _ ord o) ans post) entry
+  | fiber notGuard notUnguard notFinish notScopeExit cert pre next entry _ =>
+    exact .fiber notGuard notUnguard notFinish notScopeExit cert (fiber ord pre)
+      (fun w'' o ans post => next w'' (leHost_trans _ _ _ ord o) ans post) entry
+  | guard mid _ run skip entry ihBody _ =>
+    exact .guard mid (ihBody ord)
+      (fun w'' o ex post => run w'' (leHost_trans _ _ _ ord o) ex post)
+      (fun w'' o ex fit arm => skip w'' (leHost_trans _ _ _ ord o) ex fit arm) entry
+  | unguard payload entry => exact .unguard (exits ord payload) entry
+  | finishFinalizer payload entry => exact .finishFinalizer (exits ord payload) entry
+  | scopedGuard mid prev sc _ callback live services widen entry ihBody =>
+    exact .scopedGuard mid prev sc (ihBody ord) callback (scopeLive_mono ord.1 live)
+      (servicesFit_map ord.1.2.1 ord.1.2.2.1 ord.1.2.2.2.1 ord.2 ord.1.1.2
+        (serviceTy_of_le ord.1) services)
+      (fun w'' o ex fit => widen w'' (leHost_trans _ _ _ ord o) ex fit) entry
+
+/-- Closing a program retains its completion position, including its context row.
+The original `close_typed` and ambient guard introduction use this one constructor proof. -/
+theorem close {w : World} {input : Input} {ty : Object} {p : RProgram}
+    (h : ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry w input ty p)
+    (next : ExitV → RProgram) :
+    ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry w input ty
+      (p.bind (fun ex => .vis (.inr (.unguard ex)) next)) := by
+  induction h with
+  | pure exit entry => exact .unguard exit entry
+  | store cert pre _ entry ih => exact .store cert pre (fun w' o ans post => ih w' o ans post) entry
+  | fiber notGuard notUnguard notFinish notScopeExit cert pre _ entry ih =>
+    exact .fiber notGuard notUnguard notFinish notScopeExit cert pre
+      (fun w' o ans post => ih w' o ans post) entry
+  | guard mid _ _ skip entry ihBody ihRun =>
+    exact .guard mid ihBody (fun w' o ex post => ihRun w' o ex post) skip entry
+  | unguard payload entry => exact .unguard payload entry
+  | finishFinalizer payload entry => exact .finishFinalizer payload entry
+  | scopedGuard mid prev sc _ callback live services widen entry ihBody =>
+    exact .scopedGuard mid prev sc ihBody
+      (fun ex => Contracts.scopeExitCallback?_bind (callback ex) _) live services widen entry
+end Transport
+end ProgramArrow
+
+/-- The original type-only surface specializes the same program arrows to unit input. -/
+abbrev TypedProg (root : ProgramSource) (w : World) (ty : EffTy) (p : RProgram) : Prop :=
+  ProgramArrow (fun w (_ : Unit) => storePre root w) (fun w (_ : Unit) => storePost w)
+    (fun w (_ : Unit) => fiberPre root w) (fun w (_ : Unit) => fiberPost w)
+    (fun _ _ _ => ()) (fun w (_ : Unit) => ExitOk w)
+    (fun w (_ : Unit) kind mid ex => fiberPost w (.guard_ kind) mid (some ex))
+    (fun _ _ => ()) (fun _ => ()) (fun _ _ => True) w () ty p
+
+/-- Completion positions index the existing program arrow, not stored program syntax.
+The captured getter carries its returned context's row into the provider callback. -/
+inductive AmbientPosition where
+  | result (type : EffTy) (success failure : Env.Requirement)
+  | capturedContext (guaranteed : Env.Requirement)
+
+namespace AmbientPosition
+/-- Ordinary result positions retain their original tuple spelling. -/
+instance : Coe (EffTy × Env.Requirement × Env.Requirement) AmbientPosition :=
+  ⟨fun position => .result position.1 position.2.1 position.2.2⟩
+
+/-- The scheduler reads the same declared result type from each completion position. -/
+def type : AmbientPosition → EffTy
+  | .result type _ _ => type
+  | .capturedContext _ => EffTy.pure .context
+
+/-- Entry coverage is independent of later success, including a captured getter's failure. -/
+def failureRow : AmbientPosition → Env.Requirement
+  | .result _ _ failure => failure
+  | .capturedContext guaranteed => guaranteed
+end AmbientPosition
+
+/-- Select an input at the delivered exit, including the getter's actual decoded context.
+Consumer: the shared program and frame input projection. -/
+def ambientInput (position : AmbientPosition) (exit : ExitV) : Env.Requirement :=
+  match position with
+  | .result _ success failure => if exit.isSuccess then success else failure
+  | .capturedContext guaranteed => match exit with
+    | .success value => match Val.context? value with
+      | some ctx => ctx.services.keysRow
+      | none => guaranteed
+    | .failure _ => guaranteed
+
+/-- A captured context preserves both its guaranteed row and its decoded answer row.
+Consumer: the provider callback; ordinary positions retain their original row judgment. -/
+def AmbientBounds (available : Env.Requirement) (position : AmbientPosition) (exit : ExitV) : Prop :=
+  match position with
+  | .result _ _ _ => Row.Subset (ambientInput position exit) available
+  | .capturedContext guaranteed => Row.Subset guaranteed available ∧
+      Row.Subset (ambientInput position exit) available
+
+/-- The selected row describes runtime coverage; membership still reads the existing world. -/
+def AmbientExit (w : World) (available : Env.Requirement) (position : AmbientPosition)
+    (exit : ExitV) : Prop :=
+  ExitOk w position.type exit ∧ AmbientBounds available position exit
+
+/-- A Region body enters with its intrinsic checked requirements.
+A protected provider checks the actual installed map, not only the world's service table.
+Consumer: ambient mask admission and the existing body-entry preservation path. -/
+def BodyCoverage (root : ProgramSource) (w : World) (available : Env.Requirement)
+    (body : Body) (cert : EffTy) : Prop :=
+  (∀ region, body = .region region → ∃ intrinsic,
+    RegionTyped root w region intrinsic ∧ Ty.subN intrinsic.answer cert.answer = true ∧
+      Ty.subN intrinsic.error cert.error = true ∧ Row.Subset intrinsic.requires available) ∧
+  (∀ update region flag, body = .contextEntry update region flag → ∃ intrinsic,
+    RegionTyped root w region intrinsic ∧ Ty.subN intrinsic.answer cert.answer = true ∧
+      Ty.subN intrinsic.error cert.error = true ∧
+      ∀ previous : Env.Ctx, previous.Satisfies available →
+        (update.apply previous).Satisfies intrinsic.requires ∧
+          (update.apply previous).Satisfies available)
+
+/-- A typed context reader uses both ambient coverage and the world's declared service carriers.
+The coarse getter remains available for internal capture and restoration. -/
+def ambientFiberPre (root : ProgramSource) (w : World) (available : Env.Requirement)
+    (op : FiberOp) (cert : FiberCert op) : Prop :=
+  match op with
+  | .getContext => cert = .context ∨ ∃ keys, cert = .contextOf keys ∧
+      Row.Subset keys available ∧ ∀ key ∈ keys.elems, (w.serviceTy key).isSome = true
+  | .mask _ body | .fork body _ _ => BodyTyped root w body cert ∧
+      Row.Subset cert.requires available ∧
+      (∀ point ctx, body = .acquireIn point ctx → ctx.services.Satisfies available) ∧
+      (∀ point previous, body = .release point previous → previous.services.Satisfies available) ∧
+      BodyCoverage root w available body cert
+  | .scoped point =>
+      PointTyped root w point cert ∧ Row.Subset (bodyRequires root.signature cert) available
+  | .forkScoped point _ _ =>
+      PointTyped root w point cert ∧ Row.Subset cert.requires available
+  | .forkIn point _ scope _ =>
+      (PointTyped root w point cert ∧ ScopeLive w scope) ∧ Row.Subset cert.requires available
+  | .gen point => (PointTyped root w point cert ∧
+      ∃ body, Node.at_ (.eff root.program) point.path = some (.eff (.gen body))) ∧
+      Row.Subset cert.requires available
+  | .loop point cursor => LoopPointTyped root w point cert cursor ∧
+      Row.Subset cert.requires available
+  | .raceAll entrants _ | .raceAllFirst entrants _ => ∀ point ∈ entrants, ∃ ty,
+      PointTyped root w point ty ∧ ty.answer.sub cert.answer = true ∧
+      ty.error.sub cert.error = true ∧ Row.Subset ty.requires available
+  | other => fiberPre root w other cert
+
+/-- The context answer keeps the entry coverage alongside its strong value membership. -/
+def ambientFiberPost (w : World) (available : Env.Requirement) (op : FiberOp)
+    (cert : FiberCert op) (answer : op.answer) : Prop :=
+  match op with
+  | .getContext => Fits w answer cert ∧ ∃ ctx, Val.context? answer = some ctx ∧
+      ctx.services.Satisfies available
+  | other => fiberPost w other cert answer
+
+/-- Only the internal setter changes the available row in the ordinary fiber protocol. -/
+def ambientFiberInput (available : Env.Requirement) (op : FiberOp)
+    (_answer : op.answer) : Env.Requirement :=
+  match op with
+  | .setContext ctx => ctx.services.keysRow
+  | .getContext => match Val.context? _answer with
+    | some ctx => ctx.services.keysRow
+    | none => available
+  | _ => available
+
+/-- The row-indexed instance of the same residual program arrows.
+Its source consumer requires entry coverage of the checked requirement row. -/
+abbrev AmbientProg (root : ProgramSource) (w : World) (available : Env.Requirement)
+    (position : AmbientPosition) (p : RProgram) : Prop :=
+  ProgramArrow (fun w (_ : Env.Requirement) => storePre root w)
+    (fun w (_ : Env.Requirement) => storePost w)
+    (ambientFiberPre root) ambientFiberPost ambientFiberInput AmbientExit
+    (fun w input kind mid ex => kind.hasExitArm ex = true ∧ AmbientExit w input mid ex)
+    ambientInput (fun ctx => ctx.services.keysRow)
+    (fun available position => Row.Subset position.failureRow available) w available position p
+
+/-- The actual context answer satisfies the row-indexed protocol.
+No key-presence predicate substitutes for the declared service membership. -/
+theorem ambient_getContext_answers {root : ProgramSource} {w : World} {available : Env.Requirement}
+    {ctx : Ctx} {cert : FiberCert .getContext}
+    (services : ServicesFit w ctx.services) (coverage : ctx.services.Satisfies available)
+    (pre : ambientFiberPre root w available .getContext cert) :
+    ambientFiberPost w available .getContext cert (Val.context ctx) := by
+  refine ⟨?_, ctx, Val.context?_context ctx, coverage⟩
+  rcases pre with coarse | ⟨keys, same, sub, declared⟩
+  · subst cert
+    exact ⟨rfl, ctx, Val.context?_context ctx, services, live_context_of_servicesFit services⟩
+  · subst cert
+    exact fits_contextOf_intro services (fun key member => coverage key (sub key member)) declared
+
+/-- A typed reader certifies the actual context at its promised keys and retains the ambient row.
+Its consumer is the typed source context arm and the provider's captured-context sequence. -/
+theorem ambient_getContext_typed (root : ProgramSource) (w : World) (keys available : Env.Requirement)
+    (covered : Row.Subset keys available)
+    (declared : ∀ key ∈ keys.elems, (w.serviceTy key).isSome = true) :
+    AmbientProg root w available
+      ((⟨.contextOf keys, .never, keys⟩ : EffTy), available, available) (fiberValR .getContext rfl) := by
+  refine .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) (.contextOf keys) (.inr ⟨keys, rfl, covered, declared⟩) ?_ (Row.subset_refl available)
+  intro _ _ answer post
+  obtain ⟨members, ctx, decoded, coverage⟩ := post
+  have bound := (Provision.satisfies_iff_subset_keysRow ctx.services available).mp coverage
+  change AmbientProg root _ (match Val.context? answer with
+    | some ctx => ctx.services.keysRow
+    | none => available) _ _
+  rw [decoded]
+  exact .pure ⟨strongExit_success _ _ _ members, bound⟩ bound
+
+/-- The actual coarse getter retains value-correlated coverage at its saved callback.
+Consumer: the compiled provider's captured previous-context continuation. -/
+theorem ambient_captureContext_typed (root : ProgramSource) (w : World)
+    (available : Env.Requirement) :
+    AmbientProg root w available (.capturedContext available) (fiberValR .getContext rfl) := by
+  refine .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) .context (.inl rfl) ?_ (Row.subset_refl available)
+  intro _ _ answer post
+  obtain ⟨members, ctx, decoded, coverage⟩ := post
+  have bound := (Provision.satisfies_iff_subset_keysRow ctx.services available).mp coverage
+  change AmbientProg root _ (match Val.context? answer with
+    | some ctx => ctx.services.keysRow
+    | none => available) _ _
+  rw [decoded]
+  refine .pure ⟨strongExit_success _ _ _ members, bound, ?_⟩ bound
+  change Row.Subset (match Val.context? answer with
+    | some ctx => ctx.services.keysRow
+    | none => available) ctx.services.keysRow
+  rw [decoded]
+  exact Row.subset_refl _
+
+/-- An internal setter gives its actual success row and a failure row covered at both cuts.
+Consumer: provider entry and captured-context restoration through the existing program arrow. -/
+theorem ambient_setContext_guarantees (root : ProgramSource) (w : World)
+    (available failure : Env.Requirement) (ctx : Ctx) (services : ServicesFit w ctx.services)
+    (entry : Row.Subset failure available) (returned : Row.Subset failure ctx.services.keysRow) :
+    AmbientProg root w available (EffTy.pure .unit, ctx.services.keysRow, failure)
+      (fiberValR (.setContext ctx) rfl) := by
+  refine .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ _ _ h => nomatch h) () services ?_ entry
+  intro _ _ answer post
+  change answer = Val.unit at post
+  subst answer
+  exact .pure ⟨strongExit_success _ _ _ True.intro, Row.subset_refl _⟩ returned
+
+/-- The internal setter enters its actual supplied key row, rather than retaining the entry row.
+The provider and restoration callbacks use this transition. -/
+theorem ambient_setContext_typed (root : ProgramSource) (w : World) (available : Env.Requirement)
+    (ctx : Ctx) (services : ServicesFit w ctx.services)
+    (kept : Row.Subset available ctx.services.keysRow) :
+    AmbientProg root w available (EffTy.pure .unit, ctx.services.keysRow, available)
+      (fiberValR (.setContext ctx) rfl) :=
+  ambient_setContext_guarantees root w available available ctx services (Row.subset_refl available) kept
 
 namespace TypedProg
+
+variable {root : ProgramSource}
+abbrev pure := @ProgramArrow.pure Unit EffTy
+  (fun w (_ : Unit) => storePre root w) (fun w (_ : Unit) => storePost w)
+  (fun w (_ : Unit) => fiberPre root w) (fun w (_ : Unit) => fiberPost w)
+  (fun _ _ _ => ()) (fun w (_ : Unit) => ExitOk w)
+  (fun w (_ : Unit) kind mid ex => fiberPost w (.guard_ kind) mid (some ex))
+  (fun _ _ => ()) (fun _ => ()) (fun _ _ => True)
+abbrev store := @ProgramArrow.store Unit EffTy
+  (fun w (_ : Unit) => storePre root w) (fun w (_ : Unit) => storePost w)
+  (fun w (_ : Unit) => fiberPre root w) (fun w (_ : Unit) => fiberPost w)
+  (fun _ _ _ => ()) (fun w (_ : Unit) => ExitOk w)
+  (fun w (_ : Unit) kind mid ex => fiberPost w (.guard_ kind) mid (some ex))
+  (fun _ _ => ()) (fun _ => ()) (fun _ _ => True)
+abbrev fiber := @ProgramArrow.fiber Unit EffTy
+  (fun w (_ : Unit) => storePre root w) (fun w (_ : Unit) => storePost w)
+  (fun w (_ : Unit) => fiberPre root w) (fun w (_ : Unit) => fiberPost w)
+  (fun _ _ _ => ()) (fun w (_ : Unit) => ExitOk w)
+  (fun w (_ : Unit) kind mid ex => fiberPost w (.guard_ kind) mid (some ex))
+  (fun _ _ => ()) (fun _ => ()) (fun _ _ => True)
+abbrev guard := @ProgramArrow.guard Unit EffTy
+  (fun w (_ : Unit) => storePre root w) (fun w (_ : Unit) => storePost w)
+  (fun w (_ : Unit) => fiberPre root w) (fun w (_ : Unit) => fiberPost w)
+  (fun _ _ _ => ()) (fun w (_ : Unit) => ExitOk w)
+  (fun w (_ : Unit) kind mid ex => fiberPost w (.guard_ kind) mid (some ex))
+  (fun _ _ => ()) (fun _ => ()) (fun _ _ => True)
+abbrev unguard := @ProgramArrow.unguard Unit EffTy
+  (fun w (_ : Unit) => storePre root w) (fun w (_ : Unit) => storePost w)
+  (fun w (_ : Unit) => fiberPre root w) (fun w (_ : Unit) => fiberPost w)
+  (fun _ _ _ => ()) (fun w (_ : Unit) => ExitOk w)
+  (fun w (_ : Unit) kind mid ex => fiberPost w (.guard_ kind) mid (some ex))
+  (fun _ _ => ()) (fun _ => ()) (fun _ _ => True)
+abbrev finishFinalizer := @ProgramArrow.finishFinalizer Unit EffTy
+  (fun w (_ : Unit) => storePre root w) (fun w (_ : Unit) => storePost w)
+  (fun w (_ : Unit) => fiberPre root w) (fun w (_ : Unit) => fiberPost w)
+  (fun _ _ _ => ()) (fun w (_ : Unit) => ExitOk w)
+  (fun w (_ : Unit) kind mid ex => fiberPost w (.guard_ kind) mid (some ex))
+  (fun _ _ => ()) (fun _ => ()) (fun _ _ => True)
+abbrev scopedGuard := @ProgramArrow.scopedGuard Unit EffTy
+  (fun w (_ : Unit) => storePre root w) (fun w (_ : Unit) => storePost w)
+  (fun w (_ : Unit) => fiberPre root w) (fun w (_ : Unit) => fiberPost w)
+  (fun _ _ _ => ()) (fun w (_ : Unit) => ExitOk w)
+  (fun w (_ : Unit) kind mid ex => fiberPost w (.guard_ kind) mid (some ex))
+  (fun _ _ => ()) (fun _ => ()) (fun _ _ => True)
 
 theorem pure_inv {root : ProgramSource} {w : World} {ty : EffTy} {ex : ExitV}
     (h : TypedProg root w ty (.pure ex)) : ExitOk w ty ex := by
@@ -794,6 +1173,27 @@ theorem layerPointTyped_mono (ord : w.leHost w') {src : ProgramSource} {p : Poin
   obtain ⟨fty, hfty, hex⟩ := hview q hq
   exact ⟨fty, ord.1.2.1 _ _ hfty, strongExit_mono _ _ _ _ ord hex⟩
 
+/-- Region admission transports through the existing world order.
+Consumer: the protected provider's saved and queued body positions. -/
+theorem regionTyped_mono (ord : w.leHost w') {src : ProgramSource} {body : Region} {ty : EffTy}
+    (typed : RegionTyped src w body ty) : RegionTyped src w' body ty := by
+  fun_cases cata_region (regionTypingAlgebra src w) body with
+  | case1 => exact pointTyped_mono ord typed
+  | case2 | case3 =>
+    obtain ⟨lt, same, point, scope, memo⟩ := typed
+    exact ⟨lt, same, layerPointTyped_mono ord point, scopeLive_mono ord.1 scope,
+      memoLive_mono ord.1 memo⟩
+  | case4 =>
+    obtain ⟨bodyTy, point, same, carriers⟩ := typed
+    refine ⟨bodyTy, pointTyped_mono ord point, same, fun key keyed carrier declared => ?_⟩
+    exact carriers key keyed carrier (serviceTy_of_le ord.1 key carrier declared)
+
+/-- Protected-entry update admission uses the existing transitive host order.
+Consumer: bodyTyped_mono. -/
+theorem contextUpdateTyped_mono (ord : w.leHost w') {update : Env.ContextUpdate}
+    (typed : ContextUpdateTyped w update) : ContextUpdateTyped w' update :=
+  fun later ordered => typed later (leHost_trans _ _ _ ord ordered)
+
 /-- A finalizer's admission is upward closed (decisions row 151 (a″)): a capture's
 environment and services by membership's transport, a scope's presence by scope persistence. -/
 theorem finalizerAdmitted_mono (root : ProgramSource) (ord : w.leHost w') (fin : FinName)
@@ -827,6 +1227,11 @@ theorem bodyTyped_mono (ord : w.leHost w') {src : ProgramSource} {b : Body} {ty 
   | layerBuild p m scope lt h live memo =>
     exact .layerBuild p m scope lt (layerPointTyped_mono ord h) (scopeLive_mono ord.1 live)
       (memoLive_mono ord.1 memo)
+  | region body bodyTy ty typed answer error =>
+    exact .region body bodyTy ty (regionTyped_mono ord typed) answer error
+  | contextEntry update body flag bodyTy ty typed answer error updateTyped =>
+    exact .contextEntry update body flag bodyTy ty (regionTyped_mono ord typed) answer error
+      (contextUpdateTyped_mono ord updateTyped)
 
 /-- Every store row's demand is upward closed (all 31 rows). -/
 theorem storePre_mono (root : ProgramSource) (ord : w.leHost w') (op : SyncOp)
@@ -955,25 +1360,13 @@ end Mono
 leaves, the demands and the guard's body need transport. -/
 theorem typedProg_mono (root : ProgramSource) (w w' : World) (ty : EffTy) (p : RProgram)
     (ord : w.leHost w') (h : TypedProg root w ty p) : TypedProg root w' ty p := by
-  induction h generalizing w' with
-  | pure exit => exact .pure (strongExit_mono _ _ _ _ ord exit)
-  | store cert pre next _ =>
-    exact .store cert (storePre_mono root ord _ cert pre)
-      (fun w'' ord' ans post => next w'' (leHost_trans _ _ _ ord ord') ans post)
-  | fiber notGuard notUnguard notFinish notScopeExit cert pre next _ =>
-    exact .fiber notGuard notUnguard notFinish notScopeExit cert (fiberPre_mono root ord _ cert pre)
-      (fun w'' ord' ans post => next w'' (leHost_trans _ _ _ ord ord') ans post)
-  | guard mid _ run skip ihBody _ =>
-    exact .guard mid (ihBody _ ord)
-      (fun w'' ord' ex post => run w'' (leHost_trans _ _ _ ord ord') ex post)
-      (fun w'' ord' ex hfit harm => skip w'' (leHost_trans _ _ _ ord ord') ex hfit harm)
-  | unguard payload => exact .unguard (strongExit_mono _ _ _ _ ord payload)
-  | finishFinalizer payload => exact .finishFinalizer (strongExit_mono _ _ _ _ ord payload)
-  | scopedGuard mid prev sc _ callback live services widen ihBody =>
-    exact .scopedGuard mid prev sc (ihBody _ ord) callback (scopeLive_mono ord.1 live)
-      (servicesFit_map ord.1.2.1 ord.1.2.2.1 ord.1.2.2.2.1 ord.2 ord.1.1.2
-        (serviceTy_of_le ord.1) services)
-      (fun w'' ord' ex hex => widen w'' (leHost_trans _ _ _ ord ord') ex hex)
+  refine ProgramArrow.mono ?_ ?_ ?_ ord h
+  · intro before after input op cert ordered pre
+    exact storePre_mono root ordered op cert pre
+  · intro before after input op cert ordered pre
+    exact fiberPre_mono root ordered op cert pre
+  · intro before after input position exit ordered fits
+    exact strongExit_mono before after position exit ordered fits
 
 /-- A saved frame of the typed state transports along the host order. -/
 theorem savedOk_mono (root : ProgramSource) (w w' : World) (final : EffTy) (x : RSaved)
@@ -1109,6 +1502,19 @@ theorem finalizerAdmitted_rows_append {w : World} {fin : FinName}
   | foreign c => exact captureTyped_rows_append src src' t' hprog htab hsvc h
   | _ => exact h
 
+/-- Region admission retains its source at an appended host-row table.
+Consumer: bodyTyped_rows_append. -/
+theorem regionTyped_rows_append {w : World} {body : Region} {ty : EffTy}
+    (typed : RegionTyped src w body ty) : RegionTyped src' w body ty := by
+  fun_cases cata_region (regionTypingAlgebra src w) body with
+  | case1 => exact pointTyped_rows_append src src' t' hprog htab hsvc typed
+  | case2 | case3 =>
+    obtain ⟨lt, same, point, scope, memo⟩ := typed
+    exact ⟨lt, same, layerPointTyped_rows_append src src' t' hprog htab hsvc point, scope, memo⟩
+  | case4 =>
+    obtain ⟨bodyTy, point, same, carriers⟩ := typed
+    exact ⟨bodyTy, pointTyped_rows_append src src' t' hprog htab hsvc point, same, carriers⟩
+
 theorem bodyTyped_rows_append {w : World} {body : Body} {ty : EffTy}
     (h : BodyTyped src w body ty) : BodyTyped src' w body ty := by
   cases h with
@@ -1125,6 +1531,12 @@ theorem bodyTyped_rows_append {w : World} {body : Body} {ty : EffTy}
   | layerBuild p m scope lt hp live memo =>
     exact .layerBuild p m scope lt (layerPointTyped_rows_append src src' t' hprog htab hsvc hp) live
       memo
+  | region body bodyTy ty typed answer error =>
+    exact .region body bodyTy ty (regionTyped_rows_append src src' t' hprog htab hsvc typed)
+      answer error
+  | contextEntry update body flag bodyTy ty typed answer error updateTyped =>
+    exact .contextEntry update body flag bodyTy ty
+      (regionTyped_rows_append src src' t' hprog htab hsvc typed) answer error updateTyped
 
 theorem storePre_rows_append {w : World} {op : SyncOp} {cert : StoreCert op}
     (h : storePre src w op cert) : storePre src' w op cert := by
@@ -1191,20 +1603,23 @@ every world and type. -/
 theorem typedProg_rows_append :
     ∀ {w : World} {ty : EffTy} {p : RProgram}, TypedProg src w ty p → TypedProg src' w ty p := by
   intro w ty p h
+  unfold TypedProg at h
+  generalize unit_eq : () = input at h
+  clear unit_eq
   induction h with
   | pure exit => exact .pure exit
-  | store cert pre next ih =>
+  | store cert pre next _entry ih =>
     exact .store cert (storePre_rows_append src src' t' hprog htab hsvc pre)
       fun w' hle ans hpost => ih w' hle ans hpost
-  | fiber notGuard notUnguard notFinish notScopeExit cert pre next ih =>
+  | fiber notGuard notUnguard notFinish notScopeExit cert pre next _entry ih =>
     exact .fiber notGuard notUnguard notFinish notScopeExit cert
       (fiberPre_rows_append src src' t' hprog htab hsvc pre)
       fun w' hle ans hpost => ih w' hle ans hpost
-  | guard mid body run skip ihbody ihrun =>
+  | guard mid body run skip _entry ihbody ihrun =>
     exact .guard mid ihbody (fun w' hle ex hpost => ihrun w' hle ex hpost) skip
-  | unguard payload => exact .unguard payload
-  | finishFinalizer payload => exact .finishFinalizer payload
-  | scopedGuard mid prev sc _ callback live services widen ihbody =>
+  | unguard payload entry => exact .unguard payload entry
+  | finishFinalizer payload entry => exact .finishFinalizer payload entry
+  | scopedGuard mid prev sc _ callback live services widen _entry ihbody =>
     exact .scopedGuard mid prev sc ihbody callback live services widen
 
 end RowsAppend

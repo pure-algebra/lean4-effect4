@@ -77,6 +77,8 @@ theorem hasTy_expandRound :
   | _, _, _, .service _ => rfl
   | _, _, _, .provideService _ _ _ hb =>
     congrArg (Eff.provideService _ _) (hasTy_expandRound hb)
+  | _, _, _, .provideContext _ _ hb =>
+    congrArg (Eff.provideContext _) (hasTy_expandRound hb)
   | _, _, _, .restore _ _ hb => congrArg (Eff.restore _) (hasTy_expandRound hb)
   | _, _, _, .invoke _ _ _ _ _ ha => congrArg (Eff.invoke _ _) (effsHasTy_expandRound ha)
 
@@ -134,8 +136,7 @@ theorem actionHasTy_expandRound :
   | _, _, _, .awaitNewChildren _ _ => rfl
   | _, _, _, .raceAll he => congrArg ActionTerm.raceAll (effsHasTy_expandRound he)
   | _, _, _, .raceAllFirst he => congrArg ActionTerm.raceAllFirst (effsHasTy_expandRound he)
-  | _, _, _, .setContext _ _ => rfl
-  | _, _, _, .getContext => rfl
+  | _, _, _, .context _ => rfl
   | _, _, _, .getId => rfl
   | _, _, _, .closeScope _ _ _ _ => rfl
   | _, _, _, .getInterruptible => rfl

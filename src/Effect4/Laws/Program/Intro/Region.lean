@@ -66,11 +66,11 @@ theorem memoDone_means (root : NativeEff) (layer : LayerId) (memoMap : MemoMapId
   simp only [finProgram, embed, denoteFin]
   exact CodeMeans.syncStore _ _ (successV root)
 
-/-- A region under the finalizer that restores the previous context (`updateContext`,
-`internal/effect.ts:2092-2095`): `release_intro` on any region. -/
-theorem region_intro (root : NativeEff) (body : Region) (previous : Ctx) (r : RProgram)
-    (hb : CodeMeans root (regionCode root body) r) :
-    CodeMeans root (Prim.onExit (regionCode root body) (.restoreCtx previous) false)
+/-- The existing restoring-context frame wraps any related body code.
+Consumer: region_intro and the masked provider body's finalizer placement. -/
+theorem restoreContext_intro (root : NativeEff) (body : NCode) (previous : Ctx) (r : RProgram)
+    (hb : CodeMeans root body r) :
+    CodeMeans root (Prim.onExit body (.restoreCtx previous) false)
       (onExitR r fun _ => fiberValR (.setContext previous) rfl) := by
   unfold onExitR
   rw [guardR_bind]
@@ -83,17 +83,33 @@ theorem region_intro (root : NativeEff) (body : Region) (previous : Ctx) (r : RP
   refine finalizer_intro root completed ex ?_
   exact CodeMeans.actSetContext _ _ _ rfl (successV root)
 
-/-- `updateContext(self, f)` (`internal/effect.ts:2087-2096`): the context read, the identity
-shortcut or the set-and-restore region. -/
-theorem updateContext_intro (root : NativeEff) (u : Env.ContextUpdate) (body : Region)
-    (r : RProgram) (hb : CodeMeans root (regionCode root body) r) :
-    CodeMeans root (updateContextAt u body) (updateContextR u r) := by
-  unfold updateContextAt updateContextR
+/-- A region under the finalizer that restores its previous context.
+Consumer: the existing layer region producers. -/
+theorem region_intro (root : NativeEff) (body : Region) (previous : Ctx) (r : RProgram)
+    (hb : CodeMeans root (regionCode root body) r) :
+    CodeMeans root (Prim.onExit (regionCode root body) (.restoreCtx previous) false)
+      (onExitR r fun _ => fiberValR (.setContext previous) rfl) :=
+  restoreContext_intro root (regionCode root body) previous r hb
+
+/-- The body restore action uses the existing mask constructor and its actual Region body.
+Consumer: contextEntry_intro on both identity and setter paths. -/
+theorem restoreRegion_intro (root : NativeEff) (body : Region) (flag : Bool)
+    (hb : CodeMeans root (regionCode root body) (denoteBody root (.region body))) :
+    CodeMeans root (.withFiber (.restoreRegion body flag)) (restoreRegionR body flag) :=
+  CodeMeans.actMask _ _ flag (.region body) _ rfl hb delivers_pure
+
+/-- The protected provider half places the context-restoring frame before restoring the body mask.
+Consumer: updateContext_intro and the existing provider source agreement. -/
+theorem contextEntry_intro (root : NativeEff) (u : Env.ContextUpdate) (body : Region) (flag : Bool)
+    (hb : CodeMeans root (regionCode root body) (denoteBody root (.region body))) :
+    CodeMeans root (.onSuccess (.withFiber .getCtx) (.updateThen u body flag))
+      (contextEntryR u body flag) := by
+  unfold contextEntryR
   rw [guardR_bind]
   refine CodeMeans.onSuccess _ _ _ (fiberValR .getContext rfl) _
     (CodeMeans.actGetContext _ _ rfl (successV root)) ?_ rfl (fun _ => rfl)
   intro completed v
-  show CodeMeans root (Program.contAOf root (.updateThen u body) v) _
+  show CodeMeans root (Program.contAOf root (.updateThen u body flag) v) _
   rw [contAOf_updateThen]
   unfold updateThenK
   simp only [seqR]
@@ -102,7 +118,7 @@ theorem updateContext_intro (root : NativeEff) (u : Env.ContextUpdate) (body : R
     dsimp only
     by_cases hid : updateKeepsIdentity u prev.services = true
     · simp only [hid, ↓reduceIte]
-      exact hb.prepare completed
+      exact (restoreRegion_intro root body flag hb).prepare completed
     · simp only [hid, Bool.false_eq_true, ↓reduceIte]
       rw [prepareR_guardR_bind, guardR_bind]
       refine CodeMeans.onSuccess _ _ _
@@ -110,11 +126,30 @@ theorem updateContext_intro (root : NativeEff) (u : Env.ContextUpdate) (body : R
           (fiberValR (.setContext (Ctx.withServices (u.apply prev.services))) rfl)) _
         (CodeMeans.actSetContext _ _ _ rfl (successV root)) ?_ rfl (fun _ => rfl)
       intro completed' _
-      show CodeMeans root (Program.contAOf root (.bodyThen body prev) _) _
+      show CodeMeans root (Program.contAOf root (.bodyThen body prev flag) _) _
       rw [contAOf_bodyThen]
       simp only [seqR]
-      exact (region_intro root body prev r hb).prepare completed'
+      exact (restoreContext_intro root (.withFiber (.restoreRegion body flag)) prev
+        (restoreRegionR body flag) (restoreRegion_intro root body flag hb)).prepare completed'
   | none => exact codeMeans_badShape root
+
+/-- Capture the caller's mask, then enter the existing protected provider body.
+Consumer: the source provider agreement; the actual Region body premise replaces arbitrary RProgram reach. -/
+theorem updateContext_intro (root : NativeEff) (u : Env.ContextUpdate) (body : Region)
+    (hb : CodeMeans root (regionCode root body) (denoteBody root (.region body))) :
+    CodeMeans root (updateContextAt u body) (updateContextR u body) := by
+  unfold updateContextAt updateContextR
+  rw [guardR_bind]
+  refine CodeMeans.onSuccess _ _ _ (fiberValR .getInterruptible rfl) _
+    (CodeMeans.actGetInterruptible _ _ rfl delivers_seqR_pure) ?_ rfl (fun _ => rfl)
+  intro completed value
+  show CodeMeans root (Program.contAOf root (.provideMask u body) value) _
+  simp only [Program.contAOf, seqR]
+  cases decoded : Val.savedMask? value with
+  | none => exact codeMeans_badShape root
+  | some flag =>
+    exact CodeMeans.actMask _ _ false (.contextEntry u body flag) _ rfl
+      (contextEntry_intro root u body flag hb) delivers_pure
 
 /-- `scopeAddFinalizerExit(scope, fin)` (`internal/effect.ts:3847-3858`): the registration,
 then unit, or the finalizer now when the scope had already closed. -/

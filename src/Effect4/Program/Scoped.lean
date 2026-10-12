@@ -55,6 +55,7 @@ def scopedAlgebra (Op : Type) [ScopedOp Op] : EffAlgebra Op ScopeCarrier where
   eff_restore := fun a0 a1 n => a0.scoped n && a1 n
   eff_defs := fun _ a1 a2 a3 n => a1 (n + 1) && a2 n && a3 0
   eff_invoke := fun _ a1 a2 n => a1.scoped n && a2 (n + 1)
+  eff_provideContext := fun a0 a1 n => a0.scoped n && a1 n
   action_fork := fun a0 _ n => a0 n
   action_forkIn := fun a0 _ a2 n => a0 n && a2.scoped n
   action_forkScoped := fun a0 _ n => a0 n
@@ -67,12 +68,11 @@ def scopedAlgebra (Op : Type) [ScopedOp Op] : EffAlgebra Op ScopeCarrier where
   action_snapshotChildren := fun _ => true
   action_awaitNewChildren := fun a0 n => a0.scoped n
   action_raceAll := fun a0 n => a0 n
-  action_setContext := fun a0 n => a0.scoped n
-  action_getContext := fun _ => true
   action_getId := fun _ => true
   action_closeScope := fun a0 a1 n => a0.scoped n && a1.scoped n
   action_getInterruptible := fun _ => true
   action_raceAllFirst := fun a0 n => a0 n
+  action_context := fun _ _ => true
   layer_succeed := fun _ _ _ => true
   layer_effect := fun _ a1 _ => a1 0
   layer_effectDiscard := fun a0 _ => a0 0
@@ -177,6 +177,8 @@ def Node.scopedAt {Op : Type} [ScopedOp Op] (n : Nat) : Node Op → Bool
     Eff.scopedAt n ((.defs a0 a1 a2 a3 : Eff Op)) = (Effs.scopedAt (n + 1) a1 && Eff.scopedAt n a2 && LayerTerms.scoped a3) := rfl
 @[simp] theorem Eff.scopedAt_invoke {Op : Type} [ScopedOp Op] (n : Nat) (a0 : Nat) (a1 : Effect4.Program.Term) (a2 : Effect4.Program.Effs Op) :
     Eff.scopedAt n ((.invoke a0 a1 a2 : Eff Op)) = (a1.scoped n && Effs.scopedAt (n + 1) a2) := rfl
+@[simp] theorem Eff.scopedAt_provideContext {Op : Type} [ScopedOp Op] (n : Nat) (a0 : Effect4.Program.Term) (a1 : Effect4.Program.Eff Op) :
+    Eff.scopedAt n ((.provideContext a0 a1 : Eff Op)) = (a0.scoped n && Eff.scopedAt n a1) := rfl
 @[simp] theorem ActionTerm.scopedAt_fork {Op : Type} [ScopedOp Op] (n : Nat) (a0 : Effect4.Program.Eff Op) (a1 : Effect4.Supervision.ForkOptions) :
     ActionTerm.scopedAt n ((.fork a0 a1 : ActionTerm Op)) = (Eff.scopedAt n a0) := rfl
 @[simp] theorem ActionTerm.scopedAt_forkIn {Op : Type} [ScopedOp Op] (n : Nat) (a0 : Effect4.Program.Eff Op) (a1 : Effect4.Supervision.ForkOptions) (a2 : Effect4.Program.Term) :
@@ -201,10 +203,6 @@ def Node.scopedAt {Op : Type} [ScopedOp Op] (n : Nat) : Node Op → Bool
     ActionTerm.scopedAt n ((.awaitNewChildren a0 : ActionTerm Op)) = (a0.scoped n) := rfl
 @[simp] theorem ActionTerm.scopedAt_raceAll {Op : Type} [ScopedOp Op] (n : Nat) (a0 : Effect4.Program.Effs Op) :
     ActionTerm.scopedAt n ((.raceAll a0 : ActionTerm Op)) = (Effs.scopedAt n a0) := rfl
-@[simp] theorem ActionTerm.scopedAt_setContext {Op : Type} [ScopedOp Op] (n : Nat) (a0 : Effect4.Program.Term) :
-    ActionTerm.scopedAt n ((.setContext a0 : ActionTerm Op)) = (a0.scoped n) := rfl
-@[simp] theorem ActionTerm.scopedAt_getContext {Op : Type} [ScopedOp Op] (n : Nat)  :
-    ActionTerm.scopedAt n ((.getContext : ActionTerm Op)) = true := rfl
 @[simp] theorem ActionTerm.scopedAt_getId {Op : Type} [ScopedOp Op] (n : Nat)  :
     ActionTerm.scopedAt n ((.getId : ActionTerm Op)) = true := rfl
 @[simp] theorem ActionTerm.scopedAt_closeScope {Op : Type} [ScopedOp Op] (n : Nat) (a0 : Effect4.Program.Term) (a1 : Effect4.Program.Term) :
@@ -213,6 +211,8 @@ def Node.scopedAt {Op : Type} [ScopedOp Op] (n : Nat) : Node Op → Bool
     ActionTerm.scopedAt n ((.getInterruptible : ActionTerm Op)) = true := rfl
 @[simp] theorem ActionTerm.scopedAt_raceAllFirst {Op : Type} [ScopedOp Op] (n : Nat) (a0 : Effect4.Program.Effs Op) :
     ActionTerm.scopedAt n ((.raceAllFirst a0 : ActionTerm Op)) = (Effs.scopedAt n a0) := rfl
+@[simp] theorem ActionTerm.scopedAt_context {Op : Type} [ScopedOp Op] (n : Nat) (a0 : Effect4.Row Effect4.ServiceKey) :
+    ActionTerm.scopedAt n ((.context a0 : ActionTerm Op)) = true := rfl
 @[simp] theorem LayerTerm.scoped_succeed {Op : Type} [ScopedOp Op] (a0 : Effect4.ServiceKey) (a1 : Effect4.Program.Lit) :
     LayerTerm.scoped ((.succeed a0 a1 : LayerTerm Op)) = true := rfl
 @[simp] theorem LayerTerm.scoped_effect {Op : Type} [ScopedOp Op] (a0 : Effect4.ServiceKey) (a1 : Effect4.Program.Eff Op) :

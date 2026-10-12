@@ -392,7 +392,7 @@ theorem Annotate.check_eq (s : Signature Op) (e : Eff Op) (env : TyEnv) (p : Lis
     rw [tableAt_eq_cons]
     rfl
   | .suspend body | .uninterruptible body | .interruptible body | .exit body | .scoped body
-  | .provideService _ _ body | .restore _ body => by
+  | .provideService _ _ body | .provideContext _ body | .restore _ body => by
     rw [tableAt_eq_cons]
     simp only [Annotate.check, Annotate.check_eq s body, nodeAnswer, childTableAt]
     conv in (occs := *) Node.child _ _ => all_goals whnf
@@ -687,7 +687,7 @@ theorem Annotate.checkAction_eq (s : Signature Op) (a : ActionTerm Op) (env : Ty
       (tableAt s (some (.env env)) (.action a) p, Checker.checkAction s env p a) :=
   match a with
   | .runIn _ _ | .interrupt _ | .interruptScoped _ | .interruptAll _ _ | .awaitAll _
-  | .awaitAllFailFast _ | .snapshotChildren | .awaitNewChildren _ | .setContext _ | .getContext
+  | .awaitAllFailFast _ | .snapshotChildren | .awaitNewChildren _ | .context _
   | .getId | .closeScope _ _ | .getInterruptible => by
     rw [tableAt_eq_cons]
     rfl

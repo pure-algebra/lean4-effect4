@@ -61,6 +61,12 @@ theorem Point.awaitExit_keys (p : Point) (target : FiberId) (mode : Supervision.
   · simpa only [exitKeys, Machine.reifyExitVal_keys] using hkeys
   · exact hkeys
 
+/-- A context read back with `Val.context?`: its map's handles are the value's. -/
+theorem Val.context?_keys {v : Val} {ctx : Ctx} (h : Val.context? v = some ctx) :
+    Env.Context.handleKeys ctx.services ⊆ Val.keys v := by
+  rw [Val.context?_exact h, Val.keys_context, Ctx.keys_eq_handleKeys]
+  exact List.Subset.refl _
+
 /-- A context update's handles: the map it sets or merges, or the value it adds. -/
 def _root_.Effect4.Machine.Env.ContextUpdate.keys : Env.ContextUpdate → List Handle
   | .setTo context => Env.Context.handleKeys context
@@ -111,8 +117,9 @@ def EffName.keys : EffName → List Handle
   -- the join's names: the point, the memo map, the scopes, the fibers forked, the contexts
   | .provideLayerWith p => p.keys
   | .provideLayerBody p => p.keys
-  | .updateThen update body => update.keys ++ body.keys
-  | .bodyThen body previous => body.keys ++ previous.keys
+  | .provideMask update body => update.keys ++ body.keys
+  | .updateThen update body _ => update.keys ++ body.keys
+  | .bodyThen body previous _ => body.keys ++ previous.keys
   | .buildWithScopeFromContext q scope => Handle.scope scope :: q.keys
   | .withMemoMapThen q scope => Handle.scope scope :: q.keys
   | .addCurrentMemoMap m => [Handle.memoMap m.index]
@@ -156,6 +163,9 @@ def EffThunk.keys : EffThunk → List Handle
   | .memoLookup q m scope => Handle.scope scope :: Handle.memoMap m.index :: q.keys
   | .forkLayer q m scope => Handle.scope scope :: Handle.memoMap m.index :: q.keys
   | .awaitAllFailFast targets => targets.map Handle.fiber
+  | .captureMask => []
+  | .provideMasked update region _ => update.keys ++ region.keys
+  | .restoreRegion region _ => region.keys
 
 /-- The handles of compiled code. -/
 abbrev nativeKeys : NCode → List Handle := primKeys EffName.keys EffThunk.keys

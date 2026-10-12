@@ -463,7 +463,8 @@ def emitBlock (root : Name) : MetaM (String × List String) := do
       s := s ++ pat ++ s!" alg.{r.field}"
       for c in callArgs do s := s ++ " " ++ c
       s := s ++ "\n"
-    s := s ++ "termination_by structural node\n"
+    if rows.any (fun r => r.args.any (·.recFam.isSome)) then
+      s := s ++ "termination_by structural node\n"
   if isMutual then s := s ++ "end\n\n" else s := s ++ "\n"
 
   s := s ++ s!"structure {homType} {opArg}\{R : {famType} → Type u} (alg : {algType}{opApp} R) where\n"
@@ -497,7 +498,8 @@ def emitBlock (root : Name) : MetaM (String × List String) := do
       let rwList := String.intercalate ", " ((s!"hom.h_{r.field}" ++
         (if r.args.isEmpty then "" else " " ++ binders)) :: rewrites)
       s := s ++ pat ++ s!"\n    simp only [cata_{label}, {rwList}]\n"
-    s := s ++ "termination_by structural node\n"
+    if rows.any (fun r => r.args.any (·.recFam.isSome)) then
+      s := s ++ "termination_by structural node\n"
     receipts := receipts ++ [s!"hom_eq_cata_{label}"]
   if isMutual then s := s ++ "end\n\n" else s := s ++ "\n"
 
@@ -526,7 +528,8 @@ def emitBlock (root : Name) : MetaM (String × List String) := do
       let ihs := r.args.filterMap fun a => a.recFam.map fun f => s!"cata_id_{f} {a.name}"
       let lemmas := String.intercalate ", " ([s!"cata_{label}"] ++ ihs)
       s := s ++ pat ++ s!"\n    simp only [{lemmas}]\n    rfl\n"
-    s := s ++ "termination_by structural node\n"
+    if rows.any (fun r => r.args.any (·.recFam.isSome)) then
+      s := s ++ "termination_by structural node\n"
     receipts := receipts ++ [s!"cata_id_{label}"]
   if isMutual then s := s ++ "end\n\n" else s := s ++ "\n"
 
@@ -543,7 +546,8 @@ def emitBlock (root : Name) : MetaM (String × List String) := do
   let fAtArgs := String.intercalate " " (block.map fun (l, _, _) => s!"f_{l}")
   if isMutual then s := s ++ "mutual\n"
   for (label, fam, rows) in block do
-    s := s ++ s!"def foldMapAt_{label} {opArg}\{M : Type u} (unit : M) (op : M → M → M) (p : List Nat) (node : {fam}{opApp})\n"
+    let combining := if rows.any (fun r => r.args.any (·.recFam.isSome)) then "op" else "_op"
+    s := s ++ s!"def foldMapAt_{label} {opArg}\{M : Type u} (unit : M) ({combining} : M → M → M) (p : List Nat) (node : {fam}{opApp})\n"
     s := s ++ s!"    {fAtParams} : M :=\n"
     s := s ++ "  match node with\n"
     for r in rows do
@@ -557,7 +561,8 @@ def emitBlock (root : Name) : MetaM (String × List String) := do
         | [] => s!"f_{label} ({nodeExpr}) p"
         | _ => s!"op (f_{label} ({nodeExpr}) p) ({recComb childCalls})"
       s := s ++ pat ++ s!"\n    {rhs}\n"
-    s := s ++ "termination_by structural node\n"
+    if rows.any (fun r => r.args.any (·.recFam.isSome)) then
+      s := s ++ "termination_by structural node\n"
   if isMutual then s := s ++ "end\n\n" else s := s ++ "\n"
 
   -- foldMap
@@ -566,7 +571,8 @@ def emitBlock (root : Name) : MetaM (String × List String) := do
   let fArgs := String.intercalate " " (block.map fun (l, _, _) => s!"f_{l}")
   if isMutual then s := s ++ "mutual\n"
   for (label, fam, rows) in block do
-    s := s ++ s!"def foldMap_{label} {opArg}\{M : Type u} (unit : M) (op : M → M → M) (node : {fam}{opApp})\n"
+    let combining := if rows.any (fun r => r.args.any (·.recFam.isSome)) then "op" else "_op"
+    s := s ++ s!"def foldMap_{label} {opArg}\{M : Type u} (unit : M) ({combining} : M → M → M) (node : {fam}{opApp})\n"
     s := s ++ s!"    {fParams} : M :=\n"
     s := s ++ "  match node with\n"
     for r in rows do
@@ -579,7 +585,8 @@ def emitBlock (root : Name) : MetaM (String × List String) := do
         | [] => s!"f_{label} ({nodeExpr})"
         | _ => s!"op (f_{label} ({nodeExpr})) ({recComb childCalls})"
       s := s ++ pat ++ s!"\n    {rhs}\n"
-    s := s ++ "termination_by structural node\n"
+    if rows.any (fun r => r.args.any (·.recFam.isSome)) then
+      s := s ++ "termination_by structural node\n"
   if isMutual then s := s ++ "end\n\n" else s := s ++ "\n"
 
   -- The Kleisli algebra: the same slots, each returning in `M`. A recursive argument
@@ -663,7 +670,8 @@ def emitBlock (root : Name) : MetaM (String × List String) := do
         for a in recArgs do
           s := s ++ s!"      let {bindName a} ← foldM_{a.recFam.getD label} alg {a.name}\n"
         s := s ++ s!"      {apply}\n"
-    s := s ++ "termination_by structural node\n"
+    if rows.any (fun r => r.args.any (·.recFam.isSome)) then
+      s := s ++ "termination_by structural node\n"
   if isMutual then s := s ++ "end\n\n" else s := s ++ "\n"
 
   if isMutual then s := s ++ "mutual\n"
@@ -680,7 +688,8 @@ def emitBlock (root : Name) : MetaM (String × List String) := do
       let lemmas := String.intercalate ", "
         ([s!"foldM_{label}", s!"cata_{label}", s!"{malgType}.toSeq"] ++ ihs)
       s := s ++ pat ++ s!"\n    simp only [{lemmas}]\n"
-    s := s ++ "termination_by structural node\n"
+    if rows.any (fun r => r.args.any (·.recFam.isSome)) then
+      s := s ++ "termination_by structural node\n"
     receipts := receipts ++ [s!"foldM_eq_cata_{label}"]
   if isMutual then s := s ++ "end\n\n" else s := s ++ "\n"
 
@@ -710,7 +719,8 @@ def emitBlock (root : Name) : MetaM (String × List String) := do
       let lemmas := String.intercalate ", "
         ([s!"foldM_{label}", s!"{malgType}.map"] ++ bindLemma ++ ihs)
       s := s ++ pat ++ s!"\n    simp only [{lemmas}]\n"
-    s := s ++ "termination_by structural node\n"
+    if rows.any (fun r => r.args.any (·.recFam.isSome)) then
+      s := s ++ "termination_by structural node\n"
     receipts := receipts ++ [s!"foldM_natural_{label}"]
   if isMutual then s := s ++ "end\n\n" else s := s ++ "\n"
 
@@ -2570,6 +2580,8 @@ structure Args where
   types : List String := []
   /-- Emit only the generic fold families of each (plain) block, into `ns` (probe U). -/
   extras : Bool := false
+  /-- Reuse the existing namespace's imported MonadMorphism instead of declaring it again. -/
+  reuseMonadMorphism : Bool := false
   ns : Option String := none
 
 partial def parseArgs : List String → Args → Except String Args
@@ -2584,6 +2596,8 @@ partial def parseArgs : List String → Args → Except String Args
   | "--meta-imports" :: i :: rest, a =>
     parseArgs rest { a with metaImports := (i.splitOn ",").filter (· != "") }
   | "--extras" :: rest, a => parseArgs rest { a with extras := true }
+  | "--reuse-monad-morphism" :: rest, a =>
+    parseArgs rest { a with reuseMonadMorphism := true }
   | "--namespace" :: n :: rest, a => parseArgs rest { a with ns := some n }
   | "--kind" :: k :: rest, a =>
     match k.splitOn "=" with
@@ -2683,7 +2697,10 @@ def emitParameterizedBlock (root : Name) : MetaM String := do
   return s
 
 def run (args : Args) : MetaM (Array String) := do
-  if args.extras then return ← runExtras args
+  if args.extras then
+    if args.reuseMonadMorphism then
+      throwError "--reuse-monad-morphism requires an ordinary monadic fold"
+    return ← runExtras args
   -- The blocks first: the emitted header depends on whether any of them has a monadic half,
   -- and the namespace is the first carrier's own prefix.
   let mut blockTexts : Array String := #[]
@@ -2720,6 +2737,7 @@ def run (args : Args) : MetaM (Array String) := do
   let outPath := (args.headerOut.orElse (fun _ => args.out) |>.getD "<stdout>").replace "\\" "/"
   let head := "lake exe effect4gen Fold --group " ++ args.group ++ Tools.GeneratedStamp.moduleFlags args.moduleHeader args.metaImports
     ++ " --imports " ++ String.intercalate "," args.imports
+    ++ (if args.reuseMonadMorphism then " --reuse-monad-morphism" else "")
     ++ " --out " ++ outPath
     ++ (match args.append with | some p => " --append " ++ p.replace "\\" "/" | none => "")
     ++ String.join (args.kinds.map fun (t, k) => " --kind " ++ t ++ "=" ++ k)
@@ -2748,7 +2766,13 @@ def run (args : Args) : MetaM (Array String) := do
     "universe u v w",
     ""
   ]
-  if anyMonadic then
+  if args.reuseMonadMorphism then
+    unless anyMonadic do
+      throwError "--reuse-monad-morphism requires an ordinary monadic fold"
+    let existing := Name.str namespaceName "MonadMorphism"
+    unless (← getEnv).contains existing do
+      throwError "--reuse-monad-morphism requires imported declaration {existing}"
+  if anyMonadic && !args.reuseMonadMorphism then
     lines := lines ++ #[
       "/-- A monad morphism: a family of maps `M α → N α` that preserves `pure` and `bind`.",
       "Lean core has no such class and this estate does not depend on Mathlib, so the",

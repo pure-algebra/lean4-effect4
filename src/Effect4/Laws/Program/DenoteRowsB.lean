@@ -226,8 +226,8 @@ theorem denoteRowsB_approx (table : RowTable) {k k' : Nat} (hk : k ≤ k') :
   | .succeed _, _ | .fail _, _ | .failCause _, _ | .sync _, _ | .perform _ _, _ | .gen _, _
   | .uninterruptible _, _ | .interruptible _, _ | .yieldNow _, _ | .awaitFiber _ _, _
   | .withFiber _, _ | .scoped _, _ | .acquireRelease _ _, _ | .provideLayer _ _ _, _
-  | .service _, _ | .provideService _ _ _, _ | .restore _ _, _ | .defs _ _ _ _, _
-  | .invoke _ _ _, _ => .refl _
+  | .service _, _ | .provideService _ _ _, _ | .provideContext _ _, _ | .restore _ _, _
+  | .defs _ _ _ _, _ | .invoke _ _ _, _ => .refl _
 
 /-- **The budgeted meaning under a host**: the exit or the budget's cut, the stores and the
 host's state. The outer `none` is a call the host does not answer; it forgets the stores and the
@@ -387,7 +387,7 @@ theorem denoteRowsB_straight (table : RowTable) (k : Nat) :
   | .gen _, _, h | .uninterruptible _, _, h | .interruptible _, _, h | .yieldNow _, _, h
   | .awaitFiber _ _, _, h | .withFiber _, _, h | .scoped _, _, h | .acquireRelease _ _, _, h
   | .provideLayer _ _ _, _, h | .service _, _, h | .provideService _ _ _, _, h
-  | .iterate _ _ _ _ _ _, _, h | .restore _ _, _, h | .defs _ _ _ _, _, h | .invoke _ _ _, _, h => by
+  | .provideContext _ _, _, h | .iterate _ _ _ _ _ _, _, h | .restore _ _, _, h | .defs _ _ _ _, _, h | .invoke _ _ _, _, h => by
     simp only [StraightRows, Bool.false_eq_true] at h
 
 /-! ### The left injection commutes with the sequence and the loop -/
@@ -522,7 +522,7 @@ theorem denoteRowsB_looped (table : RowTable) (k : Nat) :
   | .gen _, _, h | .uninterruptible _, _, h | .interruptible _, _, h | .yieldNow _, _, h
   | .awaitFiber _ _, _, h | .withFiber _, _, h | .scoped _, _, h | .acquireRelease _ _, _, h
   | .provideLayer _ _ _, _, h | .service _, _, h | .provideService _ _ _, _, h
-  | .catchIf _ _ _, _, h | .restore _ _, _, h | .defs _ _ _ _, _, h | .invoke _ _ _, _, h => by
+  | .provideContext _ _, _, h | .catchIf _ _ _, _, h | .restore _ _, _, h | .defs _ _ _ _, _, h | .invoke _ _ _, _, h => by
     simp only [Looped, Bool.false_eq_true] at h
 
 /-- **The detailed observation projects to the host meaning** (Q3): a finished tree to its exit,

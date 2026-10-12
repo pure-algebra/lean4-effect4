@@ -119,6 +119,14 @@ theorem prepareR_denoteR (root : NativeEff) (e : NativeEff) (p : Point)
         cases evalTerm p.env value with
         | some v => unfold updateContextR; rw [prepareR_guardR_bind]; rfl
         | none => rfl
+      | provideContext context b =>
+        rw [denoteR_provideContext root context b hpos]
+        cases (evalTerm p.env context).bind Val.context? with
+        | none => rfl
+        | some ctx =>
+          cases inlineYield b (p.child 0) with
+          | some exit => rfl
+          | none => unfold updateContextR; rw [prepareR_guardR_bind]; rfl
       | restore saved b =>
         rw [denoteR_restore root saved b hpos]
         cases (evalTerm p.env saved).bind Val.savedMask? with

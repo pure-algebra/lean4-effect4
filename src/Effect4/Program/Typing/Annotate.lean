@@ -238,6 +238,15 @@ mutual
         if Ty.sub v.normalize ty.normalize then
           pure ⟨bt.answer, bt.error, Row.diff bt.requires (Requirement.single key)⟩
         else throw ⟨p, .valueNotSubtype key v ty⟩) b.1
+    | .provideContext context body =>
+      let b := check s env (p ++ [0]) body
+      atProgram p env (do
+        let ct ← Checker.term? s env p context
+        match ct.normalize with
+        | .contextOf supplied =>
+          let bt ← b.2
+          pure ⟨bt.answer, bt.error, Row.diff bt.requires supplied⟩
+        | _ => throw ⟨p, .contextExpected ct⟩) b.1
     | .restore saved body =>
       let b := check s env (p ++ [0]) body
       atProgram p env (do
@@ -473,9 +482,7 @@ mutual
     | .raceAllFirst entrants =>
       let c := checkEffs s env (p ++ [0]) [] entrants
       atNode p (.env env) c.2 c.1
-    | .setContext context =>
-      atNode p (.env env) (Checker.checkAction s env p (.setContext context)) []
-    | .getContext => atNode p (.env env) (Checker.checkAction s env p .getContext) []
+    | .context keys => atNode p (.env env) (Checker.checkAction s env p (.context keys)) []
     | .getId => atNode p (.env env) (Checker.checkAction s env p .getId) []
     | .closeScope scope exit =>
       atNode p (.env env) (Checker.checkAction s env p (.closeScope scope exit)) []

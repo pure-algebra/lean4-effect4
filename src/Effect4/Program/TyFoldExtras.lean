@@ -60,11 +60,12 @@ inductive TyCtor where
   | undefined
   | number
   | bytes
+  | contextOf
 deriving DecidableEq, Repr
 
 /-- Every tag, in declaration order. -/
 def TyCtor.all : List TyCtor :=
-  [.never, .unit, .nat, .int, .string, .bool, .handle, .option, .list, .prod, .except, .exitOf, .causeOf, .fiberOf, .union, .lit, .refOf, .deferredOf, .var, .unknown, .record, .map, .tuple, .app, .null, .undefined, .number, .bytes]
+  [.never, .unit, .nat, .int, .string, .bool, .handle, .option, .list, .prod, .except, .exitOf, .causeOf, .fiberOf, .union, .lit, .refOf, .deferredOf, .var, .unknown, .record, .map, .tuple, .app, .null, .undefined, .number, .bytes, .contextOf]
 
 /-- The tag of a node: one level, no recursion. -/
 def tyCtor : Effect4.Program.Ty → TyCtor
@@ -96,6 +97,7 @@ def tyCtor : Effect4.Program.Ty → TyCtor
   | .undefined => .undefined
   | .number => .number
   | .bytes => .bytes
+  | .contextOf _ => .contextOf
 
 /-- The constructor's name, as the declaration spells it. -/
 def TyCtor.name : TyCtor → String
@@ -127,6 +129,7 @@ def TyCtor.name : TyCtor → String
   | .undefined => "undefined"
   | .number => "number"
   | .bytes => "bytes"
+  | .contextOf => "contextOf"
 
 /-- The constructor's binder names, in declaration order. -/
 def TyCtor.binders : TyCtor → List String
@@ -158,6 +161,7 @@ def TyCtor.binders : TyCtor → List String
   | .undefined => []
   | .number => []
   | .bytes => []
+  | .contextOf => ["keys"]
 
 /-- One argument of a constructor of `Effect4.Program.Ty`, by sort: a member is a `child`, a leaf type has its sort's
 constructor, and a member under a container has its position's, the container kept with the carrier in
@@ -168,6 +172,7 @@ inductive TyArgF (R : Type u) where
   | nat (v : Nat)
   | list_prod_string_prod_bool_ty (v : List (String × Bool × R))
   | list_ty (v : List R)
+  | serviceKey (v : Effect4.Row Effect4.ServiceKey)
 
 /-- The children at a `Bool × R` position, in order. -/
 def kids_pos_prod_bool_ty {R : Type u} : Bool × R → List R
@@ -328,6 +333,7 @@ def TyArgF.map {R : Type u} {S : Type v} (f : R → S) : TyArgF R → TyArgF S
   | .nat v => .nat v
   | .list_prod_string_prod_bool_ty v => .list_prod_string_prod_bool_ty (v.map (prodMapSnd (prodMapSnd f)))
   | .list_ty v => .list_ty (v.map f)
+  | .serviceKey v => .serviceKey v
 
 /-- Every child of an argument, at every position, in order. -/
 def TyArgF.kids {R : Type u} : TyArgF R → List R
@@ -336,6 +342,7 @@ def TyArgF.kids {R : Type u} : TyArgF R → List R
   | .nat _ => []
   | .list_prod_string_prod_bool_ty v => kids_pos_list_prod_string_prod_bool_ty v
   | .list_ty v => kids_pos_list_ty v
+  | .serviceKey _ => []
 
 /-- What an argument contributes to a monoid fold: a child its value, a composite position its children
 combined as `foldMap_ty` combines them, a leaf nothing. -/
@@ -345,6 +352,7 @@ def TyArgF.contrib {M : Type u} (unit : M) (op : M → M → M) : TyArgF M → O
   | .nat _ => none
   | .list_prod_string_prod_bool_ty v => some (comb_pos_list_prod_string_prod_bool_ty unit op v)
   | .list_ty v => some (comb_pos_list_ty unit op v)
+  | .serviceKey _ => none
 
 /-- **The functor's composition law.** -/
 theorem TyArgF.map_comp {A : Type u} {B : Type v} {C : Type w} (h : B → C) (k : A → B) :
@@ -354,6 +362,7 @@ theorem TyArgF.map_comp {A : Type u} {B : Type v} {C : Type w} (h : B → C) (k 
   | .nat _ => rfl
   | .list_prod_string_prod_bool_ty v => congrArg TyArgF.list_prod_string_prod_bool_ty (map_pos_list_prod_string_prod_bool_ty_comp h k v)
   | .list_ty v => congrArg TyArgF.list_ty (map_pos_list_ty_comp h k v)
+  | .serviceKey _ => rfl
 
 /-- **The functor's identity law.** -/
 theorem TyArgF.map_id {A : Type u} : ∀ a : TyArgF A, a.map (fun s => s) = a
@@ -362,6 +371,7 @@ theorem TyArgF.map_id {A : Type u} : ∀ a : TyArgF A, a.map (fun s => s) = a
   | .nat _ => rfl
   | .list_prod_string_prod_bool_ty v => congrArg TyArgF.list_prod_string_prod_bool_ty (map_pos_list_prod_string_prod_bool_ty_id v)
   | .list_ty v => congrArg TyArgF.list_ty (map_pos_list_ty_id v)
+  | .serviceKey _ => rfl
 
 /-- The children of a mapped argument are the children mapped. -/
 theorem TyArgF.kids_map {A : Type u} {B : Type v} (f : A → B) :
@@ -371,6 +381,7 @@ theorem TyArgF.kids_map {A : Type u} {B : Type v} (f : A → B) :
   | .nat _ => rfl
   | .list_prod_string_prod_bool_ty v => kids_pos_list_prod_string_prod_bool_ty_map f v
   | .list_ty v => kids_pos_list_ty_map f v
+  | .serviceKey _ => rfl
 
 /-- The arguments of a node by sort, in declaration order: one level, no recursion. -/
 def tyArgs : Effect4.Program.Ty → List (TyArgF Effect4.Program.Ty)
@@ -402,6 +413,7 @@ def tyArgs : Effect4.Program.Ty → List (TyArgF Effect4.Program.Ty)
   | .undefined => []
   | .number => []
   | .bytes => []
+  | .contextOf a0 => [.serviceKey a0]
 
 /-- A node from its tag and its arguments; a tag whose arguments do not have its sorts is `never`. -/
 def tyBuild : TyCtor → List (TyArgF Effect4.Program.Ty) → Effect4.Program.Ty
@@ -433,6 +445,7 @@ def tyBuild : TyCtor → List (TyArgF Effect4.Program.Ty) → Effect4.Program.Ty
   | .undefined, [] => .undefined
   | .number, [] => .number
   | .bytes, [] => .bytes
+  | .contextOf, [.serviceKey a0] => .contextOf a0
   | _, _ => .never
 
 /-- **A node is rebuilt from its view.** -/
@@ -476,6 +489,7 @@ structure TyTable (α : Type u) where
   undefined : α
   number : α
   bytes : α
+  contextOf : α
 
 /-- A row by tag. -/
 def TyTable.get {α : Type u} (t : TyTable α) : TyCtor → α
@@ -507,6 +521,7 @@ def TyTable.get {α : Type u} (t : TyTable α) : TyCtor → α
   | .undefined => t.undefined
   | .number => t.number
   | .bytes => t.bytes
+  | .contextOf => t.contextOf
 
 /-- A layer function as an algebra: every constructor hands its tag and its arguments by sort, its
 children folded at every position, to one function. -/
@@ -540,6 +555,7 @@ def TyAlgebra.ofLayer {R : Type u} (layer : TyCtor → List (TyArgF R) → R) :
   ty_undefined := layer .undefined []
   ty_number := layer .number []
   ty_bytes := layer .bytes []
+  ty_contextOf a0 := layer .contextOf [.serviceKey a0]
 
 /-- **The fold of a layer function, one layer down.** -/
 theorem cata_ofLayer_view {R : Type u} (layer : TyCtor → List (TyArgF R) → R) (t : Effect4.Program.Ty) :
@@ -574,6 +590,7 @@ theorem cata_ofLayer_view {R : Type u} (layer : TyCtor → List (TyArgF R) → R
   | .undefined => rfl
   | .number => rfl
   | .bytes => rfl
+  | .contextOf _ => rfl
 
 /-- **Uniqueness, one layer down**: a function that satisfies the layer equation at every node is the
 fold of the layer function (`hom_eq_cata_ty`, every field by definition). -/
@@ -609,7 +626,8 @@ theorem eq_cata_ofLayer {R : Type u} (layer : TyCtor → List (TyArgF R) → R) 
       h_ty_null := hf .null
       h_ty_undefined := hf .undefined
       h_ty_number := hf .number
-      h_ty_bytes := hf .bytes } t
+      h_ty_bytes := hf .bytes
+      h_ty_contextOf := fun a0 => hf (.contextOf a0) } t
 
 /-- An algebra morphism `h` from `alg` to `alg'`, one square per constructor (a composite position
 through its container's map), each defaulting to `rfl`. -/
@@ -671,6 +689,8 @@ intros; rfl
 intros; rfl
   ty_bytes : h (alg.ty_bytes) = alg'.ty_bytes := by
 intros; rfl
+  ty_contextOf : ∀ a0, h (alg.ty_contextOf a0) = alg'.ty_contextOf a0 := by
+intros; rfl
 
 /-- **Fusion, from uniqueness.** -/
 theorem cata_fusion_ty {R : TyFam → Type u} {S : TyFam → Type v}
@@ -712,7 +732,8 @@ theorem cata_fusion_ty {R : TyFam → Type u} {S : TyFam → Type v}
       h_ty_null := c.ty_null
       h_ty_undefined := c.ty_undefined
       h_ty_number := c.ty_number
-      h_ty_bytes := c.ty_bytes } t
+      h_ty_bytes := c.ty_bytes
+      h_ty_contextOf := c.ty_contextOf } t
 
 /-- **The fold of a layer function keeps every property its layers keep**, every child at every
 position read (by fusion: the layers on the subtype commute with `Subtype.val`). -/
@@ -759,6 +780,7 @@ def TyAlgebra.prod {R : TyFam → Type u} {S : TyFam → Type v}
   ty_undefined := (a.ty_undefined, b.ty_undefined)
   ty_number := (a.ty_number, b.ty_number)
   ty_bytes := (a.ty_bytes, b.ty_bytes)
+  ty_contextOf a0 := (a.ty_contextOf a0, b.ty_contextOf a0)
 
 /-- **The banana split, by fusion at each projection.** -/
 theorem cata_prod_ty {R : TyFam → Type u} {S : TyFam → Type v}
@@ -802,6 +824,7 @@ theorem foldMap_view {M : Type u} (unit : M) (op : M → M → M) (f : Effect4.P
   | .undefined => rfl
   | .number => rfl
   | .bytes => rfl
+  | .contextOf _ => rfl
 
 /-- The monoid fold whose node contribution reads only the node's shape, as a layer algebra. -/
 def TyAlgebra.headAlg {M : Type u} (unit : M) (op : M → M → M)
