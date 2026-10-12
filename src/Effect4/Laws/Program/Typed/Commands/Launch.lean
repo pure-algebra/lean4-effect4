@@ -467,17 +467,15 @@ theorem fiberTyped_child (typed : MachineTyped root rootTy w m) {childTy : EffTy
   · rw [declaredOnly ty' d]
     exact ⟨finalPos ty true, true, .nil _, prov⟩
   · rw [show (spawnChild m program flag budget ctx).frame.current = program from rfl,
-      raceRegistrationR_ambient (ambientProg_entry root (code _ (Row.subset_refl _)) true)] at marker
+      raceRegistrationR_ambient (code _ (Row.subset_refl _))] at marker
     cases marker
   · rw [declaredOnly ty' d]
-    refine ⟨childTy.requires, finalPos ty flag, flag, covered, rfl, ?_, ?_, .nil _, prov⟩
-    · intro h
-      cases h
-    · exact ambientProg_entry root (ambientProg_mono root ord (ambientProg_widen root
+    exact ⟨childTy.requires, finalPos ty flag, flag, covered, rfl,
+      ambientProg_mono root ord (ambientProg_widen root
         (before := (childTy, childTy.requires, childTy.requires))
         (after := (ty, Env.Requirement.empty, Env.Requirement.empty)) subA subE
         (fun a h => absurd h (Row.not_mem_empty a)) (fun a h => absurd h (Row.not_mem_empty a))
-        (code _ (Row.subset_refl _)))) flag
+        (code _ (Row.subset_refl _))), .nil _, prov⟩
 
 theorem readCode_alloc (typed : ConfigTyped root rootTy w m q) :
     ReadCode root (w.addFiber ⟨m.nextId⟩ ty)

@@ -2,278 +2,46 @@ import Effect4.Laws.Program.Typed.Context
 
 /-!
 Concept: residual-program-typing, R4 and R9; helper of the closed M5 source claim.
-The existing program arrows retain the actual protected entry of a captured release body.
-The entry index separates pre-entry interruption from completion after context restoration.
-The physical premise is supplied by the evaluator and saved-mask region, not source spelling.
+The captured release body (`Body.release`) at the ambient judgment. An interruption can reach a
+program at any entry, under a mask too: the loop top and `getCont` deliver a deferred interrupt
+whatever the mask (rc.112 `internal/effect.ts:639-642` and `:684-686`; equal text in 4.0.1
+`:632-635` and `:679-681`). So the judgment holds every program's failure row within its entry
+row at either mask (`AmbientProg`'s entry), and restoring code promises on failure only the keys
+both contexts hold (`rowMeet`).
 This module establishes no whole-machine preservation or outside-runtime observation.
 -/
 set_option autoImplicit false
 namespace Effect4.Program.Typed
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched Effect4.Program.Denote
 
-/-- True forgets the physical mask; false records an established noninterruptible entry.
-Consumer: the captured release body and current, saved and queued position adapters. -/
-abbrev AmbientEntryInput := Env.Requirement × Bool
-
-/-- The actual frame discharges protection; ordinary entry makes no mask assertion. -/
-def AmbientEntryAt (input : AmbientEntryInput) (saved : RSaved) : Prop :=
-  input.2 = false → saved.interruptible = false
-
-/-- Interruption before ordinary evaluation must retain the guaranteed failure services, and the
-position is well formed (`AmbientPosition.WF`). -/
-def ambientEntryBound (input : AmbientEntryInput) (position : AmbientPosition) : Prop :=
-  (input.2 = false ∨ Row.Subset position.failureRow input.1) ∧ position.WF
-
-/-- Whole fiber actions return through the saved entry mask, while setters update the row. -/
-def ambientEntryStep (input : AmbientEntryInput) (op : FiberOp) (answer : op.answer) : AmbientEntryInput :=
-  (ambientFiberInput input.1 op answer, input.2)
-
-/-- The actual false onExit pop protects its callback; other callbacks forget protection. -/
-def ambientGuardInput (kind : GuardKind) (position : AmbientPosition) (exit : ExitV) : AmbientEntryInput :=
-  (ambientInput position exit, match kind with | .onExit false => false | _ => true)
-
-/-- The protected instance uses the same program constructors and strong value membership. -/
-abbrev AmbientProgAt (root : ProgramSource) (world : Typed.World) (input : AmbientEntryInput)
-    (position : AmbientPosition) (program : RProgram) : Prop :=
-  ProgramArrow (fun w input => ambientStorePre root w input.1)
-    (fun w (_ : AmbientEntryInput) => storePost w)
-    (fun w input => ambientFiberPre root w input.1)
-    (fun w input => ambientFiberPost w input.1) ambientEntryStep
-    (fun w input => AmbientExit w input.1)
-    (fun w input kind mid exit => kind.hasExitArm exit = true ∧ AmbientExit w input.1 mid exit)
-    (fun position exit => (ambientInput position exit, true))
-    (fun context => (context.services.keysRow, true)) ambientEntryBound ambientGuardInput
-    world input position program
-
-/-- Conservative positions forget only the mask fact, never context coverage. -/
-theorem ambientEntry_forget {available : Env.Requirement} {frame : RSaved}
-    (_protectedEntry : AmbientEntryAt (available, false) frame) : AmbientEntryAt (available, true) frame := by
-  intro impossible
-  exact Bool.noConfusion impossible
-
-/-- The actual false onExit producer supplies protected callback entry on either exit. -/
-theorem ambientGuardInput_false_at (interp : RInterp) (position : AmbientPosition)
-    (exit : ExitV) (next : ExitV → RProgram) (rest : List ScopeFrame) (frame : RSaved) :
-    AmbientEntryAt (ambientGuardInput (.onExit false) position exit)
-      (popR interp exit (.resume (.onExit false) next :: rest) frame).1 := by
-  intro _
-  cases exit <;> rfl
-
-/-- True onExit makes no false-mask claim, even when the prior frame is interruptible. -/
-theorem ambientGuardInput_true_at (interp : RInterp) (position : AmbientPosition)
-    (exit : ExitV) (next : ExitV → RProgram) (rest : List ScopeFrame) (frame : RSaved) :
-    AmbientEntryAt (ambientGuardInput (.onExit true) position exit)
-      (popR interp exit (.resume (.onExit true) next :: rest) frame).1 := by
-  intro impossible
-  exact Bool.noConfusion impossible
-
-/-- Existing ambient certificates enter the same carrier at either physical entry index.
-This connector adds no returned services and keeps the original type-only instance unchanged. -/
-theorem ambientProg_entry (root : ProgramSource) {world : Typed.World} {available : Env.Requirement}
-    {position : AmbientPosition} {program : RProgram}
-    (typed : AmbientProg root world available position program) (mode : Bool) :
-    AmbientProgAt root world (available, mode) position program := by
-  induction typed generalizing mode with
-  | pure payload entry => exact .pure payload ⟨Or.inr entry.1, entry.2⟩
-  | store cert pre _ entry ih =>
-    exact .store cert pre (fun later ordered answer post => ih later ordered answer post mode) ⟨Or.inr entry.1, entry.2⟩
-  | fiber notGuard notUnguard notFinish notScopeExit cert pre _ entry ih =>
-    exact .fiber notGuard notUnguard notFinish notScopeExit cert pre
-      (fun later ordered answer post => ih later ordered answer post mode) ⟨Or.inr entry.1, entry.2⟩
-  | guard mid _ _ skip entry ihBody ihRun =>
-    exact .guard mid (ihBody mode)
-      (fun later ordered exit post => ihRun later ordered exit post _) skip ⟨Or.inr entry.1, entry.2⟩
-  | unguard payload entry => exact .unguard payload ⟨Or.inr entry.1, entry.2⟩
-  | finishFinalizer payload entry => exact .finishFinalizer payload ⟨Or.inr entry.1, entry.2⟩
-  | scopedGuard mid previous scope _ callback live services widen entry ihBody =>
-    exact .scopedGuard mid previous scope (ihBody mode) callback live services widen ⟨Or.inr entry.1, entry.2⟩
-
-/-- The restoring setter starts protected and completes under the actual previous map. -/
-theorem ambient_setContext_protected (root : ProgramSource) (world : Typed.World)
-    (available : Env.Requirement) (previous : Ctx) (services : ServicesFit world previous.services) :
-    AmbientProgAt root world (available, false)
-      (EffTy.pure .unit, previous.services.keysRow, previous.services.keysRow)
-      (fiberValR (.setContext previous) rfl) := by
-  refine .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) () services ?_ ⟨Or.inl rfl, Row.subset_refl _⟩
-  intro _ _ answer post
-  change answer = Val.unit at post
-  subst answer
-  exact .pure ⟨strongExit_success _ _ _ True.intro, Row.subset_refl _⟩ ⟨Or.inl rfl, Row.subset_refl _⟩
-
-/-- Protected cleanup restores its actual previous services on either exit.
-Consumer: the captured release body; no entry coverage is inferred from a future success. -/
-theorem ambient_restore_finalizer_protected (root : ProgramSource) {world : Typed.World}
-    (available : Env.Requirement) (previous : Ctx) (services : ServicesFit world previous.services)
-    (type : EffTy) (bodyExit : ExitV) (payload : ExitOk world type bodyExit) :
-    AmbientProgAt root world (available, false)
-      (type, previous.services.keysRow, previous.services.keysRow)
-      (finalizerR bodyExit (fiberValR (.setContext previous) rfl)) := by
-  let middle : AmbientPosition :=
-    ((⟨.unit, type.error, Env.Requirement.empty⟩ : EffTy),
-      previous.services.keysRow, previous.services.keysRow)
-  have setter : AmbientProgAt root world (available, false) middle
-      (fiberValR (.setContext previous) rfl) := by
-    refine ProgramArrow.outputMap
-      (ty := ((EffTy.pure .unit, previous.services.keysRow, previous.services.keysRow) : AmbientPosition))
-      (ty' := middle) (ambient_setContext_protected root world available previous services)
-      ?_ (fun _ bound => bound)
-    intro later input exit clean
-    exact ⟨exitOk_widen (mid := EffTy.pure .unit) (ty := middle.type)
-      (Ty.subN_refl .unit) (Bounds.subN_never type.error) clean.1, clean.2⟩
-  have work : ∀ originalExit, ExitOk world type originalExit →
-      AmbientProgAt root world (available, false) middle
-      (match originalExit with
-      | .success _ => fiberValR (.setContext previous) rfl
-      | .failure _ => (guardR .onFailure (fiberValR (.setContext previous) rfl)).bind fun
-          | .success value => .pure (.success value)
-          | .failure cause => .pure (Exit.restoreAfterFinalizer originalExit (.failure cause))) := by
-    intro originalExit originalPayload
-    cases originalExit with
-    | success value => exact setter
-    | failure cause =>
-      refine ProgramArrow.guardBind setter (fun later ordered exit post => ?_)
-        (fun later ordered exit clean absent => ?_) ⟨Or.inl rfl, Row.subset_refl _⟩
-      · cases exit with
-        | success value => exact Bool.noConfusion post.1
-        | failure cleanupCause =>
-          refine .pure ⟨?_, Row.subset_refl _⟩ ⟨Or.inr (Row.subset_refl _), Row.subset_refl _⟩
-          have original : ExitOk later middle.type (.failure cause) :=
-            exitOk_failure_of_errorN (Ty.subN_refl _) (strongExit_mono _ _ _ _ ordered originalPayload)
-          exact exitOk_restore original post.2.1
-      · cases exit with
-        | success value => exact clean
-        | failure cleanupCause => exact Bool.noConfusion absent
-  unfold finalizerR
-  refine ProgramArrow.guardBind (work bodyExit payload) (fun later ordered exit post => ?_)
-    (fun later ordered exit clean absent => ?_) ⟨Or.inl rfl, Row.subset_refl _⟩
-  · cases exit with
-    | success value =>
-      refine .finishFinalizer ⟨strongExit_mono _ _ _ _ ordered payload, ?_⟩
-        ⟨Or.inr (Row.subset_refl _), Row.subset_refl _⟩
-      cases bodyExit <;> exact Row.subset_refl _
-    | failure cause => exact Bool.noConfusion post.1
-  · cases exit with
-    | success value => exact Bool.noConfusion absent
-    | failure cause =>
-      exact ⟨exitOk_failure_of_errorN (Ty.subN_refl _) clean.1, Row.subset_refl _⟩
-
-/-- The actual loop top can deliver a deferred interruption under a false physical mask.
-Consumer: current, saved and queued ambient input selection. -/
-def ambientEntryMode (saved : RSaved) : Bool :=
-  saved.interruptible || saved.deferredInterrupt
-
-/-- The effective protected input follows both physical fields of the actual saved frame. -/
-theorem ambientEntryMode_at (available : Env.Requirement) (saved : RSaved) :
-    AmbientEntryAt (available, ambientEntryMode saved) saved := by
-  intro protectedEntry
-  exact (Bool.or_eq_false_iff.mp protectedEntry).1
-
-/-- A false onExit callback retains any already-deferred interruption.
-Consumer: the actual saved-callback entry adapter, after the loop top has cleared the flag. -/
-theorem ambientEntryMode_false_pop (interp : RInterp) (exit : ExitV)
-    (next : ExitV → RProgram) (rest : List ScopeFrame) (saved : RSaved) :
-    ambientEntryMode (popR interp exit (.resume (.onExit false) next :: rest) saved).1 =
-      saved.deferredInterrupt := by
-  cases exit <;> rfl
-
-/-- World growth retains the protected program certificate without changing its input fields.
-Consumer: the ambient current and queued-code world adapters. -/
-theorem ambientProgAt_mono (root : ProgramSource) {world later : Typed.World}
-    (ordered : world.leHost later) {input : AmbientEntryInput} {position : AmbientPosition}
-    {code : RProgram} (typed : AmbientProgAt root world input position code) :
-    AmbientProgAt root later input position code := by
-  refine ProgramArrow.mono ?_ ?_ ?_ ordered typed
-  · intro before after entry op cert order pre
-    exact ambientStorePre_mono root order entry.1 op cert pre
-  · intro before after entry op cert order pre
-    exact ambientFiberPre_mono root order entry.1 op cert pre
-  · intro before after entry result exit order payload
-    exact ⟨strongExit_mono before after result.type exit order payload.1, payload.2⟩
-
-/-- The same certificate weakens only its conservative entry flag to established protection.
-Consumer: callback installation when its actual producer clears the deferred flag. -/
-theorem ambientProgAt_protect (root : ProgramSource) {world : Typed.World}
-    {input : AmbientEntryInput} {position : AmbientPosition} {code : RProgram}
-    (typed : AmbientProgAt root world input position code) :
-    AmbientProgAt root world (input.1, false) position code := by
-  induction typed with
-  | pure payload entry => exact .pure payload ⟨Or.inl rfl, entry.2⟩
-  | store cert pre _ entry ih =>
-    exact .store cert pre (fun later ordered answer post => ih later ordered answer post)
-      ⟨Or.inl rfl, entry.2⟩
-  | fiber notGuard notUnguard notFinish notScopeExit cert pre _ entry ih =>
-    exact .fiber notGuard notUnguard notFinish notScopeExit cert pre
-      (fun later ordered answer post => ih later ordered answer post) ⟨Or.inl rfl, entry.2⟩
-  | guard mid _ run skip entry ihBody _ =>
-    exact .guard mid ihBody run skip ⟨Or.inl rfl, entry.2⟩
-  | unguard payload entry => exact .unguard payload ⟨Or.inl rfl, entry.2⟩
-  | finishFinalizer payload entry => exact .finishFinalizer payload ⟨Or.inl rfl, entry.2⟩
-  | scopedGuard mid previous scope _ callback live services widen entry ihBody =>
-    exact .scopedGuard mid previous scope ihBody callback live services widen ⟨Or.inl rfl, entry.2⟩
-
-/-- Ordinary callback evidence enters the actual saved mask without widening its row.
-Consumer: current and queued callback installation at the effective entry cut. -/
-theorem ambientProgAt_at_saved (root : ProgramSource) {world : Typed.World}
-    {available : Env.Requirement} {position : AmbientPosition} {code : RProgram}
-    (typed : AmbientProgAt root world (available, true) position code) (saved : RSaved) :
-    AmbientProgAt root world (available, ambientEntryMode saved) position code := by
-  cases flag : ambientEntryMode saved with
-  | false => exact ambientProgAt_protect root typed
-  | true => exact typed
-
-/-- The existing saved-code relation reads its effective input from the actual saved frame.
-Consumer: parked and resumed positions in the ambient runtime relation. -/
-abbrev AmbientSaved (root : ProgramSource) (world : Typed.World) (available : Env.Requirement)
-    (final : AmbientPosition) (saved : RSaved) : Prop :=
-  Contracts.SavedArrow (AmbientProgAt root) (fun world input => AmbientExit world input.1)
-    (ambientFrameProtocols root) (fun position exit => (ambientInput position exit, true))
-    (fun ctx => (ctx.services.keysRow, true)) ambientGuardInput
-    world (available, ambientEntryMode saved) final saved
-
-/-- The existing saved relation exposes the physical assertion of its selected input.
-Consumer: actual parked-code and queued-overwrite adapters. -/
-theorem ambientSaved_entry_at (root : ProgramSource) (world : Typed.World)
-    (available : Env.Requirement) (final : AmbientPosition) (saved : RSaved)
-    (_typed : AmbientSaved root world available final saved) :
-    AmbientEntryAt (available, ambientEntryMode saved) saved :=
-  ambientEntryMode_at available saved
-
 /-- A program at a constant row is at every smaller constant row: its exits promise less.
 Consumer: the captured release body, at the keys both possible contexts hold. -/
-theorem ambientProgAt_shrink (root : ProgramSource) {world : Typed.World} {input : AmbientEntryInput}
-    {type : EffTy} {row smaller : Env.Requirement} {code : RProgram} (sub : Row.Subset smaller row)
-    (typed : AmbientProgAt root world input (type, row, row) code) :
-    AmbientProgAt root world input (type, smaller, smaller) code :=
+theorem ambientProg_shrink (root : ProgramSource) {world : Typed.World}
+    {available : Env.Requirement} {type : EffTy} {row smaller : Env.Requirement} {code : RProgram}
+    (sub : Row.Subset smaller row) (typed : AmbientProg root world available (type, row, row) code) :
+    AmbientProg root world available (type, smaller, smaller) code :=
   ProgramArrow.outputMap typed
     (fun _ _ exit payload => ⟨payload.1,
       Row.subset_trans (show Row.Subset (ambientInput (type, smaller, smaller) exit)
         (ambientInput (type, row, row) exit) by cases exit <;> exact sub) payload.2⟩)
-    (fun _ entry => ⟨entry.1.imp id fun bound => Row.subset_trans sub bound, Row.subset_refl _⟩)
+    (fun _ entry => ⟨Row.subset_trans sub entry.1, Row.subset_refl _⟩)
 
-/-- The actual captured release body retains all-exit restoration under its installed false mask.
-The source body uses its own captured map; it returns at the keys both the restored previous
-context and the captured one hold (`rowMeet`), since an interruption at its entry returns before
-the restore is installed.
-Consumer: mask installation in Body and the original closed Assembly typing path. -/
-theorem ambient_release_body_protected (root : ProgramSource) {world : Typed.World}
+/-- **The captured release body**: the body at its own row, then the previous context restored on
+every exit. It returns at the keys both the restored context and the captured one hold
+(`rowMeet`): an interruption at its entry returns before the restore is installed.
+Consumer: the release arm of `bodyTyped_ambient` (`Typed/Body.lean`). -/
+theorem ambient_release_body (root : ProgramSource) {world : Typed.World}
     (available : Env.Requirement) (point : Point) (previous : Ctx)
     (services : ServicesFit world previous.services) (type : EffTy)
     (typed : AmbientProg root world available (type, available, available)
       (denoteAt root.program point)) :
-    AmbientProgAt root world (available, false)
+    AmbientProg root world available
       (type, rowMeet previous.services.keysRow available, rowMeet previous.services.keysRow available)
       (bodyR (interpR root.program) (.release point previous)) := by
-  refine ambientProgAt_shrink root (rowMeet_left _ _) ?_
-  change AmbientProgAt root world (available, false)
-    (type, previous.services.keysRow, previous.services.keysRow)
+  change AmbientProg root world available
+    (type, rowMeet previous.services.keysRow available, rowMeet previous.services.keysRow available)
     (onExitR (denoteAt root.program point) fun _ => fiberValR (.setContext previous) rfl)
-  unfold onExitR
-  refine ProgramArrow.guardBind (ambientProg_entry root typed false)
-    (fun later ordered exit post => ?_) (fun _ _ exit _ absent => ?_) ⟨Or.inl rfl, Row.subset_refl _⟩
-  · exact ambient_restore_finalizer_protected root _ previous
-      (servicesFit_map ordered.1.2.1 ordered.1.2.2.1 ordered.1.2.2.2.1 ordered.2 ordered.1.1.2
-        (serviceTy_of_le ordered.1) services) type exit post.2.1
-  · cases exit <;> exact Bool.noConfusion absent
+  exact ambient_onExit_restore root previous services (rowMeet_left _ _)
+    (ambientProg_shrink root (rowMeet_right _ _) typed)
 
 end Effect4.Program.Typed

@@ -268,7 +268,7 @@ def MHostWalkTyped (root : ProgramSource) (w : World) (m : RState) (host : Fiber
     (covered : Env.Requirement) (tout : MachinePos) : RSaved × Option ExitV → Prop
   | (frame, none) =>
     (∃ (row : Env.Requirement) (tin : MachinePos), Row.Subset row covered ∧
-      tin.2 = frame.interruptible ∧ AmbientProgAt root w (row, tin.2) tin.1 frame.current ∧
+      tin.2 = frame.interruptible ∧ AmbientProg root w row tin.1 frame.current ∧
       MHostStack root w m host tin tout frame.stack ∧ InterruptProvenance frame) ∨
     MHostCallback root w m host tout frame ∨ MHostMarker root w m host tout frame
   | (frame, some ex) => AmbientExit w (ambientInput tout.1 ex) tout.1 ex ∧
@@ -330,8 +330,8 @@ theorem ambient_deliverR_hostTyped (root : ProgramSource) (interp : RInterp) (w 
     (ex : ExitV) {tin tout : MachinePos} (stack : MHostStack root w m f.id tin tout f.frame.stack)
     (hex : AmbientExit w (ambientInput tin.1 ex) tin.1 ex) (hcov : Row.Subset (ambientInput tin.1 ex) covered)
     (hmask : f.frame.interruptible = tin.2)
-    (deferredCov : f.frame.deferredInterrupt = true → Row.Subset tin.1.failureRow covered)
-    (hp : InterruptProvenance f.frame) (wf : tin.1.WF) :
+    (failCov : Row.Subset tin.1.failureRow covered) (hp : InterruptProvenance f.frame)
+    (wf : tin.1.WF) :
     MHostWalkTyped root w m f.id covered tout ((deliverR interp m f yielding ex).fiber.frame,
       walkExit (deliverR interp m f yielding ex).outcome) := by
   have walkCase : MHostWalkTyped root w m f.id covered tout ((walkIter interp m f yielding ex).fiber.frame,
@@ -349,10 +349,9 @@ theorem ambient_deliverR_hostTyped (root : ProgramSource) (interp : RInterp) (w 
   | success v =>
     dsimp only
     split
-    · rename_i deferred
-      exact .inl ⟨tin.1.failureRow, tin, deferredCov deferred, hmask.symm,
+    · exact .inl ⟨tin.1.failureRow, tin, failCov, hmask.symm,
         .pure (ambientExit_failure (strongExit_of_clean w _ _ (pendingCause_clean hp)
-          (pendingCause_noShapeDefect _ hp)) (Row.subset_refl _)) ⟨Or.inr (Row.subset_refl _), wf⟩,
+          (pendingCause_noShapeDefect _ hp)) (Row.subset_refl _)) ⟨Row.subset_refl _, wf⟩,
         stack, ⟨hp.recorded, fun h => nomatch h⟩⟩
     · exact walkCase
 

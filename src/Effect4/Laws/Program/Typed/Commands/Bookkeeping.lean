@@ -551,14 +551,12 @@ theorem commandAuthority_view {m m' : RState}
   | drainDue => trivial
   | wake _ _ => trivial
 
-/-- What a reply's coverage and mask read of a fiber besides its stack: the context, the mask
-flag, and a deferred interrupt only while interruptible. -/
+/-- What a reply's coverage and mask read of a fiber besides its stack: the context and the mask
+flag. -/
 def MaskView (f f' : RFiber) : Prop :=
-  (f.frame.stack = [] ∨ f'.context = f.context) ∧ f'.frame.interruptible = f.frame.interruptible ∧
-    ((f.frame.deferredInterrupt = true → f.frame.interruptible = true) →
-      f'.frame.deferredInterrupt = true → f'.frame.interruptible = true)
+  (f.frame.stack = [] ∨ f'.context = f.context) ∧ f'.frame.interruptible = f.frame.interruptible
 
-theorem MaskView.refl (f : RFiber) : MaskView f f := ⟨.inr rfl, rfl, id⟩
+theorem MaskView.refl (f : RFiber) : MaskView f f := ⟨.inr rfl, rfl⟩
 
 /-- A reply over an empty stack is at the empty row. -/
 theorem stackReplyAt_nil {root : ProgramSource} {w : World} {m : RState} {f : RFiber} {ty : EffTy}
@@ -576,9 +574,9 @@ theorem stackReplyAt_view {root : ProgramSource} {w : World} {m m' : RState} {f 
     (hprov : InterruptProvenance f.frame → InterruptProvenance f'.frame) (mask : MaskView f f')
     (h : StackReplyAt root w m f ty row) : StackReplyAt root w m' f' ty row := by
   have empty := stackReplyAt_nil h
-  obtain ⟨final, flag, declared, covered, stack, provenance, deferred⟩ := h
-  obtain ⟨context, interruptible, deferredMask⟩ := mask
-  refine ⟨final, flag, ?_, ?_, ?_, hprov provenance, deferredMask deferred⟩
+  obtain ⟨final, flag, declared, covered, stack, provenance⟩ := h
+  obtain ⟨context, interruptible⟩ := mask
+  refine ⟨final, flag, ?_, ?_, ?_, hprov provenance⟩
   · rw [hid]
     exact declared
   · rcases context with nil | same
@@ -596,10 +594,10 @@ theorem MCodeOk.of_view {root : ProgramSource} {w : World} {m m' : RState} {f g 
     (current : g.frame.current = f.frame.current) (hstack : g.frame.stack = f.frame.stack)
     (hprov : InterruptProvenance f.frame → InterruptProvenance g.frame) (mask : MaskView f g)
     (h : MCodeOk root w m f ty) : MCodeOk root w m' g ty := by
-  obtain ⟨row, tin, flag, covered, bit, deferred, code, stack, provenance⟩ := h
-  obtain ⟨_, interruptible, deferredMask⟩ := mask
+  obtain ⟨row, tin, flag, covered, bit, code, stack, provenance⟩ := h
+  obtain ⟨_, interruptible⟩ := mask
   refine ⟨row, tin, flag, by rw [context]; exact covered, by rw [interruptible]; exact bit,
-    deferredMask deferred, by rw [current]; exact code, ?_, hprov provenance⟩
+    by rw [current]; exact code, ?_, hprov provenance⟩
   rw [hstack, hid]
   exact stack.races kept
 
@@ -633,7 +631,7 @@ theorem commandDelivery_view {root : ProgramSource} {w : World} {m m' : RState}
     obtain ⟨answer, error, row, cols, protocol, stack⟩ := h f hf
     exact ⟨answer, error, row, cols, protocol,
       stackReplyAt_view kept hid (by rw [hframe]) (by rw [hframe]; exact id)
-        ⟨.inr hctx, by rw [hframe], by rw [hframe]; exact id⟩ stack⟩
+        ⟨.inr hctx, by rw [hframe]⟩ stack⟩
   | finish host _ =>
     intro f' hf'
     obtain ⟨f, hf, _, _, _, _, hframe, _⟩ := ctlView_lookup_back ctl hf'
@@ -1218,16 +1216,16 @@ theorem enrollRaceOk_world {root : ProgramSource} {m : RState} {raceId : Nat} {c
 include hΓ in
 theorem stackReply_world {root : ProgramSource} {m : RState} {f : RFiber} {ty : EffTy}
     (h : StackReply root w m f ty) : StackReply root w' m f ty := by
-  obtain ⟨row, final, flag, declared, covered, stack, provenance, deferred⟩ := h
-  exact ⟨row, final, flag, by rw [hΓ]; exact declared, covered, stack.mono ord, provenance, deferred⟩
+  obtain ⟨row, final, flag, declared, covered, stack, provenance⟩ := h
+  exact ⟨row, final, flag, by rw [hΓ]; exact declared, covered, stack.mono ord, provenance⟩
 
 include hΘ in
 /-- A resume's code is typed at the same token declaration at the later world. -/
 theorem resumeOk_world {root : ProgramSource} {target : FiberId} {token : Nat} {code : RProgram}
     (h : ResumeCode root w target token code) : ResumeCode root w' target token code := by
-  intro ty declared row bit
+  intro ty declared row
   rw [hΘ] at declared
-  exact ambientProgAt_mono root ord (h ty declared row bit)
+  exact ambientProg_mono root ord (h ty declared row)
 
 include hΓ hΘ in
 theorem rcmdOk_world {root : ProgramSource} (c : RCmd) (h : RCmdOk (preds root) w c) :
@@ -1315,8 +1313,8 @@ theorem fiberTyped_world {root : ProgramSource} {m : RState} {x : RFiber}
   · obtain ⟨tin, row, declared, reply⟩ := h.delivery token hp
     exact ⟨tin, row, by rw [hΘ]; exact declared, (stackReply_world ord hΓ ⟨row, reply⟩).elim
       fun _ _ => by
-        obtain ⟨final, flag, declaredF, covered, stack, provenance, deferred⟩ := reply
-        exact ⟨final, flag, by rw [hΓ]; exact declaredF, covered, stack.mono ord, provenance, deferred⟩⟩
+        obtain ⟨final, flag, declaredF, covered, stack, provenance⟩ := reply
+        exact ⟨final, flag, by rw [hΓ]; exact declaredF, covered, stack.mono ord, provenance⟩⟩
   · rw [hΘ]
     exact h.pendingOwner p hp
   · obtain ⟨race, resultTy, found, host, token, reply, entrants⟩ := h.registration raceId marker
@@ -1653,7 +1651,7 @@ theorem configTyped_rupdate {root : ProgramSource} {rootTy : EffTy} {w : World} 
       code | ⟨d, nd, row, tin, flag, covered, bit, failure, stackOk, provenance⟩
     · exact Or.inl (code.of_view (racesKept_of_eq (m := m) (m' := m.update g) fun _ => rfl) hid context
         current stack prov mask)
-    · obtain ⟨_, interruptible, _⟩ := mask
+    · obtain ⟨_, interruptible⟩ := mask
       exact Or.inr ⟨deferred d, by rw [hid]; exact nd, row, tin, flag, by rw [context]; exact covered,
         by rw [interruptible]; exact bit, failure,
         by rw [stack, hid]; exact stackOk.races (racesKept_of_eq (m := m) fun _ => rfl),
@@ -2089,7 +2087,7 @@ theorem configTyped_postTask {root : ProgramSource} {rootTy : EffTy} {w : World}
         · rw [List.mem_singleton.mp hk]
           exact Or.inr ⟨below, free⟩
     have edited := configTyped_rupdate (g := g) typed hf rfl (PendingWeaker.refl _) rfl rfl rfl rfl rfl
-      (fun p => p) (fun d => d) ⟨.inr rfl, rfl, id⟩ rfl keys fresh
+      (fun p => p) (fun d => d) ⟨.inr rfl, rfl⟩ rfl keys fresh
     exact configTyped_congr rfl rfl rfl rfl rfl rfl rfl
       (configTyped_congr (m := m.update g) rfl rfl rfl rfl rfl rfl rfl edited)
 
@@ -2240,7 +2238,7 @@ theorem drainDue_preserves (root : ProgramSource) (rootTy : EffTy) :
       (List.mem_map.mpr ⟨d, hd, rfl⟩)))
   refine ⟨fun ty declared => ?_, wide.keysBelow _ key, ?_, fun owner priority mode => ?_⟩
   · have strong := PromiseTableOk.due wide.stores.c0 d hd ty declared
-    exact ambientProgAt_of_admin root (typedProg_mono root w _ ty _ ord (denoteCompletion_typed root strong))
+    exact ambientProg_of_admin root (typedProg_mono root w _ ty _ ord (denoteCompletion_typed root strong))
       (denoteCompletion_admin d.code)
   · cases hr : requestOfR m d.waiter d.token with
     | none => exact hr
@@ -2485,19 +2483,19 @@ theorem configTyped_interruptRecord {root : ProgramSource} {rootTy : EffTy} {w :
     have newProv : InterruptProvenance (recordedFiber t acc).frame :=
       ⟨fun c hc => by cases hc; exact hacc, fun _ => rfl⟩
     exact configTyped_rupdate (g := recordedFiber t acc) typed hf rfl (PendingWeaker.refl _) rfl
-      rfl rfl rfl rfl (fun _ => newProv) (fun d => d) ⟨.inr rfl, rfl, id⟩ rfl (sameKeys _ rfl rfl)
+      rfl rfl rfl rfl (fun _ => newProv) (fun d => d) ⟨.inr rfl, rfl⟩ rfl (sameKeys _ rfl rfl)
       (fiberTyped_reframe old (obsView_rupdate (g := recordedFiber t acc) hf rfl
         (PendingWeaker.refl _)) (Nat.le_refl _) (Nat.le_refl _) (recordedFiber t acc).frame rfl rfl
-        newProv ⟨.inr rfl, rfl, id⟩)
+        newProv ⟨.inr rfl, rfl⟩)
   · rw [hr]
     have newProv : InterruptProvenance (deferredFiber t acc).frame :=
       ⟨fun c hc => by cases hc; exact hacc, fun _ => rfl⟩
     exact configTyped_rupdate (g := deferredFiber t acc) typed hf rfl (PendingWeaker.refl _) rfl
-      rfl rfl rfl rfl (fun _ => newProv) (fun _ => rfl) ⟨.inr rfl, rfl, fun _ _ => interruptible⟩ rfl
+      rfl rfl rfl rfl (fun _ => newProv) (fun _ => rfl) ⟨.inr rfl, rfl⟩ rfl
       (sameKeys _ rfl rfl)
       (fiberTyped_reframe old (obsView_rupdate (g := deferredFiber t acc) hf rfl
         (PendingWeaker.refl _)) (Nat.le_refl _) (Nat.le_refl _) (deferredFiber t acc).frame rfl rfl
-        newProv ⟨.inr rfl, rfl, fun _ _ => interruptible⟩)
+        newProv ⟨.inr rfl, rfl⟩)
   · rw [hr]
     show ConfigTyped root rootTy w (m.update (appliedFiber t acc)) (.evaluate target :: q)
     let g := appliedFiber t acc
@@ -2532,19 +2530,17 @@ theorem configTyped_interruptRecord {root : ProgramSource} {rootTy : EffTy} {w :
             MHostStack root w m t.id tin (finalPos ty' flag) t.frame.stack →
             MCodeOk root w (m.update g) g ty' := by
           intro row tin flag covered bit bound wf stack
-          refine ⟨row, tin, flag, covered, bit, fun _ => appliedInt, ?_,
+          exact ⟨row, tin, flag, covered, bit,
+            .pure (ambientExit_failure (exitOk_interrupts w _ hacc) bound) ⟨bound, wf⟩,
             stack.races (racesKept_of_eq view.races), newProv⟩
-          rw [show tin.2 = true from bit.trans appliedInt]
-          exact .pure (ambientExit_failure (exitOk_interrupts w _ hacc) bound) ⟨Or.inr bound, wf⟩
         cases hm : raceRegistrationR t.frame.current with
         | none =>
           -- an idle fiber's stack by its code clause, a parked one's by its delivery clause
           cases hp : t.parked with
           | notParked =>
-            obtain ⟨row, tin, flag, covered, bit, _, code, stackOk, _⟩ :=
+            obtain ⟨row, tin, flag, covered, bit, code, stackOk, _⟩ :=
               old.code live hidle hm hp ty' declared'
-            rw [show tin.2 = true from bit.trans appliedInt] at code
-            exact install row tin flag covered bit (ambientProgAt_failure_bound code)
+            exact install row tin flag covered bit (ambient_entry code)
               (ProgramArrow.entry code).2 stackOk
           | withGuard token =>
             obtain ⟨tin, row, _, final, flag, declaredF, covered, stackOk, _⟩ := old.delivery token hp
@@ -2566,7 +2562,7 @@ theorem configTyped_interruptRecord {root : ProgramSource} {rootTy : EffTy} {w :
           exact install row ((((resultTy, row, row) : AmbientPosition)), t.frame.interruptible) flag covered
             rfl (Row.subset_refl _) (Row.subset_refl _) stackOk
     have edited := configTyped_rupdate_gen (g := g) typed hf rfl (fun _ _ h => nomatch h) rfl
-      (fun _ => newProv) ⟨.inr rfl, rfl, fun _ _ => appliedInt⟩ (sameKeys g rfl rfl)
+      (fun _ => newProv) ⟨.inr rfl, rfl⟩ (sameKeys g rfl rfl)
       (fun token r hr' => by
         rw [requestOfR_of_not_parked look (fun h => nomatch h)] at hr'
         cases hr')

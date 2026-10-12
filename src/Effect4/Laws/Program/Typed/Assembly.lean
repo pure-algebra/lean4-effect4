@@ -1315,10 +1315,8 @@ theorem machineTyped_load (root : ProgramSource) (rootTy : EffTy) (fuel compileF
   change (initialWorld rootTy root.sig.serviceTy).Γ Api.root = some ty at hty
   rw [declared] at hty
   cases hty
-  refine ⟨Env.Requirement.empty, finalPos rootTy true, true, Env.Context.satisfies_empty _, rfl, ?_,
-    ambientProg_entry root code _, .nil _, ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
-  intro h
-  cases h
+  exact ⟨Env.Requirement.empty, finalPos rootTy true, true, Env.Context.satisfies_empty _, rfl,
+    code, .nil _, ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
 
 /-- **M5's reduction lemma, at the generated typed state** (seat A's
 `ValueMembership.typedStateF_load`, moved here and restated over row 134's split): a root whose

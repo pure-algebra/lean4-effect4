@@ -354,82 +354,6 @@ abbrev CodeOk (root : ProgramSource) (w : World) (m : RState) (host : FiberId) (
   CodeArrow (fun w (_ : Unit) => TypedProg root w) (fun w (_ : Unit) => ExitOk w)
     (frameProtocols root) (fun _ _ => ()) (fun _ => ()) (fun _ _ _ => ()) id w m host () final x
 
-/-- Actual context coverage indexes the ambient instance at the current read cut.
-Membership remains in the existing ServiceOk field, separately from these row bounds. -/
-def AmbientCodeOk (root : ProgramSource) (w : World) (m : RState) (fiber : RFiber)
-    (final : EffTy) : Prop :=
-  ∃ available, fiber.context.services.Satisfies available ∧
-    CodeArrow (AmbientProgAt root) (fun world input => AmbientExit world input.1)
-      (ambientFrameProtocols root) (fun position exit => (ambientInput position exit, true))
-      (fun ctx => (ctx.services.keysRow, true)) ambientGuardInput AmbientPosition.type
-      w m fiber.id (available, ambientEntryMode fiber.frame)
-      (final, Env.Requirement.empty, Env.Requirement.empty) fiber.frame
-
-/-- The actual current-code producer reads its mask from the same frame as the saved stack.
-Consumer: installed source callbacks and ambient load/current-code construction. -/
-theorem AmbientCodeOk.of_ordinary {root : ProgramSource} {w : World} {m : RState}
-    {fiber : RFiber} {final : EffTy} {available : Env.Requirement} {position : AmbientPosition}
-    (coverage : fiber.context.services.Satisfies available)
-    (code : AmbientProgAt root w (available, true) position fiber.frame.current)
-    (stack : HostStackAt (AmbientProgAt root) (fun world input => AmbientExit world input.1)
-      (ambientFrameProtocols root) (fun position exit => (ambientInput position exit, true))
-      (fun ctx => (ctx.services.keysRow, true)) ambientGuardInput AmbientPosition.type
-      w m fiber.id position (final, Env.Requirement.empty, Env.Requirement.empty) fiber.frame.stack)
-    (provenance : Contracts.InterruptProvenance fiber.frame) :
-    AmbientCodeOk root w m fiber final :=
-  ⟨available, coverage, position, ambientProgAt_at_saved root code fiber.frame, stack, provenance⟩
-
-/-- An actual readable ambient fiber covers its current interruption guarantee.
-Consumer: the loop-top interruption arm of the ambient current-code preservation path. -/
-theorem AmbientCodeOk.failure_covered {root : ProgramSource} {w : World} {m : RState}
-    {fiber : RFiber} {final : EffTy} (typed : AmbientCodeOk root w m fiber final)
-    (ordinary : ambientEntryMode fiber.frame = true) :
-    ∃ available tin,
-      AmbientProgAt root w (available, ambientEntryMode fiber.frame) tin fiber.frame.current ∧
-      fiber.context.services.Satisfies tin.failureRow := by
-  obtain ⟨available, coverage, tin, code, _⟩ := typed
-  have bound := ProgramArrow.entry code
-  change ambientEntryBound (available, ambientEntryMode fiber.frame) tin at bound
-  rw [ordinary] at bound
-  have entryBound : Row.Subset tin.failureRow available :=
-    bound.1.resolve_left Bool.noConfusion
-  exact ⟨available, tin, code, fiber.context.services.satisfies_weaken coverage entryBound⟩
-
-/-- The actual current position records both the physical mask and loop-top deferred cut.
-Consumer: ambient primitive and queued-code installation. -/
-theorem AmbientCodeOk.entry_at {root : ProgramSource} {w : World} {m : RState}
-    {fiber : RFiber} {final : EffTy} (_typed : AmbientCodeOk root w m fiber final) :
-    ∃ available, fiber.context.services.Satisfies available ∧
-      AmbientEntryAt (available, ambientEntryMode fiber.frame) fiber.frame := by
-  obtain ⟨available, coverage, _⟩ := _typed
-  exact ⟨available, coverage, ambientEntryMode_at available fiber.frame⟩
-
-/-- The actual loop top types a pending interruption even under a false physical mask.
-Consumer: the queued loop arm of the ambient current-code preservation path. -/
-theorem AmbientCodeOk.runloopTop {root : ProgramSource} {w : World} {m : RState}
-    {fiber : RFiber} {final : EffTy} (typed : AmbientCodeOk root w m fiber final) :
-    AmbientCodeOk root w m (runloopTop fiber) final := by
-  unfold Effect4.Machine.runloopTop
-  split
-  · rename_i pending
-    obtain ⟨available, coverage, tin, code, stack, provenance⟩ := typed
-    have deferred : fiber.frame.deferredInterrupt = true := pending
-    have ordinary : ambientEntryMode fiber.frame = true :=
-      Bool.or_eq_true_iff.mpr (Or.inr deferred)
-    have bound := ProgramArrow.entry code
-    change ambientEntryBound (available, ambientEntryMode fiber.frame) tin at bound
-    rw [ordinary] at bound
-    have entryBound : Row.Subset tin.failureRow available :=
-      bound.1.resolve_left Bool.noConfusion
-    refine ⟨available, coverage, tin, ?_, stack, ?_⟩
-    · exact .pure ⟨strongExit_of_clean w tin.type fiber.frame.pendingCause
-        (pendingCause_clean provenance) (pendingCause_noShapeDefect tin.type provenance),
-        by cases tin with
-        | result type success failure => exact entryBound
-        | capturedContext guaranteed => exact ⟨Row.subset_refl _, entryBound⟩⟩ ⟨Or.inr entryBound, bound.2⟩
-    · exact ⟨provenance.recorded, fun impossible => Bool.noConfusion impossible⟩
-  · exact typed
-
 /-- A registering race's unlaunched entrants start in children holding the host's context, so
 while the host lives its context covers each entrant's requirements (decisions row 349). An
 exited host launches nothing. -/
@@ -528,7 +452,7 @@ theorem hostStackAt_mono {Object Input : Type}
   h.map fun _ _ _ edge => edge.imp (Contracts.frameArrow_mono ord) (registrationArrowAt_mono ord)
 
 /-- The current entry and the complete host path transport through the same shared laws.
-Consumer: CodeOk and AmbientCodeOk at the existing machine's world-growth cuts. -/
+Consumer: CodeOk at the existing machine's world-growth cuts. -/
 theorem CodeArrow.mono {Object Input : Type}
     {TP : World → Input → Object → RProgram → Prop}
     {Ex : World → Input → Object → ExitV → Prop} {hooks : Contracts.FrameProtocols Object}
@@ -541,15 +465,6 @@ theorem CodeArrow.mono {Object Input : Type}
     CodeArrow TP Ex hooks inputOf restoreInput guardInput typeOf w' m host input final saved := by
   obtain ⟨tin, code, stack, provenance⟩ := typed
   exact ⟨tin, tp ord code, hostStackAt_mono ord stack, provenance⟩
-
-/-- The actual fiber keeps its context while world declarations grow.
-Consumer: ambient machine and queue world-transport adapters. -/
-theorem AmbientCodeOk.mono {root : ProgramSource} {w w' : World} {m : RState}
-    {fiber : RFiber} {final : EffTy} (ord : w.leHost w')
-    (typed : AmbientCodeOk root w m fiber final) : AmbientCodeOk root w' m fiber final := by
-  obtain ⟨available, coverage, code⟩ := typed
-  exact ⟨available, coverage,
-    CodeArrow.mono (TP := AmbientProgAt root) (fun ordered h => ambientProgAt_mono root ordered h) ord code⟩
 
 theorem hostStack_mono {root : ProgramSource} {w w' : World} {m : RState} {host : FiberId}
     {tin final : EffTy} {stack : List ScopeFrame} (ord : w.leHost w')
@@ -716,30 +631,27 @@ abbrev finalPos (final : EffTy) (flag : Bool) : MachinePos :=
   (((final, Env.Requirement.empty, Env.Requirement.empty) : AmbientPosition), flag)
 
 /-- **A fiber's current code over its saved stack**, at a row its context covers: the code at
-that row and the fiber's mask, a host stack to the fiber's declared type, interrupt provenance,
-and a deferred interrupt only while interruptible. An interrupt is deferred only on a running
-interruptible fiber (rc.112 `internal/effect.ts:588-591`, equal text in 4.0.1 `:569-572`), so
-with the code's entry bound the injected failure is covered (`ambient_deliverR_hostTyped`). A
-masking step leaves a deferred interrupt on a masked fiber only until the next loop top, which
-replaces the code (`runloopTop`); that window is `ReadOk`'s second branch, typed by its stack. -/
+that row, a host stack from its position at the fiber's mask to the fiber's declared type, and
+interrupt provenance. The code's failure row is within the row at either mask (the judgment's
+entry, `MaskEntry.lean`), so an interrupt the machine injects there is covered, a deferred one
+under a mask too (`runloopTop`; rc.112 `internal/effect.ts:639-642`, equal text in 4.0.1
+`:632-635`). -/
 def MCodeOk (root : ProgramSource) (w : World) (m : RState) (f : RFiber) (final : EffTy) : Prop :=
   ∃ (row : Env.Requirement) (tin : MachinePos) (flag : Bool),
     f.context.services.Satisfies row ∧ tin.2 = f.frame.interruptible ∧
-    (f.frame.deferredInterrupt = true → f.frame.interruptible = true) ∧
-    AmbientProgAt root w (row, tin.2) tin.1 f.frame.current ∧
+    AmbientProg root w row tin.1 f.frame.current ∧
     MHostStack root w m f.id tin (finalPos final flag) f.frame.stack ∧
     Contracts.InterruptProvenance f.frame
 
 theorem MCodeOk.mono {root : ProgramSource} {w w' : World} {m : RState} {f : RFiber}
     {final : EffTy} (ord : w.leHost w') (h : MCodeOk root w m f final) : MCodeOk root w' m f final := by
-  obtain ⟨row, tin, flag, covered, mask, deferred, code, stack, provenance⟩ := h
-  exact ⟨row, tin, flag, covered, mask, deferred, ambientProgAt_mono root ord code, stack.mono ord,
-    provenance⟩
+  obtain ⟨row, tin, flag, covered, mask, code, stack, provenance⟩ := h
+  exact ⟨row, tin, flag, covered, mask, ambientProg_mono root ord code, stack.mono ord, provenance⟩
 
 theorem MCodeOk.races {root : ProgramSource} {w : World} {m m' : RState} {f : RFiber}
     {final : EffTy} (kept : RacesKept m m') (h : MCodeOk root w m f final) : MCodeOk root w m' f final := by
-  obtain ⟨row, tin, flag, covered, mask, deferred, code, stack, provenance⟩ := h
-  exact ⟨row, tin, flag, covered, mask, deferred, code, stack.races kept, provenance⟩
+  obtain ⟨row, tin, flag, covered, mask, code, stack, provenance⟩ := h
+  exact ⟨row, tin, flag, covered, mask, code, stack.races kept, provenance⟩
 
 /-- What is read of a fiber is its id, context and frame. -/
 theorem MCodeOk.congr {root : ProgramSource} {w : World} {m : RState} {f g : RFiber}
@@ -753,18 +665,18 @@ theorem MCodeOk.congr {root : ProgramSource} {w : World} {m : RState} {f g : RFi
 take no capability from its type in the token table (decisions row 349). -/
 def ResumeCode (root : ProgramSource) (w : World) (target : FiberId) (token : Nat) (code : RProgram) :
     Prop :=
-  ∀ ty, w.Θ target token = some ty → ∀ row bit,
-    AmbientProgAt root w (row, bit) ((ty, row, row) : AmbientPosition) code
+  ∀ ty, w.Θ target token = some ty → ∀ row,
+    AmbientProg root w row ((ty, row, row) : AmbientPosition) code
 
 /-- Administrative resumed code typed at its token's declaration is a resume's code. -/
 theorem resumeCode_of_typed {root : ProgramSource} {w : World} {target : FiberId} {token : Nat}
     {code : RProgram} (typed : Contracts.ResumeOk (TypedProg root) w target token code)
     (admin : AdminCode code) : ResumeCode root w target token code :=
-  fun ty declared row bit => ambientProgAt_of_admin root (typed ty declared) admin row bit
+  fun ty declared row => ambientProg_of_admin root (typed ty declared) admin row
 
 /-- Row-indexed code is no race registration marker: that operation's pre is `False`. -/
-theorem raceRegistrationR_ambient {root : ProgramSource} {w : World} {input : AmbientEntryInput}
-    {position : AmbientPosition} {p : RProgram} (h : AmbientProgAt root w input position p) :
+theorem raceRegistrationR_ambient {root : ProgramSource} {w : World} {available : Env.Requirement}
+    {position : AmbientPosition} {p : RProgram} (h : AmbientProg root w available position p) :
     raceRegistrationR p = none := by
   unfold raceRegistrationR
   split
@@ -778,15 +690,13 @@ def StackReplyAt (root : ProgramSource) (w : World) (m : RState) (fiber : RFiber
   ∃ final flag, w.Γ fiber.id = some final ∧ fiber.context.services.Satisfies row ∧
     MHostStack root w m fiber.id (((replyTy, row, row) : AmbientPosition), fiber.frame.interruptible)
       (finalPos final flag) fiber.frame.stack ∧
-    Contracts.InterruptProvenance fiber.frame ∧
-    (fiber.frame.deferredInterrupt = true → fiber.frame.interruptible = true)
+    Contracts.InterruptProvenance fiber.frame
 
 theorem StackReplyAt.mono {root : ProgramSource} {w w' : World} {m m' : RState} {fiber : RFiber}
     {replyTy : EffTy} {row : Env.Requirement} (ord : w.leHost w') (kept : RacesKept m m')
     (h : StackReplyAt root w m fiber replyTy row) : StackReplyAt root w' m' fiber replyTy row := by
-  obtain ⟨final, flag, declared, covered, stack, provenance, deferred⟩ := h
-  exact ⟨final, flag, ord.1.2.1 _ _ declared, covered, (stack.races kept).mono ord, provenance,
-    deferred⟩
+  obtain ⟨final, flag, declared, covered, stack, provenance⟩ := h
+  exact ⟨final, flag, ord.1.2.1 _ _ declared, covered, (stack.races kept).mono ord, provenance⟩
 
 theorem StackReplyAt.congr {root : ProgramSource} {w : World} {m : RState} {f g : RFiber}
     {replyTy : EffTy} {row : Env.Requirement} (h : StackReplyAt root w m f replyTy row)
@@ -833,8 +743,8 @@ def StackReply (root : ProgramSource) (w : World) (m : RState) (fiber : RFiber) 
 theorem stackReply_races {root : ProgramSource} {w : World} {m m' : RState} {fiber : RFiber}
     {replyTy : EffTy} (kept : RacesKept m m') (h : StackReply root w m fiber replyTy) :
     StackReply root w m' fiber replyTy := by
-  obtain ⟨row, final, flag, declared, covered, stack, provenance, deferred⟩ := h
-  exact ⟨row, final, flag, declared, covered, stack.races kept, provenance, deferred⟩
+  obtain ⟨row, final, flag, declared, covered, stack, provenance⟩ := h
+  exact ⟨row, final, flag, declared, covered, stack.races kept, provenance⟩
 
 /-- The direct registration marker owns a real race on this fiber, and the race token's
 result meets this host's saved continuation. This finite current-code clause covers both
@@ -918,8 +828,8 @@ theorem stackReply_mono {root : ProgramSource} {w w' : World} {m m' : RState} {f
     {replyTy : EffTy} (ord : w.leHost w') (ext : ∀ id t, w.Γ id = some t → w'.Γ id = some t)
     (kept : RacesKept m m') (h : StackReply root w m fiber replyTy) :
     StackReply root w' m' fiber replyTy := by
-  obtain ⟨row, final, flag, declared, covered, stack, provenance, deferred⟩ := h
-  exact ⟨row, final, flag, ext _ _ declared, covered, (stack.races kept).mono ord, provenance, deferred⟩
+  obtain ⟨row, final, flag, declared, covered, stack, provenance⟩ := h
+  exact ⟨row, final, flag, ext _ _ declared, covered, (stack.races kept).mono ord, provenance⟩
 
 /-- **The delivery facts are monotone**: they read the world only positively, the machine only at
 the command's owner (`Guard.commandOwner`, the host of every command that installs a reply), and
@@ -947,8 +857,8 @@ theorem commandDelivery_mono {root : ProgramSource} {w w' : World} {m m' : RStat
     obtain ⟨answer, error, row, cols, protocol, stack⟩ := h f hf
     exact ⟨answer, error, row, fiberListColumns_mono ext cols, ambientIteratorProtocol_mono ord protocol,
       by
-        obtain ⟨final, flag, declared, covered, st, provenance, deferred⟩ := stack
-        exact ⟨final, flag, ext _ _ declared, covered, (st.races kept).mono ord, provenance, deferred⟩⟩
+        obtain ⟨final, flag, declared, covered, st, provenance⟩ := stack
+        exact ⟨final, flag, ext _ _ declared, covered, (st.races kept).mono ord, provenance⟩⟩
   | finish host _ =>
     intro f hf
     rw [owner host rfl] at hf

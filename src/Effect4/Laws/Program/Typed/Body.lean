@@ -20,8 +20,8 @@ at any completed view is typed by the ambient judgment at the row the fiber's co
   `Scope` read, the acquire at the point's child 0 (M5), the release's registration (its capture is
   covered by the captured context, `CaptureTyped`), and the closed branch's release now
   (`foreignFin_ambient`, under the captured context, which covers the row);
-- `release`: the release at its point under the protected restore of the previous context
-  (`ambient_release_body_protected`, `Typed/MaskEntry.lean`);
+- `release`: the release at its point under the restore of the previous context, at the keys both
+  contexts hold (`ambient_release_body`, `Typed/MaskEntry.lean`);
 - `layerBuild`: the layer family's build (`layerBuild_typed`);
 - `region`: the installed region's program (`region_ambient`): a point's program, a layer's build,
   the build with the memo map added, a leaf's construction;
@@ -418,38 +418,33 @@ def bodyPosition (available : Env.Requirement) (body : Body) (cert : EffTy) : Am
   | _ => (cert, available, available)
 
 /-- **The body bridge** (decisions row 349): an admitted body's program, at any completed view,
-entered at a row the fiber's context covers and at the mask the `mask` operation installs, is
-typed by the ambient judgment at the body's position. -/
+entered at a row the fiber's context covers, is typed by the ambient judgment at the body's
+position. -/
 theorem bodyTyped_ambient (root : ProgramSource) {w : World} (hwf : SourceWF root)
     (htie : w.serviceTy = root.sig.serviceTy) (completed : List (FiberId × ExitV)) {b : Body}
-    {cert : EffTy} {available : Env.Requirement} (flag : Bool)
+    {cert : EffTy} {available : Env.Requirement}
     (typed : BodyTyped root w b cert) (requires : Row.Subset cert.requires available)
     (acquired : ∀ point ctx, b = .acquireIn point ctx → ctx.services.Satisfies available)
-    (released : ∀ point previous, b = .release point previous → flag = false)
     (coverage : BodyCoverage root w available b cert) :
-    AmbientProgAt root w (available, flag) (bodyPosition available b cert)
+    AmbientProg root w available (bodyPosition available b cert)
       (bodyR (interpRAt root.program completed) b) := by
   obtain ⟨regionCov, entryCov, pointCov, layerCov⟩ := coverage
   cases typed with
   | at_ p ty h =>
-    exact ambientProg_entry root (denoteAt_ambient root hwf htie h requires
-      (pointCov p (.inl rfl))) flag
+    exact denoteAt_ambient root hwf htie h requires (pointCov p (.inl rfl))
   | raceCleanup race =>
-    refine ambientProg_entry root ?_ flag
     exact ambient_fiberAdmin rfl (fun _ h => nomatch h) (fun _ h => nomatch h)
       (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) () trivial (fun w' _ ans post => by
         subst post
         exact .pure ⟨strongExit_success w' _ _ trivial, Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩)
   | acquireIn p ctx ty h node hsvc =>
     obtain ⟨acquire, release, hat⟩ := node
-    exact ambientProg_entry root (acquireIn_ambient root hwf htie h hat hsvc
-      (acquired p ctx rfl) requires (pointCov p (.inr ⟨ctx, .inl rfl⟩))) flag
+    exact acquireIn_ambient root hwf htie h hat hsvc (acquired p ctx rfl) requires
+      (pointCov p (.inr ⟨ctx, .inl rfl⟩))
   | release p previous _ h hsvc =>
-    rw [released p previous rfl]
-    exact ambient_release_body_protected root available p previous hsvc cert
+    exact ambient_release_body root available p previous hsvc cert
       (denoteAt_ambient root hwf htie h requires (pointCov p (.inr ⟨previous, .inr rfl⟩)))
   | layerBuild p m scope lt h hlive hmemo =>
-    refine ambientProg_entry root ?_ flag
     obtain ⟨l, hat, hrest⟩ := h
     show AmbientProg root w available _ (layerBuildR root.program p m scope)
     simp only [layerBuildR, hat]
@@ -457,11 +452,9 @@ theorem bodyTyped_ambient (root : ProgramSource) {w : World} (hwf : SourceWF roo
       hlive hmemo requires (layerCov p m scope rfl)
   | region body bodyTy ty typed answer error =>
     obtain ⟨intrinsic, typed', answer', error', inside, stack⟩ := regionCov body rfl
-    exact ambientProg_entry root (region_ambient root hwf htie completed typed' answer' error'
-      inside stack) flag
+    exact region_ambient root hwf htie completed typed' answer' error' inside stack
   | contextEntry update body flag' bodyTy ty typed answer error updateTyped =>
     obtain ⟨intrinsic, typed', answer', error', covers⟩ := entryCov update body flag' rfl
-    exact ambientProg_entry root (contextEntry_ambient root typed' answer' error' updateTyped
-      covers) flag
+    exact contextEntry_ambient root typed' answer' error' updateTyped covers
 
 end Effect4.Program.Typed
