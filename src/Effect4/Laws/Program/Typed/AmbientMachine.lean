@@ -236,6 +236,23 @@ theorem ambientExit_failure {w : World} {row : Env.Requirement} {position : Ambi
   | result t s f => exact ⟨typed, bound⟩
   | capturedContext g => exact ⟨typed, Row.subset_refl _, bound⟩
 
+/-- A failure at a position holds the position's failure row within its row. -/
+theorem ambientExit_failure_bound {w : World} {row : Env.Requirement} {q : AmbientPosition}
+    {c : CauseV} (h : AmbientExit w row q (.failure c)) : Row.Subset q.failureRow row := by
+  cases q with
+  | result t s f => exact h.2
+  | capturedContext g => exact h.2.2
+
+/-- A widening of every exit of one position into a row holds the target's failure row within that
+row: the empty failure, admitted at every type, witnesses it. -/
+theorem failure_bound_of_widen {w : World} {p q : AmbientPosition} {row : Env.Requirement}
+    (widen : ∀ ex, AmbientExit w (ambientInput p ex) p ex → AmbientExit w row q ex) :
+    Row.Subset q.failureRow row := by
+  have none : ∀ r ∈ (Cause.empty : CauseV).reasons, r.tag = .interrupt := fun _ h => nomatch h
+  exact ambientExit_failure_bound (widen (.failure Cause.empty)
+    (ambientExit_failure (strongExit_of_clean w _ _ (cleanExit_of_interrupts _ none)
+      (noShapeDefect_of_interrupts _ _ none)) (by rw [ambientInput_failure]; exact Row.subset_refl _)))
+
 /-! ## Machine stacks
 
 A machine stack position pairs a completion position with the fiber's mask flag while control is
@@ -405,10 +422,12 @@ theorem ambientProg_unguard_inv {root : ProgramSource} {w : World} {available : 
 /-! ## The walk -/
 
 /-- The walk ran a `scoped` guard's slot: the current code is the scope's exit callback, whose
-exit is typed at the captured context's row, over the remaining stack. -/
+exit is typed at the captured context's row, at a well-formed position whose failure row that row
+holds, over the remaining stack. -/
 def MCallbackSaved (root : ProgramSource) (w : World) (tout : MachinePos) (x : RSaved) : Prop :=
   ∃ tin prev sc ex, scopeExitCallback? x.current = some (prev, sc, ex) ∧
     AmbientExit w prev.services.keysRow tin.1 ex ∧ (frameProtocols root).scopeExit w prev sc ∧
+    Row.Subset tin.1.failureRow prev.services.keysRow ∧ tin.1.WF ∧
     tin.2 = x.interruptible ∧ MStack root w tin tout x.stack ∧ InterruptProvenance x
 
 /-- The walk's outcomes at a covered row: code typed at a covered row over the remaining stack,
@@ -578,7 +597,8 @@ theorem ambient_popR_typed (root : ProgramSource) (interp : RInterp) (w : World)
       subst hmask
       cases ex <;> simp only [popR] <;>
         exact .inr ⟨_, prev, sc, _, callback _, widen w (leHost_refl w) _ hex, hook w (leHost_refl w),
-          rfl, .cons (.finalizerMask (p := q) i wf) tail,
+          failure_bound_of_widen (widen w (leHost_refl w)), wf, rfl,
+          .cons (.finalizerMask (p := q) i wf) tail,
           ⟨hp.recorded, hp.deferred⟩⟩
     | answer next run =>
       have hrun := run w (leHost_refl w) ex hex

@@ -251,6 +251,7 @@ def MHostCallback (root : ProgramSource) (w : World) (m : RState) (host : FiberI
     (x : RSaved) : Prop :=
   ∃ tin prev sc ex, scopeExitCallback? x.current = some (prev, sc, ex) ∧
     AmbientExit w prev.services.keysRow tin.1 ex ∧ (frameProtocols root).scopeExit w prev sc ∧
+    Row.Subset tin.1.failureRow prev.services.keysRow ∧ tin.1.WF ∧
     tin.2 = x.interruptible ∧ MHostStack root w m host tin tout x.stack ∧ InterruptProvenance x
 
 /-- The walk delivered a success into a registration callback: the race's marker is current over
@@ -303,10 +304,10 @@ theorem ambient_popR_hostTyped (root : ProgramSource) (interp : RInterp) (w : Wo
       cases o with
       | none =>
         rcases walk with ⟨row, tin', sub, mask, code, st, prov⟩ |
-          ⟨tin', prev, sc, ex', cb, exOk, hook, mask, st, prov⟩
+          ⟨tin', prev, sc, ex', cb, exOk, hook, restored, wf, mask, st, prov⟩
         · exact .inl ⟨row, tin', sub, mask, code, Effect4.Contracts.Path.append (MHostStack.of_stack st) tail,
             ⟨prov.recorded, prov.deferred⟩⟩
-        · exact .inr (.inl ⟨tin', prev, sc, ex', cb, exOk, hook, mask,
+        · exact .inr (.inl ⟨tin', prev, sc, ex', cb, exOk, hook, restored, wf, mask,
             Effect4.Contracts.Path.append (MHostStack.of_stack st) tail, ⟨prov.recorded, prov.deferred⟩⟩)
       | some ex' => exact ih ex' f walk.1 walk.2.1 walk.2.2 kept
     · cases arrow with
