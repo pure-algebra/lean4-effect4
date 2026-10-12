@@ -13,7 +13,7 @@ natively, compiled through LCNF. TypeScript joins the Effect ecosystem through t
 the readers. Programs are data: a canonical `Eff` tree with a digest and a typing certificate.
 A program has folds, a journaled run with replay, and a printed image that reads back.
 
-## Where the tree stands (2026-10-11, branch `refactor/phase1-phase3`)
+## Where the tree stands (2026-10-12, branch `refactor/phase1-phase3`)
 
 - **Programs and their types.** The checker types a program with located refusal. The address
   table, the focus function and one annotating traversal give each address its environment and
@@ -210,10 +210,14 @@ A program has folds, a journaled run with replay, and a printed image that reads
   Five guard chains and the evaluation
   half of `MaskRuns` follow as instances; replacing the old chains is Codex's lane. A raw context
   write lets a checked program at a closed row die with `missingService` (`E4-CTX-CE-001`). Row 349
-  ruled option A: a typed `context` reader and a `provideContext` region. Its syntax, readers,
-  printers, OCaml bridge and generated files are on branch `land/typed-context`, with eight
-  behaviour gates passing there. It merges when `Effect4.Laws` builds: the machine's typed state
-  must carry context coverage through every command, in `Laws/Program/Typed/`.
+  ruled option A: a typed `context` reader and a `provideContext` region, landed on 2026-10-12.
+  One ambient judgment types the machine's code (`AmbientProg`,
+  `src/Effect4/Laws/Program/Typed/Residual.lean`). Every program's failure row is within its
+  entry row, interruptible or not. Every clause of the typed state keeps it. M6 and M7 hold
+  modulo five planned goals. Four wait on the restore slot: `clause_closeScope`,
+  `Evaluating.settle_callback`, `clause_scoped` and `foreignFinalizer_ambient`. The fifth,
+  `Evaluating.countdown_parks_positional`, needs `J` to rule out a stale or a duplicate countdown
+  firing, which neither rc.112 nor 4.0.1 makes.
   The printer spells a pair of a union as a union of pairs (`E4-PRINT-CE-001`, row 346, ruled).
 - **Shared accounting** (row 355). A stack ledger states once what the goals lane re-proved per
   scenario: consumed plus held is at most produced, along every reachable machine
@@ -251,6 +255,11 @@ A program has folds, a journaled run with replay, and a printed image that reads
 
 ## Next, in order
 
+000. **The restore slot** (the owner's ruling of 2026-10-12, the
+   [slot plan](research/2026-10-12-restore-slot-plan.md)). A context switch pushes the frame that
+   restores the previous context in the same step, as Effect 4.0.1's `updateContext` does
+   (`onExitUnsafe`); rc.112 leaves a window. The slice changes both machines and proves the four
+   planned goals that wait on it. Then the positional countdown goal.
 00. **The last planned goals** (the [goals packet](research/2026-10-10-goals-packet/README.md)).
    Codex reached its quota on 2026-10-12, and Claude carries its lane
    (`docs/research/2026-10-11-machine-models/CODEX-PROMPT.md`). Of the fourteen application goals, three are proved
