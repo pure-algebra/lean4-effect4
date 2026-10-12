@@ -21,6 +21,63 @@ surface carriers beside it.
  Schema document ⇄  representation  →  Schema.Struct({…}) syntax, JSON Schema
 ```
 
+## Start here
+
+Write programs with `Effect4.Author`, and run them under a clock or a host with `Effect4.Run`.
+`import Effect4` brings everything, the library modules included. `import Effect4.Api` alone
+has no `eff` block, no `fork` and no `Api.Author.build`.
+
+```lean
+import Effect4.Author
+open Effect4 Effect4.Program Effect4.Program.Authoring
+set_option autoImplicit false
+
+/-- A port number. Service key 10; the type code 4 spells `number`. -/
+def Port : ServiceDef := { key := ⟨⟨10⟩, ⟨4⟩⟩, carrier := .nat }
+
+/-- A request counter. Service key 11; the type code 7 spells `Ref<number>`. -/
+def Counter : ServiceDef := { key := ⟨⟨11⟩, ⟨7⟩⟩, carrier := .refOf .nat }
+
+def handle : Src NativeOp := eff do
+  let port ← Port.use
+  let c ← Counter.use
+  let _ ← Ref.updateWith c (fun n => Atom.add n (nat 1))
+  let n ← Ref.get c
+  return Atom.pair port n
+
+def server : Src NativeOp :=
+  provideAll [Port.constant (nat 8080), Counter.layer (Ref.make (nat 0))] handle
+
+#eval match Api.Author.build { services := [Port, Counter], main := server } with
+  | .ok b => IO.println s!"{b.ty.answer.render}; closed: {b.closed}"
+  | .error _ => IO.println "refused"
+```
+
+It prints `readonly [number, number]; closed: true`.
+
+- The `eff do` block is scoped syntax. It exists only where `Effect4.Program.Authoring` is open.
+- With `autoImplicit` off, a misspelled type name is an error, not an implicit variable.
+- Lean reserves the name `main` for an `IO` entry point, so name a program otherwise.
+- Write an atom as `Atom.add` or `Atom.pair`. A misspelled name in `app "name" [...]` is refused
+  only as a bare `term`.
+- A service key is `⟨⟨name⟩, ⟨code⟩⟩`, with `name` at least 4. The code fixes the carrier:
+  4 `number`, 5 `boolean`, 6 `void`, 7 `Ref<number>`, 8 `SqlClient`, 9 `KeyValueStore`.
+- Read `b.closed` before a run. A program that needs a service with no layer builds, and its run
+  dies with `missingService`.
+
+| The program | Run it with |
+| --- | --- |
+| computes, with no sleep and no host call | `b.runSync`, or `b.runSync { fuel := 100000 }` for a long loop |
+| sleeps | `Run.runClock b [millis]` |
+| calls a host row | `Run.runWith b reactor state` |
+
+`die asyncFiber` from `runSync` means that the run did not finish. It slept, called a host, or
+spent its budget of 1000 commands.
+
+To emit TypeScript, check the program with `Api.author src`, then call `t.emit name` and
+`Api.render (.ts e.module)`. The module has no imports. Its header and the prelude it calls are
+`harness/truth/module-imports.ts` and `harness/truth/prelude.ts`.
+
 ## The application face
 
 Import `Effect4.Api` (`src/Effect4/Api.lean`). It is the program interface:

@@ -150,12 +150,12 @@ open Effect4 Effect4.Program Effect4.Program.Authoring
 
 def numbers := Queue.Definitions.make "numbers" .nat
 
-def main : Src NativeOp := eff do
+def program : Src NativeOp := eff do
   let queue ← Queue.bounded .nat 2
   let _ ← numbers.offer queue (nat 7)
   numbers.take queue
 
-def checked := Api.Author.build (numbers.module main)
+def checked := Api.Author.build (numbers.module program)
 ```
 
 `Queue.Definitions` lives in [`Modules.Queue.Defs`](../../src/Effect4/Library/Queue/Defs.lean).
