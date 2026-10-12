@@ -360,10 +360,6 @@ owner's note of 2026-10-09: write a program, then watch its session answer calls
   the atom, and read row 309 as excluding integer and float arithmetic only, or remove it.
 - **The live view's three rulings** (LV-8, `docs/research/2026-10-10-live-view/LANDING.md`): code
   lines keyed by text, causal columns in the batch, and the gutter's address reading.
-- **A third route to determinism** (the
-  [schedule independence note](research/2026-10-10-schedule-independence/README.md)). Do DB-03 and
-  `AGENTS.md` gain random descent? Does a determinism claim observe `obs` up to a renaming of
-  minted names? Its slices DET-1 and DET-2 wait on these.
 - **The type interface's three choices** (the type interface note, section 4):
   - print `int` and `number` as the aliases `Int` and `Num` now (row 309, point 5);
   - decode an exported entry's inputs, or print refined types as brands;
