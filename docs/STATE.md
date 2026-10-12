@@ -211,9 +211,8 @@ A program has folds, a journaled run with replay, and a printed image that reads
   the evaluation's half of `compiled_region_bracket`'s premise. After any command, every fiber's
   frame followed from an old one by listed edits, or the fiber is new (`driveStep_framesFollow`).
   Five guard chains and the evaluation
-  half of `MaskRuns` follow as instances; replacing the old chains is Codex's lane. A raw context
-  write lets a checked program at a closed row die with `missingService` (`E4-CTX-CE-001`). Row 349
-  ruled option A: a typed `context` reader and a `provideContext` region, landed on 2026-10-12.
+  half of `MaskRuns` follow as instances (row 350). A raw context write let a checked program at
+  a closed row die with `missingService` (`E4-CTX-CE-001`, now repaired). Row 349 ruled option A: a typed `context` reader and a `provideContext` region, landed on 2026-10-12.
   One ambient judgment types the machine's code (`AmbientProg`,
   `src/Effect4/Laws/Program/Typed/Residual.lean`). Every program's failure row is within its
   entry row, interruptible or not. Every clause of the typed state keeps it. A capture's release
