@@ -63,8 +63,10 @@ structure Administration (L : Ledger) (Free : NCode → Prop) (interp : Native.N
   await : ∀ (m : NativeMachine) kind, Free (asVoidCode interp (awaitCode interp m kind))
   children : ∀ children exit, Free (.onSuccess (interp.interruptAllCode children) (interp.restoreName exit))
   park : ∀ targets, Free (interp.parkCode (.awaitAll targets))
-  cancel : ∀ fiber name, L.fiber {fiber with frame.stack := .asyncFinalizer name :: fiber.frame.stack} ≤ L.fiber fiber
-  iterator : ∀ fiber name cursor, L.fiber {fiber with frame.stack := .iterator name cursor :: fiber.frame.stack} ≤ L.fiber fiber
+  cancel : ∀ fiber race token,
+    L.fiber {fiber with frame.stack := .asyncFinalizer (interp.cancelName (interp.raceCancelName race) fiber.id token) :: fiber.frame.stack} ≤ L.fiber fiber
+  iterator : ∀ fiber,
+    L.fiber {fiber with frame.stack := .iterator interp.closeDoneName interp.voidValue :: fiber.frame.stack} ≤ L.fiber fiber
 
 /-- The two evaluator obligations use the same place accounting after actual owner installation. -/
 structure Evaluation (L : Ledger) (P : NativeMachine → Prop) (root : NativeEff) (table : RowTable)

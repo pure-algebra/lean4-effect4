@@ -169,7 +169,7 @@ theorem command_funded {cap : Nat} (root : NativeEff) (table : RowTable)
               (by intro event member; have same := List.mem_singleton.mp member; subst event; rfl)))).funded L funded
           exact Nat.le_trans
             (control.metadata {fiber with frame.stack := .asyncFinalizer _ :: fiber.frame.stack} _
-              rfl rfl rfl (Nat.le_refl _)) (admin.cancel fiber _)
+              rfl rfl rfl (Nat.le_refl _)) (admin.cancel fiber raceId race.token)
   | interruptTarget target who extra =>
     simp only [commandAllowance, Nat.add_zero, driveStep]
     split
@@ -224,7 +224,7 @@ theorem command_funded {cap : Nat} (root : NativeEff) (table : RowTable)
         (by simpa only [RunMachine.id_of_fiber? found] using found) rfl rfl ?_ (Nat.le_refl _)).funded L funded
       exact Nat.le_trans (control.replace_changed
         {fiber with frame.stack := .iterator (interpOf root table).closeDoneName (interpOf root table).voidValue :: fiber.frame.stack}
-        _ rfl (admin.park fibers) rfl (Nat.le_refl _)) (admin.iterator fiber _ _)
+        _ rfl (admin.park fibers) rfl (Nat.le_refl _)) (admin.iterator fiber)
   | link mode scope target who extra =>
     simp only [commandAllowance, Nat.add_zero]
     exact (link_balance control quiet events (interpOf root table) stores mode scope target who extra m ok).funded L funded

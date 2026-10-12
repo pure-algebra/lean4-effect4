@@ -207,8 +207,10 @@ theorem stack_administration (ledger : StackLedger.NLedger) (root : NativeEff) (
   await := fun _ _ => True.intro
   children := fun _ _ => True.intro
   park := fun _ => True.intro
-  cancel := fun fiber name => kept.cancel name fiber.frame.stack
-  iterator := fun fiber name cursor => kept.iterator name cursor fiber.frame.stack
+  cancel := fun fiber race token => kept.cancel
+    ((interpOf root table).cancelName ((interpOf root table).raceCancelName race) fiber.id token) fiber.frame.stack
+  iterator := fun fiber => kept.iterator (interpOf root table).closeDoneName
+    (interpOf root table).voidValue fiber.frame.stack
 
 theorem stack_evaluation (ledger : StackLedger.NLedger) (root : NativeEff) (table : RowTable)
     (kept : StackLedger.Kept ledger root table) :
