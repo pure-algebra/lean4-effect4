@@ -270,14 +270,15 @@ name = "hash"
 git = "https://github.com/pure-algebra/lean4-hash"
 rev = "ab7eda433f0390fde7aa240189761540c9744c79"
 
-# HTML for the generated documents (`tools/Tools/Document/Html.lean`): the HTML Standard's content
-# model, typed tree and serializer, exact commit of pure-algebra/lean4-whatwg branch `html-h7`.
-# Only the `Tools` library imports it, and only `Whatwg.Html.*`, whose import closure is Lean
-# alone; the core and the law graph never do.
+# HTML and SVG for the generated documents and pictures (`tools/Tools/Document/Html.lean`): the HTML
+# Standard's content model, typed tree and serializer, and the SVG kit, exact commit of
+# pure-algebra/lean4-whatwg branch `html/svg` (S10). Only the `Tools` library imports it; its
+# closure reaches Aesop at this file's pin (through the SVG schema). The core and the law graph
+# never import it.
 [[require]]
 name = "whatwg"
 git = "https://github.com/pure-algebra/lean4-whatwg"
-rev = "2c6e3bc7539a1b71c9bbca3a1567fa6d873e71c0"
+rev = "1365738abeb40d9ef38f7434e68fef1798943475"
 
 
 # Proof search for the law graph (`src/Effect4/Laws/**`) and the batteries: nothing under the

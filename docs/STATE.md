@@ -332,8 +332,8 @@ A program has folds, a journaled run with replay, and a printed image that reads
    transaction attempt (G4).
 
 Also open: procedures PROC-5 (row 328), the simulation's slices S1 to S4 (row 329) and the
-session API's slices (row 326). The host session is to be drawn by H8's machine forms. The SVG kit is pushed (lean4-whatwg
-`html/svg` at `1365738`, 2026-10-12); Effect4's whatwg pin moves to it next. The
+session API's slices (row 326). The host session is to be drawn by H8's machine forms. Effect4 pins the SVG kit (lean4-whatwg
+`html/svg` at `1365738`, row 358); the picture writer moves onto it next. The
 owner's note of 2026-10-09: write a program, then watch its session answer calls and schedule.
 
 ## What the owner must decide

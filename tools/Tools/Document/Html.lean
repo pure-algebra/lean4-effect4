@@ -1,12 +1,14 @@
 import Tools.Document
 import Whatwg.Html.Print.Render
 import Whatwg.Html.Content.Valid
+import Whatwg.Html.Content.Explain
 
 /-!
 # Tools.Document.Html — a document as one HTML page
 
 The HTML fold of `Tools.Document`. It builds a `Whatwg.Html.RawNode` tree. The HTML Standard's
-content model checks the tree (`Whatwg.Html.Content.validIn`, from `lean4-whatwg`). The standard's
+content model checks the tree (`Whatwg.Html.Content.validIn`, from `lean4-whatwg`), and its located
+refusal (`Content.explain`, complete by `explain_none_iff`) names a refused node. The standard's
 fragment serialization algorithm writes it (`Whatwg.Html.Print.renderDoc`). Tag and attribute names
 are this module's. Document content reaches only text nodes and attribute values, which the
 serializer escapes.
@@ -116,33 +118,22 @@ def page (d : Document) : RawNode :=
       el "main" ((Block.foldList algebra d.body).flatMap (· 2))]]
     [("lang", "en")]
 
-mutual
-  /-- The first place where the content model refuses a node, with its path of element names. -/
-  def problem? (ctx : Content.Ctx) (path : String) : RawNode → Option String
-    | .element name attrs children =>
-      let here := path ++ "/" ++ name
-      match Schema.Tag.ofName? name with
-      | none => some s!"{here}: not an element of the HTML Standard"
-      | some t =>
-        if !ctx.admitsWith t attrs then some s!"{here}: not allowed here"
-        else match attrs.findSome? (fun (k, v) => Content.attrProblem? t k v) with
-          | some why => some s!"{here}: {why}"
-          | none => match Content.seqProblem? (ctx.child t) t children with
-            | some why => some s!"{here}: {why}"
-            | none => problemList? (ctx.child t) here children
+/-- A refusal in words: the element names along its path, from the root, then its reason. -/
+def describe (tree : RawNode) (r : Content.Refusal) : String :=
+  let names := (List.range (r.path.length + 1)).filterMap fun k =>
+    match tree.at? (r.path.take k) with
+    | some (.element name _ _) => some name
     | _ => none
-  /-- The first refused node of a list. -/
-  def problemList? (ctx : Content.Ctx) (path : String) : List RawNode → Option String
-    | [] => none
-    | n :: ns => (problem? ctx path n).orElse fun _ => problemList? ctx path ns
-end
+  "/" ++ "/".intercalate names ++ ": " ++ r.reason.describe
 
 /-- The document as an HTML page: its checks, then the content model, then the serializer. -/
 def Document.html (d : Document) : Except String String := do
   if let .error errors := d.check then throw ("document refused: " ++ "; ".intercalate errors)
   let tree := page d
   unless Content.validIn Content.Ctx.document tree do
-    throw ("HTML refused: " ++ (problem? Content.Ctx.document "" tree).getD "the content model refuses the tree")
+    throw ("HTML refused: " ++
+      ((Content.explain Content.Ctx.document tree).map (describe tree)).getD
+        "the content model refuses the tree")
   return Print.renderDoc tree
 
 end Tools.Document.Html
