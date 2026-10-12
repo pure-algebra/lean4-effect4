@@ -709,6 +709,19 @@ theorem MCodeOk.congr {root : ProgramSource} {w : World} {m : RState} {f g : RFi
   rw [id, context, frame]
   exact h
 
+/-- A queued resume's code, at the target's token type, typed at every row and mask: a resume can
+take no capability from its type in the token table (decisions row 349). -/
+def ResumeCode (root : ProgramSource) (w : World) (target : FiberId) (token : Nat) (code : RProgram) :
+    Prop :=
+  ∀ ty, w.Θ target token = some ty → ∀ row bit,
+    AmbientProgAt root w (row, bit) ((ty, row, row) : AmbientPosition) code
+
+/-- Administrative resumed code typed at its token's declaration is a resume's code. -/
+theorem resumeCode_of_typed {root : ProgramSource} {w : World} {target : FiberId} {token : Nat}
+    {code : RProgram} (typed : Contracts.ResumeOk (TypedProg root) w target token code)
+    (admin : AdminCode code) : ResumeCode root w target token code :=
+  fun ty declared row bit => ambientProgAt_of_admin root (typed ty declared) admin row bit
+
 /-- A reply delivered to a fiber meets its saved stack at a row its context covers. -/
 def StackReplyAt (root : ProgramSource) (w : World) (m : RState) (fiber : RFiber) (replyTy : EffTy)
     (row : Env.Requirement) : Prop :=
@@ -724,6 +737,14 @@ theorem StackReplyAt.mono {root : ProgramSource} {w w' : World} {m m' : RState} 
   obtain ⟨final, flag, declared, covered, stack, provenance, deferred⟩ := h
   exact ⟨final, flag, ord.1.2.1 _ _ declared, covered, (stack.races kept).mono ord, provenance,
     deferred⟩
+
+theorem StackReplyAt.congr {root : ProgramSource} {w : World} {m : RState} {f g : RFiber}
+    {replyTy : EffTy} {row : Env.Requirement} (h : StackReplyAt root w m f replyTy row)
+    (id : g.id = f.id) (context : g.context = f.context) (frame : g.frame = f.frame) :
+    StackReplyAt root w m g replyTy row := by
+  unfold StackReplyAt
+  rw [id, context, frame]
+  exact h
 
 /-- A registration callback with its race forgotten: the generated saved-position clause. -/
 inductive MPositionArrow (w : World) : MachinePos → MachinePos → ScopeFrame → Prop
@@ -945,10 +966,10 @@ def QueueFresh (m : RState) (commands : List RCmd) : Prop :=
 theorem observerCommand_resume_typed (root : ProgramSource) (w : World) (m : RState)
     (source waiter : FiberId) (token : Nat) (mode : Supervision.ObserverMode) (exit : ExitV)
     (typed : ObserverCommandOk root w m source exit (.resumeAwait waiter token mode)) :
-    Contracts.ResumeOk (TypedProg root) w waiter token
+    ResumeCode root w waiter token
       ((interpR root.program).exitValue exit mode) := by
   obtain ⟨sourceTy, _, declared, exitTyped⟩ := typed
-  intro tokenTy htoken
+  refine resumeCode_of_typed (fun tokenTy htoken => ?_) (by cases mode <;> exact .pure _)
   rw [declared] at htoken
   cases htoken
   exact observer_exitValue_typed root w sourceTy exit mode exitTyped

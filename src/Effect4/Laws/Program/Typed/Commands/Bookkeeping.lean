@@ -168,8 +168,7 @@ fiber, the store or the races; the split lets its proof re-establish only what i
 structure FiberTyped (root : ProgramSource) (w : World) (m : RState) (f : RFiber) : Prop where
   ok : RunFiberOk (preds root) w Expect.root f
   delivery : ∀ token, f.parked = .withGuard token →
-    ∃ tin final, w.Θ f.id token = some tin ∧ w.Γ f.id = some final ∧
-      HostStack root w m f.id tin final f.frame.stack ∧ InterruptProvenance f.frame
+    ∃ tin row, w.Θ f.id token = some tin ∧ StackReplyAt root w m f tin row
   below : f.id.value < m.nextId
   pendingShape : Guard.PendingShape f
   parkedIdle : f.parked ≠ .notParked → f.running = false
@@ -186,7 +185,7 @@ structure FiberTyped (root : ProgramSource) (w : World) (m : RState) (f : RFiber
   current is the operation it parked on, which nothing reads: `resume` and an applied interrupt
   overwrite it, `evaluate` skips it; seat M6B's finding). -/
   code : f.exit = none → f.running = false → raceRegistrationR f.frame.current = none →
-    f.parked = .notParked → ∀ ty, w.Γ f.id = some ty → CodeOk root w m f.id ty f.frame
+    f.parked = .notParked → ∀ ty, w.Γ f.id = some ty → MCodeOk root w m f ty
   tokens : ∀ token, f.parked = .withGuard token → (w.Θ f.id token).isSome = true
   /-- Decisions row 134 (d), at this fiber: none of its stored observers holds a race's key. -/
   raceObservers : ∀ raceId race, m.race? raceId = some race → ∀ o ∈ f.observers,
@@ -203,18 +202,17 @@ structure FiberTyped (root : ProgramSource) (w : World) (m : RState) (f : RFiber
 theorem FiberTyped.delivery_races {root : ProgramSource} {w : World} {m m' : RState} {x : RFiber}
     (h : FiberTyped root w m x) (kept : RacesKept m m') :
     ∀ token, x.parked = .withGuard token →
-      ∃ tin final, w.Θ x.id token = some tin ∧ w.Γ x.id = some final ∧
-        HostStack root w m' x.id tin final x.frame.stack ∧ InterruptProvenance x.frame := by
+      ∃ tin row, w.Θ x.id token = some tin ∧ StackReplyAt root w m' x tin row := by
   intro token hp
-  obtain ⟨tin, final, declared, final', stack, provenance⟩ := h.delivery token hp
-  exact ⟨tin, final, declared, final', hostStack_races kept stack, provenance⟩
+  obtain ⟨tin, row, declared, reply⟩ := h.delivery token hp
+  exact ⟨tin, row, declared, reply.mono (leHost_refl w) kept⟩
 
 /-- A fiber's code clause moves likewise. -/
 theorem FiberTyped.code_races {root : ProgramSource} {w : World} {m m' : RState} {x : RFiber}
     (h : FiberTyped root w m x) (kept : RacesKept m m') :
     x.exit = none → x.running = false → raceRegistrationR x.frame.current = none →
-      x.parked = .notParked → ∀ ty, w.Γ x.id = some ty → CodeOk root w m' x.id ty x.frame :=
-  fun hx hr hm hp ty declared => codeOk_races kept (h.code hx hr hm hp ty declared)
+      x.parked = .notParked → ∀ ty, w.Γ x.id = some ty → MCodeOk root w m' x ty :=
+  fun hx hr hm hp ty declared => (h.code hx hr hm hp ty declared).races kept
 
 /-- The machine-wide clauses of `J`. -/
 structure MachineWide (root : ProgramSource) (rootTy : EffTy) (w : World) (m : RState) : Prop where
@@ -474,14 +472,14 @@ its current code for a registration marker); its delivery reads that fiber's sav
 machines whose lookups agree on these move both. -/
 
 /-- What a command's authority and delivery read of a fiber. -/
-def ctlView (f : RFiber) : FiberId × Bool × Parked × Option ExitV × RSaved :=
-  (f.id, f.running, f.parked, f.exit, f.frame)
+def ctlView (f : RFiber) : FiberId × Bool × Parked × Option ExitV × RSaved × Ctx :=
+  (f.id, f.running, f.parked, f.exit, f.frame, f.context)
 
 theorem ctlView_lookup {m m' : RState}
     (ctl : ∀ id, (m'.fiber? id).map ctlView = (m.fiber? id).map ctlView)
     {id : FiberId} {f : RFiber} (h : m.fiber? id = some f) :
     ∃ f', m'.fiber? id = some f' ∧ f'.id = f.id ∧ f'.running = f.running ∧
-      f'.parked = f.parked ∧ f'.exit = f.exit ∧ f'.frame = f.frame := by
+      f'.parked = f.parked ∧ f'.exit = f.exit ∧ f'.frame = f.frame ∧ f'.context = f.context := by
   have hv := ctl id
   rw [h] at hv
   cases h' : m'.fiber? id with
@@ -491,13 +489,13 @@ theorem ctlView_lookup {m m' : RState}
   | some f' =>
     rw [h'] at hv
     simp only [ctlView, Option.map_some, Option.some.injEq, Prod.mk.injEq] at hv
-    exact ⟨f', rfl, hv.1, hv.2.1, hv.2.2.1, hv.2.2.2.1, hv.2.2.2.2⟩
+    exact ⟨f', rfl, hv.1, hv.2.1, hv.2.2.1, hv.2.2.2.1, hv.2.2.2.2.1, hv.2.2.2.2.2⟩
 
 theorem ctlView_lookup_back {m m' : RState}
     (ctl : ∀ id, (m'.fiber? id).map ctlView = (m.fiber? id).map ctlView)
     {id : FiberId} {f' : RFiber} (h' : m'.fiber? id = some f') :
     ∃ f, m.fiber? id = some f ∧ f'.id = f.id ∧ f'.running = f.running ∧
-      f'.parked = f.parked ∧ f'.exit = f.exit ∧ f'.frame = f.frame := by
+      f'.parked = f.parked ∧ f'.exit = f.exit ∧ f'.frame = f.frame ∧ f'.context = f.context := by
   have hv := ctl id
   rw [h'] at hv
   cases h : m.fiber? id with
@@ -507,7 +505,7 @@ theorem ctlView_lookup_back {m m' : RState}
   | some f =>
     rw [h] at hv
     simp only [ctlView, Option.map_some, Option.some.injEq, Prod.mk.injEq] at hv
-    exact ⟨f, rfl, hv.1, hv.2.1, hv.2.2.1, hv.2.2.2.1, hv.2.2.2.2⟩
+    exact ⟨f, rfl, hv.1, hv.2.1, hv.2.2.1, hv.2.2.2.1, hv.2.2.2.2.1, hv.2.2.2.2.2⟩
 
 theorem activeAt_view {m m' : RState}
     (ctl : ∀ id, (m'.fiber? id).map ctlView = (m.fiber? id).map ctlView)
@@ -529,7 +527,7 @@ theorem commandAuthority_view {m m' : RState}
   | raceCancel _ fiber _ _ _ => exact activeAt_view ctl h
   | registrationDone raceId _ =>
     obtain ⟨race, f, found, hf, running, parked, marker⟩ := h
-    obtain ⟨f', hf', _, hr, hp, _, hframe⟩ := ctlView_lookup ctl hf
+    obtain ⟨f', hf', _, hr, hp, _, hframe, _⟩ := ctlView_lookup ctl hf
     refine ⟨race, f', (races raceId).trans found, hf', hr.trans running, hp.trans parked, ?_⟩
     rw [hframe]
     exact marker
@@ -552,12 +550,52 @@ theorem commandAuthority_view {m m' : RState}
   | drainDue => trivial
   | wake _ _ => trivial
 
+/-- What a reply's coverage and mask read of a fiber besides its stack: the context, the mask
+flag, and a deferred interrupt only while interruptible. -/
+def MaskView (f f' : RFiber) : Prop :=
+  f'.context = f.context ∧ f'.frame.interruptible = f.frame.interruptible ∧
+    ((f.frame.deferredInterrupt = true → f.frame.interruptible = true) →
+      f'.frame.deferredInterrupt = true → f'.frame.interruptible = true)
+
+theorem MaskView.refl (f : RFiber) : MaskView f f := ⟨rfl, rfl, id⟩
+
+/-- A reply clause moves across an edit that keeps the fiber's id, stack, provenance and mask. -/
+theorem stackReplyAt_view {root : ProgramSource} {w : World} {m m' : RState} {f f' : RFiber}
+    {ty : EffTy} {row : Env.Requirement} (kept : RacesKept m m') (hid : f'.id = f.id)
+    (hstack : f'.frame.stack = f.frame.stack)
+    (hprov : InterruptProvenance f.frame → InterruptProvenance f'.frame) (mask : MaskView f f')
+    (h : StackReplyAt root w m f ty row) : StackReplyAt root w m' f' ty row := by
+  obtain ⟨final, flag, declared, covered, stack, provenance, deferred⟩ := h
+  obtain ⟨context, interruptible, deferredMask⟩ := mask
+  refine ⟨final, flag, ?_, ?_, ?_, hprov provenance, deferredMask deferred⟩
+  · rw [hid]
+    exact declared
+  · rw [context]
+    exact covered
+  · rw [hstack, hid, interruptible]
+    exact stack.races kept
+
+/-- The current-code clause moves across an edit that keeps the fiber's id, current code, stack,
+provenance and mask. -/
+theorem MCodeOk.of_view {root : ProgramSource} {w : World} {m m' : RState} {f g : RFiber}
+    {ty : EffTy} (kept : RacesKept m m') (hid : g.id = f.id)
+    (current : g.frame.current = f.frame.current) (hstack : g.frame.stack = f.frame.stack)
+    (hprov : InterruptProvenance f.frame → InterruptProvenance g.frame) (mask : MaskView f g)
+    (h : MCodeOk root w m f ty) : MCodeOk root w m' g ty := by
+  obtain ⟨row, tin, flag, covered, bit, deferred, code, stack, provenance⟩ := h
+  obtain ⟨context, interruptible, deferredMask⟩ := mask
+  refine ⟨row, tin, flag, by rw [context]; exact covered, by rw [interruptible]; exact bit,
+    deferredMask deferred, by rw [current]; exact code, ?_, hprov provenance⟩
+  rw [hstack, hid]
+  exact stack.races kept
+
 theorem stackReply_congr {root : ProgramSource} {w : World} {m m' : RState} {f f' : RFiber}
     {ty : EffTy} (kept : RacesKept m m') (id : f'.id = f.id) (frame : f'.frame = f.frame)
+    (context : f'.context = f.context)
     (h : StackReply root w m f ty) : StackReply root w m' f' ty := by
   have moved := stackReply_races kept h
-  unfold StackReply at moved ⊢
-  rw [id, frame]
+  unfold StackReply StackReplyAt at moved ⊢
+  rw [id, frame, context]
   exact moved
 
 theorem commandDelivery_view {root : ProgramSource} {w : World} {m m' : RState}
@@ -567,22 +605,24 @@ theorem commandDelivery_view {root : ProgramSource} {w : World} {m m' : RState}
   cases c with
   | afterInterrupt host _ kind =>
     intro f' hf'
-    obtain ⟨f, hf, hid, _, _, _, hframe⟩ := ctlView_lookup_back ctl hf'
+    obtain ⟨f, hf, hid, _, _, _, hframe, hctx⟩ := ctlView_lookup_back ctl hf'
     obtain ⟨replyTy, reply, stack⟩ := h f hf
-    exact ⟨replyTy, reply, stackReply_congr kept hid hframe stack⟩
+    exact ⟨replyTy, reply, stackReply_congr kept hid hframe hctx stack⟩
   | raceCancel _ host _ remaining visited =>
     intro f' hf'
-    obtain ⟨f, hf, hid, _, _, _, hframe⟩ := ctlView_lookup_back ctl hf'
+    obtain ⟨f, hf, hid, _, _, _, hframe, hctx⟩ := ctlView_lookup_back ctl hf'
     obtain ⟨answer, error, cols, stack⟩ := h f hf
-    exact ⟨answer, error, cols, stackReply_congr kept hid hframe stack⟩
+    exact ⟨answer, error, cols, stackReply_congr kept hid hframe hctx stack⟩
   | closeParAwait host _ targets =>
     intro f' hf'
-    obtain ⟨f, hf, hid, _, _, _, hframe⟩ := ctlView_lookup_back ctl hf'
-    obtain ⟨answer, error, cols, protocol, stack⟩ := h f hf
-    exact ⟨answer, error, cols, protocol, stackReply_congr kept hid hframe stack⟩
+    obtain ⟨f, hf, hid, _, _, _, hframe, hctx⟩ := ctlView_lookup_back ctl hf'
+    obtain ⟨answer, error, row, cols, protocol, stack⟩ := h f hf
+    exact ⟨answer, error, row, cols, protocol,
+      stackReplyAt_view kept hid (by rw [hframe]) (by rw [hframe]; exact id)
+        ⟨hctx, by rw [hframe], by rw [hframe]; exact id⟩ stack⟩
   | finish host _ =>
     intro f' hf'
-    obtain ⟨f, hf, _, _, _, _, hframe⟩ := ctlView_lookup_back ctl hf'
+    obtain ⟨f, hf, _, _, _, _, hframe, _⟩ := ctlView_lookup_back ctl hf'
     rw [hframe]
     exact h f hf
   | evaluate _ => trivial
@@ -664,18 +704,22 @@ theorem commandAuthority_auth {m m' : RState}
 provenance of its saved state. -/
 def StackView (m m' : RState) : Prop :=
   ∀ id f', m'.fiber? id = some f' → ∃ f, m.fiber? id = some f ∧ f'.id = f.id ∧
-    f'.frame.stack = f.frame.stack ∧ (InterruptProvenance f.frame → InterruptProvenance f'.frame)
+    f'.frame.stack = f.frame.stack ∧ (InterruptProvenance f.frame → InterruptProvenance f'.frame) ∧
+    MaskView f f'
 
 theorem stackReply_view {root : ProgramSource} {w : World} {m m' : RState} {f f' : RFiber}
     {ty : EffTy} (kept : RacesKept m m') (hid : f'.id = f.id)
     (hstack : f'.frame.stack = f.frame.stack)
-    (hprov : InterruptProvenance f.frame → InterruptProvenance f'.frame)
+    (hprov : InterruptProvenance f.frame → InterruptProvenance f'.frame) (mask : MaskView f f')
     (h : StackReply root w m f ty) : StackReply root w m' f' ty := by
-  obtain ⟨final, declared, stack, provenance⟩ := stackReply_races kept h
-  refine ⟨final, ?_, ?_, hprov provenance⟩
+  obtain ⟨row, final, flag, declared, covered, stack, provenance, deferred⟩ := stackReply_races kept h
+  obtain ⟨context, interruptible, deferredMask⟩ := mask
+  refine ⟨row, final, flag, ?_, ?_, ?_, hprov provenance, deferredMask deferred⟩
   · rw [hid]
     exact declared
-  · rw [hstack, hid]
+  · rw [context]
+    exact covered
+  · rw [hstack, hid, interruptible]
     exact stack
 
 theorem commandDelivery_stack {root : ProgramSource} {w : World} {m m' : RState}
@@ -684,22 +728,22 @@ theorem commandDelivery_stack {root : ProgramSource} {w : World} {m m' : RState}
   cases c with
   | afterInterrupt host _ kind =>
     intro f' hf'
-    obtain ⟨f, hf, hid, hstack, hprov⟩ := view host f' hf'
+    obtain ⟨f, hf, hid, hstack, hprov, hmask⟩ := view host f' hf'
     obtain ⟨replyTy, ok, stack⟩ := h f hf
-    exact ⟨replyTy, ok, stackReply_view kept hid hstack hprov stack⟩
+    exact ⟨replyTy, ok, stackReply_view kept hid hstack hprov hmask stack⟩
   | raceCancel _ host _ remaining visited =>
     intro f' hf'
-    obtain ⟨f, hf, hid, hstack, hprov⟩ := view host f' hf'
+    obtain ⟨f, hf, hid, hstack, hprov, hmask⟩ := view host f' hf'
     obtain ⟨answer, error, cols, stack⟩ := h f hf
-    exact ⟨answer, error, cols, stackReply_view kept hid hstack hprov stack⟩
+    exact ⟨answer, error, cols, stackReply_view kept hid hstack hprov hmask stack⟩
   | closeParAwait host _ targets =>
     intro f' hf'
-    obtain ⟨f, hf, hid, hstack, hprov⟩ := view host f' hf'
-    obtain ⟨answer, error, cols, protocol, stack⟩ := h f hf
-    exact ⟨answer, error, cols, protocol, stackReply_view kept hid hstack hprov stack⟩
+    obtain ⟨f, hf, hid, hstack, hprov, hmask⟩ := view host f' hf'
+    obtain ⟨answer, error, row, cols, protocol, stack⟩ := h f hf
+    exact ⟨answer, error, row, cols, protocol, stackReplyAt_view kept hid hstack hprov hmask stack⟩
   | finish host _ =>
     intro f' hf'
-    obtain ⟨f, hf, _, hstack, _⟩ := view host f' hf'
+    obtain ⟨f, hf, _, hstack, _, _⟩ := view host f' hf'
     rw [hstack]
     exact h f hf
   | evaluate _ => trivial
@@ -801,7 +845,7 @@ theorem obsView_rupdate {m : RState} {f g : RFiber} (hf : m.fiber? f.id = some f
 /-- The control view after an edit that keeps the edited fiber's id, flags and saved state. -/
 theorem ctlView_rupdate {m : RState} {f g : RFiber} (hf : m.fiber? f.id = some f)
     (hid : g.id = f.id) (running : g.running = f.running) (parked : g.parked = f.parked)
-    (exit : g.exit = f.exit) (frame : g.frame = f.frame) :
+    (exit : g.exit = f.exit) (frame : g.frame = f.frame) (context : g.context = f.context) :
     ∀ id, ((m.update g).fiber? id).map ctlView = (m.fiber? id).map ctlView := by
   intro id
   rw [rfiber?_update]
@@ -812,7 +856,7 @@ theorem ctlView_rupdate {m : RState} {f g : RFiber} (hf : m.fiber? f.id = some f
     · rw [Option.map_some, if_pos hx]
       have same : x = f := rfiber?_same hf h (hx.trans hid)
       subst same
-      simp only [ctlView, hid, running, parked, exit, frame, Option.map_some]
+      simp only [ctlView, hid, running, parked, exit, frame, context, Option.map_some]
     · rw [Option.map_some, if_neg hx]
 
 /-- `J`'s machine-wide clauses after one fiber is edited. -/
@@ -935,7 +979,7 @@ theorem configTyped_modify_quiet {root : ProgramSource} {rootTy : EffTy} {w : Wo
     have view : ObsView m (m.update (k f)) :=
       obsView_rupdate hf (quiet.id f) (by rw [quiet.pending f]; exact PendingWeaker.refl _)
     have ctl := ctlView_rupdate hf (quiet.id f) (quiet.running f) (quiet.parked f) (quiet.exit f)
-      (quiet.frame f)
+      (quiet.frame f) (quiet.context f)
     obtain ⟨machine, code, queue⟩ := typed
     have old : FiberTyped root w m f := machine.fiber hmem
     have fresh : FiberTyped root w (m.update (k f)) (k f) := by
@@ -947,8 +991,11 @@ theorem configTyped_modify_quiet {root : ProgramSource} {rootTy : EffTy} {w : Wo
       refine ⟨runFiberOk_congr old.ok (quiet.id f) (quiet.frame f) (quiet.pending f)
           (quiet.finalizing f) (quiet.exit f) (quiet.dispatcher f) (quiet.context f),
         ?_, ?_, hpending, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
-      · rw [quiet.parked f, quiet.id f, quiet.frame f]
-        exact old.delivery_races (racesKept_of_eq view.races)
+      · intro token hp
+        rw [quiet.parked f] at hp
+        obtain ⟨tin, row, declared, reply⟩ := old.delivery_races (racesKept_of_eq view.races) token hp
+        exact ⟨tin, row, by rw [quiet.id f]; exact declared,
+          reply.congr (quiet.id f) (quiet.context f) (quiet.frame f)⟩
       · rw [quiet.id f]
         exact old.below
       · rw [quiet.parked f, quiet.running f]
@@ -974,9 +1021,15 @@ theorem configTyped_modify_quiet {root : ProgramSource} {rootTy : EffTy} {w : Wo
         rw [quiet.frame f] at marker
         obtain ⟨race, resultTy, found, host, token, reply⟩ := old.registration raceId marker
         exact ⟨race, resultTy, found, host.trans (quiet.id f).symm, token,
-          stackReply_congr (racesKept_of_eq view.races) (quiet.id f) (quiet.frame f) reply⟩
-      · rw [quiet.exit f, quiet.running f, quiet.frame f, quiet.id f, quiet.parked f]
-        exact old.code_races (racesKept_of_eq view.races)
+          stackReply_congr (racesKept_of_eq view.races) (quiet.id f) (quiet.frame f) (quiet.context f) reply⟩
+      · intro hx hr hm hp ty declared
+        rw [quiet.exit f] at hx
+        rw [quiet.running f] at hr
+        rw [quiet.frame f] at hm
+        rw [quiet.parked f] at hp
+        rw [quiet.id f] at declared
+        exact (old.code_races (racesKept_of_eq view.races) hx hr hm hp ty declared).congr
+          (quiet.id f) (quiet.context f) (quiet.frame f)
       · rw [quiet.parked f, quiet.id f]
         exact old.tokens
       · intro r race hr o ho
@@ -1021,7 +1074,7 @@ theorem configTyped_modify_quiet {root : ProgramSource} {rootTy : EffTy} {w : Wo
         rw [quiet.id f] at reads declared
         rw [quiet.frame f] at marker
         exact ((code f hmem running reads marker ty declared).races
-          (racesKept_of_eq view.races)).congr (quiet.id f) (quiet.frame f)
+          (racesKept_of_eq view.races)).congr (quiet.id f) (quiet.context f) (quiet.frame f)
       · exact (code x hold running reads marker ty declared).races (racesKept_of_eq view.races)
     · intro fiber token r hr
       by_cases same : fiber = (k f).id
@@ -1070,7 +1123,7 @@ theorem racePayload_world {root : ProgramSource} {race : RRace} {ty : EffTy}
       exact ⟨t, by rw [hΓ]; exact hd, ha, he⟩,
     fun code hc => ?_⟩
   obtain ⟨cty, typed, ha, he⟩ := h.programs code hc
-  exact ⟨cty, typedProg_mono root w w' cty code ord typed, ha, he⟩
+  exact ⟨cty, typed.mono ord, ha, he⟩
 
 include hΓ hΘ in
 theorem countdownAt_world {m : RState} {waiter : FiberId} {token : Nat}
@@ -1157,17 +1210,16 @@ theorem enrollRaceOk_world {root : ProgramSource} {m : RState} {raceId : Nat} {c
 include hΓ in
 theorem stackReply_world {root : ProgramSource} {m : RState} {f : RFiber} {ty : EffTy}
     (h : StackReply root w m f ty) : StackReply root w' m f ty := by
-  obtain ⟨final, declared, stack, provenance⟩ := h
-  exact ⟨final, by rw [hΓ]; exact declared, hostStack_mono ord stack, provenance⟩
+  obtain ⟨row, final, flag, declared, covered, stack, provenance, deferred⟩ := h
+  exact ⟨row, final, flag, by rw [hΓ]; exact declared, covered, stack.mono ord, provenance, deferred⟩
 
 include hΘ in
 /-- A resume's code is typed at the same token declaration at the later world. -/
 theorem resumeOk_world {root : ProgramSource} {target : FiberId} {token : Nat} {code : RProgram}
-    (h : Contracts.ResumeOk (TypedProg root) w target token code) :
-    Contracts.ResumeOk (TypedProg root) w' target token code := by
-  intro ty declared
+    (h : ResumeCode root w target token code) : ResumeCode root w' target token code := by
+  intro ty declared row bit
   rw [hΘ] at declared
-  exact typedProg_mono root w w' ty code ord (h ty declared)
+  exact ambientProgAt_mono root ord (h ty declared row bit)
 
 include hΓ hΘ in
 theorem rcmdOk_world {root : ProgramSource} (c : RCmd) (h : RCmdOk (preds root) w c) :
@@ -1227,8 +1279,8 @@ theorem runFiberOk_world {root : ProgramSource} {f : RFiber}
     fun v hv ty declared => ?_, ⟨fun b hb => ⟨fun t ht => ?_⟩⟩, servicesFit_mono ord c5⟩
   · change w'.Γ f.id = some ty at declared
     rw [hΓ] at declared
-    obtain ⟨tin, stack, provenance⟩ := c0 ty declared
-    exact ⟨tin, positionStack_mono ord stack, provenance⟩
+    obtain ⟨tin, flag, stack, provenance⟩ := c0 ty declared
+    exact ⟨tin, flag, stack.mono ord, provenance⟩
   · obtain ⟨id, isSome⟩ := c1 p hp
     exact ⟨id, by rw [hΘ]; exact isSome⟩
   · change w'.Γ f.id = some ty at declared
@@ -1252,15 +1304,17 @@ theorem fiberTyped_world {root : ProgramSource} {m : RState} {x : RFiber}
     fun o ho => storedObserverOk_world ord hΓ hΘ o (h.observers o ho), fun raceId marker => ?_,
     fun hx hr hm hp ty declared => ?_, fun token hp => ?_, h.raceObservers, h.targetsBelow,
     h.observersBelow, fun c hc => by rw [hΓ]; exact h.children c hc⟩
-  · obtain ⟨tin, final, declared, final', stack, provenance⟩ := h.delivery token hp
-    exact ⟨tin, final, by rw [hΘ]; exact declared, by rw [hΓ]; exact final',
-      hostStack_mono ord stack, provenance⟩
+  · obtain ⟨tin, row, declared, reply⟩ := h.delivery token hp
+    exact ⟨tin, row, by rw [hΘ]; exact declared, (stackReply_world ord hΓ ⟨row, reply⟩).elim
+      fun _ _ => by
+        obtain ⟨final, flag, declaredF, covered, stack, provenance, deferred⟩ := reply
+        exact ⟨final, flag, by rw [hΓ]; exact declaredF, covered, stack.mono ord, provenance, deferred⟩⟩
   · rw [hΘ]
     exact h.pendingOwner p hp
   · obtain ⟨race, resultTy, found, host, token, reply⟩ := h.registration raceId marker
     exact ⟨race, resultTy, found, host, by rw [hΘ]; exact token, stackReply_world ord hΓ reply⟩
   · rw [hΓ] at declared
-    exact codeOk_mono ord (h.code hx hr hm hp ty declared)
+    exact (h.code hx hr hm hp ty declared).mono ord
   · rw [hΘ]
     exact h.tokens token hp
 
@@ -1398,12 +1452,19 @@ theorem readCode_cons {root : ProgramSource} {w : World} {m : RState} {c : RCmd}
     · exact absurd h.symm (noDeliver f.id y)
     · exact Or.inr h
 
+/-- A completion's code is administrative: an exit, or a reference read. -/
+theorem denoteCompletion_admin (c : Completion Val Err Defect FiberId Ann) :
+    AdminCode (denoteCompletion c) := by
+  cases c with
+  | ofExit ex => exact .pure ex
+  | ofRefGet cell => exact .store _ _ (fun _ _ h => nomatch h) fun _ => .pure _
+
 /-- **A typed resume command joins the queue**: its code is typed at its token's declaration, its
 key is below the token supply, and no external request waits at it. -/
 theorem configTyped_cons_resume {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
     {q : List RCmd} {target : FiberId} {token : Nat} {code : RProgram}
     (typed : ConfigTyped root rootTy w m q)
-    (resume : Contracts.ResumeOk (TypedProg root) w target token code)
+    (resume : ResumeCode root w target token code)
     (below : token < m.nextToken) (free : requestOfR m target token = none) :
     ConfigTyped root rootTy w m (.resume target token code :: q) := by
   refine ⟨typed.machine, readCode_cons (fun _ _ h => nomatch h) (fun _ _ h => nomatch h)
@@ -1464,7 +1525,7 @@ theorem authView_rupdate {m : RState} {f g : RFiber} (hf : m.fiber? f.id = some 
 /-- The delivery view after an edit that keeps the edited fiber's id and saved stack. -/
 theorem stackView_rupdate {m : RState} {f g : RFiber} (hf : m.fiber? f.id = some f)
     (hid : g.id = f.id) (stack : g.frame.stack = f.frame.stack)
-    (prov : InterruptProvenance f.frame → InterruptProvenance g.frame) :
+    (prov : InterruptProvenance f.frame → InterruptProvenance g.frame) (mask : MaskView f g) :
     StackView m (m.update g) := by
   intro id f' hf'
   rw [rfiber?_update] at hf'
@@ -1479,9 +1540,9 @@ theorem stackView_rupdate {m : RState} {f g : RFiber} (hf : m.fiber? f.id = some
     · rw [if_pos hx]
       have same : x = f := rfiber?_same hf h (hx.trans hid)
       subst same
-      exact ⟨x, rfl, hid, stack, prov⟩
+      exact ⟨x, rfl, hid, stack, prov, mask⟩
     · rw [if_neg hx]
-      exact ⟨x, rfl, rfl, rfl, fun p => p⟩
+      exact ⟨x, rfl, rfl, rfl, fun p => p, MaskView.refl x⟩
 
 /-- The trace is no clause's: an `emit` keeps `I`. -/
 theorem configTyped_emit {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
@@ -1499,7 +1560,7 @@ theorem configTyped_rupdate_code {root : ProgramSource} {rootTy : EffTy} {w : Wo
     {q : List RCmd} {f g : RFiber} (typed : ConfigTyped root rootTy w m q)
     (hf : m.fiber? f.id = some f) (hid : g.id = f.id) (pending : PendingWeaker f.pending g.pending)
     (stack : g.frame.stack = f.frame.stack)
-    (prov : InterruptProvenance f.frame → InterruptProvenance g.frame)
+    (prov : InterruptProvenance f.frame → InterruptProvenance g.frame) (mask : MaskView f g)
     (keys : ∀ k ∈ Guard.fiberKeys g, k ∈ Guard.internalKeys m ∨
       (k.2 < m.nextToken ∧ requestOfR m k.1 k.2 = none))
     (request : ∀ token r, requestOfR (m.update g) g.id token = some r →
@@ -1509,7 +1570,7 @@ theorem configTyped_rupdate_code {root : ProgramSource} {rootTy : EffTy} {w : Wo
       ∀ ty, w.Γ g.id = some ty → ReadOk root w (m.update g) q g ty)
     (fresh : FiberTyped root w (m.update g) g) : ConfigTyped root rootTy w (m.update g) q := by
   have view : ObsView m (m.update g) := obsView_rupdate hf hid pending
-  have sview := stackView_rupdate hf hid stack prov
+  have sview := stackView_rupdate hf hid stack prov mask
   obtain ⟨machine, code, queue⟩ := typed
   refine ⟨machineTyped_of (machineWide_rupdate machine.wide hid keys request) (fun x hx => ?_),
     ?_, queueOk_transport queue view (Nat.le_refl _) auth
@@ -1535,17 +1596,17 @@ theorem configTyped_rupdate_gen {root : ProgramSource} {rootTy : EffTy} {w : Wor
     {q : List RCmd} {f g : RFiber} (typed : ConfigTyped root rootTy w m q)
     (hf : m.fiber? f.id = some f) (hid : g.id = f.id) (pending : PendingWeaker f.pending g.pending)
     (stack : g.frame.stack = f.frame.stack)
-    (prov : InterruptProvenance f.frame → InterruptProvenance g.frame)
+    (prov : InterruptProvenance f.frame → InterruptProvenance g.frame) (mask : MaskView f g)
     (keys : ∀ k ∈ Guard.fiberKeys g, k ∈ Guard.internalKeys m ∨
       (k.2 < m.nextToken ∧ requestOfR m k.1 k.2 = none))
     (request : ∀ token r, requestOfR (m.update g) g.id token = some r →
       requestOfR m f.id token = some r)
     (auth : ∀ c ∈ q, CommandAuthorityR m c → CommandAuthorityR (m.update g) c)
     (readG : g.running = true → ReadsCode g.id q → raceRegistrationR g.frame.current = none →
-      ∀ ty, w.Γ g.id = some ty → SavedOk (TypedProg root) ExitOk (frameProtocols root) w ty g.frame)
+      ∀ ty, w.Γ g.id = some ty → MCodeOk root w (m.update g) g ty)
     (fresh : FiberTyped root w (m.update g) g) : ConfigTyped root rootTy w (m.update g) q :=
-  configTyped_rupdate_code typed hf hid pending stack prov keys request auth
-    (fun hrun reads marker ty declared => Or.inl (codeOk_of_saved (readG hrun reads marker ty declared)))
+  configTyped_rupdate_code typed hf hid pending stack prov mask keys request auth
+    (fun hrun reads marker ty declared => Or.inl (readG hrun reads marker ty declared))
     fresh
 
 /-- **A fiber edit that keeps the fiber's flags keeps `I`**: the edited fiber keeps its id, flags,
@@ -1558,13 +1619,14 @@ theorem configTyped_rupdate {root : ProgramSource} {rootTy : EffTy} {w : World} 
     (current : g.frame.current = f.frame.current) (stack : g.frame.stack = f.frame.stack)
     (prov : InterruptProvenance f.frame → InterruptProvenance g.frame)
     (deferred : f.frame.deferredInterrupt = true → g.frame.deferredInterrupt = true)
+    (mask : MaskView f g)
     (keys : ∀ k ∈ Guard.fiberKeys g, k ∈ Guard.internalKeys m ∨
       (k.2 < m.nextToken ∧ requestOfR m k.1 k.2 = none))
     (fresh : FiberTyped root w (m.update g) g) : ConfigTyped root rootTy w (m.update g) q := by
   have hmem : f ∈ m.fibers := rfiber?_mem hf
   have look : (m.update g).fiber? g.id = some g := rfiber?_update_self hf hid
   have auth := authView_rupdate hf hid running parked exit current
-  refine configTyped_rupdate_code typed hf hid pending stack prov keys ?_
+  refine configTyped_rupdate_code typed hf hid pending stack prov mask keys ?_
     (fun c _ h => commandAuthority_auth auth (fun _ => rfl) c h) ?_ fresh
   · intro token r hr
     by_cases hp : g.parked = .withGuard token
@@ -1579,12 +1641,13 @@ theorem configTyped_rupdate {root : ProgramSource} {rootTy : EffTy} {w : World} 
     rw [hid] at reads declared
     rw [current] at marker
     rcases typed.code f hmem hrun reads marker ty declared with
-      ⟨tin, typedCode, stackOk, provenance⟩ | ⟨d, nd, tin, stackOk, provenance⟩
-    · exact Or.inl ⟨tin, by rw [current]; exact typedCode,
-        by rw [stack, hid]; exact hostStack_races (racesKept_of_eq (m := m) fun _ => rfl) stackOk,
-        prov provenance⟩
-    · exact Or.inr ⟨deferred d, by rw [hid]; exact nd, tin,
-        by rw [stack, hid]; exact hostStack_races (racesKept_of_eq (m := m) fun _ => rfl) stackOk,
+      code | ⟨d, nd, row, tin, flag, covered, bit, failure, stackOk, provenance⟩
+    · exact Or.inl (code.of_view (racesKept_of_eq (m := m) (m' := m.update g) fun _ => rfl) hid current
+        stack prov mask)
+    · obtain ⟨context, interruptible, _⟩ := mask
+      exact Or.inr ⟨deferred d, by rw [hid]; exact nd, row, tin, flag, by rw [context]; exact covered,
+        by rw [interruptible]; exact bit, failure,
+        by rw [stack, hid]; exact stackOk.races (racesKept_of_eq (m := m) fun _ => rfl),
         prov provenance⟩
 
 /-! ## A store edit outside the store rows
@@ -1968,7 +2031,7 @@ theorem bucketKeys_insert {priority : Nat} {task : RTask} {buckets : List RBucke
 
 /-- What an owed resume needs to be delivered or posted. -/
 structure OwedOk (root : ProgramSource) (w : World) (m : RState) (o : Owed RProgram) : Prop where
-  typed : Contracts.ResumeOk (TypedProg root) w o.waiter o.token o.code
+  typed : ResumeCode root w o.waiter o.token o.code
   below : o.token < m.nextToken
   free : requestOfR m o.waiter o.token = none
   owner : ∀ owner priority, o.mode = .scheduled owner priority → (m.fiber? owner).isSome = true
@@ -1977,7 +2040,7 @@ structure OwedOk (root : ProgramSource) (w : World) (m : RState) (o : Owed RProg
 theorem configTyped_postTask {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
     {q : List RCmd} (typed : ConfigTyped root rootTy w m q) {owner : FiberId} {priority : Nat}
     {waiter : FiberId} {token : Nat} {code : RProgram}
-    (resume : Contracts.ResumeOk (TypedProg root) w waiter token code)
+    (resume : ResumeCode root w waiter token code)
     (below : token < m.nextToken) (free : requestOfR m waiter token = none)
     (exists_ : (m.fiber? owner).isSome = true) :
     ConfigTyped root rootTy w (m.postTask owner priority (.resume waiter token code)) q := by
@@ -2017,7 +2080,7 @@ theorem configTyped_postTask {root : ProgramSource} {rootTy : EffTy} {w : World}
         · rw [List.mem_singleton.mp hk]
           exact Or.inr ⟨below, free⟩
     have edited := configTyped_rupdate (g := g) typed hf rfl (PendingWeaker.refl _) rfl rfl rfl rfl rfl
-      (fun p => p) (fun d => d) keys fresh
+      (fun p => p) (fun d => d) ⟨rfl, rfl, id⟩ keys fresh
     exact configTyped_congr rfl rfl rfl rfl rfl rfl rfl
       (configTyped_congr (m := m.update g) rfl rfl rfl rfl rfl rfl rfl edited)
 
@@ -2168,7 +2231,8 @@ theorem drainDue_preserves (root : ProgramSource) (rootTy : EffTy) :
       (List.mem_map.mpr ⟨d, hd, rfl⟩)))
   refine ⟨fun ty declared => ?_, wide.keysBelow _ key, ?_, fun owner priority mode => ?_⟩
   · have strong := PromiseTableOk.due wide.stores.c0 d hd ty declared
-    exact typedProg_mono root w _ ty _ ord (denoteCompletion_typed root strong)
+    exact ambientProgAt_of_admin root (typedProg_mono root w _ ty _ ord (denoteCompletion_typed root strong))
+      (denoteCompletion_admin d.code)
   · cases hr : requestOfR m d.waiter d.token with
     | none => exact hr
     | some r => exact absurd key (wide.requestsOwned _ _ r hr)
@@ -2183,7 +2247,8 @@ idle interruptible fiber is unparked with the failure as its current code and ev
 /-- A fiber's saved position and provenance at its declared type (`preds`' `SavedOk` column). -/
 theorem FiberTyped.position {root : ProgramSource} {w : World} {m : RState} {f : RFiber}
     (h : FiberTyped root w m f) {ty : EffTy} (declared : w.Γ f.id = some ty) :
-    ∃ tin, PositionStack root w tin ty f.frame.stack ∧ InterruptProvenance f.frame :=
+    ∃ tin flag, MPositionStack root w tin (finalPos ty flag) f.frame.stack ∧
+      InterruptProvenance f.frame :=
   h.ok.c0.c0 ty declared
 
 theorem MachineWide.declared {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
@@ -2339,7 +2404,8 @@ current code and the stack are the old ones, and the new provenance holds. -/
 theorem fiberTyped_reframe {root : ProgramSource} {w : World} {m m' : RState} {t : RFiber}
     (h : FiberTyped root w m t) (view : ObsView m m') (nextId : m.nextId ≤ m'.nextId)
     (nextToken : m.nextToken ≤ m'.nextToken) (fr : RSaved) (current : fr.current = t.frame.current)
-    (stack : fr.stack = t.frame.stack) (prov : InterruptProvenance fr) :
+    (stack : fr.stack = t.frame.stack) (prov : InterruptProvenance fr)
+    (mask : MaskView t { t with frame := fr }) :
     FiberTyped root w m' { t with frame := fr } := by
   have moved := fiberTyped_transport h view nextId nextToken
   refine ⟨⟨⟨fun ty declared => ?_⟩, moved.ok.c1, moved.ok.c2, moved.ok.c3, moved.ok.c4,
@@ -2348,21 +2414,20 @@ theorem fiberTyped_reframe {root : ProgramSource} {w : World} {m m' : RState} {t
     moved.pendingOwner, moved.observers,
     fun raceId marker => ?_, fun hx hr hm hp ty declared => ?_, moved.tokens, moved.raceObservers,
     moved.targetsBelow, moved.observersBelow, moved.children⟩
-  · obtain ⟨tin, stackOk, _⟩ := h.position declared
-    exact ⟨tin, by rw [stack]; exact stackOk, prov⟩
-  · obtain ⟨tin, final, token', final', stackOk, _⟩ := h.delivery token hp
-    exact ⟨tin, final, token', final',
-      by rw [stack]; exact hostStack_races (racesKept_of_eq view.races) stackOk, prov⟩
+  · obtain ⟨tin, flag, stackOk, _⟩ := h.position declared
+    exact ⟨tin, flag, by rw [stack]; exact stackOk, prov⟩
+  · obtain ⟨tin, row, token', reply⟩ := h.delivery token hp
+    exact ⟨tin, row, token', stackReplyAt_view (f := t) (racesKept_of_eq view.races) rfl stack
+      (fun _ => prov) mask reply⟩
   · exact prov.deferred (by assumption)
   · rw [current] at marker
     obtain ⟨race, resultTy, found, host, token, reply⟩ := moved.registration raceId marker
     exact ⟨race, resultTy, found, host, token,
-      stackReply_view (f := t) (racesKept_of_eq (m := m') fun _ => rfl) rfl (by rw [stack])
-        (fun _ => prov) reply⟩
+      stackReply_view (f := t) (racesKept_of_eq (m := m') fun _ => rfl) rfl stack
+        (fun _ => prov) mask reply⟩
   · rw [current] at hm
-    obtain ⟨tin, code, stackOk, _⟩ := h.code hx hr hm hp ty declared
-    exact ⟨tin, by rw [current]; exact code,
-      by rw [stack]; exact hostStack_races (racesKept_of_eq view.races) stackOk, prov⟩
+    exact MCodeOk.of_view (f := t) (racesKept_of_eq view.races) rfl current stack (fun _ => prov) mask
+      (h.code hx hr hm hp ty declared)
 
 /-- The head facts of an `evaluate`: it reads nothing, owns nothing, carries no key. -/
 theorem headOk_evaluate (root : ProgramSource) (w : World) (m : RState) (id : FiberId)
@@ -2392,7 +2457,7 @@ theorem configTyped_interruptRecord {root : ProgramSource} {rootTy : EffTy} {w :
   have wide := typed.machine.wide
   have old := typed.machine.fiber hmem
   obtain ⟨ty, declared⟩ := wide.declared hmem
-  obtain ⟨tin, _, prov⟩ := old.position declared
+  obtain ⟨tin, _, _, prov⟩ := old.position declared
   have sameKeys : ∀ (g : RFiber), g.observers = t.observers → g.dispatcher = t.dispatcher →
       ∀ k ∈ Guard.fiberKeys g, k ∈ Guard.internalKeys m ∨
         (k.2 < m.nextToken ∧ requestOfR m k.1 k.2 = none) := by
@@ -2401,28 +2466,29 @@ theorem configTyped_interruptRecord {root : ProgramSource} {rootTy : EffTy} {w :
     rw [hobs, hdisp] at hk
     exact Or.inl (fiberKeys_internal hmem hk)
   rcases interruptRecord_shape root who extra t prov with
-    ⟨_, hr⟩ | ⟨hx, acc, hacc, ⟨_, hr⟩ | ⟨_, _, hr⟩ | ⟨_, hidle, hr⟩⟩
+    ⟨_, hr⟩ | ⟨hx, acc, hacc, ⟨_, hr⟩ | ⟨interruptible, _, hr⟩ | ⟨appliedInt, hidle, hr⟩⟩
   · rw [hr]
     exact configTyped_rupdate (g := t) typed hf rfl (PendingWeaker.refl _) rfl rfl rfl rfl rfl
-      (fun p => p) (fun d => d) (sameKeys t rfl rfl)
+      (fun p => p) (fun d => d) (MaskView.refl t) (sameKeys t rfl rfl)
       (fiberTyped_transport old (obsView_rupdate hf rfl (PendingWeaker.refl _)) (Nat.le_refl _)
         (Nat.le_refl _))
   · rw [hr]
     have newProv : InterruptProvenance (recordedFiber t acc).frame :=
       ⟨fun c hc => by cases hc; exact hacc, fun _ => rfl⟩
     exact configTyped_rupdate (g := recordedFiber t acc) typed hf rfl (PendingWeaker.refl _) rfl
-      rfl rfl rfl rfl (fun _ => newProv) (fun d => d) (sameKeys _ rfl rfl)
+      rfl rfl rfl rfl (fun _ => newProv) (fun d => d) ⟨rfl, rfl, id⟩ (sameKeys _ rfl rfl)
       (fiberTyped_reframe old (obsView_rupdate (g := recordedFiber t acc) hf rfl
         (PendingWeaker.refl _)) (Nat.le_refl _) (Nat.le_refl _) (recordedFiber t acc).frame rfl rfl
-        newProv)
+        newProv ⟨rfl, rfl, id⟩)
   · rw [hr]
     have newProv : InterruptProvenance (deferredFiber t acc).frame :=
       ⟨fun c hc => by cases hc; exact hacc, fun _ => rfl⟩
     exact configTyped_rupdate (g := deferredFiber t acc) typed hf rfl (PendingWeaker.refl _) rfl
-      rfl rfl rfl rfl (fun _ => newProv) (fun _ => rfl) (sameKeys _ rfl rfl)
+      rfl rfl rfl rfl (fun _ => newProv) (fun _ => rfl) ⟨rfl, rfl, fun _ _ => interruptible⟩
+      (sameKeys _ rfl rfl)
       (fiberTyped_reframe old (obsView_rupdate (g := deferredFiber t acc) hf rfl
         (PendingWeaker.refl _)) (Nat.le_refl _) (Nat.le_refl _) (deferredFiber t acc).frame rfl rfl
-        newProv)
+        newProv ⟨rfl, rfl, fun _ _ => interruptible⟩)
   · rw [hr]
     show ConfigTyped root rootTy w (m.update (appliedFiber t acc)) (.evaluate target :: q)
     let g := appliedFiber t acc
@@ -2443,42 +2509,52 @@ theorem configTyped_interruptRecord {root : ProgramSource} {rootTy : EffTy} {w :
         (fun _ => rfl), (fun _ hp => nomatch hp), moved.observers, (fun _ hm => nomatch hm),
         (fun _ _ _ _ ty' declared' => ?_), (fun _ hp => nomatch hp), moved.raceObservers,
         (fun _ hp => nomatch hp), moved.observersBelow, moved.children⟩
-      · obtain ⟨tin', stackOk, _⟩ := old.position declared'
-        exact ⟨tin', stackOk, newProv⟩
+      · obtain ⟨tin', flag', stackOk, _⟩ := old.position declared'
+        exact ⟨tin', flag', stackOk, newProv⟩
       · rw [show g.exit = t.exit from rfl, live] at hx'
         cases hx'
       · rw [show g.exit = t.exit from rfl, live] at hx'
         cases hx'
       · -- the failure is installed over the stack the old fiber's correlated clauses type: its
         -- code clause, or its registration's reply stack (row 188 (b))
+        have install : ∀ (row : Env.Requirement) (tin : MachinePos) (flag : Bool),
+            t.context.services.Satisfies row → tin.2 = t.frame.interruptible →
+            Row.Subset tin.1.failureRow row →
+            MHostStack root w m t.id tin (finalPos ty' flag) t.frame.stack →
+            MCodeOk root w (m.update g) g ty' := by
+          intro row tin flag covered bit bound stack
+          refine ⟨row, tin, flag, covered, bit, fun _ => appliedInt, ?_,
+            stack.races (racesKept_of_eq view.races), newProv⟩
+          rw [show tin.2 = true from bit.trans appliedInt]
+          exact .pure (ambientExit_failure (exitOk_interrupts w _ hacc) bound) (Or.inr bound)
         cases hm : raceRegistrationR t.frame.current with
         | none =>
           -- an idle fiber's stack by its code clause, a parked one's by its delivery clause
           cases hp : t.parked with
           | notParked =>
-            obtain ⟨tin', _, stackOk, _⟩ := old.code live hidle hm hp ty' declared'
-            exact ⟨tin', TypedProg.pure (exitOk_interrupts w tin' hacc),
-              hostStack_races (racesKept_of_eq view.races) stackOk, newProv⟩
+            obtain ⟨row, tin, flag, covered, bit, _, code, stackOk, _⟩ :=
+              old.code live hidle hm hp ty' declared'
+            rw [show tin.2 = true from bit.trans appliedInt] at code
+            exact install row tin flag covered bit (ambientProgAt_failure_bound code) stackOk
           | withGuard token =>
-            obtain ⟨tin', final, _, declaredF, stackOk, _⟩ := old.delivery token hp
+            obtain ⟨tin, row, _, final, flag, declaredF, covered, stackOk, _⟩ := old.delivery token hp
             have same : final = ty' := by
               have both : w.Γ t.id = some ty' := declared'
               rw [declaredF] at both
               exact Option.some.inj both
             subst same
-            exact ⟨tin', TypedProg.pure (exitOk_interrupts w tin' hacc),
-              hostStack_races (racesKept_of_eq view.races) stackOk, newProv⟩
+            exact install row _ flag covered rfl (Row.subset_refl _) stackOk
         | some r =>
-          obtain ⟨_, resultTy, _, _, _, final, declaredF, stackOk, _⟩ := old.registration r hm
+          obtain ⟨_, resultTy, _, _, _, row, final, flag, declaredF, covered, stackOk, _⟩ :=
+            old.registration r hm
           have same : final = ty' := by
             have both : w.Γ t.id = some ty' := declared'
             rw [declaredF] at both
             exact Option.some.inj both
           subst same
-          exact ⟨resultTy, TypedProg.pure (exitOk_interrupts w resultTy hacc),
-            hostStack_races (racesKept_of_eq view.races) stackOk, newProv⟩
+          exact install row _ flag covered rfl (Row.subset_refl _) stackOk
     have edited := configTyped_rupdate_gen (g := g) typed hf rfl (fun _ _ h => nomatch h) rfl
-      (fun _ => newProv) (sameKeys g rfl rfl)
+      (fun _ => newProv) ⟨rfl, rfl, fun _ _ => appliedInt⟩ (sameKeys g rfl rfl)
       (fun token r hr' => by
         rw [requestOfR_of_not_parked look (fun h => nomatch h)] at hr'
         cases hr')
@@ -3404,10 +3480,10 @@ theorem observe_raceCallback (root : ProgramSource) (rootTy : EffTy) {w : World}
         have acceptedTyped : ExitOk w resultTy accepted := payload1.accepted accepted hacc
         have code := raceSettle_typed root (w := w) raceId
           (race.afterExit id exit).state.cleanupNeeded acceptedTyped
-        have resumeOk : Contracts.ResumeOk (TypedProg root) w race.host race.token
+        have resumeOk : ResumeCode root w race.host race.token
             ((interpR root.program).raceSettle raceId
               (race.afterExit id exit).state.cleanupNeeded accepted) := by
-          intro ty declared
+          refine resumeCode_of_typed (fun ty declared => ?_) (denoteRaceSettle_admin _ _ _)
           rw [payload.token] at declared
           cases declared
           exact code

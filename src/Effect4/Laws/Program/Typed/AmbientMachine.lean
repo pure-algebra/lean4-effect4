@@ -33,6 +33,7 @@ open Contracts
 operation but the context reader and writer, the region and child entries, the races and the
 scope's exit marker. -/
 def adminOp : FiberOp → Bool
+  | .mask _ (.raceCleanup _) => true
   | .getContext | .setContext _ | .mask _ _ | .fork _ _ _ | .forkIn _ _ _ _ | .forkScoped _ _ _
   | .scoped _ | .gen _ | .loop _ _ | .raceAll _ _ | .raceAllFirst _ _ | .scopeExit _ _ _ => false
   | _ => true
@@ -51,18 +52,41 @@ theorem ambientFiberPre_of_admin (root : ProgramSource) {w : World} (available :
     {op : FiberOp} {cert : FiberCert op} (admin : adminOp op = true) (pre : fiberPre root w op cert) :
     ambientFiberPre root w available op cert := by
   revert admin pre
-  cases op <;> intro admin pre <;> simp only [adminOp, Bool.false_eq_true] at admin <;> exact pre
+  cases op with
+  | mask flag body =>
+    intro admin pre
+    cases body <;> simp only [adminOp, Bool.false_eq_true] at admin
+    cases pre
+    refine ⟨.raceCleanup _, fun a h => absurd h (Row.not_mem_empty a), ?_, ?_, ?_, ?_, ?_⟩
+    · intro _ _ h
+      cases h
+    · intro _ _ _ h
+      cases h
+    · intro _ h
+      cases h
+    · intro _ _ _ h
+      cases h
+    · intro _ h
+      rcases h with h | ⟨_, h | h⟩ <;> cases h
+  | _ => intro admin pre; simp only [adminOp, Bool.false_eq_true] at admin <;> exact pre
 
 theorem fiberPost_of_admin {w : World} (available : Env.Requirement) {op : FiberOp}
     {cert : FiberCert op} {answer : op.answer} (admin : adminOp op = true)
     (post : ambientFiberPost w available op cert answer) : fiberPost w op cert answer := by
   revert admin post
-  cases op <;> intro admin post <;> simp only [adminOp, Bool.false_eq_true] at admin <;> exact post
+  cases op with
+  | mask flag body => intro _ post; exact post
+  | _ => intro admin post; simp only [adminOp, Bool.false_eq_true] at admin <;> exact post
 
 theorem ambientFiberInput_admin (available : Env.Requirement) {op : FiberOp} (answer : op.answer)
     (admin : adminOp op = true) : ambientFiberInput available op answer = available := by
   revert admin
-  cases op <;> intro admin <;> simp only [adminOp, Bool.false_eq_true] at admin <;> rfl
+  cases op with
+  | mask flag body =>
+    intro admin
+    cases body <;> simp only [adminOp, Bool.false_eq_true] at admin
+    cases flag <;> rfl
+  | _ => intro admin; simp only [adminOp, Bool.false_eq_true] at admin <;> rfl
 
 /-- Administrative code carries no scope-exit callback at its head. -/
 theorem AdminCode.noCallback {p : RProgram} (admin : AdminCode p) : scopeExitCallback? p = none := by
@@ -71,7 +95,29 @@ theorem AdminCode.noCallback {p : RProgram} (admin : AdminCode p) : scopeExitCal
   | store => rfl
   | fiber op k isAdmin =>
     revert isAdmin
-    cases op <;> intro isAdmin <;> simp only [adminOp, Bool.false_eq_true] at isAdmin <;> rfl
+    cases op with
+    | mask _ _ => intro _; rfl
+    | _ => intro isAdmin; simp only [adminOp, Bool.false_eq_true] at isAdmin <;> rfl
+
+/-- Administrative code is closed under sequencing. -/
+theorem AdminCode.bind {p : RProgram} {k : ExitV → RProgram} (admin : AdminCode p)
+    (next : ∀ ex, AdminCode (k ex)) : AdminCode (p.bind k) := by
+  induction admin with
+  | pure ex => exact next ex
+  | store op k' notForeign _ ih => exact .store op _ notForeign ih
+  | fiber op k' isAdmin _ ih => exact .fiber op _ isAdmin ih
+
+/-- A race's settlement code is administrative: its cleanup region and the accepted exit. -/
+theorem denoteRaceSettle_admin (race : Nat) (cleanup : Bool) (ex : ExitV) :
+    AdminCode (denoteRaceSettle race cleanup ex) := by
+  unfold denoteRaceSettle
+  split
+  · refine AdminCode.bind (.fiber _ _ rfl fun o => ?_) fun e => ?_
+    · cases o with
+      | none => exact AdminCode.bind (.fiber _ _ rfl fun _ => .pure _) fun _ => .fiber _ _ rfl fun _ => .pure _
+      | some e => exact .pure e
+    · cases e <;> exact .pure _
+  · exact .pure ex
 
 /-- The selected row of a constant-row position is its row. -/
 theorem ambientInput_const (ty : EffTy) (row : Env.Requirement) (exit : ExitV) :

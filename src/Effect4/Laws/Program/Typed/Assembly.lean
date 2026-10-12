@@ -99,12 +99,6 @@ callback), and recorded causes are interrupts. Current code is not part of it: `
 def SavedPosition (root : ProgramSource) (w : World) (final : EffTy) (saved : RSaved) : Prop :=
   ∃ tin flag, MPositionStack root w tin (finalPos final flag) saved.stack ∧ InterruptProvenance saved
 
-/-- A queued resume's code, at the target's token type, typed at every row and mask: a resume can
-take no capability from its type in the token table (decisions row 349). -/
-def ResumeCode (root : ProgramSource) (w : World) (target : FiberId) (token : Nat) (code : RProgram) :
-    Prop :=
-  ∀ ty, w.Θ target token = some ty → ∀ row bit,
-    AmbientProgAt root w (row, bit) ((ty, row, row) : AmbientPosition) code
 
 /-- **The promise-table column** (`Typed/Vocabulary.lean`: `Π` declares every Deferred cell at the
 type it was made at), its two rows: the work a store owes fits its waiter's token (`Owed`, the due
