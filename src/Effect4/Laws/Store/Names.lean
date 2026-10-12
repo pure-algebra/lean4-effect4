@@ -1,5 +1,5 @@
 import Effect4.Store.Carrier.Fold
-import Effect4.Laws.Machine.StoresLaws
+import Effect4.Laws.Machine.StoreValidity
 import Effect4.Laws.Data.ListRel
 
 /-!
@@ -471,11 +471,75 @@ theorem Rel.diag_iff {alloc : Name → Prop} {v : Val} :
       refine Rel.ctor_iff.mpr ⟨rfl, ListRel.map_self fun x member => ?_⟩
       exact ih x member fun h inner => allocated h ((handles_mem_children member inner).2 i)
 
+private def validityAlg (s : Effect4.Machine.Stores) : ValAlgebra (fun _ => Bool) where
+  val_unit := true
+  val_bool _ := true
+  val_nat _ := true
+  val_str _ := true
+  val_bytes _ := true
+  val_list xs := xs.all id
+  val_pair a b := a && b
+  val_none := true
+  val_some a := a
+  val_ctor _ xs := xs.all id
+  val_ref _ _ := true
+  val_handle kind index := s.handleValid kind index
+  val_negInt _ := true
+  val_float _ := true
+
+private def validityHom (s : Effect4.Machine.Stores) : ValHom (validityAlg s) where
+  f_val := Machine.Val.validIn s
+  h_val_unit := rfl
+  h_val_bool _ := rfl
+  h_val_nat _ := rfl
+  h_val_str _ := rfl
+  h_val_bytes _ := rfl
+  h_val_list xs := by
+    rw [Machine.Val.validIn, Machine.Val.validInList_eq_all]
+    simp only [validityAlg, List.all_map, Function.comp_def, id_eq]
+  h_val_pair _ _ := rfl
+  h_val_none := rfl
+  h_val_some _ := rfl
+  h_val_ctor _ xs := by
+    rw [Machine.Val.validIn, Machine.Val.validInList_eq_all]
+    simp only [validityAlg, List.all_map, Function.comp_def, id_eq]
+  h_val_ref _ _ := rfl
+  h_val_handle _ _ := rfl
+  h_val_negInt _ := rfl
+  h_val_float _ := rfl
+
+private def handleValidityHom (s : Effect4.Machine.Stores) : ValHom (validityAlg s) where
+  f_val v := v.handles.all fun h => s.handleValid h.1 h.2
+  h_val_unit := rfl
+  h_val_bool _ := rfl
+  h_val_nat _ := rfl
+  h_val_str _ := rfl
+  h_val_bytes _ := rfl
+  h_val_list xs := by
+    simp only [Val.handles, Val.handlesList_eq_flatMap, List.all_flatMap, validityAlg,
+      List.all_map, Function.comp_def, id_eq]
+  h_val_pair _ _ := by
+    simp only [Val.handles, List.all_append, validityAlg]
+  h_val_none := rfl
+  h_val_some _ := rfl
+  h_val_ctor _ xs := by
+    simp only [Val.handles, Val.handlesList_eq_flatMap, List.all_flatMap, validityAlg,
+      List.all_map, Function.comp_def, id_eq]
+  h_val_ref _ _ := rfl
+  h_val_handle _ _ := by
+    simp only [Val.handles, List.all_cons, List.all_nil, Bool.and_true, validityAlg]
+  h_val_negInt _ := rfl
+  h_val_float _ := rfl
+
+
 /-- **The connector to the stores.** `Val.validIn` is the diagonal at the stores' allocation. -/
 theorem validIn_iff_diag (s : Effect4.Machine.Stores) (v : Val) :
     Effect4.Machine.Val.validIn s v = true ↔
       Rel (Corr.diag fun h => s.handleValid h.1 h.2 = true) v v := by
-  rw [Effect4.Machine.Val.validIn_eq_handles, List.all_eq_true, Rel.diag_iff]
+  have bridge := (hom_eq_cata_val (validityHom s) v).trans
+    (hom_eq_cata_val (handleValidityHom s) v).symm
+  change Effect4.Machine.Val.validIn s v = v.handles.all (fun h => s.handleValid h.1 h.2) at bridge
+  rw [bridge, List.all_eq_true, Rel.diag_iff]
 
 /-! ## Parametric maps -/
 
