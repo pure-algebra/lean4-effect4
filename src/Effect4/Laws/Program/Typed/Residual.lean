@@ -551,6 +551,15 @@ def type : AmbientPosition → EffTy
 def failureRow : AmbientPosition → Env.Requirement
   | .result _ _ failure => failure
   | .capturedContext guaranteed => guaranteed
+
+/-- **A well-formed position promises no more on failure than on success** (decisions row 349):
+the machine can replace a success by an interruption at an interruptible boundary (a mask's
+restore, a cleanup's end, an operation's entry), and that failure is delivered in the context
+the success held. A captured context's failure row is its guaranteed row, which its successful
+read covers too. Every typed program's position is well formed (the judgments' entry). -/
+def WF : AmbientPosition → Prop
+  | .result _ success failure => Row.Subset failure success
+  | .capturedContext _ => True
 end AmbientPosition
 
 /-- Select an input at the delivered exit, including the getter's actual decoded context.
@@ -667,7 +676,7 @@ abbrev AmbientProg (root : ProgramSource) (w : World) (available : Env.Requireme
     (ambientFiberPre root) ambientFiberPost ambientFiberInput AmbientExit
     (fun w input kind mid ex => kind.hasExitArm ex = true ∧ AmbientExit w input mid ex)
     ambientInput (fun ctx => ctx.services.keysRow)
-    (fun available position => Row.Subset position.failureRow available)
+    (fun available position => Row.Subset position.failureRow available ∧ position.WF)
     (fun _ position exit => ambientInput position exit) w available position p
 
 /-- The actual context answer satisfies the row-indexed protocol.
@@ -692,7 +701,7 @@ theorem ambient_getContext_typed (root : ProgramSource) (w : World) (keys availa
     AmbientProg root w available
       ((⟨.contextOf keys, .never, keys⟩ : EffTy), available, available) (fiberValR .getContext rfl) := by
   refine .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) (.contextOf keys) (.inr ⟨keys, rfl, covered, declared⟩) ?_ (Row.subset_refl available)
+    (fun _ _ _ h => nomatch h) (.contextOf keys) (.inr ⟨keys, rfl, covered, declared⟩) ?_ ⟨Row.subset_refl available, Row.subset_refl _⟩
   intro _ _ answer post
   obtain ⟨members, ctx, decoded, coverage⟩ := post
   have bound := (Provision.satisfies_iff_subset_keysRow ctx.services available).mp coverage
@@ -700,7 +709,7 @@ theorem ambient_getContext_typed (root : ProgramSource) (w : World) (keys availa
     | some ctx => ctx.services.keysRow
     | none => available) _ _
   rw [decoded]
-  exact .pure ⟨strongExit_success _ _ _ members, bound⟩ bound
+  exact .pure ⟨strongExit_success _ _ _ members, bound⟩ ⟨bound, Row.subset_refl _⟩
 
 /-- The actual coarse getter retains value-correlated coverage at its saved callback.
 Consumer: the compiled provider's captured previous-context continuation. -/
@@ -708,7 +717,7 @@ theorem ambient_captureContext_typed (root : ProgramSource) (w : World)
     (available : Env.Requirement) :
     AmbientProg root w available (.capturedContext available) (fiberValR .getContext rfl) := by
   refine .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) .context (.inl rfl) ?_ (Row.subset_refl available)
+    (fun _ _ _ h => nomatch h) .context (.inl rfl) ?_ ⟨Row.subset_refl available, trivial⟩
   intro _ _ answer post
   obtain ⟨members, ctx, decoded, coverage⟩ := post
   have bound := (Provision.satisfies_iff_subset_keysRow ctx.services available).mp coverage
@@ -716,7 +725,7 @@ theorem ambient_captureContext_typed (root : ProgramSource) (w : World)
     | some ctx => ctx.services.keysRow
     | none => available) _ _
   rw [decoded]
-  refine .pure ⟨strongExit_success _ _ _ members, bound, ?_⟩ bound
+  refine .pure ⟨strongExit_success _ _ _ members, bound, ?_⟩ ⟨bound, trivial⟩
   change Row.Subset (match Val.context? answer with
     | some ctx => ctx.services.keysRow
     | none => available) ctx.services.keysRow
@@ -731,11 +740,11 @@ theorem ambient_setContext_guarantees (root : ProgramSource) (w : World)
     AmbientProg root w available (EffTy.pure .unit, ctx.services.keysRow, failure)
       (fiberValR (.setContext ctx) rfl) := by
   refine .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) () services ?_ entry
+    (fun _ _ _ h => nomatch h) () services ?_ ⟨entry, returned⟩
   intro _ _ answer post
   change answer = Val.unit at post
   subst answer
-  exact .pure ⟨strongExit_success _ _ _ True.intro, Row.subset_refl _⟩ returned
+  exact .pure ⟨strongExit_success _ _ _ True.intro, Row.subset_refl _⟩ ⟨returned, returned⟩
 
 /-- The internal setter enters its actual supplied key row, rather than retaining the entry row.
 The provider and restoration callbacks use this transition. -/

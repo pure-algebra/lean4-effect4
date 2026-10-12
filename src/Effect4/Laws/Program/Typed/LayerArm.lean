@@ -208,7 +208,7 @@ theorem ambient_store {w : World} {available : Env.Requirement} {T : EffTy} {op 
       AmbientProg root later available ((T, available, available) : AmbientPosition) (k ans)) :
     AmbientProg root w available ((T, available, available) : AmbientPosition) (.vis (.inl op) k) :=
   .store cert ⟨pre, fun scope capture same => absurd same (notForeign scope capture)⟩ next
-    (Row.subset_refl _)
+    ⟨Row.subset_refl _, Row.subset_refl _⟩
 
 /-- An administrative fiber step at a constant row: the type-only pre and post
 (`ambientFiberPre_of_admin`, `fiberPost_of_admin`), the row unchanged. -/
@@ -223,7 +223,7 @@ theorem ambient_fiberAdmin {w : World} {available : Env.Requirement} {T : EffTy}
     AmbientProg root w available ((T, available, available) : AmbientPosition) (.vis (.inr op) k) := by
   refine .fiber notGuard notUnguard notFinish notScopeExit cert
     (ambientFiberPre_of_admin root available admin pre) (fun later ordered ans post => ?_)
-    (Row.subset_refl _)
+    ⟨Row.subset_refl _, Row.subset_refl _⟩
   show AmbientProg root later (ambientFiberInput available op ans) _ _
   rw [ambientFiberInput_admin available ans admin]
   exact next later ordered ans (fiberPost_of_admin available admin post)
@@ -336,7 +336,7 @@ theorem fromBuild_typed {w : World} {available : Env.Requirement} {T : EffTy} {s
   refine ambient_seqGuard (mid := EffTy.pure Ty.scope)
     (ambient_store (op := .scopeFork scope .sequential) () hlive (fun _ _ h => nomatch h)
       (fun later _ ans post =>
-        .pure ⟨strongExit_success later _ ans post, Row.subset_refl _⟩ (Row.subset_refl _)))
+        .pure ⟨strongExit_success later _ ans post, Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩))
     (Bounds.subN_never _) (fun later o v hv => ?_)
   obtain ⟨child, rfl, hchild⟩ := fits_scope_inv hv
   simp only [seqR, Val.scope?_scopeHandle]
@@ -370,7 +370,7 @@ theorem memoize_typed {w : World} {available : Env.Requirement} {q : Point} {m :
       .never, Env.Requirement.empty⟩) ?_ (Bounds.subN_never _) (fun w2 o2 v hv => ?_)
   · refine ambient_store (op := .memoGet q.layerKey m) (.contextOf lt.out, lt.error)
       ⟨l, lt, hat, hcheck, rfl⟩ (fun _ _ h => nomatch h) (fun w' _ ans post => ?_)
-    refine .pure ⟨strongExit_success w' _ ans ?_, Row.subset_refl _⟩ (Row.subset_refl _)
+    refine .pure ⟨strongExit_success w' _ ans ?_, Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
     rcases post with rfl | ⟨cell, owner, hhit, hdecl, hpresent⟩
     · exact Or.inl trivial
     · rw [Val.memoHit?_exact hhit]
@@ -388,7 +388,7 @@ theorem memoize_typed {w : World} {available : Env.Requirement} {q : Point} {m :
       · exact ambient_store (op := .memoBuild q.layerKey m) (.contextOf lt.out, lt.error)
           ⟨l, lt, hat, hcheck, rfl⟩ (fun _ _ h => nomatch h)
           (fun w'' _ ans post =>
-            .pure ⟨strongExit_success w'' _ ans post, Row.subset_refl _⟩ (Row.subset_refl _))
+            .pure ⟨strongExit_success w'' _ ans post, Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩)
       · obtain ⟨layerScope, rfl, hls⟩ := fits_scope_inv hu
         simp only [seqR, Val.scope?_scopeHandle]
         have o13 := leHost_trans _ _ _ o12 o3
@@ -403,7 +403,7 @@ theorem memoize_typed {w : World} {available : Env.Requirement} {q : Point} {m :
             ⟨l, lt, hat, hcheck, exitOk_widen (Ty.subN_refl _) (Ty.subN_refl _) hex⟩
             (fun _ _ h => nomatch h) (fun w6 _ ans post => by
               subst post
-              exact .pure ⟨strongExit_success w6 _ _ trivial, Row.subset_refl _⟩ (Row.subset_refl _)))
+              exact .pure ⟨strongExit_success w6 _ _ trivial, Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩))
     · -- a hit: the entry finalizer registered, then the await of the entry's deferred
       obtain ⟨x, y, rfl, hx, hy⟩ := (fits_prod_iff w2 v _ _).mp hhit
       obtain ⟨c, rfl, hdecl⟩ := fits_deferredOf_inv hx
@@ -419,7 +419,7 @@ theorem memoize_typed {w : World} {available : Env.Requirement} {q : Point} {m :
         (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) (⟨a', e', Env.Requirement.empty⟩ : EffTy)
         ⟨a', e', hpi, Ty.sub_refl _, Ty.sub_refl _⟩
         (fun w4 _ ans post => .pure ⟨exitOk_widen ha.1 he.1 post,
-          by cases ans <;> exact Row.subset_refl _⟩ (Row.subset_refl _))
+          by cases ans <;> exact Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩)
 
 /-- A present memo map's handle is live (row 187, amended by F-WF). -/
 theorem live_memoMap (w : World) (m : MemoMapId) (h : MemoLive w m) : Live w (Val.memoMap m) :=
@@ -529,7 +529,7 @@ theorem provideWith_typed {w : World} {available : Env.Requirement} {dependency 
   obtain ⟨v', hv', fits'⟩ := combineWith_exit mode (servicesFit_mono o2 hsvc) hcov
     (fun key member => by rw [le_serviceTy o2.1]; exact hdecl key member) hu
   rw [hv']
-  refine .pure ⟨strongExit_success w2 _ _ ?_, Row.subset_refl _⟩ (Row.subset_refl _)
+  refine .pure ⟨strongExit_success w2 _ _ ?_, Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
   show Fits w2 v' T.answer
   rw [hT]
   exact fits'
@@ -603,7 +603,7 @@ theorem ambient_scopeFork {w : World} {available : Env.Requirement} {scope : Nat
       (storeR (.scopeFork scope strategy)) :=
   ambient_store (op := .scopeFork scope strategy) () hlive (fun _ _ h => nomatch h)
     (fun later _ ans post =>
-      .pure ⟨strongExit_success later _ ans post, Row.subset_refl _⟩ (Row.subset_refl _))
+      .pure ⟨strongExit_success later _ ans post, Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩)
 
 /-! ### The merge: the positional await and `Context.mergeAll` -/
 
@@ -847,7 +847,7 @@ theorem awaitMerge_typed {w : World} {available : Env.Requirement} {T : EffTy}
     (ambient_fiberAdmin rfl (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
       (fun _ _ _ h => nomatch h) _ (.inr ⟨gammaCols w, rfl, positional_pre declared⟩)
       (fun w' _ ans post =>
-        .pure ⟨strongExit_success w' _ _ post, Row.subset_refl _⟩ (Row.subset_refl _)))
+        .pure ⟨strongExit_success w' _ _ post, Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩))
     (Bounds.subN_never _) (fun w' _ v hv => ?_)
   simp only [seqR]
   obtain ⟨xs, rfl, each, every⟩ := awaited_columns declared hv
@@ -859,7 +859,7 @@ theorem awaitMerge_typed {w : World} {available : Env.Requirement} {T : EffTy}
       obtain ⟨p, hp, hk⟩ := hout key member
       exact ⟨p.2, List.mem_map.mpr ⟨p, hp, rfl⟩, hk⟩)
   rw [hex]
-  exact .pure ⟨ok, by cases ex <;> exact Row.subset_refl _⟩ (Row.subset_refl _)
+  exact .pure ⟨ok, by cases ex <;> exact Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
 
 /-- One sibling's build forked as an immediate daemon (`Layer.ts:1597`): the fork's body is the
 build at the sibling's admitted layer point into a present scope (`BodyTyped.layerBuild`, decisions
@@ -882,10 +882,10 @@ theorem forkLayer_typed {w : World} {available : Env.Requirement} {q : Point} {m
       (fun point memo scope' same => by
         cases same
         exact hstack)⟩
-    (fun w' _ ans post => ?_) (Row.subset_refl _)
+    (fun w' _ ans post => ?_) ⟨Row.subset_refl _, Row.subset_refl _⟩
   obtain ⟨id, rfl, hΓ⟩ := post
   exact .pure ⟨strongExit_success w' _ _ ⟨buildTy lt, hΓ, Ty.subN_refl _, Ty.subN_refl _⟩,
-    Row.subset_refl _⟩ (Row.subset_refl _)
+    Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
 
 /-- **`mergeAllEffect`'s loop for two siblings** (`Layer.ts:1597-1600`): a sequential child of the
 present parallel parent per sibling, the sibling's build forked into it, then the positional await
@@ -1236,7 +1236,7 @@ theorem succeed_builds {key : ServiceKey} {value : Lit} {K : Nat} :
     (live_of_handles_nil (Effect4.Program.RawHandles.lit_toVal_handles value x hx))
   show AmbientProg root w available _ (bindServiceR (some key) x)
   rw [hbind]
-  exact .pure ⟨strongExit_success w _ _ hfits, Row.subset_refl _⟩ (Row.subset_refl _)
+  exact .pure ⟨strongExit_success w _ _ hfits, Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
 
 /-- **`Layer.fresh`** (`Layer.ts:3851`): the inner layer built through a brand-new memo map. -/
 theorem fresh_builds {inner : LayerTerm NativeOp} {K : Nat} (hi : BuildsTyped root K inner) :
@@ -1252,7 +1252,7 @@ theorem fresh_builds {inner : LayerTerm NativeOp} {K : Nat} (hi : BuildsTyped ro
     (Bounds.subN_never _) (fun w' o v hv => ?_)
   · obtain ⟨id, rfl, hid⟩ := post
     exact .pure ⟨strongExit_success w' _ _ (fits_memoMap w' id hid), Row.subset_refl _⟩
-      (Row.subset_refl _)
+      ⟨Row.subset_refl _, Row.subset_refl _⟩
   · obtain ⟨id, rfl, hid⟩ := fits_memoMap_inv hv
     simp only [seqR, Val.memoMap?_memoMap]
     exact hi (q.child 0) w' lt id scope available (Nat.le_trans (Nat.sub_le _ _) hK)
@@ -1280,7 +1280,7 @@ theorem orDie_builds {inner : LayerTerm NativeOp} {K : Nat} (hi : BuildsTyped ro
   · cases exit with
     | success v => exact Bool.noConfusion arm
     | failure c =>
-      exact .pure ⟨orDieCause_exitOk payload.1, Row.subset_refl _⟩ (Row.subset_refl _)
+      exact .pure ⟨orDieCause_exitOk payload.1, Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
   · cases exit with
     | success v => exact ⟨exitOk_success_of_answerN (Ty.subN_refl _) payload.1, Row.subset_refl _⟩
     | failure c => exact Bool.noConfusion absent
@@ -1527,7 +1527,7 @@ theorem ref_builds {target : List Nat} {K : Nat} (hwf : root.program.layerRefsWF
   | zero =>
     rw [denoteLayer_ref_zero _ _ _ _ _ hfq]
     refine .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-      (fun _ _ _ h => nomatch h) () True.intro ?_ (Row.subset_refl _)
+      (fun _ _ _ h => nomatch h) () True.intro ?_ ⟨Row.subset_refl _, Row.subset_refl _⟩
     intro _ _ _ impossible
     exact impossible.elim
   | succ k =>
@@ -1772,7 +1772,7 @@ theorem forkBuild_typed {w : World} {available : Env.Requirement} {parent : Opti
     (Bounds.subN_never _) (fun w' o v hv => ?_)
   · obtain ⟨id, rfl, hid⟩ := post
     exact .pure ⟨strongExit_success w' _ _ (fits_memoMap w' id hid), Row.subset_refl _⟩
-      (Row.subset_refl _)
+      ⟨Row.subset_refl _, Row.subset_refl _⟩
   · obtain ⟨id, rfl, hid⟩ := fits_memoMap_inv hv
     simp only [seqR, Val.memoMap?_memoMap]
     exact buildWithMemoMap_typed (serviceTy_leHost o htie) (hpt w' o) (scopeLive_mono o.1 hlive)
@@ -1812,7 +1812,7 @@ theorem provideLayer_arm (f : Nat) {w : World} (htie : w.serviceTy = root.sig.se
   refine ambient_seqGuard (mid := EffTy.pure Ty.scope)
     (ambient_store (op := .scopeMake .sequential) () trivial (fun _ _ h => nomatch h)
       (fun w' _ ans post =>
-        .pure ⟨strongExit_success w' _ ans post, Row.subset_refl _⟩ (Row.subset_refl _)))
+        .pure ⟨strongExit_success w' _ ans post, Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩))
     (Bounds.subN_never _) (fun w3 o3 v hv => ?_)
   obtain ⟨scope, rfl, hlive⟩ := fits_scope_inv hv
   simp only [seqR, Val.scope?_scopeHandle]
@@ -1823,7 +1823,7 @@ theorem provideLayer_arm (f : Nat) {w : World} (htie : w.serviceTy = root.sig.se
       (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) ()
       ⟨scopeLive_mono o4.1 hlive, fitsExit_unknown hok.1⟩
       (fun _ _ ans post => .pure ⟨post, by cases ans <;> exact Row.subset_refl _⟩
-        (Row.subset_refl _)))
+        ⟨Row.subset_refl _, Row.subset_refl _⟩))
   -- the build at the closed layer point, at every later world
   have hlpt : ∀ w', w3.leHost w' → LayerPointTyped root w' ({ p with completed } : Point).layerBuild lt :=
     fun w' o => layerPointTyped_scope (scopeParams_child hat 0) hatl hcl rfl
@@ -1860,7 +1860,7 @@ theorem provideLayer_arm (f : Nat) {w : World} (htie : w.serviceTy = root.sig.se
   cases hsub : inlineYield b (({ p with completed } : Point).child 1) with
   | some ex =>
     refine .pure ⟨exitOk_widen (mid := tb) (Ty.subN_refl _) (Ty.subN_join_left _ _)
-      (inlineYield_typed f _ hfuel1 hatb hchild hsub), ?_⟩ (Row.subset_refl _)
+      (inlineYield_typed f _ hfuel1 hatb hchild hsub), ?_⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
     cases ex <;> exact Row.subset_refl _
   | none =>
     refine ambientProg_widen root (before := (⟨tb.answer, tb.error, tb.requires⟩, available, available))

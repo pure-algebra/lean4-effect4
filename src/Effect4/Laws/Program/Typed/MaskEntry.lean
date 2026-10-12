@@ -19,9 +19,10 @@ abbrev AmbientEntryInput := Env.Requirement × Bool
 def AmbientEntryAt (input : AmbientEntryInput) (saved : RSaved) : Prop :=
   input.2 = false → saved.interruptible = false
 
-/-- Interruption before ordinary evaluation must retain the guaranteed failure services. -/
+/-- Interruption before ordinary evaluation must retain the guaranteed failure services, and the
+position is well formed (`AmbientPosition.WF`). -/
 def ambientEntryBound (input : AmbientEntryInput) (position : AmbientPosition) : Prop :=
-  input.2 = false ∨ Row.Subset position.failureRow input.1
+  (input.2 = false ∨ Row.Subset position.failureRow input.1) ∧ position.WF
 
 /-- Whole fiber actions return through the saved entry mask, while setters update the row. -/
 def ambientEntryStep (input : AmbientEntryInput) (op : FiberOp) (answer : op.answer) : AmbientEntryInput :=
@@ -73,19 +74,19 @@ theorem ambientProg_entry (root : ProgramSource) {world : Typed.World} {availabl
     (typed : AmbientProg root world available position program) (mode : Bool) :
     AmbientProgAt root world (available, mode) position program := by
   induction typed generalizing mode with
-  | pure payload entry => exact .pure payload (Or.inr entry)
+  | pure payload entry => exact .pure payload ⟨Or.inr entry.1, entry.2⟩
   | store cert pre _ entry ih =>
-    exact .store cert pre (fun later ordered answer post => ih later ordered answer post mode) (Or.inr entry)
+    exact .store cert pre (fun later ordered answer post => ih later ordered answer post mode) ⟨Or.inr entry.1, entry.2⟩
   | fiber notGuard notUnguard notFinish notScopeExit cert pre _ entry ih =>
     exact .fiber notGuard notUnguard notFinish notScopeExit cert pre
-      (fun later ordered answer post => ih later ordered answer post mode) (Or.inr entry)
+      (fun later ordered answer post => ih later ordered answer post mode) ⟨Or.inr entry.1, entry.2⟩
   | guard mid _ _ skip entry ihBody ihRun =>
     exact .guard mid (ihBody mode)
-      (fun later ordered exit post => ihRun later ordered exit post _) skip (Or.inr entry)
-  | unguard payload entry => exact .unguard payload (Or.inr entry)
-  | finishFinalizer payload entry => exact .finishFinalizer payload (Or.inr entry)
+      (fun later ordered exit post => ihRun later ordered exit post _) skip ⟨Or.inr entry.1, entry.2⟩
+  | unguard payload entry => exact .unguard payload ⟨Or.inr entry.1, entry.2⟩
+  | finishFinalizer payload entry => exact .finishFinalizer payload ⟨Or.inr entry.1, entry.2⟩
   | scopedGuard mid previous scope _ callback live services widen entry ihBody =>
-    exact .scopedGuard mid previous scope (ihBody mode) callback live services widen (Or.inr entry)
+    exact .scopedGuard mid previous scope (ihBody mode) callback live services widen ⟨Or.inr entry.1, entry.2⟩
 
 /-- The restoring setter starts protected and completes under the actual previous map. -/
 theorem ambient_setContext_protected (root : ProgramSource) (world : Typed.World)
@@ -94,11 +95,11 @@ theorem ambient_setContext_protected (root : ProgramSource) (world : Typed.World
       (EffTy.pure .unit, previous.services.keysRow, previous.services.keysRow)
       (fiberValR (.setContext previous) rfl) := by
   refine .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) () services ?_ (Or.inl rfl)
+    (fun _ _ _ h => nomatch h) () services ?_ ⟨Or.inl rfl, Row.subset_refl _⟩
   intro _ _ answer post
   change answer = Val.unit at post
   subst answer
-  exact .pure ⟨strongExit_success _ _ _ True.intro, Row.subset_refl _⟩ (Or.inl rfl)
+  exact .pure ⟨strongExit_success _ _ _ True.intro, Row.subset_refl _⟩ ⟨Or.inl rfl, Row.subset_refl _⟩
 
 /-- Protected cleanup restores its actual previous services on either exit.
 Consumer: the captured release body; no entry coverage is inferred from a future success. -/
@@ -132,11 +133,11 @@ theorem ambient_restore_finalizer_protected (root : ProgramSource) {world : Type
     | success value => exact setter
     | failure cause =>
       refine ProgramArrow.guardBind setter (fun later ordered exit post => ?_)
-        (fun later ordered exit clean absent => ?_) (Or.inl rfl)
+        (fun later ordered exit clean absent => ?_) ⟨Or.inl rfl, Row.subset_refl _⟩
       · cases exit with
         | success value => exact Bool.noConfusion post.1
         | failure cleanupCause =>
-          refine .pure ⟨?_, Row.subset_refl _⟩ (Or.inr (Row.subset_refl _))
+          refine .pure ⟨?_, Row.subset_refl _⟩ ⟨Or.inr (Row.subset_refl _), Row.subset_refl _⟩
           have original : ExitOk later middle.type (.failure cause) :=
             exitOk_failure_of_errorN (Ty.subN_refl _) (strongExit_mono _ _ _ _ ordered originalPayload)
           exact exitOk_restore original post.2.1
@@ -145,11 +146,11 @@ theorem ambient_restore_finalizer_protected (root : ProgramSource) {world : Type
         | failure cleanupCause => exact Bool.noConfusion absent
   unfold finalizerR
   refine ProgramArrow.guardBind (work bodyExit payload) (fun later ordered exit post => ?_)
-    (fun later ordered exit clean absent => ?_) (Or.inl rfl)
+    (fun later ordered exit clean absent => ?_) ⟨Or.inl rfl, Row.subset_refl _⟩
   · cases exit with
     | success value =>
       refine .finishFinalizer ⟨strongExit_mono _ _ _ _ ordered payload, ?_⟩
-        (Or.inr (Row.subset_refl _))
+        ⟨Or.inr (Row.subset_refl _), Row.subset_refl _⟩
       cases bodyExit <;> exact Row.subset_refl _
     | failure cause => exact Bool.noConfusion post.1
   · cases exit with
@@ -197,18 +198,19 @@ theorem ambientProgAt_protect (root : ProgramSource) {world : Typed.World}
     (typed : AmbientProgAt root world input position code) :
     AmbientProgAt root world (input.1, false) position code := by
   induction typed with
-  | pure payload _ => exact .pure payload (Or.inl rfl)
-  | store cert pre _ _ ih =>
-    exact .store cert pre (fun later ordered answer post => ih later ordered answer post) (Or.inl rfl)
-  | fiber notGuard notUnguard notFinish notScopeExit cert pre _ _ ih =>
+  | pure payload entry => exact .pure payload ⟨Or.inl rfl, entry.2⟩
+  | store cert pre _ entry ih =>
+    exact .store cert pre (fun later ordered answer post => ih later ordered answer post)
+      ⟨Or.inl rfl, entry.2⟩
+  | fiber notGuard notUnguard notFinish notScopeExit cert pre _ entry ih =>
     exact .fiber notGuard notUnguard notFinish notScopeExit cert pre
-      (fun later ordered answer post => ih later ordered answer post) (Or.inl rfl)
-  | guard mid _ run skip _ ihBody _ =>
-    exact .guard mid ihBody run skip (Or.inl rfl)
-  | unguard payload _ => exact .unguard payload (Or.inl rfl)
-  | finishFinalizer payload _ => exact .finishFinalizer payload (Or.inl rfl)
-  | scopedGuard mid previous scope _ callback live services widen _ ihBody =>
-    exact .scopedGuard mid previous scope ihBody callback live services widen (Or.inl rfl)
+      (fun later ordered answer post => ih later ordered answer post) ⟨Or.inl rfl, entry.2⟩
+  | guard mid _ run skip entry ihBody _ =>
+    exact .guard mid ihBody run skip ⟨Or.inl rfl, entry.2⟩
+  | unguard payload entry => exact .unguard payload ⟨Or.inl rfl, entry.2⟩
+  | finishFinalizer payload entry => exact .finishFinalizer payload ⟨Or.inl rfl, entry.2⟩
+  | scopedGuard mid previous scope _ callback live services widen entry ihBody =>
+    exact .scopedGuard mid previous scope ihBody callback live services widen ⟨Or.inl rfl, entry.2⟩
 
 /-- Ordinary callback evidence enters the actual saved mask without widening its row.
 Consumer: current and queued callback installation at the effective entry cut. -/
@@ -253,7 +255,7 @@ theorem ambient_release_body_protected (root : ProgramSource) {world : Typed.Wor
     (onExitR (denoteAt root.program point) fun _ => fiberValR (.setContext previous) rfl)
   unfold onExitR
   refine ProgramArrow.guardBind (ambientProg_entry root typed false)
-    (fun later ordered exit post => ?_) (fun _ _ exit _ absent => ?_) (Or.inl rfl)
+    (fun later ordered exit post => ?_) (fun _ _ exit _ absent => ?_) ⟨Or.inl rfl, Row.subset_refl _⟩
   · exact ambient_restore_finalizer_protected root _ previous
       (servicesFit_map ordered.1.2.1 ordered.1.2.2.1 ordered.1.2.2.2.1 ordered.2 ordered.1.1.2
         (serviceTy_of_le ordered.1) services) type exit post.2.1

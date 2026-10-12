@@ -1083,7 +1083,7 @@ theorem denoteR_zero_typed (e : NativeEff) (hzero : p.fuel = 0) :
     AmbientProg root w available (ty, available, available) (denoteR root.program e p) := by
   rw [denoteR_zero _ _ _ hzero]
   refine .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) () True.intro ?_ (Row.subset_refl _)
+    (fun _ _ _ h => nomatch h) () True.intro ?_ ⟨Row.subset_refl _, Row.subset_refl _⟩
   intro _ _ _ impossible
   exact impossible.elim
 
@@ -1096,7 +1096,7 @@ theorem succeed_arm {t : Term} (hfuel : p.fuel ≠ 0)
   obtain ⟨t', hty, rfl⟩ := Checker.inv_succeed _ _ _ _ _ hcheck
   obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
   rw [denoteR_succeed _ _ hfuel, hv]
-  exact .pure ⟨strongExit_success w _ v hfit, Row.subset_refl _⟩ (Row.subset_refl _)
+  exact .pure ⟨strongExit_success w _ v hfit, Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
 
 /-- **`fail`**: the failure of the term's value, an admitted error that reads back
 (`valOfErr_errOf_fits`). -/
@@ -1108,7 +1108,7 @@ theorem fail_arm {t : Term} (hfuel : p.fuel ≠ 0)
   obtain ⟨e, hty, hadm, rfl⟩ := Checker.inv_fail _ _ _ _ _ hcheck
   obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
   rw [denoteR_fail _ _ hfuel, hv]
-  refine .pure ⟨?_, Row.subset_refl _⟩ (Row.subset_refl _)
+  refine .pure ⟨?_, Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
   refine ⟨(fitsExit_failure_iff _ _ _).mpr ⟨fun r hr => ?_, fun r hr => ?_⟩, fun r hr => ?_⟩
   all_goals
     simp only [Cause.fail, List.mem_singleton] at hr
@@ -1128,7 +1128,7 @@ theorem failCause_arm {c : CauseTerm} (hfuel : p.fuel ≠ 0)
   obtain ⟨cause, hc, hfits, hshape⟩ := causeOf_progress henv c e hty
   rw [denoteR_failCause _ _ hfuel, hc]
   exact .pure ⟨⟨(fitsExit_failure_iff _ _ _).mpr ⟨hfits, hshape⟩, hshape⟩,
-    Row.subset_refl _⟩ (Row.subset_refl _)
+    Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
 
 /-- **`sync`**: the counted step answering the term's value, which fits the term's type. -/
 theorem sync_arm {t : Term} (hfuel : p.fuel ≠ 0)
@@ -1140,10 +1140,10 @@ theorem sync_arm {t : Term} (hfuel : p.fuel ≠ 0)
   obtain ⟨v, hv, hfit⟩ := evalTerm_progress_env henv hty
   rw [denoteR_sync _ _ hfuel, hv]
   refine ProgramArrow.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) () trivial (fun w' o ans post => ?_) (Row.subset_refl _)
+    (fun _ _ _ h => nomatch h) () trivial (fun w' o ans post => ?_) ⟨Row.subset_refl _, Row.subset_refl _⟩
   have hans : ans = v := post
   exact .pure ⟨strongExit_success w' _ ans (by rw [hans]; exact fits_mono o hfit),
-    Row.subset_refl _⟩ (Row.subset_refl _)
+    Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
 
 /-- **`yieldNow`**: the park answers `unit` (`fiberPost`'s `yieldNow` arm). -/
 theorem yieldNow_arm {priority : Nat} (hfuel : p.fuel ≠ 0)
@@ -1156,10 +1156,10 @@ theorem yieldNow_arm {priority : Nat} (hfuel : p.fuel ≠ 0)
   subst hty
   rw [denoteR_yieldNow _ _ hfuel]
   refine ProgramArrow.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) () trivial (fun w' _ ans post => ?_) (Row.subset_refl _)
+    (fun _ _ _ h => nomatch h) () trivial (fun w' _ ans post => ?_) ⟨Row.subset_refl _, Row.subset_refl _⟩
   have hans : ans = Val.unit := post
   subst hans
-  exact .pure ⟨strongExit_success w' _ _ trivial, Row.subset_refl _⟩ (Row.subset_refl _)
+  exact .pure ⟨strongExit_success w' _ _ trivial, Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
 
 end TermArms
 
@@ -1213,7 +1213,7 @@ theorem bind_arm {a b : NativeEff} (hfuel : p.fuel = f + 1)
       unfold constructR
       refine ProgramArrow.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
         (fun _ _ _ h => nomatch h) () trivial (fun after grew completed completedTyped => ?_)
-        (Row.subset_refl _)
+        ⟨Row.subset_refl _, Row.subset_refl _⟩
       have future := leHost_trans _ _ _ ordered grew
       have completedView : ∀ r ∈ completed, ∃ fty, after.Γ r.1 = some fty ∧
           ExitOk after fty r.2 := completedTyped

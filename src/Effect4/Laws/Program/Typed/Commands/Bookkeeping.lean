@@ -2528,14 +2528,14 @@ theorem configTyped_interruptRecord {root : ProgramSource} {rootTy : EffTy} {w :
         -- code clause, or its registration's reply stack (row 188 (b))
         have install : ∀ (row : Env.Requirement) (tin : MachinePos) (flag : Bool),
             t.context.services.Satisfies row → tin.2 = t.frame.interruptible →
-            Row.Subset tin.1.failureRow row →
+            Row.Subset tin.1.failureRow row → tin.1.WF →
             MHostStack root w m t.id tin (finalPos ty' flag) t.frame.stack →
             MCodeOk root w (m.update g) g ty' := by
-          intro row tin flag covered bit bound stack
+          intro row tin flag covered bit bound wf stack
           refine ⟨row, tin, flag, covered, bit, fun _ => appliedInt, ?_,
             stack.races (racesKept_of_eq view.races), newProv⟩
           rw [show tin.2 = true from bit.trans appliedInt]
-          exact .pure (ambientExit_failure (exitOk_interrupts w _ hacc) bound) (Or.inr bound)
+          exact .pure (ambientExit_failure (exitOk_interrupts w _ hacc) bound) ⟨Or.inr bound, wf⟩
         cases hm : raceRegistrationR t.frame.current with
         | none =>
           -- an idle fiber's stack by its code clause, a parked one's by its delivery clause
@@ -2544,7 +2544,8 @@ theorem configTyped_interruptRecord {root : ProgramSource} {rootTy : EffTy} {w :
             obtain ⟨row, tin, flag, covered, bit, _, code, stackOk, _⟩ :=
               old.code live hidle hm hp ty' declared'
             rw [show tin.2 = true from bit.trans appliedInt] at code
-            exact install row tin flag covered bit (ambientProgAt_failure_bound code) stackOk
+            exact install row tin flag covered bit (ambientProgAt_failure_bound code)
+              (ProgramArrow.entry code).2 stackOk
           | withGuard token =>
             obtain ⟨tin, row, _, final, flag, declaredF, covered, stackOk, _⟩ := old.delivery token hp
             have same : final = ty' := by
@@ -2552,7 +2553,8 @@ theorem configTyped_interruptRecord {root : ProgramSource} {rootTy : EffTy} {w :
               rw [declaredF] at both
               exact Option.some.inj both
             subst same
-            exact install row _ flag covered rfl (Row.subset_refl _) stackOk
+            exact install row ((((tin, row, row) : AmbientPosition)), t.frame.interruptible) flag covered rfl
+              (Row.subset_refl _) (Row.subset_refl _) stackOk
         | some r =>
           obtain ⟨_, resultTy, _, _, _, ⟨row, final, flag, declaredF, covered, stackOk, _⟩, _⟩ :=
             old.registration r hm
@@ -2561,7 +2563,8 @@ theorem configTyped_interruptRecord {root : ProgramSource} {rootTy : EffTy} {w :
             rw [declaredF] at both
             exact Option.some.inj both
           subst same
-          exact install row _ flag covered rfl (Row.subset_refl _) stackOk
+          exact install row ((((resultTy, row, row) : AmbientPosition)), t.frame.interruptible) flag covered
+            rfl (Row.subset_refl _) (Row.subset_refl _) stackOk
     have edited := configTyped_rupdate_gen (g := g) typed hf rfl (fun _ _ h => nomatch h) rfl
       (fun _ => newProv) ⟨.inr rfl, rfl, fun _ _ => appliedInt⟩ (sameKeys g rfl rfl)
       (fun token r hr' => by

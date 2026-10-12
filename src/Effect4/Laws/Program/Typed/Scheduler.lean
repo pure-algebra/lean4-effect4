@@ -392,7 +392,7 @@ theorem AmbientCodeOk.failure_covered {root : ProgramSource} {w : World} {m : RS
   change ambientEntryBound (available, ambientEntryMode fiber.frame) tin at bound
   rw [ordinary] at bound
   have entryBound : Row.Subset tin.failureRow available :=
-    bound.resolve_left Bool.noConfusion
+    bound.1.resolve_left Bool.noConfusion
   exact ⟨available, tin, code, fiber.context.services.satisfies_weaken coverage entryBound⟩
 
 /-- The actual current position records both the physical mask and loop-top deferred cut.
@@ -420,13 +420,13 @@ theorem AmbientCodeOk.runloopTop {root : ProgramSource} {w : World} {m : RState}
     change ambientEntryBound (available, ambientEntryMode fiber.frame) tin at bound
     rw [ordinary] at bound
     have entryBound : Row.Subset tin.failureRow available :=
-      bound.resolve_left Bool.noConfusion
+      bound.1.resolve_left Bool.noConfusion
     refine ⟨available, coverage, tin, ?_, stack, ?_⟩
     · exact .pure ⟨strongExit_of_clean w tin.type fiber.frame.pendingCause
         (pendingCause_clean provenance) (pendingCause_noShapeDefect tin.type provenance),
         by cases tin with
         | result type success failure => exact entryBound
-        | capturedContext guaranteed => exact ⟨entryBound, entryBound⟩⟩ (Or.inr entryBound)
+        | capturedContext guaranteed => exact ⟨entryBound, entryBound⟩⟩ ⟨Or.inr entryBound, bound.2⟩
     · exact ⟨provenance.recorded, fun impossible => Bool.noConfusion impossible⟩
   · exact typed
 

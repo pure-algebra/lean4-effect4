@@ -101,9 +101,14 @@ Consumer: interruption and current-code entry in the existing runtime typing rel
 theorem ambient_entry {root : ProgramSource} {w : World} {available : Env.Requirement}
     {position : AmbientPosition} {code : RProgram}
     (typed : AmbientProg root w available position code) :
-    Row.Subset position.failureRow available := by
-  have bound := ProgramArrow.entry typed
-  exact bound
+    Row.Subset position.failureRow available :=
+  (ProgramArrow.entry typed).1
+
+/-- Every typed program's position is well formed: its entry carries it. -/
+theorem ambient_wf {root : ProgramSource} {w : World} {available : Env.Requirement}
+    {position : AmbientPosition} {code : RProgram}
+    (typed : AmbientProg root w available position code) : position.WF :=
+  (ProgramArrow.entry typed).2
 
 /-- The admitted source reader lowers to the existing context operation and uses its typed row.
 Consumer: the context arm of the source denotation proof. -/
@@ -153,7 +158,7 @@ theorem checked_context_denotation (root : ProgramSource) (w : World) (p : Point
   by_cases exhausted : p.fuel = 0
   · rw [denoteR_zero _ _ _ exhausted]
     refine .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-      (fun _ _ _ h => nomatch h) () True.intro ?_ (Row.subset_refl _)
+      (fun _ _ _ h => nomatch h) () True.intro ?_ ⟨Row.subset_refl _, Row.subset_refl _⟩
     intro _ _ _ impossible
     exact impossible.elim
   · rw [denoteR_withFiber _ _ _ exhausted]
@@ -392,7 +397,8 @@ theorem ambientProg_widen (root : ProgramSource) {w : World} {available : Env.Re
     (answer : Ty.subN before.1.answer after.1.answer = true)
     (error : Ty.subN before.1.error after.1.error = true)
     (success : Row.Subset after.2.1 before.2.1) (failure : Row.Subset after.2.2 before.2.2)
-    (typed : AmbientProg root w available before code) :
+    (typed : AmbientProg root w available before code)
+    (wf : Row.Subset after.2.2 after.2.1 := by exact Row.subset_refl _) :
     AmbientProg root w available after code := by
   refine ProgramArrow.outputMap typed ?_ ?_
   · intro world input exit payload
@@ -401,7 +407,7 @@ theorem ambientProg_widen (root : ProgramSource) {w : World} {available : Env.Re
     | success value => exact Row.subset_trans success payload.2
     | failure cause => exact Row.subset_trans failure payload.2
   · intro input bound
-    exact Row.subset_trans failure bound
+    exact ⟨Row.subset_trans failure bound.1, wf⟩
 
 /-- The shared guarded composition carries actual completion rows into its saved callback.
 Consumer: context setter and restoring finalizer composition for provideContext. -/
@@ -414,10 +420,11 @@ theorem ambient_guardBind (root : ProgramSource) {w : World} {available : Env.Re
     (skip : ∀ later, w.leHost later → ∀ exit,
       AmbientExit later (ambientInput mid exit) mid exit → kind.hasExitArm exit = false →
       AmbientExit later (ambientInput mid exit) result exit)
-    (entry : Row.Subset result.failureRow available) :
+    (entry : Row.Subset result.failureRow available)
+    (wf : result.WF := by exact Row.subset_refl _) :
     AmbientProg root w available result ((guardR kind body).bind next) :=
   ProgramArrow.guardBind typed (fun later ordered exit post => run later ordered exit post.1 post.2)
-    skip entry
+    skip ⟨entry, wf⟩
 
 
 /-- Counted suspension retains the same entry row through the existing program arrow.
@@ -425,10 +432,11 @@ Consumer: suspend, select and invocation source arms in the ambient M5 proof. -/
 theorem ambient_suspendR_typed (root : ProgramSource) {w : World} {available : Env.Requirement}
     {position : AmbientPosition} {point : Point} {body : RProgram}
     (entry : Row.Subset position.failureRow available)
-    (typed : ∀ later, w.leHost later → AmbientProg root later available position body) :
+    (typed : ∀ later, w.leHost later → AmbientProg root later available position body)
+    (wf : position.WF := by exact Row.subset_refl _) :
     AmbientProg root w available position (suspendR point body) :=
   .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) () True.intro (fun later ordered _ _ => typed later ordered) entry
+    (fun _ _ _ h => nomatch h) () True.intro (fun later ordered _ _ => typed later ordered) ⟨entry, wf⟩
 
 /-- Construction retains the actual completed view and the same available service row.
 Consumer: source children constructed after suspension or a saved callback in ambient M5. -/
@@ -437,11 +445,12 @@ theorem ambient_constructR_typed (root : ProgramSource) {w : World} {available :
     (entry : Row.Subset position.failureRow available)
     (typed : ∀ later, w.leHost later → ∀ completed,
       (∀ id ∈ completed, ∃ ty, later.Γ id.1 = some ty ∧ ExitOk later ty id.2) →
-      AmbientProg root later available position (next completed)) :
+      AmbientProg root later available position (next completed))
+    (wf : position.WF := by exact Row.subset_refl _) :
     AmbientProg root w available position (constructR next) :=
   .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ _ _ h => nomatch h) () True.intro (fun later ordered completed post =>
-      typed later ordered completed post) entry
+      typed later ordered completed post) ⟨entry, wf⟩
 
 /-- Distinct cleanup guarantees compose through the existing finalizer boundary.
 Concept: residual-program-typing, R4 and R9; helper of the closed M5 source claim.
@@ -466,14 +475,14 @@ theorem ambient_finalizer_guarantees (root : ProgramSource) {w : World}
     cases originalExit with
     | success value =>
       exact ambientProg_widen root (before := (cleanupType, success, failure))
-        (Ty.subN_refl _) errorBound (Row.subset_refl _) (Row.subset_refl _) typed
+        (Ty.subN_refl _) errorBound (Row.subset_refl _) (Row.subset_refl _) typed kept
     | failure cause =>
       refine ambient_guardBind root typed (fun later ordered exit arm clean => ?_)
-        (fun later ordered exit clean absent => ?_) entry
+        (fun later ordered exit clean absent => ?_) entry kept
       · cases exit with
         | success value => exact Bool.noConfusion arm
         | failure cleanupCause =>
-          refine .pure ⟨?_, Row.subset_refl failure⟩ (Row.subset_refl failure)
+          refine .pure ⟨?_, Row.subset_refl failure⟩ ⟨Row.subset_refl failure, kept⟩
           exact exitOk_restore (strongExit_mono _ _ _ _ ordered originalPayload)
             (exitOk_failure_of_errorN errorBound clean.1)
       · cases exit with
@@ -482,10 +491,10 @@ theorem ambient_finalizer_guarantees (root : ProgramSource) {w : World}
         | failure cleanupCause => exact Bool.noConfusion absent
   unfold finalizerR
   refine ambient_guardBind root (work bodyExit payload) (fun later ordered exit arm clean => ?_)
-    (fun later ordered exit clean absent => ?_) entry
+    (fun later ordered exit clean absent => ?_) entry kept
   · cases exit with
     | success value =>
-      refine .finishFinalizer ⟨strongExit_mono _ _ _ _ ordered payload, ?_⟩ kept
+      refine .finishFinalizer ⟨strongExit_mono _ _ _ _ ordered payload, ?_⟩ ⟨kept, kept⟩
       cases bodyExit with
       | success _ => exact Row.subset_refl _
       | failure _ => exact kept
@@ -563,7 +572,7 @@ theorem ambient_onExit_restore_guarantees (root : ProgramSource) {w : World}
   unfold onExitR
   refine ambient_guardBind root typed (fun later ordered exit _ payload => ?_)
     (fun _ _ exit _ absent => by cases exit <;> exact Bool.noConfusion absent)
-    (Row.subset_trans entry (ambient_entry typed))
+    (Row.subset_trans entry (ambient_entry typed)) restored
   have selected : ambientInput (ty, bodyRow, bodyRow) exit = bodyRow := by cases exit <;> rfl
   rw [selected]
   exact ambient_restore_finalizer_guarantees root bodyRow failure previous (servicesFit_map ordered.1.2.1 ordered.1.2.2.1 ordered.1.2.2.2.1 ordered.2 ordered.1.1.2
@@ -593,9 +602,9 @@ theorem ambient_storeR_of_typed (root : ProgramSource) {w : World} {ty : EffTy}
     AmbientProg root w available (ty, available, available) (storeR op) := by
   obtain ⟨cert, pre, next⟩ := TypedProg.store_inv typed
   refine .store cert ⟨pre, fun scope capture identity =>
-    False.elim (notForeign scope capture identity)⟩ ?_ (Row.subset_refl _)
+    False.elim (notForeign scope capture identity)⟩ ?_ ⟨Row.subset_refl _, Row.subset_refl _⟩
   intro later ordered answer post
-  exact .pure ⟨TypedProg.pure_inv (next later ordered answer post), Row.subset_refl _⟩ (Row.subset_refl _)
+  exact .pure ⟨TypedProg.pure_inv (next later ordered answer post), Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
 
 /-- The actual foreign registration retains its captured callback and answers at the existing store columns.
 Consumer: the ambient acquireIn body, including the already-closed scope branch. -/
@@ -606,12 +615,12 @@ theorem ambient_foreign_registration_typed (root : ProgramSource) {w : World}
     AmbientProg root w available
       ((⟨.union .unit (.exitOf .unknown .unknown), .never, Env.Requirement.empty⟩ : EffTy),
         available, available) (storeR (.scopeAdd scope (.foreign capture))) := by
-  refine .store () ⟨⟨live, typed⟩, ?_⟩ ?_ (Row.subset_refl _)
+  refine .store () ⟨⟨live, typed⟩, ?_⟩ ?_ ⟨Row.subset_refl _, Row.subset_refl _⟩
   · intro actualScope actualCapture identity
     cases identity
     exact policy
   · intro later _ answer post
-    refine .pure ⟨⟨?_, True.intro⟩, Row.subset_refl _⟩ (Row.subset_refl _)
+    refine .pure ⟨⟨?_, True.intro⟩, Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
     rcases post with rfl | ⟨exit, rfl, member⟩
     · exact Or.inl True.intro
     · exact Or.inr member
@@ -633,7 +642,7 @@ theorem ambient_fiber_leaf_of_typed (root : ProgramSource) {w : World} {ty : Eff
     AmbientProg root w available (ty, available, available) (.vis (.inr op) next) := by
   obtain ⟨cert, pre, answerTyped⟩ := TypedProg.fiber_inv typed notGuard notUnguard notFinish notScopeExit
   refine .fiber notGuard notUnguard notFinish notScopeExit cert (preAt cert pre) ?_
-    (Row.subset_refl _)
+    ⟨Row.subset_refl _, Row.subset_refl _⟩
   intro later ordered answer post
   rw [inputAt answer]
   obtain ⟨exit, returned⟩ := terminal answer
@@ -641,7 +650,7 @@ theorem ambient_fiber_leaf_of_typed (root : ProgramSource) {w : World} {ty : Eff
   have member := answerTyped later ordered answer (postAt later ordered cert answer post)
   rw [returned] at member
   exact .pure ⟨TypedProg.pure_inv member, by cases exit <;> exact Row.subset_refl _⟩
-    (Row.subset_refl _)
+    ⟨Row.subset_refl _, Row.subset_refl _⟩
 
 /-- The existing mask reader retains the ambient entry through its restored slot.
 Consumer: the provider's protected-entry program arrow. -/
@@ -650,11 +659,11 @@ theorem ambient_captureMask_typed (root : ProgramSource) (w : World)
     AmbientProg root w available (EffTy.pure Ty.maskRestore, available, available)
       (fiberValR .getInterruptible rfl) := by
   refine .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) () True.intro ?_ (Row.subset_refl _)
+    (fun _ _ _ h => nomatch h) () True.intro ?_ ⟨Row.subset_refl _, Row.subset_refl _⟩
   intro later _ value post
   obtain ⟨flag, rfl⟩ := post
   exact .pure ⟨strongExit_success later _ _ (fits_savedMask later flag), Row.subset_refl _⟩
-    (Row.subset_refl _)
+    ⟨Row.subset_refl _, Row.subset_refl _⟩
 
 /-- **The protected context entry** at any update whose installed map covers the body's checked
 row and keeps the entry row: the mask captured, the context installed with its restoration, the
@@ -684,7 +693,7 @@ theorem ambient_updateContext (root : ProgramSource) {w : World}
       have laterUpdate : ContextUpdateTyped later update := fun after grew =>
         updateTyped after (leHost_trans _ _ _ ordered grew)
       refine .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-        (fun _ _ _ h => nomatch h) cut ?_ ?_ entry
+        (fun _ _ _ h => nomatch h) cut ?_ ?_ ⟨entry, Row.subset_refl _⟩
       · refine ⟨.contextEntry _ body flag intrinsic cut region (Ty.subN_refl _) (Ty.subN_refl _)
           laterUpdate, Row.subset_refl _, ?_, ?_, ?_, ?_, ?_, ?_⟩
         · intro point ctx impossible
@@ -708,7 +717,7 @@ theorem ambient_updateContext (root : ProgramSource) {w : World}
         · intro point memo scope impossible
           cases impossible
       · intro after _ delivered post
-        refine .pure ⟨post, ?_⟩ entry
+        refine .pure ⟨post, ?_⟩ ⟨entry, Row.subset_refl _⟩
         cases delivered <;> exact entry
   · cases exit with
     | success value => exact Bool.noConfusion absent
@@ -777,7 +786,7 @@ theorem checked_provideContext_arm (root : ProgramSource) (w : World) (p : Point
   simp only [Option.bind_some, Val.context?_context]
   cases head : inlineYield body (p.child 0) with
   | some exit =>
-    refine .pure ⟨?_, ?_⟩ (Row.subset_refl available)
+    refine .pure ⟨?_, ?_⟩ ⟨Row.subset_refl available, Row.subset_refl _⟩
     · exact exitOk_widen (Ty.subN_refl _) (Ty.subN_refl _) (immediate bodyTy bodyCheck exit head)
     · cases exit <;> exact Row.subset_refl available
   | none =>

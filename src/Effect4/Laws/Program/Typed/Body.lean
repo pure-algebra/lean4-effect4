@@ -136,7 +136,7 @@ theorem foreignFin_ambient (root : ProgramSource) {w : World} {c : Capture}
                   exact hstack),
               (fun _ _ _ impossible => by cases impossible)⟩
             (fun _ _ ans post => .pure ⟨exitOk_finalizer hnever post, by cases ans <;> exact bound⟩
-              bound) window
+              ⟨bound, Row.subset_refl _⟩) ⟨window, Row.subset_refl _⟩
       · cases exit' with
         | success done => exact Bool.noConfusion absent'
         | failure cause =>
@@ -198,7 +198,7 @@ theorem acquireIn_ambient (root : ProgramSource) {w : World} (hwf : SourceWF roo
   refine ambient_seqGuard (mid := EffTy.pure Ty.scope)
     (ambient_fiberAdmin rfl (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
       (fun _ _ _ h => nomatch h) () trivial (fun w1 _ ans post =>
-        .pure ⟨strongExit_success w1 _ _ post, Row.subset_refl _⟩ (Row.subset_refl _)))
+        .pure ⟨strongExit_success w1 _ _ post, Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩))
     (Bounds.subN_never _) (fun w1 o1 v hv => ?_)
   obtain ⟨s, rfl, hlive⟩ := fits_scope_inv hv
   simp only [seqR, Val.scope?_scopeHandle]
@@ -223,7 +223,7 @@ theorem acquireIn_ambient (root : ProgramSource) {w : World} (hwf : SourceWF roo
   have hval : Fits w3 aval a.answer := fits_mono o3 hfit
   rcases hu with hunit | hexit
   · rw [fits_unit_inv hunit, if_pos rfl]
-    exact .pure ⟨strongExit_success w3 _ aval hval, Row.subset_refl _⟩ (Row.subset_refl _)
+    exact .pure ⟨strongExit_success w3 _ aval hval, Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
   · obtain ⟨ex, hex⟩ := exitOfVal_of_fits hexit
     have hne : u ≠ Val.unit := by
       intro hu
@@ -235,7 +235,7 @@ theorem acquireIn_ambient (root : ProgramSource) {w : World} (hwf : SourceWF roo
       (foreignFin_ambient root (captureTyped_mono o3 hcap) bound (fitsExit_of_exitOfVal hexit hex))
       (Bounds.subN_never _) (fun w4 o4 _ _ =>
         .pure ⟨strongExit_success w4 _ aval (fits_mono o4 hval), Row.subset_refl _⟩
-          (Row.subset_refl _))
+          ⟨Row.subset_refl _, Row.subset_refl _⟩)
 
 /-- The keeping update installs nothing: `provide` of the empty map. -/
 theorem apply_of_keepsIdentity {update : Env.ContextUpdate} {previous : Env.Ctx}
@@ -290,7 +290,7 @@ theorem region_ambient (root : ProgramSource) {w : World} (hwf : SourceWF root)
     obtain ⟨v', hv', fits'⟩ := addCurrentMemoMap_exit (serviceTy_leHost o1 htie)
       (memoLive_mono o1.1 hmemo) hv
     rw [hv']
-    exact .pure ⟨strongExit_success w1 _ _ fits', Row.subset_refl _⟩ (Row.subset_refl _)
+    exact .pure ⟨strongExit_success w1 _ _ fits', Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
   | construct point key =>
     obtain ⟨bodyTy, hpt, rfl, carriers⟩ := typed
     show AmbientProg root w available _
@@ -305,7 +305,7 @@ theorem region_ambient (root : ProgramSource) {w : World} (hwf : SourceWF root)
         exact ⟨carrier, le_serviceTy o1.1 ▸ declared, fits_flatFits flat (fits_subN w1 sub v hv)⟩)
       (fits_live w1 _ v hv)
     rw [hbind]
-    exact .pure ⟨strongExit_success w1 _ _ hfits, Row.subset_refl _⟩ (Row.subset_refl _)
+    exact .pure ⟨strongExit_success w1 _ _ hfits, Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
 
 /-- A region's mask returns at the row it entered at. -/
 theorem ambientFiberInput_region (available : Env.Requirement) (flag : Bool) (region : Region)
@@ -341,7 +341,7 @@ theorem restoreRegion_ambient (root : ProgramSource) {w : World} {available : En
       (fun _ _ _ impossible => by cases impossible)⟩
     (fun _ _ ans post => by
       rw [ambientFiberInput_region]
-      exact .pure ⟨post, by cases ans <;> exact entry⟩ entry) entry
+      exact .pure ⟨post, by cases ans <;> exact entry⟩ ⟨entry, Row.subset_refl _⟩) ⟨entry, Row.subset_refl _⟩
 
 /-- **The provider's protected entry** (`contextEntryR`, `internal/effect.ts:2087-2096`) at a row
 the fiber's context covers: the context read, which covers the row; the update installed and the
@@ -436,7 +436,7 @@ theorem bodyTyped_ambient (root : ProgramSource) {w : World} (hwf : SourceWF roo
     exact ambient_fiberAdmin rfl (fun _ h => nomatch h) (fun _ h => nomatch h)
       (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) () trivial (fun w' _ ans post => by
         subst post
-        exact .pure ⟨strongExit_success w' _ _ trivial, Row.subset_refl _⟩ (Row.subset_refl _))
+        exact .pure ⟨strongExit_success w' _ _ trivial, Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩)
   | acquireIn p ctx ty h node hsvc =>
     obtain ⟨acquire, release, hat⟩ := node
     exact ambientProg_entry root (acquireIn_ambient root hwf htie h hat hsvc

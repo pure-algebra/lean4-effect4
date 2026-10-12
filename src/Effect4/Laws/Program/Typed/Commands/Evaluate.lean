@@ -31,17 +31,18 @@ open Contracts
 
 /-! ## The frame of the fiber a queued `loop` or `deliver` owns -/
 
-/-- Every fiber but `id` keeps its stack and provenance from `m` to `m'`. -/
+/-- Every fiber but `id` keeps its stack, provenance and mask from `m` to `m'`. -/
 def StackViewExcept (m m' : RState) (id : FiberId) : Prop :=
   ∀ i f', i ≠ id → m'.fiber? i = some f' → ∃ f, m.fiber? i = some f ∧ f'.id = f.id ∧
-    f'.frame.stack = f.frame.stack ∧ (InterruptProvenance f.frame → InterruptProvenance f'.frame)
+    f'.frame.stack = f.frame.stack ∧ (InterruptProvenance f.frame → InterruptProvenance f'.frame) ∧
+    MaskView f f'
 
 /-- Editing fiber `g` keeps every other fiber's stack. -/
 theorem stackViewExcept_rupdate {m : RState} {f g : RFiber} (hid : g.id = f.id) :
     StackViewExcept m (m.update g) f.id := by
   intro i f' hi hf'
   rw [rfiber?_update_other (fun h => hi (h.trans hid))] at hf'
-  exact ⟨f', hf', rfl, rfl, id⟩
+  exact ⟨f', hf', rfl, rfl, id, MaskView.refl f'⟩
 
 /-- **A queued command not owned by `id` keeps its delivery judgment when only fiber `id`'s stack
 moves**: the four deliveries that read a stack (`afterInterrupt`, `raceCancel`, `closeParAwait`,
@@ -53,22 +54,22 @@ theorem commandDelivery_stack_except {root : ProgramSource} {w : World} {m m' : 
   cases c with
   | afterInterrupt host _ kind =>
     intro f' hf'
-    obtain ⟨f, hf, hid, hstack, hprov⟩ := view host f' (fun e => owner (by rw [e]; rfl)) hf'
+    obtain ⟨f, hf, hid, hstack, hprov, hmask⟩ := view host f' (fun e => owner (by rw [e]; rfl)) hf'
     obtain ⟨replyTy, ok, stack⟩ := h f hf
-    exact ⟨replyTy, ok, stackReply_view kept hid hstack hprov stack⟩
+    exact ⟨replyTy, ok, stackReply_view kept hid hstack hprov hmask stack⟩
   | raceCancel _ host _ remaining visited =>
     intro f' hf'
-    obtain ⟨f, hf, hid, hstack, hprov⟩ := view host f' (fun e => owner (by rw [e]; rfl)) hf'
+    obtain ⟨f, hf, hid, hstack, hprov, hmask⟩ := view host f' (fun e => owner (by rw [e]; rfl)) hf'
     obtain ⟨answer, error, cols, stack⟩ := h f hf
-    exact ⟨answer, error, cols, stackReply_view kept hid hstack hprov stack⟩
+    exact ⟨answer, error, cols, stackReply_view kept hid hstack hprov hmask stack⟩
   | closeParAwait host _ targets =>
     intro f' hf'
-    obtain ⟨f, hf, hid, hstack, hprov⟩ := view host f' (fun e => owner (by rw [e]; rfl)) hf'
-    obtain ⟨answer, error, cols, protocol, stack⟩ := h f hf
-    exact ⟨answer, error, cols, protocol, stackReply_view kept hid hstack hprov stack⟩
+    obtain ⟨f, hf, hid, hstack, hprov, hmask⟩ := view host f' (fun e => owner (by rw [e]; rfl)) hf'
+    obtain ⟨answer, error, row, cols, protocol, stack⟩ := h f hf
+    exact ⟨answer, error, row, cols, protocol, stackReplyAt_view kept hid hstack hprov hmask stack⟩
   | finish host _ =>
     intro f' hf'
-    obtain ⟨f, hf, _, hstack, _⟩ := view host f' (fun e => owner (by rw [e]; rfl)) hf'
+    obtain ⟨f, hf, _, hstack, _, _⟩ := view host f' (fun e => owner (by rw [e]; rfl)) hf'
     rw [hstack]
     exact h f hf
   | evaluate _ => trivial
@@ -99,7 +100,7 @@ theorem configTyped_rupdate_frame {root : ProgramSource} {rootTy : EffTy} {w : W
       requestOfR m f.id token = some r)
     (auth : ∀ c ∈ q, CommandAuthorityR m c → CommandAuthorityR (m.update g) c)
     (readG : g.running = true → ReadsCode g.id q → raceRegistrationR g.frame.current = none →
-      ∀ ty, w.Γ g.id = some ty → CodeOk root w (m.update g) g.id ty g.frame)
+      ∀ ty, w.Γ g.id = some ty → MCodeOk root w (m.update g) g ty)
     (fresh : FiberTyped root w (m.update g) g) : ConfigTyped root rootTy w (m.update g) q := by
   have view : ObsView m (m.update g) := obsView_rupdate hf hid pending
   obtain ⟨machine, code, queue⟩ := typed
@@ -135,7 +136,7 @@ theorem configTyped_cons_deliver {root : ProgramSource} {rootTy : EffTy} {w : Wo
     (hf : m.fiber? f.id = some f) (running : f.running = true) (parked : f.parked = .notParked)
     (free : f.id ∉ q.filterMap (Guard.commandOwner m)) (yielding : Bool)
     (code : raceRegistrationR f.frame.current = none → ∀ ty, w.Γ f.id = some ty →
-      CodeOk root w m f.id ty f.frame) :
+      MCodeOk root w m f ty) :
     ConfigTyped root rootTy w m (.deliver f.id yielding :: q) := by
   have wide := typed.machine.wide
   refine ⟨typed.machine, ?_, queueOk_cons ?_ typed.queue⟩
@@ -225,17 +226,18 @@ theorem commandAuthority_frame {m : RState} {f g : RFiber} (hf : m.fiber? f.id =
 
 /-- **A running fiber whose frame moves stays typed**: every clause but the position reads fields
 the edit keeps, or is vacuous at a running fiber (not parked, not exited); a race registration
-marker current carries its registration facts (`RegistrationState`, decisions row 188 (b)): the
-race, hosted here, its token declared, and the stack a reply at the token's type meets. -/
+marker current carries its registration facts (`RegistrationState`, decisions row 188 (b)). -/
 theorem fiberTyped_frame {root : ProgramSource} {w : World} {m : RState} {f : RFiber}
     (old : FiberTyped root w m f) (hf : m.fiber? f.id = some f) (running : f.running = true)
     (fr : RSaved)
-    (position : ∀ ty, w.Γ f.id = some ty → ∃ tin, PositionStack root w tin ty fr.stack)
+    (position : ∀ ty, w.Γ f.id = some ty →
+      ∃ tin flag, MPositionStack root w tin (finalPos ty flag) fr.stack)
     (prov : InterruptProvenance fr)
     (registration : ∀ raceId, raceRegistrationR fr.current = some raceId →
-      ∃ race resultTy final, m.race? raceId = some race ∧ race.host = f.id ∧
-        w.Θ race.host race.token = some resultTy ∧ w.Γ f.id = some final ∧
-        HostStack root w m f.id resultTy final fr.stack) :
+      ∃ race resultTy, m.race? raceId = some race ∧ race.host = f.id ∧
+        w.Θ race.host race.token = some resultTy ∧
+        StackReply root w m { f with frame := fr } resultTy ∧
+        EntrantsCovered root w race resultTy { f with frame := fr }) :
     FiberTyped root w (m.update { f with frame := fr }) { f with frame := fr } := by
   have view : ObsView m (m.update { f with frame := fr }) :=
     obsView_rupdate hf rfl (PendingWeaker.refl f.pending)
@@ -254,41 +256,27 @@ theorem fiberTyped_frame {root : ProgramSource} {w : World} {m : RState} {f : RF
       have stopped := (old.exited (by rw [hx]; rfl)).2
       rw [running] at stopped
       cases stopped
-  exact
-    { ok := ⟨⟨fun ty declared => by
-          obtain ⟨tin, stack⟩ := position ty declared
-          exact ⟨tin, stack, prov⟩⟩, moved.ok.c1, moved.ok.c2, moved.ok.c3, moved.ok.c4, moved.ok.c5⟩
-      delivery := fun token hp => by
-        change f.parked = .withGuard token at hp
-        rw [notParked] at hp
-        cases hp
-      below := moved.below
-      pendingShape := moved.pendingShape
-      parkedIdle := moved.parkedIdle
-      parkedBelow := moved.parkedBelow
-      exited := moved.exited
-      exitedStack := fun hx => by
-        change f.exit.isSome = true at hx
-        rw [live] at hx
-        cases hx
-      deferredCause := prov.deferred
-      pendingOwner := moved.pendingOwner
-      observers := moved.observers
-      registration := fun raceId hm => by
-        change raceRegistrationR fr.current = some raceId at hm
-        obtain ⟨race, resultTy, final, found, host, token, declared, stack⟩ := registration raceId hm
-        exact ⟨race, resultTy, found, host, token, final, declared,
-          hostStack_races (m := m) (m' := m.update { f with frame := fr })
-            (racesKept_of_eq fun _ => rfl) stack, prov⟩
-      code := fun _ hr => by
-        change f.running = false at hr
-        rw [running] at hr
-        cases hr
-      tokens := moved.tokens
-      raceObservers := moved.raceObservers
-      targetsBelow := moved.targetsBelow
-      observersBelow := moved.observersBelow
-      children := moved.children }
+  refine ⟨⟨⟨fun ty declared => ?_⟩, moved.ok.c1, moved.ok.c2, moved.ok.c3, moved.ok.c4,
+      moved.ok.c5⟩, fun token hp => ?_, moved.below, moved.pendingShape, moved.parkedIdle,
+    moved.parkedBelow, moved.exited, fun hx => ?_, fun _ => ?_, moved.pendingOwner,
+    moved.observers, fun raceId hm => ?_, fun _ hr _ _ _ _ => ?_, moved.tokens,
+    moved.raceObservers, moved.targetsBelow, moved.observersBelow, moved.children⟩
+  · obtain ⟨tin, flag, stack⟩ := position ty declared
+    exact ⟨tin, flag, stack, prov⟩
+  · change f.parked = .withGuard token at hp
+    rw [notParked] at hp
+    cases hp
+  · change f.exit.isSome = true at hx
+    rw [live] at hx
+    cases hx
+  · exact prov.deferred (by assumption)
+  · obtain ⟨race, resultTy, found, host, token, reply, entrants⟩ := registration raceId hm
+    exact ⟨race, resultTy, found, host, token,
+      stackReply_races (m := m) (m' := m.update { f with frame := fr })
+        (racesKept_of_eq fun _ => rfl) reply, entrants⟩
+  · change f.running = false at hr
+    rw [running] at hr
+    cases hr
 
 /-- **The fiber edit of a frame step**: from a typed configuration headed by the `loop` or
 `deliver` that owns the running fiber `f`, a new frame for `f` that keeps `f` typed gives the
@@ -329,14 +317,14 @@ theorem configTyped_frame_edit {root : ProgramSource} {rootTy : EffTy} {w : Worl
     · exact absurd rfl (free _ r)
 
 /-- **The frame step**: from a typed configuration headed by the `loop` or `deliver` that owns the
-running fiber `f`, a new frame for `f` typed at its declared type (its current code no race
-registration marker) gives the configuration with that frame installed, under either head. The
-step's frame-only clauses all end here. -/
+running fiber `f`, a new frame for `f` whose code is typed at its declared type (its current code
+no race registration marker) gives the configuration with that frame installed, under either
+head. The step's frame-only clauses all end here. -/
 theorem configTyped_frame_step {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
     {c : RCmd} {rest : List RCmd} {f : RFiber} (typed : ConfigTyped root rootTy w m (c :: rest))
     (owner : Guard.commandOwner m c = some f.id) (hf : m.fiber? f.id = some f)
     (running : f.running = true) (fr : RSaved)
-    (code : ∀ ty, w.Γ f.id = some ty → CodeOk root w m f.id ty fr)
+    (code : ∀ ty, w.Γ f.id = some ty → MCodeOk root w m { f with frame := fr } ty)
     (marker : raceRegistrationR fr.current = none) :
     (∀ y, ConfigTyped root rootTy w (m.update { f with frame := fr }) (.loop f.id y :: rest)) ∧
     (∀ y, ConfigTyped root rootTy w (m.update { f with frame := fr }) (.deliver f.id y :: rest)) := by
@@ -354,23 +342,23 @@ theorem configTyped_frame_step {root : ProgramSource} {rootTy : EffTy} {w : Worl
     Option.isSome_iff_exists.mp ((typed.machine.wide.fibers f.id).mpr
       (List.mem_map.mpr ⟨f, hmem, rfl⟩))
   have prov : InterruptProvenance fr := by
-    obtain ⟨_, _, _, p⟩ := code ty declared
+    obtain ⟨_, _, _, _, _, _, _, _, p⟩ := code ty declared
     exact p
   have look : (m.update g).fiber? g.id = some g := rfiber?_update_self hf rfl
   have fresh : FiberTyped root w (m.update g) g :=
     fiberTyped_frame old hf running fr
       (fun ty' declared' => by
-        obtain ⟨tin, _, stack, _⟩ := code ty' declared'
-        exact ⟨tin, positionStack_of_host stack⟩) prov (fun _ h => by rw [marker] at h; cases h)
+        obtain ⟨_, tin, flag, _, _, _, _, stack, _⟩ := code ty' declared'
+        exact ⟨tin, flag, MPositionStack.of_host stack⟩) prov
+      (fun _ h => by rw [marker] at h; cases h)
   have edited : ConfigTyped root rootTy w (m.update g) rest :=
     configTyped_frame_edit typed owner hf running fr fresh
   have freeG : g.id ∉ rest.filterMap (Guard.commandOwner (m.update g)) := by
     rw [commandOwner_update]
     exact owner_free typed.queue owner
   have codeG : raceRegistrationR g.frame.current = none → ∀ ty, w.Γ g.id = some ty →
-      CodeOk root w (m.update g) g.id ty g.frame :=
-    fun _ ty' declared' =>
-      codeOk_races (m := m) (m' := m.update g) (racesKept_of_eq fun _ => rfl) (code ty' declared')
+      MCodeOk root w (m.update g) g ty :=
+    fun _ ty' declared' => (code ty' declared').races (racesKept_of_eq fun _ => rfl)
   exact ⟨fun y => configTyped_cons_loop edited look running notParked freeG y codeG,
     fun y => configTyped_cons_deliver edited look running notParked freeG y codeG⟩
 
@@ -387,26 +375,57 @@ theorem viewTyped_completed {root : ProgramSource} {rootTy : EffTy} {w : World} 
     Option.isSome_iff_exists.mp ((typed.wide.fibers f.id).mpr (List.mem_map.mpr ⟨f, hf, rfl⟩))
   exact ⟨ty, declared, (typed.fiber hf).ok.c3 ex fx ty declared⟩
 
+/-- The fiber arm's inversion at the ambient judgment: an operation that is none of the four
+control markers is typed by its certificate, its ambient pre, a continuation for every answer its
+post admits at every later world, at the entry the operation steps to, and its entry bound. -/
+theorem ambientProgAt_fiber_inv {root : ProgramSource} {w : World} {input : AmbientEntryInput}
+    {position : AmbientPosition} {op : FiberOp} {k : op.answer → RProgram}
+    (h : AmbientProgAt root w input position (.vis (.inr op) k))
+    (notGuard : ∀ kind, op ≠ .guard_ kind) (notUnguard : ∀ ex, op ≠ .unguard ex)
+    (notFinish : ∀ ex, op ≠ .finishFinalizer ex)
+    (notScopeExit : ∀ prev sc ex, op ≠ .scopeExit prev sc ex) :
+    ∃ cert, ambientFiberPre root w input.1 op cert ∧
+      (∀ later, w.leHost later → ∀ ans, ambientFiberPost later input.1 op cert ans →
+        AmbientProgAt root later (ambientFiberInput input.1 op ans, input.2) position (k ans)) ∧
+      ambientEntryBound input position := by
+  cases h with
+  | fiber _ _ _ _ cert pre next entry => exact ⟨cert, pre, next, entry⟩
+  | guard => exact absurd rfl (notGuard _)
+  | unguard => exact absurd rfl (notUnguard _)
+  | finishFinalizer => exact absurd rfl (notFinish _)
+  | scopedGuard => exact absurd rfl (notGuard _)
+
+/-- The store arm's inversion at the ambient judgment. -/
+theorem ambientProgAt_store_inv {root : ProgramSource} {w : World} {input : AmbientEntryInput}
+    {position : AmbientPosition} {op : SyncOp} {k : Val → RProgram}
+    (h : AmbientProgAt root w input position (.vis (.inl op) k)) :
+    ∃ cert, ambientStorePre root w input.1 op cert ∧
+      (∀ later, w.leHost later → ∀ ans, storePost later op cert ans →
+        AmbientProgAt root later input position (k ans)) ∧
+      ambientEntryBound input position := by
+  cases h with
+  | store cert pre next entry => exact ⟨cert, pre, next, entry⟩
+
 /-- **Construction glue keeps typing** (`prepareR`, `Laws/Program/DenoteR.lean`): a `construction`
 operation answers the completed view, which is exactly its post when the view is typed; a guard
 prepares its body, its run and skip arms untouched; nothing else moves. -/
 theorem prepareR_typed {root : ProgramSource} (C : List (FiberId × ExitV)) (c : RProgram) :
-    ∀ {w : World} {ty : EffTy}, ViewTyped w C → TypedProg root w ty c →
-      TypedProg root w ty (prepareR C c) := by
+    ∀ {w : World} {input : AmbientEntryInput} {position : AmbientPosition}, ViewTyped w C →
+      AmbientProgAt root w input position c → AmbientProgAt root w input position (prepareR C c) := by
   fun_induction prepareR C c with
   | case1 ex => exact fun _ h => h
   | case2 k ih =>
-    intro w ty view h
-    obtain ⟨cert, _, next⟩ := TypedProg.fiber_inv h (fun _ h => nomatch h) (fun _ h => nomatch h)
-      (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+    intro w input position view h
+    obtain ⟨cert, _, next, _⟩ := ambientProgAt_fiber_inv h (fun _ h => nomatch h)
+      (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
     exact ih view (next w (leHost_refl w) C view)
   | case3 kind k ih =>
-    intro w ty view h
+    intro w input position view h
     cases h with
-    | fiber notGuard _ _ _ _ _ _ => exact absurd rfl (notGuard kind)
-    | guard mid body run skip => exact TypedProg.guard mid (ih view body) run skip
-    | scopedGuard mid prev sc body callback live services widen =>
-      exact TypedProg.scopedGuard mid prev sc (ih view body) callback live services widen
+    | fiber notGuard _ _ _ _ _ _ _ => exact absurd rfl (notGuard kind)
+    | guard mid body run skip entry => exact .guard mid (ih view body) run skip entry
+    | scopedGuard mid prev sc body callback live services widen entry =>
+      exact .scopedGuard mid prev sc (ih view body) callback live services widen entry
   | case4 op k _ _ => exact fun _ h => h
 
 /-! ## Settling a frame-only clause -/
@@ -450,25 +469,29 @@ theorem completedExits_rupdate {m : RState} {g x : RFiber} (hx : m.fiber? g.id =
     rw [if_pos h, ← exit, h]
   · rw [if_neg h]
 
-/-- **The scoped exit's callback is idle on typed code**: `TypedProg` never types a raw scope-exit
-marker as current code (decisions row 188 (a)), so `prepareScopedExitR` leaves the iteration. -/
-theorem prepareScopedExitR_of_typed {root : ProgramSource} {w : World} {ty : EffTy} {it : RIter}
-    (h : TypedProg root w ty it.fiber.frame.current) : prepareScopedExitR it = it := by
+/-- **The scoped exit's callback is idle on typed code**: the ambient judgment never types a raw
+scope-exit marker as current code (decisions row 188 (a)), so `prepareScopedExitR` leaves the
+iteration. -/
+theorem prepareScopedExitR_of_typed {root : ProgramSource} {w : World} {input : AmbientEntryInput}
+    {position : AmbientPosition} {it : RIter}
+    (h : AmbientProgAt root w input position it.fiber.frame.current) : prepareScopedExitR it = it := by
   unfold prepareScopedExitR
   split
   · rename_i previous scope ex next heq
     rw [heq] at h
     cases h with
-    | fiber _ _ _ notScopeExit _ _ _ => exact absurd rfl (notScopeExit _ _ _)
+    | fiber _ _ _ notScopeExit _ _ _ _ => exact absurd rfl (notScopeExit _ _ _)
   · rfl
 
-/-- A frame stays typed when its current code is prepared at a typed view. -/
-theorem codeOk_prepare {root : ProgramSource} {w : World} {m : RState} {host : FiberId}
-    {final : EffTy} {fr : RSaved} (C : List (FiberId × ExitV)) (view : ViewTyped w C)
-    (h : CodeOk root w m host final fr) :
-    CodeOk root w m host final { fr with current := prepareR C fr.current } := by
-  obtain ⟨tin, current, stack, prov⟩ := h
-  exact ⟨tin, prepareR_typed C fr.current view current, stack, ⟨prov.recorded, prov.deferred⟩⟩
+/-- A fiber's code stays typed when its current code is prepared at a typed view. -/
+theorem codeOk_prepare {root : ProgramSource} {w : World} {m : RState} {f : RFiber}
+    {final : EffTy} (C : List (FiberId × ExitV)) (view : ViewTyped w C)
+    (h : MCodeOk root w m f final) :
+    MCodeOk root w m { f with frame := { f.frame with current := prepareR C f.frame.current } }
+      final := by
+  obtain ⟨row, tin, flag, covered, bit, deferred, code, stack, prov⟩ := h
+  exact ⟨row, tin, flag, covered, bit, deferred, prepareR_typed C f.frame.current view code, stack,
+    ⟨prov.recorded, prov.deferred⟩⟩
 
 /-- **A continue iteration whose glue has run settles typed**: the frame step installs the typed
 frame and `settle` queues `loop`. -/
@@ -476,7 +499,8 @@ theorem settle_frame_ready {root : ProgramSource} {rootTy : EffTy} {w : World} {
     {rest : List RCmd} {f f0 : RFiber} {y y' : Bool}
     (typed : ConfigTyped root rootTy w (m.update f) (.deliver f.id y :: rest))
     (hf0 : m.fiber? f.id = some f0) (running : f.running = true)
-    (fr : RSaved) (code : ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty fr) :
+    (fr : RSaved)
+    (code : ∀ ty, w.Γ f.id = some ty → MCodeOk root w (m.update f) { f with frame := fr } ty) :
     ∃ w', w.leHost w' ∧
       ConfigTyped root rootTy w' (settle f.id rest ⟨m, { f with frame := fr }, y', .continue_, [], []⟩).1
         (settle f.id rest ⟨m, { f with frame := fr }, y', .continue_, [], []⟩).2 := by
@@ -487,22 +511,24 @@ theorem settle_frame_ready {root : ProgramSource} {rootTy : EffTy} {w : World} {
   obtain ⟨ty, declared⟩ : ∃ ty, w.Γ f.id = some ty :=
     Option.isSome_iff_exists.mp ((typed.machine.wide.fibers f.id).mpr
       (List.mem_map.mpr ⟨f, rfiber?_mem look, rfl⟩))
-  obtain ⟨tin, current, _, _⟩ := code ty declared
+  obtain ⟨_, _, _, _, _, _, current, _, _⟩ := code ty declared
   have step := (configTyped_frame_step typed rfl look running fr code
-    (raceRegistrationR_typed current)).1 y'
+    (raceRegistrationR_ambient current)).1 y'
   rw [rupdate_rupdate m (show ({ f with frame := fr } : RFiber).id = f.id from rfl)] at step
   exact ⟨w, leHost_refl w, step⟩
 
 /-- **A frame-only clause's `continue` settles typed**: the iteration keeps the evaluator's machine,
-moves only the fiber's frame to one typed at its declared type, and queues nothing; the glue then
-prepares the new code (typed, `prepareR_typed`), the scoped-exit callback is idle on it, and
-`settle` queues `loop`. The machine handed to the evaluator may hold an older record of the fiber
-(`loop` edits it before evaluating); the configuration is typed with the evaluated one installed. -/
+moves only the fiber's frame to one whose code is typed at its declared type, and queues nothing;
+the glue then prepares the new code (typed, `prepareR_typed`), the scoped-exit callback is idle on
+it, and `settle` queues `loop`. The machine handed to the evaluator may hold an older record of the
+fiber (`loop` edits it before evaluating); the configuration is typed with the evaluated one
+installed. -/
 theorem settle_frame_continue {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
     {rest : List RCmd} {f f0 : RFiber} {y y' : Bool}
     (typed : ConfigTyped root rootTy w (m.update f) (.deliver f.id y :: rest))
     (hf0 : m.fiber? f.id = some f0) (exit0 : f0.exit = f.exit) (running : f.running = true)
-    (fr : RSaved) (code : ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty fr) :
+    (fr : RSaved)
+    (code : ∀ ty, w.Γ f.id = some ty → MCodeOk root w (m.update f) { f with frame := fr } ty) :
     ∃ w', w.leHost w' ∧
       ConfigTyped root rootTy w'
         (settle f.id rest (prepareIterR ⟨m, { f with frame := fr }, y', .continue_, [], []⟩)).1
@@ -518,12 +544,13 @@ theorem settle_frame_continue {root : ProgramSource} {rootTy : EffTy} {w : World
     rw [← completedExits_rupdate (g := f) (x := f0) hf0 exit0 nodup]
     exact viewTyped_completed typed.machine
   let fr' : RSaved := { fr with current := prepareR m.completedExits fr.current }
-  have code' : ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty fr' :=
-    fun ty declared => codeOk_prepare m.completedExits view (code ty declared)
+  have code' : ∀ ty, w.Γ f.id = some ty → MCodeOk root w (m.update f) { f with frame := fr' } ty :=
+    fun ty declared => codeOk_prepare (f := { f with frame := fr }) m.completedExits view
+      (code ty declared)
   obtain ⟨ty, declared⟩ : ∃ ty, w.Γ f.id = some ty :=
     Option.isSome_iff_exists.mp ((typed.machine.wide.fibers f.id).mpr
       (List.mem_map.mpr ⟨f, rfiber?_mem look, rfl⟩))
-  obtain ⟨tin, current, _, _⟩ := code' ty declared
+  obtain ⟨_, _, _, _, _, _, current, _, _⟩ := code' ty declared
   have idle : prepareScopedExitR ⟨m, { f with frame := fr' }, y', .continue_, [], []⟩ =
       ⟨m, { f with frame := fr' }, y', .continue_, [], []⟩ := prepareScopedExitR_of_typed current
   have glue : prepareIterR ⟨m, { f with frame := fr }, y', .continue_, [], []⟩ =
@@ -648,18 +675,19 @@ theorem evaluate_keeps {root : ProgramSource} {rootTy : EffTy}
     refine ⟨?_, ⟨f0, hf0, exit0⟩, ev.running, ev.live⟩
     cases hmark : raceRegistrationR f.frame.current with
     | none =>
-      have code : ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty f.frame :=
+      have code : ∀ ty, w.Γ f.id = some ty → MCodeOk root w (m.update f) f ty :=
         fun ty declared => (ev.typed.code f (rfiber?_mem look) ev.running
           ⟨y, Or.inr List.mem_cons_self⟩ hmark ty declared).code_of_deliver List.mem_cons_self
       obtain ⟨ty, declared⟩ : ∃ ty, w.Γ f.id = some ty :=
         Option.isSome_iff_exists.mp ((ev.typed.machine.wide.fibers f.id).mpr
           (List.mem_map.mpr ⟨f, rfiber?_mem look, rfl⟩))
-      obtain ⟨tin, current, _, _⟩ := codeOk_prepare m.completedExits view (code ty declared)
+      obtain ⟨_, _, _, _, _, _, current, _, _⟩ :=
+        codeOk_prepare m.completedExits view (code ty declared)
       have step : ConfigTyped root rootTy w ((m.update f).update f1) (.deliver f.id y :: rest) :=
         (configTyped_frame_step ev.typed rfl look ev.running
           { f.frame with current := prepareR m.completedExits f.frame.current }
           (fun ty' declared' => codeOk_prepare m.completedExits view (code ty' declared'))
-          (raceRegistrationR_typed current)).2 y
+          (raceRegistrationR_ambient current)).2 y
       rw [rupdate_rupdate m (show f1.id = f.id from rfl)] at step
       exact step
     | some r =>
@@ -718,7 +746,7 @@ theorem Evaluating.look {root : ProgramSource} {rootTy : EffTy} {w : World} {m :
 theorem Evaluating.code {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
     {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y)
     (marker : raceRegistrationR f.frame.current = none) :
-    ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty f.frame :=
+    ∀ ty, w.Γ f.id = some ty → MCodeOk root w (m.update f) f ty :=
   fun ty declared => (ev.typed.code f (rfiber?_mem ev.look) ev.running
     ⟨y, Or.inr List.mem_cons_self⟩ marker ty declared).code_of_deliver List.mem_cons_self
 
@@ -743,7 +771,8 @@ theorem Evaluating.view {root : ProgramSource} {rootTy : EffTy} {w : World} {m :
 /-- **A frame-only clause whose iteration continues settles typed**, from the new frame's typing. -/
 theorem Evaluating.settle_continue {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
     {rest : List RCmd} {f : RFiber} {y y' : Bool} (ev : Evaluating root rootTy w m rest f y)
-    (fr : RSaved) (code : ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty fr) :
+    (fr : RSaved)
+    (code : ∀ ty, w.Γ f.id = some ty → MCodeOk root w (m.update f) { f with frame := fr } ty) :
     SettlesTyped root rootTy w f.id rest
       (prepareIterR ⟨m, { f with frame := fr }, y', .continue_, [], []⟩) := by
   obtain ⟨f0, hf0, exit0⟩ := ev.stale
@@ -752,7 +781,8 @@ theorem Evaluating.settle_continue {root : ProgramSource} {rootTy : EffTy} {w : 
 /-- **A frame-only clause whose glue has run settles typed** (the scoped exit's close). -/
 theorem Evaluating.settle_ready {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
     {rest : List RCmd} {f : RFiber} {y y' : Bool} (ev : Evaluating root rootTy w m rest f y)
-    (fr : RSaved) (code : ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty fr) :
+    (fr : RSaved)
+    (code : ∀ ty, w.Γ f.id = some ty → MCodeOk root w (m.update f) { f with frame := fr } ty) :
     SettlesTyped root rootTy w f.id rest ⟨m, { f with frame := fr }, y', .continue_, [], []⟩ := by
   obtain ⟨f0, hf0, _⟩ := ev.stale
   exact settle_frame_ready ev.typed hf0 ev.running fr code
@@ -761,18 +791,20 @@ theorem Evaluating.settle_ready {root : ProgramSource} {rootTy : EffTy} {w : Wor
 `settle` queues `deliver`. -/
 theorem Evaluating.settle_answered {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
     {rest : List RCmd} {f : RFiber} {y y' : Bool} (ev : Evaluating root rootTy w m rest f y)
-    (fr : RSaved) (code : ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty fr) :
+    (fr : RSaved)
+    (code : ∀ ty, w.Γ f.id = some ty → MCodeOk root w (m.update f) { f with frame := fr } ty) :
     SettlesTyped root rootTy w f.id rest
       (prepareIterR ⟨m, { f with frame := fr }, y', .answered, [], []⟩) := by
   obtain ⟨ty, declared⟩ := ev.declared
-  obtain ⟨tin, current, _, _⟩ := code ty declared
+  obtain ⟨_, _, _, _, _, _, current, _, _⟩ := code ty declared
   have step := (configTyped_frame_step ev.typed rfl ev.look ev.running fr code
-    (raceRegistrationR_typed current)).2 y'
+    (raceRegistrationR_ambient current)).2 y'
   rw [rupdate_rupdate m (show ({ f with frame := fr } : RFiber).id = f.id from rfl)] at step
   exact ⟨w, leHost_refl w, step⟩
 
 /-- **An inline answer**: the clause installs the continuation at answer `v` the operation's post
-admits; the stack and everything else stay. -/
+admits at the fiber's row, which the operation leaves unchanged; the stack and everything else
+stay. -/
 theorem Evaluating.answer_typed {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
     {rest : List RCmd} {f : RFiber} {y : Bool} (ev : Evaluating root rootTy w m rest f y)
     {op : FiberOp} {next : op.answer → RProgram} (hc : f.frame.current = .vis (.inr op) next)
@@ -780,14 +812,18 @@ theorem Evaluating.answer_typed {root : ProgramSource} {rootTy : EffTy} {w : Wor
     (notGuard : ∀ kind, op ≠ .guard_ kind) (notUnguard : ∀ ex, op ≠ .unguard ex)
     (notFinish : ∀ ex, op ≠ .finishFinalizer ex)
     (notScopeExit : ∀ prev sc ex, op ≠ .scopeExit prev sc ex) (v : op.answer)
-    (post : ∀ cert, fiberPre root w op cert → fiberPost w op cert v) :
+    (post : ∀ row cert, ambientFiberPre root w row op cert → ambientFiberPost w row op cert v)
+    (input : ∀ row, ambientFiberInput row op v = row) :
     ∀ ty, w.Γ f.id = some ty →
-      CodeOk root w (m.update f) f.id ty { f.frame with current := next v } := by
+      MCodeOk root w (m.update f) { f with frame := { f.frame with current := next v } } ty := by
   intro ty declared
-  obtain ⟨tin, current, stack, prov⟩ := ev.code marker ty declared
-  rw [hc] at current
-  obtain ⟨cert, pre, typedNext⟩ := TypedProg.fiber_inv current notGuard notUnguard notFinish notScopeExit
-  exact ⟨tin, typedNext w (leHost_refl w) v (post cert pre), stack, ⟨prov.recorded, prov.deferred⟩⟩
+  obtain ⟨row, tin, flag, covered, bit, deferred, code, stack, prov⟩ := ev.code marker ty declared
+  rw [hc] at code
+  obtain ⟨cert, pre, typedNext, _⟩ :=
+    ambientProgAt_fiber_inv code notGuard notUnguard notFinish notScopeExit
+  have continued := typedNext w (leHost_refl w) v (post row cert pre)
+  rw [input row] at continued
+  exact ⟨row, tin, flag, covered, bit, deferred, continued, stack, ⟨prov.recorded, prov.deferred⟩⟩
 
 /-! ## The clauses: inline answers and no-ops -/
 

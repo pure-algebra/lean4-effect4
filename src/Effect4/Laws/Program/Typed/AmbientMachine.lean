@@ -176,20 +176,20 @@ theorem ambientProgAt_of_admin (root : ProgramSource) {w : World} {ty : EffTy} {
   induction typed with
   | pure exit =>
     intro _ bit
-    exact .pure (ambientExit_const exit) (Or.inr (Row.subset_refl _))
+    exact .pure (ambientExit_const exit) ⟨Or.inr (Row.subset_refl _), Row.subset_refl _⟩
   | store cert pre _ _ ih =>
     intro admin bit
     cases admin with
     | store op k notForeign next =>
       refine .store cert ⟨pre, fun scope capture same => absurd same (notForeign scope capture)⟩
         (fun later ordered answer post => ih later ordered answer post (next answer) bit)
-        (Or.inr (Row.subset_refl _))
+        ⟨Or.inr (Row.subset_refl _), Row.subset_refl _⟩
   | fiber notGuard notUnguard notFinish notScopeExit cert pre _ _ ih =>
     intro admin bit
     cases admin with
     | fiber op k isAdmin next =>
       refine .fiber notGuard notUnguard notFinish notScopeExit cert
-        (ambientFiberPre_of_admin root row isAdmin pre) ?_ (Or.inr (Row.subset_refl _))
+        (ambientFiberPre_of_admin root row isAdmin pre) ?_ ⟨Or.inr (Row.subset_refl _), Row.subset_refl _⟩
       intro later ordered answer post
       show AmbientProgAt root later (ambientFiberInput row _ answer, bit) _ _
       rw [ambientFiberInput_admin row answer isAdmin]
@@ -199,7 +199,7 @@ theorem ambientProgAt_of_admin (root : ProgramSource) {w : World} {ty : EffTy} {
     cases admin with
     | fiber op k isAdmin next =>
       refine .guard ((mid, row, row) : AmbientPosition) (ihBody (next none) bit) ?_ ?_
-        (Or.inr (Row.subset_refl _))
+        ⟨Or.inr (Row.subset_refl _), Row.subset_refl _⟩
       · intro later ordered exit post
         rw [ambientGuardInput_const]
         exact ihRun later ordered exit ⟨post.1, post.2.1⟩ (next (some exit)) _
@@ -207,10 +207,10 @@ theorem ambientProgAt_of_admin (root : ProgramSource) {w : World} {ty : EffTy} {
         exact ⟨skip later ordered exit exits.1 arm, by cases exit <;> exact Row.subset_refl _⟩
   | unguard payload _ =>
     intro _ bit
-    exact .unguard (ambientExit_const payload) (Or.inr (Row.subset_refl _))
+    exact .unguard (ambientExit_const payload) ⟨Or.inr (Row.subset_refl _), Row.subset_refl _⟩
   | finishFinalizer payload _ =>
     intro _ bit
-    exact .finishFinalizer (ambientExit_const payload) (Or.inr (Row.subset_refl _))
+    exact .finishFinalizer (ambientExit_const payload) ⟨Or.inr (Row.subset_refl _), Row.subset_refl _⟩
   | scopedGuard mid prev sc _ callback _ _ _ _ _ =>
     intro admin _
     cases admin with
@@ -230,20 +230,20 @@ theorem ambientProg_of_admin (root : ProgramSource) {w : World} {ty : EffTy} {p 
   induction typed with
   | pure exit =>
     intro _
-    exact .pure (ambientExit_const exit) (Row.subset_refl _)
+    exact .pure (ambientExit_const exit) ⟨Row.subset_refl _, Row.subset_refl _⟩
   | store cert pre _ _ ih =>
     intro admin
     cases admin with
     | store op k notForeign next =>
       exact .store cert ⟨pre, fun scope capture same => absurd same (notForeign scope capture)⟩
         (fun later ordered answer post => ih later ordered answer post (next answer))
-        (Row.subset_refl _)
+        ⟨Row.subset_refl _, Row.subset_refl _⟩
   | fiber notGuard notUnguard notFinish notScopeExit cert pre _ _ ih =>
     intro admin
     cases admin with
     | fiber op k isAdmin next =>
       refine .fiber notGuard notUnguard notFinish notScopeExit cert
-        (ambientFiberPre_of_admin root row isAdmin pre) ?_ (Row.subset_refl _)
+        (ambientFiberPre_of_admin root row isAdmin pre) ?_ ⟨Row.subset_refl _, Row.subset_refl _⟩
       intro later ordered answer post
       show AmbientProg root later (ambientFiberInput row _ answer) _ _
       rw [ambientFiberInput_admin row answer isAdmin]
@@ -252,7 +252,7 @@ theorem ambientProg_of_admin (root : ProgramSource) {w : World} {ty : EffTy} {p 
     intro admin
     cases admin with
     | fiber op k isAdmin next =>
-      refine .guard ((mid, row, row) : AmbientPosition) (ihBody (next none)) ?_ ?_ (Row.subset_refl _)
+      refine .guard ((mid, row, row) : AmbientPosition) (ihBody (next none)) ?_ ?_ ⟨Row.subset_refl _, Row.subset_refl _⟩
       · intro later ordered exit post
         show AmbientProg root later (ambientInput ((mid, row, row) : AmbientPosition) exit) _ _
         rw [ambientInput_const]
@@ -261,10 +261,10 @@ theorem ambientProg_of_admin (root : ProgramSource) {w : World} {ty : EffTy} {p 
         exact ⟨skip later ordered exit exits.1 arm, by cases exit <;> exact Row.subset_refl _⟩
   | unguard payload _ =>
     intro _
-    exact .unguard (ambientExit_const payload) (Row.subset_refl _)
+    exact .unguard (ambientExit_const payload) ⟨Row.subset_refl _, Row.subset_refl _⟩
   | finishFinalizer payload _ =>
     intro _
-    exact .finishFinalizer (ambientExit_const payload) (Row.subset_refl _)
+    exact .finishFinalizer (ambientExit_const payload) ⟨Row.subset_refl _, Row.subset_refl _⟩
   | scopedGuard mid prev sc _ callback _ _ _ _ _ =>
     intro admin
     cases admin with
@@ -456,7 +456,15 @@ theorem ambientProgAt_unguard_inv {root : ProgramSource} {w : World} {input : Am
 theorem ambientProgAt_failure_bound {root : ProgramSource} {w : World} {row : Env.Requirement}
     {position : AmbientPosition} {code : RProgram} (h : AmbientProgAt root w (row, true) position code) :
     Row.Subset position.failureRow row :=
-  (ProgramArrow.entry h).resolve_left Bool.noConfusion
+  (ProgramArrow.entry h).1.resolve_left Bool.noConfusion
+
+/-- A position whose failure row a success's row covers is well formed: what an injected
+interruption reads. -/
+theorem AmbientPosition.wf_of_success {p : AmbientPosition} (v : Val)
+    (h : Row.Subset p.failureRow (ambientInput p (.success v))) : p.WF := by
+  cases p with
+  | result t s f => exact h
+  | capturedContext g => trivial
 
 /-! ## The walk -/
 
@@ -516,7 +524,8 @@ theorem ambient_popR_typed (root : ProgramSource) (interp : RInterp) (w : World)
             simp only [popR, Bool.not_false, Bool.and_self, ↓reduceIte]
             refine .inl ⟨_, _, hcov, rfl, ?_, tail, ⟨hp.recorded, hp.deferred⟩⟩
             exact .pure (ambientExit_failure (strongExit_of_clean w _ c (recorded_clean hp rfl)
-              (recorded_noShapeDefect _ hp rfl)) (inject rfl v)) (Or.inr (inject rfl v))
+              (recorded_noShapeDefect _ hp rfl)) (inject rfl v))
+              ⟨Or.inr (inject rfl v), AmbientPosition.wf_of_success v (inject rfl v)⟩
           | failure c' =>
             simp only [popR, Bool.not_true, Bool.and_false, Bool.false_eq_true, ↓reduceIte]
             exact ih _ _ _ _ tail hex hcov rfl ⟨hp.recorded, hp.deferred⟩
@@ -535,7 +544,8 @@ theorem ambient_popR_typed (root : ProgramSource) (interp : RInterp) (w : World)
             simp only [popR, Bool.not_false, Bool.and_self, ↓reduceIte]
             refine .inl ⟨_, _, hcov, rfl, ?_, tail, ⟨hp.recorded, hp.deferred⟩⟩
             exact .pure (ambientExit_failure (strongExit_of_clean w _ c (recorded_clean hp rfl)
-              (recorded_noShapeDefect _ hp rfl)) (inject rfl v)) (Or.inr (inject rfl v))
+              (recorded_noShapeDefect _ hp rfl)) (inject rfl v))
+              ⟨Or.inr (inject rfl v), AmbientPosition.wf_of_success v (inject rfl v)⟩
           | failure c' =>
             simp only [popR, Bool.not_true, Bool.and_false, Bool.false_eq_true, ↓reduceIte]
             exact ih _ _ _ _ tail hex hcov rfl ⟨hp.recorded, hp.deferred⟩
@@ -658,7 +668,7 @@ theorem ambient_popR_typed (root : ProgramSource) (interp : RInterp) (w : World)
           · rename_i hint
             exact ambientProg_entry root
               (laws.asyncFinalizer _ _ _ name (protocol w (leHost_refl w)) c hex.1 hint) false
-          · exact .pure hex (Or.inl rfl)
+          · exact .pure hex ⟨Or.inl rfl, inject⟩
         simp only [popR]
         cases i
         · exact .inl ⟨_, (((a, s, f) : AmbientPosition), false), hcov, rfl, code, tail,
@@ -675,7 +685,7 @@ theorem ambient_popR_typed (root : ProgramSource) (interp : RInterp) (w : World)
         · refine .inl ⟨_, (((a, s, f) : AmbientPosition), true), hcov, rfl,
             .pure (ambientExit_failure (strongExit_of_clean w _ _
             (pendingCause_clean ⟨hp.recorded, hp.deferred⟩)
-            (pendingCause_noShapeDefect _ ⟨hp.recorded, hp.deferred⟩)) inject) (Or.inr inject),
+            (pendingCause_noShapeDefect _ ⟨hp.recorded, hp.deferred⟩)) inject) ⟨Or.inr inject, inject⟩,
             tail, ⟨hp.recorded, hp.deferred⟩⟩
     | @iter a c s f b name protocol rows =>
       obtain ⟨errors, step⟩ := laws.iterator _ _ _ _ name (protocol w (leHost_refl w))
@@ -694,11 +704,11 @@ theorem ambient_popR_typed (root : ProgramSource) (interp : RInterp) (w : World)
           rw [hs] at h
           simp only [popR, hs]
           exact .inl ⟨_, (((c, s, f) : AmbientPosition), i), hcov, rfl,
-            .pure ⟨h, Row.subset_refl _⟩ (Or.inr rows), tail, ⟨hp.recorded, hp.deferred⟩⟩
+            .pure ⟨h, Row.subset_refl _⟩ ⟨Or.inr rows, rows⟩, tail, ⟨hp.recorded, hp.deferred⟩⟩
         | halt cause =>
           rw [hs] at h
           simp only [popR, hs]
-          exact .inl ⟨_, (((c, s, f) : AmbientPosition), i), hcov, rfl, .pure ⟨h, rows⟩ (Or.inr rows),
+          exact .inl ⟨_, (((c, s, f) : AmbientPosition), i), hcov, rfl, .pure ⟨h, rows⟩ ⟨Or.inr rows, rows⟩,
             tail, ⟨hp.recorded, hp.deferred⟩⟩
         | resume code name' =>
           rw [hs] at h

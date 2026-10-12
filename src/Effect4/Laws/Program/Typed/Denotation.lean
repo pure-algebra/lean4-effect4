@@ -545,7 +545,7 @@ theorem scoped_arm {available : Env.Requirement} {b : NativeEff} (hfuel : p.fuel
     (fun _ _ _ h => nomatch h) tb ⟨pointTyped_child hat rfl rfl hcb henv hview hstack, by
       rw [← (root.scopeSig_extends p.path).bodyRequires]
       exact coverage⟩
-    (fun _ _ exit post => .pure ⟨post, by cases exit <;> exact Row.subset_refl _⟩ (Row.subset_refl _)) (Row.subset_refl _)
+    (fun _ _ exit post => .pure ⟨post, by cases exit <;> exact Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩) ⟨Row.subset_refl _, Row.subset_refl _⟩
 
 /-- **`gen`**: the counted step, then the generator entry at the point itself, whose row the
 point's typing and its generator node meet. -/
@@ -556,10 +556,10 @@ theorem gen_arm {available : Env.Requirement} {body : Stmts NativeOp} (hfuel : p
   rw [denoteR_gen _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f)]
   unfold suspendR
   refine ProgramArrow.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) () trivial (fun later ordered _ _ => ?_) (Row.subset_refl _)
+    (fun _ _ _ h => nomatch h) () trivial (fun later ordered _ _ => ?_) ⟨Row.subset_refl _, Row.subset_refl _⟩
   exact .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ _ _ h => nomatch h) ty ⟨⟨pointTyped_mono ordered hpt, body, hat⟩, coverage⟩
-    (fun _ _ exit post => .pure ⟨post, by cases exit <;> exact Row.subset_refl _⟩ (Row.subset_refl _)) (Row.subset_refl _)
+    (fun _ _ exit post => .pure ⟨post, by cases exit <;> exact Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩) ⟨Row.subset_refl _, Row.subset_refl _⟩
 
 /-- **`iterate`**: the counted step, the initial cursor (`evalTerm_progress_env`), then the loop
 entry at the point itself, its cursor at the loop's checked cursor type (`LoopPointTyped`,
@@ -581,10 +581,10 @@ theorem iterate_arm {available : Env.Requirement} {cursorTy : Option Ty} {initia
   rw [denoteR_iterate _ _ _ _ _ _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f), hcursor]
   unfold suspendR
   refine ProgramArrow.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) () trivial (fun later ordered _ _ => ?_) (Row.subset_refl _)
+    (fun _ _ _ h => nomatch h) () trivial (fun later ordered _ _ => ?_) ⟨Row.subset_refl _, Row.subset_refl _⟩
   exact .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ _ _ h => nomatch h) ty ⟨loopPointTyped_mono ordered pre, coverage⟩
-    (fun _ _ exit post => .pure ⟨post, by cases exit <;> exact Row.subset_refl _⟩ (Row.subset_refl _)) (Row.subset_refl _)
+    (fun _ _ exit post => .pure ⟨post, by cases exit <;> exact Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩) ⟨Row.subset_refl _, Row.subset_refl _⟩
 
 /-- **`uninterruptible`**: the mask row over the body at the child, at the body's type. -/
 theorem uninterruptible_arm {available : Env.Requirement} {b : NativeEff} (hfuel : p.fuel = f + 1)
@@ -612,7 +612,7 @@ theorem uninterruptible_arm {available : Env.Requirement} {b : NativeEff} (hfuel
             exact ambientStackTyped_child hat rfl rfl savedParams
           · cases impossible
           · cases impossible), fun _ _ _ impossible => by cases impossible⟩⟩ : BodyCoverage root w available (.at_ (p.child 0)) ty)⟩
-    (fun _ _ exit post => .pure ⟨post, by cases exit <;> exact Row.subset_refl _⟩ (Row.subset_refl _)) (Row.subset_refl _)
+    (fun _ _ exit post => .pure ⟨post, by cases exit <;> exact Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩) ⟨Row.subset_refl _, Row.subset_refl _⟩
   · intro point ctx same
     cases same
   · intro flag point previous impossible
@@ -644,7 +644,7 @@ theorem interruptible_arm {available : Env.Requirement} {b : NativeEff} (hfuel :
             exact ambientStackTyped_child hat rfl rfl savedParams
           · cases impossible
           · cases impossible), fun _ _ _ impossible => by cases impossible⟩⟩ : BodyCoverage root w available (.at_ (p.child 0)) ty)⟩
-    (fun _ _ exit post => .pure ⟨post, by cases exit <;> exact Row.subset_refl _⟩ (Row.subset_refl _)) (Row.subset_refl _)
+    (fun _ _ exit post => .pure ⟨post, by cases exit <;> exact Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩) ⟨Row.subset_refl _, Row.subset_refl _⟩
   · intro point ctx same
     cases same
   · intro flag point previous impossible
@@ -685,7 +685,7 @@ theorem acquireRelease_arm {available : Env.Requirement} {a r : NativeEff} (hfue
                 exact ambientStackTyped_widen bound (ambientStackTyped_mono ordered savedParams)
               · cases impossible), fun _ _ _ impossible => by cases impossible⟩⟩ :
             BodyCoverage root later ctx.services.keysRow (.acquireIn p ctx) ty)⟩
-        (fun _ _ returned post => .pure ⟨post, by cases returned <;> exact bound⟩ bound) bound
+        (fun _ _ returned post => .pure ⟨post, by cases returned <;> exact bound⟩ ⟨bound, Row.subset_refl _⟩) ⟨bound, Row.subset_refl _⟩
       · intro point context identity
         cases identity
         exact (Provision.satisfies_iff_subset_keysRow _ _).mpr (Row.subset_refl _)
@@ -865,7 +865,7 @@ theorem catchIf_arm {available : Env.Requirement} {test : Term} {b h : NativeEff
         have miss := catchIf_miss_fits (he := th.error) causeFit caught
         rw [← lengthEq] at miss
         exact .pure ⟨⟨(fitsExit_failure_iff _ _ _).mpr ⟨miss, causeTyped.2⟩, causeTyped.2⟩,
-          Row.subset_refl _⟩ (Row.subset_refl _)
+          Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
   · cases exit with
     | failure cause => exact Bool.noConfusion absent
     | success value =>
@@ -1162,7 +1162,7 @@ theorem awaitFiber_arm {available : Env.Requirement} {t : Term} {mode : Supervis
     cases hawait : p.awaitExit ⟨index⟩ .joinEffect with
     | some exit =>
       obtain ⟨entry, hmem, hid, rfl⟩ := awaitExit_join hawait
-      exact .pure ⟨view_exitOk hview hmem hid hdecl _, by cases entry.2 <;> exact Row.subset_refl _⟩ (Row.subset_refl _)
+      exact .pure ⟨view_exitOk hview hmem hid hdecl _, by cases entry.2 <;> exact Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
     | none =>
       refine ambient_fiber_leaf_of_typed root available _ _
         (fun _ impossible => nomatch impossible) (fun _ impossible => nomatch impossible)
@@ -1189,7 +1189,7 @@ theorem awaitFiber_arm {available : Env.Requirement} {t : Term} {mode : Supervis
     cases hawait : p.awaitExit ⟨index⟩ .awaitValue with
     | some exit =>
       obtain ⟨entry, hmem, hid, rfl⟩ := awaitExit_value hawait
-      exact .pure ⟨strongExit_success w _ _ (view_exitOk hview hmem hid hdecl .empty).1, Row.subset_refl _⟩ (Row.subset_refl _)
+      exact .pure ⟨strongExit_success w _ _ (view_exitOk hview hmem hid hdecl .empty).1, Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
     | none =>
       obtain ⟨fty, hΓ, ha, he⟩ := hdecl
       refine ambient_fiber_leaf_of_typed root available _ _
@@ -1242,10 +1242,10 @@ theorem fork_arm {available : Env.Requirement} {b : NativeEff} {options : Superv
               (node_at_child (node_at_child hat rfl) rfl) hcq henv hview savedParams).2
           · cases impossible
           · cases impossible), fun _ _ _ impossible => by cases impossible⟩⟩⟩
-    (fun w' _ ans post => ?_) (Row.subset_refl _)
+    (fun w' _ ans post => ?_) ⟨Row.subset_refl _, Row.subset_refl _⟩
   obtain ⟨id, rfl, hΓ⟩ := post
   exact .pure ⟨strongExit_success w' _ _ ⟨q, hΓ, Ty.subN_refl _, Ty.subN_refl _⟩,
-    Row.subset_refl _⟩ (Row.subset_refl _)
+    Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
 
 /-- **`forkIn`**: as `fork`, the scope term a present scope's handle (`fits_scope_inv`). -/
 theorem forkIn_arm {available : Env.Requirement} {b : NativeEff} {options : Supervision.ForkOptions} {scope : Term}
@@ -1272,10 +1272,10 @@ theorem forkIn_arm {available : Env.Requirement} {b : NativeEff} {options : Supe
       ((List.prefix_append _ _).trans (List.prefix_append _ _)))
       (node_at_child (node_at_child hat rfl) rfl) hcq henv hview hstack
   refine ProgramArrow.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) q ⟨⟨hbody, hlive⟩, coverage⟩ (fun w' _ ans post => ?_) (Row.subset_refl _)
+    (fun _ _ _ h => nomatch h) q ⟨⟨hbody, hlive⟩, coverage⟩ (fun w' _ ans post => ?_) ⟨Row.subset_refl _, Row.subset_refl _⟩
   obtain ⟨id, rfl, hΓ⟩ := post
   exact .pure ⟨strongExit_success w' _ _ ⟨q, hΓ, Ty.subN_refl _, Ty.subN_refl _⟩,
-    Row.subset_refl _⟩ (Row.subset_refl _)
+    Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
 
 /-- **`forkScoped`**: the ambient scope's read (`seqGuard_typed`), then `forkIn` on the handle it
 answers, a present scope's (`fits_scope_inv`). -/
@@ -1317,10 +1317,10 @@ theorem forkScoped_arm {available : Env.Requirement} {b : NativeEff} {options : 
         (fun _ impossible => nomatch impossible) (fun _ _ _ impossible => nomatch impossible)
         q ⟨⟨pointTyped_mono ordered hbody, live⟩,
           Row.subset_trans (Row.subset_union_left _ _) coverage⟩
-        (fun after _ answer post => ?_) (Row.subset_refl _)
+        (fun after _ answer post => ?_) ⟨Row.subset_refl _, Row.subset_refl _⟩
       obtain ⟨id, rfl, declared⟩ := post
       exact .pure ⟨strongExit_success after _ _ ⟨q, declared, Ty.subN_refl _, Ty.subN_refl _⟩,
-        Row.subset_refl _⟩ (Row.subset_refl _)
+        Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
   · cases exit with
     | success value => exact Bool.noConfusion absent
     | failure cause =>
@@ -1682,7 +1682,7 @@ theorem raceAll_arm {available : Env.Requirement} {es : Effs NativeOp}
   refine ProgramArrow.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ _ _ h => nomatch h) ⟨A, E, ty.requires⟩ ?_
     (fun w' _ ans post => .pure ⟨exitOk_widen hA hE post,
-      by cases ans <;> exact Row.subset_refl _⟩ (Row.subset_refl _)) (Row.subset_refl _)
+      by cases ans <;> exact Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩) ⟨Row.subset_refl _, Row.subset_refl _⟩
   intro point member
   obtain ⟨pointTy, admitted, answer, error, required⟩ := hpre point member
   exact ⟨pointTy, admitted, answer, error, Row.subset_trans required coverage⟩
@@ -1714,7 +1714,7 @@ theorem raceAllFirst_arm {available : Env.Requirement} {es : Effs NativeOp}
   refine ProgramArrow.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ _ _ h => nomatch h) ⟨A, E, ty.requires⟩ ?_
     (fun w' _ ans post => .pure ⟨exitOk_widen hA hE post,
-      by cases ans <;> exact Row.subset_refl _⟩ (Row.subset_refl _)) (Row.subset_refl _)
+      by cases ans <;> exact Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩) ⟨Row.subset_refl _, Row.subset_refl _⟩
   intro point member
   obtain ⟨pointTy, admitted, answer, error, required⟩ := hpre point member
   exact ⟨pointTy, admitted, answer, error, Row.subset_trans required coverage⟩
@@ -2468,7 +2468,7 @@ theorem deferredAwait_arm {available : Env.Requirement} {r : Term} (hfuel : p.fu
     (fun _ _ _ h => nomatch h) ⟨a', e', Env.Requirement.empty⟩
     ⟨a', e', hPi, Ty.sub_refl _, Ty.sub_refl _⟩
     (fun w' _ ans post => .pure ⟨exitOk_widen (subN_normalize₁ ha) (subN_normalize₁ he) post,
-      by cases ans <;> exact Row.subset_refl _⟩ (Row.subset_refl _)) (Row.subset_refl _)
+      by cases ans <;> exact Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩) ⟨Row.subset_refl _, Row.subset_refl _⟩
 
 /-- **`Effect.sleep`**: no time is the counted yield, answering `unit`; a positive time the
 timer's registration, met at `(unit, never)`. -/
@@ -2487,17 +2487,17 @@ theorem sleep_arm {available : Env.Requirement} {r : Term} (hfuel : p.fuel ≠ 0
   | zero =>
     change AmbientProg root w available _ (.vis (.inr (.yieldNow 0)) fun v => .pure (.success v))
     refine ProgramArrow.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-      (fun _ _ _ h => nomatch h) () trivial (fun w' _ ans post => ?_) (Row.subset_refl _)
+      (fun _ _ _ h => nomatch h) () trivial (fun w' _ ans post => ?_) ⟨Row.subset_refl _, Row.subset_refl _⟩
     have hans : ans = Val.unit := post
     subst hans
-    exact .pure ⟨strongExit_success w' _ _ trivial, Row.subset_refl _⟩ (Row.subset_refl _)
+    exact .pure ⟨strongExit_success w' _ _ trivial, Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
   | succ n =>
     change AmbientProg root w available _ (.vis (.inr (.async (.store (.registerSleep (ClockMillis.ofNat (n + 1))))
       (Val.nat (n + 1)))) Effects.Program.pure)
     exact ProgramArrow.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
       (fun _ _ _ h => nomatch h) (EffTy.pure .unit) (Ty.sub_refl _)
       (fun w' _ ans post => .pure ⟨exitOk_widen (Ty.subN_refl _) (Ty.subN_refl _) post,
-        by cases ans <;> exact Row.subset_refl _⟩ (Row.subset_refl _)) (Row.subset_refl _)
+        by cases ans <;> exact Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩) ⟨Row.subset_refl _, Row.subset_refl _⟩
 
 /-- **A host row** (`perform (.external i)`): the host registration, its certificate the node's
 checked type, the row's instance at the request (`bitEntry` at that instance by reflexivity,
@@ -2522,9 +2522,9 @@ theorem external_arm {available : Env.Requirement} {i : Nat} {request : Term} (h
   have hbit : bitEntry root (.external i) ty :=
     ⟨hdom, requestTy, ty, hrow, Ty.sub_refl _, Ty.sub_refl _⟩
   refine ProgramArrow.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) ty hbit ?_ (Row.subset_refl _)
+    (fun _ _ _ h => nomatch h) ty hbit ?_ ⟨Row.subset_refl _, Row.subset_refl _⟩
   intro w' ord ans post
-  exact .pure ⟨post, by cases ans <;> exact Row.subset_refl _⟩ (Row.subset_refl _)
+  exact .pure ⟨post, by cases ans <;> exact Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
 
 /-- **No point of an admitted program is a definition block**: the checker refuses a block below
 the whole module's root (`TypeReason.definitionBlock`), so no point's check answers there. -/
@@ -2968,9 +2968,9 @@ theorem service_arm {available : Env.Requirement} {key : ServiceKey} (hfuel : p.
           rw [serviceTy_leHost ordered htie]
           exact hsty
         exact .pure ⟨strongExit_success later _ val
-          (flatFits_fits (members.1 key val sty found declared)), bound⟩ bound
+          (flatFits_fits (members.1 key val sty found declared)), bound⟩ ⟨bound, Row.subset_refl _⟩
       | none =>
-        refine .pure ⟨⟨?_, ?_⟩, bound⟩ bound
+        refine .pure ⟨⟨?_, ?_⟩, bound⟩ ⟨bound, Row.subset_refl _⟩
         · rw [fitsExit_failure_iff]
           refine ⟨fun r hr => ?_, ?_⟩
           · simp only [Cause.die, List.mem_singleton] at hr
@@ -3205,7 +3205,7 @@ theorem provideContext_arm {available : Env.Requirement} {context : Term} {body 
   simp only [Option.bind_some, Val.context?_context]
   cases immediate : inlineYield body (p.child 0) with
   | some exit =>
-    refine .pure ⟨?_, ?_⟩ (Row.subset_refl available)
+    refine .pure ⟨?_, ?_⟩ ⟨Row.subset_refl available, Row.subset_refl _⟩
     · exact exitOk_widen (mid := bodyTy) (Ty.subN_refl _) (Ty.subN_refl _)
         (inlineYield_typed f (p.child 0) (child_fuel_eq hfuel 0)
           (node_at_child hat rfl) child immediate)
@@ -3240,7 +3240,7 @@ theorem exit_arm {available : Env.Requirement} {b : NativeEff} (hfuel : p.fuel =
   cases hsub : inlineYield b (p.child 0) with
   | some ex' =>
     exact .pure ⟨strongExit_success w _ _ (inlineYield_typed f (p.child 0) (child_fuel_eq hfuel 0)
-      (node_at_child hat rfl) hchild hsub).1, Row.subset_refl _⟩ (Row.subset_refl _)
+      (node_at_child hat rfl) hchild hsub).1, Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
   | none =>
     refine ambient_guardBind root
       (hb w htie (p.child 0) tb (child_fuel_eq hfuel 0) rfl hchild available coverage
@@ -3250,7 +3250,7 @@ theorem exit_arm {available : Env.Requirement} {b : NativeEff} (hfuel : p.fuel =
         cases exit <;> rfl
       rw [selected]
       exact .pure ⟨strongExit_success later _ (reifyExitVal exit) payload.1.1,
-        Row.subset_refl _⟩ (Row.subset_refl _)
+        Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
     · cases exit <;> exact Bool.noConfusion impossible
 
 /-- **`restore`** (decisions rows 244 and 245; the body's address in the claim
@@ -3293,7 +3293,7 @@ theorem restore_arm {available : Env.Requirement} {saved : Term} {b : NativeEff}
               exact ambientStackTyped_child hat rfl rfl savedParams
             · cases impossible
             · cases impossible), fun _ _ _ impossible => by cases impossible⟩⟩⟩
-      (fun _ _ exit post => .pure ⟨post, by cases exit <;> exact Row.subset_refl _⟩ (Row.subset_refl _)) (Row.subset_refl _)
+      (fun _ _ exit post => .pure ⟨post, by cases exit <;> exact Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩) ⟨Row.subset_refl _, Row.subset_refl _⟩
   | false =>
     exact hb w htie (p.child 0) ty (child_fuel_eq hfuel 0) rfl hchild available coverage
       (ambientStackTyped_child (q := p.child 0) hat rfl rfl savedParams)
