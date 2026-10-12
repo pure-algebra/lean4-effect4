@@ -573,12 +573,14 @@ def ambientInput (position : AmbientPosition) (exit : ExitV) : Env.Requirement :
       | none => guaranteed
     | .failure _ => guaranteed
 
-/-- A captured context preserves both its guaranteed row and its decoded answer row.
+/-- A captured context's exit holds its guaranteed row within its own row, and that row within
+the available one; an ordinary position's exit row is within the available one. So every exit
+restates at its own row (`ambientExit_self`).
 Consumer: the provider callback; ordinary positions retain their original row judgment. -/
 def AmbientBounds (available : Env.Requirement) (position : AmbientPosition) (exit : ExitV) : Prop :=
   match position with
   | .result _ _ _ => Row.Subset (ambientInput position exit) available
-  | .capturedContext guaranteed => Row.Subset guaranteed available ∧
+  | .capturedContext guaranteed => Row.Subset guaranteed (ambientInput position exit) ∧
       Row.Subset (ambientInput position exit) available
 
 /-- The selected row describes runtime coverage; membership still reads the existing world. -/
@@ -725,12 +727,17 @@ theorem ambient_captureContext_typed (root : ProgramSource) (w : World)
     | some ctx => ctx.services.keysRow
     | none => available) _ _
   rw [decoded]
-  refine .pure ⟨strongExit_success _ _ _ members, bound, ?_⟩ ⟨bound, trivial⟩
-  change Row.Subset (match Val.context? answer with
-    | some ctx => ctx.services.keysRow
-    | none => available) ctx.services.keysRow
-  rw [decoded]
-  exact Row.subset_refl _
+  refine .pure ⟨strongExit_success _ _ _ members, ?_, ?_⟩ ⟨bound, trivial⟩
+  · change Row.Subset available (match Val.context? answer with
+      | some ctx => ctx.services.keysRow
+      | none => available)
+    rw [decoded]
+    exact bound
+  · change Row.Subset (match Val.context? answer with
+      | some ctx => ctx.services.keysRow
+      | none => available) ctx.services.keysRow
+    rw [decoded]
+    exact Row.subset_refl _
 
 /-- An internal setter gives its actual success row and a failure row covered at both cuts.
 Consumer: provider entry and captured-context restoration through the existing program arrow. -/

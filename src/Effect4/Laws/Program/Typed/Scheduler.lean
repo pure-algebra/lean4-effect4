@@ -426,7 +426,7 @@ theorem AmbientCodeOk.runloopTop {root : ProgramSource} {w : World} {m : RState}
         (pendingCause_clean provenance) (pendingCause_noShapeDefect tin.type provenance),
         by cases tin with
         | result type success failure => exact entryBound
-        | capturedContext guaranteed => exact ⟨entryBound, entryBound⟩⟩ ⟨Or.inr entryBound, bound.2⟩
+        | capturedContext guaranteed => exact ⟨Row.subset_refl _, entryBound⟩⟩ ⟨Or.inr entryBound, bound.2⟩
     · exact ⟨provenance.recorded, fun impossible => Bool.noConfusion impossible⟩
   · exact typed
 

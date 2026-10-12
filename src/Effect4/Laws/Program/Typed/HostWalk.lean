@@ -329,7 +329,8 @@ theorem ambient_deliverR_hostTyped (root : ProgramSource) (interp : RInterp) (w 
     (hex : AmbientExit w (ambientInput tin.1 ex) tin.1 ex) (hcov : Row.Subset (ambientInput tin.1 ex) covered)
     (hmask : f.frame.interruptible = tin.2)
     (deferredMask : f.frame.deferredInterrupt = true → f.frame.interruptible = true)
-    (failCov : tin.2 = true → Row.Subset tin.1.failureRow covered) (hp : InterruptProvenance f.frame) :
+    (failCov : tin.2 = true → Row.Subset tin.1.failureRow covered) (hp : InterruptProvenance f.frame)
+    (wf : tin.1.WF) :
     MHostWalkTyped root w m f.id covered tout ((deliverR interp m f yielding ex).fiber.frame,
       walkExit (deliverR interp m f yielding ex).outcome) := by
   have walkCase : MHostWalkTyped root w m f.id covered tout ((walkIter interp m f yielding ex).fiber.frame,
@@ -351,7 +352,7 @@ theorem ambient_deliverR_hostTyped (root : ProgramSource) (interp : RInterp) (w 
       have bit : tin.2 = true := hmask ▸ deferredMask deferred
       exact .inl ⟨tin.1.failureRow, tin, failCov bit, hmask.symm,
         by rw [bit]; exact .pure (ambientExit_failure (strongExit_of_clean w _ _ (pendingCause_clean hp)
-          (pendingCause_noShapeDefect _ hp)) (Row.subset_refl _)) (Or.inr (Row.subset_refl _)),
+          (pendingCause_noShapeDefect _ hp)) (Row.subset_refl _)) ⟨Or.inr (Row.subset_refl _), wf⟩,
         stack, ⟨hp.recorded, fun h => nomatch h⟩⟩
     · exact walkCase
 

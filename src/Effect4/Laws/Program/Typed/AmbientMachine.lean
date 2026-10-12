@@ -281,11 +281,12 @@ theorem ambientInput_failure (position : AmbientPosition) (c : CauseV) :
   cases position <;> rfl
 
 /-- An exit at a result position, bounded by some row, is bounded by its own selected row. -/
-theorem ambientExit_self {w : World} {row : Env.Requirement} {t : EffTy} {s f : Env.Requirement}
-    {ex : ExitV} (h : AmbientExit w row ((t, s, f) : AmbientPosition) ex) :
-    AmbientExit w (ambientInput ((t, s, f) : AmbientPosition) ex) ((t, s, f) : AmbientPosition) ex ∧
-      Row.Subset (ambientInput ((t, s, f) : AmbientPosition) ex) row :=
-  ⟨⟨h.1, Row.subset_refl _⟩, h.2⟩
+theorem ambientExit_self {w : World} {row : Env.Requirement} {p : AmbientPosition}
+    {ex : ExitV} (h : AmbientExit w row p ex) :
+    AmbientExit w (ambientInput p ex) p ex ∧ Row.Subset (ambientInput p ex) row := by
+  cases p with
+  | result t s f => exact ⟨⟨h.1, Row.subset_refl _⟩, h.2⟩
+  | capturedContext g => exact ⟨⟨h.1, h.2.1, Row.subset_refl _⟩, h.2.2⟩
 
 /-- A typed failure at a position, bounded by its failure row. -/
 theorem ambientExit_failure {w : World} {row : Env.Requirement} {position : AmbientPosition}
@@ -293,7 +294,7 @@ theorem ambientExit_failure {w : World} {row : Env.Requirement} {position : Ambi
     AmbientExit w row position (.failure c) := by
   cases position with
   | result t s f => exact ⟨typed, bound⟩
-  | capturedContext g => exact ⟨typed, bound, bound⟩
+  | capturedContext g => exact ⟨typed, Row.subset_refl _, bound⟩
 
 /-! ## Machine stacks
 
@@ -305,43 +306,42 @@ at each pop from the frames themselves. -/
 /-- A machine stack position: a completion position and the mask flag there. -/
 abbrev MachinePos := AmbientPosition × Bool
 
-/-- A saved frame as a row-indexed arrow that tracks the mask flag. Callbacks return to result
-positions. A frame that can inject a recorded interrupt where a success was expected
-(`restoreMask`, `finalizerMask`, an `onExit` callback's pushed mask, a passed async hook) bounds
-its failure row by its success row. -/
+/-- A saved frame as a row-indexed arrow that tracks the mask flag. Callbacks return to any
+position. A frame after which the machine can inject a recorded interrupt where a success was
+expected (`restoreMask`, `finalizerMask`, the mask an `onExit` callback's pop pushes, a passed
+async hook) outputs a well-formed position (`AmbientPosition.WF`): the injected failure is then
+covered by the success's own bound (`AmbientPosition.inject_bound`). -/
 inductive MFrame (root : ProgramSource) (w : World) : MachinePos → MachinePos → ScopeFrame → Prop
-  | resume {p : AmbientPosition} {t : EffTy} {s f : Env.Requirement} {b : Bool}
+  | resume {p q : AmbientPosition} {b : Bool}
       (kind : GuardKind) (next : ExitV → RProgram) (ordinary : kind ≠ .onExit false)
       (run : ∀ w', w.leHost w' → ∀ ex, AmbientExit w' (ambientInput p ex) p ex →
-        kind.hasExitArm ex = true → AmbientProgAt root w' (ambientInput p ex, b) (t, s, f) (next ex))
+        kind.hasExitArm ex = true → AmbientProgAt root w' (ambientInput p ex, b) q (next ex))
       (skip : ∀ w', w.leHost w' → ∀ ex, AmbientExit w' (ambientInput p ex) p ex →
-        kind.hasExitArm ex = false → AmbientExit w' (ambientInput p ex) (t, s, f) ex)
-      (inject : kind = .onExit true → b = true → Row.Subset f s) :
-      MFrame root w (p, b) ((t, s, f), b) (.resume kind next)
-  | protect {p : AmbientPosition} {t : EffTy} {s f : Env.Requirement} {b : Bool}
+        kind.hasExitArm ex = false → AmbientExit w' (ambientInput p ex) q ex)
+      (wf : q.WF) :
+      MFrame root w (p, b) (q, b) (.resume kind next)
+  | protect {p q : AmbientPosition} {b : Bool}
       (next : ExitV → RProgram)
       (run : ∀ w', w.leHost w' → ∀ ex, AmbientExit w' (ambientInput p ex) p ex →
-        AmbientProgAt root w' (ambientInput p ex, false) (t, s, f) (next ex))
-      (inject : b = true → Row.Subset f s) :
-      MFrame root w (p, b) ((t, s, f), b) (.resume (.onExit false) next)
-  | scopedResume {p : AmbientPosition} {t : EffTy} {s f : Env.Requirement} {b : Bool}
+        AmbientProgAt root w' (ambientInput p ex, false) q (next ex))
+      (wf : q.WF) :
+      MFrame root w (p, b) (q, b) (.resume (.onExit false) next)
+  | scopedResume {p q : AmbientPosition} {b : Bool}
       (next : ExitV → RProgram) (prev : Ctx) (sc : Nat)
       (callback : ∀ ex, scopeExitCallback? (next ex) = some (prev, sc, ex))
       (hook : ∀ w', w.leHost w' → (frameProtocols root).scopeExit w' prev sc)
       (widen : ∀ w', w.leHost w' → ∀ ex, AmbientExit w' (ambientInput p ex) p ex →
-        AmbientExit w' prev.services.keysRow (t, s, f) ex)
-      (inject : b = true → Row.Subset f s) :
-      MFrame root w (p, b) ((t, s, f), b) (.resume (.onExit false) next)
-  | answer {p : AmbientPosition} {t : EffTy} {s f : Env.Requirement} {b : Bool}
+        AmbientExit w' prev.services.keysRow q ex)
+      (wf : q.WF) :
+      MFrame root w (p, b) (q, b) (.resume (.onExit false) next)
+  | answer {p q : AmbientPosition} {b : Bool}
       (next : ExitV → RProgram)
       (run : ∀ w', w.leHost w' → ∀ ex, AmbientExit w' (ambientInput p ex) p ex →
-        AmbientProgAt root w' (ambientInput p ex, b) (t, s, f) (next ex)) :
-      MFrame root w (p, b) ((t, s, f), b) (.answer next)
-  | restoreMask {p : AmbientPosition} {inner : Bool} (flag : Bool)
-      (inject : flag = true → ∀ v, Row.Subset p.failureRow (ambientInput p (.success v))) :
+        AmbientProgAt root w' (ambientInput p ex, b) q (next ex)) :
+      MFrame root w (p, b) (q, b) (.answer next)
+  | restoreMask {p : AmbientPosition} {inner : Bool} (flag : Bool) (wf : p.WF) :
       MFrame root w (p, inner) (p, flag) (.restoreMask flag)
-  | finalizerMask {p : AmbientPosition} {inner : Bool} (flag : Bool)
-      (inject : flag = true → ∀ v, Row.Subset p.failureRow (ambientInput p (.success v))) :
+  | finalizerMask {p : AmbientPosition} {inner : Bool} (flag : Bool) (wf : p.WF) :
       MFrame root w (p, inner) (p, flag) (.finalizerMask flag)
   | asyncFinalizer {a : EffTy} {s f : Env.Requirement} {b : Bool} (name : EffName)
       (protocol : ∀ w', w.leHost w' → AmbientAsyncFinalizer root w' s f a a name)
@@ -356,6 +356,16 @@ inductive MFrame (root : ProgramSource) (w : World) : MachinePos → MachinePos 
       (rows : Row.Subset f s) :
       MFrame root w ((a, s, f), b) ((c, s, f), b) (.loop name cursor)
 
+/-- **An injected interruption is covered** where a well-formed position's success was: a
+result position's failure row is within its success row, and a captured context's success bound
+holds its guaranteed row. -/
+theorem AmbientPosition.inject_bound {w : World} {p : AmbientPosition} {v : Val} (wf : p.WF)
+    (hex : AmbientExit w (ambientInput p (.success v)) p (.success v)) :
+    Row.Subset p.failureRow (ambientInput p (.success v)) := by
+  cases p with
+  | result t s f => exact wf
+  | capturedContext g => exact hex.2.1
+
 /-- A machine stack: the shared path over `MFrame`. -/
 abbrev MStack (root : ProgramSource) (w : World) := Effect4.Contracts.Path (MFrame root w)
 
@@ -364,16 +374,16 @@ theorem MFrame.mono {root : ProgramSource} {w w' : World} (ord : w.leHost w')
     {tin tout : MachinePos} {frame : ScopeFrame} (h : MFrame root w tin tout frame) :
     MFrame root w' tin tout frame := by
   cases h with
-  | resume kind next ordinary run skip inject =>
+  | resume kind next ordinary run skip wf =>
     exact .resume kind next ordinary (fun w'' o => run w'' (leHost_trans _ _ _ ord o))
-      (fun w'' o => skip w'' (leHost_trans _ _ _ ord o)) inject
-  | protect next run inject => exact .protect next (fun w'' o => run w'' (leHost_trans _ _ _ ord o)) inject
-  | scopedResume next prev sc callback hook widen inject =>
+      (fun w'' o => skip w'' (leHost_trans _ _ _ ord o)) wf
+  | protect next run wf => exact .protect next (fun w'' o => run w'' (leHost_trans _ _ _ ord o)) wf
+  | scopedResume next prev sc callback hook widen wf =>
     exact .scopedResume next prev sc callback (fun w'' o => hook w'' (leHost_trans _ _ _ ord o))
-      (fun w'' o => widen w'' (leHost_trans _ _ _ ord o)) inject
+      (fun w'' o => widen w'' (leHost_trans _ _ _ ord o)) wf
   | answer next run => exact .answer next (fun w'' o => run w'' (leHost_trans _ _ _ ord o))
-  | restoreMask flag inject => exact .restoreMask flag inject
-  | finalizerMask flag inject => exact .finalizerMask flag inject
+  | restoreMask flag wf => exact .restoreMask flag wf
+  | finalizerMask flag wf => exact .finalizerMask flag wf
   | asyncFinalizer name protocol inject =>
     exact .asyncFinalizer name (fun w'' o => protocol w'' (leHost_trans _ _ _ ord o)) inject
   | iter name protocol rows => exact .iter name (fun w'' o => protocol w'' (leHost_trans _ _ _ ord o)) rows
@@ -458,14 +468,6 @@ theorem ambientProgAt_failure_bound {root : ProgramSource} {w : World} {row : En
     Row.Subset position.failureRow row :=
   (ProgramArrow.entry h).1.resolve_left Bool.noConfusion
 
-/-- A position whose failure row a success's row covers is well formed: what an injected
-interruption reads. -/
-theorem AmbientPosition.wf_of_success {p : AmbientPosition} (v : Val)
-    (h : Row.Subset p.failureRow (ambientInput p (.success v))) : p.WF := by
-  cases p with
-  | result t s f => exact h
-  | capturedContext g => trivial
-
 /-! ## The walk -/
 
 /-- The walk ran a `scoped` guard's slot: the current code is the scope's exit callback, whose
@@ -509,7 +511,7 @@ theorem ambient_popR_typed (root : ProgramSource) (interp : RInterp) (w : World)
     cases hstack with
     | cons head tail =>
     cases head with
-    | restoreMask flag inject =>
+    | restoreMask flag wf =>
       obtain ⟨current, stack, interruptible, ic, deferred⟩ := frame
       cases ic with
       | none => exact ih _ _ _ _ tail hex hcov rfl ⟨hp.recorded, hp.deferred⟩
@@ -524,12 +526,12 @@ theorem ambient_popR_typed (root : ProgramSource) (interp : RInterp) (w : World)
             simp only [popR, Bool.not_false, Bool.and_self, ↓reduceIte]
             refine .inl ⟨_, _, hcov, rfl, ?_, tail, ⟨hp.recorded, hp.deferred⟩⟩
             exact .pure (ambientExit_failure (strongExit_of_clean w _ c (recorded_clean hp rfl)
-              (recorded_noShapeDefect _ hp rfl)) (inject rfl v))
-              ⟨Or.inr (inject rfl v), AmbientPosition.wf_of_success v (inject rfl v)⟩
+              (recorded_noShapeDefect _ hp rfl)) (AmbientPosition.inject_bound wf hex))
+              ⟨Or.inr (AmbientPosition.inject_bound wf hex), wf⟩
           | failure c' =>
             simp only [popR, Bool.not_true, Bool.and_false, Bool.false_eq_true, ↓reduceIte]
             exact ih _ _ _ _ tail hex hcov rfl ⟨hp.recorded, hp.deferred⟩
-    | finalizerMask flag inject =>
+    | finalizerMask flag wf =>
       obtain ⟨current, stack, interruptible, ic, deferred⟩ := frame
       cases ic with
       | none => exact ih _ _ _ _ tail hex hcov rfl ⟨hp.recorded, hp.deferred⟩
@@ -544,12 +546,12 @@ theorem ambient_popR_typed (root : ProgramSource) (interp : RInterp) (w : World)
             simp only [popR, Bool.not_false, Bool.and_self, ↓reduceIte]
             refine .inl ⟨_, _, hcov, rfl, ?_, tail, ⟨hp.recorded, hp.deferred⟩⟩
             exact .pure (ambientExit_failure (strongExit_of_clean w _ c (recorded_clean hp rfl)
-              (recorded_noShapeDefect _ hp rfl)) (inject rfl v))
-              ⟨Or.inr (inject rfl v), AmbientPosition.wf_of_success v (inject rfl v)⟩
+              (recorded_noShapeDefect _ hp rfl)) (AmbientPosition.inject_bound wf hex))
+              ⟨Or.inr (AmbientPosition.inject_bound wf hex), wf⟩
           | failure c' =>
             simp only [popR, Bool.not_true, Bool.and_false, Bool.false_eq_true, ↓reduceIte]
             exact ih _ _ _ _ tail hex hcov rfl ⟨hp.recorded, hp.deferred⟩
-    | @resume p t s f b kind next ordinary run skip inject =>
+    | @resume p q b kind next ordinary run skip wf =>
       obtain ⟨current, stack, i, ic, deferred⟩ := frame
       change i = _ at hmask
       subst hmask
@@ -569,9 +571,13 @@ theorem ambient_popR_typed (root : ProgramSource) (interp : RInterp) (w : World)
         intro c ic' hex' arm interruptible recorded cov' frame' mask' prov'
         subst interruptible
         have bound := ambientProgAt_failure_bound (run w (leHost_refl w) _ hex' arm)
-        refine ih _ _ _ _ tail ⟨strongExit_of_clean w _ _ (sanitize_clean_exit hp c recorded)
-          (sanitize_noShapeDefect _ hp c recorded hex'.1.2), Row.subset_refl _⟩
-          (Row.subset_trans bound cov') mask' prov'
+        have injected : AmbientExit w (ambientInput q (.failure (Cause.sanitize c ic'))) q
+            (.failure (Cause.sanitize c ic')) := by
+          rw [ambientInput_failure]
+          exact ambientExit_failure (strongExit_of_clean w _ _ (sanitize_clean_exit hp c recorded)
+            (sanitize_noShapeDefect _ hp c recorded hex'.1.2)) (Row.subset_refl _)
+        refine ih _ _ _ _ tail injected
+          (by rw [ambientInput_failure]; exact Row.subset_trans bound cov') mask' prov'
       cases kind with
       | onSuccess =>
         cases ex with
@@ -609,8 +615,8 @@ theorem ambient_popR_typed (root : ProgramSource) (interp : RInterp) (w : World)
         cases b' with
         | false => exact absurd rfl ordinary
         | true =>
-          have pushed : MStack root w (((t, s, f) : AmbientPosition), i) tout (.finalizerMask i :: rest) :=
-            .cons (.finalizerMask (p := ((t, s, f) : AmbientPosition)) i fun same _ => inject rfl same) tail
+          have pushed : MStack root w (q, i) tout (.finalizerMask i :: rest) :=
+            .cons (.finalizerMask (p := q) i wf) tail
           cases ex with
           | success v =>
             simp only [popR]
@@ -619,26 +625,26 @@ theorem ambient_popR_typed (root : ProgramSource) (interp : RInterp) (w : World)
             simp only [popR]
             cases i <;> cases ic
             · exact .inl ⟨_, _, hcov, rfl, run w (leHost_refl w) _ hex rfl,
-                .cons (.finalizerMask (p := ((t, s, f) : AmbientPosition)) false fun same _ => nomatch same) tail, hp' _ _ _⟩
+                .cons (.finalizerMask (p := q) false wf) tail, hp' _ _ _⟩
             · exact .inl ⟨_, _, hcov, rfl, run w (leHost_refl w) _ hex rfl,
-                .cons (.finalizerMask (p := ((t, s, f) : AmbientPosition)) false fun same _ => nomatch same) tail, hp' _ _ _⟩
+                .cons (.finalizerMask (p := q) false wf) tail, hp' _ _ _⟩
             · exact .inl ⟨_, _, hcov, rfl, run w (leHost_refl w) _ hex rfl, pushed, hp' _ _ _⟩
             · exact preempted c _ hex rfl rfl rfl hcov _ rfl (hp' _ _ _)
-    | @protect p t s f b next run inject =>
+    | @protect p q b next run wf =>
       obtain ⟨current, stack, i, ic, deferred⟩ := frame
       change i = _ at hmask
       subst hmask
       cases ex <;> simp only [popR] <;>
         exact .inl ⟨_, _, hcov, rfl, run w (leHost_refl w) _ hex,
-          .cons (.finalizerMask (p := ((t, s, f) : AmbientPosition)) i fun same _ => inject same) tail,
+          .cons (.finalizerMask (p := q) i wf) tail,
           ⟨hp.recorded, hp.deferred⟩⟩
-    | @scopedResume p t s f b next prev sc callback hook widen inject =>
+    | @scopedResume p q b next prev sc callback hook widen wf =>
       obtain ⟨current, stack, i, ic, deferred⟩ := frame
       change i = _ at hmask
       subst hmask
       cases ex <;> simp only [popR] <;>
         exact .inr ⟨_, prev, sc, _, callback _, widen w (leHost_refl w) _ hex, hook w (leHost_refl w),
-          rfl, .cons (.finalizerMask (p := ((t, s, f) : AmbientPosition)) i fun same _ => inject same) tail,
+          rfl, .cons (.finalizerMask (p := q) i wf) tail,
           ⟨hp.recorded, hp.deferred⟩⟩
     | answer next run =>
       have hrun := run w (leHost_refl w) ex hex
@@ -674,7 +680,7 @@ theorem ambient_popR_typed (root : ProgramSource) (interp : RInterp) (w : World)
         · exact .inl ⟨_, (((a, s, f) : AmbientPosition), false), hcov, rfl, code, tail,
             ⟨hp.recorded, hp.deferred⟩⟩
         · exact .inl ⟨_, (((a, s, f) : AmbientPosition), false), hcov, rfl, code,
-            .cons (.restoreMask (p := ((a, s, f) : AmbientPosition)) true fun _ _ => inject) tail,
+            .cons (.restoreMask (p := ((a, s, f) : AmbientPosition)) true inject) tail,
             ⟨hp.recorded, hp.deferred⟩⟩
       | success v =>
         simp only [popR]
