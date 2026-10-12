@@ -1838,6 +1838,18 @@ theorem withFiber_raceAll (interp : RunInterp ν σ β ε δ ι α χ St)
         { f with frame := { f.frame with current := interp.parkCode (ParkKind.race raceId) } },
         yielding, Outcome.continue_, [], []⟩) := by aesop
 
+/-- The actual unparked action head executes its successful interpreter hook.
+Concept: reactive-scheduling R11; consumer: source-qualified Timeout waiting and ownership.
+The equation retains current code and the actual hook result. -/
+theorem evaluatePrim_withFiber_runs (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (fiber : RunFiber ν σ β ε δ ι α χ)
+    (yielding : Bool) (thunk : σ) (action : WithFiberAction ν σ β ε δ ι α χ)
+    (current : fiber.frame.current = .withFiber thunk)
+    (unparked : interp.parkOf (.withFiber thunk) = none)
+    (found : interp.withFiberOf thunk = some action) :
+    evaluatePrim interp m fiber yielding = evaluatePrim.withFiber interp m fiber yielding action := by
+  simp only [evaluatePrim, current, unparked, found]
+
 /-- The race's `Async` registration (`:1117-1141`, `:1520-1528`, D6a): the counted step marks
 the race registering and delegates to the register loop and to the registration's return;
 the host keeps its code, its count and its latch. census: fork.race-all -/

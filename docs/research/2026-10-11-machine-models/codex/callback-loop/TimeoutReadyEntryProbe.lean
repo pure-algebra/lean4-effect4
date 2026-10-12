@@ -62,6 +62,12 @@ inductive CodeAt (view : HostTimeoutFlow.View) (state : Stores) : HostTimeoutNat
         (resolve HostTimeoutSource.program
           ((HostTimeoutNumberFinalizers.formPoint captured fuel delay n previous).child 0))
 
+  | waiting (image : Image) (n : Fin 4) (ready : Complete image n.val false) (race : Nat)
+      (phase : ImageAt image state ∨ ImageAt (expected image n ready) state ∨
+        ∃ exit, ImageAt ((expected image n ready).cleanup (expected_own image n ready) exit) state) :
+      CodeAt view state (.inl (.cleanupExit (expected image n ready) (expected_own image n ready)))
+        (.suspend (.park (.race race)))
+
 /-- Only current entry permissions extend; actual answers, causes and native hooks stay exact. -/
 def model (view : HostTimeoutFlow.View) : AnswerFlow.Model (ν := EffName) (σ := EffThunk) (β := Val)
     (ε := Err) (δ := Defect) (ι := FiberId) (α := Ann) Stores HostTimeoutNativeRootFamily.Kind :=
@@ -153,4 +159,44 @@ theorem form_entry (view : HostTimeoutFlow.View) (state : Stores) (image : Image
   exact .cons (.lower _ _ _ (HostTimeoutNumberFormFamily.form_saved view state
     (expected image n ready) (expected_own image n ready) captured fuel delay n previous (expected_count image n ready) _)) stack
 
+/-- Actual race entry installs the counted suspension above the same future form suffix.
+Ready remains the current heap; this permission does not assert completed attempt cleanup. -/
+theorem race_waiting (view : HostTimeoutFlow.View) (machine : NativeMachine)
+    (fiber : Effect4.Program.SourceScope.SourceFiber) (yielding : Bool) (programs : List NCode)
+    (site : Option (List Nat)) (image : Image) (n : Fin 4) (ready : Complete image n.val false)
+    (heap : ImageAt image machine.state) (output : HostTimeoutNativeRootFamily.Kind)
+    (stack : Path (HostTimeoutNativeRootFamily.Edge view machine.state)
+      (.inl (.cleanupExit (expected image n ready) (expected_own image n ready))) output fiber.frame.stack) :
+    let result := evaluatePrim.withFiber (HostTimeoutFlow.interpreter view) machine fiber yielding (.raceAllFirst programs site)
+    AnswerFlow.FamilyResult (model view) (HostTimeoutNativeRootFamily.Edge view)
+      result.machine.state output result.fiber.frame.current result.fiber.frame.stack := by
+  exact ⟨.inl (.cleanupExit (expected image n ready) (expected_own image n ready)),
+    CodeAt.waiting image n ready machine.nextRace (.inl heap), stack⟩
+
+/-- The waiting suspension remains permitted after the actual count image is committed.
+This is a current-state constructor; it supplies no unrestricted future-code transport. -/
+theorem waiting_counted (view : HostTimeoutFlow.View) (state : Stores) (image : Image)
+    (n : Fin 4) (ready : Complete image n.val false) (race : Nat)
+    (heap : ImageAt (expected image n ready) state) :
+    CodeAt view state (.inl (.cleanupExit (expected image n ready) (expected_own image n ready)))
+      (.suspend (.park (.race race))) := CodeAt.waiting image n ready race (.inr (.inl heap))
+
+/-- Actual race registration retains that current permission and the exact pending launch commands.
+Its returned frame still awaits the assigned attempt's completed cleanup. -/
+theorem race_registration (view : HostTimeoutFlow.View) (machine : NativeMachine)
+    (fiber : Effect4.Program.SourceScope.SourceFiber) (yielding : Bool) (raceId : Nat)
+    (race : Effect4.Program.SourceScope.SourceRace) (output : HostTimeoutNativeRootFamily.Kind)
+    (current : fiber.frame.current = .suspend (.park (.race raceId)))
+    (found : machine.race? raceId = some race)
+    (held : AnswerFlow.FamilyResult (model view) (HostTimeoutNativeRootFamily.Edge view)
+      machine.state output fiber.frame.current fiber.frame.stack) :
+    let result := evaluatePrim (HostTimeoutFlow.interpreter view) machine fiber yielding
+    result.machine.state = machine.state ∧ result.fiber = fiber ∧
+      result.nested = [.launch raceId, .registrationDone raceId yielding] ∧ result.edits = [] ∧
+      AnswerFlow.FamilyResult (model view) (HostTimeoutNativeRootFamily.Edge view)
+        result.machine.state output result.fiber.frame.current result.fiber.frame.stack := by
+  have registered := evaluatePrim_raceRegister (HostTimeoutFlow.interpreter view) machine fiber yielding
+    (.park (.race raceId)) raceId race current rfl found
+  rw [registered]
+  exact ⟨rfl, rfl, rfl, rfl, held⟩
 end Test.Dogfood.Proofs.HostTimeoutReadyEntry

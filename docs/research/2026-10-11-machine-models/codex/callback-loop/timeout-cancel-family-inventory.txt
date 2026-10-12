@@ -1,0 +1,5 @@
+24 old theorem headers unchanged
+All prior Kind constructors, ValueAt and CauseAt branches remain byte-for-byte.
+New Kind constructor appended.
+NumberFlow605->740lines.
+Baseline SHA256 f582f5dcca02051e0fe2fce2ad6d31e52e16f763e6c4713d83fc0e4442b6a4ce
