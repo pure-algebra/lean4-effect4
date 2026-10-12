@@ -52,6 +52,8 @@ example (world : Typed.World) (services : world.serviceTy = source.sig.serviceTy
     · intro row absent
       exact nomatch absent
     · exact stackTyped_nil source world []
+  · change AmbientStackTyped source world result.requires [] []
+    exact ambientStackTyped_nil source world result.requires []
 #guard (admitProgram source.program).toOption.isSome
 #guard result.requires = Row.empty
 #guard typeOfProgram source.signature source.program = some result

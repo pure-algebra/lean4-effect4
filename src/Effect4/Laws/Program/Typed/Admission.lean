@@ -401,6 +401,23 @@ Consumer: BodyTyped.region and BodyTyped.contextEntry. -/
 def RegionTyped (src : ProgramSource) (w : World) (region : Region) (ty : EffTy) : Prop :=
   cata_region (regionTypingAlgebra src w) region ty
 
+/-- The generated Region fold reads its existing source point.
+Consumer: ambient provider argument certificates at the actual installed-context cut. -/
+def regionPointAlgebra : RegionAlgebra (fun _ => Point) where
+  region_program := id
+  region_build := fun point _ _ => point
+  region_buildAdding := fun point _ _ => point
+  region_construct := fun point _ => point
+
+abbrev regionPoint (region : Region) : Point := cata_region regionPointAlgebra region
+
+/-- A Region retains the existing argument certificate policy at its actual source point.
+Consumer: BodyCoverage for protected context entry, then the closed M5 body bridge. -/
+def RegionStackTyped (source : ProgramSource) (world : World) (available : Env.Requirement)
+    (region : Region) : Prop :=
+  AmbientStackTyped source world available (scopeParams source.program (regionPoint region).path)
+    (regionPoint region).params
+
 /-- A context update retains value membership at every permitted future world.
 This judgment supplies no runtime capability coverage.
 Consumer: the protected context-entry body's admission. -/

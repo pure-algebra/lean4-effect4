@@ -575,13 +575,15 @@ def BodyCoverage (root : ProgramSource) (w : World) (available : Env.Requirement
     (body : Body) (cert : EffTy) : Prop :=
   (∀ region, body = .region region → ∃ intrinsic,
     RegionTyped root w region intrinsic ∧ Ty.subN intrinsic.answer cert.answer = true ∧
-      Ty.subN intrinsic.error cert.error = true ∧ Row.Subset intrinsic.requires available) ∧
+      Ty.subN intrinsic.error cert.error = true ∧ Row.Subset intrinsic.requires available ∧
+      RegionStackTyped root w available region) ∧
   (∀ update region flag, body = .contextEntry update region flag → ∃ intrinsic,
     RegionTyped root w region intrinsic ∧ Ty.subN intrinsic.answer cert.answer = true ∧
       Ty.subN intrinsic.error cert.error = true ∧
       ∀ previous : Env.Ctx, previous.Satisfies available →
         (update.apply previous).Satisfies intrinsic.requires ∧
-          (update.apply previous).Satisfies available)
+          (update.apply previous).Satisfies available ∧
+          RegionStackTyped root w (update.apply previous).keysRow region)
 
 /-- A typed context reader uses both ambient coverage and the world's declared service carriers.
 The coarse getter remains available for internal capture and restoration. -/

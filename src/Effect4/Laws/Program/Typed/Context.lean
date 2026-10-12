@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.Typed.Seq
+import Effect4.Laws.Program.Typed.StackCertificates
 import Effect4.Laws.Program.Typing.CheckInversion
 import Effect4.Laws.Program.Address
 
@@ -31,11 +32,15 @@ theorem ambientFiberPre_mono (root : ProgramSource) {w w' : World} (ord : w.leHo
     refine ⟨bodyTyped_mono ord pre.1, pre.2.1, pre.2.2.1, pre.2.2.2.1, ?_⟩
     constructor
     · intro region same
-      obtain ⟨intrinsic, typed, answer, error, covered⟩ := pre.2.2.2.2.1 region same
-      exact ⟨intrinsic, regionTyped_mono ord typed, answer, error, covered⟩
+      obtain ⟨intrinsic, typed, answer, error, covered, arguments⟩ := pre.2.2.2.2.1 region same
+      exact ⟨intrinsic, regionTyped_mono ord typed, answer, error, covered,
+        regionStackTyped_mono ord arguments⟩
     · intro update region flag same
       obtain ⟨intrinsic, typed, answer, error, covered⟩ := pre.2.2.2.2.2 update region flag same
-      exact ⟨intrinsic, regionTyped_mono ord typed, answer, error, covered⟩
+      refine ⟨intrinsic, regionTyped_mono ord typed, answer, error, ?_⟩
+      intro previous present
+      have installed := covered previous present
+      exact ⟨installed.1, installed.2.1, regionStackTyped_mono ord installed.2.2⟩
   | case4 | case5 =>
     exact ⟨pointTyped_mono ord pre.1, pre.2⟩
   | case6 =>
@@ -445,6 +450,7 @@ theorem ambient_updateContext_provide (root : ProgramSource) {w : World}
     (needed : Row.Subset (Row.diff required keys) available)
     (entry : Row.Subset guaranteed available) (ty : EffTy) (body : Region)
     (typedBody : RegionTyped root w body ⟨ty.answer, ty.error, required⟩)
+    (arguments : RegionStackTyped root w available body)
     (update : Env.ContextUpdate)
     (applies : ∀ previous, update.apply previous = previous.merge supplied.services) :
     AmbientProg root w available (ty, guaranteed, guaranteed)
@@ -488,7 +494,9 @@ theorem ambient_updateContext_provide (root : ProgramSource) {w : World}
           have fromBefore := Provision.satisfies_merge_left previous supplied.services
             (Row.diff required keys) (previous.satisfies_weaken covered needed)
           have fromGiven := Provision.satisfies_merge_right previous supplied.services keys suppliedKeys
-          refine ⟨?_, Provision.satisfies_merge_left previous supplied.services available covered⟩
+          refine ⟨?_, Provision.satisfies_merge_left previous supplied.services available covered,
+            regionStackTyped_installed previous supplied.services covered
+              (regionStackTyped_mono ordered arguments)⟩
           intro key member
           by_cases suppliedKey : key ∈ keys
           · exact fromGiven key suppliedKey
@@ -512,7 +520,9 @@ theorem checked_provideContext_arm (root : ProgramSource) (w : World) (p : Point
     (immediate : ∀ bodyTy, Checker.check (root.scopeSig p.path) env (p.path ++ [0]) body = .ok bodyTy →
       ∀ exit, inlineYield body (p.child 0) = some exit → ExitOk w bodyTy exit)
     (child : ∀ bodyTy, Checker.check (root.scopeSig p.path) env (p.path ++ [0]) body = .ok bodyTy →
-      PointTyped root w (p.child 0) bodyTy) :
+      PointTyped root w (p.child 0) bodyTy)
+    (saved : AmbientStackTyped root w available (scopeParams root.program (p.child 0).path)
+      (p.child 0).params) :
     AmbientProg root w available (ty, available, available)
       (denoteR root.program (.provideContext context body) p) := by
   obtain ⟨contextTy, keys, bodyTy, termCheck, normalized, bodyCheck, rfl⟩ :=
@@ -536,7 +546,7 @@ theorem checked_provideContext_arm (root : ProgramSource) (w : World) (p : Point
     exact ambient_updateContext_provide root available available bodyTy.requires keys supplied
       given coverage (Row.subset_refl _)
       ⟨bodyTy.answer, bodyTy.error, Row.diff bodyTy.requires keys⟩
-      (.program (p.child 0)) (child bodyTy bodyCheck)
+      (.program (p.child 0)) (child bodyTy bodyCheck) saved
       (.provide supplied.services) (fun _ => rfl)
 
 
@@ -552,11 +562,13 @@ theorem checked_provideContext_reader (root : ProgramSource) (w : World) (p : Po
     (_services : w.serviceTy = root.sig.serviceTy) (coverage : Row.Subset ty.requires available)
     (budget : p.fuel ≠ 0)
     (admitted : ∀ bodyTy, Checker.check (root.scopeSig p.path) env (p.path ++ [0])
-      (.withFiber (.context required)) = .ok bodyTy → PointTyped root w (p.child 0) bodyTy) :
+      (.withFiber (.context required)) = .ok bodyTy → PointTyped root w (p.child 0) bodyTy)
+    (saved : AmbientStackTyped root w available (scopeParams root.program (p.child 0).path)
+      (p.child 0).params) :
     AmbientProg root w available (ty, available, available)
       (denoteR root.program (.provideContext context (.withFiber (.context required))) p) := by
   refine checked_provideContext_arm root w p env context (.withFiber (.context required))
-    available ty supplied checked values evaluated coverage budget ?_ ?_
+    available ty supplied checked values evaluated coverage budget ?_ ?_ saved
   · intro bodyTy bodyCheck exit head
     have noInline : inlineYield (.withFiber (.context required)) (p.child 0) = none := by
       unfold inlineYield
@@ -578,7 +590,9 @@ theorem checked_provideService_arm (root : ProgramSource) (w : World) (p : Point
     (carriers : ∀ carrier, root.sig.serviceTy key = some carrier → flatCarrier carrier = true)
     (coverage : Row.Subset ty.requires available) (budget : p.fuel ≠ 0)
     (child : ∀ bodyTy, Checker.check (root.scopeSig p.path) env (p.path ++ [0]) body = .ok bodyTy →
-      PointTyped root w (p.child 0) bodyTy) :
+      PointTyped root w (p.child 0) bodyTy)
+    (saved : AmbientStackTyped root w available (scopeParams root.program (p.child 0).path)
+      (p.child 0).params) :
     AmbientProg root w available (ty, available, available)
       (denoteR root.program (.provideService key value body) p) := by
   obtain ⟨carrier, valueTy, bodyTy, declared, termCheck, orderedValue, bodyCheck, rfl⟩ :=
@@ -609,7 +623,7 @@ theorem checked_provideService_arm (root : ProgramSource) (w : World) (p : Point
     (Env.Requirement.single key) supplied given coverage (Row.subset_refl _)
     ⟨bodyTy.answer, bodyTy.error, Row.diff bodyTy.requires (Env.Requirement.single key)⟩
     (.program (p.child 0))
-    (child bodyTy bodyCheck) (.provideService key provided) (fun _ => rfl)
+    (child bodyTy bodyCheck) saved (.provideService key provided) (fun _ => rfl)
 
 /-- The real service provider installs the checked carrier before its context reader.
 Consumer: the closed provider reader and ambient M5 source denotation. -/
@@ -625,11 +639,13 @@ theorem checked_provideService_reader (root : ProgramSource) (w : World) (p : Po
     (carriers : ∀ carrier, root.sig.serviceTy key = some carrier → flatCarrier carrier = true)
     (coverage : Row.Subset ty.requires available) (budget : p.fuel ≠ 0)
     (admitted : ∀ bodyTy, Checker.check (root.scopeSig p.path) env (p.path ++ [0])
-      (.withFiber (.context required)) = .ok bodyTy → PointTyped root w (p.child 0) bodyTy) :
+      (.withFiber (.context required)) = .ok bodyTy → PointTyped root w (p.child 0) bodyTy)
+    (saved : AmbientStackTyped root w available (scopeParams root.program (p.child 0).path)
+      (p.child 0).params) :
     AmbientProg root w available (ty, available, available)
       (denoteR root.program (.provideService key value (.withFiber (.context required))) p) := by
   exact checked_provideService_arm root w p env key value (.withFiber (.context required))
-    available ty provided checked values evaluated services carriers coverage budget admitted
+    available ty provided checked values evaluated services carriers coverage budget admitted saved
 
 
 end Effect4.Program.Typed
