@@ -443,12 +443,16 @@ structure RestoreBodyBoundary : Prop where
     (body : NativeEff),
     Node.at_ (.eff root.program) p.path = some (.eff (.restore saved body)) →
       PointTyped root w p ty → PointTyped root w (p.child 0) ty
-  /-- A typed point at the node denotes a typed program at the node's type: the typed stack
-  and the typed captures of M5, at either saved choice. -/
+  /-- A typed point at the node denotes a program typed at the node's type, at every row
+  holding its requirement row and typing its parameters (decisions row 349): M5's ambient
+  judgment, at either saved choice. -/
   typed : ∀ (root : ProgramSource) (w : World) (p : Point) (ty : EffTy) (saved : Term)
     (body : NativeEff), SourceWF root → w.serviceTy = root.sig.serviceTy →
     Node.at_ (.eff root.program) p.path = some (.eff (.restore saved body)) →
-      PointTyped root w p ty → TypedProg root w ty (denoteR root.program (.restore saved body) p)
+      PointTyped root w p ty → ∀ available, Row.Subset ty.requires available →
+      AmbientStackTyped root w available (scopeParams root.program p.path) p.params →
+      AmbientProg root w available ((ty, available, available) : AmbientPosition)
+        (denoteR root.program (.restore saved body) p)
   /-- A saved value passed as data keeps its choice: it reads back as the bit it was made from,
   and it holds no handle, so it carries no activation of its mask. -/
   data : ∀ flag : Bool, Val.savedMask? (Val.savedMask flag) = some flag ∧
