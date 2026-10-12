@@ -1,0 +1,54 @@
+{
+  "base": "378779365e99eff5b90d5050a81cbcafebe021ce",
+  "build_source_base": "5f1c9a1dd",
+  "documentation_merge": "378779365",
+  "production": {
+    "src/Effect4/Laws/Program/Footprint.lean": {
+      "before_lines": 457,
+      "after_lines": 570,
+      "retained_headers": 29,
+      "added_names": [
+        "EvaluationFootprint",
+        "EvaluationFootprint.trans",
+        "PrimitiveProducer.evaluationFootprint",
+        "countdownParkEdits_evaluationFootprint",
+        "countdownPark_evaluationFootprint",
+        "evaluateNative_evaluationFootprint",
+        "evaluatePrim_evaluationFootprint",
+        "exitScoped_evaluationFootprint",
+        "finalizerOr_evaluationFootprint",
+        "iteration_currentOpCount",
+        "spawn_evaluationFootprint",
+        "start_evaluationFootprint",
+        "stepFrame_evaluationFootprint",
+        "withFiber_evaluationFootprint"
+      ],
+      "sha256": "6715c2ad1f9a5f4ecef9258999416820073f9181917d5fc3833d77361d790180"
+    },
+    "src/Effect4/Laws/Program/Interference.lean": {
+      "before_lines": 775,
+      "after_lines": 787,
+      "retained_headers": 82,
+      "added_names": [
+        "OtherEdit.constants",
+        "OtherEdit.currentOpCount",
+        "OtherEdits.constants",
+        "OtherEdits.currentOpCount"
+      ],
+      "sha256": "cbd8a0d8150ccf812abf0ee03078582d180192da4a52ad58d3f3fd753b4abbe0"
+    },
+    "src/Effect4/Laws/Machine/EditObserverWords.lean": {
+      "before_lines": 449,
+      "after_lines": 501,
+      "retained_headers": 9,
+      "added_names": [
+        "observer_producer_path_accounting"
+      ],
+      "sha256": "793b0fbadb86efe909da0e9a5d9ff005ae1775d03c6440b370fc06ea18d4ef9d"
+    }
+  },
+  "logs": {
+    "Integration-build.log": "252b3e51c9f2b8d7c7c17494f233f8213e953daa2861d8b4d9eebdec80efed1d",
+    "Integration-count-audit.log": "82163f92e242b2136e3be2b0e60cb4d836ef30928cf9eabf4dbf5984d383c43e"
+  }
+}
