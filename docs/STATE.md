@@ -347,6 +347,10 @@ owner's note of 2026-10-09: write a program, then watch its session answer calls
 - **The program's graph** (the design note, section 7): its marks, built as recommended, to
   confirm.
 - **MCP and code mode** (the MCP note, section 10): six rulings.
+- **Multiplication on naturals** (row 309, point 1). The row says no multiplication enters, but
+  the tree keeps the natural atom `mul` (2026-09-19) through `Profile.scale`. The reference is
+  exact, and TypeScript and OCaml refuse a product outside the profile (`E4-RUN-CE-047`). Keep
+  the atom, and read row 309 as excluding integer and float arithmetic only, or remove it.
 - **The live view's three rulings** (LV-8, `docs/research/2026-10-10-live-view/LANDING.md`): code
   lines keyed by text, causal columns in the batch, and the gutter's address reading.
 - **A third route to determinism** (the
