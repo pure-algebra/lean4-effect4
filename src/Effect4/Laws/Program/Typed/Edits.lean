@@ -94,7 +94,8 @@ theorem edit_answer (root : ProgramSource) (rootTy : EffTy) : EditAnswer root ro
       obtain ⟨ty', declared', strong⟩ := admitted parked
       rw [declared'] at declared
       cases declared
-      exact denoteCompletion_typed root strong
+      exact fun row => ambientProg_of_admin root (denoteCompletion_typed root strong)
+        (denoteCompletion_admin _) row
   exact ⟨after.machine, fun _ => ⟨after, queueOk_nil root w _⟩⟩
 
 /-! ## `drain` -/
@@ -239,7 +240,7 @@ theorem edit_drain (root : ProgramSource) (rootTy : EffTy) : EditDrain root root
     · exact Or.inl (fiberKeys_internal hmem (List.mem_append_left _ obs))
     · exact nomatch buckets
   have edited := configTyped_rupdate (g := g) (configTyped_nil typed) hf rfl (PendingWeaker.refl _)
-    rfl rfl rfl rfl rfl (fun p => p) (fun d => d) keysG fresh
+    rfl rfl rfl rfl rfl (fun p => p) (fun d => d) ⟨.inr rfl, rfl⟩ rfl keysG fresh
   refine ⟨machineTyped_congr (m := m.update g) (m' := (m.update g).disarm owner) rfl rfl rfl rfl
     rfl rfl rfl edited.machine, ?_⟩
   refine snapshotTyped_drain old.ok.c4 (fun k hk => wide.keysBelow k (bucketsIn k hk)) ?_
@@ -408,7 +409,8 @@ theorem edit_clockSome (root : ProgramSource) (rootTy : EffTy) : EditClockSome r
     rw [show w.Θ o.waiter o.token = some ty' from declared'] at same
     cases same
     rw [facts.1]
-    exact denoteCompletion_typed root (completionStrong_sleep demand)
+    exact fun row => ambientProg_of_admin root (denoteCompletion_typed root (completionStrong_sleep demand))
+      (denoteCompletion_admin _) row
   · exact wide.keysBelow _ internal
   · cases hr : requestOfR m o.waiter o.token with
     | none => exact hr
