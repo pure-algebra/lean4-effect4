@@ -142,7 +142,8 @@ def table_rows(path: str) -> list[list[str]]:
     rows = []
     for line in (ROOT / path).read_text().split("\n"):
         if line.startswith("| ") and not line.startswith("| ---"):
-            cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+            # a `\|` inside a cell is the cell's text, not a column break
+            cells = [cell.strip() for cell in re.split(r"(?<!\\)\|", line.strip().strip("|"))]
             rows.append(cells)
     return rows
 
