@@ -38,7 +38,7 @@ open Effect4.Program.Denote
 abbrev W := Effect4.Program.Typed.World
 
 /-- The empty fiber context fits the context type at every world: it carries no service and no
-handle. Consumers: `Test/Program/LayerDenotation.lean`, `Test/Program/MemoTable.lean`. -/
+handle. Consumer: `Test/Program/LayerDenotation.lean`. -/
 theorem emptyCtx_fits (w : W) : Fits w (Val.context emptyCtx) (.handle Ty.contextTarget) := by
   refine ⟨rfl, emptyCtx, Val.context?_context emptyCtx, ?_, ?_⟩
   · exact servicesFit_empty _

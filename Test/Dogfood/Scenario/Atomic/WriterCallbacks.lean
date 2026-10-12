@@ -44,22 +44,21 @@ theorem value_bound (built : Api.Built) (admitted : Api.Author.build (shop .none
     have zero : current id (embed (finProgram captured exit)) = 0 := program_exact id (.finalizerOf captured exit)
     rw [zero]
     omega
-  case case30 update region =>
+  case case32 update region flag =>
     cases region with
     | program point =>
       unfold updateThenK
       split
       · split
-        · simpa only [regionCode, name] using resolve_bound built admitted id member point owned
+        · simp only [current, cata_prim, thunk, name, Nat.le_refl]
         · simp only [current, cata_prim, thunk, name, Nat.zero_add, Nat.add_zero, Nat.le_refl]
       · exact Nat.zero_le _
     | build _ _ _ => exact owned.elim
     | buildAdding _ _ _ => exact owned.elim
     | construct _ _ => exact owned.elim
-  case case31 region previous =>
+  case case33 region previous flag =>
     cases region with
-    | program point =>
-      simpa only [regionCode, current, cata_prim, name, Nat.add_zero] using resolve_bound built admitted id member point owned
+    | program point => simp only [current, cata_prim, thunk, name, Nat.add_zero, Nat.le_refl]
     | build _ _ _ => exact owned.elim
     | buildAdding _ _ _ => exact owned.elim
     | construct _ _ => exact owned.elim

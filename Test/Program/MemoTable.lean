@@ -13,11 +13,11 @@ The controls run the leaf of `Test.Program.LayerDenotation` (`memoSrc`: the laye
 `K`, its checked error `never`) through the actual store steps:
 
 * **the build** (`built`): from the forked store, `memoBuild` answers a scope and the typed store
-  after it declares the entry's cell at `(Ty.context, never)`;
+  after it declares the entry's cell at the leaf's columns, `(Context<K>, never)` (`cellTy`);
 * **a real hit** (`hit`): `memoGet` on the built store answers the entry's cell and map, and the
   row's post types that cell at the leaf's columns;
-* **a real completion** (`completed`): `memoComplete` with the built context completes the cell,
-  and the store stays typed;
+* **a real completion** (`completed`): `memoComplete` with the built context, `K` bound to `7`,
+  completes the cell, and the store stays typed;
 * **the wrong error column is refused**: a world declaring the entry's cell at `string` is no typed
   store (`wrong_column_refused`), and a `memoGet` request certified at `string` is refused by the
   row's pre (`wrong_certificate_refused`).
@@ -52,8 +52,11 @@ theorem store0 : StoreTyped memoSrc w0 :=
 
 /-! ## The build -/
 
+/-- The leaf's columns: the context its build answers, which holds `K`, and its checked error. -/
+def cellTy : Ty × Ty := (.contextOf (Env.Requirement.single K), .never)
+
 /-- `memoBuild`'s certificate: the leaf's columns. -/
-theorem build_pre : storePre memoSrc w0 (.memoBuild ([0], []) ⟨0⟩) (.handle Ty.contextTarget, .never) :=
+theorem build_pre : storePre memoSrc w0 (.memoBuild ([0], []) ⟨0⟩) cellTy :=
   ⟨memoLayer, _, memo_layer_node, memo_layer_check, rfl⟩
 
 /-- The store after the build: map 0 holds the leaf's entry, at cell 0 and layer scope 1. -/
@@ -66,7 +69,7 @@ theorem s1_cells : s1.memo.layerCells = [(([0], []), ⟨0⟩)] := rfl
 /-- **The build establishes the memo row**: the typed store after it declares the entry's cell at
 the leaf's columns. -/
 theorem built : ∃ w1, w0.leHost w1 ∧ w1.state = s1 ∧ StoreTyped memoSrc w1 ∧
-    w1.«Π» ⟨0⟩ = some (.handle Ty.contextTarget, .never) := by
+    w1.«Π» ⟨0⟩ = some cellTy := by
   obtain ⟨st, ans, step, w1, ord, hst, store1, _⟩ :=
     memoBuild_implements memoSrc ([0], []) ⟨0⟩ w0 _ store0 build_pre
   rw [show w0.state = s0 from rfl, built_step] at step
@@ -86,10 +89,10 @@ theorem hit_step :
 /-- **A real hit, typed**: the answer `memoGet` gives on the built store is the hit, and the row's
 post declares its cell at the leaf's columns. -/
 theorem hit : ∃ (w2 : W) (cell : DeferredKey) (owner : MemoMapId), Val.memoHit? (Val.memoHit ⟨0⟩ ⟨0⟩) = some (cell, owner) ∧
-    w2.«Π» cell = some (.handle Ty.contextTarget, .never) := by
+    w2.«Π» cell = some cellTy := by
   obtain ⟨w1, _, hst, store1, _⟩ := built
   obtain ⟨st, ans, step, w2, _, _, _, post⟩ :=
-    memoGet_implements memoSrc ([0], []) ⟨0⟩ w1 Ty.never store1
+    memoGet_implements memoSrc ([0], []) ⟨0⟩ w1 cellTy store1
       ⟨memoLayer, _, memo_layer_node, memo_layer_check, rfl⟩
   have answer : ans = Val.memoHit ⟨0⟩ ⟨0⟩ := by
     have h := hit_step
@@ -102,8 +105,27 @@ theorem hit : ∃ (w2 : W) (cell : DeferredKey) (owner : MemoMapId), Val.memoHit
 
 /-! ## A real completion -/
 
+/-- The context the leaf's build answers: `K` bound to `7`. -/
+def builtCtx : Ctx := Ctx.withServices ((Env.Context.empty : Env.Ctx).addV K (Val.nat 7))
+
 /-- The exit the build completes the entry with: the built context. -/
-def builtExit : ExitV := .success (Val.context emptyCtx)
+def builtExit : ExitV := .success (Val.context builtCtx)
+
+/-- The built context is a member of the leaf's context type at a world whose service table
+gives `K` its native carrier, `nat`. -/
+theorem builtCtx_fits (w : W) (table : w.serviceTy = nativeServiceTy) :
+    Fits w (Val.context builtCtx) (.contextOf (Env.Requirement.single K)) := by
+  have declared : w.serviceTy K = some .nat := by rw [table]; rfl
+  have value : Fits w (Val.nat 7) .nat := trivial
+  refine fits_contextOf_intro
+    (servicesFit_addV (servicesFit_empty w) declared (fits_flatFits rfl value)
+      (fits_live w _ _ value))
+    (Provision.satisfies_single_addV K (Val.nat 7)) ?_
+  intro key member
+  have same : key = K := (Row.mem_singleton K key).mp member
+  subst key
+  rw [declared]
+  rfl
 
 /-- `memoComplete` on the built store completes cell 0 with the built context. -/
 theorem completed_step :
@@ -119,10 +141,11 @@ theorem completed_store :
 /-- **A real completion, typed**: the store after it is typed again. -/
 theorem completed : ∃ w3, StoreTyped memoSrc w3 ∧
     w3.state.deferreds.cellAt ⟨0⟩ = (s1.deferreds.complete ⟨0⟩ (.ofExit builtExit)).1.cellAt ⟨0⟩ := by
-  obtain ⟨w1, _, hst, store1, _⟩ := built
+  obtain ⟨w1, ord, hst, store1, _⟩ := built
+  have table : w1.serviceTy = nativeServiceTy := le_serviceTy ord.1
   obtain ⟨st, ans, step, w3, _, hst3, store3, _⟩ :=
     memoComplete_implements memoSrc ([0], []) ⟨0⟩ builtExit w1 PUnit.unit store1
-      ⟨memoLayer, _, memo_layer_node, memo_layer_check, ⟨emptyCtx_fits w1, trivial⟩⟩
+      ⟨memoLayer, _, memo_layer_node, memo_layer_check, ⟨builtCtx_fits w1 table, trivial⟩⟩
   rw [hst, completed_store] at step
   cases step
   exact ⟨w3, store3, by rw [hst3]⟩
@@ -133,7 +156,7 @@ theorem completed : ∃ w3, StoreTyped memoSrc w3 ∧
 def wBad : W :=
   { wHit with
     state := s1
-    «Π» := fun k => if k = ⟨0⟩ then some (.handle Ty.contextTarget, .string) else none }
+    «Π» := fun k => if k = ⟨0⟩ then some (cellTy.1, .string) else none }
 
 /-- **Refused**: the memo row reads the leaf's checked error, `never`, and the world says
 `string`. -/
@@ -144,7 +167,7 @@ theorem wrong_column_refused : ¬ StoreTyped memoSrc wBad := by
     rw [s1_cells]
     exact List.mem_singleton_self _
   have declared := store.memoTable _ mem memoLayer _ memo_layer_node memo_layer_check
-  change (if (⟨0⟩ : DeferredKey) = ⟨0⟩ then some (Ty.handle Ty.contextTarget, Ty.string)
+  change (if (⟨0⟩ : DeferredKey) = ⟨0⟩ then some (cellTy.1, Ty.string)
     else none) = _ at declared
   rw [if_pos rfl] at declared
   cases declared
@@ -152,7 +175,7 @@ theorem wrong_column_refused : ¬ StoreTyped memoSrc wBad := by
 /-- **Refused**: a `memoGet` request certified at `string` is not admitted; the row's certificate
 is the looked-up layer's own checked error. -/
 theorem wrong_certificate_refused (w : W) :
-    ¬ storePre memoSrc w (.memoGet ([0], []) ⟨0⟩) Ty.string := by
+    ¬ storePre memoSrc w (.memoGet ([0], []) ⟨0⟩) (cellTy.1, Ty.string) := by
   rintro ⟨l, lt, node, checked, err⟩
   rw [memo_layer_node] at node
   cases node
