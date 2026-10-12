@@ -3056,6 +3056,7 @@ Host Session Protocol: Session automaton, external reply ingestion, and boundary
 | Claim | Role | Status | Evidence | Contested by |
 | --- | --- | --- | --- | --- |
 | `run-admitted-history` | compatibility | proved | `Effect4.Run.reached_history` | — |
+| `keys-once` | preservation | proved | `Effect4.Run.session_keys_once` | — |
 | `allows-answer` | preservation | proved | `Effect4.Run.allows_answer` | — |
 | `reply-commute` | compatibility | proved | `Effect4.Api.HostSession.reply_commute` | — |
 | `session-success-prepared-membership` | preservation | proved | `Effect4.Api.HostSession.preflight_success_prepared_fits` | — |
@@ -3078,6 +3079,23 @@ Module: `Effect4.Laws.Run.Frame`
   s.Reached →
     And (Eq s.session.calls (Effect4.Api.HostSession.callTable s.built.program s.built.table))
       (Effect4.Run.HistoryOf s.built s.budget.compileFuel s.machine)
+```
+
+### keys-once
+
+A reached run binds, submits and applies each key at most once, and applies no retired key
+
+Module: `Effect4.Laws.Run.Journal`
+
+```lean
+∀ (s : Effect4.Run),
+  s.Reached →
+    And s.boundKeys.Nodup
+      (And s.submittedKeys.Nodup
+        (And s.appliedKeys.Nodup
+          (∀ (k : Effect4.Api.HostSession.Key),
+            List.instMembership.mem s.retiredKeys k →
+              Not (List.instMembership.mem s.appliedKeys k))))
 ```
 
 ### allows-answer

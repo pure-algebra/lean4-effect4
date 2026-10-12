@@ -873,6 +873,9 @@ def registry : Registry where
     { id := "run-admitted-history", concept := "host-session-protocol", role := .compatibility
       title := "Every reached recorded run has its built program's call table and a history of session-admitted native decisions, at its compile budget; no progress or outside-host claim"
       pointer := .witness `Effect4.Run.reached_history },
+    { id := "keys-once", concept := "host-session-protocol", role := .preservation
+      title := "A reached run binds, submits and applies each key at most once, and applies no retired key"
+      pointer := .witness `Effect4.Run.session_keys_once },
     { id := "allows-answer", concept := "host-session-protocol", role := .preservation
       title := "Answering an async request is an allowed transition from awaitingAsync"
       pointer := .witness `Effect4.Run.allows_answer

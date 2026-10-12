@@ -1365,6 +1365,12 @@ def allows (source : State) (label : Label) (target : State) : Bool :=
   `Run.reached_history` states the connection in `src/Effect4/Laws/Run/Frame.lean`.
   The history keeps the run's compile budget and records each accepted decision with its command budget.
   It covers arbitrary recorded commands and establishes no progress or outside-host behavior.
+- **Each key once (`keys-once`)**: A reached run binds, submits and applies each key at most once,
+  and applies no retired key.
+  `Run.Reached s → (boundKeys s).Nodup ∧ (submittedKeys s).Nodup ∧ (appliedKeys s).Nodup ∧ ∀ k ∈ retiredKeys s, k ∉ appliedKeys s`
+  (`session_keys_once` (`src/Effect4/Laws/Run/Journal.lean`)). It does not establish reply
+  admission at the application, the retirement edge, the order of two applications, or which reply
+  a host sends.
 - **Allowed answer step (`allows-answer`)**: Async answering is an allowed transition from `.awaitingAsync`.
   (`allows_answer` (`src/Effect4/Laws/Run.lean`)).
 - **Host reply commutativity (`reply-commute`)**: Independent host answers commute in session queues.
