@@ -307,7 +307,7 @@ theorem clause_memoGet (root : ProgramSource) (rootTy : EffTy) (layer : LayerId)
         have declared := store.memoTable (layer, entry.deferred)
           (MemoWorld.mem_layerCells.mpr ⟨mm, by rw [state]; exact hm, (layer, entry), he, rfl⟩)
           l lt node checked
-        rw [hcert] at declared
+        rw [← hcert] at declared
         have present : MemoLive w owner := by
           unfold MemoLive MemoWorld.mapAt
           rw [state, List.find?_isSome]
