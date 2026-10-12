@@ -157,16 +157,21 @@ theorem native_success (machine : Effect4.Program.NativeMachine) (fiber : HostTi
       (.fin (formPoint captured fuel delay n error)) (.success value)).map
       (finalizerCode (interpreter machine.completedExits) (.success value))) = _
     rw [form_program, Option.map_some]
-  have typed := AnswerFlow.getCont_value_finalizer (model machine.completedExits)
-    (interpreter machine.completedExits).toPrimInterp machine.state input output fiber.frame value body
-    (finalizerCode (interpreter machine.completedExits) (.success value) program)
-    (.fin (formPoint captured fuel delay n error)) false good stack chosen installed
-  unfold evaluatePrim.finalizerOr
-  dsimp only
-  rw [chosen]
-  dsimp only
-  rw [form_program]
-  exact ⟨rfl, typed⟩
+  have projected := AnswerFlow.External.finalizer_step (model machine.completedExits)
+    (interpreter machine.completedExits).toPrimInterp
+    (AnswerFlow.SavedAt (model machine.completedExits) (interpreter machine.completedExits).toPrimInterp)
+    (AnswerFlow.saved_family (model machine.completedExits) (interpreter machine.completedExits).toPrimInterp)
+    (fun state kind => AnswerFlow.saved_mask (model machine.completedExits)
+      (interpreter machine.completedExits).toPrimInterp state kind true)
+    (interpreter machine.completedExits) machine.state input output machine fiber yielding (.success value)
+    body (.fin (formPoint captured fuel delay n error)) false program good
+    (AnswerFlow.stack_path (model machine.completedExits) (interpreter machine.completedExits).toPrimInterp stack)
+    chosen (form_program machine.completedExits captured fuel delay n error _) installed
+  obtain ⟨stateKept, head, code, path⟩ := projected
+  refine ⟨stateKept, ?_⟩
+  rw [stateKept]
+  exact ⟨head, code, AnswerFlow.path_stack (model machine.completedExits)
+    (interpreter machine.completedExits).toPrimInterp path⟩
 
 /-- The real native failed form exit publishes the delivered cause after actual interrupted-handler selection. -/
 theorem native_failure (machine : Effect4.Program.NativeMachine) (fiber : HostTimeoutEvaluation.NativeFiber)
@@ -203,16 +208,21 @@ theorem native_failure (machine : Effect4.Program.NativeMachine) (fiber : HostTi
       (.fin (formPoint captured fuel delay n error)) selected).map
       (finalizerCode (interpreter machine.completedExits) selected)) = _
     rw [form_program, Option.map_some]
-  have typed := AnswerFlow.getCont_cause_finalizer (model machine.completedExits)
-    (interpreter machine.completedExits).toPrimInterp machine.state input output fiber.frame cause body
-    (finalizerCode (interpreter machine.completedExits) selected program)
-    (.fin (formPoint captured fuel delay n error)) false good stack chosen installed
-  unfold evaluatePrim.finalizerOr
-  dsimp only
-  rw [chosen]
-  dsimp only
-  rw [form_program]
-  exact ⟨rfl, typed⟩
+  have projected := AnswerFlow.External.finalizer_step (model machine.completedExits)
+    (interpreter machine.completedExits).toPrimInterp
+    (AnswerFlow.SavedAt (model machine.completedExits) (interpreter machine.completedExits).toPrimInterp)
+    (AnswerFlow.saved_family (model machine.completedExits) (interpreter machine.completedExits).toPrimInterp)
+    (fun state kind => AnswerFlow.saved_mask (model machine.completedExits)
+      (interpreter machine.completedExits).toPrimInterp state kind true)
+    (interpreter machine.completedExits) machine.state input output machine fiber yielding (.failure cause)
+    body (.fin (formPoint captured fuel delay n error)) false program good
+    (AnswerFlow.stack_path (model machine.completedExits) (interpreter machine.completedExits).toPrimInterp stack)
+    chosen (form_program machine.completedExits captured fuel delay n error _) installed
+  obtain ⟨stateKept, head, code, path⟩ := projected
+  refine ⟨stateKept, ?_⟩
+  rw [stateKept]
+  exact ⟨head, code, AnswerFlow.path_stack (model machine.completedExits)
+    (interpreter machine.completedExits).toPrimInterp path⟩
 
 /-- A handled typed failure comes from the actual form entry already written in the numeric heap. -/
 theorem caught_is_published (state : Stores) (image : Image)
