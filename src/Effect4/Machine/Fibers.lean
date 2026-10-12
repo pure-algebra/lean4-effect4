@@ -85,11 +85,10 @@ deriving DecidableEq
 
 /-- One outstanding park. A join or await (`:5291`, `:5304`) waits on one fiber; a countdown
 park (`fiberAwaitAll`, `:779-811`; `awaitAllChildren`; the exit path's child interruption)
-walks its targets *in input order*, one observer at a time (R2-4): `waitingOn` is the target
-observed now, `remaining` the targets not yet visited, `collected` the exits so far (S2-M6). -/
+walks its targets *in input order*, one observer at a time (R2-4). The observer registration
+names the current target; `remaining` holds unvisited targets and `collected` the exits so far (S2-M6). -/
 structure Pending (ν : Type u) (β : Type v) (ε δ ι α : Type u) : Type (max u v) where
   token : Nat
-  waitingOn : Option FiberId
   remaining : List FiberId
   collected : List (Exit β ε δ ι α)
   resumeWith : Resume ν
@@ -142,18 +141,17 @@ structure Bucket (ν σ : Type u) (β : Type v) (ε δ ι α : Type u)
 deriving DecidableEq
 
 /-- One `MixedSchedulerDispatcher` (`Scheduler.ts:188-233`); every fiber lazily owns one
-(`:552-555`). `armed` is "the host callback is scheduled" (`Scheduler.ts:207-212`). -/
+(`:552-555`). The machine's armed owner queue records scheduled host callbacks (`Scheduler.ts:207-212`). -/
 structure Dispatcher (ν σ : Type u) (β : Type v) (ε δ ι α : Type u)
     (κ : Type (max u v) := Prim ν σ β ε δ ι α) : Type (max u v) where
   buckets : List (Bucket ν σ β ε δ ι α κ)
-  armed : Bool
 deriving DecidableEq
 
 namespace Dispatcher
 
 variable {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} {κ : Type (max u v)}
 
-def empty : Dispatcher ν σ β ε δ ι α κ := ⟨[], false⟩
+def empty : Dispatcher ν σ β ε δ ι α κ := ⟨[]⟩
 
 def insert (priority : Nat) (task : Task ν σ β ε δ ι α κ) :
     List (Bucket ν σ β ε δ ι α κ) → List (Bucket ν σ β ε δ ι α κ)
@@ -166,13 +164,13 @@ def insert (priority : Nat) (task : Task ν σ β ε δ ι α κ) :
 /-- `Scheduler.ts:105-131` plus arming on the first task (`:207-212`). -/
 def enqueue (d : Dispatcher ν σ β ε δ ι α κ) (priority : Nat) (task : Task ν σ β ε δ ι α κ) :
     Dispatcher ν σ β ε δ ι α κ :=
-  ⟨insert priority task d.buckets, true⟩
+  ⟨insert priority task d.buckets⟩
 
 /-- `runTasks` drains the snapshot once (`Scheduler.ts:225-233`): a task enqueued during
 the drain waits for the next host task. -/
 def drain (d : Dispatcher ν σ β ε δ ι α κ) :
     List (Task ν σ β ε δ ι α κ) × Dispatcher ν σ β ε δ ι α κ :=
-  ((d.buckets.map Bucket.tasks).flatten, ⟨[], false⟩)
+  ((d.buckets.map Bucket.tasks).flatten, ⟨[]⟩)
 
 end Dispatcher
 
@@ -973,7 +971,7 @@ def countdownParkEdits (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : R
   | (exits, some (target, remaining)) =>
     let name := interp.cancelName interp.parkCancelName f.id token
     let f := { f with frame := core.pushAsyncFinalizer name f.frame }
-    let f := f.park ⟨token, some target, remaining, exits, resumeWith, failFast⟩
+    let f := f.park ⟨token, remaining, exits, resumeWith, failFast⟩
     (m.emit [RunEvent.parkedOn f.id token], f, true, [.observe target (.countdown f.id token)])
 
 /-- The eager view of a countdown registration. Native iterations retain its edits until settlement. -/
@@ -1206,7 +1204,7 @@ def evaluatePrim (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine
         frame := { f.frame with current := Prim.success interp.voidValue }
         dispatcher :=
           (f.dispatcher.enqueue priority (Task.resume f.id token (Prim.success interp.voidValue))) }
-      let f := f.park ⟨token, none, [], [], Resume.void, false⟩
+      let f := f.park ⟨token, [], [], Resume.void, false⟩
       ⟨(m.arm f.id).emit [RunEvent.parkedOn f.id token], f, yielding, Outcome.parked, [], []⟩
     | Prim.async register withSignal cancel =>                          -- :1109-1143
       let token := m.nextToken
@@ -1223,7 +1221,7 @@ def evaluatePrim (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine
             let name := interp.cancelName (cancel.getD interp.abortName) f.id token
             { f with frame := { f.frame with stack := Prim.asyncFinalizer name :: f.frame.stack } }
           else f
-        let f := f.park ⟨token, none, [], [], Resume.void, false⟩
+        let f := f.park ⟨token, [], [], Resume.void, false⟩
         ⟨m.emit [RunEvent.parkedOn f.id token], f, yielding, Outcome.parked, [], []⟩
     | _ =>
       match interp.parkOf f.frame.current with
@@ -1253,7 +1251,7 @@ def evaluatePrim (interp : RunInterp ν σ β ε δ ι α χ St) (m : RunMachine
             let name := interp.cancelName interp.parkCancelName f.id token
             let f := { f with frame :=
               { f.frame with stack := Prim.asyncFinalizer name :: f.frame.stack } }
-            let f := f.park ⟨token, some target, [], [], Resume.void, false⟩
+            let f := f.park ⟨token, [], [], Resume.void, false⟩
             ⟨m.emit [RunEvent.parkedOn f.id token], f, yielding, Outcome.parked, [],
               [.observe target (.resumeAwait f.id token mode)]⟩
       | none =>
@@ -1705,7 +1703,7 @@ def yieldNow (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine 
     frame := core.answerWith f.frame (core.success interp.voidValue)
     dispatcher :=
       (f.dispatcher.enqueue priority (Task.resume f.id token (core.success interp.voidValue))) }
-  let f := f.park ⟨token, none, [], [], Resume.void, false⟩
+  let f := f.park ⟨token, [], [], Resume.void, false⟩
   ⟨(m.arm f.id).emit [RunEvent.parkedOn f.id token], f, yielding, Outcome.parked, [], []⟩
 
 def join (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
@@ -1723,7 +1721,7 @@ def join (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν �
       let m := { m with nextToken := m.nextToken + 1 }
       let name := interp.cancelName interp.parkCancelName f.id token
       let f := { f with frame := core.pushAsyncFinalizer name f.frame }
-      let f := f.park ⟨token, some target, [], [], Resume.void, false⟩
+      let f := f.park ⟨token, [], [], Resume.void, false⟩
       ⟨m.emit [RunEvent.parkedOn f.id token], f, yielding, Outcome.parked, [],
         [.observe target (.resumeAwait f.id token mode)]⟩
 
@@ -1803,7 +1801,7 @@ def fireObserver (interp : RunInterp ν σ β ε δ ι α χ St κ) (id : FiberI
             | (exits, none) =>                                        -- :806
               let current := {current with pending := current.pending.map fun q =>
                 if q.token = token then
-                  {q with waitingOn := none, remaining := [], collected := exits}
+                  {q with remaining := [], collected := exits}
                 else q}
               (m.update current,
                 acc.2 ++ nested ++
@@ -1812,7 +1810,7 @@ def fireObserver (interp : RunInterp ν σ β ε δ ι α χ St κ) (id : FiberI
             | (exits, some (next, rest)) =>                           -- :802
               let current := {current with pending := current.pending.map fun q =>
                 if q.token = token then
-                  {q with waitingOn := some next, remaining := rest, collected := exits}
+                  {q with remaining := rest, collected := exits}
                 else q}
               let changed := applyFiberEdit (.observe next (.countdown waiter token)) (m.update current)
               (changed.1, acc.2 ++ nested ++ changed.2)
@@ -2057,7 +2055,7 @@ def driveStep (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine
         | none =>
           let name := interp.cancelName (interp.raceCancelName raceId) f.id race.token
           let f := { f with frame := core.pushAsyncFinalizer name f.frame }
-          let f := f.park ⟨race.token, none, [], [], Resume.void, false⟩
+          let f := f.park ⟨race.token, [], [], Resume.void, false⟩
           settle f.id rest ⟨m.emit [RunEvent.parkedOn f.id race.token], f, yielding, Outcome.parked, [], []⟩
   | Cmd.interruptTarget target who extra, rest =>                     -- :574-595, D6b
     match m.fiber? target with

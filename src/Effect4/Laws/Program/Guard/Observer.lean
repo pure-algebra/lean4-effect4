@@ -275,14 +275,14 @@ theorem guardState_fireObserver_countdown (p : NativeEff) (table : RowTable)
             | none =>
               exact update
                 (fun q => if q.token = token then
-                  { q with waitingOn := none, remaining := [], collected := exits } else q)
+                  { q with remaining := [], collected := exits } else q)
                 (by intro q; split <;> rfl)
             | some pair =>
               obtain ⟨next, rest⟩ := pair
               dsimp only [applyFiberEdit]
               apply guardState_addObserver
                 (update (fun q => if q.token = token then
-                  { q with waitingOn := some next, remaining := rest, collected := exits } else q)
+                  { q with remaining := rest, collected := exits } else q)
                   (by intro q; split <;> rfl)) next (.countdown waiter token)
               exact reservedKeys_of_requests_subset callbackKeys (Nat.le_refl _)
                 (requestOf_update_noExternal_subset _ _ currentCode)
@@ -378,7 +378,7 @@ theorem guardQueue_fireObserver_countdown (p : NativeEff) (table : RowTable)
               have restored := guardQueue_restorePending p table runQueue hc'
                 currentIdle rfl currentCode
                 (fun q => if q.token = token then
-                  { q with waitingOn := none, remaining := [], collected := exits } else q)
+                  { q with remaining := [], collected := exits } else q)
               apply guardQueue_snoc_resume p table restored waiter token
                 (countdownPark.resumePrim (interpOf p table) pending.resumeWith exits)
               · exact reservedKeys_of_requests_subset callbackKeys (Nat.le_refl _)
@@ -391,7 +391,7 @@ theorem guardQueue_fireObserver_countdown (p : NativeEff) (table : RowTable)
               exact guardQueue_addObserver p table
                 (guardQueue_restorePending p table runQueue hc' currentIdle rfl currentCode
                   (fun q => if q.token = token then
-                    { q with waitingOn := some next, remaining := rest, collected := exits } else q))
+                    { q with remaining := rest, collected := exits } else q))
                 next (.countdown waiter token)
 
 theorem guardState_fireObserver (p : NativeEff) (table : RowTable)
@@ -562,13 +562,13 @@ theorem requestOf_fireObserver_countdown_subset (p : NativeEff) (table : RowTabl
             | none =>
               dsimp only at hr
               rw [preserves (fun q => if q.token = token then
-                {q with waitingOn := none, remaining := [], collected := exits} else q)] at hr
+                {q with remaining := [], collected := exits} else q)] at hr
               exact subset fiber offered request hr
             | some pair =>
               obtain ⟨next, rest⟩ := pair
               dsimp only [applyFiberEdit, RunMachine.observe] at hr
               rw [requestOf_addObserver, preserves (fun q => if q.token = token then
-                {q with waitingOn := some next, remaining := rest, collected := exits} else q)] at hr
+                {q with remaining := rest, collected := exits} else q)] at hr
               exact subset fiber offered request hr
 
 theorem requestOf_fireObserver_subset (p : NativeEff) (table : RowTable)
@@ -726,7 +726,7 @@ theorem requestOrInterrupted_fireObserver_countdown (p : NativeEff) (table : Row
             | none =>
               exact requestOrInterrupted_pendingMap hc'
                 (fun q => if q.token = token then
-                  { q with waitingOn := none, remaining := [], collected := exits } else q)
+                  { q with remaining := [], collected := exits } else q)
                 fiber offered request runRequest
             | some pair =>
               obtain ⟨next, rest⟩ := pair
@@ -735,7 +735,7 @@ theorem requestOrInterrupted_fireObserver_countdown (p : NativeEff) (table : Row
                 fiber offered request
                 (requestOrInterrupted_pendingMap hc'
                   (fun q => if q.token = token then
-                    { q with waitingOn := some next, remaining := rest, collected := exits } else q)
+                    { q with remaining := rest, collected := exits } else q)
                   fiber offered request runRequest)
 
 theorem requestOrInterrupted_fireObserver (p : NativeEff) (table : RowTable)
@@ -798,7 +798,7 @@ theorem interruptedAt_fireObserver_countdown (p : NativeEff) (table : RowTable)
             | none =>
               exact interruptedAt_restorePending hc' hc'
                 (fun q => if q.token = token then
-                  { q with waitingOn := none, remaining := [], collected := exits } else q)
+                  { q with remaining := [], collected := exits } else q)
                 runInterrupted runInterrupted
             | some pair =>
               obtain ⟨next, rest⟩ := pair
@@ -806,7 +806,7 @@ theorem interruptedAt_fireObserver_countdown (p : NativeEff) (table : RowTable)
               exact interruptedAt_addObserver next (.countdown waiter token)
                 (interruptedAt_restorePending hc' hc'
                   (fun q => if q.token = token then
-                    { q with waitingOn := some next, remaining := rest, collected := exits } else q)
+                    { q with remaining := rest, collected := exits } else q)
                   runInterrupted runInterrupted)
 
 theorem interruptedAt_fireObserver (p : NativeEff) (table : RowTable)

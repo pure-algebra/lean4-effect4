@@ -376,7 +376,7 @@ abbrev yieldFiber (f : RFiber) (next : Val → RProgram) (token priority : Nat) 
                             stack := .answer (seqR next) :: f.frame.stack }
     dispatcher := f.dispatcher.enqueue priority (.resume f.id token (.pure (.success .unit)))
     parked := .withGuard token
-    pending := f.pending ++ [⟨token, none, [], [], .void, false⟩] }
+    pending := f.pending ++ [⟨token, [], [], .void, false⟩] }
 
 theorem evaluateFiberR_yieldNow (root : ProgramSource) (C : List (FiberId × ExitV)) (m : RState)
     (f : RFiber) (y : Bool) (priority : Nat) (next : Val → RProgram) :
@@ -549,7 +549,7 @@ theorem clause_yieldNow (root : ProgramSource) (rootTy : EffTy) (priority : Nat)
   · -- the park: idle on the token, the `void` record, the resume posted
     rename_i hdef
     let g : RFiber := { yieldFiber f next tok priority with running := false }
-    let pend : RPending := ⟨tok, none, [], [], .void, false⟩
+    let pend : RPending := ⟨tok, [], [], .void, false⟩
     have lookG : (M1.update g).fiber? g.id = some g := rfiber?_update_self hf1 rfl
     have hpOf : g.pending = [pend] := by
       show f.pending ++ [pend] = [pend]
@@ -958,7 +958,7 @@ theorem Evaluating.park_fresh {root : ProgramSource} {rootTy : EffTy} {w : World
     (p : RPending)
     (stack : ∀ ty, w.Γ f.id = some ty → HostStack root w (m.update f) f.id tin ty fr.stack)
     (prov : InterruptProvenance fr) (ptoken : p.token = m.nextToken)
-    (ptargets : ∀ id ∈ p.waitingOn.toList ++ p.remaining, id.value < m.nextId)
+    (ptargets : ∀ id ∈ p.remaining, id.value < m.nextId)
     (request : externalRequestR fr.current = none) (marker : raceRegistrationR fr.current = none)
     (tasks : ∀ b ∈ d.buckets, ∀ t ∈ b.tasks,
       TaskOk (preds root) (w.addToken f.id m.nextToken tin) Expect.root t)
@@ -1359,15 +1359,11 @@ theorem Evaluating.join_parks {root : ProgramSource} {rootTy : EffTy} {w : World
   let tin : EffTy := observerDeliveredType mode sourceTy
   let name := (interpR root.program).cancelName (interpR root.program).parkCancelName f.id tok
   let fr : RSaved := { f.frame with stack := .asyncFinalizer name :: .answer next' :: f.frame.stack }
-  let p : RPending := ⟨tok, some target, [], [], .void, false⟩
+  let p : RPending := ⟨tok, [], [], .void, false⟩
   let gP : RFiber := { f with frame := fr, dispatcher := f.dispatcher, parked := .withGuard tok,
                               pending := f.pending ++ [p], running := false }
   obtain ⟨ty, declared⟩ := ev.declared
   obtain ⟨_, _, _, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
-  have tbelow : target.value < m.nextId := by
-    obtain ⟨x, hx', hid⟩ := List.mem_map.mp ((wide.fibers target).mp (by rw [hsrc]; rfl))
-    rw [← hid]
-    exact (ev.typed.machine.fiber hx').below
   have ord0 : w.leHost (w.addToken f.id tok tin) :=
     addToken_leHost (valid_nextToken_fresh rootTy w (m.update f) ev.typed.machine.typed.1 f.id)
   have back : ∀ id t' ty', (w.addToken f.id tok tin).Θ id t' = some ty' → (id, t') ≠ (f.id, tok) →
@@ -1378,11 +1374,7 @@ theorem Evaluating.join_parks {root : ProgramSource} {rootTy : EffTy} {w : World
   obtain ⟨ord, parked⟩ := ev.park_fresh tin fr f.dispatcher p
     (fun ty' d => hostStack_parkFinalizer root f.id tok (frame ty' d)) ⟨prov.recorded, prov.deferred⟩
     rfl
-    (fun id hid => by
-      rcases List.mem_append.mp hid with h | h
-      · rw [List.mem_singleton.mp h]
-        exact tbelow
-      · cases h)
+    (fun _ hid => nomatch hid)
     (by show externalRequestR f.frame.current = none; rw [hc]; rfl)
     (by show raceRegistrationR f.frame.current = none; rw [hc]; rfl)
     (fun b hb t' ht' => (c4 b hb).c0 t' ht') (fun k hk => Or.inl (List.mem_append_right _ hk))
@@ -1529,7 +1521,7 @@ theorem Evaluating.countdown_parks {root : ProgramSource} {rootTy : EffTy} {w : 
       prepareIterR ⟨M, g, y, .parked, [], edits⟩ = ⟨M, g, y, .parked, [], edits⟩) :
     SettlesTyped root rootTy w f.id rest (prepareIterR
       ⟨countdownMachine m target f.id,
-        countdownFiber root f next' ⟨m.nextToken, some target, remaining, exits, resumeWith, failFast⟩,
+        countdownFiber root f next' ⟨m.nextToken, remaining, exits, resumeWith, failFast⟩,
         y, FiberAction.outcomeOf (countdownMachine m target f.id) true, [], [.observe target (.countdown f.id m.nextToken)]⟩) := by
   have wide := ev.typed.machine.wide
   have hmem : f ∈ (m.update f).fibers := rfiber?_mem ev.look
@@ -1537,7 +1529,7 @@ theorem Evaluating.countdown_parks {root : ProgramSource} {rootTy : EffTy} {w : 
   let tok : Nat := m.nextToken
   let name := (interpR root.program).cancelName (interpR root.program).parkCancelName f.id tok
   let fr : RSaved := { f.frame with stack := .asyncFinalizer name :: .answer next' :: f.frame.stack }
-  let p : RPending := ⟨tok, some target, remaining, exits, resumeWith, failFast⟩
+  let p : RPending := ⟨tok, remaining, exits, resumeWith, failFast⟩
   let gE : RFiber := { f with frame := fr, parked := .withGuard tok, pending := f.pending ++ [p] }
   let gP : RFiber := { f with frame := fr, dispatcher := f.dispatcher, parked := .withGuard tok,
                               pending := f.pending ++ [p], running := false }
@@ -1553,12 +1545,7 @@ theorem Evaluating.countdown_parks {root : ProgramSource} {rootTy : EffTy} {w : 
   have internal : ∀ k ∈ Guard.fiberKeys f, k ≠ (f.id, tok) :=
     fun k hk => key_ne_of_lt (wide.keysBelow k (fiberKeys_internal hmem hk))
   obtain ⟨_, _, _, _, ⟨c4⟩, _⟩ := runFiberOk_tok ord0 rfl back internal old.ok
-  have ptargets : ∀ id ∈ p.waitingOn.toList ++ p.remaining, id ∈ targets := by
-    intro id hid
-    rcases List.mem_append.mp hid with h | h
-    · rw [List.mem_singleton.mp h]
-      exact tmem
-    · exact rsub id h
+  have ptargets : ∀ id ∈ p.remaining, id ∈ targets := rsub
   obtain ⟨ord, parked⟩ := ev.park_fresh tt fr f.dispatcher p
     (fun ty' d => hostStack_parkFinalizer root f.id tok (frame ty' d)) ⟨prov.recorded, prov.deferred⟩
     rfl (fun id hid => tbelow id (ptargets id hid)) request marker

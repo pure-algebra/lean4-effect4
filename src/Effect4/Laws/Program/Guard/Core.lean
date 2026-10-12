@@ -583,7 +583,7 @@ theorem requestsOwned_external_park (p : NativeEff) (table : RowTable)
   let framed : NFiber := if signal || cancel.isSome then
     { f with frame := { f.frame with stack := Prim.asyncFinalizer name :: f.frame.stack } }
     else f
-  let parked := framed.park ⟨m.nextToken, none, [], [], .void, false⟩
+  let parked := framed.park ⟨m.nextToken, [], [], .void, false⟩
   have heval : evaluateNative p m f yielding table =
       ⟨before, parked, yielding, .parked, [], []⟩ := by
     cases signal <;> cases cancel <;>

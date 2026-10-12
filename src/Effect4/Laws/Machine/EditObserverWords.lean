@@ -48,11 +48,11 @@ def observerTailWord (interp : RunInterp ν σ β ε δ ι α χ St κ)
             | some _ =>
               match countdownWalk changed.1 pending.remaining (pending.collected ++ [exit]) with
               | (exits, none) => [.update {current with pending := current.pending.map fun p =>
-                  if p.token = token then {p with waitingOn := none, remaining := [], collected := exits} else p}]
+                  if p.token = token then {p with remaining := [], collected := exits} else p}]
               | (exits, some (next, rest)) =>
                 [.update {current with pending := current.pending.map fun p =>
                   if p.token = token then
-                    {p with waitingOn := some next, remaining := rest, collected := exits} else p},
+                    {p with remaining := rest, collected := exits} else p},
                   .observe next (.countdown waiter token)]
   | .raceCallback raceId =>
     match m.race? raceId with
