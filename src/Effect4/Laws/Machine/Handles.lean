@@ -670,11 +670,10 @@ def Resume.keys (nk : ν → List Handle) : Resume ν → List Handle
   | Resume.void => []
   | Resume.continueWith name => nk name
 
-/-- The handles of an outstanding park: the target observed, the targets left, the exits
-collected and the continuation. -/
+/-- The handles of an outstanding park: the targets left, the exits collected and the continuation. -/
 def Pending.keys (nk : ν → List Handle) (p : Pending ν Val Err Defect FiberId Ann) :
     List Handle :=
-  (p.waitingOn.map Handle.fiber).toList ++ p.remaining.map Handle.fiber ++
+  p.remaining.map Handle.fiber ++
     p.collected.flatMap exitKeys ++ p.resumeWith.keys nk
 
 /-- The handles an observer names: the fiber it resumes, the parent it untracks, the scope
@@ -2632,7 +2631,7 @@ theorem countdown_done_minted (hb : KeyBounded nk sk interp ambient)
     (hex1 : exits.flatMap exitKeys ⊆ (p.collected ++ [exit]).flatMap exitKeys ++ R.1.keys nk sk) :
     FiredMinted nk sk acc
       (R.1.update { w with pending := w.pending.map fun q =>
-          if q.token = token then { q with waitingOn := none, remaining := [], collected := exits } else q },
+          if q.token = token then { q with remaining := [], collected := exits } else q },
         acc.2 ++ R.2 ++ [Cmd.resume waiter token
           (countdownPark.resumePrim (core := frameCore) interp p.resumeWith exits)]) := by
   unfold FiredMinted
@@ -2652,7 +2651,7 @@ theorem countdown_done_minted (hb : KeyBounded nk sk interp ambient)
       (Ok_append.mpr ⟨Ok_of_subset (by sub_tac) hbase, hexits⟩)
   have hall := Ok_append.mpr ⟨Ok_append.mpr ⟨hbase, hexits⟩, hres⟩
   have hpm := pending_map_keys_subset nk w.pending token
-    (fun q => { q with waitingOn := none, remaining := [], collected := exits })
+    (fun q => { q with remaining := [], collected := exits })
     (exits.flatMap exitKeys) (fun q => by sub_tac)
   refine ⟨by rw [world_update]; exact hle, ?_⟩
   simp only [MintedIn]
@@ -2676,7 +2675,7 @@ theorem countdown_next_minted
     (hnext : next ∈ p.remaining) (hrest : rest ⊆ p.remaining) :
     FiredMinted nk sk acc
       ((R.1.update { w with pending := w.pending.map fun q =>
-          if q.token = token then { q with waitingOn := some next, remaining := rest, collected := exits } else q }).modify
+          if q.token = token then { q with remaining := rest, collected := exits } else q }).modify
           next fun g => {g with observers := g.observers ++ [Observer.countdown waiter token]},
         acc.2 ++ R.2) := by
   unfold FiredMinted
@@ -2697,7 +2696,7 @@ theorem countdown_next_minted
     Ok_of_subset (List.map_subset Handle.fiber hrest) hrem
   have hall := Ok_append.mpr ⟨Ok_append.mpr ⟨Ok_append.mpr ⟨hbase, hexits⟩, hnextk⟩, hrestk⟩
   have hpm := pending_map_keys_subset nk w.pending token
-    (fun q => { q with waitingOn := some next, remaining := rest, collected := exits })
+    (fun q => { q with remaining := rest, collected := exits })
     (Handle.fiber next :: rest.map Handle.fiber ++ exits.flatMap exitKeys) (fun q => by sub_tac)
   refine ⟨by rw [world_modify, world_update]; exact hle, ?_⟩
   simp only [MintedIn]
@@ -4521,14 +4520,14 @@ theorem driveStep_registrationDone_minted (hb : KeyBounded nk sk interp)
           ⟨(m.updateRace { race with registering := false }).emit [RunEvent.parkedOn f.id race.token],
             ({ f with frame := { f.frame with
                 stack := Prim.asyncFinalizer (interp.cancelName (interp.raceCancelName raceId) f.id race.token) :: f.frame.stack } }).park
-              ⟨race.token, none, [], [], Resume.void, false⟩,
+              ⟨race.token, [], [], Resume.void, false⟩,
             yielding, Outcome.parked, [], []⟩ (by
           simp only [MintedIn, iterKeys, cmdsKeys, List.flatMap_nil, List.append_nil, Outcome.keys]
           rw [world_emit, world_updateRace]
           refine Ok_of_subset ?_ (Ok_append.mpr ⟨Ok_append.mpr ⟨hM, hfk⟩, Ok_append.mpr ⟨hn, hrest⟩⟩)
           rw [keys_emit]
           simp only [RunFiber.keys, RunFiber.park, frameKeys, List.flatMap_append, List.flatMap_cons,
-            List.flatMap_nil, primKeys, Pending.keys, Option.map, Option.toList, Resume.keys]
+            List.flatMap_nil, primKeys, Pending.keys, Resume.keys]
           sub_tac)
         rw [world_emit, world_updateRace] at hle
         exact ⟨hle, hS⟩

@@ -10,12 +10,12 @@ Owner: the connectors from the three copies of the pointwise list relation to th
 `Effect4.ListRel` (`Laws/Data/ListRel.lean`). Item 11, step 1, of
 `docs/research/2026-10-11-machine-models/CODEX-PROMPT.md`.
 
-- `Machine.ListRel` (`Laws/Machine/Book.lean`) is the same inductive at one universe.
+- `Book.lean` uses the shared relation directly.
 - `Modules.Pointwise` (`Laws/Step/Reading.lean`) is the same inductive at `Type`.
 - `Program.Fits` (`Laws/Program/Typed.lean`) is the relation at `Val.hasTy`.
 
-Each connector is an equivalence of propositions, proved by one induction each way. A caller
-moves to the shared relation through its connector, and then the copy goes.
+The machine connector is reflexive. The other connectors relate the remaining copies to the shared relation.
+A caller moves to the shared relation through its connector before its copy goes.
 
 What this module does not claim: anything beyond the three equivalences.
 -/
@@ -28,16 +28,7 @@ universe w
 
 /-- `Book.lean`'s relation is the shared one. -/
 theorem machineListRel_iff {α β : Type w} {R : α → β → Prop} {l : List α} {l' : List β} :
-    Machine.ListRel R l l' ↔ _root_.Effect4.ListRel R l l' := by
-  constructor
-  · intro h
-    induction h with
-    | nil => exact .nil
-    | cons hd _ ih => exact .cons hd ih
-  · intro h
-    induction h with
-    | nil => exact .nil
-    | cons hd _ ih => exact .cons hd ih
+    _root_.Effect4.ListRel R l l' ↔ _root_.Effect4.ListRel R l l' := Iff.rfl
 
 /-- `Reading.lean`'s relation is the shared one. -/
 theorem pointwise_iff {α β : Type} {r : α → β → Prop} {l : List α} {l' : List β} :

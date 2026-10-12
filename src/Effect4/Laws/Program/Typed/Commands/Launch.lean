@@ -156,7 +156,7 @@ theorem countdownAt_alloc {waiter : FiberId} {token : Nat} {incoming incoming' :
       (m.fiber? waiter = none ∧ ∀ f, m'.fiber? waiter = some f → f.pending = []))
     (fibers : ∀ id, id ≠ n → m'.fiber? id = m.fiber? id)
     (targets : ∀ f, m.fiber? waiter = some f → ∀ p ∈ f.pending,
-      ∀ id ∈ p.waitingOn.toList ++ p.remaining, id ≠ n)
+      ∀ id ∈ p.remaining, id ≠ n)
     (h : CountdownAt w m waiter token incoming) : CountdownAt w' m' waiter token incoming' := by
   rcases lookup with same | ⟨absent, empty⟩
   · unfold CountdownAt at h ⊢

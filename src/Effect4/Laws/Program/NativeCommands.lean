@@ -289,7 +289,7 @@ theorem observer_at (root : NativeEff) (table : RowTable) (id : FiberId) (exit :
             · rename_i exits target remaining walk
               let nextCurrent : SourceFiber := {current with pending := current.pending.map fun q =>
                 if q.token = token then
-                  {q with waitingOn := some target, remaining, collected := exits}
+                  {q with remaining, collected := exits}
                 else q}
               have nextAt : FiberAt root nextCurrent :=
                 pending_map_at root current _ currentAt (by intro q; split <;> rfl)

@@ -295,7 +295,7 @@ def callParkedAt (fr : NFiber) (k t : Nat) : NRunFiber :=
   { fiberAt fr k with
     running := false
     parked := Parked.withGuard t
-    pending := [⟨t, none, [], [], Resume.void, false⟩] }
+    pending := [⟨t, [], [], Resume.void, false⟩] }
 
 /-- The machine with its root parked on a host call: nothing armed, the next token taken. -/
 def Mcall (fr : NFiber) (s : Stores) (k : Nat) (tr : NTrace) (t : Nat) : Api.Machine :=
@@ -345,7 +345,7 @@ theorem drive_loop_call (root : NativeEff) (cur : NCode) (K : List NCode) (i : B
       ⟨{ M (fiberOf (Prim.async (EffName.external (.external j) v w) false none) K i) s k
           (tr ++ [RunEvent.parkedOn Api.root nt]) nt with nextToken := nt + 1 },
         (fiberAt (fiberOf (Prim.async (EffName.external (.external j) v w) false none) K i) (k + 1)).park
-          ⟨nt, none, [], [], Resume.void, false⟩,
+          ⟨nt, [], [], Resume.void, false⟩,
         false, Outcome.parked, [], []⟩ := by
     rw [iteration_M root _ _ _ _ _ _ _ hk]
     simp only [evaluateNative, fiberAt_frame, fiberOf]

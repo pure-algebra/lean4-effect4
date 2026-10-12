@@ -366,7 +366,7 @@ theorem external_eval {B : List Val} {output : Kind} (view : View)
   have shape : evaluatePrim (interpreter view) machine fiber yielding =
       ⟨({machine with nextToken := machine.nextToken + 1}).emit
           [.parkedOn fiber.id machine.nextToken],
-        fiber.park ⟨machine.nextToken, none, [], [], .void, false⟩, yielding, .parked, [], []⟩ := by
+        fiber.park ⟨machine.nextToken, [], [], .void, false⟩, yielding, .parked, [], []⟩ := by
     rw [evaluatePrim, current]
     kernel_rfl
   rw [shape]
