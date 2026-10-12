@@ -268,16 +268,24 @@ theorem frame_step_at (root : NativeEff) (fragment : Fragment root) (completed) 
       exact ⟨slots.1, stack_append_at root _ _ slots.2 stack⟩
   case whileLoop name cursor =>
     have slots := interp_loopEnter_at root fragment completed table name cursor current
-    cases hl : (interpAt root completed table).loopEnter name cursor with
-    | «continue» next body =>
-      rw [hl] at slots
-      exact ⟨slots, fun code member => by
-        rcases List.mem_cons.mp member with eq | tail
-        · rw [eq]; exact current
-        · exact stack code tail⟩
-    | finish body =>
-      rw [hl] at slots
-      exact ⟨slots, stack⟩
+    have produced : match (interpAt root completed table).loopEnter name cursor with
+        | .continue next body => AnswerFlow.FamilyResult (lexicalModel root) (lexicalEdge root) () () body [.whileLoop name next]
+        | .finish body => AnswerFlow.FamilyResult (lexicalModel root) (lexicalEdge root) () () body [] := by
+      cases actual : (interpAt root completed table).loopEnter name cursor with
+      | «continue» next body =>
+        rw [actual] at slots
+        exact ⟨(), slots, .cons current (.nil ())⟩
+      | finish body =>
+        rw [actual] at slots
+        exact ⟨(), slots, .nil ()⟩
+    obtain ⟨after, ran, input, code, suffix⟩ := AnswerFlow.loop_step (lexicalModel root)
+      (interpAt root completed table).toPrimInterp (lexicalEdge root) () () () fiber name cursor h
+      (stack_path_at root fiber.stack stack)
+      (by intro next body found; rw [found] at produced; exact produced)
+      (by intro body found; rw [found] at produced; exact produced)
+    have actual := congrArg (FrameStepAt root) ran
+    have result := actual.mpr (show FrameStepAt root (.running after) from ⟨code, path_stack_at root suffix⟩)
+    simpa only [FrameFiber.step, h] using result
   all_goals aesop (add norm simp [FrameStepAt, FrameAt, CodeAt, StackAt, List.mem_cons]) (add safe apply [(resumeValue_at root fragment), (resumeCause_at root fragment), (interp_suspend_at root fragment)])
 
 /-- Frame hooks retain the current primitive while pushing administrative masks. -/

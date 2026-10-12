@@ -114,4 +114,30 @@ theorem saved_family
 
 }
 
+/-- The actual loop-entry hook supplies current code and the saved loop edge together.
+Consumer: lexical loop entry and Timeout's Ready cursor permission. -/
+theorem loop_step
+    (model : Model (ν := ν) (σ := σ) (β := β) (ε := ε) (δ := δ) (ι := ι) (α := α) World Kind)
+    (interp : PrimInterp ν σ β ε δ ι α)
+    (Edge : World → Kind → Kind → Prim ν σ β ε δ ι α → Prop)
+    (world : World) (input output : Kind)
+    (fiber : FrameFiber ν σ β ε δ ι α) (name : ν) (cursor : β)
+    (current : fiber.current = .whileLoop name cursor)
+    (stack : Path (Edge world) input output fiber.stack)
+    (proceed : ∀ next body, interp.loopEnter name cursor = .continue next body →
+      FamilyResult model Edge world input body [.whileLoop name next])
+    (finish : ∀ body, interp.loopEnter name cursor = .finish body →
+      FamilyResult model Edge world input body []) :
+    ∃ after, (fiber.step interp).1 = .running after ∧
+      FamilyResult model Edge world output after.current after.stack := by
+  rw [FrameFiber.step, current]
+  dsimp only
+  cases actual : interp.loopEnter name cursor with
+  | «continue» next body =>
+    obtain ⟨middle, code, pushed⟩ := proceed next body actual
+    exact ⟨_, rfl, middle, code, Path.append pushed stack⟩
+  | finish body =>
+    obtain ⟨middle, code, pushed⟩ := finish body actual
+    exact ⟨_, rfl, middle, code, Path.append pushed stack⟩
+
 end Effect4.Machine.AnswerFlow

@@ -1,0 +1,64 @@
+{
+  "base": "43d18858f22777f13c6d9f00900fd12dc9b72133",
+  "production": [
+    {
+      "path": "src/Effect4/Laws/Machine/AnswerFlowFamily.lean",
+      "before_lines": 117,
+      "after_lines": 143,
+      "before_sha256": "e59bf150e90085536bfd00b9aa582d85d4309c64839a7954b928e0bdbc820fc7",
+      "after_sha256": "21c009e75cb7ef2fed0d4a5cb75a1c144b03dfb13ae5e8670546ea335c869597",
+      "unchanged_theorem_headers": [
+        "programOf_none",
+        "result_family",
+        "saved_family"
+      ]
+    },
+    {
+      "path": "src/Effect4/Laws/Program/NativeFrameScope.lean",
+      "before_lines": 333,
+      "after_lines": 341,
+      "before_sha256": "cb6d7a96f080836787a98013d5de6641804c2b568da630718f185c42e0a06426",
+      "after_sha256": "7c9b9e03003f84427a8291db75e5df2575a694d7742890f4baab61b8cd765242",
+      "unchanged_theorem_headers": [
+        "stack_path_at",
+        "path_stack_at",
+        "ensure_stack_at",
+        "ensure_replacement_at",
+        "answerOf_at",
+        "passPushed_at",
+        "stack_append_at",
+        "popFrom_at",
+        "getCont_at",
+        "ofExit_at",
+        "armA_at",
+        "armE_at",
+        "lexical_family",
+        "resumeValue_at",
+        "resumeCause_at",
+        "frame_step_at",
+        "ensure_current",
+        "pushed_current",
+        "pop_current",
+        "getCont_frame_at",
+        "frame_exit_at"
+      ]
+    }
+  ],
+  "probes": [
+    {
+      "path": "docs/research/2026-10-11-machine-models/codex/callback-loop/TimeoutJointGenerationProbe.lean",
+      "sha256": "85f1335b205a3a98be168f5c6652a6c819f97799a717f38fb004a24ee874e0cf",
+      "lines": 452
+    },
+    {
+      "path": "docs/research/2026-10-11-machine-models/codex/callback-loop/CountdownJoinProbe.lean",
+      "sha256": "28053d8e3e40748d6b712d8cf8fb1544f6476e56bd6d4cef5d40b1552da24d0c",
+      "lines": 44
+    },
+    {
+      "path": "docs/research/2026-10-11-machine-models/codex/callback-loop/TimeoutRootLoopProbe.lean",
+      "sha256": "ee6669e1cb9e8a18bbaba7023aecb79cba2c594b14ef066b4951e75cc9941ee7",
+      "lines": 310
+    }
+  ]
+}
