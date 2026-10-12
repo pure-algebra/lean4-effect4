@@ -209,7 +209,7 @@ def plan_next() -> str:
     raise unread("no `Next goals (N):` line")
 
 
-STATUS_WORDS = ("open", "ruled", "landed", "basis", "seeded", "repaired", "pinned", "retired", "closed")
+STATUS_WORDS = ("open", "ruled", "landed", "basis", "seeded", "reserved", "repaired", "pinned", "retired", "closed")
 
 
 def status_word(cell: str) -> str:
