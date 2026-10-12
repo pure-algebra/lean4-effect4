@@ -135,8 +135,9 @@ theorem foreignFin_ambient (root : ProgramSource) {w : World} {c : Capture}
                 · cases identity
                   exact hstack),
               (fun _ _ _ impossible => by cases impossible)⟩
-            (fun _ _ ans post => .pure ⟨exitOk_finalizer hnever post, by cases ans <;> exact bound⟩
-              ⟨bound, Row.subset_refl _⟩) ⟨window, Row.subset_refl _⟩
+            (fun _ _ ans post => .pure ⟨exitOk_finalizer hnever post,
+                by cases ans <;> exact subset_rowMeet bound window⟩
+              ⟨subset_rowMeet bound window, Row.subset_refl _⟩) ⟨window, Row.subset_refl _⟩
       · cases exit' with
         | success done => exact Bool.noConfusion absent'
         | failure cause =>
@@ -407,11 +408,13 @@ theorem contextEntry_ambient (root : ProgramSource) {w : World} {available : Env
     | failure cause =>
       exact ⟨exitOk_failure_of_errorN (Bounds.subN_never _) payload.1, Row.subset_refl _⟩
 
-/-- Where an admitted body's program leaves the fiber: a capture's release at the previous
-context's keys it restores, every other body at the row it entered at. -/
+/-- Where an admitted body's program leaves the fiber: a capture's release at the keys both the
+previous context it restores and the entered one hold, every other body at the row it entered
+at. -/
 def bodyPosition (available : Env.Requirement) (body : Body) (cert : EffTy) : AmbientPosition :=
   match body with
-  | .release _ previous => (cert, previous.services.keysRow, previous.services.keysRow)
+  | .release _ previous =>
+    (cert, rowMeet previous.services.keysRow available, rowMeet previous.services.keysRow available)
   | _ => (cert, available, available)
 
 /-- **The body bridge** (decisions row 349): an admitted body's program, at any completed view,

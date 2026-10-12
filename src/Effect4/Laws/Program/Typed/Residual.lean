@@ -649,13 +649,40 @@ def ambientFiberPost (w : World) (available : Env.Requirement) (op : FiberOp)
       ctx.services.Satisfies available
   | other => fiberPost w other cert answer
 
+/-- The keys two rows share: what a context covering either of them holds. -/
+def rowMeet (r s : Env.Requirement) : Env.Requirement := Row.diff r (Row.diff r s)
+
+theorem mem_rowMeet {key : ServiceKey} {r s : Env.Requirement} :
+    key ∈ rowMeet r s ↔ key ∈ r ∧ key ∈ s := by
+  unfold rowMeet
+  rw [Row.mem_diff, Row.mem_diff]
+  constructor
+  · intro ⟨hr, hn⟩
+    exact ⟨hr, @Decidable.of_not_not _ (inferInstanceAs (Decidable (key ∈ s.elems)))
+      fun hs => hn ⟨hr, hs⟩⟩
+  · intro ⟨hr, hs⟩
+    exact ⟨hr, fun ⟨_, hns⟩ => hns hs⟩
+
+theorem rowMeet_left (r s : Env.Requirement) : Row.Subset (rowMeet r s) r :=
+  fun _ h => (mem_rowMeet.mp h).1
+
+theorem rowMeet_right (r s : Env.Requirement) : Row.Subset (rowMeet r s) s :=
+  fun _ h => (mem_rowMeet.mp h).2
+
+theorem subset_rowMeet {t r s : Env.Requirement} (hr : Row.Subset t r) (hs : Row.Subset t s) :
+    Row.Subset t (rowMeet r s) :=
+  fun key h => mem_rowMeet.mpr ⟨hr key h, hs key h⟩
+
 /-- The internal setter and captured release completion expose their actual context rows.
 Consumer: source-provider entry and the existing captured-context restoring frame. -/
 def ambientFiberInput (available : Env.Requirement) (op : FiberOp)
     (_answer : op.answer) : Env.Requirement :=
   match op with
   | .setContext ctx => ctx.services.keysRow
-  | .mask false (.release _ previous) => previous.services.keysRow
+  -- a captured release returns at the keys both the restored context and the captured one
+  -- hold: an interruption at the release's entry (a deferred interrupt, rc.112's loop top at
+  -- `internal/effect.ts:639-642`) returns before the restore is installed
+  | .mask false (.release _ previous) => rowMeet previous.services.keysRow available
   | .getContext => match Val.context? _answer with
     | some ctx => ctx.services.keysRow
     | none => available

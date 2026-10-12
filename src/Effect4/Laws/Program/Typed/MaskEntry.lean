@@ -239,8 +239,22 @@ theorem ambientSaved_entry_at (root : ProgramSource) (world : Typed.World)
     AmbientEntryAt (available, ambientEntryMode saved) saved :=
   ambientEntryMode_at available saved
 
+/-- A program at a constant row is at every smaller constant row: its exits promise less.
+Consumer: the captured release body, at the keys both possible contexts hold. -/
+theorem ambientProgAt_shrink (root : ProgramSource) {world : Typed.World} {input : AmbientEntryInput}
+    {type : EffTy} {row smaller : Env.Requirement} {code : RProgram} (sub : Row.Subset smaller row)
+    (typed : AmbientProgAt root world input (type, row, row) code) :
+    AmbientProgAt root world input (type, smaller, smaller) code :=
+  ProgramArrow.outputMap typed
+    (fun _ _ exit payload => ⟨payload.1,
+      Row.subset_trans (show Row.Subset (ambientInput (type, smaller, smaller) exit)
+        (ambientInput (type, row, row) exit) by cases exit <;> exact sub) payload.2⟩)
+    (fun _ entry => ⟨entry.1.imp id fun bound => Row.subset_trans sub bound, Row.subset_refl _⟩)
+
 /-- The actual captured release body retains all-exit restoration under its installed false mask.
-The source body uses its own captured map; the returned map is the actual previous context.
+The source body uses its own captured map; it returns at the keys both the restored previous
+context and the captured one hold (`rowMeet`), since an interruption at its entry returns before
+the restore is installed.
 Consumer: mask installation in Body and the original closed Assembly typing path. -/
 theorem ambient_release_body_protected (root : ProgramSource) {world : Typed.World}
     (available : Env.Requirement) (point : Point) (previous : Ctx)
@@ -248,8 +262,9 @@ theorem ambient_release_body_protected (root : ProgramSource) {world : Typed.Wor
     (typed : AmbientProg root world available (type, available, available)
       (denoteAt root.program point)) :
     AmbientProgAt root world (available, false)
-      (type, previous.services.keysRow, previous.services.keysRow)
+      (type, rowMeet previous.services.keysRow available, rowMeet previous.services.keysRow available)
       (bodyR (interpR root.program) (.release point previous)) := by
+  refine ambientProgAt_shrink root (rowMeet_left _ _) ?_
   change AmbientProgAt root world (available, false)
     (type, previous.services.keysRow, previous.services.keysRow)
     (onExitR (denoteAt root.program point) fun _ => fiberValR (.setContext previous) rfl)
