@@ -328,6 +328,8 @@ A program has folds, a journaled run with replay, and a printed image that reads
 5. **The authoring line** (the [tangible authoring design](research/2026-10-08-tangible-authoring-design.md)).
    Its parts: the session tool as an MCP server; marking at a gap (row 336, point 3); each table
    entry's rule as data. One session edits and runs.
+   When it asks whether a result depends on the schedule, the checked fragment of row 361 (D1
+   to D3) answers; random descent is in the law graph (`random-descent`).
 6. **The module toolkit's gaps** (row 330): wrapper reply records and laws (G1), `derive_step`
    in the tree (G3), then the module form at the Latch (G2).
 7. **The stream stack** (row 331): the Pull protocol's handlers (Codex, merged at `b8630762`) and the
