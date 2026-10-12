@@ -2958,7 +2958,8 @@ theorem provideService_arm {available : Env.Requirement} {key : ServiceKey} {val
     (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.provideService key value b)))
     (hpt : PointTyped root w p ty) (htie : w.serviceTy = root.sig.serviceTy)
-    (coverage : Row.Subset ty.requires available) :
+    (coverage : Row.Subset ty.requires available)
+    (saved : AmbientStackTyped root w available (scopeParams root.program p.path) p.params) :
     AmbientProg root w available (ty, available, available)
       (denoteR root.program (.provideService key value b) p) := by
   obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
@@ -2970,6 +2971,7 @@ theorem provideService_arm {available : Env.Requirement} {key : ServiceKey} {val
     available _ v hcheck henv evaluated htie (fun carrier declared => serviceTy_flat root key carrier declared)
     coverage (by rw [hfuel]; exact Nat.succ_ne_zero f) (fun bodyTy checked =>
       pointTyped_child hat rfl rfl checked henv hview hstack)
+    (ambientStackTyped_child (q := p.child 0) hat rfl rfl saved)
   rw [denoteR_provideService _ _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f), evaluated] at protocol ⊢
   exact protocol
 
@@ -3142,7 +3144,8 @@ variable {root : ProgramSource} {w : World} {p : Point} {ty : EffTy} {f : Nat}
 theorem provideContext_arm {available : Env.Requirement} {context : Term} {body : NativeEff}
     (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.provideContext context body)))
-    (hpt : PointTyped root w p ty) (coverage : Row.Subset ty.requires available) :
+    (hpt : PointTyped root w p ty) (coverage : Row.Subset ty.requires available)
+    (saved : AmbientStackTyped root w available (scopeParams root.program p.path) p.params) :
     AmbientProg root w available (ty, available, available)
       (denoteR root.program (.provideContext context body) p) := by
   obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
@@ -3171,7 +3174,8 @@ theorem provideContext_arm {available : Env.Requirement} {context : Term} {body 
     exact ambient_updateContext_provide root available available bodyTy.requires keys supplied
       given coverage (Row.subset_refl _)
       ⟨bodyTy.answer, bodyTy.error, Row.diff bodyTy.requires keys⟩
-      (.program (p.child 0)) child (.provide supplied.services) (fun _ => rfl)
+      (.program (p.child 0)) child
+      (ambientStackTyped_child (q := p.child 0) hat rfl rfl saved) (.provide supplied.services) (fun _ => rfl)
 end ContextSourceArm
 
 section ExitArm
@@ -3317,10 +3321,10 @@ theorem childDenotes_upto (root : ProgramSource) (hlayer : ProvideLayerArm root)
       | withFiber a => exact withFiber_arm hpos hat hqt htie coverage
       | «scoped» b => exact scoped_arm hq hat hqt coverage
       | acquireRelease a r => exact acquireRelease_arm hq hat hqt coverage
-      | provideContext context body => exact provideContext_arm hq hat hqt coverage
+      | provideContext context body => exact provideContext_arm hq hat hqt coverage savedParams
       | provideLayer l i b => exact hlayer hwf hmod f ih w htie q ty l i b hq hat hqt available coverage savedParams
       | service key => exact service_arm hpos htie hat hqt
-      | provideService key value b => exact provideService_arm hq hat hqt htie coverage
+      | provideService key value b => exact provideService_arm hq hat hqt htie coverage savedParams
       | catchIf test b h => exact catchIf_arm hq hat hqt htie (hch b 0 rfl) (hch h 1 rfl) coverage savedParams
       | select s d a0 a1 => exact select_arm hq hat hqt htie (hch a0 0 rfl) (hch a1 1 rfl) coverage savedParams
       | iterate cursorTy initial test step result body => exact iterate_arm hq hat hqt coverage

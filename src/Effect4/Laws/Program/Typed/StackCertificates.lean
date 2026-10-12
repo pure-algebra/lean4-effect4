@@ -98,4 +98,31 @@ theorem ambientPointTyped_widen {root : ProgramSource} {w : World}
     AmbientPointTyped root w later point type :=
   ⟨typed.1, ambientStackTyped_widen bound typed.2⟩
 
+/-- Region argument certificates use the same stack-fold world law.
+Consumer: actual protected-entry bodies captured before a later-world execution. -/
+theorem regionStackTyped_mono {source : ProgramSource} {before after : World}
+    (ordered : before.leHost after) {available : Env.Requirement} {region : Region}
+    (certificate : RegionStackTyped source before available region) :
+    RegionStackTyped source after available region :=
+  ambientStackTyped_mono ordered certificate
+
+/-- Region argument certificates retain their issued row when the actual available row grows.
+Consumer: the provider's installed map and captured body callback. -/
+theorem regionStackTyped_widen {source : ProgramSource} {world : World}
+    {before after : Env.Requirement} (inclusion : Row.Subset before after) {region : Region}
+    (certificate : RegionStackTyped source world before region) :
+    RegionStackTyped source world after region :=
+  ambientStackTyped_widen inclusion certificate
+
+/-- The actual merged context retains issued argument requirements.
+Consumer: BodyCoverage at the provider's installed-context entry. -/
+theorem regionStackTyped_installed {source : ProgramSource} {world : World}
+    {available : Env.Requirement} {region : Region} (previous supplied : Env.Ctx)
+    (covered : previous.Satisfies available)
+    (certificate : RegionStackTyped source world available region) :
+    RegionStackTyped source world (previous.merge supplied).keysRow region := by
+  have actual := Provision.satisfies_merge_left previous supplied available covered
+  have inclusion := (Provision.satisfies_iff_subset_keysRow (previous.merge supplied) available).mp actual
+  exact regionStackTyped_widen inclusion certificate
+
 end Effect4.Program.Typed
