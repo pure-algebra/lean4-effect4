@@ -1197,13 +1197,13 @@ Reactive Scheduling: Multi-fiber execution, decision steps, and configuration in
 | --- | --- | --- | --- | --- |
 | `machine-typed-not-halted` | inversion | proved | `Effect4.Program.Typed.machineTyped_not_halted` | — |
 | `flush-fair` | fundamentalProperty | proved | `Effect4.Machine.Scheduling.flush_fair` | — |
-| `step-loop-preserves` | preservation | modulo | `Effect4.Program.Typed.loop_preserves`, modulo `countdown_parks_positional`, `settle_callback`, `clause_closeScope`, `clause_scoped`, `foreignFinalizer_ambient` | `E4-TYPED-CE-012`, `E4-TYPED-CE-025` |
+| `step-loop-preserves` | preservation | modulo | `Effect4.Program.Typed.loop_preserves`, modulo `countdown_parks_positional`, `settle_callback`, `clause_closeScope`, `clause_scoped`, `foreignFinalizer_ambient` | `E4-TYPED-CE-025` |
 | `step-deliver-preserves` | preservation | modulo | `Effect4.Program.Typed.deliver_preserves`, modulo `countdown_parks_positional`, `settle_callback`, `clause_closeScope`, `clause_scoped`, `foreignFinalizer_ambient` | `E4-TYPED-CE-025` |
 | `store-frame-typing` | preservation | proved | `Effect4.Program.Typed.configTyped_frame` | — |
 | `waiter-completion-typing` | preservation | proved | `Effect4.Program.Typed.completionStrong_await` | — |
-| `step-wake-preserves` | preservation | proved | `Effect4.Program.Typed.wake_preserves` | `E4-TYPED-CE-026` |
+| `step-wake-preserves` | preservation | proved | `Effect4.Program.Typed.wake_preserves` | — |
 | `step-launch-preserves` | preservation | proved | `Effect4.Program.Typed.launch_preserves` | `E4-TYPED-CE-029` |
-| `step-registration-done-preserves` | preservation | proved | `Effect4.Program.Typed.registrationDone_preserves` | `E4-TYPED-CE-028` |
+| `step-registration-done-preserves` | preservation | proved | `Effect4.Program.Typed.registrationDone_preserves` | — |
 | `drivestate-lift` | simulation | proved | `Effect4.Machine.Lift.driveState_lift` | — |
 | `typed-state-admitted` | preservation | modulo | `Effect4.Program.Typed.reachable_typed`, modulo `countdown_parks_positional`, `settle_callback`, `clause_closeScope`, `clause_scoped`, `foreignFinalizer_ambient` | — |
 | `run-work-selection` | compatibility | proved | `Effect4.Run.nextControl_spec` | — |
@@ -1274,12 +1274,6 @@ Module: `Effect4.Laws.Program.Typed.Commands.Clauses.All` · Literature: WrightF
 ∀ (root : Effect4.Program.Typed.ProgramSource) (rootTy : Effect4.Program.EffTy)
   (id : Effect4.FiberId) (y : Bool),
   Effect4.Program.Typed.StepPreserves root rootTy (Effect4.Machine.Cmd.loop id y)
-```
-
-Register record `E4-TYPED-CE-012` (REPAIRED)
-
-```text
-| `E4-TYPED-CE-012` | REPAIRED 2026-10-01 (seat B, `074f03ff`); SEEDED 2026-10-01 | Saved stacks transport along world growth (`M6Ledger.step_loop` as declared) | `Test/Program/FramesNotKripke.lean`: `stackAccepts_not_mono`, `step_loop_refuted`, `hookLawsX_old`, `output_typed_one_world` (historical, over `Old.*`); `bad_not_kripke_initial`, `bad_not_kripke_by_transport`, `hookLawsX_refused` (the closed judgment refuses the frame); `output_not_kripke` (wrapping at the frame, refuted); `evaluate_keeps`, `step_loop_good`, `good_stack_transports` (green); at the union (seat I, `4a08dd1b`, `6a477f47`): `step_loop_refuted` compiles over `Old.*`, `step_loop_good` is restated over `I` (`good_config`, `afterGood_config`), the laws are `M3bWorld`'s (`M6Stack` deleted) | seat B: `FrameAccepts`'s arms and the hook protocols (`IteratorProtocol`, `LoopProtocol`, the async finalizer clause) quantified over later worlds; the walk restated over Kripke stacks; `savedOk_mono`, `stackAccepts_mono`, `typedProg_mono` in `M3bWorld` |
 ```
 
 Register record `E4-TYPED-CE-025` (REPAIRED)
@@ -1387,12 +1381,6 @@ Module: `Effect4.Laws.Program.Typed.Commands.Bookkeeping` · Literature: LynchVa
   Effect4.Program.Typed.StepPreserves root rootTy (Effect4.Machine.Cmd.wake list phase)
 ```
 
-Register record `E4-TYPED-CE-026` (REPAIRED)
-
-```text
-| `E4-TYPED-CE-026` | REPAIRED 2026-10-02 (row 134 (b), `a7294954`; general `wake_preserves`, `a8767806`; Codex lead control battery; `[propext, Quot.sound]`) | Historically `StepPreserves` for `wake` was false: a batch could owe a completion at the wrong waiter type. `WorldValid.waiters` now relates every pending/batched waiter to its cell's columns; the actual wake step is proved. | Historical refutation unchanged: `docs/research/2026-10-01-landing/seat-D3/probes/Wake.lean`, `wake_false`. Current controls: `Test/Program/WaiterColumn.lean`, `natWorld_refused`, `config_typed`, `result_typed`, `result_due`, `uncompleted_rejoins`, `repeated_wake_no_new_due`; missing cells are inert, Deferred stamps remain deliberately ignored. | row 134 (b); general invariant theorem plus bounded reference-machine controls, not progress or host/target execution |
-```
-
 ### step-launch-preserves
 
 The launch command keeps configuration typing when adding a fresh race entrant
@@ -1421,12 +1409,6 @@ Module: `Effect4.Laws.Program.Typed.Commands.Registration`
   (yielding : Bool),
   Effect4.Program.Typed.StepPreserves root rootTy
     (Effect4.Machine.Cmd.registrationDone raceId yielding)
-```
-
-Register record `E4-TYPED-CE-028` (REPAIRED)
-
-```text
-| `E4-TYPED-CE-028` | REPAIRED 2026-10-02 (row 134(d), `a7294954`; general `registrationDone_preserves` and Codex lead control battery; `[propext, Quot.sound]`) | Historically `StepPreserves` for `registrationDone` was false: a stored countdown observer on the race's key read the park's `void` record. Stored and queued observer exclusion now supports the unchanged command theorem. | Historical refutation unchanged: `docs/research/2026-10-01-landing/seat-D3/probes/Races.lean`, `Registration.registrationDone_false`. Current controls: `Test/Program/RegistrationColumn.lean`, `historical_scheduler_refused`, `historical_config_refused`, `only_countdown_removed`, `config_typed`, `result_typed`, `parked`, `registration_flag_cleared`, `historical_parked`. | row 134(d); the number-typed token is unchanged, only the countdown is removed in the positive control. General configuration preservation plus finite machine controls; no reachability, progress, fairness or host/target claim. |
 ```
 
 ### drivestate-lift

@@ -514,7 +514,7 @@ def registry : Registry where
     { id := "step-loop-preserves", concept := "reactive-scheduling", role := .preservation
       title := "The loop decision preserves configuration typing"
       pointer := .witness `Effect4.Program.Typed.loop_preserves
-      contestedBy := ["E4-TYPED-CE-012", "E4-TYPED-CE-025"]
+      contestedBy := ["E4-TYPED-CE-025"]
       literature := [
         { work := "WrightFelleisen1994", locator := "audit P36", relation := "adaptedResult" }
       ] },
@@ -537,7 +537,6 @@ def registry : Registry where
     { id := "step-wake-preserves", concept := "reactive-scheduling", role := .preservation
       title := "The wake command keeps configuration typing through its waiter-to-due transfer"
       pointer := .witness `Effect4.Program.Typed.wake_preserves
-      contestedBy := ["E4-TYPED-CE-026"]
       literature := [
         { work := "LynchVaandrager1995", locator := "§6 (invariants); audit C4", relation := "proofTechnique" }
       ] },
@@ -547,8 +546,7 @@ def registry : Registry where
       contestedBy := ["E4-TYPED-CE-029"] },
     { id := "step-registration-done-preserves", concept := "reactive-scheduling", role := .preservation
       title := "Completing race registration keeps configuration typing through immediate settlement or parking"
-      pointer := .witness `Effect4.Program.Typed.registrationDone_preserves
-      contestedBy := ["E4-TYPED-CE-028"] },
+      pointer := .witness `Effect4.Program.Typed.registrationDone_preserves },
     { id := "drivestate-lift", concept := "reactive-scheduling", role := .simulation
       title := "Command loop invariant lifting for driveState"
       pointer := .witness `Effect4.Machine.Lift.driveState_lift
