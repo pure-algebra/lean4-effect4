@@ -305,6 +305,11 @@ A program has folds, a journaled run with replay, and a printed image that reads
    - the algebra audit's slices B, C and G: the build as layers, the splice law, the run's forks;
    - flags by one table (row 337, point 8); a look's density; transpose in the order;
    - a module's cell drawn by its type; the span map as a source map (J8); interaction; termbox2.
+   - the design language of documents (row 354), in five slices (the
+     [design language note](research/2026-10-11-docs-design-language/README.md), section 7). D1
+     writes its authority in `docs/core/`. D2 gives one token source, status by shape and no
+     organic noise by default. D3 adds the figure and the motion value, D4 automata, and D5
+     Mermaid. Then the [view model](research/2026-10-11-view-model/README.md)'s R-V1 to R-V5.
    MCP and code mode: the note's slices M0 to M12, after the owner's six rulings.
 2. **The requirement statuses**: the prose of `docs/core/system-map.md` section 8 lags the
    measured table of `generated/semantics.md` (R10, R14); refresh it from the table.
@@ -342,6 +347,12 @@ owner's note of 2026-10-09: write a program, then watch its session answer calls
 - **The program's graph** (the design note, section 7): its marks, built as recommended, to
   confirm.
 - **MCP and code mode** (the MCP note, section 10): six rulings.
+- **The live view's three rulings** (LV-8, `docs/research/2026-10-10-live-view/LANDING.md`): code
+  lines keyed by text, causal columns in the batch, and the gutter's address reading.
+- **A third route to determinism** (the
+  [schedule independence note](research/2026-10-10-schedule-independence/README.md)). Do DB-03 and
+  `AGENTS.md` gain random descent? Does a determinism claim observe `obs` up to a renaming of
+  minted names? Its slices DET-1 and DET-2 wait on these.
 - **The type interface's three choices** (the type interface note, section 4):
   - print `int` and `number` as the aliases `Int` and `Num` now (row 309, point 5);
   - decode an exported entry's inputs, or print refined types as brands;
