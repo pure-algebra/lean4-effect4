@@ -107,6 +107,31 @@ theorem AdminCode.bind {p : RProgram} {k : ExitV → RProgram} (admin : AdminCod
   | store op k' notForeign _ ih => exact .store op _ notForeign ih
   | fiber op k' isAdmin _ ih => exact .fiber op _ isAdmin ih
 
+/-- A guard over administrative code is administrative. -/
+theorem AdminCode.guard (kind : GuardKind) {body : RProgram} (h : AdminCode body) :
+    AdminCode (guardR kind body) := by
+  refine .fiber _ _ rfl fun o => ?_
+  cases o with
+  | none => exact h.bind fun _ => .fiber _ _ rfl fun _ => .pure _
+  | some e => exact .pure e
+
+/-- Returning a constant exit after a success is administrative. -/
+theorem AdminCode.seq (ex : ExitV) (e : ExitV) : AdminCode (seqR (fun _ => .pure ex) e) := by
+  cases e <;> exact .pure _
+
+/-- A value-answering administrative operation is administrative code. -/
+theorem AdminCode.fiberVal (op : FiberOp) (h : op.answer = Val) (admin : adminOp op = true) :
+    AdminCode (fiberValR op h) :=
+  .fiber _ _ admin fun _ => .pure _
+
+/-- A restore over administrative code is administrative. -/
+theorem restoreR_admin {code : RProgram} (h : AdminCode code) (name : EffName) :
+    AdminCode (restoreR code name) := by
+  unfold restoreR
+  split
+  · exact (AdminCode.guard _ h).bind (AdminCode.seq _)
+  · exact .pure _
+
 /-- A race's settlement code is administrative: its cleanup region and the accepted exit. -/
 theorem denoteRaceSettle_admin (race : Nat) (cleanup : Bool) (ex : ExitV) :
     AdminCode (denoteRaceSettle race cleanup ex) := by

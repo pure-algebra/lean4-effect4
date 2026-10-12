@@ -722,6 +722,16 @@ theorem resumeCode_of_typed {root : ProgramSource} {w : World} {target : FiberId
     (admin : AdminCode code) : ResumeCode root w target token code :=
   fun ty declared row bit => ambientProgAt_of_admin root (typed ty declared) admin row bit
 
+/-- Row-indexed code is no race registration marker: that operation's pre is `False`. -/
+theorem raceRegistrationR_ambient {root : ProgramSource} {w : World} {input : AmbientEntryInput}
+    {position : AmbientPosition} {p : RProgram} (h : AmbientProgAt root w input position p) :
+    raceRegistrationR p = none := by
+  unfold raceRegistrationR
+  split
+  · cases h with
+    | fiber _ _ _ _ _ pre _ _ => cases pre
+  · rfl
+
 /-- A reply delivered to a fiber meets its saved stack at a row its context covers. -/
 def StackReplyAt (root : ProgramSource) (w : World) (m : RState) (fiber : RFiber) (replyTy : EffTy)
     (row : Env.Requirement) : Prop :=
