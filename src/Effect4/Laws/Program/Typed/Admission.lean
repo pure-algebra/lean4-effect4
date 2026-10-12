@@ -340,6 +340,19 @@ def CaptureTyped (root : ProgramSource) (w : World) (c : Capture) : Prop :=
     EnvTyped w (env ++ [a.answer]) c.env ∧ ServicesFit w c.ctx.services ∧
     StackTyped root w (scopeParams root.program c.path) c.params
 
+/-- A capture retains the issued callback input at its actual release child.
+Concept: residual-program-typing, R4 and R9; helper of the closed M5 source claim.
+Consumer: foreign scope registration and the ambient acquireIn body producer.
+The unit CaptureTyped judgment remains unchanged. -/
+def AmbientCapturePolicy (root : ProgramSource) (w : World) (capture : Capture) : Prop :=
+  ∀ later, w.leHost later → ∀ completed,
+    (∀ entry ∈ completed, ∃ declared, later.Γ entry.1 = some declared ∧ ExitOk later declared entry.2) →
+    ∀ exitValue, Fits later exitValue (.exitOf .unknown .unknown) → ∃ releaseType,
+      AmbientPointTyped root later capture.ctx.services.keysRow
+        ((Point.ofCapture capture completed).childWith 1 exitValue) releaseType ∧
+      releaseType.error.normalize = .never ∧
+      Row.Subset releaseType.requires capture.ctx.services.keysRow
+
 /-- A layer point is admitted (decisions row 186 (a)): its path addresses a layer the checker
 types, read through the expansion's rounds as `PointTyped` reads a program node and as the memo
 rows read the memo layer (`storePre`'s `memoGet` arm, `Typed/Residual.lean`); its lexical

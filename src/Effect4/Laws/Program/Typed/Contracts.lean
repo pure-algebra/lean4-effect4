@@ -67,27 +67,28 @@ inductive FrameArrow {Object Input : Type}
     (TypedProg : World → Input → Object → RProgram → Prop)
     (Exits : World → Input → Object → ExitV → Prop) (hooks : FrameProtocols Object)
     (inputOf : Object → ExitV → Input) (restoreInput : Ctx → Input)
+    (guardInput : GuardKind → Object → ExitV → Input)
     (w : World) : Object → Object → ScopeFrame → Prop
   | resume {tin tout : Object} (kind : GuardKind) (next : ExitV → RProgram)
       (run : ∀ w', w.leHost w' → ∀ ex, Exits w' (inputOf tin ex) tin ex → kind.hasExitArm ex = true →
-        TypedProg w' (inputOf tin ex) tout (next ex))
+        TypedProg w' (guardInput kind tin ex) tout (next ex))
       (skip : ∀ w', w.leHost w' → ∀ ex, Exits w' (inputOf tin ex) tin ex → kind.hasExitArm ex = false →
         Exits w' (inputOf tin ex) tout ex) :
-      FrameArrow TypedProg Exits hooks inputOf restoreInput w tin tout (.resume kind next)
+      FrameArrow TypedProg Exits hooks inputOf restoreInput guardInput w tin tout (.resume kind next)
   | answer {tin tout : Object} (next : ExitV → RProgram)
       (run : ∀ w', w.leHost w' → ∀ ex, Exits w' (inputOf tin ex) tin ex → TypedProg w' (inputOf tin ex) tout (next ex)) :
-      FrameArrow TypedProg Exits hooks inputOf restoreInput w tin tout (.answer next)
-  | restoreMask (ty : Object) (flag : Bool) : FrameArrow TypedProg Exits hooks inputOf restoreInput w ty ty (.restoreMask flag)
+      FrameArrow TypedProg Exits hooks inputOf restoreInput guardInput w tin tout (.answer next)
+  | restoreMask (ty : Object) (flag : Bool) : FrameArrow TypedProg Exits hooks inputOf restoreInput guardInput w ty ty (.restoreMask flag)
   | asyncFinalizer {tin tout : Object} (name : EffName)
       (protocol : ∀ w', w.leHost w' → hooks.asyncFinalizer w' tin tout name) :
-      FrameArrow TypedProg Exits hooks inputOf restoreInput w tin tout (.asyncFinalizer name)
-  | finalizerMask (ty : Object) (flag : Bool) : FrameArrow TypedProg Exits hooks inputOf restoreInput w ty ty (.finalizerMask flag)
+      FrameArrow TypedProg Exits hooks inputOf restoreInput guardInput w tin tout (.asyncFinalizer name)
+  | finalizerMask (ty : Object) (flag : Bool) : FrameArrow TypedProg Exits hooks inputOf restoreInput guardInput w ty ty (.finalizerMask flag)
   | iter {tin tout : Object} (name : EffName)
       (protocol : ∀ w', w.leHost w' → hooks.iterator w' tin tout name) :
-      FrameArrow TypedProg Exits hooks inputOf restoreInput w tin tout (.iter name)
+      FrameArrow TypedProg Exits hooks inputOf restoreInput guardInput w tin tout (.iter name)
   | loop {tin tout : Object} (name : EffName) (cursor : Val)
       (protocol : ∀ w', w.leHost w' → hooks.loop w' tin tout name cursor) :
-      FrameArrow TypedProg Exits hooks inputOf restoreInput w tin tout (.loop name cursor)
+      FrameArrow TypedProg Exits hooks inputOf restoreInput guardInput w tin tout (.loop name cursor)
   /-- The slot a `scoped` guard saves (decisions row 188 (a)): on every exit it runs that scope's
   exit callback, which `prepareScopedExitR` consumes by closing the scope and continuing with the
   exit the callback carries, or with that exit combined with a finalizer's failure
@@ -98,34 +99,34 @@ inductive FrameArrow {Object Input : Type}
       (hook : ∀ w', w.leHost w' → hooks.scopeExit w' prev sc)
       (widen : ∀ w', w.leHost w' → ∀ ex, Exits w' (inputOf tin ex) tin ex →
         Exits w' (restoreInput prev) tout ex) :
-      FrameArrow TypedProg Exits hooks inputOf restoreInput w tin tout (.resume (.onExit false) next)
+      FrameArrow TypedProg Exits hooks inputOf restoreInput guardInput w tin tout (.resume (.onExit false) next)
 
 /-- The existing type-only judgment is the unit-input instance of the same frame arrows.
 Typed context positions use `FrameArrow` with their actual continuation context. -/
 abbrev FrameAccepts (TypedProg : World → EffTy → RProgram → Prop)
     (Exits : World → EffTy → ExitV → Prop) (hooks : FrameProtocols) :=
   FrameArrow (fun w (_ : Unit) => TypedProg w) (fun w (_ : Unit) => Exits w)
-    hooks (fun _ _ => ()) (fun _ => ())
+    hooks (fun _ _ => ()) (fun _ => ()) (fun _ _ _ => ())
 
 namespace FrameAccepts
 variable {TP : World → EffTy → RProgram → Prop} {Ex : World → EffTy → ExitV → Prop}
   {hooks : FrameProtocols} {w : World}
 abbrev resume := @FrameArrow.resume EffTy Unit (fun w (_ : Unit) => TP w)
-  (fun w (_ : Unit) => Ex w) hooks (fun _ _ => ()) (fun _ => ()) w
+  (fun w (_ : Unit) => Ex w) hooks (fun _ _ => ()) (fun _ => ()) (fun _ _ _ => ()) w
 abbrev answer := @FrameArrow.answer EffTy Unit (fun w (_ : Unit) => TP w)
-  (fun w (_ : Unit) => Ex w) hooks (fun _ _ => ()) (fun _ => ()) w
+  (fun w (_ : Unit) => Ex w) hooks (fun _ _ => ()) (fun _ => ()) (fun _ _ _ => ()) w
 abbrev restoreMask := @FrameArrow.restoreMask EffTy Unit (fun w (_ : Unit) => TP w)
-  (fun w (_ : Unit) => Ex w) hooks (fun _ _ => ()) (fun _ => ()) w
+  (fun w (_ : Unit) => Ex w) hooks (fun _ _ => ()) (fun _ => ()) (fun _ _ _ => ()) w
 abbrev asyncFinalizer := @FrameArrow.asyncFinalizer EffTy Unit (fun w (_ : Unit) => TP w)
-  (fun w (_ : Unit) => Ex w) hooks (fun _ _ => ()) (fun _ => ()) w
+  (fun w (_ : Unit) => Ex w) hooks (fun _ _ => ()) (fun _ => ()) (fun _ _ _ => ()) w
 abbrev finalizerMask := @FrameArrow.finalizerMask EffTy Unit (fun w (_ : Unit) => TP w)
-  (fun w (_ : Unit) => Ex w) hooks (fun _ _ => ()) (fun _ => ()) w
+  (fun w (_ : Unit) => Ex w) hooks (fun _ _ => ()) (fun _ => ()) (fun _ _ _ => ()) w
 abbrev iter := @FrameArrow.iter EffTy Unit (fun w (_ : Unit) => TP w)
-  (fun w (_ : Unit) => Ex w) hooks (fun _ _ => ()) (fun _ => ()) w
+  (fun w (_ : Unit) => Ex w) hooks (fun _ _ => ()) (fun _ => ()) (fun _ _ _ => ()) w
 abbrev loop := @FrameArrow.loop EffTy Unit (fun w (_ : Unit) => TP w)
-  (fun w (_ : Unit) => Ex w) hooks (fun _ _ => ()) (fun _ => ()) w
+  (fun w (_ : Unit) => Ex w) hooks (fun _ _ => ()) (fun _ => ()) (fun _ _ _ => ()) w
 abbrev scopedResume := @FrameArrow.scopedResume EffTy Unit (fun w (_ : Unit) => TP w)
-  (fun w (_ : Unit) => Ex w) hooks (fun _ _ => ()) (fun _ => ()) w
+  (fun w (_ : Unit) => Ex w) hooks (fun _ _ => ()) (fun _ => ()) (fun _ _ _ => ()) w
 end FrameAccepts
 
 /-- The shared stack path retains the complete annotated position at each saved frame.
@@ -133,8 +134,9 @@ Consumer: the type-only stack and its ambient context instance. -/
 abbrev StackArrow {Object Input : Type}
     (TP : World → Input → Object → RProgram → Prop)
     (Ex : World → Input → Object → ExitV → Prop) (hooks : FrameProtocols Object)
-    (inputOf : Object → ExitV → Input) (restoreInput : Ctx → Input) (w : World) :=
-  Effect4.Contracts.Path (FrameArrow TP Ex hooks inputOf restoreInput w)
+    (inputOf : Object → ExitV → Input) (restoreInput : Ctx → Input)
+    (guardInput : GuardKind → Object → ExitV → Input) (w : World) :=
+  Effect4.Contracts.Path (FrameArrow TP Ex hooks inputOf restoreInput guardInput w)
 
 section
 variable (TypedProg : World → EffTy → RProgram → Prop)
@@ -159,15 +161,16 @@ def SavedArrow {Object Input : Type}
     (TP : World → Input → Object → RProgram → Prop)
     (Ex : World → Input → Object → ExitV → Prop) (hooks : FrameProtocols Object)
     (inputOf : Object → ExitV → Input) (restoreInput : Ctx → Input)
+    (guardInput : GuardKind → Object → ExitV → Input)
     (w : World) (input : Input) (final : Object) (saved : RSaved) : Prop :=
   ∃ tin, TP w input tin saved.current ∧
-    StackArrow TP Ex hooks inputOf restoreInput w tin final saved.stack ∧
+    StackArrow TP Ex hooks inputOf restoreInput guardInput w tin final saved.stack ∧
     InterruptProvenance saved
 
 /-- Current code and stack meet at the same existentially chosen intermediate type. -/
 abbrev SavedOk (w : World) (final : EffTy) (x : RSaved) : Prop :=
   SavedArrow (fun w (_ : Unit) => TypedProg w) (fun w (_ : Unit) => Exits w)
-    hooks (fun _ _ => ()) (fun _ => ()) w () final x
+    hooks (fun _ _ => ()) (fun _ => ()) (fun _ _ _ => ()) w () final x
 
 /-- A resume reads the target's own token declaration, not the fiber's final type. Active
 parking supplies the lookup in the future machine relation; absent/stale tokens impose no
@@ -201,9 +204,10 @@ theorem frameArrow_mono {Object Input : Type}
     {TP : World → Input → Object → RProgram → Prop}
     {Ex : World → Input → Object → ExitV → Prop} {hooks : FrameProtocols Object}
     {inputOf : Object → ExitV → Input} {restoreInput : Ctx → Input}
+    {guardInput : GuardKind → Object → ExitV → Input}
     {w w' : World} (ord : w.leHost w') {a b : Object} {f : ScopeFrame}
-    (h : FrameArrow TP Ex hooks inputOf restoreInput w a b f) :
-    FrameArrow TP Ex hooks inputOf restoreInput w' a b f := by
+    (h : FrameArrow TP Ex hooks inputOf restoreInput guardInput w a b f) :
+    FrameArrow TP Ex hooks inputOf restoreInput guardInput w' a b f := by
   cases h with
   | resume kind next run skip =>
     exact .resume kind next (fun w'' o ex hx hk => run w'' (leHost_trans _ _ _ ord o) ex hx hk)
@@ -240,10 +244,11 @@ theorem savedArrow_mono {Object Input : Type}
     {TP : World → Input → Object → RProgram → Prop}
     {Ex : World → Input → Object → ExitV → Prop} {hooks : FrameProtocols Object}
     {inputOf : Object → ExitV → Input} {restoreInput : Ctx → Input}
+    {guardInput : GuardKind → Object → ExitV → Input}
     (tp : ∀ {w w' input ty p}, w.leHost w' → TP w input ty p → TP w' input ty p)
     {w w' : World} {input : Input} {final : Object} {saved : RSaved} (ord : w.leHost w')
-    (h : SavedArrow TP Ex hooks inputOf restoreInput w input final saved) :
-    SavedArrow TP Ex hooks inputOf restoreInput w' input final saved := by
+    (h : SavedArrow TP Ex hooks inputOf restoreInput guardInput w input final saved) :
+    SavedArrow TP Ex hooks inputOf restoreInput guardInput w' input final saved := by
   obtain ⟨tin, code, stack, provenance⟩ := h
   exact ⟨tin, tp ord code, stack.map (fun _ _ _ edge => frameArrow_mono ord edge), provenance⟩
 

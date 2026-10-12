@@ -30,17 +30,19 @@ theorem ambientFiberPre_mono (root : ProgramSource) {w w' : World} (ord : w.leHo
       exact declared key member
   | case2 | case3 =>
     refine ⟨bodyTyped_mono ord pre.1, pre.2.1, pre.2.2.1, pre.2.2.2.1, ?_⟩
-    constructor
+    refine ⟨?_, ?_, ?_⟩
     · intro region same
       obtain ⟨intrinsic, typed, answer, error, covered, arguments⟩ := pre.2.2.2.2.1 region same
       exact ⟨intrinsic, regionTyped_mono ord typed, answer, error, covered,
         regionStackTyped_mono ord arguments⟩
     · intro update region flag same
-      obtain ⟨intrinsic, typed, answer, error, covered⟩ := pre.2.2.2.2.2 update region flag same
+      obtain ⟨intrinsic, typed, answer, error, covered⟩ := pre.2.2.2.2.2.1 update region flag same
       refine ⟨intrinsic, regionTyped_mono ord typed, answer, error, ?_⟩
       intro previous present
       have installed := covered previous present
       exact ⟨installed.1, installed.2.1, regionStackTyped_mono ord installed.2.2⟩
+    · intro point role
+      exact ambientStackTyped_mono ord (pre.2.2.2.2.2.2 point role)
   | case4 | case5 =>
     exact ⟨pointTyped_mono ord pre.1, pre.2⟩
   | case6 =>
@@ -61,6 +63,23 @@ theorem ambientFiberPre_mono (root : ProgramSource) {w w' : World} (ord : w.leHo
       notForkScoped notForkIn notGen notLoop notRace notFirst]
     exact fiberPre_mono root ord op cert pre
 
+/-- The same captured callback transports through the existing host order.
+Consumer: ambient foreign registration and captured cleanup activation. -/
+theorem ambientCapturePolicy_mono {root : ProgramSource} {w w' : World}
+    (ordered : w.leHost w') {capture : Capture} (policy : AmbientCapturePolicy root w capture) :
+    AmbientCapturePolicy root w' capture :=
+  fun later after completed typed exit member =>
+    policy later (leHost_trans _ _ _ ordered after) completed typed exit member
+
+/-- Store admission preserves its captured callback through the same world law.
+Consumer: ProgramArrow.mono's ambient instance. -/
+theorem ambientStorePre_mono (root : ProgramSource) {w w' : World} (ordered : w.leHost w')
+    (available : Env.Requirement) (op : SyncOp) (cert : StoreCert op)
+    (pre : ambientStorePre root w available op cert) :
+    ambientStorePre root w' available op cert :=
+  ⟨storePre_mono root ordered op cert pre.1,
+    fun scope capture identity => ambientCapturePolicy_mono ordered (pre.2 scope capture identity)⟩
+
 /-- The same program-arrow world law transports the ambient instance.
 Consumer: current, saved and queued ambient entry positions. -/
 theorem ambientProg_mono (root : ProgramSource) {w w' : World} {available : Env.Requirement}
@@ -69,7 +88,7 @@ theorem ambientProg_mono (root : ProgramSource) {w w' : World} {available : Env.
     AmbientProg root w' available position code := by
   refine ProgramArrow.mono ?_ ?_ ?_ ord typed
   · intro before after input op cert ordered pre
-    exact storePre_mono root ordered op cert pre
+    exact ambientStorePre_mono root ordered input op cert pre
   · intro before after input op cert ordered pre
     exact ambientFiberPre_mono root ordered input op cert pre
   · intro before after input position exit ordered payload
@@ -214,7 +233,8 @@ Consumer: actual parked and resumed code in the runtime typing relation. -/
 abbrev AmbientSaved (root : ProgramSource) (w : World) (available : Env.Requirement)
     (final : AmbientPosition) (saved : RSaved) : Prop :=
   Contracts.SavedArrow (AmbientProg root) AmbientExit (ambientFrameProtocols root)
-    ambientInput (fun ctx => ctx.services.keysRow) w available final saved
+    ambientInput (fun ctx => ctx.services.keysRow)
+    (fun _ position exit => ambientInput position exit) w available final saved
 
 /-- The existing scoped frame returns to services covered by its actual captured context.
 Consumer: scoped body delivery in the indexed typed-state preservation path. -/
@@ -225,7 +245,8 @@ theorem ambient_scoped_frame (root : ProgramSource) (w : World) (ty : EffTy)
     (hook : ∀ later, w.leHost later → (frameProtocols root).scopeExit later previous scope)
     (restored : Row.Subset restoredRow previous.services.keysRow) :
     Contracts.FrameArrow (AmbientProg root) AmbientExit (ambientFrameProtocols root)
-      ambientInput (fun ctx => ctx.services.keysRow) w (ty, bodyRow, bodyRow) (ty, restoredRow, restoredRow)
+      ambientInput (fun ctx => ctx.services.keysRow)
+    (fun _ position exit => ambientInput position exit) w (ty, bodyRow, bodyRow) (ty, restoredRow, restoredRow)
       (.resume (.onExit false) next) :=
   .scopedResume next previous scope shape hook (fun _ _ ex exit => ⟨exit.1, by cases ex <;> exact restored⟩)
 
@@ -287,17 +308,20 @@ theorem ambient_constructR_typed (root : ProgramSource) {w : World} {available :
     (fun _ _ _ h => nomatch h) () True.intro (fun later ordered completed post =>
       typed later ordered completed post) entry
 
-/-- The existing finalizer boundary retains its cleanup's actual common service guarantee.
-Consumer: source onExit and the provider's actual restoring setter adapter. -/
-theorem ambient_finalizer_typed (root : ProgramSource) {w : World}
-    {available guaranteed : Env.Requirement} {ty cleanupType : EffTy} {cleanup : RProgram}
+/-- Distinct cleanup guarantees compose through the existing finalizer boundary.
+Concept: residual-program-typing, R4 and R9; helper of the closed M5 source claim.
+Consumer: captured release restoration; entry interruption retains the failure guarantee.
+This law establishes no machine preservation or external observation. -/
+theorem ambient_finalizer_guarantees (root : ProgramSource) {w : World}
+    {available success failure : Env.Requirement} {ty cleanupType : EffTy} {cleanup : RProgram}
     (bodyExit : ExitV) (payload : ExitOk w ty bodyExit)
     (errorBound : Ty.subN cleanupType.error ty.error = true)
-    (typed : AmbientProg root w available (cleanupType, guaranteed, guaranteed) cleanup) :
-    AmbientProg root w available (ty, guaranteed, guaranteed) (finalizerR bodyExit cleanup) := by
+    (kept : Row.Subset failure success)
+    (typed : AmbientProg root w available (cleanupType, success, failure) cleanup) :
+    AmbientProg root w available (ty, success, failure) (finalizerR bodyExit cleanup) := by
   have entry := ambient_entry typed
   have work : ∀ originalExit, ExitOk w ty originalExit → AmbientProg root w available
-      ((⟨cleanupType.answer, ty.error, cleanupType.requires⟩ : EffTy), guaranteed, guaranteed)
+      ((⟨cleanupType.answer, ty.error, cleanupType.requires⟩ : EffTy), success, failure)
       (match originalExit with
       | .success _ => cleanup
       | .failure _ => (guardR .onFailure cleanup).bind fun
@@ -306,7 +330,7 @@ theorem ambient_finalizer_typed (root : ProgramSource) {w : World}
     intro originalExit originalPayload
     cases originalExit with
     | success value =>
-      exact ambientProg_widen root (before := (cleanupType, guaranteed, guaranteed))
+      exact ambientProg_widen root (before := (cleanupType, success, failure))
         (Ty.subN_refl _) errorBound (Row.subset_refl _) (Row.subset_refl _) typed
     | failure cause =>
       refine ambient_guardBind root typed (fun later ordered exit arm clean => ?_)
@@ -314,7 +338,7 @@ theorem ambient_finalizer_typed (root : ProgramSource) {w : World}
       · cases exit with
         | success value => exact Bool.noConfusion arm
         | failure cleanupCause =>
-          refine .pure ⟨?_, Row.subset_refl guaranteed⟩ (Row.subset_refl guaranteed)
+          refine .pure ⟨?_, Row.subset_refl failure⟩ (Row.subset_refl failure)
           exact exitOk_restore (strongExit_mono _ _ _ _ ordered originalPayload)
             (exitOk_failure_of_errorN errorBound clean.1)
       · cases exit with
@@ -326,27 +350,48 @@ theorem ambient_finalizer_typed (root : ProgramSource) {w : World}
     (fun later ordered exit clean absent => ?_) entry
   · cases exit with
     | success value =>
-      refine .finishFinalizer ⟨strongExit_mono _ _ _ _ ordered payload, ?_⟩ (Row.subset_refl _)
-      cases bodyExit <;> exact Row.subset_refl _
+      refine .finishFinalizer ⟨strongExit_mono _ _ _ _ ordered payload, ?_⟩ kept
+      cases bodyExit with
+      | success _ => exact Row.subset_refl _
+      | failure _ => exact kept
     | failure cause => exact Bool.noConfusion arm
   · cases exit with
     | success value => exact Bool.noConfusion absent
     | failure cause =>
-      exact ⟨exitOk_failure_of_errorN (Ty.subN_refl _) clean.1, Row.subset_refl guaranteed⟩
+      exact ⟨exitOk_failure_of_errorN (Ty.subN_refl _) clean.1, Row.subset_refl failure⟩
 
-/-- The real restoring finalizer returns the saved body exit with its common service guarantee.
-Consumer: provideContext's compiled restoring region and the source denotation adapter. -/
+/-- The common-row finalizer law is an instance of the distinct-guarantee law.
+Consumer: source onExit and existing provider callbacks. -/
+theorem ambient_finalizer_typed (root : ProgramSource) {w : World}
+    {available guaranteed : Env.Requirement} {ty cleanupType : EffTy} {cleanup : RProgram}
+    (bodyExit : ExitV) (payload : ExitOk w ty bodyExit)
+    (errorBound : Ty.subN cleanupType.error ty.error = true)
+    (typed : AmbientProg root w available (cleanupType, guaranteed, guaranteed) cleanup) :
+    AmbientProg root w available (ty, guaranteed, guaranteed) (finalizerR bodyExit cleanup) :=
+  ambient_finalizer_guarantees root bodyExit payload errorBound (Row.subset_refl _) typed
+
+/-- The restoring setter promises its actual map on success and its entry bound on failure.
+Consumer: captured release restoration through the existing finalizer program. -/
+theorem ambient_restore_finalizer_guarantees (root : ProgramSource) {w : World} (available failure : Env.Requirement)
+    (previous : Ctx) (services : ServicesFit w previous.services)
+    (entry : Row.Subset failure available) (restored : Row.Subset failure previous.services.keysRow)
+    (ty : EffTy) (bodyExit : ExitV) (payload : ExitOk w ty bodyExit) :
+    AmbientProg root w available (ty, previous.services.keysRow, failure)
+      (finalizerR bodyExit (fiberValR (.setContext previous) rfl)) :=
+  ambient_finalizer_guarantees root bodyExit payload (Bounds.subN_never _) restored
+    (ambient_setContext_guarantees root w available failure previous services entry restored)
+
+/-- The common-row restoring finalizer retains its original statement.
+Consumer: provideContext's source denotation adapter. -/
 theorem ambient_restore_finalizer (root : ProgramSource) {w : World} (available guaranteed : Env.Requirement)
     (previous : Ctx) (services : ServicesFit w previous.services)
     (entry : Row.Subset guaranteed available) (restored : Row.Subset guaranteed previous.services.keysRow)
     (ty : EffTy) (bodyExit : ExitV) (payload : ExitOk w ty bodyExit) :
     AmbientProg root w available (ty, guaranteed, guaranteed)
-      (finalizerR bodyExit (fiberValR (.setContext previous) rfl)) := by
-  have cleanup := ambient_setContext_guarantees root w available guaranteed previous services entry restored
-  exact ambient_finalizer_typed root bodyExit payload (Bounds.subN_never _)
-    (ambientProg_widen root (before := (EffTy.pure .unit, previous.services.keysRow, guaranteed))
-      (after := (EffTy.pure .unit, guaranteed, guaranteed))
-      (Ty.subN_refl _) (Ty.subN_refl _) restored (Row.subset_refl _) cleanup)
+      (finalizerR bodyExit (fiberValR (.setContext previous) rfl)) :=
+  ambientProg_widen root (before := (ty, previous.services.keysRow, guaranteed))
+    (Ty.subN_refl _) (Ty.subN_refl _) restored (Row.subset_refl _)
+    (ambient_restore_finalizer_guarantees root available guaranteed previous services entry restored ty bodyExit payload)
 
 /-- The existing onExit region preserves body and cleanup membership and their actual common row.
 Consumer: the source onExit arm in the ambient M5 induction. -/
@@ -370,37 +415,71 @@ theorem ambient_onExit_typed (root : ProgramSource) {w : World}
   exact ambient_finalizer_typed root exit (exitOk_widen answerBound bodyErrorBound payload.1)
     cleanupErrorBound (finalizer later ordered exit payload.1)
 
-/-- The existing onExit region runs the actual captured-context restoring finalizer.
-Consumer: provideContext's bodyThen region and the source admission-to-execution adapter. -/
+/-- Captured body services and restored services need no inclusion between their full rows.
+Consumer: Body.release_typed's ambient source adapter.
+The failure guarantee is covered at both the entry and restoration cuts. -/
+theorem ambient_onExit_restore_guarantees (root : ProgramSource) {w : World}
+    {available bodyRow failure : Env.Requirement} {ty : EffTy} {body : RProgram}
+    (previous : Ctx) (services : ServicesFit w previous.services)
+    (entry : Row.Subset failure bodyRow) (restored : Row.Subset failure previous.services.keysRow)
+    (typed : AmbientProg root w available (ty, bodyRow, bodyRow) body) :
+    AmbientProg root w available (ty, previous.services.keysRow, failure)
+      (onExitR body fun _ => fiberValR (.setContext previous) rfl) := by
+  unfold onExitR
+  refine ambient_guardBind root typed (fun later ordered exit _ payload => ?_)
+    (fun _ _ exit _ absent => by cases exit <;> exact Bool.noConfusion absent)
+    (Row.subset_trans entry (ambient_entry typed))
+  have selected : ambientInput (ty, bodyRow, bodyRow) exit = bodyRow := by cases exit <;> rfl
+  rw [selected]
+  exact ambient_restore_finalizer_guarantees root bodyRow failure previous (servicesFit_map ordered.1.2.1 ordered.1.2.2.1 ordered.1.2.2.2.1 ordered.2 ordered.1.1.2
+      (serviceTy_of_le ordered.1) services)
+    entry restored ty exit payload.1
+
+/-- The common-row restoring region retains its original statement.
+Consumer: provider bodies and existing source callbacks. -/
 theorem ambient_onExit_restore (root : ProgramSource) {w : World}
     {available guaranteed : Env.Requirement} {ty : EffTy} {body : RProgram}
     (previous : Ctx) (services : ServicesFit w previous.services)
     (restored : Row.Subset guaranteed previous.services.keysRow)
     (typed : AmbientProg root w available (ty, guaranteed, guaranteed) body) :
     AmbientProg root w available (ty, guaranteed, guaranteed)
-      (onExitR body fun _ => fiberValR (.setContext previous) rfl) := by
-  unfold onExitR
-  refine ambient_guardBind root typed (fun later ordered exit _ payload => ?_)
-    (fun _ _ exit _ absent => by cases exit <;> exact Bool.noConfusion absent) (ambient_entry typed)
-  have selected : ambientInput (ty, guaranteed, guaranteed) exit = guaranteed := by
-    cases exit <;> rfl
-  rw [selected]
-  have members : ServicesFit later previous.services :=
-    servicesFit_map ordered.1.2.1 ordered.1.2.2.1 ordered.1.2.2.2.1 ordered.2 ordered.1.1.2
-      (serviceTy_of_le ordered.1) services
-  exact ambient_restore_finalizer root guaranteed guaranteed previous members
-    (Row.subset_refl _) restored ty exit payload.1
+      (onExitR body fun _ => fiberValR (.setContext previous) rfl) :=
+  ambientProg_widen root (before := (ty, previous.services.keysRow, guaranteed))
+    (Ty.subN_refl _) (Ty.subN_refl _) restored (Row.subset_refl _)
+    (ambient_onExit_restore_guarantees root previous services (Row.subset_refl _) restored typed)
 
 /-- A typed store leaf preserves the available context row.
 The existing unit store certificate and answer proof remain unchanged.
 Consumer: the actual synchronous source-operation arm of M5. -/
 theorem ambient_storeR_of_typed (root : ProgramSource) {w : World} {ty : EffTy}
-    (available : Env.Requirement) {op : SyncOp} (typed : TypedProg root w ty (storeR op)) :
+    (available : Env.Requirement) {op : SyncOp}
+    (notForeign : ∀ scope capture, op ≠ .scopeAdd scope (.foreign capture))
+    (typed : TypedProg root w ty (storeR op)) :
     AmbientProg root w available (ty, available, available) (storeR op) := by
   obtain ⟨cert, pre, next⟩ := TypedProg.store_inv typed
-  refine .store cert pre ?_ (Row.subset_refl _)
+  refine .store cert ⟨pre, fun scope capture identity =>
+    False.elim (notForeign scope capture identity)⟩ ?_ (Row.subset_refl _)
   intro later ordered answer post
   exact .pure ⟨TypedProg.pure_inv (next later ordered answer post), Row.subset_refl _⟩ (Row.subset_refl _)
+
+/-- The actual foreign registration retains its captured callback and answers at the existing store columns.
+Consumer: the ambient acquireIn body, including the already-closed scope branch. -/
+theorem ambient_foreign_registration_typed (root : ProgramSource) {w : World}
+    (available : Env.Requirement) (scope : Nat) (capture : Capture)
+    (live : ScopeLive w scope) (typed : CaptureTyped root w capture)
+    (policy : AmbientCapturePolicy root w capture) :
+    AmbientProg root w available
+      ((⟨.union .unit (.exitOf .unknown .unknown), .never, Env.Requirement.empty⟩ : EffTy),
+        available, available) (storeR (.scopeAdd scope (.foreign capture))) := by
+  refine .store () ⟨⟨live, typed⟩, ?_⟩ ?_ (Row.subset_refl _)
+  · intro actualScope actualCapture identity
+    cases identity
+    exact policy
+  · intro later _ answer post
+    refine .pure ⟨⟨?_, True.intro⟩, Row.subset_refl _⟩ (Row.subset_refl _)
+    rcases post with rfl | ⟨exit, rfl, member⟩
+    · exact Or.inl True.intro
+    · exact Or.inr member
 
 /-- A terminal fiber leaf reuses its existing unit certificate and actual answer proof.
 The producer supplies ambient preconditions and the actual unchanged entry row.
@@ -479,10 +558,10 @@ theorem ambient_updateContext_provide (root : ProgramSource) {w : World}
       refine .fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
         (fun _ _ _ h => nomatch h) cut ?_ ?_ entry
       · refine ⟨.contextEntry _ body flag intrinsic cut region (Ty.subN_refl _) (Ty.subN_refl _)
-          updateTyped, Row.subset_refl _, ?_, ?_, ?_, ?_⟩
+          updateTyped, Row.subset_refl _, ?_, ?_, ?_, ?_, ?_⟩
         · intro point ctx impossible
           cases impossible
-        · intro point previous impossible
+        · intro flag point previous impossible
           cases impossible
         · intro actual impossible
           cases impossible
@@ -501,6 +580,11 @@ theorem ambient_updateContext_provide (root : ProgramSource) {w : World}
           by_cases suppliedKey : key ∈ keys
           · exact fromGiven key suppliedKey
           · exact fromBefore key ((Row.mem_diff key required keys).mpr ⟨member, suppliedKey⟩)
+        · intro point role
+          rcases role with impossible | ⟨ctx, impossible | impossible⟩
+          · cases impossible
+          · cases impossible
+          · cases impossible
       · intro after _ delivered post
         refine .pure ⟨post, ?_⟩ entry
         cases delivered <;> exact entry

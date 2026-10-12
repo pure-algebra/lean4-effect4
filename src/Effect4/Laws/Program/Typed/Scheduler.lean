@@ -300,44 +300,47 @@ abbrev RegistrationArrow :=
 def HostEdgeAt {Object Input : Type}
     (TP : World → Input → Object → RProgram → Prop)
     (Ex : World → Input → Object → ExitV → Prop) (hooks : Contracts.FrameProtocols Object)
-    (inputOf : Object → ExitV → Input) (restoreInput : Ctx → Input) (typeOf : Object → EffTy)
+    (inputOf : Object → ExitV → Input) (restoreInput : Ctx → Input)
+    (guardInput : GuardKind → Object → ExitV → Input) (typeOf : Object → EffTy)
     (w : World) (m : RState) (host : FiberId) (tin tout : Object) (frame : ScopeFrame) : Prop :=
-  Contracts.FrameArrow TP Ex hooks inputOf restoreInput w tin tout frame ∨
+  Contracts.FrameArrow TP Ex hooks inputOf restoreInput guardInput w tin tout frame ∨
     RegistrationArrowAt Ex inputOf typeOf w m host tin tout frame
 
 /-- The original type-only host edge specializes the shared annotated edge. -/
 abbrev HostEdge (root : ProgramSource) :=
   HostEdgeAt (fun w (_ : Unit) => TypedProg root w) (fun w (_ : Unit) => ExitOk w)
-    (frameProtocols root) (fun _ _ => ()) (fun _ => ()) id
+    (frameProtocols root) (fun _ _ => ()) (fun _ => ()) (fun _ _ _ => ()) id
 
 /-- A host's saved stack is the existing ordered path over its complete edge positions. -/
 abbrev HostStackAt {Object Input : Type}
     (TP : World → Input → Object → RProgram → Prop)
     (Ex : World → Input → Object → ExitV → Prop) (hooks : Contracts.FrameProtocols Object)
-    (inputOf : Object → ExitV → Input) (restoreInput : Ctx → Input) (typeOf : Object → EffTy)
+    (inputOf : Object → ExitV → Input) (restoreInput : Ctx → Input)
+    (guardInput : GuardKind → Object → ExitV → Input) (typeOf : Object → EffTy)
     (w : World) (m : RState) (host : FiberId) :=
-  Effect4.Contracts.Path (HostEdgeAt TP Ex hooks inputOf restoreInput typeOf w m host)
+  Effect4.Contracts.Path (HostEdgeAt TP Ex hooks inputOf restoreInput guardInput typeOf w m host)
 
 /-- The original type-only stack is the unit-input instance of the same path. -/
 abbrev HostStack (root : ProgramSource) :=
   HostStackAt (fun w (_ : Unit) => TypedProg root w) (fun w (_ : Unit) => ExitOk w)
-    (frameProtocols root) (fun _ _ => ()) (fun _ => ()) id
+    (frameProtocols root) (fun _ _ => ()) (fun _ => ()) (fun _ _ _ => ()) id
 
 /-- Current code and the correlated host path meet at the same complete position. -/
 def CodeArrow {Object Input : Type}
     (TP : World → Input → Object → RProgram → Prop)
     (Ex : World → Input → Object → ExitV → Prop) (hooks : Contracts.FrameProtocols Object)
-    (inputOf : Object → ExitV → Input) (restoreInput : Ctx → Input) (typeOf : Object → EffTy)
+    (inputOf : Object → ExitV → Input) (restoreInput : Ctx → Input)
+    (guardInput : GuardKind → Object → ExitV → Input) (typeOf : Object → EffTy)
     (w : World) (m : RState) (host : FiberId) (input : Input) (final : Object) (saved : RSaved) : Prop :=
   ∃ tin, TP w input tin saved.current ∧
-    HostStackAt TP Ex hooks inputOf restoreInput typeOf w m host tin final saved.stack ∧
+    HostStackAt TP Ex hooks inputOf restoreInput guardInput typeOf w m host tin final saved.stack ∧
     Contracts.InterruptProvenance saved
 
 /-- The original type-only current-code judgment is the unit-input shared instance. -/
 abbrev CodeOk (root : ProgramSource) (w : World) (m : RState) (host : FiberId) (final : EffTy)
     (x : RSaved) : Prop :=
   CodeArrow (fun w (_ : Unit) => TypedProg root w) (fun w (_ : Unit) => ExitOk w)
-    (frameProtocols root) (fun _ _ => ()) (fun _ => ()) id w m host () final x
+    (frameProtocols root) (fun _ _ => ()) (fun _ => ()) (fun _ _ _ => ()) id w m host () final x
 
 /-- Actual context coverage indexes the ambient instance at the current read cut.
 Membership remains in the existing ServiceOk field, separately from these row bounds. -/
@@ -345,7 +348,7 @@ def AmbientCodeOk (root : ProgramSource) (w : World) (m : RState) (fiber : RFibe
     (final : EffTy) : Prop :=
   ∃ available, fiber.context.services.Satisfies available ∧
     CodeArrow (AmbientProg root) AmbientExit (ambientFrameProtocols root) ambientInput
-      (fun ctx => ctx.services.keysRow) AmbientPosition.type w m fiber.id available
+      (fun ctx => ctx.services.keysRow) (fun _ position exit => ambientInput position exit) AmbientPosition.type w m fiber.id available
       (final, Env.Requirement.empty, Env.Requirement.empty) fiber.frame
 
 /-- An actual readable ambient fiber covers its current interruption guarantee.
@@ -429,11 +432,12 @@ Consumer: unit and ambient current-code world transport. -/
 theorem hostStackAt_mono {Object Input : Type}
     {TP : World → Input → Object → RProgram → Prop}
     {Ex : World → Input → Object → ExitV → Prop} {hooks : Contracts.FrameProtocols Object}
-    {inputOf : Object → ExitV → Input} {restoreInput : Ctx → Input} {typeOf : Object → EffTy}
+    {inputOf : Object → ExitV → Input} {restoreInput : Ctx → Input}
+    {guardInput : GuardKind → Object → ExitV → Input} {typeOf : Object → EffTy}
     {w w' : World} {m : RState} {host : FiberId} {tin final : Object} {stack : List ScopeFrame}
     (ord : w.leHost w')
-    (h : HostStackAt TP Ex hooks inputOf restoreInput typeOf w m host tin final stack) :
-    HostStackAt TP Ex hooks inputOf restoreInput typeOf w' m host tin final stack :=
+    (h : HostStackAt TP Ex hooks inputOf restoreInput guardInput typeOf w m host tin final stack) :
+    HostStackAt TP Ex hooks inputOf restoreInput guardInput typeOf w' m host tin final stack :=
   h.map fun _ _ _ edge => edge.imp (Contracts.frameArrow_mono ord) (registrationArrowAt_mono ord)
 
 /-- The current entry and the complete host path transport through the same shared laws.
@@ -441,12 +445,13 @@ Consumer: CodeOk and AmbientCodeOk at the existing machine's world-growth cuts. 
 theorem CodeArrow.mono {Object Input : Type}
     {TP : World → Input → Object → RProgram → Prop}
     {Ex : World → Input → Object → ExitV → Prop} {hooks : Contracts.FrameProtocols Object}
-    {inputOf : Object → ExitV → Input} {restoreInput : Ctx → Input} {typeOf : Object → EffTy}
+    {inputOf : Object → ExitV → Input} {restoreInput : Ctx → Input}
+    {guardInput : GuardKind → Object → ExitV → Input} {typeOf : Object → EffTy}
     (tp : ∀ {w w' input ty code}, w.leHost w' → TP w input ty code → TP w' input ty code)
     {w w' : World} {m : RState} {host : FiberId} {input : Input} {final : Object} {saved : RSaved}
     (ord : w.leHost w')
-    (typed : CodeArrow TP Ex hooks inputOf restoreInput typeOf w m host input final saved) :
-    CodeArrow TP Ex hooks inputOf restoreInput typeOf w' m host input final saved := by
+    (typed : CodeArrow TP Ex hooks inputOf restoreInput guardInput typeOf w m host input final saved) :
+    CodeArrow TP Ex hooks inputOf restoreInput guardInput typeOf w' m host input final saved := by
   obtain ⟨tin, code, stack, provenance⟩ := typed
   exact ⟨tin, tp ord code, hostStackAt_mono ord stack, provenance⟩
 
@@ -510,24 +515,26 @@ def PositionEdgeAt {Object Input : Type}
     (TP : World → Input → Object → RProgram → Prop)
     (Ex : World → Input → Object → ExitV → Prop) (hooks : Contracts.FrameProtocols Object)
     (inputOf : Object → ExitV → Input) (restoreInput : Ctx → Input)
+    (guardInput : GuardKind → Object → ExitV → Input)
     (w : World) (tin tout : Object) (frame : ScopeFrame) : Prop :=
-  Contracts.FrameArrow TP Ex hooks inputOf restoreInput w tin tout frame ∨
+  Contracts.FrameArrow TP Ex hooks inputOf restoreInput guardInput w tin tout frame ∨
     PositionArrowAt Ex inputOf w tin tout frame
 
 /-- The generated saved-position clause retains the same shared annotated path. -/
 abbrev PositionStackAt {Object Input : Type}
     (TP : World → Input → Object → RProgram → Prop)
     (Ex : World → Input → Object → ExitV → Prop) (hooks : Contracts.FrameProtocols Object)
-    (inputOf : Object → ExitV → Input) (restoreInput : Ctx → Input) (w : World) :=
-  Effect4.Contracts.Path (PositionEdgeAt TP Ex hooks inputOf restoreInput w)
+    (inputOf : Object → ExitV → Input) (restoreInput : Ctx → Input)
+    (guardInput : GuardKind → Object → ExitV → Input) (w : World) :=
+  Effect4.Contracts.Path (PositionEdgeAt TP Ex hooks inputOf restoreInput guardInput w)
 
 abbrev PositionEdge (root : ProgramSource) :=
   PositionEdgeAt (fun w (_ : Unit) => TypedProg root w) (fun w (_ : Unit) => ExitOk w)
-    (frameProtocols root) (fun _ _ => ()) (fun _ => ())
+    (frameProtocols root) (fun _ _ => ()) (fun _ => ()) (fun _ _ _ => ())
 
 abbrev PositionStack (root : ProgramSource) :=
   PositionStackAt (fun w (_ : Unit) => TypedProg root w) (fun w (_ : Unit) => ExitOk w)
-    (frameProtocols root) (fun _ _ => ()) (fun _ => ())
+    (frameProtocols root) (fun _ _ => ()) (fun _ => ()) (fun _ _ _ => ())
 
 theorem positionArrow_mono {w w' : World} {a b : EffTy} {frame : ScopeFrame} (ord : w.leHost w')
     (h : PositionArrow w a b frame) : PositionArrow w' a b frame := by
