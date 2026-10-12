@@ -30,12 +30,6 @@ theorem clause_snapshotChildren (root : ProgramSource) (rootTy : EffTy) :
       subst pre
       exact snapshotChildren_answers root w f.children declared))
 
-/-- A context whose services fit is live: its value's handles are its service values'
-(`Val.handles_context`), each live by `ServicesFit`'s second half (finding F-CTX). -/
-theorem live_context_of_servicesFit {w : World} {ctx : Ctx} (h : ServicesFit w ctx.services) :
-    Live w (Val.context ctx) := fun x hx =>
-  flatMap_live h.2 x (by rw [Val.handles_context] at hx; exact hx)
-
 /-- **`getContext`** (`FiberAction.getContext`): the fiber's context, whose services fit by `J`
 (`RunFiberOk`'s service clause) and which is therefore live, answered as a context handle
 (`getContext_answers`). -/

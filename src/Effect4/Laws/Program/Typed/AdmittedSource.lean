@@ -26,7 +26,7 @@ these statements only through tests until the slice's step 3 (`Author.build` bui
 `⟨table, []⟩`). It does not establish code generation at `app.signature` (step 4), M7 at a
 non-empty row table (DI-57, R6), or structured service carriers (decisions row 118). It unlocks
 R1's "every milestone statement takes the signature" for the API's admission, and M6 for every
-admitted program with no premise.
+admitted program with row 117's closed requirement row.
 -/
 
 set_option autoImplicit false
@@ -50,12 +50,13 @@ def _root_.Effect4.Program.AdmittedProgram.source {program : NativeEff} {app : S
   { program, table := app.rows, services := app.services, lawful := lawfulSig_of_admitted a }
 
 /-- **M6 for a program the API admits**, at any signature: every machine its admitted tapes reach
-is typed. -/
+is typed when its requirement row is closed at the load (decisions row 117). -/
 theorem reachable_typed_admitted {program : NativeEff} {app : SigApp}
     (a : AdmittedProgram program app) (fuel : Nat) (tape : List Api.Decision)
+    (closedRow : a.ty.requires = Env.Requirement.empty)
     (admitted : AdmittedTape a.source a.ty fuel tape) :
     ∃ w, MachineTyped a.source a.ty w (replayR program fuel tape).machine :=
-  reachable_typed a.source a.ty fuel a.typed tape admitted
+  reachable_typed a.source a.ty fuel a.typed closedRow tape admitted
 
 /-- **M7 for a program the API admits** at an empty row table (R9 at the API's admission, within
 `M7Fragment`): with a closed requirement row and an answer-free tape, its replay's exits fit, its

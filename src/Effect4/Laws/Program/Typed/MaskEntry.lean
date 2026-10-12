@@ -157,6 +157,86 @@ theorem ambient_restore_finalizer_protected (root : ProgramSource) {world : Type
     | failure cause =>
       exact ⟨exitOk_failure_of_errorN (Ty.subN_refl _) clean.1, Row.subset_refl _⟩
 
+/-- The actual loop top can deliver a deferred interruption under a false physical mask.
+Consumer: current, saved and queued ambient input selection. -/
+def ambientEntryMode (saved : RSaved) : Bool :=
+  saved.interruptible || saved.deferredInterrupt
+
+/-- The effective protected input follows both physical fields of the actual saved frame. -/
+theorem ambientEntryMode_at (available : Env.Requirement) (saved : RSaved) :
+    AmbientEntryAt (available, ambientEntryMode saved) saved := by
+  intro protectedEntry
+  exact (Bool.or_eq_false_iff.mp protectedEntry).1
+
+/-- A false onExit callback retains any already-deferred interruption.
+Consumer: the actual saved-callback entry adapter, after the loop top has cleared the flag. -/
+theorem ambientEntryMode_false_pop (interp : RInterp) (exit : ExitV)
+    (next : ExitV → RProgram) (rest : List ScopeFrame) (saved : RSaved) :
+    ambientEntryMode (popR interp exit (.resume (.onExit false) next :: rest) saved).1 =
+      saved.deferredInterrupt := by
+  cases exit <;> rfl
+
+/-- World growth retains the protected program certificate without changing its input fields.
+Consumer: the ambient current and queued-code world adapters. -/
+theorem ambientProgAt_mono (root : ProgramSource) {world later : Typed.World}
+    (ordered : world.leHost later) {input : AmbientEntryInput} {position : AmbientPosition}
+    {code : RProgram} (typed : AmbientProgAt root world input position code) :
+    AmbientProgAt root later input position code := by
+  refine ProgramArrow.mono ?_ ?_ ?_ ordered typed
+  · intro before after entry op cert order pre
+    exact ambientStorePre_mono root order entry.1 op cert pre
+  · intro before after entry op cert order pre
+    exact ambientFiberPre_mono root order entry.1 op cert pre
+  · intro before after entry result exit order payload
+    exact ⟨strongExit_mono before after result.type exit order payload.1, payload.2⟩
+
+/-- The same certificate weakens only its conservative entry flag to established protection.
+Consumer: callback installation when its actual producer clears the deferred flag. -/
+theorem ambientProgAt_protect (root : ProgramSource) {world : Typed.World}
+    {input : AmbientEntryInput} {position : AmbientPosition} {code : RProgram}
+    (typed : AmbientProgAt root world input position code) :
+    AmbientProgAt root world (input.1, false) position code := by
+  induction typed with
+  | pure payload _ => exact .pure payload (Or.inl rfl)
+  | store cert pre _ _ ih =>
+    exact .store cert pre (fun later ordered answer post => ih later ordered answer post) (Or.inl rfl)
+  | fiber notGuard notUnguard notFinish notScopeExit cert pre _ _ ih =>
+    exact .fiber notGuard notUnguard notFinish notScopeExit cert pre
+      (fun later ordered answer post => ih later ordered answer post) (Or.inl rfl)
+  | guard mid _ run skip _ ihBody _ =>
+    exact .guard mid ihBody run skip (Or.inl rfl)
+  | unguard payload _ => exact .unguard payload (Or.inl rfl)
+  | finishFinalizer payload _ => exact .finishFinalizer payload (Or.inl rfl)
+  | scopedGuard mid previous scope _ callback live services widen _ ihBody =>
+    exact .scopedGuard mid previous scope ihBody callback live services widen (Or.inl rfl)
+
+/-- Ordinary callback evidence enters the actual saved mask without widening its row.
+Consumer: current and queued callback installation at the effective entry cut. -/
+theorem ambientProgAt_at_saved (root : ProgramSource) {world : Typed.World}
+    {available : Env.Requirement} {position : AmbientPosition} {code : RProgram}
+    (typed : AmbientProgAt root world (available, true) position code) (saved : RSaved) :
+    AmbientProgAt root world (available, ambientEntryMode saved) position code := by
+  cases flag : ambientEntryMode saved with
+  | false => exact ambientProgAt_protect root typed
+  | true => exact typed
+
+/-- The existing saved-code relation reads its effective input from the actual saved frame.
+Consumer: parked and resumed positions in the ambient runtime relation. -/
+abbrev AmbientSaved (root : ProgramSource) (world : Typed.World) (available : Env.Requirement)
+    (final : AmbientPosition) (saved : RSaved) : Prop :=
+  Contracts.SavedArrow (AmbientProgAt root) (fun world input => AmbientExit world input.1)
+    (ambientFrameProtocols root) (fun position exit => (ambientInput position exit, true))
+    (fun ctx => (ctx.services.keysRow, true)) ambientGuardInput
+    world (available, ambientEntryMode saved) final saved
+
+/-- The existing saved relation exposes the physical assertion of its selected input.
+Consumer: actual parked-code and queued-overwrite adapters. -/
+theorem ambientSaved_entry_at (root : ProgramSource) (world : Typed.World)
+    (available : Env.Requirement) (final : AmbientPosition) (saved : RSaved)
+    (_typed : AmbientSaved root world available final saved) :
+    AmbientEntryAt (available, ambientEntryMode saved) saved :=
+  ambientEntryMode_at available saved
+
 /-- The actual captured release body retains all-exit restoration under its installed false mask.
 The source body uses its own captured map; the returned map is the actual previous context.
 Consumer: mask installation in Body and the original closed Assembly typing path. -/

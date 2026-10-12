@@ -86,24 +86,6 @@ theorem servicesFit_addV {w : World} {s : Env.Ctx} {key : ServiceKey} {v : Val}
   · rw [Env.Context.getV_addV_other _ _ _ _ hk] at hget
     exact hs.1 key' sv sty hget hty
 
-/-- The right-biased merge (`Context.merge`, `ContextUpdate.apply_provide_get?`) keeps the services
-fitting: every binding is one side's. -/
-theorem servicesFit_merge {w : World} {a b : Env.Ctx} (ha : ServicesFit w a)
-    (hb : ServicesFit w b) : ServicesFit w (a.merge b) := by
-  refine ⟨fun key sv sty hget hty => ?_, entriesLive_of_flatMap fun x hx => ?_⟩
-  · rw [Env.Context.getV_merge] at hget
-    cases hbk : b.getV key with
-    | some x =>
-      rw [hbk] at hget
-      cases hget
-      exact hb.1 key _ sty hbk hty
-    | none =>
-      rw [hbk] at hget
-      exact ha.1 key sv sty hget hty
-  · rcases List.mem_append.mp (Env.Context.rawHandles_merge a b hx) with h | h
-    · exact flatMap_live ha.2 x h
-    · exact flatMap_live hb.2 x h
-
 /-- `Context.mergeAll` (`Layer.ts:1600`) keeps the services fitting: a left fold of merges. -/
 theorem servicesFit_mergeAll {w : World} : ∀ (cs : List Env.Ctx), (∀ c ∈ cs, ServicesFit w c) →
     ServicesFit w (Env.Context.mergeAll cs)
@@ -1451,11 +1433,12 @@ theorem loadsTyped (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : N
     LoadsTyped root rootTy fuel compileFuel :=
   loadsTyped_of_denotesTyped_typed root rootTy fuel compileFuel (denotesTyped root)
 
-/-- **The typed load for every checked program**: M5 without the lawful-signature and closed-row
-premises, which its proof does not read. -/
+/-- **The typed load for a checked closed program**: row 117's empty requirement row applies
+at the load. The source's lawful-signature premise is not read here. -/
 theorem load_typed (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat)
-    (checked : Program.typeOfProgram root.sig.signature root.program = some rootTy) :
+    (checked : Program.typeOfProgram root.sig.signature root.program = some rootTy)
+    (closedRow : rootTy.requires = Env.Requirement.empty) :
     ∃ w, MachineTyped root rootTy w (loadR root.program fuel compileFuel) :=
-  load_typed_of_denotesTyped_typed root rootTy fuel compileFuel (denotesTyped root) checked
+  load_typed_of_denotesTyped_typed root rootTy fuel compileFuel (denotesTyped root) checked closedRow
 
 end Effect4.Program.Typed

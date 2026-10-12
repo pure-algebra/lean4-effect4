@@ -21,7 +21,7 @@ Placement (AGENTS.md):
 1. Concept 10 (`translation-simulation`): the frame machine's observation in the meaning layer's
    judgment; it serves the registry claim `m7-capstone-goals`.
 2. Question: the ledger goal `exits_hasTy`, declared and proved here.
-3. Reach: every checked program (no lawful-signature or closed-row premise), every command budget,
+3. Reach: every checked closed program (row 117's closed requirement row at the load), every command budget,
    every tape whose host answers are admitted at the ghost token table (`AdmittedTape`; answer-free
    tapes are, `admittedTape_of_noHostAnswer`), the frame machine `Api.replay` at its empty row table,
    observation `obs`.
@@ -56,12 +56,13 @@ type, under which every exit the frame machine's observation records satisfies
 `Denote.ExitHasTy` at its fiber's type over the observed stores. -/
 theorem exits_hasTy (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (tape : List Api.Decision)
     (checked : Program.typeOfProgram root.sig.signature root.program = some rootTy)
+    (closedRow : rootTy.requires = Env.Requirement.empty)
     (admitted : AdmittedTape root rootTy fuel tape) :
     ∃ Γ : FiberId → Option EffTy, Γ Api.root = some rootTy ∧
       ∀ id ex, (id, some ex) ∈ (obs (Api.replay root.program fuel tape).machine).exits →
         ∃ ty, Γ id = some ty ∧ Denote.ExitHasTy ty.answer ty.error
           (obs (Api.replay root.program fuel tape).machine).stores ex := by
-  obtain ⟨w, typed, ⟨hroot, hstate, hexits⟩, _, _⟩ := obs_typed root rootTy fuel tape checked admitted
+  obtain ⟨w, typed, ⟨hroot, hstate, hexits⟩, _, _⟩ := obs_typed root rootTy fuel tape checked closedRow admitted
   have store := storeTyped_of_typedState typed
   have halloc : w.state.externals.allocated = [] := by
     rw [hstate]
@@ -77,11 +78,12 @@ the meaning layer's judgment at the program's type (`exits_hasTy` at the root). 
 theorem root_exit_hasTy (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
     (tape : List Api.Decision)
     (checked : Program.typeOfProgram root.sig.signature root.program = some rootTy)
+    (closedRow : rootTy.requires = Env.Requirement.empty)
     (admitted : AdmittedTape root rootTy fuel tape) (ex : ExitV)
     (recorded : (Api.root, some ex) ∈ (obs (Api.replay root.program fuel tape).machine).exits) :
     Denote.ExitHasTy rootTy.answer rootTy.error
       (obs (Api.replay root.program fuel tape).machine).stores ex := by
-  obtain ⟨Γ, hΓ, hexits⟩ := exits_hasTy root rootTy fuel tape checked admitted
+  obtain ⟨Γ, hΓ, hexits⟩ := exits_hasTy root rootTy fuel tape checked closedRow admitted
   obtain ⟨ty, declared, hty⟩ := hexits _ ex recorded
   obtain rfl := Option.some.inj (hΓ.symm.trans declared)
   exact hty

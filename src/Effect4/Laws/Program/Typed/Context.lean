@@ -211,30 +211,163 @@ theorem provider_entry (root : ProgramSource) (w : World) (available required ke
   · exact (Provision.satisfies_iff_subset_keysRow _ available).mp
       (Provision.satisfies_merge_left previous.services supplied.services available entryCoverage)
 
-/-- The shared frame hooks retain the original hook contracts and their exact row index.
-The scope callback restores its captured row through the existing scope-exit contract. -/
+/-! ## The hook protocols over the row-indexed judgment
+
+A named hook frame keeps one success row and one failure row for its whole protocol. The walk
+pops it at the success row (`ambientInput` of a success), so a resumed body or a loop's finishing
+code is typed there, and every frame the walk re-pushes keeps both rows. The unit protocols
+(`IteratorStep`, `LoopStep`, `Typed/Residual.lean`) are these with the rows erased.
+Concept: residual-program-typing, R4 and R9. Consumers: the walk's hook laws and the generator,
+loop and parallel-close clauses of typed-state preservation. -/
+
+/-- A saved ambient iterator frame's state: world, success and failure rows, input and final
+types, the hook name. -/
+abbrev AmbientIterState := World × Env.Requirement × Env.Requirement × EffTy × EffTy × EffName
+
+/-- A saved ambient loop frame's state: as an iterator's, with the cursor. -/
+abbrev AmbientLoopState :=
+  World × Env.Requirement × Env.Requirement × EffTy × EffTy × EffName × Val
+
+/-- One ambient iterator step: `IteratorStep` with each resumed body typed at the frame's success
+row and the same two rows. -/
+def AmbientIteratorStep (root : ProgramSource) (I : AmbientIterState → Prop) :
+    AmbientIterState → Prop
+  | (w, success, failure, tin, tout, name) =>
+    tin.error = tout.error ∧
+      (tout.requires = Env.Requirement.empty → tin.requires = Env.Requirement.empty) ∧
+      ∀ w', w.leHost w' → ∀ completed, ViewTyped w' completed → ∀ v, Fits w' v tin.answer →
+        match ((interpRAt root.program completed).iterNext name v).2 with
+        | .done result => ExitOk w' tout (.success result)
+        | .halt cause => ExitOk w' tout (.failure cause)
+        | .resume code name' => ∃ tin', AmbientProg root w' success (tin', success, failure) code ∧
+            I (w', success, failure, tin', tout, name')
+
+/-- One ambient loop step: `LoopStep` with each body and finishing code typed at the frame's
+success row. -/
+def AmbientLoopStep (root : ProgramSource) (I : AmbientLoopState → Prop) :
+    AmbientLoopState → Prop
+  | (w, success, failure, tin, tout, name, cursor) =>
+    tin.error = tout.error ∧
+      (tout.requires = Env.Requirement.empty → tin.requires = Env.Requirement.empty) ∧
+      ∀ w', w.leHost w' → ∀ completed, ViewTyped w' completed → ∀ v, Fits w' v tin.answer →
+        match (interpRAt root.program completed).loopResume name cursor v with
+        | .continue cursor' body => ∃ tin', AmbientProg root w' success (tin', success, failure) body ∧
+            I (w', success, failure, tin', tout, name, cursor')
+        | .finish code => AmbientProg root w' success (tout, success, failure) code
+
+section AmbientProtocols
+open Contracts (Greatest StepMono)
+variable {root : ProgramSource}
+
+theorem ambientIteratorStep_mono : StepMono (AmbientIteratorStep root) := by
+  rintro I J sub ⟨w, success, failure, tin, tout, name⟩ ⟨errors, rows, next⟩
+  refine ⟨errors, rows, fun w' o completed view v hv => ?_⟩
+  have step := next w' o completed view v hv
+  revert step
+  cases ((interpRAt root.program completed).iterNext name v).2 with
+  | done result => exact id
+  | halt cause => exact id
+  | resume code name' =>
+    intro step
+    obtain ⟨tin', typed, tail⟩ := step
+    exact ⟨tin', typed, sub _ tail⟩
+
+theorem ambientLoopStep_mono : StepMono (AmbientLoopStep root) := by
+  rintro I J sub ⟨w, success, failure, tin, tout, name, cursor⟩ ⟨errors, rows, next⟩
+  refine ⟨errors, rows, fun w' o completed view v hv => ?_⟩
+  have step := next w' o completed view v hv
+  revert step
+  cases (interpRAt root.program completed).loopResume name cursor v with
+  | «continue» cursor' body =>
+    intro step
+    obtain ⟨tin', typed, tail⟩ := step
+    exact ⟨tin', typed, sub _ tail⟩
+  | finish code => exact id
+
+/-- An ambient iterator frame's protocol: the greatest invariant of its step. -/
+abbrev AmbientIteratorProtocol (root : ProgramSource) (w : World) (success failure : Env.Requirement)
+    (tin tout : EffTy) (name : EffName) : Prop :=
+  Greatest (AmbientIteratorStep root) (w, success, failure, tin, tout, name)
+
+/-- An ambient loop frame's protocol: the greatest invariant of its step. -/
+abbrev AmbientLoopProtocol (root : ProgramSource) (w : World) (success failure : Env.Requirement)
+    (tin tout : EffTy) (name : EffName) (cursor : Val) : Prop :=
+  Greatest (AmbientLoopStep root) (w, success, failure, tin, tout, name, cursor)
+
+theorem AmbientIteratorProtocol.unfold {w : World} {success failure : Env.Requirement}
+    {tin tout : EffTy} {name : EffName}
+    (h : AmbientIteratorProtocol root w success failure tin tout name) :
+    AmbientIteratorStep root (Greatest (AmbientIteratorStep root))
+      (w, success, failure, tin, tout, name) :=
+  Greatest.unfold ambientIteratorStep_mono h
+
+theorem AmbientIteratorProtocol.fold {w : World} {success failure : Env.Requirement}
+    {tin tout : EffTy} {name : EffName}
+    (h : AmbientIteratorStep root (Greatest (AmbientIteratorStep root))
+      (w, success, failure, tin, tout, name)) :
+    AmbientIteratorProtocol root w success failure tin tout name :=
+  Greatest.fold ambientIteratorStep_mono h
+
+theorem AmbientLoopProtocol.unfold {w : World} {success failure : Env.Requirement}
+    {tin tout : EffTy} {name : EffName} {cursor : Val}
+    (h : AmbientLoopProtocol root w success failure tin tout name cursor) :
+    AmbientLoopStep root (Greatest (AmbientLoopStep root))
+      (w, success, failure, tin, tout, name, cursor) :=
+  Greatest.unfold ambientLoopStep_mono h
+
+theorem AmbientLoopProtocol.fold {w : World} {success failure : Env.Requirement}
+    {tin tout : EffTy} {name : EffName} {cursor : Val}
+    (h : AmbientLoopStep root (Greatest (AmbientLoopStep root))
+      (w, success, failure, tin, tout, name, cursor)) :
+    AmbientLoopProtocol root w success failure tin tout name cursor :=
+  Greatest.fold ambientLoopStep_mono h
+
+/-- An ambient iterator protocol holds at every later world. -/
+theorem ambientIteratorProtocol_mono {w w' : World} (ord : w.leHost w')
+    {success failure : Env.Requirement} {tin tout : EffTy} {name : EffName}
+    (h : AmbientIteratorProtocol root w success failure tin tout name) :
+    AmbientIteratorProtocol root w' success failure tin tout name := by
+  obtain ⟨errors, rows, next⟩ := h.unfold
+  exact AmbientIteratorProtocol.fold ⟨errors, rows, fun w'' o => next w'' (leHost_trans _ _ _ ord o)⟩
+
+/-- An ambient loop protocol holds at every later world. -/
+theorem ambientLoopProtocol_mono {w w' : World} (ord : w.leHost w')
+    {success failure : Env.Requirement} {tin tout : EffTy} {name : EffName} {cursor : Val}
+    (h : AmbientLoopProtocol root w success failure tin tout name cursor) :
+    AmbientLoopProtocol root w' success failure tin tout name cursor := by
+  obtain ⟨errors, rows, next⟩ := h.unfold
+  exact AmbientLoopProtocol.fold ⟨errors, rows, fun w'' o => next w'' (leHost_trans _ _ _ ord o)⟩
+
+end AmbientProtocols
+
+/-- The async finalizer's ambient clause: the cancellation runs at the frame's failure row, the
+row its pop delivers a failure at. -/
+def AmbientAsyncFinalizer (root : ProgramSource) (w : World) (success failure : Env.Requirement)
+    (tin tout : EffTy) (name : EffName) : Prop :=
+  tin = tout ∧ ∀ w', w.leHost w' →
+    ∀ cause, ExitOk w' tin (.failure cause) → cause.hasInterrupts = true →
+      AmbientProg root w' failure (tout, success, failure)
+        ((interpR root.program).cancelThenFail name cause)
+
+/-- The shared frame hooks over row-indexed positions. A hook frame keeps its two rows, and its
+protocol types resumed code at them. The scope callback restores its captured row through the
+existing scope-exit contract. -/
 def ambientFrameProtocols (root : ProgramSource) : Contracts.FrameProtocols AmbientPosition where
   asyncFinalizer w before after name := match before, after with
     | .result a success failure, .result b success' failure' =>
-      (success, failure) = (success', failure') ∧ (frameProtocols root).asyncFinalizer w a b name
+      (success, failure) = (success', failure') ∧ AmbientAsyncFinalizer root w success failure a b name
     | _, _ => False
   iterator w before after name := match before, after with
     | .result a success failure, .result b success' failure' =>
-      (success, failure) = (success', failure') ∧ (frameProtocols root).iterator w a b name
+      (success, failure) = (success', failure') ∧
+        AmbientIteratorProtocol root w success failure a b name
     | _, _ => False
   loop w before after name cursor := match before, after with
     | .result a success failure, .result b success' failure' =>
-      (success, failure) = (success', failure') ∧ (frameProtocols root).loop w a b name cursor
+      (success, failure) = (success', failure') ∧
+        AmbientLoopProtocol root w success failure a b name cursor
     | _, _ => False
   scopeExit := (frameProtocols root).scopeExit
-
-/-- The existing saved-code relation uses the same complete ambient frame positions.
-Consumer: actual parked and resumed code in the runtime typing relation. -/
-abbrev AmbientSaved (root : ProgramSource) (w : World) (available : Env.Requirement)
-    (final : AmbientPosition) (saved : RSaved) : Prop :=
-  Contracts.SavedArrow (AmbientProg root) AmbientExit (ambientFrameProtocols root)
-    ambientInput (fun ctx => ctx.services.keysRow)
-    (fun _ position exit => ambientInput position exit) w available final saved
 
 /-- The existing scoped frame returns to services covered by its actual captured context.
 Consumer: scoped body delivery in the indexed typed-state preservation path. -/

@@ -240,4 +240,119 @@ theorem deliverR_hostTyped (root : ProgramSource) (interp : RInterp) (w : World)
   · exact .inl ⟨tin, TypedProg.pure (strongExit_of_clean w tin _ (pendingCause_clean hp)
       (pendingCause_noShapeDefect tin hp)), stack, ⟨hp.recorded, fun h => nomatch h⟩⟩
 
+/-! ## The walk over a machine host stack (decisions row 349)
+
+The same delegation over the row-indexed machine stacks: an ordinary frame is the ambient walk on
+the singleton stack (`ambient_popR_typed`); a registration callback installs its race's marker on a
+success and passes a failure at its own row. -/
+
+/-- The walk stopped at a `scoped` guard's slot over a machine host stack. -/
+def MHostCallback (root : ProgramSource) (w : World) (m : RState) (host : FiberId) (tout : MachinePos)
+    (x : RSaved) : Prop :=
+  ∃ tin prev sc ex, scopeExitCallback? x.current = some (prev, sc, ex) ∧
+    AmbientExit w prev.services.keysRow tin.1 ex ∧ (frameProtocols root).scopeExit w prev sc ∧
+    tin.2 = x.interruptible ∧ MHostStack root w m host tin tout x.stack ∧ InterruptProvenance x
+
+/-- The walk delivered a success into a registration callback: the race's marker is current over
+the remaining stack at the race token's type. -/
+def MHostMarker (root : ProgramSource) (w : World) (m : RState) (host : FiberId) (tout : MachinePos)
+    (x : RSaved) : Prop :=
+  ∃ (raceId : Nat) (race : RRace) (t : EffTy) (s f : Env.Requirement),
+    raceRegistrationR x.current = some raceId ∧
+    m.race? raceId = some race ∧ race.host = host ∧ w.Θ race.host race.token = some t ∧
+    MHostStack root w m host (((t, s, f) : AmbientPosition), x.interruptible) tout x.stack ∧
+    InterruptProvenance x
+
+/-- The outcomes of the walk over a machine host stack, at a covered row. -/
+def MHostWalkTyped (root : ProgramSource) (w : World) (m : RState) (host : FiberId)
+    (covered : Env.Requirement) (tout : MachinePos) : RSaved × Option ExitV → Prop
+  | (frame, none) =>
+    (∃ (row : Env.Requirement) (tin : MachinePos), Row.Subset row covered ∧
+      tin.2 = frame.interruptible ∧ AmbientProgAt root w (row, tin.2) tin.1 frame.current ∧
+      MHostStack root w m host tin tout frame.stack ∧ InterruptProvenance frame) ∨
+    MHostCallback root w m host tout frame ∨ MHostMarker root w m host tout frame
+  | (frame, some ex) => AmbientExit w (ambientInput tout.1 ex) tout.1 ex ∧
+      Row.Subset (ambientInput tout.1 ex) covered ∧ frame.interruptible = tout.2
+
+/-- **The ambient walk over a machine host stack.** -/
+theorem ambient_popR_hostTyped (root : ProgramSource) (interp : RInterp) (w : World) (m : RState)
+    (host : FiberId) (laws : MHookLaws root interp w) (covered : Env.Requirement)
+    {tin tout : MachinePos} {stack : List ScopeFrame} (hstack : MHostStack root w m host tin tout stack) :
+    ∀ (ex : ExitV) (frame : RSaved), AmbientExit w (ambientInput tin.1 ex) tin.1 ex →
+      Row.Subset (ambientInput tin.1 ex) covered → frame.interruptible = tin.2 →
+      InterruptProvenance frame → MHostWalkTyped root w m host covered tout (popR interp ex stack frame) := by
+  induction hstack with
+  | nil ty =>
+    intro ex frame hex hcov hmask _
+    exact ⟨hex, hcov, hmask⟩
+  | @cons a b c slot rest edge tail ih =>
+    intro ex frame hex hcov hmask hp
+    rw [popR_cons]
+    rcases edge with ordinary | arrow
+    · have walk := ambient_popR_typed root interp w laws covered [slot] a b ex frame
+        (.cons ordinary (.nil b)) hex hcov hmask hp
+      have kept : InterruptProvenance (popR interp ex [slot] frame).1 := by
+        obtain ⟨cause, deferred⟩ := popR_interrupts interp ex [slot] frame
+        exact ⟨fun c' h => hp.recorded c' (cause ▸ h), fun h => cause ▸ hp.deferred (deferred ▸ h)⟩
+      revert walk kept
+      generalize popR interp ex [slot] frame = r
+      obtain ⟨f, o⟩ := r
+      intro walk kept
+      cases o with
+      | none =>
+        rcases walk with ⟨row, tin', sub, mask, code, st, prov⟩ |
+          ⟨tin', prev, sc, ex', cb, exOk, hook, mask, st, prov⟩
+        · exact .inl ⟨row, tin', sub, mask, code, Effect4.Contracts.Path.append (MHostStack.of_stack st) tail,
+            ⟨prov.recorded, prov.deferred⟩⟩
+        · exact .inr (.inl ⟨tin', prev, sc, ex', cb, exOk, hook, mask,
+            Effect4.Contracts.Path.append (MHostStack.of_stack st) tail, ⟨prov.recorded, prov.deferred⟩⟩)
+      | some ex' => exact ih ex' f walk.1 walk.2.1 walk.2.2 kept
+    · cases arrow with
+      | mk marker skip found hosted token =>
+        obtain ⟨c0, x, i, ic, d⟩ := frame
+        change i = _ at hmask
+        subst hmask
+        cases ex with
+        | success v =>
+          exact .inr (.inr ⟨_, _, _, _, _, marker v, found, hosted, token, tail,
+            ⟨hp.recorded, hp.deferred⟩⟩)
+        | failure cause =>
+          obtain ⟨self, sub⟩ := ambientExit_self (skip w (leHost_refl w) cause hex)
+          cases ic <;> exact ih _ _ self (Row.subset_trans sub hcov) rfl ⟨hp.recorded, hp.deferred⟩
+
+/-- **A delivery through a machine host stack is typed**: a success with a deferred interrupt
+installs the recorded pending cause at the position's failure row over the unchanged stack;
+otherwise the ambient walk from the frame with the deferred flag cleared. -/
+theorem ambient_deliverR_hostTyped (root : ProgramSource) (interp : RInterp) (w : World) (m : RState)
+    (laws : MHookLaws root interp w) (covered : Env.Requirement) (f : RFiber) (yielding : Bool)
+    (ex : ExitV) {tin tout : MachinePos} (stack : MHostStack root w m f.id tin tout f.frame.stack)
+    (hex : AmbientExit w (ambientInput tin.1 ex) tin.1 ex) (hcov : Row.Subset (ambientInput tin.1 ex) covered)
+    (hmask : f.frame.interruptible = tin.2)
+    (deferredMask : f.frame.deferredInterrupt = true → f.frame.interruptible = true)
+    (failCov : tin.2 = true → Row.Subset tin.1.failureRow covered) (hp : InterruptProvenance f.frame) :
+    MHostWalkTyped root w m f.id covered tout ((deliverR interp m f yielding ex).fiber.frame,
+      walkExit (deliverR interp m f yielding ex).outcome) := by
+  have walkCase : MHostWalkTyped root w m f.id covered tout ((walkIter interp m f yielding ex).fiber.frame,
+      walkExit (walkIter interp m f yielding ex).outcome) := by
+    have walk := ambient_popR_hostTyped root interp w m f.id laws covered stack ex
+      { f.frame with deferredInterrupt := false } hex hcov hmask ⟨hp.recorded, fun h => nomatch h⟩
+    unfold walkIter
+    revert walk
+    generalize popR interp ex f.frame.stack { f.frame with deferredInterrupt := false } = r
+    obtain ⟨frame, o⟩ := r
+    cases o <;> exact id
+  unfold deliverR
+  cases ex with
+  | failure c => exact walkCase
+  | success v =>
+    dsimp only
+    split
+    · rename_i deferred
+      have bit : tin.2 = true := hmask ▸ deferredMask deferred
+      exact .inl ⟨tin.1.failureRow, tin, failCov bit, hmask.symm,
+        by rw [bit]; exact .pure (ambientExit_failure (strongExit_of_clean w _ _ (pendingCause_clean hp)
+          (pendingCause_noShapeDefect _ hp)) (Row.subset_refl _)) (Or.inr (Row.subset_refl _)),
+        stack, ⟨hp.recorded, fun h => nomatch h⟩⟩
+    · exact walkCase
+
 end Effect4.Program.Typed

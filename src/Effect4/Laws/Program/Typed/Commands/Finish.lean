@@ -43,21 +43,22 @@ theorem raceRegistrationR_typed {root : ProgramSource} {w : World} {ty : EffTy} 
 
 /-- **M5's load connector, its marker premise discharged** (decisions rows 148, 153 (b)): the root
 code's typing makes it no race registration marker (`raceRegistrationR_typed`), so
-`load_typed_of_denotesTyped` needs only the fundamental property and the checker's verdict. Placed
+`load_typed_of_denotesTyped` takes the fundamental property, the checker's verdict and row 117's closed row. Placed
 here, after the marker fact, since `Finish` imports `Assembly`. -/
 theorem load_typed_of_denotesTyped_typed (root : ProgramSource) (rootTy : EffTy)
     (fuel compileFuel : Nat) (denotes : DenotesTyped root)
-    (checked : Program.typeOfProgram root.sig.signature root.program = some rootTy) :
+    (checked : Program.typeOfProgram root.sig.signature root.program = some rootTy)
+    (closedRow : rootTy.requires = Env.Requirement.empty) :
     ∃ w, MachineTyped root rootTy w (loadR root.program fuel compileFuel) :=
   load_typed_of_denotesTyped root rootTy fuel compileFuel denotes
     (raceRegistrationR_typed (rootCode_typed root rootTy compileFuel denotes checked
-      (initialWorld rootTy root.sig.serviceTy) rfl)) checked
+      (initialWorld rootTy root.sig.serviceTy) rfl)) checked closedRow
 
-/-- M5's proposition from the connector: its lawful and closed-row premises are not read. -/
+/-- M5's proposition from the connector, with row 117's closed-row premise. -/
 theorem loadsTyped_of_denotesTyped_typed (root : ProgramSource) (rootTy : EffTy)
     (fuel compileFuel : Nat) (denotes : DenotesTyped root) :
-    LoadsTyped root rootTy fuel compileFuel := fun _ checked _ =>
-  load_typed_of_denotesTyped_typed root rootTy fuel compileFuel denotes checked
+    LoadsTyped root rootTy fuel compileFuel := fun _ checked closedRow =>
+  load_typed_of_denotesTyped_typed root rootTy fuel compileFuel denotes checked closedRow
 
 /-- **The typed load on the layer-free fragment**: a checked program none of whose nodes is a
 `provideLayer` loads into `J` (`denotesTyped_of_layerFree`, then the load connector). -/

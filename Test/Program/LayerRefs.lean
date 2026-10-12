@@ -118,7 +118,8 @@ denotation lemma `DenotesTyped`): the program loads into `J` at every fuel. Befo
 reduction's reference-free premise excluded it; row 170's well-formedness premise is the
 checker's (`layerRefsWF_of_typeOf`). -/
 theorem loadsTyped (denotes : DenotesTyped src) (fuel cf : Nat) : LoadsTyped src rootTy fuel cf :=
-  fun _ checked _ => load_typed_of_denotesTyped src rootTy fuel cf denotes (noMarker cf) checked
+  fun _ checked closedRow =>
+    load_typed_of_denotesTyped src rootTy fuel cf denotes (noMarker cf) checked closedRow
 
 /-! ## The redirect at the program's reference -/
 

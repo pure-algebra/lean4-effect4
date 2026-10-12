@@ -97,7 +97,14 @@ type to the position's declared type (`PositionStack`: up to row 188 (b)'s injec
 callback), and recorded causes are interrupts. Current code is not part of it: `LiveCode` and
 `ReadCode` type it where it is read. -/
 def SavedPosition (root : ProgramSource) (w : World) (final : EffTy) (saved : RSaved) : Prop :=
-  ∃ tin, PositionStack root w tin final saved.stack ∧ InterruptProvenance saved
+  ∃ tin flag, MPositionStack root w tin (finalPos final flag) saved.stack ∧ InterruptProvenance saved
+
+/-- A queued resume's code, at the target's token type, typed at every row and mask: a resume can
+take no capability from its type in the token table (decisions row 349). -/
+def ResumeCode (root : ProgramSource) (w : World) (target : FiberId) (token : Nat) (code : RProgram) :
+    Prop :=
+  ∀ ty, w.Θ target token = some ty → ∀ row bit,
+    AmbientProgAt root w (row, bit) ((ty, row, row) : AmbientPosition) code
 
 /-- **The promise-table column** (`Typed/Vocabulary.lean`: `Π` declares every Deferred cell at the
 type it was made at), its two rows: the work a store owes fits its waiter's token (`Owed`, the due
@@ -119,7 +126,7 @@ def preds (root : ProgramSource) : Preds World where
   SavedOk w e x := ∀ ty, expectOf w e = some ty → SavedPosition root w ty x
   PendingOk w _ ps := ∀ p ∈ ps, ∃ id, (w.Θ id p.token).isSome = true
   exit w e ex := ∀ ty, expectOf w e = some ty → ExitOk w ty ex
-  ResumeOk w _ target token code := Contracts.ResumeOk (TypedProg root) w target token code
+  ResumeOk w _ target token code := ResumeCode root w target token code
   ServiceOk w _ ctx := ServicesFit w ctx.services
   RaceOk w _ races := ∀ r ∈ races, ∃ resultTy, RacePayload root w r resultTy
   PromiseTable w s := PromiseTableOk root w s.deferreds.due s.memo
@@ -130,19 +137,11 @@ def preds (root : ProgramSource) : Preds World where
   CaptureOk w _ c := CaptureTyped root w c
   ScopeExitOk w _ ex := Fits w (reifyExitVal ex) (.exitOf .unknown .unknown)
 
-/-- A fully typed saved frame, code included, gives its saved position. -/
-theorem savedPosition_of_saved (root : ProgramSource) (w : World) (final : EffTy) (saved : RSaved)
-    (typed : Contracts.SavedOk (TypedProg root) ExitOk (frameProtocols root) w final saved) :
-    SavedPosition root w final saved := by
-  obtain ⟨tin, _, stack, provenance⟩ := typed
-  exact ⟨tin, positionStack_of_stackAccepts stack, provenance⟩
-
 /-- The active park and saved stack agree on what the declared token delivers; the stack may hold
 row 188 (b)'s injected registration callback (`HostStack`). -/
 def ActiveDelivery (root : ProgramSource) (w : World) (m : RState) : Prop :=
   ∀ f ∈ m.fibers, ∀ token, f.parked = .withGuard token →
-    ∃ tin final, w.Θ f.id token = some tin ∧ w.Γ f.id = some final ∧
-      HostStack root w m f.id tin final f.frame.stack ∧ InterruptProvenance f.frame
+    ∃ tin row, w.Θ f.id token = some tin ∧ StackReplyAt root w m f tin row
 
 /-- `ActiveDelivery` moves to a machine with the same fibers whose races keep their host and
 token (row 188 (b)'s registration arrows read them). -/
@@ -150,9 +149,8 @@ theorem activeDelivery_races {root : ProgramSource} {w : World} {m m' : RState}
     (fibers : m'.fibers = m.fibers) (kept : RacesKept m m') (h : ActiveDelivery root w m) :
     ActiveDelivery root w m' := by
   intro f hf token parked
-  obtain ⟨tin, final, declared, final', stack, provenance⟩ :=
-    h f (by rw [← fibers]; exact hf) token parked
-  exact ⟨tin, final, declared, final', hostStack_races kept stack, provenance⟩
+  obtain ⟨tin, row, declared, reply⟩ := h f (by rw [← fibers]; exact hf) token parked
+  exact ⟨tin, row, declared, reply.mono (leHost_refl w) kept⟩
 
 /-- `RegistrationState` moves likewise. -/
 theorem registrationState_races {root : ProgramSource} {w : World} {m m' : RState}
@@ -253,7 +251,7 @@ command that continues it, which a budget cut may have dropped. A race registrat
 registration arrow of the code's `HostStack` (decisions row 188 (b)). -/
 def LiveCode (root : ProgramSource) (w : World) (m : RState) : Prop :=
   ∀ f ∈ m.fibers, f.exit = none → f.running = false → raceRegistrationR f.frame.current = none →
-    f.parked = .notParked → ∀ ty, w.Γ f.id = some ty → CodeOk root w m f.id ty f.frame
+    f.parked = .notParked → ∀ ty, w.Γ f.id = some ty → MCodeOk root w m f ty
 
 /-- What a queued `loop` or `deliver` reads of a running fiber at its declared type: its current
 code with its stack (`CodeOk`); or, when it holds a deferred interrupt and no queued `deliver` reads
@@ -262,44 +260,43 @@ before evaluating (`runloopTop`), and the parks leave their operation current ov
 frame no type admits (seat M6B's finding). -/
 def ReadOk (root : ProgramSource) (w : World) (m : RState) (commands : List RCmd) (f : RFiber)
     (ty : EffTy) : Prop :=
-  CodeOk root w m f.id ty f.frame ∨
+  MCodeOk root w m f ty ∨
     (f.frame.deferredInterrupt = true ∧ (∀ y, Cmd.deliver f.id y ∉ commands) ∧
-      ∃ tin, HostStack root w m f.id tin ty f.frame.stack ∧ Contracts.InterruptProvenance f.frame)
+      ∃ (row : Env.Requirement) (tin : MachinePos) (flag : Bool), f.context.services.Satisfies row ∧
+        tin.2 = f.frame.interruptible ∧ Row.Subset tin.1.failureRow row ∧
+        MHostStack root w m f.id tin (finalPos ty flag) f.frame.stack ∧
+        Contracts.InterruptProvenance f.frame)
 
 theorem ReadOk.races {root : ProgramSource} {w : World} {m m' : RState} {q : List RCmd} {f : RFiber}
     {ty : EffTy} (h : ReadOk root w m q f ty) (kept : RacesKept m m') : ReadOk root w m' q f ty :=
-  h.imp (codeOk_races kept) fun ⟨d, nd, tin, st, pv⟩ => ⟨d, nd, tin, hostStack_races kept st, pv⟩
+  h.imp (MCodeOk.races kept) fun ⟨d, nd, row, tin, flag, cov, mask, fail, st, pv⟩ =>
+    ⟨d, nd, row, tin, flag, cov, mask, fail, st.races kept, pv⟩
 
 /-- A fiber a queued `deliver` reads has its code typed. -/
 theorem ReadOk.code_of_deliver {root : ProgramSource} {w : World} {m : RState} {q : List RCmd}
     {f : RFiber} {ty : EffTy} (h : ReadOk root w m q f ty) {y : Bool}
-    (hd : Cmd.deliver f.id y ∈ q) : CodeOk root w m f.id ty f.frame :=
+    (hd : Cmd.deliver f.id y ∈ q) : MCodeOk root w m f ty :=
   h.elim id fun ⟨_, nd, _⟩ => absurd hd (nd y)
 
 /-- A fiber holding no deferred interrupt has its code typed. -/
 theorem ReadOk.code_of_not_deferred {root : ProgramSource} {w : World} {m : RState} {q : List RCmd}
     {f : RFiber} {ty : EffTy} (h : ReadOk root w m q f ty)
-    (nd : f.frame.deferredInterrupt = false) : CodeOk root w m f.id ty f.frame :=
+    (nd : f.frame.deferredInterrupt = false) : MCodeOk root w m f ty :=
   h.elim id fun ⟨d, _⟩ => absurd (nd.symm.trans d) Bool.false_ne_true
 
-/-- Either way, the stack is typed. -/
-theorem ReadOk.stack {root : ProgramSource} {w : World} {m : RState} {q : List RCmd} {f : RFiber}
-    {ty : EffTy} (h : ReadOk root w m q f ty) :
-    ∃ tin, HostStack root w m f.id tin ty f.frame.stack ∧ Contracts.InterruptProvenance f.frame :=
-  h.elim (fun ⟨tin, _, st, pv⟩ => ⟨tin, st, pv⟩) fun ⟨_, _, s⟩ => s
-
-/-- What is read of a fiber reads only its id and its saved frame. -/
+/-- What is read of a fiber reads only its id, context and saved frame. -/
 theorem ReadOk.congr {root : ProgramSource} {w : World} {m : RState} {q : List RCmd} {f g : RFiber}
-    {ty : EffTy} (h : ReadOk root w m q f ty) (hid : g.id = f.id) (hframe : g.frame = f.frame) :
-    ReadOk root w m q g ty := by
-  unfold ReadOk
-  rw [hid, hframe]
+    {ty : EffTy} (h : ReadOk root w m q f ty) (hid : g.id = f.id) (hcontext : g.context = f.context)
+    (hframe : g.frame = f.frame) : ReadOk root w m q g ty := by
+  unfold ReadOk MCodeOk
+  rw [hid, hcontext, hframe]
   exact h
 
 /-- …and moves to a later world. -/
 theorem ReadOk.world {root : ProgramSource} {w w' : World} {m : RState} {q : List RCmd} {f : RFiber}
     {ty : EffTy} (h : ReadOk root w m q f ty) (ord : w.leHost w') : ReadOk root w' m q f ty :=
-  h.imp (codeOk_mono ord) fun ⟨d, nd, tin, st, pv⟩ => ⟨d, nd, tin, hostStack_mono ord st, pv⟩
+  h.imp (MCodeOk.mono ord) fun ⟨d, nd, row, tin, flag, cov, mask, fail, st, pv⟩ =>
+    ⟨d, nd, row, tin, flag, cov, mask, fail, st.mono ord, pv⟩
 
 /-- A queue holding no `deliver` of this fiber the other did not keeps what is read of it. -/
 theorem ReadOk.sub {root : ProgramSource} {w : World} {m : RState} {q q' : List RCmd} {f : RFiber}
@@ -900,7 +897,7 @@ theorem machineTyped_congr {root : ProgramSource} {rootTy : EffTy} {w : World} {
     ⟨fun f hf => obsv.pendingOwner f (member f hf), fun f hf o ho =>
       storedObserverOk_congr lookup raceLookup state o (obsv.observers f (member f hf) o ho)⟩,
     fun f hf raceId marker => ?_⟩, services, fun f hf hx hr hm hp ty d =>
-      codeOk_races (racesKept_of_eq raceLookup) (code f (member f hf) hx hr hm hp ty d), ?_, sourceWF⟩
+      MCodeOk.races (racesKept_of_eq raceLookup) (code f (member f hf) hx hr hm hp ty d), ?_, sourceWF⟩
   · exact
       { ids := by rw [fibers]; exact valid.ids
         fibers := fun id => by rw [fibers]; exact valid.fibers id
@@ -920,8 +917,8 @@ theorem machineTyped_congr {root : ProgramSource} {rootTy : EffTy} {w : World} {
     exact ok.c1
   · rw [state]
     exact ok.c2
-  · obtain ⟨tin, final, d1, d2, st, pv⟩ := deliv f (member f hf) token parked
-    exact ⟨tin, final, d1, d2, hostStack_races (racesKept_of_eq raceLookup) st, pv⟩
+  · obtain ⟨tin, row, declared, reply⟩ := deliv f (member f hf) token parked
+    exact ⟨tin, row, declared, reply.mono (leHost_refl w) (racesKept_of_eq raceLookup)⟩
   · exact
       { fiberIds := by rw [fibers]; exact sched.fiberIds
         fibersBelow := fun f hf => by rw [nextId]; exact sched.fibersBelow f (member f hf)
@@ -1179,10 +1176,9 @@ def LawfulSource (root : ProgramSource) : Prop := LawfulSig root.sig
 /-- M5's proposition: a lawful, checked, closed source whose requirement row is empty loads into
 `J`. The empty row is rc.112's own rule for a run (decisions row 117, ruled 2026-10-01):
 `Effect.runPromise` takes an `Effect<A, E>`, whose requirement parameter is `never`
-(`Effect.ts:17494-17497`); an open row runs only through `runPromiseWith(context)`. No proof reads
-the premise, nor the lawful one: the load is typed for every checked program
-(`load_typed_of_denotesTyped`). The closed row is part two's (the presence clause), which stays
-open. -/
+(`Effect.ts:17494-17497`); an open row runs only through `runPromiseWith(context)`.
+The source-load adapters retain this ratified premise (`load_typed_of_denotesTyped`).
+Internal positions still require actual ambient coverage through context changes. -/
 def LoadsTyped (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat) : Prop :=
   LawfulSource root → Program.typeOfProgram root.sig.signature root.program = some rootTy →
     rootTy.requires = Env.Requirement.empty →
@@ -1224,7 +1220,9 @@ def DenotesTyped (root : ProgramSource) : Prop :=
   SourceWF root →
     ∀ (w : World), w.serviceTy = root.sig.serviceTy → ∀ (p : Point) (e : NativeEff) (ty : EffTy),
       Node.at_ (.eff root.program) p.path = some (.eff e) → PointTyped root w p ty →
-        TypedProg root w ty (denoteR root.program e p)
+        ∀ available : Env.Requirement, Row.Subset ty.requires available →
+          AmbientStackTyped root w available (scopeParams root.program p.path) p.params →
+          AmbientProg root w available (ty, available, available) (denoteR root.program e p)
 
 /-- Row 148 (types TY-07): term soundness at `Fits`. A term the checker types evaluates, in an
 environment typed at the same world, to a value that fits its type. Term typing reads only the
@@ -1264,9 +1262,7 @@ service table (row 112), and whose head is not a race marker, loads into `J` the
 read at that world only (decisions row 175; before it this premise demanded every world, which is
 false for a program that reads a service, `E4-TYPED-CE-022`). -/
 theorem typedState_of_load (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat)
-    (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none)
-    (code : TypedProg root (initialWorld rootTy root.sig.serviceTy) rootTy
-      (denoteR root.program root.program (rootPoint compileFuel))) :
+    (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none) :
     TypedState root rootTy (initialWorld rootTy root.sig.serviceTy)
       (loadR root.program fuel compileFuel) := by
   have declared : (initialWorld rootTy root.sig.serviceTy).Γ Api.root = some rootTy :=
@@ -1284,8 +1280,7 @@ theorem typedState_of_load (root : ProgramSource) (rootTy : EffTy) (fuel compile
       change (initialWorld rootTy root.sig.serviceTy).Γ Api.root = some ty at hty
       rw [declared] at hty
       cases hty
-      exact savedPosition_of_saved root _ rootTy _
-        ⟨rootTy, code, .nil _, ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
+      exact ⟨finalPos rootTy true, true, .nil _, ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
     · intro q hq
       cases hq
     · intro v0 h
@@ -1310,13 +1305,14 @@ liveness and the source's well-formedness (decisions row 170, `MachineTyped.sour
 theorem machineTyped_load (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat)
     (sourceWF : SourceWF root)
     (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none)
-    (code : TypedProg root (initialWorld rootTy root.sig.serviceTy) rootTy
+    (code : AmbientProg root (initialWorld rootTy root.sig.serviceTy) Env.Requirement.empty
+      (rootTy, Env.Requirement.empty, Env.Requirement.empty)
       (denoteR root.program root.program (rootPoint compileFuel))) :
     MachineTyped root rootTy (initialWorld rootTy root.sig.serviceTy)
       (loadR root.program fuel compileFuel) := by
   have declared : (initialWorld rootTy root.sig.serviceTy).Γ Api.root = some rootTy :=
     insert_here (fun _ : FiberId => (none : Option EffTy)) Api.root rootTy
-  refine ⟨typedState_of_load root rootTy fuel compileFuel noMarker code, rfl, ?_,
+  refine ⟨typedState_of_load root rootTy fuel compileFuel noMarker, rfl, ?_,
     machineLive_of_quiet _ rfl rfl, sourceWF⟩
   intro f hf _ _ _ _ ty hty
   change f ∈ [_] at hf
@@ -1325,7 +1321,10 @@ theorem machineTyped_load (root : ProgramSource) (rootTy : EffTy) (fuel compileF
   change (initialWorld rootTy root.sig.serviceTy).Γ Api.root = some ty at hty
   rw [declared] at hty
   cases hty
-  exact ⟨rootTy, code, .nil _, ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
+  refine ⟨Env.Requirement.empty, finalPos rootTy true, true, Env.Context.satisfies_empty _, rfl, ?_,
+    ambientProg_entry root code _, .nil _, ⟨(fun _ h => nomatch h), (fun h => nomatch h)⟩⟩
+  intro h
+  cases h
 
 /-- **M5's reduction lemma, at the generated typed state** (seat A's
 `ValueMembership.typedStateF_load`, moved here and restated over row 134's split): a root whose
@@ -1333,10 +1332,9 @@ loaded code is typed at every world, with no race marker at its head, loads into
 the initial world. It is `J`'s first component (`machineTyped_load`), so the argument is written
 once; the battery keeps a one-line use. -/
 theorem typedState_load_of_code (root : ProgramSource) (ty : EffTy) (fuel compileFuel : Nat)
-    (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none)
-    (code : ∀ w, TypedProg root w ty (denoteR root.program root.program (rootPoint compileFuel))) :
+    (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none) :
     ∃ w, TypedState root ty w (loadR root.program fuel compileFuel) :=
-  ⟨_, typedState_of_load root ty fuel compileFuel noMarker (code _)⟩
+  ⟨_, typedState_of_load root ty fuel compileFuel noMarker⟩
 
 /-- **A checked program's layer references are well formed** (decisions row 170):
 `typeOfProgram` (`Program/Typing.lean`) answers only under `layerRefsWF`, its one test, so the
@@ -1367,8 +1365,11 @@ two load connectors. -/
 theorem rootCode_typed (root : ProgramSource) (rootTy : EffTy) (compileFuel : Nat)
     (denotes : DenotesTyped root)
     (checked : Program.typeOfProgram root.sig.signature root.program = some rootTy)
+    (closedRow : rootTy.requires = Env.Requirement.empty)
     (w : World) (htie : w.serviceTy = root.sig.serviceTy) :
-    TypedProg root w rootTy (denoteR root.program root.program (rootPoint compileFuel)) := by
+    AmbientProg root w Env.Requirement.empty (rootTy, Env.Requirement.empty, Env.Requirement.empty)
+      (denoteR root.program root.program (rootPoint compileFuel)) := by
+  have covers : Row.Subset rootTy.requires Env.Requirement.empty := closedRow ▸ Row.subset_refl _
   have hwf := sourceWF_of_typeOf checked
   have hcases : (∃ decls bodies main layers, root.program = .defs decls bodies main layers) ∨
       ((∀ decls bodies main layers, root.program ≠ .defs decls bodies main layers) ∧
@@ -1396,7 +1397,7 @@ theorem rootCode_typed (root : ProgramSource) (rootTy : EffTy) (compileFuel : Na
         rfl
       exact denotes hwf w htie _ main rootTy hat
         ⟨main, [], hat, mainChecked_of_typeOf hprog checked, envTyped_nil _,
-          (fun _ h => nomatch h), stackTyped_nil _ _ _⟩
+          (fun _ h => nomatch h), stackTyped_nil _ _ _⟩ _ covers (ambientStackTyped_nil _ _ _ _)
   · -- no block: the root point, checked at the tables' signature
     have hsig : root.signature = root.sig.signature := ProgramSource.signature_of_defsOf_nil hnil
     rw [typeOfProgram_eq_if_refsWF, if_pos hwf.refs,
@@ -1408,6 +1409,7 @@ theorem rootCode_typed (root : ProgramSource) (rootTy : EffTy) (compileFuel : Na
       exact Effect4.Laws.Auto.toOption_eq_some.mp checked
     exact denotes hwf w htie (rootPoint compileFuel) root.program rootTy rfl
       ⟨root.program, [], rfl, hcheck, envTyped_nil _, (fun _ h => nomatch h), stackTyped_nil _ _ _⟩
+      _ covers (ambientStackTyped_nil _ _ _ _)
 
 /-- **M5 from row 148's fundamental property**, for a loaded head that is not a race marker
 (`InterpR.lean:320`: only a race park builds one). The root point is typed by the checker's
@@ -1419,10 +1421,11 @@ and the root point an empty completed view (row 175). -/
 theorem load_typed_of_denotesTyped (root : ProgramSource) (rootTy : EffTy) (fuel compileFuel : Nat)
     (denotes : DenotesTyped root)
     (noMarker : raceRegistrationR (denoteR root.program root.program (rootPoint compileFuel)) = none)
-    (checked : Program.typeOfProgram root.sig.signature root.program = some rootTy) :
+    (checked : Program.typeOfProgram root.sig.signature root.program = some rootTy)
+    (closedRow : rootTy.requires = Env.Requirement.empty) :
     ∃ w, MachineTyped root rootTy w (loadR root.program fuel compileFuel) :=
   ⟨_, machineTyped_load root rootTy fuel compileFuel (sourceWF_of_typeOf checked) noMarker
-    (rootCode_typed root rootTy compileFuel denotes checked _ rfl)⟩
+    (rootCode_typed root rootTy compileFuel denotes checked closedRow _ rfl)⟩
 
 /-- **M5 from the layer family's arm** (`Typed/Denotation.lean`, `childDenotes_upto`: every arm of
 `denoteR` by induction on fuel). The layer family's arm (`ProvideLayerArm`, decisions row 176 (b)) is
@@ -1465,8 +1468,8 @@ theorem preds_savedOk_mono (root : ProgramSource) (w w' : World) (e : Expect) (x
     | hook _ => cases h0
   rw [same] at hty
   cases hty
-  obtain ⟨tin, stack, provenance⟩ := h _ h0
-  exact ⟨tin, positionStack_mono ord stack, provenance⟩
+  obtain ⟨tin, flag, stack, provenance⟩ := h _ h0
+  exact ⟨tin, flag, stack.mono ord, provenance⟩
 
 /-- A tape with no host answer is admitted at every machine it meets. -/
 theorem admittedReplay_noHostAnswer (root : ProgramSource) (J : World → RState → Prop)
@@ -1508,9 +1511,9 @@ theorem admittedTape_of_noHostAnswer (root : ProgramSource) (rootTy : EffTy) (fu
 
 /-- **`J` at the end of every admitted replay** (M6c's route, host answers included): a typed load
 and decisions that keep `J` at an admitted answer give `J` on the reference replay of any admitted
-tape, through the replay lift (`Machine.Lift.replayEval_lift`). It takes no lawful-signature or
-closed-row premise; no proof of M5 or M6 reads either (`load_typed_of_denotesTyped`,
-`DecisionKeeps`). -/
+tape, through the replay lift (`Machine.Lift.replayEval_lift`). The explicit typed-load premise
+supplies the initial configuration; source-load adapters require row 117's closed row.
+`DecisionKeeps` supplies the actual later configuration transport. -/
 theorem admitted_typed (root : ProgramSource) (rootTy : EffTy) (fuel : Nat)
     (load : ∃ w, MachineTyped root rootTy w (loadR root.program fuel fuel))
     (decisions : ∀ d, DecisionKeeps root rootTy fuel d) (tape : List Api.Decision)
@@ -1744,7 +1747,7 @@ The route is proved here at every admitted tape (`obsTyped_admitted`): from a ty
 `BMeans` (`bookMeans_obs`, `BookMeans.stuck`); `m7_of_ledger` is its answer-free case. With M5 and
 M6 proved, M7a–c follow (`m7_proved`, `Typed/Commands/Clauses/All.lean`), and scope-handle validity
 (`exitHandles_valid`) follows from `J` and capability membership (`exitHandles_valid`, same
-module): `J` holds without the closed requirement row, which no proof of M5 or M6 reads. -/
+module): the source-load adapters retain row 117's closed requirement row. -/
 
 /-- The M7 fragment: a lawful source at the empty host table, checked and closed, its requirement
 row empty (decisions row 117: rc.112's `runPromise` takes `Effect<A, E>`, `Effect.ts:17494-17497`),
@@ -1797,7 +1800,7 @@ in a typed store (`fits_validIn`): it is a consequence of `J` (`exitHandles_vali
 `Typed/Commands/Clauses/All.lean`). -/
 def ExitHandlesValid (root : ProgramSource) (rootTy : EffTy) (fuel : Nat) (m : RState) : Prop :=
   LawfulSource root → Program.typeOfProgram root.sig.signature root.program = some rootTy →
-    RReachable root fuel m →
+    rootTy.requires = Env.Requirement.empty → RReachable root fuel m →
       ∀ f ∈ m.fibers, ∀ v, f.exit = some (.success v) → Val.validIn m.state v = true
 
 /-- `J` on a reference machine types its observation: the exits and the stores. -/
