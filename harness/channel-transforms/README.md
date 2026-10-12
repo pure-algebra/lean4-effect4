@@ -21,7 +21,5 @@ It establishes no native Done-cause correspondence, asynchronous progress, or wh
 The source pin is `vendor/effect-4.0.1/src/Channel.ts`.
 The declarations cite `map`, `mapEffectSequential`, `mapDoneEffect`, and `transformPull` there.
 
-The numeric producer explicitly ascribes both values of its boolean branch.
-Without those ascriptions, the existing printer fails tsgo with `TS2375` on the differing answer variants.
-Decisions row 218 assigns that repair to the shared `ifCase` printer.
-The retained branch-refusal packet keeps the unannotated source, emitted declarations and compiler diagnostics.
+The numeric producer's boolean branch needs no ascription since the shared `ifCase` printer landed (decisions row 218, `e3eda3b2e`).
+The retained branch-refusal packet keeps the earlier unannotated output and its `TS2375` diagnostics.

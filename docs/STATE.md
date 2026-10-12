@@ -86,7 +86,8 @@ A program has folds, a journaled run with replay, and a printed image that reads
   signature (`Effects.Comodel`), and the reply tape is one host. The driver `Run.runWith` meets
   H9's premises when its reactor stays inside the envelope and answers with exits
   (`runWith_denotes`, `src/Effect4/Laws/Api/HostDrive.lean`). A reactor behind its rows' types
-  (`Reactor.guardRows`) always does. The row table's types are also a protocol of its hosts
+  (`Reactor.guardRows`) meets the reply premises. It refuses a success that allocates, and accepts
+  a failure that fits the error column. Funding, rest and a root exit stay premises. The row table's types are also a protocol of its hosts
   (`src/Effect4/Laws/Program/RowProtocol.lean`). Between decisions the machine is in one of four
   forms: loaded, parked on a yield, parked on a host call, exited
   (`src/Effect4/Laws/Program/Agreement/Hosted.lean`). Each host decision moves it to another,
@@ -100,17 +101,19 @@ A program has folds, a journaled run with replay, and a printed image that reads
   `Effects` package, version 0.10.0, holds systems, bisimulations, protocols and runs. It holds
   hosts as comodels, which compose by routing, renaming, admission, recording, and implementation
   by programs over other operations. Typed handlers compose (0.9.1), and indexed signatures give
-  protocols of a higher order, where an answer opens operations (0.10.0). It is committed on
-  branch `coalgebra` of `~/Dev/lean4-effects` and pinned here, unpushed: push `lean4-effects`
-  before this branch. Any host of the row signature drives a run (`Reactor.ofHost`). A typed
-  layer over a host that meets its lower protocol needs no guard (`runWith_layer_denotes`).
+  protocols of a higher order, where an answer opens operations (0.10.0). Branch `coalgebra`
+  of `lean4-effects` is pushed (`bf5ab8f`, 2026-10-10) and pinned here. Any host of the row
+  signature drives a run (`Reactor.ofHost`). A typed layer over a host that meets its lower
+  protocol is its own guard in the denotation (`hostGuard_through`). The driver theorem still runs
+  the guarded reactor (`runWith_layer_denotes`).
 - **The library's layout** (row 332, cutover slices C1 to C4). A user imports five entry
   modules: `Effect4.Author`, `Effect4.Run`, `Effect4.Emit`, `Effect4.Library` and
   `Effect4.Laws.Author`. Each re-exports and declares nothing. The acceptance programs import
   only these, and `#exposure_gate` refuses any other import. The step language is
   `src/Effect4/Step.lean`, and its shared laws are in `src/Effect4/Laws/Step/`.
-- **Composed modules.** Queue, Semaphore, Pool, Latch, Stream and Ref have their models, cells,
-  steps and operations in `src/Effect4/Library/`, and their laws in `src/Effect4/Laws/Library/`. Each
+- **Composed modules.** Queue, Semaphore, Pool, Latch, Stream, Ref, Pull, Channel, PubSub,
+  PartitionedSemaphore and SynchronizedRef are built. Each has its model, cells, steps and
+  operations in `src/Effect4/Library/`, and its laws in `src/Effect4/Laws/Library/`. Each
   keeps the module name and building blocks of latest (Effect 4.0.1) (row 335). Cache's profile is ruled
   (rows 270 to 272) and not built. The procedure is the
   [module factory plan](research/2026-10-05-claude-lead/module-factory-plan.md).
@@ -318,31 +321,32 @@ A program has folds, a journaled run with replay, and a printed image that reads
    entry's rule as data. One session edits and runs.
 6. **The module toolkit's gaps** (row 330): wrapper reply records and laws (G1), `derive_step`
    in the tree (G3), then the module form at the Latch (G2).
-7. **The stream stack** (row 331): the Pull protocol's handlers are landed (Codex, merged at
-   `b8630762`); next the channel as a pull transformer.
+7. **The stream stack** (row 331): the Pull protocol's handlers (Codex, merged at `b8630762`) and the
+   channel's transforms (`34e516559`) are landed. Next: stateful filtering and early stopping,
+   which need repeated-pull, empty-batch, index and lifetime contracts.
 8. **The first composition law**, SynchronizedRef from Ref and Semaphore (G10), then the
    transaction attempt (G4).
 
 Also open: procedures PROC-5 (row 328), the simulation's slices S1 to S4 (row 329) and the
-session API's slices (row 326). The host session is to be drawn by H8's machine forms. The
+session API's slices (row 326). The host session is to be drawn by H8's machine forms. The SVG kit is pushed (lean4-whatwg
+`html/svg` at `1365738`, 2026-10-12); Effect4's whatwg pin moves to it next. The
 owner's note of 2026-10-09: write a program, then watch its session answer calls and schedule.
 
 ## What the owner must decide
 
-- **The vendoring list** (row 336, point 5): the C libraries of the
-  [visual pipeline note](research/2026-10-09-visual-pipeline.md), section 6. Each is confirmed at
-  its own repository before a download.
+- **The rest of the vendoring list** (row 336, point 5). The C libraries are in the
+  [visual pipeline note](research/2026-10-09-visual-pipeline.md), section 6. termbox2 2.5.0 and
+  SDL3 3.4.16 are vendored (`8a36f2008`). HarfBuzz with FreeType, and ThorVG, wait. Each is
+  confirmed at its own repository before a download.
 - **The marks of an operation** (the forms note's proposal A, 1): drawn in the view by each
   operation's row, and removed by `v -P`.
 - **The program's graph** (the design note, section 7): its marks, built as recommended, to
   confirm.
 - **MCP and code mode** (the MCP note, section 10): six rulings.
-- **The push of `lean4-effects`**, before this branch: Effect4 pins its local commit.
 - **The type interface's three choices** (the type interface note, section 4):
   - print `int` and `number` as the aliases `Int` and `Num` now (row 309, point 5);
   - decode an exported entry's inputs, or print refined types as brands;
   - choose one frame for products, before `Shape` becomes a fold of `Ty`.
-- **The push of `html/svg`** in lean4-whatwg: Effect4's pin moves to it, the SVG plan's next slice.
 
 
 ## Process
