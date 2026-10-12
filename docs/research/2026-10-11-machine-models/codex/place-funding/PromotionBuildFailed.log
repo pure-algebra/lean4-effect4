@@ -1,0 +1,287 @@
+✔ [967/1156] Built Effect4.Laws.Machine.EditWords (4.8s)
+✔ [968/1156] Built Effect4.Laws.Machine.EditObserverWords (5.0s)
+✔ [969/1156] Built Effect4.Laws.Machine.Approximation (47s)
+✔ [970/1156] Built Effect4.Laws.Machine.Behaviour (36s)
+✔ [971/1156] Built Effect4.Laws.Program.TracedMoves (44s)
+✔ [972/1156] Built Effect4.Laws.Machine.Lift (53s)
+✔ [973/1156] Built Effect4.Laws.Machine.Handshake (21s)
+✔ [974/1156] Built Effect4.Laws.Machine.Book (34s)
+✔ [975/1156] Built Effect4.Laws.Program.Agreement.Machine (177s)
+✔ [976/1156] Built Effect4.Laws.Program.RefWords (10s)
+✔ [977/1156] Built Effect4.Laws.Program.InterpR (58s)
+✔ [978/1156] Built Effect4.Laws.Program.Footprint (25s)
+✔ [979/1156] Built Effect4.Laws.Machine.LiftMachineFact (6.5s)
+✔ [980/1156] Built Effect4.Laws.Machine.Handles (185s)
+✔ [981/1156] Built Effect4.Laws.Machine.StatePreservation (10s)
+✔ [982/1156] Built Effect4.Laws.Machine.ForkLedgerInvariant (8.7s)
+✔ [983/1156] Built Effect4.Laws.Machine.ControlSteps (7.9s)
+✔ [984/1156] Built Effect4.Laws.Program.EvaluateR (38s)
+✔ [985/1156] Built Effect4.Laws.Program.Agreement.Segment (46s)
+✔ [986/1156] Built Effect4.Laws.Machine.MaskRuns (71s)
+✔ [987/1156] Built Effect4.Laws.Program.Moves (48s)
+✔ [988/1156] Built Effect4.Laws.Program.Parking (69s)
+✔ [989/1156] Built Effect4.Laws.Program.Admit (73s)
+✔ [990/1156] Built Effect4.Laws.Program.ControlSteps (80s)
+✔ [991/1156] Built Effect4.Laws.Machine.ControlWeights (32s)
+✔ [992/1156] Built Effect4.Laws.Program.Means (32s)
+✔ [993/1156] Built Effect4.Laws.Program.Typed.State (29s)
+✔ [994/1156] Built Effect4.Laws.Program.MeaningEq (22s)
+✔ [995/1156] Built Effect4.Laws.Machine.FinalizerRun (17s)
+✔ [996/1156] Built Effect4.Laws.Program.Guard.Interruption (63s)
+✔ [997/1156] Built Effect4.Laws.Program.Interference (64s)
+✔ [998/1156] Built Effect4.Laws.Program.Handles.Alphabet (40s)
+✔ [999/1156] Built Effect4.Laws.Program.Guard.FrameOwned (285s)
+✔ [1000/1156] Built Effect4.Laws.Program.StoreExecution (44s)
+✔ [1001/1156] Built Effect4.Laws.Machine.FiberSum (23s)
+✔ [1002/1156] Built Effect4.Laws.Program.Intro.Prepare (21s)
+✔ [1003/1156] Built Effect4.Laws.Program.ReleaseCustody (27s)
+✔ [1004/1156] Built Effect4.Laws.Program.Guard.DeferredCause (7.7s)
+✔ [1005/1156] Built Effect4.Laws.Program.FinalizerMoves (9.8s)
+✔ [1006/1156] Built Effect4.Laws.Program.Typed.World (13s)
+✔ [1007/1156] Built Effect4.Laws.Program.SourceScope (16s)
+✔ [1008/1156] Built Effect4.Laws.Machine.FiberSumMessages (15s)
+✔ [1009/1156] Built Effect4.Laws.Program.Handles.Term (43s)
+✔ [1010/1156] Built Effect4.Laws.Program.Intro.Equations (19s)
+✔ [1011/1156] Built Effect4.Laws.Program.ReleaseCustody.Names (13s)
+✔ [1012/1156] Built Effect4.Laws.Program.HeapSites.Core (25s)
+✔ [1013/1156] Built Effect4.Laws.Program.Guard.Core (88s)
+✔ [1014/1156] Built Effect4.Laws.Program.ScopeFragment (11s)
+✔ [1015/1156] Built Effect4.Laws.Program.SourceOrigin (40s)
+✔ [1016/1156] Built Effect4.Laws.Machine.WriterWeights (14s)
+✔ [1017/1156] Built Effect4.Laws.Machine.Ledger (13s)
+✔ [1018/1156] Built Effect4.Laws.Machine.PlaceLedger (6.9s)
+✔ [1019/1156] Built Effect4.Laws.Program.Intro.Identity (8.3s)
+✔ [1020/1156] Built Effect4.Laws.Program.Handles.Compile (11s)
+✔ [1021/1156] Built Effect4.Laws.Program.ReleaseCustody.Control (20s)
+✔ [1022/1156] Built Effect4.Laws.Program.Guard.ReturnFields (18s)
+✔ [1023/1156] Built Effect4.Laws.Program.Guard.Finish (13s)
+✔ [1024/1156] Built Effect4.Laws.Program.Guard.ForkLedger (30s)
+✔ [1025/1156] Built Effect4.Laws.Machine.FinalizerBookkeeping (16s)
+✔ [1026/1156] Built Effect4.Laws.Machine.PlaceLedgerBalance (11s)
+✔ [1027/1156] Built Effect4.Laws.Program.NativeScope (42s)
+✔ [1028/1156] Built Effect4.Laws.Program.Intro.Weight (27s)
+✔ [1029/1156] Built Effect4.Laws.Program.Handles.Layer (31s)
+✔ [1030/1156] Built Effect4.Laws.Program.Guard.Settle (28s)
+✔ [1031/1156] Built Effect4.Laws.Program.PlaceFunding.Control (19s)
+✔ [1032/1156] Built Effect4.Laws.Machine.FinalizerEvaluation (27s)
+✔ [1033/1156] Built Effect4.Laws.Program.Intro.AcquireRelease (11s)
+✔ [1034/1156] Built Effect4.Laws.Program.Guard.RegistrationQueue (9.2s)
+✔ [1035/1156] Built Effect4.Laws.Program.NativeStoreScope (20s)
+✔ [1036/1156] Built Effect4.Laws.Program.PlaceFunding.Transfer (11s)
+✔ [1037/1156] Built Effect4.Laws.Program.FinalizerTransfer (20s)
+✔ [1038/1156] Built Effect4.Laws.Program.Intro.Region (32s)
+✔ [1039/1156] Built Effect4.Laws.Program.NativeScopeStore (24s)
+✔ [1040/1156] Built Effect4.Laws.Program.Intro.Memo (11s)
+✖ [1041/1156] Building Effect4.Laws.Program.PlaceFunding.Commands (25s)
+trace: .> LEAN_PATH=/Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/src/Effect4/Laws/Program/PlaceFunding/Commands.lean -o /Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Program/PlaceFunding/Commands.olean -i /Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/build/lib/lean/Effect4/Laws/Program/PlaceFunding/Commands.ilean -c /Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/build/ir/Effect4/Laws/Program/PlaceFunding/Commands.c --setup /Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/build/ir/Effect4/Laws/Program/PlaceFunding/Commands.setup.json --json
+error: src/Effect4/Laws/Program/PlaceFunding/Commands.lean:28:22: Type mismatch
+  true
+has type
+  Bool
+but is expected to have type
+  Option (Exit Val Err Defect FiberId Ann)
+error: src/Effect4/Laws/Program/PlaceFunding/Commands.lean:35:4: Type mismatch
+  Events.emit events ?m.241
+    [RunEvent.childrenInterrupted (Prim EffName EffThunk Val Err Defect FiberId Ann)
+        (FrameEvent EffName EffThunk Val Err Defect FiberId Ann)
+        (fiber.id (Prim EffName EffThunk Val Err Defect FiberId Ann)
+          (FrameFiber EffName EffThunk Val Err Defect FiberId Ann))
+        (fiber.children (Prim EffName EffThunk Val Err Defect FiberId Ann)
+          (FrameFiber EffName EffThunk Val Err Defect FiberId Ann))]
+    fun event member =>
+    have same := List.mem_singleton.mp member;
+    Eq.ndrec (motive := fun event =>
+      event ∈
+          [RunEvent.childrenInterrupted (Prim EffName EffThunk Val Err Defect FiberId Ann)
+              (FrameEvent EffName EffThunk Val Err Defect FiberId Ann)
+              (fiber.id (Prim EffName EffThunk Val Err Defect FiberId Ann)
+                (FrameFiber EffName EffThunk Val Err Defect FiberId Ann))
+              (fiber.children (Prim EffName EffThunk Val Err Defect FiberId Ann)
+                (FrameFiber EffName EffThunk Val Err Defect FiberId Ann))] →
+        Moves.administrative event = true)
+      (fun member =>
+        Eq.refl
+          (Moves.administrative
+            (RunEvent.childrenInterrupted (Prim EffName EffThunk Val Err Defect FiberId Ann)
+              (FrameEvent EffName EffThunk Val Err Defect FiberId Ann)
+              (fiber.id (Prim EffName EffThunk Val Err Defect FiberId Ann)
+                (FrameFiber EffName EffThunk Val Err Defect FiberId Ann))
+              (fiber.children (Prim EffName EffThunk Val Err Defect FiberId Ann)
+                (FrameFiber EffName EffThunk Val Err Defect FiberId Ann)))))
+      (Eq.symm same) member
+has type
+  PlaceLedger.Balanced L ?m.241 [] []
+    (RunMachine.emit ?m.241
+      [RunEvent.childrenInterrupted (Prim EffName EffThunk Val Err Defect FiberId Ann)
+          (FrameEvent EffName EffThunk Val Err Defect FiberId Ann)
+          (fiber.id (Prim EffName EffThunk Val Err Defect FiberId Ann)
+            (FrameFiber EffName EffThunk Val Err Defect FiberId Ann))
+          (fiber.children (Prim EffName EffThunk Val Err Defect FiberId Ann)
+            (FrameFiber EffName EffThunk Val Err Defect FiberId Ann))])
+    [] []
+but is expected to have type
+  PlaceLedger.Balanced L (RunMachine.update m next) [] []
+    ((RunMachine.update m
+          {
+            id :=
+              fiber.id (Prim EffName EffThunk Val Err Defect FiberId Ann)
+                (FrameFiber EffName EffThunk Val Err Defect FiberId Ann),
+            frame :=
+              FiberCore.answerWith EffName Val Err Defect FiberId Ann
+                (FiberCore.setDeferred EffName Val Err Defect FiberId Ann
+                  (Prim EffName EffThunk Val Err Defect FiberId Ann)
+                  (fiber.frame (Prim EffName EffThunk Val Err Defect FiberId Ann)
+                    (FrameFiber EffName EffThunk Val Err Defect FiberId Ann))
+                  false)
+                (FiberCore.onSuccess Val Err Defect FiberId Ann
+                  (interp.interruptAllCode (Prim EffName EffThunk Val Err Defect FiberId Ann)
+                    (fiber.children (Prim EffName EffThunk Val Err Defect FiberId Ann)
+                      (FrameFiber EffName EffThunk Val Err Defect FiberId Ann)))
+                  (interp.restoreName (Prim EffName EffThunk Val Err Defect FiberId Ann) exit)),
+            running := false,
+            parked :=
+              fiber.parked (Prim EffName EffThunk Val Err Defect FiberId Ann)
+                (FrameFiber EffName EffThunk Val Err Defect FiberId Ann),
+            pending :=
+              fiber.pending (Prim EffName EffThunk Val Err Defect FiberId Ann)
+                (FrameFiber EffName EffThunk Val Err Defect FiberId Ann),
+            finalizing := some exit,
+            exit :=
+              fiber.exit (Prim EffName EffThunk Val Err Defect FiberId Ann)
+                (FrameFiber EffName EffThunk Val Err Defect FiberId Ann),
+            currentOpCount :=
+              fiber.currentOpCount (Prim EffName EffThunk Val Err Defect FiberId Ann)
+                (FrameFiber EffName EffThunk Val Err Defect FiberId Ann),
+            maxOpsBeforeYield :=
+              fiber.maxOpsBeforeYield (Prim EffName EffThunk Val Err Defect FiberId Ann)
+                (FrameFiber EffName EffThunk Val Err Defect FiberId Ann),
+            preventYield :=
+              fiber.preventYield (Prim EffName EffThunk Val Err Defect FiberId Ann)
+                (FrameFiber EffName EffThunk Val Err Defect FiberId Ann),
+            yieldOverride :=
+              fiber.yieldOverride (Prim EffName EffThunk Val Err Defect FiberId Ann)
+                (FrameFiber EffName EffThunk Val Err Defect FiberId Ann),
+            observers :=
+              fiber.observers (Prim EffName EffThunk Val Err Defect FiberId Ann)
+                (FrameFiber EffName EffThunk Val Err Defect FiberId Ann),
+            children :=
+              fiber.children (Prim EffName EffThunk Val Err Defect FiberId Ann)
+                (FrameFiber EffName EffThunk Val Err Defect FiberId Ann),
+            dispatcher :=
+              fiber.dispatcher (Prim EffName EffThunk Val Err Defect FiberId Ann)
+                (FrameFiber EffName EffThunk Val Err Defect FiberId Ann),
+            context :=
+              fiber.context (Prim EffName EffThunk Val Err Defect FiberId Ann)
+                (FrameFiber EffName EffThunk Val Err Defect FiberId Ann) }).emit
+      [RunEvent.childrenInterrupted (Prim EffName EffThunk Val Err Defect FiberId Ann)
+          (FrameEvent EffName EffThunk Val Err Defect FiberId Ann)
+          (fiber.id (Prim EffName EffThunk Val Err Defect FiberId Ann)
+            (FrameFiber EffName EffThunk Val Err Defect FiberId Ann))
+          (fiber.children (Prim EffName EffThunk Val Err Defect FiberId Ann)
+            (FrameFiber EffName EffThunk Val Err Defect FiberId Ann))])
+    [] []
+error: Lean exited with code 1
+✔ [1042/1156] Built Effect4.Laws.Program.Intro.Merge (17s)
+✔ [1043/1156] Built Effect4.Laws.Program.Intro.Layer (8.7s)
+✔ [1044/1156] Built Effect4.Laws.Program.Intro.Elementary (5.7s)
+✔ [1045/1156] Built Effect4.Laws.Program.NativeCallbacks (76s)
+✔ [1046/1156] Built Effect4.Laws.Program.Intro.Sequential (56s)
+✔ [1047/1156] Built Effect4.Laws.Program.Intro.Errors (11s)
+✔ [1048/1156] Built Effect4.Laws.Program.Intro.Fibers (19s)
+✔ [1049/1156] Built Effect4.Laws.Program.NativeHeap (75s)
+✔ [1050/1156] Built Effect4.Laws.Program.Intro.Scope (18s)
+✔ [1051/1156] Built Effect4.Laws.Program.Intro (26s)
+✔ [1052/1156] Built Effect4.Laws.Program.NativeInterpScope (128s)
+✔ [1053/1156] Built Effect4.Laws.Program.Simulation.Hooks (29s)
+✔ [1054/1156] Built Effect4.Laws.Program.NativeFrameScope (56s)
+✔ [1055/1156] Built Effect4.Laws.Program.Simulation.Walk (42s)
+✔ [1056/1156] Built Effect4.Laws.Program.Simulation.Fibers (12s)
+✔ [1057/1156] Built Effect4.Laws.Program.NativeActionScope (86s)
+✔ [1058/1156] Built Effect4.Laws.Program.Table.Hooks (21s)
+✔ [1059/1156] Built Effect4.Laws.Program.Simulation.Deliver (22s)
+✔ [1060/1156] Built Effect4.Laws.Program.Simulation.Actions (10s)
+✔ [1061/1156] Built Effect4.Laws.Program.NativeConfiguration (24s)
+✔ [1062/1156] Built Effect4.Laws.Program.Simulation.Pending (26s)
+✔ [1063/1156] Built Effect4.Laws.Program.Simulation.Evaluate (33s)
+✔ [1064/1156] Built Effect4.Laws.Program.NativeEvaluation (26s)
+✔ [1065/1156] Built Effect4.Laws.Program.Simulation.Drive (22s)
+✔ [1066/1156] Built Effect4.Laws.Program.NativeActions (29s)
+✔ [1067/1156] Built Effect4.Laws.Program.RuntimeR (20s)
+✔ [1068/1156] Built Effect4.Laws.Program.Typed.Validity (10s)
+✔ [1069/1156] Built Effect4.Laws.Program.ReasonsR (10s)
+✔ [1070/1156] Built Effect4.Laws.Program.Typed.Contracts (14s)
+✔ [1071/1156] Built Effect4.Laws.Program.NativeExecutor (39s)
+✔ [1072/1156] Built Effect4.Laws.Program.Typed.Membership (34s)
+✔ [1073/1156] Built Effect4.Laws.Program.Typed.RecordOperations (9.2s)
+✔ [1074/1156] Built Effect4.Laws.Program.Typed.Admission (12s)
+✔ [1075/1156] Built Effect4.Laws.Api.HostSession (11s)
+✔ [1076/1156] Built Effect4.Laws.Program.Typed.Residual (14s)
+✔ [1077/1156] Built Effect4.Laws.Program.Typed.Seq (11s)
+✔ [1078/1156] Built Effect4.Laws.Program.NativeCommands (69s)
+✔ [1079/1156] Built Effect4.Laws.Run (25s)
+✔ [1080/1156] Built Effect4.Laws.Program.Typed.Adequacy (14s)
+✔ [1081/1156] Built Effect4.Laws.Run.Rows (19s)
+✔ [1082/1156] Built Effect4.Laws.Program.Typed.Stack (17s)
+✔ [1083/1156] Built Effect4.Laws.Program.Typed.Denotation (33s)
+✔ [1084/1156] Built Effect4.Laws.Run.Tape (10s)
+✔ [1085/1156] Built Effect4.Laws.Program.Typed.ListFold (6.9s)
+✔ [1086/1156] Built Effect4.Laws.Program.Typed.Scheduler (13s)
+✔ [1087/1156] Built Effect4.Laws.Run.Frame (19s)
+✔ [1088/1156] Built Effect4.Laws.Program.Typed.Assembly (16s)
+✔ [1089/1156] Built Effect4.Laws.Step.Reading (17s)
+✔ [1090/1156] Built Effect4.Laws.Step.Store (8.4s)
+✔ [1091/1156] Built Effect4.Laws.Program.NativeHistory (10s)
+✔ [1092/1156] Built Effect4.Laws.Program.Typed.Commands.Bookkeeping (20s)
+✔ [1093/1156] Built Effect4.Laws.Schema.Identity (15s)
+✔ [1094/1156] Built Effect4.Laws.Step.Annotations (16s)
+✔ [1095/1156] Built Effect4.Laws.Program.NativeReplies (17s)
+✔ [1096/1156] Built Effect4.Laws.Step.Checking (23s)
+✔ [1097/1156] Built Effect4.Laws.Program.NativeReferences (20s)
+✔ [1098/1156] Built Effect4.Laws.Program.Typed.Commands.Finish (32s)
+✔ [1099/1156] Built Effect4.Laws.Step.ErasedCompiler (53s)
+✔ [1100/1156] Built Effect4.Laws.Step.Tuples (31s)
+✔ [1101/1156] Built Effect4.Laws.Program.SourceOpportunities (64s)
+✔ [1102/1156] Built Effect4.Laws.Step.Cons (10s)
+✔ [1103/1156] Built Effect4.Laws.Step.Option (19s)
+✔ [1104/1156] Built Effect4.Laws.Step.Ascribe (8.3s)
+✔ [1105/1156] Built Effect4.Laws.Program.NativeHeapExecution (24s)
+✔ [1106/1156] Built Effect4.Laws.Program.Typed.LayerArm (25s)
+✔ [1107/1156] Built Effect4.Laws.Step.Requirements (54s)
+✔ [1108/1156] Built Effect4.Laws.Step.Construction (37s)
+✔ [1109/1156] Built Effect4.Laws.Program.NativeHeapHistory (9.3s)
+✔ [1110/1156] Built Effect4.Laws.Program.Typed.Mask (7.4s)
+✔ [1111/1156] Built Effect4.Laws.Program.HeapSites (6.2s)
+✔ [1112/1156] Built Effect4.Laws.Codegen.Mask (17s)
+✔ [1113/1156] Built Effect4.Laws.Program.SourceOpportunityCallbacks (83s)
+✔ [1114/1156] Built Effect4.Laws.Step.Waiting (22s)
+✔ [1115/1156] Built Effect4.Laws.Step (54s)
+✔ [1116/1156] Built Effect4.Laws.Program.SourceOpportunityFrames (16s)
+✔ [1117/1156] Built Effect4.Laws.Step.Callback (18s)
+✔ [1118/1156] Built Effect4.Laws.Program.SourceOpportunityEvaluation (19s)
+✔ [1119/1156] Built Effect4.Laws.Author (9.9s)
+✔ [1120/1156] Built Test.Dogfood.P4RateLimiter (8.2s)
+✔ [1121/1156] Built Test.Dogfood.P3WorkerQueue (8.8s)
+✔ [1122/1156] Built Test.Dogfood.Scenario (12s)
+✔ [1123/1156] Built Test.Dogfood.Scenario.Workers.Program (9.9s)
+✔ [1124/1156] Built Test.Dogfood.Scenario.QueueWorkers.Program (10s)
+✔ [1125/1156] Built Test.Dogfood.Scenario.Frame (12s)
+✔ [1126/1156] Built Test.Dogfood.Scenario.Atomic.Model (20s)
+✔ [1127/1156] Built Test.Dogfood.Scenario.Programs (27s)
+✔ [1128/1156] Built Test.Dogfood.Scenario.Atomic.Store (23s)
+✔ [1129/1156] Built Test.Dogfood.Scenario.Atomic.Writer (16s)
+✔ [1130/1156] Built Test.Dogfood.Scenario.SourceFragment (24s)
+✔ [1131/1156] Built Test.Dogfood.Scenario.NativeHeap (14s)
+✔ [1132/1156] Built Test.Dogfood.Scenario.SourceUse (10s)
+✔ [1133/1156] Built Effect4.Laws.Program.SourceOpportunityActions (132s)
+✔ [1134/1156] Built Effect4.Laws.Program.SourceOpportunityMachine (11s)
+✔ [1135/1156] Built Effect4.Laws.Program.PlaceLedgerConnect (5.8s)
+✔ [1141/1156] Built Effect4.Laws.Program.SourceOpportunityNative (7.4s)
+✔ [1142/1156] Built Effect4.Laws.Program.SourceOpportunityPrimitive (5.4s)
+✔ [1143/1156] Built Effect4.Laws.Program.SourceOpportunityExecution (3.8s)
+✔ [1144/1156] Built Effect4.Laws.Program.SourceOpportunityCommands (5.7s)
+✔ [1145/1156] Built Effect4.Laws.Program.SourceOpportunityHistory (3.0s)
+✔ [1146/1156] Built Test.Dogfood.Scenario.SourceOpportunity (9.1s)
+✔ [1147/1156] Built Test.Dogfood.Scenario.Atomic.WriterOwnership (5.6s)
+Some required targets logged failures:
+- Effect4.Laws.Program.PlaceFunding.Commands
+error: build failed
