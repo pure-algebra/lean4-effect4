@@ -589,7 +589,8 @@ theorem iterate_arm {available : Env.Requirement} {cursorTy : Option Ty} {initia
 /-- **`uninterruptible`**: the mask row over the body at the child, at the body's type. -/
 theorem uninterruptible_arm {available : Env.Requirement} {b : NativeEff} (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.uninterruptible b)))
-    (hpt : PointTyped root w p ty) (coverage : Row.Subset ty.requires available) :
+    (hpt : PointTyped root w p ty) (coverage : Row.Subset ty.requires available)
+    (savedParams : AmbientStackTyped root w available (scopeParams root.program p.path) p.params) :
     AmbientProg root w available (ty, available, available) (denoteR root.program (.uninterruptible b) p) := by
   obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_uninterruptible] at hcheck
@@ -604,17 +605,24 @@ theorem uninterruptible_arm {available : Env.Requirement} {b : NativeEff} (hfuel
     (fun _ _ _ h => nomatch h) ty
     ⟨BodyTyped.at_ _ _ (pointTyped_child hat rfl rfl hcb henv hview hstack), coverage, ?_, ?_,
       (⟨(fun _ impossible => by cases impossible),
-        (fun _ _ _ impossible => by cases impossible)⟩ : BodyCoverage root w available (.at_ (p.child 0)) ty)⟩
+        (fun _ _ _ impossible => by cases impossible),
+        (fun point role => by
+          rcases role with identity | ⟨ctx, impossible | impossible⟩
+          · cases identity
+            exact ambientStackTyped_child hat rfl rfl savedParams
+          · cases impossible
+          · cases impossible)⟩ : BodyCoverage root w available (.at_ (p.child 0)) ty)⟩
     (fun _ _ exit post => .pure ⟨post, by cases exit <;> exact Row.subset_refl _⟩ (Row.subset_refl _)) (Row.subset_refl _)
   · intro point ctx same
     cases same
-  · intro point previous same
-    cases same
+  · intro flag point previous impossible
+    cases impossible
 
 /-- **`interruptible`**: as `uninterruptible`, with the flag set. -/
 theorem interruptible_arm {available : Env.Requirement} {b : NativeEff} (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.interruptible b)))
-    (hpt : PointTyped root w p ty) (coverage : Row.Subset ty.requires available) :
+    (hpt : PointTyped root w p ty) (coverage : Row.Subset ty.requires available)
+    (savedParams : AmbientStackTyped root w available (scopeParams root.program p.path) p.params) :
     AmbientProg root w available (ty, available, available) (denoteR root.program (.interruptible b) p) := by
   obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_interruptible] at hcheck
@@ -629,19 +637,26 @@ theorem interruptible_arm {available : Env.Requirement} {b : NativeEff} (hfuel :
     (fun _ _ _ h => nomatch h) ty
     ⟨BodyTyped.at_ _ _ (pointTyped_child hat rfl rfl hcb henv hview hstack), coverage, ?_, ?_,
       (⟨(fun _ impossible => by cases impossible),
-        (fun _ _ _ impossible => by cases impossible)⟩ : BodyCoverage root w available (.at_ (p.child 0)) ty)⟩
+        (fun _ _ _ impossible => by cases impossible),
+        (fun point role => by
+          rcases role with identity | ⟨ctx, impossible | impossible⟩
+          · cases identity
+            exact ambientStackTyped_child hat rfl rfl savedParams
+          · cases impossible
+          · cases impossible)⟩ : BodyCoverage root w available (.at_ (p.child 0)) ty)⟩
     (fun _ _ exit post => .pure ⟨post, by cases exit <;> exact Row.subset_refl _⟩ (Row.subset_refl _)) (Row.subset_refl _)
   · intro point ctx same
     cases same
-  · intro point previous same
-    cases same
+  · intro flag point previous impossible
+    cases impossible
 
 /-- **`acquireRelease`**: the context read (`seqGuard_typed`), then the masked acquire at the
 point itself (`Body.acquireIn`), whose row is the node's own type; the body names the node and
 the context read, whose services fit (`fits_context_inv`). -/
 theorem acquireRelease_arm {available : Env.Requirement} {a r : NativeEff} (hfuel : p.fuel = f + 1)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.acquireRelease a r)))
-    (hpt : PointTyped root w p ty) (coverage : Row.Subset ty.requires available) :
+    (hpt : PointTyped root w p ty) (coverage : Row.Subset ty.requires available)
+    (savedParams : AmbientStackTyped root w available (scopeParams root.program p.path) p.params) :
     AmbientProg root w available (ty, available, available) (denoteR root.program (.acquireRelease a r) p) := by
   rw [denoteR_acquireRelease _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f)]
   refine ambient_guardBind root (ambient_captureContext_typed root w available)
@@ -662,14 +677,20 @@ theorem acquireRelease_arm {available : Env.Requirement} {a r : NativeEff} (hfue
         ⟨BodyTyped.acquireIn _ _ _ (pointTyped_mono ordered hpt) ⟨a, r, hat⟩ members,
           Row.subset_trans coverage bound, ?_, ?_,
           (⟨(fun _ impossible => by cases impossible),
-            (fun _ _ _ impossible => by cases impossible)⟩ :
+            (fun _ _ _ impossible => by cases impossible),
+            (fun point role => by
+              rcases role with impossible | ⟨context, identity | impossible⟩
+              · cases impossible
+              · cases identity
+                exact ambientStackTyped_widen bound (ambientStackTyped_mono ordered savedParams)
+              · cases impossible)⟩ :
             BodyCoverage root later ctx.services.keysRow (.acquireIn p ctx) ty)⟩
         (fun _ _ returned post => .pure ⟨post, by cases returned <;> exact bound⟩ bound) bound
       · intro point context identity
         cases identity
         exact (Provision.satisfies_iff_subset_keysRow _ _).mpr (Row.subset_refl _)
-      · intro point previous identity
-        cases identity
+      · intro flag point previous impossible
+        cases impossible
   · cases exit with
     | success value => exact Bool.noConfusion absent
     | failure cause =>
@@ -1190,7 +1211,8 @@ theorem awaitFiber_arm {available : Env.Requirement} {t : Term} {mode : Supervis
 typing); the post's fiber is declared at that type, so its handle fits the fiber type. -/
 theorem fork_arm {available : Env.Requirement} {b : NativeEff} {options : Supervision.ForkOptions}
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber (.fork b options))))
-    (hpt : PointTyped root w p ty) (coverage : Row.Subset ty.requires available) :
+    (hpt : PointTyped root w p ty) (coverage : Row.Subset ty.requires available)
+    (savedParams : AmbientStackTyped root w available (scopeParams root.program p.path) p.params) :
     AmbientProg root w available (ty, available, available) (denoteAction root.program p) := by
   obtain ⟨env, hcheck, henv, hview, hstack⟩ := hpt.at_node hat
   rw [Eff.expandIn_fork] at hcheck
@@ -1208,9 +1230,18 @@ theorem fork_arm {available : Env.Requirement} {b : NativeEff} {options : Superv
   refine ProgramArrow.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ _ _ h => nomatch h) q ⟨BodyTyped.at_ _ _ hbody, coverage,
       (fun _ _ impossible => by cases impossible),
-      (fun _ _ impossible => by cases impossible),
+      (fun _ _ _ impossible => by cases impossible),
       ⟨(fun _ impossible => by cases impossible),
-        (fun _ _ _ impossible => by cases impossible)⟩⟩
+        (fun _ _ _ impossible => by cases impossible),
+        (fun point role => by
+          rcases role with identity | ⟨ctx, impossible | impossible⟩
+          · cases identity
+            exact (ambientPointTyped_scope (q := (p.child 0).child 0)
+              (scopeParams_prefix hat (fun _ _ _ _ h => nomatch h)
+                ((List.prefix_append _ _).trans (List.prefix_append _ _)))
+              (node_at_child (node_at_child hat rfl) rfl) hcq henv hview savedParams).2
+          · cases impossible
+          · cases impossible)⟩⟩
     (fun w' _ ans post => ?_) (Row.subset_refl _)
   obtain ⟨id, rfl, hΓ⟩ := post
   exact .pure ⟨strongExit_success w' _ _ ⟨q, hΓ, Ty.subN_refl _, Ty.subN_refl _⟩,
@@ -1782,11 +1813,12 @@ theorem closeScope_arm {available : Env.Requirement} {scope exit : Term}
 theorem withFiber_arm {available : Env.Requirement} {a : ActionTerm NativeOp} (hfuel : p.fuel ≠ 0)
     (hat : Node.at_ (.eff root.program) p.path = some (.eff (.withFiber a)))
     (hpt : PointTyped root w p ty) (services : w.serviceTy = root.sig.serviceTy)
-    (coverage : Row.Subset ty.requires available) :
+    (coverage : Row.Subset ty.requires available)
+    (savedParams : AmbientStackTyped root w available (scopeParams root.program p.path) p.params) :
     AmbientProg root w available (ty, available, available) (denoteR root.program (.withFiber a) p) := by
   rw [denoteR_withFiber _ _ _ hfuel]
   cases a with
-  | fork b options => exact fork_arm hat hpt coverage
+  | fork b options => exact fork_arm hat hpt coverage savedParams
   | forkIn b options scope => exact forkIn_arm hat hpt coverage
   | forkScoped b options => exact forkScoped_arm hat hpt coverage
   | runIn target scope => exact runIn_arm hat hpt
@@ -3245,8 +3277,14 @@ theorem restore_arm {available : Env.Requirement} {saved : Term} {b : NativeEff}
     refine ProgramArrow.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
       (fun _ _ _ h => nomatch h) ty
       ⟨BodyTyped.at_ _ _ hchild, coverage, (fun _ _ impossible => by cases impossible),
-        (fun _ _ impossible => by cases impossible),
-        ⟨(fun _ impossible => by cases impossible), (fun _ _ _ impossible => by cases impossible)⟩⟩
+        (fun _ _ _ impossible => by cases impossible),
+        ⟨(fun _ impossible => by cases impossible), (fun _ _ _ impossible => by cases impossible),
+          (fun point role => by
+            rcases role with identity | ⟨ctx, impossible | impossible⟩
+            · cases identity
+              exact ambientStackTyped_child hat rfl rfl savedParams
+            · cases impossible
+            · cases impossible)⟩⟩
       (fun _ _ exit post => .pure ⟨post, by cases exit <;> exact Row.subset_refl _⟩ (Row.subset_refl _)) (Row.subset_refl _)
   | false =>
     exact hb w htie (p.child 0) ty (child_fuel_eq hfuel 0) rfl hchild available coverage
@@ -3314,13 +3352,13 @@ theorem childDenotes_upto (root : ProgramSource) (hlayer : ProvideLayerArm root)
       | matchCause b v c => exact matchCause_arm hq hat hqt htie coverage (hch b 0 rfl) (hch v 1 rfl) (hch c 2 rfl) savedParams
       | onExit b fin => exact onExit_arm hq hat hqt htie coverage (hch b 0 rfl) (hch fin 1 rfl) savedParams
       | exit b => exact exit_arm hq hat hqt htie (hch b 0 rfl) coverage savedParams
-      | uninterruptible b => exact uninterruptible_arm hq hat hqt coverage
-      | interruptible b => exact interruptible_arm hq hat hqt coverage
+      | uninterruptible b => exact uninterruptible_arm hq hat hqt coverage savedParams
+      | interruptible b => exact interruptible_arm hq hat hqt coverage savedParams
       | yieldNow priority => exact yieldNow_arm hpos hat hqt
       | awaitFiber t mode => exact awaitFiber_arm hpos hat hqt
-      | withFiber a => exact withFiber_arm hpos hat hqt htie coverage
+      | withFiber a => exact withFiber_arm hpos hat hqt htie coverage savedParams
       | «scoped» b => exact scoped_arm hq hat hqt coverage
-      | acquireRelease a r => exact acquireRelease_arm hq hat hqt coverage
+      | acquireRelease a r => exact acquireRelease_arm hq hat hqt coverage savedParams
       | provideContext context body => exact provideContext_arm hq hat hqt coverage savedParams
       | provideLayer l i b => exact hlayer hwf hmod f ih w htie q ty l i b hq hat hqt available coverage savedParams
       | service key => exact service_arm hpos htie hat hqt

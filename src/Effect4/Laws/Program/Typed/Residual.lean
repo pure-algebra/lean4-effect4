@@ -584,6 +584,13 @@ def BodyCoverage (root : ProgramSource) (w : World) (available : Env.Requirement
         (update.apply previous).Satisfies intrinsic.requires ∧
           (update.apply previous).Satisfies available ∧
           RegionStackTyped root w (update.apply previous).keysRow region)
+  ∧ (∀ point, body = .at_ point ∨ (∃ ctx, body = .acquireIn point ctx ∨ body = .release point ctx) →
+      AmbientStackTyped root w available (scopeParams root.program point.path) point.params)
+
+/-- The actual captured release producer disables interruption before installing restoration.
+Consumer: ambient mask entry; ordinary true-mask bodies retain their source admission. -/
+def ReleaseMaskAllowed (op : FiberOp) : Prop :=
+  ∀ flag point previous, op = .mask flag (.release point previous) → flag = false
 
 /-- A typed context reader uses both ambient coverage and the world's declared service carriers.
 The coarse getter remains available for internal capture and restoration. -/
@@ -595,8 +602,7 @@ def ambientFiberPre (root : ProgramSource) (w : World) (available : Env.Requirem
   | .mask _ body | .fork body _ _ => BodyTyped root w body cert ∧
       Row.Subset cert.requires available ∧
       (∀ point ctx, body = .acquireIn point ctx → ctx.services.Satisfies available) ∧
-      (∀ point previous, body = .release point previous → previous.services.Satisfies available) ∧
-      BodyCoverage root w available body cert
+      ReleaseMaskAllowed op ∧ BodyCoverage root w available body cert
   | .scoped point =>
       PointTyped root w point cert ∧ Row.Subset (bodyRequires root.signature cert) available
   | .forkScoped point _ _ =>
@@ -621,11 +627,13 @@ def ambientFiberPost (w : World) (available : Env.Requirement) (op : FiberOp)
       ctx.services.Satisfies available
   | other => fiberPost w other cert answer
 
-/-- Only the internal setter changes the available row in the ordinary fiber protocol. -/
+/-- The internal setter and captured release completion expose their actual context rows.
+Consumer: source-provider entry and the existing captured-context restoring frame. -/
 def ambientFiberInput (available : Env.Requirement) (op : FiberOp)
     (_answer : op.answer) : Env.Requirement :=
   match op with
   | .setContext ctx => ctx.services.keysRow
+  | .mask false (.release _ previous) => previous.services.keysRow
   | .getContext => match Val.context? _answer with
     | some ctx => ctx.services.keysRow
     | none => available
