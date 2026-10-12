@@ -990,12 +990,12 @@ theorem capture_release (root : ProgramSource) (w : World) (c : Capture)
     (hview : ∀ q ∈ completed, ∃ fty, w.Γ q.1 = some fty ∧ ExitOk w fty q.2) :
     ∃ rty, PointTyped root w ((Point.ofCapture c completed).childWith 1 exVal) rty ∧
       rty.error.normalize = .never := by
-  obtain ⟨acquire, release, env, t, a, hnode, hcheck, hacq, henv, _, hstack⟩ := h
+  obtain ⟨acquire, release, env, t, a, hnode, hcheck, hacq, henv, _, hstack, -⟩ := h
   rw [Eff.expandIn_acquireRelease] at hcheck
   obtain ⟨a', r, hacq', hrel, hnever, _⟩ := Checker.inv_acquireRelease _ _ _ _ _ t hcheck
   rw [hacq] at hacq'
   cases hacq'
-  refine ⟨r, pointTyped_child hnode rfl rfl hrel ?_ hview hstack, hnever⟩
+  refine ⟨r, pointTyped_child hnode rfl rfl hrel ?_ hview (ambientStackTyped_erases hstack), hnever⟩
   show EnvTyped w (env ++ [a.answer, .exitOf .unknown .unknown]) (c.env ++ [exVal])
   have := envTyped_append henv hex
   simpa only [List.append_assoc, List.singleton_append] using this
@@ -1118,7 +1118,7 @@ theorem finalizerTyped_of_admitted (root : ProgramSource) (w : World) (fin : Fin
     · intro w2 o2 v hv
       obtain ⟨previous, hprev, hprevious⟩ := fits_context_inv hv
       have o12 : w'.leHost w2 := leHost_trans _ _ _ o1 o2
-      obtain ⟨_, _, _, _, _, _, _, _, _, hsvc, -⟩ := finalizerAdmitted_mono root o12 (.foreign c) hc
+      obtain ⟨_, _, _, _, _, _, _, _, _, hsvc, -, -⟩ := finalizerAdmitted_mono root o12 (.foreign c) hc
       show TypedProg root w2 _ (match Val.context? v with
         | some previous =>
           (guardR .onSuccess (fiberValR (.setContext c.ctx) rfl)).bind (seqR fun _ =>

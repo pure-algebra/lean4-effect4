@@ -329,7 +329,8 @@ does (decisions row 153 (b)). Here since decisions row 151 (a″): the scope reg
 reads it (`FinalizerAdmitted`, `Typed/Admission.lean`), as the generated bundle's `CaptureOk` does
 (`preds`, `Typed/Assembly.lean`). The node is checked at the signature of its scope, and the
 capture's stack is typed there, as `PointTyped`'s (slice CX1): a release in a definition's body
-runs the body's parameters. -/
+runs the body's parameters. The captured context holds the node's requirement row and types the
+stack's passed programs (decisions row 349), so the release runs covered in it. -/
 def CaptureTyped (root : ProgramSource) (w : World) (c : Capture) : Prop :=
   ∃ (acquire release : NativeEff) (env : List Ty) (t a : EffTy),
     Node.at_ (.eff root.program) c.path = some (.eff (.acquireRelease acquire release)) ∧
@@ -338,7 +339,8 @@ def CaptureTyped (root : ProgramSource) (w : World) (c : Capture) : Prop :=
     Checker.check (root.scopeSig c.path) env (c.path ++ [0]) (Eff.expandIn root.program acquire) =
       .ok a ∧
     EnvTyped w (env ++ [a.answer]) c.env ∧ ServicesFit w c.ctx.services ∧
-    StackTyped root w (scopeParams root.program c.path) c.params
+    AmbientStackTyped root w c.ctx.services.keysRow (scopeParams root.program c.path) c.params ∧
+    Row.Subset t.requires c.ctx.services.keysRow
 
 /-- A capture retains the issued callback input at its actual release child.
 Concept: residual-program-typing, R4 and R9; helper of the closed M5 source claim.
@@ -451,10 +453,9 @@ def ContextUpdateTyped (w : World) (update : Env.ContextUpdate) : Prop :=
 `mask` and `fork` (`fiberPre`, `Typed/Residual.lean`).
 
 - A body at a point is the point's admission (`PointTyped`).
-- A finalizer body is its admission by name (`FinalizerAdmitted`) at a closing exit that fits rc.112's
-  release parameter type `Exit<unknown, unknown>`, and runs at the finalizer type `⟨unknown, never⟩`
-  (`E4-TYPED-CE-039`: admitting it at any type its exit fits typed a program the finalizer never
-  runs; no producer of `Body.fin` exists in the tree).
+- A finalizer body (`Body.fin`) is admitted at no type: it has no producer in the tree (the close
+  walk passes `denoteFin` programs directly), and a foreign release needs a covering row its name
+  does not carry (`E4-TYPED-CE-039`; the cut its register line proposed, decisions row 349).
 - `acquireRelease`'s masked half (`acquireInR`) names its node and a context whose services fit: the
   release's registration reads both (`CaptureTyped`), and the acquire runs at the node's child 0.
 - A capture's release restores a context whose services fit (`setContext`'s pre).
@@ -464,9 +465,6 @@ def ContextUpdateTyped (w : World) (update : Env.ContextUpdate) : Prop :=
 inductive BodyTyped (src : ProgramSource) (w : World) : Body → EffTy → Prop
   | at_ (p : Point) (ty : EffTy) (h : PointTyped src w p ty) :
       BodyTyped src w (.at_ p) ty
-  | fin (name : FinName) (ex : ExitV) (h : FinalizerAdmitted src w name)
-      (hex : FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ ex) :
-      BodyTyped src w (.fin name ex) ⟨.unknown, .never, Env.Requirement.empty⟩
   | raceCleanup (race : Nat) :
       BodyTyped src w (.raceCleanup race) (EffTy.pure .unit)
   | acquireIn (p : Point) (ctx : Ctx) (ty : EffTy) (h : PointTyped src w p ty)

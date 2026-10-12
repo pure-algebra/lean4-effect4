@@ -1733,9 +1733,9 @@ theorem completionStrong_mono {w w' : World} (ord : w.leHost w') {ty : EffTy}
 
 theorem captureTyped_mono {root : ProgramSource} {w w' : World} (ord : w.leHost w') {c : Capture}
     (h : CaptureTyped root w c) : CaptureTyped root w' c := by
-  obtain ⟨acquire, release, env, t, a, hnode, hcheck, hacq, henv, hsvc, hstack⟩ := h
+  obtain ⟨acquire, release, env, t, a, hnode, hcheck, hacq, henv, hsvc, hstack, hrow⟩ := h
   exact ⟨acquire, release, env, t, a, hnode, hcheck, hacq, envTyped_mono ord henv,
-    servicesFit_mono ord hsvc, stackTyped_mono ord hstack⟩
+    servicesFit_mono ord hsvc, ambientStackTyped_mono ord hstack, hrow⟩
 
 theorem finNameOk_world {root : ProgramSource} {w w' : World} (ord : w.leHost w') {e : Expect}
     {fin : FinName} (h : FinNameOk (preds root) w e fin) : FinNameOk (preds root) w' e fin := by

@@ -30,21 +30,6 @@ theorem StackCertificates.policy_map (root : ProgramSource) (world : World)
       maps parameter type admitted, values, ih _ rest⟩
 
 
-/-- The shared stack fold transports actual environment membership to a later world.
-Consumer: suspended source callbacks and captured parameter inputs in ambient M5. -/
-theorem StackCertificates.mono {w w' : World} (ordered : w.leHost w')
-    (root : ProgramSource) (policy : ParamDecl → EffTy → Prop) (stack : List (List ArgSite)) :
-    ∀ declarations, StackCertificates root w policy stack declarations →
-      StackCertificates root w' policy stack declarations := by
-  induction stack with
-  | nil => intro declarations typed; exact typed
-  | cons sites stack ih =>
-    intro declarations typed index parameter found
-    obtain ⟨site, program, environment, type, here, node, checked, admitted, values, rest⟩ :=
-      typed index parameter found
-    exact ⟨site, program, environment, type, here, node, checked, admitted,
-      envTyped_mono ordered values, ih _ rest⟩
-
 /-- Ambient stack evidence retains the unchanged unit stack judgment.
 Consumer: the original value and view typing producers used by source admission. -/
 theorem ambientStackTyped_erases {root : ProgramSource} {w : World} {available : Env.Requirement}

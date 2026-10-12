@@ -1166,6 +1166,21 @@ theorem envTyped_mono (ord : w.leHost w') {env : List Ty} {vals : List Val}
     (h : EnvTyped w env vals) : EnvTyped w' env vals :=
   ⟨h.1, fun i ty v hi hv => fits_mono ord (h.2 i ty v hi hv)⟩
 
+/-- The shared stack fold transports actual environment membership to a later world.
+Consumer: suspended source callbacks and captured parameter inputs in ambient M5. -/
+theorem StackCertificates.mono (ordered : w.leHost w')
+    (root : ProgramSource) (policy : ParamDecl → EffTy → Prop) (stack : List (List ArgSite)) :
+    ∀ declarations, StackCertificates root w policy stack declarations →
+      StackCertificates root w' policy stack declarations := by
+  induction stack with
+  | nil => intro declarations typed; exact typed
+  | cons sites stack ih =>
+    intro declarations typed index parameter found
+    obtain ⟨site, program, environment, type, here, node, checked, admitted, values, rest⟩ :=
+      typed index parameter found
+    exact ⟨site, program, environment, type, here, node, checked, admitted,
+      envTyped_mono ordered values, ih _ rest⟩
+
 /-- **A typed stack stays typed at every later world** (slice CX1): its sites are first-order
 data, and their values' membership persists. A step of `pointTyped_mono` and of every arm that
 builds a point at a later world. -/
@@ -1233,10 +1248,10 @@ theorem finalizerAdmitted_mono (root : ProgramSource) (ord : w.leHost w') (fin :
   have hRho : TableExtends w.Ρ w'.Ρ := ord.1.2.2.2.1
   cases fin with
   | foreign c =>
-    obtain ⟨acquire, release, env, t, a, hnode, hcheck, hacq, henv, hsvc, hstack⟩ := h
+    obtain ⟨acquire, release, env, t, a, hnode, hcheck, hacq, henv, hsvc, hstack, hrow⟩ := h
     exact ⟨acquire, release, env, t, a, hnode, hcheck, hacq, envTyped_mono ord henv,
       servicesFit_map ord.1.2.1 hPi hRho ord.2 ord.1.1.2 (serviceTy_of_le ord.1)
-        hsvc, stackTyped_mono ord hstack⟩
+        hsvc, StackCertificates.mono ord root _ _ _ hstack, hrow⟩
   | release _ _ => exact h
   | closeChildScope _ | closeChildOnFailure _ | detachFromParent _ _ => exact scopeLive_mono ord.1 h
   | interruptFiber _ _ => exact isSome_extends ord.1.2.1 h
@@ -1249,8 +1264,6 @@ theorem bodyTyped_mono (ord : w.leHost w') {src : ProgramSource} {b : Body} {ty 
       (serviceTy_of_le ord.1) h
   cases h with
   | at_ p ty h => exact .at_ p ty (pointTyped_mono ord h)
-  | fin name ex h hex =>
-    exact .fin name ex (finalizerAdmitted_mono src ord name h) (fitsExit_mono ord hex)
   | raceCleanup race => exact .raceCleanup race
   | acquireIn p ctx ty h node hsvc =>
     exact .acquireIn p ctx ty (pointTyped_mono ord h) node (services hsvc)
@@ -1464,10 +1477,11 @@ theorem scopeSig_rows_append (path : List Nat) :
   rw [hprog]
   exact (signature_rows_append src src' t' hprog htab hsvc).withParams _
 
-/-- A typed stack stays typed along an appended table (slice CX1): each site's check extends. -/
-theorem stackTyped_rows_append {w : World} :
+/-- A stack's certificates stay along an appended table (slice CX1), at any policy on the
+passed programs' types: each site's check extends. -/
+theorem stackCertificates_rows_append {w : World} (policy : ParamDecl → EffTy → Prop) :
     ∀ {ps : List ParamDecl} {stack : List (List ArgSite)},
-      StackTyped src w ps stack → StackTyped src' w ps stack
+      StackCertificates src w policy stack ps → StackCertificates src' w policy stack ps
   | _, [], h => h
   | _, _ :: rest, h => fun j q hq => by
     obtain ⟨site, arg, env, t, hs, hat, hc, ha, he, hr⟩ := h j q hq
@@ -1476,8 +1490,13 @@ theorem stackTyped_rows_append {w : World} :
       exact hat
     · rw [hprog]
       exact check_ext (scopeSig_rows_append src src' t' hprog htab hsvc site.path) hc
-    · exact (congrArg (fun program => StackTyped src' w (scopeParams program site.path) rest)
-        hprog).mpr (stackTyped_rows_append (stack := rest) hr)
+    · exact (congrArg (fun program => StackCertificates src' w policy rest (scopeParams program site.path))
+        hprog).mpr (stackCertificates_rows_append policy (stack := rest) hr)
+
+/-- A typed stack stays typed along an appended table (slice CX1). -/
+theorem stackTyped_rows_append {w : World} {ps : List ParamDecl} {stack : List (List ArgSite)}
+    (h : StackTyped src w ps stack) : StackTyped src' w ps stack :=
+  stackCertificates_rows_append src src' t' hprog htab hsvc _ h
 
 theorem pointTyped_rows_append {w : World} {point : Point} {ty : EffTy}
     (h : PointTyped src w point ty) : PointTyped src' w point ty := by
@@ -1519,8 +1538,8 @@ theorem layerPointTyped_rows_append {w : World} {point : Point} {lt : LayerTy}
 same program's, and the checker's verdicts extend along an appended row table. -/
 theorem captureTyped_rows_append {w : World} {c : Capture}
     (h : CaptureTyped src w c) : CaptureTyped src' w c := by
-  obtain ⟨acquire, release, env, t, a, hnode, hcheck, hacq, henv, services, hstack⟩ := h
-  refine ⟨acquire, release, env, t, a, ?_, ?_, ?_, henv, services, ?_⟩
+  obtain ⟨acquire, release, env, t, a, hnode, hcheck, hacq, henv, services, hstack, hrow⟩ := h
+  refine ⟨acquire, release, env, t, a, ?_, ?_, ?_, henv, services, ?_, hrow⟩
   · rw [hprog]
     exact hnode
   · rw [hprog]
@@ -1528,7 +1547,7 @@ theorem captureTyped_rows_append {w : World} {c : Capture}
   · rw [hprog]
     exact check_ext (scopeSig_rows_append src src' t' hprog htab hsvc c.path) hacq
   · rw [hprog]
-    exact stackTyped_rows_append src src' t' hprog htab hsvc hstack
+    exact stackCertificates_rows_append src src' t' hprog htab hsvc _ hstack
 
 theorem finalizerAdmitted_rows_append {w : World} {fin : FinName}
     (h : FinalizerAdmitted src w fin) : FinalizerAdmitted src' w fin := by
@@ -1553,8 +1572,6 @@ theorem bodyTyped_rows_append {w : World} {body : Body} {ty : EffTy}
     (h : BodyTyped src w body ty) : BodyTyped src' w body ty := by
   cases h with
   | at_ p ty hp => exact .at_ p ty (pointTyped_rows_append src src' t' hprog htab hsvc hp)
-  | fin name ex hf hex =>
-    exact .fin name ex (finalizerAdmitted_rows_append src src' t' hprog htab hsvc hf) hex
   | raceCleanup race => exact .raceCleanup race
   | acquireIn p ctx ty hp node services =>
     refine .acquireIn p ctx ty (pointTyped_rows_append src src' t' hprog htab hsvc hp) ?_ services
