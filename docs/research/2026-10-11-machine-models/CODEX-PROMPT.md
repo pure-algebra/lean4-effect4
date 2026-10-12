@@ -10,13 +10,13 @@ you. Then read this folder's `README.md` and the earlier note
 **Newest, 2026-10-12 00:45: merge the landing into the seat, then finish Assembly.** The
 landing branch `land/typed-context` is at `cd913bac7` and has merged your head at `eda02fb9b`. Its
 law graph builds except `Typed/Assembly.lean`, and its audit is within `[propext, Quot.sound]`.
-Merge it into the seat before your next commit, so your Body, LayerArm and Assembly work builds
+Merge it into the seat before your next commit. Your Body, LayerArm and Assembly work then builds
 against the same tree. The acceptance is `lake build Effect4 Effect4.Laws` at the seat's head.
 Three notes:
 
 - `SourceScope.source_no_scopeAdd` now lives in `Laws/Program/SyncOps.lean`, upstream of
-  `Agreement`. Your `syncOpOf_not_foreign_scopeAdd` is its instance at a foreign capture. Use it:
-  two modules that each split `NativeOp.syncOpOf` declare the same auxiliary equation, and a
+  `Agreement`. Your `syncOpOf_not_foreign_scopeAdd` is its instance at a foreign capture. Use it.
+  Two modules that each split `NativeOp.syncOpOf` declare the same auxiliary equation, and a
   module that imports both refuses it.
 - `Test/Program/MaskContract.lean`: at budget 2 the cut run now reaches the command fuel inside
   the provision's masked entry. The unmasked entry reached the interrupt before the form there.
