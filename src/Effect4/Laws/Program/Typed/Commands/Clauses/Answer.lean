@@ -26,28 +26,40 @@ theorem clause_snapshotChildren (root : ProgramSource) (rootTy : EffTy) :
   exact ev.settle_continue _ (ev.answer_typed hc (by rw [hc]; rfl) (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
     ((interpR root.program).fibersValue f.children)
-    (fun cert pre => by
+    (fun _ cert pre => by
       subst pre
-      exact snapshotChildren_answers root w f.children declared))
+      exact snapshotChildren_answers root w f.children declared) (fun _ => rfl))
 
 /-- **`getContext`** (`FiberAction.getContext`): the fiber's context, whose services fit by `J`
-(`RunFiberOk`'s service clause) and which is therefore live, answered as a context handle
-(`getContext_answers`). -/
+(`RunFiberOk`'s service clause) and cover the code's row, answered as a context handle
+(`ambient_getContext_answers`); the continuation runs at the context's own keys (the operation's
+input). -/
 theorem clause_getContext (root : ProgramSource) (rootTy : EffTy) :
     FiberClauseKeeps root rootTy .getContext := by
   intro w m rest f y next ev hc
   have c5 : ServicesFit w f.context.services :=
     (ev.typed.machine.fiber (rfiber?_mem ev.look)).ok.c5
-  exact ev.settle_continue _ (ev.answer_typed hc (by rw [hc]; rfl) (fun _ h => nomatch h)
+  refine ev.settle_continue
+    { f.frame with current := next ((interpR root.program).contextValue f.context) }
+    (fun ty declared => ?_)
+  obtain ⟨row, tin, flag, covered, bit, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  rw [hc] at current
+  obtain ⟨cert, pre, typedNext, _⟩ := ambientProg_fiber_inv current (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
-    ((interpR root.program).contextValue f.context)
-    (fun cert pre => by
-      subst pre
-      exact getContext_answers root w f.context c5 (live_context_of_servicesFit c5)))
+  have continued := typedNext w (leHost_refl w) (Val.context f.context)
+    (ambient_getContext_answers c5 covered pre)
+  have input : ambientFiberInput row .getContext (Val.context f.context) =
+      f.context.services.keysRow := by
+    simp only [ambientFiberInput, Val.context?_context]
+  rw [input] at continued
+  exact ⟨f.context.services.keysRow, tin, flag,
+    (Provision.satisfies_iff_subset_keysRow _ _).mpr (Row.subset_refl _), bit, continued, stack,
+    ⟨prov.recorded, prov.deferred⟩⟩
 
 /-- **`interrupt`** (`:857`, D6b): the public interrupt installs `interruptAs(target, self)` over
-the saved answer frame, typed at `unit` by its row's pre, the target's declaration, which this
-row's pre gives (finding F-PRE); the frame carries the reply to the continuation. -/
+the saved answer frame, typed at `unit` at the fiber's row by its row's pre, the target's
+declaration, which this row's pre gives (finding F-PRE); the frame carries the reply to the
+continuation. -/
 theorem clause_interrupt (root : ProgramSource) (rootTy : EffTy) (target : FiberId) :
     FiberClauseKeeps root rootTy (.interrupt target) := by
   intro w m rest f y next ev hc
@@ -57,13 +69,19 @@ theorem clause_interrupt (root : ProgramSource) (rootTy : EffTy) (target : Fiber
   refine ev.settle_continue { f.frame with
     current := fiberValR (.interruptAs target f.id) rfl, stack := .answer (seqR next) :: f.frame.stack }
     (fun ty declared => ?_)
-  obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  obtain ⟨row, tin, flag, covered, bit, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
   rw [hc] at current
-  obtain ⟨_, pre, typedNext⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
+  obtain ⟨_, pre, typedNext, entry, wf⟩ := ambientProg_fiber_inv current (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
-  refine ⟨⟨.unit, .never, Env.Requirement.empty⟩, ?_,
-    hostStack_push (Evaluating.unitAnswerFrame typedNext) stack, ⟨prov.recorded, prov.deferred⟩⟩
-  exact TypedProg.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) () pre (fun _ _ _ post => unitAnswer_typed root post)
+  refine ⟨row, ((((⟨.unit, .never, Env.Requirement.empty⟩ : EffTy), row, row) : AmbientPosition), tin.2),
+    flag, covered, bit, ?_,
+    .cons (.inl (Evaluating.unitAnswerFrame (fun w' o ans post => typedNext w' o ans post) entry wf))
+      stack, ⟨prov.recorded, prov.deferred⟩⟩
+  refine .fiber (op := .interruptAs target f.id) (fun _ h => nomatch h) (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ _ _ h => nomatch h) () pre (fun w' _ ans post => ?_)
+    ⟨Row.subset_refl _, Row.subset_refl _⟩
+  change ans = Val.unit at post
+  subst post
+  exact .pure (ambientExit_const (strongExit_success w' _ _ trivial)) ⟨Row.subset_refl _, Row.subset_refl _⟩
 
 end Effect4.Program.Typed
