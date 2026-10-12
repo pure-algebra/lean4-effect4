@@ -7,7 +7,7 @@ history (an archived branch, a moved repository, a retired battery) are in
 history and this one is the live register. The split was made on 2026-09-13,
 by whether the witness path exists in this tree: 138 rows here, 260 there then.
 At `dceae006` (2026-10-01) there were 146 rows here and 281 there; the formal
-pass's seven rows (last section) make 153 here. At the typed-context landing
+pass's seven rows (their own section) make 153 here. At the typed-context landing
 (2026-10-12) twenty-seven rows moved there with their retired batteries, leaving
 191 here and 308 there. The type interface note's two remaining rows (2026-10-12,
 at the foot of the file) make 193 here. Count with
