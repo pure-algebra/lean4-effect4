@@ -262,7 +262,7 @@ SEMANTICS_SOURCES := tools/Tools/Semantics.lean tools/Drivers/Semantics.lean \
   $(wildcard tools/ProofGraph/*.lean) \
   Test/Counterexamples/REGISTER.md docs/core/decisions.md lean-toolchain lakefile.toml
 $(GEN)/semantics: $(SEMANTICS_SOURCES) $(LEAN_INPUTS)
-	$(LAKE) build semantics-report Effect4.Laws Test.Program.TypedProgBindRed Test.Program.ProtocolPosts $(SEMANTICS_DOGFOOD) $(SEMANTICS_TOOL_ROOTS)
+	$(LAKE) build semantics-report Effect4.Laws Test.Program.TypedProgBindRed $(SEMANTICS_DOGFOOD) $(SEMANTICS_TOOL_ROOTS)
 	rm -rf $(GEN)/semantics-report && mkdir -p $(GEN)/semantics-report
 	$(LAKE) exe semantics-report $(GEN)/semantics-report
 	cp $(GEN)/semantics-report/semantics.md generated/semantics.md

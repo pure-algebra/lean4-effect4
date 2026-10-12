@@ -151,7 +151,7 @@ structure Registry where
 deriving Repr, Inhabited
 
 def registry : Registry where
-  roots := [`Effect4.Laws, `Test.Program.TypedProgBindRed, `Test.Program.ProtocolPosts,
+  roots := [`Effect4.Laws, `Test.Program.TypedProgBindRed,
     `Test.Dogfood.P1HttpCache, `Test.Dogfood.P2HandlerLayers, `Test.Dogfood.P3WorkerQueue,
     `Test.Dogfood.P4RateLimiter, `Test.Dogfood.P5LedgerService,
     -- the scenarios of the acceptance programs (decisions row 254): their placed claims and
@@ -465,8 +465,8 @@ def registry : Registry where
       title := "Re-entrant finalizer addition observes closed state immediately"
       pointer := .witness `Effect4.Scope.close_reentrant_add },
     { id := "close-seq-protocol", concept := "scope-lifetime-finalization", role := .fundamentalProperty
-      title := "The close walk meets the iterator protocol for clean finalizers"
-      pointer := .witness `Test.Program.ProtocolPosts.CloseIter.closeSeq_protocol
+      title := "The sequential close walk meets the ambient iterator protocol at one row for admitted finalizers"
+      pointer := .witness `Effect4.Program.Typed.closeSeqProtocol
       literature := [
         { work := "deVilhenaPottier2021", locator := "audit P8", relation := "adaptedResult" }
       ] },

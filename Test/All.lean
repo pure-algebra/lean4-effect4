@@ -57,7 +57,6 @@ import Test.Counterexamples.Machine.Semantics.AsyncHookContract
 import Test.Counterexamples.Machine.Semantics.TrivialPosts
 import Test.Counterexamples.Machine.Semantics.M6Capstone
 import Test.Counterexamples.Machine.Semantics.StaleCode
-import Test.Counterexamples.Machine.Semantics.AwaitLoad
 import Test.Counterexamples.Machine.Semantics.RawOrderLoad
 import Test.Counterexamples.Machine.Semantics.ScopePresence
 import Test.Program.TypedSplit
@@ -134,7 +133,6 @@ import Test.Program.LaunchEntrant
 import Test.Program.HostWalk
 import Test.Program.LoopProtocols
 import Test.Program.AnswerSchema
-import Test.Program.ProtocolPosts
 import Test.Program.RawHandleTerms
 import Test.Program.CompletionDueControls
 import Test.Program.ReadOnlyStoreClauses
