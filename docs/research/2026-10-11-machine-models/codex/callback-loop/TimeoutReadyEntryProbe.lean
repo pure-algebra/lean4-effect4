@@ -1,4 +1,5 @@
 import TimeoutNativeRootFamilyProbe
+import Effect4.Laws.Machine.AnswerFlowHead
 
 /-!
 Concept: scope-lifetime-finalization R11 and translation-simulation R10.
@@ -153,11 +154,25 @@ theorem form_entry (view : HostTimeoutFlow.View) (state : Stores) (image : Image
     ∃ after events, fiber.step (HostTimeoutFlow.interpreter view).toPrimInterp = (.running after, events) ∧
       AnswerFlow.FamilyResult (model view) (HostTimeoutNativeRootFamily.Edge view) state output after.current after.stack := by
   rw [form_bind] at current
-  simp only [FrameFiber.step, current]
-  refine ⟨_, _, rfl, .inl (.cleanupExit (expected image n ready) (expected_own image n ready)),
-    CodeAt.race image n ready heap captured fuel delay previous, ?_⟩
-  exact .cons (.lower _ _ _ (HostTimeoutNumberFormFamily.form_saved view state
-    (expected image n ready) (expected_own image n ready) captured fuel delay n previous (expected_count image n ready) _)) stack
+  have head : AnswerFlow.HeadAt (model view) (HostTimeoutFlow.interpreter view).toPrimInterp
+      (HostTimeoutNativeRootFamily.Edge view) state
+      (.inl (.formAfterCleanup (expected image n ready) (expected_own image n ready))) fiber.current := by
+    rw [current]
+    exact .onExit (.inl (.cleanupExit (expected image n ready) (expected_own image n ready))) _ _ false
+      (show CodeAt view state _ _ from CodeAt.race image n ready heap captured fuel delay previous)
+      (.lower _ _ _ (HostTimeoutNumberFormFamily.form_saved view state
+        (expected image n ready) (expected_own image n ready) captured fuel delay n previous
+        (expected_count image n ready) _))
+  have stepped := AnswerFlow.frame_step (model view) (HostTimeoutFlow.interpreter view).toPrimInterp
+    (HostTimeoutNativeRootFamily.Edge view) state _ output fiber head stack
+    (by
+      intro value provided actual good
+      rcases actual with ⟨success, _⟩ | ⟨thunk, sync, _, _⟩
+      · rw [current] at success; cases success
+      · rw [current] at sync; cases sync)
+    (by intro cause actual good; rw [current] at actual; cases actual)
+  simp only [FrameFiber.step, current] at stepped ⊢
+  exact ⟨_, _, rfl, stepped⟩
 
 /-- Actual race entry installs the counted suspension above the same future form suffix.
 Ready remains the current heap; this permission does not assert completed attempt cleanup. -/
