@@ -1,4 +1,5 @@
 import Effect4.Laws.Machine.AnswerFlowFamily
+import Effect4.Machine.Fibers
 
 /-!
 Concept: store-typing R4 and scope-lifetime-finalization R11.
@@ -332,5 +333,62 @@ theorem getCont_cause_finalizer (world : World) (input output : Kind)
   simp only [FramePop.deliveredExit, carried, Option.getD_some] at installed
   exact ⟨middle, family.program world incoming middle selected callback world
     (model.future_refl world) (.failure delivered) next incomingGood installed, suffix⟩
+
+include family mask in
+/-- Actual native finalizer installation retains the selected external callback and its suffix.
+Consumers: Timeout's native form adapters and its recursive root suffix.
+The model supplies the actual installed wrapper for the exit delivered by getCont. -/
+theorem finalizer_step {χ : Type u} {St : Type (max u v)}
+    (runInterp : RunInterp ν σ β ε δ ι α χ St)
+    (world : World) (input output : Kind)
+    (machine : RunMachine ν σ β ε δ ι α χ St) (fiber : RunFiber ν σ β ε δ ι α χ)
+    (yielding : Bool) (exit : Exit β ε δ ι α)
+    (body : Prim ν σ β ε δ ι α) (name : ν) (flag : Bool) (program : Prim ν σ β ε δ ι α)
+    (good : ExitAt model world input exit)
+    (stack : Path (Edge world) input output fiber.frame.stack)
+    (chosen : (fiber.frame.getCont
+      (match exit with | .success _ => .contA | .failure _ => .contE)
+      (match exit with | .success _ => false | .failure _ => true)
+      (match exit with | .success _ => none | .failure cause => some cause)).answer =
+        .frame (.onExit body name flag))
+    (hook : runInterp.finalizerProgram name
+      ((fiber.frame.getCont
+        (match exit with | .success _ => .contA | .failure _ => .contE)
+        (match exit with | .success _ => false | .failure _ => true)
+        (match exit with | .success _ => none | .failure cause => some cause)).deliveredExit exit) = some program)
+    (installed : model.finalizer world name
+      ((fiber.frame.getCont
+        (match exit with | .success _ => .contA | .failure _ => .contE)
+        (match exit with | .success _ => false | .failure _ => true)
+        (match exit with | .success _ => none | .failure cause => some cause)).deliveredExit exit) =
+      some (finalizerCode runInterp
+        ((fiber.frame.getCont
+          (match exit with | .success _ => .contA | .failure _ => .contE)
+          (match exit with | .success _ => false | .failure _ => true)
+          (match exit with | .success _ => none | .failure cause => some cause)).deliveredExit exit) program)) :
+    let result := evaluatePrim.finalizerOr runInterp machine fiber yielding exit
+    result.machine.state = machine.state ∧
+      FamilyResult model Edge world output result.fiber.frame.current result.fiber.frame.stack := by
+  cases exit with
+  | success value =>
+    have typed := getCont_value_finalizer model interp Edge family mask world input output fiber.frame value
+      (.onExit body name flag) (finalizerCode runInterp (.success value) program) good stack chosen installed
+    unfold evaluatePrim.finalizerOr
+    dsimp only
+    rw [chosen]
+    dsimp only
+    rw [hook]
+    exact ⟨rfl, typed⟩
+  | failure cause =>
+    have typed := getCont_cause_finalizer model interp Edge family mask world input output fiber.frame cause
+      (.onExit body name flag)
+      (finalizerCode runInterp ((fiber.frame.getCont .contE true (some cause)).deliveredExit (.failure cause)) program)
+      good stack chosen installed
+    unfold evaluatePrim.finalizerOr
+    dsimp only
+    rw [chosen]
+    dsimp only
+    rw [hook]
+    exact ⟨rfl, typed⟩
 
 end Effect4.Machine.AnswerFlow.External

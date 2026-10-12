@@ -1,0 +1,2 @@
+type CarrierFixture.Queue @int D.t
+ops D.t empty D.empty

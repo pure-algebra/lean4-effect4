@@ -191,9 +191,9 @@ def main (argv : List String) : IO Unit := do
     -- `ocaml/gen/api_gen.ml` regenerates byte for byte.
     let items : List Ml.Decl :=
       if args.externs.isNone then
-        [.floatingAttrD "warning \"-8-26-27-30-32-33-35-37-39-69\"", .blank] ++ body
+        [.floatingAttrD "warning \"-26-27-30-32-33-35-37-39-69\"", .blank] ++ body
       else
-        [.floatingAttrD "warning \"-8-26-27-30-32-33-35-37-39-69\"", .blank,
+        [.floatingAttrD "warning \"-26-27-30-32-33-35-37-39-69\"", .blank,
          .rawD carrierSignatures, .blank,
          .moduleD "Make" carrierParams none body]
     let modName := (System.FilePath.mk args.out).fileStem.getD "machine_gen"

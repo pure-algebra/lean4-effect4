@@ -1,0 +1,87 @@
+PASS succ 41: 42
+PASS pred 0: 0
+PASS pred 5: 4
+PASS isZero 0: true
+PASS isZero 3: false
+PASS not true: false
+PASS add 2 3: 5
+PASS lt 2 3: true
+PASS lt 3 3: false
+PASS eq 3 3: true
+PASS pair 1 2 is a two-element array: [1,2]
+PASS fst (pair 1 2): 1
+PASS snd (pair 1 2): 2
+PASS strings () is empty: []
+PASS strings ("7", "\"x\"") keeps its JSON texts: ["7","\"x\""]
+PASS string equality hit: true
+PASS string equality miss: false
+PASS or false true: true
+PASS and true false: false
+PASS mixed cause contains Fail: true
+PASS successful exit has no Fail: false
+PASS failed exit contains Die: true
+PASS mixed cause contains Interrupt: true
+PASS first Fail is retained: 7
+PASS successful exit has no error: true
+PASS tagIs hits the tagged pair: true
+PASS tagIs misses another tag: false
+PASS tagIs is false on a bare string: false
+PASS tagIs is false on a number: false
+PASS none has no payload: false
+PASS some unit is present: true
+PASS none selects the default: 9
+PASS some selects its payload: 7
+PASS nested none remains a payload: true
+PASS ite true 1 2: 1
+PASS ite false 1 2: 2
+PASS some 42: true
+PASS none () is none: true
+PASS mul 6 7: 42
+PASS zero product at profile edge: 0
+PASS largest profile product: 9007199254740991
+PASS first product above profile: refused
+PASS rounded product refuses: refused
+PASS nil () is empty: []
+PASS cons 1 [2, 3]: [1,2,3]
+PASS get [10, 20] 1: 20
+PASS get [10, 20] 5 is none: true
+PASS get [unit] 0 is some unit: true
+PASS length [1, 2, 3]: 3
+PASS append [1, 2] [3]: [1,2,3]
+PASS sub 5 2: 3
+PASS sub 2 5 truncates at zero: 0
+PASS plus 2 3: 5
+PASS plus -4 3: -1
+PASS minus 10 25 is exact: -15
+PASS minus 0 404: -404
+PASS lt -2 1: true
+PASS eq -1 -1: true
+PASS plus at the bound: 9007199254740991
+PASS plus past the bound refuses: refused
+PASS add past the bound refuses: refused
+PASS minus past the bound refuses: refused
+PASS div 10 3: 3
+PASS div 10 0 is zero: 0
+PASS mod 10 3: 1
+PASS mod 10 0 is the dividend: 10
+PASS concat foo bar: foobar
+PASS empty tuple retains zero positions: 0
+PASS tuple retains every positional value: ready
+PASS empty map has no entries: 0
+PASS missing map key is none: true
+PASS computed prototype key stays a value: 7
+PASS map keys follow UTF-8 order: ["10","2"]
+PASS map entries use ordinary pairs: [["a",1],["b",2]]
+PASS last repeated map key wins: 2
+PASS take [1, 2, 3] 2: [1,2]
+PASS take past the end is the list: [1,2,3]
+PASS drop [1, 2, 3] 2: [3]
+PASS drop past the end is empty: []
+PASS a Ref is the same handle as itself: true
+PASS two Refs that hold one value are two handles: false
+PASS a Deferred is the same handle as itself: true
+PASS two Deferreds are two handles: false
+PASS fold runs from the head: 4
+PASS fold keeps the list's order: [1,2,3]
+PASS fold of the empty list is its initial value: 7
+86 atom controls; 0 failures

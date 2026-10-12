@@ -1,0 +1,2 @@
+src/Effect4/Laws/Machine/AnswerFlow.lean: 9 old theorem headers identical; lines 246 -> 261; baseline SHA256 2f6861f0ff4664d6fa35673bac6c7719c931f5ab55e67b6644e8636954b79e20
+src/Effect4/Laws/Program/NativeFrameScope.lean: 21 old theorem headers identical; lines 364 -> 371; baseline SHA256 39cef85e079afbc8e8b84f39f9dcebd301f0e69104a6530c767f256f58c004fd

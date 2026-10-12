@@ -282,6 +282,20 @@ theorem frame_step_at (root : NativeEff) (fragment : Fragment root) (completed) 
       rcases result with ⟨next, pushed⟩
       have slots := armA_at root fragment completed table (.iterator name cursor) cursor none next pushed current ha
       exact ⟨slots.1, stack_append_at root _ _ slots.2 stack⟩
+  case onSuccess body name =>
+    obtain ⟨after, events, ran, code, suffix⟩ := AnswerFlow.push_success_path (lexicalModel root)
+      (interpAt root completed table).toPrimInterp () () () () (lexicalEdge root) fiber body name h
+      current.1 current (stack_path_at root fiber.stack stack)
+    have actual := congrArg (FrameStepAt root) (congrArg Prod.fst ran)
+    have result := actual.mpr (show FrameStepAt root (.running after) from ⟨code, path_stack_at root suffix⟩)
+    simpa only [FrameFiber.step, h] using result
+  case onFailure body name =>
+    obtain ⟨after, events, ran, code, suffix⟩ := AnswerFlow.push_failure_path (lexicalModel root)
+      (interpAt root completed table).toPrimInterp () () () () (lexicalEdge root) fiber body name h
+      current.1 current (stack_path_at root fiber.stack stack)
+    have actual := congrArg (FrameStepAt root) (congrArg Prod.fst ran)
+    have result := actual.mpr (show FrameStepAt root (.running after) from ⟨code, path_stack_at root suffix⟩)
+    simpa only [FrameFiber.step, h] using result
   case whileLoop name cursor =>
     have slots := interp_loopEnter_at root fragment completed table name cursor current
     have produced : match (interpAt root completed table).loopEnter name cursor with

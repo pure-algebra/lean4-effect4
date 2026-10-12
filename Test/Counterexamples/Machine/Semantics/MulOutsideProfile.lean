@@ -1,7 +1,7 @@
 import Effect4.Api
 
 /-!
-# `E4-RUN-CE-047`: `mul` answers outside the profile, three ways (retained control)
+# `E4-RUN-CE-047`: exact reference multiplication and repaired target refusal
 
 Row 321 marks every growing natural operation with `Profile.grow`, so that a face can refuse a
 result above the profile's bound (DI-56): `succ`, `add`, `plus` and `minus`
@@ -15,8 +15,9 @@ otherwise, with no refusal:
   (`ocaml/gen/api_gen.ml`).
 
 Row 309 says that no multiplication enters, yet the name resolves, and
-`Test/Dogfood/P1HttpCache.lean` uses it. The forced repair: mark `mul` like `add`, with its OCaml
-and TypeScript refusals, or remove the atom.
+`Test/Dogfood/P1HttpCache.lean` uses it. The repair marks `mul` with `Profile.scale`; both targets refuse products outside the profile.
+`docs/research/2026-10-11-machine-models/codex/type-profile/TargetReceipt.md` records the finite checks.
+The exact reference answer remains unchanged.
 -/
 
 set_option autoImplicit false

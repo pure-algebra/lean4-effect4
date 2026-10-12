@@ -1,0 +1,7 @@
+COMMAND: opam exec --switch=effect4 -- ocamlc -w +8 -warn-error +8 -c /private/tmp/ProfileWarning8Control.ml
+File "/private/tmp/ProfileWarning8Control.ml", line 3, characters 13-28:
+3 | let select = function A -> 0
+                 ^^^^^^^^^^^^^^^
+Error (warning 8 [partial-match]): this pattern-matching is not exhaustive.
+Here is an example of a case that is not matched:
+B

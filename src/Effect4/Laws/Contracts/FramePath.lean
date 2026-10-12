@@ -29,6 +29,16 @@ theorem map (f : ∀ a b frame, E a b frame → E' a b frame) {a b : Object} {s 
   | nil ty => exact .nil ty
   | cons head _ ih => exact .cons (f _ _ _ head) ih
 
+/-- An object map retains each actual frame and maps its edge endpoints.
+Consumer: native cleanup classes join the recursive root callback classes on the same saved path. -/
+theorem map_objects {Target : Type u} {R : Target → Target → Frame → Prop}
+    (f : Object → Target) (edge : ∀ a b frame, E a b frame → R (f a) (f b) frame)
+    {input output : Object} {frames : List Frame} (path : Path E input output frames) :
+    Path R (f input) (f output) frames := by
+  induction path with
+  | nil kind => exact .nil (f kind)
+  | cons head _ ih => exact .cons (edge _ _ _ head) ih
+
 theorem append {a b c : Object} {s₁ s₂ : List Frame} (h₁ : Path E a b s₁)
     (h₂ : Path E b c s₂) : Path E a c (s₁ ++ s₂) := by
   induction h₁ with

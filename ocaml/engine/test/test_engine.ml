@@ -890,6 +890,40 @@ let clock_profile_check () =
   check_instance (module En_fast);
   check_instance (module En_ref)
 
+(* The generated multiplication row observes exact products only inside the profile.
+   Out-of-profile products refuse at the decision boundary and retain its input. *)
+let multiplication_profile_check () =
+  let program a b = E.Eff_bind
+    (E.Eff_perform (E.Native_op_refMake, nat_lit 7),
+     E.Eff_succeed (E.Term_app ("mul",
+       E.Terms_cons (nat_lit a, E.Terms_cons (nat_lit b, E.Terms_nil))))) in
+  let check_instance (module En : E4_engine.ENGINE) =
+    let prefix = En.name ^ " multiplication profile: " in
+    List.iter (fun (label, a, b, expected) ->
+      let result = En.run (program a b) ~fuel:100 in
+      check (prefix ^ label)
+        (En.root_exit result = Some ("success " ^ string_of_int expected)))
+      ["ordinary", 6, 7, 42;
+       "zero at the boundary", 0, Int64.to_int 9007199254740991L, 0;
+       "largest admitted product", Int64.to_int 9007199254740991L, 1,
+         Int64.to_int 9007199254740991L];
+    List.iter (fun (label, a, b) ->
+      let before = En.load (program a b) ~fuel:100 in
+      let observation m = En.refs m, En.trace_rows m, En.fiber_rows m, En.store_row m in
+      let result, remaining = En.replay_to before [En.evaluate 0; En.flush] in
+      check (prefix ^ label ^ " refuses")
+        (match En.answer result with E4_engine.Outside_profile _ -> true | _ -> false);
+      check (prefix ^ label ^ " retains the input")
+        (observation result = observation before);
+      check (prefix ^ label ^ " retains the decision") (List.length remaining = 2))
+      ["first product above the boundary", Int64.to_int 4503599627370496L, 2;
+       "rounded double product", 134217729, 134217729;
+       "product above machine integers", Int64.to_int 9007199254740991L,
+         Int64.to_int 9007199254740991L]
+  in
+  check_instance (module En_fast);
+  check_instance (module En_ref)
+
 (* Public engine inputs refuse before narrowing or constructing a decision. *)
 let numeric_ingress_check () =
   let refused f = match f () with
@@ -1025,6 +1059,7 @@ let () =
   replay_steps_check ();
   clock_profile_check ();
   numeric_ingress_check ();
+  multiplication_profile_check ();
   origin_prelude_check ();
   layer_environment_check ();
   print_endline "";

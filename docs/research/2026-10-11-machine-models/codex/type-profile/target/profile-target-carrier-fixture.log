@@ -1,0 +1,7 @@
+compile 0
+positive-generate 0
+positive-ocaml 0
+missing-generate 0
+missing-ocaml 2
+nonempty-generate 1
+PASS carrier fixture: full record and existing fields retained; missing empty and nonempty list rejected
