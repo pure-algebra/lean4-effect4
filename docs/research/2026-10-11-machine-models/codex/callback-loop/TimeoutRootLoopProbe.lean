@@ -1,5 +1,5 @@
 import TimeoutJointGenerationProbe
-import Effect4.Laws.Machine.AnswerFlowFamily
+import Effect4.Laws.Machine.AnswerFlowFamilyPop
 
 /-!
 Concept: scope-lifetime-finalization R11 and translation-simulation R10.
@@ -23,6 +23,46 @@ def RootAt (point : Point) : Prop :=
 def FinishAt (point : Point) : Prop :=
   point.path = [1,1,1] ∧ point.env = cells (.cell ⟨0⟩) (.cell ⟨1⟩) (.cell ⟨2⟩)
 
+/-- The actual retry test point retains the allocated cells and generation cursor. -/
+def catchPoint (captured : Point) (fuel : Nat) (n : Fin 4) (delay : Nat) (previous : Val) : Point :=
+  {captured with
+    path := [1,1,1,0,0,1]
+    env := ready (Val.cell ⟨0⟩) (Val.cell ⟨1⟩) (Val.cell ⟨2⟩) n delay previous
+    fuel := fuel + 1}
+
+/-- The callback reads the actual retry test and its existing body and handler. -/
+theorem catch_node (captured : Point) (fuel : Nat) (n : Fin 4) (delay : Nat) (previous : Val) :
+    Node.at_ (.eff HostTimeoutSource.program) (catchPoint captured fuel n delay previous).path =
+      some (.eff (.catchIf HostTimeoutSource.retryTest
+        (HostTimeoutSlots.sourceAt [1,1,1,0,0,1,0])
+        (HostTimeoutSlots.sourceAt [1,1,1,0,0,1,1]))) := by kernel_rfl
+
+/-- The actual handled source leaf supplies the loop's failure option pair. -/
+theorem catch_handler (captured : Point) (fuel : Nat) (n : Fin 4) (delay : Nat) (previous error : Val) :
+    resolve HostTimeoutSource.program ((catchPoint captured (fuel + 1) n delay previous).childWith 1 error) =
+      Prim.success (.list [.none, .some error]) := by kernel_rfl
+
+/-- The native catch uses its actual source test before returning that pair. -/
+theorem catch_callback (view : HostTimeoutFlow.View) (captured : Point) (fuel : Nat)
+    (n : Fin 4) (delay : Nat) (previous : Val) (cause : CauseV) :
+    (HostTimeoutFlow.interpreter view).contE (.caughtError (catchPoint captured (fuel + 1) n delay previous)) cause =
+      match caughtErrorValue?
+        (ready (.cell ⟨0⟩) (.cell ⟨1⟩) (.cell ⟨2⟩) n delay previous) HostTimeoutSource.retryTest cause with
+      | some error => .success (.list [.none, .some error])
+      | none => .failure cause := by
+  change Effect4.Program.contEOf HostTimeoutSource.program
+    (.caughtError {catchPoint captured (fuel + 1) n delay previous with completed := view}) cause = _
+  rw [Effect4.Program.contEOf, catch_node]
+  change (match caughtErrorValue?
+      (ready (Val.cell ⟨0⟩) (Val.cell ⟨1⟩) (Val.cell ⟨2⟩) n delay previous) HostTimeoutSource.retryTest cause with
+    | some error => resolve HostTimeoutSource.program
+      ((catchPoint {captured with completed := view} (fuel + 1) n delay previous).childWith 1 error)
+    | none => .failure cause) = _
+  cases handled : caughtErrorValue?
+      (ready (Val.cell ⟨0⟩) (Val.cell ⟨1⟩) (Val.cell ⟨2⟩) n delay previous) HostTimeoutSource.retryTest cause with
+  | none => rfl
+  | some error => exact catch_handler _ _ _ _ _ _
+
 /-- The source body receives this cursor only after the previous form completes. -/
 structure Complete (image : Image) (n : Nat) (plain : Bool) : Prop where
   cursor : image.count = n
@@ -34,6 +74,8 @@ structure Complete (image : Image) (n : Nat) (plain : Bool) : Prop where
 inductive Kind
   | root
   | body (n : Fin 4) (delay : Nat) (previous : Val)
+  | published (image : Image) (own : image.count = image.cleanups.length + 1)
+      (n : Fin 4) (delay : Nat) (previous : Val)
 
 /-- A completed body either answers or supplies the declared returned failure before retry. -/
 inductive BodyValue (plain : Bool) (state : Stores) (n : Fin 4) : Val → Prop
@@ -43,20 +85,38 @@ inductive BodyValue (plain : Bool) (state : Stores) (n : Fin 4) : Val → Prop
       (complete : Complete image (n.val + 1) plain) (declared : Retryable error) :
       BodyValue plain state n (.list [.none, .some error])
 
+/-- A catch receives an actual published form and the plain script's failure shape.
+No arbitrary interrupted cause gains the permission to retry. -/
+structure Published (plain : Bool) (state : Stores) (image : Image)
+    (own : image.count = image.cleanups.length + 1) (n : Fin 4) (cause : CauseV) : Prop where
+  heap : HostTimeoutNumberFlow.CauseAt state (.formAfterCleanup image own) cause
+  count : image.count = n.val + 1
+  prior : plain = true → image.exits.all HostTimeoutNumberLedger.exitRetries = true
+  shape : plain = true →
+    (∃ tag message annotations, cause = {reasons := [Reason.fail (.tagged tag message) annotations]}) ∨
+      HostTimeoutNumberFlow.NoTypedFailure cause
+
+/-- Published input retains the concrete post-form heap even when its cause is discarded. -/
+theorem Published.image {plain state image own n cause} (good : Published plain state image own n cause) :
+    ∃ after, ImageAt after state := by
+  obtain ⟨attemptExit, selected, heap, _⟩ := good.heap
+  exact ⟨image.afterForm own attemptExit selected, heap⟩
+
 /-- Every delivered root value still reads an actual numeric heap. -/
 def ValueAt (plain : Bool) (state : Stores) : Kind → Val → Prop
   | .root, _ => ∃ image, ImageAt image state
-  | .body n _ _, value => BodyValue plain state n value
+  | .body n _ _, value | .published _ _ n _ _, value => BodyValue plain state n value
 
 /-- A skipped loop failure retains the actual numeric heap without granting another retry. -/
-def CauseAt (state : Stores) (_kind : Kind) (_cause : CauseV) : Prop :=
-  ∃ image, ImageAt image state
+def CauseAt (plain : Bool) (state : Stores) : Kind → CauseV → Prop
+  | .published image own n _ _, cause => Published plain state image own n cause
+  | _, _ => ∃ image, ImageAt image state
 
 /-- The permitted source body retains its generation, captured cells and completed predecessor form. -/
 inductive CodeAt (plain : Bool) (state : Stores) : Kind → NCode → Prop
   | success (kind : Kind) (value : Val) (good : ValueAt plain state kind value) :
       CodeAt plain state kind (.success value)
-  | failure (kind : Kind) (cause : CauseV) (good : CauseAt state kind cause) :
+  | failure (kind : Kind) (cause : CauseV) (good : CauseAt plain state kind cause) :
       CodeAt plain state kind (.failure cause)
   | iteration (point : Point) (root : RootAt point) (n : Fin 4) (delay : Nat) (previous : Val)
       (image : Image) (heap : ImageAt image state) (complete : Complete image n.val plain) :
@@ -76,7 +136,7 @@ def model (plain : Bool) : AnswerFlow.Model (ν := EffName) (σ := EffThunk) (β
   future_trans := fun _ _ _ first second =>
     ⟨Nat.le_trans first.1 second.1, Nat.le_trans first.2 second.2⟩
   value := ValueAt plain
-  cause := CauseAt
+  cause := CauseAt plain
   code := CodeAt plain
   finalizer := fun _ _ _ => none
   success := fun _ => CodeAt.success
@@ -89,6 +149,10 @@ inductive Edge (plain : Bool) (_state : Stores) : Kind → Kind → NCode → Pr
         (.whileLoop (.loop point) (cursor n delay .none previous))
   | finish (point : Point) (source : FinishAt point) (body : NCode) :
       Edge plain _state .root .root (.onSuccess body (.cont point))
+  | caught (captured : Point) (fuel : Nat) (n : Fin 4) (delay : Nat) (previous : Val)
+      (image : Image) (own : image.count = image.cleanups.length + 1) (body : NCode) :
+      Edge plain _state (.published image own n delay previous) (.body n delay previous)
+        (.onFailure body (.caughtError (catchPoint captured (fuel + 1) n delay previous)))
   | mask (kind : Kind) (flag : Bool) : Edge plain _state kind kind (.setInterruptible flag)
 
 /-- Refreshing completed exits keeps the allocated cells and source address. -/
@@ -210,6 +274,35 @@ theorem resume (plain : Bool) (state : Stores) (view : HostTimeoutFlow.View)
       cases arm
       exact result
 
+/-- The actual catch test creates the body pair only after the matching form is published. -/
+theorem published_retry (plain : Bool) (state : Stores) (captured : Point) (fuel : Nat)
+    (image : Image) (own : image.count = image.cleanups.length + 1) (n : Fin 4)
+    (delay : Nat) (previous : Val) (cause : CauseV) (error : Val)
+    (good : Published plain state image own n cause)
+    (handled : caughtErrorValue?
+      (ready (Val.cell ⟨0⟩) (Val.cell ⟨1⟩) (Val.cell ⟨2⟩) n delay previous)
+      HostTimeoutSource.retryTest cause = some error) :
+    BodyValue plain state n (.list [.none, .some error]) := by
+  obtain ⟨attemptExit, heap⟩ := HostTimeoutNumberFormFamily.caught_is_published state image own cause good.heap _ _ error handled
+  have finished := form_committed image own n good.count attemptExit (.failure cause)
+  have prior : Complete (image.afterForm own attemptExit (.failure cause)) (n.val + 1) plain := by
+    refine ⟨good.count, finished.2.2.1, finished.2.2.2, ?_⟩
+    intro onlyPlain
+    have declared : HostTimeoutNumberLedger.exitRetries (.failure cause) = true := by
+      rcases good.shape onlyPlain with ⟨tag, message, annotations, singleton⟩ | interrupted
+      · subst cause
+        exact HostTimeoutNumberFormFamily.caught_singleton_declared n delay previous tag message annotations error handled
+      · rw [HostTimeoutNumberFlow.no_typed_test _ _ cause interrupted] at handled
+        cases handled
+    change (image.exits ++ [Exit.failure cause]).all HostTimeoutNumberLedger.exitRetries = true
+    rw [List.all_append, good.prior onlyPlain]
+    simp only [List.all_cons, declared, List.all_nil, Bool.and_self]
+  let point := catchPoint captured (fuel + 1) n delay previous
+  have slots : EnvAt [] point.path point.env :=
+    EnvAt.catch (Val.cell ⟨0⟩) (Val.cell ⟨1⟩) (Val.cell ⟨2⟩) n delay previous
+  have declared : Retryable error := caught_retryable point slots _ _ _ rfl (catch_node _ _ _ _ _) cause error handled
+  exact .retry _ error heap prior declared
+
 /-- This recursive source family has finite local obligations, without an inductive callback cycle. -/
 theorem family (plain : Bool) (view : HostTimeoutFlow.View) :
     AnswerFlow.SavedFamily (model plain) (HostTimeoutFlow.interpreter view).toPrimInterp (Edge plain) where
@@ -218,12 +311,14 @@ theorem family (plain : Bool) (view : HostTimeoutFlow.View) :
     cases edge with
     | loop point root n delay previous => cases missing
     | finish point source body => cases missing
+    | caught captured fuel n delay previous image own body => exact good
     | mask kind flag => exact good
   skipCause := by
     intro state input output frame edge next future cause good missing
     cases edge with
     | loop point root n delay previous => exact good
     | finish point source body => exact good
+    | caught captured fuel n delay previous image own body => cases missing
     | mask kind flag => exact good
   answer := by
     intro state input output frame edge nextState future value provided next pushed good supplied absent arm
@@ -237,12 +332,29 @@ theorem family (plain : Bool) (view : HostTimeoutFlow.View) :
       rw [callback] at arm
       cases arm
       exact ⟨Kind.root, CodeAt.finish point source view value image heap, .nil Kind.root⟩
+    | caught captured fuel n delay previous image own body => cases arm
     | mask kind flag => cases arm
   cause := by
     intro state input output frame edge nextState future cause provided next pushed good supplied absent arm
     cases edge with
     | loop point root n delay previous => cases arm
     | finish point source body => cases arm
+    | caught captured fuel n delay previous image own body =>
+      have equation := catch_callback view captured fuel n delay previous cause
+      simp only [Prim.armE] at arm
+      rw [equation] at arm
+      cases handled : caughtErrorValue?
+          (ready (Val.cell ⟨0⟩) (Val.cell ⟨1⟩) (Val.cell ⟨2⟩) n delay previous)
+          HostTimeoutSource.retryTest cause with
+      | none =>
+        rw [handled] at arm
+        cases arm
+        exact ⟨.body n delay previous, CodeAt.failure _ cause good.image, .nil _⟩
+      | some error =>
+        rw [handled] at arm
+        cases arm
+        exact ⟨.body n delay previous,
+          CodeAt.success _ _ (published_retry plain nextState captured fuel image own n delay previous cause error good handled), .nil _⟩
     | mask kind flag => cases arm
   program := by
     intro state input output frame edge nextState future exit next good found
@@ -253,6 +365,7 @@ theorem family (plain : Bool) (view : HostTimeoutFlow.View) :
     cases edge with
     | loop point root n delay previous => cases armed
     | finish point source body => cases armed
+    | caught captured fuel n delay previous image own body => exact good.image
     | mask kind flag => cases armed
 
 /-- The exact source continuation assigns a finite generation and retains its allocated capture.
@@ -306,5 +419,75 @@ theorem finish_stack (plain : Bool) (state : Stores) (point : Point)
     (source : FinishAt point) (body : NCode) :
     Path (Edge plain state) .root .root [.onSuccess body (.cont point)] :=
   .cons (.finish point source body) (.nil Kind.root)
+
+/-- The actual current failure supplies its carried exit to the admitted declared catch.
+Consumer: the native step producer, before the root loop can advance. -/
+theorem catch_step (plain : Bool) (state : Stores) (view : HostTimeoutFlow.View)
+    (captured : Point) (fuel : Nat) (n : Fin 4) (delay : Nat) (previous : Val)
+    (image : Image) (own : image.count = image.cleanups.length + 1)
+    (fiber : FrameFiber EffName EffThunk Val Err Defect FiberId Ann) (cause : CauseV)
+    (current : fiber.current = .failure cause) (output : Kind)
+    (good : Published plain state image own n cause)
+    (stack : Path (Edge plain state) (.published image own n delay previous) output fiber.stack)
+    (body : NCode)
+    (selected : (fiber.getCont .contE true (some cause)).answer =
+      .frame (.onFailure body (.caughtError (catchPoint captured (fuel + 1) n delay previous))))
+    (error : Val)
+    (handled : caughtErrorValue?
+      (ready (Val.cell ⟨0⟩) (Val.cell ⟨1⟩) (Val.cell ⟨2⟩) n delay previous)
+      HostTimeoutSource.retryTest ((fiber.getCont .contE true (some cause)).carriedCause.getD cause) = some error) :
+    ∃ after events, fiber.step (HostTimeoutFlow.interpreter view).toPrimInterp = (.running after, events) ∧
+      AnswerFlow.FamilyResult (model plain) (Edge plain) state output after.current after.stack := by
+  have callback : (.onFailure body (.caughtError (catchPoint captured (fuel + 1) n delay previous)) : NCode).armE
+      (HostTimeoutFlow.interpreter view).toPrimInterp
+      ((fiber.getCont .contE true (some cause)).carriedCause.getD cause)
+      ((some (Exit.failure cause)).map (fiber.getCont .contE true (some cause)).deliveredExit) =
+      some (.success (.list [.none, .some error]), []) := by
+    simp only [Prim.armE]
+    rw [catch_callback, handled]
+  obtain ⟨events, resumed, incoming, code, suffix⟩ :=
+    AnswerFlow.External.resumeCause_provided_selected (model plain)
+      (HostTimeoutFlow.interpreter view).toPrimInterp (Edge plain) (family plain view)
+      (fun _ _ => Edge.mask _ true) state (.published image own n delay previous) output
+      fiber cause (some (.failure cause)) _ (.success (.list [.none, .some error])) []
+      good stack selected
+      (by intro incoming delivered carried admitted exit member
+          have image : (some (Exit.failure cause)).map (fiber.getCont .contE true (some cause)).deliveredExit =
+              some (.failure delivered) := by
+            simp only [Option.map_some, FramePop.deliveredExit, carried, Option.getD_some]
+          rw [image] at member
+          cases member
+          exact admitted)
+      (by intro delivered carried
+          exact AnswerFlow.programOf_none (model plain) state _ _ (fun _ => rfl))
+      callback
+  refine ⟨{(fiber.getCont .contE true (some cause)).fiber with
+    current := .success (.list [.none, .some error]),
+    stack := [] ++ (fiber.getCont .contE true (some cause)).fiber.stack},
+    events, ?_, incoming, code, suffix⟩
+  rw [FrameFiber.step, current]
+  exact resumed
+
+/-- The real catch, loop, and outer binder form one inhabited ordered saved suffix. -/
+theorem caught_stack (plain : Bool) (state : Stores) (captured : Point) (fuel : Nat)
+    (n : Fin 4) (delay : Nat) (previous : Val) (image : Image)
+    (own : image.count = image.cleanups.length + 1) (body : NCode)
+    (loopPoint : Point) (root : RootAt loopPoint) (finishPoint : Point)
+    (source : FinishAt finishPoint) (finishBody : NCode) :
+    Path (Edge plain state) (.published image own n delay previous) .root
+      [.onFailure body (.caughtError (catchPoint captured (fuel + 1) n delay previous)),
+       .whileLoop (.loop loopPoint) (cursor n delay .none previous),
+       .onSuccess finishBody (.cont finishPoint)] :=
+  .cons (.caught captured fuel n delay previous image own body)
+    (.cons (.loop loopPoint root n delay previous)
+      (finish_stack plain state finishPoint source finishBody))
+
+/-- An interruption-only carried cause cannot enter the declared source handler. -/
+theorem interruption_refuses (n : Fin 4) (delay : Nat) (previous : Val) (cause : CauseV)
+    (interrupted : HostTimeoutNumberFlow.NoTypedFailure cause) :
+    caughtErrorValue?
+      (ready (Val.cell ⟨0⟩) (Val.cell ⟨1⟩) (Val.cell ⟨2⟩) n delay previous)
+      HostTimeoutSource.retryTest cause = none :=
+  HostTimeoutNumberFlow.no_typed_test _ _ cause interrupted
 
 end Test.Dogfood.Proofs.HostTimeoutRootLoop

@@ -243,6 +243,44 @@ theorem resumeValue_selected (world : World) (input output : Kind)
     head, code, Path.append path suffix⟩
 
 include interp family mask in
+/-- The selected cause arm retains the actual mapped supplied exit.
+Consumer: a current failure and the numeric form's declared catch callback. -/
+theorem resumeCause_provided_selected (world : World) (input output : Kind)
+    (fiber : FrameFiber ν σ β ε δ ι α) (cause : Cause ε δ ι α)
+    (provided : Option (Exit β ε δ ι α))
+    (selected next : Prim ν σ β ε δ ι α) (pushed : List (Prim ν σ β ε δ ι α))
+    (good : model.cause world input cause)
+    (stack : Path (Edge world) input output fiber.stack)
+    (found : (fiber.getCont .contE true (some cause)).answer = .frame selected)
+    (supplied : ∀ incoming delivered,
+      (fiber.getCont .contE true (some cause)).carriedCause = some delivered →
+      model.cause world incoming delivered →
+      ∀ exit ∈ provided.map (fiber.getCont .contE true (some cause)).deliveredExit,
+        ExitAt model world incoming exit)
+    (pure : ∀ delivered,
+      (fiber.getCont .contE true (some cause)).carriedCause = some delivered →
+      programOf model world selected
+        ((provided.map (fiber.getCont .contE true (some cause)).deliveredExit).getD
+          (.failure delivered)) = none)
+    (evaluated : selected.armE interp
+      ((fiber.getCont .contE true (some cause)).carriedCause.getD cause)
+      (provided.map (fiber.getCont .contE true (some cause)).deliveredExit) = some (next, pushed)) :
+    ∃ events, fiber.resumeCause interp cause provided =
+      (.running {(fiber.getCont .contE true (some cause)).fiber with
+        current := next
+        stack := pushed ++ (fiber.getCont .contE true (some cause)).fiber.stack}, events) ∧
+      FamilyResult model Edge world output next
+        (pushed ++ (fiber.getCont .contE true (some cause)).fiber.stack) := by
+  obtain ⟨incoming, middle, delivered, carried, incomingGood, callback, suffix⟩ :=
+    getCont_cause_selected model interp Edge family mask world input output fiber cause selected good stack found
+  have equation := FrameFiber.resumeCause_frame interp fiber cause provided selected next pushed found evaluated
+  simp only [carried, Option.getD_some] at evaluated
+  obtain ⟨head, code, path⟩ := family.cause world incoming middle selected callback world
+    (model.future_refl world) delivered _ next pushed incomingGood
+    (supplied incoming delivered carried incomingGood) (pure delivered carried) evaluated
+  exact ⟨_, equation, head, code, Path.append path suffix⟩
+
+include interp family mask in
 /-- The actual selected cause callback consumes the carried cause after real handler discards. -/
 theorem resumeCause_selected (world : World) (input output : Kind)
     (fiber : FrameFiber ν σ β ε δ ι α) (cause : Cause ε δ ι α)
@@ -259,15 +297,13 @@ theorem resumeCause_selected (world : World) (input output : Kind)
         current := next
         stack := pushed ++ (fiber.getCont .contE true (some cause)).fiber.stack}, events) ∧
       FamilyResult model Edge world output next (pushed ++ (fiber.getCont .contE true (some cause)).fiber.stack) := by
-  obtain ⟨incoming, middle, delivered, carried, incomingGood, callback, suffix⟩ :=
-    getCont_cause_selected model interp Edge family mask world input output fiber cause selected good stack found
-  have equation := FrameFiber.resumeCause_frame interp fiber cause none selected next pushed found evaluated
-  simp only [carried, Option.getD_some] at evaluated
-  simp only [FramePop.deliveredExit, carried, Option.getD_some] at pure
-  obtain ⟨head, code, path⟩ := family.cause world incoming middle selected callback world
-    (model.future_refl world) delivered none next pushed incomingGood
-    (by intro exit member; cases member) pure evaluated
-  exact ⟨_, equation, head, code, Path.append path suffix⟩
+  exact resumeCause_provided_selected model interp Edge family mask world input output fiber cause none
+    selected next pushed good stack found
+    (by intro incoming delivered carried good exit member; cases member)
+    (by intro delivered carried
+        simpa only [FramePop.deliveredExit, carried, Option.getD_some, Option.map_none,
+          Option.getD_none] using pure)
+    evaluated
 
 include interp family mask in
 /-- Actual value finalizer interception consumes the selected external edge's program clause. -/

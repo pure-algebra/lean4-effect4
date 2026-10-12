@@ -224,27 +224,43 @@ theorem resumeCause_at (root : NativeEff) (fragment : Fragment root) (completed)
     (fiber : FrameFiber EffName EffThunk Val Err Defect FiberId Ann) (cause : CauseV)
     (provided : Option ExitV) (owned : FrameAt root fiber) :
     FrameStepAt root ((fiber.resumeCause (interpAt root completed table).toPrimInterp cause provided).1) := by
-  have remaining := (getCont_at root fiber .contE true none owned.2).1
-  have callback (frame : NCode) (delivered : CauseV) (given : Option ExitV)
-      (next : NCode) (pushed : List NCode) (held : CodeAt root frame)
-      (found : frame.armE (interpAt root completed table).toPrimInterp delivered given = some (next, pushed)) :
-      CodeAt root next ∧ StackAt root pushed := by
-    obtain ⟨input, code, path⟩ := (lexical_family root fragment completed table).cause () () () frame held
-      () trivial delivered given next pushed trivial (by intro exit member; cases exit <;> trivial)
-      (AnswerFlow.programOf_none (lexicalModel root) () frame _ (fun _ => rfl)) found
-    exact ⟨code, path_stack_at root path⟩
-  have answering (frame : NCode) (found : (fiber.getCont .contE true).answer = .frame frame) : CodeAt root frame := by
-    have answer := (getCont_at root fiber .contE true none owned.2).2
-    rw [found] at answer
-    exact answer
-  have replacing (next : NCode) (found : (fiber.getCont .contE true).answer = .replacement next) : CodeAt root next := by
-    have answer := (getCont_at root fiber .contE true none owned.2).2
-    rw [found] at answer
-    exact answer
-  unfold FrameFiber.resumeCause
-  dsimp only
-  repeat' split
-  all_goals aesop (add norm simp [FrameStepAt, FrameAt, AnswerAt, CodeAt, FrameFiber.getCont_fiber_cause, FrameFiber.getCont_answer_cause]) (add safe apply [stack_append_at]) (add safe forward [answering, replacing, callback])
+  let interp := (interpAt root completed table).toPrimInterp
+  let pop := fiber.getCont .contE true (some cause)
+  have retained := getCont_at root fiber .contE true (some cause) owned.2
+  change FrameStepAt root ((fiber.resumeCause interp cause provided).1)
+  cases selected : pop.answer with
+  | empty =>
+    rw [FrameFiber.resumeCause_empty interp fiber cause provided selected]
+    trivial
+  | deferred delivered =>
+    rw [FrameFiber.resumeCause_deferred interp fiber cause delivered provided selected]
+    exact ⟨trivial, retained.1⟩
+  | replacement next =>
+    rw [FrameFiber.resumeCause_replacement interp fiber cause provided next selected]
+    have source := retained.2
+    rw [selected] at source
+    exact ⟨source, retained.1⟩
+  | frame frame =>
+    cases evaluated : frame.armE interp (pop.carriedCause.getD cause)
+        (provided.map pop.deliveredExit) with
+    | none =>
+      change (fiber.getCont .contE true (some cause)).answer = .frame frame at selected
+      change frame.armE interp ((fiber.getCont .contE true (some cause)).carriedCause.getD cause)
+        (provided.map (fiber.getCont .contE true (some cause)).deliveredExit) = none at evaluated
+      simp only [FrameFiber.resumeCause, selected, evaluated, FrameStepAt]
+    | some result =>
+      obtain ⟨next, pushed⟩ := result
+      obtain ⟨events, actual, input, code, suffix⟩ :=
+        AnswerFlow.External.resumeCause_provided_selected (lexicalModel root) interp
+          (lexicalEdge root) (lexical_family root fragment completed table)
+          (fun _ _ => trivial) () () () fiber cause provided frame next pushed trivial
+          (stack_path_at root fiber.stack owned.2) selected
+          (by intro incoming delivered carried good exit member; cases exit <;> trivial)
+          (by intro delivered carried
+              exact AnswerFlow.programOf_none (lexicalModel root) () frame _ (fun _ => rfl))
+          evaluated
+      rw [actual]
+      exact ⟨code, path_stack_at root suffix⟩
 
 /-- One actual frame step retains the source addresses of its running residual. -/
 theorem frame_step_at (root : NativeEff) (fragment : Fragment root) (completed) (table : RowTable)
