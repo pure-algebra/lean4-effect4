@@ -151,11 +151,11 @@ theorem registrationState_races {root : ProgramSource} {w : World} {m m' : RStat
     (fibers : m'.fibers = m.fibers) (kept : RacesKept m m') (h : RegistrationState root w m) :
     RegistrationState root w m' := by
   intro fiber hf raceId marker
-  obtain ⟨race, resultTy, found, host, token, reply, entrants⟩ :=
+  obtain ⟨race, resultTy, found, host, token, reply⟩ :=
     h fiber (by rw [← fibers]; exact hf) raceId marker
   obtain ⟨race', found', host', token', programs⟩ := kept raceId race found
   exact ⟨race', resultTy, found', host'.trans host, by rw [host', token']; exact token,
-    stackReply_races kept reply, entrants.kept programs⟩
+    (reply.races kept).kept programs⟩
 
 /-- The generated whole-state predicate and the correlations: world validity, every generated
 typed position, active delivery, the settled native guard conditions, and the exact
@@ -257,14 +257,14 @@ def ReadOk (root : ProgramSource) (w : World) (m : RState) (commands : List RCmd
   MCodeOk root w m f ty ∨
     (f.frame.deferredInterrupt = true ∧ (∀ y, Cmd.deliver f.id y ∉ commands) ∧
       ∃ (row : Env.Requirement) (tin : MachinePos) (flag : Bool), f.context.services.Satisfies row ∧
-        tin.2 = f.frame.interruptible ∧ Row.Subset tin.1.failureRow row ∧
+        tin.2 = f.frame.interruptible ∧ Row.Subset tin.1.failureRow row ∧ tin.1.WF ∧
         MHostStack root w m f.id tin (finalPos ty flag) f.frame.stack ∧
         Contracts.InterruptProvenance f.frame)
 
 theorem ReadOk.races {root : ProgramSource} {w : World} {m m' : RState} {q : List RCmd} {f : RFiber}
     {ty : EffTy} (h : ReadOk root w m q f ty) (kept : RacesKept m m') : ReadOk root w m' q f ty :=
-  h.imp (MCodeOk.races kept) fun ⟨d, nd, row, tin, flag, cov, mask, fail, st, pv⟩ =>
-    ⟨d, nd, row, tin, flag, cov, mask, fail, st.races kept, pv⟩
+  h.imp (MCodeOk.races kept) fun ⟨d, nd, row, tin, flag, cov, mask, fail, wf, st, pv⟩ =>
+    ⟨d, nd, row, tin, flag, cov, mask, fail, wf, st.races kept, pv⟩
 
 /-- A fiber a queued `deliver` reads has its code typed. -/
 theorem ReadOk.code_of_deliver {root : ProgramSource} {w : World} {m : RState} {q : List RCmd}
@@ -278,6 +278,18 @@ theorem ReadOk.code_of_not_deferred {root : ProgramSource} {w : World} {m : RSta
     (nd : f.frame.deferredInterrupt = false) : MCodeOk root w m f ty :=
   h.elim id fun ⟨d, _⟩ => absurd (nd.symm.trans d) Bool.false_ne_true
 
+/-- What the loop top reads of a fiber whose code it may replace: a covered row, a stack from a
+well-formed position whose failure row the row holds, and provenance. -/
+theorem ReadOk.stackAt {root : ProgramSource} {w : World} {m : RState} {q : List RCmd}
+    {f : RFiber} {ty : EffTy} (h : ReadOk root w m q f ty) :
+    ∃ (row : Env.Requirement) (tin : MachinePos) (flag : Bool), f.context.services.Satisfies row ∧
+      tin.2 = f.frame.interruptible ∧ Row.Subset tin.1.failureRow row ∧ tin.1.WF ∧
+      MHostStack root w m f.id tin (finalPos ty flag) f.frame.stack ∧
+      Contracts.InterruptProvenance f.frame :=
+  h.elim (fun ⟨row, tin, flag, cov, bit, code, st, pv⟩ =>
+      ⟨row, tin, flag, cov, bit, ambient_entry code, ambient_wf code, st, pv⟩)
+    fun ⟨_, _, read⟩ => read
+
 /-- What is read of a fiber reads only its id, context and saved frame. -/
 theorem ReadOk.congr {root : ProgramSource} {w : World} {m : RState} {q : List RCmd} {f g : RFiber}
     {ty : EffTy} (h : ReadOk root w m q f ty) (hid : g.id = f.id) (hcontext : g.context = f.context)
@@ -289,8 +301,8 @@ theorem ReadOk.congr {root : ProgramSource} {w : World} {m : RState} {q : List R
 /-- …and moves to a later world. -/
 theorem ReadOk.world {root : ProgramSource} {w w' : World} {m : RState} {q : List RCmd} {f : RFiber}
     {ty : EffTy} (h : ReadOk root w m q f ty) (ord : w.leHost w') : ReadOk root w' m q f ty :=
-  h.imp (MCodeOk.mono ord) fun ⟨d, nd, row, tin, flag, cov, mask, fail, st, pv⟩ =>
-    ⟨d, nd, row, tin, flag, cov, mask, fail, st.mono ord, pv⟩
+  h.imp (MCodeOk.mono ord) fun ⟨d, nd, row, tin, flag, cov, mask, fail, wf, st, pv⟩ =>
+    ⟨d, nd, row, tin, flag, cov, mask, fail, wf, st.mono ord, pv⟩
 
 /-- A queue holding no `deliver` of this fiber the other did not keeps what is read of it. -/
 theorem ReadOk.sub {root : ProgramSource} {w : World} {m : RState} {q q' : List RCmd} {f : RFiber}
@@ -952,9 +964,9 @@ theorem machineTyped_congr {root : ProgramSource} {rootTy : EffTy} {w : World} {
         observersBelow := fun f hf o ho k hk => by
           rw [nextId]
           exact sched.observersBelow f (member f hf) o ho k hk }
-  · obtain ⟨race, resultTy, found, host, token, reply, entrants⟩ := reg f (member f hf) raceId marker
+  · obtain ⟨race, resultTy, found, host, token, reply⟩ := reg f (member f hf) raceId marker
     exact ⟨race, resultTy, (raceLookup raceId).trans found, host, token,
-      stackReply_races (racesKept_of_eq raceLookup) reply, entrants⟩
+      reply.races (racesKept_of_eq raceLookup)⟩
   · refine ⟨stuck.trans live.running, fun o ho owner priority mode => ?_⟩
     rw [state] at ho
     rw [lookup]

@@ -434,9 +434,9 @@ theorem fiberTyped_alloc (typed : MachineTyped root rootTy w m) {x : RFiber} (hx
     | wake _ _ => trivial
   · obtain ⟨tin, row, declared, reply⟩ := old.delivery token hp
     exact ⟨tin, row, declared, reply.mono ord kept⟩
-  · obtain ⟨race, resultTy, found, host, token, reply, entrants⟩ := old.registration raceId marker
+  · obtain ⟨race, resultTy, found, host, token, reply⟩ := old.registration raceId marker
     exact ⟨race, resultTy, found, host, token,
-      stackReply_mono ord (fun _ _ h => addFiber_extends fresh.2 h) kept reply, entrants.mono ord⟩
+      reply.imp (fun _ r => r.mono ord kept) fun _ e live => (e live).mono ord⟩
   · rw [addFiber_Γ_other ne] at declared
     exact ((old.code hx' hr hm hp ty' declared).races kept).mono ord
 
@@ -671,7 +671,8 @@ theorem launch_preserves (root : ProgramSource) (rootTy : EffTy) (raceId : Nat) 
           rw [hh] at hh₁
           cases hh₁
           have hostTyped := machine.fiber (rfiber?_mem hh)
-          obtain ⟨race₂, resultTy₂, hr₂, _, token₂, _, entrants⟩ := hostTyped.registration raceId marker
+          obtain ⟨race₂, resultTy₂, hr₂, _, token₂, row, ⟨_, _, _, rowCovered, _, _⟩, entrants⟩ :=
+            hostTyped.registration raceId marker
           rw [hr] at hr₂
           cases hr₂
           have sameTy : resultTy = resultTy₂ := Option.some.inj (payload.token.symm.trans token₂)
@@ -683,8 +684,10 @@ theorem launch_preserves (root : ProgramSource) (rootTy : EffTy) (raceId : Nat) 
               have stopped := (hostTyped.exited (by rw [hx]; rfl)).2
               rw [hrun] at stopped
               cases stopped
-          obtain ⟨childTy, code, covered, subA, subE⟩ :=
+          obtain ⟨childTy, code, within, subA, subE⟩ :=
             entrants live program (by rw [hp]; exact List.mem_cons_self)
+          have covered : host.context.services.Satisfies childTy.requires :=
+            host.context.services.satisfies_weaken rowCovered within
           obtain ⟨_, _, _, _, _, services⟩ := hostTyped.ok
           have ord : w.leHost (w.addFiber ⟨m.nextId⟩ resultTy) := addFiber_leHost fresh.2
           have payload' : RacePayload root (w.addFiber ⟨m.nextId⟩ resultTy) race resultTy :=

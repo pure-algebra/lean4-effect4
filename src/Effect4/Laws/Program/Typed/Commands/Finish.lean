@@ -316,8 +316,7 @@ theorem resume_step {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RSt
           cases hx
         have registrationG : ∀ raceId, raceRegistrationR g.frame.current = some raceId →
             ∃ race resultTy, (m.update g).race? raceId = some race ∧ race.host = g.id ∧
-              w.Θ race.host race.token = some resultTy ∧ StackReply root w (m.update g) g resultTy ∧
-              EntrantsCovered root w race resultTy g := by
+              w.Θ race.host race.token = some resultTy ∧ RaceReply root w (m.update g) g race resultTy := by
           intro raceId marker
           rw [notMarker] at marker
           cases marker
@@ -432,11 +431,10 @@ theorem configTyped_cleared {root : ProgramSource} {rootTy : EffTy} {w : World} 
       observers := fun _ h => nomatch h
       registration := fun raceId marker => by
         rw [gframe] at marker
-        obtain ⟨race, resultTy, found, host, token, reply, entrants⟩ := moved.registration raceId marker
-        exact ⟨race, resultTy, found, host, token,
-          stackReply_view (f := f) (racesKept_of_eq fun _ => rfl) rfl (by rw [gframe])
-            (by rw [gframe]; exact id) ⟨.inl empty, by rw [gframe]⟩ reply,
-            EntrantsCovered.of_exited exited⟩
+        obtain ⟨race, resultTy, found, host, token, reply⟩ := moved.registration raceId marker
+        exact ⟨race, resultTy, found, host, token, RaceReply.of_exited
+          (stackReply_view (f := f) (racesKept_of_eq fun _ => rfl) rfl (by rw [gframe])
+            (by rw [gframe]; exact id) ⟨.inl empty, by rw [gframe]⟩ reply.stackReply) exited⟩
       code := fun hx => by
         have none' : f.exit = none := hx
         rw [none'] at exited
@@ -747,11 +745,10 @@ theorem configTyped_publish {root : ProgramSource} {rootTy : EffTy} {w : World} 
       pendingOwner := fun _ h => nomatch h
       observers := moved.observers
       registration := fun raceId marker => by
-        obtain ⟨race, resultTy, found, host, token, reply, entrants⟩ := moved.registration raceId marker
-        exact ⟨race, resultTy, found, host, token,
-          stackReply_view (f := f) (racesKept_of_eq fun _ => rfl) rfl rfl (fun _ => provP)
-            ⟨.inr rfl, rfl⟩ reply,
-            EntrantsCovered.of_exited rfl⟩
+        obtain ⟨race, resultTy, found, host, token, reply⟩ := moved.registration raceId marker
+        exact ⟨race, resultTy, found, host, token, RaceReply.of_exited
+          (stackReply_view (f := f) (racesKept_of_eq fun _ => rfl) rfl rfl (fun _ => provP)
+            ⟨.inr rfl, rfl⟩ reply.stackReply) rfl⟩
       code := fun hx => nomatch hx
       tokens := fun _ hp => nomatch hp
       raceObservers := moved.raceObservers

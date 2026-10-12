@@ -354,34 +354,26 @@ abbrev CodeOk (root : ProgramSource) (w : World) (m : RState) (host : FiberId) (
   CodeArrow (fun w (_ : Unit) => TypedProg root w) (fun w (_ : Unit) => ExitOk w)
     (frameProtocols root) (fun _ _ => ()) (fun _ => ()) (fun _ _ _ => ()) id w m host () final x
 
-/-- A registering race's unlaunched entrants start in children holding the host's context, so
-while the host lives its context covers each entrant's requirements (decisions row 349). An
-exited host launches nothing. -/
-def EntrantsCovered (root : ProgramSource) (w : World) (race : RRace) (resultTy : EffTy)
-    (host : RFiber) : Prop :=
-  host.exit = none → ∀ code ∈ race.programs, ∃ childTy, ChildCode root w childTy code ∧
-    host.context.services.Satisfies childTy.requires ∧
+/-- A race's unlaunched entrants within a row: each is child code whose requirement row the row
+holds, at the race token's columns. -/
+def EntrantsWithin (root : ProgramSource) (w : World) (race : RRace) (resultTy : EffTy)
+    (row : Env.Requirement) : Prop :=
+  ∀ code ∈ race.programs, ∃ childTy, ChildCode root w childTy code ∧
+    Row.Subset childTy.requires row ∧
     Ty.subN childTy.answer resultTy.answer = true ∧ Ty.subN childTy.error resultTy.error = true
 
-theorem EntrantsCovered.mono {root : ProgramSource} {w w' : World} (ord : w.leHost w')
-    {race : RRace} {resultTy : EffTy} {host : RFiber} (h : EntrantsCovered root w race resultTy host) :
-    EntrantsCovered root w' race resultTy host := fun live code hc => by
-  obtain ⟨childTy, child, covered⟩ := h live code hc
+theorem EntrantsWithin.mono {root : ProgramSource} {w w' : World} (ord : w.leHost w')
+    {race : RRace} {resultTy : EffTy} {row : Env.Requirement}
+    (h : EntrantsWithin root w race resultTy row) : EntrantsWithin root w' race resultTy row :=
+  fun code hc => by
+  obtain ⟨childTy, child, covered⟩ := h code hc
   exact ⟨childTy, child.mono ord, covered⟩
 
-theorem EntrantsCovered.congr {root : ProgramSource} {w : World} {race : RRace} {resultTy : EffTy}
-    {host host' : RFiber} (h : EntrantsCovered root w race resultTy host)
-    (context : host'.context = host.context) (exit : host'.exit = host.exit) :
-    EntrantsCovered root w race resultTy host' := by
-  unfold EntrantsCovered
-  rw [context, exit]
-  exact h
-
-theorem EntrantsCovered.of_exited {root : ProgramSource} {w : World} {race : RRace} {resultTy : EffTy}
-    {host : RFiber} (exited : host.exit.isSome = true) : EntrantsCovered root w race resultTy host :=
-  fun live => by
-  rw [live] at exited
-  cases exited
+theorem EntrantsWithin.kept {root : ProgramSource} {w : World} {race race' : RRace}
+    {resultTy : EffTy} {row : Env.Requirement} (h : EntrantsWithin root w race resultTy row)
+    (programs : ∀ code ∈ race'.programs, code ∈ race.programs) :
+    EntrantsWithin root w race' resultTy row :=
+  fun code hc => h code (programs code hc)
 
 /-- The race facts the registration arrows read move to a machine whose races keep their host
 and token. -/
@@ -392,12 +384,6 @@ def RacesKept (m m' : RState) : Prop :=
 
 theorem racesKept_of_eq {m m' : RState} (races : ∀ r, m'.race? r = m.race? r) : RacesKept m m' :=
   fun r race h => ⟨race, (races r).trans h, rfl, rfl, fun _ hc => hc⟩
-
-theorem EntrantsCovered.kept {root : ProgramSource} {w : World} {race race' : RRace} {resultTy : EffTy}
-    {host : RFiber} (h : EntrantsCovered root w race resultTy host)
-    (programs : ∀ code ∈ race'.programs, code ∈ race.programs) :
-    EntrantsCovered root w race' resultTy host :=
-  fun live code hc => h live code (programs code hc)
 
 /-- Registration callbacks transport their complete positions through the existing world order.
 Consumer: host stack transport at both unit and ambient instances. -/
@@ -574,42 +560,45 @@ row its actual context covers (`AmbientMachine.lean`). A host stack also holds r
 registration callbacks. -/
 
 /-- A registration callback over machine positions: every success answer returns the race's
-marker, the race exists on this machine with this host, and a failure skips at its own row. -/
-inductive MRegistration (w : World) (m : RState) (host : FiberId) :
+marker, the race exists on this machine with this host, its unlaunched entrants are within the row,
+and a failure skips to the race token's type. The callback is saved over the race's answer at the row the race entered at, and the code
+above it keeps the context, so it meets the stack at that constant row on both sides. -/
+inductive MRegistration (root : ProgramSource) (w : World) (m : RState) (host : FiberId) :
     MachinePos → MachinePos → ScopeFrame → Prop
-  | mk {p : AmbientPosition} {t : EffTy} {s f : Env.Requirement} {b : Bool}
+  | mk {t' t : EffTy} {r : Env.Requirement} {b : Bool}
       {next : ExitV → RProgram} {raceId : Nat} {race : RRace}
       (marker : ∀ v, raceRegistrationR (next (.success v)) = some raceId)
-      (skip : ∀ w', w.leHost w' → ∀ c, AmbientExit w' (ambientInput p (.failure c)) p (.failure c) →
-        AmbientExit w' (ambientInput p (.failure c)) ((t, s, f) : AmbientPosition) (.failure c))
+      (skip : ∀ w', w.leHost w' → ∀ c, ExitOk w' t' (.failure c) → ExitOk w' t (.failure c))
       (found : m.race? raceId = some race) (hosted : race.host = host)
-      (token : w.Θ race.host race.token = some t) :
-      MRegistration w m host (p, b) (((t, s, f) : AmbientPosition), b) (.resume .onSuccess next)
+      (token : w.Θ race.host race.token = some t) (entrants : EntrantsWithin root w race t r) :
+      MRegistration root w m host (((t', r, r) : AmbientPosition), b) (((t, r, r) : AmbientPosition), b)
+        (.resume .onSuccess next)
 
 /-- A machine host stack's edge: a frame, or a registration callback. -/
 def MHostEdge (root : ProgramSource) (w : World) (m : RState) (host : FiberId)
     (tin tout : MachinePos) (frame : ScopeFrame) : Prop :=
-  MFrame root w tin tout frame ∨ MRegistration w m host tin tout frame
+  MFrame root w tin tout frame ∨ MRegistration root w m host tin tout frame
 
 /-- A machine host stack: the shared path over its edges. -/
 abbrev MHostStack (root : ProgramSource) (w : World) (m : RState) (host : FiberId) :=
   Effect4.Contracts.Path (MHostEdge root w m host)
 
-theorem MRegistration.mono {w w' : World} {m : RState} {host : FiberId} {a b : MachinePos}
-    {frame : ScopeFrame} (ord : w.leHost w') (h : MRegistration w m host a b frame) :
-    MRegistration w' m host a b frame := by
+theorem MRegistration.mono {root : ProgramSource} {w w' : World} {m : RState} {host : FiberId}
+    {a b : MachinePos} {frame : ScopeFrame} (ord : w.leHost w') (h : MRegistration root w m host a b frame) :
+    MRegistration root w' m host a b frame := by
   cases h with
-  | mk marker skip found hosted token =>
+  | mk marker skip found hosted token entrants =>
     exact .mk marker (fun w'' o c hc => skip w'' (leHost_trans _ _ _ ord o) c hc) found hosted
-      (ord.1.2.2.2.2.2.1 _ _ _ token)
+      (ord.1.2.2.2.2.2.1 _ _ _ token) (entrants.mono ord)
 
-theorem MRegistration.races {w : World} {m m' : RState} {host : FiberId} {a b : MachinePos}
-    {frame : ScopeFrame} (kept : RacesKept m m') (h : MRegistration w m host a b frame) :
-    MRegistration w m' host a b frame := by
+theorem MRegistration.races {root : ProgramSource} {w : World} {m m' : RState} {host : FiberId}
+    {a b : MachinePos} {frame : ScopeFrame} (kept : RacesKept m m')
+    (h : MRegistration root w m host a b frame) : MRegistration root w m' host a b frame := by
   cases h with
-  | mk marker skip found hosted token =>
-    obtain ⟨race', found', host', token', _⟩ := kept _ _ found
+  | mk marker skip found hosted token entrants =>
+    obtain ⟨race', found', host', token', programs⟩ := kept _ _ found
     exact .mk marker skip found' (host'.trans hosted) (by rw [host', token']; exact token)
+      (entrants.kept programs)
 
 theorem MHostStack.mono {root : ProgramSource} {w w' : World} {m : RState} {host : FiberId}
     {tin tout : MachinePos} {stack : List ScopeFrame} (ord : w.leHost w')
@@ -708,11 +697,11 @@ theorem StackReplyAt.congr {root : ProgramSource} {w : World} {m : RState} {f g 
 
 /-- A registration callback with its race forgotten: the generated saved-position clause. -/
 inductive MPositionArrow (w : World) : MachinePos → MachinePos → ScopeFrame → Prop
-  | mk {p : AmbientPosition} {t : EffTy} {s f : Env.Requirement} {b : Bool} {next : ExitV → RProgram}
+  | mk {t' t : EffTy} {r : Env.Requirement} {b : Bool} {next : ExitV → RProgram}
       (marker : ∀ v, (raceRegistrationR (next (.success v))).isSome = true)
-      (skip : ∀ w', w.leHost w' → ∀ c, AmbientExit w' (ambientInput p (.failure c)) p (.failure c) →
-        AmbientExit w' (ambientInput p (.failure c)) ((t, s, f) : AmbientPosition) (.failure c)) :
-      MPositionArrow w (p, b) (((t, s, f) : AmbientPosition), b) (.resume .onSuccess next)
+      (skip : ∀ w', w.leHost w' → ∀ c, ExitOk w' t' (.failure c) → ExitOk w' t (.failure c)) :
+      MPositionArrow w (((t', r, r) : AmbientPosition), b) (((t, r, r) : AmbientPosition), b)
+        (.resume .onSuccess next)
 
 /-- A machine position stack: frames and race-forgetting registration callbacks. -/
 abbrev MPositionStack (root : ProgramSource) (w : World) :=
@@ -723,7 +712,7 @@ theorem MPositionStack.of_host {root : ProgramSource} {w : World} {m : RState} {
     MPositionStack root w tin tout stack :=
   h.map fun _ _ _ e => e.imp id fun arrow => by
     cases arrow with
-    | mk marker skip _ _ _ => exact .mk (fun v => by rw [marker v]; rfl) skip
+    | mk marker skip _ _ _ _ => exact .mk (fun v => by rw [marker v]; rfl) skip
 
 theorem MPositionStack.mono {root : ProgramSource} {w w' : World} (ord : w.leHost w')
     {tin tout : MachinePos} {stack : List ScopeFrame} (h : MPositionStack root w tin tout stack) :
@@ -746,14 +735,57 @@ theorem stackReply_races {root : ProgramSource} {w : World} {m m' : RState} {fib
   obtain ⟨row, final, flag, declared, covered, stack, provenance⟩ := h
   exact ⟨row, final, flag, declared, covered, stack.races kept, provenance⟩
 
+/-- **A registering host's reply** (decisions rows 188 (b) and 349): its saved stack meets the
+race token's type at a row its context covers, and while it lives the race's unlaunched entrants
+are within that row, so each starts in a child its context covers. An exited host launches
+nothing; its emptied stack forces the empty row. -/
+def RaceReply (root : ProgramSource) (w : World) (m : RState) (host : RFiber) (race : RRace)
+    (resultTy : EffTy) : Prop :=
+  ∃ row, StackReplyAt root w m host resultTy row ∧
+    (host.exit = none → EntrantsWithin root w race resultTy row)
+
+/-- A race reply moves wherever its reply stack at the same row and its entrants move. -/
+theorem RaceReply.imp {root : ProgramSource} {w w' : World} {m m' : RState} {host host' : RFiber}
+    {race race' : RRace} {resultTy : EffTy} (h : RaceReply root w m host race resultTy)
+    (reply : ∀ row, StackReplyAt root w m host resultTy row →
+      StackReplyAt root w' m' host' resultTy row)
+    (entrants : ∀ row, (host.exit = none → EntrantsWithin root w race resultTy row) →
+      host'.exit = none → EntrantsWithin root w' race' resultTy row) :
+    RaceReply root w' m' host' race' resultTy :=
+  let ⟨row, r, e⟩ := h
+  ⟨row, reply row r, entrants row e⟩
+
+theorem RaceReply.races {root : ProgramSource} {w : World} {m m' : RState} {host : RFiber}
+    {race : RRace} {resultTy : EffTy} (kept : RacesKept m m')
+    (h : RaceReply root w m host race resultTy) : RaceReply root w m' host race resultTy :=
+  h.imp (fun _ r => r.mono (leHost_refl w) kept) fun _ e => e
+
+theorem RaceReply.kept {root : ProgramSource} {w : World} {m : RState} {host : RFiber}
+    {race race' : RRace} {resultTy : EffTy} (h : RaceReply root w m host race resultTy)
+    (programs : ∀ code ∈ race'.programs, code ∈ race.programs) :
+    RaceReply root w m host race' resultTy :=
+  h.imp (fun _ r => r) fun _ e live => (e live).kept programs
+
+/-- An exited host's reply needs only its stack. -/
+theorem RaceReply.of_exited {root : ProgramSource} {w : World} {m : RState} {host : RFiber}
+    {race : RRace} {resultTy : EffTy} (h : StackReply root w m host resultTy)
+    (exited : host.exit.isSome = true) : RaceReply root w m host race resultTy :=
+  let ⟨row, reply⟩ := h
+  ⟨row, reply, fun live => by rw [live] at exited; cases exited⟩
+
+theorem RaceReply.stackReply {root : ProgramSource} {w : World} {m : RState} {host : RFiber}
+    {race : RRace} {resultTy : EffTy} (h : RaceReply root w m host race resultTy) :
+    StackReply root w m host resultTy :=
+  let ⟨row, reply, _⟩ := h
+  ⟨row, reply⟩
+
 /-- The direct registration marker owns a real race on this fiber, and the race token's
 result meets this host's saved continuation. This finite current-code clause covers both
 immediate buffered settlement and parking; it is not the open recursive code-site scan. -/
 def RegistrationState (root : ProgramSource) (w : World) (m : RState) : Prop :=
   ∀ fiber ∈ m.fibers, ∀ raceId, raceRegistrationR fiber.frame.current = some raceId →
     ∃ race resultTy, m.race? raceId = some race ∧ race.host = fiber.id ∧
-      w.Θ race.host race.token = some resultTy ∧ StackReply root w m fiber resultTy ∧
-      EntrantsCovered root w race resultTy fiber
+      w.Θ race.host race.token = some resultTy ∧ RaceReply root w m fiber race resultTy
 
 /-- A loaded code with no direct registration marker needs no race/token correlation yet. -/
 theorem registrationState_load (root : ProgramSource) (w : World) (fuel compileFuel : Nat)

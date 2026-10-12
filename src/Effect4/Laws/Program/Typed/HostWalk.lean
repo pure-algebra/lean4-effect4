@@ -254,13 +254,15 @@ def MHostCallback (root : ProgramSource) (w : World) (m : RState) (host : FiberI
     tin.2 = x.interruptible ∧ MHostStack root w m host tin tout x.stack ∧ InterruptProvenance x
 
 /-- The walk delivered a success into a registration callback: the race's marker is current over
-the remaining stack at the race token's type. -/
-def MHostMarker (root : ProgramSource) (w : World) (m : RState) (host : FiberId) (tout : MachinePos)
-    (x : RSaved) : Prop :=
-  ∃ (raceId : Nat) (race : RRace) (t : EffTy) (s f : Env.Requirement),
+the remaining stack at the race token's type, at the race's row, which the walk's row covers
+and within which the race's unlaunched entrants are. -/
+def MHostMarker (root : ProgramSource) (w : World) (m : RState) (host : FiberId)
+    (covered : Env.Requirement) (tout : MachinePos) (x : RSaved) : Prop :=
+  ∃ (raceId : Nat) (race : RRace) (t : EffTy) (r : Env.Requirement),
     raceRegistrationR x.current = some raceId ∧
     m.race? raceId = some race ∧ race.host = host ∧ w.Θ race.host race.token = some t ∧
-    MHostStack root w m host (((t, s, f) : AmbientPosition), x.interruptible) tout x.stack ∧
+    Row.Subset r covered ∧ EntrantsWithin root w race t r ∧
+    MHostStack root w m host (((t, r, r) : AmbientPosition), x.interruptible) tout x.stack ∧
     InterruptProvenance x
 
 /-- The outcomes of the walk over a machine host stack, at a covered row. -/
@@ -270,7 +272,7 @@ def MHostWalkTyped (root : ProgramSource) (w : World) (m : RState) (host : Fiber
     (∃ (row : Env.Requirement) (tin : MachinePos), Row.Subset row covered ∧
       tin.2 = frame.interruptible ∧ AmbientProg root w row tin.1 frame.current ∧
       MHostStack root w m host tin tout frame.stack ∧ InterruptProvenance frame) ∨
-    MHostCallback root w m host tout frame ∨ MHostMarker root w m host tout frame
+    MHostCallback root w m host tout frame ∨ MHostMarker root w m host covered tout frame
   | (frame, some ex) => AmbientExit w (ambientInput tout.1 ex) tout.1 ex ∧
       Row.Subset (ambientInput tout.1 ex) covered ∧ frame.interruptible = tout.2
 
@@ -308,17 +310,17 @@ theorem ambient_popR_hostTyped (root : ProgramSource) (interp : RInterp) (w : Wo
             Effect4.Contracts.Path.append (MHostStack.of_stack st) tail, ⟨prov.recorded, prov.deferred⟩⟩)
       | some ex' => exact ih ex' f walk.1 walk.2.1 walk.2.2 kept
     · cases arrow with
-      | mk marker skip found hosted token =>
+      | mk marker skip found hosted token entrants =>
         obtain ⟨c0, x, i, ic, d⟩ := frame
         change i = _ at hmask
         subst hmask
         cases ex with
         | success v =>
-          exact .inr (.inr ⟨_, _, _, _, _, marker v, found, hosted, token, tail,
+          exact .inr (.inr ⟨_, _, _, _, marker v, found, hosted, token, hcov, entrants, tail,
             ⟨hp.recorded, hp.deferred⟩⟩)
         | failure cause =>
-          obtain ⟨self, sub⟩ := ambientExit_self (skip w (leHost_refl w) cause hex)
-          cases ic <;> exact ih _ _ self (Row.subset_trans sub hcov) rfl ⟨hp.recorded, hp.deferred⟩
+          cases ic <;> exact ih _ _ ⟨skip w (leHost_refl w) cause hex.1, Row.subset_refl _⟩ hcov rfl
+            ⟨hp.recorded, hp.deferred⟩
 
 /-- **A delivery through a machine host stack is typed**: a success with a deferred interrupt
 installs the recorded pending cause at the position's failure row over the unchanged stack, at

@@ -180,8 +180,7 @@ structure FiberTyped (root : ProgramSource) (w : World) (m : RState) (f : RFiber
   observers : ∀ o ∈ f.observers, StoredObserverOk root w m f.id o
   registration : ∀ raceId, raceRegistrationR f.frame.current = some raceId →
     ∃ race resultTy, m.race? raceId = some race ∧ race.host = f.id ∧
-      w.Θ race.host race.token = some resultTy ∧ StackReply root w m f resultTy ∧
-      EntrantsCovered root w race resultTy f
+      w.Θ race.host race.token = some resultTy ∧ RaceReply root w m f race resultTy
   /-- An idle fiber's code is typed at its declaration; a parked one is typed by `delivery` (its
   current is the operation it parked on, which nothing reads: `resume` and an applied interrupt
   overwrite it, `evaluate` skips it; seat M6B's finding). -/
@@ -813,9 +812,9 @@ theorem fiberTyped_transport {root : ProgramSource} {w : World} {m m' : RState} 
     fun r race hr o ho => h.raceObservers r race ((view.races r).symm.trans hr) o ho,
     fun p hp id hid => Nat.lt_of_lt_of_le (h.targetsBelow p hp id hid) nextId,
     fun o ho k hk => Nat.lt_of_lt_of_le (h.observersBelow o ho k hk) nextId, h.children⟩
-  obtain ⟨race, resultTy, found, host, token, reply, entrants⟩ := h.registration raceId marker
+  obtain ⟨race, resultTy, found, host, token, reply⟩ := h.registration raceId marker
   exact ⟨race, resultTy, (view.races raceId).trans found, host, token,
-    stackReply_races (racesKept_of_eq view.races) reply, entrants⟩
+    reply.races (racesKept_of_eq view.races)⟩
 
 /-- The fiber a lookup finds by the edited fiber's id is the replaced one. -/
 theorem rfiber?_same {m : RState} {f x : RFiber} {id : FiberId} (hf : m.fiber? f.id = some f)
@@ -1024,10 +1023,11 @@ theorem configTyped_modify_quiet {root : ProgramSource} {rootTy : EffTy} {w : Wo
           exact typed'
       · intro raceId marker
         rw [quiet.frame f] at marker
-        obtain ⟨race, resultTy, found, host, token, reply, entrants⟩ := old.registration raceId marker
+        obtain ⟨race, resultTy, found, host, token, reply⟩ := old.registration raceId marker
         exact ⟨race, resultTy, found, host.trans (quiet.id f).symm, token,
-          stackReply_congr (racesKept_of_eq view.races) (quiet.id f) (quiet.frame f) (quiet.context f) reply,
-          entrants.congr (quiet.context f) (quiet.exit f)⟩
+          reply.imp (fun _ r => (r.congr (quiet.id f) (quiet.context f) (quiet.frame f)).mono
+            (leHost_refl w) (racesKept_of_eq view.races))
+            (fun _ e live => e ((quiet.exit f).symm.trans live))⟩
       · intro hx hr hm hp ty declared
         rw [quiet.exit f] at hx
         rw [quiet.running f] at hr
@@ -1317,9 +1317,11 @@ theorem fiberTyped_world {root : ProgramSource} {m : RState} {x : RFiber}
         exact ⟨final, flag, by rw [hΓ]; exact declaredF, covered, stack.mono ord, provenance⟩⟩
   · rw [hΘ]
     exact h.pendingOwner p hp
-  · obtain ⟨race, resultTy, found, host, token, reply, entrants⟩ := h.registration raceId marker
-    exact ⟨race, resultTy, found, host, by rw [hΘ]; exact token, stackReply_world ord hΓ reply,
-      entrants.mono ord⟩
+  · obtain ⟨race, resultTy, found, host, token, reply⟩ := h.registration raceId marker
+    exact ⟨race, resultTy, found, host, by rw [hΘ]; exact token,
+      reply.imp (fun _ ⟨final, flag, declaredF, covered, stack, provenance⟩ =>
+        ⟨final, flag, by rw [hΓ]; exact declaredF, covered, stack.mono ord, provenance⟩)
+        (fun _ e live => (e live).mono ord)⟩
   · rw [hΓ] at declared
     exact (h.code hx hr hm hp ty declared).mono ord
   · rw [hΘ]
@@ -1648,12 +1650,12 @@ theorem configTyped_rupdate {root : ProgramSource} {rootTy : EffTy} {w : World} 
     rw [hid] at reads declared
     rw [current] at marker
     rcases typed.code f hmem hrun reads marker ty declared with
-      code | ⟨d, nd, row, tin, flag, covered, bit, failure, stackOk, provenance⟩
+      code | ⟨d, nd, row, tin, flag, covered, bit, failure, wf, stackOk, provenance⟩
     · exact Or.inl (code.of_view (racesKept_of_eq (m := m) (m' := m.update g) fun _ => rfl) hid context
         current stack prov mask)
     · obtain ⟨_, interruptible⟩ := mask
       exact Or.inr ⟨deferred d, by rw [hid]; exact nd, row, tin, flag, by rw [context]; exact covered,
-        by rw [interruptible]; exact bit, failure,
+        by rw [interruptible]; exact bit, failure, wf,
         by rw [stack, hid]; exact stackOk.races (racesKept_of_eq (m := m) fun _ => rfl),
         prov provenance⟩
 
@@ -2428,10 +2430,10 @@ theorem fiberTyped_reframe {root : ProgramSource} {w : World} {m m' : RState} {t
       (fun _ => prov) mask reply⟩
   · exact prov.deferred (by assumption)
   · rw [current] at marker
-    obtain ⟨race, resultTy, found, host, token, reply, entrants⟩ := moved.registration raceId marker
+    obtain ⟨race, resultTy, found, host, token, reply⟩ := moved.registration raceId marker
     exact ⟨race, resultTy, found, host, token,
-      stackReply_view (f := t) (racesKept_of_eq (m := m') fun _ => rfl) rfl stack
-        (fun _ => prov) mask reply, entrants⟩
+      reply.imp (fun _ r => stackReplyAt_view (f := t) (racesKept_of_eq (m := m') fun _ => rfl) rfl
+        stack (fun _ => prov) mask r) (fun _ e => e)⟩
   · rw [current] at hm
     exact MCodeOk.of_view (f := t) (racesKept_of_eq view.races) rfl rfl current stack (fun _ => prov) mask
       (h.code hx hr hm hp ty declared)
@@ -2552,7 +2554,7 @@ theorem configTyped_interruptRecord {root : ProgramSource} {rootTy : EffTy} {w :
             exact install row ((((tin, row, row) : AmbientPosition)), t.frame.interruptible) flag covered rfl
               (Row.subset_refl _) (Row.subset_refl _) stackOk
         | some r =>
-          obtain ⟨_, resultTy, _, _, _, ⟨row, final, flag, declaredF, covered, stackOk, _⟩, _⟩ :=
+          obtain ⟨_, resultTy, _, _, _, row, ⟨final, flag, declaredF, covered, stackOk, _⟩, _⟩ :=
             old.registration r hm
           have same : final = ty' := by
             have both : w.Γ t.id = some ty' := declared'
@@ -3298,10 +3300,10 @@ theorem configTyped_updateRace {root : ProgramSource} {rootTy : EffTy} {w : Worl
       fun o ho => storedObserverOk_updateRace hr hid hhost htoken payload liveCols o
         (old'.observers o ho), fun raceId marker => ?_, old'.code_races lookFwd, old'.tokens,
       fun r race hr' o ho => ?_, old'.targetsBelow, old'.observersBelow, old'.children⟩
-    · obtain ⟨race, rty, found, host, token, reply, entrants⟩ := old'.registration raceId marker
+    · obtain ⟨race, rty, found, host, token, reply⟩ := old'.registration raceId marker
       obtain ⟨r', found', host', token', programs⟩ := lookFwd raceId race found
       exact ⟨r', rty, found', host'.trans host, by rw [host', token']; exact token,
-        stackReply_races lookFwd reply, entrants.kept programs⟩
+        (reply.races lookFwd).kept programs⟩
     · obtain ⟨r0, found, hh, ht⟩ := lookHost r race hr'
       rw [hh, ht]
       exact old'.raceObservers r r0 found o ho

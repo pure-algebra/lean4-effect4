@@ -485,8 +485,7 @@ theorem afterInterrupt_preserves (root : ProgramSource) (rootTy : EffTy) (host :
     cases h
   have registrationG : ∀ raceId, raceRegistrationR g.frame.current = some raceId →
       ∃ race resultTy, (m.update g).race? raceId = some race ∧ race.host = g.id ∧
-        w.Θ race.host race.token = some resultTy ∧ StackReply root w (m.update g) g resultTy ∧
-              EntrantsCovered root w race resultTy g := by
+        w.Θ race.host race.token = some resultTy ∧ RaceReply root w (m.update g) g race resultTy := by
     intro raceId marker
     rw [notMarker] at marker
     cases marker
@@ -741,8 +740,7 @@ theorem closeParAwait_preserves (root : ProgramSource) (rootTy : EffTy) (host : 
     cases h
   have registrationG : ∀ raceId, raceRegistrationR g.frame.current = some raceId →
       ∃ race resultTy, (m.update g).race? raceId = some race ∧ race.host = g.id ∧
-        w.Θ race.host race.token = some resultTy ∧ StackReply root w (m.update g) g resultTy ∧
-              EntrantsCovered root w race resultTy g := by
+        w.Θ race.host race.token = some resultTy ∧ RaceReply root w (m.update g) g race resultTy := by
     intro raceId marker
     cases marker
   have fresh : FiberTyped root w (m.update g) g :=

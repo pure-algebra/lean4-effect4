@@ -155,9 +155,9 @@ theorem fiberTyped_except {root : ProgramSource} {w : World} {m m' : RState} {x 
   · by_cases off : OffKey key o
     · exact storedObserverOk_except view o off (h.observers o ho)
     · exact keyed o ho off
-  · obtain ⟨race, resultTy, found, host, token, reply, entrants⟩ := h.registration raceId marker
+  · obtain ⟨race, resultTy, found, host, token, reply⟩ := h.registration raceId marker
     exact ⟨race, resultTy, (view.races raceId).trans found, host, token,
-      stackReply_races (racesKept_of_eq view.races) reply, entrants⟩
+      reply.races (racesKept_of_eq view.races)⟩
 
 /-- The view after replacing one fiber's record by one that agrees on every pending record but
 the one at `key`. -/
@@ -808,9 +808,9 @@ theorem fiberTyped_repend {root : ProgramSource} {w : World} {m M' : RState} {wf
   · by_cases off : OffKey (wf.id, token) o
     · exact storedObserverOk_except view o off (old.observers o ho)
     · exact keyed o ho off
-  · obtain ⟨race, resultTy, found, host, token', reply, entrants⟩ := old.registration raceId marker
+  · obtain ⟨race, resultTy, found, host, token', reply⟩ := old.registration raceId marker
     exact ⟨race, resultTy, (view.races raceId).trans found, host, token',
-      stackReply_races (racesKept_of_eq view.races) reply, entrants⟩
+      reply.races (racesKept_of_eq view.races)⟩
 
 /-- **An observer at a fresh key appended to a fiber keeps `I`** (the target of a park): its keys are
 below the counter and unrequested, its waiter below `nextId`, it holds no race's key, and it is typed
