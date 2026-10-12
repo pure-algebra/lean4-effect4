@@ -9,7 +9,7 @@ you. Then read this folder's `README.md` and the earlier note
 
 **Newest, 2026-10-11 20:20: Claude is landing `codex/symbolic-native-fold` at `e30a74131`.** The
 owner asked for it. The landing branch is `land/typed-context`, in its own worktree. It reconciles
-the seat with R2 and items 10 to 12, and it does the plan's target lane: template rows for
+the seat with R2 and items 10 to 12. It also does the plan's target lane: template rows for
 `Effect.context<Row>()` and `Effect.provideContext`, the reader, the TypeScript reader, and the
 generated and OCaml sweep. Do not redo the target lane on the seat. After the landing merges into
 `refactor/phase1-phase3`, merge it into the seat before its next commit.
