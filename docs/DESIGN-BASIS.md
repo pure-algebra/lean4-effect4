@@ -1649,31 +1649,31 @@ Each repair changed statements only, no runtime code.
   (`src/Effect4/Laws/Program/Typed/Commands/Clauses/All.lean`), `exitHandles_valid`
   (`src/Effect4/Laws/Program/Typed/Commands/Clauses/All.lean`). Tested, the refutations kept as history
   over local copies of the old clauses: `stackAccepts_not_mono`
-  (`Test/Program/FramesNotKripke.lean`), `step_loop_refuted`
-  (`Test/Program/FramesNotKripke.lean`); `m5_false`
-  (`Test/Counterexamples/Machine/Semantics/FitsOrder.lean`), `capstone_false`
-  (`Test/Counterexamples/Machine/Semantics/FitsOrder.lean`); `typedState_load_false`
-  (`Test/Program/ProtocolPosts.lean`); `window_untyped`
-  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean`), `capstone_false_window`
-  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean`), `ledger_jointly_false_window`
-  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean`). Tested, the positive and red
-  controls of the current judgment: `step_loop_good` (`Test/Program/FramesNotKripke.lean`),
-  `bad_not_kripke_initial` (`Test/Program/FramesNotKripke.lean`), `stackAccepts_now`
-  (`Test/Program/FramesNotKripke.lean`), `hookLawsX_refused`
-  (`Test/Program/FramesNotKripke.lean`), `output_not_kripke`
-  (`Test/Program/FramesNotKripke.lean`); `prog3_loads_typed`
-  (`Test/Counterexamples/Machine/Semantics/FitsOrder.lean`), `loadsTyped`
-  (`Test/Counterexamples/Machine/Semantics/FitsOrder.lean`), `capstone_at_load`
-  (`Test/Counterexamples/Machine/Semantics/FitsOrder.lean`); `loadsTyped`
-  (`Test/Counterexamples/Machine/Semantics/AwaitLoad.lean`); `close_code_refused_absent`
-  (`Test/Program/ProtocolPosts.lean`), `lone_release_outside_post`
-  (`Test/Program/ProtocolPosts.lean`), `closeSeq_protocol_refused`
-  (`Test/Program/ProtocolPosts.lean:548`); `m9_root_inert`
-  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean`), `running_exempt_at_m6`
-  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean`), `worldValid_not_upward_closed`
-  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean`), `machineTyped_m6`
-  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean`), `machineTyped_m9`
-  (`Test/Counterexamples/Machine/Semantics/StaleCode.lean`); `makeThenClose_typed`
+  (`git:68856e778:Test/Program/FramesNotKripke.lean`), `step_loop_refuted`
+  (`git:68856e778:Test/Program/FramesNotKripke.lean`); `m5_false`
+  (`git:68856e778:Test/Counterexamples/Machine/Semantics/FitsOrder.lean`), `capstone_false`
+  (`git:68856e778:Test/Counterexamples/Machine/Semantics/FitsOrder.lean`); `typedState_load_false`
+  (`git:68856e778:Test/Program/ProtocolPosts.lean`); `window_untyped`
+  (`git:68856e778:Test/Counterexamples/Machine/Semantics/StaleCode.lean`), `capstone_false_window`
+  (`git:68856e778:Test/Counterexamples/Machine/Semantics/StaleCode.lean`), `ledger_jointly_false_window`
+  (`git:68856e778:Test/Counterexamples/Machine/Semantics/StaleCode.lean`). Tested, the positive and red
+  controls of the current judgment: `step_loop_good` (`git:68856e778:Test/Program/FramesNotKripke.lean`),
+  `bad_not_kripke_initial` (`git:68856e778:Test/Program/FramesNotKripke.lean`), `stackAccepts_now`
+  (`git:68856e778:Test/Program/FramesNotKripke.lean`), `hookLawsX_refused`
+  (`git:68856e778:Test/Program/FramesNotKripke.lean`), `output_not_kripke`
+  (`git:68856e778:Test/Program/FramesNotKripke.lean`); `prog3_loads_typed`
+  (`git:68856e778:Test/Counterexamples/Machine/Semantics/FitsOrder.lean`), `loadsTyped`
+  (`git:68856e778:Test/Counterexamples/Machine/Semantics/FitsOrder.lean`), `capstone_at_load`
+  (`git:68856e778:Test/Counterexamples/Machine/Semantics/FitsOrder.lean`); `loadsTyped`
+  (`git:68856e778:Test/Counterexamples/Machine/Semantics/AwaitLoad.lean`); `close_code_refused_absent`
+  (`git:68856e778:Test/Program/ProtocolPosts.lean`), `lone_release_outside_post`
+  (`git:68856e778:Test/Program/ProtocolPosts.lean`), `closeSeq_protocol_refused`
+  (`git:68856e778:Test/Program/ProtocolPosts.lean:548`); `m9_root_inert`
+  (`git:68856e778:Test/Counterexamples/Machine/Semantics/StaleCode.lean`), `running_exempt_at_m6`
+  (`git:68856e778:Test/Counterexamples/Machine/Semantics/StaleCode.lean`), `worldValid_not_upward_closed`
+  (`git:68856e778:Test/Counterexamples/Machine/Semantics/StaleCode.lean`), `machineTyped_m6`
+  (`git:68856e778:Test/Counterexamples/Machine/Semantics/StaleCode.lean`), `machineTyped_m9`
+  (`git:68856e778:Test/Counterexamples/Machine/Semantics/StaleCode.lean`); `makeThenClose_typed`
   (`Test/Counterexamples/Machine/Semantics/ScopePresence.lean`), `forkAfterMake_typed`
   (`Test/Counterexamples/Machine/Semantics/ScopePresence.lean`), `forkAfterMake_denotes`
   (`Test/Counterexamples/Machine/Semantics/ScopePresence.lean`); the red controls
