@@ -90,7 +90,9 @@
     "pInvokeForked",
     "pQueueDefs",
     "pQueueService",
-    "pSemaphoreService"
+    "pSemaphoreService",
+    "poisonNoHandler",
+    "closeInterruptedMidFinalizer"
   ],
   "handles": {
     "Host.Resource": "Adapter.HostResource",

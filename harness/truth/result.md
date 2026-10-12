@@ -95,5 +95,7 @@ effect 4.0.0-rc.112, bun 1.4.2, deadline 300 ms
 | pQueueDefs | success [true,1,true,2] | success [true,1,true,2] | yes | yes | yes | runPromiseExit | same value |
 | pQueueService | success [true,1] | success [true,1] | yes | yes | yes | runPromiseExit | same value; client through the service key: agrees (success [true,1]) |
 | pSemaphoreService | success [1,false,2] | success [1,false,2] | yes | yes | yes | runPromiseExit | same value; client through the service key: agrees (success [1,false,2]) |
+| poisonNoHandler | success [{"failure":{"reasons":[{"fail":42}]}},true,false] | success [{"failure":{"reasons":[{"fail":42}]}},true,false] | yes | yes | yes | runPromiseExit | same value |
+| closeInterruptedMidFinalizer | success 0 | success 0 | yes | yes | yes | runPromiseExit | same value |
 
-PASS: 81 programs agree on exits, schedules and sync exits; 10 signed divergence(s)
+PASS: 83 programs agree on exits, schedules and sync exits; 10 signed divergence(s)

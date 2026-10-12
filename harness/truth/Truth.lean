@@ -659,6 +659,80 @@ def pLateSeen : Api.Program :=
   | .ok p => p
   | .error _ => .fail (.lit (.str "pLateSeen: the source does not elaborate"))
 
+/-! ### Two outcomes that 4.0.1 changes (the alignment plan, 2026-10-12)
+
+The probes `poisonNoHandler` and `closeInterruptedMidFinalizer` of seat A401
+(`docs/research/2026-10-05-seat-A401/probes/backlog.mjs`), written in the language. They are the
+truth programs of items 1 and 2 of `docs/research/2026-10-12-probe-alignment-plans.md`. Each
+records the pin's answer before the machine changes, and the release lane reads the same
+program on 4.0.1. -/
+
+open Effect4.Program.Authoring in
+/-- The source of `poisonNoHandler`. -/
+def poisonNoHandlerSrc : Src NativeOp := eff do
+  let d ← Deferred.make .nat .never
+  let f ← fork (uninterruptible (eff do
+    let _ ← Deferred.await d
+    fail (nat 42)))
+  let stop ← fork (withFiber (Action.interrupt f))
+  let _ ← Deferred.succeed d (nat 7)
+  let e ← await f
+  let _ ← await stop
+  return tuple [e, app "causeIsFail" [e], app "causeIsInterrupt" [e]]
+
+/-- **A masked region fails after an interrupt was recorded, and no handler is above it.** A child
+waits at a promise inside `Effect.uninterruptible`, then fails with `42`. A helper fiber
+interrupts it while it waits, which only records the interrupt. The main fiber completes the
+promise and awaits both. The program answers `[the child's exit, causeIsFail, causeIsInterrupt]`.
+rc.112's walk skips the mask's restoring continuation and passes the cause on unchanged
+(`vendor/effect-4.0.0-rc.112/src/internal/core.ts:529-547`): the child's exit is `Fail(42)`.
+4.0.1 adds the recorded interrupt after the walk (`vendor/effect-4.0.1/src/internal/core.ts:580-608`):
+`Fail(42), Interrupt(2)`, the helper under the recorder's number. The machine answers as the
+pin. A source that does not elaborate is a failure with a text, never a patched program. -/
+def poisonNoHandler : Api.Program :=
+  match Effect4.Program.Authoring.elaborate poisonNoHandlerSrc with
+  | .ok p => p
+  | .error _ => .fail (.lit (.str "poisonNoHandler: the source does not elaborate"))
+
+open Effect4.Program.Authoring in
+/-- The source of `closeInterruptedMidFinalizer`. -/
+def closeInterruptedMidFinalizerSrc : Src NativeOp := eff do
+  let log ← Ref.make (nat 0)
+  let d ← Deferred.make .nat .never
+  let _ ← scope (eff do
+    let _ ← acquireRelease "r" "x" (succeed unit) (Ref.update "l" (app "add" [var "l", nat 1]) log)
+    let _ ← withFiber (Action.forkScoped (uninterruptible (Deferred.await d)) daemonOptions)
+    let s ← service nativeScopeKey
+    let v ← exit (succeed unit)
+    let closer ← fork (withFiber (Action.closeScope s v))
+    let stop ← fork (withFiber (Action.interrupt closer))
+    let _ ← Deferred.succeed d (nat 7)
+    let e ← await closer
+    let _ ← await stop
+    return app "causeIsInterrupt" [e])
+  Ref.get log
+
+/-- **An explicit `Scope.close` whose closer is interrupted while a finalizer runs.** Inside
+`Effect.scoped` the scope holds two finalizers: a release that adds `1` to a log, registered
+first, and the link of a daemon that waits at a promise under `Effect.uninterruptible`,
+registered second. A forked closer runs `Scope.close` on the scope that `Scope.Scope` reads. The
+close runs the link first: it interrupts the daemon, which only records the interrupt, and
+awaits the daemon's exit. A helper fiber interrupts the closer during that wait. The main fiber
+completes the promise and awaits both. The program answers the log. rc.112 closes at the
+closer's own mask (`vendor/effect-4.0.0-rc.112/src/internal/effect.ts:3775-3776`): the interrupt
+ends the close, the scope is already closed, and the release never runs, so the log is `0`.
+4.0.1 masks the closer before it closes (`vendor/effect-4.0.1/src/internal/effect.ts:3929-3935`):
+the close runs to its end, and the log is `1`. The machine answers as the pin.
+
+The interrupted finalizer is the link, not a release: the machine runs a capture's release
+masked (`EffThunk.releaseMasked`, `src/Effect4/Program/Compile.lean`), so an interrupt inside a
+release already differs from rc.112 (`docs/research/2026-10-12-close-mask-receipt.md`). A
+source that does not elaborate is a failure with a text, never a patched program. -/
+def closeInterruptedMidFinalizer : Api.Program :=
+  match Effect4.Program.Authoring.elaborate closeInterruptedMidFinalizerSrc with
+  | .ok p => p
+  | .error _ => .fail (.lit (.str "closeInterruptedMidFinalizer: the source does not elaborate"))
+
 /-! ### The Queue's first operations (decisions rows 219 to 222, 233, 238 and 240)
 
 Five programs over the library's operations (`src/Effect4/Library/Queue/Ops.lean`): the first
@@ -949,9 +1023,9 @@ interrupt wakes, the two programs of the mask that restores, the five programs o
 Queue's first operations, the ten programs of Semaphore's first operations, the ten
 programs of Pool's first operations, the programs with a definition block (four plain ones, one
 with a module layer, three whose body counts its own layer's builds, and three invocations with
-programs), the Queue's scenario R4 over its definitions, and the Queue and the Semaphore as
-services, each with its client through the key. Every listed program contributes one manifest
-entry. -/
+programs), the Queue's scenario R4 over its definitions, the Queue and the Semaphore as
+services, each with its client through the key, and the two programs of the alignment plan.
+Every listed program contributes one manifest entry. -/
 def pInterruptEscape : Api.Program := Test.Counterexamples.InterruptEscape.escape
 
 /-- Four programs with a definition block (decisions row 328, slice PROC-3): one invocation,
@@ -1117,7 +1191,9 @@ def corpus : List (String × Api.Program) :=
     ("pInvokeTwice", pInvokeTwice), ("pInvokeForward", pInvokeForward),
     ("pInvokeForked", pInvokeForked), ("pQueueDefs", pQueueDefs),
     ("pQueueService", pQueueService),
-    ("pSemaphoreService", pSemaphoreService)]
+    ("pSemaphoreService", pSemaphoreService),
+    ("poisonNoHandler", poisonNoHandler),
+    ("closeInterruptedMidFinalizer", closeInterruptedMidFinalizer)]
 
 /-! ## The value wire -/
 
@@ -1914,7 +1990,7 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
    "pDefsTwice", "pDefsEven", "pDefsOdd", "pDefsFork", "pDefsModuleLayer",
    "pDefsBodyLayerCalls", "pDefsBodyLayerShared", "pDefsBodyLayerNested", "pInvokeTwice",
    "pInvokeForward", "pInvokeForked", "pQueueDefs",
-   "pQueueService", "pSemaphoreService"]
+   "pQueueService", "pSemaphoreService", "poisonNoHandler", "closeInterruptedMidFinalizer"]
 -- Decisions row 228: the fold with an outer capture and a nested fold types at a number,
 -- answers `8` on the machine, and reads back whole.
 #guard Api.typeOf pFold = some ⟨.nat, .never, Env.Requirement.empty⟩
@@ -2015,6 +2091,17 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
 -- red control: the two programs differ by the caller's mask and the helper, and by their answers
 #guard pMaskWait != pMaskedRestore &&
   (Api.run pMaskWait 1000).exit != (Api.run pMaskedRestore 1000).exit
+-- The two programs of the alignment plan (2026-10-12). Each elaborates (its first node makes a
+-- cell; a source that did not elaborate is a `fail`), reads back whole, and answers the pin's
+-- value on the machine.
+#guard match poisonNoHandler, closeInterruptedMidFinalizer with
+  | .bind (.perform (.deferredMakeOf .nat .never) _) _, .bind (.perform .refMake _) _ => true
+  | _, _ => false
+#guard Api.roundTrip poisonNoHandler = .ok poisonNoHandler
+#guard Api.roundTrip closeInterruptedMidFinalizer = .ok closeInterruptedMidFinalizer
+#guard (Api.run poisonNoHandler 1000).exit = some (.success
+  (.list [reifyExitVal (.failure (Cause.fail (.tag 42))), .bool true, .bool false]))
+#guard (Api.run closeInterruptedMidFinalizer 1000).exit = some (.success (.nat 0))
 -- The fiber numbers of the compared fields (`numbering`). The rule on rows: a fiber's first
 -- sight is its first `forked` row as the child or its first `started` row.
 #guard firstSeen [.started 0, .forked 0 2, .started 2, .parked 2, .started 1, .started 2] = [0, 2, 1]
