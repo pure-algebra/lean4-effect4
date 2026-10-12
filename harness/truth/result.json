@@ -24002,8 +24002,8 @@
     },
     {
       "program": "pSemaphoreService",
-      "leanExit": "success [1,false,2]",
-      "hostExit": "success [1,false,2]",
+      "leanExit": "success [2,false,1]",
+      "hostExit": "success [2,false,1]",
       "entry": "runPromiseExit",
       "exitAgree": true,
       "scheduleAgree": true,
@@ -24011,15 +24011,15 @@
       "clientAgree": true,
       "notes": [
         "same value",
-        "client through the service key: agrees (success [1,false,2])"
+        "client through the service key: agrees (success [2,false,1])"
       ],
       "host": {
         "entry": "runPromiseExit",
         "exit": {
           "success": [
-            1,
+            2,
             false,
-            2
+            1
           ]
         },
         "parked": false,
@@ -24029,7 +24029,7 @@
         ],
         "events": [
           "started 0",
-          "exited 0 {\"success\":[1,false,2]}"
+          "exited 0 {\"success\":[2,false,1]}"
         ],
         "frames": [
           "0:OnSuccess",
@@ -24078,9 +24078,9 @@
         "entry": "runSyncExit",
         "exit": {
           "success": [
-            1,
+            2,
             false,
-            2
+            1
           ]
         },
         "parked": false,
@@ -24090,7 +24090,7 @@
         ],
         "events": [
           "started 0",
-          "exited 0 {\"success\":[1,false,2]}"
+          "exited 0 {\"success\":[2,false,1]}"
         ],
         "frames": [
           "0:OnSuccess",

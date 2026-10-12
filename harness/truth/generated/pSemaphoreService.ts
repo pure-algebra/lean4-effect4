@@ -28,9 +28,9 @@ export const Permits = Context.Service<"Permits", { readonly take: (a1: number) 
 export const PermitsLayer = Layer.effect(Permits, Effect.map(semaphoreMake(), (a0) => {
   return { take: (a1: number) => semaphoreTake(pair(a0, a1)), release: (a1: number) => semaphoreRelease(pair(a0, a1)), takeIfAvailable: (a1: number) => semaphoreTakeIfAvailable(pair(a0, a1)) }
 }))
-export const main: Effect.Effect<readonly [number, boolean, number], never, never> = Effect.flatMap(semaphoreMake(), (a0) => Effect.flatMap(semaphoreTake(pair(a0, 1)), (a1) => Effect.flatMap(semaphoreTakeIfAvailable(pair(a0, 5)), (a2) => Effect.flatMap(semaphoreRelease(pair(a0, 1)), (a3) => Effect.succeed(tuple(a1, a2, a3))))))
+export const main: Effect.Effect<readonly [number, boolean, number], never, never> = Effect.flatMap(semaphoreMake(), (a0) => Effect.flatMap(semaphoreTake(pair(a0, 2)), (a1) => Effect.flatMap(semaphoreTakeIfAvailable(pair(a0, 1)), (a2) => Effect.flatMap(semaphoreRelease(pair(a0, 1)), (a3) => Effect.succeed(tuple(a1, a2, a3))))))
 export const client = Effect.provide(
   Effect.flatMap(Permits, (s) =>
-    Effect.flatMap(s.take(1), (a) =>
-      Effect.flatMap(s.takeIfAvailable(5), (b) => Effect.map(s.release(1), (c) => tuple(a, b, c))))),
+    Effect.flatMap(s.take(2), (a) =>
+      Effect.flatMap(s.takeIfAvailable(1), (b) => Effect.map(s.release(1), (c) => tuple(a, b, c))))),
   PermitsLayer)

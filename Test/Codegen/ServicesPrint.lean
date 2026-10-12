@@ -88,19 +88,44 @@ def queueProgram : Option Api.Program :=
 #guard queueProgram.map (blockReadable [] (nativeSignature [])) = some false
 
 /-- A semaphore of two permits as a service, used by the main program through its initial
-program and its three methods. -/
+program and its three methods. The calls tell one captured semaphore from fresh state for each
+method (Codex's CO6B-SEMAPHORE-CAPTURE, `docs/research/2026-10-10-service-repair-overwatch/`):
+`take(2)` empties it, so `takeIfAvailable(1)` refuses. -/
 def semaphoreModule : Module NativeOp :=
   { defs := Semaphore.serviceDefs "Permits" 2,
     main := eff do
       let s ← Def.invoke "semaphoreMake" []
-      let a ← Def.invoke "semaphoreTake" [s, nat 1]
-      let b ← Def.invoke "semaphoreTakeIfAvailable" [s, nat 5]
+      let a ← Def.invoke "semaphoreTake" [s, nat 2]
+      let b ← Def.invoke "semaphoreTakeIfAvailable" [s, nat 1]
       let c ← Def.invoke "semaphoreRelease" [s, nat 1]
       return tuple [a, b, c] }
 
 /-- The semaphore module's program. -/
 def semaphoreProgram : Option Api.Program :=
   (Effect4.Api.Author.build semaphoreModule).toOption.map (·.program)
+
+-- the client's answer on the machine, through both entries
+#guard semaphoreProgram.map (fun p => (Api.run p 1000).exit) =
+  some (some (.success (.list [.nat 2, .bool false, .nat 1])))
+#guard semaphoreProgram.map (fun p => (Api.runSync p 1000).2) =
+  some (.success (.list [.nat 2, .bool false, .nat 1]))
+
+/-- Control: the same calls, each on a fresh semaphore. -/
+def freshSemaphoreModule : Module NativeOp :=
+  { defs := Semaphore.serviceDefs "Permits" 2,
+    main := eff do
+      let s ← Def.invoke "semaphoreMake" []
+      let a ← Def.invoke "semaphoreTake" [s, nat 2]
+      let t ← Def.invoke "semaphoreMake" []
+      let b ← Def.invoke "semaphoreTakeIfAvailable" [t, nat 1]
+      let u ← Def.invoke "semaphoreMake" []
+      let c ← Def.invoke "semaphoreRelease" [u, nat 1]
+      return tuple [a, b, c] }
+
+-- red control: fresh state answers otherwise, so the client's answer reads the captured state
+#guard ((Effect4.Api.Author.build freshSemaphoreModule).toOption.map
+    (fun m => (Api.run m.program 1000).exit)) !=
+  some (some (.success (.list [.nat 2, .bool false, .nat 1])))
 
 -- the Semaphore's service prints its key and its layer after the four definitions
 #guard (semaphoreProgram.bind fun p => (Api.printModule "main" p).map fun m =>

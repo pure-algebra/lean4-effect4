@@ -1141,7 +1141,8 @@ def queueServiceClient : String :=
   "  NumberQueueLayer)\n"
 
 /-- **The Semaphore as a service** (decisions rows 338 and 339, slice CO-6b): two permits; the
-main program takes one, tries to take five, and releases one, each through a definition. -/
+main program takes two, tries to take one, and releases one, each through a definition. The
+calls tell one captured semaphore from fresh state (CO6B-SEMAPHORE-CAPTURE). -/
 def pSemaphoreService : Api.Program :=
   Test.Codegen.ServicesPrint.semaphoreProgram.getD
     (.fail (.lit (.str "pSemaphoreService: the module does not build")))
@@ -1150,8 +1151,8 @@ def pSemaphoreService : Api.Program :=
 def semaphoreServiceClient : String :=
   "export const client = Effect.provide(\n" ++
   "  Effect.flatMap(Permits, (s) =>\n" ++
-  "    Effect.flatMap(s.take(1), (a) =>\n" ++
-  "      Effect.flatMap(s.takeIfAvailable(5), (b) => Effect.map(s.release(1), (c) => tuple(a, b, c))))),\n" ++
+  "    Effect.flatMap(s.take(2), (a) =>\n" ++
+  "      Effect.flatMap(s.takeIfAvailable(1), (b) => Effect.map(s.release(1), (c) => tuple(a, b, c))))),\n" ++
   "  PermitsLayer)\n"
 
 /-- The programs whose module exports a service, each with its client through the key. -/
