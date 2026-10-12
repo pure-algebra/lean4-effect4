@@ -21,6 +21,32 @@ variable {I : W → RunMachine ν σ β ε δ ι α χ St κ φ η → List (Cmd
 variable {O : W → RunMachine ν σ β ε δ ι α χ St κ φ η → List (Machine.Task ν σ β ε δ ι α κ) → Prop}
 variable {A : W → RunMachine ν σ β ε δ ι α χ St κ φ η → RunDecision ν σ β ε δ ι α → Prop}
 
+omit [FiberEvaluator ν σ β ε δ ι α χ St κ φ η] in
+/-- The interrupt decision is one word of the existing edits, at the actual lookup states.
+Consumers: the saved-stack equality and shared place balance outside the command loop. -/
+theorem interruptEdit_path
+    {Edge : RunMachine ν σ β ε δ ι α χ St κ φ η → RunMachine ν σ β ε δ ι α χ St κ φ η →
+      Edit ν σ β ε δ ι α χ St κ φ η → Prop}
+    (updated : ∀ m target old, m.fiber? target = some old → ∀ who extra,
+      Edge m (m.update (interruptRecord interp who extra old).1)
+        (.update (interruptRecord interp who extra old).1))
+    (recorded : ∀ m who target, Edge m (m.emit [.interruptRecorded who target])
+      (.emit [.interruptRecorded who target]))
+    (deferred : ∀ m target, Edge m (m.emit [.interruptDeferred target])
+      (.emit [.interruptDeferred target]))
+    (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (who : Option FiberId)
+    (extra : ReasonAnnotations α) (target : FiberId) (fiber : RunFiber ν σ β ε δ ι α χ κ φ)
+    (found : m.fiber? target = some fiber) :
+    ∃ word, Effect4.Contracts.Path Edge m (interruptEdit interp m who extra target fiber) word := by
+  unfold interruptEdit
+  dsimp only
+  split
+  · exact ⟨_, .cons (recorded m who target) (.cons (deferred _ target)
+      (.cons (updated ((m.emit [.interruptRecorded who target]).emit [.interruptDeferred target])
+        target fiber found who extra) (.nil _)))⟩
+  · exact ⟨_, .cons (recorded m who target)
+      (.cons (updated (m.emit [.interruptRecorded who target]) target fiber found who extra) (.nil _))⟩
+
 /-- Attach a machine fact while retaining the actual decision invariant's world and queues.
 Consumer: source-budget histories; the reply premise reads the actual prepared first resume. -/
 theorem DecisionLift.withMachineFact (base : DecisionLift o interp J I O A)

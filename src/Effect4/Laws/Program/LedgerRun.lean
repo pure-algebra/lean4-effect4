@@ -1,7 +1,7 @@
 import Effect4.Laws.Machine.Ledger
 import Effect4.Laws.Machine.EditObserverWords
 import Effect4.Laws.Program.FinalizerTransfer
-import Effect4.Laws.Program.PlaceFunding.Commands
+import Effect4.Laws.Program.PlaceFunding.History
 import Effect4.Laws.Program.PlaceLedgerConnect
 
 /-!
@@ -248,44 +248,34 @@ theorem command_funded {cap : Nat} (p : NativeEff) (table : RowTable) (kept : Ke
 theorem interrupt_same (interp : Native.NInterp) (m : NativeMachine) (ok : Ok m)
     (who : Option FiberId) (extra : ReasonAnnotations Ann) (target : FiberId) (f : NFiber)
     (found : m.fiber? target = some f) : L.Same m (Lift.interruptEdit interp m who extra target f) := by
-  unfold Lift.interruptEdit
-  dsimp only
-  split
-  · let before := (m.emit [.interruptRecorded who target]).emit [.interruptDeferred target]
-    exact ((L.same_emit m [.interruptRecorded who target] rfl rfl).trans
-      (L.same_emit _ [.interruptDeferred target] rfl rfl)).trans
-      (L.same_interruptUpdate interp before ok.idsUnique target f found who extra)
-  · let before := m.emit [.interruptRecorded who target]
-    exact (L.same_emit m [.interruptRecorded who target] rfl rfl).trans
-      (L.same_interruptUpdate interp before ok.idsUnique target f found who extra)
+  obtain ⟨word, path⟩ : ∃ word, Effect4.Contracts.Path
+      (fun before after edit => after = edit.apply before ∧
+        (Ok before → L.Neutral edit before ∧ Ok after))
+      m (Lift.interruptEdit interp m who extra target f) word := by
+    apply Lift.interruptEdit_path (interp := interp) (m := m) (who := who)
+      (extra := extra) (target := target) (fiber := f) (found := found)
+    · intro before target old lookup who extra
+      refine ⟨rfl, fun kept => ⟨?_, update_ok kept _⟩⟩
+      exact ⟨kept.idsUnique, old, by simpa only [RunMachine.id_of_fiber? lookup] using lookup,
+        StackLedger.interruptRecord_key interp who extra old, L.interruptRecord_held interp who extra old⟩
+    · intro before who target
+      exact ⟨rfl, fun kept => ⟨⟨rfl, rfl⟩, emit_ok kept _⟩⟩
+    · intro before target
+      exact ⟨rfl, fun kept => ⟨⟨rfl, rfl⟩, emit_ok kept _⟩⟩
+  exact L.same_ok_word path ok
 
 /-- The fork ledger's distinct ids, and the place invariant. -/
 def Holds (cap : Nat) (m : NativeMachine) : Prop := Ok m ∧ L.Funded cap m
 
 /-- **Every edit outside the command loop** keeps both. -/
-theorem edits (cap : Nat) (interp : Native.NInterp) : Lift.MachineEdits interp (L.Holds cap) where
-  drain := by
-    intro m owner f h found
-    refine ⟨(ForkLedger.Invariant.edits interp).drain m owner f h.1 found, ?_⟩
-    exact (L.same_update_view m h.1.idsUnique
-      { f with dispatcher := f.dispatcher.drain.2 } (L.found_weight m owner f found)).funded h.2
-  ran := by
-    intro m owner task h
-    exact ⟨h.1, (L.same_emit m [.ranTask owner task] rfl rfl).funded h.2⟩
-  yield := by
-    intro m id verdict h
-    exact ⟨modify_ok h.1 id _, (L.same_modify m h.1.idsUnique id
-      (fun f => { f with yieldOverride := some verdict }) (fun _ => rfl) (fun _ => rfl)).funded h.2⟩
-  interrupt := by
-    intro m who extra target f h found
-    exact ⟨interruptEdit_ok interp h.1 who extra target f,
-      (L.interrupt_same interp m h.1 who extra target f found).funded h.2⟩
-  middleware := fun _ h => h
-  clock := fun _ _ h _ => h
-  owed := by
-    intro m owed h
-    exact ⟨drainOwed_ok m [owed] h.1, (L.same_drainOwed m h.1 [owed]).funded h.2⟩
-  prepare := fun _ _ _ _ h => h
+theorem edits (cap : Nat) (interp : Native.NInterp) : Lift.MachineEdits interp (L.Holds cap) := by
+  have predicate : PlaceFunding.Holds (PlaceLedgerConnect.stack L) cap = L.Holds cap := by
+    funext m
+    exact propext (and_congr_right fun _ => PlaceLedgerConnect.stack_funded L cap m)
+  rw [← predicate]
+  exact PlaceFunding.edits (PlaceInstance.stack_control L) (PlaceInstance.stack_no_queue L)
+      (PlaceInstance.stack_events L) cap interp (fun _ _ => Nat.le_refl _)
+      (fun _ _ _ _ => Nat.le_refl _)
 
 /-- **Every decision**, under every command budget. -/
 theorem stepped (cap : Nat) (p : NativeEff) (table : RowTable) (kept : Kept L p table)
