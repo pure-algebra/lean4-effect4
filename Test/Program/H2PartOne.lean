@@ -196,13 +196,12 @@ theorem new_notImplemented_refused :
 
 theorem new_admitted (cause : CauseV) (typed : ExitOk world unitTy (.failure cause)) :
     RacePayload (program : ProgramSource) world (race cause) unitTy := by
-  refine ⟨rfl, typed, ?_, ?_, ?_, ?_, ?_⟩
+  refine ⟨rfl, typed, ?_, ?_, ?_, ?_⟩
   · intro pair member; cases member
   · intro exit member; cases member
   · intro wait member; cases member
   · intro id member
     exact ⟨unitTy, rfl, Ty.sub_refl _, Ty.sub_refl _⟩
-  · intro code member; cases member
 
 theorem user_die_admitted (value : Nat) :
     RacePayload (program : ProgramSource) world (race (Cause.die (.user value))) unitTy := by
@@ -323,11 +322,11 @@ one. -/
 theorem old_loop_admitted (src : ProgramSource) (w : W) :
     StackAccepts (TypedProg src) FullExitOk (oldFrameProtocols src) w inner outer
       [.loop name .unit] := by
-  apply StackAccepts.cons (middle := outer)
+  apply Effect4.Contracts.Path.cons (middle := outer)
   · apply FrameAccepts.loop
     intro w' _
     exact OldLoopProtocol.step (tin := inner) (tout := outer) rfl (fun _ _ _ h => False.elim h)
-  · exact StackAccepts.nil outer
+  · exact Effect4.Contracts.Path.nil outer
 
 /-- **The flip** (decisions row 117's side condition, proved): the loop frame's protocol keeps
 the requirement row from emptying, and `inner` requires the scope service while `outer` requires
@@ -351,12 +350,12 @@ from `inner` to `innerKept`, both requiring the scope service. -/
 theorem loop_kept_admitted (src : ProgramSource) (w : W) :
     StackAccepts (TypedProg src) FullExitOk (frameProtocols src) w inner innerKept
       [.loop name .unit] := by
-  apply StackAccepts.cons (middle := innerKept)
+  apply Effect4.Contracts.Path.cons (middle := innerKept)
   · apply FrameAccepts.loop
     intro w' _
     exact LoopProtocol.fold (tin := inner) (tout := innerKept)
       ⟨rfl, fun h => absurd h (by decide), fun _ _ _ _ _ h => False.elim h⟩
-  · exact StackAccepts.nil innerKept
+  · exact Effect4.Contracts.Path.nil innerKept
 
 theorem input_ok (w : W) : FullExitOk w inner (.failure missing) :=
   ⟨fitsExit_of_clean w inner missing rfl
