@@ -84,19 +84,20 @@ theorem ProgramArrow.guardBind {Input Object : Type}
     {Ex : World → Input → Object → ExitV → Prop}
     {GP : World → Input → GuardKind → Object → ExitV → Prop}
     {inputOf : Object → ExitV → Input} {restoreInput : Ctx → Input}
-    {Entry : Input → Object → Prop} {w : World} {input : Input} {mid ty : Object}
+    {Entry : Input → Object → Prop}
+    {guardInput : GuardKind → Object → ExitV → Input} {w : World} {input : Input} {mid ty : Object}
     {kind : GuardKind} {body : RProgram} {next : ExitV → RProgram}
-    (typed : ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry w input mid body)
+    (typed : ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry guardInput w input mid body)
     (run : ∀ later, w.leHost later → ∀ exit, GP later (inputOf mid exit) kind mid exit →
-      ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry
-        later (inputOf mid exit) ty (next exit))
+      ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry guardInput
+        later (guardInput kind mid exit) ty (next exit))
     (skip : ∀ later, w.leHost later → ∀ exit, Ex later (inputOf mid exit) mid exit →
       kind.hasExitArm exit = false → Ex later (inputOf mid exit) ty exit)
     (entry : Entry input ty) :
-    ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry
+    ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry guardInput
       w input ty ((guardR kind body).bind next) := by
   refine .guard mid ?_ run skip entry
-  show ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry w input mid
+  show ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry guardInput w input mid
     ((body.bind fun exit => .vis (.inr (.unguard exit)) Effects.Program.pure).bind next)
   rw [Effects.Program.bind_assoc]
   exact ProgramArrow.close typed next

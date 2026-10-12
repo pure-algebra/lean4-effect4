@@ -51,7 +51,7 @@ The existing unit store and frame laws retain their meanings.
 
 The source files are Typed/Admission, Residual, Context and Denotation.
 The source diff adds 112 lines and removes five lines.
-The research reader replaces its repeated 28-line proof with one shared producer application.
+The research reader replaces its repeated 22-line proof with one shared producer application.
 Root imports and outside-Typed producers stay coordinator-owned.
 
 The commands use one direct Lean process and one thread with warningAsError.

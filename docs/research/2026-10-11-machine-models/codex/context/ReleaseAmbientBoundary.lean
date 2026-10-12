@@ -74,12 +74,11 @@ example (world : Typed.World)
     · cases identity
       exact arguments
 
--- The real cleanup source and restoring region compose without a previous-map service promise.
-example (world : Typed.World) (services : world.serviceTy = source.sig.serviceTy)
-    (previousMembers : ServicesFit world previous.services) :
+-- One checked source producer feeds both restoration readers.
+theorem sourceRelease_typed (world : Typed.World) (services : world.serviceTy = source.sig.serviceTy) :
     AmbientProg source world captured.services.keysRow
-      (releaseType, previous.services.keysRow, (Row.empty : Env.Requirement))
-      (bodyR (interpRAt source.program []) (.release releasePoint previous)) := by
+      (releaseType, captured.services.keysRow, captured.services.keysRow)
+      (denoteAt source.program releasePoint) := by
   have node : Node.at_ (.eff source.program) releasePoint.path = some (.eff (.service key)) := by
     kernel_rfl
   have pointTyped : PointTyped source world releasePoint releaseType := by
@@ -99,14 +98,20 @@ example (world : Typed.World) (services : world.serviceTy = source.sig.serviceTy
     · change StackTyped source world [] []
       exact stackTyped_nil source world []
   have budget : releasePoint.fuel ≠ 0 := by decide
-  have cleanup : AmbientProg source world captured.services.keysRow
-      (releaseType, captured.services.keysRow, captured.services.keysRow)
-      (denoteAt source.program releasePoint) := by
-    rw [show denoteAt source.program releasePoint = denoteR source.program (.service key) releasePoint from by
-      simp only [denoteAt, node]]
-    exact service_arm budget services node pointTyped
-  exact ambient_onExit_restore_guarantees source previous previousMembers (fun key absent => False.elim (Row.not_mem_empty key absent))
-    (fun key absent => False.elim (Row.not_mem_empty key absent)) cleanup
+  rw [show denoteAt source.program releasePoint = denoteR source.program (.service key) releasePoint from by
+    simp only [denoteAt, node]]
+  exact service_arm budget services node pointTyped
+
+
+-- The real cleanup source and restoring region compose without a previous-map service promise.
+example (world : Typed.World) (services : world.serviceTy = source.sig.serviceTy)
+    (previousMembers : ServicesFit world previous.services) :
+    AmbientProg source world captured.services.keysRow
+      (releaseType, previous.services.keysRow, (Row.empty : Env.Requirement))
+      (bodyR (interpRAt source.program []) (.release releasePoint previous)) := by
+  exact ambient_onExit_restore_guarantees source previous previousMembers
+    (fun key absent => False.elim (Row.not_mem_empty key absent))
+    (fun key absent => False.elim (Row.not_mem_empty key absent)) (sourceRelease_typed world services)
 
 
 -- Ordinary true masks remain available; only the unsupported release role is refused.

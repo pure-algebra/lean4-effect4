@@ -233,7 +233,8 @@ Consumer: actual parked and resumed code in the runtime typing relation. -/
 abbrev AmbientSaved (root : ProgramSource) (w : World) (available : Env.Requirement)
     (final : AmbientPosition) (saved : RSaved) : Prop :=
   Contracts.SavedArrow (AmbientProg root) AmbientExit (ambientFrameProtocols root)
-    ambientInput (fun ctx => ctx.services.keysRow) w available final saved
+    ambientInput (fun ctx => ctx.services.keysRow)
+    (fun _ position exit => ambientInput position exit) w available final saved
 
 /-- The existing scoped frame returns to services covered by its actual captured context.
 Consumer: scoped body delivery in the indexed typed-state preservation path. -/
@@ -244,7 +245,8 @@ theorem ambient_scoped_frame (root : ProgramSource) (w : World) (ty : EffTy)
     (hook : ∀ later, w.leHost later → (frameProtocols root).scopeExit later previous scope)
     (restored : Row.Subset restoredRow previous.services.keysRow) :
     Contracts.FrameArrow (AmbientProg root) AmbientExit (ambientFrameProtocols root)
-      ambientInput (fun ctx => ctx.services.keysRow) w (ty, bodyRow, bodyRow) (ty, restoredRow, restoredRow)
+      ambientInput (fun ctx => ctx.services.keysRow)
+    (fun _ position exit => ambientInput position exit) w (ty, bodyRow, bodyRow) (ty, restoredRow, restoredRow)
       (.resume (.onExit false) next) :=
   .scopedResume next previous scope shape hook (fun _ _ ex exit => ⟨exit.1, by cases ex <;> exact restored⟩)
 

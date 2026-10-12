@@ -361,18 +361,19 @@ inductive ProgramArrow {Input Object : Type}
     (Exits : World → Input → Object → ExitV → Prop)
     (guardPost : World → Input → GuardKind → Object → ExitV → Prop)
     (inputOf : Object → ExitV → Input) (restoreInput : Ctx → Input)
-    (Entry : Input → Object → Prop) :
+    (Entry : Input → Object → Prop)
+    (guardInput : GuardKind → Object → ExitV → Input) :
     World → Input → Object → RProgram → Prop
   | pure {w : World} {input : Input} {ty : Object} {ex : ExitV}
       (exit : Exits w input ty ex) (entry : Entry input ty := by exact True.intro) :
-      ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry
+      ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry guardInput
         w input ty (.pure ex)
   | store {w : World} {input : Input} {ty : Object} {op : SyncOp} {k : Val → RProgram}
       (cert : StoreCert op) (pre : storePre w input op cert)
       (next : ∀ w', w.leHost w' → ∀ ans, storePost w' input op cert ans →
-        ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry
+        ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry guardInput
           w' input ty (k ans)) (entry : Entry input ty := by exact True.intro) :
-      ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry
+      ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry guardInput
         w input ty (.vis (.inl op) k)
   | fiber {w : World} {input : Input} {ty : Object} {op : FiberOp} {k : op.answer → RProgram}
       (notGuard : ∀ kind, op ≠ .guard_ kind) (notUnguard : ∀ ex, op ≠ .unguard ex)
@@ -380,40 +381,40 @@ inductive ProgramArrow {Input Object : Type}
       (notScopeExit : ∀ prev sc ex, op ≠ .scopeExit prev sc ex)
       (cert : FiberCert op) (pre : fiberPre w input op cert)
       (next : ∀ w', w.leHost w' → ∀ ans, fiberPost w' input op cert ans →
-        ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry
+        ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry guardInput
           w' (fiberInput input op ans) ty (k ans))
       (entry : Entry input ty := by exact True.intro) :
-      ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry
+      ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry guardInput
         w input ty (.vis (.inr op) k)
   | guard {w : World} {input : Input} {ty : Object} {kind : GuardKind}
       {k : Option ExitV → RProgram} (mid : Object)
-      (body : ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry
+      (body : ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry guardInput
         w input mid (k none))
       (run : ∀ w', w.leHost w' → ∀ ex, guardPost w' (inputOf mid ex) kind mid ex →
-        ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry
-          w' (inputOf mid ex) ty (k (some ex)))
+        ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry guardInput
+          w' (guardInput kind mid ex) ty (k (some ex)))
       (skip : ∀ w', w.leHost w' → ∀ ex, Exits w' (inputOf mid ex) mid ex →
         kind.hasExitArm ex = false → Exits w' (inputOf mid ex) ty ex)
       (entry : Entry input ty := by exact True.intro) :
-      ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry
+      ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry guardInput
         w input ty (.vis (.inr (.guard_ kind)) k)
   | unguard {w : World} {input : Input} {ty : Object} {ex : ExitV} {k : ExitV → RProgram}
       (payload : Exits w input ty ex) (entry : Entry input ty := by exact True.intro) :
-      ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry
+      ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry guardInput
         w input ty (.vis (.inr (.unguard ex)) k)
   | finishFinalizer {w : World} {input : Input} {ty : Object} {ex : ExitV} {k : ExitV → RProgram}
       (payload : Exits w input ty ex) (entry : Entry input ty := by exact True.intro) :
-      ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry
+      ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry guardInput
         w input ty (.vis (.inr (.finishFinalizer ex)) k)
   | scopedGuard {w : World} {input : Input} {ty : Object} {k : Option ExitV → RProgram}
       (mid : Object) (prev : Ctx) (sc : Nat)
-      (body : ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry
+      (body : ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry guardInput
         w input mid (k none))
       (callback : ∀ ex, Contracts.scopeExitCallback? (k (some ex)) = some (prev, sc, ex))
       (live : ScopeLive w sc) (services : ServicesFit w prev.services)
       (widen : ∀ w', w.leHost w' → ∀ ex, Exits w' (inputOf mid ex) mid ex →
         Exits w' (restoreInput prev) ty ex) (entry : Entry input ty := by exact True.intro) :
-      ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry
+      ProgramArrow storePre storePost fiberPre fiberPost fiberInput Exits guardPost inputOf restoreInput Entry guardInput
         w input ty (.vis (.inr (.guard_ (.onExit false))) k)
 
 namespace ProgramArrow
@@ -428,21 +429,22 @@ variable {Input Object : Type}
   {GP : World → Input → GuardKind → Object → ExitV → Prop}
   {inputOf : Object → ExitV → Input} {restoreInput : Ctx → Input}
   {Entry : Input → Object → Prop}
+  {guardInput : GuardKind → Object → ExitV → Input}
 
 /-- Every shared program derivation supplies its entry capability bound.
 Consumer: current-code, saved callback and queued resume entry positions in typed preservation. -/
 theorem entry {w : World} {input : Input} {ty : Object} {p : RProgram}
-    (h : ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry w input ty p) :
+    (h : ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry guardInput w input ty p) :
     Entry input ty := by
   cases h <;> assumption
 
 /-- Changing only the output object uses one constructor proof for every program instance.
 Consumer: type-column widening and ambient provider completion guarantees. -/
 theorem outputMap {w : World} {input : Input} {ty ty' : Object} {program : RProgram}
-    (typed : ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry w input ty program)
+    (typed : ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry guardInput w input ty program)
     (exits : ∀ world input exit, Ex world input ty exit → Ex world input ty' exit)
     (entries : ∀ input, Entry input ty → Entry input ty') :
-    ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry w input ty' program := by
+    ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry guardInput w input ty' program := by
   induction typed with
   | pure payload entry => exact .pure (exits _ _ _ payload) (entries _ entry)
   | store cert pre _ entry ih =>
@@ -469,8 +471,8 @@ theorem mono
     (exits : ∀ {w w' input ty ex}, w.leHost w' → Ex w input ty ex → Ex w' input ty ex)
     {w w' : World} {input : Input} {ty : Object} {p : RProgram}
     (ord : w.leHost w')
-    (h : ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry w input ty p) :
-    ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry w' input ty p := by
+    (h : ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry guardInput w input ty p) :
+    ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry guardInput w' input ty p := by
   induction h generalizing w' with
   | pure exit entry => exact .pure (exits ord exit) entry
   | store cert pre next entry _ =>
@@ -494,9 +496,9 @@ theorem mono
 /-- Closing a program retains its completion position, including its context row.
 The original `close_typed` and ambient guard introduction use this one constructor proof. -/
 theorem close {w : World} {input : Input} {ty : Object} {p : RProgram}
-    (h : ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry w input ty p)
+    (h : ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry guardInput w input ty p)
     (next : ExitV → RProgram) :
-    ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry w input ty
+    ProgramArrow SP SQ FP FQ stepInput Ex GP inputOf restoreInput Entry guardInput w input ty
       (p.bind (fun ex => .vis (.inr (.unguard ex)) next)) := by
   induction h with
   | pure exit entry => exact .unguard exit entry
@@ -520,7 +522,7 @@ abbrev TypedProg (root : ProgramSource) (w : World) (ty : EffTy) (p : RProgram) 
     (fun w (_ : Unit) => fiberPre root w) (fun w (_ : Unit) => fiberPost w)
     (fun _ _ _ => ()) (fun w (_ : Unit) => ExitOk w)
     (fun w (_ : Unit) kind mid ex => fiberPost w (.guard_ kind) mid (some ex))
-    (fun _ _ => ()) (fun _ => ()) (fun _ _ => True) w () ty p
+    (fun _ _ => ()) (fun _ => ()) (fun _ _ => True) (fun _ _ _ => ()) w () ty p
 
 /-- Completion positions index the existing program arrow, not stored program syntax.
 The captured getter carries its returned context's row into the provider callback. -/
@@ -656,7 +658,8 @@ abbrev AmbientProg (root : ProgramSource) (w : World) (available : Env.Requireme
     (ambientFiberPre root) ambientFiberPost ambientFiberInput AmbientExit
     (fun w input kind mid ex => kind.hasExitArm ex = true ∧ AmbientExit w input mid ex)
     ambientInput (fun ctx => ctx.services.keysRow)
-    (fun available position => Row.Subset position.failureRow available) w available position p
+    (fun available position => Row.Subset position.failureRow available)
+    (fun _ position exit => ambientInput position exit) w available position p
 
 /-- The actual context answer satisfies the row-indexed protocol.
 No key-presence predicate substitutes for the declared service membership. -/
@@ -742,43 +745,43 @@ abbrev pure := @ProgramArrow.pure Unit EffTy
   (fun w (_ : Unit) => fiberPre root w) (fun w (_ : Unit) => fiberPost w)
   (fun _ _ _ => ()) (fun w (_ : Unit) => ExitOk w)
   (fun w (_ : Unit) kind mid ex => fiberPost w (.guard_ kind) mid (some ex))
-  (fun _ _ => ()) (fun _ => ()) (fun _ _ => True)
+  (fun _ _ => ()) (fun _ => ()) (fun _ _ => True) (fun _ _ _ => ())
 abbrev store := @ProgramArrow.store Unit EffTy
   (fun w (_ : Unit) => storePre root w) (fun w (_ : Unit) => storePost w)
   (fun w (_ : Unit) => fiberPre root w) (fun w (_ : Unit) => fiberPost w)
   (fun _ _ _ => ()) (fun w (_ : Unit) => ExitOk w)
   (fun w (_ : Unit) kind mid ex => fiberPost w (.guard_ kind) mid (some ex))
-  (fun _ _ => ()) (fun _ => ()) (fun _ _ => True)
+  (fun _ _ => ()) (fun _ => ()) (fun _ _ => True) (fun _ _ _ => ())
 abbrev fiber := @ProgramArrow.fiber Unit EffTy
   (fun w (_ : Unit) => storePre root w) (fun w (_ : Unit) => storePost w)
   (fun w (_ : Unit) => fiberPre root w) (fun w (_ : Unit) => fiberPost w)
   (fun _ _ _ => ()) (fun w (_ : Unit) => ExitOk w)
   (fun w (_ : Unit) kind mid ex => fiberPost w (.guard_ kind) mid (some ex))
-  (fun _ _ => ()) (fun _ => ()) (fun _ _ => True)
+  (fun _ _ => ()) (fun _ => ()) (fun _ _ => True) (fun _ _ _ => ())
 abbrev guard := @ProgramArrow.guard Unit EffTy
   (fun w (_ : Unit) => storePre root w) (fun w (_ : Unit) => storePost w)
   (fun w (_ : Unit) => fiberPre root w) (fun w (_ : Unit) => fiberPost w)
   (fun _ _ _ => ()) (fun w (_ : Unit) => ExitOk w)
   (fun w (_ : Unit) kind mid ex => fiberPost w (.guard_ kind) mid (some ex))
-  (fun _ _ => ()) (fun _ => ()) (fun _ _ => True)
+  (fun _ _ => ()) (fun _ => ()) (fun _ _ => True) (fun _ _ _ => ())
 abbrev unguard := @ProgramArrow.unguard Unit EffTy
   (fun w (_ : Unit) => storePre root w) (fun w (_ : Unit) => storePost w)
   (fun w (_ : Unit) => fiberPre root w) (fun w (_ : Unit) => fiberPost w)
   (fun _ _ _ => ()) (fun w (_ : Unit) => ExitOk w)
   (fun w (_ : Unit) kind mid ex => fiberPost w (.guard_ kind) mid (some ex))
-  (fun _ _ => ()) (fun _ => ()) (fun _ _ => True)
+  (fun _ _ => ()) (fun _ => ()) (fun _ _ => True) (fun _ _ _ => ())
 abbrev finishFinalizer := @ProgramArrow.finishFinalizer Unit EffTy
   (fun w (_ : Unit) => storePre root w) (fun w (_ : Unit) => storePost w)
   (fun w (_ : Unit) => fiberPre root w) (fun w (_ : Unit) => fiberPost w)
   (fun _ _ _ => ()) (fun w (_ : Unit) => ExitOk w)
   (fun w (_ : Unit) kind mid ex => fiberPost w (.guard_ kind) mid (some ex))
-  (fun _ _ => ()) (fun _ => ()) (fun _ _ => True)
+  (fun _ _ => ()) (fun _ => ()) (fun _ _ => True) (fun _ _ _ => ())
 abbrev scopedGuard := @ProgramArrow.scopedGuard Unit EffTy
   (fun w (_ : Unit) => storePre root w) (fun w (_ : Unit) => storePost w)
   (fun w (_ : Unit) => fiberPre root w) (fun w (_ : Unit) => fiberPost w)
   (fun _ _ _ => ()) (fun w (_ : Unit) => ExitOk w)
   (fun w (_ : Unit) kind mid ex => fiberPost w (.guard_ kind) mid (some ex))
-  (fun _ _ => ()) (fun _ => ()) (fun _ _ => True)
+  (fun _ _ => ()) (fun _ => ()) (fun _ _ => True) (fun _ _ _ => ())
 
 theorem pure_inv {root : ProgramSource} {w : World} {ty : EffTy} {ex : ExitV}
     (h : TypedProg root w ty (.pure ex)) : ExitOk w ty ex := by
