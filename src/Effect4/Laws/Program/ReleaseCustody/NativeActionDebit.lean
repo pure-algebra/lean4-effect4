@@ -136,7 +136,7 @@ theorem closeScope (q : List Nat) (root : NativeEff) (table : RowTable)
   | none =>
     have close : (interpAt root m.completedExits table).closeScope scope exit fiber.frame.interruptible fiber.id m.state = none := by
       change (storesCloseScope scope exit fiber.frame.interruptible m.state).map
-        (fun result => (result.1, embed result.2)) = _
+        (fun result => (result.1, result.2.map embed)) = _
       rw [step]
       rfl
     simp only [evaluatePrim.withFiber, close]
@@ -147,17 +147,30 @@ theorem closeScope (q : List Nat) (root : NativeEff) (table : RowTable)
     obtain ⟨state, program⟩ := next
     have transfer := ScopeTransfer.close q scope exit fiber.frame.interruptible unique step
     have close : (interpAt root m.completedExits table).closeScope scope exit fiber.frame.interruptible fiber.id m.state =
-        some (state, embed program) := by
+        some (state, program.map embed) := by
       change (storesCloseScope scope exit fiber.frame.interruptible m.state).map
-        (fun result => (result.1, embed result.2)) = _
+        (fun result => (result.1, result.2.map embed)) = _
       rw [step]
       rfl
-    simp only [evaluatePrim.withFiber, close]
-    unfold IterDebit outsideCredits fiberCredits
-    simp only [List.map_nil, List.sum_nil, Nat.add_zero]
-    rw [noAdd_full q (embed program) _ held, noAdd_full q fiber.frame.current _ held]
+    have full (active : NCode) := noAdd_full q active fiber.frame.stack held
     unfold ScopeTransfer.storedCredits at transfer
-    omega
+    cases program with
+    | none =>
+      simp only [Option.elim_none, Nat.add_zero] at transfer
+      unfold IterDebit outsideCredits
+      simp only [evaluatePrim.withFiber, close, Option.map_none]
+      simp only [List.map_nil, List.sum_nil, fiberCredits, currentCredits, full, Nat.add_zero,
+        Nat.zero_add]
+      omega
+    | some program =>
+      simp only [Option.elim_some] at transfer
+      unfold IterDebit outsideCredits
+      simp only [evaluatePrim.withFiber, close, Option.map_some, FrameFiber.uninterruptible]
+      repeat' split
+      all_goals
+        simp only [List.map_nil, List.sum_nil, fiberCredits, stackCredits, futureCredits, full,
+          Nat.add_zero, Nat.zero_add]
+      all_goals omega
 
 /-- A race transfers all entrant reservations into the existing race pool.
 Consumer: the two actual race modes in the evaluator census. -/

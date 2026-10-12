@@ -1643,13 +1643,28 @@ theorem linkScope_open_exited (interp : RunInterp ν σ β ε δ ι α χ St)
 
 /-- Closing a scope installs the store's close program as the closer's current primitive
 (`Scope.close`): the sequential strategy's chain awaits each finalizer through its exit and
-the parallel strategy's forks run on this machine. census: scope.close-sequential -/
+the parallel strategy's forks run on this machine. The closer is masked first and its restoring
+frame pushed, as latest's `scopeClose` does (`vendor/effect-4.0.1/src/internal/effect.ts:3929-3935`,
+`fiberEnterUninterruptibleUnsafe` `:4584-4589`); rc.112's close is unmasked (`:3775-3776`), a
+signed divergence. census: scope.close-sequential -/
 theorem withFiber_closeScope (interp : RunInterp ν σ β ε δ ι α χ St)
     (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
     (scope : Nat) (exit : Exit β ε δ ι α) (state : St) (program : Prim ν σ β ε δ ι α)
-    (h : interp.closeScope scope exit f.frame.interruptible f.id m.state = some (state, program)) :
+    (h : interp.closeScope scope exit f.frame.interruptible f.id m.state = some (state, some program)) :
     evaluatePrim.withFiber interp m f yielding (WithFiberAction.closeScope scope exit) =
-      ⟨{ m with state := state }, { f with frame := { f.frame with current := program } },
+      ⟨{ m with state := state }, { f with frame := { f.frame.uninterruptible with current := program } },
+        yielding, Outcome.continue_, [], []⟩ := by
+  simp only [evaluatePrim.withFiber, h]
+
+/-- Closing a scope that runs nothing (empty, or already closed) answers `void` with no mask:
+latest's `scopeClose` returns `void_` before it masks (`vendor/effect-4.0.1/src/internal/effect.ts:3931-3932`).
+census: scope.close-sequential -/
+theorem withFiber_closeScope_void (interp : RunInterp ν σ β ε δ ι α χ St)
+    (m : RunMachine ν σ β ε δ ι α χ St) (f : RunFiber ν σ β ε δ ι α χ) (yielding : Bool)
+    (scope : Nat) (exit : Exit β ε δ ι α) (state : St)
+    (h : interp.closeScope scope exit f.frame.interruptible f.id m.state = some (state, none)) :
+    evaluatePrim.withFiber interp m f yielding (WithFiberAction.closeScope scope exit) =
+      ⟨{ m with state := state }, { f with frame := { f.frame with current := Prim.success interp.voidValue } },
         yielding, Outcome.continue_, [], []⟩ := by
   simp only [evaluatePrim.withFiber, h]
 

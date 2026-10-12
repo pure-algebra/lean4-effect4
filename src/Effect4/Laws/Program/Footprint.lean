@@ -242,6 +242,8 @@ theorem withFiber_evaluationFootprint (interp : NInterp) (m : NativeMachine) (f 
     split
     · exact ⟨⟨(AdministrativeTrace.of_eq rfl).idle _, rfl, rfl, rfl, rfl, rfl, rfl⟩, rfl⟩
     · exact ⟨⟨(AdministrativeTrace.of_eq rfl).answer _ _, rfl, rfl, rfl, rfl, rfl, rfl⟩, rfl⟩
+    · exact ⟨⟨⟨_, .two (.mask _) (.answer _ _ [] rfl), (List.append_nil _).symm⟩,
+        rfl, rfl, rfl, rfl, rfl, rfl⟩, rfl⟩
   | closePar finalizers =>
     exact ⟨⟨(forkFinalizers_administrative interp m f finalizers).idle _, rfl, rfl, rfl, rfl, rfl, rfl⟩, rfl⟩
   | refuse cause =>

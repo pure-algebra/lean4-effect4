@@ -446,7 +446,7 @@ theorem frame_closeScope (scope : Nat) (exit : ExitV) :
     evaluatePrim.withFiber (interpAt root c table) m f y (.closeScope scope exit) =
       FiberAction.closeScope (interpAt root c table) m f y scope exit := by
   rcases hc : (interpAt root c table).closeScope scope exit f.frame.interruptible f.id m.state with
-    _ | ⟨state, program⟩ <;>
+    _ | ⟨state, _ | program⟩ <;>
     simp only [evaluatePrim.withFiber, FiberAction.closeScope, FiberCore.interruptible, hc]
 
 theorem frame_cancelRace (raceId : Nat) :

@@ -374,13 +374,15 @@ theorem voidedFin_means (root : NativeEff) (fin : FinName) (ex : ExitV) :
     Effects.Program.pure (Exit.success Val.unit) from rfl, prepareR_pure]
   exact CodeMeans.success _
 
-/-- `Scope.close`: void for no finalizer, the lone finalizer voided on both sides (decisions row
-151 (a″), `voidedFin_means`), the walk of two or more; the same state, related programs. -/
+/-- `Scope.close`: no program for no finalizer, the lone finalizer voided on both sides (decisions
+row 151 (a″), `voidedFin_means`), the walk of two or more; the same state, and no program or
+related programs. -/
 theorem closeScope_means (root : NativeEff) (scope : Nat) (ex : ExitV) (flag : Bool) (id : FiberId)
     (s : Stores) :
-    OptRel (fun (a : Stores × NCode) (b : Stores × RProgram) => a.1 = b.1 ∧ CodeMeans root a.2 b.2)
+    OptRel (fun (a : Stores × Option NCode) (b : Stores × Option RProgram) =>
+        a.1 = b.1 ∧ OptRel (CodeMeans root) a.2 b.2)
       ((interpOf root table).closeScope scope ex flag id s) ((interpR root table).closeScope scope ex flag id s) := by
-  show OptRel _ ((storesCloseScope scope ex flag s).map fun r => (r.1, embed r.2))
+  show OptRel _ ((storesCloseScope scope ex flag s).map fun r => (r.1, r.2.map embed))
     (closeScopeR scope ex flag s)
   unfold storesCloseScope closeScopeR
   cases hs : scopeCloseSnapshot scope ex s with
@@ -389,7 +391,7 @@ theorem closeScope_means (root : NativeEff) (scope : Nat) (ex : ExitV) (flag : B
     obtain ⟨st, strategy, order⟩ := r
     refine ⟨rfl, ?_⟩
     cases order with
-    | nil => exact CodeMeans.success _
+    | nil => exact True.intro
     | cons fin rest =>
       cases rest with
       | nil => exact voidedFin_means root fin ex
@@ -634,6 +636,25 @@ theorem means_answerWith {root : NativeEff} {f₁ : FFiber} {f₂ : RSaved} (h :
     {c₁ : NCode} {c₂ : RProgram} (hc : CodeMeans root c₁ c₂) :
     Means root { f₁ with current := c₁ } { f₂ with current := c₂ } :=
   ⟨h.1, h.2.1, h.2.2.1, hc, h.2.2.2.2.1, h.2.2.2.2.2⟩
+
+/-- The mask an explicit close enters (latest's `fiberEnterUninterruptibleUnsafe`,
+`vendor/effect-4.0.1/src/internal/effect.ts:4584-4589`): the frame's `uninterruptible` and the
+term's restoring slot, each under a related current. The pair is the `.mask false` arm's. -/
+theorem means_enterUninterruptible {root : NativeEff} {f₁ : FFiber} {f₂ : RSaved}
+    (h : Means root f₁ f₂) {c₁ : NCode} {c₂ : RProgram} (hc : CodeMeans root c₁ c₂) :
+    Means root (frameCore.answerWith (frameCore.enterUninterruptible f₁) c₁)
+      (termCore.answerWith (termCore.enterUninterruptible f₂) c₂) := by
+  obtain ⟨hi, hcause, hdef, _, hstack, hinv⟩ := h
+  dsimp only [FiberCore.answerWith, FiberCore.enterUninterruptible, frameCore, termCore,
+    FrameFiber.uninterruptible]
+  rw [hi]
+  cases hb : f₂.interruptible with
+  | true =>
+    rw [hb] at hinv
+    exact ⟨rfl, hcause, hdef, hc, StackMeans.slot (SlotMeans.mask true) hstack, hinv⟩
+  | false =>
+    rw [hb] at hi
+    exact ⟨hi.trans hb.symm, hcause, hdef, hc, hstack, hinv⟩
 
 theorem means_start (root : NativeEff) {c₁ : NCode} {c₂ : RProgram} (hc : CodeMeans root c₁ c₂)
     (flag : Bool) :

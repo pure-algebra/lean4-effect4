@@ -89,6 +89,25 @@ def restoreR (code : RProgram) (name : EffName) : RProgram :=
   yieldBefore := fun previous =>
     (guardR .onSuccess (.vis (.inr (.yieldNow 0)) fun v => .pure (.success v))).bind
       (seqR fun _ => previous)
+  -- the `.mask false` arm's fiber side: mask, and push the restoring slot when the flag changes
+  enterUninterruptible := fun f =>
+    if f.interruptible then { f with interruptible := false, stack := .restoreMask true :: f.stack }
+    else f
+
+/-- The term's mask entry on an interruptible frame: the flag cleared and the restoring slot
+pushed. A step of `clause_closeScope`; consumer: that clause. -/
+theorem termCore_enterUninterruptible_true {fr : RSaved} (h : fr.interruptible = true) :
+    termCore.enterUninterruptible fr =
+      { fr with interruptible := false, stack := .restoreMask true :: fr.stack } := by
+  show (if fr.interruptible then _ else fr) = _
+  rw [if_pos h]
+
+/-- The term's mask entry on a masked frame is the identity. A step of `clause_closeScope`;
+consumer: that clause. -/
+theorem termCore_enterUninterruptible_false {fr : RSaved} (h : fr.interruptible = false) :
+    termCore.enterUninterruptible fr = fr := by
+  show (if fr.interruptible then _ else fr) = fr
+  rw [if_neg (by rw [h]; exact Bool.false_ne_true)]
 
 abbrev RState := RunMachine EffName EffThunk Val Err Defect FiberId Ann Ctx Stores RProgram RSaved Unit
 abbrev RFiber := RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx RProgram RSaved
@@ -164,9 +183,10 @@ def closeScopeUnsafeR (scope : Nat) (ex : ExitV) (_interruptible : Bool)
     | [fin] => some (denoteFin fin ex)
     | _ => some (closeWalkR strategy order ex))
 
-/-- `Scope.close(scope, exit)` (`:3775-3776`): `scopeCloseUnsafe(...) ?? void_`, read off the
-unsafe close's snapshot as `Stores.storesCloseScope` reads it — void for no finalizer, the walk for
-two or more.
+/-- `Scope.close(scope, exit)`, read off the unsafe close's snapshot as `Stores.storesCloseScope`
+reads it: no program (`void_`) for no finalizer, the walk for two or more. The machine masks the
+closer before it runs a program, as latest's `scopeClose` does
+(`vendor/effect-4.0.1/src/internal/effect.ts:3929-3935`); rc.112's is unmasked (`:3775-3776`).
 A lone finalizer runs and the close then answers `void` (the term's `OnSuccess` with a constant
 continuation; a failure, defect or interrupt of the finalizer passes through `seqR`): rc.112
 declares `Scope.close` at `Effect<void>` (`Scope.ts:567`) but passes on the lone finalizer's
@@ -174,12 +194,12 @@ effect as `scopeCloseUnsafe` returns it (`:3788-3789`, `:3794-3795`), so the val
 promises away is voided here, a signed divergence (decisions row 151 (a″); `U-02` in
 `docs/UPSTREAM-BACKLOG.md`). -/
 def closeScopeR (scope : Nat) (ex : ExitV) (_interruptible : Bool)
-    (state : Stores) : Option (Stores × RProgram) := do
+    (state : Stores) : Option (Stores × Option RProgram) := do
   let (state, strategy, order) ← scopeCloseSnapshot scope ex state
   return (state, match order with
-    | [] => .pure (.success .unit)
-    | [fin] => (guardR .onSuccess (denoteFin fin ex)).bind (seqR fun _ => .pure (.success .unit))
-    | _ => closeWalkR strategy order ex)
+    | [] => none
+    | [fin] => some ((guardR .onSuccess (denoteFin fin ex)).bind (seqR fun _ => .pure (.success .unit)))
+    | _ => some (closeWalkR strategy order ex))
 
 /-- The layer at a point of the root, built (the join): `denoteLayer` of the node there. -/
 def layerBuildR (root : NativeEff) (q : Point) (m : MemoMapId) (scope : Nat) : RProgram :=

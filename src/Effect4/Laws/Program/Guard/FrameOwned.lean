@@ -516,23 +516,24 @@ theorem raceSites_closeScopeUnsafe (scope : Nat) (exit : ExitV) (mask : Bool)
 
 theorem raceSites_closeScope (scope : Nat) (exit : ExitV) (mask : Bool)
     (state after : Stores) (code : Effect4.Machine.Program)
-    (h : storesCloseScope scope exit mask state = some (after, code)) :
+    (h : storesCloseScope scope exit mask state = some (after, some code)) :
     raceSites (embed code) = [] := by
   unfold storesCloseScope at h
   obtain ⟨⟨s, strategy, order⟩, _, h⟩ := Option.bind_eq_some_iff.mp h
-  change some _ = some (after, code) at h
+  change some _ = some (after, some code) at h
   simp only [Option.some.injEq, Prod.mk.injEq] at h
-  obtain ⟨_, rfl⟩ := h
+  obtain ⟨_, hc⟩ := h
   cases order with
-  | nil => rfl
+  | nil => cases hc
   | cons fin rest =>
     cases rest with
     | nil =>
       -- the lone finalizer, voided (decisions row 151 (a″)): its own sites and `unit`'s none
+      cases hc
       show raceSites (embed (finProgram fin exit)) ++ raceSites (Prim.success Val.unit) = []
       rw [raceSites_finProgram]
       rfl
-    | cons fin' rest => rfl
+    | cons fin' rest => cases hc; rfl
 
 theorem stepFrame_owned (p : NativeEff) (completed : List (FiberId × ExitV)) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) (hf : FrameCodeOwned m f) :
@@ -659,7 +660,7 @@ theorem forkFinalizers_races (interp : NInterp) (m : NativeMachine) (f : NFiber)
 
 theorem closeScope_hook_sites (p : NativeEff) (completed : List (FiberId × ExitV)) (table : RowTable)
     (scope : Nat) (exit : ExitV) (mask : Bool) (fid : FiberId) (state after : Stores) (code : NCode)
-    (h : (interpAt p completed table).closeScope scope exit mask fid state = some (after, code)) :
+    (h : (interpAt p completed table).closeScope scope exit mask fid state = some (after, some code)) :
     raceSites code = [] := by
   change (storesCloseScope scope exit mask state).map _ = _ at h
   cases hs : storesCloseScope scope exit mask state with
@@ -667,8 +668,10 @@ theorem closeScope_hook_sites (p : NativeEff) (completed : List (FiberId × Exit
   | some pair =>
     rcases pair with ⟨s, c⟩
     simp only [hs, Option.map_some, Option.some.injEq, Prod.mk.injEq] at h
-    rcases h with ⟨_, rfl⟩
-    exact raceSites_closeScope scope exit mask state s c hs
+    rcases h with ⟨_, hc⟩
+    cases c with
+    | none => cases hc
+    | some c => cases hc; exact raceSites_closeScope scope exit mask state s c hs
 
 theorem interruptCode_sites (p : NativeEff) (completed : List (FiberId × ExitV))
     (table : RowTable) (target : FiberId) :

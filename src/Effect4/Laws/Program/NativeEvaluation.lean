@@ -121,14 +121,19 @@ theorem sync_heap_at (root : NativeEff) (completed) (table : RowTable) (thunk : 
 
 /-- Native public close returns an owned cleanup program and state-first scope store. -/
 theorem interp_close_at (root : NativeEff) (completed) (table : RowTable) (scope : Nat)
-    (exit : ExitV) (flag : Bool) (fiber : FiberId) (state next : Stores) (program : NCode)
+    (exit : ExitV) (flag : Bool) (fiber : FiberId) (state next : Stores) (program : Option NCode)
     (owned : ScopesAt root state.scopes)
     (found : (interpAt root completed table).closeScope scope exit flag fiber state = some (next, program)) :
-    ScopesAt root next.scopes ∧ CodeAt root program := by
-  change (storesCloseScope scope exit flag state).map (fun r => (r.1, embed r.2)) = some (next, program) at found
-  obtain ⟨result, operation, eq⟩ := Option.map_eq_some_iff.mp found
+    ScopesAt root next.scopes ∧ ∀ code, program = some code → CodeAt root code := by
+  change (storesCloseScope scope exit flag state).map (fun r => (r.1, r.2.map embed)) =
+    some (next, program) at found
+  obtain ⟨⟨after, closing⟩, operation, eq⟩ := Option.map_eq_some_iff.mp found
   cases eq
-  exact close_public_at root scope exit flag state result.1 result.2 owned operation
+  have closed := close_public_at root scope exit flag state after closing owned operation
+  refine ⟨closed.1, fun code same => ?_⟩
+  cases closing with
+  | none => cases same
+  | some source => cases same; exact closed.2 source rfl
 
 /-- Delegating to the actual frame machine retains its returned fiber and nested residue. -/
 theorem step_frame_at (root : NativeEff) (fragment : Fragment root) (completed) (table : RowTable)

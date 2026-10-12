@@ -98,11 +98,18 @@ theorem with_fiber_at (root : NativeEff) (completed) (table : RowTable)
     simp only [evaluatePrim.withFiber]
     split
     · exact ⟨owned, held, by intro command member; cases member⟩
+    · rename_i state operation
+      have closed := interp_close_at root completed table scope exit fiber.frame.interruptible fiber.id
+        m.state state none owned.scopes operation
+      exact ⟨configuration_store root m state owned closed.1,
+        fiber_current_at root fiber _ held trivial, by intro command member; cases member⟩
     · rename_i state program operation
       have closed := interp_close_at root completed table scope exit fiber.frame.interruptible fiber.id
-        m.state state program owned.scopes operation
+        m.state state (some program) owned.scopes operation
+      have masked := mask_frame_at root fiber.frame held.frame
       exact ⟨configuration_store root m state owned closed.1,
-        fiber_current_at root fiber program held closed.2, by intro command member; cases member⟩
+        ⟨⟨closed.2 program rfl, masked.2⟩, held.pending, held.dispatcher⟩,
+        by intro command member; cases member⟩
   case interruptAs target who =>
     simp only [evaluatePrim.withFiber, evaluatePrim.interruptAs]
     cases found : m.fiber? target with

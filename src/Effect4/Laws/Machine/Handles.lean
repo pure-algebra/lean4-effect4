@@ -1025,7 +1025,7 @@ structure KeyBounded (nk : ν → List Handle) (sk : σ → List Handle)
   closeScope : ∀ scope exit flag closer s s' p ids,
     interp.closeScope scope exit flag closer s = some (s', p) →
     Ok ⟨ids, s⟩ (Handle.fiber closer :: exitKeys exit ++ s.keys) →
-      s.le s' ∧ Ok ⟨ids, s'⟩ (primKeys nk sk p ++ s'.keys)
+      s.le s' ∧ Ok ⟨ids, s'⟩ (p.elim [] (primKeys nk sk) ++ s'.keys)
   emptyContext : interp.emptyContext.keys = []
   contextValue : ∀ ctx, (interp.contextValue ctx).keys ⊆ ctx.keys
   exitValue : ∀ e mode, primKeys nk sk (interp.exitValue e mode) ⊆ exitKeys e
@@ -3073,6 +3073,16 @@ theorem uninterruptible_keys (fr : FrameFiber ν σ Val Err Defect FiberId Ann) 
     exact List.Subset.refl _
   · exact List.Subset.refl _
 
+/-- Masking adds only the restoring frame, which holds no key. Consumer: the masked close of
+`withFiber_closeScope_minted`. -/
+theorem uninterruptible_stack_keys (fr : FrameFiber ν σ Val Err Defect FiberId Ann) :
+    fr.uninterruptible.stack.flatMap (primKeys nk sk) ⊆ fr.stack.flatMap (primKeys nk sk) := by
+  unfold FrameFiber.uninterruptible
+  split
+  · simp only [List.flatMap_cons, primKeys, List.nil_append]
+    exact List.Subset.refl _
+  · exact List.Subset.refl _
+
 theorem interruptibleRegion_keys (fr : FrameFiber ν σ Val Err Defect FiberId Ann) :
     frameKeys nk sk fr.interruptibleRegion.1 ⊆ frameKeys nk sk fr ∧
       optPrimKeys nk sk fr.interruptibleRegion.2 = [] := by
@@ -3697,15 +3707,24 @@ theorem withFiber_closeScope_minted (hb : KeyBounded nk sk interp ambient)
   · refine ⟨World.le_refl _, ?_⟩
     refine Ok_of_subset ?_ hm
     sub_tac
-  · next state program hclose =>
+  · next state hclose =>
     have hsk : Ok ⟨m.fibers.map RunFiber.id, m.state⟩ (Handle.fiber f.id :: exitKeys exit ++ m.state.keys) :=
       Ok_of_subset (by sub_tac) hm
-    obtain ⟨hsle, hsok⟩ := hb.closeScope scope exit f.frame.interruptible f.id m.state state program _ hclose hsk
+    obtain ⟨hsle, hsok⟩ := hb.closeScope scope exit f.frame.interruptible f.id m.state state none _ hclose hsk
     have hle : m.world.le ({ m with state := state } : NM ν σ).world := ⟨fun _ h => h, hsle⟩
     refine ⟨hle, ?_⟩
     simp only [MintedIn]
     refine Ok_of_subset ?_ (Ok_append.mpr ⟨Ok_mono hle hm, hsok⟩)
-    sub_tac
+    sub_tac norm [hb.voidValue]
+  · next state program hclose =>
+    have hsk : Ok ⟨m.fibers.map RunFiber.id, m.state⟩ (Handle.fiber f.id :: exitKeys exit ++ m.state.keys) :=
+      Ok_of_subset (by sub_tac) hm
+    obtain ⟨hsle, hsok⟩ := hb.closeScope scope exit f.frame.interruptible f.id m.state state (some program) _ hclose hsk
+    have hle : m.world.le ({ m with state := state } : NM ν σ).world := ⟨fun _ h => h, hsle⟩
+    refine ⟨hle, ?_⟩
+    simp only [MintedIn]
+    refine Ok_of_subset ?_ (Ok_append.mpr ⟨Ok_mono hle hm, hsok⟩)
+    sub_tac using (uninterruptible_stack_keys nk sk f.frame)
 
 theorem withFiber_refuse_minted (m : RunMachine ν σ Val Err Defect FiberId Ann Ctx Stores)
     (f : RunFiber ν σ Val Err Defect FiberId Ann Ctx) (yielding : Bool) (cause : CauseV)
@@ -6445,9 +6464,9 @@ theorem programKeys_voided (fin : FinName) (exit : ExitV) :
 /-- `Scope.close`'s code — void, the lone finalizer voided (decisions row 151 (a″)), or the
 generator walk (§20) — retains only its exit and the captured scope finalizers. -/
 theorem storesCloseScope_keys (scope : Nat) (exit : ExitV) (flag : Bool)
-    (s s' : Stores) (code : Program)
+    (s s' : Stores) (code : Option Program)
     (h : storesCloseScope scope exit flag s = some (s', code)) :
-    s.le s' ∧ programKeys code ++ s'.keys ⊆ exitKeys exit ++ s.keys := by
+    s.le s' ∧ code.elim [] programKeys ++ s'.keys ⊆ exitKeys exit ++ s.keys := by
   unfold storesCloseScope at h
   obtain ⟨⟨state, strategy, order⟩, hsnapshot, h⟩ := Option.bind_eq_some_iff.mp h
   change some _ = some (s', code) at h
@@ -6464,10 +6483,10 @@ theorem storesCloseScope_keys (scope : Nat) (exit : ExitV) (flag : Bool)
   | cons fin rest =>
     cases rest with
     | nil =>
-      simpa only [List.flatMap_cons, List.flatMap_nil, List.append_nil, programKeys_voided]
-        using finProgram_keys fin exit
+      simpa only [Option.elim_some, List.flatMap_cons, List.flatMap_nil, List.append_nil,
+        programKeys_voided] using finProgram_keys fin exit
     | cons next rest =>
-      simp only [programKeys, primKeys, Thunk.keys, ProgName.keys]
+      simp only [Option.elim_some, programKeys, primKeys, Thunk.keys, ProgName.keys]
       exact List.Subset.refl _
 
 theorem stores_keyBounded : KeyBounded Name.keys Thunk.keys stores where

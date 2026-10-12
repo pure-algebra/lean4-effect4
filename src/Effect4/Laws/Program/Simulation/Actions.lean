@@ -548,9 +548,9 @@ theorem iterRel_answer {root : NativeEff} {m₁ : FMachine} {m₂ : RState} (hok
   ⟨hok, hm, ha _ _ _ hf, rfl, rfl, ListRel.nil, rfl⟩
 
 theorem storesOk_closeScope {root : NativeEff} {c : List (FiberId × ExitV)} {scope : Nat} {ex : ExitV}
-    {flag : Bool} {id : FiberId} {s s' : Stores} {p : NCode} (hs : StoresOk table s)
+    {flag : Bool} {id : FiberId} {s s' : Stores} {p : Option NCode} (hs : StoresOk table s)
     (h : (interpAt root c table).closeScope scope ex flag id s = some (s', p)) : StoresOk table s' := by
-  have h' : ((storesCloseScope scope ex flag s).map fun r => (r.1, embed r.2)) = some (s', p) := h
+  have h' : ((storesCloseScope scope ex flag s).map fun r => (r.1, r.2.map embed)) = some (s', p) := h
   -- `Scope.close` writes the unsafe close's state (`storesCloseScope_unsafe`)
   obtain ⟨⟨st, prog⟩, hr, hrp⟩ := Option.map_eq_some_iff.mp h'
   obtain ⟨program, hu⟩ := storesCloseScope_unsafe hr
@@ -733,14 +733,18 @@ theorem closeScope_rel (scope : Nat) (ex : ExitV) :
     IterRel table root (FiberAction.closeScope (interpAt root c table) m₁ f₁ y scope ex)
       (FiberAction.closeScope (interpRAt root c table) m₂ f₂ y scope ex) := by
   unfold FiberAction.closeScope
-  dsimp only [FiberCore.interruptible, frameCore, termCore]
-  have h : OptRel (fun (a : Stores × NCode) (b : Stores × RProgram) => a.1 = b.1 ∧ CodeMeans root a.2 b.2)
-      ((interpAt root c table).closeScope scope ex f₁.frame.interruptible f₁.id m₁.state)
-      ((interpRAt root c table).closeScope scope ex f₂.frame.interruptible f₂.id m₂.state) := by
+  have h : OptRel (fun (a : Stores × Option NCode) (b : Stores × Option RProgram) =>
+        a.1 = b.1 ∧ OptRel (CodeMeans root) a.2 b.2)
+      ((interpAt root c table).closeScope scope ex (frameCore.interruptible f₁.frame) f₁.id m₁.state)
+      ((interpRAt root c table).closeScope scope ex (termCore.interruptible f₂.frame) f₂.id m₂.state) := by
+    show OptRel _ ((interpAt root c table).closeScope scope ex f₁.frame.interruptible f₁.id m₁.state)
+      ((interpRAt root c table).closeScope scope ex f₂.frame.interruptible f₂.id m₂.state)
     rw [hf.interruptible, hf.id, hm.state]
     exact closeScope_means (table := table) root scope ex f₂.frame.interruptible f₂.id m₂.state
-  generalize hr₁ : (interpAt root c table).closeScope scope ex f₁.frame.interruptible f₁.id m₁.state = r₁ at h ⊢
-  generalize (interpRAt root c table).closeScope scope ex f₂.frame.interruptible f₂.id m₂.state = r₂ at h ⊢
+  generalize hr₁ : (interpAt root c table).closeScope scope ex (frameCore.interruptible f₁.frame) f₁.id
+    m₁.state = r₁ at h ⊢
+  generalize (interpRAt root c table).closeScope scope ex (termCore.interruptible f₂.frame) f₂.id
+    m₂.state = r₂ at h ⊢
   cases r₁ with
   | none =>
     cases r₂ with
@@ -755,8 +759,20 @@ theorem closeScope_rel (scope : Nat) (ex : ExitV) :
       obtain ⟨hs, hc⟩ := h
       dsimp only at hs hc
       subst hs
-      exact ⟨machineOk_stateOf hok (storesOk_closeScope hok.state hr₁), hm.stateOf _,
-        hf.withFrame (means_answerWith hf.means hc), rfl, rfl, ListRel.nil, rfl⟩
+      have hok' := machineOk_stateOf hok (storesOk_closeScope hok.state hr₁)
+      cases c₁ with
+      | none =>
+        cases c₂ with
+        | none =>
+          exact ⟨hok', hm.stateOf _, hf.withFrame (means_answerWith hf.means (CodeMeans.success _)),
+            rfl, rfl, ListRel.nil, rfl⟩
+        | some _ => exact hc.elim
+      | some p₁ =>
+        cases c₂ with
+        | none => exact hc.elim
+        | some p₂ =>
+          exact ⟨hok', hm.stateOf _, hf.withFrame (means_enterUninterruptible hf.means hc), rfl, rfl,
+            ListRel.nil, rfl⟩
 
 theorem interrupt_rel (target : FiberId) :
     IterRel table root (FiberAction.interrupt (interpAt root c table) m₁ f₁ y target)

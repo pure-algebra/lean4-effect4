@@ -660,6 +660,7 @@ theorem withFiber_interference (interp : NInterp) (m : NativeMachine) (f : NFibe
     split
     · exact .refl _
     · exact .ofFibers rfl (Nat.le_refl _)
+    · exact .ofFibers rfl (Nat.le_refl _)
   | closePar finalizers => exact InterferesWithLookup.forkFinalizers _ _ _ _
   | refuse cause => exact .refl _
   | dropObservers token => exact .refl _

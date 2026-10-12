@@ -142,7 +142,10 @@ theorem withFiber_kept (choose : ν → Bool) (interp : RunInterp ν σ β ε δ
   · exact IterKept.of_same (same_emit choose m [.contextSet f.id _] rfl rfl) rfl rfl
   · exact IterKept.of_same (.refl choose m) rfl rfl
   · exact IterKept.of_same (.refl choose m) rfl rfl
-  · split <;> exact IterKept.of_same (.refl choose m) rfl rfl
+  · split
+    · exact IterKept.of_same (.refl choose m) rfl rfl
+    · exact IterKept.of_same (.refl choose m) rfl rfl
+    · exact IterKept.of_same (.refl choose m) rfl (uninterruptible_credit choose f.frame)
   · exact IterKept.of_same (same_forkFinalizers choose interp m f _) rfl rfl
   · exact IterKept.of_same (.refl choose m) rfl rfl
   · exact IterKept.of_same (.refl choose m) rfl rfl

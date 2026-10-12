@@ -171,7 +171,8 @@ theorem frame_refuse (cause : CauseV) :
 theorem frame_closeScope (scope : Nat) (exit : ExitV) :
     evaluatePrim.withFiber interp m f y (.closeScope scope exit) =
       FiberAction.closeScope interp m f y scope exit := by
-  rcases hc : interp.closeScope scope exit f.frame.interruptible f.id m.state with _ | ⟨state, program⟩ <;>
+  rcases hc : interp.closeScope scope exit f.frame.interruptible f.id m.state with
+    _ | ⟨state, _ | program⟩ <;>
     simp only [evaluatePrim.withFiber, FiberAction.closeScope, FiberCore.interruptible, hc]
 
 -- D6b: the public interrupt answers the `fiberInterruptAs` program; that program's arm records

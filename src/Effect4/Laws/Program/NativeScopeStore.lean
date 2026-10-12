@@ -127,9 +127,9 @@ theorem close_unsafe_at (root : NativeEff) (scope : Nat) (exit : ExitV) (flag : 
 
 /-- Public close returns the same owned finalizers and its administrative void continuation. -/
 theorem close_public_at (root : NativeEff) (scope : Nat) (exit : ExitV) (flag : Bool)
-    (state next : Stores) (program : Program) (owned : ScopesAt root state.scopes)
+    (state next : Stores) (program : Option Program) (owned : ScopesAt root state.scopes)
     (found : storesCloseScope scope exit flag state = some (next, program)) :
-    ScopesAt root next.scopes ∧ CodeAt root (embed program) := by
+    ScopesAt root next.scopes ∧ ∀ code, program = some code → CodeAt root (embed code) := by
   unfold storesCloseScope at found
   cases h : scopeCloseSnapshot scope exit state with
   | none => rw [h] at found; cases found
@@ -138,12 +138,14 @@ theorem close_public_at (root : NativeEff) (scope : Nat) (exit : ExitV) (flag : 
     have slots := close_snapshot_at root scope exit state after strategy order owned h
     simp only [h, Option.pure_def] at found
     cases order with
-    | nil => cases found; exact ⟨slots.1, trivial⟩
+    | nil => cases found; exact ⟨slots.1, fun _ none => by cases none⟩
     | cons fin rest =>
       cases rest with
       | nil =>
         cases found
-        exact ⟨slots.1, finProgram_at root fin exit (slots.2.1 fin (.head _)), trivial⟩
-      | cons second tail => cases found; exact ⟨slots.1, slots.2⟩
+        exact ⟨slots.1, fun _ same => by
+          cases same
+          exact ⟨finProgram_at root fin exit (slots.2.1 fin (.head _)), trivial⟩⟩
+      | cons second tail => cases found; exact ⟨slots.1, fun _ same => by cases same; exact slots.2⟩
 
 end Effect4.Program.SourceScope

@@ -76,16 +76,14 @@ theorem m7Modulo (root : ProgramSource) (rootTy : Effect4.Program.EffTy) (fuel :
       M7NoHalt root rootTy fuel tape :=
   m7_of_ledger root rootTy fuel tape (loadsTyped root rootTy fuel fuel) (keeps root rootTy fuel)
 
--- `m7_proved` rests on exactly the five open goals of the ambient judgment, in the plan's order
--- (by name); the next goals are `keeps` and then those five.
+-- `m7_proved` rests on exactly the one open goal of the ambient judgment, the positional
+-- countdown (the release merge proved the other four); the next goals are `keeps` and then it.
 run_cmd liftTermElabM do
   let plan ← buildPlan [`Test] #[``m7Modulo, ``Effect4.Program.Typed.m7_proved] (← IO.mkRef {})
   let said : Standing → String
     | .modulo goals => s!"modulo {goals}"
     | standing => standing.word
-  let open5 : Array Name := #[``Effect4.Program.Typed.Evaluating.countdown_parks_positional,
-    ``Effect4.Program.Typed.Evaluating.settle_callback, ``Effect4.Program.Typed.clause_closeScope,
-    ``Effect4.Program.Typed.clause_scoped, ``Effect4.Program.Typed.foreignFinalizer_ambient]
+  let open5 : Array Name := #[``Effect4.Program.Typed.Evaluating.countdown_parks_positional]
   let some node := plan.find? ``m7Modulo | throwError "m7Modulo is not a node"
   unless node.standing == .modulo #[``keeps] do
     throwError "m7Modulo is {said node.standing}, not modulo [keeps]"
@@ -93,7 +91,7 @@ run_cmd liftTermElabM do
   unless proved.standing == .modulo open5 do
     throwError "m7_proved is {said proved.standing}, not modulo {open5}"
   unless plan.next #[``m7Modulo, ``Effect4.Program.Typed.m7_proved] == #[``keeps] ++ open5 do
-    throwError "the next goals are not keeps and the five open goals"
+    throwError "the next goals are not keeps and the open goal"
 
 -- 2. A node outside the semantic ceiling is refused.
 /-- error: plan: Classical.em: disallowed axioms [Classical.choice] -/

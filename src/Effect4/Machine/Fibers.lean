@@ -203,6 +203,11 @@ class FiberCore (ν : Type u) (β : Type v) (ε δ ι α : Type u)
   /-- The existing OnSuccess operation with a constant continuation, used by
   runLoop's `flatMap(yieldNow, () => previous)` (`effect.ts:647-651`). -/
   yieldBefore : κ → κ
+  /-- Mask an interruptible fiber and push its restoring frame, with no counted step; a masked
+  fiber is unchanged. Latest's `fiberEnterUninterruptibleUnsafe`
+  (`vendor/effect-4.0.1/src/internal/effect.ts:4584-4589`), which its `scopeClose` calls before it
+  returns the close (`:3929-3935`). -/
+  enterUninterruptible : φ → φ
 
 -- These are transparent interpreter operations, so concrete clause proofs
 -- reduce through the frame instance just as they reduced its fields before D1.
@@ -210,7 +215,7 @@ attribute [reducible] FiberCore.current FiberCore.answerWith FiberCore.start
   FiberCore.interruptible FiberCore.interruptedCause FiberCore.deferredInterrupt
   FiberCore.recordCause FiberCore.setDeferred FiberCore.pendingFailure
   FiberCore.pushAsyncFinalizer FiberCore.pushIterator FiberCore.clearStack FiberCore.success
-  FiberCore.failure FiberCore.onSuccess FiberCore.yieldBefore
+  FiberCore.failure FiberCore.onSuccess FiberCore.yieldBefore FiberCore.enterUninterruptible
 
 /-- The existing five-field frame machine supplies the concrete core. -/
 @[reducible] instance frameCore {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} :
@@ -232,6 +237,8 @@ attribute [reducible] FiberCore.current FiberCore.answerWith FiberCore.start
   failure := Prim.failure
   onSuccess := Prim.onSuccess
   yieldBefore := fun previous => Prim.onSuccessConst (Prim.yieldNowWith 0) previous
+  -- the mask's own fiber side, `setInterruptible(false)`'s arm (`:4302-4310`)
+  enterUninterruptible := FrameFiber.uninterruptible
 
 /-- A fiber's creation provenance, retained independently of diagnostic events. The
 parent records the creator, not the live child-tracking relation (`internal/effect.ts:5279-5282`).
@@ -605,8 +612,10 @@ structure RunInterp (ν σ : Type u) (β : Type v) (ε δ ι α χ : Type u) (St
   /-- The close program of a scope for its strategy: sequential awaits each finalizer
   through its exit; parallel forks daemons that inherit the closing fiber's mask and merges
   every exit by `exitAsVoidAll`. Arguments: scope, exit, the closer's `interruptible`, the
-  closer's id; `none` when the scope is unknown (S2-M7). -/
-  closeScope : Nat → Exit β ε δ ι α → Bool → FiberId → St → Option (St × κ)
+  closer's id; `none` when the scope is unknown (S2-M7). The program is `none` when nothing
+  closes, the empty or already closed scope: `scopeCloseUnsafe` answers `undefined`, and the
+  close is `void_` with no mask (`vendor/effect-4.0.1/src/internal/effect.ts:3929-3935`). -/
+  closeScope : Nat → Exit β ε δ ι α → Bool → FiberId → St → Option (St × Option κ)
   /-- The ambient `Scope` service of a context (`forkScoped`, `:5400-5406`). -/
   ambientScope : χ → Option Nat
   /-- `MaxOpsBeforeYield` and `PreventSchedulerYield` read off a context (`:726-727`). -/
@@ -1436,10 +1445,16 @@ where
     | WithFiberAction.getId =>
       ⟨m, answer f (interp.fiberIdValue f.id), yielding, Outcome.continue_, [], []⟩
     | WithFiberAction.closeScope scope exit =>
+      -- latest's `scopeClose` (`vendor/effect-4.0.1/src/internal/effect.ts:3929-3935`): `void_`
+      -- when nothing closes; otherwise the fiber masked and the restoring frame pushed
+      -- (`fiberEnterUninterruptibleUnsafe`, `:4584-4589`), then the close. A signed divergence
+      -- from rc.112's unmasked `suspend` (`vendor/effect-4.0.0-rc.112/src/internal/effect.ts:3775-3776`)
       match interp.closeScope scope exit f.frame.interruptible f.id m.state with
       | none => ⟨m, f, yielding, Outcome.stuck (Stuck.unknownScope scope), [], []⟩   -- S2-M7
-      | some (state, program) =>
-        ⟨{ m with state := state }, { f with frame := { f.frame with current := program } },
+      | some (state, none) =>
+        ⟨{ m with state := state }, answer f interp.voidValue, yielding, Outcome.continue_, [], []⟩
+      | some (state, some program) =>
+        ⟨{ m with state := state }, { f with frame := { f.frame.uninterruptible with current := program } },
           yielding, Outcome.continue_, [], []⟩
     | WithFiberAction.closePar finalizers =>                            -- :3819-3824, §20
       -- the generator step: every finalizer forked as an immediate daemon in the closer's mask
@@ -1612,13 +1627,19 @@ def refuse (m : RunMachine ν σ β ε δ ι α χ St κ φ η) (f : RunFiber ν
   ⟨m, { f with frame := core.answerWith f.frame (core.failure cause) }, yielding,
     Outcome.continue_, [], []⟩
 
+/-- Latest's `scopeClose` (`vendor/effect-4.0.1/src/internal/effect.ts:3929-3935`): `void_` when
+nothing closes, otherwise the close under the mask that `core.enterUninterruptible` enters. -/
 def closeScope (interp : RunInterp ν σ β ε δ ι α χ St κ) (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
     (f : RunFiber ν σ β ε δ ι α χ κ φ) (yielding : Bool) (scope : Nat) (exit : Exit β ε δ ι α) :
     Iter ν σ β ε δ ι α χ St κ φ η :=
   match interp.closeScope scope exit (core.interruptible f.frame) f.id m.state with
   | none => ⟨m, f, yielding, Outcome.stuck (Stuck.unknownScope scope), [], []⟩
-  | some (state, program) =>
-    ⟨{ m with state := state }, { f with frame := core.answerWith f.frame program },
+  | some (state, none) =>
+    ⟨{ m with state := state }, { f with frame := core.answerWith f.frame (core.success interp.voidValue) },
+      yielding, Outcome.continue_, [], []⟩
+  | some (state, some program) =>
+    ⟨{ m with state := state },
+      { f with frame := core.answerWith (core.enterUninterruptible f.frame) program },
       yielding, Outcome.continue_, [], []⟩
 
 /-- The public `fiberInterrupt(target)` (`:857`, D6b): its `withFiber` returns

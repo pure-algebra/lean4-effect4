@@ -971,9 +971,13 @@ theorem interpOf_keyBounded (root : NativeEff) (table : RowTable := []) :
     obtain ⟨rfl, rfl⟩ := hrp
     obtain ⟨hle, hok'⟩ := stores_keyBounded.closeScope scope exit flag closer s r.1 r.2 ids hr hok
     refine ⟨hle, ?_⟩
-    show Ok _ (nativeKeys (embed r.2) ++ _)
-    simp only [nativeKeys, embed_keys]
-    exact hok'
+    cases hc : r.2 with
+    | none => rw [hc] at hok'; exact hok'
+    | some c =>
+      rw [hc] at hok'
+      show Ok _ (nativeKeys (embed c) ++ _)
+      simp only [nativeKeys, embed_keys]
+      exact hok'
   emptyContext := rfl
   contextValue ctx := by simp only [interpOf, Val.keys_context]; exact List.Subset.refl _
   exitValue e mode := by

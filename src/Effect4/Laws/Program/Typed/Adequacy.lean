@@ -1464,7 +1464,7 @@ theorem closeScope_installs (root : ProgramSource) (w : World) (scope : Nat) (ex
     (admitted : ∀ entry ∈ st.scopes.entries, ∀ fin ∈ entry.scope.closeOrder,
       FinalizerAdmitted root w fin)
     (exitFits : FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ exit)
-    (h : closeScopeR scope exit flag st = some (st', code)) :
+    (h : closeScopeR scope exit flag st = some (st', some code)) :
     TypedProg root w (EffTy.pure .unit) code := by
   unfold closeScopeR at h
   cases hs : scopeCloseSnapshot scope exit st with
@@ -1474,14 +1474,15 @@ theorem closeScope_installs (root : ProgramSource) (w : World) (scope : Nat) (ex
   | some snapshot =>
     obtain ⟨state, strategy, order⟩ := snapshot
     rw [hs] at h
-    simp only at h
-    obtain ⟨_, rfl⟩ := h
-    match order, hs with
-    | [], _ => exact TypedProg.pure ⟨trivial, trivial⟩
-    | [fin], hs =>
+    have hc := (Prod.mk.inj (Option.some.inj h)).2
+    match order, hs, hc with
+    | [], _, hc => cases hc
+    | [fin], hs, hc =>
+      cases hc
       obtain ⟨entry, hentry, hfin⟩ := lone_of_snapshot hs
       exact voidedClose_typed root (fins entry hentry fin hfin w (leHost_refl w) exit exitFits)
-    | _ :: _ :: _, hs =>
+    | _ :: _ :: _, hs, hc =>
+      cases hc
       obtain ⟨entry, hentry, horder⟩ := mem_of_snapshot hs
       exact closeWalk_typed root w strategy _ exit
         (fun fin hf => admitted entry hentry fin (horder ▸ hf)) exitFits
