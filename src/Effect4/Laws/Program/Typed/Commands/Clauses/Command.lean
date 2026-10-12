@@ -43,9 +43,13 @@ theorem clause_interruptAll (root : ProgramSource) (rootTy : EffTy) (targets : L
     (who : Option FiberId) : FiberClauseKeeps root rootTy (.interruptAll targets who) := by
   intro w m rest f y next ev hc
   obtain ⟨ty, declared⟩ := ev.declared
-  obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  obtain ⟨row, ⟨q, b⟩, flag, covered, bit, current, stack, prov⟩ :=
+    ev.code (by rw [hc]; rfl) ty declared
+  change b = f.frame.interruptible at bit
+  subst bit
+  change AmbientProg root w row q f.frame.current at current
   rw [hc] at current
-  obtain ⟨_, pre, typedNext⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
+  obtain ⟨_, pre, typedNext, entry, wf⟩ := ambientProg_fiber_inv current (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
   have hmem : f ∈ (m.update f).fibers := rfiber?_mem ev.look
   have old := ev.typed.machine.fiber hmem
@@ -59,21 +63,22 @@ theorem clause_interruptAll (root : ProgramSource) (rootTy : EffTy) (targets : L
   -- the saved answer frame, an arrow from `unit` to the code's type
   let fr' : RSaved := { f.frame with stack := .answer (seqR next) :: f.frame.stack }
   let g : RFiber := { f with frame := fr' }
-  have typedNext' : ∀ w', w.leHost w' → ∀ ans : Val, ans = Val.unit →
-      TypedProg root w' tin (next ans) :=
-    fun w' o ans post => typedNext w' o ans post
-  have frame := Evaluating.unitAnswerFrame typedNext'
+  have hstack : MHostStack root w (m.update f) f.id
+      ((((⟨.unit, .never, Env.Requirement.empty⟩ : EffTy), row, row) : AmbientPosition),
+        f.frame.interruptible) (finalPos ty flag) fr'.stack :=
+    .cons (.inl (Evaluating.unitAnswerFrame (fun w' o ans post => typedNext w' o ans post) entry wf))
+      stack
   have same : ∀ ty', w.Γ f.id = some ty' → ty' = ty :=
     fun _ h => Option.some.inj (h.symm.trans declared)
   have fresh : FiberTyped root w ((m.update f).update g) g :=
     fiberTyped_frame old ev.look ev.running fr'
       (fun ty' d => by
         rw [same ty' d]
-        exact ⟨_, positionStack_of_host (hostStack_push frame stack)⟩)
+        exact ⟨_, flag, MPositionStack.of_host hstack⟩)
       ⟨prov.recorded, prov.deferred⟩
       (fun _ h => by
         change raceRegistrationR f.frame.current = some _ at h
-        rw [hc, raceRegistrationR_typed current] at h
+        rw [hc, raceRegistrationR_ambient current] at h
         cases h)
   have edited : ConfigTyped root rootTy w (m.update g) rest := by
     rw [← rupdate_rupdate m (show g.id = f.id from rfl)]
@@ -87,9 +92,9 @@ theorem clause_interruptAll (root : ProgramSource) (rootTy : EffTy) (targets : L
       (by rw [commandOwner_update]; exact owner_free ev.typed.queue rfl) fun x hx => ?_
     rw [lookG] at hx
     cases hx
-    refine ⟨.unknown, .unknown, fun t ht => ?_, ty, declared,
-      hostStack_push frame (hostStack_races (m := m.update f) (m' := m.update g)
-        (racesKept_of_eq fun _ => rfl) stack), ⟨prov.recorded, prov.deferred⟩⟩
+    refine ⟨.unknown, .unknown, fun t ht => ?_, row, ty, flag, declared, covered,
+      hstack.races (racesKept_of_eq (m := m.update f) (m' := m.update g) fun _ => rfl),
+      ⟨prov.recorded, prov.deferred⟩⟩
     obtain ⟨fty, hfty⟩ := Option.isSome_iff_exists.mp (pre t ht)
     exact ⟨fty, hfty, subN_unknown _, subN_unknown _⟩
   show SettlesTyped root rootTy w f.id rest
@@ -134,7 +139,7 @@ theorem configTyped_shrinkObservers {root : ProgramSource} {rootTy : EffTy} {w :
       exact List.mem_append_left _ (List.mem_flatMap.mpr ⟨o, sub o ho, hko⟩)
     · exact List.mem_append_right _ hk
   exact configTyped_rupdate typed hx rfl (PendingWeaker.refl _) rfl rfl rfl rfl rfl (fun h => h)
-    (fun h => h) keys fresh
+    (fun h => h) ⟨.inr rfl, rfl⟩ rfl keys fresh
 
 /-- **Dropping observers from every fiber keeps `I`**, one fiber at a time along the fiber list
 (`configTyped_shrinkObservers`): the fibers before `post` already dropped theirs. -/
@@ -198,23 +203,23 @@ and `clause_runIn` on the typed command preservation path. -/
 theorem Evaluating.prepare_continue {root : ProgramSource} {rootTy : EffTy} {w : World}
     {m : RState} {rest : List RCmd} {f : RFiber} {y : Bool}
     (ev : Evaluating root rootTy w m rest f y) (fr : RSaved)
-    (code : ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty fr)
+    (code : ∀ ty, w.Γ f.id = some ty → MCodeOk root w (m.update f) { f with frame := fr } ty)
     (edits : List (FiberEdit Err Defect FiberId Ann)) :
     ∃ g : RFiber, g.id = f.id ∧
       prepareIterR ⟨m, {f with frame := fr}, y, .continue_, [], edits⟩ =
         ⟨m, g, y, .continue_, [], edits⟩ ∧
       ConfigTyped root rootTy w (m.update g) (.loop f.id y :: rest) := by
   let fr' : RSaved := {fr with current := prepareR m.completedExits fr.current}
-  have code' : ∀ ty, w.Γ f.id = some ty → CodeOk root w (m.update f) f.id ty fr' :=
-    fun ty declared => codeOk_prepare _ ev.view (code ty declared)
+  have code' : ∀ ty, w.Γ f.id = some ty → MCodeOk root w (m.update f) { f with frame := fr' } ty :=
+    fun ty declared => codeOk_prepare (f := { f with frame := fr }) _ ev.view (code ty declared)
   obtain ⟨ty, declared⟩ := ev.declared
-  obtain ⟨tin, current, _, _⟩ := code' ty declared
+  obtain ⟨_, _, _, _, _, current, _, _⟩ := code' ty declared
   have glue : prepareIterR ⟨m, {f with frame := fr}, y, .continue_, [], edits⟩ =
       ⟨m, {f with frame := fr'}, y, .continue_, [], edits⟩ :=
     prepareScopedExitR_of_typed current
   refine ⟨{f with frame := fr'}, rfl, glue, ?_⟩
   have step := (configTyped_frame_step ev.typed rfl ev.look ev.running fr' code'
-    (raceRegistrationR_typed current)).1 y
+    (raceRegistrationR_ambient current)).1 y
   rw [rupdate_rupdate m (show ({f with frame := fr'} : RFiber).id = f.id from rfl)] at step
   exact step
 
@@ -249,7 +254,7 @@ theorem clause_dropObservers (root : ProgramSource) (rootTy : EffTy) (token : Na
   intro w m rest f y next ev hc
   have code := ev.answer_typed hc (by rw [hc]; rfl)
     (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-    (fun _ _ _ h => nomatch h) .unit (fun _ _ => rfl)
+    (fun _ _ _ h => nomatch h) .unit (fun _ _ _ => rfl) (fun _ => rfl)
   obtain ⟨g, gid, glue, ready⟩ := ev.prepare_continue _ code [.dropToken token]
   show SettlesTyped root rootTy w f.id rest (prepareIterR (FiberAction.dropObservers
     (interpRAt root.program m.completedExits) m f y token (answerWith next)))
@@ -349,9 +354,9 @@ theorem clause_runIn (root : ProgramSource) (rootTy : EffTy) (target : FiberId) 
     FiberClauseKeeps root rootTy (.runIn target scope) := by
   intro w m rest f y next ev hc
   obtain ⟨ty, declared⟩ := ev.declared
-  obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  obtain ⟨_, _, _, _, _, current, _, _⟩ := ev.code (by rw [hc]; rfl) ty declared
   rw [hc] at current
-  obtain ⟨_, ⟨pre, hlive⟩, _⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
+  obtain ⟨_, ⟨pre, hlive⟩, _⟩ := ambientProg_fiber_inv current (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
   have wide := ev.typed.machine.wide
   have live : m.state.ScopeLive scope := by
@@ -389,7 +394,7 @@ theorem clause_runIn (root : ProgramSource) (rootTy : EffTy) (target : FiberId) 
     have emitted := ev.emit events
     have code := emitted.answer_typed hc (by rw [hc]; rfl)
       (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-      (fun _ _ _ h => nomatch h) .unit (fun _ _ => rfl)
+      (fun _ _ _ h => nomatch h) .unit (fun _ _ _ => rfl) (fun _ => rfl)
     obtain ⟨g, gid, glue, ready⟩ := emitted.prepare_continue _ code edits
     change SettlesTyped root rootTy w f.id rest
       (prepareIterR ⟨m.emit events, {f with frame := {f.frame with current := next .unit}}, y,
@@ -422,7 +427,7 @@ theorem clause_runIn (root : ProgramSource) (rootTy : EffTy) (target : FiberId) 
       rw [out]
       exact ev.settle_continue _ (ev.answer_typed hc (by rw [hc]; rfl)
         (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-        (fun _ _ _ h => nomatch h) .unit (fun _ _ => rfl))
+        (fun _ _ _ h => nomatch h) .unit (fun _ _ _ => rfl) (fun _ => rfl))
     · rw [if_neg exited]
       obtain ⟨skip, hlink⟩ := scopeLinkFiber_open root .fiberRunIn scope target m.state hentry
       let s : Stores := {m.state with
@@ -457,7 +462,7 @@ theorem clause_runIn (root : ProgramSource) (rootTy : EffTy) (target : FiberId) 
       have ev' : Evaluating root rootTy w' M rest f y := ⟨shrunk, ev.stale, ev.running, ev.live⟩
       have code := ev'.answer_typed hc (by rw [hc]; rfl)
         (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
-        (fun _ _ _ h => nomatch h) .unit (fun _ _ => rfl)
+        (fun _ _ _ h => nomatch h) .unit (fun _ _ _ => rfl) (fun _ => rfl)
       obtain ⟨g, gid, glue, ready⟩ := ev'.prepare_continue _ code edits
       change SettlesTyped root rootTy w f.id rest
         (prepareIterR ⟨M, {f with frame := {f.frame with current := next .unit}}, y,
