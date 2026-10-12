@@ -262,12 +262,6 @@ theorem childWith_at (root : NativeEff) (p : Point) (i : Nat) (value : Val)
   rw [List.length_append, List.length_singleton]
   exact h
 
-/-- A source row cannot synthesize a captured finalizer registration. -/
-theorem source_no_scopeAdd (row : NativeOp) (env : List Val) (value : Val)
-    (scope : Nat) (fin : FinName) : row.syncOpOf env value ≠ some (.scopeAdd scope fin) := by
-  fun_cases NativeOp.syncOpOf row env value
-  all_goals aesop
-
 /-- A source scope allocation supplies its actual parallel-allocation witness when needed.
 Consumer: opAt_origin and admitted Workers strategy provenance. -/
 theorem strategyAt_origin (root : NativeEff) (strategy : FinalizerStrategy)

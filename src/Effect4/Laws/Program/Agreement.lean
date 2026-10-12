@@ -2,6 +2,7 @@ import Effect4.Laws.Program.Denote
 import Effect4.Laws.Program.Address
 import Effect4.Laws.Auto.Inversion
 import Effect4.Laws.Auto.Obligations
+import Effect4.Laws.Program.SyncOps
 
 /-!
 # Program.Agreement — the compile agrees with the denotation, one fiber at a time
