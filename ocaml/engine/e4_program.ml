@@ -164,7 +164,7 @@ module Make (A : PROGRAM_TYPES) = struct
 
   let of_lit : Eff_types.lit -> A.lit = function
     | Eff_types.Lit_unit -> A.Lit_unit
-    | Eff_types.Lit_nat n -> A.Lit_nat n
+    | Eff_types.Lit_nat n -> A.Lit_nat (E4_clock.to_profile_nat (E4_clock.of_nat n))
     | Eff_types.Lit_bool b -> A.Lit_bool b
     | Eff_types.Lit_str s -> A.Lit_str s
 

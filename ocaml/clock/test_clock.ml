@@ -40,3 +40,19 @@ let () =
       "first overflowing public number admitted"
   end;
   print_endline "PASS exact clock: decimal, arithmetic, order and checked observation"
+
+(* The represented multiplication uses exact storage before checked observation. *)
+let () =
+  let product a b = E4_clock.mul (get a) (get b) in
+  check (E4_clock.to_profile_nat (product "0" "9007199254740991") = 0) "zero product";
+  check (E4_clock.to_profile_nat (product "6" "7") = 42) "ordinary product";
+  check (E4_clock.to_decimal (product "134217729" "134217729") = "18014398777917441")
+    "product rounded before profile check";
+  check (E4_clock.to_decimal (product "4611686018427387904" "2") = "9223372036854775808")
+    "product saturated before profile check";
+  check (E4_clock.to_profile_nat (product "9007199254740991" "1") = Int64.to_int 9007199254740991L)
+    "largest profile product rejected";
+  check (match E4_clock.to_profile_nat (product "4503599627370496" "2") with
+    | _ -> false | exception E4_clock.Profile_refusal _ -> true)
+    "first product outside the profile admitted";
+  print_endline "PASS multiplication: exact product and profile refusal"

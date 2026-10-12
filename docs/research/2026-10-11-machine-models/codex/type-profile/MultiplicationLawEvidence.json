@@ -1,0 +1,29 @@
+{
+  "base": "f41efe42c2a013a41d13c8b475498f9849c7df5a",
+  "files": [
+    {
+      "path": "src/Effect4/Laws/Machine/IntegerProfile.lean",
+      "before_lines": 119,
+      "after_lines": 159,
+      "after_sha256": "6d88b7e09104d2364f1e9c65205e7ac12bce34ca0b7b1b5059c5e83c31174f7a"
+    },
+    {
+      "path": "Test/Machine/NaturalProfile.lean",
+      "before_lines": 0,
+      "after_lines": 25,
+      "after_sha256": "de724f5a19edf186e7ec342a4352e07045e12bb6be8f3eeea83d814c17e03d6c"
+    },
+    {
+      "path": "tools/ProofGraph/Registry.lean",
+      "before_lines": 1356,
+      "after_lines": 1359,
+      "after_sha256": "bbf61ebc09e3474a06484a0924bfc7e1a5b031ba904640994674e3f41ec0190b"
+    },
+    {
+      "path": "Test/All.lean",
+      "before_lines": 409,
+      "after_lines": 410,
+      "after_sha256": "59f285479f6e1bbae75c9ecb9ff47821c97132a67da8b47a5ab8f293fff3802b"
+    }
+  ]
+}

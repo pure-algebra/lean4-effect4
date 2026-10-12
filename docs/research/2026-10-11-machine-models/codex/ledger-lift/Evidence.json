@@ -1,0 +1,29 @@
+{
+  "base": "d81746e9e0cafb6f0644426b007805a04fbdfd69",
+  "unchanged_theorem_headers": [
+    "budget_decision_lift",
+    "decision_budget",
+    "history_budget",
+    "registered_event_le",
+    "registrations_le_recorded",
+    "exit_registered_event_le",
+    "exit_registrations_le_recorded"
+  ],
+  "sources": [
+    {
+      "path": "src/Effect4/Laws/Program/SourceOpportunityHistory.lean",
+      "before_lines": 200,
+      "after_lines": 192,
+      "before_sha256": "11681f58d0f439a63354c320fc5f997444f9d2b4af4a808c0f514729b568d089",
+      "after_sha256": "c358ac4d1bfeca9ff093aacd55b40ff43efa97152c7eb9fdddd4cae748785b5e"
+    },
+    {
+      "path": "src/Effect4/Laws/Machine/LiftMachineFact.lean",
+      "before_lines": 0,
+      "after_lines": 74,
+      "after_sha256": "cd76daa46cd90dbb23d1696234f4fe55482613d34d28e4bd672ab54331185059"
+    }
+  ],
+  "private_decision_lift_constructions_before": 1,
+  "private_decision_lift_constructions_after": 0
+}

@@ -49,6 +49,7 @@ import Test.Counterexamples.Machine.Semantics.SelfInterrupt
 import Test.Machine.EditMessages
 import Test.Machine.EditFields
 import Test.Machine.ReferenceFootprint
+import Test.Machine.NaturalProfile
 import Test.Counterexamples.Machine.Semantics.StrongExitDefect
 import Test.Counterexamples.Machine.Semantics.InterruptEscape
 import Test.Counterexamples.Machine.Semantics.InterruptCarrier
@@ -171,6 +172,7 @@ import Test.Store.TraitContract
 import Test.Store.ProbeContract
 import Test.Store.DerivedCheck
 import Test.Store.Names
+import Test.Codegen.TargetOrder
 import Test.Codegen.PrintContract
 import Test.Codegen.PrintTyped
 import Test.Codegen.DefinitionsPrint
@@ -365,6 +367,7 @@ import Test.Dogfood.Proofs.HostJournal
 import Test.Dogfood.Proofs.HostPayloadsAudit
 import Test.Dogfood.Proofs.MachinePopTrace
 import Test.Dogfood.Proofs.PrimitiveProducerReader
+import Test.Dogfood.Proofs.AnswerFlowFamilyReader
 import Test.Dogfood.Proofs.HostTimeoutSource
 import Test.Dogfood.Proofs.HostTimeoutDriver
 import Test.Dogfood.Proofs.HostTimeoutNumberLedger

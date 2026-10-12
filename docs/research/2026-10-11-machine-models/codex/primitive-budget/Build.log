@@ -1,0 +1,13 @@
+✔ [531/537] Built Effect4.Laws.Program.NativeReplies (10s)
+✔ [532/539] Built Effect4.Laws.Program.SourceOpportunities (6.3s)
+✔ [533/542] Built Effect4.Laws.Program.SourceOpportunityCallbacks (28s)
+✔ [535/543] Built Effect4.Laws.Program.SourceOpportunityFrames (7.1s)
+✔ [538/543] Built Effect4.Laws.Program.SourceOpportunityEvaluation (4.6s)
+✔ [541/546] Built Effect4.Laws.Program.SourceOpportunityActions (51s)
+✔ [542/550] Built Effect4.Laws.Program.SourceOpportunityMachine (6.9s)
+✔ [548/550] Built Effect4.Laws.Program.SourceOpportunityNative (4.7s)
+✔ [550/558] Built Effect4.Laws.Program.SourceOpportunityPrimitive (6.4s)
+✔ [556/558] Built Effect4.Laws.Program.SourceOpportunityExecution (3.5s)
+✔ [557/558] Built Effect4.Laws.Program.SourceOpportunityCommands (3.2s)
+✔ [558/558] Built Effect4.Laws.Program.SourceOpportunityHistory (3.0s)
+Build completed successfully (558 jobs).

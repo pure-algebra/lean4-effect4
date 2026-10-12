@@ -1,5 +1,5 @@
 (* Exact logical milliseconds, corresponding to Effect4.ClockMillis.
-   Depends on Zarith. Nonnegative values, exact addition/comparison and persistence are
+   Depends on Zarith. Nonnegative values, exact addition/multiplication/comparison and persistence are
    by construction; canonical parsing and refusal before numeric conversion are tested
    in test_clock.ml. This module performs no clock, timer, or scheduler mutation. *)
 type t = Z.t
@@ -14,6 +14,7 @@ let of_nat value =
 
 let positive predecessor = Z.succ (of_nat predecessor)
 let add = Z.add
+let mul = Z.mul
 let equal = Z.equal
 let le = Z.leq
 let lt = Z.lt

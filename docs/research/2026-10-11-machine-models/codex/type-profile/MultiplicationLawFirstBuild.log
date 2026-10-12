@@ -1,0 +1,22 @@
+✔ [64/66] Built ProofGraph.Registry (17s)
+✔ [65/66] Built Effect4.Laws.Machine.IntegerProfile (6.4s)
+✖ [66/66] Building Test.Machine.NaturalProfile (2.9s)
+trace: .> LEAN_PATH=/Users/pooks/.codex/worktrees/last-planned-goals/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/last-planned-goals/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/last-planned-goals/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/last-planned-goals/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/last-planned-goals/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/last-planned-goals/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/last-planned-goals/lean4-effect4/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/.codex/worktrees/last-planned-goals/lean4-effect4/Test/Machine/NaturalProfile.lean -o /Users/pooks/.codex/worktrees/last-planned-goals/lean4-effect4/.lake/build/lib/lean/Test/Machine/NaturalProfile.olean -i /Users/pooks/.codex/worktrees/last-planned-goals/lean4-effect4/.lake/build/lib/lean/Test/Machine/NaturalProfile.ilean -c /Users/pooks/.codex/worktrees/last-planned-goals/lean4-effect4/.lake/build/ir/Test/Machine/NaturalProfile.c --setup /Users/pooks/.codex/worktrees/last-planned-goals/lean4-effect4/.lake/build/ir/Test/Machine/NaturalProfile.setup.json --json
+error: Test/Machine/NaturalProfile.lean:15:31: Unknown identifier `rc112.natBound`
+error: Test/Machine/NaturalProfile.lean:15:68: Unknown identifier `rc112.natBound`
+error: Test/Machine/NaturalProfile.lean:16:13: Unknown identifier `rc112.natBound`
+error: Test/Machine/NaturalProfile.lean:16:34: Unknown identifier `rc112.natBound`
+error: Test/Machine/NaturalProfile.lean:17:21: Unknown identifier `rc112.natBound`
+error: Test/Machine/NaturalProfile.lean:17:36: Unknown identifier `rc112.natBound`
+error: Test/Machine/NaturalProfile.lean:17:53: Unknown identifier `rc112.natBound`
+error: Test/Machine/NaturalProfile.lean:19:15: Unknown identifier `rc112.natBound`
+error: Test/Machine/NaturalProfile.lean:19:32: Unknown identifier `rc112.natBound`
+error: Test/Machine/NaturalProfile.lean:19:0: cannot evaluate code because 'sorryAx' uses 'sorry' and/or contains errors
+error: Test/Machine/NaturalProfile.lean:20:15: Unknown identifier `rc112.natBound`
+error: Test/Machine/NaturalProfile.lean:20:0: cannot evaluate code because 'sorryAx' uses 'sorry' and/or contains errors
+error: Test/Machine/NaturalProfile.lean:21:15: Unknown identifier `rc112.natBound`
+error: Test/Machine/NaturalProfile.lean:21:0: cannot evaluate code because 'sorryAx' uses 'sorry' and/or contains errors
+error: Lean exited with code 1
+Some required targets logged failures:
+- Test.Machine.NaturalProfile
+error: build failed

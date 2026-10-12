@@ -1,0 +1,78 @@
+{
+  "base": "40db61ad1871ee947d31dceab778a6660459129c",
+  "toolchain": {
+    "ocaml": "5.1.1",
+    "dune": "3.24.2",
+    "architecture": "arm64"
+  },
+  "files": [
+    {
+      "path": "ocaml/clock/e4_clock.ml",
+      "sha256": "99b137f2d61dbc6e438c3d830503fba75ef7851a949c750446512fd74f7a2cbb",
+      "before_lines": 42,
+      "after_lines": 43
+    },
+    {
+      "path": "ocaml/clock/e4_clock.mli",
+      "sha256": "f864eb753cada897d9e8f3b61a26f64623855621fa108efabe64dc1ad6b3418c",
+      "before_lines": 20,
+      "after_lines": 21
+    },
+    {
+      "path": "ocaml/clock/test_clock.ml",
+      "sha256": "cf2da81da11b7bc290f6446541fab5037972963163cba9d19ffcaad967446733",
+      "before_lines": 42,
+      "after_lines": 58
+    },
+    {
+      "path": "ocaml/engine/e4_engine.ml",
+      "sha256": "613d29fcc432f615767738c5f61334aba3738e80b5f63c19c2ac39b715a09c35",
+      "before_lines": 704,
+      "after_lines": 717
+    },
+    {
+      "path": "ocaml/engine/e4_engine.mli",
+      "sha256": "ec385ab99cb8ac843b223b11c3b434ffff3b5d7bdf95343a06ca725f95964058",
+      "before_lines": 449,
+      "after_lines": 460
+    },
+    {
+      "path": "ocaml/engine/e4_program.ml",
+      "sha256": "bea20e24b08e249e87d4fbaaa51076a11ad5bd7fe6e44a48ac752b86c8707e14",
+      "before_lines": 512,
+      "after_lines": 512
+    },
+    {
+      "path": "ocaml/engine/e4_program.mli",
+      "sha256": "c3c8432aeb1d7d15852a2506fceeec9efa1daafdc755acc67da578d32eba72ad",
+      "before_lines": 126,
+      "after_lines": 131
+    },
+    {
+      "path": "ocaml/engine/test/test_engine.ml",
+      "sha256": "284573110f6a386659687e58ecd787a097e9890b8fb4ec5c76ee2c41f70603a9",
+      "before_lines": 1009,
+      "after_lines": 1042
+    }
+  ],
+  "generated_inputs": [
+    {
+      "path": "ocaml/engine/api_engine.ml",
+      "sha256": "88d7cd78bdc9a602655df2519d14e0dcdd0fb5c6bff4f196e28e2421fe243c98"
+    },
+    {
+      "path": "ocaml/gen/api_gen.ml",
+      "sha256": "1f0036ac08eb6df5b881c2f1aacead753f7f3b56e4edf726517aa74c37cd4ef9"
+    },
+    {
+      "path": "ocaml/engine/e4_program_layout.ml",
+      "sha256": "ed8dab1b395394945f74db73d27a19a8565c52e2be2cd1a7d50c6798b7966b54"
+    },
+    {
+      "path": "ocaml/eff/eff_types.ml",
+      "sha256": "050eaf161afef787f033bb7966ef0fd0ce8f8989bad3b0e1bdc1c1e02e2dc0a2"
+    }
+  ],
+  "clock": "PASS",
+  "engine": "PASS 182 checks, zero failures"
+}

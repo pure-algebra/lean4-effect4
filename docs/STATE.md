@@ -131,6 +131,12 @@ A program has folds, a journaled run with replay, and a printed image that reads
   [receipt](research/2026-10-08-codex-unguard-receipt.md)). A call at a join carries its type
   arguments, and so does an approved eliminator site. The reader reconstructs the typed print
   after its named erasure. The application's print is not yet the typed print.
+- **The type interface** (the [type interface note](research/2026-10-11-type-interface/README.md)).
+  `Ty` is the hub, and the JSON codec is its one exact image. A model of tsgo's assignability
+  (`src/Effect4/Laws/Codegen/TargetOrder.lean`) agrees with tsgo on every recorded pair of
+  `generated/assignability.tsv`. The TypeScript face refuses a natural literal above the profile,
+  on emission and on reading (row 357). `mul` answers outside the profile (`E4-RUN-CE-047`), and
+  the printed type is not monotone (`E4-PRINT-CE-001`; row 346's repair A, with tsgo's bound).
 - **Partial programs** (R14, row 282). A sketch is a program with its hole table (row 291). The
   replacement law holds over the six typing judgments (row 294). A sketch reads a whole program,
   definition block included: its check, focus, fill, table and refusals (cutover slice S1). An
@@ -316,6 +322,11 @@ owner's note of 2026-10-09: write a program, then watch its session answer calls
   confirm.
 - **MCP and code mode** (the MCP note, section 10): six rulings.
 - **The push of `lean4-effects`**, before this branch: Effect4 pins its local commit.
+- **The type interface's three choices** (the type interface note, section 4):
+  - print `int` and `number` as the aliases `Int` and `Num` now (row 309, point 5);
+  - decode an exported entry's inputs, or print refined types as brands;
+  - choose one frame for products, before `Shape` becomes a fold of `Ty`.
+- **The push of `html/svg`** in lean4-whatwg: Effect4's pin moves to it, the SVG plan's next slice.
 
 
 ## Process

@@ -1,0 +1,39 @@
+{
+  "base": "1591530e9978b1d1d07c5646f093f55d923294b1",
+  "files": [
+    {
+      "path": "src/Effect4/Laws/Program/RefWords.lean",
+      "before_lines": 0,
+      "after_lines": 145,
+      "before_sha256": null,
+      "after_sha256": "e8714f014cba4b2c51477abc60c10ae4190cce73bab08e8158596773289f5ff7",
+      "unchanged_old_theorem_headers": 0
+    },
+    {
+      "path": "src/Effect4/Laws/Program/NativeHeapExecution.lean",
+      "before_lines": 334,
+      "after_lines": 449,
+      "before_sha256": "d1afba7fa127334d82a5e561ba56c2bb6e6512884b8b346dd74cd30c4d91f136",
+      "after_sha256": "b35f9f88fddfa6e62846a2f56e2b790510b4b045ac871f7db4e8f94554880fff",
+      "unchanged_old_theorem_headers": 17
+    },
+    {
+      "path": "Test/Dogfood/Proofs/PrimitiveProducerReader.lean",
+      "before_lines": 47,
+      "after_lines": 89,
+      "before_sha256": "06ddb7ad292416806e5c7847622303b2d5ee86e2a031f17efc70182be212c368",
+      "after_sha256": "1461ce0007cb1ed294a61c5c9af303ddc3cd53036957bf9dde7653825e4a2d2e",
+      "unchanged_old_theorem_headers": 2
+    }
+  ],
+  "audit_modules": [
+    "Effect4.Laws.Program.RefWords",
+    "Effect4.Laws.Program.NativeHeapExecution",
+    "Test.Dogfood.Proofs.PrimitiveProducerReader"
+  ],
+  "verification": {
+    "build": "PASS",
+    "audit": "#axiom_audit: 99 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals",
+    "checked_source_hashes_unchanged": true
+  }
+}

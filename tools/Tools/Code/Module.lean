@@ -86,6 +86,7 @@ def surfaceText : SurfaceRefusal → String
   | .layerDeclaration n => "the layer declaration " ++ n ++ " is not plain"
   | .formation _ => "what it reads back to is not formed"
   | .classDeclarations => "its classes are not the printer's"
+  | .outsideProfile n => "the literal " ++ toString n ++ " is above the target's safe integers"
 
 /-- A module laid out at the width `w`: the house's header block and imports, then each
 declaration laid out, one blank line between. -/

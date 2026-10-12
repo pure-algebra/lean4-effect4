@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.SourceOpportunityCommands
+import Effect4.Laws.Machine.LiftMachineFact
 import Effect4.Laws.Program.NativeReplies
 import Effect4.Laws.Program.ReleaseTrace
 
@@ -22,83 +23,74 @@ theorem budget_decision_lift (root : NativeEff) (q : List Nat) (cap : Nat)
       (fun _ m => ConfigurationAt root m ∧ ForkLedger.Invariant.Ok m ∧ recorded q m + fibers root q m ≤ cap)
       (fun _ _ commands => CommandsAt root commands) (fun _ _ tasks => TasksAt root tasks) (fun _ _ _ => True) := by
   letI := evaluatorFor root table
-  have source := reply_decision_lift root fragment table
-  refine {
-    step := ?_, nil := source.nil, evaluate := ?_, drain := ?_, ran := ?_, task := ?_, skip := source.skip,
-    yield := ?_, interrupt := ?_, middleware := ?_, clockNone := ?_, clockSome := ?_, answer := ?_ }
-  · intro tasks world m command rest notStuck held
-    have queue := (held.2 notStuck).1
-    have moved := command_at root fragment table m command rest held.1.1 queue
-    have ledger := ForkLedger.Invariant.Native.driveStep_ok root table m command rest held.1.2.1
-    have bound := command_debit root q fragment clearFin clearLoop table m command rest
-      sequential raceFree held.1.1 held.1.2.1 (queue command (.head _))
-    exact ⟨(), trivial, ⟨moved.1, ledger, Nat.le_trans bound held.1.2.2⟩,
-      fun _ => ⟨moved.2, (held.2 notStuck).2⟩⟩
-  · intro world m id held running
-    exact source.evaluate () m id held.1 running
-  · intro world m owner fiber held found
-    have moved := source.drain () m owner fiber held.1 found
-    have ledger := ForkLedger.Invariant.disarm_ok (ForkLedger.Invariant.update_ok held.2.1 {fiber with dispatcher := fiber.dispatcher.drain.2}) owner
-    have bound := update_total_le root q m fiber {fiber with dispatcher := fiber.dispatcher.drain.2}
-      rfl held.2.1.idsUnique (List.mem_of_find?_eq_some found) (Nat.le_refl _)
-    exact ⟨⟨moved.1, ledger, Nat.le_trans bound held.2.2⟩, moved.2⟩
-  · intro world m owner task held
-    have unchanged := emit_total root q m [RunEvent.ranTask owner task] rfl
-    exact ⟨source.ran () m owner task held.1, ForkLedger.Invariant.emit_ok held.2.1 _,
-      by rw [unchanged]; exact held.2.2⟩
-  · intro world m owner task tasks held running snapshot
-    exact source.task () m owner task tasks held.1 running snapshot
-  · intro world m id verdict held
-    have bound := modify_total_le root q m id (fun fiber => {fiber with yieldOverride := some verdict})
-      held.2.1.idsUnique (fun _ => rfl) (fun _ => Nat.le_refl _)
-    exact ⟨source.yield () m id verdict held.1, ForkLedger.Invariant.modify_ok held.2.1 _ _,
-      Nat.le_trans bound held.2.2⟩
-  · intro world m who extra target fiber held found
-    have moved := source.interrupt () m who extra target fiber held.1 found
-    have frameBound := interrupt_record_le root q table [] who extra fiber
-    have same := Guard.interruptRecord_id root table who extra fiber
-    have edit := update_total_le root q m fiber (interruptRecord (interpOf root table) who extra fiber).1
-      same held.2.1.idsUnique (List.mem_of_find?_eq_some found) frameBound
-    have ledger : ForkLedger.Invariant.Ok (Lift.interruptEdit (interpOf root table) m who extra target fiber) := by
+  have edits : Lift.MachineEdits (interpOf root table)
+      (fun m => ForkLedger.Invariant.Ok m ∧ recorded q m + fibers root q m ≤ cap) := by
+    refine {
+      drain := ?_, ran := ?_, yield := ?_, interrupt := ?_, middleware := ?_,
+      clock := ?_, owed := ?_, prepare := ?_ }
+    · intro m owner fiber held found
+      have ledger := ForkLedger.Invariant.disarm_ok
+        (ForkLedger.Invariant.update_ok held.1 {fiber with dispatcher := fiber.dispatcher.drain.2}) owner
+      have bound := update_total_le root q m fiber {fiber with dispatcher := fiber.dispatcher.drain.2}
+        rfl held.1.idsUnique (List.mem_of_find?_eq_some found) (Nat.le_refl _)
+      exact ⟨ledger, Nat.le_trans bound held.2⟩
+    · intro m owner task held
+      have unchanged := emit_total root q m [RunEvent.ranTask owner task] rfl
+      exact ⟨ForkLedger.Invariant.emit_ok held.1 _, by rw [unchanged]; exact held.2⟩
+    · intro m id verdict held
+      have bound := modify_total_le root q m id (fun fiber => {fiber with yieldOverride := some verdict})
+        held.1.idsUnique (fun _ => rfl) (fun _ => Nat.le_refl _)
+      exact ⟨ForkLedger.Invariant.modify_ok held.1 _ _, Nat.le_trans bound held.2⟩
+    · intro m who extra target fiber held found
+      have frameBound := interrupt_record_le root q table [] who extra fiber
+      have same := Guard.interruptRecord_id root table who extra fiber
+      have edit := update_total_le root q m fiber (interruptRecord (interpOf root table) who extra fiber).1
+        same held.1.idsUnique (List.mem_of_find?_eq_some found) frameBound
+      have ledger : ForkLedger.Invariant.Ok (Lift.interruptEdit (interpOf root table) m who extra target fiber) := by
+        unfold Lift.interruptEdit
+        dsimp only
+        split <;> exact ForkLedger.Invariant.update_ok held.1 _
+      refine ⟨ledger, ?_⟩
       unfold Lift.interruptEdit
       dsimp only
-      split <;> exact ForkLedger.Invariant.update_ok held.2.1 _
-    refine ⟨moved, ledger, ?_⟩
-    unfold Lift.interruptEdit
-    dsimp only
-    split
-    · change recorded q (((m.update (interruptRecord (interpOf root table) who extra fiber).1).emit
-          [RunEvent.interruptRecorded who target]).emit [RunEvent.interruptDeferred target]) +
-        fibers root q (m.update (interruptRecord (interpOf root table) who extra fiber).1) ≤ cap
-      rw [recorded_emit, recorded_emit]
-      simp only [List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, runEvent, Nat.add_zero]
-      exact Nat.le_trans edit held.2.2
-    · change recorded q ((m.update (interruptRecord (interpOf root table) who extra fiber).1).emit
-          [RunEvent.interruptRecorded who target]) +
-        fibers root q (m.update (interruptRecord (interpOf root table) who extra fiber).1) ≤ cap
-      rw [recorded_emit]
-      simp only [List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, runEvent, Nat.add_zero]
-      exact Nat.le_trans edit held.2.2
-  · intro world m held
-    exact ⟨source.middleware () m held.1, held.2⟩
-  · intro world m millis state held running found
-    obtain ⟨nextWorld, order, moved⟩ := source.clockNone () m millis state held.1 running found
-    exact ⟨(), trivial, moved, held.2⟩
-  · intro world m millis owed state held running found
-    obtain ⟨nextWorld, order, moved, queue⟩ := source.clockSome () m millis owed state held.1 running found
-    have ledger := ForkLedger.Invariant.drainOwed_ok {m with state} [owed] held.2.1
-    have bound := drain_owed_total_le root q {m with state} [owed] held.2.1.idsUnique
-    exact ⟨(), trivial, ⟨moved, ledger, Nat.le_trans bound held.2.2⟩, queue⟩
-  · intro world m id token answer held running admitted
-    obtain ⟨nextWorld, order, moved⟩ := source.answer () m id token answer held.1 running admitted
+      split
+      · change recorded q (((m.update (interruptRecord (interpOf root table) who extra fiber).1).emit
+            [RunEvent.interruptRecorded who target]).emit [RunEvent.interruptDeferred target]) +
+          fibers root q (m.update (interruptRecord (interpOf root table) who extra fiber).1) ≤ cap
+        rw [recorded_emit, recorded_emit]
+        simp only [List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, runEvent, Nat.add_zero]
+        exact Nat.le_trans edit held.2
+      · change recorded q ((m.update (interruptRecord (interpOf root table) who extra fiber).1).emit
+            [RunEvent.interruptRecorded who target]) +
+          fibers root q (m.update (interruptRecord (interpOf root table) who extra fiber).1) ≤ cap
+        rw [recorded_emit]
+        simp only [List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, runEvent, Nat.add_zero]
+        exact Nat.le_trans edit held.2
+    · intro m held
+      exact held
+    · intro m millis held running
+      exact held
+    · intro m owed held
+      exact ⟨ForkLedger.Invariant.drainOwed_ok m [owed] held.1,
+        Nat.le_trans (drain_owed_total_le root q m [owed] held.1.idsUnique) held.2⟩
+    · intro m id token answer held
+      exact held
+  apply (reply_decision_lift root fragment table).withMachineFact _ ?_ edits ?_
+  · intro tasks world m command rest running source held
+    have queue := (source.2 running).1
+    have ledger := ForkLedger.Invariant.Native.driveStep_ok root table m command rest held.1
+    have bound := command_debit root q fragment clearFin clearLoop table m command rest
+      sequential raceFree source.1 held.1 (queue command (.head _))
+    exact ⟨ledger, Nat.le_trans bound held.2⟩
+  · intro world m id token answer owned held running admitted
     have prepared := prepare_reply_at root table m id token answer
     have ledger := ForkLedger.Invariant.Native.driveStep_ok root table
       {m with state := (prepareAsyncAnswer (interpOf root table) m id token answer).1}
-      (.resume id token (prepareAsyncAnswer (interpOf root table) m id token answer).2) [.drainDue] held.2.1
+      (.resume id token (prepareAsyncAnswer (interpOf root table) m id token answer).2) [.drainDue] held.1
     have bound := resume_command_debit root q table
       {m with state := (prepareAsyncAnswer (interpOf root table) m id token answer).1}
-      id token (prepareAsyncAnswer (interpOf root table) m id token answer).2 [.drainDue] held.2.1.idsUnique prepared.2.2
-    exact ⟨(), trivial, ⟨moved.1, ledger, Nat.le_trans bound held.2.2⟩, moved.2⟩
+      id token (prepareAsyncAnswer (interpOf root table) m id token answer).2 [.drainDue] held.1.idsUnique prepared.2.2
+    exact ⟨ledger, Nat.le_trans bound held.2⟩
 
 /-- Every actual decision retains the combined recorded and live source budget.
 Consumer: the original admitted-history bound for application source sites. -/

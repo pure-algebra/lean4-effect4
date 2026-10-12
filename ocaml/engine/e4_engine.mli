@@ -34,6 +34,11 @@
    Eff_wire), stdlib.
 
    Behaviours:
+   EN8 Public numeric reply constructors check representability before constructing a decision.
+       Natural replies and source literals use the selected natural-number profile.
+       Float replies retain exact bits only when the existing value carrier holds them.
+       The engine requires a 63-bit integer host. Raw INSTANCE constructors are a trusted input.
+                                                          tested (numeric_ingress_check)
    EN1 `run p ~fuel` is `Api.run p fuel []`: same outcome, same fiber table, same trace
        rows, same exits.  The check is against the instance's OWN `api_run` (the generated
        `Effect4.Api.run`, untouched) on every program of the corpus.
@@ -361,7 +366,12 @@ module type ENGINE = sig
 
   val answer_async_success : int -> int -> int -> decision
   (** [answer_async_success fiber token n] answers the parked token with
-      `Completion.ofExit (Exit.success (Val.nat n))`. *)
+      `Completion.ofExit (Exit.success (Val.nat n))`.
+      @raise E4_clock.Profile_refusal for a negative or out-of-profile natural. *)
+
+  val answer_async_float : int -> int -> float -> decision
+  (** Answers with the exact IEEE-754 bit pattern when it fits [Val_float]'s carrier.
+      @raise E4_clock.Profile_refusal before conversion when those bits do not fit. *)
 
   val interrupt_from : int option -> int -> decision
   val install_middleware : decision
@@ -374,7 +384,8 @@ module type ENGINE = sig
 
   val compile : Eff_types.eff -> program
   (** {!E4_program}'s conversion, behind the ordinal pin.
-      @raise E4_program.Ordinal_mismatch when the alphabets disagree. *)
+      @raise E4_program.Ordinal_mismatch when the alphabets disagree.
+      @raise E4_clock.Profile_refusal for a negative or out-of-profile natural literal. *)
 
   val of_bytes : string -> program option
   val load_program : program -> fuel:int -> t
