@@ -11,16 +11,25 @@ frame and runs the walk's generator (`closeSeqStepR`, `Laws/Program/InterpR.lean
 under the term's `Exit` guard; the parallel one forks every finalizer as an immediate daemon and
 awaits them (`FiberAction.closePar`, `Machine/Fibers.lean:1502-1507`).
 
+Decisions row 349 types the machine's code by the row-indexed judgment. A finalizer is typed there
+by `AmbientFinalizerTyped`: entered at any row, its program returns at that row at
+`⟨unknown, never⟩`. Every finalizer but a captured release is administrative code
+(`denoteFin_admin`, `Typed/LayerArm.lean`), lifted from its type-only typing (`ambientProg_of_admin`). A captured release
+switches to its captured context and restores the previous one; that it returns at its entry row is
+the planned goal `foreignFinalizer_ambient`, which the restore slot (owner's ruling, 2026-10-12)
+proves. Both close walks below are proved modulo it.
+
 The sequential frame's protocol is proved by coinduction (`Contracts.Greatest.coind`, decisions
-row 190 (a)) from `CloseSeqTyped`: the remaining finalizers typed at `⟨unknown, never⟩` at the
-closing exit (`FinalizerTyped`, from the row's admission, `finalizerTyped_of_admitted`), that exit
-fitting `Exit<unknown, unknown>`, and the reasons captured so far a clean failure at the row's post
-type `⟨unit, never⟩`.
+row 190 (a)) from `CloseSeqTyped`: the remaining finalizers typed at the closing exit
+(`ambientFinalizerTyped_of_admitted`), each under the `Exit` guard at the fiber's row
+(`ambient_exitR`), that exit fitting `Exit<unknown, unknown>`, and the reasons captured so far a
+clean failure at the row's post type `⟨unit, never⟩`.
 
 The parallel frame's protocol (`closeParDone`) holds outright: it reads the children's reified exits
 and never resumes (`closeParProtocol`). The forks are `Evaluating.alloc` folded over the finalizers
-(`Evaluating.forkAll`); the host keeps its operation current over the saved answer frame, read by no
-queued command until `closeParAwait` installs the await (`QueueOk.owners`).
+(`Evaluating.forkAll`), each child entered at the empty row; the host keeps its operation current
+over the saved answer frame, read by no queued command until `closeParAwait` installs the await
+(`QueueOk.owners`).
 
 Not established here: progress; that the walk finishes; the finalizers' own runs.
 -/
@@ -34,14 +43,6 @@ open Contracts
 
 section Sequential
 variable {root : ProgramSource}
-
-/-- A finalizer under the term's `Exit` guard (`exitR`, `internal/effect.ts:3617`) answers its
-reified exit at `Exit<unknown, never>` and never fails. -/
-theorem exitR_typed {w : World} {body : RProgram}
-    (h : TypedProg root w ⟨.unknown, .never, Env.Requirement.empty⟩ body) :
-    TypedProg root w ⟨.exitOf .unknown .never, .never, Env.Requirement.empty⟩ (exitR body) :=
-  allGuard_typed root (fun ex => by cases ex <;> rfl) h
-    (fun w' _ ex hex => .pure (strongExit_success w' _ _ hex.1))
 
 /-- The reasons a reified exit at `Exit<a, never>` carries are a clean failure at `⟨unit, never⟩`
 (`reasonsOfList_fit`). -/
@@ -62,15 +63,84 @@ theorem exitOk_reasons_of_fits {w : World} {v : Val} {a : Ty} (hv : Fits w v (.e
   | die _ _ => intro _; trivial
   | interrupt _ _ => intro _; trivial
 
-/-- **The sequential close walk's frame invariant** (`closeSeqStepR`): the generator walks
-finalizers typed at `⟨unknown, never⟩` at the closing exit, which fits `Exit<unknown, unknown>`; the
-reasons it has captured are a clean failure at `⟨unit, never⟩`. The frame reads each finalizer's
-reified exit at `Exit<unknown, never>` and answers at the close row's post, `⟨unit, never⟩`. -/
-def CloseSeqTyped (root : ProgramSource) : IterState → Prop
-  | (w, tin, tout, name) =>
+/-- A finalizer under the term's `Exit` guard (`exitR`, `internal/effect.ts:3617`) at the ambient
+judgment: entered at a row, it answers its reified exit at `Exit<unknown, never>` at that row and
+never fails. Consumer: the sequential walk's invariant and clause. -/
+theorem ambient_exitR {w : World} {row : Env.Requirement} {body : RProgram}
+    (h : AmbientProg root w row
+      (((⟨.unknown, .never, Env.Requirement.empty⟩ : EffTy), row, row) : AmbientPosition) body) :
+    AmbientProg root w row
+      (((⟨.exitOf .unknown .never, .never, Env.Requirement.empty⟩ : EffTy), row, row) :
+        AmbientPosition) (exitR body) :=
+  ambient_guardBind root h
+    (fun later _ ex _ hex => by
+      rw [ambientInput_const]
+      exact .pure (ambientExit_const (strongExit_success later _ _ hex.1.1))
+        ⟨Row.subset_refl _, Row.subset_refl _⟩)
+    (fun _ _ ex _ hmiss => absurd (show GuardKind.all.hasExitArm ex = true by cases ex <;> rfl)
+      (by rw [hmiss]; exact Bool.false_ne_true))
+    (Row.subset_refl _)
+
+end Sequential
+
+/-! ## Finalizers at the ambient judgment -/
+
+/-- **A finalizer at the ambient judgment**: at every later world and closing exit fitting
+`Exit<unknown, unknown>`, entered at any row, its program returns at that row at
+`⟨unknown, never⟩` (rc.112's finalizer type `Effect<unknown>`, `internal/effect.ts:3849`). -/
+def AmbientFinalizerTyped (root : ProgramSource) (w : World) (fin : FinName) : Prop :=
+  ∀ w', w.leHost w' → ∀ ex, FitsExit w' ⟨.unknown, .unknown, Env.Requirement.empty⟩ ex →
+    ∀ row, AmbientProg root w' row
+      (((⟨.unknown, .never, Env.Requirement.empty⟩ : EffTy), row, row) : AmbientPosition)
+      (denoteFin fin ex)
+
+theorem ambientFinalizerTyped_mono {root : ProgramSource} {w w' : World} {fin : FinName}
+    (ord : w.leHost w') (h : AmbientFinalizerTyped root w fin) : AmbientFinalizerTyped root w' fin :=
+  fun w'' o => h w'' (leHost_trans _ _ _ ord o)
+
+/-- **A captured release's finalizer returns at its entry row** (`denoteFin`'s `foreign` arm;
+rc.112 `internal/effect.ts:3983`, `:2180-2199`): it reads the current context, switches to the
+captured one, runs the release there and restores the previous context, which covers the entry
+row. Planned: the restore runs as code after the switch, so an interruption between the two leaves
+in the captured context (rc.112 leaks it there); the restore slot (owner's ruling, 2026-10-12) makes
+the restore atomic with the pop, and the slice that lands it proves this goal.
+Consumer: `ambientFinalizerTyped_of_admitted`, hence both close walks. -/
+@[semantics "scope-lifetime-finalization" (requirement := R11)]
+proof_goal foreignFinalizer_ambient (root : ProgramSource) (w : World) (c : Capture)
+    (admitted : CaptureTyped root w c) (ex : ExitV)
+    (fits : FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ ex) (row : Env.Requirement) :
+    AmbientProg root w row
+      (((⟨.unknown, .never, Env.Requirement.empty⟩ : EffTy), row, row) : AmbientPosition)
+      (denoteFin (.foreign c) ex)
+
+/-- An admitted finalizer is typed at the ambient judgment: administrative ones by their
+type-only typing (`finalizerTyped_of_admitted`, `ambientProg_of_admin`), a captured release by
+`foreignFinalizer_ambient`. Consumer: both close walks. -/
+theorem ambientFinalizerTyped_of_admitted (root : ProgramSource) (w : World) (fin : FinName)
+    (h : FinalizerAdmitted root w fin) : AmbientFinalizerTyped root w fin := by
+  intro w' ord ex hex row
+  cases fin with
+  | foreign c =>
+    exact foreignFinalizer_ambient root w' c (finalizerAdmitted_mono root ord (.foreign c) h) ex hex
+      row
+  | _ =>
+    exact ambientProg_of_admin root (finalizerTyped_of_admitted root w _ h w' ord ex hex)
+      (denoteFin_admin _ (fun _ h => by cases h) ex) row
+
+section Sequential
+variable {root : ProgramSource}
+
+/-- **The sequential close walk's frame invariant** (`closeSeqStepR`): at one row, the generator
+walks finalizers typed at the ambient judgment at the closing exit, which fits
+`Exit<unknown, unknown>`; the reasons it has captured are a clean failure at `⟨unit, never⟩`. The
+frame reads each finalizer's reified exit at `Exit<unknown, never>` and answers at the close row's
+post, `⟨unit, never⟩`. -/
+def CloseSeqTyped (root : ProgramSource) : AmbientIterState → Prop
+  | (w, success, failure, tin, tout, name) =>
+    failure = success ∧
     tin = ⟨.exitOf .unknown .never, .never, Env.Requirement.empty⟩ ∧ tout = EffTy.pure .unit ∧
     ∃ remaining ex captured, name = .store (.closeSeq remaining ex captured) ∧
-      (∀ fin ∈ remaining, FinalizerTyped root w fin) ∧
+      (∀ fin ∈ remaining, AmbientFinalizerTyped root w fin) ∧
       FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ ex ∧
       ExitOk w (EffTy.pure .unit) (.failure ⟨captured⟩)
 
@@ -78,8 +148,9 @@ def CloseSeqTyped (root : ProgramSource) : IterState → Prop
 reasons; with no finalizer left the walk answers `void` or the captured failure (`closeDone`); else
 it resumes with the next finalizer under its `Exit` guard. -/
 theorem closeSeqTyped_closed :
-    ∀ s, CloseSeqTyped root s → IteratorStep root (CloseSeqTyped root) s := by
-  rintro ⟨w, tin, tout, name⟩ ⟨rfl, rfl, remaining, ex, captured, rfl, fins, hex, hcap⟩
+    ∀ s, CloseSeqTyped root s → AmbientIteratorStep root (CloseSeqTyped root) s := by
+  rintro ⟨w, success, failure, tin, tout, name⟩ ⟨rfl, rfl, rfl, remaining, ex, captured, rfl, fins,
+    hex, hcap⟩
   refine ⟨rfl, fun _ => rfl, fun w' o C _ v hv => ?_⟩
   have hcap' : ExitOk w' (EffTy.pure .unit) (.failure ⟨captured ++ reasonsOfVal v⟩) :=
     exitOk_failure_append (strongExit_mono w w' _ _ o hcap) (exitOk_reasons_of_fits hv)
@@ -97,32 +168,40 @@ theorem closeSeqTyped_closed :
   | cons fin rest =>
     rw [show closeSeqStepR (fin :: rest) ex captured v = IterStep.resume (exitR (denoteFin fin ex))
       (.store (.closeSeq rest ex (captured ++ reasonsOfVal v))) from rfl]
-    exact ⟨_, exitR_typed (fins fin List.mem_cons_self w' o ex (fitsExit_mono o hex)),
-      rfl, rfl, rest, ex, captured ++ reasonsOfVal v, rfl,
-      fun fin' h => finalizerTyped_mono root w w' fin' o (fins fin' (List.mem_cons_of_mem _ h)),
+    exact ⟨_, ambient_exitR (fins fin List.mem_cons_self w' o ex (fitsExit_mono o hex) _),
+      rfl, rfl, rfl, rest, ex, captured ++ reasonsOfVal v, rfl,
+      fun fin' h => ambientFinalizerTyped_mono o (fins fin' (List.mem_cons_of_mem _ h)),
       fitsExit_mono o hex, hcap'⟩
 
 /-- **A typed walk frame has its protocol**: coinduction from the invariant. -/
-theorem closeSeqProtocol {w : World} {tin tout : EffTy} {name : EffName}
-    (h : CloseSeqTyped root (w, tin, tout, name)) : IteratorProtocol root w tin tout name :=
+theorem closeSeqProtocol {w : World} {row : Env.Requirement} {tin tout : EffTy} {name : EffName}
+    (h : CloseSeqTyped root (w, row, row, tin, tout, name)) :
+    AmbientIteratorProtocol root w row row tin tout name :=
   Greatest.coind closeSeqTyped_closed h
 
 end Sequential
 
 /-- **`closeIter`, sequential** (`evaluateFiberR`'s `.closeIter .sequential` arm): the answer frame
 saved over the continuation, the walk's first step at `void`. With no finalizer the walk answers
-`void`; else the first finalizer runs under its `Exit` guard, typed by the row's admission
-(`finalizerTyped_of_admitted`) at the closing exit the row's pre fits, over the walk's frame,
-accepted by its protocol (`closeSeqProtocol`). The machine and the world are unchanged. -/
+`void`; else the first finalizer runs under its `Exit` guard at the fiber's row, typed by the row's
+admission (`ambientFinalizerTyped_of_admitted`) at the closing exit the row's pre fits, over the
+walk's frame at that row, accepted by its protocol (`closeSeqProtocol`). The machine and the world
+are unchanged. -/
 theorem clause_closeIter_sequential (root : ProgramSource) (rootTy : EffTy) (order : List FinName)
     (ex : ExitV) : FiberClauseKeeps root rootTy (.closeIter .sequential order ex) := by
   intro w m rest f y next ev hc
   obtain ⟨ty, declared⟩ := ev.declared
-  obtain ⟨tin, current, stack, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
+  obtain ⟨row, ⟨q, b⟩, flag, covered, bit, current, stack, prov⟩ :=
+    ev.code (by rw [hc]; rfl) ty declared
+  change b = f.frame.interruptible at bit
+  subst bit
+  change AmbientProg root w row q f.frame.current at current
   rw [hc] at current
-  have answer := closeIter_frame current
-  obtain ⟨_, ⟨fins, hex⟩, _⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
+  obtain ⟨_, ⟨fins, hex⟩, typedNext, _⟩ := ambientProg_fiber_inv current (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  have answer : MFrame root w (((EffTy.pure .unit, row, row) : AmbientPosition), f.frame.interruptible)
+      (q, f.frame.interruptible) (.answer next) :=
+    ambient_answerFrame (fun w' o ex hex => typedNext w' o ex hex)
   show SettlesTyped root rootTy w f.id rest (prepareIterR
     (match ((interpRAt root.program m.completedExits).iterNext
         (.store (.closeSeq order ex [])) .unit).2 with
@@ -143,14 +222,16 @@ theorem clause_closeIter_sequential (root : ProgramSource) (rootTy : EffTy) (ord
         stack := .answer next :: f.frame.stack } (fun ty' declared' => ?_)
     have same : ty' = ty := Option.some.inj (declared'.symm.trans declared)
     subst same
-    exact ⟨EffTy.pure .unit, TypedProg.pure ⟨trivial, trivial⟩, hostStack_push answer stack,
-      ⟨prov.recorded, prov.deferred⟩⟩
+    exact ⟨row, (((EffTy.pure .unit, row, row) : AmbientPosition), f.frame.interruptible), flag,
+      covered, rfl, .pure (ambientExit_const ⟨trivial, trivial⟩) ⟨Row.subset_refl _, Row.subset_refl _⟩,
+      .cons (.inl answer) stack, ⟨prov.recorded, prov.deferred⟩⟩
   | cons fin rest' =>
     rw [show closeSeqStepR (fin :: rest') ex [] Val.unit = IterStep.resume (exitR (denoteFin fin ex))
       (.store (.closeSeq rest' ex ([] ++ reasonsOfVal Val.unit))) from rfl]
-    have inv : CloseSeqTyped root (w, ⟨.exitOf .unknown .never, .never, Env.Requirement.empty⟩,
+    have inv : CloseSeqTyped root (w, row, row,
+        ⟨.exitOf .unknown .never, .never, Env.Requirement.empty⟩,
         EffTy.pure .unit, .store (.closeSeq rest' ex ([] ++ reasonsOfVal Val.unit))) :=
-      ⟨rfl, rfl, rest', ex, _, rfl, fun fin' h => finalizerTyped_of_admitted root w fin'
+      ⟨rfl, rfl, rfl, rest', ex, _, rfl, fun fin' h => ambientFinalizerTyped_of_admitted root w fin'
         (fins fin' (List.mem_cons_of_mem _ h)), hex,
         ⟨failureFits_of_cause (fun _ hr => nomatch hr) (fun _ hr => nomatch hr),
           fun _ hr => nomatch hr⟩⟩
@@ -161,9 +242,12 @@ theorem clause_closeIter_sequential (root : ProgramSource) (rootTy : EffTy) (ord
           .answer next :: f.frame.stack } (fun ty' declared' => ?_)
     have same : ty' = ty := Option.some.inj (declared'.symm.trans declared)
     subst same
-    exact ⟨_, exitR_typed (finalizerTyped_of_admitted root w fin (fins fin List.mem_cons_self) w
-        (leHost_refl w) ex hex),
-      hostStack_push (frameAccepts_iter (closeSeqProtocol inv)) (hostStack_push answer stack),
+    exact ⟨row, ((((⟨.exitOf .unknown .never, .never, Env.Requirement.empty⟩ : EffTy), row, row) :
+        AmbientPosition), f.frame.interruptible), flag, covered, rfl,
+      ambient_exitR (ambientFinalizerTyped_of_admitted root w fin (fins fin List.mem_cons_self) w
+        (leHost_refl w) ex hex row),
+      .cons (.inl (.iter _ (fun _ o => ambientIteratorProtocol_mono o (closeSeqProtocol inv))
+        (Row.subset_refl _))) (.cons (.inl answer) stack),
       ⟨prov.recorded, prov.deferred⟩⟩
 
 /-! ## The parallel walk -/
@@ -201,15 +285,15 @@ theorem exitOk_reasons_of_list {w : World} {v : Val} {a : Ty}
 /-- **The parallel close's await frame** (`closeParDone`, rc.112 `exitAsVoidAll`,
 `internal/effect.ts:3823-3826`): it reads the children's reified exits at
 `Array<Exit<unknown, never>>` and answers at the close row's post, `⟨unit, never⟩`. -/
-def CloseParTyped : IterState → Prop
-  | (_, tin, tout, name) =>
-    tin = ⟨.list (.exitOf .unknown .never), .never, Env.Requirement.empty⟩ ∧
+def CloseParTyped : AmbientIterState → Prop
+  | (_, success, failure, tin, tout, name) =>
+    failure = success ∧ tin = ⟨.list (.exitOf .unknown .never), .never, Env.Requirement.empty⟩ ∧
       tout = EffTy.pure .unit ∧ name = .store .closeParDone
 
 /-- **The await frame's one step**: the exits' reasons, merged (`closeDone`), answer `void` or the
 captured failure; it never resumes. -/
-theorem closeParTyped_closed : ∀ s, CloseParTyped s → IteratorStep root CloseParTyped s := by
-  rintro ⟨w, tin, tout, name⟩ ⟨rfl, rfl, rfl⟩
+theorem closeParTyped_closed : ∀ s, CloseParTyped s → AmbientIteratorStep root CloseParTyped s := by
+  rintro ⟨w, success, failure, tin, tout, name⟩ ⟨rfl, rfl, rfl, rfl⟩
   refine ⟨rfl, fun _ => rfl, fun w' _ C _ v hv => ?_⟩
   have hstep : ((interpRAt root.program C).iterNext (.store .closeParDone) v).2 =
       closeDone (reasonsOfVal v) := rfl
@@ -222,20 +306,22 @@ theorem closeParTyped_closed : ∀ s, CloseParTyped s → IteratorStep root Clos
     exact hcap
 
 /-- **The await frame has its protocol** (`Contracts.Greatest.coind`). -/
-theorem closeParProtocol (w : World) :
-    IteratorProtocol root w ⟨.list (.exitOf .unknown .never), .never, Env.Requirement.empty⟩
+theorem closeParProtocol (w : World) (row : Env.Requirement) :
+    AmbientIteratorProtocol root w row row
+      ⟨.list (.exitOf .unknown .never), .never, Env.Requirement.empty⟩
       (EffTy.pure .unit) (.store .closeParDone) :=
-  Greatest.coind closeParTyped_closed ⟨rfl, rfl, rfl⟩
+  Greatest.coind closeParTyped_closed ⟨rfl, rfl, rfl, rfl⟩
 
 /-- **The parallel close's forks under the evaluated fiber** (`forkFinalizers`,
 `Machine/Fibers.lean:992-998`): each finalizer program allocated as a child declared at
-`⟨unknown, never⟩` (`Evaluating.alloc`) with its trace event, in close order; the children's
-columns are the finalizers' (`FiberListColumns` at `unknown`, `never`). -/
+`⟨unknown, never⟩` and entered at the empty row (`Evaluating.alloc`) with its trace event, in close
+order; the children's columns are the finalizers' (`FiberListColumns` at `unknown`, `never`). -/
 theorem Evaluating.forkAll {rootTy : EffTy} (interp : RInterp) (host : RFiber) :
     ∀ (progs : List RProgram) {w : World} {m : RState} {rest : List RCmd} {f : RFiber} {y : Bool},
       Evaluating root rootTy w m rest f y → host.id = f.id → host.context = f.context →
-      (∀ prog ∈ progs, ∀ w', w.leHost w' →
-        TypedProg root w' ⟨.unknown, .never, Env.Requirement.empty⟩ prog) →
+      (∀ prog ∈ progs, ∀ w', w.leHost w' → AmbientProg root w' Env.Requirement.empty
+        (((⟨.unknown, .never, Env.Requirement.empty⟩ : EffTy), Env.Requirement.empty,
+          Env.Requirement.empty) : AmbientPosition) prog) →
       ∃ w', w.leHost w' ∧ Evaluating root rootTy w' (forkFinalizers interp m host progs).1 rest f y ∧
         FiberListColumns w' (forkFinalizers interp m host progs).2 .unknown .never
   | [], w, _, _, _, _, ev, _, _, _ => ⟨w, leHost_refl w, ev, fun _ h => nomatch h⟩
@@ -244,8 +330,9 @@ theorem Evaluating.forkAll {rootTy : EffTy} (interp : RInterp) (host : RFiber) :
     have ord : w.leHost (w.addFiber ⟨m.nextId⟩ ⟨.unknown, .never, Env.Requirement.empty⟩) :=
       addFiber_leHost freshΓ
     obtain ⟨flag, hspawn⟩ := spawn_eq interp m host prog ⟨true, true, .inherit⟩ []
-    have ev1 := (ev.alloc (typed prog List.mem_cons_self w (leHost_refl w)) flag
-      (interp.budgetOf f.context) ⟨⟨m.nextId⟩, f.id, true, []⟩).emit
+    have ev1 := (ev.alloc (typed prog List.mem_cons_self w (leHost_refl w))
+      (Env.Context.satisfies_empty _) flag (interp.budgetOf f.context)
+      ⟨⟨m.nextId⟩, f.id, true, []⟩).emit
         [RunEvent.forked f.id ⟨m.nextId⟩ true]
     obtain ⟨w2, ord2, ev2, cols⟩ := Evaluating.forkAll interp host progs ev1 hid hctx
       (fun p hp w' o => typed p (List.mem_cons_of_mem _ hp) w' (leHost_trans _ _ _ ord o))
@@ -265,24 +352,25 @@ end Parallel
 
 /-- **`closeIter`, parallel** (`evaluateFiberR`'s `.closeIter .parallel` arm, `FiberAction.closePar`,
 `Machine/Fibers.lean:1502-1507`; rc.112 `internal/effect.ts:3819-3826`): the answer frame saved over
-the continuation; every finalizer, typed at `⟨unknown, never⟩` by the row's admission at the closing
-exit the pre fits (`finalizerTyped_of_admitted`), forked as an immediate daemon declared at that type
-(`Evaluating.forkAll`); their runs queued (`evaluate`), then the await over them (`closeParAwait`),
-whose reply the `closeParDone` frame (`closeParProtocol`) and the saved answer frame accept. No
-queued command reads the host's code (`QueueOk.owners`), so its stale operation needs no type. -/
+the continuation; every finalizer, typed at `⟨unknown, never⟩` at the empty row by the row's admission
+at the closing exit the pre fits (`ambientFinalizerTyped_of_admitted`), forked as an immediate daemon
+declared at that type (`Evaluating.forkAll`); their runs queued (`evaluate`), then the await over
+them (`closeParAwait`), whose reply the `closeParDone` frame at the host's row (`closeParProtocol`)
+and the saved answer frame accept. No queued command reads the host's code (`QueueOk.owners`), so
+its stale operation needs no type. -/
 theorem clause_closeIter_parallel (root : ProgramSource) (rootTy : EffTy) (order : List FinName)
     (ex : ExitV) : FiberClauseKeeps root rootTy (.closeIter .parallel order ex) := by
   intro w m rest f y next ev hc
   obtain ⟨ty, declared⟩ := ev.declared
-  obtain ⟨tin, current, _, _⟩ := ev.code (by rw [hc]; rfl) ty declared
+  obtain ⟨_, _, _, _, _, current, _, _⟩ := ev.code (by rw [hc]; rfl) ty declared
   rw [hc] at current
-  obtain ⟨_, ⟨fins, hex⟩, _⟩ := TypedProg.fiber_inv current (fun _ h => nomatch h)
+  obtain ⟨_, ⟨fins, hex⟩, _⟩ := ambientProg_fiber_inv current (fun _ h => nomatch h)
     (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
   obtain ⟨w', ord, ev', cols⟩ := Evaluating.forkAll (interpRAt root.program m.completedExits)
     (saveAnswerR f next) (order.map fun fin => denoteFin fin ex) ev rfl rfl
     (fun prog hprog w1 o => by
       obtain ⟨fin, hfin, rfl⟩ := List.mem_map.mp hprog
-      exact finalizerTyped_of_admitted root w fin (fins fin hfin) w1 o ex (fitsExit_mono o hex))
+      exact ambientFinalizerTyped_of_admitted root w fin (fins fin hfin) w1 o ex (fitsExit_mono o hex) _)
   show SettlesTyped root rootTy w f.id rest (prepareIterR (FiberAction.closePar
     (interpRAt root.program m.completedExits) m (saveAnswerR f next) y
     (order.map fun fin => denoteFin fin ex)))
@@ -304,9 +392,20 @@ theorem clause_closeIter_parallel (root : ProgramSource) (rootTy : EffTy) (order
     (children.map Cmd.evaluate ++ [Cmd.closeParAwait f.id y children] ++ rest)
   -- the host's code at the later world
   obtain ⟨ty', declared'⟩ := ev'.declared
-  obtain ⟨tin', current', stack', prov'⟩ := ev'.code (by rw [hc]; rfl) ty' declared'
+  obtain ⟨row, ⟨q, b⟩, flag, covered, bit, current', stack', prov'⟩ :=
+    ev'.code (by rw [hc]; rfl) ty' declared'
+  change b = f.frame.interruptible at bit
+  subst bit
+  change AmbientProg root w' row q f.frame.current at current'
   rw [hc] at current'
-  have answer := closeIter_frame current'
+  obtain ⟨_, _, typedNext, _⟩ := ambientProg_fiber_inv current' (fun _ h => nomatch h)
+    (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ _ _ h => nomatch h)
+  have answer : MFrame root w' (((EffTy.pure .unit, row, row) : AmbientPosition),
+      f.frame.interruptible) (q, f.frame.interruptible) (.answer next) :=
+    ambient_answerFrame (fun w'' o ex hex => typedNext w'' o ex hex)
+  have hstack : MHostStack root w' (M.update f) f.id (((EffTy.pure .unit, row, row) : AmbientPosition),
+      f.frame.interruptible) (finalPos ty' flag) (.answer next :: f.frame.stack) :=
+    .cons (.inl answer) stack'
   have hmem : f ∈ (M.update f).fibers := rfiber?_mem ev'.look
   have old := ev'.typed.machine.fiber hmem
   have notParked : f.parked = .notParked := by
@@ -323,11 +422,11 @@ theorem clause_closeIter_parallel (root : ProgramSource) (rootTy : EffTy) (order
     fiberTyped_frame old ev'.look ev'.running (saveAnswerR f next).frame
       (fun ty'' d => by
         rw [same ty'' d]
-        exact ⟨_, positionStack_of_host (hostStack_push answer stack')⟩)
+        exact ⟨_, flag, MPositionStack.of_host hstack⟩)
       ⟨prov'.recorded, prov'.deferred⟩
       (fun _ h => by
         change raceRegistrationR f.frame.current = some _ at h
-        rw [hc, raceRegistrationR_typed current'] at h
+        rw [hc, raceRegistrationR_ambient current'] at h
         cases h)
   have edited : ConfigTyped root rootTy w' (M.update { f with frame := (saveAnswerR f next).frame })
       rest := by
@@ -346,10 +445,10 @@ theorem clause_closeIter_parallel (root : ProgramSource) (rootTy : EffTy) (order
     · intro x hx
       rw [lookG] at hx
       cases hx
-      exact ⟨.unknown, .never, cols, closeParProtocol w', ty', declared',
-        hostStack_push answer (hostStack_races (m := M.update f)
-          (m' := M.update { f with frame := (saveAnswerR f next).frame })
-          (racesKept_of_eq fun _ => rfl) stack'), ⟨prov'.recorded, prov'.deferred⟩⟩
+      exact ⟨.unknown, .never, row, cols, closeParProtocol w' row, ty', flag, declared', covered,
+        hstack.races (racesKept_of_eq (m := M.update f)
+          (m' := M.update { f with frame := (saveAnswerR f next).frame }) fun _ => rfl),
+        ⟨prov'.recorded, prov'.deferred⟩⟩
     · intro o ho
       change some f.id = some o at ho
       cases ho
