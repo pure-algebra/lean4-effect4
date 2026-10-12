@@ -338,7 +338,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
 
 Also open: procedures PROC-5 (row 328), the simulation's slices S1 to S4 (row 329) and the
 session API's slices (row 326). The host session is to be drawn by H8's machine forms. Effect4 pins the SVG kit (lean4-whatwg
-`html/svg` at `1365738`, row 358); the picture writer moves onto it next. The
+`html/svg` at `1365738`, row 358). Row 360 orders the rest: the picture writer on this pin, one
+pin move at the seat's slice S14, then the motion and the geometry ports, which delete the view's
+own join, easing reader, samplers and stroke geometry. The
 owner's note of 2026-10-09: write a program, then watch its session answer calls and schedule.
 
 ## What the owner must decide
