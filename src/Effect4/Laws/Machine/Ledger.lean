@@ -371,18 +371,16 @@ theorem postTask_payload_path (m : RunMachine ν σ β ε δ ι α χ St)
       (fun before after edit => after = edit.apply before ∧
         (ForkLedger.Invariant.Ok before → L.Neutral edit before ∧ ForkLedger.Invariant.Ok after))
       m (m.postTask owner priority task) (Edits.postTaskWord m owner priority task) := by
-  rw [Edits.postTask_word]
-  cases found : m.fiber? owner with
-  | none =>
-    simp only [Edits.postTaskWord, found]
-    exact .cons ⟨rfl, fun ok => ⟨True.intro, ForkLedger.Invariant.halt_ok ok _⟩⟩ (.nil _)
-  | some old =>
-    simp only [Edits.postTaskWord, found]
-    refine .cons ⟨rfl, ?_⟩ (.cons ⟨rfl, fun ok => ⟨True.intro, ForkLedger.Invariant.arm_ok ok _⟩⟩
-      (.cons ⟨rfl, fun ok => ⟨⟨rfl, rfl⟩, ForkLedger.Invariant.emit_ok ok _⟩⟩ (.nil _)))
-    intro ok
-    exact ⟨⟨ok.idsUnique, old, by simpa only [RunMachine.id_of_fiber? found] using found, rfl, rfl⟩,
-      ForkLedger.Invariant.update_ok ok _⟩
+  apply Edits.postTask_path m owner priority task
+  · intro old found
+    exact ⟨rfl, fun ok => ⟨⟨ok.idsUnique, old,
+      by simpa only [RunMachine.id_of_fiber? found] using found, rfl, rfl⟩,
+      ForkLedger.Invariant.update_ok ok _⟩⟩
+  · intro held
+    exact ⟨rfl, fun ok => ⟨True.intro, ForkLedger.Invariant.arm_ok ok _⟩⟩
+  · intro held
+    exact ⟨rfl, fun ok => ⟨⟨rfl, rfl⟩, ForkLedger.Invariant.emit_ok ok _⟩⟩
+  · exact ⟨rfl, fun ok => ⟨True.intro, ForkLedger.Invariant.halt_ok ok _⟩⟩
 
 /-- Draining store work only posts tasks. -/
 theorem same_drainOwed (m : RunMachine ν σ β ε δ ι α χ St) (ok : ForkLedger.Invariant.Ok m)

@@ -184,6 +184,9 @@ let sh_drop_observers token fibers (_acc : 'acc list) =
        { g with observers = List.filter (sh_drop_observer_keep token) g.observers })
     fibers
 
+let sh_machine_drop_token m token =
+  { m with fibers = sh_drop_observers token m.fibers [] }
+
 (* -- the ref heap ------------------------------------------------------------------------ *)
 
 (* Effect4.Machine.refStep, src/Effect4/Machine/Stores.lean:955-1007, arm for arm.
@@ -429,12 +432,7 @@ let sh_memo_map_mk id parent entries =
   | [] -> ({ id; parent; entries = L.empty } : memo_map)
   | _ -> failwith "api_engine: MemoMap.mk with a non-empty entry list (extern table incomplete)"
 
-(* `Dispatcher.mk`: the only construction left in the closure is `⟨[], false⟩`, the second
-   component of `Dispatcher.drain` (src/Effect4/Machine/Fibers.lean:153), which the mono phase
-   inlines into `fireState` (a function that must stay generated). *)
-let sh_dispatcher_mk buckets armed =
-  match buckets, armed with
-  | [], false -> D.empty
-  | _ -> failwith "api_engine: Dispatcher.mk with a non-empty bucket list (extern table incomplete)"
+(* The one-field Lean dispatcher lowers to its bucket list. *)
+let sh_dispatcher_insert priority task dispatcher = D.enqueue dispatcher ~priority task
 
 (* PRELUDE-END *)

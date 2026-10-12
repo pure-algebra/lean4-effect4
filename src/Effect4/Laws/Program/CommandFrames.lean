@@ -598,7 +598,7 @@ theorem fireObserver_transports {allowClear : Prop} (interp : NInterp) {m : Nati
             · rename_i exits nextTarget rest walk
               let nextCurrent : NFiber := {current with pending := current.pending.map fun q =>
                 if q.token = token then
-                  {q with waitingOn := some nextTarget, remaining := rest, collected := exits}
+                  {q with remaining := rest, collected := exits}
                 else q}
               exact (changed.thenUpdate (t' := nextCurrent)
                 (List.mem_of_find?_eq_some currentFound) (.edit rfl rfl (.refl _))).thenModify

@@ -1,0 +1,42 @@
+{
+  "src/Effect4/Laws/Machine/Clauses.lean": {
+    "before_lines": 2120,
+    "after_lines": 2132,
+    "retained_headers": 175,
+    "added_names": [
+      "evaluatePrim_withFiber_runs"
+    ],
+    "sha256": "e2a336646dc53b647d3579b7829643212df025cdd739bb8bf622123273f7dd04"
+  },
+  "Test/Dogfood/Proofs/HostTimeoutNumberFlow.lean": {
+    "before_lines": 605,
+    "after_lines": 830,
+    "retained_headers": 37,
+    "added_names": [
+      "cancel_restore_saved",
+      "race_cancel_program",
+      "race_cancel_push",
+      "race_cancel_registration_park",
+      "race_cancel_saved",
+      "race_settle_code",
+      "race_settle_mask_native",
+      "race_settle_program",
+      "race_settle_push",
+      "race_settle_saved",
+      "waiting_interrupt_sanitize",
+      "waiting_interrupt_strip"
+    ],
+    "sha256": "bf581b38476043abee41e0d746a7086594d1c4a865c94296c3aafa02debee439"
+  },
+  "docs/research/2026-10-11-machine-models/codex/callback-loop/TimeoutReadyEntryProbe.lean": {
+    "before_lines": 156,
+    "after_lines": 202,
+    "retained_headers": 12,
+    "added_names": [
+      "race_registration",
+      "race_waiting",
+      "waiting_counted"
+    ],
+    "sha256": "e6e3daa6e75b4da30f68fbbf48488201dd1639ea216fb8c7bafef6bfc63cc731"
+  }
+}

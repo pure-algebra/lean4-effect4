@@ -289,7 +289,7 @@ theorem historical_config_refused (w : W) (commands : List RCmd) :
 /-- Concrete no-answer branch: the host is idle, its race key carries the `void` park,
 no countdown remains to read that record, and the command leaves no queued work. -/
 theorem parked : ∃ g, result.1.fibers = [g] ∧ result.1.fiber? Api.root = some g ∧
-    g.id = Api.root ∧ g.pending = [⟨0, none, [], [], .void, false⟩] ∧
+    g.id = Api.root ∧ g.pending = [⟨0, [], [], .void, false⟩] ∧
     g.observers = [] ∧ g.parked = .withGuard 0 ∧ g.running = false ∧ result.2 = [] :=
   ⟨_, rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
 
@@ -310,7 +310,7 @@ def historicalResult :=
 
 theorem historical_parked : ∃ g, historicalResult.1.fibers = [g] ∧
     historicalResult.1.fiber? Api.root = some g ∧ g.id = Api.root ∧
-    g.pending = [⟨0, none, [], [], .void, false⟩] ∧ g.observers = [.countdown Api.root 0] :=
+    g.pending = [⟨0, [], [], .void, false⟩] ∧ g.observers = [.countdown Api.root 0] :=
   ⟨_, rfl, rfl, rfl, rfl, rfl⟩
 
 end Test.Program.RegistrationColumn

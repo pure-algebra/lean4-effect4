@@ -48,11 +48,11 @@ def observerTailWord (interp : RunInterp ν σ β ε δ ι α χ St κ)
             | some _ =>
               match countdownWalk changed.1 pending.remaining (pending.collected ++ [exit]) with
               | (exits, none) => [.update {current with pending := current.pending.map fun p =>
-                  if p.token = token then {p with waitingOn := none, remaining := [], collected := exits} else p}]
+                  if p.token = token then {p with remaining := [], collected := exits} else p}]
               | (exits, some (next, rest)) =>
                 [.update {current with pending := current.pending.map fun p =>
                   if p.token = token then
-                    {p with waitingOn := some next, remaining := rest, collected := exits} else p},
+                    {p with remaining := rest, collected := exits} else p},
                   .observe next (.countdown waiter token)]
   | .raceCallback raceId =>
     match m.race? raceId with
@@ -119,8 +119,9 @@ theorem interrupt_commands_cost (interp : RunInterp ν σ β ε δ ι α χ St �
     (fun target => ⟨evaluateCost target, True.intro⟩) who extra targets acc).1
 
 /-- One actual observer path retains administrative payloads and generated command cost.
-Consumers: release custody, Timeout metadata, and the existing machine-only observer path. -/
-theorem observer_producer_path_metadata
+Consumers: release custody, Timeout metadata, and operation-counter command accounting.
+The actual update retains the counter, independently of saved-frame equality. -/
+theorem observer_producer_path_accounting
     {Edge : RunMachine ν σ β ε δ ι α χ St κ φ η → RunMachine ν σ β ε δ ι α χ St κ φ η →
       Edit ν σ β ε δ ι α χ St κ φ η → Prop}
     (interp : RunInterp ν σ β ε δ ι α χ St κ)
@@ -130,6 +131,7 @@ theorem observer_producer_path_metadata
     (observer : Observer)
     (update : ∀ m target old next, m.fiber? target = some old → next.id = old.id →
       next.frame = old.frame → next.dispatcher = old.dispatcher → next.parked = old.parked →
+      next.currentOpCount = old.currentOpCount →
       (∀ pending ∈ next.pending, ∃ prior ∈ old.pending,
         pending.token = prior.token ∧ pending.resumeWith = prior.resumeWith) →
       next.observers = old.observers → next.exit = old.exit → next.children ⊆ old.children →
@@ -210,7 +212,7 @@ theorem observer_producer_path_metadata
       exact .nil _
     · rename_i fiber found
       simp only [found]
-      exact .cons (update _ _ fiber _ found rfl rfl rfl rfl
+      exact .cons (update _ _ fiber _ found rfl rfl rfl rfl rfl
         (fun pending member => ⟨pending, member, rfl, rfl⟩) rfl rfl
         (fun child member => (List.mem_filter.mp member).1)) (.nil _)
   case case3.refine_1 => exact .cons (halt _ _ _ rfl (by assumption)) (.nil _)
@@ -229,7 +231,7 @@ theorem observer_producer_path_metadata
     rename_i waiter token original pending pendingFound collected fails changed nested current currentFound currentPending currentPendingFound exits walked installed base initialFound choice
     have prior := chosen _ _ _ _ _ _ _ choice
     apply prior.1.append
-    exact .cons (update changed waiter current _ currentFound rfl rfl rfl rfl
+    exact .cons (update changed waiter current _ currentFound rfl rfl rfl rfl rfl
       (by
         intro pending member
         obtain ⟨prior, held, equal⟩ := List.mem_map.mp member
@@ -240,7 +242,7 @@ theorem observer_producer_path_metadata
     rename_i waiter token original pending pendingFound collected fails changed nested current currentFound currentPending currentPendingFound exits next rest walked installed observed base initialFound choice
     have prior := chosen _ _ _ _ _ _ _ choice
     apply prior.1.append
-    exact .cons (update changed waiter current _ currentFound rfl rfl rfl rfl
+    exact .cons (update changed waiter current _ currentFound rfl rfl rfl rfl rfl
       (by
         intro pending member
         obtain ⟨prior, held, equal⟩ := List.mem_map.mp member
@@ -300,6 +302,56 @@ theorem observer_producer_path_metadata
     · rcases List.mem_cons.mp member with rfl | impossible
       · exact (raceProducer _ _ _ _ _ rfl).2
       · cases impossible
+
+/-- The original metadata observer path erases only the retained counter equation. -/
+theorem observer_producer_path_metadata
+    {Edge : RunMachine ν σ β ε δ ι α χ St κ φ η → RunMachine ν σ β ε δ ι α χ St κ φ η →
+      Edit ν σ β ε δ ι α χ St κ φ η → Prop}
+    (interp : RunInterp ν σ β ε δ ι α χ St κ)
+    (weight : Cmd ν σ β ε δ ι α κ → Nat) (Allowed : Cmd ν σ β ε δ ι α κ → Prop)
+    (id : FiberId) (exit : Exit β ε δ ι α)
+    (acc : RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ))
+    (observer : Observer)
+    (update : ∀ m target old next, m.fiber? target = some old → next.id = old.id →
+      next.frame = old.frame → next.dispatcher = old.dispatcher → next.parked = old.parked →
+      (∀ pending ∈ next.pending, ∃ prior ∈ old.pending,
+        pending.token = prior.token ∧ pending.resumeWith = prior.resumeWith) →
+      next.observers = old.observers → next.exit = old.exit → next.children ⊆ old.children →
+      Edge m ((Edit.update next).apply m) (.update next))
+    (observe : ∀ m target observed, observed = observer →
+      Edge m ((Edit.observe target observed).apply m) (.observe target observed))
+    (fired : ∀ m id observer, Edge m (m.emit [.observerFired id observer]) (.emit [.observerFired id observer]))
+    (settled : ∀ m id exit, Edge m (m.emit [.raceSettled id exit]) (.emit [.raceSettled id exit]))
+    (callback : ∀ m key exit, Edge m (m.emit [.callback key exit]) (.emit [.callback key exit]))
+    (state : ∀ m scope key s, observer = .dropScopeFinalizer scope key →
+      interp.dropFinalizer scope key m.state = some s →
+      Edge m ((Edit.setState s).apply m) (.setState s))
+    (halt : ∀ m scope key, observer = .dropScopeFinalizer scope key →
+      interp.dropFinalizer scope key m.state = none →
+      Edge m (m.halt (.unknownScope scope)) (.halt (.unknownScope scope)))
+    (race : ∀ m raceId r, observer = .raceCallback raceId → Edge m (m.updateRace r) (.updateRace r))
+    (interrupted : ∀ who extra targets held, Effect4.Contracts.Path Edge held.1
+      (interruptEach interp who extra targets held).1 (interruptWords interp who extra targets held))
+    (evaluateProducer : ∀ target, weight (.evaluate target) = 0 ∧ Allowed (.evaluate target))
+    (awaitProducer : ∀ waiter token mode, observer = .resumeAwait waiter token mode →
+      weight (.resume waiter token (interp.exitValue exit mode)) = 0 ∧
+      Allowed (.resume waiter token (interp.exitValue exit mode)))
+    (raceProducer : ∀ raceId host token cleanup accepted, observer = .raceCallback raceId →
+      weight (.resume host token (interp.raceSettle raceId cleanup accepted)) = 0 ∧
+      Allowed (.resume host token (interp.raceSettle raceId cleanup accepted)))
+    (countdownProducer : ∀ waiter token fiber pending exits, observer = .countdown waiter token →
+      (acc.1.emit [.observerFired id observer]).fiber? waiter = some fiber → pending ∈ fiber.pending → pending.token = token →
+      weight (.resume waiter token (countdownPark.resumePrim (core := core) interp pending.resumeWith exits)) = 0 ∧
+      Allowed (.resume waiter token (countdownPark.resumePrim (core := core) interp pending.resumeWith exits))) :
+    Effect4.Contracts.Path Edge acc.1 (fireObserver interp id exit acc observer).1
+      (observerWord interp id exit acc.1 observer) ∧
+    (((fireObserver interp id exit acc observer).2).map weight).sum = (acc.2.map weight).sum ∧
+      ∀ command ∈ (fireObserver interp id exit acc observer).2, command ∈ acc.2 ∨ Allowed command := by
+  exact observer_producer_path_accounting interp weight Allowed id exit acc observer
+    (fun m target old next found key frame dispatcher parked _ pending observers exited children =>
+      update m target old next found key frame dispatcher parked pending observers exited children)
+    observe fired settled callback state halt race interrupted evaluateProducer awaitProducer
+    raceProducer countdownProducer
 
 /-- One actual observer path retains administrative payloads and generated command cost.
 Consumers: release custody and the existing machine-only observer path. -/

@@ -113,11 +113,11 @@ theorem types_unit : TypesEach sig unit env path types .unit :=
 /-- The sources have the types, one by one, under one literal flag. -/
 abbrev TypesAll (sig : Signature Op) (srcs : List TermSrc) (env : Env) (path : List Nat)
     (types : List Ty) (const : Bool) (Ts : List Ty) : Prop :=
-  Pointwise (fun src T => Types sig src env path types const T) srcs Ts
+  ListRel (fun src T => Types sig src env path types const T) srcs Ts
 
 theorem argsTy_ok (sig : Signature Op) (types : List Ty) (const : Bool) :
     ∀ (ts : List Term) (Ts : List Ty),
-      Pointwise (fun t T => argTy sig types const t = some T) ts Ts →
+      ListRel (fun t T => argTy sig types const t = some T) ts Ts →
         argsTy sig types const (termsOfList ts) = some Ts
   | [], _, h => by cases h; rfl
   | t :: ts, _, h => by
@@ -129,8 +129,8 @@ theorem argsTy_ok (sig : Signature Op) (types : List Ty) (const : Bool) :
 /-- The trees of sources that type, with the types of the trees. -/
 theorem TypesAll.trees {srcs : List TermSrc} {const : Bool} {Ts : List Ty}
     (h : TypesAll sig srcs env path types const Ts) :
-    ∃ ts, Pointwise (fun (src : TermSrc) t => src env path = .ok t) srcs ts ∧
-      Pointwise (fun t T => argTy sig types const t = some T) ts Ts := by
+    ∃ ts, ListRel (fun (src : TermSrc) t => src env path = .ok t) srcs ts ∧
+      ListRel (fun t T => argTy sig types const t = some T) ts Ts := by
   induction h with
   | nil => exact ⟨[], .nil, .nil⟩
   | cons head _ ih =>

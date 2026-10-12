@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.SourceOpportunityCommands
-import Effect4.Laws.Machine.LiftMachineFact
+import Effect4.Laws.Program.PlaceFunding.History
+import Effect4.Laws.Program.PlaceLedgerConnect
 import Effect4.Laws.Program.NativeReplies
 import Effect4.Laws.Program.ReleaseTrace
 
@@ -25,56 +26,13 @@ theorem budget_decision_lift (root : NativeEff) (q : List Nat) (cap : Nat)
   letI := evaluatorFor root table
   have edits : Lift.MachineEdits (interpOf root table)
       (fun m => ForkLedger.Invariant.Ok m ∧ recorded q m + fibers root q m ≤ cap) := by
-    refine {
-      drain := ?_, ran := ?_, yield := ?_, interrupt := ?_, middleware := ?_,
-      clock := ?_, owed := ?_, prepare := ?_ }
-    · intro m owner fiber held found
-      have ledger := ForkLedger.Invariant.disarm_ok
-        (ForkLedger.Invariant.update_ok held.1 {fiber with dispatcher := fiber.dispatcher.drain.2}) owner
-      have bound := update_total_le root q m fiber {fiber with dispatcher := fiber.dispatcher.drain.2}
-        rfl held.1.idsUnique (List.mem_of_find?_eq_some found) (Nat.le_refl _)
-      exact ⟨ledger, Nat.le_trans bound held.2⟩
-    · intro m owner task held
-      have unchanged := emit_total root q m [RunEvent.ranTask owner task] rfl
-      exact ⟨ForkLedger.Invariant.emit_ok held.1 _, by rw [unchanged]; exact held.2⟩
-    · intro m id verdict held
-      have bound := modify_total_le root q m id (fun fiber => {fiber with yieldOverride := some verdict})
-        held.1.idsUnique (fun _ => rfl) (fun _ => Nat.le_refl _)
-      exact ⟨ForkLedger.Invariant.modify_ok held.1 _ _, Nat.le_trans bound held.2⟩
-    · intro m who extra target fiber held found
-      have frameBound := interrupt_record_le root q table [] who extra fiber
-      have same := Guard.interruptRecord_id root table who extra fiber
-      have edit := update_total_le root q m fiber (interruptRecord (interpOf root table) who extra fiber).1
-        same held.1.idsUnique (List.mem_of_find?_eq_some found) frameBound
-      have ledger : ForkLedger.Invariant.Ok (Lift.interruptEdit (interpOf root table) m who extra target fiber) := by
-        unfold Lift.interruptEdit
-        dsimp only
-        split <;> exact ForkLedger.Invariant.update_ok held.1 _
-      refine ⟨ledger, ?_⟩
-      unfold Lift.interruptEdit
-      dsimp only
-      split
-      · change recorded q (((m.update (interruptRecord (interpOf root table) who extra fiber).1).emit
-            [RunEvent.interruptRecorded who target]).emit [RunEvent.interruptDeferred target]) +
-          fibers root q (m.update (interruptRecord (interpOf root table) who extra fiber).1) ≤ cap
-        rw [recorded_emit, recorded_emit]
-        simp only [List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, runEvent, Nat.add_zero]
-        exact Nat.le_trans edit held.2
-      · change recorded q ((m.update (interruptRecord (interpOf root table) who extra fiber).1).emit
-            [RunEvent.interruptRecorded who target]) +
-          fibers root q (m.update (interruptRecord (interpOf root table) who extra fiber).1) ≤ cap
-        rw [recorded_emit]
-        simp only [List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, runEvent, Nat.add_zero]
-        exact Nat.le_trans edit held.2
-    · intro m held
-      exact held
-    · intro m millis held running
-      exact held
-    · intro m owed held
-      exact ⟨ForkLedger.Invariant.drainOwed_ok m [owed] held.1,
-        Nat.le_trans (drain_owed_total_le root q m [owed] held.1.idsUnique) held.2⟩
-    · intro m id token answer held
-      exact held
+    have predicate : PlaceFunding.Holds (PlaceLedgerConnect.source root q) cap =
+        (fun m => ForkLedger.Invariant.Ok m ∧ recorded q m + fibers root q m ≤ cap) := by
+      funext m
+      exact propext (and_congr_right fun _ => PlaceLedgerConnect.source_funded root q cap m)
+    rw [← predicate]
+    exact PlaceFunding.edits (source_control root q) (source_no_queue root q) (source_events root q)
+        cap (interpOf root table) (fun _ _ => Nat.le_refl _) (fun _ _ _ _ => Nat.le_refl _)
   apply (reply_decision_lift root fragment table).withMachineFact _ ?_ edits ?_
   · intro tasks world m command rest running source held
     have queue := (source.2 running).1

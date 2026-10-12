@@ -1,4 +1,5 @@
 import Effect4.Laws.Auto.Obligations
+import Effect4.Laws.Data.ListRel
 import Effect4.Laws.Machine.Behaviour
 
 /-!
@@ -24,7 +25,7 @@ programs the deferred cells may hold, so that the term instance can read them ba
 the absence of `Resume.continueWith` parks, which no arm of the machine produces and the
 term instance has no reading of. The step obligation preserves it beside the book.
 
-Core v4.33.1 has no `List.Forall₂`; `ListRel` is the pairwise relation at one universe.
+Core v4.33.1 has no `List.Forall₂`; `Effect4.ListRel` owns the shared pairwise list relation.
 -/
 
 set_option autoImplicit false
@@ -38,54 +39,9 @@ universe u v w w'
 
 /-! ## Pairwise relations -/
 
-/-- What `List.Forall₂` would be. -/
-inductive ListRel {α β : Type w} (R : α → β → Prop) : List α → List β → Prop
-  | nil : ListRel R [] []
-  | cons {a b l l'} : R a b → ListRel R l l' → ListRel R (a :: l) (b :: l')
-
 theorem cons_eq_of {α : Type w} {a b : α} {l l' : List α} (h : a = b) (h' : l = l') :
     a :: l = b :: l' :=
   by aesop
-
-theorem ListRel.append {α β : Type w} {R : α → β → Prop} {l₁ l₂ r₁ r₂}
-    (h : ListRel R l₁ l₂) (h' : ListRel R r₁ r₂) : ListRel R (l₁ ++ r₁) (l₂ ++ r₂) := by
-  induction h with
-  | nil => exact h'
-  | cons hd _ ih => exact ListRel.cons hd ih
-
-theorem ListRel.isEmpty {α β : Type w} {R : α → β → Prop} {l₁ l₂}
-    (h : ListRel R l₁ l₂) : l₁.isEmpty = l₂.isEmpty := by
-  cases h <;> rfl
-
-theorem ListRel.length {α β : Type w} {R : α → β → Prop} {l₁ l₂}
-    (h : ListRel R l₁ l₂) : l₁.length = l₂.length := by
-  induction h with
-  | nil => rfl
-  | cons _ _ ih => simp only [List.length_cons, ih]
-
-theorem ListRel.map {α β : Type w} {R : α → β → Prop} {l₁ l₂}
-    (h : ListRel R l₁ l₂) {γ : Type w'} {g₁ : α → γ} {g₂ : β → γ}
-    (hg : ∀ a b, R a b → g₁ a = g₂ b) : l₁.map g₁ = l₂.map g₂ := by
-  induction h with
-  | nil => rfl
-  | cons hd _ ih => exact cons_eq_of (hg _ _ hd) ih
-
-theorem ListRel.of_map {α β : Type w} {R : α → β → Prop} {l₁ : List α} {l₂ : List β}
-    {γ : Type w'} {g₁ : α → γ} {g₂ : β → γ} (h : ListRel R l₁ l₂)
-    {P : γ → γ → Prop} (hg : ∀ a b, R a b → P (g₁ a) (g₂ b)) :
-    ListRel P (l₁.map g₁) (l₂.map g₂) := by
-  induction h with
-  | nil => exact ListRel.nil
-  | cons hd _ ih => exact ListRel.cons (hg _ _ hd) ih
-
-theorem ListRel.refl {α : Type w} {R : α → α → Prop} (hr : ∀ a, R a a) :
-    ∀ l : List α, ListRel R l l
-  | [] => ListRel.nil
-  | a :: l => ListRel.cons (hr a) (ListRel.refl hr l)
-
-theorem ListRel.of_eq {α : Type w} {R : α → α → Prop} (hr : ∀ a, R a a) {l l' : List α}
-    (h : l = l') : ListRel R l l' := by
-  subst h; exact ListRel.refl hr l
 
 /-- The fold law every `List.foldl` in the loop needs (`fireStep`, `interruptEach`,
 `fireObserver`): one lemma, used everywhere. -/
@@ -135,10 +91,10 @@ def BucketMeans (C : κ₁ → κ₂ → Prop)
     (b₁ : Bucket ν σ β ε δ ι α κ₁) (b₂ : Bucket ν σ β ε δ ι α κ₂) : Prop :=
   b₁.priority = b₂.priority ∧ ListRel (TaskMeans C) b₁.tasks b₂.tasks
 
-/-- `Dispatcher`: buckets in priority order plus the armed latch. -/
+/-- `Dispatcher`: related buckets in priority order. -/
 def DispatcherMeans (C : κ₁ → κ₂ → Prop)
     (d₁ : Dispatcher ν σ β ε δ ι α κ₁) (d₂ : Dispatcher ν σ β ε δ ι α κ₂) : Prop :=
-  ListRel (BucketMeans C) d₁.buckets d₂.buckets ∧ d₁.armed = d₂.armed
+  ListRel (BucketMeans C) d₁.buckets d₂.buckets
 
 /-- `Race`: nine code-free fields, including selection mode and selected child, and the unforked entrant programs. -/
 def RaceMeans (C : κ₁ → κ₂ → Prop)
@@ -602,7 +558,7 @@ theorem dispatcherMeans_enqueue {d₁ : Dispatcher ν σ β ε δ ι α κ₁} {
     (hd : DispatcherMeans C d₁ d₂) (priority : Nat) {t₁ : Task ν σ β ε δ ι α κ₁}
     {t₂ : Task ν σ β ε δ ι α κ₂} (ht : TaskMeans C t₁ t₂) :
     DispatcherMeans C (d₁.enqueue priority t₁) (d₂.enqueue priority t₂) :=
-  ⟨listRel_insert priority ht hd.1, rfl⟩
+  listRel_insert priority ht hd
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem fiberMeans_enqueue {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
@@ -780,7 +736,7 @@ theorem flatten_tasks_rel {l₁ : List (Bucket ν σ β ε δ ι α κ₁)}
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem drain_rel {d₁ : Dispatcher ν σ β ε δ ι α κ₁}
     {d₂ : Dispatcher ν σ β ε δ ι α κ₂} (h : DispatcherMeans C d₁ d₂) :
-    ListRel (TaskMeans C) (d₁.drain).1 (d₂.drain).1 := flatten_tasks_rel h.1
+    ListRel (TaskMeans C) (d₁.drain).1 (d₂.drain).1 := flatten_tasks_rel h
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem fiberMeans_drained {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
@@ -790,7 +746,7 @@ theorem fiberMeans_drained {f₁ : RunFiber ν σ β ε δ ι α χ κ₁ φ₁}
   ⟨hf.1, hf.2.1, hf.2.2.1, hf.2.2.2.1, hf.2.2.2.2.1, hf.2.2.2.2.2.1,
     hf.2.2.2.2.2.2.1, hf.2.2.2.2.2.2.2.1, hf.2.2.2.2.2.2.2.2.1,
     hf.2.2.2.2.2.2.2.2.2.1, hf.2.2.2.2.2.2.2.2.2.2.1,
-    ⟨ListRel.nil, rfl⟩, hf.2.2.2.2.2.2.2.2.2.2.2.2⟩
+    ListRel.nil, hf.2.2.2.2.2.2.2.2.2.2.2.2⟩
 
 theorem book_fireStep (hstep : StepAgrees i₁ i₂ StOk C S) (fuel : Nat) (owner : FiberId)
     {a₁ : RunMachine ν σ β ε δ ι α χ St κ₁ φ₁ η₁ × Bool}
@@ -903,7 +859,7 @@ theorem flushRootState_succ (i : RunInterp ν σ β ε δ ι α χ St κ₁) (fu
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 theorem dispatcherMeans_isEmpty {d₁ : Dispatcher ν σ β ε δ ι α κ₁}
     {d₂ : Dispatcher ν σ β ε δ ι α κ₂} (h : DispatcherMeans C d₁ d₂) :
-    d₁.buckets.isEmpty = d₂.buckets.isEmpty := ListRel.isEmpty h.1
+    d₁.buckets.isEmpty = d₂.buckets.isEmpty := ListRel.isEmpty h
 
 theorem book_flushRootState (hstep : StepAgrees i₁ i₂ StOk C S) (fuel : Nat) (root : FiberId) :
     ∀ (rounds : Nat) (a : RunMachine ν σ β ε δ ι α χ St κ₁ φ₁ η₁)

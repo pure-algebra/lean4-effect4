@@ -338,7 +338,7 @@ theorem attempt_register (machine : NativeMachine) (fiber : HostTimeoutEvaluatio
     let result := evaluateNative HostTimeoutSource.program machine fiber yielding Scenario.Timeout.fetch.table
     result.machine.state = machine.state ∧ result.fiber.id = fiber.id ∧
       result.fiber.parked = .withGuard machine.nextToken ∧
-      (⟨machine.nextToken, none, [], [], .void, false⟩ : Pending EffName Val Err Defect FiberId Ann) ∈ result.fiber.pending ∧
+      (⟨machine.nextToken, [], [], .void, false⟩ : Pending EffName Val Err Defect FiberId Ann) ∈ result.fiber.pending ∧
       AnswerFlow.FrameAt (model machine.completedExits) (interpreter machine.completedExits).toPrimInterp
         result.machine.state output result.fiber.frame ∧ result.nested = [] ∧ result.edits = [] := by
   dsimp only

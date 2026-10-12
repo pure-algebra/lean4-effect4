@@ -1,0 +1,2 @@
+COMMAND: lean --root=/private/tmp/effect4-place-counter-current -DwarningAsError=true -o /private/tmp/effect4-place-counter-current/CounterAudit.olean /private/tmp/effect4-place-counter-current/CounterAudit.lean
+#axiom_audit: 29 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals

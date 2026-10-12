@@ -2,6 +2,7 @@ import Test.Dogfood.Scenario.Atomic.WriterFinalizers
 import Effect4.Laws.Machine.Approximation
 import Effect4.Laws.Program.NativeReferences
 import Effect4.Laws.Program.PlaceLedgerConnect
+import Effect4.Laws.Program.PlaceFunding.Primitive
 
 /-!
 Concept: scope-lifetime-finalization, R11.
@@ -132,12 +133,18 @@ theorem same_rows_debit (id : Nat) (machine : NativeMachine) (fiber : SourceFibe
     (next : SourceIteration) (rows : next.machine.fibers = machine.fibers)
     (bounded : Writer.heapCount id next.machine.state.refs + frame id next.fiber.frame + issued id machine ≤
       Writer.heapCount id machine.state.refs + frame id fiber.frame + issued id next.machine) : Debit id machine fiber next := by
-  have same : outside id fiber.id next.machine = outside id fiber.id machine := by
-    unfold outside Machine.WriterWeights.outside
-    rw [rows]
-  unfold Debit
-  rw [same]
-  omega
+  have quiet : PlaceFunding.NoQueue (ledger id) := ⟨fun _ => rfl, fun _ => rfl, fun _ => rfl⟩
+  have arithmetic : (ledger id).spent next.machine + (ledger id).state next.machine.state +
+      (ledger id).fiber next.fiber + (ledger id).issued machine ≤
+        (ledger id).spent machine + (ledger id).state machine.state +
+        (ledger id).fiber fiber + (ledger id).issued next.machine := by
+    simpa only [PlaceLedger.spent, PlaceLedger.issued, ledger, PlaceLedger.zero_sum,
+      Nat.zero_add, FinalizerCredits.indicator_sum, issued] using bounded
+  have debit := quiet.local_debit machine fiber next rows arithmetic
+  simpa only [PlaceLedger.IterDebit, PlaceLedger.spent, PlaceLedger.issued, PlaceLedger.outside,
+    ledger, PlaceLedger.zero_sum, Nat.zero_add, Nat.add_zero, FinalizerCredits.indicator_sum,
+    Debit, outside, Machine.WriterWeights.outside, FiberSum.outside, FiberSum.total, issued,
+    Machine.FrameWeights.frame, model, frame] using debit
 
 /-- Actual frame delegation transfers the heap and active writer budget. -/
 theorem step_frame_debit (built : Api.Built) (admitted : Api.Author.build (shop .none) = .ok built)

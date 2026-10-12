@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.SourceOpportunityNative
-import Effect4.Laws.Program.PrimitiveProducer
+import Effect4.Laws.Program.PlaceFunding.Primitive
+import Effect4.Laws.Program.PlaceLedgerConnect
 
 /-!
 Concept: scope-lifetime-finalization R11.
@@ -11,18 +12,78 @@ set_option maxHeartbeats 4000000
 namespace Effect4.Program.SourceScope.Opportunities
 open Effect4 Effect4.Machine Effect4.Program
 
+/-- Source reservations instantiate shared row control.
+Consumer: the existing primitive source debit under R11. -/
+theorem source_control (root : NativeEff) (q : List Nat) :
+    PlaceFunding.Control (PlaceLedgerConnect.source root q) (fun code => current root q code = 0) where
+  metadata := by
+    intro old next _ active saved _
+    change frame root q next.frame ≤ frame root q old.frame
+    simp only [frame, active, saved, Nat.le_refl]
+  interruption := Machine.WriterWeights.interrupt_weight_le (weightModel root q)
+  replace := by
+    intro fiber code free
+    change frame root q {fiber.frame with current := code} ≤ frame root q fiber.frame
+    simp only [frame, free, Nat.zero_add]
+    omega
+  entry := by
+    intro owner code flag budget context free
+    simp only [PlaceLedgerConnect.source, RunFiber.make, FrameFiber.start, frame, free,
+      List.map_nil, List.sum_nil, Nat.add_zero]
+  clear := by
+    intro fiber
+    change frame root q {fiber.frame with stack := []} ≤ frame root q fiber.frame
+    simp only [frame, List.map_nil, List.sum_nil, Nat.add_zero]
+    omega
+
+
+/-- Source accounting assigns zero weight to unrelated queued places.
+Consumer: primitive and admitted-history place funding. -/
+theorem source_no_queue (root : NativeEff) (q : List Nat) :
+    PlaceFunding.NoQueue (PlaceLedgerConnect.source root q) :=
+  ⟨fun _ => rfl, fun _ => rfl, fun _ => rfl⟩
+
+/-- The original local source observation is the shared place reading.
+Consumer: primitive interpretation and frame delegation. -/
+private theorem source_debit_iff (root : NativeEff) (q : List Nat) (m : NativeMachine)
+    (fiber : SourceFiber) (next : SourceIteration) :
+    (PlaceLedgerConnect.source root q).IterDebit m fiber next ↔ Debit root q m fiber next := by
+  simp only [PlaceLedger.IterDebit, PlaceLedger.outside, PlaceLedger.spent, PlaceLedger.issued,
+    PlaceLedgerConnect.source, PlaceLedger.zero_sum, Nat.zero_add, Nat.add_zero, FiberSum.outside,
+    outside, recorded, Debit]
+
+/-- Administrative events consume no selected source registration.
+Consumer: primitive place accounting. -/
+theorem source_events (root : NativeEff) (q : List Nat) :
+    PlaceFunding.Events (PlaceLedgerConnect.source root q) where
+  administrative := by
+    intro recordedEvent allowed
+    change runEvent q recordedEvent ≤ 0
+    fun_cases runEvent q recordedEvent
+    · cases allowed
+    · exact Nat.le_refl _
+
 /-- A machine edit which keeps stored frames lifts an acting-frame debit.
 Consumer: primitive frame delegation and finalizer invocation. -/
 theorem same_rows_debit (root : NativeEff) (q : List Nat) (m : NativeMachine)
     (fiber : SourceFiber) (next : SourceIteration) (rows : next.machine.fibers = m.fibers)
     (localBound : recorded q next.machine + frame root q next.fiber.frame ≤
       recorded q m + frame root q fiber.frame) : Debit root q m fiber next := by
-  have unchanged : outside root q fiber.id next.machine = outside root q fiber.id m := by
-    unfold outside
-    rw [rows]
-  unfold Debit
-  rw [unchanged]
-  omega
+  have quiet := source_no_queue root q
+  have bounded : (PlaceLedgerConnect.source root q).spent next.machine +
+      (PlaceLedgerConnect.source root q).state next.machine.state +
+      (PlaceLedgerConnect.source root q).fiber next.fiber +
+      (PlaceLedgerConnect.source root q).issued m ≤
+        (PlaceLedgerConnect.source root q).spent m +
+        (PlaceLedgerConnect.source root q).state m.state +
+        (PlaceLedgerConnect.source root q).fiber fiber +
+        (PlaceLedgerConnect.source root q).issued next.machine := by
+    simpa only [PlaceLedgerConnect.source, PlaceLedger.spent, PlaceLedger.issued,
+      PlaceLedger.zero_sum, Nat.add_zero, recorded] using localBound
+  have debit := quiet.local_debit m fiber next rows bounded
+  simpa only [PlaceLedger.IterDebit, PlaceLedger.outside, PlaceLedger.spent, PlaceLedger.issued,
+    PlaceLedgerConnect.source, PlaceLedger.zero_sum, Nat.zero_add, Nat.add_zero, FiberSum.outside,
+    outside, recorded, Debit] using debit
 
 /-- Actual frame delegation includes its trace before the owner row is installed.
 Consumer: complete primitive evaluation. -/
@@ -58,20 +119,9 @@ Consumer: native Async primitive evaluation. -/
 theorem register_reply_zero (root : NativeEff) (q : List Nat) (table : RowTable)
     (m : NativeMachine) (callback : EffName) (id : FiberId) (token : Nat) (code : NCode)
     (produced : ((interpAt root m.completedExits table).registerAsync callback id token m.state).2 = some code) :
-    current root q code = 0 := by
-  cases callback
-  case registerAwait cell =>
-    obtain ⟨answer, _, result⟩ := Option.map_eq_some_iff.mp produced
-    rw [← result]
-    exact terminal_reply_zero root q _ (completion_reply answer)
-  case store callback =>
-    cases callback
-    case registerAwait cell =>
-      obtain ⟨answer, _, result⟩ := Option.map_eq_some_iff.mp produced
-      rw [← result]
-      exact terminal_reply_zero root q _ (completion_reply answer)
-    all_goals cases produced
-  all_goals cases produced
+    current root q code = 0 :=
+  terminal_reply_zero root q code
+    (register_reply root m.completedExits table callback id token m.state code produced)
 
 /-- A race-free source history contains no runtime race row.
 Consumer: actual race-park and race command exclusion in the application helper. -/
@@ -162,68 +212,49 @@ theorem primitive_debit (root : NativeEff) (q : List Nat) (fragment : Fragment r
     have callbacks := held.frame.1
     rw [selected] at callbacks
     exact fun callback member => async_cancel_zero q callback (callbacks.2 callback member).2
-  have noRaces := races_nil root m raceFree owned
-  have frames := frame_primitive_debit root q fragment clearFin clearLoop table m fiber yielding held.frame
-  have finalizers (exit : ExitV) := finalizer_primitive_debit root q fragment clearFin clearLoop table m fiber yielding exit held.frame
-  generalize evaluated : evaluatePrim (interpAt root m.completedExits table) m fiber yielding = next
-  have actual := Moves.evaluatePrim_producer (interpAt root m.completedExits table) m fiber yielding
-  rw [evaluated] at actual
-  cases actual with
-  | yieldNow priority selected =>
-    unfold Debit
-    simp only [recorded_emit, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, runEvent, Nat.add_zero]
-    change recorded q m + outside root q fiber.id m + frame root q _ ≤ _
-    dsimp only [RunFiber.park]
-    simp only [frame, current, cata_prim, Nat.zero_add]
-    omega
-  | asyncParked register signal cancel state selected produced =>
-    have empty := cancellation register signal cancel selected
-    have cancellationZero : name q ((interpAt root m.completedExits table).cancelName
-        (cancel.getD (interpAt root m.completedExits table).abortName) fiber.id m.nextToken) = 0 := by
-      cases cancel with
-      | none => rfl
-      | some callback => exact empty callback rfl
-    unfold Debit
-    simp only [recorded_emit, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, runEvent, Nat.add_zero]
-    change recorded q m + outside root q fiber.id m + frame root q _ ≤ _
-    dsimp only [RunFiber.park]
-    split
-    · simp only [frame, List.map_cons, List.sum_cons, saved, cancellationZero, Nat.zero_add]
-      exact Nat.le_refl _
-    · exact Nat.le_refl _
-  | countdownPark targets machine returned parked edits selected counted =>
-    have debit := countdown_plan_debit root q table m fiber yielding targets .exitsValue false trivial
-    rw [counted] at debit
-    exact debit
-  | joinWaiting target mode targetFiber park found noExit =>
-    have cancelZero : name q ((interpAt root m.completedExits table).cancelName
-        (interpAt root m.completedExits table).parkCancelName fiber.id m.nextToken) = 0 := rfl
-    unfold Debit
-    simp only [recorded_emit, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, runEvent, Nat.add_zero]
-    change recorded q m + outside root q fiber.id m + frame root q _ ≤ _
-    dsimp only [RunFiber.park]
-    simp only [frame, List.map_cons, List.sum_cons, saved, cancelZero, Nat.zero_add]
-    exact Nat.le_refl _
-  | asyncImmediate register signal cancel state program selected produced =>
-    have zero := register_reply_zero root q table m register fiber.id m.nextToken program
-      (congrArg Prod.snd produced)
-    exact answer_debit root q m {m with state, nextToken := m.nextToken + 1}
-      fiber yielding program .continue_ [.drainDue] rfl rfl zero
-  | racePark race park =>
-    exact register_race_debit root q m fiber yielding race noRaces
-  | joinExited target mode targetFiber exit park found finished =>
-    exact answer_debit root q m m fiber yielding _ .continue_ [] rfl rfl
-      (exit_answer_zero root q table m exit mode)
-  | sync thunk state value selected park produced =>
-    exact answer_debit root q m {m with state} fiber yielding (.success value) .answered [.drainDue] rfl rfl rfl
-  | step unparked ordinary noSync noSuccess noFailure noYield noAsync => exact frames
-  | finalizer exit selected => exact finalizers exit
-  | action thunk next selected park produced => exact actionDebit thunk next selected produced
-  | fallback thunk selected park missing =>
-    exact answer_debit root q m m fiber yielding _ .answered [] rfl rfl rfl
-  | rejectedPark cause park =>
-    exact answer_debit root q m m fiber yielding _ .continue_ [] rfl rfl rfl
-  | joinMissing target mode park missing => exact Nat.le_refl _
+  have asLedger (next : SourceIteration) (debit : Debit root q m fiber next) :
+      (PlaceLedgerConnect.source root q).IterDebit m fiber next :=
+    (source_debit_iff root q m fiber next).mpr debit
+  have quiet := source_no_queue root q
+  have inputs : PlaceFunding.PrimitiveInputs (PlaceLedgerConnect.source root q)
+      (fun code => current root q code = 0) (interpAt root m.completedExits table) m fiber yielding := {
+    success := fun _ => rfl
+    failure := fun _ => rfl
+    exitValue := exit_answer_zero root q table m
+    step := asLedger _ (frame_primitive_debit root q fragment clearFin clearLoop table m fiber yielding held.frame)
+    finalizer := fun exit => asLedger _ (finalizer_primitive_debit root q fragment clearFin clearLoop table m fiber yielding exit held.frame)
+    action := fun suspended next selected produced => asLedger _ (actionDebit suspended next selected produced)
+    sync := by
+      intro suspended state value _ _
+      simp only [PlaceLedgerConnect.source, frame, current, cata_prim, Nat.zero_add]
+      omega
+    registerState := fun _ _ _ _ _ _ _ => Nat.le_refl _
+    registerReply := fun register _ _ _ program _ produced =>
+      register_reply_zero root q table m register fiber.id m.nextToken program (congrArg Prod.snd produced)
+    cancel := by
+      intro register signal cancel state selected _
+      have empty := cancellation register signal cancel selected
+      have zero : name q ((interpAt root m.completedExits table).cancelName
+          (cancel.getD (interpAt root m.completedExits table).abortName) fiber.id m.nextToken) = 0 := by
+        cases cancel with
+        | none => rfl
+        | some callback => exact empty callback rfl
+      change frame root q {fiber.frame with stack := .asyncFinalizer ((interpAt root m.completedExits table).cancelName
+        (cancel.getD (interpAt root m.completedExits table).abortName) fiber.id m.nextToken) :: fiber.frame.stack} ≤ frame root q fiber.frame
+      simp only [frame, List.map_cons, List.sum_cons, saved, zero, Nat.zero_add, Nat.le_refl]
+    joinCancel := by
+      change frame root q {fiber.frame with stack := .asyncFinalizer ((interpAt root m.completedExits table).cancelName
+        (interpAt root m.completedExits table).parkCancelName fiber.id m.nextToken) :: fiber.frame.stack} ≤ frame root q fiber.frame
+      simp only [frame, List.map_cons, List.sum_cons, saved, interpAt, interpOf, name, Nat.zero_add, Nat.le_refl]
+    countdown := by
+      intro targets machine returned parked edits _ counted
+      have debit := countdown_plan_debit root q table m fiber yielding targets .exitsValue false trivial
+      rw [counted] at debit
+      exact asLedger _ debit
+    race := fun race _ => asLedger _ (register_race_debit root q m fiber yielding race (races_nil root m raceFree owned)) }
+  exact (source_debit_iff root q m fiber _).mp
+    (PlaceFunding.primitive_debit quiet (source_control root q) (source_events root q)
+      (interpAt root m.completedExits table) m fiber yielding inputs)
 
 /-- A primitive exit does not edit the stored fiber rows before settlement.
 Consumer: scoped-exit and native evaluator debit. -/

@@ -501,6 +501,7 @@ def argsFor (g : Name) (as : List (Arg .pure)) : TM (List Ml.Expr) := do
 /-- A constructor application. -/
 def ctorApp (ci : ConstructorVal) (args : Array (Arg .pure)) : TM Ml.Expr := do
   let ex ← readExterns
+  let env ← readEnv
   let fieldArgs := args.extract ci.numParams args.size
   let fnames := ctorFieldNames ci
   -- a relevant field takes the carrier raw iff a `field` row gives that field this carrier
@@ -509,9 +510,15 @@ def ctorApp (ci : ConstructorVal) (args : Array (Arg .pure)) : TM Ml.Expr := do
   for a in fieldArgs, fn in fnames do
     if let some e ← argExpr? a then
       let e ← match ← argCarrier? a with
-        | none => pure e
+        | none =>
+          match ex.fieldCarrierIn? env ci.induct fn.toString, a with
+          | some c, .fvar id =>
+            match (← get).listLit[id]? with
+            | some none => pure ((← carrierOp? c "empty" []).getD e)
+            | _ => pure e
+          | _, _ => pure e
         | some c =>
-          if ex.fieldCarrier? ci.induct fn.toString == some c then pure e
+          if ex.fieldCarrierIn? env ci.induct fn.toString == some c then pure e
           else useAsList s!"{ci.name}.{fn}" c e
       rel := rel ++ [e]
       named := named ++ [(fieldName fn.toString, e)]
@@ -666,7 +673,7 @@ def letValueExpr (declName : Name) (v : LetValue .pure) : TM (Ml.Expr × Option 
           noteReal typeName
           let fld := (names[i]?.getD (Name.mkSimple s!"_{i}")).toString
           -- reading a `field`-row field is where a carrier enters a declaration
-          return (.field sv (fieldName fld), (← readExterns).fieldCarrier? typeName fld)
+          return (.field sv (fieldName fld), (← readExterns).fieldCarrierIn? env typeName fld)
         else
           todo s!"{declName}: proj on {typeName} #{i} (a single-constructor inductive that is not a structure)"
           return (.hole s!"proj {typeName} #{i}" (.assertE (.bool false)), none)
@@ -781,7 +788,7 @@ def altPat (ctor : Name) (ps : Array (LCNF.Param .pure)) (usedVars : FVarIdHashS
         let mut omitted := false
         for p? in pats, n in names, p in ps do
           -- binding a `field`-row field is the other place a carrier enters a declaration
-          if let some c := ex.fieldCarrier? ci.induct n.toString then
+          if let some c := ex.fieldCarrierIn? env ci.induct n.toString then
             if p? matches some (.var _) then setCarrier p.fvarId c
           match p? with
           | some (.var v) => fields := fields ++ [(fieldName n.toString, .var v)]

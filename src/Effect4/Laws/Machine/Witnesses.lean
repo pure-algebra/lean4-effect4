@@ -241,8 +241,8 @@ def callbackRows (m : M) : List (Nat × List Nat) :=
     | RunEvent.callback key exit => some (key, exitCode exit)
     | _ => none
 
-/-- Whether a fiber's dispatcher is armed (`Scheduler.ts:207-212`). -/
-def armedOf (m : M) (id : Nat) : Option Bool := (m.fiber? ⟨id⟩).map fun f => f.dispatcher.armed
+/-- Whether the actual fiber dispatcher has queued tasks (`Scheduler.ts:207-212`). -/
+def armedOf (m : M) (id : Nat) : Option Bool := (m.fiber? ⟨id⟩).map fun f => !f.dispatcher.buckets.isEmpty
 
 /-- The host callbacks scheduled, in arming order (R2-15). -/
 def armedQueueOf (m : M) : List Nat := m.armed.map FiberId.value

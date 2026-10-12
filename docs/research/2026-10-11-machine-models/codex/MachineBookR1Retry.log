@@ -1,0 +1,339 @@
+✔ [821/829] Built Effect4.Laws.Data.ListRelConnectors (2.8s)
+✔ [822/830] Built Effect4.Laws.Program.Typing.FoldAgreement (2.2s)
+✔ [823/830] Built Effect4.Laws.Program.Typed.Commands.Clauses.Async (5.8s)
+✔ [825/834] Built Effect4.Laws.Step.Store (2.5s)
+✔ [826/834] Built Effect4.Laws.Program.Typed.Commands.Clauses.All (2.4s)
+✔ [827/834] Built Effect4.Library.Waiting (793ms)
+✔ [828/836] Built Effect4.Laws.Program.Typed.Frames (10s)
+✔ [829/836] Built Effect4.Laws.Program.Typed.AdmittedSource (2.6s)
+✔ [830/836] Built Effect4.Laws.Library.Queue.Reading (3.1s)
+✔ [831/839] Built Effect4.Laws.Program.Typed.Results (2.4s)
+✔ [832/839] Built Effect4.Library.Queue.Ops (1.9s)
+✔ [834/842] Built Effect4.Laws.Step.Waiting (4.4s)
+✔ [835/842] Built Effect4.Laws.Library.Semaphore.Typing (3.0s)
+✔ [836/842] Built Effect4.Laws.Library.Semaphore.Reading (3.0s)
+✔ [837/845] Built Effect4.Laws.Library.Semaphore.Steps (3.7s)
+✔ [838/845] Built Effect4.Library.Semaphore.Ops (1.0s)
+✔ [839/847] Built Effect4.Laws.Library.Queue.OfferData (12s)
+✔ [840/847] Built Effect4.Laws.Library.Semaphore.Ops (6.3s)
+✔ [841/848] Built Effect4.Laws.Library.Queue.Steps (6.2s)
+✔ [842/848] Built Effect4.Laws.Library.Pool.Passes (9.6s)
+✔ [843/850] Built Effect4.Laws.Library.Pool.Reading (5.7s)
+✔ [844/850] Built Effect4.Laws.Library.Pool.Steps (4.7s)
+✔ [845/855] Built Effect4.Library.Pool.Ops (925ms)
+✔ [848/855] Built Effect4.Library.Stream.Steps (752ms)
+✔ [849/855] Built Effect4.Laws.Library.Stream.Typing (2.7s)
+✔ [850/859] Built Effect4.Laws.Library.Stream.Steps (2.5s)
+✔ [851/862] Built Effect4.Program.Stream (634ms)
+✔ [852/862] Built Effect4.Library.Pull.Ops (698ms)
+✔ [853/862] Built Effect4.Library.Stream.Source (674ms)
+✔ [855/862] Built Effect4.Laws.Library.Pull.Scope (2.2s)
+✔ [856/864] Built Effect4.Library.Stream.Ops (734ms)
+✔ [857/864] Built Effect4.Laws.Library.Stream.Ops (2.3s)
+✔ [858/864] Built Effect4.Step.Callback (600ms)
+✔ [859/867] Built Effect4.Laws.Step.Callback (2.5s)
+✔ [860/867] Built Effect4.Program.Typing.Splice (585ms)
+✔ [861/871] Built Effect4.Program.Typing.PartsTable (892ms)
+✔ [862/871] Built Effect4.Laws.Library.Pool.Typing (68s)
+✔ [863/871] Built Effect4.Program.Edit (1.6s)
+✔ [864/874] Built Effect4.Laws.Library.Pool.Ops (5.4s)
+✔ [865/876] Built Effect4.Program.SketchWire (773ms)
+✔ [867/878] Built Effect4.Laws.Library.Queue.Typing (82s)
+✔ [869/878] Built Effect4.Laws.Program.SketchWire (2.1s)
+✔ [870/880] Built Effect4.Schema.Modeled.Derive (3.7s)
+✔ [871/882] Built Effect4.Laws.Library.Queue.Ops (4.5s)
+✔ [873/885] Built Effect4.Laws.Program.Typing.Rebase (3.6s)
+✔ [877/891] Built Effect4.Laws.Author.Explain (4.3s)
+✔ [879/892] Built Effect4.Library.PartitionedSemaphore.Cell (1.8s)
+✔ [880/892] Built Effect4.Laws.Library.Ref.Operations (2.4s)
+✔ [882/894] Built Effect4.Library.PartitionedSemaphore.Data (1.9s)
+✔ [883/894] Built Effect4.Laws.Program.Typing.Splice (38s)
+✔ [884/894] Built Effect4.Laws.Library.Ref.Callback (2.7s)
+✔ [885/895] Built Effect4.Library.Stream.ArraySteps (592ms)
+✔ [886/899] Built Effect4.Library.PartitionedSemaphore.Steps (1.7s)
+✔ [887/899] Built Effect4.Laws.Library.PartitionedSemaphore.Data (2.5s)
+✔ [888/899] Built Effect4.Program.Authoring.Defs (792ms)
+✔ [889/899] Built Effect4.Library.Stream.ArrayOps (818ms)
+✔ [890/902] Built Effect4.Laws.Library.PartitionedSemaphore.Steps (3.4s)
+✔ [891/902] Built Effect4.Program.Authoring.Declare (3.6s)
+✔ [892/906] Built Effect4.Library.SynchronizedRef.Cell (718ms)
+✔ [893/908] Built Effect4.Library.SynchronizedRef.Ops (1.2s)
+✔ [895/909] Built Effect4.Laws.Library.SynchronizedRef.Ops (3.8s)
+✔ [896/909] Built Effect4.Program.Authoring.Module (6.2s)
+✔ [897/909] Built Effect4.Library.PubSub.Cell (2.2s)
+✔ [898/912] Built Effect4.Laws.Library.Pull.Protocol (2.9s)
+✔ [899/912] Built Effect4.Library.Stream.ArrayDefs (2.2s)
+✔ [900/914] Built Effect4.Library.Channel.Ops (949ms)
+✔ [901/914] Built Effect4.Library.PubSub.Data (2.3s)
+✔ [902/914] Built Effect4.Library.Stream.Definitions (802ms)
+✔ [903/916] Built Effect4.Laws.Library.Stream.Array (3.0s)
+✔ [904/916] Built Effect4.Laws.Library.Channel.Scope (2.7s)
+✔ [905/916] Built Effect4.Laws.Program.Typing.PartsTable (21s)
+✔ [906/916] Built Effect4.Library.PubSub.Steps (1.8s)
+✔ [907/918] Built Effect4.Program.TyCache (946ms)
+✔ [908/919] Built Effect4.Laws.Library.PubSub.Data (4.6s)
+✔ [909/919] Built Effect4.Laws.Library.Stream.Definitions (2.4s)
+✔ [910/919] Built Effect4.Laws.Library.Channel.Protocol (2.6s)
+✔ [912/919] Built Effect4.Laws.Program.Folds.TyCache (5.5s)
+✔ [914/920] Built Effect4.Laws.Library.PubSub.Steps (4.2s)
+✔ [915/925] Built Effect4.Laws.Library.Queue.Conservation (2.4s)
+✔ [916/925] Built Effect4.Laws.Api.AuthorBuild (2.8s)
+✔ [917/925] Built Effect4.Laws.Machine.ControlSteps (2.4s)
+✔ [918/926] Built Effect4.Laws.Machine.RaceFirst (2.5s)
+✔ [919/929] Built Effect4.Laws.Program.ControlSteps (3.1s)
+✔ [920/929] Built Effect4.Laws.Machine.ControlWeights (2.6s)
+✔ [921/929] Built Effect4.Laws.Program.Typing.Restrict (15s)
+✔ [922/929] Built Effect4.Laws.Machine.FiberSum (2.7s)
+✔ [923/929] Built Effect4.Laws.Program.StoreExecution (5.2s)
+✔ [924/929] Built Effect4.Laws.Program.Edit (3.6s)
+✔ [925/935] Built Effect4.Laws.Machine.FiberSumMessages (3.3s)
+✔ [926/941] Built Effect4.Laws.Author (3.4s)
+✔ [929/945] Built Effect4.Laws.Machine.Ledger (4.1s)
+✔ [931/945] Built Effect4.Laws.Program.Placement (1.6s)
+✔ [932/953] Built Effect4.Laws.Library.Queue.Execution (5.2s)
+✔ [933/953] Built Effect4.Laws.Machine.FinalizerRun (3.4s)
+✔ [934/955] Built Effect4.Laws.Program.SourceScope (4.2s)
+✔ [935/955] Built Effect4.Laws.Machine.WriterWeights (4.7s)
+✔ [936/955] Built Effect4.Laws.Program.FinalizerMoves (4.2s)
+✔ [937/962] Built Effect4.Laws.Machine.FinalizerBookkeeping (3.5s)
+✔ [938/971] Built Effect4.Laws.Machine.ScopeFields (5.1s)
+✔ [939/971] Built Effect4.Laws.Program.CompileInduction (14s)
+✔ [940/971] Built Effect4.Laws.Program.ScopeFragment (3.4s)
+✔ [941/971] Built Effect4.Laws.Program.HeapSites.Core (4.0s)
+✔ [942/971] Built Effect4.Laws.Machine.FinalizerEvaluation (6.1s)
+✔ [943/977] Built Effect4.Laws.Run.Frame (6.6s)
+✔ [944/979] Built Effect4.Laws.Program.ReleaseTrace (1.3s)
+✔ [945/979] Built Effect4.Laws.Program.FinalizerTransfer (4.3s)
+✔ [946/979] Built Effect4.Laws.Program.ReleaseCustody (5.2s)
+✔ [947/979] Built Effect4.Laws.Machine.PlaceLedger (4.5s)
+✔ [948/982] Built Effect4.Laws.Program.SourceOrigin (9.6s)
+✔ [949/984] Built Effect4.Laws.Program.ReleaseCustody.Names (2.3s)
+✔ [950/984] Built Effect4.Laws.Program.LedgerRun (3.4s)
+✔ [951/984] Built Effect4.Laws.Program.FinalizerCommands (8.8s)
+✔ [952/984] Built Effect4.Laws.Program.ReleaseCustody.Control (20s)
+✔ [953/984] Built Effect4.Laws.Program.NativeScope (23s)
+✔ [954/984] Built Effect4.Laws.Program.FinalizerRun (12s)
+✔ [955/996] Built Effect4.Laws.Program.ReleaseCustody.Outside (7.6s)
+✔ [956/997] Built Effect4.Laws.Program.LedgerFinalizer (7.5s)
+✔ [957/1024] Built Effect4.Laws.Program.ReleaseCustody.ScopeTransfer (12s)
+✔ [958/1024] Built Effect4.Laws.Program.NativeStoreScope (21s)
+✔ [959/1024] Built Effect4.Laws.Program.ReleaseCustody.Evaluation (16s)
+✔ [960/1024] Built Effect4.Laws.Program.NativeScopeStore (10s)
+✔ [961/1024] Built Effect4.Laws.Machine.StatePreservation (11s)
+✔ [962/1025] Built Effect4.Laws.Program.ReleaseCustody.Producers (17s)
+✔ [963/1030] Built Effect4.Laws.Program.ReleaseCustody.Lift (22s)
+✔ [964/1030] Built Effect4.Laws.Machine.RefFootprint (21s)
+✔ [965/1032] Built Effect4.Laws.Program.ReleaseCustody.Pop (33s)
+✔ [966/1032] Built Effect4.Laws.Program.ReleaseCustody.ScopeRows (12s)
+✔ [967/1037] Built Effect4.Laws.Program.NativeCallbacks (70s)
+✔ [968/1037] Built Effect4.Laws.Run.Journal (9.1s)
+✔ [969/1037] Built Effect4.Laws.Program.ReleaseCustody.CausePop (18s)
+✔ [970/1037] Built Effect4.Laws.Program.NativeHeap (27s)
+✔ [971/1040] Built Effect4.Laws.Run.JournalPrefix (19s)
+✔ [972/1041] Built Test.Counterexamples.Machine.Semantics.SelfInterrupt (3.5s)
+✔ [973/1041] Built Effect4.Laws.Program.ReleaseCustody.FrameDebit (15s)
+ℹ [974/1041] Built Test.Machine.EditFields (5.4s)
+info: Test/Machine/EditFields.lean:60:0: frame rules: 11 checked theorems, 20 reused clauses, 2 explicit premises
+✔ [975/1049] Built Test.Machine.EditMessages (2.4s)
+✔ [983/1049] Built Effect4.Laws.Program.NativeInterpScope (49s)
+✔ [985/1049] Built Effect4.Laws.Program.ReleaseCustody.Sequencing (5.0s)
+✔ [986/1049] Built Effect4.Laws.Program.NativeFrameScope (12s)
+✖ [987/1049] Building Test.Machine.Runtime.SchedulerCoreContract (19s)
+trace: .> LEAN_PATH=/Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/Test/Machine/Runtime/SchedulerCoreContract.lean -o /Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/build/lib/lean/Test/Machine/Runtime/SchedulerCoreContract.olean -i /Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/build/lib/lean/Test/Machine/Runtime/SchedulerCoreContract.ilean -c /Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/build/ir/Test/Machine/Runtime/SchedulerCoreContract.c --setup /Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/build/ir/Test/Machine/Runtime/SchedulerCoreContract.setup.json --json
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:125:14: Insufficient number of fields for `⟨...⟩` constructor: Constructor `Effect4.Machine.Iter.mk` has 6 explicit field, but only 5 were provided
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:127:8: Insufficient number of fields for `⟨...⟩` constructor: Constructor `Effect4.Machine.Iter.mk` has 6 explicit field, but only 5 were provided
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:129:32: Insufficient number of fields for `⟨...⟩` constructor: Constructor `Effect4.Machine.Iter.mk` has 6 explicit field, but only 5 were provided
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:131:6: Insufficient number of fields for `⟨...⟩` constructor: Constructor `Effect4.Machine.Iter.mk` has 6 explicit field, but only 5 were provided
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:145:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_._private.Test.Machine.Runtime.SchedulerCoreContract.0._tmp._@.Test.Machine.Runtime.SchedulerCoreContract.3916523912._hygCtx._hyg.16.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:146:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_._private.Test.Machine.Runtime.SchedulerCoreContract.0._tmp._@.Test.Machine.Runtime.SchedulerCoreContract.1679415414._hygCtx._hyg.15.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:147:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_._private.Test.Machine.Runtime.SchedulerCoreContract.0._tmp._@.Test.Machine.Runtime.SchedulerCoreContract.2297152655._hygCtx._hyg.16.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:148:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_._private.Test.Machine.Runtime.SchedulerCoreContract.0._tmp._@.Test.Machine.Runtime.SchedulerCoreContract.3266395273._hygCtx._hyg.22.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:149:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_._private.Test.Machine.Runtime.SchedulerCoreContract.0._tmp._@.Test.Machine.Runtime.SchedulerCoreContract.3639787180._hygCtx._hyg.11.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:150:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Machine.Suffices._at_._private.Test.Machine.Runtime.SchedulerCoreContract.0._tmp._@.Test.Machine.Runtime.SchedulerCoreContract.77185628._hygCtx._hyg.8.spec_0.spec_0.spec_3.spec_6.spec_8' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:151:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Machine.replayEval._at_._private.Test.Machine.Runtime.SchedulerCoreContract.0._tmp._@.Test.Machine.Runtime.SchedulerCoreContract.4135915960._hygCtx._hyg.15.spec_0.spec_0.spec_3.spec_6.spec_8' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:152:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Machine.replayEval._at_._private.Test.Machine.Runtime.SchedulerCoreContract.0._tmp._@.Test.Machine.Runtime.SchedulerCoreContract.4268577752._hygCtx._hyg.11.spec_0.spec_0.spec_3.spec_6.spec_8' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:162:43: Tactic `decide` failed for proposition
+  Suffices interp 20 tape initial = true
+because its `Decidable` instance
+  instDecidableEqBool (Suffices interp 20 tape initial) true
+did not reduce to `isTrue` or `isFalse`.
+
+After unfolding the instances `instDecidableEqBool`, `instDecidableEqNat`, `Bool.decEq`, `instDecidableEqFiberId`, `Nat.decEq`, `Nat.decLe`, `instDecidableEqParked`, `instDecidableEqFiberId.decEq`, and `instDecidableEqParked.decEq`, reduction got stuck at the `Decidable` instance
+  match Suffices interp 20 tape initial, true with
+  | false, false => isTrue ⋯
+  | false, true => isFalse ⋯
+  | true, false => isFalse ⋯
+  | true, true => isTrue ⋯
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:167:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Machine.replayEval._at_._private.Test.Machine.Runtime.SchedulerCoreContract.0._tmp._@.Test.Machine.Runtime.SchedulerCoreContract.3859209467._hygCtx._hyg.23.spec_0.spec_0.spec_3.spec_6.spec_8' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:168:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Machine.replayEval._at_._private.Test.Machine.Runtime.SchedulerCoreContract.0._tmp._@.Test.Machine.Runtime.SchedulerCoreContract.2427827850._hygCtx._hyg.29.spec_0.spec_0.spec_3.spec_6.spec_8' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:169:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Machine.replayEval._at_._private.Test.Machine.Runtime.SchedulerCoreContract.0._tmp._@.Test.Machine.Runtime.SchedulerCoreContract.1138752705._hygCtx._hyg.22.spec_0.spec_0.spec_3.spec_6.spec_8' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:170:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Machine.replayEval._at_._private.Test.Machine.Runtime.SchedulerCoreContract.0._tmp._@.Test.Machine.Runtime.SchedulerCoreContract.1703306171._hygCtx._hyg.11.spec_0.spec_0.spec_3.spec_6.spec_8' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:175:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Machine.replayEval._at_._private.Test.Machine.Runtime.SchedulerCoreContract.0._tmp._@.Test.Machine.Runtime.SchedulerCoreContract.2739429177._hygCtx._hyg.27.spec_0.spec_0.spec_3.spec_6.spec_8' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:176:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Machine.replayEval._at_._private.Test.Machine.Runtime.SchedulerCoreContract.0._tmp._@.Test.Machine.Runtime.SchedulerCoreContract.1757618314._hygCtx._hyg.21.spec_0.spec_0.spec_3.spec_6.spec_8' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:177:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Machine.replayEval._at_._private.Test.Machine.Runtime.SchedulerCoreContract.0._tmp._@.Test.Machine.Runtime.SchedulerCoreContract.3018113501._hygCtx._hyg.30.spec_0.spec_0.spec_3.spec_6.spec_8' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:180:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.stepDecisionState._at_.Effect4.Machine.replayEval._at_._private.Test.Machine.Runtime.SchedulerCoreContract.0._tmp._@.Test.Machine.Runtime.SchedulerCoreContract.3561275835._hygCtx._hyg.44.spec_0.spec_0.spec_3.spec_6.spec_8' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:189:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.drive._at_._private.Test.Machine.Runtime.SchedulerCoreContract.0._tmp._@.Test.Machine.Runtime.SchedulerCoreContract.2725315860._hygCtx._hyg.16.spec_0.spec_0.spec_1.spec_2' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:190:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Effect4.Machine.drive._at_._private.Test.Machine.Runtime.SchedulerCoreContract.0._tmp._@.Test.Machine.Runtime.SchedulerCoreContract.984501385._hygCtx._hyg.16.spec_0.spec_0.spec_1.spec_2' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:333:14: Insufficient number of fields for `⟨...⟩` constructor: Constructor `Effect4.Machine.Iter.mk` has 6 explicit field, but only 5 were provided
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:335:8: Insufficient number of fields for `⟨...⟩` constructor: Constructor `Effect4.Machine.Iter.mk` has 6 explicit field, but only 5 were provided
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:337:32: Insufficient number of fields for `⟨...⟩` constructor: Constructor `Effect4.Machine.Iter.mk` has 6 explicit field, but only 5 were provided
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:340:8: Insufficient number of fields for `⟨...⟩` constructor: Constructor `Effect4.Machine.Iter.mk` has 6 explicit field, but only 5 were provided
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:347:8: Insufficient number of fields for `⟨...⟩` constructor: Constructor `Effect4.Machine.Iter.mk` has 6 explicit field, but only 5 were provided
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:372:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_._private.Test.Machine.Runtime.SchedulerCoreContract.0._tmp._@.Test.Machine.Runtime.SchedulerCoreContract.1748550641._hygCtx._hyg.33.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:373:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_._private.Test.Machine.Runtime.SchedulerCoreContract.0._tmp._@.Test.Machine.Runtime.SchedulerCoreContract.2461674053._hygCtx._hyg.26.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:374:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_._private.Test.Machine.Runtime.SchedulerCoreContract.0._tmp._@.Test.Machine.Runtime.SchedulerCoreContract.2302373194._hygCtx._hyg.28.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:378:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Test.Runtime.SchedulerCoreContract.afterPost.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:379:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Test.Runtime.SchedulerCoreContract.afterPost.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:380:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Test.Runtime.SchedulerCoreContract.afterPost.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:381:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Test.Runtime.SchedulerCoreContract.afterPost.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:382:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Test.Runtime.SchedulerCoreContract.afterPost.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:383:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Test.Runtime.SchedulerCoreContract.afterPost.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:385:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Test.Runtime.SchedulerCoreContract.afterPost.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:388:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Test.Runtime.SchedulerCoreContract.afterPost.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:399:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Test.Runtime.SchedulerCoreContract.afterPost.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:400:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Test.Runtime.SchedulerCoreContract.afterPost.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:401:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Test.Runtime.SchedulerCoreContract.afterPost.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:412:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Test.Runtime.SchedulerCoreContract.afterPost.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:413:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Test.Runtime.SchedulerCoreContract.afterPost.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:414:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Test.Runtime.SchedulerCoreContract.afterPost.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:420:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Test.Runtime.SchedulerCoreContract.afterPost.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:421:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Test.Runtime.SchedulerCoreContract.afterPost.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:431:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Test.Runtime.SchedulerCoreContract.afterPost.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:435:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Test.Runtime.SchedulerCoreContract.afterPost.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:444:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Test.Runtime.SchedulerCoreContract.afterPost.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:445:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Test.Runtime.SchedulerCoreContract.afterPost.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:448:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Test.Runtime.SchedulerCoreContract.afterPost.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Test/Machine/Runtime/SchedulerCoreContract.lean:449:0: cannot evaluate code because 'Effect4.Machine.iteration._at_.Effect4.Machine.driveStep._at_.Effect4.Machine.driveState._at_.Test.Runtime.SchedulerCoreContract.afterPost.spec_0.spec_0.spec_1' uses 'sorry' and/or contains errors
+error: Lean exited with code 1
+✔ [988/1049] Built Effect4.Laws.Program.ReleaseCustody.CommandStacks (4.7s)
+✔ [989/1049] Built Effect4.Laws.Program.ReleaseCustody.PopSequencing (7.8s)
+✔ [990/1049] Built Effect4.Laws.Program.ReleaseCustody.NativeStacks (4.9s)
+✔ [991/1049] Built Effect4.Laws.Program.ReleaseCustody.FrameSequencing (4.2s)
+✔ [992/1049] Built Effect4.Laws.Program.ReleaseCustody.CommandStackSteps (4.5s)
+✔ [993/1049] Built Effect4.Laws.Program.ReleaseCustody.RuntimeShape (3.5s)
+✔ [994/1049] Built Effect4.Laws.Program.NativeActionScope (29s)
+✔ [995/1049] Built Effect4.Laws.Program.ReleaseCustody.CommandDebit (4.8s)
+✔ [996/1330] Built Effect4.Laws.Program.ReleaseCustody.NativeMachineShape (3.9s)
+✔ [1048/1330] Built Effect4.Laws.Program.ReleaseCustody.CommandRaceDebit (6.5s)
+✔ [1049/1330] Built Effect4.Machine.Integers:c.o (391ms)
+✔ [1051/1330] Built Effect4.Laws.Program.NativeConfiguration (12s)
+✔ [1144/1330] Built Effect4.Machine.Term:c.o (9.6s)
+✔ [1145/1330] Built Effect4.Machine.Fibers:c.o (15s)
+✔ [1164/1330] Built Effect4.Api:c.o (892ms)
+✔ [1177/1330] Built Effect4.Program.Admit:c.o (4.5s)
+✔ [1243/1403] Built Effect4.Program.Compile:c.o (10s)
+✔ [1244/1403] Built Effect4.Program.Provision:c.o (3.0s)
+✔ [1245/1403] Built Effect4.Codegen.Diagnostics (3.0s)
+✔ [1246/1403] Built Effect4.Emit (5.2s)
+✔ [1247/1403] Built Effect4.Library.Queue.Defs (6.2s)
+✔ [1248/1403] Built Effect4.Author (10s)
+✔ [1251/1403] Built Effect4.Library.Ref (1.2s)
+✔ [1266/1403] Built Effect4.Library.Semaphore.Defs (4.9s)
+✔ [1274/1403] Built Effect4.Codegen.Styles (3.3s)
+✔ [1287/1403] Built Effect4.Schema.TyFaces (1.2s)
+✔ [1298/1403] Built Effect4.Laws.Program.ReleaseCustody.CommandStoreDebit (7.0s)
+✔ [1322/1403] Built Effect4.Library (3.5s)
+✔ [1329/1403] Built Effect4.Laws.Program.NativeEvaluation (8.9s)
+✔ [1336/1403] Built Effect4.Laws.Program.ReleaseCustody.ObserverDebit (4.5s)
+✔ [1337/1403] Built Effect4 (3.7s)
+✔ [1341/1403] Built Effect4.Laws.Program.ReleaseCustody.CommandFunding (7.5s)
+✔ [1356/1404] Built Effect4:shared (755ms)
+✔ [1357/1404] Built Effect4.Laws.Program.ReleaseCustody.NativeSequencing (15s)
+✔ [1358/1405] Built Test.Program.RegistrationColumn (7.7s)
+✔ [1359/1407] Built Effect4.Laws.Program.NativeActions (18s)
+✔ [1360/1407] Built Effect4.Laws.Program.ReleaseCustody.NativeDebit (5.8s)
+✔ [1361/1417] Built Test.Dogfood.Stage (7.1s)
+✔ [1363/1417] Built Test.Dogfood.Scenario (10s)
+✔ [1364/1417] Built Test.Dogfood.Proofs.HostPayloads (5.2s)
+✔ [1366/1431] Built Test.Dogfood.P1HttpCache (7.3s)
+✔ [1367/1431] Built Test.Counterexamples.Machine.Semantics.MulOutsideProfile (3.8s)
+✔ [1368/1431] Built Effect4.Laws.Program.NativeExecutor (18s)
+✔ [1369/1431] Built Test.Audit.ScenarioGate (10s)
+✔ [1370/1431] Built Test.Dogfood.Scenario.Timeout.Model (16s)
+✔ [1371/1431] Built Test.Dogfood.Proofs.HostTimeoutSource (14s)
+✔ [1372/1431] Built Effect4.Laws.Program.NativeCommands (67s)
+✔ [1373/1431] Built Effect4.Laws.Program.NativeHistory (7.1s)
+✔ [1374/1431] Built Effect4.Laws.Program.NativeReplies (11s)
+✔ [1375/1431] Built Effect4.Laws.Program.NativeReferences (12s)
+✔ [1376/1431] Built Test.Dogfood.Proofs.HostTimeoutSlots (52s)
+✔ [1377/1431] Built Effect4.Laws.Program.ReleaseCustody.ReplySequencing (7.7s)
+✔ [1378/1431] Built Effect4.Laws.Program.NativeHeapExecution (6.8s)
+✔ [1379/1431] Built Effect4.Laws.Program.SourceOpportunities (10s)
+✔ [1380/1431] Built Effect4.Laws.Program.NativeHeapHistory (4.6s)
+✔ [1381/1431] Built Effect4.Laws.Program.NativeHeapReplies (5.1s)
+✔ [1382/1431] Built Effect4.Laws.Program.HeapSites (5.9s)
+✔ [1383/1431] Built Test.Dogfood.Proofs.HostTimeoutFlow (20s)
+✔ [1384/1431] Built Effect4.Laws.Program.HostSource (8.5s)
+✔ [1385/1431] Built Effect4.Laws.Program.WriterScope (5.5s)
+✔ [1386/1431] Built Effect4.Laws.Program.HostReplyTape (4.6s)
+✔ [1387/1431] Built Effect4.Laws.Run.CallTree (7.1s)
+✔ [1388/1431] Built Effect4.Laws.Program.SourceOpportunityCallbacks (33s)
+✔ [1389/1431] Built Test.Dogfood.Proofs.HostTimeoutNative (12s)
+✔ [1390/1431] Built Test.Dogfood.Proofs.HostTimeoutFrames (6.5s)
+✔ [1391/1431] Built Effect4.Laws.Program.SourceOpportunityFrames (7.7s)
+✔ [1392/1431] Built Test.Dogfood.Proofs.HostTimeoutEvaluation (4.0s)
+✔ [1393/1431] Built Effect4.Laws.Program.SourceOpportunityEvaluation (5.6s)
+✔ [1394/1431] Built Test.Dogfood.Proofs.HostTimeoutCommands (5.6s)
+✔ [1395/1431] Built Test.Dogfood.Proofs.HostTimeoutHeap (5.4s)
+✔ [1396/1431] Built Test.Dogfood.Proofs.HostTimeoutState (4.6s)
+✔ [1397/1431] Built Test.Dogfood.Proofs.HostTimeoutStateSteps (4.7s)
+✔ [1398/1431] Built Test.Dogfood.Proofs.HostTimeoutRaceSteps (4.0s)
+✔ [1399/1431] Built Test.Dogfood.Proofs.HostTimeoutQueue (3.6s)
+✖ [1400/1431] Building Test.Dogfood.Proofs.HostTimeoutParkSteps (8.4s)
+trace: .> LEAN_PATH=/Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/Test/Dogfood/Proofs/HostTimeoutParkSteps.lean -o /Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/build/lib/lean/Test/Dogfood/Proofs/HostTimeoutParkSteps.olean -i /Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/build/lib/lean/Test/Dogfood/Proofs/HostTimeoutParkSteps.ilean -c /Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/build/ir/Test/Dogfood/Proofs/HostTimeoutParkSteps.c --setup /Users/pooks/.codex/worktrees/machine-fields/lean4-effect4/.lake/build/ir/Test/Dogfood/Proofs/HostTimeoutParkSteps.setup.json --json
+error: Test/Dogfood/Proofs/HostTimeoutParkSteps.lean:184:52: Application type mismatch: The argument
+  some target
+has type
+  Option FiberId
+but is expected to have type
+  List FiberId
+in the application
+  Pending.mk
+    (machine.nextToken (Prim EffName EffThunk Val Err Defect FiberId Ann)
+      (FrameFiber EffName EffThunk Val Err Defect FiberId Ann) (FrameEvent EffName EffThunk Val Err Defect FiberId Ann))
+    (some target)
+error: Test/Dogfood/Proofs/HostTimeoutParkSteps.lean:184:32: Invalid `⟨...⟩` notation: The expected type `Bool` has more than one constructor
+
+Note: This notation can only be used when the expected type is an inductive type with a single constructor
+error: Test/Dogfood/Proofs/HostTimeoutParkSteps.lean:185:76: Application type mismatch: The argument
+  rfl
+has type
+  ?m.546 = ?m.546
+but is expected to have type
+  match Kind.any with
+  | Kind.any => pending.resumeWith = Resume.exitsValue
+  | Kind.unit => pending.resumeWith = Resume.void
+  | Kind.body => pending.resumeWith = Resume.void
+  | x => False
+in the application
+  ⟨fresh, rfl⟩
+error: Lean exited with code 1
+✔ [1407/1431] Built Effect4.Laws.Program.SourceOpportunityActions (60s)
+✔ [1408/1431] Built Effect4.Laws.Program.SourceOpportunityMachine (7.1s)
+✔ [1409/1431] Built Effect4.Laws.Program.FiberSumConnect (9.7s)
+✔ [1410/1431] Built Effect4.Laws.Program.PlaceLedgerConnect (9.6s)
+✔ [1411/1431] Built Effect4.Laws.Program.SourceOpportunityNative (11s)
+✔ [1412/1431] Built Effect4.Laws.Program.ReleaseCustody.IterationDebit (4.3s)
+✔ [1413/1431] Built Effect4.Laws.Program.SourceOpportunityPrimitive (4.5s)
+✔ [1414/1431] Built Effect4.Laws.Program.ReleaseCustody.NativeAccounting (3.8s)
+✔ [1415/1431] Built Effect4.Laws.Program.SourceOpportunityExecution (2.8s)
+✔ [1416/1431] Built Effect4.Laws.Program.SourceOpportunityCommands (3.8s)
+✔ [1417/1431] Built Effect4.Laws.Program.SourceOpportunityHistory (5.0s)
+✔ [1418/1431] Built Effect4.Laws.Program.ReleaseCustody.NativeActionDebit (10s)
+✔ [1419/1431] Built Effect4.Laws.Program.ReleaseCustody.NativePrimitiveDebit (2.7s)
+✔ [1420/1431] Built Effect4.Laws.Program.ReleaseCustody.NativeParkDebit (3.8s)
+✔ [1421/1431] Built Effect4.Laws.Program.ReleaseCustody.NativeScopeDebit (3.5s)
+✔ [1422/1431] Built Effect4.Laws.Program.ReleaseCustody.CommandSequencing (3.0s)
+✔ [1423/1431] Built Effect4.Laws.Program.ReleaseCustody.NativeIterationDebit (3.1s)
+✔ [1424/1431] Built Effect4.Laws.Program.ReleaseCustody.OuterFrames (2.0s)
+✔ [1425/1431] Built Effect4.Laws.Program.ReleaseCustody.LoopCommand (2.4s)
+✔ [1426/1431] Built Effect4.Laws.Program.ReleaseCustody.AdministrativeKept (2.2s)
+✔ [1427/1431] Built Effect4.Laws.Program.ReleaseCustody.AdministrativeQueue (5.8s)
+✔ [1428/1431] Built Effect4.Laws.Program.ReleaseCustody.CommandClosure (4.3s)
+✔ [1429/1431] Built Effect4.Laws.Program.ReleaseCustody.HistoryLift (4.2s)
+✔ [1430/1431] Built Effect4.Laws.Program.ReleaseCustody.Execution (5.4s)
+✔ [1431/1431] Built Effect4.Laws (10s)
+Some required targets logged failures:
+- Test.Machine.Runtime.SchedulerCoreContract
+- Test.Dogfood.Proofs.HostTimeoutParkSteps
+error: build failed

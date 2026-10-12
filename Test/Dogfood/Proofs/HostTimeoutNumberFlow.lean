@@ -1,5 +1,7 @@
 import Test.Dogfood.Proofs.HostTimeoutNumberCallbacks
 import Effect4.Laws.Machine.AnswerFlow
+import Effect4.Laws.Machine.AnswerFlowHooks
+import Effect4.Laws.Machine.Clauses
 
 /-!
 Placement: scope-lifetime-finalization R11 and translation-simulation R10.
@@ -73,6 +75,7 @@ inductive Kind
   | formExit (image : Image) (cleanupComplete : image.cleanups.length = image.count)
       (own : image.exits.length + 1 = image.count)
   | formAfterCleanup (image : Image) (own : image.count = image.cleanups.length + 1)
+  | raceWaiting (image : Image) (own : image.count = image.cleanups.length + 1)
 
 /-- A count or cleanup answer is valid only at the exact post-operation heap. -/
 def ValueAt (state : Stores) : Kind → Val → Prop
@@ -81,6 +84,7 @@ def ValueAt (state : Stores) : Kind → Val → Prop
   | .restored image (.success saved), value => ImageAt image state ∧ value = saved
   | .restored _ (.failure _), _ => False
   | .at image, _ => ImageAt image state
+  | .raceWaiting image own, _ => ∃ saved, ImageAt (image.cleanup own saved) state
   | .cleanupExit image own, _ => ∃ saved, ImageAt (image.cleanup own saved) state
   | .formExit image cleanupComplete own, value =>
     ∃ saved, ImageAt (image.form cleanupComplete own saved) state ∧ saved = .success value
@@ -96,6 +100,9 @@ def CauseAt (state : Stores) : Kind → CauseV → Prop
   | .restored image (.failure saved), cause => ImageAt image state ∧ (cause = saved ∨ NoTypedFailure cause)
   | .restored image (.success _), cause => ImageAt image state ∧ NoTypedFailure cause
   | .at image, _ => ImageAt image state
+  | .raceWaiting image own, cause =>
+    (∃ saved, ImageAt (image.cleanup own saved) state) ∨
+      (ImageAt image state ∧ cause.hasInterrupts = true)
   | .cleanupExit image own, _ => ∃ saved, ImageAt (image.cleanup own saved) state
   | .formExit image cleanupComplete own, cause =>
     ∃ saved, ImageAt (image.form cleanupComplete own saved) state ∧
@@ -172,6 +179,22 @@ inductive CodeAt (state : Stores) : Kind → NCode → Prop
   | restore (image : Image) (exit : ExitV) (program : NCode)
       (cleanup : CodeAt state (.unit image) program) :
       CodeAt state (.restored image exit) (.onSuccess program (.restore exit))
+  | cancelRace (image : Image) (own : image.count = image.cleanups.length + 1) (race : Nat)
+      (phase : ImageAt image state ∨ ∃ exit, ImageAt (image.cleanup own exit) state) :
+      CodeAt state (.cleanupExit image own) (.withFiber (.store (.act (.cancelRace race))))
+  | cancelReturn (image : Image) (own : image.count = image.cleanups.length + 1)
+      (cause : CauseV) (program : NCode) (body : CodeAt state (.cleanupExit image own) program) :
+      CodeAt state (.cleanupExit image own) (.onSuccess program (.reFail cause))
+  | raceWaiting (image : Image) (own : image.count = image.cleanups.length + 1) (race : Nat)
+      (phase : ImageAt image state ∨ ∃ exit, ImageAt (image.cleanup own exit) state) :
+      CodeAt state (.raceWaiting image own) (.suspend (.park (.race race)))
+  | maskedCancelRace (image : Image) (own : image.count = image.cleanups.length + 1) (race : Nat)
+      (phase : ImageAt image state ∨ ∃ exit, ImageAt (image.cleanup own exit) state) :
+      CodeAt state (.cleanupExit image own)
+        (.withFiber (.store (.act (.setInterruptible (.cancelRace race) false))))
+  | selectedRaceReturn (image : Image) (own : image.count = image.cleanups.length + 1)
+      (selected : ExitV) (program : NCode) (body : CodeAt state (.cleanupExit image own) program) :
+      CodeAt state (.cleanupExit image own) (.onSuccess program (.store (.restore selected)))
 
 /-- Timeout's numeric instance reuses the shared ordered saved-answer contract. -/
 def model (view : View) : AnswerFlow.Model (ν := EffName) (σ := EffThunk) (β := Val) (ε := Err)
@@ -534,6 +557,20 @@ theorem restored_sanitize (state : Stores) (image : Image) (exit : ExitV) (cause
   | success value => exact ⟨good.1, cleared⟩
   | failure saved => exact ⟨good.1, Or.inr cleared⟩
 
+/-- Stripping typed failures retains the actual interruption used by the waiting cancellation class. -/
+theorem waiting_interrupt_strip (cause : CauseV) (present : cause.hasInterrupts = true) :
+    cause.stripFail.hasInterrupts = true := by
+  obtain ⟨reason, member, tag⟩ := Cause.hasInterrupts_iff cause |>.mp present
+  apply (Cause.hasInterrupts_iff cause.stripFail).mpr
+  exact ⟨reason, (Cause.mem_stripFail reason cause).mpr ⟨member, by rw [tag]; decide⟩, tag⟩
+
+/-- Actual sanitization retains the incoming interruption through the existing reason union. -/
+theorem waiting_interrupt_sanitize (cause recorded : CauseV) (present : cause.hasInterrupts = true) :
+    (Cause.sanitize cause recorded).hasInterrupts = true := by
+  obtain ⟨reason, member, tag⟩ := (Cause.hasInterrupts_iff cause.stripFail).mp (waiting_interrupt_strip cause present)
+  apply (Cause.hasInterrupts_iff (Cause.sanitize cause recorded)).mpr
+  exact ⟨reason, (Cause.mem_combine reason cause.stripFail recorded).mpr (.inl member), tag⟩
+
 /-- Every committed numeric cause class survives stripping typed failures at an actual skipped handler. -/
 theorem cause_strip (state : Stores) (kind : Kind) (cause : CauseV)
     (good : CauseAt state kind cause) : CauseAt state kind cause.stripFail := by
@@ -542,6 +579,10 @@ theorem cause_strip (state : Stores) (kind : Kind) (cause : CauseV)
   | unit image => exact False.elim good
   | restored image exit => exact restored_strip state image exit cause good
   | «at» image => exact good
+  | raceWaiting image own =>
+    rcases good with cleaned | active
+    · exact .inl cleaned
+    · exact .inr ⟨active.1, waiting_interrupt_strip cause active.2⟩
   | cleanupExit image own => exact good
   | formExit image cleanupComplete own =>
     obtain ⟨saved, heap, _⟩ := good
@@ -559,6 +600,10 @@ theorem cause_sanitize (state : Stores) (kind : Kind) (cause interrupted : Cause
   | unit image => exact False.elim good
   | restored image exit => exact restored_sanitize state image exit cause interrupted good recorded
   | «at» image => exact good
+  | raceWaiting image own =>
+    rcases good with cleaned | active
+    · exact .inl cleaned
+    · exact .inr ⟨active.1, waiting_interrupt_sanitize cause interrupted active.2⟩
   | cleanupExit image own => exact good
   | formExit image cleanupComplete own =>
     obtain ⟨saved, heap, _⟩ := good
@@ -602,4 +647,184 @@ theorem no_typed_catch (view : View) (state : Stores) (image : Image) (exit : Ex
   simp only [Effect4.Program.contEOf, found, no_typed_test point.env test cause cleared]
   exact CodeAt.failure _ _ good
 
+/-- The actual native cancellation hook preserves the original cause beneath the race action. -/
+theorem race_cancel_program (view : View) (race token : Nat) (owner : FiberId) (cause : CauseV) :
+    (interpreter view).cancelThenFail (.withWaiter (.store (.cancelRace race)) owner token) cause =
+      .onSuccess (.withFiber (.store (.act (.cancelRace race)))) (.reFail cause) := by kernel_rfl
+
+/-- One numeric waiting class separates active cancellation input from completed cleanup output. -/
+theorem race_cancel_saved (view : View) (state : Stores) (image : Image)
+    (own : image.count = image.cleanups.length + 1) (race token : Nat) (owner : FiberId) :
+    AnswerFlow.SavedAt (model view) (interpreter view).toPrimInterp state
+      (.raceWaiting image own) (.cleanupExit image own)
+      (.asyncFinalizer (.withWaiter (.store (.cancelRace race)) owner token)) := by
+  refine AnswerFlow.SavedAt.mk state (HostTimeoutNumberFlow.Kind.raceWaiting image own) (HostTimeoutNumberFlow.Kind.cleanupExit image own) _ ?_ ?_ ?_ ?_ ?_ ?_
+  · intro next future value good absent
+    exact good
+  · intro next future cause good absent
+    cases absent
+  · intro next future value provided code pushed good supplied noProgram arm
+    cases arm
+  · intro next future cause provided code pushed good supplied noProgram arm
+    cases interrupted : cause.hasInterrupts with
+    | false =>
+      rw [Prim.armE_asyncFinalizer_no_interrupt _ _ cause provided interrupted] at arm
+      cases arm
+      rcases good with cleaned | active
+      · exact AnswerFlow.ResultAt.mk next (HostTimeoutNumberFlow.Kind.cleanupExit image own) (HostTimeoutNumberFlow.Kind.cleanupExit image own) _ []
+          (CodeAt.failure (HostTimeoutNumberFlow.Kind.cleanupExit image own) cause cleaned) (.nil next _)
+      · rw [interrupted] at active
+        cases active.2
+    | true =>
+      rw [Prim.armE_asyncFinalizer_interrupt _ _ cause provided interrupted] at arm
+      cases arm
+      rw [race_cancel_program]
+      have phase : ImageAt image next ∨ ∃ exit, ImageAt (image.cleanup own exit) next := by
+        rcases good with cleaned | active
+        · exact .inr cleaned
+        · exact .inl active.1
+      exact AnswerFlow.ResultAt.mk next (HostTimeoutNumberFlow.Kind.cleanupExit image own) (HostTimeoutNumberFlow.Kind.cleanupExit image own) _ []
+        (CodeAt.cancelReturn image own cause _ (CodeAt.cancelRace image own race phase)) (.nil next _)
+  · intro next future exit code good installed
+    cases installed
+  · intro next future fiber cause delivered good arm interrupted skipped
+    have quiet : ((Prim.asyncFinalizer (.withWaiter (.store (.cancelRace race)) owner token)).ensure fiber).1.interrupted = false := by
+      cases flag : fiber.interruptible with
+      | false =>
+        rw [Prim.ensure_asyncFinalizer_already_masked _ fiber flag]
+        change (fiber.interruptible && fiber.interruptedCause.isSome) = false
+        rw [flag]
+        rfl
+      | true =>
+        rw [Prim.ensure_asyncFinalizer_masks _ fiber flag]
+        rfl
+    rw [quiet] at interrupted
+    cases interrupted
+
+/-- Actual registration parking installs the waiting input above the existing completed-cleanup suffix.
+The active image is an explicit producer premise; parking itself does not establish the count. -/
+theorem race_cancel_registration_park (view : View) (state : Stores) (image : Image)
+    (own : image.count = image.cleanups.length + 1) (race token : Nat)
+    (fiber : Effect4.Program.SourceScope.SourceFiber) (pending : Pending EffName Val Err Defect FiberId Ann)
+    (output : HostTimeoutNumberFlow.Kind)
+    (current : fiber.frame.current = .suspend (.park (.race race)))
+    (phase : ImageAt image state ∨ ∃ exit, ImageAt (image.cleanup own exit) state)
+    (stack : AnswerFlow.StackAt (model view) (interpreter view).toPrimInterp state
+      (.cleanupExit image own) output fiber.frame.stack) :
+    let name := EffName.withWaiter (.store (.cancelRace race)) fiber.id token
+    let waiting := ({fiber with frame := {fiber.frame with stack := .asyncFinalizer name :: fiber.frame.stack}}).park pending
+    AnswerFlow.FrameAt (model view) (interpreter view).toPrimInterp state output waiting.frame := by
+  refine ⟨HostTimeoutNumberFlow.Kind.raceWaiting image own, ?_, ?_⟩
+  · change CodeAt state (.raceWaiting image own) fiber.frame.current
+    rw [current]
+    exact CodeAt.raceWaiting image own race phase
+  · exact .cons (race_cancel_saved view state image own race token fiber.id) stack
+
+/-- The actual re-failure callback cannot run its output permission before completed cleanup. -/
+theorem cancel_restore_saved (view : View) (state : Stores) (image : Image)
+    (own : image.count = image.cleanups.length + 1) (cause : CauseV) (program : NCode) :
+    AnswerFlow.SavedAt (model view) (interpreter view).toPrimInterp state
+      (.cleanupExit image own) (.cleanupExit image own) (.onSuccess program (.reFail cause)) := by
+  apply AnswerFlow.saved_success
+  · intro next future value good
+    exact CodeAt.failure _ cause good
+  · intro next future other good
+    exact good
+
+/-- The actual cancel binder pushes only its captured-cause restore above the existing form suffix. -/
+theorem race_cancel_push (view : View) (state : Stores) (image : Image)
+    (own : image.count = image.cleanups.length + 1) (race token : Nat) (owner : FiberId) (cause : CauseV)
+    (phase : ImageAt image state ∨ ∃ exit, ImageAt (image.cleanup own exit) state)
+    (fiber : HostTimeoutFrames.NativeFrame) (output : HostTimeoutNumberFlow.Kind)
+    (current : fiber.current = (interpreter view).cancelThenFail
+      (.withWaiter (.store (.cancelRace race)) owner token) cause)
+    (stack : AnswerFlow.StackAt (model view) (interpreter view).toPrimInterp state
+      (.cleanupExit image own) output fiber.stack) :
+    ∃ after events, fiber.step (interpreter view).toPrimInterp = (.running after, events) ∧
+      AnswerFlow.FrameAt (model view) (interpreter view).toPrimInterp state output after := by
+  rw [race_cancel_program] at current
+  exact AnswerFlow.push_success (model view) (interpreter view).toPrimInterp state
+    (.cleanupExit image own) (.cleanupExit image own) output fiber _ (.reFail cause) current
+    (CodeAt.cancelRace image own race phase) (cancel_restore_saved view state image own cause _) stack
+/-- The actual native race restoration retains its selected exit above masked cancellation. -/
+theorem race_settle_program (view : View) (race : Nat) (needed : Bool) (selected : ExitV) :
+    (interpreter view).raceSettle race needed selected =
+      if needed then .onSuccess (.withFiber (.store (.act (.setInterruptible (.cancelRace race) false))))
+        (.store (.restore selected)) else Prim.ofExit selected := by
+  cases needed <;> cases selected <;> kernel_rfl
+
+/-- Actual settlement starts cancellation in the active heap; skipping cancellation requires completed cleanup. -/
+theorem race_settle_code (view : View) (state : Stores) (image : Image)
+    (own : image.count = image.cleanups.length + 1) (race : Nat) (needed : Bool) (selected : ExitV)
+    (phase : ImageAt image state ∨ ∃ exit, ImageAt (image.cleanup own exit) state)
+    (already : needed = false → AnswerFlow.ExitAt (model view) state (.cleanupExit image own) selected) :
+    CodeAt state (.cleanupExit image own) ((interpreter view).raceSettle race needed selected) := by
+  rw [race_settle_program]
+  cases needed with
+  | true => exact CodeAt.selectedRaceReturn image own selected _ (CodeAt.maskedCancelRace image own race phase)
+  | false =>
+    have good := already rfl
+    cases selected with
+    | success value => exact CodeAt.success _ value good
+    | failure cause => exact CodeAt.failure _ cause good
+
+/-- The selected-exit callback requires completed cleanup and preserves the actual selected exit. -/
+theorem race_settle_saved (view : View) (state : Stores) (image : Image)
+    (own : image.count = image.cleanups.length + 1) (selected : ExitV) (program : NCode) :
+    AnswerFlow.SavedAt (model view) (interpreter view).toPrimInterp state
+      (.cleanupExit image own) (.cleanupExit image own) (.onSuccess program (.store (.restore selected))) := by
+  apply AnswerFlow.saved_success
+  · intro next future value good
+    cases selected with
+    | success saved => exact CodeAt.success _ saved good
+    | failure cause => exact CodeAt.failure _ cause good
+  · intro next future cause good
+    exact good
+
+/-- The actual accepted-settlement binder saves its selected exit above the masked cancellation body. -/
+theorem race_settle_push (view : View) (state : Stores) (image : Image)
+    (own : image.count = image.cleanups.length + 1) (race : Nat) (selected : ExitV)
+    (phase : ImageAt image state ∨ ∃ exit, ImageAt (image.cleanup own exit) state)
+    (fiber : HostTimeoutFrames.NativeFrame) (output : HostTimeoutNumberFlow.Kind)
+    (current : fiber.current = (interpreter view).raceSettle race true selected)
+    (stack : AnswerFlow.StackAt (model view) (interpreter view).toPrimInterp state
+      (.cleanupExit image own) output fiber.stack) :
+    ∃ after events, fiber.step (interpreter view).toPrimInterp = (.running after, events) ∧
+      AnswerFlow.FrameAt (model view) (interpreter view).toPrimInterp state output after := by
+  rw [race_settle_program] at current
+  exact AnswerFlow.push_success (model view) (interpreter view).toPrimInterp state
+    (.cleanupExit image own) (.cleanupExit image own) output fiber _ (.store (.restore selected)) current
+    (CodeAt.maskedCancelRace image own race phase) (race_settle_saved view state image own selected _) stack
+
+/-- The actual native mask starts only the same race cancellation and inserts an identity restoring frame. -/
+theorem race_settle_mask_native (view : View) (machine : NativeMachine)
+    (fiber : Effect4.Program.SourceScope.SourceFiber) (yielding : Bool) (image : Image)
+    (own : image.count = image.cleanups.length + 1) (race : Nat)
+    (phase : ImageAt image machine.state ∨ ∃ exit, ImageAt (image.cleanup own exit) machine.state)
+    (output : HostTimeoutNumberFlow.Kind)
+    (current : fiber.frame.current = .withFiber (.store (.act (.setInterruptible (.cancelRace race) false))))
+    (stack : AnswerFlow.StackAt (model view) (interpreter view).toPrimInterp machine.state
+      (.cleanupExit image own) output fiber.frame.stack) :
+    let result := evaluatePrim (interpreter view) machine fiber yielding
+    result.machine = machine ∧ result.fiber.frame.interruptible = false ∧
+      result.edits = [] ∧ result.nested = [] ∧
+      AnswerFlow.FrameAt (model view) (interpreter view).toPrimInterp machine.state output result.fiber.frame := by
+  have ran := evaluatePrim_withFiber_runs (interpreter view) machine fiber yielding
+    (.store (.act (.setInterruptible (.cancelRace race) false)))
+    (.setInterruptible (.withFiber (.store (.act (.cancelRace race)))) false) current rfl rfl
+  rw [ran]
+  refine ⟨rfl, ?_, rfl, rfl, HostTimeoutNumberFlow.Kind.cleanupExit image own,
+    CodeAt.cancelRace image own race phase, ?_⟩
+  · change fiber.frame.uninterruptible.interruptible = false
+    cases flag : fiber.frame.interruptible with
+    | false => rw [FrameFiber.uninterruptible_already_masked fiber.frame flag]; exact flag
+    | true => rw [FrameFiber.uninterruptible_masks fiber.frame flag]
+  · change AnswerFlow.StackAt (model view) (interpreter view).toPrimInterp machine.state
+      (.cleanupExit image own) output fiber.frame.uninterruptible.stack
+    cases flag : fiber.frame.interruptible with
+    | false => rw [FrameFiber.uninterruptible_already_masked fiber.frame flag]; exact stack
+    | true =>
+      rw [FrameFiber.uninterruptible_masks fiber.frame flag]
+      exact .cons (AnswerFlow.saved_mask (model view) (interpreter view).toPrimInterp machine.state
+        (.cleanupExit image own) true) stack
 end Test.Dogfood.Proofs.HostTimeoutNumberFlow

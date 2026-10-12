@@ -79,7 +79,7 @@ structure CountdownPayload (w : World) (m : RState) (waiter : FiberId)
   token : w.Θ waiter pending.token = some tokenTy
   collected : ∀ exit ∈ pending.collected,
     ExitOk w ⟨answer, error, Env.Requirement.empty⟩ exit
-  targets : ∀ id ∈ pending.waitingOn.toList ++ pending.remaining,
+  targets : ∀ id ∈ pending.remaining,
     ∀ fiber, m.fiber? id = some fiber → FiberColumnsBelow w fiber.id answer error
   resume : match pending.resumeWith with
     | .exitsValue => tokenTy = EffTy.pure (.list (.exitOf answer error))
@@ -258,7 +258,7 @@ structure SchedulerState (m : RState) : Prop where
   liveBelow : ∀ raceId race, m.race? raceId = some race → ∀ id ∈ race.state.live,
     id.value < m.nextId
   targetsBelow : ∀ fiber ∈ m.fibers, ∀ p ∈ fiber.pending,
-    ∀ id ∈ p.waitingOn.toList ++ p.remaining, id.value < m.nextId
+    ∀ id ∈ p.remaining, id.value < m.nextId
   observersBelow : ∀ fiber ∈ m.fibers, ∀ o ∈ fiber.observers, ∀ k ∈ Guard.observerKeys o,
     k.1.value < m.nextId
 

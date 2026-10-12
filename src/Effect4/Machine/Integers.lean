@@ -26,6 +26,10 @@ open Effect4 Effect4.Machine
 plain addition. A target lowers it to its refusal outside the bound (DI-56, decisions row 108). -/
 @[noinline] def Profile.grow (a b : Nat) : Nat := a + b
 
+/-- Exact natural multiplication in the reference, with target-profile refusal at lowering.
+Consumer: the represented `mul` atom, under the same scalar bound as `Profile.grow`. -/
+@[noinline] def Profile.scale (a b : Nat) : Nat := a * b
+
 /-- `-x` on an integer image. Zero has one image, so `-0` is `nat 0`. -/
 def intNeg : Val → Option Val
   | .nat 0 => some (.nat 0)

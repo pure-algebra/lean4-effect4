@@ -28,9 +28,10 @@ spelling in a report), `OCaml5.Lcnf.Externs` (`stripRedArg`).
   `Translate.applyBuiltin` binds every other argument that is not an atom before the form.
 * **Every row has a contract.** `fidelity`, `domain`, `controls` and `note` have no default.
   The class is a reading of the row against the Lean definition. No theorem proves a row.
-* **The numbers are the ones the route had.** Addition and successor are the raw 63-bit `+`.
-  Multiplication, powers and the left shift saturate at `max_int`. Subtraction stops at zero.
-  Decisions row 108 is open, and this module does not move it.
+* **The raw natural rows retain their numeric limits.** Addition and successor use 63-bit `+`.
+  Raw multiplication, powers and left shifts saturate at `max_int`; subtraction stops at zero.
+  `Profile.grow` and `Profile.scale` instead compute exactly and refuse outside their declared domain.
+  Decisions row 108 remains open for the raw rows.
 
 **What it does not own.** The native constructors (`OCaml5.Lcnf.Native`), the exact clock's
 constructors and type (`OCaml5.Lcnf.Clock`), and the extern table of a run
@@ -239,7 +240,7 @@ def libraries : List (String × Nat) := [
   ("List.fold_left", 3), ("List.find_opt", 2), ("List.concat", 1), ("List.filter_map", 2),
   ("Option.is_some", 1), ("Option.is_none", 1), ("Option.value", 2), ("Option.map", 2),
   ("Option.bind", 2),
-  ("E4_clock.of_nat", 1), ("E4_clock.to_profile_nat", 1), ("E4_clock.add", 2),
+  ("E4_clock.of_nat", 1), ("E4_clock.to_profile_nat", 1), ("E4_clock.add", 2), ("E4_clock.mul", 2),
   ("E4_clock.le", 2), ("E4_clock.lt", 2), ("E4_clock.equal", 2), ("E4_clock.to_decimal", 1),
   ("E4_clock.of_decimal", 1)]
 
@@ -578,6 +579,12 @@ def builtins : List Builtin := [
     .domain "a + b ≤ 2^53 - 1, and each of a and b fits `int`" []
     "Exact addition on `E4_clock.t`, then `E4_clock.to_profile_nat`, which raises `Profile_refusal` outside the domain: a refusal outside the program's result, never a wrapped value (DI-56, decisions row 108). The engine answers it as `Outside_profile` with the input machine retained (`ocaml/engine/e4_engine.mli`)."
     "two conversions and one Zarith addition for one machine addition",
+  row `Effect4.Program.Profile.scale
+    (.inline ["a", "b"] (.call "E4_clock.to_profile_nat"
+      [.call "E4_clock.mul" [.call "E4_clock.of_nat" [.var "a"], .call "E4_clock.of_nat" [.var "b"]]]))
+    .domain "a * b ≤ 2^53 - 1, and nonnegative a and b fit `int`" []
+    "Exact Zarith multiplication followed by checked natural observation. Outside the domain, Profile_refusal remains outside the program result (DI-56)."
+    "two conversions and one Zarith multiplication",
   row `Effect4.ClockMillis.add (.library "E4_clock.add") .exact "" []
     "`E4_clock.add` is `Z.add`, exact on naturals of any size; Lean's `add` is `ofNat (a.toNat + b.toNat)` (`ClockMillis.toNat_add`).",
   row `Effect4.ClockMillis.decLe (.library "E4_clock.le") .exact "" []
@@ -752,7 +759,7 @@ def problems : List String := problemsOf builtins support libraries
 -- No reserved name is another's: an eta binder is not a name a call site must reach.
 #guard etaBinders.all fun b => !protectedNames.contains b && !(libraries.map (·.1)).contains b
 #guard maxArity == 3
-#guard builtins.length == 107
+#guard builtins.length == 108
 
 /-! ### Controls: each altered copy is refused, for its own reason -/
 

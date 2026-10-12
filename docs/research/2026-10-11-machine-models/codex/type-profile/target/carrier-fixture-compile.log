@@ -1,0 +1,1 @@
+COMMAND: lake env lean --root=/private/tmp -DwarningAsError=true -o /private/tmp/CarrierFixture.olean /private/tmp/CarrierFixture.lean

@@ -1,0 +1,1 @@
+COMMAND: opam exec --switch=effect4 -- dune build engine/test/test_engine.exe engine/test/test_diff.exe engine/test/e4_engine_bench.exe gen/api_check.exe engine/test/test_buckets.exe

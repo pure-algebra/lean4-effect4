@@ -237,7 +237,7 @@ theorem dispatcherMeans_enqueue {d₁ : Dispatcher EffName EffThunk Val Err Defe
     (hd : DispatcherMeans (CodeMeans root) d₁ d₂) (priority : Nat) {t₁ : FTask} {t₂ : RTask}
     (ht : TaskMeans (CodeMeans root) t₁ t₂) :
     DispatcherMeans (CodeMeans root) (d₁.enqueue priority t₁) (d₂.enqueue priority t₂) :=
-  ⟨listRel_insert priority ht hd.1, rfl⟩
+  Effect4.Machine.dispatcherMeans_enqueue hd priority ht
 
 theorem FMeans.enqueue (h : FMeans root f₁ f₂) (priority : Nat) {t₁ : FTask} {t₂ : RTask}
     (ht : TaskMeans (CodeMeans root) t₁ t₂) :
@@ -253,7 +253,7 @@ theorem FMeans.enqueue (h : FMeans root f₁ f₂) (priority : Nat) {t₁ : FTas
 theorem fmeans_make (root : NativeEff) (id : FiberId) {c₁ : NCode} {c₂ : RProgram}
     (hc : CodeMeans root c₁ c₂) (flag : Bool) (budget : Nat × Bool) (ctx : Ctx) :
     FMeans root (RunFiber.make id c₁ flag budget ctx) (RunFiber.make id c₂ flag budget ctx) :=
-  FMeans.mk' rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl ⟨ListRel.nil, rfl⟩
+  FMeans.mk' rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl rfl ListRel.nil
     (means_start root hc flag)
 
 end Fiber

@@ -1,0 +1,6 @@
+src/Effect4/Laws/Machine/AnswerFlow.lean: 8 old headers retained; 230 -> 246 lines
+baseline cfb8b019fcc39b8dfb30eb977385ce33727e451b7f1694f1ca09adf1b7f0d799
+candidate 2f6861f0ff4664d6fa35673bac6c7719c931f5ab55e67b6644e8636954b79e20
+src/Effect4/Laws/Program/NativeFrameScope.lean: 21 old headers retained; 357 -> 364 lines
+baseline 41bde0a4a6370eeb7fd40d164f31650f2a9a5b815b0d7f034d43c68ec6e85be8
+candidate 39cef85e079afbc8e8b84f39f9dcebd301f0e69104a6530c767f256f58c004fd

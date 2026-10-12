@@ -193,7 +193,7 @@ structure FiberTyped (root : ProgramSource) (w : World) (m : RState) (f : RFiber
     (race.host, race.token) ∉ Guard.observerKeys o
   /-- Decisions row 134 (e), at this fiber: its countdowns' targets and its stored observers' keys
   name fibers below `nextId`. -/
-  targetsBelow : ∀ p ∈ f.pending, ∀ id ∈ p.waitingOn.toList ++ p.remaining, id.value < m.nextId
+  targetsBelow : ∀ p ∈ f.pending, ∀ id ∈ p.remaining, id.value < m.nextId
   observersBelow : ∀ o ∈ f.observers, ∀ k ∈ Guard.observerKeys o, k.1.value < m.nextId
   /-- Its tracked children are declared (`WorldValid.children`). -/
   children : ∀ c ∈ f.children, (w.Γ c).isSome = true

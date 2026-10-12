@@ -75,9 +75,11 @@ theorem OtherEdits.trans {g h k : NFiber} (a : OtherEdits g h) (b : OtherEdits h
   | refl => exact a
   | tail _ e ih => exact .tail ih e
 
-/-- An edit keeps the id. -/
-theorem OtherEdit.id {g h : NFiber} (e : OtherEdit g h) : h.id = g.id := by
-  cases e with
+/-- The stable run fields of a message, including its unchanged operation counter.
+Consumer: environment interference during the Timeout count prefix. -/
+theorem OtherEdit.constants {g h : NFiber} (edit : OtherEdit g h) :
+    (h.id, h.exit, h.currentOpCount) = (g.id, g.exit, g.currentOpCount) := by
+  cases edit with
   | observe => rfl
   | filterObservers => rfl
   | interruptCause cause =>
@@ -85,29 +87,39 @@ theorem OtherEdit.id {g h : NFiber} (e : OtherEdit g h) : h.id = g.id := by
     dsimp only
     repeat' split
     all_goals rfl
+
+/-- The same stable observation composes along the actual message word. -/
+theorem OtherEdits.constants {g h : NFiber} (word : OtherEdits g h) :
+    (h.id, h.exit, h.currentOpCount) = (g.id, g.exit, g.currentOpCount) := by
+  induction word with
+  | refl => rfl
+  | tail _ edit ih => exact edit.constants.trans ih
+
+/-- An edit keeps the id. -/
+theorem OtherEdit.id {g h : NFiber} (e : OtherEdit g h) : h.id = g.id :=
+  congrArg Prod.fst e.constants
 
 /-- A word of edits keeps the id. -/
-theorem OtherEdits.id {g h : NFiber} (w : OtherEdits g h) : h.id = g.id := by
-  induction w with
-  | refl => rfl
-  | tail _ e ih => exact e.id.trans ih
+theorem OtherEdits.id {g h : NFiber} (w : OtherEdits g h) : h.id = g.id :=
+  congrArg Prod.fst w.constants
 
 /-- An edit keeps the exit: an exited fiber records no interrupt. -/
-theorem OtherEdit.exit {g h : NFiber} (e : OtherEdit g h) : h.exit = g.exit := by
-  cases e with
-  | observe => rfl
-  | filterObservers => rfl
-  | interruptCause cause =>
-    unfold interruptWithCause
-    dsimp only
-    repeat' split
-    all_goals rfl
+theorem OtherEdit.exit {g h : NFiber} (e : OtherEdit g h) : h.exit = g.exit :=
+  congrArg (fun observed => observed.2.1) e.constants
 
 /-- A word of edits keeps the exit. -/
-theorem OtherEdits.exit {g h : NFiber} (w : OtherEdits g h) : h.exit = g.exit := by
-  induction w with
-  | refl => rfl
-  | tail _ e ih => exact e.exit.trans ih
+theorem OtherEdits.exit {g h : NFiber} (w : OtherEdits g h) : h.exit = g.exit :=
+  congrArg (fun observed => observed.2.1) w.constants
+
+/-- One message leaves the operation counter unchanged. -/
+theorem OtherEdit.currentOpCount {g h : NFiber} (edit : OtherEdit g h) :
+    h.currentOpCount = g.currentOpCount :=
+  congrArg (fun observed => observed.2.2) edit.constants
+
+/-- An actual word of other-fiber messages charges no operation to that fiber. -/
+theorem OtherEdits.currentOpCount {g h : NFiber} (word : OtherEdits g h) :
+    h.currentOpCount = g.currentOpCount :=
+  congrArg (fun observed => observed.2.2) word.constants
 
 /-- Messages retain the command fields of running or exited fibers.
 Consumer: Guard queue transport through the shared message interpretation. -/
