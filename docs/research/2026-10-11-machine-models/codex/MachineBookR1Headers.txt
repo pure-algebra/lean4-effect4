@@ -1,0 +1,82 @@
+Test/Dogfood/Proofs/HostTimeoutEvaluation.lean
+Test/Dogfood/Proofs/HostTimeoutParkSteps.lean
+Test/Dogfood/Proofs/HostTimeoutRaceCommands.lean
+Test/Machine/EditMessages.lean
+Test/Machine/Runtime/SchedulerCoreContract.lean
+Test/Program/RegistrationColumn.lean
+  amended: historical_parked
+  amended: parked
+src/Effect4/Laws/Data/ListRel.lean
+src/Effect4/Laws/Data/ListRelConnectors.lean
+  amended: machineListRel_iff
+src/Effect4/Laws/Machine/Book.lean
+  redirected: ListRel.refl
+  redirected: ListRel
+  redirected: ListRel.isEmpty
+  redirected: ListRel.of_map
+  redirected: ListRel.map
+  redirected: ListRel.append
+  redirected: ListRel.of_eq
+  redirected: ListRel.length
+src/Effect4/Laws/Machine/Clauses.lean
+  amended: Dispatcher.drain_disarms
+  amended: Dispatcher.enqueue_arms
+  amended: countdownPark_parks
+  amended: drive_registrationDone_parks
+  amended: evaluatePrim_async_parks
+  amended: evaluatePrim_join_live
+  amended: evaluatePrim_yieldNowWith_eq
+  amended: fireObserver_countdown_done
+  amended: fireObserver_countdown_next
+src/Effect4/Laws/Machine/EditObserverWords.lean
+src/Effect4/Laws/Machine/Handles.lean
+  amended: countdown_done_minted
+  amended: countdown_next_minted
+src/Effect4/Laws/Machine/MaskRuns.lean
+src/Effect4/Laws/Machine/Witnesses.lean
+src/Effect4/Laws/Program/Agreement/Machine.lean
+src/Effect4/Laws/Program/Agreement/Segment.lean
+src/Effect4/Laws/Program/CommandFrames.lean
+src/Effect4/Laws/Program/EvaluateR.lean
+src/Effect4/Laws/Program/Guard/Core.lean
+src/Effect4/Laws/Program/Guard/NativeState.lean
+  amended: join_actual
+src/Effect4/Laws/Program/Guard/Observer.lean
+src/Effect4/Laws/Program/Guard/RegistrationDone.lean
+  amended: guardQueue_park_internal
+  amended: guardState_park_internal
+  amended: interruptedAt_park_internal
+  amended: requestOf_park_internal
+src/Effect4/Laws/Program/NativeCommands.lean
+src/Effect4/Laws/Program/PrimitiveProducer.lean
+src/Effect4/Laws/Program/Simulation/Drive.lean
+  amended: FMeans.countdownEntry
+  amended: pendingOk_countdownEntry
+src/Effect4/Laws/Program/Simulation/Evaluate.lean
+  amended: evaluatePrim_async_none
+src/Effect4/Laws/Program/Simulation/Fibers.lean
+src/Effect4/Laws/Program/Simulation/Pending.lean
+  amended: pendingOk_parkVoid
+src/Effect4/Laws/Program/Typed/Commands/Bookkeeping.lean
+src/Effect4/Laws/Program/Typed/Commands/Clauses/Async.lean
+  amended: Evaluating.async_parks
+  amended: Evaluating.async_parks_request
+  amended: Evaluating.async_parks_store
+  amended: Evaluating.park_fresh_request
+src/Effect4/Laws/Program/Typed/Commands/Clauses/Park.lean
+  amended: Evaluating.countdown_parks
+  amended: Evaluating.park_fresh
+src/Effect4/Laws/Program/Typed/Commands/Launch.lean
+  amended: countdownAt_alloc
+src/Effect4/Laws/Program/Typed/Commands/Observe.lean
+  amended: countdownAt_advance
+  amended: countdownPayload_advance
+  amended: fiberTyped_repend
+src/Effect4/Laws/Program/Typed/Commands/Registration.lean
+src/Effect4/Laws/Program/Typed/Frames.lean
+src/Effect4/Laws/Program/Typed/Scheduler.lean
+src/Effect4/Machine/Fibers.lean
+Measured existing named headers: 2766
+Unchanged text: 2725
+Amended text: 33
+Removed local names: 8
