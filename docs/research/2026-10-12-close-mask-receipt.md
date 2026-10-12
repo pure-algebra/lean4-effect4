@@ -87,6 +87,112 @@ the main fiber (`closeA` in the probe below). The release is a capture (`FinName
 Tested: finite host runs on bun 1.4.2, rc.112 from `ts/eff/node_modules`, 4.0.1 from
 `/Users/pooks/Dev/lean4-effect4/ts/release/node_modules` (read only). No Lean semantics changed.
 
+## Step 1: mask an explicit `Scope.close` (item 2)
+
+### Placement of the obligations
+
+Written before the proofs, as `AGENTS.md` asks.
+
+- **Concept.** `scope-lifetime-finalization`, and R11's open part: exactly once in close order
+  over closed scopes. The simulation's cases serve `translation-simulation`; the typed clause
+  serves R9 (`ExitOk`, the typed state).
+- **Questions.**
+  - `clause_closeScope` (`src/Effect4/Laws/Program/Typed/Commands/Evaluate.lean`), placed at
+    `scope-lifetime-finalization`, requirement R11. Proved before the slice; re-proved in place
+    with its statement unchanged (`FiberClauseKeeps root rootTy (.closeScope scope ex)`).
+  - The registry claim `run-eq-ref`: its statement is unchanged. The cases that move are
+    `closeScope_rel` (`Simulation/Actions.lean`), `closeScope_means` (`Simulation/Hooks.lean`)
+    and `frame_closeScope` (`Simulation/Evaluate.lean`).
+  - The clause theorems `withFiber_closeScope` (restated) and `withFiber_closeScope_void` (new)
+    in `src/Effect4/Laws/Machine/Clauses.lean`, each a witness of the census row
+    `scope.close-sequential`.
+  - Helpers, each with its consumer: `means_enterUninterruptible` (consumer `closeScope_rel`);
+    `termCore_enterUninterruptible_true` and `_false` (consumer `clause_closeScope`).
+- **Reach.** The frame machine's `evaluatePrim.withFiber` at `WithFiberAction.closeScope`, the
+  term machine's `FiberAction.closeScope`, and the typed clause at the term instance. The
+  hypothesis is the interpreter's close: `none` (an unknown scope), `some (state, none)` (nothing
+  closes) or `some (state, some program)`.
+- **Not established.**
+  - Progress of the close: a finalizer that parks for ever still parks, now masked.
+  - R11's exactly-once statement itself: no theorem states it yet.
+  - The host boundary stays where `docs/core/host-boundary.md` puts it.
+- **Unlock.** R11's exactly-once statement for explicit closes. Nothing on the M5 → M6 → M7
+  spine.
+
+### Results
+
+- **Head.** `a6af0c459` holds the machine and the proofs. The truth signature, the regenerated
+  groups and this receipt follow it.
+- **The machine.** `WithFiberAction.closeScope` (`src/Effect4/Machine/Fibers.lean`) runs a close
+  program masked, through `FiberCore.enterUninterruptible`. `RunInterp.closeScope` answers
+  `Option (St × Option κ)`; `none` in the inner place is latest's `void_` close, unmasked.
+  `storesCloseScope` (`src/Effect4/Machine/Stores.lean`) answers it for a scope with no
+  finalizer.
+- **The axiom audit.** `#axiom_audit` over the landing's modules: 12784 declarations, each
+  within `[propext, Quot.sound]`.
+- **The truth lane.** `harness/truth/run-truth.ts` signs a third kind of exception, `LATEST`:
+  a program where the machine follows 4.0.1 and rc.112 differs. `scripts/check-truth.py`
+  requires the set to be exactly `closeInterruptedMidFinalizer`. Its receipt in
+  `harness/truth/Truth.lean` now reads `1`.
+- **Commands and results.**
+  - `make -k gen`: every group regenerated. The truth group first stopped at the old receipt
+    (`0`). After the receipt edit, `make gen-truth`: `PASS: 82 programs agree on exits,
+    schedules and sync exits; 11 signed divergence(s)`.
+  - `make check-compiler`: `conform compiler: PASS`. `make check-native`: `conform native:
+    PASS`. `make check-ocaml`: every lane `ALL PASS`, the three-engine differential with
+    0 divergences.
+  - `make check-host-protocol`: `PASS host-protocol: fresh projections, typed host programs,
+    keyed replay and negative controls`.
+  - `make check-truth`: `PASS truth: pinned corpus, bounded differential and the signed U-01,
+    HC-2 and LATEST divergences checked; the regenerated modules type-check`. The row:
+    Lean `success 1`, rc.112 `success 0`, the schedule differs at row 9.
+  - `make check-corpus`: `PASS corpus: 400 programs match the committed results; 18 registered
+    disagreement(s)`.
+  - `make gen-truth-ledger` and `make check-truth-release`, with `EFFECT4_RELEASE_NODE_MODULES`
+    at the main checkout's `ts/release/node_modules` (effect 4.0.1): refused. The harness does
+    not type-check against 4.0.1. Four rows predate the branch (`pSqlCatch`, `pSqlExit`,
+    `pSqlFail`, `pSqlite`: `SqlError` reaches a `never` error channel). One is Step 0's:
+    `closeInterruptedMidFinalizer` closes the scope that `Scope.Scope` reads, and 4.0.1's
+    `Scope.close` takes a `Closeable` (TS2741). On 4.0.1 the program runs (Step 0's probe) but
+    does not type-check. The ledger is not updated.
+- **Evidence kind.** Proved: the law graph's statements, modulo their recorded goals. Tested:
+  the finite host runs above on bun 1.4.2.
+- **Decisions row proposed (359).** An explicit `Scope.close` masks its closer, as 4.0.1's
+  `scopeClose` does (`vendor/effect-4.0.1/src/internal/effect.ts:3929-3935`). A close with no
+  finalizer is `void`, unmasked. The truth lane signs such a program as `LATEST`.
+
+## Step 2: latest's failure walk (item 1)
+
+### Placement of the obligations
+
+Written before the proofs, as `AGENTS.md` asks.
+
+- **Concept.** `translation-simulation` for the walk's agreement, and R9 (`ExitOk`, the typed
+  state) for the typed walk. The outcome changes; no claim's statement changes.
+- **Questions.**
+  - The registry claim `run-eq-ref`: its statement is unchanged. The cases that move are
+    `walk_mask` and `walkExit_mask_failure` (`Simulation/Walk.lean`).
+  - The claims `step-deliver-preserves` and `step-loop-preserves`: statements unchanged, still
+    modulo their goals. The cases that move are the mask slots of `popR_typed`
+    (`Typed/Stack.lean`), `ambient_popR_typed` (`Typed/AmbientMachine.lean`), `popR_hostTyped`
+    and `ambient_popR_hostTyped` (`Typed/HostWalk.lean`).
+  - One new helper, `exitOk_combine_interrupts`: an `ExitOk` failure stays `ExitOk` after an
+    interrupt-only cause is combined in. Its consumers are the four typed walks above.
+  - The answer-flow transport (`AnswerFlowFamilyPop.lean`): a skipped restoring mask now changes
+    the carried cause, so the failure transport takes the model's closure under the fiber's
+    recorded interrupt as an explicit premise. Its consumers state it at their models.
+- **Reach.** The frame machine's `FrameFiber.skippedCause` at a frame without a failure arm, and
+  the term machine's `popR` at a restoring or finalizer mask slot that sets the flag on a
+  failing exit with a recorded interrupt.
+- **Not established.**
+  - Latest's combine at the walk's end when no continuation answered and the fiber is
+    interrupted. It is reached only by a fiber that holds a deferred interrupt and then fails.
+    A combine there breaks the stack-split equations (`popFrom_append`, `getCont_under_*`) and
+    restates every delivered interrupt as `combine i i`. It stays part of `U-01`.
+  - Latest's stack-frame annotation of the cause (`FRAME-FB-STACK-ANNOTATION`).
+  - The host boundary stays where `docs/core/host-boundary.md` puts it.
+- **Unlock.** No node of the M5 → M6 → M7 spine. The gain is an outcome: `poisonNoHandler`.
+
 ## Appendix: `release_probe.py`
 
 The probe ran from the session scratchpad, outside the repository. It reuses the release lane's

@@ -663,9 +663,9 @@ def pLateSeen : Api.Program :=
 
 The probes `poisonNoHandler` and `closeInterruptedMidFinalizer` of seat A401
 (`docs/research/2026-10-05-seat-A401/probes/backlog.mjs`), written in the language. They are the
-truth programs of items 1 and 2 of `docs/research/2026-10-12-probe-alignment-plans.md`. Each
-records the pin's answer before the machine changes, and the release lane reads the same
-program on 4.0.1. -/
+truth programs of items 1 and 2 of `docs/research/2026-10-12-probe-alignment-plans.md`. The
+release lane reads the same program on 4.0.1. Where the machine follows 4.0.1, the rc.112 lane
+signs the program (`LATEST` in `harness/truth/run-truth.ts`). -/
 
 open Effect4.Program.Authoring in
 /-- The source of `poisonNoHandler`. -/
@@ -722,7 +722,8 @@ completes the promise and awaits both. The program answers the log. rc.112 close
 closer's own mask (`vendor/effect-4.0.0-rc.112/src/internal/effect.ts:3775-3776`): the interrupt
 ends the close, the scope is already closed, and the release never runs, so the log is `0`.
 4.0.1 masks the closer before it closes (`vendor/effect-4.0.1/src/internal/effect.ts:3929-3935`):
-the close runs to its end, and the log is `1`. The machine answers as the pin.
+the close runs to its end, and the log is `1`. The machine answers as 4.0.1: it masks the
+closer (`WithFiberAction.closeScope`, `src/Effect4/Machine/Fibers.lean`).
 
 The interrupted finalizer is the link, not a release: the machine runs a capture's release
 masked (`EffThunk.releaseMasked`, `src/Effect4/Program/Compile.lean`), so an interrupt inside a
@@ -2092,8 +2093,9 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
 #guard pMaskWait != pMaskedRestore &&
   (Api.run pMaskWait 1000).exit != (Api.run pMaskedRestore 1000).exit
 -- The two programs of the alignment plan (2026-10-12). Each elaborates (its first node makes a
--- cell; a source that did not elaborate is a `fail`), reads back whole, and answers the pin's
--- value on the machine.
+-- cell; a source that did not elaborate is a `fail`) and reads back whole. The close answers
+-- latest's value: the machine masks an explicit close (Effect 4.0.1
+-- `internal/effect.ts:3929-3935`), so the interrupted closer runs the release (decisions row 359).
 #guard match poisonNoHandler, closeInterruptedMidFinalizer with
   | .bind (.perform (.deferredMakeOf .nat .never) _) _, .bind (.perform .refMake _) _ => true
   | _, _ => false
@@ -2101,7 +2103,7 @@ def tapeAnswers (lines : List String) : Except String (List Answer) :=
 #guard Api.roundTrip closeInterruptedMidFinalizer = .ok closeInterruptedMidFinalizer
 #guard (Api.run poisonNoHandler 1000).exit = some (.success
   (.list [reifyExitVal (.failure (Cause.fail (.tag 42))), .bool true, .bool false]))
-#guard (Api.run closeInterruptedMidFinalizer 1000).exit = some (.success (.nat 0))
+#guard (Api.run closeInterruptedMidFinalizer 1000).exit = some (.success (.nat 1))
 -- The fiber numbers of the compared fields (`numbering`). The rule on rows: a fiber's first
 -- sight is its first `forked` row as the child or its first `started` row.
 #guard firstSeen [.started 0, .forked 0 2, .started 2, .parked 2, .started 1, .started 2] = [0, 2, 1]

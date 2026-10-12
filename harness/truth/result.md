@@ -96,6 +96,6 @@ effect 4.0.0-rc.112, bun 1.4.2, deadline 300 ms
 | pQueueService | success [true,1] | success [true,1] | yes | yes | yes | runPromiseExit | same value; client through the service key: agrees (success [true,1]) |
 | pSemaphoreService | success [1,false,2] | success [1,false,2] | yes | yes | yes | runPromiseExit | same value; client through the service key: agrees (success [1,false,2]) |
 | poisonNoHandler | success [{"failure":{"reasons":[{"fail":42}]}},true,false] | success [{"failure":{"reasons":[{"fail":42}]}},true,false] | yes | yes | yes | runPromiseExit | same value |
-| closeInterruptedMidFinalizer | success 0 | success 0 | yes | yes | yes | runPromiseExit | same value |
+| closeInterruptedMidFinalizer | success 1 | success 0 | NO | NO | NO | runPromiseExit | same kind, values differ; schedule differ at row 9: Lean "parked 3", rc.112 "resumed 2"; LATEST signed divergence: the machine follows Effect 4.0.1 here (decisions row 359) |
 
-PASS: 83 programs agree on exits, schedules and sync exits; 10 signed divergence(s)
+PASS: 82 programs agree on exits, schedules and sync exits; 11 signed divergence(s)
