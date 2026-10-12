@@ -270,3 +270,31 @@ and after: shared-law uses 19 → 48, private case analyses 9 → 8, hand decisi
   records `dune runtest clock` and the engine test.
 
 **Verdict: improving.** Shared-law uses rise by 29, and private analyses fall by one.
+
+## 2026-10-12 07:45, shared place funding, and the source command debit as its instance
+
+Codex reached its quota at 23:43. The owner gave its open work to Claude (2026-10-12).
+
+Range `f766387b1..3a380876f`, merged at `ebb78c9ea`. Under `Laws` and `Dogfood` it adds 2,676
+lines and removes 886 in 64 files. The script's patterns over the changed files, before and after:
+shared-law uses 101 → 184, private case analyses 253 → 258, hand decision lifts 5 → 5.
+
+- **Shared structure.** `Laws/Program/PlaceFunding/` (881 lines in five modules) states
+  place funding once, as `command_funded`: every command keeps a funded ledger, given the
+  ledger's hooks. `PlaceLedgerBalance.lean`, `AnswerFlowHead.lean` and `StoreValidity.lean` add
+  the balance, the head answer flow and store validity.
+- **Item 12 has landed.** `E4-RUN-CE-047` is repaired: `Profile.scale` keeps exact reference
+  multiplication, and the TypeScript and OCaml faces refuse a product outside the profile.
+- **Small regressions.** `Laws/Machine/Clauses.lean` gains three private analyses (19 → 22), and
+  `AnswerFlowFamilyPop.lean` two.
+
+Codex left one uncommitted slice in its integration worktree. Claude landed it at `2ed80a0b7`,
+and finished it. `SourceOpportunities.command_debit` keeps its name and statement. Its 20-arm
+case analysis over `SourceCommand` becomes one application of `PlaceFunding.command_funded`.
+The per-command lemmas that only the old analysis used are removed: twenty declarations. The
+file falls from 505 lines to 141. The script's patterns over that commit: shared-law uses
+35 → 30, private case analyses 23 → 10. It adds 133 lines and removes 472.
+
+**Verdict: improving.** The source-opportunity budget is the first ledger whose command case is
+an instance of the shared law. The four ledgers of the one-thing section remain: release
+custody, finalizer credits and Atomic `WriterPhase` still carry their own command passes.
