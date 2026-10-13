@@ -242,6 +242,12 @@ example (applied : (Run.rows admittedRun.run)[3]? = some (.apply ⟨Api.root, 0�
   | .ok l => l.run.phases == [.progressed, .bound, .preflight, .applied]
   | .error _ => false
 
+-- `Live.replay_recorded`, read on the finished script: the typed replay of its own journal answers
+-- its run, with the row spellings dropped.
+example (t : Api.Typed finished.run.built.table) (same : t.program = finished.run.built.program)
+    (named : finished.run.id ≠ "") :=
+  Live.replay_recorded finished t same named
+
 -- Red controls of the start: another binding and another table are refused, with the session's
 -- reasons.
 #guard typedFirst.any fun t =>

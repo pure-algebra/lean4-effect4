@@ -31,6 +31,8 @@ it.
   admission at the run before its row. The session admitted it at the row's columns or at the
   call's checked instance, and it fits there. `Api.Typed.replay` answers a `Live`, so the law reads
   every run that it replays.
+* **A session's own journal replays through the typed replay** (`replay_recorded`): it answers the
+  session's run, its row spellings dropped, so it refuses no run command that the session accepted.
 
 What they do not establish: that a run is funded (`embedded-budget-sufficient`, an open part of
 R12), that the row's columns admit only members of the call's instance, the session's ledger, a
@@ -458,5 +460,77 @@ theorem replay_at_call_instance (l : Live) (i : Nat) (key : Api.HostSession.Key)
   · rw [Run.reached_callInstance _ reached, built]
   · exact Api.HostSession.preflight_success_prepared_fits _ reply _ value live success accepted
   · exact Api.HostSession.preflight_failure_noShapeDefect _ reply _ cause failed accepted ty
+
+
+/-! ## A session's own journal replays through the typed replay
+
+The converse half of the claim: the typed replay refuses no run command that the session
+accepted. The open part of R6 that row 323 (8) names is this refusal at the checked tape replay. -/
+
+/-- Step of `replay_recorded`: feeding a journal's run commands as remote run commands plays the
+journal (`Run.feed_fst`). -/
+theorem feedAll_wire (l : Live) (journal : List Command) :
+    (l.feedAll (journal.map .wire)).run = l.run.play journal := by
+  induction journal generalizing l with
+  | nil => rfl
+  | cons c rest ih =>
+    show ((l.feed (.wire c)).1.feedAll (rest.map .wire)).run = _
+    rw [ih]
+    show (l.run.feed (.wire c)).1.play rest = l.run.play (c :: rest)
+    rw [Run.feed_fst]
+    rfl
+
+/-- Step of `replay_recorded`: a run reads no row spelling, so the spellings of its built program
+ride along a play unchanged. -/
+theorem play_rowNames (r : Run) (names : List (String × Nat)) (journal : List Command) :
+    ({ r with built := { r.built with rowNames := names } }).play journal =
+      { r.play journal with built := { (r.play journal).built with rowNames := names } } := by
+  induction journal generalizing r with
+  | nil => rfl
+  | cons c rest ih =>
+    rw [Run.play_cons, Run.play_cons]
+    exact ih (r.step c)
+
+/-- **A session's own journal replays through the typed replay** (decisions rows 98 and 373 (8)).
+Take a live run with a nonempty name, and a typing certificate of its program. Replay the run's
+journal under the header that its open wrote, with its binding and its budgets. The typed replay
+answers the run itself, with one change: the row spellings of its built program are dropped,
+since a header carries the row table alone. So the typed replay refuses no run command that the
+session accepted, and it applies every answer that the session applied.
+
+Placement: concept `host-session-protocol`, property `typed-replay-session`. Question: the
+proposed claim `replay-at-call-instance`, its half that a recorded journal is not refused, beside
+`replay_at_call_instance`. Consumers: a holder that restores a session from its journal through
+the typed route, and the OCaml checked session (slice DM7). Reach: every `Live` with a nonempty
+name, and every typing certificate of its program at its table. It applies `Live.start_ok`,
+`Run.open_total` and `journal_replays`. It does not establish that another host's journal
+replays, since the session may refuse its commands. It says nothing of row spellings, or of a
+lowered session. Unlocks: R6, with `replay_at_call_instance`, and R13. -/
+@[semantics "host-session-protocol" (requirement := R6)]
+theorem replay_recorded (l : Live) (t : Api.Typed l.run.built.table)
+    (hprog : t.program = l.run.built.program) (named : l.run.id ≠ "") :
+    ∃ l', t.replay l.run.profile
+        ⟨Api.HostSession.version, l.run.id, l.run.profile, l.run.built.table⟩
+        l.run.journal l.run.budget = .ok l' ∧
+      l'.run = { l.run with built := { l.run.built with rowNames := [] } } := by
+  obtain ⟨program, certificate⟩ := t
+  dsimp only at hprog
+  subst hprog
+  have started := start_ok l.run.built.program l.run.built.table l.run.profile
+    ⟨Api.HostSession.version, l.run.id, l.run.profile, l.run.built.table⟩ l.run.budget _
+    (Run.open_total l.run.built l.run.id l.run.budget l.run.profile named)
+  refine ⟨(Live.open ⟨l.run.built.table, l.run.built.program, l.run.built.admitted, []⟩
+      l.run.id l.run.budget l.run.profile).feedAll (l.run.journal.map .wire), ?_, ?_⟩
+  · unfold Api.Typed.replay
+    rw [started]
+    rfl
+  · rw [feedAll_wire]
+    show (Run.open { l.run.built with rowNames := [] } l.run.id l.run.budget l.run.profile).play
+      l.run.journal = _
+    have opened : Run.open { l.run.built with rowNames := [] } l.run.id l.run.budget l.run.profile =
+        { Run.open l.run.built l.run.id l.run.budget l.run.profile with
+          built := { (Run.open l.run.built l.run.id l.run.budget l.run.profile).built with
+            rowNames := [] } } := rfl
+    rw [opened, play_rowNames, journal_replays l]
 
 end Effect4.Live
