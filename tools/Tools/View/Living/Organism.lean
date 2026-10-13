@@ -158,8 +158,8 @@ def sources (m : Marking) (ds : List Nat) : List Soft.Source :=
   let cap := m.capacity
   [Soft.Source.segment (vx0 + 30) CY (vx1 cap - 30) CY 46] ++
   ((channelEnds cap).zip ds).map (fun (((ax, ay), (bx, by_)), d) =>
-    Soft.Source.segment ax ay bx by_ (max 5 (channelR d))) ++
-  [Soft.Source.point inletX CY 14 700, Soft.Source.point (outletX cap) CY 14 700] ++
+    Soft.Source.segment ax ay bx by_ (max 6 (channelR d))) ++
+  [Soft.Source.point inletX CY 22 450, Soft.Source.point (outletX cap) CY 22 450] ++
   (List.range m.held.length).map (fun k => Soft.Source.point (slotX cap k) CY 26 450) ++
   (List.range m.offers.length).map (fun j => Soft.Source.point (offerX j) CY 30 900) ++
   (List.range m.takers.length).map (fun j => Soft.Source.point (takerX cap j) CY 30 900)
@@ -169,11 +169,27 @@ beyond any channel's reach, so the field is zero on its border. -/
 def STEP : Nat := 2
 def MARGIN : Int := 48
 
-/-- The membrane's two levels, in thousandths of the field. -/
-def OUTER : Int := 300
-def INNER : Int := 440
+/-- The body's level, in thousandths of the field: its membrane. A low level lets the sources'
+fields blend widely, so the necks between them are soft. -/
+def OUTER : Int := 220
+
+/-- The lamellae's levels inside the membrane, each a fainter line. -/
+def LAMELLAE : List Int := [430, 640]
+
+/-- The width of the membrane and of a lamella, in thousandths of a pixel. -/
+def MEMBRANE_W : Int := 1400
+def LAMELLA_W : Int := 900
+
+/-- **The body of a field**: a faint fill inside the membrane, the membrane as one line, and the
+lamellae inside it, all contours of the one field. -/
+def body (g : Soft.Grid) : List (Keyed Call) :=
+  [⟨"body", .shape .ink 45 (g.paths OUTER 4)⟩, ⟨"membrane", .shape .ink 560 (g.lines OUTER MEMBRANE_W 4)⟩] ++
+  LAMELLAE.zipIdx.map fun (lv, i) => ⟨s!"lamella/{i}", .shape .ink (200 - 70 * i) (g.lines lv LAMELLA_W 4)⟩
 
 /-! ## The units -/
+
+/-- The width of every unit's outline, in thousandths of a pixel: one material with the body. -/
+def UNIT_W : Int := 1200
 
 /-- A disc of radius `r` about a point, as one closed path in thousandths. -/
 def disc (x y r : Int) : List Cubic := Grow.roundRect (1000 * (x - r)) (1000 * (y - r)) (2000 * r) (2000 * r) (1000 * r)
@@ -184,15 +200,15 @@ def numeral (key : Key) (x y : Int) (s : String) : Keyed Call :=
 
 /-- **A message held**: a filled droplet with its value. -/
 def droplet (key : Key) (x y : Int) (v : Nat) : List (Keyed Call) :=
-  [⟨key, .shape .ink 300 [disc x y 13]⟩, numeral key x y (toString v)]
+  [⟨key, .shape .ink 330 [disc x y 13]⟩, numeral key x y (toString v)]
 
 /-- **Room**: a hollow ring in the rule's tone. -/
 def room (key : Key) (x y : Int) : List (Keyed Call) :=
-  [⟨key, .shape .rule 1000 (Grow.ring (1000 * (x - 13)) (1000 * (y - 13)) 26000 26000 13000 1000)⟩]
+  [⟨key, .shape .ink 300 (Grow.ring (1000 * (x - 13)) (1000 * (y - 13)) 26000 26000 13000 UNIT_W)⟩]
 
 /-- **A request that waits**: the parked request's hollow box, its numeral above it. -/
 def parked (key : Key) (x y : Int) (n : Nat) : List (Keyed Call) :=
-  [⟨key, .shape .ink 800 (Grow.ring (1000 * (x - 17)) (1000 * (y - 17)) 34000 34000 8000 1200)⟩,
+  [⟨key, .shape .ink 700 (Grow.ring (1000 * (x - 17)) (1000 * (y - 17)) 34000 34000 12000 UNIT_W)⟩,
    ⟨key, .cells (x - 17) (y - 22) (toString n).length (toString n)⟩]
 
 /-- **What moved in the beat**: a fine arc from where a message stood to where it stands. -/
@@ -234,10 +250,8 @@ def units (before : Option Marking) (m : Marking) : List (Keyed Call) :=
 /-- **One frame of the organism**: the membrane, the faint body inside it, then the units. -/
 def picture (before : Option Marking) (m : Marking) (ds : List Nat) : List (Keyed Call) :=
   -- the grid reaches past the picture's sides, where the channels leave it, so every contour closes
-  let g := Soft.Grid.of (-MARGIN) 0 STEP (((W + 2 * MARGIN) / STEP).toNat + 1) ((H / STEP).toNat + 1) (sources m ds)
-  let outer := g.paths OUTER
-  let inner := g.paths INNER
-  [⟨"body", .shape .ink 70 inner⟩, ⟨"membrane", .shape .ink 520 (outer ++ inner)⟩] ++ units before m
+  body (Soft.Grid.of (-MARGIN) 0 STEP (((W + 2 * MARGIN) / STEP).toNat + 1) ((H / STEP).toNat + 1) (sources m ds)) ++
+    units before m
 
 /-- **Every frame of the scene**: its words, its marking and its picture. -/
 def scene : Except String (List (String × Marking × List (Keyed Call))) := do

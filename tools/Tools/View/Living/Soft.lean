@@ -28,8 +28,10 @@ contents press.
 * `smooth`: a closed polyline thinned and drawn through by Catmull-Rom's spline
   (`Grow.through`), as cubic segments in thousandths of a pixel, ready for `Call.shape`.
 
-Two levels of one field give a membrane as a band (`Call.shape` fills by the even-odd rule): it
-is thick where the field slopes gently and thin where it is steep, as a living wall is.
+Every line drawn from the field is a contour of it at one width (`Grid.lines`): the contour and
+its copy moved a fixed width inward, filled by the even-odd rule. The membrane is the contour at
+the body's level, and the lamellae inside it are the contours at higher levels, like the layers of
+cartilage, so every line of the body comes from the one structure.
 Everything is whole numbers: pixels for places, thousandths for the field and the points.
 -/
 
@@ -177,21 +179,68 @@ def Grid.loops (g : Grid) (level : Int) : List (List Nat) := Id.run do
     out := loop.toList :: out
   return out
 
-/-- **A closed polyline drawn smooth**: every `keep`-th point, then Catmull-Rom's spline through
-them, closed, as cubic segments. A loop of fewer than three points draws nothing. -/
-def smooth (keep : Nat) (pts : List (Int × Int)) : List Cubic :=
-  let thin := (pts.zipIdx.filter fun (_, i) => i % (max 1 keep) == 0).map (·.1)
-  match thin with
-  | a :: b :: c :: rest =>
-    let ring := a :: b :: c :: rest
+/-- A closed polyline thinned: every `keep`-th point. -/
+def thin (keep : Nat) (pts : List (Int × Int)) : List (Int × Int) :=
+  (pts.zipIdx.filter fun (_, i) => i % (max 1 keep) == 0).map (·.1)
+
+/-- **A closed ring of points drawn smooth**: Catmull-Rom's spline through them, closed, as cubic
+segments. A ring of fewer than three points draws nothing. -/
+def closed (ring : List (Int × Int)) : List Cubic :=
+  match ring with
+  | a :: b :: _ :: _ =>
     let last := (ring.getLast?).getD a
     (Grow.throughFrom last (ring ++ [a, b])).take ring.length
   | _ => []
+
+/-- A closed polyline thinned and drawn smooth. -/
+def smooth (keep : Nat) (pts : List (Int × Int)) : List Cubic := closed (thin keep pts)
 
 /-- **The contours of the field at a level**, smooth, as closed paths for `Call.shape`. -/
 def Grid.paths (g : Grid) (level : Int) (keep : Nat := 3) : List (List Cubic) :=
   (g.loops level).filterMap fun loop =>
     let p := smooth keep (loop.map (g.crossing level))
     if p.isEmpty then none else some p
+
+/-- **The field at a point** in thousandths of a pixel: the bilinear reading of the four samples
+around it. -/
+def Grid.sample (g : Grid) (x y : Int) : Int :=
+  let st : Int := (g.step : Int) * 1000
+  let fx := x - g.x0 * 1000
+  let fy := y - g.y0 * 1000
+  if fx < 0 || fy < 0 then 0 else
+  let i := (fx / st).toNat
+  let j := (fy / st).toNat
+  let u := fx % st
+  let v := fy % st
+  let top := g.get i j * (st - u) + g.get (i + 1) j * u
+  let bot := g.get i (j + 1) * (st - u) + g.get (i + 1) (j + 1) * u
+  (top * (st - v) + bot * v) / (st * st)
+
+/-- **A ring moved inward by `w`** thousandths of a pixel: each point along its normal, to the
+side where the field is higher. -/
+def Grid.inward (g : Grid) (w : Int) (pts : List (Int × Int)) : List (Int × Int) :=
+  let arr := pts.toArray
+  let n := arr.size
+  (List.range n).map fun k =>
+    let p := arr.getD k (0, 0)
+    let a := arr.getD ((k + n - 1) % n) p
+    let b := arr.getD ((k + 1) % n) p
+    let tx := b.1 - a.1
+    let ty := b.2 - a.2
+    let len : Int := Grow.isqrt (tx * tx + ty * ty).toNat
+    if len == 0 then p else
+    let nx := -ty * w / len
+    let ny := tx * w / len
+    if g.sample (p.1 + nx) (p.2 + ny) ≥ g.sample (p.1 - nx) (p.2 - ny) then (p.1 + nx, p.2 + ny)
+    else (p.1 - nx, p.2 - ny)
+
+/-- **The contours at a level as lines of one width**: each loop thinned, its inner edge `w`
+thousandths of a pixel inward, both drawn smooth. Filled by the even-odd rule, each loop is a
+line of constant width along the contour, so every line of a picture drawn from one field reads
+as one material. -/
+def Grid.lines (g : Grid) (level : Int) (w : Int) (keep : Nat := 3) : List (List Cubic) :=
+  (g.loops level).flatMap fun loop =>
+    let pts := thin keep (loop.map (g.crossing level))
+    if pts.length < 3 then [] else [closed pts, closed (g.inward w pts)]
 
 end Tools.View.Living.Soft

@@ -80,8 +80,8 @@ show() {
   browse "$root/${1#http://localhost:8783/}"
 }
 if [ "$cmd" = vocabulary ]; then
-  build_driver GlyphSheet
-  (cd "$root" && LEAN_NUM_THREADS=3 lake env lean --run tools/Drivers/GlyphSheet.lean "$here/out/docs")
+  # native (lakefile `view-pages`): a beat's sampled frames each compute a whole field
+  (cd "$root" && LEAN_NUM_THREADS=3 lake build -q view-pages && .lake/build/bin/view-pages "$here/out/docs")
   if [ "${1:-}" = cells ]; then
     show "http://localhost:8783/tools/view/out/docs/cells.html" "Effect4 · the Queue's cell"
   elif [ "${1:-}" = living ]; then

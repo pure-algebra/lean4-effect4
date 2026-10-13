@@ -70,26 +70,23 @@ def at_ (before after : Marking) (dsB dsA : List Nat) (p : Nat) : List (Keyed Ca
   let srcs : List Soft.Source :=
     [Soft.Source.segment (vx0 + 30) CY (vx1 cap - 30) CY 46] ++
     ((channelEnds cap).zip ds).map (fun (((ax, ay), (bx, by_)), d) =>
-      Soft.Source.segment ax ay bx by_ (max 5 (channelR d))) ++
-    [Soft.Source.point inletX CY 14 700, Soft.Source.point (outletX cap) CY 14 700] ++
+      Soft.Source.segment ax ay bx by_ (max 6 (channelR d))) ++
+    [Soft.Source.point inletX CY 22 450, Soft.Source.point (outletX cap) CY 22 450] ++
     msgs.map (fun m => let (x, y) := posOf m; Soft.Source.point x y 26 450) ++
     offerIds.map (fun i => let (x, y) := offerAt i; Soft.Source.point x y 30 (900 * (offerP i).toNat / 1000)) ++
     takerIds.map (fun i => let (x, y) := takerAt i; Soft.Source.point x y 30 (900 * (takerP i).toNat / 1000))
   let g := Soft.Grid.of (-MARGIN) 0 STEP (((W + 2 * MARGIN) / STEP).toNat + 1) ((H / STEP).toNat + 1) srcs
-  let outer := g.paths OUTER
-  let inner := g.paths INNER
   let room := (List.range cap).flatMap fun k => Organism.room s!"room/{k}" (slotX cap k) CY
   let boxes (key : String) (at_ : Int × Int) (n : Nat) (pres : Int) : List (Keyed Call) :=
     if pres ≤ 0 then [] else
-    [⟨key, .shape .ink (800 * pres.toNat / 1000)
-        (Grow.ring (1000 * (at_.1 - 17)) (1000 * (at_.2 - 17)) 34000 34000 8000 1200)⟩,
+    [⟨key, .shape .ink (700 * pres.toNat / 1000)
+        (Grow.ring (1000 * (at_.1 - 17)) (1000 * (at_.2 - 17)) 34000 34000 12000 UNIT_W)⟩,
      ⟨key, .cells (at_.1 - 17) (at_.2 - 22) (toString n).length (toString n)⟩].filter fun c =>
       match c.call with | .cells .. => pres ≥ 500 | _ => true
   let requests := offerIds.flatMap (fun i => boxes s!"offer/{i}" (offerAt i) i (offerP i)) ++
     takerIds.flatMap (fun i => boxes s!"taker/{i}" (takerAt i) i (takerP i))
   let droplets := msgs.flatMap fun m => let (x, y) := posOf m; droplet s!"held/{m}" x y m
-  [⟨"body", .shape .ink 70 inner⟩, ⟨"membrane", .shape .ink 520 (outer ++ inner)⟩] ++
-    room ++ requests ++ droplets
+  body g ++ room ++ requests ++ droplets
 
 /-- **A beat sampled**: the organism at `n + 1` evenly spaced shares, the first at the start and
 the last at the end. -/
