@@ -24,6 +24,7 @@ import { readTypeMetadata } from "./metadata.ts"
 import { readTupleIndex } from "./tuple-index.ts"
 import { targetType, legacyType, recordKeyForm, quoteType, payloadClass, targetIdentifier, requirementText, nativeScopeKey, keyText, normalize, sameKey } from "./target-types.ts"
 import { heads, rows, serviceTypes, serviceTypeFor, type Entry, type Head } from "./profile.gen.ts"
+import { names as nameTables } from "./names.gen.ts"
 import { argNamesOf, argSortsOf, programHeads, templates, type ArgPat, type ArgSort, type Depth, type Fam, type StmtTpl, type StmtTpls, type TemplateRow, type Tpl } from "./templates.gen.ts"
 
 export type { Eff } from "./eff.gen.ts"
@@ -2496,9 +2497,11 @@ const readInvoke = (k: number, n: number, x: Expr): Read<unknown> | undefined =>
 
 /* ---------- the rows' services (Lean `Codegen/RowServices.lean`) ---------- */
 
+/** The ambient values a binding name may not take (Lean `Names.reservedExtra`, generated). */
+const reservedExtra: ReadonlyArray<string> = nameTables.reservedExtra
+
 /** A binding name (Lean `Names.binderName`): a target identifier that is no ambient value. */
-const bindingName = (name: string): boolean =>
-  targetIdentifier(name) && !["arguments", "eval", "undefined", "NaN", "Infinity"].includes(name)
+const bindingName = (name: string): boolean => targetIdentifier(name) && !reservedExtra.includes(name)
 
 /** A spelling `Ns.method` as its namespace and its method (Lean `serviceParts`): a binding name,
  * one dot, and a property name, which may be a keyword. */
@@ -2517,13 +2520,8 @@ const serviceCall = (row: Row): readonly [string, string] | undefined =>
     ? serviceParts(row.spelling) : undefined
 
 /** The members of an rc.112 service key, which an accessor would shadow (Lean
- * `serviceKeyMembers`). */
-const serviceKeyMembers: ReadonlyArray<string> = [
-  "Service", "Identifier", "key", "of", "context", "use", "useSync", "pipe", "toString",
-  "toJSON", "length", "name", "prototype", "defaultValue", "make", "constructor",
-  "hasOwnProperty", "isPrototypeOf", "propertyIsEnumerable", "toLocaleString", "valueOf",
-  "__proto__", "__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__",
-]
+ * `serviceKeyMembers`, generated). */
+const serviceKeyMembers: ReadonlyArray<string> = nameTables.serviceKeyMembers
 
 interface RowService {
   readonly ns: string

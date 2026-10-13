@@ -46,6 +46,7 @@ numbers, so its domain is wider than this host representation.
 | `json.gen.ts` | `tools/Drivers/TsGen.lean` | one JSON writer per family, the bytes `OCaml5.Eff.Goldens` writes and `ocaml/eff/eff_json.ml` prints; `toJson` |
 | `profile.gen.ts` | `tools/Drivers/TsGen.lean` | the image profile as one JSON payload decoded at import through the schemas above: the address, the 50 reserved heads, and one entry per native operation, `{ op: NativeOp, row: Row }`; a stamp over the payload bytes is recomputed at import |
 | `taxonomy.gen.ts` | `tools/Drivers/TsGen.lean` | 23 refusal codes, their spectra, detail templates and active/reserved status; stamped at import |
+| `names.gen.ts` | `tools/Drivers/TsGen.lean` | the names a module file's reader refuses: the 26 members of an rc.112 service key, which an accessor would shadow (`serviceKeyMembers`), and the ambient values a binding name may not take (`Codegen.Names.reservedExtra`); stamped at import |
 | `forms.gen.ts` | `tools/Drivers/TsGen.lean` | 19 relative expansion templates, argument classes, host citations, dual arities and four unambiguous lambda shapes; `takeAndBump` stays named; stamped at import |
 | `wire.gen.ts` | `tools/Drivers/TsGen.lean` | one canonical byte writer per family, including `encodeProgram`; explicit work stack, exact natural-number checks and strict Unicode strings |
 | `check.ts` | hand | the corpus differential against Lean's JSON and wire (below) |
