@@ -258,11 +258,11 @@ SEMANTICS_DOGFOOD := $(foreach m,$(SEMANTICS_DOGFOOD_NAMES),Test.Dogfood.$(subst
 # made the build fail.
 ENGINE_FIXTURE_WRITERS := $(wildcard ocaml/engine/test/*/write.lean)
 
-# The page imports the view's looks, and the root Tools.View.FlowReach imports the view, graph and
-# code planes: their files stale the report (a superset of the closure, so no edit is missed).
+# The root Tools.View.FlowReach imports the view, graph and code planes: their files stale the
+# report (a superset of the closure, so no edit is missed). The report writes its document as
+# JSON; the site's shell, its rules and its other pages are the site's (the target `site`).
 SEMANTICS_SOURCES := tools/Tools/Semantics.lean tools/Drivers/Semantics.lean \
-  tools/Tools/SemanticsDocument.lean tools/Tools/Document.lean $(wildcard tools/Tools/Document/*.lean) \
-  tools/Tools/Document/page.css \
+  tools/Tools/SemanticsDocument.lean tools/Tools/Document.lean tools/Tools/Document/Json.lean \
   $(wildcard tools/Tools/View/*.lean tools/Tools/Graph/*.lean tools/Tools/Code/*.lean) \
   tools/Tools/SemanticsDisplay.lean tools/Tools/GeneratedStamp.lean src/Effect4/Laws/Auto/Semantics.lean \
   $(wildcard tools/ProofGraph/*.lean) \
@@ -275,15 +275,15 @@ $(GEN)/semantics: $(SEMANTICS_SOURCES) $(LEAN_INPUTS)
 	@mkdir -p $(GEN) && touch $@
 
 # The documentation site (decisions row 363): standard files only, every page checked by the HTML
-# Standard's content model, each with its document as JSON. The semantics report writes its page;
-# tools/Drivers/Site.lean writes the rest. A fresh folder replaces the old one whole.
+# Standard's content model, each with its document as JSON. The site is one value
+# (tools/Tools/Site.lean); tools/Drivers/Site.lean builds it from the semantics report's document,
+# which the semantics group writes when its sources change, so an edit of the shell, the rules or
+# a page of the site's own runs in seconds. A fresh folder replaces the old one whole.
 .PHONY: site
-site: ## the documentation site into .lake/gen/site (Lean's pages, CSS files, the JSON contract)
-	$(LAKE) build semantics-report Effect4.Laws Test.Program.TypedProgBindRed $(SEMANTICS_DOGFOOD) $(SEMANTICS_TOOL_ROOTS)
-	rm -rf $(GEN)/site-next && mkdir -p $(GEN)/site-next $(GEN)/semantics-report
-	$(LAKE) exe semantics-report $(GEN)/semantics-report $(GEN)/site-next
+site: $(GEN)/semantics ## the documentation site into .lake/gen/site (Lean's pages, CSS files, the JSON contract)
 	$(call build_imports,tools/Drivers/Site.lean)
-	$(LAKE) env lean --run tools/Drivers/Site.lean $(GEN)/site-next
+	rm -rf $(GEN)/site-next && mkdir -p $(GEN)/site-next
+	$(LAKE) env lean --run tools/Drivers/Site.lean $(GEN)/site-next $(GEN)/semantics-report
 	rm -rf $(GEN)/site && mv $(GEN)/site-next $(GEN)/site
 	@echo "site: $(GEN)/site"
 

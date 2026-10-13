@@ -1,4 +1,4 @@
-import Tools.Document.Html
+import Tools.Site
 import Tools.Document.Specimen
 
 /-!
@@ -7,8 +7,8 @@ import Tools.Document.Specimen
     lake env lean --run tools/Drivers/DocSpecimen.lean OUT
 
 Writes one small document that holds every block kind, parts nested to the sixth heading level,
-every status word, references, code in three languages and a wide table, through the same HTML fold
-as the semantics page (`Tools.Document.Html`, checked by the HTML Standard's content model):
+every status word, references, code in three languages and a wide table, through the shell and the HTML
+fold of every page of the site (`Tools.Site`, checked by the HTML Standard's content model):
 
 * `OUT/specimen.html`, the dark look with the paper look for a light preference, as the page is;
 * `OUT/specimen-dark.html` and `OUT/specimen-paper.html`, each in one look whatever the preference.
@@ -39,10 +39,14 @@ def main (args : List String) : IO UInt32 := do
     IO.eprintln s!"{Tools.Document.Html.sheetPath} refused at {why}"
   let dark ← lookFile "dark"
   let paper ← lookFile "paper"
-  let sheet := Tools.Document.Html.Sheet.link "../../../Tools/Document/page.css" none
   let write (name : String) (base light : Look) : IO Bool := do
-    match Tools.Document.Html.Document.html specimen sheet base light with
-    | .ok html => IO.FS.writeFile (out / name) html; return true
+    let shell : Tools.Site.Shell := {
+      tabTitle := specimen.title
+      home := "../index.html"
+      styles := .inlineLooks (Tools.Document.Html.looks base light ++ Tokens.rules)
+        "../../../Tools/Document/page.css" }
+    match Tools.Site.blocks Tools.Document.Html.fragment specimen with
+    | .ok blocks => IO.FS.writeFile (out / name) (Tools.Site.text (Tools.Site.render shell specimen.title blocks)); return true
     | .error why => IO.eprintln s!"{name}: {why}"; return false
   let a ← write "specimen.html" dark paper
   let b ← write "specimen-dark.html" dark dark

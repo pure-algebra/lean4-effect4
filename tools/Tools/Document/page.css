@@ -7,14 +7,51 @@
 body { margin: 0; background: var(--e4-color-ground); color: var(--e4-color-ink);
   font: 1.0625rem/1.6 var(--e4-font-name-family); text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased; }
-header, main, footer { max-width: 72rem; margin: 0 auto; padding: 0 clamp(1rem, 4vw, 2.5rem); }
+/* The frame: the site's header, then the content beside the parts of the page (a sticky column on
+   a wide screen, a list above the content on a narrow one), then the footer. */
+body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 54rem) minmax(0, 15rem) minmax(0, 1fr);
+  column-gap: clamp(1.5rem, 3vw, 3rem); padding: 0 clamp(1rem, 4vw, 2.5rem); }
+body > header, body > footer { grid-column: 2 / 4; }
+body > main { grid-column: 2; grid-row: 2; min-width: 0; }
+body > .toc { grid-column: 3; grid-row: 2; align-self: start; position: sticky; top: 0;
+  max-height: 100vh; overflow-y: auto; padding: 1.5rem 0; font-size: .85rem; }
+@media (max-width: 64rem) {
+  body { display: block; }
+  body > .toc { position: static; max-height: 14rem; margin: 1rem 0 0; padding: .5rem .75rem;
+    border: var(--e4-stroke-rule) solid var(--e4-color-rule); border-radius: var(--e4-stroke-radius); }
+}
 .skip { position: absolute; left: -100vw; }
-.skip:focus { position: static; display: inline-block; margin: .5rem 1rem; }
-header { padding-top: 2rem; border-bottom: var(--e4-stroke-rule) solid var(--e4-color-rule); }
-nav ol { display: flex; flex-wrap: wrap; gap: .25rem 1rem; padding: 0; list-style: none; }
+.skip:focus { position: static; display: inline-block; margin: .5rem 0; }
+.label { font-family: var(--e4-font-label-family); font-style: var(--e4-font-label-style); }
+nav ol { padding: 0; margin: 0; list-style: none; }
+[aria-current] { text-decoration-thickness: 2px; }
+[aria-current=page] { font-weight: var(--e4-font-title-weight); text-decoration: none; }
+
+/* The site's header: the site's name and its sections. */
+body > header { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem 2rem;
+  padding: 1.25rem 0 1rem; margin-bottom: 1.5rem; border-bottom: var(--e4-stroke-rule) solid var(--e4-color-rule); }
+.home { font-family: var(--e4-font-title-family); font-weight: var(--e4-font-title-weight); font-size: 1.15rem;
+  text-decoration: none; }
+header nav ol { display: flex; flex-wrap: wrap; gap: .25rem 1.25rem; }
+
+/* The parts of the page, two levels. */
+.toc .label { margin: 0 0 .5rem; }
+.toc li { margin: .3rem 0; line-height: 1.35; }
+.toc ol ol { margin: .25rem 0 .5rem .9rem; }
+.toc a { text-decoration: none; }
+.toc a:hover { text-decoration: underline; }
+
+/* The way to the page, and its neighbours in reading order. */
+.crumbs ol { display: flex; flex-wrap: wrap; gap: .25rem; font-size: .85rem; }
+.crumbs li + li::before { content: "/"; content: "/" / ""; margin-right: .25rem; }
+.pager { display: flex; gap: 1rem; margin: 3rem 0 0; padding-top: 1rem;
+  border-top: var(--e4-stroke-rule) solid var(--e4-color-rule); }
+.pager a { display: flex; flex-direction: column; max-width: 48%; text-decoration: none; }
+.pager a[rel=next] { margin-left: auto; text-align: right; }
+.pager .label { font-size: .8rem; }
 h1, h2, h3, h4, h5, h6 { font-family: var(--e4-font-title-family); font-weight: var(--e4-font-title-weight);
   line-height: 1.2; scroll-margin-top: 1rem; text-wrap: balance; }
-h1 { font-size: clamp(2rem, 4vw, 2.75rem); margin: 0 0 .75rem; }
+h1 { font-size: clamp(2rem, 4vw, 2.75rem); margin: .5rem 0 .75rem; }
 h2 { font-size: 1.6rem; }
 h3 { font-size: 1.25rem; }
 h4, h5, h6 { font-size: 1.05rem; }
@@ -59,6 +96,7 @@ details.diagram > summary { cursor: pointer; font-family: var(--e4-font-label-fa
   font-style: var(--e4-font-label-style); }
 footer { margin-top: 3rem; padding-top: 1rem; padding-bottom: 2.5rem;
   border-top: var(--e4-stroke-rule) solid var(--e4-color-rule); font-size: .85rem; }
+footer li + li:last-child, footer li:nth-last-child(2) { margin-top: .25rem; }
 footer .label { margin: 0 0 .25rem; font-family: var(--e4-font-label-family); font-style: var(--e4-font-label-style); }
 footer ul { list-style: none; margin: 0; padding: 0; }
 footer li { max-width: none; overflow-wrap: anywhere; }

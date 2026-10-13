@@ -122,8 +122,9 @@ private def censusAlgebra : Algebra Census where
   part k _ body := body.foldl Census.append { keys := #[k] }
 
 /-- Refuse a blank or duplicate part key, a reference to no part, a blank link or one with a space,
-and a table row of the wrong width, each by name. -/
-def Document.check (d : Document) : Except (List String) Unit := Id.run do
+and a table row of the wrong width, each by name. A reference may name a key that `outside`
+holds: a part of another page split from the same document (`Tools.Site`). -/
+def Document.check (d : Document) (outside : String → Bool := fun _ => false) : Except (List String) Unit := Id.run do
   let c := (Block.foldList censusAlgebra d.body).foldl Census.append {}
   let mut errors := c.tables.toList
   let mut seen : Std.HashSet String := {}
@@ -132,7 +133,7 @@ def Document.check (d : Document) : Except (List String) Unit := Id.run do
     if seen.contains k then errors := errors ++ [s!"part key {k}: duplicate"]
     seen := seen.insert k
   for r in c.refs do
-    unless seen.contains r do errors := errors ++ [s!"reference {r}: no part has this key"]
+    unless seen.contains r || outside r do errors := errors ++ [s!"reference {r}: no part has this key"]
   for h in c.links do
     if h.isEmpty || h.any Char.isWhitespace then errors := errors ++ [s!"link {h.quote}: blank or with a space"]
   return if errors.isEmpty then .ok () else .error errors
