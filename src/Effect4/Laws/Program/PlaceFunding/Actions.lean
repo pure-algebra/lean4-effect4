@@ -112,6 +112,27 @@ theorem Events.trace_debit {L : Ledger} (events : Events L) {m n : NativeMachine
   simp only [PlaceLedger.spent, PlaceLedger.issued, trace, List.map_append, List.sum_append]
   omega
 
+/-- A frame-model local bound with an administrative trace and a kept store is a ledger debit.
+Consumers: `action_debit` and `countdown_debit`. -/
+theorem bound_debit {L : Ledger} (quiet : NoQueue L) (events : Events L)
+    (model : FrameWeights.Model EffName EffThunk Val Err Defect FiberId Ann)
+    (rows : ∀ f : Moves.NFiber, L.fiber f = FrameWeights.frame model f.frame)
+    (m : NativeMachine) (fiber : Moves.NFiber) (next : Moves.NIteration)
+    (bounded : WriterWeights.LocalBound model m fiber next)
+    (traced : AdministrativeTrace m next.machine)
+    (kept : L.state next.machine.state ≤ L.state m.state) : L.IterDebit m fiber next := by
+  have trace := events.trace_debit traced
+  have row : L.fiber = fun f : Moves.NFiber => FrameWeights.frame model f.frame := funext rows
+  have outside (n : NativeMachine) : WriterWeights.outside model fiber.id n =
+      (n.fibers.map (ControlWeights.omitted RunFiber.id
+        (fun f : Moves.NFiber => FrameWeights.frame model f.frame) fiber.id)).sum := rfl
+  unfold WriterWeights.LocalBound at bounded
+  rw [outside, outside] at bounded
+  unfold PlaceLedger.IterDebit PlaceLedger.outside
+  simp only [funext quiet.races, funext quiet.commands, PlaceLedger.zero_sum, Nat.add_zero,
+    FiberSum.outside, row] at trace ⊢
+  omega
+
 /-- **The native action arm of a place ledger whose fiber row reads a frame weight model.**
 The frame part is `WriterWeights.action_bound`; the trace part is administrative; the instance
 keeps the store. Placement: concept `scope-lifetime-finalization`, R11; the action arm of
@@ -126,18 +147,37 @@ theorem action_debit {L : Ledger} (quiet : NoQueue L) (events : Events L)
     (carried : WriterWeights.Carried model interp m fiber action)
     (kept : L.state (evaluatePrim.withFiber interp m fiber yielding action).machine.state ≤
       L.state m.state) :
-    L.IterDebit m fiber (evaluatePrim.withFiber interp m fiber yielding action) := by
-  have bounded := WriterWeights.action_bound model interp inputs m fiber yielding action carried
-  have traced := events.trace_debit (withFiber_administrative interp m fiber yielding action)
-  have row : L.fiber = fun f : Moves.NFiber => FrameWeights.frame model f.frame := funext rows
-  have outside (n : NativeMachine) : WriterWeights.outside model fiber.id n =
-      (n.fibers.map (ControlWeights.omitted RunFiber.id
-        (fun f : Moves.NFiber => FrameWeights.frame model f.frame) fiber.id)).sum := rfl
-  unfold WriterWeights.LocalBound at bounded
-  rw [outside, outside] at bounded
-  unfold PlaceLedger.IterDebit PlaceLedger.outside
-  simp only [funext quiet.races, funext quiet.commands, PlaceLedger.zero_sum, Nat.add_zero,
-    FiberSum.outside, row] at traced ⊢
-  omega
+    L.IterDebit m fiber (evaluatePrim.withFiber interp m fiber yielding action) :=
+  bound_debit quiet events model rows m fiber _
+    (WriterWeights.action_bound model interp inputs m fiber yielding action carried)
+    (withFiber_administrative interp m fiber yielding action) kept
+
+/-- A countdown registration keeps the store. Consumer: `countdown_debit`. -/
+theorem countdown_state (interp : Moves.NInterp) (m : NativeMachine) (f : Moves.NFiber)
+    (targets : List FiberId) (resume : Resume EffName) (failFast : Bool) :
+    (countdownParkEdits interp m f targets resume failFast).1.state = m.state := by
+  unfold countdownParkEdits
+  dsimp only
+  split <;> rfl
+
+/-- **The primitive countdown arm of a place ledger whose fiber row reads a frame weight
+model**: the frame part is `WriterWeights.countdown_plan_bound`, the trace administrative, the
+store kept. Its observer edits wait for settlement. Placement: concept
+`scope-lifetime-finalization`, R11; the `countdown` field of `PlaceFunding.PrimitiveInputs`.
+Consumers: `SourceScope.Opportunities.primitive_debit` and
+`Test.Dogfood.Scenario.Atomic.WriterNative.primitive_debit`. -/
+theorem countdown_debit {L : Ledger} (quiet : NoQueue L) (events : Events L)
+    (model : FrameWeights.Model EffName EffThunk Val Err Defect FiberId Ann)
+    (rows : ∀ f : Moves.NFiber, L.fiber f = FrameWeights.frame model f.frame)
+    (interp : Moves.NInterp) (inputs : WriterWeights.ActionInputs model interp)
+    (m : NativeMachine) (fiber : Moves.NFiber) (yielding : Bool) (targets : List FiberId)
+    (resume : Resume EffName) (failFast : Bool)
+    (zero : ∀ exits, model.current (countdownPark.resumePrim interp resume exits) = 0) :
+    let out := countdownParkEdits interp m fiber targets resume failFast
+    L.IterDebit m fiber ⟨out.1, out.2.1, yielding, .continue_, [], out.2.2.2⟩ :=
+  bound_debit quiet events model rows m fiber _
+    (WriterWeights.countdown_plan_bound model interp inputs m fiber yielding targets resume failFast zero)
+    (countdown_administrative interp m fiber targets resume failFast)
+    (Nat.le_of_eq (congrArg L.state (countdown_state interp m fiber targets resume failFast)))
 
 end Effect4.Program.PlaceFunding

@@ -187,6 +187,13 @@ theorem register_race_debit (root : NativeEff) (q : List Nat) (m : NativeMachine
   rw [empty]
   exact Nat.le_refl _
 
+/-- The source weighs every code the native action arms install at zero.
+Consumers: `native_action_debit` and the countdown arm of `primitive_debit`. -/
+theorem source_action_inputs (root : NativeEff) (q : List Nat) (completed : List (FiberId × ExitV))
+    (table : RowTable) :
+    Machine.WriterWeights.ActionInputs (weightModel root q) (interpAt root completed table) :=
+  ⟨fun _ => rfl, fun _ => rfl, fun _ _ => rfl, fun _ => rfl, fun _ _ => rfl, fun _ => rfl⟩
+
 /-- Every native action spends only the source reservation of its actual producer: the
 ledger-generic `PlaceFunding.action_debit` at the source weights. The sequential source excludes a
 parallel close; a source-owned close installs no selected opportunity (`close_scope_zero`).
@@ -200,9 +207,7 @@ theorem native_action_debit (root : NativeEff) (q : List Nat) (table : RowTable)
     (_unique : (m.fibers.map (fun fiber => fiber.id)).Nodup)
     (carried : action root q selected ≤ current root q fiber.frame.current) :
     Debit root q m fiber (evaluatePrim.withFiber (interpAt root m.completedExits table) m fiber yielding selected) := by
-  have inputs : Machine.WriterWeights.ActionInputs (weightModel root q)
-      (interpAt root m.completedExits table) :=
-    ⟨fun _ => rfl, fun _ => rfl, fun _ _ => rfl, fun _ => rfl, fun _ _ => rfl, fun _ => rfl⟩
+  have inputs := source_action_inputs root q m.completedExits table
   have launched : Machine.WriterWeights.Carried (weightModel root q)
       (interpAt root m.completedExits table) m fiber selected := by
     cases selected
@@ -282,9 +287,11 @@ theorem primitive_debit (root : NativeEff) (q : List Nat) (fragment : Fragment r
       simp only [frame, List.map_cons, List.sum_cons, saved, interpAt, interpOf, name, Nat.zero_add, Nat.le_refl]
     countdown := by
       intro targets machine returned parked edits _ counted
-      have debit := countdown_plan_debit root q table m fiber yielding targets .exitsValue false trivial
+      have debit := PlaceFunding.countdown_debit quiet (source_events root q) (weightModel root q)
+        (fun _ => rfl) _ (source_action_inputs root q m.completedExits table) m fiber yielding targets
+        .exitsValue false (fun _ => rfl)
       rw [counted] at debit
-      exact asLedger _ debit
+      exact debit
     race := fun race _ => asLedger _ (register_race_debit root q m fiber yielding race (races_nil root m raceFree owned)) }
   exact (source_debit_iff root q m fiber _).mp
     (PlaceFunding.primitive_debit quiet (source_control root q) (source_events root q)

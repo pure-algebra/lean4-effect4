@@ -320,23 +320,6 @@ theorem action_debit (built : Api.Built) (admitted : Api.Author.build (shop .non
 
 /-! ## The primitive arms -/
 
-/-- A countdown registration keeps the heap and spends no reservation. -/
-theorem countdown_debit (id : Nat) (root : NativeEff) (table : RowTable) (m : NativeMachine)
-    (fiber : SourceFiber) (yielding : Bool) (targets : List FiberId) :
-    let out := countdownParkEdits (interpAt root m.completedExits table) m fiber targets .exitsValue false
-    WriterMachine.Debit id m fiber ⟨out.1, out.2.1, yielding, .continue_, [], out.2.2.2⟩ := by
-  have bound := Machine.WriterWeights.countdown_plan_bound (model id) (interpAt root m.completedExits table)
-    (action_inputs id root m.completedExits table) m fiber yielding targets .exitsValue false (fun _ => rfl)
-  refine local_debit id m fiber _ ?_ ?_ bound
-  · unfold countdownParkEdits
-    dsimp only
-    split <;> rfl
-  · unfold countdownParkEdits
-    dsimp only
-    split
-    · exact RunMachine.Extends.refl m
-    · exact emit_extends _ _
-
 /-- Native Async cancellation names carry no reservation. -/
 theorem async_cancel_zero (id : Nat) (callback : EffName) (held : AsyncCancelAt callback) :
     name id callback = 0 := by
@@ -407,9 +390,11 @@ theorem primitive_debit (built : Api.Built) (admitted : Api.Author.build (shop .
         Nat.le_refl]
     countdown := by
       intro targets next returned parked edits _ counted
-      have debit := countdown_debit id built.program built.table m fiber yielding targets
+      have debit := PlaceFunding.countdown_debit (no_queue id) (events id) (model id) (fun _ => rfl) _
+        (action_inputs id built.program m.completedExits built.table) m fiber yielding targets
+        .exitsValue false (fun _ => rfl)
       rw [counted] at debit
-      exact debit_ledger id m fiber _ debit
+      exact debit
     race := by
       intro race _
       have empty := Opportunities.races_nil built.program m (restricted built admitted).2 owned
