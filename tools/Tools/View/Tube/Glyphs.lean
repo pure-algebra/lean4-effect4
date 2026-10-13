@@ -565,6 +565,28 @@ def inCell (m : Mark) : Bool :=
 -- every figure stands in its cell, but where it meets the world: a port runs off the edge
 #guard shapes.all fun s => s == .port || (figure s).all inCell
 
+/-- A coordinate in thousandths of a pixel within ten of a whole pixel. -/
+def onPixel (v : Int) : Bool := v % 1000 ≤ 10 || v % 1000 ≥ 990
+
+/-- **A mark's straight runs lie on whole pixels**: every cubic of its centreline that runs across
+(its ends at one height, within ten thousandths) lies at a whole pixel's height, and every one
+that runs down lies at a whole pixel's abscissa. With every width even, a run's edges fall on
+pixel edges. -/
+def crisp (m : Mark) : Bool :=
+  m.drawn.cubics.all fun c =>
+    ((c.p0.2 - c.p3.2).natAbs > 10 || onPixel c.p0.2) &&
+      ((c.p0.1 - c.p3.1).natAbs > 10 || onPixel c.p0.1)
+
+-- every straight run across or down of every figure lies on a whole pixel
+#guard shapes.all fun s => (figure s).all crisp
+
+-- red controls: a run half a pixel off its pixel is not crisp; a tube past the cell's right edge
+-- is not in the cell; a bend of 16 px breaks the solid-tube pen's law, and one of 24 px keeps it
+#guard !crisp ((bodyOf "x" (tube 0 (px 48 + 500) E PIPE [run 10])).headD default)
+#guard !inCell ((bodyOf "x" (tube (px 90) (px 48) E PIPE [run 10])).headD default)
+#guard !((arcR 16 HALF_PI).turn.natAbs * LONG_BEND ≤ (arcR 16 HALF_PI).len * 1000000)
+#guard (arc HALF_PI).turn.natAbs * LONG_BEND ≤ (arc HALF_PI).len * 1000000
+
 -- the halves of a sheared pipe stand an air gap apart: `SHEAR² + 12² ≥ (26 px)²`
 #guard bodyFigure.SHEAR * bodyFigure.SHEAR + 12000 * 12000 ≥
   (apart PIPE PIPE * apart PIPE PIPE : Nat)
@@ -640,5 +662,8 @@ def near : List (Shape × Shape) :=
 #guard distance (figure .hollowBox) (figure .filledBox) == 1
 #guard distance (figure .openBracket) (figure .bracket) == 1
 #guard distance (figure .hole) (figure .filledBox) == 1
+-- controls: a figure is no part from itself, and a body's marks are one part
+#guard distance (figure .box) (figure .box) == 0
+#guard part "main:wall" == "main" && part "u" == "u"
 
 end Tools.View.Tube.Glyphs
