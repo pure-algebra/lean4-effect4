@@ -202,18 +202,25 @@ each side, eased in and out. -/
 def collarOf (key : String) (t : Tube) (s : Int) (len : Nat) : Mark :=
   stretchOf key t s len (body t.bore) (body t.bore) (2 * COLLAR) (min (len / 3) 4000)
 
-/-- **A reducer** at a tube's start: its body grows from the width `from_` to its own over
-`REDUCER`, as a concentric reducer joins a pipe to a wider vessel; at its end (`atEnd`), back down. -/
+/-- How long a reducer is between two widths: twice the change, and at least `REDUCER`, so its
+side slopes by no more than one in four. -/
+def reducerLen (a b : Nat) : Nat := max REDUCER (2 * (max a b - min a b))
+
+/-- **A reducer** at a tube's start: its body grows from the width `from_` to its own, as a
+concentric reducer joins a pipe to a wider vessel; at its end (`atEnd`), back down. -/
 def reducerOf (key : String) (t : Tube) (from_ : Nat) (atEnd : Bool := false) : Mark :=
-  if atEnd then stretchOf key t ((t.length : Int) - REDUCER) REDUCER (body t.bore) from_ 0 0
-  else stretchOf key t 0 REDUCER from_ (body t.bore) 0 0
+  let len := reducerLen from_ (body t.bore)
+  if atEnd then stretchOf key t ((t.length : Int) - len) len (body t.bore) from_ 0 0
+  else stretchOf key t 0 len from_ (body t.bore) 0 0
 
 /-- **A vessel between pipes**: its body narrowed at each end by a reducer, from the inlet's width
-`inW` and to the outlet's `outW`, over `REDUCER`; the body between them overlaps each by two
-pixels, so no seam shows. A pipe that meets it ends round, inside the reducer. -/
+`inW` and to the outlet's `outW`; the body between them overlaps each by two pixels, so no seam
+shows. A pipe that meets it ends round, inside the reducer. -/
 def reducedOf (key : String) (t : Tube) (inW outW : Nat) : List Mark :=
   let L := t.length
-  bodyOf key (t.cut (REDUCER - 2000) (L - (REDUCER - 2000))) (round := false) ++
+  let a := reducerLen inW (body t.bore) - 2000
+  let b := reducerLen outW (body t.bore) - 2000
+  bodyOf key (t.cut a (L - b)) (round := false) ++
     [reducerOf (key ++ ":r0") t inW, reducerOf (key ++ ":r1") t outW (atEnd := true)]
 
 /-- **A solid join**: the branch leaves the parent on its tangent, and they share one fill; its
@@ -326,8 +333,8 @@ def Join.web (j : Join) (ms : List Mark) : List Cubic :=
   | some p, some b =>
     match crotch p.width b.drawn b.width with
     | some cs => cs
-    | none => let o := (b.drawn.x, b.drawn.y); [lineC o o, lineC o o, lineC o o]
-  | _, _ => [lineC (0, 0) (0, 0), lineC (0, 0) (0, 0), lineC (0, 0) (0, 0)]
+    | none => noWeb (b.drawn.x, b.drawn.y)
+  | _, _ => noWeb (0, 0)
 
 /-- The layers' count. -/
 def LAYERS : Nat := 5

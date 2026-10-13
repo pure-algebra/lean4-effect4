@@ -138,10 +138,10 @@ def patchCubics (t : Tube) (s : Int) (len w0 w1 : Nat) (peak : Int) (rise : Nat)
 
 /-! ## A rounded crotch -/
 
-/-- The radius of a crotch's fillet, in thousandths of a pixel: about two thirds of a pipe's
+/-- The radius of a crotch's fillet, in thousandths of a pixel: about four fifths of a pipe's
 body, so a branch docks as a tree's does, widening into what it leaves. Where the branch leaves
 less room, the fillet is the widest that fits (`crotch`). -/
-def FILLET : Nat := 14000
+def FILLET : Nat := 18000
 
 /-- The distance between two points, in thousandths of a pixel. -/
 def dist (a b : Int × Int) : Nat := Grow.isqrt ((a.1 - b.1).natAbs ^ 2 + (a.2 - b.2).natAbs ^ 2)
@@ -203,16 +203,36 @@ def crotchAt (parent : Nat) (branch : Tube) (bw : Nat) (R : Nat) : Option (List 
       let mid := (lh.1 + lh.2) / 2
       if gap mid < 0 then (mid, lh.2) else (lh.1, mid)) (hi - 1000, hi)).2
     let cu := c u
-    let near := samples.foldl (fun b p => if dist cu p < dist cu b then p else b) J
-    let dn : Int := max 1 (dist cu near : Nat)
-    let T2 := (cu.1 + (R : Int) * (near.1 - cu.1) / dn, cu.2 + (R : Int) * (near.2 - cu.2) / dn)
+    -- where the fillet touches the branch: the nearest sample, then a twentieth of a pixel at a
+    -- time round it
+    let i := (samples.zipIdx.foldl (fun (b : (Int × Int) × Nat) (p, k) =>
+      if dist cu p < dist cu b.1 then (p, k) else b) (J, 0)).2
+    let s2 := ((List.range 41).map fun j => i * 1000 + j * 50 - min (i * 1000) 1000).foldl
+      (fun b s => if dist cu (branch.at s).1 < dist cu (branch.at b).1 then s else b) 0
+    -- the branch's inner edge, from its start to the fillet, through `STRETCH + 1` points, a
+    -- pixel inside the branch, so the web overlaps it and no seam shows where two fills meet
+    let edge (inset : Nat) (s : Nat) : Int × Int :=
+      let (p, h) := branch.at s
+      along p (-(bw / 2 - inset : Nat) : Int) (σ * (normal h).1, σ * (normal h).2)
+    let pts := (List.range (STRETCH + 1)).map fun k => edge 1000 (k * s2 / STRETCH)
+    let T2 := edge 0 s2
     let T1 := along (along J u d) (parent / 2 : Nat) side
-    some [lineC T1 J, lineC J T2, arcC cu T2 T1]
+    let step : Int := (s2 / STRETCH * 2 : Nat)
+    let h0 := branch.head
+    let h1 := (branch.at s2).2
+    some ([lineC T1 J, lineC J (pts.headD J)] ++
+      throughC pts (along (0, 0) step (dir h0)) (along (0, 0) step (dir h1)) ++
+      [lineC (pts.getLastD J) T2, arcC cu T2 T1])
 
-/-- **The rounded crotch** at the widest fillet that fits: `FILLET`, or two thirds, a half, a
-third or a sixth of it where the branch leaves less room. -/
+/-- The cubics of a crotch's web, and a web of none at a point, with as many: a film grows one
+from the other. -/
+def WEB : Nat := STRETCH + 4
+def noWeb (o : Int × Int) : List Cubic := List.replicate WEB (lineC o o)
+
+/-- **The rounded crotch** at the widest fillet that fits: `FILLET`, or less by whole pixels two
+at a time where the branch leaves less room. -/
 def crotch (parent : Nat) (branch : Tube) (bw : Nat) : Option (List Cubic) :=
-  [FILLET, FILLET * 2 / 3, FILLET / 2, FILLET / 3, FILLET / 6].findSome? (crotchAt parent branch bw)
+  ((List.range (FILLET / 2000)).map fun i => FILLET - 2000 * i).findSome? (crotchAt parent branch bw)
 
 /-! ## A parting -/
 

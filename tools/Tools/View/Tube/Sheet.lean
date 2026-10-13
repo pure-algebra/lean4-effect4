@@ -85,7 +85,7 @@ def plateGaps : SvgNode :=
   let tap (x : Int) : Tube := ⟨pxi x, pxi 30 + (body PIPE + GAP : Nat), Q, PIPE, [⟨px 70, 0⟩]⟩
   let under := straight (pxi 504) (pxi 62) 0 PIPE (px 192)
   let over : Tube := ⟨pxi 600, pxi 14, Q, PIPE, [⟨px 110, 0⟩]⟩
-  still 720 140 (bodyOf "a" a ++ [plugOf "valve" a (pxi 120) GAP] ++ packed "ua" a 3 (pxi 120) ++
+  still 720 140 (bodyOf "a" a ++ [plugOf "valve" a (pxi 120) GAP] ++ packed "ua" a 3 (pxi 120 - (body PIPE / 2 : Nat)) ++
     bodyOf "src" src ++ packed "us" src 2 ++
     bodyOf "t1" (tap 320) ++ bodyOf "t2" (tap 400) ++ packed "u1" (tap 320) 1 ++ packed "u2" (tap 400) 1 ++
     bodyOf "under" under ++ [cutOf "cross" under (pxi 96) (body PIPE)] ++ packed "uu" under 2 ++
@@ -102,7 +102,7 @@ def plateValve : SvgNode :=
   let a := straight (pxi 24) (pxi 28) 0 PIPE (px 672)
   let b := straight (pxi 24) (pxi 80) 0 PIPE (px 672)
   still 720 108 (bodyOf "a" a ++ bodyOf "b" b ++ [plugOf "p" b (pxi 400) GAP] ++
-    packed "ua" a 3 ++ packed "ub" b 3 (pxi 400))
+    packed "ua" a 3 ++ packed "ub" b 3 (pxi 400 - (body PIPE / 2 : Nat)))
 
 /-- A span of chord `c` pixels from `x`, under `n` units. -/
 def span (x : Nat) (c : Nat) (n : Nat) : Tube :=
@@ -121,7 +121,7 @@ def plateWeight : SvgNode :=
 least radius, as a drainage fitting turns with the flow, and runs off the picture to the world. -/
 def drain (t : Tube) (s : Nat) : Tube :=
   let (p, h) := t.at s
-  ⟨p.1, p.2, h, PIPE, [⟨arc 24 Q, Q⟩, ⟨px 90, 0⟩]⟩
+  ⟨p.1, p.2, h, PIPE, [⟨arc 32 Q, Q⟩, ⟨px 90, 0⟩]⟩
 
 /-- **The three strategies of a bounded queue**, each a full vessel of capacity three: a float
 valve that holds offers back (backpressure); an overflow before the vessel, down which a new
