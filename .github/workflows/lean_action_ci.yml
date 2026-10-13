@@ -104,6 +104,46 @@ jobs:
       - name: The checkers' own self-tests (planted defects must be refused)
         run: make check-tools
 
+  # The documentation site (decisions row 363). `make site` builds it from the cached build into
+  # .lake/gen/site, standard files only, and the job keeps it as an artifact. With the repository
+  # secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID, a push also deploys it to the Cloudflare
+  # Pages project effect4-docs: the main branch as production, any other branch as a preview.
+  # Without the secrets the deploy step is skipped.
+  site:
+    needs: build
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: leanprover/lean-action@v1
+        with:
+          auto-config: false
+          build: false
+          use-github-cache: false
+      - uses: actions/cache/restore@v4
+        with:
+          path: .lake
+          key: lake-${{ runner.os }}-${{ hashFiles('lake-manifest.json', 'lean-toolchain') }}-${{ github.sha }}
+          fail-on-cache-miss: true
+      - name: Build the documentation site
+        run: make site
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: .lake/gen/site
+          retention-days: 7
+      - name: Deploy to Cloudflare Pages
+        if: env.CLOUDFLARE_API_TOKEN != ''
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy .lake/gen/site --project-name=effect4-docs --branch=${{ github.ref_name }}
+
   check-host:
     needs: build
     if: github.event_name != 'schedule'
