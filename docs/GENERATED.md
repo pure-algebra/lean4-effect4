@@ -228,6 +228,9 @@ fixture of a scenario is committed. `Test/Dogfood/README.md`, section "The host 
 what a host run compares. The check pins the digest of the four fixture families' recordings
 (`scripts/check-host-protocol.py`, `CASES_SHA256`).
 
+The same check performs the to-do's scripts on its emitted Effect service (decisions row 378
+(20), `harness/truth/service/`). Lean decides each run's checks beside the script's own run.
+
 ## Engine boundary
 
 `ocaml/engine/api_engine.ml` is the LCNF projection of `Effect4.Api.run`/`replay` with the
