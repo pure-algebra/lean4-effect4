@@ -14,8 +14,6 @@ An entry closes with the package commit that answers it.
 | Id | Ask | Effect4's use | In the package today | Priority |
 | --- | --- | --- | --- | --- |
 | W17 | A ribbon: a stroke whose width varies along a curve, as one closed outline, with a collar where it meets a body; a split whose branch widths sum to the trunk. Laws: the outline stays in its band; widths add at a split; a moved ribbon is the ribbon moved | a channel's width is what it carries in a step (da Vinci's rule); Effect4's `Tools.View.Organic` (`stroke`, `collar`) is the start | `Curve`, the monotone curve (S22) | high |
-| W18 | A flow network laid out on `Layers`: nodes with values, links with widths; at each node what enters equals what leaves | the run's totals: where the units went | `Layers` (S22), d3-sankey read for it | medium |
-| W20 | Units in a vessel: n units in c slots, the order kept and the room shown; above a threshold one mark for k units (Isotype). Laws: the count is kept, the front stays at the front | a bounded place drawn as its units | `Layout` (S22) | high |
 | W21 | A body moved along a path in one beat, and a keyed join in which a key that leaves one place and enters another is one move, not an exit and an enter | a step's flows: a unit travels from place to place | `Plan.ofJoin`, `Motion.later` (S22), the reach by a sheet (W11) | high |
 | W22 | A vessel: a rounded hull around a layout's room, with openings where ribbons meet it, as one outline | the bounded place | `IBox.hull` (S22) | medium |
 
@@ -51,10 +49,13 @@ An entry closes with the package commit that answers it.
 | W15 | `Scene/Layout/Frame` (S22 `cd7332b`): `centredDown`, `framed`, `ruledRow`, `ruledColumn`, with where each part stands |
 | W16 | `Scene/Scale/Invert`, `Linear`, `Band`, `Chain`, `Geometry/Ticks` (S22 `a191355`): scales with a way back, bands after d3, ticks and nice bounds, exact |
 | W19 | `Geometry/Stack/Layers` (S22 `ca3dca8`): layers over beats with a signed baseline, and the area between two edges by the monotone curve; also `Geometry/Through`, a curve through points as a value |
+| W18 | `Scene/Network`, `Network/Laws`, `Network/Fit` (S22 `80bb06b`): d3-sankey's layout, exact; bands that stack with no gap, sum to what enters or leaves, and a fitted scale that puts every column inside the room |
+| W20 | `Scene/Units`, `Units/Laws` (S22 `80bb06b`): a bounded place as its slots, the count, the order and the front kept, marks that stand for k units; when the front leaves, each unit behind it updates to the slot before |
 | W9 | `Run ctx t a b` and `Element.ofRun` (`Whatwg/Html/Node/Run.lean`, S22 `82630b1`): children under an ordered model in parts, a loop checked once, children whose tags are data by `Run.content`; `E.el e` of a variable `a` or `input` elaborates (`Content/Monotone.lean`). Left to the kernel: a list splice inside `html!` under an ordered model, written with `Element.ofRun` instead (debt D139) |
 | W13 | `Region.withWords`, `withWordsRaw` (`Whatwg/Html/Node/Region/Words.lean`, S22): the figure names its words, the caption stays beside the picture, the words follow. Effect4's figure is `Region.withWordsRaw` (`tools/Tools/Document/Html.lean`); the site is unchanged byte for byte |
 
-Effect4 pins `ca3dca8` (S22, after K4) since 2026-10-13; the move changed no byte of the site. Before,
+Effect4 pins `80bb06b` (S22, W18 and W20) since 2026-10-13; the move changed no byte of the site. Before
+it, `ca3dca8` (K4 and the rest of S22), and before that
 `bae6a2e`, whose figure words through the package changed no byte either. Before, `990ee7d` (S21, `18368e767`). The
 page's rules are read by K2's tokens (`77bcd8141`); the shell is markup throughout and the site
 passes the package's check (`6ad53e0ca`); tables and figures stand in the package's region
