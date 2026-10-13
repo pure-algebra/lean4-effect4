@@ -1,0 +1,31 @@
+name: Lean and the build cache
+description: >
+  The toolchain that lean-toolchain names, and .lake from the cache of this commit's build. The
+  build job saves the cache (with a fallback to the last build of the same pins); every other job
+  restores it and stops when it is missing, so no job builds the tree a second time.
+
+inputs:
+  save:
+    description: "'true' in the build job: restore with a fallback, and save the cache at the job's end"
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - uses: leanprover/lean-action@v1
+      with:
+        auto-config: false
+        build: false
+        use-github-cache: false
+    - if: inputs.save == 'true'
+      uses: actions/cache@v4
+      with:
+        path: .lake
+        key: lake-${{ runner.os }}-${{ hashFiles('lake-manifest.json', 'lean-toolchain') }}-${{ github.sha }}
+        restore-keys: lake-${{ runner.os }}-${{ hashFiles('lake-manifest.json', 'lean-toolchain') }}-
+    - if: inputs.save != 'true'
+      uses: actions/cache/restore@v4
+      with:
+        path: .lake
+        key: lake-${{ runner.os }}-${{ hashFiles('lake-manifest.json', 'lean-toolchain') }}-${{ github.sha }}
+        fail-on-cache-miss: true

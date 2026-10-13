@@ -1,0 +1,16 @@
+name: The OCaml toolchain
+description: The OCaml compiler at the workflow's version, with dune, ocamlfind and the exact clock dependency.
+
+inputs:
+  ocaml-compiler:
+    description: the OCaml compiler version
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: ocaml/setup-ocaml@v3
+      with:
+        ocaml-compiler: ${{ inputs.ocaml-compiler }}
+    - shell: bash
+      run: opam install --yes dune ocamlfind zarith.1.14

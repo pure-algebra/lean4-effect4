@@ -37,8 +37,8 @@ def TermMaps (w : World) (f : Term) (env : List Val) (A R : Ty) : Prop :=
 
 /-- **The term relation is closed under later worlds**, by the order's transitivity: what
 `storePre_mono` needs of a read-modify-write row. Quantifying over later worlds is what closes
-it; a statement at one world is not closed (`Test/Program/ProtocolPosts.lean`, the control
-`termMaps_oneWorld_not_mono`). -/
+it; a statement at one world is not closed (the control `termMaps_oneWorld_not_mono` of the
+retired battery `git:68856e778:Test/Program/ProtocolPosts.lean`). -/
 @[semantics "store-typing" (requirement := R4)]
 theorem TermMaps.mono {w w' : World} {f : Term} {env : List Val} {A R : Ty}
     (ord : w.leHost w') (h : TermMaps w f env A R) : TermMaps w' f env A R :=

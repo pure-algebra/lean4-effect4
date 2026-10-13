@@ -1,17 +1,18 @@
 # The one entry point. `make help` lists the targets.
 #
 # Four kinds of target:
-#   build*   Lake builds; the axiom gate runs inside `lake build Test`.
+#   build*   Lake builds: `build` is the core and the law graph, `build-tools` the tool roots.
 #   corpus   the printed corpus, a build artifact under .lake/corpus that three checks
 #            read (the TypeScript reader, the ingest smoke, the OCaml engine differential).
 #   gen-*    the generated files, one rule per group, in the dependency order the
 #            producers need. A rule fires when its generator, its inputs, or the
 #            compiled core it reads changed; its marker is .lake/gen/<group>.
-#   check-*  the checks. `check` is the tier that runs after every change: the build
-#            (the axiom gate runs inside it), the fresh root elaboration and the
-#            generated-file drift. `check-full` is everything else: the outside oracles
-#            (the real Effect runtime, the TypeScript compiler, the OCaml engine), the
-#            host groups and the tool harnesses.
+#   check-*  the checks. What a landing owes (AGENTS.md, Working): `check` is the proofs
+#            (the build), and `check-full` adds the behaviour gates, every run compared
+#            with an outside implementation (the Effect runtime, the TypeScript compiler,
+#            the OCaml engine). The batteries, the whole-tree axiom gate (`check-roots`),
+#            the drift (`check-gen`) and the document checks run by name, at a sweep; CI
+#            runs the drift and the documents on every push.
 #            A check that names its inputs is a marker rule too (.lake/check/<name>)
 #            and is skipped while nothing it reads has changed; `make -B <target>`
 #            or `make clean-check` forces it. CI starts from a fresh clone, so it
@@ -85,11 +86,8 @@ profile-module: ## FILE=<src/…/X.lean>: re-elaborate one built module with the
 	@test -n "$(FILE)" || { echo "usage: make profile-module FILE=src/Effect4/Laws/…/X.lean"; exit 2; }
 	$(PY) scripts/profile-module.py $(FILE)
 
-build-tools: build ## the generator and checker roots (Tools, OCaml5, Conform, Effect4Gen)
-	$(LAKE) build Tools
-	$(LAKE) build OCaml5
-	$(LAKE) build Conform
-	$(LAKE) build Effect4Gen
+build-tools: build ## the generator and checker roots (Tools, OCaml5, Conform, Effect4Gen and its native guard)
+	$(LAKE) build Tools OCaml5 Conform Effect4Gen Effect4GenNative
 
 # ---------------------------------------------------------------------------- gen
 #

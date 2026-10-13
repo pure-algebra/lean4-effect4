@@ -62,11 +62,18 @@ moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 # The generator of `Canonical` instances and its projection guard
 # (docs/research/2026-09-04-cas-trait-plan.md §4): `--run` tools over `Lean.Meta`, not part
 # of any audited library; the emitted files carry their own receipts.
+# Its modules are named one by one: Lake builds a module as a library's only when the library's
+# roots or globs name it, and the files under `guards/` are text that a generator appends into a
+# generated module, which a glob `Effect4Gen.+` compiled alone and failed. `Effect4Gen.Check` is
+# `Effect4GenNative`'s: two libraries claiming it made a build cycle (2026-10-12). A new module
+# goes in this list, or the executable that imports it does not link.
 [[lean_lib]]
 name = "Effect4Gen"
 srcDir = "tools"
-roots = ["Effect4Gen.Main", "Effect4Gen.Check"]
-globs = ["Effect4Gen.+"]
+roots = ["Effect4Gen.Exe", "Effect4Gen.CatalogueExe", "Effect4Gen.Driver"]
+globs = ["Effect4Gen.AtomLifts", "Effect4Gen.Atoms", "Effect4Gen.Authoring", "Effect4Gen.Dispatch",
+  "Effect4Gen.Fold", "Effect4Gen.Forms", "Effect4Gen.Fragments", "Effect4Gen.LayerView", "Effect4Gen.Main",
+  "Effect4Gen.PreludeAtoms", "Effect4Gen.Rows", "Effect4Gen.View"]
 moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
 # Early generators inspect loaded declarations without importing Effect4.
@@ -158,8 +165,8 @@ moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
 # The projection guard on the generated files, compiled to native code the same way: the `#eval` of
 # `Test.Store.DerivedCheck` runs it over the four generated files, and interpreted it took 30 s of
-# that module's 33 s (measured 2026-10-03). Declared after `Effect4Gen` and `Tools`, whose roots and
-# globs also claim these modules. Both import only Lean.
+# that module's 33 s (measured 2026-10-03). Declared after `Tools`, whose glob also claims
+# `Tools.WireTags`. Both import only Lean.
 [[lean_lib]]
 name = "Effect4GenNative"
 srcDir = "tools"

@@ -1,0 +1,24 @@
+name: The pinned TypeScript toolchain
+description: >
+  bun and node at the workflow's versions, and ts/eff's pinned dependencies (effect rc.112, the
+  sqlite driver, tsgo 7 as @typescript/native-preview, oxc-parser) from its lockfile.
+
+inputs:
+  bun-version:
+    description: the bun version
+    required: true
+  node-version:
+    description: the node version
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: ${{ inputs.bun-version }}
+    - uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+    - shell: bash
+      run: bun install --frozen-lockfile --cwd ts/eff

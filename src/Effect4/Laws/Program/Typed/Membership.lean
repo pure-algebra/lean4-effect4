@@ -204,9 +204,9 @@ mutual
 handle leaves read the world's declaration tables; `unknown` requires declared liveness. At an
 exit type the encoded cause is also shape-free (`ShapeFree`, decisions row 152): a reified exit
 fits `Exit<A, E>` exactly when the exit has `ExitOk`'s base membership and part one's exclusion,
-so the close walk, which passes each finalizer's exit on as a value, keeps the exclusion
-(`Test/Program/ProtocolPosts.lean`, `CloseIter`). A record value is read by name in canonical
-order (`NamedFit`), a map by its sorted entries, a tuple item by item, a nominal reference as the
+so the close walk, which passes each finalizer's exit on as a value, keeps the exclusion (`CloseIter`
+of the retired battery `git:68856e778:Test/Program/ProtocolPosts.lean`). A record value is read by
+name in canonical order (`NamedFit`), a map by its sorted entries, a tuple item by item, a nominal reference as the
 handle at its name; `int` and `number` are the nesting images (decisions row 121). A mask's saved
 state has one frame of its own (`Value.savedMask`, decisions row 244): it fits the reserved
 target `Ty.maskRestoreTarget` and no other type but `unknown`, and nothing else fits that

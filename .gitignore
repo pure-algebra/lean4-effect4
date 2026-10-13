@@ -1,6 +1,8 @@
 /.lake
 .DS_Store
 __pycache__/
+# wrangler's local state from `make deploy-site`
+/.wrangler/
 
 # Working notes, spikes and process files: kept on disk and synced between machines
 # directly, not through git (docs/research/2026-09-04-prod-cleanup-inventory.md, D6).

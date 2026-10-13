@@ -1,23 +1,27 @@
 name: Lean Action CI
 
-# One build, cached by commit, then the checks as parallel jobs that need it; the long
-# censuses nightly in separate jobs; the axiom audit replayed weekly from a fresh checkout
-# with no cache. Every job runs `make` targets (see the Makefile; `make help` lists them).
+# What a landing owes (AGENTS.md, Working), run on every push: the proofs, then the behaviour
+# gates, the runs compared with an outside implementation. One build job builds the core, the law
+# graph and the tools once and caches them by commit; every other job restores that cache and runs
+# `make` targets (`make help` lists them):
 #
-# The build cache is this file's own (`actions/cache`, keyed on the runner, the Lake
-# manifest, the toolchain and the commit, with a manifest-level fallback): the Lean
-# action's built-in cache saves inside the action, before `make build` runs, so it never
-# carried the outputs the check jobs need. The action is used for the toolchain only.
+#   build        the proofs: the core and the law graph (`make build`), and the tool roots
+#   lean-gates   the Lean-side gates: the native conformance, the generated files' drift, the
+#                semantics report's refusals, the documents' references, the checkers' self-tests
+#   ts-gates     the outside oracles in TypeScript: Effect rc.112's runtime (truth, the corpus,
+#                the schema codec) and tsgo 7 (the printed target, the reader, the diagnostics)
+#   ocaml-gates  the OCaml route: the LCNF faces re-cut and held, the OCaml lane, the compiler
+#   site         the documentation site (decisions row 363), deployed when the secrets are set
 #
-# Two pinned TypeScript installs, each with its consumers: ts/eff (effect rc.112, the
-# sqlite driver, tsgo 7 as `@typescript/native-preview`, oxc-parser) for the truth harness, the type oracle, the schema
-# codec, the reader and the ingest; harness/schema-host (TypeScript 7.0.2 with the
-# language service) only for the Schema harnesses, selected through
-# EFFECT4_EFFECT_NODE_MODULES in the jobs that run them and nowhere else.
+# The long censuses run nightly, one job each, and the proofs are replayed weekly from a fresh
+# checkout with no cache. The batteries and the whole-tree axiom gate run at a sweep, by name
+# (`make check-slow`, `make check-roots`). The setup steps are the local actions under
+# .github/actions: the toolchain and the cache, the pinned TypeScript, the OCaml compiler.
+#
+# A pull request is not a trigger: its branch is pushed here, so it ran twice.
 
 on:
   push:
-  pull_request:
   workflow_dispatch:
   schedule:
     - cron: "23 3 * * *"   # nightly: the census lanes
@@ -37,98 +41,82 @@ jobs:
   build:
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v5
+      - uses: ./.github/actions/lean
         with:
-          fetch-depth: 0 # Historical citation receipts resolve against immutable commits.
-      - uses: leanprover/lean-action@v1
-        with:
-          auto-config: false
-          build: false
-          use-github-cache: false
-      - uses: actions/cache@v4
-        with:
-          path: .lake
-          key: lake-${{ runner.os }}-${{ hashFiles('lake-manifest.json', 'lean-toolchain') }}-${{ github.sha }}
-          restore-keys: lake-${{ runner.os }}-${{ hashFiles('lake-manifest.json', 'lean-toolchain') }}-
-      - name: Build the core, the proof graph, the batteries and the axiom audit
-        run: make build
-      - name: Build the generator and checker roots
-        run: make build-tools
+          save: "true"
+      - name: The core and the law graph (the proofs), then the tool roots
+        run: make build build-tools
 
-  check:
+  lean-gates:
     needs: build
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
         with:
-          fetch-depth: 0
-      - uses: leanprover/lean-action@v1
-        with:
-          auto-config: false
-          build: false
-          use-github-cache: false
-      - uses: actions/cache/restore@v4
-        with:
-          path: .lake
-          key: lake-${{ runner.os }}-${{ hashFiles('lake-manifest.json', 'lean-toolchain') }}-${{ github.sha }}
-          fail-on-cache-miss: true
-      - uses: oven-sh/setup-bun@v2
+          fetch-depth: 0 # a document's `git:<rev>:<path>` citation resolves against the history
+      - uses: ./.github/actions/lean
+      - run: make doctor
+      - name: Native conformance, generated drift, the semantics refusals, the documents, the checkers' self-tests
+        run: make check-native check-gen check-semantics check-docs check-tools
+
+  ts-gates:
+    needs: build
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/lean
+      - uses: ./.github/actions/typescript
         with:
           bun-version: ${{ env.BUN_VERSION }}
-      - name: Install the pinned TypeScript dependencies
-        run: bun install --frozen-lockfile --cwd ts/eff
+          node-version: ${{ env.NODE_VERSION }}
       - run: make doctor
-      - name: The per-change tier (build, roots, generated drift, catch-all arms, layouts, citations, the TypeScript reader)
-        run: make check
+      - name: Effect rc.112's runtime and tsgo 7 against the tree
+        run: make check-truth check-corpus check-schema-codec check-target check-ts-reader check-tsdiag check-ingest-smoke
 
-  check-tools:
+  ocaml-gates:
     needs: build
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v5
+      - uses: ./.github/actions/lean
+      - uses: ./.github/actions/ocaml
         with:
-          fetch-depth: 0
-      - uses: leanprover/lean-action@v1
-        with:
-          auto-config: false
-          build: false
-          use-github-cache: false
-      - uses: actions/cache/restore@v4
-        with:
-          path: .lake
-          key: lake-${{ runner.os }}-${{ hashFiles('lake-manifest.json', 'lean-toolchain') }}-${{ github.sha }}
-          fail-on-cache-miss: true
-      - name: The checkers' own self-tests (planted defects must be refused)
-        run: make check-tools
+          ocaml-compiler: ${{ env.OCAML_COMPILER }}
+      - run: make doctor OCAML="opam exec --"
+      # The engine's four faces are cut from the tree's own LCNF. Re-cutting them here and refusing
+      # a difference is what makes "the engine runs the same algebra" a gate; the OCaml lane then
+      # compiles the faces this step just wrote.
+      - name: The four LCNF faces re-cut from the tree and held against the committed ones
+        run: |
+          make gen-lcnf
+          git diff --exit-code --stat -- ocaml/gen/fibers_gen.ml ocaml/gen/machine_gen.ml ocaml/gen/api_gen.ml ocaml/engine/api_engine.ml
+      - name: The OCaml lane and the compiler conformance profile
+        run: make check-ocaml check-compiler OCAML="opam exec --"
 
-  # The documentation site (decisions row 363). `make site` builds it from the cached build into
-  # .lake/gen/site, standard files only, and the job keeps it as an artifact. With the repository
-  # secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID, a push also deploys it to the Cloudflare
-  # Pages project effect4-docs: the main branch as production, any other branch as a preview.
-  # Without the secrets the deploy step is skipped.
+  # `make site` builds the site from the cached build into .lake/gen/site, standard files only, and
+  # the job keeps it as an artifact. With the repository secrets CLOUDFLARE_API_TOKEN and
+  # CLOUDFLARE_ACCOUNT_ID it also deploys to the Cloudflare Pages project effect4-docs: the main
+  # branch as production, any other branch as a preview. The owner deploys from the Mac with
+  # `make deploy-site` (wrangler's sign-in) until the secrets are set.
   site:
     needs: build
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
       - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-      - uses: leanprover/lean-action@v1
-        with:
-          auto-config: false
-          build: false
-          use-github-cache: false
-      - uses: actions/cache/restore@v4
-        with:
-          path: .lake
-          key: lake-${{ runner.os }}-${{ hashFiles('lake-manifest.json', 'lean-toolchain') }}-${{ github.sha }}
-          fail-on-cache-miss: true
+      - uses: ./.github/actions/lean
       - name: Build the documentation site
         run: make site
       - uses: actions/upload-artifact@v4
@@ -144,179 +132,70 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: pages deploy .lake/gen/site --project-name=effect4-docs --branch=${{ github.ref_name }}
 
-  check-host:
-    needs: build
-    if: github.event_name != 'schedule'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-      - uses: leanprover/lean-action@v1
-        with:
-          auto-config: false
-          build: false
-          use-github-cache: false
-      - uses: actions/cache/restore@v4
-        with:
-          path: .lake
-          key: lake-${{ runner.os }}-${{ hashFiles('lake-manifest.json', 'lean-toolchain') }}-${{ github.sha }}
-          fail-on-cache-miss: true
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: ${{ env.BUN_VERSION }}
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-      - name: Install the pinned TypeScript dependencies
-        run: bun install --frozen-lockfile --cwd ts/eff
-      - run: make doctor
-      - name: The outside oracles (truth, T0, the schema codec, the ingest smoke)
-        run: make build check-truth check-corpus check-target check-schema-codec check-ingest-smoke
-
-  check-ocaml:
-    needs: build
-    if: github.event_name != 'schedule'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-      - uses: leanprover/lean-action@v1
-        with:
-          auto-config: false
-          build: false
-          use-github-cache: false
-      - uses: actions/cache/restore@v4
-        with:
-          path: .lake
-          key: lake-${{ runner.os }}-${{ hashFiles('lake-manifest.json', 'lean-toolchain') }}-${{ github.sha }}
-          fail-on-cache-miss: true
-      - uses: ocaml/setup-ocaml@v3
-        with:
-          ocaml-compiler: ${{ env.OCAML_COMPILER }}
-      - name: Install the OCaml build tools and exact clock dependency
-        run: opam install --yes dune ocamlfind zarith.1.14
-      - run: make doctor OCAML="opam exec --"
-      # The engine's four faces are cut from the tree's own LCNF, and nothing held them: the
-      # committed api_engine.ml was four `Ty` constructors behind the source for the whole of
-      # L5 and only the nightly would have said so. Re-cutting them here and refusing a
-      # difference is what makes "the engine runs the same algebra" a gate. The OCaml lane
-      # below then compiles the faces this step just wrote.
-      - name: The four LCNF faces re-cut from the tree and held against the committed ones
-        run: |
-          make gen-lcnf
-          git diff --exit-code --stat -- ocaml/gen/fibers_gen.ml ocaml/gen/machine_gen.ml ocaml/gen/api_gen.ml ocaml/engine/api_engine.ml
-      - name: The OCaml lane (the eff goldens and wire tests, the engine tests, the three-engine differential over the printed corpus, the seam check)
-        run: make build check-ocaml OCAML="opam exec --"
-      - name: The compiler conformance profile (Lean-emitted OCaml for normalization, compiled and run, plus its emitted-code mutations)
-        run: python3 scripts/check-conform.py compiler
-
   # ---------------------------------------------------------------- nightly, one job each
-  # Each census lane is its own job so that one failure leaves the others' results standing.
+  # Each census lane is its own job, so one failure leaves the others' results standing. Each
+  # restores the last cache of the same pins and builds what changed.
 
   nightly-gen-full:
     if: github.event_name == 'schedule' && github.event.schedule == '23 3 * * *'
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v5
+      - uses: ./.github/actions/lean
         with:
-          fetch-depth: 0
-      - uses: leanprover/lean-action@v1
-        with:
-          auto-config: false
-          build: false
-          use-github-cache: false
-      - uses: actions/cache@v4
-        with:
-          path: .lake
-          key: lake-${{ runner.os }}-${{ hashFiles('lake-manifest.json', 'lean-toolchain') }}-${{ github.sha }}
-          restore-keys: lake-${{ runner.os }}-${{ hashFiles('lake-manifest.json', 'lean-toolchain') }}-
-      - uses: oven-sh/setup-bun@v2
+          save: "true"
+      - uses: ./.github/actions/typescript
         with:
           bun-version: ${{ env.BUN_VERSION }}
-      - name: Install the pinned TypeScript dependencies
-        run: bun install --frozen-lockfile --cwd ts/eff
+          node-version: ${{ env.NODE_VERSION }}
       - name: Every generated group re-cut from scratch, host-cut groups included, and compared
         run: make build check-gen-full
 
   nightly-ingest:
     if: github.event_name == 'schedule' && github.event.schedule == '23 3 * * *'
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v5
+      - uses: ./.github/actions/lean
         with:
-          fetch-depth: 0
-      - uses: leanprover/lean-action@v1
-        with:
-          auto-config: false
-          build: false
-          use-github-cache: false
-      - uses: actions/cache@v4
-        with:
-          path: .lake
-          key: lake-${{ runner.os }}-${{ hashFiles('lake-manifest.json', 'lean-toolchain') }}-${{ github.sha }}
-          restore-keys: lake-${{ runner.os }}-${{ hashFiles('lake-manifest.json', 'lean-toolchain') }}-
-      - uses: oven-sh/setup-bun@v2
+          save: "true"
+      - uses: ./.github/actions/typescript
         with:
           bun-version: ${{ env.BUN_VERSION }}
-      - uses: actions/setup-node@v4
-        with:
           node-version: ${{ env.NODE_VERSION }}
-      - uses: ocaml/setup-ocaml@v3
+      - uses: ./.github/actions/ocaml
         with:
           ocaml-compiler: ${{ env.OCAML_COMPILER }}
-      - run: opam install --yes dune ocamlfind zarith.1.14
-      - name: Install the pinned TypeScript dependencies
-        run: bun install --frozen-lockfile --cwd ts/eff
       - name: The full ingest census (the constructed foreign corpus through both recognizers, the OCaml decode)
         run: make build check-ingest OCAML="opam exec --"
 
   nightly-host:
     if: github.event_name == 'schedule' && github.event.schedule == '23 3 * * *'
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v5
+      - uses: ./.github/actions/lean
         with:
-          fetch-depth: 0
-      - uses: leanprover/lean-action@v1
-        with:
-          auto-config: false
-          build: false
-          use-github-cache: false
-      - uses: actions/cache@v4
-        with:
-          path: .lake
-          key: lake-${{ runner.os }}-${{ hashFiles('lake-manifest.json', 'lean-toolchain') }}-${{ github.sha }}
-          restore-keys: lake-${{ runner.os }}-${{ hashFiles('lake-manifest.json', 'lean-toolchain') }}-
-      - uses: oven-sh/setup-bun@v2
+          save: "true"
+      - uses: ./.github/actions/typescript
         with:
           bun-version: ${{ env.BUN_VERSION }}
-      - uses: actions/setup-node@v4
-        with:
           node-version: ${{ env.NODE_VERSION }}
-      - name: Install the pinned TypeScript dependencies
-        run: bun install --frozen-lockfile --cwd ts/eff
       - name: The host protocol and the runtime census
         run: make build check-host-protocol check-census
 
   nightly-schema:
     if: github.event_name == 'schedule' && github.event.schedule == '23 3 * * *'
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v5
+      - uses: ./.github/actions/lean
         with:
-          fetch-depth: 0
-      - uses: leanprover/lean-action@v1
-        with:
-          auto-config: false
-          build: false
-          use-github-cache: false
-      - uses: actions/cache@v4
-        with:
-          path: .lake
-          key: lake-${{ runner.os }}-${{ hashFiles('lake-manifest.json', 'lean-toolchain') }}-${{ github.sha }}
-          restore-keys: lake-${{ runner.os }}-${{ hashFiles('lake-manifest.json', 'lean-toolchain') }}-
+          save: "true"
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
@@ -333,10 +212,9 @@ jobs:
   proof-replay:
     if: github.event_name == 'schedule' && github.event.schedule == '17 4 * * 1'
     runs-on: ubuntu-latest
+    timeout-minutes: 240
     steps:
       - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
       - uses: leanprover/lean-action@v1
         with:
           auto-config: false
