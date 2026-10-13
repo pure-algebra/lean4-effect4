@@ -501,6 +501,13 @@ def scenario : Scenario := claimRecord.scenario
 
 -- finite evaluation: the record's notes are right as data
 #guard claimRecord.problems = []
+-- finite evaluation: what the record claims of `complete`, of `remove`, and of a name that the
+-- application does not hold, by kind
+#guard (claimRecord.claimsOf "complete").map (fun c => (c.1, c.2.2)) =
+  [("escape", .tree), ("requested", .protocol), ("idempotent", .laws), ("journal", .inherited),
+    ("admission", .inherited)]
+#guard (claimRecord.claimsOf "remove").map (·.1) = ["journal", "admission"] &&
+  (claimRecord.claimsOf "purge").isEmpty
 
 #scenario_gate scenario
 

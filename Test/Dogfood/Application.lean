@@ -15,7 +15,8 @@ planned goal with its placement (`@[semantics …]`, decisions row 207). Its sta
   programs that its statement reads, and the premises that its statement assumes of whoever answers
   the rows, each with its grade (who discharges it).
 * **`Record.problems`** checks the notes as data. A battery reads it with `#guard`, and its red
-  controls show each finding (decisions row 301). The packet's second gate is not landed: row 375
+  controls show each finding (decisions row 301).
+* **`Record.claimsOf`** answers what the record claims of one program, by kind. The packet's second gate is not landed: row 375
   clears gates, and a name in a note is a name literal, which the elaborator resolves.
 
 What it does not establish: that a note's premises are the premises of its statement. The
@@ -117,13 +118,14 @@ def Record.problems (r : Record) : List String :=
       [r.scenario.name ++ ": the note \"" ++ note.entry ++ "\" names no clause and no law"]
     else Note.problems r note
 
-/-- The notes of one kind, by entry name: what the record says comes from that source. -/
-def Record.ofKind (r : Record) (kind : Kind) : List String :=
-  (r.notes.filter (·.kind == kind)).map (·.entry)
-
-/-- The premises of a record at one grade, by name, each once: what the record's claims rest on
-that this grade discharges. -/
-def Record.premisesAt (r : Record) (grade : Grade) : List Lean.Name :=
-  ((r.notes.flatMap (·.assumes)).filter (·.grade == grade)).map (·.name) |>.eraseDups
+/-- **What the record claims of one program** (the claims packet's operation `claims`, §3.8, at
+the record): each entry whose note reads the program, and each inherited law where the
+application holds the program, with its declaration and its kind, in the record's order. The
+status of each is the plan's (`#plan_status`), never the record's. -/
+def Record.claimsOf (r : Record) (program : String) : List (String × Lean.Name × Kind) :=
+  r.entries.filterMap fun entry =>
+    (r.notes.find? (·.entry == entry.name)).bind fun note =>
+      if note.reads.contains program || (note.kind == .inherited && r.programs.contains program)
+      then some (entry.name, entry.claim, note.kind) else none
 
 end Test.Dogfood.Application
