@@ -16,7 +16,7 @@ import Effect4.Codegen.Metadata
 
     lake env lean -M4096 --run tools/Drivers/TsGen.lean ts/eff
 
-Writes eight library files and one test fixture, all `GENERATED`, none ever edited:
+Writes nine library files and one test fixture, all `GENERATED`, none ever edited:
 
 * `eff.gen.ts` — one Effect Schema per family of the closed world `OCaml5.Eff.World.blocks`
   reads off the environment (the same world `ocaml/eff` is generated from): `Schema.TaggedUnion`
@@ -39,6 +39,10 @@ Writes eight library files and one test fixture, all `GENERATED`, none ever edit
 
 * `taxonomy.gen.ts` and `forms.gen.ts` — the refusal partition, relative expansions,
   dual-call metadata and unambiguous lambda shapes, as stamped literal data.
+* `names.gen.ts` — the name tables the reader of a module file checks names against, as stamped
+  literal data: the members of an rc.112 service key that a row service's accessor may not take
+  (`serviceKeyMembers`, `Codegen/RowServices.lean`), and the ambient values that a binding name
+  may not take (`Codegen.Names.reservedExtra`).
 * `wire.gen.ts` — the canonical byte writer for every closed-world family, with an
   explicit work stack and frame-length patching instead of recursive concatenation.
 * `templates.gen.ts` — the table of printed clauses (`Effect4.Codegen.Templates.table`), each
@@ -843,6 +847,14 @@ def emitTable (name data : String) : String :=
   "  return \"0x\" + h.toString(16)\n}\n" ++
   s!"if (fnv1a64(JSON.stringify({name})) !== stamp) throw new Error({lit (name ++ " table stamp mismatch; regenerate")})\n"
 
+/-- The name tables of `names.gen.ts`: the members of a service key, which an accessor would
+shadow (`Effect4.Program.serviceKeyMembers`), and the ambient values a binding name excludes
+(`Effect4.Codegen.Names.reservedExtra`). One owner each, in Lean; `ts/eff/read.ts` imports them. -/
+def emitNames : String :=
+  emitTable "names" (obj
+    [("serviceKeyMembers", arr (Effect4.Program.serviceKeyMembers.map lit)),
+     ("reservedExtra", arr (Effect4.Codegen.Names.reservedExtra.map lit))])
+
 def emitTaxonomy : String :=
   let rows := Effect4.Ingest.Code.all.map fun c => obj
     [("code", lit c.wire), ("spectrum", lit c.spectrum.wire),
@@ -1307,6 +1319,7 @@ def main (args : List String) : IO Unit := do
     | .error why => throw (IO.userError s!"TsGen: variance metadata: {why}")
   IO.FS.writeFile (out / "wire.gen.ts") (stampHeader ++ emitWire fs ++ metadata ++ variances)
   IO.FS.writeFile (out / "taxonomy.gen.ts") (stampHeader ++ emitTaxonomy)
+  IO.FS.writeFile (out / "names.gen.ts") (stampHeader ++ emitNames)
   IO.FS.writeFile (out / "forms.gen.ts") (stampHeader ++ emitForms)
   IO.FS.writeFile (out / "packages.gen.ts") (stampHeader ++ emitPackages)
   match emitTemplates fs with
@@ -1320,4 +1333,4 @@ def main (args : List String) : IO Unit := do
   let kinds := fs.map fun f => match kindOf f with
     | .enum => "literals" | .struct => "struct" | .consList _ => "array" | .tagged => "tagged"
   IO.println s!"TsGen: {fs.length} families ({(kinds.filter (· == "tagged")).length} tagged, {(kinds.filter (· == "literals")).length} literals, {(kinds.filter (· == "struct")).length} struct, {(kinds.filter (· == "array")).length} array), {fs.foldl (fun n f => n + f.ctors.length) 0} constructors; profile {Effect4.Program.reserved.length} heads, {atomRows.length} atoms, {allNativeOps.length} rows; packages {Effect4.Program.Packages.all.length} tables, {Effect4.Program.Packages.all.foldl (fun n p => n + p.rows.length) 0} rows, address {address}"
-  IO.println s!"wrote eff.gen.ts, json.gen.ts, profile.gen.ts, taxonomy.gen.ts, forms.gen.ts, wire.gen.ts, packages.gen.ts, templates.gen.ts, test/type-projection.gen.json under {out}"
+  IO.println s!"wrote eff.gen.ts, json.gen.ts, profile.gen.ts, taxonomy.gen.ts, names.gen.ts, forms.gen.ts, wire.gen.ts, packages.gen.ts, templates.gen.ts, test/type-projection.gen.json under {out}"
