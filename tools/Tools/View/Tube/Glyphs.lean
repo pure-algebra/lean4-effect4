@@ -18,7 +18,8 @@ one pixel to the pixel. No circle, rectangle, arrowhead or text stands in a figu
   parent's centreline, tangent to it, and turns away, and a figure names the pair
   (`Figure.joins`) for the pen's fillet. A pipe that enters a vessel end to end is a reducer
   (`Figure.reducers`). Two tubes where nothing passes stand `AIRGAP` apart, an air gap: a
-  broadcast's taps, a crossing, a cadence's strut and a force's stop.
+  broadcast's taps, a crossing, a cadence's strut and a force's stop. A strut, structure that
+  carries nothing, is named too (`Figure.struts`), so the pen may draw it with no inside.
 * **Every end round.** Inside a figure every end is round, closed. A tube that meets the world
   runs past the cell's edge, so the edge cuts it (`port`).
 * **Keys by role.** A figure's tubes are `main` and `b` to `f` (so `main:wall`), its units `u` to
@@ -247,14 +248,16 @@ def middle (t : Tube) : Int := (t.length / 2 : Nat)
 /-! ## Figures -/
 
 /-- **A figure**: its marks, its solid joins as pairs of tube keys (the parent, then the branch
-that leaves it tangentially), and its reducers (a pipe, then the vessel it enters end to end).
-A solid join and a reducer share fluid; the pen rounds the crotch of the one and smooths the
-step of the other. Two tubes named in neither that stand `AIRGAP` apart meet across an air gap:
-nothing passes between them. -/
+that leaves it tangentially), its reducers (a pipe, then the vessel it enters end to end), and its
+struts (the tubes that are structure, not channels: they carry nothing, and the pen may draw them
+with no inside). A solid join and a reducer share fluid; the pen rounds the crotch of the one and
+smooths the step of the other. Two tubes named in neither that stand `AIRGAP` apart meet across an
+air gap: nothing passes between them. -/
 structure Figure where
   marks : List Mark
   joins : List (String × String) := []
   reducers : List (String × String) := []
+  struts : List String := []
 deriving Inhabited
 
 /-- **Body: a closed piece of line, and its payload.** A body is a short pipe closed at both
@@ -458,7 +461,8 @@ def forceFigure : Shape → Figure
     let stop := px 75 - (apart PIPE THIN : Nat)
     let line := tube (px 12) (px 48) E PIPE [⟨(stop - px 12).toNat, 0⟩]
     { marks := bodyOf "main" line ++ surgeOf "s" line (px 9) 18000 ++
-        bodyOf "b" (tube (px 75) (px 24) S THIN [run 48]) }
+        bodyOf "b" (tube (px 75) (px 24) S THIN [run 48])
+      struts := ["b"] }
   | _ => { marks := [] }
 
 /-- **Cadence: a strut across the staff.** A cadence is a closed, thin strut that stands across
@@ -469,18 +473,22 @@ air gap above it, over a dot; a caesura is two slanted struts, the staff gone. -
 def cadenceFigure : Shape → Figure
   | .barLine =>
     { marks := bodyOf "main" (bar (px 48) THIN) ++ bodyOf "b" (staff (px 9) (px 48 - a)) ++
-        bodyOf "c" (staff (px 48 + a) (px 87)) }
+        bodyOf "c" (staff (px 48 + a) (px 87))
+      struts := ["main"] }
   | .exitBar =>
     { marks := bodyOf "main" (bar (px 42) THIN) ++ bodyOf "b" (staff (px 9) (px 42 - a)) ++
-        bodyOf "c" (bar (px 42 + (apart THIN PIPE : Nat)) PIPE) }
+        bodyOf "c" (bar (px 42 + (apart THIN PIPE : Nat)) PIPE)
+      struts := ["main", "c"] }
   | .fermata =>
     { marks := bodyOf "main" (tube (px 18) (px 66 - a) N THIN [arcR 30 W]) ++
         bodyOf "b" (tube (px 9) (px 66) E THIN [run 78]) ++
-        bodyOf "c" (tube (px 48) (px 42) S THIN [run 3]) }
+        bodyOf "c" (tube (px 48) (px 42) S THIN [run 3])
+      struts := ["main", "c"] }
   | .caesura =>
     let dx : Int := (apart THIN THIN * 1154701 / 1000000 : Nat)
     let slash (x : Int) := tube x (px 66) (-SIXTH) THIN [run 42]
-    { marks := bodyOf "main" (slash (px 27)) ++ bodyOf "b" (slash (px 27 + dx)) }
+    { marks := bodyOf "main" (slash (px 27)) ++ bodyOf "b" (slash (px 27 + dx))
+      struts := ["main", "b"] }
   | _ => { marks := [] }
 where
   /-- An air gap between two thin tubes' centrelines. -/
@@ -490,7 +498,7 @@ where
   /-- A strut down the cell. -/
   bar (x : Int) (bore : Nat) : Tube := tube x (px 12) S bore [run 72]
 
-/-- **A mark's figure, with its joins and reducers**, by its kind's family. -/
+/-- **A mark's figure, with its joins, reducers and struts**, by its kind's family. -/
 def draw (s : Shape) : Figure :=
   match s.kind with
   | .body => bodyFigure s
@@ -566,6 +574,13 @@ def inCell (m : Mark) : Bool :=
   let ks := (figure s).map (·.key)
   ((draw s).joins ++ (draw s).reducers).all fun (p, q) =>
     ks.contains (p ++ ":wall") && ks.contains (q ++ ":wall")
+
+-- every strut names a tube of its figure, and nothing rides on it: no other mark shares its tube
+#guard shapes.all fun s => (draw s).struts.all fun k =>
+  match (figure s).find? (·.key == k ++ ":wall") with
+  | some w => (figure s).all fun m =>
+    m.key == k ++ ":wall" || m.key == k ++ ":lumen" || m.tube != w.tube
+  | none => false
 
 /-- The tubes' keys, by role. -/
 def TUBES : List String := ["main", "b", "c", "d", "e", "f", "s"]
