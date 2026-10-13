@@ -17,8 +17,8 @@ one pixel to the pixel. No circle, rectangle, arrowhead or text stands in a figu
   that share fluid are joined solidly, a conserving tee or wye: the branch leaves its parent on the
   parent's centreline, tangent to it, and turns away, and a figure names the pair
   (`Figure.joins`) for the pen's fillet. A pipe that enters a vessel end to end is a reducer
-  (`Figure.reducers`). Two tubes where nothing passes stand `GAP` apart, an air gap: a broadcast's
-  taps, a crossing, a cadence's strut and a force's stop.
+  (`Figure.reducers`). Two tubes where nothing passes stand `AIRGAP` apart, an air gap: a
+  broadcast's taps, a crossing, a cadence's strut and a force's stop.
 * **Every end round.** Inside a figure every end is round, closed. A tube that meets the world
   runs past the cell's edge, so the edge cuts it (`port`).
 * **Keys by role.** A figure's tubes are `main` and `b` to `f` (so `main:wall`), its units `u` to
@@ -58,13 +58,13 @@ theorem reverse_ok {t : Tube} (h : t.ok) : t.reverse.ok := by
 /-- **The air gap**, in thousandths of a pixel: two bodies this far apart touch nowhere, so
 nothing passes between them. The solid-tube pen names it `GAP` in `Tools.View.Tube.Draw`; this
 one stands in until the merge. -/
-def GAP : Nat := 4000
+def AIRGAP : Nat := 4000
 
 /-- Half a tube's body, in thousandths of a pixel. -/
 def half (bore : Nat) : Nat := body bore / 2
 
 /-- The distance between the centrelines of two tubes whose bodies stand an air gap apart. -/
-def apart (b₁ b₂ : Nat) : Nat := half b₁ + GAP + half b₂
+def apart (b₁ b₂ : Nat) : Nat := half b₁ + AIRGAP + half b₂
 
 /-- **A surge standing on a tube**: its body swollen by `SWELL` on each side over `len` from `s`,
 as a pressure wave swells a pipe (Joukowsky). The still form of `swellOf`; the solid-tube pen's
@@ -92,38 +92,43 @@ def Lawful (tr : Track) : Prop := ∀ (t : Nat) (u : Tube), tr.at t = .path u �
 /-- A progress held for the morph is at most the whole. -/
 theorem clamp_le (e : Int) : clamp e ≤ 1000 := Nat.min_le_right _ _
 
-/-- **Every pose of a stroke's change keeps the bend law** when its tubes do: a bend's poses are
-mixes of lawful tubes (`Tube.mix_ok`), and a width, a swell or a window takes no path. A step of
-`tracksOf_ok`. -/
-theorem stroke_ok {c : Stroke}
-    (hc : ∀ a b v, c = .bend a b v → a.ok ∧ b.ok ∧ ∀ w, v = some w → w.ok) :
-    ∀ e u, c.at e = .path u → u.ok := by
-  intro e u h
-  cases c with
-  | bend a b v =>
-    obtain ⟨ha, hb, hv⟩ := hc a b v rfl
-    cases v with
-    | none =>
-      simp only [Stroke.at, Pose.path.injEq] at h
+/-- **Every pose of a bend keeps the bend law** when its two tubes and the pose it passes through
+do: each pose is a mix of lawful tubes (`Tube.mix_ok`). A step of `tracksOf_ok`. -/
+theorem bend_ok {a b : Tube} {v : Option Tube} (ha : a.ok) (hb : b.ok)
+    (hv : ∀ w, v = some w → w.ok) (k : String) (tm : Timing) : Lawful ⟨k, .bend a b v, tm⟩ := by
+  intro t u h
+  change Stroke.at (.bend a b v) (tm.at t) = .path u at h
+  cases v with
+  | none =>
+    simp only [Stroke.at, Pose.path.injEq] at h
+    rw [← h]
+    exact Tube.mix_ok (clamp_le _) ha hb
+  | some w =>
+    simp only [Stroke.at] at h
+    split at h
+    · simp only [Pose.path.injEq] at h
       rw [← h]
-      exact Tube.mix_ok (clamp_le e) ha hb
-    | some w =>
-      simp only [Stroke.at] at h
-      split at h
-      · simp only [Pose.path.injEq] at h
-        rw [← h]
-        exact Tube.mix_ok (clamp_le _) ha (hv w rfl)
-      · simp only [Pose.path.injEq] at h
-        rw [← h]
-        exact Tube.mix_ok (clamp_le _) (hv w rfl) hb
-  | width a b => simp only [Stroke.at, reduceCtorEq] at h
-  | swell p => simp only [Stroke.at, reduceCtorEq] at h
-  | window a b v =>
-    cases v with
-    | none => simp only [Stroke.at, reduceCtorEq] at h
-    | some w =>
-      simp only [Stroke.at] at h
-      split at h <;> simp only [reduceCtorEq] at h
+      exact Tube.mix_ok (clamp_le _) ha (hv w rfl)
+    · simp only [Pose.path.injEq] at h
+      rw [← h]
+      exact Tube.mix_ok (clamp_le _) (hv w rfl) hb
+
+/-- A change of width takes no path. A step of `tracksOf_ok`. -/
+theorem width_ok (x y : Int) (k : String) (tm : Timing) : Lawful ⟨k, .width x y, tm⟩ := by
+  intro t u h
+  change Stroke.at (.width x y) (tm.at t) = .path u at h
+  simp only [Stroke.at, reduceCtorEq] at h
+
+/-- A window along a stroke takes no path. A step of `tracksOf_ok`. -/
+theorem window_ok (x y : Int × Int) (v : Option (Int × Int)) (k : String) (tm : Timing) :
+    Lawful ⟨k, .window x y v, tm⟩ := by
+  intro t u h
+  change Stroke.at (.window x y v) (tm.at t) = .path u at h
+  cases v with
+  | none => simp only [Stroke.at, reduceCtorEq] at h
+  | some w =>
+    simp only [Stroke.at] at h
+    split at h <;> simp only [reduceCtorEq] at h
 
 /-- The pose a mark passes through keeps the bend law when the mark it is taken from does. A
 step of `tracksOf_ok`. -/
@@ -151,20 +156,18 @@ theorem tracksOf_ok {a b : Mark} {via : Option Mark} (ha : a.tube.ok) (hb : b.tu
   · split at h1
     · rw [List.mem_singleton] at h1
       subst h1
-      exact stroke_ok (fun a' b' v' he => by
-        cases he
-        exact ⟨ha, hb, viaTube_ok hv⟩) _ u h
+      exact bend_ok ha hb (viaTube_ok hv) _ _ t u h
     · exact absurd h1 (List.not_mem_nil)
   · split at h2
     · rw [List.mem_singleton] at h2
       subst h2
-      exact stroke_ok (by intro _ _ _ he; cases he) _ u h
+      exact width_ok _ _ _ _ t u h
     · exact absurd h2 (List.not_mem_nil)
   · split at h3
     · split at h3
       · rw [List.mem_singleton] at h3
         subst h3
-        exact stroke_ok (by intro _ _ _ he; cases he) _ u h
+        exact window_ok _ _ _ _ _ t u h
       · exact absurd h3 (List.not_mem_nil)
     · exact absurd h3 (List.not_mem_nil)
 
@@ -245,7 +248,7 @@ def middle (t : Tube) : Int := (t.length / 2 : Nat)
 /-- **A figure**: its marks, its solid joins as pairs of tube keys (the parent, then the branch
 that leaves it tangentially), and its reducers (a pipe, then the vessel it enters end to end).
 A solid join and a reducer share fluid; the pen rounds the crotch of the one and smooths the
-step of the other. Two tubes named in neither that stand `GAP` apart meet across an air gap:
+step of the other. Two tubes named in neither that stand `AIRGAP` apart meet across an air gap:
 nothing passes between them. -/
 structure Figure where
   marks : List Mark
@@ -315,7 +318,8 @@ bend that holds a unit or stands empty, is an option. -/
 def vesselFigure : Shape → Figure
   | .hollowDot => { marks := bodyOf "main" sealed ++ hollowAt "u" "h" sealed (middle sealed) }
   | .filledDot => { marks := bodyOf "main" sealed ++ [unitAt "u" sealed (middle sealed)] }
-  | .hollowBox => { marks := bodyOf "main" fed ++ bodyOf "b" inlet ++ hollowAt "u" "h" fed (middle fed)
+  | .hollowBox => { marks := bodyOf "main" fed ++ bodyOf "b" inlet ++
+                      hollowAt "u" "h" fed (middle fed)
                     reducers := [("b", "main")] }
   | .filledBox => { marks := bodyOf "main" fed ++ bodyOf "b" inlet ++ [unitAt "u" fed (middle fed)]
                     reducers := [("b", "main")] }
@@ -349,7 +353,8 @@ def containerFigure : Shape → Figure
   | .rail =>
     { marks := bodyOf "main" (tube (px 12) (px 36) E FINE [run 72]) ++
         bodyOf "b" (tube (px 12) (px 60) E FINE [run 72]) }
-  | .block => { marks := bodyOf "main" (row 24 66) ++ bodyOf "b" (row 48 66) ++ bodyOf "c" (row 72 45) }
+  | .block =>
+    { marks := bodyOf "main" (row 24 66) ++ bodyOf "b" (row 48 66) ++ bodyOf "c" (row 72 45) }
   | .library =>
     { marks := bodyOf "main" (row 21 66) ++ bodyOf "b" (row 48 66) ++ bodyOf "c" (row 75 66) ++
         [collarOf "k" (row 21 66) (px 3) 12000, collarOf "k2" (row 48 66) (px 3) 12000] }
@@ -423,7 +428,8 @@ the other. -/
 def bondFigure : Shape → Figure
   | .arrow =>
     let y₀ := px 24 + (apart PIPE PIPE : Nat)
-    -- the diagonal's length, so the child's run lies on a whole pixel: `(72 − y₀ − r (1 − cos 45°)) √2`
+    -- the diagonal's length, so the child's run lies on a whole pixel:
+    -- `(72 − y₀ − r (1 − cos 45°)) √2`
     let drop : Int := (RADIUS * 292893 / 1000 : Nat)
     let down := ((px 72 - y₀ - drop) * 1414214 / 1000000).toNat
     { marks := bodyOf "main" (tube (px 12) (px 24) E PIPE [run 72]) ++
@@ -448,7 +454,8 @@ arrow `⊣`, an interrupt. What holds it is outside it: a rail over a span, or t
 on. -/
 def forceFigure : Shape → Figure
   | .blockedArrow =>
-    let line := tube (px 12) (px 48) E PIPE [⟨(px 75 - (apart PIPE THIN : Nat) - px 12).toNat, 0⟩]
+    let stop := px 75 - (apart PIPE THIN : Nat)
+    let line := tube (px 12) (px 48) E PIPE [⟨(stop - px 12).toNat, 0⟩]
     { marks := bodyOf "main" line ++ surgeOf "s" line (px 9) 18000 ++
         bodyOf "b" (tube (px 75) (px 24) S THIN [run 48]) }
   | _ => { marks := [] }
@@ -550,7 +557,8 @@ def inCell (m : Mark) : Bool :=
 #guard shapes.all fun s => s == .port || (figure s).all inCell
 
 -- the halves of a sheared pipe stand an air gap apart: `SHEAR² + 12² ≥ (26 px)²`
-#guard bodyFigure.SHEAR * bodyFigure.SHEAR + 12000 * 12000 ≥ (apart PIPE PIPE * apart PIPE PIPE : Nat)
+#guard bodyFigure.SHEAR * bodyFigure.SHEAR + 12000 * 12000 ≥
+  (apart PIPE PIPE * apart PIPE PIPE : Nat)
 
 -- every join and reducer names two tubes of its figure
 #guard shapes.all fun s =>
@@ -583,9 +591,10 @@ def distance (A B : List Mark) : Nat :=
   let shared := A'.filterMap fun a => (B'.find? (part ·.key == part a.key)).map (a, ·)
   only A' B' + only B' A' + shared.foldl (fun n (a, b) =>
     let k := max a.tube.pieces.length b.tube.pieces.length
-    n + ((List.zip (pad k a.tube.pieces) (pad k b.tube.pieces)).filter fun (p, q) => p != q).length +
-      (if a.tube.x != b.tube.x || a.tube.y != b.tube.y || a.tube.head != b.tube.head then 1 else 0) +
-      (if a.width != b.width then 1 else 0) + (if a.dash != b.dash then 1 else 0)) 0
+    let pieces := (List.zip (pad k a.tube.pieces) (pad k b.tube.pieces)).filter fun (p, q) => p != q
+    let moved := a.tube.x != b.tube.x || a.tube.y != b.tube.y || a.tube.head != b.tube.head
+    n + pieces.length + (if moved then 1 else 0) + (if a.width != b.width then 1 else 0) +
+      (if a.dash != b.dash then 1 else 0)) 0
 
 /-- The pairs of distinct shapes that one sort's constructors use. -/
 def sortPairs : List (Shape × Shape) :=
