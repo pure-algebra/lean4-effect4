@@ -32,25 +32,7 @@ namespace Tools.Catalogue
 
 open Lean (Json toJson)
 open Effect4.Program Effect4.Store
-open Tools.JsonBridge (printJson)
-
-/-- A shape as a short name: a primitive, a named definition, or a list, an option or a pair
-of those. -/
-def shapeText : Shape → String
-  | .unit => "unit"
-  | .bool => "bool"
-  | .nat => "nat"
-  | .string => "string"
-  | .bytes => "bytes"
-  | .digest => "digest"
-  | .list item => s!"list {shapeText item}"
-  | .option item => s!"option {shapeText item}"
-  | .pair a b => s!"pair {shapeText a} {shapeText b}"
-  | .struct name _ => name
-  | .sum name _ => name
-  | .ref kind => s!"ref {kind.name}"
-  | .anyRef => "anyRef"
-  | .named name => name
+open Tools.JsonBridge (printJson shapeText)
 
 /-- A case's or a structure's fields: each JSON key with its shape. -/
 def fieldsJson (fields : List (String × Shape)) : Json :=
@@ -108,9 +90,6 @@ def formsJson : Json :=
   Json.arr (forms.foldl (fun (kept : List Json) form =>
     if kept.contains form then kept else kept ++ [form]) []).toArray
 
-/-- Types as the program's JSON prints them. -/
-def tysJson (tys : List Ty) : Json := Json.arr (tys.map printJson).toArray
-
 /-- A named rule's name and its parameter. -/
 def customJson : NativeAtom.CustomScheme → Json
   | .project second => Json.mkObj [("rule", .str "project"), ("second", .bool second)]
@@ -122,14 +101,14 @@ def customJson : NativeAtom.CustomScheme → Json
 /-- An atom's typing scheme (`NativeAtom.Scheme`). -/
 def schemeJson : NativeAtom.Scheme → Json
   | .mono params answer =>
-    Json.mkObj [("_tag", .str "mono"), ("params", tysJson params), ("answer", printJson answer)]
+    Json.mkObj [("_tag", .str "mono"), ("params", printJson params), ("answer", printJson answer)]
   | .variadic param answer =>
     Json.mkObj [("_tag", .str "variadic"), ("param", printJson param), ("answer", printJson answer)]
   | .poly params answer =>
-    Json.mkObj [("_tag", .str "poly"), ("params", tysJson params), ("answer", printJson answer)]
+    Json.mkObj [("_tag", .str "poly"), ("params", printJson params), ("answer", printJson answer)]
   | .alts cases =>
     Json.mkObj [("_tag", .str "alts"), ("cases", Json.arr (cases.map fun (params, answer) =>
-      Json.mkObj [("params", tysJson params), ("answer", printJson answer)]).toArray)]
+      Json.mkObj [("params", printJson params), ("answer", printJson answer)]).toArray)]
   | .custom tag => Json.mkObj [("_tag", .str "custom"), ("rule", customJson tag)]
 
 /-- One atom: its name on the wire, its arity (`null` when variadic), its scheme and its

@@ -87,4 +87,188 @@ the encoding `ts/eff/eff.gen.ts` types, and `Canonical.ofJsonAnyOrder` reads it.
 def printJson {α : Type} [Canonical α] (a : α) : Lean.Json :=
   toLeanJson (Canonical.printArrays a)
 
+/-! ## A value on the wire: its canonical bytes in hex, or its JSON print
+
+Every carrier a tool takes or gives travels one of two ways, read by one function each, at every
+canonical carrier: a program, a filling, a hole table, a row table, service declarations. -/
+
+/-- The nesting a request's JSON may take. -/
+def depth : Nat := 4096
+
+/-- **A value from its canonical bytes in lowercase hex**: the store's exact decoder. -/
+def ofHex? {α : Type} [Canonical α] (hex : String) : Option α :=
+  (bytesOfHex hex.toList).bind Canonical.decode
+
+/-- **A value's canonical bytes**, in lowercase hex. -/
+def toHex {α : Type} [Canonical α] (a : α) : String := hexString (Canonical.encode a)
+
+/-- **A value from its JSON print**: its objects in any order, its lists as arrays or as their
+cases (`Canonical.ofJsonAnyOrder`). -/
+def read? {α : Type} [Canonical α] (j : Lean.Json) : Option α :=
+  (ofLeanJson depth j).bind Canonical.ofJsonAnyOrder
+
+/-- **A value from its hex bytes or, where there are none, its JSON print**, with the laws its
+reading names; `none` where neither is given. -/
+def valueFrom? {α : Type} [Canonical α] (hex : Option String) (json : Option Lean.Json) :
+    Option (Option α × List Lean.Name) :=
+  match hex, json with
+  | some h, _ => some (ofHex? h, [])
+  | none, some j => some (read? j, [``ofLeanJson_num, ``Canonical.ofJsonAnyOrder_exact])
+  | none, none => none
+
+/-! ## Where a refused JSON value stops fitting its shape
+
+The reader decides (`read?`); this walk only explains a refusal, as `Api.explain` explains a
+build that admission refused. It walks the shape and the author's own JSON together: objects by
+key in any order, a list family as an array or as its cases, a field-free sum as one of its
+strings. It answers the first place where the JSON leaves the shape, with the path of keys and
+indices to it, what the shape wants there and what stands there. Where it finds no fault, it says
+nothing, and the refusal stands without a place. -/
+
+/-- A shape as a short name: a primitive, a named definition, or a list, an option or a pair of
+those. The catalogue names its forms so (`Tools.Catalogue`). -/
+def shapeText : Shape → String
+  | .unit => "unit"
+  | .bool => "bool"
+  | .nat => "nat"
+  | .string => "string"
+  | .bytes => "bytes"
+  | .digest => "digest"
+  | .list item => s!"list {shapeText item}"
+  | .option item => s!"option {shapeText item}"
+  | .pair a b => s!"pair {shapeText a} {shapeText b}"
+  | .struct name _ => name
+  | .sum name _ => name
+  | .ref kind => s!"ref {kind.name}"
+  | .anyRef => "anyRef"
+  | .named name => name
+
+/-- **A miss**: the path of keys and indices to the place, what the shape wants there, and what
+stands there. -/
+structure Miss where
+  path : List String := []
+  wanted : String
+  found : String
+
+/-- The miss one step further in. -/
+def Miss.under (step : String) (m : Miss) : Miss := { m with path := step :: m.path }
+
+/-- The miss as JSON: its path joined with dots, and an index in brackets. -/
+def Miss.toJson (m : Miss) : Lean.Json :=
+  let place := m.path.foldl (fun acc step =>
+    if step.all Char.isDigit then acc ++ "[" ++ step ++ "]"
+    else if acc.isEmpty then step else acc ++ "." ++ step) ""
+  Lean.Json.mkObj [("at", .str place), ("wanted", .str m.wanted), ("found", .str m.found)]
+
+/-- What stands at a place, in words. -/
+def foundText : Lean.Json → String
+  | .null => "null"
+  | .bool b => s!"the Boolean {b}"
+  | .num n => s!"the number {n}"
+  | .str t => s!"the string {t.quote}"
+  | .arr js => s!"an array of {js.size}"
+  | .obj _ => "an object"
+
+/-- What a sum wants: its strings, an array, or an object with its case's `_tag`. -/
+def sumWanted (name : String) (cases : List (String × Nat × List (String × Shape))) : String :=
+  let tags := ", ".intercalate (cases.map (·.1))
+  if allNullary cases then s!"{name}: one of the strings {tags}"
+  else match listItem? cases with
+    | some item => s!"{name}: an array of {shapeText item}"
+    | none => s!"{name}: an object whose _tag is one of {tags}"
+
+mutual
+/-- The first place where a JSON value leaves a shape, within `fuel` levels. -/
+def locateIn (defs : List (String × Shape)) : Nat → Shape → Lean.Json → Option Miss
+  | 0, _, _ => none
+  | n + 1, shape, j =>
+    match shape, j with
+    | .named name, j =>
+      match lookupAll name defs with
+      | s :: _ => locateIn defs n s j
+      | [] => none
+    | .unit, .null => none
+    | .bool, .bool _ => none
+    | .nat, .num x =>
+      if (ofLeanJson 1 (.num x)).isSome then none
+      else some { wanted := "nat: a natural that binary64 holds exactly", found := foundText j }
+    | .string, .str _ => none
+    | .bytes, .str h | .digest, .str h | .ref _, .str h =>
+      if (canonicalHex? h).isSome then none
+      else some { wanted := s!"{shapeText shape}: lowercase hex", found := foundText j }
+    | .option _, .null => none
+    | .option item, j => locateIn defs n item j
+    | .list item, .arr js => locateItems defs n item 0 js.toList
+    | .pair a b, .arr js =>
+      match js.toList with
+      | [x, y] =>
+        match locateIn defs n a x with
+        | some m => some (m.under "0")
+        | none => (locateIn defs n b y).map (·.under "1")
+      | _ => some { wanted := shapeText shape ++ ": an array of two", found := foundText j }
+    | .struct name fields, .obj _ => locateFields defs n name fields j
+    | .sum name cases, j =>
+      let wanted := sumWanted name cases
+      match listItem? cases, j with
+      | some item, .arr js => locateItems defs n item 0 js.toList
+      | _, .str t =>
+        if allNullary cases && cases.any (·.1 == t) then none
+        else some { wanted, found := foundText j }
+      | _, .obj _ =>
+        if allNullary cases then some { wanted, found := foundText j }
+        else match j.getObjVal? "_tag" with
+          | .ok (.str t) =>
+            match cases.find? (·.1 == t) with
+            | some (_, _, fields) => locateFields defs n t fields j
+            | none => some ((Miss.mk [] wanted (foundText (.str t))).under "_tag")
+          | _ => some { wanted, found := "an object with no string _tag" }
+      | _, _ => some { wanted, found := foundText j }
+    | .anyRef, .obj _ => none
+    | shape, j => some { wanted := shapeText shape, found := foundText j }
+
+/-- The first miss among a list's items, each under its index. -/
+def locateItems (defs : List (String × Shape)) : Nat → Shape → Nat → List Lean.Json → Option Miss
+  | 0, _, _, _ => none
+  | _ + 1, _, _, [] => none
+  | n + 1, item, i, j :: js =>
+    match locateIn defs n item j with
+    | some m => some (m.under (toString i))
+    | none => locateItems defs n item (i + 1) js
+
+/-- The first miss among an object's fields: a field the shape names and the object lacks, a
+field's value, or a key the shape does not name. -/
+def locateFields (defs : List (String × Shape)) : Nat → String → List (String × Shape) →
+    Lean.Json → Option Miss
+  | 0, _, _, _ => none
+  | n + 1, owner, fields, j =>
+    let named := "_tag" :: fields.map (·.1)
+    let extra := match j with
+      | .obj kvs => (kvs.toList.map fun (kv : String × Lean.Json) => kv.1).find? fun k =>
+          !named.contains k
+      | _ => none
+    match extra with
+    | some k =>
+      some { wanted := s!"{owner}: the fields {", ".intercalate (fields.map Prod.fst)}",
+             found := s!"the key {k.quote}" }
+    | none => locateEach defs n owner fields j
+
+/-- Each field of a shape, in its order, read at its key. -/
+def locateEach (defs : List (String × Shape)) : Nat → String → List (String × Shape) →
+    Lean.Json → Option Miss
+  | 0, _, _, _ => none
+  | _ + 1, _, [], _ => none
+  | n + 1, owner, (k, s) :: rest, j =>
+    match j.getObjVal? k with
+    | .error _ => some { wanted := s!"{owner}: the field {k} ({shapeText s})", found := "none" }
+    | .ok v =>
+      match locateIn defs n s v with
+      | some m => some (m.under k)
+      | none => locateEach defs n owner rest j
+end
+
+/-- **Where a carrier's JSON stops fitting its shape**, if the walk finds a place. -/
+def locate {α : Type} [Canonical α] (j : Lean.Json) : Option Miss :=
+  let doc := Canonical.shape α
+  locateIn doc.defs depth doc.root j
+
 end Tools.JsonBridge

@@ -141,9 +141,10 @@ its planned goals. A hole with a contract is a program's planned goal.
 | Order | Deep module | Its law | Cost | Waits on |
 | --- | --- | --- | --- | --- |
 | done | one JSON encoding for agents (`8324f43e9`) | `ofJsonAnyOrder_exact` | landed | nothing |
-| 1 | the located reader as the one reader | `readIn_exact` at `.ok`; agreement by definition | M | nothing |
+| 1a | done: a refused carrier's JSON located by one walk of the shape (`Tools.JsonBridge.locate`); the reader still decides | none: the walk explains, as `Api.explain` does | landed | nothing |
+| 1b | the located reader as the one reader | `readIn_exact` at `.ok`; agreement by definition | M | nothing |
 | 2 | the named source and its fold into the lifts | retraction, exactness modulo renaming, located refusal | M | the owner's word (representation) |
-| 3 | the catalogue: atoms, operations, forms and rows, read from their tables | a fold of `NativeAtom.all` and the signature | S | nothing |
+| 3 | done: the catalogue (`Tools.Catalogue`): forms with the sums held inline, atoms with their schemes, rows; types in the program's own JSON | `ofJsonAnyOrder_exact`, `atom_table_wf` | landed | nothing |
 | 4 | holes on the wire: named, with `τ`, `Γ` and the fitting entries | each fitting entry checks at the hole | M | 2, and APPCHECK's slice |
 | 5 | the list rule in `printIn` and `OfShape.render`, with MCP M2's schema | exactness unchanged | M, one rebuild of 759 modules | M1 |
 | 6 | pieces by content address; a library block as a piece | weakening; the box's digest | L | ADDRESS, MCP M4 |

@@ -16,21 +16,22 @@ edits. The session checks the sketch through its layer references, as program ad
 program, and shows the expansion's table at the source's addresses (decisions row 373 (7)).
 
 A request is one JSON object; the answer is one JSON object, in the query tool's shape
-(`Tools.Query.Answer`). Programs, fillings and hole tables travel as their canonical bytes in
-lowercase hex, as in the query tool (`Wire.encodeProgram`, `Wire.encodeHoles`), or as their JSON
-print, whose objects may come in any order and whose lists may come as arrays
-(`Canonical.ofJsonAnyOrder`, `src/Effect4/Store/Domain/ShapeRead.lean`). Answers give a program
-as both.
+(`Tools.Query.Answer`). Every carrier a request takes, a program, a filling, a hole table, a row
+table or service declarations, travels as its canonical bytes in lowercase hex (`program`,
+`holes`, …) or as its JSON print (`programJson`, `holesJson`, …), whose objects may come in any
+order and whose lists may come as arrays. One function reads each way at every carrier
+(`Tools.JsonBridge.valueFrom?`: the store's exact decoder, `Canonical.decode`, or
+`Canonical.ofJsonAnyOrder`). Answers give a program as both.
 
 **The application travels with `open`** (decisions row 373 (10)): the row table and the
-service declarations, each as its canonical bytes in hex (`rows`, `services`), read by the
-store's exact decoder (`Canonical.decode`). With neither, the application is the empty one. An
-answer names the application: `empty`, or `sha256:` and the digest of the canonical bytes of the
-pair. A digest names bytes; no answer assumes two applications with one digest are one.
+service declarations (`rows` or `rowsJson`, `services` or `servicesJson`). With neither, the
+application is the empty one. The catalogue gives a row's JSON form. An answer names the
+application: `empty`, or `sha256:` and the digest of the canonical bytes of the pair. A digest
+names bytes; no answer assumes two applications with one digest are one.
 
 | Operation | Takes | Answers | The laws it names |
 | --- | --- | --- | --- |
-| `open` | `program` (hex) or `programJson`, and `holes`, `rows`, `services` if any | the view | `SourceSession.reached_view`; `ofLeanJson_num` and `Canonical.ofJsonAnyOrder_exact` for JSON |
+| `open` | `program` (hex) or `programJson`, and the hole table, the rows and the services if any, each as hex or JSON | the view | `SourceSession.reached_view`; `ofLeanJson_num` and `Canonical.ofJsonAnyOrder_exact` for JSON |
 | `fill` | `path`, `replacement` (hex) or `replacementJson` | the delta and the view | the law the delta took, `SourceSession.feed_coherent`, and `SourceSession.reached_view` |
 | `omit` | `path`, `holeName` | the delta and the view; the hole row declares the focus's type | the same |
 | `view` | `path`, or none | at an address, its entry and its focus; with none, the whole table | `SourceSession.reached_view`; `SourceSession.focusAt_typed` at an address |
@@ -62,7 +63,7 @@ open Lean (Json ToJson toJson)
 open Effect4 (ServiceKey)
 open Effect4.Program Effect4.Program.Wire Effect4.Store
 open Tools.Query (Answer refused effTyJson refusalJson entryJson focusJson holeRow optField)
-open Tools.JsonBridge (printJson)
+open Tools.JsonBridge (printJson valueFrom? toHex locate)
 
 /-- **The tool's state**: the session, once opened, its journal, the latest step first, and the
 name of its application. -/
@@ -95,6 +96,12 @@ structure Request where
   rows : Option String := none
   /-- the application's service declarations, as their canonical bytes in hex -/
   services : Option String := none
+  /-- the hole table as its JSON print, in place of `holes` -/
+  holesJson : Option Json := none
+  /-- the row table as its JSON print, in place of `rows` -/
+  rowsJson : Option Json := none
+  /-- the service declarations as their JSON print, in place of `services` -/
+  servicesJson : Option Json := none
 
 /-- Read a request; a field of the wrong type is refused with its name. -/
 def Request.fromJson? (j : Json) : Except String Request := do
@@ -110,7 +117,8 @@ def Request.fromJson? (j : Json) : Except String Request := do
   let rows ← optField j "rows" (Lean.fromJson? (α := String))
   let services ← optField j "services" (Lean.fromJson? (α := String))
   return Request.mk op program holes (path.getD []) replacement (holeName.getD "h0") id
-    programJson replacementJson rows services
+    programJson replacementJson rows services (j.getObjVal? "holesJson").toOption
+    (j.getObjVal? "rowsJson").toOption (j.getObjVal? "servicesJson").toOption
 
 /-- Write a request, as `Request.fromJson?` reads it. -/
 def Request.toJson (r : Request) : Json :=
@@ -123,35 +131,27 @@ def Request.toJson (r : Request) : Json :=
     (r.replacementJson.map fun j => ("replacementJson", j)).toList ++
     (r.rows.map fun hex => ("rows", Json.str hex)).toList ++
     (r.services.map fun hex => ("services", Json.str hex)).toList ++
+    (r.holesJson.map fun j => ("holesJson", j)).toList ++
+    (r.rowsJson.map fun j => ("rowsJson", j)).toList ++
+    (r.servicesJson.map fun j => ("servicesJson", j)).toList ++
     (r.id.map fun id => ("id", id)).toList
 
-/-- A program from its hex bytes. -/
-def programOfHex (hex : String) : Option NativeEff := (bytesOfHex hex.toList).bind decodeProgram
+/-- **A refusal of a carrier that does not read**: where its JSON was given and the walk finds
+the place it leaves its shape (`Tools.JsonBridge.locate`), the answer's result names the place,
+what the shape wants there and what stands there. -/
+def unreadable {α : Type} [Canonical α] (op why : String) (json : Option Json)
+    (id : Option Json) : Answer :=
+  match json.bind (locate (α := α)) with
+  | some miss => { op, ok := false, result := miss.toJson, error := some why, id }
+  | none => refused op why id
 
-/-- A program from its JSON print, its objects in any order and its lists as arrays or as their
-cases (`Canonical.ofJsonAnyOrder`). -/
-def programOfJson (j : Json) : Option NativeEff :=
-  (Tools.JsonBridge.ofLeanJson 4096 j).bind Canonical.ofJsonAnyOrder
-
-/-- A program from its hex bytes or, where there are none, its JSON print; with the laws its
-reading names. -/
-def programFrom? (hex : Option String) (json : Option Json) : Option NativeEff × List Lean.Name :=
-  match hex, json with
-  | some h, _ => (programOfHex h, [])
-  | none, some j =>
-    (programOfJson j, [``Tools.JsonBridge.ofLeanJson_num, ``Canonical.ofJsonAnyOrder_exact])
-  | none, none => (none, [])
-
-/-- A hole table from its hex bytes. -/
-def holesOfHex (hex : String) : Option RowTable := (bytesOfHex hex.toList).bind decodeHoles
-
-/-- An application's row table from its hex bytes: the store's exact decoder at `RowTable`. -/
-def rowsOfHex (hex : String) : Option RowTable :=
-  (bytesOfHex hex.toList).bind (Canonical.decode (α := RowTable))
-
-/-- An application's service declarations from their hex bytes: the store's exact decoder. -/
-def servicesOfHex (hex : String) : Option (List (ServiceKey × Ty)) :=
-  (bytesOfHex hex.toList).bind (Canonical.decode (α := List (ServiceKey × Ty)))
+/-- A list a request may leave out, which is then empty: its value, or `none` where what is given
+does not read; with the laws its reading names. -/
+def listFrom? {α : Type} [Canonical (List α)] (hex : Option String) (json : Option Json) :
+    Option (List α) × List Lean.Name :=
+  match valueFrom? hex json with
+  | some (value, laws) => (value, laws)
+  | none => (some [], [])
 
 /-- **The application's name**: `empty` for the empty application, and otherwise `sha256:` and
 the digest of the canonical bytes of its row table and its declarations. -/
@@ -205,13 +205,19 @@ def answer (st : State) (req : Request) : State × Answer :=
   let none' (why : String) : State × Answer := (st, refused req.op why req.id)
   match req.op with
   | "open" =>
-    let (program?, readLaws) := programFrom? req.program req.programJson
-    match program?, (req.holes.map holesOfHex).getD (some []),
-        (req.rows.map rowsOfHex).getD (some []), (req.services.map servicesOfHex).getD (some []) with
-    | none, _, _, _ => none' "the program does not read"
-    | _, none, _, _ => none' "the hole table's bytes do not decode"
-    | _, _, none, _ => none' "the row table's bytes do not decode"
-    | _, _, _, none => none' "the service declarations' bytes do not decode"
+    let (program?, programLaws) := ((valueFrom? (α := NativeEff) req.program req.programJson).getD
+      (none, []))
+    let (holes?, holeLaws) := listFrom? (α := Row) req.holes req.holesJson
+    let (rows?, rowLaws) := listFrom? (α := Row) req.rows req.rowsJson
+    let (services?, serviceLaws) := listFrom? (α := ServiceKey × Ty) req.services req.servicesJson
+    let readLaws := (programLaws ++ holeLaws ++ rowLaws ++ serviceLaws).eraseDups
+    match program?, holes?, rows?, services? with
+    | none, _, _, _ => (st, unreadable (α := NativeEff) req.op "the program does not read" req.programJson req.id)
+    | _, none, _, _ => (st, unreadable (α := RowTable) req.op "the hole table does not read" req.holesJson req.id)
+    | _, _, none, _ => (st, unreadable (α := RowTable) req.op "the row table does not read" req.rowsJson req.id)
+    | _, _, _, none =>
+      (st, unreadable (α := List (ServiceKey × Ty)) req.op "the service declarations do not read"
+        req.servicesJson req.id)
     | some program, some holes, some rows, some services =>
       let app : SigApp := ⟨rows, services⟩
       let name := appName app
@@ -229,9 +235,10 @@ def answer (st : State) (req : Request) : State × Answer :=
     | some l =>
       match op with
       | "fill" =>
-        match programFrom? req.replacement req.replacementJson with
-        | (none, _) => none' "the filling does not read"
-        | (some q, readLaws) => feedAnswer st l req (.fill req.path q) readLaws
+        match valueFrom? (α := NativeEff) req.replacement req.replacementJson with
+        | some (some q, readLaws) => feedAnswer st l req (.fill req.path q) readLaws
+        | _ =>
+          (st, unreadable (α := NativeEff) req.op "the filling does not read" req.replacementJson req.id)
       | "omit" =>
         match l.focusAt req.path with
         | none => none' "no focus at the address"
@@ -269,10 +276,10 @@ def answer (st : State) (req : Request) : State × Answer :=
         let result := Json.arr (st.journal.reverse.map stepJson).toArray
         (st, Answer.mk op st.app [] true result none req.id)
       | "sketch" =>
-        let result := Json.mkObj [("program", .str (hexString (encodeProgram l.sketch.program))),
-          ("holes", .str (hexString (encodeHoles l.sketch.holes))),
-          ("rows", .str (hexString (Canonical.encode l.app.rows))),
-          ("services", .str (hexString (Canonical.encode l.app.services))),
+        let result := Json.mkObj [("program", .str (toHex l.sketch.program)),
+          ("holes", .str (toHex l.sketch.holes)),
+          ("rows", .str (toHex l.app.rows)),
+          ("services", .str (toHex l.app.services)),
           ("programJson", printJson l.sketch.program), ("holesJson", printJson l.sketch.holes)]
         (st, Answer.mk op st.app [``Sketch.decode_exact, ``Canonical.decode_exact] true result
           none req.id)

@@ -33,7 +33,7 @@ open Lean (Json toJson)
 open Effect4 Effect4.Program Effect4.Program.Wire
 open Effect4.Machine.Env (Requirement)
 open Test.Program.SketchControls Test.Program.FocusControls Test.Program.TableControls
-open Tools.Query Tools.ProfileJson
+open Tools.Query
 
 /-- A closed program that holds `Ref.update` under the binder of its cell:
 `Ref.make(0)`, then `Ref.update(cell, current => current)`. -/

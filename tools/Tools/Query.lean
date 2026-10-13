@@ -6,7 +6,6 @@ import Effect4.Store.Carrier.Digest
 import Effect4.Laws.Program.Sketch
 import Effect4.Laws.Program.Typing.Table
 import Lean.Data.Json
-import Tools.ProfileJson
 import Tools.JsonBridge
 import Effect4.Api.RefusalsDerived
 
@@ -44,7 +43,8 @@ grown hole table (`holeTable`): the program and the hole table, sent back togeth
 sketch (`Sketch.decode_exact`, `Program/SketchWire.lean`).
 
 **What it is not.** It is no server, it stores no session, and it adds no theorem. A term is
-answered as its canonical bytes, and a type in the JSON view of `Tools.ProfileJson`.
+answered as its canonical bytes, and a type, a refusal or a term's type as its JSON print
+(`Tools.JsonBridge.printJson`), the encoding a program's JSON uses.
 -/
 
 open Lean (Json ToJson toJson fromJson?)
@@ -184,22 +184,18 @@ def refused (op why : String) (id : Option Json := none) : Answer :=
 
 /-! ## The JSON views -/
 
-/-- A list of types. -/
-def tysJson (tys : List Ty) : Json := Json.arr (tys.map Tools.ProfileJson.tyJson).toArray
+open Tools.JsonBridge (printJson ofHex? toHex)
 
-/-- A program's type: its answer, its error and its requirement, key by key
-(`Tools.ProfileJson.keyJson`). -/
-def effTyJson (t : EffTy) : Json :=
-  Json.mkObj [("answer", Tools.ProfileJson.tyJson t.answer),
-    ("error", Tools.ProfileJson.tyJson t.error),
-    ("requires", Json.arr (t.requires.elems.map Tools.ProfileJson.keyJson).toArray)]
+/-- A program's type: its answer, its error and its requirement, as a program's JSON spells
+them. -/
+def effTyJson (t : EffTy) : Json := printJson t
 
 /-- A refusal: its address, the name of its reason, and the whole refusal as its generated
 canonical print (`detail`, `Tools.JsonBridge.printJson`), so a reason's own fields reach the
 author: a reference's target and the condition it breaks, among them. -/
 def refusalJson (r : TypeRefusal) : Json :=
-  Json.mkObj [("path", toJson r.path), ("reason", .str r.reason.head),
-    ("detail", Tools.JsonBridge.printJson r)]
+  Json.mkObj [("path", toJson r.path), ("reason", .str (Canonical.head r.reason)),
+    ("detail", printJson r)]
 
 /-- The checker's answer: a type or a refusal. -/
 def checkJson : Except TypeRefusal EffTy → Json
@@ -209,13 +205,13 @@ def checkJson : Except TypeRefusal EffTy → Json
 /-- The environment of a node. An entry that is not reached has none. -/
 def nodeEnvJson : Option NodeEnv → Json
   | none => .null
-  | some (.env tys) => Json.mkObj [("kind", .str "env"), ("tys", tysJson tys)]
+  | some (.env tys) => Json.mkObj [("kind", .str "env"), ("tys", printJson tys)]
   | some (.body tys loop) =>
-    Json.mkObj [("kind", .str "body"), ("tys", tysJson tys), ("loop", .bool loop)]
+    Json.mkObj [("kind", .str "body"), ("tys", printJson tys), ("loop", .bool loop)]
   | some .closed => Json.mkObj [("kind", .str "closed")]
   | some (.slots tys params) =>
-    Json.mkObj [("kind", .str "slots"), ("tys", tysJson tys),
-      ("params", toJson (params.map (·.name))), ("requests", tysJson (params.map (·.request)))]
+    Json.mkObj [("kind", .str "slots"), ("tys", printJson tys),
+      ("params", toJson (params.map (·.name))), ("requests", printJson (params.map (·.request)))]
 
 /-- One entry of the address table. An address of no program has no result. -/
 def entryJson (e : Table.Entry) : Json :=
@@ -228,23 +224,23 @@ def entryJson (e : Table.Entry) : Json :=
 def focusJson : Option (Focus NativeOp) → Json
   | none => Json.mkObj [("found", .bool false)]
   | some focus =>
-    Json.mkObj [("found", .bool true), ("env", tysJson focus.env), ("type", effTyJson focus.ty),
-      ("program", .str (hexOf focus.program))]
-
-/-- A term as its canonical bytes, in lowercase hex. -/
-def termHex (t : Term) : String := hexString (Canonical.encode t)
+    Json.mkObj [("found", .bool true), ("env", printJson focus.env), ("type", effTyJson focus.ty),
+      ("program", .str (hexOf focus.program)), ("programJson", printJson focus.program)]
 
 /-- One slot of a node: its term, the environment of the term, and the term's type there. -/
 def slotJson (slot : ExtSlot) (term : Option Term) (env : Option TyEnv) (ty : Option Ty) : Json :=
   Json.mkObj [("slot", .str (slotName slot)),
     ("term", match term with
-      | some t => .str (termHex t)
+      | some t => .str (toHex t)
+      | none => .null),
+    ("termJson", match term with
+      | some t => printJson t
       | none => .null),
     ("env", match env with
-      | some tys => tysJson tys
+      | some tys => printJson tys
       | none => .null),
     ("termTy", match ty with
-      | some t => Tools.ProfileJson.tyJson t
+      | some t => printJson t
       | none => .null)]
 
 /-! ## The premises of the two edit laws, decided -/
@@ -348,8 +344,7 @@ def slotsAt (sig : Signature NativeOp) (program : NativeEff) (path : List Nat)
 
 /-- **Answer one request.** -/
 def answer (req : Request) : Answer :=
-  match (bytesOfHex req.program.toList).bind decodeProgram,
-    (req.holes.map fun hex => (bytesOfHex hex.toList).bind Wire.decodeHoles).getD (some []) with
+  match ofHex? (α := NativeEff) req.program, (req.holes.map (ofHex? (α := RowTable))).getD (some []) with
   | none, _ => refused req.op "the program's bytes do not decode" req.id
   | _, none => refused req.op "the hole table's bytes do not decode" req.id
   | some program, some holes =>
@@ -388,10 +383,10 @@ def answer (req : Request) : Answer :=
             else [])
             (Json.mkObj [("program", .str (hexOf omitted.program)),
               ("holes", toJson omitted.holes.length), ("needsHoleTable", .bool true),
-              ("holeTable", .str (hexString (Wire.encodeHoles omitted.holes))),
+              ("holeTable", .str (toHex omitted.holes)),
               ("check", checkJson (omitted.check {}))])
     | "fill" =>
-      match req.replacement.bind fun hex => (bytesOfHex hex.toList).bind decodeProgram with
+      match req.replacement.bind (ofHex? (α := NativeEff)) with
       | none => refused req.op "the filling's bytes do not decode" req.id
       | some filling =>
         match sketch.fillAt req.path filling with
