@@ -447,21 +447,23 @@ theorem Flows.fireObserver (interp : RunInterp ν σ β ε δ ι α χ St)
     · split
       · exact base
       · rename_i p _
-        have changed : Flows G worldOf (if p.failFast && !exit.isSuccess && p.collected.all Exit.isSuccess then
-            Machine.interruptEach interp waiter (interp.stackAnnotations waiter) p.remaining
-              (acc.1.emit [RunEvent.observerFired id (.countdown waiter token)], [])
-            else (acc.1.emit [RunEvent.observerFired id (.countdown waiter token)], [])).1 := by
-          split
-          · exact Flows.interruptEach interp interruption waiter _ p.remaining _ base
-          · exact base
         split
-        · exact changed
-        · rename_i current currentFound
+        · have changed : Flows G worldOf (if p.failFast && !exit.isSuccess && p.collected.all Exit.isSuccess then
+              Machine.interruptEach interp waiter (interp.stackAnnotations waiter) p.remaining
+                (acc.1.emit [RunEvent.observerFired id (.countdown waiter token)], [])
+              else (acc.1.emit [RunEvent.observerFired id (.countdown waiter token)], [])).1 := by
+            split
+            · exact Flows.interruptEach interp interruption waiter _ p.remaining _ base
+            · exact base
           split
           · exact changed
-          · split
-            · exact changed.update_found currentFound _ rfl rfl
-            · exact Flows.fiberEdit interruption _ _ (changed.update_found currentFound _ rfl rfl)
+          · rename_i current currentFound
+            split
+            · exact changed
+            · split
+              · exact changed.update_found currentFound _ rfl rfl
+              · exact Flows.fiberEdit interruption _ _ (changed.update_found currentFound _ rfl rfl)
+        · exact base
   · split
     · exact base
     · split
@@ -642,7 +644,7 @@ theorem Commands.step (facts : Commands interp Ready G worldOf) (m : RunMachine 
         · have parked : Flows G worldOf ((m.updateRace {race with registering := false}).emit
               [RunEvent.parkedOn f.id race.token]) := base.fields rfl rfl
           exact Flows.settle_one facts.interruption _ rest parked
-            (RunFiber.park {f with frame := {f.frame with stack := .asyncFinalizer (interp.cancelName (interp.raceCancelName raceId) f.id race.token) :: f.frame.stack}} ⟨race.token, [], [], .void, false⟩)
+            (RunFiber.park {f with frame := {f.frame with stack := .asyncFinalizer (interp.cancelName (interp.raceCancelName raceId) f.id race.token) :: f.frame.stack}} ⟨race.token, none, [], [], .void, false⟩)
             yielding _ (facts.parkRace m raceId yielding race f ready held raceFound found)
   | interruptTarget target who extra =>
     simp only [driveStep]

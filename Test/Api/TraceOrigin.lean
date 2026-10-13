@@ -447,10 +447,10 @@ theorem forkFinalizers_ok (interp : RunInterp ν σ β ε δ ι α χ St κ)
     exact ih (spawn interp m host program ⟨true, true, .inherit⟩ []).1
       (spawn_ok interp h host program ⟨true, true, .inherit⟩ [])
 
-theorem settle_ok (id : FiberId) (rest : List (Cmd ν σ β ε δ ι α κ))
+theorem settleOutcome_ok (id : FiberId) (rest : List (Cmd ν σ β ε δ ι α κ))
     (it : Iter ν σ β ε δ ι α χ St κ φ η) (h : Ok it.machine) :
-    Ok (settle id rest it).1 := by
-  unfold settle
+    Ok (settleOutcome id rest it).1 := by
+  unfold settleOutcome
   split
   · exact update_ok h _
   · exact update_ok h _
@@ -460,6 +460,45 @@ theorem settle_ok (id : FiberId) (rest : List (Cmd ν σ β ε δ ι α κ))
   · exact halt_ok (update_ok h _) _
 
 variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+
+/-- An addressed edit forks nothing and emits nothing. -/
+theorem fiberEdit_ok (edit : FiberEdit ε δ ι α)
+    {m : RunMachine ν σ β ε δ ι α χ St κ φ η} (h : Ok m) :
+    Ok (applyFiberEdit edit m).1 := by
+  cases edit with
+  | observe target observer => exact modify_ok h _ _
+  | dropToken token => exact h
+  | interrupt target cause =>
+    simp only [applyFiberEdit]
+    split
+    · exact h
+    · exact update_ok h _
+
+/-- The edit word, applied in order, keeps the agreement. -/
+theorem fiberEdits_ok (word : List (FiberEdit ε δ ι α))
+    {m : RunMachine ν σ β ε δ ι α χ St κ φ η} (h : Ok m) :
+    Ok (applyFiberEdits word m).1 := by
+  have kept (edits : List (FiberEdit ε δ ι α)) :
+      ∀ (acc : RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ)),
+        Ok acc.1 → Ok (edits.foldl (fun held edit =>
+          let next := applyFiberEdit edit held.1
+          (next.1, held.2 ++ next.2)) acc).1 := by
+    induction edits with
+    | nil => intro _ held; exact held
+    | cons edit rest ih => intro acc held; exact ih _ (fiberEdit_ok edit held)
+  exact kept word (m, []) h
+
+theorem settle_ok (id : FiberId) (rest : List (Cmd ν σ β ε δ ι α κ))
+    (it : Iter ν σ β ε δ ι α χ St κ φ η) (h : Ok it.machine) :
+    Ok (settle id rest it).1 := by
+  unfold settle
+  split
+  · exact settleOutcome_ok id rest it h
+  · have held := fiberEdits_ok it.edits (update_ok h it.fiber)
+    dsimp only
+    split
+    · exact halt_ok held _
+    · exact settleOutcome_ok id rest _ held
 
 theorem interruptEdit_ok (interp : RunInterp ν σ β ε δ ι α χ St κ)
     {m : RunMachine ν σ β ε δ ι α χ St κ φ η} (h : Ok m)
@@ -526,16 +565,32 @@ open Effect4.Program.Guard
 abbrev NInterp := RunInterp EffName EffThunk Val Err Defect FiberId Ann Ctx Stores
 abbrev NCmd := Cmd EffName EffThunk Val Err Defect FiberId Ann
 abbrev NIter := Iter EffName EffThunk Val Err Defect FiberId Ann Ctx Stores
+theorem countdownEdits_ok (interp : NInterp) (m : NativeMachine) (f : NFiber)
+    (targets : List FiberId) (resume : Resume EffName) (failFast : Bool) (h : Ok m) :
+    Ok (countdownParkEdits interp m f targets resume failFast).1 := by
+  unfold countdownParkEdits
+  dsimp only
+  split
+  · exact h
+  · have hm : Ok { m with nextToken := m.nextToken + 1 } := h
+    exact emit_ok hm _ rfl
+
+theorem countdownEdits_result_ok (interp : NInterp) (m : NativeMachine) (f : NFiber)
+    (targets : List FiberId) (resume : Resume EffName) (failFast : Bool)
+    (after : NativeMachine) (next : NFiber) (parked : Bool)
+    (edits : List (FiberEdit Err Defect FiberId Ann)) (h : Ok m)
+    (step : countdownParkEdits interp m f targets resume failFast = (after, next, parked, edits)) :
+    Ok after := by
+  have kept := countdownEdits_ok interp m f targets resume failFast h
+  rw [step] at kept
+  exact kept
+
 theorem countdown_ok (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (targets : List FiberId) (resume : Resume EffName) (failFast : Bool) (h : Ok m) :
     Ok (countdownPark interp m f targets resume failFast).1 := by
   unfold countdownPark
   dsimp only
-  split
-  · exact h
-  · have hm : Ok { m with nextToken := m.nextToken + 1 } := h
-    apply emit_ok (modify_ok hm _ _)
-    rfl
+  exact fiberEdits_ok _ (countdownEdits_ok interp m f targets resume failFast h)
 
 theorem countdown_result_ok (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (targets : List FiberId) (resume : Resume EffName) (failFast : Bool)
@@ -546,12 +601,17 @@ theorem countdown_result_ok (interp : NInterp) (m : NativeMachine) (f : NFiber)
   rw [step] at kept
   exact kept
 
-theorem linkScope_ok (interp : NInterp) (m : NativeMachine) (mode : Supervision.ScopeMode)
+theorem linkScopeEdits_ok (interp : NInterp) (m : NativeMachine) (mode : Supervision.ScopeMode)
     (scope : Nat) (target : FiberId) (who : Option FiberId) (extra : ReasonAnnotations Ann)
-    (h : Ok m) : Ok (linkScope interp m mode scope target who extra).1 := by
-  unfold linkScope
+    (h : Ok m) : Ok (linkScopeEdits interp m mode scope target who extra).1 := by
+  unfold linkScopeEdits
   repeat' split
   all_goals aesop (rule_sets := [Effect4.StepInv])
+
+theorem linkScope_ok (interp : NInterp) (m : NativeMachine) (mode : Supervision.ScopeMode)
+    (scope : Nat) (target : FiberId) (who : Option FiberId) (extra : ReasonAnnotations Ann)
+    (h : Ok m) : Ok (linkScope interp m mode scope target who extra).1 :=
+  fiberEdits_ok _ (linkScopeEdits_ok interp m mode scope target who extra h)
 
 theorem interruptEach_ok (interp : NInterp) (who : FiberId) (extra : ReasonAnnotations Ann)
     (targets : List FiberId) (acc : NativeMachine × List NCmd) (h : Ok acc.1) :
@@ -575,8 +635,8 @@ theorem interruptEach_result_ok (interp : NInterp) (who : FiberId)
   exact kept
 
 theorem beginRace_ok (interp : NInterp) (m : NativeMachine) (f : NFiber) (yielding : Bool)
-    (programs : List NCode) (site : Option (List Nat)) (h : Ok m) :
-    Ok (beginRace interp m f yielding programs site).machine := by
+    (programs : List NCode) (site : Option (List Nat)) (mode : Supervision.RaceMode) (h : Ok m) :
+    Ok (beginRace interp m f yielding programs site mode).machine := by
   unfold beginRace
   exact emit_ok h _ rfl
 
@@ -609,13 +669,13 @@ theorem withFiber_ok (interp : NInterp) (m : NativeMachine) (f : NFiber)
     Ok (evaluatePrim.withFiber interp m f yielding action).machine := by
   cases action <;> simp only [evaluatePrim.withFiber, evaluatePrim.interruptAs]
   case dropObservers token =>
-    exact mapFibers_ok h _
+    exact h
   all_goals repeat' split
   all_goals
     aesop (rule_sets := [Effect4.StepInv])
-      (add safe apply [spawn_ok, start_ok, countdown_ok, beginRace_ok,
-        forkFinalizers_ok, linkScope_ok])
-      (add safe forward [countdown_result_ok])
+      (add safe apply [spawn_ok, start_ok, countdownEdits_ok, beginRace_ok,
+        forkFinalizers_ok, linkScopeEdits_ok])
+      (add safe forward [countdownEdits_result_ok])
 
 theorem evaluatePrim_ok (interp : NInterp) (m : NativeMachine) (f : NFiber)
     (yielding : Bool) (h : Ok m) : Ok (Effect4.Machine.evaluatePrim interp m f yielding).machine := by
@@ -623,8 +683,9 @@ theorem evaluatePrim_ok (interp : NInterp) (m : NativeMachine) (f : NFiber)
   repeat' split
   all_goals
     aesop (rule_sets := [Effect4.StepInv])
-      (add safe apply [withFiber_ok, registerRace_ok, countdown_ok, stepFrame_ok, finalizerOr_ok])
-      (add safe forward [countdown_result_ok])
+      (add safe apply [withFiber_ok, registerRace_ok, countdownEdits_ok, stepFrame_ok,
+        finalizerOr_ok])
+      (add safe forward [countdownEdits_result_ok])
 
 theorem enterScoped_ok (p : NativeEff) (point : Point) (m : NativeMachine)
     (f : NFiber) (yielding : Bool) (h : Ok m) :
@@ -681,7 +742,35 @@ theorem exitFiber_ok (interp : NInterp) (m : NativeMachine) (f : NFiber)
 theorem fireObserver_ok (interp : NInterp) (fiber : FiberId) (exit : ExitV)
     (acc : NativeMachine × List NCmd) (observer : Observer) (h : Ok acc.1) :
     Ok (fireObserver interp fiber exit acc observer).1 := by
-  cases observer <;> simp only [fireObserver]
+  have base : Ok (acc.1.emit [RunEvent.observerFired fiber observer]) := emit_ok h _ rfl
+  cases observer
+  case countdown waiter token =>
+    -- by hand: the arm's guard and its fail-fast test leave negated hypotheses, which the
+    -- search would rewrite through `Classical.not_forall`
+    unfold fireObserver
+    dsimp only
+    split
+    · exact base
+    · split
+      · exact base
+      · rename_i p _
+        split
+        · have changed : Ok (if p.failFast && !exit.isSuccess && p.collected.all Exit.isSuccess then
+              interruptEach interp waiter (interp.stackAnnotations waiter) p.remaining
+                (acc.1.emit [RunEvent.observerFired fiber (.countdown waiter token)], [])
+              else (acc.1.emit [RunEvent.observerFired fiber (.countdown waiter token)], [])).1 := by
+            split
+            · exact interruptEach_ok interp _ _ _ _ base
+            · exact base
+          split
+          · exact changed
+          · split
+            · exact changed
+            · split
+              · exact update_ok changed _
+              · exact fiberEdit_ok _ (update_ok changed _)
+        · exact base
+  all_goals simp only [fireObserver]
   all_goals repeat' split
   all_goals
     aesop (rule_sets := [Effect4.StepInv])
