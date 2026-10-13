@@ -64,20 +64,25 @@ theorem moduleReadable_pieces {sig : Signature Op} {root : Eff Op}
 
 /-- **The module inverse on the readable domain.** The declaration block the module printer
 prints of a program whose pieces are readable under the module's classes, after class
-declarations that read back to those classes, reads back to the program. -/
+declarations that read back to those classes and the services of the rows that the module
+declares (`rowServiceDecls`), reads back to the program. -/
 theorem readModule_printModule_readable {sig : Signature Op}
     {spell : String → List RowArg → Option Op} {call param : Nat → Op}
     (hl : LawfulSpelling sig spell)
     {root : Eff Op}
     (hr : moduleReadable classes sig root = true) {classDecls : List TypeScript.ClassDecl}
     (classesRead : Effect4.Codegen.Classes.readClassDecls classDecls = some classes)
+    {rows : List Row} {serviceDecls : List TypeScript.ConstDecl}
+    (servicesPrinted : rowServiceDecls sig rows = .ok serviceDecls)
     {name : String} {ty : EffTy}
     {decls : List TypeScript.ConstDecl} (printed : printModule sig name ty root = .ok decls) :
-    readModule sig spell call param
-      (classDecls.map TypeScript.Decl.classDecl ++ decls.map TypeScript.Decl.const) = .ok root := by
+    readModule sig spell call param rows
+      (classDecls.map TypeScript.Decl.classDecl ++ serviceDecls.map TypeScript.Decl.const ++
+        decls.map TypeScript.Decl.const) = .ok root := by
   obtain ⟨main, history, hoisted, plain, hmain, hlayers, hnames⟩ := moduleReadable_pieces hr
-  exact readModule_printModule hoisted plain classesRead (ReadsBack.of_Readable hl hmain)
-    (fun entry hm x hp => readLayer_print hl (hlayers entry hm) hp) hnames printed
+  exact readModule_printModule hoisted plain classesRead servicesPrinted
+    (ReadsBack.of_Readable hl hmain) (fun entry hm x hp => readLayer_print hl (hlayers entry hm) hp)
+    hnames printed
 
 /-! ## A program whose pieces are readable prints as a declaration block -/
 
@@ -226,10 +231,13 @@ theorem readModule_printModule_defs_readable {sig : Signature Op}
       ParamsNamed (defsSpell call root.defsOf spell) d.params)
     {classDecls : List TypeScript.ClassDecl}
     (classesRead : Effect4.Codegen.Classes.readClassDecls classDecls = some classes)
+    {rows : List Row} {serviceDecls : List TypeScript.ConstDecl}
+    (servicesPrinted : rowServiceDecls sig rows = .ok serviceDecls)
     {name : String} {ty : EffTy}
     {decls : List TypeScript.ConstDecl} (printed : printModule sig name ty root = .ok decls) :
-    readModule sig spell call param
-      (classDecls.map TypeScript.Decl.classDecl ++ decls.map TypeScript.Decl.const) = .ok root := by
+    readModule sig spell call param rows
+      (classDecls.map TypeScript.Decl.classDecl ++ serviceDecls.map TypeScript.Decl.const ++
+        decls.map TypeScript.Decl.const) = .ok root := by
   obtain ⟨main, history, defs, bodies, body, layers, hoisted, block, heads, hbodies, hmain, hmods,
     hmodNames, hlayers, hnames⟩ := blockReadable_pieces hr
   have same : root.defsOf = defs :=
@@ -237,7 +245,7 @@ theorem readModule_printModule_defs_readable {sig : Signature Op}
   rw [same] at named paramsNamed
   have hl' := hl.withDefs calls named
   have params' := params.withDefs calls apart defs
-  refine readModule_printModule_defs hoisted block classesRead heads
+  refine readModule_printModule_defs hoisted block classesRead servicesPrinted heads
     (fun p mem => ReadsBack.of_Readable
       (hl'.withParams params' apart (paramsNamed p.1 (List.of_mem_zip mem).1)) (hbodies p mem))
     (ReadsBack.of_Readable hl' hmain)
@@ -259,24 +267,62 @@ namespace Effect4.Codegen
 
 open Effect4.Program
 
-/-- Reading the emitted declaration block recovers its program, when the program's pieces are
+/-- Reading the emitted declarations recovers their program, after the payload classes and the
+services of the rows that the module declares (`rowServiceDecls`), when the program's pieces are
 readable under the native table: a program with no definition block (`moduleReadable`), or one
 with a block (`blockReadable`), whose names and parameter names the printer's own checks made
-readable (`defsNamed_of_fault`, `blockParamsNamed`). -/
-theorem ModuleEmission.readModule {program : NativeEff} {table : RowTable} {name : String}
+readable (`defsNamed_of_fault`, `blockParamsNamed`). The envelope (`ModuleEmission.readModule`)
+and the file (`ModuleEmission.readFile`) are its two instances. -/
+theorem ModuleEmission.readDecls {program : NativeEff} {table : RowTable} {name : String}
     (emission : ModuleEmission program table name) (lawful : LawfulTable table = true)
     (readable : moduleReadable emission.classes (nativeSignature table) program = true ∨
-      blockReadable emission.classes (nativeSignature table) program = true) :
+      blockReadable emission.classes (nativeSignature table) program = true)
+    {rows : List Program.Row} {serviceDecls : List TypeScript.ConstDecl}
+    (servicesPrinted : rowServiceDecls (nativeSignature table) rows = .ok serviceDecls) :
     Program.readModule (nativeSignature table) (nativeSpell table) NativeOp.call NativeOp.param
-      emission.module.decls = .ok program := by
+      rows (emission.classDecls.map TypeScript.Decl.classDecl ++
+        serviceDecls.map TypeScript.Decl.const ++ emission.declarations.map TypeScript.Decl.const) =
+      .ok program := by
   obtain ⟨_, _, names, paramNames, _, _, _, printed⟩ :=
     Program.printEntry_checks emission.generated
   have classesRead := Classes.readClassDecls_checked (moduleClasses_checked emission.classified)
   rcases readable with plain | block
-  · exact readModule_printModule_readable (nativeLawful table lawful) plain classesRead printed
+  · exact readModule_printModule_readable (nativeLawful table lawful) plain classesRead
+      servicesPrinted printed
   · exact readModule_printModule_defs_readable (nativeLawful table lawful) (nativeCalls table)
       (nativeParams table) (nativeApart table) block (defsNamed_of_fault names)
-      (blockParamsNamed paramNames) classesRead printed
+      (blockParamsNamed paramNames) classesRead servicesPrinted printed
+
+/-- **The envelope reads back**: the declaration block that a host wraps
+(`ModuleEmission.module`) declares no service, and reads back at no row's services. -/
+theorem ModuleEmission.readModule {program : NativeEff} {table : RowTable} {name : String}
+    (emission : ModuleEmission program table name) (lawful : LawfulTable table = true)
+    (readable : moduleReadable emission.classes (nativeSignature table) program = true ∨
+      blockReadable emission.classes (nativeSignature table) program = true) :
+    Program.readModule (nativeSignature table) (nativeSpell table) NativeOp.call NativeOp.param []
+      emission.module.decls = .ok program := by
+  have h := emission.readDecls lawful readable (rowServiceDecls_nil (nativeSignature table))
+  simp only [List.map_nil, List.append_nil] at h
+  exact h
+
+/-- **The file reads back** (decisions row 378 (19), (20)): the module as a file
+(`ModuleEmission.file`) holds the payload classes, the services of the table's rows and the
+envelope's declarations, and the file reader reads it back to the program at the table's rows.
+Placement: concept `exact-codecs`, the claim `module-defs-round-trip` (R8) at the module's file,
+its consumer the file reader `Api.readFile`. It does not say that tsgo accepts the file or that
+rc.112 provides its services. -/
+theorem ModuleEmission.readFile {program : NativeEff} {table : RowTable} {name : String}
+    (emission : ModuleEmission program table name) (lawful : LawfulTable table = true)
+    (readable : moduleReadable emission.classes (nativeSignature table) program = true ∨
+      blockReadable emission.classes (nativeSignature table) program = true)
+    {prelude : String} {except : List String} {file : TypeScript.Module}
+    (filed : emission.file prelude except = .ok file) :
+    Program.readModule (nativeSignature table) (nativeSpell table) NativeOp.call NativeOp.param
+      table file.decls = .ok program := by
+  unfold ModuleEmission.file at filed
+  obtain ⟨serviceDecls, servicesPrinted, hfile⟩ := bind_eq_ok.mp filed
+  cases hfile
+  exact emission.readDecls lawful readable servicesPrinted
 
 /-- Every row of a lawful table has safe names. -/
 theorem lawful_rowNamesSafe {table : RowTable} (lawful : LawfulTable table = true) :

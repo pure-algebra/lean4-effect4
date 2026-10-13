@@ -391,6 +391,8 @@ import Test.Dogfood.Scenario.TodoService
 import Test.Dogfood.Bank
 -- Definitions with program parameters and invocations with programs, authored (row 340, seat IMPOSE).
 import Test.Program.AuthoringInvoke
+-- The to-do's file reads back whole (decisions row 378 (19), (20), seat READ).
+import Test.Dogfood.Scenario.TodoFile
 
 /-!
 # Effect4 test battery
