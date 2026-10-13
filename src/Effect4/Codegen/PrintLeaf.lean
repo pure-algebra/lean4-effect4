@@ -535,25 +535,6 @@ def printForkOptions (options : Effect4.Supervision.ForkOptions) : TypeScript.Ex
 
 variable {Op : Type}
 
-/-- Canonical runtime spelling for an ordinary service key. Its full pair is the identity;
-its carrier is deliberately not its identity. -/
-def keyText (key : ServiceKey) : String :=
-  "k" ++ toString key.name.value ++ "_" ++ toString key.service.value
-
-/-- The requirement identity at a fixed signature. Scope uses Effect's own identity;
-ordinary services use their full key, including when their carriers coincide. -/
-def keyIdentifier (scopeKey key : ServiceKey) : TypeScript.TypeRef :=
-  if key = scopeKey then .name ["Scope", "Scope"] [] else .literal (keyText key)
-
-/-- The complete requirement row as target syntax. The empty union is `never`. It spells a
-declaration's `R` and the type argument of `Effect.context<R>()`. -/
-def requirementType (scopeKey : ServiceKey) (requires : Effect4.Row ServiceKey) :
-    TypeScript.TypeRef :=
-  match requires.elems.map (keyIdentifier scopeKey) with
-  | [] => .name ["never"] []
-  | [one] => one
-  | many => .union many
-
 /-- A known ordinary key has separate Identifier and Shape arguments (rc.112
 `Context.ts:201-219`). Scope is the genuine `Scope.Scope` service (`internal/effect.ts:3772`),
 not a new key with the same carrier. Unknown keys retain the raw printer's bare-call profile;
