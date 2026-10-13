@@ -145,6 +145,20 @@ example : parked.view.awaiting.map (·.await) = awaits parked.run.machine :=
 -- A command budget of 1 cuts the start: the run is not funded (red control of `funded`).
 #guard !((Live.open pairUp "cut" { fuel := 1 }).feed .start).1.view.funded
 
+/-- The first call of `twice` received and applied, at a command budget. -/
+def cutAt (fuel : Nat) : Live :=
+  feedAll (Live.open twice "cut" { fuel := fuel })
+    [.start, .receive (.fiber Api.root) (ok (.nat 2)), .apply (.fiber Api.root)]
+
+-- Red control of the session's bit (slice DM4): at a budget of 4 the application is `applied`
+-- with its step cut, so no verdict is a frontier, and the view reads the bit.
+#guard (cutAt 4).run.phases = [.progressed, .bound, .preflight, .applied]
+#guard !(cutAt 4).view.funded
+-- Green twin: at a budget of 5 the step has enough fuel.
+#guard (cutAt 5).view.funded
+-- `view_funded`, read on the cut run: the view's flag is the tape's reading.
+example : (cutAt 4).view.funded = Run.funded (cutAt 4).run := Live.view_funded _
+
 open Effect4.Program.Authoring in
 /-- A root that awaits a deferred nobody completes: one internal wait, and a deadlock. -/
 def stalled : Option Live :=

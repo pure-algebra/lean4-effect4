@@ -337,8 +337,9 @@ theorem applyReply_conforms {program : Api.Program} {table : RowTable}
             · rename_i removed
               have allowed : HostProtocol.allows (HostProtocol.observe s.machine) (.answer key)
                   (HostProtocol.observe (steppedBy program (fuel + 1) table s.machine decision)) = true := by
-                simpa using hl
-              simpa [hl, removed, retire] using allowed
+                simpa only [steppedBy, Bool.not_eq_true', Bool.not_eq_false] using hl
+              simpa only [hl, removed, retire, steppedBy, Bool.false_eq_true, ↓reduceIte,
+                Bool.not_eq_true', Bool.not_eq_false] using allowed
             · cases h
 
 /-- Accepted scheduler/clock/cancellation controls follow a projected protocol edge over
@@ -519,5 +520,117 @@ theorem advance_calls {program : Api.Program} {table : RowTable} (s : Session pr
   unfold advance
   repeat' split
   all_goals rfl
+
+/-! ## The funded bit (the session note's slice DM4)
+
+Steps of `view_funded` (`src/Effect4/Laws/Api/Live.lean`): every transition but an applied reply
+application keeps `funded`, an applied one conjoins whether its step had enough command fuel at a
+live machine, and a control that progressed had enough fuel at a live machine. Concept
+`translation-simulation`; the proposed claim `view-funded`. They say nothing of a run's tape. -/
+
+theorem retire_funded {program : Api.Program} {table : RowTable} (s : Session program table) :
+    (retire s).funded = s.funded := rfl
+
+theorem bindCall_funded {program : Api.Program} {table : RowTable} (s : Session program table)
+    (call : Call) (token : Nat) : (bindCall s call token).session.funded = s.funded := by
+  unfold bindCall
+  repeat' split
+  all_goals rfl
+
+theorem submit_funded {program : Api.Program} {table : RowTable} (s : Session program table)
+    (reply : Reply) : (submit s reply).session.funded = s.funded := by
+  unfold submit
+  repeat' split
+  all_goals rfl
+
+theorem advance_funded {program : Api.Program} {table : RowTable} (s : Session program table)
+    (fuel : Nat) (decision : NativeDecision) :
+    (advance s fuel decision).session.funded = s.funded := by
+  unfold advance
+  repeat' split
+  all_goals rfl
+
+/-- Step of `view_funded`: an application keeps the bit, or it is applied. -/
+theorem applyReply_funded_or {program : Api.Program} {table : RowTable}
+    (s : Session program table) (key : Key) (fuel : Nat) :
+    (applyReply s key fuel).session.funded = s.funded ∨ (applyReply s key fuel).phase = .applied := by
+  unfold applyReply
+  split
+  · exact Or.inl rfl
+  · split
+    · split
+      · exact Or.inl rfl
+      · dsimp only
+        split
+        · exact Or.inl rfl
+        · split
+          · exact Or.inr rfl
+          · exact Or.inl rfl
+    · exact Or.inl rfl
+
+/-- Step of `view_funded`: an applied application conjoins its step's bit, at the decision that its
+stored reply's preflight answered. -/
+theorem applyReply_funded_applied {program : Api.Program} {table : RowTable}
+    (s : Session program table) (key : Key) (fuel : Nat)
+    (h : (applyReply s key fuel).phase = .applied) :
+    ∃ reply decision, readReply s.pending key = some reply ∧ preflight s reply = .ok decision ∧
+      (applyReply s key fuel).session.funded =
+        (s.funded && (s.machine.stuck.isNone &&
+          (letI := evaluatorFor program table;
+            Machine.stepDecisionState (interpOf program table) fuel s.machine decision).2)) := by
+  cases fuel with
+  | zero => cases h
+  | succ fuel =>
+    cases hactive : s.active.find? (fun b => b.key == key) with
+    | none =>
+      simp only [applyReply, hactive] at h
+      cases h
+    | some selected =>
+      cases hreply : readReply s.pending key with
+      | none =>
+        simp only [applyReply, hactive, hreply] at h
+        cases h
+      | some reply =>
+        cases hpre : preflight s reply with
+        | error why =>
+          simp only [applyReply, hactive, hreply, hpre] at h
+          cases h
+        | ok decision =>
+          refine ⟨reply, decision, rfl, hpre, ?_⟩
+          simp only [applyReply, hactive, hreply, hpre] at h ⊢
+          split at h
+          · cases h
+          · rename_i allowed
+            split at h
+            · rename_i removed
+              rw [if_neg allowed, if_pos removed]
+              rfl
+            · cases h
+
+/-- Step of `view_funded`: a control that progressed was taken at a live machine, with enough
+command fuel. -/
+theorem advance_progressed {program : Api.Program} {table : RowTable} (s : Session program table)
+    (fuel : Nat) (decision : NativeDecision) (h : (advance s fuel decision).phase = .progressed) :
+    s.machine.stuck.isNone = true ∧
+      (letI := evaluatorFor program table;
+        Machine.stepDecisionState (interpOf program table) fuel s.machine decision).2 = true := by
+  unfold advance at h
+  split at h
+  · cases h
+  · split at h
+    · cases h
+    · rename_i live
+      refine ⟨?_, ?_⟩
+      · cases hstuck : s.machine.stuck with
+        | none => rfl
+        | some why =>
+          rw [hstuck] at live
+          exact absurd rfl live
+      · dsimp only at h
+        split at h
+        · cases h
+        · split at h
+          · assumption
+          · cases h
 
 end Effect4.Api.HostSession

@@ -104,6 +104,11 @@ structure Session (program : Api.Program) (table : RowTable) where
   reply runs the checker (decisions row 323; the session note's slice DM5). Empty, a session
   admits replies at the rows' own columns alone. -/
   calls : List (List Nat × CallInstance NativeOp) := []
+  /-- No reply application of the session was cut by its command fuel (decisions row 326 (4);
+  the session note's slice DM4). A control reports its fuel in its verdict (`frontier`), but an
+  application answers `applied` as soon as its call's guard is gone, so the session keeps the
+  bit (`applyReply`). -/
+  funded : Bool := true
 
 inductive Refusal
   | version
@@ -247,7 +252,11 @@ def retire {program : Api.Program} {table : RowTable} (s : Session program table
 
 /-- Execute one explicitly selected key. Zero fuel changes nothing. Consumption is counted
 only after its exact guard disappears. The remaining continuations run in the tape's order;
-this function is deliberately absent from the receipt commutation law. -/
+this function is deliberately absent from the receipt commutation law.
+
+The step is taken once, as `advance` takes it, and an applied step keeps whether it had enough
+command fuel at a live machine (`funded`, decisions row 326 (4)). The verdict stays `applied`, so
+the wire does not change. -/
 def applyReply {program : Api.Program} {table : RowTable} (s : Session program table)
     (key : Key) : Nat → Result program table
   | 0 => ⟨.frontier, s⟩
@@ -257,7 +266,9 @@ def applyReply {program : Api.Program} {table : RowTable} (s : Session program t
       match preflight s reply with
       | .error why => ⟨.refused why, s⟩
       | .ok decision =>
-        let machine := steppedBy program (fuel + 1) table s.machine decision
+        let step := (letI := evaluatorFor program table
+          stepDecisionState (interpOf program table) (fuel + 1) s.machine decision)
+        let machine := step.1
         if !HostProtocol.allows (HostProtocol.observe s.machine) (.answer key)
             (HostProtocol.observe machine) then ⟨.refused .protocol, s⟩
         else if requestOf machine bound.call.fiber bound.token = none then
@@ -266,7 +277,8 @@ def applyReply {program : Api.Program} {table : RowTable} (s : Session program t
             active := s.active.filter (fun b => b.key != key)
             pending := s.pending.filter (fun slot => slot.key != key)
             applied := s.applied + 1
-            consumed := s.consumed ++ [bound.call.callId] }
+            consumed := s.consumed ++ [bound.call.callId]
+            funded := s.funded && (s.machine.stuck.isNone && step.2) }
           ⟨.applied, retire next⟩
         else ⟨.frontier, { s with machine }⟩
     | _, _ => ⟨.refused .noCall, s⟩

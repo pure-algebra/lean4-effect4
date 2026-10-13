@@ -373,7 +373,9 @@ theorem applyReply_cases {program : Api.Program} {table : RowTable} (s : Session
         active := s.active.filter (fun b => b.key != key)
         pending := s.pending.filter (fun slot => slot.key != key)
         applied := s.applied + 1
-        consumed := s.consumed ++ [bound.call.callId] }) := by
+        consumed := s.consumed ++ [bound.call.callId]
+        funded := s.funded && (s.machine.stuck.isNone &&
+          enoughFor program table (fuel' + 1) s.machine decision) }) := by
   cases fuel with
   | zero => exact Or.inl ⟨rfl, fun h => by cases h⟩
   | succ fuel =>
@@ -1119,7 +1121,9 @@ theorem ledger_step (s : Run) (c : Command) (h : Ledger s) : Ledger (s.step c) :
           active := s.session.active.filter (fun b => b.key != key)
           pending := s.session.pending.filter (fun slot => slot.key != key)
           applied := s.session.applied + 1
-          consumed := s.session.consumed ++ [bound.call.callId] }
+          consumed := s.session.consumed ++ [bound.call.callId]
+          funded := s.session.funded && (s.session.machine.stuck.isNone &&
+            enoughFor s.built.program s.built.table (fuel' + 1) s.machine decision) }
         rfl ?_ ?_ rfl ?_ ?_ ?_ ?_ ?_ (List.nodup_cons.mpr ⟨List.not_mem_nil, List.nodup_nil⟩)
         rfl rfl (by rw [hphase']; rfl)
       · show s.session.active.filter (fun b => b.key != key) = _
