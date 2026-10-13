@@ -12,10 +12,12 @@ derivations and probes are research records:
 - the probes in `docs/research/2026-09-30-host-answers-evidence/` and
   `docs/research/2026-09-30-external-runtime-contract/`.
 
-**Status (owner, 2026-09-30).** The near-term work here is the interim rule (§5), with the M6
-in-scope repair (row 95) and the value membership fix (row 96). The full contract (§4) and its
-order (§6) are parked until host services need them. They stay written down so the path is known
-(`system-map.md` §3).
+**Status.** On 2026-09-30 the owner put three things first: the interim rule (§5), the M6
+in-scope repair (row 95) and the value membership fix (row 96). All three landed by 2026-10-01
+(§3). The rest of the contract (§4) and its order (§6) stay parked until host services need them,
+with one exception. Row 310 (7) lifted the park of DI-57 on 2026-10-07, and its statement landed
+(§6, X3). Row 373 rules what the first share promises (§1) and the host-call note's three
+questions (§6). The parked parts stay written down so the path is known (`system-map.md` §3).
 
 ## 1. Scope and completion
 
@@ -32,6 +34,18 @@ order (§6) are parked until host services need them. They stay written down so 
 The typed-state guarantee (M5–M7) on runs without host answers is a first, provisional result.
 The public promise, that typed programs using host services stay typed, is claimed only when this
 lane lands (row 99).
+
+Row 373 rules two parts of that promise for the first share (2026-10-13):
+- **What the share promises** (point 2). The Lean session's laws are the promise, among them
+  `session_eq_ref`, `denoteRows_eq_session` (H8) and `denoteRows_eq_session_host` (H9)
+  (`docs/core/system-map.md` §8, R6). The TypeScript keyed lane is finite evidence beside them
+  (tested). The OCaml checked session, slice DM7 of the
+  [session note](../research/2026-10-07-session-api-design.md), comes after the share.
+- **Typed host answers** (point 3). The guarantee is claimed first on the fragment of data rows.
+  On a data row no column holds a handle, and the answer's type is decided by its shape
+  (`shapeDecides`, `src/Effect4/Laws/Program/Typed/Membership.lean`). The claim waits on a probe
+  that ties the session's token to the ghost token table that `AnswerOk` reads
+  (`src/Effect4/Laws/Program/Typed/Assembly.lean`). Row 99 stays open for the whole lane.
 
 ## 2. How host answers flow today
 
@@ -89,15 +103,22 @@ Those checks establish no universal host implementation theorem.
 
 ## 3. Known holes, with evidence
 
+The holes found on 2026-09-30 and 2026-10-03, by their state at HEAD. These stand:
+
 | Hole | Evidence | Row |
 | --- | --- | --- |
-| The runtime check accepts a live handle of the wrong declared type. A program checked at `nat` finishes with a string on the certified live session (start, bind, submit, apply) and on the checked replay. `Val.hasTy` checks a handle by kind only (`src/Effect4/Program/Typed.lean`); `mintedIn` checks only that it exists. Fiber handles are exploitable now; native cells and deferreds hold numbers only, and generic cells would open the same gap. | `host-answers-evidence/Probe.lean` §2 (proposed `E4-HOST-CE-007`); the contract's `Probe.lean` | 97 |
-| The proof's value predicate checks nothing inside products, Results or successful exits, and a union can take shape from one branch and handle evidence from another (`Laws/Program/Typed/Admission.lean:39-62`). A closed program with no host stores a fiber handle in a pair, projects it and awaits it; it checks at `nat` and runs to 7. | the contract's `PredicateProbe.lean`; `host-answers-evidence/PathProbes.lean` §D | 96 |
-| M6's capstone counts every decision tape: a `sleep` answered with `42` finishes with `42`. | `origin-plan-review/Probe.lean`, `current_m6_capstone_false` (proposed `E4-SCHED-CE-015`) | 95 |
-| The certificate-first `Typed.replay` runs unchecked answers. | `origin-plan-review/RemediationProbe.lean` | 98 |
-| `replayChecked` uses the execution budget for compilation; swapping it in changes an unfinished run into a finished one. | `RemediationProbe.lean` | 98 |
+| The certificate-first `Typed.replay` runs unchecked answers: it is the raw `Api.replay` on the certified program (`src/Effect4/Api.lean`). Row 373 (8) rules the repair: it replays the session's journal, checked at each call's instance. | `origin-plan-review/RemediationProbe.lean` | 98 |
+| `replayChecked` uses the execution budget for compilation (`load`, `src/Effect4/Api.lean`); swapping it in changes an unfinished run into a finished one. | `RemediationProbe.lean` | 98 |
 | An allocation reply is tied to the allocation count when it is applied; two replies checked against one snapshot need not both apply. | the contract's `Probe.lean` | 100 |
-| **Repaired 2026-10-03.** The runtime check accepted a host failure carrying `badName` or `notImplemented`, the machine's own markers for malformed code, which the typed exit judgment refuses (`NoShapeDefect`, row 152); so `admit = none` did not imply `AnswerOk` on failures. Admission now refuses them on both paths (`Refusal.reservedDefect`). | `docs/research/2026-10-03-session-work/t4-audit.lean` (Codex); `Test/Counterexamples/Machine/Runtime/HostReservedDefect.lean` (`E4-HOST-CE-008`) | 191 |
+
+The others are closed:
+
+| Hole, as found | How it closed | Evidence |
+| --- | --- | --- |
+| The runtime check accepted a live handle of the wrong declared type. A program checked at `nat` finished with a string on the certified live session (start, bind, submit, apply) and on the checked replay. Fiber handles were exploitable. | By refusal: the interim rule (§5, row 97) landed on 2026-09-30 (`90df5d21a`, merged at `bc77e97fb`). A reply carries no handle but a fresh external allocation (`externalValue`, `src/Effect4/Program/Compile.lean`). `Val.hasTy` still checks a handle by kind only (`src/Effect4/Program/Typed.lean`), so lifting the rule for a kind needs its declarations (§4.3). | `E4-HOST-CE-007`, REPAIRED (`Test/Counterexamples/Machine/Runtime/HostHandleForgery.lean`); `host-answers-evidence/Probe.lean` §2 |
+| The proof's value predicate checked nothing inside products, Results or successful exits, and a union could take shape from one branch and handle evidence from another. A closed program with no host stored a fiber handle in a pair, projected it and awaited it; it checked at `nat` and ran to 7. | Row 96 landed on 2026-09-30: the membership judgment `Fits` (`src/Effect4/Laws/Program/Typed/Membership.lean`) has one arm for each `Ty` constructor, and its union arm reads one whole branch. | the contract's `PredicateProbe.lean`; `host-answers-evidence/PathProbes.lean` §D |
+| M6's statement counted every decision tape: a `sleep` answered with `42` finished with `42`. | Row 95 landed on 2026-09-30 (`eca77d6a1`): M6 and M7 count only tapes with no host answer (`NoHostAnswer`, `src/Effect4/Laws/Program/Typed/Assembly.lean`). | `E4-SCHED-CE-015`, REPAIRED for host answers, then RETIRED with its battery (`Test/Counterexamples/Archive/REGISTER.md`) |
+| The runtime check accepted a host failure carrying `badName` or `notImplemented`, the machine's own markers for malformed code, which the typed exit judgment refuses (`NoShapeDefect`, row 152); so `admit = none` did not imply `AnswerOk` on failures. | Row 191, on 2026-10-03: admission refuses them on both paths (`Refusal.reservedDefect`). | `docs/research/2026-10-03-session-work/t4-audit.lean` (Codex); `Test/Counterexamples/Machine/Runtime/HostReservedDefect.lean` (`E4-HOST-CE-008`) |
 
 ## 4. The contract (proposed; rows 96–100)
 
@@ -213,12 +234,13 @@ accepted.
 | Route | Disposition |
 | --- | --- |
 | `HostSession`, `Runner`, `Run` | the canonical checked keyed route |
-| `Typed.replay` | consumes a session header and a `Runner.Command` journal through the checked keyed session, with both budgets and phases that can refuse (row 98) |
+| `Typed.replay` | consumes a session header and a `Runner.Command` journal through the checked keyed session, with both budgets and phases that can refuse, checked at each call's instance (rows 98 and 373 (8)) |
 | `Api.replayChecked` | low-level evidence; budgets separated; no claim of host-envelope conformance |
-| raw `Api.replay`, `replayAdmitted` | low-level; the caller admits decisions |
+| raw `Api.replay` | a named test entry; the caller admits decisions (row 373 (8)) |
+| `replayAdmitted` | goes (row 373 (8)) |
 | a list of host answers | deleted from the machine and the run entries (DI-23, DI-58). A host that answers from a list drives the session: `Run.runWith` (`src/Effect4/Run/Basic.lean`) with `Reactor.ofHost` (`src/Effect4/Laws/Api/HostDrive.lean`) over `tapeHost` (`src/Effect4/Laws/Program/HostRuns.lean`) |
 | timers, yields, deferred deliveries | typed through their own delivery paths, never through external admission |
-| the OCaml engine | needs a table-aware keyed entry path of its own |
+| the OCaml engine | needs a table-aware keyed entry path of its own: the session note's slice DM7, after the first share (row 373 (2)) |
 
 ### 4.7 Required controls
 
@@ -270,24 +292,43 @@ external allocation.
 This is item A of the [slice 6 brief](../research/2026-09-30-codex-brief-slice6-and-fixes.md), as
 amended by its [addendum 1](../research/2026-09-30-codex-brief-slice6-addendum-1.md).
 
-## 6. Order (parked until needed, except X0's rows 95–96 and the interim rule)
+## 6. Order
 
-These are the contract's X-steps (its §9), with the fiber slice first:
+These are the contract's X-steps (its §9), with the fiber slice first. Each step ends with its
+state at HEAD, by the decisions rows that own it.
 
 1. **X0.** Record the rulings (rows 95–100) and reconcile the frozen packets. The M6 in-scope
-   repair and the membership amendment go before M6 proof work.
-2. **The fiber slice.** The fork ledger's site and kind, the static environment at a path, the
-   one-recursion membership check, admission against derived fiber declarations, and the
-   typed-replay route. It closes the live hole for fibers without generic cells.
-3. **X1.** Declared capabilities and preparation in general: the registry, recursive preparation,
-   aliases, ownership.
+   repair and the membership amendment go before M6 proof work. Rows 95 and 96 and row 97's
+   interim rule landed by 2026-10-01. Rows 98 and 99 are open, and row 100 is parked.
+2. **The fiber slice.** The fork ledger's site and kind, a path's static environment, the
+   one-recursion membership check, reply admission against derived fiber declarations, and the
+   typed-replay route. It closes the live hole for fibers without generic cells. The interim rule
+   closes that hole by refusal instead (§3). The fork ledger records each fork's site
+   (`ForkRecord`, `src/Effect4/Machine/Fibers.lean`), not its kind. Parked with row 97's route.
+3. **X1.** Declared capabilities and preparation in general: the handle registry, recursive
+   preparation, aliases, ownership. Parked (rows 97 and 100).
 4. **X2.** The keyed lifecycle, both budgets, disposition of the legacy paths, the image codec.
+   The keyed session is the canonical route (§2), and slice HC-2 deleted the preloaded answers
+   (row 343). Row 373 (8) rules the legacy paths (§4.6). `replayChecked` still compiles with the
+   execution budget (§3).
 5. **X3.** The reference connection: a table-aware reference and the DI-57 statement. The
-   empty-table theorem becomes its corollary.
+   empty-table theorem becomes its corollary. Landed, after row 310 (7) lifted its park on
+   2026-10-07 (rows 313, 314 and 343). The frame machine and the reference agree at every row
+   table (`run_eq_ref_table`, `src/Effect4/Laws/Program/Table/Agreement.lean`), and `run_eq_ref`
+   is its instance at the empty row table. A recorded, funded session reads the reference's replay
+   of its own tape (`session_eq_ref`, `src/Effect4/Laws/Api/SessionRef.lean`). Both are proved
+   (`generated/semantics.md`). Neither establishes reply admission, the typing of a reply or a
+   host's conformance.
 6. **X4.** The checked application guarantee over all valid execution prefixes, and the public
-   typed entry paths.
+   typed entry paths. Open (row 99). Row 373 (3) rules its first fragment, the data rows (§1).
 7. **The Ref slice** (acquisition, a handle in a Ref, a second call, release) after the
-   generic-cell work of rows 42–43.
+   generic-cell work of rows 42–43. Parked.
+
+**The host-call note's three questions** (row 373 (12), 2026-10-13; the
+[host-call note](../research/2026-10-09-host-calls-and-cleanup.md)). A call is an operation of
+`RowSig table` (`src/Effect4/Laws/Program/DenoteRows.lean`). The live call view, the view of each
+waiting call, is the view of the session note's slice DM3, with each call's checked instance. The
+note's slice HC-1 folds into DM3.
 
 ## 7. Decision 12 and the boundary rule (2026-09-10; written here 2026-10-01, row 122)
 

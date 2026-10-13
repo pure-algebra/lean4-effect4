@@ -13,7 +13,7 @@ natively, compiled through LCNF. TypeScript joins the Effect ecosystem through t
 the readers. Programs are data: a canonical `Eff` tree with a digest and a typing certificate.
 A program has folds, a journaled run with replay, and a printed image that reads back.
 
-## Where the tree stands (2026-10-12, branch `refactor/phase1-phase3`)
+## Where the tree stands (2026-10-13, branch `refactor/phase1-phase3`)
 
 - **Programs and their types.** The checker types a program with located refusal. The address
   table, the focus function and one annotating traversal give each address its environment and
@@ -46,7 +46,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
   definition's parameters print as functions named by their declarations, and an invocation
   with programs as the definition's name on its request and its programs as arrows; both read
   back (HO-3a, HO-3b: one law of named rows for a block's and a body's spelling,
-  `LawfulSpelling.extend`, and the laws of invocations, `LawfulInvokes`). A body's own layer is
+  `LawfulSpelling.extend`, and the laws of invocations, `LawfulInvokes`). A service role with
+  parameters waits for HO-5 (Codex's HO-3 review). A callback that needs a service is refused at
+  its invocation until the header carries a requirement variable. A body's own layer is
   built once per call (step 3a, the owner's option B). A build is keyed by its path and the
   running call (`Point.layerKey`), which names the chain of invocation sites. A body's own layers
   print as constants at the top of its suspension and read back (step 3b). Three counted
@@ -66,9 +68,13 @@ A program has folds, a journaled run with replay, and a printed image that reads
   The [foundation receipt](research/2026-10-08-seat-module-gaps-receipt.md) names the checks and remaining boundaries.
 - **The machine and the session.** The frame machine agrees with the reference on a session
   (`session_eq_ref`, row 314), and the host meaning has its fast path (row 313). A session admits
-  a host reply at its call's checked instance (row 323). The session's face is `Live.open`,
-  `Live.start`, `Live.feed` and `Live.view` (row 326, DI-85). No host answer is preloaded: every
-  host call parks, and its answer is a decision (slice HC-2, row 343). The raw statement
+  a host reply at its call's checked instance (row 323). It makes the call table once, at open
+  (slice DM5, `5c01db4a3`). The face a caller holds is `Run` (`src/Effect4/Run/Basic.lean`).
+  Row 326 rules the session's face, the module `Live` with `open`, `start`, `feed` and `view`
+  (DI-85). It is planned as slices DM1 to DM4 of the
+  [session note](research/2026-10-07-session-api-design.md), and no `Live` declaration exists yet.
+  No host answer is preloaded: every host call parks, and its answer is a decision (slice HC-2,
+  row 343). The raw statement
   `run_eq_ref_table` is proved. A list of answers is a host that answers from a list
   (`Test/Api/HostList.lean`).
 - **The host meaning on a run** (slices H8 and H9, row 310). `denoteRows_eq_session` and
@@ -97,7 +103,8 @@ A program has folds, a journaled run with replay, and a printed image that reads
   The forward agreement with calls is proved once, on loops; the straight one is its instance
   (row 344). The six meanings of the call tree are instances of one algebra of control
   (`denoteCtl`, `src/Effect4/Laws/Program/DenoteCtl.lean`, row 344).
-- **The coalgebra layer** (the [coalgebra note](research/2026-10-09-host-coalgebra.md)). The
+- **The coalgebra layer** (the [coalgebra note](research/2026-10-09-host-coalgebra.md), slices
+  CO-1 to CO-6 and CO-7's generic half, row 338). The
   `Effects` package, version 0.10.0, holds systems, bisimulations, protocols and runs. It holds
   hosts as comodels, which compose by routing, renaming, admission, recording, and implementation
   by programs over other operations. Typed handlers compose (0.9.1), and indexed signatures give
@@ -105,11 +112,15 @@ A program has folds, a journaled run with replay, and a printed image that reads
   of `lean4-effects` is pushed (`bf5ab8f`, 2026-10-10) and pinned here. Any host of the row
   signature drives a run (`Reactor.ofHost`). A typed layer over a host that meets its lower
   protocol is its own guard in the denotation (`hostGuard_through`). The driver theorem still runs
-  the guarded reactor (`runWith_layer_denotes`).
+  the guarded reactor (`runWith_layer_denotes`). A block's roles print as an Effect service's key
+  and layer, and they read back (CO-6b's S1 and S2, rows 338 and 339, the
+  [plan](research/2026-10-09-co6b-service-plan.md)). S3 checks a client that uses the Queue's
+  service through its key, on tsgo 7 and rc.112. The Semaphore's service landed too, with Codex's
+  service findings repaired.
 - **The library's layout** (row 332, cutover slices C1 to C4). A user imports five entry
   modules: `Effect4.Author`, `Effect4.Run`, `Effect4.Emit`, `Effect4.Library` and
   `Effect4.Laws.Author`. Each re-exports and declares nothing. The acceptance programs import
-  only these, and `#exposure_gate` refuses any other import. The step language is
+  only these; `#exposure_report` lists any other import (the gate is retired, row 375). The step language is
   `src/Effect4/Step.lean`, and its shared laws are in `src/Effect4/Laws/Step/`.
 - **Composed modules.** Queue, Semaphore, Pool, Latch, Stream, Ref, Pull, Channel, PubSub,
   PartitionedSemaphore and SynchronizedRef are built. Each has its model, cells, steps and
@@ -140,9 +151,15 @@ A program has folds, a journaled run with replay, and a printed image that reads
   `generated/assignability.tsv`. The TypeScript face refuses a natural literal above the profile,
   on emission and on reading (row 357). TypeScript and OCaml refuse a product outside the profile
   (`E4-RUN-CE-047`, repaired 2026-10-11). The printed type is not monotone (`E4-PRINT-CE-001`; row 346's repair A, with tsgo's bound).
-- **Partial programs** (R14, row 282). A sketch is a program with its hole table (row 291). The
-  replacement law holds over the six typing judgments (row 294). A sketch reads a whole program,
-  definition block included: its check, focus, fill, table and refusals (cutover slice S1). An
+- **Sketches** (R14, row 282). A sketch is a program with its hole table (row 291). The
+  replacement law holds over the six typing judgments (row 294). A sketch reads a program with a
+  definition block: its check, focus, fill, table and refusals (cutover slice S1). It refuses a
+  layer reference, which program admission accepts. `Sketch.check`
+  (`src/Effect4/Program/Sketch.lean`) checks the program as written, and the checker refuses `.ref`
+  with `layerReference` (`Checker.checkLayer`, `src/Effect4/Program/Checker.lean`). The edit
+  session's table refuses it too (`Annotate.checkLayer`, `src/Effect4/Program/Typing/Annotate.lean`).
+  Row 373 (7) rules the repair: the sketch checks the expansion, as admission does, and reads the
+  result back at the source's addresses (`source-annotation-agrees`). An
   edit that keeps its focus's type splices the address table, inside any part of a whole
   program (`edit-splices-table`, `module-table-splices`). A filled sketch is checked as its
   module (`module-holes-conservative`). A sketch has canonical bytes, so the query tool takes a
@@ -270,41 +287,39 @@ A program has folds, a journaled run with replay, and a printed image that reads
    countdown goal changes no run and stays a planned goal.
 00. **The last planned goals** (the [goals packet](research/2026-10-10-goals-packet/README.md)).
    Codex reached its quota on 2026-10-12, and Claude carries its lane
-   (`docs/research/2026-10-11-machine-models/CODEX-PROMPT.md`). Of the fourteen application goals, three are proved
-   (`Atomic.bounded`, `Routing.infrastructure_escapes`, `Timeout.stale_never_applies`). Nine are
-   proved modulo seven smaller goals. Timeout's retry and cleanup goals stay open (`#plan_status`).
-   Seat GOALS (2026-10-13, [receipt](research/2026-10-13-seat-goals-receipt.md)) proved
-   `PlaceFunding.Local.history_funded`, the history step of the three cleanup-log goals. So
-   `log_debits` rests on one evaluation's debit (`WriterHistory.evaluation`), and
-   `once_placed_pushes_once` on the sources outside the census. Next, the receipt's §8 order:
-   that debit, the Workers and QueueWorkers writer ledgers, `request_leads`, then the
-   fiber-position law. The packet also sorts the 87 open parts that no goal states yet. Beside it: the nine legacy host fixtures of the
-   truth lane move to the keyed lane (row 343 (8), signed until then), and seat FC's rulings
-   land (row 345 (2): `tools/Tools/Graph` at height 0; the generator's children induction).
-0. **The host session as a coalgebra** (the
-   [coalgebra note](research/2026-10-09-host-coalgebra.md), slices CO-1 to CO-7). CO-1 to CO-5
-   landed, with CO-6 and the generic half of CO-7 (decisions row 338 ruled the note's questions).
-   The comodel and runner papers are filed. CO-6b's S1 and S2 landed
-   ([plan](research/2026-10-09-co6b-service-plan.md), rows 338 and 339). A block's roles print as
-   an Effect service's key and layer, and the roles read back. S3 checks a client that uses the
-   Queue's service through its key, on tsgo 7 and rc.112. The Semaphore's service landed too, with
-   Codex's three service findings repaired. Pool's service waits for a method whose parameter is
-   a program: [the plan](research/2026-10-09-program-parameters.md), row 340. HO-1 and HO-2
-   landed, and so did CX1 and CX2 (points typed at their lexical scope; `invoke_arm` and
-   `param_arm` proved). Row 341 keeps a layer reference in its target's scope, and its step 2
-   landed: a block's module layers, which every scope names, printed, read and authored. HO-3a
-   and HO-3b landed: definitions with parameters and invocations with programs print and read
-   back ([the plan](research/2026-10-09-program-parameters.md) §11), with the repairs of Codex's
-   HO-3 review: a parameter's columns are in the type inventory, names are checked against row
-   roots, trailing names and payload classes, a service role with parameters waits for HO-5,
-   and a callback that needs a service is refused at its invocation until the header carries a
-   requirement variable. Step 3a landed: a body's layers are built once per call, in the machine
-   and the OCaml route ([the note](research/2026-10-10-layer-scopes.md) §5). Step 3b landed: a body's
-   layers print and read back, and three counted builds agree with rc.112. Codex scouts a
-   keyed layer, shared by argument values after Effect's `LayerMap`. Then CX3, which adds substitution and the builder's
-   certificate. CX4 adds bounded unfolding. Then HO-4 (generics), HO-5 (Pool's service). Then
-   CO-7's Effect4 half: handle rows and call sites as worlds. Codex reviews the `Effects` packet. HC-6 and HC-7 of the
-   [host-call note](research/2026-10-09-host-calls-and-cleanup.md) stand; HC-2 landed (row 343).
+   (`docs/research/2026-10-11-machine-models/CODEX-PROMPT.md`). `#plan_status` gives each
+   application goal's standing (`Test/Dogfood/Scenario/`). Seat GOALS-2 proved `WriterHistory.evaluation` on 2026-10-13
+   ([receipt](research/2026-10-13-seat-goals2-receipt.md)), so `Atomic.cleans_once` is proved.
+   `Atomic.atomic` now rests only on `Atomic.Store.shop_stages` (the receipt's §7).
+   `Workers.Assertions.logs_step` and `QueueWorkers.Assertions.logs_history` stay open. In both
+   scenarios a release note writes the acquired value that its environment binds, so their count
+   needs a fact about values. The missing piece is an invariant of answer flow over whole
+   histories: the frame-level `Machine.AnswerFlow` modules exist (`src/Effect4/Laws/Machine/`), and
+   nothing carries them through histories. The same gap blocks `Timeout.cleanup_keeps` and `Timeout.retries_declared`. Next:
+   that invariant (the receipt's §4.3), then the rest of the receipt's §8, `request_leads` among
+   it. The packet also sorts the open parts that no goal states yet. Beside it: the legacy host
+   fixtures of the truth lane move to the keyed lane (row 343 (8), signed until then). Seat FC's
+   rulings land too (row 345 (2): `tools/Tools/Graph` at height 0; the generator's children
+   induction).
+0. **The host session's line** (row 373 (1); seat BACKLOG's
+   [deep dive](research/2026-10-13-backlog-deep-dive/README.md)). In order:
+   - the `Live` face, slices DM1 to DM4 of the
+     [session note](research/2026-10-07-session-api-design.md), with seat LIVE's
+     [brief](research/2026-10-13-seat-live-brief.md);
+   - a definition block in the meaning, PROC-5 (row 328);
+   - one checked replay route: `Typed.replay` replays the session's journal, checked at each
+     call's instance (rows 98 and 373 (8));
+   - generics and Pool's service, HO-4 and HO-5
+     ([the plan](research/2026-10-09-program-parameters.md), row 340).
+
+   CX3 and CX4 wait for a consumer: the typed run goes through sites, not through an inlined body
+   ([the note](research/2026-10-10-cx-lexical-scope.md) §8). Codex's scout of a keyed layer after
+   Effect's `LayerMap` (row 341) is parked, and so is its further review of the `Effects` packet.
+   Codex reached its quota on 2026-10-12. After them stand CO-7's Effect4 half (handle rows and
+   call sites as worlds) and HC-6, the immediate-answer lowering of the
+   [host-call note](research/2026-10-09-host-calls-and-cleanup.md). DM7 and HC-7, the checked
+   session on OCaml, come after the first share (row 373 (2)). The deep dive's ranked list (§6)
+   orders the rest of the host session, holes, authoring and lowering.
 0. **The studio** (row 362; the [designer workflow note](research/2026-10-12-designer-workflow/README.md)).
    One served page in the app's browser pane shows each new view entry, the looks, the PC's probes
    and the documents, and reloads by itself. DS-1 the studio and its reload, DS-2 the scrubber and
@@ -317,8 +332,11 @@ A program has folds, a journaled run with replay, and a printed image that reads
    363, point 5). The [tube language](research/2026-10-13-tube-language/README.md) (rows 369, 370)
    draws every mark as tubes in one proportion, and a queue's units move by a driver model. The
    [motion plan](research/2026-10-13-motion-everywhere/README.md) gives every construct a picture
-   and a film, in ten slices; M1 (each figure's cost) landed. Next: the kit's S24 joins pinned and
-   the kit move (M7), then roles per module (M3) and a run as a film (M5).
+   and a film. M1 (each figure's cost) landed, and M5 has a first cut: a run as a score, a staff
+   for each fiber (`7817efdf0`). The kit's S24 is pinned (`ec25409f4`). The kit move (M7) has two
+   steps: every join by the kit's blend, and every stretch by its trapezoid profile (`b7a6a9cb6`,
+   `1f25ccd66`). Next: the rest of M7, then roles per module (M3) and the rest of M5, a run as a
+   film.
 1. **The view and the printer**, one plan across four notes. The order:
    - the program's own graph (row 337, point 9). First its design, with an agent's place in it.
      Then the graph, its ranks and its places as folds of the program (the algebra audit's D);
@@ -334,7 +352,8 @@ A program has folds, a journaled run with replay, and a printed image that reads
      writes its authority in `docs/core/`. D2 gives one token source, status by shape and no
      organic noise by default. D3 adds the figure and the motion value, D4 automata, and D5
      Mermaid. Then the [view model](research/2026-10-11-view-model/README.md)'s R-V1 to R-V5.
-   MCP and code mode: the note's slices M0 to M12, after the owner's six rulings.
+   MCP and code mode: slice M1 (typed requests) lands now, with the note's rulings 1 and 2 made
+   (row 373 (9)). Rulings 3 to 6 wait for the owner's walk-through.
 2. **The requirement statuses**: the prose of `docs/core/system-map.md` section 8 lags the
    measured table of `generated/semantics.md` (R10, R14); refresh it from the table.
 3. **The graph operations of an agent** (row 336, points 1 and 7). Pieces are stored by content
@@ -345,10 +364,17 @@ A program has folds, a journaled run with replay, and a printed image that reads
    [catalogue brief](research/2026-10-08-module-catalogue-brief.md)), in latest's order of
    building blocks.
 5. **The authoring line** (the [tangible authoring design](research/2026-10-08-tangible-authoring-design.md)).
-   Its parts: the session tool as an MCP server; marking at a gap (row 336, point 3); each table
-   entry's rule as data. One session edits and runs.
-   When it asks whether a result depends on the schedule, the checked fragment of row 361 (D1
-   to D3) answers; random descent is in the law graph (`random-descent`).
+   Editing and running stay two sessions, an edit session and a host session, with the same verbs
+   (row 373 (5)). One operation joins them: it builds a sketch with its hole table and opens a host
+   session on it. When an author asks whether a result depends on the schedule, the checked
+   fragment of row 361 (D1 to D3) answers. Random descent is in the law graph (`random-descent`).
+   The line's parts:
+   - the session tool at an application: `open` takes the row table and the services as canonical
+     bytes (row 373 (10));
+   - a sketch typed through its layer references (row 373 (7));
+   - the session tool as an MCP server;
+   - marking at a gap (row 336, point 3);
+   - each table entry's rule as data.
 6. **The module toolkit's gaps** (row 330): wrapper reply records and laws (G1), `derive_step`
    in the tree (G3), then the module form at the Latch (G2).
 7. **The stream stack** (row 331): the Pull protocol's handlers (Codex, merged at `b8630762`) and the
@@ -357,13 +383,13 @@ A program has folds, a journaled run with replay, and a printed image that reads
 8. **The first composition law**, SynchronizedRef from Ref and Semaphore (G10), then the
    transaction attempt (G4).
 
-Also open: procedures PROC-5 (row 328), the simulation's slices S1 to S4 (row 329) and the
-session API's slices (row 326). The host session is to be drawn by H8's machine forms. Effect4 pins the SVG kit (lean4-whatwg
-`html/svg` at `eac9121`, slice S23, rows 358 and 370). The view's pictures are typed trees on it
-(`tools/Tools/View/SvgOut.lean`). Row 360 orders the rest: one pin move at the seat's slice S14,
-then the motion and the geometry ports, which delete the view's own join, easing reader,
-samplers and stroke geometry. The
-owner's note of 2026-10-09: write a program, then watch its session answer calls and schedule.
+Also open: the simulation's slices S1 to S4 (row 329), and the session note's DM6 after DM3. The
+host session is to be drawn by H8's machine forms. Effect4 pins the SVG kit (lean4-whatwg
+`html/svg` at `a8a8e7b`, slice S24, rows 358 and 370; `ec25409f4`), a branch local until the owner
+pushes it. The view's pictures are typed trees on it (`tools/Tools/View/SvgOut.lean`). Row 360
+orders the rest after its pin move: the motion port and the geometry port. They delete the view's
+own join, easing reader, samplers and stroke geometry. The owner's note of 2026-10-09: write a
+program, then watch its session answer calls and schedule.
 
 ## What the owner must decide
 
@@ -375,16 +401,18 @@ owner's note of 2026-10-09: write a program, then watch its session answer calls
   operation's row, and removed by `v -P`.
 - **The program's graph** (the design note, section 7): its marks, built as recommended, to
   confirm.
-- **MCP and code mode** (the MCP note, section 10): six rulings.
+- **MCP and code mode** (the MCP note, section 10): rulings 3 to 6, at the owner's walk-through.
+  Row 373 (9) made rulings 1 and 2.
 - **Multiplication on naturals** (row 309, point 1). The row says no multiplication enters, but
   the tree keeps the natural atom `mul` (2026-09-19) through `Profile.scale`. The reference is
   exact, and TypeScript and OCaml refuse a product outside the profile (`E4-RUN-CE-047`). Keep
   the atom, and read row 309 as excluding integer and float arithmetic only, or remove it.
 - **The live view's three rulings** (LV-8, `docs/research/2026-10-10-live-view/LANDING.md`): code
   lines keyed by text, causal columns in the batch, and the gutter's address reading.
-- **The type interface's three choices** (the type interface note, section 4):
+- **The type interface's choices** (the type interface note, section 4). Row 373 (11) ruled its
+  input positions: an emitted module decodes its exported inputs with the printed Schema, and it
+  brands only `Ref` arguments. These stay open:
   - print `int` and `number` as the aliases `Int` and `Num` now (row 309, point 5);
-  - decode an exported entry's inputs, or print refined types as brands;
   - choose one frame for products, before `Shape` becomes a fold of `Ty`.
 
 

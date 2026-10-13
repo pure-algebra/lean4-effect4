@@ -12,18 +12,25 @@ A user's file imports five entry modules (decisions row 332): `Effect4.Author`
 (`src/Effect4/Author.lean`), `Effect4.Run` (`src/Effect4/Run.lean`), `Effect4.Emit`
 (`src/Effect4/Emit.lean`), `Effect4.Library` (`src/Effect4/Library.lean`) and
 `Effect4.Laws.Author` (`src/Effect4/Laws/Author.lean`). Each re-exports the rows below that its
-user needs, and declares nothing.
+user needs, and declares nothing. Row 332 (1) also lists `derive_step` and the module form among
+`Effect4.Author`'s exports, and `derive_step_eval` among `Effect4.Laws.Author`'s. None of them is
+in the tree (reading, `git grep`): they wait for the module toolkit's G3 and G2 (`docs/STATE.md`).
 
 | module | file | what an agent calls | laws |
 | --- | --- | --- | --- |
 | `Author` | `src/Effect4/Api/Author.lean`, `Program/Authoring*.lean` | `Module` (rows, services, layers, definitions, main) → `Author.build : Except BuildRefusal Built`; `Row.host`, `Row.call` by spelling; `ServiceDef.{use,give,layer,constant}`; `Package.install`; `Layer.{value,empty,mergeAll}`, `provide`, `provideAll`, `provideFresh`; `fork`, `daemon p`, `daemon p in s`, `await`, `join`; `Node.{at_,replaceAt,replaceLayerAt}`; `Built.{rebuild,typed,ty,requires,closed,positionOf,runSync,print,bytes}` | `build_table_lawful`, `build_rows_resolve`, `Row.call_scoped`, `carrier_unique`, `var_reserved`, `rebuild_spec`, `rebuild_self` |
+| `Author`: sketches and the edit session (since `90940a540`) | `src/Effect4/Program/Sketch.lean`, `src/Effect4/Program/Edit.lean`, `src/Effect4/Program/SketchWire.lean`, `src/Effect4/Program/Typing/PartsTable.lean` | `Sketch` (a program with its hole table), `Row.hole`, `SigApp.withHoles`; `Sketch.{hole,check,fillAt,omitAt,focusAt,table,refusals}`, the table part by part; `EditSession.{open,feed,feedStep,run,view}` over `Edit`; a sketch's canonical bytes, `Sketch.{encode,decode}`. `Sketch.check` checks the program as written, so it refuses a layer reference (`layerReference`) that program admission accepts; row 373 (7) rules the repair | `holes_conservative`, `Sketch.check_fill`, `Sketch.check_omit`, `Sketch.check_filled_module`; `EditSession.run_coherent`, `EditSession.reached_view`, `EditSession.feed_undo`; `Sketch.decode_encode`, `Sketch.decode_exact`; all through `Effect4.Laws.Author` |
 | `Run` | `src/Effect4/Run/Basic.lean` | `Run.open` (cannot refuse), `Rows.{start,flush,clock,receive,answer,control,tape}` into `List Command`, `Run.{play,step,answer,receive,control}`, `Run.observe : Observation` (first-order, with `fibers`), `Run.inspect : Inspection` (holds the machine), `Run.{work,nextControl,controlOnce}`, `Reactor σ`, `Run.drive`, `runPure`/`runClock`/`runWith` | `open_total`, `journal_replays`, `drive_eq_play`, `drive_envelope`, `runPure_eq_run`, `answer_once`, `answer_accepted`, `bindCall_at`, `nextControl_spec`, `controlOnce_journal`, `play_controls_eq_replay`, `runClock_eq_run` |
 | `Run`, the tape | `src/Effect4/Run/Tape.lean` | What a tool reads off a run. The raw replay: `machineOf`, `replayFrom`, `enoughFor`. The machine's view: `MachineView`, `machineViewOf`, `machineView`. The tape of a journal: `Position`, `replyDecision`, `decisionOf`, `receiptRow`, `openedOf`, `readsOn`, `tapeFrom`, `tapeOf`. A run's budget premise and rest: `funded`, `atRest`. Reachable from the `Effect4` root; `Effect4.Api` does not export them yet | `tape_replays`, `funded_replays`, `tapeFrom_cut_replays`, `tapeFrom_position_replays` (`src/Effect4/Laws/Run/Tape.lean`); `applied_selects`, `control_retires` (`src/Effect4/Laws/Run/Rows.lean`) |
 | `Supervision` | `src/Effect4/Api/Supervision.lean` | `supervision : Eff Op → List ForkSite`, `ForkSite.parent`, `fiberStatuses`, `daemonsQuiet`, `Supervised`, `Inspection.{fibers,forked,daemonsQuiet}` | `supervision_static`, `supervision_child_flag`, `status_persists`, `spawn_status_fresh`, `daemonsQuiet_iff` |
 | `Api` (the older face) | `src/Effect4/Api.lean`, `Api/*.lean` | `check`, `explain`, `blame`, `author`, `Typed.*`, `TypedLayer`/`checkLayer`, `Inspection`, `replay`/`run`/`runSync` (no list of host answers: a host answer is a decision of the tape or the session, DI-23), `print`/`read`/`bytesOf`/`ofBytes`, `schemaOf`, `HostSession`, `Runner`, `RunnerBytes` | the DI-85/86 laws, `replay_unique`, the codec laws |
 
-Imports are clean (no surface module imports `Laws`, `Test` or `Aesop`); the package root imports
-all four. What the integration already unified: one size fold, `Api.Run` → `Inspection`, the
+Imports are clean: no module of the table imports `Laws`, `Test` or `Aesop`. Of the two library
+roots, `Effect4` (`src/Effect4.lean`) imports four of the five entry modules, and `Effect4.Laws`
+(`src/Effect4/Laws.lean`) imports the fifth, `Effect4.Laws.Author`. The exposure table
+(`exposures`, `tools/Tools/ArchitectureRoles.lean`) gives the five the exposure `entry`, and also
+`Effect4.Laws.Author.Explain`, the own import of `#explain` and `#obligations` (row 332, amended
+2026-10-09). What the integration already unified: one size fold, `Api.Run` → `Inspection`, the
 `Built` face through `Built.typed`, `Layer.all`/`printLayer`/`Built.run`/`authorModule` cut,
 `with_` → `provide`.
 

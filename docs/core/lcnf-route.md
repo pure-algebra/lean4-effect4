@@ -182,8 +182,8 @@ Neither route supplies a self-application theorem.
 
 | Connection | What it owes | Where it stands |
 | --- | --- | --- |
-| Admitted source to reference | meaning under explicit choices; results, requests, public state, frontiers; state kept for finalization | fragment theorems (`run_eq_meaning`, `loopAgreement`) |
-| Reference to compiled runtime | preparation, registration, resume, frames, worlds, stores and queued work correspond; progress and frontiers relate | `run_eq_ref` at the empty table; the table-aware lane open (`host-boundary.md`) |
+| Admitted source to reference | meaning under explicit choices; results, requests, public state, frontiers; state kept for finalization | fragment theorems (`run_eq_meaning`, `loopAgreement`); with host rows, `denoteRows_eq_session` and `denoteRows_eq_session_host` on `StraightRows`, `h8_loopedRows` and `denoteRowsB_eq_session_host` on `LoopedDataRows` (`src/Effect4/Laws/Api/`) |
+| Reference to compiled runtime | preparation, registration, resume, frames, worlds, stores and queued work correspond; progress and frontiers relate | `run_eq_ref_table` at every row table, with `run_eq_ref` its instance at the empty table (`src/Effect4/Laws/Program/Table/Agreement.lean`; `host-boundary.md` §6, X3) |
 | Abstract storage to backing implementation | initialization, operation, state and answer relation, aliases, snapshots, progress; lifted through machine and holder | arena laws; no certificate yet for the OCaml arrays and maps |
 | Lean declarations to compiler IR | a pinned compiler and erasure assumption or a checked certificate; roots and complete closure; layout | reading the IR is not a compiler proof |
 | Compiler IR to target semantics | a refusing reader; value and layout relation; each rewrite and extern justified | evaluator and vector evidence for selected closures |
@@ -203,8 +203,8 @@ Neither route supplies a self-application theorem.
 - A universal claim needs a kernel-checked certificate or a proved checker; finite tests are never
   promoted to certificates.
 
-**Numbers, as they stand.** Verified at the builtin table (`builtins` in
-`src/OCaml5/Lcnf/Builtins.lean`):
+**Numbers, as they stand.** Lean's own `Nat` operations in the lowered machine keep these rows
+of the builtin table (reading, `builtins` in `src/OCaml5/Lcnf/Builtins.lean`):
 - natural addition lowers to raw 63-bit `+` (the row `Nat.add`), and so does successor (the row
   `Nat.succ`), so a large enough sum wraps;
 - multiplication, powers and the left shift saturate at the largest integer (the support
@@ -213,23 +213,42 @@ Neither route supplies a self-application theorem.
 
 The table became data on 2026-10-05 (§9). That change moved no number.
 
-The TypeScript face prints `nat` as a JavaScript number, exact only up to 2^53. The profile's
-`natBound` (`src/Effect4/Program/Profile.lean`, DI-56) bounds requests and answers, not intermediate values.
+A program's arithmetic grows a natural only through two marks (reading, `NativeAtom.eval` in
+`src/Effect4/Machine/Term.lean`). The atoms `succ`, `add`, `plus` and `minus` call `Profile.grow`,
+and `mul` calls `Profile.scale` (`src/Effect4/Machine/Integers.lean`). In the reference each mark
+is exact addition or multiplication. The store's read-modify-write rows run binder terms over the
+same atoms (`Program.evalTerm`, `src/Effect4/Machine/Stores.lean`; row 43).
 
-So the three faces agree only on a bounded range, and none refuses outside it. The numbers seat
-of the 2026-09-30 pass (`docs/research/2026-09-30-pass/numbers/`) ran one checked program with
-small literals on all three and got three different answers. DI-56's ruling stands: inside its
-profile each face equals the exact Lean reference, and outside it the face refuses, intermediate
-values included. The implementation plan is decisions row 108 (open; the owner places it, no later than
-WASM).
-- **The refusal is written once in Lean**, with the bound as data, so that OCaml and WASM
-  inherit it.
-- **Checked TypeScript atoms.**
-- **Exact native naturals only if a native use needs them.**
+Each face refuses outside the profile's bound, `natBound` (`src/Effect4/Program/Profile.lean`,
+DI-56):
+- **OCaml** (row 321; `E4-RUN-CE-047`): the rows of `Profile.grow` and `Profile.scale` compute
+  exactly on `E4_clock.t`, and `E4_clock.to_profile_nat` raises `Profile_refusal` outside the
+  bound. The engine answers it as `Outside_profile`, with the input machine retained. It also
+  refuses a negative or oversized natural in a host answer and in a literal (`E4-OCAML-CE-001`).
+- **TypeScript** (row 322; `E4-RUN-CE-047`): the prelude's bodies of the five atoms call
+  `inProfile`, which throws `ProfileRefusal` past the bound (`tools/Effect4Gen/PreludeAtoms.lean`).
+  `Codegen.emitModule` refuses a natural literal above the bound, and so does the module reader
+  (row 357).
+- **Lean**: `intAddIn`, with the bound as an argument, answers exactly when the reference answers
+  inside the profile, for arguments inside it (`intAddIn_eq_some_iff`,
+  `src/Effect4/Laws/Machine/IntegerProfile.lean`).
+
+The numbers seat of the 2026-09-30 pass (`docs/research/2026-09-30-pass/numbers/`) ran one
+checked program with small literals on all three faces and got three different answers. DI-56's
+ruling stands: inside its profile each face equals the exact Lean reference, and outside it the
+face refuses, intermediate values included. Decisions row 108 is its implementation plan, open in
+the register (the owner places it, no later than WASM). What row 108 leaves open (reading):
+- **No lane reads a refusal.** The truth runner records no profile refusal, and its comparator
+  has no class "outside the profile" (row 322 (4)). No corpus program reaches the bound.
+- **No theorem relates a target's refusal to the reference.** The Lean judgment covers `plus`, and
+  the OCaml and TypeScript refusals are finite checks (tested).
+- **No WASM target exists** to inherit the refusal.
+- **Exact native naturals stay conditional**: only when a native use needs values above 2^62.
 
 The side audit (`docs/research/2026-09-30-side-audit/`) adds two requirements:
 - **The arithmetic boundary includes the store functions and the values stored in cells**
-  (`incr`, `double`, `takeAndBump`, reached through Ref updates), not only the term atoms.
+  (`incr`, `double`, `takeAndBump`, reached through Ref updates), not only the term atoms. The
+  store now runs them as binder terms over the atoms above.
 - **A refusal is kept outside the program's result,** so that a `catchCause` or `exit` cannot hide
   it. The clock boundary (`harness/truth/session/clock.ts`) already works this way.
 
@@ -237,8 +256,18 @@ Floating point does not make natural numbers exact. FloatLib (arXiv 2609.19352) 
 methods, not a dependency (row 109): a proved equation for every compiler substitution, and fast
 paths that carry their proof.
 
-Rows 28, 29 and 31 remain open: full proof or a fragment-and-rule strategy, the common target and
-legalization design, and TypeScript read-back ordering.
+**What the lowering claims** (row 373 (4), ruled 2026-10-13). For the first share the claim has
+three parts. The Lean definitions carry the theorems. The LCNF route carries rule coverage and
+gated differentials. The trust boundary between them is named. That split is an interim claim, not
+the target. The target is the LCNF route with a proved stage law: the lowered code's semantics
+stand in Lean behind clean APIs. Then a claim proved of a program can be stated of its lowered
+implementation and carried to it. It is carried as for a verified implementation (the owner's
+words). The stage law at `Api.replay` stays on the plan. §3 and §9 record which differentials run
+today.
+
+Rows 28, 29 and 31 stay open: full proof or a fragment-and-rule strategy, the common target and
+legalization design, and TypeScript read-back ordering. Row 373 (4) rules row 28's claim for the
+first share.
 
 ## 9. The builtin table as data (2026-10-05)
 
