@@ -38,12 +38,17 @@ flowchart LR
 
 ## Proof placement
 
-Concept: typed program and compiler, serving R14's inspection tools.
+Concept: `initial-algebras-folds`, serving R14's inspection tools.
 Role: tool laws under decisions row 334, point 3.
 These laws do not change a registry claim about the machine.
 
 The tile laws describe integer translation and composition of drawing data.
 Their consumers are the program tile fold and its renderer.
+The room invariant combines containment and disjoint allocated cells.
+Its proposed tool question is `view-tile-room`, with role invariant.
+The pointer is `Tile.ofProgram_room` in `tools/Tools/View/Tube/Tile.lean`.
+It quantifies over every finite `Eff` program and every cell payload function.
+It establishes no bound on the ink or text that a renderer places in a cell.
 The fold uses `EffAlgebra.ofLayer` and `cata_eff` from `src/Effect4/Program/LayerView.lean` and `src/Effect4/Program/Fold.lean`.
 It adds no program syntax.
 

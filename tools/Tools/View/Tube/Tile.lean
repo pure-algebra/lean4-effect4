@@ -13,7 +13,7 @@ Other constructors keep their own cell beside their children, stacked with an ai
 This is a syntax picture. It claims no schedule, value-wire typing, or exact embedding of programs.
 
 Placement: the PC peg plan, R14 inspection tools, decisions row 334 (3).
-`ofProgram_fits` serves the page renderer: every allocated cell lies inside the computed room.
+`ofProgram_room` serves the page renderer: allocated cells lie inside the computed room and share no room.
 It says nothing about the ink or text a caller puts inside a cell.
 -/
 
@@ -79,21 +79,27 @@ def layer {Op α : Type} (value : EffFam → String → Header Op → α)
       let own := atom address (value fam ctor (args.map (Algebra.mapChild fun _ _ => ())))
       if kids.isEmpty then own else Layout.beside 1 own (Layout.column 1 kids)
 
+/-- Child-only indexing keeps a property supplied for every child address. -/
+theorem children_hold {Op α : Type} (property : Tile α → Prop)
+    (args : List (ArgF Op (Carrier α)))
+    (h : ∀ a ∈ args, Algebra.childOk (fun _ r => ∀ p, property (r p)) a) (p : List Nat) :
+    ∀ l ∈ ((args.filterMap child).zipIdx.map fun (r, i) => r (p ++ [i])), property l := by
+  intro l hl
+  obtain ⟨⟨r, i⟩, hr, rfl⟩ := List.mem_map.mp hl
+  obtain ⟨a, ha, he⟩ := List.mem_filterMap.mp (List.fst_mem_of_mem_zipIdx hr)
+  cases a with
+  | child f q =>
+    cases he
+    exact h _ ha _
+  | _ => cases he
+
 /-- Every layer keeps allocated cells in its room when its children do. -/
 theorem layer_fits {Op α : Type} (value : EffFam → String → Header Op → α)
     (fam : EffFam) (ctor : String) (args : List (ArgF Op (Carrier α)))
     (h : ∀ a ∈ args, Algebra.childOk (fun _ r => ∀ p, (r p).Fits) a) :
     ∀ p, (layer value fam ctor args p).Fits := by
   intro p
-  have hk : ∀ l ∈ ((args.filterMap child).zipIdx.map fun (r, i) => r (p ++ [i])), l.Fits := by
-    intro l hl
-    obtain ⟨⟨r, i⟩, hr, rfl⟩ := List.mem_map.mp hl
-    obtain ⟨a, ha, he⟩ := List.mem_filterMap.mp (List.fst_mem_of_mem_zipIdx hr)
-    cases a with
-    | child f q =>
-      cases he
-      exact h _ ha _
-    | _ => cases he
+  have hk := children_hold Layout.Fits args h p
   unfold layer
   split
   · exact Layout.Fits.row 1 _ hk
@@ -102,14 +108,48 @@ theorem layer_fits {Op α : Type} (value : EffFam → String → Header Op → �
     · exact atom_fits _ _
     · exact (atom_fits _ _).beside (Layout.Fits.column 1 _ hk)
 
+/-- Allocated cells share no room when child cells fit and share no room. -/
+theorem layer_clear {Op α : Type} (value : EffFam → String → Header Op → α)
+    (fam : EffFam) (ctor : String) (args : List (ArgF Op (Carrier α)))
+    (h : ∀ a ∈ args, Algebra.childOk (fun _ r => ∀ p, (r p).Fits ∧ (r p).Clear) a) :
+    ∀ p, (layer value fam ctor args p).Clear := by
+  intro p
+  have hk := children_hold (fun l => l.Fits ∧ l.Clear) args h p
+  have hf := fun l hl => (hk l hl).1
+  have hc := fun l hl => (hk l hl).2
+  unfold layer
+  split
+  · exact Layout.Clear.row 1 _ hf hc
+  · dsimp only
+    split
+    · exact Layout.clear_leaf _ _ _
+    · exact Layout.Clear.beside (atom_fits _ _) (Layout.Fits.column 1 _ hf)
+        (Layout.clear_leaf _ _ _) (Layout.Clear.column 1 _ hf hc)
+
 /-- A program's structural grid picture, through the existing program algebra. -/
 def ofProgram {Op α : Type} (value : EffFam → String → Header Op → α) (p : Eff Op) : Tile α :=
   cata_eff (EffAlgebra.ofLayer (layer value)) p []
 
+/-- Every allocated cell lies inside the room, and allocated cells share no room. -/
+theorem ofProgram_room {Op α : Type} (value : EffFam → String → Header Op → α) (p : Eff Op) :
+    (ofProgram value p).Fits ∧ (ofProgram value p).Clear := by
+  refine Algebra.cata_keeps (layer value)
+    (fun _ r => ∀ address, (r address).Fits ∧ (r address).Clear) ?_ .eff p []
+  intro fam ctor args h address
+  constructor
+  · apply layer_fits value fam ctor args _ address
+    intro a ha
+    cases a with
+    | child f r => exact fun p => (h _ ha p).1
+    | _ => trivial
+  · exact layer_clear value fam ctor args h address
+
 /-- Every allocated cell of a program's tile lies inside its computed room. -/
 theorem ofProgram_fits {Op α : Type} (value : EffFam → String → Header Op → α) (p : Eff Op) :
-    (ofProgram value p).Fits :=
-  Algebra.cata_keeps (layer value) (fun _ r => ∀ address, (r address).Fits)
-    (layer_fits value) .eff p []
+    (ofProgram value p).Fits := (ofProgram_room value p).1
+
+/-- Distinct allocated cells of a program's tile share no room. -/
+theorem ofProgram_clear {Op α : Type} (value : EffFam → String → Header Op → α) (p : Eff Op) :
+    (ofProgram value p).Clear := (ofProgram_room value p).2
 
 end Tools.View.Tube.Tile

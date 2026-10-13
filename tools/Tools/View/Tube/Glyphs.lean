@@ -76,8 +76,8 @@ def half (bore : Nat) : Nat := body bore / 2
 def apart (b₁ b₂ : Nat) : Nat := half b₁ + AIRGAP + half b₂
 
 /-- **A surge standing on a tube**: its body swollen by `SWELL` on each side over `len` from `s`,
-as a pressure wave swells a pipe (Joukowsky): a stretch of the body, a shoulder at each end. The
-still form of `swellOf`. A surge of no length is spent, and draws nothing. -/
+as a pressure wave swells a pipe (Joukowsky): a stretch of the body, a shoulder at each end.
+A surge of no length is spent, and draws nothing. -/
 def surgeOf (key : String) (t : Tube) (s : Int) (len : Nat) : List Mark :=
   let w := body t.bore
   [stretchOf (key ++ ":wall") t s len w w (if len = 0 then w else w + 2 * SWELL)]
@@ -140,33 +140,6 @@ theorem window_ok (x y : Int × Int) (v : Option (Int × Int)) (k : String) (tm 
     simp only [Stroke.at] at h
     split at h <;> simp only [reduceCtorEq] at h
 
-/-- A dash at sampled moments takes no path. A step of `carry_ok`. -/
-theorem windowAt_ok (vs : List (Int × Int)) (k : String) (tm : Timing) :
-    Lawful ⟨k, .windowAt vs, tm⟩ := by
-  intro t u h
-  change Stroke.at (.windowAt vs) (tm.at t) = .path u at h
-  simp only [Stroke.at, reduceCtorEq] at h
-
-/-- A width at sampled moments takes no path. A step of `carry_ok`. -/
-theorem widthAt_ok (ws : List Int) (k : String) (tm : Timing) : Lawful ⟨k, .widthAt ws, tm⟩ := by
-  intro t u h
-  change Stroke.at (.widthAt ws) (tm.at t) = .path u at h
-  simp only [Stroke.at, reduceCtorEq] at h
-
-/-- **A carry keeps the tracks lawful**: it keeps some of a mark's tracks and adds a dash and a
-width, which take no path (`Tools.View.Tube.Physics`). A step of `step_ok`. -/
-theorem carry_ok {B : Picture} {k : String} {trs : List Track} (h : ∀ tr ∈ trs, Lawful tr) :
-    ∀ tr ∈ B.carry k trs, Lawful tr := by
-  intro tr htr
-  unfold Picture.carry at htr
-  split at htr
-  · simp only [List.mem_append, List.mem_filter, List.mem_cons, List.not_mem_nil, or_false] at htr
-    rcases htr with ⟨hm, -⟩ | rfl | rfl
-    · exact h tr hm
-    · exact windowAt_ok _ _ _
-    · exact widthAt_ok _ _ _
-  · exact h tr htr
-
 /-- The pose a mark passes through keeps the bend law when the mark it is taken from does. A
 step of `tracksOf_ok`. -/
 theorem viaTube_ok {via : Option Mark} {b : Mark} (hv : ∀ v, via = some v → v.tube.ok) :
@@ -220,8 +193,7 @@ theorem gone_ok {m : Mark} (h : m.tube.ok) : m.gone.tube.ok := by
 
 /-- **Every moment of a step keeps the bend law**: the kit's join of two pictures whose marks keep
 it, and whose poses passed through keep it, yields lawful tracks only. What enters grows from its
-root and what leaves shrinks to it (`gone_ok`); what is kept morphs (`Tube.mix_ok`); a carried unit
-changes only its dash and its width (`carry_ok`). -/
+root and what leaves shrinks to it (`gone_ok`); what is kept morphs (`Tube.mix_ok`). -/
 theorem step_ok {A B : Picture} (hA : ∀ m ∈ A.marks, m.tube.ok) (hB : ∀ m ∈ B.marks, m.tube.ok)
     (hV : ∀ m ∈ B.via, m.tube.ok) : ∀ tr ∈ A.step B, Lawful tr := by
   intro tr htr
@@ -229,9 +201,9 @@ theorem step_ok {A B : Picture} (hA : ∀ m ∈ A.marks, m.tube.ok) (hB : ∀ m 
   simp only [List.mem_append, List.mem_flatMap] at htr
   rcases htr with (⟨⟨a, b⟩, hab, ht⟩ | ⟨b, hb, ht⟩) | ⟨a, ha, ht⟩
   · obtain ⟨ha, hb, -⟩ := Whatwg.Svg.Scene.mem_update _ _ _ hab
-    exact carry_ok (tracksOf_ok (hA a ha) (hB b hb) (fun v hv => hV v (List.mem_of_find?_eq_some hv))) tr ht
+    exact tracksOf_ok (hA a ha) (hB b hb) (fun v hv => hV v (List.mem_of_find?_eq_some hv)) tr ht
   · have hb' := ((Whatwg.Svg.Scene.mem_enter _ _ _).mp hb).1
-    exact carry_ok (tracksOf_ok (gone_ok (hB b hb')) (hB b hb') (by intro _ hv; cases hv)) tr ht
+    exact tracksOf_ok (gone_ok (hB b hb')) (hB b hb') (by intro _ hv; cases hv) tr ht
   · have ha' := ((Whatwg.Svg.Scene.mem_exit _ _ _).mp ha).1
     exact tracksOf_ok (hA a ha') (gone_ok (hA a ha')) (by intro _ hv; cases hv) tr ht
 

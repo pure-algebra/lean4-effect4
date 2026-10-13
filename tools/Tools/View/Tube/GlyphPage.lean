@@ -3,15 +3,12 @@ import Tools.View.Tube.Sheet
 import Tools.View.GlyphSheet
 
 /-!
-# Tools.View.Tube.GlyphPage — every mark as tubes, as the studio page `tube-glyphs.html`
+# Tools.View.Tube.GlyphPage — the peg vocabulary, as the studio page `tube-glyphs.html`
 
-Three parts: each kind's family, its rule in one sentence and its marks as figures; the morphs a
-run makes, as films (a promise kept, a scope closed, a fork joined, an interrupt held by a rail
-and landing at its end, a hole filled by a value, and any mark into any other); and every sort of
-`Tools.View.Glyph.sorts`, each constructor with its figure. The figures are
-`Tools.View.Tube.Glyphs`; every picture is drawn at one pixel to the pixel, and a film's last
-picture stands for it where the reader prefers reduced motion (`Sheet.filmFigure`). Viewing
-ergonomics only: nothing reads the page.
+The static cards use `Glyphs.pegStill`. The constructor table uses the same cached cards.
+The motion studies retain the tube renderer until their changing structures have peg transitions.
+Each film has a final still for readers who prefer reduced motion (`Sheet.filmFigure`).
+The page is a view. Nothing reads its output.
 -/
 
 namespace Tools.View.Tube.GlyphPage
@@ -53,18 +50,21 @@ private def titled (k title : String) (body : List RawNode) (level : String := "
 def drawn (s : Shape) : List Mark := (draw s).picture.marks
 def joinsOf (s : Shape) : List Join := (draw s).picture.joins
 
-/-- A mark's figure, still, at one pixel to the pixel. -/
-def still (s : Shape) : SvgNode := Tube.still SIDE SIDE (drawn s) (joinsOf s)
+/-- A mark's peg figure, or the body whose tangent is refused. -/
+def still (s : Shape) : RawNode :=
+  match Glyphs.pegStill s with
+  | .ok svg => svg.toRaw
+  | .error i => el "p" [.text s!"The peg figure {name s} has no tangent at body {i}."]
 
 /-- **Every mark's still, drawn once.** A mark stands on many cards (its family's, and each
 constructor's that it draws), and a card reads its still here, so the pen draws each figure once. -/
-def stills : List (Shape × RawNode) := shapes.map fun s => (s, (still s).toRaw)
+def stills : List (Shape × RawNode) := shapes.map fun s => (s, still s)
 
 /-- A figure in a card, over its caption: the mark's still from `stills`. -/
 private def card (s : Shape) (caption : List RawNode) : RawNode :=
   let picture := match stills.find? (·.1 == s) with
     | some (_, picture) => picture
-    | none => (still s).toRaw
+    | none => still s
   el "figure" [picture, el "figcaption" caption]
 
 /-! ## Films -/
@@ -199,7 +199,7 @@ def filmAny : RawNode :=
 /-- **The page's blocks.** -/
 def blocks : List RawNode :=
   let total := (sorts.map (·.ctors.length)).foldl (· + ·) 0
-  [el "p" [.text s!"Every mark of the vocabulary as a figure of tubes: {shapes.length} marks of seven kinds, each kind one plumbing element, drawn with the one pen at one pixel to the pixel. A solid join shares fluid; an air gap means that nothing passes. Any mark turns into any other by the morph of its tubes, and every moment of the morph keeps the bend law (morph_ok, tools/Tools/View/Tube/Glyphs.lean). The note is docs/research/2026-10-13-tube-language/glyphs.md."],
+  [el "p" [.text s!"The vocabulary on the peg grid: {shapes.length} marks of seven kinds. Each static card uses signed pegs and their string outline. The motion studies below still use tube transitions. Their bend law is morph_ok in tools/Tools/View/Tube/Glyphs.lean."],
    titled "families" "The families"
      (Glyph.Kind.all.map fun k =>
        titled ("family-" ++ kindName k) (kindName k)

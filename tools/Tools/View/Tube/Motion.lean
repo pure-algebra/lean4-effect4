@@ -16,7 +16,7 @@ point. A stroke needs three it lacks, so they are here in the kit's form (`Strok
 
 * **`bend`**: the centreline, by the intrinsic morph of `Tube.mix`, through a pose if one is given.
   Every moment of it keeps the bend law (`Tube.mix_ok`).
-* **`width`**: the stroke's width; **`swell`**, a width that rises from nothing and falls back.
+* **`width`**: the stroke's width.
 * **`window`**: one dash, its start and its length along the stroke: a unit carried along a pipe.
 
 **Why SMIL.** The kit writes a track as CSS (`Whatwg.Html.Node.SvgMotion`), and WebKit animates no
@@ -49,27 +49,7 @@ inductive Stroke where
   /-- One dash: its start and its length, from `a` to `b`, through `via` at the halfway of the
   easing where one is given: a valve that opens to let a unit in and closes behind it. -/
   | window (a b : Int × Int) (via : Option (Int × Int))
-  /-- One dash at moments spread evenly over the change, a unit's carry by
-  `Tools.View.Tube.Physics`: the line between the two moments either side. -/
-  | windowAt (vs : List (Int × Int))
-  /-- The stroke's width at moments spread evenly over the change. -/
-  | widthAt (ws : List Int)
 deriving Repr, Inhabited
-
-/-- **A list of samples at a progress** `e` in thousandths: the samples spread evenly from the
-start to the end, and the line between the two either side of `e`. -/
-def sampleAt (vs : List Int) (e : Int) : Int :=
-  match vs with
-  | [] => 0
-  | [v] => v
-  | v :: _ =>
-    let n : Int := vs.length - 1
-    let e := max 0 (min 1000 e)
-    let i := (e * n / 1000).toNat
-    let r := e * n - (i : Int) * 1000
-    let a := vs.getD i v
-    let b := vs.getD (i + 1) a
-    a + (b - a) * r / 1000
 
 /-- **The pose of a change** at an eased progress `e` in thousandths. -/
 def Stroke.at : Stroke → Int → Pose
@@ -81,8 +61,6 @@ def Stroke.at : Stroke → Int → Pose
   | .window a b (some v), e =>
     if e ≤ 500 then .window (Whatwg.Svg.Scene.mix a.1 v.1 (2 * e)) (Whatwg.Svg.Scene.mix a.2 v.2 (2 * e))
     else .window (Whatwg.Svg.Scene.mix v.1 b.1 (2 * e - 1000)) (Whatwg.Svg.Scene.mix v.2 b.2 (2 * e - 1000))
-  | .windowAt vs, e => .window (sampleAt (vs.map (·.1)) e) (sampleAt (vs.map (·.2)) e)
-  | .widthAt ws, e => .width (sampleAt ws e)
 
 /-- **A track**: the key of the thing it changes, the change, and its transition, in thousandths
 of a beat. -/
@@ -102,63 +80,12 @@ theorem Track.at_done (tr : Track) (t : Nat) (h : tr.timing.delay + tr.timing.du
 
 /-! ## Pictures and steps -/
 
-/-- **An event**: a stretch of a body that lives only during the beat that leads to its picture,
-a swell that runs along the body of the mark `follows` (its tube as it stands at each moment, or
-`tube` where the step has no such mark) from `from_` to `to` on `timing`, its width rising by
-`peak` and falling back. -/
-structure Event where
-  key : String
-  follows : String
-  tube : Tube
-  width : Nat
-  len : Nat
-  from_ : Int
-  to : Int
-  peak : Nat
-  timing : Timing
-  level : Nat := 0
-  /-- Where given, the swell's start and its rise at moments spread evenly over its timing, in
-  place of the line from `from_` to `to` and the bump of `peak`: a swell round a unit that the
-  law of `Tools.View.Tube.Physics` carries, its rise read from the unit's speed. -/
-  track : List (Int × Int) := []
-deriving Inhabited
-
-/-- **A carry**: a unit moved through one beat by the law of `Tools.View.Tube.Physics`, its dash
-and its width at moments spread evenly over the beat. -/
-structure Carry where
-  key : String
-  window : List (Int × Int)
-  width : List Int
-deriving Inhabited
-
-/-- **A picture**: its marks, the poses some of them pass through on the way to it, its events,
-and its solid joins. -/
+/-- A picture: its marks, their intermediate poses, and its solid joins. -/
 structure Picture where
   marks : List Mark
   via : List Mark := []
-  events : List Event := []
   joins : List Join := []
-  /-- The units the law carries into this picture, in place of their eased windows and widths. -/
-  carries : List Carry := []
 deriving Inhabited
-
-/-- The whole beat, at an even pace: the timing of a carry, whose samples are its pace. -/
-def wholeBeat : Timing := { delay := 0, duration := 1000, ease := Easing.linear }
-
-/-- **A swell** round a unit carried along the body `follows` from the dash `a` to the dash `b`, on
-the unit's timing: the body widens round it and closes behind it, as a tube's wall does round a
-bolus that peristalsis drives (Shapiro, Jaffrin and Weinberg 1969). One smooth stretch, its width
-eased in and out, so the body's outline keeps its tangent. -/
-def swellOf (key follows : String) (t : Tube) (a b : Int × Nat) (timing : Timing)
-    (within : Option (Int × Int) := none) : List Event :=
-  let reach : Nat := 12000
-  let len := a.2 + 2 * reach
-  -- a swell in a vessel stays on its middle, clear of the reducers at its ends
-  let keep (x : Int) : Int := match within with
-    | some (lo, hi) => max lo (min x (hi - (len : Int)))
-    | none => x
-  [{ key, follows, tube := t, width := body t.bore, len, from_ := keep (a.1 - reach),
-     to := keep (b.1 - reach), peak := 2 * SWELL, timing }]
 
 /-- **The tracks of a mark** from `a` to `b`, through `via` where one is given: its centreline on
 the tube's time, its width and its dash on its own. -/
@@ -174,21 +101,12 @@ def tracksOf (a b : Mark) (via : Option Mark) : List Track :=
     if d != d' || viaDash.isSome then [⟨b.key, .window (d.1, d.2) (d'.1, d'.2) viaDash, b.move⟩] else []
   | _, _ => []
 
-/-- **A carried unit's tracks**: where the picture carries the key, the unit keeps its centreline's
-track and takes its dash and its width from the carry, over the whole beat. -/
-def Picture.carry (B : Picture) (k : String) (trs : List Track) : List Track :=
-  match B.carries.find? (·.key == k) with
-  | some c =>
-    trs.filter (fun tr => match tr.change with | .window .. | .width .. => false | _ => true) ++
-      [⟨k, .windowAt c.window, wholeBeat⟩, ⟨k, .widthAt c.width, wholeBeat⟩]
-  | none => trs
-
 /-- **A step** (`Picture.step`): the kit's join of two pictures by key, and the tracks of what it keeps, what enters
 (from nothing where it stands) and what leaves (to nothing where it stood). -/
 def Picture.step (A B : Picture) : List Track :=
   let j := join (·.key) A.marks B.marks
-  j.update.flatMap (fun (a, b) => B.carry b.key (tracksOf a b (B.via.find? (·.key == b.key)))) ++
-  j.enter.flatMap (fun b => B.carry b.key (tracksOf b.gone b none)) ++
+  j.update.flatMap (fun (a, b) => tracksOf a b (B.via.find? (·.key == b.key))) ++
+  j.enter.flatMap (fun b => tracksOf b.gone b none) ++
   j.exit.flatMap (fun a => tracksOf a a.gone none)
 
 /-! ## Writing a film -/
@@ -211,10 +129,6 @@ def span (trs : List Track) : Nat × Nat :=
 /-- The moments of a span, `n` steps of it. -/
 def moments (sp : Nat × Nat) (n : Nat := MOMENTS) : List Nat :=
   (List.range (n + 1)).map fun k => sp.1 + k * (sp.2 - sp.1) / n
-
-/-- Moments sampled of a swell: ten, since its bump runs evenly and the browser draws straight
-between close samples. -/
-def SWELL_MOMENTS : Nat := 10
 
 /-- **One attribute animated** through its values over a span of a step: begun `start`
 milliseconds into the film (and as long after a click), for the span's duration, holding its end. A
@@ -249,25 +163,6 @@ def partAnims (id : String) (beat start : Nat) (p : Part) (m : Mark) (trs : List
       (states.map fun s => match s.dash with | some (_, l) => num l ++ " " ++ num BIG | none => "none") ++
     animate id beat start sp "stroke-dashoffset"
       (states.map fun s => match s.dash with | some (a, _) => num (-a) | none => "0")
-
-/-- **An event at a moment**: its stretch along the body it follows, as that body stands then. -/
-def Event.at (e : Event) (along : Nat → Tube) (t : Nat) : Mark :=
-  if !e.track.isEmpty then
-    let p := e.timing.at t
-    let rise := (sampleAt (e.track.map (·.2)) p).toNat
-    stretchOf e.key (along t) (sampleAt (e.track.map (·.1)) p) e.len e.width e.width (e.width + rise)
-  else
-  let p := e.timing.at t
-  let lin := ({ e.timing with ease := Easing.linear } : Timing).at t
-  let l := clamp lin
-  let amp : Int := (e.peak * 4 * l * (1000 - l) / 1000000 : Nat)
-  stretchOf e.key (along t) (Whatwg.Svg.Scene.mix e.from_ e.to p) e.len e.width e.width
-    (e.width + amp.toNat)
-
-/-- An event before it starts and after it ends: a stretch of no length and no width, which
-draws nothing, cased or not, in as many cubics as the swell (`Kit.bulge`). -/
-def Event.rest (e : Event) : Mark :=
-  stretchOf e.key e.tube e.from_ 0 0 0 0
 
 /-- **A mark hidden at its root**: its tube at no length and its stroke at no width, so it draws
 nothing. A morph from it grows the mark from its root, in length and in width at once, and a
@@ -317,17 +212,6 @@ def film (id : String) (W H : Nat) (pictures : List Picture) (beat : Nat := 1000
     let cased := (marks.filter (·.cased)).zipIdx.map fun (m, k) =>
       (m.key, s!"{id}-b{k}", pathDef s!"{id}-b{k}" (bodyPath.d m) (animsOf m bodyPath))
     let defOf (k : String) : String := ((cased.find? (·.1 == k)).map (·.2.1)).getD ""
-    -- an event's path at every moment of the event, drawn twice
-    let events : List (Nat × String × SvgNode) := stepTracks.zipIdx.flatMap fun ((A, B, i, trs), si) =>
-      B.events.zipIdx.map fun (e, ei) =>
-        let along (t : Nat) : Tube :=
-          ((baseOf A B e.follows).map fun m => (m.under trs t).tube).getD e.tube
-        let sp := (e.timing.delay, e.timing.delay + e.timing.duration)
-        let states := (moments sp SWELL_MOMENTS).zipIdx.map fun (t, k) =>
-          if k == 0 || k == SWELL_MOMENTS then { e.rest with tube := along t } else e.at along t
-        let did := s!"{id}-e{si}-{ei}"
-        (e.level, did, pathDef did (bodyPath.d e.rest)
-          (animate id beat (start i) sp "d" (states.map fun st => print (bodyPath.d st))))
     let joinKeys : List Join := (pictures.flatMap (·.joins)).foldl
       (fun js j => if js.any (·.key == j.key) then js else js ++ [j]) []
     let joins : List (Nat × String × SvgNode) := joinKeys.zipIdx.map fun (j, k) =>
@@ -340,22 +224,17 @@ def film (id : String) (W H : Nat) (pictures : List Picture) (beat : Nat := 1000
         let ms := [j.parent, j.branch].filterMap (baseOf A B)
         animate id beat (start i) sp "d" ((moments sp).map fun t => print (web (ms.map (·.under mine t))))
       (lv, s!"{id}-j{k}", pathDef s!"{id}-j{k}" (web first.marks) anims)
-    let deepest := max (depth all) (events.foldl (fun d e => max d e.1) 0)
+    let deepest := depth all
     let twice (layer : Nat) (did : String) : List SvgNode :=
       if layer == BODIES then [useOf did "tube-casing"]
       else if layer == INTERIORS then [useOf did "tube-ground"] else []
     Svg.Frame.svg { width := W, height := H, ratio := 1 } [.className "tube-view", .ident id]
-      ([Svg.defs (cased.map (·.2.2) ++ events.map (·.2.2) ++ joins.map (·.2.2))] ++
+      ([Svg.defs (cased.map (·.2.2) ++ joins.map (·.2.2))] ++
        (List.range (deepest + 1)).flatMap fun lv => (List.range LAYERS).flatMap fun l =>
         ((marks.filter (·.level == lv)).flatMap fun m =>
           if m.cased then (if m.fill == .ink && l == INTERIORS then [] else twice l (defOf m.key))
           else (m.parts.filter (·.layer == l)).map fun p => partNode p m (animsOf m p)) ++
-        ((events.filter (·.1 == lv)).flatMap fun e => twice l e.2.1) ++
         ((joins.filter (·.1 == lv)).flatMap fun e => twice l e.2.1))
-
--- samples spread over the beat: the ends, and the line between two samples
-#guard sampleAt [0, 100, 300] 0 == 0 && sampleAt [0, 100, 300] 1000 == 300 &&
-  sampleAt [0, 100, 300] 500 == 100 && sampleAt [0, 100, 300] 750 == 200 && sampleAt [7] 400 == 7
 
 /-- The rules of a film's figure: its last picture stands for it where the reader prefers
 reduced motion. -/

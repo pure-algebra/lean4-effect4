@@ -2,20 +2,23 @@ import Tools.View.GlyphSheet
 import Tools.View.CellSheet
 import Tools.View.Tube.Sheet
 import Tools.View.Tube.GlyphPage
+import Tools.View.Tube.TilePage
 import Tools.View.Tube.Measure
 import Tools.View.Tokens
 
 /-!
 # The vocabulary of marks and the value pictures, as studio pages (VS-1, VS-2, decisions row 367)
 
-`lake env lean --run tools/Drivers/GlyphSheet.lean OUT` writes four pages:
+`lake env lean --run tools/Drivers/GlyphSheet.lean OUT` writes five pages:
 
 * `OUT/glyphs.html`: every mark of `Tools.View.Glyph` drawn, and each sort's constructors with
   their marks;
 * `OUT/cells.html`: the Queue's cell drawn by its type, step by step (`Tools.View.CellSheet`);
 * `OUT/tubes.html`: the tube language, its morphs, and the Queue as plumbing (`Tools.View.Tube.Sheet`);
 * `OUT/tube-glyphs.html`: every mark of the vocabulary as a figure of tubes, and the morphs a run
-  makes (`Tools.View.Tube.GlyphPage`).
+  makes (`Tools.View.Tube.GlyphPage`);
+* `OUT/program-pegs.html`: real programs folded into grid tiles with peg marks
+  (`Tools.View.Tube.TilePage`).
 
 Each stands in the site's shell and the base look. The studio serves them (`tools/view/out/docs/`),
 and the viewer shows one after each build. Viewing ergonomics only: no test, and nothing reads
@@ -68,7 +71,8 @@ def main (args : List String) : IO UInt32 := do
   let pages ← [("glyphs.html", "The vocabulary of marks", sheetBlocks, contactCss),
     ("cells.html", "The Queue's cell, drawn by its type", CellSheet.blocks, CellSheet.css),
     ("tubes.html", "One body: the tube language", Tube.Sheet.blocks, Tube.Sheet.css),
-    ("tube-glyphs.html", "Every mark as tubes", Tube.GlyphPage.blocks, Tube.GlyphPage.css)].mapM
+    ("tube-glyphs.html", "Every mark as pegs", Tube.GlyphPage.blocks, Tube.GlyphPage.css),
+    ("program-pegs.html", "Programs on the peg grid", Tube.TilePage.blocks, Tube.TilePage.css)].mapM
     fun (file, title, blocks, css) => page out file title blocks css
   IO.FS.writeFile (out / "measure.tsv")
     ("\n".intercalate (Tube.Measure.HEAD :: (pages.flatMap (·.2)).map (·.line)) ++ "\n")
