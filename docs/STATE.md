@@ -306,8 +306,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
    strips, DS-3 inline pictures with a look switch, DS-4 the keyed diff, DS-5 the document specimen.
    The documentation site (rows 363 and 364) is live at `https://effect4-docs.pages.dev`, deployed
    by `make deploy-site`. It is one value whose pages the semantics report is split into, each page
-   in a typed shell with the site's navigation. Next: the open plan in words (the understanding
-   note's slice OPEN), then the design and semantics grill. The C player stays first-class (row
+   in a typed shell with the site's navigation. Its first semantics page is the open work: each
+   planned goal with its docstring, and each modulo theorem's chain to it. Next: the design and
+   semantics grill. The C player stays first-class (row
    363, point 5).
 1. **The view and the printer**, one plan across four notes. The order:
    - the program's own graph (row 337, point 9). First its design, with an agent's place in it.

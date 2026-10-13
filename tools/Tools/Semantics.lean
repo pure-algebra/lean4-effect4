@@ -110,12 +110,12 @@ def roleName (r : Role) : String := match r with
 
 /-! ## The report as data
 
-`buildReport` measures once and returns a `Report`. Its JSON (`Report.toJson`, schema six) and its
+`buildReport` measures once and returns a `Report`. Its JSON (`Report.toJson`, schema seven) and its
 document (`Report.document`, `Tools/SemanticsDocument.lean`) are both read from this value, so no
 output parses another. -/
 
 /-- A declaration as the report shows it: its printed statement, the axioms it reaches and the
-planned goals it rests on, both sorted by name. -/
+planned goals it rests on, both sorted by name, and its docstring, the author's explanation. -/
 structure DeclarationEntry where
   name : Name
   module : Name
@@ -123,6 +123,7 @@ structure DeclarationEntry where
   statement : String
   axioms : List Name
   restsOn : List Name
+  doc : Option String := none
   deriving Inhabited
 
 /-- No axiom outside the semantic ceiling. `buildReport` refuses a declaration that reaches one, so
@@ -187,6 +188,8 @@ structure NodeEntry where
   nearest : List Name
   lemmas : Nat
   definitions : Nat
+  /-- the node's docstring: for a planned goal, why its proof waits -/
+  doc : Option String := none
   deriving Inhabited
 
 /-- A requirement with its derived status, its top and placed nodes with theirs, and its next goals. -/
@@ -246,7 +249,7 @@ structure Report where
   placement : PlacementEntry
   deriving Inhabited
 
-/-! ## Its JSON (schema six) -/
+/-! ## Its JSON (schema seven: six with each declaration's and node's docstring) -/
 
 private def text (s : String) : Json := Lean.toJson s
 private def names (ns : List Name) : Json := Lean.toJson (ns.map Name.toString)
@@ -256,7 +259,8 @@ def DeclarationEntry.toJson (d : DeclarationEntry) : Json := obj [
   ("name", text d.name.toString), ("module", text d.module.toString),
   ("levels", names d.levels), ("statement", text d.statement),
   ("axioms", names d.axioms), ("restsOn", names d.restsOn),
-  ("withinSemanticAxiomCeiling", Lean.toJson d.withinCeiling)]
+  ("withinSemanticAxiomCeiling", Lean.toJson d.withinCeiling),
+  ("doc", match d.doc with | some s => text s | none => .null)]
 
 def RegisterRow.toJson (r : RegisterRow) : Json := obj [
   ("id", text r.id), ("registerStatus", text r.registerStatus), ("record", text r.record),
@@ -298,6 +302,7 @@ def PlanEntry.toJson (p : PlanEntry) : Json := obj [
           ("requirement", match p.requirement with | some r => text r | none => .null)]
       | none => .null),
     ("statement", text n.statement), ("axioms", names n.axioms),
+    ("doc", match n.doc with | some s => text s | none => .null),
     ("broughtIn", obj [("nearest", names n.nearest),
       ("lemmas", Lean.toJson n.lemmas), ("definitions", Lean.toJson n.definitions)])])),
   ("next", names p.next), ("unplacedGoals", names p.unplacedGoals)]
@@ -319,7 +324,7 @@ def producer : String := Tools.GeneratedStamp.note "tools/Drivers/Semantics.lean
 def command : String := "make gen-semantics"
 def inputs : List String := ["tools/ProofGraph/Registry.lean", "tools/Tools/Semantics.lean",
   "tools/Drivers/Semantics.lean", "tools/Tools/SemanticsDisplay.lean",
-  "tools/Tools/SemanticsDocument.lean", "tools/Tools/Document.lean", "tools/Tools/Document/Html.lean",
+  "tools/Tools/SemanticsDocument.lean", "tools/Tools/Document.lean", "tools/Tools/Document/Json.lean",
   "src/Effect4/Laws/Auto/Semantics.lean",
   "Test/Counterexamples/REGISTER.md", "docs/core/decisions.md", "lean-toolchain"]
 /-- The placement universe, in words. -/
@@ -327,7 +332,7 @@ def placementUniverse : String :=
   "theorems of the registry's concept-named modules; auxiliary names and planned goals excluded"
 
 def Report.toJson (r : Report) : Json := obj [
-  ("format", text "effect4-semantics-report"), ("schemaVersion", Lean.toJson (6 : Nat)),
+  ("format", text "effect4-semantics-report"), ("schemaVersion", Lean.toJson (7 : Nat)),
   ("producer", text producer), ("command", text command), ("inputs", Lean.toJson inputs),
   ("provenance", obj [("toolchain", text r.toolchain), ("roots", names r.roots),
     ("policy", obj [("gate", text "Test/Audit/AxiomGate.lean"),
@@ -394,7 +399,8 @@ private def declaration (memo : Memo) (name : Name) : MetaM DeclarationEntry := 
   let disallowed := ProofGraph.disallowedAxioms axioms
   unless disallowed.isEmpty do throwError "{name}: disallowed axioms {disallowed}"
   return { name, module := moduleOf memo env name, levels := ci.levelParams, statement := printed,
-           axioms := axioms.toList, restsOn := (goals.qsort (·.toString < ·.toString)).toList }
+           axioms := axioms.toList, restsOn := (goals.qsort (·.toString < ·.toString)).toList,
+           doc := ← findDocString? env name }
 
 private def witness (memo : Memo) (name : Name) : MetaM DeclarationEntry := do
   -- `ProofRef.validate`'s checks at the theorem's own proposition, with the axioms memoized
@@ -451,7 +457,7 @@ private def planEntry (memo : Memo) (plan : ProofGraph.Plan) (requirements : Lis
       standing := n.standing.word, restsOn := n.restsOn.toList, module := moduleOf memo env n.name,
       placement := semanticsAttribute.getParam? env n.name, statement := ← statementOf memo n.name,
       axioms := (n.axioms.qsort (·.toString < ·.toString)).toList, nearest := n.nearest.toList,
-      lemmas := n.lemmas, definitions := n.definitions }
+      lemmas := n.lemmas, definitions := n.definitions, doc := ← findDocString? env n.name }
   let index : Std.HashMap Name ProofGraph.Node := plan.nodes.foldl (fun m n => m.insert n.name n) {}
   let word (n : Name) : String := ((index[n]?).map (·.standing.word)).getD "missing"
   let reqs : List RequirementEntry := requirements.map fun r =>

@@ -126,7 +126,8 @@ private def claimPart (c : ClaimEntry) : Block :=
       ("Literature", [.text l.work, .text ", ", .text l.locator, .text s!" ({l.relation})"])
   let records := (match e with | .refuted row => [row] | _ => []) ++ c.contestedBy
   .part (claimKey c.claim.id) c.claim.id <|
-    [.para [.text c.claim.title]] ++ (if fields.isEmpty then [] else [.fields fields]) ++
+    [.para [.text c.claim.title]] ++ ((e.declaration?.bind (·.doc)).map prose).getD [] ++
+    (if fields.isEmpty then [] else [.fields fields]) ++
     (e.declaration?.map fun d => [Block.code "lean" d.statement]).getD [] ++
     records.flatMap recordBlocks
 
@@ -244,6 +245,74 @@ private def planPart (plan : PlanEntry) : Block := Id.run do
       [.code "mermaid" mermaid, .table ["Node", "Status", "Rests on", "Nearest nodes"] nodeRows]]
   return .part "plan" "Plan" body
 
+/-- The shortest chain from `start` to `goal` along `nearestOf`, through the nodes `inside` keeps,
+breadth first; `none` when the bound runs out first or no chain exists. -/
+private def chainTo (nearestOf : String → List String) (inside : String → Bool) (bound : Nat)
+    (start goal : String) : Option (List String) := Id.run do
+  let mut parent : Std.HashMap String String := {}
+  let mut queue : Array String := #[start]
+  let mut head := 0
+  let mut seen : Std.HashSet String := Std.HashSet.emptyWithCapacity.insert start
+  for _ in [0:bound] do
+    let some n := queue[head]? | break
+    head := head + 1
+    for d in nearestOf n do
+      if inside d && !seen.contains d then
+        seen := seen.insert d
+        parent := parent.insert d n
+        queue := queue.push d
+  unless seen.contains goal do return none
+  let mut path := [goal]
+  let mut at' := goal
+  for _ in [0:bound] do
+    match parent[at']? with
+    | some p => path := p :: path; at' := p
+    | none => break
+  return some path
+
+/-- **The open work** (the understanding note's slice OPEN): each planned goal of the plan with its
+docstring, which says why its proof waits, its statement, the claims and requirements that rest on
+it, and the chain by which each theorem proved modulo it reaches it. Every name and edge is the
+report's. -/
+private def openPart (plan : PlanEntry) (claims : List ClaimEntry) : Block := Id.run do
+  let index : Std.HashMap String NodeEntry := plan.nodes.foldl (fun m n => m.insert n.name.toString n) {}
+  let goals := plan.nodes.filter (·.goal)
+  let modulo := plan.nodes.filter (·.standing == "modulo")
+  let open' := (goals ++ modulo).map (·.name.toString)
+  let openSet := Std.HashSet.ofList open'
+  let shown := shownIn (displayNames open') open'
+  let nearestOf (n : String) : List String := ((index[n]?).map (·.nearest.map Name.toString)).getD []
+  let restsOn (n : String) (g : String) : Bool := ((index[n]?).map (·.restsOn.any (·.toString == g))).getD false
+  let refs (ls : List Line) : Line := if ls.isEmpty then [.text "—"] else List.intercalate [.text ", "] ls
+  let mut parts : List Block := []
+  for g in goals do
+    let name := g.name.toString
+    let claimRefs := claims.filterMap fun c => match c.evidence with
+      | .wanted d | .modulo d =>
+        if d.name.toString == name || d.restsOn.any (·.toString == name) then some [.ref (claimKey c.claim.id) c.claim.id] else none
+      | _ => none
+    let reqRefs := plan.requirements.filterMap fun r =>
+      if (r.top ++ r.placed).any (fun (n, _) => n.toString == name || restsOn n.toString name) then
+        some [.ref ("req:" ++ r.requirement.id) r.requirement.id]
+      else none
+    let chains : List Line := modulo.filterMap fun m =>
+      if !m.restsOn.any (·.toString == name) then none else
+      (chainTo nearestOf openSet.contains open'.length m.name.toString name).map fun path =>
+        List.intercalate [.text " → "] (path.map fun n => [.code (shown n)])
+    parts := parts ++ [.part ("open:" ++ name) (shown name) <|
+      (match g.doc with
+        | some d => prose d
+        | none => [.para [.text "No docstring says why this goal waits."]]) ++
+      [.fields [("Module", [.code g.module.toString]), ("Claims", refs claimRefs), ("Requirements", refs reqRefs)],
+       .code "lean" g.statement] ++
+      (if chains.isEmpty then [] else
+        [.para [.text s!"Proved modulo this goal ({chains.length}), each by its shortest chain of nearest nodes:"],
+         .items chains])]
+  return .part "open" "Open work" <|
+    [.para [.text s!"The open part of the plan: {goals.length} planned goals, and {modulo.length} theorems proved modulo them. ",
+      .text "A goal's docstring, written with its statement, says why its proof waits. A chain shows how a theorem ",
+      .text "reaches a goal: each step is an edge of the plan, from a node to a node its proof reaches first."]] ++ parts
+
 /-- The acceptance section (decisions row 206): one row per program, its stage as its battery
 declares it, and the programs each requirement keeps waiting. -/
 private def acceptancePart (programs : List AcceptanceEntry) : List Block :=
@@ -271,7 +340,7 @@ def Report.document (r : Report) : Document :=
   let byConcept : Std.HashMap String (Array ClaimEntry) :=
     r.claims.foldl (fun m c => m.insert c.claim.concept ((m.getD c.claim.concept #[]).push c)) {}
   { title := "Semantics evidence"
-    producer := [producer, "format: effect4-semantics-report v6", s!"command: {command}",
+    producer := [producer, "format: effect4-semantics-report v7", s!"command: {command}",
       s!"inputs: {", ".intercalate inputs}"]
     body :=
       [.para [.text "This page lists the claims that Effect4 makes about Effect's runtime, concept by concept, ",
@@ -294,7 +363,8 @@ def Report.document (r : Report) : Document :=
            [.status "refuted", .text ": a register record refutes the claim with a theorem."],
            [.status "absent", .text ": no declaration states the claim yet; its row gives the reason."],
            [.status "assumed", .text ": the claim is taken from an outside source, with its reason."],
-           [.status "missing", .text ": in the plan, a name that no node holds."]]]] ++
+           [.status "missing", .text ": in the plan, a name that no node holds."]]],
+       openPart r.plan r.claims] ++
       r.concepts.map (fun c => conceptPart c (byConcept.getD c.id #[]).toList) ++
       [applicabilityPart r.cuts, placementPart r.placement, planPart r.plan] ++ acceptancePart r.acceptance }
 

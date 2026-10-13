@@ -138,6 +138,61 @@ def Document.check (d : Document) (outside : String → Bool := fun _ => false) 
     if h.isEmpty || h.any Char.isWhitespace then errors := errors ++ [s!"link {h.quote}: blank or with a space"]
   return if errors.isEmpty then .ok () else .error errors
 
+/-! ## Prose: a docstring as blocks
+
+A declaration's docstring is the author's explanation, and a page shows it (the understanding
+note, `docs/research/2026-10-12-understanding-docs/README.md`, section 4.1). `prose` reads the
+small part of Markdown that docstrings use: paragraphs, lists whose items open with `* ` or `- `,
+and fenced code. In a line a backtick span is code and `**` is dropped; every other character is
+text, so nothing in a docstring becomes markup by accident. -/
+
+/-- A line's inline content: its backtick spans as code, the rest as text, `**` dropped. -/
+def proseLine (s : String) : Line :=
+  let runs := (s.replace "**" "").splitOn "`"
+  (runs.zipIdx.filterMap fun (run, i) =>
+    if run.isEmpty then none else some (if i % 2 == 1 then Inline.code run else .text run))
+
+/-- The open block of `prose`: a paragraph's lines, a list's items (each item's lines), or a fence's
+language and lines. -/
+private inductive Open where
+  | none
+  | para (lines : Array String)
+  | items (items : Array (Array String))
+  | fence (language : String) (lines : Array String)
+
+private def Open.close : Open → List Block
+  | .none => []
+  | .para ls => [.para (proseLine (" ".intercalate ls.toList))]
+  | .items is => [.items (is.toList.map fun i => proseLine (" ".intercalate i.toList))]
+  | .fence lang ls => [.code (if lang.isEmpty then "text" else lang) ("\n".intercalate ls.toList)]
+
+/-- **A docstring as blocks.** -/
+def prose (doc : String) : List Block := Id.run do
+  let mut out : Array Block := #[]
+  let mut cur : Open := .none
+  for raw in doc.splitOn "\n" do
+    let line := raw.trimAscii.toString
+    match cur with
+    | .fence lang ls =>
+      if line.startsWith "```" then out := out ++ (Open.fence lang ls).close.toArray; cur := .none
+      else cur := .fence lang (ls.push raw)
+    | _ =>
+      if line.startsWith "```" then
+        out := out ++ cur.close.toArray; cur := .fence (line.drop 3).toString #[]
+      else if line.isEmpty then
+        out := out ++ cur.close.toArray; cur := .none
+      else if line.startsWith "* " || line.startsWith "- " then
+        let item := #[(line.drop 2).toString]
+        match cur with
+        | .items is => cur := .items (is.push item)
+        | c => out := out ++ c.close.toArray; cur := .items #[item]
+      else
+        match cur with
+        | .para ls => cur := .para (ls.push line)
+        | .items is => cur := .items (is.modify (is.size - 1) (·.push line))
+        | c => out := out ++ c.close.toArray; cur := .para #[line]
+  return (out ++ cur.close.toArray).toList
+
 /-! ## Markdown (CommonMark with GitHub's tables)
 
 A reference prints as code, its label: a Markdown reader makes its own heading anchors, so a link
