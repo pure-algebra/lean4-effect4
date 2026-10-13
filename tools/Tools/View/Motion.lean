@@ -1,4 +1,5 @@
 import Tools.View.Page
+import Whatwg.Svg.Scene.Join.Laws
 
 /-!
 # Motion: the data join, transitions and easing
@@ -35,42 +36,21 @@ namespace Tools.View
 
 /-- The three selections of a join: the new elements that enter, the kept ones as pairs of the
 old and the new, and the old elements that exit. -/
-structure Join (α : Type) where
-  enter : List α
-  update : List (α × α)
-  exit : List α
+abbrev Join := Whatwg.Svg.Scene.Join
 
 /-- **The data join by key** of an old list and a new one. -/
-def join {α : Type} (key : α → Key) (old new : List α) : Join α where
-  enter := new.filter fun n => !(old.any fun o => key o == key n)
-  update := new.filterMap fun n => (old.find? fun o => key o == key n).map (·, n)
-  exit := old.filter fun o => !(new.any fun n => key n == key o)
+abbrev join {α : Type} (key : α → Key) (old new : List α) : Join α :=
+  Whatwg.Svg.Scene.join key old new
 
 /-- Every new element enters, or updates an old one with its key. -/
 theorem join_new {α : Type} (key : α → Key) (old new : List α) (n : α) (h : n ∈ new) :
-    n ∈ (join key old new).enter ∨ ∃ o, (o, n) ∈ (join key old new).update := by
-  cases hf : old.find? (fun o => key o == key n) with
-  | none =>
-    left
-    refine List.mem_filter.mpr ⟨h, ?_⟩
-    have hall := List.find?_eq_none.mp hf
-    simp only [Bool.not_eq_eq_eq_not, Bool.not_true, List.any_eq_false]
-    exact fun o ho => hall o ho
-  | some o =>
-    right
-    exact ⟨o, List.mem_filterMap.mpr ⟨n, h, by simp only [hf, Option.map_some]⟩⟩
+    n ∈ (join key old new).enter ∨ ∃ o, (o, n) ∈ (join key old new).update :=
+  Whatwg.Svg.Scene.join_new key old new n h
 
 /-- Every old element exits, or a new element has its key. -/
 theorem join_old {α : Type} (key : α → Key) (old new : List α) (o : α) (h : o ∈ old) :
-    o ∈ (join key old new).exit ∨ ∃ n ∈ new, key n = key o := by
-  cases hany : new.any (fun n => key n == key o) with
-  | false =>
-    left
-    exact List.mem_filter.mpr ⟨h, by simp only [hany, Bool.not_false]⟩
-  | true =>
-    right
-    obtain ⟨n, hn, he⟩ := List.any_eq_true.mp hany
-    exact ⟨n, hn, beq_iff_eq.mp he⟩
+    o ∈ (join key old new).exit ∨ ∃ n ∈ new, key n = key o :=
+  Whatwg.Svg.Scene.join_old key old new o h
 
 /-! ## A moment of a step -/
 

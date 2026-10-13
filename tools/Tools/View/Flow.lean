@@ -332,7 +332,7 @@ def Edge.reindex (d : Nat) (e : Edge) : Edge := { e with fr := e.fr + d, to := e
 
 /-- A region before its height is known: its key, its name, its place and width across, the
 positions of the items inside it, and the regions inside it. -/
-structure Frame where
+structure RegionFrame where
   key : Key
   name : String
   x : Int
@@ -355,7 +355,7 @@ structure Box where
   botPad : Int := 0
   items : List Placed := []
   edges : List Edge := []
-  frames : List Frame := []
+  frames : List RegionFrame := []
   backs : List (Nat × Nat) := []
   exits : List (Key × Nat) := []
   waits : List (Nat × Key) := []

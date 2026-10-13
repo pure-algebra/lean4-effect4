@@ -62,7 +62,10 @@ def stills : List (Shape × RawNode) := shapes.map fun s => (s, (still s).toRaw)
 
 /-- A figure in a card, over its caption: the mark's still from `stills`. -/
 private def card (s : Shape) (caption : List RawNode) : RawNode :=
-  el "figure" [((stills.find? (·.1 == s)).map (·.2)).getD (still s).toRaw, el "figcaption" caption]
+  let picture := match stills.find? (·.1 == s) with
+    | some (_, picture) => picture
+    | none => (still s).toRaw
+  el "figure" [picture, el "figcaption" caption]
 
 /-! ## Films -/
 
