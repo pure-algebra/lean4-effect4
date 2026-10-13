@@ -67,17 +67,6 @@ theorem List.filter_eq_nil_of_all_false {α : Type} {p : α → Bool} :
     rw [List.filter_cons, if_neg (by rw [h y List.mem_cons_self]; exact Bool.false_ne_true),
       List.filter_eq_nil_of_all_false fun x hx => h x (List.mem_cons_of_mem y hx)]
 
-/-- A filter that keeps every element is the list. A step of `Eff.addresses_expandRefs`. The same
-fact stands as `filter_all_true` in `Laws/Run/Journal.lean`; a common list bank should hold
-one. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem List.filter_eq_self_of_all {α : Type} {p : α → Bool} :
-    ∀ {l : List α}, (∀ x ∈ l, p x = true) → l.filter p = l
-  | [], _ => rfl
-  | y :: l, h => by
-    rw [List.filter_cons, if_pos (h y List.mem_cons_self),
-      List.filter_eq_self_of_all fun x hx => h x (List.mem_cons_of_mem y hx)]
-
 /-! ## A proper prefix -/
 
 /-- **A proper prefix has a nonempty rest.** A step of `Eff.addresses_expandRefs`. Its consumers
@@ -387,7 +376,7 @@ theorem Eff.addresses_expandRefs (root : Eff Op) :
     exact hk hb
   unfold Eff.expandRefs
   rw [Eff.addresses_rounds_filter _ _ _ root hkeep]
-  refine List.filter_eq_self_of_all fun a ha => ?_
+  refine List.filter_eq_self.mpr fun a ha => ?_
   rw [Bool.not_eq_true', ← Bool.not_eq_true, belowSite_refSites_iff]
   exact Node.not_belowRef_of_mem _ ha
 

@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.RowProtocol
+import Effect4.Laws.Run.Frame
 
 /-!
 # Api.HostDrive — the driver's run is answered by its reactor
@@ -430,12 +431,6 @@ theorem drive_hostAnswered {σ : Type} (table : RowTable) (r : Reactor σ)
 
 /-! ## The driver's run -/
 
-/-- Step of `runWith_hostAnswered`: playing rows appends them to the journal. -/
-theorem play_journal (s : Run) (rows : List Command) : (s.play rows).journal = s.journal ++ rows := by
-  induction rows generalizing s with
-  | nil => exact (List.append_nil _).symm
-  | cons c rest ih => rw [Run.play_cons, ih, Run.step_journal, List.append_assoc]; rfl
-
 /-- Step of `runWith_hostAnswered`: a run played from a fresh open was opened as that open. -/
 theorem openedOf_play_open (b : Api.Built) (id : String) (budget : Api.Budget)
     (rows : List Command) : openedOf ((Run.open b id budget).play rows) = Run.open b id budget := by
@@ -460,7 +455,7 @@ theorem runWith_hostAnswered {σ : Type} (b : Api.Built) (r : Reactor σ) (st : 
     rw [drive_eq_play, play_append]
   have hjournal : (Run.runWith b r st id budget rounds).1.journal = Rows.start ++
       (driveFrom r rounds ((Run.open b id budget).play Rows.start) st).2.1 := by
-    rw [hrun, play_journal, open_journal]
+    rw [hrun, Run.journal_play, open_journal]
     rfl
   have htapeOf : tapeOf (Run.runWith b r st id budget rounds).1 =
       (tapeFrom (Run.open b id budget) (Rows.start ++
@@ -470,7 +465,7 @@ theorem runWith_hostAnswered {σ : Type} (b : Api.Built) (r : Reactor σ) (st : 
   have hread : (tapeFrom (Run.open b id budget) (Rows.start ++
       (driveFrom r rounds ((Run.open b id budget).play Rows.start) st).2.1)).2 = [] := by
     have h := List.isEmpty_iff.mp hfund
-    rw [hrun, openedOf_play_open, play_journal, open_journal] at h
+    rw [hrun, openedOf_play_open, Run.journal_play, open_journal] at h
     exact h
   obtain ⟨hA, hB, htape⟩ := tapeFrom_append_read _ _ _ hread
   have hstart : ∀ x ∈ (tapeFrom (Run.open b id budget) Rows.start).1.map (·.decision),

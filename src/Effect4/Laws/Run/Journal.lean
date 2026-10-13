@@ -158,10 +158,6 @@ theorem below_steppedBy (p : NativeEff) (table : RowTable) (fuel : Nat) (m : Nat
 The session-level half of `stale_never_applies`. Every definition reads a run's own journal or its
 session's ledger, and every law holds for every program. -/
 
-/-- The journal pairs each command with its recorded phase. -/
-def journalRows (s : Run) : List (Api.Runner.Command × Api.HostSession.Phase) :=
-  s.journal.zip s.phases
-
 section Ledger
 
 open Effect4.Api.HostSession (Key Call Reply Phase BoundCall Session ReplySlot RetiredCall
@@ -184,13 +180,13 @@ def applyKey : Command × Phase → Option Key
   | _ => none
 
 /-- The keys the session bound, in order, read off the journal. -/
-def boundKeys (s : Run) : List Key := (journalRows s).filterMap bindKey
+def boundKeys (s : Run) : List Key := (Run.rows s).filterMap bindKey
 
 /-- The keys of the accepted reply receipts, in order. -/
-def submittedKeys (s : Run) : List Key := (journalRows s).filterMap submitKey
+def submittedKeys (s : Run) : List Key := (Run.rows s).filterMap submitKey
 
 /-- The keys of the applied replies, in order. -/
-def appliedKeys (s : Run) : List Key := (journalRows s).filterMap applyKey
+def appliedKeys (s : Run) : List Key := (Run.rows s).filterMap applyKey
 
 /-- The keys of the retired calls, in retirement order, read off the session's ledger. -/
 def retiredKeys (s : Run) : List Key := s.session.retired.map (·.bound.key)
@@ -231,9 +227,9 @@ theorem filterMap_singleton {α β : Type} (f : α → Option β) (x : α) :
   cases h : f x <;> simp only [List.filterMap_cons, List.filterMap_nil, h, Option.toList]
 
 theorem rows_step (s : Run) (c : Command) (h : s.journal.length = s.phases.length) :
-    journalRows (s.step c) =
-      journalRows s ++ [(c, (Api.Runner.result s.runner c).phase)] := by
-  unfold journalRows
+    Run.rows (s.step c) =
+      Run.rows s ++ [(c, (Api.Runner.result s.runner c).phase)] := by
+  unfold Run.rows
   rw [Run.step_journal, Run.step_phases, List.zip_append h]
   rfl
 
@@ -1061,14 +1057,6 @@ theorem ledger_retire (s : Run) (c : Command) (h : Ledger s) (fuel : Nat) (d : N
       · exact h.appliedGone k happ hka
       · exact hnr happ
 
-theorem filter_all_true {α : Type} (l : List α) (p : α → Bool) (h : ∀ a ∈ l, p a = true) :
-    l.filter p = l := by
-  induction l with
-  | nil => rfl
-  | cons a rest ih =>
-    rw [List.filter_cons, if_pos (h a List.mem_cons_self),
-      ih (fun x hx => h x (List.mem_cons_of_mem _ hx))]
-
 /-- Every row keeps the ledger. -/
 theorem ledger_step (s : Run) (c : Command) (h : Ledger s) : Ledger (s.step c) := by
   cases c with
@@ -1160,7 +1148,7 @@ theorem ledger_step (s : Run) (c : Command) (h : Ledger s) : Ledger (s.step c) :
     · refine ledger_retire s _ h s.budget.fuel decision []
         { s.session with
           machine := steppedBy s.built.program s.budget.fuel s.built.table s.machine decision }
-        rfl (filter_all_true _ _ (fun _ _ => rfl)).symm (filter_all_true _ _ (fun _ _ => rfl)).symm
+        rfl (List.filter_eq_self.mpr (fun _ _ => rfl)).symm (List.filter_eq_self.mpr (fun _ _ => rfl)).symm
         rfl ?_ ?_ ?_ ?_ (fun k hk => absurd hk List.not_mem_nil) List.nodup_nil rfl rfl rfl
       · rw [Run.step_session_control, hres]
         rfl

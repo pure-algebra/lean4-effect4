@@ -2876,12 +2876,6 @@ result type, pinned by its token's declaration. -/
 
 theorem subN_unknown (t : Ty) : Ty.subN t .unknown = true := Ty.sub_unknown _
 
-/-- Exit subsumption in the checker's order, column by column. -/
-theorem exitOk_subN {w : World} {ty ty' : EffTy} {ex : ExitV} (h : ExitOk w ty ex)
-    (ha : Ty.subN ty.answer ty'.answer = true) (he : Ty.subN ty.error ty'.error = true) :
-    ExitOk w ty' ex :=
-  ⟨fitsExit_subN ha he h.1, h.2⟩
-
 /-- A failed exit's membership from its error-column half and part one's exclusion: this seat's
 one construction through `fitsExit_failure_iff`. Under row 152 the proof passes the exclusion
 too (`.mpr ⟨h, _shape⟩`, `NoShapeDefect`'s failure arm being `ShapeFree` by `Iff.rfl`), and no
@@ -3133,7 +3127,7 @@ theorem observerCommandOk_updateRace {source : FiberId} {exit : ExitV}
       rcases live source hl with o | cols
       · exact oldLive o
       · obtain ⟨ty, declared, ha, he⟩ := cols
-        exact exitOk_subN (typed ty declared) ha he
+        exact exitOk_widen ha he (typed ty declared)
   | resumeAwait _ _ _ => exact h
   | countdown _ _ => exact ⟨countdownAt_view (sameFibers_updateRace m new) h.1, h.2⟩
   | dropScopeFinalizer _ _ => exact h

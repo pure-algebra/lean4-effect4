@@ -19,7 +19,7 @@ open Effect4.Api.Runner (Command)
 /-- A recorded row retains its actual preceding run and verdict.
 Consumer: `bound_request_prefix`. -/
 theorem recorded_prefix (s : Run) (reached : Reached s) (command : Command) (phase : Phase)
-    (recorded : (command, phase) ∈ journalRows s) :
+    (recorded : (command, phase) ∈ Run.rows s) :
     ∃ before : Run, Reached before ∧ before.built = s.built ∧
       (∀ c ∈ before.journal, c ∈ s.journal) ∧
       (Api.Runner.result before.runner command).phase = phase := by
@@ -42,7 +42,7 @@ theorem recorded_prefix (s : Run) (reached : Reached s) (command : Command) (pha
 /-- An accepted binding names the actual request in a preceding reached machine.
 Consumer: the original `CallTree.bound_in_tree` at unrestricted script scope. -/
 theorem bound_request_prefix (s : Run) (reached : Reached s) (call : Call) (token : Nat)
-    (recorded : (Command.bind call token, .bound) ∈ journalRows s) :
+    (recorded : (Command.bind call token, .bound) ∈ Run.rows s) :
     ∃ before : Run, Reached before ∧ before.built = s.built ∧
       (∀ c ∈ before.journal, c ∈ s.journal) ∧
       Program.requestOf before.machine call.fiber token = some (call.op, call.request) := by

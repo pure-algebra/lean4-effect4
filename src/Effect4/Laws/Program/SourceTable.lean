@@ -542,7 +542,7 @@ theorem open_shown_of_refSites_nil (app : SigApp) {s : Sketch} (h : s.program.re
   unfold shown table SourceSession.open SourceSession.app Table.atSource
   rw [hf, hsites, hx]
   dsimp only
-  rw [List.filter_eq_self_of_all (p := fun e : Table.Entry => !Table.belowSite [] e.path)
+  rw [(List.filter_eq_self (p := fun e : Table.Entry => !Table.belowSite [] e.path)).mpr
     fun _ _ => rfl]
   rfl
 

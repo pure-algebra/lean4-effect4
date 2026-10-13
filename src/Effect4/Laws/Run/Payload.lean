@@ -30,7 +30,7 @@ open Effect4.Api.Runner (Command)
 
 /-- The current journal's accepted reply receipts, with their complete payloads. -/
 def acceptedReplies (s : Run) : List Reply :=
-  (journalRows s).filterMap fun
+  (Run.rows s).filterMap fun
     | (.submit reply, .preflight) => some reply
     | _ => none
 

@@ -225,7 +225,7 @@ theorem enrollRace_preserves (root : ProgramSource) (rootTy : EffTy) (raceId : N
           unfold ObserverCommandOk
           dsimp only
           rw [hr1]
-          exact ⟨resultTy, payload', fun _ => exitOk_subN exitTyped subA subE⟩
+          exact ⟨resultTy, payload', fun _ => exitOk_widen subA subE exitTyped⟩
         exact observe_raceCallback root rootTy m1 child exit raceId obs
       | none =>
         dsimp only

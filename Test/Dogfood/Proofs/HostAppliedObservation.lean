@@ -39,7 +39,7 @@ theorem bound_step (s : Run) (c : Command) (len : s.journal.length = s.phases.le
         | .bind call token, .bound => [(call, token)]
         | _, _ => []) := by
   unfold bound rows
-  change (journalRows (s.step c)).filterMap _ = _
+  change (Run.rows (s.step c)).filterMap _ = _
   rw [rows_step s c len, List.filterMap_append, filterMap_singleton]
   generalize (Api.Runner.result s.runner c).phase = phase
   cases c <;> cases phase <;> rfl
