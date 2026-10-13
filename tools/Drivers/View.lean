@@ -100,7 +100,9 @@ loops, and under a reduced-motion preference a step shows its end frame alone (r
 picture stands inline (DS-3): a look switch redraws it in the dark look, the paper look or both
 side by side, through the class rules (`Tokens.rules`), which change colours and families and no
 place; the key under the pointer is named, and a click copies `title · picture · key` for the
-chat. The current picture names itself in data attributes for an agent that reads the page. -/
+chat. Each inline pane owns its SVG IDs and local references. A scale selector fits the largest
+picture or shows logical pixels at 100, 150 or 200 percent inside scrolling panes.
+The current picture names itself in data attributes for an agent that reads the page. -/
 def playerPage (L paper : Look) (title label : String) (pics : List (String × Bool)) (gallery : Bool) :
     String :=
   let list := ",".intercalate (pics.map fun (n, f) => s!"[\"{n}\",{if f then 1 else 0}]")
@@ -109,9 +111,9 @@ def playerPage (L paper : Look) (title label : String) (pics : List (String × B
   "<style>\n" ++ Tokens.css L ++ (if L.name == "dark" then "" else Tokens.css {}) ++
   (if L.name == "paper" then "" else Tokens.css paper) ++ Tokens.rules ++ pageRules ++
   "html { scrollbar-gutter: stable; }\n" ++
-  ".pic { overflow: hidden; }\n" ++
-  ".pic svg { display: block; max-width: 100%; height: auto; outline: 1px solid var(--e4-color-rule); }\n" ++
-  ".pic.both { display: flex; gap: 12px; align-items: flex-start; }\n" ++
+  ".pic { display: flex; gap: 12px; overflow: hidden; }\n" ++
+  ".pane { flex: 1 1 0; min-width: 0; height: 100%; overflow: auto; border: 1px solid var(--e4-color-rule); box-sizing: border-box; }\n" ++
+  ".pane svg { display: block; max-width: none; height: auto; }\n" ++
   "#pos { display: inline-block; min-width: 24ch; font-variant-numeric: tabular-nums; }\n" ++
   "#moments { min-height: 76px; }\n" ++
   ".pic [data-key] { cursor: copy; }\n" ++
@@ -138,6 +140,9 @@ def playerPage (L paper : Look) (title label : String) (pics : List (String × B
   "<label class=\"meta\">look <select id=\"lookSel\"><option value=\"\">as drawn</option>" ++
   "<option value=\"dark\">dark</option><option value=\"paper\">paper</option>" ++
   "<option value=\"both\">dark beside paper</option></select></label>" ++
+  "<label class=\"meta\">scale <select id=\"scaleSel\"><option value=\"fit\">fit</option>" ++
+  "<option value=\"1\">actual size</option><option value=\"1.5\">150%</option>" ++
+  "<option value=\"2\">200%</option></select></label>" ++
   "<input id=\"scrub\" type=\"range\" min=\"0\" max=\"" ++ toString (pics.length - 1) ++ "\" step=\"1\" value=\"0\" aria-label=\"picture\"></div>\n" ++
   "<main data-pictures=\"" ++ toString pics.length ++ "\"><div id=\"pic\" class=\"pic\" role=\"img\"></div>" ++
   "<p class=\"meta\" id=\"under\" aria-live=\"polite\"></p></main>\n" ++
@@ -150,22 +155,33 @@ def playerPage (L paper : Look) (title label : String) (pics : List (String × B
   "const reduce = matchMedia('(prefers-reduced-motion: reduce)');\n" ++
   "const $ = id => document.getElementById(id);\n" ++
   "const pic = $('pic'), pos = $('pos'), scrub = $('scrub'), rate = $('rate'), strip = $('strip'), moments = $('moments');\n" ++
-  "const lookSel = $('lookSel'), under = $('under');\n" ++
+  "const lookSel = $('lookSel'), scaleSel = $('scaleSel'), under = $('under');\n" ++
   "const cache = new Map();\n" ++
   "const load = n => { if (!cache.has(n)) cache.set(n, fetch(n + '.svg').then(r => r.text())); return cache.get(n); };\n" ++
-  "const pane = (text, look) => { const d = document.createElement('div'); d.innerHTML = text; const v = d.querySelector('svg');\n" ++
-  "  if (v && look) v.setAttribute('data-look', look); return v || d; };\n" ++
+  "let paneSerial = 0;\n" ++
+  "const pane = (text, look) => { const d = document.createElement('div'); d.className = 'pane'; d.innerHTML = text; const v = d.querySelector('svg');\n" ++
+  "  if (!v) return d; const prefix = 'e4-player-svg-' + paneSerial++ + '-', ids = new Map();\n" ++
+  "  const nodes = [v, ...v.querySelectorAll('*')];\n" ++
+  "  nodes.forEach(n => { if (n.hasAttribute('id')) { const id = n.getAttribute('id'); ids.set(id, prefix + id); n.setAttribute('id', prefix + id); } });\n" ++
+  "  nodes.forEach(n => [...n.attributes].forEach(a => { if (a.localName === 'id') return;\n" ++
+  "    let value = a.value.replace(/url\\(\\s*(['\"]?)#([^'\"\\s)]+)\\1\\s*\\)/g, (whole, quote, id) => ids.has(id) ? 'url(#' + ids.get(id) + ')' : whole);\n" ++
+  "    if (a.localName === 'href' && value.startsWith('#') && ids.has(value.slice(1))) value = '#' + ids.get(value.slice(1));\n" ++
+  "    if (a.localName === 'aria-labelledby' || a.localName === 'aria-describedby') value = value.split(/\\s+/).map(id => ids.get(id) || id).join(' ');\n" ++
+  "    if (value !== a.value) n.setAttributeNS(a.namespaceURI, a.name, value); }));\n" ++
+  "  if (look) v.setAttribute('data-look', look); return d; };\n" ++
   "async function draw(i) { const text = await load(pics[i][0]); if (at !== i) return; const mode = lookSel.value;\n" ++
   "  pic.classList.toggle('both', mode === 'both');\n" ++
   "  pic.replaceChildren(...(mode === 'both' ? [pane(text, 'dark'), pane(text, 'paper')] : [pane(text, mode)])); fit(); }\n" ++
   "let maxW = 0, maxH = 0;\n" ++
   "const dims = t => { const m = /<svg[^>]*?\\swidth=\"([0-9.]+)\"[^>]*?\\sheight=\"([0-9.]+)\"/.exec(t); return m ? [+m[1], +m[2]] : [0, 0]; };\n" ++
   "function fit() { if (!maxW) return; const both = lookSel.value === 'both';\n" ++
-  "  const k = Math.min((pic.clientWidth - (both ? 12 : 0)) / (both ? 2 : 1) / maxW, innerHeight * 0.68 / maxH);\n" ++
-  "  pic.style.height = Math.ceil(maxH * k + 2) + 'px';\n" ++
+  "  const cap = innerHeight * 0.68, available = (pic.clientWidth - (both ? 12 : 0)) / (both ? 2 : 1) - 2;\n" ++
+  "  const k = scaleSel.value === 'fit' ? Math.max(0.01, Math.min(available / maxW, cap / maxH)) : +scaleSel.value;\n" ++
+  "  pic.dataset.scale = scaleSel.value; pic.style.height = Math.ceil(Math.min(maxH * k, cap) + 2) + 'px';\n" ++
   "  pic.querySelectorAll('svg').forEach(v => { v.style.width = (+v.getAttribute('width')) * k + 'px';\n" ++
   "    v.style.height = (+v.getAttribute('height')) * k + 'px'; }); }\n" ++
   "addEventListener('resize', fit);\n" ++
+  "scaleSel.onchange = fit;\n" ++
   "const keyAt = e => { const k = e.target.closest('[data-key]'); return k ? k.getAttribute('data-key') : ''; };\n" ++
   "pic.addEventListener('mousemove', e => { const k = keyAt(e); under.textContent = k ? 'key ' + k + ' (click copies)' : ''; });\n" ++
   "pic.addEventListener('click', async e => { const k = keyAt(e); if (!k) return;\n" ++
