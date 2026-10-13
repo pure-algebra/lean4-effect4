@@ -535,8 +535,9 @@ def sideBySide (how : Branching) (k : Key) (bs : List Box) : Box :=
   parAround how k W ends r.1 r.2
 
 /-- **A region**: its part inside a margin, under a row for its name; the room above and below is
-reserved in the gaps around it. -/
+reserved in the gaps around it. An empty part keeps one addressed point for this allocation. -/
 def framed (name k : String) (b : Box) : Box :=
+  let b := if b.empty then point (k ++ "/empty") else b
   let m := b.shift MARGIN
   let w := b.w + 2 * MARGIN
   { m with w, topPad := b.topPad + MARGIN + LABEL, botPad := b.botPad + MARGIN,

@@ -96,9 +96,9 @@ private def report (name : String) (l : Laid) : String :=
   | none => s!"FAIL {name}: no graph"
   | some graph => report name graph.laid
 
--- Empty source regions expose allocation that the former sign checks miss.
+-- Retain the invalid empty-region allocation after its producer is repaired.
 #guard
-  let l := Flow.layout (Flow.ofProgram (.scoped (.gen .nil)))
+  let l : Laid := { width := 16, height := 8, regions := #[⟨"[]/region", "scoped", 0, -32, 16, 40⟩] }
   l.dimsValid && !(laid l).isOk
 
 #eval report "empty scoped generator" (Flow.layout (Flow.ofProgram (.scoped (.gen .nil))))
