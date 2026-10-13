@@ -1,5 +1,6 @@
 import Tools.Query
 import Tools.JsonBridge
+import Tools.Catalogue
 import Effect4.Laws.Store.ShapeRead
 import Effect4.Program.Typing.SourceSession
 import Effect4.Laws.Program.SourceTable
@@ -36,6 +37,7 @@ pair. A digest names bytes; no answer assumes two applications with one digest a
 | `undo` | nothing | the last fill taken back: the delta and the view | `SourceSession.feed_undo` |
 | `journal` | nothing | each edit, its address and its delta | none |
 | `sketch` | nothing | the bytes of the sketch and of the application | `Sketch.decode_exact`, `Canonical.decode_exact` |
+| `catalogue` | nothing; open or not | the program's forms, the atoms with their typing schemes, the application's rows by index (`Tools.Catalogue`) | `Canonical.ofJsonAnyOrder_exact`, `NativeAtom.atom_table_wf` |
 
 **The delta names its law.** An edit of the sketch as written that moves the expansion at its
 address alone is the expansion's own edit. A fill that splices names `Sketch.table_fill`, an
@@ -217,6 +219,10 @@ def answer (st : State) (req : Request) : State × Answer :=
       ({ source := some l, journal := [], app := name },
         Answer.mk req.op name (readLaws ++ [``SourceSession.reached_view]) true (viewJson l) none
           req.id)
+  | "catalogue" =>
+    let rows := (st.source.map (·.app.rows)).getD []
+    (st, Answer.mk req.op st.app [``Canonical.ofJsonAnyOrder_exact, ``NativeAtom.atom_table_wf] true
+      (Tools.Catalogue.catalogueJson rows) none req.id)
   | op =>
     match st.source with
     | none => none' "no session is open"
