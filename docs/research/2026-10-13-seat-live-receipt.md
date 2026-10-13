@@ -27,6 +27,44 @@ is `docs/research/2026-10-13-seat-live-brief.md`.
   **Measured** means a tool's output at the named commit. **Assumed** means read in the source and
   not checked.
 
+## The files
+
+`seat/live`, from the base to `5f762e448`, all in the brief's files or the root imports:
+
+- `Test/All.lean` (changed)
+- `Test/Dogfood/README.md` (changed)
+- `Test/Dogfood/Scenario.lean` (changed)
+- `Test/Dogfood/Scenario/QueueWorkers.lean` (changed)
+- `Test/Dogfood/Scenario/QueueWorkers/Assertions.lean` (changed)
+- `Test/Dogfood/Scenario/QueueWorkers/Model.lean` (changed)
+- `Test/Dogfood/Scenario/Tape.lean` (changed)
+- `Test/Dogfood/Scenario/Timeout.lean` (changed)
+- `Test/Dogfood/Scenario/Timeout/Model.lean` (changed)
+- `Test/Dogfood/Scenario/Workers.lean` (changed)
+- `Test/Run/LiveContract.lean` (added)
+- `src/Effect4/Api/HostSession.lean` (changed)
+- `src/Effect4/Api/Runner.lean` (changed)
+- `src/Effect4/Api/RunnerDerived.lean` (changed)
+- `src/Effect4/Laws.lean` (changed)
+- `src/Effect4/Laws/Api/Live.lean` (added)
+- `src/Effect4/Run.lean` (changed)
+- `src/Effect4/Run/Basic.lean` (changed)
+- `src/Effect4/Run/Event.lean` (added)
+- `src/Effect4/Run/Live.lean` (added)
+- `src/Effect4/Run/Tape.lean` (changed)
+- `src/Effect4/Run/View.lean` (added)
+
+`seat/live-dm4`, above `5f762e448`:
+
+- `Test/Dogfood/Proofs/HostRouting.lean` (changed)
+- `Test/Run/LiveContract.lean` (changed)
+- `src/Effect4/Api/HostSession.lean` (changed)
+- `src/Effect4/Laws/Api/HostSession.lean` (changed)
+- `src/Effect4/Laws/Api/Live.lean` (changed)
+- `src/Effect4/Run/View.lean` (changed)
+
+The receipt and `docs/research/2026-10-13-seat-live-journal.patch` are force-added on `seat/live`.
+
 ## DM1: the session's events in the library (`166a7d7ef`)
 
 - **What moved.** `Seen`, `Sel`, `Event` (the scenario driver's `Move`), `Event.commands` (its
