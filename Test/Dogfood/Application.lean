@@ -15,9 +15,9 @@ planned goal with its placement (`@[semantics …]`, decisions row 207). Its sta
   programs that its statement reads, and the premises that its statement assumes of whoever answers
   the rows, each with its grade (who discharges it).
 * **`Record.problems`** checks the notes as data. A battery reads it with `#guard`, and its red
-  controls show each finding (decisions row 301).
-* **`Record.claimsOf`** answers what the record claims of one program, by kind. The packet's second gate is not landed: row 375
+  controls show each finding (decisions row 301). The packet's second gate is not landed: row 375
   clears gates, and a name in a note is a name literal, which the elaborator resolves.
+* **`Record.claimsOf`** answers what the record claims of one program, by kind.
 
 What it does not establish: that a note's premises are the premises of its statement. The
 statement names them. The record cannot read a statement, and no check here reads one.
