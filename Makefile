@@ -684,9 +684,14 @@ $(CHK)/ingest: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES) tools/D
 	@mkdir -p $(CHK) && touch $@
 
 # The keyed lane also performs the scenarios' scripts (decisions row 254), so the batteries that
-# `harness/truth/session/Keyed.lean` imports are its inputs, by their sources.
+# `harness/truth/session/Keyed.lean` imports are its inputs, by their sources. It performs the
+# to-do's scripts on the to-do's emitted Effect service too (decisions row 378 (20), slice E4), so
+# the service's writer, consumer, runner and red controls are its inputs. The recipe builds what
+# the four Lean files that the script runs import, since `lake env` builds nothing.
 HOST_PROTOCOL_SCENARIOS := $(wildcard Test/Dogfood/*.lean Test/Dogfood/Scenario/*.lean)
-$(CHK)/host-protocol: $(LEAN_INPUTS) $(wildcard harness/truth/session/*.ts harness/truth/session/*.lean harness/truth/session/*.json) $(HOST_PROTOCOL_SCENARIOS) $(PRELUDE_SOURCES) tools/Tools/HostProtocol.lean scripts/check-host-protocol.py | harness/truth/node_modules
+HOST_PROTOCOL_SERVICE := $(wildcard harness/truth/service/*.lean harness/truth/service/*.ts harness/truth/service/*.json harness/truth/service/red/*)
+$(CHK)/host-protocol: $(LEAN_INPUTS) $(wildcard harness/truth/session/*.ts harness/truth/session/*.lean harness/truth/session/*.json) $(HOST_PROTOCOL_SCENARIOS) $(HOST_PROTOCOL_SERVICE) $(PRELUDE_SOURCES) tools/Tools/HostProtocol.lean scripts/check-host-protocol.py | harness/truth/node_modules
+	$(call build_imports,tools/Tools/HostProtocol.lean harness/truth/session/Keyed.lean harness/truth/session/Session.lean harness/truth/service/EmitTodo.lean)
 	$(PY) scripts/check-host-protocol.py
 	@mkdir -p $(CHK) && touch $@
 

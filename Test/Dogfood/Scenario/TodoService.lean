@@ -33,7 +33,8 @@ def built? (app : Application NativeOp) : Option Api.Built :=
 /-- The emitted file of an application's service, with the prelude at `./prelude.ts`. -/
 def file? (app : Application NativeOp) : Option TypeScript.Module :=
   (built? app).bind fun b =>
-    (Effect4.Api.emitModule "main" b.program b.table).toOption.map (·.file "./prelude.ts")
+    (Effect4.Api.emitModule "main" b.program b.table).toOption.bind fun e =>
+      (e.file "./prelude.ts").toOption
 
 /-- The constants of a module, in order. -/
 def constNames (m : TypeScript.Module) : List String :=
@@ -51,36 +52,45 @@ def readBack? (app : Application NativeOp) : Option (Bool × Bool) :=
 /-- The to-do without the two entries that fail with the payload class `NotFound`. -/
 def classFree : Application NativeOp := { application with entries := application.entries.take 2 }
 
+/-- The same, over rows that require no key: the state is the context of no key. -/
+def keyFree : Application NativeOp :=
+  { classFree with rows := classFree.rows.map fun r => ⟨{ r.row with requires := [] }⟩ }
+
 /-! ## The block and the file -/
 
--- finite evaluation: the initial program, one method for each entry, then the service's key,
--- its layer and the main
-#guard (file? application).map constNames = some ["TodoAppContext", "TodoApp_add", "TodoApp_list",
-  "TodoApp_complete", "TodoApp_remove", "TodoApp", "TodoAppLayer", "main"]
--- finite evaluation: the state is the context of no key, since the rows require none
-#guard application.contextKeys = Requirement.ofList []
+-- finite evaluation: the rows' service, its key first (decisions row 378 (19)); the initial
+-- program and one method for each entry; then the service's key, its layer and the main
+#guard (file? application).map constNames = some ["TodoRepoKey", "TodoRepo", "TodoAppContext",
+  "TodoApp_add", "TodoApp_list", "TodoApp_complete", "TodoApp_remove", "TodoApp", "TodoAppLayer",
+  "main"]
+-- finite evaluation: the state is the context of the rows' one key
+#guard application.contextKeys = Requirement.ofList [todoRepoKey]
 #guard (built? application).map (fun b => b.program.defsOf.head?.map (·.answer)) =
-  some (some (.contextOf (Requirement.ofList [])))
--- finite evaluation: each method declares its entry's open type (`openTy`), and no requirement
+  some (some (.contextOf (Requirement.ofList [todoRepoKey])))
+-- finite evaluation: each method declares its entry's open type (`openTy`), and no requirement:
+-- the region discharges the key
 #guard (built? application).map (fun b => (b.program.defsOf.drop 1).map fun d =>
     (some (d.answer, d.error), d.requires)) =
   some (application.entryNames.map fun n => (openTy n, []))
--- finite evaluation: the file imports four namespaces of `effect` and six prelude names; the
--- rows' namespace stays free, the host's until its service key is declared (row 378 (19))
+-- finite evaluation: the file imports four namespaces of `effect`, `Option` as a type only (the
+-- repository's `setDone` answers an option), and six prelude names; no name stays free, since the
+-- file declares the rows' namespace and `Object` is a standard global
 #guard (file? application).map (·.imports) =
-  some [.named ["Context", "Data", "Effect", "Layer"] "effect" false,
+  some [.named ["Context", "Data", "Effect", "Layer", ⟨"Option", "Option", true⟩] "effect" false,
     .named ["eq", "fst", "ifCase", "optionCase", "pair", "snd"] "./prelude.ts" false]
-#guard (file? application).map Effect4.Codegen.freeNames = some [("TodoRepo", false)]
+#guard (file? application).map Effect4.Codegen.freeNames = some []
 
 /-! ## Reading back -/
 
--- control: the to-do's module does not read back. The header reader reads no payload class, and
--- two methods declare `NotFound` in their error column, so the block is outside `blockReadable`
--- and `ModuleEmission.readModule` says nothing of it
-#guard readBack? application = some (false, false)
--- finite evaluation: without those two entries the block is readable and reads back, so the
--- premises of the read-back law reach a class-free application
+-- finite evaluation: the to-do's module reads back. The header reader reads the payload class
+-- `NotFound` in two methods' error columns and the rows' key in the requirement rows, so the
+-- block is `blockReadable` and `ModuleEmission.readModule` reads it back (seat READ, item 1)
+#guard readBack? application = some (true, true)
+-- finite evaluation: without those two entries the block reads back too
 #guard readBack? classFree = some (true, true)
+-- finite evaluation: over rows that require no key the block is readable and reads back, so the
+-- premises of the read-back law reach a class-free application whose rows require no key
+#guard readBack? keyFree = some (true, true)
 
 /-! ## A refused entry refuses the block, by its name -/
 

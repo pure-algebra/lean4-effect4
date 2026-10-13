@@ -784,11 +784,9 @@ def emitRun (run : HostRun) : Except String J := do
     ("readers", Json.mkObj readers), ("refusedReaders", toJson refused),
     ("premises", Json.mkObj premises)]
 
-/-- Lean's replay of a host's recording: the rows of the recording played by `Run.play` from the
-run that the battery opens. `same` is the battery's own equality of the replayed observation and
-the scripted one. `fields` gives the same comparison for each field's JSON value. `verdicts`
-gives the session's verdict of each row, in order. -/
-def replayRun (run : HostRun) (recording : J) : Except String J := do
+/-- The run that a host's recording replays to: the rows of the recording played by `Run.play`
+from the run that the battery opens, after the recording's header is checked against the run. -/
+def replayedOf (run : HostRun) (recording : J) : Except String Run := do
   keys recording ["header", "records"]
   let header ← field recording "header"
   keys header ["format", "version", "session", "profile", "program", "table"]
@@ -801,7 +799,14 @@ def replayRun (run : HostRun) (recording : J) : Except String J := do
   unless (← field header "table") == tableJson run.opened.built.table do throw "full table mismatch"
   let records := (← (← field recording "records").getArr?).toList
   let rows ← records.mapM (command run.opened.id run.opened.built.table)
-  let replayed := run.opened.play rows
+  return run.opened.play rows
+
+/-- Lean's replay of a host's recording: the rows of the recording played by `Run.play` from the
+run that the battery opens. `same` is the battery's own equality of the replayed observation and
+the scripted one. `fields` gives the same comparison for each field's JSON value. `verdicts`
+gives the session's verdict of each row, in order. -/
+def replayRun (run : HostRun) (recording : J) : Except String J := do
+  let replayed ← replayedOf run recording
   let scripted := Scenario.play run.opened run.moves
   let fields := ((run.observed replayed).zip (run.observed scripted)).map fun (mine, theirs) =>
     (mine.1, Json.bool (mine.2 == theirs.2))
@@ -1034,6 +1039,51 @@ def batch (inputs : List J) : Except String J := do
         | .error why => Json.mkObj [("refused", .str why)]
     return Json.mkObj [("name", .str name), ("result", result)])
 
+/-- The pairs of the to-do's runs under a host as a function (`runsOf`,
+`Test/Dogfood/Scenario/Todo/Claims.lean`): the first run, the second, and the model's state where
+the first starts. The second starts where the model leaves the first. -/
+def todoPairs : List (String × String × Scenario.Todo.Repo) :=
+  [ ("todo/model-add", "todo/model-list", (1, [])), ("todo/forgetful-add", "todo/forgetful-list", (1, []))
+  , ("todo/model-once", "todo/model-twice", Scenario.Todo.stocked)
+  , ("todo/toggling-once", "todo/toggling-twice", Scenario.Todo.stocked) ]
+
+/-- **The per-run checks of the to-do's service runs** (decisions row 378 (20), slice E4). Each
+input is the recording of a to-do script that `harness/truth/service/run-todo.ts` made on the
+emitted service, replayed against the script's program (`replayedOf`). For each run: whether the
+replayed journal is the script's, whether the run is settled (funded, at rest, driven by a host),
+and whether it conforms to the application's protocols (`Effect4.Run.conforms`). For each pair of
+`todoPairs` that the inputs hold: whether both runs agree with the reference model, the model's
+state threaded from the first to the second (`Effect4.Run.agrees`). Beside each decision stands
+the same decision on the script's own run, which the host-protocol gate compares with it. -/
+def serviceChecks (inputs : List J) : Except String J := do
+  let all ← runs
+  let replayed ← inputs.mapM fun input => do
+    let name ← input.getObjValAs? String "name"
+    let some run := all.find? (·.name == name) | throw s!"{name}: unknown run"
+    let s ← replayedOf run (← input.getObjVal? "recording")
+    return (name, run, s)
+  let settled (s : Run) : Bool :=
+    Effect4.Run.funded s && Effect4.Run.atRest s && Effect4.Run.hostDriven s
+  let agreeing (a b : Run) (origin : Scenario.Todo.Repo) : Bool :=
+    ((Effect4.Run.agrees Scenario.Todo.repository a origin).bind
+      (Effect4.Run.agrees Scenario.Todo.repository b)).isSome
+  let runChecks := replayed.map fun (name, run, s) =>
+    let scripted := Scenario.play run.opened run.moves
+    Json.mkObj [("name", .str name),
+      ("journal", toJson (decide (s.journal = scripted.journal))),
+      ("settled", toJson (settled s)), ("scriptedSettled", toJson (settled scripted)),
+      ("conforming", toJson (Effect4.Run.conforms Scenario.Todo.protocols s)),
+      ("scriptedConforming", toJson (Effect4.Run.conforms Scenario.Todo.protocols scripted))]
+  let pairChecks := todoPairs.filterMap fun (first, second, origin) =>
+    match replayed.find? (·.1 == first), replayed.find? (·.1 == second) with
+    | some (_, ra, a), some (_, rb, b) =>
+      some (Json.mkObj [("first", .str first), ("second", .str second),
+        ("agrees", toJson (agreeing a b origin)),
+        ("scriptedAgrees", toJson (agreeing (Scenario.play ra.opened ra.moves)
+          (Scenario.play rb.opened rb.moves) origin))])
+    | _, _ => none
+  return Json.mkObj [("runs", toJson runChecks), ("pairs", toJson pairChecks)]
+
 end Scenarios
 end KeyedTool
 
@@ -1058,7 +1108,10 @@ def main (args : List String) : IO UInt32 := do
     | ["scenario-batch", file] => do
       let input ← IO.FS.readFile file
       pure <| do KeyedTool.Scenarios.batch (← (← Json.parse input).getArr?).toList
-    | _ => pure (.error "usage: emit | replay FILE | zero FILE | batch FILE | scenarios | scenario-batch FILE")
+    | ["service-checks", file] => do
+      let input ← IO.FS.readFile file
+      pure <| do KeyedTool.Scenarios.serviceChecks (← (← Json.parse input).getArr?).toList
+    | _ => pure (.error "usage: emit | replay FILE | zero FILE | batch FILE | scenarios | scenario-batch FILE | service-checks FILE")
   match result with
   | .error why => IO.eprintln why; pure 2
   | .ok j => IO.println j.compress; pure 0
