@@ -21,7 +21,8 @@ table or service declarations, travels as its canonical bytes in lowercase hex (
 `holes`, …) or as its JSON print (`programJson`, `holesJson`, …), whose objects may come in any
 order and whose lists may come as arrays. One function reads each way at every carrier
 (`Tools.JsonBridge.valueFrom?`: the store's exact decoder, `Canonical.decode`, or
-`Canonical.ofJsonAnyOrder`). Answers give a program as both.
+`Canonical.ofJsonAnyOrder`). Answers give JSON; a request with `"hex": true` gets the canonical
+bytes beside it. An agent never needs them: a digest names the bytes where a name is wanted.
 
 **The application travels with `open`** (decisions row 373 (10)): the row table and the
 service declarations (`rows` or `rowsJson`, `services` or `servicesJson`). With neither, the
@@ -32,12 +33,12 @@ names bytes; no answer assumes two applications with one digest are one.
 | Operation | Takes | Answers | The laws it names |
 | --- | --- | --- | --- |
 | `open` | `program` (hex) or `programJson`, and the hole table, the rows and the services if any, each as hex or JSON | the view | `SourceSession.reached_view`; `ofLeanJson_num` and `Canonical.ofJsonAnyOrder_exact` for JSON |
-| `fill` | `path`, `replacement` (hex) or `replacementJson` | the delta and the view | the law the delta took, `SourceSession.feed_coherent`, and `SourceSession.reached_view` |
+| `fill` | `path`, `replacement` (hex) or `replacementJson` | the delta and the view; refused where the path is no part of the sketch | the law the delta took, `SourceSession.feed_coherent`, and `SourceSession.reached_view` |
 | `omit` | `path`, `holeName` | the delta and the view; the hole row declares the focus's type | the same |
 | `view` | `path`, or none | at an address, its entry and its focus; with none, the whole table | `SourceSession.reached_view`; `SourceSession.focusAt_typed` at an address |
 | `undo` | nothing | the last fill taken back: the delta and the view | `SourceSession.feed_undo` |
 | `journal` | nothing | each edit, its address and its delta | none |
-| `sketch` | nothing | the bytes of the sketch and of the application | `Sketch.decode_exact`, `Canonical.decode_exact` |
+| `sketch` | nothing | the sketch and the application as JSON, and as bytes with `hex` | `Sketch.decode_exact`, `Canonical.decode_exact` |
 | `catalogue` | nothing; open or not | the program's forms, the atoms with their typing schemes, the application's rows by index (`Tools.Catalogue`) | `Canonical.ofJsonAnyOrder_exact`, `NativeAtom.atom_table_wf` |
 
 **The delta names its law.** An edit of the sketch as written that moves the expansion at its
@@ -102,6 +103,8 @@ structure Request where
   rowsJson : Option Json := none
   /-- the service declarations as their JSON print, in place of `services` -/
   servicesJson : Option Json := none
+  /-- whether answers carry canonical bytes in hex beside the JSON; by default they do not -/
+  hex : Bool := false
 
 /-- Read a request; a field of the wrong type is refused with its name. -/
 def Request.fromJson? (j : Json) : Except String Request := do
@@ -116,9 +119,10 @@ def Request.fromJson? (j : Json) : Except String Request := do
   let replacementJson := (j.getObjVal? "replacementJson").toOption
   let rows ← optField j "rows" (Lean.fromJson? (α := String))
   let services ← optField j "services" (Lean.fromJson? (α := String))
+  let hex ← optField j "hex" (Lean.fromJson? (α := Bool))
   return Request.mk op program holes (path.getD []) replacement (holeName.getD "h0") id
     programJson replacementJson rows services (j.getObjVal? "holesJson").toOption
-    (j.getObjVal? "rowsJson").toOption (j.getObjVal? "servicesJson").toOption
+    (j.getObjVal? "rowsJson").toOption (j.getObjVal? "servicesJson").toOption (hex.getD false)
 
 /-- Write a request, as `Request.fromJson?` reads it. -/
 def Request.toJson (r : Request) : Json :=
@@ -134,6 +138,7 @@ def Request.toJson (r : Request) : Json :=
     (r.holesJson.map fun j => ("holesJson", j)).toList ++
     (r.rowsJson.map fun j => ("rowsJson", j)).toList ++
     (r.servicesJson.map fun j => ("servicesJson", j)).toList ++
+    (if r.hex then [("hex", Json.bool true)] else []) ++
     (r.id.map fun id => ("id", id)).toList
 
 /-- **A refusal of a carrier that does not read**: where its JSON was given and the walk finds
@@ -236,7 +241,9 @@ def answer (st : State) (req : Request) : State × Answer :=
       match op with
       | "fill" =>
         match valueFrom? (α := NativeEff) req.replacement req.replacementJson with
-        | some (some q, readLaws) => feedAnswer st l req (.fill req.path q) readLaws
+        | some (some q, readLaws) =>
+          if (l.sketch.fillAt req.path q).isSome then feedAnswer st l req (.fill req.path q) readLaws
+          else none' "no part of the sketch at the address"
         | _ =>
           (st, unreadable (α := NativeEff) req.op "the filling does not read" req.replacementJson req.id)
       | "omit" =>
@@ -252,11 +259,7 @@ def answer (st : State) (req : Request) : State × Answer :=
           let entry := match l.table.find? fun e => decide (e.path = req.path) with
             | some e => entryJson e
             | none => .null
-          let focus := l.focusAt req.path
-          let result := Json.mkObj [("entry", entry), ("focus", focusJson focus),
-            ("programJson", match focus with
-              | some f => printJson f.program
-              | none => .null)]
+          let result := Json.mkObj [("entry", entry), ("focus", focusJson (l.focusAt req.path) req.hex)]
           (st, Answer.mk op st.app [``SourceSession.reached_view, ``SourceSession.focusAt_typed]
             true result none req.id)
       | "undo" =>
@@ -276,11 +279,13 @@ def answer (st : State) (req : Request) : State × Answer :=
         let result := Json.arr (st.journal.reverse.map stepJson).toArray
         (st, Answer.mk op st.app [] true result none req.id)
       | "sketch" =>
-        let result := Json.mkObj [("program", .str (toHex l.sketch.program)),
-          ("holes", .str (toHex l.sketch.holes)),
-          ("rows", .str (toHex l.app.rows)),
-          ("services", .str (toHex l.app.services)),
-          ("programJson", printJson l.sketch.program), ("holesJson", printJson l.sketch.holes)]
+        let result := Json.mkObj <|
+          (if req.hex then
+            [("program", .str (toHex l.sketch.program)), ("holes", .str (toHex l.sketch.holes)),
+              ("rows", .str (toHex l.app.rows)), ("services", .str (toHex l.app.services))]
+          else []) ++
+          [("programJson", printJson l.sketch.program), ("holesJson", printJson l.sketch.holes),
+            ("rowsJson", printJson l.app.rows), ("servicesJson", printJson l.app.services)]
         (st, Answer.mk op st.app [``Sketch.decode_exact, ``Canonical.decode_exact] true result
           none req.id)
       | other => none' s!"unknown operation {other}"

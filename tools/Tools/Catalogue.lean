@@ -16,6 +16,8 @@ defines it, so none drifts from the checker or the reader:
   fields, as the reader takes them (`Canonical.ofJsonAnyOrder`).
 - **atoms**: `NativeAtom.all`, each with its row (`NativeAtom.row`) and its typing scheme and
   citation (`NativeAtom.spec`).
+- **operations**: the built-in operations that take no parameter, each with its row's request,
+  answer and error types (`NativeOp.row`).
 - **rows**: the application's row table, by index: `external i` performs row `i`.
 
 Types and rows print as the program's JSON prints them (`printJson`), so an agent copies a type
@@ -32,7 +34,7 @@ namespace Tools.Catalogue
 
 open Lean (Json toJson)
 open Effect4.Program Effect4.Store
-open Tools.JsonBridge (printJson shapeText)
+open Tools.JsonBridge (printJson shapeText read?)
 
 /-- A case's or a structure's fields: each JSON key with its shape. -/
 def fieldsJson (fields : List (String × Shape)) : Json :=
@@ -125,9 +127,23 @@ def rowsJson (rows : RowTable) : Json :=
   Json.arr ((List.range rows.length).zip rows |>.map fun (i, row) =>
     Json.mkObj [("index", toJson i), ("row", printJson row)]).toArray
 
+/-- The built-in operations that take no parameter, each with its row: the request it takes, the
+answer and the error it gives, its kind. Each is read from its `_tag` through the program's reader
+(`Tools.JsonBridge.read?`), so the list is the shape's field-free cases of `NativeOp`, and no list
+is written here. An operation with parameters is a form (`forms`); an application's row is
+`external` with its index (`rows`). -/
+def operationsJson : Json :=
+  let doc := Canonical.shape NativeOp
+  let tags : List String := match doc.root with
+    | .sum _ cases => cases.filterMap fun (tag, _, fields) => if fields.isEmpty then some tag else none
+    | _ => []
+  Json.arr (tags.filterMap fun tag =>
+    (read? (α := NativeOp) (Json.mkObj [("_tag", .str tag)])).map fun op =>
+      Json.mkObj [("_tag", .str tag), ("row", printJson op.row)]).toArray
+
 /-- **The catalogue** at an application's row table. -/
 def catalogueJson (rows : RowTable) : Json :=
-  Json.mkObj [("forms", formsJson), ("atoms", Json.arr (NativeAtom.all.map atomJson).toArray),
-    ("rows", rowsJson rows)]
+  Json.mkObj [("forms", formsJson), ("operations", operationsJson),
+    ("atoms", Json.arr (NativeAtom.all.map atomJson).toArray), ("rows", rowsJson rows)]
 
 end Tools.Catalogue

@@ -221,11 +221,13 @@ def entryJson (e : Table.Entry) : Json :=
       | some result => checkJson result)]
 
 /-- The focus at an address, or that the function answers none there. -/
-def focusJson : Option (Focus NativeOp) → Json
+def focusJson (focus : Option (Focus NativeOp)) (hex : Bool := true) : Json :=
+  match focus with
   | none => Json.mkObj [("found", .bool false)]
   | some focus =>
-    Json.mkObj [("found", .bool true), ("env", printJson focus.env), ("type", effTyJson focus.ty),
-      ("program", .str (hexOf focus.program)), ("programJson", printJson focus.program)]
+    Json.mkObj ([("found", .bool true), ("env", printJson focus.env), ("type", effTyJson focus.ty)] ++
+      (if hex then [("program", .str (hexOf focus.program))] else []) ++
+      [("programJson", printJson focus.program)])
 
 /-- One slot of a node: its term, the environment of the term, and the term's type there. -/
 def slotJson (slot : ExtSlot) (term : Option Term) (env : Option TyEnv) (ty : Option Ty) : Json :=

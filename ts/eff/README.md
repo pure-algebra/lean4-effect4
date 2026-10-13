@@ -11,6 +11,13 @@ import { readTypeScript } from "./read.ts"      // (source: string) => Result<Ef
 import { toJson } from "./json.gen.ts"          // (eff: Eff) => string
 ```
 
+**Which JSON goes where.** The session tool reads the node that `readTypeScript` returns
+(`programJson`, `tools/Tools/Session.lean`). That is `JSON.stringify(eff)`: each object a case
+with its `_tag`, each list an array, as `eff.gen.ts` types it. `toJson` writes a second form,
+the golden exchange with OCaml (`ocaml/eff/eff_json.ml`), whose lists are positional
+`["cons", head, tail]`; the session refuses it. Hand an agent's program to the session as the
+node's JSON.
+
 `readTypeScript` is the whole path, in order:
 
 | step | from → to | where |
