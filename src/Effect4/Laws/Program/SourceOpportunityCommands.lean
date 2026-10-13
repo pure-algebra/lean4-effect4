@@ -44,14 +44,16 @@ theorem post_task_ids (m : NativeMachine) (owner : FiberId) (priority : Nat)
       (fun fiber => fiber.id) = m.fibers.map (fun fiber => fiber.id)
     exact RunMachine.update_keeps_ids _ _
 
-private theorem source_stores (root : NativeEff) (q : List Nat) (table : RowTable) :
+/-- The source ledger weighs no store. Consumer: `source_local`. -/
+theorem source_stores (root : NativeEff) (q : List Nat) (table : RowTable) :
     PlaceFunding.StoreHooks (PlaceLedgerConnect.source root q) (interpOf root table) where
   link := fun _ _ _ _ _ _ _ => Nat.le_refl _
   drop := fun _ _ _ _ _ => Nat.le_refl _
   due := fun _ => Nat.le_refl _
   wake := fun _ _ _ => Nat.le_refl _
 
-private theorem source_administration (root : NativeEff) (q : List Nat) (table : RowTable) :
+/-- Administrative codes carry no selected source opportunity. Consumer: `source_local`. -/
+theorem source_administration (root : NativeEff) (q : List Nat) (table : RowTable) :
     PlaceFunding.Administration (PlaceLedgerConnect.source root q)
       (fun code => current root q code = 0) (interpOf root table) where
   race := fun race cleanup exit => terminal_reply_zero root q _ (race_settle_reply root table race cleanup exit)
@@ -76,7 +78,8 @@ private theorem source_installed (root : NativeEff) (q : List Nat)
   apply (source_no_queue root q).install_debit m fiber it unique member afterUnique key
   exact (source_debit_iff root q m fiber it).mpr debit
 
-private theorem source_evaluation (root : NativeEff) (q : List Nat) (fragment : Fragment root)
+/-- The source ledger's evaluator debit. Consumers: `command_debit` and `source_local`. -/
+theorem source_evaluation (root : NativeEff) (q : List Nat) (fragment : Fragment root)
     (clearFin : ClearFinalizers root q) (clearLoop : ClearLoops root q) (table : RowTable)
     (sequential : SequentialSource root) (raceFree : RaceFreeSource root) :
     PlaceFunding.Evaluation (PlaceLedgerConnect.source root q) (ConfigurationAt root)
@@ -97,7 +100,8 @@ private theorem source_evaluation (root : NativeEff) (q : List Nat) (fragment : 
       (iteration_debit root q fragment clearFin clearLoop table m fiber yielding sequential raceFree owned
         (configuration_fiber root m fiber.id fiber owned found) ledger.idsUnique)
 
-private theorem source_inputs (root : NativeEff) (q : List Nat) (m : NativeMachine)
+/-- A source command imports only free code. Consumers: `command_debit` and `source_local`. -/
+theorem source_inputs (root : NativeEff) (q : List Nat) (m : NativeMachine)
     (command : SourceCommand) (raceFree : RaceFreeSource root)
     (owned : ConfigurationAt root m) (head : CommandAt root command) :
     PlaceFunding.Inputs (fun code => current root q code = 0) m command where
@@ -111,31 +115,5 @@ private theorem source_inputs (root : NativeEff) (q : List Nat) (m : NativeMachi
     unfold RunMachine.race? at found
     rw [empty] at found
     cases found
-
-private theorem source_zero_allowance (m : NativeMachine) (command : SourceCommand) :
-    PlaceFunding.commandAllowance (fun _ _ _ => 0) m command = 0 := by
-  fun_cases PlaceFunding.commandAllowance (fun _ _ _ => 0) m command <;> rfl
-
-
-/-- Every actual source-owned command spends only the existing source budget.
-Consumer: the admitted decision-history bound for Workers and Atomic.
-No command constructor remains an additional preservation premise. -/
-theorem command_debit (root : NativeEff) (q : List Nat) (fragment : Fragment root)
-    (clearFin : ClearFinalizers root q) (clearLoop : ClearLoops root q) (table : RowTable)
-    (m : NativeMachine) (command : SourceCommand) (rest : List SourceCommand)
-    (sequential : SequentialSource root) (raceFree : RaceFreeSource root)
-    (owned : ConfigurationAt root m) (ledger : ForkLedger.Invariant.Ok m)
-    (head : CommandAt root command) :
-    letI := evaluatorFor root table
-    let next := driveStep (interpOf root table) m command rest
-    recorded q next.1 + fibers root q next.1 ≤ recorded q m + fibers root q m := by
-  letI := evaluatorFor root table
-  have before := (PlaceLedgerConnect.source_funded root q _ m).mpr (Nat.le_refl (recorded q m + fibers root q m))
-  have after := PlaceFunding.command_funded root table (source_control root q) (source_no_queue root q)
-    (source_events root q) (source_stores root q table) (source_administration root q table) (ConfigurationAt root)
-    (fun _ _ _ => 0) (source_evaluation root q fragment clearFin clearLoop table sequential raceFree)
-    m command rest ledger owned (source_inputs root q m command raceFree owned head) before
-  rw [source_zero_allowance, Nat.add_zero] at after
-  exact (PlaceLedgerConnect.source_funded root q _ _).mp after
 
 end Effect4.Program.SourceScope.Opportunities

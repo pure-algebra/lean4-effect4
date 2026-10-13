@@ -1,5 +1,5 @@
 import Effect4.Laws.Program.SourceOpportunityCommands
-import Effect4.Laws.Program.PlaceFunding.History
+import Effect4.Laws.Program.PlaceFunding.Run
 import Effect4.Laws.Program.PlaceLedgerConnect
 import Effect4.Laws.Program.NativeReplies
 import Effect4.Laws.Program.ReleaseTrace
@@ -7,51 +7,34 @@ import Effect4.Laws.Program.ReleaseTrace
 /-!
 Concept: scope-lifetime-finalization R11.
 Consumer: original Workers registration and Atomic cleanup bounds.
-The existing decision lift carries the existing source configuration and its numeric budget.
+The source ledger is an instance of the shared place-ledger law (`PlaceFunding.Local`): its
+decision and history lifts carry the source configuration and its numeric budget.
 -/
 set_option autoImplicit false
 set_option maxHeartbeats 4000000
 namespace Effect4.Program.SourceScope.Opportunities
 open Effect4 Effect4.Machine Effect4.Program Effect4.Run
 
-/-- Actual admitted decision transport retains the original configuration and source budget.
-Consumer: the universal application source-use history bound. -/
-theorem budget_decision_lift (root : NativeEff) (q : List Nat) (cap : Nat)
-    (fragment : Fragment root) (clearFin : ClearFinalizers root q) (clearLoop : ClearLoops root q)
-    (table : RowTable) (sequential : SequentialSource root) (raceFree : RaceFreeSource root) :
-    letI := evaluatorFor root table
-    Lift.DecisionLift Lift.unitOrder (interpOf root table)
-      (fun _ m => ConfigurationAt root m ∧ ForkLedger.Invariant.Ok m ∧ recorded q m + fibers root q m ≤ cap)
-      (fun _ _ commands => CommandsAt root commands) (fun _ _ tasks => TasksAt root tasks) (fun _ _ _ => True) := by
-  letI := evaluatorFor root table
-  have edits : Lift.MachineEdits (interpOf root table)
-      (fun m => ForkLedger.Invariant.Ok m ∧ recorded q m + fibers root q m ≤ cap) := by
-    have predicate : PlaceFunding.Holds (PlaceLedgerConnect.source root q) cap =
-        (fun m => ForkLedger.Invariant.Ok m ∧ recorded q m + fibers root q m ≤ cap) := by
-      funext m
-      exact propext (and_congr_right fun _ => PlaceLedgerConnect.source_funded root q cap m)
-    rw [← predicate]
-    exact PlaceFunding.edits (source_control root q) (source_no_queue root q) (source_events root q)
-        cap (interpOf root table) (fun _ _ => Nat.le_refl _) (fun _ _ _ _ => Nat.le_refl _)
-  apply (reply_decision_lift root fragment table).withMachineFact _ ?_ edits ?_
-  · intro tasks world m command rest running source held
-    have queue := (source.2 running).1
-    have ledger := ForkLedger.Invariant.Native.driveStep_ok root table m command rest held.1
-    have bound := command_debit root q fragment clearFin clearLoop table m command rest
-      sequential raceFree source.1 held.1 (queue command (.head _))
-    exact ⟨ledger, Nat.le_trans bound held.2⟩
-  · intro world m id token answer owned held running admitted
-    have prepared := prepare_reply_at root table m id token answer
-    have ledger := ForkLedger.Invariant.Native.driveStep_ok root table
-      {m with state := (prepareAsyncAnswer (interpOf root table) m id token answer).1}
-      (.resume id token (prepareAsyncAnswer (interpOf root table) m id token answer).2) [.drainDue] held.1
-    have bound := resume_command_debit root q table
-      {m with state := (prepareAsyncAnswer (interpOf root table) m id token answer).1}
-      id token (prepareAsyncAnswer (interpOf root table) m id token answer).2 [.drainDue] held.1.idsUnique prepared.2.2
-    exact ⟨ledger, Nat.le_trans bound held.2⟩
+/-- **The source ledger's local facts**: the shared place-ledger law then carries its funding
+through every command, edit, reply, decision and admitted history.
+Consumers: `decision_budget` and `history_budget`. -/
+theorem source_local (root : NativeEff) (q : List Nat) (fragment : Fragment root)
+    (clearFin : ClearFinalizers root q) (clearLoop : ClearLoops root q) (table : RowTable)
+    (sequential : SequentialSource root) (raceFree : RaceFreeSource root) :
+    PlaceFunding.Local (PlaceLedgerConnect.source root q) (fun code => current root q code = 0)
+      root table where
+  control := source_control root q
+  quiet := source_no_queue root q
+  events := source_events root q
+  stores := source_stores root q table
+  admin := source_administration root q table
+  evaluation := source_evaluation root q fragment clearFin clearLoop table sequential raceFree
+  inputs := fun m command owned head => source_inputs root q m command raceFree owned head
+  clock := fun _ _ => Nat.le_refl _
+  prepare := fun _ _ _ _ => Nat.le_refl _
 
-/-- Every actual decision retains the combined recorded and live source budget.
-Consumer: the original admitted-history bound for application source sites. -/
+/-- Every actual decision retains the combined recorded and live source budget, through the
+shared place-ledger decision lift. Consumer: `FinalizerRun.census_pushes_once`. -/
 theorem decision_budget (root : NativeEff) (q : List Nat) (cap : Nat)
     (fragment : Fragment root) (clearFin : ClearFinalizers root q) (clearLoop : ClearLoops root q)
     (table : RowTable) (sequential : SequentialSource root) (raceFree : RaceFreeSource root)
@@ -63,12 +46,14 @@ theorem decision_budget (root : NativeEff) (q : List Nat) (cap : Nat)
       recorded q (steppedBy root fuel table m decision) +
         fibers root q (steppedBy root fuel table m decision) ≤ cap := by
   letI := evaluatorFor root table
-  obtain ⟨_, _, moved⟩ := Lift.stepDecisionState_lift
-    (budget_decision_lift root q cap fragment clearFin clearLoop table sequential raceFree)
-    fuel () m decision ⟨owned, ledger, bounded⟩ trivial
-  exact moved
+  have facts := source_local root q fragment clearFin clearLoop table sequential raceFree
+  obtain ⟨_, _, moved⟩ := Lift.stepDecisionState_lift (facts.decision_lift cap fragment)
+    fuel () m decision ⟨owned, ledger, (PlaceLedgerConnect.source_funded root q cap m).mpr bounded⟩
+    trivial
+  exact ⟨moved.1, moved.2.1, (PlaceLedgerConnect.source_funded root q cap _).mp moved.2.2⟩
 
-/-- The original admitted-history carrier retains at most one selected source opportunity.
+/-- The original admitted-history carrier retains at most one selected source opportunity,
+through the shared place-ledger history law (`PlaceFunding.Local.history_funded`).
 The source restrictions are discharged by the actual Atomic and Workers programs.
 This invariant establishes neither progress nor arbitrary-source control linearity. -/
 theorem history_budget (b : Api.Built) (q : List Nat) (fragment : Fragment b.program)
@@ -76,14 +61,11 @@ theorem history_budget (b : Api.Built) (q : List Nat) (fragment : Fragment b.pro
     (sequential : SequentialSource b.program) (raceFree : RaceFreeSource b.program)
     (compileFuel : Nat) (m : NativeMachine) (history : HistoryOf b compileFuel m) :
     recorded q m + fibers b.program q m ≤ 1 := by
-  have kept := history_keeps b compileFuel
-    (fun m => ConfigurationAt b.program m ∧ ForkLedger.Invariant.Ok m ∧
-      recorded q m + fibers b.program q m ≤ 1)
-    ⟨load_at b.program fragment compileFuel, ForkLedger.Invariant.load_ok b.program compileFuel,
-      load_budget b.program q compileFuel⟩
-    (fun before row held _ => decision_budget b.program q 1 fragment clearFin clearLoop b.table
-      sequential raceFree row.1 before row.2 held.1 held.2.1 held.2.2) m history
-  exact kept.2.2
+  have funded := PlaceFunding.Local.history_funded b
+    (source_local b.program q fragment clearFin clearLoop b.table sequential raceFree) 1 fragment
+    compileFuel ((PlaceLedgerConnect.source_funded b.program q 1 _).mpr
+      (load_budget b.program q compileFuel)) m history
+  exact (PlaceLedgerConnect.source_funded b.program q 1 m).mp funded
 
 /-- Every actual acquisition registration event consumes the selected source reservation.
 Consumer: the original Workers registration count. -/

@@ -4,7 +4,7 @@ import Effect4.Laws.Machine.LiftMachineFact
 /-!
 Concept: scope-lifetime-finalization and reactive-scheduling, R11.
 Question: finalizer custody and source-use claims require funding through actual histories.
-Consumers: StackLedger.edits and SourceScope.Opportunities.budget_decision_lift.
+Consumers: StackLedger.edits and PlaceFunding.Local.decision_lift.
 The Atomic writer ledger consumes the same outer edits after its evaluator debit lands.
 Reach: native edits, distinct fiber ids, and zero race, command, and detached-task weights.
 Clock updates and prepared replies retain explicit state-weight obligations.
