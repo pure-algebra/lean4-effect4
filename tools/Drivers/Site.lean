@@ -1,6 +1,7 @@
 import Tools.Site
 import Tools.Document.Specimen
 import Tools.Document.Markdown
+import Tools.Document.Sheet
 
 /-!
 # The documentation site (decisions row 363)
@@ -118,9 +119,9 @@ where run (args : List String) : IO UInt32 := do
     fonts.map ("fonts/" ++ ·)
   let draft : Site := { pages, files }
   let s : Site := { draft with pages := pages ++ [{ path := ["contents"], doc := contents draft, space := "contents" }] }
-  let css ← IO.FS.readFile Html.sheetPath
-  if let some why := Html.Sheet.problem css then
-    IO.eprintln s!"{Html.sheetPath} refused at {why}"; return 1
+  let css ← IO.FS.readFile Sheet.path
+  if let some why := Sheet.problem css then
+    IO.eprintln s!"{Sheet.path} refused: {why}"; return 1
   IO.FS.createDirAll dir
   let errors ← s.write dir
   unless errors.isEmpty do

@@ -1,8 +1,9 @@
 /* The pages' rules (tools/Tools/Site.lean, tools/Tools/Document/Html.lean; decisions rows 353, 354
    and 366). Every colour and family is a look's custom property (--e4-*, looks.css). A size, a
    measure and a space are the page's, on one modular scale. Each rule below draws a structural
-   fact, named in its comment (row 366, point 3). Sheet.problem refuses a literal colour or family
-   outside @font-face, a shadow, a gradient and a filter. */
+   fact, named in its comment (row 366, point 3). Tools.Document.Sheet reads these rules by the
+   tokens of CSS Syntax 3 and refuses a declaration that writes a literal colour, a family outside
+   @font-face, a shadow, a gradient or a filter. */
 
 /* The faces (vendor/fonts/, row 366, point 1), served from the site. */
 @font-face { font-family: "Source Serif 4"; src: url("fonts/source-serif-4/source-serif-4-latin-opsz-normal.woff2") format("woff2"); font-weight: 200 900; font-style: normal; font-display: swap; }

@@ -78,7 +78,10 @@ def readLine (n : Nat) (line : String) : Read Line := do
         i := i + 1
     else if c == '*' then
       return ← fail "emphasis with `*` is not part of the subset: write the words plainly"
-    else if c == '_' && (i == 0 || !(cs[i - 1]!).isAlphanum) && i + 1 < cs.size && (cs[i + 1]!).isAlpha then
+    -- `_` opens emphasis at the start of a word: after a space or an opening bracket, never inside
+    -- a word (`Σ_app`; `Char.isAlphanum` is ASCII, so it cannot say what a word is)
+    else if c == '_' && (i == 0 || (cs[i - 1]!).isWhitespace || "([{\"'".contains cs[i - 1]!) &&
+        i + 1 < cs.size && (cs[i + 1]!).isAlpha then
       return ← fail "emphasis with `_` is not part of the subset: put a name in a code span"
     else if c == '!' && i + 1 < cs.size && cs[i + 1]! == '[' then
       return ← fail "an image is not part of the subset"

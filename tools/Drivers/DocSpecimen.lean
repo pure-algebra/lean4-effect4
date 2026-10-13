@@ -1,5 +1,6 @@
 import Tools.Site
 import Tools.Document.Specimen
+import Tools.Document.Sheet
 
 /-!
 # The document specimen (decisions row 362, DOC-1 of the docs audit)
@@ -26,8 +27,8 @@ def main (args : List String) : IO UInt32 := do
   let [out] := args | IO.eprintln "usage: DocSpecimen OUT"; return 2
   let out : System.FilePath := out
   IO.FS.createDirAll out
-  if let some why := Tools.Document.Html.Sheet.problem (← IO.FS.readFile Tools.Document.Html.sheetPath) then
-    IO.eprintln s!"{Tools.Document.Html.sheetPath} refused at {why}"
+  if let some why := Sheet.problem (← IO.FS.readFile Sheet.path) then
+    IO.eprintln s!"{Sheet.path} refused: {why}"
   let dark : Look := {}
   let paper ← Tokens.lookFile "paper"
   let write (name : String) (base light : Look) : IO Bool := do

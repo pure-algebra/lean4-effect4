@@ -1,5 +1,6 @@
 import Tools.Site
 import Tools.Document.Markdown
+import Tools.Document.Sheet
 
 /-!
 # Controls of the documentation site's checks
@@ -77,5 +78,25 @@ open Tools.Document Tools.Site
 
 -- control: a heading that skips a level is refused
 #guard (Tools.Document.Markdown.read "f.md" "" "# T\n\n### Deep").toBool == false
+
+-- an underscore inside a word is text (`Σ_app`); control: one that opens a word is emphasis
+#guard (Tools.Document.Markdown.read "f.md" "" "# T\n\nThe part Σ_app of a context.").toBool &&
+  !(Tools.Document.Markdown.read "f.md" "" "# T\n\nAn _emphasis_ here.").toBool
+
+/-! ## The page's rules (`page.css`, `Tools.Document.Sheet`), read by CSS Syntax 3's tokens -/
+
+-- control: a shadow is refused at its declaration, located under its rule
+#guard Tools.Document.Sheet.problem ".note { color: var(--e4-ink); box-shadow: 0 0 1px var(--e4-ink) }" ==
+  some "`.note` › `box-shadow: 0 0 1px var(--e4-ink)`: an ornament with no meaning (box-shadow)"
+
+-- a comment is no token, and a selector no declaration: neither writes a colour
+#guard (Tools.Document.Sheet.problem "/* #fff */ #main { color: var(--e4-ink) }").isNone
+
+-- control: a colour in a value, inside a function and under an at-rule, is refused
+#guard (Tools.Document.Sheet.problem "@media print { p { border: 1px solid rgb(0 0 0) } }").isSome
+
+-- an `@font-face` rule names its family; control: any other rule takes the look's
+#guard (Tools.Document.Sheet.problem "@font-face { font-family: \"X\" }").isNone &&
+  (Tools.Document.Sheet.problem "p { font-family: \"X\" }").isSome
 
 end Test.Audit.SiteControls

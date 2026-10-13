@@ -118,75 +118,7 @@ def algebra (target : String → String := fragment) : Algebra (Nat → List Raw
       [.text t, el "a" [.text k] [("class", "key"), ("href", fragment k)]]
     [el "section" (heading :: (body.flatMap (· (depth + 1)))) [("id", k)]]
 
-/-! ## The stylesheet -/
-
-/-- The file of the page's own rules (`page.css`), from the repository's root. Every page of the
-site links it. The rules read the
-looks' custom properties: the ground, the ink and the
-rule's colour; the families of the name, data, label and title faces; the weight of a rule and of a
-frame; the radius of a corner. The band behind a code block and a table's head is the look's band:
-the rule's colour at the band's tone over the ground, as the view draws the band behind a lit row.
-A measure, a size and a space are the page's.
-
-**The status marks** (decisions row 354, point 2) are drawn here once, before the word of a status,
-keyed on its `data-status`: a mark of the promise-and-keeping family, in `currentColor` and with no
-hue. Proved is a filled circle; modulo a circle filled on its left half; a planned goal (`goal`, a
-claim's or a plan node's) a hollow circle; open a dashed circle; refuted
-the failure cross `×` of the notation. A circle's outline is the look's frame. A circle is a
-pseudo-element with no content, which a screen reader does not read; the cross is text with an
-empty alternative (`content: "×" / ""`), after a plain `content` for a browser without the
-alternative. A circle's fill is a background, so print and a forced-colours mode are told to keep
-it. The word beside the mark names the status, to a reader and to an agent. `absent`, `assumed`
-and `missing` take no mark. -/
-def sheetPath : System.FilePath := "tools/Tools/Document/page.css"
-
-/-- The text with its comments taken out. -/
-private def uncomment : List Char → List Char
-  | '/' :: '*' :: rest =>
-    let rec skip : List Char → List Char
-      | '*' :: '/' :: more => uncomment more
-      | _ :: more => skip more
-      | [] => []
-    skip rest
-  | c :: rest => c :: uncomment rest
-  | [] => []
-
-private def isHex (c : Char) : Bool := c.isDigit || ('a' ≤ c && c ≤ 'f') || ('A' ≤ c && c ≤ 'F')
-
-/-- A `#` and three to eight hex digits after a space, a colon, a comma or a bracket. -/
-private def hexColour : List Char → Bool
-  | c :: d :: rest =>
-    let digits := rest.takeWhile isHex
-    (d == '#' && (c == ' ' || c == ':' || c == ',' || c == '(') && 3 ≤ digits.length &&
-      digits.length ≤ 8 && !(((rest.drop digits.length).head?.map Char.isAlphanum).getD false)) ||
-      hexColour (d :: rest)
-  | _ => false
-
-/-- What in one line of rules is a literal colour or family, or an ornament with no meaning (a
-shadow, a gradient, a filter: decisions row 366, point 3), if anything. An `@font-face` rule names
-the family it defines, so its line may write one. -/
-private def lineProblem (line : String) : Option String :=
-  let colourFns := ["rgb(", "rgba(", "hsl(", "hsla(", "hwb(", "lab(", "lch(", "oklab(", "oklch("]
-  let ornaments := ["box-shadow", "text-shadow", "gradient(", "filter:"]
-  let has (key : String) : Bool := (line.splitOn key).length > 1
-  let after (key : String) : List String := ((line.splitOn key).drop 1).map (·.trimAscii.toString)
-  if hexColour (' ' :: line.toList) then some "a literal colour"
-  else if colourFns.any has then some "a literal colour"
-  else if let some o := ornaments.find? has then some s!"an ornament with no meaning ({o})"
-  else if has "@font-face" then none
-  else if (after "font-family:").any (fun v => !v.startsWith "var(") then some "a literal family"
-  else if (after " font:").any (fun v => ((v.splitOn "var(--e4-font-").length ≤ 1)) then
-    some "a font without the look's family"
-  else none
-
-/-- **The design language's rule for the page's rules** (decisions row 354, point 1: the look is the
-only data of a colour, a face or a timing; row 366, point 3: no ornament without a meaning): the
-first line of `css` that writes a literal colour, a family not taken from the look, a shadow, a
-gradient or a filter, with its number, or none. -/
-def Sheet.problem (css : String) : Option String :=
-  let lines := (String.ofList (uncomment css.toList)).splitOn "\n"
-  (lines.zipIdx.findSome? fun (line, n) =>
-    (lineProblem line).map fun what => s!"line {n + 1}: {what}: {line.trimAscii}")
+/-! ## The looks (the page's rules are `Tools.Document.Sheet`) -/
 
 /-- The declarations of `light` that are not the base's: those a light scheme changes. -/
 def changed (base light : List String) : List String := light.filter fun d => !base.contains d

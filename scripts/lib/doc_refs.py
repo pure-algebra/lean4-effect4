@@ -225,6 +225,9 @@ class Checker:
             if fenced:
                 continue
             for match in CODE.finditer(line):
+                # a relative path in the site's copy is a path of the site, not of the repository
+                if doc.startswith(SITE_COPY) and match.group(1).startswith(("./", "../")):
+                    continue
                 self.check_code_span(doc, line_no, match.group(1))
             if doc.startswith(SITE_COPY):
                 continue
