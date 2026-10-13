@@ -1,6 +1,7 @@
 import Tools.View.CellSheet
 import Tools.View.Living.Physarum
 import Tools.View.Living.Soft
+import Tools.View.Living.Phyllotaxis
 
 /-!
 # Tools.View.Living.Organism — the Queue as a living network, drawn by the laws of tissue
@@ -128,30 +129,26 @@ def conductivities (ms : List Marking) : List (List Nat) :=
 
 /-! ## The tissue: the constants of the laws -/
 
-/-- The picture's room, its axis, and where the places stand. -/
-def W : Int := 640
-def H : Int := 130
-def CY : Int := 65
-def PITCH : Int := 34
-def vx0 : Int := 270
-def vx1 (cap : Nat) : Int := vx0 + PITCH * cap + 26
-def inletX : Int := vx0 - 110
-def outletX (cap : Nat) : Int := vx1 cap + 92
-
-/-- A slot's centre, the front first, nearest the outlet. -/
-def slotX (cap k : Nat) : Int := vx1 cap - 30 - PITCH * k
-
-/-- A droplet's radius, and the cell-free layer around a unit (Fåhræus): the room a unit keeps
-from a wall. -/
-def DROP_R : Int := 9
+/-- A droplet's radius at rest, and the least and the most it may take when a place is fitted to
+its room; the cell-free layer around a unit (Fåhræus): the room a unit keeps from a wall. -/
+def REST_UNIT : Int := 9
+def MIN_UNIT : Int := 5
 def CLEARANCE : Int := 4
 
-/-- The vessel's radius of influence at rest, its compliance (the share of the rest radius it
-gains under the pressure of a full vessel: Laplace with Hooke), and the least share it keeps under
-suction. -/
-def VESSEL_R : Nat := 40
+/-- The vessel's compliance (the share of its rest radius it gains under the pressure of a full
+vessel: Laplace with Hooke), and the least share it keeps under suction. -/
 def COMPLIANCE : Int := 220
 def COLLAPSE : Int := 620
+
+/-- The largest capacity drawn as a lane; above it, a disc (Gemini's review, question 2). -/
+def LANE_MAX : Nat := 8
+
+/-- The step of a parked request, a neck between a waiting room and the vessel, the least run of a
+channel to the world, and the margin above and below the body. -/
+def REQ_STEP : Int := 44
+def NECK : Int := 60
+def WORLD : Int := 56
+def MARGIN_Y : Int := 34
 
 /-- The field's level is at about 0.69 of a source's radius of influence at the body's level, so a
 visible radius `r` asks a source of radius `r · 1000 / 686`. -/
@@ -164,40 +161,146 @@ def root4 (d : Nat) : Nat := Grow.isqrt (Grow.isqrt (d * 1000000000))
 the conductivity's fourth root (Hagen–Poiseuille). -/
 def channelR (d : Nat) : Nat := reach ((2000 + 7 * (root4 d : Int)) / 1000)
 
+/-! ## The plan: the body's form and measures, from its capacity and its room -/
+
+/-- **A place's form**: a lane of slots, or a disc whose units stand as a sunflower's florets. -/
+inductive Form where
+  | lane | disc
+  deriving DecidableEq, Repr
+
+/-- **The plan of a body**: its form, the radius of a unit, how many units a mark stands for, its
+room, and where its places stand. Every frame and every beat of a run share one plan, so nothing
+of the body moves between frames but what the run moves. -/
+structure Plan where
+  cap : Nat
+  form : Form
+  unit : Int
+  per : Nat
+  W : Int
+  H : Int
+  CY : Int
+  vc : Int
+  vhalf : Int
+  inletX : Int
+  outletX : Int
+  zoneIn : Int
+  zoneOut : Int
+  pitch : Int
+  spacing : Nat
+deriving Repr
+
+/-- The slot pitch of a lane at a unit's radius: the unit, the layer each side, and a gap. -/
+def lanePitch (unit : Int) : Int := 2 * unit + 2 * CLEARANCE + 8
+
+/-- The length of a lane vessel. -/
+def laneLength (cap : Nat) (unit : Int) : Int := lanePitch unit * cap + 26
+
+/-- The marks of a disc and Vogel's spacing for them, at a unit's radius (thousandths). -/
+def discSpacing (marks : Nat) (unit : Int) : Nat :=
+  Phyllotaxis.spacing (2000 * (unit + CLEARANCE)).toNat marks
+
+/-- **The plan of a body** for a capacity, the most offers and takers that wait at once over the
+run, and the width it may take. A lane takes the largest unit, from the rest size down to the
+least, that fits the width; if none fits, or the capacity is above `LANE_MAX`, the place is a
+disc, its radius by the room law (`Phyllotaxis.radius`). Above `Phyllotaxis.MAX_MARKS` units a
+mark stands for several. -/
+def Plan.of (cap maxOffers maxTakers : Nat) (room : Int := 900) : Plan :=
+  let zoneIn := REQ_STEP * (max 1 maxOffers)
+  let zoneOut := REQ_STEP * (max 1 maxTakers)
+  let around := 2 * WORLD + zoneIn + zoneOut + 2 * NECK
+  let fits (u : Int) := around + laneLength cap u ≤ room
+  let laneUnit := ((List.range (REST_UNIT - MIN_UNIT + 1).toNat).map (fun (i : Nat) => REST_UNIT - i)).find? fits
+  let place (form : Form) (unit : Int) (per : Nat) (vhalf : Int) (spacing : Nat) (pitch : Int) : Plan :=
+    let H := 2 * vhalf + 2 * MARGIN_Y + 24
+    let inletX := WORLD + zoneIn / 2
+    let vc := WORLD + zoneIn + NECK + vhalf
+    let outletX := vc + vhalf + NECK + zoneOut / 2
+    { cap, form, unit, per, W := outletX + zoneOut / 2 + WORLD, H, CY := H / 2, vc, vhalf, inletX, outletX,
+      zoneIn, zoneOut, pitch, spacing }
+  match laneUnit, decide (cap ≤ LANE_MAX) with
+  | some u, true => place .lane u 1 (laneLength cap u / 2) 0 (lanePitch u)
+  | _, _ =>
+    let per := Phyllotaxis.perMark cap
+    let marks := (cap + per - 1) / per
+    let unit := if marks > 34 then MIN_UNIT + 2 else REST_UNIT
+    let c := discSpacing marks unit
+    let r : Int := (Phyllotaxis.radius c marks (unit * 1000).toNat (CLEARANCE * 1000).toNat : Int) / 1000
+    place .disc unit per r c 0
+
+/-- The vessel's two ends across. -/
+def Plan.vx0 (p : Plan) : Int := p.vc - p.vhalf
+def Plan.vx1 (p : Plan) : Int := p.vc + p.vhalf
+
+/-- **A slot's place by its age**, `a` counting from the newest unit held: in a lane the newest
+stands at the back and the front nearest the outlet; in a disc the newest stands at the centre and
+the oldest at the rim (Vogel, as the florets of a sunflower). `n` is the number of units held. -/
+def Plan.slotAt (p : Plan) (n a : Nat) : Int × Int :=
+  match p.form with
+  | .lane => (p.vx1 - 30 - p.pitch * ((n - 1 - a : Nat) : Int), p.CY)
+  | .disc =>
+    let d := ((Phyllotaxis.directions (a + 1)).getLast?).getD ⟨Phyllotaxis.UNIT, 0⟩
+    let q := Phyllotaxis.placeOf p.spacing a d
+    (p.vc + q.1 / 1000, p.CY + q.2 / 1000)
+
+/-- The place of the `k`-th message held, the front first, when `n` are held. -/
+def Plan.heldAt (p : Plan) (n k : Nat) : Int × Int :=
+  match p.form with
+  | .lane => (p.vx1 - 30 - p.pitch * k, p.CY)
+  | .disc => p.slotAt n (n - 1 - k)
+
+/-- The places of the room: the slots no message holds, when `n` are held. -/
+def Plan.roomAt (p : Plan) (n : Nat) : List (Int × Int) :=
+  match p.form with
+  | .lane => (List.range p.cap).filterMap fun k => if k < n then none else some (p.vx1 - 30 - p.pitch * k, p.CY)
+  | .disc => ((List.range ((p.cap + p.per - 1) / p.per)).filter (· ≥ (n + p.per - 1) / p.per)).map fun a =>
+      let d := ((Phyllotaxis.directions (a + 1)).getLast?).getD ⟨Phyllotaxis.UNIT, 0⟩
+      let q := Phyllotaxis.placeOf p.spacing a d
+      (p.vc + q.1 / 1000, p.CY + q.2 / 1000)
+
 /-- The ends of each channel. -/
-def channelEnds (cap : Nat) : List ((Int × Int) × (Int × Int)) :=
-  [((0, CY), (inletX, CY)), ((inletX, CY), (vx0 + 14, CY)),
-   ((vx1 cap - 14, CY), (outletX cap, CY)), ((outletX cap, CY), (W, CY))]
+def Plan.channelEnds (p : Plan) : List ((Int × Int) × (Int × Int)) :=
+  [((0, p.CY), (p.inletX, p.CY)), ((p.inletX, p.CY), (p.vx0 + 14, p.CY)),
+   ((p.vx1 - 14, p.CY), (p.outletX, p.CY)), ((p.outletX, p.CY), (p.W, p.CY))]
 
 /-- Where the `j`-th offer and the `j`-th taker wait, the front nearest the vessel. -/
-def offerX (j : Nat) : Int := inletX + 12 - 44 * j
-def takerX (cap j : Nat) : Int := outletX cap - 12 + 44 * j
+def Plan.offerX (p : Plan) (j : Nat) : Int := p.inletX + p.zoneIn / 2 - REQ_STEP / 2 - REQ_STEP * j
+def Plan.takerX (p : Plan) (j : Nat) : Int := p.outletX - p.zoneOut / 2 + REQ_STEP / 2 + REQ_STEP * j
 
-/-- **What the body's field reads**: the conductivities, the vessel's transmural pressure in
-thousandths of a full vessel (negative under suction), each waiting offer's place and presence,
-and the messages in transit through a channel. -/
+/-- Where an answered message leaves. -/
+def Plan.outX (p : Plan) : Int := p.W - 26
+
+/-- **What the body's field reads**: its plan, the conductivities, the vessel's transmural pressure
+in thousandths of a full vessel (negative under suction), each waiting offer's place and
+presence, and the messages in transit through a channel. -/
 structure Body where
-  cap : Nat
+  plan : Plan
   ds : List Nat
   pressure : Int
   offers : List ((Int × Int) × Int) := []
   transit : List (Int × Int) := []
 
-/-- **The vessel's radius** under its transmural pressure: the thin elastic tube's distension,
-linear in the pressure, never below the share it keeps under suction. -/
+/-- **The vessel's radius of influence** under its transmural pressure: the thin elastic tube's
+distension, linear in the pressure, never below the share it keeps under suction. A lane's rest is
+its unit, the layer and a margin of wall; a disc's is its radius by the room law. -/
 def Body.vesselR (b : Body) : Nat :=
-  let r : Int := VESSEL_R
-  (max (r * COLLAPSE / 1000) (r + r * COMPLIANCE * b.pressure / 1000000)).toNat
+  let rest : Int := match b.plan.form with
+    | .lane => b.plan.unit + CLEARANCE + 14
+    | .disc => b.plan.vhalf + 4
+  reach (max (rest * COLLAPSE / 1000) (rest + rest * COMPLIANCE * b.pressure / 1000000))
 
 /-- **The sources of the body's field**: the vessel at its distension, the channels at their
 sheaths, the room of each waiting offer, and each message in transit. Nothing else: a place with
 nothing in it has no field of its own. -/
 def Body.sources (b : Body) : List Soft.Source :=
-  [Soft.Source.segment (vx0 + 30) CY (vx1 b.cap - 30) CY b.vesselR] ++
-  ((channelEnds b.cap).zip b.ds).map (fun (((ax, ay), (bx, by_)), d) =>
+  let p := b.plan
+  let vessel := match p.form with
+    | .lane => Soft.Source.segment (p.vx0 + 30) p.CY (p.vx1 - 30) p.CY b.vesselR
+    | .disc => Soft.Source.point p.vc p.CY b.vesselR
+  [vessel] ++
+  (p.channelEnds.zip b.ds).map (fun (((ax, ay), (bx, by_)), d) =>
     Soft.Source.segment ax ay bx by_ (max (reach 3) (channelR d))) ++
   b.offers.map (fun ((x, y), pres) => Soft.Source.point x y (reach (17 + CLEARANCE)) (pres.toNat)) ++
-  b.transit.map (fun (x, y) => Soft.Source.point x y (reach (DROP_R + CLEARANCE)) 1000)
+  b.transit.map (fun (x, y) => Soft.Source.point x y (reach (p.unit + CLEARANCE)) 1000)
 
 /-- The grid of the body: two pixels a sample, reaching `MARGIN` past each side of the picture,
 beyond any channel's reach, so the field is zero on its border. -/
@@ -227,15 +330,15 @@ def body (g : Soft.Grid) : List (Keyed Call) :=
 
 /-- The body's field on its grid. -/
 def Body.grid (b : Body) : Soft.Grid :=
-  Soft.Grid.of (-MARGIN) 0 STEP (((W + 2 * MARGIN) / STEP).toNat + 1) ((H / STEP).toNat + 1) b.sources
+  Soft.Grid.of (-MARGIN) 0 STEP (((b.plan.W + 2 * MARGIN) / STEP).toNat + 1) ((b.plan.H / STEP).toNat + 1) b.sources
 
-/-- **A channel's core: what it carries in this step**, lit along its axis, as wide as its flux. -/
-def cores (cap : Nat) (fluxes : List Nat) (shareOfBeat : Int := 1000) : List (Keyed Call) :=
-  ((channelEnds cap).zip fluxes).zipIdx.filterMap fun ((((ax, _), (bx, _)), q), k) =>
+/-- **A channel's core: what it carries in this step**, lit along its axis, as wide as its share of
+the flux: the cores of a split add as the flows do. -/
+def cores (p : Plan) (fluxes : List Nat) : List (Keyed Call) :=
+  (p.channelEnds.zip fluxes).zipIdx.filterMap fun ((((ax, _), (bx, _)), q), k) =>
     if q == 0 then none else
     let half : Int := 700 + 600 * q
-    some ⟨s!"core/{k}", .shape .ink (650 * shareOfBeat / 1000).toNat
-      [Grow.roundRect (1000 * ax) (1000 * CY - half) (1000 * (bx - ax)) (2 * half) half]⟩
+    some ⟨s!"core/{k}", .shape .ink 650 [Grow.roundRect (1000 * ax) (1000 * p.CY - half) (1000 * (bx - ax)) (2 * half) half]⟩
 
 /-! ## The units -/
 
@@ -245,17 +348,16 @@ def UNIT_W : Int := 1200
 /-- A disc of radius `r` about a point, as one closed path in thousandths. -/
 def disc (x y r : Int) : List Cubic := Grow.roundRect (1000 * (x - r)) (1000 * (y - r)) (2000 * r) (2000 * r) (1000 * r)
 
-/-- A label of data centred over a point. -/
-def labelOver (key : Key) (x y : Int) (s : String) : Keyed Call :=
-  ⟨key, .cells (x - CELL * s.length / 2) (y - DROP_R - 5) s.length s⟩
-
-/-- **A message held**: a solid droplet (kept), its value above it. -/
-def droplet (key : Key) (x y : Int) (v : Nat) (tone : Nat := 1000) : List (Keyed Call) :=
-  [⟨key, .shape .ink tone [disc x y DROP_R]⟩, labelOver key x y (toString v)]
+/-- **A message held**: a solid droplet (kept), its value above it where the room allows. -/
+def droplet (p : Plan) (key : Key) (x y : Int) (v : Nat) (tone : Nat := 1000) : List (Keyed Call) :=
+  let s := toString v
+  [⟨key, .shape .ink tone [disc x y p.unit]⟩] ++
+  (if p.form == .disc then [] else [⟨key, .cells (x - CELL * s.length / 2) (y - p.unit - 5) s.length s⟩])
 
 /-- **Room**: a hollow ring (promised). -/
-def room (key : Key) (x y : Int) : List (Keyed Call) :=
-  [⟨key, .shape .ink 340 (Grow.ring (1000 * (x - DROP_R)) (1000 * (y - DROP_R)) (2000 * DROP_R) (2000 * DROP_R) (1000 * DROP_R) UNIT_W)⟩]
+def room (p : Plan) (key : Key) (x y : Int) : List (Keyed Call) :=
+  let u := p.unit
+  [⟨key, .shape .ink 340 (Grow.ring (1000 * (x - u)) (1000 * (y - u)) (2000 * u) (2000 * u) (1000 * u) UNIT_W)⟩]
 
 /-- **A request that waits**: the parked request's hollow box, its numeral under its lower corner,
 clear of the value of the message it may hold. -/
@@ -264,46 +366,47 @@ def parked (key : Key) (x y : Int) (n : Nat) (tone : Nat := 700) : List (Keyed C
   (if tone < 350 then [] else [⟨key, .cells (x - 17) (y + 31) (toString n).length (toString n)⟩])
 
 /-- Where a message stands in a marking, as a point of the picture. -/
-def Marking.pointOf (m : Marking) (msg : Nat) : Option (Int × Int) :=
+def Marking.pointOf (p : Plan) (m : Marking) (msg : Nat) : Option (Int × Int) :=
   match m.held.idxOf? msg with
-  | some k => some (slotX m.capacity k, CY)
+  | some k => some (p.heldAt m.held.length k)
   | none =>
     match m.offers.findIdx? (·.2.contains msg) with
-    | some j => some (offerX j, CY)
-    | none => if m.answered == some msg then some (W - 26, CY) else none
+    | some j => some (p.offerX j, p.CY)
+    | none => if m.answered == some msg then some (p.outX, p.CY) else none
 
 /-- **The body of a marking at rest**: its pressure from what it holds and what waits for it. -/
-def Marking.body (m : Marking) (ds : List Nat) : Body :=
-  { cap := m.capacity, ds,
+def Marking.body (p : Plan) (m : Marking) (ds : List Nat) : Body :=
+  { plan := p, ds,
     pressure := ((m.held.length : Int) - m.takers.length) * 1000 / max 1 m.capacity
-    offers := (List.range m.offers.length).map fun j => ((offerX j, CY), 1000)
-    transit := (m.answered.toList).map fun _ => (W - 26, CY) }
+    offers := (List.range m.offers.length).map fun j => ((p.offerX j, p.CY), 1000)
+    transit := (m.answered.toList).map fun _ => (p.outX, p.CY) }
 
 /-- **The units of a marking.** -/
-def units (m : Marking) : List (Keyed Call) :=
-  let cap := m.capacity
-  let slots := (List.range cap).flatMap fun k =>
-    match m.held[k]? with
-    | some v => droplet s!"held/{v}" (slotX cap k) CY v
-    | none => room s!"room/{k}" (slotX cap k) CY
+def units (p : Plan) (m : Marking) : List (Keyed Call) :=
+  let n := m.held.length
+  let held := m.held.zipIdx.flatMap fun (v, k) => let (x, y) := p.heldAt n k; droplet p s!"held/{v}" x y v
+  let rooms := (p.roomAt n).zipIdx.flatMap fun ((x, y), k) => room p s!"room/{k}" x y
   let offers := m.offers.zipIdx.flatMap fun ((i, rest), j) =>
-    parked s!"offer/{i}" (offerX j) CY i ++ (rest.take 1).flatMap fun v => droplet s!"held/{v}" (offerX j) CY v
+    parked s!"offer/{i}" (p.offerX j) p.CY i ++ (rest.take 1).flatMap fun v => droplet { p with form := .lane } s!"held/{v}" (p.offerX j) p.CY v
   let takers := m.takers.zipIdx.flatMap fun (i, j) =>
-    parked s!"taker/{i}" (takerX cap j) CY i ++
-      (if m.woken.contains i then [⟨s!"taker/{i}", .shape .ink 1000 [disc (takerX cap j) CY 3]⟩] else [])
-  let out := m.answered.toList.flatMap fun v => droplet s!"held/{v}" (W - 26) CY v
-  slots ++ offers ++ takers ++ out
+    parked s!"taker/{i}" (p.takerX j) p.CY i ++
+      (if m.woken.contains i then [⟨s!"taker/{i}", .shape .ink 1000 [disc (p.takerX j) p.CY 3]⟩] else [])
+  let out := m.answered.toList.flatMap fun v => droplet { p with form := .lane } s!"held/{v}" p.outX p.CY v
+  rooms ++ held ++ offers ++ takers ++ out
 
 /-- **One frame of the organism**: the body, the cores of the step that led to it, then the units. -/
-def picture (before : Option Marking) (m : Marking) (ds : List Nat) : List (Keyed Call) :=
-  body (m.body ds).grid ++ (match before with | some b => cores m.capacity (flux b m) | none => []) ++ units m
+def picture (p : Plan) (before : Option Marking) (m : Marking) (ds : List Nat) : List (Keyed Call) :=
+  body (m.body p ds).grid ++ (match before with | some b => cores p (flux b m) | none => []) ++ units p m
 
-/-- **Every frame of the scene**: its words, its marking and its picture. -/
-def scene : Except String (List (String × Marking × List (Keyed Call))) := do
-  let fs ← frames
+/-- **A scene drawn**: its plan, from the run's capacity and the most offers and takers that wait at
+once, then each frame: its words, its marking and its picture. -/
+def run (sc : CellSheet.Scene) : Except String (Plan × List (String × Marking × List (Keyed Call))) := do
+  let fs ← sc.run
   let ms := fs.map marking
   let ds := conductivities ms
-  return (fs.zip (ms.zip ds)).zipIdx.map fun ((f, m, d), i) =>
-    (f.words, m, picture (if i == 0 then none else ms[i - 1]?) m d)
+  let plan := Plan.of sc.capacity (ms.foldl (fun a m => max a m.offers.length) 0)
+    (ms.foldl (fun a m => max a m.takers.length) 0)
+  return (plan, (fs.zip (ms.zip ds)).zipIdx.map fun ((f, m, d), i) =>
+    (f.words, m, picture plan (if i == 0 then none else ms[i - 1]?) m d))
 
 end Tools.View.Living.Organism

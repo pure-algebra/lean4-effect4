@@ -27,28 +27,50 @@ inductive Beat where
   | offer (req message : Nat)
   | take (req : Nat)
 
-/-- The scene: three offers fill the buffer and leave one pending; three takes empty it, the
-first letting the pending offer in; a fourth take waits, an offer wakes it, and it takes again. -/
-def scene : List Beat :=
-  [.offer 1 10, .offer 2 20, .offer 3 30, .take 4, .take 5, .take 6, .take 7, .offer 8 40, .take 7]
+/-- **A scene**: a capacity, its beats, and the numbering of the hints (request `n`'s hint is the
+deferred `hintBase + n`, so no hint shares a numeral with an identity). -/
+structure Scene where
+  capacity : Nat
+  beats : List Beat
+  hintBase : Nat := 10
 
-/-- The capacity, and the message type. -/
-def capacity : Nat := 2
+/-- The scene of the cells: three offers fill the buffer and leave one pending; three takes empty
+it, the first letting the pending offer in; a fourth take waits, an offer wakes it, and it takes
+again. -/
+def scene : Scene :=
+  ⟨2, [.offer 1 10, .offer 2 20, .offer 3 30, .take 4, .take 5, .take 6, .take 7, .offer 8 40, .take 7], 10⟩
+
+/-- A larger scene, at capacity thirteen, request `n` offering the message `10 n`: sixteen offers fill it and leave three pending at the
+inlet; six takes let the three in and drain it to ten; then four more offers fill it again and
+leave one pending. -/
+def large : Scene :=
+  ⟨13, ((List.range' 1 16).map fun n => Beat.offer n (10 * n)) ++ ((List.range' 17 6).map Beat.take) ++
+      ((List.range' 23 4).map fun n => Beat.offer n (10 * n)), 100⟩
+
+/-- The message type. -/
 def A : Ty := .nat
+
+/-- The scene of the cells' capacity. -/
+def capacity : Nat := scene.capacity
 
 /-- The answer type of a step: what its type states. -/
 def answerOf {Γ : List Ty} {t : Ty} (_ : Step Γ t) : Ty := t
 
+/-- The requests a scene names. -/
+def Beat.req : Beat → Nat
+  | .offer r _ => r
+  | .take r => r
+
 /-- The names a step term reads, and their values: each request's identity and hint, then the
 cell. -/
-def requests : List Nat := List.range' 1 9
-def names : List String := requests.flatMap (fun n => [s!"i{n}", s!"h{n}"]) ++ ["cell"]
-def values (cell : Val) : List Val :=
-  requests.flatMap (fun n => [Value.promise n, Value.promise (10 + n)]) ++ [cell]
+def Scene.requests (sc : Scene) : List Nat := (sc.beats.map Beat.req).eraseDups
+def Scene.names (sc : Scene) : List String := sc.requests.flatMap (fun n => [s!"i{n}", s!"h{n}"]) ++ ["cell"]
+def Scene.values (sc : Scene) (cell : Val) : List Val :=
+  sc.requests.flatMap (fun n => [Value.promise n, Value.promise (sc.hintBase + n)]) ++ [cell]
 
-/-- A term's value with the cell bound. -/
-def evalAt (cell : Val) (src : TermSrc) : Option Val :=
-  (src { names := names } []).toOption.bind (evalTerm (values cell) ·)
+/-- A term's value in a scene, with the cell bound. -/
+def Scene.evalAt (sc : Scene) (cell : Val) (src : TermSrc) : Option Val :=
+  (src { names := sc.names } []).toOption.bind (evalTerm (sc.values cell) ·)
 
 /-- A beat in words. -/
 def Beat.words : Beat → String
@@ -66,18 +88,21 @@ structure Frame where
   answer : Option (Ty × Val)
   cell : Val
 
-/-- **The scene run**: the empty cell, then the frame of each beat, each step on the cell the step
+/-- **A scene run**: the empty cell, then the frame of each beat, each step on the cell the step
 before left. A step whose term has no value stops the scene, with the reason. -/
-def frames : Except String (List Frame) := do
-  let some start := evalAt .unit (Queue.empty A capacity) | throw "the empty cell has no value"
-  let (_, out) ← scene.foldlM (fun (cell, out) beat => do
+def Scene.run (sc : Scene) : Except String (List Frame) := do
+  let some start := sc.evalAt .unit (Queue.empty A sc.capacity) | throw "the empty cell has no value"
+  let (_, out) ← sc.beats.foldlM (fun (cell, out) beat => do
       let (src, t) := beat.step
-      let some v := evalAt cell src | throw s!"{beat.words}: the step's term has no value"
+      let some v := sc.evalAt cell src | throw s!"{beat.words}: the step's term has no value"
       match t, v with
       | .prod r _, .list [reply, next] => pure (next, out ++ [⟨beat.words, some (r, reply), next⟩])
       | _, _ => throw s!"{beat.words}: the answer is no pair of a reply and a cell")
-    (start, [{ words := "the empty cell, capacity 2", answer := none, cell := start }])
+    (start, [{ words := s!"the empty cell, capacity {sc.capacity}", answer := none, cell := start }])
   return out
+
+/-- The cells' scene, run. -/
+def frames : Except String (List Frame) := scene.run
 
 /-- A value's picture as an SVG node, in the base look. -/
 def svg (f : Fig) : RawNode :=

@@ -35,14 +35,13 @@ def along (a b : Int × Int) (lift t : Int) : Int × Int :=
   (mix a.1 b.1 t, mix a.2 b.2 t + lift * 4 * t * (1000 - t) / 1000000)
 
 /-- Where a message stands before a beat, or enters from: the world on the left. -/
-def startOf (before : Marking) (msg : Nat) : Int × Int := (before.pointOf msg).getD (8, CY)
+def startOf (p : Plan) (before : Marking) (msg : Nat) : Int × Int := (before.pointOf p msg).getD (8, p.CY)
 
 /-- Where a message stands after a beat, or leaves to: the world on the right. -/
-def endOf (after : Marking) (msg : Nat) : Int × Int := (after.pointOf msg).getD (W - 8, CY)
+def endOf (p : Plan) (after : Marking) (msg : Nat) : Int × Int := (after.pointOf p msg).getD (p.W - 8, p.CY)
 
 /-- The messages of a beat: every message of the marking before and after, once. -/
-def messages (before after : Marking) : List Nat :=
-  (before.messages ++ after.messages).foldl (fun out m => if out.contains m then out else out ++ [m]) []
+def messages (before after : Marking) : List Nat := (before.messages ++ after.messages).eraseDups
 
 /-- A request's presence at the share `e` of a beat, per mille: one through, rising if it
 begins, falling if it ends. -/
@@ -50,43 +49,44 @@ def presence (was is_ : Bool) (e : Int) : Int :=
   match was, is_ with
   | true, true => 1000 | false, true => e | true, false => 1000 - e | false, false => 0
 
-/-- **The organism at the share `p` per mille of the beat from `before` to `after`.** -/
-def at_ (before after : Marking) (dsB dsA : List Nat) (p : Nat) : List (Keyed Call) :=
+/-- **The organism at the share `p` per mille of the beat from `before` to `after`**, on the plan
+of its run. -/
+def at_ (pl : Plan) (before after : Marking) (dsB dsA : List Nat) (p : Nat) : List (Keyed Call) :=
   let e := Ease.settle.at p
-  let cap := after.capacity
   let msgs := messages before after
   -- a message travels inside the body, along its channels' axis: FIFO keeps the droplets apart
-  let posOf (m : Nat) : Int × Int := along (startOf before m) (endOf after m) 0 e
+  let posOf (m : Nat) : Int × Int := along (startOf pl before m) (endOf pl after m) 0 e
   let offerIds := (before.offers.map (·.1) ++ after.offers.map (·.1)).eraseDups
   let takerIds := (before.takers ++ after.takers).eraseDups
-  let offerAt (i : Nat) : Int × Int :=
-    let j := ((after.offers.findIdx? (·.1 == i)).orElse fun _ => before.offers.findIdx? (·.1 == i)).getD 0
-    (offerX j, CY)
-  let takerAt (i : Nat) : Int × Int :=
-    let j := ((after.takers.idxOf? i).orElse fun _ => before.takers.idxOf? i).getD 0
-    (takerX cap j, CY)
+  let offerAt (i : Nat) : Int :=
+    pl.offerX (((after.offers.findIdx? (·.1 == i)).orElse fun _ => before.offers.findIdx? (·.1 == i)).getD 0)
+  let takerAt (i : Nat) : Int :=
+    pl.takerX (((after.takers.idxOf? i).orElse fun _ => before.takers.idxOf? i).getD 0)
   let offerP (i : Nat) := presence (before.offers.any (·.1 == i)) (after.offers.any (·.1 == i)) e
   let takerP (i : Nat) := presence (before.takers.contains i) (after.takers.contains i) e
-  let offersNow := offerIds.filterMap fun i => if offerP i > 0 then some (offerAt i, offerP i) else none
+  let offersNow := offerIds.filterMap fun i => if offerP i > 0 then some ((offerAt i, pl.CY), offerP i) else none
   -- a message is in transit where it is neither in the vessel nor resting in an offer's room
-  let inVessel (x : Int) := vx0 + 10 < x && x < vx1 cap - 10
+  let inVessel (q : Int × Int) := pl.vx0 + 10 < q.1 && q.1 < pl.vx1 - 10
   let resting (q : Int × Int) := offersNow.any fun (o, _) => (q.1 - o.1).natAbs < 18
-  let pB := (before.body dsB).pressure
-  let pA := (after.body dsA).pressure
+  let pB := (before.body pl dsB).pressure
+  let pA := (after.body pl dsA).pressure
   let ds : List Nat := (dsB.zip dsA).map fun (x, y) => (mix x y e).toNat
   let transit : List (Int × Int) := msgs.filterMap fun m =>
     let q := posOf m
-    if inVessel q.1 || resting q then none else some q
-  let b : Body := ⟨cap, ds, mix pB pA e, offersNow, transit⟩
-  let room := (List.range cap).flatMap fun k => Organism.room s!"room/{k}" (slotX cap k) CY
-  let requests := offerIds.flatMap (fun i => parked s!"offer/{i}" (offerAt i).1 CY i (700 * (offerP i).toNat / 1000)) ++
-    takerIds.flatMap (fun i => parked s!"taker/{i}" (takerAt i).1 CY i (700 * (takerP i).toNat / 1000))
-  let droplets := msgs.flatMap fun m => let (x, y) := posOf m; droplet s!"held/{m}" x y m
-  body b.grid ++ cores cap (flux before after) ++ room ++ requests ++ droplets
+    if inVessel q || resting q then none else some q
+  let b : Body := ⟨pl, ds, mix pB pA e, offersNow, transit⟩
+  let nRoom := if e < 500 then before.held.length else after.held.length
+  let rooms := (pl.roomAt nRoom).zipIdx.flatMap fun ((x, y), k) => Organism.room pl s!"room/{k}" x y
+  let requests := offerIds.flatMap (fun i => parked s!"offer/{i}" (offerAt i) pl.CY i (700 * (offerP i).toNat / 1000)) ++
+    takerIds.flatMap (fun i => parked s!"taker/{i}" (takerAt i) pl.CY i (700 * (takerP i).toNat / 1000))
+  let droplets := msgs.flatMap fun m =>
+    let (x, y) := posOf m
+    droplet (if inVessel (x, y) then pl else { pl with form := .lane }) s!"held/{m}" x y m
+  body b.grid ++ cores pl (flux before after) ++ rooms ++ requests ++ droplets
 
 /-- **A beat sampled**: the organism at `n + 1` evenly spaced shares, the first at the start and
 the last at the end. -/
-def samples (before after : Marking) (dsB dsA : List Nat) (n : Nat) : List (Nat × List (Keyed Call)) :=
-  (List.range (n + 1)).map fun k => let p := 1000 * k / n; (p, at_ before after dsB dsA p)
+def samples (pl : Plan) (before after : Marking) (dsB dsA : List Nat) (n : Nat) : List (Nat × List (Keyed Call)) :=
+  (List.range (n + 1)).map fun k => let p := 1000 * k / n; (p, at_ pl before after dsB dsA p)
 
 end Tools.View.Living.Beat

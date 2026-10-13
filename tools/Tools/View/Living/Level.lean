@@ -1,5 +1,7 @@
 import Tools.View.Living.Organism
 import Whatwg.Svg.Geometry.Monotone
+import Whatwg.Svg.Scene.Scale
+import Whatwg.Svg.Scene.Scale.Band
 
 /-!
 # Tools.View.Living.Level — the run as one level, and the channels' lives
@@ -24,12 +26,25 @@ namespace Tools.View.Living.Level
 open Tools.View Tools.View.Living
 open Whatwg.Svg.Value (Vec Curve)
 
-/-- The picture's room, and its grid: the beats across, a unit of quantity down. -/
-def X0 : Int := 120
-def DX : Int := 64
-def U : Int := 22
-def ZERO : Int := 150
-def W (n : Nat) : Int := X0 + DX * n + 40
+/-- **The picture's room**, whatever the run: a run of any length and any capacity is fitted to
+it by two of lean4-whatwg's scales (ask W16): the beats across by a point scale (`Band.point`),
+the counts down by a linear scale that falls down the screen (`Scale.linear`), from the most
+takers that wait to the capacity and the most offers that wait above it. -/
+def LW : Int := 880
+def LH : Int := 230
+def LEFT : Int := 96
+def PADY : Int := 18
+
+/-- The beats across: one point for each frame of the run. -/
+def beatsOf (n : Nat) : Whatwg.Svg.Scene.Band := Whatwg.Svg.Scene.Band.point n (LEFT + 12) (LW - 16)
+
+/-- A beat's place across. -/
+def xOf (n i : Nat) : Int := Whatwg.Svg.Scene.Band.at (beatsOf n) i
+
+/-- The counts down: the deficit's floor at the bottom, the brim and the pressure's ceiling at the
+top. -/
+def scaleOf (cap maxPend maxWait : Nat) : Whatwg.Svg.Scene.Scale :=
+  .linear (-(maxWait : Int)) (cap + maxPend) (LH - PADY) PADY
 
 /-- A number in thousandths of a pixel, for a cubic of the view. -/
 def milli (r : Rat) : Int := (r * 1000).floor
@@ -56,50 +71,58 @@ def area (top bottom : List (Int × Int)) : List Cubic :=
       (through bottom.reverse) ++ [line (k bl) (k tl)]
   | _, _, _, _ => []
 
-/-- A beat's place across. -/
-def xAt (i : Nat) : Int := X0 + DX * i
-
-/-- **The level of the run**: the vessel's band, the bar lines, the three areas, and the units. -/
+/-- **The level of the run**: the vessel's band, the bar lines, the three areas, and the units,
+all placed by the run's two scales. -/
 def level (ms : List Organism.Marking) : List (Keyed Call) :=
   let n := ms.length
-  let cap : Int := (ms.head?.map (·.capacity)).getD 0
-  let xs := (List.range n).map xAt
+  let cap := (ms.head?.map (·.capacity)).getD 0
+  let maxPend := ms.foldl (fun a m => max a m.offers.length) 0
+  let maxWait := ms.foldl (fun a m => max a m.takers.length) 0
+  let s := scaleOf cap maxPend maxWait
+  let xs := (List.range n).map (xOf n)
+  let y (v : Int) : Int := s.at v
+  let U := max 1 (y 0 - y 1)
+  let r : Int := max 2 (min 5 (U / 3))
+  let zero := y 0
+  let brim := y cap
+  let x0 := (xs.head?).getD LEFT
+  let x1 := (xs.getLast?).getD LW
+  let band : Keyed Call := ⟨"vessel", .shape .ink 50 [Grow.roundRect (1000 * (x0 - 14)) (1000 * brim)
+      (1000 * (x1 - x0 + 28)) (1000 * (zero - brim)) (1000 * (min 12 ((zero - brim) / 2)))]⟩
+  let bars := xs.map fun x => (⟨"beat", Call.vrule .rule x PADY (LH - 2 * PADY) 1⟩ : Keyed Call)
+  let flat (v : Int) : List (Int × Int) := xs.map (·, y v)
+  let at_ (vs : List Int) : List (Int × Int) := xs.zip (vs.map y)
   let held := ms.map fun m => (m.held.length : Int)
-  let pend := ms.map fun m => (m.offers.length : Int)
-  let wait := ms.map fun m => (m.takers.length : Int)
-  let brim := ZERO - U * cap
-  let at_ (vs : List Int) (f : Int → Int) : List (Int × Int) := xs.zip (vs.map f)
-  let band : Keyed Call := ⟨"vessel", .shape .ink 50 [Grow.roundRect (1000 * (X0 - 24)) (1000 * brim)
-      (1000 * (DX * (n - 1) + 48)) (1000 * (ZERO - brim)) 12000]⟩
-  let bars := xs.map fun x => (⟨"beat", Call.vrule .rule x (brim - 3 * U) (6 * U + U * cap) 1⟩ : Keyed Call)
-  let flat (y : Int) : List (Int × Int) := xs.map (·, y)
+  let pend := ms.map fun m => (cap : Int) + m.offers.length
+  let wait := ms.map fun m => -(m.takers.length : Int)
   let areas : List (Keyed Call) :=
-    [⟨"held", .shape .ink 260 [area (at_ held fun h => ZERO - U * h) (flat ZERO)]⟩,
-     ⟨"pressure", .shape .ink 140 [area (at_ pend fun p => brim - U * p) (flat brim)]⟩,
-     ⟨"deficit", .shape .ink 140 [area (flat ZERO) (at_ wait fun w => ZERO + U * w)]⟩]
+    [⟨"held", .shape .ink 260 [area (at_ held) (flat 0)]⟩,
+     ⟨"pressure", .shape .ink 140 [area (at_ pend) (flat cap)]⟩,
+     ⟨"deficit", .shape .ink 140 [area (flat 0) (at_ wait)]⟩]
+  let mid (k : Int) : Int := (y k + y (k + 1)) / 2
   let unitsAt (i : Nat) (m : Organism.Marking) : List (Keyed Call) :=
-    let x := xAt i
+    let x := xs.getD i 0
     ((List.range m.held.length).map fun (k : Nat) =>
-      (⟨s!"held/{i}/{k}", .shape .ink 1000 [Organism.disc x (ZERO - U * k - U / 2) 5]⟩ : Keyed Call)) ++
+      (⟨s!"held/{i}/{k}", .shape .ink 1000 [Organism.disc x (mid k) r]⟩ : Keyed Call)) ++
     ((List.range m.offers.length).map fun (k : Nat) =>
-      ⟨s!"offer/{i}/{k}", .shape .ink 900 (Grow.ring (1000 * (x - 6)) (1000 * (brim - U * k - U / 2 - 6)) 12000 12000 3000 1100)⟩) ++
+      ⟨s!"offer/{i}/{k}", .shape .ink 900 (Grow.ring (1000 * (x - r - 1)) (1000 * (mid (cap + k) - r - 1)) (2000 * (r + 1)) (2000 * (r + 1)) (1000 * (r / 2)) 1100)⟩) ++
     ((List.range m.takers.length).map fun (k : Nat) =>
-      ⟨s!"taker/{i}/{k}", .shape .ink 900 (Grow.ring (1000 * (x - 6)) (1000 * (ZERO + U * k + U / 2 - 6)) 12000 12000 3000 1100)⟩)
+      ⟨s!"taker/{i}/{k}", .shape .ink 900 (Grow.ring (1000 * (x - r - 1)) (1000 * (mid (-(k : Int) - 1) - r - 1)) (2000 * (r + 1)) (2000 * (r + 1)) (1000 * (r / 2)) 1100)⟩)
   let labels : List (Keyed Call) :=
-    [⟨"pressure", .text .label 8 (brim - U / 2 + 4) 90 "pressure"⟩,
-     ⟨"held", .text .label 8 (ZERO - U * cap / 2 + 4) 90 "held"⟩,
-     ⟨"deficit", .text .label 8 (ZERO + U / 2 + 4) 90 "deficit"⟩]
+    [⟨"pressure", .text .label 8 (y (cap + max 1 maxPend) / 2 + y cap / 2 + 4) 90 "pressure"⟩,
+     ⟨"held", .text .label 8 ((zero + brim) / 2 + 4) 90 "held"⟩,
+     ⟨"deficit", .text .label 8 (zero + U / 2 + 4) 90 "deficit"⟩]
   band :: bars ++ areas ++ (ms.zipIdx.flatMap fun (m, i) => unitsAt i m) ++ labels
 
 /-- The height of the level's picture. -/
-def LEVEL_H : Int := ZERO + 3 * U + 10
+def LEVEL_H : Int := LH
 
 /-- **The lives of the channels**: each channel a ribbon along the run, as thick at each beat as
-the organism draws it. -/
+the organism draws it, the beats placed by the run's point scale. -/
 def lives (ds : List (List Nat)) : List (Keyed Call) :=
   let names := ["in", "enter", "leave", "out"]
   let n := ds.length
-  let xs := (List.range n).map xAt
+  let xs := (List.range n).map (xOf n)
   (List.range Organism.CHANNELS).flatMap fun (k : Nat) =>
     let y0 : Int := 26 + 34 * k
     let half := ds.map fun d => ((Organism.channelR (d.getD k 0) : Int) * 1000 / 1600 + 1)
