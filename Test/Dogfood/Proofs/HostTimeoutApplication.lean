@@ -77,11 +77,13 @@ theorem apply_machine_cases (s : Run) (key : Key) (reached : Run.Reached s)
                 (.answerAsync bound.call.fiber bound.token (.ofExit exit)) := by
             change steppedBy s.built.program (fuel + 1) s.built.table s.machine _ = _
             rw [program, table]
+          unfold Program.steppedBy at native
           split
           · exact Or.inl rfl
           · cases status : s.machine.stuck.isSome with
             | true =>
               have inert := answer_stuck s.machine fuel bound.call.fiber bound.token exit status
+              unfold Program.steppedBy at inert
               rw [native, inert]
               split
               · exact Or.inr rfl
@@ -91,6 +93,7 @@ theorem apply_machine_cases (s : Run) (key : Key) (reached : Run.Reached s)
               have goneApi : Api.requestOf
                   (steppedBy HostTimeoutSource.program (fuel + 1) Test.Dogfood.Scenario.Timeout.fetch.table s.machine
                     (.answerAsync bound.call.fiber bound.token (.ofExit exit))) bound.call.fiber bound.token = none := gone
+              unfold Program.steppedBy at goneApi
               rw [native, goneApi]
               exact Or.inr rfl
 
