@@ -2,6 +2,8 @@ import Tools.View.Look
 import Whatwg.Html.Node.SvgBuild
 import Whatwg.Html.Node.SvgPaint
 import Whatwg.Html.Node.SvgNest
+import Whatwg.Html.Node.SvgKeyword
+import Whatwg.Html.Node.SvgDefs
 import Whatwg.Html.Print.Picture
 import Whatwg.Html.Content.Explain
 import Whatwg.Svg.Geometry.Pen
@@ -60,7 +62,7 @@ def textNode (L : Look) (ratio : Nat) (face : Face) (x base : Int) (content : St
   let f := L.faces.of face
   Svg.text x base content
     ([.className ("e4-text e4-face-" ++ face.tokenName), .fontFamily f.cssFamily,
-      .fontStyle f.italic, .fontWeight f.weight, .fontSize (.fixed 3 f.size),
+      .fontStyle (.ofItalic f.italic), .fontWeight f.weight, .fontSize (.fixed 3 f.size),
       .fill (paint L .ink), .attr .transform [.scale (.ofInt ratio) none], .xmlSpacePreserve] ++
       SvgAttr.dataKey? key)
 
@@ -71,7 +73,7 @@ def shown (room : Nat) (s : String) : String :=
 /-- An invisible box that takes the pointer. -/
 def hitNode (b : Rect) (key : Key) : SvgNode :=
   Svg.rect b.x0 b.y0 (.clamp (b.x1 - b.x0)) (.clamp (b.y1 - b.y0))
-    ([.fill .none, .pointerEvents "all"] ++ SvgAttr.dataKey? key)
+    ([.fill .none, .pointerEvents .all] ++ SvgAttr.dataKey? key)
 
 /-- One closed path as a pen: its start, a curve for each segment, and a closepath. A path with
 no segment is no pen. -/
@@ -85,7 +87,7 @@ def closedPen : List Cubic → Option Pen
 def shapeNode (L : Look) (role : Role) (value : Nat) (paths : List (List Cubic)) (key : Key) :
     SvgNode :=
   Svg.path (Pen.join (paths.filterMap closedPen))
-    ([.className ("e4-fill-" ++ role.tokenName), .fillRule true, .fill (paint L role),
+    ([.className ("e4-fill-" ++ role.tokenName), .fillRule .evenodd, .fill (paint L role),
       .fillOpacity (opacity value)] ++ SvgAttr.dataKey? key)
 
 /-- An open cut: the index of its call, and its box in logical pixels. -/
@@ -159,7 +161,7 @@ def linkedMarks (L : Look) (ratio : Nat) (link : Key → Option String) (calls :
   if opened.isSome then out := out.push .leave
   return SvgNode.nest (fun
     | .inl c => cutNodes ratio c
-    | .inr href => fun children => [.element .a [.attr .href href] children]) out.toList
+    | .inr href => fun children => [Svg.link href children]) out.toList
 
 /-- **A picture whose nodes link**: `picture`, with each run of marks of a key that `link` answers
 inside a link to it. -/

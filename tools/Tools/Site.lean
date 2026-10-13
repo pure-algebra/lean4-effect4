@@ -4,6 +4,8 @@ import Tools.Document.Json
 import Whatwg.Html.Syntax.Elaborator
 import Whatwg.Html.Node.Combinators
 import Whatwg.Html.Print.Render
+import Whatwg.Html.Node.Check
+import Whatwg.Html.Content.Document
 
 /-!
 # Tools.Site — the documentation site as one value (decisions row 363)
@@ -28,13 +30,14 @@ and a page's own part by the page.
 
 **The shell is the typed tree of `lean4-whatwg`.** Its elements are written in `html!`, so the
 HTML Standard's content model admits every element of the shell where it stands when Lean
-compiles this module. A node folded from data enters the shell at a typed position, and `admit`
-checks it there at the run, with the located refusal of `Content.explain`. So a page's tree is
-valid by construction (`Element.valid`), and the serializer writes only such a tree.
+compiles this module. A node folded from data enters the shell at a typed position, and the
+package's `Child.check` checks it there at the run, with the located refusal of
+`Content.explain`. So a page's tree is valid by construction (`Element.valid`), and the
+serializer writes only such a tree.
 
 **Checks** (`Site.check`), before any file is written: a page path is unique, and its parent is a
 page; a reference resolves in its space; a relative link resolves to a page or a file of the
-site.
+site. Each page then passes `lean4-whatwg`'s checks across a whole document (`Site.html`).
 
 A page links the style files by its depth, so the folder previews from any server path: the
 studio's server serves it at `/.lake/gen/site/`.
@@ -239,13 +242,6 @@ abbrev InToc := Ctx.child (Ctx.child InMain .nav) .ol
 abbrev InTocSub := Ctx.child (Ctx.child InToc .li) .ol
 abbrev InFooterList := Ctx.child (Ctx.child InBody .footer) .ul
 
-/-- **A node folded from data, admitted at the position its type names**, with its proof, or the
-located refusal of the content model (ask W1 to `lean4-whatwg`, `Child.check?`). -/
-def admit {ctx : Ctx} (n : RawNode) : Except Refusal (Child ctx) :=
-  match h : Content.explain ctx n with
-  | none => .ok ⟨n, (Content.explain_none_iff ctx n).mp h⟩
-  | some r => .error r
-
 /-- Where a page's styles stand: the looks file and the rules file, linked (a page of the site),
 or the looks inline and the rules linked (the studio's specimen, in a look of its own). -/
 inductive Styles where
@@ -338,12 +334,13 @@ def render (s : Shell) (title : String) (blocks : List (Child InMain)) : Element
   html! <html lang="en">{headChild s.tabTitle s.styles}{body}</html>
 
 /-- The blocks of a document, folded with a reference's link from `target`, each admitted in the
-page's `main`. A refusal names the element names along its path. -/
+page's `main` by `lean4-whatwg`'s `Child.check` (its answer to ask W1), which gives the located
+refusal of the content model; a refusal is written with its path in names (`Refusal.describe`). -/
 def blocks (target : String → String) (d : Document) : Except String (List (Child InMain)) :=
   ((Block.foldList (Html.algebra target) d.body).flatMap (· 2)).mapM fun n =>
-    match admit n with
+    match Child.check n with
     | .ok c => .ok c
-    | .error r => .error ("HTML refused: " ++ Html.describe n r)
+    | .error r => .error ("HTML refused: " ++ r.describe n)
 
 /-- The text of a page. -/
 def text (e : Element .html Ctx.document) : String := Print.renderDoc e.toRaw
@@ -372,10 +369,16 @@ def Site.shell (s : Site) (p : Page) : Shell :=
       [footerLink "document.json" "This page as data (effect4-document/1)",
        footerLink (href ["contents"]) "Every page of the site"] }
 
-/-- A page of the site as its HTML, with the site's key index (`keyIndex`, computed once). -/
+/-- A page of the site as its HTML, with the site's key index (`keyIndex`, computed once). The page
+passes the checks across a whole document of `lean4-whatwg` (its answer to ask W2): each `id`
+well formed and distinct, each fragment link and reference naming an `id`, one `main`, no heading
+level skipped. -/
 def Site.html (s : Site) (ix : Std.HashMap (String × String) (List String × Bool)) (p : Page) :
     Except String String := do
-  return text (render (s.shell p) p.doc.title (← blocks (target ix p) p.doc))
+  let tree := (render (s.shell p) p.doc.title (← blocks (target ix p) p.doc)).toRaw
+  let errors := Content.Document.errors tree
+  unless errors.isEmpty do throw ("; ".intercalate (errors.map fun e => e.describe))
+  return Print.renderDoc tree
 
 /-- **The contents page**: every page under each section, deeper pages with their parent. -/
 def contents (s : Site) : Document where

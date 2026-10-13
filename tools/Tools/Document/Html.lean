@@ -201,12 +201,4 @@ def looks (base light : Look) : String :=
       (changed (Tools.View.Tokens.declarations base) (Tools.View.Tokens.declarations light)) ++
     "}\n"
 
-/-- A refusal in words: the element names along its path, from the root, then its reason. -/
-def describe (tree : RawNode) (r : Content.Refusal) : String :=
-  let names := (List.range (r.path.length + 1)).filterMap fun k =>
-    match tree.at? (r.path.take k) with
-    | some (.element name _ _) => some name
-    | _ => none
-  "/" ++ "/".intercalate names ++ ": " ++ r.reason.describe
-
 end Tools.Document.Html
