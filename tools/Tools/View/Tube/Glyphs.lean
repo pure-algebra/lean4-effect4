@@ -199,8 +199,9 @@ theorem step_ok {A B : Picture} (hA : ∀ m ∈ A.marks, m.tube.ok) (hB : ∀ m 
 
 /-! ## The cell -/
 
-/-- **The cell** a figure stands in: 96 px square, at one pixel to the pixel. -/
-def CELL : Nat := 96
+/-- **The side of the cell** a figure stands in: 96 px, at one pixel to the pixel. (Named apart
+from the view grid's `Tools.View.CELL`.) -/
+def SIDE : Nat := 96
 
 /-- The bores of the figures, in thousandths of a pixel: a pipe that carries, a vessel, a thin
 tube (a strut, a staff, a tap), a fine tube (an enclosure, a bead), and each pipe a merge joins
@@ -552,7 +553,7 @@ def inCell (m : Mark) : Bool :=
     | some (s, l) => m.drawn.cut s.toNat (s + l).toNat
     | none => m.drawn
   t.cubics.all fun c => [c.p0, c.p1, c.p2, c.p3].all fun (x, y) =>
-    0 ≤ x - w && x + w ≤ px CELL && 0 ≤ y - w && y + w ≤ px CELL
+    0 ≤ x - w && x + w ≤ px SIDE && 0 ≤ y - w && y + w ≤ px SIDE
 -- every figure stands in its cell, but where it meets the world: a port runs off the edge
 #guard shapes.all fun s => s == .port || (figure s).all inCell
 
