@@ -28,7 +28,11 @@ A file for an id that no page has is refused by the build.
 - `## Heading` opens a part, and `###` a part inside it. A heading may end in `{#key}`.
 - A paragraph is a run of lines. A list is a run of lines that open with `- `.
 - Code is a span in backticks, or a block between two lines of three backticks with a language.
-- `[label](#key)` refers to a part of the same page; `[label](../semantics/)` links to a page.
+- `[label](#key)` refers to a part. In a guide it reaches the guide's own parts. In a concept's or
+  a requirement's copy it reaches any part of the semantics pages, such as `#claim:flush-fair`
+  or `#req:R9`.
+- `[label](path/)` links to a page by its path from this one. A guide at `/guides/name/` reaches
+  a concept as `../../semantics/reactive-scheduling/`, and a claim on it with `#claim:…` after.
 - A status word in braces draws its mark: `{proved}`, `{modulo}`, `{goal}`, `{open}`,
   `{refuted}`, `{absent}`, `{assumed}`.
 
