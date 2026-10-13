@@ -132,8 +132,8 @@ def Tone.name : Tone → String
 
 /-- **How a mark is drawn**: stroked along its tube's centreline (contents, a hollow); as a solid
 body, its outline filled; as a stretch of a body over its dash whose width is `top` along its
-middle and eases over `rise` from its own width at its start and to `w1` at its end
-(`patchCubics`); as a parting, the ground between two round ends of its body across its dash
+middle and eases over `rise` from its own width at its start and to `w1` at its end, by the
+kit's profile (`Kit.bulge`); as a parting, the ground between two round ends of its body across its dash
 (`partCubics`); or as a strut, a body all ink, which carries nothing (`ink`). -/
 inductive Fill where
   | stroke
@@ -342,7 +342,7 @@ def Mark.inner (m : Mark) : Mark :=
 def Mark.outline (m : Mark) : List Cubic :=
   match m.fill, m.dash with
   | .stretch w1 top rise, some (s, len) =>
-    patchCubics m.drawn s len m.width w1 top rise (m.roundStart.getD false) m.round
+    Kit.bulge m.drawn s len m.width w1 top rise (m.roundStart.getD false) m.round
   | .part, some (s, len) => partCubics m.drawn s len m.width GAP
   | .stretch _ _ _, none | .part, none => []
   | _, _ => bodyCubics m.drawn m.width (m.roundStart.getD m.round) m.round

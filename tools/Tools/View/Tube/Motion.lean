@@ -266,7 +266,7 @@ def Event.at (e : Event) (along : Nat → Tube) (t : Nat) : Mark :=
     (e.width + amp.toNat) (e.len / 2)
 
 /-- An event before it starts and after it ends: a stretch of no length and no width, which
-draws nothing, cased or not, sampled at as many points as the swell. -/
+draws nothing, cased or not, in as many cubics as the swell (`Kit.bulge`). -/
 def Event.rest (e : Event) : Mark :=
   stretchOf e.key e.tube e.from_ 0 0 0 0 1
 
