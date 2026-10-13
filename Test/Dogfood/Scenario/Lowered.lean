@@ -50,7 +50,8 @@ def committed : List (String × String) :=
       include_str "../../../ocaml/engine/test/scenarios/queue-workers.txt")
   , ("routing.txt", include_str "../../../ocaml/engine/test/scenarios/routing.txt")
   , ("atomic.txt", include_str "../../../ocaml/engine/test/scenarios/atomic.txt")
-  , ("timeout.txt", include_str "../../../ocaml/engine/test/scenarios/timeout.txt") ]
+  , ("timeout.txt", include_str "../../../ocaml/engine/test/scenarios/timeout.txt")
+  , ("todo.txt", include_str "../../../ocaml/engine/test/scenarios/todo.txt") ]
 
 /-- The controls of the lane's names: one name has one script. The lane takes each run that a
 record lists from the record, and it refuses an own run that carries the name of a record's run.

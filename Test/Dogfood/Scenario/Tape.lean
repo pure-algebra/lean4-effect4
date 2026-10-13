@@ -3,6 +3,7 @@ import Test.Dogfood.Scenario.QueueWorkers
 import Test.Dogfood.Scenario.Routing
 import Test.Dogfood.Scenario.Atomic
 import Test.Dogfood.Scenario.Timeout
+import Test.Dogfood.Scenario.Todo.Claims
 import Test.Audit.ScenarioGate
 
 /-!
@@ -246,6 +247,10 @@ of the runs in the file's order.
 * **Timeout.** A reply before the timeout, the second attempt's reply after it, a late reply, a
   reply kept and never applied, a failure that does not retry, and four timeouts. A refused row
   gives no decision, so a late reply leaves no step on the tape.
+* **To-do.** Each request's scripted runs: an `add` of an empty and of a real title, a `complete`
+  whose call fails with the repository's tag and with another tag, and a `complete` answered with
+  the requested to-do and with another. The wide record is refused at its receipt, so it leaves
+  no decision, and the model's runs are driven by a reactor, not a script.
 * **Queue workers.** The whole run to the root's exit, and the two cancellations that stand
   between a reply application and its flush: a host has no run of those two, so the engine is
   their second machine. The crew's program is large, and a fixture writes it once for each run,
@@ -256,7 +261,8 @@ def taken : List (String × Scenario × List String) :=
       ["closed", "cancelled-accepted", "cancelled-selected"])
   , ("routing.txt", Routing.scenario, ["200", "404", "401", "escape"])
   , ("atomic.txt", Atomic.scenario, ["finished", "interrupted", "stopped"])
-  , ("timeout.txt", Timeout.scenario, ["before", "second", "late", "kept", "404", "four"]) ]
+  , ("timeout.txt", Timeout.scenario, ["before", "second", "late", "kept", "404", "four"])
+  , ("todo.txt", Todo.scenario, ["empty", "milk", "locked", "other-tag", "done", "other-todo"]) ]
 
 /-- The lane's own runs, each with its fixture file: the two scripts that no record lists.
 `none` when a program does not build.
