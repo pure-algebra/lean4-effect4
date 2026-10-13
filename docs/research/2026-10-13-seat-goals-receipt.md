@@ -302,6 +302,15 @@ Measured with the same reader at the head (`frontier-after.out` in the session s
 Proposed for the coordinator (no register edited here): the registry claim
 `place-ledger-history` (§5.2). No decisions row is proposed.
 
+Outside this seat's edit scope, at the merge:
+
+- `generated/semantics.md` still lists `log_debits` and `once_placed_pushes_once` as goals.
+  Regenerate it with `make gen-semantics`.
+- `docs/core/system-map.md` §8, row R11, names `once_placed_pushes_once` among the placed goals.
+  It is now modulo `once_placed_outside_census`.
+- The header of `Test/Dogfood/Scenario/SourceOpportunity.lean` names `once_placed_pushes_once` as
+  a consumer. No proof of it reads that module, before or after this branch.
+
 Bounded or host-only evidence: none in the landed proofs. The rc.112 timeout evidence of §7 is a
 finite host probe, cited and not re-run.
 
