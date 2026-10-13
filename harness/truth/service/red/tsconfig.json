@@ -1,0 +1,5 @@
+{
+  "//": "Slice E4's red controls: each file must fail tsgo 7 with its one diagnostic.",
+  "extends": "../tsconfig.json",
+  "include": ["*.ts"]
+}
