@@ -143,7 +143,7 @@ def runsOf (b eager resetting : Api.Built) : List NamedRun :=
   , run "second" [timedOut, answer second (ok body2)]
   , run "late" [timedOut, answer first (ok body1)]
   , run "kept" [parked, [.receive http (ok body1), .tick 2000, .apply first]]
-  , run "crossed" [timedOut, [.row (.submit (forged 0 key2 (ok body1)))]]
+  , run "crossed" [timedOut, [.wire (.submit (forged 0 key2 (ok body1)))]]
   , run "direct" [timedOut, [.control (.answerAsync ⟨3⟩ 6 (ok body1))]]
   , run "timer-interrupt" [parked, [.tick 2000]]
   , run "host-interrupt" [parked, [.cancel ⟨1⟩, .flush, .tick 2000, .tick 100]]

@@ -135,7 +135,7 @@ the semantics where features compose. It is one unit with six parts.
 | Part | Content |
 | --- | --- |
 | Program | One program through `Api.Author.build`, built on the consumer of a battery above |
-| Script | A `List Move` (`Scenario.lean`): control decisions, held calls, reply receipts and reply applications. The record lists each script once, as a named run |
+| Script | A `List Move` (`Scenario.lean`), where `Move` is the library's `Event` (`src/Effect4/Run/Event.lean`): control decisions, held calls, reply receipts, reply applications and a remote host's run command. The record lists each script once, as a named run |
 | Observation | One named structure read from the run. Every control compares it |
 | Claim | One theorem whose proof assembles the clauses. Each clause is a theorem or a planned goal with its placement |
 | Controls | For each clause, and for each associated law, a green control and at least one red control. A control names the runs that its comparison reads |

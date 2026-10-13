@@ -40,7 +40,7 @@ def Move.hostAct : Move → Bool
   | .receive _ (.ofExit _) => true
   | .receive _ _ => false
   | .apply _ => true
-  | .row _ => false
+  | .wire _ => false
 
 /-! ## 3. The observation -/
 

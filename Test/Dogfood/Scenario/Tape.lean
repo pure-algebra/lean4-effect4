@@ -273,7 +273,7 @@ def own : Option (List (String × Lowered)) := do
   some
     [ ("workers.txt", ⟨"workers/refused", Workers.opened crew,
         script [Workers.parked, Workers.takes, [.receive Workers.w1 (ok (.nat 1)),
-          .apply Workers.w1, .row (.apply ⟨⟨1⟩, 1⟩)]]⟩)
+          .apply Workers.w1, .wire (.apply ⟨⟨1⟩, 1⟩)]]⟩)
     , ("timeout.txt", ⟨"handle/cache", Run.open cache "p1" Timeout.budget,
         script [[.start], answer (.row "Kv.make") (ok (.nat 0)), answer (.row "get") (ok .none),
           [.flush, .hold Timeout.http], answer Timeout.http (ok Timeout.body1),

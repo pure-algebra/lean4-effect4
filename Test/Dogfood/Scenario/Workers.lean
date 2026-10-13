@@ -228,11 +228,11 @@ def runsOf (b faulty : Api.Built) : List NamedRun :=
   , run "applied-2" [parked, takes, [.apply w2]]
   , run "applied-1-2" [parked, takes, [.apply w1, .apply w2]]
   , run "applied-2-1" [parked, takes, [.apply w2, .apply w1]]
-  , run "crossed" [parked, [.row (.submit (forged 0 2 2 (ok (.nat 1))))]]
+  , run "crossed" [parked, [.wire (.submit (forged 0 2 2 (ok (.nat 1))))]]
   , run "unreceived" [parked, [.apply w2]]
   , run "applied-1" [parked, takes, [.apply w1]]
   , run "stale" [parked, takes,
-      [.apply w1, .row (.submit (forged 0 1 1 (ok (.nat 1)))), .row (.apply ⟨⟨1⟩, 1⟩)]]
+      [.apply w1, .wire (.submit (forged 0 1 1 (ok (.nat 1)))), .wire (.apply ⟨⟨1⟩, 1⟩)]]
   , run "cancelled-running" [running, [.cancel ⟨2⟩]]
   , run "cancelled-early" [parked, [.cancel ⟨2⟩, .receive w2 (ok (.nat 2))]]
   , run "cancelled-between" [parked, takes, [.cancel ⟨2⟩, .apply w2, .apply w1]]

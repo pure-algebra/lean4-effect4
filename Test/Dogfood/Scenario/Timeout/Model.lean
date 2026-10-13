@@ -130,7 +130,7 @@ def forged (callId : Nat) (key : Key) (completion : Api.HostSession.Answer) : Re
 /-- A move of this scenario's hosts: a control, a held call, a reply application, or a reply
 receipt whose host answer is a success or one tagged failure. A raw row is not one. -/
 def Move.plain : Move → Bool
-  | .row _ => false
+  | .wire _ => false
   | .receive _ (.ofExit (.success _)) => true
   | .receive _ (.ofExit (.failure cause)) =>
     match cause.reasons with
