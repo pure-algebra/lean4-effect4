@@ -96,7 +96,8 @@ def short (n : Lean.Name) : String :=
 private def part (k title : String) (body : List RawNode) : RawNode :=
   el "section" (el "h2" [.text title, el "a" [.text k] [("class", "key"), ("href", "#" ++ k)]] :: body) [("id", k)]
 
-/-- The sheet's blocks: the verdict, the marks, then each sort's constructors. -/
+/-- The sheet's blocks: the verdict, the marks large, the marks with what they draw, then each
+sort's constructors. -/
 def sheetBlocks : List RawNode :=
   let total := (sorts.map (·.ctors.length)).foldl (· + ·) 0
   let verdict := if problems.isEmpty then
@@ -105,6 +106,9 @@ def sheetBlocks : List RawNode :=
   let uses (s : Shape) := (table.filter (·.shape == s)).length
   [el "p" [.text s!"One mark for each constructor of the sorts the pictures fold (decisions row 367, point 6): {total} constructors in {sorts.length} sorts, drawn by {Shape.all.length} marks. What is promised is hollow and what is kept is filled."],
    el "p" [.text verdict],
+   part "large" "The marks, large" [el "ul" (Shape.all.map fun s =>
+     el "li" [s.draw 72, code ((shapeNames.getD s.ctorIdx .anonymous).componentsRev.headD .anonymous).toString])
+     [("class", "contact")]],
    part "marks" "The marks" [table' ["Mark", "Text", "Name", "Draws", "Rows"]
      (Shape.all.map fun s => [s.draw 36, code s.glyph, code ((shapeNames.getD s.ctorIdx .anonymous).componentsRev.headD .anonymous).toString, .text s.means, .text (toString (uses s))])
      "Table: Mark, Text, Name, Draws, Rows"]] ++
@@ -113,5 +117,12 @@ def sheetBlocks : List RawNode :=
     part ("sort-" ++ srt.name.replace " " "-") srt.name [table' ["Mark", "Constructor", "Variant", "Word", "Draws"]
       (rows.map fun r => [r.shape.draw, code (short r.ctor), .text r.variant, .text r.word, .text r.means])
       s!"Table: the {srt.name}'s constructors"]
+
+/-- The studio's rule for the large marks: a grid of six, each mark over its name. The site does
+not use it. -/
+def contactCss : String :=
+  ".contact { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 1.5rem 1rem; " ++
+  "list-style: none; padding: 0; max-width: none; }\n" ++
+  ".contact li { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }\n"
 
 end Tools.View.Glyph

@@ -67,10 +67,12 @@ browse() {
   if [ ! -t 1 ]; then echo "$1"; elif command -v open > /dev/null 2>&1; then open "$1"; else xdg-open "$1"; fi
 }
 # a studio page in the Hammerspoon viewer (~/.hammerspoon/init.lua, effect4.show) when it answers,
-# and as browse does otherwise
+# and as browse does otherwise. The IPC now and then drops a first message, so a second try follows.
 show() {
-  if command -v hs > /dev/null 2>&1 && timeout 15 hs -c "return effect4.show('$1', '$2')" 2> /dev/null; then :
-  else browse "$root/${1#http://localhost:8783/}"; fi
+  for _ in 1 2; do
+    if command -v hs > /dev/null 2>&1 && timeout 6 hs -q -c "return effect4.show('$1', '$2')" 2> /dev/null; then return 0; fi
+  done
+  browse "$root/${1#http://localhost:8783/}"
 }
 if [ "$cmd" = vocabulary ]; then
   build_driver GlyphSheet

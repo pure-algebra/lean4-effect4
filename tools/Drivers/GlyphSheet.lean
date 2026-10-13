@@ -23,7 +23,7 @@ def main (args : List String) : IO UInt32 := do
   let shell : Tools.Site.Shell := {
     tabTitle := "The vocabulary of marks"
     home := "../index.html"
-    styles := .inlineLooks (Tools.Document.Html.looks {} paper ++ Tokens.rules) "../../../Tools/Document/page.css"
+    styles := .inlineLooks (Tools.Document.Html.looks {} paper ++ Tokens.rules ++ contactCss) "../../../Tools/Document/page.css"
     toc := parts.map fun (k, t) => Tools.Site.tocItem k t [] }
   match sheetBlocks.mapM fun n => (Child.check n : Except _ (Child Tools.Site.InMain)) |>.mapError (·.describe n) with
   | .ok blocks =>
