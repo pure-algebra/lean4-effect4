@@ -15,21 +15,12 @@ fold of every page of the site (`Tools.Site`, checked by the HTML Standard's con
 
 The pages link the page's rules (`tools/Tools/Document/page.css`) where the semantics page inlines
 them, so an edit of the rules shows in the studio with no run; the rules' check runs here too. The
-looks are read from their token files at each run (`tools/view/looks/paper.tokens.json`, and
-`dark.tokens.json` when there is one, over the dark defaults), so a token edit shows after
-`tools/view/v -d` with no build. It imports no law module. The studio shows the two looks side by
+paper look is read from its token file at each run (`Tokens.lookFile`), over the dark base, so a
+token edit shows after `tools/view/v -d` with no build. It imports no law module. The studio shows the two looks side by
 side. Viewing ergonomics only: it is no test, and nothing reads its output.
 -/
 
 open Tools.Document Tools.Document.Specimen Tools.View
-
-/-- A look from its token file over the dark defaults, or the defaults when there is no file. -/
-def lookFile (name : String) : IO Look := do
-  let path : System.FilePath := s!"tools/view/looks/{name}.tokens.json"
-  unless ← path.pathExists do return {}
-  match Tokens.parseLook {} name (← IO.FS.readFile path) with
-  | .ok L => return L
-  | .error why => throw (IO.userError s!"{path} is refused at {why}")
 
 def main (args : List String) : IO UInt32 := do
   let [out] := args | IO.eprintln "usage: DocSpecimen OUT"; return 2
@@ -37,8 +28,8 @@ def main (args : List String) : IO UInt32 := do
   IO.FS.createDirAll out
   if let some why := Tools.Document.Html.Sheet.problem (← IO.FS.readFile Tools.Document.Html.sheetPath) then
     IO.eprintln s!"{Tools.Document.Html.sheetPath} refused at {why}"
-  let dark ← lookFile "dark"
-  let paper ← lookFile "paper"
+  let dark : Look := {}
+  let paper ← Tokens.lookFile "paper"
   let write (name : String) (base light : Look) : IO Bool := do
     let shell : Tools.Site.Shell := {
       tabTitle := specimen.title

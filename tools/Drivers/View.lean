@@ -101,13 +101,13 @@ picture stands inline (DS-3): a look switch redraws it in the dark look, the pap
 side by side, through the class rules (`Tokens.rules`), which change colours and families and no
 place; the key under the pointer is named, and a click copies `title · picture · key` for the
 chat. The current picture names itself in data attributes for an agent that reads the page. -/
-def playerPage (L : Look) (title label : String) (pics : List (String × Bool)) (gallery : Bool) :
+def playerPage (L paper : Look) (title label : String) (pics : List (String × Bool)) (gallery : Bool) :
     String :=
   let list := ",".intercalate (pics.map fun (n, f) => s!"[\"{n}\",{if f then 1 else 0}]")
   "<!doctype html>\n<html lang=\"en\" data-look=\"" ++ escape L.name ++ "\">\n<head>\n<meta charset=\"utf-8\">\n" ++
   "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>" ++ escape title ++ "</title>\n" ++
   "<style>\n" ++ Tokens.css L ++ (if L.name == "dark" then "" else Tokens.css {}) ++
-  (if L.name == "paper" then "" else Tokens.css Look.paper) ++ Tokens.rules ++ pageRules ++
+  (if L.name == "paper" then "" else Tokens.css paper) ++ Tokens.rules ++ pageRules ++
   "html { scrollbar-gutter: stable; }\n" ++
   ".pic { overflow: hidden; }\n" ++
   ".pic svg { display: block; max-width: 100%; height: auto; outline: 1px solid var(--e4-color-rule); }\n" ++
@@ -364,7 +364,7 @@ def writeFrames (L : Look) (out : System.FilePath) (frames : List Build.Frame) (
     text := text ++ (pageText g).toArray ++ #[""]
     prev := some g
   IO.FS.writeFile (out / "frames.txt") ("\n".intercalate text.toList)
-  IO.FS.writeFile (out / "index.html") (playerPage L title label pics.toList gallery)
+  IO.FS.writeFile (out / "index.html") (playerPage L (← Tokens.lookFile "paper") title label pics.toList gallery)
   IO.FS.writeFile (out / "run.json") (Lean.Json.compress (Lean.Json.mkObj [
     ("title", title), ("label", label), ("look", L.name), ("frames", frames.length),
     ("last", (pics.toList.getLast?.map (·.1)).getD "")]) ++ "\n")

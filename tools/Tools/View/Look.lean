@@ -22,8 +22,8 @@ own (`Tools.View.Tokens` writes and reads them):
 The defaults are the dark look: the palette of `paint.h`'s round-3 probe, whose hues passed the
 palette validator on their ground (hues-run.txt of the round-3 probe), and the faces of
 `paint_faces_open`. Every other look is a token file that changes some of them
-(`tools/view/looks/`). The paper look is also a value here (`Look.paper`), for a document's light
-scheme.
+(`tools/view/looks/`), read at each run (`Tokens.lookFile`): its file is its one source. The paper
+look, which a document takes for a light scheme, is one of them.
 -/
 
 namespace Tools.View
@@ -389,15 +389,5 @@ def Look.color (L : Look) (role : Role) : Rgb :=
   match role with
   | .host | .failure | .resource => if L.hue then L.palette.of role else L.palette.ink
   | _ => L.palette.of role
-
-/-- **The paper look**: the base look in the light scheme, on the light palette of `paint.h`'s
-round-3 probe. A document's page takes it for a reader who prefers light, and for print (decisions
-row 354, point 3). It is the look of `tools/view/looks/paper.tokens.json`, held here as a value so
-that a page reads no file; a guard of `Tools.View.Tokens` reads that file back as this value. -/
-def Look.paper : Look where
-  name := "paper"
-  description := "The paper ground: the light palette of paint.h's round-3 probe, whose hues passed the palette validator on their ground."
-  scheme := .light
-  palette := ⟨0xf7f4ee, 0x1b1f2a, 0xc9ccd3, 0xa97416, 0xac312a, 0x349470⟩
 
 end Tools.View

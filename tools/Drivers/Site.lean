@@ -18,7 +18,7 @@ Builds the site as one value (`Tools.Site.Site`) and writes every file of it int
 * the contents page, every page by section.
 
 Its other files: the page's rules (`page.css`, after the design language's check), the looks
-(`looks.css`), the pages and their parts (`site.json`), the host's `_headers`, and the page for a
+(`looks.css`: the dark base and the paper look, read from its token file at each run), the pages and their parts (`site.json`), the host's `_headers`, and the page for a
 missing path (`404.html`). `make site` runs the report when its sources changed, then this, into a
 fresh folder, and puts it at `.lake/gen/site`.
 -/
@@ -85,7 +85,7 @@ def main (args : List String) : IO UInt32 := do
     for e in errors do IO.eprintln e
     return 1
   IO.FS.writeFile (dir / "page.css") css
-  IO.FS.writeFile (dir / "looks.css") looksCss
+  IO.FS.writeFile (dir / "looks.css") (looksCss (← Tokens.lookFile "paper"))
   IO.FS.writeFile (dir / "_headers") headers
   match Lean.Json.parse (← IO.FS.readFile (report / "semantics.json")) with
   | .ok j => IO.FS.writeFile (dir / "semantics" / "report.json") (j.compress ++ "\n")

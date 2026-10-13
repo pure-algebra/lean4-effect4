@@ -423,12 +423,17 @@ def roundTrips (base L : Look) : Bool :=
   | .ok L' => decide (L' = L)
   | .error _ => false
 
--- The paper look's token file reads, over the base, as the paper look held in Lean (`Look.paper`),
--- which a document's page takes so that it reads no file. A finite check of the two copies; Lake
--- does not take the file as an input, so the check runs when this module is built.
-#guard match parseLook {} "paper" (include_str "../../view/looks/paper.tokens.json") with
-  | .ok L => decide (L = Look.paper)
-  | .error _ => false
+/-- The folder of the looks' token files. -/
+def lookDir : System.FilePath := "tools/view/looks"
+
+/-- **A look from its token file** (`tools/view/looks/NAME.tokens.json`), read over the base look
+at each run. The file is the look's one source (decisions row 363, point 4): an edit shows at the
+next run with no build. The base is the dark look, the defaults of `Look`. -/
+def lookFile (name : String) : IO Look := do
+  let path := lookDir / s!"{name}.tokens.json"
+  match parseLook {} name (← IO.FS.readFile path) with
+  | .ok L => return L
+  | .error why => throw (IO.userError s!"{path} is refused at {why}")
 
 /-! ## CSS -/
 

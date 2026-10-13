@@ -408,9 +408,10 @@ def Site.json (s : Site) : Lean.Json :=
       ("parts", .arr ((parts p.doc).map fun (k, t, _) =>
         Lean.Json.mkObj [("key", k), ("title", t)]).toArray)]).toArray)]
 
-/-- The looks of every page: the dark base, the paper look for a light preference and print, and
-the rules that draw a picture's marks in them (`Tools.View.Tokens.rules`). -/
-def looksCss : String := Html.looks {} Look.paper ++ Tokens.rules
+/-- The looks of every page: the dark base, the paper look (`paper`, read from its token file) for
+a light preference and print, and the rules that draw a picture's marks in them
+(`Tools.View.Tokens.rules`). -/
+def looksCss (paper : Look) : String := Html.looks {} paper ++ Tokens.rules
 
 /-- Write every page of a checked site into `dir`: its HTML and its document as JSON. -/
 def Site.write (s : Site) (dir : System.FilePath) : IO (List String) := do
