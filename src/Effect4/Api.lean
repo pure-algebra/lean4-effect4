@@ -40,9 +40,11 @@ One module, the whole pipeline, small interface:
 * `typeOf` / `wellTyped` type a program against the native signature; `explain` / `blame`
   locate and name a refusal (DI-86).
 * Certificate first (DI-85): `check` answers the typing certificate or the located, named
-  refusal, `Typed` carries a program with its certificate into `Typed.run`, `Typed.replay`,
-  `Typed.runSync` and `Typed.emit` under a `Budget` with defaults, and `author` takes a named
-  source (`Program.Authoring.Src`) to a `Typed` in one call.
+  refusal, `Typed` carries a program with its certificate into `Typed.run`, `Typed.runSync` and
+  `Typed.emit` under a `Budget` with defaults, and `author` takes a named source
+  (`Program.Authoring.Src`) to a `Typed` in one call. `Typed.replay` replays a session's journal
+  through the checked session, so it stands beside the session's face
+  (`src/Effect4/Run/Live.lean`, decisions row 373 (8)).
 * `print` / `printDecl` answer TypeScript **syntax** (`TypeScript.Expr`, `ConstDecl`),
   never text. Rendering to bytes is one call to the pinned package — `TypeScript.Render.expr
   house0 0 e` — kept outside this module on purpose: Lean's `String` folds reach
@@ -54,7 +56,8 @@ One module, the whole pipeline, small interface:
 * `replay` runs a program against an explicit host decision tape (the meaning is the
   relation over tapes; a run is its fuel-bounded simulator); `run` is the tape every
   ordinary program takes (evaluate the root, flush its dispatcher); `runSync` is
-  `Effect.runSyncExit`. These three are the raw, host-free runs.
+  `Effect.runSyncExit`. These three are the raw, host-free runs, and `replay` is a named test
+  entry (decisions row 373 (8)).
 * Host replies reach a program through one route: the keyed session
   `Effect4.Api.HostSession` (`start`, `bindCall`, `submit`, `advance`, `inspect`), which
   binds a reply to the call it answers before the reply becomes a decision (DI-23, DI-58).
@@ -317,10 +320,14 @@ structure Inspection where
 /-- Replay a host decision tape against the program. **Raw**: this entry point checks
 nothing. It does not type the program, does not check the supplied table's names
 (`LawfulTable`) and does not check that the runner can register the table's rows
-(`checkTable`). The checked entry point is `replayAdmitted`, whose certificate
-`admitProgram` builds; `replayChecked` is a different check again — it admits the incoming
-*decisions*, not the program. Kept and named for fixtures, negative tests and the truth
-driver. -/
+(`checkTable`). It admits no host answer: an `answerAsync` on the tape reaches the machine as
+written.
+
+**A named test entry** (decisions row 373 (8)), kept for fixtures, negative tests, the truth
+driver and the laws of the machine. The checked route is `Typed.replay`
+(`src/Effect4/Run/Live.lean`): it replays a session's journal, and the session admits each reply
+at its call. `replayChecked` is a different check again: it admits the incoming *decisions* at
+the rows' own columns, not the program. -/
 def replay (program : Program) (fuel : Nat) (tape : List Decision) (table : RowTable := [])
     (compileFuel : Nat := fuel) :
     Inspection :=
@@ -506,10 +513,6 @@ variable {table : RowTable}
 
 /-- The certified type. -/
 def ty (t : Typed table) : EffTy := t.certificate.ty
-
-/-- `replay` on the certified program. -/
-def replay (t : Typed table) (tape : List Decision) (budget : Budget := {}) : Inspection :=
-  Api.replay t.program budget.fuel tape table budget.compileFuel
 
 /-- `run` on the certified program: evaluate the root, flush. -/
 def run (t : Typed table) (budget : Budget := {}) : Inspection :=

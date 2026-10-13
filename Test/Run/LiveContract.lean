@@ -1,6 +1,7 @@
 import Effect4.Laws.Api.Live
 import Effect4.Api.Author
 import Test.Run.RunContract
+import Test.Api.TypedReplies
 
 /-!
 # The host session's face: `Live`, its events and its verdicts
@@ -19,6 +20,11 @@ parked on one row.
 * **Finite evaluations.** A script fed event by event reaches the exit that the run contract's drive
   reaches. The view (`src/Effect4/Run/View.lean`, slice DM3) of each stage: the awaited calls with
   their checked instance and the session's record, the internal waits, and `funded`.
+* **The typed replay** (`Api.Typed.replay`, decisions rows 98 and 373 (8)), on the template row of
+  decisions row 183 (`Test/Api/TypedReplies.lean`). A journal whose answer the call's checked
+  instance admits replays to the program's exit, where the checked tape replay refuses the same
+  answer at the row's own columns. The red control: a journal whose answer misfits the call's
+  instance is refused at its receipt, and the raw `Api.replay` applies that answer unchecked.
 -/
 
 set_option autoImplicit false
@@ -27,9 +33,6 @@ namespace Test.Run.LiveContract
 
 open Effect4 Effect4.Machine Effect4.Program
 open Test.Run.RunContract (twice pairUp)
-
-/-- A script fed event by event. -/
-def feedAll (l : Live) (events : List Run.Event) : Live := events.foldl (fun l e => (l.feed e).1) l
 
 /-- An answer of a value. -/
 def ok (value : Val) : Api.HostSession.Answer := .ofExit (.success value)
@@ -56,7 +59,7 @@ def parked : Live := ((Live.open pairUp "multi").feed .start).1
 
 /-- The first child answered and applied: one live call is left on the row. -/
 def oneLeft : Live :=
-  feedAll parked [.receive (.fiber ⟨1⟩) (ok (.nat 2)), .apply (.fiber ⟨1⟩)]
+  parked.feedAll [.receive (.fiber ⟨1⟩) (ok (.nat 2)), .apply (.fiber ⟨1⟩)]
 
 -- A reply receipt for a call the host does not hold binds it first: two run commands.
 #guard (parked.feed (.receive (.fiber ⟨1⟩) (ok (.nat 2)))).2 = .played [.bound, .preflight]
@@ -66,7 +69,7 @@ def oneLeft : Live :=
 
 /-- The whole script: both answers applied, then the flush. -/
 def finished : Live :=
-  feedAll oneLeft [.receive (.row "Host.wait") (ok (.nat 3)), .apply (.row "Host.wait"), .flush]
+  oneLeft.feedAll [.receive (.row "Host.wait") (ok (.nat 3)), .apply (.row "Host.wait"), .flush]
 
 -- The exit that the run contract's drive reaches, with no fiber number, token or call id written
 -- for the second call.
@@ -147,7 +150,7 @@ example : parked.view.awaiting.map (·.await) = awaits parked.run.machine :=
 
 /-- The first call of `twice` received and applied, at a command budget. -/
 def cutAt (fuel : Nat) : Live :=
-  feedAll (Live.open twice "cut" { fuel := fuel })
+  (Live.open twice "cut" { fuel := fuel }).feedAll
     [.start, .receive (.fiber Api.root) (ok (.nat 2)), .apply (.fiber Api.root)]
 
 -- Red control of the session's bit (slice DM4): at a budget of 4 the application is `applied`
@@ -178,5 +181,73 @@ example : ∀ f ∈ parked.run.machine.fibers, f.exit = none →
     f.id ∈ parked.view.runnable ∨ f.id ∈ parked.view.awaiting.map (·.await.fiber) ∨
       f.id ∈ parked.view.timers.map (·.1) ∨ f.id ∈ parked.view.waits.map (·.fiber) :=
   Live.view_classifies parked
+
+
+/-! ## The typed replay (decisions rows 98 and 373 (8))
+
+Seat REPLAY's lines. The fixture is row 183's template row, `List<A>` to `Option<A>`, called at
+`[1]`: the call's checked instance answers `Option<number>`, which the row's own columns refuse. -/
+
+/-- The program of row 183's battery, with its typing certificate. -/
+def typedFirst : Option (Api.Typed Test.Api.TypedReplies.table) :=
+  (Api.check Test.Api.TypedReplies.program Test.Api.TypedReplies.table).toOption
+
+/-- A session's journal that answers the one call: the root started, the call bound at its guard,
+the reply received, then applied. -/
+def answeredWith (completion : Api.HostSession.Answer) : List Api.Runner.Command :=
+  [.control Api.evaluate, .bind Test.Api.TypedReplies.call0 0,
+    .submit (Test.Api.TypedReplies.reply completion), .apply ⟨Api.root, 0⟩]
+
+/-- The typed replay of that journal, under the battery's header and its binding. -/
+def replayed (completion : Api.HostSession.Answer) :
+    Option (Except Api.HostSession.Refusal Live) :=
+  typedFirst.map (·.replay "profile" Test.Api.TypedReplies.header (answeredWith completion))
+
+/-- `some 1` answered: the run that the typed replay answers, or the run contract's program
+opened, should the replay refuse (the line below shows it does not). -/
+def admittedRun : Live :=
+  match replayed Test.Api.TypedReplies.some1.completion with
+  | some (.ok l) => l
+  | _ => Live.open twice "unreached"
+
+-- Finite evaluation: the replay starts, binds, receives `some 1` and applies it, and the program
+-- answers it.
+#guard (replayed Test.Api.TypedReplies.some1.completion).any (·.toBool)
+#guard admittedRun.run.phases = [.progressed, .bound, .preflight, .applied]
+#guard admittedRun.run.exit = some (.success (.some (.nat 1)))
+-- Control: the checked tape replay admits at the row's own columns, so it refuses the answer that
+-- the session admitted at the call's instance (the open part `replay-at-call-instance`).
+#guard match Api.replayChecked Test.Api.TypedReplies.program 1000
+    [Api.evaluate, .answerAsync Api.root 0 Test.Api.TypedReplies.some1.completion]
+    Test.Api.TypedReplies.table with
+  | .inr (.decision 1 _ (.answerType _ 0 _) _) => true
+  | _ => false
+#guard (Run.rows admittedRun.run)[3]? = some (.apply ⟨Api.root, 0⟩, .applied)
+
+-- Red control: `some "one"` misfits the call's instance, so its receipt is refused at the
+-- envelope, the application finds no reply, and the program has no exit.
+#guard (replayed Test.Api.TypedReplies.someText.completion).any fun
+  | .ok l => l.run.phases == [.progressed, .bound, .refused .envelope, .refused .noCall] &&
+      l.run.exit.isNone
+  | .error _ => false
+-- Its raw twin: the raw `Api.replay` admits nothing, and the program answers the misfit.
+#guard (Api.replay Test.Api.TypedReplies.program 1000
+    [Api.evaluate, .answerAsync Api.root 0 Test.Api.TypedReplies.someText.completion]
+    Test.Api.TypedReplies.table).exit = some (.success (.some (.str "one")))
+-- The value every instance admits takes the row's own path, as before.
+#guard (replayed Test.Api.TypedReplies.nothing.completion).any fun
+  | .ok l => l.run.phases == [.progressed, .bound, .preflight, .applied]
+  | .error _ => false
+
+-- Red controls of the start: another binding and another table are refused, with the session's
+-- reasons.
+#guard typedFirst.any fun t =>
+  match t.replay "keyed-v3" Test.Api.TypedReplies.header [] with
+  | .error .profile => true
+  | _ => false
+#guard typedFirst.any fun t =>
+  match t.replay "profile" { Test.Api.TypedReplies.header with table := [] } [] with
+  | .error .table => true
+  | _ => false
 
 end Test.Run.LiveContract
