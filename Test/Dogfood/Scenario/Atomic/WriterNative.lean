@@ -111,29 +111,6 @@ theorem emit_extends (m : NativeMachine) (events : List Moves.REvent) :
   rw [RunMachine.emit_trace]
   exact List.prefix_append _ _
 
-/-- A prefix of the evaluation that keeps the rows and the heap, extends the trace and lowers the
-acting frame composes with the debit after it. Consumer: `iteration_debit`. -/
-theorem debit_prefix (id : Nat) (m n : NativeMachine) (fiber g : SourceFiber) (next : SourceIteration)
-    (rows : n.fibers = m.fibers) (refs : n.state.refs = m.state.refs)
-    (extended : RunMachine.Extends m n) (key : g.id = fiber.id)
-    (bounded : frame id g.frame ≤ frame id fiber.frame)
-    (debit : (WriterMachine.ledger id).IterDebit n g next) :
-    (WriterMachine.ledger id).IterDebit m fiber next := by
-  have recorded := WriterMachine.issued_mono id m n extended
-  unfold PlaceLedger.IterDebit at debit ⊢
-  rw [key] at debit
-  have spent : (WriterMachine.ledger id).spent n = (WriterMachine.ledger id).spent m := by
-    simp only [PlaceLedger.spent, WriterMachine.ledger, PlaceLedger.zero_sum]
-  have outside : (WriterMachine.ledger id).outside fiber.id n [] =
-      (WriterMachine.ledger id).outside fiber.id m [] := by
-    simp only [PlaceLedger.outside, WriterMachine.ledger, FiberSum.outside, PlaceLedger.zero_sum, rows,
-      refs]
-  have issued : (WriterMachine.ledger id).issued m ≤ (WriterMachine.ledger id).issued n := by
-    simpa only [PlaceLedger.issued, WriterMachine.ledger, FinalizerCredits.indicator_sum,
-      WriterMachine.issued] using recorded
-  have fibered : (WriterMachine.ledger id).fiber g ≤ (WriterMachine.ledger id).fiber fiber := bounded
-  omega
-
 /-- A popped frame with a zero-weight answer keeps no more than the old frame. -/
 theorem pop_frame_le (id : Nat) (fiber : FrameFiber EffName EffThunk Val Err Defect FiberId Ann)
     (demand : Effect4.Arm) (skip : Bool) (cause : Option CauseV) (code : NCode)
@@ -547,52 +524,17 @@ theorem native_debit (built : Api.Built) (admitted : Api.Author.build (shop .non
   · exact exit_scoped_debit built admitted id member m fiber yielding _ owned held
   · exact primitive
 
-/-- The loop top discards only an active reservation. -/
-theorem loop_top_le (id : Nat) (fiber : SourceFiber) :
-    frame id (countOp (runloopTop fiber)).frame ≤ frame id fiber.frame := by
-  unfold countOp runloopTop
-  split
-  · change 0 + (fiber.frame.stack.map (saved id)).sum ≤ current id fiber.frame.current +
-      (fiber.frame.stack.map (saved id)).sum
-    omega
-  · exact Nat.le_refl _
-
-/-- The forced-yield wrapper keeps the active reservation. -/
-theorem yield_frame (id : Nat) (frame : FrameFiber EffName EffThunk Val Err Defect FiberId Ann) :
-    WriterPhase.frame id {frame with current := Prim.onSuccessConst (Prim.yieldNowWith 0) frame.current} =
-      WriterPhase.frame id frame := by
-  change (0 + current id frame.current) + (frame.stack.map (saved id)).sum =
-    current id frame.current + (frame.stack.map (saved id)).sum
-  rw [Nat.zero_add]
-
-/-- **The writer's charged iteration debit**, the forced yield included.
-Consumer: `WriterHistory.evaluation`. -/
+/-- **The writer's charged iteration debit**, the forced yield included: the shared
+`PlaceFunding.iteration_debit` at the writer weights. Consumer: `WriterHistory.evaluation`. -/
 theorem iteration_debit (built : Api.Built) (admitted : Api.Author.build (shop .none) = .ok built)
     (id : Nat) (member : id ∈ requests) (m : NativeMachine) (fiber : SourceFiber) (yielding : Bool)
     (owned : ConfigurationAt built.program m) (held : FiberAt built.program fiber) :
     letI := evaluatorFor built.program built.table
     (WriterMachine.ledger id).IterDebit m fiber
-      (Machine.iteration (interpOf built.program built.table) m fiber yielding) := by
-  letI := evaluatorFor built.program built.table
-  have charged := count_at built.program _ (loop_top_at built.program fiber held)
-  have key : (countOp (runloopTop fiber)).id = fiber.id := by
-    unfold countOp runloopTop
-    split <;> rfl
-  have topped := loop_top_le id fiber
-  unfold Machine.iteration
-  dsimp only
-  cases injected : injectYield m (countOp (runloopTop fiber)) yielding with
-  | none =>
-    exact debit_prefix id m m fiber (countOp (runloopTop fiber)) _ rfl rfl (RunMachine.Extends.refl m)
-      key topped (native_debit built admitted id member m _ yielding owned charged)
-  | some it =>
-    have retained := yield_at built.program m _ yielding it owned charged injected
-    unfold injectYield at injected
-    split at injected
-    · cases injected
-      exact debit_prefix id m (m.emit _) fiber _ _ rfl rfl (emit_extends m _) (by exact key)
-        (by exact Nat.le_trans (Nat.le_of_eq (yield_frame id (countOp (runloopTop fiber)).frame)) topped)
-        (native_debit built admitted id member _ _ true retained.machine retained.fiber)
-    · cases injected
+      (Machine.iteration (interpOf built.program built.table) m fiber yielding) :=
+  PlaceFunding.iteration_debit (no_queue id) (events id) (model id) (fun _ => rfl)
+    (fun code => Nat.le_of_eq (Nat.zero_add (current id code))) built.program built.table m fiber
+    yielding owned held
+    (fun n g y _ configured fibered => native_debit built admitted id member n g y configured fibered)
 
 end Test.Dogfood.Scenario.Atomic.WriterNative

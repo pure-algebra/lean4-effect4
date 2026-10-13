@@ -69,38 +69,22 @@ theorem source_administration (root : NativeEff) (q : List Nat) (table : RowTabl
     change current root q fiber.frame.current + (0 + (fiber.frame.stack.map (saved root q)).sum) ≤ frame root q fiber.frame
     simp only [Nat.zero_add, frame, Nat.le_refl]
 
-private theorem source_installed (root : NativeEff) (q : List Nat)
-    (m : NativeMachine) (fiber : SourceFiber) (it : SourceIteration)
-    (unique : (m.fibers.map (fun f => f.id)).Nodup) (member : fiber ∈ m.fibers)
-    (afterUnique : (it.machine.fibers.map (fun f => f.id)).Nodup)
-    (key : it.fiber.id = fiber.id) (debit : Debit root q m fiber it) :
-    (PlaceLedgerConnect.source root q).Balanced m [] [] (it.machine.update it.fiber) [] [] := by
-  apply (source_no_queue root q).install_debit m fiber it unique member afterUnique key
-  exact (source_debit_iff root q m fiber it).mpr debit
-
-/-- The source ledger's evaluator debit. Consumers: `command_debit` and `source_local`. -/
+/-- The source ledger's evaluator debit: the shared `PlaceFunding.Evaluation.of_debits` from
+its native and iteration debits. Consumer: `source_local`. -/
 theorem source_evaluation (root : NativeEff) (q : List Nat) (fragment : Fragment root)
     (clearFin : ClearFinalizers root q) (clearLoop : ClearLoops root q) (table : RowTable)
     (sequential : SequentialSource root) (raceFree : RaceFreeSource root) :
     PlaceFunding.Evaluation (PlaceLedgerConnect.source root q) (ConfigurationAt root)
-      root table (fun _ _ _ => 0) where
-  native := by
-    intro m fiber yielding ledger owned found
-    exact source_installed root q m fiber _ ledger.idsUnique (RunMachine.mem_of_fiber? found)
-      (ForkLedger.Invariant.Native.evaluateNative_ok root table m fiber yielding ledger).idsUnique
-      (Moves.evaluateNative_footprint root table m fiber yielding).id
+      root table (fun _ _ _ => 0) :=
+  PlaceFunding.Evaluation.of_debits (source_no_queue root q) root table
+    (fun m fiber yielding ledger owned held => (source_debit_iff root q m fiber _).mpr
       (native_debit root q fragment clearFin clearLoop table m fiber yielding sequential raceFree owned
-        (configuration_fiber root m fiber.id fiber owned found) ledger.idsUnique)
-  iteration := by
-    intro m fiber yielding ledger owned found
-    apply (PlaceLedger.charged_zero _ _ _ _ _ _ _).mpr
-    exact source_installed root q m fiber _ ledger.idsUnique (RunMachine.mem_of_fiber? found)
-      (ForkLedger.Invariant.Native.iteration_ok root table m fiber yielding ledger).idsUnique
-      (Moves.iteration_id root table m fiber yielding)
-      (iteration_debit root q fragment clearFin clearLoop table m fiber yielding sequential raceFree owned
-        (configuration_fiber root m fiber.id fiber owned found) ledger.idsUnique)
+        held ledger.idsUnique))
+    (fun m fiber yielding ledger owned held => (source_debit_iff root q m fiber _).mpr
+      (iteration_debit root q fragment clearFin clearLoop table m fiber yielding sequential raceFree
+        owned held ledger.idsUnique))
 
-/-- A source command imports only free code. Consumers: `command_debit` and `source_local`. -/
+/-- A source command imports only free code. Consumer: `source_local`. -/
 theorem source_inputs (root : NativeEff) (q : List Nat) (m : NativeMachine)
     (command : SourceCommand) (raceFree : RaceFreeSource root)
     (owned : ConfigurationAt root m) (head : CommandAt root command) :

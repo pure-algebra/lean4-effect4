@@ -95,31 +95,21 @@ writer ledger. A note write spends its active reservation, and a recorded finali
 the reservation of the program it installs.
 Placement: concept `scope-lifetime-finalization`, R11, a step of the clause `Atomic.cleans_once`
 through `log_debits`. Reach: the built shop, every request identity, every such machine, fiber and
-yield flag. Proof: the native and iteration debits of `WriterNative` (the action arms through the
-weight-generic `WriterWeights.action_bound`, the primitive arms through
-`PlaceFunding.primitive_debit`), each installed once by `PlaceFunding.NoQueue.install_debit`.
+yield flag. Proof: the native and iteration debits of `WriterNative` (the action arms through
+`PlaceFunding.action_debit`, the primitive arms through `PlaceFunding.primitive_debit`, the
+iteration through `PlaceFunding.iteration_debit`), installed by `PlaceFunding.Evaluation.of_debits`.
 It establishes no finalizer progress, release order or host observation.
 Consumer: `local_facts`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem evaluation (b : Api.Built) (built : Api.Author.build (shop .none) = .ok b)
     (id : Nat) (member : id ∈ requests) :
     PlaceFunding.Evaluation (WriterMachine.ledger id) (ConfigurationAt b.program) b.program b.table
-      (fun _ _ _ => 0) where
-  native := by
-    intro m fiber yielding ledger owned found
-    exact (no_queue id).install_debit m fiber _ ledger.idsUnique (RunMachine.mem_of_fiber? found)
-      (ForkLedger.Invariant.Native.evaluateNative_ok b.program b.table m fiber yielding ledger).idsUnique
-      (Moves.evaluateNative_footprint b.program b.table m fiber yielding).id
-      (WriterNative.native_debit b built id member m fiber yielding owned
-        (configuration_fiber b.program m fiber.id fiber owned found))
-  iteration := by
-    intro m fiber yielding ledger owned found
-    apply (PlaceLedger.charged_zero _ _ _ _ _ _ _).mpr
-    exact (no_queue id).install_debit m fiber _ ledger.idsUnique (RunMachine.mem_of_fiber? found)
-      (ForkLedger.Invariant.Native.iteration_ok b.program b.table m fiber yielding ledger).idsUnique
-      (Moves.iteration_id b.program b.table m fiber yielding)
-      (WriterNative.iteration_debit b built id member m fiber yielding owned
-        (configuration_fiber b.program m fiber.id fiber owned found))
+      (fun _ _ _ => 0) :=
+  PlaceFunding.Evaluation.of_debits (no_queue id) b.program b.table
+    (fun m fiber yielding _ owned held => WriterNative.native_debit b built id member m fiber yielding
+      owned held)
+    (fun m fiber yielding _ owned held => WriterNative.iteration_debit b built id member m fiber
+      yielding owned held)
 
 /-- The built shop authors no race. -/
 theorem race_free (b : Api.Built) (built : Api.Author.build (shop .none) = .ok b) :

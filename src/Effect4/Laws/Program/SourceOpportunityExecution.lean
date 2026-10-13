@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.SourceOpportunityPrimitive
+import Effect4.Laws.Program.PlaceFunding.Native
 import Effect4.Laws.Machine.WriterWeights
 import Effect4.Laws.Program.Footprint
 import Effect4.Laws.Program.Guard.ForkLedger
@@ -42,18 +43,8 @@ theorem settle_debit (root : NativeEff) (q : List Nat) (m : NativeMachine)
   unfold Debit at debit
   omega
 
-/-- Applying the deferred interrupt discards only the active source reservation.
-Consumer: actual native loop iteration. -/
-theorem loop_top_frame_le (root : NativeEff) (q : List Nat) (fiber : SourceFiber) :
-    frame root q (runloopTop fiber).frame ≤ frame root q fiber.frame := by
-  unfold runloopTop
-  split
-  · dsimp only [FiberCore.pendingFailure, frameCore]
-    simp only [frame, current, cata_prim, Nat.zero_add]
-    omega
-  · exact Nat.le_refl _
-
-/-- The charged native iteration includes the actual forced-yield producer.
+/-- The charged native iteration includes the actual forced-yield producer: the shared
+`PlaceFunding.iteration_debit` at the source weights.
 Consumer: the loop command and complete application source-use history. -/
 theorem iteration_debit (root : NativeEff) (q : List Nat) (fragment : Fragment root)
     (clearFin : ClearFinalizers root q) (clearLoop : ClearLoops root q) (table : RowTable)
@@ -62,41 +53,14 @@ theorem iteration_debit (root : NativeEff) (q : List Nat) (fragment : Fragment r
     (owned : ConfigurationAt root m) (held : FiberAt root fiber)
     (unique : (m.fibers.map (fun fiber => fiber.id)).Nodup) :
     Debit root q m fiber
-      (iteration (evaluator := evaluatorFor root table) (interpOf root table) m fiber yielding) := by
-  have charged := count_at root _ (loop_top_at root fiber held)
-  have bounded : frame root q (countOp (runloopTop fiber)).frame ≤ frame root q fiber.frame :=
-    loop_top_frame_le root q fiber
-  have key : (countOp (runloopTop fiber)).id = fiber.id := by
-    unfold countOp runloopTop
-    split <;> rfl
-  unfold iteration
-  dsimp only
-  cases injected : injectYield m (countOp (runloopTop fiber)) yielding with
-  | none =>
-    change Debit root q m fiber (evaluateNative root m (countOp (runloopTop fiber)) yielding table)
-    have debit := native_debit root q fragment clearFin clearLoop table m
-      (countOp (runloopTop fiber)) yielding sequential raceFree owned charged unique
-    unfold Debit at debit ⊢
-    rw [key] at debit
-    omega
-  | some it =>
-    have retained := yield_at root m _ yielding it owned charged injected
-    unfold injectYield at injected
-    split at injected
-    · cases injected
-      have debit := native_debit root q fragment clearFin clearLoop table _ _ true
-        sequential raceFree retained.machine retained.fiber unique
-      dsimp only [FiberEvaluator.evaluate, evaluatorFor]
-      unfold Debit at debit ⊢
-      dsimp only [FiberCore.answerWith, FiberCore.yieldBefore, FiberCore.current, frameCore] at debit ⊢
-      simp only [recorded_emit, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil,
-        runEvent, Nat.add_zero, outside_emit, frame, current, cata_prim, Nat.zero_add] at debit
-      change recorded q _ + outside root q fiber.id _ + frame root q _ ≤ _
-      rw [key] at debit ⊢
-      change recorded q _ + outside root q fiber.id _ + frame root q _ ≤
-        recorded q m + outside root q fiber.id m + frame root q (countOp (runloopTop fiber)).frame at debit
-      omega
-    · cases injected
+      (iteration (evaluator := evaluatorFor root table) (interpOf root table) m fiber yielding) :=
+  (source_debit_iff root q m fiber _).mp
+    (PlaceFunding.iteration_debit (source_no_queue root q) (source_events root q) (weightModel root q)
+      (fun _ => rfl) (fun code => Nat.le_of_eq (Nat.zero_add (current root q code))) root table m
+      fiber yielding owned held
+      (fun n g y same configured fibered => (source_debit_iff root q n g _).mpr
+        (native_debit root q fragment clearFin clearLoop table n g y sequential raceFree configured
+          fibered (by rw [same]; exact unique))))
 
 /-- The actual loop command composes evaluator debit with single-owner settlement.
 Consumer: complete command preservation and admitted-history induction. -/
