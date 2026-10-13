@@ -318,6 +318,66 @@ theorem join_scoped {Op : Type} [ScopedOp Op] {fiber : TermSrc} (h : fiber.Scope
     ((join fiber : Src Op)).Scoped :=
   awaitFiber_scoped .joinEffect h
 
+/-- An invocation's request is scoped when its arguments are: `unit`, the one argument, or the
+nested pairs (`requestOf`). A step of `Def.invokeWith_scoped`. -/
+theorem requestOf_scoped : ∀ {args : List TermSrc}, (∀ a ∈ args, a.Scoped) →
+    (requestOf args).Scoped
+  | [], _ => unit_scoped
+  | [_], h => h _ List.mem_cons_self
+  | a :: b :: rest, h =>
+    app_scoped "pair" (TermSrc.Scoped_cons (h a List.mem_cons_self)
+      (TermSrc.Scoped_cons
+        (requestOf_scoped (args := b :: rest) fun x hx => h x (List.mem_cons_of_mem a hx))
+        TermSrc.Scoped_nil))
+
+/-- A program parameter's run is scoped when its request is: the run is `perform` of the
+parameter's index, whose operation carries no term (decisions row 340). -/
+theorem Param.run_scoped (name : String) {request : TermSrc} (h1 : request.Scoped) :
+    (Param.run name request).Scoped := by
+  refine ⟨fun env p e h => ?_⟩
+  unfold Param.run at h
+  split at h
+  · rename_i i _
+    exact (perform_scoped (NativeOp.param i) (fun _ => rfl) h1).holds env p e h
+  · cases h
+
+/-- A program that an invocation passes is scoped at every scoped reader of its parameter's
+request. Reducible, so `authoring_scoped` introduces the reader, as it does for `bindWith`'s
+rest. -/
+abbrev ProgramSrc.Scoped (f : ProgramSrc) : Prop := ∀ r : TermSrc, r.Scoped → (f r).Scoped
+
+theorem ProgramSrc.Scoped_cons {f : ProgramSrc} {l : List ProgramSrc} (h : ProgramSrc.Scoped f)
+    (hl : ∀ x ∈ l, ProgramSrc.Scoped x) : ∀ x ∈ f :: l, ProgramSrc.Scoped x := by
+  intro x hx
+  rcases List.mem_cons.mp hx with rfl | hx
+  · exact h
+  · exact hl x hx
+
+theorem ProgramSrc.Scoped_nil : ∀ x ∈ ([] : List ProgramSrc), ProgramSrc.Scoped x := by
+  intro x hx
+  cases hx
+
+/-- An invocation with programs is scoped when its arguments are, and each program is at every
+scoped reader of its parameter's request: the request at the caller's depth, the programs one
+binder deeper (decisions row 340). -/
+theorem Def.invokeWith_scoped (name : String) {args : List TermSrc} {programs : List ProgramSrc}
+    (h1 : ∀ a ∈ args, a.Scoped) (h2 : ∀ f ∈ programs, ProgramSrc.Scoped f) :
+    (Def.invokeWith name args programs).Scoped := by
+  refine ⟨fun env p e h => ?_⟩
+  unfold Def.invokeWith at h
+  split at h
+  · obtain ⟨x, hx, h⟩ := bind_ok h
+    obtain ⟨ps, hps, h⟩ := bind_ok h
+    cases h
+    have hs : ∀ s ∈ programs.map (fun f => f (minted (env.mint "request"))), s.Scoped := by
+      intro s hs
+      obtain ⟨f, hf, rfl⟩ := List.mem_map.mp hs
+      exact h2 f hf _ (minted_scoped _)
+    have hp := elabEffs_scoped hs hps
+    rw [Env.push_length, List.length_singleton] at hp
+    simp only [Eff.scopedAt_invoke, (requestOf_scoped h1).holds env p x hx, hp, Bool.and_self]
+  · cases h
+
 /-! ## The conveniences are what they unfold to
 
 Each is a Lean function over a generated lift, so its equation is `rfl` and there is one
