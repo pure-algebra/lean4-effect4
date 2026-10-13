@@ -780,4 +780,48 @@ theorem Local.decision_lift (base : Lift.DecisionLift o interp J I O A)
 
 end Producer
 
+
+/-! ## The answer-flow instance
+
+The flow of answer classes is one predicate `G`: a fiber's current code and saved frames compose, at
+the world it reads, into the class its exit answers (`FamilyResult`, over an interpreter-free saved
+edge). Its local facts that read no program are proved here once: a write of the interrupt fields
+keeps the flow, and a code installed as the current one keeps it when it answers each class the old
+code answers. -/
+
+section Instance
+
+variable {ν σ : Type u} {β : Type v} {ε δ ι α : Type u}
+variable {World Kind : Type w}
+
+/-- **The answer flow of a frame**: its current code at some class that its saved frames carry to
+the class its fiber's exit answers. -/
+def FrameFlow (model : Model (ν := ν) (σ := σ) (β := β) (ε := ε) (δ := δ) (ι := ι) (α := α) World Kind)
+    (Edge : World → Kind → Kind → Prim ν σ β ε δ ι α → Prop) (outputOf : FiberId → Kind)
+    (world : World) (id : FiberId) (frame : FrameFiber ν σ β ε δ ι α) : Prop :=
+  FamilyResult model Edge world (outputOf id) frame.current frame.stack
+
+variable {model : Model (ν := ν) (σ := σ) (β := β) (ε := ε) (δ := δ) (ι := ι) (α := α) World Kind}
+variable {Edge : World → Kind → Kind → Prim ν σ β ε δ ι α → Prop} {outputOf : FiberId → Kind}
+
+/-- A frame write that keeps the current code and the saved frames keeps the flow: the interrupt
+fields and the deferred flag are outside it. Consumers: the `publish` fact and the interrupt fact. -/
+theorem FrameFlow.fields {world : World} {id : FiberId} {frame next : FrameFiber ν σ β ε δ ι α}
+    (held : FrameFlow model Edge outputOf world id frame) (current : next.current = frame.current)
+    (stack : next.stack = frame.stack) : FrameFlow model Edge outputOf world id next := by
+  unfold FrameFlow at held ⊢
+  rw [current, stack]
+  exact held
+
+/-- Replacing the current code by one that answers every class the old code answers keeps the
+flow. Consumers: the reply, race-settlement and await facts of an instance. -/
+theorem FrameFlow.replace {world : World} {id : FiberId} {frame : FrameFiber ν σ β ε δ ι α}
+    (held : FrameFlow model Edge outputOf world id frame) (code : Prim ν σ β ε δ ι α)
+    (answers : ∀ kind, model.code world kind frame.current → model.code world kind code) :
+    FrameFlow model Edge outputOf world id {frame with current := code} := by
+  obtain ⟨input, current, path⟩ := held
+  exact ⟨input, answers input current, path⟩
+
+end Instance
+
 end Effect4.Machine.AnswerFlow
