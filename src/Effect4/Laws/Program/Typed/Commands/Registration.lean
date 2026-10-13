@@ -53,28 +53,12 @@ structure ObsViewOff (key : Guard.GuardKey) (m m' : RState) : Prop where
 
 /-- `countdownAt_view` away from one key. -/
 theorem countdownAt_off {w : World} {m m' : RState} {key : Guard.GuardKey}
-    (view : ObsViewOff key m m') {waiter : FiberId} {token : Nat} {incoming : Ty → Ty → Prop}
-    (off : (waiter, token) ≠ key) (h : CountdownAt w m waiter token incoming) :
-    CountdownAt w m' waiter token incoming := by
-  unfold CountdownAt at h ⊢
-  cases h' : m'.fiber? waiter with
-  | none => trivial
-  | some f' =>
-    obtain ⟨f, h0, _, weak⟩ := view.fibers waiter f' h'
-    rw [h0] at h
-    dsimp only at h ⊢
-    cases hfind : f'.pending.find? (fun pending => pending.token = token) with
-    | none => trivial
-    | some pending =>
-      rw [weak token pending off hfind] at h
-      dsimp only at h ⊢
-      obtain ⟨answer, error, tokenTy, payload, incomingOk⟩ := h
-      refine ⟨answer, error, tokenTy, ⟨payload.token, payload.collected, ?_, payload.resume⟩,
-        incomingOk⟩
-      intro id member target lookup
-      obtain ⟨old, hold, hid, _⟩ := view.fibers id target lookup
-      rw [hid]
-      exact payload.targets id member old hold
+    (view : ObsViewOff key m m') {waiter : FiberId} {token : Nat}
+    (off : (waiter, token) ≠ key) (h : CountdownAt w m waiter token) :
+    CountdownAt w m' waiter token :=
+  countdownAt_transport (leHost_refl w) (fun f' p hf hp => by
+    obtain ⟨f, h0, _, weak⟩ := view.fibers waiter f' hf
+    exact ⟨f, h0, weak token p off hp⟩) h
 
 theorem storedObserverOk_off {root : ProgramSource} {w : World} {m m' : RState}
     {key : Guard.GuardKey} (view : ObsViewOff key m m') {source : FiberId} (o : Observer)
@@ -102,7 +86,7 @@ theorem observerCommandOk_off {root : ProgramSource} {w : World} {m m' : RState}
   cases o with
   | resumeAwait waiter token mode => exact h
   | countdown waiter token =>
-    refine countdownAt_off view (fun same => off ?_) h
+    refine ⟨countdownAt_off view (fun same => off ?_) h.1, h.2⟩
     rw [← same]
     exact List.mem_singleton_self _
   | raceCallback raceId =>
@@ -530,7 +514,7 @@ theorem registrationDone_preserves (root : ProgramSource) (rootTy : EffTy) (race
           (new := { race with registering := false }) payload' (fun _ h => Or.inl h))
           [RunEvent.parkedOn f.id race.token]
       · -- the park: idle at the race key, a `void` record that no observer reads (row 134 (d))
-        let pend : RPending := ⟨race.token, [], [], Resume.void, false⟩
+        let pend : RPending := ⟨race.token, none, [], [], Resume.void, false⟩
         let g : RFiber := { f with
           frame := { f.frame with stack := .asyncFinalizer ((interpR root.program).cancelName
             ((interpR root.program).raceCancelName raceId) f.id race.token) :: f.frame.stack }

@@ -42,8 +42,9 @@ Excluded positions: numeric interruptor provenance in deferredInterruptWith and
 interruptAll, and the interruptor inside a `Cause` (`Cause.interrupt (some id)`,
 provenance that nothing dereferences; the tape's `interruptFrom` may name any fiber); the
 race's duplicate winner, failure reasons and
-bookkeeping fields other than `live` and `accepted`; and Deferred waiter and due-resume
-targets. The latter become command targets: `driveStep` ignores unknown resume targets,
+bookkeeping fields other than `live` and `accepted`; a countdown's current target
+(`Pending.waitingOn`, compared with a firing fiber and never dereferenced); and Deferred waiter and
+due-resume targets. The latter become command targets: `driveStep` ignores unknown resume targets,
 while the separately collected completion code is what can enter a frame. `Cmd.keys`
 likewise collects resume code and finished exits, not target identifiers. The predicate
 does not certify every identifier stored anywhere in the machine.
@@ -2631,7 +2632,7 @@ theorem countdown_done_minted (hb : KeyBounded nk sk interp ambient)
     (hex1 : exits.flatMap exitKeys ⊆ (p.collected ++ [exit]).flatMap exitKeys ++ R.1.keys nk sk) :
     FiredMinted nk sk acc
       (R.1.update { w with pending := w.pending.map fun q =>
-          if q.token = token then { q with remaining := [], collected := exits } else q },
+          if q.token = token then { q with waitingOn := none, remaining := [], collected := exits } else q },
         acc.2 ++ R.2 ++ [Cmd.resume waiter token
           (countdownPark.resumePrim (core := frameCore) interp p.resumeWith exits)]) := by
   unfold FiredMinted
@@ -2651,7 +2652,7 @@ theorem countdown_done_minted (hb : KeyBounded nk sk interp ambient)
       (Ok_append.mpr ⟨Ok_of_subset (by sub_tac) hbase, hexits⟩)
   have hall := Ok_append.mpr ⟨Ok_append.mpr ⟨hbase, hexits⟩, hres⟩
   have hpm := pending_map_keys_subset nk w.pending token
-    (fun q => { q with remaining := [], collected := exits })
+    (fun q => { q with waitingOn := none, remaining := [], collected := exits })
     (exits.flatMap exitKeys) (fun q => by sub_tac)
   refine ⟨by rw [world_update]; exact hle, ?_⟩
   simp only [MintedIn]
@@ -2675,7 +2676,7 @@ theorem countdown_next_minted
     (hnext : next ∈ p.remaining) (hrest : rest ⊆ p.remaining) :
     FiredMinted nk sk acc
       ((R.1.update { w with pending := w.pending.map fun q =>
-          if q.token = token then { q with remaining := rest, collected := exits } else q }).modify
+          if q.token = token then { q with waitingOn := some next, remaining := rest, collected := exits } else q }).modify
           next fun g => {g with observers := g.observers ++ [Observer.countdown waiter token]},
         acc.2 ++ R.2) := by
   unfold FiredMinted
@@ -2696,7 +2697,7 @@ theorem countdown_next_minted
     Ok_of_subset (List.map_subset Handle.fiber hrest) hrem
   have hall := Ok_append.mpr ⟨Ok_append.mpr ⟨Ok_append.mpr ⟨hbase, hexits⟩, hnextk⟩, hrestk⟩
   have hpm := pending_map_keys_subset nk w.pending token
-    (fun q => { q with remaining := rest, collected := exits })
+    (fun q => { q with waitingOn := some next, remaining := rest, collected := exits })
     (Handle.fiber next :: rest.map Handle.fiber ++ exits.flatMap exitKeys) (fun q => by sub_tac)
   refine ⟨by rw [world_modify, world_update]; exact hle, ?_⟩
   simp only [MintedIn]
@@ -2733,6 +2734,17 @@ theorem fireObserver_countdown_minted (hb : KeyBounded nk sk interp ambient) (id
         rw [keys_emit]
         sub_tac
       · next p hp =>
+        -- the guard: a firing whose record waits on another fiber only emits its event
+        by_cases hg : p.waitingOn = some id
+        case neg =>
+          rw [if_neg hg]
+          refine ⟨by rw [world_emit]; exact World.le_refl _, ?_⟩
+          simp only [MintedIn]
+          rw [world_emit]
+          refine Ok_of_subset ?_ hm
+          rw [keys_emit]
+          sub_tac
+        rw [if_pos hg]
         have hpw : p ∈ w.pending := List.mem_of_find?_eq_some hp
         have hpk : p.keys nk ⊆ acc.1.keys nk sk := by
           refine List.Subset.trans (pending_mem_keys_subset nk hpw) ?_
@@ -4539,7 +4551,7 @@ theorem driveStep_registrationDone_minted (hb : KeyBounded nk sk interp)
           ⟨(m.updateRace { race with registering := false }).emit [RunEvent.parkedOn f.id race.token],
             ({ f with frame := { f.frame with
                 stack := Prim.asyncFinalizer (interp.cancelName (interp.raceCancelName raceId) f.id race.token) :: f.frame.stack } }).park
-              ⟨race.token, [], [], Resume.void, false⟩,
+              ⟨race.token, none, [], [], Resume.void, false⟩,
             yielding, Outcome.parked, [], []⟩ (by
           simp only [MintedIn, iterKeys, cmdsKeys, List.flatMap_nil, List.append_nil, Outcome.keys]
           rw [world_emit, world_updateRace]

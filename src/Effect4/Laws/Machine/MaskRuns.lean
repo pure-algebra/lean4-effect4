@@ -1575,6 +1575,12 @@ theorem fireObserver_keepsMask (interp : RunInterp ν σ β ε δ ι α χ St) (
       split
       · exact ⟨MaskAged.refl _, fun clear => clear⟩
       · rename_i p pending
+        -- the guard: a firing whose record waits on another fiber only emits its event
+        by_cases hg : p.waitingOn = some id
+        case neg =>
+          rw [if_neg hg]
+          exact ⟨MaskAged.refl _, fun clear => clear⟩
+        rw [if_pos hg]
         have step := interruptEach_if_keepsMask interp waiter (interp.stackAnnotations waiter)
           p.remaining (m := acc.1)
           (acc.1.emit [RunEvent.observerFired id (Observer.countdown waiter token)], [])
@@ -1592,7 +1598,7 @@ theorem fireObserver_keepsMask (interp : RunInterp ν σ β ε δ ι α χ St) (
               have updated := step.1.update (g := { current with
                 pending := current.pending.map fun q =>
                   if q.token = token then
-                    {q with remaining := remaining, collected := exits}
+                    {q with waitingOn := some nextTarget, remaining := remaining, collected := exits}
                   else q }) (RunMachine.mem_of_fiber? currentFound) (MaskLater.refl current)
               have edit := fiberEdit_keepsMask (.observe nextTarget (.countdown waiter token))
                 ((if p.failFast && !exit.isSuccess && p.collected.all Exit.isSuccess then
@@ -1601,7 +1607,7 @@ theorem fireObserver_keepsMask (interp : RunInterp ν σ β ε δ ι α χ St) (
                   else (acc.1.emit [.observerFired id (.countdown waiter token)], [])).1.update
                   { current with pending := current.pending.map fun q =>
                     if q.token = token then
-                      {q with remaining := remaining, collected := exits}
+                      {q with waitingOn := some nextTarget, remaining := remaining, collected := exits}
                     else q })
               exact ⟨updated.trans edit.1,
                 fun clear => noClear_append_of (noClear_append_of clear step.2) edit.2⟩

@@ -570,27 +570,12 @@ theorem commandAuthority_unowned {m : RState} {t g : RFiber} (ht : m.fiber? t.id
   | drainDue => trivial
   | wake _ _ => trivial
 
-/-- A countdown correlation weakens along its incoming condition. -/
-theorem countdownAt_weaken {w : World} {m : RState} {waiter : FiberId} {token : Nat}
-    {incoming incoming' : Ty → Ty → Prop} (weaken : ∀ a e, incoming a e → incoming' a e)
-    (h : CountdownAt w m waiter token incoming) : CountdownAt w m waiter token incoming' := by
-  unfold CountdownAt at h ⊢
-  revert h
-  cases m.fiber? waiter with
-  | none => exact fun _ => trivial
-  | some fiber =>
-    dsimp only
-    cases fiber.pending.find? (fun pending => pending.token = token) with
-    | none => exact fun _ => trivial
-    | some pending =>
-      dsimp only
-      rintro ⟨a, e, ty, payload, inc⟩
-      exact ⟨a, e, ty, payload, weaken a e inc⟩
-
 /-- **A stored observer fires typed** on its source's exit: the stored correlation reads the
-source's declared columns, and the exit is admitted at the source's declaration. -/
+source's declared columns, and the exit is admitted at the source's declaration. A countdown's
+record is unchanged by the firing's queueing, and its exit is typed at the source's declaration. -/
 theorem observerCommandOk_of_stored {root : ProgramSource} {w : World} {m : RState}
     {source : FiberId} {exit : ExitV} (typedExit : ∀ ty, w.Γ source = some ty → ExitOk w ty exit)
+    (declared : ∃ ty, w.Γ source = some ty)
     (o : Observer) (h : StoredObserverOk root w m source o) :
     ObserverCommandOk root w m source exit o := by
   cases o with
@@ -598,9 +583,8 @@ theorem observerCommandOk_of_stored {root : ProgramSource} {w : World} {m : RSta
     obtain ⟨sty, hΓ, hΘ⟩ := h
     exact ⟨sty, hΓ, hΘ, typedExit sty hΓ⟩
   | countdown waiter token =>
-    refine countdownAt_weaken (fun a e cols => ?_) h
-    obtain ⟨sty, hΓ, ha, he⟩ := cols
-    exact exitOk_widen ha he (typedExit sty hΓ)
+    obtain ⟨sty, hΓ⟩ := declared
+    exact ⟨h, sty, hΓ, typedExit sty hΓ⟩
   | raceCallback raceId =>
     change (match m.race? raceId with
       | none => True
@@ -905,7 +889,7 @@ theorem finish_preserves (root : ProgramSource) (rootTy : EffTy) (id : FiberId) 
           (fun _ _ h => nomatch h))
         (headOk_exitDone _ _ _ _ hp1 rfl) (fun _ _ h => nomatch h) (fun _ _ h => nomatch h)
       have observed := configTyped_observes base f.id exit exitF pTyped.below (o :: os)
-        (fun x hx => observerCommandOk_of_stored exitF x (pTyped.observers x hx))
+        (fun x hx => observerCommandOk_of_stored exitF ⟨final, declared⟩ x (pTyped.observers x hx))
         (fun x hx key hk => wide.keysBelow key
           (fiberKeys_internal pmem (List.mem_append_left _ (List.mem_flatMap.mpr ⟨x, hx, hk⟩))))
         (fun x hx fiber token r hr hk => wide.requestsOwned fiber token r hr

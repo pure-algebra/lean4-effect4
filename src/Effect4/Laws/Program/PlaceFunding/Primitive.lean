@@ -106,7 +106,7 @@ theorem primitive_debit {L : Ledger} {Free : NCode → Prop}
     apply quiet.local_debit m fiber _ rfl
     have dropped := control.replace fiber (.success interp.voidValue) (inputs.success _)
     have returned := parked {fiber with frame.current := .success interp.voidValue}
-      ⟨m.nextToken, [], [], .void, false⟩
+      ⟨m.nextToken, none, [], [], .void, false⟩
       (fiber.dispatcher.enqueue priority (.resume fiber.id m.nextToken (.success interp.voidValue)))
     have charged := events.administrative (.parkedOn fiber.id m.nextToken) rfl
     simp only [PlaceLedger.spent, PlaceLedger.issued]
@@ -122,13 +122,13 @@ theorem primitive_debit {L : Ledger} {Free : NCode → Prop}
     split
     · have pushed := inputs.cancel register signal cancel state selected produced
       have returned := parked {fiber with frame.stack := .asyncFinalizer (interp.cancelName (cancel.getD interp.abortName) fiber.id m.nextToken) :: fiber.frame.stack}
-        ⟨m.nextToken, [], [], .void, false⟩ fiber.dispatcher
+        ⟨m.nextToken, none, [], [], .void, false⟩ fiber.dispatcher
       simp only [PlaceLedger.spent, PlaceLedger.issued]
       dsimp only [RunFiber.park, RunMachine.emit, RunMachine.arm]
       simp only [List.isEmpty_cons, Bool.false_eq_true, if_false, List.map_append, List.sum_append, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, Nat.add_zero]
       dsimp only [RunFiber.park] at returned pushed
       omega
-    · have returned := parked fiber ⟨m.nextToken, [], [], .void, false⟩ fiber.dispatcher
+    · have returned := parked fiber ⟨m.nextToken, none, [], [], .void, false⟩ fiber.dispatcher
       simp only [PlaceLedger.spent, PlaceLedger.issued]
       dsimp only [RunFiber.park, RunMachine.emit, RunMachine.arm]
       simp only [List.isEmpty_cons, Bool.false_eq_true, if_false, List.map_append, List.sum_append, List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, Nat.add_zero]
@@ -138,7 +138,7 @@ theorem primitive_debit {L : Ledger} {Free : NCode → Prop}
     apply quiet.local_debit m fiber _ rfl
     have pushed := inputs.joinCancel
     have returned := parked {fiber with frame.stack := .asyncFinalizer (interp.cancelName interp.parkCancelName fiber.id m.nextToken) :: fiber.frame.stack}
-      ⟨m.nextToken, [], [], .void, false⟩ fiber.dispatcher
+      ⟨m.nextToken, none, [], [], .void, false⟩ fiber.dispatcher
     have charged := events.administrative (.parkedOn fiber.id m.nextToken) rfl
     simp only [PlaceLedger.spent, PlaceLedger.issued]
     dsimp only [RunFiber.park, RunMachine.emit, RunMachine.arm]

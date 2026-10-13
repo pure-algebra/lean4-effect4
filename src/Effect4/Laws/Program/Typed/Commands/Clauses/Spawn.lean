@@ -475,27 +475,9 @@ theorem internalKeys_addRace {k : Guard.GuardKey}
 
 /-- A countdown reads the fibers only: it moves to a machine with the same fibers. -/
 theorem countdownAt_sameFibers {w : World} {M' : RState} (fibers : M'.fibers = M.fibers)
-    {waiter : FiberId} {token : Nat} {incoming : Ty → Ty → Prop}
-    (h : CountdownAt w M waiter token incoming) : CountdownAt w M' waiter token incoming := by
-  have look : ∀ id, M'.fiber? id = M.fiber? id := fun id => by
-    unfold RunMachine.fiber?
-    rw [fibers]
-  unfold CountdownAt at h ⊢
-  rw [look]
-  cases hf : M.fiber? waiter with
-  | none => trivial
-  | some fiber =>
-    rw [hf] at h
-    dsimp only at h ⊢
-    cases hp : fiber.pending.find? (fun pending => pending.token = token) with
-    | none => trivial
-    | some pending =>
-      rw [hp] at h
-      dsimp only at h ⊢
-      obtain ⟨answer, error, tokenTy, payload, inc⟩ := h
-      exact ⟨answer, error, tokenTy, ⟨payload.token, payload.collected,
-        fun id hid target hlook => payload.targets id hid target (by rw [← look]; exact hlook),
-        payload.resume⟩, inc⟩
+    {waiter : FiberId} {token : Nat}
+    (h : CountdownAt w M waiter token) : CountdownAt w M' waiter token :=
+  countdownAt_congr (fun id => by unfold RunMachine.fiber?; rw [fibers]) h
 
 theorem storedObserverOk_addRace {root : ProgramSource} {w : World} {resultTy : EffTy}
     (payload : RacePayload root w race resultTy) (live : race.state.live = []) {source : FiberId}
@@ -533,7 +515,7 @@ theorem observerCommandOk_addRace {root : ProgramSource} {w : World} {resultTy :
       · rw [old] at h
         exact h
       · exact ⟨resultTy, payload, fun hl => by rw [live] at hl; cases hl⟩
-  | countdown _ _ => exact countdownAt_sameFibers (M := M) (by rfl) h
+  | countdown _ _ => exact ⟨countdownAt_sameFibers (M := M) (by rfl) h.1, h.2⟩
   | resumeAwait _ _ _ => exact h
   | dropScopeFinalizer _ _ => exact h
   | untrackChild _ => exact h

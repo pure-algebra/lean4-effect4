@@ -260,6 +260,12 @@ theorem observer_at (root : NativeEff) (table : RowTable) (id : FiberId) (exit :
       split
       · exact ⟨base, pending⟩
       · rename_i p pendingFound
+        -- the guard: a firing whose record waits on another fiber only emits its event
+        by_cases hg : p.waitingOn = some id
+        case neg =>
+          rw [if_neg hg]
+          exact ⟨base, pending⟩
+        rw [if_pos hg]
         have resumeAt := (configuration_fiber root m waiter old base oldFound).pending p
           (List.mem_of_find?_eq_some pendingFound)
         have changed :
@@ -289,7 +295,7 @@ theorem observer_at (root : NativeEff) (table : RowTable) (id : FiberId) (exit :
             · rename_i exits target remaining walk
               let nextCurrent : SourceFiber := {current with pending := current.pending.map fun q =>
                 if q.token = token then
-                  {q with remaining, collected := exits}
+                  {q with waitingOn := some target, remaining, collected := exits}
                 else q}
               have nextAt : FiberAt root nextCurrent :=
                 pending_map_at root current _ currentAt (by intro q; split <;> rfl)

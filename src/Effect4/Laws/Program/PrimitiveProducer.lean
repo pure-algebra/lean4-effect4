@@ -53,7 +53,7 @@ inductive PrimitiveProducer (interp : NInterp) (m : NativeMachine) (f : NFiber)
            frame := {f.frame with current := .success interp.voidValue}
            dispatcher := f.dispatcher.enqueue priority
              (.resume f.id m.nextToken (.success interp.voidValue))}
-         let parked := before.park ⟨m.nextToken, [], [], .void, false⟩
+         let parked := before.park ⟨m.nextToken, none, [], [], .void, false⟩
          ⟨(grown.arm f.id).emit [.parkedOn f.id m.nextToken], parked, yielding, .parked, [], []⟩)
   | asyncImmediate (register : EffName) (signal : Bool) (cancel : Option EffName)
       (state : Stores) (code : NCode)
@@ -70,7 +70,7 @@ inductive PrimitiveProducer (interp : NInterp) (m : NativeMachine) (f : NFiber)
          let before := if signal || cancel.isSome then
            {f with frame := {f.frame with stack := Prim.asyncFinalizer (interp.cancelName (cancel.getD interp.abortName) f.id m.nextToken) :: f.frame.stack}}
            else f
-         let parked := before.park ⟨m.nextToken, [], [], .void, false⟩
+         let parked := before.park ⟨m.nextToken, none, [], [], .void, false⟩
          ⟨grown.emit [.parkedOn parked.id m.nextToken], parked, yielding, .parked, [], []⟩)
   | rejectedPark (cause : CauseV) (park : interp.parkOf f.frame.current = some (.error cause)) :
       PrimitiveProducer interp m f yielding
@@ -99,7 +99,7 @@ inductive PrimitiveProducer (interp : NInterp) (m : NativeMachine) (f : NFiber)
         (let grown := {m with nextToken := m.nextToken + 1}
          let name := interp.cancelName interp.parkCancelName f.id m.nextToken
          let before := {f with frame := {f.frame with stack := Prim.asyncFinalizer name :: f.frame.stack}}
-         let parked := before.park ⟨m.nextToken, [], [], .void, false⟩
+         let parked := before.park ⟨m.nextToken, none, [], [], .void, false⟩
          ⟨grown.emit [.parkedOn f.id m.nextToken], parked, yielding, .parked, [],
            [.observe target (.resumeAwait f.id m.nextToken mode)]⟩)
 

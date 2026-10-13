@@ -134,13 +134,13 @@ theorem FMeans.runloopTop (h : FMeans root f₁ f₂) :
     exact h
 
 /-- The countdown's park entry, rewritten on both fibers. -/
-theorem FMeans.countdownEntry (h : FMeans root f₁ f₂) (token : Nat)
+theorem FMeans.countdownEntry (h : FMeans root f₁ f₂) (token : Nat) (w : Option FiberId)
     (rem : List FiberId) (exits : List ExitV) :
     FMeans root
       { f₁ with pending := f₂.pending.map fun q =>
-        if q.token = token then { q with remaining := rem, collected := exits } else q }
+        if q.token = token then { q with waitingOn := w, remaining := rem, collected := exits } else q }
       { f₂ with pending := f₂.pending.map fun q =>
-        if q.token = token then { q with remaining := rem, collected := exits } else q } :=
+        if q.token = token then { q with waitingOn := w, remaining := rem, collected := exits } else q } :=
   FMeans.mk' h.id h.parked h.context h.running rfl h.finalizing h.exit h.opCount h.maxOps
     h.preventYield h.yieldOverride h.observers h.children h.dispatcher h.means
 
@@ -172,12 +172,12 @@ theorem pendingOk_map {w : FRun} (hw : PendingOk w)
 
 /-- The countdown's park entry keeps the invariant: only bookkeeping fields change. -/
 theorem pendingOk_countdownEntry {w₁ : FRun} (hw : PendingOk w₁) {w₂ : RFiber}
-    (hpend : w₁.pending = w₂.pending) (token : Nat) (rem : List FiberId)
+    (hpend : w₁.pending = w₂.pending) (token : Nat) (w : Option FiberId) (rem : List FiberId)
     (exits : List ExitV) :
     PendingOk { w₁ with pending := w₂.pending.map fun q =>
-      if q.token = token then { q with remaining := rem, collected := exits } else q } := by
+      if q.token = token then { q with waitingOn := w, remaining := rem, collected := exits } else q } := by
   refine pendingOk_map hw
-    (fun q => if q.token = token then { q with remaining := rem, collected := exits } else q)
+    (fun q => if q.token = token then { q with waitingOn := w, remaining := rem, collected := exits } else q)
     (fun q => ?_) (by rw [hpend])
   split <;> rfl
 
@@ -469,6 +469,13 @@ theorem fireObserver_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (h
       | none => exact CmdsRel.mk' hok' hm' hn
       | some p =>
         dsimp only
+        -- the guard: a firing whose record waits on another fiber only emits its event, on both
+        -- machines alike (the records are equal)
+        by_cases hg : p.waitingOn = some id
+        case neg =>
+          simp only [if_neg hg]
+          exact CmdsRel.mk' hok' hm' hn
+        simp only [if_pos hg]
         have hp : ∀ name, p.resumeWith ≠ Resume.continueWith name :=
           hpw p (by rw [hw.pending]; exact List.mem_of_find?_eq_some hfind)
         have interrupts := interruptEach_rel root (interpAgree_of root) hok' hm' waiter
@@ -513,8 +520,8 @@ theorem fireObserver_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (h
               cases next with
               | none =>
                 exact CmdsRel.mk'
-                  (machineOk_update heldOk (pendingOk_countdownEntry pending currentRel.pending token [] exits))
-                  (heldRel.update (currentRel.countdownEntry token [] exits))
+                  (machineOk_update heldOk (pendingOk_countdownEntry pending currentRel.pending token none [] exits))
+                  (heldRel.update (currentRel.countdownEntry token none [] exits))
                   (ListRel.append (ListRel.append hn commands)
                     (ListRel.cons (cmeans_resume root rfl token (resumePrim_means root p.resumeWith hp exits))
                       ListRel.nil))
@@ -522,8 +529,8 @@ theorem fireObserver_rel (root : NativeEff) {m₁ : FMachine} {m₂ : RState} (h
                 obtain ⟨next, rest⟩ := target
                 have observed := fiberEdit_rel root (.observe next (.countdown waiter token))
                   (machineOk_update heldOk
-                    (pendingOk_countdownEntry pending currentRel.pending token rest exits))
-                  (heldRel.update (currentRel.countdownEntry token rest exits))
+                    (pendingOk_countdownEntry pending currentRel.pending token (some next) rest exits))
+                  (heldRel.update (currentRel.countdownEntry token (some next) rest exits))
                 exact ⟨observed.1, observed.2.1, ListRel.append (ListRel.append hn commands) observed.2.2⟩
   | raceCallback raceId =>
     simp only [fireObserver]
@@ -846,7 +853,7 @@ theorem drive_registrationDone (raceId : Nat) (y : Bool) :
         exact settle_rel root
           ⟨machineOk_emit hok' _, BMeans.emit hm' _ _,
             (hf.withFrame (means_pushAsyncFinalizer hf.means _)).park _, rfl, rfl, ListRel.nil, rfl⟩
-          (pendingOk_parkVoid (pendingOk_of_fields (pendingOk_of_fiber? hok' hh₁) rfl) _ _ _ _)
+          (pendingOk_parkVoid (pendingOk_of_fields (pendingOk_of_fiber? hok' hh₁) rfl) _ _ _ _ _)
           hf.id hr
 
 theorem drive_interruptTarget (target : FiberId) (who : Option FiberId) (extra : ReasonAnnotations Ann) :

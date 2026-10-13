@@ -190,7 +190,7 @@ theorem registration_command {B : List Val} {classes : Classes} (machine : Effec
     let name := (interpOf HostTimeoutSource.program Test.Dogfood.Scenario.Timeout.fetch.table).cancelName
       ((interpOf HostTimeoutSource.program Test.Dogfood.Scenario.Timeout.fetch.table).raceCancelName raceId) fiber.id race.token
     have framed := set_frame_live good _ (push_cancel body.1 body.2 (.race raceId fiber.id race.token)) parked live
-    let pending : HostTimeoutState.NPending := ⟨race.token, [], [], .void, false⟩
+    let pending : HostTimeoutState.NPending := ⟨race.token, none, [], [], .void, false⟩
     have pushedStack : StackAt B .body .body (.asyncFinalizer name :: fiber.frame.stack) :=
       .cons (.cancel .body name (cancel_then_failure (.race raceId fiber.id race.token) .body)) body.2
     let next : NativeFiber := ({fiber with frame := {fiber.frame with stack := .asyncFinalizer name :: fiber.frame.stack}}).park pending

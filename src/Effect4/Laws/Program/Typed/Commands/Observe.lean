@@ -8,12 +8,13 @@ fiber (`fireObserver`, `Machine/Fibers.lean:1660-1726`). Its one halting arm, a 
 drop on an absent scope (`:1669-1671`), is excluded by `ObserverCommandOk`'s `Stores.ScopeLive`.
 
 The resume, untrack, drop and callback arms are short. The race callback is
-`observe_raceCallback` (`Bookkeeping.lean`). The countdown arm (`:1673-1705`) is the long one:
-it advances the waiter's pending record, so every correlation that reads that record
-(`CountdownAt`, keyed by the waiter and the token) is re-proved over the new record, and every
-other one moves by a view that agrees on all other records (`ExceptView`). The new record is
-typed at the countdown's columns, pinned by the token's declaration when the record resumes with
-the exits (`Resume.exitsValue`) and at `unknown` otherwise, where no column is read.
+`observe_raceCallback` (`Bookkeeping.lean`). The countdown arm is the long one. It acts only when
+the waiter's record waits on the firing fiber (the guard, decisions row 376 (2)); otherwise it
+changes nothing but the trace. When it acts, it advances the waiter's pending record, so the one
+correlation that reads that record (`CountdownAt`, keyed by the waiter and the token) is re-proved
+over the new record, and every other one moves by a view that agrees on all other records
+(`ExceptView`). The new record keeps the old one's columns, one pair for each target in order: the
+firing fiber's exit and the walk's exits join the collected ones at their own columns.
 -/
 
 set_option autoImplicit false
@@ -47,28 +48,12 @@ theorem ExceptView.obs_trans {m m' m'' : RState} {key : FiberId × Nat} (a : Obs
 
 /-- A countdown correlation at another key moves along the view. -/
 theorem countdownAt_except {w : World} {m m' : RState} {key : FiberId × Nat}
-    (view : ExceptView m m' key) {waiter : FiberId} {token : Nat} {incoming : Ty → Ty → Prop}
-    (hne : (waiter, token) ≠ key) (h : CountdownAt w m waiter token incoming) :
-    CountdownAt w m' waiter token incoming := by
-  unfold CountdownAt at h ⊢
-  cases h' : m'.fiber? waiter with
-  | none => trivial
-  | some f' =>
-    obtain ⟨f, h0, _, except⟩ := view.fibers waiter f' h'
-    rw [h0] at h
-    dsimp only at h ⊢
-    cases hfind : f'.pending.find? (fun pending => pending.token = token) with
-    | none => trivial
-    | some pending =>
-      rw [except token pending hne hfind] at h
-      dsimp only at h ⊢
-      obtain ⟨answer, error, tokenTy, payload, incomingOk⟩ := h
-      refine ⟨answer, error, tokenTy, ⟨payload.token, payload.collected, ?_, payload.resume⟩,
-        incomingOk⟩
-      intro id member target lookup
-      obtain ⟨old, hold, hid, _⟩ := view.fibers id target lookup
-      rw [hid]
-      exact payload.targets id member old hold
+    (view : ExceptView m m' key) {waiter : FiberId} {token : Nat}
+    (hne : (waiter, token) ≠ key) (h : CountdownAt w m waiter token) :
+    CountdownAt w m' waiter token :=
+  countdownAt_transport (leHost_refl w) (fun f' p hf hp => by
+    obtain ⟨f, h0, _, except⟩ := view.fibers waiter f' hf
+    exact ⟨f, h0, except token p hne hp⟩) h
 
 /-- An observer that is not the countdown at `key`. -/
 def OffKey (key : FiberId × Nat) (o : Observer) : Prop :=
@@ -108,7 +93,7 @@ theorem observerCommandOk_except {root : ProgramSource} {w : World} {m m' : RSta
     ObserverCommandOk root w m' source exit o := by
   cases o with
   | resumeAwait waiter token mode => exact h
-  | countdown waiter token => exact countdownAt_except view (off waiter token rfl) h
+  | countdown waiter token => exact ⟨countdownAt_except view (off waiter token rfl) h.1, h.2⟩
   | raceCallback raceId =>
     unfold ObserverCommandOk at h ⊢
     dsimp only at h ⊢
@@ -619,114 +604,112 @@ theorem countdownWalk_spec (m : RState) : ∀ (l : List FiberId) (collected : Li
         · obtain ⟨hn, live, sub⟩ := hnext next rest' h
           exact ⟨List.mem_cons_of_mem _ hn, live, fun x hx => List.mem_cons_of_mem _ (sub x hx)⟩
 
+/-- **The await-all walk, position by position** (`countdownWalk`; rc.112's `fiberAwaitAll` walks
+its targets in order, `internal/effect.ts:793-808`; 4.0.1 `:818-833`): when the machine holds every
+target, the walk splits the targets into the visited ones, each with the exit it collected for it,
+in order, and either nothing more (the walk ended) or the live target it stopped at and the targets
+after it. Consumers: the countdown's park (`Evaluating.countdown_parks`, the walk from the
+operation's targets) and its firing (`observe_countdown`, the walk from the remaining targets). -/
+theorem countdownWalk_split (M : RState) :
+    ∀ (targets : List FiberId) (acc : List ExitV),
+      (∀ t ∈ targets, (M.fiber? t).isSome = true) →
+      ∃ visited tail, (countdownWalk M targets acc).1 = acc ++ tail ∧
+        ListRel (fun t ex => ∃ g, M.fiber? t = some g ∧ g.exit = some ex) visited tail ∧
+        ((countdownWalk M targets acc).2 = none → targets = visited) ∧
+        (∀ next rest, (countdownWalk M targets acc).2 = some (next, rest) →
+          targets = visited ++ next :: rest)
+  | [], acc, _ => ⟨[], [], (List.append_nil acc).symm, .nil, fun _ => rfl, fun _ _ h => nomatch h⟩
+  | t :: rest, acc, held => by
+    obtain ⟨g, hg⟩ := Option.isSome_iff_exists.mp (held t List.mem_cons_self)
+    cases hx : g.exit with
+    | none =>
+      refine ⟨[], [], ?_, .nil, ?_, ?_⟩
+      · simp only [countdownWalk, hg, hx, List.append_nil]
+      · intro h
+        simp only [countdownWalk, hg, hx] at h
+        cases h
+      · intro next rest' h
+        simp only [countdownWalk, hg, hx, Option.some.injEq, Prod.mk.injEq] at h
+        obtain ⟨rfl, rfl⟩ := h
+        rfl
+    | some ex =>
+      obtain ⟨visited, tail, hexits, rel, hdone, hnext⟩ := countdownWalk_split M rest (acc ++ [ex])
+        (fun t' ht' => held t' (List.mem_cons_of_mem _ ht'))
+      refine ⟨t :: visited, ex :: tail, ?_, .cons ⟨g, hg, hx⟩ rel, fun h => ?_, fun next rest' h => ?_⟩
+      · simp only [countdownWalk, hg, hx]
+        rw [hexits, List.append_assoc, List.singleton_append]
+      · simp only [countdownWalk, hg, hx] at h
+        rw [hdone h]
+      · simp only [countdownWalk, hg, hx] at h
+        rw [hnext next rest' h, List.cons_append]
+
+/-- Exits that fit their targets' columns one for one fit the tuple of those columns. -/
+theorem fits_exits_tuple {w : World} {cols : FiberId → Ty × Ty} :
+    ∀ {targets : List FiberId} {exits : List ExitV},
+      ListRel (fun t ex => FitsExit w ⟨(cols t).1, (cols t).2, Env.Requirement.empty⟩ ex)
+        targets exits →
+      Fits w (exitsVal exits) (.tuple (targets.map fun t => .exitOf (cols t).1 (cols t).2))
+  | _, _, .nil => by
+    unfold exitsVal
+    rw [fits_tuple]
+    trivial
+  | _, _, .cons h rest => by
+    have ih := fits_exits_tuple rest
+    unfold exitsVal at ih ⊢
+    rw [fits_tuple] at ih ⊢
+    simp only [List.map_cons]
+    exact ⟨h, ih⟩
+
 /-! ## The countdown's record, before and after -/
 
-/-- A countdown correlation, read at a found record. -/
-theorem countdownAt_found {w : World} {m : RState} {waiter : FiberId} {token : Nat}
-    {incoming : Ty → Ty → Prop} {wf : RFiber} {p : RPending}
-    (h : CountdownAt w m waiter token incoming) (hw : m.fiber? waiter = some wf)
-    (hp : wf.pending.find? (fun q => q.token = token) = some p) :
-    ∃ a e tt, CountdownPayload w m waiter p a e tt ∧ incoming a e := by
-  unfold CountdownAt at h
-  rw [hw] at h
-  dsimp only at h
-  rw [hp] at h
-  exact h
+/-- **The advanced record keeps its payload** (`fireObserver`'s countdown arm under its guard,
+decisions row 376 (2)): the record waits on the firing fiber, whose exit joins the collected ones at
+that fiber's columns; the walk's exits join at theirs; and the record waits on the live target the
+walk stopped at, with the same token, resume and columns. -/
+theorem countdownPayload_advance {w : World} {waiter source : FiberId} {p : RPending}
+    {done : List FiberId} {cols : FiberId → Ty × Ty} {tt : EffTy}
+    (payload : CountdownPayload w waiter p done cols tt) (waits : p.waitingOn = some source)
+    {exit : ExitV} (fired : ExitOk w ⟨(cols source).1, (cols source).2, Env.Requirement.empty⟩ exit)
+    {visited : List FiberId} {tail : List ExitV}
+    (walked : ListRel (fun t ex => ExitOk w ⟨(cols t).1, (cols t).2, Env.Requirement.empty⟩ ex)
+      visited tail)
+    {next : FiberId} {rest : List FiberId} (hsplit : p.remaining = visited ++ next :: rest) :
+    CountdownPayload w waiter
+      {p with waitingOn := some next, remaining := rest, collected := p.collected ++ [exit] ++ tail}
+      (done ++ source :: visited) cols tt := by
+  have targets := payload.targets
+  have resume := payload.resume
+  rw [waits, hsplit] at targets resume
+  refine ⟨payload.token, ?_, fun t ht => targets t ?_, ?_⟩
+  · show ListRel _ (done ++ source :: visited) (p.collected ++ [exit] ++ tail)
+    rw [List.append_assoc, List.singleton_append]
+    exact payload.collected.append (.cons fired walked)
+  · exact List.mem_append_right _ (List.mem_append_right _ ht)
+  · show CountdownResume w p.resumeWith (done ++ source :: visited ++ ([next] ++ rest)) cols tt
+    simp only [Option.toList_some, List.append_assoc, List.cons_append] at resume ⊢
+    exact resume
 
-/-- A countdown correlation, given at a found record. -/
-theorem countdownAt_of_found {w : World} {m : RState} {waiter : FiberId} {token : Nat}
-    {incoming : Ty → Ty → Prop} {g : RFiber} {p : RPending} (hw : m.fiber? waiter = some g)
-    (hp : g.pending.find? (fun q => q.token = token) = some p)
-    (h : ∃ a e tt, CountdownPayload w m waiter p a e tt ∧ incoming a e) :
-    CountdownAt w m waiter token incoming := by
-  unfold CountdownAt
-  rw [hw]
-  dsimp only
-  rw [hp]
-  exact h
-
-/-- The new record keeps the old one's payload at the same columns: the same token and resume,
-its collected exits typed there, its targets among the old ones. -/
-theorem countdownPayload_advance {w : World} {m m' : RState} {waiter : FiberId}
-    {p p' : RPending} {a e : Ty} {tt : EffTy} (old : CountdownPayload w m waiter p a e tt)
-    (token : p'.token = p.token) (resume : p'.resumeWith = p.resumeWith)
-    (collected : ∀ ex ∈ p'.collected, ExitOk w ⟨a, e, Env.Requirement.empty⟩ ex)
-    (targets : ∀ id ∈ p'.remaining, id ∈ p.remaining)
-    (lookup : ∀ id f', m'.fiber? id = some f' → ∃ f, m.fiber? id = some f ∧ f'.id = f.id) :
-    CountdownPayload w m' waiter p' a e tt := by
-  refine ⟨by rw [token]; exact old.token, collected, fun id hid fiber hf => ?_, ?_⟩
-  · obtain ⟨f, h0, hid'⟩ := lookup id fiber hf
-    rw [hid']
-    exact old.targets id (targets id hid) f h0
-  · have r := old.resume
-    rw [resume]
-    exact r
-
-/-- Off the exits-value resume no clause reads the columns: the payload holds at `unknown`. -/
-theorem countdownPayload_unknown {w : World} {m : RState} {waiter : FiberId} {p : RPending}
-    {a e : Ty} {tt : EffTy} (h : CountdownPayload w m waiter p a e tt)
-    (notValue : p.resumeWith ≠ .exitsValue) :
-    CountdownPayload w m waiter p .unknown .unknown tt := by
-  refine ⟨h.token, fun ex hex => exitOk_subN (h.collected ex hex) (subN_unknown _) (subN_unknown _),
-    fun id hid fiber hf => ?_, ?_⟩
-  · obtain ⟨ty, declared, _, _⟩ := h.targets id hid fiber hf
-    exact ⟨ty, declared, subN_unknown _, subN_unknown _⟩
-  · have r := h.resume
-    cases hr : p.resumeWith with
-    | exitsValue => exact absurd hr notValue
-    | void =>
-      rw [hr] at r
-      exact r
-    | continueWith name =>
-      rw [hr] at r
-      cases name with
-      | restore saved => exact r
-      | _ => exact r
-
-/-- At the exits-value resume the token pins the columns. -/
-theorem countdownPayload_pinned {w : World} {m : RState} {waiter : FiberId} {p : RPending}
-    {a e a' e' : Ty} {tt tt' : EffTy} (h1 : CountdownPayload w m waiter p a e tt)
-    (h2 : CountdownPayload w m waiter p a' e' tt') (value : p.resumeWith = .exitsValue) :
-    a' = a ∧ e' = e := by
-  have t1 := h1.token
-  have t2 := h2.token
-  rw [t1] at t2
-  cases t2
-  have r1 := h1.resume
-  have r2 := h2.resume
-  rw [value] at r1 r2
-  rw [r1] at r2
-  unfold EffTy.pure at r2
-  injection r2 with r2
-  injection r2 with r2
-  injection r2 with ha he
-  exact ⟨ha.symm, he.symm⟩
-
-/-- **A countdown correlation at the advanced record.** The old record's payload at any columns
-gives the new record's: at the head's columns when the record resumes with the exits (the token
-pins them), at `unknown` otherwise; the correlation's own condition follows by `widen`. -/
-theorem countdownAt_advance {w : World} {m m' : RState} {waiter : FiberId} {token : Nat}
-    {incoming : Ty → Ty → Prop} {p p' : RPending} {g' : RFiber} {a e : Ty} {tt : EffTy}
-    (head : CountdownPayload w m waiter p a e tt)
-    (other : ∃ a e tt, CountdownPayload w m waiter p a e tt ∧ incoming a e)
-    (widen : ∀ a e, incoming a e → incoming .unknown .unknown)
-    (lookupNew : m'.fiber? waiter = some g')
-    (findNew : g'.pending.find? (fun q => q.token = token) = some p')
-    (ptoken : p'.token = p.token) (presume : p'.resumeWith = p.resumeWith)
-    (collected : ∀ ex ∈ p'.collected, ExitOk w ⟨a, e, Env.Requirement.empty⟩ ex)
-    (targets : ∀ id ∈ p'.remaining, id ∈ p.remaining)
-    (lookup : ∀ id f', m'.fiber? id = some f' → ∃ f, m.fiber? id = some f ∧ f'.id = f.id) :
-    CountdownAt w m' waiter token incoming := by
-  obtain ⟨ax, ex', ttx, payx, incx⟩ := other
-  refine countdownAt_of_found lookupNew findNew ?_
-  by_cases value : p.resumeWith = .exitsValue
-  · obtain ⟨ha, he⟩ := countdownPayload_pinned head payx value
-    subst ha
-    subst he
-    exact ⟨ax, ex', ttx, countdownPayload_advance payx ptoken presume collected targets lookup, incx⟩
-  · refine ⟨.unknown, .unknown, ttx, countdownPayload_advance (countdownPayload_unknown payx value)
-      ptoken presume (fun x hx => exitOk_subN (collected x hx) (subN_unknown _) (subN_unknown _))
-      targets lookup, widen ax ex' incx⟩
+/-- **The ended walk types every exit at its target's columns** (`fireObserver`'s countdown arm
+under its guard, the walk meeting no live target): every target is visited, in order, so the exits
+fit the resume's columns position by position. -/
+theorem countdownPayload_finish {w : World} {waiter source : FiberId} {p : RPending}
+    {done : List FiberId} {cols : FiberId → Ty × Ty} {tt : EffTy}
+    (payload : CountdownPayload w waiter p done cols tt) (waits : p.waitingOn = some source)
+    {exit : ExitV} (fired : ExitOk w ⟨(cols source).1, (cols source).2, Env.Requirement.empty⟩ exit)
+    {visited : List FiberId} {tail : List ExitV}
+    (walked : ListRel (fun t ex => ExitOk w ⟨(cols t).1, (cols t).2, Env.Requirement.empty⟩ ex)
+      visited tail)
+    (hsplit : p.remaining = visited) :
+    ListRel (fun t ex => ExitOk w ⟨(cols t).1, (cols t).2, Env.Requirement.empty⟩ ex)
+        (done ++ source :: visited) (p.collected ++ [exit] ++ tail) ∧
+      CountdownResume w p.resumeWith (done ++ source :: visited) cols tt := by
+  have resume := payload.resume
+  rw [waits, hsplit] at resume
+  refine ⟨?_, ?_⟩
+  · rw [List.append_assoc, List.singleton_append]
+    exact payload.collected.append (.cons fired walked)
+  · simp only [Option.toList_some, List.singleton_append] at resume
+    exact resume
 
 /-- A countdown's resumed code is administrative: an exit, or a restore over one. -/
 theorem resumePrim_admin (root : ProgramSource) (resumeWith : Resume EffName) (exits : List ExitV) :
@@ -737,33 +720,48 @@ theorem resumePrim_admin (root : ProgramSource) (resumeWith : Resume EffName) (e
   | continueWith name => exact restoreR_admin (.pure _) name
 
 /-- **A finished countdown's continuation is typed at its token's declaration** (`resumePrim`,
-`Machine/Fibers.lean:881-886`): the exits as a value at the pinned list of exits, `void`, or the
-restoring continuation's saved exit. -/
-theorem resumePrim_typed (root : ProgramSource) {w : World} {m : RState} {waiter : FiberId}
-    {p : RPending} {a e : Ty} {tt : EffTy} (payload : CountdownPayload w m waiter p a e tt)
-    (exits : List ExitV) (typedExits : ∀ ex ∈ exits, ExitOk w ⟨a, e, Env.Requirement.empty⟩ ex) :
-    TypedProg root w tt (countdownPark.resumePrim (interpR root.program) p.resumeWith exits) := by
-  have r := payload.resume
-  cases hr : p.resumeWith with
+`Machine/Fibers.lean`): the exits as a value at the tuple of the targets' columns or at the list
+of their shared columns, `void`, or the restoring continuation's saved exit. -/
+theorem resumePrim_typed (root : ProgramSource) {w : World} {resumeWith : Resume EffName}
+    {targets : List FiberId} {cols : FiberId → Ty × Ty} {tt : EffTy}
+    (resume : CountdownResume w resumeWith targets cols tt) (exits : List ExitV)
+    (typedExits : ListRel (fun t ex => ExitOk w ⟨(cols t).1, (cols t).2, Env.Requirement.empty⟩ ex)
+      targets exits) :
+    TypedProg root w tt (countdownPark.resumePrim (interpR root.program) resumeWith exits) := by
+  unfold CountdownResume at resume
+  cases hr : resumeWith with
   | exitsValue =>
-    rw [hr] at r
-    subst r
-    exact TypedProg.pure ⟨awaitAll_delivered (targets := []) fun ex hex => (typedExits ex hex).1,
-      trivial⟩
+    rw [hr] at resume
+    rcases resume with tuple | ⟨a, e, list, shared⟩
+    · subst tuple
+      have fits := ListRel.of_map_mem
+        (r := fun t ex => ExitOk w ⟨(cols t).1, (cols t).2, Env.Requirement.empty⟩ ex)
+        (s := fun t ex => FitsExit w ⟨(cols t).1, (cols t).2, Env.Requirement.empty⟩ ex)
+        (f := id) (g := id) (fun _ _ _ hx => hx.1) typedExits
+      rw [List.map_id, List.map_id] at fits
+      exact TypedProg.pure ⟨fits_exits_tuple fits, trivial⟩
+    · subst list
+      refine TypedProg.pure ⟨awaitAll_delivered (targets := []) fun ex hex => ?_, trivial⟩
+      obtain ⟨t, ht, typed⟩ := typedExits.mem_left ex hex
+      rw [shared t ht] at typed
+      exact typed.1
   | void =>
-    rw [hr] at r
-    subst r
+    rw [hr] at resume
+    subst resume
     exact TypedProg.pure ⟨trivial, trivial⟩
   | continueWith name =>
-    rw [hr] at r
+    rw [hr] at resume
     show TypedProg root w tt (restoreR (.pure (.success (exitsVal exits))) name)
     cases name with
     | restore saved =>
+      have unknownExits : ∀ ex ∈ exits, FitsExit w ⟨.unknown, .unknown, Env.Requirement.empty⟩ ex := by
+        intro ex hex
+        obtain ⟨t, _, typed⟩ := typedExits.mem_left ex hex
+        exact fitsExit_subN (subN_unknown _) (subN_unknown _) typed.1
       refine seq_typed_clean root (mid := EffTy.pure (.list (.exitOf .unknown .unknown)))
-        (TypedProg.pure ⟨awaitAll_delivered (targets := []) fun ex hex =>
-          fitsExit_subN (subN_unknown _) (subN_unknown _) (typedExits ex hex).1, trivial⟩)
-        (fun w' o _ _ => TypedProg.pure (strongExit_mono _ _ _ _ o r)) rfl
-    | _ => exact TypedProg.pure r
+        (TypedProg.pure ⟨awaitAll_delivered (targets := []) unknownExits, trivial⟩)
+        (fun w' o _ _ => TypedProg.pure (strongExit_mono _ _ _ _ o resume)) rfl
+    | _ => exact TypedProg.pure resume
 
 /-- Evaluations queued in front of a typed configuration keep it typed. -/
 theorem configTyped_evaluates {root : ProgramSource} {rootTy : EffTy} {w : World} {m : RState}
@@ -1006,7 +1004,10 @@ theorem countdown_of_not_offKey {key : FiberId × Nat} {o : Observer} (h : ¬ Of
   | untrackChild _ => exact absurd (fun _ _ ho => nomatch ho) h
   | callback _ => exact absurd (fun _ _ ho => nomatch ho) h
 
-/-- **`observe` keeps `I` at a countdown observer.** -/
+/-- **`observe` keeps `I` at a countdown observer.** Under the machine's guard (decisions row
+376 (2)) a firing whose record does not wait on the firing fiber changes nothing but the trace. One
+that does types the exit at the firing fiber's columns, which the record's payload reads, and
+advances the record at its columns: no uniqueness of countdown keys is needed. -/
 theorem observe_countdown (root : ProgramSource) (rootTy : EffTy) {w : World} {m : RState}
     {rest : List RCmd} {source : FiberId} {exit : ExitV} {waiter : FiberId} {token : Nat}
     (typed : ConfigTyped root rootTy w m (.observe source exit (.countdown waiter token) :: rest)) :
@@ -1037,7 +1038,24 @@ theorem observe_countdown (root : ProgramSource) (rootTy : EffTy) {w : World} {m
     | none => exact t1
     | some p =>
       dsimp only
-      obtain ⟨a, e, tt, payload, incomingOk⟩ := countdownAt_found obsOk hw hp
+      -- the guard: a stale or duplicate firing changes nothing but the trace
+      by_cases hg : p.waitingOn = some source
+      case neg =>
+        rw [if_neg hg]
+        exact t1
+      rw [if_pos hg]
+      obtain ⟨done, cols, tt, payload⟩ := countdownAt_found obsOk.1 hw hp
+      have toCome : ∀ t ∈ p.remaining, t ∈ p.waitingOn.toList ++ p.remaining :=
+        fun t ht => List.mem_append_right _ ht
+      -- the record waits on the firing fiber, so its exit is typed at that fiber's columns
+      have fired : ExitOk w ⟨(cols source).1, (cols source).2, Env.Requirement.empty⟩ exit := by
+        obtain ⟨sourceTy, sourceDecl, sourceExit⟩ := obsOk.2
+        obtain ⟨ty, declared, ha, he⟩ := payload.targets source (by
+          rw [hg]
+          exact List.mem_append_left _ (List.mem_singleton_self _))
+        rw [sourceDecl] at declared
+        cases declared
+        exact exitOk_widen ha he sourceExit
       have wid : wf.id = waiter := rfiber?_id hw
       have hwf : m.fiber? wf.id = some wf := by rw [wid]; exact hw
       have hmem : wf ∈ m.fibers := rfiber?_mem hwf
@@ -1073,7 +1091,6 @@ theorem observe_countdown (root : ProgramSource) (rootTy : EffTy) {w : World} {m
       obtain ⟨m2, nested⟩ := pr
       dsimp only at t2 evals iview pweak ⊢
       have view2 : InterruptView m m2 := ((InterruptView.refl m).emit _).trans iview
-      have obs2 : ObsView m m2 := obsView_of_pending view2 fun id x' h x h0 => pweak id x' h x h0
       obtain ⟨y, hy, ykept⟩ := view2.lookupFwd waiter wf hw
       have yid : y.id = waiter := ykept.1.trans wid
       have hy' : m2.fiber? y.id = some y := by rw [yid]; exact hy
@@ -1097,50 +1114,46 @@ theorem observe_countdown (root : ProgramSource) (rootTy : EffTy) {w : World} {m
             have back := view2.requests h
             rw [keyFree] at back
             cases back
-        have walk := countdownWalk_spec m2 p.remaining (p.collected ++ [exit])
-        have typedExtra : ∀ x, (∃ t ∈ p.remaining, ∃ g, m2.fiber? t = some g ∧ g.exit = some x) →
-            ExitOk w ⟨a, e, Env.Requirement.empty⟩ x := by
-          rintro x ⟨t, ht, g, hg, gx⟩
-          obtain ⟨g0, hg0, kept⟩ := view2.lookup t g hg
-          have g0x : g0.exit = some x := kept.2.1.symm.trans gx
-          obtain ⟨ty, declared, sa, se⟩ :=
-            payload.targets t ht g0 hg0
-          exact exitOk_subN ((typed.machine.fiber (rfiber?_mem hg0)).ok.c3 x g0x ty declared) sa se
-        have lookupBack : ∀ (g : RFiber), g.id = waiter → ∀ id f',
-            (m2.update g).fiber? id = some f' → ∃ f, m.fiber? id = some f ∧ f'.id = f.id := by
-          intro g gid id f' h
-          rw [rfiber?_update] at h
-          cases h2 : m2.fiber? id with
+        -- every target to come is declared (the payload), so the machine holds it
+        have held : ∀ t ∈ p.remaining, (m2.fiber? t).isSome = true := by
+          intro t ht
+          obtain ⟨ty, declared, _, _⟩ := payload.targets t (toCome t ht)
+          have wide := t2.machine.wide
+          obtain ⟨x, hx, hid⟩ := List.mem_map.mp ((wide.fibers t).mp (by rw [declared]; rfl))
+          rw [← hid, rfiber?_of_mem wide.fiberIds hx]
+          rfl
+        obtain ⟨visited, extra, hexits, rel, hdone, hnext⟩ :=
+          countdownWalk_split m2 p.remaining (p.collected ++ [exit]) held
+        have visitedSub : ∀ t ∈ visited, t ∈ p.remaining := by
+          intro t ht
+          cases hres : (countdownWalk m2 p.remaining (p.collected ++ [exit])).2 with
           | none =>
-            rw [h2] at h
-            cases h
-          | some x =>
-            rw [h2, Option.map_some] at h
-            cases h
-            obtain ⟨x0, hx0, kept⟩ := view2.lookup id x h2
-            by_cases hx : x.id = g.id
-            · rw [if_pos hx]
-              exact ⟨x0, hx0, gid.trans ((hx.trans gid).symm.trans kept.1)⟩
-            · rw [if_neg hx]
-              exact ⟨x0, hx0, kept.1⟩
-        have typedWalk : ∀ x ∈ (countdownWalk m2 p.remaining (p.collected ++ [exit])).1,
-            ExitOk w ⟨a, e, Env.Requirement.empty⟩ x := by
-          obtain ⟨⟨extra, hexits, hextra⟩, _⟩ := walk
-          intro x hx
-          rw [hexits] at hx
-          rcases List.mem_append.mp hx with hx | hx
-          · rcases List.mem_append.mp hx with hx | hx
-            · exact payload.collected x hx
-            · rw [List.mem_singleton.mp hx]
-              exact incomingOk
-          · exact typedExtra x (hextra x hx)
-        have nextWalk := walk.2
-        have advancePending : ∀ (p' : RPending), p'.token = p.token → p'.resumeWith = p.resumeWith →
-            (∀ ex ∈ p'.collected, ExitOk w ⟨a, e, Env.Requirement.empty⟩ ex) →
+            rw [hdone hres]
+            exact ht
+          | some pair =>
+            obtain ⟨next, rest'⟩ := pair
+            rw [hnext next rest' hres]
+            exact List.mem_append_left _ ht
+        -- each visited target's exit, at its own declaration, is below its columns
+        have walked : ListRel (fun t ex => ExitOk w ⟨(cols t).1, (cols t).2, Env.Requirement.empty⟩ ex)
+            visited extra := by
+          have moved := ListRel.of_map_mem
+            (r := fun t ex => ∃ g, m2.fiber? t = some g ∧ g.exit = some ex)
+            (s := fun t ex => ExitOk w ⟨(cols t).1, (cols t).2, Env.Requirement.empty⟩ ex)
+            (f := id) (g := id) (fun t ht x found => by
+              obtain ⟨g, hg2, gx⟩ := found
+              obtain ⟨g0, hg0, kept⟩ := view2.lookup t g hg2
+              have g0x : g0.exit = some x := kept.2.1.symm.trans gx
+              obtain ⟨ty, declared, ha, he⟩ := payload.targets t (toCome t (visitedSub t ht))
+              have tid : g0.id = t := rfiber?_id hg0
+              exact exitOk_widen ha he ((typed.machine.fiber (rfiber?_mem hg0)).ok.c3 x g0x ty
+                (by rw [tid]; exact declared))) rel
+          rwa [List.map_id, List.map_id] at moved
+        have advancePending : ∀ (p' : RPending), p'.token = p.token →
+            (∃ done' cols' tt', CountdownPayload w waiter p' done' cols' tt') →
             (∀ id ∈ p'.remaining, id ∈ p.remaining) →
-            ConfigTyped root rootTy w (m2.update {y with pending := [p']}) rest ∧
-              CountdownPayload w (m2.update {y with pending := [p']}) waiter p' a e tt := by
-          intro p' tokenSame resumeSame collectedOk targets
+            ConfigTyped root rootTy w (m2.update {y with pending := [p']}) rest := by
+          intro p' tokenSame newPayload targets
           let g : RFiber := {y with pending := [p']}
           have tokenEq : p'.token = token := tokenSame.trans ptok
           have gid : g.id = waiter := yid
@@ -1174,25 +1187,17 @@ theorem observe_countdown (root : ProgramSource) (rootTy : EffTy) {w : World} {m
             refine Or.inl (fiberKeys_internal ymem ?_)
             unfold Guard.fiberKeys at hk ⊢
             exact hk
-          have lookupNew := lookupBack g gid
-          have advance : ∀ (incoming : Ty → Ty → Prop),
-              (∀ a e, incoming a e → incoming .unknown .unknown) →
-              CountdownAt w m waiter token incoming → CountdownAt w (m2.update g) waiter token incoming := by
-            intro incoming widen h
-            exact countdownAt_advance payload (countdownAt_found h hw hp) widen look find' tokenSame resumeSame
-              collectedOk targets lookupNew
-          have widenCols : ∀ (s : FiberId) (a e : Ty), FiberColumnsBelow w s a e →
-              FiberColumnsBelow w s .unknown .unknown := by
-            rintro s a e ⟨ty, d, _, _⟩
-            exact ⟨ty, d, subN_unknown _, subN_unknown _⟩
+          -- the record's payload is the one correlation at the key, for every stored or queued
+          -- observer there
+          have newAt : CountdownAt w (m2.update g) waiter token :=
+            countdownAt_of_found look find' newPayload
           have storedNew : ∀ x ∈ m.fibers, ∀ o ∈ x.observers, ¬ OffKey (waiter, token) o →
               StoredObserverOk root w (m2.update g) x.id o := by
-            intro x hx o ho off
+            intro x _ o _ off
             have ho' := countdown_of_not_offKey off
             dsimp only at ho'
-            have stored := (typed.machine.fiber hx).observers o ho
-            rw [ho'] at stored ⊢
-            exact advance _ (widenCols x.id) stored
+            rw [ho']
+            exact newAt
           have fresh : FiberTyped root w (m2.update g) g := by
             have view' : ExceptView m2 (m2.update g) (y.id, token) := by
               rw [yid]
@@ -1203,7 +1208,7 @@ theorem observe_countdown (root : ProgramSource) (rootTy : EffTy) {w : World} {m
                 exact storedNew wf hmem o (by rw [← ykept.2.2.2.1]; exact ho)
                   (by rw [yid] at off; exact off))
               (fun id hid => currentOld.targetsBelow p (List.mem_of_find?_eq_some currentPending) id (targets id hid))
-          have replaced := configTyped_replace t2 hy' hid (ykept.2.2.1.trans idle)
+          exact configTyped_replace t2 hy' hid (ykept.2.2.1.trans idle)
             (ykept.2.1.trans live) (ykept.2.2.1.trans idle) (key := (waiter, token)) agree keysG
             (fun tok r hr => absurd hr (fun h => gNone tok r (by rw [← gid]; exact h)))
             (fun x hx _ o ho off => by
@@ -1215,17 +1220,28 @@ theorem observe_countdown (root : ProgramSource) (rootTy : EffTy) {w : World} {m
               dsimp only at ho'
               have queued := (typed.queue.observer src ex o (List.mem_cons_of_mem _ ho)).2
               rw [ho'] at queued ⊢
-              exact advance _ (fun a e h => exitOk_subN h (subN_unknown _) (subN_unknown _)) queued)
+              exact ⟨newAt, queued.2⟩)
             fresh
-          exact ⟨replaced, countdownPayload_advance payload tokenSame resumeSame collectedOk targets lookupNew⟩
         rcases hwalk : countdownWalk m2 p.remaining (p.collected ++ [exit]) with
           ⟨exits, _ | ⟨next, rest'⟩⟩
-        · rw [hwalk] at typedWalk
+        · have exitsEq : exits = p.collected ++ [exit] ++ extra := by
+            have h := hexits
+            rw [hwalk] at h
+            exact h
+          have hsplit : p.remaining = visited := hdone (by rw [hwalk])
+          obtain ⟨finalExits, finalResume⟩ := countdownPayload_finish payload hg fired walked hsplit
+          rw [← exitsEq] at finalExits
           dsimp only
           rw [singleY, List.map_cons, List.map_nil, if_pos ptokY]
-          let p' : RPending := {p with remaining := [], collected := exits}
+          let p' : RPending := {p with waitingOn := none, remaining := [], collected := exits}
           let g : RFiber := {y with pending := [p']}
-          obtain ⟨replaced, _⟩ := advancePending p' rfl rfl typedWalk (fun _ h => nomatch h)
+          have newPayload : ∃ done' cols' tt', CountdownPayload w waiter p' done' cols' tt' := by
+            refine ⟨done ++ source :: visited, cols, tt, payload.token, finalExits,
+              (fun _ ht => nomatch ht), ?_⟩
+            show CountdownResume w p.resumeWith (done ++ source :: visited ++ ([] ++ [])) cols tt
+            rw [List.append_nil, List.append_nil]
+            exact finalResume
+          have replaced := advancePending p' rfl newPayload (fun _ h => nomatch h)
           have look : (m2.update g).fiber? waiter = some g := by
             rw [← yid]
             exact rfiber?_update_self hy' rfl
@@ -1234,24 +1250,35 @@ theorem observe_countdown (root : ProgramSource) (rootTy : EffTy) {w : World} {m
             exact wfNone
           have resumeOk : ResumeCode root w waiter token
               (countdownPark.resumePrim (interpR root.program) p.resumeWith exits) := by
-            refine resumeCode_of_typed (fun ty declared => ?_) (resumePrim_admin root p.resumeWith exits)
+            refine resumeCode_of_typed (fun ty declared => ?_)
+              (resumePrim_admin root p.resumeWith exits)
             have pt := payload.token
             rw [ptok, declared] at pt
             cases pt
-            exact resumePrim_typed root payload exits typedWalk
+            exact resumePrim_typed root finalResume _ finalExits
           have consed := configTyped_cons_resume replaced resumeOk
             (by rw [show (m2.update g).nextToken = m.nextToken from view2.nextToken]; exact keyBelow) free
           have all := configTyped_evaluates consed nested evals
           simpa only [List.nil_append, List.append_assoc, List.singleton_append] using all
-        · rw [hwalk] at typedWalk nextWalk
+        · have exitsEq : exits = p.collected ++ [exit] ++ extra := by
+            have h := hexits
+            rw [hwalk] at h
+            exact h
+          have hsplit : p.remaining = visited ++ next :: rest' := hnext next rest' (by rw [hwalk])
           dsimp only
           rw [singleY, List.map_cons, List.map_nil, if_pos ptokY]
-          obtain ⟨nextMem, ⟨gn, hgn, _⟩, restSub⟩ := nextWalk next rest' rfl
-          let p' : RPending := {p with remaining := rest', collected := exits}
+          let p' : RPending := {p with waitingOn := some next, remaining := rest', collected := exits}
           let g : RFiber := {y with pending := [p']}
-          have targets : ∀ id ∈ p'.remaining, id ∈ p.remaining :=
-            fun id hid => restSub id hid
-          obtain ⟨replaced, newPayload⟩ := advancePending p' rfl rfl typedWalk targets
+          have newPayload : ∃ done' cols' tt', CountdownPayload w waiter p' done' cols' tt' := by
+            refine ⟨done ++ source :: visited, cols, tt, ?_⟩
+            show CountdownPayload w waiter
+              {p with waitingOn := some next, remaining := rest', collected := exits} _ cols tt
+            rw [exitsEq]
+            exact countdownPayload_advance payload hg fired walked hsplit
+          have targets : ∀ id ∈ p'.remaining, id ∈ p.remaining := fun id hid => by
+            rw [hsplit]
+            exact List.mem_append_right _ (List.mem_cons_of_mem _ hid)
+          have replaced := advancePending p' rfl newPayload targets
           have look : (m2.update g).fiber? waiter = some g := by
             rw [← yid]
             exact rfiber?_update_self hy' rfl
@@ -1275,18 +1302,13 @@ theorem observe_countdown (root : ProgramSource) (rootTy : EffTy) {w : World} {m
                 exact hr
               exact typed.queue.raceObservers source exit (.countdown waiter token) List.mem_cons_self r race hr0)
             (fun t ht => by
-              have nextCols : FiberColumnsBelow w t.id a e := by
-                obtain ⟨f0, hf0, same⟩ := lookupBack g yid next t ht
-                rw [same]
-                exact payload.targets next nextMem f0 hf0
               let t' : RFiber := {t with observers := t.observers ++ [.countdown waiter token]}
               have lookT : (m2.update g).fiber? t.id = some t := by
                 rw [rfiber?_id ht]
                 exact ht
               have view := obsView_rupdate (m := m2.update g) (f := t) (g := t')
                 lookT rfl (PendingWeaker.refl _)
-              exact countdownAt_view view.fibers
-                (countdownAt_of_found look find' ⟨a, e, tt, newPayload, nextCols⟩))
+              exact countdownAt_view view.fibers (countdownAt_of_found look find' newPayload))
           have all := configTyped_evaluates added nested evals
           simpa only [applyFiberEdit, RunMachine.observe, List.nil_append, List.append_nil] using all
 

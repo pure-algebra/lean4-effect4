@@ -694,7 +694,7 @@ theorem join_actual (p : NativeEff) (table : RowTable) (completed)
     let grown : NativeMachine := {m with nextToken := token + 1}
     let name := (interpAt p completed table).cancelName (interpAt p completed table).parkCancelName f.id token
     let next := ({f with frame := {f.frame with stack := Prim.asyncFinalizer name :: f.frame.stack}} : NFiber).park
-      ⟨token, [], [], .void, false⟩
+      ⟨token, none, [], [], .void, false⟩
     NativeStep m ⟨grown.emit [RunEvent.parkedOn next.id token], next, yielding, .parked, [],
       [.observe target (.resumeAwait f.id token mode)]⟩ := by
   refine ⟨(StateStep.grow state).emit _, ?_⟩

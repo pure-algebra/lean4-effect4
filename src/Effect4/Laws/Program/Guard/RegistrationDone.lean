@@ -77,12 +77,12 @@ theorem guardState_park_internal (m : NativeMachine) (f : NFiber) (frame : NFram
     (code : externalRequest frame.current = none)
     (codes : FrameCodeOwned m { f with frame := frame }) (below : token < m.nextToken) :
     GuardState (settle f.id rest
-      ⟨m, ({ f with frame := frame } : NFiber).park ⟨token, [], [], Resume.void, false⟩,
+      ⟨m, ({ f with frame := frame } : NFiber).park ⟨token, none, [], [], Resume.void, false⟩,
         yielding, .parked, [], []⟩).1 := by
   have mem := List.mem_of_find?_eq_some lookup
   have old := guardState_fiber state mem
   have pending : f.pending = [] := by simpa only [PendingShape, park] using old.pending
-  let g := ({ f with frame := frame } : NFiber).park ⟨token, [], [], Resume.void, false⟩
+  let g := ({ f with frame := frame } : NFiber).park ⟨token, none, [], [], Resume.void, false⟩
   let it : NIter := ⟨m, g, yielding, .parked, [], []⟩
   have pshape : PendingShape g := by
     simp only [g, RunFiber.park, PendingShape, pending, List.nil_append]
@@ -102,32 +102,32 @@ theorem guardQueue_park_internal (p : NativeEff) (table : RowTable)
     (queue : GuardQueue p table m rest) (registration : RegistrationQueue rest)
     (fresh : f.id ∉ rest.filterMap (commandOwner m)) :
     let result := settle f.id rest
-      ⟨m, ({ f with frame := frame } : NFiber).park ⟨token, [], [], Resume.void, false⟩,
+      ⟨m, ({ f with frame := frame } : NFiber).park ⟨token, none, [], [], Resume.void, false⟩,
         yielding, .parked, [], []⟩
     GuardQueue p table result.1 result.2 := by
   simp only [settle, settleOutcome, List.nil_append, List.cons_append]
   split
   · let g : NFiber := { ({ f with frame := frame } : NFiber).park
-        ⟨token, [], [], Resume.void, false⟩ with parked := .notParked, pending := [] }
+        ⟨token, none, [], [], Resume.void, false⟩ with parked := .notParked, pending := [] }
     exact guardQueue_continue_active p table state lookup running park queue registration fresh g rfl running rfl yielding
   · exact guardQueue_update_internal_active p table state lookup running park queue registration fresh
       { ({ f with frame := frame } : NFiber).park
-        ⟨token, [], [], Resume.void, false⟩ with running := false } rfl code
+        ⟨token, none, [], [], Resume.void, false⟩ with running := false } rfl code
 
 theorem requestOf_park_internal (m : NativeMachine) (f : NFiber) (frame : NFrame)
     (token : Nat) (yielding : Bool) (rest : List NCmd)
     (lookup : m.fiber? f.id = some f) (park : f.parked = .notParked)
     (code : externalRequest frame.current = none) (fiber : FiberId) (offered : Nat) :
     requestOf (settle f.id rest
-      ⟨m, ({ f with frame := frame } : NFiber).park ⟨token, [], [], Resume.void, false⟩,
+      ⟨m, ({ f with frame := frame } : NFiber).park ⟨token, none, [], [], Resume.void, false⟩,
         yielding, .parked, [], []⟩).1 fiber offered = requestOf m fiber offered := by
   simp only [settle, settleOutcome]
   split
   · exact requestOf_update_internal_eq lookup park
-      { ({ f with frame := frame } : NFiber).park ⟨token, [], [], Resume.void, false⟩ with parked := .notParked, pending := [] }
+      { ({ f with frame := frame } : NFiber).park ⟨token, none, [], [], Resume.void, false⟩ with parked := .notParked, pending := [] }
       rfl code fiber offered
   · exact requestOf_update_internal_eq lookup park
-      { ({ f with frame := frame } : NFiber).park ⟨token, [], [], Resume.void, false⟩ with running := false }
+      { ({ f with frame := frame } : NFiber).park ⟨token, none, [], [], Resume.void, false⟩ with running := false }
       rfl code fiber offered
 
 theorem interruptedAt_park_internal (m : NativeMachine) (f : NFiber) (frame : NFrame)
@@ -137,7 +137,7 @@ theorem interruptedAt_park_internal (m : NativeMachine) (f : NFiber) (frame : NF
     (cause : frame.interruptedCause = f.frame.interruptedCause)
     (fiber : FiberId) (before : InterruptedAt m fiber) :
     InterruptedAt (settle f.id rest
-      ⟨m, ({ f with frame := frame } : NFiber).park ⟨token, [], [], Resume.void, false⟩,
+      ⟨m, ({ f with frame := frame } : NFiber).park ⟨token, none, [], [], Resume.void, false⟩,
         yielding, .parked, [], []⟩).1 fiber := by
   apply interruptedAt_settle _ _ _ fiber before
   intro same

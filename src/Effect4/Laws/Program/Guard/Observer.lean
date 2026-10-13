@@ -237,6 +237,9 @@ theorem guardState_fireObserver_countdown (p : NativeEff) (table : RowTable)
     cases hp : w.pending.find? (fun q => q.token = token) with
     | none => simpa only [fireObserver, show m.emit _ = base from rfl, hw, hp] using baseState
     | some pending =>
+      by_cases hg : pending.waitingOn = some id
+      case neg =>
+        simpa only [fireObserver, show m.emit _ = base from rfl, hw, hp, if_neg hg] using baseState
       let run := if pending.failFast && !exit.isSuccess && pending.collected.all Exit.isSuccess then
         interruptEach (interpOf p table) waiter ((interpOf p table).stackAnnotations waiter)
           pending.remaining (base, []) else (base, [])
@@ -248,7 +251,7 @@ theorem guardState_fireObserver_countdown (p : NativeEff) (table : RowTable)
         dsimp only [run]; split
         · exact reservedKeys_interruptEach p table waiter _ _ base [] _ baseKeys
         · exact baseKeys
-      simp only [fireObserver, show m.emit _ = base from rfl, hw, hp]
+      simp only [fireObserver, show m.emit _ = base from rfl, hw, hp, if_pos hg]
       cases hc : run.1.fiber? waiter with
       | none => exact runState
       | some current =>
@@ -275,14 +278,14 @@ theorem guardState_fireObserver_countdown (p : NativeEff) (table : RowTable)
             | none =>
               exact update
                 (fun q => if q.token = token then
-                  { q with remaining := [], collected := exits } else q)
+                  { q with waitingOn := none, remaining := [], collected := exits } else q)
                 (by intro q; split <;> rfl)
             | some pair =>
               obtain ⟨next, rest⟩ := pair
               dsimp only [applyFiberEdit]
               apply guardState_addObserver
                 (update (fun q => if q.token = token then
-                  { q with remaining := rest, collected := exits } else q)
+                  { q with waitingOn := some next, remaining := rest, collected := exits } else q)
                   (by intro q; split <;> rfl)) next (.countdown waiter token)
               exact reservedKeys_of_requests_subset callbackKeys (Nat.le_refl _)
                 (requestOf_update_noExternal_subset _ _ currentCode)
@@ -332,6 +335,9 @@ theorem guardQueue_fireObserver_countdown (p : NativeEff) (table : RowTable)
     cases hp : w.pending.find? (fun q => q.token = token) with
     | none => simpa only [fireObserver, show m.emit _ = base from rfl, hw, hp] using baseQueue
     | some pending =>
+      by_cases hg : pending.waitingOn = some id
+      case neg =>
+        simpa only [fireObserver, show m.emit _ = base from rfl, hw, hp, if_neg hg] using baseQueue
       let run := if pending.failFast && !exit.isSuccess && pending.collected.all Exit.isSuccess then
         interruptEach (interpOf p table) waiter ((interpOf p table).stackAnnotations waiter)
           pending.remaining (base, []) else (base, [])
@@ -353,7 +359,7 @@ theorem guardQueue_fireObserver_countdown (p : NativeEff) (table : RowTable)
         dsimp only [run]; split
         · exact guardState_interruptEach p table waiter _ _ base [] baseState
         · exact baseState
-      simp only [fireObserver, show m.emit _ = base from rfl, hw, hp]
+      simp only [fireObserver, show m.emit _ = base from rfl, hw, hp, if_pos hg]
       cases hc : run.1.fiber? waiter with
       | none => exact runQueue
       | some current =>
@@ -378,7 +384,7 @@ theorem guardQueue_fireObserver_countdown (p : NativeEff) (table : RowTable)
               have restored := guardQueue_restorePending p table runQueue hc'
                 currentIdle rfl currentCode
                 (fun q => if q.token = token then
-                  { q with remaining := [], collected := exits } else q)
+                  { q with waitingOn := none, remaining := [], collected := exits } else q)
               apply guardQueue_snoc_resume p table restored waiter token
                 (countdownPark.resumePrim (interpOf p table) pending.resumeWith exits)
               · exact reservedKeys_of_requests_subset callbackKeys (Nat.le_refl _)
@@ -391,7 +397,7 @@ theorem guardQueue_fireObserver_countdown (p : NativeEff) (table : RowTable)
               exact guardQueue_addObserver p table
                 (guardQueue_restorePending p table runQueue hc' currentIdle rfl currentCode
                   (fun q => if q.token = token then
-                    { q with remaining := rest, collected := exits } else q))
+                    { q with waitingOn := some next, remaining := rest, collected := exits } else q))
                 next (.countdown waiter token)
 
 theorem guardState_fireObserver (p : NativeEff) (table : RowTable)
@@ -526,6 +532,9 @@ theorem requestOf_fireObserver_countdown_subset (p : NativeEff) (table : RowTabl
     cases hp : w.pending.find? (fun q => q.token = token) with
     | none => simpa only [fireObserver, show m.emit _ = base from rfl, hw, hp] using hr
     | some pending =>
+      by_cases hg : pending.waitingOn = some id
+      case neg =>
+        simpa only [fireObserver, show m.emit _ = base from rfl, hw, hp, if_neg hg] using hr
       let run := if pending.failFast && !exit.isSuccess && pending.collected.all Exit.isSuccess then
         interruptEach (interpOf p table) waiter ((interpOf p table).stackAnnotations waiter)
           pending.remaining (base, []) else (base, [])
@@ -533,7 +542,7 @@ theorem requestOf_fireObserver_countdown_subset (p : NativeEff) (table : RowTabl
         dsimp only [run]; split
         · exact requestOf_interruptEach_subset p table waiter _ _ base []
         · exact fun _ _ _ h => h
-      simp only [fireObserver, show m.emit _ = base from rfl, hw, hp] at hr
+      simp only [fireObserver, show m.emit _ = base from rfl, hw, hp, if_pos hg] at hr
       cases hc : run.1.fiber? waiter with
       | none =>
         dsimp only [run] at hc
@@ -562,13 +571,13 @@ theorem requestOf_fireObserver_countdown_subset (p : NativeEff) (table : RowTabl
             | none =>
               dsimp only at hr
               rw [preserves (fun q => if q.token = token then
-                {q with remaining := [], collected := exits} else q)] at hr
+                {q with waitingOn := none, remaining := [], collected := exits} else q)] at hr
               exact subset fiber offered request hr
             | some pair =>
               obtain ⟨next, rest⟩ := pair
               dsimp only [applyFiberEdit, RunMachine.observe] at hr
               rw [requestOf_addObserver, preserves (fun q => if q.token = token then
-                {q with remaining := rest, collected := exits} else q)] at hr
+                {q with waitingOn := some next, remaining := rest, collected := exits} else q)] at hr
               exact subset fiber offered request hr
 
 theorem requestOf_fireObserver_subset (p : NativeEff) (table : RowTable)
@@ -702,6 +711,9 @@ theorem requestOrInterrupted_fireObserver_countdown (p : NativeEff) (table : Row
     cases hp : w.pending.find? (fun q => q.token = token) with
     | none => simpa only [fireObserver, show m.emit _ = base from rfl, hw, hp] using Or.inl (b := InterruptedAt base fiber) baseRequest
     | some pending =>
+      by_cases hg : pending.waitingOn = some id
+      case neg =>
+        simpa only [fireObserver, show m.emit _ = base from rfl, hw, hp, if_neg hg] using Or.inl (b := InterruptedAt base fiber) baseRequest
       let run := if pending.failFast && !exit.isSuccess && pending.collected.all Exit.isSuccess then
         interruptEach (interpOf p table) waiter ((interpOf p table).stackAnnotations waiter)
           pending.remaining (base, []) else (base, [])
@@ -709,7 +721,7 @@ theorem requestOrInterrupted_fireObserver_countdown (p : NativeEff) (table : Row
         dsimp only [run]; split
         · exact requestOrInterrupted_interruptEach p table waiter _ _ base [] fiber offered request baseRequest
         · exact Or.inl baseRequest
-      simp only [fireObserver, show m.emit _ = base from rfl, hw, hp]
+      simp only [fireObserver, show m.emit _ = base from rfl, hw, hp, if_pos hg]
       cases hc : run.1.fiber? waiter with
       | none => exact runRequest
       | some current =>
@@ -726,7 +738,7 @@ theorem requestOrInterrupted_fireObserver_countdown (p : NativeEff) (table : Row
             | none =>
               exact requestOrInterrupted_pendingMap hc'
                 (fun q => if q.token = token then
-                  { q with remaining := [], collected := exits } else q)
+                  { q with waitingOn := none, remaining := [], collected := exits } else q)
                 fiber offered request runRequest
             | some pair =>
               obtain ⟨next, rest⟩ := pair
@@ -735,7 +747,7 @@ theorem requestOrInterrupted_fireObserver_countdown (p : NativeEff) (table : Row
                 fiber offered request
                 (requestOrInterrupted_pendingMap hc'
                   (fun q => if q.token = token then
-                    { q with remaining := rest, collected := exits } else q)
+                    { q with waitingOn := some next, remaining := rest, collected := exits } else q)
                   fiber offered request runRequest)
 
 theorem requestOrInterrupted_fireObserver (p : NativeEff) (table : RowTable)
@@ -774,6 +786,9 @@ theorem interruptedAt_fireObserver_countdown (p : NativeEff) (table : RowTable)
     cases hp : w.pending.find? (fun q => q.token = token) with
     | none => simpa only [fireObserver, show m.emit _ = base from rfl, hw, hp] using baseInterrupted
     | some pending =>
+      by_cases hg : pending.waitingOn = some id
+      case neg =>
+        simpa only [fireObserver, show m.emit _ = base from rfl, hw, hp, if_neg hg] using baseInterrupted
       let run := if pending.failFast && !exit.isSuccess && pending.collected.all Exit.isSuccess then
         interruptEach (interpOf p table) waiter ((interpOf p table).stackAnnotations waiter)
           pending.remaining (base, []) else (base, [])
@@ -781,7 +796,7 @@ theorem interruptedAt_fireObserver_countdown (p : NativeEff) (table : RowTable)
         dsimp only [run]; split
         · exact interruptedAt_interruptEach p table waiter _ _ base [] baseInterrupted
         · exact baseInterrupted
-      simp only [fireObserver, show m.emit _ = base from rfl, hw, hp]
+      simp only [fireObserver, show m.emit _ = base from rfl, hw, hp, if_pos hg]
       cases hc : run.1.fiber? waiter with
       | none => exact runInterrupted
       | some current =>
@@ -798,7 +813,7 @@ theorem interruptedAt_fireObserver_countdown (p : NativeEff) (table : RowTable)
             | none =>
               exact interruptedAt_restorePending hc' hc'
                 (fun q => if q.token = token then
-                  { q with remaining := [], collected := exits } else q)
+                  { q with waitingOn := none, remaining := [], collected := exits } else q)
                 runInterrupted runInterrupted
             | some pair =>
               obtain ⟨next, rest⟩ := pair
@@ -806,7 +821,7 @@ theorem interruptedAt_fireObserver_countdown (p : NativeEff) (table : RowTable)
               exact interruptedAt_addObserver next (.countdown waiter token)
                 (interruptedAt_restorePending hc' hc'
                   (fun q => if q.token = token then
-                    { q with remaining := rest, collected := exits } else q)
+                    { q with waitingOn := some next, remaining := rest, collected := exits } else q)
                   runInterrupted runInterrupted)
 
 theorem interruptedAt_fireObserver (p : NativeEff) (table : RowTable)
@@ -944,6 +959,11 @@ theorem registrationQueue_fireObserver (p : NativeEff) (table : RowTable)
       split
       · exact registration
       · rename_i pending hp
+        by_cases hg : pending.waitingOn = some id
+        case neg =>
+          rw [if_neg hg]
+          exact registration
+        rw [if_pos hg]
         let base := m.emit [RunEvent.observerFired id (.countdown waiter token)]
         let run := if pending.failFast && !exit.isSuccess && pending.collected.all Exit.isSuccess then
           interruptEach (interpOf p table) waiter ((interpOf p table).stackAnnotations waiter)
