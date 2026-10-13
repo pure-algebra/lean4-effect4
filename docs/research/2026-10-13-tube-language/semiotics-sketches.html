@@ -1,0 +1,1893 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Effect4 Visual Semantics: Tube Language Mark Inventory</title>
+<style>
+  :root {
+    --dark-ground: #14110d;
+    --dark-ink: #ece6dc;
+    --paper-ground: #f7f4ee;
+    --paper-ink: #1b1f2a;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #100e0b;
+    color: #e6e0d4;
+    padding: 1rem;
+    line-height: 1.45;
+  }
+  header {
+    max-width: 1200px;
+    margin: 0 auto 1.2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #2b261f;
+  }
+  h1 { font-size: 1.8rem; font-weight: 600; color: #f5efe6; margin-bottom: 0.4rem; }
+  p.lead { font-size: 0.95rem; color: #b8aea1; max-width: 900px; }
+  .kind-section {
+    max-width: 1200px;
+    margin: 0 auto 1rem;
+  }
+  .kind-header {
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #26211a;
+  }
+  .kind-title { font-size: 1.3rem; font-weight: 600; color: #ece6dc; }
+  .kind-desc { font-size: 0.85rem; color: #a89f91; margin-top: 0.25rem; }
+  .kind-meta { font-size: 0.8rem; color: #8c8273; margin-top: 0.25rem; display: flex; gap: 1.5rem; flex-wrap: wrap; }
+  .kind-meta strong { color: #d1b894; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 0.75rem;
+  }
+  .card { padding: 0.4rem; gap: 0.4rem; 
+    background: #181511;
+    border: 1px solid #2a241c;
+    border-radius: 6px;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+  .card-top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .card-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    color: #f7f2ea;
+  }
+  .badge {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    background: #2a241c;
+    color: #d1b894;
+    font-weight: 600;
+  }
+  .reason {
+    font-size: 0.82rem;
+    color: #ccc4b8;
+    line-height: 1.35;
+  }
+  .meta-lines {
+    font-size: 0.75rem;
+    color: #8c8273;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+  }
+  .meta-lines strong { color: #a89f91; }
+  .previews {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.4rem;
+    margin-top: 0.2rem;
+  }
+  .preview-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+  .preview-label {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #7a7062;
+    font-weight: 600;
+  }
+  .theme-box {
+    border-radius: 4px;
+    padding: 0.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    min-height: 96px;
+  }
+  .theme-dark {
+    --ground: var(--dark-ground);
+    --ink: var(--dark-ink);
+    background-color: var(--ground);
+    color: var(--ink);
+    border: 1px solid #26211a;
+  }
+  .theme-paper {
+    --ground: var(--paper-ground);
+    --ink: var(--paper-ink);
+    background-color: var(--ground);
+    color: var(--ink);
+    border: 1px solid #ded9cc;
+  }
+  .tube-wall {
+    stroke: color-mix(in srgb, var(--ink) 32%, var(--ground));
+    fill: none;
+  }
+  .tube-lumen {
+    stroke: color-mix(in srgb, var(--ink) 8%, var(--ground));
+    fill: none;
+  }
+  .tube-fluid {
+    stroke: var(--ink);
+    fill: none;
+  }
+  .tube-plug {
+    stroke: color-mix(in srgb, var(--ink) 32%, var(--ground));
+    fill: none;
+  }
+  .tube-collar {
+    stroke: color-mix(in srgb, var(--ink) 32%, var(--ground));
+    fill: none;
+  }
+  .tube-hollow {
+    stroke: color-mix(in srgb, var(--ink) 8%, var(--ground));
+    fill: none;
+  }
+  svg.tube-sketch {
+    display: block;
+    shape-rendering: geometricPrecision;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Effect4 Visual Semantics: The Tube Language Inventory</h1>
+  <p class="lead">Every glyph of Effect4 drawn exclusively with the tube pen. The pipework constitutes the program invariants; the contents constitute the state. 37 marks over 7 physical kinds shown at 96px and 32px on Dark Ground (#14110d, ink #ece6dc) and Paper Ground (#f7f4ee, ink #1b1f2a).</p>
+</header>
+
+<div class="kind-section">
+  <div class="kind-header">
+    <div class="kind-title">Body Family (10 marks)</div>
+    <p class="kind-desc">A compact closed vessel, fitting, or discrete payload. Ends are closed (rounded) denoting self-containment, except when mounted inline on a process conduit.</p>
+    <div class="kind-meta">
+      <div><strong>Contents:</strong> Carries the payload or evaluated state value. An empty lumen is an operational envelope; a filled lumen holds the discrete data payload.</div>
+      <div><strong>Ends:</strong> Closed rounded ends (stroke-linecap: round) for independent bodies; square cut ends (butt) for continuous conduit interfaces.</div>
+      <div><strong>Invariance:</strong> The central lumen axis and outer casing envelope remain invariant; morphs modulate internal fluid fill or boundary scale smoothly.</div>
+    </div>
+  </div>
+  <div class="grid">
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">box</span>
+        <span class="badge">body &middot; run</span>
+      </div>
+      <p class="reason">An operational execution chamber: a horizontal closed vessel of unit length with collar stops at both ends.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 24 48 L 72 48" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 28 48 L 30 48 M 66 48 L 68 48" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 24 48 L 72 48" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 24 48 L 72 48" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 28 48 L 30 48 M 66 48 L 68 48" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 24 48 L 72 48" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 24 48 L 72 48" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 28 48 L 30 48 M 66 48 L 68 48" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 24 48 L 72 48" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 24 48 L 72 48" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 28 48 L 30 48 M 66 48 L 68 48" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 24 48 L 72 48" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> call (which has double sleeve collars) and filledBox (which carries fluid throughout).</div>
+        <div><strong>Turns into:</strong> Fills with a fluid pill upon completion (value) or discharges into a cross failure slug.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">value</span>
+        <span class="badge">body &middot; succeed</span>
+      </div>
+      <p class="reason">A produced result on the success wire: a conduit with cut inlet and rounded outlet holding a fluid pill at its exit.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 16 48 L 76 48" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 16 48 L 76 48" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 52 48 L 70 48" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 16 48 L 76 48" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 16 48 L 76 48" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 52 48 L 70 48" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 16 48 L 76 48" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 16 48 L 76 48" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 52 48 L 70 48" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 16 48 L 76 48" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 16 48 L 76 48" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 52 48 L 70 48" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> box (both ends closed) and filledDot (isolated circular loop vessel without transmission stem).</div>
+        <div><strong>Turns into:</strong> Docks into a continuation hole or discharges into a downstream series conduit.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">call</span>
+        <span class="badge">body &middot; invoke</span>
+      </div>
+      <p class="reason">An external subroutine invocation: a closed cylindrical vessel fitted with twin sleeve collars at each end.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 20 48 L 76 48" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 26 48 L 27 48 M 34 48 L 35 48 M 61 48 L 62 48 M 69 48 L 70 48" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 20 48 L 76 48" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 20 48 L 76 48" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 26 48 L 27 48 M 34 48 L 35 48 M 61 48 L 62 48 M 69 48 L 70 48" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 20 48 L 76 48" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 20 48 L 76 48" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 26 48 L 27 48 M 34 48 L 35 48 M 61 48 L 62 48 M 69 48 L 70 48" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 20 48 L 76 48" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 20 48 L 76 48" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 26 48 L 27 48 M 34 48 L 35 48 M 61 48 L 62 48 M 69 48 L 70 48" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 20 48 L 76 48" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> box (single/no collar) and library (multi-port distribution header).</div>
+        <div><strong>Turns into:</strong> Morphs into box upon inline expansion, or resolves to a value result.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">cross</span>
+        <span class="badge">body &middot; fail</span>
+      </div>
+      <p class="reason">A typed failure reason: a 4-way diagonal cross fitting (X) with rounded ends and fluid core obstruction.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 26 26 L 70 70 M 26 70 L 70 26" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 26 26 L 70 70 M 26 70 L 70 26" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 44 44 L 52 52 M 44 52 L 52 44" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 26 26 L 70 70 M 26 70 L 70 26" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 26 26 L 70 70 M 26 70 L 70 26" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 44 44 L 52 52 M 44 52 L 52 44" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 26 26 L 70 70 M 26 70 L 70 26" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 26 26 L 70 70 M 26 70 L 70 26" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 44 44 L 52 52 M 44 52 L 52 44" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 26 26 L 70 70 M 26 70 L 70 26" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 26 26 L 70 70 M 26 70 L 70 26" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 44 44 L 52 52 M 44 52 L 52 44" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> hash (2x2 grid lattice) and blockedArrow (orthogonal tee stop).</div>
+        <div><strong>Turns into:</strong> Absorbed into catchCause handler or concatenated into reasons list.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">hash</span>
+        <span class="badge">body &middot; die</span>
+      </div>
+      <p class="reason">An untyped defect: a dense 2x2 grid manifold (#) of intersecting tubes with rounded closed ends.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 35 18 L 35 78 M 61 18 L 61 78 M 18 35 L 78 35 M 18 61 L 78 61" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 35 18 L 35 78 M 61 18 L 61 78 M 18 35 L 78 35 M 18 61 L 78 61" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 35 24 L 35 72 M 61 24 L 61 72 M 24 35 L 72 35 M 24 61 L 72 61" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 35 18 L 35 78 M 61 18 L 61 78 M 18 35 L 78 35 M 18 61 L 78 61" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 35 18 L 35 78 M 61 18 L 61 78 M 18 35 L 78 35 M 18 61 L 78 61" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 35 24 L 35 72 M 61 24 L 61 72 M 24 35 L 72 35 M 24 61 L 72 61" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 35 18 L 35 78 M 61 18 L 61 78 M 18 35 L 78 35 M 18 61 L 78 61" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 35 18 L 35 78 M 61 18 L 61 78 M 18 35 L 78 35 M 18 61 L 78 61" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 35 24 L 35 72 M 61 24 L 61 72 M 24 35 L 72 35 M 24 61 L 72 61" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 35 18 L 35 78 M 61 18 L 61 78 M 18 35 L 78 35 M 18 61 L 78 61" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 35 18 L 35 78 M 61 18 L 61 78 M 18 35 L 78 35 M 18 61 L 78 61" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 35 24 L 35 72 M 61 24 L 61 72 M 24 35 L 72 35 M 24 61 L 72 61" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> cross (single diagonal X intersection) and panel (rectangular vertical shelf rack).</div>
+        <div><strong>Turns into:</strong> Concatenated into reasons or terminates fiber directly at exitBar.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">reasons</span>
+        <span class="badge">body &middot; combine</span>
+      </div>
+      <p class="reason">An aggregated cause: a horizontal segmented tube holding an ordered train of distinct slugs with menisci.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 14 48 L 82 48" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 14 48 L 82 48" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 22 48 L 34 48 M 42 48 L 54 48 M 62 48 L 74 48" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 14 48 L 82 48" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 14 48 L 82 48" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 22 48 L 34 48 M 42 48 L 54 48 M 62 48 L 74 48" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 14 48 L 82 48" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 14 48 L 82 48" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 22 48 L 34 48 M 42 48 L 54 48 M 62 48 L 74 48" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 14 48 L 82 48" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 14 48 L 82 48" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 22 48 L 34 48 M 42 48 L 54 48 M 62 48 L 74 48" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> cells (which holds value units in open compartments) and series (which has empty lumen).</div>
+        <div><strong>Turns into:</strong> Appended in order to the exitBar upon fiber termination.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">enter</span>
+        <span class="badge">body &middot; enter</span>
+      </div>
+      <p class="reason">Fiber loop entry: a forward-pointing chevron nozzle (>) with rounded apex and fluid charge along flow axis.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 24 26 L 44 41 A 18 18 0 0 1 44 55 L 24 70" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 24 26 L 44 41 A 18 18 0 0 1 44 55 L 24 70" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 30 30 L 44 41 A 18 18 0 0 1 44 55 L 30 66" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 24 26 L 44 41 A 18 18 0 0 1 44 55 L 24 70" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 24 26 L 44 41 A 18 18 0 0 1 44 55 L 24 70" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 30 30 L 44 41 A 18 18 0 0 1 44 55 L 30 66" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 24 26 L 44 41 A 18 18 0 0 1 44 55 L 24 70" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 24 26 L 44 41 A 18 18 0 0 1 44 55 L 24 70" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 30 30 L 44 41 A 18 18 0 0 1 44 55 L 30 66" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 24 26 L 44 41 A 18 18 0 0 1 44 55 L 24 70" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 24 26 L 44 41 A 18 18 0 0 1 44 55 L 24 70" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 30 30 L 44 41 A 18 18 0 0 1 44 55 L 30 66" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> arrow (which descends diagonally across lanes) and loop (which recirculates backward).</div>
+        <div><strong>Turns into:</strong> Transitions into active running wire (series) or yields turn at rest.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">probe</span>
+        <span class="badge">body &middot; read</span>
+      </div>
+      <p class="reason">Diagnostic state reading: an instrument takeoff loop tap branching upward from an inline pipe collar.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 14 68 L 82 68" stroke-width="22" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-wall" d="M 48 68 L 48 44 A 18 18 0 1 1 54 44 L 54 68" stroke-width="18" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 46 68 L 56 68" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 14 68 L 82 68" stroke-width="16" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 48 68 L 48 44 A 18 18 0 1 1 54 44 L 54 68" stroke-width="12" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 14 68 L 82 68" stroke-width="22" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-wall" d="M 48 68 L 48 44 A 18 18 0 1 1 54 44 L 54 68" stroke-width="18" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 46 68 L 56 68" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 14 68 L 82 68" stroke-width="16" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 48 68 L 48 44 A 18 18 0 1 1 54 44 L 54 68" stroke-width="12" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 14 68 L 82 68" stroke-width="22" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-wall" d="M 48 68 L 48 44 A 18 18 0 1 1 54 44 L 54 68" stroke-width="18" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 46 68 L 56 68" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 14 68 L 82 68" stroke-width="16" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 48 68 L 48 44 A 18 18 0 1 1 54 44 L 54 68" stroke-width="12" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 14 68 L 82 68" stroke-width="22" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-wall" d="M 48 68 L 48 44 A 18 18 0 1 1 54 44 L 54 68" stroke-width="18" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 46 68 L 56 68" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 14 68 L 82 68" stroke-width="16" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 48 68 L 48 44 A 18 18 0 1 1 54 44 L 54 68" stroke-width="12" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> loop (which recirculates main process flow) and port (which crosses host boundary).</div>
+        <div><strong>Turns into:</strong> Yields an evaluated value reflecting the inspected runtime cell.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">tag</span>
+        <span class="badge">body &middot; handle</span>
+      </div>
+      <p class="reason">Machine store handle: a pipe collar clamp anchoring a hanging identification tag stem with an eyelet ring.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 16 38 L 80 38" stroke-width="22" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-wall" d="M 48 38 L 48 58 A 15 15 0 1 0 48 78 L 48 58" stroke-width="18" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 44 38 L 52 38" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 16 38 L 80 38" stroke-width="16" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 48 38 L 48 58 A 15 15 0 1 0 48 78 L 48 58" stroke-width="12" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 16 38 L 80 38" stroke-width="22" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-wall" d="M 48 38 L 48 58 A 15 15 0 1 0 48 78 L 48 58" stroke-width="18" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 44 38 L 52 38" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 16 38 L 80 38" stroke-width="16" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 48 38 L 48 58 A 15 15 0 1 0 48 78 L 48 58" stroke-width="12" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 16 38 L 80 38" stroke-width="22" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-wall" d="M 48 38 L 48 58 A 15 15 0 1 0 48 78 L 48 58" stroke-width="18" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 44 38 L 52 38" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 16 38 L 80 38" stroke-width="16" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 48 38 L 48 58 A 15 15 0 1 0 48 78 L 48 58" stroke-width="12" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 16 38 L 80 38" stroke-width="22" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-wall" d="M 48 38 L 48 58 A 15 15 0 1 0 48 78 L 48 58" stroke-width="18" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 44 38 L 52 38" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 16 38 L 80 38" stroke-width="16" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 48 38 L 48 58 A 15 15 0 1 0 48 78 L 48 58" stroke-width="12" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> probe (which is a hollow sensing tap) and atom (vertical standalone standpipe).</div>
+        <div><strong>Turns into:</strong> Dereferences to store payload or dissolves on deallocation.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">atom</span>
+        <span class="badge">body &middot; literal</span>
+      </div>
+      <p class="reason">An immutable scalar literal: a vertical calibration standpipe / sight glass sealed with rounded caps.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 48 18 L 48 78" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 48 18 L 48 78" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 48 30 L 48 66" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 48 18 L 48 78" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 48 18 L 48 78" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 48 30 L 48 66" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 48 18 L 48 78" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 48 18 L 48 78" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 48 30 L 48 66" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 48 18 L 48 78" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 48 18 L 48 78" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 48 30 L 48 66" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> barLine (which traverses all staves with cut ends) and tag (hanging collar tether).</div>
+        <div><strong>Turns into:</strong> Bound into an operation value or passed directly to downstream consumer.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="kind-section">
+  <div class="kind-header">
+    <div class="kind-title">Vessel Family (6 marks)</div>
+    <p class="kind-desc">A bistable containment chamber governed by promise and fulfillment. Always sealed with rounded closed heads.</p>
+    <div class="kind-meta">
+      <div><strong>Contents:</strong> Empty lumen indicates a promise owed (park token, task, finalizer); filled fluid pill indicates promise fulfilled.</div>
+      <div><strong>Ends:</strong> Always rounded closed heads (stroke-linecap: round), signifying pressure-retaining chambers.</div>
+      <div><strong>Invariance:</strong> The chamber envelope and axis remain static; fulfillment changes fluid fill from zero to 100% in place.</div>
+    </div>
+  </div>
+  <div class="grid">
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">hollowBox</span>
+        <span class="badge">vessel &middot; park</span>
+      </div>
+      <p class="reason">An unfilled promise / queued token: a closed rectangular loop vessel displaying empty lumen.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 32 26 L 64 26 A 18 18 0 0 1 82 44 L 82 52 A 18 18 0 0 1 64 70 L 32 70 A 18 18 0 0 1 14 52 L 14 44 A 18 18 0 0 1 32 26 Z" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 32 26 L 64 26 A 18 18 0 0 1 82 44 L 82 52 A 18 18 0 0 1 64 70 L 32 70 A 18 18 0 0 1 14 52 L 14 44 A 18 18 0 0 1 32 26 Z" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 32 26 L 64 26 A 18 18 0 0 1 82 44 L 82 52 A 18 18 0 0 1 64 70 L 32 70 A 18 18 0 0 1 14 52 L 14 44 A 18 18 0 0 1 32 26 Z" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 32 26 L 64 26 A 18 18 0 0 1 82 44 L 82 52 A 18 18 0 0 1 64 70 L 32 70 A 18 18 0 0 1 14 52 L 14 44 A 18 18 0 0 1 32 26 Z" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 32 26 L 64 26 A 18 18 0 0 1 82 44 L 82 52 A 18 18 0 0 1 64 70 L 32 70 A 18 18 0 0 1 14 52 L 14 44 A 18 18 0 0 1 32 26 Z" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 32 26 L 64 26 A 18 18 0 0 1 82 44 L 82 52 A 18 18 0 0 1 64 70 L 32 70 A 18 18 0 0 1 14 52 L 14 44 A 18 18 0 0 1 32 26 Z" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 32 26 L 64 26 A 18 18 0 0 1 82 44 L 82 52 A 18 18 0 0 1 64 70 L 32 70 A 18 18 0 0 1 14 52 L 14 44 A 18 18 0 0 1 32 26 Z" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 32 26 L 64 26 A 18 18 0 0 1 82 44 L 82 52 A 18 18 0 0 1 64 70 L 32 70 A 18 18 0 0 1 14 52 L 14 44 A 18 18 0 0 1 32 26 Z" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> filledBox (fluid-filled) and hollowDot (single-unit circular loop).</div>
+        <div><strong>Turns into:</strong> filledBox upon resumption or task dispatch (in-place fill transition).</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">filledBox</span>
+        <span class="badge">vessel &middot; resume</span>
+      </div>
+      <p class="reason">A fulfilled promise / executed task: the identical closed loop vessel filled solid with fluid throughout.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 32 26 L 64 26 A 18 18 0 0 1 82 44 L 82 52 A 18 18 0 0 1 64 70 L 32 70 A 18 18 0 0 1 14 52 L 14 44 A 18 18 0 0 1 32 26 Z" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 32 26 L 64 26 A 18 18 0 0 1 82 44 L 82 52 A 18 18 0 0 1 64 70 L 32 70 A 18 18 0 0 1 14 52 L 14 44 A 18 18 0 0 1 32 26 Z" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 32 26 L 64 26 A 18 18 0 0 1 82 44 L 82 52 A 18 18 0 0 1 64 70 L 32 70 A 18 18 0 0 1 14 52 L 14 44 A 18 18 0 0 1 32 26 Z" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 32 26 L 64 26 A 18 18 0 0 1 82 44 L 82 52 A 18 18 0 0 1 64 70 L 32 70 A 18 18 0 0 1 14 52 L 14 44 A 18 18 0 0 1 32 26 Z" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 32 26 L 64 26 A 18 18 0 0 1 82 44 L 82 52 A 18 18 0 0 1 64 70 L 32 70 A 18 18 0 0 1 14 52 L 14 44 A 18 18 0 0 1 32 26 Z" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 32 26 L 64 26 A 18 18 0 0 1 82 44 L 82 52 A 18 18 0 0 1 64 70 L 32 70 A 18 18 0 0 1 14 52 L 14 44 A 18 18 0 0 1 32 26 Z" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 32 26 L 64 26 A 18 18 0 0 1 82 44 L 82 52 A 18 18 0 0 1 64 70 L 32 70 A 18 18 0 0 1 14 52 L 14 44 A 18 18 0 0 1 32 26 Z" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 32 26 L 64 26 A 18 18 0 0 1 82 44 L 82 52 A 18 18 0 0 1 64 70 L 32 70 A 18 18 0 0 1 14 52 L 14 44 A 18 18 0 0 1 32 26 Z" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 32 26 L 64 26 A 18 18 0 0 1 82 44 L 82 52 A 18 18 0 0 1 64 70 L 32 70 A 18 18 0 0 1 14 52 L 14 44 A 18 18 0 0 1 32 26 Z" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 32 26 L 64 26 A 18 18 0 0 1 82 44 L 82 52 A 18 18 0 0 1 64 70 L 32 70 A 18 18 0 0 1 14 52 L 14 44 A 18 18 0 0 1 32 26 Z" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 32 26 L 64 26 A 18 18 0 0 1 82 44 L 82 52 A 18 18 0 0 1 64 70 L 32 70 A 18 18 0 0 1 14 52 L 14 44 A 18 18 0 0 1 32 26 Z" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 32 26 L 64 26 A 18 18 0 0 1 82 44 L 82 52 A 18 18 0 0 1 64 70 L 32 70 A 18 18 0 0 1 14 52 L 14 44 A 18 18 0 0 1 32 26 Z" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> hollowBox (empty lumen) and box (horizontal process cylinder with collars).</div>
+        <div><strong>Turns into:</strong> Dissolves as resumed fiber continues execution.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">hollowDot</span>
+        <span class="badge">vessel &middot; on exit</span>
+      </div>
+      <p class="reason">A registered finalizer / unresolved deferred: a circular loop vessel showing a fluid rim around an empty lumen core.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 48 28 A 20 20 0 1 1 47.9 28 Z" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 48 28 A 20 20 0 1 1 47.9 28 Z" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 48 28 A 20 20 0 1 1 47.9 28 Z" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-hollow" d="M 48 28 A 20 20 0 1 1 47.9 28 Z" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 48 28 A 20 20 0 1 1 47.9 28 Z" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 48 28 A 20 20 0 1 1 47.9 28 Z" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 48 28 A 20 20 0 1 1 47.9 28 Z" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-hollow" d="M 48 28 A 20 20 0 1 1 47.9 28 Z" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 48 28 A 20 20 0 1 1 47.9 28 Z" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 48 28 A 20 20 0 1 1 47.9 28 Z" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 48 28 A 20 20 0 1 1 47.9 28 Z" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-hollow" d="M 48 28 A 20 20 0 1 1 47.9 28 Z" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 48 28 A 20 20 0 1 1 47.9 28 Z" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 48 28 A 20 20 0 1 1 47.9 28 Z" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 48 28 A 20 20 0 1 1 47.9 28 Z" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-hollow" d="M 48 28 A 20 20 0 1 1 47.9 28 Z" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> filledDot (fluid-filled lumen) and hole (slotted U-receptacle).</div>
+        <div><strong>Turns into:</strong> filledDot when finalizer executes or deferred resolves.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">filledDot</span>
+        <span class="badge">vessel &middot; finalize</span>
+      </div>
+      <p class="reason">An executed finalizer / fulfilled promise: the identical circular loop vessel with lumen filled solid.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 48 28 A 20 20 0 1 1 47.9 28 Z" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 48 28 A 20 20 0 1 1 47.9 28 Z" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 48 28 A 20 20 0 1 1 47.9 28 Z" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 48 28 A 20 20 0 1 1 47.9 28 Z" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 48 28 A 20 20 0 1 1 47.9 28 Z" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 48 28 A 20 20 0 1 1 47.9 28 Z" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 48 28 A 20 20 0 1 1 47.9 28 Z" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 48 28 A 20 20 0 1 1 47.9 28 Z" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 48 28 A 20 20 0 1 1 47.9 28 Z" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 48 28 A 20 20 0 1 1 47.9 28 Z" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 48 28 A 20 20 0 1 1 47.9 28 Z" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 48 28 A 20 20 0 1 1 47.9 28 Z" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> hollowDot (hollow rim) and value (conduit with exit stem).</div>
+        <div><strong>Turns into:</strong> Fades out upon enclosing scope completion.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">hole</span>
+        <span class="badge">vessel &middot; continue</span>
+      </div>
+      <p class="reason">Continuation return receptacle: a deep U-socket with open cut top awaiting return of evaluated result.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 28 20 L 28 48 A 20 20 0 0 0 68 48 L 68 20" stroke-width="22" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 28 20 L 28 48 A 20 20 0 0 0 68 48 L 68 20" stroke-width="16" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 28 20 L 28 48 A 20 20 0 0 0 68 48 L 68 20" stroke-width="22" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 28 20 L 28 48 A 20 20 0 0 0 68 48 L 68 20" stroke-width="16" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 28 20 L 28 48 A 20 20 0 0 0 68 48 L 68 20" stroke-width="22" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 28 20 L 28 48 A 20 20 0 0 0 68 48 L 68 20" stroke-width="16" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 28 20 L 28 48 A 20 20 0 0 0 68 48 L 68 20" stroke-width="22" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 28 20 L 28 48 A 20 20 0 0 0 68 48 L 68 20" stroke-width="16" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> slot (shallow low shelf tray) and hollowBox (fully enclosed loop).</div>
+        <div><strong>Turns into:</strong> Fills with returning value when frame pops (FrameEvent.popped).</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">slot</span>
+        <span class="badge">vessel &middot; option</span>
+      </div>
+      <p class="reason">An optional value container (some/none): a shallow horizontal U-tray holding a resting unit or empty.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 18 36 L 18 52 A 16 16 0 0 0 34 68 L 62 68 A 16 16 0 0 0 78 52 L 78 36" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 18 36 L 18 52 A 16 16 0 0 0 34 68 L 62 68 A 16 16 0 0 0 78 52 L 78 36" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 34 62 L 62 62" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 18 36 L 18 52 A 16 16 0 0 0 34 68 L 62 68 A 16 16 0 0 0 78 52 L 78 36" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 18 36 L 18 52 A 16 16 0 0 0 34 68 L 62 68 A 16 16 0 0 0 78 52 L 78 36" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 34 62 L 62 62" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 18 36 L 18 52 A 16 16 0 0 0 34 68 L 62 68 A 16 16 0 0 0 78 52 L 78 36" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 18 36 L 18 52 A 16 16 0 0 0 34 68 L 62 68 A 16 16 0 0 0 78 52 L 78 36" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 34 62 L 62 62" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 18 36 L 18 52 A 16 16 0 0 0 34 68 L 62 68 A 16 16 0 0 0 78 52 L 78 36" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 18 36 L 18 52 A 16 16 0 0 0 34 68 L 62 68 A 16 16 0 0 0 78 52 L 78 36" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 34 62 L 62 62" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> hole (deep vertical frame socket) and bracket (tall vertical enclosure).</div>
+        <div><strong>Turns into:</strong> Empty tray fills with unit upon some write.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="kind-section">
+  <div class="kind-header">
+    <div class="kind-title">Container Family (8 marks)</div>
+    <p class="kind-desc">An outer casing jacket, manifold header, or dual-conduit enclosure bounding an internal operational volume.</p>
+    <div class="kind-meta">
+      <div><strong>Contents:</strong> Defines an enclosed scope, environment, or compound data structure; carries child elements within boundary.</div>
+      <div><strong>Ends:</strong> Cut ends where enclosing continuous spans; flanged elbows where enclosing modular perimeters.</div>
+      <div><strong>Invariance:</strong> Enclosure maintains boundary integrity while internal contents register, execute, and deallocate.</div>
+    </div>
+  </div>
+  <div class="grid">
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">block</span>
+        <span class="badge">container &middot; generate</span>
+      </div>
+      <p class="reason">A sequential statement block: a serpentine 3-pass horizontal tube bank connected by 180° bends.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 18 26 L 62 26 A 16 16 0 0 1 78 42 L 78 44 A 16 16 0 0 1 62 60 L 34 60 A 16 16 0 0 0 18 76 L 78 76" stroke-width="18" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 18 26 L 62 26 A 16 16 0 0 1 78 42 L 78 44 A 16 16 0 0 1 62 60 L 34 60 A 16 16 0 0 0 18 76 L 78 76" stroke-width="12" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 18 26 L 62 26 A 16 16 0 0 1 78 42 L 78 44 A 16 16 0 0 1 62 60 L 34 60 A 16 16 0 0 0 18 76 L 78 76" stroke-width="18" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 18 26 L 62 26 A 16 16 0 0 1 78 42 L 78 44 A 16 16 0 0 1 62 60 L 34 60 A 16 16 0 0 0 18 76 L 78 76" stroke-width="12" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 18 26 L 62 26 A 16 16 0 0 1 78 42 L 78 44 A 16 16 0 0 1 62 60 L 34 60 A 16 16 0 0 0 18 76 L 78 76" stroke-width="18" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 18 26 L 62 26 A 16 16 0 0 1 78 42 L 78 44 A 16 16 0 0 1 62 60 L 34 60 A 16 16 0 0 0 18 76 L 78 76" stroke-width="12" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 18 26 L 62 26 A 16 16 0 0 1 78 42 L 78 44 A 16 16 0 0 1 62 60 L 34 60 A 16 16 0 0 0 18 76 L 78 76" stroke-width="18" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 18 26 L 62 26 A 16 16 0 0 1 78 42 L 78 44 A 16 16 0 0 1 62 60 L 34 60 A 16 16 0 0 0 18 76 L 78 76" stroke-width="12" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> panel (grid compartments) and series (single straight wire).</div>
+        <div><strong>Turns into:</strong> Straightens or dissolves as statement generation completes.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">region</span>
+        <span class="badge">container &middot; provide</span>
+      </div>
+      <p class="reason">An environmental provider (context/layer): four 90° elbow tube corners framing an enclosure perimeter.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 38 18 L 26 18 A 16 16 0 0 0 10 34 L 10 46 M 58 78 L 70 78 A 16 16 0 0 0 86 62 L 86 50 M 58 18 L 70 18 A 16 16 0 0 1 86 34 L 86 46 M 38 78 L 26 78 A 16 16 0 0 1 10 62 L 10 50" stroke-width="18" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 38 18 L 26 18 A 16 16 0 0 0 10 34 L 10 46 M 58 78 L 70 78 A 16 16 0 0 0 86 62 L 86 50 M 58 18 L 70 18 A 16 16 0 0 1 86 34 L 86 46 M 38 78 L 26 78 A 16 16 0 0 1 10 62 L 10 50" stroke-width="12" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 38 18 L 26 18 A 16 16 0 0 0 10 34 L 10 46 M 58 78 L 70 78 A 16 16 0 0 0 86 62 L 86 50 M 58 18 L 70 18 A 16 16 0 0 1 86 34 L 86 46 M 38 78 L 26 78 A 16 16 0 0 1 10 62 L 10 50" stroke-width="18" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 38 18 L 26 18 A 16 16 0 0 0 10 34 L 10 46 M 58 78 L 70 78 A 16 16 0 0 0 86 62 L 86 50 M 58 18 L 70 18 A 16 16 0 0 1 86 34 L 86 46 M 38 78 L 26 78 A 16 16 0 0 1 10 62 L 10 50" stroke-width="12" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 38 18 L 26 18 A 16 16 0 0 0 10 34 L 10 46 M 58 78 L 70 78 A 16 16 0 0 0 86 62 L 86 50 M 58 18 L 70 18 A 16 16 0 0 1 86 34 L 86 46 M 38 78 L 26 78 A 16 16 0 0 1 10 62 L 10 50" stroke-width="18" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 38 18 L 26 18 A 16 16 0 0 0 10 34 L 10 46 M 58 78 L 70 78 A 16 16 0 0 0 86 62 L 86 50 M 58 18 L 70 18 A 16 16 0 0 1 86 34 L 86 46 M 38 78 L 26 78 A 16 16 0 0 1 10 62 L 10 50" stroke-width="12" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 38 18 L 26 18 A 16 16 0 0 0 10 34 L 10 46 M 58 78 L 70 78 A 16 16 0 0 0 86 62 L 86 50 M 58 18 L 70 18 A 16 16 0 0 1 86 34 L 86 46 M 38 78 L 26 78 A 16 16 0 0 1 10 62 L 10 50" stroke-width="18" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 38 18 L 26 18 A 16 16 0 0 0 10 34 L 10 46 M 58 78 L 70 78 A 16 16 0 0 0 86 62 L 86 50 M 58 18 L 70 18 A 16 16 0 0 1 86 34 L 86 46 M 38 78 L 26 78 A 16 16 0 0 1 10 62 L 10 50" stroke-width="12" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> bracket (paired vertical hooks) and rail (continuous horizontal double conduit).</div>
+        <div><strong>Turns into:</strong> Contracts and dissolves when provided context is closed.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">bracket</span>
+        <span class="badge">container &middot; scope</span>
+      </div>
+      <p class="reason">A closed resource scope: a pair of opposing C-channel tube hooks with rounded ends enclosing resources.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 36 20 L 26 20 A 18 18 0 0 0 8 38 L 8 58 A 18 18 0 0 0 26 76 L 36 76 M 60 20 L 70 20 A 18 18 0 0 1 88 38 L 88 58 A 18 18 0 0 1 70 76 L 60 76" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 36 20 L 26 20 A 18 18 0 0 0 8 38 L 8 58 A 18 18 0 0 0 26 76 L 36 76 M 60 20 L 70 20 A 18 18 0 0 1 88 38 L 88 58 A 18 18 0 0 1 70 76 L 60 76" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 36 20 L 26 20 A 18 18 0 0 0 8 38 L 8 58 A 18 18 0 0 0 26 76 L 36 76 M 60 20 L 70 20 A 18 18 0 0 1 88 38 L 88 58 A 18 18 0 0 1 70 76 L 60 76" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 36 20 L 26 20 A 18 18 0 0 0 8 38 L 8 58 A 18 18 0 0 0 26 76 L 36 76 M 60 20 L 70 20 A 18 18 0 0 1 88 38 L 88 58 A 18 18 0 0 1 70 76 L 60 76" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 36 20 L 26 20 A 18 18 0 0 0 8 38 L 8 58 A 18 18 0 0 0 26 76 L 36 76 M 60 20 L 70 20 A 18 18 0 0 1 88 38 L 88 58 A 18 18 0 0 1 70 76 L 60 76" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 36 20 L 26 20 A 18 18 0 0 0 8 38 L 8 58 A 18 18 0 0 0 26 76 L 36 76 M 60 20 L 70 20 A 18 18 0 0 1 88 38 L 88 58 A 18 18 0 0 1 70 76 L 60 76" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 36 20 L 26 20 A 18 18 0 0 0 8 38 L 8 58 A 18 18 0 0 0 26 76 L 36 76 M 60 20 L 70 20 A 18 18 0 0 1 88 38 L 88 58 A 18 18 0 0 1 70 76 L 60 76" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 36 20 L 26 20 A 18 18 0 0 0 8 38 L 8 58 A 18 18 0 0 0 26 76 L 36 76 M 60 20 L 70 20 A 18 18 0 0 1 88 38 L 88 58 A 18 18 0 0 1 70 76 L 60 76" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> openBracket (unclosed trailing conduit) and rail (continuous parallel tracks).</div>
+        <div><strong>Turns into:</strong> Opens and releases finalizers upon scope exit.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">openBracket</span>
+        <span class="badge">container &middot; hold</span>
+      </div>
+      <p class="reason">An unclosed scope with close owed: leading C-channel hook on left with open horizontal trailing conduit.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 36 20 L 26 20 A 18 18 0 0 0 8 38 L 8 58 A 18 18 0 0 0 26 76 L 36 76" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-wall" d="M 48 48 L 88 48" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 36 20 L 26 20 A 18 18 0 0 0 8 38 L 8 58 A 18 18 0 0 0 26 76 L 36 76" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 48 48 L 88 48" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 36 20 L 26 20 A 18 18 0 0 0 8 38 L 8 58 A 18 18 0 0 0 26 76 L 36 76" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-wall" d="M 48 48 L 88 48" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 36 20 L 26 20 A 18 18 0 0 0 8 38 L 8 58 A 18 18 0 0 0 26 76 L 36 76" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 48 48 L 88 48" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 36 20 L 26 20 A 18 18 0 0 0 8 38 L 8 58 A 18 18 0 0 0 26 76 L 36 76" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-wall" d="M 48 48 L 88 48" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 36 20 L 26 20 A 18 18 0 0 0 8 38 L 8 58 A 18 18 0 0 0 26 76 L 36 76" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 48 48 L 88 48" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 36 20 L 26 20 A 18 18 0 0 0 8 38 L 8 58 A 18 18 0 0 0 26 76 L 36 76" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-wall" d="M 48 48 L 88 48" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 36 20 L 26 20 A 18 18 0 0 0 8 38 L 8 58 A 18 18 0 0 0 26 76 L 36 76" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 48 48 L 88 48" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> bracket (both hooks closed) and series (no vertical hook).</div>
+        <div><strong>Turns into:</strong> bracket when closing exit arrives.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">rail</span>
+        <span class="badge">container &middot; mask</span>
+      </div>
+      <p class="reason">An uninterruptible span: two parallel straight armoured conduits running with uniform clearance.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 10 36 L 86 36 M 10 60 L 86 60" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 10 36 L 86 36 M 10 60 L 86 60" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 10 36 L 86 36 M 10 60 L 86 60" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 10 36 L 86 36 M 10 60 L 86 60" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 10 36 L 86 36 M 10 60 L 86 60" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 10 36 L 86 36 M 10 60 L 86 60" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 10 36 L 86 36 M 10 60 L 86 60" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 10 36 L 86 36 M 10 60 L 86 60" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> parallel (divergent branching conduits) and series (single conduit).</div>
+        <div><strong>Turns into:</strong> Collapses to single conduit upon unmasking.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">library</span>
+        <span class="badge">container &middot; define</span>
+      </div>
+      <p class="reason">A module definition block: a distribution header tube branching into two parallel capped distribution legs.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 20 28 L 76 28 M 32 28 L 32 72 M 64 28 L 64 72" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 20 28 L 76 28 M 32 28 L 32 72 M 64 28 L 64 72" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 20 28 L 76 28 M 32 28 L 32 72 M 64 28 L 64 72" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 20 28 L 76 28 M 32 28 L 32 72 M 64 28 L 64 72" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 20 28 L 76 28 M 32 28 L 32 72 M 64 28 L 64 72" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 20 28 L 76 28 M 32 28 L 32 72 M 64 28 L 64 72" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 20 28 L 76 28 M 32 28 L 32 72 M 64 28 L 64 72" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 20 28 L 76 28 M 32 28 L 32 72 M 64 28 L 64 72" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> box (single process chamber) and panel (shelf rack).</div>
+        <div><strong>Turns into:</strong> Spawns child invocation conduits on call.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">panel</span>
+        <span class="badge">container &middot; record</span>
+      </div>
+      <p class="reason">A structured record: a vertical header conduit branching into multiple horizontal capped shelves.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 24 18 L 24 78 M 24 28 L 76 28 M 24 48 L 76 48 M 24 68 L 76 68" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 24 18 L 24 78 M 24 28 L 76 28 M 24 48 L 76 48 M 24 68 L 76 68" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 24 18 L 24 78 M 24 28 L 76 28 M 24 48 L 76 48 M 24 68 L 76 68" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 24 18 L 24 78 M 24 28 L 76 28 M 24 48 L 76 48 M 24 68 L 76 68" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 24 18 L 24 78 M 24 28 L 76 28 M 24 48 L 76 48 M 24 68 L 76 68" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 24 18 L 24 78 M 24 28 L 76 28 M 24 48 L 76 48 M 24 68 L 76 68" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 24 18 L 24 78 M 24 28 L 76 28 M 24 48 L 76 48 M 24 68 L 76 68" stroke-width="18" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 24 18 L 24 78 M 24 28 L 76 28 M 24 48 L 76 48 M 24 68 L 76 68" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> cells (linear segmented tube) and library (header manifold).</div>
+        <div><strong>Turns into:</strong> Updated in place as field cells are modified.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">cells</span>
+        <span class="badge">container &middot; list</span>
+      </div>
+      <p class="reason">A list or tuple: a horizontal metering tube partitioned by internal collar rings into discrete compartments.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 12 48 L 84 48" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 35 48 L 37 48 M 59 48 L 61 48" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 12 48 L 84 48" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 20 48 L 28 48 M 44 48 L 52 48 M 68 48 L 76 48" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 12 48 L 84 48" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 35 48 L 37 48 M 59 48 L 61 48" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 12 48 L 84 48" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 20 48 L 28 48 M 44 48 L 52 48 M 68 48 L 76 48" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 12 48 L 84 48" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 35 48 L 37 48 M 59 48 L 61 48" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 12 48 L 84 48" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 20 48 L 28 48 M 44 48 L 52 48 M 68 48 L 76 48" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 12 48 L 84 48" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 35 48 L 37 48 M 59 48 L 61 48" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 12 48 L 84 48" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 20 48 L 28 48 M 44 48 L 52 48 M 68 48 L 76 48" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> reasons (which holds failure reasons) and panel (vertical shelf rack).</div>
+        <div><strong>Turns into:</strong> Extends or shortens as list items are added or removed.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="kind-section">
+  <div class="kind-header">
+    <div class="kind-title">Wire Family (5 marks)</div>
+    <p class="kind-desc">Continuous open process conduits routing fluid and establishing causal operational sequences.</p>
+    <div class="kind-meta">
+      <div><strong>Contents:</strong> Carries moving liquid units or transmits execution pressure between operational boxes.</div>
+      <div><strong>Ends:</strong> Cut square ends (butt) at connection interfaces, representing open flow continuity.</div>
+      <div><strong>Invariance:</strong> Maintains flow connectivity; morphs redirect branch angles or insert diversion plugs.</div>
+    </div>
+  </div>
+  <div class="grid">
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">series</span>
+        <span class="badge">wire &middot; bind</span>
+      </div>
+      <p class="reason">Sequential execution: a horizontal process conduit with a central directional venturi nozzle fitting.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 10 48 L 86 48" stroke-width="22" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 42 48 L 44 48 M 52 48 L 54 48" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 10 48 L 86 48" stroke-width="16" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 22 48 L 46 48" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 10 48 L 86 48" stroke-width="22" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 42 48 L 44 48 M 52 48 L 54 48" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 10 48 L 86 48" stroke-width="16" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 22 48 L 46 48" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 10 48 L 86 48" stroke-width="22" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 42 48 L 44 48 M 52 48 L 54 48" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 10 48 L 86 48" stroke-width="16" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 22 48 L 46 48" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 10 48 L 86 48" stroke-width="22" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 42 48 L 44 48 M 52 48 L 54 48" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 10 48 L 86 48" stroke-width="16" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 22 48 L 46 48" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> parallel (split conduit) and alternative (branching wye).</div>
+        <div><strong>Turns into:</strong> Dissolves into produced value or branches at an alternative.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">parallel</span>
+        <span class="badge">wire &middot; merge</span>
+      </div>
+      <p class="reason">Concurrent layer merge: a symmetric wye split branching into two parallel horizontal conduits.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 10 48 L 26 48 A 20 20 0 0 0 46 28 L 86 28 M 26 48 A 20 20 0 0 1 46 68 L 86 68" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 10 48 L 26 48 A 20 20 0 0 0 46 28 L 86 28 M 26 48 A 20 20 0 0 1 46 68 L 86 68" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 10 48 L 26 48 A 20 20 0 0 0 46 28 L 86 28 M 26 48 A 20 20 0 0 1 46 68 L 86 68" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 10 48 L 26 48 A 20 20 0 0 0 46 28 L 86 28 M 26 48 A 20 20 0 0 1 46 68 L 86 68" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 10 48 L 26 48 A 20 20 0 0 0 46 28 L 86 28 M 26 48 A 20 20 0 0 1 46 68 L 86 68" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 10 48 L 26 48 A 20 20 0 0 0 46 28 L 86 28 M 26 48 A 20 20 0 0 1 46 68 L 86 68" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 10 48 L 26 48 A 20 20 0 0 0 46 28 L 86 28 M 26 48 A 20 20 0 0 1 46 68 L 86 68" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 10 48 L 26 48 A 20 20 0 0 0 46 28 L 86 28 M 26 48 A 20 20 0 0 1 46 68 L 86 68" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> rail (protective jacket without branching) and series (single line).</div>
+        <div><strong>Turns into:</strong> Converges via inverted wye into single joint conduit.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">alternative</span>
+        <span class="badge">wire &middot; branch</span>
+      </div>
+      <p class="reason">A conditional branch: a 3-way diverter wye branching into two symmetric divergent arms with plug gate.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 10 48 L 30 48 A 20 20 0 0 0 50 28 L 84 18 M 30 48 A 20 20 0 0 1 50 68 L 84 78" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-plug" d="M 42 36 L 46 32" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 10 48 L 30 48 A 20 20 0 0 0 50 28 L 84 18 M 30 48 A 20 20 0 0 1 50 68 L 84 78" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 10 48 L 30 48 A 20 20 0 0 0 50 28 L 84 18 M 30 48 A 20 20 0 0 1 50 68 L 84 78" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-plug" d="M 42 36 L 46 32" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 10 48 L 30 48 A 20 20 0 0 0 50 28 L 84 18 M 30 48 A 20 20 0 0 1 50 68 L 84 78" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 10 48 L 30 48 A 20 20 0 0 0 50 28 L 84 18 M 30 48 A 20 20 0 0 1 50 68 L 84 78" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-plug" d="M 42 36 L 46 32" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 10 48 L 30 48 A 20 20 0 0 0 50 28 L 84 18 M 30 48 A 20 20 0 0 1 50 68 L 84 78" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 10 48 L 30 48 A 20 20 0 0 0 50 28 L 84 18 M 30 48 A 20 20 0 0 1 50 68 L 84 78" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-plug" d="M 42 36 L 46 32" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 10 48 L 30 48 A 20 20 0 0 0 50 28 L 84 18 M 30 48 A 20 20 0 0 1 50 68 L 84 78" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> parallel (both conduits active) and arrow (cross-lane fork).</div>
+        <div><strong>Turns into:</strong> Active arm carries fluid; untaken arm withers and empties.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">loop</span>
+        <span class="badge">wire &middot; loop</span>
+      </div>
+      <p class="reason">Iterative loop: a circular recirculation bypass line looping back 270° into the upstream collar inlet.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 12 64 L 84 64 M 66 64 L 66 46 A 18 18 0 0 0 48 28 L 46 28 A 18 18 0 0 0 28 46 L 28 64" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 26 64 L 30 64" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 12 64 L 84 64 M 66 64 L 66 46 A 18 18 0 0 0 48 28 L 46 28 A 18 18 0 0 0 28 46 L 28 64" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 12 64 L 84 64 M 66 64 L 66 46 A 18 18 0 0 0 48 28 L 46 28 A 18 18 0 0 0 28 46 L 28 64" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 26 64 L 30 64" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 12 64 L 84 64 M 66 64 L 66 46 A 18 18 0 0 0 48 28 L 46 28 A 18 18 0 0 0 28 46 L 28 64" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 12 64 L 84 64 M 66 64 L 66 46 A 18 18 0 0 0 48 28 L 46 28 A 18 18 0 0 0 28 46 L 28 64" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 26 64 L 30 64" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 12 64 L 84 64 M 66 64 L 66 46 A 18 18 0 0 0 48 28 L 46 28 A 18 18 0 0 0 28 46 L 28 64" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 12 64 L 84 64 M 66 64 L 66 46 A 18 18 0 0 0 48 28 L 46 28 A 18 18 0 0 0 28 46 L 28 64" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 26 64 L 30 64" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 12 64 L 84 64 M 66 64 L 66 46 A 18 18 0 0 0 48 28 L 46 28 A 18 18 0 0 0 28 46 L 28 64" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> probe (non-recirculating sensor tap) and series (straight flow).</div>
+        <div><strong>Turns into:</strong> Breaks out downstream upon loop termination.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">rest</span>
+        <span class="badge">wire &middot; yield</span>
+      </div>
+      <p class="reason">Fiber yield: a horizontal conduit with a central siphon trap / expansion dip retarder empty of fluid.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 10 36 L 28 36 A 18 18 0 0 1 46 54 L 50 54 A 18 18 0 0 0 68 36 L 86 36" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 10 36 L 28 36 A 18 18 0 0 1 46 54 L 50 54 A 18 18 0 0 0 68 36 L 86 36" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 10 36 L 28 36 A 18 18 0 0 1 46 54 L 50 54 A 18 18 0 0 0 68 36 L 86 36" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 10 36 L 28 36 A 18 18 0 0 1 46 54 L 50 54 A 18 18 0 0 0 68 36 L 86 36" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 10 36 L 28 36 A 18 18 0 0 1 46 54 L 50 54 A 18 18 0 0 0 68 36 L 86 36" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 10 36 L 28 36 A 18 18 0 0 1 46 54 L 50 54 A 18 18 0 0 0 68 36 L 86 36" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 10 36 L 28 36 A 18 18 0 0 1 46 54 L 50 54 A 18 18 0 0 0 68 36 L 86 36" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 10 36 L 28 36 A 18 18 0 0 1 46 54 L 50 54 A 18 18 0 0 0 68 36 L 86 36" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> series (straight unrestricted bore) and plug (complete solid obstruction).</div>
+        <div><strong>Turns into:</strong> Straightens to full-bore flow when turn is resumed.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="kind-section">
+  <div class="kind-header">
+    <div class="kind-title">Bond Family (3 marks)</div>
+    <p class="kind-desc">Topological bridges, takeoff elbows, and multi-port headers connecting distinct lifelines and staves.</p>
+    <div class="kind-meta">
+      <div><strong>Contents:</strong> Transmits child spawning, completion distribution, or host protocol signals across lane boundaries.</div>
+      <div><strong>Ends:</strong> Cut ends where penetrating boundary limits or interfacing with target fiber staves.</div>
+      <div><strong>Invariance:</strong> Source connection remains anchored while bridge conduit extends across spatial coordinates.</div>
+    </div>
+  </div>
+  <div class="grid">
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">arrow</span>
+        <span class="badge">bond &middot; fork</span>
+      </div>
+      <p class="reason">Fiber fork: a smooth S-curve branch tube descending southeastward from parent conduit to child conduit.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 10 24 L 86 24 M 36 24 A 20 20 0 0 1 56 44 L 56 52 A 20 20 0 0 0 76 72 L 86 72" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 34 24 L 38 24" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 10 24 L 86 24 M 36 24 A 20 20 0 0 1 56 44 L 56 52 A 20 20 0 0 0 76 72 L 86 72" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 10 24 L 86 24 M 36 24 A 20 20 0 0 1 56 44 L 56 52 A 20 20 0 0 0 76 72 L 86 72" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 34 24 L 38 24" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 10 24 L 86 24 M 36 24 A 20 20 0 0 1 56 44 L 56 52 A 20 20 0 0 0 76 72 L 86 72" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 10 24 L 86 24 M 36 24 A 20 20 0 0 1 56 44 L 56 52 A 20 20 0 0 0 76 72 L 86 72" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 34 24 L 38 24" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 10 24 L 86 24 M 36 24 A 20 20 0 0 1 56 44 L 56 52 A 20 20 0 0 0 76 72 L 86 72" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 10 24 L 86 24 M 36 24 A 20 20 0 0 1 56 44 L 56 52 A 20 20 0 0 0 76 72 L 86 72" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 34 24 L 38 24" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 10 24 L 86 24 M 36 24 A 20 20 0 0 1 56 44 L 56 52 A 20 20 0 0 0 76 72 L 86 72" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> spider (multi-port collector hub) and series (horizontal flow).</div>
+        <div><strong>Turns into:</strong> Withdrawn once child fiber loop entry occurs (enter).</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">spider</span>
+        <span class="badge">bond &middot; await</span>
+      </div>
+      <p class="reason">Completion wake distribution: a central manifold collector hub ring fanning out multiple radial distribution tubes.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 10 48 L 34 48 M 44 32 A 16 16 0 1 1 43.9 32 Z M 56 36 L 86 24 M 60 48 L 86 48 M 56 60 L 86 72" stroke-width="18" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 10 48 L 34 48 M 44 32 A 16 16 0 1 1 43.9 32 Z M 56 36 L 86 24 M 60 48 L 86 48 M 56 60 L 86 72" stroke-width="12" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 10 48 L 34 48 M 44 32 A 16 16 0 1 1 43.9 32 Z M 56 36 L 86 24 M 60 48 L 86 48 M 56 60 L 86 72" stroke-width="18" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 10 48 L 34 48 M 44 32 A 16 16 0 1 1 43.9 32 Z M 56 36 L 86 24 M 60 48 L 86 48 M 56 60 L 86 72" stroke-width="12" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 10 48 L 34 48 M 44 32 A 16 16 0 1 1 43.9 32 Z M 56 36 L 86 24 M 60 48 L 86 48 M 56 60 L 86 72" stroke-width="18" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 10 48 L 34 48 M 44 32 A 16 16 0 1 1 43.9 32 Z M 56 36 L 86 24 M 60 48 L 86 48 M 56 60 L 86 72" stroke-width="12" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 10 48 L 34 48 M 44 32 A 16 16 0 1 1 43.9 32 Z M 56 36 L 86 24 M 60 48 L 86 48 M 56 60 L 86 72" stroke-width="18" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 10 48 L 34 48 M 44 32 A 16 16 0 1 1 43.9 32 Z M 56 36 L 86 24 M 60 48 L 86 48 M 56 60 L 86 72" stroke-width="12" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> arrow (single fork bridge) and wye (two-way split).</div>
+        <div><strong>Turns into:</strong> Fulfills connected hollowBox waiter vessels, then fades out.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">port</span>
+        <span class="badge">bond &middot; perform</span>
+      </div>
+      <p class="reason">Host row protocol port: a dual-channel bulkhead penetration fitting with upper request and lower reply nozzles.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 48 14 L 48 82 M 14 34 L 82 34 M 14 62 L 82 62" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 46 34 L 50 34 M 46 62 L 50 62" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 14 34 L 82 34 M 14 62 L 82 62" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 48 14 L 48 82 M 14 34 L 82 34 M 14 62 L 82 62" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 46 34 L 50 34 M 46 62 L 50 62" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 14 34 L 82 34 M 14 62 L 82 62" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 48 14 L 48 82 M 14 34 L 82 34 M 14 62 L 82 62" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 46 34 L 50 34 M 46 62 L 50 62" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 14 34 L 82 34 M 14 62 L 82 62" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 48 14 L 48 82 M 14 34 L 82 34 M 14 62 L 82 62" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 46 34 L 50 34 M 46 62 L 50 62" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 14 34 L 82 34 M 14 62 L 82 62" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> probe (internal sensing tap) and call (internal code invocation).</div>
+        <div><strong>Turns into:</strong> Discharges request pill and awaits incoming reply pill.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="kind-section">
+  <div class="kind-header">
+    <div class="kind-title">Force Family (1 marks)</div>
+    <p class="kind-desc">A transient kinetic shutoff ram / impact fitting arresting forward momentum.</p>
+    <div class="kind-meta">
+      <div><strong>Contents:</strong> Represents an interrupt impulse traveling along a vector until arrested by a protective barrier.</div>
+      <div><strong>Ends:</strong> Closed rounded impact barrier; open inlet along direction of kinetic travel.</div>
+      <div><strong>Invariance:</strong> Impulse travels, impacts, deposits a static interrupt reason, and is spent.</div>
+    </div>
+  </div>
+  <div class="grid">
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">blockedArrow</span>
+        <span class="badge">force &middot; interrupt</span>
+      </div>
+      <p class="reason">An interrupt impulse (Talmy Antagonist): a horizontal ram conduit abruptly blocked by a solid transverse barrier collar stop.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 14 48 L 62 48 M 62 20 L 62 76" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 60 36 L 64 36 M 60 60 L 64 60" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 14 48 L 62 48" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 36 48 L 56 48" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 14 48 L 62 48 M 62 20 L 62 76" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 60 36 L 64 36 M 60 60 L 64 60" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 14 48 L 62 48" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 36 48 L 56 48" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 14 48 L 62 48 M 62 20 L 62 76" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 60 36 L 64 36 M 60 60 L 64 60" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 14 48 L 62 48" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 36 48 L 56 48" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 14 48 L 62 48 M 62 20 L 62 76" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 60 36 L 64 36 M 60 60 L 64 60" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 14 48 L 62 48" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-fluid" d="M 36 48 L 56 48" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> barLine (transverse score measure) and cross (symmetric X failure).</div>
+        <div><strong>Turns into:</strong> Deposited into reasons list or absorbed by interrupt handler.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="kind-section">
+  <div class="kind-header">
+    <div class="kind-title">Cadence Family (4 marks)</div>
+    <p class="kind-desc">Structural framing tubes, transverse weirs, and score holding gates that carry NO process fluid.</p>
+    <div class="kind-meta">
+      <div><strong>Contents:</strong> Strictly empty of fluid. Defines temporal boundaries, host measures, frontiers, and halts.</div>
+      <div><strong>Ends:</strong> Cut ends where traversing staves; rounded caps where framing terminal expansion arches.</div>
+      <div><strong>Invariance:</strong> Completely stationary during machine beats; recedes in value as the reading cursor advances.</div>
+    </div>
+  </div>
+  <div class="grid">
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">barLine</span>
+        <span class="badge">cadence &middot; decide</span>
+      </div>
+      <p class="reason">Host decision measure: a tall structural transverse weir tube spanning vertically across all staves.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 48 8 L 48 88" stroke-width="22" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 48 26 L 48 28 M 48 68 L 48 70" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 48 8 L 48 88" stroke-width="16" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 48 8 L 48 88" stroke-width="22" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 48 26 L 48 28 M 48 68 L 48 70" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 48 8 L 48 88" stroke-width="16" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 48 8 L 48 88" stroke-width="22" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 48 26 L 48 28 M 48 68 L 48 70" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 48 8 L 48 88" stroke-width="16" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 48 8 L 48 88" stroke-width="22" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 48 26 L 48 28 M 48 68 L 48 70" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 48 8 L 48 88" stroke-width="16" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> exitBar (double vertical tubes) and atom (short closed standpipe).</div>
+        <div><strong>Turns into:</strong> Stationary temporal reference; recedes in tone as cursor passes.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">exitBar</span>
+        <span class="badge">cadence &middot; finish</span>
+      </div>
+      <p class="reason">Terminal execution exit: a double vertical gate tube (narrow lead tube, heavy flanged trail tube).</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 38 10 L 38 86" stroke-width="18" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-wall" d="M 58 10 L 58 86" stroke-width="22" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 58 30 L 58 34 M 58 62 L 58 66" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 38 10 L 38 86" stroke-width="12" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 58 10 L 58 86" stroke-width="16" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 38 10 L 38 86" stroke-width="18" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-wall" d="M 58 10 L 58 86" stroke-width="22" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 58 30 L 58 34 M 58 62 L 58 66" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 38 10 L 38 86" stroke-width="12" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 58 10 L 58 86" stroke-width="16" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 38 10 L 38 86" stroke-width="18" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-wall" d="M 58 10 L 58 86" stroke-width="22" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 58 30 L 58 34 M 58 62 L 58 66" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 38 10 L 38 86" stroke-width="12" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 58 10 L 58 86" stroke-width="16" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 38 10 L 38 86" stroke-width="18" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-wall" d="M 58 10 L 58 86" stroke-width="22" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-collar" d="M 58 30 L 58 34 M 58 62 L 58 66" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 38 10 L 38 86" stroke-width="12" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 58 10 L 58 86" stroke-width="16" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> barLine (single vertical tube) and rail (horizontal double track).</div>
+        <div><strong>Turns into:</strong> Anchors appended final reasons on fiber completion.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">fermata</span>
+        <span class="badge">cadence &middot; wait</span>
+      </div>
+      <p class="reason">Live frontier: a semicircular surge expansion loop arching upward over an empty closed resting dot vessel.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 24 64 L 24 52 A 24 24 0 0 1 72 52 L 72 64 M 48 54 A 14 14 0 1 1 47.9 54 Z" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 24 64 L 24 52 A 24 24 0 0 1 72 52 L 72 64 M 48 54 A 14 14 0 1 1 47.9 54 Z" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 24 64 L 24 52 A 24 24 0 0 1 72 52 L 72 64 M 48 54 A 14 14 0 1 1 47.9 54 Z" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 24 64 L 24 52 A 24 24 0 0 1 72 52 L 72 64 M 48 54 A 14 14 0 1 1 47.9 54 Z" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 24 64 L 24 52 A 24 24 0 0 1 72 52 L 72 64 M 48 54 A 14 14 0 1 1 47.9 54 Z" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 24 64 L 24 52 A 24 24 0 0 1 72 52 L 72 64 M 48 54 A 14 14 0 1 1 47.9 54 Z" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 24 64 L 24 52 A 24 24 0 0 1 72 52 L 72 64 M 48 54 A 14 14 0 1 1 47.9 54 Z" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 24 64 L 24 52 A 24 24 0 0 1 72 52 L 72 64 M 48 54 A 14 14 0 1 1 47.9 54 Z" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> loop (horizontal process recirculation) and caesura (broken slashed pipes).</div>
+        <div><strong>Turns into:</strong> Resumes and dissolves when awaited host decision or timer arrives.</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <span class="card-title">caesura</span>
+        <span class="badge">cadence &middot; halt</span>
+      </div>
+      <p class="reason">Abnormal machine halt: two severed slashed conduit spools (//) cut at 60° with shear misalignment gap.</p>
+      <div class="previews">
+        <div class="preview-col">
+          <span class="preview-label">Dark Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-dark">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 30 14 L 44 82 M 52 14 L 66 82" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 30 14 L 44 82 M 52 14 L 66 82" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 30 14 L 44 82 M 52 14 L 66 82" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 30 14 L 44 82 M 52 14 L 66 82" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+        <div class="preview-col">
+          <span class="preview-label">Paper Ground (96px &middot; 32px)</span>
+          <div class="theme-box theme-paper">
+            <svg width="96" height="96" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 30 14 L 44 82 M 52 14 L 66 82" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 30 14 L 44 82 M 52 14 L 66 82" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+            <svg width="32" height="32" viewBox="0 0 96 96" class="tube-sketch">
+          <path class="tube-wall" d="M 30 14 L 44 82 M 52 14 L 66 82" stroke-width="20" stroke-linecap="butt" stroke-linejoin="round" />
+          <path class="tube-lumen" d="M 30 14 L 44 82 M 52 14 L 66 82" stroke-width="14" stroke-linecap="butt" stroke-linejoin="round" />
+        </svg>
+          </div>
+        </div>
+      </div>
+      <div class="meta-lines">
+        <div><strong>Distinct from:</strong> exitBar (vertical intact double gate) and alternative (converging wye).</div>
+        <div><strong>Turns into:</strong> Terminal stuck state; never resumes.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>
