@@ -1,13 +1,15 @@
 import Test.Dogfood.Scenario
 import Test.Dogfood.P2HandlerLayers
 import Effect4.Author
+import Effect4.Program.Authoring.Application
 
 /-!
-# The to-do application, first slice: its programs build and run under a scripted host
+# The to-do application: its programs build and run under a scripted host
 
 The owner named the application on 2026-10-07: a to-do list over SQL with an API that updates
-it, as the one program that exercises the whole loop. This file is the first slice. It holds the
-data, the repository's four rows, the API's four programs, and finite runs under a scripted host.
+it, as the one program that exercises the whole loop. This file holds the data, the repository's
+four rows, the API's four programs, the application that holds them, and finite runs under a
+scripted host.
 
 * **Data.** `Todo = { id, title, done }`. A missing to-do is a tagged record, `NotFound { id }`.
   An empty title and a failure of the repository are pairs of a tag and a message: a class
@@ -15,14 +17,15 @@ data, the repository's four rows, the API's four programs, and finite runs under
 * **Rows.** The repository is four host rows: `insert`, `all`, `setDone` and `delete`. The query
   and the decoding of a row stand in the host, as in `Test/Dogfood/P2HandlerLayers.lean`.
 * **Programs.** `add`, `list`, `complete` and `remove`, each written over the rows.
+* **The application.** `application` holds the four programs as entries with typed parameters
+  (`src/Effect4/Program/Authoring/Application.lean`, decisions row 336 (9)).
 * **Tested: each program builds**, at the type that the guards state.
 * **Tested: finite runs.** Each run is one script on the Lean machine. An empty title asks the
   repository nothing. A missing to-do fails with its id. A failure of the repository escapes.
 
-No line is a theorem, and no claim is assembled yet. Which theorems the application carries,
-and how a program carries them as data, is a design of its own: the owner asked for it with
-care, on 2026-10-07. The scenario's record, its lowered runs and its place in
-`Test/Dogfood/Scenario/Faces.lean` come after that design.
+No line here is a theorem. The application's claims and their record stand in
+`Test/Dogfood/Scenario/Todo/Claims.lean`, the shape of the claims packet
+(`docs/research/2026-10-07-packet-application-claims.md`).
 
 One finding stands in no guard yet. The module printer refuses `add` as an export name
 because a module imports the atom `add`.
@@ -79,6 +82,34 @@ def remove (id : TermSrc) : Src NativeOp := eff do
 def request (main : Src NativeOp) : Module NativeOp :=
   { rows := TodoRepo.rows, main }
 
+/-! ### The application
+
+The four programs as one application (`Application`,
+`src/Effect4/Program/Authoring/Application.lean`; the claims packet's slice APP). Each entry's
+body is the program above, at its parameter read by `var`. A request of the API is an entry at
+its arguments, built through the application's module. -/
+
+/-- The to-do application: the repository's four rows, and the API's four programs. -/
+def application : Application NativeOp :=
+  { name := "todo"
+    rows := TodoRepo.rows
+    entries :=
+      [ { name := "add", params := [("title", .string)], body := add (var "title") }
+      , { name := "list", body := list }
+      , { name := "complete", params := [("id", .nat)], body := complete (var "id") }
+      , { name := "remove", params := [("id", .nat)], body := remove (var "id") } ] }
+
+/-- One entry at its arguments, built through the application's module. -/
+def builtAt (name : String) (args : List TermSrc) : Option Api.Built :=
+  (application.entry? name).bind fun e => built? (application.moduleOf e args)
+
+/-- The answer and the error of an entry's open program, at its parameters' types. -/
+def openTy (name : String) : Option (Ty × Ty) :=
+  (application.entry? name).bind fun e =>
+    (application.openProgram e).toOption.bind fun program =>
+      (effTy (nativeSignature application.table) (e.params.map (·.2)) program).map fun t =>
+        (t.answer, t.error)
+
 /-! ## 3. Each program builds -/
 
 #guard verdict (request (add (str "milk"))) = "built"
@@ -100,6 +131,27 @@ def typeOf? (main : Src NativeOp) : Option (Ty × Ty) :=
   some (Todo.ty.normalize, (Ty.union NotFound.ty SqlError.ty).normalize)
 -- tested: `remove` answers nothing, with the same error
 #guard typeOf? (remove (nat 1)) = some (.unit, (Ty.union NotFound.ty SqlError.ty).normalize)
+
+-- finite evaluation: each entry builds at an argument through the application, at the type of
+-- the request above
+#guard [("add", [str "milk"], add (str "milk")), ("list", [], list),
+    ("complete", [nat 1], complete (nat 1)), ("remove", [nat 1], remove (nat 1))].all fun entry =>
+  (builtAt entry.1 entry.2.1).map (fun b => (b.ty.answer, b.ty.error)) = typeOf? entry.2.2 &&
+    (builtAt entry.1 entry.2.1).isSome
+-- finite evaluation: each entry's open program has that type at its parameters' types
+#guard openTy "add" = some (Todo.ty.normalize, (Ty.union emptyTitleTy SqlError.ty).normalize)
+#guard openTy "list" = some ((Ty.list Todo.ty).normalize, SqlError.ty)
+#guard openTy "complete" = some (Todo.ty.normalize, (Ty.union NotFound.ty SqlError.ty).normalize)
+#guard openTy "remove" = some (.unit, (Ty.union NotFound.ty SqlError.ty).normalize)
+-- finite evaluation: an entry at its argument is its open program under one bind of the argument
+#guard ((application.entry? "complete").map fun e =>
+    decide (elaborateModule (application.moduleOf e [nat 1]) =
+      (application.openProgram e).map (.bind (.succeed (.lit (.nat 1)))))) = some true
+-- control: with no argument the parameter is unbound, and the build refuses the entry; the open
+-- program of a body that reads a name its entry does not declare is refused at that read
+#guard (builtAt "complete" []).isNone
+#guard ((application.entry? "complete").map fun e =>
+    (application.openProgram { e with params := [] }).toOption.isNone) = some true
 
 /-! ## 4. Finite runs under a scripted host -/
 
