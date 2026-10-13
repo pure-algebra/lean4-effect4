@@ -244,6 +244,8 @@ import Effect4.Program.Address
 -- A sketch checked through its layer references, and its edit session (decisions row 373 (7)).
 import Effect4.Program.Typing.Source
 import Effect4.Program.Typing.SourceSession
+-- An application as one Effect service: its block of definitions (decisions row 378 (20)).
+import Effect4.Program.Authoring.ApplicationService
 
 /-!
 # Effect4

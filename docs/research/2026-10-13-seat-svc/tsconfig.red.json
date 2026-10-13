@@ -1,0 +1,5 @@
+{
+  "//": "Seat SVC's red controls: the same project with each red consumer; each must fail with its one error.",
+  "extends": "./tsconfig.json",
+  "include": ["prelude/*.ts", "todo/todo.gen.ts", "todo/todo-host.d.ts", "todo/red-*.ts"]
+}

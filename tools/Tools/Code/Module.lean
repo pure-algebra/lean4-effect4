@@ -10,9 +10,10 @@ import Effect4.Api
 What the code generator writes for one program: one TypeScript module that a person or an agent
 reads as it is. The module is `Api.emitModule`'s declarations with three additions:
 
-- **its imports, exactly**: the names its declarations use and do not bind, by the core's binding
-  analysis (`SourceBindings.moduleUses`). A namespace of `effect` (`effectNamespaces`) and `pipe`
-  come from `effect`; every other name from the prelude, which supplies the atoms and the helpers;
+- **its imports, exactly**: the core writes them from Lean data (`moduleImports`,
+  `src/Effect4/Codegen/Checked.lean`; decisions row 373 (11)). A name that the declarations use
+  and do not bind comes from `effect` when it is a namespace of `effect` (`effectNamespaces`) or
+  `pipe`, and from the prelude when it is a prelude name (`preludeNames`); any other stays free;
 - **a header**: the program's content address (SHA-256 of its canonical bytes, `Api.bytesOf`), its
   type, and the checks below;
 - **its layout**: Effect's width, 120 columns (`Tools.Code.Ts.decl`). Undone, a layout is the
@@ -33,39 +34,10 @@ open Effect4 Effect4.Program Effect4.Codegen TypeScript
 /-- The path a generated module imports the prelude from: a folder beside its group's folder. -/
 def preludePath : String := "../prelude/prelude.ts"
 
-/-- The names the prelude exports to printed programs: the atoms, the term helpers, and the
-printer's heads that are no namespace member. A free name outside these and `effect` is unbound,
-and the reading boundary refuses the module. -/
-def preludeNames : List String :=
-  Effect4.Program.NativeAtom.names ++ Effect4.Program.termHelperNames ++
-    (Effect4.Program.reserved.filter fun h => !h.contains '.' && h != "pipe" && h != "undefined")
-
-/-- Whether a free name comes from `effect`. -/
-def fromEffect (name : String) : Bool := effectNamespaces.contains name || name == "pipe"
-
-/-- The free names of a module: each use that no binding of the module resolves, once, with
-whether every use of it is a type. -/
-def freeNames (module : Module) : List (String × Bool) :=
-  let uses := (SourceBindings.moduleUses module).uses.filter fun u => !SourceBindings.useResolved u
-  uses.foldl (fun acc u =>
-    let typeOnly := u.space == .type
-    match acc.find? (·.1 == u.name) with
-    | some _ => acc.map fun (n, t) => if n == u.name then (n, t && typeOnly) else (n, t)
-    | none => acc ++ [(u.name, typeOnly)]) []
-
-/-- Names in order. -/
-def sorted (names : List (String × Bool)) : List (String × Bool) :=
-  names.mergeSort fun a b => decide (a.1 ≤ b.1)
-
-/-- The imports of a module: from `effect`, then from the prelude, each list in order. A name in
-`holes` is no import: the host answers it until the hole is filled. -/
+/-- The imports of a module, as the core writes them (`moduleImports`), the prelude at
+`preludePath`. A name in `holes` is no import: the host answers it until the hole is filled. -/
 def importsOf (module : Module) (holes : List String := []) : List Import :=
-  let free := (sorted (freeNames module)).filter (!holes.contains ·.1)
-  let effect := free.filter (fromEffect ·.1)
-  let prelude := free.filter (!fromEffect ·.1)
-  let binding (p : String × Bool) : ImportBinding := { imported := p.1, localName := p.1, typeOnly := p.2 }
-  (if effect.isEmpty then [] else [.named (effect.map binding) "effect" false]) ++
-    (if prelude.isEmpty then [] else [.named (prelude.map binding) preludePath false])
+  moduleImports preludePath module holes
 
 /-- The origins a generated module may import from: `effect`'s namespaces, and the prelude's
 names at its path. -/
