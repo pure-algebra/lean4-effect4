@@ -2,7 +2,8 @@
 
 Status: research note (history, not authority). 2026-10-13. The page is `tubes.html`
 (`tools/view/v -V tubes`). The code is `tools/Tools/View/Tube/`. The owner ruled the note's
-questions on the same day: decisions row 369 (§12).
+questions on the same day: decisions row 369 (§12). The styling pass that followed changed the
+pen: decisions row 370 (§13). Where §2 and §13 differ, §13 holds.
 
 **The one thing to know first.** Every glyph is now one body, a tube, and every transition is a
 morph between tubes. Every moment of a morph keeps the bend law (`Tube.mix_ok`, proved). So any
@@ -278,6 +279,70 @@ written in SMIL, units are pills.
 - **The decomposition pass** then carries the tube language to the rest of the visual semantics,
   and the asks W30 to W33 move into the kit.
 
+## 13. The styling pass
+
+Decisions row 370 records the owner's rulings, made over four rounds of prototypes in the browser
+pane. The order mattered, so it is kept here:
+
+1. A cutaway look with bevels, inner shadows and highlights: refused ("ugg no thats bad").
+2. Four flat directions; the owner chose line art. Then the owner asked to "start with solid
+   fills and think of joining", with air gaps "for some semantics" and "smooth no kinks".
+3. Solid bodies with round partings and wide fillets; the owner asked for "everything with a
+   smooth outline ... organic rounded docks like tree branch widening".
+4. The look of the docs' tree and graph figures. In the owner's words: "colors and line style
+   are still all wrong make it look more like the docs / tree and graph look".
+
+**The pen now.** A body is a ground fill inside a one-pixel line of ink, as a node of the docs'
+plan trees is. Contents are solid ink pills, and a promised unit is an ink ring. No tone stands
+between ink and ground.
+
+```mermaid
+flowchart LR
+  T["a tube's interior path"] --> C["casing: filled and stroked 2 px in ink, with every body"]
+  T --> G["interior: filled with the ground, after every casing"]
+  C --> J["where bodies meet, one line round the union"]
+  G --> J
+  P["a parting"] --> R["its ground, then a ring of ink round each round end"]
+```
+
+**Joins carry meaning.**
+
+| Join | Meaning | Drawn |
+| --- | --- | --- |
+| one fill | the bodies share their fluid: a tee or a wye conserves | the branch leaves on its tangent; its crotch is rounded by the widest fillet that fits, 18 px down (`crotch`, `tools/Tools/View/Tube/Outline.lean`) |
+| an air gap | nothing passes | a closed valve parts its pipe, each end round (`plugOf`); a broadcast's taps stand a gap from their source; the tube below a crossing is parted round the one above (`cutOf`) |
+
+**Smooth, with no kink.**
+
+- A body's outline is its two exact parallels and its caps. The parallel of an arc is an arc of the
+  same turn (`Tube.offset`).
+- A change of width is eased by the smoothstep, whose slope is nothing at both ends
+  (`stretchWidth`, `patchCubics`). A vessel is one stretch whose ends ease to its pipes' widths.
+- The bend law's radius is 24 px, a long radius, so the inside of a bend is round (`BEND`,
+  `tools/Tools/View/Tube/Form.lean`). The two step lemmas of `Piece.mix_ok` follow the constant.
+- The inlet is clamped level at the vessel and sags in three arcs, so it meets the vessel on its
+  tangent (`Layout.inletAt`, `tools/Tools/View/Tube/Queue.lean`).
+
+**Motion.** A film samples each mark under all its tracks at once (`Mark.under`). So a filled
+outline follows its tube and its width together. A swell rides the pipe that sags under it, and a
+crotch's fillet follows both its bodies. A body's path is defined once and drawn twice by `use`.
+
+**What the pass does not establish.**
+
+- No theorem says an outline has no kink. The smoothness is by construction and by eye. The
+  parallels are exact, and the easings have zero slope at their ends. The fillet touches both
+  edges at points found by search, to a twentieth of a pixel.
+- The fillet assumes a parent that is straight near the join and a branch that leaves on its
+  tangent.
+- A valve that opens shows a brief notch while its round ends fuse.
+- Noise is not used. The line pen leaves no area for a grain, and row 354 (9) keeps noise at zero
+  by default.
+
+**What moves next.** The owner asked that these abstractions move into `lean4-whatwg`, made the
+way d3-shape makes shapes: its slice S23, briefed in
+`docs/research/2026-10-13-tube-language/seat-kit-brief.md`. Ask W31 (cased layers of walls and
+lumens) is withdrawn: the casing of §13 replaces it.
+
 ## Sources
 
 - Sederberg, Gao, Wang, Mu, "2-D shape blending: an intrinsic solution to the vertex path
@@ -302,5 +367,9 @@ written in SMIL, units are pills.
   number", *J. Fluid Mech.* 37 (1969), pp. 799–825:
   <https://resolve.cambridge.org/core/journals/journal-of-fluid-mechanics/article/peristaltic-pumping-with-long-wavelengths-at-low-reynolds-number/792DAD9B680C5074E3E674844DDB79FE>
 - Joukowsky's equation: <https://neutrium.net/articles/fluid-flow/joukowsky-equation/>
+- d3-shape 3.2.0 (ISC licence, Mike Bostock), read locally under
+  `~/Dev/skygest-cloudflare/node_modules/.bun/d3-shape@3.2.0/node_modules/d3-shape/src/`
+- Riškus, "Approximation of a cubic Bézier curve by circular arcs and vice versa" (2006),
+  recalled: the handle of a circular arc as one cubic (`arcC`)
 - Queue discharge as a kinematic wave (TU Delft lecture notes):
   <https://ocw.tudelft.nl/wp-content/uploads/6._Traffic_analysis__characteristics.pdf>
