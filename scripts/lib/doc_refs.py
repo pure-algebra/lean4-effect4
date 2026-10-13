@@ -22,6 +22,9 @@ from pathlib import Path
 PATH_ROOTS = ("src", "docs", "Test", "tools", "scripts", "ts", "harness", "ocaml", "generated",
               "vendor", "workshop", ".github")
 HISTORY = ("docs/research/", "vendor/", "Test/Counterexamples/Archive/", "Test/contracts/archive/")
+# The site's written copy (decisions row 366): its links name pages of the site, which `make site`
+# checks (`Tools.Site.Site.check`); its code spans and make targets are checked here as elsewhere.
+SITE_COPY = "docs/site/"
 SKIP_CHARS = set("*<>{}|…?$ \t\"'")
 LINK = re.compile(r"\[[^\]]*\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
 CODE = re.compile(r"`([^`]+)`")
@@ -223,6 +226,8 @@ class Checker:
                 continue
             for match in CODE.finditer(line):
                 self.check_code_span(doc, line_no, match.group(1))
+            if doc.startswith(SITE_COPY):
+                continue
             for match in LINK.finditer(CODE.sub(" ", line)):
                 self.check_target(doc, line_no, match.group(1), "link")
 

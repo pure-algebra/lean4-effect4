@@ -1,5 +1,6 @@
 import Tools.Site
 import Tools.Document.Specimen
+import Tools.Document.Markdown
 
 /-!
 # The documentation site (decisions row 363)
@@ -7,11 +8,16 @@ import Tools.Document.Specimen
     lake env lean --run tools/Drivers/Site.lean SITE REPORT
 
 Builds the site as one value (`Tools.Site.Site`) and writes every file of it into the folder
-`SITE`. Its pages:
+`SITE`. The written copy is Markdown under `docs/site/` (its `README.md` says how to write it),
+read at every build (`Tools.Document.Markdown`). Its pages:
 
-* the landing page, at the root;
+* the landing page, at the root (`docs/site/landing.md`);
+* the guides (`docs/site/guides/*.md`, in the order of their file names, each at its name with
+  the leading digits and dash taken off), under a page that lists them;
 * the semantics report, split into pages: a page for each concept and each section of the
-  report, and a page for each requirement under the plan. The report's document is read from
+  report, and a page for each requirement under the plan. A concept's or a requirement's copy
+  (`docs/site/concepts/<id>.md`, `docs/site/requirements/<id>.md`) stands on its page after the
+  page's opening summary. The report's document is read from
   `REPORT/document.json`, which `lake exe semantics-report REPORT` writes, and the report itself
   is copied as `semantics/report.json`;
 * the document specimen;
@@ -26,28 +32,48 @@ fresh folder, and puts it at `.lake/gen/site`.
 
 open Tools.Document Tools.Site Tools.View
 
-/-- The landing page. -/
-def landing : Document where
-  title := "Effect4"
-  producer := ["tools/Drivers/Site.lean", "make site"]
-  body := [
-    .para [.text "Effect4 is Effect's runtime written in Lean as a model with defined semantics. ",
-      .text "A program is data: a typed term that Lean checks, runs on a reference machine, lowers to OCaml ",
-      .text "and prints as TypeScript."],
-    .para [.text "Each claim about that runtime carries its evidence. The evidence is a theorem that is ",
-      .status "proved", .text ", a theorem proved ", .status "modulo", .text " named goals, or a planned ",
-      .status "goal", .text " whose proof is to come."],
-    .part "start" "Start here" [
-      .items [
-        [.link "semantics/" "Semantics evidence", .text ": every claim by concept, its status and its Lean statement, ",
-         .text "and the plan of goals that the open requirements rest on."],
-        [.link "specimen/" "Document specimen", .text ": every kind of block and status mark, as the pages draw them."],
-        [.link "contents/" "Contents", .text ": every page of the site."]]],
-    .part "contract" "For a framework" [
-      .para [.text "Every page is also its document as JSON, in the format ", .code "effect4-document/1", .text ": see ",
-        .link "semantics/document.json" "the first page of the semantics", .text ". The pages and their parts are in ",
-        .link "site.json" "site.json", .text ". The report behind the semantics pages is ",
-        .link "semantics/report.json" "report.json", .text "."]]]
+/-- The folder of the site's written copy. -/
+def copyDir : System.FilePath := "docs/site"
+
+/-- A file of copy read as a document, its keys prefixed by `keyPrefix`; a refusal names the file
+and the line. -/
+def readCopy (path : System.FilePath) (keyPrefix : String) : IO Document := do
+  match Markdown.read path.toString keyPrefix (← IO.FS.readFile path) with
+  | .ok d => return d
+  | .error why => throw (IO.userError why)
+
+/-- The Markdown files of a folder in the order of their names, its `README.md` left out; none
+when the folder is missing. -/
+def copyFiles (dir : System.FilePath) : IO (List System.FilePath) := do
+  unless ← dir.isDir do return []
+  let names := ((← dir.readDir).filter fun e => e.fileName.endsWith ".md" && e.fileName != "README.md").map (·.path)
+  return (names.qsort (·.toString < ·.toString)).toList
+
+/-- A file's name with its extension and its leading digits and dash taken off: `01-reading.md`
+is `reading`. -/
+def guideSlug (f : System.FilePath) : String :=
+  let stem := f.fileStem.getD ""
+  ((stem.dropWhile Char.isDigit).dropWhile (· == '-')).toString
+
+/-- The copy of the page whose key is `key`, as a part after the page's opening summary; refused
+when no page has the key. -/
+def place (pages : List Page) (key : String) (copy : Document) : Except String (List Page) :=
+  if !(pages.any (·.key == some key)) then .error s!"copy for {key}: no page has this key" else
+  .ok (pages.map fun p => if p.key != some key then p else
+    { p with doc := { p.doc with
+      body := p.doc.body.take 1 ++ [.part ("about:" ++ key) copy.title copy.body] ++ p.doc.body.drop 1 } })
+
+/-- The page that lists the guides, each with its opening paragraph. -/
+def guidesPage (guides : List Page) : Page where
+  path := ["guides"]
+  space := "guides"
+  doc := { title := "Guides", producer := ["docs/site/guides/", "make site"], body := [
+    .para [.text "Each guide explains one part of the site or of the semantics, in plain words."],
+    .items (guides.map fun g =>
+      let summary : Line := match g.doc.body with
+        | .para l :: _ => .text ": " :: l
+        | _ => []
+      .link (g.path.getLast! ++ "/") g.doc.title :: summary)] }
 
 /-- Where the semantics report splits: every part of its first page but the legend of statuses,
 and every requirement under the plan. -/
@@ -65,14 +91,26 @@ def notFound (s : Site) : Except String String := do
   return text (render shell doc.title (← blocks Html.fragment doc))
 
 def main (args : List String) : IO UInt32 := do
+  try run args catch e => IO.eprintln e; return 1
+where run (args : List String) : IO UInt32 := do
   let [site, report] := args | IO.eprintln "usage: Site SITE REPORT"; return 2
   let dir : System.FilePath := site
   let report : System.FilePath := report
   let semantics ← match Lean.Json.parse (← IO.FS.readFile (report / "document.json")) >>= Json.Document.reads with
     | .ok d => pure d
     | .error why => IO.eprintln s!"{report / "document.json"}: {why}"; return 1
-  let pages := [({ path := [], doc := landing, space := "landing" } : Page)] ++
-    split semanticsCut ["semantics"] "semantics" semantics ++
+  let landing ← readCopy (copyDir / "landing.md") ""
+  let guides ← (← copyFiles (copyDir / "guides")).mapM fun f => do
+    return ({ path := ["guides", guideSlug f], doc := ← readCopy f "", space := "guides:" ++ guideSlug f } : Page)
+  let mut semanticsPages := split semanticsCut ["semantics"] "semantics" semantics
+  for (folder, keyOf) in [("concepts", fun (id : String) => "concept:" ++ id), ("requirements", fun id => "req:" ++ id)] do
+    for f in ← copyFiles (copyDir / folder) do
+      let key := keyOf (f.fileStem.getD "")
+      match place semanticsPages key (← readCopy f s!"about:{key}:") with
+      | .ok ps => semanticsPages := ps
+      | .error why => IO.eprintln s!"{f}: {why}"; return 1
+  let pages := [({ path := [], doc := { landing with producer := landing.producer ++ ["make site"] }, space := "landing" } : Page)] ++
+    (if guides.isEmpty then [] else guidesPage guides :: guides) ++ semanticsPages ++
     [{ path := ["specimen"], doc := Specimen.specimen, space := "specimen" }]
   let fonts := ["source-serif-4/source-serif-4-latin-opsz-normal.woff2", "source-serif-4/source-serif-4-latin-opsz-italic.woff2",
     "source-serif-4/LICENSE", "jetbrains-mono/jetbrains-mono-latin-wght-normal.woff2", "jetbrains-mono/LICENSE", "README.md"]

@@ -1,4 +1,5 @@
 import Tools.Site
+import Tools.Document.Markdown
 
 /-!
 # Controls of the documentation site's checks
@@ -57,5 +58,24 @@ open Tools.Document Tools.Site
 
 -- control: the content model refuses a block where the shell's `main` would hold it
 #guard !(Whatwg.Html.Child.check (.element "p" [] [.element "div" [] []]) : Except _ (Whatwg.Html.Child InMain)).toBool
+
+/-! ## The written copy (`docs/site/`, `Tools.Document.Markdown`) -/
+
+-- a heading's key, a reference, a link and a status word in braces
+#guard match Tools.Document.Markdown.read "f.md" "p:" "# T\n\n## A part {#a}\n\nSee [it](#a), [x](../x/) and {goal}." with
+  | .ok d => d.title == "T" && (Tools.Site.keys d) == ["p:a"] &&
+      (match d.body with
+       | [.part "p:a" "A part" [.para l]] => l == [.text "See ", .ref "a" "it", .text ", ", .link "../x/" "x",
+           .text " and ", .status "goal", .text "."]
+       | _ => false)
+  | .error _ => false
+
+-- control: a table is refused at its line
+#guard match Tools.Document.Markdown.read "f.md" "" "# T\n\n| a | b |" with
+  | .error why => why == "f.md:3: a table is not part of the subset: write a list"
+  | .ok _ => false
+
+-- control: a heading that skips a level is refused
+#guard (Tools.Document.Markdown.read "f.md" "" "# T\n\n### Deep").toBool == false
 
 end Test.Audit.SiteControls

@@ -276,15 +276,17 @@ $(GEN)/semantics: $(SEMANTICS_SOURCES) $(LEAN_INPUTS)
 # Standard's content model, each with its document as JSON. The site is one value
 # (tools/Tools/Site.lean); tools/Drivers/Site.lean builds it from the semantics report's document,
 # which the semantics group writes when its sources change, so an edit of the shell, the rules or
-# a page of the site's own runs in seconds. The site's own pages pass the controlled-English check
-# (decisions row 366, point 8); the report's pages, whose words come from the registry and the
-# docstrings, are counted. A fresh folder replaces the old one whole.
+# a page of the site's own runs in seconds. The written copy (docs/site/) and the specimen pass the
+# controlled-English check (decisions row 366, point 8); the report's pages, whose words come from
+# the registry and the docstrings, are counted. A fresh folder replaces the old one whole.
+# The site's written copy (docs/site/README.md): Markdown that a writer edits and every build reads.
+SITE_COPY := $(shell find docs/site -name '*.md' 2>/dev/null | sort)
 .PHONY: site
 site: $(GEN)/semantics ## the documentation site into .lake/gen/site (Lean's pages, CSS files, the JSON contract)
 	$(call build_imports,tools/Drivers/Site.lean)
 	rm -rf $(GEN)/site-next && mkdir -p $(GEN)/site-next
 	$(LAKE) env lean --run tools/Drivers/Site.lean $(GEN)/site-next $(GEN)/semantics-report
-	$(PY) scripts/check-language.py --strict $(GEN)/site-next/index.md $(GEN)/site-next/specimen/index.md
+	$(PY) scripts/check-language.py --strict $(SITE_COPY) $(GEN)/site-next/specimen/index.md
 	@echo "site: $$($(PY) scripts/check-language.py --show $$(find $(GEN)/site-next/semantics -name index.md) | grep -c '^$(GEN)') language findings in the report's pages, from the registry's words and the docstrings"
 	rm -rf $(GEN)/site && mv $(GEN)/site-next $(GEN)/site
 	@echo "site: $(GEN)/site"
