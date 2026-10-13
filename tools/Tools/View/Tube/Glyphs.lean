@@ -1,5 +1,7 @@
 import Tools.View.Glyph
 import Tools.View.Tube.Motion
+import Tools.View.Tube.PegGlyphs
+import Tools.View.Tube.PegRender
 import Whatwg.Svg.Scene.Join.Laws
 
 /-!
@@ -39,6 +41,12 @@ apart the marks one sort tells apart are (`distance`, `near`).
 namespace Tools.View.Tube.Glyphs
 open Tools.View Tools.View.Tube
 open Tools.View.Glyph (Shape Kind sorts table shapeNames)
+
+/-- The still figure on the slot grid. Films keep the tube motion carrier below. -/
+def pegFigure (s : Shape) : PegFigure := PegGlyphs.draw s
+
+/-- The peg renderer reports a body index if its tour has no tangent. -/
+def pegStill (s : Shape) : Except Nat Whatwg.Html.SvgNode := (pegFigure s).still 96 96
 
 /-! ## To move into Form -/
 

@@ -112,11 +112,17 @@ def Peg.arc (p : Peg) (u v : Int × Int) : List Cubic :=
 /-- **The belt** round pegs in order: for each peg, its arc from the normal it arrives on to the
 one it leaves on, then the line along the tangent to the next peg. Nothing where two neighbours
 share no tangent. -/
-def belt (ps : List Peg) : Option (List Cubic) := do
-  let next := ps.rotateLeft 1
-  let ns ← (ps.zip next).mapM fun pq => normal pq.1 pq.2
-  pure <| (ps.zip (next.zip ((ns.rotateRight 1).zip ns))).flatMap fun (p, q, u, v) =>
+def Belt.normals (ps : List Peg) : Option (List (Int × Int)) :=
+  (ps.zip (ps.rotateLeft 1)).mapM fun pq => normal pq.1 pq.2
+
+/-- Build a belt with normals already computed for its cyclic neighbour pairs. -/
+def Belt.withNormals (ps : List Peg) (ns : List (Int × Int)) : List Cubic :=
+  (ps.zip ((ps.rotateLeft 1).zip ((ns.rotateRight 1).zip ns))).flatMap fun (p, q, u, v) =>
     p.arc u v ++ [line (p.at v) (q.at v)]
+
+def belt (ps : List Peg) : Option (List Cubic) := do
+  let ns ← Belt.normals ps
+  pure (Belt.withNormals ps ns)
 
 /-! ## The laws -/
 
@@ -125,6 +131,11 @@ def Peg.inset (w : Int) (p : Peg) : Peg := ⟨p.c, p.r - w⟩
 
 /-- A peg moved by `d`. -/
 def Peg.move (d : Int × Int) (p : Peg) : Peg := ⟨(p.c.1 + d.1, p.c.2 + d.2), p.r⟩
+
+/-- Outline and casing share one tangent calculation per neighbour pair. -/
+def Belt.outlines (w : Int) (ps : List Peg) : Option (List Cubic × List Cubic) := do
+  let ns ← Belt.normals ps
+  pure (Belt.withNormals ps ns, Belt.withNormals (ps.map (Peg.inset w)) ns)
 
 /-- **The casing's normals are the outline's** (law 3): a tangent depends on the difference of
 the radii, which an inset keeps. -/
