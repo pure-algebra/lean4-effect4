@@ -29,7 +29,9 @@ def name (s : Shape) : String :=
   ((shapeNames.getD s.ctorIdx .anonymous).componentsRev.headD .anonymous).toString
 
 /-- A kind's name. -/
-def kindName (k : Kind) : String := (reprStr k).replace "Tools.View.Glyph.Kind." ""
+def kindName : Kind → String
+  | .body => "body" | .vessel => "vessel" | .container => "container" | .wire => "wire"
+  | .bond => "bond" | .force => "force" | .cadence => "cadence"
 
 /-- **A kind's family, in one sentence**: the plumbing element it is and what its contents mean.
 The builders' docstrings in `Tools.View.Tube.Glyphs` say it in full. -/
