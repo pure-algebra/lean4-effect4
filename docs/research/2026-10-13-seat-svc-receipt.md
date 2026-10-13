@@ -506,8 +506,11 @@ No claim is made of another run.
    The same check performs the to-do's scripts on its emitted Effect service (decisions row 378
    (20), `harness/truth/service/`). Lean decides each run's checks beside the script's own run.
    ```
-3. **The read-back law at the to-do** now needs two repairs: the header reader must read a
-   payload class and a requirement row other than `never`.
+3. **The read-back law at the to-do** needed two repairs: the header reader must read a payload
+   class and a requirement row other than `never`. Seat READ's `5d602f331` makes both, on main
+   after this seat's base. Main's `ab8aeefa7` flips the battery's two guards: the to-do's block is
+   `blockReadable`, and its module reads back (tested, by evaluation). The law
+   `readModule_printModule_defs` applied at the to-do's block, as one reader line, is not written.
 4. **`other-tag` and `wide` wait**, as on the keyed lane: the session refuses their replies.
 
 ## Proposed decisions rows (proposals only)
