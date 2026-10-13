@@ -57,8 +57,11 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
-# a page opens in the default browser
-browse() { if command -v open > /dev/null 2>&1; then open "$1"; else xdg-open "$1"; fi; }
+# a page opens in the default browser when a person runs v at a terminal; otherwise v names it,
+# and the studio (http://localhost:8783/tools/view/out/index.html, .claude/launch.json) shows it
+browse() {
+  if [ ! -t 1 ]; then echo "$1"; elif command -v open > /dev/null 2>&1; then open "$1"; else xdg-open "$1"; fi
+}
 if [ "$cmd" = gallery ]; then
   build_driver View
   (cd "$root" && LEAN_NUM_THREADS=3 lake env lean --run tools/Drivers/View.lean gallery "$here/out")

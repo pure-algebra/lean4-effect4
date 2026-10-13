@@ -17,7 +17,10 @@ The design and its rulings: `docs/research/2026-10-09-visual-pipeline.md` and de
 Run from the repository's root. `v` builds the Lean modules that its driver imports and the
 stale programs that its mode runs, writes the frames, and shows them. Every run is kept in
 `tools/view/out/runs/TIME-NAME-MODE/`, labelled with its commit and time, with its page
-`index.html`. The gallery `tools/view/out/index.html` lists every kept run, newest first.
+`index.html`. The studio `tools/view/out/index.html` lists every kept run, newest first, links the
+looks, the PC's probe pages and the documents, and reloads itself when a run is kept (decisions row
+362). Keep it open in the Claude app's browser pane: the `studio` server of `.claude/launch.json`
+serves the repository at `http://localhost:8783/`, and the page is `/tools/view/out/index.html`.
 
 ```sh
 tools/view/v pFork          # build a corpus program top-down, in a window

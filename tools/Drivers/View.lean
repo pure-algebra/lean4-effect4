@@ -98,7 +98,7 @@ def playerPage (L : Look) (title label : String) (pics : List (String × Bool)) 
   "<!doctype html>\n<html lang=\"en\" data-look=\"" ++ escape L.name ++ "\">\n<head>\n<meta charset=\"utf-8\">\n" ++
   "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>" ++ escape title ++ "</title>\n" ++
   "<style>\n" ++ Tokens.css L ++ pageRules ++ "</style>\n</head>\n<body>\n<header>" ++
-  (if gallery then "<a href=\"../../index.html\">All runs</a>" else "") ++
+  (if gallery then "<a href=\"../../index.html\">Studio</a>" else "") ++
   "<h1>" ++ escape title ++ "</h1><span class=\"meta\">" ++ escape label ++ " · " ++ escape L.name ++
   "</span><span class=\"meta\" id=\"pos\"></span>" ++
   "<span><button id=\"back\">◀</button> <button id=\"next\">▶</button> <button id=\"all\">play all</button></span></header>\n" ++
@@ -155,28 +155,66 @@ def keptRuns (dir : System.FilePath) : IO (List KeptRun) := do
     out := out.push run
   pure (out.toList.mergeSort fun a b => decide (b.id ≤ a.id))
 
-/-- **The gallery**: every kept run, newest first, its last picture linking to its player. -/
-def galleryPage (runs : List KeptRun) : String :=
+/-- The pages the studio links beside its entries, when they exist: a label and a path from the
+studio's folder. The looks and the PC's probes stand in the folder; the documents stand under the
+repository's `.lake/gen`, reached from the folder when it lies inside the working directory. -/
+def studioLinks (dir : System.FilePath) : IO (List (String × String)) := do
+  let mut links : Array (String × String) := #[]
+  if ← (dir / "looks" / "index.html").pathExists then links := links.push ("looks", "looks/index.html")
+  let probes := dir / "probes"
+  if ← probes.isDir then
+    let pages := (← probes.readDir).filter (·.fileName.endsWith ".html")
+    for e in pages.qsort (fun a b => a.fileName < b.fileName) do
+      links := links.push ("probe " ++ (e.fileName.dropEnd 5).toString, "probes/" ++ e.fileName)
+  let cwd := (← IO.currentDir).toString
+  let here := (← IO.FS.realPath dir).toString
+  if here.startsWith (cwd ++ "/") then
+    let up := String.join (((here.drop (cwd.length + 1)).toString.splitOn "/").map fun _ => "../")
+    for (label, file) in [("docs", ".lake/gen/semantics-report/semantics.html"),
+        ("architecture map", ".lake/gen/architecture-map.html")] do
+      if ← (System.FilePath.mk file).pathExists then links := links.push (label, up ++ file)
+  return links.toList
+
+/-- **The studio** (decisions row 362): every kept entry, newest first, its last picture linking to
+its player, and the looks, the probes and the documents a click away. Each entry carries its
+fields as data attributes, for an agent that reads the page. The page asks for `index.json` every
+two seconds and reloads when a newer entry has come. -/
+def galleryPage (runs : List KeptRun) (links : List (String × String)) : String :=
   let card (r : KeptRun) : String :=
-    "<section><a href=\"runs/" ++ escape r.id ++ "/index.html\"><img loading=\"lazy\" src=\"runs/" ++
-    escape r.id ++ "/" ++ escape r.last ++ ".svg\" alt=\"" ++ escape r.title ++ "\"></a><h2><a href=\"runs/" ++
-    escape r.id ++ "/index.html\">" ++ escape r.title ++ "</a></h2><p class=\"meta\">" ++ escape r.label ++
-    " · " ++ escape r.look ++ " · " ++ toString r.frames ++ " frames</p></section>\n"
+    "<section data-entry=\"" ++ escape r.id ++ "\" data-title=\"" ++ escape r.title ++ "\" data-look=\"" ++
+    escape r.look ++ "\" data-frames=\"" ++ toString r.frames ++ "\" data-label=\"" ++ escape r.label ++
+    "\"><a href=\"runs/" ++ escape r.id ++ "/index.html\"><img loading=\"lazy\" src=\"runs/" ++
+    escape r.id ++ "/" ++ escape r.last ++ ".svg\" alt=\"" ++ escape r.title ++ ", picture " ++ escape r.last ++
+    "\"></a><h2><a href=\"runs/" ++ escape r.id ++ "/index.html\">" ++ escape r.title ++
+    "</a></h2><p class=\"meta\">" ++ escape r.label ++ " · " ++ escape r.look ++ " · " ++
+    toString r.frames ++ " frames</p></section>\n"
+  let nav := " · ".intercalate (links.map fun (label, href) =>
+    "<a href=\"" ++ escape href ++ "\">" ++ escape label ++ "</a>")
+  let newest := (Lean.Json.str ((runs.head?.map (·.id)).getD "")).compress
   "<!doctype html>\n<html lang=\"en\" data-look=\"dark\">\n<head>\n<meta charset=\"utf-8\">\n" ++
-  "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>Runs</title>\n<style>\n" ++
+  "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>Studio</title>\n<style>\n" ++
   Tokens.css {} ++ pageRules ++
   "main { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 20px; }\n" ++
+  "nav { font-family: var(--e4-font-data-family); font-size: 13px; }\n" ++
   "h2 { font-family: var(--e4-font-data-family); font-size: 15px; margin: 8px 0 2px; }\n" ++
   "h2 a { text-decoration: none; }\nsection img { max-height: 320px; object-fit: contain; object-position: left top; }\n" ++
-  "</style>\n</head>\n<body>\n<header><h1>Runs</h1><span class=\"meta\">" ++ toString runs.length ++
-  " kept, newest first</span></header>\n<main>\n" ++ String.join (runs.map card) ++ "</main>\n</body>\n</html>\n"
+  "</style>\n</head>\n<body>\n<header><h1>Studio</h1><nav>" ++ nav ++ "</nav><span class=\"meta\">" ++
+  toString runs.length ++ " entries, newest first; the page reloads when one comes</span></header>\n<main>\n" ++
+  String.join (runs.map card) ++ "</main>\n<script>\nconst newest = " ++ newest ++ ";\n" ++
+  "setInterval(async () => {\n  try {\n" ++
+  "    const index = await (await fetch('index.json', { cache: 'no-cache' })).json();\n" ++
+  "    if ((index.entries[0] || '') !== newest) location.reload();\n  } catch (e) {}\n}, 2000);\n" ++
+  "</script>\n</body>\n</html>\n"
 
-/-- Rewrite `dir/index.html`, the list of every kept run. -/
+/-- Rewrite `dir/index.html`, the studio, and `dir/index.json`, its entries newest first, which
+the studio asks for to know when to reload. -/
 def writeGallery (dir : System.FilePath) : IO Unit := do
   let runs ← keptRuns dir
   IO.FS.createDirAll dir
-  IO.FS.writeFile (dir / "index.html") (galleryPage runs)
-  IO.println s!"view: {runs.length} kept runs in {dir / "index.html"}"
+  IO.FS.writeFile (dir / "index.html") (galleryPage runs (← studioLinks dir))
+  IO.FS.writeFile (dir / "index.json")
+    ((Lean.Json.mkObj [("entries", .arr (runs.map fun r => Lean.Json.str r.id).toArray)]).compress ++ "\n")
+  IO.println s!"view: {runs.length} kept entries in {dir / "index.html"}"
 
 /-- Write each frame's outputs into `out`, with `motion - 1` pictures before each frame after the
 first: the moments of the step from the frame before (`sample`). Each step's moment at its end is
