@@ -2,7 +2,7 @@ import Test.Dogfood.Scenario.Atomic.WriterMachine
 import Test.Dogfood.Scenario.Atomic.WriterOwnership
 import Test.Dogfood.Scenario.Atomic.WriterSource
 import Test.Dogfood.Scenario.SourceOpportunity
-import Effect4.Laws.Program.PlaceFunding.History
+import Effect4.Laws.Program.PlaceFunding.Run
 import Effect4.Laws.Program.NativeHeapReplies
 
 /-!
@@ -12,8 +12,8 @@ Concept: scope-lifetime-finalization, R11, the original `Atomic.cleans_once` cla
 Question: these steps serve the count clause of `Atomic.Cleanup.log_debits`.
 The writer ledger `WriterMachine.ledger` weighs the heap's cleanup identities and the active note
 reservations, and it credits the recorded finalizer starts of each request.
-The shared place funding lifts it through every native command, outer edit, reply and history.
-Every ledger fact is proved here except the evaluator debit, the planned goal `evaluation`.
+The library law `PlaceFunding.Local.history_funded` lifts it through every command, edit, reply
+and history. Every local fact is proved here except the evaluator debit, the goal `evaluation`.
 Reach: the built shop, every request identity, every compile budget and every admitted history.
 These steps establish no finalizer progress, release order or host observation.
 -/
@@ -134,17 +134,12 @@ yield flag. Route: the existing debits of `WriterMachine` (frame delegation, fin
 actions, masks, forks) and `WriterSync`, `WriterSuspensions`, `WriterLoops`, completed over the
 native primitive dispatch and the iteration, as `SourceScope.Opportunities` does for its ledger.
 It establishes no finalizer progress, release order or host observation.
-Consumer: `command_funded`. -/
+Consumer: `local_facts`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 proof_goal evaluation (b : Api.Built) (built : Api.Author.build (shop .none) = .ok b)
     (id : Nat) (member : id ∈ requests) :
     PlaceFunding.Evaluation (WriterMachine.ledger id) (ConfigurationAt b.program) b.program b.table
       (fun _ _ _ => 0)
-
-/-- The zero charge allows nothing at any command. -/
-theorem zero_allowance (m : NativeMachine) (command : SourceCommand) :
-    PlaceFunding.commandAllowance (fun _ _ _ => 0) m command = 0 := by
-  fun_cases PlaceFunding.commandAllowance (fun _ _ _ => 0) m command <;> rfl
 
 /-- The built shop authors no race. -/
 theorem race_free (b : Api.Built) (built : Api.Author.build (shop .none) = .ok b) :
@@ -157,66 +152,22 @@ theorem race_free (b : Api.Built) (built : Api.Author.build (shop .none) = .ok b
   rw [program] at census
   exact (Bool.and_eq_true_iff.mp (Option.some.inj census)).2
 
-/-- One native command keeps the writer ledger funded at no cap.
-Consumer: `decision_lift`, at its command and reply cases. -/
-theorem command_funded (b : Api.Built) (built : Api.Author.build (shop .none) = .ok b)
-    (id : Nat) (member : id ∈ requests) (m : NativeMachine) (command : SourceCommand)
-    (rest : List SourceCommand) (owned : ConfigurationAt b.program m)
-    (ledger : ForkLedger.Invariant.Ok m) (head : CommandAt b.program command)
-    (funded : (WriterMachine.ledger id).Funded 0 m [] []) :
-    letI := evaluatorFor b.program b.table
-    (WriterMachine.ledger id).Funded 0
-      (driveStep (interpOf b.program b.table) m command rest).1 [] [] := by
-  letI := evaluatorFor b.program b.table
-  have after := PlaceFunding.command_funded b.program b.table (control id) (no_queue id) (events id)
-    (stores id b.program b.table) (administration id b.program b.table) (ConfigurationAt b.program)
-    (fun _ _ _ => 0) (evaluation b built id member) m command rest ledger owned
-    (inputs id b.program m command (race_free b built) owned head) funded
-  rw [zero_allowance, Nat.add_zero] at after
-  exact after
-
-/-- Every edit outside the command loop keeps the funded ledger and distinct ids.
-Consumer: `decision_lift`. -/
-theorem edits (id : Nat) (root : NativeEff) (table : RowTable) :
-    Lift.MachineEdits (interpOf root table) (PlaceFunding.Holds (WriterMachine.ledger id) 0) :=
-  PlaceFunding.edits (control id) (no_queue id) (events id) 0 (interpOf root table)
-    (fun _ _ => Nat.le_refl _)
-    (fun m fiber token answer => Nat.le_of_eq (congrArg (Writer.heapCount id)
-      (prepare_reply_refs root table m fiber token answer)))
-
-/-- Every decision keeps source ownership and the funded writer ledger, with the existing queue
-ownership. Consumer: `history_funded`. -/
-theorem decision_lift (b : Api.Built) (built : Api.Author.build (shop .none) = .ok b)
+/-- **The writer ledger's local facts on the built shop**, modulo the evaluator debit: the
+library's command, edit, reply and history lifts then carry its funding.
+Consumer: `history_funded`. -/
+theorem local_facts (b : Api.Built) (built : Api.Author.build (shop .none) = .ok b)
     (id : Nat) (member : id ∈ requests) :
-    letI := evaluatorFor b.program b.table
-    Lift.DecisionLift Lift.unitOrder (interpOf b.program b.table)
-      (fun _ m => ConfigurationAt b.program m ∧ PlaceFunding.Holds (WriterMachine.ledger id) 0 m)
-      (fun _ _ cmds => CommandsAt b.program cmds) (fun _ _ tasks => TasksAt b.program tasks)
-      (fun _ _ _ => True) := by
-  letI := evaluatorFor b.program b.table
-  apply (reply_decision_lift b.program (SourceFragment.atomic_built_fragment b built)
-    b.table).withMachineFact _ ?_ (edits id b.program b.table) ?_
-  · intro tasks world m command rest running source held
-    have queue := (source.2 running).1
-    exact ⟨ForkLedger.Invariant.Native.driveStep_ok b.program b.table m command rest held.1,
-      command_funded b built id member m command rest source.1 held.1 (queue command (.head _)) held.2⟩
-  · intro world m fiber token answer owned held running admitted
-    have prepared := prepare_reply_at b.program b.table m fiber token answer
-    have scopes : ScopesAt b.program
-        (prepareAsyncAnswer (interpOf b.program b.table) m fiber token answer).1.scopes := by
-      rw [prepared.1]
-      exact owned.scopes
-    have configured : ConfigurationAt b.program
-        {m with state := (prepareAsyncAnswer (interpOf b.program b.table) m fiber token answer).1} :=
-      ⟨owned.fibers, owned.races, scopes⟩
-    have funded : (WriterMachine.ledger id).Funded 0
-        {m with state := (prepareAsyncAnswer (interpOf b.program b.table) m fiber token answer).1} [] [] :=
-      (PlaceLedger.state_balance (WriterMachine.ledger id) m _ [] []
-        (Nat.le_of_eq (congrArg (Writer.heapCount id)
-          (prepare_reply_refs b.program b.table m fiber token answer)))).funded
-        (WriterMachine.ledger id) held.2
-    exact ⟨ForkLedger.Invariant.Native.driveStep_ok b.program b.table _ _ [.drainDue] held.1,
-      command_funded b built id member _ _ [.drainDue] configured held.1 prepared.2 funded⟩
+    PlaceFunding.Local (WriterMachine.ledger id) (Free id) b.program b.table where
+  control := control id
+  quiet := no_queue id
+  events := events id
+  stores := stores id b.program b.table
+  admin := administration id b.program b.table
+  evaluation := evaluation b built id member
+  inputs := fun m command owned head => inputs id b.program m command (race_free b built) owned head
+  clock := fun _ _ => Nat.le_refl _
+  prepare := fun m fiber token answer => Nat.le_of_eq (congrArg (Writer.heapCount id)
+    (prepare_reply_refs b.program b.table m fiber token answer))
 
 /-- No request's note reservation lies at the root's source point. -/
 theorem below_root (id : Nat) : WriterPhase.below id [] = 0 := by
@@ -251,17 +202,9 @@ recorded finalizer starts. Consumer: `Atomic.Cleanup.log_debits`. -/
 theorem history_funded (b : Api.Built) (built : Api.Author.build (shop .none) = .ok b)
     (id : Nat) (member : id ∈ requests) (compileFuel : Nat) (m : NativeMachine)
     (history : Effect4.Run.HistoryOf b compileFuel m) :
-    (WriterMachine.ledger id).Funded 0 m [] [] := by
-  have kept := Effect4.Run.history_keeps b compileFuel
-    (fun m => ConfigurationAt b.program m ∧ PlaceFunding.Holds (WriterMachine.ledger id) 0 m)
-    ⟨load_at b.program (SourceFragment.atomic_built_fragment b built) compileFuel,
-      load_funded b built id member compileFuel⟩
-    (fun before row held _ => by
-      letI := evaluatorFor b.program b.table
-      obtain ⟨_, _, moved⟩ := Lift.stepDecisionState_lift (decision_lift b built id member)
-        row.1 () before row.2 held trivial
-      exact moved)
-    m history
-  exact kept.2.2
+    (WriterMachine.ledger id).Funded 0 m [] [] :=
+  PlaceFunding.Local.history_funded b (local_facts b built id member) 0
+    (SourceFragment.atomic_built_fragment b built) compileFuel
+    (load_funded b built id member compileFuel).2 m history
 
 end Test.Dogfood.Scenario.Atomic.WriterHistory
