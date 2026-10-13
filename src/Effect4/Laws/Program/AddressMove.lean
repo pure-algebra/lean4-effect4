@@ -305,17 +305,6 @@ theorem Eff.refFault_isNone_of {root : Eff Op} {site target : List Nat}
   | ref t => exact absurd rfl (hnr t)
   | _ => rfl
 
-/-- **Well-formed references, read at a reference site: the target stands in the site's scope**
-(`Eff.inScope`). The fourth clause of `Eff.refFault`, which `layerRefsWF_mem`
-(`Laws/Program/PathFold.lean`) leaves out; `layerRefsWF_scopeOf` and `layerRefsWF_module` there read
-its two cases. A step of `references_move`, at a site of the host that the paste keeps. -/
-theorem layerRefsWF_inScope {root : Eff Op} (hwf : root.layerRefsWF = true)
-    {site target : List Nat} (h : (site, target) ∈ root.refSites []) :
-    root.inScope site target = true := by
-  have hall := List.all_eq_true.mp hwf (site, target) h
-  simp only [Eff.refFault_isNone, Bool.and_eq_true] at hall
-  exact hall.2
-
 /-! ## The references of a pasted subtree -/
 
 /-- **A subtree whose references stay inside it, pasted with its references moved, keeps every
@@ -437,7 +426,27 @@ theorem references_move {root host host' : Eff Op} {src dst : List Nat} {n : Nod
       exact hij (List.cons.inj (List.append_cancel_left hr')).1
     have htarget := outside _ hsite hnotBelow
     obtain ⟨hb₀, hp₀, l₀, hl₀, hnr₀⟩ := layerRefsWF_mem hhost hsite
-    have hs₀ := layerRefsWF_inScope hhost hsite
+    -- The target stands in the site's scope: the two cases of `Eff.inScope`, read by
+    -- `layerRefsWF_module` and `layerRefsWF_scopeOf`; outside the module's layers the site is too,
+    -- since the reference order puts a module target before every other path.
+    have hs₀ : host.inScope x.1 x.2 = true := by
+      unfold Eff.inScope
+      cases hm : host.inModule x.2 with
+      | true =>
+        rw [if_pos rfl]
+        exact layerRefsWF_module hhost hsite hm
+      | false =>
+        have hsite₀ : host.inModule x.1 = false := by
+          unfold Eff.refBefore at hb₀
+          rw [hm] at hb₀
+          cases h₁ : host.inModule x.1 with
+          | false => rfl
+          | true =>
+            rw [h₁] at hb₀
+            cases hb₀
+        rw [if_neg Bool.false_ne_true, hsite₀, layerRefsWF_scopeOf hhost hsite hm, Bool.not_false,
+          Bool.true_and]
+        exact beq_iff_eq.mpr rfl
     -- The target's layer survives the paste: the target is beside `dst`, or encloses it.
     have hlayer : ∃ l', (Node.eff host').layerAt x.2 = some l' ∧ ∀ t, l' ≠ .ref t := by
       rcases Path.prefix_cases x.2 dst with hbelowT | ⟨k, r', hk⟩ | ⟨c', i', j', r', s'', hij', ht, hd'⟩
