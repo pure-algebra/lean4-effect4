@@ -83,7 +83,7 @@ keyed `inside`, which leaves when the promise is kept. (A test of the width, not
 text: `String.endsWith` reaches `Classical.choice`.) -/
 def hollowAt (rim inside : String) (t : Tube) (mid : Int) : List Mark :=
   (hollowOf rim t (mid + (unitLen t.bore / 2 : Nat))).map fun m =>
-    { m with key := if m.width < t.bore then inside else rim }
+    { m with key := if m.width < contents t.bore then inside else rim }
 
 /-! ## To move into Motion -/
 
@@ -204,14 +204,15 @@ theorem step_ok {A B : Picture} (hA : ∀ m ∈ A.marks, m.tube.ok) (hB : ∀ m 
 from the view grid's `Tools.View.CELL`.) -/
 def SIDE : Nat := 96
 
-/-- The bores of the figures, in thousandths of a pixel: a pipe that carries, a vessel, a thin
-tube (a strut, a staff, a tap), a fine tube (an enclosure, a bead), and each pipe a merge joins
-(half a pipe, so two of them are as wide as the pipe they join). -/
-def PIPE : Nat := 12000
-def VESSEL : Nat := 16000
-def THIN : Nat := 4000
-def FINE : Nat := 8000
-def SPLIT : Nat := 6000
+/-- The bores of the figures, in thousandths of a pixel, one for each body of the ladder
+(`WIDTHS`: 10, 14, 20, 28 px): a pipe that carries, a vessel, a thin tube (a strut, a staff, a
+tap), a fine tube (an enclosure, a bead), and each pipe a merge joins, a fine tube, so two of them
+hold as much as the pipe they join (`widths_double`). -/
+def PIPE : Nat := 10000
+def VESSEL : Nat := 18000
+def THIN : Nat := 0
+def FINE : Nat := 4000
+def SPLIT : Nat := FINE
 /-- A vessel's room at each end, in thousandths of a pixel. -/
 def HEADROOM : Nat := 6000
 /-- **The radius of every bend**, in pixels: the solid-tube pen's least radius. -/

@@ -26,9 +26,11 @@ def HALF : Int := 3141593
 /-- An arc's length for a radius in pixels and a turn: `r · |θ|`, in thousandths. -/
 def arc (r : Nat) (θ : Int) : Nat := r * θ.natAbs / 1000
 
-/-- The widths of a pipe's and a vessel's contents on this page. -/
-def PIPE : Nat := 12000
-def VESSEL : Nat := 16000
+/-- The bores of a pipe and a vessel on this page, and of a fine tube: their bodies 20, 28 and 14
+px wide (`WIDTHS`). -/
+def PIPE : Nat := 10000
+def VESSEL : Nat := 18000
+def FINE : Nat := 4000
 
 /-- A figure with its caption. -/
 def figure (pic : SvgNode) (caption : String) : RawNode :=
@@ -94,9 +96,9 @@ def plateGaps : SvgNode :=
 def plateAmount : SvgNode :=
   let a := straight (pxi 24) (pxi 28) 0 PIPE (px 216)
   let v := straight (pxi 240) (pxi 28) 0 VESSEL (px 160)
-  let b := straight (pxi 400) (pxi 28) 0 4000 (px 296)
+  let b := straight (pxi 400) (pxi 28) 0 FINE (px 296)
   still 720 56 (bodyOf "a" (into a true) (roundStart := some true) (round := false) ++
-    reducedOf "v" v (body PIPE) (body 4000) ++ bodyOf "b" (into b false) (roundStart := some false) ++
+    reducedOf "v" v (body PIPE) (body FINE) ++ bodyOf "b" (into b false) (roundStart := some false) ++
     packed "ua" a 2 ++ packed "uv" v 2 (pxi 148) ++ packed "ub" b 2)
 
 def plateValve : SvgNode :=
@@ -198,13 +200,13 @@ def queueBlocks (sc : CellSheet.Scene) (id : String) : List RawNode :=
 
 /-- **The page's blocks.** -/
 def blocks : List RawNode :=
-  [el "p" [.text "One body for every glyph: a tube, a centreline swept by one width, a solid body filled in one tone, its outline smooth everywhere. Its contents are pills of ink, one amount in every tube, with a meniscus at each end. A join carries a meaning: two bodies that meet in one fill share their fluid, and their crotch is rounded; two bodies kept apart by an air gap share nothing. The pipework is the program's invariants, and the contents its state. Any glyph turns into any other by a morph of what each tube is, its lengths and its turns, and every moment of a morph keeps the bend law. A step is the kit's join of two pictures, each change on the kit's transition and its spring (docs/research/2026-10-13-tube-language/README.md)."],
+  [el "p" [.text "One body for every glyph: a tube, a centreline swept by one width, a solid body filled in one tone, its outline a line of two pixels round the ground, smooth everywhere. Its contents are circles of ink, one amount in every tube, squeezed into pills where a tube is narrower than a unit. Every size is read from the line, and the bodies step by √2, so two branches hold as much as their trunk. A join carries a meaning: two bodies that meet in one fill share their fluid, and their crotch is rounded; two bodies kept apart by an air gap share nothing. The pipework is the program's invariants, and the contents its state. Any glyph turns into any other by a morph of what each tube is, its lengths and its turns, and every moment of a morph keeps the bend law. A step is the kit's join of two pictures, each change on the kit's transition and its spring (docs/research/2026-10-13-tube-language/README.md)."],
    el "h2" [.text "The one body"],
    figure plateRun "A run and its units: each unit the same amount, a meniscus between, packed against the outlet end.",
    figure plateBends "Every bend at one radius, whatever the tube: the units follow the centreline round.",
    figure plateJunction "A solid join shares the fluid: the branch leaves on its tangent, and its crotch is rounded, so the outline has no kink.",
    figure plateGaps "An air gap shares nothing: a closed valve parts its pipe; a broadcast's taps each hold their own copy; a pipe that passes over another keeps a gap round it.",
-   figure plateAmount "One amount everywhere: a unit is 32 px long in a pipe of 12, 24 in a vessel of 16, 96 in a pipe of 4. Reducers join the widths smoothly.",
+   figure plateAmount "One amount everywhere: a unit is a circle of 10 px in a pipe of 20 and in a vessel of 28, and a pill 28 px long in a fine tube of 14. Reducers join the widths smoothly.",
    figure plateValve "A valve parts its pipe: open above, closed below by an air gap, three units waiting behind it.",
    figure plateWeight "A span bends under what it holds: no unit, two, four; its ends turn in proportion to its load.",
    el "h2" [.text "A strategy is plumbing"],

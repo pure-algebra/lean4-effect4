@@ -86,17 +86,10 @@ def complete (frames : List (List Mark)) : List Picture :=
 
 /-- **A unit along a line of tubes**, its slot's front at the volume `v` from the line's start:
 one mark for each tube, where the front stands in that tube, `(v − the volume before it) / its
-bore`, as `Queue.fronts` places one. A unit off a tube's length draws nothing there, so the unit
+contents width`, by `Queue.fronts`. A unit off a tube's length draws nothing there, so the unit
 flows from one tube into the next, shortening where the next is wider, as water does. -/
 def flow (key : String) (line : List (String × Tube)) (v : Int) : List Mark :=
-  (line.foldl (fun (acc : Int × List Mark) (kt : String × Tube) =>
-    let (k, t) := kt
-    let front := (v - acc.1) * 1000 / (t.bore : Int)
-    (acc.1 + (t.length * t.bore / 1000 : Nat), acc.2 ++ [unitOf (key ++ "@" ++ k) t front]))
-    (0, [])).2
-
-/-- The volume of a tube, in the units `flow` counts. -/
-def volume (t : Tube) : Int := (t.length * t.bore / 1000 : Nat)
+  (line.zip (Queue.fronts (line.map (·.2)) v)).map fun ((k, t), front) => unitOf (key ++ "@" ++ k) t front
 
 /-- The vessel of a figure a cell to the right, in a picture two cells wide. -/
 def vesselX : Int := vesselFigure.fed.x + px 96
@@ -114,7 +107,7 @@ def arrival : List Mark × List Mark :=
   let vessel := { vesselFigure.fed with x := vesselX }
   let line := [("b", longInlet), ("main", vessel)]
   let start : Int := 40000 * (PIPE : Int) / 1000
-  let seated : Int := volume longInlet + ((vesselFigure.L - HEADROOM) * VESSEL / 1000 : Nat)
+  let seated : Int := Queue.volume longInlet + ((vesselFigure.L - HEADROOM) * contents VESSEL / 1000 : Nat)
   (flow "a" line start, flow "a" line seated)
 
 /-- The inside of a promised unit leaves as the value arrives: late in the beat. -/

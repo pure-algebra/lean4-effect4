@@ -38,9 +38,10 @@ open Tools.View Tools.View.Tube
 open Whatwg.Svg.Scene (Easing Slot)
 open Whatwg.Svg.Scene.Units (slots lane)
 
-/-- The widths of the pipes' and the vessel's contents, in thousandths of a pixel. -/
-def PIPE : Nat := 12000
-def VESSEL : Nat := 16000
+/-- The bores of the pipes and of the vessel, in thousandths of a pixel: bodies of 20 and 28 px
+(`WIDTHS`). -/
+def PIPE : Nat := 10000
+def VESSEL : Nat := 18000
 /-- The room at each end of the vessel. -/
 def HEAD : Nat := 6000
 /-- A closed valve's air gap, its length along the inlet, and how far the valve stands from the
@@ -104,8 +105,8 @@ def Layout.vessel (l : Layout) : Tube := straight (LEFT + l.inLen) AXIS 0 VESSEL
 def Layout.outlet (l : Layout) : Tube :=
   straight (LEFT + l.inLen + l.vLen) AXIS 0 PIPE (l.outLen + RIGHT + OFF)
 
-/-- A tube's volume, in thousandths of a square pixel. -/
-def volume (t : Tube) : Int := (t.length * t.bore / 1000 : Nat)
+/-- A tube's volume, in thousandths of a square pixel: its length by the width of its contents. -/
+def volume (t : Tube) : Int := (t.length * contents t.bore / 1000 : Nat)
 
 /-- A unit's amount, in thousandths of a square pixel. -/
 def A : Int := (AREA * 1000 : Nat)
@@ -114,7 +115,7 @@ def A : Int := (AREA * 1000 : Nat)
 tubes: the length along it, `(v − the volume before it) / its width`. -/
 def fronts (line : List Tube) (v : Int) : List Int :=
   (line.foldl (fun (acc : Int × List Int) t =>
-    ((acc.1 + volume t), acc.2 ++ [(v - acc.1) * 1000 / (t.bore : Int)])) (0, [])).2
+    ((acc.1 + volume t), acc.2 ++ [(v - acc.1) * 1000 / (contents t.bore : Int)])) (0, [])).2
 
 /-- The index of a unit among a place's slots. -/
 def slotOf (ss : List (Slot Nat)) (msg : Nat) : Option Nat :=

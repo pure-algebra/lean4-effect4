@@ -16,13 +16,21 @@ with its own copy, and the tube below a crossing is parted round the one that pa
 `level`, `cutOf`). Every width is a whole, even number of pixels, and a straight run's edges fall
 on pixel edges.
 
-**One amount.** A unit of contents has one area, `AREA` square pixels, in every tube: in a tube
-whose contents are `c` pixels wide its slot is `AREA / c` long. Every width of the ladder divides
-the area (`ladder_divides`), so every slot is a whole number of pixels. A unit is drawn as a pill,
-a liquid plug with a round meniscus at each end, as a plug of liquid stands in a capillary
-(Bretherton, "The motion of long bubbles in tubes", 1961), a `MENISCUS` from the next; every width
-of the ladder leaves room for a whole pill in its slot (`ladder_pills`). A unit that passes from a
-narrow tube into a wide one shortens, as water does.
+**One proportion** (the owner's choice of 2026-10-13, from a sheet of ratios). Every size is
+read from the line: a body's `LINE` is 2 px, as the docs' edges weigh; contents stand a `MARGIN`
+of one and a half lines inside it; a unit is a circle `UNIT` 10 px across, the radio button's
+proportion 2 : 3 : 10. The bodies' widths step by √2 (`WIDTHS`: 10, 14, 20, 28), so two bodies of
+one step hold as much as one of the next, as Leonardo's rule has a tree's branches carry the
+area of their trunk (`widths_double`).
+
+**One amount.** A unit has one amount, `AREA` square pixels, the slot of a circle and its
+`MENISCUS`: in a tube whose contents are `c` pixels wide its slot is `AREA / c` long. Every width
+of the ladder divides the area (`ladder_divides`), so every slot is a whole number of pixels. A
+unit is a circle where its tube's bore holds one (`contents`), and in a narrower bore a pill of
+the same slot, a liquid plug with a round meniscus at each end, as a plug of liquid stands in a
+capillary (Bretherton, "The motion of long bubbles in tubes", 1961); every width of the ladder
+leaves room for a whole pill in its slot (`ladder_pills`). A unit that passes from a narrow tube
+into a wide one shortens to its circle, as water does.
 
 **Every transition a morph, timed.** A mark says how it comes into its pose with the kit's
 `Transition` (`Mark.move`, `Mark.shape`), so a cause moves before its effect. How a picture
@@ -35,10 +43,14 @@ open Whatwg.Svg.Value (Decimal Pen Point Path)
 
 /-! ## The pen and the amount -/
 
-/-- The wall's thickness, on each side of a tube, in thousandths of a pixel: one for every tube. -/
-def WALL : Nat := 3000
-/-- The clearance between the contents and the wall, in thousandths of a pixel. -/
-def CLEAR : Nat := 2000
+/-- **The line** round a body, in thousandths of a pixel: two pixels, the weight of the docs'
+edges. Every other size is read from it. -/
+def LINE : Nat := 2000
+/-- The margin between the contents and the inside of the line, in thousandths of a pixel: one
+line and a half. -/
+def MARGIN : Nat := 3000
+/-- **A unit's width**, in thousandths of a pixel: a circle five lines across. -/
+def UNIT : Nat := 10000
 /-- The gap between two units, along the tube, in thousandths of a pixel. -/
 def MENISCUS : Nat := 2000
 /-- How far a collar stands out of a wall, in thousandths of a pixel. -/
@@ -50,10 +62,23 @@ def GAP : Nat := 4000
 /-- How long a reducer is, from a pipe's width to a vessel's, in thousandths of a pixel. -/
 def REDUCER : Nat := 10000
 
-/-- **The widths of contents** a tube may have, in whole pixels. -/
-def LADDER : List Nat := [4, 6, 8, 12, 16]
-/-- **The area of a unit**, in square pixels: one amount in every tube. -/
-def AREA : Nat := 384
+/-- **The widths of contents** a tube may have, in whole pixels: the widest is a unit's circle. -/
+def LADDER : List Nat := [4, 6, 8, 10]
+/-- **The area of a unit**, in square pixels: one amount in every tube, a circle's slot,
+`UNIT · (UNIT + MENISCUS)`. -/
+def AREA : Nat := 120
+
+/-- **The widths of bodies**, in whole pixels, a step of √2 apart: a thin strut, a fine tube, a
+pipe, a vessel. -/
+def WIDTHS : List Nat := [10, 14, 20, 28]
+
+/-- **Two bodies of one step hold one of the next**, within one in forty: the squares of the
+widths double, as Leonardo's rule has two branches carry their trunk's area. -/
+theorem widths_double : (WIDTHS.zip WIDTHS.tail).all fun (a, b) =>
+    2 * a * a * 40 ≤ b * b * 41 && b * b * 40 ≤ 2 * a * a * 41 := by decide
+
+/-- A circle's slot is the amount: the unit and the meniscus to the next. -/
+theorem area_circle : AREA * 1000000 = UNIT * (UNIT + MENISCUS) := by decide
 
 /-- **Every width divides the amount**, so a unit's slot is a whole number of pixels in every
 tube. -/
@@ -63,14 +88,16 @@ theorem ladder_divides : ∀ c ∈ LADDER, AREA % c = 0 := by decide
 to the next, `c + 2 ≤ AREA / c`. -/
 theorem ladder_pills : ∀ c ∈ LADDER, c * (c + 2) ≤ AREA := by decide
 
-/-- A unit's slot in a tube whose contents are `bore` thousandths of a pixel wide, in thousandths
-of a pixel. -/
-def unitLen (bore : Nat) : Nat := if bore = 0 then 0 else AREA * 1000000 / bore
+/-- **The width of a tube's contents**, in thousandths of a pixel: its bore, up to a unit's
+circle. -/
+def contents (bore : Nat) : Nat := min bore UNIT
 
-/-- The width of a tube's lumen and of its body, from the width of its contents: the body holds
-its contents with the clearance and the wall round them. -/
-def lumen (bore : Nat) : Nat := bore + 2 * CLEAR
-def body (bore : Nat) : Nat := bore + 2 * CLEAR + 2 * WALL
+/-- A unit's slot in a tube whose bore is `bore` thousandths of a pixel, in thousandths of a
+pixel. -/
+def unitLen (bore : Nat) : Nat := if contents bore = 0 then 0 else AREA * 1000000 / contents bore
+
+/-- **The width of a tube's body**, from its bore: the margin and the line round it. -/
+def body (bore : Nat) : Nat := bore + 2 * MARGIN + 2 * LINE
 
 /-! ## Marks -/
 
@@ -159,9 +186,6 @@ def GAPS : Nat := 3
 def CONTENTS : Nat := 4
 def HOLLOWS : Nat := 5
 
-/-- **The line** round a body, in thousandths of a pixel: one pixel, as the docs' frames. -/
-def LINE : Nat := 1000
-
 /-- **A tube's body**: one solid fill. A tube that opens to the world is cut square at its ends,
 off the picture; one that is closed has round ends. A tube that passes over another stands at a
 deeper `level`, drawn after it, and the one below is parted round it (`cutOf`). -/
@@ -174,23 +198,22 @@ def bodyOf (key : String) (t : Tube) (fromEnd : Bool := false) (round : Bool := 
 inside the slot, a meniscus from the next. -/
 def pillDash (t : Tube) (front : Int) : Int × Nat :=
   let u := unitLen t.bore
-  (front - u + MENISCUS / 2 + t.bore / 2, u - MENISCUS - t.bore)
+  let c := contents t.bore
+  (front - u + MENISCUS / 2 + c / 2, u - MENISCUS - c)
 
 /-- **A unit** in the slot whose front stands `front` along the tube (thousandths of a pixel): a
-pill. -/
+circle, a dash of no length with round ends, where the bore holds one, else a pill. -/
 def unitOf (key : String) (t : Tube) (front : Int) : Mark :=
-  { key, layer := CONTENTS, tube := t, width := t.bore, tone := .fluid, dash := some (pillDash t front) }
+  { key, layer := CONTENTS, tube := t, width := contents t.bore, tone := .fluid,
+    dash := some (pillDash t front) }
 
-/-- The rim of a promised unit, in thousandths of a pixel. -/
-def RIM : Nat := 2000
-
-/-- **A promised unit**, a bubble in the line: the pill's outline in ink, its inside the ground,
-as a hollow node of the docs' figures. -/
+/-- **A promised unit**, a bubble in the line: the unit's outline a `LINE` of ink, its inside the
+ground, as a hollow node of the docs' figures. -/
 def hollowOf (key : String) (t : Tube) (front : Int) : List Mark :=
-  [{ key := key ++ ":rim", layer := CONTENTS, tube := t, width := t.bore, tone := .fluid,
+  [{ key := key ++ ":rim", layer := CONTENTS, tube := t, width := contents t.bore, tone := .fluid,
      dash := some (pillDash t front) },
-   { key := key ++ ":in", layer := HOLLOWS, tube := t, width := t.bore - 2 * RIM, tone := .ground,
-     dash := some (pillDash t front) }]
+   { key := key ++ ":in", layer := HOLLOWS, tube := t, width := contents t.bore - 2 * LINE,
+     tone := .ground, dash := some (pillDash t front) }]
 
 /-- **A closed valve**: the pipe parted by an air gap from `s` along the tube, `len` long, its two
 ends round and facing each other; nothing passes. Opening it fuses the ends into one body. -/
@@ -463,13 +486,18 @@ def css : String :=
   ".tube-ground { color: var(--e4-color-ground); }\n" ++
   "use.tube-ground { fill: currentColor; stroke: none; }\n" ++
   ".tube-casing { color: var(--e4-color-ink); fill: currentColor; stroke: currentColor; " ++
-  "stroke-width: 2px; stroke-linejoin: round; }\n" ++
+  "stroke-width: " ++ toString (2 * LINE / 1000) ++ "px; stroke-linejoin: round; }\n" ++
   "svg.tube-view { display: block; max-width: 100%; height: auto; shape-rendering: geometricPrecision; }\n" ++
   "svg.tube-view[id] { cursor: pointer; }\n"
 
--- the slots: a pipe of 12 px holds a unit 32 px long, a vessel of 16 px one 24 px long
-#guard unitLen 12000 == 32000 && unitLen 16000 == 24000 && unitLen 4000 == 96000
--- a pill in a pipe of 12: its dash 18 px, so 30 px with its round ends, 2 px to the next
-#guard pillDash (straight 0 0 0 12000 100000) 100000 == (75000, 18000)
+-- the slots: a pipe's bore of 10 px and a vessel's of 18 hold a circle in 12 px, a fine tube's
+-- bore of 4 a pill in 30
+#guard unitLen 10000 == 12000 && unitLen 18000 == 12000 && unitLen 4000 == 30000
+-- a circle in a pipe: a dash of no length, centred 6 px behind its slot's front
+#guard pillDash (straight 0 0 0 10000 100000) 100000 == (94000, 0)
+-- a pill in a fine tube: its dash 24 px, so 28 px with its round ends, 2 px to the next
+#guard pillDash (straight 0 0 0 4000 100000) 100000 == (73000, 24000)
+-- the page's casing stroke is two lines wide
+#guard (css.splitOn "stroke-width: 4px").length == 2
 
 end Tools.View.Tube
