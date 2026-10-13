@@ -17,7 +17,7 @@ edit, and the layer references of a pasted subtree (`Node.rebaseRefs`).
 | Statement | In words |
 | --- | --- |
 | `Path.prefix_cases` | two paths are nested, one way or the other, or they split at a common prefix |
-| `Path.below_append`, `Path.eq_append_of_below`, `Path.rebase_append` | the rest below a base, and a path relocated |
+| `Path.below_append`, `Path.rebase_append` | the rest below a base, and a path relocated |
 | `Path.lt_append_left`, `Path.properPrefix_append_left` | program order and the prefix test read past a common prefix |
 | `Node.at_replaceAt_above` | above an edit, the edited node reads an edited ancestor |
 | `Node.child_mapRefs`, `Node.at_mapRefs`, `Node.layerAt_mapRefs` | a rewrite of the targets commutes with the lookups |
@@ -80,22 +80,6 @@ theorem below_append : ∀ (p r : List Nat), Path.below p (p ++ r) = some r
     show (if b = b then Path.below p (p ++ r) else none) = some r
     rw [if_pos rfl]
     exact below_append p r
-
-/-- **`Path.below` answers only a rest below its base.** With `below_append`, the base is a prefix
-of a path exactly when `Path.below` answers. A step of `references_move`'s readers: a relocated
-target is the base's extension. -/
-theorem eq_append_of_below : ∀ {p a r : List Nat}, Path.below p a = some r → a = p ++ r
-  | [], _, _, h => by
-    cases h
-    rfl
-  | _ :: _, [], _, h => by cases h
-  | b :: p, i :: a, r, h => by
-    unfold Path.below at h
-    split at h
-    · rename_i hbi
-      subst hbi
-      rw [eq_append_of_below h, List.cons_append]
-    · cases h
 
 /-- **A path below `src` is relocated below `dst` with the same rest.** A step of
 `references_move`: an inner target of the pasted subtree names the same layer of it. -/
