@@ -389,6 +389,8 @@ import Test.Dogfood.Scenario.Workers.CommandGuard
 import Test.Dogfood.Scenario.TodoService
 -- The bank of verified implementations: the banked Ref cache (decisions row 378, seat BANK).
 import Test.Dogfood.Bank
+-- Definitions with program parameters and invocations with programs, authored (row 340, seat IMPOSE).
+import Test.Program.AuthoringInvoke
 
 /-!
 # Effect4 test battery

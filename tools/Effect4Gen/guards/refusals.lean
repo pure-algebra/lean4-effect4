@@ -47,7 +47,7 @@ def admissions : List AdmitRefusal :=
 def scopes : List Authoring.Refusal :=
   [⟨[], .unbound "x"⟩, ⟨[0, 1], .unboundLayer "L"⟩, ⟨[2], .duplicateLayer "L"⟩,
    ⟨[], .placement "L"⟩, ⟨[3], .unboundRow "Db.get"⟩, ⟨[1], .reservedName "_%x"⟩,
-   ⟨[], .duplicateRow "Db.get"⟩]
+   ⟨[], .duplicateRow "Db.get"⟩, ⟨[0, 0], .unboundParam "f"⟩, ⟨[0, 0], .duplicateParam "f"⟩]
 
 def typings : List TypeRefusal :=
   [⟨[1], .term (.var 3)⟩, ⟨[], .cause (.both (.fail (.lit (.nat 1))) (.interrupt none))⟩,

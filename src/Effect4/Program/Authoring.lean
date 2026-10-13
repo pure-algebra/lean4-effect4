@@ -74,6 +74,12 @@ inductive Reason
   | unboundDef (name : String)
   /-- Two definitions under one name: an invocation names its definition by its name. -/
   | duplicateDef (name : String)
+  /-- A run of a program parameter that the enclosing definition does not declare, by the name
+  it was run under (decisions row 340). A main program and a module layer declare none. -/
+  | unboundParam (name : String)
+  /-- Two program parameters of one definition under one name: a run names its parameter by its
+  name. -/
+  | duplicateParam (name : String)
   deriving DecidableEq, Repr
 
 structure Refusal where
@@ -113,13 +119,20 @@ abbrev RowNames := List (String × Nat)
 /-- Declared definitions, each name to its index in the module's definition block. -/
 abbrev DefNames := List (String × Nat)
 
+/-- Declared program parameters of one definition (decisions row 340), each name to its index
+among the definition's parameters (`DefDecl.params`). -/
+abbrev ParamNames := List (String × Nat)
+
 /-- What a source program reads: the value names in scope, the declared layer names, the
-declared host rows and the declared definitions. -/
+declared host rows, the declared definitions, and the program parameters in scope. A definition's
+body sees its own program parameters, and so do the programs that its invocations pass on. A main
+program and a module layer see none. -/
 structure Env where
   names : Names := []
   layers : LayerNames := []
   rows : RowNames := []
   defs : DefNames := []
+  programParams : ParamNames := []
 
 /-- A source term. -/
 abbrev TermSrc := Env → List Nat → Except Refusal Term
@@ -141,7 +154,8 @@ def Env.push (env : Env) (xs : List String) : Env := { env with names := env.nam
 
 /-- The empty value scope, for a layer body (`layerTy` types it in the empty environment) and a
 definition's body. The declared layers, rows and definitions stay: a layer body calls the
-module's rows like any other, and a body invokes the block's definitions. -/
+module's rows like any other, and a body invokes the block's definitions. The program parameters
+stay too: a layer inside a body is checked at the body's signature, so it may run them. -/
 def Env.closed (env : Env) : Env := { env with names := [] }
 
 /-- A binder name the surface mints for itself in this scope: the reserved prefix, the stem
@@ -365,7 +379,14 @@ parameters and its columns, and writes its body as a function of its parameters'
 parameters are one request: none is `unit`, one is its own type, and more are nested pairs
 (`requestTy`). The surface elaborates the body at the closed scope with one minted name for the
 request, and each parameter reads a part of it (`requestParts`), the convention of `bindWith`.
-`Def.invoke` resolves a name to the definition's index, as `Row.call` resolves a spelling. -/
+`Def.invoke` resolves a name to the definition's index, as `Row.call` resolves a spelling.
+
+A definition may also declare **program parameters** (decisions row 340): holes of its body that
+each invocation fills with a program. Each is declared once, by name, with its request, answer
+and error (`ParamDecl`). The body runs one by its name (`Param.run`), which writes the run of
+its index, `perform (.param i) x`. A definition with program parameters is invoked by
+`Def.invokeWith`, which writes `Eff.invoke k r [p₀, …]`. Each program is a Lean function of its
+parameter's request, read through a name minted for the scope, as `bindWith`'s rest is. -/
 
 /-- The request type of a list of parameter types: `unit`, the one type, or nested pairs. -/
 def requestTy : List Ty → Ty
@@ -387,9 +408,10 @@ def requestOf : List TermSrc → TermSrc
   | a :: rest => app "pair" [a, requestOf rest]
 
 /-- A definition an author declares once: its name, its parameters with their names and types,
-its declared columns, its body as a function of its parameters' terms, and its role in the
-block's services (decisions row 339). The names document the parameters; the body reads each
-through a part of the request. -/
+its declared columns, its body as a function of its parameters' terms, its role in the
+block's services (decisions row 339), and its program parameters (decisions row 340). The names
+of the value parameters document them; the body reads each through a part of the request. The
+body runs a program parameter by its name (`Param.run`). -/
 structure DefSrc (Op : Type) where
   name : String
   params : List (String × Ty)
@@ -398,12 +420,13 @@ structure DefSrc (Op : Type) where
   requires : List Effect4.ServiceKey := []
   body : List TermSrc → Src Op
   role : DefRole := .plain
+  programParams : List ParamDecl := []
 
 /-- The declaration a definition stores in the block: its name, its request type, its three
-columns and its role. -/
+columns, its role and its program parameters. -/
 def DefSrc.decl {Op : Type} (d : DefSrc Op) : DefDecl :=
   { name := d.name, request := requestTy (d.params.map (·.2)), answer := d.answer,
-    error := d.error, requires := d.requires, role := d.role }
+    error := d.error, requires := d.requires, role := d.role, params := d.programParams }
 
 /-- A definition as the initial program of service `service`: it takes no parameter, and it
 answers the service's state. -/
@@ -415,12 +438,22 @@ its other parameters are the method's arguments. -/
 def DefSrc.serviceMethod {Op : Type} (service method : String) (d : DefSrc Op) : DefSrc Op :=
   { d with role := .serviceMethod service method (d.params.length - 1) }
 
+/-- A definition's program parameters as a scope, or the first name declared twice, refused at
+the body's path `p`: a run names its parameter by its name. -/
+def paramNamesOf (p : List Nat) (params : List ParamDecl) : Except Refusal ParamNames :=
+  params.zipIdx.foldlM (init := []) fun acc (d, i) =>
+    if acc.any (·.1 == d.name) then .error ⟨p, .duplicateParam d.name⟩
+    else .ok (acc ++ [(d.name, i)])
+
 /-- A definition's body, at the closed scope with one minted name for its request: each
-parameter reads a part of it. `p` is the body's path in the block. -/
+parameter reads a part of it. Its program parameters are in scope, and nothing else's. `p` is the
+body's path in the block. -/
 def DefSrc.elaborate {Op : Type} (d : DefSrc Op) (env : Env) (p : List Nat) :
-    Except Refusal (Eff Op) :=
+    Except Refusal (Eff Op) := do
+  let programs ← paramNamesOf p d.programParams
   let request := env.closed.mint "request"
-  d.body (requestParts d.params.length (minted request)) (env.closed.push [request]) p
+  d.body (requestParts d.params.length (minted request))
+    { env.closed.push [request] with programParams := programs } p
 
 /-- The path of definition `k`'s body in a block (`Program/Definitions.lean`): the bodies are
 the block's child `0`, and in their spine the head is child `0` and the rest child `1`. -/
@@ -434,6 +467,40 @@ def Def.invoke (name : String) (args : List TermSrc) : Src NativeOp := fun env p
   | some (_, k) => do
     let x ← requestOf args env p
     .ok (.perform (.call k) x)
+  | none => .error ⟨p, .unboundDef name⟩
+
+/-- **A run of a program parameter**, by its name (decisions row 340): `perform (.param i) x`,
+where `i` is the parameter's index among the enclosing definition's program parameters. The
+run's row is the parameter's declaration (`Signature.withParams`). A name that the definition
+does not declare refuses at the run, by name. -/
+def Param.run (name : String) (request : TermSrc) : Src NativeOp := fun env p =>
+  match env.programParams.find? (fun entry => entry.1 == name) with
+  | some (_, i) => do
+    let x ← request env p
+    .ok (.perform (.param i) x)
+  | none => .error ⟨p, .unboundParam name⟩
+
+/-- A program that an invocation passes for a program parameter (decisions row 340): a Lean
+function of the parameter's request, as `bindWith`'s rest is a function of the answer. -/
+abbrev ProgramSrc := TermSrc → Src NativeOp
+
+/-- **An invocation of a declared definition with programs** (decisions row 340): the module's
+block gives the definition its index, the arguments are one request (`requestOf`), and program
+`j` fills program parameter `j`. A program reads its parameter's request through a name minted
+for the scope (`Env.mint`, `minted`), as `bindWith`'s rest reads the answer. It also reads the
+caller's names and the caller's program parameters, so a body may pass its own parameter on. The
+programs stand in the node's spine, its child `0` (`elabEffs`). An undeclared name refuses at the
+site, by name. The surface writes `Eff.invoke k r [p₀, …]`. A definition with no program
+parameter is invoked by `Def.invoke`, and the checker refuses a count of programs other than the
+definition's (`invokeArity`). -/
+def Def.invokeWith (name : String) (args : List TermSrc) (programs : List ProgramSrc) :
+    Src NativeOp := fun env p =>
+  match env.defs.find? (fun entry => entry.1 == name) with
+  | some (_, k) => do
+    let x ← requestOf args env p
+    let request := env.mint "request"
+    let ps ← elabEffs (programs.map fun f => f (minted request)) (env.push [request]) (p ++ [0])
+    .ok (.invoke k x ps)
   | none => .error ⟨p, .unboundDef name⟩
 
 /-- An authored module: the host rows it declares, the services it declares, the shared
