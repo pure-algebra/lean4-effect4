@@ -348,6 +348,7 @@ theorem applyFinishes (s : Run) (id : Nat) (idText tag message : String) (tr : N
   simp only [Api.HostSession.applyReply, hbound, hreply, hpre]
   change Program.steppedBy s.built.program (999 + 1) s.built.table s.session.machine
     (.answerAsync Api.root 1 (failed tag message)) = _ at hm
+  unfold Program.steppedBy at hm
   rw [hm]
   change s.session.machine = _ at hshape
   rw [hshape]

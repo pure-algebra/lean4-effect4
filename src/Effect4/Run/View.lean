@@ -23,8 +23,10 @@ its journal.
   reasons; the retired calls and the count of applications; the runnable fibers, the armed owners,
   the timers, the cells and each fiber's status; the number of run commands, `funded` and `atRest`.
 
-`funded` is read by a replay of the journal (`Run.funded`): DM3's first cut, which DM4 replaces
-by a bit that the session keeps. Where a reading had two owners, the view keeps one: the session's
+`funded` is read off the session's bit and the journal's verdicts, with no replay: no reply
+application was cut by its fuel (`Session.funded`, slice DM4), and no run command ended at a
+frontier. It is `Run.funded` (`view_funded`, `src/Effect4/Laws/Api/Live.lean`). Where a reading had
+two owners, the view keeps one: the session's
 pending replies are the received completions of the awaited calls, since a held call is an awaited
 call.
 
@@ -107,7 +109,7 @@ structure View where
   fibers : List (FiberId × Api.FiberStatus)
   /-- How many run commands the journal holds. -/
   steps : Nat
-  /-- No task of the run was cut by its budget (`Run.funded`). -/
+  /-- No task of the run was cut by its budget: `Run.funded`, read with no replay. -/
   funded : Bool
   /-- No runnable fiber and no armed owner (`Run.atRest`). -/
   atRest : Bool
@@ -167,7 +169,7 @@ def view (s : Run) : View :=
     cells := s.machine.state.refs
     fibers := Api.fiberStatuses s.machine
     steps := s.journal.length
-    funded := Run.funded s
+    funded := s.session.funded && !s.phases.any (· == .frontier)
     atRest := Run.atRest s }
 
 end Run

@@ -23,6 +23,8 @@ it.
   address in the run's program, as the checker types it.
 * **The view places every live fiber** (`view_classifies`): runnable, on a host call, on a timer,
   or in an internal wait (decisions row 333 (3)).
+* **The view's flag is `funded`** (`view_funded`, slice DM4): the session's bit and the journal's
+  verdicts give `Run.funded` with no replay.
 
 What they do not establish: that a run is funded (`embedded-budget-sufficient`, an open part of
 R12), reply admission, the session's ledger, a host's conformance, host progress, or anything of a
@@ -34,7 +36,8 @@ set_option autoImplicit false
 namespace Effect4.Live
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Sched
-open Effect4.Api.HostSession (Header)
+open Effect4.Api.HostSession (Header Phase)
+open Effect4.Api.Runner (Command)
 
 /-- **A live run is reached.** An open of a built program and run commands reach the run of a
 `Live`, so every law of the law graph that takes `Run.Reached` holds of it.
@@ -206,5 +209,168 @@ theorem view_classifies (l : Live) :
         refine List.mem_map.mpr ⟨⟨f.id, token, Run.registrationOf f⟩,
           List.mem_filterMap.mpr ⟨f, hf, ?_⟩, rfl⟩
         simp only [live, hp, hreq, hw, Option.isSome_none, Bool.false_eq_true, ↓reduceIte]
+
+/-! ## The view's `funded` (slice DM4)
+
+The steps of `view_funded`. `rowReads` is the tape's test of one run command: the decision that the
+command gives the machine reads on (`Run.readsOn`), or it gives none. -/
+
+/-- The tape's test of one run command: whether the decision it gives the machine reads on. A
+command that gives no decision passes. -/
+def rowReads (r : Run) (c : Command) : Bool :=
+  match Run.decisionOf r c (Api.Runner.result r.runner c).phase with
+  | some d => Run.readsOn r d
+  | none => true
+
+/-- Step of `view_funded`: one run command conjoins the session's bit with the tape's test of the
+command. A reply application keeps its step's fuel in the bit (`applyReply_funded_applied`); a
+control that progressed reads on (`advance_progressed`); every other command keeps the bit. -/
+theorem step_funded (r : Run) (c : Command) :
+    (r.step c).session.funded = (r.session.funded && rowReads r c) := by
+  cases c with
+  | bind call token =>
+    show (Api.HostSession.bindCall r.session call token).session.funded =
+      (r.session.funded && true)
+    rw [Api.HostSession.bindCall_funded, Bool.and_true]
+  | submit reply =>
+    show (Api.HostSession.submit r.session reply).session.funded = (r.session.funded && true)
+    rw [Api.HostSession.submit_funded, Bool.and_true]
+  | apply key =>
+    show (Api.HostSession.applyReply r.session key r.budget.fuel).session.funded =
+      (r.session.funded &&
+        match Run.decisionOf r (.apply key)
+            (Api.HostSession.applyReply r.session key r.budget.fuel).phase with
+        | some d => Run.readsOn r d
+        | none => true)
+    cases hph : (Api.HostSession.applyReply r.session key r.budget.fuel).phase with
+    | applied =>
+      obtain ⟨reply, decision, hread, hpre, hfund⟩ :=
+        Api.HostSession.applyReply_funded_applied r.session key r.budget.fuel hph
+      have same := Run.preflight_replyDecision r.session reply decision hpre
+      rw [hfund]
+      show _ = (r.session.funded &&
+        match (Api.HostSession.readReply r.session.pending key).map Run.replyDecision with
+        | some d => Run.readsOn r d
+        | none => true)
+      rw [hread, same]
+      rfl
+    | bound =>
+      rw [(Api.HostSession.applyReply_funded_or r.session key r.budget.fuel).resolve_right
+        (by rw [hph]; exact fun h => nomatch h)]
+      exact (Bool.and_true _).symm
+    | preflight =>
+      rw [(Api.HostSession.applyReply_funded_or r.session key r.budget.fuel).resolve_right
+        (by rw [hph]; exact fun h => nomatch h)]
+      exact (Bool.and_true _).symm
+    | progressed =>
+      rw [(Api.HostSession.applyReply_funded_or r.session key r.budget.fuel).resolve_right
+        (by rw [hph]; exact fun h => nomatch h)]
+      exact (Bool.and_true _).symm
+    | frontier =>
+      rw [(Api.HostSession.applyReply_funded_or r.session key r.budget.fuel).resolve_right
+        (by rw [hph]; exact fun h => nomatch h)]
+      exact (Bool.and_true _).symm
+    | refused why =>
+      rw [(Api.HostSession.applyReply_funded_or r.session key r.budget.fuel).resolve_right
+        (by rw [hph]; exact fun h => nomatch h)]
+      exact (Bool.and_true _).symm
+  | control d =>
+    show (Api.HostSession.advance r.session r.budget.fuel d).session.funded =
+      (r.session.funded &&
+        match Run.decisionOf r (.control d)
+            (Api.HostSession.advance r.session r.budget.fuel d).phase with
+        | some d => Run.readsOn r d
+        | none => true)
+    rw [Api.HostSession.advance_funded]
+    cases hph : (Api.HostSession.advance r.session r.budget.fuel d).phase with
+    | progressed =>
+      obtain ⟨live, enough⟩ := Api.HostSession.advance_progressed r.session r.budget.fuel d hph
+      show r.session.funded = (r.session.funded && (r.session.machine.stuck.isNone &&
+        Run.enoughFor r.built.program r.built.table r.budget.fuel r.session.machine d))
+      rw [live]
+      show r.session.funded = (r.session.funded && (true && _))
+      rw [show Run.enoughFor r.built.program r.built.table r.budget.fuel r.session.machine d = true
+        from enough, Bool.and_true, Bool.and_true]
+    | bound => exact (Bool.and_true _).symm
+    | preflight => exact (Bool.and_true _).symm
+    | applied => exact (Bool.and_true _).symm
+    | frontier => exact (Bool.and_true _).symm
+    | refused why => exact (Bool.and_true _).symm
+
+/-- Step of `view_funded`: the tape reads past one run command when the command ends at no
+frontier, its decision reads on, and the tape reads past the rest. -/
+theorem tapeFrom_cons_isEmpty (r : Run) (c : Command) (rest : List Command) :
+    (Run.tapeFrom r (c :: rest)).2.isEmpty =
+      (!((Api.Runner.result r.runner c).phase == Phase.frontier) && rowReads r c &&
+        (Run.tapeFrom (r.step c) rest).2.isEmpty) := by
+  cases hfront : ((Api.Runner.result r.runner c).phase == Phase.frontier) with
+  | true =>
+    rw [Run.tapeFrom_frontier r c rest hfront]
+    rfl
+  | false =>
+    cases hdec : Run.decisionOf r c (Api.Runner.result r.runner c).phase with
+    | none =>
+      rw [Run.tapeFrom_skip r c rest hfront hdec]
+      show _ = (true && (match Run.decisionOf r c (Api.Runner.result r.runner c).phase with
+        | some d => Run.readsOn r d
+        | none => true) && _)
+      rw [hdec]
+      rfl
+    | some d =>
+      cases hreads : Run.readsOn r d with
+      | false =>
+        rw [Run.tapeFrom_stop r c rest d hfront hdec hreads]
+        show false = (true && (match Run.decisionOf r c (Api.Runner.result r.runner c).phase with
+          | some d => Run.readsOn r d
+          | none => true) && _)
+        rw [hdec]
+        show false = (true && Run.readsOn r d && _)
+        rw [hreads]
+        rfl
+      | true =>
+        rw [Run.tapeFrom_take r c rest d hfront hdec hreads]
+        show _ = (true && (match Run.decisionOf r c (Api.Runner.result r.runner c).phase with
+          | some d => Run.readsOn r d
+          | none => true) && _)
+        rw [hdec]
+        show _ = (true && Run.readsOn r d && _)
+        rw [hreads]
+        rfl
+
+/-- The Boolean identity of one run command in `funded_play`. -/
+theorem funded_step_bool (F b P q T : Bool) :
+    ((F && b) && !(P || (q || false)) && T) = (F && !P && (!q && b && T)) := by
+  cases F <;> cases b <;> cases P <;> cases q <;> cases T <;> rfl
+
+/-- Step of `view_funded`: playing run commands keeps the view's test in step with the tape. The
+session's bit and the absence of a frontier verdict, after the commands, are their values before
+the commands and the tape's reading past every command. -/
+theorem funded_play (r : Run) (cs : List Command) :
+    ((r.play cs).session.funded && !(r.play cs).phases.any (· == Phase.frontier)) =
+      (r.session.funded && !r.phases.any (· == Phase.frontier) &&
+        (Run.tapeFrom r cs).2.isEmpty) := by
+  induction cs generalizing r with
+  | nil => exact (Bool.and_true _).symm
+  | cons c rest ih =>
+    rw [Run.play_cons, ih (r.step c), step_funded, Run.step_phases, List.any_append,
+      List.any_cons, List.any_nil, tapeFrom_cons_isEmpty]
+    exact funded_step_bool _ _ _ _ _
+
+/-- **The view's flag is `funded`** (the session note's slice DM4). The view reads the session's
+bit and the journal's verdicts, with no replay; `Run.funded` reads the tape of the run's own
+journal from its fresh open. They agree on every live run.
+
+Placement: concept `translation-simulation`; the proposed claim `view-funded`, a connector.
+Consumer: `session_eq_ref` at `Live`, whose one premise a caller reads off the view. Reach: every
+`Live`. It does not establish that a run is funded (`embedded-budget-sufficient`, an open part of
+R12), or anything of a host's budget or of a lowered session. Unlocks: R6. -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem view_funded (l : Live) : l.view.funded = Run.funded l.run := by
+  have key := funded_play (Run.openedOf l.run) l.run.journal
+  rw [show (Run.openedOf l.run).play l.run.journal = l.run from journal_replays l] at key
+  show (l.run.session.funded && !l.run.phases.any (· == Phase.frontier)) =
+    (Run.tapeFrom (Run.openedOf l.run) l.run.journal).2.isEmpty
+  rw [key]
+  rfl
 
 end Effect4.Live
