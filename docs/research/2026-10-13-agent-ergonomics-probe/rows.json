@@ -1,0 +1,89 @@
+{
+ "todo": [
+  {
+   "name": "addTodo",
+   "spelling": "Todos.add",
+   "shape": "call",
+   "trailing": [],
+   "kind": "async",
+   "request": {
+    "_tag": "string"
+   },
+   "answer": {
+    "_tag": "list",
+    "inner": {
+     "_tag": "string"
+    }
+   },
+   "error": {
+    "_tag": "never"
+   },
+   "requires": [],
+   "cite": "app",
+   "typeArgs": [],
+   "registration": "external"
+  }
+ ],
+ "db": [
+  {
+   "name": "open",
+   "spelling": "Db.open",
+   "shape": "call",
+   "trailing": [],
+   "kind": "async",
+   "request": {
+    "_tag": "string"
+   },
+   "answer": {
+    "_tag": "nat"
+   },
+   "error": {
+    "_tag": "never"
+   },
+   "requires": [],
+   "cite": "app",
+   "typeArgs": [],
+   "registration": "external"
+  },
+  {
+   "name": "close",
+   "spelling": "Db.close",
+   "shape": "call",
+   "trailing": [],
+   "kind": "async",
+   "request": {
+    "_tag": "nat"
+   },
+   "answer": {
+    "_tag": "unit"
+   },
+   "error": {
+    "_tag": "never"
+   },
+   "requires": [],
+   "cite": "app",
+   "typeArgs": [],
+   "registration": "external"
+  },
+  {
+   "name": "query",
+   "spelling": "Db.query",
+   "shape": "call",
+   "trailing": [],
+   "kind": "async",
+   "request": {
+    "_tag": "nat"
+   },
+   "answer": {
+    "_tag": "string"
+   },
+   "error": {
+    "_tag": "never"
+   },
+   "requires": [],
+   "cite": "app",
+   "typeArgs": [],
+   "registration": "external"
+  }
+ ]
+}
