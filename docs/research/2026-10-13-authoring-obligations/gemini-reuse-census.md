@@ -130,7 +130,7 @@ It closes four application goals across histories.
 ### 3.1 What it must reuse
 
 - `DecisionLift`, `StepKeeps`, `Guarded`, `ParkedAt`, `interruptEdit`, `driveState_lift` and `unitOrder` in `src/Effect4/Laws/Machine/Lift.lean`.
-- Five existing users of `DecisionLift`: `NativeHistory` (`src/Effect4/Laws/Machine/NativeHistory.lean`), `NativeReplies` (`src/Effect4/Laws/Machine/NativeReplies.lean`), `NativeHeapHistory` (`src/Effect4/Laws/Machine/NativeHeapHistory.lean`), `ReleaseCustody/Lift` (`src/Effect4/Laws/Program/ReleaseCustody/Lift.lean`) and `PlaceFunding/Run` (`src/Effect4/Laws/Program/PlaceFunding/Run.lean`).
+- Five existing users of `DecisionLift`: `NativeHistory` (`src/Effect4/Laws/Program/NativeHistory.lean`), `NativeReplies` (`src/Effect4/Laws/Program/NativeReplies.lean`), `NativeHeapHistory` (`src/Effect4/Laws/Program/NativeHeapHistory.lean`), `ReleaseCustody/Lift` (`src/Effect4/Laws/Program/ReleaseCustody/Lift.lean`) and `PlaceFunding/Run` (`src/Effect4/Laws/Program/PlaceFunding/Run.lean`).
 - `Model`, `ExitAt`, `SavedAt`, `StackAt`, `ResultAt`, `FrameAt`, `stack_path`, `path_stack` and `saved_mono` in `src/Effect4/Laws/Machine/AnswerFlow.lean`.
 - `FrameFiber`, `Prim` and `PrimInterp` in `src/Effect4/Machine/Frames.lean`.
 - `RunMachine`, `RunFiber`, `RunEvent`, `RunDecision` and `Cmd` in `src/Effect4/Machine/Fibers.lean`.
