@@ -26,6 +26,7 @@ tools/view/v -g             # the graph specimen: a graph built one edge at a ti
 tools/view/v -F             # the program graph's specimen: fork and join, waits, releases, regions, loops
 tools/view/v -t pFork       # the frames in this terminal
 tools/view/v -p pFork       # a PNG of every frame and every picture of motion
+tools/view/v -k pFork       # the frames inline in Ghostty or kitty (the kitty graphics protocol)
 tools/view/v -H pFork       # the run's page in the browser: its frames as SVG, stepped like the window
 tools/view/v -G             # every kept run in the browser, newest first
 tools/view/v -f FILE        # the frames of a session request file
@@ -140,7 +141,7 @@ go to the ends, Q quits. The corpus programs are `p42`, `pBind`, `pFork`, `pAwai
 | `tools/Drivers/Emit.lean` | the driver: the generated folder |
 | `tools/Drivers/View.lean` | the driver: frames to `.draw`, `.svg` and text |
 | `tools/Drivers/Live.lean` | the live driver: session requests in, patch rows out |
-| `draw.c`, `play.c`, `replay.h`, `paint.h` | the replay to PNG, the window and its live mode, the shared replay, the painter |
+| `draw.c`, `play.c`, `replay.h`, `paint.h` | the replay to PNG or into the terminal (`--kitty`), the window and its live mode, the shared replay, the painter |
 | `scene.h`, `scene_test.c` | the retained store that applies patch rows, and its check against Lean's streams |
 | `build.sh`, `v` | the C build (every warning an error), and the one command |
 

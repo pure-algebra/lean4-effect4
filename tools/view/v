@@ -9,6 +9,7 @@
 #   v -f FILE        the frames of a session request file (tools/Drivers/Session.lean's input)
 #   v -t NAME        the frames in this console, as characters
 #   v -p NAME        write a PNG of every frame and every picture of motion
+#   v -k NAME        the frames inline in this terminal (Ghostty, kitty), drawn by draw --kitty
 #   v -H NAME        the run's page in the browser: its frames as SVG, stepped like the window
 #   v -G             every kept run in the browser, newest first: tools/view/out/index.html
 #   v -m N ...       N pictures of motion between two frames (default 20; 1 draws none)
@@ -38,6 +39,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     -t) mode=text ;;
     -p) mode=png ;;
+    -k) mode=kitty; motion=1 ;;
     -H) mode=html ;;
     -G) cmd=gallery ;;
     -w) mode=live ;;
@@ -50,7 +52,7 @@ while [ $# -gt 0 ]; do
     -r) cmd=run ;;
     -g) cmd=specimen ;;
     -F) cmd=flows ;;
-    -h|--help) sed -n 2,25p "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n 2,26p "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) break ;;
   esac
   shift
@@ -133,6 +135,9 @@ case $mode in
   png)
     "$here/build.sh" draw
     for f in "$out"/*.draw; do "$here/draw" "$f" --png "${f%.draw}.png"; done; echo "$out" ;;
+  kitty)
+    "$here/build.sh" draw
+    for f in "$out"/[0-9][0-9][0-9].draw; do echo "${f##*/}"; "$here/draw" "$f" --kitty; done ;;
   html) browse "$out/index.html" ;;
   window) "$here/build.sh" play; exec "$here/play" "$out" ;;
 esac

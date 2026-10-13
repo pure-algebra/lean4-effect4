@@ -3,6 +3,9 @@
  * replay.h's.
  *
  *   draw STREAM --png FILE           paint the stream
+ *   draw STREAM --kitty [COLUMNS]    paint the stream into the terminal, by the kitty graphics
+ *                                    protocol (Ghostty, kitty), COLUMNS cells wide (the terminal's
+ *                                    width by default)
  *   draw STREAM --pick X Y           the key under a device pixel, by the stream's `H` rows
  *   draw STREAM --picks FILE         the key under each device pixel of a file of points
  *   draw STREAM --count              the rows of each kind
@@ -12,6 +15,63 @@
  */
 #define _GNU_SOURCE
 #include "replay.h"
+#include <sys/ioctl.h>
+#include <unistd.h>
+
+/* A growable buffer for the PNG that cairo writes. */
+typedef struct { unsigned char *data; size_t len, cap; } Bytes;
+
+static cairo_status_t bytes_write(void *closure, const unsigned char *data, unsigned int length) {
+  Bytes *b = closure;
+  if (b->len + length > b->cap) {
+    size_t cap = b->cap ? b->cap : 65536;
+    while (cap < b->len + length) cap *= 2;
+    unsigned char *grown = realloc(b->data, cap);
+    if (!grown) return CAIRO_STATUS_NO_MEMORY;
+    b->data = grown; b->cap = cap;
+  }
+  memcpy(b->data + b->len, data, length);
+  b->len += length;
+  return CAIRO_STATUS_SUCCESS;
+}
+
+/* The terminal's width in cells, or 0 when standard output is no terminal. */
+static long terminal_columns(void) {
+  struct winsize w;
+  if (isatty(STDOUT_FILENO) && ioctl(STDOUT_FILENO, TIOCGWINSZ, &w) == 0) return (long)w.ws_col;
+  return 0;
+}
+
+/* A PNG in the kitty graphics protocol: transmit and show (`a=T`) a PNG (`f=100`) quietly
+ * (`q=2`), in base64 chunks of 4096 bytes, the last with `m=0`; `c` cells wide when `columns` is
+ * positive, the height kept in proportion. */
+static void kitty_png(const Bytes *png, long columns) {
+  static const char b64[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+  char chunk[4096];
+  size_t i = 0;
+  int first = 1;
+  while (i < png->len) {
+    size_t n = 0;
+    while (n < sizeof chunk && i < png->len) {
+      unsigned v = (unsigned)png->data[i] << 16;
+      if (i + 1 < png->len) v |= (unsigned)png->data[i + 1] << 8;
+      if (i + 2 < png->len) v |= (unsigned)png->data[i + 2];
+      chunk[n++] = b64[(v >> 18) & 63];
+      chunk[n++] = b64[(v >> 12) & 63];
+      chunk[n++] = i + 1 < png->len ? b64[(v >> 6) & 63] : '=';
+      chunk[n++] = i + 2 < png->len ? b64[v & 63] : '=';
+      i += 3;
+    }
+    int more = i < png->len;
+    if (first && columns > 0) printf("\033_Gf=100,a=T,q=2,c=%ld,m=%d;", columns, more);
+    else if (first) printf("\033_Gf=100,a=T,q=2,m=%d;", more);
+    else printf("\033_Gm=%d;", more);
+    first = 0;
+    fwrite(chunk, 1, n, stdout);
+    fputs("\033\\", stdout);
+  }
+  putchar('\n');
+}
 
 /* The key under the device pixel (x, y): the last `H` row whose box holds it. */
 static void pick_at(const char *path, long x, long y, char *key, size_t room) {
@@ -49,7 +109,7 @@ static int count(const char *path) {
 }
 
 int main(int argc, char **argv) {
-  if (argc < 3) { fprintf(stderr, "usage: draw STREAM (--png FILE | --pick X Y | --picks FILE | --count)\n"); return 2; }
+  if (argc < 3) { fprintf(stderr, "usage: draw STREAM (--png FILE | --kitty [COLUMNS] | --pick X Y | --picks FILE | --count)\n"); return 2; }
   const char *stream = argv[1];
   if (!strcmp(argv[2], "--count")) return count(stream);
   if (!strcmp(argv[2], "--pick") && argc >= 5) {
@@ -72,6 +132,21 @@ int main(int argc, char **argv) {
     cairo_surface_write_to_png(surface, argv[3]);
     cairo_surface_destroy(surface);
     replay_close(&rp);
+    if (bad) { fprintf(stderr, "draw: %d rows are no call or cuts stay open\n", bad); return 1; }
+    return 0;
+  }
+  if (!strcmp(argv[2], "--kitty")) {
+    Replay rp; memset(&rp, 0, sizeof rp);
+    int bad = 0;
+    cairo_surface_t *surface = replay_stream(stream, &rp, &bad);
+    if (!surface) { fprintf(stderr, "draw: %s has no target row, or its faces do not open\n", stream); replay_close(&rp); return 1; }
+    Bytes png = { NULL, 0, 0 };
+    cairo_status_t status = cairo_surface_write_to_png_stream(surface, bytes_write, &png);
+    cairo_surface_destroy(surface);
+    replay_close(&rp);
+    if (status != CAIRO_STATUS_SUCCESS) { fprintf(stderr, "draw: %s\n", cairo_status_to_string(status)); free(png.data); return 1; }
+    kitty_png(&png, argc >= 4 ? atol(argv[3]) : terminal_columns());
+    free(png.data);
     if (bad) { fprintf(stderr, "draw: %d rows are no call or cuts stay open\n", bad); return 1; }
     return 0;
   }
