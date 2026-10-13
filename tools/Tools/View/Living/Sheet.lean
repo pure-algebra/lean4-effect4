@@ -1,5 +1,6 @@
 import Tools.View.Living.Level
 import Tools.View.Living.Beat
+import Tools.View.Living.Totals
 
 /-!
 # Tools.View.Living.Sheet — the Queue alive, frame by frame (the studio page `living.html`)
@@ -36,7 +37,9 @@ def sceneBlocks (sc : CellSheet.Scene) (beats frames : List Nat) : List RawNode 
      figure [pic Level.LW Level.LEVEL_H (Level.level ms)]
        "The run as one level: takers waiting below zero, messages held up to the brim, offers waiting above it; a bar line for each command.",
      figure [pic Level.LW Level.LIVES_H (Level.lives ds)]
-       "The lives of the channels: in from the world, into the vessel, out of it, and out to the world; each as thick at each command as its conductivity draws it."] ++
+       "The lives of the channels: in from the world, into the vessel, out of it, and out to the world; each as thick at each command as its conductivity draws it.",
+     figure [pic Totals.W Totals.H (Totals.picture (Totals.totals ms))]
+       "Where the messages went: each split at Murray's angles, each sheath by the cube law, each lit core as wide as its count."] ++
     beats.filterMap (fun i => do
       let before ← ms[i - 1]?
       let after ← ms[i]?
