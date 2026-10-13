@@ -130,6 +130,27 @@ The owner's proposal: show movement by lighting pegs in turn, as a light board d
 - **Structure still moves.** Where a branch appears or a vessel grows, its pegs move or grow from
   a peg of no size. Its string is recomputed per moment; only such bodies are sampled.
 
+### 5.1 From the machine, in its loop
+
+The owner's ruling: the picture comes from running the machine, and is built into its loop. The
+machine already records what the board needs.
+
+| the machine's record | what it draws |
+| --- | --- |
+| the trace's events (`RunEvent`: forked, started, parked, resumed, exited) | the score's grid: a row for each fiber, a column for each event (`Tools/View/Tube/Score.lean`) |
+| the journal (`List Command`, which replays uniquely: `replay_unique`, `journal_replays`) | the ticks: one control a tick, so a film is reproducible from its journal alone |
+| each fiber's continuation, its stack of frames | a column of pegs a fiber: a push lights the next peg, a pop darkens it, a frame's kind sets its ring |
+| the store's cells and deferreds | slot pegs; the trace records no store change, so they need the state's difference or store events (FORMAL's §5, owner question Q4) |
+
+- **The loop carries an observer.** Each control the loop runs yields its marking change from the
+  event it records. The board is the fold of those changes, computed as the run goes.
+- **The law is the loop's invariant.** The fold of a run's changes is the projection of its final
+  state. That is FORMAL's Law 2, held by every step of the loop rather than checked afterwards.
+- **The face exposes it.** The session's face (`Live`, decisions row 326; seat LIVE's DM3) has one
+  `view`. The board's marking belongs in that view, so a live run and a recorded one draw alike.
+- **The pen only places.** It lays the pegs and strings out once per structure; the machine lights
+  them.
+
 ## 6. Styling as a value per grid point
 
 The owner's proposal: every effect is a value computed at a grid point or in a cell, on rhythms
@@ -171,6 +192,7 @@ Each is a finite check first and a theorem where it pays (the pen's laws today: 
 6. The marking of a picture is a function of the machine's state. A step's change of marking is
    the state's change (FORMAL's Law 2, with its store gap: its §5 and owner question Q4).
 7. Every channel of a tick is computed in one pass, and changes only on its cadence's ticks.
+8. The fold of a run's marking changes is the projection of its state, at every step of the loop.
 
 ## 9. What it replaces
 
@@ -185,7 +207,8 @@ Each is a finite check first and a theorem where it pays (the pen's laws today: 
    of §8 (1 to 3) as guards.
 2. **Tour.** Skeletons and their Euler tour; the tuning fork, the bend and the cap; the vessel as
    the string round its slots.
-3. **Light board.** Lanes as bit strings and rule 184 ticks; markings to SVG, a dash chaser or
+3. **Light board.** The loop's observer: each control's marking change from its event, the
+   board as their fold, exposed in the session's view. Lanes as bit strings and rule 184 ticks; markings to SVG, a dash chaser or
    per-peg steps. The channels of §6 take one pass per tick and one keyframe set per cadence.
 4. **Glyphs on the grid.** The 37 figures as tiles; the old outline code retired.
 5. **Films.** The Queue and the score as markings over still skeletons; structure changes sampled.
