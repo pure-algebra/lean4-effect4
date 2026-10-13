@@ -256,19 +256,18 @@ def Event.at (e : Event) (along : Nat → Tube) (t : Nat) : Mark :=
     let p := e.timing.at t
     let rise := (sampleAt (e.track.map (·.2)) p).toNat
     stretchOf e.key (along t) (sampleAt (e.track.map (·.1)) p) e.len e.width e.width (e.width + rise)
-      (e.len / 2)
   else
   let p := e.timing.at t
   let lin := ({ e.timing with ease := Easing.linear } : Timing).at t
   let l := clamp lin
   let amp : Int := (e.peak * 4 * l * (1000 - l) / 1000000 : Nat)
   stretchOf e.key (along t) (Whatwg.Svg.Scene.mix e.from_ e.to p) e.len e.width e.width
-    (e.width + amp.toNat) (e.len / 2)
+    (e.width + amp.toNat)
 
 /-- An event before it starts and after it ends: a stretch of no length and no width, which
 draws nothing, cased or not, in as many cubics as the swell (`Kit.bulge`). -/
 def Event.rest (e : Event) : Mark :=
-  stretchOf e.key e.tube e.from_ 0 0 0 0 1
+  stretchOf e.key e.tube e.from_ 0 0 0 0
 
 /-- **A mark hidden at its root**: its tube at no length and its stroke at no width, so it draws
 nothing. A morph from it grows the mark from its root, in length and in width at once, and a

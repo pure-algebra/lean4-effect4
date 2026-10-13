@@ -1,6 +1,7 @@
 import Tools.View.Tube.Form
 import Tools.View.Picture
 import Whatwg.Svg.Geometry.Tube.Bulge
+import Whatwg.Svg.Geometry.Joint
 
 /-!
 # Tools.View.Tube.Kit — the pen's joins and stretches drawn by the kit
@@ -123,26 +124,92 @@ structure Frame where
   ahead : Rat
   behind : Rat
 
-/-- The frame `s` thousandths along a tube. -/
-def frameOf (t : Tube) (s : Nat) : Frame :=
-  let ((x, y), h) := t.at s
+/-- The start of the piece that holds `s`, thousandths along the tube from `c`, and whether that
+piece is straight. -/
+def pieceAt : List Piece → Nat → Nat → Nat × Bool
+  | [], _, c => (c, true)
+  | [q], _, c => (c, q.turn == 0)
+  | q :: rest, s, c => if s < q.len then (c, q.turn == 0) else pieceAt rest (s - q.len) (c + q.len)
+
+/-- The frame `s` thousandths along a tube, `s` held to the tube. On a straight piece, the pen's
+frame at the piece's start carried along its tangent, so the frame runs exactly along the piece;
+on a bend, the pen's frame at the thousandth below, carried on by the rest. -/
+def frameOf (t : Tube) (s : Rat) : Frame :=
+  let at_ := (max 0 (min (t.length : Rat) s))
+  let n := at_.floor.toNat
+  let (c, straight) := pieceAt t.pieces n 0
+  let from_ := if straight then c else n
+  let ((x, y), h) := t.at from_
   let (dx, dy) := dir h
-  { at_ := ⟨(x : Rat) / 1000, (y : Rat) / 1000⟩, d := ⟨(dx : Rat) / ONE, (dy : Rat) / ONE⟩
-    ahead := kappa t.pieces s true, behind := kappa t.pieces s false }
+  let d : Vec := ⟨(dx : Rat) / ONE, (dy : Rat) / ONE⟩
+  { at_ := ⟨(x : Rat) / 1000, (y : Rat) / 1000⟩ + Vec.scale ((at_ - from_) / 1000) d, d
+    ahead := kappa t.pieces n true, behind := kappa t.pieces n false }
 
 /-- The cubics each side of a stretch runs along its middle. -/
 def MIDDLE : Nat := 2
 
-/-- **One side of a stretch**, in its own plane: `u` along the stretch and `h` the half width. The
-kit's trapezoid profile rises from `a` to `m` over `r`, the middle holds `m` in `MIDDLE` lines,
-and the profile falls to `b` over `r` (`Whatwg/Svg/Geometry/Tube/Bulge.lean`, `Tube.side`). -/
-def sideOf (len r a m b : Rat) : List KCubic :=
-  let cs := Whatwg.Svg.Value.Tube.Profile.trapezoid.cubics.getD []
-  let ramp (u₀ h₀ h₁ : Rat) : List KCubic :=
-    cs.map (Whatwg.Svg.Value.Cubic.map fun q => ⟨u₀ + q.x * r, h₀ + q.y * (h₁ - h₀)⟩)
-  let at_ (i : Nat) : Vec := ⟨r + (len - 2 * r) * i / MIDDLE, m⟩
-  ramp 0 a m ++ (List.range MIDDLE).map (fun i => Whatwg.Svg.Value.Cubic.line (at_ i) (at_ (i + 1))) ++
-    ramp (len - r) m b
+/-- **A G2 corner** at `X` between the edge back along `a` and the edge on along `b`, each a unit
+vector: the kit's cubic smooth minimum (`Whatwg/Svg/Geometry/Corner.lean`, `Corner.smin`), from
+where it touches the first edge to where it touches the second, each `k / sin φ` from `X`. Its
+ends meet the edges with no curvature, and its halves meet with one curvature. -/
+def corner (X a b : Vec) (k : Rat) : List KCubic :=
+  let sn := max (a.cross b) (b.cross a)
+  if sn = 0 then [⟨X, X, X, X⟩, ⟨X, X, X, X⟩] else
+  let a' := Vec.scale (1 / sn) a
+  let b' := Vec.scale (1 / sn) b
+  let M := X + Vec.scale (k / 6) (a' + b')
+  [⟨X + Vec.scale k a', X + Vec.scale (2 * k / 3) a', X + Vec.scale (k / 3) a', M⟩,
+   ⟨M, X + Vec.scale (k / 3) b', X + Vec.scale (2 * k / 3) b', X + Vec.scale k b'⟩]
+
+/-- **The face of a shoulder**: the unit direction of its straight run, from the pipe's wall to the
+vessel's, along the tube and across it: steep, `12/13` across (about 67° to the tube), so the
+shoulder reads square and its corners round (the owner, 2026-10-13: "more square rounded end
+connectors"). -/
+def FACE : Vec := ⟨5 / 13, 12 / 13⟩
+
+/-- **A shoulder** from the wall `h₀` to the wall `h₁`, from `u₀` along: a straight face at `face`
+to the tube, its corners the kit's G2 corners, each as large as the face allows, as the outline of
+a body whose walls stand `inset` further out draws it; that outline's shoulder, moved in by
+`inset`: its face moved in along its normal, its walls in across the tube, the inner corner the
+larger by the inset and the outer the smaller (at least nothing), so that a casing between the
+two is as thick round the shoulder as along the walls. Both shoulders start and end at one place
+along the tube. Five cubics; its length along the tube is returned with them. -/
+def shoulder (u₀ h₀ h₁ : Rat) (face : Vec) (inset : Rat := 0) : List KCubic × Rat :=
+  let Δ := max (h₁ - h₀) (h₀ - h₁)
+  let σ : Rat := if h₀ ≤ h₁ then 1 else -1
+  let d : Vec := ⟨face.x, σ * face.y⟩
+  let k := Δ / 2
+  let run := 2 * k / face.y + Δ * face.x / face.y
+  -- the outer outline's first corner, and the inner's two, moved in along the face's normal
+  let XA : Vec := ⟨u₀ + k / face.y, h₀ + inset⟩
+  let n : Vec := ⟨σ * face.y, -face.x⟩
+  let tA := -(inset * (1 - face.x)) / (σ * face.y)
+  let XA' := XA + Vec.scale inset n + Vec.scale tA d
+  let XB' := XA + Vec.scale inset n + Vec.scale (Δ / face.y + tA) d
+  let kA := max 0 (min Δ (face.y * (XA'.x - u₀)))
+  let kB := max 0 (min (Δ - kA) (face.y * (u₀ + run - XB'.x)))
+  let ca := corner XA' ⟨-1, 0⟩ d kA
+  let cb := corner XB' (Vec.scale (-1) d) ⟨1, 0⟩ kB
+  let mid := Whatwg.Svg.Value.Cubic.line ((ca.getLast?.map (·.p3)).getD XA') ((cb.head?.map (·.p0)).getD XB')
+  (ca ++ [mid] ++ cb, run)
+
+/-- **One side of a stretch**, in its own plane: `u` along the stretch and `h` the half width: a
+shoulder up from `a` to `m` at its start, `m` along its middle in `MIDDLE` lines, and a shoulder
+down to `b` at its end, each `inset` inside the outline it is the interior of. Where the shoulders
+are longer than the stretch, the side is pressed along the tube to fit, which keeps its curvature
+continuous. -/
+def sideOf (len a m b : Rat) (face : Vec := FACE) (inset : Rat := 0) : List KCubic :=
+  let (up, ru) := shoulder 0 a m face inset
+  let (down, rd) := shoulder 0 m b face inset
+  let squeeze := if len < ru + rd ∧ 0 < ru + rd then len / (ru + rd) else 1
+  let along (u₀ : Rat) (cs : List KCubic) : List KCubic :=
+    cs.map (Whatwg.Svg.Value.Cubic.map fun q => ⟨u₀ + q.x * squeeze, q.y⟩)
+  let up' := along 0 up
+  let down' := along (len - rd * squeeze) down
+  let p₀ := (up'.getLast?.map (·.p3)).getD ⟨0, m⟩
+  let p₁ := (down'.head?.map (·.p0)).getD ⟨len, m⟩
+  let at_ (i : Nat) : Vec := p₀ + Vec.scale ((i : Rat) / MIDDLE) (p₁ - p₀)
+  up' ++ (List.range MIDDLE).map (fun i => Whatwg.Svg.Value.Cubic.line (at_ i) (at_ (i + 1))) ++ down'
 
 /-- **A side carried onto the tube**: each end of a cubic to the point `h` off the centreline on
 the side `σ`, and each handle by the map's first derivative there, `(1 − κσh)` along the tangent
@@ -181,22 +248,20 @@ def endOf (a b c d n : Vec) (r : Rat) (round : Bool) : List KCubic :=
     let m := Vec.scale (1 / 2) (a + b)
     [Whatwg.Svg.Value.Cubic.line a m, Whatwg.Svg.Value.Cubic.line m b]
 
-/-- **A stretch's outline**: the part of the tube from `s` along it, `len` long, its width eased by
-the kit's trapezoid profile from `w0` to `top` and from `top` to `w1` over `rise` at its ends (at
-most half the stretch), all in thousandths of a pixel. Its left side, its end, its right side
-back, its start: one closed ring of 28 cubics, in the kit's numbers, whatever its sizes and its
-ends. -/
-def bulgeK (t : Tube) (s : Int) (len w0 w1 top rise : Nat) (roundStart roundEnd : Bool := false) :
-    List KCubic :=
+/-- **A stretch's outline**: the part of the tube from `s` along it, `len` long, `top` wide along
+its middle, with a shoulder from `w0` at its start and one to `w1` at its end, `inset` inside the
+outline it is the interior of, all in thousandths of a pixel. Its left side, its end, its right side back, its start: one closed ring of 28 cubics, in
+the kit's numbers, whatever its sizes and its ends. -/
+def bulgeK (t : Tube) (s : Int) (len w0 w1 top : Nat) (inset : Nat := 0)
+    (roundStart roundEnd : Bool := false) (face : Vec := FACE) : List KCubic :=
   let k (n : Nat) : Rat := (n : Rat) / 1000
-  let r := min (k rise) (k len / 2)
-  let side := sideOf (k len) r (k w0 / 2) (k top / 2) (k w1 / 2)
+  let side := sideOf (k len) (k w0 / 2) (k top / 2) (k w1 / 2) face (k inset)
   let us := side.map (·.p0.x) ++ [(side.getLast?.map (·.p3.x)).getD 0]
   let L := t.length
   -- each joint's place along the tube, in thousandths, and whether it lies past an end
   let ats := us.map fun u => (s : Rat) + u * 1000
   let inside := ats.map fun a => if a < 0 then some false else if (L : Rat) < a then some true else none
-  let frames := ats.map fun a => frameOf t ((max 0 (min (L : Int) (a + 1 / 2).floor)).toNat)
+  let frames := ats.map (frameOf t)
   let left := carry frames inside (-1) (k w0 / 2) (k w1 / 2) side
   let right := carry frames inside 1 (k w0 / 2) (k w1 / 2) side
   match left.head?, left.getLast?, right.head?, right.getLast?, frames.head?, frames.getLast? with
@@ -208,20 +273,27 @@ def bulgeK (t : Tube) (s : Int) (len w0 w1 top rise : Nat) (roundStart roundEnd 
 
 /-- **A stretch's outline**, the pen's: `bulgeK` in thousandths of a pixel. A stretch is 28 cubics
 at every moment of a film, so a film writes it as one path whose commands agree. -/
-def bulge (t : Tube) (s : Int) (len w0 w1 top rise : Nat) (roundStart roundEnd : Bool := false) :
-    List Cubic :=
-  (bulgeK t s len w0 w1 top rise roundStart roundEnd).map fromKit
+def bulge (t : Tube) (s : Int) (len w0 w1 top : Nat) (inset : Nat := 0)
+    (roundStart roundEnd : Bool := false) (face : Vec := FACE) : List Cubic :=
+  (bulgeK t s len w0 w1 top inset roundStart roundEnd face).map fromKit
 
 -- a stretch is 28 cubics, whatever its sizes, its tube and its ends, and a closed ring
-#guard (bulge ⟨0, 0, 0, 12000, [⟨100000, 0⟩]⟩ 20000 30000 22000 22000 26000 15000).length == 28
-#guard (bulge ⟨0, 0, 0, 12000, [⟨40000, 0⟩, ⟨31416, 1570796⟩]⟩ 30000 40000 22000 22000 30000 5000 true true).length == 28
-#guard (bulge ⟨0, 0, 0, 12000, [⟨100000, 0⟩]⟩ 0 0 0 0 0 1).length == 28
+#guard (bulge ⟨0, 0, 0, 12000, [⟨100000, 0⟩]⟩ 20000 30000 22000 22000 26000).length == 28
+#guard (bulge ⟨0, 0, 0, 12000, [⟨40000, 0⟩, ⟨31416, 1570796⟩]⟩ 30000 40000 22000 22000 30000 0 true true).length == 28
+#guard (bulge ⟨0, 0, 0, 12000, [⟨100000, 0⟩]⟩ 0 0 0 0 0).length == 28
 #guard [false, true].all fun round =>
-  let cs := bulgeK ⟨0, 0, 0, 12000, [⟨40000, 0⟩, ⟨31416, 1570796⟩]⟩ 30000 40000 22000 22000 30000 5000 round round
+  let cs := bulgeK ⟨0, 0, 0, 12000, [⟨40000, 0⟩, ⟨31416, 1570796⟩]⟩ 30000 40000 22000 22000 30000 0 round round
   (cs.head?.map (·.p0)) == (cs.getLast?.map (·.p3))
--- on a straight run the side is the kit's own: its ramp is the kit's `rampCubics`, exactly
-#guard (bulgeK ⟨0, 0, 0, 12000, [⟨100000, 0⟩]⟩ 20000 30000 22000 22000 26000 10000).take 5 ==
-  Whatwg.Svg.Value.Tube.rampCubics ⟨20, 0⟩ ⟨1, 0⟩ (-1) 0 10 11 13
-    (Whatwg.Svg.Value.Tube.Profile.trapezoid.cubics.getD [])
+-- on a straight run each side meets itself with one curvature at every joint: its shoulders' corners
+-- are the kit's G2 corners, square to the tube and as tight as the step
+#guard [⟨0, 1⟩, ⟨3 / 5, 4 / 5⟩].all fun (face : Vec) =>
+  let cs := bulgeK ⟨0, 0, 0, 12000, [⟨100000, 0⟩]⟩ 20000 30000 20000 20000 28000 0 false false face
+  (Whatwg.Svg.Value.Cubic.joints (cs.take 12)).all (·.atLeast .curvature)
+-- a step of 4 px a side is a shoulder 6 px long: two corners of a band of 2 px on the steep face
+#guard ((sideOf 30 10 14 10).head?.map (·.p0) == some ⟨0, 10⟩) &&
+  (((sideOf 30 10 14 10).take 5).getLast?.map (·.p3) == some ⟨6, 14⟩)
+-- the interior, a line inside, starts and ends its shoulder where the outline does
+#guard ((sideOf 30 8 12 8 FACE 2).head?.map (·.p0.x) == some 0) &&
+  (((sideOf 30 8 12 8 FACE 2).take 5).getLast?.map (·.p3) == some ⟨6, 12⟩)
 
 end Tools.View.Tube.Kit

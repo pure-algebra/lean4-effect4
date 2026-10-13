@@ -115,11 +115,23 @@ def xAt (c : Nat) : Int := px (X0 + c * COL)
 /-- A row's ordinate. -/
 def yAt (r : Nat) : Int := px (Y0 + r * ROW)
 
-/-- The fibers in the order they appear in the notes: the score's rows. -/
+/-- The forks of the notes, each a parent and its child, in order. -/
+def forks (ns : List Note) : List (Nat × Nat) := ns.filterMap fun | .fork p c => some (p, c) | _ => none
+
+/-- A depth-first walk of the fork tree from the fibers `fs`: each fiber, then its children's
+walks, the child forked last first. `fuel` bounds the depth. -/
+def walk (fk : List (Nat × Nat)) : Nat → List Nat → List Nat
+  | 0, _ => []
+  | fuel + 1, fs => fs.flatMap fun f => f :: walk fk fuel ((fk.filter (·.1 == f)).map (·.2)).reverse
+
+/-- **The score's rows**: the fork tree walked depth first, each fiber above its children, the
+child forked last nearest its parent; the fibers no fork starts first, in the order they appear.
+A child's drop then passes only the rows of children forked after it, whose staffs start after
+its drop, so no drop crosses a staff. -/
 def rows (ns : List Note) : List Nat :=
-  (ns.foldl (fun acc n => match n with
-    | .fork p c => (if acc.contains p then acc else acc ++ [p]) |> fun a => if a.contains c then a else a ++ [c]
-    | n => if acc.contains n.fiber then acc else acc ++ [n.fiber]) [])
+  let fk := forks ns
+  let seen := (ns.map Note.fiber).eraseDups
+  (walk fk (seen.length + 1) (seen.filter fun f => !fk.any (·.2 == f))).eraseDups
 
 /-- A fiber's row. -/
 def rowOf (ns : List Note) (f : Nat) : Nat := ((rows ns).findIdx? (· == f)).getD 0
@@ -135,15 +147,19 @@ def dropStart (pr c : Nat) : Int × Int := (xAt c - px 6, yAt pr + (apart PIPE P
 /-- The chord that a drop at an eighth of a turn cuts along a staff it passes over. -/
 def CHORD : Nat := body PIPE * 1414 / 1000
 
-/-- **The crossings of a score**: for each child whose drop passes over the staffs of the rows
-between its parent's and its own, each row passed over and the abscissa where the drop's
-centreline crosses it, on the drop's diagonal. -/
-def crossings (shown : List Note) : List (Nat × Int) :=
+/-- **The crossings of a score**: for each child whose drop passes a row between its parent's and
+its own whose fiber has appeared before the fork, the row and the abscissa where the drop's
+centreline crosses it, on the drop's diagonal. The rows are the whole run's (`ns`), the forks
+those shown. -/
+def crossings (ns shown : List Note) : List (Nat × Int) :=
   shown.zipIdx.flatMap fun (n, c) => match n with
     | .fork p ch =>
-      let pr := rowOf shown p
+      let pr := rowOf ns p
       let (xs, y₀) := dropStart pr c
-      ((List.range (rowOf shown ch)).filter (pr < ·)).map fun q => (q, xs + (yAt q - y₀))
+      let before (q : Nat) : Bool := match (rows ns)[q]? with
+        | some g => (shown.take c).any (·.fiber == g)
+        | none => false
+      ((List.range (rowOf ns ch)).filter fun q => pr < q && before q).map fun q => (q, xs + (yAt q - y₀))
     | _ => []
 
 /-- **A staff's tube** to the abscissa `xEnd`: for a root, a straight pipe from its first column;
@@ -182,16 +198,16 @@ def picture (ns : List Note) (n fresh : Nat) : List Mark :=
     let parent := shown.findSome? fun | .fork p c => if c == f then some p else none | _ => none
     let exitAt := lastCol shown fun | .exit g _ => g == f | _ => false
     let endCol := exitAt.getD now
-    let row := rowOf shown f
+    let row := rowOf ns f
     -- a staff passed over ends an air gap short of the drop while it reaches no further, and is
     -- parted round it once it does
-    let over := crossings shown |>.filter (·.1 == row) |>.map (·.2)
+    let over := crossings ns shown |>.filter (·.1 == row) |>.map (·.2)
     let short (x : Int) : Int := x - (CHORD / 2 + GAP + half PIPE : Nat)
     let xEnd := over.foldl (fun (e x : Int) =>
       if e < x + ((CHORD / 2 + GAP + half PIPE + 4000 : Nat) : Int) && e > short x then short x else e)
       (xAt endCol + px TAIL)
-    let t := staffTube (parent.map (rowOf shown)) (some row) (born.getD first) xEnd
-    let level := match parent with | some p => if row > rowOf shown p + 1 then 1 else 0 | none => 0
+    let t := staffTube (parent.map (rowOf ns)) (some row) (born.getD first) xEnd
+    let level := match parent with | some p => if row > rowOf ns p + 1 then 1 else 0 | none => 0
     let cuts := (over.filter fun x => x + ((CHORD / 2 + GAP + half PIPE : Nat) : Int) < xEnd).zipIdx.map fun (x, k) =>
       at_ 0 (cutOf s!"c{f}-{k}" t (alongAt t x) CHORD)
     let staff := (bodyOf s!"s{f}" t (level := level)).map (at_ 0) ++ cuts
@@ -211,7 +227,7 @@ def picture (ns : List Note) (n fresh : Nat) : List Mark :=
     let bars : List Mark := match exitAt with
       | some c =>
         let xb := xEnd + (apart PIPE THIN : Nat)
-        let y := yAt (rowOf shown f)
+        let y := yAt (rowOf ns f)
         let strut (k : String) (x : Int) (bore : Nat) : List Mark :=
           (bodyOf k (tube x (y - px 16) S bore [run 32])).map fun m => at_ (late c) { m with fill := .ink }
         strut s!"x{f}" xb THIN ++ strut s!"y{f}" (xb + (apart THIN PIPE : Nat)) PIPE

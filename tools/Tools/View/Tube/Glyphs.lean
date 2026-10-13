@@ -68,10 +68,11 @@ def half (bore : Nat) : Nat := body bore / 2
 def apart (b₁ b₂ : Nat) : Nat := half b₁ + AIRGAP + half b₂
 
 /-- **A surge standing on a tube**: its body swollen by `SWELL` on each side over `len` from `s`,
-as a pressure wave swells a pipe (Joukowsky). The still form of `swellOf`; the solid-tube pen's
-`stretchOf` draws it as one smooth outline. -/
+as a pressure wave swells a pipe (Joukowsky): a stretch of the body, a shoulder at each end. The
+still form of `swellOf`. A surge of no length is spent, and draws nothing. -/
 def surgeOf (key : String) (t : Tube) (s : Int) (len : Nat) : List Mark :=
-  (bodyOf key t).map fun m => { m with width := m.width + 2 * SWELL, dash := some (s, len) }
+  let w := body t.bore
+  [stretchOf (key ++ ":wall") t s len w w (if len = 0 then w else w + 2 * SWELL)]
 
 /-- **A unit centred at `mid`** along a tube: the pen's pill, its slot's front half a slot ahead. -/
 def unitAt (key : String) (t : Tube) (mid : Int) : Mark :=
@@ -424,14 +425,16 @@ def wireFigure : Shape → Figure
     let t := tube (px 15) (px 36) E PIPE [run 12, arc SIXTH, arc (-SIXTH), run 12]
     { marks := bodyOf "main" t ++ [unitAt "u" t (middle t)] }
   | .parallel =>
-    -- the joint stands where the arms, 41.569 px of S and 9 px of run, reach back to 12 px
+    -- the joint stands where the arms, 41.569 px of S and 9 px of run, reach back to 12 px; the
+    -- trunk arrives there and stops, as the kit's fork has it, so its blends are the outline's
     let joint : Int := 62569
-    { marks := bodyOf "main" (tube (px 84) (px 48) W PIPE [⟨(px 84 - px 51).toNat, 0⟩]) ++
+    { marks := bodyOf "main" (tube (px 84) (px 48) W PIPE [⟨(px 84 - joint).toNat, 0⟩]) ++
         bodyOf "b" (tube joint (px 48) W SPLIT [arc SIXTH, arc (-SIXTH), run 9]) ++
         bodyOf "c" (tube joint (px 48) W SPLIT [arc (-SIXTH), arc SIXTH, run 9])
       joins := [("main", "b"), ("main", "c")] }
   | .alternative =>
-    { marks := bodyOf "main" (tube (px 12) (px 48) E PIPE [run 21]) ++
+    -- the trunk arrives where the arms leave, and stops there (the kit's fork)
+    { marks := bodyOf "main" (tube (px 12) (px 48) E PIPE [run 15]) ++
         bodyOf "b" (tube (px 27) (px 48) E PIPE [arc (-SIXTH), arc SIXTH, run 15]) ++
         bodyOf "c" (tube (px 27) (px 48) E PIPE [arc SIXTH, arc (-SIXTH), run 15])
       joins := [("main", "b"), ("main", "c")] }
@@ -564,9 +567,8 @@ def Figure.picture (f : Figure) : Picture :=
         let (ps, pe) := ends pipe.tube
         let atStart := min (dist ps vs) (dist pe vs) ≤ min (dist ps ve) (dist pe ve)
         let bw := body pipe.tube.bore
-        let rise := reducerLen bw m.width
-        let st := if atStart then stretchOf m.key m.tube 0 m.tube.length bw m.width m.width rise
-          else stretchOf m.key m.tube 0 m.tube.length m.width bw m.width rise
+        let st := if atStart then stretchOf m.key m.tube 0 m.tube.length bw m.width m.width
+          else stretchOf m.key m.tube 0 m.tube.length m.width bw m.width
         { st with roundStart := some !atStart, round := atStart, level := m.level, move := m.move,
                   shape := m.shape, fromEnd := m.fromEnd }
       | none => m

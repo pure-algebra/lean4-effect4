@@ -132,13 +132,14 @@ def Tone.name : Tone → String
 
 /-- **How a mark is drawn**: stroked along its tube's centreline (contents, a hollow); as a solid
 body, its outline filled; as a stretch of a body over its dash whose width is `top` along its
-middle and eases over `rise` from its own width at its start and to `w1` at its end, by the
-kit's profile (`Kit.bulge`); as a parting, the ground between two round ends of its body across its dash
-(`partCubics`); or as a strut, a body all ink, which carries nothing (`ink`). -/
+middle, with a shoulder from its own width at its start and to `w1` at its end, its outline
+`inset` inside the outline of the stretch it is the interior of (`Kit.bulge`); as a parting, the
+ground between two round ends of its body across its dash (`partCubics`); or as a strut, a body
+all ink, which carries nothing (`ink`). -/
 inductive Fill where
   | stroke
   | solid
-  | stretch (w1 : Nat) (top : Nat) (rise : Nat)
+  | stretch (w1 : Nat) (top : Nat) (inset : Nat)
   | part
   | ink
 deriving DecidableEq, Repr, Inhabited
@@ -227,28 +228,27 @@ at `at_` along the tube, an air gap each side, its ends round. -/
 def cutOf (key : String) (t : Tube) (at_ : Int) (over : Nat) : Mark :=
   plugOf key t (at_ - (over / 2 + GAP : Nat)) (over + 2 * GAP)
 
-/-- **A stretch of a body** from `s` along the tube, `len` long, `top` wide along its middle and
-eased over `rise` from `w0` at its start and to `w1` at its end: one fill with its body, whose
-edges it meets on their tangent. -/
-def stretchOf (key : String) (t : Tube) (s : Int) (len w0 w1 top rise : Nat) : Mark :=
+/-- **A stretch of a body** from `s` along the tube, `len` long, `top` wide along its middle, with
+a shoulder from `w0` at its start and one to `w1` at its end: one fill with its body, whose edges
+it meets with one curvature. -/
+def stretchOf (key : String) (t : Tube) (s : Int) (len w0 w1 top : Nat) : Mark :=
   { key, layer := BODIES, tube := t, width := w0, tone := .body, round := false,
-    dash := some (s, len), fill := .stretch w1 top rise }
+    dash := some (s, len), fill := .stretch w1 top 0 }
 
 /-- **A sleeve** round a tube from `s`, `len` long: a fitting, the body standing `COLLAR` out on
-each side, eased in and out. -/
+each side, a shoulder at each end. -/
 def collarOf (key : String) (t : Tube) (s : Int) (len : Nat) : Mark :=
-  stretchOf key t s len (body t.bore) (body t.bore) (body t.bore + 2 * COLLAR) (min (len / 3) 4000)
+  stretchOf key t s len (body t.bore) (body t.bore) (body t.bore + 2 * COLLAR)
 
 /-- How long a reducer is between two widths: twice the change, and at least `REDUCER`, so its
 side slopes by no more than one in four. -/
 def reducerLen (a b : Nat) : Nat := max REDUCER (2 * (max a b - min a b))
 
-/-- **A vessel between pipes**: one stretch, its body's width along its middle and eased at each
-end by a reducer to the inlet's width `inW` and the outlet's `outW`, so its outline is one smooth
-line with no seam. A pipe that meets it is cut square and runs `INTO` it (`into`). -/
+/-- **A vessel between pipes**: one stretch, its body's width along its middle, with a shoulder at
+each end to the inlet's width `inW` and the outlet's `outW`, so its outline is one line with no
+seam. A pipe that meets it is cut square and runs `INTO` it (`into`). -/
 def reducedOf (key : String) (t : Tube) (inW outW : Nat) : List Mark :=
-  [stretchOf (key ++ ":wall") t 0 t.length inW outW (body t.bore)
-    (max (reducerLen inW (body t.bore)) (reducerLen outW (body t.bore)))]
+  [stretchOf (key ++ ":wall") t 0 t.length inW outW (body t.bore)]
 
 /-- How far a pipe runs into the reducer of the vessel it meets, so its interior and the reducer's
 overlap, and its square corners stand inside the reducer's outline, in thousandths of a pixel. -/
@@ -336,13 +336,13 @@ def closedText (cs : List Cubic) : String := String.ofList (Path.grammar.print (
 /-- **A mark's interior**: a filled mark a `LINE` narrower on each side, in the ground. -/
 def Mark.inner (m : Mark) : Mark :=
   { m with key := m.key ++ ":in", layer := INTERIORS, tone := .ground, width := m.width - 2 * LINE,
-           fill := match m.fill with | .stretch w1 p r => .stretch (w1 - 2 * LINE) (p - 2 * LINE) r | f => f }
+           fill := match m.fill with | .stretch w1 p i => .stretch (w1 - 2 * LINE) (p - 2 * LINE) (i + LINE) | f => f }
 
 /-- **The outline of a filled mark**: a solid body's, or a stretch's over its dash. -/
 def Mark.outline (m : Mark) : List Cubic :=
   match m.fill, m.dash with
-  | .stretch w1 top rise, some (s, len) =>
-    Kit.bulge m.drawn s len m.width w1 top rise (m.roundStart.getD false) m.round
+  | .stretch w1 top inset, some (s, len) =>
+    Kit.bulge m.drawn s len m.width w1 top inset (m.roundStart.getD false) m.round
   | .part, some (s, len) => partCubics m.drawn s len m.width GAP
   | .stretch _ _ _, none | .part, none => []
   | _, _ => bodyCubics m.drawn m.width (m.roundStart.getD m.round) m.round

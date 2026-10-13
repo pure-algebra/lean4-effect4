@@ -122,25 +122,37 @@ def joinedFrames : List Picture :=
 
 /-- **An interrupt held by a rail, landing at its end**, in a picture three cells wide, five
 pictures: the interrupt's surge comes along the lane while the fiber's work runs under the rail;
-the surge is held at the rail's start; the work reaches the rail's end, and the surge still
-holds; it is let go and runs past the rail's end; it lands and is spent there: a stop set across
-the lane, the lane ending an air gap short of it. -/
+the surge is held at the rail's start while the work runs on to the rail's end, in one motion over
+two beats; the surge is let go and runs past the rail's end; it lands and is spent there, then the
+lane draws back, and then a stop is set across the lane, an air gap past the lane's end: one
+thing after another within the beat. -/
 def heldFrames : List Picture :=
   let lane (to_ : Int) := tube (px 12) (px 48) E PIPE [⟨(to_ - px 12).toNat, 0⟩]
   let stopX := px 222
   let ended := stopX - (apart PIPE THIN : Nat)
   let rails := bodyOf "r1" (tube (px 96) (px 24) E FINE [run 96]) ++
     bodyOf "r2" (tube (px 96) (px 72) E FINE [run 96])
-  let frame (to_ unit : Int) (surge : Option Int) (stop : List Mark) (moveLane : Timing) :=
+  let frame (to_ unit : Int) (moveUnit : Timing) (surge : Int × Nat) (moveSurge : Timing)
+      (stop : List Mark) (moveLane : Timing) :=
     let t := lane to_
     (bodyOf "main" t).map (fun m => { m with move := moveLane }) ++ rails ++
-      [unitAt "u" t unit] ++ (surge.map (surgeOf "s" t · 18000)).getD [] ++ stop
+      [{ unitAt "u" t unit with move := moveUnit }] ++
+      (surgeOf "s" t surge.1 surge.2).map (fun m => { m with move := moveSurge }) ++ stop
   let now : Timing := { ease := settle }
-  let after : Timing := { delay := 400, duration := 600, ease := settle }
-  let stop := (bodyOf "stop" (tube stopX (px 24) S THIN [run 48])).map fun m => { m with move := after }
-  complete [frame (px 276) (px 96) (some (px 6)) [] now, frame (px 276) (px 138) (some (px 48)) [] now,
-    frame (px 276) (px 156) (some (px 48)) [] now, frame (px 276) (px 156) (some (px 180)) [] now,
-    frame ended (px 156) none stop after]
+  -- the work's run under the rail, one motion over two beats: the two halves of a smoothstep
+  let gather : Timing := { ease := .cubic 0 500 }
+  let finish : Timing := { ease := .cubic 500 1000 }
+  let go : Timing := { ease := .cubic 0 1000 }
+  -- the last beat in turn: the surge spent at the lane's end, the lane drawn back, the stop set
+  let spend : Timing := { duration := 400, ease := settle }
+  let draw : Timing := { delay := 300, duration := 400, ease := settle }
+  let set : Timing := { delay := 650, duration := 350, ease := settle }
+  let stop := (bodyOf "stop" (tube stopX (px 24) S THIN [run 48])).map fun m => { m with move := set }
+  complete [frame (px 276) (px 96) now (px 6, 18000) now [] now,
+    frame (px 276) (px 126) gather (px 48, 18000) now [] now,
+    frame (px 276) (px 156) finish (px 48, 18000) now [] now,
+    frame (px 276) (px 156) now (px 180, 18000) go [] now,
+    frame ended (px 156) now (ended - px 1, 0) spend stop draw]
 
 /-- **Any mark into any other**: six marks of five kinds, each morphing into the next. -/
 def anyShapes : List Shape := [.box, .loop, .spider, .fermata, .hollowDot, .region]
