@@ -120,6 +120,27 @@ board is the technique, for speed and for one meaning with the machine.
   an easing. Neighbouring units fuse into one slug with soft menisci, and part as they spread. At
   a split the slug divides into the tines. Only the drawing interpolates; the marking does not.
 
+### 5.0 Movement inside the bodies
+
+The owner's requirement: the fluid is bounded by the vessels, and moves as fluid does.
+
+- **Slots lie on paths.** Each edge of a skeleton has its centreline, measured by length; the
+  stem's axis runs on round the U's centreline into each tine. A slot is a length along a path.
+- **The tween follows the path.** Between two ticks a unit's place is its eased length along the
+  path, through a junction where it changes edge. It never cuts across a wall. The pen already
+  draws contents so: a dash on a tube's centreline, moved by its offset (`unitAt`).
+- **A clip bounds the fluid.** The fluid layer is clipped by the bodies' interiors: the same
+  strings a line in, the casing's own geometry. A soft union's blur cannot leak through a wall.
+- **Flux is conserved.** A slot's length is the unit's amount over the tube's width, so a narrow
+  tube's slots are longer. One slot a tick is then a faster flow in a narrow tube (Venturi), and
+  slower in a vessel.
+- **Speeds that are no whole ratio step on a fractional clock.** Each lane adds its speed to an
+  accumulator and steps when it passes one: Bresenham's spreading of steps. The ticks stay the
+  machine's; only the lanes' cadences differ.
+- **Pressure and momentum are drawn, not stored.** Units packed and unmoving are the queue's
+  backpressure, and their slug reads as compressed. A fast unit stretches along its path, as the
+  pen's `Physics` stretches a unit by its speed.
+
 - **It is the machine's own grain.** The machine steps; a unit is in one place, then in the next.
   A unit that hops from slot peg to slot peg shows the step itself. A glide shows an
   interpolation that no state holds (row 371 (3): fills follow the machine).
