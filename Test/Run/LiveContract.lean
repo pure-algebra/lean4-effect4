@@ -22,9 +22,9 @@ parked on one row.
   their checked instance and the session's record, the internal waits, and `funded`.
 * **The typed replay** (`Api.Typed.replay`, decisions rows 98 and 373 (8)), on the template row of
   decisions row 183 (`Test/Api/TypedReplies.lean`). A journal whose answer the call's checked
-  instance admits replays to the program's exit, where the checked tape replay refuses the same
-  answer at the row's own columns. The red control: a journal whose answer misfits the call's
-  instance is refused at its receipt, and the raw `Api.replay` applies that answer unchecked.
+  instance admits replays to the program's exit. The checked tape replay refuses the same answer
+  at the row's own columns. The red control: a journal whose answer misfits the call's instance is
+  refused at its receipt, and the raw `Api.replay` applies that answer unchecked.
 -/
 
 set_option autoImplicit false
@@ -222,6 +222,9 @@ def admittedRun : Live :=
     Test.Api.TypedReplies.table with
   | .inr (.decision 1 _ (.answerType _ 0 _) _) => true
   | _ => false
+-- `Live.replay_at_call_instance`, read on the replayed run at its application row.
+example (applied : (Run.rows admittedRun.run)[3]? = some (.apply ⟨Api.root, 0⟩, .applied)) :=
+  Live.replay_at_call_instance admittedRun 3 _ applied
 #guard (Run.rows admittedRun.run)[3]? = some (.apply ⟨Api.root, 0⟩, .applied)
 
 -- Red control: `some "one"` misfits the call's instance, so its receipt is refused at the
