@@ -65,14 +65,18 @@ Row 373 rules two parts of that promise for the first share (2026-10-13):
   again at the checker's instance at that address (`acceptAtInstance`,
   `src/Effect4/Program/Admit.lean`; `HostSession.instanceAt`). A success admitted there is a
   member of the instance's answer column with no handle, and it reaches the program unchanged
-  (`instance_prepared_success`). The checked replay does not take this path yet.
+  (`instance_prepared_success`). The checked replay takes this path: `Typed.replay` feeds a
+  journal through the session, so each applied reply was admitted at its call
+  (`Live.replay_at_call_instance`, `src/Effect4/Laws/Api/Live.lean`).
 - **Preparation.** `prepareExternalAnswer` (`src/Effect4/Program/Compile.lean`) turns an accepted reply into the
   code the fiber resumes with, allocating any new external handle.
 - **Tape replays.**
   - `Api.replayChecked` runs `admit` before each decision, but compiles with the execution
     budget.
-  - `Api.replay`, `Typed.replay` and `replayAdmitted` do not admit decisions; by their
-    documentation the caller does.
+  - `Api.replay` does not admit decisions; by its documentation the caller does. It is a named
+    test entry (row 373 (8)).
+  - `Typed.replay` replays a session's journal through the checked session, and a session's own
+    journal replays to that run (`Live.replay_recorded`).
 - **The reference machine takes the row table** (decisions rows 313 and 314). The frame
   machine and the reference machine agree at every row table (`run_eq_ref_table`,
   `src/Effect4/Laws/Program/Table/Agreement.lean`). A host answer reaches either machine only as
@@ -237,7 +241,7 @@ accepted.
 | `Typed.replay` | consumes a session header and a `Runner.Command` journal through the checked keyed session, with both budgets and phases that can refuse, checked at each call's instance (rows 98 and 373 (8)) |
 | `Api.replayChecked` | low-level evidence; budgets separated; no claim of host-envelope conformance |
 | raw `Api.replay` | a named test entry; the caller admits decisions (row 373 (8)) |
-| `replayAdmitted` | goes (row 373 (8)) |
+| `replayAdmitted` | gone (row 373 (8)) |
 | a list of host answers | deleted from the machine and the run entries (DI-23, DI-58). A host that answers from a list drives the session: `Run.runWith` (`src/Effect4/Run/Basic.lean`) with `Reactor.ofHost` (`src/Effect4/Laws/Api/HostDrive.lean`) over `tapeHost` (`src/Effect4/Laws/Program/HostRuns.lean`) |
 | timers, yields, deferred deliveries | typed through their own delivery paths, never through external admission |
 | the OCaml engine | needs a table-aware keyed entry path of its own: the session note's slice DM7, after the first share (row 373 (2)) |

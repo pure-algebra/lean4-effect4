@@ -810,7 +810,7 @@ def registry : Registry where
       title := "A sketch's bytes are its program's canonical bytes and its hole table's (Sketch.encode): a well-formed sketch reads back (Sketch.decode_encode), and whatever reads was that sketch's bytes, well-formed (Sketch.decode_exact); the query tool takes a hole table with a request and gives the grown one with an omission, so the sketch it answers can be sent back; nothing of a stored sketch's renumbering when its application gains a row (decisions row 305, point 3)"
       pointer := .witness `Effect4.Program.Sketch.decode_exact },
     { id := "json-read-exact", concept := "exact-codecs", role := .compatibility
-      title := "A canonical carrier read from JSON is the carrier whose canonical print that JSON is (Canonical.ofJson_exact): the reader takes only the canonical print, a number as the binary64 of a natural, hex exact, fields in the shape's order, a case's name checked against its tag; JSON whose objects come in any order reads once ordered by the shape (Canonical.ofJsonAnyOrder), the named normaliser; nothing of the round trip, which needs every natural at most 2^53 and no option holding a shape that prints null (the agent's schema form; decisions row 334)"
+      title := "A canonical carrier read from JSON is the carrier whose canonical print that JSON is (Canonical.ofJson_exact): the reader takes only the canonical print, a number as the binary64 of a natural, hex exact, fields in the shape's order, a case's name checked against its tag; JSON whose objects come in any order, and whose lists may be arrays, reads once normalised by the shape (Canonical.ofJsonAnyOrder, Canonical.ofJsonAnyOrder_exact), the named normaliser, and the tools print each list as an array (Canonical.printArrays), the encoding ts/eff/eff.gen.ts types; nothing of the round trip, which needs every natural at most 2^53 and no option holding a shape that prints null (the agent's schema form; decisions row 334)"
       pointer := .witness `Effect4.Store.Canonical.ofJson_exact },
     { id := "call-instance-address", concept := "initial-algebras-folds", role := .inversion
       title := "The call instance at an address is the row check's answer: where callAt answers, the node there is a call of the instance's operation, its request has the instance's request type in the address's environment, and the row check at that type answers the instance's two columns; the instance keeps the row's bindings at the request (rowBindings), which instantiate the two columns where the row check answers (checkRow_rowBindings) (nothing about a run's call at that address: no registration records it; decisions row 310)"
@@ -1103,7 +1103,35 @@ def registry : Registry where
       pointer := .witness `Tools.Graph.Summary.check_summary_exact },
     { id := "view-reachability-summary-exact", concept := "initial-algebras-folds", role := .decidability
       title := "A flow's distance table that checkReach accepts (every edge's ends below the position bound, and check on the reach graph) reports a target at a source if and only if Flow.Reach leads from the source to the target; an end at or above the bound is refused, never dropped; ReachTable answers directed queries under this law; nothing of a schedule, a layout, a forest or weak connectedness"
-      pointer := .witness `Tools.View.Flow.checkReach_exact }
+      pointer := .witness `Tools.View.Flow.checkReach_exact },
+    -- the landings of 2026-10-13 (decisions rows 376 and 377)
+    { id := "replay-at-call-instance", concept := "host-session-protocol", role := .preservation
+      title := "At a row of a live run that applied the reply stored at a key, the session held that reply at the run before the row and its preflight admitted it, and the session's instance lookup is the checker's instanceAt on the run's program: a success prepares a member of the row's shape-decided column or of the call's checked instance, and a failure holds no shape defect; Typed.replay answers a Live, so the law reads every replayed run; the converse half is Live.replay_recorded; nothing of membership in the instance from the row's columns (admitAnswer_instance), handle rows, AnswerOk or progress (decisions rows 98 and 373 (8))"
+      pointer := .witness `Effect4.Live.replay_at_call_instance },
+    { id := "run-conforms-postcondition", concept := "host-session-protocol", role := .adequacy
+      title := "A reached run that conforms to the declared row protocols meets every postcondition its call tree meets under them (Effects.Program.Sat), through denoteRows_eq_session_host and the checked host's soundness; nothing of a run that does not conform, or of the protocols' demands, which conforms checks and no theorem reads yet (the claims packet, slice PROTOCOL)"
+      pointer := .witness `Effect4.Run.conforms_sat },
+    { id := "run-agrees-model", concept := "translation-simulation", role := .simulation
+      title := "A reached run that a reference model validates is the model's run of its call tree: its exit and stores are the ones the model's host gives the tree; nothing of a run the model does not validate, or of termination (the claims packet, slice MODEL)"
+      pointer := .witness `Effect4.Run.agrees_hostRun },
+    { id := "references-move", concept := "initial-algebras-folds", role := .preservation
+      title := "A subtree whose layer references stay inside it keeps every reference well formed when it is pasted with Node.rebaseRefs, at an address below the root, outside the module's layers and in one scope; nothing of typing, of references that leave the subtree, of variable levels or row positions, or of any run (decisions row 336 (6); seat ORG's L9)"
+      pointer := .witness `Effect4.Program.references_move },
+    { id := "program-digest-exact", concept := "exact-codecs", role := .compatibility
+      title := "A program files in the store under kind program (Content (Eff NativeOp), generated), so two programs with one address are equal or a digest collision (address_eq_or_collision at programs); nothing of a piece's key, which moves with its depth (the MCP note's ruling 3)"
+      pointer := .witness `Effect4.Store.address_eq_or_collision },
+    { id := "answer-flow-history", concept := "store-typing", role := .preservation
+      title := "A per-fiber frame predicate that each command keeps, given its local facts at each arm, holds through every admitted history of a program of the direct lexical fragment (PlaceFunding.NativeFlow.history), and a place ledger whose debit reads it stays funded (LocalOn.history_funded); nothing of a crew's answer-class model, its local facts, progress or a host observation"
+      pointer := .witness `Effect4.Program.PlaceFunding.NativeFlow.history },
+    { id := "source-annotation-agrees", concept := "initial-algebras-folds", role := .compatibility
+      title := "A sketch's one-pass table read through its layer references is the specification: each address of the program as written holds the expansion's entry there, and the root holds the check through the references, which succeeds exactly as admission's typeOfProgram does at the application and the hole table; nothing of sketch admission (admitSig) or of a refusal inside a copy, which keeps the expansion's address (decisions row 373 (7))"
+      pointer := .witness `Effect4.Program.Sketch.sourceAnnotate_eq_sourceTable },
+    { id := "source-session-coherent", concept := "initial-algebras-folds", role := .preservation
+      title := "The edit session of a sketch as written shows, after an open and any run of edits, the source table of its sketch: an edit that moves the expansion at its address alone splices in the expansion's session, and any other is checked again; on a program with no reference it shows the edit session's view; nothing of the repaint set at the source's addresses (decisions row 373 (7))"
+      pointer := .witness `Effect4.Program.SourceSession.reached_view },
+    { id := "source-session-undo", concept := "initial-algebras-folds", role := .compatibility
+      title := "An edit of a sketch as written, then the edit that puts back the old sub-program, restores a coherent source session exactly; nothing of undoing a run (decisions row 373 (7))"
+      pointer := .witness `Effect4.Program.SourceSession.feed_undo }
   ]
   cuts := [
     -- 1. store-typing
@@ -1257,7 +1285,8 @@ def registry : Registry where
         `Effect4.Run.runWith_denotes,
         `Effect4.Run.h8_loopedRows,
         `Effect4.Run.denoteRowsB_eq_session_host,
-        `Effect4.Run.runWith_denotesB]
+        `Effect4.Run.runWith_denotesB,
+        `Effect4.Live.replay_at_call_instance]
       openParts := [.ruling "decisions row 97: the handle declarations, parked by the owner on 2026-09-30" "admit_sound's value half: executable admission implies the ghost AnswerOk on success values (waits on decisions row 97's handle declarations)",
         .definition "the host as a relation between the machine's calls and its answers (`HostSpec`), in place of a predicate on tapes" "H related to the machine: M6's premise is a predicate on tapes (decisions row 95), not a host relation",
         .ruling "decisions rows 98 to 100: the typed replay route, when the guarantee is claimed, host resources" "receipt and application on the keyed lifecycle, and their converse (host-boundary §4.5; decisions rows 98–100, parked by the owner, 2026-09-30)",

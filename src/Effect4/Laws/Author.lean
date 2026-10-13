@@ -34,6 +34,7 @@ import Effect4.Laws.Program.Validated
 import Effect4.Laws.Api.Live
 import Effect4.Laws.Program.AddressMove
 import Effect4.Laws.Store.ShapeRead
+import Effect4.Laws.Program.SourceTable
 
 /-!
 # Effect4.Laws.Author — the entry module of the laws an author reads (decisions row 332)

@@ -235,9 +235,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
   entry row, interruptible or not. Every clause of the typed state keeps it. A capture's release
   runs under its captured context merged over the current one (`releaseContext`, Effect's
   `provideContext`). It proves the four scope-close goals (the
-  [release merge receipt](research/2026-10-12-release-merge-receipt.md)). M6 and M7 hold modulo one
-  planned goal, `Evaluating.countdown_parks_positional`. It needs `J` to rule out a stale or a
-  duplicate countdown firing, which neither rc.112 nor 4.0.1 makes.
+  [release merge receipt](research/2026-10-12-release-merge-receipt.md)). A countdown observer acts
+  only when its record waits on the firing fiber (`Pending.waitingOn`, row 376 (2)), as in rc.112
+  and 4.0.1. So `Evaluating.countdown_parks_positional` is proved, and M6 and M7 rest on no goal.
   The printer spells a pair of a union as a union of pairs (`E4-PRINT-CE-001`, row 346, ruled).
 - **Shared accounting** (row 355). A stack ledger states once what the goals lane re-proved per
   scenario: consumed plus held is at most produced, along every reachable machine
@@ -284,7 +284,8 @@ A program has folds, a journaled run with replay, and a printed image that reads
    mask. Items 3 and 4 keep rc.112's behaviour. Item 5, the operation counts, waits: 5a first.
    The restore slot is retired (the
    [slot scout](research/2026-10-12-restore-slot-scout.md); owner, 2026-10-12). The positional
-   countdown goal changes no run and stays a planned goal.
+   countdown goal is proved (seat COUNTDOWN's
+   [receipt](research/2026-10-13-seat-countdown-receipt.md)).
 00. **The last planned goals** (the [goals packet](research/2026-10-10-goals-packet/README.md)).
    Codex reached its quota on 2026-10-12, and Claude carries its lane
    (`docs/research/2026-10-11-machine-models/CODEX-PROMPT.md`). `#plan_status` gives each
@@ -293,11 +294,11 @@ A program has folds, a journaled run with replay, and a printed image that reads
    `Atomic.atomic` now rests only on `Atomic.Store.shop_stages` (the receipt's §7).
    `Workers.Assertions.logs_step` and `QueueWorkers.Assertions.logs_history` stay open. In both
    scenarios a release note writes the acquired value that its environment binds, so their count
-   needs a fact about values. The missing piece is an invariant of answer flow over whole
-   histories: the frame-level `Machine.AnswerFlow` modules exist (`src/Effect4/Laws/Machine/`), and
-   nothing carries them through histories. The same gap blocks `Timeout.cleanup_keeps` and `Timeout.retries_declared`. Next:
-   that invariant (the receipt's §4.3), then the rest of the receipt's §8, `request_leads` among
-   it. The packet also sorts the open parts that no goal states yet. Beside it: the legacy host
+   needs a fact about values. Seat FLOW carried the frame-level answer flow through whole
+   histories (`PlaceFunding.NativeFlow.history`, its
+   [receipt](research/2026-10-13-seat-flow-receipt.md)). The four goals that need it stay open:
+   these two, `Timeout.cleanup_keeps` and `Timeout.retries_declared`. Next: those four through
+   it, then the rest of the GOALS-2 receipt's §8, `request_leads` among it. The packet also sorts the open parts that no goal states yet. Beside it: the legacy host
    fixtures of the truth lane move to the keyed lane (row 343 (8), signed until then). Seat FC's
    rulings land too (row 345 (2): `tools/Tools/Graph` at height 0; the generator's children
    induction).
@@ -308,18 +309,19 @@ A program has folds, a journaled run with replay, and a printed image that reads
    remain). In order:
    - landed: a definition block in the meaning, PROC-5 (row 328; `src/Effect4/Laws/Program/Block.lean`).
      Next on that line: `run_eq_meaning` extended to blocks, and the inlining law (PROC-6);
-   - one checked replay route: `Typed.replay` replays the session's journal, checked at each
-     call's instance (rows 98 and 373 (8); seat REPLAY's
-     [brief](research/2026-10-13-seat-replay-brief.md));
-   - the application and claim records (row 336 (9); seat CLAIMS's
-     [brief](research/2026-10-13-seat-claims-brief.md));
+   - landed: one checked replay route. `Typed.replay` feeds a journal through the checked
+     session (`Live.replay_at_call_instance`, `Live.replay_recorded`; rows 98 and 373 (8); seat
+     REPLAY's [receipt](research/2026-10-13-seat-replay-receipt.md));
+   - landed: the application and claim records (row 336 (9); seat CLAIMS's
+     [receipt](research/2026-10-13-seat-claims-receipt.md)). Four of the to-do claims are proved,
+     and `Todo.serves` rests on `request_leads`;
    - generics and Pool's service, HO-4 and HO-5
      ([the plan](research/2026-10-09-program-parameters.md), row 340).
 
-   Row 376 runs four more seats beside them, reuse first: FLOW (the answer-flow history producer,
-   four application goals), APPCHECK (checking at a real application), ADDRESS (the address algebra
-   and `rebaseRefs`) and COUNTDOWN (the countdown goal, reopened: it blocks all of M7; the
-   [goals probe](research/2026-10-13-open-goals-probe/README.md)).
+   Row 376's four more seats landed on 2026-10-13. FLOW is above, and COUNTDOWN closed M7.
+   APPCHECK checks a sketch through its layer references (`SourceSession`), and the session tool
+   opens at an application. ADDRESS proved `references_move` and stores a program's content at
+   kind `program`. Their receipts list the duplicates they found, for one consolidation pass.
 
    CX3 and CX4 wait for a consumer: the typed run goes through sites, not through an inlined body
    ([the note](research/2026-10-10-cx-lexical-scope.md) §8). Codex's scout of a keyed layer after

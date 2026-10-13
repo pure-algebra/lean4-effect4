@@ -150,7 +150,8 @@ def ask (op : String) (program : NativeEff) (path : List Nat := []) : Request :=
 structure Answer where
   /-- The operation of the request. -/
   op : String
-  /-- The application that the program was read at: the empty one. -/
+  /-- The application that the program was read at: `empty`, or `sha256:` and the digest of the
+  application's bytes (the session tool's `open` with `rows` and `services`). -/
   app : String := "empty"
   /-- The laws that the answer stands on, each with its premises decided here. -/
   laws : List Lean.Name := []
