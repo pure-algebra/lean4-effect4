@@ -89,7 +89,8 @@ def draw : Shape → PegFigure
   | .alternative => ⟨[body (tuningFork 7)], []⟩
   | .loop => ⟨[body (line 1 2 7 2 10), body enclosure], []⟩
   | .rest => ⟨[body (line 1 4 3 4 10), body (line 5 4 7 4 10)], []⟩
-  | .arrow => ⟨[body (line 1 2 7 2 10), body (line 2 4 7 6 10)], []⟩
+  | .arrow => ⟨[body (.fork (peg 1 4 10) [peg 4 4 (-10)] []
+      (.cap (peg 7 2 10)) (.cap (peg 7 6 10)))], []⟩
   | .spider => ⟨[body (line 1 2 7 2 10), body (line 2 4 2 6 10),
       body (line 4 4 4 6 10), body (line 6 4 6 6 10)],
       [unit 3 2, unit 2 5, unit 4 5, unit 6 5]⟩
