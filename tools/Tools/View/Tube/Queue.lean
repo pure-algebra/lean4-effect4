@@ -11,10 +11,13 @@ The Queue's cell, at each command of a run, drawn in the tube language (`Tools.V
   the outlet's end, the order kept, the room shown. Its length is its capacity in units, so a
   full vessel is full to its ends: the capacity is the pipework, an invariant.
 * **The inlet** brings offers from the world, off the picture on the left. When the vessel is
-  full its valve closes (a float valve, the cistern's way of refusing water), and the offers that
-  wait stand behind it as backwater (`Units.lane`). **The inlet bends under what it holds**: a
-  span loaded evenly turns at its ends in proportion to its load (a beam's end slope is
-  `wL³/24EI`); a load that arrives at once carries it past its rest, and it comes back.
+  full its valve closes (a float valve, the cistern's way of refusing water): the inlet parts by
+  an air gap, nothing passes, and the offers that wait stand behind it as backwater
+  (`Units.lane`). **The inlet bends under what it holds**: it is clamped at the vessel's flange,
+  so it meets the vessel on its tangent, and a span clamped at its ends and loaded evenly sags in
+  three arcs, its slope at the inflections in proportion to its load (a beam's slope is
+  `∝ wL³/EI`); a load that arrives at once carries it past its rest, and it comes back.
+* **The vessel** joins its pipes by reducers, so its outline has no step.
 * **The outlet** takes messages to the world, off the picture on the right. A taker that waits on
   an empty vessel is a bubble at the outlet: a promise of a message (hollow is a promise, filled
   is kept). It grows where it stands and, kept, shrinks there.
@@ -40,17 +43,20 @@ def PIPE : Nat := 12000
 def VESSEL : Nat := 16000
 /-- The room at each end of the vessel. -/
 def HEAD : Nat := 6000
-/-- A closed valve's plug, its length along the inlet, and how far the valve stands from the
+/-- A closed valve's air gap, its length along the inlet, and how far the valve stands from the
 inlet's end, clear of the vessel's head. -/
-def PLUG : Nat := 8000
+def PLUG : Nat := GAP
+/-- How far the offers that wait stand back from a closed valve: its gap and its round end. -/
+def PARTED : Nat := PLUG + body PIPE / 2
 def VALVE_AT : Nat := 22000
 /-- How far the pipes run past the picture's edges, to the world. -/
 def OFF : Nat := 40000
 /-- The visible lead of the inlet and tail of the outlet. -/
 def LEFT : Nat := 16000
 def RIGHT : Nat := 16000
-/-- The inlet's end slope with nothing in it and for each message it holds (millionths of a
-radian), the most, and how far past its rest a sudden load carries it (per cent of the change). -/
+/-- The inlet's slope at its inflections with nothing in it and for each message it holds
+(millionths of a radian), the most, and how far past its rest a sudden load carries it (per cent
+of the change). -/
 def SAG0 : Int := 8000
 def SAG_PER : Int := 45000
 def SAG_MAX : Int := 240000
@@ -76,20 +82,22 @@ structure Layout where
 wait at the outlet. -/
 def Layout.of (cap waiting takers : Nat) : Layout :=
   { cap
-    inLen := max 200000 ((waiting + 1) * unitLen PIPE + PLUG + VALVE_AT + 30000)
+    inLen := max 200000 ((waiting + 1) * unitLen PIPE + PARTED + VALVE_AT + 30000)
     vLen := cap * unitLen VESSEL + 2 * HEAD
     outLen := max 160000 ((takers + 1) * unitLen PIPE + 40000) }
 
 def Layout.W (l : Layout) : Nat := (LEFT + l.inLen + l.vLen + l.outLen + RIGHT) / 1000
 
-/-- The inlet's end slope under a load of `n` messages. -/
+/-- The inlet's slope under a load of `n` messages. -/
 def slope (n : Nat) : Int := min SAG_MAX (SAG0 + SAG_PER * n)
 
-/-- **The inlet at an end slope**: a span from off the picture to the vessel, whose ends turn by
-the slope, so it is longer than its chord by the arc's ratio. -/
-def Layout.inletAt (l : Layout) (α : Int) : Tube :=
+/-- **The inlet at a slope** `β`: a span from off the picture to the vessel, clamped level at both
+ends, that sags in three arcs, `ℓ` turning `β`, `2ℓ` turning back `2β`, `ℓ` turning `β`, so it
+leaves and meets the vessel on its tangent. Its chord is `4ℓ · sinc(β/2) · cos(β/2)`. -/
+def Layout.inletAt (l : Layout) (β : Int) : Tube :=
   let chord : Int := (OFF + LEFT + l.inLen : Nat)
-  ⟨-(OFF : Int), AXIS, α, PIPE, [⟨(chord * ONE / sinc α).toNat, -2 * α⟩]⟩
+  let q := (chord * ONE / sinc (β / 2) * ONE / (sinCos (β / 2)).2 / 4).toNat
+  ⟨-(OFF : Int), AXIS, 0, PIPE, [⟨q, β⟩, ⟨2 * q, -2 * β⟩, ⟨q, β⟩]⟩
 
 def Layout.inlet (l : Layout) (n : Nat) : Tube := l.inletAt (slope n)
 def Layout.vessel (l : Layout) : Tube := straight (LEFT + l.inLen) AXIS 0 VESSEL l.vLen
@@ -120,7 +128,7 @@ def place (l : Layout) (m : Marking) (gone : Bool) (msg : Nat) : Int :=
   let vIn := volume (l.inlet m.waiting.length)
   let vV := volume l.vessel
   let total := line.foldl (· + volume ·) 0
-  let plug : Nat := if m.held.length ≥ l.cap then PLUG else 0
+  let plug : Nat := if m.held.length ≥ l.cap then PARTED else 0
   match slotOf (slots l.cap m.held) msg, slotOf (lane m.waiting) msg with
   | some i, _ => vIn + vV - ((HEAD * VESSEL / 1000 : Nat) : Int) - i * A
   | none, some k => vIn - (((VALVE_AT + plug) * PIPE / 1000 : Nat) : Int) - k * A
@@ -189,7 +197,7 @@ def picture (l : Layout) (msgs : List Nat) (seen : List Nat) (prev : Option Mark
         let len : Int := t.length
         let u : Int := unitLen t.bore
         if max s₀ s₁ < 0 || min s₀ s₁ - u > len then [] else
-        swellOf s!"s{msg}@{nm}" t (pillDash t s₀) (pillDash t s₁) tm
+        swellOf s!"s{msg}@{nm}" (if nm == "in" then "in:wall" else "") t (pillDash t s₀) (pillDash t s₁) tm
   -- the valve: closed when the vessel is full; it opens at once and closes after the unit that
   -- fills the vessel has come to rest
   let valveEnd : Int := (inlet.length : Int) - VALVE_AT
@@ -201,14 +209,12 @@ def picture (l : Layout) (msgs : List Nat) (seen : List Nat) (prev : Option Mark
     if isClosed && !wasClosed then { delay := 620, duration := 240, ease := settle }
     else if reopens then { duration := 900, ease := settle }
     else { duration := OPENING, ease := settle }
-  let valve :=
-    [onInlet (collarOf "valve:collar" inlet (valveEnd - PLUG - 3000) (PLUG + 6000)),
-     onInlet { plugOf "valve" inlet (valveEnd - plugLen) plugLen with move := valveTiming }]
+  let valve := [onInlet { plugOf "valve" inlet (valveEnd - plugLen) plugLen with move := valveTiming }]
   -- an offer that meets the closed valve: the surge runs back up the inlet from the valve
   let blocked := msgs.filter fun msg => !(seen.contains msg) && m.waiting.contains msg && isClosed
   let surge := if prev.isNone then [] else blocked.flatMap fun msg =>
     let tm : Timing := { delay := IMPACT, duration := 1000 - IMPACT, ease := Easing.linear }
-    swellOf s!"surge{msg}" inlet (valveEnd - (PLUG : Int) - 40000, 30000)
+    swellOf s!"surge{msg}" "in:wall" inlet (valveEnd - (PLUG : Int) - 40000, 30000)
       (-(OFF : Int) - 30000, 30000) tm
   -- the takers that wait: a bubble each at the outlet's visible end; a new one grows where it
   -- stands, and one that is kept shrinks there as its message reaches it
@@ -224,13 +230,13 @@ def picture (l : Layout) (msgs : List Nat) (seen : List Nat) (prev : Option Mark
       { mk.gone with move := mk.move }
   -- the poses passed through: the inlet past its rest, and the valve open
   let viaMarks : List Mark :=
-    ((bodyOf "in" inlet (round := false)).map onInlet ++ valve ++ (unitsIn.filter (·.1 == 0)).map (·.2)).filterMap
+    ((bodyOf "in" inlet).map onInlet ++ valve ++ (unitsIn.filter (·.1 == 0)).map (·.2)).filterMap
       fun mk =>
         let t := viaInlet.getD mk.tube
         let d := if reopens && mk.key == "valve" then some (valveEnd, 0) else mk.dash
         if viaInlet.isNone && d == mk.dash then none else some { mk with tube := t, dash := d }
-  { marks := (bodyOf "in" inlet (round := false)).map onInlet ++ bodyOf "vessel" l.vessel ++
-      bodyOf "out" l.outlet (round := false) ++ valve ++ units ++ waitingTakers ++ keptTakers
+  { marks := (bodyOf "in" inlet).map onInlet ++ reducedOf "vessel" l.vessel (body PIPE) (body PIPE) ++
+      bodyOf "out" l.outlet ++ valve ++ units ++ waitingTakers ++ keptTakers
     via := viaMarks
     events := swells ++ surge }
 

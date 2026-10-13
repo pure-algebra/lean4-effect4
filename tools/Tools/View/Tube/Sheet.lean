@@ -41,7 +41,7 @@ def filmFigure (id : String) (W H : Nat) (pictures : List Picture) (caption : St
   let last := (pictures.getLast?).getD default
   el "figure"
     [el "div" [(film id W H pictures beat).toRaw] [("class", "tube-anim")],
-     el "div" [(still W H last.marks).toRaw] [("class", "tube-end")],
+     el "div" [(still W H last.marks last.joins).toRaw] [("class", "tube-end")],
      el "figcaption" [.text caption]] [("class", "tube tube-film")]
 
 /-- `n` units packed against a tube's end, or against `from_`. -/
@@ -62,27 +62,46 @@ def plateBends : SvgNode :=
     [⟨px 200, 0⟩, ⟨arc 40 Q, Q⟩, ⟨px 30, 0⟩, ⟨arc 40 Q, -Q⟩, ⟨px 324, 0⟩]⟩
   still 720 170 (bodyOf "t" t ++ packed "u" t 8)
 
-/-- A wye: a branch leaves the main at 45° and turns to run beside it. -/
+/-- A wye: a branch leaves the main on its tangent, turns 45° away, and turns back to run beside
+it. -/
 def wye (y : Int) : Tube :=
-  ⟨pxi 300, pxi y, -Q / 2, PIPE, [⟨px 40, 0⟩, ⟨arc 48 (Q / 2), Q / 2⟩, ⟨px 320, 0⟩]⟩
+  ⟨pxi 260, pxi y, 0, PIPE, [⟨arc 64 (Q / 2), -Q / 2⟩, ⟨px 30, 0⟩, ⟨arc 64 (Q / 2), Q / 2⟩, ⟨px 270, 0⟩]⟩
+
+/-- The wye's join: one fill, its crotch rounded. -/
+def wyeJoin : Join := { key := "wye", parent := "main:wall", branch := "branch:wall" }
 
 def plateJunction : SvgNode :=
   let main := straight (pxi 24) (pxi 112) 0 PIPE (px 672)
   let branch := wye 112
   still 720 140 (bodyOf "main" main ++ bodyOf "branch" branch ++ packed "a" main 4 ++ packed "b" branch 4)
+    [wyeJoin]
+
+/-- **Air gaps**: three ways two bodies are kept apart because nothing passes between them: a
+closed valve parts its pipe; a broadcast's taps stand a gap below their source, each holding its
+own copy; a pipe that passes over another keeps a gap round it. -/
+def plateGaps : SvgNode :=
+  let a := straight (pxi 24) (pxi 30) 0 PIPE (px 200)
+  let src := straight (pxi 264) (pxi 30) 0 PIPE (px 200)
+  let tap (x : Int) : Tube := ⟨pxi x, pxi 30 + (body PIPE + GAP : Nat), Q, PIPE, [⟨px 70, 0⟩]⟩
+  let under := straight (pxi 504) (pxi 62) 0 PIPE (px 192)
+  let over : Tube := ⟨pxi 600, pxi 14, Q, PIPE, [⟨px 110, 0⟩]⟩
+  still 720 140 (bodyOf "a" a ++ [plugOf "valve" a (pxi 120) GAP] ++ packed "ua" a 3 (pxi 120) ++
+    bodyOf "src" src ++ packed "us" src 2 ++
+    bodyOf "t1" (tap 320) ++ bodyOf "t2" (tap 400) ++ packed "u1" (tap 320) 1 ++ packed "u2" (tap 400) 1 ++
+    bodyOf "under" under ++ [cutOf "cross" under (pxi 96) (body PIPE)] ++ packed "uu" under 2 ++
+    bodyOf "over" over (level := 1) ++ (packed "uo" over 2).map fun m => { m with level := 1 })
 
 def plateAmount : SvgNode :=
   let a := straight (pxi 24) (pxi 28) 0 PIPE (px 216)
   let v := straight (pxi 240) (pxi 28) 0 VESSEL (px 160)
   let b := straight (pxi 400) (pxi 28) 0 4000 (px 296)
-  still 720 56 (bodyOf "a" a ++ bodyOf "v" v ++ bodyOf "b" b ++
-    packed "ua" a 2 ++ packed "uv" v 2 (pxi 154) ++ packed "ub" b 2)
+  still 720 56 (bodyOf "a" a ++ reducedOf "v" v (body PIPE) (body 4000) ++ bodyOf "b" b ++
+    packed "ua" a 2 ++ packed "uv" v 2 (pxi 148) ++ packed "ub" b 2)
 
 def plateValve : SvgNode :=
   let a := straight (pxi 24) (pxi 28) 0 PIPE (px 672)
   let b := straight (pxi 24) (pxi 80) 0 PIPE (px 672)
-  still 720 108 (bodyOf "a" a ++ bodyOf "b" b ++
-    [collarOf "ca" a (pxi 397) (px 14), collarOf "cb" b (pxi 397) (px 14), plugOf "p" b (pxi 400) (px 8)] ++
+  still 720 108 (bodyOf "a" a ++ bodyOf "b" b ++ [plugOf "p" b (pxi 400) GAP] ++
     packed "ua" a 3 ++ packed "ub" b 3 (pxi 400))
 
 /-- A span of chord `c` pixels from `x`, under `n` units. -/
@@ -94,17 +113,15 @@ def plateWeight : SvgNode :=
   let spans := [(24, 0), (258, 2), (492, 4)]
   still 720 80 (spans.flatMap fun (x, n) =>
     let t := span x 204 n
-    bodyOf s!"s{x}" t ++
-      [collarOf s!"a{x}" t 0 (px 8), collarOf s!"b{x}" t ((t.length : Int) - px 8) (px 8)] ++
-      packed s!"u{x}" t n ((t.length : Int) - px 9))
+    bodyOf s!"s{x}" t ++ packed s!"u{x}" t n ((t.length : Int) - px 9))
 
 /-! ## A queue's strategy is its plumbing -/
 
-/-- A drain from a point on a tube: a branch that leaves at 45° below it, turns straight down,
-and runs off the picture to the world. -/
+/-- A drain from a point on a tube: a branch that leaves it on its tangent, sweeps down at the
+least radius, as a drainage fitting turns with the flow, and runs off the picture to the world. -/
 def drain (t : Tube) (s : Nat) : Tube :=
   let (p, h) := t.at s
-  ⟨p.1, p.2, h + Q / 2, PIPE, [⟨px 6, 0⟩, ⟨arc 30 (Q / 2), Q / 2⟩, ⟨px 90, 0⟩]⟩
+  ⟨p.1, p.2, h, PIPE, [⟨arc 24 Q, Q⟩, ⟨px 90, 0⟩]⟩
 
 /-- **The three strategies of a bounded queue**, each a full vessel of capacity three: a float
 valve that holds offers back (backpressure); an overflow before the vessel, down which a new
@@ -119,7 +136,9 @@ def plateStrategy (kind : String) : SvgNode :=
     !(mk.key.startsWith "m5")
   let inlet := l.inlet 0
   let d := if kind == "dropping" then drain inlet (inlet.length - px 60) else drain l.outlet (px 18)
-  still l.W 100 (line ++ bodyOf "drain" d (round := false) ++ [unitOf "lost" d (pxi 60)])
+  let parent := if kind == "dropping" then "in:wall" else "out:wall"
+  still l.W 100 (line ++ bodyOf "drain" d (round := false) ++ [unitOf "lost" d (pxi 70)])
+    [{ key := "drain", parent, branch := "drain:wall" }]
 
 /-! ## Morphs -/
 
@@ -145,7 +164,8 @@ def filmCircuit : RawNode :=
     let inlet : Tube := ⟨pxi 300, pxi 40, HALF, PIPE, inPs⟩
     let outlet : Tube := ⟨pxi 420, pxi 40, 0, PIPE, outPs⟩
     bodyOf "in" inlet (fromEnd := true) ++ bodyOf "out" outlet ++ packed "o" outlet 2 (pxi 120)
-  let body := bodyOf "vessel" vessel ++ packed "v" vessel 3 (pxi 114)
+  let body := reducedOf "vessel" vessel (_root_.Tools.View.Tube.body PIPE) (_root_.Tools.View.Tube.body PIPE) ++
+    packed "v" vessel 3 (pxi 114)
   let open_ := form [⟨px 260, 0⟩, ⟨0, 0⟩, ⟨0, 0⟩] [⟨px 260, 0⟩, ⟨0, 0⟩, ⟨0, 0⟩]
   let half := form [⟨px 30, 0⟩, ⟨arc r Q, -Q⟩, ⟨px 90, 0⟩] [⟨px 30, 0⟩, ⟨arc r Q, Q⟩, ⟨px 90, 0⟩]
   let closed := form [⟨px 30, 0⟩, ⟨arc r HALF, -HALF⟩, ⟨px 90, 0⟩] [⟨px 30, 0⟩, ⟨arc r HALF, HALF⟩, ⟨px 90, 0⟩]
@@ -159,7 +179,8 @@ def filmBranch : RawNode :=
   let branch := wye 112
   let a := bodyOf "main" main ++ packed "a" main 4
   filmFigure "f-branch" 720 140
-    [pic a, pic (a ++ bodyOf "branch" branch), pic (a ++ bodyOf "branch" branch ++ packed "b" branch 4)]
+    [pic a, { marks := a ++ bodyOf "branch" branch, joins := [wyeJoin] },
+     { marks := a ++ bodyOf "branch" branch ++ packed "b" branch 4, joins := [wyeJoin] }]
     "A branch grows from its root, then carries units."
 
 /-! ## The Queue -/
@@ -175,18 +196,19 @@ def queueBlocks (sc : CellSheet.Scene) (id : String) : List RawNode :=
 
 /-- **The page's blocks.** -/
 def blocks : List RawNode :=
-  [el "p" [.text "One body for every glyph: a tube, a centreline swept by one width, drawn with one pen. Its wall, its lumen and its contents are strokes of one path, every wall laid before every lumen, so where tubes meet the lumen is one. A unit of contents is one amount in every tube, a pill with a meniscus at each end. The pipework is the program's invariants, and the contents its state. Any glyph turns into any other by a morph of what each tube is, its lengths and its turns, and every moment of a morph keeps the bend law. A step is the kit's join of two pictures, each change on the kit's transition and its spring (docs/research/2026-10-13-tube-language/README.md)."],
+  [el "p" [.text "One body for every glyph: a tube, a centreline swept by one width, a solid body filled in one tone, its outline smooth everywhere. Its contents are pills of ink, one amount in every tube, with a meniscus at each end. A join carries a meaning: two bodies that meet in one fill share their fluid, and their crotch is rounded; two bodies kept apart by an air gap share nothing. The pipework is the program's invariants, and the contents its state. Any glyph turns into any other by a morph of what each tube is, its lengths and its turns, and every moment of a morph keeps the bend law. A step is the kit's join of two pictures, each change on the kit's transition and its spring (docs/research/2026-10-13-tube-language/README.md)."],
    el "h2" [.text "The one body"],
    figure plateRun "A run and its units: each unit the same amount, a meniscus between, packed against the outlet end.",
    figure plateBends "Every bend at one radius, whatever the tube: the units follow the centreline round.",
-   figure plateJunction "A junction is one lumen: every wall is laid first, then every lumen over them.",
-   figure plateAmount "One amount everywhere: a unit is 32 px long in a pipe of 12, 24 in a vessel of 16, 96 in a pipe of 4.",
-   figure plateValve "A valve is a plug in the lumen: open above, closed below with three units waiting behind it.",
+   figure plateJunction "A solid join shares the fluid: the branch leaves on its tangent, and its crotch is rounded, so the outline has no kink.",
+   figure plateGaps "An air gap shares nothing: a closed valve parts its pipe; a broadcast's taps each hold their own copy; a pipe that passes over another keeps a gap round it.",
+   figure plateAmount "One amount everywhere: a unit is 32 px long in a pipe of 12, 24 in a vessel of 16, 96 in a pipe of 4. Reducers join the widths smoothly.",
+   figure plateValve "A valve parts its pipe: open above, closed below by an air gap, three units waiting behind it.",
    figure plateWeight "A span bends under what it holds: no unit, two, four; its ends turn in proportion to its load.",
    el "h2" [.text "A strategy is plumbing"],
-   figure (plateStrategy "bounded") "Backpressure: a float valve closes when the vessel is full, and offers wait behind it, weighing on the inlet.",
-   figure (plateStrategy "dropping") "Dropping: an overflow before the vessel; an offer that finds it full runs away down it.",
-   figure (plateStrategy "sliding") "Sliding: a relief at the vessel's front; a new offer pushes the oldest out down it.",
+   figure (plateStrategy "bounded") "Backpressure: a float valve parts the inlet when the vessel is full, and offers wait behind it, weighing on the inlet.",
+   figure (plateStrategy "dropping") "Dropping: an overflow before the vessel, swept down with the flow; an offer that finds it full runs away down it.",
+   figure (plateStrategy "sliding") "Sliding: a relief after the vessel's front; a new offer pushes the oldest out down it.",
    el "h2" [.text "Any glyph into any other"],
    filmRoutes, filmCircuit, filmBranch,
    el "h2" [.text "The Queue, capacity 2"]] ++

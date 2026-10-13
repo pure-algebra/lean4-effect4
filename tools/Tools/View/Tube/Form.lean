@@ -9,7 +9,7 @@ a pipe, a vessel, a valve's plug or a unit of contents is. A tube is given **int
 it starts, its heading there, its width, and its pieces, each a length along the centreline and the
 angle it turns by over that length (an arc, or a straight run where the angle is zero).
 
-**The bend law.** No piece bends tighter than one radius, `BEND`, whatever the tube: a transit map
+**The bend law.** No piece bends tighter than one radius, `BEND` (24 px), whatever the tube: a transit map
 draws every corner at one radius, and a long-radius pipe elbow bends at one and a half times its
 size (ASME B16.9). For a piece of length `ℓ` turning `θ` the law is `BEND · |θ| ≤ ℓ`, and a piece
 turns at most half a turn, so each half of it is drawn as one cubic of at most a quarter turn
@@ -34,8 +34,10 @@ open Tools.View
 
 /-- The most a piece turns: half a turn, in millionths of a radian. -/
 def HALF_TURN : Nat := 3141593
-/-- **The least radius of a bend**, in thousandths of a pixel: one for every tube. -/
-def BEND : Nat := 15000
+/-- **The least radius of a bend**, in thousandths of a pixel: one for every tube. It is a long
+radius, about one and a half times a pipe's body, as a long-radius elbow's is (ASME B16.9), so the
+inside of a bend of a solid body is round too (decisions row 370). -/
+def BEND : Nat := 24000
 
 /-- **A piece of a centreline**: its length in thousandths of a pixel, and the angle it turns by
 over that length in millionths of a radian, positive clockwise on the page. -/
@@ -79,7 +81,7 @@ def Piece.mix (p q : Piece) (t : Nat) : Piece :=
 
 /-- A thousandth rounded down, times the bend, is at most the bend's share of the whole. A step
 of `Piece.mix_ok`. -/
-theorem div_bend (A : Nat) : A / 1000 * BEND ≤ A * 15 := by
+theorem div_bend (A : Nat) : A / 1000 * BEND ≤ A * 24 := by
   simp only [BEND]
   omega
 
@@ -92,7 +94,7 @@ theorem up_mul (Y : Nat) : Y * 1000 ≤ (Y + 999) / 1000 * 1000000 := by
 of `Piece.mix_ok`. -/
 theorem round_bend (A Y : Nat) (h : A * BEND ≤ Y * 1000000) :
     A / 1000 * BEND ≤ (Y + 999) / 1000 * 1000000 := by
-  have h1 : A * 15 ≤ Y * 1000 := by
+  have h1 : A * 24 ≤ Y * 1000 := by
     simp only [BEND] at h
     omega
   exact Nat.le_trans (div_bend A) (Nat.le_trans h1 (up_mul Y))
@@ -272,8 +274,9 @@ def Tube.reverse (t : Tube) : Tube :=
 /-- A straight tube from a point along a heading. -/
 def straight (x y head : Int) (bore len : Nat) : Tube := ⟨x, y, head, bore, [⟨len, 0⟩]⟩
 
--- an elbow at the least radius keeps the law, a tighter one does not
-#guard decide (Piece.ok ⟨23562, 1570796⟩)
+-- an elbow at the least radius (24 px) keeps the law, a tighter one does not
+#guard decide (Piece.ok ⟨37700, 1570796⟩)
+#guard !decide (Piece.ok ⟨37600, 1570796⟩)
 #guard !decide (Piece.ok ⟨20000, 1570796⟩)
 -- a quarter turn of radius 20 px ends 20 px across and 20 px down, heading down
 #guard
