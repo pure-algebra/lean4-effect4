@@ -346,6 +346,7 @@ import Effect4.Laws.Run.Journal
 import Effect4.Laws.Program.PlaceFunding.Run
 import Effect4.Laws.Machine.WriterActions
 import Effect4.Laws.Api.Live
+import Effect4.Laws.Program.AddressMove
 
 /-!
 # Effect4 proof graph

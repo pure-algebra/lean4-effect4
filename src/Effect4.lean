@@ -236,6 +236,8 @@ import Effect4.Library.Stream.Steps
 import Effect4.Library.Stream.Ops
 -- The checked cache of a type fold, for memoized folds (the claim `fold-cache-local-agreement`).
 import Effect4.Program.TyCache
+-- A path relocated, and the layer references of a moved subtree (decisions row 336 (6)).
+import Effect4.Program.Address
 
 /-!
 # Effect4

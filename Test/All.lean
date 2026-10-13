@@ -379,6 +379,7 @@ import Test.Machine.RaceFirst
 import Test.Program.FirstExitSource
 import Test.Program.KernelRfl
 import Test.Run.LiveContract
+import Test.Program.AddressMove
 
 /-!
 # Effect4 test battery
