@@ -258,9 +258,11 @@ SEMANTICS_DOGFOOD := $(foreach m,$(SEMANTICS_DOGFOOD_NAMES),Test.Dogfood.$(subst
 # made the build fail.
 ENGINE_FIXTURE_WRITERS := $(wildcard ocaml/engine/test/*/write.lean)
 
+# The page imports the view's looks, and the root Tools.View.FlowReach imports the view, graph and
+# code planes: their files stale the report (a superset of the closure, so no edit is missed).
 SEMANTICS_SOURCES := tools/Tools/Semantics.lean tools/Drivers/Semantics.lean \
   tools/Tools/SemanticsDocument.lean tools/Tools/Document.lean $(wildcard tools/Tools/Document/*.lean) \
-  tools/Tools/View/Picture.lean tools/Tools/View/Look.lean tools/Tools/View/Tokens.lean tools/Tools/Code/Doc.lean \
+  $(wildcard tools/Tools/View/*.lean tools/Tools/Graph/*.lean tools/Tools/Code/*.lean) \
   tools/Tools/SemanticsDisplay.lean tools/Tools/GeneratedStamp.lean src/Effect4/Laws/Auto/Semantics.lean \
   $(wildcard tools/ProofGraph/*.lean) \
   Test/Counterexamples/REGISTER.md docs/core/decisions.md lean-toolchain lakefile.toml
