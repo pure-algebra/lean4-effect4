@@ -140,8 +140,9 @@ def throughC (ps : List (Int × Int)) (m0 m1 : Int × Int) : List Cubic :=
 
 /-- **A stretch's outline**: the part of the tube from `s` along it, `len` long, its width eased
 from `w0` to `top` and from `top` to `w1` over `rise` at its ends, as one closed run of cubics
-cut square at both ends, through the points of `stations`. -/
-def patchCubics (t : Tube) (s : Int) (len w0 w1 top rise : Nat) : List Cubic :=
+through the points of `stations`, cut square at its ends or round where it is closed there. -/
+def patchCubics (t : Tube) (s : Int) (len w0 w1 top rise : Nat) (roundStart roundEnd : Bool := false) :
+    List Cubic :=
   let L := t.length
   let pts := (stations len rise).map fun (u : Nat) =>
     let at_ := s + (u : Int)
@@ -157,10 +158,17 @@ def patchCubics (t : Tube) (s : Int) (len w0 w1 top rise : Nat) : List Cubic :=
   let rights := pts.map (·.2.1)
   let h0 := (pts.headD ((0, 0), (0, 0), 0)).2.2
   let h1 := (pts.getLastD ((0, 0), (0, 0), 0)).2.2
+  let c0 := (t.at (s.toNat.min L)).1
+  let c1 := (t.at ((s + (len : Int)).toNat.min L)).1
   match lefts.head?, lefts.getLast?, rights.head?, rights.getLast? with
   | some l0, some l1, some r0, some r1 =>
-    throughC lefts (dir h0) (dir h1) ++ [lineC l1 r1] ++
-      ((throughC rights (dir h0) (dir h1)).map Cubic.rev).reverse ++ [lineC r0 l0]
+    let n0 := normal h0
+    let n1 := normal h1
+    let endCap := if roundEnd then capC l1 r1 c1 ((w1 / 2 : Nat) : Int) (dir h1) n1 else [lineC l1 r1]
+    let startCap := if roundStart then
+      capC r0 l0 c0 ((w0 / 2 : Nat) : Int) (-(dir h0).1, -(dir h0).2) (-n0.1, -n0.2) else [lineC r0 l0]
+    throughC lefts (dir h0) (dir h1) ++ endCap ++
+      ((throughC rights (dir h0) (dir h1)).map Cubic.rev).reverse ++ startCap
   | _, _, _, _ => []
 
 /-! ## A rounded crotch -/
@@ -199,7 +207,8 @@ branch starts on the body's centreline on its tangent and turns away. The fillet
 `R` off the body's edge and `R` off the branch's edge; the web is the region between the body's
 edge, the branch's start and the fillet, filled in the bodies' tone. None where the branch does
 not leave room for the fillet. -/
-def crotchAt (parent : Nat) (branch : Tube) (bw : Nat) (R : Nat) : Option (List Cubic) :=
+def crotchAt (parent : Nat) (branch : Tube) (bw : Nat) (R : Nat) (room : Int := 1000000000) :
+    Option (List Cubic) :=
   let σ := branch.side
   if σ == 0 then none else
   let J := (branch.x, branch.y)
@@ -227,6 +236,8 @@ def crotchAt (parent : Nat) (branch : Tube) (bw : Nat) (R : Nat) : Option (List 
     let u := ((List.range 10).foldl (fun (lh : Int × Int) _ =>
       let mid := (lh.1 + lh.2) / 2
       if gap mid < 0 then (mid, lh.2) else (lh.1, mid)) (hi - 1000, hi)).2
+    -- the fillet touches the parent's edge within the parent, short of its end
+    if u > room then none else
     let cu := c u
     -- where the fillet touches the branch: the nearest sample, then a twentieth of a pixel at a
     -- time round it
@@ -256,10 +267,70 @@ def noWeb (o : Int × Int) : List Cubic := List.replicate WEB (lineC o o)
 /-- **The rounded crotch** at the widest fillet that fits: `FILLET`, or less by whole pixels two
 at a time where the branch leaves less room. With `grow`, the same crotch inset by `grow`: the
 bodies narrower by it on each side and the fillet wider by it, round the same centre, so the two
-draw a line of `grow` round the join. -/
-def crotch (parent : Nat) (branch : Tube) (bw : Nat) (grow : Nat := 0) : Option (List Cubic) :=
+draw a line of `grow` round the join. `room` is how far the parent runs past the branch's start:
+a fillet must touch the parent before its end. -/
+def crotch (parent : Nat) (branch : Tube) (bw : Nat) (grow : Nat := 0) (room : Int := 1000000000) :
+    Option (List Cubic) :=
   ((List.range (FILLET / 2000)).map fun i => FILLET - 2000 * i).findSome? fun r =>
-    crotchAt (parent - 2 * grow) branch (bw - 2 * grow) (r + grow)
+    crotchAt (parent - 2 * grow) branch (bw - 2 * grow) (r + grow) room
+
+/-- The cubics of a fork's web, and a web of none at a point, with as many. -/
+def FORK_WEB : Nat := 2 * STRETCH + 6
+def noFork (o : Int × Int) : List Cubic := List.replicate FORK_WEB (lineC o o)
+
+/-- **The rounded crotch of a fork**: two arms `b` and `c` that leave one point on one heading and
+turn to either side. The fillet's centre stands on the heading, `R` off each arm's inner edge;
+the web runs from the point along each arm's inner edge, a pixel inside it, to the fillet. With
+`grow`, the same web inset, as `crotch` has it. None where the arms leave no room. -/
+def forkAt (b c : Tube) (bw cw : Nat) (R : Nat) : Option (List Cubic) :=
+  let σb := b.side
+  let σc := c.side
+  if σb == 0 || σc == 0 || σb == σc then none else
+  let J := (b.x, b.y)
+  let d := dir b.head
+  let reach := min (min b.length c.length) REACH
+  let sb := (List.range (reach / 1000 + 1)).map fun i => (b.at (i * 1000)).1
+  let sc := (List.range (reach / 1000 + 1)).map fun i => (c.at (i * 1000)).1
+  let near (ps : List (Int × Int)) (p : Int × Int) : Nat := ps.foldl (fun m q => min m (dist p q)) 1000000000
+  let gap (u : Int) : Int :=
+    let p := along J u d
+    min ((near sb p : Int) - (bw / 2 + R : Nat)) ((near sc p : Int) - (cw / 2 + R : Nat))
+  let found := (List.range (reach / 1000)).foldl (fun (acc : Bool × Option Int) i =>
+    match acc with
+    | (_, some u) => (true, some u)
+    | (neg, none) =>
+      let u : Int := ((i + 1) * 1000 : Nat)
+      if gap u < 0 then (true, none) else if neg then (true, some u) else (false, none)) (false, none)
+  match found.2 with
+  | none => none
+  | some hi =>
+    let u := ((List.range 10).foldl (fun (lh : Int × Int) _ =>
+      let mid := (lh.1 + lh.2) / 2
+      if gap mid < 0 then (mid, lh.2) else (lh.1, mid)) (hi - 1000, hi)).2
+    let cu := along J u d
+    let touch (t : Tube) (ps : List (Int × Int)) : Nat :=
+      let i := (ps.zipIdx.foldl (fun (bb : (Int × Int) × Nat) (p, k) =>
+        if dist cu p < dist cu bb.1 then (p, k) else bb) (J, 0)).2
+      ((List.range 41).map fun j => i * 1000 + j * 50 - min (i * 1000) 1000).foldl
+        (fun bb s => if dist cu (t.at s).1 < dist cu (t.at bb).1 then s else bb) 0
+    let edge (t : Tube) (σ : Int) (w inset : Nat) (s : Nat) : Int × Int :=
+      let (p, h) := t.at s
+      along p (-(w / 2 - inset : Nat) : Int) (σ * (normal h).1, σ * (normal h).2)
+    let s2b := touch b sb
+    let s2c := touch c sc
+    let pb := (List.range (STRETCH + 1)).map fun k => edge b σb bw 1000 (k * s2b / STRETCH)
+    let pc := (List.range (STRETCH + 1)).map fun k => edge c σc cw 1000 (k * s2c / STRETCH)
+    let Tb := edge b σb bw 0 s2b
+    let Tc := edge c σc cw 0 s2c
+    let hb := (b.at s2b).2
+    let hc := (c.at s2c).2
+    some ([lineC J (pb.headD J)] ++ throughC pb d (dir hb) ++ [lineC (pb.getLastD J) Tb, arcC cu Tb Tc,
+      lineC Tc (pc.getLastD J)] ++ ((throughC pc d (dir hc)).map Cubic.rev).reverse ++ [lineC (pc.headD J) J])
+
+/-- **The rounded crotch of a fork** at the widest fillet that fits, inset by `grow`. -/
+def fork (b c : Tube) (bw cw : Nat) (grow : Nat := 0) : Option (List Cubic) :=
+  ((List.range (FILLET / 2000)).map fun i => FILLET - 2000 * i).findSome? fun r =>
+    forkAt b c (bw - 2 * grow) (cw - 2 * grow) (r + grow)
 
 /-! ## A parting -/
 

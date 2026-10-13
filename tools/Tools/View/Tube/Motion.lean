@@ -278,7 +278,7 @@ def film (id : String) (W H : Nat) (pictures : List Picture) (beat : Nat := 1000
       ([Svg.defs (cased.map (·.2.2) ++ events.map (·.2.2) ++ joins.map (·.2.2))] ++
        (List.range (deepest + 1)).flatMap fun lv => (List.range LAYERS).flatMap fun l =>
         ((marks.filter (·.level == lv)).flatMap fun m =>
-          if m.cased then twice l (defOf m.key)
+          if m.cased then (if m.fill == .ink && l == INTERIORS then [] else twice l (defOf m.key))
           else (m.parts.filter (·.layer == l)).map fun p => partNode p m (animsOf m p)) ++
         ((events.filter (·.1 == lv)).flatMap fun e => twice l e.2.1) ++
         ((joins.filter (·.1 == lv)).flatMap fun e => twice l e.2.1))

@@ -105,13 +105,14 @@ def Tone.name : Tone → String
 /-- **How a mark is drawn**: stroked along its tube's centreline (contents, a hollow); as a solid
 body, its outline filled; as a stretch of a body over its dash whose width is `top` along its
 middle and eases over `rise` from its own width at its start and to `w1` at its end
-(`patchCubics`); or as a parting, the ground between two round ends of its body across its dash
-(`partCubics`). -/
+(`patchCubics`); as a parting, the ground between two round ends of its body across its dash
+(`partCubics`); or as a strut, a body all ink, which carries nothing (`ink`). -/
 inductive Fill where
   | stroke
   | solid
   | stretch (w1 : Nat) (top : Nat) (rise : Nat)
   | part
+  | ink
 deriving DecidableEq, Repr, Inhabited
 
 
@@ -243,6 +244,9 @@ structure Join where
   key : String
   parent : String
   branch : String
+  /-- Where given, a second arm that leaves the branch's start on its heading and turns the
+  other way: the crotch is between the two arms (`fork`), and `parent` is only what they leave. -/
+  sibling : Option String := none
 deriving Repr, Inhabited
 
 /-! ## Morphs -/
@@ -263,11 +267,12 @@ def Mark.mix (a b : Mark) (t : Nat) : Mark :=
       | f, _ => f }
 
 /-- A mark shrunk to nothing where it stands: a dash to no length and no width, a tube to its
-root. -/
+root and no width, so a tube grows from its root in length and in width at once, as a branch
+does. -/
 def Mark.gone (m : Mark) : Mark :=
   match m.dash with
   | some (s, l) => { m with dash := some (s + (l / 2 : Nat), 0), width := 0 }
-  | none => { m with tube := { m.tube with pieces := m.tube.pieces.map fun _ => Piece.zero } }
+  | none => { m with tube := { m.tube with pieces := m.tube.pieces.map fun _ => Piece.zero }, width := 0 }
 
 /-! ## Writing -/
 
@@ -312,7 +317,8 @@ def Mark.inner (m : Mark) : Mark :=
 /-- **The outline of a filled mark**: a solid body's, or a stretch's over its dash. -/
 def Mark.outline (m : Mark) : List Cubic :=
   match m.fill, m.dash with
-  | .stretch w1 top rise, some (s, len) => patchCubics m.drawn s len m.width w1 top rise
+  | .stretch w1 top rise, some (s, len) =>
+    patchCubics m.drawn s len m.width w1 top rise (m.roundStart.getD false) m.round
   | .part, some (s, len) => partCubics m.drawn s len m.width GAP
   | .stretch _ _ _, none | .part, none => []
   | _, _ => bodyCubics m.drawn m.width (m.roundStart.getD m.round) m.round
@@ -349,6 +355,7 @@ def Mark.parts (m : Mark) : List Part :=
      ⟨GAPS, .body, true, fun s => match s.dash with
        | some (a, len) => loopsPath (ringCubics s.drawn a len s.width GAP LINE)
        | none => loopsPath []⟩]
+  | .ink => [⟨m.layer, .casing, true, fun s => closedPath s.inner.outline⟩]
   | _ =>
     [⟨m.layer, .casing, true, fun s => closedPath s.inner.outline⟩,
      ⟨INTERIORS, .ground, true, fun s => closedPath s.inner.outline⟩]
@@ -380,7 +387,7 @@ def pathDef (ident : String) (d : Path) (anims : List SvgNode) : SvgNode :=
 def useOf (ident cls : String) : SvgNode := .element .use [.attr .href ("#" ++ ident), .className cls] []
 
 /-- Whether a mark is drawn as a cased body. -/
-def Mark.cased (m : Mark) : Bool := match m.fill with | .solid | .stretch _ _ _ => true | _ => false
+def Mark.cased (m : Mark) : Bool := match m.fill with | .solid | .stretch _ _ _ | .ink => true | _ => false
 
 /-- **One element of a mark**, as it stands, with its animations. -/
 def partNode (p : Part) (m : Mark) (anims : List SvgNode) : SvgNode :=
@@ -403,9 +410,23 @@ def Mark.d (m : Mark) : String :=
 and the branch, inset by `grow` for its interior, or nothing. A web of no size keeps the same
 commands, so a film can grow it. -/
 def Join.web (j : Join) (ms : List Mark) (grow : Nat := 0) : List Cubic :=
+  match j.sibling with
+  | some sk =>
+    match ms.find? (·.key == j.branch), ms.find? (·.key == sk) with
+    | some b, some c =>
+      match fork b.drawn c.drawn b.width c.width grow with
+      | some cs => cs
+      | none => noFork (b.drawn.x, b.drawn.y)
+    | _, _ => noFork (0, 0)
+  | none =>
   match ms.find? (·.key == j.parent), ms.find? (·.key == j.branch) with
   | some p, some b =>
-    match crotch p.width b.drawn b.width grow with
+    -- how far the parent runs past the branch's start, along its heading there
+    let pt := p.drawn
+    let d := dir pt.head
+    let along_ : Int := ((b.drawn.x - pt.x) * d.1 + (b.drawn.y - pt.y) * d.2) / ONE
+    let room : Int := (pt.length : Int) - along_
+    match crotch p.width b.drawn b.width grow room with
     | some cs => cs
     | none => noWeb (b.drawn.x, b.drawn.y)
   | _, _ => noWeb (0, 0)

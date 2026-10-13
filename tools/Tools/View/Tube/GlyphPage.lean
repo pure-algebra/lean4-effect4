@@ -49,8 +49,12 @@ private def titled (k title : String) (body : List RawNode) (level : String := "
   el "section" (el level [.text title, el "a" [.text k] [("class", "key"), ("href", "#" ++ k)]] :: body)
     [("id", k)]
 
+/-- A mark's figure as the pen draws it: its marks, and its joins. -/
+def drawn (s : Shape) : List Mark := (draw s).picture.marks
+def joinsOf (s : Shape) : List Join := (draw s).picture.joins
+
 /-- A mark's figure, still, at one pixel to the pixel. -/
-def still (s : Shape) : SvgNode := Tube.still SIDE SIDE (figure s)
+def still (s : Shape) : SvgNode := Tube.still SIDE SIDE (drawn s) (joinsOf s)
 
 /-- A figure in a card, over its caption. -/
 private def card (s : Shape) (caption : List RawNode) : RawNode :=
@@ -102,7 +106,7 @@ def longInlet : Tube := tube (px 12) (px 48) E PIPE [⟨(vesselX - px 12).toNat,
 
 /-- A vessel's figure a cell to the right, its pipe drawn from the picture's left. -/
 def fedFigure (s : Shape) : List Mark :=
-  (shift (px 96) 0 (figure s)).map fun m => if part m.key == "b" then { m with tube := longInlet } else m
+  (shift (px 96) 0 (drawn s)).map fun m => if part m.key == "b" then { m with tube := into longInlet true } else m
 
 /-- **A value arrives at a vessel by its pipe**: the unit's marks near the start of the long pipe,
 then seated in the vessel's slot. -/
@@ -129,12 +133,12 @@ def filledFrames : List Picture :=
   complete [fedFigure .hole ++ arrival.1, fedFigure .hole ++ arrival.2]
 
 /-- **A scope opened and closed**: its first hook grows, then its second. -/
-def closedFrames : List Picture := complete [[], figure .openBracket, figure .bracket]
+def closedFrames : List Picture := complete [[], drawn .openBracket, drawn .bracket]
 
 /-- **A fork joined**: the parent's lane; the child's lane starts beside it, an air gap away; the
 lanes fold into a completion whose header carries the exit and whose taps each hold a copy. -/
 def joinedFrames : List Picture :=
-  complete [(figure .arrow).filter (part ·.key == "main"), figure .arrow, figure .spider]
+  complete [(drawn .arrow).filter (part ·.key == "main"), drawn .arrow, drawn .spider]
 
 /-- **An interrupt held by a rail, landing at its end**, in a picture three cells wide, five
 pictures: the interrupt's surge comes along the lane while the fiber's work runs under the rail;
@@ -160,7 +164,8 @@ def heldFrames : List Picture :=
 
 /-- **Any mark into any other**: six marks of five kinds, each morphing into the next. -/
 def anyShapes : List Shape := [.box, .loop, .spider, .fermata, .hollowDot, .region]
-def anyFrames : List Picture := complete (anyShapes.map figure)
+def anyFrames : List Picture :=
+  (complete (anyShapes.map drawn)).zip anyShapes |>.map fun (p, s) => { p with joins := joinsOf s }
 
 /-- Every picture of every film on the page. -/
 def filmPictures : List Picture :=

@@ -7,12 +7,14 @@ import Tools.View.Tokens
 /-!
 # The vocabulary of marks and the value pictures, as studio pages (VS-1, VS-2, decisions row 367)
 
-`lake env lean --run tools/Drivers/GlyphSheet.lean OUT` writes three pages:
+`lake env lean --run tools/Drivers/GlyphSheet.lean OUT` writes four pages:
 
 * `OUT/glyphs.html`: every mark of `Tools.View.Glyph` drawn, and each sort's constructors with
   their marks;
 * `OUT/cells.html`: the Queue's cell drawn by its type, step by step (`Tools.View.CellSheet`);
-* `OUT/tubes.html`: the tube language, its morphs, and the Queue as plumbing (`Tools.View.Tube.Sheet`).
+* `OUT/tubes.html`: the tube language, its morphs, and the Queue as plumbing (`Tools.View.Tube.Sheet`);
+* `OUT/tube-glyphs.html`: every mark of the vocabulary as a figure of tubes, and the morphs a run
+  makes (`Tools.View.Tube.GlyphPage`).
 
 Each stands in the site's shell and the base look. The studio serves them (`tools/view/out/docs/`),
 and the viewer shows one after each build. Viewing ergonomics only: no test, and nothing reads

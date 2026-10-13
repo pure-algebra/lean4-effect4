@@ -512,6 +512,55 @@ def draw (s : Shape) : Figure :=
 /-- **A mark's figure**: its marks. -/
 def figure (s : Shape) : List Mark := (draw s).marks
 
+/-! ## As the pen draws it -/
+
+/-- The mark of a figure's tube, by the tube's key. -/
+def wall (k : String) : String := k ++ ":wall"
+
+/-- **A figure as the pen draws it** (the merge of the glyph seat, decisions row 370): its struts
+all ink, which carry nothing; each reducer's pipe run `INTO` its vessel and cut square there, the
+vessel eased to the pipe's width where the pipe meets it and closed round at its other end; its
+solid joins rounded, and two arms that leave one point of one parent a fork. The tubes are the
+figure's own, but a pipe run into its vessel gains one straight piece, which keeps the bend law. -/
+def Figure.picture (f : Figure) : Picture :=
+  let find (k : String) : Option Mark := f.marks.find? (·.key == wall k)
+  let ends (t : Tube) : (Int × Int) × (Int × Int) := ((t.x, t.y), (t.at t.length).1)
+  let marks := f.marks.map fun m =>
+    if f.struts.any (wall · == m.key) then { m with fill := .ink } else
+    match f.reducers.find? (fun r => wall r.2 == m.key), f.reducers.find? (fun r => wall r.1 == m.key) with
+    | some (pk, _), _ =>
+      match find pk with
+      | some pipe =>
+        let (vs, ve) := ends m.tube
+        let (ps, pe) := ends pipe.tube
+        let atStart := min (dist ps vs) (dist pe vs) ≤ min (dist ps ve) (dist pe ve)
+        let bw := body pipe.tube.bore
+        let rise := reducerLen bw m.width
+        let st := if atStart then stretchOf m.key m.tube 0 m.tube.length bw m.width m.width rise
+          else stretchOf m.key m.tube 0 m.tube.length m.width bw m.width rise
+        { st with roundStart := some !atStart, round := atStart, level := m.level, move := m.move,
+                  shape := m.shape, fromEnd := m.fromEnd }
+      | none => m
+    | none, some (_, vk) =>
+      match find vk with
+      | some v =>
+        let (vs, ve) := ends v.tube
+        let (ps, pe) := ends m.tube
+        let endMeets := min (dist pe vs) (dist pe ve) ≤ min (dist ps vs) (dist ps ve)
+        if endMeets then { m with tube := into m.tube true, roundStart := some m.round, round := false }
+        else { m with tube := into m.tube false, roundStart := some false }
+      | none => m
+    | none, none => m
+  -- two joins of one parent whose branches start at one point are a fork
+  let start (k : String) : Option (Int × Int) := (find k).map fun m => (m.tube.x, m.tube.y)
+  let joins := f.joins.foldl (fun (acc : List Join) (pk, bk) =>
+    if acc.any fun j => j.sibling == some (wall bk) then acc else
+    match f.joins.find? (fun (pk', bk') => pk' == pk && bk' != bk && start bk' == start bk) with
+    | some (_, ck) => acc ++ [{ key := pk ++ "<" ++ bk ++ ck, parent := wall pk, branch := wall bk,
+                                sibling := some (wall ck) }]
+    | none => acc ++ [{ key := pk ++ "<" ++ bk, parent := wall pk, branch := wall bk }]) []
+  { marks, joins }
+
 /-! ## The laws -/
 
 /-- **Every tube of every figure keeps the bend law.** -/
