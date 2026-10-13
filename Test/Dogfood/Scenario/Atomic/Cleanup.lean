@@ -1,5 +1,6 @@
 import Test.Dogfood.Scenario.Atomic.Store
 import Test.Dogfood.Scenario.Atomic.SourcePaths
+import Test.Dogfood.Scenario.Atomic.WriterHistory
 import Test.Dogfood.Scenario.SourceOpportunity
 import Effect4.Laws.Program.FinalizerRun
 import Effect4.Laws.Auto.KernelRfl
@@ -45,13 +46,25 @@ theorem placement (b : Api.Built) (built : Api.Author.build (shop .none) = .ok b
 /-- Cleanup-log provenance obligation of the original claim.
 Every logged identity comes from its request's finalizer, with at most one write per start.
 Reach: actual admitted histories, including interruption and incomplete commands.
+The membership clause is `WriterOwnership.logged_requests`. The count clause reads the writer
+ledger, funded along every admitted history (`WriterHistory.history_funded`), modulo its
+evaluator debit, the planned goal `WriterHistory.evaluation`.
 Consumer: `cleaned`; the static placement proof alone does not establish this property. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
-proof_goal log_debits (b : Api.Built) (m : NativeMachine) :
+theorem log_debits (b : Api.Built) (m : NativeMachine) :
     Api.Author.build (shop .none) = .ok b → Run.HistoryOf b budget.compileFuel m →
       (∀ i ∈ (Store.observeM m).cleaned, i ∈ requests) ∧
       ∀ i ∈ requests, (Store.observeM m).cleaned.count i ≤
-        m.trace.countP (FinalizerRun.startedAt (requestPath i))
+        m.trace.countP (FinalizerRun.startedAt (requestPath i)) := by
+  intro built history
+  refine ⟨WriterOwnership.logged_requests b built m history, ?_⟩
+  intro i member
+  have funded := (WriterMachine.ledger_funded i 0 m).mp
+    (WriterHistory.history_funded b built i member budget.compileFuel m history)
+  have observed := Writer.observe_count_le_heap m i
+  change (Store.observeM m).cleaned.count i ≤
+    m.trace.countP (FinalizerRun.startedAt (SourcePaths.requestPath i))
+  omega
 
 /-- Reading the three separate obligations proves the original log observation modulo them. -/
 theorem cleaned (b : Api.Built) (m : NativeMachine)

@@ -341,6 +341,7 @@ import Effect4.Laws.Program.NativeReplies
 import Effect4.Laws.Program.WriterScope
 import Effect4.Laws.Run.CallTree
 import Effect4.Laws.Run.Journal
+import Effect4.Laws.Program.PlaceFunding.Run
 
 /-!
 # Effect4 proof graph
