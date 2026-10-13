@@ -351,6 +351,9 @@ import Effect4.Laws.Program.Validated
 import Effect4.Laws.Machine.AnswerFlowRun
 import Effect4.Laws.Program.PlaceFunding.Flow
 import Effect4.Laws.Program.AddressMove
+-- The expansion's address map, and the table at the source's addresses (decisions row 373 (7)).
+import Effect4.Laws.Program.ExpansionAddresses
+import Effect4.Laws.Program.SourceTable
 
 /-!
 # Effect4 proof graph

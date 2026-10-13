@@ -241,6 +241,9 @@ import Effect4.Program.TyCache
 import Effect4.Program.Authoring.Application
 -- A path relocated, and the layer references of a moved subtree (decisions row 336 (6)).
 import Effect4.Program.Address
+-- A sketch checked through its layer references, and its edit session (decisions row 373 (7)).
+import Effect4.Program.Typing.Source
+import Effect4.Program.Typing.SourceSession
 
 /-!
 # Effect4
