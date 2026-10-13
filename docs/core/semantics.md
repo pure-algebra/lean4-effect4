@@ -860,6 +860,11 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   A header reads its columns under the module's payload classes (`readDefHead`).
   So a column that names a class reads as the class's record.
   The header's requirement row reads back by the requirement reader (`readKeys`).
+  A module's file declares its rows' services after its classes (`ModuleEmission.file`).
+  The file reader checks each against the table's services, so it reads them back exactly
+  (`readRowServices_rowServiceDecls`, `readRowServices_exact`,
+  `src/Effect4/Laws/Codegen/RowServices.lean`).
+  Then the file reads back to the program (`ModuleEmission.readFile`).
   The block's module layers print after the services, as constants named by their paths
   (`printModuleLayers`), and a reference to one prints as that name.
   Each body reads back at the signature its parameters extend, through the spelling map its

@@ -15,9 +15,12 @@ the coordinator on 2026-10-13). So the call's printed requirement is the key tha
 names, and a person provides the service by a layer, `Layer.succeed(Ns, impl)`. The printer, the
 readers and their laws do not move.
 
-The module envelope calls `rowServiceDecls` where a table becomes a module, and refuses the
-module by a row's spelling where it refuses (`rowServiceFault`). This module states no target
-typing and no execution claim: tsgo 7 and rc.112 are the receipt's evidence.
+The module's file declares the services after its payload classes (`ModuleEmission.file`,
+`Codegen/Checked.lean`), and refuses the module by a row's spelling where `rowServiceFault`
+refuses. The file reader reads them back exactly (`readRowServices`): the declarations are a
+function of the table, so it checks each against the table's services, piece by piece. This
+module states no target typing and no execution claim: tsgo 7 and rc.112 are the receipts'
+evidence.
 -/
 
 set_option autoImplicit false
@@ -132,43 +135,127 @@ def rowMethodField (sig : Signature Op) (m : String) (row : Row) :
   | some result => .ok { name := m, readonly := true, type := .function params result }
   | none => .error (.typeSpelling row.spelling)
 
-/-- A method's accessor on its key: `m: (a0: Request) => NsKey.use((a1) => a1.m(a0))`, and
-`m: () => NsKey.use((a0) => a0.m())` on a `unit` request. It is the ruled call of a service's
-method, `Key.use((r) => r.method(x))` (decisions row 378 (19); rc.112 `Context.ts:101`,
-`:442-444`: `use` reads the service from the fiber's context and applies the function to it). -/
-def rowAccessor (keyName m : String) (row : Row) :
-    Except PrintRefusal (String × TypeScript.Expr) :=
-  if row.request = Ty.unit then
-    .ok (m, .lambda [] (.method (.ident keyName) "use"
-      [.lambda [{ name := Var.name 0 }] (.method (.ident (Var.name 0)) m [])]))
-  else do
-    let request ← typeRefOf row.request
-    .ok (m, .lambda [{ name := Var.name 0, type := some request }] (.method (.ident keyName) "use"
-      [.lambda [{ name := Var.name 1 }] (.method (.ident (Var.name 1)) m [.ident (Var.name 0)])]))
+/-- A method's accessor on its key, as an expression: `(a0: T) => NsKey.use((a1) => a1.m(a0))` at
+the request's type `T`, and `() => NsKey.use((a0) => a0.m())` on a `unit` request (`none`). It is
+the ruled call of a service's method, `Key.use((r) => r.method(x))` (decisions row 378 (19);
+rc.112 `Context.ts:101`, `:442-444`: `use` reads the service from the fiber's context and applies
+the function to it). -/
+def accessorExpr (keyName m : String) : Option TypeScript.TypeRef → TypeScript.Expr
+  | none => .lambda [] (.method (.ident keyName) "use"
+      [.lambda [{ name := Var.name 0 }] (.method (.ident (Var.name 0)) m [])])
+  | some request => .lambda [{ name := Var.name 0, type := some request }]
+      (.method (.ident keyName) "use"
+        [.lambda [{ name := Var.name 1 }] (.method (.ident (Var.name 1)) m [.ident (Var.name 0)])])
 
-/-- **The row namespaces' services**: for each service of the table (`rowServices`), its key,
-`export const NsKey = Context.Service<"k…", { readonly m: … }>("k…")` (`serviceKeyDecl`; its
-identifier is its key's spelling `keyText`, which is what a requirement row prints), and the
-namespace, `export const Ns = Object.assign(NsKey, { m: … })`, the key with one accessor for each
-method (`rowAccessor`). A program's call `Ns.m(x)` is its accessor's call, and a consumer may
-provide either name. Both are exported, so the reading boundary's envelope admits them as it
-admits a layer (`envelopeCheck`, `Codegen/Admit.lean`). Refused by a row's spelling where
+/-- A method's request in its accessor: `none` on a `unit` request, which the accessor drops, and
+the request's type through the type printer otherwise. -/
+def accessorRequest (row : Row) : Except PrintRefusal (Option TypeScript.TypeRef) :=
+  if row.request = Ty.unit then .ok none else (typeRefOf row.request).map some
+
+/-- **What a row namespace's two declarations print** (`rowServiceDecls`): the namespace, its
+key's runtime identity, the fields of the key's shape, and each method with its accessor's
+request. -/
+structure RowServiceData where
+  ns : String
+  identity : String
+  fields : List TypeScript.TypeRef.Field
+  methods : List (String × Option TypeScript.TypeRef)
+
+/-- The name of a service's key: `NsKey`. -/
+def RowServiceData.keyName (d : RowServiceData) : String := d.ns ++ "Key"
+
+/-- A service's two declarations: its key, `NsKey = Context.Service<"identity", { fields }>(
+"identity")` (`serviceKeyDecl`), and the namespace, `Ns = Object.assign(NsKey, { m: … })`, the
+key with one accessor for each method (`accessorExpr`). -/
+def RowServiceData.decls (d : RowServiceData) : List TypeScript.ConstDecl :=
+  [serviceKeyDecl d.keyName d.identity d.fields,
+   { doc := [], name := d.ns,
+     value := .call (.ident "Object.assign") [.ident d.keyName,
+       .object (d.methods.map fun (m, request) => (m, accessorExpr d.keyName m request))] }]
+
+/-- **The data of a table's services**, for each service of the table (`rowServices`): its key's
+identity is its key's spelling `keyText`, which is what a requirement row prints; each method's
+field and request go through the type printer. Refused by a row's spelling where
 `rowServiceFault` names one, and by the namespace where its key is the signature's scope, which
 prints as `Scope.Scope` and has no shape of methods. -/
-def rowServiceDecls (sig : Signature Op) (table : List Row) :
-    Except PrintRefusal (List TypeScript.ConstDecl) :=
+def rowServiceData (sig : Signature Op) (table : List Row) :
+    Except PrintRefusal (List RowServiceData) :=
   match rowServiceFault table with
   | some spelling => .error (.unsafeName spelling)
-  | none => do
-    let groups ← (rowServices table).mapM fun s =>
-      if s.key = sig.scopeKey then .error (.unsafeName s.ns) else do
-        let fields ← s.methods.mapM fun (m, row) => rowMethodField sig m row.normalizeTypes
-        let accessors ← s.methods.mapM fun (m, row) =>
-          rowAccessor (s.ns ++ "Key") m row.normalizeTypes
-        .ok [serviceKeyDecl (s.ns ++ "Key") (keyText s.key) fields,
-             { doc := [], name := s.ns,
-               value := .call (.ident "Object.assign")
-                 [.ident (s.ns ++ "Key"), .object accessors] }]
-    .ok groups.flatten
+  | none => (rowServices table).mapM fun s =>
+    if s.key = sig.scopeKey then .error (.unsafeName s.ns) else do
+      let fields ← s.methods.mapM fun (m, row) => rowMethodField sig m row.normalizeTypes
+      let methods ← s.methods.mapM fun (m, row) =>
+        (accessorRequest row.normalizeTypes).map fun request => (m, request)
+      .ok ⟨s.ns, keyText s.key, fields, methods⟩
+
+/-- **The row namespaces' services**: for each service of the table, its two declarations
+(`RowServiceData.decls`), the key and the namespace. A program's call `Ns.m(x)` is its accessor's
+call, and a consumer may provide either name. Both are exported, so the reading boundary's
+envelope admits them as it admits a layer (`envelopeCheck`, `Codegen/Admit.lean`). The module
+declares them after its payload classes and before every other declaration (`readModule`,
+`Codegen/Read.lean`). -/
+def rowServiceDecls (sig : Signature Op) (table : List Row) :
+    Except PrintRefusal (List TypeScript.ConstDecl) :=
+  (rowServiceData sig table).map fun data => data.flatMap RowServiceData.decls
+
+/-! ## The declarations read back
+
+The declarations are a function of the table, so the reader takes the table and accepts exactly
+what `rowServiceDecls` prints of it: each declaration is compared with the service's data piece by
+piece, each piece by a decision (strings, binders, types), never by a traversal of a `String`.
+The laws are `readRowServices_rowServiceDecls` and `readRowServices_exact`
+(`Laws/Codegen/RowServices.lean`). -/
+
+/-- Whether an expression is exactly a method's accessor (`accessorExpr`). -/
+def isAccessor (keyName m : String) : Option TypeScript.TypeRef → TypeScript.Expr → Bool
+  | none, .lambda ps (.method (.ident k) u [.lambda qs (.method (.ident r) m' []) rt']) rt =>
+    decide (ps = [] ∧ k = keyName ∧ u = "use" ∧ qs = [{ name := Var.name 0 }] ∧
+      r = Var.name 0 ∧ m' = m ∧ rt' = none ∧ rt = none)
+  | some request, .lambda ps (.method (.ident k) u
+      [.lambda qs (.method (.ident r) m' [.ident a]) rt']) rt =>
+    decide (ps = [{ name := Var.name 0, type := some request }] ∧ k = keyName ∧ u = "use" ∧
+      qs = [{ name := Var.name 1 }] ∧ r = Var.name 1 ∧ m' = m ∧ a = Var.name 0 ∧ rt' = none ∧
+      rt = none)
+  | _, _ => false
+
+/-- Whether an object's entries are exactly a service's accessors, in order. -/
+def isAccessors (keyName : String) :
+    List (String × TypeScript.Expr) → List (String × Option TypeScript.TypeRef) → Bool
+  | [], [] => true
+  | (m', e) :: es, (m, request) :: ms =>
+    decide (m' = m) && isAccessor keyName m request e && isAccessors keyName es ms
+  | _, _ => false
+
+/-- Whether two declarations are exactly a service's (`RowServiceData.decls`). -/
+def RowServiceData.isDecls (d : RowServiceData) :
+    TypeScript.ConstDecl → TypeScript.ConstDecl → Bool
+  | ⟨doc, name, .call (.generic (.ident h) targs) [.str i], type, exported⟩,
+    ⟨doc', name', .call (.ident h') [.ident k, .object es], type', exported'⟩ =>
+    decide (doc = [] ∧ name = d.keyName ∧ h = "Context.Service" ∧
+      targs = [.literal d.identity, .object d.fields] ∧ i = d.identity ∧ type = none ∧
+      exported = true ∧ doc' = [] ∧ name' = d.ns ∧ h' = "Object.assign" ∧ k = d.keyName ∧
+      type' = none ∧ exported' = true) && isAccessors d.keyName es d.methods
+  | _, _ => false
+
+/-- The leading declarations that are exactly the services' of `data`, two for each service in
+order, and the declarations after them. -/
+def readServiceDecls : List RowServiceData → List TypeScript.Decl → Option (List TypeScript.Decl)
+  | [], rest => some rest
+  | d :: ds, decls =>
+    match decls with
+    | .const key :: .const ns :: rest => if d.isDecls key ns then readServiceDecls ds rest else none
+    | _ => none
+
+/-- **The row services read back**: the declarations after a module's payload classes that are
+exactly the declarations of the table's services (`rowServiceDecls`), two for each service in
+table order, and the declarations after them. `none` when the table's services do not print, or
+the declarations do not begin with theirs. A table with no service row has none, and every
+declaration list begins with them. -/
+def readRowServices (sig : Signature Op) (table : List Row) (decls : List TypeScript.Decl) :
+    Option (List TypeScript.Decl) :=
+  match rowServiceData sig table with
+  | .ok data => readServiceDecls data decls
+  | .error _ => none
 
 end Effect4.Program

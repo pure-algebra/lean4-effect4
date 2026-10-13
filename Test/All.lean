@@ -389,6 +389,8 @@ import Test.Dogfood.Scenario.Workers.CommandGuard
 import Test.Dogfood.Scenario.TodoService
 -- The bank of verified implementations: the banked Ref cache (decisions row 378, seat BANK).
 import Test.Dogfood.Bank
+-- The to-do's file reads back whole (decisions row 378 (19), (20), seat READ).
+import Test.Dogfood.Scenario.TodoFile
 
 /-!
 # Effect4 test battery

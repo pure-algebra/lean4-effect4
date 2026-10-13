@@ -206,7 +206,7 @@ def layerInBody : NativeEff :=
     "export const main: Effect.Effect<readonly [number, number], never, never> = twice(21)\n")
 #guard (Program.printModule (nativeSignature []) "main" (EffTy.pure (.prod .nat .nat))
     layerInBody).toOption.map (fun ds =>
-  decide (Program.readModule (nativeSignature []) (nativeSpell []) NativeOp.call NativeOp.param
+  decide (Program.readModule (nativeSignature []) (nativeSpell []) NativeOp.call NativeOp.param []
     (ds.map TypeScript.Decl.const) = .ok layerInBody)) = some true
 
 /-- Two definitions; the second names the first's own layer. -/

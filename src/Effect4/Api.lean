@@ -247,7 +247,16 @@ printer's readable image, but ignores imports, outer annotations and export name
 Use `checkTyping` on the recovered program for core typing; that check alone does
 not validate the original source envelope. -/
 def readModule (module : TypeScript.Module) (table : RowTable := []) : Except ReadRefusal Program :=
-  Program.readModule (nativeSignature table) (nativeSpell table) NativeOp.call NativeOp.param
+  Program.readModule (nativeSignature table) (nativeSpell table) NativeOp.call NativeOp.param []
+    module.decls
+
+/-- Raw reconstruction from a module file (`ModuleEmission.file`): the payload classes, then the
+row namespaces' services (`rowServiceDecls`, decisions row 378 (19)), read back exactly against
+the table, then the declaration block, read as `readModule` reads it. A module that declares no
+service of its table reads by `readModule`; a file of a table with no service row reads by
+either. -/
+def readFile (module : TypeScript.Module) (table : RowTable := []) : Except ReadRefusal Program :=
+  Program.readModule (nativeSignature table) (nativeSpell table) NativeOp.call NativeOp.param table
     module.decls
 
 /-- Check imports and lexical bindings on the original module, retaining its exact
