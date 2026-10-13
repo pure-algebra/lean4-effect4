@@ -1,4 +1,5 @@
 import Tools.Document
+import Tools.Document.Figure
 import Tools.View.Tokens
 import Whatwg.Html.Print.Render
 import Whatwg.Html.Content.Valid
@@ -20,6 +21,9 @@ The blocks:
 * fields are a `dl`, items a `ul`, and code a `pre` around a `code` element of class
   `language-…`, the HTML Standard's convention for naming a code element's language;
 * a wide table scrolls inside a focusable region labelled by its columns;
+* a figure is a `figure` around its picture, an SVG drawn by the view's layout whose nodes link
+  (`Tools.Document.Figure`), and its caption, then the figure in words: each node, linked, with
+  its status mark and the nodes it points to, for a reader who does not see the picture;
 * a status is a `span` whose `data-status` holds the word; the stylesheet draws the mark of its
   shape before the word, keyed on that attribute (`page.css`; decisions row 354, point 2);
 * a reference is a link whose target the caller resolves: a part of the same page by its
@@ -78,6 +82,22 @@ def algebra (target : String → String := fragment) : Algebra (Nat → List Raw
       [el "div" [el "table" [head, body]]
         [("class", "scroll"), ("role", "region"), ("tabindex", "0"),
          ("aria-label", "Table: " ++ ", ".intercalate hs)]]
+  graph k caption ns es _ :=
+    let pic := (Figure.picture (fun r => some (target r)) ns es).toRaw
+    let name (n : GraphNode) : RawNode := match n.ref with
+      | some r => el "a" [.text n.label] [("href", target r)]
+      | none => .text n.label
+    let word (n : GraphNode) : List RawNode :=
+      let next := es.filterMap fun (a, b) => if a == n.key then (ns.find? (·.key == b)).map (·.label) else none
+      [name n] ++
+        (if n.status.isEmpty then [] else [.text " ", el "span" [.text n.status] [("class", "status"), ("data-status", n.status)]]) ++
+        (if n.detail.isEmpty then [] else [.text (", " ++ n.detail)]) ++
+        (if next.isEmpty then [] else [.text (" → " ++ ", ".intercalate next)])
+    [el "figure" [
+        el "div" [pic] [("class", "scroll"), ("role", "region"), ("tabindex", "0"), ("aria-label", "Figure: " ++ caption)],
+        el "figcaption" [.text caption]] [("id", k), ("class", "graph")],
+     el "details" [el "summary" [.text "The figure in words"], el "ul" (ns.map fun n => el "li" (word n))]
+       [("class", "words")]]
   part k t body depth :=
     let heading := el ("h" ++ toString (min 6 depth))
       [.text t, el "a" [.text "#"] [("class", "self"), ("href", fragment k), ("aria-label", "Link to " ++ t)]]

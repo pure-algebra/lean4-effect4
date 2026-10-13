@@ -10,8 +10,9 @@ with no Lean code. Like the other folds it adds nothing the value does not hold:
 
 * the document: `{"format": "effect4-document/1", "title", "producer", "body"}`;
 * a block, by its `kind`: `para` (`line`), `fields` (`rows` of `label` and `line`), `items`
-  (`lines`), `code` (`language`, `body`), `table` (`headers`, `rows` of cells), `part` (`key`,
-  `title`, `body`);
+  (`lines`), `code` (`language`, `body`), `table` (`headers`, `rows` of cells), `graph` (`key`,
+  `caption`, `nodes` of `key`, `label`, `status`, `detail` and an optional `ref`, `edges` of pairs
+  of node keys), `part` (`key`, `title`, `body`);
 * an inline, by its one key: `{"text"}`, `{"code"}`, `{"ref", "label"}`, `{"link", "label"}`,
   `{"status"}`.
 
@@ -50,6 +51,10 @@ def algebra : Algebra Json where
   code lang body := Json.mkObj [("kind", "code"), ("language", lang), ("body", body)]
   table hs rs := Json.mkObj [("kind", "table"), ("headers", .arr (hs.map Json.str).toArray),
     ("rows", .arr (rs.map fun r => Json.arr (r.map line).toArray).toArray)]
+  graph k c ns es := Json.mkObj [("kind", "graph"), ("key", k), ("caption", c),
+    ("nodes", .arr (ns.map fun n => Json.mkObj (([("key", n.key), ("label", n.label), ("status", n.status),
+      ("detail", n.detail)] : List (String × Json)) ++ (n.ref.map fun r => [("ref", Json.str r)]).getD [])).toArray),
+    ("edges", .arr (es.map fun (a, b) => Json.arr #[a, b]).toArray)]
   part k t body := Json.mkObj [("kind", "part"), ("key", k), ("title", t), ("body", .arr body.toArray)]
 
 /-- **The document as JSON**: its format, title, producer and blocks. -/
@@ -104,14 +109,30 @@ private def readRow (r : Json) : Except String (String × Line) := do
 
 private def readCells (r : Json) : Except String (List Line) := do (← arr "row" r).mapM readLine
 
-/-- A block, by its `kind`; a part's blocks are read on a fuel of the nesting left. -/
+private def readNode (j : Json) : Except String GraphNode := do
+  let fs ← fields "node" ["key", "label", "status", "detail", "ref"] j
+  let s (k : String) := do str s!"node {k}" (← field "node" k fs)
+  return { key := ← s "key", label := ← s "label", status := ← s "status", detail := ← s "detail"
+           ref := ← (fs.lookup "ref").mapM (str "node ref") }
+
+private def readEdge (j : Json) : Except String (String × String) := do
+  match ← arr "edge" j with
+  | [a, b] => return (← str "edge" a, ← str "edge" b)
+  | _ => throw "edge: not a pair"
+
+/-- How deep parts nest in a document the reader takes: a heading stops at the sixth level, so a
+deeper nesting is a malformed document, refused. -/
+def maxDepth : Nat := 64
+
+/-- A block, by its `kind`; a part's blocks are read on a fuel of the nesting left (`maxDepth`). -/
 def readBlock : Nat → Json → Except String Block
-  | 0, _ => .error "block: nested deeper than the document's size"
+  | 0, _ => .error s!"block: parts nested deeper than {maxDepth}"
   | fuel + 1, j => do
     let kind ← str "block kind" (← field "block" "kind" (← entries "block" j))
     let fs ← fields s!"block {kind}" (match kind with
       | "para" => ["kind", "line"] | "fields" => ["kind", "rows"] | "items" => ["kind", "lines"]
       | "code" => ["kind", "language", "body"] | "table" => ["kind", "headers", "rows"]
+      | "graph" => ["kind", "key", "caption", "nodes", "edges"]
       | "part" => ["kind", "key", "title", "body"] | _ => ["kind"]) j
     let get (k : String) := field s!"block {kind}" k fs
     match kind with
@@ -122,6 +143,9 @@ def readBlock : Nat → Json → Except String Block
     | "table" =>
       return .table (← (← arr "headers" (← get "headers")).mapM (str "header"))
         (← (← arr "rows" (← get "rows")).mapM readCells)
+    | "graph" =>
+      return .graph (← str "key" (← get "key")) (← str "caption" (← get "caption"))
+        (← (← arr "nodes" (← get "nodes")).mapM readNode) (← (← arr "edges" (← get "edges")).mapM readEdge)
     | "part" =>
       return .part (← str "key" (← get "key")) (← str "title" (← get "title"))
         (← (← arr "body" (← get "body")).mapM (readBlock fuel))
@@ -135,8 +159,7 @@ def Document.ofJson (j : Json) : Except String Document := do
   let body ← arr "body" (← field "document" "body" fs)
   return { title := ← str "title" (← field "document" "title" fs)
            producer := ← (← arr "producer" (← field "document" "producer" fs)).mapM (str "producer")
-           -- a part nests no deeper than the text is long
-           body := ← body.mapM (readBlock (j.compress.length + 1)) }
+           body := ← body.mapM (readBlock maxDepth) }
 
 /-- The finite check of the reader on one text: the document read writes the same JSON back. -/
 def Document.reads (j : Json) : Except String Document := do

@@ -128,6 +128,46 @@ def picture (L : Look) (W H ratio : Nat) (calls : List (Keyed Dev)) : SvgNode :=
   Svg.Frame.svg { width := W, height := H, ratio := ratio }
     [.className "e4-view", .data "look" L.name] (marksOf L ratio calls)
 
+/-! ## A picture whose marks link -/
+
+/-- A group of a linked picture: a cut, or a link to `href`. -/
+abbrev Group := Sum Cut String
+
+/-- The marks of a list of device calls, each run of marks of one linked key inside one SVG `a`
+(the figure's nodes, `Tools.Document.Figure`). A cut's start or end closes an open link first, so
+a link never crosses a clip group. -/
+def linkedMarks (L : Look) (ratio : Nat) (link : Key → Option String) (calls : List (Keyed Dev)) :
+    List SvgNode := Id.run do
+  let mut out : Array (SvgNode.Flat Group) := #[]
+  let mut opened : Option Key := none
+  for (d, i) in calls.zipIdx do
+    let f := flat L ratio (d, i)
+    let want := match f with
+      | .leaf _ => (link d.key).map fun href => (d.key, href)
+      | _ => none
+    if opened.isSome && opened != want.map (·.1) then
+      out := out.push .leave
+      opened := none
+    if opened.isNone then
+      if let some (k, href) := want then
+        out := out.push (.enter (.inr href))
+        opened := some k
+    out := out.push (match f with
+      | .leaf n => .leaf n
+      | .enter c => .enter (.inl c)
+      | .leave => .leave)
+  if opened.isSome then out := out.push .leave
+  return SvgNode.nest (fun
+    | .inl c => cutNodes ratio c
+    | .inr href => fun children => [.element .a [.attr .href href] children]) out.toList
+
+/-- **A picture whose nodes link**: `picture`, with each run of marks of a key that `link` answers
+inside a link to it. -/
+def linkedPicture (L : Look) (W H ratio : Nat) (link : Key → Option String) (calls : List (Keyed Dev)) :
+    SvgNode :=
+  Svg.Frame.svg { width := W, height := H, ratio := ratio }
+    [.className "e4-view", .data "look" L.name] (linkedMarks L ratio link calls)
+
 /-- The text of a picture as a file, or why it is refused: the content model where a figure
 stands (flow content), by its located refusal, then XML's characters and names. -/
 def fileText (pic : SvgNode) : Except String String := do

@@ -171,11 +171,34 @@ private def placementPart (p : PlacementEntry) : Block :=
     [.para [.text placementUniverse],
      .para [.text s!"Tagged: {tagged}; inherited (provisional): {p.declarations.length - tagged}; unplaced: {unplaced}."]]
 
+/-- The names in an order where each comes before every name its edges reach, the given order kept
+among the names free at once (Kahn's algorithm). A name on a cycle comes last, in the given order:
+a figure ranks by this order, and an edge against it is drawn as a back edge. -/
+private def topoOrder (names : List String) (succ : String → List String) : List String := Id.run do
+  let mut indeg : Std.HashMap String Nat := names.foldl (fun m n => m.insert n 0) {}
+  for n in names do
+    for d in succ n do
+      if indeg.contains d then indeg := indeg.insert d (indeg.getD d 0 + 1)
+  let mut out : Array String := #[]
+  let mut done : Std.HashSet String := {}
+  for _ in names do
+    match names.find? (fun n => !done.contains n && indeg.getD n 0 == 0) with
+    | none => break
+    | some n =>
+      out := out.push n
+      done := done.insert n
+      for d in succ n do
+        if indeg.contains d then indeg := indeg.insert d (indeg.getD d 0 - 1)
+  return out.toList ++ names.filter (!done.contains ·)
+
 /-- The plan section: the requirements table, the next goals, the open parts by state, the loose
-goals, then one part per requirement with its open parts, a Mermaid diagram over the nodes it
-reaches, and their table. A name prints by `displayName`, among the names of its own row and
-part. -/
-private def planPart (plan : PlanEntry) : Block := Id.run do
+goals, then one part per requirement with its open parts, two figures (decisions row 365) and the
+table of the nodes it reaches. The open spine draws the requirement's planned goals and the
+theorems proved modulo them; the concept map draws its reach by concept. A node of a figure opens
+its goal's part of the open work or its claim (`claimOf`, a witness's name to its claim). A name
+prints by `displayName`, among the names of its own row and part. -/
+private def planPart (plan : PlanEntry) (concepts : List Concept) (claimOf : Std.HashMap String String) :
+    Block := Id.run do
   let index : Std.HashMap String NodeEntry := plan.nodes.foldl (fun m n => m.insert n.name.toString n) {}
   let statusOf (n : String) : String := ((index[n]?).map (·.standing)).getD "missing"
   let nearestOf (n : String) : List String := ((index[n]?).map (·.nearest.map Name.toString)).getD []
@@ -231,18 +254,48 @@ private def planPart (plan : PlanEntry) : Block := Id.run do
         | "work" => s!"Open, after other work ({part.state.on})"
         | _ => "Open, not triaged"
       [.text (label ++ ": " ++ part.text)]
-    -- A node's id is a hash of its name, so a new node adds lines and renumbers none.
-    let nodeId := fun (n : String) => "n" ++ String.ofList (Nat.toDigits 16 ((hash n).toNat % 0x100000000))
-    let mermaid := "flowchart LR\n" ++
-      String.join (reach.map fun n => s!"  {nodeId n}[\"{shown n}<br/>{statusOf n}\"]\n") ++
-      String.join (reach.flatMap fun n => (nearestOf n).filterMap fun d =>
-        if reached.contains d then some s!"  {nodeId n} --> {nodeId d}\n" else none)
+    let id := req.requirement.id
+    -- the open spine (decisions row 365): the goals and the theorems proved modulo them that the
+    -- requirement reaches, each before the nodes its proof reaches first; a goal opens its part of
+    -- the open work, a claim's witness its claim
+    let isOpen (n : String) : Bool := statusOf n == "goal" || statusOf n == "modulo"
+    let opens := topoOrder (reach.filter isOpen) fun n => (nearestOf n).filter isOpen
+    let spine : List Block := if opens.isEmpty then [] else
+      [.graph ("fig:open:" ++ id)
+        s!"The open part of {id}: its planned goals and the theorems proved modulo them. An arrow goes from a node to a node its proof reaches first."
+        (opens.map fun n => {
+          key := n, label := shown n, status := statusOf n
+          ref := if ((index[n]?).map (·.goal)).getD false then some ("open:" ++ n)
+            else (claimOf[n]?).map claimKey })
+        (opens.flatMap fun n => ((nearestOf n).filter isOpen).map (n, ·))]
+    -- the concept map: the reach by the concept each node is placed at, by its tag or its module
+    let conceptOf (n : String) : String :=
+      match (index[n]?).bind (·.placement) with
+      | some p => p.concept
+      | none => (((index[n]?).bind fun e => concepts.find? (·.defaultModules.contains e.module)).map (·.id)).getD ""
+    let conceptEdges := (reach.flatMap fun n => (nearestOf n).filterMap fun d =>
+      if reached.contains d && conceptOf n != conceptOf d then some (conceptOf n, conceptOf d) else none).eraseDups
+    -- each concept before the concepts its nodes' proofs reach, so the fewest arrows run back
+    let cs := topoOrder (dedup (reach.map conceptOf)) fun c => conceptEdges.filterMap fun (a, b) =>
+      if a == c then some b else none
+    let conceptMap : List Block := if cs.length < 2 then [] else
+      [.graph ("fig:concepts:" ++ id)
+        s!"{id} by concept: the concepts its nodes are placed at, by tag or by module, with their nodes; an arrow where a node's proof reaches a node of another concept."
+        (cs.map fun c =>
+          let members := reach.filter (conceptOf · == c)
+          let opened := (members.filter isOpen).length
+          { key := if c.isEmpty then "none" else c
+            label := if c.isEmpty then "No concept" else (nameAndDescription (((concepts.find? (·.id == c)).map (·.title)).getD c)).1
+            status := if opened == 0 then "proved" else "open"
+            detail := s!"{members.length} nodes" ++ (if opened == 0 then "" else s!", {opened} open")
+            ref := if c.isEmpty then none else some ("concept:" ++ c) })
+        (conceptEdges.map fun (a, b) => (if a.isEmpty then "none" else a, if b.isEmpty then "none" else b))]
     let nodeRows := (reach.filter (index.contains ·)).map fun n =>
       [[.code (shown n)], [.status (statusOf n)], codes shown (restsOnOf n), codes shown (nearestOf n)]
     let lines := incomplete ++ openLines
-    body := body ++ [.part ("req:" ++ req.requirement.id) (req.requirement.id ++ ": " ++ req.requirement.title) <|
-      (if lines.isEmpty then [] else [.items lines]) ++
-      [.code "mermaid" mermaid, .table ["Node", "Status", "Rests on", "Nearest nodes"] nodeRows]]
+    body := body ++ [.part ("req:" ++ id) (id ++ ": " ++ req.requirement.title) <|
+      (if lines.isEmpty then [] else [.items lines]) ++ spine ++ conceptMap ++
+      [.table ["Node", "Status", "Rests on", "Nearest nodes"] nodeRows]]
   return .part "plan" "Plan" body
 
 /-- The shortest chain from `start` to `goal` along `nearestOf`, through the nodes `inside` keeps,
@@ -366,6 +419,10 @@ def Report.document (r : Report) : Document :=
            [.status "missing", .text ": in the plan, a name that no node holds."]]],
        openPart r.plan r.claims] ++
       r.concepts.map (fun c => conceptPart c (byConcept.getD c.id #[]).toList) ++
-      [applicabilityPart r.cuts, placementPart r.placement, planPart r.plan] ++ acceptancePart r.acceptance }
+      [applicabilityPart r.cuts, placementPart r.placement,
+       planPart r.plan r.concepts (r.claims.foldl (init := {}) fun m c =>
+         match c.evidence.declaration? with
+         | some d => m.insert d.name.toString c.claim.id
+         | none => m)] ++ acceptancePart r.acceptance }
 
 end Tools.Semantics

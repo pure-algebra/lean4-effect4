@@ -10,10 +10,14 @@ A generator builds one `Document` and every output format is a fold of it: Markd
 * text and code are literal, and each format escapes them;
 * a reference names a part of the same document by its key, and a link another page or file of
   the same site by its path from this page;
-* a status is a word that a format may mark.
+* a status is a word that a format may mark;
+* a figure is a graph as data, its nodes and edges, which each format draws its own way: the HTML
+  fold through the view's layout, the Markdown fold as a Mermaid diagram (decisions row 365).
 
-`Document.check` refuses a duplicate part key, a reference to no part and a table row of the wrong
-width, before any output is written. The design and its review, against Codex's docgen probe, are
+Every fold that reads lines (the check, the site's links and keys) is one monoid fold,
+`Algebra.collect`, with a field overridden where a block holds more than lines.
+`Document.check` refuses a duplicate key, a reference to no part, a table row of the wrong width
+and a figure's edge to no node, before any output is written. The design and its review, against Codex's docgen probe, are
 `docs/research/2026-10-11-docgen/README.md`.
 -/
 
@@ -35,6 +39,22 @@ inductive Inline where
 /-- A run of inline content. -/
 abbrev Line := List Inline
 
+/-- A node of a figure's graph: its key (unique in the figure), its label, its status word (empty for
+none), a detail drawn after the status, and the part it opens, by key. -/
+structure GraphNode where
+  key : String
+  label : String
+  status : String := ""
+  detail : String := ""
+  ref : Option String := none
+  deriving Inhabited, BEq, Repr
+
+/-- A node as a line: a reference to the part it opens, shown as its label, or its label. -/
+def GraphNode.line (n : GraphNode) : Line :=
+  match n.ref with
+  | some r => [.ref r n.label]
+  | none => [.text n.label]
+
 /-- Block content. A part's blocks are its only recursive position. -/
 inductive Block where
   | para (line : Line)
@@ -45,6 +65,9 @@ inductive Block where
   /-- a code block in the syntax `language` (`lean`, `mermaid`, `text`) -/
   | code (language body : String)
   | table (headers : List String) (rows : List (List Line))
+  /-- a figure of a directed graph: its key (unique among the document's keys), its caption, its
+  nodes in the order the drawing ranks them, and its edges by node key -/
+  | graph (key caption : String) (nodes : List GraphNode) (edges : List (String × String))
   /-- a part: its key (unique in its document), its title and its blocks -/
   | part (key title : String) (body : List Block)
   deriving Inhabited, Repr
@@ -65,6 +88,7 @@ structure Algebra (α : Type) where
   items : List Line → α
   code : String → String → α
   table : List String → List (List Line) → α
+  graph : String → String → List GraphNode → List (String × String) → α
   part : String → String → List α → α
 
 mutual
@@ -75,6 +99,7 @@ mutual
     | .items ls => a.items ls
     | .code lang body => a.code lang body
     | .table hs rs => a.table hs rs
+    | .graph k c ns es => a.graph k c ns es
     | .part k t body => a.part k t (Block.foldList a body)
   /-- The fold of each block of a list. -/
   def Block.foldList {α : Type} (a : Algebra α) : List Block → List α
@@ -82,60 +107,72 @@ mutual
     | b :: bs => b.fold a :: Block.foldList a bs
 end
 
+/-- **A monoid fold** into lists: each line a block holds, mapped by `line` and joined in order (a
+paragraph's line, each field's value, each item, each table cell, each figure node as
+`GraphNode.line`), and at a part its body's results, combined by `part`. A fold that reads more
+than lines overrides a field: `{ Algebra.collect f with table := … }`. -/
+def Algebra.collect {β : Type} (line : Line → List β)
+    (part : String → String → List β → List β := fun _ _ body => body) : Algebra (List β) where
+  para l := line l
+  fields rs := rs.flatMap (line ·.2)
+  items ls := ls.flatMap line
+  code _ _ := []
+  table _ rs := rs.flatMap (·.flatMap line)
+  graph _ _ ns _ := ns.flatMap (line ·.line)
+  part k t body := part k t body.flatten
+
+/-- The results of a monoid fold over a list of blocks, joined. -/
+def Block.collect {β : Type} (a : Algebra (List β)) (bs : List Block) : List β :=
+  (Block.foldList a bs).flatten
+
 /-! ## Checks -/
 
-/-- What `check` reads from a block: the part keys it declares, the keys it references, and its
-malformed tables. -/
-structure Census where
-  keys : Array String := #[]
-  refs : Array String := #[]
-  tables : Array String := #[]
-  links : Array String := #[]
+/-- What `check` reads from a block, one finding at a time. -/
+inductive Finding where
+  /-- a key the block declares: a part's or a figure's -/
+  | key (k : String)
+  | ref (k : String)
+  | link (href : String)
+  /-- a malformed block, in words -/
+  | malformed (why : String)
 
-private def Census.append (a b : Census) : Census :=
-  ⟨a.keys ++ b.keys, a.refs ++ b.refs, a.tables ++ b.tables, a.links ++ b.links⟩
+private def lineFindings (l : Line) : List Finding :=
+  l.filterMap fun
+    | .ref k _ => some (.ref k)
+    | .link h _ => some (.link h)
+    | _ => none
 
-private def inlineRef : Inline → Option String
-  | .ref k _ => some k
-  | _ => none
+/-- The census: the monoid fold of the lines' references and links and the parts' keys, with a
+table's width and a figure's key, node keys and edges read too. -/
+private def censusAlgebra : Algebra (List Finding) :=
+  { Algebra.collect lineFindings (fun k _ body => .key k :: body) with
+    table := fun hs rs => rs.flatMap (·.flatMap lineFindings) ++
+      (if rs.all (·.length == hs.length) then [] else
+        [.malformed s!"table [{", ".intercalate hs}]: a row's width differs from its header"])
+    graph := fun k _ ns es =>
+      let keys := ns.map (·.key)
+      .key k :: ns.flatMap (lineFindings ·.line) ++
+        (if keys.eraseDups.length == keys.length then [] else [.malformed s!"figure {k}: a node key twice"]) ++
+        es.filterMap fun (a, b) =>
+          if keys.contains a && keys.contains b then none else some (.malformed s!"figure {k}: the edge {a} → {b} names no node") }
 
-private def inlineLink : Inline → Option String
-  | .link h _ => some h
-  | _ => none
-
-private def lineRefs (l : Line) : Array String := (l.filterMap inlineRef).toArray
-
-private def lineLinks (l : Line) : Array String := (l.filterMap inlineLink).toArray
-
-private def censusAlgebra : Algebra Census where
-  para l := { refs := lineRefs l, links := lineLinks l }
-  fields rs := { refs := rs.foldl (init := #[]) fun acc r => acc ++ lineRefs r.2
-                 links := rs.foldl (init := #[]) fun acc r => acc ++ lineLinks r.2 }
-  items ls := { refs := ls.foldl (init := #[]) fun acc l => acc ++ lineRefs l
-                links := ls.foldl (init := #[]) fun acc l => acc ++ lineLinks l }
-  code _ _ := {}
-  table hs rs :=
-    { refs := rs.foldl (init := #[]) fun acc r => r.foldl (init := acc) fun acc c => acc ++ lineRefs c
-      links := rs.foldl (init := #[]) fun acc r => r.foldl (init := acc) fun acc c => acc ++ lineLinks c
-      tables := if rs.all (·.length == hs.length) then #[] else
-        #[s!"table [{", ".intercalate hs}]: a row's width differs from its header"] }
-  part k _ body := body.foldl Census.append { keys := #[k] }
-
-/-- Refuse a blank or duplicate part key, a reference to no part, a blank link or one with a space,
-and a table row of the wrong width, each by name. A reference may name a key that `outside`
+/-- Refuse a blank or duplicate key, a reference to no part, a blank link or one with a space, a
+table row of the wrong width and a figure's malformed graph, each by name. A reference may name a key that `outside`
 holds: a part of another page split from the same document (`Tools.Site`). -/
 def Document.check (d : Document) (outside : String → Bool := fun _ => false) : Except (List String) Unit := Id.run do
-  let c := (Block.foldList censusAlgebra d.body).foldl Census.append {}
-  let mut errors := c.tables.toList
+  let fs := Block.collect censusAlgebra d.body
+  let mut errors := fs.filterMap fun | .malformed why => some why | _ => none
   let mut seen : Std.HashSet String := {}
-  for k in c.keys do
-    if k.isEmpty || k.any Char.isWhitespace then errors := errors ++ [s!"part key {k.quote}: blank or with a space"]
-    if seen.contains k then errors := errors ++ [s!"part key {k}: duplicate"]
-    seen := seen.insert k
-  for r in c.refs do
-    unless seen.contains r || outside r do errors := errors ++ [s!"reference {r}: no part has this key"]
-  for h in c.links do
-    if h.isEmpty || h.any Char.isWhitespace then errors := errors ++ [s!"link {h.quote}: blank or with a space"]
+  for f in fs do
+    if let .key k := f then
+      if k.isEmpty || k.any Char.isWhitespace then errors := errors ++ [s!"key {k.quote}: blank or with a space"]
+      if seen.contains k then errors := errors ++ [s!"key {k}: duplicate"]
+      seen := seen.insert k
+  for f in fs do
+    match f with
+    | .ref r => unless seen.contains r || outside r do errors := errors ++ [s!"reference {r}: no part has this key"]
+    | .link h => if h.isEmpty || h.any Char.isWhitespace then errors := errors ++ [s!"link {h.quote}: blank or with a space"]
+    | _ => pure ()
   return if errors.isEmpty then .ok () else .error errors
 
 /-! ## Prose: a docstring as blocks
@@ -239,6 +276,17 @@ def markdownLine (l : Line) (inTable := false) : String :=
 
 private def row (cells : List String) : String := "| " ++ " | ".intercalate cells ++ " |\n"
 
+/-- A figure as a Mermaid flowchart, top to bottom, which GitHub draws: each node by its place,
+labelled with its label and its status and detail on a second line. -/
+def mermaid (ns : List GraphNode) (es : List (String × String)) : String :=
+  let id (k : String) : String := "n" ++ toString (ns.findIdx (·.key == k))
+  let second (n : GraphNode) : String :=
+    " · ".intercalate ([n.status, n.detail].filter (!·.isEmpty))
+  let label (n : GraphNode) : String :=
+    ((n.label ++ (if (second n).isEmpty then "" else "<br/>" ++ second n)).replace "\"" "#quot;")
+  "```mermaid\nflowchart TB\n" ++ String.join (ns.map fun n => s!"  {id n.key}[\"{label n}\"]\n") ++
+    String.join (es.map fun (a, b) => s!"  {id a} --> {id b}\n") ++ "```\n\n"
+
 /-- The Markdown algebra. Its carrier takes the nesting depth, which fixes a part's heading
 level: a part at the top of the document is `##`, under the title's `#`, and levels stop at six. -/
 def markdownAlgebra : Algebra (Nat → String) where
@@ -252,6 +300,7 @@ def markdownAlgebra : Algebra (Nat → String) where
     if rs.isEmpty then "" else
       row (hs.map markdownText) ++ row (hs.map fun _ => "---") ++
         String.join (rs.map fun r => row (r.map (markdownLine (inTable := true)))) ++ "\n"
+  graph _ caption ns es _ := markdownText caption ++ "\n\n" ++ mermaid ns es
   part _ t body depth :=
     String.ofList (List.replicate (min 6 depth) '#') ++ " " ++ markdownText t ++ "\n\n" ++
       String.join (body.map (· (depth + 1)))

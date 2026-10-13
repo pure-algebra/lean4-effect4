@@ -91,9 +91,16 @@ td code { overflow-wrap: normal; }
 .status[data-status=open]::before { border-style: dashed; }
 .status[data-status=refuted]::before { content: "×"; content: "×" / ""; display: inline-block;
   width: .7em; margin-right: .35em; text-align: center; }
-details.diagram { margin: 1rem 0; }
-details.diagram > summary { cursor: pointer; font-family: var(--e4-font-label-family);
+/* A figure: its picture scrolls when wider than the measure, its caption below, and the figure in
+   words folded beneath it. The picture's marks take the looks' colours by class (looks.css). */
+figure.graph { margin: 1.5rem 0 .5rem; }
+figure.graph .scroll { border: 0; margin: 0; }
+figure.graph svg { display: block; max-width: none; height: auto; }
+figcaption { margin-top: .5rem; font-size: .9rem; max-width: 72ch; }
+details.words { margin: 0 0 1.5rem; font-size: .9rem; }
+details.words > summary, details.diagram > summary { cursor: pointer; font-family: var(--e4-font-label-family);
   font-style: var(--e4-font-label-style); }
+details.diagram { margin: 1rem 0; }
 footer { margin-top: 3rem; padding-top: 1rem; padding-bottom: 2.5rem;
   border-top: var(--e4-stroke-rule) solid var(--e4-color-rule); font-size: .85rem; }
 footer li + li:last-child, footer li:nth-last-child(2) { margin-top: .25rem; }

@@ -50,6 +50,16 @@ def specimen : Document where
           [.code "Effect4.Run.session_keys_once"], [.text "—"]],
          [[.code "schedule-independent"], [.text "fundamentalProperty"], [.status "absent"],
           [.text "—"], [.ref "statuses" "see the statuses"]]]],
+    .part "figure" "A figure" [
+      .para [.text "A graph as data, drawn by the view's layout: a node links to the part it opens, a goal is lit, ",
+        .text "and the figure is also given in words."],
+      .graph "fig:specimen" "A claim proved modulo one goal, through two steps; an arrow goes to a node the proof reaches first."
+        [{ key := "claim", label := "decision_preserves", status := "modulo", ref := some "statuses" },
+         { key := "loop", label := "loop_preserves", status := "modulo" },
+         { key := "deliver", label := "deliver_preserves", status := "modulo", detail := "2 steps" },
+         { key := "goal", label := "countdown_parks", status := "goal", ref := some "tables" },
+         { key := "base", label := "frame_typing", status := "proved" }]
+        [("claim", "loop"), ("claim", "deliver"), ("loop", "goal"), ("deliver", "goal"), ("deliver", "base")]],
     .part "depth" "Nesting, level 2" [
       .para [.text "Each part's heading level is its depth."],
       .part "depth-3" "Level 3" [

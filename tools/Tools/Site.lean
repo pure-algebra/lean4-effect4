@@ -95,6 +95,9 @@ private def gather : List Kept → List Block
     | .items ls :: more => .items (l :: ls) :: more
     | more => .items [l] :: more
 
+-- The split is a paramorphism, not a fold: a part that stays on its page keeps its original body,
+-- which a fold's algebra no longer sees. Pairing each case with the identity fold would make it a
+-- fold at the cost of a second carrier; the two mutual functions below say it directly.
 mutual
   /-- A block on the page at `path`: kept, or a part made a page, with the pages below it. -/
   private def splitBlock (cut : List String → String → Bool) (path : List String)
@@ -130,29 +133,14 @@ def split (cut : List String → String → Bool) (path : List String) (space : 
 
 /-! ## Folds of the site -/
 
-/-- The parts of a block list, each with its sub-parts. -/
-private def partsAlgebra : Algebra (List (String × String × List (String × String))) where
-  para _ := []
-  fields _ := []
-  items _ := []
-  code _ _ := []
-  table _ _ := []
-  part k t body := [(k, t, body.flatten.map fun (k', t', _) => (k', t'))]
-
-/-- A page's parts and their sub-parts: the two levels of "On this page". -/
+/-- A page's parts and their sub-parts: the two levels of "On this page". A monoid fold
+(`Algebra.collect`) that reads no line. -/
 def parts (d : Document) : List (String × String × List (String × String)) :=
-  (Block.foldList partsAlgebra d.body).flatten
+  Block.collect (Algebra.collect (fun _ => []) fun k t sub => [(k, t, sub.map fun (k', t', _) => (k', t'))]) d.body
 
-/-- Every part key of a page, at every depth. -/
-private def keysAlgebra : Algebra (List String) where
-  para _ := []
-  fields _ := []
-  items _ := []
-  code _ _ := []
-  table _ _ := []
-  part k _ body := k :: body.flatten
-
-def keys (d : Document) : List String := (Block.foldList keysAlgebra d.body).flatten
+/-- Every key of a page, at every depth: its parts' and its figures'. -/
+def keys (d : Document) : List String :=
+  Block.collect { Algebra.collect (fun _ => []) (fun k _ body => k :: body) with graph := fun k _ _ _ => [k] } d.body
 
 /-- The page that each key names in each space, and whether the key is the page's own: the key of
 the part it was split from, or a part on it. -/
@@ -199,14 +187,9 @@ def resolve (here : List String) (href : String) : Option (List String × Bool) 
       | _ => acc ++ [seg]) start
     some (segs, rest.isEmpty || rest.endsWith "/")
 
-/-- The links of a page's document. -/
-private def linksAlgebra : Algebra (List String) where
-  para l := l.filterMap fun | .link h _ => some h | _ => none
-  fields rs := rs.flatMap fun (_, l) => l.filterMap fun | .link h _ => some h | _ => none
-  items ls := ls.flatMap fun l => l.filterMap fun | .link h _ => some h | _ => none
-  code _ _ := []
-  table _ rs := rs.flatMap fun r => r.flatMap fun l => l.filterMap fun | .link h _ => some h | _ => none
-  part _ _ body := body.flatten
+/-- The links of a page's document: a monoid fold of its lines. -/
+def links (d : Document) : List String :=
+  Block.collect (Algebra.collect (·.filterMap fun | .link h _ => some h | _ => none)) d.body
 
 /-- **The site's checks**, each refusal by name: a repeated path, a page with no parent, a page's own
 check (`Document.check`, where a reference may name a part of its space on another page), a key
@@ -230,7 +213,7 @@ def Site.check (s : Site) : List String := Id.run do
       seen := seen.insert (p.space, k)
   let pageFiles := s.pages.map fun p => p.path ++ ["document.json"]
   for p in s.pages do
-    for h in (Block.foldList linksAlgebra p.doc.body).flatten do
+    for h in links p.doc do
       match resolve p.path h with
       | none => pure ()
       | some (r, folder) =>
@@ -380,9 +363,9 @@ def Site.shell (s : Site) (p : Page) : Shell :=
       [footerLink "document.json" "This page as data (effect4-document/1)",
        footerLink (href ["contents"]) "Every page of the site"] }
 
-/-- A page of the site as its HTML. -/
-def Site.html (s : Site) (p : Page) : Except String String := do
-  let ix := keyIndex s
+/-- A page of the site as its HTML, with the site's key index (`keyIndex`, computed once). -/
+def Site.html (s : Site) (ix : Std.HashMap (String × String) (List String × Bool)) (p : Page) :
+    Except String String := do
   return text (render (s.shell p) p.doc.title (← blocks (target ix p) p.doc))
 
 /-- **The contents page**: every page under each section, deeper pages with their parent. -/
@@ -417,8 +400,9 @@ def looksCss (paper : Look) : String := Html.looks {} paper ++ Tokens.rules
 def Site.write (s : Site) (dir : System.FilePath) : IO (List String) := do
   let mut errors := s.check
   unless errors.isEmpty do return errors
+  let ix := keyIndex s
   for p in s.pages do
-    match s.html p with
+    match s.html ix p with
     | .error why => errors := errors ++ [s!"/{folders p.path}: {why}"]
     | .ok html =>
       let folder := p.path.foldl (· / ·) dir
