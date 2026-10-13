@@ -1,4 +1,5 @@
 import Effect4.Api
+import Effect4.Run.Live
 import Effect4.Laws.Program.Invocation
 
 /-!
@@ -243,27 +244,47 @@ def refusal (program : Api.Program) (table : RowTable := []) : Option Api.AdmitR
 /-! ## The checked entry points run what the raw ones run
 
 The exit criterion of S1a: `runAdmitted` runs what `run` runs on every admitted fixture. The
-certificate is consumed as an argument, so a caller cannot reach these without building it. -/
+certificate is consumed as an argument, so a caller cannot reach these without building it. The
+typed replay (`Api.Typed.replay`, decisions row 373 (8)) takes the place of the retired
+`replayAdmitted`: it replays a session's journal, and the session admits each reply at its call. -/
 
 def runAdmittedExit (program : Api.Program) (table : RowTable) (fuel : Nat) : Option ExitV :=
   match Api.admitProgram program ⟨table, []⟩ with
   | .ok certificate => (Api.runAdmitted certificate fuel).exit
   | .error _ => none
 
-def replayAdmittedExit (program : Api.Program) (table : RowTable) (fuel : Nat)
-    (tape : List Api.Decision) : Option ExitV :=
-  match Api.admitProgram program ⟨table, []⟩ with
-  | .ok certificate => (Api.replayAdmitted certificate fuel tape).exit
+/-- The session header of the typed replay over a table. -/
+def replayHeader (table : RowTable) : Api.HostSession.Header :=
+  ⟨Api.HostSession.version, "invocation", "keyed-v3", table⟩
+
+/-- The typed replay's exit: the program checked, then a session's journal replayed through the
+checked session, or `none` where the check or the session's start refuses. -/
+def typedReplayExit (program : Api.Program) (table : RowTable) (budget : Api.Budget)
+    (journal : List Api.Runner.Command) : Option ExitV :=
+  match Api.check program table with
+  | .ok t =>
+    match t.replay "keyed-v3" (replayHeader table) journal budget with
+    | .ok l => l.run.exit
+    | .error _ => none
   | .error _ => none
 
+/-- The session's journal of `replyTape`: the root evaluated, the call bound at its guard, the
+reply received and applied, the dispatcher flushed. -/
+def replyJournal : List Api.Runner.Command :=
+  [.control Api.evaluate,
+    .bind ⟨Api.HostSession.version, "invocation", [goodRow], 0, Api.root, .external 0, .nat 7⟩ 0,
+    .submit ⟨Api.HostSession.version, "invocation", 0, ⟨Api.root, 0⟩, reply⟩,
+    .apply ⟨Api.root, 0⟩, .control Api.flush]
+
 #guard runAdmittedExit Wire.Corpus.pAwait [] 100 = (Api.run Wire.Corpus.pAwait 100).exit
-#guard replayAdmittedExit performExternal [goodRow] 100 replyTape
+#guard typedReplayExit performExternal [goodRow] ⟨100, 100⟩ replyJournal
   = (Api.replay performExternal 100 replyTape [goodRow]).exit
 #guard runAdmittedExit performSleep [] 100 = (Api.run performSleep 100).exit
-#guard replayAdmittedExit performSleep [] 100 sleepTape = some (.success .unit)
-#guard replayAdmittedExit performExternal [goodRow] 100 replyTape = some (.success (.nat 9))
--- The admitted entry points exercise the same positive routing behavior.
-#guard replayAdmittedExit performExternal [goodRow] 0 replyTape = none
+#guard typedReplayExit performSleep [] ⟨100, 100⟩ (Rows.tape sleepTape) = some (.success .unit)
+#guard typedReplayExit performExternal [goodRow] ⟨100, 100⟩ replyJournal = some (.success (.nat 9))
+-- The typed replay exercises the same positive routing behavior. With no command fuel the start
+-- stops at a frontier, so no reply is applied and the root has no exit.
+#guard typedReplayExit performExternal [goodRow] ⟨0, 100⟩ replyJournal = none
 #guard (Api.replay performExternal 0 replyTape [goodRow]).outcome = .frontier
 
 end Test.Program.InvocationContract

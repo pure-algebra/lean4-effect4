@@ -471,15 +471,6 @@ def runAdmitted {program : Program} {table : RowTable}
   let _ := admitted.ty
   run program fuel table compileFuel
 
-/-- The checked replay: `replay`, with the certificate consumed. The tape is the caller's,
-as in `replay`; admission says nothing about which decisions are legal (that is
-`replayChecked`) and nothing about finishing. -/
-def replayAdmitted {program : Program} {table : RowTable}
-    (admitted : AdmittedProgram program ⟨table, []⟩) (fuel : Nat) (tape : List Decision)
-    (compileFuel : Nat := fuel) : Inspection :=
-  let _ := admitted.ty
-  replay program fuel tape table compileFuel
-
 /-! ## Certificate first (DI-85)
 
 A program is checked once; what runs, prints or emits afterwards takes the certificate, not the
