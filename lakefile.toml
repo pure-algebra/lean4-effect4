@@ -295,7 +295,7 @@ rev = "ab7eda433f0390fde7aa240189761540c9744c79"
 [[require]]
 name = "whatwg"
 git = "https://github.com/pure-algebra/lean4-whatwg"
-rev = "a8a8e7b479a7782b281620b8e972ea79b65afe89"
+rev = "e64e9153b1e9dd83df6f84782df71ce4ab800e28"
 
 
 # Proof search for the law graph (`src/Effect4/Laws/**`) and the batteries: nothing under the
