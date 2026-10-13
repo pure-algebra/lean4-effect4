@@ -1,4 +1,4 @@
-docs/research/2026-10-13-seat-board-render-audit.lean:6:0: error: #axiom_audit: 7 of 257 declarations reach axioms outside [propext, Quot.sound]:
+docs/research/2026-10-13-seat-board-render-audit.lean:6:0: error: #axiom_audit: 7 of 260 declarations reach axioms outside [propext, Quot.sound]:
   Tools.View.Tube.Board.film reaches [Classical.choice]
   _private.Tools.View.Tube.Board.Film.0.Tools.View.Tube.Board.uncheckedFilm reaches [Classical.choice]
   Tools.View.Tube.Board.reference reaches [Classical.choice]

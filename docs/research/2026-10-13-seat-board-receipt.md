@@ -95,6 +95,9 @@ The raw audit output supplies the exact declarations and dependency paths.
 The finite probes check real Score and Queue recordings.
 They check distinct keys, fixed structures, hollow fibers, waiting offers, and waiting takers.
 They check SVG content and XML writing for films and reduced-motion stills.
+The follow-up fixes the undashed stroke's scalar text to `none` and offset `0`.
+A stroke control switches from undashed to dashed and back.
+The rendered probe checks the emitted animation values and XML admission.
 `Measure.costOf` in `tools/Tools/View/Tube/Measure.lean` supplies animation and path-byte counts.
 The retained probe output supplies film byte counts.
 

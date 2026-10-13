@@ -47,6 +47,16 @@ def check (frames : List (List Mark)) : Except String Unit :=
   | none => .ok ()
   | some why => .error why
 
+/-- A stroke with no dash has the SVG dash-array keyword `none`. -/
+def dashArray : Option (Int × Nat) → String
+  | none => "none"
+  | some dash => (dashText dash).1
+
+/-- A stroke with no dash has zero dash offset. -/
+def dashOffset : Option (Int × Nat) → String
+  | none => "0"
+  | some dash => (dashText dash).2
+
 /-- A fixed path placed by reference, with the mark's scalar attributes. -/
 def reference (ident : String) (part : Part) (mark : Mark) (anims : List SvgNode) : SvgNode :=
   let attrs := [.attr .href ("#" ++ ident), .className ("tube-" ++ part.tone.name)]
@@ -77,9 +87,9 @@ private def uncheckedFilm (id : String) (W H : Nat) (frames : List (List Mark))
           let anims := if p.filled then [] else
             write m.key "stroke-width" (fun seen => num (seen.getD m).width) ++
             write m.key "stroke-dasharray"
-              (fun seen => (dashText ((seen.getD m).dash.getD (0, BIG))).1) ++
+              (fun seen => dashArray (seen.getD m).dash) ++
             write m.key "stroke-dashoffset"
-              (fun seen => (dashText ((seen.getD m).dash.getD (0, BIG))).2)
+              (fun seen => dashOffset (seen.getD m).dash)
           .element .g [.attr .opacity (shown.headD "0")]
             (Smil.marking play 0 beat "opacity" shown ++
               [reference s!"{id}-p{(paths.idxOf? (p.d m)).getD 0}" p m anims])
@@ -107,5 +117,15 @@ def film (id : String) (W H : Nat) (frames : List (List Mark))
 #guard
   let mark := unitOf "one" (straight 0 0 0 10000 40000) 20000
   !(check [[mark, mark]]).isOk
+
+-- An undashed stroke becomes dashed and returns to an undashed stroke.
+#guard
+  let mark := { unitOf "one" (straight 0 0 0 10000 40000) 20000 with dash := none }
+  let dashed := { mark with dash := some (20000, 10000) }
+  let frames := [[mark], [dashed], [mark]]
+  (check frames).isOk &&
+    channel frames "one" (fun seen => dashArray (seen.getD mark).dash) ==
+      ["none", "10 100000", "none"] &&
+    channel frames "one" (fun seen => dashOffset (seen.getD mark).dash) == ["0", "-20", "0"]
 
 end Tools.View.Tube.Board
