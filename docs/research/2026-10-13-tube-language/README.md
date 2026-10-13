@@ -1,7 +1,8 @@
 # One body: the tube language
 
 Status: research note (history, not authority). 2026-10-13. The page is `tubes.html`
-(`tools/view/v -V tubes`). The code is `tools/Tools/View/Tube/`.
+(`tools/view/v -V tubes`). The code is `tools/Tools/View/Tube/`. The owner ruled the note's
+questions on the same day: decisions row 369 (§12).
 
 **The one thing to know first.** Every glyph is now one body, a tube, and every transition is a
 morph between tubes. Every moment of a morph keeps the bend law (`Tube.mix_ok`, proved). So any
@@ -62,11 +63,11 @@ look's ink and ground. So the paper look works with no second palette.
 
 ```mermaid
 flowchart LR
-  A["picture A: marks with keys"] --> J["join by key"]
+  A["picture A: marks with keys"] --> J["the kit's join: enter, update, exit"]
   B["picture B: marks with keys"] --> J
-  J --> M["Mark.mix at t: tube by Tube.mix, width and dash by the line"]
-  M --> S["sampled at the settle ease, K + 1 moments"]
-  S --> V["one SVG animate per changing attribute: d, stroke-width, dasharray, dashoffset"]
+  J --> T["tracks: a stroke change on the kit's Transition"]
+  T --> P["Track.at: the change at Transition.at, 21 moments"]
+  P --> V["one SVG animate per attribute: d, stroke-width, dasharray, dashoffset"]
 ```
 
 **Intrinsic blending.** `Tube.mix` mixes what a tube is, not where its points stand. It mixes each
@@ -85,10 +86,13 @@ up, a turn toward zero.
 | `Piece.mix_zero`, `Piece.mix_full` | a morph starts at its first piece and ends at its second | same |
 | `round_bend` | the bend law survives the rounding of a mix | same |
 | `ladder_divides` | every width of the ladder divides the unit's area | `tools/Tools/View/Tube/Draw.lean` |
+| `ladder_pills` | every width of the ladder leaves room for a pill in its slot | same |
+| `Track.at_done` | a track whose transition is over stands at its change's end | `tools/Tools/View/Tube/Motion.lean` |
 
-`#axiom_audit` over the five modules: the theorems rest on `propext` and `Quot.sound` only. The
-SVG writers (`node`, `film`, the plates) reach `Classical.choice` through the package's SVG node,
-as `SvgOut`'s writers do.
+`#axiom_audit` ran over the six modules of the language, the page aside. Of 537 declarations, 5
+reach `Classical.choice`: the SVG writers `pathNode`, `node`, `still`, `film` and `smil`. Each
+reaches it through the kit's `SvgNode`, as `SvgOut`'s writers do. Every theorem rests on `propext`
+and `Quot.sound`.
 
 **Three consequences.**
 
@@ -111,10 +115,11 @@ as `SvgOut`'s writers do.
   means.
 
 **Why SMIL.** WebKit does not animate CSS `d` (found 2026-10-11, row 354's probe), and the
-Hammerspoon viewer is WebKit. So the animator writes each beat's samples as SVG `animate` elements
-(`film`). The samples come from the exact morph, and the browser draws straight lines between
-close samples. A film starts half a second after the page loads, again on a click, and holds its
-end. SMIL does not read `prefers-reduced-motion`, a gap this note leaves open.
+Hammerspoon viewer is WebKit. So each track is written as SVG `animate` elements (`smil`). The
+samples come from the exact change, and the browser draws straight lines between close samples. A
+film starts half a second after the page loads, again on a click, and holds its end. SMIL does not
+read `prefers-reduced-motion`. So a film's figure carries its last picture still (`filmFigure`). A
+rule of the page shows that picture alone to a reader who prefers reduced motion.
 
 ## 4. Plumbing semantics: the pipework is the invariant, the contents the state
 
@@ -155,13 +160,15 @@ claims a conservation that does not hold.
 
 ## 6. Integer filling
 
-- **One amount.** A unit is `AREA` (192) square pixels in every tube. In a tube of contents width
-  `c`, a unit is `AREA / c` pixels long. That is 24 in a pipe of 8, 12 in a vessel of 16, and 48
-  in a pipe of 4.
-- **Reducible.** Every width of the ladder (4, 6, 8, 12, 16, 24, 32, 48) divides the area
-  (`ladder_divides`). So `AREA / c` reduces to a whole number, and every unit is a whole number of
-  pixels long.
-- **Countable.** Units stand a meniscus (2 px) apart.
+- **One amount.** A unit is `AREA` (384) square pixels in every tube. In a tube of contents width
+  `c`, a unit's slot is `AREA / c` pixels long. That is 32 in a pipe of 12, 24 in a vessel of 16,
+  and 96 in a pipe of 4.
+- **Reducible.** Every width of the ladder (4, 6, 8, 12, 16) divides the area (`ladder_divides`).
+  So `AREA / c` reduces to a whole number, and every slot is a whole number of pixels long.
+- **A pill.** A unit is drawn as a pill, a liquid plug with a round meniscus at each end, 2 px from
+  the next. Every width of the ladder leaves room for one, `c (c + 2) ≤ AREA` (`ladder_pills`).
+- **Slots.** The vessel's units are the kit's slots (`Units.slots`): the front in slot 0 at the
+  outlet's end, the order kept, the room shown. The units that wait are its lane (`Units.lane`).
 - **Conserved.** A unit keeps its area through a change of width, as water does. This repairs
   finding 1 of the earlier review: no width is truncated, since a count is drawn as units, not as
   a width.
@@ -176,36 +183,100 @@ claims a conservation that does not hold.
   beam's own curve is a quartic. At equal depth the arc departs from it by about 4% of the depth,
   under half a pixel here. That figure is computed by hand, not checked.
 - **Bending** is the bend law and the arc pieces.
-- **Stress is not drawn.** Hoop stress is `σ = p r / t` (Barlow), and the pressure behind a closed
-  valve is the backwater. Two ways to draw it wait for the owner (question 4).
+- **A sudden load passes its rest.** A load that lands at once carries a span past its static
+  deflection before it settles. The inlet passes through a pose 35% beyond its new slope
+  (`Picture.via`), then settles.
+- **Stress is not drawn yet.** Hoop stress is `σ = p r / t` (Barlow), and the pressure behind a
+  closed valve is the backwater. It belongs to the styling pass (§12).
 
 ## 8. What the earlier work becomes
 
-- **The living organism stays as a page until the owner rules** (question 1). The soft field,
-  Physarum, Murray and the phyllotaxis stay in `tools/Tools/View/Living/`.
+- **The living organism retired** (row 369). Its modules (`Tools.View.Living`: the soft field,
+  Physarum, Murray, the phyllotaxis, the organism) are deleted, and with them `living.html` and
+  `play.html`. Git keeps them.
+- The marking of a run moved to `tools/Tools/View/Tube/Marking.lean`.
 - In the tube language a junction needs no soft field, since the casing layers merge the lumens.
   A vessel needs no spiral, since its capacity is its length.
 - Of the earlier review's ten findings, two no longer arise: the truncated cores (finding 1) and
-  the curve between counts (finding 2). The rest belong to the living organism and wait with it.
+  the curve between counts (finding 2). The rest went with the living organism.
 
-## 9. Package asks (proposed, for `docs/research/2026-10-12-whatwg-requests.md`)
+## 9. The library underneath
 
-| Ask | What | Law |
+The owner asked that the language stand on `lean4-whatwg`'s abstractions, so it is coherent and
+smooth. What it takes from the kit, at the pin `80bb06b`:
+
+| The kit's | Used for | Where |
 | --- | --- | --- |
-| W30 | the tube form: pieces, the bend law, `mix`, `reverse`, drawing by cubics | `mix_ok` and the endpoints, as here |
-| W31 | cased layers: walls, then lumens, then contents, over any set of tubes | a junction's lumen is one |
-| W32 | a shape track in `Scene/Motion`, written as SMIL `animate` for WebKit and as CSS `d` where it is supported | the samples are the morph's |
+| `join` (`Whatwg/Svg/Scene/Join.lean`) | a step: what enters, what is kept, what leaves | `Picture.step` |
+| `Transition`, `Transition.at` (`Whatwg/Svg/Scene/Motion.lean`) | every change's delay, duration and easing, read as a browser reads it | `Mark.move`, `Mark.shape`, `Track.at` |
+| `Easing`: `stops`, `linear`, `cubicIn` | the eases of a step | `Queue.picture` |
+| `Spring.critical` (`Whatwg/Svg/Geometry/Spring.lean`) | the settling ease, a critically damped spring | `settle`, its stops guarded against the spring |
+| `mix` | a width or a dash between two poses | `Stroke.at` |
+| `Units.slots`, `Units.lane` (`Whatwg/Svg/Scene/Units.lean`) | the vessel's slots and the lane of waiting offers, with their laws | `Queue.place` |
 
-## 10. Questions for the owner
+What the kit lacks is here in its shape, to move into it after the decomposition pass (§12):
 
-1. **Is the tube the one body?** If so, the Queue's living organism (`living.html`, `play.html`)
-   retires once the tube page carries the run. The soft field and Physarum stay in history.
-2. **SMIL for shape morphs?** Row 354 rules one CSS-exact motion value. A morph's path needs SMIL in
-   WebKit. The amendment: a shape track, written as SMIL samples of the exact morph.
-3. **Units: square segments, or rounded pills?** Pills read softer. A pill needs `AREA / c` at least
-   `c` plus the meniscus, so the vessels narrow to 12 px or the area grows.
-4. **Stress:** none, the wall's tone darkened by hoop stress, or the lumen widened by strain? Strain
-   changes a unit's length (one amount in a wider bore), so it breaks whole-pixel units under load.
+| Ask | What | Now in |
+| --- | --- | --- |
+| W30 | the tube form: pieces, the bend law, `mix` and its laws, `reverse`, `cut`, drawing by cubics, whole-number trigonometry | `Form.lean`, `Trig.lean` |
+| W31 | cased layers over any set of tubes | `Draw.lean` (`Mark.layer`) |
+| W32 | a writer of tracks as SMIL `animate`, for WebKit, beside the CSS writer; a film's still for reduced motion | `Motion.lean` (`smil`, `film`, `filmFigure`) |
+| W33 | three changes for a stroke: the intrinsic bend, a width (and a swell), a window along it; each through a pose where given | `Motion.lean` (`Stroke`, `Pose`) |
+
+## 10. Effects, each for a meaning
+
+Every effect carries a meaning and has a source. Chang and Ungar (UIST 1993) group cartoon
+animation's principles for interfaces under solidity, exaggeration and reinforcement. Heer and
+Robertson (InfoVis 2007) ask that a transition keep the graphic valid at every moment. They also
+ask that it stage a complex change, stagger starts, and last as long as needed and no longer.
+
+| Effect | Meaning | Source | Where |
+| --- | --- | --- | --- |
+| a pill with round menisci | one message is one solid amount | Bretherton 1961, plugs and bubbles in tubes; Chang and Ungar, solidity | `unitOf` |
+| a bubble that grows where it stands and, kept, shrinks there | a taker's promise, made and kept | Chang and Ungar, arrivals and departures | `hollowOf`, `Queue.picture` |
+| the world off the picture | offers come from the world and messages go to it | Chang and Ungar: things enter from offscreen and leave the way they came | `Queue.Layout` (`OFF`) |
+| the front first, each unit after the one ahead | FIFO order, as a queue of cars leaves a green light | Heer and Robertson, staggering; the queue-discharge wave of traffic | `Queue.picture` (`STAGGER`) |
+| a valve opens, then the offer moves | the valve's cause before its effect | Heer and Robertson, staging | `OPENING` |
+| an offer meets the closed valve and stops hard | the refusal of backpressure | Chang and Ungar, follow-through; the stop as an impact | `Easing.cubicIn`, `IMPACT` |
+| a surge runs back up the inlet | backpressure reaches the source | Joukowsky, `Δp = ρ a Δv`, the surge travels upstream | the `surge` events |
+| the tube swells round a moving unit | the unit is carried now | peristalsis (Shapiro, Jaffrin and Weinberg 1969) | `swellOf` |
+| a loaded span passes its rest | the weight arrived at once | a beam's dynamic deflection; Chang and Ungar, follow-through | `OVERSHOOT`, `Picture.via` |
+| a valve opens and closes within a step | a slot freed and taken again | the float valve | `Stroke.window` through a pose |
+
+The traffic source is lecture notes on shockwave and kinematic-wave theory, read from a search
+result, not the full text.
+
+## 11. Smoothness and crispness
+
+- **One pixel to the pixel.** A picture's width is its view box's; a page narrower than it scales
+  it down. Every width is a whole, even number of pixels. A straight run's axis lies on a whole
+  pixel, so its edges fall on pixel edges.
+- **Open ends are cut, closed ends are round.** A pipe to the world is cut square, off the picture;
+  a vessel has round heads.
+- **Twenty-one samples a change.** A change is sampled at twenty-one moments of its transition, so a
+  pose moves by a twentieth at most between samples. The settling ease is the kit's spring.
+- **Every moment is lawful.** A bend keeps the bend law at every sample (`Tube.mix_ok`). A tube is
+  mixed from its root, so a pipe stays on the vessel it leaves.
+- **A unit keeps to its pipe.** The units on a pipe whose shape changes take the pipe's time for
+  their path (`Mark.shape`), so they bend with it.
+- Not yet: curvature-continuous joins (clothoid transitions between straights and arcs), and a
+  check that a picture's marks stay in its room.
+
+## 12. The owner's rulings and what comes next
+
+Decisions row 369, from the owner's answers of 2026-10-13: the tube is the one body, morphs are
+written in SMIL, units are pills.
+
+- **The styling pass** follows the owner's direction, in the owner's words: "plumbing drawing
+  precision but designed emphasized deliberately as a custom drawing does". It uses "simple
+  algorithms for using known techniques of depth shading noise". So it has no hand-drawn wobble.
+  The candidates are known, simple techniques:
+  - depth by tone and haloed crossings (row 354 (10));
+  - a tube's shading as a lit highlight and a shaded side along its centreline;
+  - a grain of noise that a look turns on (row 354 (9));
+  - stress shown on the wall.
+- **The decomposition pass** then carries the tube language to the rest of the visual semantics,
+  and the asks W30 to W33 move into the kit.
 
 ## Sources
 
@@ -221,3 +292,15 @@ claims a conservation that does not hold.
 - Road casings drawn before fills (OpenStreetMap rendering):
   <https://help.openstreetmap.org/questions/10088/mapnik-rendering-road-cores-and-casings>
 - Level-pool routing and the storage equation: <https://web.itu.edu.tr/~bulu/water_resources_files/lecture_notes_08.pdf>
+- Chang and Ungar, "Animation: from cartoons to the user interface", UIST 1993, pp. 45–55 (read in
+  full): <https://bibliography.selflanguage.org/_static/animation.pdf>
+- Heer and Robertson, "Animated transitions in statistical data graphics", IEEE TVCG 13(6), 2007
+  (sections 3.2 and 4 read): <https://homes.cs.washington.edu/~jheer/files/2007-AnimatedTrans-InfoVis.pdf>
+- Bretherton, "The motion of long bubbles in tubes", *J. Fluid Mech.* 10 (1961), via later work:
+  <https://www.math.tamu.edu/~daripa/pubs/reprints/jstat-feb10.pdf>
+- Shapiro, Jaffrin and Weinberg, "Peristaltic pumping with long wavelengths at low Reynolds
+  number", *J. Fluid Mech.* 37 (1969), pp. 799–825:
+  <https://resolve.cambridge.org/core/journals/journal-of-fluid-mechanics/article/peristaltic-pumping-with-long-wavelengths-at-low-reynolds-number/792DAD9B680C5074E3E674844DDB79FE>
+- Joukowsky's equation: <https://neutrium.net/articles/fluid-flow/joukowsky-equation/>
+- Queue discharge as a kinematic wave (TU Delft lecture notes):
+  <https://ocw.tudelft.nl/wp-content/uploads/6._Traffic_analysis__characteristics.pdf>
