@@ -17,6 +17,13 @@ and run commands reach it. So it holds no second representation of a session (`A
   and it reruns program admission (`Api.HostSession.start`). A holder that cannot carry a
   certificate starts here: a lowered session (row 326 (2)).
 * **Feeding is the run's.** `Live.feed` plays one event through `Run.feed` and answers its verdict.
+  `Live.feedAll` feeds events in order.
+* **The typed replay is a start and a feed** (decisions rows 98 and 373 (8)). `Api.Typed.replay`
+  starts the certified program from a session header and feeds a `Runner.Command` journal, each
+  command as a remote host's run command (`Run.Event.wire`). So a host answer reaches the machine
+  only after the session admits its reply at the call (`preflight`): at the row's columns, or,
+  where they refuse it, at the call's checked instance (`Live.replay_at_call_instance`,
+  `src/Effect4/Laws/Api/Live.lean`). The raw `Api.replay` stays a named test entry.
 
 The proof field is an equation over `Run.open` and `Run.play`, not a predicate of its own. The law
 graph's `Run.Reached` (`src/Effect4/Laws/Run.lean`) stays the one named predicate of a reached run,
@@ -81,6 +88,39 @@ def feed (l : Live) (event : Run.Event) : Live × Run.Verdict :=
   let fed := l.run.feed event
   (⟨fed.1, opened_feed l event⟩, fed.2)
 
+/-- **Feed events in order**, each through `feed`. The verdicts are not kept: the run keeps the
+phase of every run command that it played. -/
+def feedAll (l : Live) (events : List Run.Event) : Live :=
+  events.foldl (fun l event => (l.feed event).1) l
+
 end Live
+
+namespace Api.Typed
+
+/-- **The typed replay** (decisions rows 98 and 373 (8)): the certified program started from a
+session header, then a `Runner.Command` journal fed through the session.
+
+* **It starts as the session starts.** `Live.start` reruns program admission at the header's table
+  and checks the header against the binding that the holder selected. So the replay refuses each
+  header and program that `Api.HostSession.start` refuses, with its reason (`Live.start_error`).
+* **It feeds the journal.** Each command is a remote host's run command (`Run.Event.wire`), with
+  the claims that its recorder wrote, and `Live.feed` plays it. The replay is `Live.feed` folded
+  over the journal (`Live.feedAll`), so it adds no transition of its own.
+* **Both budgets.** The program is loaded at `budget.compileFuel`, and every command is played at
+  `budget.fuel`.
+* **Phases that can refuse.** A command that the session refuses changes nothing and leaves the
+  verdict `refused` in the run's phases (`Api.Runner.step_refused`). A host answer reaches the
+  machine only through a reply application, after the session's `preflight` admits the reply at
+  its call: at the row's columns, or, where they refuse it, at the call's checked instance
+  (`Live.replay_at_call_instance`, `src/Effect4/Laws/Api/Live.lean`).
+
+The raw `Api.replay` takes a decision tape and admits nothing. It stays a named test entry. -/
+def replay {table : RowTable} (t : Api.Typed table) (binding : String) (header : Header)
+    (journal : List Command) (budget : Api.Budget := {}) : Except Api.HostSession.Refusal Live :=
+  match Live.start t.program table binding header budget with
+  | .error why => .error why
+  | .ok l => .ok (l.feedAll (journal.map .wire))
+
+end Api.Typed
 
 end Effect4
