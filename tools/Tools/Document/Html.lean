@@ -4,7 +4,7 @@ import Tools.View.Tokens
 import Whatwg.Html.Print.Render
 import Whatwg.Html.Content.Valid
 import Whatwg.Html.Content.Explain
-import Whatwg.Html.Node.Region
+import Whatwg.Html.Node.Region.Words
 
 /-!
 # Tools.Document.Html — a document's blocks as HTML
@@ -28,8 +28,9 @@ The blocks:
   (`Tools.Document.Figure`), in a region named by the figure's caption, and the caption; then the
   figure in words, which the figure names as its description (`aria-describedby`): each node,
   linked, with its status mark and the nodes it points to, for a reader who does not see the
-  picture. The identifiers come from the figure's key, written once (`Region.captionId`,
-  `Region.wordsId`). The words follow the figure, so the caption stays beside the picture;
+  picture. The package writes the pair (`Region.withWordsRaw`, ask W13): the identifiers come
+  from the figure's key, written once, and the words follow the figure, so the caption stays
+  beside the picture;
 * a status is a `span` whose `data-status` holds the word; the stylesheet draws the mark of its
   shape before the word, keyed on that attribute (`page.css`; decisions row 354, point 2);
 * a reference is a link whose target the caller resolves: a part of the same page by its
@@ -110,11 +111,8 @@ def algebra (target : String → String := fragment) : Algebra (Nat → List Raw
         (if n.status.isEmpty then [] else [.text " ", el "span" [.text n.status] [("class", "status"), ("data-status", n.status)]]) ++
         (if n.detail.isEmpty then [] else [.text (", " ++ n.detail)]) ++
         (if next.isEmpty then [] else [.text (" → " ++ ", ".intercalate next)])
-    [el "figure" [
-        regionRaw (.labelledBy (Region.captionId k)) [pic] (some "scroll"),
-        el "figcaption" [.text caption] [("id", Region.captionId k)]]
-        [("id", k), ("class", "graph"), ("aria-describedby", Region.wordsId k)],
-     Region.wordsRaw k "The figure in words" [el "ul" (ns.map fun n => el "li" (word n))]]
+    Region.withWordsRaw k [pic] [.text caption] "The figure in words"
+      [el "ul" (ns.map fun n => el "li" (word n))] (some "graph") (some "scroll")
   part k t body depth :=
     -- the part's key beside its title: its identity, linked to itself (row 366, point 4)
     let heading := el ("h" ++ toString (min 6 depth))
