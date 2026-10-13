@@ -199,41 +199,4 @@ theorem issued_mono (id : Nat) (before after : NativeMachine) (extended : RunMac
   simp only [issued, appended, List.countP_append]
   omega
 
-/-- An actual native action lifts its shared scalar bound without another heap census. -/
-theorem action_debit (id : Nat) (root : NativeEff) (table : RowTable) (machine : NativeMachine)
-    (fiber : SourceFiber) (yielding : Bool) (action : NAction)
-    (bounded : Machine.WriterWeights.LocalBound (model id) machine fiber
-      (evaluatePrim.withFiber (interpAt root machine.completedExits table) machine fiber yielding action)) :
-    Debit id machine fiber
-      (evaluatePrim.withFiber (interpAt root machine.completedExits table) machine fiber yielding action) := by
-  have references := action_refs root machine.completedExits table machine fiber yielding action
-  have recorded := issued_mono id machine _ (withFiber_extends
-    (interp := interpAt root machine.completedExits table) (m := machine) (f := fiber)
-    (yielding := yielding) (action := action))
-  unfold Machine.WriterWeights.LocalBound at bounded
-  change outside id fiber.id _ + frame id _ ≤ outside id fiber.id machine + frame id fiber.frame at bounded
-  unfold Debit
-  rw [references]
-  omega
-
-/-- Actual native masking consumes only its supplied body reservation. -/
-theorem mask_debit (id : Nat) (root : NativeEff) (table : RowTable) (machine : NativeMachine)
-    (fiber : SourceFiber) (yielding : Bool) (body : NCode) (flag : Bool)
-    (carried : current id body ≤ current id fiber.frame.current) :
-    Debit id machine fiber
-      (evaluatePrim.withFiber (interpAt root machine.completedExits table) machine fiber yielding (.setInterruptible body flag)) := by
-  apply action_debit id root table machine fiber yielding
-  exact Machine.WriterWeights.mask_bound (model id) _ machine fiber yielding body flag
-    (fun _ => rfl) (fun _ => rfl) carried
-
-/-- Actual native forking transfers only its supplied child reservation. -/
-theorem fork_debit (id : Nat) (root : NativeEff) (table : RowTable) (machine : NativeMachine)
-    (fiber : SourceFiber) (yielding : Bool) (body : NCode) (options : Supervision.ForkOptions) (site : List Nat)
-    (carried : current id body ≤ current id fiber.frame.current) :
-    Debit id machine fiber
-      (evaluatePrim.withFiber (interpAt root machine.completedExits table) machine fiber yielding (.fork body options site)) := by
-  apply action_debit id root table machine fiber yielding
-  exact Machine.WriterWeights.fork_bound (model id) _ machine fiber yielding body options site
-    (fun _ => rfl) carried
-
 end Test.Dogfood.Scenario.Atomic.WriterMachine

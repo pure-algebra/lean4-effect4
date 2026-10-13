@@ -326,17 +326,20 @@ theorem carried (built : Api.Built) (admitted : Api.Author.build (shop .none) = 
     exact (restricted built admitted).1.not_parallel source.2
   all_goals exact True.intro
 
-/-- Every action of an owned thunk spends only its producer's reservation. -/
+/-- Every action of an owned thunk spends only its producer's reservation: the ledger-generic
+`PlaceFunding.action_debit` at the writer weights, the heap kept by `action_refs`. -/
 theorem action_debit (built : Api.Built) (admitted : Api.Author.build (shop .none) = .ok built)
     (id : Nat) (member : id ∈ requests) (m : NativeMachine) (fiber : SourceFiber) (yielding : Bool)
     (suspended : EffThunk) (next : NAction) (selected : fiber.frame.current = .withFiber suspended)
     (owned : ThunkAt built.program suspended)
     (produced : (interpAt built.program m.completedExits built.table).withFiberOf suspended = some next) :
-    WriterMachine.Debit id m fiber
+    (WriterMachine.ledger id).IterDebit m fiber
       (evaluatePrim.withFiber (interpAt built.program m.completedExits built.table) m fiber yielding next) :=
-  WriterMachine.action_debit id built.program built.table m fiber yielding next
-    (Machine.WriterWeights.action_bound (model id) _ (action_inputs id built.program m.completedExits built.table)
-      m fiber yielding next (carried built admitted id member m fiber suspended next selected owned produced))
+  PlaceFunding.action_debit (no_queue id) (events id) (model id) (fun _ => rfl) _
+    (action_inputs id built.program m.completedExits built.table) m fiber yielding next
+    (carried built admitted id member m fiber suspended next selected owned produced)
+    (Nat.le_of_eq (congrArg (Writer.heapCount id)
+      (action_refs built.program m.completedExits built.table m fiber yielding next)))
 
 /-! ## The primitive arms -/
 
@@ -388,8 +391,7 @@ theorem primitive_debit (built : Api.Built) (admitted : Api.Author.build (shop .
       intro suspended next selected produced
       have thunkOwned := held.frame.1
       rw [selected] at thunkOwned
-      exact debit_ledger id m fiber _
-        (action_debit built admitted id member m fiber yielding suspended next selected thunkOwned produced)
+      exact action_debit built admitted id member m fiber yielding suspended next selected thunkOwned produced
     sync := by
       intro suspended state value selected written
       have thunkOwned := held.frame.1

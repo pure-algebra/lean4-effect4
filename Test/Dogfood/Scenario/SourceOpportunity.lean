@@ -354,25 +354,6 @@ theorem atomic_frame_install_debit (compileFuel : Nat) (b : Api.Built)
     (atomic_loops_clear b built i member) m.completedExits b.table m fiber yielding owned unique
     (List.mem_of_find?_eq_some found)
 
-/-- Actual Workers child launches transfer their reservation at every job count.
-The suspension and action come from the fiber in the admitted history. -/
-theorem workers_native_fork_in_debit (total compileFuel : Nat) (b : Api.Built)
-    (built : Api.Author.build (Workers.crew total) = .ok b) (m : NativeMachine)
-    (history : Effect4.Run.HistoryOf b compileFuel m) (id : FiberId)
-    (fiber : SourceScope.SourceFiber) (lookup : m.fiber? id = some fiber)
-    (i : Nat) (member : i ∈ [1, 2]) (yielding : Bool) (suspended : EffThunk)
-    (program : NCode) (options : Supervision.ForkOptions) (scope : Nat) (site : List Nat)
-    (selected : fiber.frame.current = .withFiber suspended)
-    (produced : (interpAt b.program m.completedExits b.table).withFiberOf suspended = some (.forkIn program options scope site)) :
-    Debit b.program (Programs.crewAcquire i) m fiber
-      (evaluatePrim.withFiber (interpAt b.program m.completedExits b.table) m fiber yielding (.forkIn program options scope site)) := by
-  have source := SourceFragment.workers_admitted_history_at total compileFuel b built m history
-  have owned := (SourceScope.configuration_fiber b.program m id fiber source lookup).frame
-  have clear : ClearFinalizers b.program (Programs.crewAcquire i) := by
-    rw [Programs.workers_built_program total b built]
-    exact workers_clear total i member
-  exact interpreted_fork_in_debit b.program _ b.table m fiber yielding suspended program options scope site clear owned selected produced
-
 /-- Every queued Workers resume retains the actual global source reservation.
 The queued callback is read from a dispatcher in the admitted history. -/
 theorem workers_queued_resume_debit (total compileFuel : Nat) (b : Api.Built)

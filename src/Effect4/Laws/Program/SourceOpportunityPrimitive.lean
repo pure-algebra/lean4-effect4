@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.SourceOpportunityNative
 import Effect4.Laws.Program.PlaceFunding.Primitive
+import Effect4.Laws.Program.PlaceFunding.Actions
 import Effect4.Laws.Program.PlaceLedgerConnect
 
 /-!
@@ -185,6 +186,39 @@ theorem register_race_debit (root : NativeEff) (q : List Nat) (m : NativeMachine
   unfold registerRace RunMachine.race?
   rw [empty]
   exact Nat.le_refl _
+
+/-- Every native action spends only the source reservation of its actual producer: the
+ledger-generic `PlaceFunding.action_debit` at the source weights. The sequential source excludes a
+parallel close; a source-owned close installs no selected opportunity (`close_scope_zero`).
+The race-freedom and distinct-id premises are no longer read.
+Consumer: complete native evaluator and unchanged Workers/Atomic history bounds. -/
+theorem native_action_debit (root : NativeEff) (q : List Nat) (table : RowTable)
+    (m : NativeMachine) (fiber : SourceFiber) (yielding : Bool) (selected : NAction)
+    (source : ActionAt root selected) (sequential : SequentialSource root)
+    (_raceFree : RaceFreeSource root) (clear : ClearFinalizers root q)
+    (scopes : ScopesAt root m.state.scopes)
+    (_unique : (m.fibers.map (fun fiber => fiber.id)).Nodup)
+    (carried : action root q selected ≤ current root q fiber.frame.current) :
+    Debit root q m fiber (evaluatePrim.withFiber (interpAt root m.completedExits table) m fiber yielding selected) := by
+  have inputs : Machine.WriterWeights.ActionInputs (weightModel root q)
+      (interpAt root m.completedExits table) :=
+    ⟨fun _ => rfl, fun _ => rfl, fun _ _ => rfl, fun _ => rfl, fun _ _ => rfl, fun _ => rfl⟩
+  have launched : Machine.WriterWeights.Carried (weightModel root q)
+      (interpAt root m.completedExits table) m fiber selected := by
+    cases selected
+    case fork body options site => exact carried
+    case forkIn body options scope site => exact carried
+    case forkScoped body options site => exact carried
+    case setInterruptible body flag => exact carried
+    case closeScope scope exit =>
+      intro state program closed
+      exact close_scope_zero root q table m.completedExits scope exit _ fiber.id clear m.state state
+        scopes program closed
+    case closePar finalizers => exact sequential.not_parallel source.2
+    all_goals exact True.intro
+  exact (source_debit_iff root q m fiber _).mp
+    (PlaceFunding.action_debit (source_no_queue root q) (source_events root q) (weightModel root q)
+      (fun _ => rfl) _ inputs m fiber yielding selected launched (Nat.le_refl _))
 
 /-- Actual primitive evaluation spends its acting frame and preserves off-owner reservations.
 The source restrictions are discharged by the unchanged application programs.

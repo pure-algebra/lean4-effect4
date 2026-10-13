@@ -6,9 +6,8 @@ import Effect4.Laws.Machine.WriterWeights
 Concept: scope-lifetime-finalization, R11.
 Question: the action arm of the evaluator debit `PlaceFunding.Evaluation`, for every place
 ledger whose fiber row reads a frame weight model. The first consumer is the Atomic cleanup
-writer (`Atomic.WriterHistory.evaluation`); the Workers and QueueWorkers writer ledgers reuse it.
-The source ledger's arms (`SourceScope.Opportunities.native_action_debit`) prove the same
-inequalities at one weight; this module states them once for every weight.
+writer (`Atomic.WriterHistory.evaluation`) and the source ledger
+(`SourceScope.Opportunities.native_action_debit`), both through `PlaceFunding.action_debit`.
 Reach: every frame weight model, interpreter, machine, fiber, latch and fiber action. The instance
 weighs the codes the arms install (`ActionInputs`) and the programs an action carries (`Carried`).
 The laws read the acting frame and the stored rows only. They bound no store, trace, race or
@@ -133,9 +132,8 @@ theorem link_plan_rows (interp : RunInterp ν σ β ε δ ι α χ St)
 /-- **Every native action arm keeps the other rows' reservations and spends the acting frame's**,
 in every frame weight model whose installed codes the instance weighs. Placement: concept
 `scope-lifetime-finalization`, R11; the action arm of `PlaceFunding.Evaluation` for the
-cleanup-log writer ledgers. Reach: every interpreter, machine, fiber and latch, and every action
-but a parallel close. It bounds no store or trace. Consumer: the Atomic writer's primitive debit
-(`Test.Dogfood.Scenario.Atomic.WriterNative`). -/
+source and cleanup-log ledgers. Reach: every interpreter, machine, fiber and latch, and every
+action but a parallel close. It bounds no store or trace. Consumer: `PlaceFunding.action_debit`. -/
 theorem action_bound (model : FrameWeights.Model ν σ β ε δ ι α)
     (interp : RunInterp ν σ β ε δ ι α χ St) (inputs : ActionInputs model interp)
     (machine : RunMachine ν σ β ε δ ι α χ St) (fiber : RunFiber ν σ β ε δ ι α χ)
