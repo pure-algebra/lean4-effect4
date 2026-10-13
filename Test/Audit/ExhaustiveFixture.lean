@@ -17,7 +17,8 @@ namespace Test.Audit.ExhaustiveFixture
 open Effect4.Program (Ty Term)
 
 /-- Every constructor of `Ty` named, no wildcard: appending a constructor refuses this
-definition. The data wave of 2026-10-03 appended the last eight arms. -/
+definition. The data wave of 2026-10-03 appended eight arms, and the typed context of 2026-10-11
+appended the last one. -/
 def catchAllAbsent : Ty → Nat
   | .never => 0
   | .unit => 1
@@ -47,6 +48,7 @@ def catchAllAbsent : Ty → Nat
   | .undefined => 25
   | .number => 26
   | .bytes => 27
+  | .contextOf _ => 28
 
 /-- The same match closed by a wildcard: appending a constructor leaves it compiling. -/
 def catchAllPresent : Ty → Nat

@@ -90,7 +90,7 @@ Effect4.Codegen.Schema.check (Check) Effect4.Codegen.Schema.printAlgebra
 
 /--
 info: #exhaustive_gate Effect4.Program.Ty (family [Effect4.Program.Ty]) under Test.Audit.ExhaustiveFixture: 3 match(es) read it, 1 with no catch-all — appending a constructor refuses exactly those
-  Test.Audit.ExhaustiveFixture.catchAllAbsent	Test.Audit.ExhaustiveFixture	Test.Audit.ExhaustiveFixture.catchAllAbsent.match_1	discr 0	alts 28	catchAll false
+  Test.Audit.ExhaustiveFixture.catchAllAbsent	Test.Audit.ExhaustiveFixture	Test.Audit.ExhaustiveFixture.catchAllAbsent.match_1	discr 0	alts 29	catchAll false
   Test.Audit.ExhaustiveFixture.catchAllPresent	Test.Audit.ExhaustiveFixture	Test.Audit.ExhaustiveFixture.catchAllPresent.match_1	discr 0	alts 4	catchAll true
   Test.Audit.ExhaustiveFixture.privateCatchAll [private]	Test.Audit.ExhaustiveFixture	Test.Audit.ExhaustiveFixture.privateCatchAll.match_1	discr 0	alts 2	catchAll true
 #exhaustive_gate done: 3 rows; 1 modules under Test.Audit.ExhaustiveFixture scanned
