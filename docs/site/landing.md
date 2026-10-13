@@ -1,15 +1,27 @@
 # Effect4
 
-Effect4 is Effect's runtime written in Lean as a model with defined semantics. A program is data: a typed term that Lean checks, runs on a reference machine, lowers to OCaml and prints as TypeScript.
+Effect4 makes Effect-style computations explicit, inspectable program data, and Lean defines their structure, their execution rules and their construction checks (`README.md`). The product is Effect codegen: a program syntax (`Eff`) that prints as Effect TypeScript and reads back. A compiler takes it to the frame machine of Effect rc.112, and a reference fiber machine runs those frames.
 
-Each claim about that runtime carries its evidence. The evidence is a theorem that is {proved}, a theorem proved {modulo} named goals, or a planned {goal} whose proof is to come.
+The site serves two readers: a person who writes or reviews Effect programs, and an agent that reads the same pages as JSON. Effect TypeScript rc.112 is the first target and the behavioural reference, never the owner of the semantics.
 
-## Start here {#start}
+Each property of the runtime carries its formal evidence (`docs/core/semantics.md`). That evidence includes theorems that are {proved}, theorems proved {modulo} open goals, and planned {goal} markers whose proofs remain in progress.
 
-- [Semantics evidence](semantics/): every claim by concept, its status and its Lean statement, and the plan of goals that the open requirements rest on.
-- [Document specimen](specimen/): every kind of block and status mark, as the pages draw them.
-- [Contents](contents/): every page of the site.
+## Guides {#guides}
 
-## For a framework {#contract}
+- [How to read this site](guides/reading/): explains page structure, status marks, margin outlines, and JSON exports.
+- [The fiber machine on one page](guides/machine/): summarizes fibers, frames, decision tapes, execution frontiers, and resource scopes.
+- [What the evidence means](guides/evidence/): defines theorem statuses, planned goals, axiom boundaries, and observation scopes.
 
-Every page is also its document as JSON, in the format `effect4-document/1`: see [the first page of the semantics](semantics/document.json). The pages and their parts are in [site.json](site.json). The report behind the semantics pages is [report.json](semantics/report.json).
+## Formal semantics and requirements {#semantics}
+
+- [Semantics evidence](semantics/): lists claims across the ten semantic concepts with Lean statements and dependency status.
+- [System requirements](semantics/plan/): the requirements R1 to R14, from program syntax to deterministic replay, each with the goals it rests on.
+- [Document specimen](specimen/): displays every kind of block and every status mark, as the pages draw them.
+- [Contents](contents/): indexes every page across the documentation site.
+
+## Machine contracts and exports {#contracts}
+
+Every documentation page exports structured JSON using the `effect4-document/1` schema:
+- Read [the first page of the semantics](semantics/document.json) for one page's document: its title, its parts and its blocks.
+- Read [site.json](site.json) for every page with its title and the keys of its parts.
+- Read [report.json](semantics/report.json) for the semantics report: each claim with its status, and the plan of goals.
