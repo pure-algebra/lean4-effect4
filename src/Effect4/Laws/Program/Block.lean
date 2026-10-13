@@ -33,15 +33,21 @@ namespace Effect4.Program.Denote
 open Effect4 Effect4.Machine Effect4.Program
 open Effect4.Laws.Effects.Mrec
 
+/-- **A program's operations renamed**: every `perform op r` becomes `perform (f op) r`. A fold:
+the identity algebra with its `perform` field moved. Its readings: a program's invocations as
+rows (`callsAsRows`, here) and a body's parameter runs as rows (`paramsAsRows`,
+`Laws/Program/ParamRows.lean`). -/
+def mapOps (f : NativeOp → NativeOp) : NativeEff → NativeEff :=
+  cata_eff { EffAlgebra.id NativeOp with eff_perform := fun op r => .perform (f op) r }
+
 /-- An invocation as a row: `call k` is the row `n + k`, after the host's `n` rows. -/
 def callAsRow (n : Nat) : NativeOp → NativeOp
   | .call k => .external (n + k)
   | op => op
 
 /-- **A program's invocations as rows**: every `perform (call k) r` becomes
-`perform (external (n + k)) r`. A fold: the identity algebra with its `perform` field moved. -/
-def callsAsRows (n : Nat) : NativeEff → NativeEff :=
-  cata_eff { EffAlgebra.id NativeOp with eff_perform := fun op r => .perform (callAsRow n op) r }
+`perform (external (n + k)) r`. -/
+def callsAsRows (n : Nat) : NativeEff → NativeEff := mapOps (callAsRow n)
 
 /-- The signature of a program with a block: the stores and the host rows, then the block's. -/
 abbrev BlockSig (table block : RowTable) : Effects.Signature.{0, 0} :=
@@ -139,7 +145,7 @@ theorem blockTree_call (table block : RowTable) (j : Nat) (hj : j < block.length
   have hd : denoteRows (table ++ block) (callsAsRows table.length (.perform (.call j) r)) env =
       (Effects.Program.vis (Sum.inr ⟨⟨table.length + j, hlt⟩, v⟩) Effects.Program.pure :
         Effects.Program (RowsSig (table ++ block)) ExitV) := by
-    simp only [callsAsRows, cata_eff, callAsRow, denoteRows, hv, hlt, dite_true, rowCall]
+    simp only [callsAsRows, mapOps, cata_eff, callAsRow, denoteRows, hv, hlt, dite_true, rowCall]
   have e : (⟨table.length + j - table.length, lt_block hlt hn⟩ : Fin block.length) = ⟨j, hj⟩ :=
     Fin.ext (Nat.add_sub_cancel_left _ _)
   rw [blockTree, hd]
