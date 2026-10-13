@@ -391,6 +391,8 @@ import Test.Dogfood.Scenario.TodoService
 import Test.Dogfood.Bank
 -- Definitions with program parameters and invocations with programs, authored (row 340, seat IMPOSE).
 import Test.Program.AuthoringInvoke
+-- An application whose entries invoke its definitions, a banked block among them (row 378, IMPOSE).
+import Test.Dogfood.ApplicationDefs
 
 /-!
 # Effect4 test battery
