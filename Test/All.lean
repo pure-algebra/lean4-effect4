@@ -345,6 +345,7 @@ import Test.Program.PubSubSingle
 import Test.Program.TyCacheControls
 import Test.Audit.SummaryControls
 import Test.Audit.SiteControls
+import Test.Audit.GlyphControls
 
 -- Scenario proof structures and their independent controls.
 import Test.Dogfood.Proofs.HostJournal
