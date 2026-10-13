@@ -234,6 +234,35 @@ def Grid.inward (g : Grid) (w : Int) (pts : List (Int × Int)) : List (Int × In
     if g.sample (p.1 + nx) (p.2 + ny) ≥ g.sample (p.1 - nx) (p.2 - ny) then (p.1 + nx, p.2 + ny)
     else (p.1 - nx, p.2 - ny)
 
+/-- **The contours at a level as walls whose width follows the local radius**: each point of a
+loop moves inward by `wOf g`, where `g` is the field's slope across the wall at that point, in
+thousandths of the field per pixel. Near a source of radius `R`, the slope at the body's level
+falls as `1/R`, so a wall whose width is a constant times `1/g` is as thick as its tube is wide:
+Laplace's law at a constant wall stress (`σ = P r / h`). -/
+def Grid.walls (g : Grid) (level : Int) (wOf : Int → Int) (keep : Nat := 3) : List (List Cubic) :=
+  (g.loops level).flatMap fun loop =>
+    let pts := thin keep (loop.map (g.crossing level))
+    if pts.length < 3 then [] else
+    let arr := pts.toArray
+    let n := arr.size
+    let inner := (List.range n).map fun k =>
+      let p := arr.getD k (0, 0)
+      let a := arr.getD ((k + n - 1) % n) p
+      let b := arr.getD ((k + 1) % n) p
+      let tx := b.1 - a.1
+      let ty := b.2 - a.2
+      let len : Int := Grow.isqrt (tx * tx + ty * ty).toNat
+      if len == 0 then p else
+      -- the unit normal, one pixel long, in thousandths
+      let nx := -ty * 1000 / len
+      let ny := tx * 1000 / len
+      let fp := g.sample (p.1 + nx) (p.2 + ny)
+      let fm := g.sample (p.1 - nx) (p.2 - ny)
+      let w := wOf ((fp - fm).natAbs / 2)
+      if fp ≥ fm then (p.1 + nx * w / 1000, p.2 + ny * w / 1000)
+      else (p.1 - nx * w / 1000, p.2 - ny * w / 1000)
+    [closed pts, closed inner]
+
 /-- **The contours at a level as lines of one width**: each loop thinned, its inner edge `w`
 thousandths of a pixel inward, both drawn smooth. Filled by the even-odd rule, each loop is a
 line of constant width along the contour, so every line of a picture drawn from one field reads

@@ -3,33 +3,39 @@ import Tools.View.Living.Physarum
 import Tools.View.Living.Soft
 
 /-!
-# Tools.View.Living.Organism — the Queue as a living network (decisions row 367; the note
-`docs/research/2026-10-13-living-quantities/`)
+# Tools.View.Living.Organism — the Queue as a living network, drawn by the laws of tissue
+(decisions row 367; `docs/research/2026-10-13-living-quantities/`, the anatomy note)
 
 The Queue's numbers drawn as one organism. Its places stand in the order units flow: the world,
 the inlet where offers wait, the vessel that holds the messages, the outlet where takers wait, and
-the world again. The places are the module's roles, as data (`places`); they move to
-`Library/Queue/View.lean` with VS-3. Everything else is folded from the run:
+the world again. The places are the module's roles, as data; they move to
+`Library/Queue/View.lean` with VS-3. Everything else is folded from the run, and every measure of
+the body is a law of physiology applied to a quantity of the Queue, not a choice of taste:
 
 1. **The marking.** Each frame's cell (`CellSheet.frames`, the Queue's own step terms evaluated)
-   read into its places: the messages held, the offers waiting with what they carry, the takers
-   waiting.
-2. **The flows of a step.** The keyed join of the marking before and after: a message is keyed by
-   itself, and it moves from the place it stood in to the place it stands in, or out to the world
-   when the step answers it. It crosses every channel between the two, so the flux of a channel in
-   a beat is the number of messages that crossed it.
-3. **The channels' life.** Each channel's conductivity is the Physarum fold of its fluxes
-   (`Living.Physarum`): it thickens with use and withers when idle. Its width follows the
-   conductivity's fourth root, since a tube's conductivity is `π r⁴ / 8η` (Hagen–Poiseuille, in
-   Tero et al.'s equation 1).
-4. **The body.** The vessel, the channels and the units that wait are sources of one soft field
-   (`Living.Soft`): the membrane is the band between two of its levels, so channels meet the
-   vessel in organic collars, the vessel swells with what it holds, and the inlet swells where
-   offers press.
+   read into its places.
+2. **The flux of a step.** The keyed join of two markings: a message moves from the place it stood
+   in to the place it stands in, crossing every channel between; a channel's flux in a beat is the
+   number of messages that crossed it.
+3. **A channel's sheath: its history** (Physarum, Tero et al. 2010). Its conductivity is the fold
+   of its fluxes, and its radius the conductivity's fourth root (Hagen–Poiseuille,
+   `D = π r⁴ / 8η`). **Its core: this step.** A lit core as wide as the beat's flux, so history and
+   the present read apart.
+4. **The vessel's distension: its pressure** (Laplace's law with Hooke's, a thin elastic tube:
+   `ΔR / R = (R / E h) ΔP`). The transmural pressure is the messages held less the takers
+   waiting, over the capacity: a full vessel distends, and an empty one under the suction of
+   waiting takers draws in. The deficit shows on the body, never as a swelling.
+5. **Room** (the cell-free layer of the Fåhræus effect). A waiting offer holds a message, so it
+   takes room at the inlet: its size and the layer around it. A waiting taker holds nothing and
+   takes none: it docks at the outlet as a receptor. A message in a channel narrower than itself
+   distends the channel around it, single file, as a bolus does.
+6. **The wall** (Laplace's law at a constant wall stress, `σ = P r / h`). A wall is as thick as its
+   tube is wide, by one ratio; the local radius is read from the field's slope at the wall.
 
-On the body stand the units: a droplet for each message (filled: kept), a hollow ring for each
-slot of room (promised), a parked request's hollow box for each offer and each taker that waits,
-and a fine arc for each message that moved in the beat.
+The membrane and the lamellae inside it are contours of the one soft field (`Living.Soft`), so
+every line of the body comes from one structure. On the body stand the units: a solid droplet for
+each message held (kept), its value above it; a hollow ring for each slot of room (promised); a
+parked request's hollow box for each offer and each taker that waits.
 -/
 
 namespace Tools.View.Living.Organism
@@ -120,71 +126,116 @@ def conductivities (ms : List Marking) : List (List Nat) :=
     0 :: Physarum.history RATE (beats.map fun fl => fl.getD k 0 * Physarum.ONE)
   (List.range ms.length).map fun i => perChannel.map (·.getD i 0)
 
-/-! ## The body -/
+/-! ## The tissue: the constants of the laws -/
 
 /-- The picture's room, its axis, and where the places stand. -/
 def W : Int := 640
-def H : Int := 140
-def CY : Int := 70
-def PITCH : Int := 40
-def vx0 : Int := 250
-def vx1 (cap : Nat) : Int := vx0 + PITCH * cap + 24
-def inletX : Int := vx0 - 80
-def outletX (cap : Nat) : Int := vx1 cap + 80
+def H : Int := 130
+def CY : Int := 65
+def PITCH : Int := 34
+def vx0 : Int := 270
+def vx1 (cap : Nat) : Int := vx0 + PITCH * cap + 26
+def inletX : Int := vx0 - 110
+def outletX (cap : Nat) : Int := vx1 cap + 92
 
 /-- A slot's centre, the front first, nearest the outlet. -/
-def slotX (cap k : Nat) : Int := vx1 cap - 32 - PITCH * k
+def slotX (cap k : Nat) : Int := vx1 cap - 30 - PITCH * k
+
+/-- A droplet's radius, and the cell-free layer around a unit (Fåhræus): the room a unit keeps
+from a wall. -/
+def DROP_R : Int := 9
+def CLEARANCE : Int := 4
+
+/-- The vessel's radius of influence at rest, its compliance (the share of the rest radius it
+gains under the pressure of a full vessel: Laplace with Hooke), and the least share it keeps under
+suction. -/
+def VESSEL_R : Nat := 40
+def COMPLIANCE : Int := 220
+def COLLAPSE : Int := 620
+
+/-- The field's level is at about 0.69 of a source's radius of influence at the body's level, so a
+visible radius `r` asks a source of radius `r · 1000 / 686`. -/
+def reach (visible : Int) : Nat := (visible * 1000 / 686).toNat
 
 /-- The fourth root, in thousandths, of a conductivity in thousandths. -/
 def root4 (d : Nat) : Nat := Grow.isqrt (Grow.isqrt (d * 1000000000))
 
-/-- **A channel's radius of influence** from its conductivity: its visible half-width grows from
-two pixels with the fourth root of the conductivity (Hagen–Poiseuille), and the field's level
-stands at about 0.63 of the radius. -/
-def channelR (d : Nat) : Nat := (2000 + 8 * root4 d) * 1600 / 1000000
+/-- **A channel's sheath** from its conductivity: its visible half-width grows from two pixels with
+the conductivity's fourth root (Hagen–Poiseuille). -/
+def channelR (d : Nat) : Nat := reach ((2000 + 7 * (root4 d : Int)) / 1000)
 
 /-- The ends of each channel. -/
 def channelEnds (cap : Nat) : List ((Int × Int) × (Int × Int)) :=
-  [((0, CY), (inletX, CY)), ((inletX, CY), (vx0 + 16, CY)),
-   ((vx1 cap - 16, CY), (outletX cap, CY)), ((outletX cap, CY), (W, CY))]
+  [((0, CY), (inletX, CY)), ((inletX, CY), (vx0 + 14, CY)),
+   ((vx1 cap - 14, CY), (outletX cap, CY)), ((outletX cap, CY), (W, CY))]
 
 /-- Where the `j`-th offer and the `j`-th taker wait, the front nearest the vessel. -/
-def offerX (j : Nat) : Int := inletX + 18 - 46 * j
-def takerX (cap j : Nat) : Int := outletX cap - 18 + 46 * j
+def offerX (j : Nat) : Int := inletX + 12 - 44 * j
+def takerX (cap j : Nat) : Int := outletX cap - 12 + 44 * j
 
-/-- **The sources of the body's field**: the vessel, the channels at their conductivities, a
-swelling for each message held, and one for each request that waits. -/
-def sources (m : Marking) (ds : List Nat) : List Soft.Source :=
-  let cap := m.capacity
-  [Soft.Source.segment (vx0 + 30) CY (vx1 cap - 30) CY 46] ++
-  ((channelEnds cap).zip ds).map (fun (((ax, ay), (bx, by_)), d) =>
-    Soft.Source.segment ax ay bx by_ (max 6 (channelR d))) ++
-  [Soft.Source.point inletX CY 22 450, Soft.Source.point (outletX cap) CY 22 450] ++
-  (List.range m.held.length).map (fun k => Soft.Source.point (slotX cap k) CY 26 450) ++
-  (List.range m.offers.length).map (fun j => Soft.Source.point (offerX j) CY 30 900) ++
-  (List.range m.takers.length).map (fun j => Soft.Source.point (takerX cap j) CY 30 900)
+/-- **What the body's field reads**: the conductivities, the vessel's transmural pressure in
+thousandths of a full vessel (negative under suction), each waiting offer's place and presence,
+and the messages in transit through a channel. -/
+structure Body where
+  cap : Nat
+  ds : List Nat
+  pressure : Int
+  offers : List ((Int × Int) × Int) := []
+  transit : List (Int × Int) := []
+
+/-- **The vessel's radius** under its transmural pressure: the thin elastic tube's distension,
+linear in the pressure, never below the share it keeps under suction. -/
+def Body.vesselR (b : Body) : Nat :=
+  let r : Int := VESSEL_R
+  (max (r * COLLAPSE / 1000) (r + r * COMPLIANCE * b.pressure / 1000000)).toNat
+
+/-- **The sources of the body's field**: the vessel at its distension, the channels at their
+sheaths, the room of each waiting offer, and each message in transit. Nothing else: a place with
+nothing in it has no field of its own. -/
+def Body.sources (b : Body) : List Soft.Source :=
+  [Soft.Source.segment (vx0 + 30) CY (vx1 b.cap - 30) CY b.vesselR] ++
+  ((channelEnds b.cap).zip b.ds).map (fun (((ax, ay), (bx, by_)), d) =>
+    Soft.Source.segment ax ay bx by_ (max (reach 3) (channelR d))) ++
+  b.offers.map (fun ((x, y), pres) => Soft.Source.point x y (reach (17 + CLEARANCE)) (pres.toNat)) ++
+  b.transit.map (fun (x, y) => Soft.Source.point x y (reach (DROP_R + CLEARANCE)) 1000)
 
 /-- The grid of the body: two pixels a sample, reaching `MARGIN` past each side of the picture,
 beyond any channel's reach, so the field is zero on its border. -/
 def STEP : Nat := 2
 def MARGIN : Int := 48
 
-/-- The body's level, in thousandths of the field: its membrane. A low level lets the sources'
-fields blend widely, so the necks between them are soft. -/
+/-- The body's level: its membrane. A low level lets the sources' fields blend widely, so the necks
+are soft. -/
 def OUTER : Int := 220
 
 /-- The lamellae's levels inside the membrane, each a fainter line. -/
 def LAMELLAE : List Int := [430, 640]
 
-/-- The width of the membrane and of a lamella, in thousandths of a pixel. -/
-def MEMBRANE_W : Int := 1400
-def LAMELLA_W : Int := 900
+/-- **The wall's width from the field's slope** (Laplace at a constant wall stress): at the body's
+level the slope across a source of radius `R` is about `1321 / R` thousandths a pixel, so the
+local radius is `1321 / slope`, and the wall is that radius over `WALL_RATIO`, between a fine and
+a heavy line. -/
+def WALL_RATIO : Int := 11
+def wallOf (ratioScale : Int) (slope : Int) : Int :=
+  max 800 (min 3000 (686 * 1321 / max 1 slope / WALL_RATIO * ratioScale / 1000))
 
-/-- **The body of a field**: a faint fill inside the membrane, the membrane as one line, and the
-lamellae inside it, all contours of the one field. -/
+/-- **The body of a field**: a faint fill inside the membrane, the membrane as a wall as thick as
+its tube is wide, and the lamellae inside it, all contours of the one field. -/
 def body (g : Soft.Grid) : List (Keyed Call) :=
-  [⟨"body", .shape .ink 45 (g.paths OUTER 4)⟩, ⟨"membrane", .shape .ink 560 (g.lines OUTER MEMBRANE_W 4)⟩] ++
-  LAMELLAE.zipIdx.map fun (lv, i) => ⟨s!"lamella/{i}", .shape .ink (200 - 70 * i) (g.lines lv LAMELLA_W 4)⟩
+  [⟨"body", .shape .ink 45 (g.paths OUTER 4)⟩, ⟨"membrane", .shape .ink 520 (g.walls OUTER (wallOf 1000) 4)⟩] ++
+  LAMELLAE.zipIdx.map fun (lv, i) => ⟨s!"lamella/{i}", .shape .ink (190 - 70 * i) (g.walls lv (wallOf 450) 4)⟩
+
+/-- The body's field on its grid. -/
+def Body.grid (b : Body) : Soft.Grid :=
+  Soft.Grid.of (-MARGIN) 0 STEP (((W + 2 * MARGIN) / STEP).toNat + 1) ((H / STEP).toNat + 1) b.sources
+
+/-- **A channel's core: what it carries in this step**, lit along its axis, as wide as its flux. -/
+def cores (cap : Nat) (fluxes : List Nat) (shareOfBeat : Int := 1000) : List (Keyed Call) :=
+  ((channelEnds cap).zip fluxes).zipIdx.filterMap fun ((((ax, _), (bx, _)), q), k) =>
+    if q == 0 then none else
+    let half : Int := 700 + 600 * q
+    some ⟨s!"core/{k}", .shape .ink (650 * shareOfBeat / 1000).toNat
+      [Grow.roundRect (1000 * ax) (1000 * CY - half) (1000 * (bx - ax)) (2 * half) half]⟩
 
 /-! ## The units -/
 
@@ -194,27 +245,23 @@ def UNIT_W : Int := 1200
 /-- A disc of radius `r` about a point, as one closed path in thousandths. -/
 def disc (x y r : Int) : List Cubic := Grow.roundRect (1000 * (x - r)) (1000 * (y - r)) (2000 * r) (2000 * r) (1000 * r)
 
-/-- A numeral centred on a point, in the data face. -/
-def numeral (key : Key) (x y : Int) (s : String) : Keyed Call :=
-  ⟨key, .cells (x - CELL * s.length / 2) (y + 5) s.length s⟩
+/-- A label of data centred over a point. -/
+def labelOver (key : Key) (x y : Int) (s : String) : Keyed Call :=
+  ⟨key, .cells (x - CELL * s.length / 2) (y - DROP_R - 5) s.length s⟩
 
-/-- **A message held**: a filled droplet with its value. -/
-def droplet (key : Key) (x y : Int) (v : Nat) : List (Keyed Call) :=
-  [⟨key, .shape .ink 330 [disc x y 13]⟩, numeral key x y (toString v)]
+/-- **A message held**: a solid droplet (kept), its value above it. -/
+def droplet (key : Key) (x y : Int) (v : Nat) (tone : Nat := 1000) : List (Keyed Call) :=
+  [⟨key, .shape .ink tone [disc x y DROP_R]⟩, labelOver key x y (toString v)]
 
-/-- **Room**: a hollow ring in the rule's tone. -/
+/-- **Room**: a hollow ring (promised). -/
 def room (key : Key) (x y : Int) : List (Keyed Call) :=
-  [⟨key, .shape .ink 300 (Grow.ring (1000 * (x - 13)) (1000 * (y - 13)) 26000 26000 13000 UNIT_W)⟩]
+  [⟨key, .shape .ink 340 (Grow.ring (1000 * (x - DROP_R)) (1000 * (y - DROP_R)) (2000 * DROP_R) (2000 * DROP_R) (1000 * DROP_R) UNIT_W)⟩]
 
-/-- **A request that waits**: the parked request's hollow box, its numeral above it. -/
-def parked (key : Key) (x y : Int) (n : Nat) : List (Keyed Call) :=
-  [⟨key, .shape .ink 700 (Grow.ring (1000 * (x - 17)) (1000 * (y - 17)) 34000 34000 12000 UNIT_W)⟩,
-   ⟨key, .cells (x - 17) (y - 22) (toString n).length (toString n)⟩]
-
-/-- **What moved in the beat**: a fine arc from where a message stood to where it stands. -/
-def arc (key : Key) (a b : Int × Int) (lift : Int) : Keyed Call :=
-  let mid := ((a.1 + b.1) / 2, (a.2 + b.2) / 2 + lift)
-  ⟨key, .curve .ink ⟨a, ((a.1 + mid.1) / 2, mid.2), ((b.1 + mid.1) / 2, mid.2), b⟩ 1⟩
+/-- **A request that waits**: the parked request's hollow box, its numeral under its lower corner,
+clear of the value of the message it may hold. -/
+def parked (key : Key) (x y : Int) (n : Nat) (tone : Nat := 700) : List (Keyed Call) :=
+  [⟨key, .shape .ink tone (Grow.ring (1000 * (x - 17)) (1000 * (y - 17)) 34000 34000 12000 UNIT_W)⟩] ++
+  (if tone < 350 then [] else [⟨key, .cells (x - 17) (y + 31) (toString n).length (toString n)⟩])
 
 /-- Where a message stands in a marking, as a point of the picture. -/
 def Marking.pointOf (m : Marking) (msg : Nat) : Option (Int × Int) :=
@@ -223,10 +270,17 @@ def Marking.pointOf (m : Marking) (msg : Nat) : Option (Int × Int) :=
   | none =>
     match m.offers.findIdx? (·.2.contains msg) with
     | some j => some (offerX j, CY)
-    | none => if m.answered == some msg then some (W - 30, CY) else none
+    | none => if m.answered == some msg then some (W - 26, CY) else none
 
-/-- **The units of a marking**, and the arcs of the beat that led to it. -/
-def units (before : Option Marking) (m : Marking) : List (Keyed Call) :=
+/-- **The body of a marking at rest**: its pressure from what it holds and what waits for it. -/
+def Marking.body (m : Marking) (ds : List Nat) : Body :=
+  { cap := m.capacity, ds,
+    pressure := ((m.held.length : Int) - m.takers.length) * 1000 / max 1 m.capacity
+    offers := (List.range m.offers.length).map fun j => ((offerX j, CY), 1000)
+    transit := (m.answered.toList).map fun _ => (W - 26, CY) }
+
+/-- **The units of a marking.** -/
+def units (m : Marking) : List (Keyed Call) :=
   let cap := m.capacity
   let slots := (List.range cap).flatMap fun k =>
     match m.held[k]? with
@@ -236,22 +290,13 @@ def units (before : Option Marking) (m : Marking) : List (Keyed Call) :=
     parked s!"offer/{i}" (offerX j) CY i ++ (rest.take 1).flatMap fun v => droplet s!"held/{v}" (offerX j) CY v
   let takers := m.takers.zipIdx.flatMap fun (i, j) =>
     parked s!"taker/{i}" (takerX cap j) CY i ++
-      (if m.woken.contains i then [⟨s!"taker/{i}", .shape .ink 1000 [disc (takerX cap j) CY 4]⟩] else [])
-  let out := m.answered.toList.flatMap fun v => droplet s!"held/{v}" (W - 30) CY v
-  let arcs := match before with
-    | none => []
-    | some b => m.messages.filterMap fun msg =>
-      match b.pointOf msg, m.pointOf msg with
-      | some p, some q => if p == q then none else some (arc s!"moved/{msg}" (p.1, p.2 - 15) (q.1, q.2 - 15) (-26))
-      | none, some q => some (arc s!"moved/{msg}" (q.1 - 60, q.2 - 15) (q.1, q.2 - 15) (-18))
-      | _, _ => none
-  slots ++ offers ++ takers ++ out ++ arcs
+      (if m.woken.contains i then [⟨s!"taker/{i}", .shape .ink 1000 [disc (takerX cap j) CY 3]⟩] else [])
+  let out := m.answered.toList.flatMap fun v => droplet s!"held/{v}" (W - 26) CY v
+  slots ++ offers ++ takers ++ out
 
-/-- **One frame of the organism**: the membrane, the faint body inside it, then the units. -/
+/-- **One frame of the organism**: the body, the cores of the step that led to it, then the units. -/
 def picture (before : Option Marking) (m : Marking) (ds : List Nat) : List (Keyed Call) :=
-  -- the grid reaches past the picture's sides, where the channels leave it, so every contour closes
-  body (Soft.Grid.of (-MARGIN) 0 STEP (((W + 2 * MARGIN) / STEP).toNat + 1) ((H / STEP).toNat + 1) (sources m ds)) ++
-    units before m
+  body (m.body ds).grid ++ (match before with | some b => cores m.capacity (flux b m) | none => []) ++ units m
 
 /-- **Every frame of the scene**: its words, its marking and its picture. -/
 def scene : Except String (List (String × Marking × List (Keyed Call))) := do
