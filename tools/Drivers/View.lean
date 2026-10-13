@@ -93,36 +93,54 @@ def pageRules : String :=
 /-- **A run's player**: its pictures in order, a frame's motion pictures before it, stepped as
 `play` steps them. Picture `k` of a step's `n` stands at `k/n` of the look's step. A scrubber reads
 any picture, a rate of one, a half or a quarter slows a step, a strip shows every frame at one
-scale, and five moments of the current step stand beside it (decisions row 362, DS-2). Nothing
+scale, and five moments of the current step stand beside it (decisions row 362, DS-2). Every
+picture is drawn at the scale of the run's largest, from the top left, in a box of one height, so a
+kept mark stays in place from frame to frame and nothing below it moves. Nothing
 loops, and under a reduced-motion preference a step shows its end frame alone (row 354 (5)). The
-current picture names itself in data attributes for an agent that reads the page. -/
+picture stands inline (DS-3): a look switch redraws it in the dark look, the paper look or both
+side by side, through the class rules (`Tokens.rules`), which change colours and families and no
+place; the key under the pointer is named, and a click copies `title · picture · key` for the
+chat. The current picture names itself in data attributes for an agent that reads the page. -/
 def playerPage (L : Look) (title label : String) (pics : List (String × Bool)) (gallery : Bool) :
     String :=
   let list := ",".intercalate (pics.map fun (n, f) => s!"[\"{n}\",{if f then 1 else 0}]")
   "<!doctype html>\n<html lang=\"en\" data-look=\"" ++ escape L.name ++ "\">\n<head>\n<meta charset=\"utf-8\">\n" ++
   "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>" ++ escape title ++ "</title>\n" ++
-  "<style>\n" ++ Tokens.css L ++ pageRules ++
+  "<style>\n" ++ Tokens.css L ++ (if L.name == "dark" then "" else Tokens.css {}) ++
+  (if L.name == "paper" then "" else Tokens.css Look.paper) ++ Tokens.rules ++ pageRules ++
+  "html { scrollbar-gutter: stable; }\n" ++
+  ".pic { overflow: hidden; }\n" ++
+  ".pic svg { display: block; max-width: 100%; height: auto; outline: 1px solid var(--e4-color-rule); }\n" ++
+  ".pic.both { display: flex; gap: 12px; align-items: flex-start; }\n" ++
+  "#pos { display: inline-block; min-width: 24ch; font-variant-numeric: tabular-nums; }\n" ++
+  "#moments { min-height: 76px; }\n" ++
+  ".pic [data-key] { cursor: copy; }\n" ++
+  "#under { min-height: 1.4em; margin: 6px 0 0; }\n" ++
   ".controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 0 0 12px; }\n" ++
   ".controls label { display: inline-flex; align-items: center; gap: 6px; }\n" ++
   "#scrub { flex: 1 1 240px; accent-color: var(--e4-color-ink); }\n" ++
   "select { font: inherit; font-size: 13px; color: var(--e4-color-ink); background: var(--e4-color-ground); border: 1px solid var(--e4-color-rule); border-radius: 4px; padding: 1px 4px; }\n" ++
   "button:focus-visible, select:focus-visible, input:focus-visible, .strip img:focus-visible { outline: 2px solid var(--e4-color-ink); outline-offset: 2px; }\n" ++
-  "#pic { max-height: 68vh; width: auto; max-width: 100%; }\n" ++
-  ".strips { display: grid; gap: 10px; margin-top: 14px; }\n" ++
-  ".strip { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 6px; align-items: flex-start; }\n" ++
+  ".strips { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin-top: 14px; }\n" ++
+  ".strip { position: relative; display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 6px; align-items: flex-start; }\n" ++
   ".strip img { height: 68px; width: auto; max-width: none; cursor: pointer; opacity: 0.6; }\n" ++
   ".strip img[aria-current=\"true\"] { opacity: 1; outline: 2px solid var(--e4-color-ink); outline-offset: 2px; }\n" ++
   ".strip-label { font-family: var(--e4-font-data-family); font-size: 12px; opacity: 0.7; }\n" ++
   "</style>\n</head>\n<body>\n<header>" ++
   (if gallery then "<a href=\"../../index.html\">Studio</a>" else "") ++
   "<h1>" ++ escape title ++ "</h1><span class=\"meta\">" ++ escape label ++ " · " ++ escape L.name ++
-  "</span><span class=\"meta\" id=\"pos\" aria-live=\"polite\"></span></header>\n" ++
+  "</span></header>\n" ++
   "<div class=\"controls\"><span><button id=\"back\" aria-label=\"previous frame\">◀</button> " ++
   "<button id=\"next\" aria-label=\"next frame\">▶</button> <button id=\"all\">play all</button></span>" ++
+  "<span class=\"meta\" id=\"pos\" aria-live=\"polite\"></span>" ++
   "<label class=\"meta\">speed <select id=\"rate\"><option value=\"1\">1×</option><option value=\"0.5\">½×</option>" ++
   "<option value=\"0.25\">¼×</option></select></label>" ++
+  "<label class=\"meta\">look <select id=\"lookSel\"><option value=\"\">as drawn</option>" ++
+  "<option value=\"dark\">dark</option><option value=\"paper\">paper</option>" ++
+  "<option value=\"both\">dark beside paper</option></select></label>" ++
   "<input id=\"scrub\" type=\"range\" min=\"0\" max=\"" ++ toString (pics.length - 1) ++ "\" step=\"1\" value=\"0\" aria-label=\"picture\"></div>\n" ++
-  "<main data-pictures=\"" ++ toString pics.length ++ "\"><img id=\"pic\" alt=\"\"></main>\n" ++
+  "<main data-pictures=\"" ++ toString pics.length ++ "\"><div id=\"pic\" class=\"pic\" role=\"img\"></div>" ++
+  "<p class=\"meta\" id=\"under\" aria-live=\"polite\"></p></main>\n" ++
   "<div class=\"strips\"><div><span class=\"strip-label\">frames</span><nav class=\"strip\" id=\"strip\" aria-label=\"frames\"></nav></div>\n" ++
   "<div><span class=\"strip-label\">this step at 0, ¼, ½, ¾ and its end</span><div class=\"strip\" id=\"moments\"></div></div></div>\n" ++
   "<script>\n" ++
@@ -131,7 +149,30 @@ def playerPage (L : Look) (title label : String) (pics : List (String × Bool)) 
   "const frames = pics.map((p, i) => p[1] ? i : -1).filter(i => i >= 0);\n" ++
   "const reduce = matchMedia('(prefers-reduced-motion: reduce)');\n" ++
   "const $ = id => document.getElementById(id);\n" ++
-  "const img = $('pic'), pos = $('pos'), scrub = $('scrub'), rate = $('rate'), strip = $('strip'), moments = $('moments');\n" ++
+  "const pic = $('pic'), pos = $('pos'), scrub = $('scrub'), rate = $('rate'), strip = $('strip'), moments = $('moments');\n" ++
+  "const lookSel = $('lookSel'), under = $('under');\n" ++
+  "const cache = new Map();\n" ++
+  "const load = n => { if (!cache.has(n)) cache.set(n, fetch(n + '.svg').then(r => r.text())); return cache.get(n); };\n" ++
+  "const pane = (text, look) => { const d = document.createElement('div'); d.innerHTML = text; const v = d.querySelector('svg');\n" ++
+  "  if (v && look) v.setAttribute('data-look', look); return v || d; };\n" ++
+  "async function draw(i) { const text = await load(pics[i][0]); if (at !== i) return; const mode = lookSel.value;\n" ++
+  "  pic.classList.toggle('both', mode === 'both');\n" ++
+  "  pic.replaceChildren(...(mode === 'both' ? [pane(text, 'dark'), pane(text, 'paper')] : [pane(text, mode)])); fit(); }\n" ++
+  "let maxW = 0, maxH = 0;\n" ++
+  "const dims = t => { const m = /<svg[^>]*?\\swidth=\"([0-9.]+)\"[^>]*?\\sheight=\"([0-9.]+)\"/.exec(t); return m ? [+m[1], +m[2]] : [0, 0]; };\n" ++
+  "function fit() { if (!maxW) return; const both = lookSel.value === 'both';\n" ++
+  "  const k = Math.min((pic.clientWidth - (both ? 12 : 0)) / (both ? 2 : 1) / maxW, innerHeight * 0.68 / maxH);\n" ++
+  "  pic.style.height = Math.ceil(maxH * k + 2) + 'px';\n" ++
+  "  pic.querySelectorAll('svg').forEach(v => { v.style.width = (+v.getAttribute('width')) * k + 'px';\n" ++
+  "    v.style.height = (+v.getAttribute('height')) * k + 'px'; }); }\n" ++
+  "addEventListener('resize', fit);\n" ++
+  "const keyAt = e => { const k = e.target.closest('[data-key]'); return k ? k.getAttribute('data-key') : ''; };\n" ++
+  "pic.addEventListener('mousemove', e => { const k = keyAt(e); under.textContent = k ? 'key ' + k + ' (click copies)' : ''; });\n" ++
+  "pic.addEventListener('click', async e => { const k = keyAt(e); if (!k) return;\n" ++
+  "  const note = title + ' · ' + pics[at][0] + ' · ' + k;\n" ++
+  "  try { await navigator.clipboard.writeText(note); under.textContent = 'copied: ' + note; }\n" ++
+  "  catch (err) { under.textContent = note; } });\n" ++
+  "lookSel.onchange = () => draw(at);\n" ++
   "let at = 0, timer = 0, chain = false, momentsOf = -1;\n" ++
   "const reached = i => frames.filter(j => j <= i).length;\n" ++
   "const thumb = (i, alt) => { const t = document.createElement('img'); t.src = pics[i][0] + '.svg'; t.alt = alt;\n" ++
@@ -142,11 +183,13 @@ def playerPage (L : Look) (title label : String) (pics : List (String × Bool)) 
   "  const prev = frames.filter(j => j < end).pop();\n" ++
   "  if (end === undefined || prev === undefined || end - prev < 2) { moments.replaceChildren(); return; }\n" ++
   "  moments.replaceChildren(...[0, 0.25, 0.5, 0.75, 1].map(q => thumb(prev + Math.round(q * (end - prev)), 'moment ' + q * 1000 + ' per mille'))); }\n" ++
-  "function show(i) { at = i; const f = reached(i); img.src = pics[i][0] + '.svg';\n" ++
-  "  img.dataset.picture = pics[i][0]; img.dataset.frame = f; img.alt = title + ', frame ' + f + ' of ' + frames.length;\n" ++
+  "function show(i) { at = i; const f = reached(i); draw(i);\n" ++
+  "  pic.dataset.picture = pics[i][0]; pic.dataset.frame = f; pic.setAttribute('aria-label', title + ', frame ' + f + ' of ' + frames.length);\n" ++
   "  pos.textContent = 'frame ' + f + ' of ' + frames.length + (pics[i][1] ? '' : ', moving'); scrub.value = i;\n" ++
   "  strip.querySelectorAll('img').forEach(t => { const on = +t.dataset.index === frames[Math.max(0, f - 1)];\n" ++
-  "    t.setAttribute('aria-current', String(on)); if (on) t.scrollIntoView({ block: 'nearest', inline: 'nearest' }); });\n" ++
+  "    t.setAttribute('aria-current', String(on));\n" ++
+  "    if (on && (t.offsetLeft < strip.scrollLeft || t.offsetLeft + t.offsetWidth > strip.scrollLeft + strip.clientWidth))\n" ++
+  "      strip.scrollLeft = t.offsetLeft - 8; });\n" ++
   "  showMoments(i); }\n" ++
   "function stop() { cancelAnimationFrame(timer); clearTimeout(timer); timer = 0; }\n" ++
   "function next() { stop(); const end = frames.find(j => j > at); if (end === undefined) { chain = false; return; }\n" ++
@@ -170,7 +213,8 @@ def playerPage (L : Look) (title label : String) (pics : List (String × Bool)) 
   "  else if (e.key === 'Home') { stop(); chain = false; show(0); }\n" ++
   "  else if (e.key === 'End') { stop(); chain = false; show(frames[frames.length - 1]); }\n" ++
   "  else if (e.key === 'p' || e.key === 'P') all(); });\n" ++
-  "pics.forEach(p => { new Image().src = p[0] + '.svg'; });\nshow(0);\n</script>\n</body>\n</html>\n"
+  "Promise.all(pics.map(p => load(p[0]))).then(ts => { ts.forEach(t => { const [w, h] = dims(t);\n" ++
+  "  maxW = Math.max(maxW, w); maxH = Math.max(maxH, h); }); fit(); });\nshow(0);\n</script>\n</body>\n</html>\n"
 
 /-- One kept run, as the gallery lists it: its folder and what its `run.json` says. -/
 structure KeptRun where
