@@ -19,7 +19,8 @@ is `docs/research/2026-10-13-seat-live-brief.md`.
 
 - Base: `9fd8e658a` on `refactor/phase1-phase3`.
 - `seat/live`: `166a7d7ef` (DM1), `369334a8a` (DM2), `8f875f836` (DM3), `5f762e448` (DM3,
-  `view_classifies`), then the commit that adds this receipt.
+  `view_classifies`), `a9a32c6b8`, `78687f4e2` and `92aa11e1b` (this receipt and the patch file),
+  `53c95e988` (the battery reads `view_awaits`), then the commit that last updates this receipt.
 - `seat/live-dm4`: `baca79821` (DM4), `7763fc569` (`simpa only` in `applyReply_conforms`), on top of
   `5f762e448`.
 - Evidence words: **proved** means the kernel checked it and `#axiom_audit` passed it at
@@ -230,6 +231,8 @@ Every build ran as `LEAN_NUM_THREADS=2 lake build <modules>`, one `lake` at a ti
 | `8f875f836` | `make check-host-protocol` | "PASS host-protocol"; 57 keyed host runs, 30 controls; 73 scenario scripts in 269 runs on rc.112 under bun 1.4.2; 56 bun tests; the legacy adapter |
 | `5f762e448` | `Effect4.Laws.Api.Live`, `Test.Run.LiveContract`, `Effect4.Laws` | built |
 | `7763fc569` | every law module that unfolds `applyReply`; the 194 modules downstream of `HostSession` that do not import `Journal` | built, but for `Effect4.Laws.Run.Journal` (the patch above) |
+| `53c95e988` | `Test.Run.LiveContract` | built |
+| `53c95e988` and `7763fc569` | `git merge-tree --write-tree seat/live seat/live-dm4`; a throwaway local merge, then `Effect4.Laws.Api.Live`, `Test.Run.LiveContract`, `Test.Dogfood.Proofs.HostRouting` and `Effect4.Laws.Run.Tape` | exit 0, no conflict; built; the branch deleted |
 
 The three audits that fail at the base are `Test.Audit.ExhaustiveFixture`,
 `Test.Audit.TraversalFixture` and `Test.Audit.TraversalCensus`: their fixtures miss the case
