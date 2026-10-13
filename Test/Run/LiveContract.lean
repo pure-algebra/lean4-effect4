@@ -112,12 +112,14 @@ def header : Api.HostSession.Header := Test.Api.HostSessionContract.header
 
 /-! ## The view
 
-Each line is a finite evaluation of `Live.view` at one stage of a script. No theorem covers the
-view's fields yet: `view-funded` waits on slice DM4, and `view-names-waits` is a proposed claim
-(decisions row 333 (3)). -/
+Each line is a reader of a law of the view, or a finite evaluation of `Live.view` at one stage of
+a script that no theorem covers. -/
 
+-- `Live.view_awaits`, read on the parked run: the view's calls are the machine's awaited calls.
+example : parked.view.awaiting.map (·.await) = awaits parked.run.machine :=
+  Live.view_awaits parked
 -- Both calls wait, each with the checked instance at its address, and neither is held yet.
-#guard parked.view.awaiting.map (·.await) = parked.run.outstanding
+#guard parked.view.awaiting.length = 2
 #guard parked.view.awaiting.all fun call => call.origin.isSome && call.checked.isSome
 #guard parked.view.awaiting.all fun call => call.held.isNone
 #guard parked.view.state = .awaitingAsync
