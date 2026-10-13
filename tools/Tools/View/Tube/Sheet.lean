@@ -95,7 +95,8 @@ def plateAmount : SvgNode :=
   let a := straight (pxi 24) (pxi 28) 0 PIPE (px 216)
   let v := straight (pxi 240) (pxi 28) 0 VESSEL (px 160)
   let b := straight (pxi 400) (pxi 28) 0 4000 (px 296)
-  still 720 56 (bodyOf "a" a ++ reducedOf "v" v (body PIPE) (body 4000) ++ bodyOf "b" b ++
+  still 720 56 (bodyOf "a" (into a true) (roundStart := some true) (round := false) ++
+    reducedOf "v" v (body PIPE) (body 4000) ++ bodyOf "b" (into b false) (roundStart := some false) ++
     packed "ua" a 2 ++ packed "uv" v 2 (pxi 148) ++ packed "ub" b 2)
 
 def plateValve : SvgNode :=
@@ -163,7 +164,8 @@ def filmCircuit : RawNode :=
   let form (inPs outPs : List Piece) : List Mark :=
     let inlet : Tube := ⟨pxi 300, pxi 40, HALF, PIPE, inPs⟩
     let outlet : Tube := ⟨pxi 420, pxi 40, 0, PIPE, outPs⟩
-    bodyOf "in" inlet (fromEnd := true) ++ bodyOf "out" outlet ++ packed "o" outlet 2 (pxi 120)
+    bodyOf "in" (into inlet false) (fromEnd := true) (roundStart := some true) (round := false) ++
+      bodyOf "out" (into outlet false) (roundStart := some false) ++ packed "o" outlet 2 (pxi 120)
   let body := reducedOf "vessel" vessel (_root_.Tools.View.Tube.body PIPE) (_root_.Tools.View.Tube.body PIPE) ++
     packed "v" vessel 3 (pxi 114)
   let open_ := form [⟨px 260, 0⟩, ⟨0, 0⟩, ⟨0, 0⟩] [⟨px 260, 0⟩, ⟨0, 0⟩, ⟨0, 0⟩]

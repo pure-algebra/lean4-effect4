@@ -81,59 +81,86 @@ def bodyCubics (t : Tube) (w : Nat) (roundStart roundEnd : Bool) : List Cubic :=
 
 /-! ## A stretch of changing width -/
 
+/-- The distance between two points, in thousandths of a pixel. -/
+def dist (a b : Int × Int) : Nat := Grow.isqrt ((a.1 - b.1).natAbs ^ 2 + (a.2 - b.2).natAbs ^ 2)
+
+
 /-- **The smoothstep** `u²(3 − 2u)` in thousandths: from nothing to one, its slope nothing at both
 ends. -/
 def smooth (u : Nat) : Nat := let v := min u 1000; v * v * (3000 - 2 * v) / 1000000
 
-/-- **The width of a stretch** `u` along it, of `len`: from `w0` to `w1` by the smoothstep, and
-`peak` more within it, eased in and out over `rise` at each end. A swell is a peak whose rise is
-half the stretch; a sleeve is a peak with a short rise; a reducer is a change from `w0` to `w1`. -/
-def stretchWidth (w0 w1 : Nat) (peak : Int) (rise len u : Nat) : Int :=
-  let base : Int := (w0 : Int) + ((w1 : Int) - w0) * (smooth (if len = 0 then 0 else u * 1000 / len)) / 1000
-  let ramp : Nat := if rise = 0 then 1000 else smooth (min u (len - u) * 1000 / rise)
-  base + peak * ramp / 1000
+/-- **The width of a stretch** `u` along it, of `len`: `top` along its middle, eased by the
+smoothstep over `rise` at each end from the width `w0` at its start and to `w1` at its end. A
+swell is a top whose rise is half the stretch; a sleeve is a top with a short rise; a vessel
+between pipes is a long top whose ends ease to the pipes' widths. -/
+def stretchWidth (w0 w1 top rise len u : Nat) : Int :=
+  let ease (w : Nat) (v : Nat) : Int :=
+    (top : Int) - ((top : Int) - w) * (1000 - smooth (v * 1000 / max 1 rise) : Nat) / 1000
+  if rise = 0 then top
+  else if u < rise && u * 2 ≤ len then ease w0 u
+  else if len - u < rise then ease w1 (len - u)
+  else top
 
-/-- The points of a stretch taken. -/
+/-- The points of the crotch's edge taken. -/
 def STRETCH : Nat := 12
+/-- The points taken over each easing of a stretch. -/
+def RAMP : Nat := 8
 
-/-- A run of cubics through points, each with its tangent: Catmull and Rom's spline, whose
-neighbouring segments meet on one tangent. The ends' tangents are given. -/
+/-- **Where a stretch is sampled**, along it: eight points over each easing and one at most every
+eight pixels along its middle; a stretch that is all easing, eight to each half. The points
+depend on the stretch's length and rise alone, so its commands are the same at every moment of a
+change that keeps them. -/
+def stations (len rise : Nat) : List Nat :=
+  if rise = 0 then (List.range (STRETCH + 1)).map fun i => i * len / STRETCH
+  else if 2 * rise ≥ len then (List.range (2 * RAMP + 1)).map fun i => i * len / (2 * RAMP)
+  else
+    let mid := len - 2 * rise
+    let n := mid / 8000
+    (List.range (RAMP + 1)).map (fun i => i * rise / RAMP) ++
+    (List.range n).map (fun j => rise + (j + 1) * mid / (n + 1)) ++
+    (List.range (RAMP + 1)).map (fun i => len - rise + i * rise / RAMP)
+
+/-- A run of cubics through points, each with its tangent: the direction from the point before
+to the point after, so neighbouring segments meet on one tangent, each handle a third of its own
+segment. The ends' directions are given, at the scale `ONE`. -/
 def throughC (ps : List (Int × Int)) (m0 m1 : Int × Int) : List Cubic :=
   let n := ps.length
   let at_ (i : Nat) : Int × Int := ps.getD i (0, 0)
+  let unit (v : Int × Int) : Int × Int :=
+    let l : Int := max 1 (dist v (0, 0) : Nat)
+    (v.1 * ONE / l, v.2 * ONE / l)
   let tan (i : Nat) : Int × Int :=
-    if i = 0 then m0 else if i + 1 ≥ n then m1
-    else ((at_ (i + 1)).1 - (at_ (i - 1)).1, (at_ (i + 1)).2 - (at_ (i - 1)).2)
+    if i = 0 then unit m0 else if i + 1 ≥ n then unit m1
+    else unit ((at_ (i + 1)).1 - (at_ (i - 1)).1, (at_ (i + 1)).2 - (at_ (i - 1)).2)
   (List.range (n - 1)).map fun i =>
     let a := at_ i
     let b := at_ (i + 1)
-    let ta := tan i
-    let tb := tan (i + 1)
-    ⟨a, (a.1 + ta.1 / 6, a.2 + ta.2 / 6), (b.1 - tb.1 / 6, b.2 - tb.2 / 6), b⟩
+    let k : Int := (dist a b : Nat) / 3
+    ⟨a, along a k (tan i), along b (-k) (tan (i + 1)), b⟩
 
-/-- **A stretch's outline**: the part of the tube from `s` along it, `len` long, its width from
-`w0` to `w1` with a `peak` eased over `rise`, as one closed run of cubics cut square at both
-ends. It is sampled at `STRETCH + 1` points, so its commands are the same at every moment. -/
-def patchCubics (t : Tube) (s : Int) (len w0 w1 : Nat) (peak : Int) (rise : Nat) : List Cubic :=
+/-- **A stretch's outline**: the part of the tube from `s` along it, `len` long, its width eased
+from `w0` to `top` and from `top` to `w1` over `rise` at its ends, as one closed run of cubics
+cut square at both ends, through the points of `stations`. -/
+def patchCubics (t : Tube) (s : Int) (len w0 w1 top rise : Nat) : List Cubic :=
   let L := t.length
-  let pts := (List.range (STRETCH + 1)).map fun i =>
-    let u := i * len / STRETCH
-    let p := (s + u).toNat.min L
+  let pts := (stations len rise).map fun (u : Nat) =>
+    let at_ := s + (u : Int)
+    let p := at_.toNat.min L
     let (c, h) := t.at p
-    let half := (stretchWidth w0 w1 peak rise len u).toNat / 2
+    -- a point past either end of the tube stands at that end, as wide as the stretch's end there,
+    -- so a swell that runs off a tube is cut off on the tube's edge, never folded onto its end
+    let half := (if at_ < 0 then (w0 : Int) else if at_ > (L : Int) then (w1 : Int)
+      else stretchWidth w0 w1 top rise len u).toNat / 2
     let n := normal h
     (along c (-(half : Int)) n, along c half n, h)
   let lefts := pts.map (·.1)
   let rights := pts.map (·.2.1)
-  let step : Int := len / STRETCH * 2
   let h0 := (pts.headD ((0, 0), (0, 0), 0)).2.2
   let h1 := (pts.getLastD ((0, 0), (0, 0), 0)).2.2
-  let m0 := ((dir h0).1 * step / ONE, (dir h0).2 * step / ONE)
-  let m1 := ((dir h1).1 * step / ONE, (dir h1).2 * step / ONE)
   match lefts.head?, lefts.getLast?, rights.head?, rights.getLast? with
   | some l0, some l1, some r0, some r1 =>
-    throughC lefts m0 m1 ++ [lineC l1 r1] ++
-      ((throughC rights m0 m1).map Cubic.rev).reverse ++ [lineC r0 l0]
+    throughC lefts (dir h0) (dir h1) ++ [lineC l1 r1] ++
+      ((throughC rights (dir h0) (dir h1)).map Cubic.rev).reverse ++ [lineC r0 l0]
   | _, _, _, _ => []
 
 /-! ## A rounded crotch -/
@@ -143,8 +170,6 @@ body, so a branch docks as a tree's does, widening into what it leaves. Where th
 less room, the fillet is the widest that fits (`crotch`). -/
 def FILLET : Nat := 18000
 
-/-- The distance between two points, in thousandths of a pixel. -/
-def dist (a b : Int × Int) : Nat := Grow.isqrt ((a.1 - b.1).natAbs ^ 2 + (a.2 - b.2).natAbs ^ 2)
 
 /-- The side a tube turns to first: `1` toward its normal, `-1` away, `0` for a straight tube. -/
 def Tube.side (t : Tube) : Int :=
@@ -217,11 +242,10 @@ def crotchAt (parent : Nat) (branch : Tube) (bw : Nat) (R : Nat) : Option (List 
     let pts := (List.range (STRETCH + 1)).map fun k => edge 1000 (k * s2 / STRETCH)
     let T2 := edge 0 s2
     let T1 := along (along J u d) (parent / 2 : Nat) side
-    let step : Int := (s2 / STRETCH * 2 : Nat)
     let h0 := branch.head
     let h1 := (branch.at s2).2
     some ([lineC T1 J, lineC J (pts.headD J)] ++
-      throughC pts (along (0, 0) step (dir h0)) (along (0, 0) step (dir h1)) ++
+      throughC pts (dir h0) (dir h1) ++
       [lineC (pts.getLastD J) T2, arcC cu T2 T1])
 
 /-- The cubics of a crotch's web, and a web of none at a point, with as many: a film grows one
@@ -230,9 +254,12 @@ def WEB : Nat := STRETCH + 4
 def noWeb (o : Int × Int) : List Cubic := List.replicate WEB (lineC o o)
 
 /-- **The rounded crotch** at the widest fillet that fits: `FILLET`, or less by whole pixels two
-at a time where the branch leaves less room. -/
-def crotch (parent : Nat) (branch : Tube) (bw : Nat) : Option (List Cubic) :=
-  ((List.range (FILLET / 2000)).map fun i => FILLET - 2000 * i).findSome? (crotchAt parent branch bw)
+at a time where the branch leaves less room. With `grow`, the same crotch inset by `grow`: the
+bodies narrower by it on each side and the fillet wider by it, round the same centre, so the two
+draw a line of `grow` round the join. -/
+def crotch (parent : Nat) (branch : Tube) (bw : Nat) (grow : Nat := 0) : Option (List Cubic) :=
+  ((List.range (FILLET / 2000)).map fun i => FILLET - 2000 * i).findSome? fun r =>
+    crotchAt (parent - 2 * grow) branch (bw - 2 * grow) (r + grow)
 
 /-! ## A parting -/
 
@@ -267,6 +294,33 @@ def partCubics (t : Tube) (s : Int) (len w gap : Nat) : List Cubic :=
    ⟨ab, along ab k d, along am k n, am⟩, ⟨am, along am (-k) n, along at_ k d, at_⟩,
    lineC at_ tl]
 
+/-- **The rings of a parting**: the line of `line` round each round end that faces the gap, as
+two closed half rings. An end of less than three lines' radius has none. -/
+def ringCubics (t : Tube) (s : Int) (len w gap line : Nat) : List (List Cubic) :=
+  let (c, h) := t.at (s + (len / 2 : Nat)).toNat
+  let d := dir h
+  let n := normal h
+  let r : Int := (w / 2 * min len gap / max 1 gap : Nat)
+  -- an end narrower than three lines has no ring yet: it is still fusing, or just parting
+  let ri : Int := if r < 3 * (line : Int) then r else r - line
+  let k := r * KAPPA / 1000000
+  let ki := ri * KAPPA / 1000000
+  let half : Int := (len / 2 : Nat)
+  let a := along c (-(half + r)) d
+  let b := along c (half + r) d
+  let half_ (o : Int × Int) (rr kk : Int) (sg : Int) : Cubic × Cubic :=
+    -- from the top of the circle round its side toward the gap to its bottom
+    let top := along o (-rr) n
+    let mid := along o (sg * rr) d
+    let bot := along o rr n
+    (⟨top, along top (sg * kk) d, along mid (-kk) n, mid⟩, ⟨mid, along mid kk n, along bot (sg * kk) d, bot⟩)
+  let (b1, b2) := half_ b r k (-1)
+  let (bi1, bi2) := half_ b ri ki (-1)
+  let (a1, a2) := half_ a r k 1
+  let (ai1, ai2) := half_ a ri ki 1
+  [[b1, b2, lineC b2.p3 bi2.p3, Cubic.rev bi2, Cubic.rev bi1, lineC bi1.p0 b1.p0],
+   [a1, a2, lineC a2.p3 ai2.p3, Cubic.rev ai2, Cubic.rev ai1, lineC ai1.p0 a1.p0]]
+
 -- a parallel of a quarter turn of radius 20 px, 5 px inside, is a quarter turn of radius 15 px
 #guard (Tube.offset ⟨0, 0, 0, 8000, [⟨31416, 1570796⟩]⟩ 5000).pieces == [⟨23563, 1570796⟩]
 -- a parallel of a straight tube starts beside it
@@ -276,8 +330,8 @@ def partCubics (t : Tube) (s : Int) (len w gap : Nat) : List Cubic :=
 -- a body of one width is its two parallels and two round caps of two cubics each
 #guard (bodyCubics (straight 0 0 0 12000 100000) 22000 true true).length == 2 + 2 + 2 + 2
 -- a stretch is sampled at the same points whatever its width
-#guard (patchCubics (straight 0 0 0 12000 100000) 20000 30000 22000 22000 4000 15000).length ==
-  2 * STRETCH + 2
+#guard (patchCubics (straight 0 0 0 12000 100000) 20000 30000 22000 22000 26000 15000).length ==
+  2 * (2 * RAMP) + 2
 -- a parting is ten cubics, open or closed
 #guard (partCubics (straight 0 0 0 12000 100000) 40000 4000 22000 4000).length == 10
 #guard (partCubics (straight 0 0 0 12000 100000) 40000 0 22000 4000).length == 10

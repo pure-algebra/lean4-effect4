@@ -93,22 +93,24 @@ def settle : Easing :=
 
 #guard settle == (Spring.critical (691 / 1000) (37 / 100)).easing
 
-/-- The three tones of the pen: a body, its contents, and the ground an air gap shows. -/
+/-- The tones of the pen: a body, its contents, the ground an air gap shows, and a body's casing,
+its interior's path filled and stroked a `LINE` round in ink. -/
 inductive Tone where
-  | body | fluid | ground
+  | body | fluid | ground | casing
 deriving DecidableEq, Repr, Inhabited
 
 def Tone.name : Tone → String
-  | .body => "body" | .fluid => "fluid" | .ground => "ground"
+  | .body => "body" | .fluid => "fluid" | .ground => "ground" | .casing => "casing"
 
 /-- **How a mark is drawn**: stroked along its tube's centreline (contents, a hollow); as a solid
-body, its outline filled; as a stretch of its body whose width changes, from its width to `w1`,
-with `peak` more eased over `rise` at each end, over its dash (`patchCubics`); or as a parting, the
-ground between two round ends of its body across its dash (`partCubics`). -/
+body, its outline filled; as a stretch of a body over its dash whose width is `top` along its
+middle and eases over `rise` from its own width at its start and to `w1` at its end
+(`patchCubics`); or as a parting, the ground between two round ends of its body across its dash
+(`partCubics`). -/
 inductive Fill where
   | stroke
   | solid
-  | stretch (w1 : Nat) (peak : Int) (rise : Nat)
+  | stretch (w1 : Nat) (top : Nat) (rise : Nat)
   | part
 deriving DecidableEq, Repr, Inhabited
 
@@ -123,7 +125,8 @@ and `fromEnd` draws it the other way (`Tube.reverse`); a dash is measured along 
 a delay, a duration and an easing. Its tube may change on a time of its own, `shape`, shared by
 every mark on that tube: a unit rides a pipe that bends under it, and keeps to the pipe. A mark is
 stroked, solid or a stretch (`fill`), and stands at a depth (`level`): a tube that passes over
-another is drawn after it, with a gap round it. -/
+another is drawn after it. `round` is the cap of its ends; `roundStart`, where given, the cap of
+its start alone, as a pipe that ends inside a vessel is cut there and round at its other end. -/
 structure Mark where
   key : String
   layer : Nat
@@ -137,26 +140,34 @@ structure Mark where
   shape : Option Timing := none
   fill : Fill := .stroke
   level : Nat := 0
+  roundStart : Option Bool := none
 deriving Repr, DecidableEq, Inhabited
 
 /-- The centreline a mark is drawn along. -/
 def Mark.drawn (m : Mark) : Tube := if m.fromEnd then m.tube.reverse else m.tube
 
-/-- The layers of a depth, drawn in this order: the grounds a tube clears round it, the bodies,
-the partings that cut them, the contents, the insides of promised units. -/
+/-- The layers of a depth, drawn in this order, as the docs' figures draw a node, a frame of ink
+round a ground: the grounds a tube clears round it, the bodies in ink, their interiors in ground a
+`LINE` inside them, the partings that cut them with their rings, the contents, the insides of
+promised units. Where bodies meet, every ink is laid before every interior, so a join's outline
+is the one line round the joined bodies. -/
 def HALOS : Nat := 0
 def BODIES : Nat := 1
-def GAPS : Nat := 2
-def CONTENTS : Nat := 3
-def HOLLOWS : Nat := 4
+def INTERIORS : Nat := 2
+def GAPS : Nat := 3
+def CONTENTS : Nat := 4
+def HOLLOWS : Nat := 5
+
+/-- **The line** round a body, in thousandths of a pixel: one pixel, as the docs' frames. -/
+def LINE : Nat := 1000
 
 /-- **A tube's body**: one solid fill. A tube that opens to the world is cut square at its ends,
 off the picture; one that is closed has round ends. A tube that passes over another stands at a
 deeper `level`, drawn after it, and the one below is parted round it (`cutOf`). -/
 def bodyOf (key : String) (t : Tube) (fromEnd : Bool := false) (round : Bool := true)
-    (level : Nat := 0) : List Mark :=
+    (level : Nat := 0) (roundStart : Option Bool := none) : List Mark :=
   [{ key := key ++ ":wall", layer := BODIES, tube := t, width := body t.bore, tone := .body, fromEnd,
-     round, fill := .solid, level }]
+     round, fill := .solid, level, roundStart }]
 
 /-- The dash of a pill in the slot whose front stands `front` along a tube: the round ends stand
 inside the slot, a meniscus from the next. -/
@@ -172,11 +183,12 @@ def unitOf (key : String) (t : Tube) (front : Int) : Mark :=
 /-- The rim of a promised unit, in thousandths of a pixel. -/
 def RIM : Nat := 2000
 
-/-- **A promised unit**, a bubble in the line: the pill's outline, its inside the body's tone: a ring of ink that the body shows through. -/
+/-- **A promised unit**, a bubble in the line: the pill's outline in ink, its inside the ground,
+as a hollow node of the docs' figures. -/
 def hollowOf (key : String) (t : Tube) (front : Int) : List Mark :=
   [{ key := key ++ ":rim", layer := CONTENTS, tube := t, width := t.bore, tone := .fluid,
      dash := some (pillDash t front) },
-   { key := key ++ ":in", layer := HOLLOWS, tube := t, width := t.bore - 2 * RIM, tone := .body,
+   { key := key ++ ":in", layer := HOLLOWS, tube := t, width := t.bore - 2 * RIM, tone := .ground,
      dash := some (pillDash t front) }]
 
 /-- **A closed valve**: the pipe parted by an air gap from `s` along the tube, `len` long, its two
@@ -190,38 +202,40 @@ at `at_` along the tube, an air gap each side, its ends round. -/
 def cutOf (key : String) (t : Tube) (at_ : Int) (over : Nat) : Mark :=
   plugOf key t (at_ - (over / 2 + GAP : Nat)) (over + 2 * GAP)
 
-/-- **A stretch of a body** from `s` along the tube, `len` long, its width from `w0` to `w1` with
-`peak` more eased over `rise` at each end: one fill with its body, whose edges it meets on their
-tangent. -/
-def stretchOf (key : String) (t : Tube) (s : Int) (len w0 w1 : Nat) (peak : Int) (rise : Nat) : Mark :=
+/-- **A stretch of a body** from `s` along the tube, `len` long, `top` wide along its middle and
+eased over `rise` from `w0` at its start and to `w1` at its end: one fill with its body, whose
+edges it meets on their tangent. -/
+def stretchOf (key : String) (t : Tube) (s : Int) (len w0 w1 top rise : Nat) : Mark :=
   { key, layer := BODIES, tube := t, width := w0, tone := .body, round := false,
-    dash := some (s, len), fill := .stretch w1 peak rise }
+    dash := some (s, len), fill := .stretch w1 top rise }
 
 /-- **A sleeve** round a tube from `s`, `len` long: a fitting, the body standing `COLLAR` out on
 each side, eased in and out. -/
 def collarOf (key : String) (t : Tube) (s : Int) (len : Nat) : Mark :=
-  stretchOf key t s len (body t.bore) (body t.bore) (2 * COLLAR) (min (len / 3) 4000)
+  stretchOf key t s len (body t.bore) (body t.bore) (body t.bore + 2 * COLLAR) (min (len / 3) 4000)
 
 /-- How long a reducer is between two widths: twice the change, and at least `REDUCER`, so its
 side slopes by no more than one in four. -/
 def reducerLen (a b : Nat) : Nat := max REDUCER (2 * (max a b - min a b))
 
-/-- **A reducer** at a tube's start: its body grows from the width `from_` to its own, as a
-concentric reducer joins a pipe to a wider vessel; at its end (`atEnd`), back down. -/
-def reducerOf (key : String) (t : Tube) (from_ : Nat) (atEnd : Bool := false) : Mark :=
-  let len := reducerLen from_ (body t.bore)
-  if atEnd then stretchOf key t ((t.length : Int) - len) len (body t.bore) from_ 0 0
-  else stretchOf key t 0 len from_ (body t.bore) 0 0
-
-/-- **A vessel between pipes**: its body narrowed at each end by a reducer, from the inlet's width
-`inW` and to the outlet's `outW`; the body between them overlaps each by two pixels, so no seam
-shows. A pipe that meets it ends round, inside the reducer. -/
+/-- **A vessel between pipes**: one stretch, its body's width along its middle and eased at each
+end by a reducer to the inlet's width `inW` and the outlet's `outW`, so its outline is one smooth
+line with no seam. A pipe that meets it is cut square and runs `INTO` it (`into`). -/
 def reducedOf (key : String) (t : Tube) (inW outW : Nat) : List Mark :=
-  let L := t.length
-  let a := reducerLen inW (body t.bore) - 2000
-  let b := reducerLen outW (body t.bore) - 2000
-  bodyOf key (t.cut a (L - b)) (round := false) ++
-    [reducerOf (key ++ ":r0") t inW, reducerOf (key ++ ":r1") t outW (atEnd := true)]
+  [stretchOf (key ++ ":wall") t 0 t.length inW outW (body t.bore)
+    (max (reducerLen inW (body t.bore)) (reducerLen outW (body t.bore)))]
+
+/-- How far a pipe runs into the reducer of the vessel it meets, so its interior and the reducer's
+overlap, and its square corners stand inside the reducer's outline, in thousandths of a pixel. -/
+def INTO : Nat := 6000
+
+/-- **A pipe that meets a vessel**: the tube run `INTO` on past its end (`atEnd`) or back before
+its start, straight on its tangent. -/
+def into (t : Tube) (atEnd : Bool) : Tube :=
+  if atEnd then { t with pieces := t.pieces ++ [⟨INTO, 0⟩] }
+  else
+    let p := along (t.x, t.y) (-(INTO : Int)) (dir t.head)
+    { t with x := p.1, y := p.2, pieces := ⟨INTO, 0⟩ :: t.pieces }
 
 /-- **A solid join**: the branch leaves the parent on its tangent, and they share one fill; its
 crotch is rounded (`crotch`). The keys are the two bodies' marks. -/
@@ -244,7 +258,8 @@ def Mark.mix (a b : Mark) (t : Nat) : Mark :=
       | d, _ => d
     fill := match a.fill, b.fill with
       | .stretch w p r, .stretch w' p' r' =>
-        .stretch (((1000 - t) * w + t * w') / 1000) (mixInt p p' t) (((1000 - t) * r + t * r') / 1000)
+        .stretch (((1000 - t) * w + t * w') / 1000) (((1000 - t) * p + t * p') / 1000)
+          (((1000 - t) * r + t * r') / 1000)
       | f, _ => f }
 
 /-- A mark shrunk to nothing where it stands: a dash to no length and no width, a tube to its
@@ -289,13 +304,54 @@ def closedPath (cs : List Cubic) : Path :=
 
 def closedText (cs : List Cubic) : String := String.ofList (Path.grammar.print (closedPath cs))
 
+/-- **A mark's interior**: a filled mark a `LINE` narrower on each side, in the ground. -/
+def Mark.inner (m : Mark) : Mark :=
+  { m with key := m.key ++ ":in", layer := INTERIORS, tone := .ground, width := m.width - 2 * LINE,
+           fill := match m.fill with | .stretch w1 p r => .stretch (w1 - 2 * LINE) (p - 2 * LINE) r | f => f }
+
 /-- **The outline of a filled mark**: a solid body's, or a stretch's over its dash. -/
 def Mark.outline (m : Mark) : List Cubic :=
   match m.fill, m.dash with
-  | .stretch w1 peak rise, some (s, len) => patchCubics m.drawn s len m.width w1 peak rise
+  | .stretch w1 top rise, some (s, len) => patchCubics m.drawn s len m.width w1 top rise
   | .part, some (s, len) => partCubics m.drawn s len m.width GAP
   | .stretch _ _ _, none | .part, none => []
-  | _, _ => bodyCubics m.drawn m.width m.round m.round
+  | _, _ => bodyCubics m.drawn m.width (m.roundStart.getD m.round) m.round
+
+/-- **A run of closed loops** as path data. -/
+def loopsPath (ls : List (List Cubic)) : Path :=
+  let pen := ls.foldl (fun (pen : Option Pen) cs =>
+    match cs with
+    | [] => pen
+    | c :: rest =>
+      let start := match pen with
+        | none => Pen.begin (deci c.p0)
+        | some p => p.moveTo (deci c.p0)
+      some ((c :: rest).foldl (fun pen s => pen.curveTo (deci s.p1) (deci s.p2) (deci s.p3)) start).close)
+    none
+  (pen.getD (Pen.begin (deci (0, 0)))).path
+
+/-- **What a mark draws**: each of its elements, its layer, its tone, and whether it is filled.
+A stroked mark is one stroke; a filled one is its interior's path twice, first cased (filled and
+stroked a `LINE` round in ink, so its edge stands where the body's does) with the bodies, then
+filled with the ground with the interiors; a parting is its ground and its rings of ink. -/
+structure Part where
+  layer : Nat
+  tone : Tone
+  filled : Bool
+  /-- The path data of the element at a state of the mark. -/
+  d : Mark → Path
+
+def Mark.parts (m : Mark) : List Part :=
+  match m.fill with
+  | .stroke => [⟨m.layer, m.tone, false, fun s => pathOf s.drawn⟩]
+  | .part =>
+    [⟨GAPS, .ground, true, fun s => closedPath s.outline⟩,
+     ⟨GAPS, .body, true, fun s => match s.dash with
+       | some (a, len) => loopsPath (ringCubics s.drawn a len s.width GAP LINE)
+       | none => loopsPath []⟩]
+  | _ =>
+    [⟨m.layer, .casing, true, fun s => closedPath s.inner.outline⟩,
+     ⟨INTERIORS, .ground, true, fun s => closedPath s.inner.outline⟩]
 
 /-- **A stroked path** with its attributes and its animations. -/
 def pathNode (t : Tube) (cls : String) (width : Nat) (round : Bool) (dash : Option (Int × Nat))
@@ -309,57 +365,84 @@ def pathNode (t : Tube) (cls : String) (width : Nat) (round : Bool) (dash : Opti
      | none => [])
     anims
 
-/-- **A filled path** with its animations. -/
+/-- **A filled path** from its path data, with its animations. -/
+def fillPath (d : Path) (cls : String) (anims : List SvgNode) : SvgNode :=
+  .element .path [.attr .d (.path d), .className cls, .fill .currentColor] anims
+
 def fillNode (cs : List Cubic) (cls : String) (anims : List SvgNode) : SvgNode :=
   .element .path [.attr .d (.path (closedPath cs)), .className cls, .fill .currentColor] anims
 
-/-- **A mark as a path**, with its animations. -/
-def node (m : Mark) (anims : List SvgNode) : SvgNode :=
-  match m.fill with
-  | .stroke => pathNode m.drawn ("tube-" ++ m.tone.name) m.width m.round m.dash anims
-  | _ => fillNode m.outline ("tube-" ++ m.tone.name) anims
+/-- **A path defined once** under an identifier, with its animations, drawn by `useOf`: a body's
+casing and its interior are one path drawn twice. -/
+def pathDef (ident : String) (d : Path) (anims : List SvgNode) : SvgNode :=
+  .element .path [.ident ident, .attr .d (.path d)] anims
 
-/-- The path data of a mark as it stands: its centreline where it is stroked, its outline where
-it is filled. -/
+def useOf (ident cls : String) : SvgNode := .element .use [.attr .href ("#" ++ ident), .className cls] []
+
+/-- Whether a mark is drawn as a cased body. -/
+def Mark.cased (m : Mark) : Bool := match m.fill with | .solid | .stretch _ _ _ => true | _ => false
+
+/-- **One element of a mark**, as it stands, with its animations. -/
+def partNode (p : Part) (m : Mark) (anims : List SvgNode) : SvgNode :=
+  if p.filled then fillPath (p.d m) ("tube-" ++ p.tone.name) anims
+  else pathNode m.drawn ("tube-" ++ p.tone.name) m.width m.round m.dash anims
+
+/-- **A mark as a path**: its first element. -/
+def node (m : Mark) (anims : List SvgNode) : SvgNode :=
+  match m.parts with
+  | p :: _ => partNode p m anims
+  | [] => pathNode m.drawn "tube-body" m.width m.round m.dash anims
+
+/-- The path data of a mark as it stands: its first element's. -/
 def Mark.d (m : Mark) : String :=
-  match m.fill with
-  | .stroke => pathText m.drawn
-  | _ => closedText m.outline
+  match m.parts with
+  | p :: _ => String.ofList (Path.grammar.print (p.d m))
+  | [] => pathText m.drawn
 
 /-- **A join's web** where both its marks stand among `ms`: the crotch between the parent's body
-and the branch, or nothing. A web of no size keeps the same commands, so a film can grow it. -/
-def Join.web (j : Join) (ms : List Mark) : List Cubic :=
+and the branch, inset by `grow` for its interior, or nothing. A web of no size keeps the same
+commands, so a film can grow it. -/
+def Join.web (j : Join) (ms : List Mark) (grow : Nat := 0) : List Cubic :=
   match ms.find? (·.key == j.parent), ms.find? (·.key == j.branch) with
   | some p, some b =>
-    match crotch p.width b.drawn b.width with
+    match crotch p.width b.drawn b.width grow with
     | some cs => cs
     | none => noWeb (b.drawn.x, b.drawn.y)
   | _, _ => noWeb (0, 0)
 
+/-- A join's two elements: its web's interior cased with the bodies, and filled with the
+interiors. -/
+def Join.parts (j : Join) : List (Nat × Tone × (List Mark → Path)) :=
+  [(BODIES, .casing, fun ms => closedPath (j.web ms LINE)),
+   (INTERIORS, .ground, fun ms => closedPath (j.web ms LINE))]
+
 /-- The layers' count. -/
-def LAYERS : Nat := 5
+def LAYERS : Nat := 6
 
 /-- The deepest level among marks. -/
 def depth (ms : List Mark) : Nat := ms.foldl (fun d m => max d m.level) 0
 
-/-- **A still picture** of `W` by `H` pixels: each level in turn, its layers in order, a join's
-web with the bodies of its branch's level. -/
+/-- **A still picture** of `W` by `H` pixels: each level in turn, its layers in order, each
+mark's elements in their layers, a join's web and its interior with the bodies of its branch's
+level. -/
 def still (W H : Nat) (ms : List Mark) (joins : List Join := []) : SvgNode :=
   Svg.Frame.svg { width := W, height := H, ratio := 1 } [.className "tube-view"]
     ((List.range (depth ms + 1)).flatMap fun lv => (List.range LAYERS).flatMap fun l =>
-      ((ms.filter fun m => m.level == lv && m.layer == l).map (node · [])) ++
-      (if l == BODIES then
-        (joins.filter fun j => (ms.find? (·.key == j.branch)).any (·.level == lv)).map fun j =>
-          fillNode (j.web ms) "tube-body" []
-       else []))
+      ((ms.filter (·.level == lv)).flatMap fun m =>
+        (m.parts.filter (·.layer == l)).map fun p => partNode p m []) ++
+      ((joins.filter fun j => (ms.find? (·.key == j.branch)).any (·.level == lv)).flatMap fun j =>
+        (j.parts.filter (·.1 == l)).map fun (_, tone, d) => fillPath (d ms) ("tube-" ++ tone.name) []))
 
-/-- The page's rules for the pen's tones, from the look's ink and ground, and for drawing a
-picture one pixel to the pixel where the page has the room. Each path takes its tone as `color`,
-and fills or strokes with it. -/
+/-- The page's rules for the pen's tones, from the look's ink and ground, as the docs' figures:
+ink and ground and nothing between. Each path takes its tone as `color`, and fills or strokes
+with it. -/
 def css : String :=
-  ".tube-body { color: color-mix(in srgb, var(--e4-color-ink) 34%, var(--e4-color-ground)); }\n" ++
+  ".tube-body { color: var(--e4-color-ink); }\n" ++
   ".tube-fluid { color: var(--e4-color-ink); }\n" ++
   ".tube-ground { color: var(--e4-color-ground); }\n" ++
+  "use.tube-ground { fill: currentColor; stroke: none; }\n" ++
+  ".tube-casing { color: var(--e4-color-ink); fill: currentColor; stroke: currentColor; " ++
+  "stroke-width: 2px; stroke-linejoin: round; }\n" ++
   "svg.tube-view { display: block; max-width: 100%; height: auto; shape-rendering: geometricPrecision; }\n" ++
   "svg.tube-view[id] { cursor: pointer; }\n"
 

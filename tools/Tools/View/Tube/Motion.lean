@@ -28,6 +28,7 @@ reduced motion sees the last picture still (`filmFigure`).
 namespace Tools.View.Tube
 open Tools.View Whatwg.Html
 open Whatwg.Svg.Scene (Easing join)
+open Whatwg.Svg.Value (Path)
 
 /-- What a stroke's track sets at a moment. -/
 inductive Pose where
@@ -109,10 +110,16 @@ deriving Inhabited
 the unit's timing: the body widens round it and closes behind it, as a tube's wall does round a
 bolus that peristalsis drives (Shapiro, Jaffrin and Weinberg 1969). One smooth stretch, its width
 eased in and out, so the body's outline keeps its tangent. -/
-def swellOf (key follows : String) (t : Tube) (a b : Int × Nat) (timing : Timing) : List Event :=
+def swellOf (key follows : String) (t : Tube) (a b : Int × Nat) (timing : Timing)
+    (within : Option (Int × Int) := none) : List Event :=
   let reach : Nat := 12000
-  [{ key, follows, tube := t, width := body t.bore, len := a.2 + 2 * reach, from_ := a.1 - reach,
-     to := b.1 - reach, peak := 2 * SWELL, timing }]
+  let len := a.2 + 2 * reach
+  -- a swell in a vessel stays on its middle, clear of the reducers at its ends
+  let keep (x : Int) : Int := match within with
+    | some (lo, hi) => max lo (min x (hi - (len : Int)))
+    | none => x
+  [{ key, follows, tube := t, width := body t.bore, len, from_ := keep (a.1 - reach),
+     to := keep (b.1 - reach), peak := 2 * SWELL, timing }]
 
 /-- **The tracks of a mark** from `a` to `b`, through `via` where one is given: its centreline on
 the tube's time, its width and its dash on its own. -/
@@ -153,9 +160,13 @@ def span (trs : List Track) : Nat × Nat :=
   (trs.foldl (fun a tr => min a tr.timing.delay) 1000,
    trs.foldl (fun a tr => max a (tr.timing.delay + tr.timing.duration)) 0)
 
-/-- The moments of a span. -/
-def moments (sp : Nat × Nat) : List Nat :=
-  (List.range (MOMENTS + 1)).map fun k => sp.1 + k * (sp.2 - sp.1) / MOMENTS
+/-- The moments of a span, `n` steps of it. -/
+def moments (sp : Nat × Nat) (n : Nat := MOMENTS) : List Nat :=
+  (List.range (n + 1)).map fun k => sp.1 + k * (sp.2 - sp.1) / n
+
+/-- Moments sampled of a swell: ten, since its bump runs evenly and the browser draws straight
+between close samples. -/
+def SWELL_MOMENTS : Nat := 10
 
 /-- **One attribute animated** through its values over a span of a step: begun `start`
 milliseconds into the film (and as long after a click), for the span's duration, holding its end. A
@@ -170,23 +181,26 @@ def animate (id : String) (beat start : Nat) (sp : Nat × Nat) (attr : String) (
      .attr .begin s!"{at_}ms;{id}.click+{at_ - min at_ 500}ms",
      .attr .dur s!"{max 1 (ms (sp.2 - sp.1))}ms", .attr .fill "freeze", .attr .calcMode "linear"] []]
 
-/-- **A mark's animation in one step**: the mark under its tracks at every moment of their span,
-each attribute that changes as one `animate`: its path (a centreline, or a filled outline that
-follows its tube and its width at once), and where it is stroked, its width and its dash. -/
-def markAnims (id : String) (beat start : Nat) (m : Mark) (trs : List Track) : List SvgNode :=
+/-- A path as SVG writes it. -/
+def print (p : Path) : String := String.ofList (Path.grammar.print p)
+
+/-- **An element's animation in one step**: the mark under its tracks at every moment of their
+span, each attribute of the element that changes as one `animate`: its path (a centreline, or a
+filled outline that follows its tube and its width at once), and where it is stroked, its width
+and its dash. -/
+def partAnims (id : String) (beat start : Nat) (p : Part) (m : Mark) (trs : List Track) :
+    List SvgNode :=
   let mine := trs.filter (·.key == m.key)
   if mine.isEmpty then [] else
   let sp := span mine
   let states := (moments sp).map (m.under mine)
-  animate id beat start sp "d" (states.map (·.d)) ++
-  match m.fill with
-  | .stroke =>
+  animate id beat start sp "d" (states.map fun s => print (p.d s)) ++
+  if p.filled then [] else
     animate id beat start sp "stroke-width" (states.map (num ·.width)) ++
     animate id beat start sp "stroke-dasharray"
       (states.map fun s => match s.dash with | some (_, l) => num l ++ " " ++ num BIG | none => "none") ++
     animate id beat start sp "stroke-dashoffset"
       (states.map fun s => match s.dash with | some (a, _) => num (-a) | none => "0")
-  | _ => []
 
 /-- **An event at a moment**: its stretch along the body it follows, as that body stands then. -/
 def Event.at (e : Event) (along : Nat → Tube) (t : Nat) : Mark :=
@@ -194,11 +208,13 @@ def Event.at (e : Event) (along : Nat → Tube) (t : Nat) : Mark :=
   let lin := ({ e.timing with ease := Easing.linear } : Timing).at t
   let l := clamp lin
   let amp : Int := (e.peak * 4 * l * (1000 - l) / 1000000 : Nat)
-  stretchOf e.key (along t) (Whatwg.Svg.Scene.mix e.from_ e.to p) e.len e.width e.width amp (e.len / 2)
+  stretchOf e.key (along t) (Whatwg.Svg.Scene.mix e.from_ e.to p) e.len e.width e.width
+    (e.width + amp.toNat) (e.len / 2)
 
-/-- An event before it starts and after it ends: a stretch of no length, which draws nothing. -/
+/-- An event before it starts and after it ends: a stretch of no length and no width, which
+draws nothing, cased or not, sampled at as many points as the swell. -/
 def Event.rest (e : Event) : Mark :=
-  stretchOf e.key e.tube e.from_ 0 e.width e.width 0 0
+  stretchOf e.key e.tube e.from_ 0 0 0 0 1
 
 /-- **A film**: pictures played one beat each, every step the kit's join of two pictures and the
 marks under their tracks. It starts half a second after the page loads, and again from a click on
@@ -216,41 +232,56 @@ def film (id : String) (W H : Nat) (pictures : List Picture) (beat : Nat := 1000
     let keys := (all.map (·.key)).eraseDups
     let marks := keys.filterMap fun k =>
       (first.marks.find? (·.key == k)).orElse fun _ => (all.find? (·.key == k)).map (·.gone)
-    let stepTracks := steps.map fun ((A, B), i) => (A, B, i, A.step B)
+    let stepTracks : List (Picture × Picture × Nat × List Track) :=
+      steps.map fun ((A, B), i) => (A, B, i, A.step B)
     -- a mark as a step starts from: its pose in the second picture, or in the first where it leaves
     let baseOf (A B : Picture) (k : String) : Option Mark :=
       (B.marks.find? (·.key == k)).orElse fun _ => A.marks.find? (·.key == k)
-    let animsOf (m : Mark) : List SvgNode :=
+    let animsOf (m : Mark) (p : Part) : List SvgNode :=
       stepTracks.flatMap fun (A, B, i, trs) =>
         match baseOf A B m.key with
-        | some b => markAnims id beat (start i) b trs
+        | some b => partAnims id beat (start i) p b trs
         | none => []
-    let events := stepTracks.flatMap fun (A, B, i, trs) => B.events.map fun e =>
-      let along (t : Nat) : Tube :=
-        ((baseOf A B e.follows).map fun m => (m.under trs t).tube).getD e.tube
-      let sp := (e.timing.delay, e.timing.delay + e.timing.duration)
-      let states := (moments sp).zipIdx.map fun (t, k) =>
-        if k == 0 || k == MOMENTS then { e.rest with tube := along t } else e.at along t
-      (e.level, node e.rest (animate id beat (start i) sp "d" (states.map (·.d))))
-    let joinKeys := (pictures.flatMap (·.joins)).foldl
+    -- a cased body is one path, defined once with its animations and drawn twice
+    let bodyPath : Part := ⟨BODIES, .casing, true, fun s => closedPath s.inner.outline⟩
+    let cased := (marks.filter (·.cased)).zipIdx.map fun (m, k) =>
+      (m.key, s!"{id}-b{k}", pathDef s!"{id}-b{k}" (bodyPath.d m) (animsOf m bodyPath))
+    let defOf (k : String) : String := ((cased.find? (·.1 == k)).map (·.2.1)).getD ""
+    -- an event's path at every moment of the event, drawn twice
+    let events : List (Nat × String × SvgNode) := stepTracks.zipIdx.flatMap fun ((A, B, i, trs), si) =>
+      B.events.zipIdx.map fun (e, ei) =>
+        let along (t : Nat) : Tube :=
+          ((baseOf A B e.follows).map fun m => (m.under trs t).tube).getD e.tube
+        let sp := (e.timing.delay, e.timing.delay + e.timing.duration)
+        let states := (moments sp SWELL_MOMENTS).zipIdx.map fun (t, k) =>
+          if k == 0 || k == SWELL_MOMENTS then { e.rest with tube := along t } else e.at along t
+        let did := s!"{id}-e{si}-{ei}"
+        (e.level, did, pathDef did (bodyPath.d e.rest)
+          (animate id beat (start i) sp "d" (states.map fun st => print (bodyPath.d st))))
+    let joinKeys : List Join := (pictures.flatMap (·.joins)).foldl
       (fun js j => if js.any (·.key == j.key) then js else js ++ [j]) []
-    let joins := joinKeys.map fun j =>
+    let joins : List (Nat × String × SvgNode) := joinKeys.zipIdx.map fun (j, k) =>
       let lv := ((all.find? (·.key == j.branch)).map (·.level)).getD 0
+      let web (ms : List Mark) : Path := closedPath (j.web ms LINE)
       let anims := stepTracks.flatMap fun (A, B, i, trs) =>
         let mine := trs.filter fun tr => tr.key == j.parent || tr.key == j.branch
         if mine.isEmpty then [] else
         let sp := span mine
         let ms := [j.parent, j.branch].filterMap (baseOf A B)
-        animate id beat (start i) sp "d"
-          ((moments sp).map fun t => closedText (j.web (ms.map (·.under mine t))))
-      (lv, fillNode (j.web first.marks) "tube-body" anims)
+        animate id beat (start i) sp "d" ((moments sp).map fun t => print (web (ms.map (·.under mine t))))
+      (lv, s!"{id}-j{k}", pathDef s!"{id}-j{k}" (web first.marks) anims)
     let deepest := max (depth all) (events.foldl (fun d e => max d e.1) 0)
+    let twice (layer : Nat) (did : String) : List SvgNode :=
+      if layer == BODIES then [useOf did "tube-casing"]
+      else if layer == INTERIORS then [useOf did "tube-ground"] else []
     Svg.Frame.svg { width := W, height := H, ratio := 1 } [.className "tube-view", .ident id]
-      ((List.range (deepest + 1)).flatMap fun lv => (List.range LAYERS).flatMap fun l =>
-        ((marks.filter fun m => m.level == lv && m.layer == l).map fun m => node m (animsOf m)) ++
-        (if l == BODIES then
-          (events.filter (·.1 == lv)).map (·.2) ++ (joins.filter (·.1 == lv)).map (·.2)
-         else []))
+      ([Svg.defs (cased.map (·.2.2) ++ events.map (·.2.2) ++ joins.map (·.2.2))] ++
+       (List.range (deepest + 1)).flatMap fun lv => (List.range LAYERS).flatMap fun l =>
+        ((marks.filter (·.level == lv)).flatMap fun m =>
+          if m.cased then twice l (defOf m.key)
+          else (m.parts.filter (·.layer == l)).map fun p => partNode p m (animsOf m p)) ++
+        ((events.filter (·.1 == lv)).flatMap fun e => twice l e.2.1) ++
+        ((joins.filter (·.1 == lv)).flatMap fun e => twice l e.2.1))
 
 /-- The rules of a film's figure: its last picture stands for it where the reader prefers
 reduced motion. -/

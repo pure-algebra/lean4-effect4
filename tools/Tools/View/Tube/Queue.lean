@@ -197,7 +197,9 @@ def picture (l : Layout) (msgs : List Nat) (seen : List Nat) (prev : Option Mark
         let len : Int := t.length
         let u : Int := unitLen t.bore
         if max s₀ s₁ < 0 || min s₀ s₁ - u > len then [] else
+        let rise : Int := reducerLen (body PIPE) (body VESSEL)
         swellOf s!"s{msg}@{nm}" (if nm == "in" then "in:wall" else "") t (pillDash t s₀) (pillDash t s₁) tm
+          (if nm == "vessel" then some (rise, len - rise) else none)
   -- the valve: closed when the vessel is full; it opens at once and closes after the unit that
   -- fills the vessel has come to rest
   let valveEnd : Int := (inlet.length : Int) - VALVE_AT
@@ -230,13 +232,15 @@ def picture (l : Layout) (msgs : List Nat) (seen : List Nat) (prev : Option Mark
       { mk.gone with move := mk.move }
   -- the poses passed through: the inlet past its rest, and the valve open
   let viaMarks : List Mark :=
-    ((bodyOf "in" inlet).map onInlet ++ valve ++ (unitsIn.filter (·.1 == 0)).map (·.2)).filterMap
+    ((bodyOf "in" (into inlet true) (round := false)).map onInlet ++ valve ++ (unitsIn.filter (·.1 == 0)).map (·.2)).filterMap
       fun mk =>
-        let t := viaInlet.getD mk.tube
+        let t := if mk.key == "in:wall" then (viaInlet.map (into · true)).getD mk.tube
+          else viaInlet.getD mk.tube
         let d := if reopens && mk.key == "valve" then some (valveEnd, 0) else mk.dash
         if viaInlet.isNone && d == mk.dash then none else some { mk with tube := t, dash := d }
-  { marks := (bodyOf "in" inlet).map onInlet ++ reducedOf "vessel" l.vessel (body PIPE) (body PIPE) ++
-      bodyOf "out" l.outlet ++ valve ++ units ++ waitingTakers ++ keptTakers
+  { marks := (bodyOf "in" (into inlet true) (round := false)).map onInlet ++
+      reducedOf "vessel" l.vessel (body PIPE) (body PIPE) ++
+      bodyOf "out" (into l.outlet false) (round := false) ++ valve ++ units ++ waitingTakers ++ keptTakers
     via := viaMarks
     events := swells ++ surge }
 
