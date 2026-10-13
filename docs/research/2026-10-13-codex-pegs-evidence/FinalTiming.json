@@ -1,0 +1,6 @@
+{
+  "command": "lake exe view-pages tools/view/out/pegs-final",
+  "exitCode": 0,
+  "wallMilliseconds": 3443,
+  "kit": "1ecaf5c1d422a1c98b9d61717ba777b7507d7bf6"
+}

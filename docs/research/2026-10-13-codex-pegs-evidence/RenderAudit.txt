@@ -1,0 +1,149 @@
+warning: manifest out of date: git revision of dependency 'whatwg' changed; use `lake update whatwg` to update it
+docs/research/2026-10-13-codex-pegs-evidence/RenderAudit.lean:10:0: error: #axiom_audit: 58 of 1197 declarations reach axioms outside [propext, Quot.sound]:
+  Tools.View.Tube.partAnims reaches [Classical.choice]
+  Tools.View.Tube.film reaches [Classical.choice]
+  Tools.View.Tube.animate reaches [Classical.choice]
+  Tools.View.Tube.Board.film reaches [Classical.choice]
+  _private.Tools.View.Tube.Board.Film.0.Tools.View.Tube.Board.uncheckedFilm reaches [Classical.choice]
+  Tools.View.Tube.Board.reference reaches [Classical.choice]
+  Tools.View.Tube.Queue.film reaches [Classical.choice]
+  Tools.View.Tube.Queue.endStill reaches [Classical.choice]
+  Tools.View.Tube.PegFigure.nodes reaches [Classical.choice]
+  Tools.View.Tube.PegFigure.still reaches [Classical.choice]
+  Tools.View.Tube.Glyphs.pegStill reaches [Classical.choice]
+  Tools.View.Tube.Score.endStill reaches [Classical.choice]
+  Tools.View.Tube.Score.film reaches [Classical.choice]
+  Tools.View.Tube.Sheet.boardFigure.match_1 reaches [Classical.choice]
+  Tools.View.Tube.Sheet.scoreFigure reaches [Classical.choice]
+  Tools.View.Tube.Sheet.boardFigure reaches [Classical.choice]
+  Tools.View.Tube.Sheet.plateBends reaches [Classical.choice]
+  Tools.View.Tube.Sheet.plateValve reaches [Classical.choice]
+  Tools.View.Tube.Sheet.plateStrategy reaches [Classical.choice]
+  Tools.View.Tube.Sheet.plateWeight reaches [Classical.choice]
+  Tools.View.Tube.Sheet.plateRun reaches [Classical.choice]
+  Tools.View.Tube.Sheet.figure reaches [Classical.choice]
+  Tools.View.Tube.Sheet.filmBranch reaches [Classical.choice]
+  Tools.View.Tube.Sheet.blocks reaches [Classical.choice]
+  Tools.View.Tube.Sheet.plateJunction reaches [Classical.choice]
+  Tools.View.Tube.Sheet.filmFigure reaches [Classical.choice]
+  Tools.View.Tube.Sheet.filmRoutes reaches [Classical.choice]
+  Tools.View.Tube.Sheet.plateAmount reaches [Classical.choice]
+  Tools.View.Tube.Sheet.filmCircuit reaches [Classical.choice]
+  Tools.View.Tube.Sheet.queueBlocks reaches [Classical.choice]
+  Tools.View.Tube.Sheet.plateGaps reaches [Classical.choice]
+  Tools.View.Tube.TilePage.label reaches [Classical.choice]
+  Tools.View.Tube.TilePage.blocks reaches [Classical.choice]
+  Tools.View.Tube.TilePage.picture reaches [Classical.choice]
+  Tools.View.Tube.TilePage.figure reaches [Classical.choice]
+  Tools.View.Tube.TilePage.figure.match_1 reaches [Classical.choice]
+  Tools.View.Tube.GlyphPage.filmAny reaches [Classical.choice]
+  Tools.View.Tube.GlyphPage.filmFilled reaches [Classical.choice]
+  Tools.View.Tube.GlyphPage.filmClosed reaches [Classical.choice]
+  Tools.View.Tube.GlyphPage.filmJoined reaches [Classical.choice]
+  Tools.View.Tube.GlyphPage.blocks reaches [Classical.choice]
+  Tools.View.Tube.GlyphPage.filmHeld reaches [Classical.choice]
+  Tools.View.Tube.GlyphPage.still.match_1 reaches [Classical.choice]
+  Tools.View.Tube.GlyphPage.still reaches [Classical.choice]
+  Tools.View.Tube.GlyphPage.filmKept reaches [Classical.choice]
+  _private.Tools.View.Tube.GlyphPage.0.Tools.View.Tube.GlyphPage.card reaches [Classical.choice]
+  Tools.View.Tube.GlyphPage.name reaches [Classical.choice]
+  Tools.View.Tube.GlyphPage.stills reaches [Classical.choice]
+  Tools.View.underKey reaches [Classical.choice]
+  Tools.View.keptUnchanged reaches [Classical.choice]
+  Tools.View.Flow.layout reaches [Classical.choice]
+  Tools.View.Flow.nodeWidth reaches [Classical.choice]
+  Tools.View.Flow.flowLayerWith reaches [Classical.choice]
+  Tools.View.Flow.flowLayer reaches [Classical.choice]
+  Tools.View.Flow.place reaches [Classical.choice]
+  Tools.View.Flow.ofPage reaches [Classical.choice]
+  Tools.View.Flow.lay reaches [Classical.choice]
+  Tools.View.Flow.ofProgram reaches [Classical.choice]
+22 of them stand under no other (the first 8 shown); each one's path to its axiom:
+  Tools.View.Tube.animate  (Tools.View.Tube.Motion)
+  → Whatwg.Html.SvgNode  (Whatwg.Html.Node.Svg)
+  → Whatwg.Html.SvgNode.raw  (Whatwg.Html.Node.Svg)
+  → Whatwg.Html.RawNode.valuesAnywhere  (Whatwg.Html.Node.Svg)
+  → Whatwg.Html.Content.valuesAt  (Whatwg.Html.Content.Values)
+  → Whatwg.Html.Content.valuesWalk  (Whatwg.Html.Content.Values)
+  → Whatwg.Html.Content.Ns.step  (Whatwg.Html.Svg)
+  → Whatwg.Html.Schema.Tag.ofForeignName?  (Whatwg.Html.Schema.Tags)
+  → String.toList  (Init.Data.String.Basic)
+  → ⋯ 6 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Tools.View.Tube.Board.reference  (Tools.View.Tube.Board.Film)
+  → Whatwg.Html.SvgNode  (Whatwg.Html.Node.Svg)
+  → Whatwg.Html.SvgNode.raw  (Whatwg.Html.Node.Svg)
+  → Whatwg.Html.RawNode.valuesAnywhere  (Whatwg.Html.Node.Svg)
+  → Whatwg.Html.Content.valuesAt  (Whatwg.Html.Content.Values)
+  → Whatwg.Html.Content.valuesWalk  (Whatwg.Html.Content.Values)
+  → Whatwg.Html.Content.Ns.step  (Whatwg.Html.Svg)
+  → Whatwg.Html.Schema.Tag.ofForeignName?  (Whatwg.Html.Schema.Tags)
+  → String.toList  (Init.Data.String.Basic)
+  → ⋯ 6 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Tools.View.Tube.Queue.endStill  (Tools.View.Tube.Queue)
+  → Tools.View.Tube.still  (Tools.View.Tube.Draw)
+  → Tools.View.Tube.Mark.parts  (Tools.View.Tube.Draw)
+  → Tools.View.Tube.Mark.outline  (Tools.View.Tube.Draw)
+  → Tools.View.Tube.Kit.bulge  (Tools.View.Tube.Kit)
+  → Tools.View.Tube.Kit.bulgeK  (Tools.View.Tube.Kit)
+  → Rat.instAdd  (Init.Data.Rat.Basic)
+  → ⋯ 5 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Tools.View.Tube.PegFigure.nodes  (Tools.View.Tube.PegRender)
+  → Whatwg.Html.SvgNode  (Whatwg.Html.Node.Svg)
+  → Whatwg.Html.SvgNode.raw  (Whatwg.Html.Node.Svg)
+  → Whatwg.Html.RawNode.valuesAnywhere  (Whatwg.Html.Node.Svg)
+  → Whatwg.Html.Content.valuesAt  (Whatwg.Html.Content.Values)
+  → Whatwg.Html.Content.valuesWalk  (Whatwg.Html.Content.Values)
+  → Whatwg.Html.Content.Ns.step  (Whatwg.Html.Svg)
+  → Whatwg.Html.Schema.Tag.ofForeignName?  (Whatwg.Html.Schema.Tags)
+  → String.toList  (Init.Data.String.Basic)
+  → ⋯ 6 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Tools.View.Tube.Score.endStill  (Tools.View.Tube.Score)
+  → Tools.View.Tube.still  (Tools.View.Tube.Draw)
+  → Tools.View.Tube.Mark.parts  (Tools.View.Tube.Draw)
+  → Tools.View.Tube.Mark.outline  (Tools.View.Tube.Draw)
+  → Tools.View.Tube.Kit.bulge  (Tools.View.Tube.Kit)
+  → Tools.View.Tube.Kit.bulgeK  (Tools.View.Tube.Kit)
+  → Rat.instAdd  (Init.Data.Rat.Basic)
+  → ⋯ 5 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Tools.View.Tube.Sheet.boardFigure.match_1  (Tools.View.Tube.Sheet)
+  → Whatwg.Html.SvgNode  (Whatwg.Html.Node.Svg)
+  → Whatwg.Html.SvgNode.raw  (Whatwg.Html.Node.Svg)
+  → Whatwg.Html.RawNode.valuesAnywhere  (Whatwg.Html.Node.Svg)
+  → Whatwg.Html.Content.valuesAt  (Whatwg.Html.Content.Values)
+  → Whatwg.Html.Content.valuesWalk  (Whatwg.Html.Content.Values)
+  → Whatwg.Html.Content.Ns.step  (Whatwg.Html.Svg)
+  → Whatwg.Html.Schema.Tag.ofForeignName?  (Whatwg.Html.Schema.Tags)
+  → String.toList  (Init.Data.String.Basic)
+  → ⋯ 6 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Tools.View.Tube.Sheet.plateBends  (Tools.View.Tube.Sheet)
+  → Tools.View.Tube.still  (Tools.View.Tube.Draw)
+  → Tools.View.Tube.Mark.parts  (Tools.View.Tube.Draw)
+  → Tools.View.Tube.Mark.outline  (Tools.View.Tube.Draw)
+  → Tools.View.Tube.Kit.bulge  (Tools.View.Tube.Kit)
+  → Tools.View.Tube.Kit.bulgeK  (Tools.View.Tube.Kit)
+  → Rat.instAdd  (Init.Data.Rat.Basic)
+  → ⋯ 5 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Tools.View.Tube.Sheet.plateValve  (Tools.View.Tube.Sheet)
+  → Tools.View.Tube.still  (Tools.View.Tube.Draw)
+  → Tools.View.Tube.Mark.parts  (Tools.View.Tube.Draw)
+  → Tools.View.Tube.Mark.outline  (Tools.View.Tube.Draw)
+  → Tools.View.Tube.Kit.bulge  (Tools.View.Tube.Kit)
+  → Tools.View.Tube.Kit.bulgeK  (Tools.View.Tube.Kit)
+  → Rat.instAdd  (Init.Data.Rat.Basic)
+  → ⋯ 5 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)

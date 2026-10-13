@@ -1,0 +1,291 @@
+page	figure	kind	bytes	animations	path bytes
+tubes.html	A run and its units: each	still	2168	0	656
+tubes.html	Every bend at one radius, whatever	still	5299	0	3390
+tubes.html	A solid join shares the fluid:	still	6527	0	4370
+tubes.html	An air gap shares nothing: a	still	7556	0	4236
+tubes.html	One amount everywhere: a unit is	still	4794	0	2980
+tubes.html	A valve parts its pipe: open	still	3330	0	1590
+tubes.html	A span bends under what it	still	3602	0	1838
+tubes.html	Backpressure: a float valve parts the	still	8803	0	5219
+tubes.html	Dropping: an overflow before the vessel,	still	8969	0	6218
+tubes.html	Sliding: a relief after the vessel's	still	8506	0	5782
+tubes.html	One tube of three pieces: straight,	film	73764	21	67387
+tubes.html	A queue closing into a circuit:	film	39321	4	35670
+tubes.html	A branch grows from its root,	film	40922	6	35505
+tubes.html	The corpus's fork: the parent forks	film	10563	14	4787
+tubes.html	Two children: the parent forks a	film	15348	19	7586
+tubes.html	Capacity 2: the whole run, one	film	16821	16	6741
+tubes.html	the empty cell, capacity 2	still	7014	0	4196
+tubes.html	offer 10, request 1	still	7005	0	4196
+tubes.html	offer 20, request 2	still	7849	0	4928
+tubes.html	offer 30, request 3	still	7847	0	4928
+tubes.html	take, request 4	still	7846	0	4928
+tubes.html	take, request 5	still	7003	0	4196
+tubes.html	take, request 6	still	7006	0	4196
+tubes.html	take, request 7	still	7482	0	4294
+tubes.html	offer 40, request 8	still	7484	0	4294
+tubes.html	take, request 7	still	7007	0	4196
+tubes.html	Capacity 13: the whole run, one	film	53267	62	12021
+tubes.html	the empty cell, capacity 13	still	20759	0	8820
+tubes.html	offer 10, request 1	still	20750	0	8820
+tubes.html	offer 20, request 2	still	20749	0	8820
+tubes.html	offer 30, request 3	still	20748	0	8820
+tubes.html	offer 40, request 4	still	20747	0	8820
+tubes.html	offer 50, request 5	still	20746	0	8820
+tubes.html	offer 60, request 6	still	20745	0	8820
+tubes.html	offer 70, request 7	still	20745	0	8820
+tubes.html	offer 80, request 8	still	20744	0	8820
+tubes.html	offer 90, request 9	still	20743	0	8820
+tubes.html	offer 100, request 10	still	20744	0	8820
+tubes.html	offer 110, request 11	still	20743	0	8820
+tubes.html	offer 120, request 12	still	20742	0	8820
+tubes.html	offer 130, request 13	still	21551	0	9516
+tubes.html	offer 140, request 14	still	21549	0	9516
+tubes.html	offer 150, request 15	still	21547	0	9516
+tubes.html	offer 160, request 16	still	21545	0	9516
+tubes.html	take, request 17	still	21543	0	9516
+tubes.html	take, request 18	still	21546	0	9516
+tubes.html	take, request 19	still	21549	0	9516
+tubes.html	take, request 20	still	20741	0	8820
+tubes.html	take, request 21	still	20743	0	8820
+tubes.html	take, request 22	still	20745	0	8820
+tubes.html	offer 230, request 23	still	20749	0	8820
+tubes.html	offer 240, request 24	still	20748	0	8820
+tubes.html	offer 250, request 25	still	21557	0	9516
+tubes.html	offer 260, request 26	still	21555	0	9516
+tube-glyphs.html	box [ ]	still	785	0	502
+tube-glyphs.html	value ─●	still	1062	0	717
+tube-glyphs.html	probe ⌕	still	1387	0	988
+tube-glyphs.html	call ⟦ ⟧	still	1404	0	1004
+tube-glyphs.html	cross ×	still	2186	0	1674
+tube-glyphs.html	hash #	still	1378	0	982
+tube-glyphs.html	reasons × ⊣	still	1790	0	1272
+tube-glyphs.html	enter ▶	still	1595	0	1253
+tube-glyphs.html	tag #n	still	1091	0	753
+tube-glyphs.html	atom 1	still	440	0	215
+tube-glyphs.html	hollowBox □	still	1600	0	1196
+tube-glyphs.html	filledBox ■	still	1327	0	981
+tube-glyphs.html	hollowDot ○	still	1336	0	932
+tube-glyphs.html	filledDot ●	still	1063	0	717
+tube-glyphs.html	hole ◌	still	1050	0	766
+tube-glyphs.html	slot ⊔	still	1538	0	1197
+tube-glyphs.html	block ▤	still	1965	0	1452
+tube-glyphs.html	region ⌜ ⌟	still	2596	0	1964
+tube-glyphs.html	bracket [ ]	still	2325	0	1924
+tube-glyphs.html	openBracket [ ┄	still	1251	0	958
+tube-glyphs.html	rail ═══	still	1372	0	968
+tube-glyphs.html	library ❏	still	2572	0	1945
+tube-glyphs.html	panel { }	still	3603	0	2748
+tube-glyphs.html	cells [│]	still	1333	0	932
+tube-glyphs.html	series ─▶	still	1041	0	695
+tube-glyphs.html	parallel ═	still	2494	0	2206
+tube-glyphs.html	alternative ⑂	still	2357	0	2066
+tube-glyphs.html	loop ↺	still	1916	0	1518
+tube-glyphs.html	rest ┄	still	1380	0	982
+tube-glyphs.html	arrow ──▶	still	1477	0	1072
+tube-glyphs.html	spider ◉	still	3702	0	2846
+tube-glyphs.html	port !?	still	2066	0	1611
+tube-glyphs.html	blockedArrow ⊣	still	1695	0	1233
+tube-glyphs.html	exitBar ‖	still	1367	0	968
+tube-glyphs.html	barLine │	still	1687	0	1230
+tube-glyphs.html	fermata 𝄐	still	1580	0	1180
+tube-glyphs.html	caesura //	still	898	0	614
+tube-glyphs.html	A promise kept: the answer comes	film	6640	3	3288
+tube-glyphs.html	A hole filled by a value:	film	5410	2	3092
+tube-glyphs.html	A scope opened, its close owed,	film	21769	2	20536
+tube-glyphs.html	A fork joined: the child's lane	film	39816	9	35201
+tube-glyphs.html	Any mark into any other: box,	film	184312	37	174665
+tube-glyphs.html	An interrupt held by a rail:	film	64594	8	60992
+tube-glyphs.html	Eff.succeed succeed	still	1069	0	717
+tube-glyphs.html	Eff.fail fail	still	2191	0	1674
+tube-glyphs.html	Eff.failCause fail (cause)	still	2204	0	1674
+tube-glyphs.html	Eff.sync run	still	790	0	502
+tube-glyphs.html	Eff.suspend suspend (lazy)	still	804	0	502
+tube-glyphs.html	Eff.perform perform	still	2078	0	1611
+tube-glyphs.html	Eff.bind bind	still	1041	0	695
+tube-glyphs.html	Eff.gen generate	still	1972	0	1452
+tube-glyphs.html	Eff.catchCause catch	still	2362	0	2066
+tube-glyphs.html	Eff.matchCause match (both arms)	still	2374	0	2066
+tube-glyphs.html	Eff.onExit on exit	still	1341	0	932
+tube-glyphs.html	Eff.exit exit	still	1369	0	968
+tube-glyphs.html	Eff.uninterruptible mask	still	1382	0	968
+tube-glyphs.html	Eff.interruptible unmask (lifted)	still	1391	0	968
+tube-glyphs.html	Eff.yieldNow yield	still	1390	0	982
+tube-glyphs.html	Eff.awaitFiber await	still	3712	0	2846
+tube-glyphs.html	Eff.withFiber read (fiber)	still	1404	0	988
+tube-glyphs.html	Eff.scoped scope	still	2330	0	1924
+tube-glyphs.html	Eff.acquireRelease scope (acquire and release)	still	2360	0	1924
+tube-glyphs.html	Eff.provideLayer provide (layer)	still	2614	0	1964
+tube-glyphs.html	Eff.service read (service)	still	1404	0	988
+tube-glyphs.html	Eff.provideService provide (service)	still	2618	0	1964
+tube-glyphs.html	Eff.catchIf catch (if)	still	2364	0	2066
+tube-glyphs.html	Eff.select select (select)	still	2368	0	2066
+tube-glyphs.html	Eff.iterate iterate	still	1927	0	1518
+tube-glyphs.html	Eff.restore restore (restore)	still	1387	0	968
+tube-glyphs.html	Eff.defs define	still	2576	0	1945
+tube-glyphs.html	Eff.invoke invoke	still	1409	0	1004
+tube-glyphs.html	Eff.provideContext provide (context)	still	2618	0	1964
+tube-glyphs.html	Stmt.bindYield bind (yield*)	still	1056	0	695
+tube-glyphs.html	Stmt.yieldDiscard bind (discard)	still	1060	0	695
+tube-glyphs.html	Stmt.ret succeed (return)	still	1075	0	717
+tube-glyphs.html	Stmt.ifElse branch (if)	still	2365	0	2066
+tube-glyphs.html	Stmt.whileTrue loop (while)	still	1935	0	1518
+tube-glyphs.html	Stmt.breakLoop break (break)	still	1936	0	1518
+tube-glyphs.html	ActionTerm.fork fork	still	1482	0	1072
+tube-glyphs.html	ActionTerm.forkIn fork (in a scope)	still	1497	0	1072
+tube-glyphs.html	ActionTerm.forkScoped fork (scoped)	still	1497	0	1072
+tube-glyphs.html	ActionTerm.runIn scope (run in)	still	2345	0	1924
+tube-glyphs.html	ActionTerm.interrupt interrupt	still	1709	0	1233
+tube-glyphs.html	ActionTerm.interruptScoped interrupt (scoped)	still	1724	0	1233
+tube-glyphs.html	ActionTerm.interruptAll interrupt (all)	still	1718	0	1233
+tube-glyphs.html	ActionTerm.awaitAll await (all)	still	3723	0	2846
+tube-glyphs.html	ActionTerm.awaitAllFailFast await (all, fail fast)	still	3742	0	2846
+tube-glyphs.html	ActionTerm.snapshotChildren read (children)	still	1421	0	988
+tube-glyphs.html	ActionTerm.awaitNewChildren await (new children)	still	3740	0	2846
+tube-glyphs.html	ActionTerm.raceAll race (race)	still	3722	0	2846
+tube-glyphs.html	ActionTerm.getId read (id)	still	1404	0	988
+tube-glyphs.html	ActionTerm.closeScope close (close)	still	2349	0	1924
+tube-glyphs.html	ActionTerm.getInterruptible read (interruptibility)	still	1429	0	988
+tube-glyphs.html	ActionTerm.raceAllFirst race (race, first)	still	3734	0	2846
+tube-glyphs.html	ActionTerm.context read (context)	still	1411	0	988
+tube-glyphs.html	LayerTerm.succeed succeed (layer)	still	1083	0	717
+tube-glyphs.html	LayerTerm.effect run (layer)	still	806	0	502
+tube-glyphs.html	LayerTerm.effectDiscard run (layer, discard)	still	822	0	502
+tube-glyphs.html	LayerTerm.provide provide (layer)	still	2615	0	1964
+tube-glyphs.html	LayerTerm.provideMerge provide (layer, merge)	still	2627	0	1964
+tube-glyphs.html	LayerTerm.merge merge	still	2503	0	2206
+tube-glyphs.html	LayerTerm.fresh build (fresh)	still	807	0	502
+tube-glyphs.html	LayerTerm.orDie die (or die)	still	1400	0	982
+tube-glyphs.html	LayerTerm.ref invoke (layer)	still	1420	0	1004
+tube-glyphs.html	LayerTerm.mergeAll merge (all)	still	2512	0	2206
+tube-glyphs.html	CauseTerm.fail fail	still	2197	0	1674
+tube-glyphs.html	CauseTerm.die die	still	1389	0	982
+tube-glyphs.html	CauseTerm.interrupt interrupt	still	1708	0	1233
+tube-glyphs.html	CauseTerm.both combine	still	1798	0	1272
+tube-glyphs.html	Prim.success succeed	still	1070	0	717
+tube-glyphs.html	Prim.failure fail (cause)	still	2203	0	1674
+tube-glyphs.html	Prim.sync run	still	791	0	502
+tube-glyphs.html	Prim.suspend suspend (lazy)	still	805	0	502
+tube-glyphs.html	Prim.withFiber read (fiber)	still	1405	0	988
+tube-glyphs.html	Prim.yieldableError fail (yieldable)	still	2214	0	1674
+tube-glyphs.html	Prim.iterator iterate (iterator)	still	1940	0	1518
+tube-glyphs.html	Prim.onSuccess continue (success)	still	1075	0	766
+tube-glyphs.html	Prim.onSuccessConst continue (success, constant)	still	1090	0	766
+tube-glyphs.html	Prim.onFailure continue (failure)	still	1075	0	766
+tube-glyphs.html	Prim.onSuccessAndFailure continue (both)	still	1082	0	766
+tube-glyphs.html	Prim.exitFrame continue (exit)	still	1072	0	766
+tube-glyphs.html	Prim.onExit on exit (frame)	still	1350	0	932
+tube-glyphs.html	Prim.setInterruptible mask (boundary)	still	1395	0	968
+tube-glyphs.html	Prim.whileLoop loop (while)	still	1935	0	1518
+tube-glyphs.html	Prim.yieldNowWith yield	still	1395	0	982
+tube-glyphs.html	Prim.async park (async)	still	1610	0	1196
+tube-glyphs.html	Prim.asyncFinalizer cancel (async)	still	1357	0	932
+tube-glyphs.html	FrameEvent.popped pop (popped)	still	1072	0	766
+tube-glyphs.html	FrameEvent.ranContAll pass (passed)	still	1077	0	766
+tube-glyphs.html	FrameEvent.pushed push (pushed)	still	1073	0	766
+tube-glyphs.html	FrameEvent.ranFinalizer finalize (frame)	still	1090	0	717
+tube-glyphs.html	FrameEvent.substituted substitute (substituted)	still	1089	0	766
+tube-glyphs.html	FrameEvent.deferred interrupt (deferred)	still	1719	0	1233
+tube-glyphs.html	FrameEvent.yielded yield (yielded)	still	1406	0	982
+tube-glyphs.html	RunEvent.forked fork (event)	still	1490	0	1072
+tube-glyphs.html	RunEvent.started enter	still	1608	0	1253
+tube-glyphs.html	RunEvent.scheduledTask queue (task)	still	1622	0	1196
+tube-glyphs.html	RunEvent.ranTask dispatch (task)	still	1346	0	981
+tube-glyphs.html	RunEvent.yieldInjected yield (injected)	still	1411	0	982
+tube-glyphs.html	RunEvent.parkedOn park	still	1609	0	1196
+tube-glyphs.html	RunEvent.resumedWith resume	still	1341	0	981
+tube-glyphs.html	RunEvent.interruptRecorded interrupt (recorded)	still	1726	0	1233
+tube-glyphs.html	RunEvent.interruptDeferred interrupt (deferred)	still	1726	0	1233
+tube-glyphs.html	RunEvent.childrenInterrupted interrupt (children)	still	1728	0	1233
+tube-glyphs.html	RunEvent.observerFired observe (observed)	still	3733	0	2846
+tube-glyphs.html	RunEvent.frame frame (event)	still	1070	0	766
+tube-glyphs.html	RunEvent.finalizerProgram finalize (program)	still	1094	0	717
+tube-glyphs.html	RunEvent.scopeLinked link (linked)	still	2348	0	1924
+tube-glyphs.html	RunEvent.scopeClosedOnLink close (closed on link)	still	2363	0	1924
+tube-glyphs.html	RunEvent.raceStarted race (started)	still	3727	0	2846
+tube-glyphs.html	RunEvent.raceLaunched fork (race entrant)	still	1503	0	1072
+tube-glyphs.html	RunEvent.raceSettled race (settled)	still	3727	0	2846
+tube-glyphs.html	RunEvent.contextSet provide (context set)	still	2623	0	1964
+tube-glyphs.html	RunEvent.callback register (callback)	still	2096	0	1611
+tube-glyphs.html	RunEvent.exited exit	still	1376	0	968
+tube-glyphs.html	RunDecision.fire decide (drain)	still	1707	0	1230
+tube-glyphs.html	RunDecision.flush decide (flush)	still	1708	0	1230
+tube-glyphs.html	RunDecision.evaluate decide (evaluate)	still	1714	0	1230
+tube-glyphs.html	RunDecision.yieldVerdict decide (verdict)	still	1717	0	1230
+tube-glyphs.html	RunDecision.answerAsync decide (answer)	still	1715	0	1230
+tube-glyphs.html	RunDecision.interruptFrom decide (interrupt)	still	1720	0	1230
+tube-glyphs.html	RunDecision.installMiddleware decide (install)	still	1722	0	1230
+tube-glyphs.html	RunDecision.advance decide (advance)	still	1712	0	1230
+tube-glyphs.html	Observer.resumeAwait observe (await)	still	3728	0	2846
+tube-glyphs.html	Observer.untrackChild observe (untrack)	still	3731	0	2846
+tube-glyphs.html	Observer.dropScopeFinalizer unregister (drop)	still	1368	0	932
+tube-glyphs.html	Observer.countdown observe (countdown)	still	3730	0	2846
+tube-glyphs.html	Observer.raceCallback observe (race)	still	3728	0	2846
+tube-glyphs.html	Observer.callback register (callback)	still	2096	0	1611
+tube-glyphs.html	Reason.fail fail	still	2194	0	1674
+tube-glyphs.html	Reason.die die	still	1386	0	982
+tube-glyphs.html	Reason.interrupt interrupt	still	1705	0	1233
+tube-glyphs.html	Exit.success exit (success)	still	1383	0	968
+tube-glyphs.html	Exit.failure exit (failure)	still	1383	0	968
+tube-glyphs.html	ScopeState.empty hold (empty)	still	1263	0	958
+tube-glyphs.html	ScopeState.openEmpty hold (none)	still	1266	0	958
+tube-glyphs.html	ScopeState.openInline hold (one)	still	1266	0	958
+tube-glyphs.html	ScopeState.openMap hold (many)	still	1264	0	958
+tube-glyphs.html	ScopeState.closed close (closed)	still	2346	0	1924
+tube-glyphs.html	Outcome.finished finish (finished)	still	1390	0	968
+tube-glyphs.html	Outcome.frontier wait	still	1589	0	1180
+tube-glyphs.html	Outcome.stuck halt	still	906	0	614
+tube-glyphs.html	FrontierReason.commandFuel wait (budget)	still	1608	0	1180
+tube-glyphs.html	FrontierReason.compileFuel wait (compile budget)	still	1616	0	1180
+tube-glyphs.html	FrontierReason.awaitHost wait (host)	still	1604	0	1180
+tube-glyphs.html	FrontierReason.awaitTimer wait (timer)	still	1606	0	1180
+tube-glyphs.html	FrontierReason.awaitDecision wait (decision)	still	1612	0	1180
+tube-glyphs.html	Stuck.unknownFiber halt (fiber)	still	919	0	614
+tube-glyphs.html	Stuck.unknownScope halt (scope)	still	919	0	614
+tube-glyphs.html	Stuck.unknownRace halt (race)	still	917	0	614
+tube-glyphs.html	Ty.never never (never)	still	456	0	215
+tube-glyphs.html	Ty.unit unit (unit)	still	453	0	215
+tube-glyphs.html	Ty.nat number (nat)	still	453	0	215
+tube-glyphs.html	Ty.int number (int)	still	453	0	215
+tube-glyphs.html	Ty.string string (string)	still	459	0	215
+tube-glyphs.html	Ty.bool truth (bool)	still	454	0	215
+tube-glyphs.html	Ty.handle handle (named)	still	1109	0	753
+tube-glyphs.html	Ty.option option	still	1546	0	1197
+tube-glyphs.html	Ty.list list	still	1334	0	932
+tube-glyphs.html	Ty.prod pair (pair)	still	1341	0	932
+tube-glyphs.html	Ty.except either (except)	still	2367	0	2066
+tube-glyphs.html	Ty.exitOf exit (type)	still	1377	0	968
+tube-glyphs.html	Ty.causeOf cause (type)	still	1799	0	1272
+tube-glyphs.html	Ty.fiberOf handle (fiber)	still	1110	0	753
+tube-glyphs.html	Ty.union either (union)	still	2365	0	2066
+tube-glyphs.html	Ty.lit literal (literal)	still	458	0	215
+tube-glyphs.html	Ty.refOf handle (ref)	still	1106	0	753
+tube-glyphs.html	Ty.deferredOf promise (deferred)	still	1355	0	932
+tube-glyphs.html	Ty.var variable (variable)	still	460	0	215
+tube-glyphs.html	Ty.unknown unknown (unknown)	still	462	0	215
+tube-glyphs.html	Ty.record record	still	3610	0	2748
+tube-glyphs.html	Ty.map map (map)	still	3610	0	2748
+tube-glyphs.html	Ty.tuple tuple (tuple)	still	1344	0	932
+tube-glyphs.html	Ty.app apply (type)	still	1411	0	1004
+tube-glyphs.html	Ty.null null (null)	still	453	0	215
+tube-glyphs.html	Ty.undefined undefined (undefined)	still	468	0	215
+tube-glyphs.html	Ty.number number (number)	still	459	0	215
+tube-glyphs.html	Ty.bytes bytes (bytes)	still	456	0	215
+tube-glyphs.html	Ty.contextOf context (context type)	still	2617	0	1964
+tube-glyphs.html	Val.unit unit (unit)	still	454	0	215
+tube-glyphs.html	Val.bool truth (bool)	still	455	0	215
+tube-glyphs.html	Val.nat number (nat)	still	454	0	215
+tube-glyphs.html	Val.str string (string)	still	457	0	215
+tube-glyphs.html	Val.bytes bytes (bytes)	still	457	0	215
+tube-glyphs.html	Val.list list	still	1335	0	932
+tube-glyphs.html	Val.pair pair (pair)	still	1342	0	932
+tube-glyphs.html	Val.none option (empty)	still	1553	0	1197
+tube-glyphs.html	Val.some option	still	1545	0	1197
+tube-glyphs.html	Val.ctor construct (constructor)	still	3626	0	2748
+tube-glyphs.html	Val.ref address (node)	still	1107	0	753
+tube-glyphs.html	Val.handle handle	still	1102	0	753
+tube-glyphs.html	Val.negInt number (negative)	still	462	0	215
+tube-glyphs.html	Val.float number (float)	still	458	0	215
+program-pegs.html	A value [] succeed (lit 3)	still	1384	0	717
+program-pegs.html	Bind and its continuation [0] succeed	still	2581	0	1434
+program-pegs.html	A fork and its await [0	still	8443	0	5617
