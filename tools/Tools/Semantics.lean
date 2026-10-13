@@ -110,7 +110,7 @@ def roleName (r : Role) : String := match r with
 
 /-! ## The report as data
 
-`buildReport` measures once and returns a `Report`. Its JSON (`Report.toJson`, schema seven) and its
+`buildReport` measures once and returns a `Report`. Its JSON (`Report.toJson`, schema eight) and its
 document (`Report.document`, `Tools/SemanticsDocument.lean`) are both read from this value, so no
 output parses another. -/
 
@@ -141,8 +141,9 @@ structure RegisterRow where
 
 /-- A claim's evidence, derived from its pointer (decisions row 203), never authored. -/
 inductive Evidence where
-  /-- the pointer is a planned goal -/
-  | wanted (goal : DeclarationEntry)
+  /-- the pointer is a planned goal: the status `goal` (decisions row 366, point 7: one word for a
+  planned goal, on every page and in the report) -/
+  | goal (goal : DeclarationEntry)
   /-- a theorem that rests on planned goals (its `restsOn`) -/
   | modulo (witness : DeclarationEntry)
   | proved (witness : DeclarationEntry)
@@ -153,12 +154,12 @@ inductive Evidence where
 
 /-- The evidence's word in the report. -/
 def Evidence.tag : Evidence → String
-  | .wanted _ => "wanted" | .modulo _ => "modulo" | .proved _ => "proved"
+  | .goal _ => "goal" | .modulo _ => "modulo" | .proved _ => "proved"
   | .refuted _ => "refuted" | .absent _ => "absent" | .assumed _ _ => "assumed"
 
 /-- The declaration the evidence prints: the goal, the witness, or the refuting theorem. -/
 def Evidence.declaration? : Evidence → Option DeclarationEntry
-  | .wanted d | .modulo d | .proved d => some d
+  | .goal d | .modulo d | .proved d => some d
   | .refuted row => row.witness
   | .absent _ | .assumed _ _ => none
 
@@ -249,7 +250,8 @@ structure Report where
   placement : PlacementEntry
   deriving Inhabited
 
-/-! ## Its JSON (schema seven: six with each declaration's and node's docstring) -/
+/-! ## Its JSON (schema eight: six with each declaration's and node's docstring, and a planned
+goal's status `goal`, once `wanted`) -/
 
 private def text (s : String) : Json := Lean.toJson s
 private def names (ns : List Name) : Json := Lean.toJson (ns.map Name.toString)
@@ -267,7 +269,7 @@ def RegisterRow.toJson (r : RegisterRow) : Json := obj [
   ("witness", match r.witness with | some d => d.toJson | none => .null)]
 
 def Evidence.toJson : Evidence → Json
-  | .wanted d => obj [("_tag", text "wanted"), ("by", text "goal"), ("goal", d.toJson)]
+  | .goal d => obj [("_tag", text "goal"), ("by", text "goal"), ("goal", d.toJson)]
   | .modulo d => obj [("_tag", text "modulo"), ("by", text "theorem"), ("witness", d.toJson),
       ("restsOn", names d.restsOn)]
   | .proved d => obj [("_tag", text "proved"), ("by", text "theorem"), ("witness", d.toJson),
@@ -317,7 +319,7 @@ def AcceptanceEntry.toJson (a : AcceptanceEntry) : Json := obj [
   ("waitsOn", Lean.toJson a.waitsOn)]
 
 /-- The tags a concept's claims are counted by. -/
-def evidenceTags : List String := ["proved", "modulo", "wanted", "refuted", "absent", "assumed"]
+def evidenceTags : List String := ["proved", "modulo", "goal", "refuted", "absent", "assumed"]
 
 /-- The report's producer line and its declared inputs. -/
 def producer : String := Tools.GeneratedStamp.note "tools/Drivers/Semantics.lean (make gen-semantics)"
@@ -332,7 +334,7 @@ def placementUniverse : String :=
   "theorems of the registry's concept-named modules; auxiliary names and planned goals excluded"
 
 def Report.toJson (r : Report) : Json := obj [
-  ("format", text "effect4-semantics-report"), ("schemaVersion", Lean.toJson (7 : Nat)),
+  ("format", text "effect4-semantics-report"), ("schemaVersion", Lean.toJson (8 : Nat)),
   ("producer", text producer), ("command", text command), ("inputs", Lean.toJson inputs),
   ("provenance", obj [("toolchain", text r.toolchain), ("roots", names r.roots),
     ("policy", obj [("gate", text "Test/Audit/AxiomGate.lean"),
@@ -424,7 +426,7 @@ private def evidence (memo : Memo) (index : Registers) : Pointer → MetaM Evide
     -- the standing is derived (decisions row 203): an open goal, a theorem that rests on goals,
     -- or a theorem that reaches none
     let d ← witness memo name
-    if ProofGraph.isGoal (← getEnv) name then return .wanted d
+    if ProofGraph.isGoal (← getEnv) name then return .goal d
     return if d.restsOn.isEmpty then .proved d else .modulo d
   | .refutedBy id name => do
     let status ← counterexample index id

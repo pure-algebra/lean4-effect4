@@ -23,7 +23,7 @@ deriving Repr, Inhabited, BEq
 /-- What the claim points at. Authored; never a status (§3 derives the status). -/
 inductive Pointer
   /-- a theorem stating the claim, or a planned goal (`proof_goal`, decisions row 203); its status is
-  derived from its proof: wanted for a goal, modulo when it rests on goals, proved otherwise (not
+  derived from its proof: goal for a goal, modulo when it rests on goals, proved otherwise (not
   `theorem`, a keyword, which v2 had to escape) -/
   | witness (name : Name)
   /-- a theorem refuting the claim, and the register row that records it -/

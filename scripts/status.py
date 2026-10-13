@@ -350,7 +350,7 @@ def main() -> int:
     drift_line = "no committed generated file differs" if not drift else f"{len(drift)} generated file(s) differ: {' '.join(drift[:4])}"
     print(f"generated {gen_line}; {drift_line}")
 
-    print(f"claims    {summarise(claim_counts, ('proved', 'modulo', 'absent', 'refuted', 'assumed', 'wanted'))}  ({SEMANTICS})")
+    print(f"claims    {summarise(claim_counts, ('proved', 'modulo', 'goal', 'absent', 'refuted', 'assumed'))}  ({SEMANTICS})")
     print(f"goals     {planned_goals()} open planned goal(s) (proof_goal)")
     print(f"plan      requirements {requirements}; {next_goals}  ({SEMANTICS})")
     print(f"decisions {summarise(decisions(), ('open', 'ruled', 'landed'))}  (docs/core/decisions.md)")

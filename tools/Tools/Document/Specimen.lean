@@ -15,7 +15,7 @@ open Tools.Document
 
 /-- A line with a word of every status. -/
 def statuses : Line :=
-  ["proved", "modulo", "goal", "wanted", "open", "refuted", "absent", "assumed", "missing"].foldr
+  ["proved", "modulo", "goal", "open", "refuted", "absent", "assumed", "missing"].foldr
     (fun w acc => .status w :: .text " " :: acc) []
 
 /-- Every block kind, in parts nested to the sixth level. -/

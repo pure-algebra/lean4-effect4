@@ -139,7 +139,7 @@ private def nameAndDescription (title : String) : String × String :=
 
 /-- How many claims stand at each status, in the order of the legend. -/
 private def statusCounts (claims : List ClaimEntry) : Line :=
-  let words := ["proved", "modulo", "wanted", "refuted", "absent", "assumed"]
+  let words := ["proved", "modulo", "goal", "refuted", "absent", "assumed"]
   let present := words.filterMap fun w =>
     let n := (claims.filter (·.evidence.tag == w)).length
     if n == 0 then none else some (n, w)
@@ -346,7 +346,7 @@ private def openPart (plan : PlanEntry) (claims : List ClaimEntry) : Block := Id
   for g in goals do
     let name := g.name.toString
     let claimRefs := claims.filterMap fun c => match c.evidence with
-      | .wanted d | .modulo d =>
+      | .goal d | .modulo d =>
         if d.name.toString == name || d.restsOn.any (·.toString == name) then some [.ref (claimKey c.claim.id) c.claim.id] else none
       | _ => none
     let reqRefs := plan.requirements.filterMap fun r =>
@@ -398,7 +398,7 @@ def Report.document (r : Report) : Document :=
   let byConcept : Std.HashMap String (Array ClaimEntry) :=
     r.claims.foldl (fun m c => m.insert c.claim.concept ((m.getD c.claim.concept #[]).push c)) {}
   { title := "Semantics evidence"
-    producer := [producer, "format: effect4-semantics-report v7", s!"command: {command}",
+    producer := [producer, "format: effect4-semantics-report v8", s!"command: {command}",
       s!"inputs: {", ".intercalate inputs}"]
     body :=
       [.para [.text "This page lists the claims that Effect4 makes about Effect's runtime, concept by concept, ",
@@ -414,9 +414,8 @@ def Report.document (r : Report) : Document :=
          .items [
            [.status "proved", .text ": a theorem whose proof rests on no planned goal."],
            [.status "modulo", .text ": a theorem proved from planned goals; it names the goals it rests on."],
-           [.status "wanted", .text ": the claim's statement is a planned goal, stated with its proof to come."],
-           [.status "goal", .text ": in the plan, a planned goal (", .code "proof_goal", .text "), whose body is still ",
-            .code "sorry", .text "."],
+           [.status "goal", .text ": a planned goal (", .code "proof_goal", .text "), a statement whose proof is still ",
+            .code "sorry", .text "; a claim whose statement is one."],
            [.status "open", .text ": a requirement with a node not yet proved, or a part not yet stated as a goal."],
            [.status "refuted", .text ": a register record refutes the claim with a theorem."],
            [.status "absent", .text ": no declaration states the claim yet; its row gives the reason."],

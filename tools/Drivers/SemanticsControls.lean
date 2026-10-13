@@ -217,8 +217,8 @@ private def checkPositive : MetaM Unit := do
                      { id := "R2", title := "Placed fixture requirement", top := [] }]
     planScope := [fixtureModule] }
   let claims ← arrayField report "claims"
-  for (id, status) in #[("plain", "proved"), ("resting", "modulo"), ("wanted", "wanted"),
-                       ("sketched", "modulo"), ("part", "wanted"),
+  for (id, status) in #[("plain", "proved"), ("resting", "modulo"), ("wanted", "goal"),
+                       ("sketched", "modulo"), ("part", "goal"),
                        ("refuted", "refuted"), ("absent", "absent"), ("assumed", "assumed")] do
     expectString (← field (← named claims "id" id) "status") "_tag" status
   expectString (← field (← named claims "id" "plain") "status") "by" "theorem"
@@ -270,7 +270,7 @@ private def checkPositive : MetaM Unit := do
     expectString placed "placement" kind
   let concepts ← arrayField report "concepts"
   let counts ← field (← named concepts "id" "fixture-one") "counts"
-  for (key, expected) in #[("claims", 8), ("proved", 1), ("modulo", 2), ("wanted", 2), ("refuted", 1),
+  for (key, expected) in #[("claims", 8), ("proved", 1), ("modulo", 2), ("goal", 2), ("refuted", 1),
                           ("absent", 1), ("assumed", 1)] do
     let actual ← checked key (counts.getObjValAs? Nat key)
     unless actual == expected do throwError "semantics controls: count {key}: {actual} != {expected}"

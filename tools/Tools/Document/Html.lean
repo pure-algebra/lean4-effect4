@@ -122,8 +122,8 @@ A measure, a size and a space are the page's.
 
 **The status marks** (decisions row 354, point 2) are drawn here once, before the word of a status,
 keyed on its `data-status`: a mark of the promise-and-keeping family, in `currentColor` and with no
-hue. Proved is a filled circle; modulo a circle filled on its left half; a planned goal a hollow
-circle, and so is `wanted`, whose claim's pointer is a planned goal; open a dashed circle; refuted
+hue. Proved is a filled circle; modulo a circle filled on its left half; a planned goal (`goal`, a
+claim's or a plan node's) a hollow circle; open a dashed circle; refuted
 the failure cross `×` of the notation. A circle's outline is the look's frame. A circle is a
 pseudo-element with no content, which a screen reader does not read; the cross is text with an
 empty alternative (`content: "×" / ""`), after a plain `content` for a browser without the
