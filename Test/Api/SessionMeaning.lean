@@ -179,47 +179,10 @@ def clocked : NativeEff := .bind (call (num 1)) (.perform .clockNow (.lit .unit)
 section repository
 open Test.Dogfood.Scenario.Todo
 
-/-- A host function as a handler of the row signature, with the session's reply check on its
-answer: an answer outside the row's columns is no answer. -/
-def reactorHandler {σ : Type} (table : RowTable) (r : Run.Reactor σ) :
-    Effects.Handler (RowSig table) (StateT σ Option) where
-  handle op := fun state =>
-    match externalRow table op.1.val with
-    | none => none
-    | some row =>
-      match r row op.2 state with
-      | some (.ofExit ex, next) =>
-        if externalAdmits table op.1.val (.ofExit ex) [] then some (ex, next) else none
-      | _ => none
-
-/-- The repository's state: the next id and the to-dos. -/
-abbrev Repo := Nat × List (Nat × String × Bool)
-
-def todoOf (entry : Nat × String × Bool) : Val := todo entry.1 entry.2.1 entry.2.2
-
-/-- An in-memory repository as a host function, row by row. -/
-def repository : Run.Reactor Repo := fun row sent state =>
-  if row.spelling == "TodoRepo.insert" then
-    match sent with
-    | .str title =>
-      some (ok (todo state.1 title false), (state.1 + 1, state.2 ++ [(state.1, title, false)]))
-    | _ => none
-  else if row.spelling == "TodoRepo.all" then
-    some (ok (.list (state.2.map todoOf)), state)
-  else if row.spelling == "TodoRepo.setDone" then
-    match sent with
-    | .list [.nat id, .bool done] =>
-      match state.2.find? (·.1 == id) with
-      | some entry =>
-        some (ok (.some (todo id entry.2.1 done)),
-          (state.1, state.2.map fun e => if e.1 == id then (e.1, e.2.1, done) else e))
-      | none => some (ok .none, state)
-    | _ => none
-  else if row.spelling == "TodoRepo.delete" then
-    match sent with
-    | .nat id => some (ok (.bool (state.2.any (·.1 == id))), (state.1, state.2.filter (·.1 != id)))
-    | _ => none
-  else none
+/-! The repository's reference model, `repository` over the state `Repo`, is the to-do
+application's (`Test/Dogfood/Scenario/Todo.lean`, section 7). A host function becomes a handler
+of the row signature behind the session's reply check by the library's own composition:
+`Run.reactorHost`, guarded by the rows' columns (`Run.guardRows`), as a handler. -/
 
 /-- Whether two results are one: the exit, the stores and the repository's state. The
 comparison is by component: instance search does not reach the whole type at default limits. -/
@@ -234,7 +197,8 @@ as a handler: whether they are one, the exit, and the repository's state. -/
 def driven (main : Src NativeOp) (state : Repo) : Option (Bool × Option ExitV × Repo) :=
   (built? (request main)).map fun b =>
     let run : Run × Repo := Run.runWith b repository state "todo"
-    (same (meaningUnder (reactorHandler b.table repository) b.program [] Stores.empty state)
+    (same (meaningUnder (Run.guardRows b.table (Run.reactorHost b.table repository)).handler
+        b.program [] Stores.empty state)
         (run.1.exit.map fun ex => ((ex, run.1.machine.state), run.2)),
       run.1.exit, run.2)
 

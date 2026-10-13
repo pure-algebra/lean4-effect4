@@ -290,4 +290,40 @@ PROTOCOL). Each line is a finite evaluation or a control (decisions row 301). -/
   !setDoneProtocol.keeps (.list [.nat 1, .bool true]) (.some (todo 1 "milk" false)) &&
   !insertProtocol.keeps (.str "milk") (todo 1 "tea" false)
 
+/-! ## 7. The reference model of the repository
+
+The claims packet's reference model (§3.6): a host as a function, written in Lean, that states
+what the four rows do. It moved here from `Test/Api/SessionMeaning.lean`, which reads it, so the
+application has one model. -/
+
+/-- The repository's state: the next id and the to-dos. -/
+abbrev Repo := Nat × List (Nat × String × Bool)
+
+/-- A stored to-do as a value. -/
+def todoOf (entry : Nat × String × Bool) : Val := todo entry.1 entry.2.1 entry.2.2
+
+/-- An in-memory repository as a host function, row by row: the reference model. -/
+def repository : Run.Reactor Repo := fun row sent state =>
+  if row.spelling == "TodoRepo.insert" then
+    match sent with
+    | .str title =>
+      some (ok (todo state.1 title false), (state.1 + 1, state.2 ++ [(state.1, title, false)]))
+    | _ => none
+  else if row.spelling == "TodoRepo.all" then
+    some (ok (.list (state.2.map todoOf)), state)
+  else if row.spelling == "TodoRepo.setDone" then
+    match sent with
+    | .list [.nat id, .bool done] =>
+      match state.2.find? (·.1 == id) with
+      | some entry =>
+        some (ok (.some (todo id entry.2.1 done)),
+          (state.1, state.2.map fun e => if e.1 == id then (e.1, e.2.1, done) else e))
+      | none => some (ok .none, state)
+    | _ => none
+  else if row.spelling == "TodoRepo.delete" then
+    match sent with
+    | .nat id => some (ok (.bool (state.2.any (·.1 == id))), (state.1, state.2.filter (·.1 != id)))
+    | _ => none
+  else none
+
 end Test.Dogfood.Scenario.Todo

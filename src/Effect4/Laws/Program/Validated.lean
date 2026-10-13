@@ -2,7 +2,7 @@ import Effect4.Laws.Api.SessionMeaning
 import Effect4.Program.RowProtocol
 
 /-!
-# Program.Validated — a run validated against declared protocols
+# Program.Validated — a run validated against declared protocols and a reference model
 
 The grade "validated for one run" of the claims packet
 (`docs/research/2026-10-07-packet-application-claims.md`, §3.4 to §3.6; decisions rows 307 (9)
@@ -20,6 +20,9 @@ decision on one run's own tape discharges its premise for that run.
   call tree meets under the declared protocols (`Effects.Program.Sat`) holds of the run's exit.
   The proof is H9 (`denoteRows_eq_session_host`) at the guarded reply host, then
   `Effects.Program.Sat.sound`.
+* **A run agrees with a reference model** (`agrees`): the model, read as a host (`reactorHost`),
+  gave the run's applied answers, a check of `hostAnsweredCheck`. Such a run is a run of its call
+  tree under the model (`agrees_hostRun`), by H9.
 
 Placement: concept `host-session-protocol`; R6's open part "the host as a relation between the
 machine's calls and its answers". Reach: H9's fragment and premises: `StraightRows`, one fiber, a
@@ -99,5 +102,36 @@ theorem conforms_sat (protocols : RowProtocols) (s : Run) (hreach : Run.Reached 
   exact Effects.Program.Sat.sound (rowsHost (keptTapeHost s.built.table protocols))
     (rowsHost_meets (keptTapeHost_meets s.built.table protocols)) _ hsat
     (Stores.empty, appliedExits s) ex (s.machine.state, st') h9
+
+/-! ## A run validated against a reference model -/
+
+/-- **A run agrees with a model of its rows** (the claims packet's §3.6): the model, read as a host
+(`reactorHost`), gave the run's applied answers from `start`. The answer is the model's last
+state, or `none` at the first answer that the model does not give. It is `hostAnsweredCheck` on
+the run's own tape, so the host need be no Lean function. -/
+def agrees {σ : Type} (model : Reactor σ) (s : Run) (start : σ) : Option σ :=
+  hostAnsweredCheck s.built.table (reactorHost s.built.table model) s.built.program s.budget.fuel
+    (tapeOf s) (Api.load s.built.program s.budget.compileFuel) start
+
+/-- **A run that agrees with a model is a run of its call tree under the model.** For a recorded
+run of a `StraightRows` program that is funded, at rest, driven by a host, and whose root exited,
+where the model gave the run's answers from `start` to `finish`, the model's run of the call tree
+is the root's exit with the run's stores, and the model ends at `finish`.
+
+Placement: concept `translation-simulation`, role simulation; question: the proposed registry
+claim `run-agrees-model`; consumers: `Todo.list_after_add` and `Todo.complete_idempotent`
+(`Test/Dogfood/Scenario/Todo/Claims.lean`). Reach: H9's (`denoteRows_eq_session_host`), with its
+premise `HostAnswered` decided by `agrees` (`hostAnsweredCheck_sound`). Does not establish: that
+a host agrees with the model on another run; progress. Unlocks: a claim under the laws of the
+rows, read on a real run by a decided premise (R6). -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem agrees_hostRun {σ : Type} (model : Reactor σ) (s : Run) (hreach : Run.Reached s)
+    (hfund : funded s = true) (hrest : atRest s = true) (hhost : hostDriven s = true)
+    (hfrag : StraightRows s.built.table s.built.program = true) (start finish : σ)
+    (hagree : agrees model s start = some finish) (ex : ExitV) (hex : s.exit = some ex) :
+    hostRun (reactorHost s.built.table model) s.built.program [] Stores.empty start =
+      some (ex, (s.machine.state, finish)) :=
+  denoteRows_eq_session_host s hreach hfund hrest hhost hfrag _ start finish
+    (hostAnsweredCheck_sound _ _ _ _ _ _ _ _ hagree) ex hex
 
 end Effect4.Run

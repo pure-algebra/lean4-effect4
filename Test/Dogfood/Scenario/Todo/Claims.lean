@@ -35,11 +35,17 @@ namespace Test.Dogfood.Scenario.Todo
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Program.Denote (ReplyTape)
-open Effect4.Run (appliedExits hostDriven conforms)
+open Effect4.Run (appliedExits hostDriven conforms agrees)
 open Test.Dogfood.P2HandlerLayers (recordVal)
 open Test.Dogfood.Application (Kind Grade Premise Note Record)
 
 /-! ## 1. Two facts of the call tree -/
+
+/-- A recorded run of an entry at its arguments that meets the premises of the host's meaning
+(`denoteRows_eq_session_host`): reached by the driver, funded, at rest and driven by a host. -/
+def SettledRun (name : String) (args : List TermSrc) (s : Run) : Prop :=
+  Run.Reached s ∧ builtAt name args = some s.built ∧ funded s = true ∧ atRest s = true ∧
+    hostDriven s = true
 
 /-- The proposition of `add_empty_calls_nothing`. -/
 def AddEmptyCallsNothing : Prop :=
@@ -59,9 +65,7 @@ proof_goal add_empty_calls_nothing : AddEmptyCallsNothing
 
 /-- The proposition of `complete_failure_escapes`. -/
 def CompleteFailureEscapes : Prop :=
-  ∀ (id : Nat) (s : Run) (cause : CauseV), Run.Reached s →
-    builtAt "complete" [nat id] = some s.built →
-    funded s = true → atRest s = true → hostDriven s = true →
+  ∀ (id : Nat) (s : Run) (cause : CauseV), SettledRun "complete" [nat id] s →
     (appliedExits s).head? = some (.failure cause) → s.exit = some (.failure cause)
 
 /-- **A failure of the repository leaves `complete` unchanged.** In every recorded run of the
@@ -81,10 +85,8 @@ proof_goal complete_failure_escapes : CompleteFailureEscapes
 
 /-- The proposition of `complete_answers_requested`. -/
 def CompleteAnswersRequested : Prop :=
-  ∀ (id : Nat) (s : Run) (answer : Val), Run.Reached s →
-    builtAt "complete" [nat id] = some s.built →
-    funded s = true → atRest s = true → hostDriven s = true → conforms protocols s = true →
-    s.exit = some (.success answer) →
+  ∀ (id : Nat) (s : Run) (answer : Val), SettledRun "complete" [nat id] s →
+    conforms protocols s = true → s.exit = some (.success answer) →
     setDoneProtocol.keeps (.list [.nat id, .bool true]) (.some answer) = true
 
 /-- **Under the protocol of `setDone`, `complete` answers the requested to-do, marked done.** In
@@ -101,17 +103,68 @@ Kind: a fact under a protocol. -/
 @[semantics "host-session-protocol" (requirement := R6)]
 proof_goal complete_answers_requested : CompleteAnswersRequested
 
-/-! ## 3. The claim -/
+/-! ## 3. Two facts under the laws of the rows
+
+The laws of the repository are, today, its reference model `repository`
+(`Test/Dogfood/Scenario/Todo.lean`, section 7). A claim under it reads runs that agree with it:
+the model gave the runs' answers (`Effect4.Run.agrees`, decided on each run's own tape). So the
+host need be no Lean function. -/
+
+/-- The proposition of `list_after_add`. -/
+def ListAfterAdd : Prop :=
+  ∀ (title : String) (adding listing : Run) (start middle finish : Repo) (added : Val)
+    (todos : List Val), title ≠ "" →
+    SettledRun "add" [str title] adding → SettledRun "list" [] listing →
+    agrees repository adding start = some middle →
+    agrees repository listing middle = some finish →
+    adding.exit = some (.success added) → listing.exit = some (.success (.list todos)) →
+    added ∈ todos
+
+/-- **After `add`, `list` holds the new to-do**, under the reference model. For a settled run of
+`add` at a title that is not empty, then a settled run of `list`, whose answers the model gave in
+turn, a successful `list` holds the to-do that `add` answered.
+
+Placement: concept `host-session-protocol`; property as `add_empty_calls_nothing`. Question:
+this planned goal; consumer: the claim `serves`. Reach: every title but the empty one, every
+start state of the model, every such pair of runs. The premise `agrees` is validated on each run.
+Does not establish: that a host agrees with the model (a red control: a host that forgets); that
+the runs finish (progress). Unlocks: as `add_empty_calls_nothing`. Kind: a fact under the laws of
+the rows. -/
+@[semantics "host-session-protocol" (requirement := R6)]
+proof_goal list_after_add : ListAfterAdd
+
+/-- The proposition of `complete_idempotent`. -/
+def CompleteIdempotent : Prop :=
+  ∀ (id : Nat) (once twice : Run) (start middle finish : Repo) (first second : ExitV),
+    SettledRun "complete" [nat id] once → SettledRun "complete" [nat id] twice →
+    agrees repository once start = some middle → agrees repository twice middle = some finish →
+    once.exit = some first → twice.exit = some second →
+    second = first ∧ finish = middle
+
+/-- **`complete` twice leaves what `complete` once leaves**, under the reference model. For two
+settled runs of `complete` at one id, whose answers the model gave in turn, the second exit is the
+first, and the second run leaves the model's state where the first left it.
+
+Placement: as `list_after_add`. Reach: every id, every start state of the model, every such pair
+of runs. Does not establish: that a host agrees with the model (a red control: a host whose
+`setDone` flips the flag); progress. Kind: a fact under the laws of the rows. -/
+@[semantics "host-session-protocol" (requirement := R6)]
+proof_goal complete_idempotent : CompleteIdempotent
+
+/-! ## 4. The claim -/
 
 /-- **The to-do application's claim.** It assembles its clauses, and the plan derives its status
 from their proofs. Two laws stand beside it with controls only: a script's run replays from its
 journal (`replays`), and a stored successful reply fits its row
 (`Effect4.Api.HostSession.submit_success_prepared_fits`). The proof uses neither. -/
 @[semantics "host-session-protocol" (requirement := R6)]
-theorem serves : AddEmptyCallsNothing ∧ CompleteFailureEscapes ∧ CompleteAnswersRequested :=
-  ⟨add_empty_calls_nothing, complete_failure_escapes, complete_answers_requested⟩
+theorem serves :
+    AddEmptyCallsNothing ∧ CompleteFailureEscapes ∧ CompleteAnswersRequested ∧
+      ListAfterAdd ∧ CompleteIdempotent :=
+  ⟨add_empty_calls_nothing, complete_failure_escapes, complete_answers_requested,
+    list_after_add, complete_idempotent⟩
 
-/-! ## 4. The observation, the named runs and the controls -/
+/-! ## 5. The observation, the named runs and the controls -/
 
 /-- The application's one observation of a run: the root's exit, the calls that the host held,
 the refused rows, the exits of the applied replies, whether the run meets the premises of
@@ -142,8 +195,37 @@ def repoFails (message : String) : List Move :=
 /-- The failure of an empty title, at the root. -/
 def emptyTitleExit : ExitV := .failure (Cause.fail (.tagged "EmptyTitle" "a title is required"))
 
+/-- A host that forgets what it stores: it answers as the model and keeps its state. The red
+control of "after add". -/
+def forgetful : Run.Reactor Repo := fun row request s =>
+  (repository row request s).map fun step => (step.1, s)
+
+/-- A host whose `setDone` flips the stored flag: the red control of "idempotent". -/
+def toggling : Run.Reactor Repo := fun row request s =>
+  match row.spelling, request with
+  | "TodoRepo.setDone", .list [.nat id, .bool _] =>
+    match s.2.find? (·.1 == id) with
+    | some t =>
+      some (ok (.some (todo id t.2.1 !t.2.2)),
+        (s.1, s.2.map fun u => if u.1 == id then (u.1, u.2.1, !u.2.2) else u))
+    | none => some (ok .none, s)
+  | _, _ => repository row request s
+
+/-- A run of a built entry driven by a host as a function (`Run.runWith`), as a named run: its
+journal holds the host's rows, so the run replays with no host. -/
+def drivenRun {σ : Type} (name : String) (b : Api.Built) (host : Run.Reactor σ) (st : σ) :
+    NamedRun :=
+  ⟨name, opened b, (Run.runWith b host st application.name).1.journal.map .wire⟩
+
+/-- The host's state after it drives a run of a built entry. -/
+def drivenState {σ : Type} (b : Api.Built) (host : Run.Reactor σ) (st : σ) : σ :=
+  (Run.runWith b host st application.name).2
+
+/-- The model's state where the runs under a host start: one to-do stored. -/
+def stocked : Repo := (2, [(1, "milk", false)])
+
 /-- The named runs: each script once, from one build of each entry at its argument. -/
-def runsOf (empty milk done : Api.Built) : List NamedRun :=
+def runsOf (empty milk done listed : Api.Built) : List NamedRun :=
   [ ⟨"empty", opened empty,
       script [[.start], answer (.row "TodoRepo.insert") (ok (todo 1 "" false))]⟩
   , ⟨"milk", opened milk,
@@ -158,7 +240,15 @@ def runsOf (empty milk done : Api.Built) : List NamedRun :=
   , ⟨"wide", opened done,
       script [[.start], answer (.row "TodoRepo.setDone")
         (ok (.some (recordVal ["id", "title", "done", "at"]
-          [.nat 1, .str "milk", .bool true, .nat 0])))]⟩ ]
+          [.nat 1, .str "milk", .bool true, .nat 0])))]⟩
+  , drivenRun "model-add" milk repository (1, [])
+  , drivenRun "model-list" listed repository (drivenState milk repository (1, []))
+  , drivenRun "forgetful-add" milk forgetful (1, [])
+  , drivenRun "forgetful-list" listed forgetful (drivenState milk forgetful (1, []))
+  , drivenRun "model-once" done repository stocked
+  , drivenRun "model-twice" done repository (drivenState done repository stocked)
+  , drivenRun "toggling-once" done toggling stocked
+  , drivenRun "toggling-twice" done toggling (drivenState done toggling stocked) ]
 
 /-- The controls: for each clause and each law a green control and at least one red control. -/
 def controlsOf : List Control :=
@@ -195,6 +285,35 @@ def controlsOf : List Control :=
           (observe other).refusals == [] && (observe other).settled &&
           !(observe other).conforming
       | _ => false
+    -- after `add`, `list` holds the new to-do
+  , green "after add" "under the model, `list` after `add` holds the added to-do, and both runs \
+      agree with the model" ["model-add", "model-list"] fun
+      | [added, listed] =>
+        (observe added).outcome == some (.success (todo 1 "milk" false)) &&
+          (observe listed).outcome == some (.success (.list [todo 1 "milk" false])) &&
+          (observe added).settled && (observe listed).settled &&
+          ((agrees repository added (1, [])).bind (agrees repository listed)).isSome
+      | _ => false
+  , red "after add" "a host that forgets answers `list` with nothing, and its runs do not agree \
+      with the model" ["forgetful-add", "forgetful-list"] fun
+      | [added, listed] => (observe listed).outcome == some (.success (.list [])) &&
+          ((agrees repository added (1, [])).bind (agrees repository listed)).isNone
+      | _ => false
+    -- `complete` twice leaves what `complete` once leaves
+  , green "idempotent" "under the model the second `complete` answers what the first answered, \
+      and leaves the model's state" ["model-once", "model-twice"] fun
+      | [once, twice] =>
+        (observe once).outcome == some (.success (todo 1 "milk" true)) &&
+          (observe twice).outcome == (observe once).outcome &&
+          (match agrees repository once stocked with
+           | some middle => agrees repository twice middle == some middle
+           | none => false)
+      | _ => false
+  , red "idempotent" "a host whose `setDone` flips the flag answers otherwise the second time, \
+      and its runs do not agree with the model" ["toggling-once", "toggling-twice"] fun
+      | [once, twice] => (observe once).outcome != (observe twice).outcome &&
+          ((agrees repository once stocked).bind (agrees repository twice)).isNone
+      | _ => false
     -- a script's run replays from its journal
   , green "journal" "the journal alone reaches the scripted run again, verdict for verdict"
       ["done"] fun
@@ -218,11 +337,12 @@ def controlsOf : List Control :=
 /-- The runs and the controls, from one build of each entry at its argument. An entry that does
 not build leaves no run and one failing control. -/
 def runsAndControls : List NamedRun × List Control :=
-  match builtAt "add" [str ""], builtAt "add" [str "milk"], builtAt "complete" [nat 1] with
-  | some empty, some milk, some done => (runsOf empty milk done, controlsOf)
-  | _, _, _ => ([], [green "no call" "the entries build" [] fun _ => false])
+  match builtAt "add" [str ""], builtAt "add" [str "milk"], builtAt "complete" [nat 1],
+    builtAt "list" [] with
+  | some empty, some milk, some done, some listed => (runsOf empty milk done listed, controlsOf)
+  | _, _, _, _ => ([], [green "no call" "the entries build" [] fun _ => false])
 
-/-! ## 5. The record -/
+/-! ## 6. The record -/
 
 /-- The to-do application's record. The scenario's program is the application. -/
 def claimRecord : Record :=
@@ -236,7 +356,9 @@ def claimRecord : Record :=
         clauses :=
           [ ⟨"no call", ``add_empty_calls_nothing⟩
           , ⟨"escape", ``complete_failure_escapes⟩
-          , ⟨"requested", ``complete_answers_requested⟩ ]
+          , ⟨"requested", ``complete_answers_requested⟩
+          , ⟨"after add", ``list_after_add⟩
+          , ⟨"idempotent", ``complete_idempotent⟩ ]
         laws :=
           [ ⟨"journal", ``replays⟩
           , ⟨"admission", ``Effect4.Api.HostSession.submit_success_prepared_fits⟩ ]
@@ -247,6 +369,10 @@ def claimRecord : Record :=
       , { entry := "escape", kind := .tree, reads := ["complete"] }
       , { entry := "requested", kind := .protocol, reads := ["complete"],
           assumes := [⟨``protocols, .validated⟩] }
+      , { entry := "after add", kind := .laws, reads := ["add", "list"],
+          assumes := [⟨``repository, .validated⟩] }
+      , { entry := "idempotent", kind := .laws, reads := ["complete"],
+          assumes := [⟨``repository, .validated⟩] }
       , { entry := "journal", kind := .inherited }
       , { entry := "admission", kind := .inherited } ] }
 
@@ -258,7 +384,7 @@ def scenario : Scenario := claimRecord.scenario
 
 #scenario_gate scenario
 
-/-! ## 6. Red controls of the notes
+/-! ## 7. Red controls of the notes
 
 Each record below changes one thing of `claimRecord`, and `Record.problems` names exactly that
 finding. -/
