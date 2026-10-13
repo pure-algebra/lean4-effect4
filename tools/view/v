@@ -68,12 +68,14 @@ browse() {
   if [ ! -t 1 ]; then echo "$1"; elif command -v open > /dev/null 2>&1; then open "$1"; else xdg-open "$1"; fi
 }
 # a studio page in the Hammerspoon viewer (~/.hammerspoon/init.lua, effect4.show) when it answers,
-# and as browse does otherwise. The IPC now and then drops a first message, so a second try follows.
+# and as browse does otherwise. The IPC now and then drops a message, often while the viewer reloads
+# the page a build just wrote, so up to three tries follow, a second apart.
 show() {
   # a quote in the url or the title is escaped for Lua's string
   u=$(printf %s "$1" | sed "s/'/\\\\'/g"); t=$(printf %s "$2" | sed "s/'/\\\\'/g")
-  for _ in 1 2; do
+  for _ in 1 2 3; do
     if command -v hs > /dev/null 2>&1 && timeout 6 hs -q -c "return effect4.show('$u', '$t')" 2> /dev/null; then return 0; fi
+    sleep 1
   done
   browse "$root/${1#http://localhost:8783/}"
 }
