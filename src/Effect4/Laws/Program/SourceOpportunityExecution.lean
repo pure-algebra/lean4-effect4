@@ -50,17 +50,16 @@ theorem iteration_debit (root : NativeEff) (q : List Nat) (fragment : Fragment r
     (clearFin : ClearFinalizers root q) (clearLoop : ClearLoops root q) (table : RowTable)
     (m : NativeMachine) (fiber : SourceFiber) (yielding : Bool)
     (sequential : SequentialSource root) (raceFree : RaceFreeSource root)
-    (owned : ConfigurationAt root m) (held : FiberAt root fiber)
-    (unique : (m.fibers.map (fun fiber => fiber.id)).Nodup) :
+    (owned : ConfigurationAt root m) (held : FiberAt root fiber) :
     Debit root q m fiber
       (iteration (evaluator := evaluatorFor root table) (interpOf root table) m fiber yielding) :=
   (source_debit_iff root q m fiber _).mp
     (PlaceFunding.iteration_debit (source_no_queue root q) (source_events root q) (weightModel root q)
       (fun _ => rfl) (fun code => Nat.le_of_eq (Nat.zero_add (current root q code))) root table m
       fiber yielding owned held
-      (fun n g y same configured fibered => (source_debit_iff root q n g _).mpr
+      (fun n g y _ configured fibered => (source_debit_iff root q n g _).mpr
         (native_debit root q fragment clearFin clearLoop table n g y sequential raceFree configured
-          fibered (by rw [same]; exact unique))))
+          fibered)))
 
 /-- The actual loop command composes evaluator debit with single-owner settlement.
 Consumer: complete command preservation and admitted-history induction. -/
@@ -79,7 +78,7 @@ theorem loop_command_debit (root : NativeEff) (q : List Nat) (fragment : Fragmen
   · rename_i fiber found
     have held := configuration_fiber root m id fiber owned found
     have debit := iteration_debit root q fragment clearFin clearLoop table m fiber yielding
-      sequential raceFree owned held (ForkLedger.Invariant.fiber_ids_unique ledger)
+      sequential raceFree owned held
     have after := ForkLedger.Invariant.Native.iteration_ok root table m fiber yielding ledger
     have same := Moves.iteration_id root table m fiber yielding
     rw [← RunMachine.id_of_fiber? found]

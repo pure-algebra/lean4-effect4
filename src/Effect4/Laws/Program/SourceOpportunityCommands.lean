@@ -77,12 +77,12 @@ theorem source_evaluation (root : NativeEff) (q : List Nat) (fragment : Fragment
     PlaceFunding.Evaluation (PlaceLedgerConnect.source root q) (ConfigurationAt root)
       root table (fun _ _ _ => 0) :=
   PlaceFunding.Evaluation.of_debits (source_no_queue root q) root table
-    (fun m fiber yielding ledger owned held => (source_debit_iff root q m fiber _).mpr
+    (fun m fiber yielding _ owned held => (source_debit_iff root q m fiber _).mpr
       (native_debit root q fragment clearFin clearLoop table m fiber yielding sequential raceFree owned
-        held ledger.idsUnique))
-    (fun m fiber yielding ledger owned held => (source_debit_iff root q m fiber _).mpr
+        held))
+    (fun m fiber yielding _ owned held => (source_debit_iff root q m fiber _).mpr
       (iteration_debit root q fragment clearFin clearLoop table m fiber yielding sequential raceFree
-        owned held ledger.idsUnique))
+        owned held))
 
 /-- A source command imports only free code. Consumer: `source_local`. -/
 theorem source_inputs (root : NativeEff) (q : List Nat) (m : NativeMachine)

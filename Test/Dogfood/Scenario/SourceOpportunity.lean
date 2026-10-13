@@ -409,11 +409,9 @@ theorem workers_native_action_debit (total compileFuel : Nat) (b : Api.Built)
   have control : SourceScope.SequentialSource b.program ∧ SourceScope.RaceFreeSource b.program := by
     rw [Programs.workers_built_program total b built]
     exact workers_control_census total
-  have unique := (Effect4.Machine.ForkLedger.Invariant.Native.reachable_corresponding
-    b.program b.table compileFuel m history.reachable).1
   have carried := interp_action_le b.program (Programs.crewAcquire i) clear m.completedExits b.table suspended next thunkOwned produced
-  exact native_action_debit b.program _ b.table m fiber yielding next actionOwned control.1 control.2
-    clear source.scopes unique (by simpa only [selected, current] using carried)
+  exact native_action_debit b.program _ b.table m fiber yielding next actionOwned control.1
+    clear source.scopes (by simpa only [selected, current] using carried)
 
 /-- An actual Workers Async callback uses a native cancellation producer.
 The result follows from source ownership in every admitted job-count history. -/
@@ -449,10 +447,8 @@ theorem workers_native_evaluation_debit (total compileFuel : Nat) (b : Api.Built
   have control : SourceScope.SequentialSource b.program ∧ SourceScope.RaceFreeSource b.program := by
     rw [Programs.workers_built_program total b built]
     exact workers_control_census total
-  have unique := (Effect4.Machine.ForkLedger.Invariant.Native.reachable_corresponding
-    b.program b.table compileFuel m history.reachable).1
   exact native_debit b.program _ (SourceFragment.workers_built_fragment total b built)
-    clearFin clearLoop b.table m fiber yielding control.1 control.2 source owned unique
+    clearFin clearLoop b.table m fiber yielding control.1 control.2 source owned
 
 /-- Actual Workers loop commands retain the source opportunity budget at both acquisition sites.
 The result includes forced yields and every actual evaluator settlement outcome. -/

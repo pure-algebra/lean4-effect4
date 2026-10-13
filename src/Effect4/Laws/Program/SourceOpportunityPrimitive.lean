@@ -197,14 +197,11 @@ theorem source_action_inputs (root : NativeEff) (q : List Nat) (completed : List
 /-- Every native action spends only the source reservation of its actual producer: the
 ledger-generic `PlaceFunding.action_debit` at the source weights. The sequential source excludes a
 parallel close; a source-owned close installs no selected opportunity (`close_scope_zero`).
-The race-freedom and distinct-id premises are no longer read.
 Consumer: complete native evaluator and unchanged Workers/Atomic history bounds. -/
 theorem native_action_debit (root : NativeEff) (q : List Nat) (table : RowTable)
     (m : NativeMachine) (fiber : SourceFiber) (yielding : Bool) (selected : NAction)
     (source : ActionAt root selected) (sequential : SequentialSource root)
-    (_raceFree : RaceFreeSource root) (clear : ClearFinalizers root q)
-    (scopes : ScopesAt root m.state.scopes)
-    (_unique : (m.fibers.map (fun fiber => fiber.id)).Nodup)
+    (clear : ClearFinalizers root q) (scopes : ScopesAt root m.state.scopes)
     (carried : action root q selected ≤ current root q fiber.frame.current) :
     Debit root q m fiber (evaluatePrim.withFiber (interpAt root m.completedExits table) m fiber yielding selected) := by
   have inputs := source_action_inputs root q m.completedExits table
@@ -232,8 +229,7 @@ theorem primitive_debit (root : NativeEff) (q : List Nat) (fragment : Fragment r
     (clearFin : ClearFinalizers root q) (clearLoop : ClearLoops root q) (table : RowTable)
     (m : NativeMachine) (fiber : SourceFiber) (yielding : Bool)
     (sequential : SequentialSource root) (raceFree : RaceFreeSource root)
-    (owned : ConfigurationAt root m) (held : FiberAt root fiber)
-    (unique : (m.fibers.map (fun fiber => fiber.id)).Nodup) :
+    (owned : ConfigurationAt root m) (held : FiberAt root fiber) :
     Debit root q m fiber (evaluatePrim (interpAt root m.completedExits table) m fiber yielding) := by
   have actionDebit (suspended : EffThunk) (next : NAction)
       (selected : fiber.frame.current = .withFiber suspended)
@@ -243,8 +239,8 @@ theorem primitive_debit (root : NativeEff) (q : List Nat) (fragment : Fragment r
     rw [selected] at thunkOwned
     have nextOwned := interp_action_at root fragment m.completedExits table suspended next thunkOwned produced
     have carried := interp_action_le root q clearFin m.completedExits table suspended next thunkOwned produced
-    exact native_action_debit root q table m fiber yielding next nextOwned sequential raceFree clearFin
-      owned.scopes unique (by simpa only [selected, current, cata_prim] using carried)
+    exact native_action_debit root q table m fiber yielding next nextOwned sequential clearFin
+      owned.scopes (by simpa only [selected, current, cata_prim] using carried)
   have cancellation (register : EffName) (signal : Bool) (cancel : Option EffName)
       (selected : fiber.frame.current = .async register signal cancel) :
       ∀ callback ∈ cancel, name q callback = 0 := by
@@ -326,11 +322,10 @@ theorem native_debit (root : NativeEff) (q : List Nat) (fragment : Fragment root
     (clearFin : ClearFinalizers root q) (clearLoop : ClearLoops root q) (table : RowTable)
     (m : NativeMachine) (fiber : SourceFiber) (yielding : Bool)
     (sequential : SequentialSource root) (raceFree : RaceFreeSource root)
-    (owned : ConfigurationAt root m) (held : FiberAt root fiber)
-    (unique : (m.fibers.map (fun fiber => fiber.id)).Nodup) :
+    (owned : ConfigurationAt root m) (held : FiberAt root fiber) :
     Debit root q m fiber (evaluateNative root m fiber yielding table) := by
   have primitive := primitive_debit root q fragment clearFin clearLoop table m fiber yielding
-    sequential raceFree owned held unique
+    sequential raceFree owned held
   have scopedExit (exit : ExitV) (selected : fiber.frame.current = .ofExit exit) :
       Debit root q m fiber (exitScoped root m fiber yielding exit) :=
     same_rows_debit root q m fiber _ (exit_scoped_rows root m fiber yielding exit selected)
