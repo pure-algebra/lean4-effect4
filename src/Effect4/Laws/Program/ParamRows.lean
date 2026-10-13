@@ -14,10 +14,8 @@ tree then has one node for each run of a parameter, answered by whatever answers
 host, or a reply tape. When the caller's program for a parameter is one call of a host row that
 reads no request, the body that the machine runs is this reading, at that row.
 
-Both readings rename a program's operations: one fold, `mapOps`, the identity algebra with its
-`perform` field moved. `callsAsRows n` is `mapOps (callAsRow n)` by definition; the two stand
-apart until `Block.lean` is rebased on `mapOps` (seat BANK's receipt,
-`docs/research/2026-10-13-seat-bank-receipt.md`).
+Both readings rename a program's operations by one fold, `mapOps` (`Laws/Program/Block.lean`):
+`callsAsRows n` is `mapOps (callAsRow n)` and `paramsAsRows n` is `mapOps (paramAsRow n)`.
 
 Placement: concept `translation-simulation`; a definition, with no statement. Its first consumer
 is the banked cache's agreement law, `cache_agrees` (`src/Effect4/Laws/Library/Ref/Cache.lean`,
@@ -32,11 +30,6 @@ set_option autoImplicit false
 namespace Effect4.Program.Denote
 
 open Effect4 Effect4.Machine Effect4.Program
-
-/-- **A program's operations renamed**: every `perform op r` becomes `perform (f op) r`. A fold:
-the identity algebra with its `perform` field moved. -/
-def mapOps (f : NativeOp → NativeOp) : NativeEff → NativeEff :=
-  cata_eff { EffAlgebra.id NativeOp with eff_perform := fun op r => .perform (f op) r }
 
 /-- A parameter's run as a row: parameter `j` is the row `n + j`, after a table's `n` rows. -/
 def paramAsRow (n : Nat) : NativeOp → NativeOp
