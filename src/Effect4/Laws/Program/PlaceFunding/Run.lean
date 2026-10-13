@@ -59,7 +59,7 @@ theorem Local.command {L : Ledger} {Free : NCode → Prop} {root : NativeEff} {t
   exact after
 
 /-- Every decision keeps source ownership and the funded ledger, replies included.
-Consumer: `Local.history_funded`. -/
+Consumers: `Local.history_funded` and `SourceScope.Opportunities.decision_budget`. -/
 theorem Local.decision_lift {L : Ledger} {Free : NCode → Prop} {root : NativeEff}
     {table : RowTable} (facts : Local L Free root table) (cap : Nat) (fragment : Fragment root) :
     letI := evaluatorFor root table
@@ -90,11 +90,13 @@ theorem Local.decision_lift {L : Ledger} {Free : NCode → Prop} {root : NativeE
       facts.command cap _ _ [.drainDue] configured held.1 prepared.2 funded⟩
 
 /-- **A place ledger with its local facts is funded along every admitted history** of a program
-of the direct lexical fragment, from a funded load. It is the history step shared by the
-cleanup-log ledgers. Placement: concept `scope-lifetime-finalization`, R11; a step of the claim
-`Atomic.cleans_once`. Reach: every compile budget and every session-admitted history, cuts,
-interruptions and replies included. It establishes no progress, release order or host observation.
-Consumer: `Test.Dogfood.Scenario.Atomic.WriterHistory.history_funded`. -/
+of the direct lexical fragment, from a funded load. It is the history step that the
+cleanup-log ledgers and the source ledger share. Placement: concept `scope-lifetime-finalization`,
+R11; a step of the claim `Atomic.cleans_once` and of the source-use bound. Reach: every compile
+budget and every session-admitted history, cuts, interruptions and replies included. It
+establishes no progress, release order or host observation. Consumers:
+`Test.Dogfood.Scenario.Atomic.WriterHistory.history_funded` and
+`SourceScope.Opportunities.history_budget`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem Local.history_funded {L : Ledger} {Free : NCode → Prop} (b : Api.Built)
     (facts : Local L Free b.program b.table) (cap : Nat) (fragment : Fragment b.program)
