@@ -1,5 +1,7 @@
 import Effect4.Program.Ty
 import Effect4.Program.Eff
+import Effect4.Program.Native
+import Effect4.Data.NatDecimal
 import Effect4.Store.Carrier.Utf8
 import TypeScript.TypeRef
 import TypeScript.Identifier
@@ -29,7 +31,67 @@ A tagged payload record type (`payloadRecordTy`, decisions row 120) whose tag is
 identifier projects to the name of its class (`payloadClass?`): ruling (b) prints one
 `Data.TaggedError` class per tagged payload type, named by its tag. A module declares the class
 (`Codegen/Classes.lean`); the projection is the reference to it.
+
+A service key has one spelling, kept here: its runtime text (`keyText`), its identifier type
+(`keyIdentifier`) and a requirement row's type (`requirementType`). A declaration's `R`, the
+type argument of `Effect.context<R>()` and a context type's row are each this spelling. A
+context type (`Ty.contextOf`, decisions row 349) projects to `Context.Context<R>`, the answer of
+rc.112's `Effect.context<R>()` (`vendor/effect-4.0.0-rc.112/src/Effect.ts:11287`). The
+projection reads no signature, so it spells the row at the native scope key (`nativeScopeKey`),
+the scope of every checked emission (`ModuleEmission`, `Codegen/Checked.lean`).
 -/
+
+namespace Effect4.Program
+
+/-- Canonical runtime spelling for an ordinary service key. Its full pair is the identity;
+its carrier is deliberately not its identity. -/
+def keyText (key : ServiceKey) : String :=
+  "k" ++ toString key.name.value ++ "_" ++ toString key.service.value
+
+/-- A key back from its runtime text: the decimal fields after `k` and after `_`. A reader
+checks the complete spelling (`text = keyText key`); `keyFromText_print`
+(`Laws/Codegen/ReadLeaf.lean`) is the retraction. -/
+def keyFromText (text : String) : ServiceKey :=
+  let bytes := text.toByteArray.data.toList.drop 1
+  ⟨⟨Effect4.Data.NatDecimal.decodeBytes (bytes.takeWhile (· != 95))⟩,
+    ⟨Effect4.Data.NatDecimal.decodeBytes ((bytes.dropWhile (· != 95)).drop 1)⟩⟩
+
+/-- The requirement identity at a fixed signature. Scope uses Effect's own identity;
+ordinary services use their full key, including when their carriers coincide. -/
+def keyIdentifier (scopeKey key : ServiceKey) : TypeScript.TypeRef :=
+  if key = scopeKey then .name ["Scope", "Scope"] [] else .literal (keyText key)
+
+/-- The complete requirement row as target syntax. The empty union is `never`. It spells a
+declaration's `R` and the type argument of `Effect.context<R>()`. -/
+def requirementType (scopeKey : ServiceKey) (requires : Effect4.Row ServiceKey) :
+    TypeScript.TypeRef :=
+  match requires.elems.map (keyIdentifier scopeKey) with
+  | [] => .name ["never"] []
+  | [one] => one
+  | many => .union many
+
+/-- One identifier of a requirement row back to its key (`keyIdentifier`'s inverse):
+`Scope.Scope` is the scope key, and a string literal is an ordinary key's runtime text. -/
+def readKeyIdentifier (scopeKey : ServiceKey) : TypeScript.TypeRef → Option ServiceKey
+  | .name ["Scope", "Scope"] [] => some scopeKey
+  | .literal text => some (keyFromText text)
+  | _ => none
+
+/-- The identifiers of a printed requirement row: none for `never`, a union's members, or the
+one identifier. -/
+def rowIdentifiers : TypeScript.TypeRef → List TypeScript.TypeRef
+  | .name ["never"] [] => []
+  | .union members => members
+  | one => [one]
+
+/-- A requirement row back from its printed type (`requirementType`'s inverse), as a canonical
+row. It is permissive: a reader keeps the row only where it prints back as the type read
+(`readKeys`, `Codegen/Read.lean`; `readTyChecked`, `Codegen/Classes.lean`). -/
+def readRequirement (scopeKey : ServiceKey) (t : TypeScript.TypeRef) :
+    Option (Effect4.Row ServiceKey) :=
+  ((rowIdentifiers t).mapM (readKeyIdentifier scopeKey)).map Effect4.Row.normalize
+
+end Effect4.Program
 
 namespace Effect4.Codegen.Types
 
@@ -339,9 +401,11 @@ private def ofNormalized : Program.Ty → Option TypeRef
   | .bytes => some (.name ["Uint8Array"] [])
   -- Nominal applications need their own resolved declaration table.
   | .app _ _ => none
-  -- `Context.Context<R>` spells its row through the module's scope key and key spellings
-  -- (`requirementType`), which this projection does not see: no printed form here.
-  | .contextOf _ => none
+  -- `Context.Context<R>`, the answer of `Effect.context<R>()`: its row is the requirement row's
+  -- one spelling (`requirementType`), at the native scope key, since this projection reads no
+  -- signature (decisions row 349)
+  | .contextOf keys =>
+    some (.name ["Context", "Context"] [Program.requirementType Program.nativeScopeKey keys])
   | .union left right => do
       let a ← ofNormalized left
       let b ← ofNormalized right
@@ -381,5 +445,15 @@ theorem ofTy_unit : ofTy .unit = some (.name ["void"] []) := rfl
 theorem ofTy_nat : ofTy .nat = some (.name ["number"] []) := rfl
 
 theorem ofTy_int : ofTy .int = some (.name ["number"] []) := rfl
+
+/-- **A context type prints as rc.112's answer of `Effect.context<R>()`**: `Context.Context<R>`,
+its row in the one spelling of a requirement row (`requirementType`), at the native scope key
+(decisions row 349). So a definition that runs `Effect.context<R>()` declares the answer that
+rc.112 gives the call, and the two spellings of `R` are one. Consumer: an application's service
+block, whose state is the context its layer reads (decisions row 378 (20)). -/
+theorem ofTy_contextOf (keys : Effect4.Row ServiceKey) :
+    ofTy (.contextOf keys) =
+      some (.name ["Context", "Context"] [Program.requirementType Program.nativeScopeKey keys]) :=
+  rfl
 
 end Effect4.Codegen.Types

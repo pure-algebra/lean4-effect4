@@ -3,6 +3,7 @@ import Effect4.Program.CheckedTyping
 import Effect4.Program.Native
 import Effect4.Program.Profile
 import Effect4.Codegen.Print
+import Effect4.Codegen.SourceBindings
 
 /-!
 # Checked module production
@@ -12,7 +13,9 @@ check and the exact relation between this program, table, requested name and the
 existing declaration printer. The module syntax is a projection of those retained
 declarations, so a caller cannot replace an annotation independently of its receipt.
 
-This certifies production, not source admission. The printer retains all three type parameters but supplies no imports. Original
+This certifies production, not source admission. The printer retains all three type parameters.
+The envelope `module` supplies no imports: an embedding host prepends its own. The file
+`ModuleEmission.file` writes the imports from Lean data (decisions row 373 (11)). Original
 source declarations and bindings must be validated at a separate reading boundary.
 Target type checking and execution are not consequences of this certificate.
 -/
@@ -99,6 +102,77 @@ of source binding. -/
 def ModuleEmission.module (emission : ModuleEmission program table name) : TypeScript.Module :=
   { header := [], imports := []
     decls := emission.classDecls.map .classDecl ++ emission.declarations.map .const }
+
+/-! ## The module as a file: its imports from Lean data (decisions row 373 (11))
+
+The envelope `module` is the declaration block that an embedding host wraps: it holds no import,
+and the host prepends its own (`withAmbient`, `Codegen/Admit.lean`). An agent's file needs its
+imports written. `file` writes them from Lean data: the module's free names, by the binding
+analysis (`SourceBindings.moduleUses`), each from `effect` when it is one of `effect`'s names and
+from the prelude when it is a prelude name. Any other free name stays free: a host row's
+namespace is the host's until the module declares its service key (decisions row 378 (19)).
+Every declaration is exported already (`ConstDecl.exported`), the service key, its layer and the
+main among them. -/
+
+/-- The names a printed module may import from its prelude: the atoms, the term helpers, and the
+printer's heads that are no namespace member, except `pipe` and `undefined`. A head is a namespace
+member when its spelling holds a dot. The test reads bytes (`46` is `.`), since the string
+API's character traversals reach `Classical.choice` on this toolchain. -/
+def preludeNames : List String :=
+  NativeAtom.names ++ termHelperNames ++
+    reserved.filter fun h => !h.toUTF8.data.toList.contains 46 && h != "pipe" && h != "undefined"
+
+/-- Whether a name comes from `effect`: one of its namespaces (`effectNamespaces`), or its root
+export `pipe`. -/
+def fromEffect (name : String) : Bool := effectNamespaces.contains name || name == "pipe"
+
+/-- The free names of a module: each name that a use reads and no binding of the module resolves,
+once, in the order of first use, with whether every use of it is a type. -/
+def freeNames (module : TypeScript.Module) : List (String × Bool) :=
+  let uses := (SourceBindings.moduleUses module).uses.filter fun u => !SourceBindings.useResolved u
+  uses.foldl (fun acc u =>
+    let typeOnly := u.space == .type
+    match acc.find? (·.1 == u.name) with
+    | some _ => acc.map fun (n, t) => if n == u.name then (n, t && typeOnly) else (n, t)
+    | none => acc ++ [(u.name, typeOnly)]) []
+
+/-- Byte order: lexicographic on UTF-8 bytes, which is the order of code points. -/
+def bytesLe : List UInt8 → List UInt8 → Bool
+  | [], _ => true
+  | _ :: _, [] => false
+  | a :: as, b :: bs => if a < b then true else if b < a then false else bytesLe as bs
+
+/-- **A module's imports, from Lean data** (decisions row 373 (11)). The free names of `effect` come
+from `effect`, then the free prelude names from `prelude`, each list in byte order. A binding is
+type-only when every use of its name is a type. A name in `except` is no import: a hole, which
+the host answers until it is filled. A free name of neither stays free. -/
+def moduleImports (prelude : String) (module : TypeScript.Module) (except : List String := []) :
+    List TypeScript.Import :=
+  let free := ((freeNames module).mergeSort fun a b =>
+      bytesLe a.1.toUTF8.data.toList b.1.toUTF8.data.toList).filter fun p => !except.contains p.1
+  let binding (p : String × Bool) : TypeScript.ImportBinding :=
+    { imported := p.1, localName := p.1, typeOnly := p.2 }
+  let ofEffect := free.filter fun p => fromEffect p.1
+  let ofPrelude := free.filter fun p => !fromEffect p.1 && preludeNames.contains p.1
+  (if ofEffect.isEmpty then [] else [.named (ofEffect.map binding) "effect" false]) ++
+    (if ofPrelude.isEmpty then [] else [.named (ofPrelude.map binding) prelude false])
+
+/-- A module as a file: its declarations, with the imports that their free names need
+(`moduleImports`), the prelude at `prelude`. The new imports replace any that the module held. -/
+def fileOf (prelude : String) (module : TypeScript.Module) : TypeScript.Module :=
+  { module with imports := moduleImports prelude { module with imports := [] } }
+
+/-- **The module as a file**: the envelope's declarations, with their imports (`fileOf`), the
+prelude at `prelude`. -/
+def ModuleEmission.file (emission : ModuleEmission program table name) (prelude : String) :
+    TypeScript.Module :=
+  fileOf prelude emission.module
+
+/-- The file's declarations are the envelope's. So a law of the envelope's declarations holds of
+the file: the read-back (`ModuleEmission.readModule`, `src/Effect4/Laws/Api/ModuleReadable.lean`)
+among them. -/
+theorem ModuleEmission.file_decls (emission : ModuleEmission program table name)
+    (prelude : String) : (emission.file prelude).decls = emission.module.decls := rfl
 
 /-- Print from retained typing and raw formation evidence. Both public producers
 obtain this evidence before calling the declaration printer. -/

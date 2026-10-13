@@ -124,11 +124,13 @@ def readNamed : List String → List Ty → Option Ty
   | _, _ => none
 
 mutual
-  /-- A payload field's type from its printed spelling (`Types.ofTy`'s image): a name through
-  `readNamed`, a literal, `readonly [A, B]` as a product and any other readonly tuple as a tuple, an
-  object as a record, a union as the right-nested union of its members. The reader is permissive;
-  the class reader accepts a reading only when printing it gives the spelling back. -/
+  /-- A payload field's type from its printed spelling (`Types.ofTy`'s image): `Context.Context<R>`
+  as the context of its row (decisions row 349), any other name through `readNamed`, a literal,
+  `readonly [A, B]` as a product and any other readonly tuple as a tuple, an object as a record, a
+  union as the right-nested union of its members. The reader is permissive; the class reader
+  accepts a reading only when printing it gives the spelling back. -/
   def readTy : TypeRef → Option Ty
+    | .name ["Context", "Context"] [row] => (readRequirement nativeScopeKey row).map .contextOf
     | .name qualified args => do
       let xs ← readTys args
       readNamed qualified xs

@@ -244,6 +244,11 @@ import Effect4.Program.Address
 -- A sketch checked through its layer references, and its edit session (decisions row 373 (7)).
 import Effect4.Program.Typing.Source
 import Effect4.Program.Typing.SourceSession
+-- An application as one Effect service: its block of definitions (decisions row 378 (20)).
+import Effect4.Program.Authoring.ApplicationService
+-- A row namespace as an Effect service: its key and its accessors (decisions row 378 (19),
+-- slice E3).
+import Effect4.Codegen.RowServices
 -- The banked Ref cache: a cache of a list beside storage, and its model (decisions row 378).
 import Effect4.Library.Ref.Cache
 import Effect4.Library.Ref.CacheModel

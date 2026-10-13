@@ -2,6 +2,7 @@ import Test.Dogfood.Scenario
 import Test.Dogfood.P2HandlerLayers
 import Effect4.Author
 import Effect4.Program.Authoring.Application
+import Effect4.Codegen.RowServices
 
 /-!
 # The to-do application: its programs build and run under a scripted host
@@ -15,7 +16,8 @@ scripted host.
   An empty title and a failure of the repository are pairs of a tag and a message: a class
   whose one field is its message has that spelling (decisions row 120).
 * **Rows.** The repository is four host rows: `insert`, `all`, `setDone` and `delete`. The query
-  and the decoding of a row stand in the host, as in `Test/Dogfood/P2HandlerLayers.lean`.
+  and the decoding of a row stand in the host, as in `Test/Dogfood/P2HandlerLayers.lean`. Each
+  row requires the repository's key, so the namespace is an Effect service (section 8).
 * **Programs.** `add`, `list`, `complete` and `remove`, each written over the rows.
 * **The application.** `application` holds the four programs as entries with typed parameters
   (`src/Effect4/Program/Authoring/Application.lean`, decisions row 336 (9)).
@@ -51,7 +53,15 @@ eff_failure EmptyTitle message
 /-- The error that `add` raises, as the checker types it: the message is a literal type. -/
 def emptyTitleTy : Ty := .prod (.lit "EmptyTitle") (.lit "a title is required")
 
-eff_rows TodoRepo error SqlError.ty cite "the to-do scenario" where
+/-- The repository's service key (decisions row 378 (19), slice E3): the namespace `TodoRepo`
+is the service of this key, and each of its rows is a method of it, so each row's requirement
+column names the key. The name `30` is free (`Env.firstFreeName` is `4`). The code `6` is the
+built-in code whose carrier is `unit` (`nativeServiceTypes`), so admission finds a carrier for
+the key (`SigApp.serviceTy`): the machine never reads the service's value, because the host
+answers the rows. -/
+def todoRepoKey : ServiceKey := ⟨⟨30⟩, ⟨6⟩⟩
+
+eff_rows TodoRepo key todoRepoKey error SqlError.ty cite "the to-do scenario" where
   insert(.string) : Todo.ty,
   all(.unit) : .list Todo.ty,
   setDone(.prod .nat .bool) : .option Todo.ty,
@@ -169,6 +179,10 @@ def typeOf? (main : Src NativeOp) : Option (Ty × Ty) :=
   some (Todo.ty.normalize, (Ty.union NotFound.ty SqlError.ty).normalize)
 -- tested: `remove` answers nothing, with the same error
 #guard typeOf? (remove (nat 1)) = some (.unit, (Ty.union NotFound.ty SqlError.ty).normalize)
+-- reader: the checker's requirement row carries the repository's key at each request, since a
+-- row call requires its row's requirement column (`checkRow`, `Program/Typing/Rules.lean`)
+#guard [add (str "milk"), list, complete (nat 1), remove (nat 1)].all fun main =>
+  (built? (request main)).map (·.requires) == some [todoRepoKey]
 
 -- finite evaluation: each entry builds at an argument through the application, at the type of
 -- the request above
@@ -322,5 +336,33 @@ def repository : Run.Reactor Repo := fun row sent state =>
     | .nat id => some (ok (.bool (state.2.any (·.1 == id))), (state.1, state.2.filter (·.1 != id)))
     | _ => none
   else none
+
+/-! ## 8. The repository as an Effect service (decisions row 378 (19), slice E3)
+
+The repository's rows require its key, so the namespace `TodoRepo` is one service and each row
+is a method of it (`rowServices`, `src/Effect4/Codegen/RowServices.lean`). A module declares the
+key and the namespace, the key with one accessor for each method (`rowServiceDecls`). Each line
+is a finite evaluation or a control (decisions row 301). -/
+
+-- finite evaluation: one service, `TodoRepo` of the key, with its four methods in written order
+#guard (rowServices application.table).map (fun s => (s.ns, s.key, s.methods.map (·.1))) ==
+  [("TodoRepo", todoRepoKey, ["insert", "all", "setDone", "delete"])]
+-- finite evaluation: the module declares the key and the namespace with its accessors
+#guard (rowServiceDecls (nativeSignature application.table) application.table).toOption.map
+    (·.map fun decl => (decl.name, decl.exported)) ==
+  some [("TodoRepoKey", true), ("TodoRepo", true)]
+-- control: a method named as a member of the key (`use`) would shadow it, and is refused by its
+-- row's spelling
+#guard rowServiceDecls (nativeSignature application.table) (application.table ++
+    [{ (Row.host "TodoRepo.use" .unit .unit).row with requires := [todoRepoKey] }]) matches
+  .error (.unsafeName "TodoRepo.use")
+-- control: a row of the namespace that requires no key, and a row that requires the key with no
+-- namespace in its spelling, are refused by their spellings
+#guard rowServiceDecls (nativeSignature application.table)
+    (application.table ++ [(Row.host "TodoRepo.find" .nat .bool).row]) matches
+  .error (.unsafeName "TodoRepo.find")
+#guard rowServiceDecls (nativeSignature application.table)
+    (application.table ++ [{ (Row.host "find" .nat .bool).row with requires := [todoRepoKey] }])
+  matches .error (.unsafeName "find")
 
 end Test.Dogfood.Scenario.Todo

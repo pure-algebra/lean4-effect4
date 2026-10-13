@@ -354,6 +354,8 @@ import Effect4.Laws.Program.AddressMove
 -- The expansion's address map, and the table at the source's addresses (decisions row 373 (7)).
 import Effect4.Laws.Program.ExpansionAddresses
 import Effect4.Laws.Program.SourceTable
+-- An application's service block: its methods' types and its refusals (decisions row 378 (20)).
+import Effect4.Laws.Program.ApplicationService
 -- A body's parameter runs as rows, and the banked Ref cache's transfer law (decisions row 378).
 import Effect4.Laws.Program.ParamRows
 import Effect4.Laws.Library.Ref.Cache

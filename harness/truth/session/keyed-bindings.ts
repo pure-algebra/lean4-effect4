@@ -1,6 +1,6 @@
 /** Actual rc.112 operations for the bounded keyed fixtures. Stream end is translated to
  * Option.none; failures and finalizer failures retain their categories and order. */
-import { Effect, Exit, Option, Pull, Ref, Scheduler, Scope, Stream, type Cause, type Fiber } from "effect"
+import { Context, Effect, Exit, Option, Pull, Ref, Scheduler, Scope, Stream, type Cause, type Fiber } from "effect"
 import { KeyValueStore } from "effect/unstable/persistence"
 import { setImmediate as nextTurn } from "node:timers/promises"
 import { KeyedRecorder, valueJson, wireExit, type ExternalHandle, type Pair } from "./keyed-recorder.ts"
@@ -174,6 +174,19 @@ export const scenarioRows = <Rows>(name: string): Rows => {
     })
   })
   return rows as Rows
+}
+/** A scenario's program with its row services provided (decisions row 378 (19)): each namespace
+ * that the module declares as an Effect service is provided under the module's own key, by the
+ * same objects that `scenarioRows` binds for a namespace that is no service. So a row's call
+ * reaches the host of the run through the service, `Key.use((r) => r.method(x))`. */
+export const provideScenario = (name: string, services: ReadonlyArray<string>,
+  module: Readonly<Record<string, unknown>>, main: Effect.Effect<unknown, unknown, unknown>): Effect.Effect<unknown, unknown> => {
+  const rows = scenarioRows<Record<string, unknown>>(name)
+  return services.reduce((program, space) => {
+    const key = module[space], service = rows[space]
+    if (key === undefined || service === undefined) throw Error(`${name}: ${space} is no service of the module`)
+    return Effect.provideService(program, key as Context.Key<unknown, unknown>, service)
+  }, main) as Effect.Effect<unknown, unknown>
 }
 /** An object that inherits every member of a pinned module and owns the spies. It is no proxy
  * and no copy: any other member is read from the pinned module itself. */

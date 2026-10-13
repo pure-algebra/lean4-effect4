@@ -17,7 +17,7 @@ import { deepStrictEqual } from "node:assert"
 import { Effect, Ref, type Exit, type Fiber } from "effect"
 import * as Prelude from "../prelude.ts"
 import { KeyedRecorder, exitJson, type KeyedFixture } from "./keyed-recorder.ts"
-import { ArmedDispatchers, KeyedBindings, ScriptedHost, bindScenario, declareScenario } from "./keyed-bindings.ts"
+import { ArmedDispatchers, KeyedBindings, ScriptedHost, bindScenario, declareScenario, provideScenario } from "./keyed-bindings.ts"
 import { measure, type HostEnd, type ReaderName, type Readers, type ScenarioFixture, type ScenarioManifest, type ScenarioResult } from "./keyed-observation.ts"
 import type { KeyedRecording } from "./keyed-protocol.ts"
 import type { Json } from "./protocol.ts"
@@ -145,7 +145,8 @@ if (scenariosPath) {
       const modulePath = resolve(output, plain ? `${file}.ts` : `${file}.${variant.label}.ts`)
       await writeFile(modulePath, text + fixture.module)
       declareScenario(fixture.name, fixture.table)
-      main = (await import(pathToFileURL(modulePath).href) as { main: Effect.Effect<unknown, unknown> }).main
+      const imported = await import(pathToFileURL(modulePath).href) as { readonly main: Effect.Effect<unknown, unknown> } & Readonly<Record<string, unknown>>
+      main = provideScenario(fixture.name, fixture.services ?? [], imported, imported.main)
       modules.set(key, main)
     }
     return main

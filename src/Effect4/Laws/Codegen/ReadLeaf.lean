@@ -210,22 +210,22 @@ theorem readKey_printKey {Op : Type} (sig : Signature Op) (key : ServiceKey)
         simp only [readKey, keyText, keyFromText_print, ht, hty, and_self, and_true, if_pos hs]
 
 /-- Each identifier of a requirement row reads back as its key. -/
-theorem readKeyIdentifier_keyIdentifier {Op : Type} (sig : Signature Op) (key : ServiceKey) :
-    readKeyIdentifier sig (keyIdentifier sig.scopeKey key) = some key := by
-  by_cases hs : key = sig.scopeKey
+theorem readKeyIdentifier_keyIdentifier (scopeKey key : ServiceKey) :
+    readKeyIdentifier scopeKey (keyIdentifier scopeKey key) = some key := by
+  by_cases hs : key = scopeKey
   · subst key
     simp only [keyIdentifier, if_true, readKeyIdentifier]
   · obtain ⟨⟨name⟩, ⟨service⟩⟩ := key
     simp only [keyIdentifier, if_neg hs, readKeyIdentifier, keyText, keyFromText_print]
 
 /-- A row's identifiers read back as its keys, in order. -/
-theorem mapM_readKeyIdentifier {Op : Type} (sig : Signature Op) :
+theorem mapM_readKeyIdentifier (scopeKey : ServiceKey) :
     ∀ keys : List ServiceKey,
-      (keys.map (keyIdentifier sig.scopeKey)).mapM (readKeyIdentifier sig) = some keys
+      (keys.map (keyIdentifier scopeKey)).mapM (readKeyIdentifier scopeKey) = some keys
   | [] => rfl
   | k :: rest => by
     simp only [List.map_cons, List.mapM_cons, readKeyIdentifier_keyIdentifier,
-      mapM_readKeyIdentifier sig rest, Option.bind_eq_bind, Option.bind_some, Option.pure_def]
+      mapM_readKeyIdentifier scopeKey rest, Option.bind_eq_bind, Option.bind_some, Option.pure_def]
 
 /-- A key's identifier is neither `never` nor a union, so it splits as itself. -/
 theorem rowIdentifiers_keyIdentifier (scopeKey key : ServiceKey) :
@@ -249,9 +249,9 @@ argument of `Effect.context<R>()`. -/
 theorem readKeys_requirementType {Op : Type} (sig : Signature Op) (v : Effect4.Row ServiceKey) :
     readKeys sig (requirementType sig.scopeKey v) = .ok v := by
   have norm : Effect4.Row.normalize v.elems = v := Effect4.Row.normalize_of_ascending v.elems v.ascending
-  unfold readKeys
+  unfold readKeys readRequirement
   rw [rowIdentifiers_requirementType, mapM_readKeyIdentifier]
-  simp only [norm, beq_self_eq_true, if_true]
+  simp only [Option.map_some, norm, beq_self_eq_true, if_true]
 
 theorem printKey_readable (sig : Signature Op) (key : ServiceKey)
     (hr : keyReadable sig key = true) : ∃ x, printKey sig key = .ok x := by

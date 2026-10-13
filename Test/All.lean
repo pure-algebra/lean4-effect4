@@ -385,6 +385,8 @@ import Test.Dogfood.Scenario.Todo.Claims
 import Test.Program.AddressMove
 import Test.Store.ProgramContent
 import Test.Dogfood.Scenario.Workers.CommandGuard
+-- The to-do application as one Effect service (decisions row 378 (20), seat SVC).
+import Test.Dogfood.Scenario.TodoService
 
 /-!
 # Effect4 test battery
