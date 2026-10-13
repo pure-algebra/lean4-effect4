@@ -8,16 +8,19 @@ look at Codex's work and see what can be adapted, with the proof graph's tools.
 Ten planned goals are open in the plan scope `[Effect4, Test.Dogfood.Scenario]`. One of them,
 `Evaluating.countdown_parks_positional`, blocks 11 registry claims and the requirements R1, R6 and
 R9: the whole of M7. It was parked on 2026-10-12 because the guard that would close it changes no
-run. By what it blocks, it is the most valuable proof in the tree. Codex's own code is merged: every
-declaration of its truly unmerged commits exists here by name, except three that later
-consolidations replaced.
+run. By what it blocks, it is the most valuable proof in the tree. Codex's library code is merged,
+with one exception: commit `83a4234e4` (branch `codex/host-planned-goals`), a Timeout race-entry
+proof `Test/Dogfood/Proofs/HostTimeoutNumberRaceEntry.lean` and its checkpoint note, never landed.
+Two of Codex's probes live as research files, not library code: the writer debits
+(`docs/research/2026-10-11-machine-models/codex/place-writes/`) and the worker release entry
+(`docs/research/2026-10-10-goals-packet/codex/MachineWorkers*.lean`). Both lead seat FLOW.
 
 ## What was run
 
 | Command | Result |
 | --- | --- |
 | `#goal_impact` over `Effect4.Laws` and the five scenario modules (a scratch file, `lake env lean` through the slot) | 10 goals; the ranking below |
-| `git cherry HEAD <branch>` over every `codex/*` branch, then each unique commit's added declarations grepped at `HEAD` | 9 branches hold unique commits; 3 declarations absent: `wrongRelease`, `native_sync_answer`, `install_le` |
+| `git cherry HEAD <branch>` over every `codex/*` branch, then each unique commit's added declarations grepped at `HEAD` by word, one name at a time (a first pass with `\b`, which `git grep -E` does not support here, was wrong and is replaced) | 9 branches hold unique commits; `83a4234e4` is absent whole; `433137a79` and `7b5a3ba94` are research probes under `docs/research`; six names of `4b6645156` were replaced later |
 | `git log` of `land/tc-seat-B` | the countdown guard and its equations, unmerged; the goal not proved there |
 
 Evidence word: measured (the proof graph's walk at this head), and reading for the routes.
