@@ -316,6 +316,11 @@ A program has folds, a journaled run with replay, and a printed image that reads
    - generics and Pool's service, HO-4 and HO-5
      ([the plan](research/2026-10-09-program-parameters.md), row 340).
 
+   Row 376 runs four more seats beside them, reuse first: FLOW (the answer-flow history producer,
+   four application goals), APPCHECK (checking at a real application), ADDRESS (the address algebra
+   and `rebaseRefs`) and COUNTDOWN (the countdown goal, reopened: it blocks all of M7; the
+   [goals probe](research/2026-10-13-open-goals-probe/README.md)).
+
    CX3 and CX4 wait for a consumer: the typed run goes through sites, not through an inlined body
    ([the note](research/2026-10-10-cx-lexical-scope.md) §8). Codex's scout of a keyed layer after
    Effect's `LayerMap` (row 341) is parked, and so is its further review of the `Effects` packet.
