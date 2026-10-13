@@ -4,6 +4,7 @@ import Test.Dogfood.Scenario.SourceOpportunity
 import Test.Dogfood.Scenario.Frame
 import Effect4.Laws.Program.ReleaseCustody.Execution
 import Effect4.Laws.Program.Guard.Decision
+import Test.Dogfood.Scenario.ReleaseWrites
 
 /-!
 # Workers cleanup assertions at every command boundary
@@ -156,7 +157,9 @@ theorem releases_step :
 
 /-- Store preservation obligation of `releases_once`.
 Reach: the second allocated reference in actual crew histories at every command boundary.
-It needs the cell's writer census and the value captured at each acquisition source.
+It needs the cell's writer census and the value captured at each acquisition source: the release
+note writes the acquired value bound in its environment, not a literal (the control
+`ReleaseWrites.readsSlot`).
 It proves no host behavior; consumer: `step` and then `history`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 proof_goal logs_step :

@@ -47,8 +47,8 @@ theorem placement (b : Api.Built) (built : Api.Author.build (shop .none) = .ok b
 Every logged identity comes from its request's finalizer, with at most one write per start.
 Reach: actual admitted histories, including interruption and incomplete commands.
 The membership clause is `WriterOwnership.logged_requests`. The count clause reads the writer
-ledger, funded along every admitted history (`WriterHistory.history_funded`), modulo its
-evaluator debit, the planned goal `WriterHistory.evaluation`.
+ledger, funded along every admitted history (`WriterHistory.history_funded`), with its evaluator
+debit `WriterHistory.evaluation`.
 Consumer: `cleaned`; the static placement proof alone does not establish this property. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
 theorem log_debits (b : Api.Built) (m : NativeMachine) :
