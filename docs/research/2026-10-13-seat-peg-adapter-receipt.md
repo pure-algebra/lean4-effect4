@@ -50,8 +50,8 @@ Run from `C:/Users/kokok/Dev/lean4-effect4-peg-geometry`:
 ```powershell
 $env:LEAN_NUM_THREADS='3'
 lake build Tools.View.Tube.PegChecks Tools.View.Tube.GlyphPage
-lake env lean .lake/peg-adapter-audit.lean
-lake env lean .lake/peg-adapter-compatibility.lean
+lake env lean docs/research/2026-10-13-peg-adapter-evidence/Audit.lean
+lake env lean docs/research/2026-10-13-peg-adapter-evidence/Compatibility.lean
 git diff --check
 ```
 
@@ -59,6 +59,7 @@ The final narrow build passes with 448 jobs.
 Its direct consumers include `Glyphs`, `Score`, `Sheet`, and `GlyphPage`.
 The final compatibility probe passes without diagnostics.
 The final diff check passes.
+Tracked probe inputs and measured outputs live in `docs/research/2026-10-13-peg-adapter-evidence/`.
 
 The audit input imports `Tools.View.Tube.PegChecks` and `ProofGraph.AxiomAudit`.
 Its command is:
@@ -84,6 +85,7 @@ git show 36d5b01401ce451a00b39c008679cc6d8388bb4d:tools/Tools/View/Tube/Belt.lea
 ```
 
 It changes only that source's namespace to `FrozenPeg` and opens `Tools.View.Tube.ONE`.
+The source blob is `2d29b6507c2443204f6c3daafff2a81a0d9db8b3`.
 It uses the original `pegOutlines` computation with tuple peg scaling.
 It compares that computation with the kit adapter on every authored body and unit contour.
 The comparison uses full cubic record equality at step 12000 and inset `LINE`.
