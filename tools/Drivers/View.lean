@@ -270,7 +270,7 @@ its player, and the looks, the probes and the documents a click away. Each entry
 fields as data attributes, for an agent that reads the page. The page asks for `index.json` every
 two seconds and reloads when a newer entry has come. When the document specimen exists
 (`tools/view/v -d`), its dark and paper pages stand side by side above the entries, each reloaded
-when its file is written again. -/
+when its file is written again, and both when the page's rules (`page.css`) change. -/
 def galleryPage (runs : List KeptRun) (links : List (String × String)) : String :=
   let card (r : KeptRun) : String :=
     "<section data-entry=\"" ++ escape r.id ++ "\" data-title=\"" ++ escape r.title ++ "\" data-look=\"" ++
@@ -302,13 +302,17 @@ def galleryPage (runs : List KeptRun) (links : List (String × String)) : String
   "  return r.ok ? r.headers.get('Last-Modified') : null; } catch (e) { return null; } };\n" ++
   "async function docs() { if (!(await stamp('docs/specimen-dark.html'))) return;\n" ++
   "  const box = document.createElement('section'); box.className = 'docs'; box.setAttribute('aria-label', 'document specimen');\n" ++
-  "  box.innerHTML = '<h2>Document specimen <span class=\"meta\">dark beside paper; each reloads when written (v -d)</span></h2>' +\n" ++
+  "  box.innerHTML = '<h2>Document specimen <span class=\"meta\">dark beside paper; reloads when written (v -d) and when page.css changes</span></h2>' +\n" ++
   "    '<div class=\"pair\"><iframe data-watch src=\"docs/specimen-dark.html\" title=\"the specimen in the dark look\"></iframe>' +\n" ++
   "    '<iframe data-watch src=\"docs/specimen-paper.html\" title=\"the specimen in the paper look\"></iframe></div>';\n" ++
   "  document.querySelector('header').after(box); }\n" ++
-  "async function watch() { for (const f of document.querySelectorAll('iframe[data-watch]')) {\n" ++
-  "  const m = await stamp(f.getAttribute('src')); if (m && stamps.has(f) && stamps.get(f) !== m) f.contentWindow.location.reload();\n" ++
-  "  if (m) stamps.set(f, m); } }\n" ++
+  "const rules = '../../Tools/Document/page.css';\n" ++
+  "async function watch() { const frames = [...document.querySelectorAll('iframe[data-watch]')];\n" ++
+  "  const r = frames.length ? await stamp(rules) : null; const restyle = r && stamps.has(rules) && stamps.get(rules) !== r;\n" ++
+  "  if (r) stamps.set(rules, r);\n" ++
+  "  for (const f of frames) { const m = await stamp(f.getAttribute('src'));\n" ++
+  "    if (restyle || (m && stamps.has(f) && stamps.get(f) !== m)) f.contentWindow.location.reload();\n" ++
+  "    if (m) stamps.set(f, m); } }\n" ++
   "docs().then(watch);\n" ++
   "setInterval(async () => {\n  try {\n" ++
   "    const index = await (await fetch('index.json', { cache: 'no-cache' })).json();\n" ++

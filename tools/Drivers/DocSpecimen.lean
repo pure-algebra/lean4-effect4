@@ -12,9 +12,12 @@ as the semantics page (`Tools.Document.Html`, checked by the HTML Standard's con
 * `OUT/specimen.html`, the dark look with the paper look for a light preference, as the page is;
 * `OUT/specimen-dark.html` and `OUT/specimen-paper.html`, each in one look whatever the preference.
 
-It imports no law module, so it rebuilds in seconds after an edit of the HTML fold or its
-stylesheet. The studio shows the two looks side by side (`tools/view/v -d`). Viewing ergonomics
-only: it is no test, and nothing reads its output.
+The pages link the page's rules (`tools/Tools/Document/page.css`) where the semantics page inlines
+them, so an edit of the rules shows in the studio with no run; the rules' check runs here too. The
+looks are read from their token files at each run (`tools/view/looks/paper.tokens.json`, and
+`dark.tokens.json` when there is one, over the dark defaults), so a token edit shows after
+`tools/view/v -d` with no build. It imports no law module. The studio shows the two looks side by
+side. Viewing ergonomics only: it is no test, and nothing reads its output.
 -/
 
 open Tools.Document Tools.View
@@ -63,16 +66,29 @@ def specimen : Document where
           .part "depth-5" "Level 5" [
             .part "depth-6" "Level 6" [.para [.text "The deepest heading."]]]]]]]
 
+/-- A look from its token file over the dark defaults, or the defaults when there is no file. -/
+def lookFile (name : String) : IO Look := do
+  let path : System.FilePath := s!"tools/view/looks/{name}.tokens.json"
+  unless ← path.pathExists do return {}
+  match Tokens.parseLook {} name (← IO.FS.readFile path) with
+  | .ok L => return L
+  | .error why => throw (IO.userError s!"{path} is refused at {why}")
+
 def main (args : List String) : IO UInt32 := do
   let [out] := args | IO.eprintln "usage: DocSpecimen OUT"; return 2
   let out : System.FilePath := out
   IO.FS.createDirAll out
+  if let some why := Tools.Document.Html.Sheet.problem (← IO.FS.readFile Tools.Document.Html.sheetPath) then
+    IO.eprintln s!"{Tools.Document.Html.sheetPath} refused at {why}"
+  let dark ← lookFile "dark"
+  let paper ← lookFile "paper"
+  let sheet := Tools.Document.Html.Sheet.link "../../../Tools/Document/page.css"
   let write (name : String) (base light : Look) : IO Bool := do
-    match Tools.Document.Html.Document.html specimen base light with
+    match Tools.Document.Html.Document.html specimen sheet base light with
     | .ok html => IO.FS.writeFile (out / name) html; return true
     | .error why => IO.eprintln s!"{name}: {why}"; return false
-  let a ← write "specimen.html" {} Look.paper
-  let b ← write "specimen-dark.html" {} {}
-  let c ← write "specimen-paper.html" Look.paper Look.paper
+  let a ← write "specimen.html" dark paper
+  let b ← write "specimen-dark.html" dark dark
+  let c ← write "specimen-paper.html" paper paper
   IO.println s!"docs: the specimen in {out}"
   return if a && b && c then 0 else 1

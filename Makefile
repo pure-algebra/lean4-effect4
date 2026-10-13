@@ -262,6 +262,7 @@ ENGINE_FIXTURE_WRITERS := $(wildcard ocaml/engine/test/*/write.lean)
 # code planes: their files stale the report (a superset of the closure, so no edit is missed).
 SEMANTICS_SOURCES := tools/Tools/Semantics.lean tools/Drivers/Semantics.lean \
   tools/Tools/SemanticsDocument.lean tools/Tools/Document.lean $(wildcard tools/Tools/Document/*.lean) \
+  tools/Tools/Document/page.css \
   $(wildcard tools/Tools/View/*.lean tools/Tools/Graph/*.lean tools/Tools/Code/*.lean) \
   tools/Tools/SemanticsDisplay.lean tools/Tools/GeneratedStamp.lean src/Effect4/Laws/Auto/Semantics.lean \
   $(wildcard tools/ProofGraph/*.lean) \

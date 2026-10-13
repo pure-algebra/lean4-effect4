@@ -16,7 +16,8 @@ def main (args : List String) : IO UInt32 := do
     if let .error errors := doc.check then
       for error in errors do IO.eprintln s!"semantics document: {error}"
       return 1
-    let html ← match Tools.Document.Html.Document.html doc with
+    let css ← IO.FS.readFile Tools.Document.Html.sheetPath
+    let html ← match Tools.Document.Html.Document.html doc (.inline css) with
       | .ok page => pure page
       | .error why => IO.eprintln s!"semantics document: {why}"; return 1
     IO.FS.writeFile (dir / "semantics.json") (report.toJson.pretty ++ "\n")

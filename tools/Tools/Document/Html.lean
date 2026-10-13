@@ -73,7 +73,8 @@ def algebra : Algebra (Nat → List RawNode) where
 
 /-! ## The stylesheet -/
 
-/-- The page's own rules, which read the looks' custom properties: the ground, the ink and the
+/-- The file of the page's own rules (`page.css`), from the repository's root. The rules read the
+looks' custom properties: the ground, the ink and the
 rule's colour; the families of the name, data, label and title faces; the weight of a rule and of a
 frame; the radius of a corner. The band behind a code block and a table's head is the look's band:
 the rule's colour at the band's tone over the ground, as the view draws the band behind a lit row.
@@ -89,74 +90,87 @@ empty alternative (`content: "×" / ""`), after a plain `content` for a browser 
 alternative. A circle's fill is a background, so print and a forced-colours mode are told to keep
 it. The word beside the mark names the status, to a reader and to an agent. `absent`, `assumed`
 and `missing` take no mark. -/
-def rules : String := "
-:root { --band: color-mix(in srgb, var(--e4-color-rule) calc(var(--e4-tone-band) * 100%), var(--e4-color-ground)); }
-* { box-sizing: border-box; }
-body { margin: 0; background: var(--e4-color-ground); color: var(--e4-color-ink);
-  font: 16px/1.55 var(--e4-font-name-family); }
-header, main { max-width: 72rem; margin: 0 auto; padding: 0 clamp(1rem, 4vw, 2.5rem); }
-header { padding-top: 2rem; border-bottom: var(--e4-stroke-rule) solid var(--e4-color-rule); }
-nav ol { display: flex; flex-wrap: wrap; gap: .25rem 1rem; padding: 0; list-style: none; }
-h1, h2, h3, h4, h5, h6 { font-family: var(--e4-font-title-family); line-height: 1.25; scroll-margin-top: 1rem; }
-section > h2 { margin-top: 2.5rem; padding-top: 1rem; border-top: var(--e4-stroke-rule) solid var(--e4-color-rule); }
-p, dd, li { max-width: 80ch; overflow-wrap: anywhere; }
-a { color: inherit; text-underline-offset: .15em; }
-:focus-visible { outline: 3px solid var(--e4-color-ink); outline-offset: 2px; }
-code, pre { font-family: var(--e4-font-data-family); font-size: .9em; }
-:not(pre) > code { background: var(--band); padding: .05em .3em; border-radius: var(--e4-stroke-radius);
-  overflow-wrap: anywhere; }
-pre { background: var(--band); border: var(--e4-stroke-rule) solid var(--e4-color-rule);
-  border-radius: var(--e4-stroke-radius); padding: .8rem 1rem; white-space: pre-wrap; overflow-wrap: anywhere; }
-dl { display: grid; grid-template-columns: max-content 1fr; gap: .2rem 1rem; }
-dt { font-family: var(--e4-font-label-family); font-style: var(--e4-font-label-style); }
-dd { margin: 0; }
-.scroll { overflow-x: auto; border: var(--e4-stroke-rule) solid var(--e4-color-rule);
-  border-radius: var(--e4-stroke-radius); margin: 1rem 0; }
-table { border-collapse: collapse; width: 100%; min-width: 40rem; font-size: .92rem; }
-th, td { text-align: left; vertical-align: top; padding: .45rem .7rem;
-  border-bottom: var(--e4-stroke-rule) solid var(--e4-color-rule); }
-th { background: var(--band); }
-td code { overflow-wrap: normal; }
-.status { white-space: nowrap; }
-.status:is([data-status=proved], [data-status=modulo], [data-status=goal], [data-status=wanted],
-  [data-status=open])::before { content: \"\"; display: inline-block; box-sizing: border-box;
-  width: .7em; height: .7em; margin-right: .35em; vertical-align: -.05em;
-  border: var(--e4-stroke-frame) solid currentColor; border-radius: 50%;
-  -webkit-print-color-adjust: exact; print-color-adjust: exact; forced-color-adjust: none; }
-.status[data-status=proved]::before { background: currentColor; }
-.status[data-status=modulo]::before { background: linear-gradient(to right, currentColor 50%, transparent 50%); }
-.status[data-status=open]::before { border-style: dashed; }
-.status[data-status=refuted]::before { content: \"×\"; content: \"×\" / \"\"; display: inline-block;
-  width: .7em; margin-right: .35em; text-align: center; }
-@media print { .scroll { overflow: visible; } }
-"
+def sheetPath : System.FilePath := "tools/Tools/Document/page.css"
+
+/-- Where a page's rules stand: the text of `page.css`, inlined in the page's `style` element, or
+a link to the file, for a page that follows edits of it (the document specimen,
+`tools/Drivers/DocSpecimen.lean`). -/
+inductive Sheet where
+  | inline (css : String)
+  | link (href : String)
+
+/-- The text with its comments taken out. -/
+private def uncomment : List Char → List Char
+  | '/' :: '*' :: rest =>
+    let rec skip : List Char → List Char
+      | '*' :: '/' :: more => uncomment more
+      | _ :: more => skip more
+      | [] => []
+    skip rest
+  | c :: rest => c :: uncomment rest
+  | [] => []
+
+private def isHex (c : Char) : Bool := c.isDigit || ('a' ≤ c && c ≤ 'f') || ('A' ≤ c && c ≤ 'F')
+
+/-- A `#` and three to eight hex digits after a space, a colon, a comma or a bracket. -/
+private def hexColour : List Char → Bool
+  | c :: d :: rest =>
+    let digits := rest.takeWhile isHex
+    (d == '#' && (c == ' ' || c == ':' || c == ',' || c == '(') && 3 ≤ digits.length &&
+      digits.length ≤ 8 && !(((rest.drop digits.length).head?.map Char.isAlphanum).getD false)) ||
+      hexColour (d :: rest)
+  | _ => false
+
+/-- What in one line of rules is a literal colour or family, if anything. -/
+private def lineProblem (line : String) : Option String :=
+  let colourFns := ["rgb(", "rgba(", "hsl(", "hsla(", "hwb(", "lab(", "lch(", "oklab(", "oklch("]
+  let after (key : String) : List String := ((line.splitOn key).drop 1).map (·.trimAscii.toString)
+  if hexColour (' ' :: line.toList) then some "a literal colour"
+  else if colourFns.any (fun f => (line.splitOn f).length > 1) then some "a literal colour"
+  else if (after "font-family:").any (fun v => !v.startsWith "var(") then some "a literal family"
+  else if (after " font:").any (fun v => ((v.splitOn "var(--e4-font-").length ≤ 1)) then
+    some "a font without the look's family"
+  else none
+
+/-- **The design language's rule for the page's rules** (decisions row 354, point 1: the look is the
+only data of a colour, a face or a timing): the first line of `css` that writes a literal colour or a
+family not taken from the look, with its number, or none. -/
+def Sheet.problem (css : String) : Option String :=
+  let lines := (String.ofList (uncomment css.toList)).splitOn "\n"
+  (lines.zipIdx.findSome? fun (line, n) =>
+    (lineProblem line).map fun what => s!"line {n + 1}: {what}: {line.trimAscii}")
 
 /-- The declarations of `light` that are not the base's: those a light scheme changes. -/
 def changed (base light : List String) : List String := light.filter fun d => !base.contains d
 
-/-- **The page's stylesheet**: the base look's custom properties on the root; for a reader who
-prefers light, and for print, the declarations in which the light look differs; then the page's
-rules, which read them (decisions row 354, point 3). -/
-def style (base light : Look) : String :=
+/-- **The page's looks**: the base look's custom properties on the root; for a reader who prefers
+light, and for print, the declarations in which the light look differs (decisions row 354,
+point 3). The page's rules read them. -/
+def looks (base light : Look) : String :=
   Tools.View.Tokens.cssRule ":root" (Tools.View.Tokens.declarations base) ++
     "@media (prefers-color-scheme: light), print {\n" ++
     Tools.View.Tokens.cssRule ":root"
       (changed (Tools.View.Tokens.declarations base) (Tools.View.Tokens.declarations light)) ++
-    "}\n" ++ rules
+    "}\n"
+
+/-- The head's elements that style a page: the looks and the inlined rules in one `style`, or the
+looks and a link to the rules. -/
+def styleNodes (base light : Look) : Sheet → List RawNode
+  | .inline css => [el "style" [.text (looks base light ++ css)]]
+  | .link href => [el "style" [.text (looks base light)], el "link" [] [("rel", "stylesheet"), ("href", href)]]
 
 /-! ## The page -/
 
 /-- The page: the head, then a header with the title and the parts' navigation, then the parts. -/
-def page (d : Document) (base light : Look) : RawNode :=
+def page (d : Document) (base light : Look) (sheet : Sheet) : RawNode :=
   let tops := d.body.filterMap fun
     | .part k t _ => some (el "li" [el "a" [.text t] [("href", fragment k)]])
     | _ => none
   el "html" [
-    el "head" [
+    el "head" ([
       el "meta" [] [("charset", "utf-8")],
       el "meta" [] [("name", "viewport"), ("content", "width=device-width, initial-scale=1")],
-      el "title" [.text d.title],
-      el "style" [.text (style base light)]],
+      el "title" [.text d.title]] ++ styleNodes base light sheet),
     el "body" [
       el "header" ([el "h1" [.text d.title]] ++
         (if tops.isEmpty then [] else [el "nav" [el "ol" tops] [("aria-label", "Contents")]])),
@@ -171,11 +185,15 @@ def describe (tree : RawNode) (r : Content.Refusal) : String :=
     | _ => none
   "/" ++ "/".intercalate names ++ ": " ++ r.reason.describe
 
-/-- The document as an HTML page in two looks, the dark base and the paper look for a light scheme:
-its checks, then the content model, then the serializer. -/
-def Document.html (d : Document) (base : Look := {}) (light : Look := Look.paper) : Except String String := do
+/-- The document as an HTML page in two looks, the dark base and the paper look for a light scheme,
+with the page's rules (`page.css`, read by the caller): its checks, the rules' check, then the
+content model, then the serializer. -/
+def Document.html (d : Document) (sheet : Sheet) (base : Look := {}) (light : Look := Look.paper) :
+    Except String String := do
   if let .error errors := d.check then throw ("document refused: " ++ "; ".intercalate errors)
-  let tree := page d base light
+  if let .inline css := sheet then
+    if let some why := Sheet.problem css then throw (s!"{sheetPath} refused at " ++ why)
+  let tree := page d base light sheet
   unless Content.validIn Content.Ctx.document tree do
     throw ("HTML refused: " ++
       ((Content.explain Content.Ctx.document tree).map (describe tree)).getD
