@@ -11,7 +11,8 @@ import Whatwg.Html.Print.Render
 A site is one value: its pages in reading order, the root first, each a folder path and a
 `Tools.Document`. Every file of the site is a fold of that value:
 
-* each page's `index.html`, through one shell, and its document as JSON (`document.json`);
+* each page's `index.html`, through one shell, its Markdown twin (`index.md`, which an agent
+  reads and the language check reads) and its document as JSON (`document.json`);
 * the site's navigation on every page: the sections in the header, the breadcrumbs, the parts of
   the page ("On this page"), the previous and next pages, and the contents page;
 * `site.json`, the pages with their titles and parts, the contract of a framework's navigation.
@@ -278,8 +279,11 @@ def footerLine (line : String) : Child InFooterList := html! <li>{E.txt line}</l
 
 def footerLink (href label : String) : Child InFooterList := html! <li><a href={href}>{E.txt label}</a></li>
 
-/-- The page's title, the first heading of its content. -/
-def heading (title : String) : Child InMain := html! <h1>{E.txt title}</h1>
+/-- The page's title, the first heading of its content, with the key of the part it was split from
+beside it (decisions row 366, point 4). -/
+def heading (title : String) : Option String → Child InMain
+  | some k => html! <h1 id={k}>{E.txt title}<a class="key" href={Html.fragment k}>{E.txt k}</a></h1>
+  | none => html! <h1>{E.txt title}</h1>
 
 /-- The head: the encoding, the viewport, the title in the browser's tab and the styles. Its
 content model is ordered, so its elements are written out: only the texts and links are data.
@@ -303,6 +307,8 @@ structure Shell where
   styles : Styles
   /-- the link to the root, from this page -/
   home : String
+  /-- the key of the part the page was split from, shown beside its title -/
+  key : Option String := none
   sections : List (Child InSiteList) := []
   crumbs : List (Child InCrumbs) := []
   toc : List (Child InToc) := []
@@ -324,7 +330,7 @@ def render (s : Shell) (title : String) (blocks : List (Child InMain)) : Element
     [E.el (E.nav s.pager [A.a_class "pager", ⟨.aria_, "aria-label", "Pages"⟩])]
   let footer : List (Child InBody) := if s.footer.isEmpty then [] else
     [html! <footer><p class="label">"Provenance"</p>{E.el (E.ul s.footer)}</footer>]
-  let main : Child InBody := E.el (E.main (crumbs ++ [heading title] ++ blocks ++ pager) [A.a_id "content"])
+  let main : Child InBody := E.el (E.main (crumbs ++ [heading title s.key] ++ blocks ++ pager) [A.a_id "content"])
   let body : Child InHtml := E.el (E.body ([html! <a class="skip" href="#content">"Skip to the content"</a>, header] ++
     toc ++ [main] ++ footer))
   html! <html lang="en">{headChild s.tabTitle s.styles}{body}</html>
@@ -350,6 +356,7 @@ def Site.shell (s : Site) (p : Page) : Shell :=
   { tabTitle := if p.path.isEmpty then p.doc.title else p.doc.title ++ " · Effect4"
     styles := .files (up p.path ++ "looks.css") (up p.path ++ "page.css")
     home := href []
+    key := p.key
     sections := s.sections.map fun q =>
       sectionItem (href q.path) q.doc.title
         (if q.path == p.path then some "page" else if q.path.isPrefixOf p.path then some "true" else none)
@@ -408,6 +415,7 @@ def Site.write (s : Site) (dir : System.FilePath) : IO (List String) := do
       let folder := p.path.foldl (· / ·) dir
       IO.FS.createDirAll folder
       IO.FS.writeFile (folder / "index.html") html
+      IO.FS.writeFile (folder / "index.md") p.doc.markdown
       IO.FS.writeFile (folder / "document.json") ((Json.Document.json p.doc).pretty ++ "\n")
   IO.FS.writeFile (dir / "site.json") ((s.json).pretty ++ "\n")
   return errors

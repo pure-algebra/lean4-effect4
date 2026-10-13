@@ -25,7 +25,7 @@ A register record links a claim to a historical attack. Read the whole row: an e
 
 ## Open work
 
-The open part of the plan: 11 planned goals, and 26 theorems proved modulo them. A goal's docstring, written with its statement, says why its proof waits. A chain shows how a theorem reaches a goal: each step is an edge of the plan, from a node to a node its proof reaches first.
+The open part of the plan: 11 planned goals, and 26 theorems proved modulo them. A goal's docstring, written with its statement, says why its proof waits. A chain shows how a theorem reaches a goal. Each step is an edge of the plan, from a node to a node its proof reaches first.
 
 ### once_placed_pushes_once
 
@@ -5439,7 +5439,7 @@ Tagged: 291; inherited (provisional): 2456; unplaced: 0.
 
 ## Plan
 
-The requirements and their nodes. A node is a planned goal (a theorem whose body is `sorry`, declared by `proof_goal`) or a theorem a requirement names. Its status is derived from its proof, with goals as leaves (`tools/ProofGraph/Plan.lean`, decisions row 203): goal, modulo (proved from the goals it rests on), or proved. An edge goes from a node to the nodes its proof reaches first.
+The requirements and their nodes. A node is a planned goal (a theorem whose body is `sorry`, declared by `proof_goal`) or a theorem a requirement names. Its status is derived from its proof, with goals as leaves (`tools/ProofGraph/Plan.lean`, decisions row 203). The status is goal, modulo (proved from the goals it rests on), or proved. An edge goes from a node to the nodes its proof reaches first.
 
 A requirement's nodes are its top nodes, named by the registry, and the declarations placed at it (`@[semantics "concept" (requirement := Rn)]`, decisions row 207). A requirement is proved when every node is proved and no open part remains. An open part is one not yet stated as a goal.
 
@@ -5462,7 +5462,9 @@ A requirement's nodes are its top nodes, named by the registry, and the declarat
 
 Next goals (11): `countdown_parks_positional`, `shop_stages`, `log_debits`, `request_leads`, `cleanup_keeps`, `retries_declared`, `logs_step`, `jobs_step`, `logs_history`, `rest_step`, `once_placed_pushes_once`
 
-Open parts, with no planned goal (87): not triaged 36; worded as a proposed claim 27; waits on a ruling 13; needs a definition 6; after other work 5.
+Open parts, with no planned goal (87), by state:
+
+Not triaged: 36 · Worded as a proposed claim: 27 · Waits on a ruling: 13 · Needs a definition: 6 · After other work: 5
 
 ### R1: The signature is a parameter: one located refusal admits Σ\_app, and every milestone statement takes it
 
@@ -5489,7 +5491,7 @@ flowchart TB
   n4 --> n5
 ```
 
-R1 by concept: the concepts its nodes are placed at, by tag or by module, with their nodes; an arrow where a node's proof reaches a node of another concept.
+R1 by concept: each concept its nodes are placed at, by tag or by module. An arrow goes where a node's proof reaches a node of another concept.
 
 ```mermaid
 flowchart TB
@@ -5657,7 +5659,7 @@ flowchart TB
 - Open, not triaged: C7: conditional on decisions row 115
 - Open, not triaged: C8: per form
 
-R2 by concept: the concepts its nodes are placed at, by tag or by module, with their nodes; an arrow where a node's proof reaches a node of another concept.
+R2 by concept: each concept its nodes are placed at, by tag or by module. An arrow goes where a node's proof reaches a node of another concept.
 
 ```mermaid
 flowchart TB
@@ -5698,7 +5700,7 @@ flowchart TB
 - Open, not triaged: the Schema and JSON images of app, null, undefined, number and bytes: unlowered or refused by name (decisions rows 121, 158, 160, 161)
 - Open, after other work (a program that compares records (decisions row 126)): equality at records: eq stays refused at records until a program compares them (decisions row 126)
 
-R3 by concept: the concepts its nodes are placed at, by tag or by module, with their nodes; an arrow where a node's proof reaches a node of another concept.
+R3 by concept: each concept its nodes are placed at, by tag or by module. An arrow goes where a node's proof reaches a node of another concept.
 
 ```mermaid
 flowchart TB
@@ -5769,7 +5771,7 @@ flowchart TB
   n4 --> n5
 ```
 
-R4 by concept: the concepts its nodes are placed at, by tag or by module, with their nodes; an arrow where a node's proof reaches a node of another concept.
+R4 by concept: each concept its nodes are placed at, by tag or by module. An arrow goes where a node's proof reaches a node of another concept.
 
 ```mermaid
 flowchart TB
@@ -6106,7 +6108,7 @@ flowchart TB
   n1 --> n2
 ```
 
-R5 by concept: the concepts its nodes are placed at, by tag or by module, with their nodes; an arrow where a node's proof reaches a node of another concept.
+R5 by concept: each concept its nodes are placed at, by tag or by module. An arrow goes where a node's proof reaches a node of another concept.
 
 ```mermaid
 flowchart TB
@@ -6194,7 +6196,7 @@ flowchart TB
   n10 --> n12
 ```
 
-R6 by concept: the concepts its nodes are placed at, by tag or by module, with their nodes; an arrow where a node's proof reaches a node of another concept.
+R6 by concept: each concept its nodes are placed at, by tag or by module. An arrow goes where a node's proof reaches a node of another concept.
 
 ```mermaid
 flowchart TB
@@ -6648,7 +6650,7 @@ flowchart TB
 - Open, not triaged: the TypeScript face against rc.112: finite checks only, by the truth harness and by the keyed lane's runs of the scenarios' scripts on their printed modules (DI-49; decisions row 254); the truth harness compares each entry's exit with the same entry's, the fork run's and the sync run's apart; two Semaphore programs settle on two exits under their two entries, and the two faces give one exit on each; three Pool programs settle on two exits too, and their sync runs are pinned apart from the allocation order on the Lean face (lateSightsSync, harness/truth/Truth.lean) (Test/contracts/faces.contract.md, the amendments of 2026-10-06; decisions row 279)
 - Open, not triaged: the profile as data, named by each face's law (decisions row 79, R79.5)
 
-R8 by concept: the concepts its nodes are placed at, by tag or by module, with their nodes; an arrow where a node's proof reaches a node of another concept.
+R8 by concept: each concept its nodes are placed at, by tag or by module. An arrow goes where a node's proof reaches a node of another concept.
 
 ```mermaid
 flowchart TB
@@ -6759,7 +6761,7 @@ flowchart TB
   n4 --> n5
 ```
 
-R9 by concept: the concepts its nodes are placed at, by tag or by module, with their nodes; an arrow where a node's proof reaches a node of another concept.
+R9 by concept: each concept its nodes are placed at, by tag or by module. An arrow goes where a node's proof reaches a node of another concept.
 
 ```mermaid
 flowchart TB
@@ -6961,7 +6963,7 @@ flowchart TB
   n11 --> n13
 ```
 
-R10 by concept: the concepts its nodes are placed at, by tag or by module, with their nodes; an arrow where a node's proof reaches a node of another concept.
+R10 by concept: each concept its nodes are placed at, by tag or by module. An arrow goes where a node's proof reaches a node of another concept.
 
 ```mermaid
 flowchart TB
@@ -7525,7 +7527,7 @@ flowchart TB
   n7 --> n8
 ```
 
-R11 by concept: the concepts its nodes are placed at, by tag or by module, with their nodes; an arrow where a node's proof reaches a node of another concept.
+R11 by concept: each concept its nodes are placed at, by tag or by module. An arrow goes where a node's proof reaches a node of another concept.
 
 ```mermaid
 flowchart TB
@@ -7963,7 +7965,7 @@ flowchart TB
   n1 --> n3
 ```
 
-R12 by concept: the concepts its nodes are placed at, by tag or by module, with their nodes; an arrow where a node's proof reaches a node of another concept.
+R12 by concept: each concept its nodes are placed at, by tag or by module. An arrow goes where a node's proof reaches a node of another concept.
 
 ```mermaid
 flowchart TB
@@ -8059,7 +8061,7 @@ flowchart TB
 - Open, not triaged: the service half of the signature as a recorded input: Built carries the row table only (decisions row 21)
 - Open, worded as a proposed claim: clock-unit-compatibility (proposed claim; translation-simulation): exact nanoseconds inside, with every recorded millisecond input kept in meaning by an explicit conversion; public nanosecond readings wait for the target's bigint contract (decisions rows 83, 231)
 
-R13 by concept: the concepts its nodes are placed at, by tag or by module, with their nodes; an arrow where a node's proof reaches a node of another concept.
+R13 by concept: each concept its nodes are placed at, by tag or by module. An arrow goes where a node's proof reaches a node of another concept.
 
 ```mermaid
 flowchart TB
@@ -8094,7 +8096,7 @@ flowchart TB
 - Open, needs a definition (the gap as a leaf of \`Ty\` (slice GAPLEAF)): gap-conservative, gap-necessary, gap-graduality and gap-exact-off-cells (proposed claims; subtyping-algebra, with R2 and R3 for the appended leaf): with one gap per hole, the gap check on a program with no gap is the checker; a program with holes that some hole table admits passes the gap check; an omission passes the gap check at a gap type that has the original's type as an instance; off invariant positions a program that passes the gap check is admitted by some hole table; at a cell the content converts by the rule with bounds, since the member-by-member rule accepts pairs with no witness; tested on finite models and not compiled (the study, sections 5.2, 5.5 and 5.6); the leaf Ty.gap is stage 6 of the study's plan, and the coordinator tells the owner before the append lands (decisions rows 282, 288); they replace the part gradual-checker
 - Open, needs a definition (a data hole that waits at a frontier and takes a reply): fill-by-term (proposed claim; translation-simulation): a reply of a term's value at a hole's frontier and the filled program have one observation; a data hole waits at a frontier as a host row does today, and a handler for a hole's operation waits for a consumer; designed and not compiled (the study, section 7)
 
-R14 by concept: the concepts its nodes are placed at, by tag or by module, with their nodes; an arrow where a node's proof reaches a node of another concept.
+R14 by concept: each concept its nodes are placed at, by tag or by module. An arrow goes where a node's proof reaches a node of another concept.
 
 ```mermaid
 flowchart TB

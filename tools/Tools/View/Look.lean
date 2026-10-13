@@ -20,8 +20,9 @@ own (`Tools.View.Tokens` writes and reads them):
 - a duration is in milliseconds, as CSS transitions and the token format write it.
 
 The defaults are the dark look: the palette of `paint.h`'s round-3 probe, whose hues passed the
-palette validator on their ground (hues-run.txt of the round-3 probe), and the faces of
-`paint_faces_open`. Every other look is a token file that changes some of them
+palette validator on their ground (hues-run.txt of the round-3 probe), with the ink and the rules
+warmed to the ground's material (decisions row 366, point 2), and the two open faces of
+`vendor/fonts/` (row 366, point 1), each family before the system faces it falls back to. Every other look is a token file that changes some of them
 (`tools/view/looks/`), read at each run (`Tokens.lookFile`): its file is its one source. The paper
 look, which a document takes for a light scheme, is one of them.
 -/
@@ -359,19 +360,21 @@ def Faces.set (fs : Faces) (face : Face) (f : Font) : Faces :=
 /-- **A look.** The defaults are the dark look. -/
 structure Look where
   name : String := "dark"
-  description : String := "The dark ground and the black-and-white base of the native view."
+  description : String := "The dark ground: a warm charcoal, with ink the tone of bone and rules of warm grey."
   scheme : Scheme := .dark
-  palette : Palette := ⟨0x14110d, 0xf3f4f6, 0x45433f, 0xc0851f, 0xbd3931, 0x359b75⟩
+  -- the ground and the ink are materials and mean nothing (decisions row 366, point 2); the three
+  -- hues are the agents', off in this look
+  palette : Palette := ⟨0x14110d, 0xece6dc, 0x48433c, 0xc0851f, 0xbd3931, 0x359b75⟩
   /-- whether a role of an agent (the host, a failure, a resource) takes its hue; with the hue
   off it is drawn in the ink (`Look.color`) -/
   hue : Bool := false
   /-- the value of the rule's tone in the band behind a lit row or box, per mille -/
   band : Nat := 500
   faces : Faces := {
-    data := { family := ["Menlo", "DejaVu Sans Mono", "monospace"], size := 13288 }
-    name := { family := ["Georgia", "Charter", "serif"], size := 15000 }
-    label := { family := ["Georgia", "Charter", "serif"], size := 13500, italic := true }
-    title := { family := ["Georgia", "Charter", "serif"], size := 20000 } }
+    data := { family := ["JetBrains Mono", "Menlo", "DejaVu Sans Mono", "monospace"], size := 13288 }
+    name := { family := ["Source Serif 4", "Georgia", "serif"], size := 15000 }
+    label := { family := ["Source Serif 4", "Georgia", "serif"], size := 13500, italic := true }
+    title := { family := ["Source Serif 4", "Georgia", "serif"], size := 20000 } }
   strokes : Strokes := {}
   /-- the form of an edge between ranks -/
   curve : Curve := .bumpY

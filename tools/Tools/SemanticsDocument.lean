@@ -230,7 +230,7 @@ private def planPart (plan : PlanEntry) (concepts : List Concept) (claimOf : Std
     .para [.text "The requirements and their nodes. A node is a planned goal (a theorem whose body is ",
       .code "sorry", .text ", declared by ", .code "proof_goal", .text ") or a theorem a requirement names. ",
       .text "Its status is derived from its proof, with goals as leaves (", .code "tools/ProofGraph/Plan.lean",
-      .text ", decisions row 203): goal, modulo (proved from the goals it rests on), or proved. ",
+      .text ", decisions row 203). The status is goal, modulo (proved from the goals it rests on), or proved. ",
       .text "An edge goes from a node to the nodes its proof reaches first."],
     .para [.text "A requirement's nodes are its top nodes, named by the registry, and the declarations placed at it (",
       .code "@[semantics \"concept\" (requirement := Rn)]",
@@ -238,7 +238,12 @@ private def planPart (plan : PlanEntry) (concepts : List Concept) (claimOf : Std
       .text "An open part is one not yet stated as a goal."],
     .table ["Requirement", "Status", "Top nodes", "Placed nodes", "Next goals"] rows,
     .para ([.text s!"Next goals ({next.length}): "] ++ codes loose next),
-    .para [.text s!"Open parts, with no planned goal ({parts.length}): not triaged {count "untriaged"}; worded as a proposed claim {count "proposed"}; waits on a ruling {count "ruling"}; needs a definition {count "definition"}; after other work {count "work"}."]]
+    .para [.text s!"Open parts, with no planned goal ({parts.length}), by state:"],
+     .fields [("Not triaged", [.text (toString (count "untriaged"))]),
+       ("Worded as a proposed claim", [.text (toString (count "proposed"))]),
+       ("Waits on a ruling", [.text (toString (count "ruling"))]),
+       ("Needs a definition", [.text (toString (count "definition"))]),
+       ("After other work", [.text (toString (count "work"))])]]
   unless unplaced.isEmpty do
     body := body ++ [.para ([.text s!"Goals no requirement reaches ({unplaced.length}): "] ++ codes loose unplaced)]
   for (req, reach, pending, printed) in sections do
@@ -280,7 +285,7 @@ private def planPart (plan : PlanEntry) (concepts : List Concept) (claimOf : Std
       if a == c then some b else none
     let conceptMap : List Block := if cs.length < 2 then [] else
       [.graph ("fig:concepts:" ++ id)
-        s!"{id} by concept: the concepts its nodes are placed at, by tag or by module, with their nodes; an arrow where a node's proof reaches a node of another concept."
+        s!"{id} by concept: each concept its nodes are placed at, by tag or by module. An arrow goes where a node's proof reaches a node of another concept."
         (cs.map fun c =>
           let members := reach.filter (conceptOf · == c)
           let opened := (members.filter isOpen).length
@@ -364,7 +369,7 @@ private def openPart (plan : PlanEntry) (claims : List ClaimEntry) : Block := Id
   return .part "open" "Open work" <|
     [.para [.text s!"The open part of the plan: {goals.length} planned goals, and {modulo.length} theorems proved modulo them. ",
       .text "A goal's docstring, written with its statement, says why its proof waits. A chain shows how a theorem ",
-      .text "reaches a goal: each step is an edge of the plan, from a node to a node its proof reaches first."]] ++ parts
+      .text "reaches a goal. Each step is an edge of the plan, from a node to a node its proof reaches first."]] ++ parts
 
 /-- The acceptance section (decisions row 206): one row per program, its stage as its battery
 declares it, and the programs each requirement keeps waiting. -/

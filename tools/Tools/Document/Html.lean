@@ -16,10 +16,11 @@ Document content reaches only text nodes and attribute values, which the seriali
 
 The blocks:
 
-* a part is a `section` whose `id` is its key, headed `h2` to `h6` by nesting, with a link to
-  itself;
+* a part is a `section` whose `id` is its key, headed `h2` to `h6` by nesting, its key beside
+  its title as a link to itself;
 * fields are a `dl`, items a `ul`, and code a `pre` around a `code` element of class
-  `language-…`, the HTML Standard's convention for naming a code element's language;
+  `language-…`, the HTML Standard's convention for naming a code element's language; a Lean
+  statement of more than eight lines folds into a `details` under its first line;
 * a wide table scrolls inside a focusable region labelled by its columns;
 * a figure is a `figure` around its picture, an SVG drawn by the view's layout whose nodes link
   (`Tools.Document.Figure`), and its caption, then the figure in words: each node, linked, with
@@ -70,10 +71,15 @@ def algebra (target : String → String := fragment) : Algebra (Nat → List Raw
   items ls _ := [el "ul" (ls.map fun l => el "li" (line target l))]
   code lang body _ :=
     let block := el "pre" [el "code" [.text body] [("class", "language-" ++ lang)]]
-    -- A diagram's source folds away until the design language draws it (row 354, point 8).
+    let lines := body.splitOn "\n"
+    -- A diagram's source folds away; a figure (`Block.graph`) draws a graph (row 365).
     if lang == "mermaid" then
-      [el "details" [el "summary" [.text s!"Diagram source (Mermaid, {(body.splitOn "\n").length} lines)"], block]
+      [el "details" [el "summary" [.text s!"Diagram source (Mermaid, {lines.length} lines)"], block]
         [("class", "diagram")]]
+    -- A long statement folds under its first line (row 366, point 6).
+    else if lang == "lean" && lines.length > 8 then
+      [el "details" [el "summary" [el "code" [.text ((lines.head?.getD "").trimAscii.toString ++ " …")],
+          .text s!" ({lines.length} lines)"], block] [("class", "statement")]]
     else [block]
   table hs rs _ :=
     if rs.isEmpty then [] else
@@ -99,8 +105,9 @@ def algebra (target : String → String := fragment) : Algebra (Nat → List Raw
      el "details" [el "summary" [.text "The figure in words"], el "ul" (ns.map fun n => el "li" (word n))]
        [("class", "words")]]
   part k t body depth :=
+    -- the part's key beside its title: its identity, linked to itself (row 366, point 4)
     let heading := el ("h" ++ toString (min 6 depth))
-      [.text t, el "a" [.text "#"] [("class", "self"), ("href", fragment k), ("aria-label", "Link to " ++ t)]]
+      [.text t, el "a" [.text k] [("class", "key"), ("href", fragment k)]]
     [el "section" (heading :: (body.flatMap (· (depth + 1)))) [("id", k)]]
 
 /-! ## The stylesheet -/
@@ -147,20 +154,27 @@ private def hexColour : List Char → Bool
       hexColour (d :: rest)
   | _ => false
 
-/-- What in one line of rules is a literal colour or family, if anything. -/
+/-- What in one line of rules is a literal colour or family, or an ornament with no meaning (a
+shadow, a gradient, a filter: decisions row 366, point 3), if anything. An `@font-face` rule names
+the family it defines, so its line may write one. -/
 private def lineProblem (line : String) : Option String :=
   let colourFns := ["rgb(", "rgba(", "hsl(", "hsla(", "hwb(", "lab(", "lch(", "oklab(", "oklch("]
+  let ornaments := ["box-shadow", "text-shadow", "gradient(", "filter:"]
+  let has (key : String) : Bool := (line.splitOn key).length > 1
   let after (key : String) : List String := ((line.splitOn key).drop 1).map (·.trimAscii.toString)
   if hexColour (' ' :: line.toList) then some "a literal colour"
-  else if colourFns.any (fun f => (line.splitOn f).length > 1) then some "a literal colour"
+  else if colourFns.any has then some "a literal colour"
+  else if let some o := ornaments.find? has then some s!"an ornament with no meaning ({o})"
+  else if has "@font-face" then none
   else if (after "font-family:").any (fun v => !v.startsWith "var(") then some "a literal family"
   else if (after " font:").any (fun v => ((v.splitOn "var(--e4-font-").length ≤ 1)) then
     some "a font without the look's family"
   else none
 
 /-- **The design language's rule for the page's rules** (decisions row 354, point 1: the look is the
-only data of a colour, a face or a timing): the first line of `css` that writes a literal colour or a
-family not taken from the look, with its number, or none. -/
+only data of a colour, a face or a timing; row 366, point 3: no ornament without a meaning): the
+first line of `css` that writes a literal colour, a family not taken from the look, a shadow, a
+gradient or a filter, with its number, or none. -/
 def Sheet.problem (css : String) : Option String :=
   let lines := (String.ofList (uncomment css.toList)).splitOn "\n"
   (lines.zipIdx.findSome? fun (line, n) =>

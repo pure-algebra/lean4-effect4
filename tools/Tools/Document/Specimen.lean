@@ -25,8 +25,8 @@ def specimen : Document where
   body := [
     .para [.text "A paragraph of running text, with ", .code "inline code", .text ", a reference to ",
       .ref "tables" "the table part", .text ", and a status: ", .status "proved",
-      .text ". A line long enough to show the measure of a paragraph at the page's width, so the ",
-      .text "length of a line can be judged against the type's size and the leading between lines."],
+      .text ". A line long enough to show the measure of a paragraph at the page's width. ",
+      .text "Its length can be judged against the type's size and the leading between lines."],
     .part "statuses" "Every status" [
       .para [.text "Each mark is a shape, with no hue (decisions row 354, point 2):"],
       .para statuses,
@@ -51,7 +51,7 @@ def specimen : Document where
          [[.code "schedule-independent"], [.text "fundamentalProperty"], [.status "absent"],
           [.text "—"], [.ref "statuses" "see the statuses"]]]],
     .part "figure" "A figure" [
-      .para [.text "A graph as data, drawn by the view's layout: a node links to the part it opens, a goal is lit, ",
+      .para [.text "A graph as data, drawn by the view's layout. A node links to the part it opens, a goal is lit, ",
         .text "and the figure is also given in words."],
       .graph "fig:specimen" "A claim proved modulo one goal, through two steps; an arrow goes to a node the proof reaches first."
         [{ key := "claim", label := "decision_preserves", status := "modulo", ref := some "statuses" },

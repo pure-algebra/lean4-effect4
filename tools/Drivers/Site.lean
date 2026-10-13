@@ -18,7 +18,8 @@ Builds the site as one value (`Tools.Site.Site`) and writes every file of it int
 * the contents page, every page by section.
 
 Its other files: the page's rules (`page.css`, after the design language's check), the looks
-(`looks.css`: the dark base and the paper look, read from its token file at each run), the pages and their parts (`site.json`), the host's `_headers`, and the page for a
+(`looks.css`: the dark base and the paper look, read from its token file at each run), the two
+faces with their licences (`fonts/`, copied from `vendor/fonts/`), the pages and their parts (`site.json`), the host's `_headers`, and the page for a
 missing path (`404.html`). `make site` runs the report when its sources changed, then this, into a
 fresh folder, and puts it at `.lake/gen/site`.
 -/
@@ -33,9 +34,9 @@ def landing : Document where
     .para [.text "Effect4 is Effect's runtime written in Lean as a model with defined semantics. ",
       .text "A program is data: a typed term that Lean checks, runs on a reference machine, lowers to OCaml ",
       .text "and prints as TypeScript."],
-    .para [.text "Each claim about that runtime carries its evidence: a theorem that is ", .status "proved",
-      .text ", a theorem proved ", .status "modulo", .text " named goals, or a planned ", .status "goal",
-      .text " stated with its proof to come."],
+    .para [.text "Each claim about that runtime carries its evidence. The evidence is a theorem that is ",
+      .status "proved", .text ", a theorem proved ", .status "modulo", .text " named goals, or a planned ",
+      .status "goal", .text " whose proof is to come."],
     .part "start" "Start here" [
       .items [
         [.link "semantics/" "Semantics evidence", .text ": every claim by concept, its status and its Lean statement, ",
@@ -43,9 +44,9 @@ def landing : Document where
         [.link "specimen/" "Document specimen", .text ": every kind of block and status mark, as the pages draw them."],
         [.link "contents/" "Contents", .text ": every page of the site."]]],
     .part "contract" "For a framework" [
-      .para [.text "Every page is also its document as JSON, in the format ", .code "effect4-document/1", .text " (",
-        .link "semantics/document.json" "the first page of the semantics", .text "), and ",
-        .link "site.json" "site.json", .text " lists the pages with their parts. The report behind the semantics pages is ",
+      .para [.text "Every page is also its document as JSON, in the format ", .code "effect4-document/1", .text ": see ",
+        .link "semantics/document.json" "the first page of the semantics", .text ". The pages and their parts are in ",
+        .link "site.json" "site.json", .text ". The report behind the semantics pages is ",
         .link "semantics/report.json" "report.json", .text "."]]]
 
 /-- Where the semantics report splits: every part of its first page but the legend of statuses,
@@ -73,7 +74,10 @@ def main (args : List String) : IO UInt32 := do
   let pages := [({ path := [], doc := landing, space := "landing" } : Page)] ++
     split semanticsCut ["semantics"] "semantics" semantics ++
     [{ path := ["specimen"], doc := Specimen.specimen, space := "specimen" }]
-  let files := ["page.css", "looks.css", "site.json", "_headers", "404.html", "semantics/report.json"]
+  let fonts := ["source-serif-4/source-serif-4-latin-opsz-normal.woff2", "source-serif-4/source-serif-4-latin-opsz-italic.woff2",
+    "source-serif-4/LICENSE", "jetbrains-mono/jetbrains-mono-latin-wght-normal.woff2", "jetbrains-mono/LICENSE", "README.md"]
+  let files := ["page.css", "looks.css", "site.json", "_headers", "404.html", "semantics/report.json"] ++
+    fonts.map ("fonts/" ++ ·)
   let draft : Site := { pages, files }
   let s : Site := { draft with pages := pages ++ [{ path := ["contents"], doc := contents draft, space := "contents" }] }
   let css ← IO.FS.readFile Html.sheetPath
@@ -87,6 +91,10 @@ def main (args : List String) : IO UInt32 := do
   IO.FS.writeFile (dir / "page.css") css
   IO.FS.writeFile (dir / "looks.css") (looksCss (← Tokens.lookFile "paper"))
   IO.FS.writeFile (dir / "_headers") headers
+  for f in fonts do
+    let target := dir / "fonts" / f
+    if let some parent := target.parent then IO.FS.createDirAll parent
+    IO.FS.writeBinFile target (← IO.FS.readBinFile ((("vendor/fonts" : System.FilePath)) / f))
   match Lean.Json.parse (← IO.FS.readFile (report / "semantics.json")) with
   | .ok j => IO.FS.writeFile (dir / "semantics" / "report.json") (j.compress ++ "\n")
   | .error why => IO.eprintln s!"{report / "semantics.json"}: {why}"; return 1
