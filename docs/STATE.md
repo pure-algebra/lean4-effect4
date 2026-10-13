@@ -282,9 +282,10 @@ A program has folds, a journaled run with replay, and a printed image that reads
    decide its claims' premises on one recorded run, so a real run is checked run by run. In order:
    - the agent's small fixes in the tools. Answers carry no hex unless asked, and the session's
      JSON is named. A fill at a missing address is refused, and the catalogue's gaps are filled;
-   - V1, the to-do on the keyed lane and lane S: its first meeting with tsgo, rc.112 and the
-     OCaml replay;
-   - V2, the application as one module of exported functions (row 373 (11));
+   - done: V1, the to-do on the keyed lane and lane S (`4017fac26`, `2daa3ac55`). On each script
+     rc.112 and the generated OCaml engine agree with Lean;
+   - V2, the application as one Effect service with its layer, its host rows services of their
+     own (row 378 (19), (20); the [design note](research/2026-10-13-emitted-services/README.md));
    - V3, the generated declarations: the rows' bindings interface, the inputs' and answers'
      Schemas, the prelude package. They are also the agent's typed surface;
    - V4, `apps/todo/` on SQLite with the per-run checker;
