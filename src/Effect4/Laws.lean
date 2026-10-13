@@ -354,6 +354,8 @@ import Effect4.Laws.Program.AddressMove
 -- The expansion's address map, and the table at the source's addresses (decisions row 373 (7)).
 import Effect4.Laws.Program.ExpansionAddresses
 import Effect4.Laws.Program.SourceTable
+-- An application's service block: its methods' types and its refusals (decisions row 378 (20)).
+import Effect4.Laws.Program.ApplicationService
 
 /-!
 # Effect4 proof graph
