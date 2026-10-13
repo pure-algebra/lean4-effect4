@@ -82,13 +82,12 @@ def keyFree : Application NativeOp :=
 
 /-! ## Reading back -/
 
--- control: the to-do's module does not read back. The header reader reads no payload class, and
--- two methods declare `NotFound` in their error column, so the block is outside `blockReadable`
--- and `ModuleEmission.readModule` says nothing of it
-#guard readBack? application = some (false, false)
--- control: without those two entries the block still does not read back, since the initial
--- program requires the rows' key, and the header reader reads only `never` as a requirement row
-#guard readBack? classFree = some (false, false)
+-- finite evaluation: the to-do's module reads back. The header reader reads the payload class
+-- `NotFound` in two methods' error columns and the rows' key in the requirement rows, so the
+-- block is `blockReadable` and `ModuleEmission.readModule` reads it back (seat READ, item 1)
+#guard readBack? application = some (true, true)
+-- finite evaluation: without those two entries the block reads back too
+#guard readBack? classFree = some (true, true)
 -- finite evaluation: over rows that require no key the block is readable and reads back, so the
 -- premises of the read-back law reach a class-free application whose rows require no key
 #guard readBack? keyFree = some (true, true)
