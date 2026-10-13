@@ -158,8 +158,8 @@ figure.graph { margin: var(--s2) 0 var(--s-1); }
 figure.graph .scroll { border: 0; margin: 0; }
 figure.graph svg { display: block; max-width: none; height: auto; }
 figcaption { margin-top: var(--s-1); font-size: var(--s-1); }
-details.words { margin: 0 0 var(--s2); font-size: var(--s-1); }
-details.words > summary, details.diagram > summary { cursor: pointer; }
+figure.graph + details { margin: 0 0 var(--s2); font-size: var(--s-1); }
+figure.graph + details > summary, details.diagram > summary { cursor: pointer; }
 details.diagram { margin: var(--s0) 0; }
 
 /* The footer: the page's provenance; its rule ends the page. */
