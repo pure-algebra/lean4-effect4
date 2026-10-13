@@ -1,4 +1,4 @@
-import Tools.View.Tube.Motion
+import Tools.View.Tube.Physics
 import Tools.View.Tube.Marking
 import Whatwg.Svg.Scene.Units
 
@@ -42,8 +42,9 @@ open Whatwg.Svg.Scene.Units (slots lane)
 (`WIDTHS`). -/
 def PIPE : Nat := 10000
 def VESSEL : Nat := 18000
-/-- The room at each end of the vessel. -/
-def HEAD : Nat := 6000
+/-- The room at each end of the vessel: its reducer from the pipe, and six pixels more, so its
+units stand where it is full width. -/
+def HEAD : Nat := reducerLen (body PIPE) (body VESSEL) + 6000
 /-- A closed valve's air gap, its length along the inlet, and how far the valve stands from the
 inlet's end, clear of the vessel's head. -/
 def PLUG : Nat := GAP
@@ -131,7 +132,7 @@ def place (l : Layout) (m : Marking) (gone : Bool) (msg : Nat) : Int :=
   let total := line.foldl (· + volume ·) 0
   let plug : Nat := if m.held.length ≥ l.cap then PARTED else 0
   match slotOf (slots l.cap m.held) msg, slotOf (lane m.waiting) msg with
-  | some i, _ => vIn + vV - ((HEAD * VESSEL / 1000 : Nat) : Int) - i * A
+  | some i, _ => vIn + vV - ((HEAD * contents VESSEL / 1000 : Nat) : Int) - i * A
   | none, some k => vIn - (((VALVE_AT + plug) * PIPE / 1000 : Nat) : Int) - k * A
   | none, none => if gone then total + A else 0
 
@@ -187,11 +188,41 @@ def picture (l : Layout) (msgs : List Nat) (seen : List Nat) (prev : Option Mark
       let u := { unitOf s!"m{msg}@{nm}" t s with move := tm }
       (i, if i == 0 then onInlet u else u)
   let units := unitsIn.map (·.2)
-  -- the swell round each unit that moves, in each tube it passes through
-  let swells := if prev.isNone then [] else msgs.flatMap fun msg =>
+  -- the units the law carries (`Physics`): every unit that moves forward, but an offer that meets
+  -- a closed valve, which keeps its impact; a unit that stays is still a unit ahead of others
+  let impact (msg : Nat) : Bool := !(seen.contains msg) && m.waiting.contains msg && isClosed
+  let v₀Of (msg : Nat) : Int := place l before (goneBefore msg) msg
+  let v₁Of (msg : Nat) : Int := place l m (gone msg) msg
+  let law : Physics.Law := {}
+  let movers : List Physics.Mover := if prev.isNone then [] else msgs.map fun msg =>
+    { id := msg, from_ := v₀Of msg, to := v₁Of msg, start := (timingOf msg).delay,
+      free := !impact msg && v₀Of msg < v₁Of msg }
+  let runs := (movers.zip (law.run A movers)).filter (·.1.free)
+  let lineNamed := names.zip line
+  let carries := runs.flatMap fun (mv, st) => law.carries s!"m{mv.id}" lineNamed st
+  -- the swell round a carried unit: it follows the unit's dash and rises with its speed
+  let reach : Int := 12000
+  let carriedSwells := runs.flatMap fun (mv, st) =>
+    ((law.carries s!"m{mv.id}" lineNamed st).zip lineNamed).filterMap fun (c, (nm, t)) =>
+      let len : Int := t.length
+      let rise := 2 * SWELL / 1000 * 1000
+      let inTube := c.window.any fun (a, _) => a + reach ≥ 0 && a - reach ≤ len
+      if !inTube then none else
+      let lo : Int := if nm == "vessel" then reducerLen (body PIPE) (body VESSEL) else -(1 : Int) * 1000000000
+      let hi : Int := if nm == "vessel" then len - reducerLen (body PIPE) (body VESSEL) - 2 * reach else 1000000000
+      some { key := s!"s{mv.id}@{nm}", follows := if nm == "in" then "in:wall" else "", tube := t,
+             width := body t.bore, len := (2 * reach).toNat, from_ := 0, to := 0, peak := 0,
+             timing := wholeBeat,
+             track := (c.window.zip st).map fun ((a, _), sv) =>
+               -- it rises only while its unit is in this tube
+               let here := a + reach ≥ 0 && a - reach ≤ len
+               (max lo (min hi (a - reach)),
+                if here then (rise : Int) * min 1000 (sv.v * 1000 / law.speed) / 1000 else 0) }
+  -- the swell round each unit that moves on its eased timing, in each tube it passes through
+  let swells := if prev.isNone then [] else carriedSwells ++ msgs.flatMap fun msg =>
     let v₀ := place l before (goneBefore msg) msg
     let v₁ := place l m (gone msg) msg
-    if v₀ == v₁ then [] else
+    if v₀ == v₁ || runs.any (·.1.id == msg) then [] else
     let tm := timingOf msg
     ((line.zip ((fronts lineBefore v₀).zip (fronts line v₁))).zip names).flatMap
       fun ((t, (s₀, s₁)), nm) =>
@@ -243,7 +274,8 @@ def picture (l : Layout) (msgs : List Nat) (seen : List Nat) (prev : Option Mark
       reducedOf "vessel" l.vessel (body PIPE) (body PIPE) ++
       bodyOf "out" (into l.outlet false) (round := false) ++ valve ++ units ++ waitingTakers ++ keptTakers
     via := viaMarks
-    events := swells ++ surge }
+    events := swells ++ surge
+    carries := carries }
 
 /-- **A run's pictures**: its layout and, for each marking, its words and its picture. -/
 def run (sc : CellSheet.Scene) : Except String (Layout × List (String × Picture)) := do

@@ -49,7 +49,27 @@ inductive Stroke where
   /-- One dash: its start and its length, from `a` to `b`, through `via` at the halfway of the
   easing where one is given: a valve that opens to let a unit in and closes behind it. -/
   | window (a b : Int × Int) (via : Option (Int × Int))
+  /-- One dash at moments spread evenly over the change, a unit's carry by
+  `Tools.View.Tube.Physics`: the line between the two moments either side. -/
+  | windowAt (vs : List (Int × Int))
+  /-- The stroke's width at moments spread evenly over the change. -/
+  | widthAt (ws : List Int)
 deriving Repr, Inhabited
+
+/-- **A list of samples at a progress** `e` in thousandths: the samples spread evenly from the
+start to the end, and the line between the two either side of `e`. -/
+def sampleAt (vs : List Int) (e : Int) : Int :=
+  match vs with
+  | [] => 0
+  | [v] => v
+  | v :: _ =>
+    let n : Int := vs.length - 1
+    let e := max 0 (min 1000 e)
+    let i := (e * n / 1000).toNat
+    let r := e * n - (i : Int) * 1000
+    let a := vs.getD i v
+    let b := vs.getD (i + 1) a
+    a + (b - a) * r / 1000
 
 /-- **The pose of a change** at an eased progress `e` in thousandths. -/
 def Stroke.at : Stroke → Int → Pose
@@ -61,6 +81,8 @@ def Stroke.at : Stroke → Int → Pose
   | .window a b (some v), e =>
     if e ≤ 500 then .window (Whatwg.Svg.Scene.mix a.1 v.1 (2 * e)) (Whatwg.Svg.Scene.mix a.2 v.2 (2 * e))
     else .window (Whatwg.Svg.Scene.mix v.1 b.1 (2 * e - 1000)) (Whatwg.Svg.Scene.mix v.2 b.2 (2 * e - 1000))
+  | .windowAt vs, e => .window (sampleAt (vs.map (·.1)) e) (sampleAt (vs.map (·.2)) e)
+  | .widthAt ws, e => .width (sampleAt ws e)
 
 /-- **A track**: the key of the thing it changes, the change, and its transition, in thousandths
 of a beat. -/
@@ -95,6 +117,18 @@ structure Event where
   peak : Nat
   timing : Timing
   level : Nat := 0
+  /-- Where given, the swell's start and its rise at moments spread evenly over its timing, in
+  place of the line from `from_` to `to` and the bump of `peak`: a swell round a unit that the
+  law of `Tools.View.Tube.Physics` carries, its rise read from the unit's speed. -/
+  track : List (Int × Int) := []
+deriving Inhabited
+
+/-- **A carry**: a unit moved through one beat by the law of `Tools.View.Tube.Physics`, its dash
+and its width at moments spread evenly over the beat. -/
+structure Carry where
+  key : String
+  window : List (Int × Int)
+  width : List Int
 deriving Inhabited
 
 /-- **A picture**: its marks, the poses some of them pass through on the way to it, its events,
@@ -104,7 +138,12 @@ structure Picture where
   via : List Mark := []
   events : List Event := []
   joins : List Join := []
+  /-- The units the law carries into this picture, in place of their eased windows and widths. -/
+  carries : List Carry := []
 deriving Inhabited
+
+/-- The whole beat, at an even pace: the timing of a carry, whose samples are its pace. -/
+def wholeBeat : Timing := { delay := 0, duration := 1000, ease := Easing.linear }
 
 /-- **A swell** round a unit carried along the body `follows` from the dash `a` to the dash `b`, on
 the unit's timing: the body widens round it and closes behind it, as a tube's wall does round a
@@ -135,12 +174,21 @@ def tracksOf (a b : Mark) (via : Option Mark) : List Track :=
     if d != d' || viaDash.isSome then [⟨b.key, .window (d.1, d.2) (d'.1, d'.2) viaDash, b.move⟩] else []
   | _, _ => []
 
+/-- **A carried unit's tracks**: where the picture carries the key, the unit keeps its centreline's
+track and takes its dash and its width from the carry, over the whole beat. -/
+def Picture.carry (B : Picture) (k : String) (trs : List Track) : List Track :=
+  match B.carries.find? (·.key == k) with
+  | some c =>
+    trs.filter (fun tr => match tr.change with | .window .. | .width .. => false | _ => true) ++
+      [⟨k, .windowAt c.window, wholeBeat⟩, ⟨k, .widthAt c.width, wholeBeat⟩]
+  | none => trs
+
 /-- **A step** (`Picture.step`): the kit's join of two pictures by key, and the tracks of what it keeps, what enters
 (from nothing where it stands) and what leaves (to nothing where it stood). -/
 def Picture.step (A B : Picture) : List Track :=
   let j := join (·.key) A.marks B.marks
-  j.update.flatMap (fun (a, b) => tracksOf a b (B.via.find? (·.key == b.key))) ++
-  j.enter.flatMap (fun b => tracksOf b.gone b none) ++
+  j.update.flatMap (fun (a, b) => B.carry b.key (tracksOf a b (B.via.find? (·.key == b.key)))) ++
+  j.enter.flatMap (fun b => B.carry b.key (tracksOf b.gone b none)) ++
   j.exit.flatMap (fun a => tracksOf a a.gone none)
 
 /-! ## Writing a film -/
@@ -204,6 +252,12 @@ def partAnims (id : String) (beat start : Nat) (p : Part) (m : Mark) (trs : List
 
 /-- **An event at a moment**: its stretch along the body it follows, as that body stands then. -/
 def Event.at (e : Event) (along : Nat → Tube) (t : Nat) : Mark :=
+  if !e.track.isEmpty then
+    let p := e.timing.at t
+    let rise := (sampleAt (e.track.map (·.2)) p).toNat
+    stretchOf e.key (along t) (sampleAt (e.track.map (·.1)) p) e.len e.width e.width (e.width + rise)
+      (e.len / 2)
+  else
   let p := e.timing.at t
   let lin := ({ e.timing with ease := Easing.linear } : Timing).at t
   let l := clamp lin
@@ -282,6 +336,10 @@ def film (id : String) (W H : Nat) (pictures : List Picture) (beat : Nat := 1000
           else (m.parts.filter (·.layer == l)).map fun p => partNode p m (animsOf m p)) ++
         ((events.filter (·.1 == lv)).flatMap fun e => twice l e.2.1) ++
         ((joins.filter (·.1 == lv)).flatMap fun e => twice l e.2.1))
+
+-- samples spread over the beat: the ends, and the line between two samples
+#guard sampleAt [0, 100, 300] 0 == 0 && sampleAt [0, 100, 300] 1000 == 300 &&
+  sampleAt [0, 100, 300] 500 == 100 && sampleAt [0, 100, 300] 750 == 200 && sampleAt [7] 400 == 7
 
 /-- The rules of a film's figure: its last picture stands for it where the reader prefers
 reduced motion. -/
