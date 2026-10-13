@@ -1,4 +1,5 @@
 import Test.Dogfood.Scenario.Atomic.WriterMachine
+import Test.Dogfood.Scenario.Atomic.WriterNative
 import Test.Dogfood.Scenario.Atomic.WriterOwnership
 import Test.Dogfood.Scenario.Atomic.WriterSource
 import Test.Dogfood.Scenario.SourceOpportunity
@@ -13,7 +14,8 @@ Question: these steps serve the count clause of `Atomic.Cleanup.log_debits`.
 The writer ledger `WriterMachine.ledger` weighs the heap's cleanup identities and the active note
 reservations, and it credits the recorded finalizer starts of each request.
 The library law `PlaceFunding.Local.history_funded` lifts it through every command, edit, reply
-and history. Every local fact is proved here except the evaluator debit, the goal `evaluation`.
+and history. Every local fact is proved here; the evaluator debit `evaluation` installs the
+native and iteration debits of `WriterNative`, and the row facts come from there too.
 Reach: the built shop, every request identity, every compile budget and every admitted history.
 These steps establish no finalizer progress, release order or host observation.
 -/
@@ -23,40 +25,7 @@ set_option maxHeartbeats 4000000
 
 namespace Test.Dogfood.Scenario.Atomic.WriterHistory
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.SourceScope
-
-/-- Code that carries no active note reservation of request `id`. -/
-abbrev Free (id : Nat) (code : NCode) : Prop := WriterPhase.current id code = 0
-
-/-- The writer ledger weighs no race, pending command or detached task. -/
-theorem no_queue (id : Nat) : PlaceFunding.NoQueue (WriterMachine.ledger id) :=
-  ⟨fun _ => rfl, fun _ => rfl, fun _ => rfl⟩
-
-/-- The writer ledger consumes no event: a recorded start only issues credit. -/
-theorem events (id : Nat) : PlaceFunding.Events (WriterMachine.ledger id) :=
-  ⟨fun _ _ => Nat.zero_le _⟩
-
-/-- A fiber row's metadata edit, interruption, replacement by free code, birth with free code
-and stack clearing keep or lower its writer reservations. -/
-theorem control (id : Nat) : PlaceFunding.Control (WriterMachine.ledger id) (Free id) where
-  metadata := by
-    intro old next _ active saved _
-    change WriterPhase.frame id next.frame ≤ WriterPhase.frame id old.frame
-    simp only [WriterPhase.frame, active, saved, Nat.le_refl]
-  interruption := Machine.WriterWeights.interrupt_weight_le (WriterPhase.model id)
-  replace := by
-    intro fiber code free
-    change WriterPhase.frame id {fiber.frame with current := code} ≤ WriterPhase.frame id fiber.frame
-    simp only [WriterPhase.frame, free, Nat.zero_add]
-    omega
-  entry := by
-    intro owner code flag budget context free
-    simp only [WriterMachine.ledger, RunFiber.make, FrameFiber.start, WriterPhase.frame, free,
-      List.map_nil, List.sum_nil, Nat.add_zero]
-  clear := by
-    intro fiber
-    change WriterPhase.frame id {fiber.frame with stack := []} ≤ WriterPhase.frame id fiber.frame
-    simp only [WriterPhase.frame, List.map_nil, List.sum_nil, Nat.add_zero]
-    omega
+open WriterNative (Free no_queue events control terminal_zero)
 
 /-- The store hooks leave the reference heap, so they leave the writer's heap count. -/
 theorem stores (id : Nat) (root : NativeEff) (table : RowTable) :
@@ -74,10 +43,6 @@ theorem stores (id : Nat) (root : NativeEff) (table : RowTable) :
     change Writer.heapCount id (Stores.wakeList list phase before).refs ≤ Writer.heapCount id before.refs
     unfold Stores.wakeList
     split <;> exact Nat.le_refl _
-
-/-- A native reply carries no note reservation. -/
-theorem terminal_zero (id : Nat) (code : NCode) (reply : TerminalReply code) : Free id code := by
-  cases reply <;> rfl
 
 /-- A wait's native answer carries no note reservation. -/
 theorem await_code_zero (id : Nat) (root : NativeEff) (table : RowTable) (m : NativeMachine)
@@ -124,22 +89,37 @@ theorem inputs (id : Nat) (root : NativeEff) (m : NativeMachine) (command : Sour
     rw [empty] at found
     cases found
 
-/-- **The evaluator debit of the Atomic cleanup writer** (planned goal). One native evaluation,
-and one iteration, of a fiber of a machine with distinct fiber ids and source ownership balance
-the writer ledger. A note write spends its active reservation, and a recorded finalizer start
-issues the reservation of the program it installs.
+/-- **The evaluator debit of the Atomic cleanup writer.** One native evaluation, and one
+iteration, of a fiber of a machine with distinct fiber ids and source ownership balance the
+writer ledger. A note write spends its active reservation, and a recorded finalizer start issues
+the reservation of the program it installs.
 Placement: concept `scope-lifetime-finalization`, R11, a step of the clause `Atomic.cleans_once`
 through `log_debits`. Reach: the built shop, every request identity, every such machine, fiber and
-yield flag. Route: the existing debits of `WriterMachine` (frame delegation, finalizer dispatch,
-actions, masks, forks) and `WriterSync`, `WriterSuspensions`, `WriterLoops`, completed over the
-native primitive dispatch and the iteration, as `SourceScope.Opportunities` does for its ledger.
+yield flag. Proof: the native and iteration debits of `WriterNative` (the action arms through the
+weight-generic `WriterWeights.action_bound`, the primitive arms through
+`PlaceFunding.primitive_debit`), each installed once by `PlaceFunding.NoQueue.install_debit`.
 It establishes no finalizer progress, release order or host observation.
 Consumer: `local_facts`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]
-proof_goal evaluation (b : Api.Built) (built : Api.Author.build (shop .none) = .ok b)
+theorem evaluation (b : Api.Built) (built : Api.Author.build (shop .none) = .ok b)
     (id : Nat) (member : id ∈ requests) :
     PlaceFunding.Evaluation (WriterMachine.ledger id) (ConfigurationAt b.program) b.program b.table
-      (fun _ _ _ => 0)
+      (fun _ _ _ => 0) where
+  native := by
+    intro m fiber yielding ledger owned found
+    exact (no_queue id).install_debit m fiber _ ledger.idsUnique (RunMachine.mem_of_fiber? found)
+      (ForkLedger.Invariant.Native.evaluateNative_ok b.program b.table m fiber yielding ledger).idsUnique
+      (Moves.evaluateNative_footprint b.program b.table m fiber yielding).id
+      (WriterNative.native_debit b built id member m fiber yielding owned
+        (configuration_fiber b.program m fiber.id fiber owned found))
+  iteration := by
+    intro m fiber yielding ledger owned found
+    apply (PlaceLedger.charged_zero _ _ _ _ _ _ _).mpr
+    exact (no_queue id).install_debit m fiber _ ledger.idsUnique (RunMachine.mem_of_fiber? found)
+      (ForkLedger.Invariant.Native.iteration_ok b.program b.table m fiber yielding ledger).idsUnique
+      (Moves.iteration_id b.program b.table m fiber yielding)
+      (WriterNative.iteration_debit b built id member m fiber yielding owned
+        (configuration_fiber b.program m fiber.id fiber owned found))
 
 /-- The built shop authors no race. -/
 theorem race_free (b : Api.Built) (built : Api.Author.build (shop .none) = .ok b) :
@@ -152,8 +132,8 @@ theorem race_free (b : Api.Built) (built : Api.Author.build (shop .none) = .ok b
   rw [program] at census
   exact (Bool.and_eq_true_iff.mp (Option.some.inj census)).2
 
-/-- **The writer ledger's local facts on the built shop**, modulo the evaluator debit: the
-library's command, edit, reply and history lifts then carry its funding.
+/-- **The writer ledger's local facts on the built shop**: the library's command, edit, reply
+and history lifts then carry its funding.
 Consumer: `history_funded`. -/
 theorem local_facts (b : Api.Built) (built : Api.Author.build (shop .none) = .ok b)
     (id : Nat) (member : id ∈ requests) :
@@ -195,7 +175,7 @@ theorem load_funded (b : Api.Built) (built : Api.Author.build (shop .none) = .ok
         WriterPhase.current id (compileEff b.program (rootPoint compileFuel)) := rfl
   omega
 
-/-- **The writer ledger is funded along every admitted history**, modulo the evaluator debit.
+/-- **The writer ledger is funded along every admitted history.**
 The heap's cleanup identities and active note reservations of a request never exceed its
 recorded finalizer starts. Consumer: `Atomic.Cleanup.log_debits`. -/
 @[semantics "scope-lifetime-finalization" (requirement := R11)]

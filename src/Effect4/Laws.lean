@@ -342,6 +342,7 @@ import Effect4.Laws.Program.WriterScope
 import Effect4.Laws.Run.CallTree
 import Effect4.Laws.Run.Journal
 import Effect4.Laws.Program.PlaceFunding.Run
+import Effect4.Laws.Machine.WriterActions
 
 /-!
 # Effect4 proof graph
