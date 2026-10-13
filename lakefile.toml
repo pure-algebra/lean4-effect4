@@ -279,14 +279,15 @@ rev = "ab7eda433f0390fde7aa240189761540c9744c79"
 
 # HTML and SVG for the generated documents and pictures (`tools/Tools/Document/Html.lean`): the HTML
 # Standard's content model, typed tree and serializer, and the SVG kit, exact commit of
-# pure-algebra/lean4-whatwg branch `html/svg` (S19: `Child.check`, the checks across a document,
-# `Svg.link`, motion by a sheet, CSS Syntax 3 tokens; decisions rows 360 and 364). Only the
+# pure-algebra/lean4-whatwg branch `html/svg` (S21: `Child.check`, the checks of a document and of
+# a site, `Svg.link`, motion by a sheet, CSS Syntax 3 tokens, the typed tree taking data; decisions
+# rows 360 and 364). Only the
 # `Tools` library imports it, and the definitions it imports reach Lean alone (no rule bank, so no
 # Aesop). The core and the law graph never import it.
 [[require]]
 name = "whatwg"
 git = "https://github.com/pure-algebra/lean4-whatwg"
-rev = "6beedd962c6599a873da65dfef196ed5984ba0d3"
+rev = "990ee7d521852f9914d7cc95d929485b071283e0"
 
 
 # Proof search for the law graph (`src/Effect4/Laws/**`) and the batteries: nothing under the
