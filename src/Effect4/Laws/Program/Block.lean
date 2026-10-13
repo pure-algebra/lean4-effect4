@@ -21,7 +21,9 @@ performs that row (row 328 (1)). So the block needs no denotation of its own:
 The laws: the chain is monotone (`denoteDefs_refines`); a program with no block is its
 `denoteRows` tree (`denoteDefs_noBlock`); and an invocation converges exactly as its body does
 (`invoke_unfolds_at_limit`), with a single-valued limit (`Mrec.conv_unique`). The scope: one
-fiber, the meaning only. The frame machine's agreement with it is G4's, not stated here.
+fiber, the meaning only. The frame machine's agreement with it, `run_eq_meaning` extended to
+blocks, is not stated here; G4 (proved) is the reference machine's, the invocation case of
+`run_eq_ref`.
 -/
 
 set_option autoImplicit false

@@ -87,8 +87,9 @@ it.
   - The first composition law: SynchronizedRef from Ref and Semaphore (G10), then the
     transaction attempt (G4). A module built from two modules inherits their theorems.
   - The frame machine agrees with the call tree beyond the fragments of `run_eq_meaning`
-    (`Straight`) and `loopAgreement` (`Looped`): with definitions first (G4 of the procedures
-    note).
+    (`Straight`) and `loopAgreement` (`Looped`): with definitions first. The procedures note's G4,
+    the invocation case of `run_eq_ref` against the reference machine, is proved; the call tree's
+    case is not.
 
 ### 3.5 Safety: a checked program never goes wrong
 
@@ -144,9 +145,9 @@ is this note's proposal.
 | Order | Work | Obligation | What it gives an agent |
 | --- | --- | --- | --- |
 | done | the `Live` face, DM1 to DM4 | O7, part | one session to open, feed and view; a funded bit read without replay |
-| 1 | PROC-5, the meaning of a definition block | O3 | recursion and named parts inside the proved meaning |
+| done | PROC-5, the meaning of a definition block (`4e75f71a4`) | O3 | recursion and named parts inside the proved meaning |
 | 2 | the checked replay route | O7 | host answers applied only when checked |
-| 3 | PROC-6, the inlining law; then G4's agreement with the machine | O4 | extract and inline as proved edits; the machine runs definitions as the meaning says |
+| 3 | PROC-6, the inlining law; then `run_eq_meaning` extended to blocks | O4 | extract and inline as proved edits; the machine runs definitions as the meaning says |
 | 4 | the application and claim records, slices 1 to 6 | O6 | every program carries its theorems as data; an agent asks what is proved of it |
 | 5 | checking at a real application, and the first graph operations | O1, O2 | typed feedback on every edit of a real program |
 | 6 | HO-4 and HO-5, program parameters | O3 | combinators and services written in the language, with their laws |

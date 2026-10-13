@@ -306,8 +306,8 @@ A program has folds, a journaled run with replay, and a printed image that reads
    `Live` face landed: `Live.open`, `Live.start`, `Live.feed` and `Live.view`, with
    `view_funded` (seat LIVE's [receipt](research/2026-10-13-seat-live-receipt.md); DM6 and DM7
    remain). In order:
-   - a definition block in the meaning, PROC-5 (row 328; the
-     [probe](research/2026-10-13-proc5-probe/README.md));
+   - landed: a definition block in the meaning, PROC-5 (row 328; `src/Effect4/Laws/Program/Block.lean`).
+     Next on that line: `run_eq_meaning` extended to blocks, and the inlining law (PROC-6);
    - one checked replay route: `Typed.replay` replays the session's journal, checked at each
      call's instance (rows 98 and 373 (8); seat REPLAY's
      [brief](research/2026-10-13-seat-replay-brief.md));

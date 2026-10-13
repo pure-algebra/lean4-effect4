@@ -11,7 +11,8 @@ theorems: `denoteDefs_refines`, `denoteDefs_noBlock`, `invoke_unfolds_at_limit`,
 
 * **Finite evaluations (tested), which no theorem covers yet.** At a budget past the nesting the
   meaning gives the frame machine's exit (`Api.run`): one invocation, and mutual recursion eight
-  deep. The machine's agreement with the meaning is G4's, unstated.
+  deep. The machine's agreement with this meaning, `run_eq_meaning` extended to blocks, is
+  unstated. (G4, proved, is the reference machine's: the invocation case of `run_eq_ref`.)
 * **Control (tested): the frontier, never a failure.** Below the nesting the meaning is the
   frontier, and a body that invokes itself without end is the frontier at every budget tried,
   as the machine's run is.
