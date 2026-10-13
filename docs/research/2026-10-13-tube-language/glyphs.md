@@ -142,6 +142,7 @@ The guards of `Glyphs.lean` are finite checks (tested):
 - they differ by two parts at least, but for the five pairs of `near`, each with its reason;
 - the run's morphs are short: a promise kept, a hole filled and a scope closed change one part;
 - every figure stands in its cell, by the hull of its cubics, but the port, which meets the world;
+- every straight run across or down lies on a whole pixel, within ten thousandths;
 - every piece keeps the solid-tube pen's 24 px bend already;
 - a key names one role in every figure;
 - every join, reducer and strut names tubes of its figure, and nothing rides on a strut.

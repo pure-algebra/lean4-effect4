@@ -14,15 +14,17 @@ again by `decide` under the pen's `BEND`.
   `/Users/pooks/Dev/lean4-effect4/.claude/worktrees/agent-a444b32de2a8255de`.
 - Base: `25c798d50` on `refactor/phase1-phase3`, as the brief names. The worktree started at
   `9187b9b60` on `main`'s line; `git switch -C` moved the branch to the base before any work.
-- Head: the commit that adds this receipt and the note. Its parent, `26e3de398`, is the code's
-  last commit.
+- Head: the branch's last commit, which changes only this receipt and the note. The code's last
+  commit is `5bc97247a`.
 - Commits, in order:
   - `bcf7374a7`: stage 1, the figures and their laws;
   - `7945489b7`: the morph lemmas ready for the solid-tube pen;
   - `7dbac779b`: stage 2, the page;
   - `c34666dd7`: stage 3, the struts;
   - `26e3de398`: the page's kind names;
-  - then stage 4, the note and this receipt.
+  - `2cf7b9458` and `8a0ac1078`: stage 4, the note and this receipt;
+  - `5bc97247a`: the guard of whole-pixel runs, with red controls;
+  - then the note and this receipt brought up to it.
 
 ## Changed files
 
@@ -50,8 +52,8 @@ Each command ran in the worktree. `SCRATCH` is
 | `LEAN_NUM_THREADS=3 lake build view-pages` | Build completed successfully (809 jobs) |
 | `.lake/build/bin/view-pages tools/view/out/docs` | wrote `glyphs.html`, `cells.html`, `tubes.html`, `tube-glyphs.html` |
 | `/usr/bin/time -p env LEAN_NUM_THREADS=3 lake env lean tools/Tools/View/Tube/Glyphs.lean` | real 1.87 s, the 37 `decide` proofs included |
-| `LEAN_NUM_THREADS=3 lake env lean SCRATCH/probe/Audit1.lean` | 145 declarations within `[propext, Quot.sound]` |
-| `LEAN_NUM_THREADS=3 lake env lean SCRATCH/probe/Audit.lean` | 10 of 182 reach `Classical.choice`, all in `GlyphPage` |
+| `LEAN_NUM_THREADS=3 lake env lean SCRATCH/probe/Audit1.lean` | 147 declarations within `[propext, Quot.sound]` |
+| `LEAN_NUM_THREADS=3 lake env lean SCRATCH/probe/Audit.lean` | 10 of 184 reach `Classical.choice`, all in `GlyphPage` |
 | `python3 scripts/check-language.py --show docs/research/2026-10-13-tube-language/glyphs.md` | no finding |
 | `sh SCRATCH/chrome.sh --headless=new --hide-scrollbars --force-prefers-reduced-motion --window-size=1100,9200 --screenshot=SCRATCH/shots/page-final.png file://…/tools/view/out/docs/tube-glyphs.html` | written, and looked at |
 | `sh SCRATCH/capture.sh SCRATCH/films.html 330 760 SCRATCH/shots/films 100 1000 2000 4000 7000` | written, and looked at |
@@ -62,7 +64,7 @@ time. A plain command stood in for each, since the worktree guard refuses a quot
 
 ## Axiom output
 
-`#axiom_audit Tools.View.Tube.Glyphs Tools.View.Tube.GlyphPage` reports 10 of 182 declarations
+`#axiom_audit Tools.View.Tube.Glyphs Tools.View.Tube.GlyphPage` reports 10 of 184 declarations
 reaching `Classical.choice`. All ten are page writers in `GlyphPage`:
 
 - `filmKept`, `filmFilled`, `filmClosed`, `filmJoined`, `filmHeld`, `filmAny`, `still`, `card`
@@ -70,7 +72,7 @@ reaching `Classical.choice`. All ten are page writers in `GlyphPage`:
   `Whatwg.Html.Schema.Tag.ofForeignName?`, then `String.toList`).
 - `name` reaches it through `Lean.Name.toString`.
 
-`#axiom_audit Tools.View.Tube.Glyphs` reports all 145 declarations within `[propext, Quot.sound]`.
+`#axiom_audit Tools.View.Tube.Glyphs` reports all 147 declarations within `[propext, Quot.sound]`.
 That includes every theorem and every figure.
 
 ## Evidence
@@ -83,6 +85,8 @@ That includes every theorem and every figure.
   - the sort pairs closer than two parts are exactly `near`;
   - the run's morphs change one part;
   - every figure stands in its cell;
+  - every straight run across or down lies on a whole pixel;
+  - red controls show that the run, cell and long-bend checks can fail;
   - every piece keeps a 24 px bend;
   - a key names one role;
   - joins, reducers and struts name tubes.
