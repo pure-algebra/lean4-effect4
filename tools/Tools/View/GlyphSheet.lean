@@ -63,6 +63,11 @@ def Shape.parts : Shape → List RawNode
   | .barLine => [path "M12 2 V22" [("stroke-width", "2")]]
   | .fermata => [path "M4 16 A8 8 0 0 1 20 16", circle "12" "14" "1.5" filled]
   | .caesura => [path "M6 19 L11 5 M13 19 L18 5"]
+  | .panel => [rect "3" "4" "18" "16" [("rx", "1.5")], path "M9 4 V20 M3 9.5 H21 M3 14.5 H21"]
+  | .cells => [rect "2" "8" "20" "8" [("rx", "1")], path "M8.7 8 V16 M15.3 8 V16"]
+  | .slot => [path "M5 7 V17 A2 2 0 0 0 7 19 H17 A2 2 0 0 0 19 17 V7"]
+  | .tag => [path "M3 12 H8 M8 12 L11.5 7 H20 A1 1 0 0 1 21 8 V16 A1 1 0 0 1 20 17 H11.5 Z", circle "13" "12" "1.25" filled]
+  | .atom => [path "M9 5 H15 M12 5 V19 M9 19 H15"]
 
 /-- **A mark, drawn**: an SVG picture in the ink's colour, hidden from a screen reader, since the
 word beside it names it. -/
@@ -77,7 +82,7 @@ def Shape.all : List Shape :=
   [.box, .value, .series, .parallel, .block, .alternative, .loop, .region, .bracket, .openBracket,
    .rail, .arrow, .blockedArrow, .spider, .rest, .hollowBox, .filledBox, .hollowDot, .filledDot,
    .port, .probe, .call, .library, .cross, .hash, .reasons, .exitBar, .hole, .enter, .barLine,
-   .fermata, .caesura]
+   .fermata, .caesura, .panel, .cells, .slot, .tag, .atom]
 
 -- `Shape.all` lists every shape once, in the order of its constructors
 #guard Shape.all.map (·.ctorIdx) == List.range shapeNames.length

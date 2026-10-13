@@ -40,7 +40,7 @@ inductive Shape where
   | box | value | series | parallel | block | alternative | loop | region | bracket | openBracket
   | rail | arrow | blockedArrow | spider | rest | hollowBox | filledBox | hollowDot | filledDot
   | port | probe | call | library | cross | hash | reasons | exitBar | hole | enter | barLine
-  | fermata | caesura
+  | fermata | caesura | panel | cells | slot | tag | atom
   deriving DecidableEq, Repr, Inhabited
 
 /-- What each mark draws. -/
@@ -62,7 +62,7 @@ def Shape.means : Shape → String
   | .rest => "a rest: the fiber lets go of its turn"
   | .hollowBox => "the hollow box with its token: a park, a queued task (promised)"
   | .filledBox => "the filled box with the same token: a resume, a run task (kept)"
-  | .hollowDot => "the hollow dot: a finalizer registered, a registration (promised)"
+  | .hollowDot => "the hollow dot: a promise not yet kept, a finalizer registered or a deferred unresolved"
   | .filledDot => "the filled dot: a finalizer run (kept)"
   | .port => "a port of the row protocol: !request then ?answer"
   | .probe => "a read of the machine's own state"
@@ -77,6 +77,11 @@ def Shape.means : Shape → String
   | .barLine => "the bar line across every staff: a host's decision"
   | .fermata => "the fermata 𝄐: a frontier, held live"
   | .caesura => "the caesura //: a halt on malformed code"
+  | .panel => "a record: a panel of named fields, each drawn by its type"
+  | .cells => "a list or a tuple: a row of cells, the first at the left"
+  | .slot => "an option: a cup that holds a value or stands empty"
+  | .tag => "a handle into the machine's stores: its numeral on a tag"
+  | .atom => "a value written as its literal: a number, a string, a truth value"
 
 /-- A mark in text, for a terminal and for words. -/
 def Shape.glyph : Shape → String
@@ -88,6 +93,7 @@ def Shape.glyph : Shape → String
   | .call => "⟦ ⟧" | .library => "❏" | .cross => "×" | .hash => "#" | .reasons => "× ⊣"
   | .exitBar => "‖"
   | .hole => "◌" | .enter => "▶" | .barLine => "│" | .fermata => "𝄐" | .caesura => "//"
+  | .panel => "{ }" | .cells => "[│]" | .slot => "⊔" | .tag => "#n" | .atom => "1"
 
 /-- **The physical kinds** (the owner's "imagined physics", decisions row 367): how a mark behaves,
 so that its motion follows from its kind and is never drawn case by case. After Gemini's review
@@ -99,9 +105,9 @@ inductive Kind where
 
 /-- What each kind is. -/
 def Kind.means : Kind → String
-  | .body => "a thing with an identity that persists and moves: a value, an operation, a failure on its wire"
-  | .vessel => "a form promised hollow and kept filled: a park, a task, a finalizer, a hole"
-  | .container => "an enclosure that holds others, and some must close: a scope, a region, a rail"
+  | .body => "a thing with an identity that persists and moves: a value, an operation, a failure on its wire, a handle"
+  | .vessel => "a form promised hollow and kept filled: a park, a task, a finalizer, a hole, a deferred, an option"
+  | .container => "an enclosure that holds others, and some must close: a scope, a region, a rail, a record, a list"
   | .wire => "a path that carries a value: a sequence, a loop, a branch, a rest"
   | .bond => "a relation between bodies: a fork's arrow, a spider's legs, a port"
   | .force => "an impulse that arrives, is blocked or lands, and is spent: an interrupt"
@@ -109,9 +115,9 @@ def Kind.means : Kind → String
 
 /-- **A mark's kind.** -/
 def Shape.kind : Shape → Kind
-  | .value | .box | .call | .cross | .hash | .reasons | .enter | .probe => .body
-  | .hollowBox | .filledBox | .hollowDot | .filledDot | .hole => .vessel
-  | .block | .region | .bracket | .openBracket | .rail | .library => .container
+  | .value | .box | .call | .cross | .hash | .reasons | .enter | .probe | .tag | .atom => .body
+  | .hollowBox | .filledBox | .hollowDot | .filledDot | .hole | .slot => .vessel
+  | .block | .region | .bracket | .openBracket | .rail | .library | .panel | .cells => .container
   | .series | .parallel | .loop | .alternative | .rest => .wire
   | .arrow | .spider | .port => .bond
   | .blockedArrow => .force
@@ -326,7 +332,52 @@ def table : List Row := [
   ⟨``Effect4.Api.FrontierReason.awaitDecision, .fermata, "decision", "wait", "a decision owed"⟩,
   ⟨``Effect4.Machine.Stuck.unknownFiber, .caesura, "fiber", "halt", "a fiber no store holds"⟩,
   ⟨``Effect4.Machine.Stuck.unknownScope, .caesura, "scope", "halt", "a scope no store holds"⟩,
-  ⟨``Effect4.Machine.Stuck.unknownRace, .caesura, "race", "halt", "a race no store holds"⟩]
+  ⟨``Effect4.Machine.Stuck.unknownRace, .caesura, "race", "halt", "a race no store holds"⟩,
+  -- types: a value drawn by its type (`Ty`, `src/Effect4/Program/Ty.lean`; `Tools.View.Cell`)
+  ⟨``Effect4.Program.Ty.never, .atom, "never", "never", "no value: the type has none"⟩,
+  ⟨``Effect4.Program.Ty.unit, .atom, "unit", "unit", "the one value ()"⟩,
+  ⟨``Effect4.Program.Ty.nat, .atom, "nat", "number", "a natural number, its numeral"⟩,
+  ⟨``Effect4.Program.Ty.int, .atom, "int", "number", "an integer, its numeral"⟩,
+  ⟨``Effect4.Program.Ty.string, .atom, "string", "string", "a string, quoted"⟩,
+  ⟨``Effect4.Program.Ty.bool, .atom, "bool", "truth", "true or false"⟩,
+  ⟨``Effect4.Program.Ty.handle, .tag, "named", "handle", "a handle of a named kind, its numeral"⟩,
+  ⟨``Effect4.Program.Ty.option, .slot, "", "option", "a cup: the value, or empty"⟩,
+  ⟨``Effect4.Program.Ty.list, .cells, "", "list", "a row of cells, the first at the left"⟩,
+  ⟨``Effect4.Program.Ty.prod, .cells, "pair", "pair", "two cells side by side"⟩,
+  ⟨``Effect4.Program.Ty.except, .alternative, "except", "either", "one of two arms, the one the value takes"⟩,
+  ⟨``Effect4.Program.Ty.exitOf, .exitBar, "type", "exit", "an exit: ‖ and its value or its reasons"⟩,
+  ⟨``Effect4.Program.Ty.causeOf, .reasons, "type", "cause", "a cause, its reasons in order"⟩,
+  ⟨``Effect4.Program.Ty.fiberOf, .tag, "fiber", "handle", "a fiber's handle, its numeral"⟩,
+  ⟨``Effect4.Program.Ty.union, .alternative, "union", "either", "one of its arms, the first that reads the value"⟩,
+  ⟨``Effect4.Program.Ty.lit, .atom, "literal", "literal", "the one value it names"⟩,
+  ⟨``Effect4.Program.Ty.refOf, .tag, "ref", "handle", "a reference cell's handle"⟩,
+  ⟨``Effect4.Program.Ty.deferredOf, .hollowDot, "deferred", "promise", "a deferred's handle, hollow while it is owed"⟩,
+  ⟨``Effect4.Program.Ty.var, .atom, "variable", "variable", "a type variable: the value drawn raw"⟩,
+  ⟨``Effect4.Program.Ty.unknown, .atom, "unknown", "unknown", "an unknown type: the value drawn raw"⟩,
+  ⟨``Effect4.Program.Ty.record, .panel, "", "record", "a panel of named fields"⟩,
+  ⟨``Effect4.Program.Ty.map, .panel, "map", "map", "a panel of keys and their values"⟩,
+  ⟨``Effect4.Program.Ty.tuple, .cells, "tuple", "tuple", "cells side by side, by position"⟩,
+  ⟨``Effect4.Program.Ty.app, .call, "type", "apply", "a named type applied: the value drawn raw"⟩,
+  ⟨``Effect4.Program.Ty.null, .atom, "null", "null", "the value null"⟩,
+  ⟨``Effect4.Program.Ty.undefined, .atom, "undefined", "undefined", "the value undefined"⟩,
+  ⟨``Effect4.Program.Ty.number, .atom, "number", "number", "a number, its numeral"⟩,
+  ⟨``Effect4.Program.Ty.bytes, .atom, "bytes", "bytes", "bytes, by their count"⟩,
+  ⟨``Effect4.Program.Ty.contextOf, .region, "context type", "context", "a context: the value drawn raw"⟩,
+  -- values drawn raw, where no type reads them (`Store.Val`, `src/Effect4/Store/Carrier/Val.lean`)
+  ⟨``Effect4.Store.Val.unit, .atom, "unit", "unit", "the one value ()"⟩,
+  ⟨``Effect4.Store.Val.bool, .atom, "bool", "truth", "true or false"⟩,
+  ⟨``Effect4.Store.Val.nat, .atom, "nat", "number", "a natural number"⟩,
+  ⟨``Effect4.Store.Val.str, .atom, "string", "string", "a string, quoted"⟩,
+  ⟨``Effect4.Store.Val.bytes, .atom, "bytes", "bytes", "bytes, by their count"⟩,
+  ⟨``Effect4.Store.Val.list, .cells, "", "list", "a row of cells"⟩,
+  ⟨``Effect4.Store.Val.pair, .cells, "pair", "pair", "two cells side by side"⟩,
+  ⟨``Effect4.Store.Val.none, .slot, "empty", "option", "an empty cup"⟩,
+  ⟨``Effect4.Store.Val.some, .slot, "", "option", "a cup that holds a value"⟩,
+  ⟨``Effect4.Store.Val.ctor, .panel, "constructor", "construct", "a constructor's index and its arguments"⟩,
+  ⟨``Effect4.Store.Val.ref, .tag, "node", "address", "a reference to a node"⟩,
+  ⟨``Effect4.Store.Val.handle, .tag, "", "handle", "a handle into a store, its numeral"⟩,
+  ⟨``Effect4.Store.Val.negInt, .atom, "negative", "number", "a negative integer"⟩,
+  ⟨``Effect4.Store.Val.float, .atom, "float", "number", "a binary64 number"⟩]
 
 /-- **The sorts the pictures fold**, each with its constructors as the environment declares them. -/
 def sorts : List SortCtors := [
@@ -345,7 +396,9 @@ def sorts : List SortCtors := [
   ⟨"scope state", ctors_of% Effect4.ScopeState⟩,
   ⟨"outcome", ctors_of% Effect4.Api.Outcome⟩,
   ⟨"frontier", ctors_of% Effect4.Api.FrontierReason⟩,
-  ⟨"halt", ctors_of% Effect4.Machine.Stuck⟩]
+  ⟨"halt", ctors_of% Effect4.Machine.Stuck⟩,
+  ⟨"type", ctors_of% Effect4.Program.Ty⟩,
+  ⟨"value", ctors_of% Effect4.Store.Val⟩]
 
 /-- The shapes, by their constructors, in order. -/
 def shapeNames : List Name := ctors_of% Shape

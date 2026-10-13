@@ -149,7 +149,10 @@ who prefers reduced motion sees the end frames (row 354, point 5).
 1. **VS-1 the glyph table as data**: one row per constructor of `Eff`, the action terms, `Prim`,
    `RunEvent` and `RunDecision`, with its mark and its spoken word; the semiotic-clarity check.
 2. **VS-2 the value picture**: a `TyAlgebra` and a `ValAlgebra` into pictures; the Queue's cell
-   drawn by its type.
+   drawn by its type. Landed 2026-10-13: `Tools.View.Cell` (`typed`, a `TyAlgebra` into readers;
+   `raw`, a `ValAlgebra`; parts put together by lean4-whatwg's `Scene.Layout`), the marks `panel`,
+   `cells`, `slot`, `tag`, `atom` with rows for the sorts `type` and `value`, and the page
+   `cells.html` (`v -V cells`): nine steps of the Queue, each its own step term evaluated.
 3. **VS-3 a step's motion**: the join of two cell pictures keyed by handles; the Queue's six steps.
 4. **VS-4 the stack of holes**: a `Prim` fold to holes on the program picture, keyed by `Point` paths.
 5. **VS-5 the fiber's life**: the view's classification, or `Life` in the machine.
