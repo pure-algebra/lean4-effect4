@@ -89,10 +89,47 @@ The four programs as one application (`Application`,
 body is the program above, at its parameter read by `var`. A request of the API is an entry at
 its arguments, built through the application's module. -/
 
-/-- The to-do application: the repository's four rows, and the API's four programs. -/
+/-- `insert(title)`: the stored to-do has the title, and it is not done. The promise reads the
+request at level 0 and the answer at level 1 (`RowProtocol`,
+`src/Effect4/Program/RowProtocol.lean`). -/
+def insertProtocol : RowProtocol :=
+  { post := .app "and"
+      (termsOfList [.app "eq" (termsOfList [.field .required (.var 1) "title", .var 0]),
+        .app "not" (termsOfList [.field .required (.var 1) "done"])]) }
+
+/-- A to-do that stands for "none" where a term needs a value of the record. -/
+def noTodo : Term :=
+  .record Todo.fields ["id", "title", "done"]
+    (termsOfList [.lit (.nat 0), .lit (.str ""), .lit (.bool false)])
+
+/-- Two Booleans are the same. The atom `eq` has no type at two Booleans (a control in section
+6), so the term is written with `and`, `or` and `not`. -/
+def sameFlag (a b : Term) : Term :=
+  .app "or" (termsOfList [.app "and" (termsOfList [a, b]),
+    .app "and" (termsOfList [.app "not" (termsOfList [a]), .app "not" (termsOfList [b])])])
+
+/-- `setDone(id, done)`: an answered to-do has the id and the flag of the request. -/
+def setDoneProtocol : RowProtocol :=
+  { post := .app "or"
+      (termsOfList [.app "not" (termsOfList [.app "isSome" (termsOfList [.var 1])]),
+        .app "and"
+          (termsOfList
+            [.app "eq" (termsOfList
+              [.field .required (.app "getOrElse" (termsOfList [.var 1, noTodo])) "id",
+               .app "fst" (termsOfList [.var 0])]),
+             sameFlag (.field .required (.app "getOrElse" (termsOfList [.var 1, noTodo])) "done")
+               (.app "snd" (termsOfList [.var 0]))])]) }
+
+/-- The declared protocols of the repository's rows, by spelling. -/
+def protocols : RowProtocols :=
+  [("TodoRepo.insert", insertProtocol), ("TodoRepo.setDone", setDoneProtocol)]
+
+/-- The to-do application: the repository's four rows, their protocols, and the API's four
+programs. -/
 def application : Application NativeOp :=
   { name := "todo"
     rows := TodoRepo.rows
+    protocols := protocols
     entries :=
       [ { name := "add", params := [("title", .string)], body := add (var "title") }
       , { name := "list", body := list }
@@ -224,5 +261,33 @@ def seen (main : Src NativeOp) (moves : List Move) (row : String) : Option (Opti
 -- text is in the readable domain
 #guard [add (str "milk"), list, complete (nat 1), remove (nat 1)].all fun main =>
   (built? (request main)).map printedOf == some (true, true)
+
+/-! ## 6. The protocols of the rows
+
+The application declares a protocol of two rows (`protocols`, the claims packet's slice
+PROTOCOL). Each line is a finite evaluation or a control (decisions row 301). -/
+
+-- control: the atom `eq` has no type at two Booleans, and it has one at two strings
+#guard termTy (nativeSignature application.table) [.bool, .bool]
+    (.app "eq" (termsOfList [.var 0, .var 1])) = none
+#guard termTy (nativeSignature application.table) [.string, .string]
+    (.app "eq" (termsOfList [.var 0, .var 1])) = some .bool
+-- finite evaluation: the application's protocols are formed: each names a row, and its terms are
+-- typed there
+#guard application.protocolsFormed
+-- control: a protocol of a row that the application does not hold, and a promise that is no
+-- Boolean
+#guard !({ application with protocols := [("TodoRepo.find", {})] } :
+  Application NativeOp).protocolsFormed
+#guard !({ application with protocols := [("TodoRepo.insert", { post := .var 0 })] } :
+  Application NativeOp).protocolsFormed
+-- finite evaluation: answers that keep the promises; control: three that break them (another id,
+-- a to-do that is not done, another title)
+#guard insertProtocol.keeps (.str "milk") (todo 1 "milk" false) &&
+  setDoneProtocol.keeps (.list [.nat 1, .bool true]) (.some (todo 1 "milk" true)) &&
+  setDoneProtocol.keeps (.list [.nat 1, .bool true]) .none
+#guard !setDoneProtocol.keeps (.list [.nat 1, .bool true]) (.some (todo 2 "milk" true)) &&
+  !setDoneProtocol.keeps (.list [.nat 1, .bool true]) (.some (todo 1 "milk" false)) &&
+  !insertProtocol.keeps (.str "milk") (todo 1 "tea" false)
 
 end Test.Dogfood.Scenario.Todo

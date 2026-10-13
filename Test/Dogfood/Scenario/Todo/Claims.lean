@@ -2,6 +2,7 @@ import Test.Dogfood.Scenario.Todo
 import Test.Dogfood.Application
 import Test.Audit.ScenarioGate
 import Effect4.Laws.Api.SessionMeaning
+import Effect4.Laws.Program.Validated
 
 /-!
 # The to-do application's claims and their record
@@ -34,7 +35,7 @@ namespace Test.Dogfood.Scenario.Todo
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Program.Denote (ReplyTape)
-open Effect4.Run (appliedExits hostDriven)
+open Effect4.Run (appliedExits hostDriven conforms)
 open Test.Dogfood.P2HandlerLayers (recordVal)
 open Test.Dogfood.Application (Kind Grade Premise Note Record)
 
@@ -76,34 +77,60 @@ Kind: a fact of the call tree. -/
 @[semantics "host-session-protocol" (requirement := R6)]
 proof_goal complete_failure_escapes : CompleteFailureEscapes
 
-/-! ## 2. The claim -/
+/-! ## 2. A fact under a protocol of a row -/
+
+/-- The proposition of `complete_answers_requested`. -/
+def CompleteAnswersRequested : Prop :=
+  ∀ (id : Nat) (s : Run) (answer : Val), Run.Reached s →
+    builtAt "complete" [nat id] = some s.built →
+    funded s = true → atRest s = true → hostDriven s = true → conforms protocols s = true →
+    s.exit = some (.success answer) →
+    setDoneProtocol.keeps (.list [.nat id, .bool true]) (.some answer) = true
+
+/-- **Under the protocol of `setDone`, `complete` answers the requested to-do, marked done.** In
+every recorded run of the entry `complete` that is funded, at rest, driven by a host and conforms
+to the application's protocols, a successful exit keeps `setDone`'s promise at the request
+`(id, true)`.
+
+Placement: concept `host-session-protocol`; property as `add_empty_calls_nothing`. Question:
+this planned goal; consumer: the claim `serves`. Reach: the entry `complete` at every id, every
+such run. The premise `conforms` is validated on the run's own tape (`Effect4.Run.conforms`,
+`src/Effect4/Laws/Program/Validated.lean`). Does not establish: that a host conforms: a typed
+answer for another to-do reaches the root (a red control). Unlocks: as `add_empty_calls_nothing`.
+Kind: a fact under a protocol. -/
+@[semantics "host-session-protocol" (requirement := R6)]
+proof_goal complete_answers_requested : CompleteAnswersRequested
+
+/-! ## 3. The claim -/
 
 /-- **The to-do application's claim.** It assembles its clauses, and the plan derives its status
 from their proofs. Two laws stand beside it with controls only: a script's run replays from its
 journal (`replays`), and a stored successful reply fits its row
 (`Effect4.Api.HostSession.submit_success_prepared_fits`). The proof uses neither. -/
 @[semantics "host-session-protocol" (requirement := R6)]
-theorem serves : AddEmptyCallsNothing ∧ CompleteFailureEscapes :=
-  ⟨add_empty_calls_nothing, complete_failure_escapes⟩
+theorem serves : AddEmptyCallsNothing ∧ CompleteFailureEscapes ∧ CompleteAnswersRequested :=
+  ⟨add_empty_calls_nothing, complete_failure_escapes, complete_answers_requested⟩
 
-/-! ## 3. The observation, the named runs and the controls -/
+/-! ## 4. The observation, the named runs and the controls -/
 
 /-- The application's one observation of a run: the root's exit, the calls that the host held,
-the refused rows, the exits of the applied replies, and whether the run meets the premises of
-`denoteRows_eq_session` (funded, at rest, driven by a host). -/
+the refused rows, the exits of the applied replies, whether the run meets the premises of
+`denoteRows_eq_session` (funded, at rest, driven by a host), and whether it conforms to the
+application's protocols. -/
 structure Observation where
   outcome : Option ExitV
   calls : List (String × Val)
   refusals : List (String × Api.HostSession.Refusal)
   applied : ReplyTape
   settled : Bool
+  conforming : Bool
 deriving DecidableEq
 
 /-- The observation of a run. -/
 def observe (s : Run) : Observation :=
   { outcome := s.exit, calls := (held s).map fun call => (call.row, call.request)
     refusals := refusals s, applied := appliedExits s
-    settled := funded s && atRest s && hostDriven s }
+    settled := funded s && atRest s && hostDriven s, conforming := conforms protocols s }
 
 /-- A built entry, opened under the application's name. -/
 def opened (b : Api.Built) : Run := Run.open b application.name
@@ -126,6 +153,8 @@ def runsOf (empty milk done : Api.Built) : List NamedRun :=
       script [[.start], answer (.row "TodoRepo.setDone") (failed "Timeout" "slow")]⟩
   , ⟨"done", opened done,
       script [[.start], answer (.row "TodoRepo.setDone") (ok (.some (todo 1 "milk" true)))]⟩
+  , ⟨"other-todo", opened done,
+      script [[.start], answer (.row "TodoRepo.setDone") (ok (.some (todo 2 "tea" true)))]⟩
   , ⟨"wide", opened done,
       script [[.start], answer (.row "TodoRepo.setDone")
         (ok (.some (recordVal ["id", "title", "done", "at"]
@@ -136,7 +165,7 @@ def controlsOf : List Control :=
   [ -- `add` with an empty title makes no call
     green "no call" "an empty title fails, and the host holds no call, though offered an answer"
       ["empty"] fun
-      | [empty] => observe empty == ⟨some emptyTitleExit, [], [], [], true⟩
+      | [empty] => observe empty == ⟨some emptyTitleExit, [], [], [], true, true⟩
       | _ => false
   , red "no call" "at another title the host holds the call of `insert`" ["milk"] fun
       | [milk] => (observe milk).calls == [("TodoRepo.insert", .str "milk")]
@@ -153,6 +182,18 @@ def controlsOf : List Control :=
       reply is applied" ["other-tag"] fun
       | [other] => (observe other).outcome == none && (observe other).applied == [] &&
           (observe other).refusals == [("submit", .envelope), ("apply", .noCall)]
+      | _ => false
+    -- under the protocol of `setDone`, `complete` answers the requested to-do, marked done
+  , green "requested" "a settled run that conforms answers the requested to-do, marked done"
+      ["done"] fun
+      | [done] => (observe done).outcome == some (.success (todo 1 "milk" true)) &&
+          (observe done).settled && (observe done).conforming
+      | _ => false
+  , red "requested" "a typed answer for another to-do reaches the root, and the run does not \
+      conform" ["other-todo"] fun
+      | [other] => (observe other).outcome == some (.success (todo 2 "tea" true)) &&
+          (observe other).refusals == [] && (observe other).settled &&
+          !(observe other).conforming
       | _ => false
     -- a script's run replays from its journal
   , green "journal" "the journal alone reaches the scripted run again, verdict for verdict"
@@ -181,7 +222,7 @@ def runsAndControls : List NamedRun × List Control :=
   | some empty, some milk, some done => (runsOf empty milk done, controlsOf)
   | _, _, _ => ([], [green "no call" "the entries build" [] fun _ => false])
 
-/-! ## 4. The record -/
+/-! ## 5. The record -/
 
 /-- The to-do application's record. The scenario's program is the application. -/
 def claimRecord : Record :=
@@ -194,7 +235,8 @@ def claimRecord : Record :=
         claim := ``serves
         clauses :=
           [ ⟨"no call", ``add_empty_calls_nothing⟩
-          , ⟨"escape", ``complete_failure_escapes⟩ ]
+          , ⟨"escape", ``complete_failure_escapes⟩
+          , ⟨"requested", ``complete_answers_requested⟩ ]
         laws :=
           [ ⟨"journal", ``replays⟩
           , ⟨"admission", ``Effect4.Api.HostSession.submit_success_prepared_fits⟩ ]
@@ -203,6 +245,8 @@ def claimRecord : Record :=
     notes :=
       [ { entry := "no call", kind := .tree, reads := ["add"] }
       , { entry := "escape", kind := .tree, reads := ["complete"] }
+      , { entry := "requested", kind := .protocol, reads := ["complete"],
+          assumes := [⟨``protocols, .validated⟩] }
       , { entry := "journal", kind := .inherited }
       , { entry := "admission", kind := .inherited } ] }
 
@@ -214,7 +258,7 @@ def scenario : Scenario := claimRecord.scenario
 
 #scenario_gate scenario
 
-/-! ## 5. Red controls of the notes
+/-! ## 6. Red controls of the notes
 
 Each record below changes one thing of `claimRecord`, and `Record.problems` names exactly that
 finding. -/
@@ -237,6 +281,6 @@ def withNote (entry : String) (change : Note → Note) : Record :=
 #guard ["no call", "journal"].all fun entry =>
   (withNote entry ({ · with assumes := [⟨``application, .assumed⟩] })).problems.length = 1
 -- control: a fact under a promise that assumes nothing
-#guard (withNote "escape" ({ · with kind := .laws })).problems.length = 1
+#guard (withNote "requested" ({ · with assumes := [] })).problems.length = 1
 
 end Test.Dogfood.Scenario.Todo
