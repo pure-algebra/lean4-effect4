@@ -27,9 +27,8 @@ The brief (`docs/research/2026-10-13-tube-language/seat-glyphs-brief.md`) asks f
 - Read: Gemini's earlier review (`docs/research/2026-10-12-visual-semantics/gemini-review.md`) and
   its semiotics review (`docs/research/2026-10-13-tube-language/semiotics.md`).
 - Read: the coordinator's four messages of 2026-10-13. They relayed the owner's rulings on the
-  look: line art, then solid bodies with joins that carry meaning, then outlined bodies as in the
-  docs' trees. They also gave the verdicts on the semiotics review and the pen's commits
-  `027157447` and `fb74420d0`.
+  look: line art, then solid bodies whose joins carry meaning, then outlined bodies. They also gave
+  the verdicts on the semiotics review and the pen's commits `027157447` and `fb74420d0`.
 - Run: the narrow builds, the view-pages driver, and `#axiom_audit` over both modules.
 - Run: headless Chrome over the page, and over scratch sheets of the figures and of the films.
 
