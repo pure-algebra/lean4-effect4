@@ -17,7 +17,7 @@ surviving statement changed, and no goal was weakened.
 ## Base, head and evidence words
 
 - Base: `052e826df` on `refactor/phase1-phase3`. Head: the commit that adds this receipt; the last
-  code commit is `a81e6450c`.
+  code commit is `61c150065`.
 - Evidence words: **proved** means the kernel checked it, audited at `[propext, Quot.sound]`.
   **Tested** means a finite evaluation. **Assumed** means read in the source, not checked.
   **Measured** means a tool's output at this head.
@@ -44,7 +44,7 @@ The tool reported six next goals for the three claims.
 
 ## 2. What landed, by slice
 
-Seven commits on `seat/goals2`. Each table gives the state at the head.
+Eight code commits on `seat/goals2`. Each table gives the state at the head.
 
 ### 2.1 Slice 1 (`0775cae53`): `WriterHistory.evaluation` proved
 
@@ -90,7 +90,7 @@ Slice 1 stated them generically; slice 2 makes both ledgers instances. The new m
 | `PlaceFunding.withFiber_administrative`, `countdown_administrative` | every native action, and a countdown registration, extends the trace by administrative events only | proved |
 | `PlaceFunding.Events.trace_debit` | an administrative extension spends no more than it issues | proved |
 | `PlaceFunding.action_debit` | the action arm of every place ledger whose fiber row reads a frame weight model | proved |
-| `Opportunities.native_action_debit` | an instance, moved to `SourceOpportunityPrimitive`; statement unchanged, its race-freedom and distinct-id premises unread (`_raceFree`, `_unique`) | proved |
+| `Opportunities.native_action_debit` | an instance, moved to `SourceOpportunityPrimitive`; slice 8 drops its race-freedom and distinct-id premises | proved |
 | `Opportunities.close_scope_zero` | the zero fact of the deleted `close_scope_debit` | proved |
 
 ### 2.3 Slice 3 (`2fab03f7f`): the release-writes control
@@ -126,7 +126,15 @@ The new module is `src/Effect4/Laws/Program/PlaceFunding/Native.lean`.
 are its instances. `Opportunities.source_action_inputs` factors the source's installed-code
 weights. Slice 7 corrects the consumers that `PlaceFunding.Run`'s docstrings name.
 
-### 2.7 Deleted
+### 2.7 Slice 8 (`61c150065`): the unread premises dropped
+
+After slice 2, the source's `native_action_debit` no longer read its race-freedom and distinct-id
+premises. The distinct-id premise of `primitive_debit`, `native_debit` and `iteration_debit` only
+fed it. Slice 8 drops them, which strengthens those four statements. The callers pass fewer
+arguments: `loop_command_debit`, `source_evaluation`, and the Workers scenario readers
+`workers_native_action_debit` and `workers_native_evaluation_debit`.
+
+### 2.8 Deleted
 
 Each deleted declaration had no user left, measured with `grep` over `src`, `Test` and `tools`.
 
@@ -241,7 +249,7 @@ All with `LEAN_NUM_THREADS=2`, one `lake` at a time, in `~/Dev/lean4-effect4-goa
 | `lake build Test.Dogfood.Scenario.Atomic.WriterNative` | passed, 1168 jobs |
 | `lake build Effect4.Laws Test.Dogfood.Scenario.Atomic` (slice 1) | passed, 1507 jobs; the scenario's `#scenario_gate` ran |
 | `lake env lean src/Effect4/Laws/Program/PlaceFunding/Actions.lean` | passed after one repair (the event list, and eta-different atoms) |
-| `lake build Effect4.Laws Test.Dogfood.Scenario.{Atomic,Workers,QueueWorkers}` (slices 2, 4, 5, 6, 7) | passed: 1519, 1521, 1518, 1520 and 1516 jobs, no warning |
+| `lake build Effect4.Laws Test.Dogfood.Scenario.{Atomic,Workers,QueueWorkers}` (slices 2, 4, 5, 6, 7, 8) | passed: 1519, 1521, 1518, 1520, 1516 and 1514 jobs, no warning |
 | `lake env lean <scratchpad>/ReleaseSites.lean`, `QueueReleaseSites.lean` | the probes of §4.1 |
 | `lake build Test.Dogfood.Scenario.ReleaseWrites Test.Dogfood.Scenario.Workers` | passed, 1229 jobs |
 | `lake build Test.Audit.ProofStyle` | fails with 176 findings, none in a file this branch changes (measured per file); 170 are stale baseline entries |
@@ -295,10 +303,6 @@ Open obligations, in the order this seat recommends:
 3. The remaining frontier goals of the previous receipt, unchanged here: `Run.CallTree.request_leads`,
    `Atomic.Store.shop_stages`, `QueueWorkers.jobs_step` and `rest_step`, both Timeout goals, and
    `FinalizerRun.once_placed_outside_census`.
-4. A clean-up: `Opportunities.native_action_debit` no longer reads its race-freedom and distinct-id
-   premises, so the `unique` premise of `primitive_debit`, `native_debit`, `iteration_debit` and
-   `loop_command_debit` is unread too. Dropping it strengthens those statements and touches their
-   callers.
 
 Proposed for the coordinator (no register edited here):
 
@@ -328,7 +332,7 @@ Outside this seat's edit scope, at the merge:
 | `src/Effect4/Laws/Program/PlaceFunding/Native.lean` | new: the charged iteration and `Evaluation.of_debits` |
 | `src/Effect4/Laws/Program/PlaceFunding/History.lean`, `PlaceFunding/Run.lean` | docstrings: their consumers |
 | `src/Effect4/Laws/Program/SourceOpportunityNative.lean` | now `Debit` and `close_scope_zero` |
-| `src/Effect4/Laws/Program/SourceOpportunityPrimitive.lean` | `native_action_debit` and `source_action_inputs`; the countdown input as an instance |
+| `src/Effect4/Laws/Program/SourceOpportunityPrimitive.lean` | `native_action_debit` and `source_action_inputs`; the countdown input as an instance; unread premises dropped |
 | `src/Effect4/Laws/Program/SourceOpportunityExecution.lean` | `iteration_debit` as an instance |
 | `src/Effect4/Laws/Program/SourceOpportunityCommands.lean` | `source_evaluation` as an instance; source facts public |
 | `src/Effect4/Laws/Program/SourceOpportunityHistory.lean` | `source_local`; the budget lemmas through `PlaceFunding.Local` |
@@ -337,7 +341,7 @@ Outside this seat's edit scope, at the merge:
 | `Test/Dogfood/Scenario/Atomic/WriterHistory.lean` | `evaluation` proved in place; row facts moved to `WriterNative` |
 | `Test/Dogfood/Scenario/Atomic/WriterMachine.lean` | superseded action debits deleted |
 | `Test/Dogfood/Scenario/Atomic/Cleanup.lean` | docstring: `evaluation` is no longer a goal |
-| `Test/Dogfood/Scenario/SourceOpportunity.lean` | a dead instance deleted |
+| `Test/Dogfood/Scenario/SourceOpportunity.lean` | a dead instance deleted; two readers pass fewer arguments |
 | `Test/Dogfood/Scenario/ReleaseWrites.lean` | new: the control of §4.1 |
 | `Test/Dogfood/Scenario/Workers/Assertions.lean` | imports the control; `logs_step`'s docstring names it |
 | `docs/research/2026-10-13-seat-goals2-receipt.md` | this receipt (force-added) |
