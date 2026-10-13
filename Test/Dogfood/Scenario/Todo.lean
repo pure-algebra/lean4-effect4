@@ -23,7 +23,8 @@ scripted host.
 * **Tested: finite runs.** Each run is one script on the Lean machine. An empty title asks the
   repository nothing. A missing to-do fails with its id. A failure of the repository escapes.
 
-No line here is a theorem. The application's claims and their record stand in
+No line here is a theorem. The application's call trees stand in
+`Test/Dogfood/Scenario/Todo/Tree.lean`, and its claims and their record in
 `Test/Dogfood/Scenario/Todo/Claims.lean`, the shape of the claims packet
 (`docs/research/2026-10-07-packet-application-claims.md`).
 
@@ -180,10 +181,6 @@ def typeOf? (main : Src NativeOp) : Option (Ty × Ty) :=
 #guard openTy "list" = some ((Ty.list Todo.ty).normalize, SqlError.ty)
 #guard openTy "complete" = some (Todo.ty.normalize, (Ty.union NotFound.ty SqlError.ty).normalize)
 #guard openTy "remove" = some (.unit, (Ty.union NotFound.ty SqlError.ty).normalize)
--- finite evaluation: an entry at its argument is its open program under one bind of the argument
-#guard ((application.entry? "complete").map fun e =>
-    decide (elaborateModule (application.moduleOf e [nat 1]) =
-      (application.openProgram e).map (.bind (.succeed (.lit (.nat 1)))))) = some true
 -- control: with no argument the parameter is unbound, and the build refuses the entry; the open
 -- program of a body that reads a name its entry does not declare is refused at that read
 #guard (builtAt "complete" []).isNone

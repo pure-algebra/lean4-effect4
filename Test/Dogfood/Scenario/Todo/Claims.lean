@@ -1,4 +1,5 @@
 import Test.Dogfood.Scenario.Todo
+import Test.Dogfood.Scenario.Todo.Tree
 import Test.Dogfood.Application
 import Test.Audit.ScenarioGate
 import Effect4.Laws.Api.SessionMeaning
@@ -7,16 +8,18 @@ import Effect4.Laws.Program.Validated
 /-!
 # The to-do application's claims and their record
 
-The claims packet's slices RECORD to MODEL (`docs/research/2026-10-07-packet-application-claims.md`;
+The claims packet's slices RECORD to TREE (`docs/research/2026-10-07-packet-application-claims.md`;
 decisions rows 307 (9) and 336 (9)), on the application of `Test/Dogfood/Scenario/Todo.lean`.
 
-* **The claims.** Each clause is a theorem or a planned goal with its placement. `serves`
-  assembles them, and the plan derives its status (`#plan_status`).
+* **The claims.** Each clause is a theorem with its placement. `serves` assembles them, and the
+  plan derives its status (`#plan_status`): it rests on one planned goal of the law graph,
+  `Effect4.Run.CallTree.request_leads`, through `add_empty_calls_nothing`.
 * **Each statement is the session form of a fact of the call tree.** It reads a recorded run of a
   built entry: every run that the driver reaches (`Run.Reached`), not only the scripts below. A
   statement that reads the exit takes the premises of `denoteRows_eq_session`
   (`src/Effect4/Laws/Api/SessionMeaning.lean`): the run is funded, at rest and driven by a host.
-  So the call tree proves each statement through a theorem that exists (the packet's slice TREE).
+  Each proof reads the tree form (`Test/Dogfood/Scenario/Todo/Tree.lean`) on the run through a
+  theorem of the session's meaning (the packet's slice TREE).
 * **The record.** `claimRecord` is the scenario's record and one note for each entry
   (`Test/Dogfood/Application.lean`). `#scenario_gate` checks the scenario, and `#guard` reads the
   notes.
@@ -34,7 +37,7 @@ set_option maxRecDepth 8192
 namespace Test.Dogfood.Scenario.Todo
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
-open Effect4.Program.Denote (ReplyTape)
+open Effect4.Program.Denote (ReplyTape denoteRows)
 open Effect4.Run (appliedExits hostDriven conforms agrees)
 open Test.Dogfood.P2HandlerLayers (recordVal)
 open Test.Dogfood.Application (Kind Grade Premise Note Record)
@@ -55,13 +58,32 @@ def AddEmptyCallsNothing : Prop :=
 empty title, the host holds no call.
 
 Placement: concept `host-session-protocol`; property: the meaning of the row table agrees with
-the session, read at one program. Question: this planned goal; consumer: the claim `serves`.
+the session, read at one program. Question: a clause of the claim `serves`, its consumer.
 Reach: the entry `add` at the empty title, every run the driver reaches from its build, every
 budget. Does not establish: what `add` calls at another title; anything of a lowered run.
 Unlocks: R6's guarantee for a program with host rows, at one program (row 99). Kind: a fact of
-the call tree. -/
+the call tree.
+
+Proof: the tree of `add` at the empty title is one leaf (`add_empty_tree`), so it waits at no call
+under any tape (`add_empty_waits_nothing`), and a held call is a wait of the tree
+(`Routing.Calls.held_in_tree`, over `bound_in_tree`, which rests on the planned goal
+`request_leads`). -/
 @[semantics "host-session-protocol" (requirement := R6)]
-proof_goal add_empty_calls_nothing : AddEmptyCallsNothing
+theorem add_empty_calls_nothing : AddEmptyCallsNothing := by
+  intro s hreach hbuilt
+  obtain ⟨hprog, htable⟩ := builtAt_program hbuilt (add_elaborates "")
+  cases hheld : held s with
+  | nil => rfl
+  | cons seen rest =>
+    exfalso
+    have hmem : seen ∈ held s := by
+      rw [hheld]
+      exact List.mem_cons_self
+    obtain ⟨i, row, T, -, -, -, hwait⟩ := Routing.Calls.held_in_tree s hreach
+      (by rw [hprog, htable]; exact add_straight "") (by rw [hprog]; exact add_noCause "")
+      (by rw [hprog]; exact add_externalOnly "") (by rw [htable]; exact table_concrete) seen hmem
+    rw [hprog, htable, add_empty_waits_nothing] at hwait
+    cases hwait
 
 /-- The proposition of `complete_failure_escapes`. -/
 def CompleteFailureEscapes : Prop :=
@@ -73,13 +95,38 @@ entry `complete` that is funded, at rest and driven by a host, where the first a
 failure, the root fails with that failure.
 
 Placement: concept `host-session-protocol`; property as `add_empty_calls_nothing`. Question:
-this planned goal; consumer: the claim `serves`. Reach: the entry `complete` at every id, every
+a clause of the claim `serves`, its consumer. Reach: the entry `complete` at every id, every
 cause, every such run. Does not establish: which failures the session applies (reply admission
 refuses one outside the row's error column: a red control); a run with an interruption, a clock
 step or a delayed cell read, where the premises fail. Unlocks: as `add_empty_calls_nothing`.
-Kind: a fact of the call tree. -/
+Kind: a fact of the call tree.
+
+Proof: the meaning under the run's reply tape is the run's observation (`denoteRows_eq_session`),
+and under a tape that starts with a failure the tree of `complete` ends at that failure
+(`complete_failure_meaning`). -/
 @[semantics "host-session-protocol" (requirement := R6)]
-proof_goal complete_failure_escapes : CompleteFailureEscapes
+theorem complete_failure_escapes : CompleteFailureEscapes := by
+  intro id s cause ⟨hreach, hbuilt, hfund, hrest, hhost⟩ hhead
+  obtain ⟨hprog, htable⟩ := builtAt_program hbuilt (complete_elaborates id)
+  have hmean := Effect4.Run.denoteRows_eq_session s hreach hfund hrest hhost
+    (by rw [hprog, htable]; exact complete_straight id)
+  obtain ⟨rest, htape⟩ : ∃ rest, appliedExits s = .failure cause :: rest := by
+    cases h : appliedExits s with
+    | nil =>
+      rw [h] at hhead
+      cases hhead
+    | cons x rest =>
+      rw [h, List.head?_cons, Option.some.injEq] at hhead
+      exact ⟨rest, by rw [hhead]⟩
+  rw [htape, hprog, htable, complete_failure_meaning id cause rest] at hmean
+  cases hexit : s.exit with
+  | none =>
+    rw [hexit] at hmean
+    cases hmean
+  | some ex =>
+    rw [hexit, Option.map_some] at hmean
+    simp only [Option.some.injEq, Prod.mk.injEq] at hmean
+    rw [← hmean.1.1]
 
 /-! ## 2. A fact under a protocol of a row -/
 
@@ -95,13 +142,26 @@ to the application's protocols, a successful exit keeps `setDone`'s promise at t
 `(id, true)`.
 
 Placement: concept `host-session-protocol`; property as `add_empty_calls_nothing`. Question:
-this planned goal; consumer: the claim `serves`. Reach: the entry `complete` at every id, every
+a clause of the claim `serves`, its consumer. Reach: the entry `complete` at every id, every
 such run. The premise `conforms` is validated on the run's own tape (`Effect4.Run.conforms`,
 `src/Effect4/Laws/Program/Validated.lean`). Does not establish: that a host conforms: a typed
 answer for another to-do reaches the root (a red control). Unlocks: as `add_empty_calls_nothing`.
-Kind: a fact under a protocol. -/
+Kind: a fact under a protocol.
+
+Proof: under the application's protocols the tree of `complete` meets the postcondition
+`requested` (`complete_sat`), and a conforming run's exit meets every such postcondition
+(`Effect4.Run.conforms_sat`). -/
 @[semantics "host-session-protocol" (requirement := R6)]
-proof_goal complete_answers_requested : CompleteAnswersRequested
+theorem complete_answers_requested : CompleteAnswersRequested := by
+  intro id s answer ⟨hreach, hbuilt, hfund, hrest, hhost⟩ hconf hexit
+  obtain ⟨hprog, htable⟩ := builtAt_program hbuilt (complete_elaborates id)
+  have hsat : Effects.Program.Sat (Effect4.Run.rowsProtocol s.built.table protocols)
+      (requested id) (denoteRows s.built.table s.built.program []) := by
+    rw [hprog, htable]
+    exact complete_sat id
+  exact Effect4.Run.conforms_sat protocols s hreach hfund hrest hhost
+    (by rw [hprog, htable]; exact complete_straight id) hconf hsat (.success answer) hexit answer
+    rfl
 
 /-! ## 3. Two facts under the laws of the rows
 
@@ -125,13 +185,35 @@ def ListAfterAdd : Prop :=
 turn, a successful `list` holds the to-do that `add` answered.
 
 Placement: concept `host-session-protocol`; property as `add_empty_calls_nothing`. Question:
-this planned goal; consumer: the claim `serves`. Reach: every title but the empty one, every
+a clause of the claim `serves`, its consumer. Reach: every title but the empty one, every
 start state of the model, every such pair of runs. The premise `agrees` is validated on each run.
 Does not establish: that a host agrees with the model (a red control: a host that forgets); that
 the runs finish (progress). Unlocks: as `add_empty_calls_nothing`. Kind: a fact under the laws of
-the rows. -/
+the rows.
+
+Proof: a run that agrees with the model is a run of its call tree under the model
+(`Effect4.Run.agrees_hostRun`). Under the model, `add` stores the to-do under the next id and
+answers it (`add_on_model`), and `list` answers the stored to-dos (`list_on_model`). -/
 @[semantics "host-session-protocol" (requirement := R6)]
-proof_goal list_after_add : ListAfterAdd
+theorem list_after_add : ListAfterAdd := by
+  intro title adding listing start middle finish added todos hne
+    ⟨hr1, hb1, hf1, ha1, hh1⟩ ⟨hr2, hb2, hf2, ha2, hh2⟩ hag1 hag2 hex1 hex2
+  obtain ⟨hp1, ht1⟩ := builtAt_program hb1 (add_elaborates title)
+  obtain ⟨hp2, ht2⟩ := builtAt_program hb2 list_elaborates
+  have hrun1 := Effect4.Run.agrees_hostRun repository adding hr1 hf1 ha1 hh1
+    (by rw [hp1, ht1]; exact add_straight title) start middle hag1 _ hex1
+  have hrun2 := Effect4.Run.agrees_hostRun repository listing hr2 hf2 ha2 hh2
+    (by rw [hp2, ht2]; exact list_straight) middle finish hag2 _ hex2
+  rw [hp1, ht1, add_on_model title hne start] at hrun1
+  rw [hp2, ht2, list_on_model middle] at hrun2
+  simp only [Option.some.injEq, Prod.mk.injEq, Exit.success.injEq] at hrun1 hrun2
+  obtain ⟨hadded, -, hmiddle⟩ := hrun1
+  obtain ⟨htodos, -, -⟩ := hrun2
+  subst hadded hmiddle
+  injection htodos with hlist
+  rw [← hlist]
+  exact List.mem_map.mpr
+    ⟨(start.1, title, false), List.mem_append_right _ (List.mem_singleton_self _), rfl⟩
 
 /-- The proposition of `complete_idempotent`. -/
 def CompleteIdempotent : Prop :=
@@ -147,9 +229,50 @@ first, and the second run leaves the model's state where the first left it.
 
 Placement: as `list_after_add`. Reach: every id, every start state of the model, every such pair
 of runs. Does not establish: that a host agrees with the model (a red control: a host whose
-`setDone` flips the flag); progress. Kind: a fact under the laws of the rows. -/
+`setDone` flips the flag); progress. Kind: a fact under the laws of the rows.
+
+Proof: by `Effect4.Run.agrees_hostRun`, each run is a run of the tree of `complete` under the
+model. Where the id is stored, the first run marks it done (`complete_on_model_found`), and the
+second finds it marked (`find_markDone`) and marks nothing new (`map_markDone_idem`). Where it
+is not, both runs fail alike and leave the state (`complete_on_model_missing`). -/
 @[semantics "host-session-protocol" (requirement := R6)]
-proof_goal complete_idempotent : CompleteIdempotent
+theorem complete_idempotent : CompleteIdempotent := by
+  intro id once twice start middle finish first second
+    ⟨hr1, hb1, hf1, ha1, hh1⟩ ⟨hr2, hb2, hf2, ha2, hh2⟩ hag1 hag2 hex1 hex2
+  obtain ⟨hp1, ht1⟩ := builtAt_program hb1 (complete_elaborates id)
+  obtain ⟨hp2, ht2⟩ := builtAt_program hb2 (complete_elaborates id)
+  have hrun1 := Effect4.Run.agrees_hostRun repository once hr1 hf1 ha1 hh1
+    (by rw [hp1, ht1]; exact complete_straight id) start middle hag1 first hex1
+  have hrun2 := Effect4.Run.agrees_hostRun repository twice hr2 hf2 ha2 hh2
+    (by rw [hp2, ht2]; exact complete_straight id) middle finish hag2 second hex2
+  rw [hp1, ht1] at hrun1
+  rw [hp2, ht2] at hrun2
+  cases hfind : start.2.find? (·.1 == id) with
+  | none =>
+    rw [complete_on_model_missing id start hfind] at hrun1
+    simp only [Option.some.injEq, Prod.mk.injEq] at hrun1
+    obtain ⟨hfirst, -, hmiddle⟩ := hrun1
+    subst hmiddle
+    rw [complete_on_model_missing id start hfind] at hrun2
+    simp only [Option.some.injEq, Prod.mk.injEq] at hrun2
+    obtain ⟨hsecond, -, hfinish⟩ := hrun2
+    exact ⟨hsecond.symm.trans hfirst, hfinish.symm⟩
+  | some entry =>
+    rw [complete_on_model_found id start entry hfind] at hrun1
+    simp only [Option.some.injEq, Prod.mk.injEq] at hrun1
+    obtain ⟨hfirst, -, hmiddle⟩ := hrun1
+    subst hmiddle
+    have hfind2 : (start.1, start.2.map (markDone id)).2.find? (·.1 == id) =
+        some (markDone id entry) := by
+      show (start.2.map (markDone id)).find? (·.1 == id) = _
+      rw [find_markDone, hfind]
+      rfl
+    rw [complete_on_model_found id _ (markDone id entry) hfind2] at hrun2
+    simp only [Option.some.injEq, Prod.mk.injEq] at hrun2
+    obtain ⟨hsecond, -, hfinish⟩ := hrun2
+    refine ⟨?_, ?_⟩
+    · rw [← hsecond, ← hfirst, markDone_title]
+    · rw [← hfinish, map_markDone_idem]
 
 /-! ## 4. The claim -/
 
@@ -191,9 +314,6 @@ def opened (b : Api.Built) : Run := Run.open b application.name
 /-- The script that fails the one call of `complete` with the repository's tag. -/
 def repoFails (message : String) : List Move :=
   script [[.start], answer (.row "TodoRepo.setDone") (failed "SqlError" message)]
-
-/-- The failure of an empty title, at the root. -/
-def emptyTitleExit : ExitV := .failure (Cause.fail (.tagged "EmptyTitle" "a title is required"))
 
 /-- A host that forgets what it stores: it answers as the model and keeps its state. The red
 control of "after add". -/
