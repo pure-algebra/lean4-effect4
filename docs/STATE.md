@@ -314,7 +314,11 @@ A program has folds, a journaled run with replay, and a printed image that reads
    in a typed shell with the site's navigation. Its first semantics page is the open work: each
    planned goal with its docstring, and each modulo theorem's chain to it. Next: the design and
    semantics grill. The C player stays first-class (row
-   363, point 5).
+   363, point 5). The [tube language](research/2026-10-13-tube-language/README.md) (rows 369, 370)
+   draws every mark as tubes in one proportion, and a queue's units move by a driver model. The
+   [motion plan](research/2026-10-13-motion-everywhere/README.md) gives every construct a picture
+   and a film, in ten slices; M1 (each figure's cost) landed. Next: the kit's S24 joins pinned and
+   the kit move (M7), then roles per module (M3) and a run as a film (M5).
 1. **The view and the printer**, one plan across four notes. The order:
    - the program's own graph (row 337, point 9). First its design, with an agent's place in it.
      Then the graph, its ranks and its places as folds of the program (the algebra audit's D);
@@ -355,7 +359,7 @@ A program has folds, a journaled run with replay, and a printed image that reads
 
 Also open: procedures PROC-5 (row 328), the simulation's slices S1 to S4 (row 329) and the
 session API's slices (row 326). The host session is to be drawn by H8's machine forms. Effect4 pins the SVG kit (lean4-whatwg
-`html/svg` at `1365738`, row 358). The view's pictures are typed trees on it
+`html/svg` at `eac9121`, slice S23, rows 358 and 370). The view's pictures are typed trees on it
 (`tools/Tools/View/SvgOut.lean`). Row 360 orders the rest: one pin move at the seat's slice S14,
 then the motion and the geometry ports, which delete the view's own join, easing reader,
 samplers and stroke geometry. The
