@@ -1,6 +1,7 @@
 import Tools.View.GlyphSheet
 import Tools.View.CellSheet
 import Tools.View.Tube.Sheet
+import Tools.View.Tube.GlyphPage
 import Tools.View.Tokens
 
 /-!
@@ -47,4 +48,5 @@ def main (args : List String) : IO UInt32 := do
   let a ← page out "glyphs.html" "The vocabulary of marks" sheetBlocks contactCss
   let b ← page out "cells.html" "The Queue's cell, drawn by its type" CellSheet.blocks CellSheet.css
   let c ← page out "tubes.html" "One body: the tube language" Tube.Sheet.blocks Tube.Sheet.css
+  let c := max c (← page out "tube-glyphs.html" "Every mark as tubes" Tube.GlyphPage.blocks Tube.GlyphPage.css)
   return max (max a b) c
