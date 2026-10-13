@@ -382,15 +382,26 @@ def methodField (sig : Signature Op) (init : DefDecl) (defs : List DefDecl)
   let t ← methodType sig init.answer d x.2.2
   .ok { name := x.1, readonly := true, type := t }
 
+/-- **A service's key**: `const name = Context.Service<"identity", { fields }>("identity")`, the
+one form of a service key that a module declares. rc.112's `Context.Service<Identifier, Shape>`
+takes the identifier type first and the shape second, and its string argument is the key's
+runtime identity (`vendor/effect-4.0.0-rc.112/src/Context.ts:252`). A block's service names its
+key by its own name (`printService`); a row namespace's key carries its `ServiceKey`'s spelling
+(`keyText`), so that its identifier is the one a requirement row prints (decisions row 378 (19),
+slice E3). -/
+def serviceKeyDecl (name identity : String) (fields : List TypeScript.TypeRef.Field) :
+    TypeScript.ConstDecl :=
+  { doc := [], name := name,
+    value := .call (.generic (.ident "Context.Service") [.literal identity, .object fields])
+      [.str identity] }
+
 /-- **A service's key and layer.** -/
 def printService (sig : Signature Op) (defs : List DefDecl) (sv : Service) :
     Except PrintRefusal (List TypeScript.ConstDecl) := do
   let some init := defs[sv.init]? | .error (.internalAction "service")
   let fields ← sv.methods.mapM (methodField sig init defs)
   let closures ← sv.methods.mapM (methodClosure init defs)
-  .ok [{ doc := [], name := sv.name,
-         value := .call (.generic (.ident "Context.Service") [.literal sv.name, .object fields])
-           [.str sv.name] },
+  .ok [serviceKeyDecl sv.name sv.name fields,
        { doc := [], name := sv.name ++ "Layer",
          value := .call (.ident "Layer.effect") [.ident sv.name,
            .call (.ident "Effect.map") [.call (.ident init.name) [],

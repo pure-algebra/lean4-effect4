@@ -18,9 +18,16 @@ planned goal with its placement (`@[semantics …]`, decisions row 207). Its sta
   controls show each finding (decisions row 301). The packet's second gate is not landed: row 375
   clears gates, and a name in a note is a name literal, which the elaborator resolves.
 * **`Record.claimsOf`** answers what the record claims of one program, by kind.
+* **One claim record, two labels** (decisions row 378 (7)). A `ClaimRecord` names the
+  declaration that states a claim. Its two labels stay apart, as `AGENTS.md`'s trust rules ask:
+  what the claim is about (`About`: a banked implementation or an application), and its evidence
+  (`Evidence`). A premise's grade is an `Evidence` too, so the two are one type. A note of an
+  application's record is a claim record about the application (`Record.claimRecords`), and a
+  bank entry holds one about an implementation (decisions row 378 (1)).
 
 What it does not establish: that a note's premises are the premises of its statement. The
-statement names them. The record cannot read a statement, and no check here reads one.
+statement names them. The record cannot read a statement, and no check here reads one. A label
+is no status: the plan derives a claim's status from its proof.
 -/
 
 set_option autoImplicit false
@@ -43,11 +50,25 @@ inductive Kind
   | run
 deriving DecidableEq, Repr
 
-/-- Who discharges a premise of a claim: a grade of the premise, never a status of the claim
-(the claims packet, §3.4). -/
-inductive Grade
-  /-- A theorem about a handler in Lean. -/
-  | proved
+/-- What a claim is about (decisions row 378 (7)): a label of the claim, never a status. -/
+inductive About
+  /-- A banked implementation: a definition block by digest, with the Lean model it implements
+  and its agreement theorem (row 378 (1)). -/
+  | implementation
+  /-- An application: its entries over its rows (`Application`,
+  `src/Effect4/Program/Authoring/Application.lean`). -/
+  | application
+deriving DecidableEq, Repr
+
+/-- The evidence of a claim, or the grade of a premise: what discharges it (decisions row 378
+(7); the claims packet, §3.4). A label, never a status: the plan derives a claim's status. -/
+inductive Evidence
+  /-- A theorem in Lean; for a premise, a theorem about a handler. -/
+  | «theorem»
+  /-- A finite check that no theorem covers: a control or a finite evaluation of a battery. -/
+  | finiteCheck
+  /-- A run against an outside implementation: tsgo 7, rc.112 or the OCaml comparison. -/
+  | outsideOracle
   /-- The session, at each reply receipt. -/
   | monitored
   /-- A decision on one run's journal. -/
@@ -60,15 +81,31 @@ deriving DecidableEq, Repr
 protocol or a model, with its grade. -/
 structure Premise where
   name : Lean.Name
-  grade : Grade
+  grade : Evidence
 deriving DecidableEq, Repr
 
-/-- What the record says of one clause or one law of its scenario: its kind, the programs that
-its statement reads, and what its statement assumes of whoever answers the rows. -/
+/-- **A claim record** (decisions row 378 (7)): the declaration that states a claim, its two
+labels, and the premises that its statement assumes, each with its grade. The record holds no
+status: the plan derives it from the declaration's proof (`#plan_status`). -/
+structure ClaimRecord where
+  /-- The theorem or planned goal that states the claim. -/
+  statement : Lean.Name
+  /-- What the claim is about. -/
+  about : About
+  /-- What discharges the claim. -/
+  evidence : Evidence
+  /-- The premises that the statement assumes, each with its grade. -/
+  assumes : List Premise := []
+deriving DecidableEq, Repr
+
+/-- What the record says of one clause or one law of its scenario: its kind, its evidence, the
+programs that its statement reads, and what its statement assumes of whoever answers the rows. -/
 structure Note where
   /-- The clause's or the law's name in the scenario's record. -/
   entry : String
   kind : Kind
+  /-- What discharges the claim: a clause or a law is a theorem or a planned goal by default. -/
+  evidence : Evidence := .«theorem»
   /-- The application's programs that the statement reads, by name. -/
   reads : List String := []
   /-- The premises that the statement assumes, each with its grade. -/
@@ -117,6 +154,15 @@ def Record.problems (r : Record) : List String :=
     if !r.entries.any (·.name == note.entry) then
       [r.scenario.name ++ ": the note \"" ++ note.entry ++ "\" names no clause and no law"]
     else Note.problems r note
+
+/-- **The record's claims as claim records** (decisions row 378 (7)): each entry with its note, in
+the record's order, about the application, with its note's evidence and premises. An entry with
+no note gives none: `Record.problems` names it. -/
+def Record.claimRecords (r : Record) : List ClaimRecord :=
+  r.entries.filterMap fun entry =>
+    (r.notes.find? (·.entry == entry.name)).map fun note =>
+      { statement := entry.claim, about := .application, evidence := note.evidence,
+        assumes := note.assumes }
 
 /-- **What the record claims of one program** (the claims packet's operation `claims`, §3.8, at
 the record): each entry whose note reads the program, and each inherited law where the
