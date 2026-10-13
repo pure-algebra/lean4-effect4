@@ -5,57 +5,87 @@ import Tools.Document.Sheet
 /-!
 # Controls of the documentation site's checks
 
-The site's checks run before any file is written (`Tools.Site.Site.check`, decisions row 363), and
-a node folded from data enters the typed shell only where the content model admits it
-(`Whatwg.Html.Child.check`, the package's answer to ask W1). Each line is a control that shows where a check refuses, or a finite
-evaluation that no theorem covers (decisions row 301). The site's code reads text, so every value
-stands inside its `#guard` and the battery declares nothing (the axiom gate).
+The site's checks run before any file is written (`Tools.Site.Site.checked`, decisions row 363):
+the documents' own (`Site.check`), then `lean4-whatwg`'s check of the rendered site
+(`Whatwg.Html.Content.Site.errors`, its answer to ask W6), which reads every `href` of every page,
+the shell's too. A node folded from data enters the typed shell only where the content model
+admits it (`Whatwg.Html.Child.check`, the answer to ask W1). Each line is a control that shows
+where a check refuses, or a finite evaluation that no theorem covers (decisions row 301). The
+site's code reads text, so every value stands inside its `#guard` and the battery declares nothing
+(the axiom gate).
 
-Each guard builds the same site: a root page, and a document of two parts, one referring to the
-other, split at its top-level parts under `/s/`.
+Each guard builds the same site: a root page, a document of two parts, one referring to the
+other, split at its top-level parts under `/s/`, the contents page and the two style files that
+every page's shell links.
 -/
 
 namespace Test.Audit.SiteControls
 
 open Tools.Document Tools.Site
 
--- the split: the section, then a page for each part; the site passes its checks
+-- the split: the section, then a page for each part; the site passes every check
 #guard
-  let s : Site := { pages := { path := [], doc := { title := "Root", body := [] } } ::
+  let s : Site := { files := ["looks.css", "page.css"], pages := { path := [], doc := { title := "Root", body := [] } } ::
     (split (fun path _ => path == ["s"]) ["s"] "s"
-      { title := "Source", body := [.part "a" "A" [.para [.ref "b" "to B"]], .part "b" "B" [.para [.text "B"]]] }) }
-  s.pages.map (·.path) == [[], ["s"], ["s", "a"], ["s", "b"]] && s.check.isEmpty
+      { title := "Source", body := [.part "a" "A" [.para [.ref "b" "to B"]], .part "b" "B" [.para [.text "B"]]] }) ++
+    [{ path := ["contents"], doc := { title := "Contents", body := [] } }] }
+  s.pages.map (·.path) == [[], ["s"], ["s", "a"], ["s", "b"], ["contents"]] && s.problems.isEmpty
 
 -- a reference to a part made a page links to that page's folder, from its sibling
 #guard
-  let s : Site := { pages := { path := [], doc := { title := "Root", body := [] } } ::
+  let s : Site := { files := ["looks.css", "page.css"], pages := { path := [], doc := { title := "Root", body := [] } } ::
     (split (fun path _ => path == ["s"]) ["s"] "s"
-      { title := "Source", body := [.part "a" "A" [.para [.ref "b" "to B"]], .part "b" "B" [.para [.text "B"]]] }) }
+      { title := "Source", body := [.part "a" "A" [.para [.ref "b" "to B"]], .part "b" "B" [.para [.text "B"]]] }) ++
+    [{ path := ["contents"], doc := { title := "Contents", body := [] } }] }
   (s.at? ["s", "a"]).map (fun p => target (keyIndex s) p "b") == some "../b/"
 
--- control: a link to no page or file of the site
+-- control: a link to no page or file of the site, located by the elements along its path
 #guard
-  let s : Site := { pages := { path := [], doc := { title := "Root", body := [] } } ::
+  let s : Site := { files := ["looks.css", "page.css"], pages := { path := [], doc := { title := "Root", body := [] } } ::
     (split (fun path _ => path == ["s"]) ["s"] "s"
-      { title := "Source", body := [.part "a" "A" [.para [.ref "b" "to B"]], .part "b" "B" [.para [.text "B"]]] }) }
+      { title := "Source", body := [.part "a" "A" [.para [.ref "b" "to B"]], .part "b" "B" [.para [.text "B"]]] }) ++
+    [{ path := ["contents"], doc := { title := "Contents", body := [] } }] }
   ({ s with pages := s.pages ++
-      [{ path := ["x"], doc := { title := "X", body := [.para [.link "../nowhere/" "dead"]] } }] } : Site).check
-    == ["/x/: link ../nowhere/: no page or file of the site"]
+      [{ path := ["x"], doc := { title := "X", body := [.para [.link "../nowhere/" "dead"]] } }] } : Site).problems
+    == ["/x/: link `../nowhere/` leads to `/nowhere/`: no page or file of the site: at html/body[1]/main[2]/p[1]/a[0]"]
+
+-- control: a link to a page of the site whose tree has no such fragment
+#guard
+  let s : Site := { files := ["looks.css", "page.css"], pages := { path := [], doc := { title := "Root", body := [] } } ::
+    (split (fun path _ => path == ["s"]) ["s"] "s"
+      { title := "Source", body := [.part "a" "A" [.para [.ref "b" "to B"]], .part "b" "B" [.para [.text "B"]]] }) ++
+    [{ path := ["contents"], doc := { title := "Contents", body := [] } }] }
+  ({ s with pages := s.pages ++
+      [{ path := ["x"], doc := { title := "X", body := [.para [.link "../s/b/#gone" "gone"]] } }] } : Site).problems
+    == ["/x/: link `../s/b/#gone` leads to `/s/b/`, and `#gone` names no identifier of that page: at html/body[1]/main[2]/p[1]/a[0]"]
+
+-- control: the shell links the contents page and the style files, so a site without them is refused
+#guard
+  let s : Site := { files := ["looks.css", "page.css"], pages := { path := [], doc := { title := "Root", body := [] } } ::
+    (split (fun path _ => path == ["s"]) ["s"] "s"
+      { title := "Source", body := [.part "a" "A" [.para [.ref "b" "to B"]], .part "b" "B" [.para [.text "B"]]] }) ++
+    [{ path := ["contents"], doc := { title := "Contents", body := [] } }] }
+  !({ s with files := [] } : Site).problems.isEmpty &&
+    !({ s with pages := s.pages.filter (·.path != ["contents"]) } : Site).problems.isEmpty
 
 -- control: a reference resolves in its own space only
 #guard
-  let s : Site := { pages := { path := [], doc := { title := "Root", body := [] } } ::
+  let s : Site := { files := ["looks.css", "page.css"], pages := { path := [], doc := { title := "Root", body := [] } } ::
     (split (fun path _ => path == ["s"]) ["s"] "s"
-      { title := "Source", body := [.part "a" "A" [.para [.ref "b" "to B"]], .part "b" "B" [.para [.text "B"]]] }) }
+      { title := "Source", body := [.part "a" "A" [.para [.ref "b" "to B"]], .part "b" "B" [.para [.text "B"]]] }) ++
+    [{ path := ["contents"], doc := { title := "Contents", body := [] } }] }
   ({ s with pages := s.pages ++
-      [{ path := ["y"], space := "other", doc := { title := "Y", body := [.para [.ref "b" "B"]] } }] } : Site).check
+      [{ path := ["y"], space := "other", doc := { title := "Y", body := [.para [.ref "b" "B"]] } }] } : Site).problems
     == ["/y/: reference b: no part has this key"]
 
 -- control: a page whose parent is no page
 #guard
-  let s : Site := { pages := [{ path := [], doc := { title := "Root", body := [] } }] }
-  ({ s with pages := s.pages ++ [{ path := ["z", "deep"], doc := { title := "Z", body := [] } }] } : Site).check
-    == ["/z/deep/: no page above it"]
+  let s : Site := { files := ["looks.css", "page.css"], pages := { path := [], doc := { title := "Root", body := [] } } ::
+    (split (fun path _ => path == ["s"]) ["s"] "s"
+      { title := "Source", body := [.part "a" "A" [.para [.ref "b" "to B"]], .part "b" "B" [.para [.text "B"]]] }) ++
+    [{ path := ["contents"], doc := { title := "Contents", body := [] } }] }
+  (({ s with pages := s.pages ++ [{ path := ["z", "deep"], doc := { title := "Z", body := [] } }] } : Site).problems.head?)
+    == some "/z/deep/: no page above it"
 
 -- control: the content model refuses a block where the shell's `main` would hold it
 #guard !(Whatwg.Html.Child.check (.element "p" [] [.element "div" [] []]) : Except _ (Whatwg.Html.Child InMain)).toBool

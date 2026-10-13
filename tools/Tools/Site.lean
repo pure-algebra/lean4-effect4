@@ -5,7 +5,7 @@ import Whatwg.Html.Syntax.Elaborator
 import Whatwg.Html.Node.Combinators
 import Whatwg.Html.Print.Render
 import Whatwg.Html.Node.Check
-import Whatwg.Html.Content.Document
+import Whatwg.Html.Content.Site
 
 /-!
 # Tools.Site — the documentation site as one value (decisions row 363)
@@ -35,9 +35,12 @@ package's `Child.check` checks it there at the run, with the located refusal of
 `Content.explain`. So a page's tree is valid by construction (`Element.valid`), and the
 serializer writes only such a tree.
 
-**Checks** (`Site.check`), before any file is written: a page path is unique, and its parent is a
-page; a reference resolves in its space; a relative link resolves to a page or a file of the
-site. Each page then passes `lean4-whatwg`'s checks across a whole document (`Site.html`).
+**Checks**, before any file is written. The documents first (`Site.check`): a reference resolves
+in its space, and a key stands once in a space. Then the trees a browser gets, every page rendered,
+by `lean4-whatwg`'s check of a site (`Content.Site.errors`, its answer to ask W6): each page sound
+alone (ids distinct, fragment links naming an id, one `main`, no heading level skipped), a page at
+the root, one page at a path and a page above each, and every `href` of every page, the shell's
+too, leading off the site, to a file of the site, or to a page whose tree has the fragment.
 
 A page links the style files by its depth, so the folder previews from any server path: the
 studio's server serves it at `/.lake/gen/site/`.
@@ -177,35 +180,11 @@ def Site.around (s : Site) (p : Page) : Option Page × Option Page :=
 
 /-! ## Checks -/
 
-/-- A link's path from the root, from the page at `here`, without its fragment, and whether it
-names a folder; `none` for a link off the site. -/
-def resolve (here : List String) (href : String) : Option (List String × Bool) :=
-  let href := (href.splitOn "#").head!
-  if href.startsWith "https://" || href.startsWith "http://" || href.startsWith "mailto:" then none
-  else
-    let (start, rest) := if href.startsWith "/" then ([], (href.drop 1).toString) else (here, href)
-    let segs := (rest.splitOn "/").foldl (fun acc seg =>
-      match seg with
-      | "." | "" => acc
-      | ".." => acc.dropLast
-      | _ => acc ++ [seg]) start
-    some (segs, rest.isEmpty || rest.endsWith "/")
-
-/-- The links of a page's document: a monoid fold of its lines. -/
-def links (d : Document) : List String :=
-  Block.collect (Algebra.collect (·.filterMap fun | .link h _ => some h | _ => none)) d.body
-
-/-- **The site's checks**, each refusal by name: a repeated path, a page with no parent, a page's own
-check (`Document.check`, where a reference may name a part of its space on another page), a key
-twice in one space, and a relative link to no page or file. -/
+/-- **The documents' checks**, before any page is rendered, each refusal by name: a page's own
+check (`Document.check`, where a reference may name a part of its space on another page), and a
+key twice in one space. The rendered site's checks are the package's (`Site.problems`). -/
 def Site.check (s : Site) : List String := Id.run do
   let mut errors : Array String := #[]
-  let paths := s.pages.map (·.path)
-  if !paths.contains [] then errors := errors.push "no page at the root"
-  for p in s.pages do
-    let place := "/" ++ folders p.path
-    if (paths.filter (· == p.path)).length > 1 then errors := errors.push s!"{place}: two pages at this path"
-    if !p.path.isEmpty && !paths.contains p.path.dropLast then errors := errors.push s!"{place}: no page above it"
   let ix := keyIndex s
   for p in s.pages do
     if let .error es := p.doc.check (fun k => ix.contains (p.space, k)) then
@@ -215,15 +194,6 @@ def Site.check (s : Site) : List String := Id.run do
     for k in p.key.toList ++ keys p.doc do
       if seen.contains (p.space, k) then errors := errors.push s!"/{folders p.path}: key {k} twice in space {p.space.quote}"
       seen := seen.insert (p.space, k)
-  let pageFiles := s.pages.map fun p => p.path ++ ["document.json"]
-  for p in s.pages do
-    for h in links p.doc do
-      match resolve p.path h with
-      | none => pure ()
-      | some (r, folder) =>
-        let ok := if folder then paths.contains r
-          else pageFiles.contains r || s.files.contains ("/".intercalate r)
-        unless ok do errors := errors.push s!"/{folders p.path}: link {h}: no page or file of the site"
   return errors.toList
 
 /-! ## The shell
@@ -248,16 +218,14 @@ inductive Styles where
   | files (looks rules : String)
   | inlineLooks (looks : String) (rules : String)
 
-/-- A section of the site's navigation; the current one is marked. -/
+/-- A section of the site's navigation; the current one is marked, the mark absent otherwise
+(ask W12). -/
 def sectionItem (href label : String) (current : Option String) : Child InSiteList :=
-  match current with
-  | some how => html! <li><a href={href} aria-current={how}>{E.txt label}</a></li>
-  | none => html! <li><a href={href}>{E.txt label}</a></li>
+  html! <li><a href={href} aria-current={current}>{E.txt label}</a></li>
 
 /-- A breadcrumb; the last is the page itself. -/
 def crumb (href label : String) (last : Bool) : Child InCrumbs :=
-  if last then html! <li><a href={href} aria-current="page">{E.txt label}</a></li>
-  else html! <li><a href={href}>{E.txt label}</a></li>
+  html! <li><a href={href} aria-current={if last then some "page" else none}>{E.txt label}</a></li>
 
 /-- A link to a neighbouring page in reading order. -/
 def pagerLink (rel href label : String) : Child InPager :=
@@ -277,9 +245,9 @@ def footerLink (href label : String) : Child InFooterList := html! <li><a href={
 
 /-- The page's title, the first heading of its content, with the key of the part it was split from
 beside it (decisions row 366, point 4). -/
-def heading (title : String) : Option String → Child InMain
-  | some k => html! <h1 id={k}>{E.txt title}<a class="key" href={Html.fragment k}>{E.txt k}</a></h1>
-  | none => html! <h1>{E.txt title}</h1>
+def heading (title : String) (key : Option String) : Child InMain :=
+  html! <h1 id={key}>{E.txt title}{key.map fun (k : String) =>
+    html! <a class="key" href={Html.fragment k}>{E.txt k}</a>}</h1>
 
 /-- The head: the encoding, the viewport, the title in the browser's tab and the styles. Its
 content model is ordered, so its elements are written out: only the texts and links are data.
@@ -287,14 +255,6 @@ Its type names its tag, so the ordered model of `html` reads it whatever the sty
 def head (tabTitle : String) : Styles → Element .head InHtml
   | .files looks rules => html! <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>{E.txt tabTitle}</title><link rel="stylesheet" href={looks} /><link rel="stylesheet" href={rules} /></head>
   | .inlineLooks looks rules => html! <head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>{E.txt tabTitle}</title><style>{E.txt looks}</style><link rel="stylesheet" href={rules} /></head>
-
-/-- The head takes no attribute, whatever its styles. -/
-theorem head_attrs (tabTitle : String) (styles : Styles) : (head tabTitle styles).attrs = [] := by
-  cases styles <;> rfl
-
-/-- The head in the place of `html`'s first child. -/
-def headChild (tabTitle : String) (styles : Styles) : Child InHtml :=
-  Child.of (head tabTitle styles) (by rw [head_attrs]; admits)
 
 /-- What a page's shell holds beyond its document. Empty lists leave their element out. -/
 structure Shell where
@@ -316,22 +276,24 @@ the page, the document's blocks, the neighbouring pages), and the footer. The pa
 title, so a reader meets the title first; on a wide screen the rules float them into the margin
 beside the content, as a margin note. -/
 def render (s : Shell) (title : String) (blocks : List (Child InMain)) : Element .html Ctx.document :=
-  let header : Child InBody :=
-    if s.sections.isEmpty then html! <header><a class="home" href={s.home}>"Effect4"</a></header>
-    else html! <header><a class="home" href={s.home}>"Effect4"</a><nav aria-label="Site">{E.el (E.ol s.sections)}</nav></header>
-  let toc : List (Child InMain) := if s.toc.isEmpty then [] else
-    [html! <nav class="toc" aria-labelledby="toc-label"><p id="toc-label" class="label">"On this page"</p>{E.el (E.ol s.toc)}</nav>]
-  let crumbs : List (Child InMain) := if s.crumbs.isEmpty then [] else
-    [html! <nav class="crumbs" aria-label="Breadcrumb">{E.el (E.ol s.crumbs)}</nav>]
-  let pager : List (Child InMain) := if s.pager.isEmpty then [] else
-    -- the attribute's name as a literal, which the `admits` tactic reads
-    [E.el (E.nav s.pager [A.a_class "pager", ⟨.aria_, "aria-label", "Pages"⟩])]
-  let footer : List (Child InBody) := if s.footer.isEmpty then [] else
-    [html! <footer><p class="label">"Provenance"</p>{E.el (E.ul s.footer)}</footer>]
-  let main : Child InBody := E.el (E.main (crumbs ++ [heading title s.key] ++ toc ++ blocks ++ pager) [A.a_id "content"])
-  let body : Child InHtml := E.el (E.body ([html! <a class="skip" href="#content">"Skip to the content"</a>, header] ++
-    [main] ++ footer))
-  html! <html lang="en">{headChild s.tabTitle s.styles}{body}</html>
+  -- a part of the page that an empty list leaves out
+  let part {ctx : Ctx} (present : Bool) (child : Child ctx) : Option (Child ctx) :=
+    if present then some child else none
+  let body : Element .body InHtml :=
+    html! <body>
+      <a class="skip" href="#content">"Skip to the content"</a>
+      <header><a class="home" href={s.home}>"Effect4"</a>{part (!s.sections.isEmpty)
+        (html! <nav aria-label="Site"><ol>{s.sections}</ol></nav>)}</header>
+      <main id="content">
+        {part (!s.crumbs.isEmpty) (html! <nav class="crumbs" aria-label="Breadcrumb"><ol>{s.crumbs}</ol></nav>)}
+        {heading title s.key}
+        {part (!s.toc.isEmpty) (html! <nav class="toc" aria-labelledby="toc-label"><p id="toc-label" class="label">"On this page"</p><ol>{s.toc}</ol></nav>)}
+        {blocks}
+        {part (!s.pager.isEmpty) (html! <nav class="pager" aria-label="Pages">{s.pager}</nav>)}
+      </main>
+      {part (!s.footer.isEmpty) (html! <footer><p class="label">"Provenance"</p><ul>{s.footer}</ul></footer>)}
+    </body>
+  html! <html lang="en">{E.el (head s.tabTitle s.styles)}{E.el body}</html>
 
 /-- The blocks of a document, folded with a reference's link from `target`, each admitted in the
 page's `main` by `lean4-whatwg`'s `Child.check` (its answer to ask W1), which gives the located
@@ -369,16 +331,38 @@ def Site.shell (s : Site) (p : Page) : Shell :=
       [footerLink "document.json" "This page as data (effect4-document/1)",
        footerLink (href ["contents"]) "Every page of the site"] }
 
-/-- A page of the site as its HTML, with the site's key index (`keyIndex`, computed once). The page
-passes the checks across a whole document of `lean4-whatwg` (its answer to ask W2): each `id`
-well formed and distinct, each fragment link and reference naming an `id`, one `main`, no heading
-level skipped. -/
-def Site.html (s : Site) (ix : Std.HashMap (String × String) (List String × Bool)) (p : Page) :
-    Except String String := do
-  let tree := (render (s.shell p) p.doc.title (← blocks (target ix p) p.doc)).toRaw
-  let errors := Content.Document.errors tree
-  unless errors.isEmpty do throw ("; ".intercalate (errors.map fun e => e.describe))
-  return Print.renderDoc tree
+/-- A page of the site as the tree a browser gets, with the site's key index (`keyIndex`, computed
+once). -/
+def Site.tree (s : Site) (ix : Std.HashMap (String × String) (List String × Bool)) (p : Page) :
+    Except String RawNode := do
+  return (render (s.shell p) p.doc.title (← blocks (target ix p) p.doc)).toRaw
+
+/-- **The site as `lean4-whatwg` reads it**: every page's tree at its folders, and the site's other
+files, each page's Markdown twin and document among them. -/
+def Site.content (s : Site) : Except String Content.Site := do
+  let ix := keyIndex s
+  let pages ← s.pages.mapM fun p => do
+    let tree ← (s.tree ix p).mapError (s!"/{folders p.path}: " ++ ·)
+    return ({ path := p.path, tree } : Content.Site.Page)
+  let twins := s.pages.flatMap fun p => [p.path ++ ["index.md"], p.path ++ ["document.json"]]
+  return { pages, files := s.files.map (·.splitOn "/") ++ twins }
+
+/-- **Every check of the site**: the documents' (`Site.check`), then the package's over the rendered
+trees (`Content.Site.errors`, ask W6). The checked site, or each refusal in words, a path in a page
+named by the elements along it (`Content.Site.trail`). -/
+def Site.checked (s : Site) : Except (List String) Content.Site := do
+  let errors := s.check
+  unless errors.isEmpty do throw errors
+  let c ← s.content.mapError ([·])
+  match Content.Site.errors c with
+  | [] => return c
+  | es => throw (es.map (·.describe (Content.Site.trail c)))
+
+/-- The refusals of `Site.checked`, none for a site that passes. -/
+def Site.problems (s : Site) : List String :=
+  match s.checked with
+  | .ok _ => []
+  | .error es => es
 
 /-- **The contents page**: every page under each section, deeper pages with their parent. -/
 def contents (s : Site) : Document where
@@ -408,22 +392,20 @@ a light preference and print, and the rules that draw a picture's marks in them
 (`Tools.View.Tokens.rules`). -/
 def looksCss (paper : Look) : String := Html.looks {} paper ++ Tokens.rules
 
-/-- Write every page of a checked site into `dir`: its HTML and its document as JSON. -/
+/-- Write every page of the site into `dir` once it passes every check (`Site.checked`): its HTML,
+its Markdown twin and its document as JSON; or return the refusals and write no page. -/
 def Site.write (s : Site) (dir : System.FilePath) : IO (List String) := do
-  let mut errors := s.check
-  unless errors.isEmpty do return errors
-  let ix := keyIndex s
-  for p in s.pages do
-    match s.html ix p with
-    | .error why => errors := errors ++ [s!"/{folders p.path}: {why}"]
-    | .ok html =>
-      let folder := p.path.foldl (· / ·) dir
-      IO.FS.createDirAll folder
-      IO.FS.writeFile (folder / "index.html") html
-      IO.FS.writeFile (folder / "index.md") p.doc.markdown
-      IO.FS.writeFile (folder / "document.json") ((Json.Document.json p.doc).pretty ++ "\n")
+  let c ← match s.checked with
+    | .ok c => pure c
+    | .error es => return es
+  for (p, page) in s.pages.zip c.pages do
+    let folder := p.path.foldl (· / ·) dir
+    IO.FS.createDirAll folder
+    IO.FS.writeFile (folder / "index.html") (Print.renderDoc page.tree)
+    IO.FS.writeFile (folder / "index.md") p.doc.markdown
+    IO.FS.writeFile (folder / "document.json") ((Json.Document.json p.doc).pretty ++ "\n")
   IO.FS.writeFile (dir / "site.json") ((s.json).pretty ++ "\n")
-  return errors
+  return []
 
 /-- Cloudflare Pages' headers: no sniffing, a strict referrer, no script, styles and images from
 the site alone (the looks stand in a file, and a page's only inline part is none), and JSON as
