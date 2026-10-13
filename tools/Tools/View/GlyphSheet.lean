@@ -63,9 +63,9 @@ def Shape.parts : Shape → List RawNode
   | .barLine => [path "M12 2 V22" [("stroke-width", "2")]]
   | .fermata => [path "M4 16 A8 8 0 0 1 20 16", circle "12" "14" "1.5" filled]
   | .caesura => [path "M6 19 L11 5 M13 19 L18 5"]
-  | .panel => [rect "3" "4" "18" "16" [("rx", "1.5")], path "M9 4 V20 M3 9.5 H21 M3 14.5 H21"]
-  | .cells => [rect "2" "8" "20" "8" [("rx", "1")], path "M8.7 8 V16 M15.3 8 V16"]
-  | .slot => [path "M5 7 V17 A2 2 0 0 0 7 19 H17 A2 2 0 0 0 19 17 V7"]
+  | .panel => [path "M3 7 H6 M3 12 H6 M3 17 H6" [("stroke-opacity", "0.55")], path "M10 7 H20 M10 12 H17 M10 17 H19"]
+  | .cells => [path "M4 7 V17" [("stroke-opacity", "0.55")], circle "9" "12" "1.75" filled, circle "14.5" "12" "1.75" filled, circle "20" "12" "1.75" filled]
+  | .slot => [path "M5 14 V18 H19 V14" [("stroke-opacity", "0.55")], circle "12" "11" "2.5" filled]
   | .tag => [path "M3 12 H8 M8 12 L11.5 7 H20 A1 1 0 0 1 21 8 V16 A1 1 0 0 1 20 17 H11.5 Z", circle "13" "12" "1.25" filled]
   | .atom => [path "M9 5 H15 M12 5 V19 M9 19 H15"]
 

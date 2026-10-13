@@ -77,9 +77,9 @@ def Shape.means : Shape → String
   | .barLine => "the bar line across every staff: a host's decision"
   | .fermata => "the fermata 𝄐: a frontier, held live"
   | .caesura => "the caesura //: a halt on malformed code"
-  | .panel => "a record: a panel of named fields, each drawn by its type"
-  | .cells => "a list or a tuple: a row of cells, the first at the left"
-  | .slot => "an option: a cup that holds a value or stands empty"
+  | .panel => "a record: a system of rows, the names once in a muted column at the left"
+  | .cells => "a list or a tuple: a lane read from its front, the elements left to right"
+  | .slot => "an option: a low shelf that holds a value or stands empty"
   | .tag => "a handle into the machine's stores: its numeral on a tag"
   | .atom => "a value written as its literal: a number, a string, a truth value"
 

@@ -43,5 +43,5 @@ def main (args : List String) : IO UInt32 := do
   let out : System.FilePath := out
   IO.FS.createDirAll out
   let a ← page out "glyphs.html" "The vocabulary of marks" sheetBlocks contactCss
-  let b ← page out "cells.html" "The Queue's cell, drawn by its type" CellSheet.blocks ""
+  let b ← page out "cells.html" "The Queue's cell, drawn by its type" CellSheet.blocks CellSheet.css
   return max a b

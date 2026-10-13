@@ -12,7 +12,7 @@ own type states (`Data.take`, `Data.offer`: a `Step Γ t` answers `t`), and the 
 (`cellTy`). Nothing on the page is drawn by hand: a value's picture is `Cell.draw` at its type.
 
 A request's identity and its hint are deferreds: request `n` is the deferred `n`, and its hint
-the deferred `100 + n`. The scene is the tool's for now. The module's own view file
+the deferred `10 + n`. The scene is the tool's for now. The module's own view file
 (`Library/Queue/View.lean`, row 367, point 5) takes it with the roles of VS-3.
 -/
 
@@ -44,7 +44,7 @@ cell. -/
 def requests : List Nat := List.range' 1 9
 def names : List String := requests.flatMap (fun n => [s!"i{n}", s!"h{n}"]) ++ ["cell"]
 def values (cell : Val) : List Val :=
-  requests.flatMap (fun n => [Value.promise n, Value.promise (100 + n)]) ++ [cell]
+  requests.flatMap (fun n => [Value.promise n, Value.promise (10 + n)]) ++ [cell]
 
 /-- A term's value with the cell bound. -/
 def evalAt (cell : Val) (src : TermSrc) : Option Val :=
@@ -86,10 +86,19 @@ def svg (f : Fig) : RawNode :=
 private def el (tag : String) (children : List RawNode) (attrs : List (String × String) := []) : RawNode :=
   .element tag attrs children
 
-/-- **The page's blocks**: what the page shows, then a table with a row per frame: the step, its
-answer at its type, and the cell after it. -/
+/-- Every picture of the scene: each answer at its type and each cell at the cell's type. -/
+def pictures (fs : List Frame) : List Fig :=
+  fs.flatMap fun f => (f.answer.map fun (t, v) => draw t v).toList ++ [draw (Queue.cellTy A) f.cell]
+
+/-- The page's rule for the pictures' names: muted and small (rule 3 of the composition grammar).
+The label face's tone belongs in the look, for the player in C too; until then the page says it. -/
+def css : String := ".e4-face-label { fill-opacity: 0.55; font-size: 12px; }\n"
+
+/-- **The page's blocks**: what the page shows, the verdict of the composition grammar over every
+picture, then a table with a row per frame: the step, its answer at its type, and the cell after
+it. -/
 def blocks : List RawNode :=
-  let intro := el "p" [.text s!"The Queue at capacity {capacity}, step by step. Each step is the Queue's own step term, evaluated by the machine's term evaluator on the cell the step before left. The answer is drawn at the type the step states, and the cell at the cell's type: a record is a panel of its fields, a list a row of cells with the first at the left, an option a cup, a request's identity or hint the hollow dot of its deferred."]
+  let intro := el "p" [.text s!"The Queue at capacity {capacity}, step by step. Each step is the Queue's own step term, evaluated by the machine's term evaluator on the cell the step before left. The answer is drawn at the type the step states, and the cell at the cell's type: a record is a system of rows with its names once at the left; a list is a lane read from its front, the thin tick; a list of records sets each element in a column; an option is a low shelf; a request's identity or hint is the hollow dot of its deferred."]
   match frames with
   | .error why => [intro, el "p" [.text ("The scene stops: " ++ why)]]
   | .ok fs =>
@@ -97,7 +106,11 @@ def blocks : List RawNode :=
       el "tr" [el "td" [.text f.words],
         el "td" (match f.answer with | some (t, v) => [svg (draw t v)] | none => []),
         el "td" [svg (draw (Queue.cellTy A) f.cell)]]
-    [intro,
+    let faults := (pictures fs).flatMap Cell.problems
+    let verdict := if faults.isEmpty then
+        "Every picture keeps the composition grammar: each text on the row grid, and no container drawn by a frame."
+      else "The composition grammar refuses: " ++ "; ".intercalate faults ++ "."
+    [intro, el "p" [.text verdict],
      el "div" [el "table" [
          el "thead" [el "tr" (["Step", "Answer", "Cell after"].map fun h => el "th" [.text h] [("scope", "col")])],
          el "tbody" (fs.map row)]]
