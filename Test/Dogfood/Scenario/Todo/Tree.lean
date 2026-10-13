@@ -14,9 +14,11 @@ Each statement here is a step of a claim of `Test/Dogfood/Scenario/Todo/Claims.l
 it on a run through a theorem of the session's meaning.
 
 * **A built entry is its elaboration** (`builtAt_program`): a build retains its elaboration
-  (`Effect4.Api.Author.build_retains`), and the kernel elaborates each entry at a free argument
-  (`kernel_rfl`, as `Test/Dogfood/Proofs/HostRouting.lean` does for the routing request). An entry
-  at its argument is its open program under one bind of the argument.
+  (`Effect4.Api.Author.build_retains`), and each entry elaborates at a free argument by
+  computation. `aesop` closes each such equation that it reaches from its statement (decisions row
+  376 (3); `#auto_census`), and `kernel_rfl` the others, as `Test/Dogfood/Proofs/HostRouting.lean`
+  does for the routing request. An entry at its argument is its open program under one bind of
+  the argument.
 * **The fragment.** Each program is in `StraightRows`, has no cause handler, calls only external
   rows, over a table whose reply columns are closed: the premises of `held_in_tree` and of H8
   and H9.
@@ -100,7 +102,7 @@ theorem builtAt_program {name : String} {args : List TermSrc} {b : Api.Built} {p
 theorem add_elaborates (title : String) :
     (application.entry? "add").map (fun e => elaborateModule (application.moduleOf e [str title])) =
       some (.ok (addAt title)) := by
-  kernel_rfl
+  aesop
 
 /-- The kernel elaborates `complete` at a free id. A step of the three claims of `complete`. -/
 theorem complete_elaborates (id : Nat) :
@@ -113,37 +115,35 @@ theorem complete_elaborates (id : Nat) :
 theorem list_elaborates :
     (application.entry? "list").map (fun e => elaborateModule (application.moduleOf e [])) =
       some (.ok listAt) := by
-  kernel_rfl
+  aesop
 
 /-! ## 2. The fragment -/
 
 /-- `add` is in the row fragment at every title. A step of `add_empty_calls_nothing` and
 `list_after_add`. -/
 theorem add_straight (title : String) : StraightRows application.table (addAt title) = true := by
-  kernel_rfl
+  aesop
 
 /-- `complete` is in the row fragment at every id. A step of the three claims of `complete`. -/
 theorem complete_straight (id : Nat) :
     StraightRows application.table (completeAt id) = true := by
-  kernel_rfl
+  aesop
 
 /-- `list` is in the row fragment. A step of `list_after_add`. -/
 theorem list_straight : StraightRows application.table listAt = true := by
-  kernel_rfl
+  aesop
 
 /-- `add` has no cause handler at any title. A step of `add_empty_calls_nothing`. -/
 theorem add_noCause (title : String) : NoCauseHandler (addAt title) = true := by
-  kernel_rfl
+  aesop
 
 /-- `add` calls only external rows at any title. A step of `add_empty_calls_nothing`. -/
 theorem add_externalOnly (title : String) : SourceScope.ExternalOnly (addAt title) := by
-  unfold SourceScope.ExternalOnly
-  kernel_rfl
+  aesop
 
 /-- The repository's reply columns are closed. A step of `add_empty_calls_nothing`. -/
 theorem table_concrete : SourceScope.ConcreteReplies application.table := by
-  unfold SourceScope.ConcreteReplies
-  kernel_rfl
+  aesop
 
 /-! ## 3. The tree forms -/
 
@@ -153,21 +153,20 @@ def emptyTitleExit : ExitV := .failure (Cause.fail (.tagged "EmptyTitle" "a titl
 /-- **`add` at the empty title is one leaf**: its tree makes no call. The tree form of
 `add_empty_calls_nothing`. -/
 theorem add_empty_tree : denoteRows application.table (addAt "") [] = .pure emptyTitleExit := by
-  kernel_rfl
+  aesop
 
 /-- Under any tape, the tree of `add` at the empty title finishes at its leaf and waits at no
 call. A step of `add_empty_calls_nothing`. -/
 theorem add_empty_waits_nothing (T : ReplyTape) :
     treeWaits application.table (addAt "") T = .finished emptyTitleExit := by
-  rw [treeWaits_eq, add_empty_tree]
-  rfl
+  aesop
 
 /-- **A failing answer of `complete`'s one call is its exit**, under the reply tape, at every id
 and every cause, with the rest of the tape unread. The tree form of `complete_failure_escapes`. -/
 theorem complete_failure_meaning (id : Nat) (cause : CauseV) (rest : ReplyTape) :
     meaningRows application.table (completeAt id) [] Stores.empty (.failure cause :: rest) =
       some ((.failure cause, Stores.empty), rest) := by
-  kernel_rfl
+  aesop
 
 /-- The part of `complete`'s open program after its one call: the selection on the answer. -/
 def completeSel : NativeEff :=
@@ -181,7 +180,7 @@ theorem complete_tree (id : Nat) :
     denoteRows application.table (completeAt id) [] =
       .vis (.inr ⟨⟨2, by decide⟩, .list [.nat id, .bool true]⟩)
         (fun a => seqRows (fun v => denoteRows application.table completeSel [.nat id, v]) a) := by
-  kernel_rfl
+  aesop
 
 /-- The postcondition of `complete` under `setDone`'s protocol: a successful exit keeps the
 promise at the request `(id, true)`. -/
@@ -216,7 +215,7 @@ theorem complete_sat (id : Nat) :
 theorem list_on_model (st : Repo) :
     hostRun (reactorHost application.table repository) listAt [] Stores.empty st =
       some (.success (.list (st.2.map todoOf)), (Stores.empty, st)) := by
-  kernel_rfl
+  aesop
 
 /-- The test of `add`'s open program: the title against the empty one. -/
 def addTest : Term :=
@@ -240,7 +239,7 @@ def addElse : NativeEff :=
 `add_tree`. -/
 theorem add_test (title : String) :
     evalTerm [.str title] addTest = some (.bool (title == "")) := by
-  kernel_rfl
+  aesop
 
 /-- **`add` at a title that is not empty calls `insert` with the title**, and its exit is the
 answer. A step of `add_on_model`. -/
@@ -306,7 +305,7 @@ def setDoneRow : Row := (application.table[2]'(by decide)).normalizeTypes
 /-- The table registers `setDone` at position 2. A step of the trees of `complete` under the
 model. -/
 theorem setDone_row : externalRow application.table 2 = some setDoneRow := by
-  kernel_rfl
+  aesop
 
 /-- The model's answer to `setDone` at `(id, true)`, by what it finds at the id. A step of the
 trees of `complete` under the model. -/
@@ -326,12 +325,12 @@ def notFoundExit (id : Nat) : ExitV :=
 /-- At an answer `none`, the tree of `complete` is the missing to-do's failure. -/
 theorem complete_none (id : Nat) :
     denoteRows application.table completeSel [.nat id, .none] = .pure (notFoundExit id) := by
-  kernel_rfl
+  aesop
 
 /-- At an answer `some v`, the tree of `complete` succeeds with `v`. -/
 theorem complete_some (id : Nat) (v : Val) :
     denoteRows application.table completeSel [.nat id, .some v] = .pure (.success v) := by
-  kernel_rfl
+  aesop
 
 /-- **`complete` under the model, where the id is stored**: it answers the to-do marked done, and
 the model marks it. A step of `complete_idempotent`. -/
