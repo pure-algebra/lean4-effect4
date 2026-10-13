@@ -1,5 +1,7 @@
 import Tools.View.Tube.Glyphs
 import Tools.View.Decision
+import Tools.View.Tube.Board
+import Tools.View.Tube.Board.Film
 
 /-!
 # Tools.View.Tube.Score — a run as a score: a staff for each fiber, its events in trace order
@@ -20,8 +22,8 @@ machine's trace orders what happens inside each beat. Each event the score shows
   and a heavy one, the unit before them;
 - **a beat** is a tick above the score after its last column, one for each control decision.
 
-Within a beat, each change starts in the order of its event (`STEP` of the beat apart), so cause
-comes before effect as the trace records it.
+The fixed staff geometry draws once. Contents change at recorded control boundaries.
+Columns retain event order, but this film assigns no timing inside a control.
 
 **Simplifications** (row 371 (3)): a dispatcher's tasks, an observer's delivery of an exit, a
 frame's push and pop, and a later turn of a running fiber take no column. A failure's exit draws
@@ -77,16 +79,18 @@ def record (program : NativeEff) (most : Nat := 40) : Option Record :=
   match Api.Author.Internal.finishBuild program [] [] with
   | .error _ => none
   | .ok built =>
-    let rec go (left seen : Nat) (s : Effect4.Run) (acc : List (List Note) × List String) :
+    let observed (s : Effect4.Run) (_ : Unit) (next : Effect4.Run) : List (List Note) :=
+      [(next.machine.trace.drop s.machine.trace.length).filterMap noteOf]
+    let rec go (left : Nat) (s : Effect4.Run) (acc : List (List Note) × List String) :
         List (List Note) × List String :=
       match left, s.nextControl with
       | k + 1, some d =>
-        let s' := s.controlOnce
-        go k s'.machine.trace.length s'
-          (acc.1 ++ [(s'.machine.trace.drop seen).filterMap noteOf], acc.2 ++ [Run.decisionText d])
+        let (s', notes) := Board.fold (fun run _ => run.controlOnce)
+          observed (· ++ ·) (s, acc.1) [()]
+        go k s' (notes, acc.2 ++ [Run.decisionText d])
       | _, _ => acc
     let s0 := Effect4.Run.open built "score"
-    let (per, verbs) := go most s0.machine.trace.length s0 ([], [])
+    let (per, verbs) := go most s0 ([], [])
     -- first starts are judged over the whole run, then counted back into their beats
     let all := per.flatten
     let kept := firstStarts all
@@ -107,8 +111,6 @@ def Y0 : Nat := 40
 /-- How far a staff reaches past its last column, and where a tick stands above the score. -/
 def TAIL : Nat := 12
 def TICK_Y : Nat := 8
-/-- The thousandths of a beat between two changes of one beat. -/
-def STEP : Nat := 110
 
 /-- A column's abscissa, thousandths of a pixel. -/
 def xAt (c : Nat) : Int := px (X0 + c * COL)
@@ -181,16 +183,9 @@ def alongAt (t : Tube) (x : Int) : Int :=
   let ((ex, _), _) := t.at t.length
   (t.length : Int) - (ex - x)
 
-/-- A mark that enters at the `j`-th change of its beat. -/
-def at_ (j : Nat) (m : Mark) : Mark :=
-  let d := min (j * STEP) 800
-  { m with move := { m.move with delay := d, duration := 1000 - d } }
-
-/-- **The score after the first `n` notes**, the notes before `fresh` drawn at rest and the rest
-entering in order. -/
-def picture (ns : List Note) (n fresh : Nat) : List Mark :=
+/-- The score after its first `n` notes, using the recorded event columns. -/
+def picture (ns : List Note) (n : Nat) : List Mark :=
   let shown := ns.take n
-  let late (c : Nat) : Nat := if c < fresh then 0 else c - fresh
   let now := n - 1
   (rows shown).flatMap fun f =>
     let born := (lastCol shown fun | .fork _ c => c == f | _ => false)
@@ -209,8 +204,8 @@ def picture (ns : List Note) (n fresh : Nat) : List Mark :=
     let t := staffTube (parent.map (rowOf ns)) (some row) (born.getD first) xEnd
     let level := match parent with | some p => if row > rowOf ns p + 1 then 1 else 0 | none => 0
     let cuts := (over.filter fun x => x + ((CHORD / 2 + GAP + half PIPE : Nat) : Int) < xEnd).zipIdx.map fun (x, k) =>
-      at_ 0 (cutOf s!"c{f}-{k}" t (alongAt t x) CHORD)
-    let staff := (bodyOf s!"s{f}" t (level := level)).map (at_ 0) ++ cuts
+      cutOf s!"c{f}-{k}" t (alongAt t x) CHORD
+    let staff := bodyOf s!"s{f}" t (level := level) ++ cuts
     -- the unit: from the first turn, at the column of the fiber's latest event
     let started := lastCol shown fun | .start g => g == f | _ => false
     let latest := lastCol shown fun | .fork _ _ => false | n => n.fiber == f
@@ -221,15 +216,15 @@ def picture (ns : List Note) (n fresh : Nat) : List Mark :=
         let x := if exitAt.isSome then xAt c - px COL / 2 else xAt c
         let mid := alongAt t x
         (if parked then hollowAt s!"u{f}" s!"u{f}h" t mid else [unitAt s!"u{f}" t mid]).map fun m =>
-          at_ (late c) { m with level }
+          { m with level }
       | _, _ => []
     -- the exit: a thin strut and a heavy one, the staff an air gap short of them
     let bars : List Mark := match exitAt with
-      | some c =>
+      | some _ =>
         let xb := xEnd + (apart PIPE THIN : Nat)
         let y := yAt (rowOf ns f)
         let strut (k : String) (x : Int) (bore : Nat) : List Mark :=
-          (bodyOf k (tube x (y - px 16) S bore [run 32])).map fun m => at_ (late c) { m with fill := .ink }
+          (bodyOf k (tube x (y - px 16) S bore [run 32])).map fun m => { m with fill := .ink }
         strut s!"x{f}" xb THIN ++ strut s!"y{f}" (xb + (apart THIN PIPE : Nat)) PIPE
       | none => []
     staff ++ unit ++ bars
@@ -242,16 +237,36 @@ def ticks (beats : List Nat) (done : Nat) : List Mark :=
     (bodyOf s!"t{k}" (tube (xAt (upto - 1) + px COL / 2) (px TICK_Y) S THIN [run 12])).map fun m =>
       { m with fill := .ink }
 
-/-- **The score's pictures**, one a beat: before any control, then after each beat's notes. -/
-def pictures (r : Record) : List Picture :=
+/-- Each recorded control boundary's note count, including the initial boundary. -/
+def boundaries (r : Record) : List Nat :=
   let ends := (r.beats.foldl (fun (acc : Nat × List Nat) b => (acc.1 + b, acc.2 ++ [acc.1 + b])) (0, [])).2
-  let starts := 0 :: ends
-  complete ((starts.zip (0 :: starts)).zipIdx.map fun ((n, before), k) =>
-    picture r.notes n before ++ ticks r.beats k)
+  0 :: ends
 
 /-- The score's size, in pixels. -/
 def size (r : Record) : Nat × Nat :=
   (X0 + r.notes.length * COL + 2 * TAIL + 24, Y0 + (rows r.notes).length * ROW)
+
+/-- The score's markings on its final staff geometry, one per checked control boundary. -/
+def markings (r : Record) : List (List Mark) :=
+  let final := picture r.notes r.notes.length
+  (boundaries r).zipIdx.map fun (n, k) =>
+    (picture r.notes n).map (fun m =>
+      if m.layer < CONTENTS then (Board.atKey final m.key).getD m else
+      let fiber := (rows r.notes).find? fun f => m.key == s!"u{f}" || m.key == s!"u{f}h"
+      match fiber.bind (fun f => Board.atKey final s!"s{f}:wall") with
+      | some staff => { m with tube := staff.tube }
+      | none => m) ++ ticks r.beats k
+
+/-- The score film writes no path samples while its final staffs stay fixed. -/
+def film (id : String) (r : Record) (beat : Nat := 1000) :
+    Except String Whatwg.Html.SvgNode :=
+  let (W, H) := size r
+  Board.film id W H (markings r) beat
+
+/-- The last score marking for reduced motion. -/
+def endStill (r : Record) : Whatwg.Html.SvgNode :=
+  let (W, H) := size r
+  Tools.View.Tube.still W H ((markings r).getLastD [])
 
 /-! ## Two programs -/
 
@@ -272,7 +287,15 @@ def twoChildren : NativeEff :=
   some ([.start 0, .fork 0 1, .park 0, .start 1, .park 1, .resume 1, .exit 1 true, .resume 0, .exit 0 true], [3, 6])
 #guard (record twoChildren).isSome
 -- every staff and strut of every picture keeps the bend law, and no picture repeats a key
-#guard ((record twoChildren).map pictures).all fun ps => ps.all fun p =>
-  p.marks.all (fun m => m.tube.pieces.all fun q => decide q.ok) && (p.marks.map (·.key)).eraseDups.length == p.marks.length
+#guard ((record twoChildren).map markings).all fun ps => ps.all fun ms =>
+  ms.all (fun m => m.tube.pieces.all fun q => decide q.ok) &&
+    (ms.map (·.key)).eraseDups.length == ms.length
+
+-- A parked fiber has a hollow channel; each repeated key keeps its final centreline.
+#guard (record twoChildren).all fun r =>
+  let all := (markings r).flatten
+  all.any (·.layer == HOLLOWS) && all.all fun m => all.all fun n =>
+    m.key != n.key || (m.tube == n.tube && m.fill == n.fill &&
+      (m.fill == .stroke || m.dash == n.dash))
 
 end Tools.View.Tube.Score
