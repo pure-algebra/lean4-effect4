@@ -301,14 +301,18 @@ A program has folds, a journaled run with replay, and a printed image that reads
    fixtures of the truth lane move to the keyed lane (row 343 (8), signed until then). Seat FC's
    rulings land too (row 345 (2): `tools/Tools/Graph` at height 0; the generator's children
    induction).
-0. **The host session's line** (row 373 (1); seat BACKLOG's
-   [deep dive](research/2026-10-13-backlog-deep-dive/README.md)). In order:
-   - the `Live` face, slices DM1 to DM4 of the
-     [session note](research/2026-10-07-session-api-design.md), with seat LIVE's
-     [brief](research/2026-10-13-seat-live-brief.md);
-   - a definition block in the meaning, PROC-5 (row 328);
+0. **The authoring line** (row 373 (1); the
+   [obligations note](research/2026-10-13-authoring-obligations/README.md) orders the rest). The
+   `Live` face landed: `Live.open`, `Live.start`, `Live.feed` and `Live.view`, with
+   `view_funded` (seat LIVE's [receipt](research/2026-10-13-seat-live-receipt.md); DM6 and DM7
+   remain). In order:
+   - a definition block in the meaning, PROC-5 (row 328; the
+     [probe](research/2026-10-13-proc5-probe/README.md));
    - one checked replay route: `Typed.replay` replays the session's journal, checked at each
-     call's instance (rows 98 and 373 (8));
+     call's instance (rows 98 and 373 (8); seat REPLAY's
+     [brief](research/2026-10-13-seat-replay-brief.md));
+   - the application and claim records (row 336 (9); seat CLAIMS's
+     [brief](research/2026-10-13-seat-claims-brief.md));
    - generics and Pool's service, HO-4 and HO-5
      ([the plan](research/2026-10-09-program-parameters.md), row 340).
 
