@@ -151,16 +151,17 @@ def layerSigOf (sig : Signature Op) (defs : List DefDecl) (t : List Nat) : Signa
   | none => sig.withDefs defs
 
 /-- The pieces of a hoisted program with a definition block are readable at the block's
-signature: each declaration (`DefDecl.readable`), each body at environment length `1` at the
-signature its parameters extend (slice HO-3), the main program, each module layer (decisions row
-341, step 2) and each hoisted layer, a body's own at its body's signature (step 3,
-`layerSigOf`), and the layers' declared names decode. -/
+signature: each declaration under the module's payload classes (`DefDecl.readable`: a column
+that names a class reads as the class's record, and the requirement row reads back), each body at
+environment length `1` at the signature its parameters extend (slice HO-3), the main program,
+each module layer (decisions row 341, step 2) and each hoisted layer, a body's own at its body's
+signature (step 3, `layerSigOf`), and the layers' declared names decode. -/
 def blockReadable (classes : Classes) (sig : Signature Op) (root : Eff Op) : Bool :=
   match root.hoistAll with
   | .ok (main, history) =>
     match main.block? with
     | some (defs, bodies, body, layers) =>
-      defs.all DefDecl.readable &&
+      defs.all (DefDecl.readable classes) &&
         (defs.zip bodies.toList).all (fun p =>
           Readable classes ((sig.withDefs defs).withParams p.1.params) 1 p.2) &&
         Readable classes (sig.withDefs defs) 0 body &&
@@ -178,7 +179,7 @@ def blockReadable (classes : Classes) (sig : Signature Op) (root : Eff Op) : Boo
 theorem blockReadable_pieces {sig : Signature Op} {root : Eff Op}
     (hr : blockReadable classes sig root = true) :
     ∃ main history defs bodies body layers, root.hoistAll = .ok (main, history) ∧
-      main.block? = some (defs, bodies, body, layers) ∧ (∀ d ∈ defs, d.readable = true) ∧
+      main.block? = some (defs, bodies, body, layers) ∧ (∀ d ∈ defs, d.readable classes = true) ∧
       (∀ p ∈ defs.zip bodies.toList,
         Readable classes ((sig.withDefs defs).withParams p.1.params) 1 p.2 = true) ∧
       Readable classes (sig.withDefs defs) 0 body = true ∧

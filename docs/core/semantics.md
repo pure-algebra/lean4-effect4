@@ -855,8 +855,11 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   as an arrow of the binder due at the call (`printInvoke`, slice HO-3b).
   It reads back under the block's laws of invocations (`LawfulInvokes`): a name spells its
   definition, and no row of the domain carries the name of a definition that takes programs.
-  The statement fixes declarations with readable columns, an empty requirement row and names
+  The statement fixes declarations with readable columns, a canonical requirement row and names
   with no layer path (`DefDecl.readable`).
+  A header reads its columns under the module's payload classes (`readDefHead`).
+  So a column that names a class reads as the class's record.
+  The header's requirement row reads back by the requirement reader (`readKeys`).
   The block's module layers print after the services, as constants named by their paths
   (`printModuleLayers`), and a reference to one prints as that name.
   Each body reads back at the signature its parameters extend, through the spelling map its
@@ -881,7 +884,6 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   (`Eff.inScope`).
   The application face refuses an invocation whose programs need a service, at its path
   (`PrintRefusal.callbackRequirement`): the printed header closes a parameter's row as `never`.
-  A requirement row other than `never` is printed and not read.
   It establishes nothing that tsgo accepts and nothing of a run of the printed module.
   The truth lane runs the block programs on the pin, a finite check (`make check-truth`).
   Three counted programs compare the builds of a body's own layer with rc.112: two calls build

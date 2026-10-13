@@ -398,17 +398,47 @@ def serviceCallback : NativeEff :=
 -- a callback that needs nothing prints (`invokeProg`)
 #guard (Api.printModule "main" Test.Program.InvokeControls.invokeProg).isSome
 
-/-! ## Controls: what the reader refuses -/
+/-! ## A header's requirement row (decisions row 378 (20))
+
+A definition that requires a service prints its row as the header's `R`, and the header reader
+reads it back (`readDefHead`, by `readKeys`): an application's initial program requires the keys
+of its rows. -/
 
 /-- `twice` declaring a service it does not need. -/
 def withService : NativeEff :=
   .defs [{ twiceDecl with requires := [⟨⟨1⟩, ⟨1⟩⟩] }]
     (.cons (.succeed (ap "pair" [.var 0, .var 0])) .nil) (.perform (.call 0) (.lit (.nat 21))) .nil
 
--- a requirement row other than `never` is printed and not read: the declaration is outside the
--- readable domain, and the reader refuses its header by name
-#guard !(withService.defsOf.all DefDecl.readable)
-#guard (Api.printModule "main" withService).isSome
-#guard (Api.printModule "main" withService).map Api.readModule = some (.error (.shape "definition"))
+-- reader: the declaration's row is canonical, so it is in the readable domain, and the module
+-- reads back to the program with the row
+#guard withService.defsOf.all (DefDecl.readable [])
+#guard blockReadable [] (nativeSignature []) withService
+#guard (Api.printModule "main" withService).map (fun m =>
+  decide (Api.readModule m [] = .ok withService)) = some true
+
+/-- `withService`'s header, its requirement row replaced by a printed type. -/
+def headerWith (requires : TypeScript.TypeRef) : Option TypeScript.ConstDecl :=
+  (Api.printModule "main" withService).bind fun m => m.decls.head?.bind fun
+    | .const c => match c.value with
+      | .lambda ps body (some (.name ["Effect", "Effect"] [answer, error, _])) =>
+        some { c with value := .lambda ps body (some (.name ["Effect", "Effect"]
+          [answer, error, requires])) }
+      | _ => none
+    | _ => none
+
+-- reader: the header's printed row reads back as the row
+#guard (headerWith (.literal "k1_1")).map (fun c =>
+  match readDefHead (nativeSignature []) [] c with
+  | .ok (d, _) => d.requires == [⟨⟨1⟩, ⟨1⟩⟩]
+  | .error _ => false) = some true
+-- control: a row of two keys out of their order reads, and prints back in order, so the header
+-- reader refuses it; a literal that is no key's text decodes to a key that prints otherwise
+#guard (headerWith (.union [.literal "k2_1", .literal "k1_1"])).map (fun c =>
+  readDefHead (nativeSignature []) [] c matches .error (.shape "definition")) = some true
+#guard (headerWith (.literal "x")).map (fun c =>
+  readDefHead (nativeSignature []) [] c matches .error (.shape "definition")) = some true
+-- control: a declaration whose row is not canonical (a key twice) prints the key once, so it is
+-- outside the readable domain
+#guard !DefDecl.readable [] { twiceDecl with requires := [⟨⟨1⟩, ⟨1⟩⟩, ⟨⟨1⟩, ⟨1⟩⟩] }
 
 end Test.Codegen.DefinitionsPrint

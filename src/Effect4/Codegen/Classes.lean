@@ -102,12 +102,16 @@ theorem readClass_size (e : Expr) (tag : String) (names : List String) (values :
 
 /-! ## The field-type reader -/
 
-/-- A named type at its arguments' readings, at one choice per spelling: `number` reads as `nat`,
-and `Readonly<Record<string, V>>` as a map. A class name reads as nothing: a class's field naming
-another class has no reading here. `never` reads as the empty type (the state plan's T5, part B):
-the error column of `Deferred.make<A, never>()` is spelled so. A handle's name (`Ref.Ref<A>`,
-`Deferred.Deferred<A, E>`) and `unknown` read as nothing. -/
-def readNamed : List String → List Ty → Option Ty
+/-- A named type at its arguments' readings, under the module's payload classes, at one choice
+per spelling: `number` reads as `nat`, and `Readonly<Record<string, V>>` as a map. A class name
+reads as the payload record that its declaration declares (`classes`, tag ↦ fields; decisions row
+120), so the error column `readonly ["SqlError", string] | NotFound` reads as a union that holds
+the record of `NotFound`. Under no class a class name reads as nothing: the class reader reads a
+class's fields under none, so a class's field naming another class has no reading. `never` reads
+as the empty type (the state plan's T5, part B): the error column of `Deferred.make<A, never>()`
+is spelled so. A handle's name (`Ref.Ref<A>`, `Deferred.Deferred<A, E>`) and `unknown` read as
+nothing. -/
+def readNamed (classes : Classes) : List String → List Ty → Option Ty
   | ["number"], [] => some .nat
   | ["string"], [] => some .string
   | ["boolean"], [] => some .bool
@@ -121,77 +125,82 @@ def readNamed : List String → List Ty → Option Ty
   | ["Result", "Result"], [v, e] => some (.except e v)
   | ["Record"], [.string, v] => some (.map .string v)
   | ["Readonly"], [.map k v] => some (.map k v)
+  | [tag], [] => (classes.lookup tag).map .record
   | _, _ => none
 
 mutual
-  /-- A payload field's type from its printed spelling (`Types.ofTy`'s image): `Context.Context<R>`
-  as the context of its row (decisions row 349), any other name through `readNamed`, a literal,
-  `readonly [A, B]` as a product and any other readonly tuple as a tuple, an object as a record, a
-  union as the right-nested union of its members. The reader is permissive; the class reader
-  accepts a reading only when printing it gives the spelling back. -/
-  def readTy : TypeRef → Option Ty
+  /-- A type from its printed spelling (`Types.ofTy`'s image), under the module's payload classes:
+  `Context.Context<R>` as the context of its row (decisions row 349), any other name through
+  `readNamed`, a literal, `readonly [A, B]` as a product and any other readonly tuple as a tuple,
+  an object as a record, a union as the right-nested union of its members. The reader is
+  permissive; the checked reader and the class reader accept a reading only when printing it gives
+  the spelling back. -/
+  def readTy (classes : Classes) : TypeRef → Option Ty
     | .name ["Context", "Context"] [row] => (readRequirement nativeScopeKey row).map .contextOf
     | .name qualified args => do
-      let xs ← readTys args
-      readNamed qualified xs
+      let xs ← readTys classes args
+      readNamed classes qualified xs
     | .literal value => some (.lit value)
     | .tuple items readonly => do
-      let xs ← readTys items
+      let xs ← readTys classes items
       if readonly then
         match xs with
         | [x, y] => some (.prod x y)
         | _ => some (.tuple xs)
       else none
-    | .union members => (readTys members).map Ty.ofMembers
-    | .object fields => (readFieldTys fields).map .record
+    | .union members => (readTys classes members).map Ty.ofMembers
+    | .object fields => (readFieldTys classes fields).map .record
     | .function _ _ => none
   termination_by structural t => t
 
   /-- The items of a tuple or a union, in order. -/
-  def readTys : List TypeRef → Option (List Ty)
+  def readTys (classes : Classes) : List TypeRef → Option (List Ty)
     | [] => some []
     | t :: ts => do
-      let x ← readTy t
-      let xs ← readTys ts
+      let x ← readTy classes t
+      let xs ← readTys classes ts
       some (x :: xs)
   termination_by structural ts => ts
 
   /-- An object type's fields, in order. -/
-  def readFieldTys : List TypeRef.Field → Option (List (String × Bool × Ty))
+  def readFieldTys (classes : Classes) : List TypeRef.Field → Option (List (String × Bool × Ty))
     | [] => some []
     | f :: fs => do
-      let x ← readFieldTy f
-      let xs ← readFieldTys fs
+      let x ← readFieldTy classes f
+      let xs ← readFieldTys classes fs
       some (x :: xs)
   termination_by structural fs => fs
 
   /-- One readonly field: its name, its optional flag and its type. -/
-  def readFieldTy : TypeRef.Field → Option (String × Bool × Ty)
+  def readFieldTy (classes : Classes) : TypeRef.Field → Option (String × Bool × Ty)
     | ⟨name, readonly, optional, type⟩ => do
-      let x ← readTy type
+      let x ← readTy classes type
       if readonly then some (name, optional, x) else none
   termination_by structural f => f
 end
 
 /-! ## The checked type reader
 
-One reader for the places where the faces print a program type (the state plan's T5, part B).
-Two of the three read their type back, and only through this reader: the type arguments an
-operation carries on its call's head (`Deferred.make<A, E>()`, `installTypeArgs`,
-`Codegen/Read.lean`), and a loop's stated cursor type (`readLeaf`). The third, a list fold's
-stated accumulator type, is printed and not read yet. The class reader below checks a whole
-declaration by the same re-print. -/
+One reader for the places where the faces print a program type (the state plan's T5, part B),
+under a reading environment of payload classes. The expression reader reads its types under no
+class: the type arguments an operation carries on its call's head (`Deferred.make<A, E>()`,
+`installTypeArgs`, `Codegen/Read.lean`), and a loop's stated cursor type (`readLeaf`). A list
+fold's stated accumulator type is printed and not read yet. A definition's header reads its
+columns under the module's classes (`readDefHead`, `readParam`), so a column that names a payload
+class reads as the class's record. The class reader below checks a whole declaration by the same
+re-print. -/
 
-/-- **The checked type reader**: a program type from its printed spelling (`readTy`), kept only
-when the type printer prints that type as this spelling (`Types.ofTy`). What it accepts is exact
-by its definition (`readTyChecked_exact`, `Laws/Codegen/Classes.lean`). The check does not make
-the printer injective: two types can share one spelling, and the reader answers one of them
+/-- **The checked type reader** under the module's classes: a program type from its printed
+spelling (`readTy`), kept only when the type printer prints that type as this spelling
+(`Types.ofTy`). What it accepts is exact by its definition, under any classes
+(`readTyChecked_exact`, `Laws/Codegen/Classes.lean`). The check does not make the printer
+injective: two types can share one spelling, and the reader answers one of them
 (`ReadableTy`). -/
-def readTyChecked (x : TypeRef) : Option Ty :=
-  (readTy x).bind fun ty => if Types.ofTy ty = some x then some ty else none
+def readTyChecked (classes : Classes) (x : TypeRef) : Option Ty :=
+  (readTy classes x).bind fun ty => if Types.ofTy ty = some x then some ty else none
 
-/-- **The readable types**: a type that the checked reader answers from its own printed spelling.
-It is the premise of every retraction through `readTyChecked`
+/-- **The readable types** under the module's classes: a type that the checked reader answers
+from its own printed spelling. It is the premise of every retraction through `readTyChecked`
 (`readTyChecked_of_readable`, `Laws/Codegen/Classes.lean`), decided by running the round trip.
 A type is outside it for one of four reasons, and each stays visible here.
 
@@ -202,14 +211,14 @@ A type is outside it for one of four reasons, and each stays visible here.
   members collapse in the target prints as one member.
 * **A spelling with no reading**: `unknown`; `Ref.Ref<A>`, `Deferred.Deferred<A, E>`,
   `Exit.Exit<A, E>`, `Cause.Cause<E>` and `Fiber.Fiber<A, E>`; the scope handle and every other
-  handle; a tagged payload record, which prints as the name of its class.
+  handle; a tagged payload record whose class `classes` does not declare with its fields.
 * **Not the reader's choice for its spelling**: `readonly [A, B]` reads as a product, never as
   a tuple of two items, and a type outside normal form prints as its normal form (a union in
   another order of members, for one).
 
 A type that holds one of these is outside too. -/
-def ReadableTy (ty : Ty) : Bool :=
-  decide ((Types.ofTy ty).bind readTyChecked = some ty)
+def ReadableTy (classes : Classes) (ty : Ty) : Bool :=
+  decide ((Types.ofTy ty).bind (readTyChecked classes) = some ty)
 
 /-- The printed forms of a list of types, in order; `none` when one has no printed form. -/
 def writeTys : List Ty → Option (List TypeRef)
@@ -219,12 +228,13 @@ def writeTys : List Ty → Option (List TypeRef)
     let xs ← writeTys tys
     some (x :: xs)
 
-/-- A list of types from their printed spellings, each through the checked reader. -/
-def readTysChecked : List TypeRef → Option (List Ty)
+/-- A list of types from their printed spellings, each through the checked reader under the
+module's classes. -/
+def readTysChecked (classes : Classes) : List TypeRef → Option (List Ty)
   | [] => some []
   | x :: xs => do
-    let ty ← readTyChecked x
-    let tys ← readTysChecked xs
+    let ty ← readTyChecked classes x
+    let tys ← readTysChecked classes xs
     some (ty :: tys)
 
 /-! ## The class declaration -/
@@ -244,12 +254,13 @@ def classDecl (tag : String) (fields : Fields) : Option ClassDecl :=
       members := [], exported := true }
 
 /-- A class declaration back to its tag and fields: the tag from the heritage call, `_tag` first,
-then the field record through `readTy`. Exactly `classDecl`'s image: the reading is accepted only
-when the declaration is what `classDecl` prints of it. -/
+then the field record through `readTy` under no class, so a field naming another class has no
+reading. Exactly `classDecl`'s image: the reading is accepted only when the declaration is what
+`classDecl` prints of it. -/
 def readClassDecl (c : ClassDecl) : Option (String × Fields) :=
   match c.heritage with
   | some (.generic (.call (.ident head) [.str tag]) [.object fs]) => do
-    let rest ← readFieldTys fs
+    let rest ← readFieldTys [] fs
     let fields := ("_tag", false, .lit tag) :: rest
     if head = "Data.TaggedError" ∧ c.doc = [] ∧ c.name = tag ∧ c.members = [] ∧
         c.exported = true ∧ (classFields? fields).map TypeRef.object = some (.object fs) then

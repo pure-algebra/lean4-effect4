@@ -84,7 +84,7 @@ def queueProgram : Option Api.Program :=
     "NumberQueueLayer", "main"]
 -- control: the Queue's module is outside the readable domain, since its handle, a reference to
 -- the queue's record, is no readable type; so the round trip says nothing of it
-#guard !Effect4.Codegen.Classes.ReadableTy (Queue.handleTy .nat)
+#guard !Effect4.Codegen.Classes.ReadableTy [] (Queue.handleTy .nat)
 #guard queueProgram.map (blockReadable [] (nativeSignature [])) = some false
 
 /-- A semaphore of two permits as a service, used by the main program through its initial
