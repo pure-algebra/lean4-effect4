@@ -1,4 +1,5 @@
 import Effect4.Run.Live
+import Effect4.Run.View
 import Effect4.Laws.Api.SessionRef
 
 /-!
@@ -16,6 +17,10 @@ it.
 * **Starting is the session's start** (`start_error`, `start_ok`): `Live.start` refuses exactly
   where `Api.HostSession.start` refuses, with its reason, and opens the admitted program
   otherwise.
+* **The view projects the waits** (`view_awaits`, slice DM3): the view's calls are the machine's
+  awaited calls, in the machine's order (HC-1's connector to `Await`).
+* **The view names each call's checked instance** (`view_checked`): the instance at the call's
+  address in the run's program, as the checker types it.
 
 What they do not establish: that a run is funded (`embedded-budget-sufficient`, an open part of
 R12), reply admission, the session's ledger, a host's conformance, host progress, or anything of a
@@ -115,5 +120,36 @@ theorem start_ok (program : Api.Program) (table : RowTable) (binding : String) (
         binding) := by
   unfold Live.start
   rw [h]
+
+/-- **The view projects the waits.** The calls of a live run's view are the calls the machine
+waits on, in the machine's order: the view adds the checked source and the session's record to
+each, and drops none (HC-1, decisions row 373 (12)).
+
+Placement: concept `host-session-protocol`; HC-1's connector to `Await`, a step of the live call
+view that row 373 (12) folds into DM3. Consumer: a run view driven by a host (row 373 (1)), which
+offers a reply for each entry. Reach: every `Live`. It does not establish host progress, or a
+history of every call. -/
+theorem view_awaits (l : Live) : l.view.awaiting.map (·.await) = awaits l.run.machine := by
+  show ((awaits l.run.machine).map l.run.callView).map (·.await) = _
+  rw [List.map_map]
+  exact List.map_id _
+
+/-- **The view names each call's checked instance.** For each call that a live run's view lists,
+the checked instance is the checker's instance at the call's address in the run's program
+(`Api.HostSession.instanceAt`): the type that a reply must meet. The session's call table, made
+once at the open, answers it (`reached_callInstance`).
+
+Placement: concept `host-session-protocol`; a step of the claim `reply-at-call-instance`
+(decisions row 323, an open part of R6). Consumer: a host adapter that picks its decoder from the
+view (the session note §3.3 and §3.6, finding 5), and MCP's run tools. Reach: every `Live` and every
+call that its view lists. It does not establish that the session admits a reply at that instance,
+or that the expansion keeps the call at its address (`expansion-keeps-call`). -/
+theorem view_checked (l : Live) (c : CallView) (h : c ∈ l.view.awaiting) :
+    c.checked =
+      c.origin.bind (Api.HostSession.instanceAt l.run.built.program l.run.built.table) := by
+  obtain ⟨call, _, rfl⟩ := List.mem_map.mp h
+  show (originOf l.run.machine call.fiber call.token).bind l.run.session.callInstance = _
+  rw [Run.reached_callInstance l.run (reached l)]
+  rfl
 
 end Effect4.Live

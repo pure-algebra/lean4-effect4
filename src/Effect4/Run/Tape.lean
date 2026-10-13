@@ -162,7 +162,7 @@ def tapeFrom (s : Run) : List Command → List Position × List Command
 
 /-! ## The fresh open, a funded run, and a machine at rest -/
 
-/-- The run that a run started from: its own program, name, budgets and profile, opened fresh.
+/-- The run that a run started from: its own program, name, budgets and binding, opened fresh.
 Playing a recorded run's journal from it reaches the run again (`Run.journal_replays`,
 `src/Effect4/Laws/Run.lean`). -/
 def openedOf (s : Run) : Run := Run.open s.built s.id s.budget s.profile

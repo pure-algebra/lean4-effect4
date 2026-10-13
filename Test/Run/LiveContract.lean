@@ -1,4 +1,5 @@
 import Effect4.Laws.Api.Live
+import Effect4.Api.Author
 import Test.Run.RunContract
 
 /-!
@@ -16,7 +17,8 @@ parked on one row.
   live call is left. A header that the session refuses is refused by `Live.start`, with the
   session's reason.
 * **Finite evaluations.** A script fed event by event reaches the exit that the run contract's drive
-  reaches.
+  reaches. The view (`src/Effect4/Run/View.lean`, slice DM3) of each stage: the awaited calls with
+  their checked instance and the session's record, the internal waits, and `funded`.
 -/
 
 set_option autoImplicit false
@@ -107,5 +109,53 @@ def header : Api.HostSession.Header := Test.Api.HostSessionContract.header
     { header with session := "" } with
   | .error .session => true
   | _ => false
+
+/-! ## The view
+
+Each line is a finite evaluation of `Live.view` at one stage of a script. No theorem covers the
+view's fields yet: `view-funded` waits on slice DM4, and `view-names-waits` is a proposed claim
+(decisions row 333 (3)). -/
+
+-- Both calls wait, each with the checked instance at its address, and neither is held yet.
+#guard parked.view.awaiting.map (·.await) = parked.run.outstanding
+#guard parked.view.awaiting.all fun call => call.origin.isSome && call.checked.isSome
+#guard parked.view.awaiting.all fun call => call.held.isNone
+#guard parked.view.state = .awaitingAsync
+
+-- Held, the first call shows its call id; received, it shows the completion too.
+#guard ((parked.feed (.hold (.fiber ⟨1⟩))).1.view.awaiting.map (·.held)) =
+  [some ⟨0, none⟩, none]
+#guard ((parked.feed (.receive (.fiber ⟨1⟩) (ok (.nat 2)))).1.view.awaiting.map (·.held)) =
+  [some ⟨0, some (ok (.nat 2))⟩, none]
+
+-- After the script: nothing waits, two completions were applied, the run is funded and at rest.
+#guard finished.view.awaiting = []
+#guard finished.view.applied = 2
+#guard finished.view.steps = 8
+#guard finished.view.funded
+#guard finished.view.atRest
+#guard finished.view.exit = some (.success (Val.exitOk (.nat 3)))
+
+-- `Live.at`: after the first command, the start, both calls wait and nothing is held.
+#guard (finished.at 1).steps = 1
+#guard (finished.at 1).awaiting.map (·.await) = parked.run.outstanding
+
+-- A command budget of 1 cuts the start: the run is not funded (red control of `funded`).
+#guard !((Live.open pairUp "cut" { fuel := 1 }).feed .start).1.view.funded
+
+open Effect4.Program.Authoring in
+/-- A root that awaits a deferred nobody completes: one internal wait, and a deadlock. -/
+def stalled : Option Live :=
+  (Api.Author.build { main := eff do
+    let d ← Deferred.make .nat .never
+    Deferred.await d }).toOption.map fun b => ((Live.open b "stalled").feed .start).1
+
+-- The view names the internal wait with its registration, and it flags the empty frontier at a
+-- live machine. The host's view of calls is empty: no reply can end this wait.
+#guard stalled.any fun l => l.view.awaiting.isEmpty && l.view.waits.length == 1 &&
+  l.view.waits.all (·.registration.isSome) && l.view.emptyFrontier && l.view.reasons.isEmpty
+-- Green twin: a run that waits on host calls names them, so its frontier is not empty. Beside
+-- them the root waits on its children, an internal wait that no frontier reason names.
+#guard !parked.view.emptyFrontier && parked.view.waits.map (·.fiber) == [Api.root]
 
 end Test.Run.LiveContract

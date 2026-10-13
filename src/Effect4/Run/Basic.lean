@@ -66,8 +66,11 @@ namespace Run
 the call the session accepts. -/
 def id (s : Run) : String := s.session.header.session
 
-/-- The profile named in the run's header. -/
-def profile (s : Run) : String := s.session.header.profile
+/-- The host binding named in the run's header (`Header.binding`, decisions row 326 (4)). The
+accessor keeps the law graph's name: `step_profile`, `play_profile` and `journal_replays` state it
+(`src/Effect4/Laws/Run.lean`, `src/Effect4/Laws/Run/Rows.lean`), outside the files of the session
+note's slice DM3. It becomes `binding` when they move. -/
+def profile (s : Run) : String := s.session.header.binding
 
 /-- The row table the program's host calls are positions in. -/
 def table (s : Run) : RowTable := s.built.table
@@ -98,12 +101,12 @@ def rowOf (s : Run) : NativeOp → Option Program.Row
 evidence `HostSession.start` re-derives, the header is built from the `Built` rather than
 supplied beside it, and the machine is loaded at the budget's compile fuel. -/
 def «open» (b : Api.Built) (id : String) (budget : Api.Budget := {})
-    (profile : String := "") : Run :=
+    (binding : String := "") : Run :=
   { built := b
     budget := budget
     session :=
       { admitted := b.admitted
-        header := ⟨Api.HostSession.version, id, profile, b.table⟩
+        header := ⟨Api.HostSession.version, id, binding, b.table⟩
         machine := Api.load b.program budget.compileFuel
         calls := Api.HostSession.callTable b.program b.table } }
 
