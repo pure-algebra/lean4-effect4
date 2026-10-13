@@ -1,6 +1,7 @@
 import Effect4.Program.Ty
 import Effect4.Program.Eff
 import Effect4.Program.Native
+import Effect4.Data.NatDecimal
 import Effect4.Store.Carrier.Utf8
 import TypeScript.TypeRef
 import TypeScript.Identifier
@@ -47,6 +48,14 @@ its carrier is deliberately not its identity. -/
 def keyText (key : ServiceKey) : String :=
   "k" ++ toString key.name.value ++ "_" ++ toString key.service.value
 
+/-- A key back from its runtime text: the decimal fields after `k` and after `_`. A reader
+checks the complete spelling (`text = keyText key`); `keyFromText_print`
+(`Laws/Codegen/ReadLeaf.lean`) is the retraction. -/
+def keyFromText (text : String) : ServiceKey :=
+  let bytes := text.toByteArray.data.toList.drop 1
+  ⟨⟨Effect4.Data.NatDecimal.decodeBytes (bytes.takeWhile (· != 95))⟩,
+    ⟨Effect4.Data.NatDecimal.decodeBytes ((bytes.dropWhile (· != 95)).drop 1)⟩⟩
+
 /-- The requirement identity at a fixed signature. Scope uses Effect's own identity;
 ordinary services use their full key, including when their carriers coincide. -/
 def keyIdentifier (scopeKey key : ServiceKey) : TypeScript.TypeRef :=
@@ -60,6 +69,27 @@ def requirementType (scopeKey : ServiceKey) (requires : Effect4.Row ServiceKey) 
   | [] => .name ["never"] []
   | [one] => one
   | many => .union many
+
+/-- One identifier of a requirement row back to its key (`keyIdentifier`'s inverse):
+`Scope.Scope` is the scope key, and a string literal is an ordinary key's runtime text. -/
+def readKeyIdentifier (scopeKey : ServiceKey) : TypeScript.TypeRef → Option ServiceKey
+  | .name ["Scope", "Scope"] [] => some scopeKey
+  | .literal text => some (keyFromText text)
+  | _ => none
+
+/-- The identifiers of a printed requirement row: none for `never`, a union's members, or the
+one identifier. -/
+def rowIdentifiers : TypeScript.TypeRef → List TypeScript.TypeRef
+  | .name ["never"] [] => []
+  | .union members => members
+  | one => [one]
+
+/-- A requirement row back from its printed type (`requirementType`'s inverse), as a canonical
+row. It is permissive: a reader keeps the row only where it prints back as the type read
+(`readKeys`, `Codegen/Read.lean`; `readTyChecked`, `Codegen/Classes.lean`). -/
+def readRequirement (scopeKey : ServiceKey) (t : TypeScript.TypeRef) :
+    Option (Effect4.Row ServiceKey) :=
+  ((rowIdentifiers t).mapM (readKeyIdentifier scopeKey)).map Effect4.Row.normalize
 
 end Effect4.Program
 

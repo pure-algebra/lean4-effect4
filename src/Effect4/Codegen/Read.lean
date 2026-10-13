@@ -407,12 +407,6 @@ abbrev digitOfByte := Effect4.Data.NatDecimal.digitOfByte
 /-- The number a byte string spells in decimal. -/
 abbrev decodeBytes := Effect4.Data.NatDecimal.decodeBytes
 
-/-- Decode the two numeric fields; `readKey` checks the complete canonical spelling. -/
-def keyFromText (text : String) : ServiceKey :=
-  let bytes := text.toByteArray.data.toList.drop 1
-  ⟨⟨decodeBytes (bytes.takeWhile (· != 95))⟩,
-    ⟨decodeBytes ((bytes.dropWhile (· != 95)).drop 1)⟩⟩
-
 /-- Only the exact printed key is admitted. Identifier, runtime spelling and carrier
 must agree; the distinguished scope is represented only by the genuine `Scope.Scope`. -/
 def readKey {Op : Type} (sig : Signature Op) : Expr → Except ReadRefusal ServiceKey
@@ -434,29 +428,14 @@ def readKey {Op : Type} (sig : Signature Op) : Expr → Except ReadRefusal Servi
     | none => .error (.shape "service key")
   | _ => .error (.shape "service key")
 
-/-- One identifier of a requirement row back to its key: `Scope.Scope` is the signature's scope,
-and a string literal is an ordinary key's runtime spelling. -/
-def readKeyIdentifier {Op : Type} (sig : Signature Op) : TypeScript.TypeRef → Option ServiceKey
-  | .name ["Scope", "Scope"] [] => some sig.scopeKey
-  | .literal text => some (keyFromText text)
-  | _ => none
-
-/-- The identifiers of a printed requirement row: none for `never`, a union's members, or the
-one identifier. -/
-def rowIdentifiers : TypeScript.TypeRef → List TypeScript.TypeRef
-  | .name ["never"] [] => []
-  | .union members => members
-  | one => [one]
-
 /-- A requirement row from its printed type (`requirementType`): `never`, one identifier, or
 their union. The canonical row of the keys read is kept only when it prints back as the type
 read, so what the reader accepts is exact. -/
 def readKeys {Op : Type} (sig : Signature Op) (t : TypeScript.TypeRef) :
     Except ReadRefusal (Effect4.Row ServiceKey) :=
-  match (rowIdentifiers t).mapM (readKeyIdentifier sig) with
+  match readRequirement sig.scopeKey t with
   | some keys =>
-    if requirementType sig.scopeKey (Effect4.Row.normalize keys) == t then
-      .ok (Effect4.Row.normalize keys)
+    if requirementType sig.scopeKey keys == t then .ok keys
     else .error (.shape "requirement row")
   | none => .error (.shape "requirement row")
 
