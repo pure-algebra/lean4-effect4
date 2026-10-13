@@ -9,6 +9,16 @@ They claim no exact real-curve theorem and no machine-state relation.
 namespace Tools.View.Tube.PegChecks
 open Tools.View.Tube.Glyphs
 
+-- The kit transfer retains the pen's billion-unit normal scale.
+#guard Whatwg.Svg.Scene.Belt.ONE == ONE
+
+-- The pen connector returns each authored cubic's original record.
+#guard shapes.all fun s => (pegFigure s).bodies.all fun b =>
+  match pegOutlines 12000 LINE b.skeleton.tour with
+  | some (outer, inner) => (outer ++ inner).all fun c =>
+      PegBridge.fromCubic (PegBridge.cubic c) == c
+  | none => false
+
 -- Every authored body has tangents and closed outline and casing paths.
 #guard shapes.all fun s => (pegFigure s).check
 
