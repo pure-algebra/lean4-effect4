@@ -273,7 +273,12 @@ A program has folds, a journaled run with replay, and a printed image that reads
    (`docs/research/2026-10-11-machine-models/CODEX-PROMPT.md`). Of the fourteen application goals, three are proved
    (`Atomic.bounded`, `Routing.infrastructure_escapes`, `Timeout.stale_never_applies`). Nine are
    proved modulo seven smaller goals. Timeout's retry and cleanup goals stay open (`#plan_status`).
-   The packet also sorts the 87 open parts that no goal states yet. Beside it: the nine legacy host fixtures of the
+   Seat GOALS (2026-10-13, [receipt](research/2026-10-13-seat-goals-receipt.md)) proved
+   `PlaceFunding.Local.history_funded`, the history step of the three cleanup-log goals. So
+   `log_debits` rests on one evaluation's debit (`WriterHistory.evaluation`), and
+   `once_placed_pushes_once` on the sources outside the census. Next, the receipt's §8 order:
+   that debit, the Workers and QueueWorkers writer ledgers, `request_leads`, then the
+   fiber-position law. The packet also sorts the 87 open parts that no goal states yet. Beside it: the nine legacy host fixtures of the
    truth lane move to the keyed lane (row 343 (8), signed until then), and seat FC's rulings
    land (row 345 (2): `tools/Tools/Graph` at height 0; the generator's children induction).
 0. **The host session as a coalgebra** (the
