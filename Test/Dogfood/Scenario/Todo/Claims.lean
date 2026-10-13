@@ -40,7 +40,7 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 open Effect4.Program.Denote (ReplyTape denoteRows)
 open Effect4.Run (appliedExits hostDriven conforms agrees)
 open Test.Dogfood.P2HandlerLayers (recordVal)
-open Test.Dogfood.Application (Kind Grade Premise Note Record)
+open Test.Dogfood.Application (Kind Evidence Premise Note Record)
 
 /-! ## 1. Two facts of the call tree -/
 
