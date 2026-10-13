@@ -384,6 +384,7 @@ import Test.Dogfood.Application
 import Test.Dogfood.Scenario.Todo.Claims
 import Test.Program.AddressMove
 import Test.Store.ProgramContent
+import Test.Dogfood.Scenario.Workers.CommandGuard
 
 /-!
 # Effect4 test battery
