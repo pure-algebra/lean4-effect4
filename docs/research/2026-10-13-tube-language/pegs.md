@@ -108,9 +108,17 @@ depends on two pegs alone, so the outline is a map over neighbouring pairs.
 - **The score is a grid already.** Columns are the trace's events and rows are fibers
   (`Tools/View/Tube/Score.lean`); its staffs become strings and its units slot pegs.
 
-## 5. Motion as a light board
+## 5. Motion computed as a light board, drawn as fluid
 
-The owner's proposal: show movement by lighting pegs in turn, as a light board does.
+The owner's proposal: compute movement as a light board does, a marking of pegs per tick. The
+owner's correction: it must not look like a light board. It looks natural, fluid and organic; the
+board is the technique, for speed and for one meaning with the machine.
+
+- **The computation is discrete.** Each tick's marking is the state; nothing between ticks is
+  state.
+- **The drawing is continuous.** Between two ticks a unit glides from its slot to its next one on
+  an easing. Neighbouring units fuse into one slug with soft menisci, and part as they spread. At
+  a split the slug divides into the tines. Only the drawing interpolates; the marking does not.
 
 - **It is the machine's own grain.** The machine steps; a unit is in one place, then in the next.
   A unit that hops from slot peg to slot peg shows the step itself. A glide shows an
