@@ -161,7 +161,7 @@
    "normal": {"keys": [], "_tag": "contextOf"},
    "metadata": "[10, [28], [[4, []]]]",
    "key": [28],
-   "annotation": null},
+   "annotation": "Context.Context<never>"},
   {"raw":
    {"fields":
     [["nickname", [true, {"_tag": "string"}]],

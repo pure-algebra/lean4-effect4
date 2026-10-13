@@ -5,12 +5,13 @@
 
 import { describe, expect, test } from "bun:test"
 import { spawnSync } from "node:child_process"
+import { readFileSync } from "node:fs"
 import { resolve } from "node:path"
-import { Result } from "effect"
-import { isEff, type Eff, type LayerTerm, type Row, type Term, type Ty } from "../eff.gen.ts"
+import { Result, Schema } from "effect"
+import { isEff, Row as RowSchema, type Eff, type LayerTerm, type Row, type Term, type Ty } from "../eff.gen.ts"
 import { toJson } from "../json.gen.ts"
 import { heads, rows } from "../profile.gen.ts"
-import { readTypeScript, type Refusal, locate, showFailure } from "../read.ts"
+import { readTypeScript, readTypeScriptFile, type Refusal, locate, showFailure } from "../read.ts"
 
 const json = (source: string): string => {
   const r = readTypeScript(source)
@@ -442,9 +443,11 @@ describe("layer references", () => {
     expect(both[2][3][1][1][1]).toEqual(["ref", [1, 0, 0, 0, 0]])
     expect(both[2][3][1][1][2]).toEqual(["ref", [1, 0, 0, 0, 0]])
   })
-  test("a declaration whose name is no path spelling is not a module", () => {
+  // A constant before the main whose name is no path spelling and that is no service's key or
+  // layer leads a definition block (Lean `defsPrefix`): this one is no definition's header.
+  test("a declaration whose name is no path spelling is read as a definition, and refused", () => {
     expect(refusal(`export const helper = Layer.succeed(${key}, 7)\nexport const main = Effect.succeed(1)`))
-      .toEqual({ _tag: "shape", what: "module" })
+      .toEqual({ _tag: "shape", what: "definition" })
   })
   test("a declaration whose path names no layer is not a module", () => {
     expect(refusal(`export const L_0 = Layer.succeed(${key}, 7)\nexport const main = Effect.succeed(1)`))
@@ -711,5 +714,52 @@ describe("a refusal says where", () => {
     const r = refusal("Effect.gen(function* () { const a0 = yield* Effect.succeed(1); return a9 })")
     expect(r).toEqual({ _tag: "unknownIdent", name: "a9" })
     expect(locate(r).path).toEqual([["gen", 0], ["cons", 1], ["cons", 0], ["ret", 0]])
+  })
+})
+
+// A module file (decisions row 378 (19), (20); seat READ): the to-do's file holds its payload
+// class, its rows' service (`rowServiceDecls`), its definition block, its service and its main.
+// The file reader reads it back to Lean's reading of the same text (`Api.readFile`); the
+// fixtures are written by `docs/research/2026-10-13-seat-read/TodoFileFixture.lean`.
+describe("a module file: the rows' services and a definition block", () => {
+  const fixture = (name: string): string => readFileSync(resolve(import.meta.dir, "fixtures", name), "utf8")
+  const text = fixture("todo-file.txt")
+  const table: ReadonlyArray<Row> = (JSON.parse(fixture("todo-file.table.json")) as ReadonlyArray<unknown>)
+    .map((row) => Schema.decodeUnknownSync(RowSchema)(row))
+  const fileRefusal = (source: string): Refusal => {
+    const r = readTypeScriptFile(source, "todo.gen.ts", table)
+    if (Result.isSuccess(r)) throw new Error(`accepted: ${toJson(r.success)}`)
+    return r.failure
+  }
+  test("the to-do's file reads back to Lean's reading", () => {
+    const r = readTypeScriptFile(text, "todo.gen.ts", table)
+    if (Result.isFailure(r)) throw new Error(`refused: ${showFailure(r.failure)}`)
+    expect(toJson(r.success)).toBe(fixture("todo-file.json").trimEnd())
+  })
+  test("the block a host wraps reads back to the same program, and each reader refuses the other's form", () => {
+    const envelope = fixture("todo-envelope.txt")
+    const r = readTypeScript(envelope, "todo.gen.ts", table)
+    if (Result.isFailure(r)) throw new Error(`refused: ${showFailure(r.failure)}`)
+    expect(toJson(r.success)).toBe(fixture("todo-file.json").trimEnd())
+    // the file read as the block a host wraps: its services are no layer
+    const asBlock = readTypeScript(text, "todo.gen.ts", table)
+    expect(Result.isFailure(asBlock) && asBlock.failure).toEqual({ _tag: "shape", what: "module" })
+    // the block a host wraps read as a file: it lacks the rows' services
+    expect(fileRefusal(envelope)).toEqual({ _tag: "shape", what: "row services" })
+  })
+  test("a service declaration other than the table's is refused", () => {
+    // the key at another identity
+    expect(fileRefusal(text.replaceAll('"k30_6"', '"k30_7"'))).toEqual({ _tag: "shape", what: "row services" })
+    // an accessor calling another method
+    expect(fileRefusal(text.replace("(a1) => a1.insert(a0)", "(a1) => a1.all(a0)"))).toEqual({ _tag: "shape", what: "row services" })
+  })
+  test("a header's error column names the payload class, read under the module's classes", () => {
+    const r = readTypeScriptFile(text, "todo.gen.ts", table)
+    if (Result.isFailure(r)) throw new Error(`refused: ${showFailure(r.failure)}`)
+    const program = r.success
+    if (program._tag !== "defs") throw new Error("no definition block")
+    const complete = program.decls.find((d) => d.name === "TodoApp_complete")
+    expect(JSON.stringify(complete?.error)).toContain('"NotFound"')
+    expect(program.decls[0]?.requires).toEqual([{ name: { value: 30 }, service: { value: 6 } }])
   })
 })
