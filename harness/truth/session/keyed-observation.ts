@@ -36,6 +36,8 @@ export type ReaderName = keyof Readers
 export interface ScenarioFixture {
   name: string; scenario: string; session: string
   module: string; namespaces: string[]; bindings: string; table: Json[]
+  /** The row namespaces that the module declares as Effect services (decisions row 378 (19)). */
+  services?: string[]
   calls: Array<Key & { row: number; request: Json }>
   acts: ScenarioAct[]
   observation: Record<string, Json>
