@@ -32,6 +32,8 @@ import Effect4.Program.Sketch
 import Effect4.Program.Typing.PartsTable
 import Effect4.Program.Edit
 import Effect4.Program.SketchWire
+import Effect4.Program.Authoring.Application
+import Effect4.Program.Address
 
 /-!
 # Effect4.Author — the entry module for writing a program or a module (decisions row 332)
@@ -46,6 +48,9 @@ An agent or a person who writes a program imports this module. It re-exports:
 - the wrappers of a module that waits;
 - sketches and the edit session: a whole program with its holes, its address table part by part,
   edits fed one at a time, and a sketch's canonical bytes (`Program.Sketch`, `Program.Edit`).
+- an application: named programs with typed parameters over one row table, and each row's
+  declared protocol (`Program.Authoring.Application`, `Program.RowProtocol`);
+- a subtree's layer references moved with it (`Program.Address`: `Eff.rebaseRefs`).
 
 It declares nothing. The prebuilt composed modules are `Effect4.Library`, and their laws and the
 shared step laws are `Effect4.Laws.Author`.

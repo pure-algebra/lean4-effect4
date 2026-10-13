@@ -29,6 +29,11 @@ import Effect4.Laws.Step.Waiting
 import Effect4.Laws.Step.Callback
 import Effect4.Laws.Program.Edit
 import Effect4.Laws.Program.SketchWire
+import Effect4.Laws.Program.Block
+import Effect4.Laws.Program.Validated
+import Effect4.Laws.Api.Live
+import Effect4.Laws.Program.AddressMove
+import Effect4.Laws.Store.ShapeRead
 
 /-!
 # Effect4.Laws.Author — the entry module of the laws an author reads (decisions row 332)
@@ -42,6 +47,12 @@ re-exports:
 - the run API's laws: the journal, its rows and its tape;
 - the shared step laws: reading, typing, scope, the store's connectors, the encoding table, the
   lists, renaming and the wrappers' laws.
+- the meaning of a definition block (`Program.Block`: `invoke_unfolds_at_limit`);
+- a run checked against declared protocols and a reference model (`Program.Validated`:
+  `conforms_sat`, `agrees_hostRun`), and the checked replay (`Api.Live`:
+  `replay_at_call_instance`);
+- references moved with a pasted subtree (`Program.AddressMove`: `references_move`), and an
+  agent's JSON read exactly modulo its normaliser (`Store.ShapeRead`).
 
 `#explain` and `#obligations` (a step's or a theorem's placement, standing and open goals, as text
 or JSON) are their own import, `Effect4.Laws.Author.Explain`. They read the semantics registry,
