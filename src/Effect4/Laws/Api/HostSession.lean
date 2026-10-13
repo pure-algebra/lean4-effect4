@@ -337,8 +337,9 @@ theorem applyReply_conforms {program : Api.Program} {table : RowTable}
             · rename_i removed
               have allowed : HostProtocol.allows (HostProtocol.observe s.machine) (.answer key)
                   (HostProtocol.observe (steppedBy program (fuel + 1) table s.machine decision)) = true := by
-                simpa [steppedBy] using hl
-              simpa [hl, removed, retire, steppedBy] using allowed
+                simpa only [steppedBy, Bool.not_eq_true', Bool.not_eq_false] using hl
+              simpa only [hl, removed, retire, steppedBy, Bool.false_eq_true, ↓reduceIte,
+                Bool.not_eq_true', Bool.not_eq_false] using allowed
             · cases h
 
 /-- Accepted scheduler/clock/cancellation controls follow a projected protocol edge over
