@@ -380,6 +380,7 @@ import Test.Program.FirstExitSource
 import Test.Program.KernelRfl
 import Test.Run.LiveContract
 import Test.Program.AddressMove
+import Test.Store.ProgramContent
 
 /-!
 # Effect4 test battery
