@@ -346,7 +346,7 @@ instance wakeEvaluator : FiberEvaluator Unit Unit Nat Unit Unit FiberId Unit Uni
         let m := { m with
           nextToken := m.nextToken + 1
           state := { m.state with list := m.state.list.delay f.id token f.frame.current } }
-        ⟨m.emit [RunEvent.parkedOn f.id token], f.park ⟨token, [], [], Resume.void, false⟩,
+        ⟨m.emit [RunEvent.parkedOn f.id token], f.park ⟨token, none, [], [], Resume.void, false⟩,
           yielding, Outcome.parked, [], []⟩
     | .vis true next =>
       FiberAction.yieldNow i m

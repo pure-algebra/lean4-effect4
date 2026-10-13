@@ -125,7 +125,12 @@ theorem observer {id : FiberId} {below : List NCode} (interp : NInterp)
       split
       · exact fired
       · rename_i pending pendingFound
-        rw [Edits.run_append, Edits.interrupt_choice_word]
+        -- the guard: a firing whose record waits on another fiber has no further edit
+        by_cases hg : pending.waitingOn = some owner
+        case neg =>
+          rw [if_neg hg, Edits.run_nil]
+          exact fired
+        rw [if_pos hg, Edits.run_append, Edits.interrupt_choice_word]
         have interrupted : Held id below
             (if pending.failFast && !exit.isSuccess && pending.collected.all Exit.isSuccess then
               interruptEach interp waiter (interp.stackAnnotations waiter) pending.remaining (current, [])

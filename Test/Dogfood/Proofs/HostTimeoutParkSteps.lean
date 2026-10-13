@@ -69,7 +69,7 @@ theorem external_park_state {B : List Val} {classes : Classes}
   have code : CodeAt B .body fiber.frame.current := by
     rw [current]
     exact .head (.external op request path)
-  let pending : NPending := ⟨machine.nextToken, [], [], .void, false⟩
+  let pending : NPending := ⟨machine.nextToken, none, [], [], .void, false⟩
   have park := park_fiber (fiber_extend (ClassLe.append classes .body) goodFiber)
     pending fresh code stack ⟨.body, fresh, rfl⟩
   simp only [evaluatePrim, current]
@@ -116,7 +116,7 @@ theorem sleep_park_state {B : List Val} {classes : Classes}
   let frame : NativeFrame := {fiber.frame with stack := .asyncFinalizer name :: fiber.frame.stack}
   have framed := set_frame_live (fiber_extend (ClassLe.append classes .unit) goodFiber)
     frame ⟨.unit, code, saved⟩ parked live
-  let pending : NPending := ⟨machine.nextToken, [], [], .void, false⟩
+  let pending : NPending := ⟨machine.nextToken, none, [], [], .void, false⟩
   have held := park_fiber framed pending fresh code saved ⟨.unit, fresh, rfl⟩
   simp only [frame, current] at held
   simp only [evaluatePrim, current]
@@ -181,7 +181,7 @@ theorem countdown_plan_state {B : List Val} {classes : Classes}
         .cons (.cancel .any name (cancel_then_failure (.park fiber.id machine.nextToken) .any)) stack
       let frame : NativeFrame := {fiber.frame with stack := .asyncFinalizer name :: fiber.frame.stack}
       have framed := set_frame_live fiberGood frame ⟨.any, code, saved⟩ parked live
-      let pending : NPending := ⟨machine.nextToken, remaining, exits, .exitsValue, false⟩
+      let pending : NPending := ⟨machine.nextToken, some target, remaining, exits, .exitsValue, false⟩
       have held := park_fiber framed pending fresh code saved ⟨.any, fresh, rfl⟩
       refine ⟨configuration_emit minted _, held, ?_⟩
       intro message member
@@ -283,7 +283,7 @@ theorem yield_park_state {B : List Val} {classes : Classes}
   have dispatcher := dispatcher_enqueue fiber.dispatcher priority _
     (fiber_extend (ClassLe.append classes .unit) goodFiber).dispatcher task
   have queued := dispatcher_fiber started _ dispatcher
-  let pending : NPending := ⟨machine.nextToken, [], [], .void, false⟩
+  let pending : NPending := ⟨machine.nextToken, none, [], [], .void, false⟩
   have held := park_fiber queued pending fresh code stack ⟨.unit, fresh, rfl⟩
   simp only [evaluatePrim, current]
   exact ⟨configuration_emit (configuration_arm minted fiber.id) _, held,

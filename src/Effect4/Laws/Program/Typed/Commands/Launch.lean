@@ -143,53 +143,18 @@ theorem racePayload_alloc {race : RRace} {resultTy : EffTy} (h : RacePayload roo
       obtain ⟨t, declared, ha, he⟩ := h.live id hid
       exact ⟨t, ord.1.2.1 _ _ declared, ha, he⟩⟩
 
-omit back in
-include ord ext hΘ in
-/-- A countdown at a waiter whose lookup is unchanged and whose pending targets avoid the fresh
-id, or at the fresh fiber, which has no pending record. -/
-theorem countdownAt_alloc {waiter : FiberId} {token : Nat} {incoming incoming' : Ty → Ty → Prop}
-    (hin : ∀ a e, incoming a e → incoming' a e)
+include ord in
+/-- A countdown at a waiter whose lookup is unchanged, or at the fresh fiber, which has no pending
+record. The payload reads the record and the world, so the fresh fiber constrains none of it. -/
+theorem countdownAt_alloc {waiter : FiberId} {token : Nat}
     (lookup : m'.fiber? waiter = m.fiber? waiter ∨
       (m.fiber? waiter = none ∧ ∀ f, m'.fiber? waiter = some f → f.pending = []))
-    (fibers : ∀ id, id ≠ n → m'.fiber? id = m.fiber? id)
-    (targets : ∀ f, m.fiber? waiter = some f → ∀ p ∈ f.pending,
-      ∀ id ∈ p.remaining, id ≠ n)
-    (h : CountdownAt w m waiter token incoming) : CountdownAt w' m' waiter token incoming' := by
-  rcases lookup with same | ⟨absent, empty⟩
-  · unfold CountdownAt at h ⊢
-    rw [same]
-    cases hf : m.fiber? waiter with
-    | none => trivial
-    | some fiber =>
-      rw [hf] at h
-      dsimp only at h ⊢
-      cases hp : fiber.pending.find? (fun pending => pending.token = token) with
-      | none => trivial
-      | some pending =>
-        rw [hp] at h
-        dsimp only at h ⊢
-        obtain ⟨answer, error, tokenTy, payload, incomingOk⟩ := h
-        have member : pending ∈ fiber.pending := List.mem_of_find?_eq_some hp
-        refine ⟨answer, error, tokenTy, ⟨by rw [hΘ]; exact payload.token,
-          fun ex hx => strongExit_mono _ _ _ _ ord (payload.collected ex hx), ?_, ?_⟩,
-          hin answer error incomingOk⟩
-        · intro id hid target hlook
-          have ne := targets fiber hf pending member id hid
-          rw [fibers id ne] at hlook
-          exact fiberColumnsBelow_ext ext (payload.targets id hid target hlook)
-        · have resume := payload.resume
-          split at resume
-          · exact resume
-          · exact resume
-          · exact strongExit_mono _ _ _ _ ord resume
-          · exact strongExit_mono _ _ _ _ ord resume
-  · unfold CountdownAt
-    cases hf : m'.fiber? waiter with
-    | none => trivial
-    | some fiber =>
-      dsimp only
-      rw [empty fiber hf]
-      trivial
+    (h : CountdownAt w m waiter token) : CountdownAt w' m' waiter token :=
+  countdownAt_transport ord (fun f' p hf hp => by
+    rcases lookup with same | ⟨_, empty⟩
+    · exact ⟨f', by rw [← same]; exact hf, hp⟩
+    · rw [empty f' hf, List.find?_nil] at hp
+      cases hp) h
 
 end Transport
 
@@ -229,9 +194,7 @@ theorem storedObserverOk_alloc (typed : MachineTyped root rootTy w m) {x : RFibe
     exact ⟨sourceTy, ext _ _ declared, token'⟩
   | countdown waiter token =>
     have below := sched.observersBelow x hx _ ho (waiter, token) (List.mem_singleton_self _)
-    exact countdownAt_alloc ord ext rfl (fun _ _ hc => fiberColumnsBelow_ext ext hc)
-      (.inl (fibers waiter (ne_next below))) fibers
-      (fun f hf p hp id hid => ne_next (sched.targetsBelow f (rfiber?_mem hf) p hp id hid)) h
+    exact countdownAt_alloc ord (.inl (fibers waiter (ne_next below))) h
   | raceCallback raceId =>
     unfold StoredObserverOk at h ⊢
     dsimp only at h ⊢
@@ -278,9 +241,9 @@ theorem observerCommandOk_alloc (typed : MachineTyped root rootTy w m) {source :
         cases hf
         rfl
       · exact .inl (fibers waiter same)
-    exact countdownAt_alloc ord ext rfl (fun _ _ hc => strongExit_mono _ _ _ _ ord hc) lookup
-      fibers
-      (fun f hf p hp id hid => ne_next (sched.targetsBelow f (rfiber?_mem hf) p hp id hid)) h
+    obtain ⟨sourceTy, declared, typedExit⟩ := h.2
+    exact ⟨countdownAt_alloc ord lookup h.1, sourceTy, ext _ _ declared,
+      strongExit_mono _ _ _ _ ord typedExit⟩
   | raceCallback raceId =>
     unfold ObserverCommandOk at h ⊢
     dsimp only at h ⊢

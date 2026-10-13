@@ -384,14 +384,14 @@ theorem Evaluating.async_parks {root : ProgramSource} {rootTy : EffTy} {w : Worl
     SettlesTyped root rootTy w f.id rest (prepareIterR
       ⟨({ m with nextToken := m.nextToken + 1 } : RState).emit [.parkedOn f.id m.nextToken],
         { f with frame := { f.frame with stack := stk }, parked := .withGuard m.nextToken,
-                 pending := f.pending ++ [⟨m.nextToken, [], [], .void, false⟩] },
+                 pending := f.pending ++ [⟨m.nextToken, none, [], [], .void, false⟩] },
         y, .parked, [], []⟩) := by
   have wide := ev.typed.machine.wide
   have hmem : f ∈ (m.update f).fibers := rfiber?_mem ev.look
   have old := ev.typed.machine.fiber hmem
   let tok : Nat := m.nextToken
   let fr : RSaved := { f.frame with stack := stk }
-  let p : RPending := ⟨tok, [], [], .void, false⟩
+  let p : RPending := ⟨tok, none, [], [], .void, false⟩
   obtain ⟨ty, declared⟩ := ev.declared
   obtain ⟨_, _, _, _, _, _, _, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
   have ord0 : w.leHost (w.addToken f.id tok tin) :=
@@ -450,14 +450,14 @@ theorem Evaluating.async_parks_store {root : ProgramSource} {rootTy : EffTy} {w 
     SettlesTyped root rootTy w f.id rest (prepareIterR
       ⟨({ m with state := s, nextToken := m.nextToken + 1 } : RState).emit [.parkedOn f.id m.nextToken],
         { f with frame := { f.frame with stack := stk }, parked := .withGuard m.nextToken,
-                 pending := f.pending ++ [⟨m.nextToken, [], [], .void, false⟩] },
+                 pending := f.pending ++ [⟨m.nextToken, none, [], [], .void, false⟩] },
         y, .parked, [], []⟩) := by
   have wide := ev.typed.machine.wide
   have hmem : f ∈ (m.update f).fibers := rfiber?_mem ev.look
   have old := ev.typed.machine.fiber hmem
   let tok : Nat := m.nextToken
   let fr : RSaved := { f.frame with stack := stk }
-  let p : RPending := ⟨tok, [], [], .void, false⟩
+  let p : RPending := ⟨tok, none, [], [], .void, false⟩
   obtain ⟨ty, declared⟩ := ev.declared
   obtain ⟨_, _, _, _, _, _, _, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
   have ord0 : w.leHost (w.addToken f.id tok tin) :=
@@ -989,11 +989,11 @@ theorem Evaluating.async_parks_request {root : ProgramSource} {rootTy : EffTy} {
     SettlesTyped root rootTy w f.id rest (prepareIterR
       ⟨({ m with nextToken := m.nextToken + 1 } : RState).emit [.parkedOn f.id m.nextToken],
         { f with frame := { f.frame with stack := stk }, parked := .withGuard m.nextToken,
-                 pending := f.pending ++ [⟨m.nextToken, [], [], .void, false⟩] },
+                 pending := f.pending ++ [⟨m.nextToken, none, [], [], .void, false⟩] },
         y, .parked, [], []⟩) := by
   let tok : Nat := m.nextToken
   let fr : RSaved := { f.frame with stack := stk }
-  let p : RPending := ⟨tok, [], [], .void, false⟩
+  let p : RPending := ⟨tok, none, [], [], .void, false⟩
   obtain ⟨ty, declared⟩ := ev.declared
   obtain ⟨_, _, _, _, _, _, _, prov⟩ := ev.code (by rw [hc]; rfl) ty declared
   have marker : raceRegistrationR fr.current = none := by

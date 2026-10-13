@@ -33,27 +33,30 @@ def observerTailWord (interp : RunInterp ν σ β ε δ ι α χ St κ)
       match fiber.pending.find? fun p => p.token = token with
       | none => []
       | some pending =>
-        let fails := pending.failFast && !exit.isSuccess && pending.collected.all Exit.isSuccess
-        let changed := if fails then
-          interruptEach interp waiter (interp.stackAnnotations waiter) pending.remaining (m, [])
-          else (m, [])
-        let editsBefore := if fails then
-          interruptWords interp waiter (interp.stackAnnotations waiter) pending.remaining (m, [])
-          else []
-        editsBefore ++ match changed.1.fiber? waiter with
-          | none => []
-          | some current =>
-            match current.pending.find? fun p => p.token = token with
+        -- the machine's guard: a firing acts only when the record waits on the firing fiber
+        if pending.waitingOn = some id then
+          let fails := pending.failFast && !exit.isSuccess && pending.collected.all Exit.isSuccess
+          let changed := if fails then
+            interruptEach interp waiter (interp.stackAnnotations waiter) pending.remaining (m, [])
+            else (m, [])
+          let editsBefore := if fails then
+            interruptWords interp waiter (interp.stackAnnotations waiter) pending.remaining (m, [])
+            else []
+          editsBefore ++ match changed.1.fiber? waiter with
             | none => []
-            | some _ =>
-              match countdownWalk changed.1 pending.remaining (pending.collected ++ [exit]) with
-              | (exits, none) => [.update {current with pending := current.pending.map fun p =>
-                  if p.token = token then {p with remaining := [], collected := exits} else p}]
-              | (exits, some (next, rest)) =>
-                [.update {current with pending := current.pending.map fun p =>
-                  if p.token = token then
-                    {p with remaining := rest, collected := exits} else p},
-                  .observe next (.countdown waiter token)]
+            | some current =>
+              match current.pending.find? fun p => p.token = token with
+              | none => []
+              | some _ =>
+                match countdownWalk changed.1 pending.remaining (pending.collected ++ [exit]) with
+                | (exits, none) => [.update {current with pending := current.pending.map fun p =>
+                    if p.token = token then {p with waitingOn := none, remaining := [], collected := exits} else p}]
+                | (exits, some (next, rest)) =>
+                  [.update {current with pending := current.pending.map fun p =>
+                    if p.token = token then
+                      {p with waitingOn := some next, remaining := rest, collected := exits} else p},
+                    .observe next (.countdown waiter token)]
+        else []
   | .raceCallback raceId =>
     match m.race? raceId with
     | none => []
@@ -201,9 +204,9 @@ theorem observer_producer_path_accounting
   all_goals simp only [observerWord, observerTailWord, List.map_append, List.sum_append,
     List.map_cons, List.map_nil, List.sum_cons, List.sum_nil, *]
   all_goals refine ⟨(Effect4.Contracts.Path.cons (fired acc.1 id _) (.nil _)).append ?_, ?_, ?_⟩
-  case case1.refine_1 | case5.refine_1 | case6.refine_1 | case11.refine_1 => exact .nil _
+  case case1.refine_1 | case5.refine_1 | case6.refine_1 | case11.refine_1 | case12.refine_1 => exact .nil _
   case case1.refine_2 | case2.refine_2 | case3.refine_2 | case4.refine_2 | case5.refine_2 | case6.refine_2 |
-      case11.refine_2 | case13.refine_2 | case14.refine_2 => simp only [Nat.add_zero]
+      case11.refine_2 | case12.refine_2 | case14.refine_2 | case15.refine_2 => simp only [Nat.add_zero]
   case case2.refine_1 =>
     unfold RunMachine.modify
     split
@@ -217,18 +220,18 @@ theorem observer_producer_path_accounting
         (fun child member => (List.mem_filter.mp member).1)) (.nil _)
   case case3.refine_1 => exact .cons (halt _ _ _ rfl (by assumption)) (.nil _)
   case case4.refine_1 => exact .cons (state _ _ _ _ rfl (by assumption)) (.nil _)
-  case case14.refine_1 => exact .cons (callback _ _ _) (.nil _)
-  case case13.refine_1 => exact .cons (race _ _ _ rfl) (.nil _)
+  case case15.refine_1 => exact .cons (callback _ _ _) (.nil _)
+  case case14.refine_1 => exact .cons (race _ _ _ rfl) (.nil _)
   case case7.refine_1 | case8.refine_1 =>
     rename_i choice
     have prior := chosen _ _ _ _ _ _ _ choice
-    simpa only [List.append_nil] using prior.1
+    simpa only [List.append_nil, ↓reduceIte] using prior.1
   case case7.refine_2 | case8.refine_2 | case10.refine_2 =>
     rename_i choice
     have prior := chosen _ _ _ _ _ _ _ choice
     simp only [prior.2.1, applyFiberEdit, List.map_nil, List.sum_nil, Nat.add_zero]
   case case9.refine_1 =>
-    rename_i waiter token original pending pendingFound collected fails changed nested current currentFound currentPending currentPendingFound exits walked installed base initialFound choice
+    rename_i waiter token original pending pendingFound _ collected fails changed nested current currentFound currentPending currentPendingFound exits walked installed base initialFound choice
     have prior := chosen _ _ _ _ _ _ _ choice
     apply prior.1.append
     exact .cons (update changed waiter current _ currentFound rfl rfl rfl rfl rfl
@@ -239,7 +242,7 @@ theorem observer_producer_path_accounting
         refine ⟨prior, held, ?_, ?_⟩
         all_goals split <;> rfl) rfl rfl (fun _ member => member)) (.nil _)
   case case10.refine_1 =>
-    rename_i waiter token original pending pendingFound collected fails changed nested current currentFound currentPending currentPendingFound exits next rest walked installed observed base initialFound choice
+    rename_i waiter token original pending pendingFound _ collected fails changed nested current currentFound currentPending currentPendingFound exits next rest walked installed observed base initialFound choice
     have prior := chosen _ _ _ _ _ _ _ choice
     apply prior.1.append
     exact .cons (update changed waiter current _ currentFound rfl rfl rfl rfl rfl
@@ -250,21 +253,21 @@ theorem observer_producer_path_accounting
         refine ⟨prior, held, ?_, ?_⟩
         all_goals split <;> rfl) rfl rfl (fun _ member => member)) (.cons (observe _ _ _ rfl) (.nil _))
   case case9.refine_2 =>
-    rename_i waiter token original pending pendingFound collected fails changed nested current currentFound currentPending currentPendingFound exits walked installed base initialFound choice
+    rename_i waiter token original pending pendingFound _ collected fails changed nested current currentFound currentPending currentPendingFound exits walked installed base initialFound choice
     have prior := chosen _ _ _ _ _ _ _ choice
     rw [prior.2.1, countdownCost _ _ _ _ _ rfl (by assumption) (List.mem_of_find?_eq_some (by assumption))
       (of_decide_eq_true (List.find?_some (p := fun p : Pending ν β ε δ ι α => decide (p.token = token)) pendingFound))]
     simp only [Nat.add_zero]
-  case case12.refine_1 =>
+  case case13.refine_1 =>
     exact (Effect4.Contracts.Path.cons (race _ _ _ rfl) (.nil _)).append
       (.cons (race _ _ _ rfl) (.cons (settled _ _ _) (.nil _)))
-  case case12.refine_2 =>
+  case case13.refine_2 =>
     split <;> simp only [List.map_cons, List.map_nil, List.sum_cons, List.sum_nil,
       raceCost _ _ _ _ _ rfl, Nat.add_zero]
 
 
   case case2.refine_3 | case3.refine_3 | case4.refine_3 | case5.refine_3 | case6.refine_3 |
-      case11.refine_3 | case13.refine_3 | case14.refine_3 =>
+      case11.refine_3 | case12.refine_3 | case14.refine_3 | case15.refine_3 =>
     exact fun _ member => .inl member
   case case1.refine_3 =>
     apply appended
@@ -277,7 +280,7 @@ theorem observer_producer_path_accounting
     have prior := chosen _ _ _ _ _ _ _ choice
     exact appended _ prior.2.2
   case case9.refine_3 =>
-    rename_i waiter token original pending pendingFound collected fails changed nested current currentFound currentPending currentPendingFound exits walked installed base initialFound choice
+    rename_i waiter token original pending pendingFound _ collected fails changed nested current currentFound currentPending currentPendingFound exits walked installed base initialFound choice
     have prior := chosen _ _ _ _ _ _ _ choice
     rw [List.append_assoc]
     apply appended
@@ -294,7 +297,7 @@ theorem observer_producer_path_accounting
     have prior := chosen _ _ _ _ _ _ _ choice
     simp only [applyFiberEdit, List.append_nil]
     exact appended _ prior.2.2
-  case case12.refine_3 =>
+  case case13.refine_3 =>
     apply appended
     intro command member
     split at member

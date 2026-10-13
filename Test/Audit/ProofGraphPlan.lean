@@ -9,10 +9,11 @@ proved, and the red controls pin each refusal:
 
 1. a theorem that uses a goal is proved modulo it, never proved. The real case is `m7_of_ledger`
    with `LoadsTyped` proved by `loadsTyped` and `DecisionKeeps` a goal: it rests on that goal
-   alone. With `decision_preserves` in its place, the same statement (`m7_proved`) rests on
-   exactly the five planned goals of the ambient judgment (decisions row 349):
+   alone. With `decision_preserves` in its place, the same statement (`m7_proved`) rested on the
+   five planned goals of the ambient judgment (decisions row 349):
    `Evaluating.countdown_parks_positional`, `Evaluating.settle_callback`, `clause_closeScope`,
-   `clause_scoped` and `foreignFinalizer_ambient`. Each goal's docstring says why it is open;
+   `clause_scoped` and `foreignFinalizer_ambient`. All five are proved, the last the positional
+   countdown (decisions row 376 (2)), so `m7_proved` rests on no goal;
 2. a node whose axioms leave the semantic ceiling is refused;
 3. a hand-written `sorry` is not a goal: the plan refuses it as an axiom outside the ceiling, and
    `tagGoal` refuses to tag a theorem whose body is not `sorry`, or a definition;
@@ -76,22 +77,21 @@ theorem m7Modulo (root : ProgramSource) (rootTy : Effect4.Program.EffTy) (fuel :
       M7NoHalt root rootTy fuel tape :=
   m7_of_ledger root rootTy fuel tape (loadsTyped root rootTy fuel fuel) (keeps root rootTy fuel)
 
--- `m7_proved` rests on exactly the one open goal of the ambient judgment, the positional
--- countdown (the release merge proved the other four); the next goals are `keeps` and then it.
+-- `m7_proved` rests on no goal: the release merge proved four goals of the ambient judgment and
+-- seat COUNTDOWN the positional countdown (decisions row 376 (2)); the next goal is `keeps` alone.
 run_cmd liftTermElabM do
   let plan ← buildPlan [`Test] #[``m7Modulo, ``Effect4.Program.Typed.m7_proved] (← IO.mkRef {})
   let said : Standing → String
     | .modulo goals => s!"modulo {goals}"
     | standing => standing.word
-  let open5 : Array Name := #[``Effect4.Program.Typed.Evaluating.countdown_parks_positional]
   let some node := plan.find? ``m7Modulo | throwError "m7Modulo is not a node"
   unless node.standing == .modulo #[``keeps] do
     throwError "m7Modulo is {said node.standing}, not modulo [keeps]"
   let some proved := plan.find? ``Effect4.Program.Typed.m7_proved | throwError "m7_proved is not a node"
-  unless proved.standing == .modulo open5 do
-    throwError "m7_proved is {said proved.standing}, not modulo {open5}"
-  unless plan.next #[``m7Modulo, ``Effect4.Program.Typed.m7_proved] == #[``keeps] ++ open5 do
-    throwError "the next goals are not keeps and the open goal"
+  unless proved.standing == .proved do
+    throwError "m7_proved is {said proved.standing}, not proved"
+  unless plan.next #[``m7Modulo, ``Effect4.Program.Typed.m7_proved] == #[``keeps] do
+    throwError "the next goals are not keeps alone"
 
 -- 2. A node outside the semantic ceiling is refused.
 /-- error: plan: Classical.em: disallowed axioms [Classical.choice] -/

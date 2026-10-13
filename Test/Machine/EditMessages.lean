@@ -71,15 +71,25 @@ def peer : Fiber := {joinOwner with id := ⟨1⟩}
 def callbackWaiter : Fiber :=
   {countdown.2.1 with
     running := false
-    pending := [⟨0, [⟨0⟩], [], .void, false⟩]}
+    pending := [⟨0, some ⟨1⟩, [⟨0⟩], [], .void, false⟩]}
 def callbackMachine : NativeMachine := {machine callbackWaiter with
   fibers := [callbackWaiter, {peer with exit := some (.success .unit), running := false}], nextId := 2}
 def callbackResult := fireObserver interp ⟨1⟩ (.success .unit) (callbackMachine, []) (.countdown ⟨0⟩ 0)
 #guard storedObservers callbackResult.1 == [.countdown ⟨0⟩ 0]
 #guard (((callbackResult.1.fiber? ⟨0⟩).getD callbackWaiter).pending.map Pending.remaining) == [[]]
 #guard (((callbackResult.1.fiber? ⟨0⟩).getD callbackWaiter).pending.map Pending.collected) == [[.success .unit]]
+#guard (((callbackResult.1.fiber? ⟨0⟩).getD callbackWaiter).pending.map Pending.waitingOn) == [some ⟨0⟩]
+-- Control (decisions row 376 (2)): the same firing while the record waits on another fiber is stale:
+-- no command, nothing collected, the record and the stored observers unchanged.
+def staleWaiter : Fiber := {callbackWaiter with pending := [⟨0, some ⟨0⟩, [], [], .void, false⟩]}
+def staleMachine : NativeMachine := {callbackMachine with
+  fibers := [staleWaiter, {peer with exit := some (.success .unit), running := false}]}
+def staleResult := fireObserver interp ⟨1⟩ (.success .unit) (staleMachine, []) (.countdown ⟨0⟩ 0)
+#guard staleResult.2.isEmpty
+#guard ((staleResult.1.fiber? ⟨0⟩).getD callbackWaiter).pending == staleWaiter.pending
+#guard storedObservers staleResult.1 == staleWaiter.observers
 -- Fail-fast interrupts this idle waiter; the canceled pending guard cannot reappear.
-def failFastWaiter : Fiber := {callbackWaiter with pending := [⟨0, [⟨0⟩], [], .void, true⟩]}
+def failFastWaiter : Fiber := {callbackWaiter with pending := [⟨0, some ⟨1⟩, [⟨0⟩], [], .void, true⟩]}
 def failFastMachine : NativeMachine := {callbackMachine with fibers := [failFastWaiter, peer]}
 def failFastResult := fireObserver interp ⟨1⟩ (.failure selfCause)
   (failFastMachine, []) (.countdown ⟨0⟩ 0)

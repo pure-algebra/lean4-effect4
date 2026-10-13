@@ -19,9 +19,9 @@ open Effect4 Effect4.Machine Effect4.Program
 
 variable {table : RowTable}
 
-theorem pendingOk_parkVoid {f : FRun} (hf : PendingOk f) (token : Nat)
+theorem pendingOk_parkVoid {f : FRun} (hf : PendingOk f) (token : Nat) (waitingOn : Option FiberId)
     (remaining : List FiberId) (collected : List ExitV) (failFast : Bool) :
-    PendingOk (f.park ⟨token, remaining, collected, Resume.void, failFast⟩) :=
+    PendingOk (f.park ⟨token, waitingOn, remaining, collected, Resume.void, failFast⟩) :=
   pendingOk_park hf _ (fun _ h => nomatch h)
 
 @[aesop norm simp (rule_sets := [Effect4.Stores])]
@@ -198,10 +198,10 @@ theorem evaluatePrim_pendingOk (i : FInterp) (m : FMachine) (f : FRun) (y : Bool
   unfold evaluatePrim
   dsimp only
   split
-  · exact pendingOk_parkVoid (pendingOk_of_fields hf rfl) _ _ _ _
+  · exact pendingOk_parkVoid (pendingOk_of_fields hf rfl) _ _ _ _ _
   · split
     · exact pendingOk_of_fields hf rfl
-    · split <;> exact pendingOk_parkVoid (pendingOk_of_fields hf rfl) _ _ _ _
+    · split <;> exact pendingOk_parkVoid (pendingOk_of_fields hf rfl) _ _ _ _ _
   · split
     · exact pendingOk_of_fields hf rfl
     · exact registerRace_pendingOk m f y _ hf
@@ -211,7 +211,7 @@ theorem evaluatePrim_pendingOk (i : FInterp) (m : FMachine) (f : FRun) (y : Bool
       · exact hf
       · split
         · exact pendingOk_of_fields hf rfl
-        · exact pendingOk_parkVoid (pendingOk_of_fields hf rfl) _ _ _ _
+        · exact pendingOk_parkVoid (pendingOk_of_fields hf rfl) _ _ _ _ _
     · split
       · split
         · exact withFiber_pendingOk i m f y _ hf

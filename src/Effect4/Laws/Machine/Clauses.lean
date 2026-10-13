@@ -333,7 +333,7 @@ theorem evaluatePrim_yieldNowWith_eq (interp : RunInterp ν σ β ε δ ι α χ
          frame := {f.frame with current := Prim.success interp.voidValue}
          dispatcher := f.dispatcher.enqueue priority
            (Task.resume f.id m.nextToken (Prim.success interp.voidValue))}
-       let parked := before.park ⟨m.nextToken, [], [], Resume.void, false⟩
+       let parked := before.park ⟨m.nextToken, none, [], [], Resume.void, false⟩
        ⟨(grown.arm parked.id).emit [RunEvent.parkedOn parked.id m.nextToken],
          parked, yielding, Outcome.parked, [], []⟩) := by
   simp only [evaluatePrim, current]
@@ -786,7 +786,7 @@ theorem evaluatePrim_join_live (interp : RunInterp ν σ β ε δ ι α χ St)
           [RunEvent.parkedOn g.id m.nextToken],
         ({ g with frame := { g.frame with
             stack := Prim.asyncFinalizer (interp.cancelName interp.parkCancelName g.id m.nextToken) :: g.frame.stack } }).park
-          ⟨m.nextToken, [], [], Resume.void, false⟩, yielding, Outcome.parked, [],
+          ⟨m.nextToken, none, [], [], Resume.void, false⟩, yielding, Outcome.parked, [],
           [.observe target (.resumeAwait g.id m.nextToken mode)]⟩ := by
   simp only [evaluatePrim, hpark, ht, hlive]
   rfl
@@ -1280,7 +1280,7 @@ theorem countdownPark_parks (interp : RunInterp ν σ β ε δ ι α χ St)
       (let m' : RunMachine ν σ β ε δ ι α χ St := { m with nextToken := m.nextToken + 1 }
        let name := interp.cancelName interp.parkCancelName f.id m.nextToken
        let g := ({ f with frame := { f.frame with stack := Prim.asyncFinalizer name :: f.frame.stack } }).park
-         ⟨m.nextToken, remaining, exits, resumeWith, failFast⟩
+         ⟨m.nextToken, some target, remaining, exits, resumeWith, failFast⟩
        ((m'.modify target fun g => { g with observers := g.observers ++ [Observer.countdown f.id m.nextToken] }).emit
           [RunEvent.parkedOn f.id m.nextToken], g, true)) := by
   simp only [countdownPark, countdownParkEdits, hwalk, applyFiberEdits,
@@ -1296,17 +1296,18 @@ theorem fireObserver_countdown_done (interp : RunInterp ν σ β ε δ ι α χ 
     (waiter : FiberId) (token : Nat) (w : RunFiber ν σ β ε δ ι α χ) (p : Pending ν β ε δ ι α)
     (exits : List (Exit β ε δ ι α))
     (hw : acc.1.fiber? waiter = some w) (hp : w.pending.find? (fun q => q.token = token) = some p)
-    (hff : p.failFast = false)
+    (hg : p.waitingOn = some id) (hff : p.failFast = false)
     (hwalk : countdownWalk (acc.1.emit [RunEvent.observerFired id (Observer.countdown waiter token)])
       p.remaining (p.collected ++ [exit]) = (exits, none)) :
     fireObserver interp id exit acc (Observer.countdown waiter token) =
       ((acc.1.emit [RunEvent.observerFired id (Observer.countdown waiter token)]).update
           { w with pending := w.pending.map fun q =>
               if q.token = token then
-                { q with remaining := [], collected := exits }
+                { q with waitingOn := none, remaining := [], collected := exits }
               else q },
         acc.2 ++ [Cmd.resume waiter token (countdownPark.resumePrim interp p.resumeWith exits)]) := by
-  simp [fireObserver, RunMachine.fiber?_emit, hw, hp, hff, hwalk]
+  simp only [fireObserver, RunMachine.fiber?_emit, hw, hp, if_pos hg, hff, Bool.false_eq_true,
+    Bool.false_and, ↓reduceIte, hwalk, List.append_nil]
 
 /-- … and when a later target is live, the countdown moves its one observer to it
 (`:802`, `loop()` at `:804`). census: fork.await-all-children -/
@@ -1315,19 +1316,34 @@ theorem fireObserver_countdown_next (interp : RunInterp ν σ β ε δ ι α χ 
     (waiter : FiberId) (token : Nat) (w : RunFiber ν σ β ε δ ι α χ) (p : Pending ν β ε δ ι α)
     (exits : List (Exit β ε δ ι α)) (next : FiberId) (rest : List FiberId)
     (hw : acc.1.fiber? waiter = some w) (hp : w.pending.find? (fun q => q.token = token) = some p)
-    (hff : p.failFast = false)
+    (hg : p.waitingOn = some id) (hff : p.failFast = false)
     (hwalk : countdownWalk (acc.1.emit [RunEvent.observerFired id (Observer.countdown waiter token)])
       p.remaining (p.collected ++ [exit]) = (exits, some (next, rest))) :
     fireObserver interp id exit acc (Observer.countdown waiter token) =
       (((acc.1.emit [RunEvent.observerFired id (Observer.countdown waiter token)]).update
           { w with pending := w.pending.map fun q =>
               if q.token = token then
-                { q with remaining := rest, collected := exits }
+                { q with waitingOn := some next, remaining := rest, collected := exits }
               else q }).modify next
           (fun g => { g with observers := g.observers ++ [Observer.countdown waiter token] }),
         acc.2) := by
-  simp only [fireObserver, RunMachine.fiber?_emit, hw, hp, hff, Bool.false_eq_true,
+  simp only [fireObserver, RunMachine.fiber?_emit, hw, hp, if_pos hg, hff, Bool.false_eq_true,
     Bool.false_and, ↓reduceIte, hwalk, applyFiberEdit, RunMachine.observe, List.append_nil]
+
+/-- A countdown observer that fires while its record waits on another fiber, or on none, changes
+nothing but the trace (decisions row 376 (2)). The reference's countdown observer is one closure on
+the walk's current target (rc.112 `internal/effect.ts:801-804`; 4.0.1 `:826-829`), called once when
+that target exits (rc.112 `:621-624`; 4.0.1 `:611-616`), so the reference never fires one here: this
+is a stale observer of an exited fiber, or a duplicate command. No census row: the reference never
+takes the branch. -/
+theorem fireObserver_countdown_stale (interp : RunInterp ν σ β ε δ ι α χ St) (id : FiberId)
+    (exit : Exit β ε δ ι α) (acc : RunMachine ν σ β ε δ ι α χ St × List (Cmd ν σ β ε δ ι α))
+    (waiter : FiberId) (token : Nat) (w : RunFiber ν σ β ε δ ι α χ) (p : Pending ν β ε δ ι α)
+    (hw : acc.1.fiber? waiter = some w) (hp : w.pending.find? (fun q => q.token = token) = some p)
+    (hg : p.waitingOn ≠ some id) :
+    fireObserver interp id exit acc (Observer.countdown waiter token) =
+      (acc.1.emit [RunEvent.observerFired id (Observer.countdown waiter token)], acc.2) := by
+  simp only [fireObserver, RunMachine.fiber?_emit, hw, hp, if_neg hg]
 
 /-- The settling arm of a race callback (`:1503-1514`, R2-12): the race is marked settled;
 while its registration is still running the answer is only buffered (`:1120-1126`, D6a),
@@ -1527,7 +1543,7 @@ theorem drive_registrationDone_parks (interp : RunInterp ν σ β ε δ ι α χ
       (let name := interp.cancelName (interp.raceCancelName raceId) host.id race.token
        let g := ({ host with frame := { host.frame with
           stack := Prim.asyncFinalizer name :: host.frame.stack } }).park
-         ⟨race.token, [], [], Resume.void, false⟩
+         ⟨race.token, none, [], [], Resume.void, false⟩
        drive interp fuel
          (((m.updateRace { race with registering := false }).emit [RunEvent.parkedOn g.id race.token]).update
            { g with running := false })
@@ -2052,7 +2068,7 @@ theorem evaluatePrim_async_parks (interp : RunInterp ν σ β ε δ ι α χ St)
               stack := Prim.asyncFinalizer
                 (interp.cancelName (cancel.getD interp.abortName) g.id token) :: g.frame.stack } }
          else g
-       let g := g.park ⟨token, [], [], Resume.void, false⟩
+       let g := g.park ⟨token, none, [], [], Resume.void, false⟩
        ⟨m.emit [RunEvent.parkedOn g.id token], g, yielding, Outcome.parked, [], []⟩) := by
   simp only [evaluatePrim, hreg]
 

@@ -241,7 +241,7 @@ theorem evaluatePrim_async_none (root : NativeEff) (c : List (FiberId × ExitV))
        let f' : FRun := if withSignal || cancel.isSome then
            { f with frame := { f.frame with stack := Prim.asyncFinalizer name :: f.frame.stack } }
          else f
-       let f' := f'.park ⟨m.nextToken, [], [], Resume.void, false⟩
+       let f' := f'.park ⟨m.nextToken, none, [], [], Resume.void, false⟩
        ⟨({ m with state := s, nextToken := m.nextToken + 1 }).emit [RunEvent.parkedOn f'.id m.nextToken],
          f', y, .parked, [], []⟩) := by
   simp only [evaluatePrim, hcur, hreg]

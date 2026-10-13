@@ -973,7 +973,7 @@ def parkedAt (fr : NFiber) (k : Nat) (t : Nat) : NRunFiber :=
       current := Prim.success Val.unit
       stack := Prim.onSuccessConst (Prim.yieldNowWith 0) fr.current :: fr.stack }
     parked := Parked.withGuard t
-    pending := [⟨t, [], [], Resume.void, false⟩]
+    pending := [⟨t, none, [], [], Resume.void, false⟩]
     dispatcher := Dispatcher.empty.enqueue 0 (Task.resume Api.root t (Prim.success Val.unit)) }
 
 /-- The machine after a yield: the root parked on token `t`, its dispatcher armed, the next

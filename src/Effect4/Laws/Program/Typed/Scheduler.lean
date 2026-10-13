@@ -72,32 +72,46 @@ structure RacePayload (root : ProgramSource) (w : World) (race : RRace)
   (`CommandDeliveryOk`'s `FiberListColumns`); `enrollRace` supplies it (`EnrollRaceOk`). -/
   live : ∀ id ∈ race.state.live, FiberColumnsBelow w id resultTy.answer resultTy.error
 
-/-- The finite pending record reached by a countdown observer. Joins also use Pending with
-void metadata, so this predicate is attached only through an actual countdown observer. -/
-structure CountdownPayload (w : World) (m : RState) (waiter : FiberId)
-    (pending : RPending) (answer error : Ty) (tokenTy : EffTy) : Prop where
-  token : w.Θ waiter pending.token = some tokenTy
-  collected : ∀ exit ∈ pending.collected,
-    ExitOk w ⟨answer, error, Env.Requirement.empty⟩ exit
-  targets : ∀ id ∈ pending.remaining,
-    ∀ fiber, m.fiber? id = some fiber → FiberColumnsBelow w fiber.id answer error
-  resume : match pending.resumeWith with
-    | .exitsValue => tokenTy = EffTy.pure (.list (.exitOf answer error))
-    | .void => tokenTy = EffTy.pure .unit
-    | .continueWith (.restore saved) => ExitOk w tokenTy saved
-    | .continueWith _ => ExitOk w tokenTy outsideExit
+/-- What a finished countdown's continuation is typed at (`countdownPark.resumePrim`), read from
+its targets in order and their columns: the exits as a value at the tuple of the targets' columns
+(the positional certificate, row 349), or at one list of exits whose columns every target shares
+(`Resume.exitsValue`); `void`; or the restoring continuation's saved exit. -/
+def CountdownResume (w : World) (resumeWith : Resume EffName) (targets : List FiberId)
+    (cols : FiberId → Ty × Ty) (tokenTy : EffTy) : Prop :=
+  match resumeWith with
+  | .exitsValue =>
+    tokenTy = EffTy.pure (.tuple (targets.map fun t => .exitOf (cols t).1 (cols t).2)) ∨
+      ∃ a e, tokenTy = EffTy.pure (.list (.exitOf a e)) ∧ ∀ t ∈ targets, cols t = (a, e)
+  | .void => tokenTy = EffTy.pure .unit
+  | .continueWith (.restore saved) => ExitOk w tokenTy saved
+  | .continueWith _ => ExitOk w tokenTy outsideExit
 
-/-- Follow exactly fireObserver's waiter and pending lookups. Missing lookups are inert.
-The supplied condition shares the aggregate witnesses with all buffered values. -/
-def CountdownAt (w : World) (m : RState) (waiter : FiberId) (token : Nat)
-    (incoming : Ty → Ty → Prop) : Prop :=
+/-- The finite pending record reached by a countdown observer, read from the record alone
+(decisions row 376 (2)). The countdown's targets, in order, are the visited ones (`done`), the one
+it waits on now (`waitingOn`) and the ones after it (`remaining`). Each visited target's exit is
+collected, in order, at that target's columns; each target to come is declared below its columns;
+and the token is declared at what the resume answers over all of them. Joins also use Pending with
+void metadata, so this predicate is attached only through an actual countdown observer. -/
+structure CountdownPayload (w : World) (waiter : FiberId) (pending : RPending)
+    (done : List FiberId) (cols : FiberId → Ty × Ty) (tokenTy : EffTy) : Prop where
+  token : w.Θ waiter pending.token = some tokenTy
+  collected : ListRel (fun t ex => ExitOk w ⟨(cols t).1, (cols t).2, Env.Requirement.empty⟩ ex)
+    done pending.collected
+  targets : ∀ t ∈ pending.waitingOn.toList ++ pending.remaining,
+    FiberColumnsBelow w t (cols t).1 (cols t).2
+  resume : CountdownResume w pending.resumeWith
+    (done ++ (pending.waitingOn.toList ++ pending.remaining)) cols tokenTy
+
+/-- Follow exactly fireObserver's waiter and pending lookups. Missing lookups are inert. The
+payload reads the record and the world only: no column condition on the observer's source, so a
+stale or duplicate firing, which the machine's guard drops, constrains nothing. -/
+def CountdownAt (w : World) (m : RState) (waiter : FiberId) (token : Nat) : Prop :=
   match m.fiber? waiter with
   | none => True
   | some fiber =>
     match fiber.pending.find? (fun pending => pending.token = token) with
     | none => True
-    | some pending => ∃ answer error tokenTy,
-        CountdownPayload w m waiter pending answer error tokenTy ∧ incoming answer error
+    | some pending => ∃ done cols tokenTy, CountdownPayload w waiter pending done cols tokenTy
 
 /-- A stored observer's source declaration is connected to the destination token; a stored
 scope-finalizer drop names a scope the store holds (row 139; `Stores.ScopeLive`, row 156's
@@ -106,7 +120,7 @@ def StoredObserverOk (root : ProgramSource) (w : World) (m : RState)
     (source : FiberId) : Observer → Prop
   | .resumeAwait waiter token mode => ∃ sourceTy,
       w.Γ source = some sourceTy ∧ w.Θ waiter token = some (observerDeliveredType mode sourceTy)
-  | .countdown waiter token => CountdownAt w m waiter token (FiberColumnsBelow w source)
+  | .countdown waiter token => CountdownAt w m waiter token
   | .raceCallback raceId =>
     match m.race? raceId with
     | none => True
@@ -118,14 +132,16 @@ def StoredObserverOk (root : ProgramSource) (w : World) (m : RState)
 
 /-- A queued observer must type what it can deliver or buffer, including a race callback
 while registration is still active; a scope-finalizer drop names a scope the store holds
-(`Stores.ScopeLive`). The two remaining no-payload variants keep their machine guards. -/
+(`Stores.ScopeLive`). A countdown types its exit at its source's declaration, which the record's
+payload reads when the record waits on the source (`fireObserver`'s guard, decisions row 376 (2)).
+The two remaining no-payload variants keep their machine guards. -/
 def ObserverCommandOk (root : ProgramSource) (w : World) (m : RState)
     (source : FiberId) (exit : ExitV) : Observer → Prop
   | .resumeAwait waiter token mode => ∃ sourceTy,
       w.Γ source = some sourceTy ∧
       w.Θ waiter token = some (observerDeliveredType mode sourceTy) ∧ ExitOk w sourceTy exit
-  | .countdown waiter token => CountdownAt w m waiter token
-      (fun answer error => ExitOk w ⟨answer, error, Env.Requirement.empty⟩ exit)
+  | .countdown waiter token => CountdownAt w m waiter token ∧
+      ∃ sourceTy, w.Γ source = some sourceTy ∧ ExitOk w sourceTy exit
   | .raceCallback raceId =>
     match m.race? raceId with
     | none => True
@@ -155,31 +171,89 @@ structure ObserverState (root : ProgramSource) (w : World) (m : RState) : Prop w
 
 /-! ### Transport between machines with the same lookups
 
-The observer correlations read the machine only through `fiber?`, `race?` and the store, but a
-countdown's payload is a structure over the machine, so two machines that agree on those lookups
-need a transport, not a definitional rewrite. -/
+The observer correlations read the machine only through `fiber?`, `race?` and the store. A
+countdown's payload reads the record and the world, so it moves along the host order, and the
+correlation moves to any machine whose record at the waiter is one the first machine held. -/
+
+/-- The resume's typing moves along the host order. -/
+theorem countdownResume_mono {w w' : World} (ord : w.leHost w') {resumeWith : Resume EffName}
+    {targets : List FiberId} {cols : FiberId → Ty × Ty} {tokenTy : EffTy}
+    (h : CountdownResume w resumeWith targets cols tokenTy) :
+    CountdownResume w' resumeWith targets cols tokenTy := by
+  unfold CountdownResume at h ⊢
+  split at h
+  · exact h
+  · exact h
+  · exact strongExit_mono _ _ _ _ ord h
+  · exact strongExit_mono _ _ _ _ ord h
+
+/-- A countdown's payload moves along the host order: the token and the declarations persist, and
+the collected exits keep their membership. -/
+theorem countdownPayload_mono {w w' : World} (ord : w.leHost w') {waiter : FiberId}
+    {pending : RPending} {done : List FiberId} {cols : FiberId → Ty × Ty} {tokenTy : EffTy}
+    (h : CountdownPayload w waiter pending done cols tokenTy) :
+    CountdownPayload w' waiter pending done cols tokenTy :=
+  ⟨ord.1.2.2.2.2.2.1 _ _ _ h.token,
+    by
+      have moved := ListRel.of_map_mem
+        (r := fun t ex => ExitOk w ⟨(cols t).1, (cols t).2, Env.Requirement.empty⟩ ex)
+        (s := fun t ex => ExitOk w' ⟨(cols t).1, (cols t).2, Env.Requirement.empty⟩ ex)
+        (f := id) (g := id) (fun _ _ _ hx => strongExit_mono _ _ _ _ ord hx) h.collected
+      rwa [List.map_id, List.map_id] at moved,
+    fun t ht => by
+      obtain ⟨ty, declared, ha, he⟩ := h.targets t ht
+      exact ⟨ty, ord.1.2.1 _ _ declared, ha, he⟩,
+    countdownResume_mono ord h.resume⟩
+
+/-- A countdown correlation, read at a found record. -/
+theorem countdownAt_found {w : World} {m : RState} {waiter : FiberId} {token : Nat}
+    {wf : RFiber} {p : RPending}
+    (h : CountdownAt w m waiter token) (hw : m.fiber? waiter = some wf)
+    (hp : wf.pending.find? (fun q => q.token = token) = some p) :
+    ∃ done cols tt, CountdownPayload w waiter p done cols tt := by
+  unfold CountdownAt at h
+  rw [hw] at h
+  dsimp only at h
+  rw [hp] at h
+  exact h
+
+/-- A countdown correlation, given at a found record. -/
+theorem countdownAt_of_found {w : World} {m : RState} {waiter : FiberId} {token : Nat}
+    {g : RFiber} {p : RPending} (hw : m.fiber? waiter = some g)
+    (hp : g.pending.find? (fun q => q.token = token) = some p)
+    (h : ∃ done cols tt, CountdownPayload w waiter p done cols tt) :
+    CountdownAt w m waiter token := by
+  unfold CountdownAt
+  rw [hw]
+  dsimp only
+  rw [hp]
+  exact h
+
+/-- **A countdown correlation moves** to a later world and to a machine whose record at the waiter
+and the token, when it has one, is a record the first machine held there. -/
+theorem countdownAt_transport {w w' : World} {m m' : RState} (ord : w.leHost w')
+    {waiter : FiberId} {token : Nat}
+    (record : ∀ f' p, m'.fiber? waiter = some f' →
+      f'.pending.find? (fun q => q.token = token) = some p →
+      ∃ f, m.fiber? waiter = some f ∧ f.pending.find? (fun q => q.token = token) = some p)
+    (h : CountdownAt w m waiter token) : CountdownAt w' m' waiter token := by
+  unfold CountdownAt
+  cases hf : m'.fiber? waiter with
+  | none => trivial
+  | some f' =>
+    dsimp only
+    cases hp : f'.pending.find? (fun pending => pending.token = token) with
+    | none => trivial
+    | some p =>
+      dsimp only
+      obtain ⟨f, hf0, hp0⟩ := record f' p hf hp
+      obtain ⟨done, cols, tt, payload⟩ := countdownAt_found h hf0 hp0
+      exact ⟨done, cols, tt, countdownPayload_mono ord payload⟩
 
 theorem countdownAt_congr {w : World} {m m' : RState} {waiter : FiberId} {token : Nat}
-    {incoming : Ty → Ty → Prop} (fibers : ∀ id, m'.fiber? id = m.fiber? id)
-    (h : CountdownAt w m waiter token incoming) : CountdownAt w m' waiter token incoming := by
-  unfold CountdownAt at h ⊢
-  rw [fibers]
-  cases found : m.fiber? waiter with
-  | none => trivial
-  | some fiber =>
-    rw [found] at h
-    dsimp only at h ⊢
-    cases hp : fiber.pending.find? (fun pending => pending.token = token) with
-    | none => trivial
-    | some pending =>
-      rw [hp] at h
-      dsimp only at h
-      obtain ⟨answer, error, tokenTy, payload, incomingOk⟩ := h
-      refine ⟨answer, error, tokenTy, ⟨payload.token, payload.collected, ?_, payload.resume⟩,
-        incomingOk⟩
-      intro id member target lookup
-      rw [fibers] at lookup
-      exact payload.targets id member target lookup
+    (fibers : ∀ id, m'.fiber? id = m.fiber? id)
+    (h : CountdownAt w m waiter token) : CountdownAt w m' waiter token :=
+  countdownAt_transport (leHost_refl w) (fun f' _ hf hp => ⟨f', by rw [← fibers]; exact hf, hp⟩) h
 
 theorem storedObserverOk_congr {root : ProgramSource} {w : World} {m m' : RState}
     {source : FiberId} (fibers : ∀ id, m'.fiber? id = m.fiber? id)
@@ -207,7 +281,7 @@ theorem observerCommandOk_congr {root : ProgramSource} {w : World} {m m' : RStat
     (h : ObserverCommandOk root w m source exit o) : ObserverCommandOk root w m' source exit o := by
   cases o with
   | resumeAwait waiter token mode => exact h
-  | countdown waiter token => exact countdownAt_congr fibers h
+  | countdown waiter token => exact ⟨countdownAt_congr fibers h.1, h.2⟩
   | raceCallback raceId =>
     unfold ObserverCommandOk at h ⊢
     dsimp only at h ⊢

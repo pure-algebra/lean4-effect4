@@ -580,6 +580,12 @@ theorem fireObserver_transports {allowClear : Prop} (interp : NInterp) {m : Nati
       split
       · exact base.thenEmit _
       · rename_i p pending
+        -- the guard: a firing whose record waits on another fiber only emits its event
+        by_cases hg : p.waitingOn = some id
+        case neg =>
+          rw [if_neg hg]
+          exact base.thenEmit _
+        rw [if_pos hg]
         have changed : Transports allowClear acc.1
             (if p.failFast && !exit.isSuccess && p.collected.all Exit.isSuccess then
               interruptEach interp waiter (interp.stackAnnotations waiter) p.remaining
@@ -598,7 +604,7 @@ theorem fireObserver_transports {allowClear : Prop} (interp : NInterp) {m : Nati
             · rename_i exits nextTarget rest walk
               let nextCurrent : NFiber := {current with pending := current.pending.map fun q =>
                 if q.token = token then
-                  {q with remaining := rest, collected := exits}
+                  {q with waitingOn := some nextTarget, remaining := rest, collected := exits}
                 else q}
               exact (changed.thenUpdate (t' := nextCurrent)
                 (List.mem_of_find?_eq_some currentFound) (.edit rfl rfl (.refl _))).thenModify

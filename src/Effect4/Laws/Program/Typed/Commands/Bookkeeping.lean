@@ -330,27 +330,11 @@ theorem ObsView.ofLookup {m m' : RState} (lookup : ∀ id, m'.fiber? id = m.fibe
 theorem countdownAt_view {w : World} {m m' : RState}
     (fibers : ∀ id f', m'.fiber? id = some f' →
       ∃ f, m.fiber? id = some f ∧ f'.id = f.id ∧ PendingWeaker f.pending f'.pending)
-    {waiter : FiberId} {token : Nat} {incoming : Ty → Ty → Prop}
-    (h : CountdownAt w m waiter token incoming) : CountdownAt w m' waiter token incoming := by
-  unfold CountdownAt at h ⊢
-  cases h' : m'.fiber? waiter with
-  | none => trivial
-  | some f' =>
-    obtain ⟨f, h0, _, weak⟩ := fibers waiter f' h'
-    rw [h0] at h
-    dsimp only at h ⊢
-    cases hfind : f'.pending.find? (fun pending => pending.token = token) with
-    | none => trivial
-    | some pending =>
-      rw [weak token pending hfind] at h
-      dsimp only at h ⊢
-      obtain ⟨answer, error, tokenTy, payload, incomingOk⟩ := h
-      refine ⟨answer, error, tokenTy, ⟨payload.token, payload.collected, ?_, payload.resume⟩,
-        incomingOk⟩
-      intro id member target lookup
-      obtain ⟨old, hold, hid, _⟩ := fibers id target lookup
-      rw [hid]
-      exact payload.targets id member old hold
+    {waiter : FiberId} {token : Nat}
+    (h : CountdownAt w m waiter token) : CountdownAt w m' waiter token :=
+  countdownAt_transport (leHost_refl w) (fun f' p hf hp => by
+    obtain ⟨f, h0, _, weak⟩ := fibers waiter f' hf
+    exact ⟨f, h0, weak token p hp⟩) h
 
 theorem storedObserverOk_view {root : ProgramSource} {w : World} {m m' : RState}
     (view : ObsView m m') {source : FiberId} (o : Observer)
@@ -372,7 +356,7 @@ theorem observerCommandOk_view {root : ProgramSource} {w : World} {m m' : RState
     (h : ObserverCommandOk root w m source exit o) : ObserverCommandOk root w m' source exit o := by
   cases o with
   | resumeAwait waiter token mode => exact h
-  | countdown waiter token => exact countdownAt_view view.fibers h
+  | countdown waiter token => exact ⟨countdownAt_view view.fibers h.1, h.2⟩
   | raceCallback raceId =>
     unfold ObserverCommandOk at h ⊢
     dsimp only at h ⊢
@@ -1128,32 +1112,9 @@ theorem racePayload_world {root : ProgramSource} {race : RRace} {ty : EffTy}
       obtain ⟨t, hd, ha, he⟩ := h.live id hid
       exact ⟨t, by rw [hΓ]; exact hd, ha, he⟩⟩
 
-include hΓ hΘ in
 theorem countdownAt_world {m : RState} {waiter : FiberId} {token : Nat}
-    {incoming incoming' : Ty → Ty → Prop} (hin : ∀ a e, incoming a e → incoming' a e)
-    (h : CountdownAt w m waiter token incoming) : CountdownAt w' m waiter token incoming' := by
-  unfold CountdownAt at h ⊢
-  cases hf : m.fiber? waiter with
-  | none => trivial
-  | some fiber =>
-    rw [hf] at h
-    dsimp only at h ⊢
-    cases hp : fiber.pending.find? (fun pending => pending.token = token) with
-    | none => trivial
-    | some pending =>
-      rw [hp] at h
-      dsimp only at h ⊢
-      obtain ⟨answer, error, tokenTy, payload, incomingOk⟩ := h
-      refine ⟨answer, error, tokenTy, ⟨by rw [hΘ]; exact payload.token,
-        fun ex hx => strongExit_mono _ _ _ _ ord (payload.collected ex hx),
-        fun id hid target ht => fiberColumnsBelow_world hΓ (payload.targets id hid target ht),
-        ?_⟩, hin answer error incomingOk⟩
-      have resume := payload.resume
-      split at resume
-      · exact resume
-      · exact resume
-      · exact strongExit_mono _ _ _ _ ord resume
-      · exact strongExit_mono _ _ _ _ ord resume
+    (h : CountdownAt w m waiter token) : CountdownAt w' m waiter token :=
+  countdownAt_transport ord (fun f' _ hf hp => ⟨f', hf, hp⟩) h
 
 include hΓ hΘ in
 theorem storedObserverOk_world {root : ProgramSource} {m : RState} {source : FiberId} (o : Observer)
@@ -1162,8 +1123,7 @@ theorem storedObserverOk_world {root : ProgramSource} {m : RState} {source : Fib
   | resumeAwait waiter token mode =>
     obtain ⟨sourceTy, declared, token'⟩ := h
     exact ⟨sourceTy, by rw [hΓ]; exact declared, by rw [hΘ]; exact token'⟩
-  | countdown waiter token =>
-    exact countdownAt_world ord hΓ hΘ (fun a e hc => fiberColumnsBelow_world hΓ hc) h
+  | countdown waiter token => exact countdownAt_world ord h
   | raceCallback raceId =>
     unfold StoredObserverOk at h ⊢
     dsimp only at h ⊢
@@ -1186,7 +1146,9 @@ theorem observerCommandOk_world {root : ProgramSource} {m : RState} {source : Fi
     exact ⟨sourceTy, by rw [hΓ]; exact declared, by rw [hΘ]; exact token',
       strongExit_mono _ _ _ _ ord typed⟩
   | countdown waiter token =>
-    exact countdownAt_world ord hΓ hΘ (fun a e hc => strongExit_mono _ _ _ _ ord hc) h
+    obtain ⟨at_, sourceTy, declared, typed⟩ := h
+    exact ⟨countdownAt_world ord at_, sourceTy, by rw [hΓ]; exact declared,
+      strongExit_mono _ _ _ _ ord typed⟩
   | raceCallback raceId =>
     unfold ObserverCommandOk at h ⊢
     dsimp only at h ⊢
@@ -3173,7 +3135,7 @@ theorem observerCommandOk_updateRace {source : FiberId} {exit : ExitV}
       · obtain ⟨ty, declared, ha, he⟩ := cols
         exact exitOk_subN (typed ty declared) ha he
   | resumeAwait _ _ _ => exact h
-  | countdown _ _ => exact countdownAt_view (sameFibers_updateRace m new) h
+  | countdown _ _ => exact ⟨countdownAt_view (sameFibers_updateRace m new) h.1, h.2⟩
   | dropScopeFinalizer _ _ => exact h
   | untrackChild _ => trivial
   | callback _ => trivial
