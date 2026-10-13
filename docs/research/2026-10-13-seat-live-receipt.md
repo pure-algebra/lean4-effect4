@@ -147,7 +147,12 @@ is `docs/research/2026-10-13-seat-live-brief.md`.
   (`src/Effect4/Laws/Api/HostSession.lean`) and `applyFinishes`
   (`Test/Dogfood/Proofs/HostRouting.lean`) unfold `steppedBy` to meet the shared step.
 - The patch, tested: a scratchpad copy of `Journal.lean` with these two hunks compiles with
-  `-DwarningAsError=true` against `seat/live-dm4` at `7763fc569`.
+  `-DwarningAsError=true` against `seat/live-dm4` at `7763fc569`. The same hunks stand in
+  `docs/research/2026-10-13-seat-live-journal.patch`, and `git apply --check` passes on `seat/live`.
+- Two more modules destructure `applyReply_cases`: `Test/Dogfood/Proofs/HostAppliedObservation.lean`
+  and `Test/Dogfood/Proofs/HostPayloads.lean`. Each rewrites with the session equation and reads
+  `active` and `pending` alone, so the patch leaves them as they are. That is assumed, by reading:
+  they import `Journal`, so the seat could not build them, and the build after the patch tests it.
 
 ```diff
 @@ applyReply_cases, the third disjunct @@
