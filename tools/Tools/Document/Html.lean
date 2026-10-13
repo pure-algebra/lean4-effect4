@@ -53,10 +53,18 @@ def fragment (key : String) : String :=
 private def el (tag : String) (children : List RawNode) (attrs : List (String × String) := []) : RawNode :=
   .element tag attrs children
 
+/-- Code's text, with a place to break after each dot of a qualified name: a name with no space
+breaks between its components (`Effect4.Program.Typed.…`) and nowhere else. -/
+def codeText (s : String) : List RawNode :=
+  if s.any Char.isWhitespace || !s.contains '.' then [.text s] else
+    let parts := s.splitOn "."
+    (parts.zipIdx.flatMap fun (p, i) =>
+      if i + 1 == parts.length then [.text p] else [.text (p ++ "."), el "wbr" []])
+
 /-- Inline content, with the link of a reference from `target`. -/
 def inline (target : String → String) : Inline → RawNode
   | .text s => .text s
-  | .code s => el "code" [.text s]
+  | .code s => el "code" (codeText s)
   | .ref k label => el "a" [.text label] [("href", target k)]
   | .link href label => el "a" [.text label] [("href", href)]
   | .status w => el "span" [.text w] [("class", "status"), ("data-status", w)]

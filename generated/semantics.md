@@ -5,9 +5,11 @@ inputs: tools/ProofGraph/Registry.lean, tools/Tools/Semantics.lean, tools/Driver
 -->
 # Semantics evidence
 
-This page lists the claims that Effect4 makes about Effect's runtime, concept by concept, with the evidence for each. A claim's evidence is derived from its Lean declaration, never written by hand (decisions row 203).
+Effect4 makes 216 claims about Effect's runtime: 198 proved, 12 modulo, 1 goal, 1 refuted, 3 absent, 1 assumed.
 
-Every witness stays within the semantic axiom ceiling, `propext` and `Quot.sound`, or the page is not written. That ceiling is no verdict of the whole library's gate. Only selected evidence stands here. Each claim's English is written by hand, and a placement that a declaration inherits from its module is provisional.
+A claim's evidence comes from its Lean declaration and is never written by hand (decisions row 203). `The open work` lists the planned goals that the remaining claims rest on, and why each waits.
+
+Every witness uses no axiom beyond `propext` and `Quot.sound`, or the page is not written. That ceiling covers the evidence shown here, not the whole library. A claim's English is written by hand. A placement that a declaration inherits from its module is provisional.
 
 A register record links a claim to a historical attack. Read the whole row: an early status word may stand beside a later repair.
 
@@ -421,33 +423,31 @@ Proved modulo this goal (2), each by its shortest chain of nearest nodes:
 
 ## Store Typing
 
-World-indexed semantic value membership (Fits) and store typings
+World-indexed semantic value membership (Fits) and store typings. 21 claims: 20 proved, 1 absent.
 
-Key: `store-typing` · Claims: 21 (20 proved, 1 absent)
-
-| Claim | Role | Status | Evidence | Contested by |
-| --- | --- | --- | --- | --- |
-| `fits-mono` | monotonicity | proved | `Effect4.Program.Typed.fits_mono` | — |
-| `fits-subn` | preservation | proved | `Effect4.Program.Typed.fits_subN` | — |
-| `fits-normalize` | compatibility | proved | `Effect4.Program.Typed.fits_normalize` | — |
-| `fits-scope-inv` | inversion | proved | `Effect4.Program.Typed.fits_scope_inv` | — |
-| `term-maps-mono` | monotonicity | proved | `Effect4.Program.Typed.TermMaps.mono` | — |
-| `term-typed-maps` | fundamentalProperty | proved | `Effect4.Program.Typed.termMaps_of_typed` | — |
-| `fold-typed-atomic-update` | compatibility | proved | `Effect4.Program.Typed.fold_typed_atomic_update` | — |
-| `handle-identity-laws` | canonicalForms | proved | `Effect4.Program.Typed.handle_identity_laws` | — |
-| `saved-mask-image-membership` | canonicalForms | proved | `Effect4.Program.Typed.saved_mask_image_membership` | — |
-| `modeled-membership` | compatibility | proved | `Effect4.Schema.Model.member` | — |
-| `step-language-typed` | compatibility | proved | `Effect4.Modules.Step.typed` | — |
-| `store-safety` | progress | absent | Machine safety is established by inductive configuration typing rather than operational progress (decisions row 139) | — |
-| `semaphore-profile-closed` | preservation | proved | `Effect4.Semaphore.Model.profile_closed` | — |
-| `waiting-wrapper-typed` | compatibility | proved | `Effect4.Modules.waitRetryAt_answers` | — |
-| `protected-form-typed` | compatibility | proved | `Effect4.Modules.protectedBy_has` | — |
-| `pool-use-typed` | compatibility | proved | `Effect4.Pool.use_types` | — |
-| `pool-make-typed` | compatibility | proved | `Effect4.Pool.make_types` | — |
-| `pool-close-typed` | compatibility | proved | `Effect4.Pool.close_answers` | — |
-| `pool-profile-closed` | preservation | proved | `Effect4.Pool.Model.profile_closed` | — |
-| `pool-lease-enrols` | inversion | proved | `Effect4.Pool.Model.lease_enrols_iff` | — |
-| `stream-source-declarations` | compatibility | proved | `Effect4.Stream.Source.fromDefinitions_declarations` | — |
+| Claim | Role | Status | Evidence |
+| --- | --- | --- | --- |
+| `fits-mono` | monotonicity | proved | `Effect4.Program.Typed.fits_mono` |
+| `fits-subn` | preservation | proved | `Effect4.Program.Typed.fits_subN` |
+| `fits-normalize` | compatibility | proved | `Effect4.Program.Typed.fits_normalize` |
+| `fits-scope-inv` | inversion | proved | `Effect4.Program.Typed.fits_scope_inv` |
+| `term-maps-mono` | monotonicity | proved | `Effect4.Program.Typed.TermMaps.mono` |
+| `term-typed-maps` | fundamentalProperty | proved | `Effect4.Program.Typed.termMaps_of_typed` |
+| `fold-typed-atomic-update` | compatibility | proved | `Effect4.Program.Typed.fold_typed_atomic_update` |
+| `handle-identity-laws` | canonicalForms | proved | `Effect4.Program.Typed.handle_identity_laws` |
+| `saved-mask-image-membership` | canonicalForms | proved | `Effect4.Program.Typed.saved_mask_image_membership` |
+| `modeled-membership` | compatibility | proved | `Effect4.Schema.Model.member` |
+| `step-language-typed` | compatibility | proved | `Effect4.Modules.Step.typed` |
+| `store-safety` | progress | absent | Machine safety is established by inductive configuration typing rather than operational progress (decisions row 139) |
+| `semaphore-profile-closed` | preservation | proved | `Effect4.Semaphore.Model.profile_closed` |
+| `waiting-wrapper-typed` | compatibility | proved | `Effect4.Modules.waitRetryAt_answers` |
+| `protected-form-typed` | compatibility | proved | `Effect4.Modules.protectedBy_has` |
+| `pool-use-typed` | compatibility | proved | `Effect4.Pool.use_types` |
+| `pool-make-typed` | compatibility | proved | `Effect4.Pool.make_types` |
+| `pool-close-typed` | compatibility | proved | `Effect4.Pool.close_answers` |
+| `pool-profile-closed` | preservation | proved | `Effect4.Pool.Model.profile_closed` |
+| `pool-lease-enrols` | inversion | proved | `Effect4.Pool.Model.lease_enrols_iff` |
+| `stream-source-declarations` | compatibility | proved | `Effect4.Stream.Source.fromDefinitions_declarations` |
 
 ### fits-mono
 
@@ -851,9 +851,7 @@ Module: `Effect4.Laws.Library.Stream.Definitions`
 
 ## Residual Program Typing
 
-TypedProg, the protocol-indexed judgment on residual programs
-
-Key: `residual-program-typing` · Claims: 20 (19 proved, 1 refuted)
+TypedProg, the protocol-indexed judgment on residual programs. 20 claims: 19 proved, 1 refuted.
 
 | Claim | Role | Status | Evidence | Contested by |
 | --- | --- | --- | --- | --- |
@@ -1328,28 +1326,26 @@ Register record `E4-TYPED-CE-041` (REPAIRED)
 
 ## Scope Lifetime & Finalization
 
-Lifetimes, finalizer registration, and LIFO unwinding
+Lifetimes, finalizer registration, and LIFO unwinding. 16 claims: 15 proved, 1 goal.
 
-Key: `scope-lifetime-finalization` · Claims: 16 (15 proved, 1 goal)
-
-| Claim | Role | Status | Evidence | Contested by |
-| --- | --- | --- | --- | --- |
-| `finalizer-starts-bounded` | preservation | proved | `Effect4.Program.FinalizerRun.starts_le_pushes` | — |
-| `once-placed-finalizer` | preservation | goal | `Effect4.Program.FinalizerRun.once_placed_pushes_once` | — |
-| `close-idempotent` | preservation | proved | `Effect4.Scope.close_idempotent` | — |
-| `close-twice` | preservation | proved | `Effect4.Scope.close_twice` | — |
-| `close-order-eq` | inversion | proved | `Effect4.Scope.closeOrder_eq` | — |
-| `close-reentrant-add` | preservation | proved | `Effect4.Scope.close_reentrant_add` | — |
-| `close-seq-protocol` | fundamentalProperty | proved | `Effect4.Program.Typed.closeSeqProtocol` | — |
-| `saved-mask-restoration` | preservation | proved | `Effect4.Program.Typed.saved_mask_restoration` | — |
-| `saved-mask-pop-discipline` | preservation | proved | `Effect4.Machine.saved_mask_pop_discipline` | — |
-| `saved-mask-chain-runs` | preservation | proved | `Effect4.Program.compiled_mask_chain_runs` | — |
-| `saved-mask-region-bracket` | preservation | proved | `Effect4.Program.compiled_region_bracket` | — |
-| `stepped-fiber-live` | inversion | proved | `Effect4.Program.stepped_live` | — |
-| `pool-return-front` | inversion | proved | `Effect4.Pool.Model.giveBack_front` | — |
-| `pool-return-once` | inversion | proved | `Effect4.Pool.Model.giveBack_once` | — |
-| `pool-close-refuses` | inversion | proved | `Effect4.Pool.Model.close_refuses` | — |
-| `pool-drain-waits` | inversion | proved | `Effect4.Pool.Model.drain_waits` | — |
+| Claim | Role | Status | Evidence |
+| --- | --- | --- | --- |
+| `finalizer-starts-bounded` | preservation | proved | `Effect4.Program.FinalizerRun.starts_le_pushes` |
+| `once-placed-finalizer` | preservation | goal | `Effect4.Program.FinalizerRun.once_placed_pushes_once` |
+| `close-idempotent` | preservation | proved | `Effect4.Scope.close_idempotent` |
+| `close-twice` | preservation | proved | `Effect4.Scope.close_twice` |
+| `close-order-eq` | inversion | proved | `Effect4.Scope.closeOrder_eq` |
+| `close-reentrant-add` | preservation | proved | `Effect4.Scope.close_reentrant_add` |
+| `close-seq-protocol` | fundamentalProperty | proved | `Effect4.Program.Typed.closeSeqProtocol` |
+| `saved-mask-restoration` | preservation | proved | `Effect4.Program.Typed.saved_mask_restoration` |
+| `saved-mask-pop-discipline` | preservation | proved | `Effect4.Machine.saved_mask_pop_discipline` |
+| `saved-mask-chain-runs` | preservation | proved | `Effect4.Program.compiled_mask_chain_runs` |
+| `saved-mask-region-bracket` | preservation | proved | `Effect4.Program.compiled_region_bracket` |
+| `stepped-fiber-live` | inversion | proved | `Effect4.Program.stepped_live` |
+| `pool-return-front` | inversion | proved | `Effect4.Pool.Model.giveBack_front` |
+| `pool-return-once` | inversion | proved | `Effect4.Pool.Model.giveBack_once` |
+| `pool-close-refuses` | inversion | proved | `Effect4.Pool.Model.close_refuses` |
+| `pool-drain-waits` | inversion | proved | `Effect4.Pool.Model.drain_waits` |
 
 ### finalizer-starts-bounded
 
@@ -1765,9 +1761,7 @@ Module: `Effect4.Laws.Library.Pool.Profile`
 
 ## Reactive Scheduling
 
-Multi-fiber execution, decision steps, and configuration invariants
-
-Key: `reactive-scheduling` · Claims: 25 (19 proved, 4 modulo, 2 absent)
+Multi-fiber execution, decision steps, and configuration invariants. 25 claims: 19 proved, 4 modulo, 2 absent.
 
 | Claim | Role | Status | Evidence | Contested by |
 | --- | --- | --- | --- | --- |
@@ -2326,31 +2320,29 @@ Module: `Effect4.Laws.Library.Pool.Profile`
 
 ## Exact Codecs
 
-Invertible embeddings for JSON and Schema representations
+Invertible embeddings for JSON and Schema representations. 19 claims: 19 proved.
 
-Key: `exact-codecs` · Claims: 19 (19 proved)
-
-| Claim | Role | Status | Evidence | Contested by |
-| --- | --- | --- | --- | --- |
-| `type-metadata-exact` | compatibility | proved | `Effect4.Codegen.Metadata.type_metadata_exact` | — |
-| `decode-iff` | decidability | proved | `Effect4.Schema.decode_iff` | — |
-| `decode-encode` | compatibility | proved | `Effect4.Schema.decode_encode` | — |
-| `of-schema-exact` | compatibility | proved | `Effect4.Schema.Bridge.ofSchema_exact` | — |
-| `of-schema-schema` | compatibility | proved | `Effect4.Schema.Bridge.ofSchema_schema` | — |
-| `collection-term-print-read` | compatibility | proved | `Effect4.Program.readTerm_printTerm` | — |
-| `record-codec-layout` | compatibility | proved | `Effect4.Schema.decode_iff` | — |
-| `service-identifier-injective` | compatibility | proved | `Effect4.Program.keyIdentifier_injective` | — |
-| `error-payload-exact` | compatibility | proved | `Effect4.Program.errOf_valOfErr` | — |
-| `payload-class-decl-exact` | compatibility | proved | `Effect4.Codegen.admitModule_classDecls` | — |
-| `mask-rows-table-premises` | compatibility | proved | `Effect4.Program.mask_rows_table_premises` | — |
-| `sketch-wire` | compatibility | proved | `Effect4.Program.Sketch.decode_exact` | — |
-| `json-read-exact` | compatibility | proved | `Effect4.Store.Canonical.ofJson_exact` | — |
-| `typed-print-connector` | compatibility | proved | `Effect4.Program.printTyped_eq_print` | — |
-| `typed-print-erasure` | compatibility | proved | `Effect4.Codegen.eraseJoinArgs_printTyped` | — |
-| `typed-print-read` | compatibility | proved | `Effect4.Codegen.readTyped_printTyped` | — |
-| `module-defs-round-trip` | compatibility | proved | `Effect4.Program.readModule_printModule_defs` | — |
-| `modeled-codec` | compatibility | proved | `Effect4.Schema.Modeled.codec_roundtrip` | — |
-| `record-field-laws` | compatibility | proved | `Effect4.Schema.FieldRef.frame_laws` | — |
+| Claim | Role | Status | Evidence |
+| --- | --- | --- | --- |
+| `type-metadata-exact` | compatibility | proved | `Effect4.Codegen.Metadata.type_metadata_exact` |
+| `decode-iff` | decidability | proved | `Effect4.Schema.decode_iff` |
+| `decode-encode` | compatibility | proved | `Effect4.Schema.decode_encode` |
+| `of-schema-exact` | compatibility | proved | `Effect4.Schema.Bridge.ofSchema_exact` |
+| `of-schema-schema` | compatibility | proved | `Effect4.Schema.Bridge.ofSchema_schema` |
+| `collection-term-print-read` | compatibility | proved | `Effect4.Program.readTerm_printTerm` |
+| `record-codec-layout` | compatibility | proved | `Effect4.Schema.decode_iff` |
+| `service-identifier-injective` | compatibility | proved | `Effect4.Program.keyIdentifier_injective` |
+| `error-payload-exact` | compatibility | proved | `Effect4.Program.errOf_valOfErr` |
+| `payload-class-decl-exact` | compatibility | proved | `Effect4.Codegen.admitModule_classDecls` |
+| `mask-rows-table-premises` | compatibility | proved | `Effect4.Program.mask_rows_table_premises` |
+| `sketch-wire` | compatibility | proved | `Effect4.Program.Sketch.decode_exact` |
+| `json-read-exact` | compatibility | proved | `Effect4.Store.Canonical.ofJson_exact` |
+| `typed-print-connector` | compatibility | proved | `Effect4.Program.printTyped_eq_print` |
+| `typed-print-erasure` | compatibility | proved | `Effect4.Codegen.eraseJoinArgs_printTyped` |
+| `typed-print-read` | compatibility | proved | `Effect4.Codegen.readTyped_printTyped` |
+| `module-defs-round-trip` | compatibility | proved | `Effect4.Program.readModule_printModule_defs` |
+| `modeled-codec` | compatibility | proved | `Effect4.Schema.Modeled.codec_roundtrip` |
+| `record-field-laws` | compatibility | proved | `Effect4.Schema.FieldRef.frame_laws` |
 
 ### type-metadata-exact
 
@@ -2726,25 +2718,23 @@ Module: `Effect4.Laws.Schema.FieldRef`
 
 ## Subtyping Algebra
 
-Preorder laws, normalization, and join-semilattice on CTy
+Preorder laws, normalization, and join-semilattice on CTy. 13 claims: 13 proved.
 
-Key: `subtyping-algebra` · Claims: 13 (13 proved)
-
-| Claim | Role | Status | Evidence | Contested by |
-| --- | --- | --- | --- | --- |
-| `raw-formation` | decidability | proved | `Effect4.Program.Formation.checkInput_eq_none_iff` | — |
-| `subn-refl` | compatibility | proved | `Effect4.Program.Ty.subN_refl` | — |
-| `subn-trans` | transitivity | proved | `Effect4.Program.Ty.subN_trans` | — |
-| `subn-equiv-iff` | decidability | proved | `Effect4.Program.Ty.subN_equiv_iff` | — |
-| `normalize-idem` | compatibility | proved | `Effect4.Program.Ty.normalize_idem` | — |
-| `sub-antisymm-canonical` | antisymmetry | proved | `Effect4.Program.Ty.sub_antisymm_canonical` | — |
-| `template-match-complete` | decidability | proved | `Effect4.Program.Bounds.matchB_complete` | — |
-| `slice-lattice-minimal` | monotonicity | proved | `Effect4.SliceView.lattice_minimal` | — |
-| `union-rule-lift` | compatibility | proved | `Effect4.Program.UnionRule.lift_laws` | — |
-| `union-rule-extend` | compatibility | proved | `Effect4.Program.UnionRule.Eliminator.extendAll_laws` | — |
-| `variance-semiring` | compatibility | proved | `Effect4.Program.Var4.semiring_laws` | — |
-| `instantiate-respects-polarity` | monotonicity | proved | `Effect4.Program.Ty.sub_instantiate_polarity` | — |
-| `checked-types-closed` | inversion | proved | `Effect4.Program.check_closed` | — |
+| Claim | Role | Status | Evidence |
+| --- | --- | --- | --- |
+| `raw-formation` | decidability | proved | `Effect4.Program.Formation.checkInput_eq_none_iff` |
+| `subn-refl` | compatibility | proved | `Effect4.Program.Ty.subN_refl` |
+| `subn-trans` | transitivity | proved | `Effect4.Program.Ty.subN_trans` |
+| `subn-equiv-iff` | decidability | proved | `Effect4.Program.Ty.subN_equiv_iff` |
+| `normalize-idem` | compatibility | proved | `Effect4.Program.Ty.normalize_idem` |
+| `sub-antisymm-canonical` | antisymmetry | proved | `Effect4.Program.Ty.sub_antisymm_canonical` |
+| `template-match-complete` | decidability | proved | `Effect4.Program.Bounds.matchB_complete` |
+| `slice-lattice-minimal` | monotonicity | proved | `Effect4.SliceView.lattice_minimal` |
+| `union-rule-lift` | compatibility | proved | `Effect4.Program.UnionRule.lift_laws` |
+| `union-rule-extend` | compatibility | proved | `Effect4.Program.UnionRule.Eliminator.extendAll_laws` |
+| `variance-semiring` | compatibility | proved | `Effect4.Program.Var4.semiring_laws` |
+| `instantiate-respects-polarity` | monotonicity | proved | `Effect4.Program.Ty.sub_instantiate_polarity` |
+| `checked-types-closed` | inversion | proved | `Effect4.Program.check_closed` |
 
 ### raw-formation
 
@@ -3018,45 +3008,43 @@ Module: `Effect4.Laws.Program.Typing.Closed`
 
 ## Initial Algebras & Folds
 
-Free syntax objects, catamorphisms, and fold uniqueness
+Free syntax objects, catamorphisms, and fold uniqueness. 33 claims: 33 proved.
 
-Key: `initial-algebras-folds` · Claims: 33 (33 proved)
-
-| Claim | Role | Status | Evidence | Contested by |
-| --- | --- | --- | --- | --- |
-| `hom-eq-cata-eff` | fundamentalProperty | proved | `Effect4.Program.hom_eq_cata_eff` | — |
-| `inhabited-iff-fits` | decidability | proved | `Effect4.Program.Typed.inhabited_iff_fits` | — |
-| `cata-eff-congr-on` | compatibility | proved | `Effect4.Program.cata_eff_congr_on` | — |
-| `addressed-replacement` | compatibility | proved | `Effect4.Program.Node.replaceAt_spec` | — |
-| `address-composes` | compatibility | proved | `Effect4.Program.Node.replaceAt_append` | — |
-| `path-fold-natural` | compatibility | proved | `Effect4.Program.foldMapAt_eff_base` | — |
-| `checker-base-natural` | compatibility | proved | `Effect4.Program.Checker.check_rebase` | — |
-| `operation-data-scoped` | decidability | proved | `Effect4.Program.Eff.perform_scoped_iff` | — |
-| `reference-expansion-complete` | substitution | proved | `Effect4.Program.expanded_refs_nil_of_wf` | — |
-| `sketch-conservative` | compatibility | proved | `Effect4.Program.holes_conservative` | — |
-| `sketch-weakening` | weakening | proved | `Effect4.Program.sketch_weakening` | — |
-| `hole-rule` | compatibility | proved | `Effect4.Program.Sketch.hole_hasTy` | — |
-| `defs-conservative` | compatibility | proved | `Effect4.Program.defs_conservative` | — |
-| `invocation-rule` | compatibility | proved | `Effect4.Program.invoke_hasTy` | — |
-| `module-check` | compatibility | proved | `Effect4.Program.checkModule_sound` | — |
-| `typed-replacement` | substitution | proved | `Effect4.Program.NodeHasTy.replace` | — |
-| `focus-function` | inversion | proved | `Effect4.Program.NodeHasTy.replace_envAt` | — |
-| `address-table` | compatibility | proved | `Effect4.Program.refusals_nil_iff` | — |
-| `edit-splices-table` | preservation | proved | `Effect4.Program.table_splice` | — |
-| `edit-session-coherent` | preservation | proved | `Effect4.Program.EditSession.reached_view` | — |
-| `edit-session-undo` | compatibility | proved | `Effect4.Program.EditSession.feed_undo` | — |
-| `edit-repaint-set` | preservation | proved | `Effect4.Program.EditSession.feed_repaint` | — |
-| `module-address-table` | compatibility | proved | `Effect4.Program.Sketch.refusals_nil_iff` | — |
-| `module-annotate-table` | compatibility | proved | `Effect4.Program.Sketch.annotate_eq_table` | — |
-| `module-table-splices` | preservation | proved | `Effect4.Program.Sketch.table_fill` | — |
-| `omit-splices-table` | preservation | proved | `Effect4.Program.Sketch.table_omit` | — |
-| `module-holes-conservative` | compatibility | proved | `Effect4.Program.Sketch.check_filled_module` | — |
-| `call-instance-address` | inversion | proved | `Effect4.Program.callAt_rowTy` | — |
-| `annotate-table` | compatibility | proved | `Effect4.Program.annotate_eq_table` | — |
-| `term-slot-environment` | inversion | proved | `Effect4.Program.hasTy_extSlotEnv` | — |
-| `fold-cache-local-agreement` | compatibility | proved | `Effect4.Program.TyCache.check_agreement` | — |
-| `dependency-summary-exact` | decidability | proved | `Tools.Graph.Summary.check_summary_exact` | — |
-| `view-reachability-summary-exact` | decidability | proved | `Tools.View.Flow.checkReach_exact` | — |
+| Claim | Role | Status | Evidence |
+| --- | --- | --- | --- |
+| `hom-eq-cata-eff` | fundamentalProperty | proved | `Effect4.Program.hom_eq_cata_eff` |
+| `inhabited-iff-fits` | decidability | proved | `Effect4.Program.Typed.inhabited_iff_fits` |
+| `cata-eff-congr-on` | compatibility | proved | `Effect4.Program.cata_eff_congr_on` |
+| `addressed-replacement` | compatibility | proved | `Effect4.Program.Node.replaceAt_spec` |
+| `address-composes` | compatibility | proved | `Effect4.Program.Node.replaceAt_append` |
+| `path-fold-natural` | compatibility | proved | `Effect4.Program.foldMapAt_eff_base` |
+| `checker-base-natural` | compatibility | proved | `Effect4.Program.Checker.check_rebase` |
+| `operation-data-scoped` | decidability | proved | `Effect4.Program.Eff.perform_scoped_iff` |
+| `reference-expansion-complete` | substitution | proved | `Effect4.Program.expanded_refs_nil_of_wf` |
+| `sketch-conservative` | compatibility | proved | `Effect4.Program.holes_conservative` |
+| `sketch-weakening` | weakening | proved | `Effect4.Program.sketch_weakening` |
+| `hole-rule` | compatibility | proved | `Effect4.Program.Sketch.hole_hasTy` |
+| `defs-conservative` | compatibility | proved | `Effect4.Program.defs_conservative` |
+| `invocation-rule` | compatibility | proved | `Effect4.Program.invoke_hasTy` |
+| `module-check` | compatibility | proved | `Effect4.Program.checkModule_sound` |
+| `typed-replacement` | substitution | proved | `Effect4.Program.NodeHasTy.replace` |
+| `focus-function` | inversion | proved | `Effect4.Program.NodeHasTy.replace_envAt` |
+| `address-table` | compatibility | proved | `Effect4.Program.refusals_nil_iff` |
+| `edit-splices-table` | preservation | proved | `Effect4.Program.table_splice` |
+| `edit-session-coherent` | preservation | proved | `Effect4.Program.EditSession.reached_view` |
+| `edit-session-undo` | compatibility | proved | `Effect4.Program.EditSession.feed_undo` |
+| `edit-repaint-set` | preservation | proved | `Effect4.Program.EditSession.feed_repaint` |
+| `module-address-table` | compatibility | proved | `Effect4.Program.Sketch.refusals_nil_iff` |
+| `module-annotate-table` | compatibility | proved | `Effect4.Program.Sketch.annotate_eq_table` |
+| `module-table-splices` | preservation | proved | `Effect4.Program.Sketch.table_fill` |
+| `omit-splices-table` | preservation | proved | `Effect4.Program.Sketch.table_omit` |
+| `module-holes-conservative` | compatibility | proved | `Effect4.Program.Sketch.check_filled_module` |
+| `call-instance-address` | inversion | proved | `Effect4.Program.callAt_rowTy` |
+| `annotate-table` | compatibility | proved | `Effect4.Program.annotate_eq_table` |
+| `term-slot-environment` | inversion | proved | `Effect4.Program.hasTy_extSlotEnv` |
+| `fold-cache-local-agreement` | compatibility | proved | `Effect4.Program.TyCache.check_agreement` |
+| `dependency-summary-exact` | decidability | proved | `Tools.Graph.Summary.check_summary_exact` |
+| `view-reachability-summary-exact` | decidability | proved | `Tools.View.Flow.checkReach_exact` |
 
 ### hom-eq-cata-eff
 
@@ -3701,20 +3689,18 @@ Module: `Tools.View.FlowReach`
 
 ## Context Requirements
 
-Graded coeffects, requirement rows, and layer discharge
+Graded coeffects, requirement rows, and layer discharge. 8 claims: 8 proved.
 
-Key: `context-requirements` · Claims: 8 (8 proved)
-
-| Claim | Role | Status | Evidence | Contested by |
-| --- | --- | --- | --- | --- |
-| `satisfies-empty` | compatibility | proved | `Effect4.Machine.Env.Context.satisfies_empty` | — |
-| `satisfies-single` | inversion | proved | `Effect4.Machine.Env.Context.satisfies_single` | — |
-| `satisfies-union` | compatibility | proved | `Effect4.Machine.Env.Context.satisfies_union` | — |
-| `satisfies-weaken` | weakening | proved | `Effect4.Machine.Env.Context.satisfies_weaken` | — |
-| `emission-requirements-complete` | compatibility | proved | `Effect4.Codegen.ModuleEmission.annotation_complete` | — |
-| `provide-discharges` | preservation | proved | `Effect4.Program.Provision.LayerTy.provide_discharges` | — |
-| `provide-closed` | fundamentalProperty | proved | `Effect4.Program.Provision.LayerTy.provide_closed` | — |
-| `build-total` | progress | proved | `Effect4.Program.Provision.build_total` | — |
+| Claim | Role | Status | Evidence |
+| --- | --- | --- | --- |
+| `satisfies-empty` | compatibility | proved | `Effect4.Machine.Env.Context.satisfies_empty` |
+| `satisfies-single` | inversion | proved | `Effect4.Machine.Env.Context.satisfies_single` |
+| `satisfies-union` | compatibility | proved | `Effect4.Machine.Env.Context.satisfies_union` |
+| `satisfies-weaken` | weakening | proved | `Effect4.Machine.Env.Context.satisfies_weaken` |
+| `emission-requirements-complete` | compatibility | proved | `Effect4.Codegen.ModuleEmission.annotation_complete` |
+| `provide-discharges` | preservation | proved | `Effect4.Program.Provision.LayerTy.provide_discharges` |
+| `provide-closed` | fundamentalProperty | proved | `Effect4.Program.Provision.LayerTy.provide_closed` |
+| `build-total` | progress | proved | `Effect4.Program.Provision.build_total` |
 
 ### satisfies-empty
 
@@ -3856,9 +3842,7 @@ Module: `Effect4.Laws.Program.BuildTotal`
 
 ## Host Session Protocol
 
-Session automaton, external reply ingestion, and boundary capabilities
-
-Key: `host-session-protocol` · Claims: 12 (11 proved, 1 assumed)
+Session automaton, external reply ingestion, and boundary capabilities. 12 claims: 11 proved, 1 assumed.
 
 | Claim | Role | Status | Evidence | Contested by |
 | --- | --- | --- | --- | --- |
@@ -4120,61 +4104,59 @@ Effect4.Run.H9FrontierLoopedRows
 
 ## Translation & Simulation
 
-Semantic preservation, replay relations, and capstone M7
+Semantic preservation, replay relations, and capstone M7. 49 claims: 41 proved, 8 modulo.
 
-Key: `translation-simulation` · Claims: 49 (41 proved, 8 modulo)
-
-| Claim | Role | Status | Evidence | Contested by |
-| --- | --- | --- | --- | --- |
-| `recorded-call-tree-prefix` | inversion | modulo | `Effect4.Run.CallTree.bound_in_tree`, modulo `request_leads` | — |
-| `run-eq-meaning` | simulation | proved | `Effect4.Program.Agreement.run_eq_meaning` | — |
-| `loop-agreement` | simulation | proved | `Effect4.Program.Agreement.loopAgreement` | — |
-| `run-eq-ref` | simulation | proved | `Effect4.Program.Sched.run_eq_ref` | — |
-| `profile-plus-exact` | compatibility | proved | `Effect4.Program.intAddIn_eq_some_iff` | — |
-| `profile-mul-exact` | compatibility | proved | `Effect4.Program.mulIn_eq_some_iff` | — |
-| `rows-denotation-straight` | compatibility | proved | `Effect4.Program.Denote.denoteRows_straight` | — |
-| `rows-denotation-append` | compatibility | proved | `Effect4.Program.Denote.meaningUnder_append` | — |
-| `rows-denotation-reference` | compatibility | proved | `Effect4.Program.Sched.denoteR_straightRows` | — |
-| `run-eq-ref-table` | simulation | proved | `Effect4.Program.Sched.run_eq_ref_table` | — |
-| `session-eq-ref` | simulation | proved | `Effect4.Run.session_eq_ref` | — |
-| `rows-denotation-session` | simulation | proved | `Effect4.Run.denoteRows_eq_session` | — |
-| `rows-denotation-host` | simulation | proved | `Effect4.Run.denoteRows_eq_session_host` | — |
-| `rows-loop-session` | simulation | proved | `Effect4.Run.h8_loopedRows` | — |
-| `rows-loop-host` | simulation | proved | `Effect4.Run.denoteRowsB_eq_session_host` | — |
-| `rows-loop-driver` | simulation | proved | `Effect4.Run.runWith_denotesB` | — |
-| `rows-loop-straight` | compatibility | proved | `Effect4.Program.Denote.denoteRowsB_straight` | — |
-| `rows-loop-looped` | compatibility | proved | `Effect4.Program.Denote.denoteRowsB_looped` | — |
-| `rows-denotation-driver` | simulation | proved | `Effect4.Run.runWith_denotes` | — |
-| `m7-route` | fundamentalProperty | proved | `Effect4.Program.Typed.m7_of_ledger` | — |
-| `m7-exits-typed` | adequacy | modulo | `Effect4.Program.Typed.m7_proved`, modulo `countdown_parks_positional` | — |
-| `m7-stores-typed` | adequacy | modulo | `Effect4.Program.Typed.m7_proved`, modulo `countdown_parks_positional` | — |
-| `m7-never-halts` | progress | modulo | `Effect4.Program.Typed.m7_proved`, modulo `countdown_parks_positional` | — |
-| `m7-admitted` | fundamentalProperty | modulo | `Effect4.Program.Typed.m7_admitted`, modulo `countdown_parks_positional` | — |
-| `m7-exit-handles-valid` | preservation | modulo | `Effect4.Program.Typed.exitHandles_valid`, modulo `countdown_parks_positional` | — |
-| `obs-typed-admitted` | adequacy | modulo | `Effect4.Program.Typed.obs_typed`, modulo `countdown_parks_positional` | — |
-| `m7-results-exit-hasty` | adequacy | modulo | `Effect4.Program.Typed.exits_hasTy`, modulo `countdown_parks_positional` | — |
-| `replay-externals` | preservation | proved | `Effect4.Program.Sched.replay_externals` | — |
-| `run-controls-replay` | simulation | proved | `Effect4.Run.play_controls_eq_replay` | — |
-| `run-tape-replay` | simulation | proved | `Effect4.Run.tape_replays` | — |
-| `funded-run-replay` | simulation | proved | `Effect4.Run.funded_replays` | — |
-| `journal-position-replay` | simulation | proved | `Effect4.Run.tapeFrom_position_replays` | — |
-| `pool-steps-agree` | simulation | proved | `Effect4.Pool.Model.pool_steps_agree` | — |
-| `queue-steps-agree` | simulation | proved | `Effect4.Queue.Model.queue_steps_agree` | — |
-| `semaphore-steps-agree` | simulation | proved | `Effect4.Semaphore.Model.semaphore_steps_agree` | — |
-| `straight-composition-agreement` | simulation | proved | `Effect4.Program.Denote.StraightEq.run_agrees` | — |
-| `mask-printed-form-profile` | compatibility | proved | `Effect4.Program.mask_printed_form_profile` | — |
-| `step-language-sound` | simulation | proved | `Effect4.Modules.Step.sound` | — |
-| `step-frame` | preservation | proved | `Effect4.Modules.Step.frame` | — |
-| `latch-steps-agree` | simulation | proved | `Effect4.Latch.Model.latch_steps_agree` | — |
-| `latch-registration-agrees` | simulation | proved | `Effect4.Latch.Model.latch_registration_agrees` | — |
-| `partitioned-semaphore-bookkeeping` | simulation | proved | `Effect4.PartitionedSemaphore.Model.bookkeeping_agrees` | — |
-| `pubsub-single-steps-agree` | simulation | proved | `Effect4.PubSub.Model.single_steps_agree` | — |
-| `channel-batch-transform` | compatibility | proved | `Effect4.Channel.Internal.mapEffectOf_protocol` | — |
-| `channel-completion-transform` | compatibility | proved | `Effect4.Channel.Internal.mapDoneEffectOf_protocol` | — |
-| `pull-protocol-selection` | compatibility | proved | `Effect4.Pull.matchEffect_protocol` | — |
-| `pull-completion-recovery` | compatibility | proved | `Effect4.Pull.catchDone_meaning` | — |
-| `stream-array-step-agreement` | simulation | proved | `Effect4.Stream.arrayStep_agrees` | — |
-| `ref-steps-agree` | simulation | proved | `Effect4.Ref.ref_steps_agree` | — |
+| Claim | Role | Status | Evidence |
+| --- | --- | --- | --- |
+| `recorded-call-tree-prefix` | inversion | modulo | `Effect4.Run.CallTree.bound_in_tree`, modulo `request_leads` |
+| `run-eq-meaning` | simulation | proved | `Effect4.Program.Agreement.run_eq_meaning` |
+| `loop-agreement` | simulation | proved | `Effect4.Program.Agreement.loopAgreement` |
+| `run-eq-ref` | simulation | proved | `Effect4.Program.Sched.run_eq_ref` |
+| `profile-plus-exact` | compatibility | proved | `Effect4.Program.intAddIn_eq_some_iff` |
+| `profile-mul-exact` | compatibility | proved | `Effect4.Program.mulIn_eq_some_iff` |
+| `rows-denotation-straight` | compatibility | proved | `Effect4.Program.Denote.denoteRows_straight` |
+| `rows-denotation-append` | compatibility | proved | `Effect4.Program.Denote.meaningUnder_append` |
+| `rows-denotation-reference` | compatibility | proved | `Effect4.Program.Sched.denoteR_straightRows` |
+| `run-eq-ref-table` | simulation | proved | `Effect4.Program.Sched.run_eq_ref_table` |
+| `session-eq-ref` | simulation | proved | `Effect4.Run.session_eq_ref` |
+| `rows-denotation-session` | simulation | proved | `Effect4.Run.denoteRows_eq_session` |
+| `rows-denotation-host` | simulation | proved | `Effect4.Run.denoteRows_eq_session_host` |
+| `rows-loop-session` | simulation | proved | `Effect4.Run.h8_loopedRows` |
+| `rows-loop-host` | simulation | proved | `Effect4.Run.denoteRowsB_eq_session_host` |
+| `rows-loop-driver` | simulation | proved | `Effect4.Run.runWith_denotesB` |
+| `rows-loop-straight` | compatibility | proved | `Effect4.Program.Denote.denoteRowsB_straight` |
+| `rows-loop-looped` | compatibility | proved | `Effect4.Program.Denote.denoteRowsB_looped` |
+| `rows-denotation-driver` | simulation | proved | `Effect4.Run.runWith_denotes` |
+| `m7-route` | fundamentalProperty | proved | `Effect4.Program.Typed.m7_of_ledger` |
+| `m7-exits-typed` | adequacy | modulo | `Effect4.Program.Typed.m7_proved`, modulo `countdown_parks_positional` |
+| `m7-stores-typed` | adequacy | modulo | `Effect4.Program.Typed.m7_proved`, modulo `countdown_parks_positional` |
+| `m7-never-halts` | progress | modulo | `Effect4.Program.Typed.m7_proved`, modulo `countdown_parks_positional` |
+| `m7-admitted` | fundamentalProperty | modulo | `Effect4.Program.Typed.m7_admitted`, modulo `countdown_parks_positional` |
+| `m7-exit-handles-valid` | preservation | modulo | `Effect4.Program.Typed.exitHandles_valid`, modulo `countdown_parks_positional` |
+| `obs-typed-admitted` | adequacy | modulo | `Effect4.Program.Typed.obs_typed`, modulo `countdown_parks_positional` |
+| `m7-results-exit-hasty` | adequacy | modulo | `Effect4.Program.Typed.exits_hasTy`, modulo `countdown_parks_positional` |
+| `replay-externals` | preservation | proved | `Effect4.Program.Sched.replay_externals` |
+| `run-controls-replay` | simulation | proved | `Effect4.Run.play_controls_eq_replay` |
+| `run-tape-replay` | simulation | proved | `Effect4.Run.tape_replays` |
+| `funded-run-replay` | simulation | proved | `Effect4.Run.funded_replays` |
+| `journal-position-replay` | simulation | proved | `Effect4.Run.tapeFrom_position_replays` |
+| `pool-steps-agree` | simulation | proved | `Effect4.Pool.Model.pool_steps_agree` |
+| `queue-steps-agree` | simulation | proved | `Effect4.Queue.Model.queue_steps_agree` |
+| `semaphore-steps-agree` | simulation | proved | `Effect4.Semaphore.Model.semaphore_steps_agree` |
+| `straight-composition-agreement` | simulation | proved | `Effect4.Program.Denote.StraightEq.run_agrees` |
+| `mask-printed-form-profile` | compatibility | proved | `Effect4.Program.mask_printed_form_profile` |
+| `step-language-sound` | simulation | proved | `Effect4.Modules.Step.sound` |
+| `step-frame` | preservation | proved | `Effect4.Modules.Step.frame` |
+| `latch-steps-agree` | simulation | proved | `Effect4.Latch.Model.latch_steps_agree` |
+| `latch-registration-agrees` | simulation | proved | `Effect4.Latch.Model.latch_registration_agrees` |
+| `partitioned-semaphore-bookkeeping` | simulation | proved | `Effect4.PartitionedSemaphore.Model.bookkeeping_agrees` |
+| `pubsub-single-steps-agree` | simulation | proved | `Effect4.PubSub.Model.single_steps_agree` |
+| `channel-batch-transform` | compatibility | proved | `Effect4.Channel.Internal.mapEffectOf_protocol` |
+| `channel-completion-transform` | compatibility | proved | `Effect4.Channel.Internal.mapDoneEffectOf_protocol` |
+| `pull-protocol-selection` | compatibility | proved | `Effect4.Pull.matchEffect_protocol` |
+| `pull-completion-recovery` | compatibility | proved | `Effect4.Pull.catchDone_meaning` |
+| `stream-array-step-agreement` | simulation | proved | `Effect4.Stream.arrayStep_agrees` |
+| `ref-steps-agree` | simulation | proved | `Effect4.Ref.ref_steps_agree` |
 
 ### recorded-call-tree-prefix
 

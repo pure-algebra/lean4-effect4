@@ -235,7 +235,7 @@ abbrev InMain := Ctx.child InBody .main
 abbrev InSiteList := Ctx.child (Ctx.child (Ctx.child InBody .header) .nav) .ol
 abbrev InCrumbs := Ctx.child (Ctx.child InMain .nav) .ol
 abbrev InPager := Ctx.child InMain .nav
-abbrev InToc := Ctx.child (Ctx.child InBody .nav) .ol
+abbrev InToc := Ctx.child (Ctx.child InMain .nav) .ol
 abbrev InTocSub := Ctx.child (Ctx.child InToc .li) .ol
 abbrev InFooterList := Ctx.child (Ctx.child InBody .footer) .ul
 
@@ -315,13 +315,15 @@ structure Shell where
   pager : List (Child InPager) := []
   footer : List (Child InFooterList) := []
 
-/-- **The page**: the head, the site's header, the parts of the page, the content (breadcrumbs,
-the title, the document's blocks, the neighbouring pages), and the footer. -/
+/-- **The page**: the head, the site's header, the content (breadcrumbs, the title, the parts of
+the page, the document's blocks, the neighbouring pages), and the footer. The parts come after the
+title, so a reader meets the title first; on a wide screen the rules float them into the margin
+beside the content, as a margin note. -/
 def render (s : Shell) (title : String) (blocks : List (Child InMain)) : Element .html Ctx.document :=
   let header : Child InBody :=
     if s.sections.isEmpty then html! <header><a class="home" href={s.home}>"Effect4"</a></header>
     else html! <header><a class="home" href={s.home}>"Effect4"</a><nav aria-label="Site">{E.el (E.ol s.sections)}</nav></header>
-  let toc : List (Child InBody) := if s.toc.isEmpty then [] else
+  let toc : List (Child InMain) := if s.toc.isEmpty then [] else
     [html! <nav class="toc" aria-labelledby="toc-label"><p id="toc-label" class="label">"On this page"</p>{E.el (E.ol s.toc)}</nav>]
   let crumbs : List (Child InMain) := if s.crumbs.isEmpty then [] else
     [html! <nav class="crumbs" aria-label="Breadcrumb">{E.el (E.ol s.crumbs)}</nav>]
@@ -330,9 +332,9 @@ def render (s : Shell) (title : String) (blocks : List (Child InMain)) : Element
     [E.el (E.nav s.pager [A.a_class "pager", ⟨.aria_, "aria-label", "Pages"⟩])]
   let footer : List (Child InBody) := if s.footer.isEmpty then [] else
     [html! <footer><p class="label">"Provenance"</p>{E.el (E.ul s.footer)}</footer>]
-  let main : Child InBody := E.el (E.main (crumbs ++ [heading title s.key] ++ blocks ++ pager) [A.a_id "content"])
+  let main : Child InBody := E.el (E.main (crumbs ++ [heading title s.key] ++ toc ++ blocks ++ pager) [A.a_id "content"])
   let body : Child InHtml := E.el (E.body ([html! <a class="skip" href="#content">"Skip to the content"</a>, header] ++
-    toc ++ [main] ++ footer))
+    [main] ++ footer))
   html! <html lang="en">{headChild s.tabTitle s.styles}{body}</html>
 
 /-- The blocks of a document, folded with a reference's link from `target`, each admitted in the

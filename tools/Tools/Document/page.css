@@ -19,6 +19,8 @@
   --s5: calc(var(--s4) * var(--ratio));
   --s-1: calc(var(--s0) / var(--ratio)); --s-2: calc(var(--s-1) / var(--ratio));
   --measure: 66ch;
+  --margin: 15rem;
+  --gap: clamp(var(--s1), 3vw, var(--s4));
   --band: color-mix(in srgb, var(--e4-color-rule) calc(var(--e4-tone-band) * 100%), var(--e4-color-ground));
   --quiet: color-mix(in srgb, var(--e4-color-ink) 64%, var(--e4-color-ground));
 }
@@ -27,18 +29,21 @@ body { margin: 0; background: var(--e4-color-ground); color: var(--e4-color-ink)
   font: var(--s0)/1.55 var(--e4-font-name-family); font-optical-sizing: auto;
   text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
 
-/* The frame: the site's header, then the content beside the parts of the page (a sticky column on
-   a wide screen, a framed list above the content on a narrow one), then the footer. */
-body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 54rem) minmax(0, 15rem) minmax(0, 1fr);
-  column-gap: clamp(var(--s1), 3vw, var(--s4)); padding: 0 clamp(var(--s0), 4vw, var(--s3)); }
+/* The frame: the site's header, the content with a margin at its right, the footer. The parts of
+   the page follow the title; on a wide screen they float into the margin and stay in view, as a
+   margin note, and on a narrow one they stand under the title in a frame of their own. */
+body { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 58rem) var(--margin) minmax(0, 1fr);
+  column-gap: var(--gap); padding: 0 clamp(var(--s0), 4vw, var(--s3)); }
 body > header, body > footer { grid-column: 2 / 4; }
-body > main { grid-column: 2; grid-row: 2; min-width: 0; }
-body > .toc { grid-column: 3; grid-row: 2; align-self: start; position: sticky; top: 0;
-  max-height: 100vh; overflow-y: auto; padding: var(--s2) 0; font-size: var(--s-1); line-height: 1.35; }
+body > main { grid-column: 2; min-width: 0; }
+main > .toc { float: right; clear: right; width: var(--margin); margin-right: calc(-1 * (var(--margin) + var(--gap)));
+  position: sticky; top: 0; max-height: 100vh; overflow-y: auto; padding: var(--s0) 0;
+  font-size: var(--s-1); line-height: 1.35; }
 @media (max-width: 64rem) {
   body { display: block; }
-  body > .toc { position: static; max-height: 14rem; margin: var(--s0) 0 0; padding: var(--s-1) var(--s0);
-    border: var(--e4-stroke-rule) solid var(--e4-color-rule); border-radius: var(--e4-stroke-radius); }
+  main > .toc { float: none; width: auto; margin: var(--s0) 0 var(--s1); position: static; max-height: 14rem;
+    padding: var(--s-1) var(--s0); border: var(--e4-stroke-rule) solid var(--e4-color-rule);
+    border-radius: var(--e4-stroke-radius); }
 }
 
 /* The way past the navigation, shown when it takes the focus. */
@@ -111,21 +116,29 @@ details.statement > summary code { font-style: normal; }
 dl { display: grid; grid-template-columns: max-content 1fr; gap: var(--s-2) var(--s0); }
 dd { margin: 0; }
 
-/* A region that scrolls: its frame says that it holds more than it shows. */
-.scroll { overflow-x: auto; border: var(--e4-stroke-rule) solid var(--e4-color-rule);
-  border-radius: var(--e4-stroke-radius); margin: var(--s0) 0; }
-/* A table: its head on the band, a rule under each row, numerals of one width. */
-table { border-collapse: collapse; width: 100%; min-width: 40rem; font-size: var(--s-1); line-height: 1.35;
-  font-variant-numeric: tabular-nums lining-nums; }
-th, td { text-align: left; vertical-align: top; padding: var(--s-2) var(--s-1);
+/* A region that scrolls sideways on a narrow screen: a wide table or figure. */
+.scroll { overflow-x: auto; margin: var(--s1) 0; }
+/* A table, after the booktabs rules: a rule opens it and one closes it, a hairline ends its head,
+   and space, not rules, parts its rows. Its head is a label; its numerals take one width; its first
+   column, an identity, does not wrap; code in it is told by its face alone. */
+table { border-collapse: collapse; width: 100%; min-width: 36rem; font-size: var(--s-1); line-height: 1.35;
+  font-variant-numeric: tabular-nums lining-nums;
+  border-top: calc(2 * var(--e4-stroke-rule)) solid var(--e4-color-rule);
+  border-bottom: calc(2 * var(--e4-stroke-rule)) solid var(--e4-color-rule); }
+th, td { text-align: left; vertical-align: top; padding: var(--s-2) var(--s-1); }
+th { font-family: var(--e4-font-label-family); font-style: var(--e4-font-label-style); font-weight: inherit;
   border-bottom: var(--e4-stroke-rule) solid var(--e4-color-rule); }
-th { background: var(--band); }
-td code { overflow-wrap: normal; }
+tbody td { padding-top: var(--s-1); padding-bottom: var(--s-1); }
+td:first-child { white-space: nowrap; }
+td code { background: none; padding: 0; overflow-wrap: normal; }
 
 /* A status: a mark of the promise-and-keeping family, with no hue (row 354, point 2). Proved is a
    filled circle, modulo half filled (a fill clipped to the left half), a goal hollow, open dashed,
    refuted the cross. A circle's outline is the look's frame. */
 .status { white-space: nowrap; }
+/* What is proved recedes, so what is open stands out: proved, absent and assumed in the quiet
+   ink; modulo, goal, open and refuted in the full ink. */
+.status:is([data-status=proved], [data-status=absent], [data-status=assumed]) { color: var(--quiet); }
 .status:is([data-status=proved], [data-status=modulo], [data-status=goal], [data-status=open])::before {
   content: ""; display: inline-block; box-sizing: border-box;
   width: .7em; height: .7em; margin-right: .35em; vertical-align: -.05em;

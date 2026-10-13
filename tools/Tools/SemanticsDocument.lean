@@ -138,24 +138,27 @@ private def nameAndDescription (title : String) : String × String :=
   | _ => (title, "")
 
 /-- How many claims stand at each status, in the order of the legend. -/
-private def statusCounts (claims : List ClaimEntry) : Line :=
+private def statusCounts (claims : List ClaimEntry) (noun : String := "claims") : Line :=
   let words := ["proved", "modulo", "goal", "refuted", "absent", "assumed"]
   let present := words.filterMap fun w =>
     let n := (claims.filter (·.evidence.tag == w)).length
     if n == 0 then none else some (n, w)
-  [.text s!"{claims.length} ("] ++ List.intercalate [.text ", "]
-    (present.map fun (n, w) => [.text s!"{n} ", .status w]) ++ [.text ")"]
+  [.text s!"{claims.length} {noun}: "] ++ List.intercalate [.text ", "]
+    (present.map fun (n, w) => [.text s!"{n} ", .status w]) ++ [.text "."]
 
-/-- A concept's part, headed by its name: its description, its key and its claims by status, its
-claims' table, then each claim's part. -/
+/-- A concept's part, headed by its name (its key beside it): an opening paragraph that summarises
+it, its description and its claims by status, which the site's list of concepts shows; its
+claims' table, with a column of contesting records only when a record contests one; then each
+claim's part. -/
 private def conceptPart (concept : Concept) (claims : List ClaimEntry) : Block :=
   let (name, description) := nameAndDescription concept.title
+  let contested := claims.any (!·.contestedBy.isEmpty)
   .part ("concept:" ++ concept.id) name <|
-    (if description.isEmpty then [] else [.para [.text description]]) ++
-    [.fields [("Key", [.code concept.id]), ("Claims", statusCounts claims)],
-     .table ["Claim", "Role", "Status", "Evidence", "Contested by"] (claims.map fun c =>
-       [[.ref (claimKey c.claim.id) c.claim.id], [.text (roleName c.claim.role)], [.status c.evidence.tag],
-        evidenceCell c.evidence, codes id (c.contestedBy.map (·.id))])] ++
+    [.para ((if description.isEmpty then [] else [.text (description ++ ". ")]) ++ statusCounts claims),
+     .table (["Claim", "Role", "Status", "Evidence"] ++ (if contested then ["Contested by"] else []))
+       (claims.map fun c =>
+         [[.ref (claimKey c.claim.id) c.claim.id], [.text (roleName c.claim.role)], [.status c.evidence.tag],
+          evidenceCell c.evidence] ++ (if contested then [codes id (c.contestedBy.map (·.id))] else []))] ++
     claims.map claimPart
 
 private def applicabilityPart (cuts : List CutEntry) : Block :=
@@ -401,13 +404,12 @@ def Report.document (r : Report) : Document :=
     producer := [producer, "format: effect4-semantics-report v8", s!"command: {command}",
       s!"inputs: {", ".intercalate inputs}"]
     body :=
-      [.para [.text "This page lists the claims that Effect4 makes about Effect's runtime, concept by concept, ",
-        .text "with the evidence for each. A claim's evidence is derived from its Lean declaration, never ",
-        .text "written by hand (decisions row 203)."],
-       .para [.text "Every witness stays within the semantic axiom ceiling, ", .code "propext", .text " and ",
-        .code "Quot.sound", .text ", or the page is not written. That ceiling is no verdict of the whole library's gate. ",
-        .text "Only selected evidence stands here. Each claim's English is written by hand, and a placement that a ",
-        .text "declaration inherits from its module is provisional."],
+      [.para ([.text "Effect4 makes "] ++ statusCounts r.claims "claims about Effect's runtime"),
+       .para [.text "A claim's evidence comes from its Lean declaration and is never written by hand (decisions row 203). ",
+        .ref "open" "The open work", .text " lists the planned goals that the remaining claims rest on, and why each waits."],
+       .para [.text "Every witness uses no axiom beyond ", .code "propext", .text " and ", .code "Quot.sound",
+        .text ", or the page is not written. That ceiling covers the evidence shown here, not the whole library. ",
+        .text "A claim's English is written by hand. A placement that a declaration inherits from its module is provisional."],
        .para [.text "A register record links a claim to a historical attack. Read the whole row: an early status word ",
         .text "may stand beside a later repair."],
        .part "statuses" "How to read a status" [
