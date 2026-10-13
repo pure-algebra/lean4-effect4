@@ -1,4 +1,5 @@
 import Tools.View.Living.Level
+import Tools.View.Living.Beat
 
 /-!
 # Tools.View.Living.Sheet — the Queue alive, frame by frame (the studio page `living.html`)
@@ -31,6 +32,17 @@ def blocks : List RawNode :=
      el "figure" [pic (Level.W n) Level.LIVES_H (Level.lives (Organism.conductivities ms)),
        el "figcaption" [.text "The lives of the channels: in from the world, into the vessel, out of it, and out to the world; each as thick at each command as its conductivity draws it."]]
        [("class", "living")]] ++
+    -- three beats sampled: the offer that finds the vessel full, the take that lets it in, the
+    -- offer that wakes a waiting taker
+    (let ds := Organism.conductivities ms
+     [3, 4, 8].filterMap fun i => do
+       let before ← ms[i - 1]?
+       let after ← ms[i]?
+       let words ← (frames[i]?).map (·.1)
+       pure (el "figure" ((Beat.samples before after (ds.getD (i - 1) []) (ds.getD i []) 3).map
+           (fun (_, calls) => pic Organism.W Organism.H calls) ++
+         [el "figcaption" [.text s!"One beat, sampled at its start, a third, two thirds and its end: {words}."]])
+         [("class", "living beat")])) ++
     frames.map fun (words, _, calls) =>
       el "figure" [
         (SvgOut.picture {} Organism.W.toNat Organism.H.toNat 1 (lowerAll 1 calls)).toRaw,
