@@ -1,5 +1,5 @@
 {
-  "//": "Slice E4: tsgo 7 type-checks the to-do's emitted service (in the keyed lane's work folder), its consumer and the runner, with the compiler options of harness/truth/tsconfig.json.",
+  "//": "Slice E4: tsgo 7 type-checks the to-do's emitted service and its consumer (in apps/todo/) and the runner, with the compiler options of harness/truth/tsconfig.json.",
   "compilerOptions": {
     "target": "ES2022",
     "module": "ESNext",
@@ -14,5 +14,5 @@
     "skipLibCheck": true,
     "types": ["bun"]
   },
-  "include": ["consumer.ts", "run-todo.ts"]
+  "include": ["run-todo.ts", "../../../apps/todo/consumer.ts"]
 }

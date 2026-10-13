@@ -1,10 +1,12 @@
-/** The consumer of the to-do application's emitted service (decisions row 378 (20), slice E4).
- * An Effect program takes the service by its key, calls one method, and provides the service's
- * layer. The layer reads the repository's service from its context, so a program here requires
- * the repository's key until a repository is provided. tsgo 7 type-checks this file against the
- * emitted module, which `EmitTodo.lean` writes into the keyed lane's work folder. */
+/** The consumer of the to-do application's emitted service (decisions row 378 (20), slices E4
+ * and V4). An Effect program takes the service by its key, calls one method, and provides the
+ * service's layer. The layer reads the repository's service from its context, so a program here
+ * requires the repository's key until a repository is provided. tsgo 7 type-checks this file
+ * against the emitted module, which `EmitTodo.lean` writes into the application's work folder.
+ * The front (`server.ts`) serves its programs over SQLite, and the keyed lane's runner performs
+ * the to-do's scripts on them (`harness/truth/service/run-todo.ts`). */
 import { Effect, Layer } from "effect"
-import { NotFound, TodoApp, TodoAppLayer, TodoRepo } from "../session/.work/service/todo.gen.ts"
+import { NotFound, TodoApp, TodoAppLayer, TodoRepo } from "./.work/todo.gen.ts"
 
 /** A to-do, as the service's methods answer it. */
 export type Todo = { readonly done: boolean; readonly id: number; readonly title: string }

@@ -158,36 +158,50 @@ const hostOf = (name: string, what: string): ScriptedHost => {
   if (!host) throw Error(`${name}: ${what} ran outside a run`)
   return host
 }
-/** The rows of a scenario's table as the objects that its printed module names: the row
- * `Jobs.take` is `Jobs.take()`. A row takes its request, or nothing when the request is unit.
- * The module's header states the objects' type, which Lean prints from the row table. */
-export const scenarioRows = <Rows>(name: string): Rows => {
+/** A row of a table as a printed module names it, `Namespace.method`, at its position. */
+export interface TableRow { readonly index: number; readonly space: string; readonly method: string; readonly spelling: string }
+/** The rows of a table as the objects that a printed module names: the row `Jobs.take` is
+ * `Jobs.take()`. A row takes its request, or nothing when the request is unit. `call` gives each
+ * call's host operation from the row, the request and the request's image on the wire. `owner`
+ * names the run or the application in each refusal. */
+export const tableRows = <Rows>(owner: string, table: ReadonlyArray<Json>,
+  call: (row: TableRow, request: unknown, image: Json) => Effect.Effect<unknown, unknown>): Rows => {
   const rows: Record<string, Record<string, (...request: unknown[]) => Effect.Effect<unknown, unknown>>> = {}
-  scenarioOf(name).table.forEach((row, index) => {
+  table.forEach((row, index) => {
     const spelling = (row as { spelling?: unknown }).spelling
     const [space, method, ...rest] = typeof spelling === "string" ? spelling.split(".") : []
-    if (!space || !method || rest.length) throw Error(`${name}: row ${index} is not spelled Namespace.method`)
+    if (!space || !method || rest.length) throw Error(`${owner}: row ${index} is not spelled Namespace.method`)
+    const named: TableRow = { index, space, method, spelling: spelling as string }
     ;(rows[space] ??= {})[method] = (...request) => Effect.suspend(() => {
-      const host = hostOf(name, String(spelling))
-      if (request.length > 1) throw Error(`${name}: ${spelling} takes one request`)
-      return host.recorder.external(index, request.length ? valueJson(request[0]) : null, host.work)
+      if (request.length > 1) throw Error(`${owner}: ${named.spelling} takes one request`)
+      return call(named, request[0], request.length ? valueJson(request[0]) : null)
     })
   })
   return rows as Rows
 }
-/** A scenario's program with its row services provided (decisions row 378 (19)): each namespace
- * that the module declares as an Effect service is provided under the module's own key, by the
- * same objects that `scenarioRows` binds for a namespace that is no service. So a row's call
- * reaches the host of the run through the service, `Key.use((r) => r.method(x))`. */
-export const provideScenario = (name: string, services: ReadonlyArray<string>,
-  module: Readonly<Record<string, unknown>>, main: Effect.Effect<unknown, unknown, unknown>): Effect.Effect<unknown, unknown> => {
-  const rows = scenarioRows<Record<string, unknown>>(name)
-  return services.reduce((program, space) => {
+/** The rows of a scenario's table, each call going to the host of the run that executes it. The
+ * module's header states the objects' type, which Lean prints from the row table. */
+export const scenarioRows = <Rows>(name: string): Rows =>
+  tableRows<Rows>(name, scenarioOf(name).table, (row, _request, image) => {
+    const host = hostOf(name, row.spelling)
+    return host.recorder.external(row.index, image, host.work)
+  })
+/** A program with its row services provided (decisions row 378 (19)): each namespace that the
+ * module declares as an Effect service is provided under the module's own key, by the rows' object
+ * of that namespace (`tableRows`). So a row's call reaches its host through the service,
+ * `Key.use((r) => r.method(x))`. */
+export const provideRows = (owner: string, rows: Readonly<Record<string, unknown>>, services: ReadonlyArray<string>,
+  module: Readonly<Record<string, unknown>>, main: Effect.Effect<unknown, unknown, unknown>): Effect.Effect<unknown, unknown> =>
+  services.reduce((program, space) => {
     const key = module[space], service = rows[space]
-    if (key === undefined || service === undefined) throw Error(`${name}: ${space} is no service of the module`)
+    if (key === undefined || service === undefined) throw Error(`${owner}: ${space} is no service of the module`)
     return Effect.provideService(program, key as Context.Key<unknown, unknown>, service)
   }, main) as Effect.Effect<unknown, unknown>
-}
+/** A scenario's program with its row services provided by the same objects that `scenarioRows`
+ * binds for a namespace that is no service. */
+export const provideScenario = (name: string, services: ReadonlyArray<string>,
+  module: Readonly<Record<string, unknown>>, main: Effect.Effect<unknown, unknown, unknown>): Effect.Effect<unknown, unknown> =>
+  provideRows(name, scenarioRows<Record<string, unknown>>(name), services, module, main)
 /** An object that inherits every member of a pinned module and owns the spies. It is no proxy
  * and no copy: any other member is read from the pinned module itself. */
 const withSpies = <Module extends object>(pinned: Module, spies: Partial<Record<keyof Module, unknown>>): Module =>

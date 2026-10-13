@@ -95,4 +95,8 @@ def rowJson (row : Row) : Json :=
     ("requires", .arr (row.requires.map keyJson).toArray), ("cite", .str row.cite),
     ("typeArgs", toJson row.typeArgs), ("registration", registrationJson row.registration)]
 
+/-- A row table on the wire: each row's `rowJson`, in the table's order. The keyed lane's header
+and the to-do application's session header carry it, and each reader compares it whole. -/
+def tableJson (table : List Row) : Json := toJson (table.map rowJson)
+
 end Tools.ProfileJson

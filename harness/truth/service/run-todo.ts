@@ -14,8 +14,8 @@
  *
  *     bun --no-install harness/truth/service/run-todo.ts SCENARIOS OUT
  *
- * `SCENARIOS` is `Keyed.lean scenarios`' output. The emitted module stands in the keyed lane's
- * work folder (`EmitTodo.lean`). */
+ * `SCENARIOS` is `Keyed.lean scenarios`' output. The emitted module and its consumer stand in
+ * the to-do application's folder (`apps/todo/EmitTodo.lean`, `apps/todo/consumer.ts`). */
 import { readFile, writeFile, mkdir } from "node:fs/promises"
 import { resolve } from "node:path"
 import { setImmediate } from "node:timers/promises"
@@ -27,8 +27,8 @@ import { measure, type HostEnd, type ScenarioFixture, type ScenarioManifest } fr
 import type { KeyedRecording } from "../session/keyed-protocol.ts"
 import type { Json } from "../session/protocol.ts"
 import { Rc112ClockBoundary } from "../session/clock.ts"
-import * as Service from "../session/.work/service/todo.gen.ts"
-import { programs } from "./consumer.ts"
+import * as Service from "../../../apps/todo/.work/todo.gen.ts"
+import { programs } from "../../../apps/todo/consumer.ts"
 
 const [scenariosPath, outPath] = process.argv.slice(2)
 if (!scenariosPath || !outPath) throw Error("usage: run-todo.ts SCENARIOS OUT")
