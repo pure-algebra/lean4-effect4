@@ -18,9 +18,11 @@ is `docs/research/2026-10-13-seat-live-brief.md`.
 ## Base, heads and evidence words
 
 - Base: `9fd8e658a` on `refactor/phase1-phase3`.
-- `seat/live`: `166a7d7ef` (DM1), `369334a8a` (DM2), `8f875f836` (DM3), `5f762e448` (DM3,
-  `view_classifies`), `a9a32c6b8`, `78687f4e2` and `92aa11e1b` (this receipt and the patch file),
-  `53c95e988` (the battery reads `view_awaits`), then the commit that last updates this receipt.
+- `seat/live`, in order:
+  - `166a7d7ef` (DM1), `369334a8a` (DM2), `8f875f836` (DM3) and `5f762e448` (`view_classifies`);
+  - `a9a32c6b8`, `78687f4e2` and `92aa11e1b`: this receipt and the patch file;
+  - `53c95e988`: the battery reads `view_awaits`;
+  - the commits that update this receipt last.
 - `seat/live-dm4`: `baca79821` (DM4), `7763fc569` (`simpa only` in `applyReply_conforms`), on top of
   `5f762e448`.
 - Evidence words: **proved** means the kernel checked it and `#axiom_audit` passed it at
