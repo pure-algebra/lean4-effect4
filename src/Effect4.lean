@@ -236,6 +236,9 @@ import Effect4.Library.Stream.Steps
 import Effect4.Library.Stream.Ops
 -- The checked cache of a type fold, for memoized folds (the claim `fold-cache-local-agreement`).
 import Effect4.Program.TyCache
+-- An application: named programs with typed parameters over one row table (decisions rows 307
+-- (9) and 336 (9); the claims packet's slice APP).
+import Effect4.Program.Authoring.Application
 
 /-!
 # Effect4

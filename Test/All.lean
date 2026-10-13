@@ -379,6 +379,9 @@ import Test.Machine.RaceFirst
 import Test.Program.FirstExitSource
 import Test.Program.KernelRfl
 import Test.Run.LiveContract
+-- The application and claim records (the claims packet, seat CLAIMS).
+import Test.Dogfood.Application
+import Test.Dogfood.Scenario.Todo.Claims
 
 /-!
 # Effect4 test battery
