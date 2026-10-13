@@ -244,6 +244,9 @@ import Effect4.Program.Address
 -- A sketch checked through its layer references, and its edit session (decisions row 373 (7)).
 import Effect4.Program.Typing.Source
 import Effect4.Program.Typing.SourceSession
+-- The banked Ref cache: a cache of a list beside storage, and its model (decisions row 378).
+import Effect4.Library.Ref.Cache
+import Effect4.Library.Ref.CacheModel
 
 /-!
 # Effect4
