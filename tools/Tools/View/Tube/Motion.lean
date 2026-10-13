@@ -333,7 +333,7 @@ def film (id : String) (W H : Nat) (pictures : List Picture) (beat : Nat := 1000
       (fun js j => if js.any (·.key == j.key) then js else js ++ [j]) []
     let joins : List (Nat × String × SvgNode) := joinKeys.zipIdx.map fun (j, k) =>
       let lv := ((all.find? (·.key == j.branch)).map (·.level)).getD 0
-      let web (ms : List Mark) : Path := closedPath (j.web ms LINE)
+      let web (ms : List Mark) : Path := loopsPath (j.web ms LINE)
       let anims := stepTracks.flatMap fun (A, B, i, trs) =>
         let mine := trs.filter fun tr => tr.key == j.parent || tr.key == j.branch
         if mine.isEmpty then [] else

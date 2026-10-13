@@ -1,4 +1,5 @@
 import Tools.View.Tube.Outline
+import Tools.View.Tube.Kit
 import Tools.View.SvgOut
 import Whatwg.Svg.Geometry.Spring
 
@@ -429,36 +430,27 @@ def Mark.d (m : Mark) : String :=
   | p :: _ => String.ofList (Path.grammar.print (p.d m))
   | [] => pathText m.drawn
 
-/-- **A join's web** where both its marks stand among `ms`: the crotch between the parent's body
-and the branch, inset by `grow` for its interior, or nothing. A web of no size keeps the same
-commands, so a film can grow it. -/
-def Join.web (j : Join) (ms : List Mark) (grow : Nat := 0) : List Cubic :=
+/-- **A join's webs** where its marks stand among `ms`: the kit's blend of each notch where the
+branch leaves the parent's body, or where two arms leave one point (`Tools.View.Tube.Kit`), inset
+by `grow` for its interior; a slot whose marks are missing is a web of no size. Each slot keeps one
+shape at every moment, so a film can grow it. -/
+def Join.web (j : Join) (ms : List Mark) (grow : Nat := 0) : List (List Cubic) :=
+  let find (k : String) := ms.find? (·.key == k)
   match j.sibling with
   | some sk =>
-    match ms.find? (·.key == j.branch), ms.find? (·.key == sk) with
-    | some b, some c =>
-      match fork b.drawn c.drawn b.width c.width grow with
-      | some cs => cs
-      | none => noFork (b.drawn.x, b.drawn.y)
-    | _, _ => noFork (0, 0)
+    match find j.parent, find j.branch, find sk with
+    | some p, some b, some c => Kit.fork p.drawn b.drawn c.drawn p.width b.width c.width grow
+    | _, _, _ => List.replicate 3 (Kit.none_ (0, 0))
   | none =>
-  match ms.find? (·.key == j.parent), ms.find? (·.key == j.branch) with
-  | some p, some b =>
-    -- how far the parent runs past the branch's start, along its heading there
-    let pt := p.drawn
-    let d := dir pt.head
-    let along_ : Int := ((b.drawn.x - pt.x) * d.1 + (b.drawn.y - pt.y) * d.2) / ONE
-    let room : Int := (pt.length : Int) - along_
-    match crotch p.width b.drawn b.width grow room with
-    | some cs => cs
-    | none => noWeb (b.drawn.x, b.drawn.y)
-  | _, _ => noWeb (0, 0)
+    match find j.parent, find j.branch with
+    | some p, some b => Kit.crotch p.drawn b.drawn p.width b.width grow
+    | _, _ => List.replicate 2 (Kit.none_ (0, 0))
 
 /-- A join's two elements: its web's interior cased with the bodies, and filled with the
 interiors. -/
 def Join.parts (j : Join) : List (Nat × Tone × (List Mark → Path)) :=
-  [(BODIES, .casing, fun ms => closedPath (j.web ms LINE)),
-   (INTERIORS, .ground, fun ms => closedPath (j.web ms LINE))]
+  [(BODIES, .casing, fun ms => loopsPath (j.web ms LINE)),
+   (INTERIORS, .ground, fun ms => loopsPath (j.web ms LINE))]
 
 /-- The layers' count. -/
 def LAYERS : Nat := 6
