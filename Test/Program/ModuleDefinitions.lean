@@ -64,8 +64,8 @@ def twoTypesModule : Module NativeOp := numbers.install (strings.module twoTypes
 #guard runModule twoTypesModule = some (.success (.list [.nat 3, .str "three", .none]))
 #guard prints twoTypesModule
 -- The handle request is outside the existing type reader's domain, on both authoring surfaces.
-#guard (Queue.defs .nat).all fun d => !d.decl.readable
-#guard numbers.defs.all fun d => !d.decl.readable
+#guard (Queue.defs .nat).all fun d => !d.decl.readable []
+#guard numbers.defs.all fun d => !d.decl.readable []
 #guard readResult { defs := Queue.defs .nat, main := succeed unit } =
   some (.error (.shape "definition"))
 #guard readResult twoTypesModule = some (.error (.shape "definition"))
@@ -90,7 +90,7 @@ def immediate : Src NativeOp := eff do
 #guard runModule (permits.module immediate) =
   some (.success (.list [.nat 1, .nat 2, .bool true, .bool false]))
 #guard prints (permits.module immediate)
-#guard permits.defs.all fun d => !d.decl.readable
+#guard permits.defs.all fun d => !d.decl.readable []
 #guard readResult (permits.module immediate) = some (.error (.shape "definition"))
 
 /-- A stored invocation waits in a child and resumes after a release. -/
