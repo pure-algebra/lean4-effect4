@@ -1,5 +1,8 @@
 import Effect4.Run.Basic
 import Effect4.Run.Tape
+import Effect4.Run.Event
+import Effect4.Run.Live
+import Effect4.Run.View
 
 /-!
 # Effect4.Run — the entry module for running a built program (decisions row 332)

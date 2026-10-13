@@ -24,9 +24,17 @@ def version : Nat := HostProtocol.hostProtocol.version
 structure Header where
   version : Nat
   session : String
-  profile : String
+  /-- The host binding the holder selected, matched by equality: `keyed-v3`,
+  `serial-root-scalar-v1`. It is no target profile (`ProfileData`); decisions row 326 (4) renamed
+  the field. -/
+  binding : String
   table : RowTable
 deriving DecidableEq, Repr
+
+/-- The header's binding under its former name. Callers outside the files of the session note's
+slice DM3 read it: `harness/truth/session/Session.lean` and `step_profile`
+(`src/Effect4/Laws/Run.lean`). It goes when they move. -/
+abbrev Header.profile (header : Header) : String := header.binding
 
 /-- Actual call-start claims. `fiber` is a recorded semantic fiber ID, not an implicit
 conversion from a runtime fiber number. A binding must justify that association. -/
@@ -100,6 +108,8 @@ structure Session (program : Api.Program) (table : RowTable) where
 inductive Refusal
   | version
   | session
+  /-- The header names a binding other than the one the holder selected. The refusal keeps its
+  name until slice DM6 renames it with the refusals it deletes. -/
   | profile
   | table
   | program (reason : AdmitRefusal)
@@ -139,15 +149,15 @@ def callTable (program : Api.Program) (table : RowTable) :
   Program.programCalls (SigApp.signature ⟨table, []⟩) [] program.expandRefs
 
 /-- Validate an explicit header and retain the indexed admission proof. Empty session IDs
-refuse. The expected profile is supplied by the binding's explicitly selected profile. The header
-carries the row table only (decisions row 21), so the program is admitted at the table's own
-signature, `⟨table, []⟩`. -/
-def start (program : Api.Program) (table : RowTable) (expectedProfile : String)
+refuse. The expected binding is the one that the holder selected. The header carries the row
+table only (decisions row 21), so the program is admitted at the table's own signature,
+`⟨table, []⟩`. -/
+def start (program : Api.Program) (table : RowTable) (expectedBinding : String)
     (header : Header) (compileFuel : Nat) :
     Except Refusal (Session program table) :=
   if header.version ≠ version then .error .version
   else if header.session = "" then .error .session
-  else if header.profile ≠ expectedProfile then .error .profile
+  else if header.binding ≠ expectedBinding then .error .profile
   else if header.table ≠ table then .error .table
   else match admitProgram program ⟨table, []⟩ with
     | .error why => .error (.program why)

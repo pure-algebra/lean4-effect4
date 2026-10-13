@@ -10,14 +10,16 @@ compose, with no check outside a placed theorem or planned goal. A scenario is o
 parts (`Test/Dogfood/README.md`): a program, a script, one named observation, a claim, the controls
 and the lowered runs. This module holds what the scenarios share.
 
-* **The script alphabet.** A `Move` is one thing a host does: a control decision, holding a call
-  (`hold`), a reply receipt (`receive`), a reply application (`apply`), or one raw row for a red
-  control. A script is a `List Move`: first-order data.
-* **The driver.** `play` turns each move into rows of the run's own journal (`Move.rows`) and plays
+* **The script alphabet.** A `Move` is the library's event (`Effect4.Run.Event`,
+  `src/Effect4/Run/Event.lean`, slice DM1): a control decision, holding a call (`hold`), a reply
+  receipt (`receive`), a reply application (`apply`), or a remote host's run command (`wire`), the
+  raw row of a red control. A script is a `List Move`: first-order data.
+* **The driver.** `play` turns each move into rows of the run's own journal (`Event.rows`) and plays
   them through `Run.play`. It adds no scheduler and no program representation. The run it reaches
   is the run its journal reaches (`replays`), so a replay resolves no selector and calls no fixture.
-* **Selection by key.** A move names a call by its fiber or by its row (`Sel`). The driver resolves
-  the name to the key of a live call, and `Api.HostSession.Call.at` builds the call's claim.
+* **Selection.** A move names a call by its key, its fiber or its row (`Sel`). The library resolves
+  the name to the key of the one live call it names, and `Api.HostSession.Call.at` builds the
+  call's claim. A row selector that names two live calls is unresolved, and its move plays nothing.
 * **Reply receipt and reply application apart.** `receive` plays the rows of `Rows.receive`, or the
   one `submit` row when the host already holds the call. `apply` plays the one row `.apply key`.
   The driver never plays `Rows.answer`: after a reply receipt it would bind and submit again.
@@ -59,101 +61,23 @@ open Effect4 Effect4.Machine Effect4.Program
 open Effect4.Api.HostSession (Key Call Reply Phase BoundCall Session)
 open Effect4.Api.Runner (Command)
 
-/-! ## 1. How a script names a call -/
+/-! ## 1. The library's events
 
-/-- A call as the host sees it: the row's spelling, the request, and the key that selects it. -/
-structure Seen where
-  row : String
-  request : Val
-  key : Key
-deriving DecidableEq
+The events, the selectors and the readers that resolve a selector stand in the library
+(`src/Effect4/Run/Event.lean`, slice DM1 of the session note). A row selector that names two live
+calls is unresolved there (decisions row 326 (4)), so its move plays nothing. The command below
+gives each name that the scenario tree uses an alias in this namespace. -/
 
-/-- How a script names a call. A fiber parks on one call at a time, so a fiber names one call. -/
-inductive Sel
-  /-- The call this fiber is parked on. -/
-  | fiber (id : FiberId)
-  /-- The first call on the row with this spelling, in the machine's order. -/
-  | row (spelling : String)
-deriving DecidableEq
+export Effect4.Run (Seen Sel Event live rows bound seenOf held)
 
-/-- Whether a selector names a call. -/
-def Sel.names (sel : Sel) (call : Seen) : Bool :=
-  match sel with
-  | .fiber id => call.key.fiber == id
-  | .row spelling => call.row == spelling
+/-- A step of a script: the library's event. The scenarios and the host lane
+(`harness/truth/session/Keyed.lean`) name it `Move`. -/
+abbrev Move := Event
 
-/-- The calls the machine is waiting on, as the host sees them, in the machine's order. -/
-def live (s : Run) : List Seen :=
-  s.outstanding.filterMap fun await =>
-    (s.rowOf await.op).map fun row => ⟨row.spelling, await.request, ⟨await.fiber, await.token⟩⟩
+/-! ## 2. The driver -/
 
-/-- A journal row with its verdict. -/
-def rows (s : Run) : List (Command × Phase) := s.journal.zip s.phases
-
-/-- The calls' claims that the host holds or held: the accepted `bind` rows, in order, each with
-its guard token. -/
-def bound (s : Run) : List (Call × Nat) :=
-  (rows s).filterMap fun
-    | (.bind call token, .bound) => some (call, token)
-    | _ => none
-
-/-- A held call's claim as the host sees it. -/
-def seenOf (s : Run) (entry : Call × Nat) : Option Seen :=
-  (s.rowOf entry.1.op).map fun row => ⟨row.spelling, entry.1.request, ⟨entry.1.fiber, entry.2⟩⟩
-
-/-- The calls the host holds or held, in the order it got them. -/
-def held (s : Run) : List Seen := (bound s).filterMap (seenOf s)
-
-/-- The key a selector names: the live call it names. With no such live call it names the latest
-call the host held, so a script can send a late reply for a call the machine dropped. -/
-def Sel.key (sel : Sel) (s : Run) : Option Key :=
-  match (live s).find? sel.names with
-  | some call => some call.key
-  | none => ((held s).reverse.find? sel.names).map (·.key)
-
-/-! ## 2. The script alphabet and the driver -/
-
-/-- One step of a script, by what the host does. -/
-inductive Move
-  /-- A control decision: evaluate, flush, a clock step, an interruption. -/
-  | control (decision : Api.Decision)
-  /-- The host gets the call and holds it: the session binds the call, with no reply. -/
-  | hold (call : Sel)
-  /-- The reply receipt: the session stores the host answer for the call. The machine does not
-  run. -/
-  | receive (call : Sel) (completion : Api.HostSession.Answer)
-  /-- The reply application: the session applies the stored reply at the call's key. -/
-  | apply (call : Sel)
-  /-- One raw row, for a red control: a reply under another key, a row recorded earlier. -/
-  | row (command : Command)
-deriving DecidableEq
-
-/-- The rows a move plays on a run. The claim of a live call comes from `Call.at`. A host answer
-for a call the host holds or held is one `submit` row against that claim. A host answer for a live
-call the host does not hold is the two rows of `Rows.receive`. -/
-def Move.rows (s : Run) : Move → List Command
-  | .control decision => [.control decision]
-  | .hold call =>
-    match (live s).find? call.names with
-    | none => []
-    | some seen =>
-      match Call.at s seen.key with
-      | none => []
-      | some claim => [.bind claim seen.key.token]
-  | .receive call completion =>
-    match call.key s with
-    | none => []
-    | some key =>
-      match (bound s).reverse.find? (fun entry => (⟨entry.1.fiber, entry.2⟩ : Key) == key) with
-      | some entry => [.submit (Rows.reply s entry.1 key completion)]
-      | none => Rows.receive s key completion
-  | .apply call =>
-    match call.key s with
-    | none => []
-    | some key => [.apply key]
-  | .row command => [command]
-
-/-- One move played: its rows go into the run's journal, each with its verdict. -/
+/-- One move played: its rows go into the run's journal, each with its verdict. It is the run that
+`Run.feed` reaches (`Run.feed_fst`). -/
 def step (s : Run) (move : Move) : Run := s.play (move.rows s)
 
 /-- A script played, move by move. -/
@@ -165,18 +89,6 @@ def ok (value : Val) : Api.HostSession.Answer := .ofExit (.success value)
 /-- A host answer that fails with a tag and a message, the pair spelling of DB-15. -/
 def failed (tag message : String) : Api.HostSession.Answer :=
   .ofExit (.failure (Cause.fail (.tagged tag message)))
-
-/-- The root evaluated: the move that starts a run. -/
-def Move.start : Move := .control Api.evaluate
-
-/-- Every armed dispatcher drained. -/
-def Move.flush : Move := .control Api.flush
-
-/-- The logical clock advanced by `millis`. -/
-def Move.tick (millis : Nat) : Move := .control (Api.TestClock.adjust (ClockMillis.ofNat millis))
-
-/-- The host cancels a fiber: `interruptUnsafe` with no interruptor. -/
-def Move.cancel (fiber : FiberId) : Move := .control (.interruptFrom none .empty fiber)
 
 /-- A reply receipt, then its reply application: two moves, two verdicts. -/
 def answer (call : Sel) (completion : Api.HostSession.Answer) : List Move :=
@@ -310,16 +222,22 @@ Consumer: the workers scenario's clause "receipt". It lifts `submit_machine`
 theorem receipt_inert : ReceiptInert := by
   intro s call completion
   refine ⟨play_receiptRows s _ ?_, play_receiptRows s _ ?_⟩
-  · simp only [Move.rows]
-    split
-    · rfl
-    · split <;> rfl
-  · simp only [Move.rows]
-    split
-    · rfl
-    · split
-      · rfl
-      · exact receive_receiptRows s _ completion
+  · simp only [Effect4.Run.Event.rows, Effect4.Run.Event.commands]
+    cases call.one s with
+    | none => rfl
+    | some seen =>
+      dsimp only
+      cases Api.HostSession.Call.at s seen.key with
+      | none => rfl
+      | some claim => rfl
+  · simp only [Effect4.Run.Event.rows, Effect4.Run.Event.commands]
+    cases call.resolve s with
+    | none => rfl
+    | some key =>
+      dsimp only
+      cases (bound s).reverse.find? (fun entry => (⟨entry.1.fiber, entry.2⟩ : Key) == key) with
+      | some entry => rfl
+      | none => exact receive_receiptRows s key completion
 
 /-! ## 5. A scenario's record, and the gate at the foot of a battery -/
 

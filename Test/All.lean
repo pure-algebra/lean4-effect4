@@ -377,6 +377,7 @@ import Test.Dogfood.Scenario.QueueWorkers.Source
 import Test.Machine.RaceFirst
 import Test.Program.FirstExitSource
 import Test.Program.KernelRfl
+import Test.Run.LiveContract
 
 /-!
 # Effect4 test battery

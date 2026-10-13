@@ -53,9 +53,9 @@ structure Runner where
   session : Session program table
 
 /-- A runner from a program, its row table and an explicit header, or the refusal. -/
-def load (program : Api.Program) (table : RowTable) (expectedProfile : String)
+def load (program : Api.Program) (table : RowTable) (expectedBinding : String)
     (header : Header) (compileFuel stepFuel : Nat) : Except HostSession.Refusal Runner :=
-  match HostSession.start program table expectedProfile header compileFuel with
+  match HostSession.start program table expectedBinding header compileFuel with
   | .error why => .error why
   | .ok session => .ok { program, table, fuel := stepFuel, session }
 

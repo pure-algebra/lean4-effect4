@@ -355,7 +355,7 @@ def runsOf (b unwithdrawn silent keeps masked takesBack stays twice : Api.Built)
   , run "blocked" [blocked]
   , run "applied-1-2" [blocked, replies, [.apply w1, .flush, .apply w2, .flush]]
   , run "applied-2-1" [blocked, replies, [.apply w2, .flush, .apply w1, .flush]]
-  , run "crossed" [running, [.row (.submit (forged 2 2 7 (ok .unit)))]]
+  , run "crossed" [running, [.wire (.submit (forged 2 2 7 (ok .unit)))]]
   , run "unreceived" [running, [.apply w2]]
   , run "cancelled-running" [running, [.cancel ⟨2⟩]]
   , run "cancelled-running-closed" [running, [.cancel ⟨2⟩], afterRunning]

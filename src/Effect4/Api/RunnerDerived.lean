@@ -788,7 +788,7 @@ namespace HeaderC
 
 def shapeDoc : ShapeDoc :=
   ⟨.struct "Header" [("version", (shape _root_.Nat).root),
-     ("session", (shape _root_.String).root), ("profile", (shape _root_.String).root),
+     ("session", (shape _root_.String).root), ("binding", (shape _root_.String).root),
      ("table", (shape (@_root_.List (_root_.Effect4.Program.Row))).root)],
    (shape _root_.Nat).defs ++ (shape _root_.String).defs ++
      (shape (@_root_.List (_root_.Effect4.Program.Row))).defs⟩

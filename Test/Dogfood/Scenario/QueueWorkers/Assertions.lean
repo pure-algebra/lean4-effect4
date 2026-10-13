@@ -59,23 +59,43 @@ theorem hostAct_rows (s : Run) (m : Move) (h : Move.hostAct m = true) :
     | answerAsync _ _ _ => exact absurd h Bool.false_ne_true
     | installMiddleware => exact absurd h Bool.false_ne_true
   | hold sel =>
-    simp only [Move.rows] at hc
-    split at hc
-    · exact absurd hc List.not_mem_nil
-    · split at hc
-      · exact absurd hc List.not_mem_nil
-      · rw [List.mem_singleton.mp hc]
+    simp only [Effect4.Run.Event.rows, Effect4.Run.Event.commands] at hc
+    cases hone : sel.one s with
+    | none =>
+      rw [hone] at hc
+      exact absurd hc List.not_mem_nil
+    | some seen =>
+      rw [hone] at hc
+      dsimp only at hc
+      cases hat : Api.HostSession.Call.at s seen.key with
+      | none =>
+        rw [hat] at hc
+        exact absurd hc List.not_mem_nil
+      | some claim =>
+        rw [hat] at hc
+        rw [List.mem_singleton.mp hc]
         trivial
   | receive sel completion =>
     cases completion with
     | ofExit e =>
-      simp only [Move.rows] at hc
-      split at hc
-      · exact absurd hc List.not_mem_nil
-      · split at hc
-        · rw [List.mem_singleton.mp hc]
+      simp only [Effect4.Run.Event.rows, Effect4.Run.Event.commands] at hc
+      cases hkey : sel.resolve s with
+      | none =>
+        rw [hkey] at hc
+        exact absurd hc List.not_mem_nil
+      | some key =>
+        rw [hkey] at hc
+        dsimp only at hc
+        cases hheld : (bound s).reverse.find?
+            (fun entry => (⟨entry.1.fiber, entry.2⟩ : Api.HostSession.Key) == key) with
+        | some entry =>
+          rw [hheld] at hc
+          rw [List.mem_singleton.mp hc]
           exact ⟨e, rfl⟩
-        · unfold Rows.receive at hc
+        | none =>
+          rw [hheld] at hc
+          dsimp only at hc
+          unfold Rows.receive at hc
           split at hc
           · exact absurd hc List.not_mem_nil
           · rcases List.mem_cons.mp hc with rfl | hc
@@ -84,12 +104,16 @@ theorem hostAct_rows (s : Run) (m : Move) (h : Move.hostAct m = true) :
               exact ⟨e, rfl⟩
     | ofRefGet _ => exact absurd h Bool.false_ne_true
   | apply sel =>
-    simp only [Move.rows] at hc
-    split at hc
-    · exact absurd hc List.not_mem_nil
-    · rw [List.mem_singleton.mp hc]
+    simp only [Effect4.Run.Event.rows, Effect4.Run.Event.commands] at hc
+    cases hkey : sel.resolve s with
+    | none =>
+      rw [hkey] at hc
+      exact absurd hc List.not_mem_nil
+    | some key =>
+      rw [hkey] at hc
+      rw [List.mem_singleton.mp hc]
       trivial
-  | row _ => exact absurd h Bool.false_ne_true
+  | wire _ => exact absurd h Bool.false_ne_true
 
 open Test.Dogfood.Scenario.QueueWorkers in
 /-- A script of host acts plays host rows only. -/
