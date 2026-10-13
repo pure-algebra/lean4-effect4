@@ -214,7 +214,7 @@ composeAt Γ p q := bind p (q.weaken Γ.length)
   The witnesses are in `docs/research/2026-09-19-critique-response.md` §2.
 
 **Generation is a fixed point.** Stage 0 is the tables (`binders.json`, `manifest.json`, the
-template table, `cases-policy.json`); stage 1 is the generated Lean. The committed tree must be a
+template table); stage 1 is the generated Lean. The committed tree must be a
 fixed point of the generator (`check-gen`). Every generated declaration is a fold or an embedding
 of §5, which keeps the generated sugar inside the proofs.
 

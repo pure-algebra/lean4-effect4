@@ -32,7 +32,7 @@ tree's `Representation` census.
 Beside it, the exhaustiveness inventory: which matches on a type have no catch-all, and so
 are the definitions a new constructor refuses. It is printed, not asserted, for the same
 reason the census is — `docs/core/decisions.md` row 34 keeps the census an instrument, and the
-gate over compiled default arms is the case-site policy (`make check-cases`). Read it before
+gate over compiled default arms, the case-site policy, was cleared (decisions row 375). Read it before
 appending a constructor: `lake env lean Test/Audit/TraversalCensus.lean`.
 
 The one assertion here is the inventory's own red control, over

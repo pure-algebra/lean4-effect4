@@ -402,7 +402,7 @@ doctor: ## the tools and installs every tier needs, with their versions
 
 # ---------------------------------------------------------------------------- checks
 
-CHECKS := roots cases native compiler ts-reader truth truth-release target schema-codec ocaml ingest ingest-smoke \
+CHECKS := roots native compiler ts-reader truth truth-release target schema-codec ocaml ingest ingest-smoke \
   host-protocol census schema-ts schema-pins tools corpus tsgo semantics docs language
 .PHONY: check check-full check-gen check-gen-full clean-check FORCE check-slow traversal-census $(addprefix check-,$(CHECKS))
 FORCE:
@@ -502,10 +502,6 @@ $(CHK)/language: $(CHK)/paths $(DOCS) $(LANGUAGE_SOURCES)
 	@mkdir -p $(CHK) && touch $@
 
 CONFORM_SOURCES := $(shell find tools/Conform -name '*.lean' -o -name '*.json') scripts/check-conform.py scripts/lib/conform_report.py
-$(CHK)/cases: $(CORE_SOURCES) $(CONFORM_SOURCES)
-	$(PY) scripts/check-conform.py cases
-	@mkdir -p $(CHK) && touch $@
-
 $(CHK)/native: $(CORE_SOURCES) $(CONFORM_SOURCES)
 	$(PY) scripts/check-conform.py native
 	@mkdir -p $(CHK) && touch $@
@@ -761,7 +757,7 @@ status: ## one screen, measured: HEAD and dirty paths, build and check freshness
 help: ## this list
 	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_-]+:.*## / {printf "  %-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 	@echo
-	@echo '  check-<name>       one check: roots, cases, native, compiler, ts-reader, truth, truth-release, target,'
+	@echo '  check-<name>       one check: roots, native, compiler, ts-reader, truth, truth-release, target,'
 	@echo '                     schema-codec, ocaml, ingest, ingest-smoke, host-protocol, census, schema-ts,'
 	@echo '                     corpus, schema-pins, tools, tsgo, semantics, docs, language'
 	@echo '                     (each skipped while its inputs are unchanged; -B forces)'

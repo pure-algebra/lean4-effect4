@@ -3,8 +3,7 @@
 
     python3 scripts/check-conform.py [PROFILE ...]      default: native
 
-`make check-cases`, `make check-native` and `make check-compiler` run the `cases`, `native`
-and `compiler` profiles; CI's OCaml job runs `compiler` by name. Each profile is a producer
+`make check-native` and `make check-compiler` run the `native` and `compiler` profiles; CI's OCaml job runs `compiler` by name. Each profile is a producer
 that gets an empty directory and must write exactly its named files. A profile states the
 role of each file: a report, with
 the tool identity it must carry, or an artifact. `conform_report.fresh_run` validates the
@@ -53,12 +52,6 @@ PROFILES = {
         "command": ["lake", "env", "lean", "-M4096", "--run", "tools/Conform/Effect4/NativeMain.lean", "{out}"],
         "reports": {"layout-lean-native.json": "conform.layout[lean-native]"},
         "artifacts": ["native-layout.json"],
-    },
-    "cases": {
-        "command": ["lake", "env", "lean", "-M4096", "--run", "tools/Conform/Cli/Audit.lean",
-                    "--config", "tools/Conform/Effect4/cases.json", "--out", "{out}/cases.json"],
-        "reports": {"cases.json": "conform-cases"},
-        "artifacts": [],
     },
 }
 

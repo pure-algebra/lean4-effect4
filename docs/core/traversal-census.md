@@ -57,7 +57,7 @@ already a fold whose arms ignore the recursive results (`fold_of` reads it as on
 value in — the paramorphism of §7), so converting it changes its spelling and nothing else, and
 the principle is about recursion; what a new constructor costs a `match`, with or without a
 catch-all, is measured by the exhaustiveness inventory (`#exhaustive_gate`, read from the
-matcher's own type) and governed by the case-site policy (row 56, `make check-cases`), so
+matcher's own type; the case-site policy of row 56 was cleared by row 375), so
 counting matches here as well would give that fact a second owner; and until 2026-10-01 the
 census counted a one-level match only when the compiler encoded it through the family's own
 `casesOn` (an exhaustive `match`, `Ty.isNever`) and missed it when the encoding went through a

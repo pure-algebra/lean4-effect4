@@ -22,7 +22,7 @@ by the family's `unlisted` setting.
 **Depends on.** `Lean` (`Lean.Compiler.LCNF.PhaseExt.getMonoDecl?`, the one door to the compiler's
 own IR, and `Lean.Compiler.LCNF.Basic`'s `Cases`/`Alt`), `Conform.Core.Report`,
 `Conform.Core.Policy`. Nothing from this repository: the extensibility rule of the wave's common
-brief. Effect4's own configuration lives in `tools/Conform/Effect4/cases-policy.json`.
+brief. Effect4 runs no case-site policy since decisions row 375; a configuration names one by `casesPolicy`.
 
 **Why mono LCNF and not the matcher.** A `match` on an inductive compiles through `casesOn`,
 a `matcher_N` auxiliary, `Ty.ctorIdx` or `StructProjCases` depending on the arms, so reading the

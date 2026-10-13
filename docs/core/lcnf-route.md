@@ -63,8 +63,8 @@ else in the machine's closure translates.
   the emitted syntax (`Expr`, `Pat`, `TValue`, `evalT` at `:424`, `PrimEnv` for the named
   primitive assumptions).
 - `Lcnf/Validity.lean` (728), `Lcnf/Rules.lean` (757), `Lcnf/Cases.lean` (721): the validity
-  check, structural rule summaries, and the case-site policy — the gate that refused `Run.rowOf` and
-  `ServiceDef.receiver` today (`cases-policy.json`).
+  check, structural rule summaries, and the case-site check. No lane runs the last since its
+  policy was cleared (decisions row 375).
 - `tools/Conform/Effect4/LcnfSemantics.lean` (rung 2): the LCNF evaluator against the compiled Lean functions
   on 20,387 vectors. `tools/Conform/Effect4/LcnfMl.lean` (rung 3): the emitted OCaml read into the target
   evaluator and run on the same vectors — "the evaluator handles what the translator emits" is
@@ -77,8 +77,8 @@ The recorded evidence is a differential on 20,387 vectors over the type-processi
 comparing LCNF and target-AST evaluation with compiled Lean. It is not a theorem that lowering
 preserves the LCNF semantics. **And that evidence was produced once, not on every change.** The three modules
 above are libraries; their `--run` drivers are named by no `make` target, no script and no CI
-job, so nothing re-runs the 20,387 cases. What does run on every change is the case-site policy
-(`make check-cases`), the validity walk and structural rule summaries. Wiring the vector lane into
+job, so nothing re-runs the 20,387 cases. What runs is the compiler's own lanes
+(`make check-compiler`, `make check-native`); the case-site policy was cleared (decisions row 375). Wiring the vector lane into
 `check-host` is the plan's item 4.5; until it lands, read this paragraph as a record of a run,
 with its date, and not as a standing check. Scout F's question 6 is whether to prove it
 (CompCert-shaped simulation over `Semantics` and `SemanticsTarget`, both of which exist as Lean
@@ -88,7 +88,7 @@ the theorem statable.
 ## 4. What a TypeScript target needs that ML did not
 
 Target-independent, reusable as is: the closure walk, `Naming`, `Externs`'s shape, `argsFor`/
-`ctorApp`/`altPat`, `Types`' closure, the case-site policy, both evaluators and the vector
+`ctorApp`/`altPat`, `Types`' closure, both evaluators and the vector
 lane. Target-specific, to write:
 
 1. **The emitter's syntax.** Emit into the vendored `TypeScript.Expr`/`Stmt` (the `typescript`
@@ -123,7 +123,7 @@ Upstream, not beside. The authoring sugar, the generated lifts, the forms and an
 generation are metaprograms that *write Lean* (definitions, tables, instances); LCNF lowers the
 Lean they wrote. So "apprised of the sugar" means one thing concretely: the roots list. A
 metaprogram that adds a definition an agent should be able to call from TypeScript adds it to
-the roots, and the closure walk, the case-site policy and the rungs take it from there.
+the roots, and the closure walk and the rungs take it from there.
 Metaprogramming determines which declarations exist; LCNF supplies a lowering input.
 Agreement of the TypeScript image still requires the named translation and execution evidence.
 
@@ -135,8 +135,8 @@ Agreement of the TypeScript image still requires the named translation and execu
 - The evidence is a 20,387-vector differential between two Lean-defined evaluators, produced
   once and not re-run by any lane today (see §3); a theorem is statable because both evaluators
   are Lean functions.
-- The case-site policy already gates *every* default arm in the compiled code, which is why a
-  seat's `| _ =>` was refused today: the LCNF route's gates are already in `make check`.
+- The compiler and native lanes check the LCNF route's behaviour against real runs. The
+  case-site policy over compiled default arms was cleared (decisions row 375).
 
 ## 7. Owner's steer, later on 2026-09-17: LLVM as the model for the high tier, LLVM as the low tier
 

@@ -3,7 +3,6 @@
   "tool": "conform-audit",
   "imports": ["Effect4"],
   "roots": ["Effect4", "Test"],
-  "casesPolicy": "tools/Conform/Effect4/cases-policy.json",
   "mirrors": "tools/Conform/Effect4/mirrors.json",
   "rules": "tools/Conform/Effect4/rules.json"
 }
