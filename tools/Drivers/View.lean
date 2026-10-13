@@ -91,36 +91,82 @@ def pageRules : String :=
   "img { display: block; max-width: 100%; height: auto; border: 1px solid var(--e4-color-rule); }\n"
 
 /-- **A run's player**: its pictures in order, a frame's motion pictures before it, stepped as
-`play` steps them. Picture `k` of a step's `n` stands at `k/n` of the look's step. -/
+`play` steps them. Picture `k` of a step's `n` stands at `k/n` of the look's step. A scrubber reads
+any picture, a rate of one, a half or a quarter slows a step, a strip shows every frame at one
+scale, and five moments of the current step stand beside it (decisions row 362, DS-2). Nothing
+loops, and under a reduced-motion preference a step shows its end frame alone (row 354 (5)). The
+current picture names itself in data attributes for an agent that reads the page. -/
 def playerPage (L : Look) (title label : String) (pics : List (String × Bool)) (gallery : Bool) :
     String :=
   let list := ",".intercalate (pics.map fun (n, f) => s!"[\"{n}\",{if f then 1 else 0}]")
   "<!doctype html>\n<html lang=\"en\" data-look=\"" ++ escape L.name ++ "\">\n<head>\n<meta charset=\"utf-8\">\n" ++
   "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n<title>" ++ escape title ++ "</title>\n" ++
-  "<style>\n" ++ Tokens.css L ++ pageRules ++ "</style>\n</head>\n<body>\n<header>" ++
+  "<style>\n" ++ Tokens.css L ++ pageRules ++
+  ".controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 0 0 12px; }\n" ++
+  ".controls label { display: inline-flex; align-items: center; gap: 6px; }\n" ++
+  "#scrub { flex: 1 1 240px; accent-color: var(--e4-color-ink); }\n" ++
+  "select { font: inherit; font-size: 13px; color: var(--e4-color-ink); background: var(--e4-color-ground); border: 1px solid var(--e4-color-rule); border-radius: 4px; padding: 1px 4px; }\n" ++
+  "button:focus-visible, select:focus-visible, input:focus-visible, .strip img:focus-visible { outline: 2px solid var(--e4-color-ink); outline-offset: 2px; }\n" ++
+  "#pic { max-height: 68vh; width: auto; max-width: 100%; }\n" ++
+  ".strips { display: grid; gap: 10px; margin-top: 14px; }\n" ++
+  ".strip { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 6px; align-items: flex-start; }\n" ++
+  ".strip img { height: 68px; width: auto; max-width: none; cursor: pointer; opacity: 0.6; }\n" ++
+  ".strip img[aria-current=\"true\"] { opacity: 1; outline: 2px solid var(--e4-color-ink); outline-offset: 2px; }\n" ++
+  ".strip-label { font-family: var(--e4-font-data-family); font-size: 12px; opacity: 0.7; }\n" ++
+  "</style>\n</head>\n<body>\n<header>" ++
   (if gallery then "<a href=\"../../index.html\">Studio</a>" else "") ++
   "<h1>" ++ escape title ++ "</h1><span class=\"meta\">" ++ escape label ++ " · " ++ escape L.name ++
-  "</span><span class=\"meta\" id=\"pos\"></span>" ++
-  "<span><button id=\"back\">◀</button> <button id=\"next\">▶</button> <button id=\"all\">play all</button></span></header>\n" ++
-  "<img id=\"pic\" alt=\"\">\n<script>\n" ++
-  "const pics = [" ++ list ++ "];\nconst step = " ++ toString L.motion.step ++ ";\n" ++
+  "</span><span class=\"meta\" id=\"pos\" aria-live=\"polite\"></span></header>\n" ++
+  "<div class=\"controls\"><span><button id=\"back\" aria-label=\"previous frame\">◀</button> " ++
+  "<button id=\"next\" aria-label=\"next frame\">▶</button> <button id=\"all\">play all</button></span>" ++
+  "<label class=\"meta\">speed <select id=\"rate\"><option value=\"1\">1×</option><option value=\"0.5\">½×</option>" ++
+  "<option value=\"0.25\">¼×</option></select></label>" ++
+  "<input id=\"scrub\" type=\"range\" min=\"0\" max=\"" ++ toString (pics.length - 1) ++ "\" step=\"1\" value=\"0\" aria-label=\"picture\"></div>\n" ++
+  "<main data-pictures=\"" ++ toString pics.length ++ "\"><img id=\"pic\" alt=\"\"></main>\n" ++
+  "<div class=\"strips\"><div><span class=\"strip-label\">frames</span><nav class=\"strip\" id=\"strip\" aria-label=\"frames\"></nav></div>\n" ++
+  "<div><span class=\"strip-label\">this step at 0, ¼, ½, ¾ and its end</span><div class=\"strip\" id=\"moments\"></div></div></div>\n" ++
+  "<script>\n" ++
+  "const pics = [" ++ list ++ "];\nconst step = " ++ toString L.motion.step ++ ";\nconst title = " ++
+  (Lean.Json.str title).compress ++ ";\n" ++
   "const frames = pics.map((p, i) => p[1] ? i : -1).filter(i => i >= 0);\n" ++
-  "const img = document.getElementById('pic'), pos = document.getElementById('pos');\n" ++
-  "let at = 0, timer = 0, chain = false;\n" ++
-  "function show(i) { at = i; img.src = pics[i][0] + '.svg'; pos.textContent = 'frame ' + frames.filter(j => j <= i).length + ' of ' + frames.length; }\n" ++
+  "const reduce = matchMedia('(prefers-reduced-motion: reduce)');\n" ++
+  "const $ = id => document.getElementById(id);\n" ++
+  "const img = $('pic'), pos = $('pos'), scrub = $('scrub'), rate = $('rate'), strip = $('strip'), moments = $('moments');\n" ++
+  "let at = 0, timer = 0, chain = false, momentsOf = -1;\n" ++
+  "const reached = i => frames.filter(j => j <= i).length;\n" ++
+  "const thumb = (i, alt) => { const t = document.createElement('img'); t.src = pics[i][0] + '.svg'; t.alt = alt;\n" ++
+  "  t.dataset.index = i; t.dataset.picture = pics[i][0]; t.tabIndex = 0;\n" ++
+  "  t.onclick = t.onkeydown = e => { if (e.type === 'keydown' && e.key !== 'Enter') return; stop(); chain = false; show(i); }; return t; };\n" ++
+  "frames.forEach((i, k) => strip.append(thumb(i, 'frame ' + (k + 1))));\n" ++
+  "function showMoments(i) { const end = frames.find(j => j >= i); if (end === momentsOf) return; momentsOf = end;\n" ++
+  "  const prev = frames.filter(j => j < end).pop();\n" ++
+  "  if (end === undefined || prev === undefined || end - prev < 2) { moments.replaceChildren(); return; }\n" ++
+  "  moments.replaceChildren(...[0, 0.25, 0.5, 0.75, 1].map(q => thumb(prev + Math.round(q * (end - prev)), 'moment ' + q * 1000 + ' per mille'))); }\n" ++
+  "function show(i) { at = i; const f = reached(i); img.src = pics[i][0] + '.svg';\n" ++
+  "  img.dataset.picture = pics[i][0]; img.dataset.frame = f; img.alt = title + ', frame ' + f + ' of ' + frames.length;\n" ++
+  "  pos.textContent = 'frame ' + f + ' of ' + frames.length + (pics[i][1] ? '' : ', moving'); scrub.value = i;\n" ++
+  "  strip.querySelectorAll('img').forEach(t => { const on = +t.dataset.index === frames[Math.max(0, f - 1)];\n" ++
+  "    t.setAttribute('aria-current', String(on)); if (on) t.scrollIntoView({ block: 'nearest', inline: 'nearest' }); });\n" ++
+  "  showMoments(i); }\n" ++
   "function stop() { cancelAnimationFrame(timer); clearTimeout(timer); timer = 0; }\n" ++
   "function next() { stop(); const end = frames.find(j => j > at); if (end === undefined) { chain = false; return; }\n" ++
+  "  const span = step / +rate.value;\n" ++
+  "  if (reduce.matches) { show(end); if (chain) timer = setTimeout(next, span); return; }\n" ++
   "  const start = at, n = end - start, t0 = performance.now();\n" ++
-  "  const tick = t => { const k = Math.min(n, Math.ceil((t - t0) * n / step)); if (k > 0 && start + k !== at) show(start + k);\n" ++
-  "    if (k < n) timer = requestAnimationFrame(tick); else if (chain) timer = setTimeout(next, step); };\n" ++
+  "  const tick = t => { const k = Math.min(n, Math.ceil((t - t0) * n / span)); if (k > 0 && start + k !== at) show(start + k);\n" ++
+  "    if (k < n) timer = requestAnimationFrame(tick); else if (chain) timer = setTimeout(next, span); };\n" ++
   "  timer = requestAnimationFrame(tick); }\n" ++
   "function back() { stop(); chain = false; const p = frames.filter(j => j < at).pop(); show(p === undefined ? 0 : p); }\n" ++
   "function all() { chain = true; if (at === frames[frames.length - 1]) show(0); next(); }\n" ++
-  "document.getElementById('next').onclick = () => { chain = false; next(); };\n" ++
-  "document.getElementById('back').onclick = back; document.getElementById('all').onclick = all;\n" ++
+  "$('next').onclick = () => { chain = false; next(); };\n" ++
+  "$('back').onclick = back; $('all').onclick = all;\n" ++
+  "scrub.oninput = () => { stop(); chain = false; show(+scrub.value); };\n" ++
   "document.addEventListener('keydown', e => {\n" ++
+  "  if (e.target.closest('select, input')) return;\n" ++
   "  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); chain = false; next(); }\n" ++
   "  else if (e.key === 'ArrowLeft') back();\n" ++
+  "  else if (e.key === ',') { stop(); chain = false; show(Math.max(0, at - 1)); }\n" ++
+  "  else if (e.key === '.') { stop(); chain = false; show(Math.min(pics.length - 1, at + 1)); }\n" ++
   "  else if (e.key === 'Home') { stop(); chain = false; show(0); }\n" ++
   "  else if (e.key === 'End') { stop(); chain = false; show(frames[frames.length - 1]); }\n" ++
   "  else if (e.key === 'p' || e.key === 'P') all(); });\n" ++
