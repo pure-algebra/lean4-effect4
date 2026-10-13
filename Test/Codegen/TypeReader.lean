@@ -23,6 +23,7 @@ set_option autoImplicit false
 namespace Test.Codegen.TypeReader
 
 open Effect4 Effect4.Program Effect4.Codegen Effect4.Codegen.Classes
+open Effect4.Machine.Env (Requirement)
 open TypeScript (TypeRef)
 
 /-- A tagged payload record type: it prints as the name of its class. -/
@@ -133,5 +134,37 @@ def neverFields : Classes.Fields := [("_tag", false, .lit "X"), ("a", false, .ne
 
 #guard (classDecl "X" neverFields).bind readClassDecl = some ("X", neverFields)
 #guard Types.payloadClass? neverFields = none
+
+/-! ## The context type (decisions row 349)
+
+A context type prints as `Context.Context<R>`, its row in the one spelling of a requirement row
+at the native scope key (`Types.ofTy_contextOf`). The checked reader reads it back to its keys.
+An application's service holds a context as its state and passes it first in each method's
+request (decisions row 378 (20)): the last type below is such a request. -/
+
+/-- Two ordinary service keys. -/
+def keyA : ServiceKey := ⟨⟨3⟩, ⟨7⟩⟩
+def keyB : ServiceKey := ⟨⟨1⟩, ⟨12⟩⟩
+
+/-- Context types that read back: no key, one key, the native scope, two keys, and a service
+method's request of a context and a string. -/
+def contexts : List Ty :=
+  [ .contextOf (Requirement.ofList []), .contextOf (Requirement.ofList [keyA])
+  , .contextOf (Requirement.ofList [nativeScopeKey]), .contextOf (Requirement.ofList [keyA, keyB])
+  , .prod (.contextOf (Requirement.ofList [])) .string ]
+
+#guard contexts.all ReadableTy
+-- the printed text: the row in key order, the native scope as `Scope.Scope`
+#guard Types.ofTy (.contextOf (Requirement.ofList [keyA, nativeScopeKey])) =
+  some (.name ["Context", "Context"] [.union [.name ["Scope", "Scope"] [], .literal "k3_7"]])
+-- control: the internal handle `Context.Context<unknown>` has no row, so no reading
+#guard readTy (.name ["Context", "Context"] [.name ["unknown"] []]) = none
+#guard !ReadableTy (.handle "Context.Context<unknown>")
+-- control: a key written twice reads, and the checked reader refuses it, since the row prints the
+-- key once; a literal that is no key's text decodes to a key that prints otherwise
+#guard readTy (.name ["Context", "Context"] [.union [.literal "k3_7", .literal "k3_7"]]) =
+  some (.contextOf (Requirement.ofList [keyA]))
+#guard readTyChecked (.name ["Context", "Context"] [.union [.literal "k3_7", .literal "k3_7"]]) = none
+#guard readTyChecked (.name ["Context", "Context"] [.literal "x"]) = none
 
 end Test.Codegen.TypeReader
