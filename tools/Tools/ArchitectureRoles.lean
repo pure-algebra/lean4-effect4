@@ -10,10 +10,9 @@ module: one area per directory with its column, its height in the column and its
 layering rule; the imports a document names and accepts. The proof graph the map draws is derived
 from the semantics report (`make gen-semantics`), not declared here.
 
-The table is total in both directions, the same way `Typed/Sources.lean` is: a Lean file
-under no declared area, or a declared path that does not exist, stops the driver with the
-name. It is the role register's totality gate, not a test gate: the map is a report, and the
-driver exits 0 on every import it finds against the direction.
+The driver lists a Lean file under no declared area, and a declared path that does not exist,
+and draws the map anyway: the map is a report, not a gate (decisions row 375). It exits 0 on
+every import it finds against the direction too.
 -/
 
 namespace Tools.Architecture
@@ -159,7 +158,6 @@ def areas : List Area := [
   ⟨"tools/Conform/Effect4", .tools, 4, "Conform/Effect4", "the Effect4 adapters: profiles, fixtures, the LCNF and layout worlds, the native target", false, true⟩,
   ⟨"tools/Effect4Gen", .tools, 5, "Effect4Gen", "the deriving generator (`Canonical`, folds, views, rows, atoms, forms) and its projection guard; `guards/` holds the fragments appended to generated files, not modules", false, true⟩,
   ⟨"tools/BankCensusRun.lean", .tools, 5, "BankCensusRun", "the rule-bank census runner (`make bank-census`)", false, true⟩,
-  ⟨"tools/ProofStyleRecord.lean", .tools, 5, "ProofStyleRecord", "the proof-style baseline recorder (`make record-proof-style`)", false, true⟩,
   ⟨"tools/conform-red", .tools, 6, "conform-red", "negative probes for Conform, deliberately red, in no root", false, true⟩,
   -- the batteries
   ⟨"Test", .tests, 0, "Test", "`Test/All.lean` is the green battery and the gate's root; the areas mirror the runtime's", false, true⟩,

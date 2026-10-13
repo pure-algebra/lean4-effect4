@@ -9,10 +9,9 @@ A user of the library imports only entry modules and the module library
 file under the user roots (`Tools.Architecture.userRoots`, the acceptance programs), with the
 compiler's own header parser, and classifies each import of the tree by its exposure
 (`Tools.Architecture.exposures`). `#exposure_report` prints the imports a user may not make, with
-their exposure, and a count by exposure. `#exposure_gate`, at the foot of `Test/All.lean`, refuses
-the same imports (cutover slice C4): the acceptance programs import entry modules, a composed
-module's own files and the batteries' support only. An import outside the tree (Lean, Std, the
-pinned packages) is not the gate's business.
+their exposure, and a count by exposure. It reports and refuses nothing: the gate that refused
+them is retired (decisions row 375). An import outside the tree (Lean, Std, the pinned packages)
+is not the report's business.
 -/
 
 namespace Tools.Exposure
@@ -29,7 +28,7 @@ def pathOf (m : Name) : Option String :=
   | "TestSupport" :: _ => some ("tools/" ++ "/".intercalate parts ++ ".lean")
   | _ => none
 
-/-- One import of a user's file that the gate would refuse. -/
+/-- One import of a user's file that row 332 does not admit. -/
 structure Finding where
   file : String
   imported : Name
@@ -71,21 +70,5 @@ syntax (name := exposureReport) "#exposure_report" : command
     let users := findings.filter (·.imported == m)
     out := out ++ s!"\n{m} ({users[0]!.exposure}), from {users.size} files"
   logInfo out
-
-/-- `#exposure_gate`: refuse every import of the user roots that row 332's gate does not admit,
-naming the file, the module and its exposure. `Test/All.lean` imports every acceptance program,
-so an import line that changes elaborates this command again. -/
-syntax (name := exposureGate) "#exposure_gate" (ppSpace str)? : command
-
-/-- The gate's check over `roots`. With a path, `#exposure_gate "p"` reads that folder instead of
-the user roots: the red control of `Test/Audit/Exposure.lean` reads a fixture. -/
-@[command_elab exposureGate] def elabExposureGate : CommandElab := fun stx => do
-  let roots := match stx[1].getOptional? with
-    | some s => [s.isStrLit?.getD ""]
-    | none => userRoots
-  let (findings, _) ← scan roots
-  unless findings.isEmpty do
-    throwError (String.intercalate "\n" (findings.toList.map fun f =>
-      s!"exposure gate: {f.file} imports {f.imported}, which is {f.exposure}; a user imports entry modules and a composed module's own files"))
 
 end Tools.Exposure

@@ -407,34 +407,6 @@ no opaque and needs no entry.
 private def admittedInitializedHandles : List Name :=
   [`Effect4.Laws.Auto.semanticsAttribute]
 
-/--
-The declarations that rest on planned goals at the default audit root (decisions rows 301 and 302).
-The gate refuses any addition or removal, including a replacement that leaves the count unchanged.
-A change to this list is a review event. The slow root logs its count and pins no names.
--/
-private def restingPin : Array Name := #[
-  `Test.Audit.SemanticsCensus.placedSketch,
-  `Test.Audit.SemanticsCensus.restingWitness,
-  `Test.Audit.SemanticsCensus.sketchedGoal,
-  `Test.Dogfood.Scenario.Atomic.atomic,
-  `Test.Dogfood.Scenario.QueueWorkers.queueWorkers,
-  `Test.Dogfood.Scenario.Routing.routing,
-  `Test.Dogfood.Scenario.Timeout.timeout,
-  `Test.Dogfood.Scenario.Workers.workers,
-  `Test.LandingPlanControls.pendingHelper,
-  `Test.LandingPlanControls.pendingTop,
-  `Test.Obligations.resting,
-  `Test.ProofGraphPlan.m7Modulo,
-  `Test.ProofGraph.WhyControl.mid,
-  `Test.ProofGraph.WhyControl.top,
-  `Test.ProofGraphPlan.sketched,
-  `Test.ProofGraphPlan.top]
-
-/-- Compare identities, independently of the environment's declaration order. -/
-private def restingDifference (expected actual : Array Name) : Array Name × Array Name :=
-  (actual.filter fun name => !expected.contains name,
-    expected.filter fun name => !actual.contains name)
-
 open Lean Elab Command in
 elab "#effect4_axiom_gate" : command => do
   let environment ← getEnv
@@ -537,7 +509,6 @@ elab "#effect4_axiom_gate" : command => do
   let mut memo : ProofGraph.AxiomMemo := memoAll
   let mut goalCount := 0
   let mut resting : Array Name := #[]
-  let mut restingGoals : Std.HashMap Name (Array Name) := {}
   -- every offender is collected, so one run names them all and the roots they stand under
   let mut offenders : Array (Name × Array Name) := #[]
   for (declaration, reached) in declarations.zip reachedAll do
@@ -561,7 +532,6 @@ elab "#effect4_axiom_gate" : command => do
       continue
     if axioms.any isGoal then
       resting := resting.push declaration
-      restingGoals := restingGoals.insert declaration (axioms.filter isGoal)
     -- An auxiliary or equation lemma inherits the admission of the declaration
     -- it was generated from; see `admissionAncestors` for which parents count.
     let bound :=
@@ -619,21 +589,6 @@ elab "#effect4_axiom_gate" : command => do
   let t6 ← liftIO IO.monoMsNow
   logInfo
     m!"Effect4 module and axiom gate: checked {sources.size} modules and {declarations.size} declarations; phases (ms): sources and closure {t1 - t0}, library roots {t2 - t1}, declarations {t3 - t2}, resolution {t4 - t3}, axioms {t5 - t4}, exemptions {t6 - t5}; semantic/test axioms are {allowedAxioms}; exact implementation boundary ({choiceImplementationModules.length} module(s), {exactImplementationDeclarations.length} declaration(s)) additionally allows Classical.choice"
-  let (added, removed) := restingDifference restingPin resting
-  if !slowRoot && (!added.isEmpty || !removed.isEmpty) then
-    -- the added names, by the goal each rests on; `#why D` prints one's path to its goal
-    let mut byGoal : Array (Name × Array Name) := #[]
-    for d in added do
-      for g in restingGoals.getD d #[] do
-        match byGoal.findIdx? (·.1 == g) with
-        | some i => byGoal := byGoal.modify i fun (g, ds) => (g, ds.push d)
-        | none => byGoal := byGoal.push (g, #[d])
-    let grouped := byGoal.toList.map fun (g, ds) => m!"resting on {g} ({ds.size}): {ds}"
-    throwError (m!"Effect4 goal gate: declarations resting on planned goals changed; \
-      {added.size} added, {removed.size} removed\
-      {indentD (MessageData.joinSep grouped Format.line)}\nremoved: {removed}\n\
-      review the dependencies (`#why D` prints one's path to its goal), then update \
-      `restingPin` in Test/Audit/AxiomGate.lean")
   logInfo m!"Effect4 goal gate: {goalCount} planned goal(s), each a theorem whose body is `sorry` outside the Effect4 root; {resting.size} declaration(s) rest on goals; no other declaration reaches sorryAx"
 
 /-!

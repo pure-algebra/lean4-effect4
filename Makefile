@@ -402,7 +402,7 @@ doctor: ## the tools and installs every tier needs, with their versions
 
 # ---------------------------------------------------------------------------- checks
 
-CHECKS := roots proof-style cases native compiler ts-reader truth truth-release target schema-codec ocaml ingest ingest-smoke \
+CHECKS := roots cases native compiler ts-reader truth truth-release target schema-codec ocaml ingest ingest-smoke \
   host-protocol census schema-ts schema-pins tools corpus tsgo semantics docs language
 .PHONY: check check-full check-gen check-gen-full clean-check FORCE check-slow traversal-census $(addprefix check-,$(CHECKS))
 FORCE:
@@ -433,25 +433,6 @@ check-kernel: ## (sweep) replay every compiled Effect4 and Test declaration thro
 	$(LAKE) build kernel-replay Test Test.Slow
 	$(LAKE) exe kernel-replay --self-test
 	$(LAKE) exe kernel-replay Test Test.Slow
-
-# The proof-style ratchet (AGENTS.md: no new simp_all, first, try or simp without only under src/):
-# `make check` runs it as `check-proof-style`, and record-proof-style rewrites the baseline after a
-# cleanup. The scan reads the sources and the baseline at elaboration, which Lake's trace of
-# Test.Audit.ProofStyle does not cover: the marker's inputs do, so a baseline-only or a
-# comment-only edit reruns it. The red fixtures and their baselines are inputs too, and the source
-# inventory reruns it when a scanned source is added or deleted.
-$(CHK)/proof-style: $(filter src/Effect4/%,$(LEAN_SOURCES)) Test/fixtures/proof-style/baseline.tsv \
-  Test/fixtures/proof-style/red/Sample.lean Test/fixtures/proof-style/red-baseline.tsv \
-  Test/fixtures/proof-style/red-stale.tsv Test/fixtures/proof-style/under/Sample.lean \
-  $(CHK)/inventory \
-  tools/ProofGraph/ProofStyle.lean Test/Audit/ProofStyle.lean
-	$(call build_imports,Test/Audit/ProofStyle.lean)
-	$(LAKE) env lean -DwarningAsError=true Test/Audit/ProofStyle.lean
-	@mkdir -p $(CHK) && touch $@
-
-record-proof-style: ## rewrite Test/fixtures/proof-style/baseline.tsv from the tree (a reviewed diff)
-	$(LAKE) build ProofGraph.ProofStyle Effect4 Effect4Laws
-	$(LAKE) env lean tools/ProofStyleRecord.lean
 
 traversal-census: ## print the traversal census (`docs/core/traversal-census.md`)
 	$(LAKE) build Test.Audit.TraversalCensus

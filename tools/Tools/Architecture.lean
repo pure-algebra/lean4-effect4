@@ -720,7 +720,6 @@ def main (args : List String) : IO UInt32 := do
   unless facts.missing.isEmpty do
     IO.eprintln s!"architecture: {facts.missing.size} declared area(s) with no such path:"
     for p in facts.missing do IO.eprintln s!"  {p}"
-  unless facts.uncovered.isEmpty && facts.missing.isEmpty do return 1
   let html ← page facts
   let against := (facts.against.filter (·.accepted.isNone)).size
   if let some parent := (out : System.FilePath).parent then IO.FS.createDirAll parent
