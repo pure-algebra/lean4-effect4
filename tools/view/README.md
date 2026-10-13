@@ -34,6 +34,8 @@ tools/view/v -H pFork       # the run's page in the browser: its frames as SVG, 
 tools/view/v -G             # every kept run in the browser, newest first
 tools/view/v -d             # the document specimen, dark beside paper, in the studio
 tools/view/v -V             # the vocabulary of marks (row 367), every mark drawn, in the viewer
+tools/view/v -V tube-glyphs # the peg vocabulary, with the remaining tube motion studies
+tools/view/v -V program-pegs # real programs folded into grid tiles
 tools/view/v -f FILE        # the frames of a session request file
 tools/view/v -P -m 1 pLoop  # no marks; no motion
 tools/view/v -l paper pFork # in a look of tools/view/looks/
