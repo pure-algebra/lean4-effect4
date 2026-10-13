@@ -150,6 +150,17 @@ const scenarios: Record<string, Scenario> = {
     predicted: ["refusals"],
     through: {}
   },
+  // Test/Dogfood/Scenario/Todo/Claims.lean, `Observation`: the outcome, each held call with its
+  // row, and the session's refusals, which the ledger predicts. Lean alone reads the rest.
+  todo: {
+    host: ({ exit, ledger }, spelling) => ({
+      outcome: exit,
+      calls: ledger.held.map(call => [spelling(call), call.request]),
+      refusals: ledger.refusals.map(({ row, reason }) => [row, reason])
+    }),
+    predicted: ["refusals"],
+    through: {}
+  },
   // Test/Dogfood/Scenario/Workers.lean, `Observation`. The work left is five entries. The cells
   // are `opened`, `released`, `assigned` and `count`, in allocation order.
   workers: {

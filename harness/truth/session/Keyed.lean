@@ -6,6 +6,7 @@ import Test.Dogfood.Scenario.QueueWorkers
 import Test.Dogfood.Scenario.Routing
 import Test.Dogfood.Scenario.Atomic
 import Test.Dogfood.Scenario.Timeout
+import Test.Dogfood.Scenario.Todo.Claims
 import Tools.ProfileJson
 import TypeScript.Render
 import Lean.Data.Json
@@ -965,8 +966,20 @@ def atomic : Wire :=
     same := fun a b => Scenario.Atomic.observe a == Scenario.Atomic.observe b
     asks := [.cells, .fibers] }
 
+/-- The to-do application (`Test/Dogfood/Scenario/Todo/Claims.lean`), with three fields of its
+observation: the outcome, the held calls with their rows, and the refusals. Its other fields
+(`applied`, `settled`, `conforming`) are Lean's readings of the run, which a host does not make. -/
+def todo : Wire :=
+  { scenario := Scenario.Todo.scenario
+    observed := fun run =>
+      let o := Scenario.Todo.observe run
+      [ ("outcome", exitOrNull o.outcome)
+      , ("calls", toJson (o.calls.map fun (call : String × Val) => [(.str call.1 : J), valJson call.2]))
+      , ("refusals", toJson (o.refusals.map fun entry => [entry.1, refusalWord entry.2])) ]
+    same := fun a b => Scenario.Todo.observe a == Scenario.Todo.observe b }
+
 /-- The scenarios that the lane performs, in the lane's order. -/
-def wires : List Wire := [routing, workers, timeout, atomic, queueWorkers]
+def wires : List Wire := [routing, workers, timeout, atomic, queueWorkers, todo]
 
 /-- The kept-out names that no run carries: a reason that outlived its run. -/
 def stale (kept : List (String × String)) (all : List HostRun) : List String :=
