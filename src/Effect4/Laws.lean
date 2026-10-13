@@ -346,6 +346,8 @@ import Effect4.Laws.Run.Journal
 import Effect4.Laws.Program.PlaceFunding.Run
 import Effect4.Laws.Machine.WriterActions
 import Effect4.Laws.Api.Live
+-- A run validated against declared protocols and a reference model (the claims packet).
+import Effect4.Laws.Program.Validated
 
 /-!
 # Effect4 proof graph

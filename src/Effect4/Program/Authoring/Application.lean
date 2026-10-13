@@ -2,6 +2,7 @@ module
 
 public import Effect4.Program.Authoring
 public import Effect4.Program.Authoring.Lifts
+public import Effect4.Program.RowProtocol
 
 /-!
 # Program.Authoring.Application — an application: named programs over one row table
@@ -17,7 +18,10 @@ entries. It adds no representation of a program: each entry builds through `Modu
 * **An entry at its arguments is a closed program.** `Entry.applied` binds each argument with
   `bind` over `succeed`, in order, so the body reads the argument as it reads any answer.
 * **One table.** Every module of the application supplies the application's row table
-  (`moduleOf_table`).
+  (`moduleOf_table`). The declarations are one `Module` (`declarations`), so the table is
+  `Module.table`'s.
+* **Declared protocols.** Beside its rows' types, an application may declare a protocol of a row
+  (`RowProtocol`), checked at the row's columns (`protocolsFormed`).
 
 What stays out: the application as one stored value with canonical bytes, and one module with
 several exports (the packet's slice 13). An open program reads the application's rows and nothing
@@ -52,6 +56,9 @@ structure Application (Op : Type) where
   services : List ServiceDef := []
   layers : List (String × LayerSrc Op) := []
   defs : List (DefSrc Op) := []
+  /-- The declared protocols of the application's rows, by the row's spelling
+  (`src/Effect4/Program/RowProtocol.lean`). A row with none has the protocol of its types. -/
+  protocols : RowProtocols := []
   entries : List (Application.Entry Op)
 
 namespace Application
@@ -65,18 +72,20 @@ def entry? (app : Application Op) (name : String) : Option (Application.Entry Op
 /-- The names of the application's programs, in declaration order. -/
 def entryNames (app : Application Op) : List String := app.entries.map (·.name)
 
-/-- The rows the application supplies, in table order: its own declarations, then each service's
-operations, as `Module.rowDefs` orders them. -/
-def rowDefs (app : Application Op) : List RowDef := app.rows ++ app.services.flatMap (·.ops)
+/-- The application's declarations as a module. An application holds no program of its own, so
+the module's main program answers the unit value; `moduleOf` replaces it by an entry. The
+module's readers (`Module.rowDefs`, `Module.table`) read the declarations. -/
+def declarations (app : Application Op) : Module Op :=
+  { rows := app.rows, services := app.services, layers := app.layers, defs := app.defs,
+    main := succeed unit }
 
 /-- The module of one entry at its arguments: the application's declarations, and the applied
 body as its main program. `Api.Author.build` builds it as it builds any module. -/
 def moduleOf (app : Application Op) (e : Application.Entry Op) (args : List TermSrc) : Module Op :=
-  { rows := app.rows, services := app.services, layers := app.layers, defs := app.defs,
-    main := e.applied args }
+  { app.declarations with main := e.applied args }
 
-/-- The application's row table. -/
-def table (app : Application Op) : RowTable := RowDef.table app.rowDefs
+/-- The application's row table: the table of its declarations. -/
+def table (app : Application Op) : RowTable := app.declarations.table
 
 /-- **Every entry is checked against one table**: the module of any entry at any arguments
 supplies the application's table. Consumer: the claims of an application, which read one table
@@ -84,10 +93,14 @@ for all its programs (`Test/Dogfood/Scenario/Todo.lean`). -/
 theorem moduleOf_table (app : Application Op) (e : Application.Entry Op) (args : List TermSrc) :
     (app.moduleOf e args).table = app.table := rfl
 
+/-- **The application's protocols are formed**: each names a row of its table, and its terms are
+typed at that row's columns (`RowProtocols.formed`). -/
+def protocolsFormed (app : Application NativeOp) : Bool := app.protocols.formed app.table
+
 /-- The entry's own program, open in its parameters: the body elaborated under the parameters'
 names, over the application's rows. It is first-order data, at the root path. -/
 def openProgram (app : Application Op) (e : Application.Entry Op) : Except Refusal (Eff Op) := do
-  let rows ← rowNamesOf app.rowDefs
+  let rows ← rowNamesOf app.declarations.rowDefs
   e.body { names := e.params.map (·.1), rows := rows } []
 
 end Application
