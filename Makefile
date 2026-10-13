@@ -274,6 +274,19 @@ $(GEN)/semantics: $(SEMANTICS_SOURCES) $(LEAN_INPUTS)
 	cp $(GEN)/semantics-report/semantics.md generated/semantics.md
 	@mkdir -p $(GEN) && touch $@
 
+# The documentation site (decisions row 363): standard files only, every page checked by the HTML
+# Standard's content model, each with its document as JSON. The semantics report writes its page;
+# tools/Drivers/Site.lean writes the rest. A fresh folder replaces the old one whole.
+.PHONY: site
+site: ## the documentation site into .lake/gen/site (Lean's pages, CSS files, the JSON contract)
+	$(LAKE) build semantics-report Effect4.Laws Test.Program.TypedProgBindRed $(SEMANTICS_DOGFOOD) $(SEMANTICS_TOOL_ROOTS)
+	rm -rf $(GEN)/site-next && mkdir -p $(GEN)/site-next $(GEN)/semantics-report
+	$(LAKE) exe semantics-report $(GEN)/semantics-report $(GEN)/site-next
+	$(call build_imports,tools/Drivers/Site.lean)
+	$(LAKE) env lean --run tools/Drivers/Site.lean $(GEN)/site-next
+	rm -rf $(GEN)/site && mv $(GEN)/site-next $(GEN)/site
+	@echo "site: $(GEN)/site"
+
 # The lanes' inventory: every fixture and every writer, by path. A wildcard prerequisite does
 # not remember a path that left, so the list itself is a prerequisite. It changes when a fixture
 # or a writer is added, removed or renamed (the pattern of $(CHK)/inventory), and the producer

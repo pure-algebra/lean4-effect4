@@ -51,6 +51,7 @@ def inline : Inline → RawNode
   | .text s => .text s
   | .code s => el "code" [.text s]
   | .ref k label => el "a" [.text label] [("href", fragment k)]
+  | .link href label => el "a" [.text label] [("href", href)]
   | .status w => el "span" [.text w] [("class", "status"), ("data-status", w)]
 
 def line (l : Line) : List RawNode := l.map inline
@@ -94,10 +95,11 @@ def sheetPath : System.FilePath := "tools/Tools/Document/page.css"
 
 /-- Where a page's rules stand: the text of `page.css`, inlined in the page's `style` element, or
 a link to the file, for a page that follows edits of it (the document specimen,
-`tools/Drivers/DocSpecimen.lean`). -/
+`tools/Drivers/DocSpecimen.lean`) or a page of the site (`Tools.Site`), with the looks inlined or
+linked as a file of their own. -/
 inductive Sheet where
   | inline (css : String)
-  | link (href : String)
+  | link (href : String) (looks : Option String)
 
 /-- The text with its comments taken out. -/
 private def uncomment : List Char → List Char
@@ -157,7 +159,9 @@ def looks (base light : Look) : String :=
 looks and a link to the rules. -/
 def styleNodes (base light : Look) : Sheet → List RawNode
   | .inline css => [el "style" [.text (looks base light ++ css)]]
-  | .link href => [el "style" [.text (looks base light)], el "link" [] [("rel", "stylesheet"), ("href", href)]]
+  | .link href none => [el "style" [.text (looks base light)], el "link" [] [("rel", "stylesheet"), ("href", href)]]
+  | .link href (some lk) =>
+    [el "link" [] [("rel", "stylesheet"), ("href", lk)], el "link" [] [("rel", "stylesheet"), ("href", href)]]
 
 /-! ## The page -/
 

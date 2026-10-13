@@ -8,7 +8,8 @@ A generator builds one `Document` and every output format is a fold of it: Markd
 
 * a part's heading level is its nesting, so no level is out of range;
 * text and code are literal, and each format escapes them;
-* a reference names a part of the same document by its key;
+* a reference names a part of the same document by its key, and a link another page or file of
+  the same site by its path from this page;
 * a status is a word that a format may mark.
 
 `Document.check` refuses a duplicate part key, a reference to no part and a table row of the wrong
@@ -24,6 +25,9 @@ inductive Inline where
   | code (s : String)
   /-- a reference to the part `key` of the same document, shown as `label` -/
   | ref (key label : String)
+  /-- a link to another page or file, by its path from this page (`../semantics/`), shown as
+  `label` -/
+  | link (href label : String)
   /-- a status word (`proved`, `modulo`, `goal`, `open`, …) -/
   | status (word : String)
   deriving Inhabited, BEq, Repr
@@ -86,29 +90,39 @@ structure Census where
   keys : Array String := #[]
   refs : Array String := #[]
   tables : Array String := #[]
+  links : Array String := #[]
 
 private def Census.append (a b : Census) : Census :=
-  ⟨a.keys ++ b.keys, a.refs ++ b.refs, a.tables ++ b.tables⟩
+  ⟨a.keys ++ b.keys, a.refs ++ b.refs, a.tables ++ b.tables, a.links ++ b.links⟩
 
 private def inlineRef : Inline → Option String
   | .ref k _ => some k
   | _ => none
 
+private def inlineLink : Inline → Option String
+  | .link h _ => some h
+  | _ => none
+
 private def lineRefs (l : Line) : Array String := (l.filterMap inlineRef).toArray
 
+private def lineLinks (l : Line) : Array String := (l.filterMap inlineLink).toArray
+
 private def censusAlgebra : Algebra Census where
-  para l := { refs := lineRefs l }
-  fields rs := { refs := rs.foldl (init := #[]) fun acc r => acc ++ lineRefs r.2 }
-  items ls := { refs := ls.foldl (init := #[]) fun acc l => acc ++ lineRefs l }
+  para l := { refs := lineRefs l, links := lineLinks l }
+  fields rs := { refs := rs.foldl (init := #[]) fun acc r => acc ++ lineRefs r.2
+                 links := rs.foldl (init := #[]) fun acc r => acc ++ lineLinks r.2 }
+  items ls := { refs := ls.foldl (init := #[]) fun acc l => acc ++ lineRefs l
+                links := ls.foldl (init := #[]) fun acc l => acc ++ lineLinks l }
   code _ _ := {}
   table hs rs :=
     { refs := rs.foldl (init := #[]) fun acc r => r.foldl (init := acc) fun acc c => acc ++ lineRefs c
+      links := rs.foldl (init := #[]) fun acc r => r.foldl (init := acc) fun acc c => acc ++ lineLinks c
       tables := if rs.all (·.length == hs.length) then #[] else
         #[s!"table [{", ".intercalate hs}]: a row's width differs from its header"] }
   part k _ body := body.foldl Census.append { keys := #[k] }
 
-/-- Refuse a blank or duplicate part key, a reference to no part and a table row of the wrong
-width, each by name. -/
+/-- Refuse a blank or duplicate part key, a reference to no part, a blank link or one with a space,
+and a table row of the wrong width, each by name. -/
 def Document.check (d : Document) : Except (List String) Unit := Id.run do
   let c := (Block.foldList censusAlgebra d.body).foldl Census.append {}
   let mut errors := c.tables.toList
@@ -119,6 +133,8 @@ def Document.check (d : Document) : Except (List String) Unit := Id.run do
     seen := seen.insert k
   for r in c.refs do
     unless seen.contains r do errors := errors ++ [s!"reference {r}: no part has this key"]
+  for h in c.links do
+    if h.isEmpty || h.any Char.isWhitespace then errors := errors ++ [s!"link {h.quote}: blank or with a space"]
   return if errors.isEmpty then .ok () else .error errors
 
 /-! ## Markdown (CommonMark with GitHub's tables)
@@ -159,6 +175,7 @@ def markdownInline (inTable : Bool) : Inline → String
   | .text s => markdownText s
   | .code s => markdownCode inTable s
   | .ref _ label => markdownCode inTable label
+  | .link href label => "[" ++ markdownText label ++ "](" ++ href ++ ")"
   | .status w => markdownText w
 
 def markdownLine (l : Line) (inTable := false) : String :=

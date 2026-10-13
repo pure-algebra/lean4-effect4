@@ -260,7 +260,8 @@ def studioLinks (dir : System.FilePath) : IO (List (String × String)) := do
   let here := (← IO.FS.realPath dir).toString
   if here.startsWith (cwd ++ "/") then
     let up := String.join (((here.drop (cwd.length + 1)).toString.splitOn "/").map fun _ => "../")
-    for (label, file) in [("docs", ".lake/gen/semantics-report/semantics.html"),
+    for (label, file) in [("site", ".lake/gen/site/index.html"),
+        ("docs", ".lake/gen/semantics-report/semantics.html"),
         ("architecture map", ".lake/gen/architecture-map.html")] do
       if ← (System.FilePath.mk file).pathExists then links := links.push (label, up ++ file)
   return links.toList
