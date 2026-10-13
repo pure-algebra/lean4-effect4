@@ -5,6 +5,7 @@ import Effect4.Library
 import Test.Dogfood.Stage
 import Test.Dogfood.Scenario
 import Test.Dogfood.Scenario.Todo
+import Effect4.Codegen.RowServices
 import Test.Dogfood.P2HandlerLayers
 
 /-!
@@ -33,15 +34,21 @@ open Test.Dogfood.Scenario (script answer ok failed Move Sel requestsOn refusals
 /-- The repository's cursor over its to-dos: an external handle. -/
 def cursorTarget : String := "TodoRepo.Cursor"
 
+/-- A row of the repository's service: its requirement column names the repository's key, as
+each row of `TodoRepo` does (`Test/Dogfood/Scenario/Todo.lean`, section 8), so the namespace
+stays one Effect service (`rowServiceFault`, `src/Effect4/Codegen/RowServices.lean`). -/
+def repoRow (r : RowDef) : RowDef :=
+  ⟨{ r.row with requires := [Test.Dogfood.Scenario.Todo.todoRepoKey] }⟩
+
 /-- `SELECT … ` as a stream: the cursor's handle. -/
-def openList : RowDef :=
+def openList : RowDef := repoRow <|
   Row.host "TodoRepo.openList" .unit (.handle cursorTarget) SqlError.ty "the to-do scenario"
 /-- The next page of the cursor, or its end. -/
-def nextPage : RowDef :=
+def nextPage : RowDef := repoRow <|
   Row.host "TodoRepo.nextPage" (.handle cursorTarget) (pulledTy Todo.ty .unit) SqlError.ty
     "the to-do scenario"
 /-- The cursor's release. -/
-def closeList : RowDef :=
+def closeList : RowDef := repoRow <|
   Row.host "TodoRepo.closeList" (.handle cursorTarget) .unit .never "the to-do scenario"
 
 /-- The repository's to-dos as a stream. -/
@@ -68,6 +75,9 @@ def typeOf? (main : Src NativeOp) : Option (Ty × Ty) :=
 -- stream is no member of the error column
 #guard typeOf? listPaged = some ((Ty.list Todo.ty).normalize, SqlError.ty)
 #guard typeOf? completeAll = some (.unit, SqlError.ty)
+-- finite evaluation: the seven rows are one Effect service, `TodoRepo` of the repository's key
+#guard (rowServices (RowDef.table (request listPaged).rows)).map
+    (fun s => (s.ns, s.methods.length)) == [("TodoRepo", 7)]
 
 /-! ## 4. Finite runs under a scripted host -/
 

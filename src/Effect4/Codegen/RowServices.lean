@@ -167,7 +167,8 @@ def rowServiceDecls (sig : Signature Op) (table : List Row) :
           rowAccessor (s.ns ++ "Key") m row.normalizeTypes
         .ok [serviceKeyDecl (s.ns ++ "Key") (keyText s.key) fields,
              { doc := [], name := s.ns,
-               value := .call (.ident "Object.assign") [.ident (s.ns ++ "Key"), .object accessors] }]
+               value := .call (.ident "Object.assign")
+                 [.ident (s.ns ++ "Key"), .object accessors] }]
     .ok groups.flatten
 
 end Effect4.Program
