@@ -21,9 +21,10 @@ and run commands reach it. So it holds no second representation of a session (`A
 * **The typed replay is a start and a feed** (decisions rows 98 and 373 (8)). `Api.Typed.replay`
   starts the certified program from a session header and feeds a `Runner.Command` journal, each
   command as a remote host's run command (`Run.Event.wire`). So a host answer reaches the machine
-  only after the session admits its reply at the call (`preflight`): at the row's columns, or,
-  where they refuse it, at the call's checked instance (`Live.replay_at_call_instance`,
-  `src/Effect4/Laws/Api/Live.lean`). The raw `Api.replay` stays a named test entry.
+  only after the session admits its reply at the call (`preflight`). The session admits it at the
+  row's columns, or, where they refuse it, at the call's checked instance
+  (`Live.replay_at_call_instance`, `src/Effect4/Laws/Api/Live.lean`). The raw `Api.replay` stays
+  a named test entry.
 
 The proof field is an equation over `Run.open` and `Run.play`, not a predicate of its own. The law
 graph's `Run.Reached` (`src/Effect4/Laws/Run.lean`) stays the one named predicate of a reached run,
@@ -109,9 +110,10 @@ session header, then a `Runner.Command` journal fed through the session.
 * **Both budgets.** The program is loaded at `budget.compileFuel`, and every command is played at
   `budget.fuel`.
 * **Phases that can refuse.** A command that the session refuses changes nothing and leaves the
-  verdict `refused` in the run's phases (`Api.Runner.step_refused`). A host answer reaches the
-  machine only through a reply application, after the session's `preflight` admits the reply at
-  its call: at the row's columns, or, where they refuse it, at the call's checked instance
+  verdict `refused` in the run's phases (`Api.Runner.step_refused`).
+* **Answers checked at the call.** A host answer reaches the machine only through a reply
+  application, after the session's `preflight` admits the reply. It admits the reply at the row's
+  columns, or, where they refuse it, at the call's checked instance
   (`Live.replay_at_call_instance`, `src/Effect4/Laws/Api/Live.lean`).
 
 The raw `Api.replay` takes a decision tape and admits nothing. It stays a named test entry. -/

@@ -1,6 +1,7 @@
 import Effect4.Run.Live
 import Effect4.Run.View
 import Effect4.Laws.Api.SessionRef
+import Effect4.Laws.Run.Payload
 
 /-!
 # Api.Live — the laws of a run at the face, with no premise of reachability
@@ -25,10 +26,16 @@ it.
   or in an internal wait (decisions row 333 (3)).
 * **The view's flag is `funded`** (`view_funded`, slice DM4): the session's bit and the journal's
   verdicts give `Run.funded` with no replay.
+* **A replayed run's applied answers were admitted at their call** (`replay_at_call_instance`,
+  decisions rows 98 and 373 (8)). Each reply that a live run applied passed the session's reply
+  admission at the run before its row. The session admitted it at the row's columns or at the
+  call's checked instance, and it fits there. `Api.Typed.replay` answers a `Live`, so the law reads
+  every run that it replays.
 
 What they do not establish: that a run is funded (`embedded-budget-sufficient`, an open part of
-R12), reply admission, the session's ledger, a host's conformance, host progress, or anything of a
-lowered session. The host boundary stays where `docs/core/host-boundary.md` puts it.
+R12), that the row's columns admit only members of the call's instance, the session's ledger, a
+host's conformance, host progress, or anything of a lowered session. The host boundary stays where
+`docs/core/host-boundary.md` puts it.
 -/
 
 set_option autoImplicit false
@@ -372,5 +379,84 @@ theorem view_funded (l : Live) : l.view.funded = Run.funded l.run := by
     (Run.tapeFrom (Run.openedOf l.run) l.run.journal).2.isEmpty
   rw [key]
   rfl
+
+/-! ## The typed replay (decisions rows 98 and 373 (8))
+
+`Api.Typed.replay` (`src/Effect4/Run/Live.lean`) starts the certified program and feeds a journal
+through `Live.feed`, so what it answers is a `Live`, and every law of this module reads it. The
+law below says what the session checked before each host answer reached the machine. -/
+
+/-- Step of `replay_at_call_instance`: the verdict that a live run recorded at a row is the verdict
+of the row's run command on the run after the rows before it (`Live.upTo`). The run replays from
+its own journal (`journal_replays`), and playing run commands only appends verdicts. -/
+theorem rows_upTo (l : Live) (i : Nat) (c : Command) (phase : Phase)
+    (h : (Run.rows l.run)[i]? = some (c, phase)) :
+    (Api.Runner.result (l.upTo i).run.runner c).phase = phase := by
+  have hc : l.run.journal[i]? = some c := (List.getElem?_zip_eq_some.mp h).1
+  have hp : l.run.phases[i]? = some phase := (List.getElem?_zip_eq_some.mp h).2
+  obtain ⟨within, hci⟩ := List.getElem?_eq_some_iff.mp hc
+  have parts : l.run.journal = l.run.journal.take i ++ c :: l.run.journal.drop (i + 1) := by
+    rw [← hci, ← List.drop_eq_getElem_cons within, List.take_append_drop]
+  have whole := journal_replays l
+  rw [parts, Run.play_append, Run.play_cons] at whole
+  obtain ⟨added, hadded⟩ := Run.play_phases_extend
+    (((Run.open l.run.built l.run.id l.run.budget l.run.profile).play
+      (l.run.journal.take i)).step c) (l.run.journal.drop (i + 1))
+  rw [whole, Run.step_phases] at hadded
+  have before := Run.Reached.play _ (l.run.journal.take i)
+    (Run.Reached.opened l.run.built l.run.id l.run.budget l.run.profile)
+  have hlen := (Run.payload_reached _ before).1
+  rw [Run.journal_play, Run.open_journal, List.nil_append,
+    List.length_take_of_le (Nat.le_of_lt within)] at hlen
+  rw [hadded,
+    List.getElem?_append_left (by rw [List.length_append, ← hlen]; exact Nat.lt_succ_self i),
+    List.getElem?_append_right (Nat.le_of_eq hlen.symm), ← hlen, Nat.sub_self,
+    List.getElem?_cons_zero] at hp
+  exact Option.some.inj hp
+
+/-- **A replayed run's applied answers were admitted at their call** (decisions rows 98, 323 and
+373 (8)). Take a row of a live run's journal that applied the reply stored at a key. At the run
+after the rows before it (`Live.upTo`), the session held that reply, and its `preflight` admitted
+it. There the session's instance lookup is the checker's instance on the run's program
+(`instanceAt`). So the answer fits its call. A success prepares a member of the row's
+shape-decided answer column (`PreparedSuccess`). Where the row's columns refuse it, it is a
+handle-free member of the call's checked instance, prepared unchanged (`InstanceSuccess`). A
+failure holds no reserved defect, at every type. `Api.Typed.replay` answers a `Live`, so this holds
+of every run that it replays.
+
+Placement: concept `host-session-protocol`, property `typed-replay-session`. Question: the
+proposed claim `replay-at-call-instance` (role preservation), an open part of R6. Consumers:
+`Api.Typed.replay`, then the OCaml checked session (slice DM7), then row 99's typed answers on data
+rows. Reach: every `Live` and every row whose verdict is `applied`. The instance path stands only
+where the row's answer column allocates nothing. It applies `application_payload`,
+`application_live`, `reached_callInstance`, `preflight_success_prepared_fits` and
+`preflight_failure_noShapeDefect`. It does not establish that the row's columns admit only members
+of the call's instance (`admitAnswer_instance`). It does not establish that the expansion of layer
+references keeps a call at its address (`expansion-keeps-call`). It says nothing of handle rows or
+delayed cell reads (row 100), or of the ghost admission `AnswerOk` (row 99). It does not establish
+that a run is funded, host progress, or anything of a lowered session. Unlocks: R6, and row 99's
+step on data rows. -/
+@[semantics "host-session-protocol" (requirement := R6)]
+theorem replay_at_call_instance (l : Live) (i : Nat) (key : Api.HostSession.Key)
+    (h : (Run.rows l.run)[i]? = some (.apply key, .applied)) :
+    ∃ reply decision,
+      Api.HostSession.readReply (l.upTo i).run.session.pending key = some reply ∧
+      Api.HostSession.preflight (l.upTo i).run.session reply = .ok decision ∧
+      (l.upTo i).run.session.callInstance =
+        Api.HostSession.instanceAt l.run.built.program l.run.built.table ∧
+      (∀ value, reply.completion = .ofExit (.success value) →
+        Api.HostSession.PreparedSuccess (l.upTo i).run.session reply decision ∨
+          Api.HostSession.InstanceSuccess (l.upTo i).run.session reply decision) ∧
+      (∀ cause, reply.completion = .ofExit (.failure cause) →
+        ∀ ty, Program.Typed.NoShapeDefect ty (.failure cause)) := by
+  have applied := rows_upTo l i _ _ h
+  have reached := Live.reached (l.upTo i)
+  obtain ⟨reply, _, _, _, read, _, accepted, _⟩ := Run.application_payload _ reached key applied
+  have live := Run.application_live _ reached key applied
+  have built : (l.upTo i).run.built = l.run.built := Run.play_built _ _
+  refine ⟨reply, _, read, accepted, ?_, fun value success => ?_, fun cause failed ty => ?_⟩
+  · rw [Run.reached_callInstance _ reached, built]
+  · exact Api.HostSession.preflight_success_prepared_fits _ reply _ value live success accepted
+  · exact Api.HostSession.preflight_failure_noShapeDefect _ reply _ cause failed accepted ty
 
 end Effect4.Live
