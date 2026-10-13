@@ -1,7 +1,6 @@
 import Tools.View.Program
 import Tools.Code.Module
-import Effect4.Run
-import Effect4.Api.Author
+import Tools.View.Decision
 
 /-!
 # The frames of a run
@@ -26,17 +25,6 @@ each one is.
 namespace Tools.View.Run
 
 open Effect4 Effect4.Program Effect4.Machine Tools.View
-
-/-- A control decision in words. -/
-def decisionText : Api.Decision → String
-  | .fire owner => s!"fire the dispatcher of fiber {owner.value}"
-  | .flush => "flush"
-  | .evaluate f => s!"evaluate fiber {f.value}"
-  | .yieldVerdict f v => s!"fiber {f.value} yields: {v}"
-  | .answerAsync f _ _ => s!"answer fiber {f.value}"
-  | .interruptFrom .. => "interrupt"
-  | .installMiddleware => "install middleware"
-  | .advance millis => s!"advance the clock {millis.toNat} ms"
 
 /-- An exit in words. -/
 def exitText {β ε δ ι α : Type} : Exit β ε δ ι α → String

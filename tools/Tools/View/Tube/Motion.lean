@@ -270,6 +270,23 @@ draws nothing, cased or not, sampled at as many points as the swell. -/
 def Event.rest (e : Event) : Mark :=
   stretchOf e.key e.tube e.from_ 0 0 0 0 1
 
+/-- **A mark hidden at its root**: its tube at no length and its stroke at no width, so it draws
+nothing. A morph from it grows the mark from its root, in length and in width at once, and a
+morph to it shrinks the mark there. (`Mark.gone` keeps a tube's width, so a film draws a tube
+that enters later as a dot at its root, and a tube that leaves as a dot where it ends.) -/
+def hidden (m : Mark) : Mark := { m.gone with width := 0 }
+
+/-- **The pictures of a film whose marks never appear from nothing**: each picture with every key
+of the film, those it lacks hidden at their root (`hidden`), taken from the nearest picture before
+it that has them, else the nearest after. -/
+def complete (frames : List (List Mark)) : List Picture :=
+  let keys := (frames.flatMap fun ms => ms.map (·.key)).eraseDups
+  frames.zipIdx.map fun (ms, i) =>
+    let near := (frames.take i).reverse ++ frames.drop (i + 1)
+    let source (k : String) : Option Mark := near.findSome? fun f => f.find? (·.key == k)
+    { marks := ms ++ (keys.filter fun k => !ms.any (·.key == k)).filterMap fun k =>
+        (source k).map hidden }
+
 /-- **A film**: pictures played one beat each, every step the kit's join of two pictures and the
 marks under their tracks. It starts half a second after the page loads, and again from a click on
 it; it holds its end. Each level is drawn in turn, its layers in order. `id` names the picture,

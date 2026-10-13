@@ -1,4 +1,5 @@
 import Tools.View.Tube.Queue
+import Tools.View.Tube.Score
 
 /-!
 # Tools.View.Tube.Sheet — the tube language, as the studio page `tubes.html`
@@ -198,6 +199,17 @@ def queueBlocks (sc : CellSheet.Scene) (id : String) : List RawNode :=
        s!"Capacity {sc.capacity}: the whole run, one command a second (click to play it again)."] ++
     fs.map fun (words, p) => figure (still l.W Queue.HEIGHT p.marks) words
 
+/-! ## A run as a score -/
+
+/-- A program's run as a score, played a beat a control, with its beats in words. -/
+def scoreFigure (id name : String) (program : Effect4.Program.NativeEff) (words : String) : RawNode :=
+  match Score.record program with
+  | none => el "p" [.text s!"{name} is not admitted, so it does not run."]
+  | some r =>
+    let (W, H) := Score.size r
+    filmFigure id W H (Score.pictures r)
+      s!"{name}: {words} The beats: {", ".intercalate r.verbs} (click to play it again)."
+
 /-- **The page's blocks.** -/
 def blocks : List RawNode :=
   [el "p" [.text "One body for every glyph: a tube, a centreline swept by one width, a solid body filled in one tone, its outline a line of two pixels round the ground, smooth everywhere. Its contents are circles of ink, one amount in every tube, squeezed into pills where a tube is narrower than a unit. Every size is read from the line, and the bodies step by √2, so two branches hold as much as their trunk. A join carries a meaning: two bodies that meet in one fill share their fluid, and their crotch is rounded; two bodies kept apart by an air gap share nothing. The pipework is the program's invariants, and the contents its state. Any glyph turns into any other by a morph of what each tube is, its lengths and its turns, and every moment of a morph keeps the bend law. A step is the kit's join of two pictures, each change on the kit's transition and its spring (docs/research/2026-10-13-tube-language/README.md)."],
@@ -215,6 +227,10 @@ def blocks : List RawNode :=
    figure (plateStrategy "sliding") "Sliding: a relief after the vessel's front; a new offer pushes the oldest out down it.",
    el "h2" [.text "Any glyph into any other"],
    filmRoutes, filmCircuit, filmBranch,
+   el "h2" [.text "A run as a score"],
+   el "p" [.text "A run read left to right: a staff for each fiber, one column for each event the machine records, in the order of its trace, and a tick above for each control. A fork starts the child's staff an air gap below its parent's; a fiber's unit is hollow while it is parked and fills where it resumes; an exit ends the staff at its bars (decisions row 371; tools/Tools/View/Tube/Score.lean)."],
+   scoreFigure "f-score-fork" "The corpus's fork" Effect4.Program.Wire.Corpus.pFork "the parent forks a child that yields once, then awaits it.",
+   scoreFigure "f-score-two" "Two children" Score.twoChildren "the parent forks a child that yields once and one that yields twice, then awaits each in turn.",
    el "h2" [.text "The Queue, capacity 2"]] ++
   queueBlocks CellSheet.scene "f-queue2" ++
   [el "h2" [.text "The Queue, capacity 13"]] ++

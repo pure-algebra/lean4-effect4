@@ -71,23 +71,6 @@ it keeps the bend law. -/
 def shift (dx dy : Int) (ms : List Mark) : List Mark :=
   ms.map fun m => { m with tube := { m.tube with x := m.tube.x + dx, y := m.tube.y + dy } }
 
-/-- **A mark hidden at its root**: its tube at no length and its stroke at no width, so it draws
-nothing. A morph from it grows the mark from its root, in length and in width at once, and a
-morph to it shrinks the mark there. (`Mark.gone` keeps a tube's width, so a film draws a tube
-that enters later as a dot at its root, and a tube that leaves as a dot where it ends.) -/
-def hidden (m : Mark) : Mark := { m.gone with width := 0 }
-
-/-- **The pictures of a film whose marks never appear from nothing**: each picture with every key
-of the film, those it lacks hidden at their root (`hidden`), taken from the nearest picture before
-it that has them, else the nearest after. -/
-def complete (frames : List (List Mark)) : List Picture :=
-  let keys := (frames.flatMap fun ms => ms.map (·.key)).eraseDups
-  frames.zipIdx.map fun (ms, i) =>
-    let near := (frames.take i).reverse ++ frames.drop (i + 1)
-    let source (k : String) : Option Mark := near.findSome? fun f => f.find? (·.key == k)
-    { marks := ms ++ (keys.filter fun k => !ms.any (·.key == k)).filterMap fun k =>
-        (source k).map hidden }
-
 /-- **A unit along a line of tubes**, its slot's front at the volume `v` from the line's start:
 one mark for each tube, where the front stands in that tube, `(v − the volume before it) / its
 contents width`, by `Queue.fronts`. A unit off a tube's length draws nothing there, so the unit
