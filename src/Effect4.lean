@@ -244,6 +244,9 @@ import Effect4.Program.Address
 -- A sketch checked through its layer references, and its edit session (decisions row 373 (7)).
 import Effect4.Program.Typing.Source
 import Effect4.Program.Typing.SourceSession
+-- A row namespace as an Effect service: its key and its accessors (decisions row 378 (19),
+-- slice E3).
+import Effect4.Codegen.RowServices
 
 /-!
 # Effect4

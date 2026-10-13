@@ -42,9 +42,12 @@ syntax ident "(" term ")" " : " term : effRow
 /-- `eff_rows Name error E cite "…" where r₁(request₁) : answer₁, …`: one host row for each
 entry, spelled `Name.rᵢ`, with the block's error column and citation. It declares each row
 under `Name.row`, the list `Name.rows` in the written order, and one call of each row under
-`Name`. The words `error` and `cite` are no reserved keywords. -/
-syntax (name := effRowsDecl) "eff_rows " ident &" error " term:max &" cite " str " where "
-  sepBy1(effRow, ", ") : command
+`Name`. With `key k` after the name, each row's requirement column is `[k]`: the namespace is
+the service of key `k`, and each row is one of its methods (decisions row 378 (19), slice E3;
+`Row.serviceCall?`, `Codegen/RowServices.lean`). The words `key`, `error` and `cite` are no reserved
+keywords. -/
+syntax (name := effRowsDecl) "eff_rows " ident (&" key " term:max)? &" error " term:max
+  &" cite " str " where " sepBy1(effRow, ", ") : command
 
 /-- The fields of a declaration, each as its name and its type. -/
 def parseEffFields (fields : Array Lean.Syntax) :
@@ -128,7 +131,7 @@ macro_rules
           Effect4.Program.Authoring.Src Op :=
         Effect4.Program.Authoring.fail ($mkId text))
     return mkNullNode #[d1.raw, d2.raw, d3.raw, d4.raw]
-  | `(eff_rows $name:ident error $err:term cite $cite:str where $rows,*) => do
+  | `(eff_rows $name:ident $[key $keyTerm]? error $err:term cite $cite:str where $rows,*) => do
     let n := name.getId
     let parsed ← rows.getElems.mapM fun r => match r with
       | `(effRow| $x:ident ($req:term) : $ans:term) => pure (x, req, ans)
@@ -140,8 +143,11 @@ macro_rules
       let callId := mkIdent (n ++ x.getId)
       let spelling := Syntax.mkStrLit (identToString name ++ "." ++ identToString x)
       rowIds := rowIds.push ⟨rowId.raw⟩
-      out := out.push (← `(def $rowId : Effect4.Program.Authoring.RowDef :=
-        Effect4.Program.Authoring.Row.host $spelling $req $ans $err $cite)).raw
+      let host ← `(Effect4.Program.Authoring.Row.host $spelling $req $ans $err $cite)
+      let rowDef ← match keyTerm with
+        | some k => `(Effect4.Program.Authoring.RowDef.mk { ($host).row with requires := [$k] })
+        | none => pure host
+      out := out.push (← `(def $rowId : Effect4.Program.Authoring.RowDef := $rowDef)).raw
       out := out.push (← `(def $callId (request : Effect4.Program.Authoring.TermSrc) :
           Effect4.Program.Authoring.Src Effect4.Program.NativeOp :=
         Effect4.Program.Authoring.Row.call $rowId request)).raw

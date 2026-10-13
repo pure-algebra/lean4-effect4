@@ -7,6 +7,7 @@ import Test.Dogfood.Scenario.Routing
 import Test.Dogfood.Scenario.Atomic
 import Test.Dogfood.Scenario.Timeout
 import Test.Dogfood.Scenario.Todo.Claims
+import Effect4.Codegen.RowServices
 import Tools.ProfileJson
 import TypeScript.Render
 import Lean.Data.Json
@@ -623,9 +624,10 @@ def columnType (ty : Ty) : Except String String :=
 /-- The host bindings of a row table, as the printed module names them: the namespaces, and the
 TypeScript type of the object that holds them. A row `Spelling.method` is one method. It takes
 the request, or nothing when the request is `unit`, and it answers
-`Effect.Effect<answer, error>`. -/
+`Effect.Effect<answer, error>`. A service row is no binding: the module declares its namespace
+as an Effect service (`rowServiceDecls`, decisions row 378 (19)), and the run provides it. -/
 def bindingsType (table : RowTable) : Except String (List String × String) := do
-  let methods ← table.mapM fun (raw : Program.Row) => do
+  let methods ← (table.filter fun row => row.serviceCall?.isNone).mapM fun (raw : Program.Row) => do
     let row := raw.normalizeTypes
     unless row.shape == .call && row.trailing.isEmpty && row.typeArgs.isEmpty &&
         row.registration == .external && row.kind == .async do
@@ -745,9 +747,10 @@ def readersOf (run : HostRun) (scripted : Run) : List (String × J) × List J ×
 
 /-! ### The fixture and the replay -/
 
-/-- One run's fixture: the printed module, the bindings' type, the table, the calls, the script
-as the host's acts, the battery's observation of the scripted run with its fields in the
-battery's order, and the readers that the run gets. -/
+/-- One run's fixture: the printed module, the bindings' type, the row namespaces that the
+module declares as Effect services, the table, the calls, the script as the host's acts, the
+battery's observation of the scripted run with its fields in the battery's order, and the readers
+that the run gets. -/
 def emitRun (run : HostRun) : Except String J := do
   let built := run.opened.built
   let scripted := Scenario.play run.opened run.moves
@@ -759,6 +762,10 @@ def emitRun (run : HostRun) : Except String J := do
   if let some why := run.out then throw why
   let some module := Api.printModule "main" built.program built.table
     | throw "the module printer refuses the program"
+  -- the row namespaces that are Effect services, declared before the program that calls them
+  let services ← match rowServiceDecls (nativeSignature built.table) built.table with
+    | .ok decls => pure decls
+    | .error why => throw s!"the row services do not print: {reprStr why}"
   let acts ← scripted.journal.mapM fun row =>
     match rowJson row with
     | some act => pure act
@@ -767,8 +774,10 @@ def emitRun (run : HostRun) : Except String J := do
   let (readers, refused, premises) := readersOf run scripted
   return Json.mkObj [("name", .str run.name), ("scenario", .str run.scenario),
     ("session", .str run.opened.id),
-    ("module", .str (String.join (module.decls.map (TypeScript.Render.decl TypeScript.house0)))),
-    ("namespaces", toJson spaces), ("bindings", .str bindings), ("table", tableJson built.table),
+    ("module", .str (String.join ((services.map TypeScript.Decl.const ++ module.decls).map
+      (TypeScript.Render.decl TypeScript.house0)))),
+    ("namespaces", toJson spaces), ("bindings", .str bindings),
+    ("services", toJson ((rowServices built.table).map (·.ns))), ("table", tableJson built.table),
     ("calls", toJson ((callsOf run.opened scripted.journal).map awaitJson)),
     ("acts", toJson acts), ("observation", Json.mkObj (run.observed scripted)),
     ("fields", toJson ((run.observed scripted).map (·.1))),
