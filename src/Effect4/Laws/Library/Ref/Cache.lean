@@ -71,7 +71,8 @@ def holding {L : Type} (I : Image L) (q : RefKey) (s : Stores) (c : Option L) : 
 /-- What the code's run observes for one read of the model: the answer's exit, the stores with
 the cell at the model's next cached value, and the unread tape's exits. -/
 def observed {L : Type} (I : Image L) (q : RefKey) (s : Stores)
-    (r : (Except CauseV L × Option L) × List (Except CauseV L)) : (ExitV × Stores) × ReplyTape :=
+    (r : (Except CauseV L × Option L) × List (Except CauseV L)) :
+    (ExitV × Stores) × ReplyTape :=
   ((exitOf I r.1.1, holding I q s r.1.2), r.2.map (exitOf I))
 
 /-- The stores that `make` leaves at the empty stores: one cell, holding the model's empty

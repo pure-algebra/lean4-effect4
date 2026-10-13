@@ -20,7 +20,8 @@ library's service blocks (`Semaphore.serviceDefs`, `src/Effect4/Library/Semaphor
 passes storage's read at each call, so the block calls no host row and names no application.
 Its bodies hold no row position and no definition position, so its bytes do not depend on where
 an application places it. The element type and the loader's error type are the block's two type
-parameters. The bank records the block at `Ty.var 0` and `Ty.var 1` (`Test/Dogfood/Bank.lean`).
+parameters. The bank records the block at the types of the to-do's `list`
+(`Test/Dogfood/Bank.lean`).
 
 The independent model is `Effect4.Ref.Cache.Model` (`src/Effect4/Library/Ref/CacheModel.lean`).
 The agreement law is `cache_agrees` (`src/Effect4/Laws/Library/Ref/Cache.lean`).
