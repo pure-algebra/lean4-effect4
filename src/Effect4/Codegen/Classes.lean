@@ -1,6 +1,5 @@
 import Effect4.Codegen.Record
 import Effect4.Program.Formation
-import Effect4.Data.NatDecimal
 
 /-!
 # Codegen.Classes — the error payload face: one `Data.TaggedError` class per tagged payload type
@@ -124,29 +123,6 @@ def readNamed : List String → List Ty → Option Ty
   | ["Readonly"], [.map k v] => some (.map k v)
   | _, _ => none
 
-/-- A service key from its runtime text (`keyText`, `Codegen/Types.lean`): the decimal fields
-after `k` and after `_`. It decodes as `keyFromText` does (`Codegen/Read.lean`, which imports this
-module); the checked reader keeps a key only where it prints back. -/
-def keyOfText (text : String) : ServiceKey :=
-  let bytes := text.toByteArray.data.toList.drop 1
-  ⟨⟨Effect4.Data.NatDecimal.decodeBytes (bytes.takeWhile (· != 95))⟩,
-    ⟨Effect4.Data.NatDecimal.decodeBytes ((bytes.dropWhile (· != 95)).drop 1)⟩⟩
-
-/-- One key of a context type's row from its identifier (`keyIdentifier` at the native scope
-key): `Scope.Scope` is the native scope, and a string literal is an ordinary key's runtime text. -/
-def readContextKey : TypeRef → Option ServiceKey
-  | .name ["Scope", "Scope"] [] => some nativeScopeKey
-  | .literal text => some (keyOfText text)
-  | _ => none
-
-/-- A context type's row from its printed form (`requirementType` at the native scope key):
-`never`, one identifier, or their union, as a canonical row. It is permissive: the checked reader
-keeps a context type only where it prints back as the spelling read. -/
-def readContextRow : TypeRef → Option (Effect4.Row ServiceKey)
-  | .name ["never"] [] => some (Effect4.Machine.Env.Requirement.ofList [])
-  | .union members => (members.mapM readContextKey).map Effect4.Machine.Env.Requirement.ofList
-  | one => (readContextKey one).map fun key => Effect4.Machine.Env.Requirement.ofList [key]
-
 mutual
   /-- A payload field's type from its printed spelling (`Types.ofTy`'s image): `Context.Context<R>`
   as the context of its row (decisions row 349), any other name through `readNamed`, a literal,
@@ -154,7 +130,7 @@ mutual
   union as the right-nested union of its members. The reader is permissive; the class reader
   accepts a reading only when printing it gives the spelling back. -/
   def readTy : TypeRef → Option Ty
-    | .name ["Context", "Context"] [row] => (readContextRow row).map .contextOf
+    | .name ["Context", "Context"] [row] => (readRequirement nativeScopeKey row).map .contextOf
     | .name qualified args => do
       let xs ← readTys args
       readNamed qualified xs
