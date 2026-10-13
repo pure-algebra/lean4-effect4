@@ -157,5 +157,10 @@ def stalled : Option Live :=
 -- Green twin: a run that waits on host calls names them, so its frontier is not empty. Beside
 -- them the root waits on its children, an internal wait that no frontier reason names.
 #guard !parked.view.emptyFrontier && parked.view.waits.map (·.fiber) == [Api.root]
+-- `Live.view_classifies`, read on the parked run: each live fiber has its place in the view.
+example : ∀ f ∈ parked.run.machine.fibers, f.exit = none →
+    f.id ∈ parked.view.runnable ∨ f.id ∈ parked.view.awaiting.map (·.await.fiber) ∨
+      f.id ∈ parked.view.timers.map (·.1) ∨ f.id ∈ parked.view.waits.map (·.fiber) :=
+  Live.view_classifies parked
 
 end Test.Run.LiveContract

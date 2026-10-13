@@ -21,6 +21,8 @@ it.
   awaited calls, in the machine's order (HC-1's connector to `Await`).
 * **The view names each call's checked instance** (`view_checked`): the instance at the call's
   address in the run's program, as the checker types it.
+* **The view places every live fiber** (`view_classifies`): runnable, on a host call, on a timer,
+  or in an internal wait (decisions row 333 (3)).
 
 What they do not establish: that a run is funded (`embedded-budget-sufficient`, an open part of
 R12), reply admission, the session's ledger, a host's conformance, host progress, or anything of a
@@ -151,5 +153,58 @@ theorem view_checked (l : Live) (c : CallView) (h : c ∈ l.view.awaiting) :
   show (originOf l.run.machine call.fiber call.token).bind l.run.session.callInstance = _
   rw [Run.reached_callInstance l.run (reached l)]
   rfl
+
+/-- **The view places every live fiber** (decisions row 333 (3)). Each fiber of a live run's
+machine that has not exited stands in one of four places of the view: runnable, parked on a host
+call, asleep on a timer, or in an internal wait.
+
+Placement: concept `reactive-scheduling`; a step of the proposed claim `view-names-waits`, which row
+333 (3) puts in slice DM3 (R12's classification of a live run). Consumer: an agent that reads a
+deadlock off the view (`emptyFrontier`, with each wait named), and the run view driven by a host.
+Reach: every `Live` and every fiber of its machine with no exit. It does not establish which fiber
+can end a wait, progress or liveness, or an internal wait's program address, which the machine does
+not keep. -/
+theorem view_classifies (l : Live) :
+    ∀ f ∈ l.run.machine.fibers, f.exit = none →
+      f.id ∈ l.view.runnable ∨ f.id ∈ l.view.awaiting.map (·.await.fiber) ∨
+        f.id ∈ l.view.timers.map (·.1) ∨ f.id ∈ l.view.waits.map (·.fiber) := by
+  intro f hf live
+  cases hp : f.parked with
+  | notParked =>
+    left
+    show f.id ∈ Api.runnableFibers l.run.machine
+    refine List.mem_map.mpr ⟨f, List.mem_filter.mpr ⟨hf, ?_⟩, rfl⟩
+    simp only [Api.isRunnable, live, hp, Option.isNone_none, Bool.true_and, beq_self_eq_true]
+  | withGuard token =>
+    cases hreq : requestOf l.run.machine f.id token with
+    | some call =>
+      cases call with
+      | mk op request =>
+        right
+        left
+        show f.id ∈ ((awaits l.run.machine).map l.run.callView).map (·.await.fiber)
+        rw [List.map_map]
+        refine List.mem_map.mpr ⟨⟨f.id, token, op, request⟩,
+          List.mem_filterMap.mpr ⟨f, hf, ?_⟩, rfl⟩
+        simp only [hp, hreq, Option.map_some]
+    | none =>
+      cases hw : l.run.machine.state.timers.wake.waiters.any (·.fiber == f.id) with
+      | true =>
+        right
+        right
+        left
+        obtain ⟨w, hwmem, hweq⟩ := List.any_eq_true.mp hw
+        show f.id ∈ (l.run.machine.state.timers.wake.waiters.map
+          fun w => (w.fiber, w.payload)).map (·.1)
+        rw [List.map_map]
+        exact List.mem_map.mpr ⟨w, hwmem, beq_iff_eq.mp hweq⟩
+      | false =>
+        right
+        right
+        right
+        show f.id ∈ (Run.internalWaits l.run.machine).map (·.fiber)
+        refine List.mem_map.mpr ⟨⟨f.id, token, Run.registrationOf f⟩,
+          List.mem_filterMap.mpr ⟨f, hf, ?_⟩, rfl⟩
+        simp only [live, hp, hreq, hw, Option.isSome_none, Bool.false_eq_true, ↓reduceIte]
 
 end Effect4.Live
