@@ -382,6 +382,8 @@ import Test.Run.LiveContract
 -- The application and claim records (the claims packet, seat CLAIMS).
 import Test.Dogfood.Application
 import Test.Dogfood.Scenario.Todo.Claims
+import Test.Program.AddressMove
+import Test.Store.ProgramContent
 
 /-!
 # Effect4 test battery

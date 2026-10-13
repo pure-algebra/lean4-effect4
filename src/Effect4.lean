@@ -239,6 +239,8 @@ import Effect4.Program.TyCache
 -- An application: named programs with typed parameters over one row table (decisions rows 307
 -- (9) and 336 (9); the claims packet's slice APP).
 import Effect4.Program.Authoring.Application
+-- A path relocated, and the layer references of a moved subtree (decisions row 336 (6)).
+import Effect4.Program.Address
 
 /-!
 # Effect4

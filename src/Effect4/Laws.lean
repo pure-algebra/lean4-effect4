@@ -350,6 +350,7 @@ import Effect4.Laws.Api.Live
 import Effect4.Laws.Program.Validated
 import Effect4.Laws.Machine.AnswerFlowRun
 import Effect4.Laws.Program.PlaceFunding.Flow
+import Effect4.Laws.Program.AddressMove
 
 /-!
 # Effect4 proof graph
