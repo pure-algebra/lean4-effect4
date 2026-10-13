@@ -3,6 +3,7 @@ import Effect4.Program.CheckedTyping
 import Effect4.Program.Native
 import Effect4.Program.Profile
 import Effect4.Codegen.Print
+import Effect4.Codegen.RowServices
 import Effect4.Codegen.SourceBindings
 
 /-!
@@ -107,12 +108,13 @@ def ModuleEmission.module (emission : ModuleEmission program table name) : TypeS
 
 The envelope `module` is the declaration block that an embedding host wraps: it holds no import,
 and the host prepends its own (`withAmbient`, `Codegen/Admit.lean`). An agent's file needs its
-imports written. `file` writes them from Lean data: the module's free names, by the binding
-analysis (`SourceBindings.moduleUses`), each from `effect` when it is one of `effect`'s names and
-from the prelude when it is a prelude name. Any other free name stays free: a host row's
-namespace is the host's until the module declares its service key (decisions row 378 (19)).
-Every declaration is exported already (`ConstDecl.exported`), the service key, its layer and the
-main among them. -/
+imports written, and its row namespaces declared. `file` declares each row namespace that is an
+Effect service (`rowServiceDecls`, `Codegen/RowServices.lean`; decisions row 378 (19)) after the
+payload classes and before the declarations that call it. It writes the imports from Lean data:
+the module's free names, by the binding analysis (`SourceBindings.moduleUses`), each from
+`effect` when it is one of `effect`'s names and from the prelude when it is a prelude name. Any
+other free name stays free: a row that is no service row is the host's. Every declaration is
+exported already (`ConstDecl.exported`), the service key, its layer and the main among them. -/
 
 /-- The names a printed module may import from its prelude: the atoms, the term helpers, and the
 printer's heads that are no namespace member, except `pipe` and `undefined`. A head is a namespace
@@ -158,21 +160,23 @@ def moduleImports (prelude : String) (module : TypeScript.Module) (except : List
     (if ofPrelude.isEmpty then [] else [.named (ofPrelude.map binding) prelude false])
 
 /-- A module as a file: its declarations, with the imports that their free names need
-(`moduleImports`), the prelude at `prelude`. The new imports replace any that the module held. -/
-def fileOf (prelude : String) (module : TypeScript.Module) : TypeScript.Module :=
-  { module with imports := moduleImports prelude { module with imports := [] } }
-
-/-- **The module as a file**: the envelope's declarations, with their imports (`fileOf`), the
-prelude at `prelude`. -/
-def ModuleEmission.file (emission : ModuleEmission program table name) (prelude : String) :
+(`moduleImports`), the prelude at `prelude`. The new imports replace any that the module held. A
+name in `except` is no import. -/
+def fileOf (prelude : String) (module : TypeScript.Module) (except : List String := []) :
     TypeScript.Module :=
-  fileOf prelude emission.module
+  { module with imports := moduleImports prelude { module with imports := [] } except }
 
-/-- The file's declarations are the envelope's. So a law of the envelope's declarations holds of
-the file: the read-back (`ModuleEmission.readModule`, `src/Effect4/Laws/Api/ModuleReadable.lean`)
-among them. -/
-theorem ModuleEmission.file_decls (emission : ModuleEmission program table name)
-    (prelude : String) : (emission.file prelude).decls = emission.module.decls := rfl
+/-- **The module as a file**: the payload classes, the row namespaces' services
+(`rowServiceDecls`), then the envelope's declarations, with their imports (`fileOf`), the prelude
+at `prelude`. Refused by a row's spelling where the rows' services do not print. The read-back
+law (`ModuleEmission.readModule`, `src/Effect4/Laws/Api/ModuleReadable.lean`) speaks of the
+envelope's declarations, which the file holds after the rows' services. -/
+def ModuleEmission.file (emission : ModuleEmission program table name) (prelude : String)
+    (except : List String := []) : Except PrintRefusal TypeScript.Module := do
+  let rows ← rowServiceDecls (nativeSignature table) table
+  pure (fileOf prelude { emission.module with
+    decls := emission.classDecls.map .classDecl ++ rows.map .const ++
+      emission.declarations.map .const } except)
 
 /-- Print from retained typing and raw formation evidence. Both public producers
 obtain this evidence before calling the declaration printer. -/
