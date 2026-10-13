@@ -20,16 +20,21 @@ def landing : Document where
   title := "Effect4"
   producer := ["tools/Drivers/Site.lean", "make site"]
   body := [
-    .para [.text "Effect's runtime, reified in Lean as a model with defined semantics: typed programs ",
-      .text "as data, lowered to OCaml and printed as TypeScript, with the evidence for each claim."],
-    .part "pages" "Pages" [
+    .para [.text "Effect4 is Effect's runtime written in Lean as a model with defined semantics. ",
+      .text "A program is data: a typed term that Lean checks, runs on a reference machine, lowers to OCaml ",
+      .text "and prints as TypeScript."],
+    .para [.text "Each claim about that runtime carries its evidence: a theorem that is ", .status "proved",
+      .text ", a theorem proved ", .status "modulo", .text " named goals, or a planned ", .status "goal",
+      .text " stated with its proof to come."],
+    .part "start" "Start here" [
       .items [
-        [.link "semantics/" "Semantics evidence", .text ": the concepts, the claims and the status of each"],
-        [.link "specimen/" "Document specimen", .text ": every kind of block and mark, in the look"]]],
+        [.link "semantics/" "Semantics evidence", .text ": every claim by concept, its status and its Lean statement, ",
+         .text "and the plan of goals that the open requirements rest on."],
+        [.link "specimen/" "Document specimen", .text ": every kind of block and status mark, as the pages draw them."]]],
     .part "contract" "For a framework" [
-      .para [.text "Every page is also its document as JSON (", .code "effect4-document/1", .text "): ",
-        .link "semantics/document.json" "the semantics page's", .text ", ",
-        .link "specimen/document.json" "the specimen's", .text ". The report itself is ",
+      .para [.text "Every page is also its document as JSON, in the format ", .code "effect4-document/1", .text ": ",
+        .link "semantics/document.json" "the semantics page", .text " and ",
+        .link "specimen/document.json" "the specimen", .text ". The report behind the semantics page is ",
         .link "semantics/report.json" "report.json", .text "."]]]
 
 /-- The page for a path the site does not have. -/

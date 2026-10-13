@@ -130,10 +130,28 @@ private def claimPart (c : ClaimEntry) : Block :=
     (e.declaration?.map fun d => [Block.code "lean" d.statement]).getD [] ++
     records.flatMap recordBlocks
 
-/-- A concept's part: its title, its claims' table, then each claim's part. -/
+/-- A concept's name and its description, from a title written `Name: description`. -/
+private def nameAndDescription (title : String) : String × String :=
+  match title.splitOn ": " with
+  | name :: rest@(_ :: _) => (name, ": ".intercalate rest)
+  | _ => (title, "")
+
+/-- How many claims stand at each status, in the order of the legend. -/
+private def statusCounts (claims : List ClaimEntry) : Line :=
+  let words := ["proved", "modulo", "wanted", "refuted", "absent", "assumed"]
+  let present := words.filterMap fun w =>
+    let n := (claims.filter (·.evidence.tag == w)).length
+    if n == 0 then none else some (n, w)
+  [.text s!"{claims.length} ("] ++ List.intercalate [.text ", "]
+    (present.map fun (n, w) => [.text s!"{n} ", .status w]) ++ [.text ")"]
+
+/-- A concept's part, headed by its name: its description, its key and its claims by status, its
+claims' table, then each claim's part. -/
 private def conceptPart (concept : Concept) (claims : List ClaimEntry) : Block :=
-  .part ("concept:" ++ concept.id) concept.id <|
-    [.para [.text concept.title],
+  let (name, description) := nameAndDescription concept.title
+  .part ("concept:" ++ concept.id) name <|
+    (if description.isEmpty then [] else [.para [.text description]]) ++
+    [.fields [("Key", [.code concept.id]), ("Claims", statusCounts claims)],
      .table ["Claim", "Role", "Status", "Evidence", "Contested by"] (claims.map fun c =>
        [[.ref (claimKey c.claim.id) c.claim.id], [.text (roleName c.claim.role)], [.status c.evidence.tag],
         evidenceCell c.evidence, codes id (c.contestedBy.map (·.id))])] ++
@@ -256,9 +274,27 @@ def Report.document (r : Report) : Document :=
     producer := [producer, "format: effect4-semantics-report v6", s!"command: {command}",
       s!"inputs: {", ".intercalate inputs}"]
     body :=
-      [.para [.text "Selected evidence only. English associations are authored; inherited placement is provisional. ",
-        .text "Every witness is within the semantic axiom ceiling, or the report is refused; that ceiling is not a whole-library gate verdict. ",
-        .text "A register record is an authored link to a historical attack: read the full row, since a leading status word may coexist with a later repair."]] ++
+      [.para [.text "This page lists the claims that Effect4 makes about Effect's runtime, concept by concept, ",
+        .text "with the evidence for each. A claim's evidence is derived from its Lean declaration, never ",
+        .text "written by hand (decisions row 203)."],
+       .para [.text "Every witness stays within the semantic axiom ceiling, ", .code "propext", .text " and ",
+        .code "Quot.sound", .text ", or the page is not written. That ceiling is no verdict of the whole library's gate. ",
+        .text "Only selected evidence stands here. Each claim's English is written by hand, and a placement that a ",
+        .text "declaration inherits from its module is provisional."],
+       .para [.text "A register record links a claim to a historical attack. Read the whole row: an early status word ",
+        .text "may stand beside a later repair."],
+       .part "statuses" "How to read a status" [
+         .items [
+           [.status "proved", .text ": a theorem whose proof rests on no planned goal."],
+           [.status "modulo", .text ": a theorem proved from planned goals; it names the goals it rests on."],
+           [.status "wanted", .text ": the claim's statement is a planned goal, stated with its proof to come."],
+           [.status "goal", .text ": in the plan, a planned goal (", .code "proof_goal", .text "), whose body is still ",
+            .code "sorry", .text "."],
+           [.status "open", .text ": a requirement with a node not yet proved, or a part not yet stated as a goal."],
+           [.status "refuted", .text ": a register record refutes the claim with a theorem."],
+           [.status "absent", .text ": no declaration states the claim yet; its row gives the reason."],
+           [.status "assumed", .text ": the claim is taken from an outside source, with its reason."],
+           [.status "missing", .text ": in the plan, a name that no node holds."]]]] ++
       r.concepts.map (fun c => conceptPart c (byConcept.getD c.id #[]).toList) ++
       [applicabilityPart r.cuts, placementPart r.placement, planPart r.plan] ++ acceptancePart r.acceptance }
 

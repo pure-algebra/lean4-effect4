@@ -287,6 +287,13 @@ site: ## the documentation site into .lake/gen/site (Lean's pages, CSS files, th
 	rm -rf $(GEN)/site && mv $(GEN)/site-next $(GEN)/site
 	@echo "site: $(GEN)/site"
 
+# Publish the site from this Mac through wrangler's own sign-in (`wrangler login`, once): no API
+# token and no repository secret. Cloudflare Pages project effect4-docs, production (decisions row 363).
+.PHONY: deploy-site
+deploy-site: site ## publish .lake/gen/site to Cloudflare Pages (effect4-docs) with wrangler's sign-in
+	wrangler pages deploy $(GEN)/site --project-name=effect4-docs --branch=main \
+	  --commit-hash=$$(git rev-parse HEAD) --commit-message="$$(git log -1 --format=%s)"
+
 # The lanes' inventory: every fixture and every writer, by path. A wildcard prerequisite does
 # not remember a path that left, so the list itself is a prerequisite. It changes when a fixture
 # or a writer is added, removed or renamed (the pattern of $(CHK)/inventory), and the producer

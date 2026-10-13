@@ -5,11 +5,29 @@ inputs: tools/ProofGraph/Registry.lean, tools/Tools/Semantics.lean, tools/Driver
 -->
 # Semantics evidence
 
-Selected evidence only. English associations are authored; inherited placement is provisional. Every witness is within the semantic axiom ceiling, or the report is refused; that ceiling is not a whole-library gate verdict. A register record is an authored link to a historical attack: read the full row, since a leading status word may coexist with a later repair.
+This page lists the claims that Effect4 makes about Effect's runtime, concept by concept, with the evidence for each. A claim's evidence is derived from its Lean declaration, never written by hand (decisions row 203).
 
-## store-typing
+Every witness stays within the semantic axiom ceiling, `propext` and `Quot.sound`, or the page is not written. That ceiling is no verdict of the whole library's gate. Only selected evidence stands here. Each claim's English is written by hand, and a placement that a declaration inherits from its module is provisional.
 
-Store Typing: World-indexed semantic value membership (Fits) and store typings
+A register record links a claim to a historical attack. Read the whole row: an early status word may stand beside a later repair.
+
+## How to read a status
+
+- proved: a theorem whose proof rests on no planned goal.
+- modulo: a theorem proved from planned goals; it names the goals it rests on.
+- wanted: the claim's statement is a planned goal, stated with its proof to come.
+- goal: in the plan, a planned goal (`proof_goal`), whose body is still `sorry`.
+- open: a requirement with a node not yet proved, or a part not yet stated as a goal.
+- refuted: a register record refutes the claim with a theorem.
+- absent: no declaration states the claim yet; its row gives the reason.
+- assumed: the claim is taken from an outside source, with its reason.
+- missing: in the plan, a name that no node holds.
+
+## Store Typing
+
+World-indexed semantic value membership (Fits) and store typings
+
+Key: `store-typing` · Claims: 21 (20 proved, 1 absent)
 
 | Claim | Role | Status | Evidence | Contested by |
 | --- | --- | --- | --- | --- |
@@ -389,9 +407,11 @@ Module: `Effect4.Laws.Library.Stream.Definitions`
                       (List.cons state List.nil))))))))
 ```
 
-## residual-program-typing
+## Residual Program Typing
 
-Residual Program Typing: TypedProg, the protocol-indexed judgment on residual programs
+TypedProg, the protocol-indexed judgment on residual programs
+
+Key: `residual-program-typing` · Claims: 20 (19 proved, 1 refuted)
 
 | Claim | Role | Status | Evidence | Contested by |
 | --- | --- | --- | --- | --- |
@@ -822,9 +842,11 @@ Register record `E4-TYPED-CE-041` (REPAIRED)
 | `E4-TYPED-CE-041` | REPAIRED 2026-10-04 (seat S, branch `seat/sigapp`: decisions row 21's slice, step 2; `lawfulSig_of_admitted` has no premise, `[propext, Quot.sound]`); SEEDED 2026-10-04 (Claude, the Σ_app slice survey; kernel-checked by `decide +kernel`) | A program the API admits denotes a lawful source: `AdmittedProgram program table` implies `LawfulSig ⟨table, []⟩`, the premise of M5–M7 (`ProgramSource.lawful`) | `Test/Counterexamples/Program/AdmissionUnserved.lean`, one witness per clause the API did not check: a row requiring the key at service code 30, which no built-in carrier serves, performed by the program; a row whose answer mentions an unbound parameter; a parameter under a union head. Each was admitted by `admitProgram` and refused by `admitSig`. Repaired: `admitProgram` refuses each with the refusal `admitSig` gives (`refused`: `.signature (.unservedKey 0 appKey)`; `refused_unscoped`: `.signature (.row 0 .notWellScoped)`; `refused_union`: `.signature (.row 0 (.templateNotAdmissible "request"))`; `decide +kernel`), `not_lawful` stays, and each old acceptance is a red control under `#guard_msgs (error)`; the green controls admit clause 1's program once the application declares the key's carrier (`admitted_served`) and type a read of the declared service at its carrier (`admitted_reads_declared`, against `refused_reads_undeclared`) | decisions row 21's slice, step 2 (`docs/research/2026-10-04-claude-lead/sigapp-slice-plan.md`): program admission runs the signature's located refusal (`admitSig`, `src/Effect4/Program/SigApp.lean`) at `AdmittedProgram program app`, whose certificate holds `admitSig app = .ok ()`; the bridge `lawfulSig_of_admitted` is `admitSig_ok_iff` read off that field, and the premise `AdmissionGap` is deleted |
 ```
 
-## scope-lifetime-finalization
+## Scope Lifetime & Finalization
 
-Scope Lifetime & Finalization: Lifetimes, finalizer registration, and LIFO unwinding
+Lifetimes, finalizer registration, and LIFO unwinding
+
+Key: `scope-lifetime-finalization` · Claims: 16 (15 proved, 1 wanted)
 
 | Claim | Role | Status | Evidence | Contested by |
 | --- | --- | --- | --- | --- |
@@ -1189,9 +1211,11 @@ Module: `Effect4.Laws.Library.Pool.Profile`
           next := s.next }))
 ```
 
-## reactive-scheduling
+## Reactive Scheduling
 
-Reactive Scheduling: Multi-fiber execution, decision steps, and configuration invariants
+Multi-fiber execution, decision steps, and configuration invariants
+
+Key: `reactive-scheduling` · Claims: 25 (19 proved, 4 modulo, 2 absent)
 
 | Claim | Role | Status | Evidence | Contested by |
 | --- | --- | --- | --- | --- |
@@ -1698,9 +1722,11 @@ Module: `Effect4.Laws.Library.Pool.Profile`
           closing := s.closing, next := s.next }))
 ```
 
-## exact-codecs
+## Exact Codecs
 
-Exact Codecs: Invertible embeddings for JSON and Schema representations
+Invertible embeddings for JSON and Schema representations
+
+Key: `exact-codecs` · Claims: 19 (19 proved)
 
 | Claim | Role | Status | Evidence | Contested by |
 | --- | --- | --- | --- | --- |
@@ -2052,9 +2078,11 @@ Module: `Effect4.Laws.Schema.FieldRef`
             ((Effect4.Schema.Model.imageAt L (Effect4.Program.Ty.record fs)).toVal (f.set x v))))
 ```
 
-## subtyping-algebra
+## Subtyping Algebra
 
-Subtyping Algebra: Preorder laws, normalization, and join-semilattice on CTy
+Preorder laws, normalization, and join-semilattice on CTy
+
+Key: `subtyping-algebra` · Claims: 13 (13 proved)
 
 | Claim | Role | Status | Evidence | Contested by |
 | --- | --- | --- | --- | --- |
@@ -2322,9 +2350,11 @@ Module: `Effect4.Laws.Program.Typing.Closed`
               And (Eq t.answer.closed Bool.true) (Eq t.error.closed Bool.true)
 ```
 
-## initial-algebras-folds
+## Initial Algebras & Folds
 
-Initial Algebras & Folds: Free syntax objects, catamorphisms, and fold uniqueness
+Free syntax objects, catamorphisms, and fold uniqueness
+
+Key: `initial-algebras-folds` · Claims: 33 (33 proved)
 
 | Claim | Role | Status | Evidence | Contested by |
 | --- | --- | --- | --- | --- |
@@ -2931,9 +2961,11 @@ Module: `Tools.View.FlowReach`
         (Tools.View.Flow.Reach es source.val target.val)
 ```
 
-## context-requirements
+## Context Requirements
 
-Context Requirements: Graded coeffects, requirement rows, and layer discharge
+Graded coeffects, requirement rows, and layer discharge
+
+Key: `context-requirements` · Claims: 8 (8 proved)
 
 | Claim | Role | Status | Evidence | Contested by |
 | --- | --- | --- | --- | --- |
@@ -3068,9 +3100,11 @@ Module: `Effect4.Laws.Program.BuildTotal`
               (Effect4.Machine.Env.Context.Satisfies out t.out)
 ```
 
-## host-session-protocol
+## Host Session Protocol
 
-Host Session Protocol: Session automaton, external reply ingestion, and boundary capabilities
+Session automaton, external reply ingestion, and boundary capabilities
+
+Key: `host-session-protocol` · Claims: 12 (11 proved, 1 assumed)
 
 | Claim | Role | Status | Evidence | Contested by |
 | --- | --- | --- | --- | --- |
@@ -3310,9 +3344,11 @@ Module: `Effect4.Laws.Api.SessionMeaningLoop`
 Effect4.Run.H9FrontierLoopedRows
 ```
 
-## translation-simulation
+## Translation & Simulation
 
-Translation & Simulation: Semantic preservation, replay relations, and capstone M7
+Semantic preservation, replay relations, and capstone M7
+
+Key: `translation-simulation` · Claims: 49 (41 proved, 8 modulo)
 
 | Claim | Role | Status | Evidence | Contested by |
 | --- | --- | --- | --- | --- |

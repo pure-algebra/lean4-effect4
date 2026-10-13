@@ -61,7 +61,13 @@ def algebra : Algebra (Nat → List RawNode) where
   para l _ := [el "p" (line l)]
   fields rs _ := [el "dl" (rs.flatMap fun (k, v) => [el "dt" [.text k], el "dd" (line v)])]
   items ls _ := [el "ul" (ls.map fun l => el "li" (line l))]
-  code lang body _ := [el "pre" [el "code" [.text body] [("class", "language-" ++ lang)]]]
+  code lang body _ :=
+    let block := el "pre" [el "code" [.text body] [("class", "language-" ++ lang)]]
+    -- A diagram's source folds away until the design language draws it (row 354, point 8).
+    if lang == "mermaid" then
+      [el "details" [el "summary" [.text s!"Diagram source (Mermaid, {(body.splitOn "\n").length} lines)"], block]
+        [("class", "diagram")]]
+    else [block]
   table hs rs _ :=
     if rs.isEmpty then [] else
       let head := el "thead" [el "tr" (hs.map fun h => el "th" [.text h] [("scope", "col")])]
@@ -70,7 +76,9 @@ def algebra : Algebra (Nat → List RawNode) where
         [("class", "scroll"), ("role", "region"), ("tabindex", "0"),
          ("aria-label", "Table: " ++ ", ".intercalate hs)]]
   part k t body depth :=
-    [el "section" (el ("h" ++ toString (min 6 depth)) [.text t] :: (body.flatMap (· (depth + 1)))) [("id", k)]]
+    let heading := el ("h" ++ toString (min 6 depth))
+      [.text t, el "a" [.text "#"] [("class", "self"), ("href", fragment k), ("aria-label", "Link to " ++ t)]]
+    [el "section" (heading :: (body.flatMap (· (depth + 1)))) [("id", k)]]
 
 /-! ## The stylesheet -/
 
@@ -175,10 +183,14 @@ def page (d : Document) (base light : Look) (sheet : Sheet) : RawNode :=
       el "meta" [] [("charset", "utf-8")],
       el "meta" [] [("name", "viewport"), ("content", "width=device-width, initial-scale=1")],
       el "title" [.text d.title]] ++ styleNodes base light sheet),
-    el "body" [
+    el "body" ([
+      el "a" [.text "Skip to the content"] [("class", "skip"), ("href", "#content")],
       el "header" ([el "h1" [.text d.title]] ++
         (if tops.isEmpty then [] else [el "nav" [el "ol" tops] [("aria-label", "Contents")]])),
-      el "main" ((Block.foldList algebra d.body).flatMap (· 2))]]
+      el "main" ((Block.foldList algebra d.body).flatMap (· 2)) [("id", "content")]] ++
+      (if d.producer.isEmpty then [] else
+        [el "footer" [el "p" [.text "Provenance"] [("class", "label")],
+          el "ul" (d.producer.map fun line => el "li" [.text line])]]))]
     [("lang", "en")]
 
 /-- A refusal in words: the element names along its path, from the root, then its reason. -/
