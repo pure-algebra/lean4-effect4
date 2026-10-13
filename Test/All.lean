@@ -387,6 +387,8 @@ import Test.Store.ProgramContent
 import Test.Dogfood.Scenario.Workers.CommandGuard
 -- The to-do application as one Effect service (decisions row 378 (20), seat SVC).
 import Test.Dogfood.Scenario.TodoService
+-- The bank of verified implementations: the banked Ref cache (decisions row 378, seat BANK).
+import Test.Dogfood.Bank
 
 /-!
 # Effect4 test battery

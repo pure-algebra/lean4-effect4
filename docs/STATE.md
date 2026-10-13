@@ -285,12 +285,19 @@ A program has folds, a journaled run with replay, and a printed image that reads
    - done: V1, the to-do on the keyed lane and lane S (`4017fac26`, `2daa3ac55`). On each script
      rc.112 and the generated OCaml engine agree with Lean;
    - V2, the application as one Effect service with its layer, its host rows services of their
-     own (row 378 (19), (20); the [design note](research/2026-10-13-emitted-services/README.md));
+     own (row 378 (19), (20); the [design note](research/2026-10-13-emitted-services/README.md)).
+     E1 to E3 landed. `Application.serviceDefs` builds the service (`45761a86a`). A context type
+     prints as `Context.Context<R>` (`9be016a0a`). Each row namespace is an Effect service
+     (`c4f56a879`). Its accessors are `Key.use((r) => r.method(x))`. tsgo 7 accepts the to-do's
+     file and a consumer, and rc.112 runs its keyed lane through the service. Running: E4, the
+     file with a consumer on rc.112 and Lean's per-run checks. Also running: the whole file's
+     read-back, and keys by name (seat READ);
    - V3, the generated declarations: the rows' bindings interface, the inputs' and answers'
      Schemas, the prelude package. They are also the agent's typed surface;
    - V4, `apps/todo/` on SQLite with the per-run checker;
-   - beside them, `request_leads` and the banked Ref with its transfer law (refinement per tape).
-     Also the claim record's two labels, and binder names in the TypeScript reader (row 378 (17));
+   - beside them, `request_leads` and binder names in the TypeScript reader (row 378 (17)). The
+     claim record's two labels landed (`13551903c`), and so did the banked Ref cache with its
+     transfer law `cache_agrees`, which rests on no goal (`23f95aac2`). Its bank entry is running;
    - then V5, the OCaml face, its repository lowered through LCNF.
 
    Planned goals off the slice's path pause (row 378 (12)).

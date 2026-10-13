@@ -249,6 +249,9 @@ import Effect4.Program.Authoring.ApplicationService
 -- A row namespace as an Effect service: its key and its accessors (decisions row 378 (19),
 -- slice E3).
 import Effect4.Codegen.RowServices
+-- The banked Ref cache: a cache of a list beside storage, and its model (decisions row 378).
+import Effect4.Library.Ref.Cache
+import Effect4.Library.Ref.CacheModel
 
 /-!
 # Effect4
