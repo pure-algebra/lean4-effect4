@@ -1053,7 +1053,8 @@ emitted service, replayed against the script's program (`replayedOf`). For each 
 replayed journal is the script's, whether the run is settled (funded, at rest, driven by a host),
 and whether it conforms to the application's protocols (`Effect4.Run.conforms`). For each pair of
 `todoPairs` that the inputs hold: whether both runs agree with the reference model, the model's
-state threaded from the first to the second (`Effect4.Run.agrees`). -/
+state threaded from the first to the second (`Effect4.Run.agrees`). Beside each decision stands
+the same decision on the script's own run, which the host-protocol gate compares with it. -/
 def serviceChecks (inputs : List J) : Except String J := do
   let all ← runs
   let replayed ← inputs.mapM fun input => do
@@ -1061,17 +1062,25 @@ def serviceChecks (inputs : List J) : Except String J := do
     let some run := all.find? (·.name == name) | throw s!"{name}: unknown run"
     let s ← replayedOf run (← input.getObjVal? "recording")
     return (name, run, s)
+  let settled (s : Run) : Bool :=
+    Effect4.Run.funded s && Effect4.Run.atRest s && Effect4.Run.hostDriven s
+  let agreeing (a b : Run) (origin : Scenario.Todo.Repo) : Bool :=
+    ((Effect4.Run.agrees Scenario.Todo.repository a origin).bind
+      (Effect4.Run.agrees Scenario.Todo.repository b)).isSome
   let runChecks := replayed.map fun (name, run, s) =>
+    let scripted := Scenario.play run.opened run.moves
     Json.mkObj [("name", .str name),
-      ("journal", toJson (decide (s.journal = (Scenario.play run.opened run.moves).journal))),
-      ("settled", toJson (Effect4.Run.funded s && Effect4.Run.atRest s && Effect4.Run.hostDriven s)),
-      ("conforming", toJson (Effect4.Run.conforms Scenario.Todo.protocols s))]
+      ("journal", toJson (decide (s.journal = scripted.journal))),
+      ("settled", toJson (settled s)), ("scriptedSettled", toJson (settled scripted)),
+      ("conforming", toJson (Effect4.Run.conforms Scenario.Todo.protocols s)),
+      ("scriptedConforming", toJson (Effect4.Run.conforms Scenario.Todo.protocols scripted))]
   let pairChecks := todoPairs.filterMap fun (first, second, origin) =>
     match replayed.find? (·.1 == first), replayed.find? (·.1 == second) with
-    | some (_, _, a), some (_, _, b) =>
+    | some (_, ra, a), some (_, rb, b) =>
       some (Json.mkObj [("first", .str first), ("second", .str second),
-        ("agrees", toJson ((Effect4.Run.agrees Scenario.Todo.repository a origin).bind
-          (Effect4.Run.agrees Scenario.Todo.repository b)).isSome)])
+        ("agrees", toJson (agreeing a b origin)),
+        ("scriptedAgrees", toJson (agreeing (Scenario.play ra.opened ra.moves)
+          (Scenario.play rb.opened rb.moves) origin))])
     | _, _ => none
   return Json.mkObj [("runs", toJson runChecks), ("pairs", toJson pairChecks)]
 
