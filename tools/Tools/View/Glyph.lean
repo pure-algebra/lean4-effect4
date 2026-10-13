@@ -37,9 +37,10 @@ elab "ctors_of% " i:ident : term => do
 
 /-- The marks of the visual language; what each draws is `Shape.means`. -/
 inductive Shape where
-  | box | value | series | parallel | block | alternative | loop | region | bracket | rail | arrow
-  | blockedArrow | spider | rest | hollowBox | filledBox | hollowDot | filledDot | port | probe
-  | call | library | cross | hash | exitBar | hole | enter | barLine | fermata | caesura
+  | box | value | series | parallel | block | alternative | loop | region | bracket | openBracket
+  | rail | arrow | blockedArrow | spider | rest | hollowBox | filledBox | hollowDot | filledDot
+  | port | probe | call | library | cross | hash | reasons | exitBar | hole | enter | barLine
+  | fermata | caesura
   deriving DecidableEq, Repr, Inhabited
 
 /-- What each mark draws. -/
@@ -52,7 +53,8 @@ def Shape.means : Shape → String
   | .alternative => "alternatives side by side, one of them taken: a handler, a branch"
   | .loop => "a wire that returns to an earlier point: a loop"
   | .region => "an enclosure that provides what its inside reads: a layer, a service, a context"
-  | .bracket => "the bracket of a scope, [k … k]: must close"
+  | .bracket => "the bracket of a scope, [k … k]: closed, its span whole"
+  | .openBracket => "the open bracket [ of a scope still open: a close owed"
   | .rail => "the double rail of an uninterruptible span: delivery blocked, never dropped"
   | .arrow => "a directed arrow from a parent's lane to a child's: a fork"
   | .blockedArrow => "the blocked arrow ⊣: an interrupt, Talmy's Antagonist"
@@ -68,6 +70,7 @@ def Shape.means : Shape → String
   | .library => "a block of named definitions"
   | .cross => "the reason ×: a typed failure"
   | .hash => "the reason #: a defect"
+  | .reasons => "a cause: its reasons in order on one line, × # ⊣"
   | .exitBar => "the final bar ‖: an exit, the reasons after it"
   | .hole => "a hole: the place a frame's result returns to"
   | .enter => "the entry ▶: a fiber enters its loop"
@@ -78,11 +81,76 @@ def Shape.means : Shape → String
 /-- A mark in text, for a terminal and for words. -/
 def Shape.glyph : Shape → String
   | .box => "[ ]" | .value => "─●" | .series => "─▶" | .parallel => "═" | .block => "▤"
-  | .alternative => "⑂" | .loop => "↺" | .region => "⌜ ⌟" | .bracket => "[ ]" | .rail => "═══"
+  | .alternative => "⑂" | .loop => "↺" | .region => "⌜ ⌟" | .bracket => "[ ]" | .openBracket => "[ ┄"
+  | .rail => "═══"
   | .arrow => "──▶" | .blockedArrow => "⊣" | .spider => "◉" | .rest => "┄" | .hollowBox => "□"
   | .filledBox => "■" | .hollowDot => "○" | .filledDot => "●" | .port => "!?" | .probe => "⌕"
-  | .call => "⟦ ⟧" | .library => "❏" | .cross => "×" | .hash => "#" | .exitBar => "‖"
+  | .call => "⟦ ⟧" | .library => "❏" | .cross => "×" | .hash => "#" | .reasons => "× ⊣"
+  | .exitBar => "‖"
   | .hole => "◌" | .enter => "▶" | .barLine => "│" | .fermata => "𝄐" | .caesura => "//"
+
+/-- **The physical kinds** (the owner's "imagined physics", decisions row 367): how a mark behaves,
+so that its motion follows from its kind and is never drawn case by case. After Gemini's review
+(`docs/research/2026-10-12-visual-semantics/gemini-review.md`), revised: an operation and a failure
+are bodies, and only an interrupt is a force. -/
+inductive Kind where
+  | body | vessel | container | wire | bond | force | cadence
+  deriving DecidableEq, Repr, Inhabited
+
+/-- What each kind is. -/
+def Kind.means : Kind → String
+  | .body => "a thing with an identity that persists and moves: a value, an operation, a failure on its wire"
+  | .vessel => "a form promised hollow and kept filled: a park, a task, a finalizer, a hole"
+  | .container => "an enclosure that holds others, and some must close: a scope, a region, a rail"
+  | .wire => "a path that carries a value: a sequence, a loop, a branch, a rest"
+  | .bond => "a relation between bodies: a fork's arrow, a spider's legs, a port"
+  | .force => "an impulse that arrives, is blocked or lands, and is spent: an interrupt"
+  | .cadence => "a mark in the reading's time that stands still: a bar line, an exit, a fermata, a caesura"
+
+/-- **A mark's kind.** -/
+def Shape.kind : Shape → Kind
+  | .value | .box | .call | .cross | .hash | .reasons | .enter | .probe => .body
+  | .hollowBox | .filledBox | .hollowDot | .filledDot | .hole => .vessel
+  | .block | .region | .bracket | .openBracket | .rail | .library => .container
+  | .series | .parallel | .loop | .alternative | .rest => .wire
+  | .arrow | .spider | .port => .bond
+  | .blockedArrow => .force
+  | .barLine | .exitBar | .fermata | .caesura => .cadence
+
+/-- The primitives of a motion that CSS states exactly (decisions row 354, point 4), and the still
+mark, which moves by none. -/
+inductive Primitive where
+  | translate | scale | clip | opacity | still
+  deriving DecidableEq, Repr, Inhabited
+
+/-- One track of a kind's motion: what moves, by which primitive. -/
+structure Track where
+  primitive : Primitive
+  how : String
+
+/-- **A kind's motion grammar**: how a mark of the kind enters, changes and leaves, one track each,
+within one beat (row 367, point 10). Nothing loops and nothing pulses (row 354, point 5). -/
+structure Grammar where
+  enter : Track
+  change : Track
+  leave : Track
+
+/-- The motion grammar of each kind. -/
+def Kind.grammar : Kind → Grammar
+  | .body => ⟨⟨.scale, "grows from its centre"⟩, ⟨.translate, "moves along a shallow arc and settles"⟩,
+      ⟨.opacity, "docks in its target and fades"⟩⟩
+  | .vessel => ⟨⟨.clip, "its outline is drawn from its start edge"⟩, ⟨.opacity, "its fill comes in: the promise kept"⟩,
+      ⟨.opacity, "fades"⟩⟩
+  | .container => ⟨⟨.clip, "opens from its leading edge along the reading"⟩, ⟨.scale, "grows about its anchor to hold what enters"⟩,
+      ⟨.clip, "closes toward its trailing edge"⟩⟩
+  | .wire => ⟨⟨.clip, "is drawn along its direction"⟩, ⟨.still, "carries; nothing moves on it"⟩,
+      ⟨.clip, "is taken in along its direction, from its tail"⟩⟩
+  | .bond => ⟨⟨.clip, "grows from its source along its direction"⟩, ⟨.opacity, "a leg fills when its end arrives"⟩,
+      ⟨.opacity, "fades when the relation ends"⟩⟩
+  | .force => ⟨⟨.translate, "travels along its direction to its target"⟩, ⟨.still, "stops at a bar: a rail holds it, or it lands"⟩,
+      ⟨.opacity, "fades as its reason is written"⟩⟩
+  | .cadence => ⟨⟨.clip, "is drawn from top to bottom"⟩, ⟨.still, "stands"⟩,
+      ⟨.opacity, "recedes in tone as the cursor passes"⟩⟩
 
 /-- One constructor's mark: its shape, the variant that tells it from a sibling of the same shape
 and word, its spoken word (a verb of the dictionary where there is one), and what it draws. -/
@@ -121,7 +189,7 @@ def table : List Row := [
   ⟨``Effect4.Program.Eff.scoped, .bracket, "", "scope", "a scope around its inside"⟩,
   ⟨``Effect4.Program.Eff.acquireRelease, .bracket, "acquire and release", "scope", "an acquire, its use, its release at close"⟩,
   ⟨``Effect4.Program.Eff.provideLayer, .region, "layer", "provide", "the services a layer builds, around the inside"⟩,
-  ⟨``Effect4.Program.Eff.service, .port, "service", "ask", "a service taken from the context"⟩,
+  ⟨``Effect4.Program.Eff.service, .probe, "service", "read", "a service read from the context"⟩,
   ⟨``Effect4.Program.Eff.provideService, .region, "service", "provide", "one service, around the inside"⟩,
   ⟨``Effect4.Program.Eff.catchIf, .alternative, "if", "catch", "a handler for the failures a test admits"⟩,
   ⟨``Effect4.Program.Eff.select, .alternative, "select", "select", "the arm a tag picks"⟩,
@@ -170,7 +238,7 @@ def table : List Row := [
   ⟨``Effect4.Program.CauseTerm.fail, .cross, "", "fail", "the reason ×"⟩,
   ⟨``Effect4.Program.CauseTerm.die, .hash, "", "die", "the reason #"⟩,
   ⟨``Effect4.Program.CauseTerm.interrupt, .blockedArrow, "", "interrupt", "the reason ⊣"⟩,
-  ⟨``Effect4.Program.CauseTerm.both, .series, "cause", "combine", "two causes in order, one line of reasons"⟩,
+  ⟨``Effect4.Program.CauseTerm.both, .reasons, "", "combine", "two causes in order, one line of reasons"⟩,
   -- the machine's runtime code and frames (`Prim`, `src/Effect4/Machine/Frames.lean`)
   ⟨``Effect4.Prim.success, .value, "", "succeed", "a value, compiled"⟩,
   ⟨``Effect4.Prim.failure, .cross, "cause", "fail", "a cause, compiled"⟩,
@@ -242,11 +310,11 @@ def table : List Row := [
   ⟨``Effect4.Reason.interrupt, .blockedArrow, "", "interrupt", "the reason ⊣ and its interruptor"⟩,
   ⟨``Effect4.Exit.success, .exitBar, "success", "exit", "‖ and the value"⟩,
   ⟨``Effect4.Exit.failure, .exitBar, "failure", "exit", "‖ and the reasons, in order"⟩,
-  ⟨``Effect4.ScopeState.empty, .bracket, "empty", "scope", "a scope with nothing registered yet"⟩,
-  ⟨``Effect4.ScopeState.openEmpty, .bracket, "open, none", "scope", "an open scope, no finalizer"⟩,
-  ⟨``Effect4.ScopeState.openInline, .bracket, "open, one", "scope", "an open scope, one finalizer"⟩,
-  ⟨``Effect4.ScopeState.openMap, .bracket, "open, many", "scope", "an open scope, finalizers by key"⟩,
-  ⟨``Effect4.ScopeState.closed, .bracket, "closed", "scope", "a closed scope and its exit"⟩,
+  ⟨``Effect4.ScopeState.empty, .openBracket, "empty", "hold", "a scope with nothing registered yet: its close owed"⟩,
+  ⟨``Effect4.ScopeState.openEmpty, .openBracket, "none", "hold", "an open scope, no finalizer"⟩,
+  ⟨``Effect4.ScopeState.openInline, .openBracket, "one", "hold", "an open scope, one finalizer"⟩,
+  ⟨``Effect4.ScopeState.openMap, .openBracket, "many", "hold", "an open scope, finalizers by key"⟩,
+  ⟨``Effect4.ScopeState.closed, .bracket, "closed", "close", "a closed scope, its span whole, its exit kept"⟩,
   -- outcomes, frontiers and halts (`Outcome`, `FrontierReason`, `Stuck`)
   ⟨``Effect4.Api.Outcome.finished, .exitBar, "finished", "finish", "the run's final bar"⟩,
   ⟨``Effect4.Api.Outcome.frontier, .fermata, "", "wait", "the run held live"⟩,
