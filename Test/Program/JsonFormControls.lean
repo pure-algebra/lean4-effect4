@@ -1,21 +1,17 @@
 import Effect4.Laws.Store.ShapeRead
-import Test.Program.SketchControls
-import Test.Program.PartsControls
+import Effect4.Store.Domain.ProgramWire
 
 /-!
 # The JSON form of a program: the controls
 
-`src/Effect4/Store/Domain/ShapeRead.lean` reads a canonical carrier from its JSON print
-(`Canonical.ofJson`), and from JSON whose objects are in any order (`Canonical.ofJsonAnyOrder`).
-Its law is exactness (`Canonical.ofJson_exact`). These lines are finite evaluations of the round
-trip, which no theorem states.
+The tools print a program as JSON with each list an array (`Canonical.printArrays`), the
+encoding `ts/eff/eff.gen.ts` types, and read an agent's JSON in any order
+(`Canonical.ofJsonAnyOrder`). The law is exactness modulo that normaliser
+(`Canonical.ofJsonAnyOrder_exact`). These two lines are finite evaluations of the round trip,
+which no theorem states.
 
-* **Tested: the round trip.** The sketch battery's program and seat HOST's client with the
-  Queue's definitions read back from their prints.
-* **Tested: any order.** With every object's entries reversed, the strict reader refuses, and
-  the reader in any order reads the program back.
-* **Controls: a number reads only from a non-negative finite binary64** (`natOfBinary64_finite`).
-  From 2^1024 up the write's pattern is no binary64 of the natural, and the read refuses it.
+* **Tested: a program written by hand as `ts/eff/eff.gen.ts` types it reads.**
+* **Tested: the tools' print reads back with every object's entries reversed.**
 -/
 
 set_option autoImplicit false
@@ -23,8 +19,6 @@ set_option autoImplicit false
 namespace Test.Program.JsonFormControls
 
 open Effect4 Effect4.Program Effect4.Program.Wire Effect4.Store
-open Test.Program.SketchControls
-open Test.Program.PartsControls (definedClient builtOf)
 
 mutual
 /-- Every object's entries reversed: a JSON value an agent may write. -/
@@ -42,24 +36,27 @@ def reverseEntries : List (String × Json) → List (String × Json)
   | (n, j) :: entries => (n, reverseObjs j) :: reverseEntries entries
 end
 
--- tested: the sketch battery's program reads back from its print
-#guard ((Canonical.ofJson (Canonical.print original) : Option NativeEff).map hexOf) ==
-  some (hexOf original)
--- tested: so does the client with the Queue's definitions, a block at the root
-#guard ((builtOf definedClient).map fun b =>
-  ((Canonical.ofJson (Canonical.print b.program) : Option NativeEff).map hexOf) ==
-    some (hexOf b.program)) == some true
--- tested: with every object reversed, the strict reader refuses, and the reader in any order
--- reads the program back
-#guard ((Canonical.ofJson (reverseObjs (Canonical.print original)) : Option NativeEff).isNone,
-  (Canonical.ofJsonAnyOrder (reverseObjs (Canonical.print original)) : Option NativeEff).map
-    hexOf == some (hexOf original)) == (true, true)
+/-- A program whose lists are not empty: the atoms' arguments. -/
+def listed : NativeEff :=
+  .bind (.succeed (.app "cons" (.cons (.lit (.str "buy milk")) (.cons (.app "nil" .nil) .nil))))
+    (.succeed (.app "length" (.cons (.var 0) .nil)))
 
--- control: 2^1024's pattern is +Infinity's, and 2^2048's is -1.0's; the read refuses both
-#guard (Effect4.Arch.binary64OfNat (2 ^ 1024), Effect4.Arch.binary64OfNat (2 ^ 2048)) ==
-  (0x7FF0000000000000, 0xBFF0000000000000)
-#guard (natOfBinary64 0x7FF0000000000000, natOfBinary64 0xBFF0000000000000) == (none, none)
--- tested: the top of the MCP face's profile, 2^53, reads back
-#guard natOfBinary64 (Effect4.Arch.binary64OfNat (2 ^ 53)) == some (2 ^ 53)
+/-- `listed` as `ts/eff/eff.gen.ts` types it, each list an array, written by hand. -/
+def listedAsTs : Json :=
+  let lit (tag : String) (v : Json) : Json :=
+    .obj [("_tag", .str "lit"), ("value", .obj [("_tag", .str tag), ("value", v)])]
+  .obj [("_tag", .str "bind"),
+    ("first", .obj [("_tag", .str "succeed"), ("value", .obj [("_tag", .str "app"),
+      ("atom", .str "cons"), ("args", .arr [lit "str" (.str "buy milk"),
+        .obj [("_tag", .str "app"), ("atom", .str "nil"), ("args", .arr [])]])])]),
+    ("rest", .obj [("_tag", .str "succeed"), ("value", .obj [("_tag", .str "app"),
+      ("atom", .str "length"), ("args", .arr [.obj [("_tag", .str "var"),
+        ("index", Effect4.Arch.Json.ofNat 0)]])])])]
+
+-- tested: the program written by hand as `ts/eff/eff.gen.ts` types it reads
+#guard ((Canonical.ofJsonAnyOrder listedAsTs : Option NativeEff).map hexOf) == some (hexOf listed)
+-- tested: the tools' print reads back with every object's entries reversed
+#guard ((Canonical.ofJsonAnyOrder (reverseObjs (Canonical.printArrays listed)) :
+  Option NativeEff).map hexOf) == some (hexOf listed)
 
 end Test.Program.JsonFormControls

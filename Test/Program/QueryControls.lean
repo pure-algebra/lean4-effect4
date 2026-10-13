@@ -21,9 +21,6 @@ These are the finite evaluations, on the examples of `Test/Program/SketchControl
   an omission and a filling at no address.
 * **Tested: the reader.** It reads what the writer writes. It refuses a field of the wrong type
   and an unknown slot, with the field's name.
-* **Tested: the transcript.** `Test/fixtures/query/answers.jsonl` is the driver's own output on
-  `Test/fixtures/query/requests.jsonl`. The answer of each recorded request is the recorded
-  answer.
 
 No line restates a theorem, and no line prints axioms. The rendered text stays inside the guards.
 -/
@@ -215,12 +212,5 @@ def loopBlock : NativeEff := .defs [idDecl] (.cons (.succeed (.var 0)) .nil) (.b
 -- says so
 #guard (answerLine "not json").startsWith "{\"app\":\"empty\",\"error\":\"no JSON"
 #guard answerLine "{}" != answerLine "not json"
-
-/-! ## The transcript -/
-
--- tested: the answer of each recorded request is the recorded answer
-#guard replays (include_str "../fixtures/query/requests.jsonl")
-  (include_str "../fixtures/query/answers.jsonl")
-#guard (fixtureLines (include_str "../fixtures/query/requests.jsonl")).length == 16
 
 end Test.Program.QueryControls

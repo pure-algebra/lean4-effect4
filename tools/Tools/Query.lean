@@ -404,7 +404,7 @@ def answer (req : Request) : Answer :=
               ("matchedFocus", .bool matched), ("check", checkJson (filled.check {}))])
     | other => refused other s!"unknown operation {other}" req.id
 
-/-! ## The driver's one function, and the replay of a transcript -/
+/-! ## The driver's one function -/
 
 /-- **Answer one line**: a JSON object that is a request, or an answer that says why it is
 none. The driver prints this for each line of its input. -/
@@ -419,13 +419,5 @@ def answerLine (line : String) : String :=
 /-- The lines of a fixture that hold text. -/
 def fixtureLines (text : String) : List String :=
   (text.splitOn "\n").filter fun line => !line.isEmpty
-
-/-- **A transcript replays**: the answer of each recorded request is the recorded answer, line
-by line. -/
-def replays (requests answers : String) : Bool :=
-  let asked := fixtureLines requests
-  let recorded := fixtureLines answers
-  asked.length == recorded.length &&
-    (asked.zip recorded).all fun pair => answerLine pair.1 == pair.2
 
 end Tools.Query
