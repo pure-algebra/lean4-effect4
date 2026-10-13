@@ -56,9 +56,13 @@ def joinsOf (s : Shape) : List Join := (draw s).picture.joins
 /-- A mark's figure, still, at one pixel to the pixel. -/
 def still (s : Shape) : SvgNode := Tube.still SIDE SIDE (drawn s) (joinsOf s)
 
-/-- A figure in a card, over its caption. -/
+/-- **Every mark's still, drawn once.** A mark stands on many cards (its family's, and each
+constructor's that it draws), and a card reads its still here, so the pen draws each figure once. -/
+def stills : List (Shape × RawNode) := shapes.map fun s => (s, (still s).toRaw)
+
+/-- A figure in a card, over its caption: the mark's still from `stills`. -/
 private def card (s : Shape) (caption : List RawNode) : RawNode :=
-  el "figure" [(still s).toRaw, el "figcaption" caption]
+  el "figure" [((stills.find? (·.1 == s)).map (·.2)).getD (still s).toRaw, el "figcaption" caption]
 
 /-! ## Films -/
 
