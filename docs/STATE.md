@@ -275,6 +275,24 @@ A program has folds, a journaled run with replay, and a printed image that reads
 
 ## Next, in order
 
+0000. **The vertical slice: the to-do application end to end** (decisions row 378; the
+   [lowering note](research/2026-10-13-lowering-vertical-slice/README.md) and the
+   [ergonomics probe](research/2026-10-13-agent-ergonomics-probe/README.md)). The to-do is
+   proved and run in Lean only. `agrees` and `conforms` (`src/Effect4/Laws/Program/Validated.lean`)
+   decide its claims' premises on one recorded run, so a real run is checked run by run. In order:
+   - the agent's small fixes in the tools. Answers carry no hex unless asked, and the session's
+     JSON is named. A fill at a missing address is refused, and the catalogue's gaps are filled;
+   - V1, the to-do on the keyed lane and lane S: its first meeting with tsgo, rc.112 and the
+     OCaml replay;
+   - V2, the application as one module of exported functions (row 373 (11));
+   - V3, the generated declarations: the rows' bindings interface, the inputs' and answers'
+     Schemas, the prelude package. They are also the agent's typed surface;
+   - V4, `apps/todo/` on SQLite with the per-run checker;
+   - beside them, `request_leads` and the banked Ref with its transfer law (refinement per tape).
+     Also the claim record's two labels, and binder names in the TypeScript reader (row 378 (17));
+   - then V5, the OCaml face, its repository lowered through LCNF.
+
+   Planned goals off the slice's path pause (row 378 (12)).
 000. **The runtime differences the probes found** (research notes named `2026-10-12-probe-`). The
    probes of 2026-10-12 rank each difference from Effect by its outcome in real code. Fix those
    that change an outcome; record the rest. Items 2 and 1 of the
