@@ -300,6 +300,10 @@ A program has folds, a journaled run with replay, and a printed image that reads
    certificate. CX4 adds bounded unfolding. Then HO-4 (generics), HO-5 (Pool's service). Then
    CO-7's Effect4 half: handle rows and call sites as worlds. Codex reviews the `Effects` packet. HC-6 and HC-7 of the
    [host-call note](research/2026-10-09-host-calls-and-cleanup.md) stand; HC-2 landed (row 343).
+0. **The studio** (row 362; the [designer workflow note](research/2026-10-12-designer-workflow/README.md)).
+   One served page in the app's browser pane shows each new view entry, the looks, the PC's probes
+   and the documents, and reloads by itself. DS-1 the studio and its reload, DS-2 the scrubber and
+   strips, DS-3 inline pictures with a look switch, DS-4 the keyed diff, DS-5 the document specimen.
 1. **The view and the printer**, one plan across four notes. The order:
    - the program's own graph (row 337, point 9). First its design, with an agent's place in it.
      Then the graph, its ranks and its places as folds of the program (the algebra audit's D);
