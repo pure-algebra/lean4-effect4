@@ -924,6 +924,15 @@ def registry : Registry where
     { id := "loop-agreement", concept := "translation-simulation", role := .simulation
       title := "Loop agreement on the loop-bearing fragment (Looped)"
       pointer := .witness `Effect4.Program.Agreement.loopAgreement },
+    { id := "block-handler-monotone", concept := "translation-simulation", role := .monotonicity
+      title := "A definition block's meaning at a budget only refines with more budget: frontiers refine, finished leaves stay (G5)"
+      pointer := .witness `Effect4.Program.Denote.denoteDefs_refines },
+    { id := "block-handler-unfolds", concept := "translation-simulation", role := .compatibility
+      title := "An invocation of a definition converges exactly as its body does, to one limit; no single budget solves the unfolding equation (G5)"
+      pointer := .witness `Effect4.Program.Denote.invoke_unfolds_at_limit
+      literature := [
+        { work := "XiaEtAl2020", locator := "audit P37, section 4.2", relation := "analogy" }
+      ] },
     { id := "run-eq-ref", concept := "translation-simulation", role := .simulation
       title := "Frame machine replay matches term reference replay at empty host table"
       pointer := .witness `Effect4.Program.Sched.run_eq_ref
