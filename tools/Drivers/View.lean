@@ -268,7 +268,9 @@ def studioLinks (dir : System.FilePath) : IO (List (String × String)) := do
 /-- **The studio** (decisions row 362): every kept entry, newest first, its last picture linking to
 its player, and the looks, the probes and the documents a click away. Each entry carries its
 fields as data attributes, for an agent that reads the page. The page asks for `index.json` every
-two seconds and reloads when a newer entry has come. -/
+two seconds and reloads when a newer entry has come. When the document specimen exists
+(`tools/view/v -d`), its dark and paper pages stand side by side above the entries, each reloaded
+when its file is written again. -/
 def galleryPage (runs : List KeptRun) (links : List (String × String)) : String :=
   let card (r : KeptRun) : String :=
     "<section data-entry=\"" ++ escape r.id ++ "\" data-title=\"" ++ escape r.title ++ "\" data-look=\"" ++
@@ -288,12 +290,29 @@ def galleryPage (runs : List KeptRun) (links : List (String × String)) : String
   "nav { font-family: var(--e4-font-data-family); font-size: 13px; }\n" ++
   "h2 { font-family: var(--e4-font-data-family); font-size: 15px; margin: 8px 0 2px; }\n" ++
   "h2 a { text-decoration: none; }\nsection img { max-height: 320px; object-fit: contain; object-position: left top; }\n" ++
+  ".docs { margin: 0 0 28px; }\n.docs h2 { margin: 0 0 8px; }\n" ++
+  ".pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }\n" ++
+  ".pair iframe { width: 100%; height: 62vh; border: 1px solid var(--e4-color-rule); border-radius: 4px; background: transparent; }\n" ++
+  "@media (max-width: 900px) { .pair { grid-template-columns: minmax(0, 1fr); } }\n" ++
   "</style>\n</head>\n<body>\n<header><h1>Studio</h1><nav>" ++ nav ++ "</nav><span class=\"meta\">" ++
   toString runs.length ++ " entries, newest first; the page reloads when one comes</span></header>\n<main>\n" ++
   String.join (runs.map card) ++ "</main>\n<script>\nconst newest = " ++ newest ++ ";\n" ++
+  "const stamps = new Map();\n" ++
+  "const stamp = async src => { try { const r = await fetch(src, { method: 'HEAD', cache: 'no-cache' });\n" ++
+  "  return r.ok ? r.headers.get('Last-Modified') : null; } catch (e) { return null; } };\n" ++
+  "async function docs() { if (!(await stamp('docs/specimen-dark.html'))) return;\n" ++
+  "  const box = document.createElement('section'); box.className = 'docs'; box.setAttribute('aria-label', 'document specimen');\n" ++
+  "  box.innerHTML = '<h2>Document specimen <span class=\"meta\">dark beside paper; each reloads when written (v -d)</span></h2>' +\n" ++
+  "    '<div class=\"pair\"><iframe data-watch src=\"docs/specimen-dark.html\" title=\"the specimen in the dark look\"></iframe>' +\n" ++
+  "    '<iframe data-watch src=\"docs/specimen-paper.html\" title=\"the specimen in the paper look\"></iframe></div>';\n" ++
+  "  document.querySelector('header').after(box); }\n" ++
+  "async function watch() { for (const f of document.querySelectorAll('iframe[data-watch]')) {\n" ++
+  "  const m = await stamp(f.getAttribute('src')); if (m && stamps.has(f) && stamps.get(f) !== m) f.contentWindow.location.reload();\n" ++
+  "  if (m) stamps.set(f, m); } }\n" ++
+  "docs().then(watch);\n" ++
   "setInterval(async () => {\n  try {\n" ++
   "    const index = await (await fetch('index.json', { cache: 'no-cache' })).json();\n" ++
-  "    if ((index.entries[0] || '') !== newest) location.reload();\n  } catch (e) {}\n}, 2000);\n" ++
+  "    if ((index.entries[0] || '') !== newest) location.reload();\n  } catch (e) {}\n  watch();\n}, 2000);\n" ++
   "</script>\n</body>\n</html>\n"
 
 /-- Rewrite `dir/index.html`, the studio, and `dir/index.json`, its entries newest first, which

@@ -32,6 +32,7 @@ tools/view/v -p pFork       # a PNG of every frame and every picture of motion
 tools/view/v -k pFork       # the frames inline in Ghostty or kitty (the kitty graphics protocol)
 tools/view/v -H pFork       # the run's page in the browser: its frames as SVG, stepped like the window
 tools/view/v -G             # every kept run in the browser, newest first
+tools/view/v -d             # the document specimen, dark beside paper, in the studio
 tools/view/v -f FILE        # the frames of a session request file
 tools/view/v -P -m 1 pLoop  # no marks; no motion
 tools/view/v -l paper pFork # in a look of tools/view/looks/
