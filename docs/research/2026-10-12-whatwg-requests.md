@@ -20,9 +20,18 @@ An entry closes with the package commit that answers it.
 | W5 | CSS Syntax (level 3) sealed and read: tokens, rules and declarations, so a stylesheet is checked by its grammar | `page.css` must take every colour and family from a look's custom property (row 354, point 1); `Sheet.problem` in `tools/Tools/Document/Html.lean` checks that by scanning lines | no CSS module (`Whatwg/` holds Ecma262, Html, Infra, Signatures, Streams, Svg, Url, WebIdl) | medium |
 | W6 | `href` values read by the URL Standard, and a site-level check that a relative link resolves to a page of the site | the site's pages link each other by relative paths (`Inline.link`) | `Whatwg/Url` exists; whether attribute admission reads `href` through it was not read | medium |
 | W7 | A located refusal in words, the element names along its path (`Refusal.describe tree`) | Effect4 writes this itself (`describe`, `tools/Tools/Document/Html.lean`) | `Reason.describe`, `RawNode.at?` (`Whatwg/Html/Content/Explain.lean`) | low |
+| W8 | The `admits` tactic reads a computed attribute name: `"aria-" ++ "label"` from `AttrVal.aria`, `"data-" ++ k` from `AttrVal.data` | the shell's `nav` takes `aria-label` beside spliced children; Effect4 writes the literal `⟨.aria_, "aria-label", "Pages"⟩` (`tools/Tools/Site.lean`) | `Admit.str?` reads a literal or `String.mk` of characters; an append of two literals reaches neither | medium |
+| W9 | `html!` reads the tag of a spliced `E.el e` from the type of `e`, under an element with an ordered model (`head`, `html`) | the head's styles differ by page, and `html`'s model reads its children's tags; Effect4 types the head `Element .head InHtml`, proves its attributes empty by cases (`head_attrs`) and places it with `Child.of` | the elaborator checks the ordered model only when no child is spliced, and leaves the kernel to evaluate it over spliced terms | medium |
+| W10 | `SvgBuild` constructors for `a` (with `href`), `title` and `desc` (a part of W4) | each node of a plan figure is a link, with a spoken title | the tags and `href` are in the schema (`Whatwg/Svg/Schema/Tags.lean`, `Attributes.lean`); no constructor | medium, with W4 |
+| W11 | Motion that passes a page's policy `default-src 'self'`: keyframes in a CSS file and the animation named by a class, never an inline `style` | the site serves that policy (`Tools.Site.headers`); the understanding note's Q5 | the kit writes a motion's timing as an inline `style` (the understanding note, section 1) | medium, before motion reaches the site |
 
 ## Notes, not asks
 
+- **The typed shell landed** (Effect4 `e04ea78a5`, decisions row 364): every page's frame is
+  written in `html!` in `tools/Tools/Site.lean`, and the module elaborates in about two seconds.
+  A block folded from data enters through Effect4's `admit`, the shape asked as W1:
+  `admit {ctx} (n : RawNode) : Except Refusal (Child ctx)`, from `explain_none_iff`. A computed
+  `href`, a computed text and a computed `aria-current` splice without trouble.
 - **The typed tree's cost.** Effect4 will measure the elaboration of a page shell written with `E.*`
   and `html!` before it adopts them. `Typed.lean` notes that a list literal of more than 32
   children costs seconds; a shell stays well under that.
