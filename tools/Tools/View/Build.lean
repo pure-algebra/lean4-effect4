@@ -108,7 +108,7 @@ def frames (title : String) (reqs : List Tools.Session.Request) : List Frame :=
     match st'.session with
     | none => (st', out)
     | some l =>
-      if r.op == "view" || r.op == "journal" || r.op == "sketch" then (st', out)
+      if r.op == "view" || r.op == "journal" || r.op == "sketch" || r.op == "run" then (st', out)
       else
         let lit := if r.op == "open" then none else some r.path
         let (delta, spliced) := match st'.journal, ans.ok, r.op with

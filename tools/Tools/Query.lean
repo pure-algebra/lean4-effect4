@@ -192,15 +192,28 @@ def effTyJson (t : EffTy) : Json := printJson t
 
 /-- A refusal: its address, the name of its reason, and the whole refusal as its generated
 canonical print (`detail`, `Tools.JsonBridge.printJson`), so a reason's own fields reach the
-author: a reference's target and the condition it breaks, among them. -/
-def refusalJson (r : TypeRefusal) : Json :=
-  Json.mkObj [("path", toJson r.path), ("reason", .str (Canonical.head r.reason)),
-    ("detail", printJson r)]
+author: a reference's target and the condition it breaks, among them. When `root` is a definition
+block, it also names the enclosing `definition` and any invoked `parameter` (`Eff.defAt`,
+`Eff.paramAt`). -/
+def refusalJson (r : TypeRefusal) (root : Option (Eff NativeOp) := none)
+    (sig : Signature NativeOp := nativeSignature []) : Json :=
+  Json.mkObj <|
+    [("path", toJson r.path)] ++
+    (match root.bind (·.defAt r.path) with
+      | some d => [("definition", .str d)]
+      | none => []) ++
+    (match root.bind (·.paramAt sig r.path) with
+      | some (callee, name) =>
+        [("parameter", Json.mkObj [("callee", .str callee), ("name", .str name)])]
+      | none => []) ++
+    [("reason", .str (Canonical.head r.reason)), ("detail", printJson r)]
 
 /-- The checker's answer: a type or a refusal. -/
-def checkJson : Except TypeRefusal EffTy → Json
+def checkJson (res : Except TypeRefusal EffTy) (root : Option (Eff NativeOp) := none)
+    (sig : Signature NativeOp := nativeSignature []) : Json :=
+  match res with
   | .ok t => Json.mkObj [("status", .str "ok"), ("type", effTyJson t)]
-  | .error r => Json.mkObj [("status", .str "refused"), ("refusal", refusalJson r)]
+  | .error r => Json.mkObj [("status", .str "refused"), ("refusal", refusalJson r root sig)]
 
 /-- The environment of a node. An entry that is not reached has none. -/
 def nodeEnvJson : Option NodeEnv → Json
@@ -214,11 +227,12 @@ def nodeEnvJson : Option NodeEnv → Json
       ("params", toJson (params.map (·.name))), ("requests", printJson (params.map (·.request)))]
 
 /-- One entry of the address table. An address of no program has no result. -/
-def entryJson (e : Table.Entry) : Json :=
+def entryJson (e : Table.Entry) (root : Option (Eff NativeOp) := none)
+    (sig : Signature NativeOp := nativeSignature []) : Json :=
   Json.mkObj [("path", toJson e.path), ("env", nodeEnvJson e.env),
     ("result", match e.result with
       | none => .null
-      | some result => checkJson result)]
+      | some result => checkJson result root sig)]
 
 /-- The focus at an address, or that the function answers none there. -/
 def focusJson (focus : Option (Focus NativeOp)) (hex : Bool := true) : Json :=
@@ -351,10 +365,11 @@ def answer (req : Request) : Answer :=
   | _, none => refused req.op "the hole table's bytes do not decode" req.id
   | some program, some holes =>
     let sketch : Sketch := { program, holes }
+    let sig := (({} : SigApp).withHoles holes).signature
     let done (laws : List Lean.Name) (result : Json) : Answer :=
       { op := req.op, laws, ok := true, result, id := req.id }
     match req.op with
-    | "check" => done [``Sketch.check_program] (checkJson (sketch.check {}))
+    | "check" => done [``Sketch.check_program] (checkJson (sketch.check {}) (some program) sig)
     | "addresses" => done [``mem_addresses_iff] (toJson (Node.addresses (.eff program)))
     | "focus" =>
       -- the root's focus is the module check's answer, which may be a block's; any other is the
@@ -366,12 +381,12 @@ def answer (req : Request) : Answer :=
       done (if focus.isSome then laws else []) (focusJson focus)
     | "table" =>
       done [``mem_addresses_iff, ``Sketch.table_head]
-        (Json.arr ((sketch.table {}).map entryJson).toArray)
+        (Json.arr ((sketch.table {}).map fun e => entryJson e (some program) sig).toArray)
     | "refusals" =>
       done [``Sketch.refusals_head, ``Sketch.refusals_nil_iff]
-        (Json.arr ((sketch.refusals {}).map refusalJson).toArray)
+        (Json.arr ((sketch.refusals {}).map fun r => refusalJson r (some program) sig).toArray)
     | "slots" =>
-      let (slots, typed) := slotsAt (({} : SigApp).withHoles holes).signature program req.path
+      let (slots, typed) := slotsAt sig program req.path
         (req.slot.map ([·]) |>.getD allSlots)
       done (if typed && !slots.isEmpty then [``hasTy_extSlotEnv] else []) (Json.arr slots.toArray)
     | "omit" =>
@@ -386,7 +401,8 @@ def answer (req : Request) : Answer :=
             (Json.mkObj [("program", .str (hexOf omitted.program)),
               ("holes", toJson omitted.holes.length), ("needsHoleTable", .bool true),
               ("holeTable", .str (toHex omitted.holes)),
-              ("check", checkJson (omitted.check {}))])
+              ("check", checkJson (omitted.check {}) (some omitted.program)
+                (({} : SigApp).withHoles omitted.holes).signature)])
     | "fill" =>
       match req.replacement.bind (ofHex? (α := NativeEff)) with
       | none => refused req.op "the filling's bytes do not decode" req.id
@@ -399,7 +415,8 @@ def answer (req : Request) : Answer :=
             | none => false
           done (if matched then [``Sketch.check_fill_focusAt] else [])
             (Json.mkObj [("program", .str (hexOf filled.program)),
-              ("matchedFocus", .bool matched), ("check", checkJson (filled.check {}))])
+              ("matchedFocus", .bool matched),
+              ("check", checkJson (filled.check {}) (some filled.program) sig)])
     | other => refused other s!"unknown operation {other}" req.id
 
 /-! ## The driver's one function -/

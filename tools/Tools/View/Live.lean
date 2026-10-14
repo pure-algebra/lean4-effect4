@@ -173,7 +173,7 @@ def step (s : Settings) (title : String) (st : State) (r : Tools.Session.Request
   match tool.session with
   | none => ({ st with tool }, ans, [])
   | some l =>
-    if r.op == "view" || r.op == "journal" || r.op == "sketch" then ({ st with tool }, ans, []) else
+    if r.op == "view" || r.op == "journal" || r.op == "sketch" || r.op == "run" then ({ st with tool }, ans, []) else
     let (g, memo) := page title r tool ans l st.memo
     let gutter := ratchet s.columnStep st.gutter (ownGutter g)
     let codeAt := ratchet s.columnStep st.codeAt (ownCodeAt g)

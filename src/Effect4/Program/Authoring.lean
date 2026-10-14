@@ -529,6 +529,12 @@ def Module.rowNames {Op : Type} (m : Module Op) : RowNames := RowDef.names m.row
 def Module.serviceTypes {Op : Type} (m : Module Op) : List (Effect4.ServiceKey × Ty) :=
   m.services.map fun s => (s.key, s.carrier)
 
+/-- The definition whose body holds `path` in `m`, by name (`Path.spineIndex`); `none` when `m`
+declares no definition or `path` stands outside every body. -/
+def Module.defAt {Op : Type} (m : Module Op) : List Nat → Option String
+  | 0 :: rest => (Path.spineIndex rest).bind fun k => (m.defs[k]?).map (·.name)
+  | _ => none
+
 set_option backward.privateInPublic true in
 private def layerNamesOf {Op : Type} (layers : List (String × LayerSrc Op)) :
     Except Refusal LayerNames :=

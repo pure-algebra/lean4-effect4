@@ -71,4 +71,13 @@ def invokeRequirementFault (sig : Signature Op) : Eff Op → Option (List Nat)
       fault sig' [] [1] main
   | _ => none
 
+/-- The enclosing definition and invoked parameter of a printer refusal that names a path in
+`root` (`callbackRequirement`, `layerRef`). -/
+def PrintRefusal.locate (sig : Signature Op) (root : Eff Op) :
+    PrintRefusal → Option (Option String × Option (String × String))
+  | .callbackRequirement path | .layerRef path =>
+    some (root.defAt path, root.paramAt sig path)
+  | _ => none
+
 end Effect4.Codegen
+

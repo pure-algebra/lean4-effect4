@@ -150,4 +150,48 @@ def Eff.defsOf : Eff Op → List DefDecl
   | .defs decls _ _ _ => decls
   | _ => []
 
+/-- The definition whose body holds `path` in `root`, by name (`Eff.scopeOf`); `none` outside
+every body. -/
+def Eff.defAt (root : Eff Op) (path : List Nat) : Option String :=
+  (root.scopeOf path).bind fun k => (root.defsOf[k]?).map (·.name)
+
+/-- The invoked definition and parameter that hold `path` under `node`, innermost first: when a
+step along `path` stands at `Eff.invoke k _ _` and enters its programs (`0 :: rest`), the
+parameter is `params[j]` of `decls[k]` at the spine position `j` (`Path.spineIndex rest`); when
+`path` ends at `Eff.invoke k _ _` itself, its first parameter. Read through the generated
+`LayerView.view`. -/
+def Node.paramAt (decls : List DefDecl) : Node Op → List Nat → Option (String × String)
+  | .eff e, [] =>
+    match view .eff e with
+    | ("invoke", .nat k :: _) =>
+      (decls[k]?).bind fun d => (d.params.head?).map fun p => (d.name, p.name)
+    | _ => none
+  | _, [] => none
+  | n, step :: rest =>
+    match (n.child step).bind fun c => c.paramAt decls rest with
+    | some found => some found
+    | none =>
+      match n, step with
+      | .eff e, 0 =>
+        match view .eff e, Path.spineIndex rest with
+        | ("invoke", .nat k :: _), some j =>
+          (decls[k]?).bind fun d => (d.params[j]?).map fun p => (d.name, p.name)
+        | _, _ => none
+      | _, _ => none
+
+/-- The definition and parameter at `path` in `root`: the innermost invoked parameter that holds
+`path` (`Node.paramAt`), or, at a parameter call `perform op _` inside a body, the enclosing
+definition and the parameter `sig.paramOf op` names. -/
+def Eff.paramAt (sig : Signature Op) (root : Eff Op) (path : List Nat) :
+    Option (String × String) :=
+  ((Node.eff root).paramAt root.defsOf path).or <|
+    match (Node.eff root).at_ path, root.scopeOf path with
+    | some (.eff e), some k =>
+      match view .eff e, root.defsOf[k]? with
+      | ("perform", .op op :: _), some d =>
+        (sig.paramOf op).bind fun i => (d.params[i]?).map fun p => (d.name, p.name)
+      | _, _ => none
+    | _, _ => none
+
 end Effect4.Program
+
