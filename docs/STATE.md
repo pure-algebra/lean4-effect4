@@ -276,7 +276,7 @@ A program has folds, a journaled run with replay, and a printed image that reads
 
 ## Next, in order
 
-**After PROC-6** (rows 379 and 381): SCOPE-1, layers, scopes and services on one fiber
+**PROC-6 landed** (row 379; merged `36ddb0b56`): `h9_blocks` is proved, with the context family at every scheduler budget. **Next, the procedures line's close-out**: the inlining law (G7) with the Queue's and Semaphore's expansion claims, the typed substitution and unfolding laws (CX3, CX4), generic definitions (PROC-7, G8) and the value form (PROC-8, G9, under row 381 (3)). **Then** (rows 379 and 381): SCOPE-1, layers, scopes and services on one fiber
 ([its scout](research/2026-10-14-one-fiber-scout.md)), then CONC-1, many fibers
 ([its scout](research/2026-10-14-many-fibers-scout.md)). Both reach the machine through the
 proved `run_eq_ref_table`; each owes one adequacy theorem of the reference against the meaning.
