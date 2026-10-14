@@ -43,3 +43,35 @@ are wrong, and two of its proposals contradict the tree or a ruling. The correct
 - The two new connector claims, composed with the expansion claims by transitivity.
 - HO-5 and PROC-7 before the module form.
 - One stage for closures, the activation stack and SCOPE-1's stage 0.
+
+## 5. Round 2: Gemini's review of the mathematics
+
+The review is `gemini-math-review.md` at `96bc22eaf`. The coordinator re-ran its probe:
+`lean-slot.sh lake env lean docs/research/2026-10-14-proc-close/probes/MathProbes.lean`, exit 0,
+no error, no warning, no `sorry`. Decisions row 385 records the rulings.
+
+### 5.1 What holds, checked against the tree
+
+| Finding | Check |
+| --- | --- |
+| `Step.Lift` relates two finished steps only at one equal value, so `IsSim` cannot relate an implementation's stores to a model's state | `Effects/Coalgebra/Step.lean`: `Lift.done (value : A)` on both sides |
+| `System.peel` always steps, so a budget cut becomes a finished value, not a cut | `Effects/Coalgebra/Run.lean`: `peel … := fun state => some (Program.peel …)` |
+| the prototype order (`PeelStepRel`, `PeelSim`) composes and is sound for every host | the probe's `PeelSim.comp` and `PeelSim.sound_host` compile |
+| a client can compare handles only by `sameHandle`: equality and arithmetic refuse them | `NativeAtom.eval` (`src/Effect4/Machine/Term.lean`): `.eq` goes through `intEq`, which answers `none` on a handle; the probe's `sameHandle_renaming_invariant` |
+| waiting has three transitions (attempt, signal, withdrawal) and two wrappers; a `waitRetry` wake reserves nothing | `src/Effect4/Library/Waiting.lean`; the probe's model runs for the Queue and Semaphore |
+| Semaphore admits barging: `takeIfAvailable` can take the permit before a woken waiter retries | the probe's Semaphore run (row 259) |
+| one generic step agreement can hold an existing one unchanged | the probe's `refObjectSpec_stepsAgree`, from `ref_steps_agree`; shown for Ref only |
+| the queue-workers claims rest on three planned goals | the probe's `#plan_status`: `jobs_step`, `rest_step`, `logs_history` |
+| the masks are outside the block meaning today | `blockAlgB` answers `outsideExit` for them; SCOPE-1's stage 1 already plans them |
+
+### 5.2 What the review gets wrong
+
+| The review says | The tree says |
+| --- | --- |
+| `call_arm`, `invoke_arm` and `param_arm` are open goals in `Typed/BlockArms.lean` | no such file exists; the three are proved in `Typed/Denotation.lean` (round 1's own `#plan_status`) |
+| a numbering G1 to G9 (closures, `ModuleDecl`, a Queue module, a Semaphore module) | the tree's G7 to G10 are the inlining law, `check_subst`, `resolve_typed` and SynchronizedRef's claim; the review's numbering is its own |
+| its restatement of §3's eleven corrections | several are restated wrongly (for example "`ModuleDecl` is a new structure that G6 introduces"; §3 says no such declaration exists) |
+| Latch's await uses `waitAnswer` | no Latch module uses the shared wrapper (`src/Effect4/Library/Latch/` has no use of it) |
+| the masks block G8 and G9 | G8 (`check_subst`) and G9 (`resolve_typed`) are typing statements; only G10 needs the masks |
+| close the many-fiber claims directly on the machine | that is a proof per program, with a program's own invariants (the review itself names one for the crew). The generic theorems on the meaning stay, and the direct proofs are the control route |
+| no logical relation for higher-order state is needed, because values hold no closures | true today; D2 adds closures. D2's closures are first-order data (a code address and captured values), so the first-order argument should extend: D2 must show it |

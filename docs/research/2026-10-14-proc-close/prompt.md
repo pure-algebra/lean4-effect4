@@ -4,8 +4,9 @@
 
 PROC-6 landed and is merged (`36ddb0b56`; decisions row 379). This brief is rewritten after
 Gemini's review (`gemini-review.md`), the coordinator's corrections (`review-notes.md`) and the
-modelling check (`modelling-check.md`). Decisions rows 383 and 384 record the rulings. Track 1
-lands now:
+modelling check (`modelling-check.md`) and Gemini's review of it (`gemini-math-review.md`,
+`review-notes.md` §5). Decisions rows 383, 384 and 385 record the rulings. Track 1 lands now:
+- the `effects` package's simulation with a relation on results, an Effects release;
 - the one refinement order on the meaning, with its congruence;
 - the inlining law G7 in that order;
 - CX3, the typing of an inlined program;
@@ -42,7 +43,9 @@ CX4 is proved already (`call_arm`, `invoke_arm` and `param_arm` with `hop_typed`
   out. It is the frame for every slice below.
 - `docs/research/2026-10-14-proc-close/gemini-review.md`, `review-notes.md` and
   `probes/Probes.lean`. Where the review and the notes disagree, the notes win.
-- Decisions rows 82, 328, 331, 340, 361, 379, 381, 382, 383 and 384.
+- `docs/research/2026-10-14-proc-close/gemini-math-review.md` and `probes/MathProbes.lean`:
+  `PeelSim` there is the prototype of slice L0.
+- Decisions rows 82, 259, 328, 331, 340, 361, 379, 381, 382, 383, 384 and 385.
 - The PROC design (`docs/research/2026-10-08-seat-PROC-design.md`): §4.4, §8 and §9.
 - `docs/research/2026-10-09-program-parameters.md` (HO-4, HO-5) and
   `docs/research/2026-10-10-cx-lexical-scope.md` (§3.4, §8, §9).
@@ -71,12 +74,28 @@ that bind every slice". In short:
 
 ## Track 1: land now
 
+The order: L0, then L3 while the coordinator releases L0, then L1, L2 and L4.
+
+### Slice L0: the simulation with a relation on results (the `effects` package)
+
+- Work in `/Users/pooks/Dev/lean4-effects` (the pin `bf5ab8f`, v0.10.1), on a new branch
+  `codex/result-relation`. Its own build and its own audit hold; read its `AGENTS.md` or
+  `README.md` first.
+- `Step.Lift` gains a relation on results: two finished steps relate when their values relate.
+  `IsSim` and `IsBisim` take it, and so do `run_of_sim`, `run_eq_of_bisim`, the compositions
+  (`IsSim.comp`) and `unfold_approx_of_sim`. Today's forms are the equality instances, stated as
+  abbreviations or theorems, so every existing caller keeps its name and its proof.
+- Add the result relation on `Option` results that puts a cut below everything. With it, a
+  program's budget cut is the bottom of a peeled system (`System.peel`).
+- Prove the peeled form's soundness for every host, as `PeelSim.sound_host` does in the probe.
+- Stop after this slice's commit in the `effects` repository, and report. Releasing it and
+  bumping the pin are the coordinator's, after the owner's push.
+
 ### Slice L1: the refinement order on the meaning
 
 - Define the order as inclusion of completed observations of runs, up to a relation on states
-  (row 384 (1)). A run's state is the stores and the host's state. Prove instances by simulation
-  up to that relation, with the `effects` package's `IsSim` and `unfold_approx_of_sim`. Write no
-  second simulation framework.
+  (rows 384 (1), 385 (1)). Then use L0's simulation with a result relation, after the stores are
+  peeled. Write no second simulation framework.
 - Its identity instance is the limit order on budget-indexed trees: every budget of the left is
   approximated, by `Effects.Program.Approx`, at some budget of the right. It is not `Approx`
   itself (row 382 (3)). Define `RefinesB` as that instance's pullback through `denoteBlockB`,
@@ -92,6 +111,10 @@ that bind every slice". In short:
   the relation (the frame condition). Generalize `cata_blockAlgB_approx`, which proves the identity
   case (its hypothesis `hc` relates the two handlers). A module's claim then relates its two
   handlers operation by operation, and never quantifies over clients.
+- The frame condition (row 385 (2)): the abstraction splits the stores into the module's
+  owned keys and the client's. A client's store operations act outside the owned keys. A
+  module's operation establishes the relation at its success and failure exits. A budget cut is
+  the bottom.
 - Prove the frame condition for the identity relation now. State the module case's frame
   condition as a premise (row 384 (3)). It has two readings: the module form's opaque closures,
   or a located refusal that the client uses the handle only through the operations.
@@ -112,6 +135,8 @@ L2 uses the substitution, so this slice lands before it.
   definition's. Compose with `check_weaken`, `check_replace` and `table_splice`, so that replacing
   a call or an invocation by its inlined body at any address keeps the module typed.
 - Prove that the substitution keeps `BodyRows`, so an inlined block stays in `BlockRows`.
+- Prove the meaning's weakening law, `denoteBlockB_weaken`: a weakened program at a longer
+  environment means the program at the shorter one (row 385 (6)). L2's sandwich uses it.
 - Claim: `inline-types`, role preservation, beside `check_replace` under `initial-algebras-folds`
   (R14). The typed run keeps its path-addressed points (the CX note §3.4): CX3 types the inlined
   program, not a point inside it.
@@ -170,7 +195,9 @@ Give its rulings, stages, placements of the planned goals, fan-out, gates and op
   is the closed instances of formed templates (`Bounds.TemplateOK`), and the instance of a host
   call in a generic body (row 323). HO-5: methods with program parameters (`withPermits`,
   `withPermitsIfAvailable`, Pool's `use`), as the program-parameters plan sets it out.
-- **D2, the closure stage** (row 383 (5)). One design for three things:
+- **D2, the closure stage** (rows 383 (5), 385 (5)). Closures stay first-order data: a code
+  address and captured values. Show that the renaming argument for names extends to them. One
+  design for three things:
   - closures held as data (row 381 (3)): a code reference and captured values; a program path
     now, and a content digest with content addressing;
   - one activation stack: first show the invariant that `Point.params` and `Point.call` move
@@ -196,15 +223,21 @@ Give its rulings, stages, placements of the planned goals, fan-out, gates and op
 - **D3, the module form's inputs and the generic object** (row 384 (5) to (8)).
   - Say what D1 and D2 give the module form (rows 331 (6), 382 (2)). The module form is a record
     of opaque closures over a cell, generic in its types, and its methods take programs.
-  - Design one object specification: a state, the operations, each a two-phase step (enrolment
-    and fulfilment), and the encoding into the cell. Design one `StepsAgree` over it. Show the
-    five existing structures (Queue, Semaphore, Pool, Latch, Ref) as its instances, field by
-    field.
-  - State the wrapper law that CONC-1 proves once: the wrapper over agreeing steps refines the
-    two-phase object, linearized at enrolment and fulfilment.
-  - Design the claim template. It has refinement; refinement that keeps termination under fair
-    tapes; names compared up to renaming; and the trust chain as `ClaimRecord.assumes` premises
-    with their grades.
+  - Design one object specification with three transitions (row 385 (3)): an attempt, a signal
+    and a withdrawal, under the two wrappers `waitRetry` and `waitAnswer`. Start from the probe's
+    `ObjectSpec`, with its relation on replies. Design one `StepsAgree` over it. Show each of the
+    five existing structures (Queue, Semaphore, Pool, Latch, Ref) as its instance. Each adapter
+    theorem leaves the proved theorem unchanged. Do the Queue first: it is the hard case,
+    with its relation on signals (`Notified`).
+  - State the wrapper law that CONC-1 proves once. A `waitRetry` operation is linearized at its
+    successful attempt. A `waitAnswer` operation is linearized at the step that commits its
+    answer.
+  - Design the claim template. It has four parts:
+    - refinement;
+    - progress as the model states it (row 385 (4)): freedom from deadlock by default, from
+      starvation where the model serves in order;
+    - names compared up to renaming;
+    - the trust chain, as `ClaimRecord.assumes` premises with their grades.
   - Do not design the module form itself.
 - **Stop after the design note** and report. The coordinator reviews it before D1 or D2 touches
   source.

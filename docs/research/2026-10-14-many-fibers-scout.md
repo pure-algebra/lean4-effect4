@@ -126,13 +126,15 @@ flowchart TD
   SynchronizedRef's `modify` reach their connectors:
   `queue-definitions-agree` and `semaphore-definitions-agree` are proved here, and compose with
   `queue-expansion-agrees` and `semaphore-expansion-agrees` by transitivity.
-- **The wrapper law, proved once** (decisions row 384 (6), (7)). The shared wrapper
-  (`src/Effect4/Library/Waiting.lean`) over steps that agree with a two-phase object refines that
-  object, linearized at enrolment and at fulfilment. The waits and posts touch only the request's
+- **The wrapper law, proved once** (decisions rows 384 (7), 385 (3)). The shared wrapper
+  (`src/Effect4/Library/Waiting.lean`) over steps that agree with a three-transition object
+  (attempt, signal, withdrawal) refines that object. A `waitRetry` operation is linearized at
+  its successful attempt, and a `waitAnswer` operation at the step that commits its answer. The waits and posts touch only the request's
   own Deferreds, so they commute with every other fiber's step, and reduction leaves the atomic
   steps. Each module's expansion claim is then its instance at its `StepsAgree`.
-- **Progress** (row 384 (5)). The order that keeps termination, under `FairTape`: the
-  implementation answers where the model answers. Each bank claim carries it beside refinement.
+- **Progress** (rows 384 (5), 385 (4)). The order that keeps termination, under `FairTape`: the
+  implementation answers where the model answers. Each model states its guarantee: freedom from
+  deadlock by default, from starvation where it serves in order. Each bank claim carries it.
 
 ### Stage 4: H9 on many fibers
 

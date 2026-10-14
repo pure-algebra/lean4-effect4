@@ -80,6 +80,11 @@ reads and writes its cell and mints its request's names; its model touches neith
 built from `Approx` alone states relation 3. Row 383 (1)'s definition is that order's identity
 instance.
 
+**Amended by row 385 (1).** The `effects` package's simulation relates finished steps at one
+equal value. Its peeled system turns a budget cut into a finished value (Gemini's second
+review). So the simulation first gains a relation on results, in the `effects` package, with
+today's forms as its equality instances.
+
 **The repair.** The order is inclusion of completed observations, proved by a simulation up to a
 relation on states. The `effects` package has the tool: `IsSim` and `unfold_approx_of_sim`
 (`Effects/Coalgebra/Bisim.lean`), which compose (`IsSim.comp`). Two instances use it:
@@ -138,7 +143,9 @@ answers refines every model. G7 states refinement both ways on equal observation
 claim is one way. A bank claim therefore has two parts:
 - refinement: safety;
 - refinement that keeps termination, under fair tapes: the implementation answers where the
-  model answers (R12, `FairTape`). Liang, Feng and Fu characterise lock-freedom and
+  model answers (R12, `FairTape`). Amended by row 385 (4): each model states its guarantee.
+  Freedom from deadlock is the default; freedom from starvation holds where the model serves
+  in order. Semaphore admits barging, so its `take` has the first only. Liang, Feng and Fu characterise lock-freedom and
   deadlock-freedom as contextual refinement that keeps termination (CONCUR 2013; unread in this
   repository).
 
@@ -152,6 +159,12 @@ post. They are specifications with reservations: a request's step enrols it, and
 fulfils it. Scherer and Scott call such objects dual data structures (DISC 2004; unread in this
 repository). So the many-fiber claim is linearizability with two points per waiting request: its
 enrolment and its fulfilment.
+
+**Amended by row 385 (3).** The object has three transitions: an attempt, a signal and a
+withdrawal. A `waitRetry` wake reserves nothing, so such an operation is linearized at its
+successful attempt. A `waitAnswer` operation is linearized at the step that commits its answer,
+which another request performs. An enrolment and a withdrawal are transitions that other
+requests read.
 
 ### 4.7 Four generic theorems replace per-module work
 
@@ -232,6 +245,9 @@ flowchart TD
   L3["substitution and its typing, CX3 (L3)"]
   L2["the inlining law G7 (L2)"]
   L4["definitions-agree (L4)"]
+  L0["the simulation with a result relation, an Effects release (L0)"]
+  WK["the meaning's weakening law (L3)"]
+  CT["control: jobs_step, rest_step, logs_history"]
   D2["opaque closures and one stack (D2, SCOPE-1 stage 0)"]
   D3["the object specification, StepsAgree, the claim template (D3)"]
   S1["SCOPE-1: one fiber, its congruence cases, H9Fiber"]
@@ -242,8 +258,13 @@ flowchart TD
   K2["K2: the Queue's bank claim"]
   K3["K3: the crew from the model alone"]
   G10["G10: SynchronizedRef from Semaphore"]
+  L0 --> L1
   L1 --> L2
   L3 --> L2
+  WK --> L2
+  C1 --> CT
+  CT --> K3
+  S1 --> G10
   L2 --> L4
   L1 --> S1
   D2 --> S1
