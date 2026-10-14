@@ -360,6 +360,15 @@ import Effect4.Laws.Program.ApplicationService
 import Effect4.Laws.Program.ParamRows
 import Effect4.Laws.Library.Ref.Cache
 
+-- PROC-6 placement: definition-block meaning and its open agreement obligations (row 379).
+import Effect4.Laws.Program.BlockMeaning
+import Effect4.Laws.Program.FragmentBlock
+import Effect4.Laws.Program.Agreement.BlockPlain
+import Effect4.Laws.Program.Agreement.Blocks
+import Effect4.Laws.Program.Agreement.HostedBlocks
+import Effect4.Laws.Api.SessionMeaningBlocks
+import Effect4.Laws.Program.ValidatedBlocks
+
 /-!
 # Effect4 proof graph
 

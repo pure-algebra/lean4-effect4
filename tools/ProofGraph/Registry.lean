@@ -976,6 +976,9 @@ def registry : Registry where
     { id := "rows-loop-host", concept := "translation-simulation", role := .simulation
       title := "H9 on loops: for a finished recorded run of the same fragment, under any host whose answers are the run's, past a budget bound the budgeted meaning under the host is the root's exit with the stores and the host ends where the answers left it (no progress claim; nothing of a run stopped at a call; the host-meaning widening, slice L1)"
       pointer := .witness `Effect4.Run.denoteRowsB_eq_session_host },
+    { id := "rows-block-host", concept := "translation-simulation", role := .simulation
+      title := "H9 on definition blocks: a reached, funded, at-rest, host-driven BlockRows run already has a root exit. Under matching host answers, its budgeted meaning eventually has that exit, stores and host state. One fiber; empty initial context; no progress claim. Context admission and scheduler generalization remain planned (decisions row 379)."
+      pointer := .witness `Effect4.Run.h9_blocks },
     { id := "rows-loop-driver", concept := "translation-simulation", role := .simulation
       title := "H9 at the driver on loops: open a LoopedRows program the row fragment with loops admits, evaluate its root and drive it with a reactor inside the envelope that answers with exits (Run.runWith); when the run is funded, at rest and its root exited, past a budget bound the reactor read as a host runs the budgeted call tree to the root's exit with the stores and ends at the drive's state (no progress claim; the host-meaning widening, Q9)"
       pointer := .witness `Effect4.Run.runWith_denotesB },
