@@ -276,7 +276,7 @@ A program has folds, a journaled run with replay, and a printed image that reads
 
 ## Next, in order
 
-**PROC-6 landed** (row 379; merged `36ddb0b56`): `h9_blocks` is proved, with the context family at every scheduler budget. **Next, the procedures line's close-out**: the inlining law (G7) with the Queue's and Semaphore's expansion claims, the typed substitution and unfolding laws (CX3, CX4), generic definitions (PROC-7, G8) and the value form (PROC-8, G9, under row 381 (3)). **Then** (rows 379 and 381): SCOPE-1, layers, scopes and services on one fiber
+**PROC-6 landed** (row 379; merged `36ddb0b56`): `h9_blocks` is proved, with the context family at every scheduler budget. **Next, the procedures line's close-out** (row 383; [its brief](research/2026-10-14-proc-close/prompt.md)): one refinement order on the meaning with its congruence; the inlining law (G7) in it; the typing of an inlined program (CX3); and the Queue's and Semaphore's definition connectors, which reach their last operations through SCOPE-1's and CONC-1's congruence cases. A design note follows for generic definitions with methods that take programs (PROC-7, HO-5), and for one stage of closures held as data and one activation stack, which becomes SCOPE-1's stage 0. **Then** (rows 379 and 381): SCOPE-1, layers, scopes and services on one fiber
 ([its scout](research/2026-10-14-one-fiber-scout.md)), then CONC-1, many fibers
 ([its scout](research/2026-10-14-many-fibers-scout.md)). Both reach the machine through the
 proved `run_eq_ref_table`; each owes one adequacy theorem of the reference against the meaning.

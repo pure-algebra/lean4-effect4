@@ -2,45 +2,53 @@
 
 ## The one thing to know first
 
-PROC-6 landed and is merged (`36ddb0b56`; decisions row 379). The procedures line still owes six
-things: the inlining law that PROC-6 set aside, its two consumers, two typed laws, generic
-definitions, the value form and one activation stack. Land the laws now, in track 1. Design the
-three syntax changes in track 2, then stop for review before any edit to `Eff`, `Ty`, `Store.Val`
-or `Point`.
+PROC-6 landed and is merged (`36ddb0b56`; decisions row 379). This brief is rewritten after
+Gemini's review (`gemini-review.md`) and the coordinator's corrections (`review-notes.md`).
+Decisions row 383 records the rulings. Track 1 lands now:
+- the one refinement order on the meaning, with its congruence;
+- the inlining law G7 in that order;
+- CX3, the typing of an inlined program;
+- the claims of the two definition connectors.
+
+Track 2 designs the syntax changes as one note, then stops for review before any edit to `Eff`,
+`Ty`, `Store.Val` or `Point`.
 
 **The owner's rule for every choice (2026-10-14):** decide on semantics, never on rebuild cost, and
-take the complete option. A shortcut is a finding to report, not a choice to make.
+take the complete option. Every item here is wanted and its users are known. If a statement falls
+short of its users, the plan widens. Never drop or defer an item; report the gap and the step
+that closes it.
 
 ## What the line owes
 
-| Item | What it is | Where it was planned |
+| Item | What it is | Its users |
 | --- | --- | --- |
-| G7 `inline_agrees` | an invocation and its inlining give equal observations | PROC design §4.4 form (c) and §8; row 379 (1) set it aside |
-| `queue-expansion-agrees`, `semaphore-expansion-agrees` | the Queue's and the Semaphore's operations as definitions agree with their expansions | proposed claims in `tools/ProofGraph/Registry.lean`; their helpers are proved |
-| CX3, CX4 | the typed substitution law for parameters, and the typed unfolding law | `docs/research/2026-10-10-cx-lexical-scope.md` §8 |
-| PROC-7, G8 `check_subst` | generic definitions: template rows, a body at rigid variables, the typed print at an invocation, a host call's instance in a generic body | PROC design §9; row 340 (3), slice HO-4 |
-| PROC-8, G9 `resolve_typed` | the value form: a closure held as data | PROC design §9; rows 82, 381 (3), 382 (2) |
-| one activation stack | `Point.params` and `Point.call` merged into one stack of frames | PROC-6 scout §6 (d) |
+| the refinement order (L1) | inclusion of completed observations, on the meaning, with its congruence (row 383 (1)) | G7; the module claims of row 382 (1); G10 |
+| G7 `inline-agrees` (L2) | an invocation and its inlining give equal completed observations, in every context (row 383 (2)) | the to-do's cached service now; the Queue's and Semaphore's connectors through SCOPE-1 and CONC-1 |
+| CX3 `inline-types` (L3) | an inlined program keeps its typing at the checker (row 383 (4)) | G7's typed side: the inlined program meets H9's typed premises |
+| `queue-definitions-agree`, `semaphore-definitions-agree` (L4) | a client over the definition form agrees with the same client over the expansion (row 383 (3)) | every module built from the two modules' definitions |
+| PROC-7 and HO-5 (D1) | generic definitions (G8 `check_subst`) and methods with program parameters | the module form (row 383 (6)) |
+| the closure stage (D2) | closures held as data (PROC-8, G9 `resolve_typed`), one activation stack, and SCOPE-1's stage 0, as one stage (row 383 (5)) | services as records of closures (rows 381 (3), 382 (2)); SCOPE-1 |
+| the module form's inputs (D3) | what D1 and D2 owe the module form of rows 331 (6) and 382 (2) | the ports of row 382 (3) |
 
-The PROC design is `docs/research/2026-10-08-seat-PROC-design.md`.
+CX4 is proved already (`call_arm`, `invoke_arm` and `param_arm` with `hop_typed`,
+`src/Effect4/Laws/Program/Typed/Denotation.lean`). Record its placement in the receipt.
 
 ## Read first
 
 - `AGENTS.md`, all of it.
-- The PROC design: §4.4, §8 (G7 to G9) and §9.
-- `docs/research/2026-10-09-program-parameters.md`, the plan of row 340 and HO-4.
-- `docs/research/2026-10-10-cx-lexical-scope.md`, §8 and §9.
-- Decisions rows 82, 328, 340, 379, 381 and 382.
+- `docs/research/2026-10-14-proc-close/gemini-review.md`, `review-notes.md` and
+  `probes/Probes.lean`. Where the two disagree, the notes win.
+- Decisions rows 82, 328, 331, 340, 379, 381, 382 and 383.
+- The PROC design (`docs/research/2026-10-08-seat-PROC-design.md`): §4.4, §8 and §9.
+- `docs/research/2026-10-09-program-parameters.md` (HO-4, HO-5) and
+  `docs/research/2026-10-10-cx-lexical-scope.md` (§3.4, §8, §9).
+- `docs/research/2026-10-14-one-fiber-scout.md`, stage 0; D2 designs that stage.
 - PROC-6's receipt: `docs/research/2026-10-14-proc6-prep/landing-receipt.md`.
 
 ## Where you work
 
-Reuse your worktree, `/Users/pooks/Dev/lean4-effect4-codex`. Its `.lake` is current and its kit
-package holds `3e5e793`. Start a new branch at the coordinator's head:
-
-```sh
-git -C /Users/pooks/Dev/lean4-effect4-codex switch -c codex/proc-close 85639873e
-```
+Reuse your worktree, `/Users/pooks/Dev/lean4-effect4-codex`. Its kit package holds `3e5e793`.
+Start a new branch at the coordinator's head, given in the launch message.
 
 ## The rules that bind every slice
 
@@ -50,73 +58,122 @@ that bind every slice". In short:
 - place before you prove;
 - `#axiom_audit` each slice, at `[propext, Quot.sound]`;
 - in the law graph, `aesop` and `simp only`, with no `simp_all`, `first` or `try`;
+- every new traversal of `Eff` is a fold (an `EffAlgebra` and `cata_eff`), never a hand `match`;
+- reuse before you add: name the existing declaration each new one could have been;
 - commit by named paths;
 - never push, download nothing, and never write `2>/dev/null`;
 - `lakefile.toml` and `docs/core/decisions.md` are the coordinator's;
 - append to the root imports.
 
-## Track 1: the laws, landed now
+## Track 1: land now
 
-### Slice L1: the inlining law, G7
+### Slice L1: the refinement order on the meaning
 
-- State the claim `inline-agrees` (role simulation, concept `translation-simulation`, R10:
-  "laws proved once per definition instead of per expansion").
-- **The route.** Prove it at the block meaning, which has no schedule. Then seat SIM's
-  relation (the PROC design §4.4, items 1 to 4) is not needed there:
-  - a call: `C[perform (.call k) r]` against `C[bind (succeed r) (shift body)]`;
-  - an invocation: the body's parameter runs replaced by the relocated argument programs.
-- **The observation.** The convergence form: some budget gives the same exit, stores and host
-  state, as `call_unfolds_at_limitB` and `invoke_unfolds_at_limitB` state it.
-- **The steps.** The unfolding laws PROC-6 proved; the shift and relocation lemmas of the code;
-  and a congruence of the convergence relation for every `Eff` constructor, the PROC design
-  §4.4 item 5.
-- **The machine.** On `BlockRows` the statement reaches the machine by `h9_blocks` on both
-  programs, receipt-conditioned, as `H9Blocks` is.
-- Check first, and report it: whether the convergence relation is a congruence as it stands, or
-  needs `Effects.Program.Approx` and monotonicity to be one.
+- Define the order on budget-indexed families of meaning trees. The left refines the right when
+  every budget of the left is approximated, by `Effects.Program.Approx`, at some budget of the
+  right. It is the limit order, not `Approx` itself (row 382 (3)).
+- Define `RefinesB` as its pullback through `denoteBlockB`, and `EquivB` as refinement both ways.
+  Quantify over the context, the environment and parameter frames that approximate each other.
+- Prove the observation law: equivalent programs give equal completed observations (exit, stores,
+  host state) of `hostRunBlockB` at some budget, under every host. Start from
+  `hostRunBlockB_stable` and `denoteBlockB_approx`.
+- Prove the congruence once per `BlockRows` constructor, from `cata_blockAlgB_approx`. Keep the
+  proof one per constructor, so SCOPE-1 and CONC-1 add their constructors' cases beside it.
+- A module's model stands on the right as a handler (row 383 (1)). Check, and report, which law
+  about running a handled tree the module claims need beyond the observation law.
+- Claim: `meaning-refines`, role simulation, concept `translation-simulation`, R10. It is row
+  382 (3)'s first step.
 
-### Slice L2: CX3 and CX4
+### Slice L3: parameter substitution and CX3
 
-- CX3, the typed substitution law: a parameter's run replaced by its argument keeps the typing
-  of `denotesTyped`.
-- CX4, the typed unfolding law: an invocation's typed run is its body's typed run at the
-  definition's point.
-- Their consumer is L1's typed side: an inlining pass needs its output typed. Place both under
-  `residual-program-typing`, as steps of the claim `denote-typed`, at the requirement that claim
-  serves.
+L2 uses the substitution, so this slice lands before it.
 
-### Slice L3: the two expansion claims
+- The shift is the existing generated `Eff.weaken` (`src/Effect4/Program/Fold.lean`), typed by
+  `check_weaken` (`src/Effect4/Program/Typing.lean`). Write no second shift.
+- Define `Eff.substParams` as a fold in a new core module, `src/Effect4/Program/Inline.lean`,
+  with a carrier indexed by binder depth (`binders.json`). It replaces each run of a parameter by
+  its argument, weakened to the depth of the site. Define the inlined forms of a call and of an
+  invocation there too.
+- Prove `check_substParams`: an inlined body checks, and its answer and error are subtypes of the
+  definition's. Compose with `check_weaken`, `check_replace` and `table_splice`, so that replacing
+  a call or an invocation by its inlined body at any address keeps the module typed.
+- Prove that the substitution keeps `BodyRows`, so an inlined block stays in `BlockRows`.
+- Claim: `inline-types`, role preservation, beside `check_replace` under `initial-algebras-folds`
+  (R14). The typed run keeps its path-addressed points (the CX note §3.4): CX3 types the inlined
+  program, not a point inside it.
 
-- Register `queue-expansion-agrees` and `semaphore-expansion-agrees`, and prove each from L1
-  applied at every definition of the module (`src/Effect4/Library/Queue/Defs.lean`, `Semaphore`).
-- Their existing helpers stay where they are.
+### Slice L2: the inlining law G7
+
+- The step laws: `inline_call_approx` and `inline_invoke_approx`, each the two-sided sandwich.
+  The inlining at budget `k` approximates the call or invocation at `k + 1`, which approximates
+  the inlining at `k + 1`. The probe's controls A and B show why no single budget holds.
+- The law: `inline_agrees`. In every context on `BlockRows`, a call or an invocation and its
+  inlining are `EquivB`, so they give equal completed observations at some budget. It follows
+  from L1's congruence and the step laws.
+- The machine: on `BlockRows` both programs reach the machine by `h9_blocks`, receipt-conditioned
+  as `H9Blocks` is. The inlined program's typed premises come from L3.
+- Its first user now: the to-do's cached service (`Test/Dogfood/Scenario/Todo/Cached.lean`,
+  `src/Effect4/Laws/Library/Ref/Cache.lean`). Inlining the cache's definitions keeps the
+  to-do's observations.
+- Claim: `inline-agrees`, role simulation, concept `translation-simulation`, R10. It is the PROC
+  design's form (c).
+
+### Slice L4: the claims of the two definition connectors
+
+- Register `queue-definitions-agree` and `semaphore-definitions-agree` in
+  `tools/ProofGraph/Registry.lean`, concept `translation-simulation`, R10. Each relates a client
+  over the definition form (`src/Effect4/Library/Queue/Defs.lean`, `Semaphore/Defs.lean`) to the
+  same client over the expansion (`Ops.lean`).
+- State that each composes with `queue-expansion-agrees` or `semaphore-expansion-agrees` by
+  transitivity of L1's order.
+- Write each claim's route as its open parts, one per stage, by the constructs each operation
+  uses (the probe):
+  - SCOPE-1's congruence cases (masks, interruption, scopes, finalizers, layers) bring
+    `withPermits`, `withPermitsIfAvailable` and SynchronizedRef's `modify`;
+  - CONC-1's cases (forks, awaits, deferred awaits, races) bring the Queue's `take`, `offer`
+    and `poll`, and Semaphore's `take` and `release`.
+- Each connector is proved at the stage that brings its last operation. The coordinator adds
+  those steps to the SCOPE-1 and CONC-1 scouts.
 
 Each slice ends with its narrow build, its `#axiom_audit`, its commits and its receipt section.
-No behaviour gate is reached, since nothing in track 1 changes a compile or a machine definition.
+L3 adds a core module that nothing in the `Effect4` root imports until a user does. No behaviour
+gate is reached, since no compile or machine definition changes.
 
-## Track 2: design the three syntax changes, then stop
+## Track 2: design, then stop
 
-Write one design note, `docs/research/2026-10-14-proc-close/design.md`, in PROC-6's scout
-form: rulings, stages, placements of the planned goals, fan-out, gates and open checks.
+Write one design note, `docs/research/2026-10-14-proc-close/design.md`, in PROC-6's scout form.
+Give its rulings, stages, placements of the planned goals, fan-out, gates and open checks.
 
-- **D1, PROC-7: generic definitions.** The PROC design §9's slice. G8 is `check_subst` with
-  `sub_subst`, under `subtyping-algebra` and `initial-algebras-folds`. Its reach is the
-  closed instances of formed templates (`Bounds.TemplateOK`), and the instance of a host call
-  in a generic body (row 323).
-- **D2, PROC-8: the value form.** It is held as data (row 381 (3)): a code reference and
-  captured values, a program path now and a content digest with content addressing.
-  - A module's instance and a service are one record of closures (row 382 (2)).
-  - Settle each item row 82 lists: typed entry resolution; lexical captures against a captured
-    service context; lifetime and portability ("a digest alone is not proof of code identity");
-    recursive admission; the printer and reader contract; the `Val`, `Ty` and `Eff` forms.
-  - Choose between the PROC design's V1 (a value, a type and an apply form) and V2 (closure
-    records and dispatch definitions), on semantics. A bank entry's code must be reachable by its
-    digest, which a dispatch over one program's definitions cannot name.
-  - G9 is `resolve_typed`, R7's top node.
-- **D3, one activation stack.** Since PROC-6's stage 0a, `Point.params` and `Point.call` move
-  together. Show that invariant first, then plan their merge into one stack of frames.
-- **Stop after the design note** and report. The coordinator reviews it before any of D1 to D3
-  touches source.
+- **D1, PROC-7 and HO-5.** Generic definitions: the PROC design §9's slice, with G8
+  `check_subst` and `sub_subst` under `subtyping-algebra` and `initial-algebras-folds`. Its reach
+  is the closed instances of formed templates (`Bounds.TemplateOK`), and the instance of a host
+  call in a generic body (row 323). HO-5: methods with program parameters (`withPermits`,
+  `withPermitsIfAvailable`, Pool's `use`), as the program-parameters plan sets it out.
+- **D2, the closure stage** (row 383 (5)). One design for three things:
+  - closures held as data (row 381 (3)): a code reference and captured values; a program path
+    now, and a content digest with content addressing;
+  - one activation stack: first show the invariant that `Point.params` and `Point.call` move
+    together, then merge them into one stack of frames;
+  - SCOPE-1's stage 0, which this design becomes.
+
+  Settle each item row 82 lists:
+  - typed entry resolution;
+  - lexical captures against a captured service context;
+  - lifetime and portability ("a digest alone is not proof of code identity");
+  - recursive admission;
+  - the printer and reader contract;
+  - the `Val`, `Ty` and `Eff` forms.
+
+  Choose between the PROC design's V1 (a value, a type and an apply form) and V2 (closure records
+  and dispatch definitions), on semantics. A bank entry's code must be reachable by its digest,
+  which a dispatch over one program's definitions cannot name. G9 is `resolve_typed`, R7's top
+  node.
+- **D3, the module form's inputs.** Say what D1 and D2 give the module form (rows 331 (6), 382
+  (2)). The module form is a record of closures over a cell, generic in its types. Its methods
+  take programs. State its owed refinement claims in L1's order. Do not design the module form
+  itself.
+- **Stop after the design note** and report. The coordinator reviews it before D1 or D2 touches
+  source.
 
 ## Stop and report at once when
 

@@ -114,6 +114,18 @@ flowchart TD
   fibers and the pool's trees, preserved by each decision.
 - With `run_eq_ref_table` and SCOPE-1's bridge (its check C0), the frame machine joins.
 
+### The congruence cases and the two connectors (amended 2026-10-14, decisions row 383)
+
+- Each forking construct adds its case to the congruence of the refinement order
+  (`meaning-refines`, the procedures close-out's slice L1): `fork` and its family, `await`,
+  a Deferred's await, `raceAll`, interruption between fibers, merged layers and parallel closes.
+  Over many fibers the order is inclusion of completed observations over decision tapes: every
+  outcome of the left under some tape is an outcome of the right under some tape.
+- With those cases, `inline-agrees` holds on the many-fiber fragment. Then the Queue's `take`,
+  `offer` and `poll`, and Semaphore's `take` and `release`, reach their connectors:
+  `queue-definitions-agree` and `semaphore-definitions-agree` are proved here, and compose with
+  `queue-expansion-agrees` and `semaphore-expansion-agrees` by transitivity.
+
 ### Stage 4: H9 on many fibers
 
 - `H9Fibers`: a reached, funded, at-rest run of a program in the fragment, under a host and a
@@ -152,6 +164,8 @@ All goals: concept `translation-simulation`, except where named.
 | stage 3: the reference adequate to the handled meaning | step of `rows-fibers-host` | R6 | `H9Fibers` |
 | stage 4: `h9_fibers : H9Fibers` | `rows-fibers-host` (new), simulation | R6, serving R10 to R12 | the validated premises |
 | stage 5: the generic schedule-independence theorem | concept `reactive-scheduling` (row 361) | R12 | determinism claims on checked fragments |
+| stage 3: the congruence cases of the forking constructs | step of `meaning-refines` (row 383 (1)) | R10 | `inline-agrees` on many fibers; linearizability claims (row 382 (1)) |
+| stage 3: `queue-definitions-agree`, `semaphore-definitions-agree` | the two connector claims (row 383 (3)) | R10 | every module built from the two modules' definitions |
 
 `H9Fibers` does not establish progress, fairness or that a host answers; those are R12's
 liveness line and the host's assumption.
