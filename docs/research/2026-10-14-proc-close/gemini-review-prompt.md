@@ -27,12 +27,46 @@ Read, in this order:
 
 1. `AGENTS.md`, all of it; the placement rule under "Trust" is the standard you review against.
 2. `docs/research/2026-10-14-proc-close/prompt.md`, the plan under review.
-3. `docs/research/2026-10-08-seat-PROC-design.md`: §4.4, §8 and §9.
-4. `docs/research/2026-10-10-cx-lexical-scope.md`: §3.4, §6, §8 and §9.
-5. `docs/research/2026-10-14-proc6-prep/landing-receipt.md`, what PROC-6 proved.
+3. **Codex's whole PROC-6 work**, the base every item of the plan stands on. See the next section.
+4. `docs/research/2026-10-08-seat-PROC-design.md`: §4.4, §8 and §9.
+5. `docs/research/2026-10-10-cx-lexical-scope.md`: §3.4, §6, §8 and §9.
 6. `docs/research/2026-10-14-one-fiber-scout.md` and `docs/research/2026-10-14-many-fibers-scout.md`.
 7. `docs/core/decisions.md` rows 82, 328, 331, 340, 379, 381 and 382.
 8. `tools/ProofGraph/Registry.lean` (the claims and their open parts) and `generated/semantics.md`.
+
+## Codex's PROC-6 work: read all of it
+
+PROC-6 is the merge `36ddb0b56`: 21 commits from `9d404a1ec` to `6b98721ce`, slices P, A to G.
+All of it is on your branch. The branches `codex/proc6-*` other than `codex/proc6` hold earlier
+attempts that the final branch superseded; ignore them.
+
+- **Its documents:**
+  - `docs/research/2026-10-14-proc6-scout.md`, the locked plan (fifth version): rulings,
+    stages, placements and checks;
+  - `docs/research/2026-10-14-proc6-v5-review/` and `docs/research/2026-10-14-proc6-codex-review/`,
+    the reviews that locked it;
+  - under `docs/research/2026-10-14-proc6-prep/`: `README.md` (what the coordinator readied),
+    `landing-prompt.md` and `continue-prompt.md` (the briefs), `landing-receipt.md` (what landed,
+    slice by slice, with every goal's status) and `landing-evidence/` (the logs, audits and probe
+    files behind the receipt, 157 files).
+- **Its code.** Read the diff in full: `git diff 36ddb0b56^1 36ddb0b56 -- src Test tools harness`.
+  Its centre:
+  - the block meaning `denoteBlockB`, its unfolding laws (`call_unfolds_at_limitB`,
+    `invoke_unfolds_at_limitB`) and its monotonicity claim (`denoteBlockB_approx`):
+    `src/Effect4/Laws/Program/BlockMeaning.lean`;
+  - the fragment `BlockRows`: `src/Effect4/Laws/Program/FragmentBlock.lean`;
+  - H9 on blocks, `h9_blocks : H9Blocks`: `src/Effect4/Laws/Api/SessionMeaningBlocks.lean`, over
+    the agreement in `src/Effect4/Laws/Program/Agreement/` (`Blocks.lean`, `Machine.lean`,
+    `BlockPlain.lean`, `ContextSteps.lean`, `ContextSegment.lean`, `HostedBlocks.lean`);
+  - the validated premises: `src/Effect4/Laws/Program/ValidatedBlocks.lean`;
+  - the session at the meaning: `src/Effect4/Laws/Api/SessionMeaningBlocks.lean`;
+  - the shipped consumer, replayed per request: `Test/Dogfood/Scenario/Todo/Cached.lean` and
+    `src/Effect4/Laws/Library/Ref/Cache.lean`.
+- **What it removed.** `src/Effect4/Laws/Effects/Mrec.lean` and most of `ParamRows.lean` and
+  `Block.lean`. A plan item that cites a removed declaration is a finding.
+
+The plan under review must build on exactly this: name each PROC-6 theorem an item uses, and
+check that the name exists at your head.
 
 ## Part 1: your own review, written before you read Part 2
 
@@ -80,7 +114,8 @@ evidence: a path, a declaration, a probe's output. Do not take any of them on tr
   refinement both ways. The proposal: build the refinement order once, with its congruence,
   and state G7 as one instance of it. Each later widening of the meaning (SCOPE-1, CONC-1) then
   owes the congruence cases of its constructors. Check whether `denoteBlockB` is monotone in its
-  budget, since any convergence relation needs that to be a congruence for `bind`.
+  budget, since any convergence relation needs that to be a congruence for `bind`. Start from
+  `denoteBlockB_approx` and `hostRunBlockB_stable`.
 - **F4. CX3 contradicts the CX ruling.** The CX note §3.4 rejects substitution as the typed
   route: a point addresses the root program by path, and a substituted body is no subterm. The
   plan's L2 names an inlining pass as CX3's consumer, and no plan builds one. CX4 may already be
