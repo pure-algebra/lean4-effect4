@@ -16,7 +16,7 @@ open Tools.View.Tube.Glyphs
 #guard shapes.all fun s => (pegFigure s).bodies.all fun b =>
   match pegOutlines 12000 LINE b.skeleton.tour with
   | some (outer, inner) => (outer ++ inner).all fun c =>
-      PegBridge.fromCubic (PegBridge.cubic c) == c
+      SceneBridge.fromCubic (SceneBridge.cubic c) == c
   | none => false
 
 -- Every authored body has tangents and closed outline and casing paths.

@@ -1,5 +1,5 @@
 import Tools.View.Organic
-import Tools.View.Tube.PegBridge
+import Tools.View.SceneBridge
 import Whatwg.Svg.Scene.Ribbon
 
 /-!
@@ -10,7 +10,7 @@ The paired sides include the flares, with shared integer neck handles.
 `Connector.stroke` writes one perimeter, with two transverse caps.
 
 Placement: concept `initial-algebras-folds`, R14 live authoring.
-These tool helpers serve `Laid.organicCalls` after its caller migration.
+These tool helpers serve `Laid.organicCalls`.
 The placement brief is `docs/research/2026-10-13-connector-plan.md`.
 The observation is integer cubic controls, not scheduler meaning.
 No law here establishes global absence of intersections or exact circles.
@@ -19,7 +19,6 @@ No law here establishes global absence of intersections or exact circles.
 namespace Tools.View.Connector
 
 open Tools.View
-open Tools.View.Tube
 
 /-- A vertical surface, relative to the route endpoint, in thousandths. -/
 structure Dock where
@@ -31,10 +30,10 @@ structure Dock where
 abbrev Body := Whatwg.Svg.Scene.Ribbon
 
 /-- The forward left side. Cardinality agrees with the right side by construction. -/
-def Body.left (b : Body) : List Cubic := b.lefts.map PegBridge.fromCubic
+def Body.left (b : Body) : List Cubic := b.lefts.map SceneBridge.fromCubic
 
 /-- The forward right side. -/
-def Body.right (b : Body) : List Cubic := b.rights.map PegBridge.fromCubic
+def Body.right (b : Body) : List Cubic := b.rights.map SceneBridge.fromCubic
 
 /-- A reserved neck: its surface point and effective radius. -/
 structure Neck where
@@ -167,7 +166,7 @@ def paired (seed : Nat) (o : Organic) (w : Int) (tip : Bool)
     (fun c => target.map (fun n => (pinEnd n c.1, pinEnd n c.2)) |>.getD c) curves
   let edges := (source.map (flare startArc (w / 2)) |>.getD []) ++ curves ++
     (target.map (flare endArc (w / 2)) |>.getD [])
-  ⟨edges.map fun (l, r) => (PegBridge.cubic r, PegBridge.cubic l)⟩
+  ⟨edges.map fun (l, r) => (SceneBridge.cubic r, SceneBridge.cubic l)⟩
 
 /-- An undocked body retains horizontal travel and refuses a coincident sample sequence. -/
 def freeBody (seed : Nat) (o : Organic) (w : Int) (cs : List Cubic) (tip : Bool) : Body :=
@@ -203,7 +202,7 @@ def body (seed : Nat) (o : Organic) (w : Int) (cs : List Cubic) (tip : Bool)
 
 /-- One closed perimeter. Reversal swaps controls instead of resampling a side. -/
 def Body.outline (b : Body) : List Cubic :=
-  (Whatwg.Svg.Scene.Ribbon.outline b).map PegBridge.fromCubic
+  (Whatwg.Svg.Scene.Ribbon.outline b).map SceneBridge.fromCubic
 
 /-- The two deliberate transverse caps, indexed in the emitted perimeter. -/
 def capSegments (cs : List Cubic) : List Nat :=
@@ -225,17 +224,6 @@ def stroke (seed : Nat) (o : Organic) (w : Int) (cs : List Cubic) (tip : Bool)
 
 /-! The following local laws serve the shared-handle observation in the placement brief.
 Finite controls check their composition in the actual emitted perimeter. -/
-
-/-- The local-to-kit record conversion changes no integer control. -/
-theorem from_cubic (c : Cubic) : PegBridge.fromCubic (PegBridge.cubic c) = c := by
-  cases c
-  rfl
-
-/-- The kit-to-local conversion also recovers every integer control. -/
-theorem cubic_from (c : Whatwg.Svg.Scene.ICubic) :
-    PegBridge.cubic (PegBridge.fromCubic c) = c := by
-  cases c
-  rfl
 
 /-- Adjacent forward Catmull–Rom segments have exactly equal integer tangent handles. -/
 theorem catmull_shared (a b c d e : Grow.P) :

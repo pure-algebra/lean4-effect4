@@ -10,7 +10,7 @@ The connector replaces separate body and collar contours with one perimeter.
 | Concept | `initial-algebras-folds`, concept 7, R14 live authoring |
 | Question | Does the displayed connector use shared points and tangent handles at its necks? |
 | Role | Tool geometry helper under decisions row 334(3) and row 336(8) |
-| Consumer | `Laid.organicCalls` in `tools/Tools/View/Graph.lean`, after coordinator migration |
+| Consumer | `Laid.organicCalls` in `tools/Tools/View/Graph.lean` |
 | Observation | Integer cubic controls, in thousandths of a logical pixel |
 | Fragment | Forward routes with vertical source and target docks |
 | Hypotheses | Positive width and positive surface drop for a nonempty connector |
@@ -60,8 +60,8 @@ The return side swaps these controls without rounding or resampling.
 ## Integer owner adapter placement
 
 The kit owns `Whatwg.Svg.Scene.Ribbon` in `Whatwg/Svg/Scene/Ribbon.lean`.
-The next adapter aliases `Connector.Body` to that paired integer carrier.
-`Tools.View.Tube.PegBridge` in `tools/Tools/View/Tube/PegBridge.lean` supplies the existing record conversions.
+The adapter aliases `Connector.Body` to that paired integer carrier.
+`Tools.View.SceneBridge` in `tools/Tools/View/SceneBridge.lean` supplies the shared record conversions.
 The two local conversion laws serve the same concept, question, role, and R14 consumer listed above.
 Their observation is exact cubic control records, with no arithmetic or rounding.
 They establish mutual record recovery for arbitrary integer cubic controls.

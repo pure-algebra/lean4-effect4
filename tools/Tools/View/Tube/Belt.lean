@@ -1,4 +1,5 @@
-import Tools.View.Tube.PegBridge
+import Tools.View.SceneBridge
+import Whatwg.Svg.Scene.Belt
 import Tools.View.Tube.Trig
 
 /-! # The pen's tuple interface to kit peg geometry
@@ -18,74 +19,74 @@ namespace Belt
 def isqrt := Whatwg.Svg.Scene.Belt.isqrt
 
 def dot (u v : Int × Int) : Int :=
-  Whatwg.Svg.Scene.Belt.dot (PegBridge.vec u) (PegBridge.vec v)
+  Whatwg.Svg.Scene.Belt.dot (SceneBridge.vec u) (SceneBridge.vec v)
 
 def cross (u v : Int × Int) : Int :=
-  Whatwg.Svg.Scene.Belt.cross (PegBridge.vec u) (PegBridge.vec v)
+  Whatwg.Svg.Scene.Belt.cross (SceneBridge.vec u) (SceneBridge.vec v)
 
 def unit (v : Int × Int) : Int × Int :=
-  PegBridge.point (Whatwg.Svg.Scene.Belt.unit (PegBridge.vec v))
+  SceneBridge.point (Whatwg.Svg.Scene.Belt.unit (SceneBridge.vec v))
 
 def normal (p q : Peg) : Option (Int × Int) :=
-  (Whatwg.Svg.Scene.Belt.normal p q).map PegBridge.point
+  (Whatwg.Svg.Scene.Belt.normal p q).map SceneBridge.point
 
 def half (σ : Int) (u v : Int × Int) : Int × Int :=
-  PegBridge.point (Whatwg.Svg.Scene.Belt.half σ (PegBridge.vec u) (PegBridge.vec v))
+  SceneBridge.point (Whatwg.Svg.Scene.Belt.half σ (SceneBridge.vec u) (SceneBridge.vec v))
 
 def line (a b : Int × Int) : Cubic :=
-  PegBridge.fromCubic (Whatwg.Svg.Scene.Belt.line (PegBridge.vec a) (PegBridge.vec b))
+  SceneBridge.fromCubic (Whatwg.Svg.Scene.Belt.line (SceneBridge.vec a) (SceneBridge.vec b))
 
 end Belt
 open Belt
 
 def Peg.at (p : Peg) (u : Int × Int) : Int × Int :=
-  PegBridge.point (Whatwg.Svg.Scene.Peg.at p (PegBridge.vec u))
+  SceneBridge.point (Whatwg.Svg.Scene.Peg.at p (SceneBridge.vec u))
 
 def Peg.piece (p : Peg) (h : Int) (a b : Int × Int) : Cubic :=
-  PegBridge.fromCubic (Whatwg.Svg.Scene.Peg.piece p h (PegBridge.vec a) (PegBridge.vec b))
+  SceneBridge.fromCubic (Whatwg.Svg.Scene.Peg.piece p h (SceneBridge.vec a) (SceneBridge.vec b))
 
 def Peg.arc (p : Peg) (u v : Int × Int) : List Cubic :=
-  (Whatwg.Svg.Scene.Peg.arc p (PegBridge.vec u) (PegBridge.vec v)).map PegBridge.fromCubic
+  (Whatwg.Svg.Scene.Peg.arc p (SceneBridge.vec u) (SceneBridge.vec v)).map SceneBridge.fromCubic
 
 def Belt.normals (ps : List Peg) : Option (List (Int × Int)) :=
-  (Whatwg.Svg.Scene.Belt.normals ps).map (List.map PegBridge.point)
+  (Whatwg.Svg.Scene.Belt.normals ps).map (List.map SceneBridge.point)
 
 def Belt.withNormals (ps : List Peg) (ns : List (Int × Int)) : List Cubic :=
-  (Whatwg.Svg.Scene.Belt.withNormals ps (ns.map PegBridge.vec)).map
-    PegBridge.fromCubic
+  (Whatwg.Svg.Scene.Belt.withNormals ps (ns.map SceneBridge.vec)).map
+    SceneBridge.fromCubic
 
 def belt (ps : List Peg) : Option (List Cubic) :=
-  (Whatwg.Svg.Scene.belt ps).map (List.map PegBridge.fromCubic)
+  (Whatwg.Svg.Scene.belt ps).map (List.map SceneBridge.fromCubic)
 
 abbrev Peg.inset (w : Int) (p : Peg) : Peg := Whatwg.Svg.Scene.Peg.inset w p
-def Peg.move (d : Int × Int) (p : Peg) : Peg := Whatwg.Svg.Scene.Peg.move (PegBridge.vec d) p
+def Peg.move (d : Int × Int) (p : Peg) : Peg := Whatwg.Svg.Scene.Peg.move (SceneBridge.vec d) p
 
 def Belt.outlines (w : Int) (ps : List Peg) : Option (List Cubic × List Cubic) :=
-  (Whatwg.Svg.Scene.Belt.outlines w ps).map PegBridge.paths
+  (Whatwg.Svg.Scene.Belt.outlines w ps).map SceneBridge.paths
 
 /-- Transport the kit's exact inset law across the tuple connector. -/
 theorem normal_inset (w : Int) (p q : Peg) : normal (p.inset w) (q.inset w) = normal p q := by
-  exact congrArg (Option.map PegBridge.point) (Whatwg.Svg.Scene.normal_inset w p q)
+  exact congrArg (Option.map SceneBridge.point) (Whatwg.Svg.Scene.normal_inset w p q)
 
 /-- Transport the kit's exact translation law across the tuple connector. -/
 theorem normal_move (d : Int × Int) (p q : Peg) : normal (p.move d) (q.move d) = normal p q := by
-  exact congrArg (Option.map PegBridge.point)
-    (Whatwg.Svg.Scene.normal_move (PegBridge.vec d) p q)
+  exact congrArg (Option.map SceneBridge.point)
+    (Whatwg.Svg.Scene.normal_move (SceneBridge.vec d) p q)
 
 def chained (cs : List Cubic) : Bool :=
-  Whatwg.Svg.Scene.chained (cs.map PegBridge.cubic)
+  Whatwg.Svg.Scene.chained (cs.map SceneBridge.cubic)
 
-def Cubic.still (c : Cubic) : Bool := Whatwg.Svg.Scene.ICubic.still (PegBridge.cubic c)
+def Cubic.still (c : Cubic) : Bool := Whatwg.Svg.Scene.ICubic.still (SceneBridge.cubic c)
 
 def handles (a b : Cubic) : (Int × Int) × (Int × Int) :=
-  let h := Whatwg.Svg.Scene.handles (PegBridge.cubic a) (PegBridge.cubic b)
-  (PegBridge.point h.1, PegBridge.point h.2)
+  let h := Whatwg.Svg.Scene.handles (SceneBridge.cubic a) (SceneBridge.cubic b)
+  (SceneBridge.point h.1, SceneBridge.point h.2)
 
 def smooth (tol : Int) (cs : List Cubic) : Bool :=
-  Whatwg.Svg.Scene.smooth tol (cs.map PegBridge.cubic)
+  Whatwg.Svg.Scene.smooth tol (cs.map SceneBridge.cubic)
 
 def insetBy (w tol : Int) (outline casing : List Cubic) : Bool :=
-  Whatwg.Svg.Scene.insetBy w tol (outline.map PegBridge.cubic) (casing.map PegBridge.cubic)
+  Whatwg.Svg.Scene.insetBy w tol (outline.map SceneBridge.cubic) (casing.map SceneBridge.cubic)
 /-! ## Guards: a pipe, a taper, a bend, a belt round rings -/
 
 /-- A pipe: two pegs of one size, a body of ten pixels' half width. -/

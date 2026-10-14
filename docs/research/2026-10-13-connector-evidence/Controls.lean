@@ -57,10 +57,10 @@ def formerOutline (b : Body) : List Cubic :=
     b.outline == formerOutline b
 
 -- Readers: both record conversions recover their supplied integer cubic exactly.
-example (c : Cubic) : Tools.View.Tube.PegBridge.fromCubic (Tools.View.Tube.PegBridge.cubic c) = c :=
-  from_cubic c
+example (c : Cubic) : Tools.View.SceneBridge.fromCubic (Tools.View.SceneBridge.cubic c) = c :=
+  SceneBridge.from_cubic c
 example (c : Whatwg.Svg.Scene.ICubic) :
-    Tools.View.Tube.PegBridge.cubic (Tools.View.Tube.PegBridge.fromCubic c) = c := cubic_from c
+    Tools.View.SceneBridge.cubic (Tools.View.SceneBridge.fromCubic c) = c := SceneBridge.cubic_from c
 
 -- Every intended side seam has nonzero, exactly equal milli tangent handles.
 -- This finite control includes linear, bumpY, stepY, short, and duplicate-control routes.

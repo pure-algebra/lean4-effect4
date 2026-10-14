@@ -374,7 +374,7 @@ def graphRefusal (r : GraphCheck.Refusal) : String :=
 /-- Write each frame's outputs into `out`, with `motion - 1` pictures before each frame after the
 first: the moments of the step from the frame before (`sample`). Each step's moment at its end is
 the next frame by `sample_end`, so no check repeats it. One stroke cache threads the frames and the
-moments between them, so a route that only moved reuses its stroke (`Laid.cachedStroke_eq`).
+moments between them, so a route that only moved reuses its stroke (`Connector.cached_eq`).
 Report the splice check: the lines outside each spliced edit's subtree keep their text, type and
 note (`keptUnchanged`). -/
 def writeFrames (L : Look) (out : System.FilePath) (frames : List Build.Frame) (motion : Nat)

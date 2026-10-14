@@ -1,6 +1,6 @@
 import Tools.View.Place
 import Tools.View.Organic
-import Tools.View.KeyMap
+import Tools.View.ConnectorMemo
 
 /-!
 # A graph: ranks, order, places, routes
@@ -509,10 +509,10 @@ def onBar (l : Laid) (p : Placed) : Bool :=
 
 `Laid.find` scans the placed items at every key a route names, and `Laid.onBar` scans every mark.
 A drawing builds the index of its places once (`Ix`), which answers as they do (`Ix.find_of`,
-`Ix.onBar_of`). An organic stroke costs most, and a route that only moved draws the same stroke,
-moved (`Grow.stroke_move`). So a cache keeps each stroke at the origin by what it reads
-(`StrokeCache`), and a sequence of frames threads one cache: it answers the stroke itself
-(`cachedStroke_eq`) and stays valid (`cachedStroke_valid`). -/
+`Ix.onBar_of`). A cache keeps each connector outline at the origin by all its construction inputs.
+The key includes the docking offsets and radii.
+A sequence of frames threads one cache, whose answers satisfy `Connector.cached_eq`.
+The next frame receives a valid cache by `Connector.cached_valid`. -/
 
 /-- **A laid graph's places by key**, built once per drawing, and the bars of its marks. -/
 structure Ix where
@@ -560,94 +560,8 @@ theorem Ix.onBar_of (l : Laid) (p : Placed) : (Ix.of l).onBar p = l.onBar p := b
     | bar k x0 x1 y => simp only [List.filterMap_cons, List.any_cons, ih]
     | diamond k x y => simp only [List.filterMap_cons, List.any_cons, ih, Bool.false_or]
 
-/-- What an organic stroke reads: its seed, its look's noise and wave, its width, whether it grows
-to a tip, and its segments, moved to the origin. -/
-structure StrokeKey where
-  seed : Nat
-  noise : Nat
-  wave : Nat
-  width : Int
-  tip : Bool
-  segments : List Cubic
-deriving DecidableEq, Hashable
-
-/-- **The stroke cache**: an organic stroke kept at the origin by what it reads (`StrokeKey`). -/
-abbrev StrokeCache := KeyMap StrokeKey (List Cubic)
-
-/-- A cache is valid when each stroke it keeps is the stroke of its key, at any organic settings
-with the key's noise and wave. -/
-def StrokeCache.Valid (cache : StrokeCache) : Prop :=
-  ∀ (k : StrokeKey) (s : List Cubic), cache.get? k = some s →
-    ∀ o : Organic, o.noise = k.noise → o.wave = k.wave → s = Grow.stroke k.seed o k.width k.segments k.tip
-
-/-- **A stroke from the cache**, moved into place; or computed at the origin, kept and moved. A
-line is moved to the origin by its first point, in logical pixels. -/
-def cachedStroke (cache : StrokeCache) (seed : Nat) (o : Organic) (w : Int) (cs : List Cubic)
-    (tip : Bool) : List Cubic × StrokeCache :=
-  match cs with
-  | [] => ([], cache)
-  | c :: _ =>
-    let rel := cs.map (Cubic.move (-c.p0.1) (-c.p0.2))
-    let key : StrokeKey := ⟨seed, o.noise, o.wave, w, tip, rel⟩
-    match cache.get? key with
-    | some s => (s.map (Cubic.move (1000 * c.p0.1) (1000 * c.p0.2)), cache)
-    | none =>
-      let s := Grow.stroke seed o w rel tip
-      (s.map (Cubic.move (1000 * c.p0.1) (1000 * c.p0.2)), cache.insert key s)
-
-/-- The empty cache is valid. -/
-theorem StrokeCache.valid_empty : StrokeCache.Valid {} := by
-  intro k s h
-  rw [KeyMap.get?_empty] at h
-  cases h
-
-/-- A line moved to the origin by its first point, and back, is the line. A step of
-`cachedStroke_eq`. -/
-theorem move_back (cs : List Cubic) (x y : Int) :
-    (cs.map (Cubic.move (-x) (-y))).map (Cubic.move x y) = cs := by
-  simp only [List.map_map, Function.comp_def, Cubic.move_move, Int.add_left_neg, Cubic.move_zero,
-    List.map_id']
-
-/-- **A stroke from a valid cache is the stroke.** By `Grow.stroke_move`: the stroke kept at the
-origin, moved back into place, is the stroke where the line stands. A tool law; its consumer is
-the drawing on the cache (`callsCached`), which a sequence of frames threads. Placement: concept
-`initial-algebras-folds`, R14's live authoring. -/
-theorem cachedStroke_eq {cache : StrokeCache} (hv : cache.Valid) (seed : Nat) (o : Organic) (w : Int)
-    (cs : List Cubic) (tip : Bool) : (cachedStroke cache seed o w cs tip).1 = Grow.stroke seed o w cs tip := by
-  cases cs with
-  | nil => rfl
-  | cons c rest =>
-    have hmoved : (Grow.stroke seed o w ((c :: rest).map (Cubic.move (-c.p0.1) (-c.p0.2))) tip).map
-        (Cubic.move (1000 * c.p0.1) (1000 * c.p0.2)) = Grow.stroke seed o w (c :: rest) tip := by
-      rw [← Grow.stroke_move, move_back]
-    simp only [cachedStroke]
-    cases h : cache.get? ⟨seed, o.noise, o.wave, w, tip, (c :: rest).map (Cubic.move (-c.p0.1) (-c.p0.2))⟩ with
-    | some s =>
-      rw [hv _ _ h o rfl rfl]
-      exact hmoved
-    | none => exact hmoved
-
-/-- **A cache stays valid** through a stroke drawn on it. A tool law; its consumer is a sequence
-of frames that threads one cache. Placement: concept `initial-algebras-folds`, R14's live
-authoring. -/
-theorem cachedStroke_valid {cache : StrokeCache} (hv : cache.Valid) (seed : Nat) (o : Organic)
-    (w : Int) (cs : List Cubic) (tip : Bool) : (cachedStroke cache seed o w cs tip).2.Valid := by
-  cases cs with
-  | nil => exact hv
-  | cons c rest =>
-    simp only [cachedStroke]
-    cases h : cache.get? ⟨seed, o.noise, o.wave, w, tip, (c :: rest).map (Cubic.move (-c.p0.1) (-c.p0.2))⟩ with
-    | some s => exact hv
-    | none =>
-      intro k s' hs o' hn hw
-      rw [KeyMap.get?_insert] at hs
-      by_cases hk : (⟨seed, o.noise, o.wave, w, tip, (c :: rest).map (Cubic.move (-c.p0.1) (-c.p0.2))⟩ : StrokeKey) = k
-      · rw [if_pos hk] at hs
-        subst hk
-        cases hs
-        exact Grow.stroke_organic seed hn.symm hw.symm w _ tip
-      · rw [if_neg hk] at hs
-        exact hv _ _ hs o' hn hw
+/-- The graph retains complete connector outlines, including their docking geometry. -/
+abbrev StrokeCache := Connector.Cache
 
 /-- The bar's top in logical pixels. Odd heights use the painter's integer origin. -/
 def barTop (y : Int) : Int := y - BAR / 2
@@ -655,10 +569,9 @@ def barTop (y : Int) : Int := y - BAR / 2
 /-- The bar surface relative to its route point, in thousandths. -/
 def barSurface (down : Bool) : Int := 1000 * (barTop 0 + if down then BAR else 0)
 
-/-- **A forward edge as an organic stroke** (`Tools.View.Grow`), on a stroke cache: its width the
-trunk's times its share of the work, never finer than the look's finest line; its edges moved by
-the noise its key seeds, inside their band; a collar where it leaves a box or a bar, and, once it
-is whole, where it meets one. While it grows, its tip narrows. -/
+/-- A forward edge is one closed connector outline with integrated flares at its docking surfaces.
+The width follows its share, bounded below by the look's finest line.
+While it grows, its tip narrows. -/
 def organicCalls (find : Key → Option Placed) (onBar : Placed → Bool) (L : Look) (cache : StrokeCache)
     (key : Key) (ks : List Key) (share : Nat) (cs : List Cubic) (whole : Bool) :
     List (Keyed Call) × StrokeCache :=
@@ -672,24 +585,19 @@ def organicCalls (find : Key → Option Placed) (onBar : Placed → Bool) (L : L
       let room := 1000 * (bounds.x1 - bounds.x0) / 2 - w / 2 - L.strokes.radius
       if p.grow = 0 then none else some (0, min R (max 0 room))
     else if onBar p then some (barSurface down, R) else none
-  let (body, cache) := cachedStroke cache (Grow.seedOf key) o w cs (!whole)
-  let drop := match cs.head?, cs.getLast? with
-    | some a, some b => 1000 * (b.p3.2 - a.p0.2)
-    | _, _ => 0
-  let start := match cs.head?, ks.head?.bind (surface true) with
-    | some c, some (off, radius) =>
-      let radius := min radius (max 0 (drop - off) / 2)
-      if radius = 0 then [] else
-        [Grow.collar (1000 * c.p0.1) (1000 * c.p0.2 + off) w radius true]
-    | _, _ => []
-  let finish := match whole, cs.getLast?, ks.getLast?.bind (surface false) with
-    | true, some c, some (off, radius) =>
-      let radius := min radius (max 0 (drop + off) / 2)
-      if radius = 0 then [] else
-        [Grow.collar (1000 * c.p3.1) (1000 * c.p3.2 + off) w radius false]
-    | _, _, _ => []
-  if body.isEmpty then ([], cache) else
-    (([body] ++ start ++ finish).map fun path => ⟨key, .shape .ink 1000 [path]⟩, cache)
+  let source := (ks.head?.bind (surface true)).map fun (off, r) =>
+    ({ offset := off, radius := r } : Connector.Dock)
+  let target := if whole then (ks.getLast?.bind (surface false)).map fun (off, r) =>
+    ({ offset := off, radius := r } : Connector.Dock) else none
+  match cs with
+  | [] => ([], cache)
+  | c :: _ =>
+    let request : Connector.Request := {
+      seed := Grow.seedOf key, noise := o.noise, wave := o.wave, width := w, tip := !whole,
+      segments := cs.map (Cubic.move (-c.p0.1) (-c.p0.2)), source, target }
+    let (outline, cache) := Connector.cached cache request
+    let body := outline.map (Cubic.move (1000 * c.p0.1) (1000 * c.p0.2))
+    if body.isEmpty then ([], cache) else ([⟨key, .shape .ink 1000 [body]⟩], cache)
 
 /-- A route's calls, on a stroke cache: its segments, drawn as far as its reveal, at the look's
 weight of an edge, or, for a forward edge in a look with a trunk, as an organic stroke; an arc in a

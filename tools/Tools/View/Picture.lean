@@ -68,8 +68,7 @@ def Cubic.move (dx dy : Int) (c : Cubic) : Cubic :=
   ⟨(c.p0.1 + dx, c.p0.2 + dy), (c.p1.1 + dx, c.p1.2 + dy), (c.p2.1 + dx, c.p2.2 + dy),
     (c.p3.1 + dx, c.p3.2 + dy)⟩
 
-/-- A segment moved twice is the segment moved by the sum. A step of the stroke cache's law
-(`Laid.cachedStroke_eq`). -/
+/-- A segment moved twice is the segment moved by the sum. The connector drawing uses this translation. -/
 theorem Cubic.move_move (a b x y : Int) (c : Cubic) : (c.move a b).move x y = c.move (a + x) (b + y) := by
   simp only [Cubic.move, Int.add_assoc]
 

@@ -13,7 +13,7 @@ open Tools.View Whatwg.Html
 
 /-- A single peg has two semicircles. A tour shares its casing's normals. -/
 def pegOutlines (step inset : Int) (tour : List GridPeg) : Option (List Cubic × List Cubic) :=
-  (Whatwg.Svg.Scene.pegOutlines step inset tour).map PegBridge.paths
+  (Whatwg.Svg.Scene.pegOutlines step inset tour).map SceneBridge.paths
 
 /-- A finite path check: every tour has tangents and both rounded paths chain. -/
 def PegFigure.check (f : PegFigure) (step : Int := 12000) : Bool :=

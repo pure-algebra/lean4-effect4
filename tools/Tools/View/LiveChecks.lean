@@ -2,6 +2,7 @@ import Tools.View.Build
 import Tools.View.Inc
 import Tools.View.Retained
 import Tools.View.Live
+import Tools.View.GraphCheck
 
 /-!
 # The live view's checks
@@ -62,7 +63,7 @@ def laidsOf (L : Look) (p : NativeEff) : List Laid :=
 /-! ## LV-2: the graph's calls on a key index and a stroke cache -/
 
 -- One stroke cache carried along every frame and every moment of motion of a build answers each
--- drawing's calls on a fresh cache: `Laid.cachedStroke_eq`, read at the drawings the driver writes.
+-- drawing's calls on a fresh cache: `Connector.cached_eq`, read at the drawings the driver writes.
 #guard programs.all fun p =>
   let L : Look := {}
   ((laidsOf L p).foldl (fun (acc : Bool × Laid.StrokeCache) l =>
@@ -74,8 +75,34 @@ def controlLine : List Cubic := [⟨(0, 0), (0, 12), (40, 18), (40, 30)⟩, Grow
 
 -- The controls of the cache's key. A growing stroke is not the whole one, so the key holds the
 -- tip; another noise draws another stroke, so the key holds the noise.
-#guard Grow.stroke 7 {} 2400 controlLine true != Grow.stroke 7 {} 2400 controlLine false
-#guard Grow.stroke 7 {} 2400 controlLine false != Grow.stroke 7 { noise := 100 } 2400 controlLine false
+#guard Connector.stroke 7 {} 2400 controlLine true none none !=
+  Connector.stroke 7 {} 2400 controlLine false none none
+#guard Connector.stroke 7 {} 2400 controlLine false none none !=
+  Connector.stroke 7 { noise := 100 } 2400 controlLine false none none
+
+/-- A connector request for finite cache controls. -/
+def dockRequest : Connector.Request := {
+  seed := 7, noise := 0, wave := 40000, width := 2400, tip := false,
+  segments := controlLine, source := some ⟨0, 6000⟩, target := some ⟨0, 6000⟩ }
+
+-- The same route with a changed docking surface must not reuse the old outline.
+#guard dockRequest.outline != { dockRequest with source := some ⟨2000, 6000⟩ }.outline
+#guard dockRequest.outline != { dockRequest with target := some ⟨0, 3000⟩ }.outline
+#guard let cache := (Connector.cached {} dockRequest).2
+  let changed := { dockRequest with target := some ⟨-1000, 3000⟩ }
+  (Connector.cached cache changed).1 == changed.outline
+
+/-- Equal-rank points form an admitted horizontal route. -/
+def horizontalFixture : Laid := {
+  placed := #[{ key := "a", x := 0, y := 0, w := 16 },
+    { key := "b", x := 40, y := 0, w := 16 }],
+  routes := #[.down "a→b" ["a", "b"]], width := 80, height := 16 }
+
+-- The renderer must retain this admitted route even though a vertical flare does not apply.
+#guard (GraphCheck.laid horizontalFixture).isOk
+#guard match horizontalFixture.calls {} 0 0 with
+  | [⟨"a→b", .shape .ink 1000 [path]⟩] => !path.isEmpty
+  | _ => false
 
 /-- A laid graph whose two places share a key. -/
 def twice : Laid := { placed := #[{ key := "k", x := 0, y := 0, w := 8 }, { key := "k", x := 40, y := 0, w := 8 }] }
@@ -94,11 +121,11 @@ def dockFixture : Laid := {
   routes := #[.down "e" ["a", "b"]]
   width := 40, height := 36 }
 
-/-- Read the flat face of an emitted collar. -/
-def collarFace (calls : List (Keyed Call)) (i : Nat) : Option Int := do
-  let call ← calls[i]?
-  match call.call with
-  | .shape _ _ paths => return (← (← paths.head?)[1]?).p0.2
+/-- Read the two transverse faces of one emitted connector perimeter. -/
+def connectorFaces (calls : List (Keyed Call)) : Option (Int × Int) := do
+  match calls with
+  | [⟨_, .shape _ _ [path]⟩] =>
+    return ((← path.head?).p0.2, (← path[(path.length - 2) / 2]?).p0.2)
   | _ => none
 
 -- The odd-height bar occupies [7, 10] and [31, 34]. Both collars meet those painted surfaces.
@@ -106,14 +133,15 @@ def collarFace (calls : List (Keyed Call)) (i : Nat) : Option Int := do
 #guard [0, 19, -7].all fun dy =>
   let cs := (Laid.routeCalls {} dockFixture.find dockFixture.onBar 40 11 dy {}
     (.down "e" ["a", "b"])).1
-  collarFace cs 1 == some (1000 * (dy + 10)) &&
-    collarFace cs 2 == some (1000 * (dy + 31))
+  connectorFaces cs == some (1000 * (dy + 10), 1000 * (dy + 31))
 
 -- A growing connector has no target collar. Its source still meets the painted bar.
 #guard [250, 500, 750].all fun reveal =>
   let cs := (Laid.routeCalls {} dockFixture.find dockFixture.onBar 40 0 0 {}
     (.down "e" ["a", "b"] reveal)).1
-  collarFace cs 1 == some 10000 && collarFace cs 2 == none
+  match connectorFaces cs with
+  | some (source, tip) => source == 10000 && 10000 < tip && tip < 31000
+  | none => false
 
 /-- A node during its entrance. The painted top is twelve pixels below its final top. -/
 def growingTarget : Placed :=
@@ -138,8 +166,9 @@ def growingTarget : Placed :=
     { key := "a", x := 0, y := 0, w := 80, node := some { key := "a", line1 := "a" } }
   let cs : List (Keyed Call) := (Laid.organicCalls (fun _ => some source) (fun _ => false)
     {} {} "e" ["a", "b"] 1000000 [⟨(40, 48), (40, 49), (40, 50), (40, 51)⟩] false).1
-  match (cs[1]?).map Keyed.call with
-  | some (Call.shape _ _ [path]) => path.all fun c => c.p0.2 < 51000 && c.p3.2 < 51000
+  match cs with
+  | [⟨_, Call.shape _ _ [path]⟩] => path.all fun c =>
+    [c.p0, c.p1, c.p2, c.p3].all fun p => 48000 ≤ p.2 && p.2 ≤ 51000
   | _ => false
 
 /-! ## LV-3: the layout in linear time -/

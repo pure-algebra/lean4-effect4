@@ -21,7 +21,7 @@ those caches reads a lookup after an insert.
 
 They are tool laws, not registry claims (decisions row 334, point 3). They serve concept
 `initial-algebras-folds` and R14's live authoring. Their consumers are the stroke cache's law
-(`Laid.cachedStroke_valid`), the memo's law (`Inc.next_valid`) and the retained picture's laws
+(`Connector.cached_valid`), the memo's law (`Inc.next_valid`) and the retained picture's laws
 (`Retained.of_flatten`, `Retained.apply_diff`).
 -/
 
