@@ -305,19 +305,16 @@ theorem postTask_queue {m : RunMachine ν σ β ε δ ι α χ St} {owner : Fibe
   · exact List.prefix_rfl
   · exact (arm_queue (m := m.update _) (owner := owner) : QueueKeeps (m.update _) _)
 
-theorem drainOwed_queue_aux (m : RunMachine ν σ β ε δ ι α χ St) :
-    ∀ (due : List (Owed (Prim ν σ β ε δ ι α))), QueueKeeps m (drainOwed m due).1
-  | [] => queue_refl _
-  | d :: rest => by
-    unfold drainOwed
-    split
-    · exact drainOwed_queue_aux m rest
-    · exact queue_trans postTask_queue (drainOwed_queue_aux _ rest)
-
 /-- The drain of owed resumes keeps the queue: every scheduled entry is a post. -/
 theorem drainOwed_queue {m : RunMachine ν σ β ε δ ι α χ St}
-    {due : List (Owed (Prim ν σ β ε δ ι α))} : QueueKeeps m (drainOwed m due).1 :=
-  drainOwed_queue_aux m due
+    {due : List (Owed (Prim ν σ β ε δ ι α))} : QueueKeeps m (drainOwed m due).1 := by
+  induction due generalizing m with
+  | nil => exact queue_refl _
+  | cons d rest ih =>
+    unfold drainOwed
+    split
+    · exact ih
+    · exact queue_trans postTask_queue ih
 
 set_option maxHeartbeats 1600000 in
 theorem driveStep_queue {interp : RunInterp ν σ β ε δ ι α χ St} {m : RunMachine ν σ β ε δ ι α χ St}
