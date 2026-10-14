@@ -657,15 +657,56 @@ theorem denoteBlockB_of_asExit (table : RowTable) (bodies : List NativeEff)
     | interruptible body => change false = true at he; cases he
     | yieldNow priority => change false = true at he; cases he
     | awaitFiber fiber mode => change false = true at he; cases he
-    | withFiber action => change false = true at he; cases he
+    | withFiber action =>
+      cases action
+      case context keys =>
+        rw [Agreement.compileEff_withFiber (.context keys) hf (by intros; intro h; cases h)] at hex
+        cases hex
+      all_goals change false = true at he; cases he
     | «scoped» body => change false = true at he; cases he
     | acquireRelease a b => change false = true at he; cases he
     | provideLayer layer flag body => change false = true at he; cases he
-    | service key => change false = true at he; cases he
-    | provideService key value body => change false = true at he; cases he
+    | service key => rw [Agreement.compileEff_service key hf] at hex; cases hex
+    | provideService key value body =>
+      rw [Agreement.compileEff_provideService key value body hf] at hex
+      cases hv : evalTerm p.env value with
+      | some v => simp only [hv, updateContextAt, Prim.asExit?] at hex; cases hex
+      | none =>
+        simp only [hv, badShape, Prim.asExit?, Option.some.injEq] at hex
+        subst ex
+        cases k <;> change (match evalTerm p.env value with
+          | some v => _
+          | none => pure (some badShapeExit)) = _
+        all_goals rw [hv]; rfl
     | restore mask body => change false = true at he; cases he
     | defs decls bs main layers => change false = true at he; cases he
-    | provideContext context body => change false = true at he; cases he
+    | provideContext context body =>
+      rw [Agreement.compileEff_provideContext context body hf] at hex
+      cases hc : (evalTerm p.env context).bind Val.context? with
+      | none =>
+        simp only [hc, badShape, Prim.asExit?, Option.some.injEq] at hex
+        subst ex
+        cases k <;> change (match (evalTerm p.env context).bind Val.context? with
+          | some built => _
+          | none => pure (some badShapeExit)) = _
+        all_goals rw [hc]; rfl
+      | some built =>
+        cases hb : (compileEff body (p.child 0)).asExit? with
+        | none =>
+          simp only [hc, hb] at hex
+          change none = some ex at hex
+          cases hex
+        | some inner =>
+          simp only [hc, hb, Prim.ofExit_asExit?, Option.some.injEq] at hex
+          subst ex
+          have hbody : BodyRows table body = true := he
+          have hm := denoteBlockB_of_asExit table bodies body (p.child 0) inner hbody hb k params
+            (provided (.provide built.services) ctx)
+          cases k <;> change (match (evalTerm p.env context).bind Val.context? with
+            | some built => _
+            | none => pure (some badShapeExit)) = _
+          all_goals rw [hc]
+          all_goals exact hm
 
 
 

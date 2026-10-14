@@ -51,18 +51,18 @@ theorem localRunC_to_blockB {σ : Type} (host : Effects.Comodel (RowSig table) �
   refine ⟨c, ?_⟩
   have hR : RunsToDO host root [] true c (fiberOf (compile root cf) []) Stores.empty R
       (runRowsO host (denoteBlockB table (bodiesOf root) c [] root emptyCtx []) Stores.empty R) :=
-    compilesBlk_root host root hfrag c (rootPoint cf) [] true Stores.empty R rfl rfl
+    compilesBlk_root host root hfrag c (rootPoint cf) [] true Stores.empty R emptyCtx rfl rfl
   have hnodiv : ¬ Diverges host root (fiberOf (compile root cf) []) Stores.empty R := by
-    rintro ⟨d, fr', s₁, r₁, hd, hfront⟩
+    rintro ⟨d, fr', s₁, r₁, ctx₁, hd, hfront⟩
     have h₁ := localRunC_mono c d _ _ _ h
-    rw [hd c, localRunC_frontier _ s₁ r₁ hfront] at h₁
+    rw [hd c, localRunC_frontier (ctx := ctx₁) _ s₁ r₁ hfront] at h₁
     cases h₁
   unfold hostRunBlockB
   rw [runRowsH_eq_project]
   rcases hm : runRowsO host (denoteBlockB table (bodiesOf root) c [] root emptyCtx [])
       Stores.empty R with ⟨_ | ex₂, s₂, r₂⟩ | ⟨row, request, s₂, r₂⟩
   · rw [hm] at hR
-    rcases hR with ⟨d, fr', s₁, r₁, hcd, hd⟩ | hdiv
+    rcases hR with ⟨d, fr', s₁, r₁, ctx₁, hcd, hd⟩ | hdiv
     · have h₁ := localRunC_mono c (d - c) _ _ _ h
       rw [Nat.add_sub_cancel' hcd, ← Nat.zero_add d, hd 0] at h₁
       cases h₁
@@ -74,8 +74,8 @@ theorem localRunC_to_blockB {σ : Type} (host : Effects.Comodel (RowSig table) �
       rfl
     · exact absurd hdiv hnodiv
   · rw [hm] at hR
-    rcases hR with ⟨d, fr', hd, hc, hcall, ha⟩ | hdiv
-    · have hw := (hd 1).trans (localRunC_waits hc ha s₂ 0)
+    rcases hR with ⟨d, fr', ctx₁, hd, hc, hcall, ha⟩ | hdiv
+    · have hw := (hd 1).trans (localRunC_waits hc ha s₂ 0 ctx₁)
       cases localRunC_agree h hw
     · exact absurd hdiv hnodiv
 

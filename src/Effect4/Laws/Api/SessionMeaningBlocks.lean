@@ -36,8 +36,8 @@ theorem h9_blocks : H9Blocks := by
   intro s hreach hfund hrest hhost hfrag σ host st st' hA ex hex
   obtain ⟨p, hS, -, hL, hexit⟩ := session_settled s hreach hfund hrest hhost
     (PlainHooks.of_blockRows hfrag) host st st' hA
-  rcases hS with ⟨cur, K, i, s', n, tr, t, hm, -, -⟩ |
-    ⟨cur, K, i, s', n, tr, t, hm, -, -⟩ | ⟨ex', fr, s', n, tr, nt, hm, rfl, -⟩
+  rcases hS with ⟨cur, K, i, s', n, tr, t, ctx, hm, -, -⟩ |
+    ⟨cur, K, i, s', n, tr, t, ctx, hm, -, -⟩ | ⟨ex', fr, s', n, tr, nt, ctx, hm, rfl, -⟩
   · rw [hexit, hm, Myield_fiber?] at hex
     cases hex
   · rw [hexit, hm, Mcall_fiber?] at hex

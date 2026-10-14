@@ -226,8 +226,8 @@ def ExtPlainFrame (table : RowTable) : NCode → Bool
 def ExtPlainStack (table : RowTable) (K : List NCode) : Prop :=
   ∀ fr ∈ K, ExtPlainFrame table fr = true
 
-theorem ExtPlainName.toPlain {n : EffName} (h : ExtPlainName n = true) : PlainName n = true := by
-  cases n <;> simp only [ExtPlainName, PlainName, Bool.false_eq_true] at h ⊢
+theorem ExtPlainName.toContextFree {n : EffName} (h : ExtPlainName n = true) : ContextFreeName n = true := by
+  cases n <;> simp only [ExtPlainName, ContextFreeName, Bool.false_eq_true] at h ⊢
 
 theorem ExtCall.toIsCall {table : RowTable} {c : NCode} (h : ExtCall table c = true) :
     IsCall c = true := by
@@ -240,13 +240,13 @@ theorem ExtCall.toIsCall {table : RowTable} {c : NCode} (h : ExtCall table c = t
     | _ => simp only [ExtCall, Bool.false_eq_true] at h
   | _ => simp only [ExtCall, Bool.false_eq_true] at h
 
-theorem ExtPlainCode.toPlain {table : RowTable} :
-    ∀ {c : NCode}, ExtPlainCode table c = true → PlainCode c = true
+theorem ExtPlainCode.toContextFree {table : RowTable} :
+    ∀ {c : NCode}, ExtPlainCode table c = true → ContextFreeCode c = true
   | Prim.success _, _ | Prim.failure _, _ | Prim.yieldableError _, _
   | Prim.sync (EffThunk.pure _), _ | Prim.suspend (EffThunk.body _), _ => rfl
   | Prim.onSuccess b n, h | Prim.onFailure b n, h => by
-    simp only [ExtPlainCode, PlainCode, Bool.and_eq_true] at h ⊢
-    exact ⟨ExtPlainCode.toPlain h.1, ExtPlainName.toPlain h.2⟩
+    simp only [ExtPlainCode, ContextFreeCode, Bool.and_eq_true] at h ⊢
+    exact ⟨ExtPlainCode.toContextFree h.1, ExtPlainName.toContextFree h.2⟩
   | Prim.async n w c, h => ExtCall.toIsCall h
   | Prim.sync (EffThunk.op _), h | Prim.sync (EffThunk.store _), h
   | Prim.suspend (EffThunk.store _), h
@@ -255,6 +255,15 @@ theorem ExtPlainCode.toPlain {table : RowTable} :
   | Prim.setInterruptible _, h | Prim.yieldNowWith _, h | Prim.asyncFinalizer _, h
   | Prim.onSuccessConst _ _, h => by
     simp only [ExtPlainCode, Bool.false_eq_true] at h
+
+/-- Step of recorded-call-tree-prefix/R6; consumer: `LeadsTape.step`.
+The external-only straight lane never interprets a fiber action. -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem ExtPlainCode.noWithFiber {table : RowTable} {code : NCode}
+    (h : ExtPlainCode table code = true) (thunk : EffThunk) : code ≠ Prim.withFiber thunk := by
+  intro same
+  subst code
+  cases h
 
 theorem ExtPlainCode.not_sync_op {table : RowTable} {c : NCode} (h : ExtPlainCode table c = true) :
     ∀ o, c ≠ Prim.sync (EffThunk.op o) := by
@@ -267,11 +276,11 @@ theorem ExtPlainCode.extCall_of_isCall {table : RowTable} {c : NCode}
   cases c <;> simp only [IsCall, ExtPlainCode, Bool.false_eq_true] at hc h ⊢
   exact h
 
-theorem ExtPlainFrame.toPlain {table : RowTable} {fr : NCode} (h : ExtPlainFrame table fr = true) :
-    PlainFrame fr = true := by
-  cases fr <;> simp only [ExtPlainFrame, PlainFrame, Bool.and_eq_true, Bool.false_eq_true] at h ⊢
-  · exact ⟨ExtPlainCode.toPlain h.1, ExtPlainName.toPlain h.2⟩
-  · exact ⟨ExtPlainCode.toPlain h.1, ExtPlainName.toPlain h.2⟩
+theorem ExtPlainFrame.toContextFree {table : RowTable} {fr : NCode} (h : ExtPlainFrame table fr = true) :
+    ContextFreeFrame fr = true := by
+  cases fr <;> simp only [ExtPlainFrame, ContextFreeFrame, Bool.and_eq_true, Bool.false_eq_true] at h ⊢
+  · exact ⟨ExtPlainCode.toContextFree h.1, ExtPlainName.toContextFree h.2⟩
+  · exact ⟨ExtPlainCode.toContextFree h.1, ExtPlainName.toContextFree h.2⟩
 
 theorem ExtPlainFrame.not_contAll {table : RowTable} {fr : NCode}
     (h : ExtPlainFrame table fr = true) : fr.hasArm .contAll = false := by
@@ -296,9 +305,9 @@ theorem ExtPlainStack.tail {table : RowTable} {fr : NCode} {K : List NCode}
     (hK : ExtPlainStack table (fr :: K)) : ExtPlainStack table K :=
   fun f hf => hK f (List.mem_cons_of_mem fr hf)
 
-theorem ExtPlainStack.toPlain {table : RowTable} {K : List NCode} (hK : ExtPlainStack table K) :
-    PlainStack K :=
-  fun fr hfr => ExtPlainFrame.toPlain (hK fr hfr)
+theorem ExtPlainStack.toContextFree {table : RowTable} {K : List NCode} (hK : ExtPlainStack table K) :
+    ContextFreeStack K :=
+  fun fr hfr => ExtPlainFrame.toContextFree (hK fr hfr)
 
 theorem extPlainCode_compileEff (table : RowTable) :
     ∀ (e : NativeEff) (p : Point), ExtRows table e = true →
@@ -603,10 +612,10 @@ theorem LeadsTape.step {table : RowTable} {root : NativeEff}
     {fr₀ fr fr' : NFiber} {s₀ s s' : Stores} {tape : ReplyTape}
     (hL : LeadsTape table root fr₀ s₀ tape fr s)
     (hstep : localStep root fr s = .running fr' s')
-    (hcall : IsCall fr.current = false) :
+    (hcall : IsCall fr.current = false) (hwith : ∀ thunk, fr.current ≠ Prim.withFiber thunk) :
     LeadsTape table root fr₀ s₀ tape fr' s' := by
   obtain ⟨c, hc⟩ := hL
-  exact ⟨c + 1, fun rest => (hc rest).trans (ReachesC.step hstep hcall rest)⟩
+  exact ⟨c + 1, fun rest => (hc rest).trans (ReachesC.step hstep hcall hwith rest)⟩
 
 theorem LeadsTape.answer {table : RowTable} {root : NativeEff}
     {fr₀ fr : NFiber} {s₀ s : Stores} {tape : ReplyTape} {ex : ExitV}
@@ -626,10 +635,9 @@ theorem LeadsTape.toLeads {table : RowTable} {root : NativeEff}
     (hL : LeadsTape table root fr₀ s₀ tape fr s) :
     Leads (admittedTapeHost table) root (.live fr₀ s₀) tape (.live fr s) [] := by
   obtain ⟨c, hc⟩ := hL
-  refine ⟨c, ?_⟩
   have h0 := hc []
   rw [List.append_nil] at h0
-  exact h0
+  exact h0.join
 
 /-! ## Single-step evaluation on `YieldStack`, interrupted fibers, and `ExtPlainCode` -/
 
@@ -749,8 +757,8 @@ theorem evaluateNative_ext_nonSync (root : NativeEff) (table : RowTable)
         ⟨m.emit ev, { f with frame := fr' }, yielding, Outcome.continue_, [], []⟩
       | .finished ex _ =>
         ⟨m.emit ev, { f with frame := frameExitState f.frame }, yielding, Outcome.finished ex, [], []⟩ := by
-  have hplain : PlainCode cur = true := ExtPlainCode.toPlain hpl
-  have hKplain : PlainStack K := hK.toPlain
+  have hplain : ContextFreeCode cur = true := ExtPlainCode.toContextFree hpl
+  have hKplain : ContextFreeStack K := hK.toContextFree
   have hnotScoped : ∀ ex body previous scope flag,
       (popOf f.frame ex).answer ≠
         ContAnswer.frame (Prim.onExit body (EffName.scopedExit previous scope) flag) := by
@@ -2046,7 +2054,7 @@ private theorem settle_evaluateNative_ext_nonSync {root : NativeEff} {table : Ro
     dsimp only [settle, settleOutcome, List.nil_append]
     let f' : NRunFiber := { f₁ with frame := fiberOf cur' K' true }
     have hup : ((m.emit ev).update f').fibers = [f'] := update_one hmf₀ hid₁₀
-    have hleads' := LeadsTape.step hleads hstep_empty hnc
+    have hleads' := LeadsTape.step hleads hstep_empty hnc (fun thunk => ExtPlainCode.noWithFiber hpl thunk)
     have hl' : LoopActiveOrInterrupted root table cf journal f' :=
       Or.inl ⟨cur', K', tape, rfl, hpl', hK', htape, hleads', .plain⟩
     have hmode' : FiberMode root table cf journal m.nextToken f' :=
@@ -2222,6 +2230,7 @@ private theorem driveStep_loop {root : NativeEff} {table : RowTable} {cf : Nat}
           have hleads' : LeadsTape table root (fiberOf (compile root cf) []) Stores.empty
               tape (fiberOf (Prim.success v) K true) Stores.empty :=
             LeadsTape.step hleads (step_sync_pure root p K true Stores.empty) rfl
+              (by intros; intro h; cases h)
           have hmode' : FiberMode root table cf journal m.nextToken f₃ :=
             .active (Prim.success v) K tape hexit rfl rfl rfl rfl hK htape hleads'
               (.unparked hp .plain)

@@ -51,18 +51,18 @@ theorem localRunC_to_rowsB {σ : Type} (host : Effects.Comodel (RowSig table) σ
       (hostRunB host c root [] Stores.empty R) :=
     localRunC_compileB host root c root (rootPoint cf) [] true Stores.empty R hfrag rfl
   have hnodiv : ¬ Diverges host root (fiberOf (compile root cf) []) Stores.empty R := by
-    rintro ⟨d, fr', s₁, r₁, hd, hfront⟩
+    rintro ⟨d, fr', s₁, r₁, reachedCtx, hd, hfront⟩
     have h₁ := localRunC_mono c d _ _ _ h
     rw [hd c, localRunC_frontier _ s₁ r₁ hfront] at h₁
     cases h₁
   rcases hm : hostRunB host c root [] Stores.empty R with _ | ⟨_ | ex₂, s₂, r₂⟩
   · rw [hm] at hR
-    rcases hR with ⟨d, fr', s₁, r₁, hd, hc, ha⟩ | hdiv
-    · have hw := (hd 1).trans (localRunC_waits hc ha s₁ 0)
+    rcases hR with ⟨d, fr', s₁, r₁, reachedCtx, hd, hc, ha⟩ | hdiv
+    · have hw := (hd 1).trans (localRunC_waits hc ha s₁ 0 reachedCtx)
       cases localRunC_agree h hw
     · exact absurd hdiv hnodiv
   · rw [hm] at hR
-    rcases hR with ⟨d, fr', s₁, r₁, hkd, hd⟩ | hdiv
+    rcases hR with ⟨d, fr', s₁, r₁, reachedCtx, hkd, hd⟩ | hdiv
     · have h₁ := localRunC_mono c (d - c) _ _ _ h
       rw [Nat.add_sub_cancel' hkd, ← Nat.zero_add d, hd 0] at h₁
       cases h₁
@@ -78,24 +78,22 @@ theorem localRunC_to_rowsB {σ : Type} (host : Effects.Comodel (RowSig table) σ
 budget. Q5 at the root: a finished approximant would make the run exit, or reach the compile's
 frontier, and it waits. -/
 theorem hostRunB_waits {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root : NativeEff)
-    (hfrag : LoopedDataRows table root = true) (cf : Nat) (R st : σ) {fr : NFiber} {s : Stores}
-    (hL : Leads host root (.live (fiberOf (compile root cf) []) Stores.empty) R (.live fr s) st)
+    (hfrag : LoopedDataRows table root = true) (cf : Nat) (R st : σ) {fr : NFiber} {s : Stores} {ctx : Ctx}
+    (hL : Leads host root (.live (fiberOf (compile root cf) []) Stores.empty) R (.live fr s ctx) st)
     (hc : IsCall fr.current = true) (hstop : hostAnswer host fr.current st = none) (k : Nat)
     {ex : ExitV} {r : Stores × σ} : hostRunB host k root [] Stores.empty R ≠ some (some ex, r) := by
   intro hm
-  obtain ⟨c, hreach⟩ := hL
-  have hw : ∀ n, localRunC host root (n + 1 + c) (fiberOf (compile root cf) []) Stores.empty R =
-      some (.waits _ _ _) := fun n => (hreach (n + 1)).trans (localRunC_waits hc hstop s n)
+  obtain ⟨c, hw⟩ := RunJoinC.terminal hL (localRunC_waits hc hstop s 0 ctx)
   have hR : RunsToDB host root [] true k (fiberOf (compile root cf) []) Stores.empty R
       (hostRunB host k root [] Stores.empty R) :=
     localRunC_compileB host root k root (rootPoint cf) [] true Stores.empty R hfrag rfl
   obtain ⟨s₂, r₂⟩ := r
   rw [hm] at hR
-  rcases hR with ⟨d, hd⟩ | ⟨d, fr', s', r', hd, hfront⟩
+  rcases hR with ⟨d, hd⟩ | ⟨d, fr', s', r', reachedCtx, hd, hfront⟩
   · have he := (hd 1).trans (localRunC_ofExit_nil ex true s₂ r₂ 0)
-    cases localRunC_agree (hw 0) he
-  · have h₁ := localRunC_mono (0 + 1 + c) d _ _ _ (hw 0)
-    rw [hd (0 + 1 + c), localRunC_frontier _ s' r' hfront] at h₁
+    cases localRunC_agree hw he
+  · have h₁ := localRunC_mono c d _ _ _ hw
+    rw [hd c, localRunC_frontier _ s' r' hfront] at h₁
     cases h₁
 
 /-- **An exited root has its exit at every budget past a bound**: Q6a finds one budget, Q2 keeps
@@ -112,11 +110,11 @@ theorem hostRunB_exits {σ : Type} (host : Effects.Comodel (RowSig table) σ) (r
 never does. A step of `localWaitC_to_rowsB`. -/
 theorem waits_not_diverges {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
     {fr₀ : NFiber} {s₀ : Stores} {R : σ} {c : Nat} {e : RunEnd σ}
-    (hw : localRunC host root (0 + 1 + c) fr₀ s₀ R = some e) :
+    (hw : localRunC host root c fr₀ s₀ R = some e) :
     ¬ Diverges host root fr₀ s₀ R := by
-  rintro ⟨d, fr', s₁, r₁, hd, hfront⟩
-  have h₁ := localRunC_mono (0 + 1 + c) d _ _ _ hw
-  rw [hd (0 + 1 + c), localRunC_frontier _ s₁ r₁ hfront] at h₁
+  rintro ⟨d, fr', s₁, r₁, reachedCtx, hd, hfront⟩
+  have h₁ := localRunC_mono c d _ _ _ hw
+  rw [hd c, localRunC_frontier _ s₁ r₁ hfront] at h₁
   cases h₁
 
 /-- **The detailed meaning waits where the local run waits** (Q6b): a local run with calls that
@@ -131,17 +129,15 @@ any budget below the bound. -/
 @[semantics "translation-simulation" (requirement := R6)]
 theorem localWaitC_to_rowsB {σ : Type} (host : Effects.Comodel (RowSig table) σ)
     (root : NativeEff) (hfrag : LoopedDataRows table root = true) (cf : Nat) (R st : σ)
-    {fr : NFiber} {s : Stores}
-    (hL : Leads host root (.live (fiberOf (compile root cf) []) Stores.empty) R (.live fr s) st)
+    {fr : NFiber} {s : Stores} {ctx : Ctx}
+    (hL : Leads host root (.live (fiberOf (compile root cf) []) Stores.empty) R (.live fr s ctx) st)
     (hc : IsCall fr.current = true) (hstop : hostAnswer host fr.current st = none)
     {row : Nat} {request : Val} (hcall : callOf fr.current = some (row, request)) :
     ∃ lower, ∀ k, lower ≤ k →
       runRowsO host (denoteRowsB table k root []) Stores.empty R = .waiting row request s st := by
-  obtain ⟨c, hreach⟩ := hL
-  have hw : ∀ n, localRunC host root (n + 1 + c) (fiberOf (compile root cf) []) Stores.empty R =
-      some (.waits fr.current s st) := fun n => (hreach (n + 1)).trans (localRunC_waits hc hstop s n)
-  have hnodiv := waits_not_diverges (hw 0)
-  refine ⟨c + 1, fun k hk => ?_⟩
+  obtain ⟨c, hw⟩ := RunJoinC.terminal hL (localRunC_waits hc hstop s 0 ctx)
+  have hnodiv := waits_not_diverges hw
+  refine ⟨c, fun k hk => ?_⟩
   have hR : RunsToDO host root [] true k (fiberOf (compile root cf) []) Stores.empty R
       (runRowsO host (denoteRowsB table k root []) Stores.empty R) :=
     localRunC_compileBO host root k root (rootPoint cf) [] true Stores.empty R hfrag rfl
@@ -149,8 +145,8 @@ theorem localWaitC_to_rowsB {σ : Type} (host : Effects.Comodel (RowSig table) �
     ⟨_ | ex, s', r'⟩ | ⟨row', request', s', r'⟩
   · -- a cut: the local run would still be going after `k` steps, past its wait
     rw [hm] at hR
-    rcases hR with ⟨d, fr', s₁, r₁, hkd, hd⟩ | hdiv
-    · have h₁ := localRunC_mono (0 + 1 + c) (d - (0 + 1 + c)) _ _ _ (hw 0)
+    rcases hR with ⟨d, fr', s₁, r₁, reachedCtx, hkd, hd⟩ | hdiv
+    · have h₁ := localRunC_mono c (d - c) _ _ _ hw
       rw [Nat.add_sub_cancel' (by omega), hd.none] at h₁
       cases h₁
     · exact absurd hdiv hnodiv
@@ -158,14 +154,14 @@ theorem localWaitC_to_rowsB {σ : Type} (host : Effects.Comodel (RowSig table) �
     rw [hm] at hR
     rcases hR with ⟨d, hd⟩ | hdiv
     · have he := (hd 1).trans (localRunC_ofExit_nil ex true s' r' 0)
-      cases localRunC_agree (hw 0) he
+      cases localRunC_agree hw he
     · exact absurd hdiv hnodiv
   · -- a wait: the local run's, by determinism
     rw [hm] at hR
-    rcases hR with ⟨d, fr', hd, hc', hcall', ha'⟩ | hdiv
-    · have hw' := (hd 1).trans (localRunC_waits hc' ha' s' 0)
-      have hagree := localRunC_agree (hw 0) hw'
-      injection hagree with hcur hs hst
+    rcases hR with ⟨d, fr', reachedCtx, hd, hc', hcall', ha'⟩ | hdiv
+    · have hw' := (hd 1).trans (localRunC_waits hc' ha' s' 0 reachedCtx)
+      have hagree := localRunC_agree hw hw'
+      injection hagree with hcur hs hst _
       subst hs hst
       rw [← hcur, hcall] at hcall'
       cases hcall'
@@ -181,8 +177,8 @@ theorem meaning_settledB_tape (root : NativeEff) (hfrag : LoopedDataRows table r
     (hL : Leads (tapeHost table) root (.live (fiberOf (compile root cf) []) Stores.empty) R p []) :
     ∃ lower, ∀ k, lower ≤ k → coarseRowsB table k root [] Stores.empty R =
       ((m.fiber? Api.root).bind RunFiber.exit).map fun ex => ((ex, m.state), []) := by
-  rcases hS with ⟨cur, K, i, s, n, tr, t, rfl, rfl, -⟩ |
-    ⟨cur, K, i, s, n, tr, t, rfl, rfl, hc, -⟩ | ⟨ex, fr, s, n, tr, nt, rfl, rfl, -⟩
+  rcases hS with ⟨cur, K, i, s, n, tr, t, ctx, rfl, rfl, -⟩ |
+    ⟨cur, K, i, s, n, tr, t, ctx, rfl, rfl, hc, -⟩ | ⟨ex, fr, s, n, tr, nt, ctx, rfl, rfl, -⟩
   · cases harmed
   · refine ⟨0, fun k _ => ?_⟩
     rw [Mcall_fiber?]

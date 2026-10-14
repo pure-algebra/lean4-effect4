@@ -68,8 +68,8 @@ does not establish that a host's drive finishes, nor anything of a run that stop
 theorem denoteRowsB_eq_session_host : H9LoopedRows := by
   intro s hreach hfund hrest hhost hroot hfrag σ host st st' hA ex hex
   obtain ⟨p, hS, -, hL, hexit⟩ := session_settled s hreach hfund hrest hhost (PlainHooks.of_loopedRows hroot) host st st' hA
-  rcases hS with ⟨cur, K, i, s', n, tr, t, hm, -, -⟩ | ⟨cur, K, i, s', n, tr, t, hm, -, -⟩ |
-    ⟨ex', fr, s', n, tr, nt, hm, rfl, -⟩
+  rcases hS with ⟨cur, K, i, s', n, tr, t, ctx, hm, -, -⟩ | ⟨cur, K, i, s', n, tr, t, ctx, hm, -, -⟩ |
+    ⟨ex', fr, s', n, tr, nt, ctx, hm, rfl, -⟩
   · rw [hexit, hm, Myield_fiber?] at hex
     cases hex
   · rw [hexit, hm, Mcall_fiber?] at hex
@@ -92,14 +92,14 @@ The plan is `docs/research/2026-10-10-l4-frontiers.md`. -/
 /-- The machine with its root parked on a host call holds that call's row and request. A step of
 `awaits_Mcall_call`. -/
 theorem requestOf_Mcall_call (j : Nat) (v : Val) (w : List Nat) (K : List NCode) (i : Bool)
-    (s : Stores) (n : Nat) (tr : NTrace) (t : Nat) :
+    (s : Stores) (n : Nat) (tr : NTrace) (t : Nat) (ctx : Ctx := emptyCtx) :
     Program.requestOf (Mcall (fiberOf (Prim.async (EffName.external (.external j) v w) false none) K i)
-      s n tr t) Api.root t = some (.external j, v) := by
+      s n tr t ctx) Api.root t = some (.external j, v) := by
   unfold Program.requestOf
   rw [Mcall_fiber?]
   simp only [Option.bind_eq_bind, Option.bind_some]
   have hp : (callParkedAt (fiberOf (Prim.async (EffName.external (.external j) v w) false none) K i)
-      n t).parked = Parked.withGuard t := rfl
+      n t ctx).parked = Parked.withGuard t := rfl
   unfold guard
   rw [if_pos hp]
   rfl
@@ -107,15 +107,15 @@ theorem requestOf_Mcall_call (j : Nat) (v : Val) (w : List Nat) (K : List NCode)
 /-- **The machine with its root parked on a host call awaits that call alone**: the run's one
 outstanding call (`Program.awaits`). A step of `rows_loop_frontier`. -/
 theorem awaits_Mcall_call (j : Nat) (v : Val) (w : List Nat) (K : List NCode) (i : Bool)
-    (s : Stores) (n : Nat) (tr : NTrace) (t : Nat) :
+    (s : Stores) (n : Nat) (tr : NTrace) (t : Nat) (ctx : Ctx := emptyCtx) :
     Program.awaits (Mcall (fiberOf (Prim.async (EffName.external (.external j) v w) false none) K i)
-      s n tr t) = [⟨Api.root, t, .external j, v⟩] := by
+      s n tr t ctx) = [⟨Api.root, t, .external j, v⟩] := by
   unfold Program.awaits
-  show List.filterMap _ [callParkedAt _ n t] = _
+  show List.filterMap _ [callParkedAt _ n t ctx] = _
   simp only [List.filterMap_cons, List.filterMap_nil, callParkedAt]
   have h : Program.requestOf (Mcall (fiberOf (Prim.async (EffName.external (.external j) v w) false none)
-      K i) s n tr t) (fiberAt (fiberOf (Prim.async (EffName.external (.external j) v w) false none) K i)
-      n).id t = some (.external j, v) := requestOf_Mcall_call j v w K i s n tr t
+      K i) s n tr t ctx) (fiberAt (fiberOf (Prim.async (EffName.external (.external j) v w) false none) K i)
+      n ctx).id t = some (.external j, v) := requestOf_Mcall_call j v w K i s n tr t ctx
   rw [h]
   rfl
 
@@ -141,12 +141,12 @@ theorem rows_loop_frontier : H8FrontierLoopedRows := by
   intro s hreach hfund hrest hhost hroot hfrag a ha
   obtain ⟨p, hS, harmed, hL, -⟩ := session_settled s hreach hfund hrest hhost (PlainHooks.of_loopedRows hroot)
     (tapeHost s.built.table) _ _ (session_tapeAnswered s hfund hhost)
-  rcases hS with ⟨cur, K, i, s', n, tr, t, hm, -, -⟩ | ⟨cur, K, i, s', n, tr, t, hm, hp, hc, -⟩ |
-    ⟨ex, fr, s', n, tr, nt, hm, -, -⟩
+  rcases hS with ⟨cur, K, i, s', n, tr, t, ctx, hm, -, -⟩ | ⟨cur, K, i, s', n, tr, t, ctx, hm, hp, hc, -⟩ |
+    ⟨ex, fr, s', n, tr, nt, ctx, hm, -, -⟩
   · rw [hm] at harmed
     cases harmed
   · obtain ⟨j, v, w, rfl⟩ := eq_call_of_isCall hc
-    rw [hm, awaits_Mcall_call, List.mem_singleton] at ha
+    rw [hm, awaits_Mcall_call (ctx := ctx), List.mem_singleton] at ha
     subst ha
     refine ⟨j, rfl, ?_⟩
     rw [hp] at hL
@@ -181,12 +181,12 @@ host leaves the call unanswered: that is the premise. -/
 theorem rows_loop_frontier_host : H9FrontierLoopedRows := by
   intro s hreach hfund hrest hhost hroot hfrag σ host st st' hA a ha
   obtain ⟨p, hS, harmed, hL, -⟩ := session_settled s hreach hfund hrest hhost (PlainHooks.of_loopedRows hroot) host st st' hA
-  rcases hS with ⟨cur, K, i, s', n, tr, t, hm, -, -⟩ | ⟨cur, K, i, s', n, tr, t, hm, hp, hc, -⟩ |
-    ⟨ex, fr, s', n, tr, nt, hm, -, -⟩
+  rcases hS with ⟨cur, K, i, s', n, tr, t, ctx, hm, -, -⟩ | ⟨cur, K, i, s', n, tr, t, ctx, hm, hp, hc, -⟩ |
+    ⟨ex, fr, s', n, tr, nt, ctx, hm, -, -⟩
   · rw [hm] at harmed
     cases harmed
   · obtain ⟨j, v, w, rfl⟩ := eq_call_of_isCall hc
-    rw [hm, awaits_Mcall_call, List.mem_singleton] at ha
+    rw [hm, awaits_Mcall_call (ctx := ctx), List.mem_singleton] at ha
     subst ha
     refine ⟨j, rfl, fun hno => ?_⟩
     rw [hp] at hL

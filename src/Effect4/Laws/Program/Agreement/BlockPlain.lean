@@ -6,7 +6,7 @@ import Effect4.Laws.Program.FragmentBlock
 
 Concept: translation-simulation. Claim: rows-block-host, a simulation serving R6.
 These goals supply `session_settled` with plain hooks on `BlockRows`.
-They concern one fiber and no context constructs, and establish no progress.
+They concern one fiber with context constructs, and establish no progress.
 `Agreement.Machine` owns `PlainHooks`; this module supplies the block premise.
 -/
 
@@ -144,12 +144,9 @@ theorem plainCode_compileEff_bodyRows {table : RowTable} : ∀ (e : NativeEff) (
   | .interruptible _, _, hpl
   | .yieldNow _, _, hpl
   | .awaitFiber _ _, _, hpl
-  | .withFiber _, _, hpl
   | .scoped _, _, hpl
   | .acquireRelease _ _, _, hpl
   | .provideLayer _ _ _, _, hpl
-  | .service _, _, hpl
-  | .provideService _ _ _, _, hpl
   | .restore _ _, _, hpl => by cases hpl
 
   | .defs _ _ _ _, _, hpl => by cases hpl
@@ -157,7 +154,32 @@ theorem plainCode_compileEff_bodyRows {table : RowTable} : ∀ (e : NativeEff) (
     rcases hf : p.fuel with _ | k
     · rw [compileEff_at_zero _ hf]; rfl
     · rw [compileEff_invoke j r args hf]; rfl
-  | .provideContext _ _, _, hpl => by cases hpl
+  | .withFiber action, p, hpl => by
+    cases action
+    case context keys =>
+      rcases hf : p.fuel with _ | k
+      · rw [compileEff_at_zero _ hf]; rfl
+      · rw [compileEff_withFiber (.context keys) hf (by intros; intro h; cases h)]; rfl
+    all_goals cases hpl
+  | .service key, p, _ => by
+    rcases hf : p.fuel with _ | k
+    · rw [compileEff_at_zero _ hf]; rfl
+    · rw [compileEff_service key hf]; rfl
+  | .provideService key value body, p, _ => by
+    rcases hf : p.fuel with _ | k
+    · rw [compileEff_at_zero _ hf]; rfl
+    · rw [compileEff_provideService key value body hf]
+      cases evalTerm p.env value <;> rfl
+  | .provideContext context body, p, _ => by
+    rcases hf : p.fuel with _ | k
+    · rw [compileEff_at_zero _ hf]; rfl
+    · rw [compileEff_provideContext context body hf]
+      cases (evalTerm p.env context).bind Val.context? with
+      | none => rfl
+      | some built =>
+        cases hx : (compileEff body (p.child 0)).asExit? with
+        | none => rfl
+        | some ex => cases ex <;> rfl
 
 /-- Reachability predicate for rows-block-host (R6), consumed by `blockNode_child`.
 Only the root may be a block; spines carry admitted program children. -/
@@ -165,6 +187,7 @@ private def BlockNode (table : RowTable) : Node NativeOp → Prop
   | .eff e => BodyRows table e = true ∨ BlockRows table e = true
   | .effs es => cata_effs (bodyRowsAlg table) es = true
   | .layers .nil => True
+  | .action action => cata_action (bodyRowsAlg table) action = true
   | _ => False
 
 /-- Step of rows-block-host (R6), consumed by `block_plain_at`.
@@ -206,25 +229,33 @@ private theorem blockNode_child {table : RowTable} {n m : Node NativeOp} {i : Na
     | cons _ _ => exact False.elim hn
   | stmts _ => exact False.elim hn
   | stmt _ => exact False.elim hn
-  | action _ => exact False.elim hn
+  | action action =>
+    cases action
+    case context keys => cases i <;> cases hc
+    all_goals exact False.elim (Bool.noConfusion hn)
   | layer _ => exact False.elim hn
 
 /-- Step of rows-block-host (R6), consumed by the root resolver hook.
 Address descent retains body or root membership. -/
-private theorem block_plain_at {table : RowTable} : ∀ (path : List Nat) (n : Node NativeOp)
-    (e : NativeEff), BlockNode table n → Node.at_ n path = some (.eff e) →
-    BodyRows table e = true ∨ BlockRows table e = true
-  | [], n, e, hn, h => by
+private theorem block_node_at {table : RowTable} : ∀ (path : List Nat) (n m : Node NativeOp),
+    BlockNode table n → Node.at_ n path = some m → BlockNode table m
+  | [], n, m, hn, h => by
     simp only [Node.at_, Option.some.injEq] at h
     subst n
     exact hn
-  | i :: rest, n, e, hn, h => by
+  | i :: rest, n, m, hn, h => by
     simp only [Node.at_] at h
     cases hc : n.child i with
     | none => simp only [hc, Option.bind_none, reduceCtorEq] at h
-    | some m =>
+    | some child =>
       simp only [hc, Option.bind_some] at h
-      exact block_plain_at rest m e (blockNode_child hn hc) h
+      exact block_node_at rest child m (blockNode_child hn hc) h
+
+/-- Step of rows-block-host (R6), consumed by the resolver hook.
+Address descent retains body or root membership. -/
+private theorem block_plain_at {table : RowTable} (path : List Nat) (n : Node NativeOp)
+    (e : NativeEff) (hn : BlockNode table n) (h : Node.at_ n path = some (.eff e)) :
+    BodyRows table e = true ∨ BlockRows table e = true := block_node_at path n (.eff e) hn h
 
 /-- Step of rows-block-host (R6), consumed by the block resolver.
 Root compilation enters its admitted main without a machine step. -/
@@ -318,11 +349,47 @@ private theorem block_plain_suspend {table : RowTable} {root : NativeEff}
           exact block_plain_compile he q
       all_goals rw [suspendBodyAt_other hf h (fun _ h => by cases h)]; rfl
 
+/-- Step of rows-block-host (R6), consumed by `PlainHooks.of_blockRows`.
+Every reachable source action reads the context; no progress claim follows. -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem block_context_action {table : RowTable} {root : NativeEff}
+    (hroot : BlockRows table root = true) (p : Point) :
+    actionAt root p = none ∨ actionAt root p = some WithFiberAction.getContext := by
+  unfold actionAt
+  cases h : Node.at_ (.eff root) p.path with
+  | none => exact Or.inl rfl
+  | some n =>
+    have hn := block_node_at p.path (.eff root) n (Or.inr hroot) h
+    cases n
+    case eff e =>
+      cases e
+      case withFiber action =>
+        cases action
+        case context keys => exact Or.inr rfl
+        all_goals change false = true ∨ false = true at hn
+        all_goals rcases hn with hn | hn <;> cases hn
+      all_goals simp only [BlockNode, BodyRows, BlockRows, cata_eff, bodyRowsAlg,
+        Bool.false_eq_true, or_self] at hn
+      all_goals exact Or.inl rfl
+    all_goals exact Or.inl rfl
+
+/-- Step of rows-block-host (R6), consumed by `PlainHooks.of_blockRows`.
+The fragment excludes native scope interception at every source address. -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem block_context_noScoped {table : RowTable} {root : NativeEff}
+    (hroot : BlockRows table root = true) (p : Point) (body : NativeEff) :
+    Node.at_ (.eff root) p.path ≠ some (.eff (.scoped body)) := by
+  intro h
+  have hn := block_node_at p.path (.eff root) (.eff (.scoped body)) (Or.inr hroot) h
+  change false = true ∨ false = true at hn
+  rcases hn with hn | hn <;> cases hn
+
 /-- Step of rows-block-host (R6), consumed by `session_settled` on blocks.
 An admitted root block supplies plain hooks; no scheduler progress follows. -/
 @[semantics "translation-simulation" (requirement := R6)]
 theorem PlainHooks.of_blockRows {table : RowTable} {root : NativeEff}
     (hroot : BlockRows table root = true) : PlainHooks root :=
-  ⟨block_plain_resolve hroot, block_plain_suspend hroot⟩
+  ⟨block_plain_resolve hroot, block_plain_suspend hroot, block_context_action hroot,
+    block_context_noScoped hroot⟩
 
 end Effect4.Program.Agreement

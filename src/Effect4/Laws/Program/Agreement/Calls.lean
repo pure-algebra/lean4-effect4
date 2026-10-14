@@ -82,23 +82,32 @@ theorem prepareExternalAnswer_data {j : Nat} (hrow : dataRow table j = true) (v 
 stores and the host's state, it reaches the exit's fiber over the stack `K` with mask `i`; for
 the frontier, it reaches a host call the host does not answer. -/
 def RunsTo {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root : NativeEff) (K : List NCode)
-    (i : Bool) (fr : NFiber) (s : Stores) (r : σ) : Option (ExitV × (Stores × σ)) → Prop
-  | some (ex, (s', r')) => ∃ c, ReachesC host root c fr s r (fiberOf (Prim.ofExit ex) K i) s' r'
-  | none => ∃ c fr' s' r', ReachesC host root c fr s r fr' s' r' ∧ IsCall fr'.current = true ∧
+    (i : Bool) (fr : NFiber) (s : Stores) (r : σ) (o : Option (ExitV × (Stores × σ)))
+    (ctx : Ctx := emptyCtx) (postCtx : Ctx := ctx) : Prop :=
+  match o with
+  | some (ex, (s', r')) => ∃ c,
+      ReachesC host root c fr s r (fiberOf (Prim.ofExit ex) K i) s' r' ctx postCtx
+  | none => ∃ c fr' s' r' reachedCtx,
+      ReachesC host root c fr s r fr' s' r' ctx reachedCtx ∧ IsCall fr'.current = true ∧
       hostAnswer host fr'.current r' = none
 
-/-- A run that reaches a fiber goes where that fiber's run goes. -/
+/-- A step of rows-block-host/R6: a prefix transfers an outcome while retaining its
+expected final context. Consumer: `RunsToD.pre`. No progress is asserted. -/
 theorem RunsTo.pre {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
     {K : List NCode} {i : Bool} {c : Nat} {fr fr₁ : NFiber} {s s₁ : Stores} {r r₁ : σ}
-    (h : ReachesC host root c fr s r fr₁ s₁ r₁) :
-    ∀ {o : Option (ExitV × (Stores × σ))}, RunsTo host root K i fr₁ s₁ r₁ o → RunsTo host root K i fr s r o
+    {ctx ctx₁ postCtx : Ctx} (h : ReachesC host root c fr s r fr₁ s₁ r₁ ctx ctx₁) :
+    ∀ {o : Option (ExitV × (Stores × σ))},
+      RunsTo host root K i fr₁ s₁ r₁ o ctx₁ postCtx → RunsTo host root K i fr s r o ctx postCtx
   | some (_, (_, _)), ⟨c', h'⟩ => ⟨c + c', h.trans h'⟩
-  | none, ⟨c', fr', s', r', h', hc, ha⟩ => ⟨c + c', fr', s', r', h.trans h', hc, ha⟩
+  | none, ⟨c', fr', s', r', reachedCtx, h', hc, ha⟩ =>
+      ⟨c + c', fr', s', r', reachedCtx, h.trans h', hc, ha⟩
 
-/-- The frontier names no stack. -/
+/-- The frontier names no stack or expected final context. -/
 theorem RunsTo.frontier {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
     {K K' : List NCode} {i i' : Bool} {fr : NFiber} {s : Stores} {r : σ}
-    (h : RunsTo host root K i fr s r none) : RunsTo host root K' i' fr s r none := h
+    {ctx postCtx postCtx' : Ctx}
+    (h : RunsTo host root K i fr s r none ctx postCtx) :
+    RunsTo host root K' i' fr s r none ctx postCtx' := h
 
 /-! ## The compile's frontier: where the local run diverges -/
 
@@ -110,37 +119,47 @@ def AtFrontier (fr : NFiber) : Prop :=
 /-- **The local run with calls diverges**: it reaches the compile's frontier, where it stays
 (`localRunC_frontier`). -/
 def Diverges {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root : NativeEff) (fr : NFiber)
-    (s : Stores) (r : σ) : Prop :=
-  ∃ c fr' s' r', ReachesC host root c fr s r fr' s' r' ∧ AtFrontier fr'
+    (s : Stores) (r : σ) (ctx : Ctx := emptyCtx) : Prop :=
+  ∃ c fr' s' r' reachedCtx, ReachesC host root c fr s r fr' s' r' ctx reachedCtx ∧ AtFrontier fr'
 
+/-- A step of rows-block-host/R6, consumed by `RunsToD.pre`: prefixes preserve a reached
+compile frontier and its actual context. This is not a progress statement. -/
 theorem Diverges.pre {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
-    {c : Nat} {fr fr₁ : NFiber} {s s₁ : Stores} {r r₁ : σ} (hd : Diverges host root fr₁ s₁ r₁)
-    (h : ReachesC host root c fr s r fr₁ s₁ r₁) : Diverges host root fr s r :=
-  let ⟨c', fr', s', r', h', ha⟩ := hd
-  ⟨c + c', fr', s', r', h.trans h', ha⟩
+    {c : Nat} {fr fr₁ : NFiber} {s s₁ : Stores} {r r₁ : σ} {ctx ctx₁ : Ctx}
+    (hd : Diverges host root fr₁ s₁ r₁ ctx₁)
+    (h : ReachesC host root c fr s r fr₁ s₁ r₁ ctx ctx₁) : Diverges host root fr s r ctx :=
+  let ⟨c', fr', s', r', reachedCtx, h', ha⟩ := hd
+  ⟨c + c', fr', s', r', reachedCtx, h.trans h', ha⟩
 
-/-- Where the local run with calls goes for an outcome of the meaning, or the compile's
-frontier, where it diverges. -/
+/-- An outcome or a reached compile frontier, with separate initial and final contexts. -/
 def RunsToD {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root : NativeEff) (K : List NCode)
-    (i : Bool) (fr : NFiber) (s : Stores) (r : σ) (o : Option (ExitV × (Stores × σ))) : Prop :=
-  RunsTo host root K i fr s r o ∨ Diverges host root fr s r
+    (i : Bool) (fr : NFiber) (s : Stores) (r : σ) (o : Option (ExitV × (Stores × σ)))
+    (ctx : Ctx := emptyCtx) (postCtx : Ctx := ctx) : Prop :=
+  RunsTo host root K i fr s r o ctx postCtx ∨ Diverges host root fr s r ctx
 
+/-- A step of rows-block-host/R6, consumed by the forward compilation proofs:
+a prefix transfers the source context and retains the expected final context. -/
 theorem RunsToD.pre {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
     {K : List NCode} {i : Bool} {c : Nat} {fr fr₁ : NFiber} {s s₁ : Stores} {r r₁ : σ}
-    (h : ReachesC host root c fr s r fr₁ s₁ r₁) {o : Option (ExitV × (Stores × σ))} :
-    RunsToD host root K i fr₁ s₁ r₁ o → RunsToD host root K i fr s r o
+    {ctx ctx₁ postCtx : Ctx} (h : ReachesC host root c fr s r fr₁ s₁ r₁ ctx ctx₁)
+    {o : Option (ExitV × (Stores × σ))} :
+    RunsToD host root K i fr₁ s₁ r₁ o ctx₁ postCtx → RunsToD host root K i fr s r o ctx postCtx
   | .inl h' => .inl (RunsTo.pre h h')
   | .inr hd => .inr (hd.pre h)
 
 theorem RunsToD.frontier {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
     {K K' : List NCode} {i i' : Bool} {fr : NFiber} {s : Stores} {r : σ}
-    (h : RunsToD host root K i fr s r none) : RunsToD host root K' i' fr s r none := h
+    {ctx postCtx postCtx' : Ctx}
+    (h : RunsToD host root K i fr s r none ctx postCtx) :
+    RunsToD host root K' i' fr s r none ctx postCtx' := h
 
-/-- A compile out of budget is at the frontier at once. -/
+/-- A compile out of budget is at the frontier at once, at any initial context. -/
 theorem RunsToD.of_zero {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root e : NativeEff}
     {p : Point} {K : List NCode} {i : Bool} {s : Stores} {r : σ} {o : Option (ExitV × (Stores × σ))}
-    (hf : p.fuel = 0) : RunsToD host root K i (fiberOf (compileEff e p) K i) s r o :=
-  .inr ⟨0, _, s, r, ReachesC.refl host root _ s r, p, K, i, hf, by rw [compileEff_at_zero e hf]⟩
+    {ctx postCtx : Ctx} (hf : p.fuel = 0) :
+    RunsToD host root K i (fiberOf (compileEff e p) K i) s r o ctx postCtx :=
+  .inr ⟨0, _, s, r, ctx, ReachesC.refl host root _ s r ctx,
+    p, K, i, hf, by rw [compileEff_at_zero e hf]⟩
 
 /-! ## Facts the atoms and the composite arms share -/
 
@@ -190,60 +209,60 @@ goes**, from any outer stack, mask, stores and host state, or diverges at the co
 (`RunsToD`). `localRunC_compile` says it of every `StraightRows` program. -/
 def CompilesD {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root : NativeEff)
     (e : NativeEff) : Prop :=
-  ∀ (p : Point) (K : List NCode) (i : Bool) (s : Stores) (r : σ),
+  ∀ (p : Point) (K : List NCode) (i : Bool) (s : Stores) (r : σ) (ctx : Ctx),
     Node.at_ (Node.eff root) p.path = some (Node.eff e) →
-      RunsToD host root K i (fiberOf (compileEff e p) K i) s r (hostRun host e p.env s r)
+      RunsToD host root K i (fiberOf (compileEff e p) K i) s r (hostRun host e p.env s r) ctx ctx
 
 /-- A success is its exit at once. An atom of `compilesBO` (`Agreement/LoopCalls.lean`). -/
 theorem compilesD_succeed {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root : NativeEff)
     (v : Term) : CompilesD host root (.succeed v) := by
-  intro p K i s r _
+  intro p K i s r ctx _
   rcases hfu : p.fuel with _ | k
   · exact RunsToD.of_zero hfu
   rw [compileEff_succeed v hfu, hostRun_pure host _ _ s r rfl]
   rcases hx : evalTerm p.env v with _ | x
-  · dsimp only; rw [badShape_eq]; exact Or.inl ⟨0, ReachesC.refl host root _ s r⟩
-  · exact Or.inl ⟨0, ReachesC.refl host root _ s r⟩
+  · dsimp only; rw [badShape_eq]; exact Or.inl ⟨0, ReachesC.refl host root _ s r ctx⟩
+  · exact Or.inl ⟨0, ReachesC.refl host root _ s r ctx⟩
 
 /-- A failure is its exit at once. An atom of `compilesBO`. -/
 theorem compilesD_fail {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root : NativeEff)
     (e : Term) : CompilesD host root (.fail e) := by
-  intro p K i s r _
+  intro p K i s r ctx _
   rcases hfu : p.fuel with _ | k
   · exact RunsToD.of_zero hfu
   rw [compileEff_fail e hfu, hostRun_pure host _ _ s r rfl]
   rcases hx : evalTerm p.env e with _ | x
-  · dsimp only; rw [badShape_eq]; exact Or.inl ⟨0, ReachesC.refl host root _ s r⟩
-  · exact Or.inl ⟨0, ReachesC.refl host root _ s r⟩
+  · dsimp only; rw [badShape_eq]; exact Or.inl ⟨0, ReachesC.refl host root _ s r ctx⟩
+  · exact Or.inl ⟨0, ReachesC.refl host root _ s r ctx⟩
 
 /-- A cause's failure is its exit at once. An atom of `compilesBO`. -/
 theorem compilesD_failCause {σ : Type} (host : Effects.Comodel (RowSig table) σ)
     (root : NativeEff) (c : CauseTerm) : CompilesD host root (.failCause c) := by
-  intro p K i s r _
+  intro p K i s r ctx _
   rcases hfu : p.fuel with _ | k
   · exact RunsToD.of_zero hfu
   rw [compileEff_failCause c hfu, hostRun_pure host _ _ s r rfl]
   rcases hc : causeOf p.env c with _ | cause
-  · dsimp only; rw [badShape_eq]; exact Or.inl ⟨0, ReachesC.refl host root _ s r⟩
-  · exact Or.inl ⟨0, ReachesC.refl host root _ s r⟩
+  · dsimp only; rw [badShape_eq]; exact Or.inl ⟨0, ReachesC.refl host root _ s r ctx⟩
+  · exact Or.inl ⟨0, ReachesC.refl host root _ s r ctx⟩
 
 /-- A pure computation is its value after one step. An atom of `compilesBO`. -/
 theorem compilesD_sync {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root : NativeEff)
     (t : Term) : CompilesD host root (.sync t) := by
-  intro p K i s r h
+  intro p K i s r ctx h
   rcases hfu : p.fuel with _ | k
   · exact RunsToD.of_zero hfu
   rw [compileEff_sync t hfu, hostRun_pure host _ _ s r rfl]
   have hs := step_sync_pure root p K i s
   rw [syncValueAt_pure h] at hs
-  exact Or.inl ⟨1, ReachesC.step (host := host) hs rfl r⟩
+  exact Or.inl ⟨1, ReachesC.step (host := host) hs rfl (by intro t h; cases h) r⟩
 
 /-- **A call of the fragment**: a host call asks the host at its row, and reads its answer or
 waits; every other call is a store operation, one step. An atom of `compilesBO`. -/
 theorem compilesD_perform {σ : Type} (host : Effects.Comodel (RowSig table) σ)
     (root : NativeEff) {op : NativeOp} {q : Term} (hpl : StraightRows table (.perform op q) = true) :
     CompilesD host root (.perform op q) := by
-  intro p K i s r _
+  intro p K i s r ctx _
   rcases hfu : p.fuel with _ | k
   · exact RunsToD.of_zero hfu
   rcases hext : externalIndex? op with _ | j
@@ -253,37 +272,37 @@ theorem compilesD_perform {σ : Type} (host : Effects.Comodel (RowSig table) σ)
     have hrow : dataRow table j = true := hpl
     have hj : j < table.length := lt_of_dataRow hrow
     rw [compileEff_perform (.external j) q hfu]
-    show RunsToD host root K i (fiberOf (asyncRoute (.external j) q p) K i) s r _
+    show RunsToD host root K i (fiberOf (asyncRoute (.external j) q p) K i) s r _ ctx ctx
     unfold asyncRoute
     rcases hx : evalTerm p.env q with _ | v
     · rw [hostRun_pure host _ _ s r (show denoteRows table (.perform (.external j) q) p.env = _ by
         simp only [denoteRows, hx]; rfl)]
-      dsimp only; rw [badShape_eq]; exact Or.inl ⟨0, ReachesC.refl host root _ s r⟩
+      dsimp only; rw [badShape_eq]; exact Or.inl ⟨0, ReachesC.refl host root _ s r ctx⟩
     · rw [hostRun_call host j q p.env s r hx hj]
       have hcall := hostAnswer_call host hj v p.path r
       rcases ha : host.answer ⟨⟨j, hj⟩, v⟩ r with _ | ⟨ex, r'⟩
-      · show RunsToD host root K i _ s r none
-        exact Or.inl ⟨0, _, s, r, ReachesC.refl host root _ s r, rfl, hcall.trans ha⟩
-      · show RunsToD host root K i _ s r (some (ex, (s, r')))
+      · show RunsToD host root K i _ s r none ctx ctx
+        exact Or.inl ⟨0, _, s, r, ctx, ReachesC.refl host root _ s r ctx, rfl, hcall.trans ha⟩
+      · show RunsToD host root K i _ s r (some (ex, (s, r'))) ctx ctx
         exact Or.inl ⟨1, ReachesC.answer s rfl (hcall.trans ha)
-          (prepareExternalAnswer_data hrow v p.path ex s)⟩
+          (prepareExternalAnswer_data hrow v p.path ex s) ctx⟩
   · have hst := straight_of_performRows hpl (ne_external_of_index hext)
     have hkind := Straight.perform_sync hst
     rw [hostRun_straight host _ p.env s r hst]
     rw [compileEff_perform_sync op q hfu hkind]
     rcases hx : evalTerm p.env q with _ | x
     · rw [meaning_perform_noEval op q p.env s hkind hx]
-      dsimp only; rw [badShape_eq]; exact Or.inl ⟨0, ReachesC.refl host root _ s r⟩
+      dsimp only; rw [badShape_eq]; exact Or.inl ⟨0, ReachesC.refl host root _ s r ctx⟩
     · rcases ho : NativeOp.syncOpOf op p.env x with _ | o
       · rw [meaning_perform_noDecode op q p.env s hkind hx ho]
-        simp only [ho]; rw [badShape_eq]; exact Or.inl ⟨0, ReachesC.refl host root _ s r⟩
+        simp only [ho]; rw [badShape_eq]; exact Or.inl ⟨0, ReachesC.refl host root _ s r ctx⟩
       · rw [meaning_perform_sync op q p.env s hkind hx ho]
         simp only [ho]
         have hs := step_sync_op root o K i s
         rcases hstep : syncOpStep o s with _ | ⟨s', w⟩
         · simp only [hstep] at hs ⊢
-          exact Or.inl ⟨1, ReachesC.step (host := host) hs rfl r⟩
+          exact Or.inl ⟨1, ReachesC.step (host := host) hs rfl (by intro t h; cases h) r⟩
         · simp only [hstep] at hs ⊢
-          exact Or.inl ⟨1, ReachesC.step (host := host) hs rfl r⟩
+          exact Or.inl ⟨1, ReachesC.step (host := host) hs rfl (by intro t h; cases h) r⟩
 
 end Effect4.Program.Agreement

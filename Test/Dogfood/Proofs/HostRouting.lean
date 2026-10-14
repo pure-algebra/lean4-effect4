@@ -229,8 +229,8 @@ theorem failureTail (id : Nat) (idText tag message : String)
   let table := (request "secret" id idText).table
   let c : CauseV := Cause.fail (.tagged tag message)
   have hs : ∀ t, Prim.failure c ≠ (Prim.sync t : NCode) := fun _ h => by cases h
-  have hK : PlainStack K := by simp only [K, PlainStack, List.mem_cons]; intros; aesop
-  have hK2 : PlainStack [Prim.onFailure insideHandler (.caughtError p0)] := by simp only [PlainStack, List.mem_singleton]; intros; aesop
+  have hK : ContextFreeStack K := by simp only [K, ContextFreeStack, List.mem_cons]; intros; aesop
+  have hK2 : ContextFreeStack [Prim.onFailure insideHandler (.caughtError p0)] := by simp only [ContextFreeStack, List.mem_singleton]; intros; aesop
   obtain ⟨tr1, h1⟩ := drive_loop_running (table := table) root (Prim.failure c) K true
     Stores.empty 0 tr nt [Cmd.drainDue] (Prim.failure c)
     [Prim.onFailure insideHandler (.caughtError p0)] true rfl hK hs rfl (by decide)

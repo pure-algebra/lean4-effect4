@@ -5,7 +5,7 @@ import Effect4.Laws.Program.Folds.DenoteRowsB
 
 Concept: translation-simulation. Claim: rows-block-host, a simulation serving R6 and R10.
 The fragment admits one root block and bodies with loops, host rows, calls and program parameters.
-It admits no nested block, layer, scope, fork, interruption or context construct.
+It admits context reads, services and supplied contexts; it excludes nested blocks, layers, scopes, forks and interruption.
 The goals serve `compilesBlk` and `PlainHooks.of_blockRows`; they establish no progress.
 -/
 
@@ -25,6 +25,7 @@ def bodiesOf : NativeEff → List NativeEff
 abbrev BodyRowsCarrier : EffFam → Type
   | .eff => Bool
   | .effs => Bool
+  | .action => Bool
   | _ => Unit
 
 /-- The body fragment extends `LoopedDataRows` with calls, parameters and invocation arguments. -/
@@ -50,19 +51,19 @@ def bodyRowsAlg (table : RowTable) : EffAlgebra NativeOp BodyRowsCarrier where
   eff_interruptible _ := false
   eff_yieldNow _ := false
   eff_awaitFiber _ _ := false
-  eff_withFiber _ := false
+  eff_withFiber action := action
   eff_scoped _ := false
   eff_acquireRelease _ _ := false
   eff_provideLayer _ _ _ := false
-  eff_service _ := false
-  eff_provideService _ _ _ := false
+  eff_service _ := true
+  eff_provideService _ _ body := body
   eff_catchIf _ a b := a && b
   eff_select _ _ a b := a && b
   eff_iterate _ _ _ _ _ body := body
   eff_restore _ _ := false
   eff_defs _ _ _ _ := false
   eff_invoke _ _ args := args
-  eff_provideContext _ _ := false
+  eff_provideContext _ body := body
   stmt_bindYield _ := ()
   stmt_yieldDiscard _ := ()
   stmt_ret _ := ()
@@ -73,23 +74,23 @@ def bodyRowsAlg (table : RowTable) : EffAlgebra NativeOp BodyRowsCarrier where
   stmts_cons _ _ := ()
   effs_nil := true
   effs_cons head tail := head && tail
-  action_fork _ _ := ()
-  action_forkIn _ _ _ := ()
-  action_forkScoped _ _ := ()
-  action_runIn _ _ := ()
-  action_interrupt _ := ()
-  action_interruptScoped _ := ()
-  action_interruptAll _ _ := ()
-  action_awaitAll _ := ()
-  action_awaitAllFailFast _ := ()
-  action_snapshotChildren := ()
-  action_awaitNewChildren _ := ()
-  action_raceAll _ := ()
-  action_getId := ()
-  action_closeScope _ _ := ()
-  action_getInterruptible := ()
-  action_raceAllFirst _ := ()
-  action_context _ := ()
+  action_fork _ _ := false
+  action_forkIn _ _ _ := false
+  action_forkScoped _ _ := false
+  action_runIn _ _ := false
+  action_interrupt _ := false
+  action_interruptScoped _ := false
+  action_interruptAll _ _ := false
+  action_awaitAll _ := false
+  action_awaitAllFailFast _ := false
+  action_snapshotChildren := false
+  action_awaitNewChildren _ := false
+  action_raceAll _ := false
+  action_getId := false
+  action_closeScope _ _ := false
+  action_getInterruptible := false
+  action_raceAllFirst _ := false
+  action_context _ := true
   layer_succeed _ _ := ()
   layer_effect _ _ := ()
   layer_effectDiscard _ := ()

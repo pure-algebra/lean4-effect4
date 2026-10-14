@@ -9,6 +9,12 @@ import Effect4.Api
 /-!
 # Program.Agreement.Machine — the command loop over one plain fiber, one command at a time
 
+Concept: translation-simulation. Claim: rows-block-host, serving R6.
+The context-aware lane follows one fiber at every context and scheduler budget.
+It relates finite commands and preserves plainness; it establishes no progress.
+The context-free lane retains the earlier default-budget progress results.
+The host reply boundary remains in reply admission and the host interpretation.
+
 Packet: `Test/contracts/program-denotation.contract.md`; plan
 `docs/research/2026-09-05-slice-1-compile-ground.md` §9. This module is the machine half of
 the packet's theorem, one command at a time. `Agreement.lean` showed that the frame machine,
@@ -181,19 +187,19 @@ def ContextFreeFrame : NCode → Bool
 theorem plainFrame_onExit {b : NCode} {n : EffName} {flag : Bool}
     (h : ContextFreeFrame (Prim.onExit b n flag) = true) :
     ∃ p, n = .fin p ∧ flag = false ∧ ContextFreeCode b = true := by
-  cases n <;> cases flag <;> simp [ContextFreeFrame] at h
+  cases n <;> cases flag <;> simp only [ContextFreeFrame, Bool.false_eq_true] at h
   exact ⟨_, rfl, rfl, h⟩
 
 theorem plainCode_onExit {b : NCode} {n : EffName} {flag : Bool}
     (h : ContextFreeCode (Prim.onExit b n flag) = true) :
     ∃ p, n = .fin p ∧ flag = false ∧ ContextFreeCode b = true := by
-  cases n <;> cases flag <;> simp [ContextFreeCode] at h
+  cases n <;> cases flag <;> simp only [ContextFreeCode, Bool.false_eq_true] at h
   exact ⟨_, rfl, rfl, h⟩
 
 /-- A stack of plain frames. -/
 def ContextFreeStack (K : List NCode) : Prop := ∀ f ∈ K, ContextFreeFrame f = true
 
-theorem ContextFreeStack.nil : ContextFreeStack [] := fun _ h => by simp at h
+theorem ContextFreeStack.nil : ContextFreeStack [] := fun _ h => by simp only [List.not_mem_nil] at h
 
 theorem ContextFreeStack.cons {f : NCode} {K : List NCode} (hf : ContextFreeFrame f = true)
     (hK : ContextFreeStack K) : ContextFreeStack (f :: K) := by
@@ -266,7 +272,9 @@ theorem plainCode_compileEff : ∀ (e : NativeEff) (p : Point), LoopedRows e = t
       | _ =>
         rw [compileEff_perform_sync _ r hf
           (Straight.perform_sync (LoopedRows.straight_perform hpl (fun _ h => by cases h)))]
-        split <;> (try split) <;> rfl
+        split
+        · split <;> rfl
+        · rfl
   | .bind a b, p, hpl => by
     rcases hf : p.fuel with _ | k
     · rw [compileEff_at_zero _ hf]; rfl
@@ -322,7 +330,7 @@ theorem plainCode_compileEff : ∀ (e : NativeEff) (p : Point), LoopedRows e = t
   | .provideLayer _ _ _, _, hpl
   | .service _, _, hpl
   | .provideService _ _ _, _, hpl
-  | .restore _ _, _, hpl => by simp [LoopedRows] at hpl
+  | .restore _ _, _, hpl => by simp only [LoopedRows, Bool.false_eq_true] at hpl
 
 /-! ### Every subterm of a straight-line program is straight-line -/
 
@@ -483,7 +491,7 @@ def PlainCode : NCode → Bool
   | .onSuccessAndFailure b n m => PlainCode b && (PlainName n && PlainName m)
   | .exitFrame b => PlainCode b
   | .onExit b (.fin _) false => PlainCode b
-  | .onExit (.withFiber (.restoreRegion (.program _) _)) (.restoreCtx _) false => true
+  | .onExit b (.restoreCtx _) false => PlainCode b
   | .whileLoop (.loop _) _ => true
   | .async n w c => IsCall (.async n w c)
   | .withFiber (.act _) | .withFiber .getCtx | .withFiber .captureMask
@@ -497,7 +505,7 @@ def PlainFrame : NCode → Bool
   | .onSuccessAndFailure b n m => PlainCode b && (PlainName n && PlainName m)
   | .exitFrame b => PlainCode b
   | .onExit b (.fin _) false => PlainCode b
-  | .onExit (.withFiber (.restoreRegion (.program _) _)) (.restoreCtx _) false => true
+  | .onExit b (.restoreCtx _) false => PlainCode b
   | .setInterruptible _ | .whileLoop (.loop _) _ => true
   | .onSuccessConst (.yieldNowWith 0) saved => PlainCode saved
   | _ => false
@@ -1210,7 +1218,8 @@ abbrev NTrace := List (RunEvent EffName EffThunk Val Err Defect FiberId Ann Ctx)
 abbrev NCmd := Cmd EffName EffThunk Val Err Defect FiberId Ann
 abbrev NIter := Iter EffName EffThunk Val Err Defect FiberId Ann Ctx Stores
 
-/-- The root fiber, running at op count `k` over the frame `fr`: what `Cmd.evaluate` makes
+/-- The root fiber, running at op count `k` with the context and its cached budget:
+what `Cmd.evaluate` makes
 of `Api.load`'s fiber (`Fibers.lean:1170-1173`), and what every iteration leaves. -/
 def fiberAt (fr : NFiber) (k : Nat) (ctx : Ctx := emptyCtx) : NRunFiber :=
   { RunFiber.make Api.root fr.current true (stores.budgetOf ctx) ctx with
@@ -1227,7 +1236,7 @@ def M (fr : NFiber) (s : Stores) (k : Nat) (tr : NTrace) (nt : Nat)
     fibers := [fiberAt fr k ctx], nextId := 1, nextToken := nt, trace := tr }
 
 /-- The root fiber once its exit path has stored `ex` (`exitStore`, the else branch of
-`exitFiber` at `Fibers.lean:1128-1141`). -/
+`exitFiber`). Clearing resets the context and retains the previous context's cached budget. -/
 def exitedAt (root : NativeEff) (ex : ExitV) (fr : NFiber) (k : Nat)
     (previousCtx : Ctx := emptyCtx) : NRunFiber :=
   { fiberAt fr k previousCtx with
@@ -1302,7 +1311,7 @@ theorem M_emit {ctx : Ctx} (fr : NFiber) (s : Stores) (k : Nat) (tr ev : NTrace)
     (M fr s k tr nt ctx).emit ev = M fr s k (tr ++ ev) nt ctx := by
   -- the field-local guard on an empty emit (direction L4): the trace is the trace
   cases ev with
-  | nil => simp [M, RunMachine.emit]
+  | nil => simp only [List.append_nil]; rfl
   | cons _ _ => rfl
 
 theorem Mexit_stuck {ctx : Ctx} (root : NativeEff) (ex : ExitV) (fr : NFiber) (s : Stores) (k : Nat)
@@ -1350,10 +1359,11 @@ theorem parkOf_sync (root : NativeEff) (thunk : EffThunk) :
 
 theorem parkOf_plain (root : NativeEff) {cur : NCode} (h : ContextFreeCode cur = true) :
     (interpAt root []).parkOf cur = none := by
-  cases cur
-  all_goals first
-    | rfl
-    | (rename_i thunk; cases thunk <;> first | rfl | simp [ContextFreeCode] at h)
+  cases cur with
+  | suspend thunk =>
+    cases thunk <;> simp only [ContextFreeCode, Bool.false_eq_true] at h
+    rfl
+  | _ => rfl
 
 theorem syncState_op (root : NativeEff) (o : SyncOp) (s : Stores) :
     (interpAt root []).syncState (EffThunk.op o) s = syncOpStep o s :=
@@ -1559,16 +1569,15 @@ theorem popOf_plain_not_scoped (cur : NCode) (K : List NCode) (i : Bool)
     (popOf (fiberOf cur K i) ex).answer ≠
       ContAnswer.frame (Prim.onExit body (EffName.scopedExit previous scope) flag) := by
   induction K generalizing i with
-  | nil => cases ex <;> simp [popOf, FrameFiber.getCont, FrameFiber.popFrom, fiberOf]
+  | nil => cases ex <;> simp only [popOf, FrameFiber.getCont, fiberOf, Bool.not_false, Bool.and_true, ↓reduceIte, FrameFiber.popFrom, ne_eq, reduceCtorEq, not_false_eq_true, Bool.not_true, Bool.and_self]
   | cons frame K ih =>
     have hf := hK.head
     have hK' := hK.tail
-    cases frame <;> (try simp only [ContextFreeFrame, Bool.and_eq_true, Bool.false_eq_true] at hf)
+    cases frame <;> simp only [ContextFreeFrame, Bool.and_eq_true, Bool.false_eq_true] at hf
     · next b n =>
       cases ex with
       | success v =>
-        simp [popOf, FrameFiber.getCont, FrameFiber.popFrom, fiberOf, Prim.ensure,
-          Prim.answerOf, Prim.hasArm, Prim.arms]
+        simp only [popOf, FrameFiber.getCont, fiberOf, Bool.not_false, Bool.and_true, Bool.false_eq_true, ↓reduceIte, FrameFiber.popFrom, Prim.answerOf, Prim.ensure, Prim.hasArm, Prim.arms, List.contains_eq_mem, List.mem_cons, List.not_mem_nil, or_false, decide_true, Bool.false_and, List.nil_append, ne_eq, ContAnswer.frame.injEq, reduceCtorEq, not_false_eq_true]
       | failure c =>
         change (FrameFiber.popFrom Effect4.Arm.contE true (Prim.onSuccess b n :: K)
           (fiberOf cur [] i)).answer ≠ _
@@ -1582,19 +1591,15 @@ theorem popOf_plain_not_scoped (cur : NCode) (K : List NCode) (i : Bool)
         rw [(popFrom_pass Effect4.Arm.contA false _ K cur i rfl rfl).1]
         exact ih i hK'
       | failure c =>
-        simp [popOf, FrameFiber.getCont, FrameFiber.popFrom, fiberOf, Prim.ensure,
-          Prim.answerOf, Prim.hasArm, Prim.arms, FrameFiber.interrupted]
+        simp only [popOf, FrameFiber.getCont, fiberOf, Bool.not_true, Bool.and_self, ↓reduceIte, FrameFiber.popFrom, Prim.answerOf, Prim.ensure, Prim.hasArm, Prim.arms, List.contains_eq_mem, List.mem_cons, List.not_mem_nil, or_false, decide_true, FrameFiber.interrupted, Option.isSome_none, Bool.and_false, List.nil_append, ne_eq, ContAnswer.frame.injEq, reduceCtorEq, not_false_eq_true]
     · cases ex <;>
-        simp [popOf, FrameFiber.getCont, FrameFiber.popFrom, fiberOf, Prim.ensure,
-          Prim.answerOf, Prim.hasArm, Prim.arms, FrameFiber.interrupted]
+        simp only [popOf, FrameFiber.getCont, fiberOf, Bool.not_false, Bool.and_true, ↓reduceIte, FrameFiber.popFrom, Prim.answerOf, Prim.ensure, Prim.hasArm, Prim.arms, List.contains_eq_mem, List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self, or_false, decide_true, FrameFiber.interrupted, Option.isSome_none, Bool.and_false, Bool.and_self, List.nil_append, ne_eq, ContAnswer.frame.injEq, not_false_eq_true, Bool.not_true, or_true]
     · cases ex <;>
-        simp [popOf, FrameFiber.getCont, FrameFiber.popFrom, fiberOf, Prim.ensure,
-          Prim.answerOf, Prim.hasArm, Prim.arms, FrameFiber.interrupted]
+        simp only [popOf, FrameFiber.getCont, fiberOf, Bool.not_false, Bool.and_true, ↓reduceIte, FrameFiber.popFrom, Prim.answerOf, Prim.ensure, Prim.hasArm, Prim.arms, List.contains_eq_mem, List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self, or_false, decide_true, FrameFiber.interrupted, Option.isSome_none, Bool.and_false, Bool.and_self, List.nil_append, ne_eq, ContAnswer.frame.injEq, not_false_eq_true, Bool.not_true, or_true]
     · next b n finalizerFlag =>
       cases n <;> cases finalizerFlag <;> simp only [Bool.false_eq_true] at hf
       cases ex <;> cases i <;>
-        simp [popOf, FrameFiber.getCont, FrameFiber.popFrom, fiberOf, Prim.ensure,
-          Prim.answerOf, Prim.hasArm, Prim.arms, FrameFiber.interrupted]
+        simp only [popOf, FrameFiber.getCont, fiberOf, Bool.not_false, Bool.and_true, ↓reduceIte, FrameFiber.popFrom, Prim.answerOf, Prim.ensure, Prim.hasArm, Prim.arms, List.contains_eq_mem, List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self, or_false, decide_true, FrameFiber.interrupted, Option.isSome_none, Bool.and_self, List.nil_append, ne_eq, ContAnswer.frame.injEq, Prim.onExit.injEq, Bool.false_eq, false_and, and_false, not_false_eq_true, List.cons_append, Bool.not_true, or_true, Bool.and_false]
     · next restoreFlag =>
       cases restoreFlag <;> simp only [Bool.false_eq_true] at hf
       cases ex
@@ -1609,13 +1614,13 @@ theorem popOf_plain_not_scoped (cur : NCode) (K : List NCode) (i : Bool)
     · next loop cursor =>
       cases ex with
       | success v =>
-        simp [popOf, FrameFiber.getCont, FrameFiber.popFrom, fiberOf, Prim.ensure,
-          Prim.answerOf, Prim.hasArm, Prim.arms]
+        simp only [popOf, FrameFiber.getCont, fiberOf, Bool.not_false, Bool.and_true, Bool.false_eq_true, ↓reduceIte, FrameFiber.popFrom, Prim.answerOf, Prim.ensure, Prim.hasArm, Prim.arms, List.contains_eq_mem, List.mem_cons, List.not_mem_nil, or_false, decide_true, Bool.false_and, List.nil_append, ne_eq, ContAnswer.frame.injEq, reduceCtorEq, not_false_eq_true]
       | failure c =>
         change (FrameFiber.popFrom Effect4.Arm.contE true (Prim.whileLoop loop cursor :: K)
           (fiberOf cur [] i)).answer ≠ _
         rw [(popFrom_pass Effect4.Arm.contE true _ K cur i rfl rfl).1]
         exact ih i hK'
+
 
 /-- The native exit adapter is the ordinary evaluator when the actual pop does
 not answer the scoped callback. -/
@@ -1650,7 +1655,8 @@ theorem evaluateNative_plain (root : NativeEff) (m : Api.Machine) (cur : NCode)
     apply exitScoped_eq_evaluatePrim
     exact popOf_plain_not_scoped _ K i hK _
   | async n w c => cases hpl.symm.trans hnc
-  | _ => first | rfl | simp [ContextFreeCode] at hpl
+  | withFiber _ => simp only [ContextFreeCode, Bool.false_eq_true] at hpl
+  | _ => rfl
 
 /-- The finished local-step hypothesis itself excludes an answering scoped
 callback; the older stack need not be plain for this equation. -/
@@ -1676,7 +1682,8 @@ theorem evaluateNative_of_finished (root : NativeEff) (m : Api.Machine) (cur : N
   | async n w c =>
     rw [localStep_async] at hstep
     cases hstep
-  | _ => first | rfl | simp [ContextFreeCode] at hpl
+  | withFiber _ => simp only [ContextFreeCode, Bool.false_eq_true] at hpl
+  | _ => rfl
 
 /-! ### One iteration under the budget: no yield, the primitive evaluated at count `k + 1` -/
 
@@ -1738,7 +1745,6 @@ theorem drive_loop_sync_op (root : NativeEff) (o : SyncOp) (K : List NCode) (i :
       (fiberAt (fiberOf (Prim.sync (EffThunk.op o)) K i) (k + 1)) o s₁ v rfl hs
   rw [driveState_succ_cons (evaluator := evaluatorFor root table)]
   simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, hit, settle, settleOutcome]
-  try dsimp only
   rw [M_update]
   rfl
 
@@ -1761,7 +1767,6 @@ theorem drive_loop_sync_op_none (root : NativeEff) (o : SyncOp) (K : List NCode)
       (fiberAt (fiberOf (Prim.sync (EffThunk.op o)) K i) (k + 1)) o rfl hs
   rw [driveState_succ_cons (evaluator := evaluatorFor root table)]
   simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, hit, settle, settleOutcome]
-  try dsimp only
   rw [M_update]
   rfl
 
@@ -1786,7 +1791,6 @@ theorem drive_loop_sync_pure (root : NativeEff) (p : Point) (K : List NCode) (i 
       (fiberAt (fiberOf (Prim.sync (EffThunk.pure p)) K i) (k + 1)) p rfl
   rw [driveState_succ_cons (evaluator := evaluatorFor root table)]
   simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, hit, settle, settleOutcome]
-  try dsimp only
   rw [M_update]
   rfl
 
@@ -1817,7 +1821,6 @@ theorem drive_loop_running (root : NativeEff) (cur : NCode) (K : List NCode) (i 
   refine ⟨tr ++ ev, fun n => ?_⟩
   rw [driveState_succ_cons (evaluator := evaluatorFor root table)]
   simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, hit, settle, settleOutcome]
-  try dsimp only
   rw [M_update]
   rfl
 
@@ -1847,7 +1850,6 @@ theorem drive_loop_finish (root : NativeEff) (cur : NCode) (K : List NCode) (i :
   refine ⟨tr ++ ev, fun n => ?_⟩
   rw [drive_loop_finished (evaluator := evaluatorFor root table) _ _ _ _ _ _ rest ex rfl
     (M_fiber? _ _ _ _ _) (by rw [hit]) (by rw [hit]), hit]
-  try dsimp only
   rw [M_update]
   rfl
 
@@ -1977,7 +1979,6 @@ theorem drive_loop_yield (root : NativeEff) (cur : NCode) (K : List NCode) (i : 
   rw [show n + 2 = (n + 1) + 1 by omega]
   rw [driveState_succ_cons (evaluator := evaluatorFor root table)]
   simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, hit, settle, settleOutcome]
-  try dsimp only
   rw [M_update]
   simp only [List.nil_append, List.cons_append]
   have hpark : (iteration (evaluator := evaluatorFor root table) (interpOf root table) (M waiting s (k + 1) tr₁ nt)
@@ -2005,8 +2006,7 @@ theorem fire_Myield_answer (root : NativeEff) (fr : NFiber) (s : Stores) (k : Na
   unfold fireState
   simp only [Myield_fiber?, hdrain]
   dsimp only [List.foldl, fireStep, taskCmds, stepDecisionState.loop]
-  simp [driveState_succ_cons, driveStep, M, Myield, parkedAt, fiberAt, RunMachine.fiber?,
-    RunMachine.update, RunMachine.disarm, RunMachine.emit, RunMachine.empty, RunFiber.make, Dispatcher.empty]
+  simp only [↓reduceIte, RunMachine.emit, RunMachine.disarm, RunMachine.update, parkedAt, fiberAt, RunFiber.make, Dispatcher.empty, Myield, RunMachine.empty, List.map_cons, List.map_nil, ne_eq, decide_not, decide_true, Bool.not_true, Bool.false_eq_true, not_false_eq_true, List.filter_cons_of_neg, List.filter_nil, List.isEmpty_cons, driveState_succ_cons, Option.isSome_none, driveStep, RunMachine.fiber?, List.find?_cons_of_pos, List.append_assoc, List.cons_append, List.nil_append, Bool.or_self, bne_self_eq_false, M]
 
 /-- `flush` fires the root's dispatcher, enters at count zero and delivers its
 success answer through the injected frame at count one (`effect.ts:629-655`). -/
@@ -2037,7 +2037,7 @@ theorem fire_Myield (root : NativeEff) (cur : NCode) (K : List NCode) (i : Bool)
       change ContAnswer.frame saved ≠
         ContAnswer.frame (Prim.onExit body (EffName.scopedExit previous scope) flag)
       intro h
-      simp [saved] at h), M_completedExits]
+      simp only [ContAnswer.frame.injEq, reduceCtorEq, saved] at h), M_completedExits]
     rw [evaluatePrim_success root _ _ Val.unit rfl]
     simp only [evaluatePrim.finalizerOr]
     rw [stepFrame_eq]
@@ -2051,7 +2051,6 @@ theorem fire_Myield (root : NativeEff) (cur : NCode) (K : List NCode) (i : Bool)
     rfl
   rw [driveState_succ_cons (evaluator := evaluatorFor root table)]
   simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, hit, settle, settleOutcome]
-  try dsimp only
   rw [M_update]
   rfl
 
@@ -2063,25 +2062,845 @@ Consumers: the context-aware segments and the receipt-conditioned H9Blocks.
 No theorem here establishes scheduler progress or admits a host reply.
 -/
 
+theorem PlainStack.nil : PlainStack [] := fun _ h => by simp only [List.not_mem_nil] at h
+
+theorem PlainStack.cons {f : NCode} {K : List NCode} (hf : PlainFrame f = true)
+    (hK : PlainStack K) : PlainStack (f :: K) := by
+  intro g hg
+  rcases List.mem_cons.mp hg with rfl | hg
+  · exact hf
+  · exact hK g hg
+
+theorem PlainStack.head {f : NCode} {K : List NCode} (h : PlainStack (f :: K)) :
+    PlainFrame f = true :=
+  by aesop
+
+theorem PlainStack.tail {f : NCode} {K : List NCode} (h : PlainStack (f :: K)) :
+    PlainStack K := fun g hg => h g (List.mem_cons_of_mem _ hg)
+
+theorem PlainStack.mask {K : List NCode} (i : Bool) (hK : PlainStack K) :
+    PlainStack (maskStack i K) := by
+  cases i
+  · exact hK
+  · exact hK.cons rfl
+
+/-- Step of rows-block-host/R6; consumer: the context-aware continuation closure. -/
+theorem plainContext_resolve {root : NativeEff} (h : PlainHooks root) (q : Point) :
+    PlainCode (resolve root q) = true := h.resolve q
+
+/-- Step of rows-block-host/R6; consumer: the context-aware suspension closure. -/
+theorem plainContext_suspendBodyAt {root : NativeEff} (h : PlainHooks root) (q : Point) :
+    PlainCode (suspendBodyAt root (.body q)) = true := h.suspend q
+
+/-- Step of rows-block-host/R6; consumer: the context-aware exit closure. -/
+theorem plainContext_ofExit (ex : ExitV) : PlainCode (Prim.ofExit ex) = true := by
+  cases ex <;> rfl
+
+/-- Step of rows-block-host/R6; consumer: the context-aware finalizer closure.
+Source context brackets use a restoreRegion body; any already plain body is administrative closure. -/
+theorem plainFrame_onExit_context {b : NCode} {n : EffName} {flag : Bool}
+    (h : PlainFrame (.onExit b n flag) = true) :
+    ((∃ p, n = .fin p) ∨ (∃ ctx, n = .restoreCtx ctx)) ∧ flag = false ∧ PlainCode b = true := by
+  cases n <;> cases flag <;> simp only [PlainFrame, Bool.false_eq_true] at h
+  · exact ⟨Or.inl ⟨_, rfl⟩, rfl, h⟩
+  · exact ⟨Or.inr ⟨_, rfl⟩, rfl, h⟩
+
+/-- Step of rows-block-host/R6; consumer: pushing the two admitted finalizer kinds. -/
+theorem plainCode_onExit_context {b : NCode} {n : EffName} {flag : Bool}
+    (h : PlainCode (.onExit b n flag) = true) :
+    ((∃ p, n = .fin p) ∨ (∃ ctx, n = .restoreCtx ctx)) ∧ flag = false ∧ PlainCode b = true := by
+  cases n <;> cases flag <;> simp only [PlainCode, Bool.false_eq_true] at h
+  · exact ⟨Or.inl ⟨_, rfl⟩, rfl, h⟩
+  · exact ⟨Or.inr ⟨_, rfl⟩, rfl, h⟩
+
+/-- Step of rows-block-host/R6; consumer: the context-aware finalizer closure. -/
+theorem plainContext_finalizerCode (root : NativeEff) (ex : ExitV) (program : NCode)
+    (h : PlainCode program = true) : PlainCode (finalizerCode (interpAt root []) ex program) = true := by
+  cases ex
+  · change PlainCode program && true = true
+    rw [h]
+    rfl
+  · change (PlainCode program && true) && true = true
+    rw [h]
+    rfl
+
+/-- Step of rows-block-host/R6; consumer: the context-aware finalizer closure. -/
+theorem step_ofExit_restoreCtx (root : NativeEff) (ex : ExitV) (body : NCode) (previous : Ctx)
+    (K : List NCode) (i : Bool) (s : Stores) :
+    localStep root (fiberOf (Prim.ofExit ex) (.onExit body (.restoreCtx previous) false :: K) i) s =
+      .running (fiberOf (finalizerCode (interpAt root []) ex (.withFiber (.setCtx previous)))
+        (maskStack i K) false) s := by
+  cases ex <;> cases i <;> rfl
+
+/-- Step of rows-block-host/R6; consumer: the local wrapper closure. -/
+theorem step_success_yieldWrapper (root : NativeEff) (v : Val) (cur : NCode) (K : List NCode)
+    (i : Bool) (s : Stores) :
+    localStep root (fiberOf (.success v) (.onSuccessConst (.yieldNowWith 0) cur :: K) i) s =
+      .running (fiberOf cur K i) s := by
+  rfl
+
+/-- Step of rows-block-host/R6; consumer: the local wrapper closure. -/
+theorem step_failure_yieldWrapper (root : NativeEff) (c : CauseV) (cur : NCode) (K : List NCode)
+    (i : Bool) (s : Stores) :
+    localStep root (fiberOf (.failure c) (.onSuccessConst (.yieldNowWith 0) cur :: K) i) s =
+      localStep root (fiberOf (.failure c) K i) s := by
+  aesop
+
+/-- `catchIf`'s handler answers its compiled handler at a represented, selected failure, and
+the failure itself otherwise. -/
+theorem plainContext_contEOf_caughtError {root : NativeEff} (hroot : PlainHooks root)
+    (p : Point) (c : CauseV) : PlainCode (contEOf root (EffName.caughtError p) c) = true := by
+  simp only [contEOf]
+  split
+  · split
+    · exact plainContext_resolve hroot _
+    · rfl
+  · rfl
+
+theorem plainContext_contAOf {root : NativeEff} (hroot : PlainHooks root) {n : EffName}
+    (hn : PlainName n = true) (v : Val) : PlainCode (contAOf root n v) = true := by
+  cases n <;> simp only [PlainName, Bool.false_eq_true] at hn
+  case cont p => exact plainContext_resolve hroot _
+  case caught p => rfl
+  case caughtError p => rfl
+  case onValue p => exact plainContext_resolve hroot _
+  case onCause p => rfl
+  case fin p => rfl
+  case restore ex => exact plainContext_ofExit _
+  case merge ex => exact plainContext_ofExit _
+  case provideMask u region =>
+    cases region <;> simp only [Bool.false_eq_true] at hn
+    case program q =>
+      simp only [contAOf]
+      split <;> rfl
+  case updateThen u region flag =>
+    cases region <;> simp only [Bool.false_eq_true] at hn
+    case program q =>
+      rw [contAOf_updateThen]
+      unfold updateThenK
+      split
+      · split <;> rfl
+      · rfl
+  case bodyThen region previous flag =>
+    cases region <;> simp only [Bool.false_eq_true] at hn
+    rfl
+  case serviceLookup key =>
+    rw [contAOf_serviceLookup]
+    unfold serviceLookupK
+    split
+    · split <;> rfl
+    · rfl
+
+theorem plainContext_contEOf {root : NativeEff} (hroot : PlainHooks root) {n : EffName}
+    (hn : PlainName n = true) (c : CauseV) : PlainCode (contEOf root n c) = true := by
+  cases n <;> simp only [PlainName, Bool.false_eq_true] at hn
+  case cont p => rfl
+  case caught p => exact plainContext_resolve hroot _
+  case caughtError p => exact plainContext_contEOf_caughtError hroot _ _
+  case onValue p => rfl
+  case onCause p => exact plainContext_resolve hroot _
+  case fin p => rfl
+  case restore ex => exact plainContext_ofExit _
+  case merge ex => exact plainContext_ofExit _
+  case provideMask u region => rfl
+  case updateThen u region flag => rfl
+  case bodyThen region previous flag => rfl
+  case serviceLookup key => rfl
+
+/-- Fresh source callbacks still answer plain code at any captured point. -/
+theorem plainContext_contAAt {root : NativeEff} (hroot : PlainHooks root) {n : EffName}
+    (hn : PlainName n = true) (v : Val) : PlainCode ((interpAt root []).contA n v) = true := by
+  cases n <;> simp only [PlainName, Bool.false_eq_true] at hn
+  case cont p => exact plainContext_resolve hroot _
+  case caught p => rfl
+  case caughtError p => rfl
+  case onValue p => exact plainContext_resolve hroot _
+  case onCause p => rfl
+  case fin p => rfl
+  case restore ex => exact plainContext_ofExit _
+  case merge ex => exact plainContext_ofExit _
+  case provideMask u region => exact plainContext_contAOf hroot hn v
+  case updateThen u region flag => exact plainContext_contAOf hroot hn v
+  case bodyThen region previous flag => exact plainContext_contAOf hroot hn v
+  case serviceLookup key => exact plainContext_contAOf hroot (n := .serviceLookup key) rfl v
+
+theorem plainContext_contEAt {root : NativeEff} (hroot : PlainHooks root) {n : EffName}
+    (hn : PlainName n = true) (c : CauseV) : PlainCode ((interpAt root []).contE n c) = true := by
+  cases n <;> simp only [PlainName, Bool.false_eq_true] at hn
+  case cont p => rfl
+  case caught p => exact plainContext_resolve hroot _
+  case caughtError p => exact plainContext_contEOf_caughtError hroot _ _
+  case onValue p => rfl
+  case onCause p => exact plainContext_resolve hroot _
+  case fin p => rfl
+  case restore ex => exact plainContext_ofExit _
+  case merge ex => exact plainContext_ofExit _
+
+  case provideMask u region => rfl
+  case updateThen u region flag => rfl
+  case bodyThen region previous flag => rfl
+  case serviceLookup key => rfl
+/-! ### A loop's decisions are plain -/
+
+theorem plainContext_loopFinishAt (root : NativeEff) (q : Point) (c : Val) :
+    PlainCode (loopFinishAt root q c) = true := by
+  unfold loopFinishAt
+  split
+  · split <;> rfl
+  · rfl
+
+/-- What a loop does next is plain code either way: the body resolved at the loop's child, or
+a finishing exit. -/
+theorem plainContext_loopNextAt {root : NativeEff} (hroot : PlainHooks root) (q : Point)
+    (c : Val) : PlainCode (loopNextAt root q c).code = true := by
+  unfold loopNextAt
+  split
+  · split
+    · exact plainContext_resolve hroot _
+    · exact plainContext_loopFinishAt root q c
+    · rfl
+  · rfl
+
+theorem plainContext_loopResumeAt {root : NativeEff} (hroot : PlainHooks root) (q : Point)
+    (c v : Val) : PlainCode (loopResumeAt root q c v).code = true := by
+  unfold loopResumeAt
+  split
+  · split
+    · exact plainContext_loopNextAt hroot q _
+    · rfl
+  · rfl
+
+/-- Where a loop's decision leaves the fiber is a plain fiber over a plain stack. -/
+theorem context_enter_plain (q : Point) (K : List NCode) (i : Bool)
+    (ln : LoopNext Val NCode) (hcode : PlainCode ln.code = true) (hK : PlainStack K) :
+    ∃ cur' K' i', enter q K i ln = fiberOf cur' K' i' ∧ PlainCode cur' = true ∧ PlainStack K' := by
+  cases ln with
+  | «continue» next body => exact ⟨_, _, _, rfl, hcode, hK.cons rfl⟩
+  | finish code => exact ⟨_, _, _, rfl, hcode, hK⟩
+
+/-! ### The local step keeps the fiber plain -/
+
+set_option linter.unusedSimpArgs false in
+theorem context_localStep_success_plain {root : NativeEff} (hroot : PlainHooks root)
+    (v : Val) (K : List NCode) (i : Bool) (s : Stores) (fr' : NFiber) (s' : Stores)
+    (hK : PlainStack K)
+    (h : localStep root (fiberOf (Prim.success v) K i) s = .running fr' s') :
+      ∃ cur' K' i', fr' = fiberOf cur' K' i' ∧ PlainCode cur' = true ∧ PlainStack K' := by
+  induction K generalizing i with
+  | nil =>
+    have he := step_exit_empty root (Exit.success v) i s
+    simp only [Prim.ofExit] at he
+    rw [he] at h
+    cases h
+  | cons f K ih =>
+    have hf := hK.head
+    have hK' := hK.tail
+    cases f <;> simp only [PlainFrame, Bool.and_eq_true, Bool.false_eq_true] at hf
+    · rw [step_success_onSuccess] at h
+      cases h
+      exact ⟨_, _, _, rfl, plainContext_contAAt hroot hf.2 v, hK'⟩
+    · next body saved =>
+      cases body with
+      | yieldNowWith priority =>
+        cases priority with
+        | zero =>
+          rw [step_success_yieldWrapper] at h
+          cases h
+          exact ⟨_, _, _, rfl, hf, hK'⟩
+        | succ _ => exact Bool.noConfusion hf
+      | _ => exact Bool.noConfusion hf
+    · rw [step_success_pass_onFailure] at h
+      exact ih i hK' h
+    · rw [step_success_onSuccessAndFailure] at h
+      cases h
+      exact ⟨_, _, _, rfl, plainContext_contAAt hroot hf.2.1 v, hK'⟩
+    · rw [step_success_exitFrame] at h
+      cases h
+      exact ⟨_, _, _, rfl, rfl, hK'⟩
+    · next b n flag =>
+      obtain ⟨kind, rfl, _⟩ := plainFrame_onExit_context hf
+      rcases kind with ⟨p, rfl⟩ | ⟨previous, rfl⟩
+      · have hm := step_ofExit_onExit root (Exit.success v) b p K i s
+        simp only [Prim.ofExit] at hm
+        rw [hm] at h
+        cases h
+        exact ⟨_, _, _, rfl, plainContext_finalizerCode root _ _ (hroot.resolve _), hK'.mask i⟩
+      · have hm := step_ofExit_restoreCtx root (Exit.success v) b previous K i s
+        simp only [Prim.ofExit] at hm
+        rw [hm] at h
+        cases h
+        exact ⟨_, _, _, rfl, plainContext_finalizerCode root _ _ rfl, hK'.mask i⟩
+    · next flag =>
+      rw [step_success_pass_setInterruptible (flag := flag)] at h
+      exact ih flag hK' h
+    · next loop cursor =>
+      cases loop <;> simp only [PlainFrame, Bool.false_eq_true] at hf
+      next q =>
+      rw [step_success_enter_at root q cursor v K i s] at h
+      cases h
+      exact context_enter_plain q K i _ (plainContext_loopResumeAt hroot _ cursor v) hK'
+
+
+
+set_option linter.unusedSimpArgs false in
+theorem context_localStep_failure_plain {root : NativeEff} (hroot : PlainHooks root)
+    (c : CauseV) (K : List NCode) (i : Bool) (s : Stores) (fr' : NFiber) (s' : Stores)
+    (hK : PlainStack K)
+    (h : localStep root (fiberOf (Prim.failure c) K i) s = .running fr' s') :
+      ∃ cur' K' i', fr' = fiberOf cur' K' i' ∧ PlainCode cur' = true ∧ PlainStack K' := by
+  induction K generalizing i with
+  | nil =>
+    have he := step_exit_empty root (Exit.failure c) i s
+    simp only [Prim.ofExit] at he
+    rw [he] at h
+    cases h
+  | cons f K ih =>
+    have hf := hK.head
+    have hK' := hK.tail
+    cases f <;> simp only [PlainFrame, Bool.and_eq_true, Bool.false_eq_true] at hf
+    · rw [step_failure_pass_onSuccess] at h
+      exact ih i hK' h
+    · next body saved =>
+      cases body with
+      | yieldNowWith priority =>
+        cases priority with
+        | zero =>
+          rw [step_failure_yieldWrapper] at h
+          exact ih i hK' h
+        | succ _ => exact Bool.noConfusion hf
+      | _ => exact Bool.noConfusion hf
+    · rw [step_failure_onFailure] at h
+      cases h
+      exact ⟨_, _, _, rfl, plainContext_contEAt hroot hf.2 c, hK'⟩
+    · rw [step_failure_onSuccessAndFailure] at h
+      cases h
+      exact ⟨_, _, _, rfl, plainContext_contEAt hroot hf.2.2 c, hK'⟩
+    · rw [step_failure_exitFrame] at h
+      cases h
+      exact ⟨_, _, _, rfl, rfl, hK'⟩
+    · next b n flag =>
+      obtain ⟨kind, rfl, _⟩ := plainFrame_onExit_context hf
+      rcases kind with ⟨p, rfl⟩ | ⟨previous, rfl⟩
+      · have hm := step_ofExit_onExit root (Exit.failure c) b p K i s
+        simp only [Prim.ofExit] at hm
+        rw [hm] at h
+        cases h
+        exact ⟨_, _, _, rfl, plainContext_finalizerCode root _ _ (hroot.resolve _), hK'.mask i⟩
+      · have hm := step_ofExit_restoreCtx root (Exit.failure c) b previous K i s
+        simp only [Prim.ofExit] at hm
+        rw [hm] at h
+        cases h
+        exact ⟨_, _, _, rfl, plainContext_finalizerCode root _ _ rfl, hK'.mask i⟩
+    · next flag =>
+      rw [step_failure_pass_setInterruptible (flag := flag)] at h
+      exact ih flag hK' h
+    · next loop cursor =>
+      cases loop <;> simp only [PlainFrame, Bool.false_eq_true] at hf
+      next q =>
+      rw [step_failure_pass_whileLoop] at h
+      exact ih i hK' h
+
+
+
+-- The `PlainFrame` argument is spent in some branches of the frame case split and not in
+-- others; the linter reports the latter.
+set_option linter.unusedSimpArgs false in
+theorem context_localStep_plain {root : NativeEff} (hroot : PlainHooks root) :
+    ∀ (cur : NCode) (K : List NCode) (i : Bool) (s : Stores) (fr' : NFiber) (s' : Stores),
+      PlainCode cur = true → PlainStack K →
+      localStep root (fiberOf cur K i) s = .running fr' s' →
+      ∃ cur' K' i', fr' = fiberOf cur' K' i' ∧ PlainCode cur' = true ∧ PlainStack K' := by
+  intro cur K i s fr' s' hpl hK h
+  cases cur with
+  | success v =>
+    exact context_localStep_success_plain hroot v K i s fr' s' hK h
+  | failure c =>
+    exact context_localStep_failure_plain hroot c K i s fr' s' hK h
+  | yieldableError e =>
+    rw [step_yieldableError] at h
+    cases h
+    exact ⟨_, _, _, rfl, rfl, hK⟩
+  | sync thunk =>
+    cases thunk <;> simp only [PlainCode, Bool.false_eq_true] at hpl
+    · rw [step_sync_pure] at h
+      cases h
+      exact ⟨_, _, _, rfl, rfl, hK⟩
+    · rw [step_sync_op] at h
+      rcases hso : syncOpStep _ s with _ | ⟨s₁, v⟩ <;> rw [hso] at h
+      · cases h
+        exact ⟨_, _, _, rfl, rfl, hK⟩
+      · cases h
+        exact ⟨_, _, _, rfl, rfl, hK⟩
+  | suspend thunk =>
+    cases thunk <;> simp only [PlainCode, Bool.false_eq_true] at hpl
+    rw [step_suspend] at h
+    cases h
+    exact ⟨_, _, _, rfl, plainContext_suspendBodyAt hroot _, hK⟩
+  | onSuccess b n =>
+    rw [step_push_onSuccess] at h
+    cases h
+    simp only [PlainCode, Bool.and_eq_true] at hpl
+    exact ⟨_, _, _, rfl, hpl.1, hK.cons (by simp only [PlainFrame, hpl.1, hpl.2, Bool.and_self])⟩
+  | onFailure b n =>
+    rw [step_push_onFailure] at h
+    cases h
+    simp only [PlainCode, Bool.and_eq_true] at hpl
+    exact ⟨_, _, _, rfl, hpl.1, hK.cons (by simp only [PlainFrame, hpl.1, hpl.2, Bool.and_self])⟩
+  | onSuccessAndFailure b n₁ n₂ =>
+    rw [step_push_onSuccessAndFailure] at h
+    cases h
+    simp only [PlainCode, Bool.and_eq_true] at hpl
+    exact ⟨_, _, _, rfl, hpl.1, hK.cons (by simp only [PlainFrame, hpl.1, hpl.2.1, hpl.2.2, Bool.and_self])⟩
+  | exitFrame b =>
+    rw [step_push_exitFrame] at h
+    cases h
+    exact ⟨_, _, _, rfl, hpl, hK.cons hpl⟩
+  | onExit b n flag =>
+    obtain ⟨kind, rfl, hb⟩ := plainCode_onExit_context hpl
+    rw [step_push_onExit] at h
+    cases h
+    rcases kind with ⟨p, rfl⟩ | ⟨previous, rfl⟩
+    · exact ⟨_, _, _, rfl, hb, hK.cons hb⟩
+    · exact ⟨_, _, _, rfl, hb, hK.cons hb⟩
+  | whileLoop loop cursor =>
+    cases loop <;> simp only [PlainCode, Bool.false_eq_true] at hpl
+    next q =>
+    rw [step_whileLoop_enter_at root q cursor K i s] at h
+    cases h
+    exact context_enter_plain q K i _ (plainContext_loopNextAt hroot _ cursor) hK
+  | async n w c =>
+    -- a host call: the self-loop
+    rw [localStep_async] at h
+    cases h
+    exact ⟨_, _, _, rfl, hpl, hK⟩
+  | withFiber thunk =>
+    have hl : localStep root (fiberOf (.withFiber thunk) K i) s =
+        .running (fiberOf (.failure (Cause.die Defect.notImplemented)) K i) s := by
+      cases thunk with
+      | act _ | getCtx | captureMask | setCtx _ | provideMasked _ _ _ | restoreRegion _ _ => rfl
+      | _ => simp only [PlainCode, Bool.false_eq_true] at hpl
+    rw [hl] at h
+    cases h
+    exact ⟨_, _, _, rfl, rfl, hK⟩
+  | iterator _ _ | setInterruptible _ | yieldNowWith _ | asyncFinalizer _ | onSuccessConst _ _ =>
+    simp only [PlainCode, Bool.false_eq_true] at hpl
+
+/-- Placement: rows-block-host/R6; consumer: the hosted store invariant.
+Reach: a running non-sync local step; no scheduler or host-reply claim. -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem contextStep_stores {root : NativeEff} {cur : NCode} {K : List NCode} {i : Bool}
+    {s s' : Stores} {ctx ctx' : Ctx} {fr' : NFiber} (hns : ∀ t, cur ≠ .sync t)
+    (h : contextStep root (fiberOf cur K i) s ctx = (.running fr' s', ctx')) : s' = s
+ := by
+  have fallback (hs : (localStep root (fiberOf cur K i) s, ctx) = (.running fr' s', ctx')) : s' = s := by
+    have hstep := congrArg Prod.fst hs
+    exact (localStep_stores hns hstep).symm
+  unfold contextStep at h
+  split at h
+  · split at h
+    · cases h
+      rfl
+    · cases h
+      rfl
+    · cases h
+      rfl
+    · cases h
+      rfl
+    · dsimp only at h
+      cases h
+      rfl
+    · exact fallback h
+  · exact fallback h
+
+/-- Placement: rows-block-host/R6; consumer: the hosted quiet-store invariant.
+Reach: every running local step; no scheduler progress or reply admission. -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem contextStep_quiet {root : NativeEff} {cur : NCode} {K : List NCode} {i : Bool}
+    {s s' : Stores} {ctx ctx' : Ctx} {fr' : NFiber} (hq : Quiet s)
+    (h : contextStep root (fiberOf cur K i) s ctx = (.running fr' s', ctx')) : Quiet s'
+ := by
+  have fallback (hs : (localStep root (fiberOf cur K i) s, ctx) = (.running fr' s', ctx')) : Quiet s' := by
+    have hstep := congrArg Prod.fst hs
+    exact localStep_quiet hstep hq
+  unfold contextStep at h
+  split at h
+  · split at h
+    · cases h
+      exact hq
+    · cases h
+      exact hq
+    · cases h
+      exact hq
+    · cases h
+      exact hq
+    · dsimp only at h
+      cases h
+      exact hq
+    · exact fallback h
+  · exact fallback h
+
 /-- The context-aware step keeps a running plain fiber plain.
 Placement: rows-block-host/R6; consumer: the hosted run invariant. -/
 @[semantics "translation-simulation" (requirement := R6)]
-proof_goal contextStep_plain {root : NativeEff} (hroot : PlainHooks root)
+theorem contextStep_plain {root : NativeEff} (hroot : PlainHooks root)
     (cur : NCode) (K : List NCode) (i : Bool) (s s' : Stores) (ctx ctx' : Ctx)
     (fr' : NFiber) (hpl : PlainCode cur = true) (hK : PlainStack K)
     (h : contextStep root (fiberOf cur K i) s ctx = (.running fr' s', ctx')) :
     ∃ cur' K' i', fr' = fiberOf cur' K' i' ∧ PlainCode cur' = true ∧ PlainStack K'
+ := by
+  cases cur with
+  | withFiber thunk =>
+    cases thunk with
+    | act p =>
+      rcases hroot.action p with ha | ha
+      · have hs : contextStep root (fiberOf (.withFiber (.act p)) K i) s ctx =
+            (.running (fiberOf (.failure (Cause.die Defect.notImplemented)) K i) s, ctx) := by
+          simp only [contextStep, fiberOf, interpAt, interpOf, ha]
+          rfl
+        rw [hs] at h
+        cases h
+        exact ⟨_, _, _, rfl, rfl, hK⟩
+      · rw [contextStep_act_context root p K i s ctx ha] at h
+        cases h
+        exact ⟨_, _, _, rfl, rfl, hK⟩
+    | getCtx =>
+      rw [contextStep_getCtx] at h
+      cases h
+      exact ⟨_, _, _, rfl, rfl, hK⟩
+    | captureMask =>
+      rw [contextStep_captureMask] at h
+      cases h
+      exact ⟨_, _, _, rfl, rfl, hK.mask i⟩
+    | setCtx next =>
+      rw [contextStep_setCtx] at h
+      cases h
+      exact ⟨_, _, _, rfl, rfl, hK⟩
+    | provideMasked u region flag =>
+      cases region <;> simp only [PlainCode, Bool.false_eq_true] at hpl
+      case program q =>
+        rw [contextStep_provideMasked] at h
+        cases h
+        exact ⟨_, _, _, rfl, rfl, hK.mask i⟩
+    | restoreRegion region flag =>
+      cases region <;> simp only [PlainCode, Bool.false_eq_true] at hpl
+      case program q =>
+        cases flag with
+        | false =>
+          rw [contextStep_restoreRegion_false] at h
+          cases h
+          exact ⟨_, _, _, rfl, hroot.resolve _, hK.mask i⟩
+        | true =>
+          rw [contextStep_restoreRegion_true] at h
+          cases h
+          refine ⟨_, _, _, rfl, hroot.resolve _, ?_⟩
+          cases i
+          · exact hK.cons rfl
+          · exact hK
+    | _ => simp only [PlainCode, Bool.false_eq_true] at hpl
+  | _ =>
+    rw [contextStep_fallback root _ _ _ (fun _ h => by cases h)] at h
+    exact context_localStep_plain hroot _ K i s fr' s' hpl hK (congrArg Prod.fst h)
+
+/-- Step of rows-block-host/R6; consumer: the context-aware primitive bridge. -/
+theorem parkOf_plain_context (root : NativeEff) {cur : NCode} (h : PlainCode cur = true) :
+    (interpAt root []).parkOf cur = none := by
+  cases cur with
+  | suspend thunk =>
+    cases thunk <;> simp only [PlainCode, Bool.false_eq_true] at h
+    rfl
+  | _ => rfl
+
+/-- Step of rows-block-host/R6; consumer: the context-aware primitive bridge. -/
+theorem iterOfC_sameCtx (m : Api.Machine) (fr : NFiber) (k : Nat) (ctx : Ctx)
+    (ev : NTrace) (step : LocalStep) :
+    iterOfC m (fiberAt fr k ctx) ev (step, ctx) = iterOf m (fiberAt fr k ctx) ev step := by
+  cases step <;> rfl
+
+/-- Step of rows-block-host/R6; consumer: the context-aware command transitions.
+Only an async primitive reads the row table during primitive evaluation. -/
+theorem evaluatePrim_table_context (root : NativeEff) (hroot : PlainHooks root)
+    (completed : List (FiberId × ExitV)) (m : Api.Machine) (f : NRunFiber)
+    (hp : PlainCode f.frame.current = true)
+    (hn : ∀ name flag cancel, f.frame.current ≠ .async name flag cancel) :
+    evaluatePrim (interpAt root completed table) m f false =
+      evaluatePrim (interpAt root completed) m f false := by
+  cases hc : f.frame.current with
+  | async name flag cancel => exact False.elim (hn name flag cancel hc)
+  | withFiber thunk =>
+    cases thunk with
+    | act p =>
+      rcases hroot.action p with ha | ha
+      · conv =>
+          lhs
+          simp only [evaluatePrim, hc, interpAt, interpOf, ha]
+        conv =>
+          rhs
+          simp only [evaluatePrim, hc, interpAt, interpOf, ha]
+        rfl
+      · conv =>
+          lhs
+          simp only [evaluatePrim, hc, interpAt, interpOf, ha]
+        conv =>
+          rhs
+          simp only [evaluatePrim, hc, interpAt, interpOf, ha]
+        rfl
+    | getCtx | captureMask | setCtx _ | provideMasked _ _ _ =>
+      conv =>
+        lhs
+        simp only [evaluatePrim, hc]
+      conv =>
+        rhs
+        simp only [evaluatePrim, hc]
+      rfl
+    | restoreRegion body flag =>
+      cases flag
+      all_goals
+        conv =>
+          lhs
+          simp only [evaluatePrim, hc]
+        conv =>
+          rhs
+          simp only [evaluatePrim, hc]
+        rfl
+    | _ => rw [hc] at hp; simp only [PlainCode, Bool.false_eq_true] at hp
+  | _ => unfold evaluatePrim; rw [hc]; rfl
+
+/-- Step of rows-block-host/R6; consumer: the store-sync command transitions. -/
+theorem evaluatePrim_table_sync (root : NativeEff) (completed : List (FiberId × ExitV))
+    (m : Api.Machine) (f : NRunFiber) (thunk : EffThunk) (hc : f.frame.current = .sync thunk) :
+    evaluatePrim (interpAt root completed table) m f false =
+      evaluatePrim (interpAt root completed) m f false := by
+  unfold evaluatePrim
+  rw [hc]
+  rfl
+
+/-- Step of rows-block-host/R6; consumer: the context-aware command transitions. -/
+theorem not_async_plain_context {cur : NCode} (hpl : PlainCode cur = true)
+    (hnc : IsCall cur = false) : ∀ name flag cancel, cur ≠ .async name flag cancel := by
+  intro name flag cancel h
+  subst cur
+  exact Bool.noConfusion (hpl.symm.trans hnc)
+
+/-- Step of rows-block-host/R6; consumer: excluding native scoped callbacks. -/
+theorem popFrom_pass_setInterruptible_context (demand : Effect4.Arm) (skip : Bool)
+    (K : List NCode) (cur : NCode) (i flag : Bool)
+    (hno : (Prim.setInterruptible flag : NCode).hasArm demand = false) :
+    (FrameFiber.popFrom demand skip (.setInterruptible flag :: K) (fiberOf cur [] i)).answer =
+      (FrameFiber.popFrom demand skip K (fiberOf cur [] flag)).answer := by
+  have he : (Prim.setInterruptible flag : NCode).ensure (fiberOf cur [] i) =
+      (fiberOf cur [] flag, none) := by cases flag <;> rfl
+  have hn : (Prim.setInterruptible flag : NCode).answerOf demand
+      ((Prim.setInterruptible flag : NCode).ensure (fiberOf cur [] i)).snd = none := by
+    rw [he]
+    exact Prim.answerOf_missing _ demand hno
+  have hp := FrameFiber.popFrom_pass_no_push demand skip (.setInterruptible flag) K
+    (fiberOf cur [] i) rfl (by rw [he]; rfl)
+  rw [he] at hp
+  rw [FrameFiber.popFrom_continue_answer demand skip _ K _ (Or.inl hn), hp]
+
+theorem popOf_plain_not_scoped_context (cur : NCode) (K : List NCode) (i : Bool)
+    (hK : PlainStack K) (ex : ExitV) (body : NCode) (previous : Ctx) (scope : Nat)
+    (flag : Bool) :
+    (popOf (fiberOf cur K i) ex).answer ≠
+      ContAnswer.frame (Prim.onExit body (EffName.scopedExit previous scope) flag) := by
+  induction K generalizing i with
+  | nil => cases ex <;> simp only [popOf, FrameFiber.getCont, fiberOf, Bool.not_false, Bool.and_true, ↓reduceIte, FrameFiber.popFrom, ne_eq, reduceCtorEq, not_false_eq_true, Bool.not_true, Bool.and_self]
+  | cons frame K ih =>
+    have hf := hK.head
+    have hK' := hK.tail
+    cases frame <;> simp only [PlainFrame, Bool.and_eq_true, Bool.false_eq_true] at hf
+    · next b n =>
+      cases ex with
+      | success v =>
+        simp only [popOf, FrameFiber.getCont, fiberOf, Bool.not_false, Bool.and_true, Bool.false_eq_true, ↓reduceIte, FrameFiber.popFrom, Prim.answerOf, Prim.ensure, Prim.hasArm, Prim.arms, List.contains_eq_mem, List.mem_cons, List.not_mem_nil, or_false, decide_true, Bool.false_and, List.nil_append, ne_eq, ContAnswer.frame.injEq, reduceCtorEq, not_false_eq_true]
+      | failure c =>
+        change (FrameFiber.popFrom Effect4.Arm.contE true (Prim.onSuccess b n :: K)
+          (fiberOf cur [] i)).answer ≠ _
+        rw [(popFrom_pass Effect4.Arm.contE true _ K cur i rfl rfl).1]
+        exact ih i hK'
+    · next b n =>
+      cases ex with
+      | success v =>
+        change ContAnswer.frame (.onSuccessConst b n) ≠
+          ContAnswer.frame (.onExit body (.scopedExit previous scope) flag)
+        intro h
+        cases h
+      | failure c =>
+        change (FrameFiber.popFrom Effect4.Arm.contE true (.onSuccessConst b n :: K)
+          (fiberOf cur [] i)).answer ≠ _
+        rw [(popFrom_pass Effect4.Arm.contE true _ K cur i rfl rfl).1]
+        exact ih i hK'
+    · next b n =>
+      cases ex with
+      | success v =>
+        change (FrameFiber.popFrom Effect4.Arm.contA false (Prim.onFailure b n :: K)
+          (fiberOf cur [] i)).answer ≠ _
+        rw [(popFrom_pass Effect4.Arm.contA false _ K cur i rfl rfl).1]
+        exact ih i hK'
+      | failure c =>
+        simp only [popOf, FrameFiber.getCont, fiberOf, Bool.not_true, Bool.and_self, ↓reduceIte, FrameFiber.popFrom, Prim.answerOf, Prim.ensure, Prim.hasArm, Prim.arms, List.contains_eq_mem, List.mem_cons, List.not_mem_nil, or_false, decide_true, FrameFiber.interrupted, Option.isSome_none, Bool.and_false, List.nil_append, ne_eq, ContAnswer.frame.injEq, reduceCtorEq, not_false_eq_true]
+    · cases ex <;>
+        simp only [popOf, FrameFiber.getCont, fiberOf, Bool.not_false, Bool.and_true, ↓reduceIte, FrameFiber.popFrom, Prim.answerOf, Prim.ensure, Prim.hasArm, Prim.arms, List.contains_eq_mem, List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self, or_false, decide_true, FrameFiber.interrupted, Option.isSome_none, Bool.and_false, Bool.and_self, List.nil_append, ne_eq, ContAnswer.frame.injEq, not_false_eq_true, Bool.not_true, or_true]
+    · cases ex <;>
+        simp only [popOf, FrameFiber.getCont, fiberOf, Bool.not_false, Bool.and_true, ↓reduceIte, FrameFiber.popFrom, Prim.answerOf, Prim.ensure, Prim.hasArm, Prim.arms, List.contains_eq_mem, List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self, or_false, decide_true, FrameFiber.interrupted, Option.isSome_none, Bool.and_false, Bool.and_self, List.nil_append, ne_eq, ContAnswer.frame.injEq, not_false_eq_true, Bool.not_true, or_true]
+    · next b n finalizerFlag =>
+      cases n <;> cases finalizerFlag <;> simp only [Bool.false_eq_true] at hf
+      all_goals cases ex <;> cases i <;>
+        simp only [popOf, FrameFiber.getCont, fiberOf, Bool.not_false, Bool.and_true, ↓reduceIte, FrameFiber.popFrom, Prim.answerOf, Prim.ensure, Prim.hasArm, Prim.arms, List.contains_eq_mem, List.mem_cons, reduceCtorEq, List.not_mem_nil, or_self, or_false, decide_true, FrameFiber.interrupted, Option.isSome_none, Bool.and_self, List.nil_append, ne_eq, ContAnswer.frame.injEq, Prim.onExit.injEq, Bool.false_eq, false_and, and_false, not_false_eq_true, List.cons_append, Bool.not_true, or_true, Bool.and_false]
+    · next restoreFlag =>
+      cases ex
+      · change (FrameFiber.popFrom Effect4.Arm.contA false (.setInterruptible restoreFlag :: K)
+          (fiberOf cur [] i)).answer ≠ _
+        rw [popFrom_pass_setInterruptible_context Effect4.Arm.contA false K cur i restoreFlag rfl]
+        exact ih restoreFlag hK'
+      · change (FrameFiber.popFrom Effect4.Arm.contE true (.setInterruptible restoreFlag :: K)
+          (fiberOf cur [] i)).answer ≠ _
+        rw [popFrom_pass_setInterruptible_context Effect4.Arm.contE true K cur i restoreFlag rfl]
+        exact ih restoreFlag hK'
+    · next loop cursor =>
+      cases ex with
+      | success v =>
+        simp only [popOf, FrameFiber.getCont, fiberOf, Bool.not_false, Bool.and_true, Bool.false_eq_true, ↓reduceIte, FrameFiber.popFrom, Prim.answerOf, Prim.ensure, Prim.hasArm, Prim.arms, List.contains_eq_mem, List.mem_cons, List.not_mem_nil, or_false, decide_true, Bool.false_and, List.nil_append, ne_eq, ContAnswer.frame.injEq, reduceCtorEq, not_false_eq_true]
+      | failure c =>
+        change (FrameFiber.popFrom Effect4.Arm.contE true (Prim.whileLoop loop cursor :: K)
+          (fiberOf cur [] i)).answer ≠ _
+        rw [(popFrom_pass Effect4.Arm.contE true _ K cur i rfl rfl).1]
+        exact ih i hK'
+
+
+/-- Placement: rows-block-host/R6; consumer: the generalized command transitions.
+Reach: plain stacks and the no-scoped root hook, at every live context. -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem evaluateNative_plain_context (root : NativeEff) (hroot : PlainHooks root)
+    (m : Api.Machine) (cur : NCode) (K : List NCode) (i : Bool) (k : Nat) (ctx : Ctx)
+    (hK : PlainStack K) :
+    evaluateNative root m (fiberAt (fiberOf cur K i) k ctx) false table =
+      evaluatePrim (interpAt root m.completedExits table) m (fiberAt (fiberOf cur K i) k ctx) false
+ := by
+  cases cur with
+  | success v =>
+    change exitScoped root m _ false (.success v) = _
+    apply exitScoped_eq_evaluatePrim
+    exact popOf_plain_not_scoped_context _ K i hK _
+  | failure c =>
+    change exitScoped root m _ false (.failure c) = _
+    apply exitScoped_eq_evaluatePrim
+    exact popOf_plain_not_scoped_context _ K i hK _
+  | withFiber thunk =>
+    cases thunk with
+    | act p =>
+      simp only [evaluateNative, fiberAt_frame, fiberOf]
+      split
+      · next body h => exact False.elim (hroot.noScoped p body h)
+      · rfl
+    | _ => rfl
+  | _ => rfl
 
 /-- The primitive evaluator agrees with the single context-aware step.
 Placement: rows-block-host/R6; consumer: the hosted one-command transitions.
 Reach: non-sync, non-call plain code and the actual live context. -/
 @[semantics "translation-simulation" (requirement := R6)]
-proof_goal evaluatePrim_contextStep (root : NativeEff) (hroot : PlainHooks root)
+theorem evaluatePrim_contextStep (root : NativeEff) (hroot : PlainHooks root)
     (m : Api.Machine) (cur : NCode) (K : List NCode) (i : Bool) (k : Nat) (ctx : Ctx)
     (hpl : PlainCode cur = true) (hns : ∀ t, cur ≠ Prim.sync t) (hnc : IsCall cur = false) :
     ∃ ev, evaluatePrim (interpAt root []) m (fiberAt (fiberOf cur K i) k ctx) false =
       iterOfC m (fiberAt (fiberOf cur K i) k ctx) ev
         (contextStep root (fiberOf cur K i) m.state ctx)
+ := by
+  cases cur with
+  | success v =>
+    rw [contextStep_fallback root _ _ _ (fun _ h => by cases h)]
+    simp only [iterOfC_sameCtx]
+    rw [evaluatePrim_success root m _ v rfl, localStep_success]
+    unfold evaluatePrim.finalizerOr exitFrom popOf
+    simp only [stepFrame_eq, fiberAt_frame, step_fst_success]
+    simp only [FramePop.deliveredExit]
+    unfold iterOf evaluatePrim.finishFrame
+    have hcur : (fiberOf (Prim.success v) K i).current = Prim.success v := rfl
+    simp only [fiberAt_frame, frameExitState, hcur]
+    generalize (fiberOf (Prim.success v) K i).getCont Effect4.Arm.contA false = pop
+    rcases pop with ⟨ans, _, _, fib, carried⟩
+    cases ans
+    · exact ⟨_, rfl⟩
+    · exact ⟨_, rfl⟩
+    · rename_i fr
+      dsimp only [resumeOf]
+      generalize Prim.armA (primOf root) fr v (some (Exit.success v)) = arm
+      cases fr with
+      | onExit body fin flag =>
+        dsimp only
+        rcases (interpAt root []).finalizerProgram fin (Exit.success v) with _ | program
+        · rcases arm with _ | ⟨_, _⟩ <;> exact ⟨_, rfl⟩
+        · exact ⟨_, rfl⟩
+      | _ => rcases arm with _ | ⟨_, _⟩ <;> exact ⟨_, rfl⟩
+    · exact ⟨_, rfl⟩
+  | failure c =>
+    rw [contextStep_fallback root _ _ _ (fun _ h => by cases h)]
+    simp only [iterOfC_sameCtx]
+    rw [evaluatePrim_failure root m _ c rfl, localStep_failure]
+    unfold evaluatePrim.finalizerOr exitFrom popOf
+    simp only [stepFrame_eq, fiberAt_frame, step_fst_failure]
+    rw [FrameFiber.getCont_no_pending _ _ _ (some c) rfl]
+    simp only [FramePop.deliveredExit, Option.getD_some]
+    unfold iterOf evaluatePrim.finishFrame
+    have hcur : (fiberOf (Prim.failure c) K i).current = Prim.failure c := rfl
+    simp only [fiberAt_frame, frameExitState, hcur]
+    generalize (fiberOf (Prim.failure c) K i).getCont Effect4.Arm.contE true = pop
+    rcases pop with ⟨ans, _, _, fib, carried⟩
+    cases ans
+    · exact ⟨_, rfl⟩
+    · exact ⟨_, rfl⟩
+    · rename_i fr
+      dsimp only [resumeOf]
+      generalize Prim.armE (primOf root) fr c (some (Exit.failure c)) = arm
+      cases fr with
+      | onExit body fin flag =>
+        dsimp only
+        rcases (interpAt root []).finalizerProgram fin (Exit.failure c) with _ | program
+        · rcases arm with _ | ⟨_, _⟩ <;> exact ⟨_, rfl⟩
+        · exact ⟨_, rfl⟩
+      | _ => rcases arm with _ | ⟨_, _⟩ <;> exact ⟨_, rfl⟩
+    · exact ⟨_, rfl⟩
+  | sync t => exact absurd rfl (hns t)
+  | yieldableError _ | suspend _ | onSuccess _ _ | onFailure _ _
+  | onSuccessAndFailure _ _ _ | exitFrame _ | onExit _ _ _ | whileLoop _ _ =>
+    rw [contextStep_fallback root _ _ _ (fun _ h => by cases h)]
+    simp only [iterOfC_sameCtx]
+    rw [evaluatePrim_stepShape root m _ _ rfl (parkOf_plain_context root hpl) rfl, stepFrame_eq,
+      fiberAt_frame, localStep_other root _ K i m.state (fun _ h => by cases h)
+        (fun _ h => by cases h) (fun _ h => by cases h)]
+    rcases ((fiberOf _ K i).step (primOf root)).1 with _ | _ <;> exact ⟨_, rfl⟩
+  | async n w c => cases hpl.symm.trans hnc
+  | withFiber thunk =>
+    cases thunk with
+    | act p =>
+      rcases hroot.action p with ha | ha
+      · simp only [evaluatePrim, fiberAt_frame, fiberOf, interpAt, interpOf, ha, contextStep]
+        exact ⟨[], rfl⟩
+      · simp only [evaluatePrim, fiberAt_frame, fiberOf, interpAt, interpOf, ha, contextStep]
+        exact ⟨[], rfl⟩
+    | getCtx => exact ⟨[], rfl⟩
+    | captureMask => cases i <;> exact ⟨[], rfl⟩
+    | setCtx next => exact ⟨[RunEvent.contextSet Api.root next], rfl⟩
+    | provideMasked update region flag =>
+      cases region <;> simp only [PlainCode, Bool.false_eq_true] at hpl
+      case program q => cases i <;> exact ⟨[], rfl⟩
+    | restoreRegion region flag =>
+      cases region <;> simp only [PlainCode, Bool.false_eq_true] at hpl
+      case program q => cases flag <;> cases i <;> exact ⟨[], rfl⟩
+    | _ => simp only [PlainCode, Bool.false_eq_true] at hpl
+  | _ => simp only [PlainCode, Bool.false_eq_true] at hpl
+
+/-- Step of rows-block-host/R6; consumer: the generalized finish transitions. -/
+theorem isCall_false_of_context_finished {root : NativeEff} {cur : NCode} {K : List NCode}
+    {i : Bool} {s s' : Stores} {ctx ctx' : Ctx} {ex : ExitV}
+    (h : contextStep root (fiberOf cur K i) s ctx = (.finished ex s', ctx')) : IsCall cur = false := by
+  cases hc : IsCall cur with
+  | false => rfl
+  | true =>
+    obtain ⟨name, flag, cancel, rfl⟩ := eq_async_of_isCall hc
+    change (LocalStep.running (fiberOf (.async name flag cancel) K i) s, ctx) = (LocalStep.finished ex s', ctx') at h
+    cases h
 
 /-- A non-yielding checkpoint evaluates the current primitive at the next count.
 Placement: rows-block-host/R6; consumer: generalized hosted segments.
@@ -2193,5 +3012,223 @@ theorem fire_Myield_answer_context (root : NativeEff) (fr : NFiber) (s : Stores)
     decide_true, Bool.not_true, Bool.false_eq_true, not_false_eq_true, List.filter_cons_of_neg, List.filter_nil,
     List.isEmpty_cons, driveState_succ_cons, Option.isSome_none, driveStep, RunMachine.fiber?, List.find?_cons_of_pos,
     List.append_assoc, List.cons_append, List.nil_append, Bool.or_self, bne_self_eq_false, M]
+
+/-- Placement: rows-block-host/R6; consumer: the receipt-conditioned hosted driver.
+Reach: one actual command at the stated context; no uniform progress claim. -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem drive_loop_sync_op_context (root : NativeEff) (ctx : Ctx) (o : SyncOp) (K : List NCode) (i : Bool)
+    (s : Stores) (k : Nat) (tr : NTrace) (nt : Nat) (rest : List NCmd) (s₁ : Stores) (v : Val)
+    (hk : (stores.budgetOf ctx).2 = true ∨ k + 1 < (stores.budgetOf ctx).1) (hs : syncOpStep o s = some (s₁, v)) :
+    ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root table) (interpOf root table) (n + 1)
+        (M (fiberOf (Prim.sync (EffThunk.op o)) K i) s k tr nt ctx) (Cmd.loop Api.root false :: rest) =
+      driveState (evaluator := evaluatorFor root table) (interpOf root table) n (M (fiberOf (Prim.success v) K i) s₁ (k + 1) tr' nt ctx)
+        (Cmd.drainDue :: Cmd.deliver Api.root false :: rest) := by
+  refine ⟨tr, fun n => ?_⟩
+  have hit : iteration (evaluator := evaluatorFor root table) (interpOf root table) (M (fiberOf (Prim.sync (EffThunk.op o)) K i) s k tr nt ctx)
+      (fiberAt (fiberOf (Prim.sync (EffThunk.op o)) K i) k ctx) false =
+      ⟨M (fiberOf (Prim.sync (EffThunk.op o)) K i) s₁ k tr nt ctx,
+        fiberAt (fiberOf (Prim.success v) K i) (k + 1) ctx, false, Outcome.answered,
+        [Cmd.drainDue], []⟩ := by
+    rw [iteration_M_context root _ _ _ _ _ _ _ ctx hk]
+    simp only [evaluateNative, fiberAt_frame, fiberOf, M_completedExits]
+    rw [evaluatePrim_table_sync root [] _ _ _ rfl]
+    exact evaluatePrim_sync_op root (M (fiberOf (Prim.sync (EffThunk.op o)) K i) s k tr nt ctx)
+      (fiberAt (fiberOf (Prim.sync (EffThunk.op o)) K i) (k + 1) ctx) o s₁ v rfl hs
+  rw [driveState_succ_cons (evaluator := evaluatorFor root table)]
+  simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, hit, settle, settleOutcome]
+  rw [M_update]
+  rfl
+
+/-- Placement: rows-block-host/R6; consumer: the receipt-conditioned hosted driver.
+Reach: one actual command at the stated context; no uniform progress claim. -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem drive_loop_sync_op_none_context (root : NativeEff) (ctx : Ctx) (o : SyncOp) (K : List NCode) (i : Bool)
+    (s : Stores) (k : Nat) (tr : NTrace) (nt : Nat) (rest : List NCmd)
+    (hk : (stores.budgetOf ctx).2 = true ∨ k + 1 < (stores.budgetOf ctx).1) (hs : syncOpStep o s = none) :
+    ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root table) (interpOf root table) (n + 1)
+        (M (fiberOf (Prim.sync (EffThunk.op o)) K i) s k tr nt ctx) (Cmd.loop Api.root false :: rest) =
+      driveState (evaluator := evaluatorFor root table) (interpOf root table) n (M (fiberOf (Prim.success Val.unit) K i) s (k + 1) tr' nt ctx)
+        (Cmd.deliver Api.root false :: rest) := by
+  refine ⟨tr, fun n => ?_⟩
+  have hit : iteration (evaluator := evaluatorFor root table) (interpOf root table) (M (fiberOf (Prim.sync (EffThunk.op o)) K i) s k tr nt ctx)
+      (fiberAt (fiberOf (Prim.sync (EffThunk.op o)) K i) k ctx) false =
+      ⟨M (fiberOf (Prim.sync (EffThunk.op o)) K i) s k tr nt ctx,
+        fiberAt (fiberOf (Prim.success Val.unit) K i) (k + 1) ctx, false, Outcome.answered, [], []⟩ := by
+    rw [iteration_M_context root _ _ _ _ _ _ _ ctx hk]
+    simp only [evaluateNative, fiberAt_frame, fiberOf, M_completedExits]
+    rw [evaluatePrim_table_sync root [] _ _ _ rfl]
+    exact evaluatePrim_sync_op_none root (M (fiberOf (Prim.sync (EffThunk.op o)) K i) s k tr nt ctx)
+      (fiberAt (fiberOf (Prim.sync (EffThunk.op o)) K i) (k + 1) ctx) o rfl hs
+  rw [driveState_succ_cons (evaluator := evaluatorFor root table)]
+  simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, hit, settle, settleOutcome]
+  rw [M_update]
+  rfl
+
+/-- Placement: rows-block-host/R6; consumer: the receipt-conditioned hosted driver.
+Reach: one actual command at the stated context; no uniform progress claim. -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem drive_loop_sync_pure_context (root : NativeEff) (ctx : Ctx) (p : Point) (K : List NCode) (i : Bool)
+    (s : Stores) (k : Nat) (tr : NTrace) (nt : Nat) (rest : List NCmd)
+    (hk : (stores.budgetOf ctx).2 = true ∨ k + 1 < (stores.budgetOf ctx).1) :
+    ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root table) (interpOf root table) (n + 1)
+        (M (fiberOf (Prim.sync (EffThunk.pure p)) K i) s k tr nt ctx) (Cmd.loop Api.root false :: rest) =
+      driveState (evaluator := evaluatorFor root table) (interpOf root table) n
+        (M (fiberOf (Prim.success (syncValueAt root (EffThunk.pure p))) K i) s (k + 1) tr' nt ctx)
+        (Cmd.deliver Api.root false :: rest) := by
+  refine ⟨tr, fun n => ?_⟩
+  have hit : iteration (evaluator := evaluatorFor root table) (interpOf root table) (M (fiberOf (Prim.sync (EffThunk.pure p)) K i) s k tr nt ctx)
+      (fiberAt (fiberOf (Prim.sync (EffThunk.pure p)) K i) k ctx) false =
+      ⟨M (fiberOf (Prim.sync (EffThunk.pure p)) K i) s k tr nt ctx,
+        fiberAt (fiberOf (Prim.success (syncValueAt root (EffThunk.pure p))) K i) (k + 1) ctx, false,
+        Outcome.answered, [], []⟩ := by
+    rw [iteration_M_context root _ _ _ _ _ _ _ ctx hk]
+    simp only [evaluateNative, fiberAt_frame, fiberOf, M_completedExits]
+    rw [evaluatePrim_table_sync root [] _ _ _ rfl]
+    exact evaluatePrim_sync_pure root (M (fiberOf (Prim.sync (EffThunk.pure p)) K i) s k tr nt ctx)
+      (fiberAt (fiberOf (Prim.sync (EffThunk.pure p)) K i) (k + 1) ctx) p rfl
+  rw [driveState_succ_cons (evaluator := evaluatorFor root table)]
+  simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, hit, settle, settleOutcome]
+  rw [M_update]
+  rfl
+
+/-- Placement: rows-block-host/R6; consumer: the receipt-conditioned hosted driver.
+Reach: one actual command at the stated context; no uniform progress claim. -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem drive_loop_running_context (root : NativeEff) (ctx : Ctx) (hroot : PlainHooks root) (ctx' : Ctx) (cur : NCode) (K : List NCode) (i : Bool)
+    (s : Stores) (k : Nat) (tr : NTrace) (nt : Nat) (rest : List NCmd) (cur₁ : NCode)
+    (K₁ : List NCode) (i₁ : Bool) (hpl : PlainCode cur = true) (hK : PlainStack K)
+    (hns : ∀ t, cur ≠ Prim.sync t) (hnc : IsCall cur = false)
+    (hk : (stores.budgetOf ctx).2 = true ∨ k + 1 < (stores.budgetOf ctx).1)
+    (hstep : contextStep root (fiberOf cur K i) s ctx = (.running (fiberOf cur₁ K₁ i₁) s, ctx')) :
+    ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root table) (interpOf root table) (n + 1) (M (fiberOf cur K i) s k tr nt ctx)
+        (Cmd.loop Api.root false :: rest) =
+      driveState (evaluator := evaluatorFor root table) (interpOf root table) n (M (fiberOf cur₁ K₁ i₁) s (k + 1) tr' nt ctx')
+        (Cmd.loop Api.root false :: rest) := by
+  obtain ⟨ev, hev⟩ :=
+    evaluatePrim_contextStep root hroot (M (fiberOf cur K i) s k tr nt ctx) cur K i (k + 1) ctx hpl hns hnc
+  rw [M_state, hstep] at hev
+  have hraw := evaluateNative_plain_context (table := table) root hroot (M (fiberOf cur K i) s k tr nt ctx)
+    cur K i (k + 1) ctx hK
+  rw [M_completedExits] at hraw
+  rw [evaluatePrim_table_context root hroot [] _ _ hpl (not_async_plain_context hpl hnc)] at hraw
+  have hit : iteration (evaluator := evaluatorFor root table) (interpOf root table) (M (fiberOf cur K i) s k tr nt ctx)
+      (fiberAt (fiberOf cur K i) k ctx) false =
+      ⟨M (fiberOf cur K i) s k (tr ++ ev) nt ctx, fiberAt (fiberOf cur₁ K₁ i₁) (k + 1) ctx', false,
+        Outcome.continue_, [], []⟩ := by
+    rw [iteration_M_context root _ _ _ _ _ _ _ ctx hk, hraw, hev]
+    simp only [iterOfC, M_emit]
+    rfl
+  refine ⟨tr ++ ev, fun n => ?_⟩
+  rw [driveState_succ_cons (evaluator := evaluatorFor root table)]
+  simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, hit, settle, settleOutcome]
+  rw [M_update]
+  rfl
+
+/-- Placement: rows-block-host/R6; consumer: the receipt-conditioned hosted driver.
+Reach: one actual command at the stated context; no uniform progress claim. -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem drive_loop_finish_context (root : NativeEff) (ctx : Ctx) (hroot : PlainHooks root) (ctx' : Ctx) (cur : NCode) (K : List NCode) (i : Bool)
+    (s : Stores) (k : Nat) (tr : NTrace) (nt : Nat) (rest : List NCmd) (ex : ExitV)
+    (hpl : PlainCode cur = true) (hK : PlainStack K) (hns : ∀ t, cur ≠ Prim.sync t) (hk : (stores.budgetOf ctx).2 = true ∨ k + 1 < (stores.budgetOf ctx).1)
+    (hstep : contextStep root (fiberOf cur K i) s ctx = (.finished ex s, ctx')) :
+    ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root table) (interpOf root table) (n + 1) (M (fiberOf cur K i) s k tr nt ctx)
+        (Cmd.loop Api.root false :: rest) =
+      driveState (evaluator := evaluatorFor root table) (interpOf root table) n (M (frameExitState (fiberOf cur K i)) s (k + 1) tr' nt ctx')
+        (Cmd.finish Api.root ex :: rest) := by
+  obtain ⟨ev, hev⟩ :=
+    evaluatePrim_contextStep root hroot (M (fiberOf cur K i) s k tr nt ctx) cur K i (k + 1) ctx hpl hns
+      (isCall_false_of_context_finished hstep)
+  rw [M_state, hstep] at hev
+  have hraw := evaluateNative_plain_context (table := table) root hroot (M (fiberOf cur K i) s k tr nt ctx)
+    cur K i (k + 1) ctx hK
+  rw [M_completedExits] at hraw
+  rw [evaluatePrim_table_context root hroot [] _ _ hpl (not_async_plain_context hpl (isCall_false_of_context_finished hstep))] at hraw
+  have hit : iteration (evaluator := evaluatorFor root table) (interpOf root table) (M (fiberOf cur K i) s k tr nt ctx)
+      (fiberAt (fiberOf cur K i) k ctx) false =
+      ⟨M (fiberOf cur K i) s k (tr ++ ev) nt ctx, fiberAt (frameExitState (fiberOf cur K i)) (k + 1) ctx', false,
+        Outcome.finished ex, [], []⟩ := by
+    rw [iteration_M_context root _ _ _ _ _ _ _ ctx hk, hraw, hev]
+    simp only [iterOfC, M_emit]
+    rfl
+  refine ⟨tr ++ ev, fun n => ?_⟩
+  rw [drive_loop_finished (evaluator := evaluatorFor root table) _ _ _ _ _ _ rest ex rfl
+    (M_fiber? _ _ _ _ _) (by rw [hit]) (by rw [hit]), hit]
+  rw [M_update]
+  rfl
+
+/-- Placement: rows-block-host/R6; consumer: the receipt-conditioned hosted driver.
+Reach: one actual command at the stated context; no uniform progress claim. -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem drive_deliver_running_context (root : NativeEff) (ctx : Ctx) (hroot : PlainHooks root) (ctx' : Ctx) (cur : NCode) (K : List NCode) (i : Bool)
+    (s : Stores) (k : Nat) (tr : NTrace) (nt : Nat) (rest : List NCmd) (cur₁ : NCode)
+    (K₁ : List NCode) (i₁ : Bool) (hpl : PlainCode cur = true) (hK : PlainStack K)
+    (hns : ∀ t, cur ≠ Prim.sync t) (hnc : IsCall cur = false)
+    (hstep : contextStep root (fiberOf cur K i) s ctx = (.running (fiberOf cur₁ K₁ i₁) s, ctx')) :
+    ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root table) (interpOf root table) (n + 1) (M (fiberOf cur K i) s k tr nt ctx)
+        (Cmd.deliver Api.root false :: rest) =
+      driveState (evaluator := evaluatorFor root table) (interpOf root table) n (M (fiberOf cur₁ K₁ i₁) s k tr' nt ctx')
+        (Cmd.loop Api.root false :: rest) := by
+  obtain ⟨ev, hev⟩ :=
+    evaluatePrim_contextStep root hroot (M (fiberOf cur K i) s k tr nt ctx) cur K i k ctx hpl hns hnc
+  rw [M_state, hstep] at hev
+  have hraw := evaluateNative_plain_context (table := table) root hroot (M (fiberOf cur K i) s k tr nt ctx)
+    cur K i k ctx hK
+  rw [M_completedExits] at hraw
+  rw [evaluatePrim_table_context root hroot [] _ _ hpl (not_async_plain_context hpl hnc)] at hraw
+  refine ⟨tr ++ ev, fun n => ?_⟩
+  rw [driveState_succ_cons (evaluator := evaluatorFor root table)]
+  simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?,
+    FiberEvaluator.evaluate, hraw, hev, iterOfC, M_emit]
+  show driveState (evaluator := evaluatorFor root table) _ n
+    ((M (fiberOf cur K i) s k (tr ++ ev) nt ctx).update (fiberAt (fiberOf cur₁ K₁ i₁) k ctx'))
+    ([] ++ [Cmd.loop Api.root false] ++ rest) = _
+  rw [M_update]
+  rfl
+
+/-- Placement: rows-block-host/R6; consumer: the receipt-conditioned hosted driver.
+Reach: one actual command at the stated context; no uniform progress claim. -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem drive_deliver_finish_context (root : NativeEff) (ctx : Ctx) (hroot : PlainHooks root) (ctx' : Ctx) (cur : NCode) (K : List NCode) (i : Bool)
+    (s : Stores) (k : Nat) (tr : NTrace) (nt : Nat) (rest : List NCmd) (ex : ExitV)
+    (hpl : PlainCode cur = true) (hK : PlainStack K) (hns : ∀ t, cur ≠ Prim.sync t)
+    (hstep : contextStep root (fiberOf cur K i) s ctx = (.finished ex s, ctx')) :
+    ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root table) (interpOf root table) (n + 1) (M (fiberOf cur K i) s k tr nt ctx)
+        (Cmd.deliver Api.root false :: rest) =
+      driveState (evaluator := evaluatorFor root table) (interpOf root table) n (M (frameExitState (fiberOf cur K i)) s k tr' nt ctx')
+        (Cmd.finish Api.root ex :: rest) := by
+  obtain ⟨ev, hev⟩ :=
+    evaluatePrim_contextStep root hroot (M (fiberOf cur K i) s k tr nt ctx) cur K i k ctx hpl hns
+      (isCall_false_of_context_finished hstep)
+  rw [M_state, hstep] at hev
+  have hraw := evaluateNative_plain_context (table := table) root hroot (M (fiberOf cur K i) s k tr nt ctx)
+    cur K i k ctx hK
+  rw [M_completedExits] at hraw
+  rw [evaluatePrim_table_context root hroot [] _ _ hpl (not_async_plain_context hpl (isCall_false_of_context_finished hstep))] at hraw
+  refine ⟨tr ++ ev, fun n => ?_⟩
+  rw [driveState_succ_cons (evaluator := evaluatorFor root table)]
+  simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?,
+    FiberEvaluator.evaluate, hraw, hev, iterOfC, M_emit]
+  show driveState (evaluator := evaluatorFor root table) _ n ((M (fiberOf cur K i) s k (tr ++ ev) nt ctx).update (fiberAt (frameExitState (fiberOf cur K i)) k ctx'))
+    ([] ++ [Cmd.finish Api.root ex] ++ rest) = _
+  rw [M_update]
+  rfl
+
+/-- Placement: rows-block-host/R6; consumer: the receipt-conditioned hosted driver.
+Reach: one actual command at the stated context; no uniform progress claim. -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem drive_finish_M_context (root : NativeEff) (ctx : Ctx) (ex : ExitV) (fr : NFiber) (s : Stores) (k : Nat)
+    (tr : NTrace) (nt : Nat) (rest : List NCmd) :
+    ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root table) (interpOf root table) (n + 1) (M fr s k tr nt ctx) (Cmd.finish Api.root ex :: rest) =
+      driveState (evaluator := evaluatorFor root table) (interpOf root table) n (Mexit root ex fr s k tr' nt ctx) (Cmd.drainDue :: rest) := by aesop
+
+/-- Placement: rows-block-host/R6; consumer: the receipt-conditioned hosted driver.
+Reach: one actual command at the stated context; no uniform progress claim. -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem flushAll_Mexit_context (root : NativeEff) (ctx : Ctx) (fuel : Nat) (ex : ExitV) (fr : NFiber) (s : Stores)
+    (k : Nat) (tr : NTrace) (nt : Nat) :
+    ∀ rounds, flushAllState (evaluator := evaluatorFor root table) (interpOf root table) fuel rounds (Mexit root ex fr s k tr nt ctx) =
+      (Mexit root ex fr s k tr nt ctx, true) := by
+  intro rounds
+  cases rounds <;> rfl
 
 end Effect4.Program.Agreement

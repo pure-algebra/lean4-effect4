@@ -509,8 +509,8 @@ theorem denoteRows_eq_session_host : DenoteRowsEqSessionHost StraightRows := by
     (PlainHooks.of_loopedRows (LoopedRows.of_straightRows s.built.program hfrag)) host st st' hA
   -- an exited root is the exit form, where the host is asked nothing
   have hstop : p.hostAnswer host st' = none := by
-    rcases hS with ⟨cur, K, i, s', k, tr, t, hm, -, -⟩ | ⟨cur, K, i, s', k, tr, t, hm, -, -⟩ |
-      ⟨ex', fr, s', k, tr, nt, hm, rfl, -⟩
+    rcases hS with ⟨cur, K, i, s', k, tr, t, ctx, hm, -, -⟩ | ⟨cur, K, i, s', k, tr, t, ctx, hm, -, -⟩ |
+      ⟨ex', fr, s', k, tr, nt, ctx, hm, rfl, -⟩
     · rw [hexit, hm, Myield_fiber?] at hex
       cases hex
     · rw [hexit, hm, Mcall_fiber?] at hex
