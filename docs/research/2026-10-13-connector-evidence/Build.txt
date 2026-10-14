@@ -1,0 +1,2 @@
+warning: manifest out of date: git revision of dependency 'whatwg' changed; use `lake update whatwg` to update it
+Build completed successfully (5 jobs).
