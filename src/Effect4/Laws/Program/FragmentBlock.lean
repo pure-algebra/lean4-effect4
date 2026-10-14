@@ -111,11 +111,33 @@ def BlockRows (table : RowTable) : NativeEff → Bool
   | .defs _ bodies main .nil => cata_effs (bodyRowsAlg table) bodies && BodyRows table main
   | _ => false
 
+/-- Step of rows-block-host (R6), consumed by `bodiesOf_blockRows`.
+The spine fold certifies each definition body; it establishes no execution claim. -/
+theorem bodyRows_effs_mem (table : RowTable) : ∀ (es : Effs NativeOp),
+    cata_effs (bodyRowsAlg table) es = true →
+    ∀ e ∈ es.toList, BodyRows table e = true
+  | .nil, _, _, h => False.elim (List.not_mem_nil h)
+  | .cons head tail, h, e, he => by
+    change (BodyRows table head && cata_effs (bodyRowsAlg table) tail) = true at h
+    have hs : BodyRows table head = true ∧ cata_effs (bodyRowsAlg table) tail = true := by
+      simpa only [Bool.and_eq_true] using h
+    change e ∈ head :: tail.toList at he
+    rcases List.mem_cons.mp he with he | he
+    · subst e
+      exact hs.1
+    · exact bodyRows_effs_mem table tail hs.2 e he
+
 /-- Step of rows-block-host (R6), consumed by `compilesBlk` at a definition call.
 Every body of an admitted root block lies in `BodyRows`; no termination follows. -/
 @[semantics "translation-simulation" (requirement := R6)]
-proof_goal bodiesOf_blockRows (table : RowTable) (root : NativeEff)
+theorem bodiesOf_blockRows (table : RowTable) (root : NativeEff)
     (hroot : BlockRows table root = true) :
-    ∀ body ∈ bodiesOf root, BodyRows table body = true
+    ∀ body ∈ bodiesOf root, BodyRows table body = true := by
+  cases root <;> simp only [BlockRows, Bool.false_eq_true] at hroot
+  rename_i decls bodies main layers
+  cases layers <;> simp only [Bool.false_eq_true] at hroot
+  have hs : cata_effs (bodyRowsAlg table) bodies = true ∧ BodyRows table main = true := by
+    simpa only [Bool.and_eq_true] using hroot
+  exact bodyRows_effs_mem table bodies hs.1
 
 end Effect4.Program.Denote
