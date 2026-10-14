@@ -1,0 +1,10 @@
+{
+  "base": "067f6a3d9e65f4fcae737f0969d009860b9891e3",
+  "head": "d1dca3a5a8bad2feaf17de32aca8958a96b0fbc9",
+  "files": [
+    {
+      "path": "src/Effect4/Laws/Program/Agreement/Blocks.lean",
+      "sha256": "f3c768c576b020a392d28dde402956e69769238a312c35d4235ac58c24a8c580"
+    }
+  ]
+}

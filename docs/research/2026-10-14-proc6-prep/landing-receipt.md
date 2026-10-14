@@ -351,3 +351,37 @@ Both C goals report proved, with zero next goals.
 `Effect4.Run.h9_blocks` remains a goal at this checkpoint.
 No behavior gate is reached.
 [The C manifest](landing-evidence/c/manifest.json) retains exact evidence and source hashes.
+
+## Slice D
+
+All four forward-agreement goals are proved in place, with their approved statements unchanged.
+Base: `067f6a3d9`. Code head: `d1dca3a5a8bad2feaf17de32aca8958a96b0fbc9`.
+Commits `701ac1c58` and `d1dca3a5a` change only `Agreement/Blocks.lean`.
+The semantics producer updates `generated/semantics.md`.
+
+The address laws connect definition and argument lookups to their compiled points.
+`compilesBlk` proves the outer budget induction and inner structural induction.
+`compilesBlk_root` connects that result to the leading block.
+Calls use empty lexical argument frames; passed programs retain caller environments and budgets.
+Placement: translation-simulation, rows-block-host, R6.
+Consumers: the root agreement and E's completed-run connection.
+The reach remains the stage 2 block fragment at the empty context.
+The proof establishes neither scheduler progress nor target behavior.
+
+The shared slot runs `bash /tmp/proc6-landing/d-integrated-checks.sh`:
+
+| Command | Result | Evidence |
+| --- | --- | --- |
+| `lake build Effect4.Laws.Program.Agreement.Blocks Effect4.Laws` | PASS, 1096 jobs | `d-integrated-build.log` |
+| `lake env lean -DwarningAsError=true /tmp/proc6-landing/d-integrated-audit.lean` | PASS | `d-integrated-audit.log` |
+| `make -o ts/eff/node_modules -o harness/truth/node_modules -o apps/todo/node_modules gen-semantics` | PASS, 1608 jobs | `d-integrated-semantics.log` |
+
+```text
+#axiom_audit: 213 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
+
+All four D goals report proved, with zero next goals.
+The integrated audit removes the independent branch's dependencies on B and C goals.
+`Effect4.Run.h9_blocks` remains a goal at this checkpoint.
+No behavior gate is reached.
+[The D manifest](landing-evidence/d/manifest.json) retains exact evidence and source hashes.
