@@ -138,8 +138,7 @@ requirement annotation on its main declaration, each key spelled under the table
 theorem ModuleEmission.annotation_complete (emission : ModuleEmission program table name) :
     ∃ layers main body answer error,
       emission.declarations = layers ++ [main] ∧
-      Program.printDecl name emission.typing.ty body nativeScopeKey
-        (nativeSignature table).keyNames = .ok main ∧
+      Program.printDecl name emission.typing.ty body (nativeSignature table).typeEnv = .ok main ∧
       main.type = some (.name ["Effect", "Effect"]
         [answer, error, requirementType nativeScopeKey (nativeSignature table).keyNames
           emission.typing.ty.requires]) := by

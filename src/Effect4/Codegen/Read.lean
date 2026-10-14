@@ -520,11 +520,11 @@ def readLeaf {R : EffFam → Type} (classes : Effect4.Codegen.Classes.Classes) (
     match LayerTerm.readRefName s with
     | some target => if LayerTerm.refName target = s then .ok (.path target) else .error (.shape "layer")
     | none => .error (.shape "layer")
-  -- a loop's stated cursor type, through the checked type reader under no class (the state
+  -- a loop's stated cursor type, through the checked type reader under `{}` (the state
   -- plan's T5, part B): an answer is kept only when the type printer prints it back as the
   -- spelling read, and a spelling with no such reading is refused as an annotation
   | .optTy, .type t =>
-    match Effect4.Codegen.Classes.readTyChecked [] [] t with
+    match Effect4.Codegen.Classes.readTyChecked {} t with
     | some ty => .ok (.optTy (some ty))
     | none => .error (.annotation "local const")
   | _, _ => .error (.shape "argument")
@@ -1167,17 +1167,17 @@ def roleOf (services : List (String × String × List (String × String × Nat))
 
 /-- A parameter's declaration from its binder in a definition's header, the inverse of
 `paramType` (slice HO-3): `name: (a0: Request) => Effect.Effect<A, E, never>`, each column read
-by the checked type reader under the module's classes and key names, so a column that names a
-payload class reads as the class's record (decisions row 120). -/
-def readParam (classes : Effect4.Codegen.Classes.Classes) (names : KeyNames)
+by the checked type reader under the module's `TypeEnv`, so a column that names a payload class
+reads as the class's record (decisions row 120). -/
+def readParam (env : Effect4.Codegen.Classes.TypeEnv)
     (p : TypeScript.Parameter) : Except ReadRefusal ParamDecl :=
   match p.type with
   | some (.function [(binder, request)]
       (.name ["Effect", "Effect"] [answer, error, .name ["never"] []])) =>
     if binder = Var.name 0 then
-      match Effect4.Codegen.Classes.readTyChecked classes names request,
-          Effect4.Codegen.Classes.readTyChecked classes names answer,
-          Effect4.Codegen.Classes.readTyChecked classes names error with
+      match Effect4.Codegen.Classes.readTyChecked env request,
+          Effect4.Codegen.Classes.readTyChecked env answer,
+          Effect4.Codegen.Classes.readTyChecked env error with
       | some request, some answer, some error => .ok { name := p.name, request, answer, error }
       | _, _, _ => .error (.shape "definition")
     else .error (.shape "definition")
@@ -1185,49 +1185,50 @@ def readParam (classes : Effect4.Codegen.Classes.Classes) (names : KeyNames)
 
 /-- A definition's declaration and its printed body from its constant, the inverse of
 `printDef`'s header: `(a0: Request): Effect.Effect<A, E, R> => body`. Each column is read by the
-checked type reader under the module's classes and the signature's key names, so a column that
-names a payload class reads as the class's record (decisions row 120), and the requirement row
-`R` by the requirement reader at the signature's scope (`readKeys`), so a definition that
-requires a service reads back with its keys (decisions row 378 (20): an application's initial
-program requires the keys of its rows), each key read by its name (row 378 (22)). -/
+checked type reader under the module's `sig.typeEnv classes`, so a column that names a payload
+class reads as the class's record (decisions row 120), and the requirement row `R` by the
+requirement reader at the signature's scope (`readKeys`), so a definition that requires a service
+reads back with its keys (decisions row 378 (20): an application's initial program requires the
+keys of its rows), each key read by its name (row 378 (22)). -/
 def readDefHead (sig : Signature Op) (classes : Effect4.Codegen.Classes.Classes)
     (c : TypeScript.ConstDecl) : Except ReadRefusal (DefDecl × Expr) :=
+  let env := sig.typeEnv classes
   match c.value with
   | .lambda (⟨parameter, some request⟩ :: ps) body
       (some (.name ["Effect", "Effect"] [answer, error, requires])) =>
     if parameter = Var.name 0 then
-      match Effect4.Codegen.Classes.readTyChecked classes sig.keyNames request,
-          Effect4.Codegen.Classes.readTyChecked classes sig.keyNames answer,
-          Effect4.Codegen.Classes.readTyChecked classes sig.keyNames error,
+      match Effect4.Codegen.Classes.readTyChecked env request,
+          Effect4.Codegen.Classes.readTyChecked env answer,
+          Effect4.Codegen.Classes.readTyChecked env error,
           readKeys sig requires with
       | some request, some answer, some error, .ok keys => do
-        let params ← ps.mapM (readParam classes sig.keyNames)
+        let params ← ps.mapM (readParam env)
         .ok ({ name := c.name, request, answer, error, requires := keys.elems, params }, body)
       | _, _, _, _ => .error (.shape "definition")
     else .error (.shape "definition")
   | _ => .error (.shape "definition")
 
-/-- A parameter whose binder reads back under the module's classes and key names: its three
-columns are readable types (slice HO-3). -/
-def ParamDecl.readable (classes : Effect4.Codegen.Classes.Classes) (names : KeyNames)
+/-- A parameter whose binder reads back under `env`: its three columns are readable types (slice
+HO-3). -/
+def ParamDecl.readable (env : Effect4.Codegen.Classes.TypeEnv := {})
     (q : ParamDecl) : Bool :=
-  Effect4.Codegen.Classes.ReadableTy classes names q.request &&
-    Effect4.Codegen.Classes.ReadableTy classes names q.answer &&
-    Effect4.Codegen.Classes.ReadableTy classes names q.error
+  Effect4.Codegen.Classes.ReadableTy env q.request &&
+    Effect4.Codegen.Classes.ReadableTy env q.answer &&
+    Effect4.Codegen.Classes.ReadableTy env q.error
 
-/-- **A declaration that reads back from its printed header** under the module's classes and
-key names: its three columns are readable types (`ReadableTy`), its requirement row is canonical
-(ascending with no key twice, the row the header prints and `readKeys` reads back), its name
-carries no layer path, and each parameter's columns are readable types (slice HO-3). A header
-prints no role: a block's services give them back (`roleOf`). The domain of `readDefHead`'s
-retraction up to the role (`readDefHead_printDef`, `Laws/Codegen/Module.lean`). -/
-def DefDecl.readable (classes : Effect4.Codegen.Classes.Classes) (names : KeyNames)
+/-- **A declaration that reads back from its printed header** under `env`: its three columns are
+readable types (`ReadableTy`), its requirement row is canonical (ascending with no key twice, the
+row the header prints and `readKeys` reads back), its name carries no layer path, and each
+parameter's columns are readable types (slice HO-3). A header prints no role: a block's services
+give them back (`roleOf`). The domain of `readDefHead`'s retraction up to the role
+(`readDefHead_printDef`, `Laws/Codegen/Module.lean`). -/
+def DefDecl.readable (env : Effect4.Codegen.Classes.TypeEnv := {})
     (d : DefDecl) : Bool :=
-  Effect4.Codegen.Classes.ReadableTy classes names d.request &&
-    Effect4.Codegen.Classes.ReadableTy classes names d.answer &&
-    Effect4.Codegen.Classes.ReadableTy classes names d.error &&
+  Effect4.Codegen.Classes.ReadableTy env d.request &&
+    Effect4.Codegen.Classes.ReadableTy env d.answer &&
+    Effect4.Codegen.Classes.ReadableTy env d.error &&
     decide ((Effect4.Machine.Env.Requirement.ofList d.requires).elems = d.requires) &&
-    (LayerTerm.readRefName d.name).isNone && d.params.all (ParamDecl.readable classes names)
+    (LayerTerm.readRefName d.name).isNone && d.params.all (ParamDecl.readable env)
 
 /-- A spelling map extended by names: a name that `nameIdx` indexes, with no trailing arguments,
 spells the operation of its index (`mk k`); every other spelling is the map's own. A block's map
@@ -1512,9 +1513,8 @@ def termReadable (classes : Effect4.Codegen.Classes.Classes) (n : Nat) (row : Ro
   | some f =>
     f.scoped (n + 1) && f.covers classes && f.unannotated && !decide (row.shape = .value)
 
-/-- An operation's type arguments read back on its row: each is a readable type under no class
-and no key name (`Classes.ReadableTy [] []`: the checked type reader answers it from its own
-printed spelling), and
+/-- An operation's type arguments read back on its row: each is a readable type under `{}`
+(`Classes.ReadableTy {}`: the checked type reader answers it from its own printed spelling), and
 the row prints a call that declares no type argument of its own, which carries them on its head
 (`withHeadTypes`). An operation that carries none reads back. A type outside `ReadableTy` is
 outside this domain, whatever it prints as: `Deferred.make` at `int` prints
@@ -1522,7 +1522,7 @@ outside this domain, whatever it prints as: `Deferred.make` at `int` prints
 def typeArgsReadable (row : Row) : List Ty → Bool
   | [] => true
   | ty :: tys =>
-    (ty :: tys).all (Effect4.Codegen.Classes.ReadableTy [] []) && !decide (row.shape = .value) &&
+    (ty :: tys).all (Effect4.Codegen.Classes.ReadableTy {}) && !decide (row.shape = .value) &&
       row.typeArgs.isEmpty
 
 /-! ## What the reader needs of a signature -/

@@ -1800,7 +1800,7 @@ def joinedOutput (p : Api.Program) (table : RowTable) :
   | _ => throw "typed fixture: hoisted layers need the ordinary module producer"
   let sig := nativeSignature table
   let expression ← (Program.printTyped sig [] p).mapError refusalText
-  let declaration ← (Program.printDecl "main" emission.typing.ty expression sig.scopeKey).mapError refusalText
+  let declaration ← (Program.printDecl "main" emission.typing.ty expression sig.typeEnv).mapError refusalText
   pure (expression, { header := [], imports := [], decls := [.const declaration] })
 
 /-- Widening fixtures retain the actual typed initializer in both module views.

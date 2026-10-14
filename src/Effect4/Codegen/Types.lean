@@ -389,6 +389,17 @@ def parseLegacy (text : String) : Option TypeRef := do
   if (skipSpace rest).isEmpty then some value else none
 
 mutual
+/-- Project a normalized `Ty` to its target `TypeRef`, under `names` for `.contextOf`.
+
+Two constructors inspect the raw `Program.Ty` subterm rather than only its folded `Option TypeRef`,
+so `ofNormalized` is a paramorphism (and `cata_ty` over `TyAlgebra` does not factor it without
+pairing the carrier with `Ty`):
+- `Ty.record fields`: `payloadClass? fields` checks `payloadRecordTy` on the raw field types before
+  falling back to `ofFields`. Two fields `.map .nat .nat` and `.var 0` have the same folded value
+  `none`, yet `payloadFieldTy (.map .nat .nat) = true` while `payloadFieldTy (.var 0) = false`.
+- `Ty.map key value`: `key != .string` checks the raw key `Ty`. `Ty.string` and `Ty.handle "string"`
+  have the same folded value `some (.name ["string"] [])`, yet only `Ty.string` is admitted as a
+  map key. -/
 private def ofNormalized (names : Program.KeyNames) : Program.Ty → Option TypeRef
   | .never => some (.name ["never"] [])
   | .unknown => some (.name ["unknown"] [])
@@ -510,38 +521,13 @@ private theorem ofNormalized_isSome (names names' : Program.KeyNames) :
     (ty : Program.Ty) → (ofNormalized names ty).isSome = (ofNormalized names' ty).isSome
   | .never | .unknown | .unit | .nat | .int | .string | .bool | .handle _ | .lit _ | .var _
   | .null | .undefined | .number | .bytes | .app _ _ | .contextOf _ => rfl
-  | .option inner => by
+  | .option inner | .list inner | .causeOf inner | .refOf inner => by
     simp only [ofNormalized]
     exact isSome_bind_pure (ofNormalized_isSome names names' inner)
-  | .list inner => by
+  | .prod a b | .except b a | .exitOf a b | .fiberOf a b | .deferredOf a b | .union a b => by
     simp only [ofNormalized]
-    exact isSome_bind_pure (ofNormalized_isSome names names' inner)
-  | .prod left right => by
-    simp only [ofNormalized]
-    exact isSome_bind_bind (ofNormalized_isSome names names' left)
-      (ofNormalized_isSome names names' right)
-  | .except error value => by
-    simp only [ofNormalized]
-    exact isSome_bind_bind (ofNormalized_isSome names names' value)
-      (ofNormalized_isSome names names' error)
-  | .exitOf value error => by
-    simp only [ofNormalized]
-    exact isSome_bind_bind (ofNormalized_isSome names names' value)
-      (ofNormalized_isSome names names' error)
-  | .causeOf error => by
-    simp only [ofNormalized]
-    exact isSome_bind_pure (ofNormalized_isSome names names' error)
-  | .fiberOf value error => by
-    simp only [ofNormalized]
-    exact isSome_bind_bind (ofNormalized_isSome names names' value)
-      (ofNormalized_isSome names names' error)
-  | .refOf value => by
-    simp only [ofNormalized]
-    exact isSome_bind_pure (ofNormalized_isSome names names' value)
-  | .deferredOf value error => by
-    simp only [ofNormalized]
-    exact isSome_bind_bind (ofNormalized_isSome names names' value)
-      (ofNormalized_isSome names names' error)
+    exact isSome_bind_bind (ofNormalized_isSome names names' a)
+      (ofNormalized_isSome names names' b)
   | .record fields => by
     simp only [ofNormalized]
     cases payloadClass? fields with
@@ -557,10 +543,6 @@ private theorem ofNormalized_isSome (names names' : Program.KeyNames) :
   | .tuple items => by
     simp only [ofNormalized, Option.isSome_map]
     exact ofItems_isSome names names' items
-  | .union left right => by
-    simp only [ofNormalized]
-    exact isSome_bind_bind (ofNormalized_isSome names names' left)
-      (ofNormalized_isSome names names' right)
 
 /-- The items' printed forms exist alike under any key names. A step of `ofTy_isSome`. -/
 private theorem ofItems_isSome (names names' : Program.KeyNames) :

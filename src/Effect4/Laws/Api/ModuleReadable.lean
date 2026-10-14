@@ -136,14 +136,14 @@ theorem printModule_readable {sig : Signature Op} {root : Eff Op}
   obtain ⟨body, hbody⟩ := print_of_readable hmain
   obtain ⟨ds, hds⟩ := captured_mapM_ok hlayers (Path.sortBy Path.declBefore (history.map (·.1)))
     (fun t ht => (Path.sortBy_perm Path.declBefore _).mem_iff.mp ht)
-  obtain ⟨decl, hdecl⟩ := printDecl_readable name ty body types sig.scopeKey sig.keyNames
+  obtain ⟨decl, hdecl⟩ := printDecl_readable name ty body types sig.typeEnv
   refine ⟨ds ++ [decl], ?_⟩
   unfold printModule
   rw [hoisted]
   simp only [plain]
   change ((Path.sortBy Path.declBefore (history.map (·.1))).mapM (capturedDecl sig history) >>=
     fun ds => print sig 0 main >>= fun body =>
-    printDecl name ty body sig.scopeKey sig.keyNames >>= fun decl => .ok (ds ++ [decl])) = _
+    printDecl name ty body sig.typeEnv >>= fun decl => .ok (ds ++ [decl])) = _
   simp only [hds, ok_bind, hbody, hdecl]
 
 /-! ## A program with a definition block (decisions row 328, slice PROC-3) -/
@@ -156,9 +156,9 @@ def layerSigOf (sig : Signature Op) (defs : List DefDecl) (t : List Nat) : Signa
   | none => sig.withDefs defs
 
 /-- The pieces of a hoisted program with a definition block are readable at the block's
-signature: each declaration under the module's payload classes and the signature's key names
-(`DefDecl.readable`: a column that names a class reads as the class's record, a named key reads
-by its name, and the requirement row reads back), each body at
+signature: each declaration under `sig.typeEnv classes` (`DefDecl.readable`: a column that names a
+class reads as the class's record, a named key reads by its name, and the requirement row reads
+back), each body at
 environment length `1` at the signature its parameters extend (slice HO-3), the main program,
 each module layer (decisions row 341, step 2) and each hoisted layer, a body's own at its body's
 signature (step 3, `layerSigOf`), and the layers' declared names decode. -/
@@ -167,7 +167,7 @@ def blockReadable (classes : Classes) (sig : Signature Op) (root : Eff Op) : Boo
   | .ok (main, history) =>
     match main.block? with
     | some (defs, bodies, body, layers) =>
-      defs.all (DefDecl.readable classes sig.keyNames) &&
+      defs.all (DefDecl.readable (sig.typeEnv classes)) &&
         (defs.zip bodies.toList).all (fun p =>
           Readable classes ((sig.withDefs defs).withParams p.1.params) 1 p.2) &&
         Readable classes (sig.withDefs defs) 0 body &&
@@ -186,7 +186,7 @@ theorem blockReadable_pieces {sig : Signature Op} {root : Eff Op}
     (hr : blockReadable classes sig root = true) :
     ∃ main history defs bodies body layers, root.hoistAll = .ok (main, history) ∧
       main.block? = some (defs, bodies, body, layers) ∧
-      (∀ d ∈ defs, d.readable classes sig.keyNames = true) ∧
+      (∀ d ∈ defs, d.readable (sig.typeEnv classes) = true) ∧
       (∀ p ∈ defs.zip bodies.toList,
         Readable classes ((sig.withDefs defs).withParams p.1.params) 1 p.2 = true) ∧
       Readable classes (sig.withDefs defs) 0 body = true ∧

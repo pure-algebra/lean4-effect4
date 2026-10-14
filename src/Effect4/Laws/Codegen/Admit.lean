@@ -37,7 +37,7 @@ structure EnvelopeValid (name : String) (ty : EffTy) (classes : Classes.Classes)
   declared : Program.blockClasses decls = some classes
   main : ∃ main : TypeScript.ConstDecl,
     (Program.splitClasses decls).2.getLast? = some (.const main) ∧
-    main.name = name ∧ main.exported = true ∧ declarationType ty (names := names) = .ok main.type
+    main.name = name ∧ main.exported = true ∧ declarationType ty { names } = .ok main.type
   layers : ∀ d ∈ (Program.splitClasses decls).2.dropLast, ∃ c : TypeScript.ConstDecl,
     d = .const c ∧ c.type = none ∧ c.exported = true
 

@@ -51,28 +51,28 @@ theorem print_perform (sig : Signature Op) (n : Nat) (op : Op) (request : Term) 
     print sig n (.perform op request) = printPerform sig n op request := rfl
 
 /-- The complete declared type `Effect.Effect<A, E, R>`. The native API defaults to
-its reserved scope key and no key name; generic module printing passes the signature's scope key
-and key names (`Signature.keyNames`, decisions row 378 (22)), so a named key's requirement reads
-`"TodoRepo"`, in `R` and in a context type's row alike. This is structural annotation evidence,
-not a general target typing theorem. A payload type in either column prints as its class name
-(`Types.ofTy`, decisions row 120), and a union by its members:
+its reserved scope key and no key name (`env : Classes.TypeEnv := {}`); generic module printing
+passes the signature's spelling context (`sig.typeEnv`, decisions row 378 (22)), so a named key's
+requirement reads `"TodoRepo"`, in `R` and in a context type's row alike. This is structural
+annotation evidence, not a general target typing theorem. A payload type in either column prints as
+its class name (`Types.ofTy`, decisions row 120), and a union by its members:
 `Effect.Effect<never, NotFound | Unauthorized, never>`. -/
-def declarationType (ty : EffTy) (scopeKey : ServiceKey := Effect4.Machine.Env.scopeKey)
-    (names : KeyNames := []) : Except PrintRefusal (Option TypeScript.TypeRef) := do
-  let answer ← match Effect4.Codegen.Types.ofTy ty.answer names with
+def declarationType (ty : EffTy) (env : Effect4.Codegen.Classes.TypeEnv := {}) :
+    Except PrintRefusal (Option TypeScript.TypeRef) := do
+  let answer ← match Effect4.Codegen.Types.ofTy ty.answer env.names with
     | some target => .ok target
     | none => .error (.typeSpelling ty.answer.render)
-  let error ← match Effect4.Codegen.Types.ofTy ty.error names with
+  let error ← match Effect4.Codegen.Types.ofTy ty.error env.names with
     | some target => .ok target
     | none => .error (.typeSpelling ty.error.render)
   .ok (some (.name ["Effect", "Effect"]
-    [answer, error, requirementType scopeKey names ty.requires]))
+    [answer, error, requirementType env.scopeKey env.names ty.requires]))
 
 /-- The printed program as an exported constant carrying `declarationType`'s annotation. -/
 def printDecl (name : String) (ty : EffTy) (body : TypeScript.Expr)
-    (scopeKey : ServiceKey := Effect4.Machine.Env.scopeKey) (names : KeyNames := []) :
+    (env : Effect4.Codegen.Classes.TypeEnv := {}) :
     Except PrintRefusal TypeScript.ConstDecl := do
-  let annotation ← declarationType ty scopeKey names
+  let annotation ← declarationType ty env
   .ok { doc := [], name := name, value := body, type := annotation }
 
 /-- Answer and error types must both be representable; a nonempty requirement row never
@@ -80,31 +80,30 @@ bypasses that check. Requirement identifiers have a total structural spelling. -
 def declarationTypeRepresentable (ty : EffTy) : Bool :=
   (Effect4.Codegen.Types.ofTy ty.answer).isSome && (Effect4.Codegen.Types.ofTy ty.error).isSome
 
-/-- Representability suffices for a complete annotation at every scope identity and under
-every key name: the names spell no part whose printed form may be missing
-(`Types.ofTy_isSome`). -/
+/-- Representability suffices for a complete annotation under every spelling context `env`: the
+names spell no part whose printed form may be missing (`Types.ofTy_isSome`). -/
 theorem declarationType_ok {ty : EffTy} (hr : declarationTypeRepresentable ty = true)
-    (scopeKey : ServiceKey := Effect4.Machine.Env.scopeKey) (names : KeyNames := []) :
-    ∃ annotation, declarationType ty scopeKey names = .ok annotation := by
+    (env : Effect4.Codegen.Classes.TypeEnv := {}) :
+    ∃ annotation, declarationType ty env = .ok annotation := by
   simp only [declarationTypeRepresentable, Bool.and_eq_true] at hr
-  rw [← Effect4.Codegen.Types.ofTy_isSome ty.answer names,
-    ← Effect4.Codegen.Types.ofTy_isSome ty.error names] at hr
+  rw [← Effect4.Codegen.Types.ofTy_isSome ty.answer env.names,
+    ← Effect4.Codegen.Types.ofTy_isSome ty.error env.names] at hr
   simp only [Option.isSome_iff_exists] at hr
   obtain ⟨⟨answer, ha⟩, ⟨error, he⟩⟩ := hr
   exact ⟨_, by simp only [declarationType, ha, he, bind, Except.bind]; rfl⟩
 
 /-- A successful declaration always retains all three slots, including the complete
 requirement row. Consumer: checked module production and its annotation admission check. -/
-theorem declarationType_complete {ty : EffTy} {scopeKey : ServiceKey} {names : KeyNames}
+theorem declarationType_complete {ty : EffTy} {env : Effect4.Codegen.Classes.TypeEnv}
     {annotation : Option TypeScript.TypeRef}
-    (h : declarationType ty scopeKey names = .ok annotation) :
+    (h : declarationType ty env = .ok annotation) :
     ∃ answer error, annotation = some (.name ["Effect", "Effect"]
-      [answer, error, requirementType scopeKey names ty.requires]) := by
+      [answer, error, requirementType env.scopeKey env.names ty.requires]) := by
   unfold declarationType at h
-  cases ha : Effect4.Codegen.Types.ofTy ty.answer names with
+  cases ha : Effect4.Codegen.Types.ofTy ty.answer env.names with
   | none => simp only [ha, bind, Except.bind] at h; cases h
   | some answer =>
-    cases he : Effect4.Codegen.Types.ofTy ty.error names with
+    cases he : Effect4.Codegen.Types.ofTy ty.error env.names with
     | none => simp only [ha, he, bind, Except.bind] at h; cases h
     | some error =>
       simp only [ha, he, bind, Except.bind, Except.ok.injEq] at h
@@ -112,13 +111,13 @@ theorem declarationType_complete {ty : EffTy} {scopeKey : ServiceKey} {names : K
 
 /-- Everything a successful declaration retains: its requested name, its body unchanged,
 its export flag, and the annotation this type's one owner decided. -/
-theorem printDecl_fields {scopeKey : ServiceKey} {names : KeyNames} {name : String} {ty : EffTy}
+theorem printDecl_fields {env : Effect4.Codegen.Classes.TypeEnv} {name : String} {ty : EffTy}
     {body : TypeScript.Expr} {decl : TypeScript.ConstDecl}
-    (hp : printDecl name ty body scopeKey names = .ok decl) :
+    (hp : printDecl name ty body env = .ok decl) :
     decl.name = name ∧ decl.value = body ∧ decl.exported = true ∧
-      declarationType ty scopeKey names = .ok decl.type := by
+      declarationType ty env = .ok decl.type := by
   unfold printDecl at hp
-  cases h : declarationType ty scopeKey names with
+  cases h : declarationType ty env with
   | error why => simp only [h, bind, Except.bind] at hp; cases hp
   | ok annotation =>
     rw [h] at hp
@@ -127,17 +126,17 @@ theorem printDecl_fields {scopeKey : ServiceKey} {names : KeyNames} {name : Stri
     exact ⟨rfl, rfl, rfl, rfl⟩
 
 /-- A successful raw declaration retains its expression exactly. -/
-theorem printDecl_value {scopeKey : ServiceKey} {names : KeyNames} {name : String} {ty : EffTy}
+theorem printDecl_value {env : Effect4.Codegen.Classes.TypeEnv} {name : String} {ty : EffTy}
     {body : TypeScript.Expr} {decl : TypeScript.ConstDecl}
-    (hp : printDecl name ty body scopeKey names = .ok decl) : decl.value = body :=
+    (hp : printDecl name ty body env = .ok decl) : decl.value = body :=
   (printDecl_fields hp).2.1
 
-/-- A representable declaration type prints, at every name and body, scope and key names. -/
+/-- A representable declaration type prints, at every name, body and spelling context. -/
 theorem printDecl_readable (name : String) (ty : EffTy) (body : TypeScript.Expr)
     (hr : declarationTypeRepresentable ty = true)
-    (scopeKey : ServiceKey := Effect4.Machine.Env.scopeKey) (names : KeyNames := []) :
-    ∃ decl, printDecl name ty body scopeKey names = .ok decl := by
-  obtain ⟨annotation, ha⟩ := declarationType_ok hr scopeKey names
+    (env : Effect4.Codegen.Classes.TypeEnv := {}) :
+    ∃ decl, printDecl name ty body env = .ok decl := by
+  obtain ⟨annotation, ha⟩ := declarationType_ok hr env
   refine ⟨{ doc := [], name := name, value := body, type := annotation }, ?_⟩
   simp only [printDecl, ha, bind, Except.bind]
 
@@ -197,7 +196,7 @@ from its request to an Effect of its declared columns, `(a0: Request) => Effect.
 never>`. A parameter requires nothing: the passed program's requirements are the call's. -/
 def paramType (sig : Signature Op) (q : ParamDecl) : Except PrintRefusal TypeScript.TypeRef :=
   typeRefOf q.request sig.keyNames >>= fun request =>
-  declarationType ⟨q.answer, q.error, Requirement.ofList []⟩ sig.scopeKey sig.keyNames >>= fun
+  declarationType ⟨q.answer, q.error, Requirement.ofList []⟩ sig.typeEnv >>= fun
     | some result => .ok (.function [(Var.name 0, request)] result)
     | none => .error (.typeSpelling q.name)
 
@@ -219,7 +218,7 @@ def printDef (sig : Signature Op) (d : DefDecl) (body : Eff Op)
     (locals : List (List Nat × LayerTerm Op)) : Except PrintRefusal TypeScript.ConstDecl :=
   typeRefOf d.request sig.keyNames >>= fun request =>
   d.params.mapM (paramType sig) >>= fun fns =>
-  declarationType d.effTy sig.scopeKey sig.keyNames >>= fun result =>
+  declarationType d.effTy sig.typeEnv >>= fun result =>
   (Path.sortBy Path.declBefore (locals.map (·.1))).mapM
     (printLocal (sig.withParams d.params) locals) >>= fun ls =>
   print (sig.withParams d.params) 1 body >>= fun value =>
@@ -377,7 +376,7 @@ def methodType (sig : Signature Op) (state : Ty) (d : DefDecl) (arity : Nat) :
     let r ← typeRefOf t sig.keyNames
     .ok (a, r)
   let fns ← d.params.mapM (paramType sig)
-  let result ← declarationType d.effTy sig.scopeKey sig.keyNames
+  let result ← declarationType d.effTy sig.typeEnv
   match result with
   | some r => .ok (.function (params ++ (d.params.map (·.name)).zip fns) r)
   | none => .error (.internalAction "service")
@@ -487,7 +486,7 @@ def printModule (sig : Signature Op) (name : String) (ty : EffTy) (e : Eff Op) :
           .ok ({ doc := [], name := LayerTerm.refName t, value := x } : TypeScript.ConstDecl)
         | none => .error (.layerRef t)
       let m ← print sig 0 main
-      let declaration ← printDecl name ty m sig.scopeKey sig.keyNames
+      let declaration ← printDecl name ty m sig.typeEnv
       .ok (ds ++ [declaration])
     -- an empty block would print as its main program alone, and read back as it
     | some ([], _, _, _) => .error (.internalAction "defs")
@@ -508,7 +507,7 @@ def printModule (sig : Signature Op) (name : String) (ty : EffTy) (e : Eff Op) :
             .ok ({ doc := [], name := LayerTerm.refName t, value := x } : TypeScript.ConstDecl)
           | none => .error (.layerRef t)
         let m ← print sig' 0 body
-        let declaration ← printDecl name ty m sig.scopeKey sig.keyNames
+        let declaration ← printDecl name ty m sig.typeEnv
         .ok (out.1 ++ svc ++ ms ++ ds ++ [declaration])
 
 variable [ScopedOp Op]

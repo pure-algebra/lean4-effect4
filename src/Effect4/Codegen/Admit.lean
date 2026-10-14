@@ -78,7 +78,7 @@ def envelopeCheck (name : String) (ty : EffTy) (classes : Classes.Classes) (name
     (decls : List TypeScript.Decl) : Option SurfaceRefusal :=
   if exportNameSafe name ≠ true then some (.unsafeName name)
   else
-    match declarationType ty (names := names) with
+    match declarationType ty { names } with
     | .error why => some (.unrepresentable why)
     | .ok expected =>
       if Program.blockClasses decls ≠ some classes then some .classDeclarations

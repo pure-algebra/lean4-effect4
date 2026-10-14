@@ -124,7 +124,7 @@ def rowMethodField (sig : Signature Op) (m : String) (row : Row) :
   let params ← if row.request = Ty.unit then pure [] else do
     let request ← typeRefOf row.request sig.keyNames
     pure [(Var.name 0, request)]
-  match ← declarationType ⟨row.answer, row.error, Requirement.empty⟩ sig.scopeKey sig.keyNames with
+  match ← declarationType ⟨row.answer, row.error, Requirement.empty⟩ sig.typeEnv with
   | some result => .ok { name := m, readonly := true, type := .function params result }
   | none => .error (.typeSpelling row.spelling)
 
