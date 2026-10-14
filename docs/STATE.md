@@ -72,8 +72,8 @@ A program has folds, a journaled run with replay, and a printed image that reads
   a host reply at its call's checked instance (row 323). It makes the call table once, at open
   (slice DM5, `5c01db4a3`). The face a caller holds is `Run` (`src/Effect4/Run/Basic.lean`).
   Row 326 rules the session's face, the module `Live` with `open`, `start`, `feed` and `view`
-  (DI-85). It is planned as slices DM1 to DM4 of the
-  [session note](research/2026-10-07-session-api-design.md), and no `Live` declaration exists yet.
+  (DI-85, the [session note](research/2026-10-07-session-api-design.md)). It landed in
+  `src/Effect4/Run/Live.lean` with `view_funded` (DM6 and DM7 remain).
   No host answer is preloaded: every host call parks, and its answer is a decision (slice HC-2,
   row 343). The raw statement
   `run_eq_ref_table` is proved. A list of answers is a host that answers from a list
@@ -282,7 +282,8 @@ A program has folds, a journaled run with replay, and a printed image that reads
    proved and run in Lean only. `agrees` and `conforms` (`src/Effect4/Laws/Program/Validated.lean`)
    decide its claims' premises on one recorded run, so a real run is checked run by run. In order:
    - the agent's small fixes in the tools. Answers carry no hex unless asked, and the session's
-     JSON is named. A fill at a missing address is refused, and the catalogue's gaps are filled;
+     JSON is named. A fill at a missing address is refused, and the catalogue's gaps are filled.
+     A refusal names its definition and parameter, and the session tool adds `"run"`;
    - done: V1, the to-do on the keyed lane and lane S (`4017fac26`, `2daa3ac55`). On each script
      rc.112 and the generated OCaml engine agree with Lean;
    - done: V2, the application as one Effect service with its layer. Its host rows are services
@@ -290,8 +291,7 @@ A program has folds, a journaled run with replay, and a printed image that reads
      [design note](research/2026-10-13-emitted-services/README.md)). The to-do's file reads back
      whole (`ab8aeefa7`). `make check-host-protocol` runs its 13 scripts on rc.112 through a
      consumer, and Lean decides each run's checks (`210424144`). A key that a service row names
-     prints by the service's name, so the to-do's requirement reads `"TodoRepo"` (row 378 (22)).
-     The TypeScript reader still reads a key by its runtime text alone;
+     prints by the service's name and reads back by it (`"TodoRepo"`, row 378 (22));
    - V3, the generated declarations: the rows' bindings interface, the inputs' and answers'
      Schemas, the prelude package. They are also the agent's typed surface;
    - done: V4, `apps/todo/` on SQLite with the per-run checker, in `make check-host-protocol`. A
@@ -299,10 +299,12 @@ A program has folds, a journaled run with replay, and a printed image that reads
      the checks they target;
    - beside them, binder names in the TypeScript reader (row 378 (17)). `request_leads` is
      proved, so the recorded call tree rests on no goal. The
-     claim record's two labels landed (`13551903c`). So did the banked Ref cache with its
-     transfer law `cache_agrees`, which rests on no goal (`23f95aac2`), and its bank entry
-     (`f463ee53b`). The cache block prints as the service `ListCache` (HO-5). Its module does not
-     read back yet, and the to-do does not yet impose it (row 378 (8));
+     claim record's two labels landed (`13551903c`), and `ClaimRecord` and `Bank.Entry` live in
+     the core and join the semantics report (row 378 (23)). The banked Ref cache and its
+     transfer law `cache_agrees` rest on no goal (`23f95aac2`, `f463ee53b`). The cache block
+     prints as `ListCache` (HO-5) and reads back (`Ref.Ref<A>` in definition headers). The cached
+     to-do imposes it (`bindWith`), proves `cached_list_after_add` on the built module, reads
+     back whole, and runs in `apps/todo/` (row 378 (8));
    - then V5, the OCaml face, its repository lowered through LCNF.
 
    Planned goals off the slice's path pause (row 378 (12)).
@@ -329,7 +331,7 @@ A program has folds, a journaled run with replay, and a printed image that reads
    histories (`PlaceFunding.NativeFlow.history`, its
    [receipt](research/2026-10-13-seat-flow-receipt.md)). The four goals that need it stay open:
    these two, `Timeout.cleanup_keeps` and `Timeout.retries_declared`. Next: those four through
-   it, then the rest of the GOALS-2 receipt's §8, `request_leads` among it. The packet also sorts the open parts that no goal states yet. Beside it: the legacy host
+   it, then the rest of the GOALS-2 receipt's §8 (`request_leads` is proved). The packet also sorts the open parts that no goal states yet. Beside it: the legacy host
    fixtures of the truth lane move to the keyed lane (row 343 (8), signed until then). Seat FC's
    rulings land too (row 345 (2): `tools/Tools/Graph` at height 0; the generator's children
    induction).
@@ -338,8 +340,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
    `Live` face landed: `Live.open`, `Live.start`, `Live.feed` and `Live.view`, with
    `view_funded` (seat LIVE's [receipt](research/2026-10-13-seat-live-receipt.md); DM6 and DM7
    remain). In order:
-   - landed: a definition block in the meaning, PROC-5 (row 328; `src/Effect4/Laws/Program/Block.lean`).
-     Next on that line: `run_eq_meaning` extended to blocks, and the inlining law (PROC-6);
+   - landed: a definition block in the meaning, PROC-5 (row 328; `src/Effect4/Laws/Program/Block.lean`),
+     and `denoteRows_invoke`, `denoteRows_call` and `denoteRows_provideContext` on the row meaning.
+     Next on that line: `run_eq_meaning` extended to blocks, and the general inlining law (PROC-6);
    - landed: one checked replay route. `Typed.replay` feeds a journal through the checked
      session (`Live.replay_at_call_instance`, `Live.replay_recorded`; rows 98 and 373 (8); seat
      REPLAY's [receipt](research/2026-10-13-seat-replay-receipt.md));
