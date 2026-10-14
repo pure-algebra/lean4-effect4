@@ -379,8 +379,8 @@ A program has folds, a journaled run with replay, and a printed image that reads
    [motion plan](research/2026-10-13-motion-everywhere/README.md), M1 stays: each figure's cost and
    a documentation page's limits (`tools/Tools/View/Measure.lean`). The PC's graph work is merged:
    connectors as one closed perimeter (`tools/Tools/View/Connector.lean`), and the graph's checks,
-   regions, packing and inspectors. The kit is pinned at the PC's reconciled `html/svg`
-   (`e51195721`), which GitHub does not hold yet.
+   regions, packing and inspectors. The kit's tube went too (its ruling R-S59, tag `archive/tube`).
+   The kit is pinned at its `html/svg` (`3e5e79335`), which GitHub does not hold yet.
 1. **The view and the printer**, one plan across four notes. The order:
    - the program's own graph (row 337, point 9). First its design, with an agent's place in it.
      Then the graph, its ranks and its places as folds of the program (the algebra audit's D);
