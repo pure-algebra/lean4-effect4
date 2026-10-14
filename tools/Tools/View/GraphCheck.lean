@@ -2,7 +2,7 @@ import Tools.View.Graph
 
 /-! # Located checks before graph rendering
 
-Input admission checks node keys and edge positions.
+Input admission checks node keys, edge keys, and edge positions.
 Layout admission checks allocated rectangles and every route's endpoint lookup.
 Keys use the renderer's Boolean String comparison.
 The observations concern finite rendering data, not program typing or scheduling.
@@ -85,14 +85,15 @@ private def keys (site : Site) (ks : List Key) : List Test :=
      test site i .key .duplicateKey (!(ks.take i).any (· == key))]
 
 private def inputTests (g : Graph) : List Test :=
-  keys .node (g.nodes.toList.map (·.key)) ++ g.edges.toList.zipIdx.flatMap fun (e, i) =>
+  keys .node (g.nodes.toList.map (·.key)) ++
+  keys .edge (g.edges.toList.map (·.key)) ++ g.edges.toList.zipIdx.flatMap fun (e, i) =>
     [test .edge i .source (.endpointOutside e.src g.nodes.size) (e.src < g.nodes.size),
      test .edge i .target (.endpointOutside e.dst g.nodes.size) (e.dst < g.nodes.size)]
 
 /-- All finite input observations hold. Empty graphs are admitted. -/
 def InputOK (g : Graph) : Prop := ∀ t ∈ inputTests g, t.holds = true
 
-/-- Refuse an empty or repeated node key, or an edge outside the node array. -/
+/-- Refuse empty or repeated node or edge keys, or endpoints outside the node array. -/
 def input (g : Graph) : Except Refusal Unit := checks (inputTests g)
 
 /-- The input arrow accepts exactly the named finite input observation. -/
@@ -138,5 +139,12 @@ def laid (l : Laid) : Except Refusal Unit := checks (laidTests l)
 
 /-- The layout arrow accepts exactly the named finite rendering observation. -/
 theorem laid_iff (l : Laid) : laid l = .ok () ↔ LaidOK l := checks_iff _
+
+/-- Rendering data with input and allocation evidence, independent of its layout producer.
+Placement: `docs/research/2026-10-13-graph-library-plan.md`, R14, concept 7, row 334 (3). -/
+structure Checked (g : Graph) where
+  value : Laid
+  input_ok : InputOK g
+  allocation_ok : LaidOK value
 
 end Tools.View.GraphCheck

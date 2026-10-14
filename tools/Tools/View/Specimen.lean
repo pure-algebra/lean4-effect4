@@ -1,4 +1,5 @@
 import Tools.View.Page
+import Tools.View.GraphLayout
 
 /-!
 # A graph built one edge at a time: the layout's specimen
@@ -44,15 +45,28 @@ def graphAt (k : Nat) : Graph :=
   { nodes := (used.map fun n => ({ key := n, line1 := n } : GNode)).toArray,
     edges := (es.map fun (s, d, _) => ({ key := s ++ "→" ++ d, src := pos s, dst := pos d } : GEdge)).toArray }
 
-/-- The frames: one after each edge, titled by the edge and what it shows; the last edge's
-target is lit. -/
+private def page (g : Graph) (value : Laid) (s d why : String) (i n : Nat) : Page :=
+  { title := s!"graph · add {s} → {d}", judgment := why, place := s!"{i + 1} / {n}",
+    heads := ("", ""), foot := s!"{g.nodes.size} nodes, {g.edges.size} edges",
+    graph := some { title := "", laid := value } }
+
+private def litGraph (i : Nat) (target : String) : Graph :=
+  let g := graphAt (i + 1)
+  { g with nodes := g.nodes.map fun (v : GNode) => { v with lit := v.key == target } }
+
+/-- One frame after each edge. The last edge's target is lit. -/
 def frames : List Page :=
   let n := steps.length
   (steps.zipIdx.map fun ((s, d, why), i) =>
-    let g := graphAt (i + 1)
-    let g : Graph := { g with nodes := g.nodes.map fun (v : GNode) => { v with lit := v.key == d } }
-    ({ title := s!"graph · add {s} → {d}", judgment := why, place := s!"{i + 1} / {n}",
-       heads := ("", ""), foot := s!"{g.nodes.size} nodes, {g.edges.size} edges",
-       graph := some { title := "", laid := g.layout } } : Page))
+    let g := litGraph i d
+    page g g.layout s d why i n)
+
+/-- Check both graph input and layout before constructing each specimen frame. -/
+def checkedFrames : Except GraphCheck.Refusal (List Page) :=
+  let n := steps.length
+  steps.zipIdx.mapM fun ((s, d, why), i) => do
+    let g := litGraph i d
+    let checked ← GraphLayout.checked g
+    pure (page g checked.value s d why i n)
 
 end Tools.View.Specimen
