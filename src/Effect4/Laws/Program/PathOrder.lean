@@ -62,94 +62,25 @@ theorem findEntry_of_mem {α : Type} {entries : List (List Nat × α)}
 
 end
 
-private theorem lt_cons_iff (a b : Nat) (as bs : List Nat) :
-    lt (a :: as) (b :: bs) = true ↔ a < b ∨ a = b ∧ lt as bs = true := by
-  by_cases hab : a < b
-  · simp [lt, hab]
-  · by_cases hba : b < a
-    · have hne : a ≠ b := by omega
-      simp [lt, hab, hba, hne]
-    · have heq : a = b := by omega
-      subst b
-      simp [lt]
-
-/-- The strict path order never relates a path to itself. -/
-theorem lt_irrefl (a : List Nat) : lt a a = false := by
-  induction a with
-  | nil => rfl
-  | cons a as ih => simpa [lt] using ih
-
-/-- Transitivity of the runtime path comparator. -/
-theorem lt_trans {a b c : List Nat} (hab : lt a b = true) (hbc : lt b c = true) :
-    lt a c = true := by
-  induction a generalizing b c with
-  | nil =>
-    cases c with
-    | nil => cases b <;> simp [lt] at hab hbc
-    | cons c cs => rfl
-  | cons a as ih =>
-    cases b with
-    | nil => simp [lt] at hab
-    | cons b bs =>
-      cases c with
-      | nil => simp [lt] at hbc
-      | cons c cs =>
-        rw [lt_cons_iff] at hab hbc ⊢
-        rcases hab with hab | ⟨rfl, hab⟩
-        · rcases hbc with hbc | ⟨rfl, _⟩
-          · exact Or.inl (Nat.lt_trans hab hbc)
-          · exact Or.inl hab
-        · rcases hbc with hbc | ⟨rfl, hbc⟩
-          · exact Or.inl hbc
-          · exact Or.inr ⟨rfl, ih hab hbc⟩
-
-/-- The two strict directions cannot both hold. -/
-theorem lt_asymm {a b : List Nat} (hab : lt a b = true) : lt b a ≠ true := by
-  intro hba
-  have h := lt_trans hab hba
-  simp [lt_irrefl] at h
-
-/-- Every pair of paths is equal or ordered in exactly one direction. -/
-theorem lt_trichotomy (a b : List Nat) : lt a b = true ∨ a = b ∨ lt b a = true := by
-  induction a generalizing b with
-  | nil => cases b <;> simp [lt]
-  | cons a as ih =>
-    cases b with
-    | nil => simp [lt]
-    | cons b bs =>
-      by_cases hab : a < b
-      · exact Or.inl (by simp [lt, hab])
-      · by_cases hba : b < a
-        · exact Or.inr (Or.inr (by simp [lt, hba]))
-        · have heq : a = b := by omega
-          subst b
-          simpa [lt] using ih bs
-
-/-- Strict totality is stated only for distinct paths. -/
-theorem lt_total {a b : List Nat} (hne : a ≠ b) : lt a b = true ∨ lt b a = true := by
-  rcases lt_trichotomy a b with h | h | h
-  · exact Or.inl h
-  · exact False.elim (hne h)
-  · exact Or.inr h
-
 /-- A path that precedes another, and is no prefix of it, precedes it under every extension: the
 two paths differ at an index of the shorter one. A step of `expanded_refs_nil_of_wf`
 (`Laws/Program/ReferenceExpansion.lean`). Its consumer is `target_refs_prior` there, at a
 reference's target and at the sites inside the target. By `fun_induction`, so the cases are the
-arms of `lt`. -/
+arms of `Field.ltKey`. -/
 theorem lt_append_of_lt {a b : List Nat} (hab : lt a b = true) (hpre : properPrefix a b = false)
     (c : List Nat) : lt (a ++ c) b = true := by
-  fun_induction lt a b with
+  unfold lt at hab ⊢
+  fun_induction Field.ltKey a b with
   | case1 => exact Bool.noConfusion hab
   | case2 => exact Bool.noConfusion hpre
   | case3 => exact Bool.noConfusion hab
-  | case4 a as b bs hlt => simp only [List.cons_append, lt, hlt, if_true]
+  | case4 a as b bs hlt => simp only [List.cons_append, Field.ltKey, hlt, if_true]
   | case5 => exact Bool.noConfusion hab
   | case6 a as b bs hlt hgt ih =>
     have heq : a = b := by omega
     subst heq
     simp only [properPrefix, decide_true, Bool.true_and] at hpre
-    simp only [List.cons_append, lt, hlt, if_false]
+    simp only [List.cons_append, Field.ltKey, hlt, if_false]
     exact ih hab hpre
 
 /-- Insertion retains every element and its multiplicity, for any comparator. -/
@@ -186,7 +117,7 @@ theorem sortBy_nodup (before : List Nat → List Nat → Bool) {xs : List (List 
 
 private theorem insertBy_pairwise (before : List Nat → List Nat → Bool)
     (trans : ∀ a b c, before a b = true → before b c = true → before a c = true)
-    (total : ∀ a b, a ≠ b → before a b = true ∨ before b a = true)
+    (total : ∀ a b, a ≠ b → before a b = false → before b a = true)
     (x : List Nat) {xs : List (List Nat)}
     (hx : x ∉ xs) (hs : xs.Pairwise (fun a b => before a b = true)) :
     (insertBy before x xs).Pairwise (fun a b => before a b = true) := by
@@ -204,7 +135,7 @@ private theorem insertBy_pairwise (before : List Nat → List Nat → Bool)
         · exact hbefore
         · exact trans x y z hbefore (hhead z hz)
       · exact hs
-    · have hyx : before y x = true := (total x y hxy).resolve_left hbefore
+    · have hyx : before y x = true := total x y hxy (Bool.eq_false_iff.mpr hbefore)
       simp only [insertBy, if_neg hbefore]
       apply List.Pairwise.cons
       · intro z hz
@@ -216,7 +147,7 @@ private theorem insertBy_pairwise (before : List Nat → List Nat → Bool)
 
 private theorem fold_insertBy_pairwise (before : List Nat → List Nat → Bool)
     (trans : ∀ a b c, before a b = true → before b c = true → before a c = true)
-    (total : ∀ a b, a ≠ b → before a b = true ∨ before b a = true)
+    (total : ∀ a b, a ≠ b → before a b = false → before b a = true)
     (xs : List (List Nat)) : ∀ (acc : List (List Nat)),
     acc.Pairwise (fun a b => before a b = true) → acc.Nodup → xs.Nodup →
     (∀ x ∈ xs, x ∉ acc) →
@@ -242,7 +173,7 @@ private theorem fold_insertBy_pairwise (before : List Nat → List Nat → Bool)
 The `Nodup` premise is essential because the comparator is strict. -/
 theorem sortBy_pairwise (before : List Nat → List Nat → Bool)
     (trans : ∀ a b c, before a b = true → before b c = true → before a c = true)
-    (total : ∀ a b, a ≠ b → before a b = true ∨ before b a = true)
+    (total : ∀ a b, a ≠ b → before a b = false → before b a = true)
     {xs : List (List Nat)} (hx : xs.Nodup) :
     (sortBy before xs).Pairwise (fun a b => before a b = true) := by
   exact fold_insertBy_pairwise before trans total xs [] (by simp) (by simp) hx (by simp)
@@ -251,31 +182,31 @@ theorem sortBy_pairwise (before : List Nat → List Nat → Bool)
 the proof uses permutation uniqueness rather than changing the sorting algorithm. -/
 theorem sortBy_eq_self (before : List Nat → List Nat → Bool)
     (trans : ∀ a b c, before a b = true → before b c = true → before a c = true)
-    (total : ∀ a b, a ≠ b → before a b = true ∨ before b a = true)
-    (asymm : ∀ a b, before a b = true → before b a ≠ true)
+    (total : ∀ a b, a ≠ b → before a b = false → before b a = true)
+    (asymm : ∀ a b, before a b = true → before b a = false)
     {xs : List (List Nat)} (hs : xs.Pairwise (fun a b => before a b = true)) :
     sortBy before xs = xs := by
   have hn : xs.Nodup := hs.imp (by
     intro a b hab heq
     subst b
-    exact asymm a a hab hab)
+    exact Bool.noConfusion ((asymm a a hab).symm.trans hab))
   exact List.Perm.eq_of_pairwise
-    (fun a b _ _ hab hba => False.elim (asymm a b hab hba))
+    (fun a b _ _ hab hba => Bool.noConfusion ((asymm a b hab).symm.trans hba))
     (sortBy_pairwise before trans total hn) hs (sortBy_perm before xs)
 
 /-- The ascending restore sort fixes an already ascending capture history. -/
 theorem sortBy_lt_eq_self {xs : List (List Nat)}
     (hs : xs.Pairwise (fun a b => lt a b = true)) : sortBy lt xs = xs :=
-  sortBy_eq_self lt (fun _ _ _ => lt_trans) (fun _ _ => lt_total)
-    (fun _ _ => lt_asymm) hs
+  sortBy_eq_self lt (fun _ _ _ => Field.ltKey_trans) (fun _ _ => Field.ltKey_total)
+    (fun _ _ => Field.ltKey_asymm) hs
 
 /-- Reversing the descending hoist order gives the ascending restore order. -/
 theorem reverse_sortBy_flip_lt_pairwise {xs : List (List Nat)} (hx : xs.Nodup) :
     (sortBy (fun a b => lt b a) xs).reverse.Pairwise (fun a b => lt a b = true) := by
   apply List.pairwise_reverse.mpr
   exact sortBy_pairwise (fun a b => lt b a)
-    (fun _ _ _ hab hbc => lt_trans hbc hab)
-    (fun a b hne => (lt_total hne).symm) hx
+    (fun _ _ _ hab hbc => Field.ltKey_trans hbc hab)
+    (fun _ _ hne => Field.ltKey_total hne.symm) hx
 
 /-! ## The rank of a path in a finite list
 
@@ -350,7 +281,7 @@ theorem Eff.inModule_append (root : Eff Op) {a : List Nat} (ha : a ≠ []) (r : 
 /-- No path precedes itself. A step of `expanded_refs_nil_of_wf`. -/
 theorem Eff.refBefore_irrefl (root : Eff Op) (a : List Nat) : root.refBefore a a = false := by
   unfold Eff.refBefore
-  cases root.inModule a <;> simp only [Path.lt_irrefl, Bool.true_beq, Bool.false_beq,
+  cases root.inModule a <;> simp only [Path.lt, Field.ltKey_irrefl, Bool.true_beq, Bool.false_beq,
     Bool.not_true, Bool.not_false, Bool.and_false, Bool.and_true, Bool.or_false]
 
 /-- The reference order is transitive. A step of `expanded_refs_nil_of_wf`. -/
@@ -361,7 +292,7 @@ theorem Eff.refBefore_trans (root : Eff Op) (a b c : List Nat) (hab : root.refBe
     simp only [ha, hb, hc, Bool.true_beq, Bool.false_beq, Bool.not_true, Bool.not_false,
       Bool.and_false, Bool.and_true, Bool.false_and, Bool.true_and, Bool.or_false, Bool.false_or,
       Bool.false_eq_true] at hab hbc ⊢ <;>
-    exact Path.lt_trans hab hbc
+    exact Field.ltKey_trans hab hbc
 
 /-- A path that precedes another in the reference order, and is no prefix of it, precedes it
 under every extension: the module test reads the head (`Eff.inModule_append`), and program order

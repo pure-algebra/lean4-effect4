@@ -1,5 +1,6 @@
 module
 
+public import Effect4.Data.FieldOrder
 public import Effect4.Program.NodeLenses
 public import Effect4.Program.Fold
 
@@ -80,12 +81,8 @@ end Node
 
 /-! ## Program order on paths -/
 
-/-- Strict lexicographic order on paths: a proper prefix is earlier. -/
-def Path.lt : List Nat → List Nat → Bool
-  | [], [] => false
-  | [], _ :: _ => true
-  | _ :: _, [] => false
-  | a :: as, b :: bs => if a < b then true else if b < a then false else Path.lt as bs
+/-- Strict lexicographic order on paths: a proper prefix is earlier (`Field.ltKey`). -/
+abbrev Path.lt : List Nat → List Nat → Bool := Field.ltKey
 
 /-- `a` is a proper prefix of `b`. -/
 def Path.properPrefix : List Nat → List Nat → Bool
@@ -372,7 +369,7 @@ def LayerTerm.readRefName (s : String) : Option (List Nat) :=
 #guard LayerTerm.readRefName "a0" = none
 #guard LayerTerm.readRefName "L_12_3" = some [12, 3]
 #guard [[0], [1, 0], [1, 0, 0], [0, 2]].all fun t => LayerTerm.readRefName (LayerTerm.refName t) = some t
-#guard Path.lt [0] [0, 1] && Path.lt [0, 1] [1] && !Path.lt [1] [0, 1] && !Path.lt [] []
-#guard Path.sortBy Path.declBefore [[1, 0], [0, 0, 1], [0, 0]] = [[0, 0, 1], [0, 0], [1, 0]]
+example : (Path.lt [0] [0, 1] && Path.lt [0, 1] [1] && !Path.lt [1] [0, 1] && !Path.lt [] []) = true := rfl
+example : Path.sortBy Path.declBefore [[1, 0], [0, 0, 1], [0, 0]] = [[0, 0, 1], [0, 0], [1, 0]] := rfl
 
 end Effect4.Program

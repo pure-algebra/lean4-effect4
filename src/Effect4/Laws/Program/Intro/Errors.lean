@@ -25,9 +25,9 @@ theorem intro_catchCause (root : NativeEff) (n : Nat) (b hd : NativeEff) (p : Po
     CodeMeans root (compileEff (.catchCause b hd) p) (denoteR root (.catchCause b hd) p) := by
   rw [compileEff_catchCause b hd hf, denoteR_catchCause root b hd hpos, guardR_bind]
   refine CodeMeans.onFailure _ _ _ (denoteR root b (p.child 0)) _ ?_ ?_ rfl (fun _ => rfl)
-  · exact ih _ (hw0 0) b (at_child_of h 0)
+  · exact ih _ (hw0 0) b (at_child h 0)
   · intro completed c
-    have hb := at_childWith_of (p := { p with completed }) h 1 (.exitErr c)
+    have hb := at_childWith (p := { p with completed }) h 1 (.exitErr c)
     show CodeMeans root (resolve root ({ p with completed }.childWith 1 (.exitErr c)))
       (prepareR completed (constructR _))
     rw [resolve_of_at hb]
@@ -45,7 +45,7 @@ theorem intro_catchIf (root : NativeEff) (n : Nat) (test : Term) (b hd : NativeE
     CodeMeans root (compileEff (.catchIf test b hd) p) (denoteR root (.catchIf test b hd) p) := by
   rw [compileEff_catchIf test b hd hf, denoteR_catchIf root test b hd hpos, guardR_bind]
   refine CodeMeans.onFailure _ _ _ (denoteR root b (p.child 0)) _ ?_ ?_ rfl (fun _ => rfl)
-  · exact ih _ (hw0 0) b (at_child_of h 0)
+  · exact ih _ (hw0 0) b (at_child h 0)
   · intro completed cause
     simp only [EffName.refreshE, contEOf, h, prepareR_constructR]
     cases caughtErrorValue? p.env test cause with
@@ -54,7 +54,7 @@ theorem intro_catchIf (root : NativeEff) (n : Nat) (test : Term) (b hd : NativeE
       exact CodeMeans.failure cause
     | some value =>
       simp only
-      have hb := at_childWith_of (p := { p with completed }) h 1 value
+      have hb := at_childWith (p := { p with completed }) h 1 value
       rw [resolve_of_at hb]
       simp only [prepareR_denoteR]
       exact ih _ (hwcw completed 1 value) hd hb
@@ -70,16 +70,16 @@ theorem intro_matchCause (root : NativeEff) (n : Nat) (b v c : NativeEff) (p : P
     CodeMeans root (compileEff (.matchCause b v c) p) (denoteR root (.matchCause b v c) p) := by
   rw [compileEff_matchCause b v c hf, denoteR_matchCause root b v c hpos, guardR_bind]
   refine CodeMeans.onBoth _ _ _ _ (denoteR root b (p.child 0)) _ ?_ ?_ ?_ rfl (fun _ => rfl)
-  · exact ih _ (hw0 0) b (at_child_of h 0)
+  · exact ih _ (hw0 0) b (at_child h 0)
   · intro completed x
-    have hb := at_childWith_of (p := { p with completed }) h 1 x
+    have hb := at_childWith (p := { p with completed }) h 1 x
     show CodeMeans root (resolve root ({ p with completed }.childWith 1 x))
       (prepareR completed (constructR _))
     rw [resolve_of_at hb]
     simp only [prepareR_constructR, prepareR_denoteR]
     exact ih _ (hwcw completed 1 x) v hb
   · intro completed cause
-    have hb := at_childWith_of (p := { p with completed }) h 2 (.exitErr cause)
+    have hb := at_childWith (p := { p with completed }) h 2 (.exitErr cause)
     show CodeMeans root (resolve root ({ p with completed }.childWith 2 (.exitErr cause)))
       (prepareR completed (constructR _))
     rw [resolve_of_at hb]
@@ -103,6 +103,6 @@ theorem intro_exit (root : NativeEff) (n : Nat) (b : NativeEff) (p : Point) (k :
     refine CodeMeans.exitFrame _ _ (denoteR root b (p.child 0))
       (fun ex => .pure (.success (reifyExitVal ex))) ?_ (fun _ _ => CodeMeans.success _) rfl
       (fun _ => rfl)
-    exact ih _ (hw0 0) b (at_child_of h 0)
+    exact ih _ (hw0 0) b (at_child h 0)
 
 end Effect4.Program.Sched

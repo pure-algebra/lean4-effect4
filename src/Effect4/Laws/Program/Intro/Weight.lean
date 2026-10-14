@@ -17,16 +17,6 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Denote Effect4.Prog
 
 /-! ## Addresses and weights -/
 
-theorem at_child_of {root : NativeEff} {p : Point} {n : Node NativeOp}
-    (h : Node.at_ (Node.eff root) p.path = some n) (i : Nat) :
-    Node.at_ (Node.eff root) (p.child i).path = n.child i := by
-  simp only [Point.child, Agreement.Node.at_append, h, Option.bind]
-
-theorem at_childWith_of {root : NativeEff} {p : Point} {n : Node NativeOp}
-    (h : Node.at_ (Node.eff root) p.path = some n) (i : Nat) (v : Val) :
-    Node.at_ (Node.eff root) (p.childWith i v).path = n.child i := by
-  simp only [Point.childWith, Agreement.Node.at_append, h, Option.bind]
-
 theorem denoteAt_of_at {root : NativeEff} {q : Point} {e : NativeEff}
     (h : Node.at_ (Node.eff root) q.path = some (Node.eff e)) :
     denoteAt root q = denoteR root e q := by
@@ -143,8 +133,8 @@ theorem entrants_intro (root : NativeEff) (n : Nat)
           CodeMeans root x.1 x.2
   | .nil, _, _, _ => ⟨rfl, fun _ hx => by simp [actionAt.entrants, entrantPoints] at hx⟩
   | .cons e rest, q, hq, h => by
-    have h0 : Node.at_ (.eff root) (q.child 0).path = some (.eff e) := at_child_of h 0
-    have h1 : Node.at_ (.eff root) (q.child 1).path = some (.effs rest) := at_child_of h 1
+    have h0 : Node.at_ (.eff root) (q.child 0).path = some (.eff e) := at_child h 0
+    have h1 : Node.at_ (.eff root) (q.child 1).path = some (.effs rest) := at_child h 1
     have tail := entrants_intro root n ih rest (q.child 1) (Nat.lt_of_le_of_lt (weight_child q 1) hq) h1
     refine ⟨by simp only [actionAt.entrants, entrantPoints, List.length_cons, tail.1], ?_⟩
     intro x hx

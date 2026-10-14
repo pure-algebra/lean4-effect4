@@ -62,8 +62,8 @@ theorem Eff.hoistAll_exists_of_targets (root : Eff Op)
   have unique : root.refTargets.Nodup :=
     Path.sortBy_nodup Path.declBefore (Path.eraseDups_nodup _)
   have ordered := Path.sortBy_pairwise (fun a b => Path.lt b a)
-    (fun _ _ _ hab hbc => Path.lt_trans hbc hab)
-    (fun a b hne => (Path.lt_total hne).symm) unique
+    (fun _ _ _ hab hbc => Field.ltKey_trans hbc hab)
+    (fun _ _ hne => Field.ltKey_total hne.symm) unique
   apply captureFold_exists _ ordered root []
   intro target member
   have inTargets := (Path.sortBy_perm (fun a b => Path.lt b a) root.refTargets).mem_iff.mp member

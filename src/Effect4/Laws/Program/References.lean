@@ -194,10 +194,6 @@ theorem at_replaceAt_disjoint {node result replacement : Node Op}
               simp only [List.cons_append, at_, (setChild_spec set).1, first, Option.bind_some]
               exact ih changed
 
-/-- Layer replacement is precisely the general edit with a layer replacement. -/
-theorem replaceLayerAt_eq_replaceAt (node : Node Op) (path : List Nat) (layer : LayerTerm Op) :
-    node.replaceLayerAt path layer = node.replaceAt path (.layer layer) := rfl
-
 /-- The layer wrapper keeps the original recursive child-update equation. -/
 theorem replaceLayerAt_cons (node : Node Op) (index : Nat) (path : List Nat)
     (layer : LayerTerm Op) :
@@ -228,12 +224,6 @@ theorem replaceLayerAt_spec {node result : Node Op} {path : List Nat}
   refine ⟨(layerAt_eq_some_iff _ _ _).mpr found, sorts, ?_⟩
   intro old original
   exact undo (.layer old) ((layerAt_eq_some_iff _ _ _).mp original)
-
-/-- Looking up the replaced path returns the replacement layer. -/
-theorem layerAt_replaceLayerAt {node result : Node Op} {path : List Nat}
-    {replacement : LayerTerm Op}
-    (updated : node.replaceLayerAt path replacement = some result) :
-    result.layerAt path = some replacement := (replaceLayerAt_spec updated).1
 
 /-- Restoring the original layer reverses a successful replacement at the same path. -/
 theorem replaceLayerAt_restore {node result : Node Op} {path : List Nat}
@@ -271,7 +261,7 @@ theorem layerAt_exists_before_replaceLayerAt {node result : Node Op}
     (updated : node.replaceLayerAt path replacement = some result) :
     ∃ layer, result.layerAt earlier = some layer := by
   induction path generalizing node result earlier with
-  | nil => cases earlier <;> simp only [Path.lt, Bool.false_eq_true] at before
+  | nil => cases earlier <;> simp only [Path.lt, Field.ltKey, Bool.false_eq_true] at before
   | cons index path ih =>
       cases earlier with
       | nil =>
@@ -291,7 +281,7 @@ theorem layerAt_exists_before_replaceLayerAt {node result : Node Op}
                   by_cases sameIndex : other = index
                   · subst other
                     have before' : Path.lt rest path = true := by
-                      simpa only [Path.lt, Nat.lt_irrefl, if_false] using before
+                      simpa only [Path.lt, Field.ltKey, Nat.lt_irrefl, if_false] using before
                     have found' : next.layerAt rest = some old := by
                       simpa only [layerAt_cons, first, Option.bind_some] using found
                     obtain ⟨layer, survives⟩ := ih before' found' changed

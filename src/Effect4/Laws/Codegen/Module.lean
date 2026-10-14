@@ -52,11 +52,11 @@ private theorem sortPaths_perm_eq {first second : List (List Nat)}
     Path.sortBy Path.lt first = Path.sortBy Path.lt second := by
   apply List.Perm.eq_of_pairwise (le := fun a b => Path.lt a b = true)
   · intro a b _ _ ab ba
-    exact False.elim (Path.lt_asymm ab ba)
-  · exact Path.sortBy_pairwise Path.lt (fun _ _ _ => Path.lt_trans)
-      (fun _ _ => Path.lt_total) unique
-  · exact Path.sortBy_pairwise Path.lt (fun _ _ _ => Path.lt_trans)
-      (fun _ _ => Path.lt_total) (perm.nodup unique)
+    exact Bool.noConfusion ((Field.ltKey_asymm ab).symm.trans ba)
+  · exact Path.sortBy_pairwise Path.lt (fun _ _ _ => Field.ltKey_trans)
+      (fun _ _ => Field.ltKey_total) unique
+  · exact Path.sortBy_pairwise Path.lt (fun _ _ _ => Field.ltKey_trans)
+      (fun _ _ => Field.ltKey_total) (perm.nodup unique)
   · exact (Path.sortBy_perm Path.lt first).trans
       (perm.trans (Path.sortBy_perm Path.lt second).symm)
 
@@ -285,7 +285,7 @@ theorem readModule_printModule {sig : Signature Op}
   have unique : (history.map Prod.fst).Nodup := ordered.imp (by
     intro a b before equal
     subst b
-    simp [Path.lt_irrefl] at before)
+    simp only [Path.lt, Field.ltKey_irrefl, Bool.false_eq_true] at before)
   unfold printModule at printed
   rw [hoisted] at printed
   simp only [plain] at printed
@@ -1032,7 +1032,7 @@ theorem readModule_printModule_defs {sig : Signature Op}
   have unique : (history.map Prod.fst).Nodup := ordered.imp (by
     intro a b before equal
     subst b
-    simp only [Path.lt_irrefl, Bool.false_eq_true] at before)
+    simp only [Path.lt, Field.ltKey_irrefl, Bool.false_eq_true] at before)
   have shape := Eff.eq_of_block? block
   have rootDefs : root.defsOf = defs := by
     rw [← Eff.hoistAll_defsOf hoisted, Eff.defsOf_of_block? block]

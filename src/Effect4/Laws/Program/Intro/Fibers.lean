@@ -62,7 +62,7 @@ theorem intro_restore (root : NativeEff) (n : Nat) (saved : Term) (b : NativeEff
       show CodeMeans root (Prim.withFiber (EffThunk.act p)) (denoteAction root p)
       unfold denoteAction; rw [hact]
       exact CodeMeans.actMask _ _ _ (.at_ (p.child 0)) _ hact (hres _ (hw0 0)) delivers_pure
-    | false => exact ih _ (hw0 0) b (at_child_of h 0)
+    | false => exact ih _ (hw0 0) b (at_child h 0)
 
 theorem intro_yieldNow (root : NativeEff) (priority : Nat) (p : Point) (k : Nat)
     (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0) :
@@ -167,7 +167,7 @@ theorem intro_withFiber (root : NativeEff) (n : Nat) (a : ActionTerm NativeOp) (
       show CodeMeans root _ (.vis (.inr (.raceAll (racePoints root p) site)) Effects.Program.pure)
       rw [hpts]
       have hes : Node.at_ (.eff root) ((p.child 0).child 0).path = some (.effs es) :=
-        at_child_of (n := .action (.raceAll es)) (at_child_of h 0) 0
+        at_child (n := .action (.raceAll es)) (at_child h 0) 0
       obtain ⟨hlen, hc⟩ := entrants_intro root n ih es _ hw00 hes
       exact CodeMeans.actRaceAll _ _ _ _ ht hlen hc delivers_pure
     | raceAllFirst entrants site =>
@@ -177,7 +177,7 @@ theorem intro_withFiber (root : NativeEff) (n : Nat) (a : ActionTerm NativeOp) (
       show CodeMeans root _ (.vis (.inr (.raceAllFirst (racePoints root p) site)) Effects.Program.pure)
       rw [hpts]
       have hes : Node.at_ (.eff root) ((p.child 0).child 0).path = some (.effs es) :=
-        at_child_of (n := .action (.raceAllFirst es)) (at_child_of h 0) 0
+        at_child (n := .action (.raceAllFirst es)) (at_child h 0) 0
       obtain ⟨hlen, hc⟩ := entrants_intro root n ih es _ hw00 hes
       exact CodeMeans.actRaceAllFirst _ _ _ _ ht hlen hc delivers_pure
     | setInterruptible body flag => exact (actionAt_not_setInterruptible h hact).elim

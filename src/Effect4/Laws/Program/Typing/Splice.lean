@@ -82,37 +82,6 @@ theorem List.dropWhile_eq_nil_of_all {α : Type} {p : α → Bool} :
     rw [List.dropWhile_cons_of_pos (h y List.mem_cons_self)]
     exact List.dropWhile_eq_nil_of_all fun x hx => h x (List.mem_cons_of_mem y hx)
 
-/-- An address is inside its own subtree, and so is each extension of it. A step of
-`tableAt_splice`. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem Table.under_append (a b : List Nat) : Table.under a (a ++ b) = true := by
-  unfold Table.under
-  exact List.isPrefixOf_iff_prefix.mpr (List.prefix_append a b)
-
-/-- A node's own address is outside the subtree at a strict extension of it. A step of
-`tableAt_splice`. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem Table.under_prefix_false (pre rest : List Nat) (i : Nat) :
-    Table.under (pre ++ i :: rest) pre = false := by
-  unfold Table.under
-  cases h : (pre ++ i :: rest).isPrefixOf pre with
-  | false => rfl
-  | true =>
-    have hl := (List.isPrefixOf_iff_prefix.mp h).length_le
-    simp only [List.length_append, List.length_cons] at hl
-    omega
-
-/-- A sibling's subtree is outside the subtree at another child. A step of `tableAt_splice`. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem Table.under_sibling_false (pre rest b : List Nat) {i j : Nat} (hj : j ≠ i) :
-    Table.under (pre ++ i :: rest) (pre ++ j :: b) = false := by
-  unfold Table.under
-  cases h : (pre ++ i :: rest).isPrefixOf (pre ++ j :: b) with
-  | false => rfl
-  | true =>
-    have hp := (List.prefix_append_right_inj pre).mp (List.isPrefixOf_iff_prefix.mp h)
-    exact absurd (List.cons_prefix_cons.mp hp).1.symm hj
-
 /-- Entries before the subtree stay in front. A step of `tableAt_splice`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem Table.splice_append_out_left {a : List Nat} {X Y sub : List Table.Entry}
@@ -184,11 +153,6 @@ theorem tableAt_mem_path {s : Signature Op} {ctx : Option NodeEnv} {n x : Node O
     {pre b : List Nat} (h : n.at_ b = some x) : ∃ e ∈ tableAt s ctx n pre, e.path = pre ++ b := by
   have hb : b ∈ Node.addresses n := (mem_addresses_iff n b).mpr (by rw [h]; rfl)
   exact ⟨_, List.mem_map.mpr ⟨b, hb, rfl⟩, rfl⟩
-
-/-- A node has at most three children. A step of `tableAt_splice`. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem Node.child_add_three (n : Node Op) (i : Nat) : n.child (i + 3) = none := by
-  rcases n with x | x | x | x | x | x | x <;> cases x <;> rfl
 
 /-! ## What an edit that keeps its focus's type keeps -/
 

@@ -59,6 +59,9 @@ def Path.rebase (src dst p : List Nat) : List Nat :=
   | some r => dst ++ r
   | none => p
 
+/-- Whether the address `c` is inside the subtree at the address `a`. -/
+def Table.under (a c : List Nat) : Bool := a.isPrefixOf c
+
 /-! ## The layer references of a node, rewritten -/
 
 variable {Op : Type}

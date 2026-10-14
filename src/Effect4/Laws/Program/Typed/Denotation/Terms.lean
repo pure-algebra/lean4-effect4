@@ -346,13 +346,6 @@ theorem envTyped_append {w : World} {env : List Ty} {vals : List Val} {ty : Ty} 
       simp only [List.getElem?_cons_succ, List.getElem?_nil] at ht
       cases ht
 
-/-- The node at a child's path is the node's child there: the address law
-(`Effect4.Program.Node.at_child`, `Laws/Program/Address.lean`) at a program's root. -/
-theorem node_at_child {root : NativeEff} {path : List Nat} {n : Node NativeOp} {i : Nat}
-    {c : Node NativeOp} (hat : Node.at_ (.eff root) path = some n)
-    (hc : n.child i = some c) : Node.at_ (.eff root) (path ++ [i]) = some c :=
-  Effect4.Program.Node.at_child hat hc
-
 /-- The world order keeps the service table, so a later world is one `J` ranges over too. -/
 theorem serviceTy_leHost {root : ProgramSource} {w w' : World} (ord : w.leHost w')
     (tie : w.serviceTy = root.sig.serviceTy) : w'.serviceTy = root.sig.serviceTy :=
@@ -381,7 +374,7 @@ theorem pointTyped_child {src : ProgramSource} {w : World} {path : List Nat} {e 
     PointTyped src w q ty := by
   rw [← src.scopeSig_child hat i] at hcheck
   rw [← scopeParams_child hat i] at hstack
-  exact ⟨c, env, hpath ▸ node_at_child hat hc, hpath ▸ hcheck, henv, hview, hpath ▸ hstack⟩
+  exact ⟨c, env, hpath ▸ Node.at_child hat hc, hpath ▸ hcheck, henv, hview, hpath ▸ hstack⟩
 
 /-- A point typed at the scope of a path that has its parameters: its node checked at that path's
 signature, and its stack typed at that path's scope. A grandchild of a program node is one

@@ -1,3 +1,4 @@
+import Effect4.Program.Address
 import Effect4.Laws.Program.References
 import Effect4.Program.Typing.Focus
 import Effect4.Laws.Auto.Semantics
@@ -91,14 +92,26 @@ theorem envAt_append (sig : Signature Op) (root : Node Op) (env : NodeEnv)
         cases source.at_ path <;> rfl
       | some env' => exact ih source env'
 
+/-- **The node at one more child index**: a path `path ++ [i]` reads child `i` of the node at
+`path`. A step of `Node.at_child`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem at_snoc (root : Node Op) (path : List Nat) (i : Nat) :
+    root.at_ (path ++ [i]) = (root.at_ path).bind fun source => source.child i := by
+  rw [at_append]
+  cases root.at_ path with
+  | none => rfl
+  | some source =>
+    show source.at_ [i] = source.child i
+    simp only [Node.at_]
+    cases source.child i <;> rfl
+
 /-- **One more child index.** A step of `address-composes`. Its consumers are the typed print's
-laws. -/
+laws and the typed denotation. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
 theorem at_child {root source child : Node Op} {path : List Nat} {i : Nat}
     (found : root.at_ path = some source) (step : source.child i = some child) :
     root.at_ (path ++ [i]) = some child := by
-  rw [at_append, found]
-  simp only [Option.bind_some, Node.at_, step]
+  rw [at_snoc, found, Option.bind_some, step]
 
 /-- **One more child index, for the environment.** A step of `address-composes`. Its consumers
 are the typed print's laws. -/
@@ -345,5 +358,200 @@ theorem foldMapAt_layers_hom {M : Type u} {N : Type v} (φ : M → N) {unit : M}
   cases e <;> simp only [foldMapAt_layers, hop, foldMapAt_layer_hom φ (unit' := unit') hop,
     foldMapAt_layers_hom φ (unit' := unit') hop]
 end
+
+/-! ## Subtree containment (`Table.under`) -/
+
+/-- An address is inside its own subtree, and so is each extension of it. A step of
+`tableAt_splice`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Table.under_append (a b : List Nat) : Table.under a (a ++ b) = true := by
+  unfold Table.under
+  exact List.isPrefixOf_iff_prefix.mpr (List.prefix_append a b)
+
+/-- An address is under itself. A step of `module-table-splices`. Its consumers are
+`Table.bodies_mem_under` and `Table.bodies_splice`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Table.under_self (a : List Nat) : Table.under a a = true := by
+  have h := Table.under_append a []
+  rwa [List.append_nil] at h
+
+/-- A node's own address is outside the subtree at a strict extension of it. A step of
+`tableAt_splice`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Table.under_prefix_false (pre rest : List Nat) (i : Nat) :
+    Table.under (pre ++ i :: rest) pre = false := by
+  unfold Table.under
+  cases h : (pre ++ i :: rest).isPrefixOf pre with
+  | false => rfl
+  | true =>
+    have hl := (List.isPrefixOf_iff_prefix.mp h).length_le
+    simp only [List.length_append, List.length_cons] at hl
+    omega
+
+/-- A sibling's subtree is outside the subtree at another child. A step of `tableAt_splice`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Table.under_sibling_false (pre rest b : List Nat) {i j : Nat} (hj : j ≠ i) :
+    Table.under (pre ++ i :: rest) (pre ++ j :: b) = false := by
+  unfold Table.under
+  cases h : (pre ++ i :: rest).isPrefixOf (pre ++ j :: b) with
+  | false => rfl
+  | true =>
+    have hp := (List.prefix_append_right_inj pre).mp (List.isPrefixOf_iff_prefix.mp h)
+    exact absurd (List.cons_prefix_cons.mp hp).1.symm hj
+
+/-! ## Child arity, empty spines, and sort-preserving replacements -/
+
+/-- A node has at most three children. A step of `tableAt_splice`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Node.child_add_three (n : Node Op) (i : Nat) : n.child (i + 3) = none := by
+  rcases n with x | x | x | x | x | x | x <;> cases x <;> rfl
+
+/-- An empty statement list leads to no program. A step of `typed-replacement`: the dead end
+after a `return` in `NodeHasTy.child_step`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Node.at_stmts_nil (rest : List Nat) (q : Eff Op) :
+    (Node.stmts (.nil : Stmts Op)).at_ rest ≠ some (.eff q) := by
+  cases rest with
+  | nil => intro h; cases h
+  | cons j rest => intro h; cases h
+
+/-- An empty layer spine leads to no program. A step of `typed-replacement`: the dead end after
+a one-layer spine in `NodeHasTy.child_step`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Node.at_layers_nil (rest : List Nat) (q : Eff Op) :
+    (Node.layers (.nil : LayerTerms Op)).at_ rest ≠ some (.eff q) := by
+  cases rest with
+  | nil => intro h; cases h
+  | cons j rest => intro h; cases h
+
+/-- A program stands where a program stood: the replacement at an address of a program exists,
+and it is a program. A step of `typed-replacement`: `check_replace` reads it, so that the law at
+the checker answers the replaced program. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Node.replaceAt_eff {p q : Eff Op} (q' : Eff Op) {path : List Nat}
+    (hat : (Node.eff p).at_ path = some (.eff q)) :
+    ∃ p', (Node.eff p).replaceAt path (.eff q') = some (.eff p') := by
+  obtain ⟨result, hrep⟩ :=
+    Node.replaceAt_exists hat (rfl : (Node.eff q').ctorIdx = (Node.eff q).ctorIdx)
+  have hsort := (Node.replaceAt_spec hrep).2.1
+  cases result with
+  | eff p' => exact ⟨p', hrep⟩
+  | stmts _ => cases hsort
+  | stmt _ => cases hsort
+  | action _ => cases hsort
+  | effs _ => cases hsort
+  | layer _ => cases hsort
+  | layers _ => cases hsort
+
+/-- An edit of a block's main program. A step of `module-table-splices`. Its consumer is
+`annotateModule_fill_main`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Node.replaceAt_defs_main {decls : List DefDecl} {bodies : Effs Op} {main p' q' : Eff Op}
+    {layers : LayerTerms Op} {r : List Nat}
+    (h : (Node.eff (.defs decls bodies main layers)).replaceAt (1 :: r) (.eff q') = some (.eff p')) :
+    ∃ main', (Node.eff main).replaceAt r (.eff q') = some (.eff main') ∧
+      p' = .defs decls bodies main' layers := by
+  simp only [Node.replaceAt, Node.child, Option.bind_some] at h
+  cases hr : (Node.eff main).replaceAt r (.eff q') with
+  | none =>
+    rw [hr] at h
+    cases h
+  | some c =>
+    rw [hr, Option.bind_some] at h
+    cases c
+    case eff x =>
+      cases h
+      exact ⟨x, rfl, rfl⟩
+    all_goals cases h
+
+/-- An edit of a block's bodies. A step of `module-table-splices`. Its consumer is
+`annotateModule_fill_body`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Node.replaceAt_defs_body {decls : List DefDecl} {bodies : Effs Op} {main p' q' : Eff Op}
+    {layers : LayerTerms Op} {r : List Nat}
+    (h : (Node.eff (.defs decls bodies main layers)).replaceAt (0 :: r) (.eff q') = some (.eff p')) :
+    ∃ bodies', (Node.effs bodies).replaceAt r (.eff q') = some (.effs bodies') ∧
+      p' = .defs decls bodies' main layers := by
+  simp only [Node.replaceAt, Node.child, Option.bind_some] at h
+  cases hr : (Node.effs bodies).replaceAt r (.eff q') with
+  | none =>
+    rw [hr] at h
+    cases h
+  | some c =>
+    rw [hr, Option.bind_some] at h
+    cases c
+    case effs x =>
+      cases h
+      exact ⟨x, rfl, rfl⟩
+    all_goals cases h
+
+/-- An edit of the spine's head body. A step of `module-table-splices`. Its consumer is
+`Table.bodies_splice`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Node.replaceAt_effs_head {body q' : Eff Op} {rest bodies' : Effs Op} {r : List Nat}
+    (h : (Node.effs (.cons body rest)).replaceAt (0 :: r) (.eff q') = some (.effs bodies')) :
+    ∃ body', (Node.eff body).replaceAt r (.eff q') = some (.eff body') ∧
+      bodies' = .cons body' rest := by
+  simp only [Node.replaceAt, Node.child, Option.bind_some] at h
+  cases hr : (Node.eff body).replaceAt r (.eff q') with
+  | none =>
+    rw [hr] at h
+    cases h
+  | some c =>
+    rw [hr, Option.bind_some] at h
+    cases c
+    case eff x =>
+      cases h
+      exact ⟨x, rfl, rfl⟩
+    all_goals cases h
+
+/-- An edit of the spine's tail. A step of `module-table-splices`. Its consumer is
+`Table.bodies_splice`. -/
+@[semantics "initial-algebras-folds" (requirement := R14)]
+theorem Node.replaceAt_effs_tail {body q' : Eff Op} {rest bodies' : Effs Op} {r : List Nat}
+    (h : (Node.effs (.cons body rest)).replaceAt (1 :: r) (.eff q') = some (.effs bodies')) :
+    ∃ rest', (Node.effs rest).replaceAt r (.eff q') = some (.effs rest') ∧
+      bodies' = .cons body rest' := by
+  simp only [Node.replaceAt, Node.child, Option.bind_some] at h
+  cases hr : (Node.effs rest).replaceAt r (.eff q') with
+  | none =>
+    rw [hr] at h
+    cases h
+  | some c =>
+    rw [hr, Option.bind_some] at h
+    cases c
+    case effs x =>
+      cases h
+      exact ⟨x, rfl, rfl⟩
+    all_goals cases h
+
+/-- An edit below a nonempty spine keeps it nonempty. A step of `annotateModule_fill_layers`. -/
+theorem Node.replaceAt_layers_cons {h : LayerTerm Op} {t : LayerTerms Op} {r : List Nat}
+    {q : Eff Op} {ls : LayerTerms Op}
+    (hr : (Node.layers (.cons h t)).replaceAt r (.eff q) = some (.layers ls)) :
+    ∃ h' t', ls = .cons h' t' := by
+  match r, hr with
+  | [], hr =>
+    simp only [Node.replaceAt] at hr
+    split at hr
+    · cases hr
+    · cases hr
+  | i :: rest, hr =>
+    simp only [Node.replaceAt] at hr
+    cases hc : (Node.layers (.cons h t)).child i with
+    | none =>
+      rw [hc] at hr
+      cases hr
+    | some c =>
+      rw [hc, Option.bind_some] at hr
+      cases hr' : c.replaceAt rest (.eff q) with
+      | none =>
+        rw [hr'] at hr
+        cases hr
+      | some c' =>
+        rw [hr', Option.bind_some] at hr
+        unfold Node.setChild at hr
+        split at hr <;> cases hr
+        all_goals exact ⟨_, _, rfl⟩
 
 end Effect4.Program

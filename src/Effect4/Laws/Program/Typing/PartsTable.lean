@@ -153,56 +153,7 @@ theorem annotateModule_plain {s : Signature Op} {root : Except TypeRefusal EffTy
   · cases h
   · rfl
 
-/-- An edit of a block's main program. A step of `module-table-splices`. Its consumer is
-`annotateModule_fill_main`. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem Node.replaceAt_defs_main {decls : List DefDecl} {bodies : Effs Op} {main p' q' : Eff Op}
-    {layers : LayerTerms Op} {r : List Nat}
-    (h : (Node.eff (.defs decls bodies main layers)).replaceAt (1 :: r) (.eff q') = some (.eff p')) :
-    ∃ main', (Node.eff main).replaceAt r (.eff q') = some (.eff main') ∧
-      p' = .defs decls bodies main' layers := by
-  simp only [Node.replaceAt, Node.child, Option.bind_some] at h
-  cases hr : (Node.eff main).replaceAt r (.eff q') with
-  | none =>
-    rw [hr] at h
-    cases h
-  | some c =>
-    rw [hr, Option.bind_some] at h
-    cases c
-    case eff x =>
-      cases h
-      exact ⟨x, rfl, rfl⟩
-    all_goals cases h
-
-/-- An edit of a block's bodies. A step of `module-table-splices`. Its consumer is
-`annotateModule_fill_body`. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem Node.replaceAt_defs_body {decls : List DefDecl} {bodies : Effs Op} {main p' q' : Eff Op}
-    {layers : LayerTerms Op} {r : List Nat}
-    (h : (Node.eff (.defs decls bodies main layers)).replaceAt (0 :: r) (.eff q') = some (.eff p')) :
-    ∃ bodies', (Node.effs bodies).replaceAt r (.eff q') = some (.effs bodies') ∧
-      p' = .defs decls bodies' main layers := by
-  simp only [Node.replaceAt, Node.child, Option.bind_some] at h
-  cases hr : (Node.effs bodies).replaceAt r (.eff q') with
-  | none =>
-    rw [hr] at h
-    cases h
-  | some c =>
-    rw [hr, Option.bind_some] at h
-    cases c
-    case effs x =>
-      cases h
-      exact ⟨x, rfl, rfl⟩
-    all_goals cases h
-
 /-! ## The table, part by part -/
-
-/-- An address is under itself. A step of `module-table-splices`. Its consumers are
-`Table.bodies_mem_under` and `Table.bodies_splice`. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem Table.under_self (a : List Nat) : Table.under a a = true := by
-  have h := Table.under_append a []
-  rwa [List.append_nil] at h
 
 /-- The spine's own node has no part. A step of `module-annotate-table`. Its consumer is
 `Table.bodies_eq`. -/
@@ -382,46 +333,6 @@ theorem Table.bodies_mem_under {sig : Signature Op} {decls : List DefDecl} {bodi
   · simp only [Table.bodyEntry, hbody]
     exact Table.under_self _
 
-/-- An edit of the spine's head body. A step of `module-table-splices`. Its consumer is
-`Table.bodies_splice`. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem Node.replaceAt_effs_head {body q' : Eff Op} {rest bodies' : Effs Op} {r : List Nat}
-    (h : (Node.effs (.cons body rest)).replaceAt (0 :: r) (.eff q') = some (.effs bodies')) :
-    ∃ body', (Node.eff body).replaceAt r (.eff q') = some (.eff body') ∧
-      bodies' = .cons body' rest := by
-  simp only [Node.replaceAt, Node.child, Option.bind_some] at h
-  cases hr : (Node.eff body).replaceAt r (.eff q') with
-  | none =>
-    rw [hr] at h
-    cases h
-  | some c =>
-    rw [hr, Option.bind_some] at h
-    cases c
-    case eff x =>
-      cases h
-      exact ⟨x, rfl, rfl⟩
-    all_goals cases h
-
-/-- An edit of the spine's tail. A step of `module-table-splices`. Its consumer is
-`Table.bodies_splice`. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem Node.replaceAt_effs_tail {body q' : Eff Op} {rest bodies' : Effs Op} {r : List Nat}
-    (h : (Node.effs (.cons body rest)).replaceAt (1 :: r) (.eff q') = some (.effs bodies')) :
-    ∃ rest', (Node.effs rest).replaceAt r (.eff q') = some (.effs rest') ∧
-      bodies' = .cons body rest' := by
-  simp only [Node.replaceAt, Node.child, Option.bind_some] at h
-  cases hr : (Node.effs rest).replaceAt r (.eff q') with
-  | none =>
-    rw [hr] at h
-    cases h
-  | some c =>
-    rw [hr, Option.bind_some] at h
-    cases c
-    case effs x =>
-      cases h
-      exact ⟨x, rfl, rfl⟩
-    all_goals cases h
-
 /-- **An edit inside one body splices the spine's entries.** A step of `module-table-splices`.
 Its consumer is `annotateModule_fill_body`. -/
 @[semantics "initial-algebras-folds" (requirement := R14)]
@@ -542,35 +453,6 @@ theorem Table.moduleLayers_under (sig : Signature Op) (ls : LayerTerms Op) :
     intro e he
     rw [Table.moduleLayers, Annotate.checkLayers_eq] at he
     exact tableAt_path he
-
-/-- An edit below a nonempty spine keeps it nonempty. A step of `annotateModule_fill_layers`. -/
-theorem Node.replaceAt_layers_cons {h : LayerTerm Op} {t : LayerTerms Op} {r : List Nat}
-    {q : Eff Op} {ls : LayerTerms Op}
-    (hr : (Node.layers (.cons h t)).replaceAt r (.eff q) = some (.layers ls)) :
-    ∃ h' t', ls = .cons h' t' := by
-  match r, hr with
-  | [], hr =>
-    simp only [Node.replaceAt] at hr
-    split at hr
-    · cases hr
-    · cases hr
-  | i :: rest, hr =>
-    simp only [Node.replaceAt] at hr
-    cases hc : (Node.layers (.cons h t)).child i with
-    | none =>
-      rw [hc] at hr
-      cases hr
-    | some c =>
-      rw [hc, Option.bind_some] at hr
-      cases hr' : c.replaceAt rest (.eff q) with
-      | none =>
-        rw [hr'] at hr
-        cases hr
-      | some c' =>
-        rw [hr', Option.bind_some] at hr
-        unfold Node.setChild at hr
-        split at hr <;> cases hr
-        all_goals exact ⟨_, _, rfl⟩
 
 /-- **An edit inside a block's main program splices the whole table.** The splice law at the
 main program's base `[1]`. A step of `module-table-splices`. Its consumer is
