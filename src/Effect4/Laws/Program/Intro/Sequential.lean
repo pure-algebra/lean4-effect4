@@ -32,8 +32,8 @@ theorem intro_suspend (root : NativeEff) (n : Nat) (b : NativeEff) (p : Point) (
   exact ih _ (hwc completed 0) b hb
 
 /-- **An invocation** (decisions row 328): one counted suspension on both sides, then the
-definition's body at its point of the root, the request its one variable. The hop spends one
-fuel (`weight_redirect_call_lt`), so the introduction at every lighter point (`hres`) closes it. A step
+definition's body with an empty program frame and the request its one variable. The hop spends one
+fuel (`weight_redirect_params_lt`), so the introduction at every lighter point (`hres`) closes it. A step
 of `code_intro_aux`; goal G4 of the procedures note. -/
 theorem intro_call (root : NativeEff) (n : Nat) (index : Nat) (r : Term) (p : Point) (k : Nat)
     (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0) (hle : p.weight ≤ n)
@@ -53,8 +53,8 @@ theorem intro_call (root : NativeEff) (n : Nat) (index : Nat) (r : Term) (p : Po
     | none => exact codeMeans_badShape root
     | some path =>
       have hq := hres
-        { ({ p with completed } : Point).redirect path with env := [v], call := p.path :: p.call }
-        (Nat.lt_of_lt_of_le (weight_redirect_call_lt p path hpos completed [v] _) hle)
+        { ({ p with completed } : Point).redirect path with env := [v], params := [] :: p.params, call := p.path :: p.call }
+        (Nat.lt_of_lt_of_le (weight_redirect_params_lt p path hpos completed [v] ([] :: p.params) _) hle)
       unfold denoteAt at hq
       unfold resolve at hq ⊢
       dsimp only [Point.redirect] at hq ⊢

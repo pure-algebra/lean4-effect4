@@ -927,7 +927,7 @@ theorem compilesBO_onExit {σ : Type} (host : Effects.Comodel (RowSig table) σ)
       cases i
       · exact ReachesC.refl host root _ state rr
       · exact ReachesC.same (host := host) state rr
-          (fun s => step_ofExit_pass_setInterruptible root _ K false s)
+          (fun s => step_ofExit_pass_setInterruptible root _ K false true s)
           (isCall_ofExit result) (isCall_ofExit result)
     cases ex with
     | success value =>

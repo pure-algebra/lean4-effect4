@@ -2628,7 +2628,7 @@ theorem call_arm {available : Env.Requirement} {k : Nat} {r : Term} {f : Nat} (h
     (after := ((⟨d.row.normalizeTypes.answer.normalize, d.row.normalizeTypes.error.normalize,
       Env.Requirement.ofList d.row.normalizeTypes.requires⟩ : EffTy), available, available)) ?_ ?_
     (Row.subset_refl _) (Row.subset_refl _) (hden body path hbody w''
-    (serviceTy_leHost o'' htie) { p.redirect path with completed, env := [v], call := p.path :: p.call } tb (by simp only [Point.redirect, hfuel]; rfl) rfl
+    (serviceTy_leHost o'' htie) { p.redirect path with completed, env := [v], params := [] :: p.params, call := p.path :: p.call } tb (by simp only [Point.redirect, hfuel]; rfl) rfl
     ⟨body, [d.request.normalize], hbody, hbcheck', ?_, hc, ?_⟩ available bodyCovered ?_)
   · show Ty.sub tb.answer.normalize d.answer.normalize.normalize.normalize = true
     rw [Ty.normalize_idem, Ty.normalize_idem]
@@ -2640,10 +2640,10 @@ theorem call_arm {available : Env.Requirement} {k : Nat} {r : Term} {f : Nat} (h
       fits_subN w'' (show Ty.sub reqTy.normalize d.request.normalize.normalize = true from hsub)
         v (fits_mono o'' hfit)
     exact envTyped_append (envTyped_nil w'') hreqFit
-  · show StackTyped root w'' (scopeParams root.program path) p.params
+  · show StackTyped root w'' (scopeParams root.program path) ([] :: p.params)
     rw [hscope]
     exact stackTyped_nil root w'' _
-  · show AmbientStackTyped root w'' available (scopeParams root.program path) p.params
+  · show AmbientStackTyped root w'' available (scopeParams root.program path) ([] :: p.params)
     rw [hscope]
     exact ambientStackTyped_nil root w'' available _
 
