@@ -1,16 +1,16 @@
-# Codex: the last eight goals, one meaning, and the block call claim
+# Codex: the last eight goals, one meaning, and the call tree past straight lines
 
 ## The one thing to know first
 
-Revised after your first run (decisions rows 388 and 389). The owner wants the clear paths landed,
-not more boundary work. So the chunk is smaller:
-- **M3 first, the bulk:** the eight open planned goals.
-- **M1, a deletion:** the block meaning is the one meaning from now on. The unused shared fold
-  `denoteCtl` goes. No caller moves.
-- **M2, a corollary:** the call claim for completed block runs, from `h9_blocks`. The pending-call
-  form waits for SCOPE-1, which brings the host's interruption into the meaning.
+Revised after your first run (decisions rows 388 to 390). The owner's rule (row 390): robust and
+rigorous, with no shortcuts, and no stop over a technicality. We know what each claim is for.
+When a goal is false as written, state the true goal that serves the same users. Prove it and
+record the counterexample as its boundary control, then go on. Consolidate rather than case-split.
 
-A stop in one slice stops that slice only.
+- **M3 first, the bulk:** the eight open planned goals.
+- **M1, consolidation:** the block meaning is the one meaning; the unused shared fold goes.
+- **M2, the full claim:** the recorded call tree past straight lines, with pending calls at
+  every cut, over host-driven histories.
 
 ## Read first
 
@@ -50,31 +50,38 @@ message. The rules of PROC-6's brief hold
   theorem each.
 - Delete `src/Effect4/Laws/Program/DenoteCtl.lean`: nothing uses it, and no registry claim cites
   it. Remove its import.
-- No caller moves. An older meaning goes when its last caller moves for a reason of its own.
+- Move every caller that its connector moves without a case split, and delete each older
+  meaning left with no caller. Report the rest, with the reason each stays.
 
-### M2: the call claim for completed block runs
+### M2: the recorded call tree past straight lines
 
-- The claim: a completed, host-driven run of a `BlockRows` program makes exactly its meaning's
-  host calls, in order, under its submitted-reply tape. Prove it as a corollary of `h9_blocks`.
-  The tape host refuses a call that differs from the record, so a completed meaning run makes
-  the recorded calls.
-- Its first user: the cached to-do's call clause, an add on an empty list calls nothing
-  (`Test/Dogfood/Scenario/Todo/Claims.lean` holds the straight one).
-- If it is not a short corollary, write why in the receipt and stop this slice; build no prefix
-  simulation.
-- Your counterexample stays, as this claim's boundary control: an interrupted run is outside it
-  (`interrupted_not_host_driven`).
+- Widen `recorded-call-tree-prefix` (`request_leads`, `request_in_tree`, `bound_in_tree`) from
+  `StraightRows` with no cause handlers to `BlockRows`: definitions, loops and cause handlers.
+- **The histories:** those with `Run.hostDriven`, `H9Blocks`'s own premise (row 388 (1)). The
+  block meaning does not model the host's interruption, and your counterexample is the boundary
+  control. SCOPE-1's stage 5 brings interruption into the meaning, and the claim widens with it.
+- **The prefix connection:** a reached, host-driven run's pending calls and bindings sit in the
+  block tree under its submitted-reply tape, at some budget, at every command cut. Build it from
+  `compilesBlk_root` and the recorded-command invariant it lacks.
+- **The completed-run form** follows from it with `h9_blocks`: a completed run makes exactly its
+  meaning's calls, in order.
+- **The source restriction:** widen `SourceScope.ExternalOnly` to a block whose every body is
+  direct (`directHead` refuses a block today).
+- Its first user: the cached to-do's call clauses, as `serves` has them for the straight to-do
+  (`Test/Dogfood/Scenario/Todo/Claims.lean`).
 
 ## Done means
 
 - The eight goals are proved, and `#plan_status` reports the application claims proved.
 - `DenoteCtl.lean` is gone, and each older meaning's chain to the block meaning is listed.
-- The block call claim is proved, or its reason is written.
+- The recorded call tree holds on `BlockRows` over host-driven histories, with the cached
+  to-do's call clauses proved on it.
 
 ## Stop and report at once when
 
-- a goal is false as stated: give the counterexample, and go on with the other slices;
-- a slice needs an edit to the machine, `Eff`, `Ty` or `Store.Val`.
+- a slice needs an edit to the machine, `Eff`, `Ty` or `Store.Val`;
+- no true statement serves a goal's users: give the counterexample. A goal false only as
+  written is corrected and proved, not stopped (row 390).
 
 ## What you report
 
