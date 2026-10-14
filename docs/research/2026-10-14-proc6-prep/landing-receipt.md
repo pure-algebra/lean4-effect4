@@ -319,3 +319,35 @@ The independent Cached audit checks 26 declarations with no planned goals or dep
 No behavior gate is reached by B.
 
 [The B manifest](landing-evidence/b/manifest.json) binds the retained logs, statement comparison and proof receipts.
+
+## Slice C
+
+The two block-fragment obligations are proved in place, with their approved statements unchanged.
+Base: `5af6bc8d5`. Code head: `f05a7b117019a688ee6477e841d16302375b267a`.
+The changed files are `FragmentBlock.lean` and `Agreement/BlockPlain.lean`.
+The semantics producer updates `generated/semantics.md`.
+
+`bodiesOf_blockRows` proves membership of each indexed definition body.
+`PlainHooks.of_blockRows` supplies the resolver and suspension hooks from the whole root block.
+Their helpers follow body and argument spines, including lexical calls, invocations and parameters.
+Placement: translation-simulation, rows-block-host, R6.
+The consumers are `compilesBlk` and the hosted session proof.
+The reach remains the stage 1 block fragment without context constructs.
+These laws establish no scheduler progress or target behavior.
+
+The shared slot runs `bash /tmp/proc6-landing/c-integrated-checks.sh`:
+
+| Command | Result | Evidence |
+| --- | --- | --- |
+| `lake build Effect4.Laws.Program.FragmentBlock Effect4.Laws.Program.Agreement.BlockPlain Effect4.Laws` | PASS, 1096 jobs | `c-integrated-build.log` |
+| `lake env lean -DwarningAsError=true /tmp/proc6-landing/c-integrated-audit.lean` | PASS | `c-integrated-audit.log` |
+| `make -o ts/eff/node_modules -o harness/truth/node_modules -o apps/todo/node_modules gen-semantics` | PASS, 1608 jobs | `c-integrated-semantics.log` |
+
+```text
+#axiom_audit: 183 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
+
+Both C goals report proved, with zero next goals.
+`Effect4.Run.h9_blocks` remains a goal at this checkpoint.
+No behavior gate is reached.
+[The C manifest](landing-evidence/c/manifest.json) retains exact evidence and source hashes.
