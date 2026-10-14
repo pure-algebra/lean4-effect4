@@ -72,7 +72,7 @@ structure Point where
   machine changes no format). -/
   root : Nat := 0
   /-- **The stack of the programs that the running calls passed** (decisions row 340). The top
-  entry holds the sites that the innermost invocation passed, one for each parameter, and each
+  entry holds the sites that the innermost call passed, one for each parameter, and each
   entry below is its caller's. A parameter's run pops the top entry, so the passed program runs
   at its caller's stack. Empty outside a definition's body. -/
   params : List (List ArgSite) := []
@@ -1452,7 +1452,7 @@ def suspendBodyAt (root : NativeEff) : EffThunk → NCode
         -- the environment is built from the point's own (`take 0`, then the request's value), as
         -- `Point.layerBuild` builds an empty one: the engine keeps it in its environment carrier
         | some v, some path =>
-          resolve root { p.redirect path with env := p.env.take 0 ++ [v], call := p.path :: p.call }
+          resolve root { p.redirect path with env := p.env.take 0 ++ [v], params := [] :: p.params, call := p.path :: p.call }
         | _, _ => badShape
       -- an invocation with programs (decisions row 340): as an invocation, with the sites of the
       -- call's programs, under this point's environment, pushed on the stack of parameters

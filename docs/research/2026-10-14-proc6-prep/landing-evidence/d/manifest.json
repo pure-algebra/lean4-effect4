@@ -1,0 +1,40 @@
+{
+  "stage": "D",
+  "files": [
+    {
+      "file": "d-integrated-audit.lean",
+      "bytes": 377,
+      "sha256": "b5e5b4dc8ecc30faaa5547efe3765a820e6966f7998f40f4c6d0e5da9c56803a"
+    },
+    {
+      "file": "d-integrated-audit.log",
+      "bytes": 642,
+      "sha256": "db179cec650290c8ae0314aeff8d0234afb43ed4739e2ca446e2596656c7efb7"
+    },
+    {
+      "file": "d-integrated-build.log",
+      "bytes": 357,
+      "sha256": "3bbc129debca677d63f9d1f4394664c89f230794eefee5a8db0fb0d0cb079dc3"
+    },
+    {
+      "file": "d-integrated-checks.sh",
+      "bytes": 473,
+      "sha256": "aa9999dbef9918c564431cb49252827e635e1120a8a397726585b918755cfa2f"
+    },
+    {
+      "file": "d-integrated-semantics.log",
+      "bytes": 752,
+      "sha256": "f2a90eae8166edfdfce4cb3efabaad50cc388e49326543a318ab8b09625ed23c"
+    },
+    {
+      "file": "d-receipt.txt",
+      "bytes": 3406,
+      "sha256": "332cb8f91016008a90ff3d934a4651648d703797162df29615032cb8f1ef3c4a"
+    },
+    {
+      "file": "sources.json",
+      "bytes": 288,
+      "sha256": "1a2a8f051c581ffad36592c3df57fe6cacfd8122a757bfbf51cb00e7fe897910"
+    }
+  ]
+}

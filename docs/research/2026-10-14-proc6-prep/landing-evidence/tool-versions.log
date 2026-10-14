@@ -1,0 +1,9 @@
+$ /tmp/proc6-landing/bin/bun --no-install --version
+1.4.2
+exit 0
+$ ./ts/eff/node_modules/.bin/tsgo --version
+Version 7.0.0-dev.20260629.1
+exit 0
+$ opam exec --switch=effect4 -- dune --version
+3.24.2
+exit 0

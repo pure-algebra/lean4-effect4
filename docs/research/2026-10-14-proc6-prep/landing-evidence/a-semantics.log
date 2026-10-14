@@ -1,0 +1,10 @@
+lake build semantics-report Effect4.Laws Test.Program.TypedProgBindRed Test.Dogfood.P1HttpCache Test.Dogfood.P2HandlerLayers Test.Dogfood.P3WorkerQueue Test.Dogfood.P4RateLimiter Test.Dogfood.P5LedgerService Test.Dogfood.Scenario Test.Dogfood.Scenario.Workers Test.Dogfood.Scenario.Routing Test.Dogfood.Scenario.Atomic Test.Dogfood.Scenario.Timeout Test.Dogfood.Scenario.Tape Test.Dogfood.Scenario.QueueWorkers Test.Dogfood.Bank Test.Dogfood.Scenario.Todo.Claims Test.Dogfood.Scenario.Todo.Cached Tools.View.FlowReach
+✔ [1640/1645] Built Tools.View.Program (988ms)
+✔ [1641/1645] Built Test.Program.TypedProgBindRed (1.6s)
+✔ [1643/1645] Built Tools.View.Flow (1.5s)
+✔ [1644/1645] Built Tools.View.FlowLaws (1.8s)
+✔ [1645/1645] Built Tools.View.FlowReach (686ms)
+Build completed successfully (1645 jobs).
+rm -rf .lake/gen/semantics-report && mkdir -p .lake/gen/semantics-report
+lake exe semantics-report .lake/gen/semantics-report
+cp .lake/gen/semantics-report/semantics.md generated/semantics.md

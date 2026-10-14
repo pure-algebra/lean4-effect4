@@ -392,25 +392,25 @@ theorem step_success_pass_onFailure (v : Val) (body : NCode) (n : EffName) (K : 
       localStep root (fiberOf (Prim.success v) K i) s := by
   aesop
 
-/-- A value passes the restoring frame a mask left: the fiber is interruptible again. -/
-theorem step_success_pass_setInterruptible (v : Val) (K : List NCode) (i : Bool) (s : Stores) :
-    localStep root (fiberOf (Prim.success v) (Prim.setInterruptible true :: K) i) s =
-      localStep root (fiberOf (Prim.success v) K true) s := by aesop
+/-- A value passes the restoring frame a mask left: the fiber takes the saved flag. -/
+theorem step_success_pass_setInterruptible (v : Val) (K : List NCode) (i flag : Bool) (s : Stores) :
+    localStep root (fiberOf (Prim.success v) (Prim.setInterruptible flag :: K) i) s =
+      localStep root (fiberOf (Prim.success v) K flag) s := by aesop
 
-/-- A cause passes the restoring frame a mask left: the fiber is interruptible again. -/
-theorem step_failure_pass_setInterruptible (c : CauseV) (K : List NCode) (i : Bool)
+/-- A cause passes the restoring frame a mask left: the fiber takes the saved flag. -/
+theorem step_failure_pass_setInterruptible (c : CauseV) (K : List NCode) (i flag : Bool)
     (s : Stores) :
-    localStep root (fiberOf (Prim.failure c) (Prim.setInterruptible true :: K) i) s =
-      localStep root (fiberOf (Prim.failure c) K true) s := by aesop
+    localStep root (fiberOf (Prim.failure c) (Prim.setInterruptible flag :: K) i) s =
+      localStep root (fiberOf (Prim.failure c) K flag) s := by aesop
 
 /-- Either exit passes the restoring frame. -/
-theorem step_ofExit_pass_setInterruptible (ex : ExitV) (K : List NCode) (i : Bool)
+theorem step_ofExit_pass_setInterruptible (ex : ExitV) (K : List NCode) (i flag : Bool)
     (s : Stores) :
-    localStep root (fiberOf (Prim.ofExit ex) (Prim.setInterruptible true :: K) i) s =
-      localStep root (fiberOf (Prim.ofExit ex) K true) s := by
+    localStep root (fiberOf (Prim.ofExit ex) (Prim.setInterruptible flag :: K) i) s =
+      localStep root (fiberOf (Prim.ofExit ex) K flag) s := by
   cases ex
-  · exact step_success_pass_setInterruptible root _ K i s
-  · exact step_failure_pass_setInterruptible root _ K i s
+  · exact step_success_pass_setInterruptible root _ K i flag s
+  · exact step_failure_pass_setInterruptible root _ K i flag s
 
 end frames
 
@@ -1418,13 +1418,13 @@ theorem suspendBodyAt_suspend {root : NativeEff} {q : Point} {k : Nat} {b : Nati
   simp only [suspendBodyAt, hf, h]
 
 /-- An invocation's suspension body (decisions row 328): the request evaluated at the point,
-then the definition's body resolved at its point of the root, the request its one variable. -/
+then the definition's body resolved with an empty program frame and the request its one variable. -/
 theorem suspendBodyAt_call {root : NativeEff} {q : Point} {k : Nat} {index : Nat} {r : Term}
     (hf : q.fuel = k + 1)
     (h : Node.at_ (Node.eff root) q.path = some (Node.eff (.perform (.call index) r))) :
     suspendBodyAt root (EffThunk.body q) =
       match evalTerm q.env r, defBodyPath root index with
-      | some v, some path => resolve root { q.redirect path with env := [v], call := q.path :: q.call }
+      | some v, some path => resolve root { q.redirect path with env := [v], params := [] :: q.params, call := q.path :: q.call }
       | _, _ => badShape := by
   simp only [suspendBodyAt, hf, h]
   rfl
@@ -1975,7 +1975,7 @@ theorem localRun_compile (root : NativeEff) :
         (fiberOf (Prim.ofExit result) K i) state := by
       cases i
       · exact Reaches.refl root _ state
-      · exact Reaches.same state (fun s => step_ofExit_pass_setInterruptible root _ K false s)
+      · exact Reaches.same state (fun s => step_ofExit_pass_setInterruptible root _ K false true s)
     cases ex with
     | success value =>
       let program := compileEff f ({ p with completed := [] }.childWith 1
@@ -2052,7 +2052,7 @@ theorem localRun_compile (root : NativeEff) :
   | .service _, _, _, _, _, hpl, _, _
   | .provideService _ _ _, _, _, _, _, hpl, _, _
   | .catchIf _ _ _, _, _, _, _, hpl, _, _
-  | .restore _ _, _, _, _, _, hpl, _, _ => by simp [Straight] at hpl
+  | .restore _ _, _, _, _, _, hpl, _, _ => by simp only [Straight, Bool.false_eq_true] at hpl
 
 /-- At the root, on the empty stack, from the empty stores: the local run finishes with the
 meaning inside `steps e + 1` steps (the last one is the exit leaving the empty stack). -/

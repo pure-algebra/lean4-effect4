@@ -1,0 +1,58 @@
+Slice D: block compilation proofs
+
+Coordinator must know before merging: all four frozen goals in Blocks.lean are proved in place.
+This branch starts before B/C proof commits, so 10 declarations still depend on their existing
+planned goals. The parent must rebuild/audit after B/C integration to measure the final closure.
+
+Base: 5290731d502d5a9f3335d950b8117b4146143eb4.
+First coherent commit: 64248edfd (addresses, root connector and preliminary helpers).
+Final commit: 0de7523935800cc558503f022efffb22420f652e (main compilation induction).
+Branch: codex/proc6-blockcompile.
+Worktree: /private/tmp/proc6-blockcompile.
+Changed file, both commits: src/Effect4/Laws/Program/Agreement/Blocks.lean only.
+
+Frozen statements retained:
+- defBodyPath_body: proved by actual body-spine lookup.
+- argSitesAt_body: proved by argument-spine lookup and captured-environment equality.
+- compilesBlk: proved by outer budget induction and mutual body/argument-spine induction.
+- compilesBlk_root: proved from compilesBlk at the root main child, or compile-fuel exhaustion.
+
+The local control helpers adapt LoopCalls' existing proof architecture to the block reader.
+Calls push the empty lexical frame introduced in A. Invocations retain captured environments and
+use the caller's argument budget, then weaken the cut bound through RunsToDO.mono.
+Missing definitions, missing parameters and unevaluated requests retain badShape behavior.
+The loop helper retains the same parameter frame through each administrative point.
+No core syntax, compile definition, machine step or semantic definition changed.
+
+Final narrow build:
+LAKE_CACHE_DIR=/private/tmp/proc6-blockcompile-cache \
+  /Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake build Effect4.Laws.Program.Agreement.Blocks
+Result: Build completed successfully (416 jobs); leaf build 16s.
+Log: /private/tmp/proc6-landing-d-final-build.log.
+
+Exact audit source: /private/tmp/proc6-blockcompile-audit.lean.
+It imports Blocks and ProofGraph.AxiomAudit, then runs:
+#axiom_audit Effect4.Laws.Program.Agreement.Blocks
+
+Command:
+LAKE_CACHE_DIR=/private/tmp/proc6-blockcompile-cache \
+  /Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean /private/tmp/proc6-blockcompile-audit.lean
+Result:
+#axiom_audit: 229 declarations within [propext, Quot.sound], 10 of them modulo planned goals; 0 planned goals
+Log: /private/tmp/proc6-landing-d-audit-final2.log.
+
+The first final audit detected Classical.choice in the parameter arm because omega closed an
+arbitrary conclusion by contradiction. The repair first proves False arithmetically, then uses
+False.elim. The final build and exact audit above check the repaired saved proof.
+
+Other checks:
+- git diff --check: clean before commits.
+- Prohibited tactic scan over Blocks.lean: no try, first fallback, simp_all or bare simp/simpa.
+- Both commit messages inspected; exact Co-Authored-By: Codex <noreply@openai.com> trailer present.
+- No planned goal remains in this module.
+- No outside behavior gate is reached by proof-only changes to this leaf.
+- No push, download, source edit outside the owned path or broad battery run occurred.
+
+Open: upstream B/C obligations at this branch's base; the parent reports their new theorem proofs.
+The full rows-block-host claim still needs E/F, outside this slice. This work establishes local
+forward agreement at emptyCtx, not scheduler progress or host/runtime conformance.

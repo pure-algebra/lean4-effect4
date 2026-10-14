@@ -1,0 +1,9 @@
+✔ [1177/1190] Built Test.Dogfood.Application (11s)
+✔ [1182/1190] Built Test.Dogfood.Scenario.Todo (11s)
+✔ [1185/1190] Built Test.Dogfood.Bank (1.5s)
+✔ [1186/1190] Built Tools.RunChecks (1.6s)
+✔ [1187/1190] Built Test.Dogfood.ApplicationDefs (1.4s)
+✔ [1188/1190] Built Test.Dogfood.Scenario.Routing.Calls (2.1s)
+✔ [1189/1190] Built Test.Dogfood.Scenario.Todo.Tree (2.3s)
+✔ [1190/1190] Built Test.Dogfood.Scenario.Todo.Cached (2.3s)
+Build completed successfully (1190 jobs).

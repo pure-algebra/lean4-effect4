@@ -1,0 +1,66 @@
+{
+  "base": "42ae57813a368b2acfa349f9d06768aa89e729b9",
+  "head": "b7ca24a26fbfb69b29ccfc137d1ec7d0dfb7ed9f",
+  "files": [
+    {
+      "path": "Test/Dogfood/Scenario/Todo/Cached.lean",
+      "sha256": "adacc3e1644bfce883491ac88da563b271c461c001c16dbacdece9f7a1c58016",
+      "deleted": false
+    },
+    {
+      "path": "Test/Program/BlockMeaning.lean",
+      "sha256": "5db2459d3a3294442bb850fd870f0d8e47703bff8162a63b8f719481d5d4cc9e",
+      "deleted": false
+    },
+    {
+      "path": "generated/semantics.md",
+      "sha256": "4d9422b6c6037be26179c9a5826f95e6462c9f6c953408777d7c10e5cc7e4dd9",
+      "deleted": false
+    },
+    {
+      "path": "src/Effect4/Laws.lean",
+      "sha256": "6e6197b0b8eb7c407b6c98651513137fbc77f7ec4127bbbf6f4f923fe602a7f8",
+      "deleted": false
+    },
+    {
+      "path": "src/Effect4/Laws/Author.lean",
+      "sha256": "6bf0213f9205956b101d7fb2f1668bdd855d55f3b1f8176d3d7ccbe76c5cb5f2",
+      "deleted": false
+    },
+    {
+      "path": "src/Effect4/Laws/Effects/Mrec.lean",
+      "sha256": null,
+      "deleted": true
+    },
+    {
+      "path": "src/Effect4/Laws/Library/Ref/Cache.lean",
+      "sha256": "df80e2509d67e9df87bfbe254d35a973b4b53f547e1ce16459af15e30de8ff60",
+      "deleted": false
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Block.lean",
+      "sha256": "bb7623912fed3a7c9f8efea444f705b3038078026c8641742705f437375bad98",
+      "deleted": false
+    },
+    {
+      "path": "src/Effect4/Laws/Program/BlockMeaning.lean",
+      "sha256": "0a735ae9378ffd73a3185ff40d43caf51bf1ea9ca24bff873aa6c7a7cc1fc240",
+      "deleted": false
+    },
+    {
+      "path": "src/Effect4/Laws/Program/FragmentBlock.lean",
+      "sha256": "2cd04e41e1b2f7165a7c3820602ec54fcaca3f247ceb5be4f9ecbebde954f8dc",
+      "deleted": false
+    },
+    {
+      "path": "src/Effect4/Laws/Program/ParamRows.lean",
+      "sha256": "02b2e11623333473718fbe9869dbe06966888a29605a499e98e313243ce91c18",
+      "deleted": false
+    },
+    {
+      "path": "tools/ProofGraph/Registry.lean",
+      "sha256": "47854baa62640fbb6e840a2208a28e2b832048baaedab5dd922fc010567ca55d",
+      "deleted": false
+    }
+  ]
+}

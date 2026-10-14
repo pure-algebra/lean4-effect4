@@ -644,7 +644,7 @@ def denoteEffBody (root : NativeEff) (rec : NativeEff → Point → RProgram)
         match evalTerm p.env request, defBodyPath root k with
         | some v, some path =>
           match Node.at_ (Node.eff root) path with
-          | some (Node.eff body) => rec body { p.redirect path with completed, env := [v], call := p.path :: p.call }
+          | some (Node.eff body) => rec body { p.redirect path with completed, env := [v], params := [] :: p.params, call := p.path :: p.call }
           | _ => .pure badShapeExit
         | _, _ => .pure badShapeExit)
     -- a parameter's run (decisions row 340), as `suspendBodyAt` decides it: the counted step,
@@ -1030,7 +1030,7 @@ theorem denoteR_perform (op : NativeOp) (r : Term) (h : p.fuel ≠ 0) :
            | some v, some path =>
              match Node.at_ (Node.eff root) path with
              | some (Node.eff body) => denoteR root body
-                 { p.redirect path with completed, env := [v], call := p.path :: p.call }
+                 { p.redirect path with completed, env := [v], params := [] :: p.params, call := p.path :: p.call }
              | _ => .pure badShapeExit
            | _, _ => .pure badShapeExit)
        | .param i => suspendR p (constructR fun completed =>
@@ -1055,7 +1055,7 @@ theorem denoteR_perform (op : NativeOp) (r : Term) (h : p.fuel ≠ 0) :
          | .program => pending .unsupported p) := by
   cases hf : p.fuel with
   | zero => exact (h hf).elim
-  | succ f => budget hf; try rfl
+  | succ f => budget hf
 
 /-- The synchronous fragment retains its old semantic head under external-first routing. -/
 theorem denoteR_perform_sync (op : NativeOp) (r : Term) (h : p.fuel ≠ 0)

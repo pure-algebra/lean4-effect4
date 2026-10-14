@@ -1,0 +1,90 @@
+PROC-6 risk 6 preflight — read-only source audit
+
+Pin: 5290731d502d5a9f3335d950b8117b4146143eb4 in /Users/pooks/Dev/lean4-effect4-codex.
+Read: continue-prompt.md, locked fifth plan Stage 4/risk 6, and the named consumers.
+No source edits, Lean commands, builds or new proof statements.
+
+VERDICT
+
+No demonstrated stop condition. The existing consumers do not require a forward path through an exact intermediate NFiber. They consume composition plus stopped local-run observations. Those observations MUST include waits with their exact code/request, stores and host state, not only completed exits. A joinability replacement preserving only exited roots would break existing H8/frontier consumers and fail risk 6.
+
+This is a source-level feasibility assessment, not a proved joinability construction. Stage F still owes precise definitions, terminal reflection, composition and the wrapper connector. Do not claim risk 6 is Lean-closed on this report.
+
+THE KEY EXISTING CONTRACT
+
+Agreement/Segment.lean ReachesC is already explicitly documented as a relation on final observations, not a path. Its definition is
+  forall n, localRunC host root (n+c) fr s r = localRunC host root n fr' s' r'.
+The RunEnd observation includes exit and waits. A wait retains its current NCode, stores and host state. A wait and divergence are distinct. Hence 'final outcome' in risk 6 can legitimately mean a stopped RunEnd even when Pos is live.
+
+EXACT LEADS READERS
+
+1. Agreement/Hosted.lean Leads
+   - live->live currently contains an existential ReachesC offset.
+   - live->done contains a finite localRunC exit.
+   - done->done contains equal exit, stores and host state.
+   - done->live is impossible.
+   Leads.trans composes these cases. It uses shifted local-run equality to transport a later stop, not identity of an intermediate frame.
+
+2. Api/SessionMeaning.lean tape_holds_host
+   - empty tape: Leads.refl.
+   - answer: holds_answer obtains hL1; recursive tape_holds_host obtains hL'; the result is hL1.trans hL'.
+   - evaluate and flush: the same transitive composition.
+   It never destructs Leads or compares intermediate NFibers from Leads.
+   Its answer arm also uses Holds.hostAnswer_eq to connect an actual parked request to the host's answer. This is a NON-FINAL boundary fact, but it reads Holds, not Leads. A new Holds must retain the actual Mcall row/request correspondence. Merely preserving final exits would not supply this fact.
+
+3. Agreement/Hosted.lean holds_answer
+   Uses ReachesC.answer to connect the actual host call to prepared answer code, then Leads.trans with the next segment's LeadsQ. It needs a forward-step embedding into the new relation and composition. It does not require every related position to be reachable in the forward direction.
+
+4. Agreement/Hosted.lean meaning_settled
+   - yielded case: ruled out by armed=[]; no semantic read.
+   - waiting host-call case: destructs live->live Leads as c,hreach, applies hreach(n+1), combines it with localRunC_waits, and obtains a STOPPED waits observation from the root. It then compares stopped outcomes with the forward meaning and rules out a finished meaning or compile-frontier divergence.
+   - exited case: destructs live->done Leads as a finite exit and compares stopped outcomes.
+   The waiting case needs exact terminal wait preservation, but not an exact forward path to the waiting NFiber.
+
+5. Agreement/Hosted.lean meaning_settled_tape
+   Supplies an empty reply tape's no-answer fact, then calls meaning_settled. No extra read of Leads.
+
+6. Agreement/HostedLoop.lean hostRunB_waits
+   Destructs live->live Leads and builds a finite stopped waits observation via localRunC_waits. It uses that observation to refute a finished approximant or compile-frontier divergence. It does not require a bounded step count fixed independently of the supplied Leads witness.
+
+7. Agreement/HostedLoop.lean hostRunB_exits
+   Destructs live->done Leads to extract finite exit, calls localRunC_to_rowsB, then uses budget stability. No intermediate position equality.
+
+8. Agreement/HostedLoop.lean localWaitC_to_rowsB
+   This is the strongest wait consumer. It derives exact waits fr.current s st from Leads plus IsCall/no-answer. It compares that with the forward run's waits, then injects equal NCode, stores and host state. Finally it rewrites callOf to fix the exact row/request. This is stopped-observation equality, despite the target Pos being live. It cannot be weakened to 'neither side exits' or 'both are frontier'.
+
+9. Agreement/HostedLoop.lean meaning_settledB_tape
+   Uses hostRunB_waits for the parked-call case and hostRunB_exits for the done case. No stronger use.
+
+10. Agreement/HostedBlocks.lean hostRunBlockB_exits (placed goal)
+    Reads Leads only at a done target, by its statement. Stage 3's block capstone requires finite exit reflection, with exact stores and host state.
+
+DOWNSTREAM WAITING CONSUMERS THAT MUST SURVIVE
+
+Api/SessionMeaningLoop.lean rows_loop_frontier and rows_loop_frontier_host:
+- obtain hL from session_settled;
+- use Settled's Mcall equality to identify the actual request and store state;
+- rewrite the corresponding Pos equality into hL;
+- call localWaitC_to_rowsB;
+- conclude exact waiting row, request, machine stores and host state.
+Their public statements are not restricted to completed runs. They are legitimate frontier theorems and must remain so.
+
+Run/CallTree.lean tree_wait_of_leads consumes localWaitC_to_rowsB to fix a live request's row/request in the call tree, even before settlement. request_leads produces the related call position; request_in_tree consumes it. LeadsTape.toLeads currently embeds a ReachesC witness. Its production of Leads can be preserved by embedding shifted observation equality into joinability. Its use does not force joinability back into a forward path.
+
+SUFFICIENT CONNECTOR OBLIGATIONS FOR STAGE F
+
+- Reflexivity and transitivity of the new Leads/LeadsQ.
+- Embed an ordinary ReachesC step/answer into the new relation.
+- If a related target stops with RunEnd.exit, the source stops finitely with the SAME exit/stores/host state.
+- If a related target stops with RunEnd.waits, the source stops finitely with the SAME waiting NCode/stores/host state. The NCode then determines row/request through callOf.
+- Preserve the full done-position distinction; no done->live bridge that could turn an exit into a wait.
+- Retain actual machine-call correspondence in Holds.hostAnswer_eq and the Mcall branch of Settled. Joinability is not a replacement for those operational boundary facts.
+- Show yield wrappers take finitely many local administrative steps without reading a host reply, mutating stores/context, or changing the stopped observation.
+
+An observational joinability relation with shifts on both sides can plausibly provide these facts, using localRunC_mono and determinism. A target stop transports to the common descendant and back to the source after enough fuel. This is reasoning about eventual stopped observations, not an asserted implementation or proof. Waiting positions require the same treatment as exits.
+
+IMPORTANT SCOPE DISTINCTION
+
+ReachesC.none/lt/rest encode one-sided bounded progress and are used by the old default-budget flushAll_Myield proof. They do not follow unchanged from symmetric joinability. The locked plan keeps those old context-free progress results at their present scope. Do not globally redefine ReachesC or silently reuse its one-sided fuel laws for general-budget Leads. The general scheduler relation can sit at the Leads/Settled/Holds connector while retaining the local forward relation and its scoped progress laws.
+
+No budget invariant, row restriction or compile change is proposed by this audit.

@@ -737,7 +737,7 @@ theorem localRun_compileB (k : Nat) :
         (fiberOf (Prim.ofExit result) K i) state := by
       cases i
       · exact Reaches.refl root _ state
-      · exact Reaches.same state (fun s => step_ofExit_pass_setInterruptible root _ K false s)
+      · exact Reaches.same state (fun s => step_ofExit_pass_setInterruptible root _ K false true s)
     cases exb with
     | success value =>
       let program := compileEff f ({ p with completed := [] }.childWith 1

@@ -381,75 +381,102 @@ theorem invalidate_get {σ : Type} {table : RowTable} (host : Effects.Comodel (R
   rw [invalidate_run host I c st held, Option.bind_some]
   exact get_miss host hn st hempty
 
-/-! ## Invoking the banked cache in a block (`denoteBody`, `hostRunBody`) -/
+/-! ## Invoking the banked cache in the budgeted block meaning -/
 
-/-- `getBody` with one denoted program parameter `param` whose tree at `Val.unit` is the row `n`'s
-call tree has the call tree of `paramsAsRows n getBody`. Placement: as `invalidate_get`; consumer:
-`hostRunBody_invoke_get`. -/
+/-- Step of ref-cache-invalidated-reads-through, translation-simulation, R10.
+The loader agrees with a host row at the current context and unit request.
+Consumer: `hostRunBlockB_invoke_get`; this tree equation establishes no machine agreement. -/
 @[semantics "translation-simulation" (requirement := R10)]
-theorem denoteBody_getBody (table : RowTable) (bodies : List NativeEff) (fuel : Nat) (n : Nat)
-    (param : ParamTree table) (env : List Val)
-    (hparam : param Val.unit = denoteRows table (.perform (.external n) (.lit .unit)) []) :
-    denoteBody table bodies fuel [param] getBody env =
-      denoteRows table (paramsAsRows n getBody) env := by
-  cases fuel <;> {
-    change Effects.Program.bind
-        ((denoteRows.alg table).eff_perform .refGet (.var 0) env)
-        (seqRows fun v =>
-          match (evalTerm (env ++ [v]) (.var 1)).bind Decision.option.decide with
-          | some (true, bound) =>
-            Effects.Program.bind (param Val.unit)
-              (seqRows fun w => denoteRows table missRest (env ++ [v] ++ bound.toList ++ [w]))
-          | some (false, bound) =>
-            (denoteRows.alg table).eff_succeed (.var 2) (env ++ [v] ++ bound.toList)
-          | none => pure badShapeExit) =
-      Effects.Program.bind
-        ((denoteRows.alg table).eff_perform .refGet (.var 0) env)
-        (seqRows fun v =>
-          match (evalTerm (env ++ [v]) (.var 1)).bind Decision.option.decide with
-          | some (true, bound) =>
-            Effects.Program.bind (denoteRows table (.perform (.external n) (.lit .unit)) [])
-              (seqRows fun w => denoteRows table missRest (env ++ [v] ++ bound.toList ++ [w]))
-          | some (false, bound) =>
-            (denoteRows.alg table).eff_succeed (.var 2) (env ++ [v] ++ bound.toList)
+theorem denoteBlockB_getBody (table : RowTable) (bodies : List NativeEff) (fuel : Nat) (n : Nat)
+    (param : ParamTreeB table) (env : List Val) (ctx : Ctx)
+    (hparam : param ctx Val.unit = some <$> denoteRows table (.perform (.external n) (.lit .unit)) []) :
+    denoteBlockB table bodies fuel [param] getBody ctx env =
+      some <$> denoteRows table (paramsAsRows n getBody) env := by
+  have hrest (env' : List Val) :
+      denoteBlockB table bodies 0 [param] missRest ctx env' =
+        some <$> denoteRows table missRest env' :=
+    denoteBlockB_straight table bodies 0 [param] missRest ctx env' rfl rfl
+  cases fuel <;>
+    change thenOpt (some <$> (denoteRows.alg table).eff_perform .refGet (.var 0) env)
+      (fun
+        | .success v => match (evalTerm (env ++ [v]) (.var 1)).bind Decision.option.decide with
+          | some (true, bound) => thenOpt (param ctx Val.unit) (fun
+            | .success w => denoteBlockB table bodies 0 [param] missRest ctx (env ++ [v] ++ bound.toList ++ [w])
+            | .failure cause => pure (some (.failure cause)))
+          | some (false, bound) => some <$> (denoteRows.alg table).eff_succeed (.var 2) (env ++ [v] ++ bound.toList)
+          | none => pure (some badShapeExit)
+        | .failure cause => pure (some (.failure cause))) =
+      some <$> ((denoteRows.alg table).eff_perform .refGet (.var 0) env).bind
+        (seqRows fun v => match (evalTerm (env ++ [v]) (.var 1)).bind Decision.option.decide with
+          | some (true, bound) => (denoteRows table (.perform (.external n) (.lit .unit)) []).bind
+            (seqRows fun w => denoteRows table missRest (env ++ [v] ++ bound.toList ++ [w]))
+          | some (false, bound) => (denoteRows.alg table).eff_succeed (.var 2) (env ++ [v] ++ bound.toList)
           | none => pure badShapeExit)
-    rw [hparam]
-  }
+  all_goals
+    rw [thenOpt_map_some, map_programBind]
+    congr 1
+    funext ex
+    cases ex with
+    | failure cause => rfl
+    | success v =>
+      dsimp only [seqRows]
+      cases hd : (evalTerm (env ++ [v]) (.var 1)).bind Decision.option.decide with
+      | none => rfl
+      | some pair =>
+        obtain ⟨flag, bound⟩ := pair
+        cases flag with
+        | false => rfl
+        | true =>
+          dsimp only
+          rw [hparam, thenOpt_map_some, map_programBind]
+          congr 1
+          funext ex
+          cases ex with
+          | failure cause => rfl
+          | success w => exact hrest _
 
-/-- **Invoking `get` by `Eff.invoke` runs `paramsAsRows n getBody`**: at a positive call budget,
-when definition `k` of `bodies` is `getBody`, the request evaluates to `Val.cell q`, and the caller's
-loader `loader` denotes the row `n`'s call tree, `hostRunBody` on `.invoke k r (.cons loader .nil)`
-is `hostRun` on `paramsAsRows n getBody` at `[Val.cell q]`. Placement: as `invalidate_get`;
-consumer: `Test.Dogfood.Scenario.Todo.Cached.cached_list_after_add`. -/
+/-- Step of ref-cache-invalidated-reads-through, translation-simulation, R10.
+A present cache body runs its supplied loader at the invocation context.
+Consumer: the cached application reader; the host and loader equality remain premises. -/
 @[semantics "translation-simulation" (requirement := R10)]
-theorem hostRunBody_invoke_get {σ : Type} {table : RowTable}
+theorem hostRunBlockB_invoke_get {σ : Type} {table : RowTable}
     (host : Effects.Comodel (RowSig table) σ) (bodies : List NativeEff) (fuel : Nat)
-    (params : List (ParamTree table)) (k n : Nat) (r : Term) (loader : NativeEff)
-    (env : List Val) (q : RefKey) (s : Stores) (st : σ)
+    (params : List (ParamTreeB table)) (k n : Nat) (r : Term) (loader : NativeEff)
+    (ctx : Ctx) (env : List Val) (q : RefKey) (s : Stores) (st : σ)
     (hk : bodies[k]? = some getBody) (hr : evalTerm env r = some (Val.cell q))
-    (hloader : denoteBody table bodies (fuel + 1) params loader (env ++ [Val.unit]) =
-      denoteRows table (.perform (.external n) (.lit .unit)) []) :
-    hostRunBody host bodies (fuel + 1) params (.invoke k r (.cons loader .nil)) env s st =
-      hostRun host (paramsAsRows n getBody) [Val.cell q] s st := by
-  rw [hostRunBody_invoke_one host bodies fuel params k r loader env s st getBody (Val.cell q) hk hr]
-  unfold hostRunBody hostRun
-  rw [denoteBody_getBody table bodies fuel n _ [Val.cell q] hloader]
+    (hloader : denoteBlockB table bodies (fuel + 1) params loader ctx (env ++ [Val.unit]) =
+      some <$> denoteRows table (.perform (.external n) (.lit .unit)) []) :
+    hostRunBlockB host bodies (fuel + 1) params (.invoke k r (.cons loader .nil)) ctx env s st =
+      (hostRun host (paramsAsRows n getBody) [Val.cell q] s st).map fun out => (some out.1, out.2) := by
+  unfold hostRunBlockB
+  rw [denoteBlockB_invoke table bodies fuel params k r (.cons loader .nil) getBody ctx env
+    (Val.cell q) hk hr]
+  rw [show (.cons loader .nil : Effs NativeOp).toList = [loader] from rfl, List.map_cons, List.map_nil]
+  rw [denoteBlockB_getBody table bodies fuel n _ [Val.cell q] ctx hloader]
+  change runRowsH host ((denoteRows table (paramsAsRows n getBody) [Val.cell q]).bind
+      (fun ex => pure (some ex))) s st = _
+  rw [runRowsH_bind]
+  change (hostRun host (paramsAsRows n getBody) [Val.cell q] s st).bind _ = _
+  cases hostRun host (paramsAsRows n getBody) [Val.cell q] s st <;> rfl
 
-/-- **Calling `invalidate` by `perform (call k)` runs `invalidateBody`**: at a positive call budget,
-when definition `k` of `bodies` is `invalidateBody` and the request evaluates to `Val.cell q`,
-`hostRunBody` on `.perform (.call k) r` is `hostRun` on `invalidateBody` at `[Val.cell q]`.
-Placement: as `invalidate_get`; consumer:
-`Test.Dogfood.Scenario.Todo.Cached.cached_list_after_add`. -/
+/-- Step of ref-cache-invalidated-reads-through, translation-simulation, R10.
+A present invalidation body runs at every context and positive call budget.
+Consumer: the cached application reader; this supplies no scheduler progress. -/
 @[semantics "translation-simulation" (requirement := R10)]
-theorem hostRunBody_call_invalidate {σ : Type} {table : RowTable}
+theorem hostRunBlockB_call_invalidate {σ : Type} {table : RowTable}
     (host : Effects.Comodel (RowSig table) σ) (bodies : List NativeEff) (fuel : Nat)
-    (params : List (ParamTree table)) (k : Nat) (r : Term) (env : List Val)
+    (params : List (ParamTreeB table)) (k : Nat) (r : Term) (ctx : Ctx) (env : List Val)
     (q : RefKey) (s : Stores) (st : σ)
     (hk : bodies[k]? = some invalidateBody) (hr : evalTerm env r = some (Val.cell q)) :
-    hostRunBody host bodies (fuel + 1) params (.perform (.call k) r) env s st =
-      hostRun host invalidateBody [Val.cell q] s st := by
-  rw [hostRunBody_call host bodies fuel params k r env s st invalidateBody (Val.cell q) hk hr]
-  exact hostRunBody_straightRows host bodies fuel [] invalidateBody [Val.cell q] s st rfl
+    hostRunBlockB host bodies (fuel + 1) params (.perform (.call k) r) ctx env s st =
+      (hostRun host invalidateBody [Val.cell q] s st).map fun out => (some out.1, out.2) := by
+  unfold hostRunBlockB
+  rw [denoteBlockB_call table bodies fuel params k r invalidateBody ctx env (Val.cell q) hk hr,
+    denoteBlockB_straight table bodies fuel [] invalidateBody ctx [Val.cell q] rfl rfl]
+  change runRowsH host ((denoteRows table invalidateBody [Val.cell q]).bind
+      (fun ex => pure (some ex))) s st = _
+  rw [runRowsH_bind]
+  change (hostRun host invalidateBody [Val.cell q] s st).bind _ = _
+  cases hostRun host invalidateBody [Val.cell q] s st <;> rfl
 
 end Effect4.Ref.Cache
-

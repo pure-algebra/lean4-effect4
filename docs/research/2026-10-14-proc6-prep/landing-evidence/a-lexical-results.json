@@ -1,0 +1,9 @@
+{
+  "probe": "/tmp/proc6-landing/a-lexical-control.lean",
+  "guards": 3,
+  "before_errors": 2,
+  "after_diagnostics": "",
+  "before_exit_code": 1,
+  "after_exit_code": 0,
+  "scope": "Finite compilation and suspension hops; no scheduler or host claim."
+}

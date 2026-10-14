@@ -1,0 +1,782 @@
+[
+  {
+    "name": "todo/empty",
+    "exit": {
+      "failure": [
+        {
+          "fail": [
+            "EmptyTitle",
+            "a title is required"
+          ]
+        }
+      ]
+    },
+    "measured": {
+      "outcome": {
+        "failure": [
+          {
+            "fail": [
+              "EmptyTitle",
+              "a title is required"
+            ]
+          }
+        ]
+      },
+      "calls": []
+    },
+    "predicted": {
+      "refusals": []
+    }
+  },
+  {
+    "name": "todo/milk",
+    "exit": {
+      "success": {
+        "ctor": 0,
+        "args": [
+          [
+            "done",
+            "id",
+            "title"
+          ],
+          [
+            false,
+            1,
+            "milk"
+          ]
+        ]
+      }
+    },
+    "measured": {
+      "outcome": {
+        "success": {
+          "ctor": 0,
+          "args": [
+            [
+              "done",
+              "id",
+              "title"
+            ],
+            [
+              false,
+              1,
+              "milk"
+            ]
+          ]
+        }
+      },
+      "calls": [
+        [
+          "TodoRepo.insert",
+          "milk"
+        ]
+      ]
+    },
+    "predicted": {
+      "refusals": []
+    }
+  },
+  {
+    "name": "todo/locked",
+    "exit": {
+      "failure": [
+        {
+          "fail": [
+            "SqlError",
+            "locked"
+          ]
+        }
+      ]
+    },
+    "measured": {
+      "outcome": {
+        "failure": [
+          {
+            "fail": [
+              "SqlError",
+              "locked"
+            ]
+          }
+        ]
+      },
+      "calls": [
+        [
+          "TodoRepo.setDone",
+          [
+            1,
+            true
+          ]
+        ]
+      ]
+    },
+    "predicted": {
+      "refusals": []
+    }
+  },
+  {
+    "name": "todo/done",
+    "exit": {
+      "success": {
+        "ctor": 0,
+        "args": [
+          [
+            "done",
+            "id",
+            "title"
+          ],
+          [
+            true,
+            1,
+            "milk"
+          ]
+        ]
+      }
+    },
+    "measured": {
+      "outcome": {
+        "success": {
+          "ctor": 0,
+          "args": [
+            [
+              "done",
+              "id",
+              "title"
+            ],
+            [
+              true,
+              1,
+              "milk"
+            ]
+          ]
+        }
+      },
+      "calls": [
+        [
+          "TodoRepo.setDone",
+          [
+            1,
+            true
+          ]
+        ]
+      ]
+    },
+    "predicted": {
+      "refusals": []
+    }
+  },
+  {
+    "name": "todo/other-todo",
+    "exit": {
+      "success": {
+        "ctor": 0,
+        "args": [
+          [
+            "done",
+            "id",
+            "title"
+          ],
+          [
+            true,
+            2,
+            "tea"
+          ]
+        ]
+      }
+    },
+    "measured": {
+      "outcome": {
+        "success": {
+          "ctor": 0,
+          "args": [
+            [
+              "done",
+              "id",
+              "title"
+            ],
+            [
+              true,
+              2,
+              "tea"
+            ]
+          ]
+        }
+      },
+      "calls": [
+        [
+          "TodoRepo.setDone",
+          [
+            1,
+            true
+          ]
+        ]
+      ]
+    },
+    "predicted": {
+      "refusals": []
+    }
+  },
+  {
+    "name": "todo/model-add",
+    "exit": {
+      "success": {
+        "ctor": 0,
+        "args": [
+          [
+            "done",
+            "id",
+            "title"
+          ],
+          [
+            false,
+            1,
+            "milk"
+          ]
+        ]
+      }
+    },
+    "measured": {
+      "outcome": {
+        "success": {
+          "ctor": 0,
+          "args": [
+            [
+              "done",
+              "id",
+              "title"
+            ],
+            [
+              false,
+              1,
+              "milk"
+            ]
+          ]
+        }
+      },
+      "calls": [
+        [
+          "TodoRepo.insert",
+          "milk"
+        ]
+      ]
+    },
+    "predicted": {
+      "refusals": []
+    }
+  },
+  {
+    "name": "todo/model-list",
+    "exit": {
+      "success": [
+        {
+          "ctor": 0,
+          "args": [
+            [
+              "done",
+              "id",
+              "title"
+            ],
+            [
+              false,
+              1,
+              "milk"
+            ]
+          ]
+        }
+      ]
+    },
+    "measured": {
+      "outcome": {
+        "success": [
+          {
+            "ctor": 0,
+            "args": [
+              [
+                "done",
+                "id",
+                "title"
+              ],
+              [
+                false,
+                1,
+                "milk"
+              ]
+            ]
+          }
+        ]
+      },
+      "calls": [
+        [
+          "TodoRepo.all",
+          null
+        ]
+      ]
+    },
+    "predicted": {
+      "refusals": []
+    }
+  },
+  {
+    "name": "todo/forgetful-add",
+    "exit": {
+      "success": {
+        "ctor": 0,
+        "args": [
+          [
+            "done",
+            "id",
+            "title"
+          ],
+          [
+            false,
+            1,
+            "milk"
+          ]
+        ]
+      }
+    },
+    "measured": {
+      "outcome": {
+        "success": {
+          "ctor": 0,
+          "args": [
+            [
+              "done",
+              "id",
+              "title"
+            ],
+            [
+              false,
+              1,
+              "milk"
+            ]
+          ]
+        }
+      },
+      "calls": [
+        [
+          "TodoRepo.insert",
+          "milk"
+        ]
+      ]
+    },
+    "predicted": {
+      "refusals": []
+    }
+  },
+  {
+    "name": "todo/forgetful-list",
+    "exit": {
+      "success": []
+    },
+    "measured": {
+      "outcome": {
+        "success": []
+      },
+      "calls": [
+        [
+          "TodoRepo.all",
+          null
+        ]
+      ]
+    },
+    "predicted": {
+      "refusals": []
+    }
+  },
+  {
+    "name": "todo/model-once",
+    "exit": {
+      "success": {
+        "ctor": 0,
+        "args": [
+          [
+            "done",
+            "id",
+            "title"
+          ],
+          [
+            true,
+            1,
+            "milk"
+          ]
+        ]
+      }
+    },
+    "measured": {
+      "outcome": {
+        "success": {
+          "ctor": 0,
+          "args": [
+            [
+              "done",
+              "id",
+              "title"
+            ],
+            [
+              true,
+              1,
+              "milk"
+            ]
+          ]
+        }
+      },
+      "calls": [
+        [
+          "TodoRepo.setDone",
+          [
+            1,
+            true
+          ]
+        ]
+      ]
+    },
+    "predicted": {
+      "refusals": []
+    }
+  },
+  {
+    "name": "todo/model-twice",
+    "exit": {
+      "success": {
+        "ctor": 0,
+        "args": [
+          [
+            "done",
+            "id",
+            "title"
+          ],
+          [
+            true,
+            1,
+            "milk"
+          ]
+        ]
+      }
+    },
+    "measured": {
+      "outcome": {
+        "success": {
+          "ctor": 0,
+          "args": [
+            [
+              "done",
+              "id",
+              "title"
+            ],
+            [
+              true,
+              1,
+              "milk"
+            ]
+          ]
+        }
+      },
+      "calls": [
+        [
+          "TodoRepo.setDone",
+          [
+            1,
+            true
+          ]
+        ]
+      ]
+    },
+    "predicted": {
+      "refusals": []
+    }
+  },
+  {
+    "name": "todo/toggling-once",
+    "exit": {
+      "success": {
+        "ctor": 0,
+        "args": [
+          [
+            "done",
+            "id",
+            "title"
+          ],
+          [
+            true,
+            1,
+            "milk"
+          ]
+        ]
+      }
+    },
+    "measured": {
+      "outcome": {
+        "success": {
+          "ctor": 0,
+          "args": [
+            [
+              "done",
+              "id",
+              "title"
+            ],
+            [
+              true,
+              1,
+              "milk"
+            ]
+          ]
+        }
+      },
+      "calls": [
+        [
+          "TodoRepo.setDone",
+          [
+            1,
+            true
+          ]
+        ]
+      ]
+    },
+    "predicted": {
+      "refusals": []
+    }
+  },
+  {
+    "name": "todo/toggling-twice",
+    "exit": {
+      "success": {
+        "ctor": 0,
+        "args": [
+          [
+            "done",
+            "id",
+            "title"
+          ],
+          [
+            false,
+            1,
+            "milk"
+          ]
+        ]
+      }
+    },
+    "measured": {
+      "outcome": {
+        "success": {
+          "ctor": 0,
+          "args": [
+            [
+              "done",
+              "id",
+              "title"
+            ],
+            [
+              false,
+              1,
+              "milk"
+            ]
+          ]
+        }
+      },
+      "calls": [
+        [
+          "TodoRepo.setDone",
+          [
+            1,
+            true
+          ]
+        ]
+      ]
+    },
+    "predicted": {
+      "refusals": []
+    }
+  },
+  {
+    "name": "todo/cached-list-after-add",
+    "exit": {
+      "success": [
+        [
+          {
+            "ctor": 0,
+            "args": [
+              [
+                "done",
+                "id",
+                "title"
+              ],
+              [
+                false,
+                1,
+                "milk"
+              ]
+            ]
+          }
+        ],
+        [
+          {
+            "ctor": 0,
+            "args": [
+              [
+                "done",
+                "id",
+                "title"
+              ],
+              [
+                false,
+                1,
+                "milk"
+              ]
+            ]
+          }
+        ],
+        {
+          "ctor": 0,
+          "args": [
+            [
+              "done",
+              "id",
+              "title"
+            ],
+            [
+              false,
+              2,
+              "tea"
+            ]
+          ]
+        },
+        [
+          {
+            "ctor": 0,
+            "args": [
+              [
+                "done",
+                "id",
+                "title"
+              ],
+              [
+                false,
+                1,
+                "milk"
+              ]
+            ]
+          },
+          {
+            "ctor": 0,
+            "args": [
+              [
+                "done",
+                "id",
+                "title"
+              ],
+              [
+                false,
+                2,
+                "tea"
+              ]
+            ]
+          }
+        ]
+      ]
+    },
+    "measured": {
+      "outcome": {
+        "success": [
+          [
+            {
+              "ctor": 0,
+              "args": [
+                [
+                  "done",
+                  "id",
+                  "title"
+                ],
+                [
+                  false,
+                  1,
+                  "milk"
+                ]
+              ]
+            }
+          ],
+          [
+            {
+              "ctor": 0,
+              "args": [
+                [
+                  "done",
+                  "id",
+                  "title"
+                ],
+                [
+                  false,
+                  1,
+                  "milk"
+                ]
+              ]
+            }
+          ],
+          {
+            "ctor": 0,
+            "args": [
+              [
+                "done",
+                "id",
+                "title"
+              ],
+              [
+                false,
+                2,
+                "tea"
+              ]
+            ]
+          },
+          [
+            {
+              "ctor": 0,
+              "args": [
+                [
+                  "done",
+                  "id",
+                  "title"
+                ],
+                [
+                  false,
+                  1,
+                  "milk"
+                ]
+              ]
+            },
+            {
+              "ctor": 0,
+              "args": [
+                [
+                  "done",
+                  "id",
+                  "title"
+                ],
+                [
+                  false,
+                  2,
+                  "tea"
+                ]
+              ]
+            }
+          ]
+        ]
+      },
+      "calls": [
+        [
+          "TodoRepo.all",
+          null
+        ],
+        [
+          "TodoRepo.insert",
+          "tea"
+        ],
+        [
+          "TodoRepo.all",
+          null
+        ]
+      ]
+    },
+    "predicted": {
+      "refusals": []
+    }
+  }
+]

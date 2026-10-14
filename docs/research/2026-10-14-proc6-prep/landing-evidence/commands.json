@@ -1,0 +1,146 @@
+{
+  "base_commit": "d6e162caf2bdfd6e1a3718b75d4c8aa34d145034",
+  "p_commit": "9d404a1ecbd180973ebdef20441bb1e155d093cc",
+  "a_core_commit": "479f2d7ddac01962e2c0423199d782454a66b11e",
+  "a_hooks_commit": "8576f0db4c1497714c38735103d871cb16b6bac5",
+  "coordinator_merge": "5290731d502d5a9f3335d950b8117b4146143eb4",
+  "kit_commit": "3e5e79335e778c04493245e14e31bb2d48d0d54f",
+  "source_binding": "A checks run on the source bytes committed in a_hooks_commit; source-files.json lists their hashes.",
+  "sequence_wrappers": [
+    "/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh bash /tmp/proc6-landing/finish-checks.sh",
+    "/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh bash /tmp/proc6-landing/remaining-checks.sh"
+  ],
+  "environment": "PATH begins with /tmp/proc6-landing/bin. Its bun wrapper adds --no-install. The shared slot exports LEAN_NUM_THREADS=2.",
+  "commands": [
+    {
+      "stage": "base",
+      "working_directory": "/Users/pooks/Dev/lean4-effect4-codex",
+      "command": "/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake build Effect4 Effect4.Laws",
+      "log": "initial-build.log",
+      "exit_code": 0
+    },
+    {
+      "stage": "P",
+      "working_directory": "/Users/pooks/Dev/lean4-effect4-codex",
+      "command": "/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake build Effect4.Laws.Program.ValidatedBlocks",
+      "log": "p-leaf-build-3.log",
+      "exit_code": 0
+    },
+    {
+      "stage": "P",
+      "working_directory": "/Users/pooks/Dev/lean4-effect4-codex",
+      "command": "/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake build ProofGraph.AxiomAudit ProofGraph.Plan",
+      "log": "p-audit-tools-build.log",
+      "exit_code": 0
+    },
+    {
+      "stage": "P",
+      "working_directory": "/Users/pooks/Dev/lean4-effect4-codex",
+      "command": "/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean -DwarningAsError=true /tmp/proc6-landing/p-audit.lean",
+      "log": "p-audit.log",
+      "exit_code": 0
+    },
+    {
+      "stage": "P",
+      "working_directory": "/Users/pooks/Dev/lean4-effect4-codex",
+      "command": "/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh make -o ts/eff/node_modules -o harness/truth/node_modules -o apps/todo/node_modules gen-semantics",
+      "log": "p-semantics-final.log",
+      "exit_code": 0
+    },
+    {
+      "stage": "P finite control",
+      "working_directory": "/Users/pooks/Dev/lean4-effect4-codex",
+      "command": "/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean -DwarningAsError=true /tmp/proc6-landing/a-lexical-control.lean",
+      "log": "a-lexical-before.log",
+      "exit_code": 1,
+      "scope_note": "Expected red control before the lexical-call repair; two of three guards fail."
+    },
+    {
+      "stage": "A",
+      "working_directory": "/Users/pooks/Dev/lean4-effect4-codex",
+      "command": "/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake build Effect4.Laws.Program.Agreement.Machine Effect4.Laws.Program.Intro.Sequential Effect4.Laws.Program.Typed.Denotation",
+      "log": "a-narrow-repair.log",
+      "exit_code": 0
+    },
+    {
+      "stage": "A",
+      "working_directory": "/Users/pooks/Dev/lean4-effect4-codex",
+      "command": "/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake build Effect4.Laws.Program.Agreement.Hosted",
+      "log": "a-hosted-repair.log",
+      "exit_code": 0
+    },
+    {
+      "stage": "A",
+      "working_directory": "/Users/pooks/Dev/lean4-effect4-codex",
+      "command": "/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake build Effect4 Effect4.Laws",
+      "log": "a-build-accepted.log",
+      "exit_code": 0
+    },
+    {
+      "stage": "A finite control",
+      "working_directory": "/Users/pooks/Dev/lean4-effect4-codex",
+      "command": "/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean -DwarningAsError=true /tmp/proc6-landing/a-lexical-control.lean",
+      "log": "a-lexical-after.log",
+      "exit_code": 0,
+      "scope_note": "Three finite guards, with no scheduler or host claim."
+    },
+    {
+      "stage": "A",
+      "working_directory": "/Users/pooks/Dev/lean4-effect4-codex",
+      "command": "/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean -DwarningAsError=true /tmp/proc6-landing/a-audit.lean",
+      "log": "a-audit.log",
+      "exit_code": 0
+    },
+    {
+      "stage": "A",
+      "working_directory": "/Users/pooks/Dev/lean4-effect4-codex",
+      "command": "/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh make -o ts/eff/node_modules -o harness/truth/node_modules -o apps/todo/node_modules gen-lcnf",
+      "log": "a-gen-lcnf.log",
+      "exit_code": 0
+    },
+    {
+      "stage": "A",
+      "working_directory": "/Users/pooks/Dev/lean4-effect4-codex/ocaml",
+      "command": "opam exec --switch=effect4 -- dune build",
+      "log": "a-dune.log",
+      "exit_code": 0
+    },
+    {
+      "stage": "A",
+      "working_directory": "/Users/pooks/Dev/lean4-effect4-codex",
+      "command": "make -o ts/eff/node_modules -o harness/truth/node_modules -o apps/todo/node_modules check-compiler check-native check-ocaml check-truth check-host-protocol",
+      "log": "a-gates.log",
+      "exit_code": 2,
+      "scope_note": "Compiler, native and OCaml passed; truth stopped at the baseline P2b error fixed by coordinator commit f78fda8ef. Host protocol ran separately."
+    },
+    {
+      "stage": "A",
+      "working_directory": "/Users/pooks/Dev/lean4-effect4-codex",
+      "command": "make -o ts/eff/node_modules -o harness/truth/node_modules -o apps/todo/node_modules gen-semantics",
+      "log": "a-semantics.log",
+      "exit_code": 0
+    },
+    {
+      "stage": "A",
+      "working_directory": "/Users/pooks/Dev/lean4-effect4-codex",
+      "command": "lake env lean -DwarningAsError=true /tmp/proc6-landing/p-audit.lean",
+      "log": "a-final-goals.log",
+      "exit_code": 0
+    },
+    {
+      "stage": "A",
+      "working_directory": "/Users/pooks/Dev/lean4-effect4-codex",
+      "command": "/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh make -o ts/eff/node_modules -o harness/truth/node_modules -o apps/todo/node_modules check-host-protocol",
+      "log": "a-host-protocol.log",
+      "exit_code": 0
+    },
+    {
+      "stage": "A after coordinator merge",
+      "working_directory": "/Users/pooks/Dev/lean4-effect4-codex",
+      "command": "/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh make -o ts/eff/node_modules -o harness/truth/node_modules -o apps/todo/node_modules check-truth",
+      "log": "a-truth-after-merge.log",
+      "exit_code": 0,
+      "scope_note": "Passed after merge 5290731d502d5a9f3335d950b8117b4146143eb4 and local kit seed at 3e5e79335e778c04493245e14e31bb2d48d0d54f."
+    }
+  ]
+}

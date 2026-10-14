@@ -144,7 +144,6 @@ import Effect4.Laws.Auto.BankCensus
 import Effect4.Laws.Auto.Semantics
 import Effect4.Laws.Effects.Protocol
 import Effect4.Laws.Effects.Sum
-import Effect4.Laws.Effects.Mrec
 import Effect4.Laws.Program.Typed.ProtocolObligations
 import Effect4.Laws.Program.Typed.Vocabulary
 import Effect4.Laws.Program.Typed.TypedSources
@@ -359,6 +358,15 @@ import Effect4.Laws.Program.ApplicationService
 -- A body's parameter runs as rows, and the banked Ref cache's transfer law (decisions row 378).
 import Effect4.Laws.Program.ParamRows
 import Effect4.Laws.Library.Ref.Cache
+
+-- PROC-6 placement: definition-block meaning and its open agreement obligations (row 379).
+import Effect4.Laws.Program.BlockMeaning
+import Effect4.Laws.Program.FragmentBlock
+import Effect4.Laws.Program.Agreement.BlockPlain
+import Effect4.Laws.Program.Agreement.Blocks
+import Effect4.Laws.Program.Agreement.HostedBlocks
+import Effect4.Laws.Api.SessionMeaningBlocks
+import Effect4.Laws.Program.ValidatedBlocks
 
 /-!
 # Effect4 proof graph

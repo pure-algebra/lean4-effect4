@@ -10,8 +10,9 @@ The one drive law of the frame machine's route. `Agreement/Machine.lean` gives t
 commands one local step at a time over a plain fiber; here they are chained. The local run with
 calls (`localRunC`) is the run of `Program/Agreement.lean` with a host call answered by a host: a
 comodel of the row signature at its state (`Effects.Comodel`). The reply tape is one host
-(`tapeHost`), and the silent host answers nothing. A run that finishes meets no call, so it is
-the same run under every host (`localRunC_of_localRun`).
+(`tapeHost`), and the silent host answers nothing. The hosted run also steps context thunks.
+Its live states and waiting observations retain the current context. The unchanged context-free
+local run transfers its completed exit under every host (`localRunC_of_localRun`).
 
 **One evaluation segment** (`drive_seg`): from the running root, the loop reaches the exit path,
 a host call or a yield, and the local run with calls reaches the same place with no reply read.
@@ -24,7 +25,7 @@ host (`ReachesQ`).
 `[evaluate, flush]` at fuel `2N + 4`, under the op budget directly or through the rounds of
 `flush` (`flushAll_Myield`). Concept `translation-simulation`; claims `run-eq-meaning` and
 `loop-agreement` (R8). `Agreement/Hosted.lean` takes the same segments under a host's decisions
-(H8, R6). Reach: `LoopedRows`, one fiber. It does not establish that a run with calls ends: that
+(H8, R6). The default-budget progress theorem requires `ContextFreeHooks`, one fiber. It does not establish that a run with calls ends: that
 a run is funded is the open claim of `Laws/Run/Tape.lean`.
 -/
 
@@ -56,143 +57,197 @@ def callOf : NCode → Option (Nat × Val)
 /-- The host that never answers. Under it, a host call waits. -/
 def silentHost (table : RowTable) : Effects.Comodel (RowSig table) Unit := ⟨fun _ _ => none⟩
 
-/-- **One local step with calls.** A host call is asked of the host at its state, and the fiber
-goes on with the answer the machine's answer decision prepares from the exit it gives
-(`prepareExternalAnswer`; at a data row, the exit itself over the same stores,
-`prepareExternalAnswer_data`); where the host gives no answer, the call is the frontier
-(`none`). Every other step is the local step, and asks the host nothing. The reply tape is one
-host (`tapeHost`, `Laws/Program/HostRuns.lean`). -/
+/-- One hosted step keeps its live context. Calls read the host; other steps use
+`contextStep`. Consumer: rows-block-host/R6 through the hosted session proof.
+This definition supplies no progress or reply-admission claim. -/
 def localStepC {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root : NativeEff)
-    (fr : NFiber) (s : Stores) (st : σ) : Option (LocalStep × σ) :=
+    (fr : NFiber) (s : Stores) (st : σ) (ctx : Ctx := emptyCtx) :
+    Option (LocalStep × Ctx × σ) :=
   if IsCall fr.current then
     match hostAnswer host fr.current st with
     | none => none
     | some (ex, st') =>
       let answer := prepareExternalAnswer table (some fr.current) (.ofExit ex) s
-      some (.running { fr with current := answer.2 } answer.1, st')
-  else some (localStep root fr s, st)
+      some (.running { fr with current := answer.2 } answer.1, ctx, st')
+  else
+    let next := Effect4.Program.Agreement.contextStep root fr s ctx
+    some (next.1, next.2, st)
 
-/-- Where the local run with calls stops within its budget: the fiber's exit with its stores and
-the host's state, or a host call the host does not answer, where it waits with that call's code,
-its stores and the host's state (slice L4, `docs/research/2026-10-10-l4-frontiers.md`). -/
+/-- A stopped observation retains the live context at a waiting call.
+The completed exit observes its exit, stores and host state; the machine clears its context. -/
 inductive RunEnd (σ : Type) where
   | exit (ex : ExitV) (s : Stores) (st : σ)
-  | waits (call : NCode) (s : Stores) (st : σ)
+  | waits (call : NCode) (s : Stores) (st : σ) (ctx : Ctx)
 
-/-- The local run with calls: `n` steps at most; where it stops, or `none` when the steps run
-out first. -/
-def localRunC {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root : NativeEff) :
-    Nat → NFiber → Stores → σ → Option (RunEnd σ)
-  | 0, _, _, _ => none
-  | n + 1, fr, s, st =>
-    match localStepC host root fr s st with
-    | some (.running fr' s', st') => localRunC host root n fr' s' st'
-    | some (.finished ex s', st') => some (.exit ex s' st')
-    | none => some (.waits fr.current s st)
+/-- The one hosted local run. Exhausting the step bound remains `none`.
+Consumer: rows-block-host/R6; no progress is established. -/
+def localRunC {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root : NativeEff)
+    (n : Nat) (fr : NFiber) (s : Stores) (st : σ) (ctx : Ctx := emptyCtx) :
+    Option (RunEnd σ) :=
+  match n with
+  | 0 => none
+  | n + 1 =>
+    match localStepC host root fr s st ctx with
+    | some (.running fr' s', ctx', st') => localRunC host root n fr' s' st' ctx'
+    | some (.finished ex s', _, st') => some (.exit ex s' st')
+    | none => some (.waits fr.current s st ctx)
 
-/-- **A relation on final observations**: at every budget, the local run with calls from `fr`
-given `c` more steps stops where the run from `fr'` stops (`RunEnd`), or neither stops. It is no
-path, but a wait names its call, its stores and the host's state, so two waits relate only when
-these agree (slice L4 closes the H8 review's finding H8R-01). A run that waits and a run that
-diverges do not relate: the first stops with `RunEnd.waits`. -/
+/-- Directed agreement of final observations, with an exact additional step count.
+The two endpoints retain their own contexts. Cuts, waits and completed exits remain distinct.
+Consumer: the forward meaning proof and its cut bounds, rows-block-host/R6. -/
 def ReachesC {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root : NativeEff) (c : Nat)
-    (fr : NFiber) (s : Stores) (st : σ) (fr' : NFiber) (s' : Stores) (st' : σ) : Prop :=
-  ∀ n, localRunC host root (n + c) fr s st = localRunC host root n fr' s' st'
+    (fr : NFiber) (s : Stores) (st : σ) (fr' : NFiber) (s' : Stores) (st' : σ)
+    (ctx : Ctx := emptyCtx) (ctx' : Ctx := ctx) : Prop :=
+  ∀ n, localRunC host root (n + c) fr s st ctx = localRunC host root n fr' s' st' ctx'
 
-/-- **Reaching with no reply read**: under every host, at every state, the run from `fr` given `c`
-more steps is the run from `fr'`, the host's state untouched. What a segment of the machine owes
-(`SegOwes`). -/
+/-- Directed agreement with no host reply read, at arbitrary endpoint contexts.
+Consumer: context brackets and command segments, rows-block-host/R6. -/
 def ReachesQ (root : NativeEff) (c : Nat) (fr : NFiber) (s : Stores) (fr' : NFiber)
-    (s' : Stores) : Prop :=
+    (s' : Stores) (ctx : Ctx := emptyCtx) (ctx' : Ctx := ctx) : Prop :=
   ∀ {σ : Type} (host : Effects.Comodel (RowSig table) σ) (st : σ),
-    ReachesC host root c fr s st fr' s' st
+    ReachesC host root c fr s st fr' s' st ctx ctx'
 
+/-! The following goals place the context extension before its proofs.
+Concept: translation-simulation; claim: rows-block-host; requirement R6.
+Consumers: `CompilesBlk`, the context bracket, and the hosted command receipt.
+Reach: one hosted local run, every context and host, exact stopped observations.
+These goals establish neither scheduler progress nor host conformance.
+-/
+
+@[semantics "translation-simulation" (requirement := R6)]
 theorem ReachesC.refl {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root : NativeEff)
-    (fr : NFiber) (s : Stores) (st : σ) : ReachesC host root 0 fr s st fr s st := fun _ => rfl
+    (fr : NFiber) (s : Stores) (st : σ) (ctx : Ctx := emptyCtx) :
+    ReachesC host root 0 fr s st fr s st ctx ctx := fun _ => rfl
 
-theorem ReachesQ.refl (root : NativeEff) (fr : NFiber) (s : Stores) :
-    ReachesQ (table := table) root 0 fr s fr s := fun host st => ReachesC.refl host root fr s st
+@[semantics "translation-simulation" (requirement := R6)]
+theorem ReachesQ.refl (root : NativeEff) (fr : NFiber) (s : Stores) (ctx : Ctx := emptyCtx) :
+    ReachesQ (table := table) root 0 fr s fr s ctx ctx := fun host st => ReachesC.refl host root fr s st ctx
 
+@[semantics "translation-simulation" (requirement := R6)]
 theorem ReachesC.trans {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
     {c₁ c₂ : Nat} {fr₁ fr₂ fr₃ : NFiber} {s₁ s₂ s₃ : Stores} {r₁ r₂ r₃ : σ}
-    (h₁ : ReachesC host root c₁ fr₁ s₁ r₁ fr₂ s₂ r₂) (h₂ : ReachesC host root c₂ fr₂ s₂ r₂ fr₃ s₃ r₃) :
-    ReachesC host root (c₁ + c₂) fr₁ s₁ r₁ fr₃ s₃ r₃ := by
+    {ctx₁ ctx₂ ctx₃ : Ctx}
+    (h₁ : ReachesC host root c₁ fr₁ s₁ r₁ fr₂ s₂ r₂ ctx₁ ctx₂)
+    (h₂ : ReachesC host root c₂ fr₂ s₂ r₂ fr₃ s₃ r₃ ctx₂ ctx₃) :
+    ReachesC host root (c₁ + c₂) fr₁ s₁ r₁ fr₃ s₃ r₃ ctx₁ ctx₃ := by
   intro n
   rw [← Nat.add_assoc, Nat.add_right_comm, h₁, h₂]
 
-theorem ReachesQ.trans {root : NativeEff} {c₁ c₂ : Nat} {fr₁ fr₂ fr₃ : NFiber} {s₁ s₂ s₃ : Stores}
-    (h₁ : ReachesQ (table := table) root c₁ fr₁ s₁ fr₂ s₂)
-    (h₂ : ReachesQ (table := table) root c₂ fr₂ s₂ fr₃ s₃) :
-    ReachesQ (table := table) root (c₁ + c₂) fr₁ s₁ fr₃ s₃ :=
-  fun host st => (h₁ host st).trans (h₂ host st)
+@[semantics "translation-simulation" (requirement := R6)]
+theorem ReachesQ.trans {root : NativeEff} {c₁ c₂ : Nat} {fr₁ fr₂ fr₃ : NFiber}
+    {s₁ s₂ s₃ : Stores} {ctx₁ ctx₂ ctx₃ : Ctx}
+    (h₁ : ReachesQ (table := table) root c₁ fr₁ s₁ fr₂ s₂ ctx₁ ctx₂)
+    (h₂ : ReachesQ (table := table) root c₂ fr₂ s₂ fr₃ s₃ ctx₂ ctx₃) :
+    ReachesQ (table := table) root (c₁ + c₂) fr₁ s₁ fr₃ s₃ ctx₁ ctx₃ := fun host st => (h₁ host st).trans (h₂ host st)
 
-/-- A step that is no call reads no reply. -/
-theorem ReachesC.step {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
-    {fr fr' : NFiber} {s s' : Stores} (h : localStep root fr s = .running fr' s')
-    (hc : IsCall fr.current = false) (r : σ) : ReachesC host root 1 fr s r fr' s' r := by
+@[semantics "translation-simulation" (requirement := R6)]
+theorem ReachesC.contextStep {σ : Type} {host : Effects.Comodel (RowSig table) σ}
+    {root : NativeEff} {fr fr' : NFiber} {s s' : Stores} {ctx ctx' : Ctx}
+    (h : Effect4.Program.Agreement.contextStep root fr s ctx = (.running fr' s', ctx'))
+    (hc : IsCall fr.current = false) (r : σ) :
+    ReachesC host root 1 fr s r fr' s' r ctx ctx' := by
   intro n
-  show localRunC host root (n + 1) fr s r = _
   simp only [localRunC, localStepC, hc, Bool.false_eq_true, if_false, h]
 
-/-- A step that is no call reads no reply, under every host. -/
-theorem ReachesQ.step {root : NativeEff} {fr fr' : NFiber} {s s' : Stores}
-    (h : localStep root fr s = .running fr' s') (hc : IsCall fr.current = false) :
-    ReachesQ (table := table) root 1 fr s fr' s' := fun _ st => ReachesC.step h hc st
+@[semantics "translation-simulation" (requirement := R6)]
+theorem ReachesQ.contextStep {root : NativeEff} {fr fr' : NFiber} {s s' : Stores}
+    {ctx ctx' : Ctx} (h : Effect4.Program.Agreement.contextStep root fr s ctx = (.running fr' s', ctx'))
+    (hc : IsCall fr.current = false) :
+    ReachesQ (table := table) root 1 fr s fr' s' ctx ctx' := fun _ st => ReachesC.contextStep h hc st
 
-/-- Two fibers that are no call and take the same next step reach each other for free. -/
-theorem ReachesC.same {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
-    {fr fr' : NFiber} (s : Stores) (r : σ)
-    (h : ∀ s, localStep root fr s = localStep root fr' s) (hc : IsCall fr.current = false)
-    (hc' : IsCall fr'.current = false) : ReachesC host root 0 fr s r fr' s r := by
+@[semantics "translation-simulation" (requirement := R6)]
+theorem ReachesC.step {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
+    {fr fr' : NFiber} {s s' : Stores} (h : localStep root fr s = .running fr' s')
+    (hc : IsCall fr.current = false) (hw : ∀ t, fr.current ≠ Prim.withFiber t)
+    (r : σ) {ctx : Ctx} : ReachesC host root 1 fr s r fr' s' r ctx ctx := by
+  apply ReachesC.contextStep (ctx := ctx) ?_ hc r
+  rw [contextStep_fallback root fr s ctx hw, h]
+
+@[semantics "translation-simulation" (requirement := R6)]
+theorem ReachesQ.step {root : NativeEff} {fr fr' : NFiber} {s s' : Stores}
+    (h : localStep root fr s = .running fr' s') (hc : IsCall fr.current = false)
+    (hw : ∀ t, fr.current ≠ Prim.withFiber t) {ctx : Ctx} :
+    ReachesQ (table := table) root 1 fr s fr' s' ctx ctx := fun _ st => ReachesC.step h hc hw st
+
+@[semantics "translation-simulation" (requirement := R6)]
+theorem ReachesC.contextSame {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
+    {fr fr' : NFiber} (s : Stores) (r : σ) {ctx : Ctx}
+    (h : ∀ s, Effect4.Program.Agreement.contextStep root fr s ctx = Effect4.Program.Agreement.contextStep root fr' s ctx)
+    (hc : IsCall fr.current = false) (hc' : IsCall fr'.current = false) :
+    ReachesC host root 0 fr s r fr' s r ctx ctx := by
   intro n
   cases n with
   | zero => rfl
   | succ n =>
     simp only [localRunC, localStepC, hc, hc', Bool.false_eq_true, if_false, h]
-    cases localStep root fr' s <;> rfl
+    cases (Effect4.Program.Agreement.contextStep root fr' s ctx).1 <;> rfl
 
-/-- **A host call takes the host's answer**, as the answer its preparation gives. -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem ReachesC.same {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
+    {fr fr' : NFiber} (s : Stores) (r : σ) {ctx : Ctx}
+    (h : ∀ s, localStep root fr s = localStep root fr' s)
+    (hc : IsCall fr.current = false) (hc' : IsCall fr'.current = false)
+    (hw : ∀ t, fr.current ≠ Prim.withFiber t) (hw' : ∀ t, fr'.current ≠ Prim.withFiber t) :
+    ReachesC host root 0 fr s r fr' s r ctx ctx := by
+  apply ReachesC.contextSame s r ?_ hc hc'
+  intro state
+  rw [contextStep_fallback root fr state ctx hw,
+    contextStep_fallback root fr' state ctx hw', h]
+
+@[semantics "translation-simulation" (requirement := R6)]
 theorem ReachesC.answer {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
     {fr : NFiber} (s : Stores) (hc : IsCall fr.current = true) {st st' : σ} {ex : ExitV}
     (ha : hostAnswer host fr.current st = some (ex, st')) {s' : Stores} {code : NCode}
-    (hp : prepareExternalAnswer table (some fr.current) (.ofExit ex) s = (s', code)) :
-    ReachesC host root 1 fr s st { fr with current := code } s' st' := by
+    (hp : prepareExternalAnswer table (some fr.current) (.ofExit ex) s = (s', code))
+    (ctx : Ctx := emptyCtx) :
+    ReachesC host root 1 fr s st { fr with current := code } s' st' ctx ctx := by
   intro n
-  show localRunC host root (n + 1) fr s st = _
   simp only [localRunC, localStepC, hc, if_true, ha, hp]
 
-theorem isCall_ofExit (ex : ExitV) : IsCall (Prim.ofExit ex) = false := by cases ex <;> rfl
-
-/-- A run that stops within its budget stops there at every larger budget. -/
-theorem localRunC_mono {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff} :
-    ∀ (c k : Nat) (fr : NFiber) (s : Stores) (r : σ) {e : RunEnd σ},
-      localRunC host root c fr s r = some e → localRunC host root (c + k) fr s r = some e
-  | 0, _, _, _, _, _, h => by cases h
-  | c + 1, k, fr, s, r, e, h => by
+@[semantics "translation-simulation" (requirement := R6)]
+theorem localRunC_mono {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
+    (c k : Nat) (fr : NFiber) (s : Stores) (r : σ) {e : RunEnd σ}
+    {ctx : Ctx} (h : localRunC host root c fr s r ctx = some e) :
+    localRunC host root (c + k) fr s r ctx = some e := by
+  induction c generalizing fr s r ctx with
+  | zero => cases h
+  | succ c ih =>
     rw [show c + 1 + k = (c + k) + 1 by omega]
-    rcases hst : localStepC host root fr s r with _ | ⟨_ | _, r'⟩
-    · simp only [localRunC, hst] at h ⊢
+    cases hst : localStepC host root fr s r ctx with
+    | none =>
+      simp only [localRunC, hst] at h ⊢
       exact h
-    · simp only [localRunC, hst] at h ⊢
-      exact localRunC_mono c k _ _ r' h
-    · simp only [localRunC, hst] at h ⊢
-      exact h
+    | some next =>
+      rcases next with ⟨step, ctx', r'⟩
+      cases step with
+      | running fr' s' =>
+        simp only [localRunC, hst] at h ⊢
+        exact ih fr' s' r' h
+      | finished ex s' =>
+        simp only [localRunC, hst] at h ⊢
+        exact h
 
-/-- Two budgets at which the run stops see the same stop. -/
+@[semantics "translation-simulation" (requirement := R6)]
 theorem localRunC_agree {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
-    {fr : NFiber} {s : Stores} {r : σ} {a b : Nat} {e₁ e₂ : RunEnd σ}
-    (h₁ : localRunC host root a fr s r = some e₁) (h₂ : localRunC host root b fr s r = some e₂) :
-    e₁ = e₂ := by
+    {fr : NFiber} {s : Stores} {r : σ} {ctx : Ctx} {a b : Nat} {e₁ e₂ : RunEnd σ}
+    (h₁ : localRunC host root a fr s r ctx = some e₁)
+    (h₂ : localRunC host root b fr s r ctx = some e₂) : e₁ = e₂ := by
   have h₁' := localRunC_mono a b fr s r h₁
   have h₂' := localRunC_mono b a fr s r h₂
   rw [Nat.add_comm b a, h₁'] at h₂'
   exact Option.some.inj h₂'
 
-/-- A host call the host does not answer waits. -/
+@[semantics "translation-simulation" (requirement := R6)]
 theorem localRunC_waits {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
-    {fr : NFiber} (hc : IsCall fr.current = true) {st : σ} (ha : hostAnswer host fr.current st = none)
-    (s : Stores) (n : Nat) : localRunC host root (n + 1) fr s st = some (.waits fr.current s st) := by
+    {fr : NFiber} (hc : IsCall fr.current = true) {st : σ}
+    (ha : hostAnswer host fr.current st = none) (s : Stores) (n : Nat)
+    (ctx : Ctx := emptyCtx) :
+    localRunC host root (n + 1) fr s st ctx = some (.waits fr.current s st ctx) := by
   simp only [localRunC, localStepC, hc, if_true, ha]
+
+
+
+theorem isCall_ofExit (ex : ExitV) : IsCall (Prim.ofExit ex) = false := by cases ex <;> rfl
 
 /-- The silent host answers no host call. -/
 theorem hostAnswer_silent (code : NCode) : hostAnswer (silentHost table) code () = none := by
@@ -219,33 +274,50 @@ theorem localRun_call {root : NativeEff} {fr : NFiber} (hc : IsCall fr.current =
     rw [localRun_running (localStep_call hc s)]
     exact localRun_call hc s n
 
-/-- **A finished local run is the local run with calls under every host**: it meets no host
-call, so it asks the host nothing. The connector of the two local runs; its consumer is
-`replay_Mexit_of_localRun`. -/
-theorem localRunC_of_localRun {root : NativeEff} :
-    ∀ {n : Nat} {fr : NFiber} {s s' : Stores} {ex : ExitV},
-      localRun root n fr s = some (ex, s') →
-        ∀ {σ : Type} (host : Effects.Comodel (RowSig table) σ) (r : σ),
-          localRunC host root n fr s r = some (.exit ex s' r)
-  | 0, _, _, _, _, h, _, _, _ => by cases h
-  | n + 1, fr, s, s', ex, h, σ, host, r => by
-    have hnc : IsCall fr.current = false := by
-      cases hc : IsCall fr.current
+/-- A context-free primitive cannot be a context thunk.
+Placement: translation-simulation, rows-block-host/R6. Consumer: the unchanged local-run connector. -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem ContextFreeCode.not_withFiber {cur : NCode} (h : ContextFreeCode cur = true) :
+    ∀ t, cur ≠ Prim.withFiber t := by
+  intro t heq
+  subst heq
+  cases h
+
+/-- The context-free completed run agrees with the hosted run at every initial context.
+Placement: translation-simulation, run-eq-meaning/R8. Consumer: replay_Mexit_of_localRun.
+The context-free hypotheses exclude the context operations added to the hosted run. -/
+@[semantics "translation-simulation" (requirement := R8)]
+theorem localRunC_of_localRun {root : NativeEff} (hroot : ContextFreeHooks root)
+    {n : Nat} {cur : NCode} {K : List NCode} {i : Bool} {s s' : Stores} {ex : ExitV}
+    (hpl : ContextFreeCode cur = true) (hK : ContextFreeStack K)
+    (hrun : localRun root n (fiberOf cur K i) s = some (ex, s'))
+    {σ : Type} (host : Effects.Comodel (RowSig table) σ) (r : σ) {ctx : Ctx} :
+    localRunC host root n (fiberOf cur K i) s r ctx = some (.exit ex s' r) := by
+  induction n generalizing cur K i s with
+  | zero => cases hrun
+  | succ n ih =>
+    have hnc : IsCall (fiberOf cur K i).current = false := by
+      cases hc : IsCall (fiberOf cur K i).current
       · rfl
-      · rw [localRun_call hc] at h
-        cases h
-    rcases hst : localStep root fr s with ⟨fr₁, s₁⟩ | ⟨ex₁, s₁⟩
-    · rw [localRun_running hst] at h
-      simp only [localRunC, localStepC, hnc, Bool.false_eq_true, if_false, hst]
-      exact localRunC_of_localRun h host r
-    · rw [localRun_finished hst, Option.some.injEq, Prod.mk.injEq] at h
-      obtain ⟨rfl, rfl⟩ := h
-      simp only [localRunC, localStepC, hnc, Bool.false_eq_true, if_false, hst]
+      · rw [localRun_call hc] at hrun
+        cases hrun
+    have hw : ∀ t, (fiberOf cur K i).current ≠ Prim.withFiber t := (ContextFreeCode.not_withFiber hpl)
+    rcases hst : localStep root (fiberOf cur K i) s with ⟨fr₁, s₁⟩ | ⟨ex₁, s₁⟩
+    · rw [localRun_running hst] at hrun
+      obtain ⟨cur₁, K₁, i₁, rfl, hpl₁, hK₁⟩ :=
+        localStep_plain hroot cur K i s fr₁ s₁ hpl hK hst
+      simp only [localRunC, localStepC, hnc, Bool.false_eq_true, if_false,
+        contextStep_fallback root (fiberOf cur K i) s ctx hw, hst]
+      exact ih hpl₁ hK₁ hrun
+    · rw [localRun_finished hst, Option.some.injEq, Prod.mk.injEq] at hrun
+      obtain ⟨rfl, rfl⟩ := hrun
+      simp only [localRunC, localStepC, hnc, Bool.false_eq_true, if_false,
+        contextStep_fallback root (fiberOf cur K i) s ctx hw, hst]
 
 /-- A run that has not stopped at one budget stops, if at all, at a larger one. -/
 theorem localRunC_lt {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
-    {fr : NFiber} {s : Stores} {r : σ} {a b : Nat} {e : RunEnd σ}
-    (ha : localRunC host root a fr s r = none) (hb : localRunC host root b fr s r = some e) :
+    {fr : NFiber} {s : Stores} {r : σ} {ctx : Ctx} {a b : Nat} {e : RunEnd σ}
+    (ha : localRunC host root a fr s r ctx = none) (hb : localRunC host root b fr s r ctx = some e) :
     a < b := by
   refine Nat.lt_of_not_le fun hle => ?_
   obtain ⟨k, hk⟩ := Nat.exists_eq_add_of_le hle
@@ -255,8 +327,8 @@ theorem localRunC_lt {σ : Type} {host : Effects.Comodel (RowSig table) σ} {roo
 
 /-- A run that reaches a fiber after `c` steps has not stopped by then. -/
 theorem ReachesC.none {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
-    {c : Nat} {fr fr' : NFiber} {s s' : Stores} {r r' : σ} (h : ReachesC host root c fr s r fr' s' r') :
-    localRunC host root c fr s r = none := by
+    {c : Nat} {fr fr' : NFiber} {s s' : Stores} {r r' : σ} {ctx ctx' : Ctx} (h : ReachesC host root c fr s r fr' s' r' ctx ctx') :
+    localRunC host root c fr s r ctx = none := by
   have h0 := h 0
   rw [Nat.zero_add] at h0
   rw [h0]
@@ -264,26 +336,26 @@ theorem ReachesC.none {σ : Type} {host : Effects.Comodel (RowSig table) σ} {ro
 
 /-- So a run that stops does so after every fiber it reaches. -/
 theorem ReachesC.lt {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
-    {c : Nat} {fr fr' : NFiber} {s s' : Stores} {r r' : σ} (h : ReachesC host root c fr s r fr' s' r')
-    {n : Nat} {e : RunEnd σ} (hn : localRunC host root n fr s r = some e) : c < n :=
+    {c : Nat} {fr fr' : NFiber} {s s' : Stores} {r r' : σ} {ctx ctx' : Ctx} (h : ReachesC host root c fr s r fr' s' r' ctx ctx')
+    {n : Nat} {e : RunEnd σ} (hn : localRunC host root n fr s r ctx = some e) : c < n :=
   localRunC_lt h.none hn
 
 /-- After `c` steps the run is the run of the fiber it reached, for the rest of the budget. -/
 theorem ReachesC.rest {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
-    {c : Nat} {fr fr' : NFiber} {s s' : Stores} {r r' : σ} (h : ReachesC host root c fr s r fr' s' r')
-    {n : Nat} (hcn : c ≤ n) : localRunC host root n fr s r = localRunC host root (n - c) fr' s' r' := by
+    {c : Nat} {fr fr' : NFiber} {s s' : Stores} {r r' : σ} {ctx ctx' : Ctx} (h : ReachesC host root c fr s r fr' s' r' ctx ctx')
+    {n : Nat} (hcn : c ≤ n) : localRunC host root n fr s r ctx = localRunC host root (n - c) fr' s' r' ctx' := by
   have hn := h (n - c)
   rw [Nat.sub_add_cancel hcn] at hn
   exact hn
 
 /-- A run that exits under the silent host reaches no host call: there it would wait. -/
-theorem ReachesC.not_call {root : NativeEff} {c : Nat} {fr fr' : NFiber} {s s' : Stores}
-    (h : ReachesC (silentHost table) root c fr s () fr' s' ()) (hc : IsCall fr'.current = true)
+theorem ReachesC.not_call {root : NativeEff} {c : Nat} {fr fr' : NFiber} {s s' : Stores} {ctx ctx' : Ctx}
+    (h : ReachesC (silentHost table) root c fr s () fr' s' () ctx ctx') (hc : IsCall fr'.current = true)
     {n : Nat} {ex : ExitV} {s'' : Stores}
-    (hn : localRunC (silentHost table) root n fr s () = some (.exit ex s'' ())) : False := by
+    (hn : localRunC (silentHost table) root n fr s () ctx = some (.exit ex s'' ())) : False := by
   have hlt := h.lt hn
   rw [h.rest (Nat.le_of_lt hlt), show n - c = (n - c - 1) + 1 by omega,
-    localRunC_waits hc (hostAnswer_silent _)] at hn
+    localRunC_waits hc (hostAnswer_silent _) _ _ ctx'] at hn
   cases hn
 
 /-! ## The root parked on a host call -/
@@ -291,28 +363,29 @@ theorem ReachesC.not_call {root : NativeEff} {c : Nat} {fr fr' : NFiber} {s s' :
 /-- The root fiber parked on a host call at guard token `t`: the registration's park
 (`Fibers.lean`, the `async` arm of `evaluatePrim`), the fiber no longer running. Its frame keeps
 the call as its current code, which the answer decision reads. -/
-def callParkedAt (fr : NFiber) (k t : Nat) : NRunFiber :=
-  { fiberAt fr k with
+def callParkedAt (fr : NFiber) (k t : Nat) (ctx : Ctx := emptyCtx) : NRunFiber :=
+  { fiberAt fr k ctx with
     running := false
     parked := Parked.withGuard t
     pending := [⟨t, none, [], [], Resume.void, false⟩] }
 
 /-- The machine with its root parked on a host call: nothing armed, the next token taken. -/
-def Mcall (fr : NFiber) (s : Stores) (k : Nat) (tr : NTrace) (t : Nat) : Api.Machine :=
+def Mcall (fr : NFiber) (s : Stores) (k : Nat) (tr : NTrace) (t : Nat)
+    (ctx : Ctx := emptyCtx) : Api.Machine :=
   { (RunMachine.empty s : Api.Machine) with
-    fibers := [callParkedAt fr k t], nextId := 1, nextToken := t + 1, trace := tr }
+    fibers := [callParkedAt fr k t ctx], nextId := 1, nextToken := t + 1, trace := tr }
 
-theorem Mcall_stuck (fr : NFiber) (s : Stores) (k : Nat) (tr : NTrace) (t : Nat) :
-    (Mcall fr s k tr t).stuck = none := rfl
+theorem Mcall_stuck {ctx : Ctx} (fr : NFiber) (s : Stores) (k : Nat) (tr : NTrace) (t : Nat) :
+    (Mcall fr s k tr t ctx).stuck = none := rfl
 
-theorem Mcall_armed (fr : NFiber) (s : Stores) (k : Nat) (tr : NTrace) (t : Nat) :
-    (Mcall fr s k tr t).armed = [] := rfl
+theorem Mcall_armed {ctx : Ctx} (fr : NFiber) (s : Stores) (k : Nat) (tr : NTrace) (t : Nat) :
+    (Mcall fr s k tr t ctx).armed = [] := rfl
 
-theorem Mcall_state (fr : NFiber) (s : Stores) (k : Nat) (tr : NTrace) (t : Nat) :
-    (Mcall fr s k tr t).state = s := rfl
+theorem Mcall_state {ctx : Ctx} (fr : NFiber) (s : Stores) (k : Nat) (tr : NTrace) (t : Nat) :
+    (Mcall fr s k tr t ctx).state = s := rfl
 
-theorem Mcall_fiber? (fr : NFiber) (s : Stores) (k : Nat) (tr : NTrace) (t : Nat) :
-    (Mcall fr s k tr t).fiber? Api.root = some (callParkedAt fr k t) := rfl
+theorem Mcall_fiber? {ctx : Ctx} (fr : NFiber) (s : Stores) (k : Nat) (tr : NTrace) (t : Nat) :
+    (Mcall fr s k tr t ctx).fiber? Api.root = some (callParkedAt fr k t ctx) := rfl
 
 /-- The view of a host call: its row, request and address. -/
 theorem eq_call_of_isCall {cur : NCode} (h : IsCall cur = true) :
@@ -356,6 +429,34 @@ theorem drive_loop_call (root : NativeEff) (cur : NCode) (K : List NCode) (i : B
     settle]
   rfl
 
+/-- Context-aware host parking, a step of rows-block-host/R6. Consumer: drive_seg_receipt. -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem drive_loop_call_context (root : NativeEff) (cur : NCode) (K : List NCode) (i : Bool)
+    (s : Stores) (k : Nat) (tr : NTrace) (nt : Nat) (rest : List NCmd) (ctx : Ctx)
+    (hc : IsCall cur = true) (hk : (stores.budgetOf ctx).2 = true ∨ k + 1 < (stores.budgetOf ctx).1) :
+    ∃ tr', ∀ n, driveState (evaluator := evaluatorFor root table) (interpOf root table) (n + 1)
+        (M (fiberOf cur K i) s k tr nt ctx) (Cmd.loop Api.root false :: rest) =
+      driveState (evaluator := evaluatorFor root table) (interpOf root table) n
+        (Mcall (fiberOf cur K i) s (k + 1) tr' nt ctx) rest := by
+  obtain ⟨j, v, w, rfl⟩ := eq_call_of_isCall hc
+  refine ⟨tr ++ [RunEvent.parkedOn Api.root nt], fun n => ?_⟩
+  have hit : iteration (evaluator := evaluatorFor root table) (interpOf root table)
+      (M (fiberOf (Prim.async (EffName.external (.external j) v w) false none) K i) s k tr nt ctx)
+      (fiberAt (fiberOf (Prim.async (EffName.external (.external j) v w) false none) K i) k ctx) false =
+      ⟨{ M (fiberOf (Prim.async (EffName.external (.external j) v w) false none) K i) s k
+          (tr ++ [RunEvent.parkedOn Api.root nt]) nt ctx with nextToken := nt + 1 },
+        (fiberAt (fiberOf (Prim.async (EffName.external (.external j) v w) false none) K i) (k + 1) ctx).park
+          ⟨nt, none, [], [], Resume.void, false⟩,
+        false, Outcome.parked, [], []⟩ := by
+    rw [iteration_M_context root _ _ _ _ _ _ _ ctx hk]
+    simp only [evaluateNative, fiberAt_frame, fiberOf]
+    simp only [evaluatePrim, fiberAt_frame, M_state, registerAsync_call root _ j v w _ _ s]
+    rfl
+  rw [driveState_succ_cons (evaluator := evaluatorFor root table)]
+  simp only [M_stuck, Option.isSome_none, Bool.false_eq_true, ↓reduceIte, driveStep, M_fiber?, hit,
+    settle]
+  rfl
+
 /-- The next command the loop owes: the loop itself, or the delivery of an answered `sync`. -/
 def cmdOf : Bool → NCmd
   | false => Cmd.loop Api.root false
@@ -368,9 +469,9 @@ no reply read. -/
 theorem localRunC_finish {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
     {fr : NFiber} {s s' : Stores} {ex : ExitV}
     (hstep : localStep root fr s = .finished ex s') (hc : IsCall fr.current = false)
-    (r : σ) : localRunC host root 1 fr s r = some (.exit ex s' r) := by
-  show localRunC host root (0 + 1) fr s r = _
-  simp only [localRunC, localStepC, hc, Bool.false_eq_true, if_false, hstep]
+    (hw : ∀ t, fr.current ≠ Prim.withFiber t) (r : σ) {ctx : Ctx} : localRunC host root 1 fr s r ctx = some (.exit ex s' r) := by
+  show localRunC host root (0 + 1) fr s r ctx = _
+  simp only [localRunC, localStepC, hc, Bool.false_eq_true, if_false, contextStep_fallback root fr s ctx hw, hstep]
 
 /-- **What one evaluation segment owes**, from the running root at count `k` with `d` the next
 command (`cmdOf`). Within `c ≤ 2n + 2` commands the loop reaches one of three places, and the
@@ -398,14 +499,14 @@ def SegOwes (root : NativeEff) (table : RowTable) (n : Nat) (cur : NCode) (K : L
             (M (fiberOf cur K i) s k tr nt) (cmdOf d :: rest) =
           driveState (evaluator := evaluatorFor root table) (interpOf root table) fuel
             (M fr s' k' tr' nt) (Cmd.finish Api.root ex :: rest)) ∨
-      (∃ cur₁ K₁ i₁ s₁ k₁ tr' l, c ≤ 2 * l + 1 ∧ IsCall cur₁ = true ∧ PlainStack K₁ ∧ Quiet s₁ ∧
+      (∃ cur₁ K₁ i₁ s₁ k₁ tr' l, c ≤ 2 * l + 1 ∧ IsCall cur₁ = true ∧ ContextFreeStack K₁ ∧ Quiet s₁ ∧
         ReachesQ (table := table) root l (fiberOf cur K i) s (fiberOf cur₁ K₁ i₁) s₁ ∧
         ∀ fuel, driveState (evaluator := evaluatorFor root table) (interpOf root table) (fuel + c)
             (M (fiberOf cur K i) s k tr nt) (cmdOf d :: rest) =
           driveState (evaluator := evaluatorFor root table) (interpOf root table) fuel
             (Mcall (fiberOf cur₁ K₁ i₁) s₁ k₁ tr' nt) rest) ∨
       (∃ cur₁ K₁ i₁ s₁ k₁ tr' l, c ≤ 2 * l + 2 ∧ defaultBudget ≤ k + l + 1 ∧
-        PlainCode cur₁ = true ∧ PlainStack K₁ ∧ Quiet s₁ ∧
+        ContextFreeCode cur₁ = true ∧ ContextFreeStack K₁ ∧ Quiet s₁ ∧
         ReachesQ (table := table) root l (fiberOf cur K i) s (fiberOf cur₁ K₁ i₁) s₁ ∧
         ∀ fuel, driveState (evaluator := evaluatorFor root table) (interpOf root table) (fuel + c)
             (M (fiberOf cur K i) s k tr nt) (cmdOf d :: rest) =
@@ -467,7 +568,7 @@ theorem SegOwes.finish {root : NativeEff} {n : Nat} {cur : NCode} {K : List NCod
 /-- The root parked on a host call, one command away. -/
 theorem SegOwes.call {root : NativeEff} {n : Nat} {cur : NCode} {K : List NCode} {i : Bool}
     {s : Stores} {k : Nat} {tr : NTrace} {nt : Nat} {rest : List NCmd} {d : Bool} {k' : Nat}
-    {tr' : NTrace} (hc : IsCall cur = true) (hK : PlainStack K) (hq : Quiet s)
+    {tr' : NTrace} (hc : IsCall cur = true) (hK : ContextFreeStack K) (hq : Quiet s)
     (hdrv : ∀ fuel, driveState (evaluator := evaluatorFor root table) (interpOf root table)
         (fuel + 1) (M (fiberOf cur K i) s k tr nt) (cmdOf d :: rest) =
       driveState (evaluator := evaluatorFor root table) (interpOf root table) fuel
@@ -479,7 +580,7 @@ theorem SegOwes.call {root : NativeEff} {n : Nat} {cur : NCode} {K : List NCode}
 /-- The yield, two commands away: the count about to reach the budget at the loop. -/
 theorem SegOwes.yield (root : NativeEff) {n : Nat} {cur : NCode} {K : List NCode} {i : Bool}
     {s : Stores} {k : Nat} {tr : NTrace} {nt : Nat} {rest : List NCmd}
-    (hk : defaultBudget ≤ k + 1) (hpl : PlainCode cur = true) (hK : PlainStack K) (hq : Quiet s) :
+    (hk : defaultBudget ≤ k + 1) (hpl : ContextFreeCode cur = true) (hK : ContextFreeStack K) (hq : Quiet s) :
     SegOwes root table n cur K i s k tr nt rest false := by
   obtain ⟨tr', h⟩ := drive_loop_yield (table := table) root cur K i s k tr nt rest hk
   exact ⟨2, by omega, Or.inr (Or.inr ⟨cur, K, i, s, k + 2, tr', 0, by omega, by omega, hpl, hK,
@@ -490,13 +591,13 @@ fiber, quiet stores, and a measure `n` of what is left of the op
 budget, the loop does what `SegOwes` says: it reaches the exit path, a host call or a yield,
 and the local run with calls reaches the same place with no reply read. Induction on the
 measure: each command takes one local step, or answers a `sync` that the next command
-delivers. Reach: `LoopedRows`, one fiber, any row table. It does not establish that the run
+delivers. Reach: `ContextFreeHooks`, one fiber, any row table. It does not establish that the run
 ends: a yield leaves the rest to `flush`. -/
-theorem drive_seg (root : NativeEff) (hroot : LoopedRows root = true) :
+theorem drive_seg (root : NativeEff) (hroot : ContextFreeHooks root) :
     ∀ (n : Nat) (cur : NCode) (K : List NCode) (i : Bool) (s : Stores) (k : Nat) (tr : NTrace)
       (nt : Nat) (rest : List NCmd) (d : Bool),
       2 * (defaultBudget - k) + d.toNat ≤ n →
-      PlainCode cur = true → PlainStack K → Quiet s →
+      ContextFreeCode cur = true → ContextFreeStack K → Quiet s →
       (d = true → (∀ t, cur ≠ Prim.sync t) ∧ IsCall cur = false) →
       SegOwes root table n cur K i s k tr nt rest d
   | 0, cur, K, i, s, k, tr, nt, rest, d, hm, hpl, hK, hq, _ => by
@@ -515,7 +616,7 @@ theorem drive_seg (root : NativeEff) (hroot : LoopedRows root = true) :
       simp only [Bool.toNat_true] at hm
       obtain ⟨hns, hnc⟩ := hd rfl
       rcases hstep : localStep root (fiberOf cur K i) s with ⟨fr₁, s₁⟩ | ⟨ex₁, s₁⟩
-      · have hreach : ReachesQ (table := table) root 1 _ _ _ _ := ReachesQ.step hstep hnc
+      · have hreach : ReachesQ (table := table) root 1 _ _ _ _ := ReachesQ.step hstep hnc (ContextFreeCode.not_withFiber hpl)
         have hs₁ := localStep_stores hns hstep
         subst hs₁
         obtain ⟨cur₁, K₁, i₁, rfl, hpl₁, hK₁⟩ :=
@@ -531,14 +632,14 @@ theorem drive_seg (root : NativeEff) (hroot : LoopedRows root = true) :
         subst hs₁
         obtain ⟨tr₁, hdrv⟩ :=
           drive_deliver_finish (table := table) root cur K i s k tr nt rest ex₁ hpl hns hstep
-        exact SegOwes.finish hq (fun _ r => localRunC_finish hstep hnc r) hdrv
+        exact SegOwes.finish hq (fun _ r => localRunC_finish hstep hnc (ContextFreeCode.not_withFiber hpl) r) hdrv
     | false =>
       simp only [Bool.toNat_false, Nat.add_zero] at hm
       rcases Nat.lt_or_ge (k + 1) defaultBudget with hk | hk
       · cases hcall : IsCall cur
         · rcases hstep : localStep root (fiberOf cur K i) s with ⟨fr₁, s₁⟩ | ⟨ex₁, s₁⟩
           · -- one more local step at the loop
-            have hreach : ReachesQ (table := table) root 1 _ _ _ _ := ReachesQ.step hstep hcall
+            have hreach : ReachesQ (table := table) root 1 _ _ _ _ := ReachesQ.step hstep hcall (ContextFreeCode.not_withFiber hpl)
             cases hsy : isSync cur
             · have hns := not_sync_of_isSync_false hsy
               have hs₁ := localStep_stores hns hstep
@@ -554,7 +655,7 @@ theorem drive_seg (root : NativeEff) (hroot : LoopedRows root = true) :
                   (fun h => by cases h))
             · -- a `sync`: answered at the loop, delivered next
               obtain ⟨t, rfl⟩ := eq_sync_of_isSync hsy
-              cases t <;> simp only [PlainCode, Bool.false_eq_true] at hpl
+              cases t <;> simp only [ContextFreeCode, Bool.false_eq_true] at hpl
               · -- pure
                 rename_i p
                 rw [step_sync_pure] at hstep
@@ -599,10 +700,10 @@ theorem drive_seg (root : NativeEff) (hroot : LoopedRows root = true) :
             · have hns := not_sync_of_isSync_false hsy
               obtain ⟨tr₁, hdrv⟩ :=
                 drive_loop_finish (table := table) root cur K i s k tr nt rest ex₁ hpl hns hk hstep
-              exact SegOwes.finish hq (fun _ r => localRunC_finish hstep hcall r) hdrv
+              exact SegOwes.finish hq (fun _ r => localRunC_finish hstep hcall (ContextFreeCode.not_withFiber hpl) r) hdrv
             · -- a `sync` never finishes the fiber
               obtain ⟨t, rfl⟩ := eq_sync_of_isSync hsy
-              cases t <;> simp only [PlainCode, Bool.false_eq_true] at hpl
+              cases t <;> simp only [ContextFreeCode, Bool.false_eq_true] at hpl
               · rw [step_sync_pure] at hstep
                 cases hstep
               · rename_i o
@@ -620,10 +721,10 @@ theorem drive_seg (root : NativeEff) (hroot : LoopedRows root = true) :
 dispatcher back into the loop at count one and runs a segment (`drive_seg`). A segment that
 yields again has taken at least `defaultBudget - 2` steps of the run, so `n + 1` rounds are
 enough, and each round's commands fit in `2n + 6`. A step of `replay_Mexit_of_localRun`. -/
-theorem flushAll_Myield (root : NativeEff) (hroot : LoopedRows root = true) :
+theorem flushAll_Myield (root : NativeEff) (hroot : ContextFreeHooks root) :
     ∀ (rounds n : Nat) (cur : NCode) (K : List NCode) (i : Bool) (s : Stores) (k : Nat)
       (tr : NTrace) (nt : Nat) (ex : ExitV) (s' : Stores) (fuel : Nat),
-      PlainCode cur = true → PlainStack K → Quiet s →
+      ContextFreeCode cur = true → ContextFreeStack K → Quiet s →
       localRunC (silentHost table) root n (fiberOf cur K i) s () = some (.exit ex s' ()) →
       n + 1 ≤ rounds → 2 * n + 6 ≤ fuel →
       ∃ fr k' tr' nt', flushAllState (evaluator := evaluatorFor root table) (interpOf root table)
@@ -701,12 +802,13 @@ theorem replay_Mexit_of_localRun (e : NativeEff) (fuel N : Nat) (hl : Looped e =
       [Api.evaluate, Api.flush] (Api.load e fuel) =
       ReplayResult.finished (Mexit e ex fr s' k' tr' nt') := by
   have hB : defaultBudget = 2048 := rfl
-  have hroot := LoopedRows.of_looped e hl
-  have hrunC := localRunC_of_localRun (table := table) hrun (silentHost table) ()
+  have hrows := LoopedRows.of_looped e hl
+  have hroot := ContextFreeHooks.of_loopedRows hrows
+  have hrunC := localRunC_of_localRun (table := table) (ctx := emptyCtx) hroot (plainCode_compileEff e _ hrows) ContextFreeStack.nil hrun (silentHost table) ()
   obtain ⟨c, -, h⟩ := drive_seg (table := table) e hroot (2 * defaultBudget) (compile e fuel) []
     true Stores.empty 0 [RunEvent.started Api.root] 0 [Cmd.drainDue] false
-    (by simp only [Bool.toNat_false, Nat.add_zero]; omega) (plainCode_compileEff e _ hroot)
-    PlainStack.nil Quiet.empty (fun h => by cases h)
+    (by simp only [Bool.toNat_false, Nat.add_zero]; omega) (plainCode_compileEff e _ hrows)
+    ContextFreeStack.nil Quiet.empty (fun h => by cases h)
   simp only [cmdOf] at h
   rcases h with ⟨ex₁, s₁, fr, k', tr', l, hc, hq', hl₁, hsim⟩ |
     ⟨cur₁, K₁, i₁, s₁, k₁, tr', l, -, hc₁, -, -, hreach, -⟩ |

@@ -45,12 +45,15 @@ approximant's exit or an unanswered call, as `RunsToD` says of the meaning; at a
 run is still going after at least `k` steps, or diverges. Each loop test costs a step, so a cut
 at `k` is at least `k` steps away. -/
 def RunsToDB {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root : NativeEff)
-    (K : List NCode) (i : Bool) (k : Nat) (fr : NFiber) (s : Stores) (r : σ) :
-    Option (Option ExitV × (Stores × σ)) → Prop
-  | some (some ex, st) => RunsToD host root K i fr s r (some (ex, st))
+    (K : List NCode) (i : Bool) (k : Nat) (fr : NFiber) (s : Stores) (r : σ)
+    (o : Option (Option ExitV × (Stores × σ))) (ctx : Ctx := emptyCtx)
+    (postCtx : Ctx := ctx) : Prop :=
+  match o with
+  | some (some ex, st) => RunsToD host root K i fr s r (some (ex, st)) ctx postCtx
   | some (none, _) =>
-    (∃ c fr' s' r', k ≤ c ∧ ReachesC host root c fr s r fr' s' r') ∨ Diverges host root fr s r
-  | none => RunsToD host root K i fr s r none
+    (∃ c fr' s' r' reachedCtx,
+      k ≤ c ∧ ReachesC host root c fr s r fr' s' r' ctx reachedCtx) ∨ Diverges host root fr s r ctx
+  | none => RunsToD host root K i fr s r none ctx postCtx
 
 /-- On `StraightRows` the budgeted run is the row run, finished (`denoteRowsB_straight`). -/
 theorem hostRunB_of_straightRows {σ : Type} (host : Effects.Comodel (RowSig table) σ) (k : Nat)
@@ -152,80 +155,92 @@ a finished outcome's exit (`RunsToD`); at a cut, still going after at least `k` 
 wait, a host call with the outcome's row and request, reached at its stores and host state,
 which the host does not answer. Each may instead diverge at the compile's frontier. -/
 def RunsToDO {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root : NativeEff)
-    (K : List NCode) (i : Bool) (k : Nat) (fr : NFiber) (s : Stores) (r : σ) :
-    RowsEnd (Option ExitV) σ → Prop
-  | .done (some ex) s' r' => RunsToD host root K i fr s r (some (ex, (s', r')))
+    (K : List NCode) (i : Bool) (k : Nat) (fr : NFiber) (s : Stores) (r : σ)
+    (o : RowsEnd (Option ExitV) σ) (ctx : Ctx := emptyCtx) (postCtx : Ctx := ctx) : Prop :=
+  match o with
+  | .done (some ex) s' r' => RunsToD host root K i fr s r (some (ex, (s', r'))) ctx postCtx
   | .done none _ _ =>
-    (∃ c fr' s' r', k ≤ c ∧ ReachesC host root c fr s r fr' s' r') ∨ Diverges host root fr s r
+    (∃ c fr' s' r' reachedCtx,
+      k ≤ c ∧ ReachesC host root c fr s r fr' s' r' ctx reachedCtx) ∨ Diverges host root fr s r ctx
   | .waiting row request s' r' =>
-    (∃ c fr', ReachesC host root c fr s r fr' s' r' ∧ IsCall fr'.current = true ∧
-      callOf fr'.current = some (row, request) ∧ hostAnswer host fr'.current r' = none) ∨
-      Diverges host root fr s r
+    (∃ c fr' reachedCtx, ReachesC host root c fr s r fr' s' r' ctx reachedCtx ∧
+      IsCall fr'.current = true ∧ callOf fr'.current = some (row, request) ∧
+      hostAnswer host fr'.current r' = none) ∨ Diverges host root fr s r ctx
 
-/-- Steps before an outcome keep it: a cut's count and a wait's distance grow by the prefix. -/
+/-- A step of rows-block-host/R6, consumed by `compilesBO` and `compilesBlk`:
+prefixes retain the expected final context and transfer the actual live context. -/
 theorem RunsToDO.pre {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
     {K : List NCode} {i : Bool} {k c : Nat} {fr fr₁ : NFiber} {s s₁ : Stores} {r r₁ : σ}
-    (h : ReachesC host root c fr s r fr₁ s₁ r₁) :
+    {ctx ctx₁ postCtx : Ctx} (h : ReachesC host root c fr s r fr₁ s₁ r₁ ctx ctx₁) :
     ∀ {o : RowsEnd (Option ExitV) σ},
-      RunsToDO host root K i k fr₁ s₁ r₁ o → RunsToDO host root K i k fr s r o
+      RunsToDO host root K i k fr₁ s₁ r₁ o ctx₁ postCtx → RunsToDO host root K i k fr s r o ctx postCtx
   | .done (some _) _ _, h' => RunsToD.pre h h'
-  | .done none _ _, .inl ⟨c', fr', s', r', hk, h'⟩ =>
-    .inl ⟨c + c', fr', s', r', Nat.le_trans hk (Nat.le_add_left c' c), h.trans h'⟩
+  | .done none _ _, .inl ⟨c', fr', s', r', reachedCtx, hk, h'⟩ =>
+    .inl ⟨c + c', fr', s', r', reachedCtx, Nat.le_trans hk (Nat.le_add_left c' c), h.trans h'⟩
   | .done none _ _, .inr hd => .inr (hd.pre h)
-  | .waiting _ _ _ _, .inl ⟨c', fr', h', hc, hcall, ha⟩ => .inl ⟨c + c', fr', h.trans h', hc, hcall, ha⟩
+  | .waiting _ _ _ _, .inl ⟨c', fr', reachedCtx, h', hc, hcall, ha⟩ =>
+    .inl ⟨c + c', fr', reachedCtx, h.trans h', hc, hcall, ha⟩
   | .waiting _ _ _ _, .inr hd => .inr (hd.pre h)
 
-/-- A compile out of budget is at the frontier at once, for every outcome. -/
+/-- A compile out of budget reaches its frontier at once, at any context. -/
 theorem RunsToDO.of_zero {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root e : NativeEff}
-    {p : Point} {K : List NCode} {i : Bool} {k : Nat} {s : Stores} {r : σ} (hf : p.fuel = 0) :
+    {p : Point} {K : List NCode} {i : Bool} {k : Nat} {s : Stores} {r : σ}
+    {ctx postCtx : Ctx} (hf : p.fuel = 0) :
     ∀ {o : RowsEnd (Option ExitV) σ},
-      RunsToDO host root K i k (fiberOf (compileEff e p) K i) s r o
+      RunsToDO host root K i k (fiberOf (compileEff e p) K i) s r o ctx postCtx
   | .done (some _) _ _ => RunsToD.of_zero hf
   | .done none _ _ =>
-    .inr ⟨0, _, s, r, ReachesC.refl host root _ s r, p, K, i, hf, by rw [compileEff_at_zero e hf]⟩
+    .inr ⟨0, _, s, r, ctx, ReachesC.refl host root _ s r ctx,
+      p, K, i, hf, by rw [compileEff_at_zero e hf]⟩
   | .waiting _ _ _ _ =>
-    .inr ⟨0, _, s, r, ReachesC.refl host root _ s r, p, K, i, hf, by rw [compileEff_at_zero e hf]⟩
+    .inr ⟨0, _, s, r, ctx, ReachesC.refl host root _ s r ctx,
+      p, K, i, hf, by rw [compileEff_at_zero e hf]⟩
 
-/-- A divergence is where the run goes for every outcome. -/
+/-- A divergence reaches the same frontier for every expected outcome and final context. -/
 theorem RunsToDO.of_diverges {σ : Type} {host : Effects.Comodel (RowSig table) σ}
     {root : NativeEff} {K : List NCode} {i : Bool} {k : Nat} {fr : NFiber} {s : Stores} {r : σ}
-    (hd : Diverges host root fr s r) :
-    ∀ {o : RowsEnd (Option ExitV) σ}, RunsToDO host root K i k fr s r o
+    {ctx postCtx : Ctx} (hd : Diverges host root fr s r ctx) :
+    ∀ {o : RowsEnd (Option ExitV) σ}, RunsToDO host root K i k fr s r o ctx postCtx
   | .done (some _) _ _ => .inr hd
   | .done none _ _ => .inr hd
   | .waiting _ _ _ _ => .inr hd
 
-/-- A cut's bound weakens. -/
+/-- A cut's bound weakens, at the same initial and expected final contexts. -/
 theorem RunsToDO.mono {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
-    {K : List NCode} {i : Bool} {j j' : Nat} {fr : NFiber} {s : Stores} {r : σ} (hj : j ≤ j') :
+    {K : List NCode} {i : Bool} {j j' : Nat} {fr : NFiber} {s : Stores} {r : σ}
+    {ctx postCtx : Ctx} (hj : j ≤ j') :
     ∀ {o : RowsEnd (Option ExitV) σ},
-      RunsToDO host root K i j' fr s r o → RunsToDO host root K i j fr s r o
+      RunsToDO host root K i j' fr s r o ctx postCtx → RunsToDO host root K i j fr s r o ctx postCtx
   | .done (some _) _ _, h => h
-  | .done none _ _, .inl ⟨c, fr', s', r', hk, h⟩ => .inl ⟨c, fr', s', r', Nat.le_trans hj hk, h⟩
+  | .done none _ _, .inl ⟨c, fr', s', r', reachedCtx, hk, h⟩ =>
+    .inl ⟨c, fr', s', r', reachedCtx, Nat.le_trans hj hk, h⟩
   | .done none _ _, .inr hd => .inr hd
   | .waiting _ _ _ _, h => h
 
-/-- Steps before an outcome raise a cut's bound by their count. -/
+/-- A step of rows-block-host/R6, consumed by the loop arm: prefix steps increase the cut
+bound while retaining the expected final context. No termination is asserted. -/
 theorem RunsToDO.pre_add {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
     {K : List NCode} {i : Bool} {j c : Nat} {fr fr₁ : NFiber} {s s₁ : Stores} {r r₁ : σ}
-    (h : ReachesC host root c fr s r fr₁ s₁ r₁) :
+    {ctx ctx₁ postCtx : Ctx} (h : ReachesC host root c fr s r fr₁ s₁ r₁ ctx ctx₁) :
     ∀ {o : RowsEnd (Option ExitV) σ},
-      RunsToDO host root K i j fr₁ s₁ r₁ o → RunsToDO host root K i (j + c) fr s r o
+      RunsToDO host root K i j fr₁ s₁ r₁ o ctx₁ postCtx →
+      RunsToDO host root K i (j + c) fr s r o ctx postCtx
   | .done (some _) _ _, h' => RunsToD.pre h h'
-  | .done none _ _, .inl ⟨c', fr', s', r', hk, h'⟩ =>
-    .inl ⟨c + c', fr', s', r', by omega, h.trans h'⟩
+  | .done none _ _, .inl ⟨c', fr', s', r', reachedCtx, hk, h'⟩ =>
+    .inl ⟨c + c', fr', s', r', reachedCtx, by omega, h.trans h'⟩
   | .done none _ _, .inr hd => .inr (hd.pre h)
   | .waiting _ _ _ _, h' => RunsToDO.pre h h'
 
-/-- **The coarse relation is the detailed one, a wait's data forgotten** (`RowsEnd.project`). A
-step of `localRunC_compileB`'s reading from `localRunC_compileBO`. -/
+/-- Forgetting a wait's row and request retains its actual reached context.
+A step of rows-block-host/R6, consumed by `localRunC_compileB`. -/
 theorem RunsToDO.project {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
-    {K : List NCode} {i : Bool} {k : Nat} {fr : NFiber} {s : Stores} {r : σ} :
+    {K : List NCode} {i : Bool} {k : Nat} {fr : NFiber} {s : Stores} {r : σ} {ctx postCtx : Ctx} :
     ∀ {o : RowsEnd (Option ExitV) σ},
-      RunsToDO host root K i k fr s r o → RunsToDB host root K i k fr s r o.project
+      RunsToDO host root K i k fr s r o ctx postCtx → RunsToDB host root K i k fr s r o.project ctx postCtx
   | .done (some _) _ _, h => h
   | .done none _ _, h => h
-  | .waiting _ _ _ _, .inl ⟨c, fr', h, hc, _, ha⟩ => .inl ⟨c, fr', _, _, h, hc, ha⟩
+  | .waiting _ _ _ _, .inl ⟨c, fr', reachedCtx, h, hc, _, ha⟩ =>
+    .inl ⟨c, fr', _, _, reachedCtx, h, hc, ha⟩
   | .waiting _ _ _ _, .inr hd => .inr hd
 
 /-! ## The detailed run of a budgeted tree -/
@@ -297,10 +312,10 @@ theorem runRowsO_of_asExit {σ : Type} (host : Effects.Comodel (RowSig table) σ
 from any outer stack, mask, stores and host state. -/
 def CompilesBO {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root : NativeEff) (k : Nat)
     (e : NativeEff) : Prop :=
-  ∀ (p : Point) (K : List NCode) (i : Bool) (s : Stores) (r : σ),
+  ∀ (p : Point) (K : List NCode) (i : Bool) (s : Stores) (r : σ) (ctx : Ctx),
     Node.at_ (Node.eff root) p.path = some (Node.eff e) →
       RunsToDO host root K i k (fiberOf (compileEff e p) K i) s r
-        (runRowsO host (denoteRowsB table k e p.env) s r)
+        (runRowsO host (denoteRowsB table k e p.env) s r) ctx ctx
 
 /-- **A `StraightRows` atom whose host run finishes** compiles to its finished detailed run: its
 agreement (`CompilesD`) read through `runRowsO_of_runRowsH`. -/
@@ -309,8 +324,8 @@ theorem compilesBO_of_finishes {σ : Type} (host : Effects.Comodel (RowSig table
     (hc : CompilesD host root e)
     (hfin : ∀ (env : List Val) (s : Stores) (r : σ), ∃ x, hostRun host e env s r = some x) :
     CompilesBO host root k e := by
-  intro p K i s r hat
-  have hd := hc p K i s r hat
+  intro p K i s r ctx hat
+  have hd := hc p K i s r ctx hat
   obtain ⟨⟨ex, s', r'⟩, hx⟩ := hfin p.env s r
   have hB : hostRunB host k e p.env s r = some (some ex, (s', r')) := by
     rw [hostRunB_of_straightRows host k e p.env s r h, hx]
@@ -343,10 +358,10 @@ theorem compilesBO_perform {σ : Type} (host : Effects.Comodel (RowSig table) σ
   · rw [eq_external_of_index hext] at h ⊢
     have hrow : dataRow table j = true := h
     have hj : j < table.length := lt_of_dataRow hrow
-    intro p K i s r hat
+    intro p K i s r ctx hat
     rcases hfu : p.fuel with _ | n
     · exact RunsToDO.of_zero hfu
-    have hd := compilesD_perform host root h p K i s r hat
+    have hd := compilesD_perform host root h p K i s r ctx hat
     rcases hx : evalTerm p.env q with _ | v
     · -- no request: the wrong-shape exit, finished
       have hR : hostRun host (.perform (.external j) q) p.env s r = some (badShapeExit, (s, r)) :=
@@ -374,11 +389,11 @@ theorem compilesBO_perform {σ : Type} (host : Effects.Comodel (RowSig table) σ
           rw [ha]
           rfl
         rw [hO, compileEff_perform (.external j) q hfu]
-        show RunsToDO host root K i k (fiberOf (asyncRoute (.external j) q p) K i) s r _
+        show RunsToDO host root K i k (fiberOf (asyncRoute (.external j) q p) K i) s r _ ctx ctx
         unfold asyncRoute
         rw [hx]
         have hcall := hostAnswer_call host hj v p.path r
-        exact Or.inl ⟨0, _, ReachesC.refl host root _ s r, rfl, rfl, hcall.trans ha⟩
+        exact Or.inl ⟨0, _, ctx, ReachesC.refl host root _ s r ctx, rfl, rfl, hcall.trans ha⟩
       · -- the host answers: the straight agreement, finished
         have hR : hostRun host (.perform (.external j) q) p.env s r = some (ex, (s, r')) := by
           rw [hostRun_call host j q p.env s r hx hj, ha]
@@ -405,12 +420,12 @@ theorem loop_reachesCO {σ : Type} (host : Effects.Comodel (RowSig table) σ) (r
     {body : NativeEff}
     (h : Node.at_ (Node.eff root) q.path =
       some (Node.eff (.iterate cty init test step result body)))
-    (K : List NCode) (i : Bool) (hbody : CompilesBO host root k body) :
+    (K : List NCode) (i : Bool) (ctx : Ctx) (hbody : CompilesBO host root k body) :
     ∀ (j : Nat), j ≤ k → ∀ (c : Val) (s : Stores) (r : σ),
       RunsToDO host root K i j (enter q K i (loopNextAt root q c)) s r
         (runRowsO host (Option.join <$>
-          iter (loopStep (denoteRowsB table k body) q.env test step result) j c) s r)
-  | 0, _, _, s, r => .inl ⟨0, _, s, r, Nat.le_refl 0, ReachesC.refl host root _ s r⟩
+          iter (loopStep (denoteRowsB table k body) q.env test step result) j c) s r) ctx ctx
+  | 0, _, _, s, r => .inl ⟨0, _, s, r, ctx, Nat.le_refl 0, ReachesC.refl host root _ s r ctx⟩
   | j + 1, hj, c, s, r => by
     have hNext : ∀ {x : Option Val} {ln : LoopNext Val NCode}, evalTerm (q.env ++ [c]) test = x →
         (match x with
@@ -440,12 +455,12 @@ theorem loop_reachesCO {σ : Type} (host : Effects.Comodel (RowSig table) σ) (r
           .done (.inl (some y)) s r →
         loopNextAt root q c = .finish code → code = Prim.ofExit y →
         RunsToDO host root K i (j + 1) (enter q K i (loopNextAt root q c)) s r
-          (.done (some y) s r) := by
+          (.done (some y) s r) ctx ctx := by
       intro y code hf hln hcode
       rw [hln]
-      show RunsToD host root K i (fiberOf code K i) s r (some (y, (s, r)))
+      show RunsToD host root K i (fiberOf code K i) s r (some (y, (s, r))) ctx ctx
       rw [hcode]
-      exact Or.inl ⟨0, ReachesC.refl host root _ s r⟩
+      exact Or.inl ⟨0, ReachesC.refl host root _ s r ctx⟩
     cases ht : evalTerm (q.env ++ [c]) test with
     | none =>
       have hf : runRowsO host (loopStep (denoteRowsB table k body) q.env test step result c) s r =
@@ -486,7 +501,7 @@ theorem loop_reachesCO {σ : Type} (host : Effects.Comodel (RowSig table) σ) (r
             rw [resolve_of_at hat]
             rfl
           rw [hent]
-          have ihb := hbody (q.childWith 0 c) (Prim.whileLoop (EffName.loop q) c :: K) i s r hat
+          have ihb := hbody (q.childWith 0 c) (Prim.whileLoop (EffName.loop q) c :: K) i s r ctx hat
           rw [Point.childWith_env] at ihb
           -- the round's run, from the body's run
           have hround : runRowsO host (loopStep (denoteRowsB table k body) q.env test step result c)
@@ -517,12 +532,12 @@ theorem loop_reachesCO {σ : Type} (host : Effects.Comodel (RowSig table) σ) (r
             obtain ⟨cb, hrb⟩ := ihb
             cases exb with
             | failure cause =>
-              have hpass := ReachesC.same (host := host) s' r' (fun s₀ =>
-                step_failure_pass_whileLoop root q c cause K i s₀) rfl rfl
+              have hpass := ReachesC.same (host := host) (ctx := ctx) s' r' (fun s₀ =>
+                step_failure_pass_whileLoop root q c cause K i s₀) rfl rfl (by intro t ht; cases ht) (by intro t ht; cases ht)
               exact Or.inl ⟨cb + 0, hrb.trans hpass⟩
             | success a =>
-              have hstepA := ReachesC.step (host := host) (step_success_enter root q hq c a K i s')
-                rfl r'
+              have hstepA := ReachesC.step (host := host) (ctx := ctx) (step_success_enter root q hq c a K i s')
+                rfl (by intro t ht; cases ht) r'
               have hResume : ∀ {x : Option Val} {ln : LoopNext Val NCode},
                   evalTerm (q.env ++ [c, a]) step = x →
                   (match x with
@@ -542,7 +557,7 @@ theorem loop_reachesCO {σ : Type} (host : Effects.Comodel (RowSig table) σ) (r
                 exact Or.inl ⟨cb + 1, hrb.trans hstepA⟩
               | some c' =>
                 rw [hResume hs rfl] at hstepA
-                have ih := loop_reachesCO host root k q hq h K i hbody j (by omega) c' s' r'
+                have ih := loop_reachesCO host root k q hq h K i ctx hbody j (by omega) c' s' r'
                 exact RunsToDO.mono (by omega) (RunsToDO.pre_add (hrb.trans hstepA) ih)
       | _ =>
         have hf : runRowsO host (loopStep (denoteRowsB table k body) q.env test step result c) s r =
@@ -564,33 +579,33 @@ part is the whole's. On `StraightRows` no part is cut, and the arms are the stra
 theorem compilesBO_suspend {σ : Type} (host : Effects.Comodel (RowSig table) σ)
     (root : NativeEff) (k : Nat) {b : NativeEff} (hb : CompilesBO host root k b) :
     CompilesBO host root k (.suspend b) := by
-  intro p K i s r h
+  intro p K i s r ctx h
   rcases hfu : p.fuel with _ | n
   · exact RunsToDO.of_zero hfu
   have hb' : Node.at_ (Node.eff root) ({ p with completed := [] }.child 0).path =
       some (Node.eff b) := at_child h 0
-  have ih := hb ({ p with completed := [] }.child 0) K i s r hb'
+  have ih := hb ({ p with completed := [] }.child 0) K i s r ctx hb'
   rw [Point.child_env] at ih
   rw [compileEff_suspend b hfu]
   have hs := step_suspend root (EffThunk.body p) K i s
   simp only [interpAt] at hs
   rw [suspendBodyAt_suspend (q := { p with completed := [] }) hfu h, resolve_of_at hb'] at hs
-  exact RunsToDO.pre (ReachesC.step (host := host) hs rfl r) ih
+  exact RunsToDO.pre (ReachesC.step (host := host) (ctx := ctx) hs rfl (by intro t ht; cases ht) r) ih
 
 /-- The sequence arm: a cut of either part cuts the whole. -/
 @[semantics "translation-simulation" (requirement := R6)]
 theorem compilesBO_bind {σ : Type} (host : Effects.Comodel (RowSig table) σ)
     (root : NativeEff) (k : Nat) {a b : NativeEff} (ha : CompilesBO host root k a)
     (hb : CompilesBO host root k b) : CompilesBO host root k (.bind a b) := by
-  intro p K i s r h
+  intro p K i s r ctx h
   rcases hfu : p.fuel with _ | n
   · exact RunsToDO.of_zero hfu
   have ha' : Node.at_ (Node.eff root) (p.child 0).path = some (Node.eff a) := at_child h 0
   rw [compileEff_bind a b hfu, runRowsOB_thenOpt host k a _ s r rfl]
-  have iha := ha (p.child 0) (Prim.onSuccess (compileEff a (p.child 0)) (EffName.cont p) :: K) i s r ha'
+  have iha := ha (p.child 0) (Prim.onSuccess (compileEff a (p.child 0)) (EffName.cont p) :: K) i s r ctx ha'
   rw [Point.child_env] at iha
-  have hpush := ReachesC.step (host := host)
-    (step_push_onSuccess root (compileEff a (p.child 0)) (EffName.cont p) K i s) rfl r
+  have hpush := ReachesC.step (host := host) (ctx := ctx)
+    (step_push_onSuccess root (compileEff a (p.child 0)) (EffName.cont p) K i s) rfl (by intro t ht; cases ht) r
   rcases hma : runRowsO host (denoteRowsB table k a p.env) s r with
       ⟨_ | ex, s', r'⟩ | ⟨row, req, s', r'⟩
   rotate_right
@@ -607,16 +622,16 @@ theorem compilesBO_bind {σ : Type} (host : Effects.Comodel (RowSig table) σ)
     | success v =>
       have hb' : Node.at_ (Node.eff root) ({ p with completed := [] }.childWith 1 v).path =
           some (Node.eff b) := at_childWith h 1 v
-      have ihb := hb ({ p with completed := [] }.childWith 1 v) K i s' r' hb'
+      have ihb := hb ({ p with completed := [] }.childWith 1 v) K i s' r' ctx hb'
       rw [Point.childWith_env] at ihb
-      have hpop := ReachesC.step (host := host)
-        (step_success_onSuccess root v (compileEff a (p.child 0)) (EffName.cont p) K i s') rfl r'
+      have hpop := ReachesC.step (host := host) (ctx := ctx)
+        (step_success_onSuccess root v (compileEff a (p.child 0)) (EffName.cont p) K i s') rfl (by intro t ht; cases ht) r'
       simp only [interpAt] at hpop
       rw [contAOf_cont, resolve_of_at hb'] at hpop
       exact RunsToDO.pre ((hpush.trans hra).trans hpop) ihb
     | failure c =>
-      have hpass := ReachesC.same (host := host) s' r' (fun s =>
-        step_failure_pass_onSuccess root c (compileEff a (p.child 0)) (EffName.cont p) K i s) rfl rfl
+      have hpass := ReachesC.same (host := host) (ctx := ctx) s' r' (fun s =>
+        step_failure_pass_onSuccess root c (compileEff a (p.child 0)) (EffName.cont p) K i s) rfl rfl (by intro t ht; cases ht) (by intro t ht; cases ht)
       exact Or.inl ⟨1 + ca + 0, (hpush.trans hra).trans hpass⟩
 
 /-- The decision arm: the chosen branch's outcome. -/
@@ -625,7 +640,7 @@ theorem compilesBO_select {σ : Type} (host : Effects.Comodel (RowSig table) σ)
     (root : NativeEff) (k : Nat) {t : Term} {d : Decision} {a b : NativeEff}
     (ha : CompilesBO host root k a) (hb : CompilesBO host root k b) :
     CompilesBO host root k (.select t d a b) := by
-  intro p K i s r h
+  intro p K i s r ctx h
   rcases hfu : p.fuel with _ | n
   · exact RunsToDO.of_zero hfu
   rw [compileEff_select t d a b hfu]
@@ -638,7 +653,7 @@ theorem compilesBO_select {σ : Type} (host : Effects.Comodel (RowSig table) σ)
       simp only [denoteRowsB, hdec]
       rfl]
     rw [badShape_eq] at hs
-    exact Or.inl ⟨1, ReachesC.step (host := host) hs rfl r⟩
+    exact Or.inl ⟨1, ReachesC.step (host := host) (ctx := ctx) hs rfl (by intro t ht; cases ht) r⟩
   · rw [suspendBodyAt_select_of_decide (q := { p with completed := [] }) hfu h hdec] at hs
     cases first with
     | true =>
@@ -649,21 +664,21 @@ theorem compilesBO_select {σ : Type} (host : Effects.Comodel (RowSig table) σ)
       | none =>
         have ha' : Node.at_ (Node.eff root) ({ p with completed := [] }.child 0).path =
             some (Node.eff a) := at_child h 0
-        have ih := ha ({ p with completed := [] }.child 0) K i s r ha'
+        have ih := ha ({ p with completed := [] }.child 0) K i s r ctx ha'
         rw [Point.child_env] at ih
         simp only [Bool.cond_true, Point.childBind] at hs
         rw [resolve_of_at ha'] at hs
         simp only [Option.toList, List.append_nil]
-        exact RunsToDO.pre (ReachesC.step (host := host) hs rfl r) ih
+        exact RunsToDO.pre (ReachesC.step (host := host) (ctx := ctx) hs rfl (by intro t ht; cases ht) r) ih
       | some v =>
         have ha' : Node.at_ (Node.eff root) ({ p with completed := [] }.childWith 0 v).path =
             some (Node.eff a) := at_childWith h 0 v
-        have ih := ha ({ p with completed := [] }.childWith 0 v) K i s r ha'
+        have ih := ha ({ p with completed := [] }.childWith 0 v) K i s r ctx ha'
         rw [Point.childWith_env] at ih
         simp only [Bool.cond_true, Point.childBind] at hs
         rw [resolve_of_at ha'] at hs
         simp only [Option.toList]
-        exact RunsToDO.pre (ReachesC.step (host := host) hs rfl r) ih
+        exact RunsToDO.pre (ReachesC.step (host := host) (ctx := ctx) hs rfl (by intro t ht; cases ht) r) ih
     | false =>
       rw [show runRowsO host (denoteRowsB table k (.select t d a b) p.env) s r =
           runRowsO host (denoteRowsB table k b (p.env ++ bound.toList)) s r by
@@ -672,38 +687,38 @@ theorem compilesBO_select {σ : Type} (host : Effects.Comodel (RowSig table) σ)
       | none =>
         have hb' : Node.at_ (Node.eff root) ({ p with completed := [] }.child 1).path =
             some (Node.eff b) := at_child h 1
-        have ih := hb ({ p with completed := [] }.child 1) K i s r hb'
+        have ih := hb ({ p with completed := [] }.child 1) K i s r ctx hb'
         rw [Point.child_env] at ih
         simp only [Bool.cond_false, Point.childBind] at hs
         rw [resolve_of_at hb'] at hs
         simp only [Option.toList, List.append_nil]
-        exact RunsToDO.pre (ReachesC.step (host := host) hs rfl r) ih
+        exact RunsToDO.pre (ReachesC.step (host := host) (ctx := ctx) hs rfl (by intro t ht; cases ht) r) ih
       | some v =>
         have hb' : Node.at_ (Node.eff root) ({ p with completed := [] }.childWith 1 v).path =
             some (Node.eff b) := at_childWith h 1 v
-        have ih := hb ({ p with completed := [] }.childWith 1 v) K i s r hb'
+        have ih := hb ({ p with completed := [] }.childWith 1 v) K i s r ctx hb'
         rw [Point.childWith_env] at ih
         simp only [Bool.cond_false, Point.childBind] at hs
         rw [resolve_of_at hb'] at hs
         simp only [Option.toList]
-        exact RunsToDO.pre (ReachesC.step (host := host) hs rfl r) ih
+        exact RunsToDO.pre (ReachesC.step (host := host) (ctx := ctx) hs rfl (by intro t ht; cases ht) r) ih
 
 /-- The reified exit arm: its fold case through `straight_of_asExit`; a cut of the body cuts the whole. -/
 @[semantics "translation-simulation" (requirement := R6)]
 theorem compilesBO_exit {σ : Type} (host : Effects.Comodel (RowSig table) σ)
     (root : NativeEff) (k : Nat) {b : NativeEff} (hfrag : LoopedDataRows table b = true)
     (hb : CompilesBO host root k b) : CompilesBO host root k (.exit b) := by
-  intro p K i s r h
+  intro p K i s r ctx h
   rcases hfu : p.fuel with _ | n
   · exact RunsToDO.of_zero hfu
   have hb' : Node.at_ (Node.eff root) (p.child 0).path = some (Node.eff b) := at_child h 0
   rw [runRowsOB_thenOpt host k b _ s r rfl]
   rcases hx : (compileEff b (p.child 0)).asExit? with _ | ex
   · rw [compileEff_exit_frame b hfu hx]
-    have ih := hb (p.child 0) (Prim.exitFrame (compileEff b (p.child 0)) :: K) i s r hb'
+    have ih := hb (p.child 0) (Prim.exitFrame (compileEff b (p.child 0)) :: K) i s r ctx hb'
     rw [Point.child_env] at ih
-    have hpush := ReachesC.step (host := host)
-      (step_push_exitFrame root (compileEff b (p.child 0)) K i s) rfl r
+    have hpush := ReachesC.step (host := host) (ctx := ctx)
+      (step_push_exitFrame root (compileEff b (p.child 0)) K i s) rfl (by intro t ht; cases ht) r
     rcases hmb : runRowsO host (denoteRowsB table k b p.env) s r with
         ⟨_ | ex, s', r'⟩ | ⟨row, req, s', r'⟩
     rotate_right
@@ -716,14 +731,14 @@ theorem compilesBO_exit {σ : Type} (host : Effects.Comodel (RowSig table) σ)
       swap
       · exact RunsToDO.of_diverges (hdiv.pre hpush)
       obtain ⟨cb, hrb⟩ := ih
-      have hpop := ReachesC.step (host := host)
-        (step_ofExit_exitFrame root ex (compileEff b (p.child 0)) K i s') (isCall_ofExit ex) r'
+      have hpop := ReachesC.step (host := host) (ctx := ctx)
+        (step_ofExit_exitFrame root ex (compileEff b (p.child 0)) K i s') (by cases ex <;> rfl) (by intro t ht; cases ex <;> cases ht) r'
       exact Or.inl ⟨1 + cb + 1, (hpush.trans hrb).trans hpop⟩
   · -- the fold: the compiled program already is the meaning's exit (row D1)
     have hmb := runRowsO_of_asExit host k b (p.child 0) s r hfrag hx
     rw [Point.child_env] at hmb
     rw [compileEff_exit_fold b hfu hx, hmb]
-    exact Or.inl ⟨0, ReachesC.refl host root _ s r⟩
+    exact Or.inl ⟨0, ReachesC.refl host root _ s r ctx⟩
 
 /-- The handler arm: a cut of the body or the handler
 cuts the whole. -/
@@ -731,15 +746,15 @@ cuts the whole. -/
 theorem compilesBO_catchCause {σ : Type} (host : Effects.Comodel (RowSig table) σ)
     (root : NativeEff) (k : Nat) {b h : NativeEff} (hb : CompilesBO host root k b)
     (hh : CompilesBO host root k h) : CompilesBO host root k (.catchCause b h) := by
-  intro p K i s r hat
+  intro p K i s r ctx hat
   rcases hfu : p.fuel with _ | n
   · exact RunsToDO.of_zero hfu
   have hb' : Node.at_ (Node.eff root) (p.child 0).path = some (Node.eff b) := at_child hat 0
   rw [compileEff_catchCause b h hfu, runRowsOB_thenOpt host k b _ s r rfl]
-  have ih := hb (p.child 0) (Prim.onFailure (compileEff b (p.child 0)) (EffName.caught p) :: K) i s r hb'
+  have ih := hb (p.child 0) (Prim.onFailure (compileEff b (p.child 0)) (EffName.caught p) :: K) i s r ctx hb'
   rw [Point.child_env] at ih
-  have hpush := ReachesC.step (host := host)
-    (step_push_onFailure root (compileEff b (p.child 0)) (EffName.caught p) K i s) rfl r
+  have hpush := ReachesC.step (host := host) (ctx := ctx)
+    (step_push_onFailure root (compileEff b (p.child 0)) (EffName.caught p) K i s) rfl (by intro t ht; cases ht) r
   rcases hmb : runRowsO host (denoteRowsB table k b p.env) s r with
       ⟨_ | ex, s', r'⟩ | ⟨row, req, s', r'⟩
   rotate_right
@@ -754,16 +769,16 @@ theorem compilesBO_catchCause {σ : Type} (host : Effects.Comodel (RowSig table)
     obtain ⟨cb, hrb⟩ := ih
     cases ex with
     | success v =>
-      have hpass := ReachesC.same (host := host) s' r' (fun s =>
-        step_success_pass_onFailure root v (compileEff b (p.child 0)) (EffName.caught p) K i s) rfl rfl
+      have hpass := ReachesC.same (host := host) (ctx := ctx) s' r' (fun s =>
+        step_success_pass_onFailure root v (compileEff b (p.child 0)) (EffName.caught p) K i s) rfl rfl (by intro t ht; cases ht) (by intro t ht; cases ht)
       exact Or.inl ⟨1 + cb + 0, (hpush.trans hrb).trans hpass⟩
     | failure c =>
       have hh' : Node.at_ (Node.eff root) ({ p with completed := [] }.childWith 1 (Val.exitErr c)).path =
           some (Node.eff h) := at_childWith hat 1 (Val.exitErr c)
-      have ihh := hh ({ p with completed := [] }.childWith 1 (Val.exitErr c)) K i s' r' hh'
+      have ihh := hh ({ p with completed := [] }.childWith 1 (Val.exitErr c)) K i s' r' ctx hh'
       rw [Point.childWith_env] at ihh
-      have hpop := ReachesC.step (host := host)
-        (step_failure_onFailure root c (compileEff b (p.child 0)) (EffName.caught p) K i s') rfl r'
+      have hpop := ReachesC.step (host := host) (ctx := ctx)
+        (step_failure_onFailure root c (compileEff b (p.child 0)) (EffName.caught p) K i s') rfl (by intro t ht; cases ht) r'
       simp only [interpAt] at hpop
       rw [contEOf_caught, resolve_of_at hh'] at hpop
       exact RunsToDO.pre ((hpush.trans hrb).trans hpop) ihh
@@ -773,16 +788,16 @@ theorem compilesBO_catchCause {σ : Type} (host : Effects.Comodel (RowSig table)
 theorem compilesBO_catchIf {σ : Type} (host : Effects.Comodel (RowSig table) σ)
     (root : NativeEff) (k : Nat) {test : Term} {b h : NativeEff} (hb : CompilesBO host root k b)
     (hh : CompilesBO host root k h) : CompilesBO host root k (.catchIf test b h) := by
-  intro p K i s r hat
+  intro p K i s r ctx hat
   rcases hfu : p.fuel with _ | n
   · exact RunsToDO.of_zero hfu
   have hb' : Node.at_ (Node.eff root) (p.child 0).path = some (Node.eff b) := at_child hat 0
   rw [compileEff_catchIf test b h hfu, runRowsOB_thenOpt host k b _ s r rfl]
   have ih := hb (p.child 0)
-    (Prim.onFailure (compileEff b (p.child 0)) (EffName.caughtError p) :: K) i s r hb'
+    (Prim.onFailure (compileEff b (p.child 0)) (EffName.caughtError p) :: K) i s r ctx hb'
   rw [Point.child_env] at ih
-  have hpush := ReachesC.step (host := host)
-    (step_push_onFailure root (compileEff b (p.child 0)) (EffName.caughtError p) K i s) rfl r
+  have hpush := ReachesC.step (host := host) (ctx := ctx)
+    (step_push_onFailure root (compileEff b (p.child 0)) (EffName.caughtError p) K i s) rfl (by intro t ht; cases ht) r
   rcases hmb : runRowsO host (denoteRowsB table k b p.env) s r with
       ⟨_ | ex, s', r'⟩ | ⟨row, req, s', r'⟩
   rotate_right
@@ -797,13 +812,13 @@ theorem compilesBO_catchIf {σ : Type} (host : Effects.Comodel (RowSig table) σ
     obtain ⟨cb, hrb⟩ := ih
     cases ex with
     | success v =>
-      have hpass := ReachesC.same (host := host) s' r' (fun s =>
+      have hpass := ReachesC.same (host := host) (ctx := ctx) s' r' (fun s =>
         step_success_pass_onFailure root v (compileEff b (p.child 0)) (EffName.caughtError p) K i s)
-        rfl rfl
+        rfl rfl (by intro t ht; cases ht) (by intro t ht; cases ht)
       exact Or.inl ⟨1 + cb + 0, (hpush.trans hrb).trans hpass⟩
     | failure c =>
-      have hpop := ReachesC.step (host := host)
-        (step_failure_onFailure root c (compileEff b (p.child 0)) (EffName.caughtError p) K i s') rfl r'
+      have hpop := ReachesC.step (host := host) (ctx := ctx)
+        (step_failure_onFailure root c (compileEff b (p.child 0)) (EffName.caughtError p) K i s') rfl (by intro t ht; cases ht) r'
       simp only [interpAt] at hpop
       have hcont : contEOf root (EffName.caughtError { p with completed := [] }) c =
           (match caughtErrorValue? p.env test c with
@@ -820,14 +835,14 @@ theorem compilesBO_catchIf {σ : Type} (host : Effects.Comodel (RowSig table) σ
       show RunsToDO host root K i k _ s r (runRowsO host
         (match caughtErrorValue? p.env test c with
           | some value => denoteRowsB table k h (p.env ++ [value])
-          | none => pure (some (Exit.failure c))) s' r')
+          | none => pure (some (Exit.failure c))) s' r') ctx ctx
       rcases hcv : caughtErrorValue? p.env test c with _ | value
       · simp only [hcv] at hpop
         exact Or.inl ⟨1 + cb + 1, (hpush.trans hrb).trans hpop⟩
       · simp only [hcv] at hpop
         have hh' : Node.at_ (Node.eff root) ({ p with completed := [] }.childWith 1 value).path =
             some (Node.eff h) := at_childWith hat 1 value
-        have ihh := hh ({ p with completed := [] }.childWith 1 value) K i s' r' hh'
+        have ihh := hh ({ p with completed := [] }.childWith 1 value) K i s' r' ctx hh'
         rw [Point.childWith_env] at ihh
         rw [resolve_of_at hh'] at hpop
         exact RunsToDO.pre ((hpush.trans hrb).trans hpop) ihh
@@ -838,17 +853,17 @@ theorem compilesBO_matchCause {σ : Type} (host : Effects.Comodel (RowSig table)
     (root : NativeEff) (k : Nat) {b v c : NativeEff} (hb : CompilesBO host root k b)
     (hv : CompilesBO host root k v) (hc : CompilesBO host root k c) :
     CompilesBO host root k (.matchCause b v c) := by
-  intro p K i s r h
+  intro p K i s r ctx h
   rcases hfu : p.fuel with _ | n
   · exact RunsToDO.of_zero hfu
   have hb' : Node.at_ (Node.eff root) (p.child 0).path = some (Node.eff b) := at_child h 0
   rw [compileEff_matchCause b v c hfu, runRowsOB_thenOpt host k b _ s r rfl]
   have ih := hb (p.child 0)
     (Prim.onSuccessAndFailure (compileEff b (p.child 0)) (EffName.onValue p) (EffName.onCause p) :: K)
-    i s r hb'
+    i s r ctx hb'
   rw [Point.child_env] at ih
-  have hpush := ReachesC.step (host := host) (step_push_onSuccessAndFailure root
-    (compileEff b (p.child 0)) (EffName.onValue p) (EffName.onCause p) K i s) rfl r
+  have hpush := ReachesC.step (host := host) (ctx := ctx) (step_push_onSuccessAndFailure root
+    (compileEff b (p.child 0)) (EffName.onValue p) (EffName.onCause p) K i s) rfl (by intro t ht; cases ht) r
   rcases hmb : runRowsO host (denoteRowsB table k b p.env) s r with
       ⟨_ | ex, s', r'⟩ | ⟨row, req, s', r'⟩
   rotate_right
@@ -865,10 +880,10 @@ theorem compilesBO_matchCause {σ : Type} (host : Effects.Comodel (RowSig table)
     | success x =>
       have hv' : Node.at_ (Node.eff root) ({ p with completed := [] }.childWith 1 x).path =
           some (Node.eff v) := at_childWith h 1 x
-      have ihv := hv ({ p with completed := [] }.childWith 1 x) K i s' r' hv'
+      have ihv := hv ({ p with completed := [] }.childWith 1 x) K i s' r' ctx hv'
       rw [Point.childWith_env] at ihv
-      have hpop := ReachesC.step (host := host) (step_success_onSuccessAndFailure root x
-        (compileEff b (p.child 0)) (EffName.onValue p) (EffName.onCause p) K i s') rfl r'
+      have hpop := ReachesC.step (host := host) (ctx := ctx) (step_success_onSuccessAndFailure root x
+        (compileEff b (p.child 0)) (EffName.onValue p) (EffName.onCause p) K i s') rfl (by intro t ht; cases ht) r'
       simp only [interpAt] at hpop
       rw [contAOf_onValue, resolve_of_at hv'] at hpop
       exact RunsToDO.pre ((hpush.trans hrb).trans hpop) ihv
@@ -876,10 +891,10 @@ theorem compilesBO_matchCause {σ : Type} (host : Effects.Comodel (RowSig table)
       have hc' : Node.at_ (Node.eff root)
           ({ p with completed := [] }.childWith 2 (Val.exitErr cause)).path = some (Node.eff c) :=
         at_childWith h 2 (Val.exitErr cause)
-      have ihc := hc ({ p with completed := [] }.childWith 2 (Val.exitErr cause)) K i s' r' hc'
+      have ihc := hc ({ p with completed := [] }.childWith 2 (Val.exitErr cause)) K i s' r' ctx hc'
       rw [Point.childWith_env] at ihc
-      have hpop := ReachesC.step (host := host) (step_failure_onSuccessAndFailure root cause
-        (compileEff b (p.child 0)) (EffName.onValue p) (EffName.onCause p) K i s') rfl r'
+      have hpop := ReachesC.step (host := host) (ctx := ctx) (step_failure_onSuccessAndFailure root cause
+        (compileEff b (p.child 0)) (EffName.onValue p) (EffName.onCause p) K i s') rfl (by intro t ht; cases ht) r'
       simp only [interpAt] at hpop
       rw [contEOf_onCause, resolve_of_at hc'] at hpop
       exact RunsToDO.pre ((hpush.trans hrb).trans hpop) ihc
@@ -890,15 +905,15 @@ before the finalizer starts, and a cut of the finalizer cuts the whole. -/
 theorem compilesBO_onExit {σ : Type} (host : Effects.Comodel (RowSig table) σ)
     (root : NativeEff) (k : Nat) {b f : NativeEff} (hb : CompilesBO host root k b)
     (hf : CompilesBO host root k f) : CompilesBO host root k (.onExit b f) := by
-  intro p K i s r h
+  intro p K i s r ctx h
   rcases hfu : p.fuel with _ | n
   · exact RunsToDO.of_zero hfu
   have hb' : Node.at_ (Node.eff root) (p.child 0).path = some (Node.eff b) := at_child h 0
   rw [compileEff_onExit b f hfu, runRowsOB_thenOpt host k b _ s r rfl]
-  have ih := hb (p.child 0) (Prim.onExit (compileEff b (p.child 0)) (EffName.fin p) false :: K) i s r hb'
+  have ih := hb (p.child 0) (Prim.onExit (compileEff b (p.child 0)) (EffName.fin p) false :: K) i s r ctx hb'
   rw [Point.child_env] at ih
-  have hpush := ReachesC.step (host := host)
-    (step_push_onExit root (compileEff b (p.child 0)) (EffName.fin p) false K i s) rfl r
+  have hpush := ReachesC.step (host := host) (ctx := ctx)
+    (step_push_onExit root (compileEff b (p.child 0)) (EffName.fin p) false K i s) rfl (by intro t ht; cases ht) r
   rcases hmb : runRowsO host (denoteRowsB table k b p.env) s r with
       ⟨_ | ex, s', r'⟩ | ⟨row, req, s', r'⟩
   rotate_right
@@ -913,31 +928,32 @@ theorem compilesBO_onExit {σ : Type} (host : Effects.Comodel (RowSig table) σ)
     obtain ⟨cb, hrb⟩ := ih
     show RunsToDO host root K i k _ s r (runRowsO host
       (thenOpt (denoteRowsB table k f (p.env ++ [reifyExitVal ex])) fun fex =>
-        pure (some (Exit.restoreAfterFinalizer ex (finVoid fex)))) s' r')
+        pure (some (Exit.restoreAfterFinalizer ex (finVoid fex)))) s' r') ctx ctx
     rw [runRowsO_thenOpt]
     -- the body's exit meets the frame: the finalizer runs under the mask
     have hf' : Node.at_ (Node.eff root) ({ p with completed := [] }.childWith 1 (reifyExitVal ex)).path =
         some (Node.eff f) := at_childWith h 1 (reifyExitVal ex)
-    have hmeet := ReachesC.step (host := host)
-      (step_ofExit_onExit root ex (compileEff b (p.child 0)) p K i s') (isCall_ofExit ex) r'
+    have hmeet := ReachesC.step (host := host) (ctx := ctx)
+      (step_ofExit_onExit root ex (compileEff b (p.child 0)) p K i s') (by cases ex <;> rfl) (by intro t ht; cases ex <;> cases ht) r'
     rw [resolve_of_at hf'] at hmeet
     have hunmask (result : ExitV) (state : Stores) (rr : σ) : ReachesC host root 0
         (fiberOf (Prim.ofExit result) (maskStack i K) false) state rr
-        (fiberOf (Prim.ofExit result) K i) state rr := by
+        (fiberOf (Prim.ofExit result) K i) state rr ctx ctx := by
       cases i
-      · exact ReachesC.refl host root _ state rr
-      · exact ReachesC.same (host := host) state rr
-          (fun s => step_ofExit_pass_setInterruptible root _ K false s)
-          (isCall_ofExit result) (isCall_ofExit result)
+      · exact ReachesC.refl host root _ state rr ctx
+      · exact ReachesC.same (host := host) (ctx := ctx) state rr
+          (fun s => step_ofExit_pass_setInterruptible root _ K false true s)
+          (by cases result <;> rfl) (by cases result <;> rfl)
+          (by intro t ht; cases result <;> cases ht) (by intro t ht; cases result <;> cases ht)
     cases ex with
     | success value =>
       let program := compileEff f ({ p with completed := [] }.childWith 1
         (reifyExitVal (.success value)))
       let restore := EffName.restore (.success value)
-      have hpush₂ := ReachesC.step (host := host)
-        (step_push_onSuccess root program restore (maskStack i K) false s') rfl r'
+      have hpush₂ := ReachesC.step (host := host) (ctx := ctx)
+        (step_push_onSuccess root program restore (maskStack i K) false s') rfl (by intro t ht; cases ht) r'
       have ihf := hf ({ p with completed := [] }.childWith 1 (reifyExitVal (.success value)))
-        (Prim.onSuccess program restore :: maskStack i K) false s' r' hf'
+        (Prim.onSuccess program restore :: maskStack i K) false s' r' ctx hf'
       rw [Point.childWith_env] at ihf
       rcases hmf : runRowsO host (denoteRowsB table k f (p.env ++ [reifyExitVal (.success value)])) s' r' with
           ⟨_ | fex, s'', r''⟩ | ⟨row, req, s'', r''⟩
@@ -953,16 +969,16 @@ theorem compilesBO_onExit {σ : Type} (host : Effects.Comodel (RowSig table) σ)
         obtain ⟨cf, hrf⟩ := ihf
         cases fex with
         | success finValue =>
-          have hfin := ReachesC.step (host := host)
-            (step_success_onSuccess root finValue program restore (maskStack i K) false s'') rfl r''
+          have hfin := ReachesC.step (host := host) (ctx := ctx)
+            (step_success_onSuccess root finValue program restore (maskStack i K) false s'') rfl (by intro t ht; cases ht) r''
           change ReachesC host root 1 _ s'' r''
-            (fiberOf (Prim.success value) (maskStack i K) false) s'' r'' at hfin
+            (fiberOf (Prim.success value) (maskStack i K) false) s'' r'' ctx ctx at hfin
           exact Or.inl ⟨1 + cb + 1 + 1 + cf + 1 + 0,
             (((((hpush.trans hrb).trans hmeet).trans hpush₂).trans hrf).trans hfin).trans
               (hunmask (.success value) s'' r'')⟩
         | failure finCause =>
-          have hpass := ReachesC.same (host := host) s'' r'' (fun s =>
-            step_failure_pass_onSuccess root finCause program restore (maskStack i K) false s) rfl rfl
+          have hpass := ReachesC.same (host := host) (ctx := ctx) s'' r'' (fun s =>
+            step_failure_pass_onSuccess root finCause program restore (maskStack i K) false s) rfl rfl (by intro t ht; cases ht) (by intro t ht; cases ht)
           exact Or.inl ⟨1 + cb + 1 + 1 + cf + 0 + 0,
             (((((hpush.trans hrb).trans hmeet).trans hpush₂).trans hrf).trans hpass).trans
               (hunmask (.failure finCause) s'' r'')⟩
@@ -972,12 +988,12 @@ theorem compilesBO_onExit {σ : Type} (host : Effects.Comodel (RowSig table) σ)
       let restore := EffName.restore (.failure cause)
       let merge := EffName.merge (.failure cause)
       let outer := Prim.onSuccess (Prim.onFailure program merge) restore
-      have hpush₂ := ReachesC.step (host := host)
-        (step_push_onSuccess root (Prim.onFailure program merge) restore (maskStack i K) false s') rfl r'
-      have hpush₃ := ReachesC.step (host := host)
-        (step_push_onFailure root program merge (outer :: maskStack i K) false s') rfl r'
+      have hpush₂ := ReachesC.step (host := host) (ctx := ctx)
+        (step_push_onSuccess root (Prim.onFailure program merge) restore (maskStack i K) false s') rfl (by intro t ht; cases ht) r'
+      have hpush₃ := ReachesC.step (host := host) (ctx := ctx)
+        (step_push_onFailure root program merge (outer :: maskStack i K) false s') rfl (by intro t ht; cases ht) r'
       have ihf := hf ({ p with completed := [] }.childWith 1 (reifyExitVal (.failure cause)))
-        (Prim.onFailure program merge :: outer :: maskStack i K) false s' r' hf'
+        (Prim.onFailure program merge :: outer :: maskStack i K) false s' r' ctx hf'
       rw [Point.childWith_env] at ihf
       rcases hmf : runRowsO host (denoteRowsB table k f (p.env ++ [reifyExitVal (.failure cause)])) s' r' with
           ⟨_ | fex, s'', r''⟩ | ⟨row, req, s'', r''⟩
@@ -994,26 +1010,26 @@ theorem compilesBO_onExit {σ : Type} (host : Effects.Comodel (RowSig table) σ)
         obtain ⟨cf, hrf⟩ := ihf
         cases fex with
         | success finValue =>
-          have hpass := ReachesC.same (host := host) s'' r'' (fun s =>
+          have hpass := ReachesC.same (host := host) (ctx := ctx) s'' r'' (fun s =>
             step_success_pass_onFailure root finValue program merge (outer :: maskStack i K) false s)
-            rfl rfl
-          have hfin := ReachesC.step (host := host) (step_success_onSuccess root finValue
-            (Prim.onFailure program merge) restore (maskStack i K) false s'') rfl r''
+            rfl rfl (by intro t ht; cases ht) (by intro t ht; cases ht)
+          have hfin := ReachesC.step (host := host) (ctx := ctx) (step_success_onSuccess root finValue
+            (Prim.onFailure program merge) restore (maskStack i K) false s'') rfl (by intro t ht; cases ht) r''
           change ReachesC host root 1 _ s'' r''
-            (fiberOf (Prim.failure cause) (maskStack i K) false) s'' r'' at hfin
+            (fiberOf (Prim.failure cause) (maskStack i K) false) s'' r'' ctx ctx at hfin
           exact Or.inl ⟨1 + cb + 1 + 1 + 1 + cf + 0 + 1 + 0,
             (((((((hpush.trans hrb).trans hmeet).trans hpush₂).trans hpush₃).trans hrf).trans
               hpass).trans hfin).trans (hunmask (.failure cause) s'' r'')⟩
         | failure finCause =>
-          have hmerge := ReachesC.step (host := host)
+          have hmerge := ReachesC.step (host := host) (ctx := ctx)
             (step_failure_onFailure root finCause program merge (outer :: maskStack i K) false s'')
-            rfl r''
+            rfl (by intro t ht; cases ht) r''
           change ReachesC host root 1 _ s'' r''
             (fiberOf (Prim.failure (Cause.combine cause finCause)) (outer :: maskStack i K) false)
-            s'' r'' at hmerge
-          have hpass := ReachesC.same (host := host) s'' r'' (fun s => step_failure_pass_onSuccess root
+            s'' r'' ctx ctx at hmerge
+          have hpass := ReachesC.same (host := host) (ctx := ctx) s'' r'' (fun s => step_failure_pass_onSuccess root
             (Cause.combine cause finCause) (Prim.onFailure program merge) restore (maskStack i K)
-            false s) rfl rfl
+            false s) rfl rfl (by intro t ht; cases ht) (by intro t ht; cases ht)
           exact Or.inl ⟨1 + cb + 1 + 1 + 1 + cf + 1 + 0 + 0,
             (((((((hpush.trans hrb).trans hmeet).trans hpush₂).trans hpush₃).trans hrf).trans
               hmerge).trans hpass).trans (hunmask (.failure (Cause.combine cause finCause)) s'' r'')⟩
@@ -1026,7 +1042,7 @@ theorem compilesBO_iterate {σ : Type} (host : Effects.Comodel (RowSig table) σ
     (root : NativeEff) (k : Nat) {cty : Option Ty} {init test step result : Term}
     {body : NativeEff} (hb : CompilesBO host root k body) :
     CompilesBO host root k (.iterate cty init test step result body) := by
-  intro p K i s r h
+  intro p K i s r ctx h
   rcases hfu : p.fuel with _ | n
   · exact RunsToDO.of_zero hfu
   have hq : Node.at_ (Node.eff root) (loopPoint p).path =
@@ -1039,13 +1055,13 @@ theorem compilesBO_iterate {σ : Type} (host : Effects.Comodel (RowSig table) σ
   cases hi : evalTerm p.env init with
   | none =>
     rw [show evalTerm (loopPoint p).env init = none from hi, badShape_eq] at hs
-    exact Or.inl ⟨1, ReachesC.step (host := host) hs rfl r⟩
+    exact Or.inl ⟨1, ReachesC.step (host := host) (ctx := ctx) hs rfl (by intro t ht; cases ht) r⟩
   | some c₀ =>
     rw [show evalTerm (loopPoint p).env init = some c₀ from hi] at hs
-    have henter := ReachesC.step (host := host)
-      (step_whileLoop_enter root (loopPoint p) rfl c₀ K i s) rfl r
-    exact RunsToDO.pre ((ReachesC.step (host := host) hs rfl r).trans henter)
-      (loop_reachesCO host root k (loopPoint p) rfl hq K i hb k (Nat.le_refl k) c₀ s r)
+    have henter := ReachesC.step (host := host) (ctx := ctx)
+      (step_whileLoop_enter root (loopPoint p) rfl c₀ K i s) rfl (by intro t ht; cases ht) r
+    exact RunsToDO.pre ((ReachesC.step (host := host) (ctx := ctx) hs rfl (by intro t ht; cases ht) r).trans henter)
+      (loop_reachesCO host root k (loopPoint p) rfl hq K i ctx hb k (Nat.le_refl k) c₀ s r)
 
 /-! ## The induction -/
 
@@ -1112,10 +1128,10 @@ projection. A step of `localWaitC_to_rowsB` (Q6b, `Agreement/HostedLoop.lean`). 
 theorem localRunC_compileBO {σ : Type} (host : Effects.Comodel (RowSig table) σ)
     (root : NativeEff) (k : Nat) (e : NativeEff) (p : Point) (K : List NCode) (i : Bool)
     (s : Stores) (r : σ) (hfrag : LoopedDataRows table e = true)
-    (hat : Node.at_ (Node.eff root) p.path = some (Node.eff e)) :
+    (hat : Node.at_ (Node.eff root) p.path = some (Node.eff e)) (ctx : Ctx := emptyCtx) :
     RunsToDO host root K i k (fiberOf (compileEff e p) K i) s r
-      (runRowsO host (denoteRowsB table k e p.env) s r) :=
-  compilesBO host root k e hfrag p K i s r hat
+      (runRowsO host (denoteRowsB table k e p.env) s r) ctx ctx :=
+  compilesBO host root k e hfrag p K i s r ctx hat
 
 /-- **The forward agreement on loops** (Q5): a program of the row fragment with loops, compiled at
 an address of the root, runs with calls where its budgeted meaning goes at any budget, from any
@@ -1127,9 +1143,9 @@ the budget's count of steps. The detailed agreement's projection (`RunsToDO.proj
 theorem localRunC_compileB {σ : Type} (host : Effects.Comodel (RowSig table) σ)
     (root : NativeEff) (k : Nat) (e : NativeEff) (p : Point) (K : List NCode) (i : Bool)
     (s : Stores) (r : σ) (hfrag : LoopedDataRows table e = true)
-    (hat : Node.at_ (Node.eff root) p.path = some (Node.eff e)) :
-    RunsToDB host root K i k (fiberOf (compileEff e p) K i) s r (hostRunB host k e p.env s r) := by
-  have h := (localRunC_compileBO host root k e p K i s r hfrag hat).project
+    (hat : Node.at_ (Node.eff root) p.path = some (Node.eff e)) (ctx : Ctx := emptyCtx) :
+    RunsToDB host root K i k (fiberOf (compileEff e p) K i) s r (hostRunB host k e p.env s r) ctx ctx := by
+  have h := (localRunC_compileBO host root k e p K i s r hfrag hat ctx).project
   rw [← runRowsH_eq_project] at h
   exact h
 
@@ -1171,11 +1187,11 @@ consumer is `meaning_settled` (`Agreement/Hosted.lean`). Reach: `StraightRows`, 
 budget, every root, every reply tape. It does not establish a run of the machine, nor anything
 of a fiber, a scope or a loop. -/
 theorem localRunC_compile {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root : NativeEff) :
-    ∀ (e : NativeEff) (p : Point) (K : List NCode) (i : Bool) (s : Stores) (r : σ),
+    ∀ (e : NativeEff) (p : Point) (K : List NCode) (i : Bool) (s : Stores) (r : σ) (ctx : Ctx),
       StraightRows table e = true → Node.at_ (Node.eff root) p.path = some (Node.eff e) →
-      RunsToD host root K i (fiberOf (compileEff e p) K i) s r (hostRun host e p.env s r) := by
-  intro e p K i s r hst hat
-  have h := localRunC_compileB host root 0 e p K i s r (loopedDataRows_of_straightRows e hst) hat
+      RunsToD host root K i (fiberOf (compileEff e p) K i) s r (hostRun host e p.env s r) ctx ctx := by
+  intro e p K i s r ctx hst hat
+  have h := localRunC_compileB host root 0 e p K i s r (loopedDataRows_of_straightRows e hst) hat ctx
   rw [hostRunB_of_straightRows host 0 e p.env s r hst] at h
   rcases hx : hostRun host e p.env s r with _ | ⟨ex, st⟩
   · rw [hx] at h

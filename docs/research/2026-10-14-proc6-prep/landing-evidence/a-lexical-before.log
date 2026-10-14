@@ -1,0 +1,10 @@
+/tmp/proc6-landing/a-lexical-control.lean:31:0: error: Expression
+  decide (Prim.asExit? (hops nestedCall 3 (compileEff nestedCall start)) = Prim.asExit? badShape)
+did not evaluate to `true`
+/tmp/proc6-landing/a-lexical-control.lean:35:0: error: Expression
+  decide
+    ((match hops nestedCall 2 (compileEff nestedCall start) with
+      | Prim.suspend (EffThunk.body p) => List.map List.length p.params
+      | x => []) =
+      [0, 1])
+did not evaluate to `true`

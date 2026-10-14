@@ -1,0 +1,107 @@
+✔ [1368/1383] Built Test.Dogfood.Bank (5.8s)
+✔ [1372/1383] Built Tools.RunChecks (5.9s)
+✔ [1381/1383] Built Tools.Code.Module (552ms)
+✔ [1382/1383] Built Test.Dogfood.ApplicationDefs (1.4s)
+✔ [1383/1383] Built Test.Dogfood.Scenario.Todo.Cached (2.4s)
+Build completed successfully (1383 jobs).
+python3 scripts/check-host-protocol.py
+✔ [496/496] Built Test.Api.HostSessionContract (2.5s)
+Build completed successfully (496 jobs).
+✔ [536/536] Built Test.Api.KeyedHostContract (2.2s)
+Build completed successfully (536 jobs).
+Build completed successfully (1279 jobs).
+Build completed successfully (1284 jobs).
+Build completed successfully (1178 jobs).
+Build completed successfully (1253 jobs).
+Build completed successfully (1196 jobs).
+Build completed successfully (1183 jobs).
+Build completed successfully (1184 jobs).
+Build completed successfully (156 jobs).
+Build completed successfully (30 jobs).
+Build completed successfully (524 jobs).
++ lake query -J +Test.Dogfood.Scenario.Workers:setup +Test.Dogfood.Scenario.QueueWorkers:setup +Test.Dogfood.Scenario.Routing:setup +Test.Dogfood.Scenario.Atomic:setup +Test.Dogfood.Scenario.Timeout:setup +Test.Dogfood.Scenario.Todo.Claims:setup +Test.Dogfood.Scenario.Todo.Cached:setup +Tools.Code.Module:setup +Tools.ProfileJson:setup +Tools.RunChecks:setup
+keyed host: effect 4.0.0-rc.112 under bun 1.4.2, loaded from /Users/pooks/Dev/lean4-effect4/ts/eff/node_modules/effect
+PASS keyed host: 57 actual rc.112 runs; 52 admitted printed programs
+PASS keyed scenarios: 86 scripts performed on actual rc.112 in 295 runs: each with no reader, with its readers, and with each reader alone; 14 scripts with no host run
+EmitTodo: wrote the to-do's service module and its table to /Users/pooks/Dev/lean4-effect4-codex/apps/todo/.work
+bun test v1.4.2 (744846f84)
+
+harness/truth/session/keyed-protocol.test.ts:
+(pass) projected keyed tape structure > replies arrive by key; application order remains independent [0.37ms]
+(pass) projected keyed tape structure > missing fiber is not inferred [0.08ms]
+(pass) projected keyed tape structure > missing token is not inferred [0.02ms]
+(pass) projected keyed tape structure > missing callId is not inferred [0.02ms]
+(pass) projected keyed tape structure > duplicate pending reply [0.10ms]
+(pass) projected keyed tape structure > application without a stored reply [0.02ms]
+(pass) projected keyed tape structure > one key cannot replace another key's payload [0.02ms]
+(pass) projected keyed tape structure > decimal clock transport has protocol version 3 [0.04ms]
+(pass) projected keyed tape structure > legacy version 1 requires explicit migration [0.23ms]
+(pass) projected keyed tape structure > legacy version 2 requires explicit migration [0.02ms]
+(pass) projected keyed tape structure > version 2 clock records cannot enter a version 3 tape [0.16ms]
+(pass) projected keyed tape structure > table metadata participates in identity [0.10ms]
+(pass) projected keyed tape structure > pending and unanswered prefixes are accepted [0.36ms]
+(pass) projected keyed tape structure > unsafe and negative-zero keys refuse [0.12ms]
+(pass) projected keyed tape structure > clock and cancellation follow the generated table [0.07ms]
+(pass) projected keyed tape structure > clock transport keeps canonical decimal text beyond host integer ranges [0.20ms]
+(pass) projected keyed tape structure > Result uses failure=0/success=1, with value/error alias order [0.13ms]
+(pass) keyed clock execution > an advance is recorded before the host call it wakes [3.06ms]
+(pass) keyed clock execution > malformed and overflowing advances neither record nor mutate, and refuse the receipt [0.53ms]
+(pass) keyed clock execution > a refusal from a woken continuation rejects the advance and prevents a receipt [0.44ms]
+(pass) keyed clock execution > queued advances validate against their own input clock before recording [0.46ms]
+(pass) scripted recorder > an unmarked fixture keeps today's refusals, and it takes no scripted branch [0.47ms]
+(pass) scripted recorder > an unmarked fixture refuses an operation that completes after its cancellation [0.14ms]
+(pass) scripted recorder > a scripted fixture records a call when the script holds it [0.36ms]
+(pass) scripted recorder > a late reply is recorded, stored nowhere and predicted as noCall [0.19ms]
+(pass) scripted recorder > a stored reply stays with its retired call, and a second reply is predicted as pendingReply [0.11ms]
+(pass) scripted recorder > a call that the script never held leaves no retired record [0.11ms]
+(pass) scripted recorder > a record is its frame, and a scripted value is the frame's record [0.64ms]
+(pass) scripted recorder > saved failed exits keep exact cause images and refuse unknown identities [0.22ms]
+(pass) scripted recorder > a Deferred has an image with no identity in a cell, and it is outside the transport profile [0.14ms]
+(pass) scenario readers > the cells reader's Ref owns `make` only, and its cell is the pinned one [0.30ms]
+(pass) scenario readers > the fibers reader's Effect owns the three fork heads, in both call forms [0.38ms]
+(pass) scenario readers > the sleeps reader is off by default, and it lists a sleep from its start to its end [0.38ms]
+(pass) scenario readers > the dispatchers reader counts an armed dispatcher until its turn [0.39ms]
+(pass) scenario readers > the dispatchers reader's zero carries its limit where the run's own wait gave it [0.29ms]
+(pass) live recorder (decisions row 378 (16), slice V4) > a request's record holds each call's row, request and completion, and the root's exit [0.26ms]
+(pass) live recorder (decisions row 378 (16), slice V4) > a call from a fiber other than the root is refused, and the request has no record [0.17ms]
+(pass) live recorder (decisions row 378 (16), slice V4) > a call on a row that the table does not hold is refused [0.05ms]
+(pass) live recorder (decisions row 378 (16), slice V4) > a fixture that is not live gives no request's record [0.03ms]
+
+harness/truth/session/protocol.test.ts:
+(pass) serial scalar recorder and strict protocol > two actual Effect calls retain call-start identities [0.41ms]
+(pass) serial scalar recorder and strict protocol > valid pending and completed-call prefixes retain their records [0.71ms]
+(pass) serial scalar recorder and strict protocol > actual typed failure keeps category/tag/message [0.30ms]
+(pass) serial scalar recorder and strict protocol > independent provenance and sequencing mutants refuse [2.12ms]
+(pass) serial scalar recorder and strict protocol > bound violations are outside-profile; cannot be caught into agreement [0.22ms]
+(pass) serial scalar recorder and strict protocol > child-fiber calls cannot borrow the root identity [0.13ms]
+
+harness/truth/session/resource.test.ts:
+(pass) failed use charges state; real scoped finalization closes it once [0.58ms]
+(pass) closed use and double release retain category/message without more work [0.26ms]
+(pass) two independently owned allocations need two completed releases [0.32ms]
+(pass) public metadata cannot impersonate a registered object [0.15ms]
+(pass) foreign session and never-acquired handle refuse before mutation [0.08ms]
+(pass) interrupted pending allocation compensates the later unclaimed object [1.47ms]
+(pass) a compensated physical allocation does not consume a machine allocation index [0.17ms]
+
+harness/truth/session/clock.test.ts:
+(pass) exact clock and numeric target boundary > decimal round trips beyond both numeric target ranges [0.19ms]
+(pass) exact clock and numeric target boundary > noncanonical transport and numeric overflow refuse [0.04ms]
+(pass) exact clock and numeric target boundary > nanoseconds are checked exactly before any numeric conversion [0.02ms]
+(pass) exact clock and numeric target boundary > the provided service exposes only the pinned Clock readers and checked sleep [0.38ms]
+(pass) exact clock and numeric target boundary > in-program TestClock mutation is unsupported and cannot bypass the numeric boundary [0.92ms]
+(pass) exact clock and numeric target boundary > stock TestClock rejects an overflowing adjustment before mutation [0.15ms]
+(pass) exact clock and numeric target boundary > stock TestClock refuses an overflowing deadline without a program failure [1.39ms]
+(pass) exact clock and numeric target boundary > refusal takes precedence even after a concurrent root completes [0.34ms]
+
+ 60 pass
+ 0 fail
+ 493 expect() calls
+Ran 60 tests across 4 files. [72.00ms]
+PASS keyed differential: 57 runs, 52 programs, 30 controls; exact exits and keyed applications
+PASS keyed scenarios on effect 4.0.0-rc.112 under bun 1.4.2: routing 9 scripts (2 entries measured by the host, 1 predicted by the ledger; no entry waits); workers 17 scripts (6 entries measured by the host, 5 through a reader, 2 of them zero by the run's own wait in 12 scripts; no entry waits); timeout 14 scripts (6 entries measured by the host, 2 through a reader, timers through a reader in 9 scripts; the whole-observation comparison waits on timers in 5 scripts (parked, timed-out, late, received, eager), forms in 14 scripts (parked, 503, timed-out, four, 404, before, second, late, kept, timer-interrupt, host-interrupt, received, eager, resetting)); atomic 8 scripts (0 entries measured by the host, 5 through a reader; no entry waits); queue-workers 25 scripts (7 entries measured by the host, 8 through a reader, 2 of them zero by the run's own wait in 21 scripts; no entry waits); todo 13 scripts (2 entries measured by the host, 1 predicted by the ledger; no entry waits); 14 scripts with no host run; 47 red controls
+effect 4.0.0-rc.112 under bun 1.4.2
+PASS the to-do's service on rc.112: 13 scripts performed on its consumer's programs, each with the host's outcome, calls and predicted refusals equal to Lean's observation; 2 scripts with no host run; 2 red controls
+to-do on SQLite: effect 4.0.0-rc.112 under bun 1.4.2, SQLite 3.51.0
+PASS the to-do on SQLite: 14 requests served over HTTP for each of 4 repositories, 3 of them refused with no record; the statuses of the shipped and the read-only repositories, the shipped last list, and the Ref cache hit + invalidation as expected; sessions in /Users/pooks/Dev/lean4-effect4-codex/harness/truth/session/.work/check-_s9hx2fs/app
+PASS host-protocol: fresh projections, typed host programs, keyed replay and negative controls; the scenarios' scripts on their printed modules; the to-do's service: 13 scripts on rc.112, each replayed to its journal; 11 conform, 2 of 4 pairs agree with the model, as on the scripts; the to-do on SQLite: 11 requests from an empty database, each passing Lean's five checks; the forgetful and titleless repositories fail agrees and conforming; 8 writes that SQLite refused escape as the row's declared error; 3 changed records fail built, replayed, exit

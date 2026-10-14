@@ -142,7 +142,9 @@ def localAgrees (p : NativeEff) : Bool :=
 #guard PlainCode (compile (.onExit (.succeed (.lit (.nat 1))) (.succeed (.lit (.nat 2)))) fuel)
   = true
 #guard PlainFrame (Prim.setInterruptible true) = true
-#guard PlainFrame (Prim.setInterruptible false) = false
+#guard PlainFrame (Prim.setInterruptible false) = true
+-- control: the retained default-budget progress lane excludes the re-masking frame.
+#guard ContextFreeFrame (Prim.setInterruptible false) = false
 #guard PlainCode (Prim.onExit (Prim.success Val.unit) (EffName.fin (rootPoint fuel)) true) = false
 #guard PlainCode (Prim.onExit (Prim.success Val.unit) (EffName.scopeClose 0) false) = false
 #guard isSync (compile pBindSync fuel) = false
