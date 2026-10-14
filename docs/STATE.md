@@ -297,7 +297,8 @@ A program has folds, a journaled run with replay, and a printed image that reads
    - done: V4, `apps/todo/` on SQLite with the per-run checker, in `make check-host-protocol`. A
      run from an empty database passes Lean's checks on each request, and four red controls fail
      the checks they target;
-   - beside them, `request_leads` and binder names in the TypeScript reader (row 378 (17)). The
+   - beside them, binder names in the TypeScript reader (row 378 (17)). `request_leads` is
+     proved, so the recorded call tree rests on no goal. The
      claim record's two labels landed (`13551903c`). So did the banked Ref cache with its
      transfer law `cache_agrees`, which rests on no goal (`23f95aac2`), and its bank entry
      (`f463ee53b`). The cache block prints as the service `ListCache` (HO-5). Its module does not
@@ -344,7 +345,7 @@ A program has folds, a journaled run with replay, and a printed image that reads
      REPLAY's [receipt](research/2026-10-13-seat-replay-receipt.md));
    - landed: the application and claim records (row 336 (9); seat CLAIMS's
      [receipt](research/2026-10-13-seat-claims-receipt.md)). Four of the to-do claims are proved,
-     and `Todo.serves` rests on `request_leads`;
+     and `Todo.serves` is proved now that `request_leads` is;
    - generics and Pool's service, HO-4
      ([the plan](research/2026-10-09-program-parameters.md), row 340).
 
