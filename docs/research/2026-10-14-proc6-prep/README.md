@@ -14,8 +14,9 @@ slice.
 ## The base
 
 - Branch `refactor/phase1-phase3` of `/Users/pooks/Dev/lean4-effect4`, fast-forwarded to Gemini's
-  `7c9bb7617`, then `d6e162caf`, which locks the plan. The landing's base is the commit that records
-  this receipt and the `check-truth` repair, one after `d6e162caf`.
+  `7c9bb7617`, then `d6e162caf`, which locks the plan. The landing's base is the commit
+  "ocaml/engine/test: regenerate the to-do scenario fixture after the record normalization", which
+  follows `f78fda8ef` (the `check-truth` repair and this receipt).
 - `lake build Effect4 Effect4.Laws`: `Build completed successfully (1111 jobs).`
 
 ## The fan-out of the modules the stages edit
