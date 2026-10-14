@@ -223,7 +223,7 @@ header{position:sticky;top:0;background:#202124;z-index:2;padding:8px 0}h1{font-
 input[type=number]{width:88px}select#feature{max-width:660px}button{cursor:pointer}small{color:#ccc}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:12px}
 .panel{min-width:0;border:1px solid #62646a;padding:10px}.scroll{overflow:auto;max-height:65vh;background:var(--e4-color-ground)}
-.scroll svg{display:block;max-width:none;flex:none}.full svg{width:100%;height:auto}.full{max-height:32vh;overflow:auto}
+.scroll svg{display:block;max-width:none;flex:none}.full svg{width:100%;height:32vh}.full{max-height:32vh;overflow:auto}
 .detail{margin-top:8px}h2{font-size:15px;margin:0 0 8px}canvas{display:block;max-width:none;image-rendering:pixelated}
 output{display:block;font:12px monospace;white-space:pre-wrap;margin:8px 0}.probe{border-top:1px solid #62646a;margin-top:12px;padding-top:8px}
 </style>
@@ -273,7 +273,7 @@ function panel(set,frame,look){
  const div=document.createElement('section');div.className='panel';div.dataset.look=look;
  // SVG style elements otherwise affect every panel in the document.
  const content=div.attachShadow({mode:'open'}),layout=document.createElement('style');layout.textContent=`
- .scroll{overflow:auto;max-height:65vh}.scroll svg{display:block;max-width:none}.full svg{width:100%;height:auto}
+ .scroll{overflow:auto;max-height:65vh}.scroll svg{display:block;max-width:none}.full svg{width:100%;height:32vh}
  .full{max-height:32vh}.detail{margin-top:8px}h2{font:15px system-ui;margin:0 0 8px}
  output{display:block;font:12px monospace;white-space:pre-wrap;margin:8px 0}
  .probe{overflow:auto;border-top:1px solid #62646a;margin-top:12px;padding-top:8px}

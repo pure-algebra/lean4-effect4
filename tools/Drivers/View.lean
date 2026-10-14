@@ -2,6 +2,7 @@ import Tools.View.Build
 import Tools.View.Run
 import Tools.View.Specimen
 import Tools.View.FlowSpecimen
+import Tools.View.GraphCheck
 import Tools.View.Tokens
 import Tools.View.Output
 import Tools.View.SvgOut
@@ -350,6 +351,26 @@ def writeGallery (dir : System.FilePath) : IO Unit := do
     ((Lean.Json.mkObj [("entries", .arr (runs.map fun r => Lean.Json.str r.id).toArray)]).compress ++ "\n")
   IO.println s!"view: {runs.length} kept entries in {dir / "index.html"}"
 
+/-- A located graph refusal at the driver boundary. -/
+def graphRefusal (r : GraphCheck.Refusal) : String :=
+  let site := match r.site with
+    | .canvas => "canvas" | .node => "node" | .edge => "edge"
+    | .placed => "placed" | .route => "route" | .region => "region"
+  let field := match r.field with
+    | .key => "key" | .source => "source" | .target => "target"
+    | .vertex i => s!"vertex[{i}]" | .width => "width" | .height => "height"
+    | .x => "x" | .y => "y" | .right => "right" | .bottom => "bottom"
+    | .length => "length" | .downward i => s!"downward[{i}]"
+  let reason := match r.reason with
+    | .emptyKey => "empty key" | .duplicateKey => "duplicate key"
+    | .endpointOutside p n => s!"endpoint {p} outside {n} nodes"
+    | .unresolvedKey key => s!"unresolved key {key}"
+    | .tooShort => "route has fewer than two vertices"
+    | .negative v => s!"negative value {v}"
+    | .outside far bound => s!"extent {far} exceeds {bound}"
+    | .doesNotDescend => "segment does not descend"
+  s!"{site}[{r.index}].{field}: {reason}"
+
 /-- Write each frame's outputs into `out`, with `motion - 1` pictures before each frame after the
 first: the moments of the step from the frame before (`sample`). Each step's moment at its end is
 the next frame by `sample_end`, so no check repeats it. One stroke cache threads the frames and the
@@ -358,6 +379,13 @@ Report the splice check: the lines outside each spliced edit's subtree keep thei
 note (`keptUnchanged`). -/
 def writeFrames (L : Look) (out : System.FilePath) (frames : List Build.Frame) (motion : Nat)
     (title label : String := "") (gallery : Bool := false) : IO Unit := do
+  for (f, i) in frames.zipIdx do
+    if let some graph := f.page.graph then
+      match GraphCheck.laid graph.laid with
+      | .ok () => pure ()
+      | .error refusal => throw (IO.userError s!"view: frame {i + 1}: {graphRefusal refusal}")
+      unless graph.laid.boxesApart do
+        throw (IO.userError s!"view: frame {i + 1}: graph boxes overlap")
   IO.FS.createDirAll out
   let mut pics : Array (String × Bool) := #[]
   let mut text : Array String := #[]
@@ -393,6 +421,7 @@ def writeFrames (L : Look) (out : System.FilePath) (frames : List Build.Frame) (
   IO.println s!"C\tkept-lines-unchanged\t{spliced} spliced edits\t{same} of {kept} lines"
   IO.println s!"C\tgraph-boxes-apart\t{graphs.length} graphs\t{(graphs.filter Laid.boxesApart).length} apart"
   IO.println s!"C\tgraph-edges-descend\t{graphs.length} graphs\t{(graphs.filter Laid.edgesDescend).length} descend"
+  IO.println s!"C\tgraph-admitted\t{graphs.length} graphs\t{graphs.length} admitted"
   IO.println s!"C\tgraph-dims-valid\t{graphs.length} graphs\t{(graphs.filter Laid.dimsValid).length} valid"
 
 /-- Read a request file: one JSON object a line; a blank line is skipped. -/
