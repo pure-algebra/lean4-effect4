@@ -1037,19 +1037,19 @@ private def joinLayers : List (LayerTerm NativeOp) :=
   match printDecl "main" ty body with
   | .error _ => false
   | .ok declaration =>
-    Effect4.Codegen.envelopeCheck "main" ty [] [.const declaration] == none
+    Effect4.Codegen.envelopeCheck "main" ty [] [] [.const declaration] == none
 #guard
   let ty : EffTy := ⟨.nat, .never, Effect4.Machine.Env.Requirement.single ⟨⟨4⟩, ⟨4⟩⟩⟩
   let declaration : TypeScript.ConstDecl :=
     { doc := [], name := "main", value := .ident "body", type := some (.name ["Effect", "Effect"]
         [.name ["number"] [], .name ["never"] [], .name ["never"] []]) }
-  match Effect4.Codegen.envelopeCheck "main" ty [] [.const declaration] with
+  match Effect4.Codegen.envelopeCheck "main" ty [] [] [.const declaration] with
   | some (.declaredType _ _) => true
   | _ => false
 #guard
   let ty : EffTy := ⟨.nat, .never, Effect4.Machine.Env.Requirement.single ⟨⟨4⟩, ⟨4⟩⟩⟩
   let declaration : TypeScript.ConstDecl := { doc := [], name := "main", value := .ident "body" }
-  match Effect4.Codegen.envelopeCheck "main" ty [] [.const declaration] with
+  match Effect4.Codegen.envelopeCheck "main" ty [] [] [.const declaration] with
   | some (.declaredType _ _) => true
   | _ => false
 

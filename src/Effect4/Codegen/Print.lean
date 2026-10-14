@@ -51,25 +51,28 @@ theorem print_perform (sig : Signature Op) (n : Nat) (op : Op) (request : Term) 
     print sig n (.perform op request) = printPerform sig n op request := rfl
 
 /-- The complete declared type `Effect.Effect<A, E, R>`. The native API defaults to
-its reserved scope key; generic module printing passes the signature's scope key.
-This is structural annotation evidence, not a general target typing theorem. A payload type in
-either column prints as its class name (`Types.ofTy`, decisions row 120), and a union by its
-members: `Effect.Effect<never, NotFound | Unauthorized, never>`. -/
-def declarationType (ty : EffTy) (scopeKey : ServiceKey := Effect4.Machine.Env.scopeKey) :
-    Except PrintRefusal (Option TypeScript.TypeRef) := do
-  let answer ← match Effect4.Codegen.Types.ofTy ty.answer with
+its reserved scope key and no key name; generic module printing passes the signature's scope key
+and key names (`Signature.keyNames`, decisions row 378 (22)), so a named key's requirement reads
+`"TodoRepo"`, in `R` and in a context type's row alike. This is structural annotation evidence,
+not a general target typing theorem. A payload type in either column prints as its class name
+(`Types.ofTy`, decisions row 120), and a union by its members:
+`Effect.Effect<never, NotFound | Unauthorized, never>`. -/
+def declarationType (ty : EffTy) (scopeKey : ServiceKey := Effect4.Machine.Env.scopeKey)
+    (names : KeyNames := []) : Except PrintRefusal (Option TypeScript.TypeRef) := do
+  let answer ← match Effect4.Codegen.Types.ofTy ty.answer names with
     | some target => .ok target
     | none => .error (.typeSpelling ty.answer.render)
-  let error ← match Effect4.Codegen.Types.ofTy ty.error with
+  let error ← match Effect4.Codegen.Types.ofTy ty.error names with
     | some target => .ok target
     | none => .error (.typeSpelling ty.error.render)
-  .ok (some (.name ["Effect", "Effect"] [answer, error, requirementType scopeKey ty.requires]))
+  .ok (some (.name ["Effect", "Effect"]
+    [answer, error, requirementType scopeKey names ty.requires]))
 
 /-- The printed program as an exported constant carrying `declarationType`'s annotation. -/
 def printDecl (name : String) (ty : EffTy) (body : TypeScript.Expr)
-    (scopeKey : ServiceKey := Effect4.Machine.Env.scopeKey) :
+    (scopeKey : ServiceKey := Effect4.Machine.Env.scopeKey) (names : KeyNames := []) :
     Except PrintRefusal TypeScript.ConstDecl := do
-  let annotation ← declarationType ty scopeKey
+  let annotation ← declarationType ty scopeKey names
   .ok { doc := [], name := name, value := body, type := annotation }
 
 /-- Answer and error types must both be representable; a nonempty requirement row never
@@ -77,25 +80,31 @@ bypasses that check. Requirement identifiers have a total structural spelling. -
 def declarationTypeRepresentable (ty : EffTy) : Bool :=
   (Effect4.Codegen.Types.ofTy ty.answer).isSome && (Effect4.Codegen.Types.ofTy ty.error).isSome
 
-/-- Representability suffices for a complete annotation at every scope identity. -/
+/-- Representability suffices for a complete annotation at every scope identity and under
+every key name: the names spell no part whose printed form may be missing
+(`Types.ofTy_isSome`). -/
 theorem declarationType_ok {ty : EffTy} (hr : declarationTypeRepresentable ty = true)
-    (scopeKey : ServiceKey := Effect4.Machine.Env.scopeKey) :
-    ∃ annotation, declarationType ty scopeKey = .ok annotation := by
-  simp only [declarationTypeRepresentable, Bool.and_eq_true, Option.isSome_iff_exists] at hr
+    (scopeKey : ServiceKey := Effect4.Machine.Env.scopeKey) (names : KeyNames := []) :
+    ∃ annotation, declarationType ty scopeKey names = .ok annotation := by
+  simp only [declarationTypeRepresentable, Bool.and_eq_true] at hr
+  rw [← Effect4.Codegen.Types.ofTy_isSome ty.answer names,
+    ← Effect4.Codegen.Types.ofTy_isSome ty.error names] at hr
+  simp only [Option.isSome_iff_exists] at hr
   obtain ⟨⟨answer, ha⟩, ⟨error, he⟩⟩ := hr
   exact ⟨_, by simp only [declarationType, ha, he, bind, Except.bind]; rfl⟩
 
 /-- A successful declaration always retains all three slots, including the complete
 requirement row. Consumer: checked module production and its annotation admission check. -/
-theorem declarationType_complete {ty : EffTy} {scopeKey : ServiceKey}
-    {annotation : Option TypeScript.TypeRef} (h : declarationType ty scopeKey = .ok annotation) :
+theorem declarationType_complete {ty : EffTy} {scopeKey : ServiceKey} {names : KeyNames}
+    {annotation : Option TypeScript.TypeRef}
+    (h : declarationType ty scopeKey names = .ok annotation) :
     ∃ answer error, annotation = some (.name ["Effect", "Effect"]
-      [answer, error, requirementType scopeKey ty.requires]) := by
+      [answer, error, requirementType scopeKey names ty.requires]) := by
   unfold declarationType at h
-  cases ha : Effect4.Codegen.Types.ofTy ty.answer with
+  cases ha : Effect4.Codegen.Types.ofTy ty.answer names with
   | none => simp only [ha, bind, Except.bind] at h; cases h
   | some answer =>
-    cases he : Effect4.Codegen.Types.ofTy ty.error with
+    cases he : Effect4.Codegen.Types.ofTy ty.error names with
     | none => simp only [ha, he, bind, Except.bind] at h; cases h
     | some error =>
       simp only [ha, he, bind, Except.bind, Except.ok.injEq] at h
@@ -103,12 +112,13 @@ theorem declarationType_complete {ty : EffTy} {scopeKey : ServiceKey}
 
 /-- Everything a successful declaration retains: its requested name, its body unchanged,
 its export flag, and the annotation this type's one owner decided. -/
-theorem printDecl_fields {scopeKey : ServiceKey} {name : String} {ty : EffTy} {body : TypeScript.Expr}
-    {decl : TypeScript.ConstDecl} (hp : printDecl name ty body scopeKey = .ok decl) :
+theorem printDecl_fields {scopeKey : ServiceKey} {names : KeyNames} {name : String} {ty : EffTy}
+    {body : TypeScript.Expr} {decl : TypeScript.ConstDecl}
+    (hp : printDecl name ty body scopeKey names = .ok decl) :
     decl.name = name ∧ decl.value = body ∧ decl.exported = true ∧
-      declarationType ty scopeKey = .ok decl.type := by
+      declarationType ty scopeKey names = .ok decl.type := by
   unfold printDecl at hp
-  cases h : declarationType ty scopeKey with
+  cases h : declarationType ty scopeKey names with
   | error why => simp only [h, bind, Except.bind] at hp; cases hp
   | ok annotation =>
     rw [h] at hp
@@ -117,17 +127,17 @@ theorem printDecl_fields {scopeKey : ServiceKey} {name : String} {ty : EffTy} {b
     exact ⟨rfl, rfl, rfl, rfl⟩
 
 /-- A successful raw declaration retains its expression exactly. -/
-theorem printDecl_value {scopeKey : ServiceKey} {name : String} {ty : EffTy} {body : TypeScript.Expr}
-    {decl : TypeScript.ConstDecl} (hp : printDecl name ty body scopeKey = .ok decl) :
-    decl.value = body :=
+theorem printDecl_value {scopeKey : ServiceKey} {names : KeyNames} {name : String} {ty : EffTy}
+    {body : TypeScript.Expr} {decl : TypeScript.ConstDecl}
+    (hp : printDecl name ty body scopeKey names = .ok decl) : decl.value = body :=
   (printDecl_fields hp).2.1
 
-/-- A representable declaration type prints, at every name and body. -/
+/-- A representable declaration type prints, at every name and body, scope and key names. -/
 theorem printDecl_readable (name : String) (ty : EffTy) (body : TypeScript.Expr)
     (hr : declarationTypeRepresentable ty = true)
-    (scopeKey : ServiceKey := Effect4.Machine.Env.scopeKey) :
-    ∃ decl, printDecl name ty body scopeKey = .ok decl := by
-  obtain ⟨annotation, ha⟩ := declarationType_ok hr scopeKey
+    (scopeKey : ServiceKey := Effect4.Machine.Env.scopeKey) (names : KeyNames := []) :
+    ∃ decl, printDecl name ty body scopeKey names = .ok decl := by
+  obtain ⟨annotation, ha⟩ := declarationType_ok hr scopeKey names
   refine ⟨{ doc := [], name := name, value := body, type := annotation }, ?_⟩
   simp only [printDecl, ha, bind, Except.bind]
 
@@ -139,9 +149,10 @@ def Eff.block? : Eff Op → Option (List DefDecl × Effs Op × Eff Op × LayerTe
   | .defs decls bodies main layers => some (decls, bodies, main, layers)
   | _ => none
 
-/-- A program type as target syntax, refused by its rendering when it has none. -/
-def typeRefOf (ty : Ty) : Except PrintRefusal TypeScript.TypeRef :=
-  match Effect4.Codegen.Types.ofTy ty with
+/-- A program type as target syntax, a context type's row under the key names given (none by
+default), refused by its rendering when it has none. -/
+def typeRefOf (ty : Ty) (names : KeyNames := []) : Except PrintRefusal TypeScript.TypeRef :=
+  match Effect4.Codegen.Types.ofTy ty names with
   | some target => .ok target
   | none => .error (.typeSpelling ty.render)
 
@@ -185,8 +196,8 @@ def suspension : List TypeScript.Stmt → TypeScript.Expr → TypeScript.Expr
 from its request to an Effect of its declared columns, `(a0: Request) => Effect.Effect<A, E,
 never>`. A parameter requires nothing: the passed program's requirements are the call's. -/
 def paramType (sig : Signature Op) (q : ParamDecl) : Except PrintRefusal TypeScript.TypeRef :=
-  typeRefOf q.request >>= fun request =>
-  declarationType ⟨q.answer, q.error, Requirement.ofList []⟩ sig.scopeKey >>= fun
+  typeRefOf q.request sig.keyNames >>= fun request =>
+  declarationType ⟨q.answer, q.error, Requirement.ofList []⟩ sig.scopeKey sig.keyNames >>= fun
     | some result => .ok (.function [(Var.name 0, request)] result)
     | none => .error (.typeSpelling q.name)
 
@@ -206,9 +217,9 @@ own objects, as the machine keys a body's build by its path and the running call
 341, step 3). A reference to a module layer prints as the module constant's name (step 2). -/
 def printDef (sig : Signature Op) (d : DefDecl) (body : Eff Op)
     (locals : List (List Nat × LayerTerm Op)) : Except PrintRefusal TypeScript.ConstDecl :=
-  typeRefOf d.request >>= fun request =>
+  typeRefOf d.request sig.keyNames >>= fun request =>
   d.params.mapM (paramType sig) >>= fun fns =>
-  declarationType d.effTy sig.scopeKey >>= fun result =>
+  declarationType d.effTy sig.scopeKey sig.keyNames >>= fun result =>
   (Path.sortBy Path.declBefore (locals.map (·.1))).mapM
     (printLocal (sig.withParams d.params) locals) >>= fun ls =>
   print (sig.withParams d.params) 1 body >>= fun value =>
@@ -240,7 +251,9 @@ definitions: its key, `const S = Context.Service<"S", Shape>("S")`, the form of 
 the printer writes (`printKey`); and its layer, `const SLayer = Layer.effect(S,
 Effect.map(init(), (a0) => { return { m: (a1, …) => d(pair(a0, …)), … } }))`. The layer runs
 the initial program once, and each method closes over its answer, the state (rc.112
-`Layer.effect`, `vendor/effect-4.0.0-rc.112/src/Layer.ts`). -/
+`Layer.effect`, `vendor/effect-4.0.0-rc.112/src/Layer.ts`). A method whose definition takes
+programs takes them after its arguments and passes them on: `m: (a1, …, p, …) => d(pair(a0, …),
+p, …)` (slice HO-5, decisions row 340). -/
 
 /-- A service of a block: its name, its initial program's position, and its methods, each with
 its name, its definition's position and its arity. -/
@@ -314,15 +327,16 @@ def plainMethodName (m : String) : Bool := TypeScript.targetIdentifier m && m !=
 def serviceNames (services : List Service) : List String :=
   services.flatMap fun sv => [sv.name, sv.name ++ "Layer"]
 
-/-- Why one service does not print, if it does not: its initial program is missing or takes a
-request other than `unit`; it has no method, two with one name, or one whose name is no plain
-key (`plainMethodName`); its name or its layer's name is a definition's or carries a layer path;
-or a method's request is not the state and its arguments. -/
+/-- Why one service does not print, if it does not: its initial program is missing, takes a
+request other than `unit`, or takes a program, which the layer has none to pass; it has no
+method, two with one name, or one whose name is no plain key (`plainMethodName`); its name or its
+layer's name is a definition's or carries a layer path; or a method's request is not the state and
+its arguments. A method that takes programs prints, and its closure passes them on (slice HO-5). -/
 def serviceFaultOf (defs : List DefDecl) (sv : Service) : Option String :=
   match defs[sv.init]? with
   | none => some sv.name
   | some init =>
-    -- a service with parameters forwards its callbacks only from slice HO-5 (Codex's HO3-SVC-01)
+    -- the layer runs the initial program with no caller, so none passes it a program
     if init.request ≠ .unit || !init.params.isEmpty then some sv.name
     else if !(sv.methods.map (·.1)).Nodup || sv.methods.isEmpty ||
         sv.methods.any (fun x => !plainMethodName x.1) then some sv.name
@@ -333,7 +347,7 @@ def serviceFaultOf (defs : List DefDecl) (sv : Service) : Option String :=
     else sv.methods.findSome? fun (m, j, n) =>
       match defs[j]? with
       | some d =>
-        if d.params.isEmpty && (methodArgs init.answer d n).isSome then none
+        if (methodArgs init.answer d n).isSome then none
         else some (sv.name ++ "." ++ m)
       | none => some (sv.name ++ "." ++ m)
 
@@ -353,27 +367,36 @@ def serviceFault (defs : List DefDecl) : Option String :=
   else if defs.any (strayMethod ((servicesOf defs).map (·.name))) then some "service:method"
   else (servicesOf defs).findSome? (serviceFaultOf defs)
 
-/-- A method's type in the service's shape: `(a1: T1, …) => Effect.Effect<A, E, R>`. -/
+/-- A method's type in the service's shape: `(a1: T1, …, p: (a0: B) => Effect.Effect<…>, …) =>
+Effect.Effect<A, E, R>`. The definition's program parameters follow the arguments, each named by
+its declaration and typed by `paramType` (slice HO-5). -/
 def methodType (sig : Signature Op) (state : Ty) (d : DefDecl) (arity : Nat) :
     Except PrintRefusal TypeScript.TypeRef := do
   let some tys := methodArgs state d arity | .error (.internalAction "service")
   let params ← (argNames arity).zip tys |>.mapM fun (a, t) => do
-    let r ← typeRefOf t
+    let r ← typeRefOf t sig.keyNames
     .ok (a, r)
-  let result ← declarationType d.effTy sig.scopeKey
+  let fns ← d.params.mapM (paramType sig)
+  let result ← declarationType d.effTy sig.scopeKey sig.keyNames
   match result with
-  | some r => .ok (.function params r)
+  | some r => .ok (.function (params ++ (d.params.map (·.name)).zip fns) r)
   | none => .error (.internalAction "service")
 
-/-- A method's closure in its service's layer: `(a1: T1, …) => d(pair(a0, …))`. -/
-def methodClosure (init : DefDecl) (defs : List DefDecl) (x : String × Nat × Nat) :
-    Except PrintRefusal (String × TypeScript.Expr) := do
+/-- A method's closure in its service's layer: `(a1: T1, …, p: …, …) => d(pair(a0, …), p, …)`.
+The closure takes the definition's programs after its arguments and passes them on unchanged
+(slice HO-5): a method that takes none is `(a1: T1, …) => d(pair(a0, …))`. -/
+def methodClosure (sig : Signature Op) (init : DefDecl) (defs : List DefDecl)
+    (x : String × Nat × Nat) : Except PrintRefusal (String × TypeScript.Expr) := do
   let some d := defs[x.2.1]? | .error (.internalAction "service")
   let some tys := methodArgs init.answer d x.2.2 | .error (.internalAction "service")
   let params ← ((argNames x.2.2).zip tys).mapM fun p => do
-    let r ← typeRefOf p.2
+    let r ← typeRefOf p.2 sig.keyNames
     .ok ({ name := p.1, type := some r } : TypeScript.Parameter)
-  .ok (x.1, TypeScript.Expr.lambda params (.call (.ident d.name) [methodRequest (argNames x.2.2)]))
+  let fns ← d.params.mapM (paramType sig)
+  .ok (x.1, TypeScript.Expr.lambda
+    (params ++ (d.params.zip fns).map fun q => ({ name := q.1.name, type := some q.2 } :
+      TypeScript.Parameter))
+    (.call (.ident d.name) (methodRequest (argNames x.2.2) :: d.params.map fun q => .ident q.name)))
 
 /-- A method's field in its service's shape. -/
 def methodField (sig : Signature Op) (init : DefDecl) (defs : List DefDecl)
@@ -400,7 +423,7 @@ def printService (sig : Signature Op) (defs : List DefDecl) (sv : Service) :
     Except PrintRefusal (List TypeScript.ConstDecl) := do
   let some init := defs[sv.init]? | .error (.internalAction "service")
   let fields ← sv.methods.mapM (methodField sig init defs)
-  let closures ← sv.methods.mapM (methodClosure init defs)
+  let closures ← sv.methods.mapM (methodClosure sig init defs)
   .ok [serviceKeyDecl sv.name sv.name fields,
        { doc := [], name := sv.name ++ "Layer",
          value := .call (.ident "Layer.effect") [.ident sv.name,
@@ -464,7 +487,7 @@ def printModule (sig : Signature Op) (name : String) (ty : EffTy) (e : Eff Op) :
           .ok ({ doc := [], name := LayerTerm.refName t, value := x } : TypeScript.ConstDecl)
         | none => .error (.layerRef t)
       let m ← print sig 0 main
-      let declaration ← printDecl name ty m sig.scopeKey
+      let declaration ← printDecl name ty m sig.scopeKey sig.keyNames
       .ok (ds ++ [declaration])
     -- an empty block would print as its main program alone, and read back as it
     | some ([], _, _, _) => .error (.internalAction "defs")
@@ -485,7 +508,7 @@ def printModule (sig : Signature Op) (name : String) (ty : EffTy) (e : Eff Op) :
             .ok ({ doc := [], name := LayerTerm.refName t, value := x } : TypeScript.ConstDecl)
           | none => .error (.layerRef t)
         let m ← print sig' 0 body
-        let declaration ← printDecl name ty m sig.scopeKey
+        let declaration ← printDecl name ty m sig.scopeKey sig.keyNames
         .ok (out.1 ++ svc ++ ms ++ ds ++ [declaration])
 
 variable [ScopedOp Op]

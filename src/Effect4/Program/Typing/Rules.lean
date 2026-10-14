@@ -120,6 +120,12 @@ structure Signature (Op : Type) where
   with programs reads (`Eff.invoke`, decisions row 340). A block's signature supplies it
   (`Signature.withDefs`). None by default. -/
   defOf : Nat → Option DefDecl := fun _ => none
+  /-- The names that a module gives its keys (decisions row 378 (19), (22)): a key and the name
+  it prints by, so the requirement of a named key prints as the name's literal, `"TodoRepo"`
+  (`keySpelling`, `Codegen/Types.lean`). The native signature over a row table names the keys
+  that its rows name (`rowKeyNames`, `Program/Native.lean`). None by default: every key prints
+  by its runtime text. Typing reads none of it. -/
+  keyNames : List (ServiceKey × String) := []
 
 variable {Op : Type}
 

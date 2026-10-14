@@ -29,14 +29,15 @@ variable {table : RowTable} {name : String} {allowed : List Bindings.Origin}
 
 /-- The five facts the envelope decides, stated on the declaration block: the leading class
 declarations read back to the printer's classes (decisions row 120), then the four of the
-declaration block after them. -/
-structure EnvelopeValid (name : String) (ty : EffTy) (classes : Classes.Classes)
+declaration block after them, the main's annotation under the table's key names (decisions row
+378 (22)). -/
+structure EnvelopeValid (name : String) (ty : EffTy) (classes : Classes.Classes) (names : KeyNames)
     (decls : List TypeScript.Decl) : Prop where
   safe : exportNameSafe name = true
   declared : Program.blockClasses decls = some classes
   main : ∃ main : TypeScript.ConstDecl,
     (Program.splitClasses decls).2.getLast? = some (.const main) ∧
-    main.name = name ∧ main.exported = true ∧ declarationType ty = .ok main.type
+    main.name = name ∧ main.exported = true ∧ declarationType ty (names := names) = .ok main.type
   layers : ∀ d ∈ (Program.splitClasses decls).2.dropLast, ∃ c : TypeScript.ConstDecl,
     d = .const c ∧ c.type = none ∧ c.exported = true
 
@@ -100,9 +101,9 @@ theorem layersPlain_iff (ds : List TypeScript.Decl) :
         cases heq
 
 /-- The computed envelope admits exactly the stated declaration-block judgment. -/
-theorem envelopeCheck_iff (name : String) (ty : EffTy) (classes : Classes.Classes)
+theorem envelopeCheck_iff (name : String) (ty : EffTy) (classes : Classes.Classes) (names : KeyNames)
     (decls : List TypeScript.Decl) :
-    envelopeCheck name ty classes decls = none ↔ EnvelopeValid name ty classes decls := by
+    envelopeCheck name ty classes names decls = none ↔ EnvelopeValid name ty classes names decls := by
   unfold envelopeCheck
   split
   · rename_i unsafe?
@@ -320,9 +321,9 @@ theorem admitModule_bound {module : TypeScript.Module}
 theorem admitModule_envelope {module : TypeScript.Module}
     {r : ModuleReading table name allowed ambient}
     (h : admitModule name module table allowed ambient = .ok r) :
-    EnvelopeValid name r.typing.ty r.classes module.decls := by
+    EnvelopeValid name r.typing.ty r.classes (nativeSignature table).keyNames module.decls := by
   rw [← admitModule_module h]
-  exact (envelopeCheck_iff _ _ _ _).mp r.envelope
+  exact (envelopeCheck_iff _ _ _ _ _).mp r.envelope
 
 /-- **The envelope admits exactly the printed class declarations** (decisions row 120, part E2):
 an admitted module's leading class declarations are the ones the printer writes for the program
@@ -355,7 +356,8 @@ theorem admitModule_complete {module : TypeScript.Module} {program : NativeEff}
     (classified : ClassTable.moduleClasses (nativeSignature table) name typing.ty program =
       .ok (classes, classDecls))
     (annotations : annotationRefusal program = none)
-    (env : envelopeCheck name typing.ty classes module.decls = none) :
+    (env : envelopeCheck name typing.ty classes (nativeSignature table).keyNames module.decls =
+      none) :
     ∃ r, admitModule name module table allowed ambient = .ok r ∧
       r.program = program ∧ r.typing.ty = typing.ty :=
   ⟨⟨module, program, formed, inProfile, typing, classes, classDecls, classified, annotations,
@@ -395,8 +397,9 @@ theorem ModuleEmission.admit {program : NativeEff} {table : RowTable} {name : St
   have declared : Program.blockClasses e.module.decls = some e.classes := by
     rw [Program.blockClasses, split]
     exact Classes.readClassDecls_checked (moduleClasses_checked e.classified)
-  have env : envelopeCheck name e.typing.ty e.classes e.module.decls = none := by
-    refine (envelopeCheck_iff _ _ _ _).mpr
+  have env : envelopeCheck name e.typing.ty e.classes (nativeSignature table).keyNames
+      e.module.decls = none := by
+    refine (envelopeCheck_iff _ _ _ _ _).mpr
       ⟨safe, declared, ⟨main, ?_, hname, hexported, htype⟩, ?_⟩
     · simp only [split, List.getLast?_append, List.getLast?_singleton, Option.some_or]
     · intro d mem

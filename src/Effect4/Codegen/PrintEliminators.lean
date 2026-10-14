@@ -40,7 +40,7 @@ def target (ty : Ty) : Except PrintRefusal TypeRef :=
 
 /-- The actual three columns, in the target's A,E,R order. -/
 def «columns» (sig : Signature Op) (ty : EffTy) : Except PrintRefusal (List TypeRef) := do
-  return [← target ty.answer, ← target ty.error, requirementType sig.scopeKey ty.requires]
+  return [← target ty.answer, ← target ty.error, requirementType sig.scopeKey sig.keyNames ty.requires]
 
 /-- A whole effect type, for target heads whose one parameter is the complete effect. -/
 def effectTarget (sig : Signature Op) (ty : EffTy) : Except PrintRefusal TypeRef := do
@@ -314,7 +314,8 @@ def decorate (sig : Signature Op) (ctx : Context Op) (plain : Expr) : Except Pri
     let acquire ← need "acquire child" (childTy sig ctx 0)
     let release ← need "release child" (childTy sig ctx 1)
     if columnsJoin acquire || columnsJoin release then
-      apply "Effect.acquireRelease" ((← «columns» sig acquire) ++ [requirementType sig.scopeKey release.requires])
+      apply "Effect.acquireRelease"
+        ((← «columns» sig acquire) ++ [requirementType sig.scopeKey sig.keyNames release.requires])
     else return plain
   | .action (.fork _ _) | .action (.forkScoped _ _) =>
     let body ← need "fork child" (childTy sig ctx 0)

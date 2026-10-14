@@ -2769,8 +2769,10 @@ const isMethodRequest = (arity: number, e: Node): boolean => {
 }
 
 /** A service's layer (Lean `readServiceLayer`): `Layer.effect(S, Effect.map(init(), (a0) => {
- * return { m: (a1, …) => d(pair(a0, …)), … } }))`. A closure's parameters' annotations are not
- * read: they are erased in the run. */
+ * return { m: (a1, …, p, …) => d(pair(a0, …), p, …), … } }))`. A closure takes its arguments, then
+ * its definition's programs, which it passes on by name (Lean `readServiceMethod`, slice HO-5): its
+ * arity is its parameters less those programs. A closure's parameters' annotations are not read:
+ * they are erased in the run. */
 const readServiceLayer = (c: Declaration): ServiceInfo | undefined => {
   const v = c.value
   const callee = nodeAt(v, "callee")
@@ -2799,13 +2801,18 @@ const readServiceLayer = (c: Declaration): ServiceInfo | undefined => {
     if (m === undefined || closure?.type !== "ArrowFunctionExpression" || closure.async === true || closure.typeParameters ||
         closure.expression !== true || closure.returnType) return undefined
     const params = listAt(closure, "params") ?? []
-    if (!params.every((q, i) => isNode(q) && q.type === "Identifier" && q.name === `a${i + 1}`)) return undefined
     const call = nodeAt(closure, "body")
     const head = call && nodeAt(call, "callee")
     const args = call ? listAt(call, "arguments") ?? [] : []
-    if (call?.type !== "CallExpression" || head?.type !== "Identifier" || typeof head.name !== "string" || args.length !== 1 ||
-        !isNode(args[0]) || !isMethodRequest(params.length, args[0])) return undefined
-    methods.push([m, head.name, params.length])
+    const passed = args.slice(1)
+    if (!passed.every((a) => isNode(a) && a.type === "Identifier" && typeof a.name === "string")) return undefined
+    const names = passed.map((a) => (a as Node).name as string)
+    const arity = params.length - names.length
+    if (arity < 0 || !params.every((q, i) => isNode(q) && q.type === "Identifier" &&
+        q.name === (i < arity ? `a${i + 1}` : names[i - arity]))) return undefined
+    if (call?.type !== "CallExpression" || head?.type !== "Identifier" || typeof head.name !== "string" || args.length < 1 ||
+        !isNode(args[0]) || !isMethodRequest(arity, args[0])) return undefined
+    methods.push([m, head.name, arity])
   }
   return { name: s.name, init: initCallee.name, methods }
 }

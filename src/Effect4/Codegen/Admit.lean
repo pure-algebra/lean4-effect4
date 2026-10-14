@@ -67,17 +67,18 @@ def mainConst (decls : List TypeScript.Decl) : Option TypeScript.ConstDecl :=
   | some (.const main) => some main
   | _ => none
 
-/-- The envelope of a declaration block around a checked type and the payload classes the
-printer declares for its program: the export name is safe, the leading class declarations read
-back to exactly those classes (decisions row 120), the last declaration is the exported main
-constant under that name annotated exactly as the printer annotates the type, and every
-declaration between is a plain layer constant. `none` means the envelope agrees; otherwise the
-first disagreement, named. -/
-def envelopeCheck (name : String) (ty : EffTy) (classes : Classes.Classes)
+/-- The envelope of a declaration block around a checked type, the payload classes the
+printer declares for its program and the key names its table gives: the export name is safe, the
+leading class declarations read back to exactly those classes (decisions row 120), the last
+declaration is the exported main constant under that name annotated exactly as the printer
+annotates the type under those names (decisions row 378 (22)), and every declaration between is
+a plain layer constant. `none` means the envelope agrees; otherwise the first disagreement,
+named. -/
+def envelopeCheck (name : String) (ty : EffTy) (classes : Classes.Classes) (names : KeyNames)
     (decls : List TypeScript.Decl) : Option SurfaceRefusal :=
   if exportNameSafe name ≠ true then some (.unsafeName name)
   else
-    match declarationType ty with
+    match declarationType ty (names := names) with
     | .error why => some (.unrepresentable why)
     | .ok expected =>
       if Program.blockClasses decls ≠ some classes then some .classDeclarations
@@ -118,7 +119,8 @@ structure ModuleReading (table : RowTable) (name : String) (allowed : List Bindi
   bound : SourceBindings.Checked allowed (withAmbient ambient module)
   read : Program.readModule (nativeSignature table) (nativeSpell table) NativeOp.call
     NativeOp.param [] module.decls = .ok program
-  envelope : envelopeCheck name typing.ty classes module.decls = none
+  envelope : envelopeCheck name typing.ty classes (nativeSignature table).keyNames module.decls =
+    none
 
 /-- Checked reading: lexical bindings, raw reconstruction, the shared typing certificate,
 and the declaration envelope compared with what the printer emits for the checked type. -/
@@ -149,7 +151,8 @@ def admitModule (name : String) (module : TypeScript.Module) (table : RowTable :
         match hannotations : annotationRefusal program with
         | some why => .error (.unrepresentable why)
         | none =>
-        match henv : envelopeCheck name typing.ty classes module.decls with
+        match henv : envelopeCheck name typing.ty classes (nativeSignature table).keyNames
+            module.decls with
         | some why => .error why
         | none => .ok ⟨module, program, (Formation.checkInput_eq_none_iff program table).mp hformed,
             hprofile, typing, classes, classDecls, hclasses, hannotations, bound, hread, henv⟩

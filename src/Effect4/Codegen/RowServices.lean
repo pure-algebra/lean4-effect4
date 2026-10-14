@@ -12,8 +12,10 @@ The call site prints as it did, `Ns.method(x)`. The module declares `Ns` as the 
 accessor per method, and each accessor is the ruled call `NsKey.use((r) => r.method(x))`
 (option A of the seat ROWS receipt, `docs/research/2026-10-13-seat-rows-receipt.md`, accepted by
 the coordinator on 2026-10-13). So the call's printed requirement is the key that the column
-names, and a person provides the service by a layer, `Layer.succeed(Ns, impl)`. The printer, the
-readers and their laws do not move.
+names, and a person provides the service by a layer, `Layer.succeed(Ns, impl)`. The call site's
+printer and reader do not move. The key prints by the service's name, `"TodoRepo"`, in every
+requirement row and as the key's runtime identity (`keySpelling` under the native signature's
+key names, `rowKeyNames`; decisions row 378 (22)).
 
 The module's file declares the services after its payload classes (`ModuleEmission.file`,
 `Codegen/Checked.lean`), and refuses the module by a row's spelling where `rowServiceFault`
@@ -31,18 +33,11 @@ open Effect4.Machine.Env (Requirement)
 
 variable {Op : Type}
 
-/-- The bytes before the one dot of a spelling and the bytes after it; `none` unless the bytes
-hold exactly one dot (byte `46`). -/
-def splitDot : List UInt8 → Option (List UInt8 × List UInt8)
-  | [] => none
-  | b :: rest =>
-    if b = 46 then (if rest.contains 46 then none else some ([], rest))
-    else (splitDot rest).map fun p => (b :: p.1, p.2)
-
-/-- **A spelling `Ns.method` as its namespace and its method**: a binding name, one dot, and a
-property name, which may be a keyword (`TodoRepo.delete`, as `Effect.catch`;
-`SourceBindings.identifierBytes`). It reads the spelling's bytes and decodes the two parts
-(`Store.decodeString`), so no traversal of a `String` enters the proof graph. -/
+/-- **A spelling `Ns.method` as its namespace and its method**: a binding name, one dot
+(`splitDot`, `Program/Native.lean`), and a property name, which may be a keyword
+(`TodoRepo.delete`, as `Effect.catch`; `SourceBindings.identifierBytes`). It reads the
+spelling's bytes and decodes the two parts (`Store.decodeString`), so no traversal of a `String`
+enters the proof graph. -/
 def serviceParts (spelling : String) : Option (String × String) :=
   match splitDot spelling.toByteArray.data.toList with
   | some (pre, post) =>
@@ -54,16 +49,14 @@ def serviceParts (spelling : String) : Option (String × String) :=
     | _, _ => none
   | none => none
 
-/-- **The service a row belongs to**: a call row with no trailing argument and no declared type
-argument, whose requirement column names exactly one key and whose spelling is `Ns.method`
-(`serviceParts`), is method `method` of the service `Ns`. The column is read first, so a row
-whose column names no key is no service row by computation. -/
+/-- **The service a row belongs to**: a row that names its key by a namespace
+(`Row.keyNamespace?`, `Program/Native.lean`: a call row with no trailing argument and no declared
+type argument, whose requirement column names exactly one key and whose spelling holds one dot)
+and whose spelling is `Ns.method` (`serviceParts`) is method `method` of the service `Ns`. The
+column is read first, so a row whose column names no key is no service row by computation, and
+a service's key prints by the service's name (`rowKeyNames`). -/
 def Row.serviceCall? (row : Row) : Option (String × String) :=
-  match row.requires with
-  | [_] =>
-    if row.shape = .call ∧ row.trailing = [] ∧ row.typeArgs = [] then serviceParts row.spelling
-    else none
-  | _ => none
+  row.keyNamespace?.bind fun _ => serviceParts row.spelling
 
 /-- The members of an rc.112 service key, which an accessor on the key would shadow
 (`Object.assign`): the `Key` and `Service` interfaces (`Context.ts:64-69`, `:98-103`); the
@@ -129,9 +122,9 @@ requires nothing: the layer that builds the service provides what it needs. -/
 def rowMethodField (sig : Signature Op) (m : String) (row : Row) :
     Except PrintRefusal TypeScript.TypeRef.Field := do
   let params ← if row.request = Ty.unit then pure [] else do
-    let request ← typeRefOf row.request
+    let request ← typeRefOf row.request sig.keyNames
     pure [(Var.name 0, request)]
-  match ← declarationType ⟨row.answer, row.error, Requirement.empty⟩ sig.scopeKey with
+  match ← declarationType ⟨row.answer, row.error, Requirement.empty⟩ sig.scopeKey sig.keyNames with
   | some result => .ok { name := m, readonly := true, type := .function params result }
   | none => .error (.typeSpelling row.spelling)
 
@@ -148,9 +141,10 @@ def accessorExpr (keyName m : String) : Option TypeScript.TypeRef → TypeScript
         [.lambda [{ name := Var.name 1 }] (.method (.ident (Var.name 1)) m [.ident (Var.name 0)])])
 
 /-- A method's request in its accessor: `none` on a `unit` request, which the accessor drops, and
-the request's type through the type printer otherwise. -/
-def accessorRequest (row : Row) : Except PrintRefusal (Option TypeScript.TypeRef) :=
-  if row.request = Ty.unit then .ok none else (typeRefOf row.request).map some
+the request's type through the type printer under the module's key names otherwise. -/
+def accessorRequest (names : KeyNames) (row : Row) :
+    Except PrintRefusal (Option TypeScript.TypeRef) :=
+  if row.request = Ty.unit then .ok none else (typeRefOf row.request names).map some
 
 /-- **What a row namespace's two declarations print** (`rowServiceDecls`): the namespace, its
 key's runtime identity, the fields of the key's shape, and each method with its accessor's
@@ -174,10 +168,11 @@ def RowServiceData.decls (d : RowServiceData) : List TypeScript.ConstDecl :=
        .object (d.methods.map fun (m, request) => (m, accessorExpr d.keyName m request))] }]
 
 /-- **The data of a table's services**, for each service of the table (`rowServices`): its key's
-identity is its key's spelling `keyText`, which is what a requirement row prints; each method's
-field and request go through the type printer. Refused by a row's spelling where
-`rowServiceFault` names one, and by the namespace where its key is the signature's scope, which
-prints as `Scope.Scope` and has no shape of methods. -/
+identity is its key's spelling under the signature's key names (`keySpelling`), which is what a
+requirement row prints: at the native signature, the service's own name (`rowKeyNames`,
+decisions row 378 (22)). Each method's field and request go through the type printer. Refused
+by a row's spelling where `rowServiceFault` names one, and by the namespace where its key is the
+signature's scope, which prints as `Scope.Scope` and has no shape of methods. -/
 def rowServiceData (sig : Signature Op) (table : List Row) :
     Except PrintRefusal (List RowServiceData) :=
   match rowServiceFault table with
@@ -186,8 +181,8 @@ def rowServiceData (sig : Signature Op) (table : List Row) :
     if s.key = sig.scopeKey then .error (.unsafeName s.ns) else do
       let fields ← s.methods.mapM fun (m, row) => rowMethodField sig m row.normalizeTypes
       let methods ← s.methods.mapM fun (m, row) =>
-        (accessorRequest row.normalizeTypes).map fun request => (m, request)
-      .ok ⟨s.ns, keyText s.key, fields, methods⟩
+        (accessorRequest sig.keyNames row.normalizeTypes).map fun request => (m, request)
+      .ok ⟨s.ns, keySpelling sig.keyNames s.key, fields, methods⟩
 
 /-- **The row namespaces' services**: for each service of the table, its two declarations
 (`RowServiceData.decls`), the key and the namespace. A program's call `Ns.m(x)` is its accessor's

@@ -393,7 +393,7 @@ def printArg (sig : Signature Op) (d : Nat) :
   | .mode _ | .bool _ | .op _ => .ok none
   -- a definition block's declarations: no template row prints a block yet (slice PROC-3)
   | .decls _ => .ok none
-  | .keys ks => .ok (some (.type (requirementType sig.scopeKey ks)))
+  | .keys ks => .ok (some (.type (requirementType sig.scopeKey sig.keyNames ks)))
 
 def printArgs (sig : Signature Op) (fam : EffFam) (n : Nat) (out : RowOut) :
     List (ArgF Op Carrier) → Nat → Except PrintRefusal Subst

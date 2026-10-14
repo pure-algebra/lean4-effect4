@@ -6,6 +6,7 @@ public import Effect4.Program.Typing
 public import Effect4.Program.ScopedOp
 public import Effect4.Program.FnName
 public import Effect4.Machine.Stores
+public import Effect4.Store.Carrier.Utf8
 
 /-!
 # Syntax.Native — the native row alphabet over the stores (lane A3, first cut)
@@ -600,8 +601,39 @@ def nativeRowOf (table : RowTable) : NativeOp → Row
 @[simp] theorem nativeRowOf_nil (op : NativeOp) : nativeRowOf [] op = op.row := by
   cases op <;> rfl
 
+/-! ## The names a table gives its keys (decisions row 378 (19), (22)) -/
+
+/-- The bytes before the one dot of a spelling and the bytes after it; `none` unless the bytes
+hold exactly one dot (byte `46`). -/
+def splitDot : List UInt8 → Option (List UInt8 × List UInt8)
+  | [] => none
+  | b :: rest =>
+    if b = 46 then (if rest.contains 46 then none else some ([], rest))
+    else (splitDot rest).map fun p => (b :: p.1, p.2)
+
+/-- **The name a row gives its key**: a call row with no trailing argument and no declared type
+argument, whose requirement column names exactly one key and whose spelling holds one dot, names
+that key by the bytes before the dot. A row namespace that is an Effect service is such a row
+(`Row.serviceCall?`, `Codegen/RowServices.lean`), so a service's key prints by the service's
+name. -/
+def Row.keyNamespace? (row : Row) : Option (ServiceKey × String) :=
+  match row.requires with
+  | [key] =>
+    if row.shape = .call ∧ row.trailing = [] ∧ row.typeArgs = [] then
+      match splitDot row.spelling.toByteArray.data.toList with
+      | some (ns, _) => (Effect4.Store.decodeString ns).map fun name => (key, name)
+      | none => none
+    else none
+  | _ => none
+
+/-- **The names a row table gives its keys**: each row's (`Row.keyNamespace?`), once, in table
+order. The native signature carries them (`Signature.keyNames`). -/
+def rowKeyNames (table : RowTable) : List (ServiceKey × String) :=
+  (table.filterMap Row.keyNamespace?).eraseDups
+
 /-- The native signature uses the same canonical linked-row types as external preparation
-and admission (`externalRow`). Raw table entries retain their source spelling/provenance. -/
+and admission (`externalRow`). Raw table entries retain their source spelling/provenance. Its
+key names are the names its table's rows give their keys (`rowKeyNames`). -/
 def nativeSignature (table : RowTable := []) : Signature NativeOp :=
   { rowOf := fun op => (nativeRowOf table op).normalizeTypes, atomOf := nativeAtomTy, scopeKey := nativeScopeKey,
     serviceTy := nativeServiceTy,
@@ -620,7 +652,9 @@ def nativeSignature (table : RowTable := []) : Signature NativeOp :=
     -- an invocation names its definition; outside a block it is outside the domain
     callOf := fun | .call k => some k | _ => none
     -- a parameter's run names its parameter; outside a body it is outside the domain
-    paramOf := fun | .param i => some i | _ => none }
+    paramOf := fun | .param i => some i | _ => none
+    -- a key prints by the name its table's rows give it
+    keyNames := rowKeyNames table }
 
 /-- **The native signature types an operation alike once its binder term is weakened**
 (`Signature.WeakenNatural`, `Program/Typing.lean`): weakening replaces a term row's term and

@@ -306,7 +306,7 @@ theorem readModule_printModule {sig : Signature Op}
   simp only [plain] at printed
   change ((Path.sortBy Path.declBefore (history.map Prod.fst)).mapM
     (printCaptured sig history) >>= fun ds => print sig 0 main >>= fun body =>
-    printDecl name ty body sig.scopeKey >>= fun decl => .ok (ds ++ [decl])) = .ok decls at printed
+    printDecl name ty body sig.scopeKey sig.keyNames >>= fun decl => .ok (ds ++ [decl])) = .ok decls at printed
   obtain ⟨ds, hp, hmain⟩ := bind_eq_ok.mp printed
   obtain ⟨body, hbody, hdecl⟩ := bind_eq_ok.mp hmain
   obtain ⟨decl, declaration, heq⟩ := bind_eq_ok.mp hdecl
@@ -486,9 +486,10 @@ theorem printDefs_plain {sig : Signature Op} {k : Nat} {defs : List DefDecl} {bo
       · exact ⟨(printDef_plain hc).1, (printDef_plain hc).2.1⟩
       · exact ih hout c' rest'
 
-/-- An empty requirement row prints as `never`. -/
-theorem requirementType_nil (scopeKey : ServiceKey) :
-    requirementType scopeKey (Effect4.Machine.Env.Requirement.ofList []) = .name ["never"] [] :=
+/-- An empty requirement row prints as `never`, under any key names. -/
+theorem requirementType_nil (scopeKey : ServiceKey) (names : KeyNames) :
+    requirementType scopeKey names (Effect4.Machine.Env.Requirement.ofList []) =
+      .name ["never"] [] :=
   rfl
 
 /-! ## The module's layers (decisions row 341, step 2)
@@ -635,7 +636,7 @@ theorem printModule_shape {sig : Signature Op} {name : String} {ty : EffTy} {roo
     {block : List TypeScript.ConstDecl} (printed : printModule sig name ty root = .ok block) :
     ∃ layers main body, block = layers ++ [main] ∧
       (∀ decl ∈ layers, decl.type = none ∧ decl.exported = true) ∧
-      printDecl name ty body sig.scopeKey = .ok main := by
+      printDecl name ty body sig.scopeKey sig.keyNames = .ok main := by
   unfold printModule at printed
   cases hoisted : root.hoistAll with
   | error target => rw [hoisted] at printed; simp only [reduceCtorEq] at printed
@@ -647,7 +648,7 @@ theorem printModule_shape {sig : Signature Op} {name : String} {ty : EffTy} {roo
       simp only [hb] at printed
       change ((Path.sortBy Path.declBefore (history.map Prod.fst)).mapM
         (printCaptured sig history) >>= fun ds => print sig 0 main >>= fun body =>
-        printDecl name ty body sig.scopeKey >>= fun decl => .ok (ds ++ [decl])) = .ok block at printed
+        printDecl name ty body sig.scopeKey sig.keyNames >>= fun decl => .ok (ds ++ [decl])) = .ok block at printed
       obtain ⟨ds, hp, hmain⟩ := bind_eq_ok.mp printed
       obtain ⟨body, _, hdecl⟩ := bind_eq_ok.mp hmain
       obtain ⟨decl, declaration, heq⟩ := bind_eq_ok.mp hdecl
@@ -670,7 +671,7 @@ theorem printModule_shape {sig : Signature Op} {name : String} {ty : EffTy} {roo
           (Path.sortBy Path.declBefore (out.2.map Prod.fst)).mapM
             (printCaptured (sig.withDefs (d :: ds)) out.2) >>= fun ls =>
           print (sig.withDefs (d :: ds)) 0 body >>= fun m =>
-          printDecl name ty m sig.scopeKey >>= fun decl =>
+          printDecl name ty m sig.scopeKey sig.keyNames >>= fun decl =>
             .ok (out.1 ++ svc ++ ms ++ ls ++ [decl])) = .ok block at printed
         obtain ⟨out, hout, rest⟩ := bind_eq_ok.mp printed
         obtain ⟨svc, hsvc, rest⟩ := bind_eq_ok.mp rest
@@ -695,14 +696,15 @@ theorem printModule_shape {sig : Signature Op} {name : String} {ty : EffTy} {roo
         · exact mapM_ok_forall _ _ (fun t d hd => printCaptured_plain t d hd) _ hls c hl
 
 /-- **A parameter's binder reads back** (slice HO-3): the binders `printDef` prints of
-parameters readable under the module's classes read as the parameters under them. A step of
-`readDefHead_printDef`. -/
+parameters readable under the module's classes and the signature's key names read as the
+parameters under them. A step of `readDefHead_printDef`. -/
 theorem readParams_printParams {sig : Signature Op} :
-    ∀ {ps : List ParamDecl} {fns : List TypeScript.TypeRef}, (∀ q ∈ ps, q.readable classes = true) →
+    ∀ {ps : List ParamDecl} {fns : List TypeScript.TypeRef},
+      (∀ q ∈ ps, q.readable classes sig.keyNames = true) →
       ps.mapM (paramType sig) = .ok fns →
       ((ps.zip fns).map fun p =>
         ({ name := p.1.name, type := some p.2 } : TypeScript.Parameter)).mapM
-          (readParam classes) = .ok ps
+          (readParam classes sig.keyNames) = .ok ps
   | [], fns, _, h => by
     simp only [List.mapM_nil, pure, Except.pure, Except.ok.injEq] at h
     subst h
@@ -731,15 +733,17 @@ theorem readParams_printParams {sig : Signature Op} :
     rfl
 
 /-- **A definition's header reads back**: the constant `printDef` prints of a declaration
-readable under the module's classes reads as that declaration under them, its requirement row
-and its parameters included (slice HO-3), and the printed suspension of its body (`suspension`):
-the constants of the body's own layers and the body, printed at the signature its parameters
-extend (decisions row 341, step 3). A column that names a payload class reads as the class's
-record (decisions row 120), and the requirement row reads back by `readKeys_requirementType`.
-Placement: concept `exact-codecs`, a step of the claim `module-defs-round-trip` (R8) through
+readable under the module's classes and the signature's key names reads as that declaration under
+them, its requirement row and its parameters included (slice HO-3), and the printed suspension of
+its body (`suspension`): the constants of the body's own layers and the body, printed at the
+signature its parameters extend (decisions row 341, step 3). A column that names a payload class
+reads as the class's record (decisions row 120), a named key reads by its name (row 378 (22)),
+and the requirement row reads back by `readKeys_requirementType`. Placement: concept
+`exact-codecs`, a step of the claim `module-defs-round-trip` (R8) through
 `readModule_printModule_defs`, its consumer. It states nothing of target typing. -/
 theorem readDefHead_printDef {sig : Signature Op} {d : DefDecl} {body : Eff Op}
-    {locals : History Op} {c : TypeScript.ConstDecl} (readable : d.readable classes = true)
+    {locals : History Op} {c : TypeScript.ConstDecl}
+    (readable : d.readable classes sig.keyNames = true)
     (printed : printDef sig d body locals = .ok c) :
     ∃ ls y, (Path.sortBy Path.declBefore (locals.map Prod.fst)).mapM
         (printLocal (sig.withParams d.params) locals) = .ok ls ∧
@@ -773,7 +777,8 @@ theorem readDefHead_printDef {sig : Signature Op} {d : DefDecl} {body : Eff Op}
     Effect4.Codegen.Classes.readTyChecked_of_readable herr herrT]
 
 /-- A header reads alike at a block's signature and at the signature the block extends: the
-header reader reads the signature's scope key alone, and the block keeps it. A step of
+header reader reads the signature's scope key and key names alone, and the block keeps them. A
+step of
 `readModule_printModule_defs`, whose printer prints the headers at the block's signature and
 whose reader reads them before the block is known. -/
 theorem readDefHead_withDefs (sig : Signature Op) (defs : List DefDecl) :
@@ -896,7 +901,7 @@ theorem readDefs_printDefs {classes : Classes} {sig : Signature Op}
     {k : Nat} {defs : List DefDecl} {bodies : Effs Op} {rest : History Op}
     {out : List TypeScript.ConstDecl × History Op}
     (index : ∀ i, all[k + i]? = defs[i]?)
-    (readable : ∀ d ∈ defs, d.readable classes = true)
+    (readable : ∀ d ∈ defs, d.readable classes sig.keyNames = true)
     (bodiesRead : ∀ p ∈ defs.zip bodies.toList, ReadsBack classes (sig.withParams p.1.params)
       (paramsSpell param p.1.params spell) 1 p.2)
     (localsRead : ∀ e ∈ rest, ∀ d, bodyDeclOf all e.1 = some d →
@@ -1010,8 +1015,9 @@ module printer prints a block's definitions as constants, each body's own hoiste
 constants at the top of its suspension (decisions row 341, step 3), then the block's services'
 keys and layers (decisions rows 338 and 339), then its module layers, each named by its path
 (step 2), before the hoisted layers no body took and the main declaration (`printModule`). When
-each declaration is readable under the module's classes (`DefDecl.readable`: readable columns, a
-canonical requirement row, a name with no layer path); each body and each of its own layers read
+each declaration is readable under the module's classes and the signature's key names
+(`DefDecl.readable`: readable columns, a canonical requirement row, a name with no layer path);
+each body and each of its own layers read
 back from their printing at
 the signature its parameters extend (`bodyDeclOf`); the main program, each module layer and each
 other hoisted layer read back at the block's signature through the block's spelling map
@@ -1040,7 +1046,7 @@ theorem readModule_printModule_defs {sig : Signature Op}
     (classesRead : Effect4.Codegen.Classes.readClassDecls classDecls = some classes)
     {rows : List Row} {serviceDecls : List TypeScript.ConstDecl}
     (servicesPrinted : rowServiceDecls sig rows = .ok serviceDecls)
-    (headsReadable : ∀ d ∈ defs, d.readable classes = true)
+    (headsReadable : ∀ d ∈ defs, d.readable classes sig.keyNames = true)
     (bodiesReadable : ∀ p ∈ defs.zip bodies.toList,
       ReadsBack classes ((sig.withDefs defs).withParams p.1.params)
         (paramsSpell param p.1.params (defsSpell call defs spell)) 1 p.2)
@@ -1085,7 +1091,7 @@ theorem readModule_printModule_defs {sig : Signature Op}
       (Path.sortBy Path.declBefore (out.2.map Prod.fst)).mapM
         (printCaptured (sig.withDefs (d :: ds)) out.2) >>= fun ls =>
       print (sig.withDefs (d :: ds)) 0 body >>= fun m =>
-      printDecl name ty m sig.scopeKey >>= fun decl =>
+      printDecl name ty m sig.scopeKey sig.keyNames >>= fun decl =>
         .ok (out.1 ++ svc ++ ms ++ ls ++ [decl])) = .ok decls at printed
     obtain ⟨out, hout, rest⟩ := bind_eq_ok.mp printed
     obtain ⟨svc, hsvc, rest⟩ := bind_eq_ok.mp rest
@@ -1096,8 +1102,8 @@ theorem readModule_printModule_defs {sig : Signature Op}
     cases heq
     have value := printDecl_value declaration
     obtain ⟨heads, locals, hheads, hdefs, hbodies, hperm, hleft, hnames, hnot⟩ :=
-      readDefs_printDefs (all := d :: ds) (k := 0) (fun i => by rw [Nat.zero_add])
-        headsReadable bodiesReadable localsReadable namesReadable unique hout
+      readDefs_printDefs (sig := sig.withDefs (d :: ds)) (all := d :: ds) (k := 0)
+        (fun i => by rw [Nat.zero_add]) headsReadable bodiesReadable localsReadable namesReadable unique hout
     rw [readDefHead_withDefs] at hheads
     -- the layers no body took: hoisted layers in no body, read at the block's signature
     have leftMem : ∀ e ∈ out.2, e ∈ history := fun e he =>

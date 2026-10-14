@@ -26,13 +26,10 @@ parameters. The bank records the block at the types of the to-do's `list`
 The independent model is `Effect4.Ref.Cache.Model` (`src/Effect4/Library/Ref/CacheModel.lean`).
 The agreement law is `cache_agrees` (`src/Effect4/Laws/Library/Ref/Cache.lean`).
 
-What the block lacks today:
-
-* a print as an Effect service: `printServices` (`src/Effect4/Codegen/Print.lean`) refuses a
-  method with a parameter until slice HO-5 forwards its programs (`serviceFaultOf`, Codex's
-  HO3-SVC-01);
-* an authoring form for its call: a caller writes `Eff.invoke` with the loader as its program,
-  and the authoring surface has no invocation with programs yet.
+It prints as the Effect service `ListCache`: the closure of `get` takes the loader and passes it
+on (`printServices`, `src/Effect4/Codegen/Print.lean`, slice HO-5). A caller invokes `get` with
+its loader by `Def.invokeWith` (`src/Effect4/Program/Authoring.lean`). What it lacks today: a read
+back of its module, since the header reader reads no `Ref.Ref<…>` column.
 -/
 
 @[expose] public section

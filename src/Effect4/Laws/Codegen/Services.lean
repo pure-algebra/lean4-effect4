@@ -187,10 +187,20 @@ theorem isMethodRequest_methodRequest : ∀ (args : List String),
     rw [decide_eq_true rfl, isArgTuple_argTuple (List.cons_ne_nil a rest)]
     rfl
 
-/-- The closures of a printed layer read back as its methods' information. -/
-theorem readServiceMethods_ok {defs : List DefDecl} {init : DefDecl} :
+/-- The programs that a method's closure passes on read back as their names. A step of
+`readServiceMethods_ok` (slice HO-5). -/
+theorem mapM_passedName : ∀ (qs : List ParamDecl),
+    (qs.map fun q => TypeScript.Expr.ident q.name).mapM passedName = some (qs.map (·.name))
+  | [] => rfl
+  | q :: qs => by
+    rw [List.map_cons, List.mapM_cons, mapM_passedName qs]
+    rfl
+
+/-- The closures of a printed layer read back as its methods' information: the arity is the
+closure's parameters less the programs that it passes on (slice HO-5). -/
+theorem readServiceMethods_ok {sig : Signature Op} {defs : List DefDecl} {init : DefDecl} :
     ∀ {methods : List (String × Nat × Nat)} {closures : List (String × TypeScript.Expr)},
-      methods.mapM (methodClosure init defs) = .ok closures →
+      methods.mapM (methodClosure sig init defs) = .ok closures →
         closures.mapM readServiceMethod =
           some (methods.map fun x => (x.1, ((defs[x.2.1]?).map (·.name)).getD "", x.2.2))
   | [], closures, h => by
@@ -217,7 +227,8 @@ theorem readServiceMethods_ok {defs : List DefDecl} {init : DefDecl} :
         cases hc
       | some tys =>
         rw [htys] at hc
-        obtain ⟨params, hparams, heq⟩ := bind_eq_ok.mp hc
+        obtain ⟨params, hparams, rest'⟩ := bind_eq_ok.mp hc
+        obtain ⟨fns, hfns, heq⟩ := bind_eq_ok.mp rest'
         cases heq
         have hargs : (argNames n).length = n := by
           simp only [argNames, List.length_map, List.length_range]
@@ -230,11 +241,29 @@ theorem readServiceMethods_ok {defs : List DefDecl} {init : DefDecl} :
               cases heq
               rfl) hparams,
             List.map_fst_zip (by rw [hargs, length_methodArgs htys]; exact Nat.le_refl n)]
+        have hfnslen : fns.length = d.params.length := length_of_mapM_ok hfns
+        have hfst : (d.params.zip fns).map Prod.fst = d.params :=
+          List.map_fst_zip (by rw [hfnslen]; exact Nat.le_refl _)
+        have hpassed : ((d.params.zip fns).map fun q =>
+            ({ name := q.1.name, type := some q.2 } : TypeScript.Parameter)).map (·.name) =
+            d.params.map (·.name) := by
+          rw [List.map_map]
+          conv => rhs; rw [← hfst]
+          rw [List.map_map]
+          rfl
+        have hcount : (params ++ (d.params.zip fns).map fun q =>
+            ({ name := q.1.name, type := some q.2 } : TypeScript.Parameter)).length -
+            (d.params.map (·.name)).length = n := by
+          rw [List.length_append, List.length_map, List.length_zip, hfnslen, Nat.min_self, hlen,
+            List.length_map, Nat.add_sub_cancel]
         have hread : readServiceMethod
-            (m, .lambda params (.call (.ident d.name) [methodRequest (argNames n)]) none) =
+            (m, .lambda (params ++ (d.params.zip fns).map fun q =>
+                ({ name := q.1.name, type := some q.2 } : TypeScript.Parameter))
+              (.call (.ident d.name) (methodRequest (argNames n) :: d.params.map fun q =>
+                .ident q.name)) none) =
             some (m, d.name, n) := by
-          simp only [readServiceMethod, hlen, hnames, isMethodRequest_methodRequest, decide_true,
-            Bool.and_self, ↓reduceIte]
+          simp only [readServiceMethod, mapM_passedName, hcount, List.map_append, hnames, hpassed,
+            isMethodRequest_methodRequest, decide_true, Bool.and_self, ↓reduceIte]
         rw [List.mapM_cons, readServiceMethods_ok hcs, hread]
         simp only [hd, Option.map_some, Option.getD_some, List.map_cons]
         rfl

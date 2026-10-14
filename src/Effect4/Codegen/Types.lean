@@ -32,13 +32,18 @@ identifier projects to the name of its class (`payloadClass?`): ruling (b) print
 `Data.TaggedError` class per tagged payload type, named by its tag. A module declares the class
 (`Codegen/Classes.lean`); the projection is the reference to it.
 
-A service key has one spelling, kept here: its runtime text (`keyText`), its identifier type
-(`keyIdentifier`) and a requirement row's type (`requirementType`). A declaration's `R`, the
-type argument of `Effect.context<R>()` and a context type's row are each this spelling. A
-context type (`Ty.contextOf`, decisions row 349) projects to `Context.Context<R>`, the answer of
-rc.112's `Effect.context<R>()` (`vendor/effect-4.0.0-rc.112/src/Effect.ts:11287`). The
-projection reads no signature, so it spells the row at the native scope key (`nativeScopeKey`),
-the scope of every checked emission (`ModuleEmission`, `Codegen/Checked.lean`).
+A service key has one spelling in a module, kept here (`keySpelling`): the name the module
+gives it (`Signature.keyNames`, decisions row 378 (19), (22)), and its runtime text (`keyText`)
+when it has none. A row namespace that is an Effect service names its key, so the to-do's
+requirement reads `"TodoRepo"`; every other key keeps its runtime text. The identifier type
+(`keyIdentifier`) and a requirement row's type (`requirementType`) take the module's names, and
+so does every printer and reader of a key: a declaration's `R`, the type argument of
+`Effect.context<R>()`, a key's value and its declaration. A context type (`Ty.contextOf`,
+decisions row 349) projects to `Context.Context<R>`, the answer of rc.112's `Effect.context<R>()`
+(`vendor/effect-4.0.0-rc.112/src/Effect.ts:11287`), its row under the names the projection is
+given (`ofTy`'s `names`, none by default). The projection reads no signature, so it spells the
+row at the native scope key (`nativeScopeKey`), the scope of every checked emission
+(`ModuleEmission`, `Codegen/Checked.lean`).
 -/
 
 namespace Effect4.Program
@@ -56,25 +61,65 @@ def keyFromText (text : String) : ServiceKey :=
   ⟨⟨Effect4.Data.NatDecimal.decodeBytes (bytes.takeWhile (· != 95))⟩,
     ⟨Effect4.Data.NatDecimal.decodeBytes ((bytes.dropWhile (· != 95)).drop 1)⟩⟩
 
-/-- The requirement identity at a fixed signature. Scope uses Effect's own identity;
-ordinary services use their full key, including when their carriers coincide. -/
-def keyIdentifier (scopeKey key : ServiceKey) : TypeScript.TypeRef :=
-  if key = scopeKey then .name ["Scope", "Scope"] [] else .literal (keyText key)
+/-- **The names a module gives its keys** (`Signature.keyNames`; decisions row 378 (19), (22)):
+a key and the name it prints by, in the order of the table's rows (`rowKeyNames`,
+`Program/Native.lean`). -/
+abbrev KeyNames := List (ServiceKey × String)
 
-/-- The complete requirement row as target syntax. The empty union is `never`. It spells a
-declaration's `R` and the type argument of `Effect.context<R>()`. -/
-def requirementType (scopeKey : ServiceKey) (requires : Effect4.Row ServiceKey) :
+/-- **The name a key prints by**, if it has one: the first name that the module gives the key,
+when no earlier entry gives that name and the name is no key's runtime text (`keyText`). The two
+conditions make the names invert whatever the list (`keyOf_nameOf`, `keyOf_keyText`,
+`Laws/Codegen/ReadLeaf.lean`): a name stands for one key, and a runtime text for its own key. -/
+def KeyNames.nameOf (names : KeyNames) (key : ServiceKey) : Option String :=
+  match names.find? (fun p => decide (p.1 = key)) with
+  | some (_, name) =>
+    if names.find? (fun p => decide (p.2 = name)) = some (key, name) ∧
+        keyText (keyFromText name) ≠ name then some name
+    else none
+  | none => none
+
+/-- The key that a name stands for (`nameOf`'s inverse): the key of the first entry that gives
+the name, when the key prints by it. -/
+def KeyNames.keyOf (names : KeyNames) (name : String) : Option ServiceKey :=
+  match names.find? (fun p => decide (p.2 = name)) with
+  | some (key, _) => if names.nameOf key = some name then some key else none
+  | none => none
+
+/-- **A key's one spelling in a module**: the name that the module gives it (`nameOf`), and its
+runtime text (`keyText`) otherwise. A requirement row, a context type, a key's value and its
+declaration each read it here. -/
+def keySpelling (names : KeyNames) (key : ServiceKey) : String :=
+  (names.nameOf key).getD (keyText key)
+
+/-- A key back from its spelling (`keySpelling`'s inverse, `keyOfSpelling_keySpelling`): the key
+that a name stands for, and otherwise the key whose runtime text the spelling is. A reader checks
+the complete spelling (`text = keySpelling names key`). -/
+def keyOfSpelling (names : KeyNames) (text : String) : ServiceKey :=
+  (names.keyOf text).getD (keyFromText text)
+
+/-- The requirement identity at a fixed signature, under the module's key names. Scope uses
+Effect's own identity; an ordinary key its spelling (`keySpelling`), including when the carriers
+of two keys coincide. -/
+def keyIdentifier (scopeKey : ServiceKey) (names : KeyNames) (key : ServiceKey) :
     TypeScript.TypeRef :=
-  match requires.elems.map (keyIdentifier scopeKey) with
+  if key = scopeKey then .name ["Scope", "Scope"] [] else .literal (keySpelling names key)
+
+/-- The complete requirement row as target syntax, under the module's key names. The empty
+union is `never`. It spells a declaration's `R`, the type argument of `Effect.context<R>()` and
+the row of a context type. -/
+def requirementType (scopeKey : ServiceKey) (names : KeyNames)
+    (requires : Effect4.Row ServiceKey) : TypeScript.TypeRef :=
+  match requires.elems.map (keyIdentifier scopeKey names) with
   | [] => .name ["never"] []
   | [one] => one
   | many => .union many
 
 /-- One identifier of a requirement row back to its key (`keyIdentifier`'s inverse):
-`Scope.Scope` is the scope key, and a string literal is an ordinary key's runtime text. -/
-def readKeyIdentifier (scopeKey : ServiceKey) : TypeScript.TypeRef → Option ServiceKey
+`Scope.Scope` is the scope key, and a string literal is the key it spells (`keyOfSpelling`). -/
+def readKeyIdentifier (scopeKey : ServiceKey) (names : KeyNames) :
+    TypeScript.TypeRef → Option ServiceKey
   | .name ["Scope", "Scope"] [] => some scopeKey
-  | .literal text => some (keyFromText text)
+  | .literal text => some (keyOfSpelling names text)
   | _ => none
 
 /-- The identifiers of a printed requirement row: none for `never`, a union's members, or the
@@ -84,12 +129,13 @@ def rowIdentifiers : TypeScript.TypeRef → List TypeScript.TypeRef
   | .union members => members
   | one => [one]
 
-/-- A requirement row back from its printed type (`requirementType`'s inverse), as a canonical
-row. It is permissive: a reader keeps the row only where it prints back as the type read
-(`readKeys`, `Codegen/Read.lean`; `readTyChecked`, `Codegen/Classes.lean`). -/
-def readRequirement (scopeKey : ServiceKey) (t : TypeScript.TypeRef) :
+/-- A requirement row back from its printed type (`requirementType`'s inverse) under the
+module's key names, as a canonical row. It is permissive: a reader keeps the row only where it
+prints back as the type read (`readKeys`, `Codegen/Read.lean`; `readTyChecked`,
+`Codegen/Classes.lean`). -/
+def readRequirement (scopeKey : ServiceKey) (names : KeyNames) (t : TypeScript.TypeRef) :
     Option (Effect4.Row ServiceKey) :=
-  ((rowIdentifiers t).mapM (readKeyIdentifier scopeKey)).map Effect4.Row.normalize
+  ((rowIdentifiers t).mapM (readKeyIdentifier scopeKey names)).map Effect4.Row.normalize
 
 end Effect4.Program
 
@@ -343,7 +389,7 @@ def parseLegacy (text : String) : Option TypeRef := do
   if (skipSpace rest).isEmpty then some value else none
 
 mutual
-private def ofNormalized : Program.Ty → Option TypeRef
+private def ofNormalized (names : Program.KeyNames) : Program.Ty → Option TypeRef
   | .never => some (.name ["never"] [])
   | .unknown => some (.name ["unknown"] [])
   | .unit => some (.name ["void"] [])
@@ -353,48 +399,48 @@ private def ofNormalized : Program.Ty → Option TypeRef
   | .handle target => parseLegacy target
   | .lit value => some (.literal value)
   | .option inner => do
-      let value ← ofNormalized inner
+      let value ← ofNormalized names inner
       pure (.name ["Option", "Option"] [value])
   | .list inner => do
-      let value ← ofNormalized inner
+      let value ← ofNormalized names inner
       pure (.name ["ReadonlyArray"] [value])
   | .prod left right => do
-      let a ← ofNormalized left
-      let b ← ofNormalized right
+      let a ← ofNormalized names left
+      let b ← ofNormalized names right
       pure (.tuple [a, b] true)
   | .except error value => do
-      let a ← ofNormalized value
-      let e ← ofNormalized error
+      let a ← ofNormalized names value
+      let e ← ofNormalized names error
       pure (.name ["Result", "Result"] [a, e])
   | .exitOf value error => do
-      let a ← ofNormalized value
-      let e ← ofNormalized error
+      let a ← ofNormalized names value
+      let e ← ofNormalized names error
       pure (.name ["Exit", "Exit"] [a, e])
   | .causeOf error => do
-      let e ← ofNormalized error
+      let e ← ofNormalized names error
       pure (.name ["Cause", "Cause"] [e])
   | .fiberOf value error => do
-      let a ← ofNormalized value
-      let e ← ofNormalized error
+      let a ← ofNormalized names value
+      let e ← ofNormalized names error
       pure (.name ["Fiber", "Fiber"] [a, e])
   | .refOf value => do
-      let a ← ofNormalized value
+      let a ← ofNormalized names value
       pure (.name ["Ref", "Ref"] [a])
   | .deferredOf value error => do
-      let a ← ofNormalized value
-      let e ← ofNormalized error
+      let a ← ofNormalized names value
+      let e ← ofNormalized names error
       pure (.name ["Deferred", "Deferred"] [a, e])
   -- a row template's parameter is not a program type: no reference
   | .var _ => none
   -- a tagged payload record type is its class, which the module declares (decisions row 120)
   | .record fields => match payloadClass? fields with
     | some tag => some (.name [tag] [])
-    | none => (ofFields fields).map TypeRef.object
+    | none => (ofFields names fields).map TypeRef.object
   | .map key value => do
       if key != .string then none else do
-        let target ← ofNormalized value
+        let target ← ofNormalized names value
         pure (.name ["Readonly"] [.name ["Record"] [.name ["string"] [], target]])
-  | .tuple items => (ofItems items).map (fun values => .tuple values true)
+  | .tuple items => (ofItems names items).map (fun values => .tuple values true)
   | .null => some (.name ["null"] [])
   | .undefined => some (.name ["undefined"] [])
   | .number => some (.name ["number"] [])
@@ -402,40 +448,160 @@ private def ofNormalized : Program.Ty → Option TypeRef
   -- Nominal applications need their own resolved declaration table.
   | .app _ _ => none
   -- `Context.Context<R>`, the answer of `Effect.context<R>()`: its row is the requirement row's
-  -- one spelling (`requirementType`), at the native scope key, since this projection reads no
-  -- signature (decisions row 349)
+  -- one spelling (`requirementType`) under the names given, at the native scope key, since this
+  -- projection reads no signature (decisions rows 349, 378 (22))
   | .contextOf keys =>
-    some (.name ["Context", "Context"] [Program.requirementType Program.nativeScopeKey keys])
+    some (.name ["Context", "Context"] [Program.requirementType Program.nativeScopeKey names keys])
   | .union left right => do
-      let a ← ofNormalized left
-      let b ← ofNormalized right
+      let a ← ofNormalized names left
+      let b ← ofNormalized names right
       pure (unionOf (unionParts a ++ unionParts b))
 
-private def ofItems : List Program.Ty → Option (List TypeRef)
+private def ofItems (names : Program.KeyNames) : List Program.Ty → Option (List TypeRef)
   | [] => some []
   | value :: rest => do
-      let target ← ofNormalized value
-      let targets ← ofItems rest
+      let target ← ofNormalized names value
+      let targets ← ofItems names rest
       pure (target :: targets)
 
-private def ofFields : List (String × Bool × Program.Ty) → Option (List TypeRef.Field)
+private def ofFields (names : Program.KeyNames) :
+    List (String × Bool × Program.Ty) → Option (List TypeRef.Field)
   | [] => some []
   | (name, optional, value) :: rest => do
-      let target ← ofNormalized value
-      let targets ← ofFields rest
+      let target ← ofNormalized names value
+      let targets ← ofFields names rest
       pure ({ name, readonly := true, optional, type := target } :: targets)
 end
 
-/-- Normalize the program type once, then project its target structure.
-Opaque legacy spellings may be refused. Naturals and integers intentionally
-share a target spelling, so this operation is not an injective type codec; a
-union whose members collapse in the target (`nat | int`) projects to the one
-member (`number`). -/
-def ofTy (type : Program.Ty) : Option TypeRef := ofNormalized type.normalize
+/-- A bind into `pure` has a value exactly when its source has one. A step of `ofTy_isSome`. -/
+private theorem isSome_bind_pure {α β : Type} {x y : Option α} {f g : α → β}
+    (h : x.isSome = y.isSome) :
+    (x >>= fun a => pure (f a)).isSome = (y >>= fun a => pure (g a)).isSome := by
+  cases x with
+  | none =>
+    cases y with
+    | none => rfl
+    | some _ => exact absurd h Bool.false_ne_true
+  | some _ =>
+    cases y with
+    | none => exact absurd h.symm Bool.false_ne_true
+    | some _ => rfl
+
+/-- Two binds into `pure` have a value exactly when both sources have one. A step of
+`ofTy_isSome`. -/
+private theorem isSome_bind_bind {α β γ : Type} {x x' : Option α} {y y' : Option β}
+    {f f' : α → β → γ} (hx : x.isSome = x'.isSome) (hy : y.isSome = y'.isSome) :
+    (x >>= fun a => y >>= fun b => pure (f a b)).isSome =
+      (x' >>= fun a => y' >>= fun b => pure (f' a b)).isSome := by
+  cases x with
+  | none =>
+    cases x' with
+    | none => rfl
+    | some _ => exact absurd hx Bool.false_ne_true
+  | some a =>
+    cases x' with
+    | none => exact absurd hx.symm Bool.false_ne_true
+    | some a' => exact isSome_bind_pure (f := f a) (g := f' a') hy
+
+mutual
+/-- Whether a type has a printed form does not depend on the key names, which spell only a
+context type's row, and a context type always prints. A step of `ofTy_isSome`. -/
+private theorem ofNormalized_isSome (names names' : Program.KeyNames) :
+    (ty : Program.Ty) → (ofNormalized names ty).isSome = (ofNormalized names' ty).isSome
+  | .never | .unknown | .unit | .nat | .int | .string | .bool | .handle _ | .lit _ | .var _
+  | .null | .undefined | .number | .bytes | .app _ _ | .contextOf _ => rfl
+  | .option inner => by
+    simp only [ofNormalized]
+    exact isSome_bind_pure (ofNormalized_isSome names names' inner)
+  | .list inner => by
+    simp only [ofNormalized]
+    exact isSome_bind_pure (ofNormalized_isSome names names' inner)
+  | .prod left right => by
+    simp only [ofNormalized]
+    exact isSome_bind_bind (ofNormalized_isSome names names' left)
+      (ofNormalized_isSome names names' right)
+  | .except error value => by
+    simp only [ofNormalized]
+    exact isSome_bind_bind (ofNormalized_isSome names names' value)
+      (ofNormalized_isSome names names' error)
+  | .exitOf value error => by
+    simp only [ofNormalized]
+    exact isSome_bind_bind (ofNormalized_isSome names names' value)
+      (ofNormalized_isSome names names' error)
+  | .causeOf error => by
+    simp only [ofNormalized]
+    exact isSome_bind_pure (ofNormalized_isSome names names' error)
+  | .fiberOf value error => by
+    simp only [ofNormalized]
+    exact isSome_bind_bind (ofNormalized_isSome names names' value)
+      (ofNormalized_isSome names names' error)
+  | .refOf value => by
+    simp only [ofNormalized]
+    exact isSome_bind_pure (ofNormalized_isSome names names' value)
+  | .deferredOf value error => by
+    simp only [ofNormalized]
+    exact isSome_bind_bind (ofNormalized_isSome names names' value)
+      (ofNormalized_isSome names names' error)
+  | .record fields => by
+    simp only [ofNormalized]
+    cases payloadClass? fields with
+    | some _ => rfl
+    | none =>
+      simp only [Option.isSome_map]
+      exact ofFields_isSome names names' fields
+  | .map key value => by
+    simp only [ofNormalized]
+    cases key != Program.Ty.string with
+    | true => rfl
+    | false => exact isSome_bind_pure (ofNormalized_isSome names names' value)
+  | .tuple items => by
+    simp only [ofNormalized, Option.isSome_map]
+    exact ofItems_isSome names names' items
+  | .union left right => by
+    simp only [ofNormalized]
+    exact isSome_bind_bind (ofNormalized_isSome names names' left)
+      (ofNormalized_isSome names names' right)
+
+/-- The items' printed forms exist alike under any key names. A step of `ofTy_isSome`. -/
+private theorem ofItems_isSome (names names' : Program.KeyNames) :
+    (items : List Program.Ty) → (ofItems names items).isSome = (ofItems names' items).isSome
+  | [] => rfl
+  | value :: rest => by
+    simp only [ofItems]
+    exact isSome_bind_bind (ofNormalized_isSome names names' value)
+      (ofItems_isSome names names' rest)
+
+/-- The fields' printed forms exist alike under any key names. A step of `ofTy_isSome`. -/
+private theorem ofFields_isSome (names names' : Program.KeyNames) :
+    (fields : List (String × Bool × Program.Ty)) →
+      (ofFields names fields).isSome = (ofFields names' fields).isSome
+  | [] => rfl
+  | (_, _, value) :: rest => by
+    simp only [ofFields]
+    exact isSome_bind_bind (ofNormalized_isSome names names' value)
+      (ofFields_isSome names names' rest)
+end
+
+/-- Normalize the program type once, then project its target structure, a context type's row
+under the key names given (none by default). Opaque legacy spellings may be refused. Naturals
+and integers intentionally share a target spelling, so this operation is not an injective type
+codec; a union whose members collapse in the target (`nat | int`) projects to the one member
+(`number`). -/
+def ofTy (type : Program.Ty) (names : Program.KeyNames := []) : Option TypeRef :=
+  ofNormalized names type.normalize
+
+/-- **Whether a type prints does not depend on the key names** (decisions row 378 (22)): they
+spell a context type's row, which always prints. Consumers: `declarationType_ok`
+(`Codegen/Print.lean`) and the printers' success on the readable domain, whose premises are
+decided under no names. -/
+theorem ofTy_isSome (type : Program.Ty) (names : Program.KeyNames) :
+    (ofTy type names).isSome = (ofTy type).isSome :=
+  ofNormalized_isSome names [] type.normalize
 
 /-- The projection depends on the existing canonical program type, so applying
 that normalization before projection does not change success or refusal. -/
-theorem ofTy_normalize (type : Program.Ty) : ofTy type.normalize = ofTy type := by
+theorem ofTy_normalize (type : Program.Ty) (names : Program.KeyNames := []) :
+    ofTy type.normalize names = ofTy type names := by
   simp only [ofTy, Program.Ty.normalize_idem]
 
 theorem parseLegacy_empty : parseLegacy "" = none := rfl
@@ -447,13 +613,15 @@ theorem ofTy_nat : ofTy .nat = some (.name ["number"] []) := rfl
 theorem ofTy_int : ofTy .int = some (.name ["number"] []) := rfl
 
 /-- **A context type prints as rc.112's answer of `Effect.context<R>()`**: `Context.Context<R>`,
-its row in the one spelling of a requirement row (`requirementType`), at the native scope key
-(decisions row 349). So a definition that runs `Effect.context<R>()` declares the answer that
-rc.112 gives the call, and the two spellings of `R` are one. Consumer: an application's service
-block, whose state is the context its layer reads (decisions row 378 (20)). -/
-theorem ofTy_contextOf (keys : Effect4.Row ServiceKey) :
-    ofTy (.contextOf keys) =
-      some (.name ["Context", "Context"] [Program.requirementType Program.nativeScopeKey keys]) :=
+its row in the one spelling of a requirement row (`requirementType`) under the key names given,
+at the native scope key (decisions rows 349, 378 (22)). So a definition that runs
+`Effect.context<R>()` declares the answer that rc.112 gives the call, and the two spellings of
+`R` are one. Consumer: an application's service block, whose state is the context its layer reads
+(decisions row 378 (20)). -/
+theorem ofTy_contextOf (keys : Effect4.Row ServiceKey) (names : Program.KeyNames := []) :
+    ofTy (.contextOf keys) names =
+      some (.name ["Context", "Context"]
+        [Program.requirementType Program.nativeScopeKey names keys]) :=
   rfl
 
 end Effect4.Codegen.Types

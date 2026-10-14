@@ -538,14 +538,18 @@ variable {Op : Type}
 /-- A known ordinary key has separate Identifier and Shape arguments (rc.112
 `Context.ts:201-219`). Scope is the genuine `Scope.Scope` service (`internal/effect.ts:3772`),
 not a new key with the same carrier. Unknown keys retain the raw printer's bare-call profile;
-checked program admission owns whether a service is known. -/
+checked program admission owns whether a service is known. The identity is the key's spelling
+under the signature's key names (`keySpelling`, decisions row 378 (22)), which is what its
+requirement prints; the carrier prints under no key name, as every type the expression printer
+writes. -/
 def printKey (sig : Signature Op) (key : ServiceKey) : Except PrintRefusal TypeScript.Expr :=
   if key = sig.scopeKey then .ok (.ident "Scope.Scope") else do
     let head ← match sig.serviceTy key with
       | some ty => match Effect4.Codegen.Types.ofTy ty with
-        | some target => .ok (.generic (.ident "Context.Service") [.literal (keyText key), target])
+        | some target =>
+          .ok (.generic (.ident "Context.Service") [.literal (keySpelling sig.keyNames key), target])
         | none => .error (.typeSpelling ty.render)
       | none => .ok (.ident "Context.Service")
-    .ok (.call head [.str (keyText key)])
+    .ok (.call head [.str (keySpelling sig.keyNames key)])
 
 end Effect4.Program

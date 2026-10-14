@@ -291,9 +291,10 @@ theorem lookup_of_captured : ∀ (σ : Subst) (i : Nat) (a : Arg) (h : (i, a) �
 
 /-! ## The leaves: what a leaf reader accepts prints back to what it read -/
 
-/-- A requirement row read back prints as the type it was read from: the reader's guard. -/
+/-- A requirement row read back prints as the type it was read from, under the signature's key
+names: the reader's guard. -/
 theorem readKeys_exact {sig : Signature Op} {t : TypeScript.TypeRef} {row : Effect4.Row ServiceKey}
-    (h : readKeys sig t = .ok row) : requirementType sig.scopeKey row = t := by
+    (h : readKeys sig t = .ok row) : requirementType sig.scopeKey sig.keyNames row = t := by
   unfold readKeys at h
   split at h
   · split at h

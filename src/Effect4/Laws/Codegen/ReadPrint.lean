@@ -387,8 +387,9 @@ abbrev Dom (_ : EffFam) : Type := Nat → Option Nat
 
 /-- A leaf reads back from its printing at depth `d`: a term or cause in scope whose folds
 state no accumulator type, a key whose type spells, fork options whose daemon flag the row
-spells, a stated type that is readable under no class (`Classes.ReadableTy []`: the checked
-type reader answers it from its own printed spelling; the state plan's T5, part B), and a layer
+spells, a stated type that is readable under no class and no key name (`Classes.ReadableTy []
+[]`: the checked type reader answers it from its own printed spelling; the state plan's T5, part
+B), and a layer
 path whose declared name decodes (the name codec has no law of its own; the domain runs it). An
 operation is no leaf of its own: the row call's arm of the domain reads its type arguments and
 its binder term (`typeArgsReadable`, `termReadable`). -/
@@ -399,7 +400,7 @@ def leafReadable {R : EffFam → Type} (classes : Classes) (sig : Signature Op) 
   | .cause c => CauseTerm.scoped d c && c.covers classes && c.unannotated
   | .key k => keyReadable sig k
   | .forkOptions o => o.daemon == daemon
-  | .optTy (some ty) => Effect4.Codegen.Classes.ReadableTy [] ty
+  | .optTy (some ty) => Effect4.Codegen.Classes.ReadableTy [] [] ty
   | .path p => decide (LayerTerm.readRefName (LayerTerm.refName p) = some p)
   | _ => true
 

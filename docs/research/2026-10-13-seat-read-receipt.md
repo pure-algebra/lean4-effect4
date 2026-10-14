@@ -191,4 +191,44 @@ which Lean refuses alike). No Lean oracle covers those 11 newly read block modul
 | `bun --no-install test` | 780 pass, 0 fail (776 before, and 4 new) |
 | `bun --no-install run check.ts ../../harness/truth/generated` | 79 accepted, 14 refused, no oracle |
 
+## The generated name tables (`be5750177`)
+
+The coordinator's message after the merge of items 1 and 2 named one duplicate: the 26 members of
+a service key were written by hand in `ts/eff/read.ts` and in `src/Effect4/Codegen/RowServices.lean`.
+The reader's binding check held a second copy, of `Codegen.Names.reservedExtra`.
+
+| File | Change |
+| --- | --- |
+| `tools/Drivers/TsGen.lean` | `emitNames` writes `names.gen.ts`: `serviceKeyMembers` and `reservedExtra`, one stamped table (`emitTable`) |
+| `ts/eff/names.gen.ts` (new, generated) | the table; its stamp is checked at import |
+| `ts/eff/read.ts` | `serviceKeyMembers` and `bindingName` read the generated table; the two hand lists are gone |
+| `ts/eff/ingest/pins.ts` | the ingest's pin digest covers `names.gen.ts`, since the ingest reads through `read.ts`, whose bytes held the two lists before |
+| `Makefile` (`GENERATED_PATHS`), `docs/GENERATED.md` (the `ts` row), `ts/eff/README.md` (the files table) | name the new file |
+
+One observation, not changed: the ingest's digest lists seven projections by hand and omits
+`templates.gen.ts`, which `read.ts` imports too. A glob over `ts/eff/*.gen.ts` would end the list.
+
+| Command | Result |
+| --- | --- |
+| `lean-slot.sh lake build Drivers.TsGen` | green, 132 jobs |
+| `lean-slot.sh lake env lean -M4096 --run tools/Drivers/TsGen.lean <scratch>` | the eight other `.gen.ts` files and `test/type-projection.gen.json` byte-identical to the tree (tested, `cmp`) |
+| `bun --no-install run typecheck` (tsgo 7.0.0-dev.20260629.1) | exit 0, no diagnostic |
+| `bun --no-install test` | 780 pass, 0 fail |
+
+## The behaviour gates after items 1 and 2
+
+Run once each at `be5750177`, as `lean-slot.sh make -o ts/eff/node_modules -o
+harness/truth/node_modules <target>` (tested):
+
+| Gate | Result |
+| --- | --- |
+| `make check-ts-reader` | corpus `kept 408 (readable 385) refused 0`; `files 501: matched 416, mismatched 0, refused with oracle 0, accepted without oracle 71, refused without oracle 14`; typecheck clean; 780 pass, 0 fail; `generated/corpus-index.tsv` unchanged |
+| `make check-target` | `PASS row-types`; tsgo clean on `tools/target`; 28 pass, 0 fail; `target conformance [effect@4.0.0-rc.112/adapter]: PASS; 104 expected, 104 attempted, 104 resolved, 0 mismatching, 0 refused`; `assignability: 742 pairs; agree 708, cut 6, incomplete 28`, red control 10 of 10 caught, `PASS`; `rows: 67 queried (22 rows, 45 atoms); agree 42, mismatch 3, refused 22`, `PASS rows: the table is what this run observed` |
+
+The base reader (`9c5393ff5`'s `ts/eff`, run on the same corpus and truth modules; reproduced)
+gives `accepted without oracle 60, refused without oracle 25`. The 11 more modules read are the
+definition blocks. Three refusals changed kind: `pQueueDefs`, `pQueueService` and
+`pSemaphoreService` now stop at their first definition (`shape "definition"`), whose parameter is
+a handle (`Ref.Ref<…>`), which Lean's `readNamed` reads as nothing too.
+
 (More in progress.)

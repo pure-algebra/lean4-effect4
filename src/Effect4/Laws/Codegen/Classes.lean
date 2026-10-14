@@ -214,19 +214,20 @@ theorem readClassDecls_eq_checked : ∀ {cs : List ClassDecl} {table : Classes} 
 
 Concept `translation-simulation`, serving R4 (the faces of `Ref<A>` and `Deferred<A, E>`) and R8
 (reconstruction). The consumers are the row reader, which reads an operation's type arguments
-under no class (`readCall_printCall`, `readCall_exact`, `Laws/Codegen/ReadLeaf.lean`), the
-readers of a stated type (`readLeaf_print`, `readLeaf_exact`), and a definition's header, read
-under the module's classes (`readDefHead_printDef`, `Laws/Codegen/Module.lean`). Reach: every
-target type syntax and every class table for exactness; the readable types under the same classes
-(`ReadableTy`) for the retraction. Neither states target typing or agreement of a host run, and
+under no class and no key name (`readCall_printCall`, `readCall_exact`,
+`Laws/Codegen/ReadLeaf.lean`), the readers of a stated type (`readLeaf_print`, `readLeaf_exact`),
+and a definition's header, read under the module's classes and the signature's key names
+(`readDefHead_printDef`, `Laws/Codegen/Module.lean`; decisions row 378 (22)). Reach: every target
+type syntax, every class table and every list of key names for exactness; the readable types
+under the same classes and names (`ReadableTy`) for the retraction. Neither states target typing or agreement of a host run, and
 the retraction says nothing of a type outside `ReadableTy`: the type printer is not injective
 (`Types.ofTy_nat`, `Types.ofTy_int`). -/
 
 /-- **Exactness of the checked type reader**: what it accepts is the spelling that the type
 printer prints of the type it answers. It holds by the reader's own re-print, for every syntax
 and under any classes. -/
-theorem readTyChecked_exact {classes : Classes} {x : TypeRef} {ty : Ty}
-    (h : readTyChecked classes x = some ty) : Types.ofTy ty = some x := by
+theorem readTyChecked_exact {classes : Classes} {names : KeyNames} {x : TypeRef} {ty : Ty}
+    (h : readTyChecked classes names x = some ty) : Types.ofTy ty names = some x := by
   unfold readTyChecked at h
   obtain ⟨ty', _, h⟩ := Option.bind_eq_some_iff.mp h
   split at h
@@ -239,18 +240,18 @@ theorem readTyChecked_exact {classes : Classes} {x : TypeRef} {ty : Ty}
 module's classes reads back from its printed spelling under them. The premise is the domain
 itself (`ReadableTy`); without it the statement is false, at `int` for one, and at a payload
 class's record under no class. -/
-theorem readTyChecked_of_readable {classes : Classes} {ty : Ty} {x : TypeRef}
-    (hr : ReadableTy classes ty = true) (hp : Types.ofTy ty = some x) :
-    readTyChecked classes x = some ty := by
+theorem readTyChecked_of_readable {classes : Classes} {names : KeyNames} {ty : Ty} {x : TypeRef}
+    (hr : ReadableTy classes names ty = true) (hp : Types.ofTy ty names = some x) :
+    readTyChecked classes names x = some ty := by
   have h := of_decide_eq_true hr
   rw [hp, Option.bind_some] at h
   exact h
 
 /-- A readable type has a printed form. -/
-theorem ofTy_of_readable {classes : Classes} {ty : Ty} (hr : ReadableTy classes ty = true) :
-    ∃ x, Types.ofTy ty = some x := by
+theorem ofTy_of_readable {classes : Classes} {names : KeyNames} {ty : Ty}
+    (hr : ReadableTy classes names ty = true) : ∃ x, Types.ofTy ty names = some x := by
   have h := of_decide_eq_true hr
-  cases hp : Types.ofTy ty with
+  cases hp : Types.ofTy ty names with
   | none =>
     rw [hp, Option.bind_none] at h
     exact nomatch h
@@ -294,7 +295,7 @@ theorem readTysChecked_exact {classes : Classes} : ∀ {xs : List TypeRef} {tys 
 /-- **The retraction, item by item**: readable types read back from their printed forms. A
 step of `readCall_printCall`. -/
 theorem readTysChecked_of_readable {classes : Classes} : ∀ {tys : List Ty} {xs : List TypeRef},
-    tys.all (ReadableTy classes) = true → writeTys tys = some xs →
+    tys.all (ReadableTy classes []) = true → writeTys tys = some xs →
       readTysChecked classes xs = some tys
   | [], xs, _, h => by
     cases h
@@ -309,7 +310,7 @@ theorem readTysChecked_of_readable {classes : Classes} : ∀ {tys : List Ty} {xs
 /-- Readable types have printed forms, as a list. A step of `printCall_ok`
 (`Laws/Codegen/PrintReadable.lean`). -/
 theorem writeTys_of_readable {classes : Classes} : ∀ {tys : List Ty},
-    tys.all (ReadableTy classes) = true → ∃ xs, writeTys tys = some xs
+    tys.all (ReadableTy classes []) = true → ∃ xs, writeTys tys = some xs
   | [], _ => ⟨[], rfl⟩
   | ty :: tys, hr => by
     simp only [List.all_cons, Bool.and_eq_true] at hr

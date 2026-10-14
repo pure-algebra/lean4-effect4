@@ -46,8 +46,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
   definition's parameters print as functions named by their declarations, and an invocation
   with programs as the definition's name on its request and its programs as arrows; both read
   back (HO-3a, HO-3b: one law of named rows for a block's and a body's spelling,
-  `LawfulSpelling.extend`, and the laws of invocations, `LawfulInvokes`). A service role with
-  parameters waits for HO-5 (Codex's HO-3 review). A callback that needs a service is refused at
+  `LawfulSpelling.extend`, and the laws of invocations, `LawfulInvokes`). A service method that
+  takes programs takes them after its arguments and passes them on, and reads back (HO-5). An
+  initial program that takes one is refused. A callback that needs a service is refused at
   its invocation until the header carries a requirement variable. A body's own layer is
   built once per call (step 3a, the owner's option B). A build is keyed by its path and the
   running call (`Point.layerKey`), which names the chain of invocation sites. A body's own layers
@@ -288,14 +289,19 @@ A program has folds, a journaled run with replay, and a printed image that reads
      of their own (row 378 (19), (20), (22); the
      [design note](research/2026-10-13-emitted-services/README.md)). The to-do's file reads back
      whole (`ab8aeefa7`). `make check-host-protocol` runs its 13 scripts on rc.112 through a
-     consumer, and Lean decides each run's checks (`210424144`). Running: keys by name (seat READ);
+     consumer, and Lean decides each run's checks (`210424144`). A key that a service row names
+     prints by the service's name, so the to-do's requirement reads `"TodoRepo"` (row 378 (22)).
+     The TypeScript reader still reads a key by its runtime text alone;
    - V3, the generated declarations: the rows' bindings interface, the inputs' and answers'
      Schemas, the prelude package. They are also the agent's typed surface;
-   - V4, `apps/todo/` on SQLite with the per-run checker;
+   - done: V4, `apps/todo/` on SQLite with the per-run checker, in `make check-host-protocol`. A
+     run from an empty database passes Lean's checks on each request, and four red controls fail
+     the checks they target;
    - beside them, `request_leads` and binder names in the TypeScript reader (row 378 (17)). The
      claim record's two labels landed (`13551903c`). So did the banked Ref cache with its
      transfer law `cache_agrees`, which rests on no goal (`23f95aac2`), and its bank entry
-     (`f463ee53b`). Running: the to-do imposes the cache by reference (seat IMPOSE, row 378 (8));
+     (`f463ee53b`). The cache block prints as the service `ListCache` (HO-5). Its module does not
+     read back yet, and the to-do does not yet impose it (row 378 (8));
    - then V5, the OCaml face, its repository lowered through LCNF.
 
    Planned goals off the slice's path pause (row 378 (12)).
@@ -339,7 +345,7 @@ A program has folds, a journaled run with replay, and a printed image that reads
    - landed: the application and claim records (row 336 (9); seat CLAIMS's
      [receipt](research/2026-10-13-seat-claims-receipt.md)). Four of the to-do claims are proved,
      and `Todo.serves` rests on `request_leads`;
-   - generics and Pool's service, HO-4 and HO-5
+   - generics and Pool's service, HO-4
      ([the plan](research/2026-10-09-program-parameters.md), row 340).
 
    Row 376's four more seats landed on 2026-10-13. FLOW is above, and COUNTDOWN closed M7.

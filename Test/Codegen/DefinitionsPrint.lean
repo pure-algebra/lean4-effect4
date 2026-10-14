@@ -359,9 +359,13 @@ def counterService (methodParam initParam : Bool) : NativeEff :=
       (.cons (if methodParam then .perform (.param 0) (.var 0) else .succeed (.var 0)) .nil))
     (.succeed (.lit (.nat 1))) .nil
 
--- control (HO3-SVC-01): a service's method or initial program with a parameter is refused by
--- name until slice HO-5 forwards its programs; the service without one prints
-#guard printRefusalAt (counterService true false) [] = some (.internalAction "Counter.read")
+-- finite evaluation (slice HO-5): a service's method that takes a program prints, and the module
+-- reads back, the method's role and its parameter both
+#guard printRefusalAt (counterService true false) [] = none
+#guard (Api.printModule "main" (counterService true false)).any fun m =>
+  decide (Api.readModule m [] = .ok (counterService true false))
+-- control (HO3-SVC-01): an initial program that takes a program is refused by name, since the
+-- layer runs it with no caller to pass one; the service without one prints
 #guard printRefusalAt (counterService false true) [] = some (.internalAction "Counter")
 #guard (Api.printModule "main" (counterService false false)).isSome
 
@@ -411,7 +415,7 @@ def withService : NativeEff :=
 
 -- reader: the declaration's row is canonical, so it is in the readable domain, and the module
 -- reads back to the program with the row
-#guard withService.defsOf.all (DefDecl.readable [])
+#guard withService.defsOf.all (DefDecl.readable [] [])
 #guard blockReadable [] (nativeSignature []) withService
 #guard (Api.printModule "main" withService).map (fun m =>
   decide (Api.readModule m [] = .ok withService)) = some true
@@ -439,6 +443,6 @@ def headerWith (requires : TypeScript.TypeRef) : Option TypeScript.ConstDecl :=
   readDefHead (nativeSignature []) [] c matches .error (.shape "definition")) = some true
 -- control: a declaration whose row is not canonical (a key twice) prints the key once, so it is
 -- outside the readable domain
-#guard !DefDecl.readable [] { twiceDecl with requires := [⟨⟨1⟩, ⟨1⟩⟩, ⟨⟨1⟩, ⟨1⟩⟩] }
+#guard !DefDecl.readable [] [] { twiceDecl with requires := [⟨⟨1⟩, ⟨1⟩⟩, ⟨⟨1⟩, ⟨1⟩⟩] }
 
 end Test.Codegen.DefinitionsPrint

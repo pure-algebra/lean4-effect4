@@ -169,11 +169,76 @@ theorem keyText_injective : Function.Injective keyText := by
   rcases b with ⟨⟨bn⟩, ⟨bt⟩⟩
   simpa only [keyText, keyFromText_print] using decoded
 
-/-- At one fixed signature's scope identity, different keys have different target
-Identifier syntax, independently of their carriers. This is a syntax theorem; the
-pinned TypeScript assignment controls separately test the target interpretation. -/
-theorem keyIdentifier_injective (scopeKey : ServiceKey) :
-    Function.Injective (keyIdentifier scopeKey) := by
+/-- A key's runtime text reads back as the key. A step of `keyOfSpelling_keySpelling`. -/
+theorem keyFromText_keyText (key : ServiceKey) : keyFromText (keyText key) = key := by
+  obtain ⟨⟨name⟩, ⟨service⟩⟩ := key
+  exact keyFromText_print name service
+
+/-! ### A key's spelling under a module's names (decisions row 378 (22))
+
+Placement: concept `exact-codecs`, steps of the claim `service-identifier-injective`
+(`keyIdentifier_injective`) and of `module-defs-round-trip` (R8) through
+`readKeys_requirementType` and `readKey_printKey`, their consumers. Reach: every list of names,
+with no premise: `KeyNames.nameOf` keeps only the names that invert. They do not establish that
+tsgo reads two spellings as two types, nor that a name is the one a host gives its service. -/
+
+/-- A name a key prints by is no key's runtime text. A step of `KeyNames.keyOf_keyText`. -/
+theorem KeyNames.nameOf_text {names : KeyNames} {key : ServiceKey} {name : String}
+    (h : names.nameOf key = some name) : keyText (keyFromText name) ≠ name := by
+  unfold KeyNames.nameOf at h
+  split at h
+  · split at h
+    · rename_i hc
+      cases h
+      exact hc.2
+    · exact nomatch h
+  · exact nomatch h
+
+/-- **The name a key prints by stands for the key.** A step of `keyOfSpelling_keySpelling`. -/
+theorem KeyNames.keyOf_nameOf {names : KeyNames} {key : ServiceKey} {name : String}
+    (h : names.nameOf key = some name) : names.keyOf name = some key := by
+  have named := h
+  unfold KeyNames.nameOf at h
+  split at h
+  · split at h
+    · rename_i hc
+      cases h
+      simp only [KeyNames.keyOf, hc.1]
+      exact if_pos named
+    · exact nomatch h
+  · exact nomatch h
+
+/-- **No name stands for a key's runtime text**, so a key with no name reads back from its text.
+A step of `keyOfSpelling_keySpelling`. -/
+theorem KeyNames.keyOf_keyText (names : KeyNames) (key : ServiceKey) :
+    names.keyOf (keyText key) = none := by
+  unfold KeyNames.keyOf
+  split
+  · rename_i k n _
+    refine if_neg fun named => KeyNames.nameOf_text named ?_
+    rw [keyFromText_keyText]
+  · rfl
+
+/-- **A key reads back from its spelling** under any names: the retraction of the key's one
+spelling in a module. A step of `readKeyIdentifier_keyIdentifier` and `readKey_printKey`. -/
+theorem keyOfSpelling_keySpelling (names : KeyNames) (key : ServiceKey) :
+    keyOfSpelling names (keySpelling names key) = key := by
+  unfold keySpelling keyOfSpelling
+  cases h : names.nameOf key with
+  | some name => simp only [Option.getD_some, KeyNames.keyOf_nameOf h]
+  | none => simp only [Option.getD_none, KeyNames.keyOf_keyText, keyFromText_keyText]
+
+/-- Distinct keys have distinct spellings under any names. A step of
+`keyIdentifier_injective`. -/
+theorem keySpelling_injective (names : KeyNames) : Function.Injective (keySpelling names) := by
+  intro a b h
+  rw [← keyOfSpelling_keySpelling names a, h, keyOfSpelling_keySpelling]
+
+/-- At one fixed signature's scope identity and under one module's key names, different keys
+have different target Identifier syntax, independently of their carriers. This is a syntax
+theorem; the pinned TypeScript assignment controls separately test the target interpretation. -/
+theorem keyIdentifier_injective (scopeKey : ServiceKey) (names : KeyNames) :
+    Function.Injective (keyIdentifier scopeKey names) := by
   intro a b h
   by_cases ha : a = scopeKey
   · by_cases hb : b = scopeKey
@@ -184,7 +249,7 @@ theorem keyIdentifier_injective (scopeKey : ServiceKey) :
     · simp only [keyIdentifier, if_neg ha, if_pos hb] at h
       cases h
     · simp only [keyIdentifier, if_neg ha, if_neg hb, TypeScript.TypeRef.literal.injEq] at h
-      exact keyText_injective h
+      exact keySpelling_injective names h
 
 /-- The successful structural key image reads back. Unsupported legacy type text
 now refuses printing, so success is explicit instead of assuming a total string printer. -/
@@ -195,59 +260,63 @@ theorem readKey_printKey {Op : Type} (sig : Signature Op) (key : ServiceKey)
     simp only [printKey, if_true, Except.ok.injEq] at hp
     subst x
     simp only [readKey, if_true]
-  · obtain ⟨⟨name⟩, ⟨service⟩⟩ := key
-    cases ht : sig.serviceTy ⟨⟨name⟩, ⟨service⟩⟩ with
+  · cases ht : sig.serviceTy key with
     | none =>
       simp only [printKey, if_neg hs, ht, ok_bind, Except.ok.injEq] at hp
       subst x
-      simp only [readKey, keyText, keyFromText_print, ht, and_self, and_true, if_pos hs]
+      simp only [readKey, keyOfSpelling_keySpelling, ht, and_self, and_true, if_pos hs]
     | some ty =>
       cases hty : Effect4.Codegen.Types.ofTy ty with
       | none => simp only [printKey, if_neg hs, ht, hty, bind, Except.bind] at hp; cases hp
       | some target =>
         simp only [printKey, if_neg hs, ht, hty, ok_bind, Except.ok.injEq] at hp
         subst x
-        simp only [readKey, keyText, keyFromText_print, ht, hty, and_self, and_true, if_pos hs]
+        simp only [readKey, keyOfSpelling_keySpelling, ht, hty, and_self, and_true, if_pos hs]
 
 /-- Each identifier of a requirement row reads back as its key. -/
-theorem readKeyIdentifier_keyIdentifier (scopeKey key : ServiceKey) :
-    readKeyIdentifier scopeKey (keyIdentifier scopeKey key) = some key := by
+theorem readKeyIdentifier_keyIdentifier (scopeKey : ServiceKey) (names : KeyNames)
+    (key : ServiceKey) :
+    readKeyIdentifier scopeKey names (keyIdentifier scopeKey names key) = some key := by
   by_cases hs : key = scopeKey
   · subst key
     simp only [keyIdentifier, if_true, readKeyIdentifier]
-  · obtain ⟨⟨name⟩, ⟨service⟩⟩ := key
-    simp only [keyIdentifier, if_neg hs, readKeyIdentifier, keyText, keyFromText_print]
+  · simp only [keyIdentifier, if_neg hs, readKeyIdentifier, keyOfSpelling_keySpelling]
 
 /-- A row's identifiers read back as its keys, in order. -/
-theorem mapM_readKeyIdentifier (scopeKey : ServiceKey) :
+theorem mapM_readKeyIdentifier (scopeKey : ServiceKey) (names : KeyNames) :
     ∀ keys : List ServiceKey,
-      (keys.map (keyIdentifier scopeKey)).mapM (readKeyIdentifier scopeKey) = some keys
+      (keys.map (keyIdentifier scopeKey names)).mapM (readKeyIdentifier scopeKey names) =
+        some keys
   | [] => rfl
   | k :: rest => by
     simp only [List.map_cons, List.mapM_cons, readKeyIdentifier_keyIdentifier,
-      mapM_readKeyIdentifier scopeKey rest, Option.bind_eq_bind, Option.bind_some, Option.pure_def]
+      mapM_readKeyIdentifier scopeKey names rest, Option.bind_eq_bind, Option.bind_some,
+      Option.pure_def]
 
 /-- A key's identifier is neither `never` nor a union, so it splits as itself. -/
-theorem rowIdentifiers_keyIdentifier (scopeKey key : ServiceKey) :
-    rowIdentifiers (keyIdentifier scopeKey key) = [keyIdentifier scopeKey key] := by
+theorem rowIdentifiers_keyIdentifier (scopeKey : ServiceKey) (names : KeyNames)
+    (key : ServiceKey) :
+    rowIdentifiers (keyIdentifier scopeKey names key) = [keyIdentifier scopeKey names key] := by
   by_cases hs : key = scopeKey
   · simp only [keyIdentifier, if_pos hs]
     rfl
   · simp only [keyIdentifier, if_neg hs, rowIdentifiers]
 
 /-- A printed requirement row splits back into its keys' identifiers. -/
-theorem rowIdentifiers_requirementType (scopeKey : ServiceKey) (v : Effect4.Row ServiceKey) :
-    rowIdentifiers (requirementType scopeKey v) = v.elems.map (keyIdentifier scopeKey) := by
+theorem rowIdentifiers_requirementType (scopeKey : ServiceKey) (names : KeyNames)
+    (v : Effect4.Row ServiceKey) :
+    rowIdentifiers (requirementType scopeKey names v) =
+      v.elems.map (keyIdentifier scopeKey names) := by
   unfold requirementType
   match v.elems with
   | [] => rfl
-  | [k] => exact rowIdentifiers_keyIdentifier scopeKey k
+  | [k] => exact rowIdentifiers_keyIdentifier scopeKey names k
   | _ :: _ :: _ => rfl
 
-/-- **A requirement row's printed type reads back as the row**: the round trip of the type
-argument of `Effect.context<R>()`. -/
+/-- **A requirement row's printed type reads back as the row** under the signature's key names:
+the round trip of a declaration's `R` and of the type argument of `Effect.context<R>()`. -/
 theorem readKeys_requirementType {Op : Type} (sig : Signature Op) (v : Effect4.Row ServiceKey) :
-    readKeys sig (requirementType sig.scopeKey v) = .ok v := by
+    readKeys sig (requirementType sig.scopeKey sig.keyNames v) = .ok v := by
   have norm : Effect4.Row.normalize v.elems = v := Effect4.Row.normalize_of_ascending v.elems v.ascending
   unfold readKeys readRequirement
   rw [rowIdentifiers_requirementType, mapM_readKeyIdentifier]

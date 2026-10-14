@@ -133,14 +133,16 @@ theorem emitModule_erasure (name : String) (program : NativeEff) (table : RowTab
           simp only [printed, classified, Except.toOption, ModuleEmission.module, Option.map_some]
 
 /-- R5/R8: a checked emission retains an explicit answer, error and complete
-requirement annotation on its main declaration. This certifies generated syntax,
-not TypeScript execution. -/
+requirement annotation on its main declaration, each key spelled under the table's key names
+(decisions row 378 (22)). This certifies generated syntax, not TypeScript execution. -/
 theorem ModuleEmission.annotation_complete (emission : ModuleEmission program table name) :
     ∃ layers main body answer error,
       emission.declarations = layers ++ [main] ∧
-      Program.printDecl name emission.typing.ty body nativeScopeKey = .ok main ∧
+      Program.printDecl name emission.typing.ty body nativeScopeKey
+        (nativeSignature table).keyNames = .ok main ∧
       main.type = some (.name ["Effect", "Effect"]
-        [answer, error, requirementType nativeScopeKey emission.typing.ty.requires]) := by
+        [answer, error, requirementType nativeScopeKey (nativeSignature table).keyNames
+          emission.typing.ty.requires]) := by
   have printed := (printEntry_ok emission.generated).2.2
   obtain ⟨layers, main, body, block, _, declaration⟩ := printModule_shape printed
   obtain ⟨answer, error, annotation⟩ := declarationType_complete (printDecl_fields declaration).2.2.2
