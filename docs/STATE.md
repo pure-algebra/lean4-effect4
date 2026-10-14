@@ -437,28 +437,13 @@ program, then watch its session answer calls and schedule.
 
 ## What the owner must decide
 
-- **The rest of the vendoring list** (row 336, point 5). The C libraries are in the
-  [visual pipeline note](research/2026-10-09-visual-pipeline.md), section 6. termbox2 2.5.0 and
-  SDL3 3.4.16 are vendored (`8a36f2008`). HarfBuzz with FreeType, and ThorVG, wait. Each is
-  confirmed at its own repository before a download.
-- **The marks of an operation** (the forms note's proposal A, 1): drawn in the view by each
-  operation's row, and removed by `v -P`.
-- **The program's graph** (the design note, section 7): its marks, built as recommended, to
-  confirm.
-- **MCP and code mode** (the MCP note, section 10): rulings 3 to 6, at the owner's walk-through.
-  Row 373 (9) made rulings 1 and 2.
-- **Multiplication on naturals** (row 309, point 1). The row says no multiplication enters, but
-  the tree keeps the natural atom `mul` (2026-09-19) through `Profile.scale`. The reference is
-  exact, and TypeScript and OCaml refuse a product outside the profile (`E4-RUN-CE-047`). Keep
-  the atom, and read row 309 as excluding integer and float arithmetic only, or remove it.
-- **The live view's three rulings** (LV-8, `docs/research/2026-10-10-live-view/LANDING.md`): code
-  lines keyed by text, causal columns in the batch, and the gutter's address reading.
-- **The type interface's choices** (the type interface note, section 4). Row 373 (11) ruled its
-  input positions: an emitted module decodes its exported inputs with the printed Schema, and it
-  brands only `Ref` arguments. These stay open:
-  - print `int` and `number` as the aliases `Int` and `Num` now (row 309, point 5);
-  - choose one frame for products, before `Shape` becomes a fold of `Ty`.
+Row 380 decided the parked rulings of the view, MCP and the type interface, and the vendoring
+list, under the owner's delegation of 2026-10-14. HarfBuzz 14.6.0, FreeType 2.15.0 and ThorVG
+1.1.2 are vendored by pin beside termbox2 and SDL3 (`vendor/`). Each has a `fetch.sh` that refuses
+a tarball whose SHA-256 differs, and FreeType's checks its signature too.
 
+- **Pushing the kit** (`pure-algebra/lean4-whatwg`, branch `html/svg` at `3e5e79335`). A checkout
+  other than this Mac's seeds `.lake/packages/whatwg` from the local kit until then.
 
 ## Process
 
