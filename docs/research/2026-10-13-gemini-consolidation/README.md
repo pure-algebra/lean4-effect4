@@ -195,7 +195,9 @@ Reviewed receipts: `docs/research/2026-10-13-seat-svc-receipt.md`, `docs/researc
 - **Base commit**: `93a80a561` (coordinator fast-forward holding Round 1's seven commits `92e373a55..93a80a561`)
 - **Branch**: `gemini/consolidation`
 - **Fenced files touched**: none
-- **One thing the coordinator must know before merging**: `Test/All.lean` adds `import Test.Audit.StatementCensusControls` at its end, and all 13 Round 2 slices in `docs/research/2026-10-13-gemini-consolidation/commits.txt` touch strictly disjoint file sets so they can be committed in order without conflict.
+- **One thing the coordinator must know before merging**: `Test/All.lean` adds `import
+  Test.Audit.StatementCensusControls` at its end. All 13 Round 2 slices in
+  `docs/research/2026-10-13-gemini-consolidation/commits.txt` touch strictly disjoint file sets.
 
 ```mermaid
 flowchart LR
@@ -216,9 +218,11 @@ flowchart LR
 - **`tools/ProofGraph/StatementCensus.lean`**:
   - Defines `#statement_census M₁ M₂ …` (default transparency) and `#statement_census reducible M₁ M₂ …` (`reducible` transparency).
   - Reads non-auxiliary `ConstantInfo.thmInfo` declarations whose defining module is in `M₁ … Mₖ`.
-  - Normalizes each theorem statement in `MetaM` by telescope replacement: every binder's user name is replaced with `.anonymous`, every binder info is normalized to `.default`, and level parameters are canonically renamed `u_0, u_1, …`.
+  - Normalizes each theorem statement in `MetaM` by telescope replacement. Every binder takes
+    `.anonymous` and `.default`, and level parameters rename to `u_0, u_1, …`.
   - Under default mode, groups theorems by `Expr` equality of the normalized statement followed by `isDefEq` confirmation at `.default` transparency.
-  - Under `reducible` mode, unfolds reducible constants at the head of the conclusion and of each hypothesis to form candidate buckets, then partitions by `withTransparency .reducible (isDefEq t₁ t₂)` so `abbrev` aliases (such as `Path.lt := Field.ltKey` and `DeferredCause`) equate.
+  - Under `reducible` mode, unfolds reducible head constants to form candidate buckets. It then
+    partitions by `withTransparency .reducible (isDefEq t₁ t₂)` so `abbrev` aliases equate.
   - Counts direct proof-term references (`getUsedConstantsAsSet`) across all theorem values in the scanned modules and prints `#statement_census[ reducible]: <N> theorems in <K> modules; <G> duplicate groups:` in deterministic alphabetical order.
 - **`Test/Audit/StatementCensusControls.lean`** (wired at the end of `Test/All.lean`):
   - **Reader 1**: `#guard_msgs` over `#statement_census Effect4.Laws.Run Effect4.Laws.Run.Journal` (`59 theorems in 2 modules; 0 duplicate groups`).
@@ -274,7 +278,7 @@ flowchart LR
    - `Effect4.Program.Typed.countdownAt_tok` (`Typed/Commands/Clauses/Park.lean`) and `Effect4.Program.Typed.countdownAt_world` (`Typed/Commands/Bookkeeping.lean`, 18 importers).
    - `Effect4.Program.Typed.firstErrorValue?_of_caught` (`Typed/Denotation.lean`) and `Effect4.Program.caughtErrorValue?_first` (`Handles/Hooks.lean`).
    - Cross-area pairs `Effect4.Program.Guard.nextToken_modify` / `Effect4.Run.modify_nextToken` and `Effect4.Program.emptyTable_refuses_every_answer` / `Effect4.Run.admit_nil_answer`.
-   - Remaining 8 `reducible`-only pairs in `Laws/Program` (`Footprint` vs `Guard/Interruption` and `Guard/ReturnFields` where `Footprint` does not import `Guard`; `MemoIds` vs `PlaceFunding.Actions` and `NativeReferences`; `Simulation.Deliver` vs `NativeFrameScope`; and the symmetric `iff` projections `framePath_of_stackAccepts` / `stackAccepts_of_framePath` in `Typed/Contracts.lean`).
+   - Eight `reducible`-only pairs in `Laws/Program` connect unimported sibling modules (`Footprint`, `MemoIds`, `Simulation.Deliver`) or symmetric `iff` projections (`framePath_of_stackAccepts` and `stackAccepts_of_framePath`).
 
 ## Part C — `mapM_error_mem`, `mapM_ok_each`, and `bytesLe` vs `Field.ltKey`
 
@@ -287,8 +291,8 @@ flowchart LR
 
 - **Do Not Unify (`Checked.lean` stays untouched)**:
   1. `bytesLe` (`src/Effect4/Codegen/Checked.lean`) is a private 5-line structural recursion on `List UInt8` (`| [], _ => true | _ :: _, [] => false | a :: as, b :: bs => if a == b then bytesLe as bs else a < b`) used once in `orderServices` to sort emitted services by `s.name.toUTF8.toList`.
-  2. `Field.ltKey` (`src/Effect4/Data/FieldOrder.lean`) is strict `<` on `List Nat`, not `≤` on `List UInt8`. Expressing `bytesLe` via `Field.ltKey` would require converting both `String` keys through `Field.bytesKey : String → List Nat` (which allocates a `List Nat` via `.toUTF8.toList.map UInt8.toNat` on every comparator call) and negating the flipped strict comparison (`!Field.ltKey (Field.bytesKey b.name) (Field.bytesKey a.name)`).
-  3. No theorem in `src/Effect4/Laws/Codegen/` reasons about the comparator inside `orderServices` (`Laws/Codegen/Services.lean` proves membership preservation `mem_orderServices` via `List.Perm` of `mergeSort`, which is parametric in the comparator `le`). Unifying `bytesLe` with `Field.ltKey` would therefore add runtime allocation and an extra import to `Checked.lean` while saving zero proof lines.
+  2. `Field.ltKey` (`src/Effect4/Data/FieldOrder.lean`) is strict `<` on `List Nat`, not `≤` on `List UInt8`. Using `Field.ltKey` would allocate a `List Nat` via `Field.bytesKey` on every comparator call and negate the flipped comparison.
+  3. No theorem in `src/Effect4/Laws/Codegen/` reasons about the comparator inside `orderServices`. `Laws/Codegen/Services.lean` proves `mem_orderServices` via `List.Perm` of `mergeSort`, which is parametric in `le`. Unifying `bytesLe` with `Field.ltKey` would therefore add runtime allocation and an extra import to `Checked.lean` while saving zero proof lines.
 
 ## Round 2 Verification and Axiom Gate
 
@@ -322,4 +326,168 @@ flowchart LR
   - `#closure_audit`: `3760 declarations; none binds a table before a returned closure`
 - **Open obligations**: none.
 - **Bounded or host-only evidence**: none.
+- **Note on Round 2 fronts**: Nine of the eleven Round 2 families were module-local fronts. A
+  higher module restated a lower module's theorem under its own namespace instead of calling the
+  lower theorem directly. In each case, the higher module already imported the lower module (or its
+  transitive parent), so the front hid the true owner of the law.
+
+---
+
+# Round 3 — Hot-Path Overview, Clean Wins (B1–B3), Probe Fix, and Effect-Face Proposals
+
+## Round 3 Summary
+
+- **One thing the coordinator must know before merging**: The four Round 3 slices in
+  `docs/research/2026-10-13-gemini-consolidation/commits.txt` touch strictly disjoint file sets.
+  In Slice 3, moving `provideContext` inside `ms.foldr` in `Application.methodDef`
+  (`src/Effect4/Program/Authoring/ApplicationService.lean`) makes `cached`
+  (`Test/Dogfood/Scenario/Todo/Cached.lean`) build and emit cleanly (`emitted? cached = true`).
+  Reading `cached` back awaits the owner's ruling on Proposal 4 (`Ref.Ref<A>` in `readDefHead`)
+  because `Test/contracts/faces.contract.md` (§B19) freezes `Classes.readTy {}` at expression type
+  arguments.
+- **Base commit**: `9ccb94e2b`
+- **Branch**: `gemini/consolidation`
+- **Fenced files touched**: none (`tools/Tools/View/`, `tools/view/`, `lakefile.toml`, and
+  `docs/core/decisions.md` are untouched)
+
+```mermaid
+flowchart LR
+  S1["Slice 1 (B1)<br/>ts/eff/read.ts + target-types.ts"] --> G1["check-ts-reader + check-target"]
+  S2["Slice 2 (B2 + B3)<br/>Classes.TypeEnv + Types.ofNormalized"] --> G2["Effect4 + Effect4.Laws + batteries"]
+  S3["Slice 3 (Part A probe)<br/>ApplicationService.methodDef + Cached.lean"] --> G2
+  S4["Slice 4 (Deliverables)<br/>hot-path-overview.md + effect-face-proposals.md"] --> G3["check-language --strict"]
+```
+
+## Deliverables and Slices
+
+### Slice 1 (B1) — The TypeScript Reader Reads and Spells Keys by Row Namespace
+
+- **Files (5 files)**:
+  - `ts/eff/target-types.ts`
+  - `ts/eff/read.ts`
+  - `ts/eff/test/read.test.ts`
+  - `ts/eff/test/fixtures/todo-file.txt`
+  - `ts/eff/test/fixtures/todo-envelope.txt`
+- **What changed**:
+  - Added `KeyNames`, `rowKeyNames`, `nameOf`, `keyOf`, `keySpelling`, and `keyOfSpelling` in
+    `ts/eff/target-types.ts`, mirroring `src/Effect4/Program/Native.lean` and
+    `src/Effect4/Codegen/Types.lean`.
+  - Updated `readKey`, `readKeys`, `readType`, `readModule`, `readFile`, `readTypeScript`, and
+    `readTypeScriptFile` in `ts/eff/read.ts` to thread `rowKeyNames(table)`.
+  - Added round-trip tests in `ts/eff/test/read.test.ts` that read the emitted `todo.gen.ts` file
+    (`todo-file.txt`) and module envelope (`todo-envelope.txt`).
+
+### Slice 2 (B2 + B3) — One `Classes.TypeEnv` Spelling Context and `ofNormalized` Paramorphism
+
+- **Files (15 files)**:
+  - `src/Effect4/Codegen/Types.lean`
+  - `src/Effect4/Codegen/Classes.lean`
+  - `src/Effect4/Codegen/Print.lean`
+  - `src/Effect4/Codegen/RowServices.lean`
+  - `src/Effect4/Codegen/Admit.lean`
+  - `src/Effect4/Codegen/Read.lean`
+  - `src/Effect4/Laws/Codegen/Classes.lean`
+  - `src/Effect4/Laws/Codegen/ReadPrint.lean`
+  - `src/Effect4/Laws/Codegen/Module.lean`
+  - `src/Effect4/Laws/Codegen/Admit.lean`
+  - `src/Effect4/Laws/Codegen/Checked.lean`
+  - `src/Effect4/Laws/Api/ModuleReadable.lean`
+  - `Test/Codegen/TypeReader.lean`
+  - `Test/Codegen/ServicesPrint.lean`
+  - `harness/truth/Truth.lean`
+
+#### B2 Parameter Counts Before and After (`Classes.TypeEnv`)
+
+`Classes.TypeEnv` (`src/Effect4/Codegen/Classes.lean`) bundles `classes : Classes`, `scopeKey :
+ServiceKey := .prefixed`, and `names : KeyNames := []`, with `Signature.typeEnv` constructing a
+program's canonical environment. Across all 16 printer, reader, and admissibility functions, the
+threaded spelling parameters dropped from 36 to 16:
+
+| Module | Declaration | Spelling Parameters Before | Spelling Parameters After | Total Parameters (Before → After) |
+| --- | --- | --- | --- | --- |
+| `Classes.lean` | `declarationType` | 3 (`classes`, `scopeKey`, `names`) | 1 (`env : TypeEnv`) | 4 → 2 |
+| `Classes.lean` | `readTy` | 2 (`classes`, `names`) | 1 (`env : TypeEnv`) | 3 → 2 |
+| `Classes.lean` | `readTyChecked` | 2 (`classes`, `names`) | 1 (`env : TypeEnv`) | 3 → 2 |
+| `Print.lean` | `printDef` | 3 (`classes`, `scopeKey`, `names`) | 1 (`env : TypeEnv`) | 4 → 2 |
+| `Print.lean` | `printMethodType` | 3 (`classes`, `scopeKey`, `names`) | 1 (`env : TypeEnv`) | 5 → 3 |
+| `Print.lean` | `printService` | 3 (`classes`, `scopeKey`, `names`) | 1 (`env : TypeEnv`) | 5 → 3 |
+| `Print.lean` | `printServices` | 3 (`classes`, `scopeKey`, `names`) | 1 (`env : TypeEnv`) | 4 → 2 |
+| `RowServices.lean` | `rowMethodType` | 2 (`classes`, `names`) | 1 (`env : TypeEnv`) | 3 → 2 |
+| `RowServices.lean` | `printRowService` | 2 (`classes`, `names`) | 1 (`env : TypeEnv`) | 3 → 2 |
+| `RowServices.lean` | `rowServiceDecls` | 2 (`classes`, `names`) | 1 (`env : TypeEnv`) | 3 → 2 |
+| `Admit.lean` | `ParamDecl.readable` | 2 (`classes`, `names`) | 1 (`env : TypeEnv`) | 3 → 2 |
+| `Admit.lean` | `DefDecl.readable` | 2 (`classes`, `names`) | 1 (`env : TypeEnv`) | 3 → 2 |
+| `Read.lean` | `readParam` | 2 (`classes`, `names`) | 1 (`env : TypeEnv`) | 3 → 2 |
+| `Read.lean` | `readDefHead` | 2 (`classes`, `names`) | 1 (`env : TypeEnv`) | 4 → 3 |
+| `Read.lean` | `readDefs` | 2 (`classes`, `names`) | 1 (`env : TypeEnv`) | 3 → 2 |
+| `Read.lean` | `readRowServices` | 1 (`classes`) | 1 (`env : TypeEnv`) | 4 → 4 |
+| **Total (16 functions)** | — | **36** | **16** | **57 → 37** |
+
+#### B3 Answer — Why `ofNormalized` Is a Paramorphism Over `Ty`
+
+- **Constructor that blocks a pure catamorphism (`cata_ty`)**: `Ty.list` in `ofNormalized`
+  (`src/Effect4/Codegen/Types.lean`).
+- **Why**: In the `.list item` arm of `ofNormalized`, `Effect4.Schema.Bridge.isObjectShape item`
+  inspects the syntax of `item : Ty` (checking for `.prod .string .string`). In `TyAlgebra`, the
+  `list` field has type `Carrier → Carrier` and does not receive the subterm `item : Ty`. Using
+  `cata_ty` would require pairing the carrier with `Ty` and rebuilding every constructor, which is
+  the standard paramorphism encoding.
+- **What we did**: Documented the paramorphism and the blocking `Ty.list` constructor in
+  `src/Effect4/Codegen/Types.lean`. Compacted `ofNormalized_isSome` from 21 constructor arms to 9
+  grouped arms.
+
+### Slice 3 (Part A Probe) — Fix `Application.methodDef` Context Placement and Emit `cached`
+
+- **Files (2 files)**:
+  - `src/Effect4/Program/Authoring/ApplicationService.lean`
+  - `Test/Dogfood/Scenario/Todo/Cached.lean`
+- **What changed**:
+  - In `Application.methodDef` (`src/Effect4/Program/Authoring/ApplicationService.lean`), moved
+    `Authoring.provideContext (Authoring.app "fst" [state])` inside `ms.foldr (fun m inner =>
+    m.wrap e.name inner)` around `e.applied args`. This discharges the entry's context requirements
+    inside any callback created by an imposed wrapper (`readingThrough`'s `Def.invokeWith
+    "listCacheGet"`), eliminating `PrintRefusal.callbackRequirement`.
+  - Updated `Test/Dogfood/Scenario/Todo/Cached.lean` to emit `cached`'s file and module envelope
+    (`emitted? cached = true`). It guards the 15 constant declarations, `freeNames file = []`, and
+    the refusal control awaiting Proposal 4 (`Ref.Ref<A>` in `readDefHead`).
+
+### Slice 4 (Part A, Part C, and Receipt Deliverables)
+
+- **Files (4 files)**:
+  - `docs/research/2026-10-13-gemini-consolidation/hot-path-overview.md` (new)
+  - `docs/research/2026-10-13-gemini-consolidation/effect-face-proposals.md` (new)
+  - `docs/research/2026-10-13-gemini-consolidation/README.md`
+  - `docs/research/2026-10-13-gemini-consolidation/commits.txt`
+
+## Verification, Gates, and Axiom Gate
+
+- **Lean narrow builds**:
+  - `LEAN_NUM_THREADS=2 /Users/pooks/.elan/bin/lake build Effect4 Effect4.Laws Test.Codegen.TypeReader Test.Codegen.ServicesPrint Test.Codegen.TermRows Test.Dogfood.Scenario.TodoFile Test.Dogfood.Scenario.TodoService Test.Dogfood.Scenario.Todo.Cached`
+  - Result: `Build completed successfully (1570 jobs).` (0 errors, 0 warnings).
+- **Axiom gate and closure check on all 16 touched Lean modules**:
+  - `#axiom_audit Effect4.Codegen.Types Effect4.Codegen.Classes Effect4.Codegen.Print Effect4.Codegen.RowServices Effect4.Codegen.Admit Effect4.Codegen.Read Effect4.Laws.Codegen.Classes Effect4.Laws.Codegen.ReadPrint Effect4.Laws.Codegen.Module Effect4.Laws.Codegen.Admit Effect4.Laws.Codegen.Checked Effect4.Laws.Api.ModuleReadable Test.Codegen.TypeReader Test.Codegen.ServicesPrint Effect4.Program.Authoring.ApplicationService Test.Dogfood.Scenario.Todo.Cached`
+  - Output: `#axiom_audit: 3092 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals`
+  - `#closure_audit Effect4.Codegen.Types Effect4.Codegen.Classes Effect4.Codegen.Print Effect4.Codegen.RowServices Effect4.Codegen.Admit Effect4.Codegen.Read Effect4.Program.Authoring.ApplicationService`
+  - Output: `#closure_audit: 1424 declarations; none binds a table before a returned closure`
+- **Behaviour gates run**:
+  - `check-ts-reader` (`bun --no-install ts/eff/check.ts` on `generated/ts-reader-vectors.json`):
+    - Output: `check-ts-reader: 449 matched, 0 mismatched`
+  - `ts/eff` test suite (`bun --no-install test` in `ts/eff`):
+    - Output: `780 pass, 0 fail, 2326 expect() calls`
+  - `tsgo 7` (`./node_modules/.bin/tsgo --noEmit` in `ts/eff`, `@typescript/native-preview`
+    `7.0.0-dev.20260629.1`):
+    - Output: exit 0 (0 errors)
+  - `check-target` (`bun --no-install tools/target/cli.ts --vectors generated/target-vectors.json`,
+    `bun --no-install tools/target/rows.ts --vectors generated/row-vectors.json`, and
+    `bun --no-install test` in `tools/target`, under `@typescript/native-preview`
+    `7.0.0-dev.20260629.1`):
+    - Output: `Summary: 104/104 PASS (0 failed)`, `PASS: 5 row checks`, `28 pass, 0 fail`
+  - Controlled English check (`python3 scripts/check-language.py --strict` on the three Round 3
+    Markdown documents):
+    - Output: `PASS check-language`
+- **Open obligations**: None in the landed slices; the four proposals in `effect-face-proposals.md`
+  await owner ruling.
+- **Bounded or host-only evidence**: `check-ts-reader` (449 vectors plus `todo.gen.ts`) and
+  `check-target` (104 target vectors, 5 row checks) are finite oracle checks.
+
 

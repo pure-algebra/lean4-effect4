@@ -125,3 +125,45 @@ git commit -m "Laws/Program/Authoring: move mapM_error_mem and mapM_ok_each from
 git add docs/research/2026-10-13-gemini-consolidation/README.md \
   docs/research/2026-10-13-gemini-consolidation/commits.txt
 git commit -m "docs/research: record Round 2 statement census and consolidation receipt"
+
+# ==============================================================================
+# Round 3 — Base commit: 9ccb94e2b
+# ==============================================================================
+
+# 22. Slice 1 (B1) — TypeScript reader reads keys by name
+git add ts/eff/target-types.ts \
+  ts/eff/read.ts \
+  ts/eff/test/read.test.ts \
+  ts/eff/test/fixtures/todo-file.txt \
+  ts/eff/test/fixtures/todo-envelope.txt
+git commit -m "ts/eff: spell and read service keys by row namespace (B1)"
+
+# 23. Slice 2 (B2 + B3) — One TypeEnv spelling context and ofNormalized paramorphism note
+git add src/Effect4/Codegen/Types.lean \
+  src/Effect4/Codegen/Classes.lean \
+  src/Effect4/Codegen/Print.lean \
+  src/Effect4/Codegen/RowServices.lean \
+  src/Effect4/Codegen/Admit.lean \
+  src/Effect4/Codegen/Read.lean \
+  src/Effect4/Laws/Codegen/Classes.lean \
+  src/Effect4/Laws/Codegen/ReadPrint.lean \
+  src/Effect4/Laws/Codegen/Module.lean \
+  src/Effect4/Laws/Codegen/Admit.lean \
+  src/Effect4/Laws/Codegen/Checked.lean \
+  src/Effect4/Laws/Api/ModuleReadable.lean \
+  Test/Codegen/TypeReader.lean \
+  Test/Codegen/ServicesPrint.lean \
+  harness/truth/Truth.lean
+git commit -m "Codegen: bundle Classes.TypeEnv and Signature.typeEnv; compact ofNormalized_isSome (B2, B3)"
+
+# 24. Slice 3 (Part A probe) — Discharge context inside imposed wrappers and emit cached
+git add src/Effect4/Program/Authoring/ApplicationService.lean \
+  Test/Dogfood/Scenario/Todo/Cached.lean
+git commit -m "Authoring/ApplicationService: provide context inside imposed wrappers; emit cached"
+
+# 25. Slice 4 (Part A + Part C + Round 3 receipt) — Overview, proposals, receipt, and commits.txt
+git add docs/research/2026-10-13-gemini-consolidation/hot-path-overview.md \
+  docs/research/2026-10-13-gemini-consolidation/effect-face-proposals.md \
+  docs/research/2026-10-13-gemini-consolidation/README.md \
+  docs/research/2026-10-13-gemini-consolidation/commits.txt
+git commit -m "docs/research: add Round 3 hot-path overview, Effect-face proposals, and receipt"
