@@ -388,10 +388,6 @@ theorem selectReply_nodes : NodesFormed selectReplyTy := nodesFormed_of_check (b
 
 theorem closeReply_nodes : NodesFormed closeReplyTy := nodesFormed_of_check (by decide)
 
-theorem bool_nodes : NodesFormed .bool := nodesFormed_of_check (by decide)
-
-theorem unit_nodes : NodesFormed .unit := nodesFormed_of_check (by decide)
-
 theorem selectReply_normal : selectReplyTy.normalize = selectReplyTy := by decide +kernel
 
 theorem closeReply_normal : closeReplyTy.normalize = closeReplyTy := by decide +kernel
@@ -462,7 +458,8 @@ theorem borrower_typed {A : Ty} (resource : ResourceTy A) {pool : TermSrc} {s : 
     rw [Ty.join_comm] at body
     exact body
   withdraw := fun t id reach hid =>
-    answers_refModifyWith (cellTy_normal resource.canonical) (cell_nodes resource) rfl unit_nodes
+    answers_refModifyWith (cellTy_normal resource.canonical) (cell_nodes resource) rfl
+      (nodesFormed_of_check (by decide))
       (hpool.reach reach).here fun _ hcurrent path =>
         withdrawStep_types _ rfl resource.canonical (TypedScope.depth _) (hid.push.captured path)
           (hcurrent path)
@@ -589,7 +586,7 @@ theorem closer_typed {A : Ty} (resource : ResourceTy A) {pool : TermSrc} {s : Ty
       (first := Ref.modifyWith pool (drainStep id hint))
       (rest := fun drained => ifElse drained (done unit) wait)
       (answers_refModifyWith (cellTy_normal resource.canonical) (cell_nodes resource) rfl
-        bool_nodes (hpool.reach reach).here fun _ hcurrent path =>
+        (nodesFormed_of_check (by decide)) (hpool.reach reach).here fun _ hcurrent path =>
           drainStep_types _ rfl resource.canonical (TypedScope.depth _) (hid.push.captured path)
             (hhint.push.here path) (hcurrent path))
       fun _ hdrained =>
@@ -599,7 +596,8 @@ theorem closer_typed {A : Ty} (resource : ResourceTy A) {pool : TermSrc} {s : Ty
     rw [Ty.join_comm] at body
     exact body
   withdraw := fun t id reach hid =>
-    answers_refModifyWith (cellTy_normal resource.canonical) (cell_nodes resource) rfl unit_nodes
+    answers_refModifyWith (cellTy_normal resource.canonical) (cell_nodes resource) rfl
+      (nodesFormed_of_check (by decide))
       (hpool.reach reach).here fun _ hcurrent path =>
         withdrawStep_types _ rfl resource.canonical (TypedScope.depth _) (hid.push.captured path)
           (hcurrent path)
