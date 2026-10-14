@@ -27,49 +27,6 @@ namespace Effect4.Program.Authoring
 
 open Effect4.Program
 
-/-- A refusal of `mapM` over `Except` is the refusal of one element. A step of
-`serviceDefs_error`. -/
-theorem mapM_error_mem {α β ε : Type} {f : α → Except ε β} :
-    ∀ {l : List α} {r : ε}, l.mapM f = .error r → ∃ a ∈ l, f a = .error r := by
-  intro l
-  induction l with
-  | nil => intro r h; cases h
-  | cons a as ih =>
-    intro r h
-    simp only [List.mapM_cons] at h
-    cases hfa : f a with
-    | error r' =>
-      rw [hfa] at h
-      cases h
-      exact ⟨a, List.mem_cons_self, hfa⟩
-    | ok b =>
-      rw [hfa] at h
-      cases hrest : as.mapM f with
-      | error r' =>
-        rw [hrest] at h
-        cases h
-        obtain ⟨a', ha', hf⟩ := ih hrest
-        exact ⟨a', List.mem_cons_of_mem _ ha', hf⟩
-      | ok bs =>
-        rw [hrest] at h
-        cases h
-
-/-- A successful `mapM` over `Except` succeeds at each element. A step of
-`serviceDefs_of_refused`. -/
-theorem mapM_ok_each {α β ε : Type} {f : α → Except ε β} :
-    ∀ {l : List α} {ys : List β}, l.mapM f = .ok ys → ∀ a ∈ l, ∃ b, f a = .ok b := by
-  intro l
-  induction l with
-  | nil => intro ys _ a ha; cases ha
-  | cons a as ih =>
-    intro ys h a' ha'
-    simp only [List.mapM_cons] at h
-    obtain ⟨b, hb, h⟩ := bind_ok h
-    obtain ⟨bs, hbs, _⟩ := bind_ok h
-    rcases List.mem_cons.mp ha' with rfl | ha'
-    · exact ⟨b, hb⟩
-    · exact ih hbs a' ha'
-
 namespace Application
 
 /-- **The declaration of an entry's method**: the definition `<service>_<e>`, whose request is the
