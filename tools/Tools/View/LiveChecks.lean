@@ -86,6 +86,62 @@ def twice : Laid := { placed := #[{ key := "k", x := 0, y := 0, w := 8 }, { key 
 #guard (((twice.placed.toList.foldl (fun m p => m.insert p.key p) ({} : KeyMap Key Placed)).get? "k").map (·.x)) ==
   some 40
 
+/-- Two points on bars, with an organic connector between them. -/
+def dockFixture : Laid := {
+  placed := #[{ key := "a", x := 12, y := 8, w := 16 },
+    { key := "b", x := 12, y := 32, w := 16 }]
+  marks := #[.bar "top" 0 40 8, .bar "bottom" 0 40 32]
+  routes := #[.down "e" ["a", "b"]]
+  width := 40, height := 36 }
+
+/-- Read the flat face of an emitted collar. -/
+def collarFace (calls : List (Keyed Call)) (i : Nat) : Option Int := do
+  let call ← calls[i]?
+  match call.call with
+  | .shape _ _ paths => return (← (← paths.head?)[1]?).p0.2
+  | _ => none
+
+-- The odd-height bar occupies [7, 10] and [31, 34]. Both collars meet those painted surfaces.
+-- The pre-change target face is 30500, leaving a half-pixel slit above the second bar.
+#guard [0, 19, -7].all fun dy =>
+  let cs := (Laid.routeCalls {} dockFixture.find dockFixture.onBar 40 11 dy {}
+    (.down "e" ["a", "b"])).1
+  collarFace cs 1 == some (1000 * (dy + 10)) &&
+    collarFace cs 2 == some (1000 * (dy + 31))
+
+-- A growing connector has no target collar. Its source still meets the painted bar.
+#guard [250, 500, 750].all fun reveal =>
+  let cs := (Laid.routeCalls {} dockFixture.find dockFixture.onBar 40 0 0 {}
+    (.down "e" ["a", "b"] reveal)).1
+  collarFace cs 1 == some 10000 && collarFace cs 2 == none
+
+/-- A node during its entrance. The painted top is twelve pixels below its final top. -/
+def growingTarget : Placed :=
+  { key := "b", x := 0, y := 72, w := 80,
+    node := some { key := "b", line1 := "b" }, grow := 483 }
+
+#guard Laid.entryAt growingTarget == (40, 84)
+#guard Laid.exitAt growingTarget == (40, 107)
+
+-- Side routes dock on the growing side, including the loop's two attachment points.
+#guard
+  let cs := Laid.segments {} (fun _ => some growingTarget) 140 (.back "back" "b" "b" 0)
+  (cs.head?.map (·.p0)) == some (59, 95) && (cs.getLast?.map (·.p3.1)) == some 59
+#guard
+  let cs := Laid.segments {} (fun _ => some growingTarget) 140 (.loop "loop" "b")
+  cs.all fun c => c.p0.1 == 59 && c.p3.1 == 59 &&
+    84 ≤ c.p0.2 && c.p3.2 ≤ 107
+
+-- A collar stays behind a short growing tip. Before the fix, its end reaches 54000.
+#guard
+  let source : Placed :=
+    { key := "a", x := 0, y := 0, w := 80, node := some { key := "a", line1 := "a" } }
+  let cs : List (Keyed Call) := (Laid.organicCalls (fun _ => some source) (fun _ => false)
+    {} {} "e" ["a", "b"] 1000000 [⟨(40, 48), (40, 49), (40, 50), (40, 51)⟩] false).1
+  match (cs[1]?).map Keyed.call with
+  | some (Call.shape _ _ [path]) => path.all fun c => c.p0.2 < 51000 && c.p3.2 < 51000
+  | _ => false
+
 /-! ## LV-3: the layout in linear time -/
 
 /-- Every intermediate program of a build: each answered request's sketch. -/

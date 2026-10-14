@@ -327,15 +327,24 @@ namespace Laid
 /-- The placed item with key `k`. -/
 def find (l : Laid) (k : Key) : Option Placed := l.placed.find? (·.key == k)
 
+/-- The painted bounds of a box at its current growth, in logical pixels. -/
+def boxBounds (p : Placed) : Rect :=
+  let w := p.w * p.grow / 1000
+  let h := ROWH * BOXROWS * p.grow / 1000
+  let x := p.x + (p.w - w) / 2
+  let y := p.y + (ROWH * BOXROWS - h) / 2
+  ⟨x, y, x + w, y + h⟩
+
 /-- A box, grown about its centre as far as its `grow`: its ground, its band when lit, its frame;
 its two lines and its pointer box once it has grown whole. -/
 def boxCalls (L : Look) (dx dy : Int) (p : Placed) (n : GNode) : List (Keyed Call) :=
   if p.grow = 0 then [] else
   let h := ROWH * BOXROWS
-  let w' := p.w * p.grow / 1000
-  let h' := h * p.grow / 1000
-  let x := dx + p.x + (p.w - w') / 2
-  let y := dy + p.y + (h - h') / 2
+  let bounds := boxBounds p
+  let w' := bounds.x1 - bounds.x0
+  let h' := bounds.y1 - bounds.y0
+  let x := dx + bounds.x0
+  let y := dy + bounds.y0
   let room : Int := p.w / CELL - 2
   let r : Int := L.strokes.radius
   let m (v : Int) : Int := 1000 * v
@@ -365,10 +374,18 @@ def middle (p : Placed) : Int := p.x + (if p.node.isSome then p.w / 2 else CELL)
 edge leaves it where it enters. Every edge of a box leaves
 from one point and enters at one point, so the edge aligned with the box (`Tools.View.Place`)
 runs straight and the others branch from it, as a tree's limbs do. -/
-def exitAt (p : Placed) : Pt := (middle p, p.y + (if p.node.isSome then ROWH * BOXROWS else 0))
+def exitAt (p : Placed) : Pt :=
+  if p.node.isSome then
+    let b := boxBounds p
+    (b.x0 + (b.x1 - b.x0) / 2, b.y1)
+  else (middle p, p.y)
 
 /-- Where an edge enters an item from above: the middle of its top. -/
-def entryAt (p : Placed) : Pt := (middle p, p.y)
+def entryAt (p : Placed) : Pt :=
+  if p.node.isSome then
+    let b := boxBounds p
+    (b.x0 + (b.x1 - b.x0) / 2, b.y0)
+  else (middle p, p.y)
 
 /-- A straight segment from `a` to `b`. -/
 def straight (a b : Pt) : Cubic := ⟨a, a, b, b⟩
@@ -417,7 +434,10 @@ def segments (L : Look) (find : Key → Option Placed) (width : Int) : Route →
       let lx := width - CELL * (2 * lane + 1)
       -- a box's side at its middle row; a point has no height, and is its own side
       let side (p : Placed) (rise : Int) : Pt :=
-        if p.node.isSome then (p.x + p.w, p.y + ROWH - rise) else (p.x + 2 * CELL, p.y)
+        if p.node.isSome then
+          let b := boxBounds p
+          (b.x1, b.y0 + (b.y1 - b.y0) / 2 - rise * p.grow / 1000)
+        else (p.x + 2 * CELL, p.y)
       let p : Pt := side a 0
       let q : Pt := side b BACK_RISE
       -- controls a third past the lane, so the arc's widest point reaches the lane
@@ -427,10 +447,12 @@ def segments (L : Look) (find : Key → Option Placed) (width : Int) : Route →
   | .loop _ k _ =>
     match find k with
     | some a =>
-      let x := a.x + a.w
-      let y := a.y + ROWH
-      [⟨(x, y - LOOP_HALF), (x + 2 * LOOP_REACH, y - 2 * LOOP_HALF),
-        (x + 2 * LOOP_REACH, y + 2 * LOOP_HALF), (x, y + LOOP_HALF)⟩]
+      let b := boxBounds a
+      let x := if a.node.isSome then b.x1 else a.x + a.w
+      let y := if a.node.isSome then b.y0 + (b.y1 - b.y0) / 2 else a.y + ROWH
+      let half := if a.node.isSome then LOOP_HALF * a.grow / 1000 else LOOP_HALF
+      [⟨(x, y - half), (x + 2 * LOOP_REACH, y - 2 * half),
+        (x + 2 * LOOP_REACH, y + 2 * half), (x, y + half)⟩]
     | none => []
 
 /-- **The segments revealed from their start for `budget` of size**: each whole segment within the
@@ -627,6 +649,12 @@ theorem cachedStroke_valid {cache : StrokeCache} (hv : cache.Valid) (seed : Nat)
       · rw [if_neg hk] at hs
         exact hv _ _ hs o' hn hw
 
+/-- The bar's top in logical pixels. Odd heights use the painter's integer origin. -/
+def barTop (y : Int) : Int := y - BAR / 2
+
+/-- The bar surface relative to its route point, in thousandths. -/
+def barSurface (down : Bool) : Int := 1000 * (barTop 0 + if down then BAR else 0)
+
 /-- **A forward edge as an organic stroke** (`Tools.View.Grow`), on a stroke cache: its width the
 trunk's times its share of the work, never finer than the look's finest line; its edges moved by
 the noise its key seeds, inside their band; a collar where it leaves a box or a bar, and, once it
@@ -637,15 +665,28 @@ def organicCalls (find : Key → Option Placed) (onBar : Placed → Bool) (L : L
   let o := L.organic
   let w : Int := max (o.fine : Int) ((o.trunk : Int) * share / 1000000)
   let R : Int := (o.flare : Int) * w / max 1 (o.trunk : Int)
-  -- the surface a line meets: a box's edge, at the line's end; a bar's edge, half its thickness away
-  let surface (k : Key) : Option Int := (find k).bind fun p =>
-    if p.node.isSome then some 0 else if onBar p then some (500 * BAR) else none
+  -- A collar uses the painted surface and the straight room before a rounded box corner.
+  let surface (down : Bool) (k : Key) : Option (Int × Int) := (find k).bind fun p =>
+    if p.node.isSome then
+      let bounds := boxBounds p
+      let room := 1000 * (bounds.x1 - bounds.x0) / 2 - w / 2 - L.strokes.radius
+      if p.grow = 0 then none else some (0, min R (max 0 room))
+    else if onBar p then some (barSurface down, R) else none
   let (body, cache) := cachedStroke cache (Grow.seedOf key) o w cs (!whole)
-  let start := match cs.head?, ks.head?.bind surface with
-    | some c, some off => [Grow.collar (1000 * c.p0.1) (1000 * c.p0.2 + off) w R true]
+  let drop := match cs.head?, cs.getLast? with
+    | some a, some b => 1000 * (b.p3.2 - a.p0.2)
+    | _, _ => 0
+  let start := match cs.head?, ks.head?.bind (surface true) with
+    | some c, some (off, radius) =>
+      let radius := min radius (max 0 (drop - off) / 2)
+      if radius = 0 then [] else
+        [Grow.collar (1000 * c.p0.1) (1000 * c.p0.2 + off) w radius true]
     | _, _ => []
-  let finish := match whole, cs.getLast?, ks.getLast?.bind surface with
-    | true, some c, some off => [Grow.collar (1000 * c.p3.1) (1000 * c.p3.2 - off) w R false]
+  let finish := match whole, cs.getLast?, ks.getLast?.bind (surface false) with
+    | true, some c, some (off, radius) =>
+      let radius := min radius (max 0 (drop + off) / 2)
+      if radius = 0 then [] else
+        [Grow.collar (1000 * c.p3.1) (1000 * c.p3.2 + off) w radius false]
     | _, _, _ => []
   if body.isEmpty then ([], cache) else
     (([body] ++ start ++ finish).map fun path => ⟨key, .shape .ink 1000 [path]⟩, cache)
@@ -679,8 +720,8 @@ def regionCalls (L : Look) (dx dy : Int) (r : Region) : List (Keyed Call) :=
 strokes. -/
 def markCalls (L : Look) (dx dy : Int) : FlowMark → List (Keyed Call)
   | .bar k x0 x1 y =>
-    if L.strokes.radius = 0 then [⟨k, .fill .ink 1000 (dx + x0) (dy + y - BAR / 2) (x1 - x0) BAR⟩]
-    else [⟨k, .shape .ink 1000 [Grow.roundRect (1000 * (dx + x0)) (1000 * (dy + y - BAR / 2)) (1000 * (x1 - x0))
+    if L.strokes.radius = 0 then [⟨k, .fill .ink 1000 (dx + x0) (barTop (dy + y)) (x1 - x0) BAR⟩]
+    else [⟨k, .shape .ink 1000 [Grow.roundRect (1000 * (dx + x0)) (1000 * (barTop (dy + y))) (1000 * (x1 - x0))
       (1000 * BAR) (500 * BAR)]⟩]
   | .diamond k x y =>
     let c := (dx + x, dy + y)
