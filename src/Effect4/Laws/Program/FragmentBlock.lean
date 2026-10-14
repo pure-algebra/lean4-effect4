@@ -1,4 +1,3 @@
-import Effect4.Laws.Program.ParamRows
 import Effect4.Laws.Program.Folds.DenoteRowsB
 
 /-!
@@ -15,6 +14,12 @@ set_option autoImplicit false
 namespace Effect4.Program.Denote
 
 open Effect4 Effect4.Machine Effect4.Program
+
+/-- The definition bodies of a root block. Consumer: `bodiesOf_blockRows`,
+a step of rows-block-host (R6); this projection claims no execution property. -/
+def bodiesOf : NativeEff → List NativeEff
+  | .defs _ bodies _ _ => bodies.toList
+  | _ => []
 
 /-- The fragment fold reads programs and their lists as Boolean values. -/
 abbrev BodyRowsCarrier : EffFam → Type
