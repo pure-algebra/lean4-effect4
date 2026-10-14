@@ -28,6 +28,9 @@ entries. It adds no representation of a program: each entry builds through `Modu
   (`Def.invokeWith`). A banked block joins the definitions by reference (`DefSrc.ofBlock`), its
   bytes kept, so the built application can pin the bank's digest (row 378 (4)). An open program is
   checked at the application's table and its definitions (`signature`).
+* **A banked block imposed on the service** (`Imposed`). Its state lives in the service's state,
+  and the service's methods run their entries through it
+  (`src/Effect4/Program/Authoring/ApplicationService.lean`). No entry changes.
 
 What stays out: the application as one stored value with canonical bytes, and one module with
 several exports (the packet's slice 13). An open program reads the application's rows and
@@ -55,6 +58,27 @@ def Application.Entry.applied {Op : Type} (e : Application.Entry Op) (args : Lis
     Src Op :=
   (e.params.zip args).foldr (fun pa rest => bind pa.1.1 (succeed pa.2) rest) e.body
 
+/-- **A banked block imposed on an application's service** (decisions row 378 (2), (4), (8) and
+(23)). The block joins the service's definitions by reference, first and kept (`DefSrc.ofBlock`).
+Its state is made once, by the block's definition `make` at the request `unit`, beside the
+context, and every method reads it under the name `state`. `around` gives, by entry name, how
+that entry's method runs through the block: a wrapper of the entry's program, which reads the
+state by its name and invokes the block's definitions by theirs. An entry with no wrapper runs as
+it is. The entries' own programs do not change, so neither do their modules (`moduleOf`). -/
+structure Application.Imposed (Op : Type) where
+  block : Eff Op
+  state : String
+  stateTy : Ty
+  make : String
+  around : List (String × (Src Op → Src Op)) := []
+
+/-- The wrapper of an entry's method under one imposed block: the one `around` names, or none. -/
+def Application.Imposed.wrap {Op : Type} (m : Application.Imposed Op) (entry : String) :
+    Src Op → Src Op :=
+  match m.around.find? (·.1 == entry) with
+  | some (_, f) => f
+  | none => id
+
 /-- An application: the declarations of a `Module`, and several named programs over them. -/
 structure Application (Op : Type) where
   name : String
@@ -64,6 +88,9 @@ structure Application (Op : Type) where
   /-- The application's definitions, which its entries invoke by name. A banked block joins them
   by reference (`DefSrc.ofBlock`), its bytes kept. -/
   defs : List (DefSrc Op) := []
+  /-- The banked blocks imposed on the application's service (`Application.Imposed`), in order.
+  They change the service and no entry. -/
+  imposed : List (Application.Imposed Op) := []
   /-- The declared protocols of the application's rows, by the row's spelling
   (`src/Effect4/Program/RowProtocol.lean`). A row with none has the protocol of its types. -/
   protocols : RowProtocols := []

@@ -395,6 +395,8 @@ import Test.Program.AuthoringInvoke
 import Test.Dogfood.Scenario.TodoFile
 -- An application whose entries invoke its definitions, a banked block among them (row 378, IMPOSE).
 import Test.Dogfood.ApplicationDefs
+-- The to-do with the banked Ref cache imposed on its service (row 378 (8), seat IMPOSE).
+import Test.Dogfood.Scenario.Todo.Cached
 
 /-!
 # Effect4 test battery

@@ -1135,7 +1135,11 @@ def registry : Registry where
     -- the banked module of the vertical slice (decisions row 378; seat BANK)
     { id := "ref-cache-agrees", concept := "translation-simulation", role := .simulation
       title := "The banked Ref cache's code refines its model on every tape of storage's answers: each of the block's three bodies (make, get, invalidate), at its request with the cell holding the image of a cached value and get's loader read as a row of any table (paramsAsRows), observes the model's answer, the cell at the model's next value and the unread tape, under every reply tape whose successes lie in the image; and every recorded run of a fresh cache read once, funded, at rest and driven by a host, observes the model's read at the run's applied replies, through denoteRows_eq_session; the cache has no waiter, so the wake order is empty; nothing of an invocation by Eff.invoke (HO-2's invoke-unfolds, PROC-6), of several calls in one run, of a loader that writes the cell, of any host's storage, of a fiber-sharing schedule, or of progress (decisions row 378 (1) to (6) and (18))"
-      pointer := .witness `Effect4.Ref.Cache.cache_agrees }
+      pointer := .witness `Effect4.Ref.Cache.cache_agrees },
+    -- the banked cache imposed on an application that invalidates it (decisions row 378 (8); seat IMPOSE)
+    { id := "ref-cache-invalidated-reads-through", concept := "translation-simulation", role := .compatibility
+      title := "An invalidated banked cache reads through to storage: under any host, invalidate and then get, its loader a row of the host's table, at a cell holding the image of any cached value, asks the host once at the row and answers its answer, holding a success in the cell; it is the model's read after the model's invalidate, carried to the block's code by the steps of ref-cache-agrees; its first reader is the to-do's list after add through the imposed cache, at the call tree's meaning under the reference model; nothing of an invocation by Eff.invoke (HO-2's invoke-unfolds, row 378 (23)), of a run of the service, of an application that skips the invalidation, or of a fiber-sharing schedule (decisions row 378 (2), (8) and (23))"
+      pointer := .witness `Effect4.Ref.Cache.invalidate_get }
   ]
   cuts := [
     -- 1. store-typing

@@ -325,4 +325,61 @@ the bank entry `refCache` (`Test/Dogfood/Bank.lean`). -/
 theorem cache_agrees : Agrees :=
   ⟨@make_agrees, @get_agrees, @invalidate_agrees, @get_session⟩
 
+/-! ## A client that invalidates (decisions row 378 (8) and (23))
+
+An application that holds the cache invalidates it after each write. Then its next read asks
+storage: the model's `read (invalidate c)` takes the tape's next answer, whatever `c` was. This is
+the cache's law that an application's claim reads, under the application's own host. -/
+
+/-- `invalidate` at a cell holding the image of any cached value leaves the cell at the model's
+empty cache and answers `unit`, under any host, which it does not ask. A helper of
+`ref-cache-invalidated-reads-through`; its consumer is `invalidate_get`. -/
+@[semantics "translation-simulation" (requirement := R10)]
+theorem invalidate_run {σ : Type} {table : RowTable} (host : Effects.Comodel (RowSig table) σ)
+    {L : Type} (I : Image L) (c : Option L) {q : RefKey} {s : Stores} (st : σ)
+    (held : refPeek s.refs q = some ((Image.option I).toVal c)) :
+    hostRun host invalidateBody [Val.cell q] s st =
+      some (.success Val.unit, (holding I q s (Model.invalidate c), st)) := by
+  have hstep : syncOpStep (.refSet q Store.Val.none) s = some (holding I q s none, Val.cell q) :=
+    ref_steps_agree.set (Image.option I) c held none
+  have hm : meaning invalidateBody [Val.cell q] s = (.success Val.unit, holding I q s none) := by
+    rw [invalidateBody, meaning_bind,
+      meaning_perform_sync .refSet _ _ s rfl rfl rfl (o := .refSet q Store.Val.none), hstep]
+    rfl
+  rw [hostRun_straight host _ _ _ _ rfl, hm]
+  rfl
+
+/-- **An invalidated cache reads through** (the registry claim
+`ref-cache-invalidated-reads-through`): under any host, `invalidate` and then `get`, its loader
+the row `n` of the host's table, at a cell holding the image of any cached value, asks the host
+once at the row, from no request, and answers its answer. A success is held in the cell, and a
+failure leaves the cell empty. It is the model's `read (invalidate c)`, carried to the block's
+code by the steps of `cache_agrees` (`ref_steps_agree.set` and `get_miss`).
+
+Placement: concept `translation-simulation`; property: a module's code is simulated by its model,
+read at a composition of two methods (R10's `Agrees`). Question: the registry claim
+`ref-cache-invalidated-reads-through` (role compatibility), witness this theorem. Consumer: the
+to-do's `cached_list_after_add` (`Test/Dogfood/Scenario/Todo/Cached.lean`). Reach: every table,
+host, loader row and cached value, one fiber, the call tree's meaning under the host. Does not
+establish: a run that invokes the block by `Eff.invoke` (HO-2's `invoke-unfolds`, row 378 (23));
+that an application invalidates after each write, which its own code shows; anything of a
+schedule that shares the cell between fibers. Unlocks: the to-do's `list_after_add` restated
+through the imposed cache (row 378 (8)). -/
+@[semantics "translation-simulation" (requirement := R10)]
+theorem invalidate_get {σ : Type} {table : RowTable} (host : Effects.Comodel (RowSig table) σ)
+    {L : Type} (I : Image L) {n : Nat} (hn : n < table.length) (c : Option L) {q : RefKey}
+    {s : Stores} (st : σ) (held : refPeek s.refs q = some ((Image.option I).toVal c)) :
+    (hostRun host invalidateBody [Val.cell q] s st).bind
+        (fun r => hostRun host (paramsAsRows n getBody) [Val.cell q] r.2.1 r.2.2) =
+      (host.answer ⟨⟨n, hn⟩, Val.unit⟩ st).map fun answer =>
+        match answer.1 with
+        | .success w =>
+          (.success w, ({ holding I q s none with
+            refs := refPoke (holding I q s none).refs q (Store.Val.some w) }, answer.2))
+        | .failure e => (.failure e, (holding I q s none, answer.2)) := by
+  have hempty : refPeek (holding I q s none).refs q = some Store.Val.none :=
+    refPeek_poke_self s.refs q _ _ held
+  rw [invalidate_run host I c st held, Option.bind_some]
+  exact get_miss host hn st hempty
+
 end Effect4.Ref.Cache

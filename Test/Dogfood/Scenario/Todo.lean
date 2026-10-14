@@ -3,6 +3,7 @@ import Test.Dogfood.P2HandlerLayers
 import Effect4.Author
 import Effect4.Program.Authoring.Application
 import Effect4.Codegen.RowServices
+import Effect4.Library.Ref.Cache
 
 /-!
 # The to-do application: its programs build and run under a scripted host
@@ -134,6 +135,29 @@ def setDoneProtocol : RowProtocol :=
 /-- The declared protocols of the repository's rows, by spelling. -/
 def protocols : RowProtocols :=
   [("TodoRepo.insert", insertProtocol), ("TodoRepo.setDone", setDoneProtocol)]
+
+/-- `list`'s method reads through the banked cache: `get` at the cache's cell, with the entry's
+program, `TodoRepo.all()`, as its loader (decisions row 378 (8)). -/
+def readingThrough (body : Src NativeOp) : Src NativeOp :=
+  Def.invokeWith "listCacheGet" [var "cache"] [fun _ => body]
+
+/-- A write's method empties the cache after the entry's program succeeds: an application that
+holds the cache invalidates it after each write (decisions row 378 (23)). A failure skips it. -/
+def invalidatingAfter (body : Src NativeOp) : Src NativeOp :=
+  bindWith body fun answer =>
+    andThen (Def.invoke "listCacheInvalidate" [var "cache"]) (succeed answer)
+
+/-- **The banked Ref cache, imposed on the to-do's service** (decisions row 378 (8)): the bank's
+block at the to-do's types (`Ref.Cache.block`; `Test/Dogfood/Bank.lean` records its digest). Its
+cell is the service's state `cache`, made once by `listCacheMake`. `list` reads through it, and
+`add`, `complete` and `remove` invalidate it after a successful write. The entries do not change. -/
+def listCache : Application.Imposed NativeOp where
+  block := Effect4.Ref.Cache.block Todo.ty SqlError.ty
+  state := "cache"
+  stateTy := Effect4.Ref.Cache.cellTy Todo.ty
+  make := "listCacheMake"
+  around := [("list", readingThrough), ("add", invalidatingAfter),
+    ("complete", invalidatingAfter), ("remove", invalidatingAfter)]
 
 /-- The to-do application: the repository's four rows, their protocols, and the API's four
 programs. -/
