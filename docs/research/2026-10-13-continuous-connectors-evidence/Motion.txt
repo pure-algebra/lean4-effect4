@@ -1,0 +1,7 @@
+warning: manifest out of date: git revision of dependency 'whatwg' changed; use `lake update whatwg` to update it
+view: 7 frames in tools/view/out/continuous-motion, 4 between each two
+C	kept-lines-unchanged	5 spliced edits	24 of 24 lines
+C	graph-boxes-apart	7 graphs	7 apart
+C	graph-edges-descend	7 graphs	7 descend
+C	graph-admitted	7 graphs	7 admitted
+C	graph-dims-valid	7 graphs	7 valid
