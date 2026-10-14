@@ -1,2 +1,4 @@
 warning: manifest out of date: git revision of dependency 'whatwg' changed; use `lake update whatwg` to update it
-Build completed successfully (5 jobs).
+info: whatwg: URL has changed; you might need to delete 'C:\Users\kokok\Dev\lean4-effect4-peg-geometry\.lake/packages\whatwg' manually
+info: whatwg: checking out revision 'e77e9d0ed68d120ecce5477d16c086cc40cc3561'
+Build completed successfully (10 jobs).

@@ -56,3 +56,21 @@ The perimeter uses the kit's paired-edge outline recipe with integer controls.
 Kit rational arithmetic reaches `Classical.choice` through `Rat.instAdd`.
 The strict Effect4 connector therefore keeps its paired integer edges directly.
 The return side swaps these controls without rounding or resampling.
+
+## Integer owner adapter placement
+
+The kit owns `Whatwg.Svg.Scene.Ribbon` in `Whatwg/Svg/Scene/Ribbon.lean`.
+The next adapter aliases `Connector.Body` to that paired integer carrier.
+`Tools.View.Tube.PegBridge` in `tools/Tools/View/Tube/PegBridge.lean` supplies the existing record conversions.
+The two local conversion laws serve the same concept, question, role, and R14 consumer listed above.
+Their observation is exact cubic control records, with no arithmetic or rounding.
+They establish mutual record recovery for arbitrary integer cubic controls.
+They do not establish SVG byte equality, tangent continuity, or circle exactness.
+
+The adapter changes pair order to the kit's right-then-left convention.
+The public local left and right projections keep their existing meaning.
+The adapter uses the kit outline directly instead of retaining a second assembler.
+
+An unshifted horizontal route has an undocked body.
+A coincident sample sequence has no perimeter.
+A source offset that reaches the partial tip has no body until the tip clears that surface.

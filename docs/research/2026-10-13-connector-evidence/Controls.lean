@@ -41,6 +41,27 @@ def caps (cs : List Cubic) : Bool := (capSegments cs).all fun i =>
 
 def passes (cs : List Cubic) : Bool := closed cs && smooth cs && caps cs
 
+-- Retained integer assembly from implementation head 1b0284dc2.
+-- The kit owns this assembly after the adapter migration.
+def formerOutline (b : Body) : List Cubic :=
+  match b.right.head?, b.right.getLast?, b.left.head?, b.left.getLast? with
+  | some ar, some zr, some al, some zl =>
+    b.right ++ [Grow.line zr.p3 zl.p3] ++
+      b.left.reverse.map (fun c => ⟨c.p3, c.p2, c.p1, c.p0⟩) ++ [Grow.line al.p0 ar.p0]
+  | _, _, _, _ => []
+
+-- Finite adapter comparison: kit assembly changes no supplied integer controls.
+#guard (List.range 64).all fun seed => fixtures.all fun cs =>
+  [false, true].all fun tip =>
+    let b := body seed noiseLook 2400 cs tip dock dock
+    b.outline == formerOutline b
+
+-- Readers: both record conversions recover their supplied integer cubic exactly.
+example (c : Cubic) : Tools.View.Tube.PegBridge.fromCubic (Tools.View.Tube.PegBridge.cubic c) = c :=
+  from_cubic c
+example (c : Whatwg.Svg.Scene.ICubic) :
+    Tools.View.Tube.PegBridge.cubic (Tools.View.Tube.PegBridge.fromCubic c) = c := cubic_from c
+
 -- Every intended side seam has nonzero, exactly equal milli tangent handles.
 -- This finite control includes linear, bumpY, stepY, short, and duplicate-control routes.
 #guard (List.range 64).all fun seed => fixtures.all fun cs =>
@@ -65,6 +86,12 @@ def passes (cs : List Cubic) : Bool := closed cs && smooth cs && caps cs
 #guard stroke 0 noiseLook 0 fixtures[0]! false dock dock == []
 #guard stroke 0 noiseLook 2400 [] false dock dock == []
 #guard stroke 0 noiseLook 2400 [Grow.line (0, 0) (0, 0)] false dock dock == []
+
+-- GraphCheck admits horizontal zero-drop routes. They retain an undocked body.
+#guard let path := stroke 0 noiseLook 2400 [Grow.line (8, 0) (48, 0)] false dock dock
+  closed path && smooth path && caps path && !(path.isEmpty)
+#guard stroke 0 noiseLook 2400 [Grow.line (8, 0) (48, 0)] false dock dock ==
+  stroke 0 noiseLook 2400 [Grow.line (8, 0) (48, 0)] false none none
 
 -- Two thousandths is the smallest effective flare with a nonzero integer handle.
 #guard radius 1 10000 40000 == 0
