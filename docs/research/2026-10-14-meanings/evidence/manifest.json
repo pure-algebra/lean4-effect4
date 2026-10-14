@@ -1,0 +1,64 @@
+{
+  "base": "03e8f5d5679b3aa9020f694550ab5db19beeceba",
+  "implementation_head": "03e8f5d5679b3aa9020f694550ab5db19beeceba",
+  "branch": "codex/meanings",
+  "source_diff_against_base": [],
+  "checks": {
+    "command": "/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh bash docs/research/2026-10-14-meanings/evidence/run-checks.sh /private/tmp/meanings-final-check",
+    "exit_code": 0,
+    "probe": "kernel-checked counterexample",
+    "axioms": [
+      "propext",
+      "Quot.sound"
+    ],
+    "probe_planned_goals": 0,
+    "m3_remaining_goals": 8
+  },
+  "files": [
+    {
+      "path": "docs/research/2026-10-14-meanings/receipt.md",
+      "bytes": 9368,
+      "sha256": "763d82ba767baf88dea0d2518602ca0bde52eb89186a794c312731ed03891001"
+    },
+    {
+      "path": "docs/research/2026-10-14-meanings/evidence/Audit.lean",
+      "bytes": 391,
+      "sha256": "a07e35b0099a8b9d906d43db8d9035dcd59f03f61e48f716ab7a612e484471ed"
+    },
+    {
+      "path": "docs/research/2026-10-14-meanings/evidence/Frontier.lean",
+      "bytes": 1191,
+      "sha256": "11991861f27f7906f53a217f96691d868808352322267644615f262c74846417"
+    },
+    {
+      "path": "docs/research/2026-10-14-meanings/evidence/MeaningsPrefixProbe.lean",
+      "bytes": 4529,
+      "sha256": "5720da261eec403e7ad57c2596b28d8db0c6658260a1747e554beba6d6429300"
+    },
+    {
+      "path": "docs/research/2026-10-14-meanings/evidence/audit.log",
+      "bytes": 2009,
+      "sha256": "e959fb900012cc918eaf603b10a109cb1fa9814e52a3ec6a82bc624dc76a2f58"
+    },
+    {
+      "path": "docs/research/2026-10-14-meanings/evidence/build.log",
+      "bytes": 42,
+      "sha256": "5ea049de0a2fce66a110d2aa9c378b48408fe675335850854b0096c764daae2d"
+    },
+    {
+      "path": "docs/research/2026-10-14-meanings/evidence/frontier.log",
+      "bytes": 10103,
+      "sha256": "0d0c7165c36854285e3572930c29b3c4eeeb9b9eaa547ba7f94b7b38ddbe5fdd"
+    },
+    {
+      "path": "docs/research/2026-10-14-meanings/evidence/probe.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/research/2026-10-14-meanings/evidence/run-checks.sh",
+      "bytes": 1031,
+      "sha256": "006c423931febf87eaa006164f5cb2d2f59bb0cc7ae241e53c8bfc5206714665"
+    }
+  ]
+}
