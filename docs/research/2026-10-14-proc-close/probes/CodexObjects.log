@@ -1,0 +1,86 @@
+Queue.Model.queue_steps_agree.offer : ∀ (A : Ty) (tb : Table) (msg : Nat → Val) (s : Queue.Model.State) (id a : Nat)
+  (hint : DeferredKey),
+  Queue.Model.FirstProfile s →
+    Queue.Model.Requested s (Queue.Model.Op.offer id a) →
+      (∀ (o : Queue.Model.Offer), o ∈ s.offers → o.id ≠ id) →
+        ∀ {idSrc hintSrc messageSrc cellSrc : TermSrc} {env : Env} {path : List Nat} {vals : List Val},
+          Reads idSrc env path vals (Val.promise (tb.handle id)) →
+            Reads hintSrc env path vals (Val.promise hint) →
+              Reads messageSrc env path vals (msg a) →
+                Reads cellSrc env path vals (Queue.Model.cellVal tb msg s) →
+                  ∃ woken,
+                    Queue.Model.Notified s (Queue.Model.offer s id a).fst (Queue.Model.offer s id a).snd.snd [] woken ∧
+                      Reads (Queue.offerStep A idSrc hintSrc messageSrc cellSrc) env path vals
+                        (Val.tuple
+                          [Val.tuple
+                              [Queue.Model.offerReplyVal (Queue.Model.offer s id a).snd.fst,
+                                Val.list
+                                  (List.map
+                                    (Queue.Model.takerVal
+                                      (Table.afterOffer tb id hint (Queue.Model.offer s id a).snd.fst))
+                                    woken)],
+                            Queue.Model.cellVal (Table.afterOffer tb id hint (Queue.Model.offer s id a).snd.fst) msg
+                              (Queue.Model.offer s id a).fst])
+Queue.Model.queue_steps_agree.poll : ∀ (A : Ty) (tb : Table) (msg : Nat → Val) (s : Queue.Model.State),
+  Queue.Model.FirstProfile s →
+    ∀ {cellSrc : TermSrc} {env : Env} {path : List Nat} {vals : List Val},
+      vals.length = List.length env.names →
+        Reads cellSrc env path vals (Queue.Model.cellVal tb msg s) →
+          ∃ entered,
+            Queue.Model.Notified s (Queue.Model.poll s).fst (Queue.Model.poll s).snd.snd entered [] ∧
+              Reads (Queue.pollStep A cellSrc) env path vals
+                (Val.tuple
+                  [Val.tuple
+                      [Queue.Model.pollReplyVal msg (Queue.Model.poll s).snd.fst,
+                        Val.list (List.map (Queue.Model.offerVal tb msg) entered)],
+                    Queue.Model.cellVal tb msg (Queue.Model.poll s).fst])
+Queue.Model.queue_steps_agree.size : ∀ (A : Ty) (tb : Table) (msg : Nat → Val) (s : Queue.Model.State),
+  Queue.Model.FirstProfile s →
+    ∀ {cellSrc : TermSrc} {env : Env} {path : List Nat} {vals : List Val},
+      Reads cellSrc env path vals (Queue.Model.cellVal tb msg s) →
+        Reads (Queue.sizeStep A cellSrc) env path vals (Val.nat (Queue.Model.size s))
+Queue.Model.queue_steps_agree.withdrawTake : ∀ (A : Ty) (tb : Table) (msg : Nat → Val) (s : Queue.Model.State)
+  (id : Nat),
+  Queue.Model.FirstProfile s →
+    tb.Injective →
+      ∀ {idSrc cellSrc : TermSrc} {env : Env} {path : List Nat} {vals : List Val},
+        vals.length = List.length env.names →
+          Captured idSrc env path vals (Val.promise (tb.handle id)) →
+            Reads cellSrc env path vals (Queue.Model.cellVal tb msg s) →
+              ∃ woken,
+                Queue.Model.Notified s (Queue.Model.withdrawTake s id).fst (Queue.Model.withdrawTake s id).snd []
+                    woken ∧
+                  Reads (Queue.withdrawTake A idSrc cellSrc) env path vals
+                    (Val.tuple
+                      [Val.list (List.map (Queue.Model.takerVal tb) woken),
+                        Queue.Model.cellVal tb msg (Queue.Model.withdrawTake s id).fst])
+Queue.Model.queue_steps_agree.withdrawOffer : ∀ (A : Ty) (tb : Table) (msg : Nat → Val) (s : Queue.Model.State)
+  (id : Nat),
+  Queue.Model.FirstProfile s →
+    tb.Injective →
+      ∀ {idSrc cellSrc : TermSrc} {env : Env} {path : List Nat} {vals : List Val},
+        vals.length = List.length env.names →
+          Captured idSrc env path vals (Val.promise (tb.handle id)) →
+            Reads cellSrc env path vals (Queue.Model.cellVal tb msg s) →
+              ∃ woken,
+                Queue.Model.Notified s (Queue.Model.withdrawOffer s id).fst (Queue.Model.withdrawOffer s id).snd []
+                    woken ∧
+                  Reads (Queue.withdrawOffer A idSrc cellSrc) env path vals
+                    (Val.tuple
+                      [Val.list (List.map (Queue.Model.takerVal tb) woken),
+                        Queue.Model.cellVal tb msg (Queue.Model.withdrawOffer s id).fst])
+Effect4.Machine.Scheduling.FairTape.{u, v} {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u} {St : Type (max u v)}
+  [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat)
+  (m : RunMachine ν σ β ε δ ι α χ St) (tape : List (RunDecision ν σ β ε δ ι α)) : Prop
+Effect4.Machine.Scheduling.fairTape_unarmed.{u, v} {ν σ : Type u} {β : Type v} {ε δ ι α χ : Type u}
+  {St : Type (max u v)} [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
+  (interp : RunInterp ν σ β ε δ ι α χ St) (fuel : Nat) (m : RunMachine ν σ β ε δ ι α χ St)
+  (tape : List (RunDecision ν σ β ε δ ι α)) (fair : Scheduling.FairTape interp fuel m tape)
+  (enough : Suffices interp fuel tape m = true)
+  (live :
+    (replayEval interp fuel tape m).machine.stuck (Prim ν σ β ε δ ι α) (FrameFiber ν σ β ε δ ι α)
+        (FrameEvent ν σ β ε δ ι α) =
+      none) :
+  (replayEval interp fuel tape m).machine.armed (Prim ν σ β ε δ ι α) (FrameFiber ν σ β ε δ ι α)
+      (FrameEvent ν σ β ε δ ι α) =
+    []

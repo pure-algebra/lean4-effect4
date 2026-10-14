@@ -1,0 +1,49 @@
+{
+  "source_head": "bff5c1ccb34742381b21011893877cbfe9fd4a24",
+  "checks": [
+    {
+      "file": "docs/research/2026-10-14-proc-close/probes/CodexRelations.lean",
+      "sha256": "44b8587a768b66d35648f52763c710787c206d94c958fd8f96f528e9ff4e7d2d",
+      "command": "/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean -DwarningAsError=true --root=docs/research/2026-10-14-proc-close/probes -o /private/tmp/proc-close-review-tjziuq0k/CodexRelations.olean docs/research/2026-10-14-proc-close/probes/CodexRelations.lean",
+      "exit": 0,
+      "output": "docs/research/2026-10-14-proc-close/probes/CodexRelations.log"
+    },
+    {
+      "file": "docs/research/2026-10-14-proc-close/probes/CodexInline.lean",
+      "sha256": "a69551a8422cbbd6fbd10e45e0e78b5047511b060aadb2996f73065d651bd640",
+      "command": "/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean -DwarningAsError=true --root=docs/research/2026-10-14-proc-close/probes -o /private/tmp/proc-close-review-tjziuq0k/CodexInline.olean docs/research/2026-10-14-proc-close/probes/CodexInline.lean",
+      "exit": 0,
+      "output": "docs/research/2026-10-14-proc-close/probes/CodexInline.log"
+    },
+    {
+      "file": "docs/research/2026-10-14-proc-close/probes/CodexObjects.lean",
+      "sha256": "3ca3be820302b1b7edf55e76f4afc920e149e2bd01d3de5440be0a68d53de6a0",
+      "command": "/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean -DwarningAsError=true --root=docs/research/2026-10-14-proc-close/probes -o /private/tmp/proc-close-review-tjziuq0k/CodexObjects.olean docs/research/2026-10-14-proc-close/probes/CodexObjects.lean",
+      "exit": 0,
+      "output": "docs/research/2026-10-14-proc-close/probes/CodexObjects.log"
+    },
+    {
+      "file": "docs/research/2026-10-14-proc-close/probes/CodexClosure.lean",
+      "sha256": "e647d14555557a53ccede60e783d776dc981cbc76a87b6754243e8220cf84d9e",
+      "command": "/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean -DwarningAsError=true --root=docs/research/2026-10-14-proc-close/probes -o /private/tmp/proc-close-review-tjziuq0k/CodexClosure.olean docs/research/2026-10-14-proc-close/probes/CodexClosure.lean",
+      "exit": 0,
+      "output": "docs/research/2026-10-14-proc-close/probes/CodexClosure.log"
+    },
+    {
+      "file": "docs/research/2026-10-14-proc-close/probes/CodexAudit.lean",
+      "sha256": "92f9125b001c569c4cc87f95c557a4be9d75183a52243d5b2ad1942b7c836dae",
+      "command": "/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean -DwarningAsError=true docs/research/2026-10-14-proc-close/probes/CodexAudit.lean",
+      "exit": 0,
+      "output": "docs/research/2026-10-14-proc-close/probes/CodexAudit.log",
+      "LEAN_PATH": "/private/tmp/proc-close-review-tjziuq0k"
+    }
+  ],
+  "packages": {
+    "aesop": "3448c0bcc5ce01b2d1546e483ec3620e32df3d0e",
+    "whatwg": "3e5e79335e778c04493245e14e31bb2d48d0d54f",
+    "hash": "ab7eda433f0390fde7aa240189761540c9744c79",
+    "typescript": "f5878bf879bd5712db964c2cd12802748c707605",
+    "effects": "bf5ab8fd26ee009abbf465821a3664ea20948a49",
+    "batteries": "4488d40d070b9700d4d5a6aa342f0d40c31b2a2d"
+  }
+}

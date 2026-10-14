@@ -1,0 +1,47 @@
+Test.Dogfood.Scenario.QueueWorkers.held_within_fed: modulo [Test.Dogfood.Scenario.QueueWorkers.Assertions.jobs_step]; nearest []; 0 lemmas, 0 definitions
+next goals: 1
+  goal Test.Dogfood.Scenario.QueueWorkers.Assertions.jobs_step : ∀ (total : Nat) (b : Api.Built) (s : Run) (c : Api.Runner.Command),
+  Api.Author.build (Test.Dogfood.Scenario.QueueWorkers.crew total) = Except.ok b →
+    Test.Dogfood.Scenario.QueueWorkers.Assertions.Basis b s →
+      Test.Dogfood.Scenario.QueueWorkers.Assertions.Jobs s →
+        s.rowReads c = true → Test.Dogfood.Scenario.QueueWorkers.Assertions.Jobs (s.step c)
+Test.Dogfood.Scenario.QueueWorkers.fed_accounted: modulo [Test.Dogfood.Scenario.QueueWorkers.Assertions.jobs_step, Test.Dogfood.Scenario.QueueWorkers.Assertions.rest_step]; nearest []; 0 lemmas, 0 definitions
+next goals: 2
+  goal Test.Dogfood.Scenario.QueueWorkers.Assertions.jobs_step : ∀ (total : Nat) (b : Api.Built) (s : Run) (c : Api.Runner.Command),
+  Api.Author.build (Test.Dogfood.Scenario.QueueWorkers.crew total) = Except.ok b →
+    Test.Dogfood.Scenario.QueueWorkers.Assertions.Basis b s →
+      Test.Dogfood.Scenario.QueueWorkers.Assertions.Jobs s →
+        s.rowReads c = true → Test.Dogfood.Scenario.QueueWorkers.Assertions.Jobs (s.step c)
+  goal Test.Dogfood.Scenario.QueueWorkers.Assertions.rest_step : ∀ (total : Nat) (b : Api.Built) (s : Run) (c : Api.Runner.Command),
+  Api.Author.build (Test.Dogfood.Scenario.QueueWorkers.crew total) = Except.ok b →
+    Test.Dogfood.Scenario.QueueWorkers.Assertions.Basis b s →
+      Test.Dogfood.Scenario.QueueWorkers.Assertions.Jobs s →
+        Test.Dogfood.Scenario.QueueWorkers.Assertions.Rest s →
+          s.rowReads c = true → Test.Dogfood.Scenario.QueueWorkers.Assertions.Rest (s.step c)
+Test.Dogfood.Scenario.QueueWorkers.queue_settled: modulo [Test.Dogfood.Scenario.QueueWorkers.Assertions.jobs_step, Test.Dogfood.Scenario.QueueWorkers.Assertions.rest_step]; nearest []; 0 lemmas, 0 definitions
+next goals: 2
+  goal Test.Dogfood.Scenario.QueueWorkers.Assertions.jobs_step : ∀ (total : Nat) (b : Api.Built) (s : Run) (c : Api.Runner.Command),
+  Api.Author.build (Test.Dogfood.Scenario.QueueWorkers.crew total) = Except.ok b →
+    Test.Dogfood.Scenario.QueueWorkers.Assertions.Basis b s →
+      Test.Dogfood.Scenario.QueueWorkers.Assertions.Jobs s →
+        s.rowReads c = true → Test.Dogfood.Scenario.QueueWorkers.Assertions.Jobs (s.step c)
+  goal Test.Dogfood.Scenario.QueueWorkers.Assertions.rest_step : ∀ (total : Nat) (b : Api.Built) (s : Run) (c : Api.Runner.Command),
+  Api.Author.build (Test.Dogfood.Scenario.QueueWorkers.crew total) = Except.ok b →
+    Test.Dogfood.Scenario.QueueWorkers.Assertions.Basis b s →
+      Test.Dogfood.Scenario.QueueWorkers.Assertions.Jobs s →
+        Test.Dogfood.Scenario.QueueWorkers.Assertions.Rest s →
+          s.rowReads c = true → Test.Dogfood.Scenario.QueueWorkers.Assertions.Rest (s.step c)
+Test.Dogfood.Scenario.QueueWorkers.releases_once: modulo [Test.Dogfood.Scenario.QueueWorkers.Assertions.logs_history]; nearest []; 0 lemmas, 0 definitions
+next goals: 1
+  goal Test.Dogfood.Scenario.QueueWorkers.Assertions.logs_history : ∀ (total compileFuel : Nat) (b : Api.Built) (machine : NativeMachine),
+  Api.Author.build (Test.Dogfood.Scenario.QueueWorkers.crew total) = Except.ok b →
+    Run.HistoryOf b compileFuel machine →
+      (∀ (value : Val),
+          value ∈ Test.Dogfood.Scenario.QueueWorkers.Assertions.log machine → ∃ i, i ∈ [1, 2, 3] ∧ value = Val.nat i) ∧
+        ∀ (i : Nat),
+          i ∈ [1, 2, 3] →
+            List.count (Val.nat i) (Test.Dogfood.Scenario.QueueWorkers.Assertions.log machine) ≤
+              List.countP (ReleaseTrace.releaseAt (Test.Dogfood.Scenario.QueueWorkers.Assertions.acquirePath i))
+                (machine.trace (Prim EffName EffThunk Val Err Defect FiberId Ann)
+                  (FrameFiber EffName EffThunk Val Err Defect FiberId Ann)
+                  (FrameEvent EffName EffThunk Val Err Defect FiberId Ann))
