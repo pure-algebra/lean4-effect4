@@ -2,6 +2,7 @@ import Test.Dogfood.Scenario.Todo.Tree
 import Test.Dogfood.ApplicationDefs
 import Effect4.Program.Authoring.ApplicationService
 import Effect4.Laws.Library.Ref.Cache
+import Effect4.Laws.Program.FragmentBlock
 
 /-!
 # The to-do with the banked Ref cache imposed on its service
@@ -34,8 +35,10 @@ clauses of `serves` (`Test/Dogfood/Scenario/Todo/Claims.lean`).
   free names, and both the file and the envelope read back to the built program (`Api.readFile`,
   `Api.readModule`).
 
-What it does not establish. Machine replay agreement for `denoteBlockB`
-(PROC-6, row 378 (23)): the machine runs are finite probes.
+The consumer builder serves the recorded-request checker through `H9Blocks` and the block
+validated claims. Their fragment and tree-level premises remain separate from runtime checks.
+The runs below remain finite probes. They establish no layer-build, persistent-session or
+outside-host agreement.
 -/
 
 set_option autoImplicit false
@@ -62,6 +65,27 @@ def service : String := "TodoApp"
 /-- An application's service module, built. -/
 def built? (app : Application NativeOp) : Option Api.Built :=
   (app.serviceModule service).toOption.bind fun m => (Api.Author.build m).toOption
+
+/-- A consumer built over the cached service's unchanged definition module.
+Each run starts from empty stores and calls its own service initializer. -/
+def buildConsumer (main : Src NativeOp) : Option Api.Built :=
+  (cached.serviceModule service).toOption.bind fun m =>
+    (Api.Author.build { m with main := main }).toOption
+
+/-- One recorded request: make the cached service state once, then invoke the named method.
+Unknown entries refuse before the service module builds. -/
+def consumerBuiltAt (name : String) (args : List TermSrc) : Option Api.Built :=
+  (cached.entry? name).bind fun entry =>
+    buildConsumer (bindWith (Def.invoke (service ++ "Context") []) fun state =>
+      Def.invoke (service ++ "_" ++ entry.name) (state :: args))
+
+-- control: an unknown method has no consumer.
+#guard (consumerBuiltAt "missing" []).isNone
+-- finite admission: each method's representative consumer belongs to the block fragment.
+#guard (consumerBuiltAt "list" []).map (fun b => BlockRows b.table b.program) = some true
+#guard (consumerBuiltAt "add" [str "tea"]).map (fun b => BlockRows b.table b.program) = some true
+#guard (consumerBuiltAt "complete" [nat 1]).map (fun b => BlockRows b.table b.program) = some true
+#guard (consumerBuiltAt "remove" [nat 1]).map (fun b => BlockRows b.table b.program) = some true
 
 /-! ## The service and the pin -/
 
@@ -328,6 +352,24 @@ def listAddList : Src NativeOp :=
         bindWith (Def.invoke "TodoApp_list" [st]) fun second =>
           succeed (app "pair" [first, second])
 
+/-- The shipped cache composite: one fresh service state, two lists, an add, and another list.
+The result retains the first list, the cache hit, the new item and the refreshed list. -/
+def listListAddList : Src NativeOp :=
+  bindWith (Def.invoke "TodoAppContext" []) fun st =>
+    bindWith (Def.invoke "TodoApp_list" [st]) fun first =>
+      bindWith (Def.invoke "TodoApp_list" [st]) fun hit =>
+        bindWith (Def.invoke "TodoApp_add" [st, str "tea"]) fun item =>
+          bindWith (Def.invoke "TodoApp_list" [st]) fun after =>
+            succeed (app "tuple" [first, hit, item, after])
+
+/-- One finite named script for the keyed service gate, driven from the stocked reference model.
+A failed build remains absent, so the gate must refuse it rather than omit the case. -/
+def cachedListAfterAddRun : Option Test.Dogfood.Scenario.NamedRun :=
+  (buildConsumer listListAddList).map fun b =>
+    { name := "cached-list-after-add"
+      opened := Run.open b application.name
+      moves := (Run.runWith b repository (2, [(1, "milk", false)]) application.name).1.journal.map .wire }
+
 /-- The consumer, over an application's service module, elaborated. -/
 def consumerOf (app : Application NativeOp) : Option NativeEff :=
   (app.serviceModule service).toOption.bind fun m =>
@@ -335,6 +377,19 @@ def consumerOf (app : Application NativeOp) : Option NativeEff :=
 
 /-- The stored to-do and the new one, as the repository lists them. -/
 def both : Val := Val.list [todo 1 "milk" false, todo 2 "tea" false]
+
+-- finite admission: the composite reaches the fragment of `H9Blocks`.
+#guard cachedListAfterAddRun.map (fun run => BlockRows run.opened.built.table run.opened.built.program) =
+  some true
+-- finite observation: the repeated list hits the cache; the write makes the last list read again.
+#guard cachedListAfterAddRun.map (fun run =>
+  (Test.Dogfood.Scenario.applications run.played).map (·.row)) =
+    some ["TodoRepo.all", "TodoRepo.insert", "TodoRepo.all"]
+#guard cachedListAfterAddRun.map (fun run => run.played.exit) =
+  some (some (Exit.success (Val.list [milk, milk, todo 2 "tea" false, both])))
+-- finite observation: replay starts without a cache cell and allocates its own single cell.
+#guard cachedListAfterAddRun.map (fun run =>
+  (run.opened.machine.state.refs.length, run.played.machine.state.refs.length)) = some (0, 1)
 
 /-- The service with the cache, whose writes do not invalidate it. -/
 def forgetting : Application NativeOp :=

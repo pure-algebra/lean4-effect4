@@ -28,7 +28,7 @@ import type { KeyedRecording } from "../session/keyed-protocol.ts"
 import type { Json } from "../session/protocol.ts"
 import { Rc112ClockBoundary } from "../session/clock.ts"
 import * as Service from "../../../apps/todo/.work/todo.gen.ts"
-import { programs } from "../../../apps/todo/consumer.ts"
+import { cachedListAfterAdd, programs } from "../../../apps/todo/consumer.ts"
 
 const [scenariosPath, outPath] = process.argv.slice(2)
 if (!scenariosPath || !outPath) throw Error("usage: run-todo.ts SCENARIOS OUT")
@@ -47,7 +47,8 @@ const programOf: Record<string, Effect.Effect<unknown, unknown, unknown>> = {
   "todo/model-add": programs.addMilk, "todo/model-list": programs.list,
   "todo/forgetful-add": programs.addMilk, "todo/forgetful-list": programs.list,
   "todo/model-once": programs.completeOne, "todo/model-twice": programs.completeOne,
-  "todo/toggling-once": programs.completeOne, "todo/toggling-twice": programs.completeOne
+  "todo/toggling-once": programs.completeOne, "todo/toggling-twice": programs.completeOne,
+  "todo/cached-list-after-add": cachedListAfterAdd("tea")
 }
 
 /** The wait after an act: rc.112 runs a dispatcher's tasks in one macrotask, and a task may arm

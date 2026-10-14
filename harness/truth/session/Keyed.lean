@@ -7,6 +7,7 @@ import Test.Dogfood.Scenario.Routing
 import Test.Dogfood.Scenario.Atomic
 import Test.Dogfood.Scenario.Timeout
 import Test.Dogfood.Scenario.Todo.Claims
+import Test.Dogfood.Scenario.Todo.Cached
 import Effect4.Codegen.RowServices
 import Tools.ProfileJson
 import Tools.RunChecks
@@ -888,9 +889,14 @@ def atomic : Wire :=
 
 /-- The to-do application (`Test/Dogfood/Scenario/Todo/Claims.lean`), with three fields of its
 observation: the outcome, the held calls with their rows, and the refusals. Its other fields
-(`applied`, `settled`, `conforming`) are Lean's readings of the run, which a host does not make. -/
-def todo : Wire :=
-  { scenario := Scenario.Todo.scenario
+(`applied`, `settled`, `conforming`) are Lean's readings of the run, which a host does not make.
+The cache composite shares these checks. A missing consumer refuses fixture construction. -/
+def todo : Except String Wire := do
+  let some cached := Scenario.Todo.Cached.cachedListAfterAddRun
+    | throw "todo/cached-list-after-add: the cached consumer does not build"
+  return {
+    scenario := { Scenario.Todo.scenario with
+      runs := Scenario.Todo.scenario.runs ++ [cached] }
     observed := fun run =>
       let o := Scenario.Todo.observe run
       [ ("outcome", exitOrNull o.outcome)
@@ -899,7 +905,8 @@ def todo : Wire :=
     same := fun a b => Scenario.Todo.observe a == Scenario.Todo.observe b }
 
 /-- The scenarios that the lane performs, in the lane's order. -/
-def wires : List Wire := [routing, workers, timeout, atomic, queueWorkers, todo]
+def wires : Except String (List Wire) := do
+  return [routing, workers, timeout, atomic, queueWorkers, ← todo]
 
 /-- The kept-out names that no run carries: a reason that outlived its run. -/
 def stale (kept : List (String × String)) (all : List HostRun) : List String :=
@@ -912,6 +919,7 @@ def stale (kept : List (String × String)) (all : List HostRun) : List String :=
 that lists no run, which is a battery whose program does not build. It refuses a kept-out name
 that no record lists, so a reason cannot outlive its run. -/
 def runs : Except String (List HostRun) := do
+  let wires ← wires
   for wire in wires do
     if wire.scenario.runs.isEmpty then
       throw s!"the scenario {wire.scenario.name} lists no run: a program of its battery does not build"
