@@ -281,8 +281,9 @@ A program has folds, a journaled run with replay, and a printed image that reads
 ([its scout](research/2026-10-14-many-fibers-scout.md)). Both reach the machine through the
 proved `run_eq_ref_table`; each owes one adequacy theorem of the reference against the meaning.
 The first release is a TypeScript package of verified Effect modules with Effect's own APIs, each
-with its bank claim (row 381 (4)). A program picks each service's bank entry at assembly, by
-digest (row 381 (3)).
+with its bank claim (row 381 (4)). A service is a record of closures held as data (row 381 (3)), and
+a module's instance is one (row 382 (2)). A module claims contextual refinement of its model, so
+modules compose by one congruence theorem (row 382 (1)); the order is row 382 (3).
 
 0000. **The vertical slice: the to-do application end to end** (decisions row 378; the
    [lowering note](research/2026-10-13-lowering-vertical-slice/README.md) and the
