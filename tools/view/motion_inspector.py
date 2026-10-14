@@ -217,12 +217,16 @@ let serial=0,raf=0,origin=0,mediaOrigin=0,views=[];
 __SVG_HELPERS__
 const current=()=>payload.scenes[state.scene],frames=()=>current().variants[0].frames;
 const byId=(id)=>current().choices.find(c=>c.id===id);
-const centreCrop=(p,w=36,h=44)=>[p[0]-w/2,p[1]-h/2,w,h];
+const centreCrop=(p,w=288/state.zoom,h=288/state.zoom)=>[p[0]-w/2,p[1]-h/2,w,h];
+function zoomCrop(crop,previous,next){
+ const w=crop[2]*previous/next,h=crop[3]*previous/next;
+ return [crop[0]+(crop[2]-w)/2,crop[1]+(crop[3]-h)/2,w,h];
+}
 function mount(parent,variant,panel){
  const wrap=document.createElement('div'),label=document.createElement('span');label.className='role';label.textContent=variant.role+' · '+variant.title;wrap.append(label);
  const host=document.createElement('div');host.className='host '+(panel===null?'overview-host':'crop-host');host.dataset.role=variant.role;wrap.append(host);parent.append(wrap);
  const shadow=host.attachShadow({mode:'open'}),style=document.createElement('style');style.textContent=`
- :host{display:block}.viewport{overflow:auto;background:#fff;border-radius:3px}.viewport svg{display:block;max-width:none}
+ :host{display:block}.viewport{overflow:auto;overflow-anchor:none;background:#fff;border-radius:3px}.viewport svg{display:block;max-width:none}
  .full{height:300px}.full svg{width:100%;height:100%}.detail{max-height:320px;min-height:240px}
  @media(max-width:850px){.full{height:250px}}`;
  shadow.append(style);const viewport=document.createElement('div');viewport.className='viewport '+(panel===null?'full':'detail');shadow.append(viewport);
@@ -264,7 +268,13 @@ function render(){
    p.caption.textContent=byId(p.id).key+' · '+(actual?'emitted path '+actual.path+', '+actual.cubics+' cubics':'not emitted in this sample')+' · crop '+p.crop.map(x=>+x.toFixed(3)).join(' ');});
   for(const view of views){
    const frame=view.variant.frames[state.index],crop=view.panel===null?view.variant.overview:state.panels[view.panel].crop;
+   const signature=JSON.stringify([state.zoom,...crop]),left=view.viewport.scrollLeft,top=view.viewport.scrollTop;
    const svg=svgFor(frame,view.variant,state.look,crop);view.viewport.replaceChildren(svg);view.host.dataset.frame=frame.name;
+   if(view.panel!==null&&view.cropSignature!==signature){
+    view.viewport.scrollLeft=Math.max(0,(view.viewport.scrollWidth-view.viewport.clientWidth)/2);
+    view.viewport.scrollTop=Math.max(0,(view.viewport.scrollHeight-view.viewport.clientHeight)/2);
+   }else{view.viewport.scrollLeft=left;view.viewport.scrollTop=top;}
+   view.cropSignature=signature;
    view.viewport.style.background=getComputedStyle(svg).getPropertyValue('--e4-color-ground').trim()||'transparent';
    if(view.panel===null){svg.addEventListener('click',e=>{const point=new DOMPoint(e.clientX,e.clientY).matrixTransform(svg.getScreenCTM().inverse()),p=state.panels[state.active];p.crop=centreCrop([point.x,point.y],p.crop[2],p.crop[3]);p.follow=false;p.card.querySelector('input[type=checkbox]').checked=false;render();});}
    else svg.addEventListener('mousemove',e=>{const point=new DOMPoint(e.clientX,e.clientY).matrixTransform(svg.getScreenCTM().inverse());view.host.title='SVG '+point.x.toFixed(3)+', '+point.y.toFixed(3);});
@@ -288,7 +298,7 @@ function tick(now){
 payload.scenes.forEach((s,i)=>$('scene').add(new Option(s.title,String(i))));
 $('scene').onchange=()=>{state.scene=Number($('scene').value);setup();};$('play').onclick=play;
 $('back').onclick=()=>show(state.index-1);$('next').onclick=()=>show(state.index+1);$('first').onclick=()=>show(0);$('last').onclick=()=>show(frames().length-1);
-$('scrub').oninput=()=>show(Number($('scrub').value));$('look').onchange=()=>{state.look=$('look').value;render();};$('zoom').onchange=()=>{state.zoom=Number($('zoom').value);render();};
+$('scrub').oninput=()=>show(Number($('scrub').value));$('look').onchange=()=>{state.look=$('look').value;render();};$('zoom').onchange=()=>{const next=Number($('zoom').value);state.panels.forEach(p=>p.crop=zoomCrop(p.crop,state.zoom,next));state.zoom=next;render();};
 $('speed').onchange=()=>{if(state.playing){origin=performance.now();mediaOrigin=state.mediaTime;}};
 document.addEventListener('keydown',e=>{if(e.target.closest('input,select,button'))return;if(e.code==='Space'){e.preventDefault();play();}else if(e.key==='ArrowLeft'){e.preventDefault();show(state.index-1);}else if(e.key==='ArrowRight'){e.preventDefault();show(state.index+1);}else if(e.key==='Home'){e.preventDefault();show(0);}else if(e.key==='End'){e.preventDefault();show(frames().length-1);}});
 setup();
