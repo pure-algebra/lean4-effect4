@@ -1,0 +1,1100 @@
+{
+  "scope": "finite generated organic bumpY forward connectors; no global topology or pixel claim",
+  "files": [
+    {
+      "file": "C:\\Users\\kokok\\.codex\\worktrees\\pegs-port\\lean4-effect4\\tools\\view\\out\\graph-flows-final\\001.svg",
+      "sha256": "d23b0e29041664d8b03690f527808ba95be37f82907f17d7b41b87cde44218de",
+      "connectors": 6,
+      "side_joins": 0,
+      "issues": [
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0]/fork/0\u2192[0 0]/0",
+          "paths": [
+            1,
+            2
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0]/fork/1\u2192[0 0 0 0]",
+          "paths": [
+            3,
+            4,
+            5
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 0 0]\u2192[0 0 0 1]",
+          "paths": [
+            6,
+            7,
+            8
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0]/0\u2192[0 0]/join/0",
+          "paths": [
+            9,
+            10
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 0 1]\u2192[0 0]/join/1",
+          "paths": [
+            11,
+            12,
+            13
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0]/join\u2192[1]",
+          "paths": [
+            14,
+            15,
+            16
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        }
+      ]
+    },
+    {
+      "file": "C:\\Users\\kokok\\.codex\\worktrees\\pegs-port\\lean4-effect4\\tools\\view\\out\\graph-flows-final\\002.svg",
+      "sha256": "27927c117e3c8e9415cdce4418eaf0d986429d4214ce3e95fdefd2734c7fe9b6",
+      "connectors": 5,
+      "side_joins": 0,
+      "issues": [
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0]/fork/0\u2192[1 0 0]",
+          "paths": [
+            2,
+            3,
+            4
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0]/fork/1\u2192[0 0 0 0]",
+          "paths": [
+            5,
+            6,
+            7
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[1 0 0]\u2192[1 0 1]",
+          "paths": [
+            8,
+            9,
+            10
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 0 0]\u2192[0 0 0 1]",
+          "paths": [
+            11,
+            12,
+            13
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[1 0 1]\u2192[0 0]/end",
+          "paths": [
+            14,
+            15
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        }
+      ]
+    },
+    {
+      "file": "C:\\Users\\kokok\\.codex\\worktrees\\pegs-port\\lean4-effect4\\tools\\view\\out\\graph-flows-final\\003.svg",
+      "sha256": "dcc154ba270a42e6404700269f280a10ee67d355de6d9aff41c2949896760648",
+      "connectors": 9,
+      "side_joins": 0,
+      "issues": [
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0]/fork/0\u2192[1 0 0]/fork",
+          "paths": [
+            1,
+            2,
+            3
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0]/fork/1\u2192[0 0 0 0]",
+          "paths": [
+            4,
+            5,
+            6
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[1 0 0]/fork/0\u2192[1 0 0]/0",
+          "paths": [
+            7,
+            8
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[1 0 0]/fork/1\u2192[1 0 0 0]",
+          "paths": [
+            9,
+            10,
+            11
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[1 0 0]/0\u2192[1 0 0]/join/0",
+          "paths": [
+            12,
+            13
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[1 0 0 0]\u2192[1 0 0]/join/1",
+          "paths": [
+            14,
+            15,
+            16
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[1 0 0]/join\u2192[1 1]",
+          "paths": [
+            17,
+            18,
+            19
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 0 0]\u2192[0 0 0 1]",
+          "paths": [
+            20,
+            21,
+            22
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[1 1]\u2192[0 0]/end",
+          "paths": [
+            23,
+            24
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        }
+      ]
+    },
+    {
+      "file": "C:\\Users\\kokok\\.codex\\worktrees\\pegs-port\\lean4-effect4\\tools\\view\\out\\graph-flows-final\\004.svg",
+      "sha256": "f987bda29bfc1499cf0c68f6c1656d270e640cba0969e064754a9e888142f77a",
+      "connectors": 11,
+      "side_joins": 0,
+      "issues": [
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0]/fork/0\u2192[1 0 0]/fork",
+          "paths": [
+            1,
+            2,
+            3
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0]/fork/1\u2192[0 0 0 0]",
+          "paths": [
+            4,
+            5,
+            6
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[1 0 0]/fork/0\u2192[1 0 0]/0",
+          "paths": [
+            7,
+            8
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[1 0 0]/fork/1\u2192[1 0 0 0 0]",
+          "paths": [
+            9,
+            10,
+            11
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[1 0 0 0 0]\u2192[1 0 0 0 1]",
+          "paths": [
+            12,
+            13,
+            14
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[1 0 0]/0\u2192[1 0 0]/join/0",
+          "paths": [
+            15,
+            16
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[1 0 0 0 1]\u2192[1 0 0]/join/1",
+          "paths": [
+            17,
+            18,
+            19
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 0 0]\u2192[0 0 0 1]",
+          "paths": [
+            20,
+            21,
+            22
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[1 0 0]/join\u2192[0 0]/join/0",
+          "paths": [
+            23,
+            24,
+            25
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 0 1]\u2192[0 0]/join/1",
+          "paths": [
+            26,
+            27,
+            28
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0]/join\u2192[1 1 0]",
+          "paths": [
+            29,
+            30,
+            31
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        }
+      ]
+    },
+    {
+      "file": "C:\\Users\\kokok\\.codex\\worktrees\\pegs-port\\lean4-effect4\\tools\\view\\out\\graph-flows-final\\005.svg",
+      "sha256": "47f63ce21a0b391be3640c589198e73f809234fff2273eaa4c055b6bfb229d1e",
+      "connectors": 8,
+      "side_joins": 14,
+      "issues": [
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0]/fork/0\u2192[1 0 0]/fork",
+          "paths": [
+            1,
+            2,
+            3
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0]/fork/1\u2192[0 0 0 0]",
+          "paths": [
+            4,
+            5,
+            6
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[1 0 0]/fork/0\u2192[1 1]",
+          "paths": [
+            7,
+            8,
+            9
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[1 0 0]/fork/1\u2192[1 0 0 0 0]",
+          "paths": [
+            10,
+            11,
+            12
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[1 0 0 0 0]\u2192[1 0 0 0 1]",
+          "paths": [
+            13,
+            14,
+            15
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[1 1]\u2192[1 0 0]/end",
+          "paths": [
+            16,
+            17
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 0 0]\u2192[0 0 0 1]",
+          "paths": [
+            18,
+            19,
+            20
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        }
+      ]
+    },
+    {
+      "file": "C:\\Users\\kokok\\.codex\\worktrees\\pegs-port\\lean4-effect4\\tools\\view\\out\\graph-flows-final\\006.svg",
+      "sha256": "66c243742b90122cc977c84d7759c80b27cd1c64bb8c0554b0a958f9d18d1402",
+      "connectors": 3,
+      "side_joins": 0,
+      "issues": [
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 0]\u2192[0 1 0]",
+          "paths": [
+            2,
+            3,
+            4
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 1 0]\u2192[0 1 1]",
+          "paths": [
+            5,
+            6,
+            7
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 1 1]\u2192[0 0 1]",
+          "paths": [
+            8,
+            9,
+            10
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        }
+      ]
+    },
+    {
+      "file": "C:\\Users\\kokok\\.codex\\worktrees\\pegs-port\\lean4-effect4\\tools\\view\\out\\graph-flows-final\\007.svg",
+      "sha256": "42709f34cebd0ea105745ce3e47d70cd8136fb3a07218bf53c1bcaeb49ca81dd",
+      "connectors": 0,
+      "side_joins": 0,
+      "issues": []
+    },
+    {
+      "file": "C:\\Users\\kokok\\.codex\\worktrees\\pegs-port\\lean4-effect4\\tools\\view\\out\\graph-flows-final\\008.svg",
+      "sha256": "c23fee4a7fc483e4b0e9b938777b5b37884e8284bd74335dd0129ab5511d44a3",
+      "connectors": 8,
+      "side_joins": 0,
+      "issues": [
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0]/fork/0\u2192[0 0 0 0]",
+          "paths": [
+            1,
+            2,
+            3
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0]/fork/1\u2192[0 0 1 0 0]",
+          "paths": [
+            4,
+            5,
+            6
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0]/fork/2\u2192[0 0 1 1 0]",
+          "paths": [
+            7,
+            8,
+            9
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 0 0]\u2192[0 0 0 1]",
+          "paths": [
+            10,
+            11,
+            12
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 1 0 0]\u2192[0 0 1 0 1]",
+          "paths": [
+            13,
+            14,
+            15
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 0 1]\u2192[0]/join/0",
+          "paths": [
+            16,
+            17,
+            18
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 1 0 1]\u2192[0]/join/1",
+          "paths": [
+            19,
+            20,
+            21
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 1 1 0]\u2192[0]/join/2",
+          "paths": [
+            22,
+            23,
+            24
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        }
+      ]
+    },
+    {
+      "file": "C:\\Users\\kokok\\.codex\\worktrees\\pegs-port\\lean4-effect4\\tools\\view\\out\\graph-flows-final\\009.svg",
+      "sha256": "e243cdadda487aa6c12034965ff2ad65b55e88ca36671534361233c9408b2af9",
+      "connectors": 8,
+      "side_joins": 56,
+      "issues": [
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 0]\u2192[0 0 1]",
+          "paths": [
+            2,
+            3,
+            4
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[]/fork\u2192[1]",
+          "paths": [
+            5,
+            6
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[1]\u2192[]/join/0",
+          "paths": [
+            8,
+            9
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 1]\u2192[]/fork",
+          "paths": [
+            13,
+            14
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        }
+      ]
+    },
+    {
+      "file": "C:\\Users\\kokok\\.codex\\worktrees\\pegs-port\\lean4-effect4\\tools\\view\\out\\graph-flows-final\\010.svg",
+      "sha256": "3fa7ce54b480744532688cddf8973d50399764e0564c0a8aea2ad2ffc59d6241",
+      "connectors": 1,
+      "side_joins": 0,
+      "issues": [
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[]\u2192[0]",
+          "paths": [
+            1,
+            2,
+            3
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        }
+      ]
+    },
+    {
+      "file": "C:\\Users\\kokok\\.codex\\worktrees\\pegs-port\\lean4-effect4\\tools\\view\\out\\graph-flows-final\\011.svg",
+      "sha256": "601774d10cfaabbddbc387695945db99977d00ea3a3bad83c1fe1807bc60647d",
+      "connectors": 11,
+      "side_joins": 0,
+      "issues": [
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0]/fork/0\u2192[0 0]/0",
+          "paths": [
+            1,
+            2
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0]/fork/1\u2192[0 0 0 0 0]/fork",
+          "paths": [
+            3,
+            4,
+            5
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 0 0 0]/fork/0\u2192[0 0 0 0 0]/0",
+          "paths": [
+            6,
+            7
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 0 0 0]/fork/1\u2192[0 0 0 0 0 0 0]",
+          "paths": [
+            8,
+            9,
+            10
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 0 0 0 0 0]\u2192[0 0 0 0 0 0 1]",
+          "paths": [
+            11,
+            12,
+            13
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 0 0 0]/0\u2192[0 0 0 0 0]/join/0",
+          "paths": [
+            14,
+            15
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 0 0 0 0 1]\u2192[0 0 0 0 0]/join/1",
+          "paths": [
+            16,
+            17,
+            18
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 0 0 0]/join\u2192[0 0 0 1]",
+          "paths": [
+            19,
+            20,
+            21
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0]/0\u2192[0 0]/join/0",
+          "paths": [
+            22,
+            23
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 0 1]\u2192[0 0]/join/1",
+          "paths": [
+            24,
+            25,
+            26
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0]/join\u2192[1]",
+          "paths": [
+            27,
+            28,
+            29
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        }
+      ]
+    },
+    {
+      "file": "C:\\Users\\kokok\\.codex\\worktrees\\pegs-port\\lean4-effect4\\tools\\view\\out\\graph-flows-final\\012.svg",
+      "sha256": "28a3fc2dd710fb7cd48247816d816d155ed8f32f655663618fd6bbaf0163ce66",
+      "connectors": 7,
+      "side_joins": 0,
+      "issues": [
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0]/fork/0\u2192[0 0 0 0 0]",
+          "paths": [
+            1,
+            2,
+            3
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0]/fork/1\u2192[0 0 0 1 0 0]",
+          "paths": [
+            4,
+            5,
+            6
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 0 0 0]\u2192[0 0 0 0 1]",
+          "paths": [
+            7,
+            8,
+            9
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 0 1 0 0]\u2192[0 0 0 1 0 1]",
+          "paths": [
+            10,
+            11,
+            12
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 0 0 1]\u2192[0 0]/join/0",
+          "paths": [
+            13,
+            14,
+            15
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 0 1 0 1]\u2192[0 0]/join/1",
+          "paths": [
+            16,
+            17,
+            18
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[]\u2192[0 0]/fork",
+          "paths": [
+            19,
+            20,
+            21
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        }
+      ]
+    },
+    {
+      "file": "C:\\Users\\kokok\\.codex\\worktrees\\pegs-port\\lean4-effect4\\tools\\view\\out\\graph-flows-final\\013.svg",
+      "sha256": "ee9fafd1bcdd379721b697741229ce03789276e316bd9e47c62b9dc44115b2d7",
+      "connectors": 7,
+      "side_joins": 0,
+      "issues": [
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 0 0]\u2192[0 0 0 1]",
+          "paths": [
+            3,
+            4,
+            5
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 1 0 0 0 0]\u2192[0 1 0 0 0 1]",
+          "paths": [
+            6,
+            7,
+            8
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 1 0 0 0 1]\u2192[0 1 0 1 0]",
+          "paths": [
+            9,
+            10,
+            11
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 1 0 1 0]\u2192[0 1 0 1 1]",
+          "paths": [
+            12,
+            13,
+            14
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 1 0 1 1]\u2192[0 1 0 0 1]",
+          "paths": [
+            15,
+            16,
+            17
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 0 1]\u2192[0 1 0 0 0 0]",
+          "paths": [
+            18,
+            19,
+            20
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 1 0 0 1]\u2192[0 0 1]",
+          "paths": [
+            21,
+            22,
+            23
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        }
+      ]
+    },
+    {
+      "file": "C:\\Users\\kokok\\.codex\\worktrees\\pegs-port\\lean4-effect4\\tools\\view\\out\\graph-flows-final\\014.svg",
+      "sha256": "ae78803e00ac64deb04e5f63be57329af54e18b63e519304ce457eab7d76b338",
+      "connectors": 0,
+      "side_joins": 0,
+      "issues": []
+    },
+    {
+      "file": "C:\\Users\\kokok\\.codex\\worktrees\\pegs-port\\lean4-effect4\\tools\\view\\out\\graph-flows-final\\015.svg",
+      "sha256": "af41e3f7138a5a7b329b173abac62fdc66b011b85b6b3f5398f26dc92a288e48",
+      "connectors": 17,
+      "side_joins": 0,
+      "issues": [
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0]/fork/0\u2192[0 0 0 0]",
+          "paths": [
+            2,
+            3,
+            4
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0]/fork/1\u2192[0 0 1 0 0 0]/fork",
+          "paths": [
+            5,
+            6,
+            7
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0]/fork/2\u2192[0 0 1 1 0 0 0]",
+          "paths": [
+            8,
+            9,
+            10
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0]/fork/3\u2192[0 0 1 1 1 0 0]",
+          "paths": [
+            11,
+            12,
+            13
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 0 0]\u2192[0 0 0 1]",
+          "paths": [
+            14,
+            15,
+            16
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 1 0 0 0]/fork/0\u2192[0 0 1 0 0 0]/0",
+          "paths": [
+            17,
+            18
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 1 0 0 0]/fork/1\u2192[0 0 1 0 0 0 0 0]",
+          "paths": [
+            19,
+            20,
+            21
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 1 0 0 0 0 0]\u2192[0 0 1 0 0 0 0 1]",
+          "paths": [
+            22,
+            23,
+            24
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 1 0 0 0]/0\u2192[0 0 1 0 0 0]/join/0",
+          "paths": [
+            25,
+            26
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 1 0 0 0 0 1]\u2192[0 0 1 0 0 0]/join/1",
+          "paths": [
+            27,
+            28,
+            29
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 1 0 0 0]/join\u2192[0 0 1 0 1]",
+          "paths": [
+            30,
+            31,
+            32
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 1 1 0 0 0]\u2192[0 0 1 1 0 0 1]",
+          "paths": [
+            33,
+            34,
+            35
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 1 1 1 0 0]\u2192[0 0 1 1 1 0 1]",
+          "paths": [
+            36,
+            37,
+            38
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 0 1]\u2192[0]/join/0",
+          "paths": [
+            39,
+            40,
+            41
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 1 0 1]\u2192[0]/join/1",
+          "paths": [
+            42,
+            43,
+            44
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 1 1 0 0 1]\u2192[0]/join/2",
+          "paths": [
+            45,
+            46,
+            47
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0 1 1 1 0 1]\u2192[0]/join/3",
+          "paths": [
+            48,
+            49,
+            50
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        }
+      ]
+    },
+    {
+      "file": "C:\\Users\\kokok\\.codex\\worktrees\\pegs-port\\lean4-effect4\\tools\\view\\out\\graph-flows-final\\016.svg",
+      "sha256": "0b5824910df83dd30b0db06014b0bc9e8581d61123aaf8b93167d248d90802d9",
+      "connectors": 2,
+      "side_joins": 0,
+      "issues": [
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[0 0]/empty\u2192[1 0]",
+          "paths": [
+            3,
+            4
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        },
+        {
+          "code": "MULTIPLE_PATHS",
+          "key": "[1 0]\u2192[1 1]",
+          "paths": [
+            5,
+            6,
+            7
+          ],
+          "detail": "connector consists of overlapping filled pieces"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "files": 16,
+    "connectors": 103,
+    "side_joins": 70,
+    "issues": 98,
+    "angle_degrees": 1.0,
+    "result": "fail"
+  }
+}
