@@ -1,4 +1,5 @@
 import Tools.View.Place
+import Tools.View.GraphOrdering
 import Tools.View.Organic
 import Tools.View.ConnectorMemo
 
@@ -255,22 +256,6 @@ def links (g : Graph) (rk : List Nat) : List (Key × Key) :=
   (g.edges.toList.filter (fun e => e.src < e.dst)).flatMap fun e =>
     let c := chain g rk e
     c.zip c.tail
-
-/-- The position of a key in a rank's order. -/
-def posIn (order : List Key) (k : Key) : Nat := order.findIdx (· == k)
-
-/-- Order one rank by the barycentre of each item's neighbours in the rank beside it; an item
-with none keeps its place. The sort is stable, so ties keep the order before. Barycentres are
-compared as fractions, by cross products. -/
-def reorder (order beside : List Key) (neighbours : Key → List Key) : List Key :=
-  let bary (k : Key) : Nat × Nat :=
-    let ns := (neighbours k).filter beside.contains
-    if ns.isEmpty then (2 * posIn order k, 2)
-    else (ns.foldl (fun s n => s + 2 * posIn beside n) 0, 2 * ns.length)
-  order.mergeSort fun a b =>
-    let (sa, ca) := bary a
-    let (sb, cb) := bary b
-    sa * cb ≤ sb * ca
 
 /-- **The order of each rank**: the items' own order, then two sweeps down and up by barycentres. -/
 def orders (g : Graph) (rk : List Nat) : List (List Key) :=
