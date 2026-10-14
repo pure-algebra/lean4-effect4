@@ -1,0 +1,23 @@
+Coordinator must know: all twelve frozen BlockMeaning goals are proved with unchanged statements; the final module audit has no planned-goal dependencies.
+Base: 5290731d502d5a9f3335d950b8117b4146143eb4.
+Proof commit: aec1ec8b7 (before parent attribution-only amendment).
+Changed file: src/Effect4/Laws/Program/BlockMeaning.lean only.
+Worktree: /private/tmp/proc6-blockproof, branch codex/proc6-blockproof.
+
+Commands and final results:
+LAKE_CACHE_DIR=/private/tmp/proc6-blockproof-cache /Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake build Effect4.Laws.Program.BlockMeaning
+Passed: Build completed successfully (283 jobs).
+LAKE_CACHE_DIR=/private/tmp/proc6-blockproof-cache /Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake build ProofGraph.AxiomAudit
+Passed.
+LAKE_CACHE_DIR=/private/tmp/proc6-blockproof-cache /Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean /tmp/proc6-landing/block-axiom-audit.lean
+Passed: #axiom_audit: 113 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals.
+git diff --check
+Passed.
+A local Python comparison measured 12 original proof_goal statements unchanged; each is now theorem.
+
+Placement: original R6/R10 translation-simulation annotations retained. New fold helpers serve those same goals. R2 straight compatibility placement replaces the deleted no-block placement over the admitted fragment. Cache map/bind helpers serve ref-cache-invalidated-reads-through and Cached.cached_list_after_add.
+No Compile.lean, Agreement.lean, registry, root, existing definitions or consumer edits.
+No forbidden proof constructs added. Initial audit caught Classical.choice from an existential by_cases in the exit proof; finite NativeOp constructor elimination replaced it and final audit passed.
+The default shared Lake artifact cache denied a write after compilation; writable LAKE_CACHE_DIR resolved this without changing repository config.
+
+Evidence scope: Lean proofs over the frozen block meaning. No runtime, whole-machine, whole-tree axiom or host-target claim. No behavior gate reached by the proof-only change. Parent owns consumer migration, generated semantics and broader slice verification.

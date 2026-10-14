@@ -230,8 +230,9 @@ This receipt uses this branch's measured gate results and does not invent missin
 
 ## Open work and decision proposal
 
-The old block meaning, its consumers and claim pointers remain for B's migration and deletion.
-The new stage 0 laws, block plainness, forward agreement, closing steps and validated consumers remain planned goals.
+B replaces the old block meaning and migrates its consumers and claim pointers.
+Its twelve stage 0 goals are proved.
+Block plainness, forward agreement, closing steps and validated consumers remain planned goals at the B checkpoint.
 F still owes machine forms with a context and scheduler agreement at every context budget.
 G still owes the shipped consumer's per-request replay and keyed composite check.
 
@@ -269,3 +270,52 @@ A waiting call retains its request, stores and host state.
 Existing frontier claims consume that exact observation.
 The audit checks sources; it does not prove the new relation or its connectors.
 The detailed report is retained when F lands.
+
+## Slice B
+
+All twelve stage 0 goals are proved in place, with their approved statements unchanged.
+The combined build and exact audit pass.
+The application law retains its arbitrary outer context and gains the optional finished exit.
+
+Base: `42ae57813a368b2acfa349f9d06768aa89e729b9`. Code head: `b7ca24a26fbfb69b29ccfc137d1ec7d0dfb7ed9f`.
+The coherent commits are `f763dda79`, `9efb68b6c`, `f83b7c82d` and `b7ca24a26`.
+The first moves `bodiesOf` before the block modules lose their old import dependency.
+The next proves the meaning laws; the application migration and remaining deletions follow.
+
+`BlockMeaning.lean` owns `mapOps` and `blockOf?`.
+`Block.lean` keeps its module entry through an import.
+`ParamRows.lean` retains only the parameter-to-row renaming.
+The old recursive-handler meaning and `Effects/Mrec.lean` are deleted.
+The Mrec import is the brief's one permitted root-import removal.
+The author note and both registry pointers now name the surviving laws.
+[The source record](landing-evidence/b/sources.json) lists every changed path and its digest.
+
+The meaning laws serve rows-block-host, R6, and block-handler-monotone/block-handler-unfolds, R10.
+`denoteBlockB_straight` carries the deleted no-block compatibility placement, R2, on its stated straight data-row fragment.
+Its consumer is the cache-body connection.
+The cache helpers serve ref-cache-invalidated-reads-through, R10; the application reader uses the library's `invalidate_get` law.
+The finite block battery retains budget cuts, missing progress and finished cases.
+It claims no universal scheduler or target agreement.
+
+| Command inside the shared slot | Result | Evidence |
+| --- | --- | --- |
+| `lake build Effect4.Laws.Library.Ref.Cache` | PASS, 531 jobs | `b-cache-final-build.log` |
+| `lake build Test.Program.BlockMeaning` | PASS, 863 jobs | `b-control-build.log` |
+| `lake build Effect4.Laws Test.Program.BlockMeaning Test.Dogfood.Scenario.Todo.Cached` | PASS, 1530 jobs | `b-dependents.log` |
+| `lake env lean -DwarningAsError=true /tmp/proc6-landing/b-audit.lean` | PASS | `b-audit.log` |
+| `make -o ts/eff/node_modules -o harness/truth/node_modules -o apps/todo/node_modules gen-semantics` | PASS, 1657 jobs | `b-semantics.log` |
+
+The final three commands run through `lean-slot.sh bash /tmp/proc6-landing/b-final-checks.sh`.
+The audit reports:
+
+```text
+#axiom_audit: 202 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 1 planned goals
+```
+
+The one remaining audited goal is C's body-fragment lookup, included through `FragmentBlock.lean`.
+Every queried stage 0 goal reports proved with zero next goals.
+`Effect4.Run.h9_blocks` remains a goal at this checkpoint.
+The independent Cached audit checks 26 declarations with no planned goals or dependencies on them.
+No behavior gate is reached by B.
+
+[The B manifest](landing-evidence/b/manifest.json) binds the retained logs, statement comparison and proof receipts.

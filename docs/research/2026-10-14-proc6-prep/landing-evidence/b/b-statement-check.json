@@ -1,0 +1,55 @@
+{
+  "baseline": "9d404a1ecbd180973ebdef20441bb1e155d093cc",
+  "source_path": "src/Effect4/Laws/Program/BlockMeaning.lean",
+  "sha256": "0a735ae9378ffd73a3185ff40d43caf51bf1ea9ca24bff873aa6c7a7cc1fc240",
+  "checks": [
+    {
+      "declaration": "Effect4.Program.Denote.denoteBlockB_loopedDataRows",
+      "unchanged": true
+    },
+    {
+      "declaration": "Effect4.Program.Denote.denoteBlockB_approx",
+      "unchanged": true
+    },
+    {
+      "declaration": "Effect4.Program.Denote.denoteBlockB_of_asExit",
+      "unchanged": true
+    },
+    {
+      "declaration": "Effect4.Program.Denote.denoteBlockB_call",
+      "unchanged": true
+    },
+    {
+      "declaration": "Effect4.Program.Denote.denoteBlockB_invoke",
+      "unchanged": true
+    },
+    {
+      "declaration": "Effect4.Program.Denote.denoteBlockB_param",
+      "unchanged": true
+    },
+    {
+      "declaration": "Effect4.Program.Denote.denoteBlockB_provideContext",
+      "unchanged": true
+    },
+    {
+      "declaration": "Effect4.Program.Denote.denoteBlockB_provideService",
+      "unchanged": true
+    },
+    {
+      "declaration": "Effect4.Program.Denote.denoteBlockB_service",
+      "unchanged": true
+    },
+    {
+      "declaration": "Effect4.Program.Denote.denoteBlockB_context",
+      "unchanged": true
+    },
+    {
+      "declaration": "Effect4.Program.Denote.call_unfolds_at_limitB",
+      "unchanged": true
+    },
+    {
+      "declaration": "Effect4.Program.Denote.invoke_unfolds_at_limitB",
+      "unchanged": true
+    }
+  ]
+}
