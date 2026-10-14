@@ -122,14 +122,6 @@ theorem registrationQueue_driveStep_link (p : NativeEff) (table : RowTable)
     obtain ⟨target, rfl⟩ := commands first List.mem_cons_self
     exact ⟨True.intro, ih (fun next member => commands next (List.mem_cons_of_mem _ member))⟩
 
-/-- A field update that keeps the old interruption witness: `Finish.interruptedAt_update`, with
-the fiber named. -/
-theorem interruptedAt_update_mark {m : NativeMachine} {f : NFiber}
-    (lookup : m.fiber? f.id = some f) (g : NFiber) (id : g.id = f.id)
-    (mark : Interrupted f → Interrupted g) (fiber : FiberId) (h : InterruptedAt m fiber) :
-    InterruptedAt (m.update g) fiber :=
-  Finish.interruptedAt_update lookup g id mark h
-
 theorem interruptedAt_driveStep_evaluate (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (target : FiberId) (rest : List NCmd) (fiber : FiberId)
     (h : InterruptedAt m fiber) :
@@ -142,8 +134,9 @@ theorem interruptedAt_driveStep_evaluate (p : NativeEff) (table : RowTable)
     simp only [driveStep, lookup]
     split
     · exact h
-    · refine interruptedAt_update_mark (f := f) (by simpa only [fiber_id_of_lookup lookup] using lookup)
-        { f with running := true, currentOpCount := 0 } rfl ?_ fiber h
+    · refine Finish.interruptedAt_update (f := f)
+        (by simpa only [fiber_id_of_lookup lookup] using lookup)
+        { f with running := true, currentOpCount := 0 } rfl ?_ h
       exact fun h => h
 
 theorem interruptedAt_driveStep_resume (p : NativeEff) (table : RowTable)
@@ -160,11 +153,12 @@ theorem interruptedAt_driveStep_resume (p : NativeEff) (table : RowTable)
     | withGuard guarded =>
       simp only [driveStep, lookup, park]
       split
-      · refine interruptedAt_update_mark (f := f) (by simpa only [fiber_id_of_lookup lookup] using lookup)
+      · refine Finish.interruptedAt_update (f := f)
+          (by simpa only [fiber_id_of_lookup lookup] using lookup)
           { f with
             parked := .notParked
             pending := f.pending.filter (fun pending => pending.token ≠ token)
-            frame := { f.frame with current := answer } } rfl ?_ fiber h
+            frame := { f.frame with current := answer } } rfl ?_ h
         exact fun h => h
       · exact h
 
@@ -194,9 +188,9 @@ theorem interruptedAt_postTask (m : NativeMachine) (owner : FiberId) (priority :
   cases lookup : m.fiber? owner with
   | none => exact h
   | some f =>
-    refine interruptedAt_update_mark (f := f)
+    refine Finish.interruptedAt_update (f := f)
       (by simpa only [fiber_id_of_lookup lookup] using lookup)
-      { f with dispatcher := f.dispatcher.enqueue priority task } rfl ?_ fiber h
+      { f with dispatcher := f.dispatcher.enqueue priority task } rfl ?_ h
     exact fun h => h
 
 theorem interruptedAt_drainOwed (m : NativeMachine) (due : List (Owed NCode))
