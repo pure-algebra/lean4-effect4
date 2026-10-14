@@ -1,0 +1,147 @@
+✔ [379/381] Built Effect4.Laws.Program.FragmentBlock (7.6s)
+✖ [380/381] Building Effect4.Laws.Program.BlockMeaning (1.2s)
+trace: .> LEAN_PATH=/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/Dev/lean4-effect4-codex/src/Effect4/Laws/Program/BlockMeaning.lean -o /Users/pooks/Dev/lean4-effect4-codex/.lake/build/lib/lean/Effect4/Laws/Program/BlockMeaning.olean -i /Users/pooks/Dev/lean4-effect4-codex/.lake/build/lib/lean/Effect4/Laws/Program/BlockMeaning.ilean -c /Users/pooks/Dev/lean4-effect4-codex/.lake/build/ir/Effect4/Laws/Program/BlockMeaning.c --setup /Users/pooks/Dev/lean4-effect4-codex/.lake/build/ir/Effect4/Laws/Program/BlockMeaning.setup.json --json
+error: src/Effect4/Laws/Program/BlockMeaning.lean:44:28: Type mismatch
+  (denoteRowsB.alg table k).eff_succeed t
+has type
+  EffFam.rec (Eff NativeOp × (List Val → Effects.Program (RowsSig table) (Option ExitV))) (Stmt NativeOp × Unit)
+    (Stmts NativeOp × Unit) (Effs NativeOp × Unit) (ActionTerm NativeOp × Unit) (LayerTerm NativeOp × Unit)
+    (LayerTerms NativeOp × Unit) EffFam.eff
+but is expected to have type
+  List Val → Effects.Program (RowsSig table) (Option ExitV)
+error: src/Effect4/Laws/Program/BlockMeaning.lean:45:25: Type mismatch
+  (denoteRowsB.alg table k).eff_fail t
+has type
+  EffFam.rec (Eff NativeOp × (List Val → Effects.Program (RowsSig table) (Option ExitV))) (Stmt NativeOp × Unit)
+    (Stmts NativeOp × Unit) (Effs NativeOp × Unit) (ActionTerm NativeOp × Unit) (LayerTerm NativeOp × Unit)
+    (LayerTerms NativeOp × Unit) EffFam.eff
+but is expected to have type
+  List Val → Effects.Program (RowsSig table) (Option ExitV)
+error: src/Effect4/Laws/Program/BlockMeaning.lean:46:30: Type mismatch
+  (denoteRowsB.alg table k).eff_failCause t
+has type
+  EffFam.rec (Eff NativeOp × (List Val → Effects.Program (RowsSig table) (Option ExitV))) (Stmt NativeOp × Unit)
+    (Stmts NativeOp × Unit) (Effs NativeOp × Unit) (ActionTerm NativeOp × Unit) (LayerTerm NativeOp × Unit)
+    (LayerTerms NativeOp × Unit) EffFam.eff
+but is expected to have type
+  List Val → Effects.Program (RowsSig table) (Option ExitV)
+error: src/Effect4/Laws/Program/BlockMeaning.lean:47:25: Type mismatch
+  (denoteRowsB.alg table k).eff_sync t
+has type
+  EffFam.rec (Eff NativeOp × (List Val → Effects.Program (RowsSig table) (Option ExitV))) (Stmt NativeOp × Unit)
+    (Stmts NativeOp × Unit) (Effs NativeOp × Unit) (ActionTerm NativeOp × Unit) (LayerTerm NativeOp × Unit)
+    (LayerTerms NativeOp × Unit) EffFam.eff
+but is expected to have type
+  List Val → Effects.Program (RowsSig table) (Option ExitV)
+error: src/Effect4/Laws/Program/BlockMeaning.lean:48:71: Application type mismatch: The argument
+  body ctx
+has type
+  List Val → Effects.Program (RowsSig table) (Option ExitV)
+but is expected to have type
+  EffFam.rec (Eff NativeOp × (List Val → Effects.Program (RowsSig table) (Option ExitV))) (Stmt NativeOp × Unit)
+    (Stmts NativeOp × Unit) (Effs NativeOp × Unit) (ActionTerm NativeOp × Unit) (LayerTerm NativeOp × Unit)
+    (LayerTerms NativeOp × Unit) EffFam.eff
+in the application
+  (denoteRowsB.alg table k).eff_suspend (body ctx)
+error: src/Effect4/Laws/Program/BlockMeaning.lean:56:11: Function expected at
+  (denoteRowsB.alg table k).eff_perform op r
+but this term has type
+  EffFam.rec (Eff NativeOp × (List Val → Effects.Program (RowsSig table) (Option ExitV))) (Stmt NativeOp × Unit)
+    (Stmts NativeOp × Unit) (Effs NativeOp × Unit) (ActionTerm NativeOp × Unit) (LayerTerm NativeOp × Unit)
+    (LayerTerms NativeOp × Unit) EffFam.eff
+
+Note: Expected a function because this term is being applied to the argument
+  env
+error: src/Effect4/Laws/Program/BlockMeaning.lean:57:64: Application type mismatch: The argument
+  a ctx
+has type
+  List Val → Effects.Program (RowsSig table) (Option ExitV)
+but is expected to have type
+  EffFam.rec (Eff NativeOp × (List Val → Effects.Program (RowsSig table) (Option ExitV))) (Stmt NativeOp × Unit)
+    (Stmts NativeOp × Unit) (Effs NativeOp × Unit) (ActionTerm NativeOp × Unit) (LayerTerm NativeOp × Unit)
+    (LayerTerms NativeOp × Unit) EffFam.eff
+in the application
+  (denoteRowsB.alg table k).eff_bind (a ctx)
+error: src/Effect4/Laws/Program/BlockMeaning.lean:59:76: Application type mismatch: The argument
+  a ctx
+has type
+  List Val → Effects.Program (RowsSig table) (Option ExitV)
+but is expected to have type
+  EffFam.rec (Eff NativeOp × (List Val → Effects.Program (RowsSig table) (Option ExitV))) (Stmt NativeOp × Unit)
+    (Stmts NativeOp × Unit) (Effs NativeOp × Unit) (ActionTerm NativeOp × Unit) (LayerTerm NativeOp × Unit)
+    (LayerTerms NativeOp × Unit) EffFam.eff
+in the application
+  (denoteRowsB.alg table k).eff_catchCause (a ctx)
+error: src/Effect4/Laws/Program/BlockMeaning.lean:60:78: Application type mismatch: The argument
+  a ctx
+has type
+  List Val → Effects.Program (RowsSig table) (Option ExitV)
+but is expected to have type
+  EffFam.rec (Eff NativeOp × (List Val → Effects.Program (RowsSig table) (Option ExitV))) (Stmt NativeOp × Unit)
+    (Stmts NativeOp × Unit) (Effs NativeOp × Unit) (ActionTerm NativeOp × Unit) (LayerTerm NativeOp × Unit)
+    (LayerTerms NativeOp × Unit) EffFam.eff
+in the application
+  (denoteRowsB.alg table k).eff_matchCause (a ctx)
+error: src/Effect4/Laws/Program/BlockMeaning.lean:61:68: Application type mismatch: The argument
+  a ctx
+has type
+  List Val → Effects.Program (RowsSig table) (Option ExitV)
+but is expected to have type
+  EffFam.rec (Eff NativeOp × (List Val → Effects.Program (RowsSig table) (Option ExitV))) (Stmt NativeOp × Unit)
+    (Stmts NativeOp × Unit) (Effs NativeOp × Unit) (ActionTerm NativeOp × Unit) (LayerTerm NativeOp × Unit)
+    (LayerTerms NativeOp × Unit) EffFam.eff
+in the application
+  (denoteRowsB.alg table k).eff_onExit (a ctx)
+error: src/Effect4/Laws/Program/BlockMeaning.lean:62:65: Application type mismatch: The argument
+  body ctx
+has type
+  List Val → Effects.Program (RowsSig table) (Option ExitV)
+but is expected to have type
+  EffFam.rec (Eff NativeOp × (List Val → Effects.Program (RowsSig table) (Option ExitV))) (Stmt NativeOp × Unit)
+    (Stmts NativeOp × Unit) (Effs NativeOp × Unit) (ActionTerm NativeOp × Unit) (LayerTerm NativeOp × Unit)
+    (LayerTerms NativeOp × Unit) EffFam.eff
+in the application
+  (denoteRowsB.alg table k).eff_exit (body ctx)
+error: src/Effect4/Laws/Program/BlockMeaning.lean:79:74: Application type mismatch: The argument
+  a ctx
+has type
+  List Val → Effects.Program (RowsSig table) (Option ExitV)
+but is expected to have type
+  EffFam.rec (Eff NativeOp × (List Val → Effects.Program (RowsSig table) (Option ExitV))) (Stmt NativeOp × Unit)
+    (Stmts NativeOp × Unit) (Effs NativeOp × Unit) (ActionTerm NativeOp × Unit) (LayerTerm NativeOp × Unit)
+    (LayerTerms NativeOp × Unit) EffFam.eff
+in the application
+  (denoteRowsB.alg table k).eff_catchIf t (a ctx)
+error: src/Effect4/Laws/Program/BlockMeaning.lean:80:76: Application type mismatch: The argument
+  a ctx
+has type
+  List Val → Effects.Program (RowsSig table) (Option ExitV)
+but is expected to have type
+  EffFam.rec (Eff NativeOp × (List Val → Effects.Program (RowsSig table) (Option ExitV))) (Stmt NativeOp × Unit)
+    (Stmts NativeOp × Unit) (Effs NativeOp × Unit) (ActionTerm NativeOp × Unit) (LayerTerm NativeOp × Unit)
+    (LayerTerms NativeOp × Unit) EffFam.eff
+in the application
+  (denoteRowsB.alg table k).eff_select t d (a ctx)
+error: src/Effect4/Laws/Program/BlockMeaning.lean:82:70: Application type mismatch: The argument
+  body ctx
+has type
+  List Val → Effects.Program (RowsSig table) (Option ExitV)
+but is expected to have type
+  EffFam.rec (Eff NativeOp × (List Val → Effects.Program (RowsSig table) (Option ExitV))) (Stmt NativeOp × Unit)
+    (Stmts NativeOp × Unit) (Effs NativeOp × Unit) (ActionTerm NativeOp × Unit) (LayerTerm NativeOp × Unit)
+    (LayerTerms NativeOp × Unit) EffFam.eff
+in the application
+  (denoteRowsB.alg table k).eff_iterate ty initial test step result (body ctx)
+error: src/Effect4/Laws/Program/BlockMeaning.lean:161:15: Unknown constant `List.Forall₂`
+error: src/Effect4/Laws/Program/BlockMeaning.lean:237:46: Function expected at
+  Row
+but this term has type
+  Type
+
+Note: Expected a function because this term is being applied to the argument
+  ServiceKey
+error: Lean exited with code 1
+✔ [381/381] Built Effect4.Laws.Program.Agreement.BlockPlain (2.2s)
+Some required targets logged failures:
+- Effect4.Laws.Program.BlockMeaning
+error: build failed

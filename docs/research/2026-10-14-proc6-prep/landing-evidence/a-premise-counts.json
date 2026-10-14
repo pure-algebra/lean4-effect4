@@ -1,0 +1,13 @@
+{
+  "paths": {
+    "src/Effect4/Laws/Api/SessionMeaning.lean": 3,
+    "src/Effect4/Laws/Api/SessionMeaningLoop.lean": 0,
+    "src/Effect4/Laws/Program/Agreement/BlockPlain.lean": 0,
+    "src/Effect4/Laws/Program/Agreement/Hosted.lean": 6,
+    "src/Effect4/Laws/Program/Agreement/Loop.lean": 0,
+    "src/Effect4/Laws/Program/Agreement/LoopCalls.lean": 0,
+    "src/Effect4/Laws/Program/Agreement/Machine.lean": 12,
+    "src/Effect4/Laws/Program/Agreement/Segment.lean": 2
+  },
+  "migrated_premises": 23
+}

@@ -1,0 +1,58 @@
+# Slice A source audit
+
+Base: d6e162caf2bdfd6e1a3718b75d4c8aa34d145034, worktree /Users/pooks/Dev/lean4-effect4-codex.
+Read-only source review. No build, probe theorem or repository edit. Scope: slice A only; no stage-4 scheduler or budget-invariant work.
+
+## The 23 premise migrations
+
+Machine.lean (12): plainCode_resolve, plainCode_suspendBodyAt, plainCode_contEOf_caughtError, plainCode_contAOf, plainCode_contEOf, plainCode_contAAt, plainCode_contEAt, plainCode_loopNextAt, plainCode_loopResumeAt, localStep_success_plain, localStep_failure_plain, localStep_plain.
+
+Segment.lean (2): drive_seg, flushAll_Myield.
+
+Hosted.lean (6): seg_settles, load_evaluate, flush_Myield, holds_evaluate, holds_flush, holds_answer.
+
+Api/SessionMeaning.lean (3): tape_holds_host, tape_holds, session_settled.
+
+The three public driver premises in SessionMeaningLoop.lean are additional LoopedRows occurrences but are not part of the 23 generic machine-premise migrations. They describe the existing loop meaning and can remain unchanged, with adapters inside the four consumers listed below.
+
+## Adapter consumers
+
+1. Segment.replay_Mexit_of_localRun: retain hrows := LoopedRows.of_looped e hl for plainCode_compileEff e _ hrows. Define hroot := PlainHooks.of_loopedRows hrows for drive_seg and flushAll_Myield. Do not accidentally pass the new hooks into plainCode_compileEff, which remains the LoopedRows structural compile lemma.
+2. Hosted.load_evaluate: its root plainness currently uses plainCode_compileEff root _ hroot. With PlainHooks, derive it from hroot.resolve (rootPoint cf []) by unfolding resolve/rootPoint/Node.at_ at the empty path. compile is compileEff root (rootPoint cf []); resolve at that root point is the same code. No fragment premise is required.
+3. SessionMeaning.denoteRows_eq_session and denoteRows_eq_session_host: pass PlainHooks.of_loopedRows (LoopedRows.of_straightRows s.built.program hfrag) to session_settled.
+4. SessionMeaningLoop.h8_loopedRows, denoteRowsB_eq_session_host, rows_loop_frontier, rows_loop_frontier_host: pass PlainHooks.of_loopedRows hroot to session_settled. Keep their original loop-fragment premises and meaning laws intact.
+
+The recursive calls inside generic migrated theorems pass hroot unchanged. No outside source callers of the migrated machine plainness helpers were found by rg over src and Test.
+
+## Avoiding a proof-order cycle
+
+The old plainCode_resolve proof derives plainness by structural LoopedRows membership. The old plainCode_suspendBodyAt proof uses plainCode_resolve twice. Keep those old arguments in local/private helpers (for example loopedRows_plainCode_resolve and loopedRows_plainCode_suspendBodyAt), then build PlainHooks.of_loopedRows from both. Expose generalized plainCode_resolve and plainCode_suspendBodyAt as direct projections of the hooks. Alternatively move the old proof bodies directly into the adapter structure, sharing an internal resolver lemma. Do not attempt to build the adapter by using the newly generalized projections before a PlainHooks witness exists.
+
+## Flag-general helper patch
+
+Agreement.lean has three statements:
+- step_success_pass_setInterruptible
+- step_failure_pass_setInterruptible
+- step_ofExit_pass_setInterruptible
+
+Each gains flag : Bool. Replace Prim.setInterruptible true on the left by flag, and K true on the right by K flag. Keep the entering interruptibility i independent. The combined exit theorem passes flag to each success/failure helper. Current explicit callers must pass true:
+- Agreement.lean compiles onExit/mask Reaches.same use;
+- Agreement/Loop.lean compiles loop onExit/mask use;
+- Agreement/LoopCalls.lean corresponding call-tree proof;
+- Machine.lean localStep_success_plain and localStep_failure_plain rewrite uses (their match currently only admits true).
+
+The final two rewrite uses may infer flag from the expression if it is implicit; an explicit true is clearer and matches the landing brief. This patch does not widen PlainFrame in slice A.
+
+## Stage 0a exact consumers
+
+Compile.lean suspendBodyAt call arm: add params := [] :: p.params. Its env currently p.env.take 0 ++ [v], definitionally [v]. Update Point.params wording from innermost invocation to innermost call.
+
+DenoteR.lean has the actual call semantics in denoteEffBody, and its expose theorem denoteR_perform repeats the record. Both gain params := [] :: p.params. The invocation arms already push their actual argument frame and stay unchanged.
+
+Agreement.lean suspendBodyAt_call statement repeats that resolved record and gains params := [] :: q.params. Its sole source caller is Intro/Sequential.lean intro_call.
+
+Intro/Sequential.lean intro_call: add the empty frame to hres's Point record, then use weight_redirect_params_lt p path hpos completed [v] ([] :: p.params) (p.path :: p.call). Delete weight_redirect_call_lt only after this move. Update intro_call's docstring and weight_redirect_params_lt's consumer note; rg finds no second use of the deleted lemma.
+
+Typed/Denotation.lean call_arm: the hden Point record gains params := [] :: p.params. The final StackTyped and AmbientStackTyped goals consequently name the new stack. hscope = [] makes stackTyped_nil and ambientStackTyped_nil applicable to any stack, so no new typing lemma is needed. Update the explicit goal text from p.params to [] :: p.params; do not weaken StackTyped.
+
+No other call/param introduction needs a changed record. Intro.lean's call branch invokes intro_call by name with its unchanged external statement.
