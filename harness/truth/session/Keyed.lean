@@ -9,6 +9,7 @@ import Test.Dogfood.Scenario.Timeout
 import Test.Dogfood.Scenario.Todo.Claims
 import Effect4.Codegen.RowServices
 import Tools.ProfileJson
+import Tools.RunChecks
 import TypeScript.Render
 import Lean.Data.Json
 
@@ -16,14 +17,19 @@ import Lean.Data.Json
 only fixture construction, JSON transport, and rendering of the same admitted Eff program.
 No legacy tape inference, oracle answer queue, or implicit pending-reply scheduler.
 
+The wire's values, answers and exits, and the decisions on a run, stand in `Tools.RunChecks`,
+which the to-do application's checker reads too (`apps/todo/Check.lean`).
+
 The last section holds the scenarios' host runs (decisions row 254): one fixture for each script
 of a battery of `Test/Dogfood/Scenario/` that a host can perform, and Lean's replay of each
 recording that the host writes. -/
 open Lean Effect4 Effect4.Machine Effect4.Program Effect4.Api.HostSession
+open Tools.RunChecks (J keys field text nat strField natField decodeVal valJson valsJson reasonJson
+  exitJson decodeReason decodeAnswer answerJson decided threaded)
+open Tools.ProfileJson (tableJson)
 set_option maxRecDepth 8192
 set_option maxHeartbeats 4000000
 namespace KeyedTool
-abbrev J := Lean.Json
 
 def pair (a b : Effect4.Program.Term) : Effect4.Program.Term := .app "pair" (.cons a (.cons b .nil))
 def opts : Supervision.ForkOptions := { daemon := false, startImmediately := true, maskMode := .inherit }
@@ -73,61 +79,11 @@ def fixture (name : String) : Except String Fixture := do
       Json.mkObj [("variant", toJson (n / 4)), ("pulls", toJson (n % 4))]⟩
   throw "unknown fixture"
 
-def tableJson (table : RowTable) : J := toJson (table.map Tools.ProfileJson.rowJson)
-def keys (j : J) (wanted : List String) : Except String Unit := do
-  let actual := (← j.getObj?).toList.map Prod.fst
-  unless actual.length = wanted.length && actual.all (wanted.contains ·) do throw "missing or extra fields"
-def field := Json.getObjVal?
-def text (j : J) : Except String String := do
-  let s ← j.getStr?
-  if s.length ≤ 4096 then return s else throw "text bound"
-def nat (j : J) : Except String Nat := do
-  let n ← j.getNat?
-  if n ≤ rc112.natBound then return n else throw "unsafe natural"
-def strField (j : J) (k : String) := field j k >>= text
-def natField (j : J) (k : String) := field j k >>= nat
 def clockField (j : J) (k : String) : Except String ClockMillis := do
   let text ← (← field j k).getStr?
   match ClockMillis.ofDecimal text with
   | some millis => pure millis
   | none => throw "clock milliseconds require canonical decimal text"
-
-def decodeVal : Nat → J → Except String Val
-  | 0, _ => .error "value depth"
-  | fuel + 1, j => do
-    match j with
-    | .null => return .unit
-    | .bool b => return .bool b
-    | .num _ => return .nat (← nat j)
-    | .str _ => return .str (← text j)
-    | .arr vs => return .list (← vs.toList.mapM (decodeVal fuel))
-    | .obj _ =>
-      if (field j "none").isOk then
-        keys j ["none"]
-        unless (← field j "none") == .bool true do throw "invalid none"
-        return .none
-      else if (field j "some").isOk then
-        keys j ["some"]
-        return .some (← decodeVal fuel (← field j "some"))
-      else if (field j "ctor").isOk then
-        keys j ["ctor", "args"]
-        return .ctor (← natField j "ctor") (← (← (← field j "args").getArr?).toList.mapM (decodeVal fuel))
-      else
-        keys j ["handle"]
-        return Value.external (← natField j "handle")
-
-mutual
-  def valJson : Val → J
-    | .unit => .null | .nat n => toJson n | .bool b => toJson b | .str s => .str s
-    | .none => Json.mkObj [("none", .bool true)]
-    | .some v => Json.mkObj [("some", valJson v)]
-    | .list vs => .arr (valsJson vs).toArray
-    | .ctor n vs => Json.mkObj [("ctor", toJson n), ("args", .arr (valsJson vs).toArray)]
-    | .handle _ n => Json.mkObj [("handle", toJson n)]
-    | _ => Json.mkObj [("unsupported", .bool true)]
-  def valsJson : List Val → List J
-    | [] => [] | v :: vs => valJson v :: valsJson vs
-end
 
 mutual
   /-- A value with each `Deferred` handle written without its identity: the image
@@ -161,52 +117,6 @@ end
 -- The host reader pins the same bytes in keyed-protocol.test.ts.
 #guard (Json.parse "{\"ctor\":1,\"args\":[{\"ctor\":0,\"args\":[[{\"ctor\":0,\"args\":[{\"ctor\":2,\"args\":[\"Timeout\",\"deadline\"]},{\"ctor\":0,\"args\":[[]]}]}]]}]}").toOption ==
   some (cellJson (exitImage.toVal (.failure (Cause.fail (.tagged "Timeout" "deadline")))))
-
-def reasonJson : Reason Err Defect FiberId Ann → J
-  | .fail (.tagged tag msg) _ => Json.mkObj [("fail", toJson [tag, msg])]
-  | .fail (.text msg) _ => Json.mkObj [("fail", toJson msg)]
-  | .fail (.tag n) _ => Json.mkObj [("fail", toJson n)]
-  -- a record payload (decisions row 120): its frame through the structural value wire
-  | .fail (.payload p) _ => Json.mkObj [("fail", valJson p.val)]
-  | .die (.user n) _ => Json.mkObj [("die", toJson n)]
-  | .die (.error (.text msg)) _ => Json.mkObj [("die", toJson msg)]
-  | .interrupt fiber _ => Json.mkObj [("interrupt", toJson (fiber.map FiberId.value))]
-  | _ => Json.mkObj [("unsupported", .bool true)]
-
-def exitJson : ExitV → J
-  | .success v => Json.mkObj [("success", valJson v)]
-  | .failure cause => Json.mkObj [("failure", toJson (cause.reasons.map reasonJson))]
-
-def decodeReason (j : J) : Except String (Reason Err Defect FiberId Ann) := do
-  if (field j "fail").isOk then
-    keys j ["fail"]
-    match ← decodeVal 32 (← field j "fail") with
-    | .str s => return .fail (.text s) .empty
-    | .nat n => return .fail (.tag n) .empty
-    | .list [.str a, .str b] => return .fail (.tagged a b) .empty
-    | v =>
-      match Effect4.Machine.Payload.image.ofVal v with
-      | some p => return .fail (.payload p) .empty
-      | none => throw "unsupported error shape"
-  else if (field j "die").isOk then
-    keys j ["die"]
-    match ← decodeVal 32 (← field j "die") with
-    | .str s => return .die (.error (.text s)) .empty
-    | .nat n => return .die (.user n) .empty
-    | _ => throw "unsupported defect shape"
-  else
-    keys j ["interrupt"]
-    let f ← field j "interrupt"
-    let who ← if f == .null then pure none else do pure (some ⟨← nat f⟩)
-    return .interrupt who .empty
-
-def decodeAnswer (j : J) : Except String Answer := do
-  if (field j "success").isOk then
-    keys j ["success"]
-    return .ofExit (.success (← decodeVal 64 (← field j "success")))
-  else
-    keys j ["failure"]
-    return .ofExit (.failure ⟨← (← (← field j "failure").getArr?).toList.mapM decodeReason⟩)
 
 def keyOf (j : J) : Except String Key := return ⟨⟨← natField j "fiber"⟩, ← natField j "token"⟩
 
@@ -353,10 +263,6 @@ def modelReply (f : Fixture) (s : ModelState) (bound : BoundCall) : Except Strin
     if variant = 7 || variant = 9 then return (.ofExit (.failure (Cause.die (.error (.text "close defect")))), s)
     return ok .unit
   | _, _ => throw "unexpected stream model request"
-
-def answerJson (answer : Answer) : J := match answer with
-  | .ofExit exit => exitJson exit
-  | _ => Json.mkObj [("unsupported", .bool true)]
 
 def planRun (f : Fixture) (s : Session f.program f.table) (model : ModelState) :
     Nat → Except String (List J × J)
@@ -1053,8 +959,9 @@ emitted service, replayed against the script's program (`replayedOf`). For each 
 replayed journal is the script's, whether the run is settled (funded, at rest, driven by a host),
 and whether it conforms to the application's protocols (`Effect4.Run.conforms`). For each pair of
 `todoPairs` that the inputs hold: whether both runs agree with the reference model, the model's
-state threaded from the first to the second (`Effect4.Run.agrees`). Beside each decision stands
-the same decision on the script's own run, which the host-protocol gate compares with it. -/
+state threaded from the first to the second (`Effect4.Run.agrees`). The decisions are the shared
+ones (`Tools.RunChecks.decided`, `Tools.RunChecks.threaded`). Beside each decision stands the same
+decision on the script's own run, which the host-protocol gate compares with it. -/
 def serviceChecks (inputs : List J) : Except String J := do
   let all ← runs
   let replayed ← inputs.mapM fun input => do
@@ -1062,18 +969,16 @@ def serviceChecks (inputs : List J) : Except String J := do
     let some run := all.find? (·.name == name) | throw s!"{name}: unknown run"
     let s ← replayedOf run (← input.getObjVal? "recording")
     return (name, run, s)
-  let settled (s : Run) : Bool :=
-    Effect4.Run.funded s && Effect4.Run.atRest s && Effect4.Run.hostDriven s
   let agreeing (a b : Run) (origin : Scenario.Todo.Repo) : Bool :=
-    ((Effect4.Run.agrees Scenario.Todo.repository a origin).bind
-      (Effect4.Run.agrees Scenario.Todo.repository b)).isSome
+    (threaded Scenario.Todo.repository origin [some a, some b]).all Option.isSome
   let runChecks := replayed.map fun (name, run, s) =>
     let scripted := Scenario.play run.opened run.moves
+    let mine := decided Scenario.Todo.protocols s
+    let theirs := decided Scenario.Todo.protocols scripted
     Json.mkObj [("name", .str name),
       ("journal", toJson (decide (s.journal = scripted.journal))),
-      ("settled", toJson (settled s)), ("scriptedSettled", toJson (settled scripted)),
-      ("conforming", toJson (Effect4.Run.conforms Scenario.Todo.protocols s)),
-      ("scriptedConforming", toJson (Effect4.Run.conforms Scenario.Todo.protocols scripted))]
+      ("settled", toJson mine.settled), ("scriptedSettled", toJson theirs.settled),
+      ("conforming", toJson mine.conforming), ("scriptedConforming", toJson theirs.conforming)]
   let pairChecks := todoPairs.filterMap fun (first, second, origin) =>
     match replayed.find? (·.1 == first), replayed.find? (·.1 == second) with
     | some (_, ra, a), some (_, rb, b) =>
