@@ -7,6 +7,8 @@ The Flow producer still needs explicit direct membership metadata.
 Base: `5cd537aef`.
 Core source: `b1247fdae264c9ce8d502ecfb8ed86d41f238cd6`.
 Proof and probe delta: `ba9d9fd01f5308f4ac982094c2584177f5730b47`.
+A later benchmark correction supplies clock-derived inputs to non-inlined operations.
+The coordinator receives its commit hash with this receipt.
 Branch: `codex/graph-regions`.
 
 ## Interface and consumers
@@ -104,7 +106,13 @@ They also exhibit the false displayed path.
 The rows contain 100, 1000, and 10000 source vertices with ten region declarations.
 They retain 200, 2000, and 20000 edge occurrences respectively.
 Each prepared projection has ten visible representatives.
-The probe forces preparation and projection through `IO.Ref` before reading their timestamps.
+Non-inlined measured functions receive clock-derived nonces and rotate ownership or edge order inside the timed operation.
+The nonce divides nanoseconds by 100 before indexing, accounting for the host clock granularity.
+`IO.Ref` retains the actual outputs.
+The measurement includes input rotation.
+The logs retain each rotation.
+The checksum depends on edge order and projected endpoints.
+It is not a reproducible digest across differing clock-derived inputs.
 It consumes results through conservation checks and a checksum.
 
 These measurements run through `lake env lean --run`.

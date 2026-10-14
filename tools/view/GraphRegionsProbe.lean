@@ -79,17 +79,30 @@ private def cutProjection : Array (EdgeOccurrence Edge) :=
 #guard cutProjection.any (fun first => first.source == 0 &&
   cutProjection.any (fun second => first.target == second.source && second.target == 2))
 
+private def rotate {α : Type} (values : Array α) (nonce : Nat) : Array α :=
+  let split := nonce % values.size
+  values.extract split values.size ++ values.extract 0 split
+
+/-- Clock-dependent ownership rotation stays inside the measured operation. -/
+@[noinline] private def measuredPrepare (input : Membership) (nonce : Nat) : Except Refusal Prepared :=
+  prepare { input with owner := rotate input.owner nonce } (Array.replicate input.regions.size true)
+
+/-- Clock-dependent edge-order rotation stays inside the measured operation. -/
+@[noinline] private def measuredProject (prepared : Prepared) (input : Array Edge) (nonce : Nat) :
+    Except Refusal (Array (EdgeOccurrence Edge)) :=
+  project prepared (rotate input nonce) Edge.src Edge.dst
+
 private def bench (count : Nat) : IO Unit := do
   let input : Membership :=
     { regions := (List.range 10).map (fun i => RegionDecl.mk (toString i) none) |>.toArray
       owner := (List.range count).map (fun i => some (i % 10)) |>.toArray }
   let inputEdges := (List.range (2 * count)).map (fun i => Edge.mk i (i % count) ((i + 1) % count)) |>.toArray
   let started ← IO.monoNanosNow
-  let retained ← IO.mkRef (prepare input (Array.replicate 10 true))
+  let retained ← IO.mkRef (measuredPrepare input (started / 100))
   let preparation ← retained.get
   let preparedAt ← IO.monoNanosNow
   let .ok prepared := preparation | throw (IO.userError "benchmark membership refused")
-  let result ← IO.mkRef (project prepared inputEdges Edge.src Edge.dst)
+  let result ← IO.mkRef (measuredProject prepared inputEdges (preparedAt / 100))
   let value ← result.get
   let projectedAt ← IO.monoNanosNow
   let .ok output := value | throw (IO.userError "benchmark projection refused")
@@ -97,10 +110,15 @@ private def bench (count : Nat) : IO Unit := do
     throw (IO.userError "benchmark conservation failed")
   IO.println (Lean.Json.compress (Lean.Json.mkObj [
     ("vertices", Lean.toJson count), ("regions", Lean.toJson input.regions.size),
+    ("owner_rotation", Lean.toJson (started / 100 % count)),
+    ("edge_rotation", Lean.toJson (preparedAt / 100 % inputEdges.size)),
+    ("includes_input_rotation", Lean.toJson true),
     ("input_edges", Lean.toJson inputEdges.size), ("visible", Lean.toJson prepared.visible.size),
     ("retained_edges", Lean.toJson output.size), ("prepare_ns", Lean.toJson (preparedAt - started)),
     ("project_ns", Lean.toJson (projectedAt - preparedAt)),
-    ("checksum", Lean.toJson (output.foldl (fun n e => n + e.occurrence + e.originalSource + e.originalTarget) 0))]))
+    ("checksum", Lean.toJson ((output.foldl (fun (n : UInt64) e =>
+      n * 1099511628211 + UInt64.ofNat (e.original.id + 17 * e.source + 31 * e.target))
+      14695981039346656037).toNat))]))
 
 end GraphRegionsProbe
 

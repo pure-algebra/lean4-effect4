@@ -72,6 +72,7 @@ These passes perform work proportional to the supplied array lengths under ordin
 Region-key validation also hashes and compares key bytes through the existing `KeyMap`.
 No theorem establishes a runtime complexity or collision bound.
 Benchmarks use projection directly at 100, 1000, and 10000 vertices.
+The measured operations include clock-dependent input rotation to prevent compiler hoisting.
 They exclude full `Graph.layout` and its separate input checker.
 
 ## Placement before proof
