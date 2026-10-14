@@ -49,6 +49,11 @@ Base: `880aac65022f0ec0101e16fd29d34f39f3946780`.
 Head: the commit adding this receipt on `codex/connector-smoothness`.
 The pre-existing diagnostic and evidence changes in this worktree remain outside this landing.
 
+The coordinator integrates the bridge through the existing `diagnose_shape` function in `tools/view/check_smoothness.py`.
+The integrated bridge needs no uncommitted diagnostic helper.
+The coordinator reruns all 366 knot-guide motion frames through this committed interface.
+The numerical summary agrees with `AdvancedKnots.json` from the initial probe.
+
 ## Commands and evidence
 
 The JavaScript syntax check and Python bytecode check succeed.

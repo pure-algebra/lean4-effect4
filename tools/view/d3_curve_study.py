@@ -9,7 +9,7 @@ import sys
 import xml.etree.ElementTree as ET
 
 from check_connectors import check_svg, cubic_contours, keyed_paths
-from check_smoothness import diagnose, sampled_shape, shape_curves
+from check_smoothness import diagnose, diagnose_shape
 
 
 def files(source):
@@ -139,13 +139,13 @@ def main(mode, source, output):
                             source_sha256=hashlib.sha256(source_path.read_bytes()).hexdigest()))
         if name in payload['metadata']['shape_files']:
             for row in records:
-                shape = sampled_shape(shape_curves(target, row['key']), 16)
-                baseline = sampled_shape(shape_curves(source_path, row['key']), 16)
+                shape = diagnose_shape(target, row['key'], 16)
+                baseline = diagnose_shape(source_path, row['key'], 16)
                 fields = ('side_cubics', 'min_paired_distance', 'min_oriented_normal_gap',
                           'max_oriented_normal_gap', 'normal_gap_sign_changes', 'min_sampled_speed',
                           'backtracking_samples', 'proper_polyline_crossings')
-                shapes.append(dict(file=name, key=row['key'], **shape,
-                                   baseline={k: baseline[k] for k in fields}))
+                shapes.append({**shape, 'file': name, 'key': row['key'],
+                               'baseline': {k: baseline[k] for k in fields}})
     summary['sampled_shapes'] = len(shapes)
     summary['proper_sampled_crossings'] = sum(x['proper_polyline_crossings'] for x in shapes)
     summary['shape_backtracking_samples'] = sum(x['backtracking_samples'] for x in shapes)

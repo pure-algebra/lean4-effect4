@@ -93,3 +93,32 @@ It should include collar guides in the same side and avoid pinning individual ha
 
 This recommendation still needs measured clearance, width, motion stability, and the production coordinate conversion contract.
 The separate D3 comparison records its source version, concrete outputs, and limitations.
+
+## Browser observations
+
+The final comparison page is `tools/view/out/advanced-d3-motion.html`.
+Its inputs are the production frames and the D3 basis frames with sampled side guides.
+The viewer shows all six sequences with synchronized full graphs and three contact crops.
+Playback advances every mounted view to the same recorded frame.
+The browser reports no page error during playback, stepping, theme changes, or cropping.
+
+The browser inspection checks 20-times magnification in dark and paper themes.
+Zoom keeps the selected contact centered.
+A 440-pixel viewport wraps controls and has no horizontal page overflow.
+The inspection restores the normal viewport afterward.
+
+The static reported join appears smoother under D3's whole-side basis construction.
+The handler's growing tip still has a visible corner at its retained cap.
+A thin line remains at one node boundary in the handler close-up.
+That observation does not distinguish a painted outline from rasterization at adjacent fills.
+The handler's choice diamond also retains overlapping connector silhouettes.
+Side curvature agreement does not establish one continuous perimeter for that whole junction.
+
+The browser captures are local inspection outputs:
+
+- `tools/view/out/d3-motion-closeups.png` shows the wide race and three paired contact crops.
+- `tools/view/out/d3-growing-tip-remaining.png` shows the handler's remaining contact observations.
+
+The kit research addendum records D3 source and test comparisons.
+Its repository commit is `71a45b8b1dfbba0c76751bd21642c04f0f2285f1`.
+Its path is `docs/research/2026-10-13-smooth-connector-literature.md` in the kit repository.
