@@ -398,8 +398,9 @@ def writeFrames (L : Look) (out : System.FilePath) (frames : List Build.Frame) (
     let g := f.page
     let name := frameName (i + 1)
     if let some g0 := prev then
+      let transition := preparePageMotion L.motion g0 g
       for k in List.range' 1 (motion - 1) do
-        cache ← writePage L out s!"{name}-{frameName k}" (sample L.motion g0 g (k * 1000 / motion)) cache
+        cache ← writePage L out s!"{name}-{frameName k}" (transition.sample (k * 1000 / motion)) cache
         pics := pics.push (s!"{name}-{frameName k}", false)
       if f.spliced then
         if let some a := f.edit then
@@ -518,7 +519,10 @@ def looksIndex (looks : List Look) : String :=
 def writeLooks (dir out : System.FilePath) : IO UInt32 := do
   let files ← lookFiles dir
   let looks := ({} : Look) :: (← files.mapM readLookFile)
-  let some specimen := Tools.View.Specimen.frames.getLast? | throw (IO.userError "view: the specimen has no frame")
+  let specimens ← match Tools.View.Specimen.checkedFrames with
+    | .ok frames => pure frames
+    | .error refusal => throw (IO.userError s!"view: specimen: {graphRefusal refusal}")
+  let some specimen := specimens.getLast? | throw (IO.userError "view: the specimen has no frame")
   let some program := (List.lookup "pFork" Effect4.Program.Wire.Corpus.all >>= Build.requests).bind
       fun reqs => (Build.frames "pFork" reqs).getLast?.map (·.page)
     | throw (IO.userError "view: pFork has no frame built")
@@ -579,8 +583,11 @@ def main (args : List String) : IO UInt32 := do
         return 1
       | some pages =>
         keep st L out (withMarks st (pages.map fun page => ({ page } : Build.Frame))) s!"{name}, run"
-  | ["specimen", out] =>
-    keep st L out (Tools.View.Specimen.frames.map fun page => ({ page } : Build.Frame)) "graph specimen"
+  | ["specimen", out] => do
+    let specimens ← match Tools.View.Specimen.checkedFrames with
+      | .ok frames => pure frames
+      | .error refusal => throw (IO.userError s!"view: specimen: {graphRefusal refusal}")
+    keep st L out (specimens.map fun page => ({ page } : Build.Frame)) "graph specimen"
   | ["flows", out] =>
     keep st L out (Tools.View.FlowSpecimen.frames.map fun page => ({ page } : Build.Frame))
       "program graph cases"

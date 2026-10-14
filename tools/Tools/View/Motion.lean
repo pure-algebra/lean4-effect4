@@ -1,4 +1,5 @@
 import Tools.View.Page
+import Tools.View.GraphMotion
 import Whatwg.Svg.Scene.Join.Laws
 
 /-!
@@ -88,48 +89,9 @@ def sampleLines (c : Choreography) (g1 g2 : Page) (t : Nat) : Array Line :=
       lineGone c new.length t o i k)
   (kept ++ leaving).toArray
 
-/-- **The update and the enter of a placed item**: a kept item moves `moved` per mille of the way
-from its old place; a new one grows as far as `grow` says. -/
-def placedAt (a : Laid) (moved : Int) (grow : Placed → Nat) (p : Placed) : Placed :=
-  match a.find p.key with
-  | some q => { p with x := lerp q.x p.x moved, y := lerp q.y p.y moved }
-  | none => { p with grow := grow p }
-
-/-- **The update and the enter of a route**: a kept route is drawn whole, and a new one as far as
-`reveal` says. -/
-def routeAt (a : Laid) (reveal : Route → Nat) (r : Route) : Route :=
-  if a.routes.toList.any (·.key == r.key) then r else r.withReveal (reveal r)
-
-/-- The layout at the moment `t` of the step from `a` to `b`: the kept items move; level by level
-from the top, each new edge draws and then the boxes at its end expand; the old items shrink and
-retract. -/
+/-- Sample a graph through retained transition analysis. -/
 def sampleLaid (c : Choreography) (a b : Laid) (t : Nat) : Laid :=
-  let left := c.leave.within.at t
-  let newBoxes := b.placed.toList.filter fun p => (a.find p.key).isNone
-  let newRoutes := b.routes.toList.filter fun r => !(a.routes.toList.any (·.key == r.key))
-  let targetY : Route → Int
-    | .down _ ks _ _ => ((ks.getLast?.bind b.find).map (·.y)).getD 0
-    | .back _ _ d _ _ => ((b.find d).map (·.y)).getD 0
-    | .loop _ k _ => ((b.find k).map (·.y)).getD 0
-  let levels := ((newBoxes.map (·.y)) ++ (newRoutes.map targetY)).eraseDups.mergeSort (· ≤ ·)
-  let slot := if levels.isEmpty then 0 else (1000 - c.enterFrom) / levels.length
-  let start (y : Int) : Nat := c.enterFrom + levels.findIdx (· == y) * slot
-  let drawAt (y : Int) : Transition :=
-    ({ c.draw with duration := min c.draw.duration (slot * 45 / 100) } : Transition).after (start y)
-  let expandAt (y : Int) : Transition :=
-    ({ c.expand with duration := min c.expand.duration (slot * 60 / 100) } : Transition).after
-      (start y + slot * 40 / 100)
-  let placed := b.placed.toList.map (placedAt a (c.move.within.at t) fun p => ((expandAt p.y).at t).toNat)
-  let routes := b.routes.toList.map (routeAt a fun r => ((drawAt (targetY r)).at t).toNat)
-  let gone := if 1000 ≤ t then [] else
-    (a.placed.toList.filter fun p => (b.find p.key).isNone).map fun p => { p with grow := (1000 - left).toNat }
-  let retracting := if 1000 ≤ t then [] else
-    (a.routes.toList.filter fun r => !(b.routes.toList.any (·.key == r.key))).map fun r =>
-      r.withReveal (1000 - left).toNat
-  { placed := (gone ++ placed).toArray, routes := (retracting ++ routes).toArray,
-    width := if 1000 ≤ t then b.width else max a.width b.width,
-    height := if 1000 ≤ t then b.height else max a.height b.height, regions := b.regions,
-    marks := b.marks }
+  (GraphMotion.prepare c a b).sample t
 
 /-- **The moment `t` of the step from `g1` to `g2`**, as a page: `g2`'s, with its lines and its
 graph sampled in the choreography's per mille of its step. A graph that appears enters from an
@@ -138,6 +100,33 @@ def sample (c : Choreography) (g1 g2 : Page) (t : Nat) : Page :=
   { g2 with
     lines := sampleLines c.norm g1 g2 t
     graph := g2.graph.map fun p => { p with laid := sampleLaid c.norm ((g1.graph.map (·.laid)).getD {}) p.laid t } }
+
+/-- One page transition with retained graph analysis.
+Line sampling keeps its existing behavior; the graph is prepared once. -/
+structure PreparedPageMotion where
+  choreography : Choreography
+  old : Page
+  next : Page
+  graph : Option (Panel × GraphMotion.Prepared)
+
+/-- Prepare the graph of a page transition before sampling its intermediate frames. -/
+def preparePageMotion (c : Choreography) (g1 g2 : Page) : PreparedPageMotion :=
+  { choreography := c.norm, old := g1, next := g2
+    graph := g2.graph.map fun p =>
+      (p, GraphMotion.prepare c.norm ((g1.graph.map (·.laid)).getD {}) p.laid) }
+
+/-- Sample a prepared page transition, retaining the existing line sampler. -/
+def PreparedPageMotion.sample (prepared : PreparedPageMotion) (t : Nat) : Page :=
+  { prepared.next with
+    lines := sampleLines prepared.choreography prepared.old prepared.next t
+    graph := prepared.graph.map fun (panel, graph) => { panel with laid := graph.sample t } }
+
+/-- Retaining page graph analysis answers the existing page sampler.
+Tool compatibility for R14; `Drivers.View.writeFrames` consumes this law. -/
+theorem preparePageMotion_sample (c : Choreography) (g1 g2 : Page) (t : Nat) :
+    (preparePageMotion c g1 g2).sample t = sample c g1 g2 t := by
+  simp only [preparePageMotion, PreparedPageMotion.sample, sample, Option.map_map, sampleLaid]
+  rfl
 
 /-! ## The end law: a step's last moment is the next frame -/
 
@@ -188,7 +177,9 @@ theorem routeAt_end (a : Laid) (reveal : Route → Nat) (r : Route) (h : r.revea
 /-- The layout at a step's end is the next frame's. -/
 theorem sampleLaid_end (c : Choreography) (a b : Laid) (h : b.AtRest) : sampleLaid c a b 1000 = b := by
   obtain ⟨hp, hr⟩ := h
-  simp only [sampleLaid, Nat.le_refl, ↓reduceIte, List.nil_append, Transition.within_at_end,
+  unfold sampleLaid
+  rw [GraphMotion.prepare_sample_eq_reference]
+  simp only [GraphMotion.reference, Nat.le_refl, ↓reduceIte, List.nil_append, Transition.within_at_end,
     Transition.after_at_end]
   rw [List.map_congr_left (g := id) fun p hm => placedAt_end a _ p (hp p hm) rfl,
     List.map_congr_left (g := id) fun r hm => routeAt_end a _ r (hr r hm) rfl,
