@@ -6,14 +6,16 @@ Status: receipt (history, not authority). From the coordinator, 2026-10-14. The 
 
 ## The one thing to know
 
-The base builds, and the behaviour gates the landing will reach pass at the base, except where the
-table below says otherwise. So a gate that fails after a slice fails because of that slice.
+The base builds, and every behaviour gate the landing will reach passes at the base. One of them,
+`check-truth`, was broken by an earlier landing and is repaired here: a harness caller that missed a
+new argument (`harness/truth/P2b.lean`). So a gate that fails after a slice fails because of that
+slice.
 
 ## The base
 
 - Branch `refactor/phase1-phase3` of `/Users/pooks/Dev/lean4-effect4`, fast-forwarded to Gemini's
-  `7c9bb7617`, then the commit that locks the plan (its hash is in the commit log under "PROC-6: lock
-  the plan").
+  `7c9bb7617`, then `d6e162caf`, which locks the plan. The landing's base is the commit that records
+  this receipt and the `check-truth` repair, one after `d6e162caf`.
 - `lake build Effect4 Effect4.Laws`: `Build completed successfully (1111 jobs).`
 
 ## The fan-out of the modules the stages edit
@@ -65,16 +67,31 @@ The narrow build reads only the first column.
 | `make check-host-protocol` | PASS. The keyed host: 57 actual rc.112 runs, 52 admitted printed programs. The keyed scenarios: 86 scripts in 295 runs. The to-do's service: 13 scripts on rc.112, each replayed to its journal. The to-do on SQLite: 11 requests from an empty database, each passing Lean's five checks; the Ref cache hit and invalidation as expected; the forgetful and titleless repositories fail `agrees` and `conforming` |
 | `make check-ts-reader` | `files 501: matched 416, mismatched 0` |
 | `make check-target` | conformance `104 expected, 104 attempted, 104 resolved, 0 mismatching, 0 refused`; assignability PASS (742 pairs: agree 708, cut 6, incomplete 28; the red control caught); rows PASS |
-| `make check-compiler` | pending |
-| `make check-native` | pending |
-| `make check-ocaml` | pending |
-| `make check-truth` | pending |
+| `make check-compiler` | `conform compiler: PASS, exit 0` |
+| `make check-native` | `conform native: PASS, exit 0` |
+| `make check-ocaml` | PASS: the generated fixtures present; `ok` C1, C2 (`ocaml/gen` builds and `@gen/runtest` passes), C3a, C3b, C4; the engine lanes' views equal Lean's |
+| `make check-truth` | failed at the base, then fixed here. The differential passed (`81 programs agree on exits, schedules and sync exits; 12 signed divergence(s)`), then `harness/truth/P2b.lean` failed to elaborate. `requirementType` gained its `KeyNames` argument in `8c14ef7cc` (row 378 (22)), and no gate run updated this harness caller. It now passes `[]`, the names of the native signature over an empty table, so its keys print by their runtime text as before. The rerun passes: `PASS P2b: exact consumer columns, retained negative comparisons, and missing-member refusals checked; type-only`; `PASS truth: pinned corpus, bounded differential and the signed U-01, HC-2 and LATEST divergences checked; the regenerated modules type-check` |
 | `make gen-semantics` after row 379 | `generated/semantics.md` unchanged |
 
 Versions: effect 4.0.0-rc.112, bun 1.4.2.
 
-## Not done here
+## The merge's axiom audit
 
-- No source file changed, so no `#axiom_audit` ran in this preparation.
+The fast-forward to Gemini's `7c9bb7617` landed 11 commits that no audit had read. One
+`#axiom_audit` over the 23 `Effect4.*` modules and the 9 batteries they changed:
+
+- `Effect4.Codegen.{Admit, CallbackRequirements, Classes, Print, Read, RowServices, Types}`;
+- `Effect4.Laws.Api.ModuleReadable`, `Effect4.Laws.Codegen.{Admit, Checked, Classes, Module, ReadPrint}`;
+- `Effect4.Laws.Library.Ref.Cache`, `Effect4.Laws.Program.ParamRows`, `Effect4.Laws.Run.CallTree`;
+- `Effect4.Program.Authoring` and its `Application`, `ApplicationService`, `Claims` and `Declare`;
+  `Effect4.Program.Definitions`;
+- `Test.Codegen.{DefinitionsPrint, ServicesPrint, TypeReader}`, `Test.Dogfood.{Application, Bank}`,
+  `Test.Dogfood.Scenario.Todo` and its `Cached`, `Test.Program.{AuthoringDeclare, SessionToolControls}`.
+
+```text
+#axiom_audit: 4694 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
+
+## Not done here
 - The placement slice (the registry claim and the planned goals) is the landing seat's first slice,
   so that the seat owns the statements it proves.

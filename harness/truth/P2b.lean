@@ -164,7 +164,7 @@ def columns (ty : EffTy) : Except String Lean.Json := do
   let some error := Types.ofTy ty.error | throw "error projection refuses"
   return Lean.Json.mkObj [("A", toJson (Render.type house0 answer)),
     ("E", toJson (Render.type house0 error)),
-    ("R", toJson (Render.type house0 (requirementType nativeScopeKey ty.requires)))]
+    ("R", toJson (Render.type house0 (requirementType nativeScopeKey [] ty.requires)))]
 
 /-- Emit one inferred function from the actual typed expression and exact source parameters. -/
 def emit (fixture : Fixture) : Except String Lean.Json := do
