@@ -85,11 +85,11 @@ def makeStates : List (Application.Imposed NativeOp) → List TermSrc →
   | [], made, k => k made
   | m :: ms, made, k => bindWith (Def.invoke m.make []) fun x => makeStates ms (made ++ [x]) k
 
-/-- Each imposed block's state bound under its name, read from its part of the service's state,
-around `body`. A step of `methodDef`. -/
-def bindStates (ms : List (Application.Imposed NativeOp)) (parts : List TermSrc)
-    (body : Src NativeOp) : Src NativeOp :=
-  (ms.zip parts).foldr (fun mp rest => bind mp.1.state (succeed mp.2) rest) body
+/-- Each imposed block's state bound to a fresh variable (`bindWith`), read from its part of the
+service's state, then `k` of their terms. A step of `methodDef`. -/
+def bindStates : List TermSrc → List TermSrc → (List TermSrc → Src NativeOp) → Src NativeOp
+  | [], bound, k => k bound
+  | part :: parts, bound, k => bindWith (succeed part) fun x => bindStates parts (bound ++ [x]) k
 
 /-- The service's initial program `<service>Context`: it reads the context of the rows' keys
 (`Effect.context<R>()`), so the layer requires them and each method runs under them. When the
@@ -107,7 +107,7 @@ def contextDef (app : Application NativeOp) (service : String) : DefSrc NativeOp
 /-- Method `e` of the service, the definition `<service>_<e>`. Its request is the state, then the
 entry's parameters. Its body runs the entry at its parameters under the context
 (`provideContext`). When the application imposes banked blocks, the body first binds each block's
-state under its name, and the entry runs inside each block's wrapper (`Imposed.wrap`), the first
+state (`bindStates`), and the entry runs inside each block's wrapper (`Imposed.wrap`), the first
 block's outermost. Its columns are the entry's type `t`, the context's keys discharged. -/
 def methodDef (app : Application NativeOp) (service : String) (e : Application.Entry NativeOp)
     (t : EffTy) : DefSrc NativeOp :=
@@ -118,9 +118,9 @@ def methodDef (app : Application NativeOp) (service : String) (e : Application.E
       body := fun
         | state :: args => match app.imposed with
           | [] => provideContext state (e.applied args)
-          | ms => bindStates ms (requestParts ms.length (Authoring.app "snd" [state]))
-            (ms.foldr (fun m inner => m.wrap e.name inner)
-              (provideContext (Authoring.app "fst" [state]) (e.applied args)))
+          | ms => bindStates (requestParts ms.length (Authoring.app "snd" [state])) [] fun states =>
+            (ms.zip states).foldr (fun ms inner => ms.1.wrap e.name ms.2 inner)
+              (provideContext (Authoring.app "fst" [state]) (e.applied args))
         | [] => e.body }
 
 /-- **The application as one service** (decisions row 378 (20)): the initial program, then one

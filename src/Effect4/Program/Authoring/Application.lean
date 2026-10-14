@@ -61,22 +61,23 @@ def Application.Entry.applied {Op : Type} (e : Application.Entry Op) (args : Lis
 /-- **A banked block imposed on an application's service** (decisions row 378 (2), (4), (8) and
 (23)). The block joins the service's definitions by reference, first and kept (`DefSrc.ofBlock`).
 Its state is made once, by the block's definition `make` at the request `unit`, beside the
-context, and every method reads it under the name `state`. `around` gives, by entry name, how
-that entry's method runs through the block: a wrapper of the entry's program, which reads the
-state by its name and invokes the block's definitions by theirs. An entry with no wrapper runs as
+context, and every method binds it to a fresh variable. `around` gives, by entry name, how
+that entry's method runs through the block: a wrapper of the entry's program, which receives the
+bound state term and invokes the block's definitions by name. An entry with no wrapper runs as
 it is. The entries' own programs do not change, so neither do their modules (`moduleOf`). -/
 structure Application.Imposed (Op : Type) where
   block : Eff Op
-  state : String
+  state : String := "state"
   stateTy : Ty
   make : String
-  around : List (String × (Src Op → Src Op)) := []
+  around : List (String × (TermSrc → Src Op → Src Op)) := []
 
-/-- The wrapper of an entry's method under one imposed block: the one `around` names, or none. -/
-def Application.Imposed.wrap {Op : Type} (m : Application.Imposed Op) (entry : String) :
-    Src Op → Src Op :=
+/-- The wrapper of an entry's method under one imposed block: the one `around` names, passed the
+block's bound state term, or none. -/
+def Application.Imposed.wrap {Op : Type} (m : Application.Imposed Op) (entry : String)
+    (state : TermSrc) : Src Op → Src Op :=
   match m.around.find? (·.1 == entry) with
-  | some (_, f) => f
+  | some (_, f) => f state
   | none => id
 
 /-- An application: the declarations of a `Module`, and several named programs over them. -/
