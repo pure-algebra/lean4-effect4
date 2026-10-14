@@ -32,7 +32,7 @@ Select a node to inspect its members and its boundary connections.</p>
 <div class="workspace"><section class="panel"><h2 id="title"></h2><div class="stats" id="stats"></div><div id="overview" class="drawing"></div>
 <p class="hint" id="description"></p></section><section class="panel"><h2>Node and connection inspection</h2>
 <div class="controls"><label for="node">Node</label><select id="node"></select><label for="focus">Focus</label><select id="focus"><option value="node">Node body</option><option value="incoming">Incoming contact</option><option value="outgoing">Outgoing contact</option></select></div>
-<div id="detail" class="drawing"></div><div id="contact-status" class="hint"></div><div id="selection"></div><details><summary>All member keys</summary><pre id="members" style="max-height:200px;overflow:auto"></pre></details><p class="hint">Selection follows an original member through collapse and expansion. A newly selected compound uses its first member.</p><p class="hint">A collapsed node shows view adjacency. A path through it does not establish an original path between its members.</p></section></div>
+<div id="detail" class="drawing"></div><div id="contact-status" class="hint"></div><div id="selection"></div><details><summary>All member keys</summary><pre id="members" style="max-height:200px;overflow:auto"></pre></details><details><summary>Hidden internal edge occurrences</summary><pre id="hidden-edges" style="max-height:200px;overflow:auto"></pre></details><p class="hint">Selection follows an original member through collapse and expansion. A newly selected compound uses its first member.</p><p class="hint">A collapsed node shows view adjacency. A path through it does not establish an original path between its members.</p></section></div>
 <section class="panel packed"><div class="controls"><h2>Pack independently drawn components</h2><label for="packing">Canvas target</label><select id="packing"></select></div>
 <div id="pack-stats" class="stats"></div><div id="packed" class="drawing"></div><a id="packed-file" target="_blank" rel="noopener">Open full-size packed SVG</a>
 <p class="hint">Stable shelves pack resolved geometry envelopes with a margin. Components keep their connector geometry. Text ink remains unmeasured.</p></section>
@@ -60,7 +60,8 @@ const w=byId('detail').clientWidth/z,h=byId('detail').clientHeight/z;
 insert('detail',c.svg,[cx-w/2,cy-h/2,w,h]);
 const boundary=c.edges.filter(e=>!e.hidden&&(e.source===n.key||e.target===n.key));
 byId('selection').textContent=n.label+'\n'+n.origin+'\nMembers ('+n.members.length+'): '+n.members.slice(0,12).join(', ')+(n.members.length>12?' …':'')+'\nVisible edge occurrences: '+boundary.map(e=>'#'+e.occurrence+' '+e.key).join(', ');
-byId('members').textContent=n.members.join('\n');}
+byId('members').textContent=n.members.join('\n');
+byId('hidden-edges').textContent=c.edges.filter(e=>e.hidden&&e.source===n.key).map(e=>'#'+e.occurrence+' '+e.key+'  ('+e.originalSource+' → '+e.originalTarget+')').join('\n')||'None';}
 function drawCase(){const c=data.cases[+caseSelect.value];byId('title').textContent=c.title;
 byId('node').replaceChildren();for(const n of c.nodes)byId('node').add(new Option(n.label,n.key));
 byId('stats').textContent=c.originalNodes+' original nodes → '+c.nodes.length+' visible nodes · '+c.edges.length+' original edges · '+c.edges.filter(e=>e.hidden).length+' hidden internal edges';
@@ -109,7 +110,8 @@ def measurements(paths: list[Path]) -> str:
         for count, times in sorted(packing.items()):
             result.append(f"{count:>7,} rectangles   {min(times):8.3f}–{max(times):.3f} ms per call")
     if regions:
-        result.append("\nREGIONS · preparation / projection, including timed input rotation")
+        rotation = ", including timed input rotation" if all(r.get("includes_input_rotation") for r in regions) else ""
+        result.append("\nREGIONS · preparation / projection" + rotation)
         for r in regions:
             result.append(f"{r['vertices']:>7,} vertices / {r['input_edges']:>6,} edges   "
                           f"{r['prepare_ns'] / 1_000_000:8.3f} / {r['project_ns'] / 1_000_000:.3f} ms")
