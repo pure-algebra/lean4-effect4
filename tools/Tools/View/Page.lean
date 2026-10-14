@@ -195,8 +195,8 @@ def linesWidth (W : Int) (g : Page) : Int :=
 /-- The top of a page's graph: below its body and a head for the graph's title. -/
 def graphTop (g : Page) : Int := TOP + ROWH * bodyRows g + GRAPH_GAP + ROWH * 2
 
-/-- The size of a page in logical pixels, at least `W` wide: its lines and its code, then its
-graph. -/
+/-- The allocated size estimate, at least `W` wide.
+`pageDrawingCached` fits graph geometry for export; text ink remains unmeasured. -/
 def pageSize (W : Int) (g : Page) : Int × Int :=
   let W := match g.code with
     | some c => max W (col (codeCol g) + CELL * c.lines.foldl (fun n s => max n s.length) 0 + LEFT)

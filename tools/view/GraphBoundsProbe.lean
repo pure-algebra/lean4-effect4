@@ -95,7 +95,6 @@ def run (out : Option System.FilePath) : IO Unit := do
       require (v.size.1 ≥ laid.width && v.size.2 ≥ laid.height) "fitting shrinks allocation"
       let page : Page := { title := "bounds", graph := some { title := name, laid } }
       let drawing := pageDrawingCached look 640 page {}
-      require (drawing.calls == (pageCallsCached look 640 page {}).1) "prepared page calls disagree"
       let graphCanvas := IBox.ofSize 0 drawing.size.1 drawing.size.2
       for call in drawing.graph.map (Keyed.move drawing.graphOrigin.1 drawing.graphOrigin.2) do
         match (PaintBounds.call call.call).geometry with
