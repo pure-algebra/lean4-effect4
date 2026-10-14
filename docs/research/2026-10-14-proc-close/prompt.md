@@ -128,10 +128,13 @@ L2 uses the substitution, so this slice lands before it.
   transitivity of L1's order.
 - Write each claim's route as its open parts, one per stage, by the constructs each operation
   uses (the probe):
-  - SCOPE-1's congruence cases (masks, interruption, scopes, finalizers, layers) bring
-    `withPermits`, `withPermitsIfAvailable` and SynchronizedRef's `modify`;
-  - CONC-1's cases (forks, awaits, deferred awaits, races) bring the Queue's `take`, `offer`
-    and `poll`, and Semaphore's `take` and `release`.
+  - SCOPE-1's congruence cases (masks, interruption, scopes, finalizers, layers) cover the
+    protection wrapper (`protectedBy`) of `withPermits`, `withPermitsIfAvailable` and
+    SynchronizedRef's `modify`;
+  - CONC-1's cases (forks, awaits, deferred awaits, races) complete every operation that waits
+    or wakes another fiber: the Queue's `take`, `offer` and `poll`; Semaphore's `take` and
+    `release`; and the `withPermits` family and `modify`, whose take waits and whose release
+    wakes waiters.
 - Each connector is proved at the stage that brings its last operation. The coordinator adds
   those steps to the SCOPE-1 and CONC-1 scouts.
 

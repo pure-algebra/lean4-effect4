@@ -213,9 +213,9 @@ supersedes them where they differ.
 - Open check C1 (§8): the exact delivery points on one fiber.
 - **The congruence cases:** interruption by the host, and a sleep.
 - **The inlining law on one fiber** (row 383 (3)). With stages 1, 2 and 5's cases, `inline-agrees`
-  holds on `FiberRows`. Then `withPermits`, `withPermitsIfAvailable` and SynchronizedRef's
-  `modify` reach `semaphore-definitions-agree` as definitions with program parameters (HO-5), on
-  bodies that run on one fiber.
+  holds on `FiberRows`. That covers the protection wrapper (`protectedBy`) of `withPermits`,
+  `withPermitsIfAvailable` and SynchronizedRef's `modify`. Their take waits and their release
+  wakes waiters, so they complete in CONC-1.
 
 ### Stage 6: H9 on one fiber, and the shipped service
 
@@ -261,7 +261,7 @@ All goals: concept `translation-simulation` (`docs/core/semantics.md`), except w
 | stage 6: `h9_fiber : H9Fiber` | `rows-fiber-host` (new), simulation | R6, serving R10 and R11 | the validated premises |
 | stage 6: session composition | step of `rows-fiber-host` | R12 | the server-lifetime replay |
 | stages 1, 2, 5: the congruence cases of their arms | step of `meaning-refines` (row 383 (1)) | R10 | `inline-agrees` on `FiberRows`; the module claims of row 382 (1) |
-| stage 5: `inline-agrees` on `FiberRows` | step of `inline-agrees` | R10 | `semaphore-definitions-agree`'s one-fiber operations |
+| stage 5: `inline-agrees` on `FiberRows` | step of `inline-agrees` | R10 | the protection wrapper inside `semaphore-definitions-agree`; CONC-1 completes it |
 
 `H9Fiber` does not establish forks, merged layers, parallel closes, races or progress. Those are
 CONC-1's, and progress stays the host's assumption (`host-progress`).

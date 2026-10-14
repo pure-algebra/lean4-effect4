@@ -122,7 +122,8 @@ flowchart TD
   Over many fibers the order is inclusion of completed observations over decision tapes: every
   outcome of the left under some tape is an outcome of the right under some tape.
 - With those cases, `inline-agrees` holds on the many-fiber fragment. Then the Queue's `take`,
-  `offer` and `poll`, and Semaphore's `take` and `release`, reach their connectors:
+  `offer` and `poll`, Semaphore's `take` and `release`, and the `withPermits` family with
+  SynchronizedRef's `modify` reach their connectors:
   `queue-definitions-agree` and `semaphore-definitions-agree` are proved here, and compose with
   `queue-expansion-agrees` and `semaphore-expansion-agrees` by transitivity.
 
