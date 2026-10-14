@@ -11,7 +11,7 @@ Branch: `codex/graph-hierarchy-research`.
 Worktree: `C:/Users/kokok/Dev/lean4-effect4-graph-separation`.
 Evidence kind: primary-source research and source inspection.
 This note changes no Lean source and runs no layout benchmark.
-The owner's clarification of compound-node behavior remains pending.
+The owner requests both larger node counts and richer compound nodes.
 
 ## Terms and source boundary
 
