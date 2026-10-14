@@ -237,7 +237,7 @@ $(GEN)/census: $(GEN)/schema-ts generated/effect-runtime-census.tsv
 SEMANTICS_TOOL_ROOTS := Tools.View.FlowReach
 SEMANTICS_DOGFOOD_NAMES := P1HttpCache P2HandlerLayers P3WorkerQueue P4RateLimiter P5LedgerService \
   Scenario Scenario/Workers Scenario/Routing Scenario/Atomic Scenario/Timeout Scenario/Tape \
-  Scenario/QueueWorkers
+  Scenario/QueueWorkers Bank Scenario/Todo/Claims Scenario/Todo/Cached
 SEMANTICS_DOGFOOD := $(foreach m,$(SEMANTICS_DOGFOOD_NAMES),Test.Dogfood.$(subst /,.,$(m)))
 
 # The engine's fixtures (decisions rows 254 and 255; the group `fixtures` of docs/GENERATED.md).

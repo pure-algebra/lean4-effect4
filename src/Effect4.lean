@@ -237,8 +237,10 @@ import Effect4.Library.Stream.Ops
 -- The checked cache of a type fold, for memoized folds (the claim `fold-cache-local-agreement`).
 import Effect4.Program.TyCache
 -- An application: named programs with typed parameters over one row table (decisions rows 307
--- (9) and 336 (9); the claims packet's slice APP).
+-- (9) and 336 (9); the claims packet's slice APP), and claim records and banked entries
+-- (decisions row 378 (1), (7) and (23)).
 import Effect4.Program.Authoring.Application
+import Effect4.Program.Authoring.Claims
 -- A path relocated, and the layer references of a moved subtree (decisions row 336 (6)).
 import Effect4.Program.Address
 -- A sketch checked through its layer references, and its edit session (decisions row 373 (7)).

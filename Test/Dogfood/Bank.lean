@@ -40,25 +40,7 @@ open Effect4.Program.Denote (blockOf? paramsAsRows)
 open Test.Dogfood.Application (About Evidence ClaimRecord)
 open Test.Dogfood.Scenario.Todo (application repository Repo todo noTodo)
 
-/-- **A bank entry** (decisions row 378 (1)): a verified implementation. -/
-structure Entry where
-  /-- The module's name in the bank. -/
-  name : String
-  /-- The definition block, at the types that `types` gives. -/
-  block : NativeEff
-  /-- The digest of the block's canonical bytes (`Canonical.digest`), in hex. -/
-  digest : String
-  /-- The host rows that the block's bodies call, by position. -/
-  rows : RowTable
-  /-- The block's type parameters, each with the type that the entry gives it. -/
-  types : List (String × Ty)
-  /-- The Lean model that the block implements: the namespace of its definitions. -/
-  model : Lean.Name
-  /-- The claim: a claim record about an implementation, its statement the agreement theorem. -/
-  claim : ClaimRecord
-
-/-- The interface's operations: the block's declarations, each a definition's row and its role. -/
-def Entry.operations (e : Entry) : List DefDecl := e.block.defsOf
+export Effect4.Bank (Entry)
 
 /-- **The banked Ref cache** (decisions row 378 (18)), at the types of the to-do's `list`: the
 element type `Todo` and the loader's error `SqlError`. Its bodies call no host row: the loader

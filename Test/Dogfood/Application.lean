@@ -1,4 +1,5 @@
 import Test.Dogfood.Scenario
+import Effect4.Program.Authoring.Claims
 
 /-!
 # Test.Dogfood.Application — the record of an application's claims
@@ -18,12 +19,13 @@ planned goal with its placement (`@[semantics …]`, decisions row 207). Its sta
   controls show each finding (decisions row 301). The packet's second gate is not landed: row 375
   clears gates, and a name in a note is a name literal, which the elaborator resolves.
 * **`Record.claimsOf`** answers what the record claims of one program, by kind.
-* **One claim record, two labels** (decisions row 378 (7)). A `ClaimRecord` names the
-  declaration that states a claim. Its two labels stay apart, as `AGENTS.md`'s trust rules ask:
-  what the claim is about (`About`: a banked implementation or an application), and its evidence
-  (`Evidence`). A premise's grade is an `Evidence` too, so the two are one type. A note of an
-  application's record is a claim record about the application (`Record.claimRecords`), and a
-  bank entry holds one about an implementation (decisions row 378 (1)).
+* **One claim record, two labels** (decisions row 378 (7) and (23);
+  `src/Effect4/Program/Authoring/Claims.lean`). A `ClaimRecord` names the declaration that states a
+  claim. Its two labels stay apart, as `AGENTS.md`'s trust rules ask: what the claim is about
+  (`About`: a banked implementation or an application), and its evidence (`Evidence`). A premise's
+  grade is an `Evidence` too, so the two are one type. A note of an application's record is a claim
+  record about the application (`Record.claimRecords`), and a bank entry holds one about an
+  implementation (decisions row 378 (1)).
 
 What it does not establish: that a note's premises are the premises of its statement. The
 statement names them. The record cannot read a statement, and no check here reads one. A label
@@ -36,67 +38,7 @@ namespace Test.Dogfood.Application
 
 open Test.Dogfood.Scenario (Scenario Clause)
 
-/-- Where the truth of a claim of an application comes from (the claims packet, §3.4). -/
-inductive Kind
-  /-- A law of every admitted program, read at this application's programs. -/
-  | inherited
-  /-- A fact of a program's call tree: it holds whatever answers the rows. -/
-  | tree
-  /-- A fact under a protocol of a row. -/
-  | protocol
-  /-- A fact under the laws of the rows: today, under a reference model of them. -/
-  | laws
-  /-- A fact of a whole run: fibers, scopes, time. -/
-  | run
-deriving DecidableEq, Repr
-
-/-- What a claim is about (decisions row 378 (7)): a label of the claim, never a status. -/
-inductive About
-  /-- A banked implementation: a definition block by digest, with the Lean model it implements
-  and its agreement theorem (row 378 (1)). -/
-  | implementation
-  /-- An application: its entries over its rows (`Application`,
-  `src/Effect4/Program/Authoring/Application.lean`). -/
-  | application
-deriving DecidableEq, Repr
-
-/-- The evidence of a claim, or the grade of a premise: what discharges it (decisions row 378
-(7); the claims packet, §3.4). A label, never a status: the plan derives a claim's status. -/
-inductive Evidence
-  /-- A theorem in Lean; for a premise, a theorem about a handler. -/
-  | «theorem»
-  /-- A finite check that no theorem covers: a control or a finite evaluation of a battery. -/
-  | finiteCheck
-  /-- A run against an outside implementation: tsgo 7, rc.112 or the OCaml comparison. -/
-  | outsideOracle
-  /-- The session, at each reply receipt. -/
-  | monitored
-  /-- A decision on one run's journal. -/
-  | validated
-  /-- Nobody: the claim names it. -/
-  | assumed
-deriving DecidableEq, Repr
-
-/-- One premise that a claim's statement assumes of whoever answers the rows: a declaration, a
-protocol or a model, with its grade. -/
-structure Premise where
-  name : Lean.Name
-  grade : Evidence
-deriving DecidableEq, Repr
-
-/-- **A claim record** (decisions row 378 (7)): the declaration that states a claim, its two
-labels, and the premises that its statement assumes, each with its grade. The record holds no
-status: the plan derives it from the declaration's proof (`#plan_status`). -/
-structure ClaimRecord where
-  /-- The theorem or planned goal that states the claim. -/
-  statement : Lean.Name
-  /-- What the claim is about. -/
-  about : About
-  /-- What discharges the claim. -/
-  evidence : Evidence
-  /-- The premises that the statement assumes, each with its grade. -/
-  assumes : List Premise := []
-deriving DecidableEq, Repr
+export Effect4.Program.Authoring (Kind About Evidence Premise ClaimRecord)
 
 /-- What the record says of one clause or one law of its scenario: its kind, its evidence, the
 programs that its statement reads, and what its statement assumes of whoever answers the rows. -/
