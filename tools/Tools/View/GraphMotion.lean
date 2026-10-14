@@ -1,13 +1,16 @@
 import Tools.View.Graph
+import Tools.View.GraphAttachmentMotion
+import Tools.View.GraphSeparation
 
 /-!
 # Prepared graph transitions
 
 Preparation retains ordered occurrences, first-key matches, exit selections, and entry transitions.
 Sampling reads these data without rebuilding graph joins or target levels.
-The reference is the sampler at `d6285ddf8`.
-The tool compatibility law serves concept 7 and R14 navigation.
-Placement: `docs/research/2026-10-13-graph-motion-plan.md`, rows 334 (3) and 336 (8).
+The legacy observation extends the sampler at `d6285ddf8` with explicit metadata.
+Production motion couples explicit attachments and chooses a complete scene family when travel is refused.
+The named tool laws serve concept 7 and R14 navigation.
+Placement: `docs/research/2026-10-13-graph-attachment-motion-plan.md`, rows 334 (3) and 336 (8).
 No runtime execution or speed bound follows from that law.
 -/
 
@@ -29,24 +32,16 @@ namespace GraphMotion
 
 /-- The first occurrence of each route key, retained as lookup data. -/
 def routeIndex (rs : List Route) : KeyMap Key Route :=
-  rs.foldr (fun r m => m.insert r.key r) {}
+  KeyMap.firstBy Route.key rs
 
 /-- Route lookup retains the reference's first-occurrence answer.
-Helper of `prepare_sample_eq_reference`, consumed by preparation. -/
+Helper of `prepare_legacySample_eq_legacyReference`, consumed by preparation. -/
 theorem routeIndex_find (rs : List Route) (k : Key) :
     (routeIndex rs).get? k = rs.find? (fun r => r.key == k) := by
-  induction rs with
-  | nil => exact KeyMap.get?_empty k
-  | cons r rs ih =>
-    rw [routeIndex, List.foldr_cons, KeyMap.get?_insert]
-    change (if r.key = k then some r else (routeIndex rs).get? k) = _
-    rw [ih, List.find?_cons]
-    by_cases h : r.key = k
-    · rw [if_pos h, show (r.key == k) = true from decide_eq_true h]
-    · rw [if_neg h, show (r.key == k) = false from decide_eq_false h]
+  exact KeyMap.get?_firstBy _ _ _
 
 /-- Lookup presence answers the reference's membership test.
-Helper of `prepare_sample_eq_reference`, consumed by preparation. -/
+Helper of `prepare_legacySample_eq_legacyReference`, consumed by preparation. -/
 theorem routeIndex_has (rs : List Route) (k : Key) :
     ((routeIndex rs).get? k).isSome = rs.any (fun r => r.key == k) := by
   rw [routeIndex_find]
@@ -69,6 +64,46 @@ structure RouteEntry where
   kept : Bool
   draw : Transition
 
+/-- Why direct node-family travel uses the explicit endpoint fallback. -/
+inductive FallbackReason where
+  | changedNodeFamily
+  | overshootingMovement
+  | sweptBoxes (first second : Nat)
+  deriving DecidableEq, Repr
+
+/-- The inspected graph movement policy. -/
+inductive Policy where
+  | direct
+  | endpointFamilies (reason : FallbackReason)
+  deriving DecidableEq, Repr
+
+/-- Full allocated node room, independent of instantaneous growth. -/
+def allocatedBox (p : Placed) : Whatwg.Svg.Scene.IBox :=
+  ⟨p.x, p.y, p.x + p.w, p.y + ROWH * BOXROWS⟩
+
+/-- Node occurrences in their existing order. -/
+def nodePlaces (l : Laid) : List Placed := l.placed.toList.filter (·.node.isSome)
+
+/-- Conservative travel policy for node families.
+A single endpoint family can grow at its fixed places under clipped growth. -/
+def choosePolicy (c : Choreography) (a b : Laid) : Policy :=
+  let old := nodePlaces a
+  let next := nodePlaces b
+  if old.isEmpty || next.isEmpty then .direct else
+  let oldIx := Laid.Ix.of a
+  let nextIx := Laid.Ix.of b
+  let changed := old.any (fun p => !(nextIx.find p.key).any (·.node.isSome)) ||
+    next.any (fun p => !(oldIx.find p.key).any (·.node.isSome))
+  if changed then .endpointFamilies .changedNodeFamily else
+  if c.move.ease == .spring || c.move.ease == .outBack then
+    .endpointFamilies .overshootingMovement
+  else
+    let moves := old.filterMap fun p =>
+      (nextIx.find p.key).map fun q => (allocatedBox p, allocatedBox q)
+    match GraphSeparation.firstSweptOverlap moves with
+    | none => .direct
+    | some pair => .endpointFamilies (.sweptBoxes pair.first pair.second)
+
 /-- Retained analysis of one graph transition.
 Arbitrary records carry no agreement guarantee; `prepare` supplies the named law. -/
 structure Prepared where
@@ -78,7 +113,11 @@ structure Prepared where
   retracting : List Route
   move : Transition
   leave : Transition
+  source : Laid
   target : Laid
+  coherence : GraphAttachmentMotion.Prepared
+  policy : Policy
+  routingWidth : Int
   width : Int
   height : Int
 
@@ -100,7 +139,7 @@ def targetY (ix : Laid.Ix) : Route → Int
   | .loop _ k _ => ((ix.find k).map (·.y)).getD 0
 
 /-- Indexed target heights answer the frozen endpoint lookup.
-Helper of `prepare_sample_eq_reference`, consumed by entry-phase preparation. -/
+Helper of `prepare_legacySample_eq_legacyReference`, consumed by entry-phase preparation. -/
 theorem targetY_of (b : Laid) : targetY (Laid.Ix.of b) = (fun
     | .down _ ks _ _ => ((ks.getLast?.bind b.find).map (·.y)).getD 0
     | .back _ _ d _ _ => ((b.find d).map (·.y)).getD 0
@@ -131,11 +170,13 @@ def prepare (c : Choreography) (a b : Laid) : Prepared :=
       ⟨r, (oldRoutes.get? r.key).isSome, drawAt (targetY next r)⟩
     gone := a.placed.toList.filter fun p => (next.find p.key).isNone
     retracting := a.routes.toList.filter fun r => !((nextRoutes.get? r.key).isSome)
-    move := c.move.within, leave := c.leave.within, target := b
+    move := c.move.within, leave := c.leave.within, source := a, target := b
+    coherence := GraphAttachmentMotion.prepare a b, policy := choosePolicy c a b
+    routingWidth := max a.routeWidth b.routeWidth
     width := max a.width b.width, height := max a.height b.height }
 
-/-- Sample retained data without rebuilding key membership or entry levels. -/
-def Prepared.sample (prepared : Prepared) (t : Nat) : Laid :=
+/-- Sample the legacy display policy with explicit attachment and routing-span metadata. -/
+def Prepared.legacySample (prepared : Prepared) (t : Nat) : Laid :=
   let left := prepared.leave.at t
   let placed := prepared.places.map fun p => p.sample (prepared.move.at t) t
   let routes := prepared.routes.map fun r => r.sample t
@@ -146,7 +187,9 @@ def Prepared.sample (prepared : Prepared) (t : Nat) : Laid :=
   { placed := (gone ++ placed).toArray, routes := (retracting ++ routes).toArray,
     width := if 1000 ≤ t then prepared.target.width else prepared.width,
     height := if 1000 ≤ t then prepared.target.height else prepared.height,
-    regions := prepared.target.regions, marks := prepared.target.marks }
+    regions := prepared.target.regions, marks := prepared.target.marks
+    attachments := prepared.target.attachments
+    routingWidth := if 1000 ≤ t then prepared.target.routingWidth else some prepared.routingWidth }
 
 /-- The layout at the moment `t` of the step from `a` to `b`: the kept items move; level by level
 from the top, each new edge draws and then the boxes at its end expand; the old items shrink and
@@ -180,14 +223,93 @@ def reference (c : Choreography) (a b : Laid) (t : Nat) : Laid :=
     marks := b.marks }
 
 
-/-- Retained graph sampling answers the frozen sampler on every finite input.
-The observation includes duplicate keys, occurrence order, and out-of-range sample times.
-Tool compatibility for R14; the frame exporter consumes this law. -/
-theorem prepare_sample_eq_reference (c : Choreography) (a b : Laid) (t : Nat) :
-    (prepare c a b).sample t = reference c a b t := by
-  simp only [prepare, Prepared.sample, reference, Laid.Ix.find_of, routeIndex_has,
-    List.map_map, targetY_of]
+/-- The frozen display observation extended with target incidence and a separate lane span. -/
+def legacyReference (c : Choreography) (a b : Laid) (t : Nat) : Laid :=
+  { reference c a b t with
+    attachments := b.attachments
+    routingWidth := if 1000 ≤ t then b.routingWidth else some (max a.routeWidth b.routeWidth) }
+
+/-- Retained legacy sampling agrees with its explicitly extended reference.
+This law does not describe the production attachment or separation policy. -/
+theorem prepare_legacySample_eq_legacyReference (c : Choreography) (a b : Laid) (t : Nat) :
+    (prepare c a b).legacySample t = legacyReference c a b t := by
+  simp only [prepare, Prepared.legacySample, legacyReference, reference,
+    Laid.Ix.find_of, routeIndex_has, List.map_map, targetY_of]
   rfl
+
+/-- Clip any growth or reveal to the selected endpoint envelope. -/
+def familyGrowth (value factor : Nat) : Nat := min 1000 (value * factor / 1000)
+
+/-- Production growth stays inside its full endpoint allocation. -/
+theorem family_growth_le (value factor : Nat) : familyGrowth value factor ≤ 1000 :=
+  Nat.min_le_left _ _
+
+/-- The painted node box, in the kit's integer box carrier. -/
+def paintedBox (p : Placed) : Whatwg.Svg.Scene.IBox :=
+  let box := Laid.boxBounds p
+  ⟨box.x0, box.y0, box.x1, box.y1⟩
+
+/-- A clipped nonnegative length stays within its allocated endpoint length.
+Helper of `family_boxes_inside`, consumed by endpoint-family sampling. -/
+private theorem scaledLength (length : Int) (growth : Nat) (hl : 0 ≤ length)
+    (hg : growth ≤ 1000) :
+    0 ≤ length * (growth : Int) / 1000 ∧ length * (growth : Int) / 1000 ≤ length := by
+  have nonnegative : 0 ≤ (growth : Int) := Int.natCast_nonneg _
+  have bounded : (growth : Int) ≤ 1000 := by omega
+  exact ⟨Int.ediv_nonneg (Int.mul_nonneg hl nonnegative) (by decide),
+    Int.ediv_le_of_le_mul (by decide) (Int.mul_le_mul_of_nonneg_left bounded hl)⟩
+
+/-- Each scaled endpoint node box stays inside its allocated endpoint envelope.
+Nonnegative width is a premise; route, mark, region, and text ink are outside the observation. -/
+theorem family_boxes_inside (p : Placed) (factor : Nat) (width : 0 ≤ p.w) :
+    (paintedBox { p with grow := familyGrowth p.grow factor }).Inside (allocatedBox p) := by
+  have hw := scaledLength p.w (familyGrowth p.grow factor) width (family_growth_le _ _)
+  have hh := scaledLength (ROWH * BOXROWS) (familyGrowth p.grow factor)
+    (by decide) (family_growth_le _ _)
+  simp only [paintedBox, Laid.boxBounds, allocatedBox, Whatwg.Svg.Scene.IBox.Inside]
+  refine ⟨?_, ?_, ?_, ?_⟩ <;> omega
+
+/-- Scale one complete scene family at its fixed endpoint places. -/
+def family (l : Laid) (factor : Nat) : Laid :=
+  { l with
+    placed := l.placed.map fun p => { p with grow := familyGrowth p.grow factor }
+    routes := l.routes.map fun r => r.withReveal (familyGrowth r.reveal factor) }
+
+/-- Apply the inspected fallback to complete endpoint data, with an empty relocation phase. -/
+def Prepared.fallbackSample (prepared : Prepared) (t : Nat) : Laid :=
+  let l := match GraphSeparation.fallback t with
+    | .old growth => { family prepared.source growth with
+        routingWidth := some prepared.source.routeWidth }
+    | .hidden => ({} : Laid)
+    | .new growth => { family prepared.target growth with
+        routingWidth := some prepared.target.routeWidth }
+  { l with width := prepared.width, height := prepared.height }
+
+/-- Sample coherent marks and ports while retaining the legacy route-reveal arithmetic. -/
+def Prepared.directSample (prepared : Prepared) (t : Nat) : Laid :=
+  let legacy := prepared.legacySample t
+  let moved := GraphAttachmentMotion.progress (prepared.move.at t)
+  let marks := prepared.coherence.marks.map fun mark => mark.sample moved
+  let markTable := GraphAttachment.markTable marks
+  let placed := legacy.placed.map fun point =>
+    let point := GraphAttachmentMotion.applyDock prepared.coherence.docks markTable point
+    { point with grow := familyGrowth point.grow 1000 }
+  { legacy with
+    placed := placed
+    marks := marks.toArray
+    regions := (prepared.coherence.regions.map fun region => region.sample moved).toArray
+    attachments := prepared.coherence.attachments.toArray }
+
+/-- Production sampling keeps complete scene families and returns the exact target at the endpoint. -/
+def Prepared.sample (prepared : Prepared) (t : Nat) : Laid :=
+  if 1000 ≤ t then prepared.target else
+    match prepared.policy with
+    | .direct => prepared.directSample t
+    | .endpointFamilies _ => prepared.fallbackSample t
+
+/-- The production endpoint is exact, independently of metadata validity or rest hypotheses. -/
+theorem Prepared.sample_end (prepared : Prepared) : prepared.sample 1000 = prepared.target := by
+  simp only [Prepared.sample, Nat.le_refl, if_true]
 
 end GraphMotion
 end Tools.View

@@ -176,14 +176,8 @@ theorem routeAt_end (a : Laid) (reveal : Route → Nat) (r : Route) (h : r.revea
 
 /-- The layout at a step's end is the next frame's. -/
 theorem sampleLaid_end (c : Choreography) (a b : Laid) (h : b.AtRest) : sampleLaid c a b 1000 = b := by
-  obtain ⟨hp, hr⟩ := h
-  unfold sampleLaid
-  rw [GraphMotion.prepare_sample_eq_reference]
-  simp only [GraphMotion.reference, Nat.le_refl, ↓reduceIte, List.nil_append, Transition.within_at_end,
-    Transition.after_at_end]
-  rw [List.map_congr_left (g := id) fun p hm => placedAt_end a _ p (hp p hm) rfl,
-    List.map_congr_left (g := id) fun r hm => routeAt_end a _ r (hr r hm) rfl,
-    List.map_id, List.map_id, Array.toArray_toList, Array.toArray_toList]
+  obtain ⟨_, _⟩ := h
+  exact GraphMotion.Prepared.sample_end _
 
 /-- **The end law.** A step's last moment is the next frame: sampling the step from any page to a
 page at rest, at its end, gives that page. -/
