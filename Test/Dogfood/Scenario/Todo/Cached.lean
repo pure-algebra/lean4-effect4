@@ -27,11 +27,16 @@ clauses of `serves` (`Test/Dogfood/Scenario/Todo/Claims.lean`).
   lists again. With the invalidation the second list holds the new to-do; without it the second
   list is stale (the control of row 378 (23)).
 
+* **The emitted file** (HO-5, decisions rows 340 and 378 (8), (23)). The service module emits as a
+  file (`ModuleEmission.file`) declaring both `ListCache` and `TodoApp`, with their imports and no
+  free names.
+
 What it does not establish. That a run of the service observes that meaning: the service's `list`
 invokes `get` by `Eff.invoke`, which no meaning reads (HO-2's `invoke-unfolds`, row 378 (23)), and
 its methods run under `provideContext`, outside the row fragment. The runs are finite probes. The
-emitted file waits for HO-5 (item 3), since the kept block declares the service `ListCache`, whose
-method `get` takes a program.
+emitted file does not read back yet: `Classes.readNamed` refuses `Ref.Ref<…>` under the frozen
+contract (`Test/contracts/faces.contract.md`, §B19), so `readDefHead` refuses the cache's
+declarations (`shape "definition"`).
 -/
 
 set_option autoImplicit false
@@ -164,5 +169,30 @@ def forgetting : Application NativeOp :=
 -- control (row 378 (23)): writes that do not invalidate leave the second list stale, answered from
 -- the cache without the new to-do, which the repository holds (two answers)
 #guard (consumerOf forgetting).bind observe == some (some (Exit.success (Val.list [milk, milk])), 2)
+
+/-! ## The emitted file -/
+
+/-- The built program, its table, its envelope and its file (the prelude at `./prelude.ts`). -/
+def emitted? (app : Application NativeOp) :
+    Option (Api.Program × RowTable × TypeScript.Module × TypeScript.Module) :=
+  (built? app).bind fun b => (Api.emitModule "main" b.program b.table).toOption.bind fun e =>
+    (e.file "./prelude.ts").toOption.map fun f => (b.program, b.table, e.module, f)
+
+-- finite evaluation: the file declares the payload class `NotFound`, the row service `TodoRepo`,
+-- the eight definitions, the two block services `ListCache` and `TodoApp` with their layers, and
+-- `main`, with no free name
+#guard (emitted? cached).map (fun (_, _, _, file) => (file.decls.drop 1).map fun
+  | .const c => c.name
+  | _ => "") =
+  some ["TodoRepoKey", "TodoRepo", "listCacheMake", "listCacheGet", "listCacheInvalidate",
+    "TodoAppContext", "TodoApp_add", "TodoApp_list", "TodoApp_complete", "TodoApp_remove",
+    "ListCache", "ListCacheLayer", "TodoApp", "TodoAppLayer", "main"]
+#guard (emitted? cached).map (fun (_, _, _, file) => Effect4.Codegen.freeNames file) = some []
+-- control: `Classes.readNamed` refuses `Ref.Ref<…>` under the frozen contract
+-- (`Test/contracts/faces.contract.md`, §B19), so the file and envelope readers refuse the cache's
+-- definition headers as `shape "definition"`
+#guard (emitted? cached).map (fun (_, table, envelope, file) =>
+  (Api.readFile file table matches .error (.shape "definition")) &&
+    (Api.readModule envelope table matches .error (.shape "definition"))) = some true
 
 end Test.Dogfood.Scenario.Todo.Cached

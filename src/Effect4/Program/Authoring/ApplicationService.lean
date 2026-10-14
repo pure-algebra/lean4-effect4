@@ -118,9 +118,9 @@ def methodDef (app : Application NativeOp) (service : String) (e : Application.E
       body := fun
         | state :: args => match app.imposed with
           | [] => provideContext state (e.applied args)
-          | ms => provideContext (Authoring.app "fst" [state])
-            (bindStates ms (requestParts ms.length (Authoring.app "snd" [state]))
-              (ms.foldr (fun m inner => m.wrap e.name inner) (e.applied args)))
+          | ms => bindStates ms (requestParts ms.length (Authoring.app "snd" [state]))
+            (ms.foldr (fun m inner => m.wrap e.name inner)
+              (provideContext (Authoring.app "fst" [state]) (e.applied args)))
         | [] => e.body }
 
 /-- **The application as one service** (decisions row 378 (20)): the initial program, then one
