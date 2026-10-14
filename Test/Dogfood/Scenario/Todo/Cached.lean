@@ -16,13 +16,15 @@ clauses of `serves` (`Test/Dogfood/Scenario/Todo/Claims.lean`).
 
 * **The pin** (row 378 (4)). The built service's first three definitions, as a block, have the
   bank's recorded digest (`refCache`, `Test/Dogfood/Bank.lean`).
-* **The restated claim** (`cached_list_after_add`). After `add` and its invalidation, `get` with
-  the to-do's loader answers what the repository holds, the new to-do included, whatever the
-  cache held. It is the original clause `list_after_add` read through the cache, carried by the
+* **The restated claim** (`cached_list_after_add`). Over the built service `built? cached`, calling
+  `TodoApp_add` and then `TodoApp_list` (`addThenList`) at the block's row meaning under the
+  reference model (`hostRunDefs`, `src/Effect4/Laws/Program/ParamRows.lean`) answers what the
+  repository holds, the new to-do included, whatever the cache held. `TodoApp_add` runs `add` under
+  `provideContext` and calls `listCacheInvalidate`; `TodoApp_list` invokes `listCacheGet`
+  (`Eff.invoke`) with `list` under `provideContext` as its loader. It is the original clause
+  `list_after_add` proved of the built service's own definitions through `denoteBody` and the
   cache's law `invalidate_get` (`src/Effect4/Laws/Library/Ref/Cache.lean`, the registry claim
-  `ref-cache-invalidated-reads-through`). It holds at the call tree's meaning under the reference
-  model, of the code that the service runs: `add`'s program, the cache's `invalidate`, and `get`'s
-  body with its loader read as the row of `all`.
+  `ref-cache-invalidated-reads-through`).
 * **The runs** (tested). On the Lean machine, a consumer of the built service lists, adds and
   lists again. With the invalidation the second list holds the new to-do; without it the second
   list is stale (the control of row 378 (23)).
@@ -31,12 +33,11 @@ clauses of `serves` (`Test/Dogfood/Scenario/Todo/Claims.lean`).
   file (`ModuleEmission.file`) declaring both `ListCache` and `TodoApp`, with their imports and no
   free names.
 
-What it does not establish. That a run of the service observes that meaning: the service's `list`
-invokes `get` by `Eff.invoke`, which no meaning reads (HO-2's `invoke-unfolds`, row 378 (23)), and
-its methods run under `provideContext`, outside the row fragment. The runs are finite probes. The
-emitted file does not read back yet: `Classes.readNamed` refuses `Ref.Ref<…>` under the frozen
-contract (`Test/contracts/faces.contract.md`, §B19), so `readDefHead` refuses the cache's
-declarations (`shape "definition"`).
+What it does not establish. Machine replay agreement for `denoteBody` before block inlining
+(PROC-6, row 378 (23)): the machine runs are finite probes. The emitted file does not read back
+yet: `Classes.readNamed` refuses `Ref.Ref<…>` under the frozen contract
+(`Test/contracts/faces.contract.md`, §B19), so `readDefHead` refuses the cache's declarations
+(`shape "definition"`).
 -/
 
 set_option autoImplicit false
@@ -105,39 +106,182 @@ theorem add_on_model_at (title : String) (hne : title ≠ "") (st : Repo) (s : S
   rw [add_tree title hne]
   kernel_rfl
 
-/-- The proposition of `cached_list_after_add`. -/
+/-- The consumer that invokes `TodoApp_add` at `(state, title)` and then `TodoApp_list` at `state`,
+over the service's definition block (definitions 4 and 5). -/
+def addThenList : NativeEff :=
+  .bind (.perform (.call 4) (.app "pair" (.cons (.var 0) (.cons (.var 1) .nil))))
+    (.perform (.call 5) (.var 0))
+
+/-- The elaborated bodies of the cached service module. -/
+def cachedBodies : List NativeEff :=
+  match (cached.serviceModule service).toOption.bind (fun m => (elaborateModule m).toOption) with
+  | some p => bodiesOf p
+  | none => []
+
+/-- A built cached service module has `cachedBodies` as its definition bodies
+(`Api.Author.build_retains`). A step of `cached_list_after_add`. -/
+@[semantics "translation-simulation" (requirement := R10)]
+theorem built_cached_bodies {b : Api.Built} (h : built? cached = some b) :
+    bodiesOf b.program = cachedBodies := by
+  unfold built? at h
+  cases hm : (cached.serviceModule service).toOption with
+  | none =>
+    rw [hm] at h
+    cases h
+  | some m =>
+    rw [hm, Option.bind_some] at h
+    cases hb : Api.Author.build m with
+    | error _ =>
+      rw [hb] at h
+      cases h
+    | ok b' =>
+      rw [hb] at h
+      cases h
+      obtain ⟨hprog, -, -⟩ := Api.Author.build_retains hb
+      unfold cachedBodies
+      rw [hm, Option.bind_some, hprog]
+      rfl
+
+/-- Calling `TodoApp_add` (definition 4 of `cachedBodies`) at `(state, title)` unfolds to `addAt
+title`, then `listCacheInvalidate` (`invalidateBody`) at the cache's cell, and answers the new
+to-do. A step of `cached_list_after_add`. -/
+@[semantics "translation-simulation" (requirement := R10)]
+theorem denoteBody_call_add (title : String) (ctx : Ctx) (q : RefKey) :
+    denoteBody application.table cachedBodies 2 []
+      (.perform (.call 4) (.app "pair" (.cons (.var 0) (.cons (.var 1) .nil))))
+      [Val.list [Val.context ctx, Val.cell q], .str title] =
+    (denoteRows application.table (addAt title) []).bind
+      (seqRows fun v =>
+        (denoteRows application.table invalidateBody [Val.cell q]).bind
+          (seqRows fun _ => pure (.success v))) := by
+  have h1 :
+      denoteBody application.table cachedBodies 2 []
+        (.perform (.call 4) (.app "pair" (.cons (.var 0) (.cons (.var 1) .nil))))
+        [Val.list [Val.context ctx, Val.cell q], .str title] =
+      (match Val.context? (Val.context ctx) with
+       | some _ => denoteRows application.table (addAt title) []
+       | none => pure badShapeExit).bind
+        (seqRows fun v =>
+          (denoteRows application.table invalidateBody [Val.cell q]).bind
+            (seqRows fun _ => pure (.success v))) := by
+    kernel_rfl
+  rw [h1, Val.context?_context ctx]
+
+/-- Calling `TodoApp_list` (definition 5 of `cachedBodies`) at `state` unfolds `Eff.invoke` of
+`listCacheGet` (`getBody`) with the entry `list` under `provideContext` as its loader, which is
+`paramsAsRows 1 getBody` at the cache's cell. A step of `cached_list_after_add`. -/
+@[semantics "translation-simulation" (requirement := R10)]
+theorem denoteBody_call_list (ctx : Ctx) (q : RefKey) (title : String) (v : Val) :
+    denoteBody application.table cachedBodies 2 []
+      (.perform (.call 5) (.var 0))
+      ([Val.list [Val.context ctx, Val.cell q], .str title] ++ [v]) =
+    denoteRows application.table (paramsAsRows 1 getBody) [Val.cell q] := by
+  have h1 :
+      denoteBody application.table cachedBodies 2 []
+        (.perform (.call 5) (.var 0))
+        ([Val.list [Val.context ctx, Val.cell q], .str title] ++ [v]) =
+      denoteBody application.table cachedBodies 0
+        [fun _ =>
+          match Val.context? (Val.context ctx) with
+          | some _ => denoteRows application.table (.perform (.external 1) (.lit .unit)) []
+          | none => pure badShapeExit]
+        getBody [Val.cell q] := by
+    kernel_rfl
+  rw [h1, Val.context?_context ctx]
+  exact Effect4.Ref.Cache.denoteBody_getBody application.table cachedBodies 0 1 _ [Val.cell q] rfl
+
+/-- The proposition of `cached_list_after_add`: over the built service `built? cached`, calling
+`TodoApp_add` and then `TodoApp_list` (`addThenList`) under the reference model answers the stored
+to-dos with the new one appended, from any cache content. -/
 def CachedListAfterAdd : Prop :=
-  ∀ (title : String) (start : Repo) (c : Option Val) (q : RefKey) (s : Stores), title ≠ "" →
+  ∀ (b : Api.Built) (title : String) (start : Repo) (ctx : Ctx) (c : Option Val)
+    (q : RefKey) (s : Stores),
+    built? cached = some b → title ≠ "" →
     refPeek s.refs q = some ((Image.option Image.ident).toVal c) →
-    ((hostRun modelHost (addAt title) [] s start).bind fun r =>
-      (hostRun modelHost invalidateBody [Val.cell q] r.2.1 r.2.2).bind fun r' =>
-        hostRun modelHost (paramsAsRows 1 getBody) [Val.cell q] r'.2.1 r'.2.2).map (·.1) =
+    (hostRunDefs modelHost b.program 2 addThenList
+      [Val.list [Val.context ctx, Val.cell q], .str title] s start).map (·.1) =
       some (.success (.list ((start.2 ++ [(start.1, title, false)]).map todoOf)))
 
-/-- **After `add`, `list` through the cache holds the new to-do**, under the reference model, from
-any cache content. At a title that is not empty, `add` stores the to-do, the cache's `invalidate`
-empties the cell, and `get` with the to-do's loader, the row `all`, answers the stored to-dos,
-the new one among them. It is `list_after_add` (`Test/Dogfood/Scenario/Todo/Claims.lean`) read
-through the imposed cache.
+/-- **After `TodoApp_add`, `TodoApp_list` through the imposed cache holds the new to-do**, over the
+built service `built? cached` under the reference model, from any cache content. At a title that is
+not empty, `TodoApp_add` runs `add` under `provideContext`, invalidates the cache's cell by calling
+`listCacheInvalidate`, and `TodoApp_list` invokes `listCacheGet` (`Eff.invoke`) with `list` under
+`provideContext` as its loader, answering the stored to-dos with the new one among them. It is
+`list_after_add` (`Test/Dogfood/Scenario/Todo/Claims.lean`) proved of the built service's own
+definitions through `hostRunDefs` and `invalidate_get`.
 
 Placement: concept `translation-simulation`; property: a composed module's law (R10), the claim
-of an application carried to the imposed module's code by the module's agreement (row 378 (2)).
-Question: the registry claim `ref-cache-invalidated-reads-through`, of which this is the first
-reader; the to-do's modules load under no root of the registry (row 336 (9)). Reach: every title
-but the empty one, every start state of the model, every cached value and cell, at the call tree's
-meaning under the model. Does not establish: that a run of the service observes this meaning
-(HO-2's `invoke-unfolds` and the service's context, row 378 (23)); anything of a host that
-disagrees with the model. Unlocks: the slice's claim of the imposed to-do (row 378 (8)).
+of an application carried to the imposed module's code by the module's agreement (row 378 (2) and
+(8)). Question: the registry claim `ref-cache-invalidated-reads-through`, of which this is the
+application reader; the to-do's modules load under no root of the registry (row 336 (9)). Reach:
+the built service `built? cached`, every title but the empty one, every start state of the model,
+every context, cached value and cell, at the block's row meaning under the model (`hostRunDefs`).
+Does not establish: machine replay agreement before block inlining (PROC-6, row 378 (23)); anything
+of a host that disagrees with the model. Unlocks: the slice's claim of the imposed to-do over the
+code that builds and emits (row 378 (8)).
 
-Proof: `add_on_model_at`, then the cache's `invalidate_get`, then the model's answer at `all`, by
+Proof: `built_cached_bodies`, `hostRunBody_bind`, `denoteBody_call_add` with `add_on_model_at`,
+`denoteBody_call_list`, then the cache's `invalidate_get`, and the model's answer at `all` by
 computation. -/
 @[semantics "translation-simulation" (requirement := R10)]
 theorem cached_list_after_add : CachedListAfterAdd := by
-  intro title start c q s hne held
-  rw [add_on_model_at title hne start s, Option.bind_some]
-  dsimp only
+  intro b title start ctx c q s hbuilt hne held
+  unfold hostRunDefs addThenList
+  rw [built_cached_bodies hbuilt, hostRunBody_bind]
+  have hadd :
+      hostRunBody modelHost cachedBodies 2 []
+        (.perform (.call 4) (.app "pair" (.cons (.var 0) (.cons (.var 1) .nil))))
+        [Val.list [Val.context ctx, Val.cell q], .str title] s start =
+      (hostRun modelHost invalidateBody [Val.cell q] s
+          (start.1 + 1, start.2 ++ [(start.1, title, false)])).map fun r' =>
+        match r'.1 with
+        | .success _ => (.success (todo start.1 title false), r'.2)
+        | .failure c => (.failure c, r'.2) := by
+    unfold hostRunBody
+    rw [denoteBody_call_add title ctx q, runRowsH_bind]
+    show (hostRun modelHost (addAt title) [] s start).bind _ = _
+    rw [add_on_model_at title hne start s, Option.bind_some]
+    dsimp only [seqRows]
+    rw [runRowsH_bind]
+    show (hostRun modelHost invalidateBody [Val.cell q] s
+        (start.1 + 1, start.2 ++ [(start.1, title, false)])).bind _ = _
+    cases hostRun modelHost invalidateBody [Val.cell q] s
+        (start.1 + 1, start.2 ++ [(start.1, title, false)]) with
+    | none => rfl
+    | some r' =>
+      obtain ⟨ex', s'', st''⟩ := r'
+      cases ex' <;> rfl
+  rw [hadd]
+  have hlist :
+      hostRunBody modelHost cachedBodies 2 []
+        (.perform (.call 5) (.var 0))
+        ([Val.list [Val.context ctx, Val.cell q], .str title] ++ [todo start.1 title false]) =
+      hostRun modelHost (paramsAsRows 1 getBody) [Val.cell q] := by
+    funext s' st'
+    unfold hostRunBody hostRun
+    rw [denoteBody_call_list ctx q title (todo start.1 title false)]
+  have hstep :
+      ((hostRun modelHost invalidateBody [Val.cell q] s
+          (start.1 + 1, start.2 ++ [(start.1, title, false)])).map fun r' =>
+        match r'.1 with
+        | .success _ => (Exit.success (todo start.1 title false), r'.2)
+        | .failure c => (Exit.failure c, r'.2)).bind
+        (fun r =>
+          match r.1 with
+          | .success v =>
+            hostRunBody modelHost cachedBodies 2 [] (.perform (.call 5) (.var 0))
+              ([Val.list [Val.context ctx, Val.cell q], .str title] ++ [v]) r.2.1 r.2.2
+          | .failure c => some (.failure c, r.2)) =
+      (hostRun modelHost invalidateBody [Val.cell q] s
+          (start.1 + 1, start.2 ++ [(start.1, title, false)])).bind
+        (fun r' => hostRun modelHost (paramsAsRows 1 getBody) [Val.cell q] r'.2.1 r'.2.2) := by
+    rw [Effect4.Ref.Cache.invalidate_run modelHost Image.ident c _ held]
+    dsimp only [Option.map, Option.bind]
+    exact congrFun (congrFun hlist _) _
+  refine (congrArg (Option.map (·.1)) hstep).trans ?_
   rw [invalidate_get modelHost Image.ident (n := 1) (by decide) c _ held]
   kernel_rfl
+
 
 /-! ## The runs -/
 
@@ -161,6 +305,15 @@ def both : Val := Val.list [todo 1 "milk" false, todo 2 "tea" false]
 /-- The service with the cache, whose writes do not invalidate it. -/
 def forgetting : Application NativeOp :=
   { application with imposed := [{ listCache with around := [("list", readingThrough)] }] }
+
+-- control: at the block meaning `hostRunDefs`, when `TodoApp_add` omits invalidation (`forgetting`)
+-- and the cache holds `milk`, `addThenList` answers the stale `milk` instead of `both`
+#guard ((built? forgetting).bind fun b =>
+  (hostRunDefs modelHost b.program 2 addThenList
+    [Val.list [Val.context { services := .empty, maxOpsBeforeYield := 0, preventYield := false },
+      Val.cell ⟨0⟩], .str "tea"]
+    { Stores.empty with refs := [Store.Val.some milk] }
+    (2, [(1, "milk", false)])).map (·.1)) = some (.success milk)
 
 -- tested: under the reference model, from one stored to-do, the first list holds it, and after
 -- `add` the second list holds both: the invalidation empties the cache, so the second read asks

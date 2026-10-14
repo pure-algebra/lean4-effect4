@@ -361,8 +361,7 @@ read at a composition of two methods (R10's `Agrees`). Question: the registry cl
 `ref-cache-invalidated-reads-through` (role compatibility), witness this theorem. Consumer: the
 to-do's `cached_list_after_add` (`Test/Dogfood/Scenario/Todo/Cached.lean`). Reach: every table,
 host, loader row and cached value, one fiber, the call tree's meaning under the host. Does not
-establish: a run that invokes the block by `Eff.invoke` (HO-2's `invoke-unfolds`, row 378 (23));
-that an application invalidates after each write, which its own code shows; anything of a
+establish: that an application invalidates after each write, which its own code shows; anything of a
 schedule that shares the cell between fibers. Unlocks: the to-do's `list_after_add` restated
 through the imposed cache (row 378 (8)). -/
 @[semantics "translation-simulation" (requirement := R10)]
@@ -382,4 +381,75 @@ theorem invalidate_get {σ : Type} {table : RowTable} (host : Effects.Comodel (R
   rw [invalidate_run host I c st held, Option.bind_some]
   exact get_miss host hn st hempty
 
+/-! ## Invoking the banked cache in a block (`denoteBody`, `hostRunBody`) -/
+
+/-- `getBody` with one denoted program parameter `param` whose tree at `Val.unit` is the row `n`'s
+call tree has the call tree of `paramsAsRows n getBody`. Placement: as `invalidate_get`; consumer:
+`hostRunBody_invoke_get`. -/
+@[semantics "translation-simulation" (requirement := R10)]
+theorem denoteBody_getBody (table : RowTable) (bodies : List NativeEff) (fuel : Nat) (n : Nat)
+    (param : ParamTree table) (env : List Val)
+    (hparam : param Val.unit = denoteRows table (.perform (.external n) (.lit .unit)) []) :
+    denoteBody table bodies fuel [param] getBody env =
+      denoteRows table (paramsAsRows n getBody) env := by
+  cases fuel <;> {
+    change Effects.Program.bind
+        ((denoteRows.alg table).eff_perform .refGet (.var 0) env)
+        (seqRows fun v =>
+          match (evalTerm (env ++ [v]) (.var 1)).bind Decision.option.decide with
+          | some (true, bound) =>
+            Effects.Program.bind (param Val.unit)
+              (seqRows fun w => denoteRows table missRest (env ++ [v] ++ bound.toList ++ [w]))
+          | some (false, bound) =>
+            (denoteRows.alg table).eff_succeed (.var 2) (env ++ [v] ++ bound.toList)
+          | none => pure badShapeExit) =
+      Effects.Program.bind
+        ((denoteRows.alg table).eff_perform .refGet (.var 0) env)
+        (seqRows fun v =>
+          match (evalTerm (env ++ [v]) (.var 1)).bind Decision.option.decide with
+          | some (true, bound) =>
+            Effects.Program.bind (denoteRows table (.perform (.external n) (.lit .unit)) [])
+              (seqRows fun w => denoteRows table missRest (env ++ [v] ++ bound.toList ++ [w]))
+          | some (false, bound) =>
+            (denoteRows.alg table).eff_succeed (.var 2) (env ++ [v] ++ bound.toList)
+          | none => pure badShapeExit)
+    rw [hparam]
+  }
+
+/-- **Invoking `get` by `Eff.invoke` runs `paramsAsRows n getBody`**: at a positive call budget,
+when definition `k` of `bodies` is `getBody`, the request evaluates to `Val.cell q`, and the caller's
+loader `loader` denotes the row `n`'s call tree, `hostRunBody` on `.invoke k r (.cons loader .nil)`
+is `hostRun` on `paramsAsRows n getBody` at `[Val.cell q]`. Placement: as `invalidate_get`;
+consumer: `Test.Dogfood.Scenario.Todo.Cached.cached_list_after_add`. -/
+@[semantics "translation-simulation" (requirement := R10)]
+theorem hostRunBody_invoke_get {σ : Type} {table : RowTable}
+    (host : Effects.Comodel (RowSig table) σ) (bodies : List NativeEff) (fuel : Nat)
+    (params : List (ParamTree table)) (k n : Nat) (r : Term) (loader : NativeEff)
+    (env : List Val) (q : RefKey) (s : Stores) (st : σ)
+    (hk : bodies[k]? = some getBody) (hr : evalTerm env r = some (Val.cell q))
+    (hloader : denoteBody table bodies (fuel + 1) params loader (env ++ [Val.unit]) =
+      denoteRows table (.perform (.external n) (.lit .unit)) []) :
+    hostRunBody host bodies (fuel + 1) params (.invoke k r (.cons loader .nil)) env s st =
+      hostRun host (paramsAsRows n getBody) [Val.cell q] s st := by
+  rw [hostRunBody_invoke_one host bodies fuel params k r loader env s st getBody (Val.cell q) hk hr]
+  unfold hostRunBody hostRun
+  rw [denoteBody_getBody table bodies fuel n _ [Val.cell q] hloader]
+
+/-- **Calling `invalidate` by `perform (call k)` runs `invalidateBody`**: at a positive call budget,
+when definition `k` of `bodies` is `invalidateBody` and the request evaluates to `Val.cell q`,
+`hostRunBody` on `.perform (.call k) r` is `hostRun` on `invalidateBody` at `[Val.cell q]`.
+Placement: as `invalidate_get`; consumer:
+`Test.Dogfood.Scenario.Todo.Cached.cached_list_after_add`. -/
+@[semantics "translation-simulation" (requirement := R10)]
+theorem hostRunBody_call_invalidate {σ : Type} {table : RowTable}
+    (host : Effects.Comodel (RowSig table) σ) (bodies : List NativeEff) (fuel : Nat)
+    (params : List (ParamTree table)) (k : Nat) (r : Term) (env : List Val)
+    (q : RefKey) (s : Stores) (st : σ)
+    (hk : bodies[k]? = some invalidateBody) (hr : evalTerm env r = some (Val.cell q)) :
+    hostRunBody host bodies (fuel + 1) params (.perform (.call k) r) env s st =
+      hostRun host invalidateBody [Val.cell q] s st := by
+  rw [hostRunBody_call host bodies fuel params k r env s st invalidateBody (Val.cell q) hk hr]
+  exact hostRunBody_straightRows host bodies fuel [] invalidateBody [Val.cell q] s st rfl
+
 end Effect4.Ref.Cache
+
