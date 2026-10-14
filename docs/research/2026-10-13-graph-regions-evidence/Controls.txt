@@ -1,0 +1,4 @@
+warning: manifest out of date: git revision of dependency 'whatwg' changed; use `lake update whatwg` to update it
+{"checksum":39700,"input_edges":200,"prepare_ns":2646900,"project_ns":767700,"regions":10,"retained_edges":200,"vertices":100,"visible":10}
+{"checksum":3997000,"input_edges":2000,"prepare_ns":1172500,"project_ns":4205600,"regions":10,"retained_edges":2000,"vertices":1000,"visible":10}
+{"checksum":399970000,"input_edges":20000,"prepare_ns":10711100,"project_ns":45467100,"regions":10,"retained_edges":20000,"vertices":10000,"visible":10}

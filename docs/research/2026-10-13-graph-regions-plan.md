@@ -18,7 +18,7 @@ The coordinator owns Graph, Flow, checker, producer, and gallery changes.
 `Flow.Box.append` shifts item positions when it composes parts.
 `Flow.layout` drops these memberships and retains only region rectangles.
 
-`Graph.Region` (`tools/Tools/View/Graph.lean`) carries geometry and a label.
+`Tools.View.Region` (`tools/Tools/View/Graph.lean`) carries geometry and a label.
 A rectangle or key spelling does not establish membership.
 Generic graph groups remain explicit caller data.
 The Flow producer can record direct parent and direct owner during its fold.
