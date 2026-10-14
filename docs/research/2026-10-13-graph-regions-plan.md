@@ -82,6 +82,7 @@ They exclude full `Graph.layout` and its separate input checker.
    `GraphRegions.checks_iff` serves preparation admission.
    `GraphRegions.project_originals` serves the original-payload observation.
    `GraphRegions.project_provenance` also observes original endpoints and occurrence ordinals under that same placement.
+   `GraphRegions.project_indices` and `project_size` read ordinal and size observations from that provenance law.
    Helper statements serve those laws and the actual graph adapter consumer.
    Proof roles: decidability for admission and preservation for edge provenance.
    Evidence status: proposed before implementation.

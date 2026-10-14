@@ -305,4 +305,23 @@ theorem project_originals {E : Type} (prepared : Prepared) (edges : Array E) (so
   rw [List.zipIdx_map_fst] at payloads
   exact payloads
 
+/-- Accepted projection retains the complete ordinal sequence, even for repeated payloads. -/
+theorem project_indices {E : Type} (prepared : Prepared) (edges : Array E) (source target : E → Nat)
+    (projected : Array (EdgeOccurrence E))
+    (accepted : project prepared edges source target = .ok projected) :
+    projected.toList.map (·.occurrence) = List.range' 0 edges.size := by
+  have kept := congrArg (List.map (fun p : Nat × E × Nat × Nat => p.1))
+    (project_provenance prepared edges source target projected accepted)
+  simp only [List.map_map, EdgeOccurrence.provenance, Function.comp_def] at kept
+  rw [List.zipIdx_map_snd, Array.length_toList] at kept
+  exact kept
+
+/-- Hidden and visible edge occurrences together retain the source array's size. -/
+theorem project_size {E : Type} (prepared : Prepared) (edges : Array E) (source target : E → Nat)
+    (projected : Array (EdgeOccurrence E))
+    (accepted : project prepared edges source target = .ok projected) : projected.size = edges.size := by
+  have kept := congrArg List.length (project_provenance prepared edges source target projected accepted)
+  simp only [List.length_map, List.length_zipIdx, Array.length_toList] at kept
+  exact kept
+
 end Tools.View.GraphRegions
