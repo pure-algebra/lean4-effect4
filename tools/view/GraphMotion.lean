@@ -33,9 +33,10 @@ def main (args : List String) : IO Unit := do
     let H := (graph.laid.height + 32).toNat
     let mut cache : Laid.StrokeCache := {}
     let mut frames : Array Lean.Json := #[]
+    let transition := GraphMotion.prepare L.motion.norm {} graph.laid
     for i in List.range 61 do
       let t := i * 1000 / 60
-      let laid := sampleLaid L.motion.norm {} graph.laid t
+      let laid := transition.sample t
       let (calls, next) := laid.callsCached L 16 16 cache
       cache := next
       let calls := (⟨"ground", .fill .ground 1000 0 0 W H⟩ : Keyed Call) :: calls

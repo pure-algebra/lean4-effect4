@@ -1,4 +1,4 @@
-# Graph library admission receipt
+# Graph input-check receipt
 
 The checker passes its strict audit. The layout producer inherits the existing text-measurement trust boundary.
 The new entry point does not establish painted bounds or collision freedom during motion.
@@ -25,7 +25,7 @@ This separates the reusable checker from layout's text measurement.
 `Specimen.checkedFrames` in `tools/Tools/View/Specimen.lean` supplies the driver's admitted specimen pages.
 
 The input check now refuses empty or repeated edge keys.
-Parallel edges with distinct keys remain admitted.
+The input checker accepts parallel edges with distinct keys.
 Refusals follow phases: node keys, edge keys, endpoint positions, then layout checks.
 The finite controls pin this order.
 
@@ -49,9 +49,9 @@ lake env lean docs/research/2026-10-13-graph-library-evidence/RenderingAudit.lea
 
 The narrow builds and finite controls pass.
 `docs/research/2026-10-13-graph-library-evidence/Controls.txt` records the strict checker audit and measured specimen counts.
-The existing Flow specimens pass allocation admission.
+The existing Flow specimens pass `GraphCheck.laid`.
 Checked generic specimen layouts match the previous producer's layouts in the finite control.
-The collision control passes input admission and fails layout admission at the generated duplicate placed key.
+The collision control passes `GraphCheck.input` and fails `GraphCheck.laid` at the generated duplicate placed key.
 
 The rendering audit returns an error, retained in `docs/research/2026-10-13-graph-library-evidence/RenderingAudit.txt`.
 Its reported paths reach `Classical.choice` through `Graph.boxWidth` and Lean's `String.length`.
@@ -66,7 +66,7 @@ No dependency configuration changes.
 
 ## Open obligations
 
-The loop control demonstrates that allocation admission excludes painted route bounds.
+The loop control demonstrates that `GraphCheck.laid` excludes painted route bounds.
 The certificate establishes no scheduler behaviour, program typing, semantic projection, or moving-frame validity.
 The coordinator owns registration of the proposed tool question and any rendering exemption decision.
 The driver's prepared-motion slice adopts `Specimen.checkedFrames` at both specimen call sites.

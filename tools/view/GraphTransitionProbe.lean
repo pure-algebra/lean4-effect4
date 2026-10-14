@@ -107,6 +107,9 @@ end GraphTransitionProbe
 
 /-- Run finite actual-graph and synthetic sampling measurements. -/
 def main (args : List String) : IO Unit := do
+  if args.headD "" == "controls" then
+    IO.println "graph-transition: finite compatibility and inherited moving-bar controls pass"
+    return
   let rounds := (args.headD "1").toNat?.getD 1
   let c := ({} : Look).motion.norm
   for (name, index) in [("nested-forks", 10), ("wide-race", 14), ("race-loop", 11),
@@ -115,7 +118,10 @@ def main (args : List String) : IO Unit := do
     let some graph := page.graph | throw (IO.userError "missing flow graph")
     GraphTransitionProbe.bench name c {} graph.laid rounds
   for count in [128, 512] do
-    GraphTransitionProbe.bench s!"synthetic-{count}" c {} (GraphTransitionProbe.synthetic count) rounds
+    let target := GraphTransitionProbe.synthetic count
+    GraphTransitionProbe.bench s!"synthetic-{count}" c {} target rounds
+    let previous := { target with placed := target.placed.map fun p => { p with x := p.x + 12 } }
+    GraphTransitionProbe.bench s!"synthetic-kept-{count}" c previous target rounds
   IO.println (Lean.Json.compress (Lean.Json.mkObj [
     ("moving_bar", Lean.Json.mkObj [("time", Lean.toJson (500 : Nat)),
       ("port_y", Lean.toJson (50 : Nat)), ("mark_y", Lean.toJson (100 : Nat)),

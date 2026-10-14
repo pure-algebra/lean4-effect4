@@ -1,0 +1,8 @@
+{
+  "baseline": "tools/view/out/advanced-motion-before",
+  "candidate": "tools/view/out/advanced-service-motion",
+  "svg_count": 366,
+  "xml_valid": true,
+  "different": [],
+  "missing_baseline": []
+}

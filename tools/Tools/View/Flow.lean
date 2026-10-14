@@ -8,8 +8,9 @@ import Std.Data.HashSet
 # A program's flow: its own graph as a fold, and its layout as a fold
 
 Slices D2 and D3 of the program graph's design (`docs/research/2026-10-09-program-graph-design.md`;
-decisions row 337, point 9). A program's flow is what must happen before what. `bind` and
-statements stand in series. The branches of `raceAll`, and a forked fiber beside its parent's
+decisions row 337, point 9). A program's flow records structural layout constraints.
+It does not record scheduler events or establish runtime causality.
+`bind` and statements stand in series. The branches of `raceAll`, and a forked fiber beside its parent's
 continuation, stand in parallel. Alternatives (a handler, the branches of `select` and `ifElse`)
 stand side by side, one of them taken. A region (a scope, an uninterruptible span, a provided
 layer) brackets its part, and a loop returns.
@@ -306,10 +307,10 @@ end
 A program's waits make its graph more than series-parallel: an await may wait for a fiber forked
 in another part. So the layout has two passes. Across, it is a fold of the flow (`lay`): series
 centres its parts, parallel stands its branches side by side, a region adds a margin. Down, each
-item stands below every item before it, by the longest path over the flow's edges and its waits:
-so every edge descends, and an await stands below the end of the fiber it waits for. A wait that
-closes a cycle is a deadlock, and is drawn in a lane, so it stands out. A region's frame is the
-bounding box of what it holds.
+item stands below its accepted predecessors, by the longest path over the structural constraints.
+A wait that closes a constraint cycle appears in a lane.
+That cycle does not establish runtime deadlock.
+A region's frame is the bounding box of what it holds.
 
 **Positions, not names.** A part's edges name their ends by their positions among the part's
 items, as a variable names its binder by a position. Composing two parts moves the second's

@@ -1,4 +1,4 @@
-# Graph library admission and preparation
+# Graph input checks and preparation
 
 The production connector construction stays fixed during this slice.
 The graph service joins input checks, layout, and allocation checks behind one call.
@@ -6,7 +6,7 @@ Preparation moves repeated motion and ordering work outside their inner loops.
 
 Base: `d6285ddf8ab54ef7d5fc3bb32a23831173e45afe`.
 
-## Admission placement
+## Input-check placement
 
 Concept: `initial-algebras-folds`, concept 7 in `docs/core/semantics.md`.
 Required property served: agreement between a finite checker and its named observation.
@@ -38,7 +38,7 @@ It establishes no program typing, scheduler behaviour, or graph relation to mach
 The allocation observation excludes connector ink, text, marks, and collision freedom during motion.
 The evidence does not identify a particular layout algorithm.
 This keeps the checker independent of text measurement and permits other layout producers.
-Input admission does not imply layout admission.
+Passing `GraphCheck.input` does not imply passing `GraphCheck.laid`.
 A generated point key can collide with a supplied node key.
 The second check reports that collision as a located refusal.
 Neither check repairs identities or silently removes parallel edges.
