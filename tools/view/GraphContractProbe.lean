@@ -19,6 +19,7 @@ private def fork (y : Int) : Laid :=
       { key := "b", x := 128, y := y + 100, w := 72,
         node := some { key := "b", line1 := "right" } }],
     marks := #[.bar "op/fork" 24 176 y],
+    attachments := #[⟨"op/fork/0", "op/fork"⟩, ⟨"op/fork/1", "op/fork"⟩],
     routes := #[.down "op/fork/0→a" ["op/fork/0", "a"],
       .down "op/fork/1→b" ["op/fork/1", "b"]], width := 220, height := 280 }
 
@@ -35,9 +36,9 @@ private def loopGraph : Graph :=
 #guard (fork 40).placed.toList.filter (·.node.isNone) |>.all ((fork 40).onBar ·)
 #guard (fork 120).placed.toList.filter (·.node.isNone) |>.all ((fork 120).onBar ·)
 #guard let mid := sampleLaid linear (fork 40) (fork 120) 500
-  !(mid.placed.toList.filter (·.node.isNone) |>.any (mid.onBar ·))
+  mid.placed.toList.filter (·.node.isNone) |>.all (mid.onBar ·)
 #guard (boxes false).boxesApart && (boxes true).boxesApart
-#guard !(sampleLaid linear (boxes false) (boxes true) 500).boxesApart
+#guard (sampleLaid linear (boxes false) (boxes true) 500).boxesApart
 #guard (GraphCheck.laid loopGraph.layout).isOk
 
 private def write (out : System.FilePath) (L : Look) (name : String) (laid : Laid) : IO Unit := do

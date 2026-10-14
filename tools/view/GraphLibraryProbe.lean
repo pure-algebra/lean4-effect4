@@ -49,14 +49,14 @@ private def generatedCollision : Graph :=
       Specimen.frames.map (·.graph.map (·.laid))
   | .error _ => false
 
--- Allocation admission does not bound the painted self-loop.
+-- Allocation reserves the self-loop control hull; painted stroke margins remain separate.
 private def selfLoop : Graph :=
   { nodes := #[⟨"a", "A", "", false⟩], edges := #[⟨"loop", 0, 0⟩] }
 
 #guard (GraphLayout.checked selfLoop).isOk
 #guard let value := selfLoop.layout
   match value.placed[0]? with
-  | some p => value.width < p.x + p.w + 3 * LOOP_REACH / 2
+  | some p => p.x + p.w + 2 * LOOP_REACH ≤ value.width
   | none => false
 
 #axiom_audit Tools.View.GraphCheck
@@ -70,4 +70,4 @@ def main : IO Unit := do
   if admitted.length != FlowSpecimen.frames.length then
     throw (IO.userError "flow allocation control failed")
   IO.println "identity, parallel edge, first refusal, generated point collision controls: pass"
-  IO.println "remaining gap control: self-loop centreline exceeds admitted allocation canvas"
+  IO.println "self-loop allocation control: full control hull fits the canvas"

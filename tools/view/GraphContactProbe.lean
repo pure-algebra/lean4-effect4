@@ -37,3 +37,15 @@ private def refusal (l : Laid) (site : GraphCheck.Site) (index : Nat)
   cs[1]?.any fun c => !c.docked && c.point.2 < 120
 #guard (GraphContact.collect {} { fixture with routes := #[.down "hidden" ["source→part", "target/fork/→part"] 0] }).isEmpty
 
+-- Both sides of one mark share its incidence role, independently of endpoint spelling.
+private def forkTopology : Laid :=
+  { fixture with routes := #[
+      .down "in" ["target/fork/→part", "source→part"],
+      .down "out one" ["source→part", "target/fork/→part"],
+      .down "out two" ["source→part", "target/fork/→part"]] }
+#guard (GraphContact.degrees forkTopology (GraphAttachment.Index.of forkTopology)).get? "plain mark" == some (1, 2)
+#guard GraphContact.junction 1 2 == .fork
+#guard GraphContact.junction 2 1 == .join
+#guard GraphContact.junction 2 2 == .mixed
+#guard GraphContact.junction 1 1 == .through
+

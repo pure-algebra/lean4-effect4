@@ -6,10 +6,11 @@
   python tools/view/motion_inspector.py --self-test
 
 A sequence directory contains SVGs and look.css or the existing player index.html.
-Optional motion.json supplies title, description, overview, and ordered frames
-[{name, label, time_ms}]. Without it, the existing player's pics order is used.
-An input root may contain several sequence directories. Contacts come from the
-actual final connector caps. Crops change viewports, never source path data.
+Optional motion.json supplies title, description, overview, and ordered frames.
+contact_schema=1 requires explicit logical contact records for every frame.
+Legacy sequences infer contacts from connector caps and key spelling.
+An input root may contain several sequence directories. Crops change viewports,
+never source path data.
 Only trusted local generated SVGs belong to this inspection tool.
 """
 
@@ -26,6 +27,40 @@ from inspect_svg import PAGE as CONTACT_PAGE, load_directory
 
 
 KINDS = ("fork", "join", "node")
+
+
+def explicit_contacts(rows):
+    """Validate producer records; malformed metadata never falls back to guessing."""
+    if not isinstance(rows, list):
+        raise ValueError("explicit contacts must be an array")
+    out = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            raise ValueError("contact must be an object")
+        if any(not isinstance(row.get(k), str) or not row[k] for k in ("id", "key", "item", "label")):
+            raise ValueError("contact identities and label must be nonempty strings")
+        if row["id"] in out:
+            raise ValueError("duplicate contact identity")
+        if row.get("side") not in ("source", "target") or row.get("kind") not in (*KINDS, "pass"):
+            raise ValueError("invalid contact side or kind")
+        if row.get("surface") not in ("node", "point", "bar", "diamond") or not isinstance(row.get("docked"), bool):
+            raise ValueError("invalid contact surface or docking state")
+        mark = row.get("mark")
+        if not isinstance(mark, str) or bool(mark) != (row["surface"] in ("bar", "diamond")):
+            raise ValueError("contact mark must match its surface")
+        junction = row.get("junction")
+        if (mark and junction not in ("fork", "join", "through", "mixed")) or (not mark and junction != ""):
+            raise ValueError("contact junction must match its surface")
+        kind = "node" if row["surface"] == "node" else \
+            junction if row["surface"] == "bar" and junction in ("fork", "join") else "pass"
+        if row["kind"] != kind:
+            raise ValueError("contact kind must match its surface and junction")
+        point = row.get("point")
+        if not isinstance(point, list) or len(point) != 2 or any(
+                not isinstance(x, (int, float)) or isinstance(x, bool) or not math.isfinite(x) for x in point):
+            raise ValueError("contact point must have two finite coordinates")
+        out[row["id"]] = {**row, "basis": "logical"}
+    return out
 
 
 def node_keys(text):
@@ -82,6 +117,9 @@ def finite_view(value):
 
 
 def order_frames(frames, manifest=None, player=""):
+    explicit = manifest is not None and "contact_schema" in manifest
+    if explicit and (type(manifest["contact_schema"]) is not int or manifest["contact_schema"] != 1):
+        raise ValueError("unsupported contact schema")
     by_name = {frame["name"]: frame for frame in frames}
     if manifest and "frames" in manifest:
         rows = manifest["frames"]
@@ -93,7 +131,11 @@ def order_frames(frames, manifest=None, player=""):
             rows = [{"name": frame["name"]} for frame in frames]
     if not isinstance(rows, list) or not rows:
         raise ValueError("empty or invalid frame sequence")
+    if any(not isinstance(row, dict) for row in rows):
+        raise ValueError("frame sequence entries must be objects")
     names = [row.get("name") for row in rows]
+    if any(not isinstance(name, str) or not name for name in names):
+        raise ValueError("frame names must be nonempty strings")
     if len(set(names)) != len(names) or set(names) != set(by_name):
         raise ValueError("sequence must name every input SVG exactly once")
     out, previous = [], -1.0
@@ -105,16 +147,17 @@ def order_frames(frames, manifest=None, player=""):
             raise ValueError("frame times must increase strictly")
         frame = dict(by_name[row["name"]])
         frame.update(label=str(row.get("label", row["name"])), time_ms=time,
-                     contacts=contacts(frame["text"]))
+                     contacts=explicit_contacts(row.get("contacts")) if explicit else contacts(frame["text"]))
         # The inspector uses keyed contacts instead of the generic endpoint menu.
         frame.pop("features", None)
         out.append(frame)
         previous = time
     # Final geometry owns classification when earlier samples have no node body yet.
     final_kinds = {identity: contact["kind"] for identity, contact in out[-1]["contacts"].items()}
-    for frame in out:
-        for identity, contact in frame["contacts"].items():
-            contact["kind"] = final_kinds.get(identity, "pass")
+    if not explicit:
+        for frame in out:
+            for identity, contact in frame["contacts"].items():
+                contact["kind"] = final_kinds.get(identity, "pass")
     return out
 
 
@@ -265,7 +308,7 @@ function render(){
   $('position').textContent='sample '+(state.index+1)+' / '+frames().length;$('sampleLabel').textContent=primary.label;
   document.querySelector('main').dataset.frame=primary.name;document.querySelector('main').dataset.scene=scene.id;
   state.panels.forEach(p=>{const actual=primary.contacts[p.id];if(p.follow&&actual)p.crop=centreCrop(actual.point,p.crop[2],p.crop[3]);p.inputs.forEach((el,i)=>el.value=+p.crop[i].toFixed(4));
-   p.caption.textContent=byId(p.id).key+' · '+(actual?'emitted path '+actual.path+', '+actual.cubics+' cubics':'not emitted in this sample')+' · crop '+p.crop.map(x=>+x.toFixed(3)).join(' ');});
+   p.caption.textContent=byId(p.id).key+' · '+(actual?(actual.basis==='logical'?'logical '+actual.surface+' contact · '+(actual.docked?'docked':'free tip'):'emitted path '+actual.path+', '+actual.cubics+' cubics'):'not emitted in this sample')+' · crop '+p.crop.map(x=>+x.toFixed(3)).join(' ');});
   for(const view of views){
    const frame=view.variant.frames[state.index],crop=view.panel===null?view.variant.overview:state.panels[view.panel].crop;
    const signature=JSON.stringify([state.zoom,...crop]),left=view.viewport.scrollLeft,top=view.viewport.scrollTop;
@@ -339,7 +382,23 @@ def self_test():
     stable = order_frames([{'name': '001.svg', 'text': early}, {'name': '002.svg', 'text': node_svg}])
     assert stable[0]['contacts']['x/fork/0→node::target']['kind'] == 'node'
     assert contacts(svg.replace('x/fork/0→y/join/0', 'plain→y/fork/0'))['plain→y/fork/0::target']['kind'] == 'fork'
-    return {"controls": 14, "result": "pass"}
+    contact = dict(id="0::source", key="an→arbitrary→key", item="plain", label="source plain",
+                   side="source", kind="fork", surface="bar", mark="bar identity", junction="fork", point=[3, 4], docked=True)
+    manifest = dict(contact_schema=1, frames=[dict(name="001.svg", contacts=[contact]),
+                                            dict(name="002.svg", contacts=[])])
+    explicit = order_frames(frames, manifest)
+    assert explicit[0]["contacts"]["0::source"]["kind"] == "fork"
+    assert explicit[-1]["contacts"] == {}
+    for invalid in [None, [contact, contact], [{**contact, "point": [float("nan"), 0]}],
+                    [{**contact, "docked": 1}], [{**contact, "surface": "guessed"}],
+                    [{**contact, "mark": ""}], [{**contact, "kind": "node"}]]:
+        try:
+            explicit_contacts(invalid)
+        except ValueError:
+            pass
+        else:
+            raise AssertionError("malformed contact metadata admitted")
+    return {"controls": 23, "result": "pass"}
 
 
 def main():

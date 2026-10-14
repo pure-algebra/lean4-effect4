@@ -21,6 +21,14 @@ The relation is view metadata, not another program representation.
 It supports coupled motion, contact inspection, selection, and later styling.
 The renderer remains the owner of connector geometry.
 
+`GraphContact.collect` in `tools/Tools/View/GraphContact.lean` exposes logical contacts and their declared surfaces.
+`GraphContact.degrees` counts directed route occurrences at each explicit mark.
+Parallel route occurrences contribute separately.
+`GraphContact.junction` distinguishes forks, joins, through points, and mixed junctions by those counts.
+The counts concern structural incidence, not machine execution.
+Contact occurrence identities belong to one layout snapshot.
+They promise no identity across arbitrary route reordering.
+
 ```mermaid
 flowchart LR
   Box[Flow.Box marks and positions] --> Layout[Laid attachments]
@@ -43,7 +51,7 @@ Limits: no program typing, scheduler causality, liveness, or text-ink measuremen
 Requirement served: R14, through view navigation and rendering explanations.
 
 `GraphCheck.laid_iff` in `tools/Tools/View/GraphCheck.lean` continues to characterize the checker as its finite tests expand.
-No separate theorem restates that equivalence.
+No separate theorem restates that finite-check observation.
 Each motion, separation, and painted-bound slice records its own stronger observation before proving it.
 
 `KeyMap.get?_firstBy` characterizes first-occurrence lookup for a finite list.

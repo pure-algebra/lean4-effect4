@@ -203,8 +203,8 @@ structure Region where
 deriving DecidableEq, Repr
 
 /-- A mark of a program's flow, in the notation of UML's activity diagrams: a bar where branches
-that all run part or meet, across `[x0, x1)` at the height `y`; a diamond where alternatives part
-or meet, centred at `(x, y)`. -/
+that all run part or meet, from `x0` to `x1` at height `y`; a diamond where alternatives part
+or meet, centred at `(x, y)`. Logical bar contacts include both endpoints. -/
 inductive FlowMark where
   | bar (key : Key) (x0 x1 y : Int)
   | diamond (key : Key) (x y : Int)

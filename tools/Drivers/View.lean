@@ -76,10 +76,9 @@ def writePicture (L : Look) (out : System.FilePath) (name : String) (W H : Int) 
 /-- Write one page, in a look, on a stroke cache (`Laid.StrokeCache`); answer the cache. -/
 def writePage (L : Look) (out : System.FilePath) (name : String) (g : Page)
     (cache : Laid.StrokeCache := {}) : IO Laid.StrokeCache := do
-  let (W, H) := pageSize width g
-  let (calls, cache) := pageCallsCached L width g cache
-  writePicture L out name W H calls
-  pure cache
+  let drawing := pageDrawingCached L width g cache
+  writePicture L out name drawing.size.1 drawing.size.2 drawing.calls
+  pure drawing.cache
 
 /-- The page rules a player and the gallery share, over a look's custom properties. -/
 def pageRules : String :=
@@ -356,6 +355,7 @@ def graphRefusal (r : GraphCheck.Refusal) : String :=
   let site := match r.site with
     | .canvas => "canvas" | .node => "node" | .edge => "edge"
     | .placed => "placed" | .route => "route" | .region => "region"
+    | .mark => "mark" | .attachment => "attachment"
   let field := match r.field with
     | .key => "key" | .source => "source" | .target => "target"
     | .vertex i => s!"vertex[{i}]" | .width => "width" | .height => "height"
@@ -369,6 +369,8 @@ def graphRefusal (r : GraphCheck.Refusal) : String :=
     | .negative v => s!"negative value {v}"
     | .outside far bound => s!"extent {far} exceeds {bound}"
     | .doesNotDescend => "segment does not descend"
+    | .notPoint => "attachment names a node"
+    | .offMark => "point is outside its declared mark"
   s!"{site}[{r.index}].{field}: {reason}"
 
 /-- Write each frame's outputs into `out`, with `motion - 1` pictures before each frame after the

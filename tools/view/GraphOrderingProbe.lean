@@ -54,6 +54,7 @@ def baselineLayout (g : Graph) : Laid :=
     ((g.edges.toList.filter fun e => e.src = e.dst).map fun e => Route.loop e.key (key e.src))
   let ranksN : Int := os.length
   { placed := placed.toArray, routes := routes.toArray,
+    routingWidth := some (CELL * (widest + (if backs.isEmpty then 0 else GAP + 2 * backs.length))),
     width := CELL * (widest + (if backs.isEmpty then 0 else GAP + 2 * backs.length)),
     height := if ranksN == 0 then 0 else ROWH * LEVEL * (ranksN - 1) + ROWH * BOXROWS }
 
