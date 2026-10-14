@@ -692,12 +692,14 @@ $(CHK)/ingest: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES) tools/D
 # `harness/truth/session/Keyed.lean` imports are its inputs, by their sources. It performs the
 # to-do's scripts on the to-do's emitted Effect service too (decisions row 378 (20), slice E4), so
 # the service's runner and red controls, and the to-do application's writer of the service and its
-# consumer (`apps/todo/`), are its inputs. The recipe builds what the four Lean files that the
-# script runs import, since `lake env` builds nothing.
+# consumer (`apps/todo/`), are its inputs. It runs the to-do application on SQLite too (row 378
+# (16), slice V4), so the application's front, repository and checker, and the checks they share
+# with the keyed lane (`tools/Tools/RunChecks.lean`), are its inputs. The recipe builds what the
+# five Lean files that the script runs import, since `lake env` builds nothing.
 HOST_PROTOCOL_SCENARIOS := $(wildcard Test/Dogfood/*.lean Test/Dogfood/Scenario/*.lean)
 HOST_PROTOCOL_SERVICE := $(wildcard harness/truth/service/*.ts harness/truth/service/*.json harness/truth/service/red/* apps/todo/*.lean apps/todo/*.ts)
-$(CHK)/host-protocol: $(LEAN_INPUTS) $(wildcard harness/truth/session/*.ts harness/truth/session/*.lean harness/truth/session/*.json) $(HOST_PROTOCOL_SCENARIOS) $(HOST_PROTOCOL_SERVICE) $(PRELUDE_SOURCES) tools/Tools/HostProtocol.lean scripts/check-host-protocol.py | harness/truth/node_modules apps/todo/node_modules
-	$(call build_imports,tools/Tools/HostProtocol.lean harness/truth/session/Keyed.lean harness/truth/session/Session.lean apps/todo/EmitTodo.lean)
+$(CHK)/host-protocol: $(LEAN_INPUTS) $(wildcard harness/truth/session/*.ts harness/truth/session/*.lean harness/truth/session/*.json) $(HOST_PROTOCOL_SCENARIOS) $(HOST_PROTOCOL_SERVICE) $(PRELUDE_SOURCES) tools/Tools/HostProtocol.lean tools/Tools/RunChecks.lean tools/Tools/ProfileJson.lean scripts/check-host-protocol.py | harness/truth/node_modules apps/todo/node_modules
+	$(call build_imports,tools/Tools/HostProtocol.lean harness/truth/session/Keyed.lean harness/truth/session/Session.lean apps/todo/EmitTodo.lean apps/todo/Check.lean)
 	$(PY) scripts/check-host-protocol.py
 	@mkdir -p $(CHK) && touch $@
 

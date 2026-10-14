@@ -364,3 +364,40 @@ describe("scenario readers", () => {
     expect(read(1, false)["workLeft.queued"]).toEqual({ reader: "dispatchers", value: { armed: 1 } })
   })
 })
+
+describe("live recorder (decisions row 378 (16), slice V4)", () => {
+  const live = (): KeyedRecorder => new KeyedRecorder({ name: "add", expression: "", table: [{}], source: null, plan: [],
+    expected: null, live: true }, "live")
+  /** A program run as the front runs one: the root attaches itself, then the program runs. */
+  const runAsRoot = (recorder: KeyedRecorder, program: Effect.Effect<unknown, unknown>) =>
+    Effect.runPromiseExit(Effect.withFiber(fiber => { recorder.attachRoot(fiber); return program }))
+
+  test("a request's record holds each call's row, request and completion, and the root's exit", async () => {
+    const recorder = live()
+    const exit = await runAsRoot(recorder, Effect.flatMap(recorder.external(0, "milk", Effect.succeed(7)),
+      n => recorder.external(0, n, Effect.fail(["SqlError", "locked"] as const))))
+    expect(recorder.request(["milk"], exit)).toEqual({ entry: "add", args: ["milk"], calls: [
+      { row: 0, request: "milk", completion: { success: 7 } },
+      { row: 0, request: 7, completion: { failure: [{ fail: ["SqlError", "locked"] }] } }
+    ], exit: { failure: [{ fail: ["SqlError", "locked"] }] } })
+  })
+
+  test("a call from a fiber other than the root is refused, and the request has no record", async () => {
+    const recorder = live()
+    const exit = await runAsRoot(recorder, Effect.flatMap(Effect.forkChild(recorder.external(0, "milk", Effect.succeed(7))), Fiber.join))
+    expect(Exit.isFailure(exit)).toBe(true)
+    expect(() => recorder.request(["milk"], exit)).toThrow("a live call from a fiber other than the root")
+  })
+
+  test("a call on a row that the table does not hold is refused", async () => {
+    const recorder = live()
+    const exit = await runAsRoot(recorder, recorder.external(1, "milk", Effect.succeed(7)))
+    expect(Exit.isFailure(exit)).toBe(true)
+    expect(() => recorder.request(["milk"], exit)).toThrow("a live call on row 1, which the table does not hold")
+  })
+
+  test("a fixture that is not live gives no request's record", async () => {
+    const recorder = new KeyedRecorder({ name: "add", expression: "", table: [{}], source: null, plan: [], expected: null }, "planned")
+    expect(() => recorder.request([], Exit.succeed(undefined))).toThrow("a request record of a run that is not live")
+  })
+})

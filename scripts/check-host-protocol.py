@@ -14,6 +14,12 @@ slice E4, `harness/truth/service/`). Lean writes the service's file into the to-
 folder (`apps/todo/`); tsgo 7 checks it with its consumer and red controls. The consumer's
 programs perform each to-do script with the lane's recorder; Lean replays each recording and
 decides each run's checks beside the script's own run.
+
+The to-do application then runs on SQLite (decisions row 378 (16), slice V4, `apps/todo/`): its
+front serves one script of requests from an empty database, over the shipped repository, two red
+ones and a read-only one, and records each request. Lean rebuilds each request's run from its
+record and decides its five checks (`apps/todo/Check.lean`), with three changed copies of the
+shipped session.
 """
 from pathlib import Path
 import copy
@@ -116,6 +122,92 @@ def service_controls(fixtures, replays, decided):
             continue
         raise SystemExit('FAIL host-protocol: a changed service decision passes the service checks')
 
+# The checks that `apps/todo/Check.lean` decides of each request (the lowering note's §6.1).
+CHECKS = ('built', 'replayed', 'exit', 'funded', 'atRest', 'hostDriven', 'conforming', 'agrees')
+
+def failing(session):
+    """The checks that fail on some request of a checked session."""
+    return {check for request in session['requests'] for check in CHECKS if not request['verdict'][check]}
+
+def tamper(app):
+    """Three copies of the shipped repository's session, each changed at one record: the red
+    control of one check each. An entry that the application does not hold fails `built`; a call's
+    request that the program does not make fails `replayed`; an exit that the program does not
+    reach fails `exit`. Answers each copy's name, the changed record's index and its check."""
+    header, *lines = (app / 'sqlite.jsonl').read_text().splitlines()
+    records = [json.loads(line) for line in lines]
+    def write(name, index, change, check):
+        changed = copy.deepcopy(records)
+        change(changed[index])
+        (app / f'{name}.jsonl').write_text('\n'.join([header, *map(json.dumps, changed)]) + '\n')
+        return name, index, check
+    called = next(index for index, record in enumerate(records)
+                  if record['calls'] and isinstance(record['calls'][0]['request'], str))
+    return [write('changed-entry', 0, lambda record: record.update(entry='purge'), 'built'),
+            write('changed-request', called,
+                  lambda record: record['calls'][0].update(request=record['calls'][0]['request'] + '!'), 'replayed'),
+            write('changed-exit', len(records) - 1, lambda record: record.update(exit={'success': 'changed'}), 'exit')]
+
+def failed_completions(path):
+    """The calls of a session's file whose completion is a failure."""
+    return [call for line in path.read_text().splitlines()[1:] for call in json.loads(line)['calls']
+            if 'failure' in call['completion']]
+
+def check_app(checked, tampered, failures):
+    """The to-do on SQLite: every check of every request of the shipped repository's session
+    passes; the forgetful repository fails `agrees` alone; the titleless one fails `conforming`, and
+    nothing but `conforming` and `agrees`; the read-only one, whose `failures` SQLite answered,
+    fails `agrees` alone, so each failure is the exit that Lean's run reaches; each changed copy
+    fails its check at its record, and no request before that record fails. Answers the summary,
+    or fails at the first finding."""
+    shipped, forgetful, titleless, readonly, *copies = checked['sessions']
+    if not shipped['requests'] or failing(shipped):
+        raise SystemExit(f'FAIL host-protocol: the to-do on SQLite fails {sorted(failing(shipped))}')
+    if failing(forgetful) != {'agrees'}:
+        raise SystemExit(f'FAIL host-protocol: the forgetful repository fails {sorted(failing(forgetful))}, '
+                         'and agrees alone is expected')
+    if 'conforming' not in failing(titleless) or not failing(titleless) <= {'conforming', 'agrees'}:
+        raise SystemExit(f'FAIL host-protocol: the titleless repository fails {sorted(failing(titleless))}, '
+                         'and conforming is expected, with agrees at most')
+    if not failures or failing(readonly) != {'agrees'}:
+        raise SystemExit(f'FAIL host-protocol: the read-only repository, with {len(failures)} failed calls, '
+                         f'fails {sorted(failing(readonly))}, and agrees alone is expected')
+    if len(copies) != len(tampered):
+        raise SystemExit('FAIL host-protocol: the checker did not answer each changed session')
+    for session, (name, index, check) in zip(copies, tampered):
+        requests = session['requests']
+        if requests[index]['verdict'][check] or not all(request['verdict']['passed'] for request in requests[:index]):
+            raise SystemExit(f'FAIL host-protocol: the changed session {name} does not fail {check} at its record {index}')
+    name, index, check = tampered[-1]
+    if failing(copies[-1]) != {check} or [i for i, r in enumerate(copies[-1]['requests']) if not r['verdict']['passed']] != [index]:
+        raise SystemExit(f'FAIL host-protocol: the changed session {name} fails more than {check} at its record')
+    return (f'the to-do on SQLite: {len(shipped["requests"])} requests from an empty database, each passing Lean\'s '
+            f'five checks; the forgetful and titleless repositories fail agrees and conforming; '
+            f'{len(failures)} writes that SQLite refused escape as the row\'s declared error; '
+            f'{len(tampered)} changed records fail {", ".join(check for _, _, check in tampered)}')
+
+def app_controls(checked, tampered, failures):
+    """Red controls of `check_app`: a failing check of the shipped session, a forgetful session that
+    agrees, a read-only session whose exit check fails, and a changed record that passes each fail
+    it."""
+    def fail_shipped(c):
+        c['sessions'][0]['requests'][0]['verdict'].update(agrees=False, passed=False)
+    def agree_forgetful(c):
+        for request in c['sessions'][1]['requests']:
+            request['verdict'].update(agrees=True, passed=True)
+    def fail_readonly_exit(c):
+        c['sessions'][3]['requests'][0]['verdict'].update(exit=False, passed=False)
+    def pass_changed(c):
+        c['sessions'][4]['requests'][tampered[0][1]]['verdict'].update(built=True, passed=True)
+    for change in [fail_shipped, agree_forgetful, fail_readonly_exit, pass_changed]:
+        changed = copy.deepcopy(checked)
+        change(changed)
+        try:
+            check_app(changed, tampered, failures)
+        except SystemExit:
+            continue
+        raise SystemExit('FAIL host-protocol: a changed verdict of the to-do on SQLite passes its checks')
+
 def main():
     bun = shutil.which('bun')
     if not bun or json.loads((MODULES / 'effect/package.json').read_text())['version'] != '4.0.0-rc.112':
@@ -182,6 +274,18 @@ def main():
         decided = json.loads((work / 'service-checks.json').read_text())
         served = check_service(todo, replays, decided)
         service_controls(todo, replays, decided)
+        # The to-do application on SQLite (slice V4): the front serves the script over the shipped
+        # repository, two red ones and a read-only one; Lean checks each session and three changed
+        # copies of the shipped one.
+        app = work / 'app'
+        run(bun, '--no-install', str(APP / 'run.ts'), str(app))
+        tampered = tamper(app)
+        sessions = ['sqlite', 'forgetful', 'titleless', 'readonly', *(name for name, _, _ in tampered)]
+        lean('apps/todo/Check.lean', *(app / f'{name}.jsonl' for name in sessions), output=work / 'app-checks.json')
+        checked = json.loads((work / 'app-checks.json').read_text())
+        failures = failed_completions(app / 'readonly.jsonl')
+        applied = check_app(checked, tampered, failures)
+        app_controls(checked, tampered, failures)
         # Explicit legacy adapter remains buildable; no stale, deleted library import.
         lean('harness/truth/session/Session.lean', 'emit', output=work / 'legacy-fixtures.json')
         latest = work_root / 'latest'
@@ -189,7 +293,7 @@ def main():
             shutil.rmtree(latest)
         shutil.copytree(work, latest)
     print('PASS host-protocol: fresh projections, typed host programs, keyed replay and negative controls; '
-          'the scenarios\' scripts on their printed modules; ' + served)
+          'the scenarios\' scripts on their printed modules; ' + served + '; ' + applied)
 
 if __name__ == '__main__':
     main()

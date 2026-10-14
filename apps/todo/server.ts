@@ -26,7 +26,7 @@ import { Database } from "bun:sqlite"
 import { Cause, Context, Effect, Exit, Layer, Scope } from "effect"
 import { KeyedRecorder, valueJson, type RequestRecord } from "../../harness/truth/session/keyed-recorder.ts"
 import { provideRows, tableRows } from "../../harness/truth/session/keyed-bindings.ts"
-import type { Json } from "../../harness/truth/session/protocol.ts"
+import { nat, text, type Json } from "../../harness/truth/session/protocol.ts"
 import * as Service from "./.work/todo.gen.ts"
 import { withTodo, type Repo } from "./consumer.ts"
 import { SqliteTodoRepo, open, sqliteRepository, stateOf, type Repository } from "./repo.ts"
@@ -73,11 +73,15 @@ const respond = (exit: Exit.Exit<unknown, unknown>): Response => {
 /** A request whose input is no entry's argument. */
 const refuse = (why: string): Response => Response.json({ error: "BadRequest", message: why }, { status: 400 })
 
-/** An id from a route: a decimal natural that the wire carries (`Number.MAX_SAFE_INTEGER` at most). */
-const idOf = (text: string): number | undefined => {
-  const id = /^(0|[1-9][0-9]*)$/.test(text) ? Number(text) : NaN
-  return Number.isSafeInteger(id) ? id : undefined
+/** An argument that the wire carries, read by the wire's own reader (`text` or `nat`,
+ * `protocol.ts`), which Lean's reader bounds alike; `undefined` for any other input. */
+const carried = <A>(read: (value: unknown) => A, value: unknown): A | undefined => {
+  try { return read(value) } catch { return undefined }
 }
+
+/** An id from a route: a decimal natural that the wire carries. */
+const idOf = (digits: string): number | undefined =>
+  /^(0|[1-9][0-9]*)$/.test(digits) ? carried(nat, Number(digits)) : undefined
 
 export interface Served { readonly port: number; stop(): Promise<void> }
 
@@ -126,21 +130,21 @@ export const serve = async (options: { db: string; session: string; port?: numbe
         GET: () => serial("list", []),
         POST: async request => {
           const body: unknown = await request.json().catch(() => undefined)
-          const title = typeof body === "object" && body !== null ? (body as { title?: unknown }).title : undefined
-          if (typeof title !== "string" || title.length > 4096) return refuse("a title is a string of 4096 characters at most")
+          const title = carried(text, typeof body === "object" && body !== null ? (body as { title?: unknown }).title : undefined)
+          if (title === undefined) return refuse("a title is a string that the wire carries")
           return serial("add", [valueJson(title)])
         }
       },
       "/todos/:id/complete": {
         POST: request => {
           const id = idOf(request.params.id)
-          return id === undefined ? refuse("an id is a decimal natural") : serial("complete", [valueJson(id)])
+          return id === undefined ? refuse("an id is a decimal natural that the wire carries") : serial("complete", [valueJson(id)])
         }
       },
       "/todos/:id": {
         DELETE: request => {
           const id = idOf(request.params.id)
-          return id === undefined ? refuse("an id is a decimal natural") : serial("remove", [valueJson(id)])
+          return id === undefined ? refuse("an id is a decimal natural that the wire carries") : serial("remove", [valueJson(id)])
         }
       }
     },

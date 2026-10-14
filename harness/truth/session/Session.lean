@@ -11,6 +11,7 @@ This is the explicit v1 serial adapter; it binds the missing key at the actual p
 retains the original v1 records. New v2 recordings use Keyed.lean and require recorded keys. -/
 
 open Lean Effect4 Effect4.Machine Effect4.Program Effect4.Api.HostSession
+open Tools.ProfileJson (tableJson)
 abbrev J := Lean.Json
 namespace HostSessionTool
 
@@ -37,8 +38,6 @@ def program (name : String) : Except String Api.Program :=
   else if name = "resourceSuccess" then .ok resourceSuccess
   else if name = "resourceClosed" then .ok resourceClosed
   else .error "unknown fixture"
-
-def tableJson (rows : RowTable) : J := .arr (rows.map Tools.ProfileJson.rowJson).toArray
 
 def emitFixture (name : String) : Except String J := do
   let p ← program name

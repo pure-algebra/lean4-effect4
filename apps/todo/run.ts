@@ -11,10 +11,17 @@
  *   back, so it forgets the write. Its runs conform, and they do not agree with the model.
  * - `titleless`: red control. Its `insert` ignores the title: it stores and answers an empty one.
  *   Its runs do not conform to `insert`'s protocol.
+ * - `readonly`: the shipped repository over a connection that SQLite keeps read-only
+ *   (`pragma query_only`). Each write fails with SQLite's own error, which the row declares as
+ *   `["SqlError", message]`, and each failure escapes its entry as the exit. Its runs conform, and
+ *   they do not agree with the model, which never fails.
  *
  * The script covers each entry, both typed failures, an empty title that calls nothing, a second
- * `complete`, and an add after a remove. The run checks each answer's status, and the last list of
- * the shipped repository, over HTTP: the front's glue, which no Lean check reads. */
+ * `complete`, and an add after a remove. Three inputs that the wire does not carry are refused
+ * before any program runs, so they leave no record: a title of 4097 characters, an id with a
+ * leading zero, and an id beyond the wire's naturals. The run checks each answer's status, the
+ * shipped repository's last list, and each session's count of records, over HTTP: the front's
+ * glue, which no Lean check reads. */
 import { mkdir, rm } from "node:fs/promises"
 import { resolve } from "node:path"
 import { deepStrictEqual } from "node:assert"
@@ -44,17 +51,27 @@ const titleless = (db: Database): Repository => {
   return { ...shipped, insert: _title => shipped.insert("") }
 }
 
-/** The script: each request with the status that the shipped repository answers. */
-const script: ReadonlyArray<{ method: string; path: string; body?: unknown; status: number }> = [
+/** The shipped repository over a connection that SQLite keeps read-only. */
+const readonly = (db: Database): Repository => {
+  db.run("pragma query_only = true")
+  return sqliteRepository(db)
+}
+
+/** The script: each request with the status that the shipped repository answers. A request that
+ * the front refuses runs no program. */
+const script: ReadonlyArray<{ method: string; path: string; body?: unknown; status: number; refused?: true }> = [
   { method: "POST", path: "/todos", body: { title: "milk" }, status: 200 },
+  { method: "POST", path: "/todos", body: { title: "x".repeat(4097) }, status: 400, refused: true },
   { method: "POST", path: "/todos", body: { title: "tea" }, status: 200 },
   { method: "POST", path: "/todos", body: { title: "" }, status: 400 },
   { method: "GET", path: "/todos", status: 200 },
   { method: "POST", path: "/todos/1/complete", status: 200 },
   { method: "POST", path: "/todos/1/complete", status: 200 },
   { method: "POST", path: "/todos/7/complete", status: 404 },
+  { method: "POST", path: "/todos/01/complete", status: 400, refused: true },
   { method: "DELETE", path: "/todos/2", status: 200 },
   { method: "DELETE", path: "/todos/2", status: 404 },
+  { method: "DELETE", path: "/todos/9007199254740992", status: 400, refused: true },
   { method: "POST", path: "/todos", body: { title: "bread" }, status: 200 },
   { method: "GET", path: "/todos", status: 200 }
 ]
@@ -76,6 +93,8 @@ const session = async (name: string, over: (db: Database) => Repository): Promis
       statuses.push(response.status)
       last = await response.json()
     }
+    const records = (await Bun.file(file).text()).split("\n").filter(line => line !== "").length - 1
+    deepStrictEqual(records, script.filter(request => !request.refused).length, `${name}: one record for each request that ran`)
     return { statuses, last }
   } finally {
     await served.stop()
@@ -89,5 +108,10 @@ deepStrictEqual(shipped.last, [{ done: true, id: 1, title: "milk" }, { done: fal
   "the shipped repository's last list")
 await session("forgetful", forgetful)
 await session("titleless", titleless)
-console.log(`PASS the to-do on SQLite: ${script.length} requests served over HTTP for each of 3 repositories; ` +
-  `the shipped repository's statuses and last list as expected; sessions in ${out}`)
+// A write that SQLite refuses answers 500 with the row's declared error; a read still answers.
+const refused = await session("readonly", readonly)
+deepStrictEqual(refused.statuses, script.map(request => request.method === "GET" || request.status === 400 ? request.status : 500),
+  "the read-only repository's statuses")
+console.log(`PASS the to-do on SQLite: ${script.length} requests served over HTTP for each of 4 repositories, ` +
+  `${script.filter(request => request.refused).length} of them refused with no record; the statuses of the shipped and ` +
+  `the read-only repositories and the shipped last list as expected; sessions in ${out}`)
