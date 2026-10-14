@@ -212,6 +212,9 @@ supersedes them where they differ.
   deadline (`Timer`, `src/Effect4/Machine/Timer.lean`).
 - Open check C1 (§8): the exact delivery points on one fiber.
 - **The congruence cases:** interruption by the host, and a sleep.
+- **`protectedBy`'s masked-region law** (decisions row 386 (8)). The acquisition's commit and
+  the installation of the cleanup hook happen in one masked region, with no interruption
+  between them. G10 and Pool's `use` need it.
 - **The inlining law on one fiber** (row 383 (3)). With stages 1, 2 and 5's cases, `inline-agrees`
   holds on `FiberRows`. That covers the protection wrapper (`protectedBy`) of `withPermits`,
   `withPermitsIfAvailable` and SynchronizedRef's `modify`. Their take waits and their release

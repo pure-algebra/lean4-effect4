@@ -132,7 +132,16 @@ flowchart TD
   its successful attempt, and a `waitAnswer` operation at the step that commits its answer. The waits and posts touch only the request's
   own Deferreds, so they commute with every other fiber's step, and reduction leaves the atomic
   steps. Each module's expansion claim is then its instance at its `StepsAgree`.
-- **Progress** (rows 384 (5), 385 (4)). The order that keeps termination, under `FairTape`: the
+- **The request protocol** (row 386 (8)). Registration and completion on one Deferred do not
+  commute, so the wrapper law goes through a protocol. It tracks pending requests, committed
+  answers, stale hints, posted helpers and withdrawals. It covers cancellation against commit and
+  completion at most once. Reduction applies only where disjointness is proved.
+- **Prefix observations** (row 386 (10)). `H9Fibers` is stated on funded prefixes and at rest,
+  not only on completed runs. The maintained relation is carried at prefixes, reusing `RowsEnd`,
+  `runRowsO` and `observeRows`. The crew's claims need it.
+- **Progress** (rows 384 (5), 385 (4), 386 (9)). A parked machine satisfies `FairTape`, so
+  progress is stated over a fair-execution definition connected to `FairTape`, with the
+  environment premises named. The order that keeps termination, under `FairTape`: the
   implementation answers where the model answers. Each model states its guarantee: freedom from
   deadlock by default, from starvation where it serves in order. Each bank claim carries it.
 

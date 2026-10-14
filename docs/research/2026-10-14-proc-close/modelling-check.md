@@ -293,7 +293,67 @@ A new bank entry adds no theory. It adds a model, its step terms, its encoding a
 step agreement. An agent or a person writes those four, and `#plan_status` on the entry's claim
 shows what is left.
 
-## 8. What this note does not establish
+## 8. Amended after Codex's review: the locked form
+
+Codex's review (`codex-review.md`, decisions row 386) disproved several statements of this note
+as written, each with a checked control. The coordinator re-ran its four probes and their audit.
+Where this section and §1 to §7 differ, this section holds.
+
+| § | As written | Locked form | Control |
+| --- | --- | --- | --- |
+| 3, 4.1 | the order is the limit of `Approx` | inclusion of completed observations is the order; the uniform limit is a sufficient certificate | `no_uniform_structural_limit`, `limit_sound_for_completed_observations` |
+| 4.1 | a result relation makes a budget cut the bottom | normalize a peeled cut to a system cut; the lifting also relates operations under the related states | `result_relation_does_not_make_cut_bottom`, `completed_peel_reclassifies_cut` |
+| 4.2 | the frame condition is a premise | the frame and compatibility predicates follow the admitted constructors, with proved preservation; ownership excludes reads and indirect access | `HandlerLiftContract`, `NominalFrameCondition` |
+| 4.4 | names are nominal because the language refuses arithmetic on handles | a host can still read a handle's index, so module claims need hosts that respect names | `allocation_changes_host_answer`, `HostRespects` |
+| 4.5 | progress holds under `FairTape` | a parked machine satisfies `FairTape`; progress needs a fair-execution definition and named environment premises | `parked_empty_tape_fair` |
+| 4.6 | waits and posts commute with every other fiber's step | registration and completion on one Deferred do not commute; a request protocol and reduction on proved disjointness | the shared-hint control in `CodexObjects.lean` |
+| 4.7 | `definitions-agree` over acyclic blocks | ranked expansion, and recursive unfolding for `eff_module`'s `using self` | the `Recursive` module control |
+| 4.7 | five `StepsAgree` instances of one structure | one phase-indexed object with separate obligations; three strategies (attempt only, the Deferred wrappers, batching) | `queue_atomic_steps_agree` |
+| 5 | an author writes four things | the four, plus the protocol and progress obligations of the chosen strategy; a checked bank constructor binds the record to its block and theorem | `uncheckedEntry`, `AuthorProofs` |
+| 7 | K3 moves completed-run claims | the crew's claims hold over funded prefixes and at rest; K1 carries the relation at prefixes, and `H9Fibers` is stated on prefixes | `waiting_projection_loses_state` |
+
+The CX3 law also changes. An inlined body can have a narrower type than its call (the `wideDecl`
+control). So a subtype-aware replacement theorem carries it, since `check_replace` needs one
+equal type.
+
+### 8.1 The closure, as locked
+
+```mermaid
+flowchart TD
+  L0["L0: relational simulation, normalized cut"] --> L1["L1: observation order and framed lift"]
+  L3["L3: substitution, weakening, typed replacement"] --> L2["L2: G7"]
+  L1 --> L2
+  L2 --> L4["L4: ranked expansion and recursive unfolding"]
+  D1["D1 and HO-5"] --> MF["module form and encapsulation"]
+  D2["D2: closures, one stack, capture conversion"] --> MF
+  D2 --> SX["capture-safe substitution"]
+  SX --> C1["SCOPE-1 and CONC-1: meaning and congruence"]
+  L1 --> C1
+  D3["D3: object and atomic agreement"] --> PR["request protocol and qualified reduction"]
+  C1 --> PR
+  PR --> W["wrapper laws and protectedBy"]
+  C1 --> F["fair execution and per-object enabling"]
+  F --> P["per-object progress"]
+  MF --> K1["K1: framed module theorem with prefix transfer"]
+  W --> K1
+  P --> K1
+  L1 --> K1
+  N["nominal operations and hosts"] --> K1
+  K1 --> K2["K2: the Queue's claim"]
+  L4 --> K2
+  E["definitions expand to the named Ops"] --> K2
+  L4 --> E
+  C1 --> E
+  K2 --> K3["K3: the crew from the model alone"]
+  H["H9Fibers on funded prefixes and at rest"] --> K3
+  C1 --> H
+  M["model accounting and observation relation"] --> K3
+  K1 --> G10["G10: SynchronizedRef from Semaphore"]
+  SEM["Semaphore instance, Ref law, masks, protectedBy"] --> G10
+  CT["the direct proofs, a control"] -. comparison .-> K3
+```
+
+## 9. What this note does not establish
 
 - No statement here is compiled.
 - The three literature results are cited from memory and are not read in this repository.

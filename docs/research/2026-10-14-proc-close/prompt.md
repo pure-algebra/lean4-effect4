@@ -1,23 +1,26 @@
-# Codex: close out the procedures line
+# Codex: close out the procedures line (the locked brief)
 
 ## The one thing to know first
 
-PROC-6 landed and is merged (`36ddb0b56`; decisions row 379). This brief is rewritten after
-Gemini's review (`gemini-review.md`), the coordinator's corrections (`review-notes.md`) and the
-modelling check (`modelling-check.md`) and Gemini's review of it (`gemini-math-review.md`,
-`review-notes.md` §5). Decisions rows 383, 384 and 385 record the rulings. Track 1 lands now:
-- the `effects` package's simulation with a relation on results, an Effects release;
-- the one refinement order on the meaning, with its congruence;
-- the inlining law G7 in that order;
-- CX3, the typing of an inlined program;
-- the generic definitions connector, with the Queue's and Semaphore's as its instances.
+The plan is locked (decisions row 386). Three reviews shaped it: Gemini's two (`gemini-review.md`,
+`gemini-math-review.md`) and your own (`codex-review.md`). The coordinator checked each
+(`review-notes.md`). Your review's amendments are now the plan's statements. The probes it left
+are the starting points: `probes/CodexRelations.lean`, `CodexInline.lean`, `CodexObjects.lean`
+and `CodexClosure.lean`.
 
-The line ends at the proof closure (`modelling-check.md` §8): every slice here is a node of it.
-Track 2 designs the syntax changes as one note, then stops for review before any edit to `Eff`,
-`Ty`, `Store.Val` or `Point`.
+Track 1 lands now, five slices:
+- L0: the `effects` package's simulation, relational in results, operations and states;
+- L3: parameter substitution, its typing and the meaning's weakening law;
+- L1: the one order on the meaning and its lift law;
+- L2: the inlining law G7;
+- L4: the definitions connectors.
 
-**The owner's rule for every choice (2026-10-14):** decide on semantics, never on rebuild cost, and
-take the complete option. Every item here is wanted and its users are known. If a statement falls
+Track 2 designs the syntax changes and the generic object as one note. Then it stops for review
+before any edit to `Eff`, `Ty`, `Store.Val` or `Point`. The line ends at the proof closure
+(`modelling-check.md` §7, amended in §8): every slice is a node of it.
+
+**The owner's rule for every choice (2026-10-14):** decide on semantics, never on rebuild cost,
+and take the complete option. Every item is wanted and its users are known. If a statement falls
 short of its users, the plan widens. Never drop or defer an item; report the gap and the step
 that closes it.
 
@@ -25,13 +28,14 @@ that closes it.
 
 | Item | What it is | Its users |
 | --- | --- | --- |
-| the refinement order (L1) | inclusion of completed observations, proved by simulation up to a relation on states, with its congruence and the lift law in the call handler (rows 383 (1), 384 (1), (2)) | G7; every module claim of row 382 (1); G10 |
-| G7 `inline-agrees` (L2) | an invocation and its inlining give equal completed observations, in every context (row 383 (2)) | the to-do's cached service now; the Queue's and Semaphore's connectors through SCOPE-1 and CONC-1 |
-| CX3 `inline-types` (L3) | an inlined program keeps its typing at the checker (row 383 (4)) | G7's typed side: the inlined program meets H9's typed premises |
-| `definitions-agree` (L4) | over an acyclic block, a client over the definitions agrees with the same client with every invocation inlined (row 384 (7)); the Queue's and Semaphore's connectors are its instances | every module built from definitions |
-| PROC-7 and HO-5 (D1) | generic definitions (G8 `check_subst`) and methods with program parameters | the module form (row 383 (6)) |
-| the closure stage (D2) | closures held as data (PROC-8, G9 `resolve_typed`), one activation stack, and SCOPE-1's stage 0, as one stage (row 383 (5)) | services as records of closures (rows 381 (3), 382 (2)); SCOPE-1 |
-| the module form's inputs (D3) | what D1 and D2 owe the module form, and the generic object specification and claim template (row 384 (5) to (8)) | the ports of row 382 (3); every bank entry |
+| L0 | the `effects` simulation, relational in results, operations and states, with normalized cuts (row 386 (2)) | L1; every simulation after it |
+| L1 `meaning-refines` | inclusion of completed observations, its block pullback, the lift law in the call handler (row 386 (1), (3), (4)) | G7; every module claim; G10 |
+| L3 `inline-types` | substitution, its checker law, subtype-aware replacement, the meaning's weakening (row 386 (5)) | G7's program and its typing |
+| L2 `inline-agrees` | an invocation or call and its inlining are equivalent in every context (row 383 (2)) | the to-do's cached service now; the connectors |
+| L4 `definitions-agree` | ranked expansion and recursive unfolding (row 386 (6)) | every module built from definitions; the Queue's and Semaphore's instances |
+| D1 | PROC-7 (generic definitions, G8 `check_subst`) and HO-5 (methods with program parameters) | the module form |
+| D2 | closures held as data, one activation stack, capture conversion: SCOPE-1's stage 0 (rows 383 (5), 385 (5)) | services; the module form; substitution into layer bodies |
+| D3 | the generic object, its obligations and the checked bank constructor (row 386 (7) to (11)) | every bank entry; K1 |
 
 CX4 is proved already (`call_arm`, `invoke_arm` and `param_arm` with `hop_typed`,
 `src/Effect4/Laws/Program/Typed/Denotation.lean`). Record its placement in the receipt.
@@ -39,23 +43,20 @@ CX4 is proved already (`call_arm`, `invoke_arm` and `param_arm` with `hop_typed`
 ## Read first
 
 - `AGENTS.md`, all of it.
-- `docs/research/2026-10-14-proc-close/modelling-check.md`: every relation of the line, written
-  out. It is the frame for every slice below.
-- `docs/research/2026-10-14-proc-close/gemini-review.md`, `review-notes.md` and
-  `probes/Probes.lean`. Where the review and the notes disagree, the notes win.
-- `docs/research/2026-10-14-proc-close/gemini-math-review.md` and `probes/MathProbes.lean`:
-  `PeelSim` there is the prototype of slice L0.
-- Decisions rows 82, 259, 328, 331, 340, 361, 379, 381, 382, 383, 384 and 385.
+- `docs/research/2026-10-14-proc-close/modelling-check.md`, with its §8 amendments.
+- Your own `codex-review.md` and its probes; `review-notes.md`.
+- Decisions rows 82, 259, 328, 331, 340, 361, 379 and 381 to 386.
 - The PROC design (`docs/research/2026-10-08-seat-PROC-design.md`): §4.4, §8 and §9.
 - `docs/research/2026-10-09-program-parameters.md` (HO-4, HO-5) and
   `docs/research/2026-10-10-cx-lexical-scope.md` (§3.4, §8, §9).
-- `docs/research/2026-10-14-one-fiber-scout.md`, stage 0; D2 designs that stage.
-- PROC-6's receipt: `docs/research/2026-10-14-proc6-prep/landing-receipt.md`.
+- `docs/research/2026-10-14-one-fiber-scout.md` and `docs/research/2026-10-14-many-fibers-scout.md`.
 
 ## Where you work
 
-Reuse your worktree, `/Users/pooks/Dev/lean4-effect4-codex`. Its kit package holds `3e5e793`.
-Start a new branch at the coordinator's head, given in the launch message.
+- Effect4: your worktree, `/Users/pooks/Dev/lean4-effect4-codex`, on the branch the launch
+  message names, at the coordinator's head.
+- L0 only: `/Users/pooks/Dev/lean4-effects`, on a new branch `codex/relational-simulation` from
+  its pin `bf5ab8f` (v0.10.1). Read its own rules first.
 
 ## The rules that bind every slice
 
@@ -76,110 +77,101 @@ that bind every slice". In short:
 
 The order: L0, then L3 while the coordinator releases L0, then L1, L2 and L4.
 
-### Slice L0: the simulation with a relation on results (the `effects` package)
+### Slice L0: the relational simulation (the `effects` package)
 
-- Work in `/Users/pooks/Dev/lean4-effects` (the pin `bf5ab8f`, v0.10.1), on a new branch
-  `codex/result-relation`. Its own build and its own audit hold; read its `AGENTS.md` or
-  `README.md` first.
-- `Step.Lift` gains a relation on results: two finished steps relate when their values relate.
-  `IsSim` and `IsBisim` take it, and so do `run_of_sim`, `run_eq_of_bisim`, the compositions
-  (`IsSim.comp`) and `unfold_approx_of_sim`. Today's forms are the equality instances, stated as
-  abbreviations or theorems, so every existing caller keeps its name and its proof.
-- Add the result relation on `Option` results that puts a cut below everything. With it, a
-  program's budget cut is the bottom of a peeled system (`System.peel`).
-- Prove the peeled form's soundness for every host, as `PeelSim.sound_host` does in the probe.
+- One lifting relates results, operations and states (row 386 (2)). Two finished steps relate
+  when their results relate. Two calls relate when their operations relate under the related
+  states; related answers lead to related continuations. The result types may differ.
+- `IsSim`, `IsBisim`, the run theorems, the compositions and the unfolding theorem take the
+  relational lifting.
+  - A run theorem concludes an existentially related result (your `RunSoundContract`,
+    `RunBisimContract`).
+  - Composition composes the result, operation and state relations (`SimCompositionContract`,
+    `Lift.comp`). Show it composes worlds: a state relation that grows by allocation.
+- Today's names are the equality instances, with `lift_eq_iff`, `isSim_eq_iff` and
+  `isBisim_eq_iff`. `unfold_approx_of_sim` and `run_eq_of_bisim` stay, as equality corollaries.
+  Adjust the package's own proofs that build or eliminate `Lift.done`.
+- Normalize a peeled budget cut to a system cut (`completedPeel`), so the system's own cut is
+  the bottom. Land no bottom-aware second lifting.
+- Prove that the peeled system's completed runs are the program's, for every host.
 - Stop after this slice's commit in the `effects` repository, and report. Releasing it and
   bumping the pin are the coordinator's, after the owner's push.
 
-### Slice L1: the refinement order on the meaning
+### Slice L3: substitution, its typing and weakening
 
-- Define the order as inclusion of completed observations of runs, up to a relation on states
-  (rows 384 (1), 385 (1)). Then use L0's simulation with a result relation, after the stores are
-  peeled. Write no second simulation framework.
-- Its identity instance is the limit order on budget-indexed trees: every budget of the left is
-  approximated, by `Effects.Program.Approx`, at some budget of the right. It is not `Approx`
-  itself (row 382 (3)). Define `RefinesB` as that instance's pullback through `denoteBlockB`,
-  and `EquivB` as refinement both ways. Quantify over the context, the environment and parameter
-  frames that approximate each other.
-- Prove the observation law: equivalent programs give equal completed observations (exit, stores,
-  host state) of `hostRunBlockB` at some budget, under every host. Start from
-  `hostRunBlockB_stable` and `denoteBlockB_approx`.
-- Prove the congruence once per `BlockRows` constructor, from `cata_blockAlgB_approx`. Keep the
-  proof one per constructor, so SCOPE-1 and CONC-1 add their constructors' cases beside it.
-- **The lift law** (row 384 (2)). Take two call handlers related by a simulation up to a
-  relation on states. They give related observations for every client whose own operations keep
-  the relation (the frame condition). Generalize `cata_blockAlgB_approx`, which proves the identity
-  case (its hypothesis `hc` relates the two handlers). A module's claim then relates its two
-  handlers operation by operation, and never quantifies over clients.
-- The frame condition (row 385 (2)): the abstraction splits the stores into the module's
-  owned keys and the client's. A client's store operations act outside the owned keys. A
-  module's operation establishes the relation at its success and failure exits. A budget cut is
-  the bottom.
-- Prove the frame condition for the identity relation now. State the module case's frame
-  condition as a premise (row 384 (3)). It has two readings: the module form's opaque closures,
-  or a located refusal that the client uses the handle only through the operations.
-- Claim: `meaning-refines`, role simulation, concept `translation-simulation`, R10. It is row
-  382 (3)'s first step.
+L2 uses all of it, so it lands before L2, and it needs no part of L0.
 
-### Slice L3: parameter substitution and CX3
+- `Eff.substParams` and the inlined forms (`inlineInvoke`, and the call's): your `substAlg`
+  fold, in a new core module `src/Effect4/Program/Inline.lean`. It reads the generated binder
+  levels (`Node.childLevel`) and uses `Eff.weaken` for every shift. An inserted argument keeps its
+  caller's parameter frame and is not substituted again.
+- `check_substParams` over `BodyRows`, with every premise of your
+  `CheckSubstParamsObligation`: declaration formation, argument count, body checking,
+  declaration admission, argument checking and requirement containment.
+- **The subtype-aware replacement theorem.** Replacing a subterm by one whose answer and error
+  are narrower, and whose requirements are contained, keeps the program typed. State the
+  enclosing inferred type and the typing table (`check_replace` and `table_splice` need one equal
+  type). Your `wideDecl` control is its first reader.
+- `denoteBlockB_weaken`, your `DenoteWeakenObligation` equation.
+- That substitution keeps `BodyRows`.
+- Its domain: immediate `BodyRows` bodies. Substitution into a closed layer body waits for D2's
+  capture conversion (your `captureBody` control); record that as the claim's open part.
+- Claim `inline-types`, role preservation, beside `check_replace` under `initial-algebras-folds`
+  (R14).
 
-L2 uses the substitution, so this slice lands before it.
+### Slice L1: the order on the meaning
 
-- The shift is the existing generated `Eff.weaken` (`src/Effect4/Program/Fold.lean`), typed by
-  `check_weaken` (`src/Effect4/Program/Typing.lean`). Write no second shift.
-- Define `Eff.substParams` as a fold in a new core module, `src/Effect4/Program/Inline.lean`,
-  with a carrier indexed by binder depth (`binders.json`). It replaces each run of a parameter by
-  its argument, weakened to the depth of the site. Define the inlined forms of a call and of an
-  invocation there too.
-- Prove `check_substParams`: an inlined body checks, and its answer and error are subtypes of the
-  definition's. Compose with `check_weaken`, `check_replace` and `table_splice`, so that replacing
-  a call or an invocation by its inlined body at any address keeps the module typed.
-- Prove that the substitution keeps `BodyRows`, so an inlined block stays in `BlockRows`.
-- Prove the meaning's weakening law, `denoteBlockB_weaken`: a weakened program at a longer
-  environment means the program at the shorter one (row 385 (6)). L2's sandwich uses it.
-- Claim: `inline-types`, role preservation, beside `check_replace` under `initial-algebras-folds`
-  (R14). The typed run keeps its path-addressed points (the CX note §3.4): CX3 types the inlined
-  program, not a point inside it.
+- `ObsRefines`, the primary order (row 386 (1)): inclusion of completed observations (exit,
+  stores, host state). It ranges over related initial states and admitted host pairs. The right
+  budget is chosen after the host and the completed run are fixed. `exactHosts` gives the
+  same-host instance.
+- `RefinesB`, its pullback through `denoteBlockB`. It exposes both body tables, related contexts
+  and environments, and a relation on parameter frames. `EquivB` is both directions.
+- The uniform limit of `Effects.Program.Approx` is a sufficient certificate:
+  `limit_sound_for_completed_observations`. It is not the same order; keep your controls.
+- **The lift law** (your `HandlerLiftContract`): call handlers related by L0's simulation give
+  related observations for every client that keeps the frame.
+  - Define the client-frame and compatibility predicates by the admitted constructors, and
+    prove their preservation. They cover terms, branches, dynamic contexts, returned values and
+    captured program parameters.
+  - A module's operation restores the abstraction at success and at failure. An unanswered
+    host call is a frontier.
+- The frame conditions:
+  - `FrameCondition`, primitive answers and states, with `identity_frame` proved now;
+  - `NominalFrameCondition` for modules: renamed handle arguments, and the name relation
+    extended at allocation. Ownership excludes reads and indirect access to private cells. It
+    follows nested values, captures and calls through the interface.
+- `HostRespects` (row 386 (3)): a module claim holds for hosts that respect names. Your
+  `allocation_changes_host_answer` is its control.
+- Claim `meaning-refines`, role simulation, concept `translation-simulation`, R10: row 382 (3)'s
+  first step.
 
 ### Slice L2: the inlining law G7
 
-- The step laws: `inline_call_approx` and `inline_invoke_approx`, each the two-sided sandwich.
-  The inlining at budget `k` approximates the call or invocation at `k + 1`, which approximates
-  the inlining at `k + 1`. The probe's controls A and B show why no single budget holds.
-- The law: `inline_agrees`. In every context on `BlockRows`, a call or an invocation and its
-  inlining are `EquivB`, so they give equal completed observations at some budget. It follows
-  from L1's congruence and the step laws.
-- The machine: on `BlockRows` both programs reach the machine by `h9_blocks`, receipt-conditioned
-  as `H9Blocks` is. The inlined program's typed premises come from L3.
+- The step laws: the call's and the invocation's two-sided sandwich (`UniversalInvokeSandwich`
+  and its call form). Use L3's substitution and weakening.
+- Then `sandwich_implies_limit_equivalence`, L1's certificate, and the lift law at the identity
+  frame: `inline_agrees`, an `EquivB` in every context on `BlockRows`.
+- On `BlockRows`, both programs reach the machine by `h9_blocks`, under its own premises. CX3
+  admits the inlined program; it adds no premise to H9.
 - Its first user now: the to-do's cached service (`Test/Dogfood/Scenario/Todo/Cached.lean`,
-  `src/Effect4/Laws/Library/Ref/Cache.lean`). Inlining the cache's definitions keeps the
-  to-do's observations.
-- Claim: `inline-agrees`, role simulation, concept `translation-simulation`, R10. It is the PROC
-  design's form (c).
+  `src/Effect4/Laws/Library/Ref/Cache.lean`).
+- Keep your finite controls: nested forwarding, caller parameter frames, captured values under
+  nested binders, Gemini's unequal-budget example.
+- Claim `inline-agrees`, role simulation, concept `translation-simulation`, R10.
 
-### Slice L4: the generic definitions connector
+### Slice L4: the definitions connectors
 
-- Register `definitions-agree` in `tools/ProofGraph/Registry.lean`, concept
-  `translation-simulation`, R10 (row 384 (7)). Over an acyclic definition block, a client over the
-  definitions and the same client with every invocation inlined give equal observations. It
-  follows from L2 at each invocation, then the laws of `bind` and `succeed`.
-- Prove it on `BlockRows` now, as a theorem over every acyclic block, and place it.
-- Register the Queue's and Semaphore's connectors (`queue-definitions-agree`,
-  `semaphore-definitions-agree`) as its instances. Each relates a client over the definition form
-  (`src/Effect4/Library/Queue/Defs.lean`, `Semaphore/Defs.lean`) to the same client over the
-  expansion (`Ops.lean`). State that each composes with `queue-expansion-agrees` or
-  `semaphore-expansion-agrees` by transitivity of L1's order.
-- Write each claim's route as its open parts, one per stage, by the constructs each operation
-  uses (the probe):
-  - SCOPE-1's congruence cases (masks, interruption, scopes, finalizers, layers) cover the
-    protection wrapper (`protectedBy`) of `withPermits`, `withPermitsIfAvailable` and
-    SynchronizedRef's `modify`;
-  - CONC-1's cases (forks, awaits, deferred awaits, races) complete every operation that waits
-    or wakes another fiber. They are the Queue's `take`, `offer` and `poll`, and Semaphore's
-    `take` and `release`. The `withPermits` family and `modify` complete there too: their take
-    waits, and their release wakes waiters.
-- Each instance is proved at the stage that brings its last operation. The SCOPE-1 and CONC-1
-  scouts carry those steps.
+- **Ranked blocks.** A decreasing rank on the definition dependencies (`callsIn`, a fold that
+  counts calls inside program arguments). Total expansion on the ranked domain, with a located
+  refusal outside it. The theorem gives the expansion, shows that no definition call remains,
+  and relates the client over the definitions to the client over the expansion.
+- **Recursive blocks** (`eff_module`'s `using self`): finite unfolding and limit agreement, with
+  no call-free expansion claimed. Your `Recursive` control is its first reader.
+- Register `definitions-agree` (R10) with both theorems. Register `queue-definitions-agree` and
+  `semaphore-definitions-agree` as its instances. Each also needs the theorem that the module's
+  definitions expand to its named `Ops` (builders, requests, captures, wrappers).
+- The instances' waiting operations complete in CONC-1; the scouts carry those steps.
 
 Each slice ends with its narrow build, its `#axiom_audit`, its commits and its receipt section.
 L3 adds a core module that nothing in the `Effect4` root imports until a user does. No behaviour
@@ -190,57 +182,56 @@ gate is reached, since no compile or machine definition changes.
 Write one design note, `docs/research/2026-10-14-proc-close/design.md`, in PROC-6's scout form.
 Give its rulings, stages, placements of the planned goals, fan-out, gates and open checks.
 
-- **D1, PROC-7 and HO-5.** Generic definitions: the PROC design §9's slice, with G8
-  `check_subst` and `sub_subst` under `subtyping-algebra` and `initial-algebras-folds`. Its reach
-  is the closed instances of formed templates (`Bounds.TemplateOK`), and the instance of a host
-  call in a generic body (row 323). HO-5: methods with program parameters (`withPermits`,
-  `withPermitsIfAvailable`, Pool's `use`), as the program-parameters plan sets it out.
-- **D2, the closure stage** (rows 383 (5), 385 (5)). Closures stay first-order data: a code
-  address and captured values. Show that the renaming argument for names extends to them. One
-  design for three things:
-  - closures held as data (row 381 (3)): a code reference and captured values; a program path
-    now, and a content digest with content addressing;
-  - one activation stack: first show the invariant that `Point.params` and `Point.call` move
-    together, then merge them into one stack of frames;
-  - SCOPE-1's stage 0, which this design becomes.
-
-  Settle each item row 82 lists:
-  - typed entry resolution;
-  - lexical captures against a captured service context;
-  - lifetime and portability ("a digest alone is not proof of code identity");
-  - recursive admission;
-  - the printer and reader contract;
-  - the `Val`, `Ty` and `Eff` forms.
-
-  **Closures are opaque** (row 384 (3)). No operation projects a closure's captured values. A
-  closure has no equality, the codec refuses it, and the printer writes its type only. A module's
-  cell is then private by construction, which is what makes a module claim hold for every client.
-
-  Choose between the PROC design's V1 (a value, a type and an apply form) and V2 (closure records
-  and dispatch definitions), on semantics. A bank entry's code must be reachable by its digest,
-  which a dispatch over one program's definitions cannot name. G9 is `resolve_typed`, R7's top
-  node.
-- **D3, the module form's inputs and the generic object** (row 384 (5) to (8)).
-  - Say what D1 and D2 give the module form (rows 331 (6), 382 (2)). The module form is a record
-    of opaque closures over a cell, generic in its types, and its methods take programs.
-  - Design one object specification with three transitions (row 385 (3)): an attempt, a signal
-    and a withdrawal, under the two wrappers `waitRetry` and `waitAnswer`. Start from the probe's
-    `ObjectSpec`, with its relation on replies. Design one `StepsAgree` over it. Show each of the
-    five existing structures (Queue, Semaphore, Pool, Latch, Ref) as its instance. Each adapter
-    theorem leaves the proved theorem unchanged. Do the Queue first: it is the hard case,
-    with its relation on signals (`Notified`).
-  - State the wrapper law that CONC-1 proves once. A `waitRetry` operation is linearized at its
-    successful attempt. A `waitAnswer` operation is linearized at the step that commits its
-    answer.
-  - Design the claim template. It has four parts:
-    - refinement;
-    - progress as the model states it (row 385 (4)): freedom from deadlock by default, from
-      starvation where the model serves in order;
-    - names compared up to renaming;
-    - the trust chain, as `ClaimRecord.assumes` premises with their grades.
-  - Do not design the module form itself.
-- **Stop after the design note** and report. The coordinator reviews it before D1 or D2 touches
-  source.
+- **D1, PROC-7 and HO-5.** Generic definitions: the PROC design §9's slice, with G8 `check_subst`
+  and `sub_subst` under `subtyping-algebra` and `initial-algebras-folds`. Its reach is the closed
+  instances of formed templates (`Bounds.TemplateOK`) and a host call's instance in a generic body
+  (row 323). HO-5: methods with program parameters (`withPermits`, `withPermitsIfAvailable`,
+  Pool's `use`), as the program-parameters plan sets it out.
+- **D2, the closure stage: SCOPE-1's stage 0.**
+  - Closures held as data (row 381 (3)): a code reference and captured values, a program path
+    now and a content digest with content addressing. They stay first-order, so the renaming
+    argument extends; show it.
+  - Closures are opaque: no projection of captures, no equality, no codec, and the printer writes
+    the type only.
+  - One activation stack: show that `Point.params` and `Point.call` move together, then merge
+    them into one stack of frames.
+  - Capture conversion, so substitution and inlining reach closed layer bodies.
+  - One capture representation: migrate `ArgSite`, `Capture` and `Point`'s capture fields with
+    their connector, and keep no duplicate stored environment.
+  - Settle each item row 82 lists:
+    - typed entry resolution;
+    - lexical captures against a captured service context;
+    - lifetime and portability ("a digest alone is not proof of code identity");
+    - recursive admission;
+    - the printer and reader contract;
+    - the `Val`, `Ty` and `Eff` forms.
+  - Choose between the PROC design's V1 and V2 on semantics. A bank entry's code must be
+    reachable by its digest, which a dispatch over one program's definitions cannot name. G9 is
+    `resolve_typed`, R7's top node.
+- **D3, the generic object and the bank interface** (row 386 (7) to (11)).
+  - One `ObjectSpec`, phase-indexed, with relational steps (your `CodexObjects.lean`).
+  - One agreement package, with separate fields: atomic term agreement, invariant preservation,
+    the delivery protocol, the frame and progress.
+  - Three strategies: attempt only (Ref), the two Deferred wrappers (Queue, Semaphore, Pool) and
+    batching (Latch, with `latch_registration_agrees`). An adapter for each of the five modules;
+    the existing `StepsAgree` theorems stay as compatibility readers.
+  - The request protocol for the wrappers: pending requests, committed answers, stale hints,
+    posted helpers and withdrawals. Cover cancellation against commit, and completion at most
+    once. Reduction applies only where disjointness is proved. Add `protectedBy`'s masked-region
+    law.
+  - Progress: a fair-execution definition, connected to `FairTape`. State `RequestProgress` and
+    `SystemProgress` per object over every admitted fair execution, with the environment
+    premises named (host answers, funding, enabling, cancellation). The Queue's and Semaphore's
+    rows of your Q7 table are the first instances.
+  - Prefix observations: the maintained relation at funded prefixes and at rest, reusing
+    `RowsEnd`, `runRowsO` and `observeRows`, and `H9Fibers` stated on prefixes.
+  - The checked bank constructor: it recomputes the digest, resolves and types the theorem, and
+    derives `assumes` from its premises. The author's proofs are predicates fixed by the entry's
+    data (your `AuthorProofs`), never free propositions.
+  - The module form's inputs: what D1, D2 and this give the module form (rows 331 (6), 382 (2)).
+    Do not design the module form itself.
+- **Stop after the design note** and report. The coordinator reviews it before D1, D2 or D3
+  touches source.
 
 ## Stop and report at once when
 

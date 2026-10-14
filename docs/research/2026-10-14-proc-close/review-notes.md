@@ -75,3 +75,28 @@ no error, no warning, no `sorry`. Decisions row 385 records the rulings.
 | the masks block G8 and G9 | G8 (`check_subst`) and G9 (`resolve_typed`) are typing statements; only G10 needs the masks |
 | close the many-fiber claims directly on the machine | that is a proof per program, with a program's own invariants (the review itself names one for the crew). The generic theorems on the meaning stay, and the direct proofs are the control route |
 | no logical relation for higher-order state is needed, because values hold no closures | true today; D2 adds closures. D2's closures are first-order data (a code address and captured values), so the first-order argument should extend: D2 must show it |
+
+## 6. Round 3: Codex's review
+
+The review is `codex-review.md` at `ecaa580f4`. The coordinator re-ran its four probes with
+`-DwarningAsError=true` through the slot, each exit 0, and its audit: "356 declarations within
+[propext, Quot.sound], 0 of them modulo planned goals". No probe holds a `sorry`.
+
+Each counterexample was read and is a checked statement about real programs or trees, not a
+vacuous one:
+- `allocation_changes_host_answer`: two checked `BodyRows` programs, one host, answers 0 and 1;
+- `no_uniform_structural_limit` with `boundedReplies_mono`: a monotone family with no uniform
+  budget;
+- `result_relation_does_not_make_cut_bottom`: no constructor of the lifting relates a finished
+  step to a call;
+- `parked_empty_tape_fair`: a parked machine with an empty fair tape;
+- `waiting_projection_loses_state`: two waiting ends with one coarse projection.
+
+`eff_module` builds recursive blocks: `src/Effect4/Program/Authoring/Module.lean` says "A body
+may call a forward or recursive operation through that record."
+
+Decisions row 386 takes every amendment, and the brief is rewritten as the locked plan. One
+choice is the coordinator's: Codex left two candidates for name transport (canonical names
+before the simulation, or an operation relation in the package's lifting). The plan takes the
+operation relation under the related states. It keeps one simulation that composes worlds by
+relation composition.
