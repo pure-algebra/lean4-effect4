@@ -1,0 +1,58 @@
+[
+  {
+    "Case": "ordering",
+    "Width": "32",
+    "BeforeMs": 27.57,
+    "AfterMs": 4.77,
+    "Ratio": 5.78
+  },
+  {
+    "Case": "ordering",
+    "Width": "128",
+    "BeforeMs": 187.27,
+    "AfterMs": 25.98,
+    "Ratio": 7.21
+  },
+  {
+    "Case": "ordering",
+    "Width": "512",
+    "BeforeMs": 1155.75,
+    "AfterMs": 131.72,
+    "Ratio": 8.77
+  },
+  {
+    "Case": "ordering",
+    "Width": "2048",
+    "BeforeMs": 23093.84,
+    "AfterMs": 2147.62,
+    "Ratio": 10.75
+  },
+  {
+    "Case": "layout",
+    "Width": "16",
+    "BeforeMs": 22.77,
+    "AfterMs": 18.23,
+    "Ratio": 1.25
+  },
+  {
+    "Case": "layout",
+    "Width": "32",
+    "BeforeMs": 75.72,
+    "AfterMs": 57.0,
+    "Ratio": 1.33
+  },
+  {
+    "Case": "layout",
+    "Width": "64",
+    "BeforeMs": 141.97,
+    "AfterMs": 98.08,
+    "Ratio": 1.45
+  },
+  {
+    "Case": "layout",
+    "Width": "128",
+    "BeforeMs": 557.12,
+    "AfterMs": 356.55,
+    "Ratio": 1.56
+  }
+]

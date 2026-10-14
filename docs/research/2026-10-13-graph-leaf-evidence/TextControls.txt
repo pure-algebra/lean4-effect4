@@ -1,0 +1,2 @@
+warning: manifest out of date: git revision of dependency 'whatwg' changed; use `lake update whatwg` to update it
+#axiom_audit: 29 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals; checked: the walk's answers at 534 constants agree with their captured graph, over the labels [propext]

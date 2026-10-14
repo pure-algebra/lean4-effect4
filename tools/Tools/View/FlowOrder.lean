@@ -395,7 +395,19 @@ theorem lay_realizes {width : GNode → Int} (hw : ∀ n, 0 ≤ width n) : ∀ f
     by_cases hc : how = .choice
     · rw [if_pos hc]; exact ⟨layAll_realizes hw bs f hf, lay_good hw f⟩
     · rw [if_neg hc]; exact ⟨(layAll_realizes hw bs f hf).reshare _, good_reshare (lay_good hw f) _⟩
-  | .region name k body => (lay_realizes hw body).moved (d := MARGIN) rfl rfl
+  | .region name k body => by
+    have realizes := lay_realizes hw body
+    by_cases empty : (layWith width body).empty = true
+    · apply realizes_none
+      intro key member
+      obtain ⟨i, p, present, _, _⟩ := realizes.shows key member
+      have noItems : (layWith width body).items = [] := List.isEmpty_iff.mp empty
+      rw [noItems] at present
+      cases present
+    · apply realizes.moved (d := MARGIN)
+      · simp only [layWith, framed, empty, Bool.false_eq_true, if_false, Box.shift]
+        rfl
+      · simp only [layWith, framed, empty, Bool.false_eq_true, if_false, Box.shift]
   | .loop _ body => ⟨(lay_realizes hw body).shows, (lay_realizes hw body).keeps⟩
 /-- Every flow of a list realizes its order. -/
 theorem layAll_realizes {width : GNode → Int} (hw : ∀ n, 0 ≤ width n) :

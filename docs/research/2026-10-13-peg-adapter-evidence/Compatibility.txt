@@ -1,0 +1,2 @@
+Command: LEAN_NUM_THREADS=3 lake env lean docs/research/2026-10-13-peg-adapter-evidence/Compatibility.lean
+Exit code: 0

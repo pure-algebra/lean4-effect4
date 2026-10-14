@@ -383,14 +383,20 @@ theorem MARGIN_nonneg : (0 : Int) ≤ MARGIN := by decide
 theorem LABEL_nonneg : (0 : Int) ≤ LABEL := by decide
 
 theorem good_framed (name k : String) {b : Box} (hb : Good b) : Good (framed name k b) := by
+  let body := if b.empty then point (k ++ "/empty") else b
+  have hbody : Good body := by
+    dsimp only [body]
+    split
+    · exact good_point _
+    · exact hb
   have hm := MARGIN_nonneg
   have hl := LABEL_nonneg
-  have ht := hb.topPad
-  have hbt := hb.botPad
-  refine good_moved hb hm ?_ rfl rfl rfl rfl ?_ ?_
-  · show MARGIN + b.w ≤ b.w + 2 * MARGIN; omega
-  · show 0 ≤ b.topPad + MARGIN + LABEL; omega
-  · show 0 ≤ b.botPad + MARGIN; omega
+  have ht := hbody.topPad
+  have hbt := hbody.botPad
+  refine good_moved hbody hm ?_ rfl rfl rfl rfl ?_ ?_
+  · show MARGIN + body.w ≤ body.w + 2 * MARGIN; omega
+  · show 0 ≤ body.topPad + MARGIN + LABEL; omega
+  · show 0 ≤ body.botPad + MARGIN; omega
 
 /-! ## Series -/
 

@@ -1,0 +1,264 @@
+{
+  "scope": "finite generated organic bumpY forward connectors; no global topology or pixel claim",
+  "files": [
+    {
+      "file": "tools\\view\\out\\continuous-after\\001.svg",
+      "sha256": "3dc5854ac3efd5d48a74622fd28a807b73df26b25320ff725c8e3b2d5d93d899",
+      "connectors": 6,
+      "keys": [
+        "[0 0 0 0]\u2192[0 0 0 1]",
+        "[0 0 0 1]\u2192[0 0]/join/1",
+        "[0 0]/0\u2192[0 0]/join/0",
+        "[0 0]/fork/0\u2192[0 0]/0",
+        "[0 0]/fork/1\u2192[0 0 0 0]",
+        "[0 0]/join\u2192[1]"
+      ],
+      "side_joins": 42,
+      "issues": []
+    },
+    {
+      "file": "tools\\view\\out\\continuous-after\\002.svg",
+      "sha256": "74479e5474d5e93374a58bbc16f9dd18cac09009797c6e320f79db16da61a6bb",
+      "connectors": 5,
+      "keys": [
+        "[0 0 0 0]\u2192[0 0 0 1]",
+        "[0 0]/fork/0\u2192[1 0 0]",
+        "[0 0]/fork/1\u2192[0 0 0 0]",
+        "[1 0 0]\u2192[1 0 1]",
+        "[1 0 1]\u2192[0 0]/end"
+      ],
+      "side_joins": 60,
+      "issues": []
+    },
+    {
+      "file": "tools\\view\\out\\continuous-after\\003.svg",
+      "sha256": "0ea440cc10e9b4121b72614d67b4e9d8fdbbd9841436651d88e7671131dd73ea",
+      "connectors": 9,
+      "keys": [
+        "[0 0 0 0]\u2192[0 0 0 1]",
+        "[0 0]/fork/0\u2192[1 0 0]/fork",
+        "[0 0]/fork/1\u2192[0 0 0 0]",
+        "[1 0 0 0]\u2192[1 0 0]/join/1",
+        "[1 0 0]/0\u2192[1 0 0]/join/0",
+        "[1 0 0]/fork/0\u2192[1 0 0]/0",
+        "[1 0 0]/fork/1\u2192[1 0 0 0]",
+        "[1 0 0]/join\u2192[1 1]",
+        "[1 1]\u2192[0 0]/end"
+      ],
+      "side_joins": 86,
+      "issues": []
+    },
+    {
+      "file": "tools\\view\\out\\continuous-after\\004.svg",
+      "sha256": "bb27e25781b36f15354e6a57a347bfa7cbbda4b845ab1da8d46a3d209c9b4e15",
+      "connectors": 11,
+      "keys": [
+        "[0 0 0 0]\u2192[0 0 0 1]",
+        "[0 0 0 1]\u2192[0 0]/join/1",
+        "[0 0]/fork/0\u2192[1 0 0]/fork",
+        "[0 0]/fork/1\u2192[0 0 0 0]",
+        "[0 0]/join\u2192[1 1 0]",
+        "[1 0 0 0 0]\u2192[1 0 0 0 1]",
+        "[1 0 0 0 1]\u2192[1 0 0]/join/1",
+        "[1 0 0]/0\u2192[1 0 0]/join/0",
+        "[1 0 0]/fork/0\u2192[1 0 0]/0",
+        "[1 0 0]/fork/1\u2192[1 0 0 0 0]",
+        "[1 0 0]/join\u2192[0 0]/join/0"
+      ],
+      "side_joins": 106,
+      "issues": []
+    },
+    {
+      "file": "tools\\view\\out\\continuous-after\\005.svg",
+      "sha256": "93a048a4c923e7a5792fa10f4db232ca93211db4b5115931405636065779ce6d",
+      "connectors": 8,
+      "keys": [
+        "[0 0 0 0]\u2192[0 0 0 1]",
+        "[0 0]/fork/0\u2192[1 0 0]/fork",
+        "[0 0]/fork/1\u2192[0 0 0 0]",
+        "[1 0 0 0 0]\u2192[1 0 0 0 1]",
+        "[1 0 0]/end\u2192[0 0]/end",
+        "[1 0 0]/fork/0\u2192[1 1]",
+        "[1 0 0]/fork/1\u2192[1 0 0 0 0]",
+        "[1 1]\u2192[1 0 0]/end"
+      ],
+      "side_joins": 86,
+      "issues": []
+    },
+    {
+      "file": "tools\\view\\out\\continuous-after\\006.svg",
+      "sha256": "d29a8a8aa6d29fbc92474a048b36b91a31d9c757e69411a88eff5d6b343072a5",
+      "connectors": 3,
+      "keys": [
+        "[0 0 0]\u2192[0 1 0]",
+        "[0 1 0]\u2192[0 1 1]",
+        "[0 1 1]\u2192[0 0 1]"
+      ],
+      "side_joins": 12,
+      "issues": []
+    },
+    {
+      "file": "tools\\view\\out\\continuous-after\\007.svg",
+      "sha256": "c3c04aa4c2a56bb4b76d63672b4cbb213853dae1acaf5534a443cec393553d56",
+      "connectors": 0,
+      "keys": [],
+      "side_joins": 0,
+      "issues": []
+    },
+    {
+      "file": "tools\\view\\out\\continuous-after\\008.svg",
+      "sha256": "f6287603689e91f2cb7cc9b5dab9c4380470495193b4bc890e3b3a7b89f0ae04",
+      "connectors": 8,
+      "keys": [
+        "[0 0 0 0]\u2192[0 0 0 1]",
+        "[0 0 0 1]\u2192[0]/join/0",
+        "[0 0 1 0 0]\u2192[0 0 1 0 1]",
+        "[0 0 1 0 1]\u2192[0]/join/1",
+        "[0 0 1 1 0]\u2192[0]/join/2",
+        "[0]/fork/0\u2192[0 0 0 0]",
+        "[0]/fork/1\u2192[0 0 1 0 0]",
+        "[0]/fork/2\u2192[0 0 1 1 0]"
+      ],
+      "side_joins": 82,
+      "issues": []
+    },
+    {
+      "file": "tools\\view\\out\\continuous-after\\009.svg",
+      "sha256": "9966432a4f4c5b8bd34818f80160c4845eefb9436adb690ff84c327c309e0739",
+      "connectors": 8,
+      "keys": [
+        "[0 0 0]\u2192[0 0 1]",
+        "[0 0 1]\u2192[]/fork",
+        "[1]\u2192[]/join/0",
+        "[]/1\u2192[]/join/1",
+        "[]/fork\u2192[1]",
+        "[]/fork\u2192[]/1",
+        "[]/join/0\u2192[]/join",
+        "[]/join/1\u2192[]/join"
+      ],
+      "side_joins": 82,
+      "issues": []
+    },
+    {
+      "file": "tools\\view\\out\\continuous-after\\010.svg",
+      "sha256": "2a87199cab4e84b457571bb2532e15292865294c775f9ea344c41726d1dad1f6",
+      "connectors": 1,
+      "keys": [
+        "[]\u2192[0]"
+      ],
+      "side_joins": 4,
+      "issues": []
+    },
+    {
+      "file": "tools\\view\\out\\continuous-after\\011.svg",
+      "sha256": "44f012667088a691dcfa86e8eba7a11eaf72f26c880e47bf2d20f9e37a8eab5b",
+      "connectors": 11,
+      "keys": [
+        "[0 0 0 0 0 0 0]\u2192[0 0 0 0 0 0 1]",
+        "[0 0 0 0 0 0 1]\u2192[0 0 0 0 0]/join/1",
+        "[0 0 0 0 0]/0\u2192[0 0 0 0 0]/join/0",
+        "[0 0 0 0 0]/fork/0\u2192[0 0 0 0 0]/0",
+        "[0 0 0 0 0]/fork/1\u2192[0 0 0 0 0 0 0]",
+        "[0 0 0 0 0]/join\u2192[0 0 0 1]",
+        "[0 0 0 1]\u2192[0 0]/join/1",
+        "[0 0]/0\u2192[0 0]/join/0",
+        "[0 0]/fork/0\u2192[0 0]/0",
+        "[0 0]/fork/1\u2192[0 0 0 0 0]/fork",
+        "[0 0]/join\u2192[1]"
+      ],
+      "side_joins": 106,
+      "issues": []
+    },
+    {
+      "file": "tools\\view\\out\\continuous-after\\012.svg",
+      "sha256": "d63a8a139752c4bac2a414a9c09de6a7e5073418cebf6fc9fc9950e95e14c582",
+      "connectors": 7,
+      "keys": [
+        "[0 0 0 0 0]\u2192[0 0 0 0 1]",
+        "[0 0 0 0 1]\u2192[0 0]/join/0",
+        "[0 0 0 1 0 0]\u2192[0 0 0 1 0 1]",
+        "[0 0 0 1 0 1]\u2192[0 0]/join/1",
+        "[0 0]/fork/0\u2192[0 0 0 0 0]",
+        "[0 0]/fork/1\u2192[0 0 0 1 0 0]",
+        "[]\u2192[0 0]/fork"
+      ],
+      "side_joins": 32,
+      "issues": []
+    },
+    {
+      "file": "tools\\view\\out\\continuous-after\\013.svg",
+      "sha256": "4f7aae6044c4e8ae8a3b90395d0f63e6c12587a06d8a45801453bfc443ba5703",
+      "connectors": 7,
+      "keys": [
+        "[0 0 0 0]\u2192[0 0 0 1]",
+        "[0 0 0 1]\u2192[0 1 0 0 0 0]",
+        "[0 1 0 0 0 0]\u2192[0 1 0 0 0 1]",
+        "[0 1 0 0 0 1]\u2192[0 1 0 1 0]",
+        "[0 1 0 0 1]\u2192[0 0 1]",
+        "[0 1 0 1 0]\u2192[0 1 0 1 1]",
+        "[0 1 0 1 1]\u2192[0 1 0 0 1]"
+      ],
+      "side_joins": 40,
+      "issues": []
+    },
+    {
+      "file": "tools\\view\\out\\continuous-after\\014.svg",
+      "sha256": "be334a8e06b16b5005d04c481b149b205116fffb25d7fdb1d1d41b514a869022",
+      "connectors": 0,
+      "keys": [],
+      "side_joins": 0,
+      "issues": []
+    },
+    {
+      "file": "tools\\view\\out\\continuous-after\\015.svg",
+      "sha256": "42f5a6acb2ae6bb38dcc185670a64e2f6c295fcb9110f9c9f96274967a05c315",
+      "connectors": 17,
+      "keys": [
+        "[0 0 0 0]\u2192[0 0 0 1]",
+        "[0 0 0 1]\u2192[0]/join/0",
+        "[0 0 1 0 0 0 0 0]\u2192[0 0 1 0 0 0 0 1]",
+        "[0 0 1 0 0 0 0 1]\u2192[0 0 1 0 0 0]/join/1",
+        "[0 0 1 0 0 0]/0\u2192[0 0 1 0 0 0]/join/0",
+        "[0 0 1 0 0 0]/fork/0\u2192[0 0 1 0 0 0]/0",
+        "[0 0 1 0 0 0]/fork/1\u2192[0 0 1 0 0 0 0 0]",
+        "[0 0 1 0 0 0]/join\u2192[0 0 1 0 1]",
+        "[0 0 1 0 1]\u2192[0]/join/1",
+        "[0 0 1 1 0 0 0]\u2192[0 0 1 1 0 0 1]",
+        "[0 0 1 1 0 0 1]\u2192[0]/join/2",
+        "[0 0 1 1 1 0 0]\u2192[0 0 1 1 1 0 1]",
+        "[0 0 1 1 1 0 1]\u2192[0]/join/3",
+        "[0]/fork/0\u2192[0 0 0 0]",
+        "[0]/fork/1\u2192[0 0 1 0 0 0]/fork",
+        "[0]/fork/2\u2192[0 0 1 1 0 0 0]",
+        "[0]/fork/3\u2192[0 0 1 1 1 0 0]"
+      ],
+      "side_joins": 244,
+      "issues": []
+    },
+    {
+      "file": "tools\\view\\out\\continuous-after\\016.svg",
+      "sha256": "0d22ac7f7fce58791c0e97450b008174cd7f1cd76d4bc65437b0c8b097e69486",
+      "connectors": 2,
+      "keys": [
+        "[0 0]/empty\u2192[1 0]",
+        "[1 0]\u2192[1 1]"
+      ],
+      "side_joins": 16,
+      "issues": []
+    }
+  ],
+  "baseline": {
+    "directory": "tools\\view\\out\\continuous-before",
+    "matched_frames": 16,
+    "issues": []
+  },
+  "summary": {
+    "files": 16,
+    "connectors": 103,
+    "side_joins": 998,
+    "issues": 0,
+    "angle_degrees": 0.0,
+    "tangent_mode": "exact decimal",
+    "result": "pass"
+  }
+}

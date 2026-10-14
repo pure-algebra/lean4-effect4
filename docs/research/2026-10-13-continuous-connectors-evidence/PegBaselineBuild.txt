@@ -1,0 +1,7 @@
+warning: manifest out of date: git revision of dependency 'whatwg' changed; use `lake update whatwg` to update it
+✔ [406/410] Built Tools.View.Tube.Draw (4.0s)
+✔ [407/410] Built Tools.View.Tube.PegRender (2.7s)
+✔ [408/410] Built Tools.View.Tube.Motion (2.8s)
+✔ [409/410] Built Tools.View.Tube.Glyphs (23s)
+✔ [410/410] Built Tools.View.Tube.PegChecks (7.1s)
+Build completed successfully (410 jobs).

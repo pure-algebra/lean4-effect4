@@ -1,0 +1,11 @@
+warning: manifest out of date: git revision of dependency 'whatwg' changed; use `lake update whatwg` to update it
+#axiom_audit: 286 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+.lake/graph-attachment-motion-audit.lean:6:0: error: #axiom_audit: 2 of 57 declarations reach axioms outside [propext, Quot.sound]:
+  Tools.View.underKey reaches [Classical.choice]
+  Tools.View.keptUnchanged reaches [Classical.choice]
+1 of them stands under no other; each one's path to its axiom:
+  Tools.View.underKey  (Tools.View.Motion)
+  → String.Slice.toString  (Init.Data.String.Slice)
+  → ⋯ 5 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)

@@ -47,6 +47,17 @@ def filmFigure (id : String) (W H : Nat) (pictures : List Picture) (caption : St
      el "div" [(still W H last.marks last.joins).toRaw] [("class", "tube-end")],
      el "figcaption" [.text caption]] [("class", "tube tube-film")]
 
+/-- A fixed board and its last marking, with the same reduced-motion boundary. -/
+def boardFigure (animated : Except String SvgNode) (final : SvgNode) (caption : String) : RawNode :=
+  match animated with
+  | .error why => el "figure"
+      [el "p" [.text ("The board refuses this film: " ++ why)], el "figcaption" [.text caption]]
+      [("class", "tube")]
+  | .ok svg => el "figure"
+      [el "div" [svg.toRaw] [("class", "tube-anim")],
+       el "div" [final.toRaw] [("class", "tube-end")],
+       el "figcaption" [.text caption]] [("class", "tube tube-film")]
+
 /-- `n` units packed against a tube's end, or against `from_`. -/
 def packed (key : String) (t : Tube) (n : Nat) (from_ : Int := t.length) : List Mark :=
   (List.range n).map fun (k : Nat) => unitOf s!"{key}{k}" t (from_ - (k * unitLen t.bore : Nat))
@@ -134,7 +145,7 @@ offer runs away (dropping); a relief at the vessel's front, down which the oldes
 def plateStrategy (kind : String) : SvgNode :=
   let l := Queue.Layout.of 3 2 1
   let m : Marking := ⟨3, [1, 2, 3], if kind == "bounded" then [(9, [4, 5])] else [], [], [], none⟩
-  let ms := (Queue.picture l [1, 2, 3, 4, 5] [] none m).marks
+  let ms := (Queue.picture l [1, 2, 3, 4, 5] [] m).marks
   if kind == "bounded" then still l.W Queue.HEIGHT ms else
   let line := ms.filter fun mk => !(mk.key.startsWith "valve") && !(mk.key.startsWith "m4") &&
     !(mk.key.startsWith "m5")
@@ -192,12 +203,16 @@ def filmBranch : RawNode :=
 
 /-- The Queue's run, played, and then each command still. -/
 def queueBlocks (sc : CellSheet.Scene) (id : String) : List RawNode :=
-  match Queue.run sc with
+  match Queue.record sc with
   | .error why => [el "p" [.text ("The scene stops: " ++ why)]]
-  | .ok (l, fs) =>
-    [filmFigure id l.W Queue.HEIGHT (fs.map (·.2))
+  | .ok (l, snapshots) =>
+    let markings := snapshots.map (·.2)
+    let frames := Queue.markings l markings
+    [boardFigure (Board.film id l.W Queue.HEIGHT frames)
+       (still l.W Queue.HEIGHT (frames.getLastD []))
        s!"Capacity {sc.capacity}: the whole run, one command a second (click to play it again)."] ++
-    fs.map fun (words, p) => figure (still l.W Queue.HEIGHT p.marks) words
+    (snapshots.zip frames).map fun ((words, _), marks) =>
+      figure (still l.W Queue.HEIGHT marks) words
 
 /-! ## A run as a score -/
 
@@ -207,7 +222,8 @@ def scoreFigure (id name : String) (program : Effect4.Program.NativeEff) (words 
   | none => el "p" [.text s!"{name} is not admitted, so it does not run."]
   | some r =>
     let (W, H) := Score.size r
-    filmFigure id W H (Score.pictures r)
+    let frames := Score.markings r
+    boardFigure (Board.film id W H frames) (still W H (frames.getLastD []))
       s!"{name}: {words} The beats: {", ".intercalate r.verbs} (click to play it again)."
 
 /-- **The page's blocks.** -/

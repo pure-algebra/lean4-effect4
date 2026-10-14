@@ -60,7 +60,25 @@ def programs : List (String × String × NativeEff) :=
       .catchCause (.scoped (.bind (.yieldNow 0) (.fail (.lit (.nat 1))))) (.succeed (.lit (.nat 0)))),
     ("a loop", "its head, its body, and the return",
       .iterate none (.lit (.nat 0)) (.app "isZero" (.cons (.var 0) .nil)) (.app "succ" (.cons (.var 0) .nil))
-        (.lit .unit) (.yieldNow 0)) ]
+        (.lit .unit) (.yieldNow 0)),
+    ("nested forks", "each child joins its own child before the outer await",
+      .bind (forkOf (.bind (forkOf (work 3)) (.awaitFiber (.var 0) .awaitValue)))
+        (.awaitFiber (.var 0) .awaitValue)),
+    ("a race inside a loop", "the loop returns after the race joins its branches",
+      .iterate none (.lit (.nat 0)) (.app "isZero" (.cons (.var 0) .nil))
+        (.app "succ" (.cons (.var 0) .nil)) (.lit .unit)
+        (.withFiber (.raceAll (.cons (work 1) (.cons (work 2) .nil))))),
+    ("nested scopes and releases", "each release stands at its own scope boundary",
+      .scoped (.bind (.acquireRelease (work 1) (.yieldNow 0))
+        (.scoped (.bind (.acquireRelease (work 2) (.yieldNow 1)) (work 3))))),
+    ("an unresolved wait", "an external fiber stays an unresolved dependency",
+      .scoped (.awaitFiber (.var 0) .awaitValue)),
+    ("a wide race with nested branches", "forks and scopes remain inside their race branches",
+      .withFiber (.raceAll (.cons (work 1) (.cons
+        (.bind (forkOf (work 2)) (.awaitFiber (.var 0) .awaitValue))
+        (.cons (.scoped (work 3)) (.cons (work 4) .nil)))))),
+    ("empty nested scopes", "empty bodies retain their region allocation and sequence position",
+      .bind (.scoped (.scoped (.gen .nil))) (work 5)) ]
 
 /-- One page: the program's lines, and its flow below them. -/
 def page (i : Nat) (name what : String) (program : NativeEff) : Page :=

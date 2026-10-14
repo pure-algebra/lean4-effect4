@@ -1,0 +1,10 @@
+warning: manifest out of date: git revision of dependency 'whatwg' changed; use `lake update whatwg` to update it
+{"case":"nested-forks","checksum":1021967,"nodes":18,"prepare_ns":634900,"prepared_sample_ns":18461400,"reference_sample_ns":10476400,"routes":11,"samples":61}
+{"case":"wide-race","checksum":1765475,"nodes":26,"prepare_ns":739600,"prepared_sample_ns":4344800,"reference_sample_ns":16895100,"routes":17,"samples":61}
+{"case":"race-loop","checksum":627198,"nodes":11,"prepare_ns":339900,"prepared_sample_ns":2188100,"reference_sample_ns":5702200,"routes":8,"samples":61}
+{"case":"await-all","checksum":988817,"nodes":18,"prepare_ns":489700,"prepared_sample_ns":3007200,"reference_sample_ns":10618300,"routes":11,"samples":61}
+{"case":"nested-scopes","checksum":587744,"nodes":8,"prepare_ns":287100,"prepared_sample_ns":1631700,"reference_sample_ns":4787100,"routes":7,"samples":61}
+{"case":"handler-scope","checksum":492061,"nodes":8,"prepare_ns":296000,"prepared_sample_ns":1732000,"reference_sample_ns":5139500,"routes":8,"samples":61}
+{"case":"synthetic-128","checksum":11211320,"nodes":128,"prepare_ns":4316800,"prepared_sample_ns":23501700,"reference_sample_ns":295402700,"routes":127,"samples":61}
+{"case":"synthetic-512","checksum":98441501,"nodes":512,"prepare_ns":19429100,"prepared_sample_ns":89108500,"reference_sample_ns":4327367500,"routes":511,"samples":61}
+{"moving_bar":{"inherited":true,"mark_y":100,"onBar":false,"port_y":50,"time":500}}

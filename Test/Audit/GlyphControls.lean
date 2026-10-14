@@ -1,4 +1,6 @@
 import Tools.View.Glyph
+import Tools.View.Tube.PegChecks
+import Tools.View.Tube.Tile
 
 /-!
 # Controls of the vocabulary of marks (VS-1, decisions row 367, point 6)
@@ -30,5 +32,35 @@ open Tools.View.Glyph
   ["excess: Nat.succ is no constructor of a sort drawn"]
 #guard (check sorts (table.filter (·.shape != .caesura)) shapeNames).getLast? ==
   some "excess: the mark Tools.View.Glyph.Shape.caesura draws nothing"
+
+-- A real bind places its two addressed operations in successive cells.
+#guard
+  let program : Effect4.Program.NativeEff :=
+    .bind (.succeed (.lit (.nat 3))) (.succeed (.var 0))
+  let tile := Tools.View.Tube.Tile.ofProgram (fun _ ctor _ => ctor) program
+  tile.items.map (·.address) == [[0], [1]] &&
+    tile.items.map (·.value) == ["succeed", "succeed"] && tile.w == 17 && tile.h == 10
+
+-- Scalars before children do not consume child addresses.
+#guard
+  let program : Effect4.Program.NativeEff :=
+    .select (.lit (.bool true)) .bool (.succeed (.lit (.nat 3))) (.fail (.lit (.nat 4)))
+  let tile := Tools.View.Tube.Tile.ofProgram (fun _ ctor _ => ctor) program
+  tile.items.map (·.address) == [[], [0], [1]] &&
+    tile.items.map (·.value) == ["select", "succeed", "fail"]
+
+-- A list spine keeps its nested addresses without drawing cons or nil cells.
+#guard
+  let program : Effect4.Program.NativeEff :=
+    .gen (.cons (.yieldDiscard (.succeed (.lit (.nat 3)))) (.cons (.ret (.var 0)) .nil))
+  let tile := Tools.View.Tube.Tile.ofProgram (fun _ ctor _ => ctor) program
+  tile.items.map (·.address) == [[], [0, 0, 0], [0, 1, 0]] &&
+    tile.items.map (·.value) == ["gen", "succeed", "ret"]
+
+-- A zero-child spine has no allocated cell or room.
+#guard
+  let tile := Tools.View.Tube.Tile.layer (Op := Effect4.Program.NativeOp)
+    (fun _ ctor _ => ctor) .stmts "nil" [] []
+  tile.items.isEmpty && tile.w == 0 && tile.h == 0
 
 end Test.Audit.GlyphControls

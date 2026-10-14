@@ -1,0 +1,7 @@
+warning: manifest out of date: git revision of dependency 'whatwg' changed; use `lake update whatwg` to update it
+view: 16 frames in tools/view/out/continuous-noise, 0 between each two
+C	kept-lines-unchanged	0 spliced edits	0 of 0 lines
+C	graph-boxes-apart	16 graphs	16 apart
+C	graph-edges-descend	16 graphs	16 descend
+C	graph-admitted	16 graphs	16 admitted
+C	graph-dims-valid	16 graphs	16 valid

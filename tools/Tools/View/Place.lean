@@ -29,9 +29,6 @@ namespace Tools.View.Place
 
 open Std
 
-/-- A key of an item. -/
-abbrev Key := String
-
 /-- The positions of the items within their ranks. -/
 def positions (ranks : List (List Key)) : HashMap Key Nat :=
   ranks.foldl (fun m r => r.zipIdx.foldl (fun m (k, i) => m.insert k i) m) {}

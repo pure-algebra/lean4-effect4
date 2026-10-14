@@ -104,20 +104,18 @@ structure State where
 /-- **A page as groups**: the ground, the lines, the code, the graph at its panel's origin, and the
 chrome. The graph's calls are drawn on the session's stroke cache, relative to the panel's origin,
 so a panel that moves down the page moves as one. -/
+def drawingGroups (drawing : PageDrawing) : List Group :=
+  [{ name := "ground", calls := drawing.ground },
+   { name := "lines", calls := drawing.lines },
+   { name := "code", calls := drawing.code },
+   { name := "graph", origin := drawing.graphOrigin, calls := drawing.graph },
+   { name := "chrome", calls := drawing.chrome }]
+
+/-- Prepare a page once and retain its drawing groups. -/
 def pageGroups (L : Look) (W : Int) (g : Page) (cache : Laid.StrokeCache) :
     List Group × Laid.StrokeCache :=
-  let (W, H) := pageSize W g
-  let (graph, cache) := match g.graph with
-    | none => ([], cache)
-    | some p =>
-      let (cs, c) := p.laid.callsCached L 0 0 cache
-      (textAt "" .label 0 (- ROWH + BASE - GRAPH_GAP) p.title HEAD_ROOM ++ cs, c)
-  ([{ name := "ground", calls := groundCalls W H },
-    { name := "lines", calls := g.lines.toList.zipIdx.flatMap fun (l, i) =>
-        lineCalls L (linesWidth W g) (gutterCols g) i l g.marks },
-    { name := "code", calls := codeCalls L W g },
-    { name := "graph", origin := (LEFT, graphTop g), calls := graph },
-    { name := "chrome", calls := chromeCalls L W H g }], cache)
+  let drawing := pageDrawingCached L W g cache
+  (drawingGroups drawing, drawing.cache)
 
 /-- The page of a session after a request, as `Build.frames` titles and fills it, without the
 place in a sequence, which a live session does not know. Its lines and its flow are the folds
@@ -178,10 +176,11 @@ def step (s : Settings) (title : String) (st : State) (r : Tools.Session.Request
     let gutter := ratchet s.columnStep st.gutter (ownGutter g)
     let codeAt := ratchet s.columnStep st.codeAt (ownCodeAt g)
     let g := { g with gutter, codeAt }
-    let (groups, cache) := pageGroups s.look s.width g st.cache
-    let scene := Scene.ofGroups groups
+    let drawing := pageDrawingCached s.look s.width g st.cache
+    let cache := drawing.cache
+    let scene := Scene.ofGroups (drawingGroups drawing)
     let patch := diff st.scene scene
-    let size := pageSize s.width g
+    let size := drawing.size
     let head := if size == st.size then [] else
       targetRow s.look s.ratio size :: (if st.frame == 0 then lookRows s.look else [])
     ({ tool, scene, cache, gutter, codeAt, frame := st.frame + 1, size, memo },

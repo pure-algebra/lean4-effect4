@@ -1,0 +1,113 @@
+warning: manifest out of date: git revision of dependency 'whatwg' changed; use `lake update whatwg` to update it
+docs/research/2026-10-13-organic-graph-evidence/Audit.lean:6:0: error: #axiom_audit: 46 of 655 declarations reach axioms outside [propext, Quot.sound]:
+  Tools.View.Graph.layout reaches [Classical.choice]
+  Tools.View.Laid.routeCalls reaches [Classical.choice]
+  Tools.View.Laid.callsCached reaches [Classical.choice]
+  Tools.View.Laid.calls reaches [Classical.choice]
+  Tools.View.Graph.items reaches [Classical.choice]
+  Tools.View.Laid.organicCalls reaches [Classical.choice]
+  Tools.View.Graph.orders reaches [Classical.choice]
+  Tools.View.Graph.boxWidth reaches [Classical.choice]
+  Tools.View.FlowSpecimen.frames reaches [Classical.choice]
+  Tools.View.FlowSpecimen.page reaches [Classical.choice]
+  Tools.View.LiveChecks.livePages reaches [Classical.choice]
+  Tools.View.LiveChecks.picturesOf reaches [Classical.choice]
+  Tools.View.LiveChecks.flowWithWaits reaches [Classical.choice]
+  Tools.View.LiveChecks.framesOf reaches [Classical.choice]
+  Tools.View.LiveChecks.kahnAgrees reaches [Classical.choice]
+  Tools.View.LiveChecks.livePages.match_1 reaches [Classical.choice]
+  Tools.View.LiveChecks.laidsOf reaches [Classical.choice]
+  Tools.View.LiveChecks.sketchesOf.match_3 reaches [Classical.choice]
+  Tools.View.LiveChecks.incAgrees reaches [Classical.choice]
+  Tools.View.LiveChecks.sketchesOf reaches [Classical.choice]
+  Tools.View.LiveChecks.sketchesOf.match_1 reaches [Classical.choice]
+  studioLinks reaches [Classical.choice]
+  writeFrames reaches [Classical.choice]
+  writePage reaches [Classical.choice]
+  keptRuns.match_1 reaches [Classical.choice]
+  main reaches [Classical.choice]
+  settingsOf._unsafe_rec reaches [Classical.choice]
+  writeLooks reaches [Classical.choice]
+  settingsOf reaches [Classical.choice]
+  galleryPage reaches [Classical.choice]
+  keptRuns reaches [Classical.choice]
+  playerPage reaches [Classical.choice]
+  writePicture reaches [Classical.choice]
+  lookOf reaches [Classical.choice]
+  main.match_6 reaches [Classical.choice]
+  readRequests reaches [Classical.choice]
+  lookFiles reaches [Classical.choice]
+  settingsOf._sunfold reaches [Classical.choice]
+  looksIndex reaches [Classical.choice]
+  writeGallery reaches [Classical.choice]
+  keep reaches [Classical.choice]
+  lookName reaches [Classical.choice]
+  frameName reaches [Classical.choice]
+  readRequests.match_1 reaches [Classical.choice]
+  readLookFile reaches [Classical.choice]
+  settingsOf._f reaches [Classical.choice]
+22 of them stand under no other (the first 8 shown); each one's path to its axiom:
+  Tools.View.Laid.organicCalls  (Tools.View.Graph)
+  → Tools.View.Grow.seedOf  (Tools.View.Organic)
+  → String.foldl  (Init.Data.String.Iterate)
+  → ⋯ 6 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Tools.View.Graph.boxWidth  (Tools.View.Graph)
+  → String.length  (Init.Data.String.Length)
+  → ⋯ 7 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Tools.View.FlowSpecimen.page  (Tools.View.FlowSpecimen)
+  → Tools.View.Program.sessionPage  (Tools.View.Program)
+  → Tools.View.Program.lines  (Tools.View.Program)
+  → Tools.View.Program.layer  (Tools.View.Program)
+  → Tools.View.Program.ownText  (Tools.View.Program)
+  → Tools.View.Program.argText  (Tools.View.Program)
+  → Tools.View.Program.plain  (Tools.View.Program)
+  → String.Slice.Pattern.ForwardSliceSearcher.instIteratorIdSearchStep  (Init.Data.String.Pattern.String)
+  → String.Slice.Pattern.ForwardSliceSearcher.instIteratorIdSearchStep._proof_28  (Init.Data.String.Pattern.String)
+  → _private.Init.Data.String.Pattern.String.0.String.Slice.Pattern.ForwardSliceSearcher.instIteratorIdSearchStep._proof_27  (Init.Data.String.Pattern.String)
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Tools.View.LiveChecks.flowWithWaits  (Tools.View.LiveChecks)
+  → Tools.View.Flow.flowLayer  (Tools.View.Flow)
+  → Tools.View.Flow.flowLayerWith  (Tools.View.Flow)
+  → Tools.View.Program.ownText  (Tools.View.Program)
+  → Tools.View.Program.argText  (Tools.View.Program)
+  → Tools.View.Program.plain  (Tools.View.Program)
+  → String.Slice.Pattern.ForwardSliceSearcher.instIteratorIdSearchStep  (Init.Data.String.Pattern.String)
+  → String.Slice.Pattern.ForwardSliceSearcher.instIteratorIdSearchStep._proof_28  (Init.Data.String.Pattern.String)
+  → _private.Init.Data.String.Pattern.String.0.String.Slice.Pattern.ForwardSliceSearcher.instIteratorIdSearchStep._proof_27  (Init.Data.String.Pattern.String)
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Tools.View.LiveChecks.framesOf  (Tools.View.LiveChecks)
+  → Tools.View.Build.frames  (Tools.View.Build)
+  → Tools.View.Build.lawText  (Tools.View.Build)
+  → String.Slice.Pattern.ForwardSliceSearcher.instIteratorIdSearchStep  (Init.Data.String.Pattern.String)
+  → String.Slice.Pattern.ForwardSliceSearcher.instIteratorIdSearchStep._proof_28  (Init.Data.String.Pattern.String)
+  → _private.Init.Data.String.Pattern.String.0.String.Slice.Pattern.ForwardSliceSearcher.instIteratorIdSearchStep._proof_27  (Init.Data.String.Pattern.String)
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Tools.View.LiveChecks.kahnAgrees  (Tools.View.LiveChecks)
+  → Tools.View.Flow.lay  (Tools.View.Flow)
+  → Tools.View.Flow.nodeWidth  (Tools.View.Flow)
+  → Tools.View.Graph.boxWidth  (Tools.View.Graph)
+  → String.length  (Init.Data.String.Length)
+  → ⋯ 7 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Tools.View.LiveChecks.livePages.match_1  (Tools.View.LiveChecks)
+  → Tools.Query.Answer  (Tools.Query)
+  → Tools.Query.Answer.mk  (Tools.Query)
+  → Lean.Json  (Lean.Data.Json.Basic)
+  → ⋯ 11 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Tools.View.LiveChecks.sketchesOf.match_3  (Tools.View.LiveChecks)
+  → Tools.Session.Request  (Tools.Session)
+  → Tools.Session.Request.mk  (Tools.Session)
+  → Lean.Json  (Lean.Data.Json.Basic)
+  → ⋯ 11 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
