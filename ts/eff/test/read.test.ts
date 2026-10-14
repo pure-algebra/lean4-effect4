@@ -771,4 +771,17 @@ describe("a module file: the rows' services and a definition block", () => {
     expect(program.decls[0]?.requires).toEqual([{ name: { value: 30 }, service: { value: 6 } }])
     expect(program.decls[0]?.answer).toEqual({ _tag: "contextOf", keys: [{ name: { value: 30 }, service: { value: 6 } }] })
   })
+  test("a definition header reads Ref.Ref<A>, while expression type arguments still refuse it", () => {
+    const mod = [
+      'export const make = (a0: void): Effect.Effect<Ref.Ref<Option.Option<number>>, never, never> => Effect.suspend(() => Ref.make(Option.none()))',
+      'export const clear = (a0: Ref.Ref<Option.Option<number>>): Effect.Effect<void, never, never> => Effect.suspend(() => Ref.set(a0, Option.none()))',
+      'export const main = Effect.flatMap(make(), (a0) => clear(a0))',
+    ].join("\n")
+    const r = readTypeScript(mod, "cache.gen.ts", [])
+    if (Result.isFailure(r)) throw new Error(`refused: ${showFailure(r.failure)}`)
+    if (r.success._tag !== "defs") throw new Error("no definition block")
+    expect(r.success.decls[0]?.answer).toEqual({ _tag: "refOf", value: { _tag: "option", inner: { _tag: "nat" } } })
+    expect(r.success.decls[1]?.request).toEqual({ _tag: "refOf", value: { _tag: "option", inner: { _tag: "nat" } } })
+    expect(refusal("Deferred.make<Ref.Ref<number>, never>()")).toEqual({ _tag: "shape", what: "Deferred.make type argument annotation" })
+  })
 })

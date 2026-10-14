@@ -31,13 +31,11 @@ clauses of `serves` (`Test/Dogfood/Scenario/Todo/Claims.lean`).
 
 * **The emitted file** (HO-5, decisions rows 340 and 378 (8), (23)). The service module emits as a
   file (`ModuleEmission.file`) declaring both `ListCache` and `TodoApp`, with their imports and no
-  free names.
+  free names, and both the file and the envelope read back to the built program (`Api.readFile`,
+  `Api.readModule`).
 
 What it does not establish. Machine replay agreement for `denoteBody` before block inlining
-(PROC-6, row 378 (23)): the machine runs are finite probes. The emitted file does not read back
-yet: `Classes.readNamed` refuses `Ref.Ref<…>` under the frozen contract
-(`Test/contracts/faces.contract.md`, §B19), so `readDefHead` refuses the cache's declarations
-(`shape "definition"`).
+(PROC-6, row 378 (23)): the machine runs are finite probes.
 -/
 
 set_option autoImplicit false
@@ -341,11 +339,15 @@ def emitted? (app : Application NativeOp) :
     "TodoAppContext", "TodoApp_add", "TodoApp_list", "TodoApp_complete", "TodoApp_remove",
     "ListCache", "ListCacheLayer", "TodoApp", "TodoAppLayer", "main"]
 #guard (emitted? cached).map (fun (_, _, _, file) => Effect4.Codegen.freeNames file) = some []
--- control: `Classes.readNamed` refuses `Ref.Ref<…>` under the frozen contract
--- (`Test/contracts/faces.contract.md`, §B19), so the file and envelope readers refuse the cache's
--- definition headers as `shape "definition"`
-#guard (emitted? cached).map (fun (_, table, envelope, file) =>
-  (Api.readFile file table matches .error (.shape "definition")) &&
-    (Api.readModule envelope table matches .error (.shape "definition"))) = some true
+-- reader: `Ref.Ref<A>` reads in definition headers (`Signature.typeEnv`), and `Todo.ty` is
+-- normalized when declared (`eff_record`), so every definition header of `cached` is in
+-- `DefDecl.readable` and both the emitted file and the envelope read back to the built program
+-- (decisions row 378 (8))
+#guard (emitted? cached).map (fun (program, table, _, _) =>
+  program.defsOf.all (DefDecl.readable ((nativeSignature table).typeEnv (classesOf program)))) =
+  some true
+#guard (emitted? cached).map (fun (program, table, envelope, file) =>
+  decide (Api.readFile file table = .ok program) &&
+    decide (Api.readModule envelope table = .ok program)) = some true
 
 end Test.Dogfood.Scenario.Todo.Cached

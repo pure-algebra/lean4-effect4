@@ -26,7 +26,7 @@ def handTodoFields : List (String × Bool × Ty) :=
   [("id", false, .nat), ("title", false, .string), ("done", false, .bool)]
 
 /-- Hand-written record type for comparison. -/
-def handTodoTy : Ty := .record handTodoFields
+def handTodoTy : Ty := (Ty.record handTodoFields).normalize
 
 /-- Hand-written record constructor for comparison. -/
 def handTodoMk (id title done : TermSrc) : TermSrc :=

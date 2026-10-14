@@ -203,4 +203,19 @@ def otherShort : Classes := [("Short", [("_tag", false, .lit "Short"), ("needed"
 #guard ((classDecl "Wrap" [("_tag", false, .lit "Wrap"), ("inner", false, tagged)]).bind
   readClassDecl).isNone
 
+/-! ## `Ref.Ref<A>` in a definition's header (decisions row 378 (8))
+
+A definition's header reads its columns under `sig.typeEnv classes` (`refs = true`), so
+`Ref.Ref<A>` reads back as `.refOf A` — alone, in a product with a context, or over a cached option
+of a list. Under `{}` (`refs = false`, an operation's type arguments or a loop's cursor),
+`Ref.Ref<A>` still reads as nothing (`unread` above). -/
+
+#guard [Ty.refOf .nat, .refOf (.option (.list plain)),
+    .prod (.contextOf (Requirement.ofList [keyA])) (.refOf (.option (.list plain)))].all
+  (ReadableTy { refs := true })
+#guard readTyChecked { refs := true } (.name ["Ref", "Ref"] [.name ["number"] []]) =
+  some (.refOf .nat)
+-- control: `Deferred.Deferred<A, E>` still reads as nothing even when `refs = true`
+#guard !ReadableTy { refs := true } (.deferredOf .unit .never)
+
 end Test.Codegen.TypeReader

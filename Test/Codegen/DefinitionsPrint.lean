@@ -415,7 +415,7 @@ def withService : NativeEff :=
 
 -- reader: the declaration's row is canonical, so it is in the readable domain, and the module
 -- reads back to the program with the row
-#guard withService.defsOf.all (DefDecl.readable [] [])
+#guard withService.defsOf.all (DefDecl.readable {})
 #guard blockReadable [] (nativeSignature []) withService
 #guard (Api.printModule "main" withService).map (fun m =>
   decide (Api.readModule m [] = .ok withService)) = some true
@@ -443,6 +443,6 @@ def headerWith (requires : TypeScript.TypeRef) : Option TypeScript.ConstDecl :=
   readDefHead (nativeSignature []) [] c matches .error (.shape "definition")) = some true
 -- control: a declaration whose row is not canonical (a key twice) prints the key once, so it is
 -- outside the readable domain
-#guard !DefDecl.readable [] [] { twiceDecl with requires := [⟨⟨1⟩, ⟨1⟩⟩, ⟨⟨1⟩, ⟨1⟩⟩] }
+#guard !DefDecl.readable {} { twiceDecl with requires := [⟨⟨1⟩, ⟨1⟩⟩, ⟨⟨1⟩, ⟨1⟩⟩] }
 
 end Test.Codegen.DefinitionsPrint

@@ -49,11 +49,12 @@ The first entry of a tag is the one a reader uses. -/
 abbrev Classes := List (String × Fields)
 
 /-- The module's spelling context: its declared payload classes, the signature's scope key,
-and its service keys' names. -/
+its service keys' names, and whether `Ref.Ref<A>` reads as `.refOf` (definition headers). -/
 structure TypeEnv where
   classes : Classes := []
   scopeKey : ServiceKey := nativeScopeKey
   names : KeyNames := []
+  refs : Bool := false
 deriving DecidableEq, Repr
 
 /-- The first value of an argument list. -/
@@ -117,9 +118,11 @@ reads as the payload record that its declaration declares (`classes`, tag ↦ fi
 the record of `NotFound`. Under no class a class name reads as nothing: the class reader reads a
 class's fields under none, so a class's field naming another class has no reading. `never` reads
 as the empty type (the state plan's T5, part B): the error column of `Deferred.make<A, never>()`
-is spelled so. The handle names (`Ref.Ref<A>`, `Deferred.Deferred<A, E>`, …) and `unknown` read
-as nothing. -/
-def readNamed (classes : Classes) : List String → List Ty → Option Ty
+is spelled so. `Ref.Ref<A>` reads as `.refOf A` when `refs` is true (a definition's header,
+`Signature.typeEnv`; decisions row 378 (8)) and as nothing at an expression's type arguments or a
+loop's cursor (`refs = false`). The other handle names (`Deferred.Deferred<A, E>`, …) and
+`unknown` read as nothing. -/
+def readNamed (classes : Classes) (refs : Bool := false) : List String → List Ty → Option Ty
   | ["number"], [] => some .nat
   | ["string"], [] => some .string
   | ["boolean"], [] => some .bool
@@ -131,6 +134,7 @@ def readNamed (classes : Classes) : List String → List Ty → Option Ty
   | ["Option", "Option"], [x] => some (.option x)
   | ["ReadonlyArray"], [x] => some (.list x)
   | ["Result", "Result"], [v, e] => some (.except e v)
+  | ["Ref", "Ref"], [x] => if refs then some (.refOf x) else none
   | ["Record"], [.string, v] => some (.map .string v)
   | ["Readonly"], [.map k v] => some (.map k v)
   | [tag], [] => (classes.lookup tag).map .record
@@ -148,7 +152,7 @@ mutual
       (readRequirement nativeScopeKey env.names row).map .contextOf
     | .name qualified args => do
       let xs ← readTys env args
-      readNamed env.classes qualified xs
+      readNamed env.classes env.refs qualified xs
     | .literal value => some (.lit value)
     | .tuple items readonly => do
       let xs ← readTys env items
@@ -293,9 +297,10 @@ namespace Effect4.Program
 
 open Effect4.Codegen.Classes (Classes TypeEnv classTag?)
 
-/-- The spelling context of a signature under a module's declared payload classes. -/
+/-- The spelling context of a signature under a module's declared payload classes: a definition's
+header reads `Ref.Ref<A>` as `.refOf A` (`refs := true`, decisions row 378 (8)). -/
 def Signature.typeEnv {Op : Type} (sig : Signature Op) (classes : Classes := []) : TypeEnv :=
-  { classes, scopeKey := sig.scopeKey, names := sig.keyNames }
+  { classes, scopeKey := sig.scopeKey, names := sig.keyNames, refs := true }
 
 /-- One node's coverage (decisions row 120): a class construction names a class whose fields are
 its declared fields; every other node is covered. -/

@@ -786,3 +786,20 @@ What this changes in the packet above, and nothing else:
   supplies it from the emission's own field.
 - **Evidence.** *Proved*: the laws above, under `[propext, Quot.sound]`. *Tested*: the
   counterexample's regression and its control, and bun 1.4.2's reading of `9007199254740993`.
+
+## Amendment, 2026-10-14: `Ref.Ref<A>` in a definition's header (decisions row 378 (8))
+
+What this changes in the packet above, and nothing else:
+
+- **B19, narrowed at definition headers.** `Classes.TypeEnv` carries `refs : Bool := false`
+  (`src/Effect4/Codegen/Classes.lean`). Under `{}` (`refs = false`), used by expression type
+  arguments (`installTypeArgs`), loop cursor annotations (`readLeaf`) and payload class fields
+  (`readClassDecl`), `Ref.Ref<A>` still reads as nothing. Under `sig.typeEnv classes`
+  (`refs = true`), used by `readDefHead` and `readParam` (`src/Effect4/Codegen/Read.lean`),
+  `Ref.Ref<A>` reads as `.refOf A`. `ts/eff/read.ts` threads the same flag.
+- **The laws keep their statements.** `readTyChecked_exact`, `readTyChecked_of_readable`,
+  `readParams_printParams` and `readDefHead_printDef` are unchanged.
+- **Evidence.** *Proved*: the laws above, under `[propext, Quot.sound]`. *Tested*:
+  `Test/Codegen/TypeReader.lean`, `Test/Dogfood/Scenario/Todo/Cached.lean`, and
+  `ts/eff/test/read.test.ts`.
+

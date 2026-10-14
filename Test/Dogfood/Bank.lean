@@ -67,7 +67,7 @@ def refCache : Entry where
   name := "Ref.Cache"
   block := Ref.Cache.block Test.Dogfood.Scenario.Todo.Todo.ty
     Test.Dogfood.Scenario.Todo.SqlError.ty
-  digest := "dfc060722a5228647b59deaaf644357d55d234294121ae76f4b9d1192ba1cdde"
+  digest := "c2bbfd58a550c7efe4e44b2800597bc708c41c7ebfe60dff1dada2a9eabd410c"
   rows := []
   types := [("A", Test.Dogfood.Scenario.Todo.Todo.ty),
     ("E", Test.Dogfood.Scenario.Todo.SqlError.ty)]

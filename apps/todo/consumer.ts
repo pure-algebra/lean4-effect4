@@ -43,3 +43,20 @@ export const repository = (impl: typeof TodoRepo.Service): Layer.Layer<Repo> => 
 /** With a repository provided, the program requires nothing. */
 export const closed = (impl: typeof TodoRepo.Service): Effect.Effect<Todo, SqlError | EmptyTitle> =>
   programs.addMilk.pipe(Effect.provide(repository(impl)))
+
+/** Two `list`s, an `add`, and a third `list` in one `TodoAppLayer` scope (decisions row 378 (8)):
+ * the second `list` answers from the `Ref` cache without calling `TodoRepo.all`, and `add`
+ * invalidates the cache (`cached_list_after_add`) so the third `list` reads the repository again. */
+export const cachedListAfterAdd = (
+  title: string
+): Effect.Effect<readonly [ReadonlyArray<Todo>, ReadonlyArray<Todo>, Todo, ReadonlyArray<Todo>], SqlError | EmptyTitle, Repo> =>
+  withTodo(todo =>
+    Effect.gen(function* () {
+      const first = yield* todo.list()
+      const hit = yield* todo.list()
+      const item = yield* todo.add(title)
+      const after = yield* todo.list()
+      return [first, hit, item, after] as const
+    })
+  )
+

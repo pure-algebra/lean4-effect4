@@ -46,7 +46,8 @@ TSGO = MODULES / '@typescript/native-preview/bin/tsgo'
 SCENARIOS = ['Test.Dogfood.Scenario.Workers', 'Test.Dogfood.Scenario.QueueWorkers',
              'Test.Dogfood.Scenario.Routing', 'Test.Dogfood.Scenario.Atomic',
              'Test.Dogfood.Scenario.Timeout', 'Test.Dogfood.Scenario.Todo.Claims',
-             'Tools.ProfileJson']
+             'Test.Dogfood.Scenario.Todo.Cached', 'Tools.Code.Module',
+             'Tools.ProfileJson', 'Tools.RunChecks']
 # The recordings of the lane's four fixture families (two, shared, kv and the streams), as the
 # runner wrote them at `310c8314`, before the scenarios came. A scenario's fixture is `scripted`,
 # and a reader is off unless a scenario's fixture asks for it, so these bytes must not move.

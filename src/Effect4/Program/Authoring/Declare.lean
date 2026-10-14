@@ -81,7 +81,7 @@ macro_rules
             Effect4.Program.Authoring.TermSrc :=
           Effect4.Program.Authoring.field self $(Syntax.mkStrLit (identToString x)))
     let d1 ← `(def $fieldsId : List (String × Bool × Effect4.Program.Ty) := [$entries,*])
-    let d2 ← `(def $tyId : Effect4.Program.Ty := Effect4.Program.Ty.record $fieldsId)
+    let d2 ← `(def $tyId : Effect4.Program.Ty := (Effect4.Program.Ty.record $fieldsId).normalize)
     let d3 ← `(def $mkId : $mkTy := fun $args* =>
         Effect4.Program.Authoring.record $fieldsId [$present,*])
     return mkNullNode (#[d1.raw, d2.raw, d3.raw] ++ decls.map (·.raw))

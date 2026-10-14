@@ -195,12 +195,12 @@ def typeOf? (main : Src NativeOp) : Option (Ty × Ty) :=
 
 -- tested: `add` answers a to-do. Its error is the repository's or the empty title
 #guard typeOf? (add (str "milk")) =
-  some (Todo.ty.normalize, (Ty.union emptyTitleTy SqlError.ty).normalize)
+  some (Todo.ty, (Ty.union emptyTitleTy SqlError.ty).normalize)
 -- tested: `list` answers the to-dos, and only the repository fails
-#guard typeOf? list = some ((Ty.list Todo.ty).normalize, SqlError.ty)
+#guard typeOf? list = some (Ty.list Todo.ty, SqlError.ty)
 -- tested: `complete` answers a to-do. Its error is the repository's or the missing to-do
 #guard typeOf? (complete (nat 1)) =
-  some (Todo.ty.normalize, (Ty.union NotFound.ty SqlError.ty).normalize)
+  some (Todo.ty, (Ty.union NotFound.ty SqlError.ty).normalize)
 -- tested: `remove` answers nothing, with the same error
 #guard typeOf? (remove (nat 1)) = some (.unit, (Ty.union NotFound.ty SqlError.ty).normalize)
 -- reader: the checker's requirement row carries the repository's key at each request, since a
@@ -215,9 +215,9 @@ def typeOf? (main : Src NativeOp) : Option (Ty × Ty) :=
   (builtAt entry.1 entry.2.1).map (fun b => (b.ty.answer, b.ty.error)) = typeOf? entry.2.2 &&
     (builtAt entry.1 entry.2.1).isSome
 -- finite evaluation: each entry's open program has that type at its parameters' types
-#guard openTy "add" = some (Todo.ty.normalize, (Ty.union emptyTitleTy SqlError.ty).normalize)
-#guard openTy "list" = some ((Ty.list Todo.ty).normalize, SqlError.ty)
-#guard openTy "complete" = some (Todo.ty.normalize, (Ty.union NotFound.ty SqlError.ty).normalize)
+#guard openTy "add" = some (Todo.ty, (Ty.union emptyTitleTy SqlError.ty).normalize)
+#guard openTy "list" = some (Ty.list Todo.ty, SqlError.ty)
+#guard openTy "complete" = some (Todo.ty, (Ty.union NotFound.ty SqlError.ty).normalize)
 #guard openTy "remove" = some (.unit, (Ty.union NotFound.ty SqlError.ty).normalize)
 -- control: with no argument the parameter is unbound, and the build refuses the entry; the open
 -- program of a body that reads a name its entry does not declare is refused at that read

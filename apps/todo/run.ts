@@ -27,8 +27,9 @@ import { resolve } from "node:path"
 import { deepStrictEqual } from "node:assert"
 import type { Database } from "bun:sqlite"
 import { Effect } from "effect"
+import { cachedListAfterAdd, repository } from "./consumer.ts"
 import { serve, versions } from "./server.ts"
-import { sqliteRepository, type Repository } from "./repo.ts"
+import { open, sqliteRepository, type Repository } from "./repo.ts"
 
 const [outPath] = process.argv.slice(2)
 if (!outPath) throw Error("usage: run.ts OUT")
@@ -112,6 +113,33 @@ await session("titleless", titleless)
 const refused = await session("readonly", readonly)
 deepStrictEqual(refused.statuses, script.map(request => request.method === "GET" || request.status === 400 ? request.status : 500),
   "the read-only repository's statuses")
+// In one `TodoAppLayer` scope, the second `list` answers from the `Ref` cache (no second `all`
+// query), and `add` invalidates the cache so the third `list` queries SQLite again (row 378 (8)).
+const cacheDbPath = resolve(out, "cached.db")
+await rm(cacheDbPath, { force: true })
+const cacheDb = open(cacheDbPath)
+let allQueries = 0
+try {
+  const base = sqliteRepository(cacheDb)
+  const counted: Repository = {
+    ...base,
+    all: () => Effect.suspend(() => {
+      allQueries += 1
+      return base.all()
+    })
+  }
+  const [first, hit, item, after] = await Effect.runPromise(
+    cachedListAfterAdd("milk").pipe(Effect.provide(repository(counted)))
+  )
+  deepStrictEqual(first, [], "cached: first list is empty")
+  deepStrictEqual(hit, [], "cached: second list answers the cached empty list")
+  deepStrictEqual(item, { done: false, id: 1, title: "milk" }, "cached: add answers the new to-do")
+  deepStrictEqual(after, [{ done: false, id: 1, title: "milk" }], "cached: list after add answers the new to-do")
+  deepStrictEqual(allQueries, 2, "cached: two SQL `all` queries across three `list` calls (one cache hit, one invalidation)")
+} finally {
+  cacheDb.close()
+}
 console.log(`PASS the to-do on SQLite: ${script.length} requests served over HTTP for each of 4 repositories, ` +
   `${script.filter(request => request.refused).length} of them refused with no record; the statuses of the shipped and ` +
-  `the read-only repositories and the shipped last list as expected; sessions in ${out}`)
+  `the read-only repositories, the shipped last list, and the Ref cache hit + invalidation as expected; sessions in ${out}`)
+
