@@ -46,6 +46,13 @@ Requirement served: R14, through view navigation and rendering explanations.
 No separate theorem restates that equivalence.
 Each motion, separation, and painted-bound slice records its own stronger observation before proving it.
 
+`KeyMap.get?_firstBy` characterizes first-occurrence lookup for a finite list.
+Its consumers are the placed-point, route, and attachment indices.
+`GraphAttachment.Index.findMark_of` and `GraphAttachment.Index.findAttachment_of` instantiate that observation for contact metadata.
+Their role is a helper of the proposed rendering-check question above.
+Their hypotheses require only decidable keys and hashing; duplicate keys use the first occurrence.
+These laws establish lookup agreement, not geometric validity or program meaning.
+
 ## Controls
 
 The motion controls include kept, added, and removed ports attached to moving marks.

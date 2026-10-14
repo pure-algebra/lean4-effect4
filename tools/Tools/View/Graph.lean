@@ -522,7 +522,7 @@ structure Ix where
 /-- The index of a laid graph. Its places are put last first, so the first place of a key stands,
 as `Laid.find` answers. -/
 def Ix.of (l : Laid) : Ix where
-  places := l.placed.toList.foldr (fun p m => m.insert p.key p) {}
+  places := KeyMap.firstBy Placed.key l.placed.toList
   bars := l.marks.toList.filterMap fun
     | .bar _ x0 x1 y => some (x0, x1, y)
     | _ => none
@@ -539,13 +539,7 @@ drawing on the index (`callsCached`). Placement: concept `initial-algebras-folds
 authoring. -/
 theorem Ix.find_of (l : Laid) (k : Key) : (Ix.of l).find k = l.find k := by
   simp only [Ix.of, Ix.find, Laid.find, ← Array.find?_toList]
-  induction l.placed.toList with
-  | nil => exact KeyMap.get?_empty k
-  | cons p ps ih =>
-    rw [List.foldr_cons, KeyMap.get?_insert, ih, List.find?_cons]
-    by_cases h : p.key = k
-    · rw [if_pos h, show (p.key == k) = true from decide_eq_true h]
-    · rw [if_neg h, show (p.key == k) = false from decide_eq_false h]
+  exact KeyMap.get?_firstBy _ _ _
 
 /-- **The index answers as `Laid.onBar` does**, at every item. A tool law; its consumer is the
 drawing on the index (`callsCached`). Placement: concept `initial-algebras-folds`, R14's live

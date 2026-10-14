@@ -203,6 +203,23 @@ theorem contains_insert (m : KeyMap κ α) (k j : κ) (v : α) :
   · rw [if_neg h, decide_eq_false h]
     rfl
 
+/-- Index a list by its first occurrence at each key. -/
+def firstBy (key : α → κ) (xs : List α) : KeyMap κ α :=
+  xs.foldr (fun a m => m.insert (key a) a) {}
+
+/-- First-occurrence indexing agrees with list lookup, including duplicate keys.
+Placement: graph-defects plan, concept 7, R14; consumed by the graph attachment index. -/
+theorem get?_firstBy (key : α → κ) (xs : List α) (k : κ) :
+    (firstBy key xs).get? k = xs.find? (fun a => decide (key a = k)) := by
+  induction xs with
+  | nil => exact get?_empty k
+  | cons a xs ih =>
+    simp only [firstBy, List.foldr_cons, get?_insert, List.find?_cons]
+    by_cases h : key a = k
+    · simp only [h, if_true, decide_true]
+    · simp only [h, if_false, decide_false]
+      exact ih
+
 end KeyMap
 
 end Tools.View
