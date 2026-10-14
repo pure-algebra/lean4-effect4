@@ -357,7 +357,12 @@ theorem plain_at : ∀ (path : List Nat) (n : Node NativeOp) (e : NativeEff), No
         all_goals simp [NodePlain] at hn
       exact plain_at rest m e hm h
 
-theorem plainCode_resolve {root : NativeEff} (hroot : LoopedRows root = true) (q : Point) :
+/-- The root's resolver and suspended-body hook always produce plain code. -/
+structure PlainHooks (root : NativeEff) : Prop where
+  resolve : ∀ q, PlainCode (resolve root q) = true
+  suspend : ∀ q, PlainCode (suspendBodyAt root (EffThunk.body q)) = true
+
+private theorem loopedRows_plainCode_resolve {root : NativeEff} (hroot : LoopedRows root = true) (q : Point) :
     PlainCode (resolve root q) = true := by
   unfold resolve
   rcases h : Node.at_ (Node.eff root) q.path with _ | n
@@ -396,7 +401,7 @@ theorem suspendBodyAt_iterate_at {root : NativeEff} {q : Point} {k : Nat} {c : O
        | none => badShape) := by
   simp [suspendBodyAt, hf, h]; rfl
 
-theorem plainCode_suspendBodyAt {root : NativeEff} (hroot : LoopedRows root = true) (q : Point) :
+private theorem loopedRows_plainCode_suspendBodyAt {root : NativeEff} (hroot : LoopedRows root = true) (q : Point) :
     PlainCode (suspendBodyAt root (EffThunk.body q)) = true := by
   rcases hf : q.fuel with _ | k
   · rw [suspendBodyAt_zero hf]; rfl
@@ -413,11 +418,11 @@ theorem plainCode_suspendBodyAt {root : NativeEff} (hroot : LoopedRows root = tr
           rcases (LoopedRows.suspendDecided_iff he).mp hd with
             ⟨b, rfl⟩ | ⟨s, d, a, b, rfl⟩ | ⟨c, i, t, st, r, b, rfl⟩
           · rw [suspendBodyAt_suspend hf h]
-            exact plainCode_resolve hroot _
+            exact loopedRows_plainCode_resolve hroot _
           · rcases hdec : (evalTerm q.env s).bind d.decide with _ | ⟨first, bound⟩
             · rw [suspendBodyAt_select_bad hf h hdec]; rfl
             · rw [suspendBodyAt_select_of_decide hf h hdec]
-              exact plainCode_resolve hroot _
+              exact loopedRows_plainCode_resolve hroot _
           · -- a loop: the loop primitive at the initial cursor, or the wrong shape
             rw [suspendBodyAt_iterate_at hf h]
             cases evalTerm q.env i <;> rfl
@@ -428,12 +433,28 @@ theorem plainCode_suspendBodyAt {root : NativeEff} (hroot : LoopedRows root = tr
       | layer _ => rw [suspendBodyAt_other hf h (fun _ h => by cases h)]; rfl
       | layers _ => rw [suspendBodyAt_other hf h (fun _ h => by cases h)]; rfl
 
+/-- Every hook of a looped row program answers plain code.
+Placement: translation-simulation, rows-block-host/R6; consumer: the existing hosted session laws.
+This adapter adds no block, context, scheduler or host claim. -/
+@[semantics "translation-simulation" (requirement := R6)]
+theorem PlainHooks.of_loopedRows {root : NativeEff} (hroot : LoopedRows root = true) :
+    PlainHooks root :=
+  ⟨loopedRows_plainCode_resolve hroot, loopedRows_plainCode_suspendBodyAt hroot⟩
+
+/-- The resolver hook answers plain code. Consumer: the hosted step closure. -/
+theorem plainCode_resolve {root : NativeEff} (hroot : PlainHooks root) (q : Point) :
+    PlainCode (resolve root q) = true := hroot.resolve q
+
+/-- The suspension hook answers plain code. Consumer: the hosted step closure. -/
+theorem plainCode_suspendBodyAt {root : NativeEff} (hroot : PlainHooks root) (q : Point) :
+    PlainCode (suspendBodyAt root (EffThunk.body q)) = true := hroot.suspend q
+
 theorem plainCode_ofExit (ex : ExitV) : PlainCode (Prim.ofExit ex) = true := by
   cases ex <;> rfl
 
 /-- `catchIf`'s handler answers its compiled handler at a represented, selected failure, and
 the failure itself otherwise. -/
-theorem plainCode_contEOf_caughtError {root : NativeEff} (hroot : LoopedRows root = true)
+theorem plainCode_contEOf_caughtError {root : NativeEff} (hroot : PlainHooks root)
     (p : Point) (c : CauseV) : PlainCode (contEOf root (EffName.caughtError p) c) = true := by
   simp only [contEOf]
   split
@@ -442,40 +463,54 @@ theorem plainCode_contEOf_caughtError {root : NativeEff} (hroot : LoopedRows roo
     · rfl
   · rfl
 
-theorem plainCode_contAOf {root : NativeEff} (hroot : LoopedRows root = true) {n : EffName}
+theorem plainCode_contAOf {root : NativeEff} (hroot : PlainHooks root) {n : EffName}
     (hn : PlainName n = true) (v : Val) : PlainCode (contAOf root n v) = true := by
-  cases n <;> simp [PlainName] at hn
-  all_goals first
-    | rfl
-    | exact plainCode_resolve hroot _
-    | exact plainCode_ofExit _
+  cases n <;> simp only [PlainName, Bool.false_eq_true] at hn
+  case cont p => exact plainCode_resolve hroot _
+  case caught p => rfl
+  case caughtError p => rfl
+  case onValue p => exact plainCode_resolve hroot _
+  case onCause p => rfl
+  case fin p => rfl
+  case restore ex => exact plainCode_ofExit _
+  case merge ex => exact plainCode_ofExit _
 
-theorem plainCode_contEOf {root : NativeEff} (hroot : LoopedRows root = true) {n : EffName}
+theorem plainCode_contEOf {root : NativeEff} (hroot : PlainHooks root) {n : EffName}
     (hn : PlainName n = true) (c : CauseV) : PlainCode (contEOf root n c) = true := by
-  cases n <;> simp [PlainName] at hn
-  all_goals first
-    | rfl
-    | exact plainCode_resolve hroot _
-    | exact plainCode_ofExit _
-    | exact plainCode_contEOf_caughtError hroot _ _
+  cases n <;> simp only [PlainName, Bool.false_eq_true] at hn
+  case cont p => rfl
+  case caught p => exact plainCode_resolve hroot _
+  case caughtError p => exact plainCode_contEOf_caughtError hroot _ _
+  case onValue p => rfl
+  case onCause p => exact plainCode_resolve hroot _
+  case fin p => rfl
+  case restore ex => exact plainCode_ofExit _
+  case merge ex => exact plainCode_ofExit _
 
 /-- Fresh source callbacks still answer plain code at any captured point. -/
-theorem plainCode_contAAt {root : NativeEff} (hroot : LoopedRows root = true) {n : EffName}
+theorem plainCode_contAAt {root : NativeEff} (hroot : PlainHooks root) {n : EffName}
     (hn : PlainName n = true) (v : Val) : PlainCode ((interpAt root []).contA n v) = true := by
-  cases n <;> simp [PlainName] at hn
-  all_goals first
-    | rfl
-    | exact plainCode_resolve hroot _
-    | exact plainCode_ofExit _
+  cases n <;> simp only [PlainName, Bool.false_eq_true] at hn
+  case cont p => exact plainCode_resolve hroot _
+  case caught p => rfl
+  case caughtError p => rfl
+  case onValue p => exact plainCode_resolve hroot _
+  case onCause p => rfl
+  case fin p => rfl
+  case restore ex => exact plainCode_ofExit _
+  case merge ex => exact plainCode_ofExit _
 
-theorem plainCode_contEAt {root : NativeEff} (hroot : LoopedRows root = true) {n : EffName}
+theorem plainCode_contEAt {root : NativeEff} (hroot : PlainHooks root) {n : EffName}
     (hn : PlainName n = true) (c : CauseV) : PlainCode ((interpAt root []).contE n c) = true := by
-  cases n <;> simp [PlainName] at hn
-  all_goals first
-    | rfl
-    | exact plainCode_resolve hroot _
-    | exact plainCode_ofExit _
-    | exact plainCode_contEOf_caughtError hroot _ _
+  cases n <;> simp only [PlainName, Bool.false_eq_true] at hn
+  case cont p => rfl
+  case caught p => exact plainCode_resolve hroot _
+  case caughtError p => exact plainCode_contEOf_caughtError hroot _ _
+  case onValue p => rfl
+  case onCause p => exact plainCode_resolve hroot _
+  case fin p => rfl
+  case restore ex => exact plainCode_ofExit _
+  case merge ex => exact plainCode_ofExit _
 
 /-! ### The local step, by the shape of the current primitive -/
 
@@ -549,7 +584,7 @@ theorem plainCode_loopFinishAt (root : NativeEff) (q : Point) (c : Val) :
 
 /-- What a loop does next is plain code either way: the body resolved at the loop's child, or
 a finishing exit. -/
-theorem plainCode_loopNextAt {root : NativeEff} (hroot : LoopedRows root = true) (q : Point)
+theorem plainCode_loopNextAt {root : NativeEff} (hroot : PlainHooks root) (q : Point)
     (c : Val) : PlainCode (loopNextAt root q c).code = true := by
   unfold loopNextAt
   split
@@ -559,7 +594,7 @@ theorem plainCode_loopNextAt {root : NativeEff} (hroot : LoopedRows root = true)
     · rfl
   · rfl
 
-theorem plainCode_loopResumeAt {root : NativeEff} (hroot : LoopedRows root = true) (q : Point)
+theorem plainCode_loopResumeAt {root : NativeEff} (hroot : PlainHooks root) (q : Point)
     (c v : Val) : PlainCode (loopResumeAt root q c v).code = true := by
   unfold loopResumeAt
   split
@@ -579,7 +614,7 @@ theorem enter_plain (q : Point) (K : List NCode) (i : Bool)
 /-! ### The local step keeps the fiber plain -/
 
 set_option linter.unusedSimpArgs false in
-theorem localStep_success_plain {root : NativeEff} (hroot : LoopedRows root = true)
+theorem localStep_success_plain {root : NativeEff} (hroot : PlainHooks root)
     (v : Val) (K : List NCode) (i : Bool) (s : Stores) (fr' : NFiber) (s' : Stores)
     (hK : PlainStack K)
     (h : localStep root (fiberOf (Prim.success v) K i) s = .running fr' s') :
@@ -593,7 +628,7 @@ theorem localStep_success_plain {root : NativeEff} (hroot : LoopedRows root = tr
   | cons f K ih =>
     have hf := hK.head
     have hK' := hK.tail
-    cases f <;> (try simp only [PlainFrame, Bool.and_eq_true, Bool.false_eq_true] at hf)
+    cases f <;> simp only [PlainFrame, Bool.and_eq_true, Bool.false_eq_true] at hf
     · rw [step_success_onSuccess] at h
       cases h
       exact ⟨_, _, _, rfl, plainCode_contAAt hroot hf.2 v, hK'⟩
@@ -612,11 +647,11 @@ theorem localStep_success_plain {root : NativeEff} (hroot : LoopedRows root = tr
       rw [hm] at h
       cases h
       refine ⟨_, _, _, rfl, ?_, hK'.mask i⟩
-      simp [finalizerCode, PlainCode, PlainName, plainCode_resolve hroot, interpAt, interpOf]
+      simp only [finalizerCode, PlainCode, PlainName, plainCode_resolve hroot, interpAt, interpOf,
+        Bool.true_and, Bool.and_true]
     · next flag =>
-      cases flag <;> simp only [PlainFrame] at hf
-      all_goals try exact absurd hf (by decide)
-      rw [step_success_pass_setInterruptible] at h
+      cases flag <;> simp only [PlainFrame, Bool.false_eq_true] at hf
+      rw [step_success_pass_setInterruptible (flag := true)] at h
       exact ih true hK' h
     · next loop cursor =>
       cases loop <;> simp only [PlainFrame, Bool.false_eq_true] at hf
@@ -626,7 +661,7 @@ theorem localStep_success_plain {root : NativeEff} (hroot : LoopedRows root = tr
       exact enter_plain q K i _ (plainCode_loopResumeAt hroot _ cursor v) hK'
 
 set_option linter.unusedSimpArgs false in
-theorem localStep_failure_plain {root : NativeEff} (hroot : LoopedRows root = true)
+theorem localStep_failure_plain {root : NativeEff} (hroot : PlainHooks root)
     (c : CauseV) (K : List NCode) (i : Bool) (s : Stores) (fr' : NFiber) (s' : Stores)
     (hK : PlainStack K)
     (h : localStep root (fiberOf (Prim.failure c) K i) s = .running fr' s') :
@@ -640,7 +675,7 @@ theorem localStep_failure_plain {root : NativeEff} (hroot : LoopedRows root = tr
   | cons f K ih =>
     have hf := hK.head
     have hK' := hK.tail
-    cases f <;> (try simp only [PlainFrame, Bool.and_eq_true, Bool.false_eq_true] at hf)
+    cases f <;> simp only [PlainFrame, Bool.and_eq_true, Bool.false_eq_true] at hf
     · rw [step_failure_pass_onSuccess] at h
       exact ih i hK' h
     · rw [step_failure_onFailure] at h
@@ -659,11 +694,11 @@ theorem localStep_failure_plain {root : NativeEff} (hroot : LoopedRows root = tr
       rw [hm] at h
       cases h
       refine ⟨_, _, _, rfl, ?_, hK'.mask i⟩
-      simp [finalizerCode, PlainCode, PlainName, plainCode_resolve hroot, interpAt, interpOf]
+      simp only [finalizerCode, PlainCode, PlainName, plainCode_resolve hroot, interpAt, interpOf,
+        Bool.true_and, Bool.and_true]
     · next flag =>
-      cases flag <;> simp only [PlainFrame] at hf
-      all_goals try exact absurd hf (by decide)
-      rw [step_failure_pass_setInterruptible] at h
+      cases flag <;> simp only [PlainFrame, Bool.false_eq_true] at hf
+      rw [step_failure_pass_setInterruptible (flag := true)] at h
       exact ih true hK' h
     · next loop cursor =>
       cases loop <;> simp only [PlainFrame, Bool.false_eq_true] at hf
@@ -674,7 +709,7 @@ theorem localStep_failure_plain {root : NativeEff} (hroot : LoopedRows root = tr
 -- The `PlainFrame` argument is spent in some branches of the frame case split and not in
 -- others; the linter reports the latter.
 set_option linter.unusedSimpArgs false in
-theorem localStep_plain {root : NativeEff} (hroot : LoopedRows root = true) :
+theorem localStep_plain {root : NativeEff} (hroot : PlainHooks root) :
     ∀ (cur : NCode) (K : List NCode) (i : Bool) (s : Stores) (fr' : NFiber) (s' : Stores),
       PlainCode cur = true → PlainStack K →
       localStep root (fiberOf cur K i) s = .running fr' s' →
@@ -709,17 +744,17 @@ theorem localStep_plain {root : NativeEff} (hroot : LoopedRows root = true) :
     rw [step_push_onSuccess] at h
     cases h
     simp only [PlainCode, Bool.and_eq_true] at hpl
-    exact ⟨_, _, _, rfl, hpl.1, hK.cons (by simp [PlainFrame, hpl.1, hpl.2])⟩
+    exact ⟨_, _, _, rfl, hpl.1, hK.cons (by simp only [PlainFrame, hpl.1, hpl.2, Bool.and_self])⟩
   | onFailure b n =>
     rw [step_push_onFailure] at h
     cases h
     simp only [PlainCode, Bool.and_eq_true] at hpl
-    exact ⟨_, _, _, rfl, hpl.1, hK.cons (by simp [PlainFrame, hpl.1, hpl.2])⟩
+    exact ⟨_, _, _, rfl, hpl.1, hK.cons (by simp only [PlainFrame, hpl.1, hpl.2, Bool.and_self])⟩
   | onSuccessAndFailure b n₁ n₂ =>
     rw [step_push_onSuccessAndFailure] at h
     cases h
     simp only [PlainCode, Bool.and_eq_true] at hpl
-    exact ⟨_, _, _, rfl, hpl.1, hK.cons (by simp [PlainFrame, hpl.1, hpl.2.1, hpl.2.2])⟩
+    exact ⟨_, _, _, rfl, hpl.1, hK.cons (by simp only [PlainFrame, hpl.1, hpl.2.1, hpl.2.2, Bool.and_self])⟩
   | exitFrame b =>
     rw [step_push_exitFrame] at h
     cases h
@@ -742,7 +777,7 @@ theorem localStep_plain {root : NativeEff} (hroot : LoopedRows root = true) :
     exact ⟨_, _, _, rfl, hpl, hK⟩
   | withFiber _ | iterator _ _ | setInterruptible _
   | yieldNowWith _ | asyncFinalizer _ | onSuccessConst _ _ =>
-    simp [PlainCode] at hpl
+    simp only [PlainCode, Bool.false_eq_true] at hpl
 
 /-! ## Quiet stores: nothing owed to any waiter -/
 

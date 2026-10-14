@@ -7,7 +7,7 @@ import Effect4.Laws.Program.FragmentBlock
 Concept: translation-simulation. Claim: rows-block-host, a simulation serving R6.
 These goals supply `session_settled` with plain hooks on `BlockRows`.
 They concern one fiber and no context constructs, and establish no progress.
-Slice A moves `PlainHooks` unchanged into `Agreement.Machine` before widening its consumers.
+`Agreement.Machine` owns `PlainHooks`; this module supplies the block premise.
 -/
 
 set_option autoImplicit false
@@ -15,11 +15,6 @@ set_option autoImplicit false
 namespace Effect4.Program.Agreement
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Denote
-
-/-- The root's resolver and suspended-body hook always produce plain code. -/
-structure PlainHooks (root : NativeEff) : Prop where
-  resolve : ∀ q, PlainCode (resolve root q) = true
-  suspend : ∀ q, PlainCode (suspendBodyAt root (EffThunk.body q)) = true
 
 /-- Step of rows-block-host (R6), consumed by `session_settled` on blocks.
 An admitted root block supplies plain hooks; no scheduler progress follows. -/

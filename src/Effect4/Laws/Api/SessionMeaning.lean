@@ -309,7 +309,7 @@ def reactorHost (table : RowTable) {σ : Type} (r : Run.Reactor σ) : Effects.Co
 calls under the host leads from the first position to the last, the host's state going from `st`
 to `st'`. -/
 theorem tape_holds_host (program : Api.Program) (table : RowTable) (fuel : Nat)
-    (hroot : LoopedRows program = true) (cf : Nat) {σ : Type}
+    (hroot : PlainHooks program) (cf : Nat) {σ : Type}
     (host : Effects.Comodel (RowSig table) σ) :
     ∀ (T : List Api.Decision) (m : Api.Machine) (p : Pos) (st st' : σ), Holds program cf m p →
       Answered program table fuel T m → T.all hostDecision = true →
@@ -380,7 +380,7 @@ theorem answered_hostAnswered (program : Api.Program) (table : RowTable) (fuel :
 /-- **A tape of a host's answered decisions keeps the machine's forms, reading the tape's own
 exits to the end** (a step of `denoteRows_eq_session`): `tape_holds_host` at the reply host. -/
 theorem tape_holds (program : Api.Program) (table : RowTable) (fuel : Nat)
-    (hroot : LoopedRows program = true) (cf : Nat) (T : List Api.Decision) (m : Api.Machine)
+    (hroot : PlainHooks program) (cf : Nat) (T : List Api.Decision) (m : Api.Machine)
     (p : Pos) (hH : Holds program cf m p) (hans : Answered program table fuel T m)
     (hall : T.all hostDecision = true) :
     ∃ p', Holds program cf (Run.machineOf (Run.replayFrom program table fuel T m)) p' ∧
@@ -418,13 +418,12 @@ theorem session_answered (s : Run) (hfund : funded s = true) :
     Run.open_machine s.built s.id s.budget s.profile] at h
   exact h
 
-/-- **A recorded run at rest is settled where the local run with calls leads** (the session prefix
-of H8 and H9, straight and on loops): for a funded run at rest, driven by a host, of a program of
-`LoopedRows`, under a host that gave the run's answers, the machine is settled with nothing armed
-at a position the local run with calls reaches from the root's start, and the run's exit is the
-root fiber's. -/
+/-- The session prefix of H8 and H9 for a reached, funded run at rest, driven by a host.
+The program supplies plain hooks, and the host gives the recorded answers.
+The machine is settled, with nothing armed, at a position reached by the local run with calls.
+The session exit is the root fiber's exit. -/
 theorem session_settled (s : Run) (hreach : Run.Reached s) (hfund : funded s = true)
-    (hrest : atRest s = true) (hhost : hostDriven s = true) (hroot : LoopedRows s.built.program = true)
+    (hrest : atRest s = true) (hhost : hostDriven s = true) (hroot : PlainHooks s.built.program)
     {σ : Type} (host : Effects.Comodel (RowSig s.built.table) σ) (st st' : σ)
     (hA : HostAnswered s.built.table host s.built.program s.budget.fuel (tapeOf s)
       (Api.load s.built.program s.budget.compileFuel) st st') :
@@ -476,7 +475,7 @@ machine at rest is exited or waits on a call; and there the meaning is what the 
 theorem denoteRows_eq_session : DenoteRowsEqSession StraightRows := by
   intro s hreach hfund hrest hhost hfrag
   obtain ⟨p, hS, harmed, hL, hexit⟩ := session_settled s hreach hfund hrest hhost
-    (LoopedRows.of_straightRows s.built.program hfrag) (tapeHost s.built.table) _ _
+    (PlainHooks.of_loopedRows (LoopedRows.of_straightRows s.built.program hfrag)) (tapeHost s.built.table) _ _
     (session_tapeAnswered s hfund hhost)
   rw [hexit]
   exact meaning_settled_tape s.built.program hfrag s.budget.compileFuel (appliedExits s) hS harmed hL
@@ -507,7 +506,7 @@ constructions (`docs/research/2026-10-09-host-coalgebra.md`, slice CO-5). -/
 theorem denoteRows_eq_session_host : DenoteRowsEqSessionHost StraightRows := by
   intro s hreach hfund hrest hhost hfrag σ host st st' hA ex hex
   obtain ⟨p, hS, harmed, hL, hexit⟩ := session_settled s hreach hfund hrest hhost
-    (LoopedRows.of_straightRows s.built.program hfrag) host st st' hA
+    (PlainHooks.of_loopedRows (LoopedRows.of_straightRows s.built.program hfrag)) host st st' hA
   -- an exited root is the exit form, where the host is asked nothing
   have hstop : p.hostAnswer host st' = none := by
     rcases hS with ⟨cur, K, i, s', k, tr, t, hm, -, -⟩ | ⟨cur, K, i, s', k, tr, t, hm, -, -⟩ |

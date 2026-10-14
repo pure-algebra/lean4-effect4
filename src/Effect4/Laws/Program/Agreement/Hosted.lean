@@ -101,7 +101,7 @@ def Holds (root : NativeEff) (cf : Nat) (m : Api.Machine) (p : Pos) : Prop :=
 /-- **A segment closed by its drain settles.** From the running root at count `k` over a plain
 fiber, the loop and its drain settle in a form of `Settled` within a bound of commands, and the
 local run with calls leads to its position with no reply read. -/
-theorem seg_settles (root : NativeEff) (hroot : LoopedRows root = true) (cur : NCode)
+theorem seg_settles (root : NativeEff) (hroot : PlainHooks root) (cur : NCode)
     (K : List NCode) (i : Bool) (s : Stores) (k : Nat) (tr : NTrace) (nt : Nat)
     (hpl : PlainCode cur = true) (hK : PlainStack K) (hq : Quiet s) :
     ∃ c m' p', c ≤ 4 * defaultBudget + 5 ∧ Settled root m' p' ∧
@@ -144,14 +144,14 @@ theorem step_of_receipt {root : NativeEff} {m R : Api.Machine} {d : Api.Decision
   rw [← stepDecisionState_stable (evaluator := evaluatorFor root table) _ F m d h c, hR F]
 
 /-- `evaluate` on the loaded root runs its first segment. -/
-theorem load_evaluate (root : NativeEff) (hroot : LoopedRows root = true) (cf : Nat) :
+theorem load_evaluate (root : NativeEff) (hroot : PlainHooks root) (cf : Nat) :
     ∃ c m' p', Settled root m' p' ∧
       LeadsQ (table := table) root (.live (fiberOf (compile root cf) []) Stores.empty) p' ∧
       ∀ fuel, stepDecisionState (evaluator := evaluatorFor root table) (interpOf root table)
         (fuel + c) (Api.load root cf) Api.evaluate = (m', true) := by
   obtain ⟨c, m', p', -, hS, hL, hd⟩ := seg_settles (table := table) root hroot (compile root cf) []
     true Stores.empty 0 [RunEvent.started Api.root] 0
-    (plainCode_compileEff root _ hroot) PlainStack.nil Quiet.empty
+    (by simpa only [resolve, compile, rootPoint, Node.at_] using hroot.resolve (rootPoint cf [])) PlainStack.nil Quiet.empty
   refine ⟨c + 1, m', p', hS, hL, fun fuel => ?_⟩
   change stepDecisionState.loop (driveState (evaluator := evaluatorFor root table) _ _ _ _) = _
   rw [show fuel + (c + 1) = fuel + c + 1 by omega, drive_evaluate_load root cf _ _, hd]
@@ -193,7 +193,7 @@ theorem flushAllState_unarmed (root : NativeEff) (fuel : Nat) (m : Api.Machine)
 back into the loop at count one and settles; a round that yields again leaves the rest to the
 next. The rounds end on a settled machine that is not on a yield, and the local run with calls
 leads there with no reply read. -/
-theorem flush_Myield (root : NativeEff) (hroot : LoopedRows root = true) :
+theorem flush_Myield (root : NativeEff) (hroot : PlainHooks root) :
     ∀ (rounds : Nat) (cur : NCode) (K : List NCode) (i : Bool) (s : Stores) (k : Nat)
       (tr : NTrace) (t : Nat) (fuel : Nat),
       4 * defaultBudget + 8 ≤ fuel → PlainCode cur = true → PlainStack K → Quiet s →
@@ -355,7 +355,7 @@ theorem answer_Mcall (root : NativeEff) (cur : NCode) (K : List NCode) (i : Bool
 
 /-- **`evaluate`** keeps the forms: on the loaded root it runs the first segment; on a parked or
 exited root it does nothing. The local run with calls reads no reply. -/
-theorem holds_evaluate (root : NativeEff) (hroot : LoopedRows root = true) (cf : Nat)
+theorem holds_evaluate (root : NativeEff) (hroot : PlainHooks root) (cf : Nat)
     {m : Api.Machine} {p : Pos} (hH : Holds root cf m p) {F : Nat}
     (h : (stepDecisionState (evaluator := evaluatorFor root table) (interpOf root table) F m
       Api.evaluate).2 = true) :
@@ -377,7 +377,7 @@ theorem holds_evaluate (root : NativeEff) (hroot : LoopedRows root = true) (cf :
 
 /-- **`flush`** keeps the forms: after a yield it runs the rounds; with nothing armed it does
 nothing. The local run with calls reads no reply. -/
-theorem holds_flush (root : NativeEff) (hroot : LoopedRows root = true) (cf : Nat)
+theorem holds_flush (root : NativeEff) (hroot : PlainHooks root) (cf : Nat)
     {m : Api.Machine} {p : Pos} (hH : Holds root cf m p) {F : Nat}
     (h : (stepDecisionState (evaluator := evaluatorFor root table) (interpOf root table) F m
       Api.flush).2 = true) :
@@ -402,7 +402,7 @@ theorem holds_flush (root : NativeEff) (hroot : LoopedRows root = true) (cf : Na
 /-- **An answer at a guard the machine is waiting on** keeps the forms: it is the root's host
 call, the machine resumes it with the answer it prepares and runs the next segment, and the
 local run with calls reads exactly that reply. -/
-theorem holds_answer (root : NativeEff) (hroot : LoopedRows root = true) (cf : Nat)
+theorem holds_answer (root : NativeEff) (hroot : PlainHooks root) (cf : Nat)
     {m : Api.Machine} {p : Pos} (hH : Holds root cf m p) {F : Nat} {f : FiberId} {t₀ : Nat}
     {ex : ExitV} (hreq : Program.requestOf m f t₀ ≠ none)
     (h : (stepDecisionState (evaluator := evaluatorFor root table) (interpOf root table) F m

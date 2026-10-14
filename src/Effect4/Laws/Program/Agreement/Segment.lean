@@ -492,7 +492,7 @@ and the local run with calls reaches the same place with no reply read. Inductio
 measure: each command takes one local step, or answers a `sync` that the next command
 delivers. Reach: `LoopedRows`, one fiber, any row table. It does not establish that the run
 ends: a yield leaves the rest to `flush`. -/
-theorem drive_seg (root : NativeEff) (hroot : LoopedRows root = true) :
+theorem drive_seg (root : NativeEff) (hroot : PlainHooks root) :
     ∀ (n : Nat) (cur : NCode) (K : List NCode) (i : Bool) (s : Stores) (k : Nat) (tr : NTrace)
       (nt : Nat) (rest : List NCmd) (d : Bool),
       2 * (defaultBudget - k) + d.toNat ≤ n →
@@ -620,7 +620,7 @@ theorem drive_seg (root : NativeEff) (hroot : LoopedRows root = true) :
 dispatcher back into the loop at count one and runs a segment (`drive_seg`). A segment that
 yields again has taken at least `defaultBudget - 2` steps of the run, so `n + 1` rounds are
 enough, and each round's commands fit in `2n + 6`. A step of `replay_Mexit_of_localRun`. -/
-theorem flushAll_Myield (root : NativeEff) (hroot : LoopedRows root = true) :
+theorem flushAll_Myield (root : NativeEff) (hroot : PlainHooks root) :
     ∀ (rounds n : Nat) (cur : NCode) (K : List NCode) (i : Bool) (s : Stores) (k : Nat)
       (tr : NTrace) (nt : Nat) (ex : ExitV) (s' : Stores) (fuel : Nat),
       PlainCode cur = true → PlainStack K → Quiet s →
@@ -701,11 +701,12 @@ theorem replay_Mexit_of_localRun (e : NativeEff) (fuel N : Nat) (hl : Looped e =
       [Api.evaluate, Api.flush] (Api.load e fuel) =
       ReplayResult.finished (Mexit e ex fr s' k' tr' nt') := by
   have hB : defaultBudget = 2048 := rfl
-  have hroot := LoopedRows.of_looped e hl
+  have hrows := LoopedRows.of_looped e hl
+  have hroot := PlainHooks.of_loopedRows hrows
   have hrunC := localRunC_of_localRun (table := table) hrun (silentHost table) ()
   obtain ⟨c, -, h⟩ := drive_seg (table := table) e hroot (2 * defaultBudget) (compile e fuel) []
     true Stores.empty 0 [RunEvent.started Api.root] 0 [Cmd.drainDue] false
-    (by simp only [Bool.toNat_false, Nat.add_zero]; omega) (plainCode_compileEff e _ hroot)
+    (by simp only [Bool.toNat_false, Nat.add_zero]; omega) (plainCode_compileEff e _ hrows)
     PlainStack.nil Quiet.empty (fun h => by cases h)
   simp only [cmdOf] at h
   rcases h with ⟨ex₁, s₁, fr, k', tr', l, hc, hq', hl₁, hsim⟩ |

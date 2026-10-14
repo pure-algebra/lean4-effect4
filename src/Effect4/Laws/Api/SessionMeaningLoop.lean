@@ -53,7 +53,7 @@ progress or target claim, and no waiting position's stores or request. -/
 @[semantics "translation-simulation" (requirement := R6)]
 theorem h8_loopedRows : H8LoopedRows := by
   intro s hreach hfund hrest hhost hroot hfrag
-  obtain ⟨p, hS, harmed, hL, hexit⟩ := session_settled s hreach hfund hrest hhost hroot
+  obtain ⟨p, hS, harmed, hL, hexit⟩ := session_settled s hreach hfund hrest hhost (PlainHooks.of_loopedRows hroot)
     (tapeHost s.built.table) _ _ (session_tapeAnswered s hfund hhost)
   rw [hexit]
   exact meaning_settledB_tape s.built.program hfrag s.budget.compileFuel (appliedExits s) hS harmed hL
@@ -67,7 +67,7 @@ does not establish that a host's drive finishes, nor anything of a run that stop
 @[semantics "translation-simulation" (requirement := R6)]
 theorem denoteRowsB_eq_session_host : H9LoopedRows := by
   intro s hreach hfund hrest hhost hroot hfrag σ host st st' hA ex hex
-  obtain ⟨p, hS, -, hL, hexit⟩ := session_settled s hreach hfund hrest hhost hroot host st st' hA
+  obtain ⟨p, hS, -, hL, hexit⟩ := session_settled s hreach hfund hrest hhost (PlainHooks.of_loopedRows hroot) host st st' hA
   rcases hS with ⟨cur, K, i, s', n, tr, t, hm, -, -⟩ | ⟨cur, K, i, s', n, tr, t, hm, -, -⟩ |
     ⟨ex', fr, s', n, tr, nt, hm, rfl, -⟩
   · rw [hexit, hm, Myield_fiber?] at hex
@@ -139,7 +139,7 @@ failure, and nothing says the host answers; nothing of a fork, a scope or an int
 @[semantics "host-session-protocol" (requirement := R12)]
 theorem rows_loop_frontier : H8FrontierLoopedRows := by
   intro s hreach hfund hrest hhost hroot hfrag a ha
-  obtain ⟨p, hS, harmed, hL, -⟩ := session_settled s hreach hfund hrest hhost hroot
+  obtain ⟨p, hS, harmed, hL, -⟩ := session_settled s hreach hfund hrest hhost (PlainHooks.of_loopedRows hroot)
     (tapeHost s.built.table) _ _ (session_tapeAnswered s hfund hhost)
   rcases hS with ⟨cur, K, i, s', n, tr, t, hm, -, -⟩ | ⟨cur, K, i, s', n, tr, t, hm, hp, hc, -⟩ |
     ⟨ex, fr, s', n, tr, nt, hm, -, -⟩
@@ -180,7 +180,7 @@ host leaves the call unanswered: that is the premise. -/
 @[semantics "host-session-protocol" (requirement := R12)]
 theorem rows_loop_frontier_host : H9FrontierLoopedRows := by
   intro s hreach hfund hrest hhost hroot hfrag σ host st st' hA a ha
-  obtain ⟨p, hS, harmed, hL, -⟩ := session_settled s hreach hfund hrest hhost hroot host st st' hA
+  obtain ⟨p, hS, harmed, hL, -⟩ := session_settled s hreach hfund hrest hhost (PlainHooks.of_loopedRows hroot) host st st' hA
   rcases hS with ⟨cur, K, i, s', n, tr, t, hm, -, -⟩ | ⟨cur, K, i, s', n, tr, t, hm, hp, hc, -⟩ |
     ⟨ex, fr, s', n, tr, nt, hm, -, -⟩
   · rw [hm] at harmed
