@@ -139,7 +139,7 @@ theorem moduleLayersTyped_of_typeOf {root : ProgramSource} {rootTy : EffTy}
   | cons x t =>
     cases hh
     have hat : Node.at_ (.layers layers) t = some (.layer l) := by
-      have h0 := Node.at_of_layerAt hl
+      have h0 := (Node.layerAt_eq_some_iff _ _ _).mp hl
       rw [hprog] at h0
       exact h0
     obtain ⟨lt, hty⟩ := layersTyped_at t layers l hhead hat hlayers
@@ -1139,13 +1139,13 @@ private theorem raceEntrants_typed {root : ProgramSource} {w : World} {env : Lis
     obtain ⟨H, R, hch, hct, rfl⟩ := Checker.inv_effs_cons _ _ _ _ _ _ hc
     obtain ⟨A, E, hrest, hA, hE⟩ :=
       raceEntrants_typed t (q.child 1) R (fun x hx => hscope x ((List.prefix_append _ _).trans hx))
-        (node_at_child hat rfl) hct henv hview hstack
+        (Node.at_child hat rfl) hct henv hview hstack
     refine ⟨.union H.answer A, .union H.error E, fun r hr => ?_,
       subN_union_le (Ty.subN_join_left _ _) (Ty.subN_trans hA (Ty.subN_join_right _ _)),
       subN_union_le (Ty.subN_join_left _ _) (Ty.subN_trans hE (Ty.subN_join_right _ _))⟩
     simp only [entrantPoints, List.mem_cons] at hr
     rcases hr with rfl | hr
-    · exact ⟨H, pointTyped_scope (hscope _ (List.prefix_append _ _)) (node_at_child hat rfl) hch
+    · exact ⟨H, pointTyped_scope (hscope _ (List.prefix_append _ _)) (Node.at_child hat rfl) hch
         henv hview hstack, sub_union_self_left _ _, sub_union_self_left _ _, Row.subset_union_left _ _⟩
     · obtain ⟨ty, hpt, ha, he, required⟩ := hrest r hr
       exact ⟨ty, hpt, Ty.sub_trans _ _ _ ha (sub_union_self_right _ _),
@@ -1244,7 +1244,7 @@ theorem fork_arm {available : Env.Requirement} {b : NativeEff} {options : Superv
   have hbody : PointTyped root w ((p.child 0).child 0) q :=
     pointTyped_scope (scopeParams_prefix hat (fun _ _ _ _ h => nomatch h)
       ((List.prefix_append _ _).trans (List.prefix_append _ _)))
-      (node_at_child (node_at_child hat rfl) rfl) hcq henv hview hstack
+      (Node.at_child (Node.at_child hat rfl) rfl) hcq henv hview hstack
   refine ProgramArrow.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ _ _ h => nomatch h) q ⟨BodyTyped.at_ _ _ hbody, coverage,
       (fun _ _ impossible => by cases impossible),
@@ -1257,7 +1257,7 @@ theorem fork_arm {available : Env.Requirement} {b : NativeEff} {options : Superv
             exact (ambientPointTyped_scope (q := (p.child 0).child 0)
               (scopeParams_prefix hat (fun _ _ _ _ h => nomatch h)
                 ((List.prefix_append _ _).trans (List.prefix_append _ _)))
-              (node_at_child (node_at_child hat rfl) rfl) hcq henv hview savedParams).2
+              (Node.at_child (Node.at_child hat rfl) rfl) hcq henv hview savedParams).2
           · cases impossible
           · cases impossible), fun _ _ _ impossible => by cases impossible⟩⟩⟩
     (fun w' _ ans post => ?_) ⟨Row.subset_refl _, Row.subset_refl _⟩
@@ -1289,7 +1289,7 @@ theorem forkIn_arm {available : Env.Requirement} {b : NativeEff} {options : Supe
   have hbody : AmbientPointTyped root w available ((p.child 0).child 0) q :=
     ambientPointTyped_scope (scopeParams_prefix hat (fun _ _ _ _ h => nomatch h)
       ((List.prefix_append _ _).trans (List.prefix_append _ _)))
-      (node_at_child (node_at_child hat rfl) rfl) hcq henv hview savedParams
+      (Node.at_child (Node.at_child hat rfl) rfl) hcq henv hview savedParams
   refine ProgramArrow.fiber (fun _ h => nomatch h) (fun _ h => nomatch h) (fun _ h => nomatch h)
     (fun _ _ _ h => nomatch h) q ⟨⟨hbody, hlive⟩, coverage⟩ (fun w' _ ans post => ?_) ⟨Row.subset_refl _, Row.subset_refl _⟩
   obtain ⟨id, rfl, hΓ⟩ := post
@@ -1315,7 +1315,7 @@ theorem forkScoped_arm {available : Env.Requirement} {b : NativeEff} {options : 
   have hbody : AmbientPointTyped root w available ((p.child 0).child 0) q :=
     ambientPointTyped_scope (scopeParams_prefix hat (fun _ _ _ _ h => nomatch h)
       ((List.prefix_append _ _).trans (List.prefix_append _ _)))
-      (node_at_child (node_at_child hat rfl) rfl) hcq henv hview savedParams
+      (Node.at_child (Node.at_child hat rfl) rfl) hcq henv hview savedParams
   simp only [denoteFiberAction]
   rw [hat]
   simp only []
@@ -1687,7 +1687,7 @@ theorem raceAll_arm {available : Env.Requirement} {es : Effs NativeOp}
   obtain ⟨A, E, hpre, hA, hE⟩ := raceEntrants_typed es ((p.child 0).child 0) ty
     (fun x hx => scopeParams_prefix hat (fun _ _ _ _ h => nomatch h)
       (((List.prefix_append _ _).trans (List.prefix_append _ _)).trans hx))
-    (node_at_child (node_at_child hat rfl) rfl) hc henv hview hstack
+    (Node.at_child (Node.at_child hat rfl) rfl) hc henv hview hstack
   obtain ⟨ents, hact⟩ : ∃ ents, actionAt root.program p =
       some (WithFiberAction.raceAll ents (some ((p.child 0).child 0).path)) := by
     unfold actionAt
@@ -1726,7 +1726,7 @@ theorem raceAllFirst_arm {available : Env.Requirement} {es : Effs NativeOp}
   obtain ⟨A, E, hpre, hA, hE⟩ := raceEntrants_typed es ((p.child 0).child 0) ty
     (fun x hx => scopeParams_prefix hat (fun _ _ _ _ h => nomatch h)
       (((List.prefix_append _ _).trans (List.prefix_append _ _)).trans hx))
-    (node_at_child (node_at_child hat rfl) rfl) hc henv hview hstack
+    (Node.at_child (Node.at_child hat rfl) rfl) hc henv hview hstack
   obtain ⟨ents, hact⟩ : ∃ ents, actionAt root.program p =
       some (WithFiberAction.raceAllFirst ents (some ((p.child 0).child 0).path)) := by
     unfold actionAt
@@ -2865,7 +2865,7 @@ theorem invoke_arm {root : ProgramSource} {w : World} {p : Point} {ty : EffTy} {
     ambient_argument_birth henv saved d.params args (p.path ++ [0]) ts
       (fun x hx => scopeParams_prefix hat (fun _ _ _ _ h => nomatch h)
         ((List.prefix_append _ _).trans hx))
-      (node_at_child hat rfl) hlen hargs
+      (Node.at_child hat rfl) hlen hargs
       (Row.subset_trans (Row.subset_union_right _ _) coverage)
   rw [denoteR_invoke _ _ _ _ (by rw [hfuel]; exact Nat.succ_ne_zero f)]
   refine ambient_suspendR_typed root (Row.subset_refl _) (fun w' o =>
@@ -3169,7 +3169,7 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
       | some ex' =>
         rw [hsub, Option.map_some, Option.some.injEq] at hinline
         subst hinline
-        have hex' := ih (p.child 0) (child_fuel_eq hfuel 0) (node_at_child hat rfl)
+        have hex' := ih (p.child 0) (child_fuel_eq hfuel 0) (Node.at_child hat rfl)
           (pointTyped_child hat rfl rfl hcb henv hview hstack) hsub
         exact strongExit_success w _ (reifyExitVal ex') hex'.1
     | provideContext context body =>
@@ -3184,7 +3184,7 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
       obtain ⟨ctx, decoded, _, _, _⟩ := fits_contextOf_inv given
       simp only [evaluated, Option.bind_some, decoded] at hinline
       exact exitOk_widen (mid := bodyTy) (Ty.subN_refl _) (Ty.subN_refl _)
-        (ih (p.child 0) (child_fuel_eq hfuel 0) (node_at_child hat rfl)
+        (ih (p.child 0) (child_fuel_eq hfuel 0) (Node.at_child hat rfl)
           (pointTyped_child hat rfl rfl bodyCheck henv hview hstack) hinline)
     | provideService key value b =>
       obtain ⟨env, hcheck, henv, -, hstack⟩ := hpt.at_node hat
@@ -3205,7 +3205,7 @@ theorem inlineYield_typed {root : ProgramSource} {w : World} (f : Nat) :
       cases flag with
       | true => exact nomatch hinline
       | false =>
-        exact ih (p.child 0) (child_fuel_eq hfuel 0) (node_at_child hat rfl)
+        exact ih (p.child 0) (child_fuel_eq hfuel 0) (Node.at_child hat rfl)
           (pointTyped_child hat rfl rfl hcb henv hview hstack) hinline
     | defs decls bodies main _ => exact (defs_not_typed hat hpt).elim
     | _ => exact nomatch hinline
@@ -3242,7 +3242,7 @@ theorem provideContext_arm {available : Env.Requirement} {context : Term} {body 
     refine .pure ⟨?_, ?_⟩ ⟨Row.subset_refl available, Row.subset_refl _⟩
     · exact exitOk_widen (mid := bodyTy) (Ty.subN_refl _) (Ty.subN_refl _)
         (inlineYield_typed f (p.child 0) (child_fuel_eq hfuel 0)
-          (node_at_child hat rfl) child immediate)
+          (Node.at_child hat rfl) child immediate)
     · cases exit <;> exact Row.subset_refl available
   | none =>
     exact ambient_updateContext_provide root available available bodyTy.requires keys supplied
@@ -3274,7 +3274,7 @@ theorem exit_arm {available : Env.Requirement} {b : NativeEff} (hfuel : p.fuel =
   cases hsub : inlineYield b (p.child 0) with
   | some ex' =>
     exact .pure ⟨strongExit_success w _ _ (inlineYield_typed f (p.child 0) (child_fuel_eq hfuel 0)
-      (node_at_child hat rfl) hchild hsub).1, Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
+      (Node.at_child hat rfl) hchild hsub).1, Row.subset_refl _⟩ ⟨Row.subset_refl _, Row.subset_refl _⟩
   | none =>
     refine ambient_guardBind root
       (hb w htie (p.child 0) tb (child_fuel_eq hfuel 0) rfl hchild available coverage
@@ -3379,7 +3379,7 @@ theorem childDenotes_upto (root : ProgramSource) (hlayer : ProvideLayerArm root)
       have hpos : q.fuel ≠ 0 := by rw [hq]; exact Nat.succ_ne_zero f
       have hch : ∀ (c' : NativeEff) (i : Nat), (Node.eff c).child i = some (.eff c') →
           ChildDenotes root f c' (q.path ++ [i]) :=
-        fun c' i hci => ih f (Nat.le_refl f) c' (q.path ++ [i]) (node_at_child hat hci)
+        fun c' i hci => ih f (Nat.le_refl f) c' (q.path ++ [i]) (Node.at_child hat hci)
       cases c with
       | succeed t => exact succeed_arm hpos hat hqt
       | fail t => exact fail_arm hpos hat hqt

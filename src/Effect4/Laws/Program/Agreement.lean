@@ -416,27 +416,17 @@ end frames
 
 /-! ## Addresses -/
 
-/-- The node at one more child index: the address law (`Effect4.Program.Node.at_append`,
-`Laws/Program/Address.lean`) at a rest of one index. -/
-theorem Node.at_append (n : Node NativeOp) (path : List Nat) (i : Nat) :
-    Node.at_ n (path ++ [i]) = (Node.at_ n path).bind fun m => m.child i := by
-  rw [Effect4.Program.Node.at_append]
-  cases Node.at_ n path with
-  | none => rfl
-  | some m =>
-    show m.at_ [i] = m.child i
-    simp only [Node.at_]
-    cases m.child i <;> rfl
+/-- **The node at a machine point's child** (`Point.child`). -/
+theorem at_child {root : NativeEff} {p : Point} {n : Node NativeOp}
+    (h : Node.at_ (Node.eff root) p.path = some n) (i : Nat) :
+    Node.at_ (Node.eff root) (p.child i).path = n.child i := by
+  simp only [Point.child, Node.at_snoc, h, Option.bind]
 
-theorem at_child {root : NativeEff} {p : Point} {e : NativeEff}
-    (h : Node.at_ (Node.eff root) p.path = some (Node.eff e)) (i : Nat) :
-    Node.at_ (Node.eff root) (p.child i).path = (Node.eff e).child i := by
-  simp only [Point.child, Node.at_append, h, Option.bind]
-
-theorem at_childWith {root : NativeEff} {p : Point} {e : NativeEff}
-    (h : Node.at_ (Node.eff root) p.path = some (Node.eff e)) (i : Nat) (v : Val) :
-    Node.at_ (Node.eff root) (p.childWith i v).path = (Node.eff e).child i := by
-  simp only [Point.childWith, Node.at_append, h, Option.bind]
+/-- **The node at a machine point's child with a pushed value** (`Point.childWith`). -/
+theorem at_childWith {root : NativeEff} {p : Point} {n : Node NativeOp}
+    (h : Node.at_ (Node.eff root) p.path = some n) (i : Nat) (v : Val) :
+    Node.at_ (Node.eff root) (p.childWith i v).path = n.child i := by
+  simp only [Point.childWith, Node.at_snoc, h, Option.bind]
 
 theorem resolve_of_at {root : NativeEff} {q : Point} {e : NativeEff}
     (h : Node.at_ (Node.eff root) q.path = some (Node.eff e)) :

@@ -1,5 +1,6 @@
 module
 
+public import Effect4.Program.Address
 public import Effect4.Program.Typing.Table
 
 /-!
@@ -23,9 +24,6 @@ the attributes at the subtree's root changes none outside it. The law is `table_
 set_option autoImplicit false
 
 namespace Effect4.Program
-
-/-- Whether the address `c` is inside the subtree at the address `a`. -/
-def Table.under (a c : List Nat) : Bool := a.isPrefixOf c
 
 /-- **The splice at an address**: the old table's entries before the subtree at `a`, then `sub`,
 then the old table's entries after the subtree. `sub` is the new subtree's table at its own

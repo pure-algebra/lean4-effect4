@@ -110,7 +110,7 @@ private theorem restoreAll_eq_undo (root : Eff Op) (history : History Op)
   have unique : (history.map Prod.fst).Nodup := ordered.imp (by
     intro a b before equal
     subst b
-    simp [Path.lt_irrefl] at before)
+    simp only [Path.lt, Field.ltKey_irrefl, Bool.false_eq_true] at before)
   unfold Eff.restoreAll
   rw [Path.sortBy_lt_eq_self ordered]
   exact restoreFold_eq_undo history history unique (fun _ h => h) root

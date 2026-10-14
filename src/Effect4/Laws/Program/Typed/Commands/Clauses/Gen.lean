@@ -298,27 +298,6 @@ theorem replicate_snoc (blk : List Nat) (k : Nat) :
     blk ++ List.replicate k 1 ++ [1] = blk ++ List.replicate (k + 1) 1 := by
   rw [List.replicate_succ', List.append_assoc]
 
-/-! ## Node navigation -/
-
-theorem at_snoc2 {n m : Node NativeOp} {path : List Nat} (h : Node.at_ n path = some m) (i j : Nat) :
-    Node.at_ n (path ++ [i, j]) = (m.child i).bind fun x => x.child j := by
-  rw [show path ++ [i, j] = path ++ [i] ++ [j] by rw [List.append_assoc]; rfl,
-    Agreement.Node.at_append, Agreement.Node.at_append, h]
-  rfl
-
-theorem at_snoc1 {n m : Node NativeOp} {path : List Nat} (h : Node.at_ n path = some m) (i : Nat) :
-    Node.at_ n (path ++ [i]) = m.child i := by
-  rw [Agreement.Node.at_append, h]
-  rfl
-
-/-- The block of a branch or a loop body, under its statement. -/
-theorem at_frame {root : NativeEff} {P : List Nat} {s : Stmt NativeOp} {rest : Stmts NativeOp}
-    {sel : Nat} {m : Node NativeOp} (h : Node.at_ (.eff root) P = some (.stmts (.cons s rest)))
-    (hs : (Node.stmt s).child sel = some m) :
-    Node.at_ (.eff root) (P ++ [0, sel]) = some m := by
-  rw [at_snoc2 h]
-  exact hs
-
 /-! ## The typed position -/
 
 mutual
@@ -431,8 +410,8 @@ theorem PosOk.loopStart {c : GenCtx} {k : Nat} {e : List Val}
   | body b rest Γ gb hnode hcheck henv ha he hr exit =>
     have hblock : Node.at_ (.eff root.program) (P0 ++ [0] ++ (GenCtx.body c k).block) =
         some (.stmts b) := by
-      rw [GenCtx.block, ← List.append_assoc]
-      exact at_frame hnode rfl
+      rw [GenCtx.block, ← List.append_assoc, Node.at_append, hnode]
+      rfl
     refine .mk b Γ gb e [] hblock ?_ ?_ henv (List.append_nil e).symm (localBinds_zero b).symm ha he
       hr (fun _ => .body b rest Γ gb hnode hcheck henv ha he hr exit)
       (fun hb => .body b rest hnode (exit hb))
@@ -661,7 +640,7 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
       · have hsuf : Node.at_ (.eff root.program) (P0 ++ [0] ++ (ctx.block ++ List.replicate k 1)) =
             some (.stmts (.cons s rest)) := hs ▸ hsuffix
         rw [hdrop, ← hpath1]
-        exact at_snoc1 hsuf 1
+        exact Node.at_child hsuf rfl
       · rw [hdrop, ← hpath1]
         exact hr
       · rw [hsplit, List.append_assoc]
@@ -700,8 +679,8 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
         have hreqs := subset_union_both hreq
         have hnode : Node.at_ (.eff root.program)
             (p.path ++ [0] ++ (ctx.block ++ List.replicate k 1) ++ [0, 0]) = some (.eff e) := by
-          rw [hpath]
-          exact at_frame hsuffix rfl
+          rw [hpath, Node.at_append, hsuffix]
+          rfl
         have hq : P0 <+: p.path ++ [0] ++ (ctx.block ++ List.replicate k 1) ++ [0, 0] := by
           rw [← hpath]
           exact (List.prefix_append _ _).trans ((List.prefix_append _ _).trans
@@ -749,8 +728,8 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
         have hreqs := subset_union_both hreq
         have hnode : Node.at_ (.eff root.program)
             (p.path ++ [0] ++ (ctx.block ++ List.replicate k 1) ++ [0, 0]) = some (.eff e) := by
-          rw [hpath]
-          exact at_frame hsuffix rfl
+          rw [hpath, Node.at_append, hsuffix]
+          rfl
         have hq : P0 <+: p.path ++ [0] ++ (ctx.block ++ List.replicate k 1) ++ [0, 0] := by
           rw [← hpath]
           exact (List.prefix_append _ _).trans ((List.prefix_append _ _).trans
@@ -837,8 +816,11 @@ theorem walk_typed {root : ProgramSource} (hwf : SourceWF root) {w : World}
           intro sel blk gx hchild hcx hax hex hrx hcx' hbx
           have hblk : Node.at_ (.eff root.program) (P0 ++ [0] ++ (GenCtx.branch ctx k sel).block) =
               some (.stmts blk) := by
-            rw [GenCtx.block, ← List.append_assoc]
-            exact at_frame hsuffix hchild
+            have h0 : P0 ++ [0] ++ (GenCtx.branch ctx k sel).block =
+                (P0 ++ [0] ++ (ctx.block ++ List.replicate k 1)) ++ [0] ++ [sel] := by
+              simp only [GenCtx.block, List.append_assoc, List.cons_append, List.nil_append]
+            rw [h0]
+            exact Node.at_child (Node.at_child hsuffix rfl) hchild
           refine .mk blk Γ gx env [] hblk ?_ ?_ henv (List.append_nil env).symm
             (localBinds_zero blk).symm hax hex hrx
             (fun h => .branch test a b rest hsuffix (cont (hcx' h)))
@@ -977,7 +959,7 @@ theorem genProtocol (root : ProgramSource) : GenProtocol root := by
   have hbody : Node.at_ (.eff root.program) (p.path ++ [0] ++ GenCtx.top.block) =
       some (.stmts body) := by
     rw [show GenCtx.top.block = [] from rfl, List.append_nil]
-    exact at_snoc1 hat 0
+    exact Node.at_child hat rfl
   refine .mk body Γ0 gB p.env [] hbody ?_ ?_ (envTyped_mono o henv) (List.append_nil _).symm
     (localBinds_zero body).symm
     (answer_le_genAnswer gB) (Ty.subN_refl _) coverage (fun hc => .top (unit_le_genAnswer gB hc))

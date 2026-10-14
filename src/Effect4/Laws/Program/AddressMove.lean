@@ -111,9 +111,9 @@ theorem properPrefix_append_left : ∀ (p a b : List Nat),
 
 /-- **Below a node that is no spine, every path of a block's bodies has the node's position.** The
 bodies are a spine whose head is child `0` and whose rest is child `1`; a node that is no spine
-stands in one body, and every path below it stays there. A step of `Eff.scopeOf_append`. The
-parameters' form of the same fact is `spineParams_append` (`Laws/Program/Typed/Scope.lean`); the
-two are related by `spineParams_index` there. -/
+stands in one body, and every path below it stays there. A step of `Eff.scopeOf_append`,
+`scopeParams_child`, `scopeParams_below`, and `scopeParams_layer_below`
+(`Laws/Program/Typed/Scope.lean`). -/
 theorem spineIndex_append {Op : Type} : ∀ (bodies : Effs Op) (rest : List Nat) (m : Node Op),
     Node.at_ (.effs bodies) rest = some m → (∀ es, m ≠ .effs es) →
     ∀ q, Path.spineIndex (rest ++ q) = Path.spineIndex rest

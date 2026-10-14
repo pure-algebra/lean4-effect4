@@ -345,7 +345,7 @@ theorem actionAt_restore
 theorem resolve_restore_body
     (hat : Node.at_ (.eff root) p.path = some (.eff (.restore saved body))) :
     resolve root (p.child 0) = compileEff body (p.child 0) := by
-  have child : Node.at_ (.eff root) (p.child 0).path = some (.eff body) := at_child_of hat 0
+  have child : Node.at_ (.eff root) (p.child 0).path = some (.eff body) := at_child hat 0
   unfold resolve
   rw [child]
 

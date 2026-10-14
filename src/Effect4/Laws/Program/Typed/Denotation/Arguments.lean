@@ -48,7 +48,7 @@ theorem argument_certificates {root : ProgramSource} {w : World} {env : List Ty}
       subst hq
       have hsite : scopeParams root.program (spine ++ [0]) = scopeParams root.program base :=
         hscope _ (List.prefix_append _ _)
-      refine ⟨{ path := spine ++ [0], env := vals }, h, env, H, rfl, node_at_child hat rfl, ?_,
+      refine ⟨{ path := spine ++ [0], env := vals }, h, env, H, rfl, Node.at_child hat rfl, ?_,
         producer q H hadm (Row.subset_union_left _ _), henv, ?_⟩
       · show Checker.check (root.scopeSig (spine ++ [0])) _ _ _ = _
         unfold ProgramSource.scopeSig
@@ -60,7 +60,7 @@ theorem argument_certificates {root : ProgramSource} {w : World} {env : List Ty}
     | succ j =>
       simp only [List.getElem?_cons_succ] at hq
       exact argument_certificates policy henv hstack qs t (spine ++ [1]) R
-        (fun x hx => hscope x ((List.prefix_append _ _).trans hx)) (node_at_child hat rfl)
+        (fun x hx => hscope x ((List.prefix_append _ _).trans hx)) (Node.at_child hat rfl)
         (Nat.succ.inj hlen) hct (fun parameter type admitted bound =>
           producer parameter type admitted (Row.subset_trans bound (Row.subset_union_right _ _))) j q' hq
 

@@ -104,7 +104,7 @@ theorem node_child_at (root : NativeEff) (p : Point) (node child : Node NativeOp
     Node.at_ (.eff root) (p.child i).path = some child ∧ At root (p.child i) := by
   refine ⟨?_, ?_⟩
   · change Node.at_ (.eff root) (p.path ++ [i]) = some child
-    rw [Agreement.Node.at_append, found]
+    rw [Node.at_snoc, found]
     exact lookup
   · unfold At
     change levelAt (.eff root) 0 (p.path ++ [i]) = some p.env.length

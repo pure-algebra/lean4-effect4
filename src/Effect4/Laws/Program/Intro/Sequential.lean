@@ -25,7 +25,7 @@ theorem intro_suspend (root : NativeEff) (n : Nat) (b : NativeEff) (p : Point) (
     CodeMeans root (compileEff (.suspend b) p) (denoteR root (.suspend b) p) := by
   rw [compileEff_suspend b hf, denoteR_suspend root b p hpos]
   refine CodeMeans.suspendBody p _ fun completed => ?_
-  have hb := at_child_of (p := { p with completed }) h 0
+  have hb := at_child (p := { p with completed }) h 0
   show CodeMeans root (suspendBodyAt root (.body { p with completed })) (prepareR completed (constructR _))
   rw [suspendBodyAt_suspend (q := { p with completed }) hf h, resolve_of_at hb]
   simp only [prepareR_constructR, prepareR_denoteR]
@@ -179,7 +179,7 @@ theorem intro_defs (root : NativeEff) (n : Nat) (decls : List DefDecl) (bodies :
       (denoteR root (.defs decls bodies main layers) p) := by
   rw [compileEff_defs decls bodies main layers hf,
     denoteR_defs (root := root) (p := p) decls bodies main layers hpos]
-  exact ih _ (hw0 1) main (at_child_of h 1)
+  exact ih _ (hw0 1) main (at_child h 1)
 
 theorem intro_bind (root : NativeEff) (n : Nat) (a b : NativeEff) (p : Point) (k : Nat)
     (hf : p.fuel = k + 1) (hpos : p.fuel ≠ 0)
@@ -194,9 +194,9 @@ theorem intro_bind (root : NativeEff) (n : Nat) (a b : NativeEff) (p : Point) (k
   refine CodeMeans.onSuccess _ _ _ (denoteR root a (p.child 0))
     (seqR fun v => constructR fun completed => denoteR root b ({ p with completed }.childWith 1 v))
     ?_ ?_ rfl (fun _ => rfl)
-  · exact ih _ (hw0 0) a (at_child_of h 0)
+  · exact ih _ (hw0 0) a (at_child h 0)
   · intro completed v
-    have hb := at_childWith_of (p := { p with completed }) h 1 v
+    have hb := at_childWith (p := { p with completed }) h 1 v
     show CodeMeans root (resolve root ({ p with completed }.childWith 1 v))
       (prepareR completed (constructR _))
     rw [resolve_of_at hb]
@@ -236,14 +236,14 @@ theorem intro_select (root : NativeEff) (n : Nat) (s : Term) (d : Decision) (a0 
     · cases bound with
       | none =>
         simp only [Bool.cond_false, Point.childBind]
-        have hb := at_child_of (p := { p with completed }) h 1
+        have hb := at_child (p := { p with completed }) h 1
         simp only [Node.child] at hb
         rw [resolve_of_at hb]
         simp only [prepareR_denoteR]
         exact ih _ (hwc completed 1) a1 hb
       | some v =>
         simp only [Bool.cond_false, Point.childBind]
-        have hb := at_childWith_of (p := { p with completed }) h 1 v
+        have hb := at_childWith (p := { p with completed }) h 1 v
         simp only [Node.child] at hb
         rw [resolve_of_at hb]
         simp only [prepareR_denoteR]
@@ -251,14 +251,14 @@ theorem intro_select (root : NativeEff) (n : Nat) (s : Term) (d : Decision) (a0 
     · cases bound with
       | none =>
         simp only [Bool.cond_true, Point.childBind]
-        have hb := at_child_of (p := { p with completed }) h 0
+        have hb := at_child (p := { p with completed }) h 0
         simp only [Node.child] at hb
         rw [resolve_of_at hb]
         simp only [prepareR_denoteR]
         exact ih _ (hwc completed 0) a0 hb
       | some v =>
         simp only [Bool.cond_true, Point.childBind]
-        have hb := at_childWith_of (p := { p with completed }) h 0 v
+        have hb := at_childWith (p := { p with completed }) h 0 v
         simp only [Node.child] at hb
         rw [resolve_of_at hb]
         simp only [prepareR_denoteR]
@@ -297,13 +297,13 @@ theorem intro_onExit (root : NativeEff) (n : Nat) (b f : NativeEff) (p : Point) 
     (fun ex => finalizerR ex (constructR fun completed =>
       denoteR root f ({ p with completed }.childWith 1 (reifyExitVal ex))))
     ?_ ?_ (fun _ _ => rfl) rfl (fun _ => rfl)
-  · exact ih _ (hw0 0) b (at_child_of h 0)
+  · exact ih _ (hw0 0) b (at_child h 0)
   · intro completed ex program hprog
     have hp' : resolve root ({ p with completed }.childWith 1 (reifyExitVal ex)) = program :=
       Option.some.inj hprog
     rw [← hp']
     refine finalizer_intro root completed ex ?_
-    have hb := at_childWith_of (p := { p with completed }) h 1 (reifyExitVal ex)
+    have hb := at_childWith (p := { p with completed }) h 1 (reifyExitVal ex)
     rw [resolve_of_at hb]
     simp only [prepareR_constructR, prepareR_denoteR]
     exact ih _ (hwcw completed 1 _) f hb

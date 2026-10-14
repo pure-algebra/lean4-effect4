@@ -49,7 +49,7 @@ theorem layerTerm_intro (root : NativeEff) (n : Nat)
       (CodeMeans.syncOp _ _ (successV root)) ?_ rfl (fun _ => rfl)
     intro completed v
     simp only [seqR]
-    have hinner := at_child_of h 0
+    have hinner := at_child h 0
     cases hid : Val.memoMap? v with
     | some id =>
       have hv := Val.memoMap?_exact hid
@@ -67,7 +67,7 @@ theorem layerTerm_intro (root : NativeEff) (n : Nat)
       exact codeMeans_badShape root
   | .orDie inner, q, m, scope, hK, hq, h => by
     rw [resolveLayerTerm_orDie, denoteLayer_orDie, guardR_bind]
-    have hinner := at_child_of h 0
+    have hinner := at_child h 0
     -- the inner layer resolves on both sides, a reference by its hop (decisions row 185)
     refine CodeMeans.onFailure _ _ _ (denoteLayer root inner (q.child 0) m scope) _
       (layerTerm_intro root n hres K hhop inner (q.child 0) m scope
@@ -117,8 +117,8 @@ theorem layerTerm_intro (root : NativeEff) (n : Nat)
       denoteLayer_provide]
     refine fromBuild_intro root q m scope _ fun child => ?_
     rw [innerLayerAt_provide root h]
-    have hs := at_child_of h 0
-    have ht := at_child_of h 1
+    have hs := at_child h 0
+    have ht := at_child h 1
     refine provideWith_intro root q m child .provide _ ?_ ?_
     · rw [resolveLayer_of_at root ht]
       exact layerTerm_intro root n hres K hhop that (q.child 1) m child
@@ -131,8 +131,8 @@ theorem layerTerm_intro (root : NativeEff) (n : Nat)
       compileLayer_provideMerge, denoteLayer_provideMerge]
     refine fromBuild_intro root q m scope _ fun child => ?_
     rw [innerLayerAt_provideMerge root h]
-    have hs := at_child_of h 0
-    have ht := at_child_of h 1
+    have hs := at_child h 0
+    have ht := at_child h 1
     refine provideWith_intro root q m child .provideMerge _ ?_ ?_
     · rw [resolveLayer_of_at root ht]
       exact layerTerm_intro root n hres K hhop that (q.child 1) m child
@@ -145,8 +145,8 @@ theorem layerTerm_intro (root : NativeEff) (n : Nat)
       denoteLayer_merge]
     refine fromBuild_intro root q m scope _ fun child => ?_
     rw [innerLayerAt_merge root h]
-    have h0 := at_child_of h 0
-    have h1 := at_child_of h 1
+    have h0 := at_child h 0
+    have h1 := at_child h 1
     refine mergeTwo_intro root q m child ?_ ?_
     · intro c
       rw [resolveLayer_of_at root h0, layerBuildR_of_at h0]
@@ -166,7 +166,7 @@ theorem layerTerm_intro (root : NativeEff) (n : Nat)
     rw [Point.spineChild_eq]
     exact layerTerms_intro root n hres K hhop layers (q.child 0) i hi
       (Nat.le_trans (fuel_child_le q 0) hK) (Nat.lt_of_le_of_lt (weight_child q 0) hq)
-      (at_child_of h 0) m c
+      (at_child h 0) m c
   | .ref target, q, m, scope, hK, hq, _ => by
     rw [resolveLayerTerm_ref]
     cases hf : q.fuel with
@@ -209,7 +209,7 @@ theorem layerTerms_intro (root : NativeEff) (n : Nat)
           (layerBuildR root ((Point.spineWalk i p).child 0) m c)
   | .nil, _, i, hi, _, _, _, _, _ => absurd hi (Nat.not_lt_zero i)
   | .cons hd _, p, 0, _, hK, hp, h, m, c => by
-    have hh := at_child_of h 0
+    have hh := at_child h 0
     show CodeMeans root (resolveLayer root (p.child 0) m c) (layerBuildR root (p.child 0) m c)
     rw [resolveLayer_of_at root hh, layerBuildR_of_at hh]
     exact layerTerm_intro root n hres K hhop hd (p.child 0) m c
@@ -217,7 +217,7 @@ theorem layerTerms_intro (root : NativeEff) (n : Nat)
   | .cons _ tl, p, i + 1, hi, hK, hp, h, m, c =>
     layerTerms_intro root n hres K hhop tl (p.child 1) i (Nat.lt_of_succ_lt_succ hi)
       (Nat.le_trans (fuel_child_le p 1) hK) (Nat.lt_of_le_of_lt (weight_child p 1) hp)
-      (at_child_of h 1) m c
+      (at_child h 1) m c
 termination_by structural ls => ls
 end
 
@@ -255,8 +255,8 @@ theorem provideLayer_intro (root : NativeEff) (n : Nat)
   have hw : ∀ j, (p.child j).weight < n := fun j =>
     Nat.lt_of_lt_of_le (weight_child_lt p j hpos) hp
   have hl : Node.at_ (.eff root) p.layerBuild.path = some (.layer l) :=
-    at_child_of h 0
-  have hb := at_child_of h 1
+    at_child h 0
+  have hb := at_child h 1
   have hbuild : ∀ (m : MemoMapId) (scope : Nat),
       CodeMeans root (resolveLayer root p.layerBuild m scope)
         (layerBuildR root p.layerBuild m scope) := by

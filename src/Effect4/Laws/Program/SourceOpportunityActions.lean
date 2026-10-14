@@ -30,11 +30,11 @@ theorem entrants_le (root : NativeEff) (q : List Nat) (bodies : Effs NativeOp) (
     intro found
     have first : Node.at_ (.eff root) (point.child 0).path = some (.eff head) := by
       change Node.at_ (.eff root) (point.path ++ [0]) = some (.eff head)
-      rw [Agreement.Node.at_append, found]
+      rw [Node.at_snoc, found]
       rfl
     have tail : Node.at_ (.eff root) (point.child 1).path = some (.effs rest) := by
       change Node.at_ (.eff root) (point.path ++ [1]) = some (.effs rest)
-      rw [Agreement.Node.at_append, found]
+      rw [Node.at_snoc, found]
       rfl
     have left := compile_le root q head (point.child 0) first
     have right := ih tail
@@ -100,7 +100,7 @@ theorem source_action_le (root : NativeEff) (q : List Nat) (point : Point) (next
         ((actionAt.entrants bodies ((point.child 0).child 0)).map (current root q)).sum ≤ below q point.path := by
       have location : Node.at_ (.eff root) ((point.child 0).child 0).path = some (.effs bodies) := by
         change Node.at_ (.eff root) (point.path ++ [0] ++ [0]) = some (.effs bodies)
-        rw [Agreement.Node.at_append, Agreement.Node.at_append, source]
+        rw [Node.at_snoc, Node.at_snoc, source]
         exact node
       have entered := entrants_le root q bodies ((point.child 0).child 0) location
       exact Nat.le_trans entered (Nat.le_trans (child_le q (point.child 0).path 0) (child_le q point.path 0))

@@ -87,7 +87,7 @@ theorem intro_provideService (root : NativeEff) (n : Nat) (key : ServiceKey) (va
   rw [compileEff_provideService key value b hf, denoteR_provideService root key value b hpos]
   cases evalTerm p.env value with
   | some v =>
-    have hb := at_child_of h 0
+    have hb := at_child h 0
     refine updateContext_intro root _ (Region.program (p.child 0)) ?_
     simp only [regionCode, denoteBody, regionBodyR, cata_region]
     rw [resolve_of_at hb, denoteAt_of_at hb]
@@ -113,7 +113,7 @@ theorem intro_provideContext (root : NativeEff) (n : Nat) (context : Term)
     cases (compileEff b (p.child 0)).asExit? with
     | some exit => exact codeMeans_ofExit_pure root exit
     | none =>
-      have hb := at_child_of h 0
+      have hb := at_child h 0
       refine updateContext_intro root _ (Region.program (p.child 0)) ?_
       simp only [regionCode, denoteBody, regionBodyR, cata_region]
       rw [resolve_of_at hb, denoteAt_of_at hb]

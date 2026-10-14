@@ -1,6 +1,6 @@
 import Effect4.Program.Typing.Focus
 import Effect4.Laws.Program.Signature
-import Effect4.Laws.Program.References
+import Effect4.Laws.Program.Address
 import Effect4.Laws.Auto.Semantics
 
 /-!
@@ -148,24 +148,6 @@ inductive NodeHasTy (s : Signature Op) : Node Op → NodeTy Op → Prop where
       LayersHasTy s ls L → NodeHasTy s (.layers ls) (.layers L)
 
 /-! ## One step -/
-
-/-- An empty statement list leads to no program. A step of `typed-replacement`: the dead end
-after a `return` in `NodeHasTy.child_step`. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem Node.at_stmts_nil (rest : List Nat) (q : Eff Op) :
-    (Node.stmts (.nil : Stmts Op)).at_ rest ≠ some (.eff q) := by
-  cases rest with
-  | nil => intro h; cases h
-  | cons j rest => intro h; cases h
-
-/-- An empty layer spine leads to no program. A step of `typed-replacement`: the dead end after
-a one-layer spine in `NodeHasTy.child_step`. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem Node.at_layers_nil (rest : List Nat) (q : Eff Op) :
-    (Node.layers (.nil : LayerTerms Op)).at_ rest ≠ some (.eff q) := by
-  cases rest with
-  | nil => intro h; cases h
-  | cons j rest => intro h; cases h
 
 /-- A typed spine after a typed head is a typed spine: the rule `LayersHasTy.cons` with a tail
 that is not written as a `cons`. A typed spine is never empty. A step of `typed-replacement`:
@@ -675,25 +657,6 @@ theorem layersHasTy_replace {s : Signature Op} {ls : LayerTerms Op} {q : Eff Op}
         LayersHasTy s' ls' L := by
   obtain ⟨env, t, hq, hfill⟩ := NodeHasTy.replace path (.layers hl) hat
   exact ⟨env, t, hq, fun hext hq' hrep => by cases hfill hext hq' hrep with | layers h => exact h⟩
-
-/-- A program stands where a program stood: the replacement at an address of a program exists,
-and it is a program. A step of `typed-replacement`: `check_replace` reads it, so that the law at
-the checker answers the replaced program. -/
-@[semantics "initial-algebras-folds" (requirement := R14)]
-theorem Node.replaceAt_eff {p q : Eff Op} (q' : Eff Op) {path : List Nat}
-    (hat : (Node.eff p).at_ path = some (.eff q)) :
-    ∃ p', (Node.eff p).replaceAt path (.eff q') = some (.eff p') := by
-  obtain ⟨result, hrep⟩ :=
-    Node.replaceAt_exists hat (rfl : (Node.eff q').ctorIdx = (Node.eff q).ctorIdx)
-  have hsort := (Node.replaceAt_spec hrep).2.1
-  cases result with
-  | eff p' => exact ⟨p', hrep⟩
-  | stmts _ => cases hsort
-  | stmt _ => cases hsort
-  | action _ => cases hsort
-  | effs _ => cases hsort
-  | layer _ => cases hsort
-  | layers _ => cases hsort
 
 /-- **The law at the checker: the focus is checked, and not the program again.** A program that
 the checker admits splits at an address into an environment and a type of the focus. For every
