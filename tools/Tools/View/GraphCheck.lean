@@ -1,4 +1,4 @@
-import Tools.View.Graph
+import Tools.View.GraphAttachment
 
 /-! # Located checks before graph rendering
 
@@ -12,7 +12,7 @@ Placement: `docs/research/2026-10-13-graph-check-plan.md`, R14, concept 7, row 3
 namespace Tools.View.GraphCheck
 
 inductive Site where
-  | canvas | node | edge | placed | route | region
+  | canvas | node | edge | placed | route | region | mark | attachment
   deriving BEq
 
 inductive Field where
@@ -28,6 +28,7 @@ inductive Reason where
   | negative (value : Int)
   | outside (far bound : Int)
   | doesNotDescend
+  | notPoint | offMark
   deriving BEq
 
 /-- A refusal locates one finite rendering test, without formatting text. -/
@@ -119,6 +120,20 @@ private def routeTests (l : Laid) (i : Nat) : Route → List Test
   | .back _ a b _ _ => [resolves l i .source a, resolves l i .target b]
   | .loop _ a _ => [resolves l i (.vertex 0) a]
 
+private def attachmentTests (l : Laid) : List Test :=
+  let ix := GraphAttachment.Index.of l
+  let places := Laid.Ix.of l
+  keys .mark (l.marks.toList.map FlowMark.key) ++
+  keys .attachment (l.attachments.toList.map PortAttachment.port) ++
+  l.attachments.toList.zipIdx.flatMap fun (a, i) =>
+    let point := places.find a.port
+    let mark := ix.findMark a.mark
+    [test .attachment i .source (.unresolvedKey a.port) point.isSome,
+     test .attachment i .target (.unresolvedKey a.mark) mark.isSome,
+     test .attachment i .source .notPoint (point.any (·.node.isNone)),
+     test .attachment i .target .offMark
+       (point.any fun p => mark.any fun m => GraphAttachment.markContains m p)]
+
 private def laidTests (l : Laid) : List Test :=
   [test .canvas 0 .width (.negative l.width) (0 ≤ l.width),
    test .canvas 0 .height (.negative l.height) (0 ≤ l.height)] ++
@@ -128,9 +143,9 @@ private def laidTests (l : Laid) : List Test :=
       (if p.node.isSome then ROWH * BOXROWS else 0)) ++
   l.regions.toList.zipIdx.flatMap (fun (r, i) =>
     rectangle .region i l.width l.height r.x r.y r.w r.h) ++
-  l.routes.toList.zipIdx.flatMap fun (r, i) => routeTests l i r
+  (l.routes.toList.zipIdx.flatMap fun (r, i) => routeTests l i r) ++ attachmentTests l
 
-/-- Every allocated rectangle and route lookup satisfies its finite rendering test.
+/-- Allocated rectangles, route lookups, and explicit mark attachments satisfy their finite rendering tests.
 This observation excludes curve, stroke, text and mark ink bounds. -/
 def LaidOK (l : Laid) : Prop := ∀ t ∈ laidTests l, t.holds = true
 
