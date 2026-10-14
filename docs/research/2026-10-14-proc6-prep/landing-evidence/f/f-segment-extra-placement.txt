@@ -1,0 +1,69 @@
+
+proof_goal isCall_ofExit (ex : ExitV) : IsCall (Prim.ofExit ex) = false 
+
+proof_goal hostAnswer_silent (code : NCode) : hostAnswer (silentHost table) code () = none 
+
+proof_goal localStep_call {root : NativeEff} {fr : NFiber} (hc : IsCall fr.current = true)
+    (s : Stores) : localStep root fr s = .running fr s 
+
+proof_goal ContextFreeCode.not_withFiber {cur : NCode} (h : ContextFreeCode cur = true) :
+    ∀ t, cur ≠ Prim.withFiber t 
+
+proof_goal localRunC_of_localRun {root : NativeEff} (hroot : ContextFreeHooks root)
+    {n : Nat} {cur : NCode} {K : List NCode} {i : Bool} {s s' : Stores} {ex : ExitV}
+    (hpl : ContextFreeCode cur = true) (hK : ContextFreeStack K)
+    (hrun : localRun root n (fiberOf cur K i) s = some (ex, s'))
+    {σ : Type} (host : Effects.Comodel (RowSig table) σ) (r : σ) {ctx : Ctx} :
+    localRunC host root n (fiberOf cur K i) s r ctx = some (.exit ex s' r) 
+
+proof_goal localRunC_lt {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
+    {fr : NFiber} {s : Stores} {r : σ} {ctx : Ctx} {a b : Nat} {e : RunEnd σ}
+    (ha : localRunC host root a fr s r ctx = none) (hb : localRunC host root b fr s r ctx = some e) :
+    a < b 
+
+proof_goal ReachesC.none {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
+    {c : Nat} {fr fr' : NFiber} {s s' : Stores} {r r' : σ} {ctx ctx' : Ctx} (h : ReachesC host root c fr s r fr' s' r' ctx ctx') :
+    localRunC host root c fr s r ctx = none 
+
+proof_goal ReachesC.lt {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
+    {c : Nat} {fr fr' : NFiber} {s s' : Stores} {r r' : σ} {ctx ctx' : Ctx} (h : ReachesC host root c fr s r fr' s' r' ctx ctx')
+    {n : Nat} {e : RunEnd σ} (hn : localRunC host root n fr s r ctx = some e) : c < n 
+
+proof_goal ReachesC.rest {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
+    {c : Nat} {fr fr' : NFiber} {s s' : Stores} {r r' : σ} {ctx ctx' : Ctx} (h : ReachesC host root c fr s r fr' s' r' ctx ctx')
+    {n : Nat} (hcn : c ≤ n) : localRunC host root n fr s r ctx = localRunC host root (n - c) fr' s' r' ctx' 
+
+proof_goal ReachesC.not_call {root : NativeEff} {c : Nat} {fr fr' : NFiber} {s s' : Stores} {ctx ctx' : Ctx}
+    (h : ReachesC (silentHost table) root c fr s () fr' s' () ctx ctx') (hc : IsCall fr'.current = true)
+    {n : Nat} {ex : ExitV} {s'' : Stores}
+    (hn : localRunC (silentHost table) root n fr s () ctx = some (.exit ex s'' ())) : False 
+
+proof_goal Mcall_stuck {ctx : Ctx} (fr : NFiber) (s : Stores) (k : Nat) (tr : NTrace) (t : Nat) :
+    (Mcall fr s k tr t ctx).stuck = none 
+
+proof_goal Mcall_armed {ctx : Ctx} (fr : NFiber) (s : Stores) (k : Nat) (tr : NTrace) (t : Nat) :
+    (Mcall fr s k tr t ctx).armed = [] 
+
+proof_goal Mcall_state {ctx : Ctx} (fr : NFiber) (s : Stores) (k : Nat) (tr : NTrace) (t : Nat) :
+    (Mcall fr s k tr t ctx).state = s 
+
+proof_goal Mcall_fiber? {ctx : Ctx} (fr : NFiber) (s : Stores) (k : Nat) (tr : NTrace) (t : Nat) :
+    (Mcall fr s k tr t ctx).fiber? Api.root = some (callParkedAt fr k t ctx) 
+
+proof_goal eq_call_of_isCall {cur : NCode} (h : IsCall cur = true) :
+    ∃ j v w, cur = Prim.async (EffName.external (.external j) v w) false none 
+
+proof_goal registerAsync_call (root : NativeEff) (completed : List (FiberId × ExitV)) (j : Nat)
+    (v : Val) (w : List Nat) (f : FiberId) (t : Nat) (s : Stores) :
+    (interpAt root completed table).registerAsync (EffName.external (.external j) v w) f t s =
+      (s, none) 
+
+proof_goal drive_loop_call (root : NativeEff) (cur : NCode) (K : List NCode) (i : Bool)
+    (s : Stores) (k : Nat) (tr : NTrace) (nt : Nat) (rest : List NCmd)
+    (hc : IsCall cur = true) (hk : k + 1 < defaultBudget) :
+    ∃ tr', ∀ n, driveState (evaluator 
+
+proof_goal localRunC_finish {σ : Type} {host : Effects.Comodel (RowSig table) σ} {root : NativeEff}
+    {fr : NFiber} {s s' : Stores} {ex : ExitV}
+    (hstep : localStep root fr s = .finished ex s') (hc : IsCall fr.current = false)
+    (hw : ∀ t, fr.current ≠ Prim.withFiber t) (r : σ) {ctx : Ctx} : localRunC host root 1 fr s r ctx = some (.exit ex s' r) 

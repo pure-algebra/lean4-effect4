@@ -1,0 +1,856 @@
+{
+  "fixture": {
+    "acts": [
+      {
+        "fiber": 0,
+        "kind": "evaluate"
+      },
+      {
+        "callId": 0,
+        "fiber": 0,
+        "kind": "call",
+        "request": null,
+        "row": 1,
+        "token": 0
+      },
+      {
+        "callId": 0,
+        "completion": {
+          "success": [
+            {
+              "args": [
+                [
+                  "done",
+                  "id",
+                  "title"
+                ],
+                [
+                  false,
+                  1,
+                  "milk"
+                ]
+              ],
+              "ctor": 0
+            }
+          ]
+        },
+        "fiber": 0,
+        "kind": "reply",
+        "token": 0
+      },
+      {
+        "fiber": 0,
+        "kind": "apply",
+        "token": 0
+      },
+      {
+        "callId": 1,
+        "fiber": 0,
+        "kind": "call",
+        "request": "tea",
+        "row": 0,
+        "token": 1
+      },
+      {
+        "callId": 1,
+        "completion": {
+          "success": {
+            "args": [
+              [
+                "done",
+                "id",
+                "title"
+              ],
+              [
+                false,
+                2,
+                "tea"
+              ]
+            ],
+            "ctor": 0
+          }
+        },
+        "fiber": 0,
+        "kind": "reply",
+        "token": 1
+      },
+      {
+        "fiber": 0,
+        "kind": "apply",
+        "token": 1
+      },
+      {
+        "callId": 2,
+        "fiber": 0,
+        "kind": "call",
+        "request": null,
+        "row": 1,
+        "token": 2
+      },
+      {
+        "callId": 2,
+        "completion": {
+          "success": [
+            {
+              "args": [
+                [
+                  "done",
+                  "id",
+                  "title"
+                ],
+                [
+                  false,
+                  1,
+                  "milk"
+                ]
+              ],
+              "ctor": 0
+            },
+            {
+              "args": [
+                [
+                  "done",
+                  "id",
+                  "title"
+                ],
+                [
+                  false,
+                  2,
+                  "tea"
+                ]
+              ],
+              "ctor": 0
+            }
+          ]
+        },
+        "fiber": 0,
+        "kind": "reply",
+        "token": 2
+      },
+      {
+        "fiber": 0,
+        "kind": "apply",
+        "token": 2
+      },
+      {
+        "kind": "flush"
+      }
+    ],
+    "bindings": "{  }",
+    "calls": [
+      {
+        "fiber": 0,
+        "request": null,
+        "row": 1,
+        "token": 0
+      },
+      {
+        "fiber": 0,
+        "request": "tea",
+        "row": 0,
+        "token": 1
+      },
+      {
+        "fiber": 0,
+        "request": null,
+        "row": 1,
+        "token": 2
+      }
+    ],
+    "fields": [
+      "outcome",
+      "calls",
+      "refusals"
+    ],
+    "module": "export const TodoRepoKey = Context.Service<\"TodoRepo\", { readonly insert: (a0: string) => Effect.Effect<{ readonly done: boolean; readonly id: number; readonly title: string }, readonly [\"SqlError\", string], never>; readonly all: () => Effect.Effect<ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }>, readonly [\"SqlError\", string], never>; readonly setDone: (a0: readonly [number, boolean]) => Effect.Effect<Option.Option<{ readonly done: boolean; readonly id: number; readonly title: string }>, readonly [\"SqlError\", string], never>; readonly \"delete\": (a0: number) => Effect.Effect<boolean, readonly [\"SqlError\", string], never> }>(\"TodoRepo\")\nexport const TodoRepo = Object.assign(TodoRepoKey, { insert: (a0: string) => TodoRepoKey.use((a1) => a1.insert(a0)), all: () => TodoRepoKey.use((a0) => a0.all()), setDone: (a0: readonly [number, boolean]) => TodoRepoKey.use((a1) => a1.setDone(a0)), delete: (a0: number) => TodoRepoKey.use((a1) => a1.delete(a0)) })\nexport class NotFound extends Data.TaggedError(\"NotFound\")<{ readonly id: number }> {}\nexport const listCacheMake = (a0: void): Effect.Effect<Ref.Ref<Option.Option<ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }>>>, never, never> => Effect.suspend(() => Ref.make(recordRequired<\"v\">(\"v\")(recordValue<{ readonly v: Option.Option<ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }>> }>([10, [20], [[4, [[5, [3, \"v\"], [5, [1, false], [10, [7], [[10, [8], [[10, [20], [[4, [[5, [3, \"done\"], [5, [1, false], [10, [5], []]]], [5, [3, \"id\"], [5, [1, false], [10, [2], []]]], [5, [3, \"title\"], [5, [1, false], [10, [4], []]]]]]]]]]]]]]]]]], { v: none() }))))\nexport const listCacheGet = (a0: Ref.Ref<Option.Option<ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }>>>, load: (a0: void) => Effect.Effect<ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }>, readonly [\"SqlError\", string], never>): Effect.Effect<ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }>, readonly [\"SqlError\", string], never> => Effect.suspend(() => Effect.flatMap(Ref.get(a0), (a1) => optionCase(a1, () => Effect.flatMap(load(), (a2) => Effect.flatMap(Ref.set(a0, some(a2)), (a3) => Effect.succeed(a2))), (a2) => Effect.succeed(a2))))\nexport const listCacheInvalidate = (a0: Ref.Ref<Option.Option<ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }>>>): Effect.Effect<void, never, never> => Effect.suspend(() => Effect.flatMap(Ref.set(a0, none()), (a1) => Effect.succeed(undefined)))\nexport const TodoAppContext = (a0: void): Effect.Effect<readonly [Context.Context<\"TodoRepo\">, Ref.Ref<Option.Option<ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }>>>], never, \"TodoRepo\"> => Effect.suspend(() => Effect.flatMap(Effect.context<\"TodoRepo\">(), (a1) => Effect.flatMap(listCacheMake(), (a2) => Effect.succeed(pair(a1, a2)))))\nexport const TodoApp_add = (a0: readonly [readonly [Context.Context<\"TodoRepo\">, Ref.Ref<Option.Option<ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }>>>], string]): Effect.Effect<{ readonly done: boolean; readonly id: number; readonly title: string }, readonly [\"SqlError\", string] | readonly [\"EmptyTitle\", \"a title is required\"], never> => Effect.suspend(() => Effect.flatMap(Effect.succeed(snd(fst(a0))), (a1) => Effect.flatMap(Effect.provideContext(Effect.flatMap(Effect.succeed(snd(a0)), (a2) => ifCase(() => eq(a2, \"\"), () => Effect.fail(pair(\"EmptyTitle\", \"a title is required\")), () => TodoRepo.insert(a2))), fst(fst(a0))), (a2) => Effect.flatMap(listCacheInvalidate(a1), (a3) => Effect.succeed(a2)))))\nexport const TodoApp_list = (a0: readonly [Context.Context<\"TodoRepo\">, Ref.Ref<Option.Option<ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }>>>]): Effect.Effect<ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }>, readonly [\"SqlError\", string], never> => Effect.suspend(() => Effect.flatMap(Effect.succeed(snd(a0)), (a1) => listCacheGet(a1, (a2) => Effect.provideContext(TodoRepo.all(), fst(a0)))))\nexport const TodoApp_complete = (a0: readonly [readonly [Context.Context<\"TodoRepo\">, Ref.Ref<Option.Option<ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }>>>], number]): Effect.Effect<{ readonly done: boolean; readonly id: number; readonly title: string }, readonly [\"SqlError\", string] | NotFound, never> => Effect.suspend(() => Effect.flatMap(Effect.succeed(snd(fst(a0))), (a1) => Effect.flatMap(Effect.provideContext(Effect.flatMap(Effect.succeed(snd(a0)), (a2) => Effect.flatMap(TodoRepo.setDone(pair(a2, true)), (a3) => optionCase(a3, () => Effect.fail(new NotFound({ id: a2 })), (a4) => Effect.succeed(a4)))), fst(fst(a0))), (a2) => Effect.flatMap(listCacheInvalidate(a1), (a3) => Effect.succeed(a2)))))\nexport const TodoApp_remove = (a0: readonly [readonly [Context.Context<\"TodoRepo\">, Ref.Ref<Option.Option<ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }>>>], number]): Effect.Effect<void, readonly [\"SqlError\", string] | NotFound, never> => Effect.suspend(() => Effect.flatMap(Effect.succeed(snd(fst(a0))), (a1) => Effect.flatMap(Effect.provideContext(Effect.flatMap(Effect.succeed(snd(a0)), (a2) => Effect.flatMap(TodoRepo.delete(a2), (a3) => ifCase(() => a3, () => Effect.succeed(undefined), () => Effect.fail(new NotFound({ id: a2 }))))), fst(fst(a0))), (a2) => Effect.flatMap(listCacheInvalidate(a1), (a3) => Effect.succeed(a2)))))\nexport const ListCache = Context.Service<\"ListCache\", { readonly get: (load: (a0: void) => Effect.Effect<ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }>, readonly [\"SqlError\", string], never>) => Effect.Effect<ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }>, readonly [\"SqlError\", string], never>; readonly invalidate: () => Effect.Effect<void, never, never> }>(\"ListCache\")\nexport const ListCacheLayer = Layer.effect(ListCache, Effect.map(listCacheMake(), (a0) => {\n  return { get: (load: (a0: void) => Effect.Effect<ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }>, readonly [\"SqlError\", string], never>) => listCacheGet(a0, load), invalidate: () => listCacheInvalidate(a0) }\n}))\nexport const TodoApp = Context.Service<\"TodoApp\", { readonly add: (a1: string) => Effect.Effect<{ readonly done: boolean; readonly id: number; readonly title: string }, readonly [\"SqlError\", string] | readonly [\"EmptyTitle\", \"a title is required\"], never>; readonly list: () => Effect.Effect<ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }>, readonly [\"SqlError\", string], never>; readonly complete: (a1: number) => Effect.Effect<{ readonly done: boolean; readonly id: number; readonly title: string }, readonly [\"SqlError\", string] | NotFound, never>; readonly remove: (a1: number) => Effect.Effect<void, readonly [\"SqlError\", string] | NotFound, never> }>(\"TodoApp\")\nexport const TodoAppLayer = Layer.effect(TodoApp, Effect.map(TodoAppContext(), (a0) => {\n  return { add: (a1: string) => TodoApp_add(pair(a0, a1)), list: () => TodoApp_list(a0), complete: (a1: number) => TodoApp_complete(pair(a0, a1)), remove: (a1: number) => TodoApp_remove(pair(a0, a1)) }\n}))\nexport const main: Effect.Effect<readonly [ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }>, ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }>, { readonly done: boolean; readonly id: number; readonly title: string }, ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }>], readonly [\"SqlError\", string] | readonly [\"EmptyTitle\", \"a title is required\"], \"TodoRepo\"> = Effect.flatMap(TodoAppContext(), (a0) => Effect.flatMap(TodoApp_list(a0), (a1) => Effect.flatMap(TodoApp_list(a0), (a2) => Effect.flatMap(TodoApp_add(pair(a0, \"tea\")), (a3) => Effect.flatMap(TodoApp_list(a0), (a4) => Effect.succeed(tuple(a1, a2, a3, a4)))))))\n",
+    "name": "todo/cached-list-after-add",
+    "namespaces": [],
+    "observation": {
+      "calls": [
+        [
+          "TodoRepo.all",
+          null
+        ],
+        [
+          "TodoRepo.insert",
+          "tea"
+        ],
+        [
+          "TodoRepo.all",
+          null
+        ]
+      ],
+      "outcome": {
+        "success": [
+          [
+            {
+              "args": [
+                [
+                  "done",
+                  "id",
+                  "title"
+                ],
+                [
+                  false,
+                  1,
+                  "milk"
+                ]
+              ],
+              "ctor": 0
+            }
+          ],
+          [
+            {
+              "args": [
+                [
+                  "done",
+                  "id",
+                  "title"
+                ],
+                [
+                  false,
+                  1,
+                  "milk"
+                ]
+              ],
+              "ctor": 0
+            }
+          ],
+          {
+            "args": [
+              [
+                "done",
+                "id",
+                "title"
+              ],
+              [
+                false,
+                2,
+                "tea"
+              ]
+            ],
+            "ctor": 0
+          },
+          [
+            {
+              "args": [
+                [
+                  "done",
+                  "id",
+                  "title"
+                ],
+                [
+                  false,
+                  1,
+                  "milk"
+                ]
+              ],
+              "ctor": 0
+            },
+            {
+              "args": [
+                [
+                  "done",
+                  "id",
+                  "title"
+                ],
+                [
+                  false,
+                  2,
+                  "tea"
+                ]
+              ],
+              "ctor": 0
+            }
+          ]
+        ]
+      },
+      "refusals": []
+    },
+    "premises": {
+      "cells": true,
+      "dispatchers": true,
+      "fibers": true,
+      "sleeps": true
+    },
+    "readers": {},
+    "refusedReaders": [],
+    "scenario": "todo",
+    "services": [
+      "TodoRepo"
+    ],
+    "session": "todo",
+    "table": [
+      {
+        "answer": {
+          "_tag": "record",
+          "fields": [
+            [
+              "done",
+              [
+                false,
+                {
+                  "_tag": "bool"
+                }
+              ]
+            ],
+            [
+              "id",
+              [
+                false,
+                {
+                  "_tag": "nat"
+                }
+              ]
+            ],
+            [
+              "title",
+              [
+                false,
+                {
+                  "_tag": "string"
+                }
+              ]
+            ]
+          ]
+        },
+        "cite": "the to-do scenario",
+        "error": {
+          "_tag": "prod",
+          "left": {
+            "_tag": "lit",
+            "value": "SqlError"
+          },
+          "right": {
+            "_tag": "string"
+          }
+        },
+        "kind": "async",
+        "name": "TodoRepo.insert",
+        "registration": "external",
+        "request": {
+          "_tag": "string"
+        },
+        "requires": [
+          {
+            "name": {
+              "value": 30
+            },
+            "service": {
+              "value": 6
+            }
+          }
+        ],
+        "shape": "call",
+        "spelling": "TodoRepo.insert",
+        "trailing": [],
+        "typeArgs": []
+      },
+      {
+        "answer": {
+          "_tag": "list",
+          "inner": {
+            "_tag": "record",
+            "fields": [
+              [
+                "done",
+                [
+                  false,
+                  {
+                    "_tag": "bool"
+                  }
+                ]
+              ],
+              [
+                "id",
+                [
+                  false,
+                  {
+                    "_tag": "nat"
+                  }
+                ]
+              ],
+              [
+                "title",
+                [
+                  false,
+                  {
+                    "_tag": "string"
+                  }
+                ]
+              ]
+            ]
+          }
+        },
+        "cite": "the to-do scenario",
+        "error": {
+          "_tag": "prod",
+          "left": {
+            "_tag": "lit",
+            "value": "SqlError"
+          },
+          "right": {
+            "_tag": "string"
+          }
+        },
+        "kind": "async",
+        "name": "TodoRepo.all",
+        "registration": "external",
+        "request": {
+          "_tag": "unit"
+        },
+        "requires": [
+          {
+            "name": {
+              "value": 30
+            },
+            "service": {
+              "value": 6
+            }
+          }
+        ],
+        "shape": "call",
+        "spelling": "TodoRepo.all",
+        "trailing": [],
+        "typeArgs": []
+      },
+      {
+        "answer": {
+          "_tag": "option",
+          "inner": {
+            "_tag": "record",
+            "fields": [
+              [
+                "done",
+                [
+                  false,
+                  {
+                    "_tag": "bool"
+                  }
+                ]
+              ],
+              [
+                "id",
+                [
+                  false,
+                  {
+                    "_tag": "nat"
+                  }
+                ]
+              ],
+              [
+                "title",
+                [
+                  false,
+                  {
+                    "_tag": "string"
+                  }
+                ]
+              ]
+            ]
+          }
+        },
+        "cite": "the to-do scenario",
+        "error": {
+          "_tag": "prod",
+          "left": {
+            "_tag": "lit",
+            "value": "SqlError"
+          },
+          "right": {
+            "_tag": "string"
+          }
+        },
+        "kind": "async",
+        "name": "TodoRepo.setDone",
+        "registration": "external",
+        "request": {
+          "_tag": "prod",
+          "left": {
+            "_tag": "nat"
+          },
+          "right": {
+            "_tag": "bool"
+          }
+        },
+        "requires": [
+          {
+            "name": {
+              "value": 30
+            },
+            "service": {
+              "value": 6
+            }
+          }
+        ],
+        "shape": "call",
+        "spelling": "TodoRepo.setDone",
+        "trailing": [],
+        "typeArgs": []
+      },
+      {
+        "answer": {
+          "_tag": "bool"
+        },
+        "cite": "the to-do scenario",
+        "error": {
+          "_tag": "prod",
+          "left": {
+            "_tag": "lit",
+            "value": "SqlError"
+          },
+          "right": {
+            "_tag": "string"
+          }
+        },
+        "kind": "async",
+        "name": "TodoRepo.delete",
+        "registration": "external",
+        "request": {
+          "_tag": "nat"
+        },
+        "requires": [
+          {
+            "name": {
+              "value": 30
+            },
+            "service": {
+              "value": 6
+            }
+          }
+        ],
+        "shape": "call",
+        "spelling": "TodoRepo.delete",
+        "trailing": [],
+        "typeArgs": []
+      }
+    ]
+  },
+  "host": {
+    "name": "todo/cached-list-after-add",
+    "exit": {
+      "success": [
+        [
+          {
+            "ctor": 0,
+            "args": [
+              [
+                "done",
+                "id",
+                "title"
+              ],
+              [
+                false,
+                1,
+                "milk"
+              ]
+            ]
+          }
+        ],
+        [
+          {
+            "ctor": 0,
+            "args": [
+              [
+                "done",
+                "id",
+                "title"
+              ],
+              [
+                false,
+                1,
+                "milk"
+              ]
+            ]
+          }
+        ],
+        {
+          "ctor": 0,
+          "args": [
+            [
+              "done",
+              "id",
+              "title"
+            ],
+            [
+              false,
+              2,
+              "tea"
+            ]
+          ]
+        },
+        [
+          {
+            "ctor": 0,
+            "args": [
+              [
+                "done",
+                "id",
+                "title"
+              ],
+              [
+                false,
+                1,
+                "milk"
+              ]
+            ]
+          },
+          {
+            "ctor": 0,
+            "args": [
+              [
+                "done",
+                "id",
+                "title"
+              ],
+              [
+                false,
+                2,
+                "tea"
+              ]
+            ]
+          }
+        ]
+      ]
+    },
+    "measured": {
+      "outcome": {
+        "success": [
+          [
+            {
+              "ctor": 0,
+              "args": [
+                [
+                  "done",
+                  "id",
+                  "title"
+                ],
+                [
+                  false,
+                  1,
+                  "milk"
+                ]
+              ]
+            }
+          ],
+          [
+            {
+              "ctor": 0,
+              "args": [
+                [
+                  "done",
+                  "id",
+                  "title"
+                ],
+                [
+                  false,
+                  1,
+                  "milk"
+                ]
+              ]
+            }
+          ],
+          {
+            "ctor": 0,
+            "args": [
+              [
+                "done",
+                "id",
+                "title"
+              ],
+              [
+                false,
+                2,
+                "tea"
+              ]
+            ]
+          },
+          [
+            {
+              "ctor": 0,
+              "args": [
+                [
+                  "done",
+                  "id",
+                  "title"
+                ],
+                [
+                  false,
+                  1,
+                  "milk"
+                ]
+              ]
+            },
+            {
+              "ctor": 0,
+              "args": [
+                [
+                  "done",
+                  "id",
+                  "title"
+                ],
+                [
+                  false,
+                  2,
+                  "tea"
+                ]
+              ]
+            }
+          ]
+        ]
+      },
+      "calls": [
+        [
+          "TodoRepo.all",
+          null
+        ],
+        [
+          "TodoRepo.insert",
+          "tea"
+        ],
+        [
+          "TodoRepo.all",
+          null
+        ]
+      ]
+    },
+    "predicted": {
+      "refusals": []
+    }
+  },
+  "replay": {
+    "name": "todo/cached-list-after-add",
+    "result": {
+      "fields": {
+        "calls": true,
+        "outcome": true,
+        "refusals": true
+      },
+      "journal": true,
+      "observation": {
+        "calls": [
+          [
+            "TodoRepo.all",
+            null
+          ],
+          [
+            "TodoRepo.insert",
+            "tea"
+          ],
+          [
+            "TodoRepo.all",
+            null
+          ]
+        ],
+        "outcome": {
+          "success": [
+            [
+              {
+                "args": [
+                  [
+                    "done",
+                    "id",
+                    "title"
+                  ],
+                  [
+                    false,
+                    1,
+                    "milk"
+                  ]
+                ],
+                "ctor": 0
+              }
+            ],
+            [
+              {
+                "args": [
+                  [
+                    "done",
+                    "id",
+                    "title"
+                  ],
+                  [
+                    false,
+                    1,
+                    "milk"
+                  ]
+                ],
+                "ctor": 0
+              }
+            ],
+            {
+              "args": [
+                [
+                  "done",
+                  "id",
+                  "title"
+                ],
+                [
+                  false,
+                  2,
+                  "tea"
+                ]
+              ],
+              "ctor": 0
+            },
+            [
+              {
+                "args": [
+                  [
+                    "done",
+                    "id",
+                    "title"
+                  ],
+                  [
+                    false,
+                    1,
+                    "milk"
+                  ]
+                ],
+                "ctor": 0
+              },
+              {
+                "args": [
+                  [
+                    "done",
+                    "id",
+                    "title"
+                  ],
+                  [
+                    false,
+                    2,
+                    "tea"
+                  ]
+                ],
+                "ctor": 0
+              }
+            ]
+          ]
+        },
+        "refusals": []
+      },
+      "same": true,
+      "verdicts": [
+        "progressed",
+        "bound",
+        "preflight",
+        "applied",
+        "bound",
+        "preflight",
+        "applied",
+        "bound",
+        "preflight",
+        "applied",
+        "progressed"
+      ]
+    }
+  },
+  "checks": {
+    "conforming": true,
+    "journal": true,
+    "name": "todo/cached-list-after-add",
+    "scriptedConforming": true,
+    "scriptedSettled": true,
+    "settled": true
+  }
+}

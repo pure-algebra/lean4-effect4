@@ -1,0 +1,357 @@
+✖ [388/388] Building Effect4.Laws.Program.Agreement.ContextSegment (1.5s)
+trace: .> LEAN_PATH=/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4-codex/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/Dev/lean4-effect4-codex/src/Effect4/Laws/Program/Agreement/ContextSegment.lean -o /Users/pooks/Dev/lean4-effect4-codex/.lake/build/lib/lean/Effect4/Laws/Program/Agreement/ContextSegment.olean -i /Users/pooks/Dev/lean4-effect4-codex/.lake/build/lib/lean/Effect4/Laws/Program/Agreement/ContextSegment.ilean -c /Users/pooks/Dev/lean4-effect4-codex/.lake/build/ir/Effect4/Laws/Program/Agreement/ContextSegment.c --setup /Users/pooks/Dev/lean4-effect4-codex/.lake/build/ir/Effect4/Laws/Program/Agreement/ContextSegment.setup.json --json
+error: src/Effect4/Laws/Program/Agreement/ContextSegment.lean:218:8: Tactic `subst` failed: did not find equation for eliminating 's''
+
+case finished
+table : RowTable
+root : NativeEff
+hroot : PlainHooks root
+fuel : Nat
+ih :
+  ∀ (m : Nat),
+    m < fuel →
+      ∀ (cur : NCode) (K : List NCode) (i : Bool) (s : Stores) (k : Nat) (tr : NTrace) (nt : Nat) (ctx : Ctx)
+        (d : Bool),
+        PlainCode cur = true →
+          PlainStack K →
+            Quiet s →
+              (d = true → (∀ (t : EffThunk), cur ≠ Prim.sync t) ∧ IsCall cur = false) →
+                settled
+                      (driveState (interpOf root table) m (M (fiberOf cur K i) s k tr nt ctx) [cmdOf d, Cmd.drainDue]) =
+                    true →
+                  ∃ result,
+                    driveState (interpOf root table) m (M (fiberOf cur K i) s k tr nt ctx) [cmdOf d, Cmd.drainDue] =
+                        (result, []) ∧
+                      ContextSegOwes root table (fiberOf cur K i) s ctx result
+cur : NCode
+K : List NCode
+i : Bool
+s : Stores
+k : Nat
+tr : NTrace
+nt : Nat
+ctx : Ctx
+d : Bool
+hpl : PlainCode cur = true
+hK : PlainStack K
+hq : Quiet s
+hd : d = true → (∀ (t : EffThunk), cur ≠ Prim.sync t) ∧ IsCall cur = false
+hreceipt :
+  settled (driveState (interpOf root table) fuel (M (fiberOf cur K i) s k tr nt ctx) [cmdOf d, Cmd.drainDue]) = true
+recurse :
+  ∀ (a : Nat),
+    0 < a →
+      ∀ (cur₁ : NCode) (K₁ : List NCode) (i₁ : Bool) (s₁ : Stores) (k₁ : Nat) (tr₁ : NTrace) (ctx₁ : Ctx) (d₁ : Bool),
+        PlainCode cur₁ = true →
+          PlainStack K₁ →
+            Quiet s₁ →
+              (d₁ = true → (∀ (t : EffThunk), cur₁ ≠ Prim.sync t) ∧ IsCall cur₁ = false) →
+                ReachesQ root 1 (fiberOf cur K i) s (fiberOf cur₁ K₁ i₁) s₁ ctx ctx₁ →
+                  (∀ (n : Nat),
+                      driveState (interpOf root table) (n + a) (M (fiberOf cur K i) s k tr nt ctx)
+                          [cmdOf d, Cmd.drainDue] =
+                        driveState (interpOf root table) n (M (fiberOf cur₁ K₁ i₁) s₁ k₁ tr₁ nt ctx₁)
+                          [cmdOf d₁, Cmd.drainDue]) →
+                    ∃ result,
+                      driveState (interpOf root table) fuel (M (fiberOf cur K i) s k tr nt ctx)
+                            [cmdOf d, Cmd.drainDue] =
+                          (result, []) ∧
+                        ContextSegOwes root table (fiberOf cur K i) s ctx result
+hns : ∀ (t : EffThunk), cur ≠ Prim.sync t
+hnc : IsCall cur = false
+hk :
+  d = false →
+    (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) ctx).snd = true ∨
+      k + 1 < (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) ctx).fst
+ctx' : Ctx
+ex : ExitV
+s' : Stores
+hstep : contextStep root (fiberOf cur K i) s ctx = (LocalStep.finished ex s', ctx')
+hs : s' = s ∧ ctx' = ctx
+⊢ ∃ result,
+    driveState (interpOf root table) fuel (M (fiberOf cur K i) s k tr nt ctx) [cmdOf d, Cmd.drainDue] = (result, []) ∧
+      ContextSegOwes root table (fiberOf cur K i) s ctx result
+error: src/Effect4/Laws/Program/Agreement/ContextSegment.lean:246:49: Tactic `rewrite` failed: Did not find an occurrence of the pattern
+  driveState (interpOf root ?m.860) (?n + 1) (M (fiberOf cur K i) s k tr nt ctx) [Cmd.loop Api.root false, Cmd.drainDue]
+in the target expression
+  driveState (interpOf root table) (n + 1 + 1) (M (fiberOf cur K i) s k tr nt ctx) [cmdOf false, Cmd.drainDue] =
+    (Mcall (fiberOf cur K i) s (k + 1) tr₁ nt ctx, [])
+
+case pos.true.refine_1
+table : RowTable
+root : NativeEff
+hroot : PlainHooks root
+fuel : Nat
+ih :
+  ∀ (m : Nat),
+    m < fuel →
+      ∀ (cur : NCode) (K : List NCode) (i : Bool) (s : Stores) (k : Nat) (tr : NTrace) (nt : Nat) (ctx : Ctx)
+        (d : Bool),
+        PlainCode cur = true →
+          PlainStack K →
+            Quiet s →
+              (d = true → (∀ (t : EffThunk), cur ≠ Prim.sync t) ∧ IsCall cur = false) →
+                settled
+                      (driveState (interpOf root table) m (M (fiberOf cur K i) s k tr nt ctx) [cmdOf d, Cmd.drainDue]) =
+                    true →
+                  ∃ result,
+                    driveState (interpOf root table) m (M (fiberOf cur K i) s k tr nt ctx) [cmdOf d, Cmd.drainDue] =
+                        (result, []) ∧
+                      ContextSegOwes root table (fiberOf cur K i) s ctx result
+cur : NCode
+K : List NCode
+i : Bool
+s : Stores
+k : Nat
+tr : NTrace
+nt : Nat
+ctx : Ctx
+hpl : PlainCode cur = true
+hK : PlainStack K
+hq : Quiet s
+hd : false = true → (∀ (t : EffThunk), cur ≠ Prim.sync t) ∧ IsCall cur = false
+hreceipt :
+  settled (driveState (interpOf root table) fuel (M (fiberOf cur K i) s k tr nt ctx) [cmdOf false, Cmd.drainDue]) = true
+recurse :
+  ∀ (a : Nat),
+    0 < a →
+      ∀ (cur₁ : NCode) (K₁ : List NCode) (i₁ : Bool) (s₁ : Stores) (k₁ : Nat) (tr₁ : NTrace) (ctx₁ : Ctx) (d₁ : Bool),
+        PlainCode cur₁ = true →
+          PlainStack K₁ →
+            Quiet s₁ →
+              (d₁ = true → (∀ (t : EffThunk), cur₁ ≠ Prim.sync t) ∧ IsCall cur₁ = false) →
+                ReachesQ root 1 (fiberOf cur K i) s (fiberOf cur₁ K₁ i₁) s₁ ctx ctx₁ →
+                  (∀ (n : Nat),
+                      driveState (interpOf root table) (n + a) (M (fiberOf cur K i) s k tr nt ctx)
+                          [cmdOf false, Cmd.drainDue] =
+                        driveState (interpOf root table) n (M (fiberOf cur₁ K₁ i₁) s₁ k₁ tr₁ nt ctx₁)
+                          [cmdOf d₁, Cmd.drainDue]) →
+                    ∃ result,
+                      driveState (interpOf root table) fuel (M (fiberOf cur K i) s k tr nt ctx)
+                            [cmdOf false, Cmd.drainDue] =
+                          (result, []) ∧
+                        ContextSegOwes root table (fiberOf cur K i) s ctx result
+advance :
+  (∀ (t : EffThunk), cur ≠ Prim.sync t) →
+    IsCall cur = false →
+      (false = false →
+          (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) ctx).snd = true ∨
+            k + 1 < (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) ctx).fst) →
+        ∃ result,
+          driveState (interpOf root table) fuel (M (fiberOf cur K i) s k tr nt ctx) [cmdOf false, Cmd.drainDue] =
+              (result, []) ∧
+            ContextSegOwes root table (fiberOf cur K i) s ctx result
+hk :
+  (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) ctx).snd = true ∨
+    k + 1 < (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) ctx).fst
+hc : IsCall cur = true
+tr₁ : NTrace
+hdrv :
+  ∀ (n : Nat),
+    driveState (interpOf root ?m.860) (n + 1) (M (fiberOf cur K i) s k tr nt ctx)
+        [Cmd.loop Api.root false, Cmd.drainDue] =
+      driveState (interpOf root ?m.860) n (Mcall (fiberOf cur K i) s (k + 1) tr₁ nt ctx) [Cmd.drainDue]
+n : Nat
+⊢ driveState (interpOf root table) (n + 1 + 1) (M (fiberOf cur K i) s k tr nt ctx) [cmdOf false, Cmd.drainDue] =
+    (Mcall (fiberOf cur K i) s (k + 1) tr₁ nt ctx, [])
+error: src/Effect4/Laws/Program/Agreement/ContextSegment.lean:259:26: Insufficient number of fields for `⟨...⟩` constructor: Constructor `And.intro` has 2 explicit field, but only 1 was provided
+error: src/Effect4/Laws/Program/Agreement/ContextSegment.lean:259:41: Missing eliminator: An eliminator must be provided when multiple induction targets are specified and no default eliminator has been registered
+
+Hint: Write `using <eliminator-name>` to specify an eliminator, or register a default eliminator with the attribute `[cases_eliminator]`
+error: src/Effect4/Laws/Program/Agreement/ContextSegment.lean:268:28: Insufficient number of fields for `⟨...⟩` constructor: Constructor `And.intro` has 2 explicit field, but only 1 was provided
+error: src/Effect4/Laws/Program/Agreement/ContextSegment.lean:268:43: Missing eliminator: An eliminator must be provided when multiple induction targets are specified and no default eliminator has been registered
+
+Hint: Write `using <eliminator-name>` to specify an eliminator, or register a default eliminator with the attribute `[cases_eliminator]`
+error: src/Effect4/Laws/Program/Agreement/ContextSegment.lean:277:28: Insufficient number of fields for `⟨...⟩` constructor: Constructor `And.intro` has 2 explicit field, but only 1 was provided
+error: src/Effect4/Laws/Program/Agreement/ContextSegment.lean:277:43: Missing eliminator: An eliminator must be provided when multiple induction targets are specified and no default eliminator has been registered
+
+Hint: Write `using <eliminator-name>` to specify an eliminator, or register a default eliminator with the attribute `[cases_eliminator]`
+error: src/Effect4/Laws/Program/Agreement/ContextSegment.lean:280:53: Tactic `rewrite` failed: Did not find an occurrence of the pattern
+  driveState (interpOf root ?m.1545) (?n + 1) (M (fiberOf (Prim.sync (EffThunk.op o)) K i) s k tr nt ctx)
+    [Cmd.loop Api.root false, Cmd.drainDue]
+in the target expression
+  driveState (interpOf root table) (n + 1 + 1) (M (fiberOf (Prim.sync (EffThunk.op o)) K i) s k tr nt ctx)
+      [cmdOf false, Cmd.drainDue] =
+    driveState (interpOf root table) n (M (fiberOf (Prim.success v) K i) s₁ (k + 1) tr₁ nt ctx)
+      [cmdOf true, Cmd.drainDue]
+
+case pos.false.true.op.some
+table : RowTable
+root : NativeEff
+hroot : PlainHooks root
+fuel : Nat
+ih :
+  ∀ (m : Nat),
+    m < fuel →
+      ∀ (cur : NCode) (K : List NCode) (i : Bool) (s : Stores) (k : Nat) (tr : NTrace) (nt : Nat) (ctx : Ctx)
+        (d : Bool),
+        PlainCode cur = true →
+          PlainStack K →
+            Quiet s →
+              (d = true → (∀ (t : EffThunk), cur ≠ Prim.sync t) ∧ IsCall cur = false) →
+                settled
+                      (driveState (interpOf root table) m (M (fiberOf cur K i) s k tr nt ctx) [cmdOf d, Cmd.drainDue]) =
+                    true →
+                  ∃ result,
+                    driveState (interpOf root table) m (M (fiberOf cur K i) s k tr nt ctx) [cmdOf d, Cmd.drainDue] =
+                        (result, []) ∧
+                      ContextSegOwes root table (fiberOf cur K i) s ctx result
+K : List NCode
+i : Bool
+s : Stores
+k : Nat
+tr : NTrace
+nt : Nat
+ctx : Ctx
+hK : PlainStack K
+hq : Quiet s
+hk :
+  (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) ctx).snd = true ∨
+    k + 1 < (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) ctx).fst
+o : SyncOp
+hd :
+  false = true →
+    (∀ (t : EffThunk), Prim.sync (EffThunk.op o) ≠ Prim.sync t) ∧ IsCall (Prim.sync (EffThunk.op o)) = false
+hreceipt :
+  settled
+      (driveState (interpOf root table) fuel (M (fiberOf (Prim.sync (EffThunk.op o)) K i) s k tr nt ctx)
+        [cmdOf false, Cmd.drainDue]) =
+    true
+recurse :
+  ∀ (a : Nat),
+    0 < a →
+      ∀ (cur₁ : NCode) (K₁ : List NCode) (i₁ : Bool) (s₁ : Stores) (k₁ : Nat) (tr₁ : NTrace) (ctx₁ : Ctx) (d₁ : Bool),
+        PlainCode cur₁ = true →
+          PlainStack K₁ →
+            Quiet s₁ →
+              (d₁ = true → (∀ (t : EffThunk), cur₁ ≠ Prim.sync t) ∧ IsCall cur₁ = false) →
+                ReachesQ root 1 (fiberOf (Prim.sync (EffThunk.op o)) K i) s (fiberOf cur₁ K₁ i₁) s₁ ctx ctx₁ →
+                  (∀ (n : Nat),
+                      driveState (interpOf root table) (n + a)
+                          (M (fiberOf (Prim.sync (EffThunk.op o)) K i) s k tr nt ctx) [cmdOf false, Cmd.drainDue] =
+                        driveState (interpOf root table) n (M (fiberOf cur₁ K₁ i₁) s₁ k₁ tr₁ nt ctx₁)
+                          [cmdOf d₁, Cmd.drainDue]) →
+                    ∃ result,
+                      driveState (interpOf root table) fuel (M (fiberOf (Prim.sync (EffThunk.op o)) K i) s k tr nt ctx)
+                            [cmdOf false, Cmd.drainDue] =
+                          (result, []) ∧
+                        ContextSegOwes root table (fiberOf (Prim.sync (EffThunk.op o)) K i) s ctx result
+advance :
+  (∀ (t : EffThunk), Prim.sync (EffThunk.op o) ≠ Prim.sync t) →
+    IsCall (Prim.sync (EffThunk.op o)) = false →
+      (false = false →
+          (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) ctx).snd = true ∨
+            k + 1 < (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) ctx).fst) →
+        ∃ result,
+          driveState (interpOf root table) fuel (M (fiberOf (Prim.sync (EffThunk.op o)) K i) s k tr nt ctx)
+                [cmdOf false, Cmd.drainDue] =
+              (result, []) ∧
+            ContextSegOwes root table (fiberOf (Prim.sync (EffThunk.op o)) K i) s ctx result
+hc : IsCall (Prim.sync (EffThunk.op o)) = false
+hsync : isSync (Prim.sync (EffThunk.op o)) = true
+hpl : True
+s₁ : Stores
+v : Val
+hso : syncOpStep o s = some (s₁, v)
+hq₁ : Quiet s₁
+tr₁ : NTrace
+hdrv :
+  ∀ (n : Nat),
+    driveState (interpOf root ?m.1545) (n + 1) (M (fiberOf (Prim.sync (EffThunk.op o)) K i) s k tr nt ctx)
+        [Cmd.loop Api.root false, Cmd.drainDue] =
+      driveState (interpOf root ?m.1545) n (M (fiberOf (Prim.success v) K i) s₁ (k + 1) tr₁ nt ctx)
+        [Cmd.drainDue, Cmd.deliver Api.root false, Cmd.drainDue]
+hstep : localStep root (fiberOf (Prim.sync (EffThunk.op o)) K i) s = LocalStep.running (fiberOf (Prim.success v) K i) s₁
+n : Nat
+⊢ driveState (interpOf root table) (n + 1 + 1) (M (fiberOf (Prim.sync (EffThunk.op o)) K i) s k tr nt ctx)
+      [cmdOf false, Cmd.drainDue] =
+    driveState (interpOf root table) n (M (fiberOf (Prim.success v) K i) s₁ (k + 1) tr₁ nt ctx)
+      [cmdOf true, Cmd.drainDue]
+error: src/Effect4/Laws/Program/Agreement/ContextSegment.lean:291:49: Tactic `rewrite` failed: Did not find an occurrence of the pattern
+  driveState (interpOf root ?m.1778) (?n + 2) (M (fiberOf cur K i) s k tr nt ctx)
+    [Cmd.loop Api.root false, Cmd.drainDue]
+in the target expression
+  driveState (interpOf root table) (n + 1 + 2) (M (fiberOf cur K i) s k tr nt ctx) [cmdOf false, Cmd.drainDue] =
+    (Myield (fiberOf cur K i) s (k + 2) tr₁ nt ctx, [])
+
+case neg.refine_1
+table : RowTable
+root : NativeEff
+hroot : PlainHooks root
+fuel : Nat
+ih :
+  ∀ (m : Nat),
+    m < fuel →
+      ∀ (cur : NCode) (K : List NCode) (i : Bool) (s : Stores) (k : Nat) (tr : NTrace) (nt : Nat) (ctx : Ctx)
+        (d : Bool),
+        PlainCode cur = true →
+          PlainStack K →
+            Quiet s →
+              (d = true → (∀ (t : EffThunk), cur ≠ Prim.sync t) ∧ IsCall cur = false) →
+                settled
+                      (driveState (interpOf root table) m (M (fiberOf cur K i) s k tr nt ctx) [cmdOf d, Cmd.drainDue]) =
+                    true →
+                  ∃ result,
+                    driveState (interpOf root table) m (M (fiberOf cur K i) s k tr nt ctx) [cmdOf d, Cmd.drainDue] =
+                        (result, []) ∧
+                      ContextSegOwes root table (fiberOf cur K i) s ctx result
+cur : NCode
+K : List NCode
+i : Bool
+s : Stores
+k : Nat
+tr : NTrace
+nt : Nat
+ctx : Ctx
+hpl : PlainCode cur = true
+hK : PlainStack K
+hq : Quiet s
+hd : false = true → (∀ (t : EffThunk), cur ≠ Prim.sync t) ∧ IsCall cur = false
+hreceipt :
+  settled (driveState (interpOf root table) fuel (M (fiberOf cur K i) s k tr nt ctx) [cmdOf false, Cmd.drainDue]) = true
+recurse :
+  ∀ (a : Nat),
+    0 < a →
+      ∀ (cur₁ : NCode) (K₁ : List NCode) (i₁ : Bool) (s₁ : Stores) (k₁ : Nat) (tr₁ : NTrace) (ctx₁ : Ctx) (d₁ : Bool),
+        PlainCode cur₁ = true →
+          PlainStack K₁ →
+            Quiet s₁ →
+              (d₁ = true → (∀ (t : EffThunk), cur₁ ≠ Prim.sync t) ∧ IsCall cur₁ = false) →
+                ReachesQ root 1 (fiberOf cur K i) s (fiberOf cur₁ K₁ i₁) s₁ ctx ctx₁ →
+                  (∀ (n : Nat),
+                      driveState (interpOf root table) (n + a) (M (fiberOf cur K i) s k tr nt ctx)
+                          [cmdOf false, Cmd.drainDue] =
+                        driveState (interpOf root table) n (M (fiberOf cur₁ K₁ i₁) s₁ k₁ tr₁ nt ctx₁)
+                          [cmdOf d₁, Cmd.drainDue]) →
+                    ∃ result,
+                      driveState (interpOf root table) fuel (M (fiberOf cur K i) s k tr nt ctx)
+                            [cmdOf false, Cmd.drainDue] =
+                          (result, []) ∧
+                        ContextSegOwes root table (fiberOf cur K i) s ctx result
+advance :
+  (∀ (t : EffThunk), cur ≠ Prim.sync t) →
+    IsCall cur = false →
+      (false = false →
+          (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) ctx).snd = true ∨
+            k + 1 < (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) ctx).fst) →
+        ∃ result,
+          driveState (interpOf root table) fuel (M (fiberOf cur K i) s k tr nt ctx) [cmdOf false, Cmd.drainDue] =
+              (result, []) ∧
+            ContextSegOwes root table (fiberOf cur K i) s ctx result
+hk :
+  ¬((stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) ctx).snd = true ∨
+      k + 1 < (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) ctx).fst)
+hp : (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) ctx).snd = false
+hbudget : (stores.budgetOf (Prim Name Machine.Thunk Val Err Defect FiberId Ann) ctx).fst ≤ k + 1
+tr₁ : NTrace
+hdrv :
+  ∀ (n : Nat),
+    driveState (interpOf root ?m.1778) (n + 2) (M (fiberOf cur K i) s k tr nt ctx)
+        [Cmd.loop Api.root false, Cmd.drainDue] =
+      driveState (interpOf root ?m.1778) n (Myield (fiberOf cur K i) s (k + 2) tr₁ nt ctx) [Cmd.drainDue]
+n : Nat
+⊢ driveState (interpOf root table) (n + 1 + 2) (M (fiberOf cur K i) s k tr nt ctx) [cmdOf false, Cmd.drainDue] =
+    (Myield (fiberOf cur K i) s (k + 2) tr₁ nt ctx, [])
+error: Lean exited with code 1
+Some required targets logged failures:
+- Effect4.Laws.Program.Agreement.ContextSegment

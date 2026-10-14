@@ -1,14 +1,14 @@
 # PROC-6 landing receipt
 
-Slices P and A are committed and approved.
-The coordinator update is merged, and every required A behavior gate passes.
-Slices B through E are committed and pass their builds and exact audits.
-The block-session claim is proved for the stage 3 fragment at the empty context.
-F still owes the context extension and scheduler agreement at every budget.
+PROC-6 is ready for the coordinator to merge from `codex/proc6`.
+Slices P through G are committed, and their required builds, exact audits and behavior gates pass.
+The block-session claim covers the context extension at every scheduler budget under its completed-run premises.
+The request checker uses fresh cached service state, and the new cache sequence passes the outside comparison.
+No progress, funding, persistent-session or whole-runtime claim follows.
 
 Status: receipt, history rather than authority.
 Evidence kinds: checked Lean builds, exact axiom audits, finite controls, and outside behavior comparisons.
-Scope: decisions row 379. This checkpoint records P and A; later sections record subsequent slices.
+Scope: decisions row 379. This receipt records P through G.
 
 ## Commits and ownership
 
@@ -21,6 +21,8 @@ Scope: decisions row 379. This checkpoint records P and A; later sections record
 | A core head | `479f2d7ddac01962e2c0423199d782454a66b11e` |
 | A hooks head | `8576f0db4c1497714c38735103d871cb16b6bac5` |
 | Coordinator merge | `5290731d502d5a9f3335d950b8117b4146143eb4` |
+| F code head | `0f1eb5308fe7d0cf4ceea2438712667d826f5d45` |
+| G code head | `8dd51ebfbf13a845385f25cc4a116110377bba31` |
 
 The main checkout and Gemini worktree receive no source edits from this seat.
 The coordinator owns merging this branch.
@@ -235,18 +237,22 @@ B replaces the old block meaning and migrates its consumers and claim pointers.
 Its twelve stage 0 goals are proved.
 C through E prove block plainness, forward agreement, closing steps and the validated consumers.
 All 24 goals placed in P are proved at the E checkpoint.
-F still owes machine forms with a context and scheduler agreement at every context budget.
-G still owes the shipped consumer's per-request replay and keyed composite check.
+F proves the context forms and receipt-conditioned scheduler agreement at every context budget.
+G completes the shipped consumer's per-request replay and keyed composite check.
+No obligation of the locked PROC-6 plan remains open.
+The plan's horizon remains outside this landing: layers, persistent service state, concurrent requests and general inlining.
 
-The new fragments impose no row-column or service-key restriction.
+The landing adds no row-column or service-key restriction beyond the approved block fragment.
 The landing introduces no budget-safety invariant.
 The completed-run premise supplies no progress, termination, funding or host-conformance proof.
 
 Proposed register note, for the coordinator:
 
-> PROC-6 slices P and A implement row 379's placement and lexical-call preparation.
-> The block-session claim remains a planned goal.
-> The continuation review approves both slices and authorizes B through F under its stop rules.
+> PROC-6 replaces the former block meaning with the context-reading block meaning.
+> The block-session claim is proved on `BlockRows` under its explicit completed-session premises.
+> Context operations and every scheduler budget enter through the finite command receipt.
+> The recorded-request checker uses the fresh service consumer, and the keyed cache sequence passes on rc.112.
+> No progress, funding or arbitrary host-conformance claim follows.
 
 The decision register stays unchanged in this branch.
 
@@ -261,6 +267,10 @@ It retains the failed intermediate logs beside the successful replacements.
 The manifest records exact evidence hashes and source commits.
 The subagent reports are independent source reviews, not additional Lean runs.
 Every Lake run uses the shared slot.
+F and G retain the original bytes of their placement snapshots and audit source.
+[The narrow whitespace record](landing-evidence/g/retained-whitespace.json) lists the staged whitespace findings confined to that evidence.
+Production source and this receipt pass their whitespace checks.
+The retained sources are historical evidence; no library root imports them.
 Existing installed dependencies supply Bun and tsgo; the wrapper adds `--no-install` to nested Bun calls.
 The version record reports Bun 1.4.2, tsgo 7.0.0-dev.20260629.1 and dune 3.24.2.
 
@@ -425,3 +435,166 @@ next goals: 0
 The integrated audit removes E's former dependencies on C and D goals.
 No behavior gate is reached.
 [The E manifest](landing-evidence/e/manifest.json) retains exact evidence and all 24 statement comparisons.
+
+## Slice F
+
+The hosted run carries the current context through calls and waiting observations.
+The block-session theorem now covers the four context constructs at every scheduler budget.
+Its completed-session premise remains unchanged.
+It establishes no progress, funding, termination or outside-runtime claim.
+
+The segment proof consumes the actual finite command receipt.
+It reads the live budget and `preventYield` at each scheduler step.
+Its yield case permits zero local advancement.
+The flush proof consumes completed rounds and relates their wrapper frames through `RunJoinC`.
+Waiting observations retain the exact call, stores, host state and context.
+`Holds.hostAnswer_eq` separately recovers the actual request.
+
+`ParamsAgree` reads captured arguments at their invocation context.
+`CompilesBlk` quantifies that context explicitly.
+`H9Blocks` still starts at `emptyCtx`.
+The context bracket restores both context and mask after success or failure.
+The fragment adds no value, row-column, service-key or budget restriction.
+
+The former default-budget progress proofs retain their context-free scope.
+Their predicates are named `ContextFreeCode`, `ContextFreeStack` and `ContextFreeHooks`.
+The wider `Plain*` predicates serve the receipt-conditioned context proof.
+`localStep` and `localRun` remain unchanged.
+F changes neither `Program/Compile.lean` nor `Program/Agreement.lean`.
+
+The new leaves are `Agreement/ContextSteps.lean` and `Agreement/ContextSegment.lean`.
+`Blocks.lean` imports the first; `Hosted.lean` imports the second.
+Existing root imports reach both.
+Two existing tests follow the authorized widening and the retained context-free progress lane.
+
+Proof placement: translation-simulation, claim `rows-block-host`, requirement R6, serving R10.
+Context transitions serve the receipt driver, which serves the hosted decisions and `h9_blocks`.
+Bracket entrance and restoration serve the four context arms of `compilesBlk`.
+The existing `run_eq_meaning` connector continues to serve R8 on its context-free fragment.
+The retained placement snapshots name each new obligation before its checked proof replacement.
+
+The independent source review finds no stop-rule evidence.
+It confirms risk 6 at `meaning_settled` and `tape_holds_host`.
+The review is source evidence, separate from the combined build and axiom audit.
+
+The actual receipt replaces a uniform command bound for the widened scheduler proof.
+This proof choice keeps the approved completed-session conclusion and adds no progress premise.
+Administrative `restoreCtx` frames admit any plain body.
+The source fragment remains limited to its four approved context constructs.
+Exited machine forms retain the previous context's cached budget and clear their stored context.
+The forms therefore match the existing machine reset exactly.
+
+The final combined verification and source hashes are recorded in `landing-evidence/f/`.
+
+Base: `9138ecfe1fb91e8aaecc33a966f9e888ad270922`.
+The interface checkpoint is `cc73b2072f4bb6bd076f84a12213b006aad937ba`.
+Code head: `0f1eb5308fe7d0cf4ceea2438712667d826f5d45`.
+[The F source digest](landing-evidence/f/source-files.json) lists all nineteen changed files and their checked hashes.
+
+The shared slot runs `bash /tmp/proc6-landing/verify-f-combined.sh` once after integration:
+
+| Command | Result | Evidence |
+| --- | --- | --- |
+| `lake build Effect4 Effect4.Laws Test.Dogfood.Proofs.HostRouting Test.Program.AgreementContract` | PASS, 1535 jobs | `f-integrated-build.log` |
+| `lake env lean -DwarningAsError=true /tmp/proc6-landing/f-integrated-audit.lean` | PASS | `f-integrated-audit.log` |
+
+```text
+#axiom_audit: 2758 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+Effect4.Run.h9_blocks: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+```
+
+The audit covers the complete hosted spine and the two changed test modules.
+The placement, segment, forward, closing and session status probes all report proved with zero next goals.
+No stage 0 through 4 goal remains open.
+No outside gate is reached by F's proof edits.
+No stop rule fires, so the continuation prompt authorizes G.
+[The F manifest](landing-evidence/f/manifest.json) retains exact proof, build and source-review evidence.
+
+## Slice G
+
+The request checker now builds the cached service's consumer for each record.
+Its main invokes `TodoAppContext` once, then the selected method at that state and the record's literal arguments.
+Each run starts with empty stores.
+Only the reference model's state passes between records.
+Unknown method names refuse.
+The existing bare-entry builders and their claims remain unchanged.
+
+The keyed fixture performs `list`, `list`, `add`, then `list` on one service state.
+It returns the first list, the cache hit, the added item and the refreshed list.
+Its repository calls are exactly `TodoRepo.all`, `TodoRepo.insert`, then `TodoRepo.all`.
+The host runner selects the existing `cachedListAfterAdd("tea")` consumer.
+Fixture construction refuses a missing Lean builder.
+The observation, replay, exact-call association and negative controls remain in force.
+
+The four changed files are:
+
+- `Test/Dogfood/Scenario/Todo/Cached.lean`;
+- `apps/todo/Check.lean`;
+- `harness/truth/session/Keyed.lean`;
+- `harness/truth/service/run-todo.ts`.
+
+The semantics producer also updates `generated/semantics.md` after F and G.
+No new proof obligation is introduced in G.
+The new checks are finite evaluations and controls.
+They check four representative request builders and the composite against `BlockRows`.
+They check the composite's full exit, its three external calls and its fresh cache allocation.
+The generic claims retain their fragment, completed-run and tree-level premises.
+Runtime checks alone establish no arbitrary postcondition.
+
+The source review and focused build run on the assigned Sol 6.1 agents.
+The parent integrates all four files before the final checks.
+One standalone harness preflight finds a record-indentation error.
+The correction changes no expression or statement.
+The final preflight passes, and the outside gate runs only after it.
+The passed leaf build is not repeated after that correction.
+
+The emitted service remains byte-identical to the pre-G service.
+Its SHA256 is `7645c0e535c71c7acddca9f2a15d402679c6164b1bb7b9323bb4542d8f64eae3`.
+The conditional `check-target` and `check-ts-reader` gates are therefore not reached.
+The host-protocol gate checks the new printed composite and service consumer under tsgo 7.
+
+The twin agrees on the checked call tree.
+It does not replay the host layer's scope, memo map or service lookup steps.
+The outside evidence is finite and uses Effect 4.0.0-rc.112.
+Persistent service state, concurrent requests and whole-runtime agreement remain outside this landing.
+
+[The G manifest](landing-evidence/g/manifest.json) retains exact command logs, source hashes and host outputs.
+[The composite evidence](landing-evidence/g/cache-composite.json) joins its fixture, host observation, replay and checked verdicts.
+[The emission comparison](landing-evidence/g/emission-comparison.json) records the unchanged service bytes.
+
+Base: `0f1eb5308fe7d0cf4ceea2438712667d826f5d45`.
+Code and generated-report head: `8dd51ebfbf13a845385f25cc4a116110377bba31`.
+
+The shared slot runs the focused agent check, then the integrated preflight and final script:
+
+| Command | Result | Evidence |
+| --- | --- | --- |
+| `lake build Test.Dogfood.Scenario.Todo.Cached Tools.RunChecks` | PASS, 1190 jobs | `g-consumer/check.log` |
+| `lake env lean apps/todo/Check.lean` | PASS | `g-consumer/check.log` |
+| `lake build Test.Dogfood.Scenario.Todo.Cached` | PASS, 1188 jobs; reused artifacts | `g-build.log` |
+| `lake env lean -DwarningAsError=true harness/truth/session/Keyed.lean` | PASS after the indentation correction | `g-keyed-check.log` |
+| `lake env lean -DwarningAsError=true apps/todo/Check.lean` | PASS | `g-checker-check.log` |
+| `lake env lean -DwarningAsError=true /tmp/proc6-landing/g-final-audit.lean` | PASS | `g-final-audit.log` |
+| `make -o ts/eff/node_modules -o harness/truth/node_modules -o apps/todo/node_modules check-host-protocol` | PASS | `g-host-protocol.log` |
+| `make -o ts/eff/node_modules -o harness/truth/node_modules -o apps/todo/node_modules gen-semantics` | PASS, 1610 jobs | `final-semantics.log` |
+
+```text
+#axiom_audit: 30 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+Effect4.Run.h9_blocks: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+```
+
+The gate reports 60 tests passed and zero failed.
+It performs 14 to-do service scripts on rc.112 and replays each to its journal.
+Twelve conform; two of four paired runs agree with the model, matching their scripted controls.
+The new cache composite is settled and conforming, and its exact outcome, calls, refusals and journal match.
+The SQLite session contains 11 recorded requests, each passing Lean's five checks.
+The forgetful and titleless repositories fail the expected checks.
+Eight refused writes produce the declared row error, and three changed records fail their expected checks.
+The TypeScript compiler is tsgo `7.0.0-dev.20260629.1`; the host uses Bun `1.4.2` and Effect `4.0.0-rc.112`.
+
+The generated report lists `rows-block-host`, `block-handler-monotone` and `block-handler-unfolds` as proved.
+All nineteen verified F source hashes remain unchanged after G.
+No stop rule fires, and no required check remains open.
+The branch stays local for the coordinator's merge.
