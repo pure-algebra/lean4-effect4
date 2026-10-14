@@ -4,6 +4,8 @@ Status: a scout for review (history, not authority). It runs after SCOPE-1
 (`docs/research/2026-10-14-one-fiber-scout.md`), which runs after PROC-6. Base of the reading:
 `98589332f` on `refactor/phase1-phase3`.
 
+**Status, 2026-10-14 evening (decisions row 387).** The owner paused the general theory of module composition (rows 382 to 386). This plan's own aim stands: H9 on more constructs, so that more Effect code runs in a verified way. What the paused reviews learned is kept in `docs/research/2026-10-14-proc-close/modelling-check.md` §8 and `docs/research/2026-10-14-proc-close/codex-review.md`.
+
 ## 1. The one thing to know
 
 CONC-1 takes every construct that forks: the fork family, joins and awaits, races, interruption
@@ -114,37 +116,6 @@ flowchart TD
   fibers and the pool's trees, preserved by each decision.
 - With `run_eq_ref_table` and SCOPE-1's bridge (its check C0), the frame machine joins.
 
-### The congruence cases and the two connectors (amended 2026-10-14, decisions row 383)
-
-- Each forking construct adds its case to the congruence of the refinement order
-  (`meaning-refines`, the procedures close-out's slice L1): `fork` and its family, `await`,
-  a Deferred's await, `raceAll`, interruption between fibers, merged layers and parallel closes.
-  Over many fibers the order is inclusion of completed observations over decision tapes: every
-  outcome of the left under some tape is an outcome of the right under some tape.
-- With those cases, `inline-agrees` holds on the many-fiber fragment. Then the Queue's `take`,
-  `offer` and `poll`, Semaphore's `take` and `release`, and the `withPermits` family with
-  SynchronizedRef's `modify` reach their connectors:
-  `queue-definitions-agree` and `semaphore-definitions-agree` are proved here, and compose with
-  `queue-expansion-agrees` and `semaphore-expansion-agrees` by transitivity.
-- **The wrapper law, proved once** (decisions rows 384 (7), 385 (3)). The shared wrapper
-  (`src/Effect4/Library/Waiting.lean`) over steps that agree with a three-transition object
-  (attempt, signal, withdrawal) refines that object. A `waitRetry` operation is linearized at
-  its successful attempt, and a `waitAnswer` operation at the step that commits its answer. The waits and posts touch only the request's
-  own Deferreds, so they commute with every other fiber's step, and reduction leaves the atomic
-  steps. Each module's expansion claim is then its instance at its `StepsAgree`.
-- **The request protocol** (row 386 (8)). Registration and completion on one Deferred do not
-  commute, so the wrapper law goes through a protocol. It tracks pending requests, committed
-  answers, stale hints, posted helpers and withdrawals. It covers cancellation against commit and
-  completion at most once. Reduction applies only where disjointness is proved.
-- **Prefix observations** (row 386 (10)). `H9Fibers` is stated on funded prefixes and at rest,
-  not only on completed runs. The maintained relation is carried at prefixes, reusing `RowsEnd`,
-  `runRowsO` and `observeRows`. The crew's claims need it.
-- **Progress** (rows 384 (5), 385 (4), 386 (9)). A parked machine satisfies `FairTape`, so
-  progress is stated over a fair-execution definition connected to `FairTape`, with the
-  environment premises named. The order that keeps termination, under `FairTape`: the
-  implementation answers where the model answers. Each model states its guarantee: freedom from
-  deadlock by default, from starvation where it serves in order. Each bank claim carries it.
-
 ### Stage 4: H9 on many fibers
 
 - `H9Fibers`: a reached, funded, at-rest run of a program in the fragment, under a host and a
@@ -183,10 +154,6 @@ All goals: concept `translation-simulation`, except where named.
 | stage 3: the reference adequate to the handled meaning | step of `rows-fibers-host` | R6 | `H9Fibers` |
 | stage 4: `h9_fibers : H9Fibers` | `rows-fibers-host` (new), simulation | R6, serving R10 to R12 | the validated premises |
 | stage 5: the generic schedule-independence theorem | concept `reactive-scheduling` (row 361) | R12 | determinism claims on checked fragments |
-| stage 3: the congruence cases of the forking constructs | step of `meaning-refines` (row 383 (1)) | R10 | `inline-agrees` on many fibers; linearizability claims (row 382 (1)) |
-| stage 3: `queue-definitions-agree`, `semaphore-definitions-agree` | instances of `definitions-agree` (row 384 (7)) | R10 | every module built from the two modules' definitions |
-| stage 3: the wrapper law | the generic object claim (row 384 (6), (7)) | R10, R12 | each module's expansion claim, as an instance |
-| stage 4: refinement that keeps termination under fair tapes | step of each bank claim (row 384 (5)) | R12 | the progress half of every bank claim |
 
 `H9Fibers` does not establish progress, fairness or that a host answers; those are R12's
 liveness line and the host's assumption.

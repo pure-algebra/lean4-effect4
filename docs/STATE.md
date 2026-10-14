@@ -276,14 +276,7 @@ A program has folds, a journaled run with replay, and a printed image that reads
 
 ## Next, in order
 
-**PROC-6 landed** (row 379; merged `36ddb0b56`): `h9_blocks` is proved, with the context family at every scheduler budget. **Next, the procedures line's close-out** (row 383; [its brief](research/2026-10-14-proc-close/prompt.md)): one refinement order on the meaning with its congruence; the inlining law (G7) in it; the typing of an inlined program (CX3); and the Queue's and Semaphore's definition connectors, which reach their last operations through SCOPE-1's and CONC-1's congruence cases. A design note follows for generic definitions with methods that take programs (PROC-7, HO-5), and for one stage of closures held as data and one activation stack, which becomes SCOPE-1's stage 0. **Then** (rows 379 and 381): SCOPE-1, layers, scopes and services on one fiber
-([its scout](research/2026-10-14-one-fiber-scout.md)), then CONC-1, many fibers
-([its scout](research/2026-10-14-many-fibers-scout.md)). Both reach the machine through the
-proved `run_eq_ref_table`; each owes one adequacy theorem of the reference against the meaning.
-The first release is a TypeScript package of verified Effect modules with Effect's own APIs, each
-with its bank claim (row 381 (4)). A service is a record of closures held as data (row 381 (3)), and
-a module's instance is one (row 382 (2)). A module claims contextual refinement of its model, so
-modules compose by one congruence theorem (row 382 (1)); the order is row 382 (3).
+**PROC-6 landed** (row 379; merged `36ddb0b56`): `h9_blocks` is proved, with the context family at every scheduler budget. **Build first** (owner, row 387): the general theory of module composition (rows 382 to 386) pauses. Its findings are kept in [the modelling check](research/2026-10-14-proc-close/modelling-check.md) §8. **Next, in order:** (1) the vertical slice on every face (item 0000 below): the checked bank constructor, V3 (the runtime surface from Lean data) and V5 (OCaml natively, each run checked by Lean), with [its brief](research/2026-10-14-faces/prompt.md); (2) the queue-workers crew's open goals by the direct route (item 00); (3) SCOPE-1, layers, scopes and services on one fiber ([its scout](research/2026-10-14-one-fiber-scout.md)), then CONC-1, many fibers ([its scout](research/2026-10-14-many-fibers-scout.md)); (4) the lowering, V6. A service is a record of closures held as data (row 381 (3)), and a module's instance is one (row 382 (2)).
 
 0000. **The vertical slice: the to-do application end to end** (decisions row 378; the
    [lowering note](research/2026-10-13-lowering-vertical-slice/README.md) and the

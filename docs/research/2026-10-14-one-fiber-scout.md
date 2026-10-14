@@ -4,6 +4,8 @@ Status: a scout for review (history, not authority). It runs after PROC-6 lands,
 state. Base of the reading: `98589332f` on `refactor/phase1-phase3`; Codex's PROC-6 branch
 `codex/proc6` at `9d404a1ec` with slice A uncommitted.
 
+**Status, 2026-10-14 evening (decisions row 387).** The owner paused the general theory of module composition (rows 382 to 386). This plan's own aim stands: H9 on more constructs, so that more Effect code runs in a verified way. What the paused reviews learned is kept in `docs/research/2026-10-14-proc-close/modelling-check.md` §8 and `docs/research/2026-10-14-proc-close/codex-review.md`.
+
 ## 1. The one thing to know
 
 The owner, 2026-10-14: "no shortcuts, so we want all of the layers and scopes, obviously. Insert
@@ -118,13 +120,7 @@ flowchart TD
   S5 --> S6
 ```
 
-### Stage 0: closures as data, with one activation stack
-
-**Amended 2026-10-14 (decisions row 383 (5)).** This stage is one with PROC-8's value form and the
-merge of `Point.params` and `Point.call` into one stack of frames. The procedures close-out's
-design note (`docs/research/2026-10-14-proc-close/design.md`, its D2) designs all three and
-settles row 82's items. The bullets below are this scout's first sketch; the design note
-supersedes them where they differ.
+### Stage 0: closures as data
 
 - `Store.Val` gains a closure: a code reference and a captured value. The reference is a program
   path now; content addressing adds a digest as a second kind of reference, with no new carrier.
@@ -154,10 +150,6 @@ supersedes them where they differ.
   `denoteRowsB` has it.
 - **Laws** (§7): conservativity over PROC-6's fragment; monotonicity; the one-step laws; that
   the meaning's scope state equals the machine's (`closeOrder`).
-- **The congruence cases** (row 383 (1)): each new arm of the meaning adds its case to the
-  congruence of the refinement order (`meaning-refines`, the close-out's slice L1), beside the
-  block fragment's cases. Here: `scoped`, `acquireRelease`, `closeScope`, `onExit`'s restore,
-  and the masks (`uninterruptible`, `interruptible`, `restore`, `getInterruptible`).
 
 ### Stage 2: the sequential layers and the memo world in the meaning
 
@@ -171,7 +163,6 @@ supersedes them where they differ.
   observer and registers the entry's finalizer in the caller's scope; a miss builds and inserts.
   The in-flight Deferred is never awaited on one fiber.
 - A layer's identity is its path and the call that runs it (row 341, step 3).
-- **The congruence cases:** `provideLayer` and every sequential layer term.
 
 ### Stage 3: services as records of closures
 
@@ -211,14 +202,6 @@ supersedes them where they differ.
 - A sleep waits on the clock: the meaning's tree waits until the host's `advance` passes the
   deadline (`Timer`, `src/Effect4/Machine/Timer.lean`).
 - Open check C1 (§8): the exact delivery points on one fiber.
-- **The congruence cases:** interruption by the host, and a sleep.
-- **`protectedBy`'s masked-region law** (decisions row 386 (8)). The acquisition's commit and
-  the installation of the cleanup hook happen in one masked region, with no interruption
-  between them. G10 and Pool's `use` need it.
-- **The inlining law on one fiber** (row 383 (3)). With stages 1, 2 and 5's cases, `inline-agrees`
-  holds on `FiberRows`. That covers the protection wrapper (`protectedBy`) of `withPermits`,
-  `withPermitsIfAvailable` and SynchronizedRef's `modify`. Their take waits and their release
-  wakes waiters, so they complete in CONC-1.
 
 ### Stage 6: H9 on one fiber, and the shipped service
 
@@ -263,8 +246,6 @@ All goals: concept `translation-simulation` (`docs/core/semantics.md`), except w
 | stage 5: delivery under a mask | step of `rows-fiber-host`; `saved-mask-restoration` | R11 | `H9Fiber` with interruption |
 | stage 6: `h9_fiber : H9Fiber` | `rows-fiber-host` (new), simulation | R6, serving R10 and R11 | the validated premises |
 | stage 6: session composition | step of `rows-fiber-host` | R12 | the server-lifetime replay |
-| stages 1, 2, 5: the congruence cases of their arms | step of `meaning-refines` (row 383 (1)) | R10 | `inline-agrees` on `FiberRows`; the module claims of row 382 (1) |
-| stage 5: `inline-agrees` on `FiberRows` | step of `inline-agrees` | R10 | the protection wrapper inside `semaphore-definitions-agree`; CONC-1 completes it |
 
 `H9Fiber` does not establish forks, merged layers, parallel closes, races or progress. Those are
 CONC-1's, and progress stays the host's assumption (`host-progress`).
@@ -280,7 +261,6 @@ CONC-1's, and progress stays the host's assumption (`host-progress`).
   `Capture`), so the outer induction on the budget covers it as PROC-6's covers a call.
 - **C3.** The closure carrier: a new `Val` constructor, or `ArgSite` and `Capture` promoted. One
   carrier serves finalizers, methods and stored functions (`Cache`'s `lookup`, row 340 (2)).
-  The close-out's design note (D2) answers it.
 - **C4.** The function type printed for tsgo 7 (`(a: A) => Effect<B, E, R>`), and read back.
 - **C5.** `budgetOf` across a layer's scope: PROC-6's ruling 5 proves the machine at every
   scheduler budget, so a layer that provides the budget's keys is covered. Confirm at stage 4.

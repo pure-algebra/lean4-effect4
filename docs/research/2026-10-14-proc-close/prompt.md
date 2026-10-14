@@ -1,5 +1,7 @@
 # Codex: close out the procedures line (the locked brief)
 
+**Paused, 2026-10-14 evening (decisions row 387).** The owner paused this brief before any of it ran. Its findings stay as the reference for when the general theory resumes: §8 of `modelling-check.md` and `codex-review.md`, with their probes. The next work is the vertical slice (`docs/research/2026-10-14-faces/prompt.md`).
+
 ## The one thing to know first
 
 The plan is locked (decisions row 386). Three reviews shaped it: Gemini's two (`gemini-review.md`,

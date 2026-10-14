@@ -1,5 +1,7 @@
 # The modelling check: every relation of the verified line, written out
 
+**Paused, 2026-10-14 evening (decisions row 387).** The owner paused this brief before any of it ran. Its findings stay as the reference for when the general theory resumes: §8 of `modelling-check.md` and `codex-review.md`, with their probes. The next work is the vertical slice (`docs/research/2026-10-14-faces/prompt.md`).
+
 Status: research note (history, not authority). From the coordinator, 2026-10-14, at `c41c91d3a`.
 Decisions row 384 records the rulings it leads to.
 
