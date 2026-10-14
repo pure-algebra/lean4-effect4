@@ -1,0 +1,127 @@
+# Per-family git add and git commit commands for gemini/consolidation
+# Base commit: 3e86319b2
+# Ordered by rebuild cost, with Family 4 (Refs.lean) last.
+
+# 1. Family 7 — dead access lemmas (0 uses)
+git add src/Effect4/Laws/Program/References.lean
+git commit -m "Laws/Program/References: drop dead replaceLayerAt access lemmas"
+
+# 2. Family 5 — the bodies' spine (3 callers)
+git add src/Effect4/Laws/Program/AddressMove.lean src/Effect4/Laws/Program/Typed/Scope.lean
+git commit -m "Laws/Program/Typed/Scope: use Path.spineIndex_append for spineParams"
+
+# 3. Family 3 — a layer's node (5 callers)
+git add src/Effect4/Laws/Program/Typed/Scope.lean src/Effect4/Laws/Program/Typed/Denotation.lean src/Effect4/Laws/Program/Typed/LayerArm.lean
+git commit -m "Laws/Program/Typed: use Node.layerAt_eq_some_iff in place of Node.at_of_layerAt"
+
+# 4. Family 2 — a machine point's child (41 callers)
+git add src/Effect4/Laws/Program/Agreement.lean \
+  src/Effect4/Laws/Program/Intro/Weight.lean \
+  src/Effect4/Laws/Program/Intro/Sequential.lean \
+  src/Effect4/Laws/Program/Intro/Errors.lean \
+  src/Effect4/Laws/Program/Intro/Fibers.lean \
+  src/Effect4/Laws/Program/Intro/Layer.lean \
+  src/Effect4/Laws/Program/Intro/Scope.lean \
+  src/Effect4/Laws/Program/Typed/Mask.lean
+git commit -m "Laws/Program/Agreement: generalize at_child and drop Intro/Weight duplicates"
+
+# 5. Family 1 — one more child index (46 callers)
+git add src/Effect4/Laws/Program/Address.lean \
+  src/Effect4/Laws/Program/Agreement.lean \
+  src/Effect4/Laws/Program/NativeActionScope.lean \
+  src/Effect4/Laws/Program/Simulation/Hooks.lean \
+  src/Effect4/Laws/Program/SourceOpportunityActions.lean \
+  src/Effect4/Laws/Program/Typed/Denotation/Terms.lean \
+  src/Effect4/Laws/Program/Typed/Denotation/Arguments.lean \
+  src/Effect4/Laws/Program/Typed/LayerArm.lean \
+  src/Effect4/Laws/Program/Typed/Denotation.lean \
+  src/Effect4/Laws/Program/Typed/Commands/Clauses/Gen.lean
+git commit -m "Laws/Program/Address: add Node.at_snoc and consolidate child-extension lemmas"
+
+# 6. Family 6 — stranded basis in Laws/Program/Typing/
+git add src/Effect4/Program/Address.lean \
+  src/Effect4/Program/Typing/Splice.lean \
+  src/Effect4/Laws/Program/Address.lean \
+  src/Effect4/Laws/Program/Typing/Replace.lean \
+  src/Effect4/Laws/Program/Typing/Splice.lean \
+  src/Effect4/Laws/Program/Typing/PartsTable.lean
+git commit -m "Program/Address: move Table.under and Node.replaceAt basis from Typing"
+
+# 7. Family 4 — the order on keys and paths (Refs.lean last)
+git add src/Effect4/Program/Refs.lean \
+  src/Effect4/Laws/Program/References.lean \
+  src/Effect4/Laws/Program/PathOrder.lean \
+  src/Effect4/Laws/Program/Hoisting.lean \
+  src/Effect4/Laws/Program/HoistingTotal.lean \
+  src/Effect4/Laws/Codegen/Module.lean
+git commit -m "Program/Refs: alias Path.lt to Field.ltKey and drop duplicate PathOrder laws"
+
+# ==============================================================================
+# Round 2 — Base commit: 93a80a561
+# All 13 slices touch strictly disjoint file sets.
+# ==============================================================================
+
+# 8. Part A — #statement_census command and control battery
+git add tools/ProofGraph/StatementCensus.lean \
+  Test/Audit/StatementCensusControls.lean \
+  Test/All.lean
+git commit -m "ProofGraph/StatementCensus: add #statement_census and control battery"
+
+# 9. Family B1 — Laws/Codegen/PrintTyped duplicate perform head lemma
+git add src/Effect4/Laws/Codegen/PrintTyped.lean
+git commit -m "Laws/Codegen/PrintTyped: drop duplicate P2bRowSupport.rawPerformAt_head"
+
+# 10. Family B2 — Laws/Machine/AnswerFlowPop & AnswerFlowCausePop unused drain aliases
+git add src/Effect4/Laws/Machine/AnswerFlowPop.lean \
+  src/Effect4/Laws/Machine/AnswerFlowCausePop.lean
+git commit -m "Laws/Machine/AnswerFlow: drop unused drain_empty, drain_not_frame, and drain_cause aliases"
+
+# 11. Family B3 — Laws/Machine/FinalizerBookkeeping & Laws/Program/LedgerFinalizer unused aliases
+git add src/Effect4/Laws/Machine/FinalizerBookkeeping.lean \
+  src/Effect4/Laws/Program/LedgerFinalizer.lean
+git commit -m "Laws/Finalizer: drop unused Ledger and FinalizerRun duplicate aliases"
+
+# 12. Family B4 — Laws/Machine/Scheduling drainOwed_queue_aux
+git add src/Effect4/Laws/Machine/Scheduling.lean
+git commit -m "Laws/Machine/Scheduling: fold drainOwed_queue_aux into drainOwed_queue"
+
+# 13. Family B5 — Laws/Library/Queue/Ops duplicate message_nodes and offer_nodes
+git add src/Effect4/Laws/Library/Queue/Ops.lean
+git commit -m "Laws/Library/Queue/Ops: use message_nodes_for_steps and offer_nodes_for_steps directly"
+
+# 14. Family B6 — Laws/Library/Pool/Ops duplicate bool_nodes and unit_nodes
+git add src/Effect4/Laws/Library/Pool/Ops.lean
+git commit -m "Laws/Library/Pool/Ops: inline bool_nodes and unit_nodes checks"
+
+# 15. Family B7 — Laws/Api/MaskRuns duplicate inspect_machine
+git add src/Effect4/Laws/Api/MaskRuns.lean \
+  Test/Machine/MaskRuns.lean \
+  Test/Dogfood/Proofs/HostTimeoutHistory.lean
+git commit -m "Laws/Api/MaskRuns: consolidate HostSession.inspect_machine to Run.inspect_keeps_machine"
+
+# 16. Family B8 — Laws/Program/Guard/ControlRemainder duplicate interruptedAt_update_mark
+git add src/Effect4/Laws/Program/Guard/ControlRemainder.lean
+git commit -m "Laws/Program/Guard/ControlRemainder: use Finish.interruptedAt_update directly"
+
+# 17. Family B9 — Laws/Program/Guard/Driver duplicate driverContract_of_lift
+git add src/Effect4/Laws/Program/Guard/Driver.lean
+git commit -m "Laws/Program/Guard/Driver: fold driverContract_of_lift into driverContract"
+
+# 18. Family B10 — Laws/Program/MovesConnect & SourceOpportunityCommands unused duplicate connectors
+git add src/Effect4/Laws/Program/MovesConnect.lean \
+  src/Effect4/Laws/Program/SourceOpportunityCommands.lean
+git commit -m "Laws/Program: drop unused MovesConnect and SourceOpportunityCommands duplicates"
+
+# 19. Family B11 — Laws/Program/Bounds duplicate lookup_solve_seed
+git add src/Effect4/Laws/Program/Bounds.lean
+git commit -m "Laws/Program/Bounds: consolidate lookup_solve_seed to Template.solve_lookup_of_mem"
+
+# 20. Part C — Move mapM_error_mem and mapM_ok_each to Laws/Program/Authoring
+git add src/Effect4/Laws/Program/Authoring.lean \
+  src/Effect4/Laws/Program/ApplicationService.lean
+git commit -m "Laws/Program/Authoring: move mapM_error_mem and mapM_ok_each from ApplicationService"
+
+# 21. Round 2 receipt and commit script
+git add docs/research/2026-10-13-gemini-consolidation/README.md \
+  docs/research/2026-10-13-gemini-consolidation/commits.txt
+git commit -m "docs/research: record Round 2 statement census and consolidation receipt"
