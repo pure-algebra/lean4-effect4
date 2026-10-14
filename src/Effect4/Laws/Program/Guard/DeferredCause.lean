@@ -118,6 +118,7 @@ theorem exitScoped_deferredCause (p : NativeEff) (m : NativeMachine)
 
 /-- Native evaluation retains the deferred-cause implication for its returned
 fiber, for every root, table, machine, fiber, and yielding latch. -/
+@[semantics "reactive-scheduling"]
 theorem evaluateNative_deferredCause (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool)
     (hf : f.frame.deferredInterrupt = true → f.frame.interruptedCause.isSome = true) :
@@ -143,6 +144,7 @@ theorem injectYield_deferredCause (m : NativeMachine) (f : NFiber) (yielding : B
 
 /-- One native iteration retains the same implication. The evaluator instance
 is pinned explicitly; this is a returned-fiber law, not a machine invariant. -/
+@[semantics "reactive-scheduling"]
 theorem iteration_deferredCause (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool)
     (hf : f.frame.deferredInterrupt = true → f.frame.interruptedCause.isSome = true) :

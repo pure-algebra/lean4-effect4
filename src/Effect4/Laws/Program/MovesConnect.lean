@@ -31,64 +31,6 @@ namespace Effect4.Program.Moves
 
 open Effect4 Effect4.Machine Effect4.Program
 
-/-! ## The recorded interrupt -/
-
-/-- Each move keeps the recorded interrupt. -/
-theorem move_interruptedCause {f g : NFrame} (m : FrameMove f g) :
-    g.interruptedCause = f.interruptedCause :=
-  Guard.Interruption.move_interruptedCause m
-
-/-- A word keeps the recorded interrupt. -/
-theorem Moves.interruptedCause {f g : NFrame} (w : Moves f g) :
-    g.interruptedCause = f.interruptedCause :=
-  w.keeps (fun h => h.interruptedCause = f.interruptedCause)
-    (fun _ _ mv kept => (move_interruptedCause mv).trans kept) rfl
-
-/-- Connector of `Guard.Interruption.evaluateNative_interruptedCause`. -/
-@[semantics "reactive-scheduling"]
-theorem evaluateNative_interruptedCause (p : NativeEff) (table : RowTable)
-    (m : NativeMachine) (f : NFiber) (yielding : Bool) :
-    (evaluateNative p m f yielding table).fiber.frame.interruptedCause =
-      f.frame.interruptedCause :=
-  (evaluateNative_moves p table m f yielding).interruptedCause
-
-/-- Connector of `Guard.Interruption.iteration_interruptedCause`. -/
-@[semantics "reactive-scheduling"]
-theorem iteration_interruptedCause (p : NativeEff) (table : RowTable)
-    (m : NativeMachine) (f : NFiber) (yielding : Bool) :
-    letI := evaluatorFor p table
-    (iteration (interpOf p table) m f yielding).fiber.frame.interruptedCause =
-      f.frame.interruptedCause :=
-  (iteration_moves p table (interpOf p table) m f yielding).interruptedCause
-
-/-! ## The deferred bit's cause -/
-
-/-- Each move keeps "a deferred interrupt has a recorded cause". -/
-theorem move_deferredCause {f g : NFrame} (m : FrameMove f g)
-    (kept : Guard.DeferredCause.DeferredCause f) : Guard.DeferredCause.DeferredCause g :=
-  Guard.DeferredCause.move_deferredCause m kept
-
-/-- Connector of `Guard.DeferredCause.evaluateNative_deferredCause`. -/
-@[semantics "reactive-scheduling"]
-theorem evaluateNative_deferredCause (p : NativeEff) (table : RowTable)
-    (m : NativeMachine) (f : NFiber) (yielding : Bool)
-    (hf : f.frame.deferredInterrupt = true → f.frame.interruptedCause.isSome = true) :
-    (evaluateNative p m f yielding table).fiber.frame.deferredInterrupt = true →
-      (evaluateNative p m f yielding table).fiber.frame.interruptedCause.isSome = true :=
-  (evaluateNative_moves p table m f yielding).keeps Guard.DeferredCause.DeferredCause
-    (fun _ _ mv kept => move_deferredCause mv kept) hf
-
-/-- Connector of `Guard.DeferredCause.iteration_deferredCause`. -/
-@[semantics "reactive-scheduling"]
-theorem iteration_deferredCause (p : NativeEff) (table : RowTable)
-    (m : NativeMachine) (f : NFiber) (yielding : Bool)
-    (hf : f.frame.deferredInterrupt = true → f.frame.interruptedCause.isSome = true) :
-    letI := evaluatorFor p table
-    (iteration (interpOf p table) m f yielding).fiber.frame.deferredInterrupt = true →
-      (iteration (interpOf p table) m f yielding).fiber.frame.interruptedCause.isSome = true :=
-  (iteration_moves p table (interpOf p table) m f yielding).keeps
-    Guard.DeferredCause.DeferredCause (fun _ _ mv kept => move_deferredCause mv kept) hf
-
 /-! ## The finishing outcome -/
 
 /-- The finishing witness gives the empty returned stack.
