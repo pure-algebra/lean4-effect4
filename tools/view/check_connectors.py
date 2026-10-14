@@ -101,10 +101,11 @@ def tangent(curve, end):
 
 
 def angle(a, b):
-    return math.degrees(math.acos(max(-1, min(1, sum(x * y for x, y in zip(a, b))))))
+    # atan2 avoids acos amplification when two emitted directions agree exactly.
+    return math.degrees(math.atan2(abs(cross(a, b)), sum(x * y for x, y in zip(a, b))))
 
 
-def check_contour(contour, degrees=1.0, position_tolerance=1e-6):
+def check_contour(contour, degrees=0.0, position_tolerance=1e-6):
     """Check the symmetric two-side format and all its internal side joins."""
     issues, checked = [], 0
     curves = contour.cubics
@@ -133,10 +134,10 @@ def check_contour(contour, degrees=1.0, position_tolerance=1e-6):
             issues.append({"code": "TANGENT", "join_after": index, "detail": str(error)})
             continue
         checked += 1
-        if mismatch > degrees:
+        if mismatch > degrees + 1e-7:
             issues.append({"code": "TANGENT", "join_after": index,
                            "point": before[3], "angle_degrees": mismatch,
-                           "detail": "oriented endpoint tangents exceed the finite rounding tolerance"})
+                           "detail": "oriented endpoint tangents exceed the requested angle plus 1e-7 degree arithmetic tolerance"})
     return issues, checked
 
 
@@ -159,12 +160,12 @@ def keyed_paths(root):
     return groups
 
 
-def check_svg(path, degrees=1.0):
+def check_svg(path, degrees=0.0):
     data = path.read_bytes()
     return check_svg_text(data.decode("utf-8"), str(path), degrees, hashlib.sha256(data).hexdigest())
 
 
-def check_svg_text(text, name="fixture.svg", degrees=1.0, digest=None):
+def check_svg_text(text, name="fixture.svg", degrees=0.0, digest=None):
     result = {"file": name, "sha256": digest or hashlib.sha256(text.encode()).hexdigest(),
               "connectors": 0, "side_joins": 0, "issues": []}
     try:
@@ -315,8 +316,8 @@ def main():
     parser.add_argument("inputs", nargs="*", type=Path)
     parser.add_argument("--self-test", action="store_true")
     parser.add_argument("--kink-fixture", type=Path, help="confirm the named retained baseline defect")
-    parser.add_argument("--angle-degrees", type=float, default=1.0,
-                        help="finite emitted-coordinate tolerance; default 1 degree")
+    parser.add_argument("--angle-degrees", type=float, default=0.0,
+                        help="requested emitted angle tolerance; default 0 plus 1e-7 degree arithmetic tolerance")
     parser.add_argument("--json", type=Path, help="also save the complete diagnostic")
     args = parser.parse_args()
     if not (0 <= args.angle_degrees < 90 and math.isfinite(args.angle_degrees)):
@@ -347,6 +348,7 @@ def main():
             output["summary"] = {"files": len(files), "connectors": connectors,
                                  "side_joins": sum(file["side_joins"] for file in output["files"]),
                                  "issues": issues, "angle_degrees": args.angle_degrees,
+                                 "arithmetic_angle_tolerance": 1e-7,
                                  "result": "fail" if failed else "pass"}
     except (ValueError, OSError, ET.ParseError, AssertionError) as error:
         output["error"] = str(error)

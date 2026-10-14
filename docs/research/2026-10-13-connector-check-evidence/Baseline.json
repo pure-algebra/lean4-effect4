@@ -1094,7 +1094,8 @@
     "connectors": 103,
     "side_joins": 70,
     "issues": 98,
-    "angle_degrees": 1.0,
+    "angle_degrees": 0.0,
+    "arithmetic_angle_tolerance": 1e-07,
     "result": "fail"
   }
 }

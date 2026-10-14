@@ -40,7 +40,8 @@ The diagnostic checks every internal side junction, including each flare neck.
 It does not use producer metadata or discard failing joints.
 The last explicit cubic must return to the moveto within `1e-6` logical units.
 Side endpoints must agree within the same tolerance.
-Oriented side tangents must agree within one degree by default.
+Oriented side tangents must agree exactly by default.
+The numerical comparison allows `1e-7` degree for floating-point arithmetic.
 A zero first derivative uses the first nonzero endpoint control difference.
 A constant cubic has no admitted tangent.
 
@@ -92,7 +93,7 @@ No Lake build or axiom audit applies to this Python-only change.
 The constructor format bounds the check.
 Its two cap junctions remain deliberate exceptions.
 An arbitrary `stepY` corner needs a separate named fixture profile.
-One degree is a finite numerical tolerance, not a proved universal rounding bound.
+The arithmetic tolerance is finite numerical evidence, not a proved universal floating-point bound.
 The diagnostic establishes neither global simplicity nor correct docking, width, curvature, clearance, or program semantics.
 It does not compare browser pixels or interpret unbounded executions.
 The coordinator must run it against the replacement constructor's generated output.
