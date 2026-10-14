@@ -34,11 +34,6 @@ open Effect4.Machine.ForkLedger.Invariant Effect4.Program.Guard
 /-- **The finalizer ledger** of the chosen names. -/
 def finalizer (choose : EffName → Bool) : NLedger := FinalizerCredits.ledger choose
 
-/-- A sum of indicators is a count. -/
-theorem indicator_sum {γ : Type _} (p : γ → Bool) :
-    ∀ (items : List γ), (items.map fun x => if p x then 1 else 0).sum = items.countP p :=
-  FinalizerCredits.indicator_sum p
-
 /-- What a run event consumes is its finalizer-start indicator. -/
 theorem eventConsumed_eq (choose : EffName → Bool) :
     (finalizer choose).eventConsumed (χ := Ctx) = fun e => if runStarted choose e then 1 else 0 := by
@@ -73,14 +68,5 @@ theorem iterKept (choose : EffName → Bool) (m : NativeMachine) (f : NFiber) (n
 theorem kept (choose : EffName → Bool) (p : NativeEff) (table : RowTable) :
     (finalizer choose).Kept p table :=
   FinalizerTransfer.ledger_kept choose p table
-
-/-- **The run law's instance**: finalizer custody at every reachable machine, re-derived through
-`StackLedger.funded_reachable` with no command case of its own. -/
-@[semantics "scope-lifetime-finalization" (requirement := R11)]
-theorem funded_reachable (p : NativeEff) (table : RowTable) (cf : Nat) (m : NativeMachine)
-    (q : List Nat) (reached : Guard.Reachable p table cf m) :
-    FinalizerCredits.Funded (FinalizerRun.atPath q) m :=
-  (funded_iff _ m).mpr ((finalizer (FinalizerRun.atPath q)).funded_reachable 0 p table cf
-    (kept _ p table) ((funded_iff _ _).mp (FinalizerRun.load_funded p cf q)) m reached)
 
 end Effect4.Program.LedgerFinalizer

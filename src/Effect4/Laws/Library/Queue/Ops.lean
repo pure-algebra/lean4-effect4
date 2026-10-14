@@ -643,13 +643,6 @@ section OpsTyping
 
 variable {table : RowTable}
 
-/-- Every node of a message type that a cell holds is formed. -/
-theorem message_nodes {A : Ty} (message : MessageTy A) : NodesFormed A :=
-  Model.message_nodes_for_steps message
-
-theorem offer_nodes {A : Ty} (message : MessageTy A) : NodesFormed (Queue.offerTy A) :=
-  Model.offer_nodes_for_steps message
-
 theorem cell_nodes {A : Ty} (message : MessageTy A) : NodesFormed (Queue.cellTy A) := by
   intro t member
   have member' : t ∈ [Queue.cellTy A] ++ (Formation.nodes .nat ++
@@ -660,8 +653,8 @@ theorem cell_nodes {A : Ty} (message : MessageTy A) : NodesFormed (Queue.cellTy 
   · show (["cap", "msgs", "offers", "takers"] : List String).Nodup
     decide
   · exact nodesFormed_of_check (T := .nat) (by decide) t h
-  · exact nodesFormed_list (message_nodes message) t h
-  · exact nodesFormed_list (offer_nodes message) t h
+  · exact nodesFormed_list (Model.message_nodes_for_steps message) t h
+  · exact nodesFormed_list (Model.offer_nodes_for_steps message) t h
   · exact nodesFormed_of_check (T := .list Queue.takerTy) (by decide) t h
 
 theorem takeReply_nodes {A : Ty} (message : MessageTy A) : NodesFormed (takeReplyTy A) := by
@@ -672,8 +665,8 @@ theorem takeReply_nodes {A : Ty} (message : MessageTy A) : NodesFormed (takeRepl
   simp only [List.mem_append, List.mem_singleton, List.not_mem_nil, or_false] at member'
   rcases member' with rfl | h | h | h
   · exact trivial
-  · exact nodesFormed_option (message_nodes message) t h
-  · exact nodesFormed_list (offer_nodes message) t h
+  · exact nodesFormed_option (Model.message_nodes_for_steps message) t h
+  · exact nodesFormed_list (Model.offer_nodes_for_steps message) t h
   · exact nodesFormed_of_check (T := .list Queue.takerTy) (by decide) t h
 
 theorem pollReply_nodes {A : Ty} (message : MessageTy A) : NodesFormed (pollReplyTy A) := by
@@ -683,8 +676,8 @@ theorem pollReply_nodes {A : Ty} (message : MessageTy A) : NodesFormed (pollRepl
   simp only [List.mem_append, List.mem_singleton] at member'
   rcases member' with rfl | h | h
   · exact trivial
-  · exact nodesFormed_option (message_nodes message) t h
-  · exact nodesFormed_list (offer_nodes message) t h
+  · exact nodesFormed_option (Model.message_nodes_for_steps message) t h
+  · exact nodesFormed_list (Model.offer_nodes_for_steps message) t h
 
 theorem offerReply_nodes : NodesFormed offerReplyTy := nodesFormed_of_check (by decide)
 

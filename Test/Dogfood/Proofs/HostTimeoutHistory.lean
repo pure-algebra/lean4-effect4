@@ -116,7 +116,7 @@ theorem returned_body (s : Run) (reached : Run.Reached s)
   obtain ⟨classes, owned⟩ := reached_state s reached program table (appliedBodies s) (List.Subset.refl _)
   apply successful_root owned body
   change (s.inspect.machine.fiber? Api.root).bind RunFiber.exit = some (.success body) at returned
-  have inspection : s.inspect.machine = s.machine := Api.HostSession.inspect_machine s.session
+  have inspection : s.inspect.machine = s.machine := Run.inspect_keeps_machine s.session
   rw [inspection] at returned
   exact returned
 

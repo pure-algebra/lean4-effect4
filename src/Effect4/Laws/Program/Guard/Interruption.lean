@@ -120,6 +120,7 @@ theorem exitScoped_interruptedCause (p : NativeEff) (m : NativeMachine)
       f.frame.interruptedCause :=
   moves_interruptedCause (Moves.exitScoped_moves p m f yielding exit)
 
+@[semantics "reactive-scheduling"]
 theorem evaluateNative_interruptedCause (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) :
     (evaluateNative p m f yielding table).fiber.frame.interruptedCause =
@@ -140,6 +141,7 @@ theorem injectYield_interruptedCause (m : NativeMachine) (f : NFiber) (yielding 
   · injection h with h'; subst h'; rfl
   · cases h
 
+@[semantics "reactive-scheduling"]
 theorem iteration_interruptedCause (p : NativeEff) (table : RowTable)
     (m : NativeMachine) (f : NFiber) (yielding : Bool) :
     letI := evaluatorFor p table

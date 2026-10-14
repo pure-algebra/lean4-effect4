@@ -284,6 +284,9 @@ theorem Bounds.matchB_closed (seed : Ty.Subst) (t r : Ty) (h : t.closed = true) 
   dsimp only [Bounds.solve, List.filterMap_nil]
   simp only [List.append_nil, Ty.instantiate_closed seed t h]
 
+/-- A seed's binding survives the solve. It is a step of `matchB_sound`, and
+`matchB_sound_step` reads it. -/
+@[semantics "subtyping-algebra" (requirement := R4)]
 theorem Bounds.solve_lookup_of_mem {seed : Ty.Subst} {cs : List Bounds.Cand} {j : Nat} {u : Ty}
     (h : seed.lookup j = some u) : (Bounds.solve seed cs).lookup j = some u := by
   dsimp only [Bounds.solve]

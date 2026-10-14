@@ -210,12 +210,6 @@ theorem interruptRecord_credit (choose : ν → Bool) (interp : RunInterp ν σ 
     fiberCredits choose (interruptRecord interp who extra f).1 = fiberCredits choose f :=
   (ledger choose).interruptRecord_held interp who extra f
 
-/-- Interrupt delivery keeps the selected table key. -/
-theorem interruptRecord_key (interp : RunInterp ν σ β ε δ ι α χ St)
-    (who : Option FiberId) (extra : ReasonAnnotations α) (f : RunFiber ν σ β ε δ ι α χ) :
-    (interruptRecord interp who extra f).1.id = f.id :=
-  StackLedger.interruptRecord_key interp who extra f
-
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
 
 /-- Race allocation changes no stack or finalizer count, in either selection mode. -/
@@ -225,11 +219,6 @@ theorem same_beginRace (choose : ν → Bool) (interp : RunInterp ν σ β ε δ
     (mode : Supervision.RaceMode) :
     Same choose m (beginRace interp m f yielding programs site mode).machine :=
   (ledger_same choose _ _).mp ((ledger choose).same_beginRace interp m f yielding programs site mode)
-
-/-- Updating an absent key leaves the actual machine unchanged. -/
-theorem update_absent (m : RunMachine ν σ β ε δ ι α χ St)
-    (next : RunFiber ν σ β ε δ ι α χ) (missing : m.fiber? next.id = none) : m.update next = m :=
-  StackLedger.update_absent m next missing
 
 /-- Replacing a fiber spends its previous lookup credit; an absent key creates no table row. -/
 theorem update_bound (choose : ν → Bool) (m : RunMachine ν σ β ε δ ι α χ St)

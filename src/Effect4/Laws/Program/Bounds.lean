@@ -176,13 +176,6 @@ theorem instantiate_solve (seed : Subst) (cs : List Cand) (i : Nat) (hi : seed.l
   · rw [h, hl]
     rfl
 
-/-- It is a step of `matchB_sound`, and `matchB_sound_step` reads it. -/
-@[semantics "subtyping-algebra" (requirement := R4)]
-theorem lookup_solve_seed (seed : Subst) (cs : List Cand) {i : Nat} {u : Ty}
-    (hi : seed.lookup i = some u) : (solve seed cs).lookup i = some u := by
-  unfold solve
-  rw [List.lookup_append, hi, Option.some_or]
-
 /-! ## Sound: the guard is the law -/
 
 /-- Each argument below its parameter's instance at `τ`, in the checker's order. -/
@@ -200,7 +193,7 @@ theorem matchB_sound {seed σ : Subst} {t r : Ty} (h : matchB seed t r = some σ
   split at h
   · rename_i hg
     cases h
-    exact ⟨hg, fun j u hj => lookup_solve_seed seed _ hj⟩
+    exact ⟨hg, fun j u hj => solve_lookup_of_mem hj⟩
   · exact nomatch h
 
 /-- **The match of an argument list is sound at one instance**: every argument is below its
@@ -596,7 +589,7 @@ theorem solve_between (seed : Subst) (cs : List Cand) (τ : Subst)
   · intro i
     cases hs : seed.lookup i with
     | some u =>
-      rw [instantiate, lookup_solve_seed seed cs hs, hseed i u hs]
+      rw [instantiate, solve_lookup_of_mem hs, hseed i u hs]
       exact sub_refl _
     | none =>
       rw [instantiate_solve seed cs i hs]
@@ -610,7 +603,7 @@ theorem solve_between (seed : Subst) (cs : List Cand) (τ : Subst)
     have hcc := hcs c hc
     cases hs : seed.lookup c.1 with
     | some u =>
-      rw [instantiate, lookup_solve_seed seed cs hs]
+      rw [instantiate, solve_lookup_of_mem hs]
       show sub c.2.2 u.normalize = true
       rw [← hseed c.1 u hs]
       exact hcc.2.2

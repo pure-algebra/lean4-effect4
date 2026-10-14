@@ -31,19 +31,6 @@ theorem await_void_zero (root : NativeEff) (q : List Nat) (table : RowTable)
   change current root q (awaitCode (interpOf root table) m kind) + 0 = 0
   rw [await_code_zero, Nat.add_zero]
 
-/-- Posting a dispatcher task retains all stored fiber identities.
-Consumer: repeated due-store draining. -/
-theorem post_task_ids (m : NativeMachine) (owner : FiberId) (priority : Nat)
-    (task : Task EffName EffThunk Val Err Defect FiberId Ann) :
-    (m.postTask owner priority task).fibers.map (fun fiber => fiber.id) = m.fibers.map (fun fiber => fiber.id) := by
-  unfold RunMachine.postTask
-  split
-  · rfl
-  · rename_i fiber found
-    change (m.update {fiber with dispatcher := fiber.dispatcher.enqueue priority task}).fibers.map
-      (fun fiber => fiber.id) = m.fibers.map (fun fiber => fiber.id)
-    exact RunMachine.update_keeps_ids _ _
-
 /-- The source ledger weighs no store. Consumer: `source_local`. -/
 theorem source_stores (root : NativeEff) (q : List Nat) (table : RowTable) :
     PlaceFunding.StoreHooks (PlaceLedgerConnect.source root q) (interpOf root table) where

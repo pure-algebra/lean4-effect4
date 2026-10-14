@@ -82,15 +82,10 @@ theorem guard_request (p : NativeEff) (table : RowTable) :
   · exact requestOrInterrupted_driveStep p table m c rest h.1.1 h.1.2.1 fiber token request kept
   · exact Or.inr (interruptedAt_driveStep p table m c rest h.1.1 fiber interrupted)
 
-/-- **The guard's contract is an instance.** All four fields of `DriverContract` come from the
-one loop lift, each at its own invariant, with the guard's per-command lemmas as premises. -/
-theorem driverContract_of_lift (p : NativeEff) (table : RowTable) : DriverContract p table :=
-  ⟨guard_invariant p table, guard_reserved p table, guard_request p table,
-    guard_interrupted p table⟩
-
 /-- The native command driver satisfies the internal contract for every fuel budget.
 The generic loop lift supplies all four fields from the per-command facts. -/
 theorem driverContract (p : NativeEff) (table : RowTable) : DriverContract p table :=
-  driverContract_of_lift p table
+  ⟨guard_invariant p table, guard_reserved p table, guard_request p table,
+    guard_interrupted p table⟩
 
 end Effect4.Program.Guard

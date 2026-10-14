@@ -397,6 +397,8 @@ import Test.Dogfood.Scenario.TodoFile
 import Test.Dogfood.ApplicationDefs
 -- The to-do with the banked Ref cache imposed on its service (row 378 (8), seat IMPOSE).
 import Test.Dogfood.Scenario.Todo.Cached
+-- The statement census and its controls (consolidation round 2).
+import Test.Audit.StatementCensusControls
 
 /-!
 # Effect4 test battery
