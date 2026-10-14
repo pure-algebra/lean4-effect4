@@ -18,18 +18,6 @@ variable {World Kind : Type w}
 variable (model : Model (ν := ν) (σ := σ) (β := β) (ε := ε) (δ := δ) (ι := ι) (α := α) World Kind)
 variable (interp : PrimInterp ν σ β ε δ ι α)
 
-/-- The fused failure pop discards a restoring mask's replacement. The carried cause is kept,
-or, where the restore meets a recorded interrupt, the interrupt is added to it (latest's walk;
-U-01). Consumer: the structural induction proceeds through the original saved list. -/
-theorem drain_cause (code : Prim ν σ β ε δ ι α) (fiber : FrameFiber ν σ β ε δ ι α)
-    (cause : Cause ε δ ι α) (empty : fiber.stack = []) :
-    (FrameFiber.passPushed .contE true (code.ensure fiber).1 (some cause)).answer = .empty ∧
-    ((FrameFiber.passPushed .contE true (code.ensure fiber).1 (some cause)).carriedCause = some cause ∨
-      ∃ interrupted, fiber.interruptedCause = some interrupted ∧
-        (FrameFiber.passPushed .contE true (code.ensure fiber).1 (some cause)).carriedCause =
-          some (Cause.combine cause interrupted)) :=
-  External.drain_cause code fiber cause empty
-
 /-- Passing an interrupted saved frame uses its exact discard or missing-arm clause. -/
 theorem saved_discard_cause (world : World) (input middle : Kind)
     (code : Prim ν σ β ε δ ι α) (fiber : FrameFiber ν σ β ε δ ι α)

@@ -19,20 +19,6 @@ variable {World Kind : Type w}
 variable (model : Model (ν := ν) (σ := σ) (β := β) (ε := ε) (δ := δ) (ι := ι) (α := α) World Kind)
 variable (interp : PrimInterp ν σ β ε δ ι α)
 
-/-- Draining the actual hook's scratch stack leaves it empty. -/
-theorem drain_empty (demand : Arm) (skip : Bool) (code : Prim ν σ β ε δ ι α) (fiber : FrameFiber ν σ β ε δ ι α)
-    (empty : fiber.stack = []) :
-    (FrameFiber.passPushed demand skip (code.ensure fiber).1).fiber.stack = [] :=
-  PopTrace.drain_empty demand skip code fiber empty
-
-/-- A pushed mask cannot select a callback at an absent arm. -/
-theorem drain_not_frame (demand : Arm) (skip : Bool)
-    (missing : (Prim.setInterruptible true : Prim ν σ β ε δ ι α).hasArm demand = false)
-    (code selected : Prim ν σ β ε δ ι α)
-    (fiber : FrameFiber ν σ β ε δ ι α) (empty : fiber.stack = []) :
-    (FrameFiber.passPushed demand skip (code.ensure fiber).1).answer ≠ .frame selected :=
-  PopTrace.drain_not_frame demand skip missing code selected fiber empty
-
 /-- The actual value pop carries its incoming value into the selected saved callback.
 It retains the suffix after that callback's actual mask hook. -/
 theorem popFrom_value_selected (world : World) (input output : Kind)
