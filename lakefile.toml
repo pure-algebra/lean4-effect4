@@ -119,8 +119,7 @@ srcDir = "tools"
 root = "Drivers.SemanticsControls"
 moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
-# The studio's visual pages (`tools/view/v -V`): the vocabulary of marks, the value pictures and
-# the tube language, native, since a film samples every change of every beat.
+# The studio's visual pages (`tools/view/v -V`): the vocabulary of marks and the value pictures.
 [[lean_exe]]
 name = "view-pages"
 srcDir = "tools"

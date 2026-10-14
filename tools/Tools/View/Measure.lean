@@ -1,7 +1,7 @@
 import Whatwg.Html.Print.Render
 
 /-!
-# Tools.View.Tube.Measure — what each figure costs, and the limits a documentation page holds
+# Tools.View.Measure — what each figure costs, and the limits a documentation page holds
 
 Slice M1 of the motion plan (`docs/research/2026-10-13-motion-everywhere/README.md`, §6 and §7).
 A page's figures are read from the blocks it writes: each `figure` element is one row, with its
@@ -14,7 +14,7 @@ The limits are the plan's proposal (§6.3), as data: a still of 25 KB, a film of
 page is measured and reported, never refused. The owner rules the numbers.
 -/
 
-namespace Tools.View.Tube.Measure
+namespace Tools.View.Measure
 open Whatwg.Html
 
 /-- **One figure's cost** on a page: its caption's first words, its bytes, its animation elements
@@ -131,4 +131,4 @@ def HEAD : String := "page\tfigure\tkind\tbytes\tanimations\tpath bytes"
   | .ok _ => false
 #guard (({ film := 10 } : Limits).check { page := "q", figure := "A run", bytes := 10, animations := 1, pathBytes := 0 }).isOk
 
-end Tools.View.Tube.Measure
+end Tools.View.Measure

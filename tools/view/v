@@ -13,7 +13,7 @@
 #   v -H NAME        the run's page in the browser: its frames as SVG, stepped like the window
 #   v -G             every kept run in the browser, newest first: tools/view/out/index.html
 #   v -d             the document specimen, dark beside paper, in the studio (tools/Drivers/DocSpecimen.lean)
-#   v -V [cells|tubes|tube-glyphs|program-pegs] marks, cells, tube studies, peg vocabulary, program tiles
+#   v -V [cells]     the vocabulary of marks, or the Queue's cell drawn by its type
 #                    (tools/Drivers/GlyphSheet.lean writes both)
 #   v -m N ...       N pictures of motion between two frames (default 20; 1 draws none)
 #   v -P ...         no marks: the plain page (the marks wait for the owner's ruling)
@@ -84,12 +84,6 @@ if [ "$cmd" = vocabulary ]; then
   (cd "$root" && LEAN_NUM_THREADS=3 lake build -q view-pages && .lake/build/bin/view-pages "$here/out/docs")
   if [ "${1:-}" = cells ]; then
     show "http://localhost:8783/tools/view/out/docs/cells.html" "Effect4 · the Queue's cell"
-  elif [ "${1:-}" = tubes ]; then
-    show "http://localhost:8783/tools/view/out/docs/tubes.html" "Effect4 · one body: the tube language"
-  elif [ "${1:-}" = tube-glyphs ]; then
-    show "http://localhost:8783/tools/view/out/docs/tube-glyphs.html" "Effect4 · the peg vocabulary"
-  elif [ "${1:-}" = program-pegs ]; then
-    show "http://localhost:8783/tools/view/out/docs/program-pegs.html" "Effect4 · programs on the peg grid"
   else
     show "http://localhost:8783/tools/view/out/docs/glyphs.html" "Effect4 · the vocabulary of marks"
   fi

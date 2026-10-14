@@ -267,9 +267,7 @@ repository's `.lake/gen`, reached from the folder when it lies inside the workin
 def studioLinks (dir : System.FilePath) : IO (List (String × String)) := do
   let mut links : Array (String × String) := #[]
   if ← (dir / "looks" / "index.html").pathExists then links := links.push ("looks", "looks/index.html")
-  for (label, file) in [("marks", "glyphs.html"), ("cells", "cells.html"),
-      ("tube studies", "tubes.html"), ("peg vocabulary", "tube-glyphs.html"),
-      ("program pegs", "program-pegs.html")] do
+  for (label, file) in [("marks", "glyphs.html"), ("cells", "cells.html")] do
     if ← (dir / "docs" / file).pathExists then links := links.push (label, "docs/" ++ file)
   let probes := dir / "probes"
   if ← probes.isDir then

@@ -374,14 +374,13 @@ A program has folds, a journaled run with replay, and a printed image that reads
    in a typed shell with the site's navigation. Its first semantics page is the open work: each
    planned goal with its docstring, and each modulo theorem's chain to it. Next: the design and
    semantics grill. The C player stays first-class (row
-   363, point 5). The [tube language](research/2026-10-13-tube-language/README.md) (rows 369, 370)
-   draws every mark as tubes in one proportion, and a queue's units move by a driver model. The
-   [motion plan](research/2026-10-13-motion-everywhere/README.md) gives every construct a picture
-   and a film. M1 (each figure's cost) landed, and M5 has a first cut: a run as a score, a staff
-   for each fiber (`7817efdf0`). The kit's S24 is pinned (`ec25409f4`). The kit move (M7) has two
-   steps: every join by the kit's blend, and every stretch by its trapezoid profile (`b7a6a9cb6`,
-   `1f25ccd66`). Next: the rest of M7, then roles per module (M3) and the rest of M5, a run as a
-   film.
+   363, point 5). The tube language (rows 369 to 374) and its pegs port left the view on
+   2026-10-14, at the owner's word; the code stands at the tag `archive/tube-language`. Of the
+   [motion plan](research/2026-10-13-motion-everywhere/README.md), M1 stays: each figure's cost and
+   a documentation page's limits (`tools/Tools/View/Measure.lean`). The PC's graph work is merged:
+   connectors as one closed perimeter (`tools/Tools/View/Connector.lean`), and the graph's checks,
+   regions, packing and inspectors. The kit is pinned at the PC's reconciled `html/svg`
+   (`e51195721`), which GitHub does not hold yet.
 1. **The view and the printer**, one plan across four notes. The order:
    - the program's own graph (row 337, point 9). First its design, with an agent's place in it.
      Then the graph, its ranks and its places as folds of the program (the algebra audit's D);
