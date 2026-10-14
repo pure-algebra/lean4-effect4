@@ -1,6 +1,7 @@
 module
 
 public import Effect4.Program.Authoring
+public import Effect4.Program.Authoring.Defs
 public import Effect4.Program.Authoring.Lifts
 public import Effect4.Program.RowProtocol
 
@@ -22,10 +23,15 @@ entries. It adds no representation of a program: each entry builds through `Modu
   `Module.table`'s.
 * **Declared protocols.** Beside its rows' types, an application may declare a protocol of a row
   (`RowProtocol`), checked at the row's columns (`protocolsFormed`).
+* **Definitions that the entries invoke** (decisions row 378 (8)). An entry invokes the
+  application's definitions by name, with programs where a definition takes them
+  (`Def.invokeWith`). A banked block joins the definitions by reference (`DefSrc.ofBlock`), its
+  bytes kept, so the built application can pin the bank's digest (row 378 (4)). An open program is
+  checked at the application's table and its definitions (`signature`).
 
 What stays out: the application as one stored value with canonical bytes, and one module with
-several exports (the packet's slice 13). An open program reads the application's rows and nothing
-else: an entry that names a shared layer or invokes a definition has its open program refused at
+several exports (the packet's slice 13). An open program reads the application's rows and
+definitions and nothing else: an entry that names a shared layer has its open program refused at
 that site, a located refusal. Its applied form builds through the module, as any program does.
 -/
 
@@ -55,6 +61,8 @@ structure Application (Op : Type) where
   rows : List RowDef := []
   services : List ServiceDef := []
   layers : List (String × LayerSrc Op) := []
+  /-- The application's definitions, which its entries invoke by name. A banked block joins them
+  by reference (`DefSrc.ofBlock`), its bytes kept. -/
   defs : List (DefSrc Op) := []
   /-- The declared protocols of the application's rows, by the row's spelling
   (`src/Effect4/Program/RowProtocol.lean`). A row with none has the protocol of its types. -/
@@ -98,10 +106,20 @@ typed at that row's columns (`RowProtocols.formed`). -/
 def protocolsFormed (app : Application NativeOp) : Bool := app.protocols.formed app.table
 
 /-- The entry's own program, open in its parameters: the body elaborated under the parameters'
-names, over the application's rows. It is first-order data, at the root path. -/
+names, over the application's rows and definitions. It is first-order data, at the root path. An
+invocation in it names a definition by its position in the application's block, so it is checked
+at the block's signature (`signature`). -/
 def openProgram (app : Application Op) (e : Application.Entry Op) : Except Refusal (Eff Op) := do
   let rows ← rowNamesOf app.declarations.rowDefs
-  e.body { names := e.params.map (·.1), rows := rows } []
+  let defs ← defNamesOf app.defs
+  e.body { names := e.params.map (·.1), rows := rows, defs := defs } []
+
+/-- The signature an entry's open program is checked at: the native signature of the
+application's table, extended by its definitions' declarations (`Signature.withDefs`). A program
+that invokes no definition is checked the same as at the table's own signature
+(`defs_conservative`, `src/Effect4/Laws/Program/Definitions.lean`). -/
+def signature (app : Application NativeOp) : Signature NativeOp :=
+  (nativeSignature app.table).withDefs (app.defs.map (·.decl))
 
 end Application
 

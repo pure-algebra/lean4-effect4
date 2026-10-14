@@ -18,6 +18,9 @@ operation of any arity needs code of its own. `Def.of` checks the parameter coun
 arity. The declared columns stay the author's: a
 definition is typed by its declaration (decisions row 328, point 3), and the checker checks the
 body against it.
+
+A banked block's definitions join a module as they are (`DefSrc.kept`, `DefSrc.ofBlock`), so the
+built program holds the bank's bytes (decisions row 378 (4)).
 -/
 
 @[expose] public section
@@ -73,5 +76,33 @@ def Def.of {F : Type} [Params F] (name : String) (params : List (String × Ty)) 
     (_arity : params.length = Params.arity (F := F) := by rfl) : Defined F :=
   { src := { name, params, answer, error, requires, body := Params.uncurry op }
     call := Params.curry (Def.invoke name) }
+
+/-! ## A banked block's definitions, kept (decisions row 378 (4))
+
+A verified implementation is banked as a definition block (`Test/Dogfood/Bank.lean`). A module
+imposes it by reference: the block's definitions join the module's block as they are, so the
+built program holds the bank's bytes, and a guard can pin their digest. -/
+
+/-- **A definition kept as it is**: its declaration and its body. The body elaborates to itself
+at every scope and path. `decl` gives the declaration back: the one value parameter is the
+declared request, and the program parameters are the declared ones. A kept body reads no name of
+the module: its rows and its invocations are positions, kept as they are. -/
+def DefSrc.kept {Op : Type} (d : DefDecl) (body : Eff Op) : DefSrc Op where
+  name := d.name
+  params := [("request", d.request)]
+  answer := d.answer
+  error := d.error
+  requires := d.requires
+  role := d.role
+  programParams := d.params
+  body := fun _ _ _ => .ok body
+
+/-- **A block's definitions, kept**, in order (`DefSrc.kept`). A program with no block has none. A
+body that invokes a definition of its own block keeps its position only where the block stands
+first among the module's definitions; a body that invokes none, as the Ref cache's, stands
+anywhere. -/
+def DefSrc.ofBlock {Op : Type} : Eff Op → List (DefSrc Op)
+  | .defs decls bodies _ _ => (decls.zip bodies.toList).map fun (d, b) => DefSrc.kept d b
+  | _ => []
 
 end Effect4.Program.Authoring

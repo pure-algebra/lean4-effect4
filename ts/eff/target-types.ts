@@ -1,7 +1,8 @@
 /** Source-side annotation comparison for Codegen.Types.ofTy.
  * Ty remains the generated carrier. Policy tables retain their Lean owners.
  * Cross-language fixtures measure this adapter; they do not prove a simulation. */
-import type { Ty } from "./eff.gen.ts"
+import type { ServiceKey, Ty } from "./eff.gen.ts"
+import { serviceTypes } from "./profile.gen.ts"
 import { typeMetadataConstructors, typeLeafEdges, typeVariances, targetReservedIdentifiers } from "./wire.gen.ts"
 
 const unrecognized = (_type: never): never => { throw new Error("unknown generated Ty constructor") }
@@ -194,6 +195,27 @@ export const quoteType = (text: string): string =>
 export const recordKeyForm = (names: readonly string[]): "plain" | "quoted" | "computed" =>
   names.includes("__proto__") ? "computed" : names.every(targetIdentifier) ? "plain" : "quoted"
 
+/* ---- the key spelling (`Codegen/Types.lean`): one spelling of a key and of a requirement row */
+
+/** The native signature's scope key, whose identifier is `Scope.Scope`. */
+export const nativeScopeKey: ServiceKey | undefined =
+  serviceTypes.reserved.find(entry => entry.rendered === "Scope.Scope")?.key
+
+/** One key: its name and its service code. */
+export const sameKey = (a: ServiceKey, b: ServiceKey): boolean =>
+  a.name.value === b.name.value && a.service.value === b.service.value
+
+/** An ordinary key's runtime text (`keyText`): `k<name>_<service>`. */
+export const keyText = (key: ServiceKey): string => `k${key.name.value}_${key.service.value}`
+
+/** A requirement row's printed type at the native scope key (`requirementType`): `never` for no
+ * key, the scope key as `Scope.Scope`, an ordinary key as its quoted runtime text, and a union of
+ * several in the row's order. */
+export const requirementText = (keys: ReadonlyArray<ServiceKey>): string =>
+  keys.length === 0 ? "never"
+    : keys.map(k => (nativeScopeKey !== undefined && sameKey(k, nativeScopeKey) ? "Scope.Scope" : quoteType(keyText(k))))
+        .join(" | ")
+
 /** Flatten only top-level union spelling; quoted text and nested type arguments stay intact. */
 export const unionParts = (text: string): string[] => {
   const parts: string[] = []
@@ -262,8 +284,11 @@ export const targetType = (raw: Ty, legacy: (text: string) => string | undefined
         if (values.some(value => value === undefined)) return undefined
         return [...new Set(values.flatMap(value => unionParts(value!)))].join(" | ")
       }
-      // no printed form: `Codegen.Types.ofTy` refuses a context type (decisions row 349)
-      case "var": case "app": case "contextOf": return undefined
+      // `Context.Context<R>`, the answer of `Effect.context<R>()`: its row in the requirement
+      // row's one spelling at the native scope key (`Codegen.Types.ofTy_contextOf`, decisions
+      // row 349)
+      case "contextOf": return `Context.Context<${requirementText(type.keys)}>`
+      case "var": case "app": return undefined
       default: return unrecognized(type)
     }
   }

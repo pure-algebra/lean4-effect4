@@ -81,4 +81,114 @@ class). `Test/Codegen/DefinitionsPrint.lean`'s control `withService` flips: a he
 row now reads back, and three red controls refuse a row out of order, a literal that is no key's
 text, and a row with a key twice.
 
+## 2. The row services read back (item 2)
+
+### The design
+
+The rows' service declarations are a function of the table, so the reader takes the table and
+checks them against the services' data, piece by piece (`readRowServices`,
+`src/Effect4/Codegen/RowServices.lean`). Each piece is compared by a decision on strings, binders,
+`TypeRef`s and parameters, never by a traversal of a `String`: `TypeScript.Expr` has a `BEq` but
+no decidable equality, and the deriving handler does not apply to its mutual block (reproduced).
+
+`rowServiceDecls` is now the image of the services' data (`RowServiceData`, `rowServiceData`,
+`RowServiceData.decls`, `accessorExpr`, `accessorRequest`), with the same output and refusals.
+`rowAccessor` is gone into `accessorExpr`.
+
+The module reader takes one more argument, the rows whose services the module declares after its
+classes (`Program.readModule … rows decls`):
+
+- the file (`ModuleEmission.file`, seat SVC's E2 join): the table's rows, by `Api.readFile`;
+- the envelope that a host wraps (`ModuleEmission.module`): none, by `Api.readModule`, as before.
+
+So the envelope reads back as it did, `Api.printModule_roundTrip` and the reading boundary
+(`admitModule`) keep their statements, and the file reads back whole. Each reader refuses the
+other's form.
+
+### The laws
+
+| Theorem | File | Statement |
+| --- | --- | --- |
+| `isAccessor_accessorExpr`, `isAccessor_exact`, `isAccessors_map`, `isAccessors_exact` | `src/Effect4/Laws/Codegen/RowServices.lean` (new) | an accessor, and a service's accessors, are accepted exactly |
+| `RowServiceData.isDecls_decls`, `RowServiceData.isDecls_exact` | same | a service's two declarations are accepted exactly |
+| `readServiceDecls_decls`, `readServiceDecls_exact` | same | the services' declarations, in order |
+| `readRowServices_rowServiceDecls` | same | retraction: the table's services' declarations read back, leaving what follows |
+| `readRowServices_exact` | same | exactness: what the reader accepts is the table's services' declarations |
+| `rowServiceDecls_nil` | same | no row prints no service, by `rfl` |
+| `splitClasses_rowServices` | `src/Effect4/Laws/Codegen/Module.lean` | classes, then service constants, then constants, split after the classes |
+| `readModule_printModule`, `readModule_printModule_defs` | same | restated with the rows' services after the classes |
+| `readModule_printModule_readable`, `readModule_printModule_defs_readable` | `src/Effect4/Laws/Api/ModuleReadable.lean` | the same, on the readable domain |
+| `ModuleEmission.readDecls` (new) | same | the emitted declarations read back after the classes and any rows' services |
+| `ModuleEmission.readModule` | same | the envelope, at no row's services: the instance of `readDecls` |
+| `ModuleEmission.readFile` (new) | same | **the file reads back**: `emission.file prelude except = .ok file` gives the program at the table's rows |
+
+`Api.readFile` (new, `src/Effect4/Api.lean`) is the file reader at the application face;
+`Api.readModule` reads the envelope at no row's services, as before.
+
+### The to-do's file
+
+`Test/Dogfood/Scenario/TodoFile.lean` (new; tested):
+
+- reader: the to-do's file (`e.file "./prelude.ts"`) reads back to the built program by
+  `Api.readFile`;
+- reader: the envelope reads back by `Api.readModule`;
+- control: each reader refuses the other's form (the envelope as a file: `shape "row services"`);
+- control: a key at another identity (`"k30_7"`), an accessor that calls another method, and the
+  two declarations in the other order: each `shape "row services"`.
+
+### Evidence for item 2
+
+| Command | Result |
+| --- | --- |
+| `lake build Effect4.Laws.Codegen.RowServices` | green, 113 jobs |
+| `lake build Effect4.Laws.Api.ModuleReadable Effect4.Laws.Codegen.Admit Test.Codegen.DefinitionsPrint Test.Dogfood.Scenario.TodoFile` | green, 1136 jobs |
+| `lake build` of the direct importers of `Effect4.Api`, `Codegen.Read`, `Codegen.RowServices`, `Codegen.Admit` and the law modules, the to-do's batteries and `Laws.Codegen.PrintTyped` (91 targets) | green, 1471 jobs |
+| `#axiom_audit` over `Codegen.RowServices`, `Codegen.Read`, `Api`, `Codegen.Admit`, `Laws.Codegen.Admit`, `Laws.Codegen.Module`, `Laws.Api.ModuleReadable`, `Laws.Codegen.RowServices` and the two batteries (`<scratch>/lean/Audit2.lean`) | `1755 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals` |
+
+With item 2, `Test.Dogfood.Scenario.TodoService` fails the same two guards as after item 1 and
+nothing else: its `readBack?` reads the envelope, which still reads back.
+
+## 1 and 2 in TypeScript (`ts/eff/read.ts`)
+
+At the base the TypeScript reader read no definition block at all: `readModule` took every
+constant before the main for a layer, and refused a block as `shape "module"` (reproduced: 68 of
+the truth lane's 93 modules read, the 11 block programs among the refused). So "the same way"
+needed the block reader itself. The port mirrors Lean's `readModule` declaration by declaration,
+on oxc's nodes:
+
+| TypeScript | Lean |
+| --- | --- |
+| `readTypeScriptFile` (new), `readTypeScript` | `Api.readFile`, `Api.readModule` |
+| `readRowServices`, `rowServiceData`, `isServiceDecls`, `isAccessor`, `rowServices`, `serviceCall`, `serviceParts`, `breaksServices` | `readRowServices`, `rowServiceData`, `RowServiceData.isDecls`, `isAccessor`, `rowServices`, `Row.serviceCall?`, `serviceParts`, `rowBreaksServices` |
+| `readBlock`, `readDefHead`, `readParam`, `readDefBody`, `readServices`, `readServiceLayer`, `isMethodRequest`, `roleOf`, `moduleLayersOf`, `readLayerDecl` | the same names in `src/Effect4/Codegen/Read.lean` |
+| `named`, `withNamed`, `defEntries`, `paramEntries` and the first step of `spell` | `namedSpell`, `defsSpell`, `paramsSpell`, `Signature.withDefs`, `withParams` |
+| `readInvoke` in `readT` (it skipped the row before) | `readRow`'s `invoke` arm |
+| `readTypeNode`, `readNamedType`, `readTypeChecked` under a `ClassTable`; the `Context.Context<R>` arm | `readTy`, `readNamed`, `readTyChecked` under the classes; `readTy`'s first arm |
+| `targetType`'s `contextOf` case, `requirementText`, `keyText`, `nativeScopeKey`, `sameKey` (`ts/eff/target-types.ts`) | `Types.ofTy_contextOf`, `requirementType`, `keyText` |
+
+`targetType` printed no context type before (the twin of `ofTy` before `b002e17c5`), so the
+generated fixture `ts/eff/test/type-projection.gen.json` was stale at its one context case. It is
+regenerated by `tools/Drivers/TsGen.lean` (every other generated file came out byte-identical).
+`readKeys` now spells its re-print by `requirementText`, so the key spelling has one place in
+TypeScript too.
+
+The oracle (tested, `bun test`): `docs/research/2026-10-13-seat-read/TodoFileFixture.lean` writes
+the to-do's file, its envelope, its table and Lean's reading of the file
+(`ts/eff/test/fixtures/todo-*`). The TypeScript reader reads the file to Lean's JSON, byte for
+byte, and the envelope to the same program; each reader refuses the other's form; a key at another
+identity and an accessor that calls another method are refused; the header's error column holds
+`NotFound`'s record and the initial program requires `todoRepoKey`. One expectation moved: a
+constant named `helper` before the main is now read as a definition and refused as
+`shape "definition"`, as Lean's `defsPrefix` reads it (it was `shape "module"`).
+
+Reproduced: the truth lane's 93 modules now read 79 (the base reader read 68); the 14 refused
+need their tables or hold handle requests (`pQueueDefs`, `pQueueService`, `pSemaphoreService`,
+which Lean refuses alike). No Lean oracle covers those 11 newly read block modules.
+
+| Command (in `ts/eff`, bun 1.4.2, tsgo 7.0.0-dev.20260629.1) | Result |
+| --- | --- |
+| `bun --no-install run typecheck` | exit 0, no diagnostic |
+| `bun --no-install test` | 780 pass, 0 fail (776 before, and 4 new) |
+| `bun --no-install run check.ts ../../harness/truth/generated` | 79 accepted, 14 refused, no oracle |
+
 (More in progress.)

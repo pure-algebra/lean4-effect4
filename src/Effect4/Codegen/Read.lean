@@ -1,5 +1,6 @@
 import Effect4.Codegen.Print
 import Effect4.Codegen.Templates
+import Effect4.Codegen.RowServices
 import Effect4.Program.Native
 import Effect4.Program.Table
 
@@ -1302,14 +1303,18 @@ def moduleLayersOf (ds : List (List Nat × LayerTerm Op)) : Option (LayerTerms O
   else none
 
 /-- A declaration block back to the program (the host rows slice): its leading class
-declarations read as the payload classes the rest is read under (decisions row 120), every
+declarations read as the payload classes the rest is read under (decisions row 120), then the
+services of the row namespaces of `rows`, exactly as the file declares them (`readRowServices`,
+decisions row 378 (19)): the table's rows for a file (`ModuleEmission.file`), none for the
+envelope that a host wraps (`ModuleEmission.module`). Then every
 `const L_<path> = <layer>` read as a layer at the path its name carries and put back at that
 path (`Refs.lean` `restoreAll`, ancestors first), the last declaration the main program.
 The program reconstruction law applies to successfully printed modules under its stated
 readability and hoisting premises. This raw reader ignores declaration type annotations,
 export flags and the main declaration's name; it is not exact source-module admission.
-A class declaration that does not read back returns `shape "class"`; malformed declaration forms,
-layer paths and failed restoration return `shape "module"`.
+A class declaration that does not read back returns `shape "class"`; services other than the
+rows' return `shape "row services"`; malformed declaration forms, layer paths and failed
+restoration return `shape "module"`.
 
 Leading definition constants (`defsPrefix`) read as a definition block: each header as its
 declaration, its columns under the module's classes (`readDefHead`), and the bodies, the layers
@@ -1321,12 +1326,15 @@ module (`2 :: …`, decisions row 341, step 2) are the block's module layers, th
 `Path.layerPath k` (`moduleLayersOf`); the others, and each body's own layers from its suspension
 (step 3), are put back at their paths. -/
 def readModule (sig : Signature Op) (spell : String → List RowArg → Option Op)
-    (call : Nat → Op) (param : Nat → Op) (decls : List TypeScript.Decl) :
+    (call : Nat → Op) (param : Nat → Op) (rows : List Row) (decls : List TypeScript.Decl) :
     Except ReadRefusal (Eff Op) :=
   match blockClasses decls with
   | none => .error (.shape "class")
   | some classes =>
-    match (splitClasses decls).2.getLast?, (splitClasses decls).2.dropLast with
+    match readRowServices sig rows (splitClasses decls).2 with
+    | none => .error (.shape "row services")
+    | some block =>
+    match block.getLast?, block.dropLast with
     | some (.const main), earlier =>
       match defsPrefix earlier with
       | ([], layerDecls) => do

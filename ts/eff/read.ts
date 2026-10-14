@@ -1,26 +1,30 @@
 // read.ts — TypeScript text into an Eff node. The one hand-written path of this package.
 //
-//   readTypeScript(source)
+//   readTypeScript(source), readTypeScriptFile(source)
 //     │ parseSync           text → oxc's ESTree                             (oxc-parser)
 //     │ programModuleOf     the declarations and the one program a file holds § 2
 //     │ exprOf              ESTree → the fragment the Lean printer emits      § 2
 //     │ readEff(0, ·)       fragment → Eff: one matcher over the table Lean prints from     § 3
 //     │ readModule          the hoisted layers put back at their paths        § 4
+//     │ readRowServices,    a file's rows' services, exactly; a definition   § 5
+//     │   readBlock         block, its headers under the module's classes
 //     └ decodeEff           the node checked against the schema             (eff.gen.ts)
 //
 // Everything else in this package is generated from Lean: the nodes (eff.gen.ts), their
 // JSON (json.gen.ts), the operation table (profile.gen.ts), the table of printed clauses
 // (templates.gen.ts). This file holds what is logic and not data: what oxc calls things (§ 2),
-// the generic reading step over the table, and the leaf and row readers (§ 3).
+// the generic reading step over the table, the leaf and row readers (§ 3), and a module's
+// declarations (§ 4, § 5).
 
 import { Result } from "effect"
 import { parseSync } from "oxc-parser"
-import type { ActionTerm, CauseTerm, Eff, ForkOptions, LayerTerm, Lit, NativeOp, Row, RowArg, ServiceKey, Stmt, Term, Ty } from "./eff.gen.ts"
+import type { ActionTerm, CauseTerm, DefDecl, Eff, ForkOptions, LayerTerm, Lit, NativeOp, ParamDecl, Row, RowArg, ServiceKey, Stmt, Term, Ty } from "./eff.gen.ts"
 import { decodeEff } from "./eff.gen.ts"
 import { readTypeMetadata } from "./metadata.ts"
 import { readTupleIndex } from "./tuple-index.ts"
-import { targetType, legacyType, recordKeyForm, quoteType, payloadClass, targetIdentifier } from "./target-types.ts"
+import { targetType, legacyType, recordKeyForm, quoteType, payloadClass, targetIdentifier, requirementText, nativeScopeKey, keyText, normalize, sameKey } from "./target-types.ts"
 import { heads, rows, serviceTypes, serviceTypeFor, type Entry, type Head } from "./profile.gen.ts"
+import { names as nameTables } from "./names.gen.ts"
 import { argNamesOf, argSortsOf, programHeads, templates, type ArgPat, type ArgSort, type Depth, type Fam, type StmtTpl, type StmtTpls, type TemplateRow, type Tpl } from "./templates.gen.ts"
 
 export type { Eff } from "./eff.gen.ts"
@@ -49,8 +53,19 @@ export type Read<A> = Result.Result<A, Refusal>
 
 /** One program file's text into an Eff node, or the refusal that names what was not readable.
  * `table` is the supplied row table (`Api.read (table := …)`): its rows are the external
- * operations, by position; the printed corpus reads under the empty table. */
+ * operations, by position; the printed corpus reads under the empty table. The file is the
+ * declaration block a host wraps (Lean `Api.readModule`): it declares no row's service. */
 export const readTypeScript = (source: string, filename = "program.ts", table: ReadonlyArray<Row> = []): Read<Eff> =>
+  readSource(source, filename, table, [])
+
+/** A module file's text into an Eff node (Lean `Api.readFile`): its payload classes, then the
+ * services of its table's rows, exactly as `rowServiceDecls` prints them (decisions row 378
+ * (19)), then the declaration block. */
+export const readTypeScriptFile = (source: string, filename = "program.ts", table: ReadonlyArray<Row> = []): Read<Eff> =>
+  readSource(source, filename, table, table)
+
+/** A source's text read under its table, its module declaring the services of `rows`. */
+const readSource = (source: string, filename: string, table: ReadonlyArray<Row>, rows: ReadonlyArray<Row>): Read<Eff> =>
   withTable(table, () => {
     const parsed = parseSync(filename, source, { sourceType: "module", lang: "ts" })
     if (parsed.errors.length > 0) return refuse({ _tag: "parse", messages: parsed.errors.map((e) => e.message) })
@@ -60,7 +75,8 @@ export const readTypeScript = (source: string, filename = "program.ts", table: R
     if (failed(module)) return again(module)
     const { classes, declarations, main } = module.success
     return withClasses(classes, () =>
-      declarations.length === 0 ? Result.map(readProgramExpr(main), decodeEff) : readModule(declarations, main))
+      declarations.length === 0 && rows.length === 0 ? Result.map(readProgramExpr(main), decodeEff)
+        : readModule(declarations, main, rows))
   })
 
 /** Fragment seam for the independent oxc normalization and printer-image test entrypoint. */
@@ -157,8 +173,11 @@ export const withTable = <A>(table: ReadonlyArray<Row>, body: () => A): A => {
  * `new Tag({ … })` reads under them. Bound for the duration of one entry-point call; a bare
  * expression has none. */
 type RecordFields = Extract<Ty, { _tag: "record" }>["fields"]
-let declaredClasses: ReadonlyArray<readonly [string, RecordFields]> = []
-export const withClasses = <A>(classes: ReadonlyArray<readonly [string, RecordFields]>, body: () => A): A => {
+/** The payload classes a type is read under (Lean `Classes.Classes`): each tag with its record
+ * fields, `_tag` first. */
+type ClassTable = ReadonlyArray<readonly [string, RecordFields]>
+let declaredClasses: ClassTable = []
+export const withClasses = <A>(classes: ClassTable, body: () => A): A => {
   const saved = declaredClasses
   declaredClasses = classes
   try {
@@ -173,12 +192,17 @@ export const sameRowArg = (a: RowArg, b: RowArg): boolean =>
   a._tag === "name" ? b._tag === "name" && a.spelling === b.spelling : b._tag === "str" && a.value === b.value
 
 /** The entry a (spelling, trailing arguments) pair names: `nativeSpell` of `Read.lean`, the
- * built-in rows first and then the supplied table. */
+ * built-in rows first and then the supplied table. Inside a definition block a name with no
+ * trailing arguments spells a body's parameter, then a definition, first (Lean `namedSpell`). */
 const spell = (spelling: string, trailing: ReadonlyArray<RowArg>): Entry | undefined => {
-  const named = (e: Entry): boolean =>
+  if (trailing.length === 0) {
+    const local = named.find((e) => e.row.spelling === spelling)
+    if (local !== undefined) return local
+  }
+  const keyed = (e: Entry): boolean =>
     e.row.spelling === spelling && e.row.trailing.length === trailing.length &&
     e.row.trailing.every((a, i) => sameRowArg(a, trailing[i]!))
-  return rows.find(named) ?? supplied.find(named)
+  return rows.find(keyed) ?? supplied.find(keyed)
 }
 
 const isValueRow = (e: Entry): boolean => e.row.shape === "value"
@@ -324,6 +348,23 @@ const typeName = (t: Node): string | undefined => {
       if (t.operator !== "readonly" || value?.type !== "TSTupleType") return undefined
       const tuple = typeName(value)
       return tuple === undefined ? undefined : `readonly ${tuple}`
+    }
+    case "TSFunctionType": {
+      // a method's field in a service's shape: `(a0: T) => Effect.Effect<A, E, never>`
+      if (t.typeParameters) return undefined
+      const params: string[] = []
+      for (const p of listAt(t, "params") ?? []) {
+        if (!isNode(p) || p.type !== "Identifier" || typeof p.name !== "string" || p.optional === true) return undefined
+        const annotation = nodeAt(p, "typeAnnotation")
+        const value = annotation && nodeAt(annotation, "typeAnnotation")
+        const rendered = value && typeName(value)
+        if (rendered === undefined) return undefined
+        params.push(`${p.name}: ${rendered}`)
+      }
+      const ret = nodeAt(t, "returnType")
+      const result = ret && nodeAt(ret, "typeAnnotation")
+      const rendered = result && typeName(result)
+      return rendered === undefined ? undefined : `(${params.join(", ")}) => ${rendered}`
     }
     case "TSTypeLiteral": {
       const fields: string[] = []
@@ -715,16 +756,20 @@ const stmtsOf = (items: ReadonlyArray<unknown>): Read<ReadonlyArray<TsStmt>> => 
 /** A file's leading class declarations, its declarations and the one program it ends with. */
 interface Module {
   /** The payload classes its leading `export class` declarations declare (decisions row 120). */
-  readonly classes: ReadonlyArray<readonly [string, RecordFields]>
+  readonly classes: ClassTable
   /** The `const L_<path> = <layer>` declarations before the last statement, in file order. */
   readonly declarations: ReadonlyArray<Declaration>
   /** The last statement's expression: the program itself. */
   readonly main: Node
 }
 
+/** A const declaration's oxc node with what the raw reader keeps of it: its name, its value, and
+ * whether it is exported and annotated (the rows' services are read exactly, § 5). */
 interface Declaration {
   readonly name: string
   readonly value: Node
+  readonly exported: boolean
+  readonly annotated: boolean
 }
 
 /** `const name = value` or `export const name = value`, one declarator, any declared type. */
@@ -737,13 +782,14 @@ const constDeclOf = (s: Node): Declaration | undefined => {
   const id = nodeAt(d, "id")
   const init = nodeAt(d, "init")
   if (!id || id.type !== "Identifier" || typeof id.name !== "string" || !init) return undefined
-  return { name: id.name, value: init }
+  return { name: id.name, value: init, exported: s.type === "ExportNamedDeclaration", annotated: nodeAt(id, "typeAnnotation") !== undefined }
 }
 
-/** A payload field's type from its printed spelling (`Codegen/Classes.lean` `readTy`, over oxc's
- * nodes): one choice per spelling, `number` as `nat`, `readonly [A, B]` as a product, a union as
- * the right-nested union of its members. A class name reads as nothing. */
-const readNamedType = (name: string, args: ReadonlyArray<Ty>): Ty | undefined => {
+/** A type's name from its printed spelling (`Codegen/Classes.lean` `readNamed`, over oxc's nodes),
+ * under the module's payload classes: one choice per spelling, `number` as `nat`, `readonly [A, B]`
+ * as a product, a union as the right-nested union of its members. A class name reads as the
+ * record its declaration declares, and under no class as nothing. */
+const readNamedType = (name: string, args: ReadonlyArray<Ty>, classes: ClassTable): Ty | undefined => {
   const [a, b] = args
   if (name === "Uint8Array" && args.length === 0) return { _tag: "bytes" }
   if (name === "Option.Option" && args.length === 1) return { _tag: "option", inner: a! }
@@ -751,21 +797,22 @@ const readNamedType = (name: string, args: ReadonlyArray<Ty>): Ty | undefined =>
   if (name === "Result.Result" && args.length === 2) return { _tag: "except", error: b!, value: a! }
   if (name === "Record" && args.length === 2 && a!._tag === "string") return { _tag: "map", key: a!, value: b! }
   if (name === "Readonly" && args.length === 1 && a!._tag === "map") return a
-  return undefined
+  const fields = args.length === 0 ? classes.find(([tag]) => tag === name)?.[1] : undefined
+  return fields === undefined ? undefined : { _tag: "record", fields }
 }
 const ofMembers = (members: ReadonlyArray<Ty>): Ty => members.length === 0 ? { _tag: "never" } :
   members.slice(0, -1).reduceRight<Ty>((right, left) => ({ _tag: "union", left, right }), members.at(-1)!)
-const readTypeNodes = (nodes: ReadonlyArray<unknown> | undefined): Ty[] | undefined => {
+const readTypeNodes = (nodes: ReadonlyArray<unknown> | undefined, classes: ClassTable): Ty[] | undefined => {
   if (nodes === undefined) return undefined
   const out: Ty[] = []
   for (const node of nodes) {
-    const t = isNode(node) ? readTypeNode(node) : undefined
+    const t = isNode(node) ? readTypeNode(node, classes) : undefined
     if (t === undefined) return undefined
     out.push(t)
   }
   return out
 }
-const readFieldNodes = (members: ReadonlyArray<unknown> | undefined): Array<readonly [string, readonly [boolean, Ty]]> | undefined => {
+const readFieldNodes = (members: ReadonlyArray<unknown> | undefined, classes: ClassTable): Array<readonly [string, readonly [boolean, Ty]]> | undefined => {
   if (members === undefined) return undefined
   const out: Array<readonly [string, readonly [boolean, Ty]]> = []
   for (const field of members) {
@@ -775,13 +822,13 @@ const readFieldNodes = (members: ReadonlyArray<unknown> | undefined): Array<read
       : key?.type === "Literal" && typeof key.value === "string" ? key.value : undefined
     const annotation = nodeAt(field, "typeAnnotation")
     const value = annotation && nodeAt(annotation, "typeAnnotation")
-    const t = value && readTypeNode(value)
+    const t = value && readTypeNode(value, classes)
     if (name === undefined || t === undefined) return undefined
     out.push([name, [field.optional === true, t]])
   }
   return out
 }
-const readTypeNode = (t: Node): Ty | undefined => {
+const readTypeNode = (t: Node, classes: ClassTable): Ty | undefined => {
   switch (t.type) {
     case "TSNumberKeyword": return { _tag: "nat" }
     case "TSStringKeyword": return { _tag: "string" }
@@ -800,22 +847,30 @@ const readTypeNode = (t: Node): Ty | undefined => {
       const ref = nodeAt(t, "typeName")
       const name = ref && qualifiedTypeName(ref)
       const typeArgs = nodeAt(t, "typeArguments")
-      const args = typeArgs ? readTypeNodes(listAt(typeArgs, "params")) : []
-      return name === undefined || args === undefined ? undefined : readNamedType(name, args)
+      const params = typeArgs ? listAt(typeArgs, "params") : []
+      // `Context.Context<R>`: the context of its row, read by the requirement reader (Lean
+      // `readTy`'s first arm, decisions row 349)
+      if (name === "Context.Context") {
+        const row = params !== undefined && params.length === 1 && isNode(params[0]) ? typeName(params[0]) : undefined
+        const keys = row === undefined ? undefined : readKeysText(row)
+        return keys === undefined ? undefined : { _tag: "contextOf", keys }
+      }
+      const args = readTypeNodes(params, classes)
+      return name === undefined || args === undefined ? undefined : readNamedType(name, args, classes)
     }
     case "TSTypeOperator": {
       const value = nodeAt(t, "typeAnnotation")
       if (t.operator !== "readonly" || value?.type !== "TSTupleType") return undefined
-      const items = readTypeNodes(listAt(value, "elementTypes"))
+      const items = readTypeNodes(listAt(value, "elementTypes"), classes)
       if (items === undefined) return undefined
       return items.length === 2 ? { _tag: "prod", left: items[0]!, right: items[1]! } : { _tag: "tuple", items }
     }
     case "TSUnionType": {
-      const members = readTypeNodes(listAt(t, "types"))
+      const members = readTypeNodes(listAt(t, "types"), classes)
       return members === undefined ? undefined : ofMembers(members)
     }
     case "TSTypeLiteral": {
-      const fields = readFieldNodes(listAt(t, "members"))
+      const fields = readFieldNodes(listAt(t, "members"), classes)
       return fields === undefined ? undefined : { _tag: "record", fields }
     }
     default: return undefined
@@ -823,15 +878,17 @@ const readTypeNode = (t: Node): Ty | undefined => {
 }
 
 /**
- * The checked type reader (Lean `Classes.readTyChecked`, `Codegen/Classes.lean`): a program type
- * from its printed spelling, kept only when the type printer prints that type as the spelling
- * read (`targetType`, the twin of `Types.ofTy`). What it accepts is exact. It does not make the
- * printer injective: `number` reads as `nat`, so a type at `int` does not read back, and a
- * handle's name (`Ref.Ref<A>`, `Deferred.Deferred<A, E>`), `unknown` and a class's name read as
- * nothing (Lean `Classes.ReadableTy` names what is outside).
+ * The checked type reader (Lean `Classes.readTyChecked`, `Codegen/Classes.lean`) under the
+ * module's payload classes: a program type from its printed spelling, kept only when the type
+ * printer prints that type as the spelling read (`targetType`, the twin of `Types.ofTy`). What it
+ * accepts is exact. It does not make the printer injective: `number` reads as `nat`, so a type at
+ * `int` does not read back, and a handle's name (`Ref.Ref<A>`, `Deferred.Deferred<A, E>`) and
+ * `unknown` read as nothing, as does a class's name under no class (Lean `Classes.ReadableTy`
+ * names what is outside). The expression reader reads its types under no class, and a
+ * definition's header under the module's classes.
  */
-const readTypeChecked = (t: Node): Ty | undefined => {
-  const ty = readTypeNode(t)
+const readTypeChecked = (t: Node, classes: ClassTable = []): Ty | undefined => {
+  const ty = readTypeNode(t, classes)
   return ty !== undefined && targetType(ty, legacyType) === typeName(t) ? ty : undefined
 }
 
@@ -891,7 +948,7 @@ const classDeclOf = (s: Node): Read<readonly [string, RecordFields]> | undefined
   if (!callee || dotted(callee) !== "Data.TaggedError" || args.length !== 1 || !isNode(tagArg) ||
       tagArg.type !== "Literal" || tagArg.value !== id.name || params.length !== 1 || !isNode(literal) ||
       literal.type !== "TSTypeLiteral") return malformed
-  const rest = readFieldNodes(listAt(literal, "members"))
+  const rest = readFieldNodes(listAt(literal, "members"), [])
   if (rest === undefined || classTypeText(rest) !== typeName(literal)) return malformed
   return ok([id.name, [["_tag", [false, { _tag: "lit", value: id.name }]], ...rest]])
 }
@@ -1339,12 +1396,11 @@ const keyBefore = (a: ServiceKey, b: ServiceKey): boolean =>
  * read, so what the reader accepts is exact. */
 const readKeys = (text: string): Read<ReadonlyArray<ServiceKey>> => {
   const bad = () => refuse({ _tag: "shape", what: "requirement row" })
-  const scopeKey = serviceTypes.reserved.find(entry => entry.rendered === "Scope.Scope")?.key
   const keys: Array<ServiceKey> = []
   for (const member of text === "never" ? [] : text.split(" | ")) {
     if (member === "Scope.Scope") {
-      if (scopeKey === undefined) return bad()
-      keys.push(scopeKey)
+      if (nativeScopeKey === undefined) return bad()
+      keys.push(nativeScopeKey)
       continue
     }
     const fields = /^"k(0|[1-9][0-9]*)_(0|[1-9][0-9]*)"$/.exec(member)
@@ -1356,11 +1412,7 @@ const readKeys = (text: string): Read<ReadonlyArray<ServiceKey>> => {
   }
   const row = keys.slice().sort((a, b) => (keyBefore(a, b) ? -1 : keyBefore(b, a) ? 1 : 0))
     .filter((k, i, all) => i === 0 || keyBefore(all[i - 1]!, k))
-  const isScope = (k: ServiceKey) =>
-    scopeKey !== undefined && k.name.value === scopeKey.name.value && k.service.value === scopeKey.service.value
-  const printed = row.length === 0 ? "never"
-    : row.map(k => (isScope(k) ? "Scope.Scope" : `"k${k.name.value}_${k.service.value}"`)).join(" | ")
-  return printed === text ? ok(row) : bad()
+  return requirementText(row) === text ? ok(row) : bad()
 }
 
 /** A context reader's type argument as a row, for the foreign recognizers: the printer's own
@@ -2003,9 +2055,13 @@ const readT = (fam: Fam, n: number, x: Expr): Read<unknown> | undefined => {
       }
       return r
     }
-    // an invocation with programs (decisions row 340, slice HO-3b) names a definition of the
-    // module's block, which this reader does not read: its call stays `unknownHead`
-    if (row.out._tag === "invoke") continue
+    // an invocation with programs (decisions row 340, slice HO-3b): a call of a name that spells
+    // the invocation of a definition that takes programs (§ 5, `readInvoke`)
+    if (row.out._tag === "invoke") {
+      const r = fam === "eff" ? readInvoke(k, n, x) : undefined
+      if (r !== undefined) return r
+      continue
+    }
     if (row.out._tag !== "tpl") continue // a statement row is read by `readStmts`
     const sorts = argSortsOf(fam, row.ctor)
     const names = argNamesOf(fam, row.ctor)
@@ -2333,28 +2389,561 @@ export const restoreAll = (main: Eff, decls: ReadonlyArray<readonly [ReadonlyArr
 }
 
 /**
- * A declaration block back to the program (`readModule` of `Read.lean`): the last statement
- * is the program, and every `const L_<path>` before it is a layer term put back at the path
- * its name carries. Every occurrence of the identifier — the defining site and each
- * reference — reads as `ref <path>` in § 3, so putting the declaration back at that path
- * leaves the first occurrence (the site at exactly that path, which is what `printModule`
- * hoists) the layer itself and every later occurrence a reference to it. A declaration whose
- * name is no canonical path spelling, or whose path names no layer, is `shape "module"`.
+ * A declaration block back to the program (`readModule` of `Read.lean`): past the payload classes,
+ * the services of the rows the module declares (`rows`: the table's for a file, none for the block
+ * a host wraps; § 5), then a definition block when the module has one (§ 5), else every
+ * `const L_<path>` before the last statement as a layer term put back at the path its name
+ * carries. Every occurrence of the identifier — the defining site and each reference — reads as
+ * `ref <path>` in § 3, so putting the declaration back at that path leaves the first occurrence
+ * (the site at exactly that path, which is what `printModule` hoists) the layer itself and every
+ * later occurrence a reference to it. Services other than the rows' are `shape "row services"`;
+ * a declaration whose name is no canonical path spelling, or whose path names no layer, is
+ * `shape "module"`.
  */
-const readModule = (declarations: ReadonlyArray<Declaration>, main: Node): Read<Eff> => {
-  const notModule = refuse({ _tag: "shape", what: "module" })
+const readModule = (declarations: ReadonlyArray<Declaration>, main: Node, rows: ReadonlyArray<Row>): Read<Eff> => {
+  const after = readRowServices(declarations, rows)
+  if (after === undefined) return refuse({ _tag: "shape", what: "row services" })
+  // the leading definition constants (Lean `defsPrefix`): no layer path, no service's key or layer
+  const defsEnd = after.findIndex((c) => readRefName(c.name) !== undefined || isServiceConst(c.value))
+  const defDecls = defsEnd === -1 ? after : after.slice(0, defsEnd)
+  if (defDecls.length > 0) return readBlock(defDecls, defsEnd === -1 ? [] : after.slice(defsEnd), main)
   const program = readProgramExpr(main)
   if (failed(program)) return again(program)
   const decls: Array<readonly [ReadonlyArray<number>, LayerTerm]> = []
-  for (const declaration of declarations) {
-    const target = readRefName(declaration.name)
-    if (target === undefined || refName(target) !== declaration.name) return notModule
-    const fragment = exprOf(declaration.value)
-    if (failed(fragment)) return again(fragment)
-    const layer = readLayer(fragment.success)
-    if (failed(layer)) return again(layer)
-    decls.push([target, layer.success])
+  for (const declaration of after) {
+    const d = readLayerDecl(declaration)
+    if (failed(d)) return again(d)
+    decls.push(d.success)
   }
   const whole = restoreAll(program.success, decls)
-  return whole === undefined ? notModule : ok(decodeEff(whole))
+  return whole === undefined ? refuse({ _tag: "shape", what: "module" }) : ok(decodeEff(whole))
+}
+
+/* ============================================================ § 5  a module: the rows' services and a definition block */
+
+// The rest of Lean's `readModule` (`src/Effect4/Codegen/Read.lean`): past the payload classes, a
+// file declares the services of its rows (`readRowServices`, `Codegen/RowServices.lean`; decisions
+// row 378 (19)), then a definition block may follow (decisions row 328): its definitions, the
+// services its roles declare, the module's layers, the hoisted layers and the main program. The
+// block's definitions and a body's parameters are names the rows' spelling map is extended by
+// (`defsSpell`, `paramsSpell`). Every check here reads oxc's nodes: a header's annotations and a
+// method's typed parameters are no fragment of § 2.
+
+
+/** A block's definitions, by name, and inside a body its parameters, which a name with no
+ * trailing arguments spells first (Lean `namedSpell`): a definition's name spells its
+ * invocation (`NativeOp.call`), a parameter's its run (`NativeOp.param`). Bound for the duration
+ * of one block's reading. */
+let named: ReadonlyArray<Entry> = []
+let namedDecls: ReadonlyArray<DefDecl> = []
+const withNamed = <A>(entries: ReadonlyArray<Entry>, decls: ReadonlyArray<DefDecl>, body: () => A): A => {
+  const saved = named, savedDecls = namedDecls
+  named = entries
+  namedDecls = decls
+  try {
+    return body()
+  } finally {
+    named = saved
+    namedDecls = savedDecls
+  }
+}
+
+/** The row a definition or a parameter declares: a program row of its columns, answered by its
+ * body or by the program a call passes (Lean `DefDecl.row`, `ParamDecl.row`). */
+const programRow = (name: string, request: Ty, answer: Ty, error: Ty, requires: ReadonlyArray<ServiceKey>): Row => ({
+  name, spelling: name, shape: "call", trailing: [], kind: "program", request, answer, error,
+  requires, cite: "", typeArgs: [], registration: "deferred",
+})
+
+const defEntries = (decls: ReadonlyArray<DefDecl>): ReadonlyArray<Entry> =>
+  decls.map((d, index): Entry => ({ op: { _tag: "call", index }, row: programRow(d.name, d.request, d.answer, d.error, d.requires) }))
+
+const paramEntries = (params: ReadonlyArray<ParamDecl>): ReadonlyArray<Entry> =>
+  params.map((q, index): Entry => ({ op: { _tag: "param", index }, row: programRow(q.name, q.request, q.answer, q.error, []) }))
+
+/** The definition a name invokes with programs (Lean `invokedDef`): the index of the definition
+ * the name spells, when it takes programs. */
+const invokedDef = (s: string): number | undefined => {
+  const e = named.find((entry) => entry.row.spelling === s)
+  if (e === undefined || e.op._tag !== "call") return undefined
+  const d = namedDecls[e.op.index]
+  return d !== undefined && d.params.length > 0 ? e.op.index : undefined
+}
+
+/** An invocation with programs (Lean `readRow`'s `invoke` arm, slice HO-3b): a call whose head
+ * spells the invocation of a definition that takes programs, on its request and on one function
+ * of the binder due at `n` for each program; the programs read at `n + 1`. `undefined` when the
+ * tree is no such call. */
+const readInvoke = (k: number, n: number, x: Expr): Read<unknown> | undefined => {
+  if (x._tag !== "call" || x.fn._tag !== "ident") return undefined
+  const [rq, ...fns] = x.args
+  if (rq === undefined) return undefined
+  const j = invokedDef(x.fn.name)
+  if (j === undefined) return undefined
+  const bodies: Expr[] = []
+  for (const f of fns) {
+    if (f._tag !== "lambda" || !sameParams(n, [0], f.params)) return undefined
+    bodies.push(f.body)
+  }
+  const request = under(readTerm(n, rq), "invoke", 1)
+  if (failed(request)) return again(request)
+  const programs = under(readSpine("effs", n + 1, bodies), "invoke", 2)
+  if (failed(programs)) return again(programs)
+  const args = [j, request.success, programs.success]
+  if (chosenRow("eff", "invoke", args) !== k) return refuse({ _tag: "shape", what: "not the printed row" })
+  const names = argNamesOf("eff", "invoke")
+  return names === undefined ? tableDefect() : ok(build("invoke", names, args))
+}
+
+/* ---------- the rows' services (Lean `Codegen/RowServices.lean`) ---------- */
+
+/** The ambient values a binding name may not take (Lean `Names.reservedExtra`, generated). */
+const reservedExtra: ReadonlyArray<string> = nameTables.reservedExtra
+
+/** A binding name (Lean `Names.binderName`): a target identifier that is no ambient value. */
+const bindingName = (name: string): boolean => targetIdentifier(name) && !reservedExtra.includes(name)
+
+/** A spelling `Ns.method` as its namespace and its method (Lean `serviceParts`): a binding name,
+ * one dot, and a property name, which may be a keyword. */
+const serviceParts = (spelling: string): readonly [string, string] | undefined => {
+  const dot = spelling.indexOf(".")
+  if (dot < 0 || spelling.indexOf(".", dot + 1) >= 0) return undefined
+  const ns = spelling.slice(0, dot), m = spelling.slice(dot + 1)
+  return bindingName(ns) && /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(m) ? [ns, m] : undefined
+}
+
+/** The service a row belongs to (Lean `Row.serviceCall?`): a call row with no trailing argument
+ * and no declared type argument, whose requirement column names one key and whose spelling is
+ * `Ns.method`. */
+const serviceCall = (row: Row): readonly [string, string] | undefined =>
+  row.requires.length === 1 && row.shape === "call" && row.trailing.length === 0 && row.typeArgs.length === 0
+    ? serviceParts(row.spelling) : undefined
+
+/** The members of an rc.112 service key, which an accessor would shadow (Lean
+ * `serviceKeyMembers`, generated). */
+const serviceKeyMembers: ReadonlyArray<string> = nameTables.serviceKeyMembers
+
+interface RowService {
+  readonly ns: string
+  readonly key: ServiceKey
+  readonly methods: ReadonlyArray<readonly [string, Row]>
+}
+
+/** The services of a table's service rows, one for each namespace, in the order of its first
+ * row (Lean `rowServices`). */
+const rowServices = (table: ReadonlyArray<Row>): ReadonlyArray<RowService> => {
+  const rows = table.flatMap((row) => {
+    const call = serviceCall(row)
+    return call === undefined ? [] : [{ ns: call[0], key: row.requires[0]!, m: call[1], row }]
+  })
+  const spaces = [...new Set(rows.map((r) => r.ns))]
+  return spaces.map((ns) => ({
+    ns, key: rows.find((r) => r.ns === ns)!.key,
+    methods: rows.filter((r) => r.ns === ns).map((r): readonly [string, Row] => [r.m, r.row]),
+  }))
+}
+
+/** Whether one row breaks the table's services (Lean `rowBreaksServices`). */
+const breaksServices = (services: ReadonlyArray<RowService>, row: Row): boolean => {
+  const call = serviceCall(row)
+  if (call !== undefined && row.requires.length === 1) {
+    const [ns, m] = call
+    const key = row.requires[0]!
+    return serviceKeyMembers.includes(m) ||
+      services.some((s) => s.ns === ns && (!sameKey(s.key, key) || s.methods.filter(([n]) => n === m).length !== 1)) ||
+      services.some((s) => s.ns !== ns && (sameKey(s.key, key) || s.ns === `${ns}Key`))
+  }
+  if (call === undefined && row.requires.length === 0) {
+    const parts = serviceParts(row.spelling)
+    return parts !== undefined && services.some((s) => s.ns === parts[0])
+  }
+  return true
+}
+
+/** What a service's two declarations print (Lean `RowServiceData`): the namespace, the key's
+ * identity, the text of the key's shape, and each method with its request's type text (`undefined`
+ * on a `unit` request). `undefined` where Lean's `rowServiceData` refuses. */
+interface ServiceData {
+  readonly ns: string
+  readonly identity: string
+  readonly shape: string
+  readonly methods: ReadonlyArray<readonly [string, string | undefined]>
+}
+
+const rowServiceData = (table: ReadonlyArray<Row>): ReadonlyArray<ServiceData> | undefined => {
+  const services = rowServices(table)
+  if (table.some((row) => breaksServices(services, row))) return undefined
+  const out: ServiceData[] = []
+  for (const s of services) {
+    if (nativeScopeKey !== undefined && sameKey(s.key, nativeScopeKey)) return undefined
+    const fields: string[] = []
+    const methods: Array<readonly [string, string | undefined]> = []
+    for (const [m, row] of s.methods) {
+      const unit = normalize(row.request)._tag === "unit"
+      const request = unit ? undefined : targetType(row.request, legacyType)
+      const answer = targetType(row.answer, legacyType)
+      const error = targetType(row.error, legacyType)
+      if ((!unit && request === undefined) || answer === undefined || error === undefined) return undefined
+      fields.push(`readonly ${targetIdentifier(m) ? m : quoteType(m)}: (${request === undefined ? "" : `a0: ${request}`}) => ` +
+        `Effect.Effect<${answer}, ${error}, never>`)
+      methods.push([m, request])
+    }
+    out.push({ ns: s.ns, identity: keyText(s.key), shape: fields.length === 0 ? "{}" : `{ ${fields.join("; ")} }`, methods })
+  }
+  return out
+}
+
+/** A property's key name, plain or a string literal. */
+const propertyKey = (p: Node): string | undefined => {
+  const key = nodeAt(p, "key")
+  if (p.computed === true || !key) return undefined
+  return key.type === "Identifier" && typeof key.name === "string" ? key.name
+    : key.type === "Literal" && typeof key.value === "string" ? key.value : undefined
+}
+
+/** An identifier node with no annotation, by name. */
+const plainIdent = (n: Node | undefined, name: string): boolean =>
+  n !== undefined && n.type === "Identifier" && n.name === name && !n.typeAnnotation
+
+/** A method's accessor exactly as Lean's `accessorExpr` writes it: `(a0: T) => NsKey.use((a1) =>
+ * a1.m(a0))`, and `() => NsKey.use((a0) => a0.m())` on a `unit` request. */
+const isAccessor = (keyName: string, m: string, request: string | undefined, f: Node): boolean => {
+  if (f.type !== "ArrowFunctionExpression" || f.async === true || f.typeParameters || f.returnType || f.expression !== true) return false
+  const params = listAt(f, "params") ?? []
+  const inner = request === undefined ? "a0" : "a1"
+  if (request === undefined ? params.length !== 0 : params.length !== 1) return false
+  if (request !== undefined) {
+    const p = params[0]
+    const annotation = isNode(p) ? nodeAt(p, "typeAnnotation") : undefined
+    const type = annotation && nodeAt(annotation, "typeAnnotation")
+    if (!isNode(p) || p.type !== "Identifier" || p.name !== "a0" || !type || typeName(type) !== request) return false
+  }
+  const use = nodeAt(f, "body")
+  if (use?.type !== "CallExpression" || use.optional === true || use.typeArguments) return false
+  const useCallee = nodeAt(use, "callee")
+  const [g] = listAt(use, "arguments") ?? []
+  if (!useCallee || dotted(useCallee) !== `${keyName}.use` || (listAt(use, "arguments") ?? []).length !== 1 || !isNode(g)) return false
+  if (g.type !== "ArrowFunctionExpression" || g.async === true || g.typeParameters || g.returnType || g.expression !== true) return false
+  const gParams = listAt(g, "params") ?? []
+  if (gParams.length !== 1 || !isNode(gParams[0]) || !plainIdent(gParams[0], inner)) return false
+  const call = nodeAt(g, "body")
+  if (call?.type !== "CallExpression" || call.optional === true || call.typeArguments) return false
+  const member = nodeAt(call, "callee")
+  if (member?.type !== "MemberExpression" || member.computed === true || member.optional === true) return false
+  const object = nodeAt(member, "object"), property = nodeAt(member, "property")
+  if (!plainIdent(object, inner) || property?.type !== "Identifier" || property.name !== m) return false
+  const args = listAt(call, "arguments") ?? []
+  return request === undefined ? args.length === 0 : args.length === 1 && isNode(args[0]) && plainIdent(args[0], "a0")
+}
+
+/** Whether two const declarations are exactly a service's (Lean `RowServiceData.isDecls`): the
+ * key `NsKey = Context.Service<"identity", Shape>("identity")` and the namespace
+ * `Ns = Object.assign(NsKey, { m: accessor, … })`, both exported and unannotated. */
+const isServiceDecls = (d: ServiceData, key: Declaration, ns: Declaration): boolean => {
+  const keyName = `${d.ns}Key`
+  if (key.name !== keyName || !key.exported || key.annotated || ns.name !== d.ns || !ns.exported || ns.annotated) return false
+  const k = key.value
+  const kCallee = nodeAt(k, "callee")
+  const kTypes = nodeAt(k, "typeArguments")
+  const kParams = kTypes ? listAt(kTypes, "params") ?? [] : []
+  const kArgs = listAt(k, "arguments") ?? []
+  const identity = quotedTypeString(d.identity)
+  if (k.type !== "CallExpression" || k.optional === true || !kCallee || dotted(kCallee) !== "Context.Service" ||
+      kParams.length !== 2 || !isNode(kParams[0]) || typeName(kParams[0]) !== identity ||
+      !isNode(kParams[1]) || typeName(kParams[1]) !== d.shape ||
+      kArgs.length !== 1 || !isNode(kArgs[0]) || kArgs[0].type !== "Literal" || kArgs[0].value !== d.identity) return false
+  const a = ns.value
+  const aCallee = nodeAt(a, "callee")
+  const aArgs = listAt(a, "arguments") ?? []
+  if (a.type !== "CallExpression" || a.optional === true || a.typeArguments || !aCallee || dotted(aCallee) !== "Object.assign" ||
+      aArgs.length !== 2 || !isNode(aArgs[0]) || !plainIdent(aArgs[0], keyName) || !isNode(aArgs[1]) ||
+      aArgs[1].type !== "ObjectExpression") return false
+  const properties = listAt(aArgs[1], "properties") ?? []
+  if (properties.length !== d.methods.length) return false
+  return d.methods.every(([m, request], i) => {
+    const p = properties[i]
+    if (!isNode(p) || p.type !== "Property" || p.kind !== "init" || p.method === true || p.shorthand === true) return false
+    const value = nodeAt(p, "value")
+    return propertyKey(p) === m && value !== undefined && isAccessor(keyName, m, request, value)
+  })
+}
+
+/** **The rows' services read back** (Lean `readRowServices`): the leading declarations that are
+ * exactly the declarations of the services of `rows`, two for each service in table order, and the
+ * declarations after them. `undefined` when the services do not print or the declarations do not
+ * begin with theirs. */
+const readRowServices = (decls: ReadonlyArray<Declaration>, rows: ReadonlyArray<Row>): ReadonlyArray<Declaration> | undefined => {
+  const data = rowServiceData(rows)
+  if (data === undefined) return undefined
+  if (decls.length < 2 * data.length) return undefined
+  return data.every((d, i) => isServiceDecls(d, decls[2 * i]!, decls[2 * i + 1]!)) ? decls.slice(2 * data.length) : undefined
+}
+
+/* ---------- a definition block (Lean `readDefHead`, `readServices`, `readDefBody`) ---------- */
+
+/** Whether a constant is a service's key or layer (Lean `isServiceConst`): a call of
+ * `Context.Service` at type arguments, or of `Layer.effect`. */
+const isServiceConst = (value: Node): boolean => {
+  if (value.type !== "CallExpression") return false
+  const callee = nodeAt(value, "callee")
+  const head = callee && dotted(callee)
+  return (head === "Context.Service" && nodeAt(value, "typeArguments") !== undefined) ||
+    (head === "Layer.effect" && nodeAt(value, "typeArguments") === undefined)
+}
+
+/** `Effect.Effect<A, E, R>` as its three type nodes. */
+const effectColumns = (t: Node | undefined): readonly [Node, Node, Node] | undefined => {
+  if (t?.type !== "TSTypeReference") return undefined
+  const ref = nodeAt(t, "typeName")
+  const args = nodeAt(t, "typeArguments")
+  const params = args ? listAt(args, "params") ?? [] : []
+  const [a, e, r] = params
+  return ref && qualifiedTypeName(ref) === "Effect.Effect" && params.length === 3 && isNode(a) && isNode(e) && isNode(r)
+    ? [a, e, r] : undefined
+}
+
+/** A type annotation's type node. */
+const annotationOf = (n: Node): Node | undefined => {
+  const annotation = nodeAt(n, "typeAnnotation")
+  return annotation && nodeAt(annotation, "typeAnnotation")
+}
+
+/** A parameter's declaration from its binder in a header (Lean `readParam`):
+ * `name: (a0: Request) => Effect.Effect<A, E, never>`, each column under the module's classes. */
+const readParam = (p: unknown): ParamDecl | undefined => {
+  if (!isNode(p) || p.type !== "Identifier" || typeof p.name !== "string" || p.optional === true) return undefined
+  const fn = annotationOf(p)
+  if (fn?.type !== "TSFunctionType" || fn.typeParameters) return undefined
+  const params = listAt(fn, "params") ?? []
+  const binder = params[0]
+  const request = isNode(binder) && binder.type === "Identifier" && binder.name === "a0" ? annotationOf(binder) : undefined
+  const result = nodeAt(fn, "returnType")
+  const columns = effectColumns(result && nodeAt(result, "typeAnnotation"))
+  if (params.length !== 1 || request === undefined || columns === undefined || typeName(columns[2]) !== "never") return undefined
+  const req = readTypeChecked(request, declaredClasses)
+  const answer = readTypeChecked(columns[0], declaredClasses)
+  const error = readTypeChecked(columns[1], declaredClasses)
+  return req === undefined || answer === undefined || error === undefined ? undefined
+    : { name: p.name, request: req, answer, error }
+}
+
+/** A definition's declaration and its body's node from its constant (Lean `readDefHead`):
+ * `(a0: Request, p: …): Effect.Effect<A, E, R> => body`, its columns under the module's classes
+ * and its requirement row by the requirement reader. The role is the services' (`roleOf`). */
+const readDefHead = (c: Declaration): Read<readonly [DefDecl, Node]> => {
+  const bad = refuse({ _tag: "shape", what: "definition" })
+  const f = c.value
+  if (f.type !== "ArrowFunctionExpression" || f.async === true || f.typeParameters || f.expression !== true) return bad
+  const [first, ...rest] = listAt(f, "params") ?? []
+  const request = isNode(first) && first.type === "Identifier" && first.name === "a0" ? annotationOf(first) : undefined
+  const result = nodeAt(f, "returnType")
+  const columns = effectColumns(result && nodeAt(result, "typeAnnotation"))
+  const body = nodeAt(f, "body")
+  if (request === undefined || columns === undefined || body === undefined) return bad
+  const req = readTypeChecked(request, declaredClasses)
+  const answer = readTypeChecked(columns[0], declaredClasses)
+  const error = readTypeChecked(columns[1], declaredClasses)
+  const rowText = typeName(columns[2])
+  const requires = rowText === undefined ? undefined : readKeysText(rowText)
+  const params = rest.map(readParam)
+  if (req === undefined || answer === undefined || error === undefined || requires === undefined ||
+      params.some((q) => q === undefined)) return bad
+  return ok([{ name: c.name, request: req, answer, error, requires, role: { _tag: "plain" }, params: params as ParamDecl[] }, body])
+}
+
+type ServiceInfo = { readonly name: string; readonly init: string; readonly methods: ReadonlyArray<readonly [string, string, number]> }
+
+/** The request a method's closure passes its definition (Lean `isMethodRequest`): the state `a0`,
+ * then its arguments `a1` … `an` as `argTuple` writes them. */
+const isMethodRequest = (arity: number, e: Node): boolean => {
+  const isPairOf = (x: Node, first: string, rest: (y: Node) => boolean): boolean => {
+    if (x.type !== "CallExpression") return false
+    const callee = nodeAt(x, "callee")
+    const args = listAt(x, "arguments") ?? []
+    return callee !== undefined && plainIdent(callee, "pair") && args.length === 2 &&
+      isNode(args[0]) && plainIdent(args[0], first) && isNode(args[1]) && rest(args[1])
+  }
+  const tuple = (from: number, x: Node): boolean =>
+    from === arity ? plainIdent(x, `a${from}`) : isPairOf(x, `a${from}`, (y) => tuple(from + 1, y))
+  return arity === 0 ? plainIdent(e, "a0") : isPairOf(e, "a0", (y) => tuple(1, y))
+}
+
+/** A service's layer (Lean `readServiceLayer`): `Layer.effect(S, Effect.map(init(), (a0) => {
+ * return { m: (a1, …) => d(pair(a0, …)), … } }))`. A closure's parameters' annotations are not
+ * read: they are erased in the run. */
+const readServiceLayer = (c: Declaration): ServiceInfo | undefined => {
+  const v = c.value
+  const callee = nodeAt(v, "callee")
+  const [s, mapped] = listAt(v, "arguments") ?? []
+  if (v.type !== "CallExpression" || !callee || dotted(callee) !== "Layer.effect" || (listAt(v, "arguments") ?? []).length !== 2 ||
+      !isNode(s) || s.type !== "Identifier" || typeof s.name !== "string" || !isNode(mapped) || mapped.type !== "CallExpression") return undefined
+  const mapCallee = nodeAt(mapped, "callee")
+  const [initCall, fn] = listAt(mapped, "arguments") ?? []
+  if (!mapCallee || dotted(mapCallee) !== "Effect.map" || (listAt(mapped, "arguments") ?? []).length !== 2 ||
+      !isNode(initCall) || initCall.type !== "CallExpression" || (listAt(initCall, "arguments") ?? []).length !== 0) return undefined
+  const initCallee = nodeAt(initCall, "callee")
+  if (initCallee?.type !== "Identifier" || typeof initCallee.name !== "string") return undefined
+  if (!isNode(fn) || fn.type !== "ArrowFunctionExpression" || fn.async === true || fn.typeParameters || fn.expression === true ||
+      fn.returnType) return undefined
+  const fnParams = listAt(fn, "params") ?? []
+  if (fnParams.length !== 1 || !isNode(fnParams[0]) || !plainIdent(fnParams[0], "a0")) return undefined
+  const block = listAt(nodeAt(fn, "body") ?? fn, "body") ?? []
+  const ret = block[0]
+  const object = block.length === 1 && isNode(ret) && ret.type === "ReturnStatement" ? nodeAt(ret, "argument") : undefined
+  if (object?.type !== "ObjectExpression") return undefined
+  const methods: Array<readonly [string, string, number]> = []
+  for (const p of listAt(object, "properties") ?? []) {
+    if (!isNode(p) || p.type !== "Property" || p.kind !== "init" || p.method === true || p.shorthand === true) return undefined
+    const m = propertyKey(p)
+    const closure = nodeAt(p, "value")
+    if (m === undefined || closure?.type !== "ArrowFunctionExpression" || closure.async === true || closure.typeParameters ||
+        closure.expression !== true || closure.returnType) return undefined
+    const params = listAt(closure, "params") ?? []
+    if (!params.every((q, i) => isNode(q) && q.type === "Identifier" && q.name === `a${i + 1}`)) return undefined
+    const call = nodeAt(closure, "body")
+    const head = call && nodeAt(call, "callee")
+    const args = call ? listAt(call, "arguments") ?? [] : []
+    if (call?.type !== "CallExpression" || head?.type !== "Identifier" || typeof head.name !== "string" || args.length !== 1 ||
+        !isNode(args[0]) || !isMethodRequest(params.length, args[0])) return undefined
+    methods.push([m, head.name, params.length])
+  }
+  return { name: s.name, init: initCallee.name, methods }
+}
+
+/** A block's service constants (Lean `readServices`): each service's key, `const S =
+ * Context.Service<"S", Shape>("S")` (its shape is not read: it is erased in the run), then its
+ * layer, named for the key. Every constant is one of these, or the reading refuses. */
+const readServices = (consts: ReadonlyArray<Declaration>): ReadonlyArray<ServiceInfo> | undefined => {
+  const out: ServiceInfo[] = []
+  for (let i = 0; i < consts.length; i += 2) {
+    const key = consts[i]!, layer = consts[i + 1]
+    if (layer === undefined) return undefined
+    const info = readServiceLayer(layer)
+    if (info === undefined || layer.name !== `${info.name}Layer` || key.name !== info.name) return undefined
+    const k = key.value
+    const callee = nodeAt(k, "callee")
+    const types = nodeAt(k, "typeArguments")
+    const typeParams = types ? listAt(types, "params") ?? [] : []
+    const [identity, shape] = typeParams
+    const [arg] = listAt(k, "arguments") ?? []
+    if (k.type !== "CallExpression" || !callee || dotted(callee) !== "Context.Service" || typeParams.length !== 2 ||
+        !isNode(identity) || typeName(identity) !== quotedTypeString(info.name) || !isNode(shape) || shape.type !== "TSTypeLiteral" ||
+        !isNode(arg) || arg.type !== "Literal" || arg.value !== info.name || (listAt(k, "arguments") ?? []).length !== 1) return undefined
+    out.push(info)
+  }
+  return out
+}
+
+/** The role a block's services give a definition, by its name (Lean `roleOf`). */
+const roleOf = (services: ReadonlyArray<ServiceInfo>, name: string): DefDecl["role"] => {
+  const init = services.find((s) => s.init === name)
+  if (init !== undefined) return { _tag: "serviceInit", service: init.name }
+  for (const s of services) {
+    const m = s.methods.find(([, d]) => d === name)
+    if (m !== undefined) return { _tag: "serviceMethod", service: s.name, method: m[0], arity: m[2] }
+  }
+  return { _tag: "plain" }
+}
+
+/** A layer declaration back to its path and its layer (Lean `readLayerDecl`). */
+const readLayerDecl = (c: Declaration): Read<readonly [ReadonlyArray<number>, LayerTerm]> => {
+  const target = readRefName(c.name)
+  if (target === undefined || refName(target) !== c.name) return refuse({ _tag: "shape", what: "module" })
+  const fragment = exprOf(c.value)
+  if (failed(fragment)) return again(fragment)
+  const layer = readLayer(fragment.success)
+  if (failed(layer)) return again(layer)
+  return ok([target, layer.success])
+}
+
+/** A definition's body from its printed suspension, at environment length `1`, with its own
+ * layers (Lean `readDefBody`): `Effect.suspend(() => body)`, or
+ * `Effect.suspend(() => { let L_<path> = …; return body })`. */
+const readDefBody = (x: Node): Read<readonly [Eff, ReadonlyArray<readonly [ReadonlyArray<number>, LayerTerm]>]> => {
+  const bad = refuse({ _tag: "shape", what: "definition" })
+  const callee = nodeAt(x, "callee")
+  const [thunk] = listAt(x, "arguments") ?? []
+  if (x.type !== "CallExpression" || !callee || dotted(callee) !== "Effect.suspend" || (listAt(x, "arguments") ?? []).length !== 1 ||
+      !isNode(thunk) || thunk.type !== "ArrowFunctionExpression" || thunk.async === true || thunk.typeParameters ||
+      (listAt(thunk, "params") ?? []).length !== 0 || thunk.returnType) return bad
+  const body = nodeAt(thunk, "body")
+  if (!body) return bad
+  const readBody = (y: Node): Read<Eff> => {
+    const fragment = exprOf(y)
+    return failed(fragment) ? again(fragment) : readEff(1, fragment.success)
+  }
+  if (thunk.expression === true) return Result.map(readBody(body), (e) => [e, []] as const)
+  const stmts = (listAt(body, "body") ?? []).filter(isNode)
+  const last = stmts[stmts.length - 1]
+  const result = last?.type === "ReturnStatement" ? nodeAt(last, "argument") : undefined
+  if (result === undefined) return bad
+  const locals: Array<readonly [ReadonlyArray<number>, LayerTerm]> = []
+  for (const s of stmts.slice(0, -1)) {
+    if (s.type !== "VariableDeclaration" || s.kind !== "let") return bad
+    const [d] = listAt(s, "declarations") ?? []
+    const id = isNode(d) ? nodeAt(d, "id") : undefined
+    const init = isNode(d) ? nodeAt(d, "init") : undefined
+    if ((listAt(s, "declarations") ?? []).length !== 1 || id?.type !== "Identifier" || typeof id.name !== "string" ||
+        id.typeAnnotation || !init) return bad
+    const local = readLayerDecl({ name: id.name, value: init, exported: false, annotated: false })
+    if (failed(local)) return local.failure._tag === "shape" && local.failure.what === "module" ? bad : again(local)
+    locals.push(local.success)
+  }
+  return Result.map(readBody(result), (e) => [e, locals] as const)
+}
+
+/** A path in a block's module layers: its head is the block's child `2` (Lean `inModulePath`). */
+const inModulePath = (p: ReadonlyArray<number>): boolean => p[0] === 2
+
+/** The module's `k`-th layer's path: the block's child `2`, then the spine's item `k` (Lean
+ * `Path.layerPath`). */
+const layerPath = (k: number): ReadonlyArray<number> => [2, ...Array<number>(k).fill(1), 0]
+
+/** The block's module layers (Lean `moduleLayersOf`): the declarations whose paths stand in the
+ * module, which must be `layerPath 0`, `1`, … in order. */
+const moduleLayersOf = (ds: ReadonlyArray<readonly [ReadonlyArray<number>, LayerTerm]>): ReadonlyArray<LayerTerm> | undefined => {
+  const ms = ds.filter(([p]) => inModulePath(p))
+  return ms.every(([p], k) => refName(p) === refName(layerPath(k))) ? ms.map(([, l]) => l) : undefined
+}
+
+/** **A definition block** (Lean `readModule`'s block path): the headers, the services' roles, the
+ * bodies at their parameters, the main program, the module's layers and the hoisted layers, put
+ * back at their paths. */
+const readBlock = (defDecls: ReadonlyArray<Declaration>, after: ReadonlyArray<Declaration>, main: Node): Read<Eff> => {
+  const heads: Array<readonly [DefDecl, Node]> = []
+  for (const c of defDecls) {
+    const h = readDefHead(c)
+    if (failed(h)) return again(h)
+    heads.push(h.success)
+  }
+  const serviceEnd = after.findIndex((c) => readRefName(c.name) !== undefined || !isServiceConst(c.value))
+  const serviceConsts = serviceEnd === -1 ? after : after.slice(0, serviceEnd)
+  const layerConsts = serviceEnd === -1 ? [] : after.slice(serviceEnd)
+  const services = readServices(serviceConsts)
+  if (services === undefined) return refuse({ _tag: "shape", what: "service" })
+  const decls: DefDecl[] = heads.map(([d]) => ({ ...d, role: roleOf(services, d.name) }))
+  const defs = defEntries(decls)
+  return withNamed(defs, decls, () => {
+    const bodies: Eff[] = []
+    const locals: Array<readonly [ReadonlyArray<number>, LayerTerm]> = []
+    for (const [d, body] of heads) {
+      const b = withNamed([...paramEntries(d.params), ...defs], decls, () => readDefBody(body))
+      if (failed(b)) return again(b)
+      bodies.push(b.success[0])
+      locals.push(...b.success[1])
+    }
+    const program = readProgramExpr(main)
+    if (failed(program)) return again(program)
+    const ds: Array<readonly [ReadonlyArray<number>, LayerTerm]> = []
+    for (const c of layerConsts) {
+      const d = readLayerDecl(c)
+      if (failed(d)) return again(d)
+      ds.push(d.success)
+    }
+    const layers = moduleLayersOf(ds)
+    if (layers === undefined) return refuse({ _tag: "shape", what: "module" })
+    const whole = restoreAll({ _tag: "defs", decls, bodies, main: program.success, layers },
+      [...locals, ...ds.filter(([p]) => !inModulePath(p))])
+    return whole === undefined ? refuse({ _tag: "shape", what: "module" }) : ok(decodeEff(whole))
+  })
 }

@@ -1,5 +1,6 @@
 import Effect4.Laws.Codegen.ReadLeaf
 import Effect4.Laws.Codegen.Services
+import Effect4.Laws.Codegen.RowServices
 import Effect4.Laws.Program.Hoisting
 import Effect4.Laws.Program.HoistingTotal
 import Effect4.Laws.Auto.Semantics
@@ -255,9 +256,20 @@ theorem splitClasses_append (cs : List TypeScript.ClassDecl) (ds : List TypeScri
   | nil => cases ds <;> rfl
   | cons c cs ih => simp only [List.map_cons, List.cons_append, splitClasses, ih]
 
+/-- A block of class declarations, then the rows' service constants, then constants, splits
+after the classes. A step of `readModule_printModule` and `readModule_printModule_defs`. -/
+theorem splitClasses_rowServices (cs : List TypeScript.ClassDecl)
+    (serviceDecls ds : List TypeScript.ConstDecl) :
+    splitClasses (cs.map TypeScript.Decl.classDecl ++ serviceDecls.map TypeScript.Decl.const ++
+      ds.map TypeScript.Decl.const) =
+      (cs, serviceDecls.map TypeScript.Decl.const ++ ds.map TypeScript.Decl.const) := by
+  rw [List.append_assoc, ← List.map_append, splitClasses_append, List.map_append]
+
 /-- Reading the declaration block produced by the module printer recovers the original
 program, including shared-layer references, when its leading class declarations read back to
-the module's payload classes (decisions row 120, part E2), each piece successful hoisting
+the module's payload classes (decisions row 120, part E2), the services of the rows that the
+module declares follow them as `rowServiceDecls` prints them (decisions row 378 (19); none for
+the envelope that a host wraps), each piece successful hoisting
 produced reads back from its own printing under those classes (`ReadsBack`, which `readable`
 gives), and the emitted reference names decode. The premises concern the pieces, never the
 module read itself, and they are stated of any expression reader: this law is the hoisting
@@ -273,14 +285,17 @@ theorem readModule_printModule {sig : Signature Op}
     (plain : main.block? = none)
     {classDecls : List TypeScript.ClassDecl}
     (classesRead : Effect4.Codegen.Classes.readClassDecls classDecls = some classes)
+    {rows : List Row} {serviceDecls : List TypeScript.ConstDecl}
+    (servicesPrinted : rowServiceDecls sig rows = .ok serviceDecls)
     (mainReadable : ReadsBack classes sig spell 0 main)
     (layersReadable : ∀ entry ∈ history, entry.2.ReadsBack classes sig spell)
     (namesReadable : ∀ entry ∈ history,
       LayerTerm.readRefName (LayerTerm.refName entry.1) = some entry.1)
     {name : String} {ty : EffTy} {decls : List TypeScript.ConstDecl}
     (printed : printModule sig name ty root = .ok decls) :
-    readModule sig spell call param
-      (classDecls.map TypeScript.Decl.classDecl ++ decls.map TypeScript.Decl.const) = .ok root := by
+    readModule sig spell call param rows
+      (classDecls.map TypeScript.Decl.classDecl ++ serviceDecls.map TypeScript.Decl.const ++
+        decls.map TypeScript.Decl.const) = .ok root := by
   have ordered := Eff.hoistAll_ordered hoisted
   have unique : (history.map Prod.fst).Nodup := ordered.imp (by
     intro a b before equal
@@ -306,7 +321,8 @@ theorem readModule_printModule {sig : Signature Op}
     rw [Eff.restoreAll_perm main perm ((perm.map Prod.fst).symm.nodup unique)]
     exact Eff.restoreAll_hoistAll hoisted
   have leading := defsPrefix_layers namesReadable hp
-  rw [readModule, blockClasses, splitClasses_append, classesRead]
+  rw [readModule, blockClasses, splitClasses_rowServices, classesRead]
+  simp only [readRowServices_rowServiceDecls servicesPrinted]
   simp only [List.map_append, List.map_cons, List.map_nil,
     List.getLast?_append, List.getLast?_singleton, Option.some_or,
     List.dropLast_append_cons, List.dropLast_singleton, List.append_nil, value, leading]
@@ -999,7 +1015,8 @@ canonical requirement row, a name with no layer path); each body and each of its
 back from their printing at
 the signature its parameters extend (`bodyDeclOf`); the main program, each module layer and each
 other hoisted layer read back at the block's signature through the block's spelling map
-(`defsSpell`); and the layers' names decode, the module reads back to the program, with each
+(`defsSpell`); and the layers' names decode, the module reads back to the program, after its
+payload classes and the services of the rows it declares (`rowServiceDecls`), with each
 definition's role given back by the services' layers (`roleOf`, `restoreRoles`) and the module's
 layers by their paths (`moduleLayersOf`). No hoisted layer stands in the module
 (`Eff.hoistAll_outside`). The premises concern the pieces, as `readModule_printModule`'s do, and
@@ -1021,6 +1038,8 @@ theorem readModule_printModule_defs {sig : Signature Op}
     (block : main.block? = some (defs, bodies, body, layers))
     {classDecls : List TypeScript.ClassDecl}
     (classesRead : Effect4.Codegen.Classes.readClassDecls classDecls = some classes)
+    {rows : List Row} {serviceDecls : List TypeScript.ConstDecl}
+    (servicesPrinted : rowServiceDecls sig rows = .ok serviceDecls)
     (headsReadable : ∀ d ∈ defs, d.readable classes = true)
     (bodiesReadable : ∀ p ∈ defs.zip bodies.toList,
       ReadsBack classes ((sig.withDefs defs).withParams p.1.params)
@@ -1039,8 +1058,9 @@ theorem readModule_printModule_defs {sig : Signature Op}
       LayerTerm.readRefName (LayerTerm.refName entry.1) = some entry.1)
     {name : String} {ty : EffTy} {decls : List TypeScript.ConstDecl}
     (printed : printModule sig name ty root = .ok decls) :
-    readModule sig spell call param
-      (classDecls.map TypeScript.Decl.classDecl ++ decls.map TypeScript.Decl.const) = .ok root := by
+    readModule sig spell call param rows
+      (classDecls.map TypeScript.Decl.classDecl ++ serviceDecls.map TypeScript.Decl.const ++
+        decls.map TypeScript.Decl.const) = .ok root := by
   have ordered := Eff.hoistAll_ordered hoisted
   have unique : (history.map Prod.fst).Nodup := ordered.imp (by
     intro a b before equal
@@ -1161,7 +1181,8 @@ theorem readModule_printModule_defs {sig : Signature Op}
         obtain ⟨c, _, tail⟩ := bind_eq_ok.mp hout
         obtain ⟨out', _, heq⟩ := bind_eq_ok.mp tail
         exact ⟨c, out'.1, by rw [← Except.ok.inj heq]⟩
-    rw [readModule, blockClasses, splitClasses_append, classesRead]
+    rw [readModule, blockClasses, splitClasses_rowServices, classesRead]
+    simp only [readRowServices_rowServiceDecls servicesPrinted]
     simp only [List.map_append, List.map_cons, List.map_nil,
       List.getLast?_append, List.getLast?_singleton, Option.some_or,
       List.dropLast_append_cons, List.dropLast_singleton, List.append_nil, value, leading]
