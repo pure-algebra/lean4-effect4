@@ -68,17 +68,19 @@ preamble). They lock after the reviews, as row 379 did.
 | 2 | One meaning: `denoteBlockB` gains every one-fiber arm. No second meaning is written; `denoteR` stays the residual program of M5 | meaning |
 | 2b | **The agreement goes through the reference.** H9 on one fiber is the chain session, frame replay, reference replay (`run_eq_ref_table`, proved), meaning. The one new theorem is the reference's adequacy against the block meaning on one fiber. PROC-6's frame-level chain stays as landed | representation |
 | 3 | **Code by address.** A finalizer, a layer's build and a service method are first-order data: a program address and a captured environment. The meaning denotes such data on demand at the next budget, as PROC-6's `call` denotes a body. Scopes, memo maps and their finalizers live in `Stores`, exactly as the machine keeps them | representation |
-| 4 | **Link-time choice** (decisions row 381 (3), the owner's): a program names a service by its key, and assembly picks a bank entry per key by digest. Dispatch is static. Row 340 (2) stands. Closures become values only with content addressing | representation |
+| 4 | **Services are records of closures, held as data** (decisions row 381 (3), the owner's): a closure is a code reference and captured values, a program path now and a content digest once content addressing lands. A layer builds a service record; `Effect.service` reads it; a method call applies a closure | representation |
 | 5 | The host may interrupt the fiber and advance the clock. `hostDecision` widens to `interruptFrom` at the root and `advance`; masks defer an interruption as rc.112 does | domain |
 | 6 | Order: §5's stages, after PROC-6 merges; CONC-1 after SCOPE-1 | domain |
 
-**Ruling 4, as the owner ruled it.** A layer still chooses the implementation, as Effect's
-services do, but the choice is made when the program is assembled, not while it runs. A program
-names each service by its key; the assembly picks a bank entry (`Effect4.Bank.Entry`) for each key
-by its digest. A method call is then a static invocation into the chosen block, so a proof about
-the program composes with the entry's claim, as a functor's application does. The printer still
-writes the Effect face, `yield* TodoApp` and `todo.add(x)`, from the static wiring. Closures as
-values wait for content addressing, where a closure is a code digest and captured values.
+**Ruling 4, as the owner ruled it, on semantics.** In Effect a service in the context is a runtime
+value, a record of functions, and the layer provided at that place, possibly chosen while the
+program runs, decides the implementation. A choice fixed at link time would be a subset of that.
+A closure held as data keeps Effect's meaning with names as data: a code reference and captured
+values, never a Lean function. The tree already has two carriers of that shape, `ArgSite` (a path
+and an environment, row 340) and `Capture` (a point at rest with its context,
+`src/Effect4/Machine/Stores.lean`). With content addressing the code reference becomes a digest,
+so a closure can name a bank entry's code. The codec refuses a closure; none crosses the host
+boundary.
 
 ## 4. The shortcut audit
 
@@ -86,7 +88,7 @@ values wait for content addressing, where a closure is a code digest and capture
 | --- | --- |
 | Layers without memo maps (build every time) | the memo world, parent chain, `fresh` and observers, as the machine keeps them |
 | A layer as a context-producing definition (PROC-6's twin) | `provideLayer` with the service's `LayerTerm` |
-| Methods as fixed definitions | the implementation chosen per service key at assembly, from the bank by digest (ruling 4) |
+| Methods as fixed definitions | records of closures, the implementation the provided layer's (ruling 4) |
 | Finalizers that cannot call host rows | a finalizer is code by address; it may call rows and fail |
 | Masks as no-ops because nothing interrupts | the host interrupts the fiber (ruling 5) |
 | `acquireRelease` without its uninterruptible acquire | the masked acquire, with the release registered only after success |
@@ -101,17 +103,35 @@ flowchart TD
   P["Placement: the claim rows-fiber-host, the definitions, the planned goals"]
   S1["Stage 1: scopes and finalizers in the meaning"]
   S2["Stage 2: the sequential layers and the memo world in the meaning"]
-  S3["Stage 3: services chosen at assembly, from the bank"]
+  S0["Stage 0: closures as data"]
+  S3["Stage 3: services as records of closures"]
   S4["Stage 4: the reference adequate to the meaning on one fiber"]
   S5["Stage 5: host interruption and the clock"]
   S6["Stage 6: H9 on one fiber; the shipped service replayed through its real layer"]
+  P --> S0
   P --> S1
+  S0 --> S3
   S1 --> S2
   S2 --> S3
   S3 --> S4
   S4 --> S5
   S5 --> S6
 ```
+
+### Stage 0: closures as data
+
+- `Store.Val` gains a closure: a code reference and a captured value. The reference is a program
+  path now; content addressing adds a digest as a second kind of reference, with no new carrier.
+- `Ty` gains an effectful function type, `A → Eff B E R`, contravariant in `A`. `Eff` gains the
+  application of a closure value to an argument.
+- The machine applies a closure as `invoke` does: it resolves the code at its reference with the
+  environment `[captured, argument]` and pushes an empty parameter frame (PROC-6's stage 0a).
+- The meaning denotes an application at the next budget, as PROC-6's `call` does.
+- The checker types an application against the function type. `Fits` admits a closure whose code
+  types at the captured value's type. Subtyping reads the variance table.
+- The codec refuses a closure. The printer writes an arrow; the reader reads one back.
+- Landing: the edits to `Store.Val`, `Ty` and `Eff` and the generated groups they feed land
+  together and build together. The behaviour gates of `make check-full` follow.
 
 ### Stage 1: scopes and finalizers in the meaning
 
@@ -142,16 +162,15 @@ flowchart TD
   The in-flight Deferred is never awaited on one fiber.
 - A layer's identity is its path and the call that runs it (row 341, step 3).
 
-### Stage 3: services chosen at assembly, from the bank
+### Stage 3: services as records of closures
 
-- A program names each service it needs by key. The assembly binds each key to a bank entry by
-  digest: the entry's block provides the service's methods, and its layer builds the service's
-  state in its scope (stage 2).
-- A method call is a static invocation into the chosen block, with the service's state read from
-  the context. Swapping the entry for another with the same claim keeps every proof of the program.
-- The printer writes the Effect face from the wiring: the layer as `<App>Layer`, the service as a
-  record of arrows, the consumer as `yield* TodoApp` and then `todo.add(x)`.
-- The to-do's claims carry over by one equation: a method called means its entry under the
+- A layer's `effect` body returns a record of closures over its state. `Effect.service key` reads
+  the record from the context, and a method call applies one closure.
+- The layer provided at a place decides the implementation, as in Effect, including a layer
+  chosen while the program runs.
+- The emitted application changes shape: `<App>Layer` builds the record, each method a closure
+  over the state, and a consumer writes `yield* TodoApp` and then `todo.add(x)`.
+- The to-do's claims carry over by one equation: a method applied means its entry under the
   state, the region's meaning (the emitted-services note, "The laws it owes").
 
 ### Stage 4: the reference adequate to the meaning on one fiber
@@ -200,9 +219,8 @@ flowchart TD
   modules, `BlockMeaning.lean` and `FragmentBlock.lean`, and it leaves PROC-6's hosted spine
   (`Agreement/Machine.lean`, `Segment.lean`, `Hosted.lean`) alone, since the agreement goes
   through the reference. It starts after PROC-6 merges.
-- **No core edit is planned** since ruling 4 is link-time: `Store.Val`, `Ty` and `Eff` stay as
-  they are (their 786, 690 and 682 dependents are not rebuilt). The assembly's binding of keys to
-  entries is new data beside the program.
+- **Stage 0 is the core edit.** Its edits to `Store.Val`, `Ty` and `Eff` land together, with
+  every generated group they feed, then one build and `make check-full`.
 - **New material in new leaf modules**, appended to the root imports, as PROC-6's brief did:
   the scope arms, the layer arms, the service arms, the agreement arms, `H9Fiber`.
 - **A prep stage first**, as PROC-6 had: measure each edited module's fan-out at the base, and
@@ -215,7 +233,8 @@ All goals: concept `translation-simulation` (`docs/core/semantics.md`), except w
 
 | Goal | Claim, role | Requirement | Consumer |
 | --- | --- | --- | --- |
-| stage 3: an assembly's binding is well typed: each entry's interface meets its key's signature | `context-requirements` | R5 | stage 6 |
+| stage 0: closure application's typing and `Fits` | `store-typing`, `subtyping-algebra` | R4 | stage 3 |
+| stage 0: the codec refuses a closure | `exact-codecs` | R4 | the host boundary |
 | stage 1: conservativity over `BlockRows` | step of `rows-fiber-host` | R6 | `H9Fiber` at a block program |
 | stage 1: the meaning's close equals `closeOrder`'s | step of `rows-fiber-host`; concept `scope-lifetime-finalization` | R11 | stage 4's close arm |
 | stage 2: a memo hit's observer and finalizer | step of `rows-fiber-host` | R11 | stage 6's shared service |
@@ -238,9 +257,9 @@ CONC-1's, and progress stays the host's assumption (`host-progress`).
   a sleep, a yield, a mask's end. The meaning asks the host at exactly those points.
 - **C2.** Whether the reference runs a finalizer as a hop by address (`FiberOp.foreignRelease`,
   `Capture`), so the outer induction on the budget covers it as PROC-6's covers a call.
-- **C3.** The assembly's binding: where it lives (beside the program, or in the application
-  record of row 336 (9)) and how a run names the entries it used, so a receipt can cite their
-  digests.
+- **C3.** The closure carrier: a new `Val` constructor, or `ArgSite` and `Capture` promoted. One
+  carrier serves finalizers, methods and stored functions (`Cache`'s `lookup`, row 340 (2)).
+- **C4.** The function type printed for tsgo 7 (`(a: A) => Effect<B, E, R>`), and read back.
 - **C5.** `budgetOf` across a layer's scope: PROC-6's ruling 5 proves the machine at every
   scheduler budget, so a layer that provides the budget's keys is covered. Confirm at stage 4.
 
