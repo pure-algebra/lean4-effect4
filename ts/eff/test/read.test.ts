@@ -748,12 +748,20 @@ describe("a module file: the rows' services and a definition block", () => {
     expect(fileRefusal(envelope)).toEqual({ _tag: "shape", what: "row services" })
   })
   test("a service declaration other than the table's is refused", () => {
-    // the key at another identity
-    expect(fileRefusal(text.replaceAll('"k30_6"', '"k30_7"'))).toEqual({ _tag: "shape", what: "row services" })
+    // the key at its raw runtime text or at another identity when the table names it
+    expect(fileRefusal(text.replaceAll('"TodoRepo"', '"k30_6"'))).toEqual({ _tag: "shape", what: "row services" })
+    expect(fileRefusal(text.replaceAll('"TodoRepo"', '"k30_7"'))).toEqual({ _tag: "shape", what: "row services" })
+    // a requirement row or context type at the raw runtime text when the table names the key
+    expect(fileRefusal(text.replace('Effect.context<"TodoRepo">()', 'Effect.context<"k30_6">()'))).toEqual({
+      _tag: "shape", what: "requirement row",
+    })
     // an accessor calling another method
     expect(fileRefusal(text.replace("(a1) => a1.insert(a0)", "(a1) => a1.all(a0)"))).toEqual({ _tag: "shape", what: "row services" })
   })
-  test("a header's error column names the payload class, read under the module's classes", () => {
+  test("a header's error column names the payload class, and its key columns read by the service's name", () => {
+    expect(text).toContain('Context.Service<"TodoRepo",')
+    expect(text).toContain('Context.Context<"TodoRepo">')
+    expect(text).not.toContain('"k30_6"')
     const r = readTypeScriptFile(text, "todo.gen.ts", table)
     if (Result.isFailure(r)) throw new Error(`refused: ${showFailure(r.failure)}`)
     const program = r.success
@@ -761,5 +769,6 @@ describe("a module file: the rows' services and a definition block", () => {
     const complete = program.decls.find((d) => d.name === "TodoApp_complete")
     expect(JSON.stringify(complete?.error)).toContain('"NotFound"')
     expect(program.decls[0]?.requires).toEqual([{ name: { value: 30 }, service: { value: 6 } }])
+    expect(program.decls[0]?.answer).toEqual({ _tag: "contextOf", keys: [{ name: { value: 30 }, service: { value: 6 } }] })
   })
 })

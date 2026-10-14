@@ -5,11 +5,11 @@
 
 export class NotFound extends Data.TaggedError("NotFound")<{ readonly id: number }> {}
 
-export const TodoAppContext = (a0: void): Effect.Effect<Context.Context<"k30_6">, never, "k30_6"> => Effect.suspend(
-  () => Effect.context<"k30_6">()
+export const TodoAppContext = (a0: void): Effect.Effect<Context.Context<"TodoRepo">, never, "TodoRepo"> => Effect.suspend(
+  () => Effect.context<"TodoRepo">()
 )
 
-export const TodoApp_add = (a0: readonly [Context.Context<"k30_6">, string]): Effect.Effect<{ readonly done: boolean; readonly id: number; readonly title: string }, readonly ["SqlError", string] | readonly ["EmptyTitle", "a title is required"], never> => Effect.suspend(
+export const TodoApp_add = (a0: readonly [Context.Context<"TodoRepo">, string]): Effect.Effect<{ readonly done: boolean; readonly id: number; readonly title: string }, readonly ["SqlError", string] | readonly ["EmptyTitle", "a title is required"], never> => Effect.suspend(
   () => Effect.provideContext(
     Effect.flatMap(
       Effect.succeed(snd(a0)),
@@ -23,11 +23,11 @@ export const TodoApp_add = (a0: readonly [Context.Context<"k30_6">, string]): Ef
   )
 )
 
-export const TodoApp_list = (a0: Context.Context<"k30_6">): Effect.Effect<ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }>, readonly ["SqlError", string], never> => Effect.suspend(
+export const TodoApp_list = (a0: Context.Context<"TodoRepo">): Effect.Effect<ReadonlyArray<{ readonly done: boolean; readonly id: number; readonly title: string }>, readonly ["SqlError", string], never> => Effect.suspend(
   () => Effect.provideContext(TodoRepo.all(), a0)
 )
 
-export const TodoApp_complete = (a0: readonly [Context.Context<"k30_6">, number]): Effect.Effect<{ readonly done: boolean; readonly id: number; readonly title: string }, readonly ["SqlError", string] | NotFound, never> => Effect.suspend(
+export const TodoApp_complete = (a0: readonly [Context.Context<"TodoRepo">, number]): Effect.Effect<{ readonly done: boolean; readonly id: number; readonly title: string }, readonly ["SqlError", string] | NotFound, never> => Effect.suspend(
   () => Effect.provideContext(
     Effect.flatMap(
       Effect.succeed(snd(a0)),
@@ -40,7 +40,7 @@ export const TodoApp_complete = (a0: readonly [Context.Context<"k30_6">, number]
   )
 )
 
-export const TodoApp_remove = (a0: readonly [Context.Context<"k30_6">, number]): Effect.Effect<void, readonly ["SqlError", string] | NotFound, never> => Effect.suspend(
+export const TodoApp_remove = (a0: readonly [Context.Context<"TodoRepo">, number]): Effect.Effect<void, readonly ["SqlError", string] | NotFound, never> => Effect.suspend(
   () => Effect.provideContext(
     Effect.flatMap(
       Effect.succeed(snd(a0)),

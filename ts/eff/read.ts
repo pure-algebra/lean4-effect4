@@ -22,7 +22,7 @@ import type { ActionTerm, CauseTerm, DefDecl, Eff, ForkOptions, LayerTerm, Lit, 
 import { decodeEff } from "./eff.gen.ts"
 import { readTypeMetadata } from "./metadata.ts"
 import { readTupleIndex } from "./tuple-index.ts"
-import { targetType, legacyType, recordKeyForm, quoteType, payloadClass, targetIdentifier, requirementText, nativeScopeKey, keyText, normalize, sameKey } from "./target-types.ts"
+import { targetType, legacyType, recordKeyForm, quoteType, payloadClass, targetIdentifier, requirementText, nativeScopeKey, keySpelling, keyOfSpelling, rowKeyNames, unionParts, normalize, sameKey, type KeyNames } from "./target-types.ts"
 import { heads, rows, serviceTypes, serviceTypeFor, type Entry, type Head } from "./profile.gen.ts"
 import { names as nameTables } from "./names.gen.ts"
 import { argNamesOf, argSortsOf, programHeads, templates, type ArgPat, type ArgSort, type Depth, type Fam, type StmtTpl, type StmtTpls, type TemplateRow, type Tpl } from "./templates.gen.ts"
@@ -158,13 +158,16 @@ const again = (f: Result.Failure<unknown, Refusal>): Result.Result<never, Refusa
  * `NativeOp.external i` (`Read.lean` `nativeSpell`: an external index is the row's position,
  * never parsed out of an identifier). Bound for the duration of one entry-point call. */
 let supplied: ReadonlyArray<Entry> = []
+let declaredKeyNames: KeyNames = []
 export const withTable = <A>(table: ReadonlyArray<Row>, body: () => A): A => {
-  const saved = supplied
+  const saved = supplied, savedNames = declaredKeyNames
   supplied = table.map((row, index): Entry => ({ op: { _tag: "external", index }, row }))
+  declaredKeyNames = rowKeyNames(table)
   try {
     return body()
   } finally {
     supplied = saved
+    declaredKeyNames = savedNames
   }
 }
 
@@ -802,17 +805,17 @@ const readNamedType = (name: string, args: ReadonlyArray<Ty>, classes: ClassTabl
 }
 const ofMembers = (members: ReadonlyArray<Ty>): Ty => members.length === 0 ? { _tag: "never" } :
   members.slice(0, -1).reduceRight<Ty>((right, left) => ({ _tag: "union", left, right }), members.at(-1)!)
-const readTypeNodes = (nodes: ReadonlyArray<unknown> | undefined, classes: ClassTable): Ty[] | undefined => {
+const readTypeNodes = (nodes: ReadonlyArray<unknown> | undefined, classes: ClassTable, names: KeyNames = []): Ty[] | undefined => {
   if (nodes === undefined) return undefined
   const out: Ty[] = []
   for (const node of nodes) {
-    const t = isNode(node) ? readTypeNode(node, classes) : undefined
+    const t = isNode(node) ? readTypeNode(node, classes, names) : undefined
     if (t === undefined) return undefined
     out.push(t)
   }
   return out
 }
-const readFieldNodes = (members: ReadonlyArray<unknown> | undefined, classes: ClassTable): Array<readonly [string, readonly [boolean, Ty]]> | undefined => {
+const readFieldNodes = (members: ReadonlyArray<unknown> | undefined, classes: ClassTable, names: KeyNames = []): Array<readonly [string, readonly [boolean, Ty]]> | undefined => {
   if (members === undefined) return undefined
   const out: Array<readonly [string, readonly [boolean, Ty]]> = []
   for (const field of members) {
@@ -822,13 +825,13 @@ const readFieldNodes = (members: ReadonlyArray<unknown> | undefined, classes: Cl
       : key?.type === "Literal" && typeof key.value === "string" ? key.value : undefined
     const annotation = nodeAt(field, "typeAnnotation")
     const value = annotation && nodeAt(annotation, "typeAnnotation")
-    const t = value && readTypeNode(value, classes)
+    const t = value && readTypeNode(value, classes, names)
     if (name === undefined || t === undefined) return undefined
     out.push([name, [field.optional === true, t]])
   }
   return out
 }
-const readTypeNode = (t: Node, classes: ClassTable): Ty | undefined => {
+const readTypeNode = (t: Node, classes: ClassTable, names: KeyNames = []): Ty | undefined => {
   switch (t.type) {
     case "TSNumberKeyword": return { _tag: "nat" }
     case "TSStringKeyword": return { _tag: "string" }
@@ -852,25 +855,25 @@ const readTypeNode = (t: Node, classes: ClassTable): Ty | undefined => {
       // `readTy`'s first arm, decisions row 349)
       if (name === "Context.Context") {
         const row = params !== undefined && params.length === 1 && isNode(params[0]) ? typeName(params[0]) : undefined
-        const keys = row === undefined ? undefined : readKeysText(row)
+        const keys = row === undefined ? undefined : readKeysText(row, names)
         return keys === undefined ? undefined : { _tag: "contextOf", keys }
       }
-      const args = readTypeNodes(params, classes)
+      const args = readTypeNodes(params, classes, names)
       return name === undefined || args === undefined ? undefined : readNamedType(name, args, classes)
     }
     case "TSTypeOperator": {
       const value = nodeAt(t, "typeAnnotation")
       if (t.operator !== "readonly" || value?.type !== "TSTupleType") return undefined
-      const items = readTypeNodes(listAt(value, "elementTypes"), classes)
+      const items = readTypeNodes(listAt(value, "elementTypes"), classes, names)
       if (items === undefined) return undefined
       return items.length === 2 ? { _tag: "prod", left: items[0]!, right: items[1]! } : { _tag: "tuple", items }
     }
     case "TSUnionType": {
-      const members = readTypeNodes(listAt(t, "types"), classes)
+      const members = readTypeNodes(listAt(t, "types"), classes, names)
       return members === undefined ? undefined : ofMembers(members)
     }
     case "TSTypeLiteral": {
-      const fields = readFieldNodes(listAt(t, "members"), classes)
+      const fields = readFieldNodes(listAt(t, "members"), classes, names)
       return fields === undefined ? undefined : { _tag: "record", fields }
     }
     default: return undefined
@@ -879,17 +882,17 @@ const readTypeNode = (t: Node, classes: ClassTable): Ty | undefined => {
 
 /**
  * The checked type reader (Lean `Classes.readTyChecked`, `Codegen/Classes.lean`) under the
- * module's payload classes: a program type from its printed spelling, kept only when the type
- * printer prints that type as the spelling read (`targetType`, the twin of `Types.ofTy`). What it
- * accepts is exact. It does not make the printer injective: `number` reads as `nat`, so a type at
- * `int` does not read back, and a handle's name (`Ref.Ref<A>`, `Deferred.Deferred<A, E>`) and
- * `unknown` read as nothing, as does a class's name under no class (Lean `Classes.ReadableTy`
+ * module's payload classes and key names: a program type from its printed spelling, kept only when
+ * the type printer prints that type as the spelling read (`targetType`, the twin of `Types.ofTy`).
+ * What it accepts is exact. It does not make the printer injective: `number` reads as `nat`, so a
+ * type at `int` does not read back, and a handle's name (`Ref.Ref<A>`, `Deferred.Deferred<A, E>`)
+ * and `unknown` read as nothing, as does a class's name under no class (Lean `Classes.ReadableTy`
  * names what is outside). The expression reader reads its types under no class, and a
- * definition's header under the module's classes.
+ * definition's header under the module's classes and key names.
  */
-const readTypeChecked = (t: Node, classes: ClassTable = []): Ty | undefined => {
-  const ty = readTypeNode(t, classes)
-  return ty !== undefined && targetType(ty, legacyType) === typeName(t) ? ty : undefined
+const readTypeChecked = (t: Node, classes: ClassTable = [], names: KeyNames = []): Ty | undefined => {
+  const ty = readTypeNode(t, classes, names)
+  return ty !== undefined && targetType(ty, legacyType, names) === typeName(t) ? ty : undefined
 }
 
 /**
@@ -1363,20 +1366,20 @@ const readRowMethod = (n: number, receiver: Expr, s: string, typeArgs: ReadonlyA
   return ok(rowAnswer(spelled, { _tag: "app", atom: "pair", args: [recv.success, eff.request] }))
 }
 
-/** The exact numeric spelling, full-key identity and carrier of Lean's `printKey`. */
+/** Only the exact printed key is admitted (Lean `readKey`): its spelling under the signature's
+ * key names (`keySpelling`), its type argument and its carrier must agree, and the distinguished
+ * scope is represented only by `Scope.Scope`. */
 const readKey = (x: Expr): Read<ServiceKey> => {
   const bad = () => refuse({ _tag: "shape", what: "service key" })
   const scopeKey = serviceTypes.reserved.find(entry => entry.rendered === "Scope.Scope")?.key
   if (x._tag === "ident" && x.name === "Scope.Scope") return scopeKey ? ok(scopeKey) : bad()
   if (x._tag !== "call" || x.args.length !== 1 || x.args[0]?._tag !== "str") return bad()
-  const fields = /^k(0|[1-9][0-9]*)_(0|[1-9][0-9]*)$/.exec(x.args[0].value)
-  if (!fields) return bad()
-  const name = Number(fields[1])
-  const service = Number(fields[2])
-  if (!Number.isSafeInteger(name) || !Number.isSafeInteger(service)) return bad()
-  if (scopeKey !== undefined && name === scopeKey.name.value && service === scopeKey.service.value) return bad()
-  const ty = serviceTypeFor({ name: { value: name }, service: { value: service } })?.rendered
-  const identity = JSON.stringify(x.args[0].value)
+  const text = x.args[0].value
+  const key = keyOfSpelling(declaredKeyNames, text)
+  if (!key) return bad()
+  if (scopeKey !== undefined && sameKey(key, scopeKey)) return bad()
+  const ty = serviceTypeFor(key)?.rendered
+  const identity = quoteType(keySpelling(declaredKeyNames, key))
   if (ty === undefined) {
     if (x.fn._tag !== "ident" || x.fn.name !== "Context.Service") return bad()
   } else {
@@ -1384,41 +1387,58 @@ const readKey = (x: Expr): Read<ServiceKey> => {
       x.fn.typeArgs.length !== 2 || x.fn.typeArgs[0] !== identity ||
       x.fn.typeArgs[1] !== ty) return bad()
   }
-  return ok({ name: { value: name }, service: { value: service } })
+  return ok(key)
 }
 
 /** The key order of `ServiceKey.Lt` (`src/Effect4/Machine/Key.lean`): by name, then by service. */
 const keyBefore = (a: ServiceKey, b: ServiceKey): boolean =>
   a.name.value < b.name.value || (a.name.value === b.name.value && a.service.value < b.service.value)
 
+/** The string a quoted type literal spells (`quoteType`'s inverse). */
+const unquoteType = (quoted: string): string | undefined => {
+  if (quoted.length < 2 || !quoted.startsWith('"') || !quoted.endsWith('"')) return undefined
+  let out = ""
+  for (let i = 1; i < quoted.length - 1; i++) {
+    const c = quoted[i]!
+    if (c === '"' || c === "\n" || c === "\r" || c === "\t") return undefined
+    if (c !== "\\") { out += c; continue }
+    const next = quoted[++i]
+    if (next === "\\" || next === '"') out += next
+    else if (next === "n") out += "\n"
+    else if (next === "r") out += "\r"
+    else if (next === "t") out += "\t"
+    else return undefined
+  }
+  return out
+}
+
 /** A requirement row from its printed type argument (Lean `readKeys`): `never`, one key identifier,
- * or their union. The canonical row of the keys read is kept only when it prints back as the text
- * read, so what the reader accepts is exact. */
-const readKeys = (text: string): Read<ReadonlyArray<ServiceKey>> => {
+ * or their union, each key read by its spelling under the module's key names (`keyOfSpelling`).
+ * The canonical row of the keys read is kept only when it prints back as the text read, so what
+ * the reader accepts is exact. */
+const readKeys = (text: string, names: KeyNames = declaredKeyNames): Read<ReadonlyArray<ServiceKey>> => {
   const bad = () => refuse({ _tag: "shape", what: "requirement row" })
   const keys: Array<ServiceKey> = []
-  for (const member of text === "never" ? [] : text.split(" | ")) {
+  for (const member of text === "never" ? [] : unionParts(text)) {
     if (member === "Scope.Scope") {
       if (nativeScopeKey === undefined) return bad()
       keys.push(nativeScopeKey)
       continue
     }
-    const fields = /^"k(0|[1-9][0-9]*)_(0|[1-9][0-9]*)"$/.exec(member)
-    if (!fields) return bad()
-    const name = Number(fields[1])
-    const service = Number(fields[2])
-    if (!Number.isSafeInteger(name) || !Number.isSafeInteger(service)) return bad()
-    keys.push({ name: { value: name }, service: { value: service } })
+    const spelling = unquoteType(member)
+    const key = spelling === undefined ? undefined : keyOfSpelling(names, spelling)
+    if (key === undefined) return bad()
+    keys.push(key)
   }
   const row = keys.slice().sort((a, b) => (keyBefore(a, b) ? -1 : keyBefore(b, a) ? 1 : 0))
     .filter((k, i, all) => i === 0 || keyBefore(all[i - 1]!, k))
-  return requirementText(row) === text ? ok(row) : bad()
+  return requirementText(row, names) === text ? ok(row) : bad()
 }
 
 /** A context reader's type argument as a row, for the foreign recognizers: the printer's own
  * reader (`readKeys`), so only a printed row is admitted. */
-export const readKeysText = (text: string): ReadonlyArray<ServiceKey> | undefined => {
-  const r = readKeys(text)
+export const readKeysText = (text: string, names: KeyNames = declaredKeyNames): ReadonlyArray<ServiceKey> | undefined => {
+  const r = readKeys(text, names)
   return Result.isSuccess(r) ? r.success : undefined
 }
 
@@ -2580,15 +2600,15 @@ const rowServiceData = (table: ReadonlyArray<Row>): ReadonlyArray<ServiceData> |
     const methods: Array<readonly [string, string | undefined]> = []
     for (const [m, row] of s.methods) {
       const unit = normalize(row.request)._tag === "unit"
-      const request = unit ? undefined : targetType(row.request, legacyType)
-      const answer = targetType(row.answer, legacyType)
-      const error = targetType(row.error, legacyType)
+      const request = unit ? undefined : targetType(row.request, legacyType, declaredKeyNames)
+      const answer = targetType(row.answer, legacyType, declaredKeyNames)
+      const error = targetType(row.error, legacyType, declaredKeyNames)
       if ((!unit && request === undefined) || answer === undefined || error === undefined) return undefined
       fields.push(`readonly ${targetIdentifier(m) ? m : quoteType(m)}: (${request === undefined ? "" : `a0: ${request}`}) => ` +
         `Effect.Effect<${answer}, ${error}, never>`)
       methods.push([m, request])
     }
-    out.push({ ns: s.ns, identity: keyText(s.key), shape: fields.length === 0 ? "{}" : `{ ${fields.join("; ")} }`, methods })
+    out.push({ ns: s.ns, identity: keySpelling(declaredKeyNames, s.key), shape: fields.length === 0 ? "{}" : `{ ${fields.join("; ")} }`, methods })
   }
   return out
 }
@@ -2709,7 +2729,8 @@ const annotationOf = (n: Node): Node | undefined => {
 }
 
 /** A parameter's declaration from its binder in a header (Lean `readParam`):
- * `name: (a0: Request) => Effect.Effect<A, E, never>`, each column under the module's classes. */
+ * `name: (a0: Request) => Effect.Effect<A, E, never>`, each column under the module's classes and
+ * key names. */
 const readParam = (p: unknown): ParamDecl | undefined => {
   if (!isNode(p) || p.type !== "Identifier" || typeof p.name !== "string" || p.optional === true) return undefined
   const fn = annotationOf(p)
@@ -2720,16 +2741,17 @@ const readParam = (p: unknown): ParamDecl | undefined => {
   const result = nodeAt(fn, "returnType")
   const columns = effectColumns(result && nodeAt(result, "typeAnnotation"))
   if (params.length !== 1 || request === undefined || columns === undefined || typeName(columns[2]) !== "never") return undefined
-  const req = readTypeChecked(request, declaredClasses)
-  const answer = readTypeChecked(columns[0], declaredClasses)
-  const error = readTypeChecked(columns[1], declaredClasses)
+  const req = readTypeChecked(request, declaredClasses, declaredKeyNames)
+  const answer = readTypeChecked(columns[0], declaredClasses, declaredKeyNames)
+  const error = readTypeChecked(columns[1], declaredClasses, declaredKeyNames)
   return req === undefined || answer === undefined || error === undefined ? undefined
     : { name: p.name, request: req, answer, error }
 }
 
 /** A definition's declaration and its body's node from its constant (Lean `readDefHead`):
  * `(a0: Request, p: …): Effect.Effect<A, E, R> => body`, its columns under the module's classes
- * and its requirement row by the requirement reader. The role is the services' (`roleOf`). */
+ * and key names, and its requirement row by the requirement reader. The role is the services'
+ * (`roleOf`). */
 const readDefHead = (c: Declaration): Read<readonly [DefDecl, Node]> => {
   const bad = refuse({ _tag: "shape", what: "definition" })
   const f = c.value
@@ -2740,9 +2762,9 @@ const readDefHead = (c: Declaration): Read<readonly [DefDecl, Node]> => {
   const columns = effectColumns(result && nodeAt(result, "typeAnnotation"))
   const body = nodeAt(f, "body")
   if (request === undefined || columns === undefined || body === undefined) return bad
-  const req = readTypeChecked(request, declaredClasses)
-  const answer = readTypeChecked(columns[0], declaredClasses)
-  const error = readTypeChecked(columns[1], declaredClasses)
+  const req = readTypeChecked(request, declaredClasses, declaredKeyNames)
+  const answer = readTypeChecked(columns[0], declaredClasses, declaredKeyNames)
+  const error = readTypeChecked(columns[1], declaredClasses, declaredKeyNames)
   const rowText = typeName(columns[2])
   const requires = rowText === undefined ? undefined : readKeysText(rowText)
   const params = rest.map(readParam)

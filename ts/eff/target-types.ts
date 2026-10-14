@@ -1,7 +1,7 @@
 /** Source-side annotation comparison for Codegen.Types.ofTy.
  * Ty remains the generated carrier. Policy tables retain their Lean owners.
  * Cross-language fixtures measure this adapter; they do not prove a simulation. */
-import type { ServiceKey, Ty } from "./eff.gen.ts"
+import type { Row, ServiceKey, Ty } from "./eff.gen.ts"
 import { serviceTypes } from "./profile.gen.ts"
 import { typeMetadataConstructors, typeLeafEdges, typeVariances, targetReservedIdentifiers } from "./wire.gen.ts"
 
@@ -195,7 +195,7 @@ export const quoteType = (text: string): string =>
 export const recordKeyForm = (names: readonly string[]): "plain" | "quoted" | "computed" =>
   names.includes("__proto__") ? "computed" : names.every(targetIdentifier) ? "plain" : "quoted"
 
-/* ---- the key spelling (`Codegen/Types.lean`): one spelling of a key and of a requirement row */
+/* ---- the key spelling (`Codegen/Types.lean`, `Program/Native.lean`): one spelling of a key and of a requirement row */
 
 /** The native signature's scope key, whose identifier is `Scope.Scope`. */
 export const nativeScopeKey: ServiceKey | undefined =
@@ -208,12 +208,73 @@ export const sameKey = (a: ServiceKey, b: ServiceKey): boolean =>
 /** An ordinary key's runtime text (`keyText`): `k<name>_<service>`. */
 export const keyText = (key: ServiceKey): string => `k${key.name.value}_${key.service.value}`
 
+/** A key back from its runtime text (`keyFromText`, `Codegen/Types.lean`): `k<name>_<service>`. */
+export const keyFromText = (text: string): ServiceKey | undefined => {
+  const fields = /^k(0|[1-9][0-9]*)_(0|[1-9][0-9]*)$/.exec(text)
+  if (!fields) return undefined
+  const name = Number(fields[1]), service = Number(fields[2])
+  return Number.isSafeInteger(name) && Number.isSafeInteger(service)
+    ? { name: { value: name }, service: { value: service } } : undefined
+}
+
+/** The names a module gives its keys (`Codegen/Types.lean` `KeyNames`, decisions row 378 (19), (22)). */
+export type KeyNames = ReadonlyArray<readonly [ServiceKey, string]>
+
+/** `Row.keyNamespace?` (`Program/Native.lean`): a call row with no trailing argument and no
+ * declared type argument, whose requirement column names one key and whose spelling holds one dot,
+ * names that key by the text before the dot. */
+const keyNamespace = (row: Row): readonly [ServiceKey, string] | undefined => {
+  if (row.requires.length !== 1 || row.shape !== "call" || row.trailing.length > 0 || row.typeArgs.length > 0) return undefined
+  const dot = row.spelling.indexOf(".")
+  if (dot < 0 || row.spelling.indexOf(".", dot + 1) >= 0) return undefined
+  return [row.requires[0]!, row.spelling.slice(0, dot)]
+}
+
+/** `rowKeyNames` (`Program/Native.lean`): the names a row table gives its keys, once, in table order. */
+export const rowKeyNames = (table: ReadonlyArray<Row>): KeyNames => {
+  const out: Array<readonly [ServiceKey, string]> = []
+  for (const row of table) {
+    const entry = keyNamespace(row)
+    if (entry !== undefined && !out.some(([k, n]) => sameKey(k, entry[0]) && n === entry[1])) out.push(entry)
+  }
+  return out
+}
+
+/** `KeyNames.nameOf` (`Codegen/Types.lean`): the first name the module gives the key, when no
+ * earlier entry gives that name and the name is no key's runtime text (`keyText`). */
+export const nameOf = (names: KeyNames, key: ServiceKey): string | undefined => {
+  const first = names.find(([k]) => sameKey(k, key))
+  if (first === undefined) return undefined
+  const [, name] = first
+  const byName = names.find(([, n]) => n === name)
+  return byName !== undefined && sameKey(byName[0], key) && byName[1] === name && keyFromText(name) === undefined
+    ? name : undefined
+}
+
+/** `KeyNames.keyOf` (`Codegen/Types.lean`): the key that a name stands for (`nameOf`'s inverse). */
+export const keyOf = (names: KeyNames, name: string): ServiceKey | undefined => {
+  const first = names.find(([, n]) => n === name)
+  return first !== undefined && nameOf(names, first[0]) === name ? first[0] : undefined
+}
+
+/** `keySpelling` (`Codegen/Types.lean`): a key's one spelling in a module. */
+export const keySpelling = (names: KeyNames, key: ServiceKey): string =>
+  nameOf(names, key) ?? keyText(key)
+
+/** `keyOfSpelling` (`Codegen/Types.lean`) with its exactness check (`text === keySpelling(names, key)`):
+ * the key that a name stands for, or the key whose runtime text the spelling is when the module
+ * gives that key no name. */
+export const keyOfSpelling = (names: KeyNames, text: string): ServiceKey | undefined => {
+  const key = keyOf(names, text) ?? keyFromText(text)
+  return key !== undefined && keySpelling(names, key) === text ? key : undefined
+}
+
 /** A requirement row's printed type at the native scope key (`requirementType`): `never` for no
- * key, the scope key as `Scope.Scope`, an ordinary key as its quoted runtime text, and a union of
- * several in the row's order. */
-export const requirementText = (keys: ReadonlyArray<ServiceKey>): string =>
+ * key, the scope key as `Scope.Scope`, an ordinary key as its quoted spelling (`keySpelling`), and
+ * a union of several in the row's order. */
+export const requirementText = (keys: ReadonlyArray<ServiceKey>, names: KeyNames = []): string =>
   keys.length === 0 ? "never"
-    : keys.map(k => (nativeScopeKey !== undefined && sameKey(k, nativeScopeKey) ? "Scope.Scope" : quoteType(keyText(k))))
+    : keys.map(k => (nativeScopeKey !== undefined && sameKey(k, nativeScopeKey) ? "Scope.Scope" : quoteType(keySpelling(names, k))))
         .join(" | ")
 
 /** Flatten only top-level union spelling; quoted text and nested type arguments stay intact. */
@@ -236,7 +297,7 @@ export const unionParts = (text: string): string[] => {
 }
 
 /** The target renderer returns a refusal when Codegen.Types has no structural projection. */
-export const targetType = (raw: Ty, legacy: (text: string) => string | undefined): string | undefined => {
+export const targetType = (raw: Ty, legacy: (text: string) => string | undefined, names: KeyNames = []): string | undefined => {
   const render = (type: Ty): string | undefined => {
     const generic = (head: string, args: readonly Ty[]): string | undefined => {
       const values = args.map(render)
@@ -287,7 +348,7 @@ export const targetType = (raw: Ty, legacy: (text: string) => string | undefined
       // `Context.Context<R>`, the answer of `Effect.context<R>()`: its row in the requirement
       // row's one spelling at the native scope key (`Codegen.Types.ofTy_contextOf`, decisions
       // row 349)
-      case "contextOf": return `Context.Context<${requirementText(type.keys)}>`
+      case "contextOf": return `Context.Context<${requirementText(type.keys, names)}>`
       case "var": case "app": return undefined
       default: return unrecognized(type)
     }
