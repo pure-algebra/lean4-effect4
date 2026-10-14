@@ -4,9 +4,11 @@
 
 Codex has not started. The owner wants to know whether the plan is scoped for clean
 implementation before any proof is attempted. The plan is `docs/research/2026-10-14-proc-close/prompt.md`.
-Review it as the owner's examiner would: every planned theorem needs a statement, a placement, a
-consumer in reach and a fragment it holds on. A plan that lands proofs to nowhere fails, however
-well it reads.
+Review it as the owner's examiner would: every planned theorem needs a statement, a placement
+and a fragment it holds on. **Every item is wanted, and its users are known**: the inlining law is
+for the Queue's and the Semaphore's definition forms and every module built from definitions. The
+question is whether the plan reaches them. A statement on too small a fragment, or a missing step,
+is a fault of the plan; the fix is to widen the plan, never to drop or defer the item.
 
 The owner's rule for every choice: decide on semantics, never on rebuild cost, and take the
 complete option. A shortcut is a finding.
@@ -75,11 +77,12 @@ Answer each question from the tree, with paths and declaration names.
 1. **Each of the six items** (G7, the two expansion claims, CX3 and CX4, PROC-7, PROC-8, one
    activation stack). Is its statement written down, or left to the implementer? Give its five
    placements from `AGENTS.md`: concept, claim, reach, what it does not establish, what it
-   unlocks. Name its consumer, and say whether that consumer is in reach on the fragment the
-   statement holds on. Give a verdict: ready, re-scope, merge with another item, or retire.
+   unlocks. Name its users, and say whether the planned statement reaches them. Where it falls
+   short, say what the plan must add so that it does. Give a verdict: ready, re-scope, or merge
+   with another item.
 2. **The chain.** Draw the whole chain as one Mermaid DAG of slices and planned goals, from the
    close-out through CONC-1 and row 382's order. Find duplicate owners of one representation,
-   missing edges, items with no consumer and edges in the wrong direction.
+   missing edges, statements that fall short of their users and edges in the wrong direction.
 3. **The proof graph today.** Run `#plan_status` on the tops the plan touches (the pointers of
    `denote-typed` and of the H9 claims) and read `generated/semantics.md`. Say what is proved,
    proved modulo goals, or a goal. Say whether any new claim the plan names duplicates an
@@ -105,9 +108,10 @@ evidence: a path, a declaration, a probe's output. Do not take any of them on tr
   (`src/Effect4/Laws/Program/FragmentBlock.lean`) refuses `uninterruptible`, `awaitFiber`,
   `fork` and the scope forms. The shared wrapper (`src/Effect4/Library/Waiting.lean`) uses
   `uninterruptibleMaskWith`, a `Deferred`'s await, `onInterrupt` and `fork`. So G7 at the block
-  meaning reaches neither module's waiting operations until SCOPE-1 and CONC-1 widen the
-  meaning. Settle it with a probe: evaluate `BlockRows` on the program that
-  `Definitions.make` builds.
+  meaning falls short of the modules it is for. The complete plan states G7 over the whole
+  meaning and proves it for every construct these modules use, with the congruence cases of
+  masks, interruption, waiting and forks arriving as SCOPE-1 and CONC-1 widen the meaning. Settle
+  the fragment with a probe: evaluate `BlockRows` on the program that `Definitions.make` builds.
 - **F3. G7's congruence and row 382's first step are one object.** The PROC design §4.4 item 5
   needs the convergence relation to be a congruence for every `Eff` constructor. Row 382 (3)
   starts with a refinement order on the meaning and its congruence. Contextual equivalence is
@@ -116,10 +120,12 @@ evidence: a path, a declaration, a probe's output. Do not take any of them on tr
   owes the congruence cases of its constructors. Check whether `denoteBlockB` is monotone in its
   budget, since any convergence relation needs that to be a congruence for `bind`. Start from
   `denoteBlockB_approx` and `hostRunBlockB_stable`.
-- **F4. CX3 contradicts the CX ruling.** The CX note §3.4 rejects substitution as the typed
-  route: a point addresses the root program by path, and a substituted body is no subterm. The
-  plan's L2 names an inlining pass as CX3's consumer, and no plan builds one. CX4 may already be
-  `invoke_arm` with `hop_typed` (CX2). If neither has a consumer, they are retired, not owed.
+- **F4. CX3, as the plan specifies it, contradicts the CX ruling.** The CX note §3.4 rejects
+  substitution as the typed route: a point addresses the root program by path, and a substituted
+  body is no subterm. The typed side of inlining is still wanted: an inlined program must stay
+  typed. Find the form of CX3 that fits path-addressed points (for example, a typed relocation of
+  the body to the site's address), and say whether CX4 is already `invoke_arm` with `hop_typed`
+  (CX2).
 - **F5. PROC-8 and SCOPE-1's stage 0 design one representation.** Both put closures held as data
   into `Store.Val`, `Ty` and `Eff`. One of them must own it. D3, the one activation stack, edits
   `Point`, which SCOPE-1's stage 0 also edits. Order the two.
@@ -127,16 +133,17 @@ evidence: a path, a declaration, a probe's output. Do not take any of them on tr
   message type, one instance. The module form of row 382 (2) needs generic modules, so PROC-7
   comes before the module form. Confirm, and place it.
 
-Then answer the question the faults raise. **Does G7 have any consumer in reach today?** Form (b)
-of the PROC design §4.4 is R10's "laws proved once per definition". Say whether form (b) is
-proved, and whether it, not form (c), is the near-term item.
+Then lay out **the route that gets G7 to the Queue and the Semaphore**: what lands on the block
+fragment now, which congruence cases arrive with SCOPE-1 and with CONC-1, and the claim that
+names the definition-to-expansion connector for each module. Say also where form (b) of the PROC
+design §4.4 stands (R10's "laws proved once per definition").
 
 ## What you deliver
 
 One file, `docs/research/2026-10-14-proc-close/gemini-review.md`, in this order:
 
 1. The one thing the owner must know.
-2. A verdict table: one row per item, with its verdict, consumer and evidence.
+2. A verdict table: one row per item, with its verdict, its users and evidence.
 3. F1 to F6: confirmed, refuted or amended, each with its evidence.
 4. Your own findings from Part 1 that Part 2 does not hold.
 5. The re-scoped plan: the tracks, each planned goal with its five placements, and one Mermaid
