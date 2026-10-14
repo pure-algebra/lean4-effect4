@@ -3,6 +3,7 @@ import Tools.View.GraphOrdering
 import Tools.View.Organic
 import Tools.View.ConnectorMemo
 import Tools.View.PaintBounds
+import Tools.View.GraphText
 
 /-!
 # A graph: ranks, order, places, routes
@@ -343,9 +344,9 @@ def boxBounds (p : Placed) : Rect :=
   let y := p.y + (ROWH * BOXROWS - h) / 2
   ⟨x, y, x + w, y + h⟩
 
-/-- A box, grown about its centre as far as its `grow`: its ground, its band when lit, its frame;
-its two lines and its pointer box once it has grown whole. -/
-def boxCalls (L : Look) (dx dy : Int) (p : Placed) (n : GNode) : List (Keyed Call) :=
+/-- A grown box with caller-selected row faces. Its body, hit area, and connections keep their allocation. -/
+def boxCalls (L : Look) (dx dy : Int) (p : Placed) (n : GNode) (textStyle : GraphText.Style := {}) :
+    List (Keyed Call) :=
   if p.grow = 0 then [] else
   let h := ROWH * BOXROWS
   let bounds := boxBounds p
@@ -353,7 +354,6 @@ def boxCalls (L : Look) (dx dy : Int) (p : Placed) (n : GNode) : List (Keyed Cal
   let h' := bounds.y1 - bounds.y0
   let x := dx + bounds.x0
   let y := dy + bounds.y0
-  let room : Int := p.w / CELL - 2
   let r : Int := L.strokes.radius
   let m (v : Int) : Int := 1000 * v
   let surface : List (Keyed Call) :=
@@ -367,8 +367,8 @@ def boxCalls (L : Look) (dx dy : Int) (p : Placed) (n : GNode) : List (Keyed Cal
         [⟨p.key, .shape .ink 1000 (Grow.ring (m x) (m y) (m w') (m h') r (m L.strokes.frame))⟩]
   surface ++
     (if 1000 ≤ p.grow then
-      cellsAt p.key (dx + p.x + CELL) (dy + p.y + BASE) n.line1 room ++
-        cellsAt p.key (dx + p.x + CELL) (dy + p.y + ROWH + BASE) n.line2 room ++
+      GraphText.row textStyle.first p.key (dx + p.x + CELL) (dy + p.y) (p.w - 2 * CELL) n.line1 ++
+        GraphText.row textStyle.second p.key (dx + p.x + CELL) (dy + p.y + ROWH) (p.w - 2 * CELL) n.line2 ++
         [⟨p.key, .hit (dx + p.x) (dy + p.y) p.w h⟩]
     else [])
 
@@ -643,7 +643,7 @@ def markCalls (L : Look) (dx dy : Int) : FlowMark → List (Keyed Call)
 /-- **A laid-out graph as calls, on a stroke cache**, with its top left at `(dx, dy)`: the regions
 behind, then the routes, then the marks and the boxes over them. The places are read by the
 index, built once. -/
-def callsCached (L : Look) (l : Laid) (dx dy : Int) (cache : StrokeCache) :
+def callsCached (L : Look) (l : Laid) (dx dy : Int) (cache : StrokeCache) (textStyle : GraphText.Style := {}) :
     List (Keyed Call) × StrokeCache :=
   let ix := Ix.of l
   let (routes, cache) := l.routes.toList.foldl (fun (acc : List (List (Keyed Call)) × StrokeCache) rt =>
@@ -652,12 +652,13 @@ def callsCached (L : Look) (l : Laid) (dx dy : Int) (cache : StrokeCache) :
   (l.regions.toList.flatMap (regionCalls L dx dy) ++ routes.reverse.flatten ++
     l.marks.toList.flatMap (markCalls L dx dy) ++
     l.placed.toList.flatMap (fun p => match p.node with
-      | some n => boxCalls L dx dy p n
+      | some n => boxCalls L dx dy p n textStyle
       | none => []), cache)
 
 /-- **A laid-out graph as calls**, with its top left at `(dx, dy)`: the drawing on a fresh stroke
 cache. -/
-def calls (L : Look) (l : Laid) (dx dy : Int) : List (Keyed Call) := (callsCached L l dx dy {}).1
+def calls (L : Look) (l : Laid) (dx dy : Int) (textStyle : GraphText.Style := {}) : List (Keyed Call) :=
+  (callsCached L l dx dy {} textStyle).1
 
 /-- No two boxes share a pixel: a finite check of a layout. -/
 def boxesApart (l : Laid) : Bool :=
