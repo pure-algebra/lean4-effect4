@@ -2,6 +2,12 @@
 
 ## The one thing to know first
 
+**Amended after Codex's first run (decisions row 388).** The first run stopped at M2's route with a
+checked counterexample (`receipt.md`, `evidence/MeaningsPrefixProbe.lean`). An interruption
+starts a finalizer's call that no reply-only tree explains. M2's route is now decided (below).
+M1 and M3 never depended on M2, so the order is M1, M3, M2, and a stop in one slice stops only
+that slice.
+
 Before the faces chunk (`docs/research/2026-10-14-faces/prompt.md`), the owner wants the open
 proof work closed and the meanings cleaned up and connected (2026-10-14). Three things are open,
 measured at `d71ca9698`:
@@ -39,7 +45,7 @@ Your worktree, `/Users/pooks/Dev/lean4-effect4-codex`, on the branch the launch 
 the coordinator's head. The rules of PROC-6's brief hold
 (`docs/research/2026-10-14-proc6-prep/landing-prompt.md`, "The rules that bind every slice").
 
-## The slices, in order
+## The slices, in order: M1, M3, M2
 
 ### M1: one meaning
 
@@ -56,13 +62,21 @@ the coordinator's head. The rules of PROC-6's brief hold
 - Placement: concept `initial-algebras-folds` (two folds agree when their algebras do), cleanup
   C4's question. No behaviour gate is reached: no compile or machine definition changes.
 
-### M2: the call tree past straight lines
+### M2: the call tree past straight lines (the route decided)
 
 - Widen `recorded-call-tree-prefix` from `StraightRows` with no cause handlers to `BlockRows`:
   definitions, loops and cause handlers.
-- First check the route, and report it before a long proof. `h9_blocks` gives the machine's run as
-  the block meaning's, and M1's one meaning gives the tree. Say whether the recorded call's place
-  in the tree follows from those two, or what else it needs.
+- **The histories** (row 388 (1)): those with `Run.hostDriven`, the predicate `H9Blocks` already
+  uses. It excludes the host's interruption, which the block meaning does not model, and your
+  counterexample shows why. SCOPE-1's stage 5 adds the host's interruption to the meaning. The
+  claim widens with it there, and your counterexample becomes this claim's red control until then.
+- **The prefix simulation.** `h9_blocks` speaks of completed runs, and the call tree of pending
+  calls at any command cut. Build the prefix connection: a reached, host-driven run's pending
+  calls and bindings sit in the block tree under its submitted-reply tape, at some budget. Start
+  from `compilesBlk_root`, and add the recorded-command invariant it lacks.
+- **The source restriction.** `SourceScope.ExternalOnly` needs `directHead`, which refuses a
+  block. Widen it to a block whose every body is direct.
+- Scope the prefix simulation before a long proof, and put the scope in the receipt.
 - Place the widened statements as planned goals first (`proof_goal`, with their `@[semantics]`
   placement), then prove them.
 - Its first user: the cached to-do's version of `serves` (`Test/Dogfood/Scenario/Todo/Claims.lean`
@@ -71,7 +85,7 @@ the coordinator's head. The rules of PROC-6's brief hold
 - It does not establish forks, scopes, layers or any outside host's agreement. The host boundary
   stays where `docs/core/host-boundary.md` puts it.
 
-### M3: the eight goals
+### M3: the eight goals (second, before M2)
 
 - First the four that need a fact about values, through seat FLOW's answer flow
   (`PlaceFunding.NativeFlow.history`): `Workers.Assertions.logs_step`,
@@ -92,7 +106,9 @@ the coordinator's head. The rules of PROC-6's brief hold
 
 - a goal is false as stated: give the counterexample;
 - a slice needs an edit to the machine, `Eff`, `Ty` or `Store.Val`;
-- M2's route needs more than `h9_blocks` and M1: report it before you build it.
+- M2's prefix simulation needs a machine change: report it, and keep M1 and M3.
+
+A stop in one slice stops that slice only. The others go on.
 
 ## What you report
 
