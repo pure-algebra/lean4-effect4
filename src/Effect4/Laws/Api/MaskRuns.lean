@@ -14,7 +14,7 @@ entries above them, each of which returns a machine inside a session:
   evaluator, or they refuse and change nothing (`advance_maskRuns`, `applyReply_maskRuns`,
   `applyPending_maskRuns`). `bindCall` and `submit` write the ledger alone (`bindCall_machine`,
   and `submit_machine` of `Laws/Api/HostSession.lean`). `inspect` reads the session's machine
-  (`inspect_machine`).
+  (`Run.inspect_keeps_machine` of `Laws/Api/SessionMeaning.lean`).
 * **The runner** (`src/Effect4/Api/Runner.lean`, `src/Effect4/Api/RunnerBytes.lean`). One row is
   one of the session's four transitions (`Runner.step_maskRuns`). A journal is a fold of rows
   (`Runner.replay_maskRuns`), and so is a journal of bytes (`Runner.stepRow_maskRuns`,
@@ -97,24 +97,6 @@ theorem bindCall_machine {program : Api.Program} {table : RowTable} (s : Session
           · split
             · rfl
             · rfl
-
-/-- A reading holds the session's machine: `inspect` replays the empty tape at budget 0. So the
-invariant at a session is the invariant at its reading. A step of the run API's readings
-(`Runner.inspect`, `Run.inspect`). -/
-theorem inspect_machine {program : Api.Program} {table : RowTable} (s : Session program table) :
-    (inspect s).machine = s.machine := by
-  letI := evaluatorFor program table
-  unfold inspect
-  split
-  · rename_i m result
-    exact (congrArg ReplayResult.machine result).symm.trans
-      (Lift.replayEval_nil_machine (interpOf program table) 0 s.machine)
-  · rename_i why m result
-    exact (congrArg ReplayResult.machine result).symm.trans
-      (Lift.replayEval_nil_machine (interpOf program table) 0 s.machine)
-  · rename_i why m result
-    exact (congrArg ReplayResult.machine result).symm.trans
-      (Lift.replayEval_nil_machine (interpOf program table) 0 s.machine)
 
 /-- **The entry `HostSession.advance` keeps the invariant**: a control is one decision at the
 compiled program's interpreter, under the native evaluator, or it is a refusal that changes

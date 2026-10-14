@@ -1,6 +1,7 @@
 import Effect4.Laws.Machine.MaskRuns
 import Effect4.Laws.Program.MaskRuns
 import Effect4.Laws.Api.MaskRuns
+import Effect4.Laws.Api.SessionMeaning
 import Test.Program.MaskContract
 
 /-!
@@ -722,7 +723,7 @@ example (b : Api.Built) (r : Run.Reactor Unit) :
 reading. -/
 example (s : Run) (bases : List Bool) (kept : MaskRuns bases s.machine) :
     MaskRuns bases s.inspect.machine := by
-  rw [show s.inspect.machine = s.machine from Api.HostSession.inspect_machine s.session]
+  rw [show s.inspect.machine = s.machine from Run.inspect_keeps_machine s.session]
   exact kept
 
 end Compiled
