@@ -209,6 +209,16 @@ inductive FlowMark where
   | diamond (key : Key) (x y : Int)
 deriving DecidableEq, Repr
 
+/-- The identity of a bar or diamond. -/
+def FlowMark.key : FlowMark → Key
+  | .bar k .. | .diamond k .. => k
+
+/-- A placed point attached to a named mark. Geometry and identity remain separate data. -/
+structure PortAttachment where
+  port : Key
+  mark : Key
+deriving DecidableEq, Repr
+
 /-- A laid-out graph: its placed items, its routes, its regions and its marks, and its size in
 logical pixels. -/
 structure Laid where
@@ -218,8 +228,13 @@ structure Laid where
   height : Int := 0
   regions : Array Region := #[]
   marks : Array FlowMark := #[]
+  attachments : Array PortAttachment := #[]
+  /-- The span used by return lanes, independent of any later canvas expansion. -/
+  routingWidth : Option Int := none
 deriving DecidableEq, Repr
 
+/-- The lane span, with the original canvas-width convention for legacy layouts. -/
+def Laid.routeWidth (l : Laid) : Int := l.routingWidth.getD l.width
 
 namespace Graph
 
@@ -631,7 +646,7 @@ def callsCached (L : Look) (l : Laid) (dx dy : Int) (cache : StrokeCache) :
     List (Keyed Call) × StrokeCache :=
   let ix := Ix.of l
   let (routes, cache) := l.routes.toList.foldl (fun (acc : List (List (Keyed Call)) × StrokeCache) rt =>
-    let (cs, c) := routeCalls L ix.find ix.onBar l.width dx dy acc.2 rt
+    let (cs, c) := routeCalls L ix.find ix.onBar l.routeWidth dx dy acc.2 rt
     (cs :: acc.1, c)) ([], cache)
   (l.regions.toList.flatMap (regionCalls L dx dy) ++ routes.reverse.flatten ++
     l.marks.toList.flatMap (markCalls L dx dy) ++
