@@ -1,0 +1,12 @@
+✖ [1178/1189] Building Test.Dogfood.Stage (10s)
+trace: .> LEAN_PATH=/Users/pooks/Dev/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/Dev/lean4-effect4/Test/Dogfood/Stage.lean -o /Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Test/Dogfood/Stage.olean -i /Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Test/Dogfood/Stage.ilean -c /Users/pooks/Dev/lean4-effect4/.lake/build/ir/Test/Dogfood/Stage.c --setup /Users/pooks/Dev/lean4-effect4/.lake/build/ir/Test/Dogfood/Stage.setup.json --json
+error: failed to cache artifact: operation not permitted (error code: 1)
+  file: /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lake/cache/artifacts/3913ffe727aff7b9.olean
+✖ [1180/1189] Building Test.Dogfood.Scenario (10s)
+trace: .> LEAN_PATH=/Users/pooks/Dev/lean4-effect4/.lake/packages/batteries/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/effects/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/typescript/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/hash/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/whatwg/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/packages/aesop/.lake/build/lib/lean:/Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/bin/lean -M6144 -DwarningAsError=true /Users/pooks/Dev/lean4-effect4/Test/Dogfood/Scenario.lean -o /Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Test/Dogfood/Scenario.olean -i /Users/pooks/Dev/lean4-effect4/.lake/build/lib/lean/Test/Dogfood/Scenario.ilean -c /Users/pooks/Dev/lean4-effect4/.lake/build/ir/Test/Dogfood/Scenario.c --setup /Users/pooks/Dev/lean4-effect4/.lake/build/ir/Test/Dogfood/Scenario.setup.json --json
+error: failed to cache artifact: operation not permitted (error code: 1)
+  file: /Users/pooks/.elan/toolchains/leanprover--lean4---v4.33.1/lake/cache/artifacts/647cfdeeaea1b63b.olean
+Some required targets logged failures:
+- Test.Dogfood.Stage
+- Test.Dogfood.Scenario
+error: build failed

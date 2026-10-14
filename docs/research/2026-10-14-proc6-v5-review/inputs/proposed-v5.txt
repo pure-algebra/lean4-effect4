@@ -1,0 +1,105 @@
+Codex’s review and finite counterexample probes ([`2026-10-14-proc6-codex-review/README.md`](file:///Users/pooks/Dev/lean4-effect4/docs/research/2026-10-14-proc6-codex-review/README.md)) are spot-on. Below is the assessment of all four findings (**F1–F4**), where my earlier review (`[G2]`) was too loose, and the exact specifications to fold into **Version 5** of [`2026-10-14-proc6-scout.md`](file:///Users/pooks/Dev/lean4-effect4/docs/research/2026-10-14-proc6-scout.md) before freezing decisions row 379.
+
+---
+
+## 1. Resolution of Finding F1 — The Budget Invariant, Its Domain, and Admitted Replies
+
+### Why Codex’s [`AdmissionBoundary.lean`](file:///Users/pooks/Dev/lean4-effect4/docs/research/2026-10-14-proc6-codex-review/evidence/context-scheduler/AdmissionBoundary.lean) broke v4’s wording
+1. **Polymorphic row instantiation**: [`SigApp`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Program/SigApp.lean) checks raw row columns with `findInternalHandle`, which accepts a generic row `request := .var 0, answer := .var 0`. When called with `Effect.context .empty`, [`callAt`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Program/Typing/Call.lean) instantiates the call’s answer type at `.contextOf .empty`. In [`Api.HostSession.preflight`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Api/SessionMeaning.lean#L67-L100), [`acceptAtInstance`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Program/Admit.lean#L300-L313) checks [`admitInstance`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Program/Admit.lean#L274-L283), which calls [`Val.hasTy`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Program/Typed.lean#L225-L228) at `.contextOf .empty`. Because `Val.hasTy` at `.contextOf keys` only checks that `keys` are bound, it admits a `Val.context` carrying `Env.maxOpsKey ↦ .nat 1`.
+2. **Local run vs. machine run**: In Stage 4, the local run ([`localStepC`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Agreement/Segment.lean), `localRunC`, `ReachesC`, `RunsToDO`, `ParamsAgree`, `CompilesBlk`, [`Leads`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Agreement/Hosted.lean#L46-L51)) **never yields and never reads `budgetOf`**, and its `host : Effects.Comodel (RowSig table) σ` has raw answer carrier `ExitV` ([`DenoteRows.lean`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/DenoteRows.lean)). So `DefaultBudgetCtx` cannot and need not be a premise of `ParamsAgree` or `CompilesBlk`.
+
+### Exact V5 Specification for F1
+
+1. **Keep the local forward relation completely general over `ctx : Ctx` and `host`**:
+   - `localStepC`, `localRunC`, `ReachesC`, `RunsToDO`, `ParamsAgree`, `CompilesBlk`, `compilesBlk_root`, and `Leads` quantify over **every** `ctx : Ctx` and **every** `host : Effects.Comodel (RowSig table) σ`, with **no** `DefaultBudgetCtx` premise.
+2. **Put `DefaultBudgetCtx` only on the machine forms (`M`, `Myield`, `Mcall`, `Settled`, `Holds`)**:
+   - Define the value-level invariants over [`Store.Val`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Machine/ContextMap.lean#L568-L587) and [`Ctx`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Machine/Stores.lean#L2168):
+     ```lean
+     -- proposed, not compiled
+     def DefaultBudgetServices (c : Env.Ctx) : Bool :=
+       (c.getV Env.maxOpsKey).isNone && (c.getV Env.preventYieldKey).isNone
+
+     def DefaultBudgetCtx (ctx : Ctx) : Prop :=
+       DefaultBudgetServices ctx.services = true ∧
+         ctx.maxOpsBeforeYield = defaultBudget ∧ ctx.preventYield = false
+     ```
+   - Define `BudgetSafeVal : Val → Bool` recursively over `Store.Val` so that any spine `Val.context? v = some c` inside `v` satisfies `DefaultBudgetServices c.services` and its service entries recursively satisfy `BudgetSafeVal`, and lift it to `BudgetSafeExit : ExitV → Bool` (checking `.success v` and every `.fail (.payload p)` in `.failure cause`; `.die` and `.interrupt` carry no `Val`).
+3. **Close all three sources of a `Val` on the machine side via `BlockRows` and `preflight`**:
+   - **Recursive column filter `ContextFreeTy : Ty → Bool` in `BlockRows`**:
+     Returns `false` on `.var _`, `.unknown`, `.contextOf _`, `.handle t` when `t == Ty.contextTarget`, and `.app n _` when `n == Ty.contextTarget`, and recurses over all composite `Ty` constructors (`.option`, `.prod`, `.list`, `.union`, `.except`, `.record`, `.map`, `.tuple`, `.exitOf`, `.causeOf`).
+   - **Fragment rules**:
+     - `BlockRows table root` requires `table.all fun row => ContextFreeTy row.answer && ContextFreeTy row.error`.
+     - `BodyRows table e` requires `key.name.value ≥ Env.firstFreeName` on `.provideService key value body` (matching [`nativeServiceTy`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Program/Native.lean#L565-L570)).
+   - **Connection to `s : Run` via `preflight` (`SessionMeaning.lean`)**:
+     - Because `ContextFreeTy` excludes `.var _`, any call instance `c` checked by [`acceptAtInstance`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Program/Admit.lean#L300-L313) has `c.answer = row.answer.instantiate subst = row.answer` and `c.error = row.error`.
+     - By structural induction on `ty`, `ContextFreeTy ty = true → Val.hasTy v ty allocated = true → BudgetSafeVal v = true` (and `errAdmits ty r = true → BudgetSafeReason r = true`).
+     - Therefore, in [`preflight_row`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Api/SessionMeaning.lean#L67-L100) / [`Answered`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Api/SessionMeaning.lean#L177-L183), every applied `.answerAsync f t (.ofExit ex)` on `tapeOf s` satisfies `BudgetSafeExit ex = true`, without altering global reply admission in `Admit.lean`.
+
+---
+
+## 2. Resolution of Finding F2 — Small-Budget Arithmetic and Conditional Agreement vs. Progress
+
+### Where `[G2]` was wrong
+My earlier review claimed `2 ≤ budget` implies `1 ≤ l` (positive local steps after a yield). As Codex’s probe demonstrated, [`fire_Myield`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Agreement/Machine.lean#L1708-L1727) consumes one counted step (`k : 0 → 1`) when delivering `Prim.success Val.unit` to pop `Prim.onSuccessConst (Prim.yieldNowWith 0) cur`. When `drive_seg` starts at `k = 1`, the first checkpoint tests `k + 1 ≥ budget` (`2 ≥ budget`). At `budget = 2`, it yields immediately with **`l = 0` local steps**.
+
+### Exact V5 Specification for F2
+1. **Correct the two thresholds in §5 (Stage 4), §6(f), and §11**:
+   - `1 < budget` (`2 ≤ budget`) is the threshold for [`fire_Myield`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Agreement/Machine.lean#L1727) to pop the yield continuation frame without `injectYield` firing on the resume delivery itself (at `budget ∈ {0, 1}`, each flush round pushes another `onSuccessConst` frame).
+   - **`2 < budget` (`3 ≤ budget`)** is the threshold for [`flushAll_Myield`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Agreement/Segment.lean#L623-L670) to guarantee `1 ≤ l` local steps of progress after a yield.
+2. **Keep `H9Blocks` receipt-conditioned (`flush_Myield`, not `flushAll_Myield`)**:
+   - [`flush_Myield`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Agreement/Hosted.lean#L196-L240) inducts on `rounds` using the true receipt `(flushAllState ... rounds ...).2 = true`, and `H9Blocks` is conditioned on `funded s = true`, `atRest s = true`, `hostDriven s = true`, and `s.exit = some ex`.
+   - Under the reachable machine invariant `DefaultBudgetCtx` (`budget = defaultBudget = 2048`), `2 < 2048` holds on every reachable fiber, and `flushAll_Myield` remains untouched on the context-free `Straight`/`Looped` lane.
+
+---
+
+## 3. Resolution of Finding F3 — Shared Service Lifetime Captures the Request Recorder (and Cache Wording)
+
+### Why Codex’s [`captured-context-current.ts`](file:///Users/pooks/Dev/lean4-effect4/docs/research/2026-10-14-proc6-codex-review/evidence/consumer-build/captured-context-current.ts) failed on Request 2
+1. In [`ApplicationService.lean`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Program/Authoring/ApplicationService.lean#L98-L124), `TodoAppContext` captures `Effect.context<TodoRepo>()` when the layer is built, and each method `TodoApp_<entry>` wraps its body in `provideContext (fst state) ...`.
+2. In [`vendor/effect-4.0.0-rc.112/src/internal/effect.ts`](file:///Users/pooks/Dev/lean4-effect4-gemini/vendor/effect-4.0.0-rc.112/src/internal/effect.ts#L2197), `provideContext` merges with right-bias (`Context.merge(captured)`), so the inner `provideContext` in `TodoApp_<entry>` **overrides** any outer per-request `provideRows`.
+3. In [`apps/todo/server.ts`](file:///Users/pooks/Dev/lean4-effect4-gemini/apps/todo/server.ts#L103-L110), `run` builds a fresh `KeyedRecorder` and `rows` object per HTTP request. If `TodoAppLayer` is built once during request 1, `TodoAppContext` permanently captures request 1’s `rows` (and its closed `KeyedRecorder`).
+4. Also, in my earlier review I misstated the cache hit sequence: `list` then `list` is a cache hit (`0` host calls on the second `list`), whereas `add` (`POST /todos`) calls `invalidateBody`, so `list` after `add` is a cache **miss** that calls `TodoRepo.all` again (as [`apps/todo/consumer.ts`](file:///Users/pooks/Dev/lean4-effect4-gemini/apps/todo/consumer.ts#L47-L61) documents).
+
+### Exact V5 Specification for F3 (Stage 5 vs. Horizon §6(b) and §13 item 3)
+1. **Stage 5 stays per-request (matching `withTodo` in [`apps/todo/consumer.ts`](file:///Users/pooks/Dev/lean4-effect4-gemini/apps/todo/consumer.ts#L20-L24))**:
+   - Each HTTP request in `server.ts` runs `withTodo`, which builds `TodoAppLayer` inside that request’s `provideRows`.
+   - Its Lean twin in Stage 5 is one `Run` per `Record` from `Stores.empty` (`<service>Context` followed by `<service>_<entry>`), which [`runOf`](file:///Users/pooks/Dev/lean4-effect4-gemini/tools/Tools/RunChecks.lean#L259-L261), [`checkSession`](file:///Users/pooks/Dev/lean4-effect4-gemini/tools/Tools/RunChecks.lean#L291-L305), and `H9Blocks` cover directly with no change to `server.ts`’s recorder lifecycle.
+   - Meanwhile, the single-run scenario `cachedListAfterAdd` ([`apps/todo/consumer.ts`](file:///Users/pooks/Dev/lean4-effect4-gemini/apps/todo/consumer.ts#L50-L61), [`Cached.lean`](file:///Users/pooks/Dev/lean4-effect4-gemini/Test/Dogfood/Scenario/Todo/Cached.lean)) exercises `list → list (hit) → add (invalidate) → list (miss)` within one `TodoAppLayer` build.
+2. **Horizon §6(b) and §13 item 3 (if the owner adopts server-lifetime `TodoAppLayer` across requests)** must explicitly require two things:
+   - **Server-lifetime row proxy in [`apps/todo/server.ts`](file:///Users/pooks/Dev/lean4-effect4-gemini/apps/todo/server.ts#L98-L118)**: Build one `rows` table at startup whose callback reads an `activeRecorder : KeyedRecorder | undefined` variable (just as [`scenarioRows`](file:///Users/pooks/Dev/lean4-effect4-gemini/harness/truth/session/keyed-bindings.ts#L147-L188) dispatches through `scenarioOf(name).host.recorder`), and build `TodoAppLayer` once over that `rows` table. Inside `serial`, each request sets `activeRecorder = recorder` before running ` todo.<entry>(...).pipe(Effect.provide(appContext))` and clears it on exit.
+   - **Persistent-store session replay in [`tools/Tools/RunChecks.lean`](file:///Users/pooks/Dev/lean4-effect4-gemini/tools/Tools/RunChecks.lean) with its own placed goal**: Because `H9Blocks` is a single-run theorem starting from `Stores.empty`, connecting a multi-request HTTP session over a shared `Ref` cell requires either threading `Stores` across `runOf` or replaying the session’s requests as one block program that reifies each request’s exit, backed by a placed session-composition goal.
+
+---
+
+## 4. Resolution of Finding F4 — Connecting `compilesBlk` to the Block Root (`.defs`)
+
+### Why Codex flagged Stage 2
+In Stage 1, `BodyRows table e` excludes `.defs`, while `BlockRows table root` holds when `root = .defs decls bodies main .nil`, `BodyRows table main = true`, and `(bodiesOf root).all (BodyRows table) = true` (plus the `ContextFreeTy` table check from F1). Because `compilesBlk` is stated for `BodyRows table e = true`, it cannot be instantiated at `e := root`.
+
+### Exact V5 Specification for F4 (Stage 2 & §7 Placement)
+1. **Remove the `defs` bullet from `compilesBlk`’s body-induction list** in Stage 2 (`BodyRows` has no `defs` case).
+2. **Add the block-root theorem `compilesBlk_root` right below `compilesBlk`** in Stage 2, and add a row for it in §7 (Placement, step of `rows-block-host`, consumer: Stage 3’s `localRunC_to_blockB`):
+   ```lean
+   -- proposed, not compiled
+   theorem compilesBlk_root {σ : Type} (host : Effects.Comodel (RowSig table) σ) (root : NativeEff)
+       (hroot : BlockRows table root = true) (k : Nat) (p : Point) (K : List NCode) (i : Bool)
+       (s : Stores) (r : σ) ( ctx : Ctx) (hp : p.path = []) (hpar : p.params = []) :
+       RunsToDO host root K i k (fiberOf (compileEff root p) K i) ctx s r
+         (runRowsO host (denoteBlockB table (bodiesOf root) k [] root ctx p.env) s r)
+   ```
+   **Proof**: Unpack `BlockRows table root = true` to get `root = .defs decls bodies main .nil` and `hmain : BodyRows table main = true`.
+   - If `p.fuel = 0`: `compileEff root p = frontier p` (`compileEff_zero`), closed by `RunsToDO.of_zero`.
+   - If `p.fuel = f + 1`: `compileEff (.defs decls bodies main .nil) p = compileEff main (p.child 1)` and `denoteBlockB table (bodiesOf root) k [] (.defs decls bodies main .nil) ctx p.env = denoteBlockB table (bodiesOf root) k [] main ctx (p.child 1).env`. Apply `compilesBlk host root hroot k main hmain` at `p.child 1`, using `Node.at_ (Node.eff root) [1] = some (Node.eff main)` and `ParamsAgree` at `(p.child 1).params = []`.
+
+---
+
+## Summary Checklist for the Version 5 Edit of `2026-10-14-proc6-scout.md`
+
+1. **§5 Stage 2 & §7**: Replace the `defs` bullet of `compilesBlk` with `compilesBlk_root` (handling `p.fuel = 0` via `RunsToDO.of_zero` and `p.fuel = f + 1` via `compilesBlk` on `main` at `p.child 1`), and add `compilesBlk_root` to the §7 placement table.
+2. **§5 Stage 4 & §11**:
+   - Keep `localStepC`, `localRunC`, `RunsToDO`, `ParamsAgree`, `CompilesBlk`, and `Leads` general over all `ctx : Ctx` and all `host : Effects.Comodel`.
+   - Restrict `DefaultBudgetCtx` to the machine forms (`M`, `Myield`, `Mcall`, `Settled`, `Holds`), backed by `BudgetSafeVal` / `BudgetSafeExit`, `key.name.value ≥ Env.firstFreeName` in `BodyRows`, and `ContextFreeTy row.answer && ContextFreeTy row.error` (excluding `.var`, `.unknown`, `.context`, `.contextOf`) in `BlockRows`, connected to `s : Run` through `Api.HostSession.preflight`.
+   - Fix the small-budget threshold description: `1 < budget` for `fire_Myield`, **`2 < budget`** for positive local progress in `flushAll_Myield`, and note that `H9Blocks` uses receipt-conditioned `flush_Myield`.
+3. **§5 Stage 5, §6(b), §11 & §13**:
+   - Keep Stage 5 per-request; state the two requirements for Horizon §6(b) (a server-lifetime `rows` adapter dispatching to `activeRecorder` in `apps/todo/server.ts`, and a persistent-store session replay contract in `tools/Tools/RunChecks.lean` with a placed goal).
+   - Correct the cache hit/miss wording (`list → list` is a hit; `add` invalidates so `list` after `add` is a miss).

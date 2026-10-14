@@ -1,0 +1,151 @@
+Here is the second review of the ratified no-shortcut plan ([`2026-10-14-proc6-scout.md`](file:///Users/pooks/Dev/lean4-effect4/docs/research/2026-10-14-proc6-scout.md)), answering all six questions in §12 against HEAD and flagging four concrete catches in the proof and build graph.
+
+---
+
+## 1. Answers to §12 ("For Gemini's second review")
+
+### Q1. Stage 0a (`call` pushes `[] :: p.params`): does any proof or consumer rely on a `call` keeping the caller's stack?
+
+**No.** Every consumer and proof site handles `params := [] :: p.params` cleanly, and the weight proof actually simplifies:
+
+1. **Compiler & Reference Machine**:
+   - [`suspendBodyAt`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Program/Compile.lean#L1443-L1458) (`.call` arm at line 1455): change `{ p.redirect path with env := p.env.take 0 ++ [v], call := p.path :: p.call }` to add `params := [] :: p.params`.
+   - [`denoteEffBody`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/DenoteR.lean#L644-L651) and [`denoteR_perform`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/DenoteR.lean#L868-L875): add `params := [] :: p.params` in the `.call` arm.
+2. **Agreement & Intro (`run_eq_ref_table`)**:
+   - [`suspendBodyAt_call`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Agreement.lean#L1422-L1432) has only one consumer in the tree: [`intro_call`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Intro/Sequential.lean#L38-L75).
+   - In [`intro_call`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Intro/Sequential.lean#L67-L70), replace [`weight_redirect_call_lt`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Intro/Weight.lean#L59-L65) with the existing [`weight_redirect_params_lt`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Intro/Weight.lean#L67-L74) (which already proves `({ p.redirect target with env := env', params := frame :: p.params, call := ret :: p.call }).weight < p.weight`). `weight_redirect_call_lt` has no other caller and can be deleted.
+3. **Typed Machine (`M5`)**:
+   - In [`call_arm`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Typed/Denotation.lean#L2583-L2649), line 2606 establishes `hscope : scopeParams root.program path = []`.
+   - At lines 2643–2648, [`stackTyped_nil`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Typed/Admission.lean#L225-L231) and [`ambientStackTyped_nil`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Typed/Denotation.lean#L951-L957) accept **any** `stack : List (List ArgSite)` when `declarations = []` (the `cons` constructor of `StackCertificates` quantifies over `[][index]? = some parameter`, which is vacuous). So changing `p.params` to `[] :: p.params` at lines 2643 and 2646 requires zero new lemmas.
+4. **Build catch (OCaml LCNF extraction)**:
+   - `Effect4.Program.suspendBodyAt` is LCNF-extracted into [`ocaml/engine/api_engine.ml`](file:///Users/pooks/Dev/lean4-effect4-gemini/ocaml/engine/api_engine.ml#L8847) and [`ocaml/gen/api_gen.ml`](file:///Users/pooks/Dev/lean4-effect4-gemini/ocaml/gen/api_gen.ml#L10131) (tracked in [`closure-api_engine.tsv`](file:///Users/pooks/Dev/lean4-effect4-gemini/ocaml/gen/closure-api_engine.tsv#L113) and [`closure-api_gen.tsv`](file:///Users/pooks/Dev/lean4-effect4-gemini/ocaml/gen/closure-api_gen.tsv#L47)). Stage 0a must run `make gen-ocaml` and `opam exec --switch=effect4 -- dune build` before `make check-native check-ocaml`.
+
+---
+
+### Q2. The reader lift (Stage 0): is the lift of `denoteRowsB.alg` to `BlockCarrierB` one definition, and does conservativity follow from `EffAlgebra.AgreeOn`?
+
+**Part A (Reader lift): Yes.** Because `ctx : Ctx` is a lexical reader (never mutated across `bind` or `iterate`—only locally modified inside `eff_provideContext`), every control field of `blockAlgB` is a 1-line pointwise lift of [`denoteRowsB.alg`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/DenoteRowsB.lean#L140-L185):
+- **1-child (`suspend`, `exit`, `iterate`)**: `fun r0 ctx env => (denoteRowsB.alg table k).eff_... (r0 ctx) env`
+- **2-child (`bind`, `catchCause`, `onExit`, `catchIf`, `select`)**: `fun r0 r1 ctx env => (denoteRowsB.alg table k).eff_... (r0 ctx) (r1 ctx) env`
+- **3-child (`matchCause`)**: `fun r0 r1 r2 ctx env => (denoteRowsB.alg table k).eff_matchCause (r0 ctx) (r1 ctx) (r2 ctx) env`
+
+**Part B (`EffAlgebra.AgreeOn`): No — do not use [`EffAlgebra.AgreeOn`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Signature.lean#L394-L479) for conservativity.** Two concrete obstacles in `Signature.lean` block it:
+1. **`eff_provideContext` and `eff_withFiber` are unguarded in `AgreeOn`**:
+   - Line 418 requires unconditional equality: `eff_provideContext : alg₁.eff_provideContext = alg₂.eff_provideContext` (because [`readsAlg`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Signature.lean#L493) defines `eff_provideContext _ r1 := r1`).
+   - In `blockAlgB`, `eff_provideContext` updates `ctx` and runs `r1`; in `denoteRowsB.alg`, `eff_provideContext` returns `pure (some outsideExit)`. Thus `(blockAlgB ...).AgreeOn (liftAlg (denoteRowsB.alg ...))` is **false** for every choice of `okOp`, `okKey`, `okDef`.
+2. **`action_context` at `.empty` holds vacuously in `readsAlg`**:
+   - Line 523 defines `action_context keys := ∀ key ∈ keys.elems, okKey key`. Even with `okKey := fun _ => False`, at `keys = Env.Requirement.empty` (`elems = []`), `∀ key ∈ [], False` is **true**! So `reads (.withFiber (.context .empty))` holds under `okKey := fun _ => False`, while `blockAlgB` returns `Val.context ctx` and `denoteRowsB.alg` returns `outsideExit`.
+
+**The cleaner proof**: Because `blockAlgB` defines its control fields literally by applying `(denoteRowsB.alg table k).eff_...` to `(r0 ctx)` and `(r1 ctx)`, direct structural induction on `e` (mirroring [`cata_blockStepAlg_straightRows`](file:///Users/pooks/Dev/lean4/src/Effect4/Laws/Program/ParamRows.lean#L309-L415)) is **shorter** than setting up `AgreeOn`:
+- In each composite case (`bind`, `catchCause`, `onExit`, `catchIf`, `matchCause`, `select`, `iterate`), applying `funext ctx' env'` to the induction hypothesis yields `cata_eff (blockAlgB ...) child ctx = denoteRowsB table k child`.
+- Rewriting with the IH immediately reduces `(denoteRowsB.alg table k).eff_bind (cata_eff ... a ctx) (cata_eff ... b ctx) env` to `denoteRowsB table k (.bind a b) env` **without ever unfolding `thenOpt` or `loopStep`**.
+
+---
+
+### Q3. Stage 4 (`localRun` with `Ctx`): is a second module with a connector, then moving 157 statements, the least rework? Or can the existing local run take the context in a way that leaves those statements unchanged?
+
+**We can avoid moving the 100+ statements in `Agreement.lean` and `Loop.lean` entirely, and keep almost all existing signatures unchanged.**
+
+Here is why and how:
+
+1. **Leave `localStep` and `localRun` in [`Agreement.lean`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Agreement.lean#L143-L202) and [`Loop.lean`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Agreement/Loop.lean) completely untouched.**
+   - `localStep` and `localRun` only serve the call-free, context-free `Straight` (`run_eq_meaning`) and `Looped` (`loopAgreement`) theorems. Nothing in Stage 3 or Stage 4 uses `localRun`; the hosted call-tree spine (`Segment.lean`, `Calls.lean`, `LoopCalls.lean`, `Hosted.lean`) uses [`localRunC`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Agreement/Segment.lean#L61-L103).
+2. **Why `localStepC` / `localRunC` cannot just pass `ctx : Ctx` as a read-only parameter if `provideContext` is inside a segment**:
+   - Inside `updateContextAt` ([`Compile.lean`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Program/Compile.lean#L531-L553)), `EffThunk.setCtx` **mutates** the fiber's `context` mid-segment, and `Prim.onExit _ (.restoreCtx prev) false` **restores** `prev` when the `provideContext` region exits (or in a later segment if the body makes a host call in between!).
+   - Therefore, across a segment boundary (`Yielded` or `Called`), the updated `ctx' : Ctx` must be carried in the fiber state alongside `fr' : NFiber`.
+3. **How to carry `ctx` in `Segment.lean` and `Machine.lean` with minimal churn**:
+   - In [`Machine.lean`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Agreement/Machine.lean#L90-L157), give `fiberAt`, `M`, `Myield`, `Mcall`, `parkedAt`, and `callParkedAt` a trailing default parameter `(ctx : Ctx := (interpOf root).emptyContext)`. Note that [`Mexit`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Agreement/Machine.lean#L956) already resets `context := (interpOf root).emptyContext` on fiber exit!
+   - Every existing call site `M root fr s k tr nt` elaborates unchanged with the default `emptyContext`, while the general step lemmas (`step_M_...`, `drive_seg`, `seg_settles`) quantify over `(ctx : Ctx)`.
+4. **Critical catch in Stage 4's [`PlainFrame`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Agreement/Machine.lean#L170-L180)**:
+   - Look closely at what `updateContextAt` ([`Compile.lean`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Program/Compile.lean#L531-L553)) pushes onto `f.frame.stack` when starting from an unmasked fiber (`f.frame.interruptible = true`):
+     1. `EffThunk.captureMask` runs [`WithFiberAction.getInterruptible`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Machine/Fibers.lean#L1484-L1489), which calls `f.frame.uninterruptible` ([`Frames.lean`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Machine/Frames.lean#L3205-L3210)): it pushes `Prim.setInterruptible true` *above* `Prim.onSuccess _ (.provideMask u body)` and sets `interruptible := false`.
+     2. Immediately on the next step, `Prim.success (Val.savedMask true)` pops `Prim.setInterruptible true` (restoring `interruptible := true`) and enters `.provideMask u body`.
+     3. `.provideMask u body` runs `WithFiberAction.setInterruptible ... false`, which pushes `Prim.setInterruptible true` onto `K` and sets `interruptible := false`.
+     4. After `getCtx` and `setCtx`, `Prim.onExit (Prim.withFiber (.restoreRegion body true)) (.restoreCtx prev) false` pushes `Prim.onExit _ (.restoreCtx prev) false` onto `Prim.setInterruptible true :: K`.
+     5. Then `.restoreRegion body true` runs [`WithFiberAction.setInterruptible (regionCode root body) true`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Machine/Fibers.lean#L1440-L1443), which calls [`interruptibleRegion`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Machine/Frames.lean#L3214-L3228) / `setFiberInterruptible true`. Because `f.frame.interruptible` is currently `false`, `setFiberInterruptible true` **pushes `Prim.setInterruptible false`** onto the stack and sets `f.frame.interruptible := true`!
+     6. While `body` executes, the continuation stack above `K` is therefore:
+        ```text
+        Prim.setInterruptible false :: Prim.onExit _ (.restoreCtx prev) false :: Prim.setInterruptible true :: K
+        ```
+   - Right now, [`PlainFrame`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Agreement/Machine.lean#L176) has `| Prim.setInterruptible true => true` (rejecting `Prim.setInterruptible false`!).
+   - **Fix for Stage 4**: Change `PlainFrame` in [`Machine.lean`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Agreement/Machine.lean#L176) from `| Prim.setInterruptible true => true` to `| Prim.setInterruptible _ => true` (and generalize `step_ofExit_pass_setInterruptible` at line 500 from `true` to `(flag : Bool)`). Because `f.frame.interruptedCause = none` on a plain fiber (`Plain`), popping `Prim.setInterruptible false` on exit simply sets `interruptible := false` just before `Prim.onExit _ (.restoreCtx prev) false` runs `restoreCtx` and pops `Prim.setInterruptible true` (which sets `interruptible := true`).
+
+---
+
+### Q4. The yield (Stage 4): does any proof read `defaultBudget`'s value (`2048`) beyond the order `≤`?
+
+**Yes — two proofs read `defaultBudget = 2048`, and there is a real machine edge case if `ctx.maxOpsBeforeYield ≤ 1`:**
+
+1. **Where `defaultBudget = 2048` is used**:
+   - [` fire_Myield`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Agreement/Machine.lean#L1727): uses `have : 0 + 1 < defaultBudget := by decide`. After `fire` resumes a yielded fiber at `k = 0`, the fiber's current instruction is `Prim.success Val.unit` with `Prim.onSuccessConst (Prim.yieldNowWith 0) cur` on top of the stack. Stepping `Prim.success Val.unit` increments `currentOpCount` from `0` to `1` (`k = 1`). That step **must not** trigger `injectYield` (`0 + 1 < maxOpsBeforeYield`), i.e. **`1 < ctx.maxOpsBeforeYield`** is required for `fire_Myield` to return `M` at `k = 1`!
+   - [`flushAll_Myield`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Agreement/Segment.lean#L633) and [`replay_Mexit_of_localRun`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Agreement/Segment.lean#L703): use `have hB : defaultBudget = 2048 := rfl` so `omega` knows **`2 ≤ defaultBudget`**. When a segment starts at `k = 1` after a yield and runs `l` local steps before hitting `maxOpsBeforeYield ≤ 1 + l + 1`, `2 ≤ maxOpsBeforeYield` guarantees `1 ≤ l` (strictly positive local-step progress per yield round).
+   - Note that [`flush_Myield`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Agreement/Hosted.lean#L196-L240) (used by `H9` / `request_leads`) inducts on `rounds` using the `flushAllState = true` receipt rather than `n - l`, so `flush_Myield` only needs `1 < ctx.maxOpsBeforeYield` (from `fire_Myield`), whereas `flushAll_Myield` (used by `H8` / `run_eq_meaning`) needs `2 ≤ ctx.maxOpsBeforeYield`.
+2. **Why `ctx.maxOpsBeforeYield = defaultBudget` and `ctx.preventYield = false` hold invariance-style on `BlockRows`**:
+   - In [`Stores.lean`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Machine/Stores.lean#L2218-L2231), `setContext` computes `maxOpsBeforeYield` and `preventYield` by looking up the two reserved keys `Env.maxOpsBeforeYieldKey` and `Env.preventYieldKey` in `ctx.services`.
+   - Under [`SigApp`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Machine/Key.lean) ("the machine's reserved names type nothing"), no application service key in `BlockRows` is ever `maxOpsBeforeYieldKey` or `preventYieldKey`.
+   - **Recommendation**: Rather than threading arbitrary `maxOpsBeforeYield` budgets through `Machine.lean` and `Segment.lean`, add the two-field predicate `DefaultBudgetCtx (ctx : Ctx) : Prop := ctx.maxOpsBeforeYield = defaultBudget ∧ ctx.preventYield = false` to `M` / `Myield` / `Mcall`. Prove the 3-line preservation lemma that `provideService` for any key `∉ [Env.maxOpsBeforeYieldKey, Env.preventYieldKey]` preserves `DefaultBudgetCtx`. Then `defaultBudget = 2048` and `preventYield = false` remain literally true in every step of `Machine.lean` and `Segment.lean` with **zero changes** to the budget arithmetic!
+
+---
+
+### Q5. The twin (Stage 5): is `withTodo`'s `Effect.provide(TodoAppLayer)` a fresh layer build per request in rc.112? And how does that connect to Decision 3 in §13?
+
+**Yes on both counts — and inspecting [`vendor/effect-4.0.0-rc.112/src/internal/layer.ts`](file:///Users/pooks/Dev/lean4-effect4-gemini/vendor/effect-4.0.0-rc.112/src/internal/layer.ts#L8-L87) reveals a major payoff for Decision 3:**
+
+1. **What `withTodo` currently does per request**:
+   - In [`apps/todo/consumer.ts`](file:///Users/pooks/Dev/lean4-effect4-gemini/apps/todo/consumer.ts#L60-L65), `withTodo` calls `Effect.provide(TodoAppLayer)`.
+   - In [`internal/layer.ts`](file:///Users/pooks/Dev/lean4-effect4-gemini/vendor/effect-4.0.0-rc.112/src/internal/layer.ts#L84-L87), when the argument to `Effect.provide` is a `Layer` (not a `Context`), `provide` calls `provideLayer`:
+     ```ts
+     export const provideLayer = (self, layer, options) =>
+       effect.scopedWith((scope) =>
+         effect.flatMap(buildWithScope(layer, scope, options), (context) =>
+           effect.provideContext(self, context)))
+     ```
+   - Thus, every HTTP request currently creates a fresh `Scope`, builds a fresh `MemoMap`, runs `TodoAppContext` (allocating a fresh `Ref.make(Option.none())` that is discarded at the end of the request!), and closes the scope.
+2. **What happens when `server.ts` builds `TodoAppLayer` once at startup (Decision 3 in §13)**:
+   - Look at lines 85–86 of [`internal/layer.ts`](file:///Users/pooks/Dev/lean4-effect4-gemini/vendor/effect-4.0.0-rc.112/src/internal/layer.ts#L85-L86):
+     ```ts
+     export const provide = dual(2, (self, source, options) =>
+       Context.isContext(source)
+         ? effect.provideContext(self, source)
+         : provideLayer(self, ...))
+     ```
+   - If `server.ts` builds the layer once at server startup (just like it already opens `SqliteTodoRepo` once at startup in [`apps/todo/server.ts`](file:///Users/pooks/Dev/lean4-effect4-gemini/apps/todo/server.ts#L98-L100)) into `appContext : Context.Context<TodoApp>` and runs each request with `Effect.provide(appContext)`, then:
+     1. **In production (`server.ts`)**: the `Ref` cache cell actually persists across HTTP requests, so a `GET /todos` after `POST /todos` is a real cache hit in the running server.
+     2. **In rc.112 (`internal/layer.ts:85-86`)**: `Effect.provide(appContext)` on a `Context` dispatches directly to `effect.provideContext(self, appContext)` — **no per-request `scopedWith` and no per-request `MemoMap`**!
+     3. **In the Lean twin (`TodoCached.lean`)**: building the context once (`TodoAppContext`) and running each session request under `.provideContext` matches the runtime execution **on the nose**, with no throwaway scope/memoMap allocation between requests.
+
+---
+
+### Q6. The type of `Effect.context`: does the checker type `withFiber (.context keys)` at a type that `Val.context ctx` fits (`Fits`), for every context `ctx` the fiber can hold?
+
+**Yes — this is already proved in [`src/Effect4/Laws/Program/Typed/Context.lean`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Typed/Context.lean#L115-L198).**
+
+- **Checker rule ([`inv_action_context`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Typed/Context.lean#L121-L132))**: `.withFiber (.context keys)` checks at `EffTy.mk Ty.context Ty.never keys` whenever every `key ∈ keys.elems` is declared in `sig.serviceTy`.
+- **Value fit ([`fits_context_inv`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Typed/Context.lean#L189-L198) and [`native_context_answer`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Typed/Context.lean#L170-L179))**: `Fits w (Val.context ctx) Ty.context` holds whenever `ServicesFit w ctx.services` holds, and `ambientFiberPost` additionally records `ctx.services.Satisfies available`.
+- **Machine invariant ([`checked_context_arm`](file:///Users/pooks/Dev/lean4-effect4-gemini/src/Effect4/Laws/Program/Typed/Context.lean#L134-L157))**: Every reachable fiber in the M5 invariant carries `ServicesFit w f.context.services` and `f.context.services.Satisfies available`, so `Val.context f.context` fits `Ty.context` and satisfies the required service keys `keys` for every context the fiber can hold.
+
+---
+
+## 2. Summary of the Four Catches to Fold Into Execution
+
+| # | Stage | Catch | Exact Fix |
+|---|---|---|---|
+| **A** | **Stage 0a** | `Effect4.Program.suspendBodyAt` is LCNF-extracted into `ocaml/engine/api_engine.ml` and `ocaml/gen/api_gen.ml`. | Run `make gen-ocaml` and `opam exec --switch=effect4 -- dune build` in Stage 0a before `make check-native check-ocaml`. |
+| **B** | **Stage 0** | `EffAlgebra.AgreeOn` (`Signature.lean:394`) has unguarded `eff_provideContext` and `eff_withFiber` fields, and `readsAlg.action_context .empty` is vacuously true. | Prove `denoteBlockB_loopedDataRows` by direct structural induction on `e` (rewriting with the IH on each child reduces directly to `denoteRowsB.eq_cata` without unfolding `thenOpt` or `loopStep`). |
+| **C** | **Stage 4** | `updateContextAt` runs `restoreRegion body true`, which calls `interruptibleRegion` and pushes `Prim.setInterruptible false` above `Prim.onExit _ (.restoreCtx prev) false`. Currently `PlainFrame` (`Machine.lean:176`) only admits `Prim.setInterruptible true`. | Change `PlainFrame` (`Machine.lean:176`) to `\| Prim.setInterruptible _ => true` and generalize `step_ofExit_pass_setInterruptible` (`Machine.lean:500`) to `(flag : Bool)`. |
+| **D** | **Stage 4** | `fire_Myield` (`Machine.lean:1727`) needs `1 < maxOpsBeforeYield` and `flushAll_Myield` (`Segment.lean:633`) needs `2 ≤ maxOpsBeforeYield`. | Add `DefaultBudgetCtx ctx` (`ctx.maxOpsBeforeYield = defaultBudget ∧ ctx.preventYield = false`) to `M`/`Myield`/`Mcall`, and prove that `provideService` on any non-reserved key (`∉ [maxOpsBeforeYieldKey, preventYieldKey]`) preserves `DefaultBudgetCtx`. This keeps every budget proof in `Machine.lean` and `Segment.lean` unchanged. |
+
+---
+
+## 3. Recommendations on §13 ("Four Decisions for the Owner")
+
+1. **Decision 1 (First-class `provideService` vs. keeping `provideService` as a macro over `Effect.context` + `provideContext`)**:
+   - **Keep `provideService` as the macro** (`Effect.context` + `ServiceMap.add` + `provideContext`). As §2.6 of the plan shows, that matches Effect's own runtime representation (`internal/effect.ts:1049-1052`), avoids adding a new `Eff` constructor (and regenerating every algebra/fold/printer/reader), and gives `Effect.context` a first-class meaning at the same time.
+2. **Decision 2 (Layer scope on the horizon)**:
+   - Keep `Layer.build` out of `BlockRows` for this slice; the `<service>Context` builder definition is already emitted and banked, and `TodoAppLayer` is simply `Layer.effectContext(TodoAppContext)`.
+3. **Decision 3 (Server-scoped service in `apps/todo/server.ts`)**:
+   - **Adopt this in Stage 5.** Building `TodoAppLayer` once at server startup (`appContext`) and calling `Effect.provide(appContext)` per request makes the in-memory `Ref` cache actually persist across HTTP requests in production **and** causes rc.112 (`internal/layer.ts:85-86`) to execute `effect.provideContext(self, appContext)` directly, matching the Lean session replay without per-request scope/memoMap noise.
+4. **Decision 4 (Where `Ctx` lives in Stage 4)**:
+   - Keep `localStep` / `localRun` in `Agreement.lean` and `Loop.lean` untouched (they only serve `Straight` and `Looped`), and thread `ctx : Ctx` (with `DefaultBudgetCtx ctx` and default value `emptyContext`) through `Machine.lean`, `Segment.lean`, `Calls.lean`, `LoopCalls.lean`, and `Hosted.lean`. That gives the full no-shortcut theorem without touching the 100+ context-free `localRun` lemmas.
+
+The plan in [`2026-10-14-proc6-scout.md`](file:///Users/pooks/Dev/lean4-effect4/docs/research/2026-10-14-proc6-scout.md) is tight, sound, and ready to freeze into decisions row 379 and execute starting at **Stage 0a**.

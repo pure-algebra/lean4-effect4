@@ -1,0 +1,1 @@
+[{"name": "TodoRepo.insert", "answer": true, "error": true, "typeArgs": []}, {"name": "TodoRepo.all", "answer": true, "error": true, "typeArgs": []}, {"name": "TodoRepo.setDone", "answer": true, "error": true, "typeArgs": []}, {"name": "TodoRepo.delete", "answer": true, "error": true, "typeArgs": []}]

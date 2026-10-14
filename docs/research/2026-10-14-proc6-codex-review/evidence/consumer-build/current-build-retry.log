@@ -1,0 +1,11 @@
+✔ [1180/1189] Built Test.Dogfood.Application (7.9s)
+✔ [1181/1189] Built Test.Dogfood.P2HandlerLayers (8.1s)
+✔ [1182/1189] Built Test.Dogfood.Scenario.Routing.Model (1.5s)
+✔ [1183/1189] Built Test.Dogfood.Scenario.Todo (1.7s)
+✔ [1184/1189] Built Test.Dogfood.Bank (1.6s)
+✔ [1185/1189] Built Test.Dogfood.Proofs.HostRouting (2.6s)
+✔ [1186/1189] Built Test.Dogfood.ApplicationDefs (1.4s)
+✔ [1187/1189] Built Test.Dogfood.Scenario.Routing.Calls (1.0s)
+✔ [1188/1189] Built Test.Dogfood.Scenario.Todo.Tree (2.3s)
+✔ [1189/1189] Built Test.Dogfood.Scenario.Todo.Cached (2.2s)
+Build completed successfully (1189 jobs).

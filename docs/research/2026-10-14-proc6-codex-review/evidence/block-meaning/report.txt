@@ -1,0 +1,24 @@
+PROC-6 block meaning review
+Initial source pin: 9ccb94e2b8349f72dae884328e84cf25582c95c4.
+Final source pin checked: 7c9bb76172400d2f885cf461f2f09db334d2495a.
+Reviewed v4 snapshot: docs/research/2026-10-14-proc6-codex-review/plan-v4.md.
+
+Outstanding: v4 lines 412-415 exclude defs from BodyRows. Lines 454-456 state compilesBlk only for BodyRows. Lines 464-465 nevertheless list a defs arm. Add a separate block-root wrapper applying compilesBlk to main at p.child 1, with compile-fuel exhaustion handled. This is a narrow missing proof connection, not a semantic counterexample.
+
+Q1 source-confirmed: suspendBodyAt_call has intro_call as its direct consumer. The two call reference equations and typed call_arm also require changes. Existing weight_redirect_params_lt and empty-scope stack lemmas fit the proposed repair. No additional call-specific Simulation consumer found. No repair compiled by this review; do not claim universal observation preservation from this sweep.
+
+Q2 source-confirmed: Signature.EffAlgebra.AgreeOn requires unconditional provideContext and withFiber field equality; the proposed reader block algebra differs there. Empty requirement context action also satisfies readsAlg vacuously. V4 already fixes the route by fragment induction, so not an outstanding v4 finding.
+
+Invoke nonfinding: captured argument trees retain k+1 caller budget. RunsToDO.mono lowers only the cut-bound index to k, retaining the same observed outcome. New ParamsAgree can therefore use the structural argument witness. Rebuilding closures at k would need another argument.
+
+Exit-law controls: compileEff checks context/service term before body. Two malformed-term guards around constant success passed, supporting the sketch; not a full theorem.
+
+Commands (one lake process at a time):
+LEAN_NUM_THREADS=3 lake build Effect4.Laws.Program.Agreement.LoopCalls
+Result: exit 0, Build completed successfully (408 jobs), build.log retained.
+LEAN_NUM_THREADS=3 lake env lean /tmp/proc6-review-20261014/block-meaning/ExitFold.lean
+Final result: exit 0, empty output, probe.log retained. Initial attempt used badShapeExit without importing its defining Laws module; expected expression changed to (badShape : NCode).asExit? and rerun passed.
+
+Sequencing: freeze the lexical-call statement contract and placement first. Stage 0a can then land as a standalone narrow slice before stage 2, including reference/typed repair, reached regeneration and behavior gates. Stage 0 is independent.
+
+Consolidated report review: F4 correct; Q1 evidence appropriately qualified; Q2 already-fixed status correct; invocation-budget paragraph accurate. Consider grading F4 as local proof debt rather than major semantic defect. No obsolete v3 objection remains in those sections.

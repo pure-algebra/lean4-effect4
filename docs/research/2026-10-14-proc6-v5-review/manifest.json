@@ -1,0 +1,164 @@
+{
+  "date": "2026-10-14",
+  "timezone": "America/Chicago",
+  "head": "7c9bb76172400d2f885cf461f2f09db334d2495a",
+  "status_before": "?? tools/view/make_videos.py\n",
+  "plan_on_disk": "Fourth version",
+  "proposal": "Proposed version-5 amendment attachment",
+  "agents": [
+    "gpt-6.1-sol /root/context_scheduler",
+    "gpt-6.1-sol /root/block_meaning",
+    "gpt-6.1-sol /root/consumer_build"
+  ],
+  "source_sha256": {
+    "AGENTS.md": "e75f6dfe4b054b711894739087066e68714afbd88588371cab9cb245f7b77cb4",
+    "Makefile": "01ba667fc66ef04f652f0377612ac58ce9af66ea98e674c5b0d5b73102f28911",
+    "Test/Dogfood/Scenario/Todo/Cached.lean": "b5d2c60be9abcac55c3eb84fb5812a0e2dadba940b6c2bb17ee0326c4c2c3415",
+    "apps/todo/Check.lean": "33592f8f0871a6bfdbcd127a0d55f1580ead46e9b0a3776ecfc7beb7fb1cefd5",
+    "apps/todo/EmitTodo.lean": "54f7e3720d4ce94da23f5a84d545ac6ff83dda6457fbe4544199be51f1d4c02d",
+    "apps/todo/consumer.ts": "e9af7f78650fe0d4ebcdcf6e8a30a6ddb28396adaace53abaacb87de20f4a9a8",
+    "apps/todo/server.ts": "8929f5ff347c88a7726cdb2f71940566e2b5a8fcef3ab9de3f6a887bb6d1d56e",
+    "docs/core/decisions.md": "871615b33b246faf341d18b0f2909c600749011b363fbb1d423b7a593913692b",
+    "docs/core/host-boundary.md": "806720b9937c48278616e242a08524c4e0db3b34ccb3e151653331fa504d0d16",
+    "docs/core/semantics.md": "eda6aff363ac9d5b008a62e7d47a27140981cf91a206c18ce7163621620dd942",
+    "harness/truth/service/run-todo.ts": "6580071861652813deeb054c04c298209996b0a931b43666e9054333448d6fd3",
+    "lean-toolchain": "3aac669c7a910ec2389f4e4f921b605adf6ebf2d1e0c9b9cd0be4d33f3f5db71",
+    "scripts/check-host-protocol.py": "3805ee4421a0bc39ba436d993df452a1a4aa7d459f85e7e85bb8197c04c3a8e3",
+    "src/Effect4/Api/Built.lean": "d8424f26a856a7146e000dc97b40556f69b7442f8f9c0f5b78d711cdcbc5f8a3",
+    "src/Effect4/Api/HostSession.lean": "2092ce8c1418ca17389ef738d92b415bd0624f87fb5eddb72c86c88f1a6d7173",
+    "src/Effect4/Laws/Api/SessionMeaning.lean": "c41926a9649dec2212de3a820e11473a55144614ea4430d4cc1869b637e05e23",
+    "src/Effect4/Laws/Api/SessionMeaningLoop.lean": "db9acd5e6b8ed50d6deeb8df795db0a17e1ccce81dc8046648e5b2feab496337",
+    "src/Effect4/Laws/Program/Agreement.lean": "65b6f7950a01dc0a0540b6111ee2c1890486f325279acb92532b1c78655b7a0a",
+    "src/Effect4/Laws/Program/Agreement/Hosted.lean": "75bb2f6177c0ac85d61c1d9b855cf4050e51ca06579b4c5083ebc227f6e05bda",
+    "src/Effect4/Laws/Program/Agreement/LoopCalls.lean": "d735163e8be508a2f113eaf6eaa648a5805da5f45423c8152bb504ca7826ae9f",
+    "src/Effect4/Laws/Program/Agreement/Machine.lean": "309b0e82a8c96d48de38117c2d50de039e4946817855e8f524efe1c4516e557f",
+    "src/Effect4/Laws/Program/Agreement/Segment.lean": "cceb87697e3df7d30d98d84600fe07d94cd6dabd25294be9278b9979b93dc2fa",
+    "src/Effect4/Laws/Program/DenoteR.lean": "2b5e26d49c67f7feed1a56a610a3fc85285d6057c4dc92705ec1e1699b1bf432",
+    "src/Effect4/Laws/Program/DenoteRows.lean": "b3522b8a42561ee0e4d2d51aef511a3667a3a580acba062f3890bebf90803b68",
+    "src/Effect4/Laws/Program/FragmentRowAdmission.lean": "d6e423fb2250ab0f9593a156c6d01973ff9b26bf6992e4ae12fe9dfd55870559",
+    "src/Effect4/Laws/Program/Intro/Sequential.lean": "7382e80402f05c907001ce1aa82137e3e34929a3fe08d156db5a62c1c5508d5e",
+    "src/Effect4/Laws/Program/Signature.lean": "0b71e64d0e0c2ec350852a7ae3c56ad4acb3e73b38a9dcdf22615577dc68213e",
+    "src/Effect4/Laws/Program/Typed/Context.lean": "c45f50eea254c02642ec00889ecfc9c06dadbee9839610a41898443eb73fa29f",
+    "src/Effect4/Laws/Program/Typed/Denotation.lean": "118a631aece8ca904b59e529d986e7587089abf9bdc78db49fe4be8fe1cdf695",
+    "src/Effect4/Laws/Program/Typed/Membership.lean": "cbb61a2b994c4fb3c946a078e0977efb5d8202c7e9d684dbe0866018287cd057",
+    "src/Effect4/Laws/Program/Typing/Call.lean": "194e005185afe8013c51d2ae607992a3be75e2362d15d03ffbafacfebe6327b1",
+    "src/Effect4/Machine/Alphabets.lean": "f1edec0d7b60dac6c1a5c19d613ac07bc4869af9ecd23231ad3e6261dcbcd564",
+    "src/Effect4/Machine/ContextMap.lean": "abc3af7887ba5c96dba804f58e2597cebe6328ae0d6b06c6ee272359edf5ac0f",
+    "src/Effect4/Machine/Fibers.lean": "d407c4ac87b017fce1d9d00205662b8b4b67653c6a8fd1f9ba8037ba49686410",
+    "src/Effect4/Machine/Frames.lean": "000e664e27e6bde515f14928bd473bbbdbb7d95181b06326efb9a24d3c11153c",
+    "src/Effect4/Machine/Record.lean": "cf759a6a076fb422e0e46442c118deec1c16631657fcdb7ed0b8a9c5b01ced2d",
+    "src/Effect4/Machine/Stores.lean": "acf0fbd12a676936d307c55e0337fb98920a725f110b5d311f8b3da4604e1f1b",
+    "src/Effect4/Machine/Term.lean": "7bcbf5bdd4aa484165224fa20c99a24e47cd5369ef5071fbb3ac36a8219c8591",
+    "src/Effect4/Program/Checker.lean": "f6c803a2574d6c452330f69a353fecc6c54e79f74e20986c425858287e98bc70",
+    "src/Effect4/Program/Columns.lean": "770e98b0af8655efb0d41ecc8d4de916861d3d016deaa78029b5608fb62e0cce",
+    "src/Effect4/Program/Compile.lean": "2ea5f8cdb249e2ace29615ee43e027605cb3bb50271f37e12c553b0910026de1",
+    "src/Effect4/Program/Eff.lean": "eb024afe07ed836356e9363fc9104cf1e1d720f3713f908dd0d4c11b57b97e79",
+    "src/Effect4/Program/ErrorImage.lean": "cd52f7d8d778b6f6e3fc5d1b65ecd6adaf059ac5ba6fd90bcd4d50f9f83e3206",
+    "src/Effect4/Program/Fold.lean": "7643111f31c0f714e590cfdf86957271c6b9fa1bbf677c5d7840a74931c5b6f3",
+    "src/Effect4/Program/SigApp.lean": "887eaf929ddf6a641f4d9ba77344d625a1aca3134fec61c22ee33810d357cd33",
+    "src/Effect4/Program/Ty.lean": "5f09e6b84d7825ef5b4ec362ccabf73756f5ea2dd5fe5af393c4f9e6e20deece",
+    "src/Effect4/Program/Typed.lean": "f4be872ccf815212164f8b57dee473ac440aa329ae1a5d0a73fc96f66d545856",
+    "src/Effect4/Program/Typing/Call.lean": "10507b9bd38fd3213967f74399b63c1f82adc3e05a751ae1da6fb63c5be2df25",
+    "src/Effect4/Program/Typing/Rules.lean": "e5941193c4d3ff69c7ebeb7bc155d1ed9e5e984ae7be1aa939d6b673eb0848ca",
+    "src/Effect4/Run/Basic.lean": "1a720ebe13aed8f82cbc56f2e9007e21959ea1f930d208eef6cfda82d42070dc",
+    "tools/Tools/RunChecks.lean": "5c994f5e7eb3086b8337674ced1caf92aa4df4b88ee758e42c1549d22ad13f27",
+    "vendor/effect-4.0.0-rc.112/src/internal/effect.ts": "0e32b42fbc8901ae75419fbd2999bf5c96b40e4bb54cc42c4fc2ec778cc641f0",
+    "vendor/effect-4.0.0-rc.112/src/internal/layer.ts": "6ad3c8e779bae54dc0b3e57cd99fcd2087354df0c673d6335619d5cd95a74187",
+    "src/Effect4/Machine/Cause.lean": "529edf4778df4a4d7f10dee10fcea65434301aa3ffee77d9340ae91566c1a853"
+  },
+  "evidence_scope": "Finite Lean and Bun probes plus source review. No new production theorem, implementation, full build, whole-tree axiom audit or full behavior gate.",
+  "parent_retained_lean_checks": [
+    {
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-14-proc6-v5-review/evidence/context-scheduler/Bridge.lean"
+      ],
+      "exit_code": 0,
+      "expected_output_matched": true,
+      "log": "evidence/parent/Bridge-retained.log"
+    },
+    {
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-14-proc6-v5-review/evidence/parent/OuterFailure.lean"
+      ],
+      "exit_code": 0,
+      "expected_output_matched": true,
+      "log": "evidence/parent/OuterFailure-retained.log"
+    },
+    {
+      "command": [
+        "lake",
+        "env",
+        "lean",
+        "-DwarningAsError=true",
+        "/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-14-proc6-v5-review/evidence/parent/TypeClosure.lean"
+      ],
+      "exit_code": 0,
+      "expected_output_matched": true,
+      "log": "evidence/parent/TypeClosure-retained.log"
+    }
+  ],
+  "toolchain": "leanprover/lean4:v4.33.1",
+  "runtime": {
+    "bun": "1.4.2",
+    "effect": "4.0.0-rc.112"
+  },
+  "retained_runtime_dependency_link": {
+    "path": "evidence/consumer-build/node_modules",
+    "target": "/Users/pooks/Dev/lean4-effect4/apps/todo/node_modules"
+  },
+  "status_after": "?? tools/view/make_videos.py\n",
+  "input_sha256": {
+    "inputs/plan-v4.md": "f100b80cdbcbcfe0237dd63d8309e64f48fc8fc6ebff352a56c07af542689705",
+    "inputs/proposed-v5.txt": "4156fd33ee16db55ddbf9ebb456439402f0daa5367834df325ab775a9c0f97fa"
+  },
+  "evidence_sha256": {
+    "evidence/block-meaning/report.txt": "d0b0661a74ed8aca9bb351bc81ac2da1a79c616637123143699c2abc1e0e3c35",
+    "evidence/consumer-build/consumer-current.ts": "b368f114da4fc076dc6edc18e661ad5d5c6b8949a098b26ccccc17c708fd994a",
+    "evidence/consumer-build/consumer-probe.log": "f5b59eadafde4b5cb2218d9674c77262b7587d157cf87363fb578829d2c32ddc",
+    "evidence/consumer-build/consumer-probe.ts": "4bfe9bd203e2f8ec2fbb4d80f5741066e33388f2f050033e488e793b06d5eae2",
+    "evidence/consumer-build/emitted/todo.gen.ts": "2116bb8d490a772c79431fe5df03bf5a9f359b673706da5af952a0cb8ceef409",
+    "evidence/consumer-build/emitted/todo.table.json": "218086712100650e76020b10fd2994a6085b69159445ba8b5f4354fae0bca91a",
+    "evidence/consumer-build/review.md": "ec53c3428dee139c3d419418bbb51f0d5d0fe47075d3f56621871b95f3fb319f",
+    "evidence/consumer-build/table-probe.log": "a4eb268914e327d263d7fb79d99e34b347ed1e628bbfc161e5180e5f6a37656d",
+    "evidence/consumer-build/table-probe.py": "fd1f588875cc4ede51652b953191b0a406844bdc178dec74ef00b9a0cedf7eae",
+    "evidence/context-scheduler/Bridge.lean": "e2ee97d580b81aa143f634422b7f593fa2d6c3de7ef4ad07d55a8d726b76534e",
+    "evidence/context-scheduler/bridge.log": "835746d33422f45339bf51eae00e0429855aaff70b45bf48e5cfc3cab7395757",
+    "evidence/context-scheduler/receipt.md": "0d2ef5a87ca7a7758d4f25531af9448e7e731dd9a261f91cbe6ded254a5aa10b",
+    "evidence/parent/Bridge-retained.log": "835746d33422f45339bf51eae00e0429855aaff70b45bf48e5cfc3cab7395757",
+    "evidence/parent/OuterFailure-retained.log": "9ae773e39db3fe3013c05cdbec7ec3eb3d48a43bb0956509ef344904e44f09ab",
+    "evidence/parent/OuterFailure.lean": "0518c2248ddc28532f32d7d50337f32e2138f00cba6a27038e60b2403a5e57e7",
+    "evidence/parent/TypeClosure-retained.log": "fda743e5d12ac61f059bd807d09269049604b0a853fd21bbc57cfa9e5a89a4eb",
+    "evidence/parent/TypeClosure.lean": "d3f1ac75679fb1df929de97be0c08173346e04236f6ea632367bc1ce6ce44eaa",
+    "evidence/parent/bridge-parent.log": "835746d33422f45339bf51eae00e0429855aaff70b45bf48e5cfc3cab7395757",
+    "evidence/parent/consumer-parent.log": "f5b59eadafde4b5cb2218d9674c77262b7587d157cf87363fb578829d2c32ddc",
+    "evidence/parent/consumer-retained-initial-failure.log": "4c8f036eb680a6f25c89d920fb4a6f41546bde9d797f56adba738a47af82852e",
+    "evidence/parent/consumer-retained.log": "f5b59eadafde4b5cb2218d9674c77262b7587d157cf87363fb578829d2c32ddc",
+    "evidence/parent/outer-failure.log": "9ae773e39db3fe3013c05cdbec7ec3eb3d48a43bb0956509ef344904e44f09ab",
+    "evidence/parent/table-parent.log": "a4eb268914e327d263d7fb79d99e34b347ed1e628bbfc161e5180e5f6a37656d",
+    "evidence/parent/table-retained.log": "a4eb268914e327d263d7fb79d99e34b347ed1e628bbfc161e5180e5f6a37656d",
+    "evidence/parent/type-closure.log": "fda743e5d12ac61f059bd807d09269049604b0a853fd21bbc57cfa9e5a89a4eb"
+  },
+  "report_sha256": "bf9d1a5196cb361a05ef516bc327153c30a8cf82f173281d3ec9a6d52ecdaa82",
+  "report_crosscheck": {
+    "reviewer": "gpt-6.1-sol /root/block_meaning",
+    "result": "No substantive corrections; clarified outer-failure equality observation."
+  },
+  "parent_runtime_check": {
+    "command": "bun docs/research/2026-10-14-proc6-v5-review/evidence/consumer-build/consumer-probe.ts",
+    "exit_code": 0,
+    "log": "evidence/parent/consumer-retained.log"
+  },
+  "parent_table_check": {
+    "command": "python3 docs/research/2026-10-14-proc6-v5-review/evidence/consumer-build/table-probe.py",
+    "exit_code": 0,
+    "log": "evidence/parent/table-retained.log"
+  }
+}

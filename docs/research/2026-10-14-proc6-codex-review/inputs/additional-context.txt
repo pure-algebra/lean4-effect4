@@ -1,0 +1,48 @@
+I'll verify Gemini's claims before reviewing, since it cites specific lines and names. First, the stage 0a and `AgreeOn` claims.
+
+Gemini's stage 0a and `AgreeOn` claims check out, confirming the call steps, consumers, typed call step, extraction, and equality requirements. Next I'll verify the interrupt-mask, budget, and reserved-key claims.
+
+Confirmed `interruptibleRegion` pushes `Prim.setInterruptible false` on a masked fiber and `defaultBudget = 2048` in Segment.lean, but found two naming discrepancies: the OCaml target is actually `make gen-lcnf` and the reserved key is `Env.maxOpsKey`. Continuing to check the remaining claims and map each context-carrying statement to its source file.
+
+The file split clarifies where context is concentrated: 47 statements are context-free, 22 are command-to-step lemmas, and about 52 plus the `CompilesBO` cases form the hosted spine. Now I'll check the last two names Gemini cites for Q6.
+
+Q6 checks out, but its lemmas are split between `CheckInversion.lean` and `Membership.lean`. Now moving to catch D: since `provideContext` merges an entire context value, I need to verify the budget invariant holds for every possible source of such a value, starting with whether a term or host answer could produce one.
+
+I found that while terms can't build a context directly, a host answer via `dataRow` can carry one—so Gemini's invariant, though sound, needs to cover more cases than the proposed "3-line" lemma suggests. I'll measure what the context-carrying hosted spine actually touches.
+
+Gemini's split shows ~100 statements restated across contexts and 63 untouched, whereas my plan moved all of them—a real improvement, but not "almost all unchanged" as claimed. I'll fold these verified points into the note so Codex reviews the accurate current plan.
+
+Next, the stage 0a sites and the OCaml regeneration step.
+
+Now stage 4: where the context lives, the mask frame, and the budget invariant.
+
+Now the face finding, the sizes, and the review sections.
+
+Gemini's second review is solid on the code. I checked every claim against the source: its four catches are real, and three of its claims don't hold. I've folded all of it into the note so Codex reviews the current plan. It's version 4, at the same path: `/Users/pooks/Dev/lean4-effect4/docs/research/2026-10-14-proc6-scout.md`.
+
+**What holds:**
+- **Nothing depends on `call` keeping the caller's stack.** `suspendBodyAt_call` has one consumer, `intro_call`. The typed tree's call step already handles any stack. `weight_redirect_call_lt` can be deleted once `intro_call` moves off it.
+- **Catch A: the change reaches the OCaml route.** `suspendBodyAt` is extracted into two OCaml files, so stage 0a has to regenerate them before the gates. The command is `make gen-lcnf`, not `make gen-ocaml` as Gemini wrote.
+- **Catch B: `AgreeOn` can't prove conservativity.** Its `provideContext` and `withFiber` fields demand plain equality with no guard. So the law is proved by structural induction, the way `cata_blockStepAlg_straightRows` is.
+- **Catch C: the plain-frame check misses a mask frame.** On a masked fiber, entering the region pushes `setInterruptible false` (`interruptibleRegion` in `Frames.lean`), and `PlainFrame` admits only `true`. I'd missed this.
+- **Catch D: two proofs depend on the budget being 2048.** `Segment.lean` uses `defaultBudget = 2048` directly, not just an inequality, and a budget of 0 or 1 breaks their progress argument.
+- **Gemini's budget invariant is the right fix.** Keep the default budget as a proved invariant instead of generalizing the proofs. The language can't name the budget keys ("the machine's reserved names type nothing"), so proving the proofs at every budget would cover programs nobody can write. I've replaced my amendment with this, and moved budget control to the horizon as a future language feature.
+- **`Effect.provide` on a ready-made context skips the layer build.** In rc.112 it goes straight to `provideContext` (`internal/layer.ts`). That strengthens the case for building the service once per server.
+- **Q6: the context action is already typed.** All four lemmas it cites exist, though two are in other files.
+
+**What doesn't hold:**
+- **"Almost all signatures unchanged" is wrong.** Gemini's real gain is sound: the context-free local run stays untouched, as long as the call-aware step handles the context steps before falling back to it. But a host call made inside a `provideContext` body parks with the provided context, so the hosted run's states must carry it. I measured with the same rough regex: 100 statements get restated over every context, and 63 stay as they are. A default parameter keeps the old calls compiling but proves nothing at any other context.
+- **The budget invariant is bigger than "a 3-line lemma".** `provideContext` merges a whole context value, so the invariant has to cover every place a context can come from:
+  - the program: service keys, which the fragment refuses, as the checker does;
+  - the fiber's own context, which the invariant itself covers;
+  - host answers: a data row can answer a context, so either the fragment refuses such rows or reply checking does.
+- **"Matches on the nose" is overstated.** The front reads `TodoApp`, a record of functions, while the Lean twin invokes the method's definition directly. Functions aren't program data, so the two agree on the call tree, not step for step.
+- **Its §3 answers decisions the plan doesn't contain.** `provideService` is already a program constructor, and rc.112 implements it as `updateContext`. `TodoAppLayer` is `Layer.effect`, not `Layer.effectContext`. It doesn't address your decisions 1, 2 or 4 at all, though its Q1 does support decision 1.
+
+The note's §12 now holds four open questions for Codex:
+1. Should the fragment or reply checking refuse host-supplied contexts?
+2. Is there a way to carry the context that restates fewer than 100 statements?
+3. Is `intro_call` the only proof in the frame-machine/reference-machine agreement that the empty call frame touches?
+4. Should stage 0a, a core edit, land before stage 2, the only stage that needs it?
+
+Your §13 decisions are updated, and decisions row 379 is still held until your review cycle closes.
