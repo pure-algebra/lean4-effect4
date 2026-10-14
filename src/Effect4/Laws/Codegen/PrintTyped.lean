@@ -7544,12 +7544,6 @@ theorem head_erased {n : Nat} {x : Expr} {name : String}
   · exact head
   all_goals aesop (add norm simp exprHead?)
 
-theorem rawPerformAt_head {n : Nat} {op : Op} {request : Term}
-    {ann : Option (List Ty)} {x : Expr}
-    (hp : Templates.printPerformAt sig n op request ann = .ok x) :
-    exprHead? x = none ∨ exprHead? x = some (sig.rowOf op).spelling :=
-  printPerformAt_exprHead hp
-
 end Effect4.Codegen.P2bRowSupport
 
 namespace Effect4.Codegen
@@ -7587,7 +7581,7 @@ theorem typedPerform_no_reserved (hl : LawfulSpelling sig spell)
   | some substitution =>
     have head := head_of_match d t x substitution hm hh
     have erasedHead := P2bRowSupport.head_erased (n := ctx.env.length) head
-    have image := P2bRowSupport.rawPerformAt_head
+    have image := printPerformAt_exprHead
       (P2bRowSupport.perform_erases_children sig ctx op request ann hn hp)
     rcases image with absent | owned
     · rw [erasedHead] at absent
