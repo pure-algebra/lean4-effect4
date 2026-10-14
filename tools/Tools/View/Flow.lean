@@ -849,11 +849,18 @@ def layout (f : Flow) : Laid :=
       let v := keyAt j
       if i == j then Route.loop (u ++ "↺") u else Route.back (u ++ "↺" ++ v) u v lane
   let height := (placed.map bottomOf ++ rects.map fun (p : Key × Region) => p.2.y + p.2.h).foldl max 0
+  let routingWidth := b.w + (if pl.lanes.isEmpty then 0 else CELL * (GAP + 2 * pl.lanes.length))
+  let loops := routes.filterMap fun
+    | .loop _ k _ => (placed.find? (·.key == k)).map fun p =>
+      let centre := p.y + (if p.node.isSome then ROWH * BOXROWS / 2 else ROWH)
+      PaintBounds.controlHull (PaintBounds.loopSegment (p.x + p.w) centre LOOP_HALF LOOP_REACH)
+    | _ => none
+  let (width, height) := PaintBounds.reserveCanvas routingWidth height loops
   { placed := arr, routes := routes.toArray, regions := (rects.map (·.2)).reverse.toArray,
     marks := marks.toArray,
     attachments := (b.marks.flatMap fun (k, _, is) =>
       is.filterMap fun i => (at_ i).map fun p => ({ port := p.key, mark := k } : PortAttachment)).toArray,
-    width := b.w + (if pl.lanes.isEmpty then 0 else CELL * (GAP + 2 * pl.lanes.length)), height }
+    width, height, routingWidth := some routingWidth }
 
 /-- **A page's program graph**: the program's flow, each node labelled with its line's text and
 type on the page, laid out. -/

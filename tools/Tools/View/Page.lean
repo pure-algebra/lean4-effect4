@@ -1,4 +1,5 @@
 import Tools.View.Graph
+import Tools.View.GraphBounds
 
 /-!
 # A page of lines, and its calls
@@ -216,14 +217,30 @@ def codeCalls (L : Look) (W : Int) (g : Page) : List (Keyed Call) :=
     [⟨"", .vrule .rule (col (codeCol g - CODE_RULE)) HEAD_RULE (TOP + ROWH * bodyRows g - HEAD_RULE) L.strokes.rule⟩] ++
       c.lines.toList.zipIdx.flatMap fun (s, i) => cellsAt "" x (TOP + ROWH * i + BASE) s room
 
-/-- A page's graph as calls, on a stroke cache: its title in the label face, then the graph below. -/
+/-- A graph panel prepared once, with local calls and their fitted panel origin. -/
+structure GraphDrawing where
+  origin : Int × Int
+  viewport : Option GraphBounds.Viewport
+  calls : List (Keyed Call)
+  cache : Laid.StrokeCache
+
+/-- Resolve a graph's look once, fit its geometry, and retain the calls at their routing coordinates. -/
+def graphDrawingCached (L : Look) (g : Page) (cache : Laid.StrokeCache) (halo : Nat := 0) : GraphDrawing :=
+  match g.graph with
+  | none => ⟨(LEFT, graphTop g), none, [], cache⟩
+  | some p =>
+    let (cs, cache) := p.laid.callsCached L 0 0 cache
+    let viewport := GraphBounds.viewport p.laid cs halo
+    let title := textAt "" .label viewport.bounds.x0
+      (viewport.bounds.y0 - ROWH + BASE - GRAPH_GAP) p.title HEAD_ROOM
+    { origin := (LEFT + viewport.shift.1, graphTop g + viewport.shift.2),
+      viewport := some viewport, calls := title ++ cs, cache }
+
+/-- A graph panel's calls at its fitted page origin, on the retained stroke cache. -/
 def graphCallsCached (L : Look) (g : Page) (cache : Laid.StrokeCache) :
     List (Keyed Call) × Laid.StrokeCache :=
-  match g.graph with
-  | none => ([], cache)
-  | some p =>
-    let (cs, cache) := p.laid.callsCached L LEFT (graphTop g) cache
-    (textAt "" .label LEFT (graphTop g - ROWH + BASE - GRAPH_GAP) p.title HEAD_ROOM ++ cs, cache)
+  let drawing := graphDrawingCached L g cache
+  (drawing.calls.map (Keyed.move drawing.origin.1 drawing.origin.2), drawing.cache)
 
 /-- A page's graph as calls: its title in the label face, then the graph below. -/
 def graphCalls (L : Look) (g : Page) : List (Keyed Call) := (graphCallsCached L g {}).1
@@ -288,15 +305,49 @@ def chromeCalls (L : Look) (W H : Int) (g : Page) : List (Keyed Call) :=
       ⟨none', .hrule .rule LEFT (H - FOOT) (right - LEFT) L.strokes.rule⟩] ++
     cellsAt none' LEFT (H - FOOT_BASE) g.foot cols
 
-/-- A whole page as calls in a look, at the width `W`, on a stroke cache: the ground, the lines,
-the code, the graph, then the title block and the foot. A sequence of pages threads one cache. -/
+/-- A page's prepared drawing, shared by batch output and retained groups.
+The graph remains local until its consumer applies `graphOrigin`. -/
+structure PageDrawing where
+  size : Int × Int
+  graphOrigin : Int × Int
+  graphViewport : Option GraphBounds.Viewport
+  ground : List (Keyed Call)
+  lines : List (Keyed Call)
+  code : List (Keyed Call)
+  graph : List (Keyed Call)
+  chrome : List (Keyed Call)
+  cache : Laid.StrokeCache
+  unmeasuredText : Bool
+
+/-- A prepared page's calls, with exactly one translation of its local graph group. -/
+def PageDrawing.calls (drawing : PageDrawing) : List (Keyed Call) :=
+  drawing.ground ++ drawing.lines ++ drawing.code ++
+    drawing.graph.map (Keyed.move drawing.graphOrigin.1 drawing.graphOrigin.2) ++ drawing.chrome
+
+/-- Prepare one drawing and its fitted dimensions from one graph-cache traversal.
+The optional halo reserves caller-selected room around graph geometry. -/
+def pageDrawingCached (L : Look) (W : Int) (g : Page) (cache : Laid.StrokeCache)
+    (halo : Nat := 0) : PageDrawing :=
+  let graph := graphDrawingCached L g cache halo
+  let (allocatedW, allocatedH) := pageSize W g
+  let (W, H) := match graph.viewport with
+    | none => (allocatedW, allocatedH)
+    | some v => (max allocatedW (v.size.1 + 2 * LEFT),
+        max allocatedH (graphTop g + v.size.2 + ROWH + FOOT))
+  let ground := groundCalls W H
+  let lines := g.lines.toList.zipIdx.flatMap fun (l, i) =>
+    lineCalls L (linesWidth W g) (gutterCols g) i l g.marks
+  let code := codeCalls L W g
+  let chrome := chromeCalls L W H g
+  { size := (W, H), graphOrigin := graph.origin, graphViewport := graph.viewport,
+    ground, lines, code, graph := graph.calls, chrome, cache := graph.cache,
+    unmeasuredText := PaintBounds.textUnmeasuredAll (lines ++ code ++ graph.calls ++ chrome) }
+
+/-- A whole page as calls and its retained stroke cache, from the prepared drawing. -/
 def pageCallsCached (L : Look) (W : Int) (g : Page) (cache : Laid.StrokeCache) :
     List (Keyed Call) × Laid.StrokeCache :=
-  let (W, H) := pageSize W g
-  let (graph, cache) := graphCallsCached L g cache
-  (groundCalls W H ++
-    (g.lines.toList.zipIdx.flatMap fun (l, i) => lineCalls L (linesWidth W g) (gutterCols g) i l g.marks) ++
-    codeCalls L W g ++ graph ++ chromeCalls L W H g, cache)
+  let drawing := pageDrawingCached L W g cache
+  (drawing.calls, drawing.cache)
 
 /-- A whole page as calls in a look, at the width `W`: the ground, the lines, then the title block
 and the foot. -/

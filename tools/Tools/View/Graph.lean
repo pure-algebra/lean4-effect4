@@ -2,6 +2,7 @@ import Tools.View.Place
 import Tools.View.GraphOrdering
 import Tools.View.Organic
 import Tools.View.ConnectorMemo
+import Tools.View.PaintBounds
 
 /-!
 # A graph: ranks, order, places, routes
@@ -314,9 +315,16 @@ def layout (g : Graph) : Laid :=
       (backs.zipIdx.map fun (e, lane) => Route.back e.key (key e.src) (key e.dst) lane) ++
       ((g.edges.toList.filter fun e => e.src = e.dst).map fun e => Route.loop e.key (key e.src))
   let ranksN : Int := os.length
+  let routingWidth := CELL * (widest + (if backs.isEmpty then 0 else GAP + 2 * backs.length))
+  let allocatedHeight := if ranksN == 0 then 0 else ROWH * LEVEL * (ranksN - 1) + ROWH * BOXROWS
+  let loops := routes.filterMap fun
+    | .loop _ k _ => (placed.find? (·.key == k)).map fun p =>
+      let centre := p.y + (if p.node.isSome then ROWH * BOXROWS / 2 else ROWH)
+      PaintBounds.controlHull (PaintBounds.loopSegment (p.x + p.w) centre LOOP_HALF LOOP_REACH)
+    | _ => none
+  let (width, height) := PaintBounds.reserveCanvas routingWidth allocatedHeight loops
   { placed := placed.toArray, routes := routes.toArray,
-    width := CELL * (widest + (if backs.isEmpty then 0 else GAP + 2 * backs.length)),
-    height := if ranksN == 0 then 0 else ROWH * LEVEL * (ranksN - 1) + ROWH * BOXROWS }
+    width, height, routingWidth := some routingWidth }
 
 end Graph
 
@@ -451,8 +459,7 @@ def segments (L : Look) (find : Key → Option Placed) (width : Int) : Route →
       let x := if a.node.isSome then b.x1 else a.x + a.w
       let y := if a.node.isSome then b.y0 + (b.y1 - b.y0) / 2 else a.y + ROWH
       let half := if a.node.isSome then LOOP_HALF * a.grow / 1000 else LOOP_HALF
-      [⟨(x, y - half), (x + 2 * LOOP_REACH, y - 2 * half),
-        (x + 2 * LOOP_REACH, y + 2 * half), (x, y + half)⟩]
+      [PaintBounds.loopSegment x y half LOOP_REACH]
     | none => []
 
 /-- **The segments revealed from their start for `budget` of size**: each whole segment within the
