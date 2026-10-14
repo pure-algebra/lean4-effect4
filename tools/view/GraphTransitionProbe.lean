@@ -96,6 +96,16 @@ private def attachedMid : Laid := (GraphMotion.prepare linear attachedFrom attac
 #guard (GraphMotion.prepare linear attachedFrom attachedTo).sample 1000 == attachedTo
 #guard (GraphMotion.prepare linear attachedFrom attachedTo).sample 3000 == attachedTo
 
+-- A kept point without target incidence detaches and follows the legacy position interpolation.
+private def detachedTo : Laid :=
+  { attachedTo with placed := #[item "stable" 120 100], attachments := #[] }
+private def detachedMid : Laid := (GraphMotion.prepare linear attachedFrom detachedTo).sample 500
+#guard (detachedMid.find "stable").map (·.x) == some 60
+#guard (detachedMid.find "stable").map (·.y) == some 50
+#guard !(detachedMid.attachments.toList.any fun a => a.port == "stable")
+#guard detachedMid.attachments.toList.any fun a => a.port == "removed"
+#guard (GraphMotion.prepare linear attachedFrom detachedTo).sample 1000 == detachedTo
+
 private def diamondFrom : Laid :=
   { placed := #[item "choice-port" 0 0], marks := #[.diamond "choice" 8 0]
     attachments := #[⟨"choice-port", "choice"⟩] }
@@ -126,6 +136,16 @@ private def swapTo : Laid :=
   { placed := #[node "left" 80, node "right" 0], marks := #[.bar "target-mark" 80 112 0]
     regions := #[{ key := "target-region", name := "target", x := 80, y := 0, w := 32, h := 48 }]
     width := 160, height := 80, routingWidth := some 130 }
+
+-- Empty node-family admission does not permit a matched point to travel as a new node.
+private def pointSource : Laid :=
+  { swapFrom with placed := #[item "left" 0 0, item "right" 80 0] }
+#guard (GraphMotion.prepare linear pointSource swapTo).policy ==
+  .endpointFamilies .changedNodeFamily
+#guard !((GraphMotion.prepare linear pointSource swapTo).legacySample 500).boxesApart
+#guard (List.range 1001).all fun t =>
+  ((GraphMotion.prepare linear pointSource swapTo).sample t).boxesApart
+#guard (GraphMotion.prepare linear pointSource swapTo).sample 1000 == swapTo
 
 #guard (GraphMotion.prepare linear swapFrom swapTo).policy ==
   .endpointFamilies (.sweptBoxes 0 1)

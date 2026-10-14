@@ -89,9 +89,14 @@ A single endpoint family can grow at its fixed places under clipped growth. -/
 def choosePolicy (c : Choreography) (a b : Laid) : Policy :=
   let old := nodePlaces a
   let next := nodePlaces b
-  if old.isEmpty || next.isEmpty then .direct else
   let oldIx := Laid.Ix.of a
   let nextIx := Laid.Ix.of b
+  let kindChanged := a.placed.toList.any (fun p => (nextIx.find p.key).any fun q =>
+      !(p.node.isSome == q.node.isSome)) ||
+    b.placed.toList.any (fun p => (oldIx.find p.key).any fun q =>
+      !(p.node.isSome == q.node.isSome))
+  if kindChanged then .endpointFamilies .changedNodeFamily else
+  if old.isEmpty || next.isEmpty then .direct else
   let changed := old.any (fun p => !(nextIx.find p.key).any (·.node.isSome)) ||
     next.any (fun p => !(oldIx.find p.key).any (·.node.isSome))
   if changed then .endpointFamilies .changedNodeFamily else

@@ -61,10 +61,11 @@ structure Prepared where
   attachments : List PortAttachment
   docks : KeyMap Key (Option Dock)
 
-/-- Keep target incidence first; retain source incidence where the target has no port entry. -/
+/-- Keep target incidence and retain source bindings only for placements that leave. -/
 def attachments (a b : Laid) : List PortAttachment :=
+  let nextPlaces := Laid.Ix.of b
   b.attachments.toList ++ a.attachments.toList.filter fun old =>
-    !(b.attachments.toList.any fun next => next.port == old.port)
+    (nextPlaces.find old.port).isNone
 
 /-- Prepare mark matches, region matches, and explicit point attachment policies once. -/
 def prepare (a b : Laid) : Prepared :=

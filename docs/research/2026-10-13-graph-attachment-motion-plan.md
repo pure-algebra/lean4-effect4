@@ -57,7 +57,8 @@ An entering or leaving point maps its endpoint mark-relative position onto the c
 A diamond attachment takes the current diamond centre.
 A node attachment or unresolved attachment keeps the legacy placement.
 
-Source-only attachments remain available for leaving points and routes.
+Source attachments remain available only for points absent from the target layout.
+Kept points without target incidence detach and move freely.
 Target attachments take precedence for shared placement keys.
 No operation parses a key spelling to discover an attachment.
 Before the endpoint, routing width uses the greater endpoint routing span.
@@ -85,7 +86,8 @@ The coordinator owns complete export comparisons and the separate movement-separ
 
 The prepared policy records direct motion or an endpoint-family fallback with its reason.
 Reasons name changed node membership, potentially overshooting movement, or a conservative swept-box conflict.
-If one endpoint has no nodes, direct sampling uses only the other endpoint node family.
+A matched point-to-node or node-to-point change forces endpoint-family fallback.
+Otherwise, an empty endpoint node family permits growth at fixed endpoint positions.
 Production growth is clipped to `[0,1000]`.
 Matching nonempty node families can travel directly only under a bounded easing form and clear conservative sweeps.
 Other nonempty families shrink the old scene, relocate while hidden, and grow the target scene.
