@@ -3,13 +3,15 @@
 ## The one thing to know first
 
 PROC-6 landed and is merged (`36ddb0b56`; decisions row 379). This brief is rewritten after
-Gemini's review (`gemini-review.md`) and the coordinator's corrections (`review-notes.md`).
-Decisions row 383 records the rulings. Track 1 lands now:
+Gemini's review (`gemini-review.md`), the coordinator's corrections (`review-notes.md`) and the
+modelling check (`modelling-check.md`). Decisions rows 383 and 384 record the rulings. Track 1
+lands now:
 - the one refinement order on the meaning, with its congruence;
 - the inlining law G7 in that order;
 - CX3, the typing of an inlined program;
-- the claims of the two definition connectors.
+- the generic definitions connector, with the Queue's and Semaphore's as its instances.
 
+The line ends at the proof closure (`modelling-check.md` §8): every slice here is a node of it.
 Track 2 designs the syntax changes as one note, then stops for review before any edit to `Eff`,
 `Ty`, `Store.Val` or `Point`.
 
@@ -22,13 +24,13 @@ that closes it.
 
 | Item | What it is | Its users |
 | --- | --- | --- |
-| the refinement order (L1) | inclusion of completed observations, on the meaning, with its congruence (row 383 (1)) | G7; the module claims of row 382 (1); G10 |
+| the refinement order (L1) | inclusion of completed observations, proved by simulation up to a relation on states, with its congruence and the lift law in the call handler (rows 383 (1), 384 (1), (2)) | G7; every module claim of row 382 (1); G10 |
 | G7 `inline-agrees` (L2) | an invocation and its inlining give equal completed observations, in every context (row 383 (2)) | the to-do's cached service now; the Queue's and Semaphore's connectors through SCOPE-1 and CONC-1 |
 | CX3 `inline-types` (L3) | an inlined program keeps its typing at the checker (row 383 (4)) | G7's typed side: the inlined program meets H9's typed premises |
-| `queue-definitions-agree`, `semaphore-definitions-agree` (L4) | a client over the definition form agrees with the same client over the expansion (row 383 (3)) | every module built from the two modules' definitions |
+| `definitions-agree` (L4) | over an acyclic block, a client over the definitions agrees with the same client with every invocation inlined (row 384 (7)); the Queue's and Semaphore's connectors are its instances | every module built from definitions |
 | PROC-7 and HO-5 (D1) | generic definitions (G8 `check_subst`) and methods with program parameters | the module form (row 383 (6)) |
 | the closure stage (D2) | closures held as data (PROC-8, G9 `resolve_typed`), one activation stack, and SCOPE-1's stage 0, as one stage (row 383 (5)) | services as records of closures (rows 381 (3), 382 (2)); SCOPE-1 |
-| the module form's inputs (D3) | what D1 and D2 owe the module form of rows 331 (6) and 382 (2) | the ports of row 382 (3) |
+| the module form's inputs (D3) | what D1 and D2 owe the module form, and the generic object specification and claim template (row 384 (5) to (8)) | the ports of row 382 (3); every bank entry |
 
 CX4 is proved already (`call_arm`, `invoke_arm` and `param_arm` with `hop_typed`,
 `src/Effect4/Laws/Program/Typed/Denotation.lean`). Record its placement in the receipt.
@@ -36,9 +38,11 @@ CX4 is proved already (`call_arm`, `invoke_arm` and `param_arm` with `hop_typed`
 ## Read first
 
 - `AGENTS.md`, all of it.
+- `docs/research/2026-10-14-proc-close/modelling-check.md`: every relation of the line, written
+  out. It is the frame for every slice below.
 - `docs/research/2026-10-14-proc-close/gemini-review.md`, `review-notes.md` and
-  `probes/Probes.lean`. Where the two disagree, the notes win.
-- Decisions rows 82, 328, 331, 340, 379, 381, 382 and 383.
+  `probes/Probes.lean`. Where the review and the notes disagree, the notes win.
+- Decisions rows 82, 328, 331, 340, 361, 379, 381, 382, 383 and 384.
 - The PROC design (`docs/research/2026-10-08-seat-PROC-design.md`): §4.4, §8 and §9.
 - `docs/research/2026-10-09-program-parameters.md` (HO-4, HO-5) and
   `docs/research/2026-10-10-cx-lexical-scope.md` (§3.4, §8, §9).
@@ -69,18 +73,28 @@ that bind every slice". In short:
 
 ### Slice L1: the refinement order on the meaning
 
-- Define the order on budget-indexed families of meaning trees. The left refines the right when
-  every budget of the left is approximated, by `Effects.Program.Approx`, at some budget of the
-  right. It is the limit order, not `Approx` itself (row 382 (3)).
-- Define `RefinesB` as its pullback through `denoteBlockB`, and `EquivB` as refinement both ways.
-  Quantify over the context, the environment and parameter frames that approximate each other.
+- Define the order as inclusion of completed observations of runs, up to a relation on states
+  (row 384 (1)). A run's state is the stores and the host's state. Prove instances by simulation
+  up to that relation, with the `effects` package's `IsSim` and `unfold_approx_of_sim`. Write no
+  second simulation framework.
+- Its identity instance is the limit order on budget-indexed trees: every budget of the left is
+  approximated, by `Effects.Program.Approx`, at some budget of the right. It is not `Approx`
+  itself (row 382 (3)). Define `RefinesB` as that instance's pullback through `denoteBlockB`,
+  and `EquivB` as refinement both ways. Quantify over the context, the environment and parameter
+  frames that approximate each other.
 - Prove the observation law: equivalent programs give equal completed observations (exit, stores,
   host state) of `hostRunBlockB` at some budget, under every host. Start from
   `hostRunBlockB_stable` and `denoteBlockB_approx`.
 - Prove the congruence once per `BlockRows` constructor, from `cata_blockAlgB_approx`. Keep the
   proof one per constructor, so SCOPE-1 and CONC-1 add their constructors' cases beside it.
-- A module's model stands on the right as a handler (row 383 (1)). Check, and report, which law
-  about running a handled tree the module claims need beyond the observation law.
+- **The lift law** (row 384 (2)). Take two call handlers related by a simulation up to a
+  relation on states. They give related observations for every client whose own operations keep
+  the relation (the frame condition). Generalize `cata_blockAlgB_approx`, which proves the identity
+  case (its hypothesis `hc` relates the two handlers). A module's claim then relates its two
+  handlers operation by operation, and never quantifies over clients.
+- Prove the frame condition for the identity relation now. State the module case's frame
+  condition as a premise (row 384 (3)). It has two readings: the module form's opaque closures,
+  or a located refusal that the client uses the handle only through the operations.
 - Claim: `meaning-refines`, role simulation, concept `translation-simulation`, R10. It is row
   382 (3)'s first step.
 
@@ -118,25 +132,29 @@ L2 uses the substitution, so this slice lands before it.
 - Claim: `inline-agrees`, role simulation, concept `translation-simulation`, R10. It is the PROC
   design's form (c).
 
-### Slice L4: the claims of the two definition connectors
+### Slice L4: the generic definitions connector
 
-- Register `queue-definitions-agree` and `semaphore-definitions-agree` in
-  `tools/ProofGraph/Registry.lean`, concept `translation-simulation`, R10. Each relates a client
-  over the definition form (`src/Effect4/Library/Queue/Defs.lean`, `Semaphore/Defs.lean`) to the
-  same client over the expansion (`Ops.lean`).
-- State that each composes with `queue-expansion-agrees` or `semaphore-expansion-agrees` by
-  transitivity of L1's order.
+- Register `definitions-agree` in `tools/ProofGraph/Registry.lean`, concept
+  `translation-simulation`, R10 (row 384 (7)). Over an acyclic definition block, a client over the
+  definitions and the same client with every invocation inlined give equal observations. It
+  follows from L2 at each invocation, then the laws of `bind` and `succeed`.
+- Prove it on `BlockRows` now, as a theorem over every acyclic block, and place it.
+- Register the Queue's and Semaphore's connectors (`queue-definitions-agree`,
+  `semaphore-definitions-agree`) as its instances. Each relates a client over the definition form
+  (`src/Effect4/Library/Queue/Defs.lean`, `Semaphore/Defs.lean`) to the same client over the
+  expansion (`Ops.lean`). State that each composes with `queue-expansion-agrees` or
+  `semaphore-expansion-agrees` by transitivity of L1's order.
 - Write each claim's route as its open parts, one per stage, by the constructs each operation
   uses (the probe):
   - SCOPE-1's congruence cases (masks, interruption, scopes, finalizers, layers) cover the
     protection wrapper (`protectedBy`) of `withPermits`, `withPermitsIfAvailable` and
     SynchronizedRef's `modify`;
   - CONC-1's cases (forks, awaits, deferred awaits, races) complete every operation that waits
-    or wakes another fiber: the Queue's `take`, `offer` and `poll`; Semaphore's `take` and
-    `release`; and the `withPermits` family and `modify`, whose take waits and whose release
-    wakes waiters.
-- Each connector is proved at the stage that brings its last operation. The coordinator adds
-  those steps to the SCOPE-1 and CONC-1 scouts.
+    or wakes another fiber. They are the Queue's `take`, `offer` and `poll`, and Semaphore's
+    `take` and `release`. The `withPermits` family and `modify` complete there too: their take
+    waits, and their release wakes waiters.
+- Each instance is proved at the stage that brings its last operation. The SCOPE-1 and CONC-1
+  scouts carry those steps.
 
 Each slice ends with its narrow build, its `#axiom_audit`, its commits and its receipt section.
 L3 adds a core module that nothing in the `Effect4` root imports until a user does. No behaviour
@@ -167,14 +185,27 @@ Give its rulings, stages, placements of the planned goals, fan-out, gates and op
   - the printer and reader contract;
   - the `Val`, `Ty` and `Eff` forms.
 
+  **Closures are opaque** (row 384 (3)). No operation projects a closure's captured values. A
+  closure has no equality, the codec refuses it, and the printer writes its type only. A module's
+  cell is then private by construction, which is what makes a module claim hold for every client.
+
   Choose between the PROC design's V1 (a value, a type and an apply form) and V2 (closure records
   and dispatch definitions), on semantics. A bank entry's code must be reachable by its digest,
   which a dispatch over one program's definitions cannot name. G9 is `resolve_typed`, R7's top
   node.
-- **D3, the module form's inputs.** Say what D1 and D2 give the module form (rows 331 (6), 382
-  (2)). The module form is a record of closures over a cell, generic in its types. Its methods
-  take programs. State its owed refinement claims in L1's order. Do not design the module form
-  itself.
+- **D3, the module form's inputs and the generic object** (row 384 (5) to (8)).
+  - Say what D1 and D2 give the module form (rows 331 (6), 382 (2)). The module form is a record
+    of opaque closures over a cell, generic in its types, and its methods take programs.
+  - Design one object specification: a state, the operations, each a two-phase step (enrolment
+    and fulfilment), and the encoding into the cell. Design one `StepsAgree` over it. Show the
+    five existing structures (Queue, Semaphore, Pool, Latch, Ref) as its instances, field by
+    field.
+  - State the wrapper law that CONC-1 proves once: the wrapper over agreeing steps refines the
+    two-phase object, linearized at enrolment and fulfilment.
+  - Design the claim template. It has refinement; refinement that keeps termination under fair
+    tapes; names compared up to renaming; and the trust chain as `ClaimRecord.assumes` premises
+    with their grades.
+  - Do not design the module form itself.
 - **Stop after the design note** and report. The coordinator reviews it before D1 or D2 touches
   source.
 

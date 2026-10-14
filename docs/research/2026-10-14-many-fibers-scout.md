@@ -126,6 +126,13 @@ flowchart TD
   SynchronizedRef's `modify` reach their connectors:
   `queue-definitions-agree` and `semaphore-definitions-agree` are proved here, and compose with
   `queue-expansion-agrees` and `semaphore-expansion-agrees` by transitivity.
+- **The wrapper law, proved once** (decisions row 384 (6), (7)). The shared wrapper
+  (`src/Effect4/Library/Waiting.lean`) over steps that agree with a two-phase object refines that
+  object, linearized at enrolment and at fulfilment. The waits and posts touch only the request's
+  own Deferreds, so they commute with every other fiber's step, and reduction leaves the atomic
+  steps. Each module's expansion claim is then its instance at its `StepsAgree`.
+- **Progress** (row 384 (5)). The order that keeps termination, under `FairTape`: the
+  implementation answers where the model answers. Each bank claim carries it beside refinement.
 
 ### Stage 4: H9 on many fibers
 
@@ -166,7 +173,9 @@ All goals: concept `translation-simulation`, except where named.
 | stage 4: `h9_fibers : H9Fibers` | `rows-fibers-host` (new), simulation | R6, serving R10 to R12 | the validated premises |
 | stage 5: the generic schedule-independence theorem | concept `reactive-scheduling` (row 361) | R12 | determinism claims on checked fragments |
 | stage 3: the congruence cases of the forking constructs | step of `meaning-refines` (row 383 (1)) | R10 | `inline-agrees` on many fibers; linearizability claims (row 382 (1)) |
-| stage 3: `queue-definitions-agree`, `semaphore-definitions-agree` | the two connector claims (row 383 (3)) | R10 | every module built from the two modules' definitions |
+| stage 3: `queue-definitions-agree`, `semaphore-definitions-agree` | instances of `definitions-agree` (row 384 (7)) | R10 | every module built from the two modules' definitions |
+| stage 3: the wrapper law | the generic object claim (row 384 (6), (7)) | R10, R12 | each module's expansion claim, as an instance |
+| stage 4: refinement that keeps termination under fair tapes | step of each bank claim (row 384 (5)) | R12 | the progress half of every bank claim |
 
 `H9Fibers` does not establish progress, fairness or that a host answers; those are R12's
 liveness line and the host's assumption.
