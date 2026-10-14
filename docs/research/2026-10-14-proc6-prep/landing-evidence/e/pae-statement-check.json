@@ -1,0 +1,150 @@
+{
+  "placement_commit": "9d404a1ec",
+  "checked_head": "c1d7aa9645a93e44f80d1a3c03355db764cf3737",
+  "goals": [
+    {
+      "name": "denoteBlockB_loopedDataRows",
+      "path": "src/Effect4/Laws/Program/BlockMeaning.lean",
+      "unchanged": true,
+      "source_sha256": "0a735ae9378ffd73a3185ff40d43caf51bf1ea9ca24bff873aa6c7a7cc1fc240"
+    },
+    {
+      "name": "denoteBlockB_approx",
+      "path": "src/Effect4/Laws/Program/BlockMeaning.lean",
+      "unchanged": true,
+      "source_sha256": "0a735ae9378ffd73a3185ff40d43caf51bf1ea9ca24bff873aa6c7a7cc1fc240"
+    },
+    {
+      "name": "denoteBlockB_of_asExit",
+      "path": "src/Effect4/Laws/Program/BlockMeaning.lean",
+      "unchanged": true,
+      "source_sha256": "0a735ae9378ffd73a3185ff40d43caf51bf1ea9ca24bff873aa6c7a7cc1fc240"
+    },
+    {
+      "name": "denoteBlockB_call",
+      "path": "src/Effect4/Laws/Program/BlockMeaning.lean",
+      "unchanged": true,
+      "source_sha256": "0a735ae9378ffd73a3185ff40d43caf51bf1ea9ca24bff873aa6c7a7cc1fc240"
+    },
+    {
+      "name": "denoteBlockB_invoke",
+      "path": "src/Effect4/Laws/Program/BlockMeaning.lean",
+      "unchanged": true,
+      "source_sha256": "0a735ae9378ffd73a3185ff40d43caf51bf1ea9ca24bff873aa6c7a7cc1fc240"
+    },
+    {
+      "name": "denoteBlockB_param",
+      "path": "src/Effect4/Laws/Program/BlockMeaning.lean",
+      "unchanged": true,
+      "source_sha256": "0a735ae9378ffd73a3185ff40d43caf51bf1ea9ca24bff873aa6c7a7cc1fc240"
+    },
+    {
+      "name": "denoteBlockB_provideContext",
+      "path": "src/Effect4/Laws/Program/BlockMeaning.lean",
+      "unchanged": true,
+      "source_sha256": "0a735ae9378ffd73a3185ff40d43caf51bf1ea9ca24bff873aa6c7a7cc1fc240"
+    },
+    {
+      "name": "denoteBlockB_provideService",
+      "path": "src/Effect4/Laws/Program/BlockMeaning.lean",
+      "unchanged": true,
+      "source_sha256": "0a735ae9378ffd73a3185ff40d43caf51bf1ea9ca24bff873aa6c7a7cc1fc240"
+    },
+    {
+      "name": "denoteBlockB_service",
+      "path": "src/Effect4/Laws/Program/BlockMeaning.lean",
+      "unchanged": true,
+      "source_sha256": "0a735ae9378ffd73a3185ff40d43caf51bf1ea9ca24bff873aa6c7a7cc1fc240"
+    },
+    {
+      "name": "denoteBlockB_context",
+      "path": "src/Effect4/Laws/Program/BlockMeaning.lean",
+      "unchanged": true,
+      "source_sha256": "0a735ae9378ffd73a3185ff40d43caf51bf1ea9ca24bff873aa6c7a7cc1fc240"
+    },
+    {
+      "name": "call_unfolds_at_limitB",
+      "path": "src/Effect4/Laws/Program/BlockMeaning.lean",
+      "unchanged": true,
+      "source_sha256": "0a735ae9378ffd73a3185ff40d43caf51bf1ea9ca24bff873aa6c7a7cc1fc240"
+    },
+    {
+      "name": "invoke_unfolds_at_limitB",
+      "path": "src/Effect4/Laws/Program/BlockMeaning.lean",
+      "unchanged": true,
+      "source_sha256": "0a735ae9378ffd73a3185ff40d43caf51bf1ea9ca24bff873aa6c7a7cc1fc240"
+    },
+    {
+      "name": "bodiesOf_blockRows",
+      "path": "src/Effect4/Laws/Program/FragmentBlock.lean",
+      "unchanged": true,
+      "source_sha256": "e4e62d5a009128eb00a086378107e80e648ccaef28ae37c7c714feaed5f2e6a9"
+    },
+    {
+      "name": "PlainHooks.of_blockRows",
+      "path": "src/Effect4/Laws/Program/Agreement/BlockPlain.lean",
+      "unchanged": true,
+      "source_sha256": "f47833901d937e57ddc74f87cd2694a67848474eb56048930913ef80e94baabc"
+    },
+    {
+      "name": "defBodyPath_body",
+      "path": "src/Effect4/Laws/Program/Agreement/Blocks.lean",
+      "unchanged": true,
+      "source_sha256": "f3c768c576b020a392d28dde402956e69769238a312c35d4235ac58c24a8c580"
+    },
+    {
+      "name": "argSitesAt_body",
+      "path": "src/Effect4/Laws/Program/Agreement/Blocks.lean",
+      "unchanged": true,
+      "source_sha256": "f3c768c576b020a392d28dde402956e69769238a312c35d4235ac58c24a8c580"
+    },
+    {
+      "name": "compilesBlk",
+      "path": "src/Effect4/Laws/Program/Agreement/Blocks.lean",
+      "unchanged": true,
+      "source_sha256": "f3c768c576b020a392d28dde402956e69769238a312c35d4235ac58c24a8c580"
+    },
+    {
+      "name": "compilesBlk_root",
+      "path": "src/Effect4/Laws/Program/Agreement/Blocks.lean",
+      "unchanged": true,
+      "source_sha256": "f3c768c576b020a392d28dde402956e69769238a312c35d4235ac58c24a8c580"
+    },
+    {
+      "name": "hostRunBlockB_stable",
+      "path": "src/Effect4/Laws/Program/Agreement/HostedBlocks.lean",
+      "unchanged": true,
+      "source_sha256": "a97c55b0598cd09d9fb0149ea94d699958fa689301f3590d94f7c4ba87ec080e"
+    },
+    {
+      "name": "localRunC_to_blockB",
+      "path": "src/Effect4/Laws/Program/Agreement/HostedBlocks.lean",
+      "unchanged": true,
+      "source_sha256": "a97c55b0598cd09d9fb0149ea94d699958fa689301f3590d94f7c4ba87ec080e"
+    },
+    {
+      "name": "hostRunBlockB_exits",
+      "path": "src/Effect4/Laws/Program/Agreement/HostedBlocks.lean",
+      "unchanged": true,
+      "source_sha256": "a97c55b0598cd09d9fb0149ea94d699958fa689301f3590d94f7c4ba87ec080e"
+    },
+    {
+      "name": "h9_blocks",
+      "path": "src/Effect4/Laws/Api/SessionMeaningBlocks.lean",
+      "unchanged": true,
+      "source_sha256": "4fff2b9ca0d31a12cc95c0e1bf1d1be1f409fcd3a0812e8ae543055da950f751"
+    },
+    {
+      "name": "conforms_sat_blocks",
+      "path": "src/Effect4/Laws/Program/ValidatedBlocks.lean",
+      "unchanged": true,
+      "source_sha256": "96c437504264734d26fffffaa91b7440d70e31a8b354554978b777dcbca59232"
+    },
+    {
+      "name": "agrees_hostRun_blocks",
+      "path": "src/Effect4/Laws/Program/ValidatedBlocks.lean",
+      "unchanged": true,
+      "source_sha256": "96c437504264734d26fffffaa91b7440d70e31a8b354554978b777dcbca59232"
+    }
+  ]
+}

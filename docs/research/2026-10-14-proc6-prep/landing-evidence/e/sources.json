@@ -1,0 +1,18 @@
+{
+  "base": "028fbb42c0815c5f6b712a5c371bc50f77b62a5a",
+  "head": "c1d7aa9645a93e44f80d1a3c03355db764cf3737",
+  "files": [
+    {
+      "path": "src/Effect4/Laws/Api/SessionMeaningBlocks.lean",
+      "sha256": "4fff2b9ca0d31a12cc95c0e1bf1d1be1f409fcd3a0812e8ae543055da950f751"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/Agreement/HostedBlocks.lean",
+      "sha256": "a97c55b0598cd09d9fb0149ea94d699958fa689301f3590d94f7c4ba87ec080e"
+    },
+    {
+      "path": "src/Effect4/Laws/Program/ValidatedBlocks.lean",
+      "sha256": "96c437504264734d26fffffaa91b7440d70e31a8b354554978b777dcbca59232"
+    }
+  ]
+}

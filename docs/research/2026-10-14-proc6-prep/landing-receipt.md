@@ -2,8 +2,9 @@
 
 Slices P and A are committed and approved.
 The coordinator update is merged, and every required A behavior gate passes.
-The block-session claim remains a planned goal.
-The continuation brief authorizes B through F, subject to its stop rules.
+Slices B through E are committed and pass their builds and exact audits.
+The block-session claim is proved for the stage 3 fragment at the empty context.
+F still owes the context extension and scheduler agreement at every budget.
 
 Status: receipt, history rather than authority.
 Evidence kinds: checked Lean builds, exact axiom audits, finite controls, and outside behavior comparisons.
@@ -232,7 +233,8 @@ This receipt uses this branch's measured gate results and does not invent missin
 
 B replaces the old block meaning and migrates its consumers and claim pointers.
 Its twelve stage 0 goals are proved.
-Block plainness, forward agreement, closing steps and validated consumers remain planned goals at the B checkpoint.
+C through E prove block plainness, forward agreement, closing steps and the validated consumers.
+All 24 goals placed in P are proved at the E checkpoint.
 F still owes machine forms with a context and scheduler agreement at every context budget.
 G still owes the shipped consumer's per-request replay and keyed composite check.
 
@@ -385,3 +387,41 @@ The integrated audit removes the independent branch's dependencies on B and C go
 `Effect4.Run.h9_blocks` remains a goal at this checkpoint.
 No behavior gate is reached.
 [The D manifest](landing-evidence/d/manifest.json) retains exact evidence and source hashes.
+
+## Slice E
+
+All six completed-session goals are proved in place.
+The independent comparison confirms that all 24 statements from P remain unchanged through E.
+Base: `028fbb42c`. Code head: `c1d7aa9645a93e44f80d1a3c03355db764cf3737`.
+Commit `c1d7aa964` changes `Agreement/HostedBlocks.lean`, `Api/SessionMeaningBlocks.lean` and `Program/ValidatedBlocks.lean`.
+Each module now has its required concept, claim and reach header.
+The session leaf imports `SessionMeaning` directly; it needs no broader `HostDrive` import.
+The semantics producer updates `generated/semantics.md`.
+
+The local completed run fixes a block-meaning budget.
+Monotonicity keeps the same exit, stores and host state at every larger budget.
+`h9_blocks` connects the completed session to that observation under the host that supplied its answers.
+The validated protocol and reference-model premises consume that connection.
+Placement: translation-simulation, rows-block-host, R6, serving R10.
+The reach is the stage 3 block fragment, one fiber, starting at the empty context.
+Reached, funded, at-rest, host-driven and completed-run premises remain explicit.
+The proof establishes no progress, funding, arbitrary scheduler-budget agreement, or target conformance.
+Coverage of the checker's consumer builder remains prospective until G.
+
+The shared slot runs `bash /tmp/proc6-landing/e-integrated-checks.sh`:
+
+| Command | Result | Evidence |
+| --- | --- | --- |
+| `lake build Effect4.Laws.Program.Agreement.HostedBlocks Effect4.Laws.Api.SessionMeaningBlocks Effect4.Laws.Program.ValidatedBlocks Effect4.Laws` | PASS, 1096 jobs | `e-integrated-build.log` |
+| `lake env lean -DwarningAsError=true /tmp/proc6-landing/e-integrated-audit.lean` | PASS | `e-integrated-audit.log` |
+| `make -o ts/eff/node_modules -o harness/truth/node_modules -o apps/todo/node_modules gen-semantics` | PASS, 1608 jobs | `e-integrated-semantics.log` |
+
+```text
+#axiom_audit: 8 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+Effect4.Run.h9_blocks: proved; nearest []; 0 lemmas, 0 definitions
+next goals: 0
+```
+
+The integrated audit removes E's former dependencies on C and D goals.
+No behavior gate is reached.
+[The E manifest](landing-evidence/e/manifest.json) retains exact evidence and all 24 statement comparisons.
