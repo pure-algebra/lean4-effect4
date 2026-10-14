@@ -19,6 +19,15 @@ namespace Effect4.Program.Denote
 
 open Effect4 Effect4.Machine Effect4.Program
 
+/-- Rename each operation through the identity algebra. The cache uses this fold for parameter rows. -/
+def mapOps (f : NativeOp → NativeOp) : NativeEff → NativeEff :=
+  cata_eff { EffAlgebra.id NativeOp with eff_perform := fun op r => .perform (f op) r }
+
+/-- Read the declarations, bodies and main program from a root definition block. -/
+def blockOf? : NativeEff → Option (List DefDecl × List NativeEff × NativeEff)
+  | .defs decls bodies main _ => some (decls, bodies.toList, main)
+  | _ => none
+
 /-- A block tree reads the current context and the term environment. -/
 abbrev TreeB (table : RowTable) : Type :=
   Ctx → List Val → Effects.Program (RowsSig table) (Option ExitV)

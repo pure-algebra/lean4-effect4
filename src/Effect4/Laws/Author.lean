@@ -48,7 +48,7 @@ re-exports:
 - the run API's laws: the journal, its rows and its tape;
 - the shared step laws: reading, typing, scope, the store's connectors, the encoding table, the
   lists, renaming and the wrappers' laws.
-- the meaning of a definition block (`Program.Block`: `invoke_unfolds_at_limit`);
+- the meaning of a definition block (`Program.BlockMeaning`: `invoke_unfolds_at_limitB`);
 - a run checked against declared protocols and a reference model (`Program.Validated`:
   `conforms_sat`, `agrees_hostRun`), and the checked replay (`Api.Live`:
   `replay_at_call_instance`);

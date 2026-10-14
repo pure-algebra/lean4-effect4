@@ -144,7 +144,6 @@ import Effect4.Laws.Auto.BankCensus
 import Effect4.Laws.Auto.Semantics
 import Effect4.Laws.Effects.Protocol
 import Effect4.Laws.Effects.Sum
-import Effect4.Laws.Effects.Mrec
 import Effect4.Laws.Program.Typed.ProtocolObligations
 import Effect4.Laws.Program.Typed.Vocabulary
 import Effect4.Laws.Program.Typed.TypedSources

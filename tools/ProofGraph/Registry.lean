@@ -929,11 +929,11 @@ def registry : Registry where
       title := "Loop agreement on the loop-bearing fragment (Looped)"
       pointer := .witness `Effect4.Program.Agreement.loopAgreement },
     { id := "block-handler-monotone", concept := "translation-simulation", role := .monotonicity
-      title := "A definition block's meaning at a budget only refines with more budget: frontiers refine, finished leaves stay (G5)"
-      pointer := .witness `Effect4.Program.Denote.denoteDefs_refines },
+      title := "A block meaning refines when the call budget increases and the parameters approximate pointwise at every context and request (PROC-6)"
+      pointer := .witness `Effect4.Program.Denote.denoteBlockB_approx },
     { id := "block-handler-unfolds", concept := "translation-simulation", role := .compatibility
-      title := "An invocation of a definition converges exactly as its body does, to one limit; no single budget solves the unfolding equation (G5)"
-      pointer := .witness `Effect4.Program.Denote.invoke_unfolds_at_limit
+      title := "An invocation converges exactly when its body finishes with argument trees at the caller's budget, at the fixed host, context, request and stores (PROC-6)"
+      pointer := .witness `Effect4.Program.Denote.invoke_unfolds_at_limitB
       literature := [
         { work := "XiaEtAl2020", locator := "audit P37, section 4.2", relation := "analogy" }
       ] },
@@ -1145,13 +1145,13 @@ def registry : Registry where
       pointer := .witness `Effect4.Ref.Cache.cache_agrees },
     -- the banked cache imposed on an application that invalidates it (decisions row 378 (8); seat IMPOSE)
     { id := "ref-cache-invalidated-reads-through", concept := "translation-simulation", role := .compatibility
-      title := "An invalidated banked cache reads through to storage: under any host, invalidate and then get, its loader a row of the host's table, at a cell holding the image of any cached value, asks the host once at the row and answers its answer, holding a success in the cell; it is the model's read after the model's invalidate, carried to the block's code by the steps of ref-cache-agrees, and unfolded on an invocation by Eff.invoke under provideContext by denoteBody and hostRunBody_invoke_get; its first reader is the built service's TodoApp_add then TodoApp_list of the cached to-do (hostRunDefs), under the reference model; nothing of machine replay agreement before block inlining (PROC-6, row 378 (23)), of an application that skips the invalidation, or of a fiber-sharing schedule (decisions row 378 (2), (8) and (23))"
+      title := "An invalidated banked cache reads through to storage: under any host, invalidate and then get, its loader a row of the host's table, at a cell holding the image of any cached value, asks the host once at the row and answers its answer, holding a success in the cell; it is the model's read after the model's invalidate, carried to the block's code by the steps of ref-cache-agrees, and unfolded on an invocation by Eff.invoke under provideContext by denoteBlockB and hostRunBlockB_invoke_get; its first reader is the built service's TodoApp_add then TodoApp_list of the cached to-do (hostRunBlockB), under the reference model; nothing of machine replay agreement before block inlining (PROC-6, row 378 (23)), of an application that skips the invalidation, or of a fiber-sharing schedule (decisions row 378 (2), (8) and (23))"
       pointer := .witness `Effect4.Ref.Cache.invalidate_get },
     { id := "todo-serves", concept := "host-session-protocol", role := .fundamentalProperty
       title := "The to-do application's claim: an empty title makes no host call, a repository failure escapes complete unchanged, under setDone's protocol complete answers the requested to-do marked done, and under the reference model list after add holds the new to-do and complete twice leaves what complete once leaves (decisions row 378 (8) and (23))"
       pointer := .witness `Test.Dogfood.Scenario.Todo.serves },
     { id := "cached-todo-list-after-add", concept := "translation-simulation", role := .simulation
-      title := "On the built cached to-do service (built? cached = some b), invoking TodoApp_add at a non-empty title and then TodoApp_list in one service scope (hostRunDefs at depth 2) under the reference model answers the stored to-do list holding the newly added to-do, from any cached list in the Ref cell: TodoApp_add invalidates the cell and TodoApp_list reads through to TodoRepo.all via denoteBody_invoke_eq (decisions row 378 (8) and (23))"
+      title := "On the built cached to-do service (built? cached = some b), invoking TodoApp_add at a non-empty title and then TodoApp_list in one service scope (hostRunBlockB at depth 2, at every outer context) under the reference model answers the stored to-do list holding the newly added to-do, from any cached list in the Ref cell: TodoApp_add invalidates the cell and TodoApp_list reads through to TodoRepo.all via denoteBlockB_invoke (decisions row 378 (8) and (23))"
       pointer := .witness `Test.Dogfood.Scenario.Todo.Cached.cached_list_after_add }
   ]
   cuts := [
