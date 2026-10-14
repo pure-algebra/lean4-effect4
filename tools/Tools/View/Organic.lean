@@ -25,8 +25,8 @@ every run draws the same.
   side, as a branch widens into its trunk.
 - **A growing tip** (`stroke` with `tip`): a line still being drawn narrows to its tip, as a shoot
   does; a growth function that is continuous in its age (§6.2).
-- **The move law** (`stroke_move`): the stroke of a moved line is the stroke, moved. A cache of
-  strokes kept at the origin rests on it (`Laid.cachedStroke_eq`, `tools/Tools/View/Graph.lean`).
+- **The move law** (`stroke_move`): the legacy stroke of a moved line is the stroke, moved.
+  `Tools.View.Connector` now owns the graph's integrated connector outline.
 -/
 
 namespace Tools.View.Grow
@@ -334,9 +334,8 @@ offset to a point (`sidePoint`, `segmentThrough`, `line`). So the stroke of a mo
 stroke, moved (`stroke_move`).
 
 The laws are a tool's, not registry claims (decisions row 334, point 3). They serve concept
-`initial-algebras-folds` and R14's live authoring. Their consumer is the stroke cache
-(`Laid.cachedStroke_eq`, `tools/Tools/View/Graph.lean`), which keeps a stroke at the origin and
-serves it moved. -/
+`initial-algebras-folds` and R14's live authoring. The legacy stroke cache consumed them before `Tools.View.ConnectorMemo` replaced it.
+The component laws still describe the integer sampling helpers used by `Tools.View.Connector`. -/
 
 /-- A point moved by `d`. -/
 def shift (d : P) (p : P) : P := (p.1 + d.1, p.2 + d.2)
@@ -463,17 +462,15 @@ theorem outline_shift (d : P) (left right : List P) :
 
 /-- **The move law of a stroke.** The stroke of a centre line moved by `(dx, dy)` logical pixels is
 the stroke moved by `(1000 dx, 1000 dy)` thousandths. For every seed, organic settings, width,
-line and tip: no step of a stroke reads where the line stands. A tool's law; its consumer is the
-stroke cache (`Laid.cachedStroke_eq`). Placement: concept `initial-algebras-folds`, R14's live
-authoring. -/
+line and tip: no step of a stroke reads where the line stands. A retained tool law for the legacy stroke.
+Placement: concept `initial-algebras-folds`, R14's live authoring. -/
 theorem stroke_move (seed : Nat) (o : Organic) (w : Int) (cs : List Cubic) (tip : Bool) (dx dy : Int) :
     stroke seed o w (cs.map (Cubic.move dx dy)) tip =
       (stroke seed o w cs tip).map (Cubic.move (1000 * dx) (1000 * dy)) := by
   simp only [stroke, samples_move, runningLengths_shift, List.zip_map_left, side_shift]
   rw [← List.map_reverse, outline_shift]
 
-/-- A stroke reads its organic settings' noise and wave alone. A step of the stroke cache's law
-(`Laid.cachedStroke_eq`), whose key keeps these two. -/
+/-- The legacy stroke reads its organic settings' noise and wave alone. -/
 theorem stroke_organic (seed : Nat) {o o' : Organic} (hn : o.noise = o'.noise) (hw : o.wave = o'.wave)
     (w : Int) (cs : List Cubic) (tip : Bool) : stroke seed o w cs tip = stroke seed o' w cs tip := by
   have side : sidePoint seed o = sidePoint seed o' := by

@@ -119,8 +119,7 @@ srcDir = "tools"
 root = "Drivers.SemanticsControls"
 moreLeanArgs = ["-M6144", "-DwarningAsError=true"]
 
-# The studio's visual pages (`tools/view/v -V`): the vocabulary of marks, the value pictures and
-# the tube language, native, since a film samples every change of every beat.
+# The studio's visual pages (`tools/view/v -V`): the vocabulary of marks and the value pictures.
 [[lean_exe]]
 name = "view-pages"
 srcDir = "tools"
@@ -287,15 +286,17 @@ rev = "ab7eda433f0390fde7aa240189761540c9744c79"
 
 # HTML and SVG for the generated documents and pictures (`tools/Tools/Document/Html.lean`): the HTML
 # Standard's content model, typed tree and serializer, and the SVG kit, exact commit of
-# pure-algebra/lean4-whatwg branch `html/svg` (S24 on S23: the tube, its solid bodies, stretches,
-# partings and docks, d3's Catmull-Rom, the SMIL writer and the cased union; one blend for every
-# join, coalescence, smooth bulges, graph edges as tubes; decisions rows 360, 364, 370 and 371).
+# pure-algebra/lean4-whatwg, branch `html/svg`. It holds the ribbon, the vessel, the scene and its
+# motion, and the exact geometry under them (decisions rows 360, 364 and 374). The tube language,
+# the pegs and their writers left the kit on 2026-10-14 (its ruling R-S59) and stand at its tag
+# `archive/tube`. GitHub does not hold this commit until the owner pushes the kit's branch; a
+# checkout seeds `.lake/packages/whatwg` from the local kit or a bundle.
 # Only the `Tools` library imports it, and the definitions it imports reach Lean alone (no rule
 # bank, so no Aesop). The core and the law graph never import it.
 [[require]]
 name = "whatwg"
 git = "https://github.com/pure-algebra/lean4-whatwg"
-rev = "e64e9153b1e9dd83df6f84782df71ce4ab800e28"
+rev = "3e5e79335e778c04493245e14e31bb2d48d0d54f"
 
 
 # Proof search for the law graph (`src/Effect4/Laws/**`) and the batteries: nothing under the

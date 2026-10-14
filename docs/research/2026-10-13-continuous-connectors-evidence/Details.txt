@@ -1,0 +1,2 @@
+warning: manifest out of date: git revision of dependency 'whatwg' changed; use `lake update whatwg` to update it
+graph-details: 8 SVG controls in tools/view/out/continuous-details

@@ -1,6 +1,9 @@
 import Tools.View.Place
+import Tools.View.GraphOrdering
 import Tools.View.Organic
-import Tools.View.KeyMap
+import Tools.View.ConnectorMemo
+import Tools.View.PaintBounds
+import Tools.View.GraphText
 
 /-!
 # A graph: ranks, order, places, routes
@@ -201,11 +204,21 @@ structure Region where
 deriving DecidableEq, Repr
 
 /-- A mark of a program's flow, in the notation of UML's activity diagrams: a bar where branches
-that all run part or meet, across `[x0, x1)` at the height `y`; a diamond where alternatives part
-or meet, centred at `(x, y)`. -/
+that all run part or meet, from `x0` to `x1` at height `y`; a diamond where alternatives part
+or meet, centred at `(x, y)`. Logical bar contacts include both endpoints. -/
 inductive FlowMark where
   | bar (key : Key) (x0 x1 y : Int)
   | diamond (key : Key) (x y : Int)
+deriving DecidableEq, Repr
+
+/-- The identity of a bar or diamond. -/
+def FlowMark.key : FlowMark → Key
+  | .bar k .. | .diamond k .. => k
+
+/-- A placed point attached to a named mark. Geometry and identity remain separate data. -/
+structure PortAttachment where
+  port : Key
+  mark : Key
 deriving DecidableEq, Repr
 
 /-- A laid-out graph: its placed items, its routes, its regions and its marks, and its size in
@@ -217,8 +230,13 @@ structure Laid where
   height : Int := 0
   regions : Array Region := #[]
   marks : Array FlowMark := #[]
+  attachments : Array PortAttachment := #[]
+  /-- The span used by return lanes, independent of any later canvas expansion. -/
+  routingWidth : Option Int := none
 deriving DecidableEq, Repr
 
+/-- The lane span, with the original canvas-width convention for legacy layouts. -/
+def Laid.routeWidth (l : Laid) : Int := l.routingWidth.getD l.width
 
 namespace Graph
 
@@ -255,22 +273,6 @@ def links (g : Graph) (rk : List Nat) : List (Key × Key) :=
   (g.edges.toList.filter (fun e => e.src < e.dst)).flatMap fun e =>
     let c := chain g rk e
     c.zip c.tail
-
-/-- The position of a key in a rank's order. -/
-def posIn (order : List Key) (k : Key) : Nat := order.findIdx (· == k)
-
-/-- Order one rank by the barycentre of each item's neighbours in the rank beside it; an item
-with none keeps its place. The sort is stable, so ties keep the order before. Barycentres are
-compared as fractions, by cross products. -/
-def reorder (order beside : List Key) (neighbours : Key → List Key) : List Key :=
-  let bary (k : Key) : Nat × Nat :=
-    let ns := (neighbours k).filter beside.contains
-    if ns.isEmpty then (2 * posIn order k, 2)
-    else (ns.foldl (fun s n => s + 2 * posIn beside n) 0, 2 * ns.length)
-  order.mergeSort fun a b =>
-    let (sa, ca) := bary a
-    let (sb, cb) := bary b
-    sa * cb ≤ sb * ca
 
 /-- **The order of each rank**: the items' own order, then two sweeps down and up by barycentres. -/
 def orders (g : Graph) (rk : List Nat) : List (List Key) :=
@@ -314,9 +316,16 @@ def layout (g : Graph) : Laid :=
       (backs.zipIdx.map fun (e, lane) => Route.back e.key (key e.src) (key e.dst) lane) ++
       ((g.edges.toList.filter fun e => e.src = e.dst).map fun e => Route.loop e.key (key e.src))
   let ranksN : Int := os.length
+  let routingWidth := CELL * (widest + (if backs.isEmpty then 0 else GAP + 2 * backs.length))
+  let allocatedHeight := if ranksN == 0 then 0 else ROWH * LEVEL * (ranksN - 1) + ROWH * BOXROWS
+  let loops := routes.filterMap fun
+    | .loop _ k _ => (placed.find? (·.key == k)).map fun p =>
+      let centre := p.y + (if p.node.isSome then ROWH * BOXROWS / 2 else ROWH)
+      PaintBounds.controlHull (PaintBounds.loopSegment (p.x + p.w) centre LOOP_HALF LOOP_REACH)
+    | _ => none
+  let (width, height) := PaintBounds.reserveCanvas routingWidth allocatedHeight loops
   { placed := placed.toArray, routes := routes.toArray,
-    width := CELL * (widest + (if backs.isEmpty then 0 else GAP + 2 * backs.length)),
-    height := if ranksN == 0 then 0 else ROWH * LEVEL * (ranksN - 1) + ROWH * BOXROWS }
+    width, height, routingWidth := some routingWidth }
 
 end Graph
 
@@ -327,16 +336,24 @@ namespace Laid
 /-- The placed item with key `k`. -/
 def find (l : Laid) (k : Key) : Option Placed := l.placed.find? (·.key == k)
 
-/-- A box, grown about its centre as far as its `grow`: its ground, its band when lit, its frame;
-its two lines and its pointer box once it has grown whole. -/
-def boxCalls (L : Look) (dx dy : Int) (p : Placed) (n : GNode) : List (Keyed Call) :=
+/-- The painted bounds of a box at its current growth, in logical pixels. -/
+def boxBounds (p : Placed) : Rect :=
+  let w := p.w * p.grow / 1000
+  let h := ROWH * BOXROWS * p.grow / 1000
+  let x := p.x + (p.w - w) / 2
+  let y := p.y + (ROWH * BOXROWS - h) / 2
+  ⟨x, y, x + w, y + h⟩
+
+/-- A grown box with caller-selected row faces. Its body, hit area, and connections keep their allocation. -/
+def boxCalls (L : Look) (dx dy : Int) (p : Placed) (n : GNode) (textStyle : GraphText.Style := {}) :
+    List (Keyed Call) :=
   if p.grow = 0 then [] else
   let h := ROWH * BOXROWS
-  let w' := p.w * p.grow / 1000
-  let h' := h * p.grow / 1000
-  let x := dx + p.x + (p.w - w') / 2
-  let y := dy + p.y + (h - h') / 2
-  let room : Int := p.w / CELL - 2
+  let bounds := boxBounds p
+  let w' := bounds.x1 - bounds.x0
+  let h' := bounds.y1 - bounds.y0
+  let x := dx + bounds.x0
+  let y := dy + bounds.y0
   let r : Int := L.strokes.radius
   let m (v : Int) : Int := 1000 * v
   let surface : List (Keyed Call) :=
@@ -350,8 +367,8 @@ def boxCalls (L : Look) (dx dy : Int) (p : Placed) (n : GNode) : List (Keyed Cal
         [⟨p.key, .shape .ink 1000 (Grow.ring (m x) (m y) (m w') (m h') r (m L.strokes.frame))⟩]
   surface ++
     (if 1000 ≤ p.grow then
-      cellsAt p.key (dx + p.x + CELL) (dy + p.y + BASE) n.line1 room ++
-        cellsAt p.key (dx + p.x + CELL) (dy + p.y + ROWH + BASE) n.line2 room ++
+      GraphText.row textStyle.first p.key (dx + p.x + CELL) (dy + p.y) (p.w - 2 * CELL) n.line1 ++
+        GraphText.row textStyle.second p.key (dx + p.x + CELL) (dy + p.y + ROWH) (p.w - 2 * CELL) n.line2 ++
         [⟨p.key, .hit (dx + p.x) (dy + p.y) p.w h⟩]
     else [])
 
@@ -365,10 +382,18 @@ def middle (p : Placed) : Int := p.x + (if p.node.isSome then p.w / 2 else CELL)
 edge leaves it where it enters. Every edge of a box leaves
 from one point and enters at one point, so the edge aligned with the box (`Tools.View.Place`)
 runs straight and the others branch from it, as a tree's limbs do. -/
-def exitAt (p : Placed) : Pt := (middle p, p.y + (if p.node.isSome then ROWH * BOXROWS else 0))
+def exitAt (p : Placed) : Pt :=
+  if p.node.isSome then
+    let b := boxBounds p
+    (b.x0 + (b.x1 - b.x0) / 2, b.y1)
+  else (middle p, p.y)
 
 /-- Where an edge enters an item from above: the middle of its top. -/
-def entryAt (p : Placed) : Pt := (middle p, p.y)
+def entryAt (p : Placed) : Pt :=
+  if p.node.isSome then
+    let b := boxBounds p
+    (b.x0 + (b.x1 - b.x0) / 2, b.y0)
+  else (middle p, p.y)
 
 /-- A straight segment from `a` to `b`. -/
 def straight (a b : Pt) : Cubic := ⟨a, a, b, b⟩
@@ -417,7 +442,10 @@ def segments (L : Look) (find : Key → Option Placed) (width : Int) : Route →
       let lx := width - CELL * (2 * lane + 1)
       -- a box's side at its middle row; a point has no height, and is its own side
       let side (p : Placed) (rise : Int) : Pt :=
-        if p.node.isSome then (p.x + p.w, p.y + ROWH - rise) else (p.x + 2 * CELL, p.y)
+        if p.node.isSome then
+          let b := boxBounds p
+          (b.x1, b.y0 + (b.y1 - b.y0) / 2 - rise * p.grow / 1000)
+        else (p.x + 2 * CELL, p.y)
       let p : Pt := side a 0
       let q : Pt := side b BACK_RISE
       -- controls a third past the lane, so the arc's widest point reaches the lane
@@ -427,10 +455,11 @@ def segments (L : Look) (find : Key → Option Placed) (width : Int) : Route →
   | .loop _ k _ =>
     match find k with
     | some a =>
-      let x := a.x + a.w
-      let y := a.y + ROWH
-      [⟨(x, y - LOOP_HALF), (x + 2 * LOOP_REACH, y - 2 * LOOP_HALF),
-        (x + 2 * LOOP_REACH, y + 2 * LOOP_HALF), (x, y + LOOP_HALF)⟩]
+      let b := boxBounds a
+      let x := if a.node.isSome then b.x1 else a.x + a.w
+      let y := if a.node.isSome then b.y0 + (b.y1 - b.y0) / 2 else a.y + ROWH
+      let half := if a.node.isSome then LOOP_HALF * a.grow / 1000 else LOOP_HALF
+      [PaintBounds.loopSegment x y half LOOP_REACH]
     | none => []
 
 /-- **The segments revealed from their start for `budget` of size**: each whole segment within the
@@ -487,10 +516,10 @@ def onBar (l : Laid) (p : Placed) : Bool :=
 
 `Laid.find` scans the placed items at every key a route names, and `Laid.onBar` scans every mark.
 A drawing builds the index of its places once (`Ix`), which answers as they do (`Ix.find_of`,
-`Ix.onBar_of`). An organic stroke costs most, and a route that only moved draws the same stroke,
-moved (`Grow.stroke_move`). So a cache keeps each stroke at the origin by what it reads
-(`StrokeCache`), and a sequence of frames threads one cache: it answers the stroke itself
-(`cachedStroke_eq`) and stays valid (`cachedStroke_valid`). -/
+`Ix.onBar_of`). A cache keeps each connector outline at the origin by all its construction inputs.
+The key includes the docking offsets and radii.
+A sequence of frames threads one cache, whose answers satisfy `Connector.cached_eq`.
+The next frame receives a valid cache by `Connector.cached_valid`. -/
 
 /-- **A laid graph's places by key**, built once per drawing, and the bars of its marks. -/
 structure Ix where
@@ -500,7 +529,7 @@ structure Ix where
 /-- The index of a laid graph. Its places are put last first, so the first place of a key stands,
 as `Laid.find` answers. -/
 def Ix.of (l : Laid) : Ix where
-  places := l.placed.toList.foldr (fun p m => m.insert p.key p) {}
+  places := KeyMap.firstBy Placed.key l.placed.toList
   bars := l.marks.toList.filterMap fun
     | .bar _ x0 x1 y => some (x0, x1, y)
     | _ => none
@@ -517,13 +546,7 @@ drawing on the index (`callsCached`). Placement: concept `initial-algebras-folds
 authoring. -/
 theorem Ix.find_of (l : Laid) (k : Key) : (Ix.of l).find k = l.find k := by
   simp only [Ix.of, Ix.find, Laid.find, ← Array.find?_toList]
-  induction l.placed.toList with
-  | nil => exact KeyMap.get?_empty k
-  | cons p ps ih =>
-    rw [List.foldr_cons, KeyMap.get?_insert, ih, List.find?_cons]
-    by_cases h : p.key = k
-    · rw [if_pos h, show (p.key == k) = true from decide_eq_true h]
-    · rw [if_neg h, show (p.key == k) = false from decide_eq_false h]
+  exact KeyMap.get?_firstBy _ _ _
 
 /-- **The index answers as `Laid.onBar` does**, at every item. A tool law; its consumer is the
 drawing on the index (`callsCached`). Placement: concept `initial-algebras-folds`, R14's live
@@ -538,117 +561,44 @@ theorem Ix.onBar_of (l : Laid) (p : Placed) : (Ix.of l).onBar p = l.onBar p := b
     | bar k x0 x1 y => simp only [List.filterMap_cons, List.any_cons, ih]
     | diamond k x y => simp only [List.filterMap_cons, List.any_cons, ih, Bool.false_or]
 
-/-- What an organic stroke reads: its seed, its look's noise and wave, its width, whether it grows
-to a tip, and its segments, moved to the origin. -/
-structure StrokeKey where
-  seed : Nat
-  noise : Nat
-  wave : Nat
-  width : Int
-  tip : Bool
-  segments : List Cubic
-deriving DecidableEq, Hashable
+/-- The graph retains complete connector outlines, including their docking geometry. -/
+abbrev StrokeCache := Connector.Cache
 
-/-- **The stroke cache**: an organic stroke kept at the origin by what it reads (`StrokeKey`). -/
-abbrev StrokeCache := KeyMap StrokeKey (List Cubic)
+/-- The bar's top in logical pixels. Odd heights use the painter's integer origin. -/
+def barTop (y : Int) : Int := y - BAR / 2
 
-/-- A cache is valid when each stroke it keeps is the stroke of its key, at any organic settings
-with the key's noise and wave. -/
-def StrokeCache.Valid (cache : StrokeCache) : Prop :=
-  ∀ (k : StrokeKey) (s : List Cubic), cache.get? k = some s →
-    ∀ o : Organic, o.noise = k.noise → o.wave = k.wave → s = Grow.stroke k.seed o k.width k.segments k.tip
+/-- The bar surface relative to its route point, in thousandths. -/
+def barSurface (down : Bool) : Int := 1000 * (barTop 0 + if down then BAR else 0)
 
-/-- **A stroke from the cache**, moved into place; or computed at the origin, kept and moved. A
-line is moved to the origin by its first point, in logical pixels. -/
-def cachedStroke (cache : StrokeCache) (seed : Nat) (o : Organic) (w : Int) (cs : List Cubic)
-    (tip : Bool) : List Cubic × StrokeCache :=
-  match cs with
-  | [] => ([], cache)
-  | c :: _ =>
-    let rel := cs.map (Cubic.move (-c.p0.1) (-c.p0.2))
-    let key : StrokeKey := ⟨seed, o.noise, o.wave, w, tip, rel⟩
-    match cache.get? key with
-    | some s => (s.map (Cubic.move (1000 * c.p0.1) (1000 * c.p0.2)), cache)
-    | none =>
-      let s := Grow.stroke seed o w rel tip
-      (s.map (Cubic.move (1000 * c.p0.1) (1000 * c.p0.2)), cache.insert key s)
-
-/-- The empty cache is valid. -/
-theorem StrokeCache.valid_empty : StrokeCache.Valid {} := by
-  intro k s h
-  rw [KeyMap.get?_empty] at h
-  cases h
-
-/-- A line moved to the origin by its first point, and back, is the line. A step of
-`cachedStroke_eq`. -/
-theorem move_back (cs : List Cubic) (x y : Int) :
-    (cs.map (Cubic.move (-x) (-y))).map (Cubic.move x y) = cs := by
-  simp only [List.map_map, Function.comp_def, Cubic.move_move, Int.add_left_neg, Cubic.move_zero,
-    List.map_id']
-
-/-- **A stroke from a valid cache is the stroke.** By `Grow.stroke_move`: the stroke kept at the
-origin, moved back into place, is the stroke where the line stands. A tool law; its consumer is
-the drawing on the cache (`callsCached`), which a sequence of frames threads. Placement: concept
-`initial-algebras-folds`, R14's live authoring. -/
-theorem cachedStroke_eq {cache : StrokeCache} (hv : cache.Valid) (seed : Nat) (o : Organic) (w : Int)
-    (cs : List Cubic) (tip : Bool) : (cachedStroke cache seed o w cs tip).1 = Grow.stroke seed o w cs tip := by
-  cases cs with
-  | nil => rfl
-  | cons c rest =>
-    have hmoved : (Grow.stroke seed o w ((c :: rest).map (Cubic.move (-c.p0.1) (-c.p0.2))) tip).map
-        (Cubic.move (1000 * c.p0.1) (1000 * c.p0.2)) = Grow.stroke seed o w (c :: rest) tip := by
-      rw [← Grow.stroke_move, move_back]
-    simp only [cachedStroke]
-    cases h : cache.get? ⟨seed, o.noise, o.wave, w, tip, (c :: rest).map (Cubic.move (-c.p0.1) (-c.p0.2))⟩ with
-    | some s =>
-      rw [hv _ _ h o rfl rfl]
-      exact hmoved
-    | none => exact hmoved
-
-/-- **A cache stays valid** through a stroke drawn on it. A tool law; its consumer is a sequence
-of frames that threads one cache. Placement: concept `initial-algebras-folds`, R14's live
-authoring. -/
-theorem cachedStroke_valid {cache : StrokeCache} (hv : cache.Valid) (seed : Nat) (o : Organic)
-    (w : Int) (cs : List Cubic) (tip : Bool) : (cachedStroke cache seed o w cs tip).2.Valid := by
-  cases cs with
-  | nil => exact hv
-  | cons c rest =>
-    simp only [cachedStroke]
-    cases h : cache.get? ⟨seed, o.noise, o.wave, w, tip, (c :: rest).map (Cubic.move (-c.p0.1) (-c.p0.2))⟩ with
-    | some s => exact hv
-    | none =>
-      intro k s' hs o' hn hw
-      rw [KeyMap.get?_insert] at hs
-      by_cases hk : (⟨seed, o.noise, o.wave, w, tip, (c :: rest).map (Cubic.move (-c.p0.1) (-c.p0.2))⟩ : StrokeKey) = k
-      · rw [if_pos hk] at hs
-        subst hk
-        cases hs
-        exact Grow.stroke_organic seed hn.symm hw.symm w _ tip
-      · rw [if_neg hk] at hs
-        exact hv _ _ hs o' hn hw
-
-/-- **A forward edge as an organic stroke** (`Tools.View.Grow`), on a stroke cache: its width the
-trunk's times its share of the work, never finer than the look's finest line; its edges moved by
-the noise its key seeds, inside their band; a collar where it leaves a box or a bar, and, once it
-is whole, where it meets one. While it grows, its tip narrows. -/
+/-- A forward edge is one closed connector outline with integrated flares at its docking surfaces.
+The width follows its share, bounded below by the look's finest line.
+While it grows, its tip narrows. -/
 def organicCalls (find : Key → Option Placed) (onBar : Placed → Bool) (L : Look) (cache : StrokeCache)
     (key : Key) (ks : List Key) (share : Nat) (cs : List Cubic) (whole : Bool) :
     List (Keyed Call) × StrokeCache :=
   let o := L.organic
   let w : Int := max (o.fine : Int) ((o.trunk : Int) * share / 1000000)
   let R : Int := (o.flare : Int) * w / max 1 (o.trunk : Int)
-  -- the surface a line meets: a box's edge, at the line's end; a bar's edge, half its thickness away
-  let surface (k : Key) : Option Int := (find k).bind fun p =>
-    if p.node.isSome then some 0 else if onBar p then some (500 * BAR) else none
-  let (body, cache) := cachedStroke cache (Grow.seedOf key) o w cs (!whole)
-  let start := match cs.head?, ks.head?.bind surface with
-    | some c, some off => [Grow.collar (1000 * c.p0.1) (1000 * c.p0.2 + off) w R true]
-    | _, _ => []
-  let finish := match whole, cs.getLast?, ks.getLast?.bind surface with
-    | true, some c, some off => [Grow.collar (1000 * c.p3.1) (1000 * c.p3.2 - off) w R false]
-    | _, _, _ => []
-  if body.isEmpty then ([], cache) else
-    (([body] ++ start ++ finish).map fun path => ⟨key, .shape .ink 1000 [path]⟩, cache)
+  -- A collar uses the painted surface and the straight room before a rounded box corner.
+  let surface (down : Bool) (k : Key) : Option (Int × Int) := (find k).bind fun p =>
+    if p.node.isSome then
+      let bounds := boxBounds p
+      let room := 1000 * (bounds.x1 - bounds.x0) / 2 - w / 2 - L.strokes.radius
+      if p.grow = 0 then none else some (0, min R (max 0 room))
+    else if onBar p then some (barSurface down, R) else none
+  let source := (ks.head?.bind (surface true)).map fun (off, r) =>
+    ({ offset := off, radius := r } : Connector.Dock)
+  let target := if whole then (ks.getLast?.bind (surface false)).map fun (off, r) =>
+    ({ offset := off, radius := r } : Connector.Dock) else none
+  match cs with
+  | [] => ([], cache)
+  | c :: _ =>
+    let request : Connector.Request := {
+      seed := Grow.seedOf key, noise := o.noise, wave := o.wave, width := w, tip := !whole,
+      segments := cs.map (Cubic.move (-c.p0.1) (-c.p0.2)), source, target }
+    let (outline, cache) := Connector.cached cache request
+    let body := outline.map (Cubic.move (1000 * c.p0.1) (1000 * c.p0.2))
+    if body.isEmpty then ([], cache) else ([⟨key, .shape .ink 1000 [body]⟩], cache)
 
 /-- A route's calls, on a stroke cache: its segments, drawn as far as its reveal, at the look's
 weight of an edge, or, for a forward edge in a look with a trunk, as an organic stroke; an arc in a
@@ -679,8 +629,8 @@ def regionCalls (L : Look) (dx dy : Int) (r : Region) : List (Keyed Call) :=
 strokes. -/
 def markCalls (L : Look) (dx dy : Int) : FlowMark → List (Keyed Call)
   | .bar k x0 x1 y =>
-    if L.strokes.radius = 0 then [⟨k, .fill .ink 1000 (dx + x0) (dy + y - BAR / 2) (x1 - x0) BAR⟩]
-    else [⟨k, .shape .ink 1000 [Grow.roundRect (1000 * (dx + x0)) (1000 * (dy + y - BAR / 2)) (1000 * (x1 - x0))
+    if L.strokes.radius = 0 then [⟨k, .fill .ink 1000 (dx + x0) (barTop (dy + y)) (x1 - x0) BAR⟩]
+    else [⟨k, .shape .ink 1000 [Grow.roundRect (1000 * (dx + x0)) (1000 * (barTop (dy + y))) (1000 * (x1 - x0))
       (1000 * BAR) (500 * BAR)]⟩]
   | .diamond k x y =>
     let c := (dx + x, dy + y)
@@ -693,21 +643,22 @@ def markCalls (L : Look) (dx dy : Int) : FlowMark → List (Keyed Call)
 /-- **A laid-out graph as calls, on a stroke cache**, with its top left at `(dx, dy)`: the regions
 behind, then the routes, then the marks and the boxes over them. The places are read by the
 index, built once. -/
-def callsCached (L : Look) (l : Laid) (dx dy : Int) (cache : StrokeCache) :
+def callsCached (L : Look) (l : Laid) (dx dy : Int) (cache : StrokeCache) (textStyle : GraphText.Style := {}) :
     List (Keyed Call) × StrokeCache :=
   let ix := Ix.of l
   let (routes, cache) := l.routes.toList.foldl (fun (acc : List (List (Keyed Call)) × StrokeCache) rt =>
-    let (cs, c) := routeCalls L ix.find ix.onBar l.width dx dy acc.2 rt
+    let (cs, c) := routeCalls L ix.find ix.onBar l.routeWidth dx dy acc.2 rt
     (cs :: acc.1, c)) ([], cache)
   (l.regions.toList.flatMap (regionCalls L dx dy) ++ routes.reverse.flatten ++
     l.marks.toList.flatMap (markCalls L dx dy) ++
     l.placed.toList.flatMap (fun p => match p.node with
-      | some n => boxCalls L dx dy p n
+      | some n => boxCalls L dx dy p n textStyle
       | none => []), cache)
 
 /-- **A laid-out graph as calls**, with its top left at `(dx, dy)`: the drawing on a fresh stroke
 cache. -/
-def calls (L : Look) (l : Laid) (dx dy : Int) : List (Keyed Call) := (callsCached L l dx dy {}).1
+def calls (L : Look) (l : Laid) (dx dy : Int) (textStyle : GraphText.Style := {}) : List (Keyed Call) :=
+  (callsCached L l dx dy {} textStyle).1
 
 /-- No two boxes share a pixel: a finite check of a layout. -/
 def boxesApart (l : Laid) : Bool :=

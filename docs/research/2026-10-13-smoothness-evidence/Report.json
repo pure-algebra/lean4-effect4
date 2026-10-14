@@ -1,0 +1,2154 @@
+{
+  "scope": "finite emitted cubic contours; curvature in reciprocal SVG user units; no whole-graph union proof",
+  "files": [
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/001.svg",
+      "sha256": "3dc5854ac3efd5d48a74622fd28a807b73df26b25320ff725c8e3b2d5d93d899",
+      "connectors": 6,
+      "side_seams": 42,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 20,
+      "max_curvature_jump": 0.23125334874860126,
+      "flat_contacts": 20
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/002.svg",
+      "sha256": "74479e5474d5e93374a58bbc16f9dd18cac09009797c6e320f79db16da61a6bb",
+      "connectors": 5,
+      "side_seams": 60,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 18,
+      "max_curvature_jump": 0.23125334874860126,
+      "flat_contacts": 18
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/003.svg",
+      "sha256": "0ea440cc10e9b4121b72614d67b4e9d8fdbbd9841436651d88e7671131dd73ea",
+      "connectors": 9,
+      "side_seams": 86,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 30,
+      "max_curvature_jump": 0.3272756869986992,
+      "flat_contacts": 30
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/004.svg",
+      "sha256": "bb27e25781b36f15354e6a57a347bfa7cbbda4b845ab1da8d46a3d209c9b4e15",
+      "connectors": 11,
+      "side_seams": 106,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 40,
+      "max_curvature_jump": 0.3272756869986992,
+      "flat_contacts": 40
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/005.svg",
+      "sha256": "93a048a4c923e7a5792fa10f4db232ca93211db4b5115931405636065779ce6d",
+      "connectors": 8,
+      "side_seams": 86,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 26,
+      "max_curvature_jump": 0.3272756869986992,
+      "flat_contacts": 26
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/006.svg",
+      "sha256": "d29a8a8aa6d29fbc92474a048b36b91a31d9c757e69411a88eff5d6b343072a5",
+      "connectors": 3,
+      "side_seams": 12,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 12,
+      "max_curvature_jump": 0.1633643725641205,
+      "flat_contacts": 12
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/007.svg",
+      "sha256": "c3c04aa4c2a56bb4b76d63672b4cbb213853dae1acaf5534a443cec393553d56",
+      "connectors": 0,
+      "side_seams": 0,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 0,
+      "max_curvature_jump": 0,
+      "flat_contacts": 0
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/008.svg",
+      "sha256": "f6287603689e91f2cb7cc9b5dab9c4380470495193b4bc890e3b3a7b89f0ae04",
+      "connectors": 8,
+      "side_seams": 82,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 32,
+      "max_curvature_jump": 0.28313865497090435,
+      "flat_contacts": 32
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/009.svg",
+      "sha256": "9966432a4f4c5b8bd34818f80160c4845eefb9436adb690ff84c327c309e0739",
+      "connectors": 8,
+      "side_seams": 82,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 56,
+      "max_curvature_jump": 0.8450824406637261,
+      "flat_contacts": 10
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/010.svg",
+      "sha256": "2a87199cab4e84b457571bb2532e15292865294c775f9ea344c41726d1dad1f6",
+      "connectors": 1,
+      "side_seams": 4,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 4,
+      "max_curvature_jump": 0.1633643725641205,
+      "flat_contacts": 4
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/011.svg",
+      "sha256": "44f012667088a691dcfa86e8eba7a11eaf72f26c880e47bf2d20f9e37a8eab5b",
+      "connectors": 11,
+      "side_seams": 106,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 36,
+      "max_curvature_jump": 0.3272756869986992,
+      "flat_contacts": 36
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/012.svg",
+      "sha256": "d63a8a139752c4bac2a414a9c09de6a7e5073418cebf6fc9fc9950e95e14c582",
+      "connectors": 7,
+      "side_seams": 32,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 28,
+      "max_curvature_jump": 0.23125334874860126,
+      "flat_contacts": 28
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/013.svg",
+      "sha256": "4f7aae6044c4e8ae8a3b90395d0f63e6c12587a06d8a45801453bfc443ba5703",
+      "connectors": 7,
+      "side_seams": 40,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 28,
+      "max_curvature_jump": 0.1633643725641205,
+      "flat_contacts": 28
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/014.svg",
+      "sha256": "be334a8e06b16b5005d04c481b149b205116fffb25d7fdb1d1d41b514a869022",
+      "connectors": 0,
+      "side_seams": 0,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 0,
+      "max_curvature_jump": 0,
+      "flat_contacts": 0
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/015.svg",
+      "sha256": "42f5a6acb2ae6bb38dcc185670a64e2f6c295fcb9110f9c9f96274967a05c315",
+      "connectors": 17,
+      "side_seams": 244,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 64,
+      "max_curvature_jump": 0.462658582316702,
+      "flat_contacts": 64
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/016.svg",
+      "sha256": "0d22ac7f7fce58791c0e97450b008174cd7f1cd76d4bc65437b0c8b097e69486",
+      "connectors": 2,
+      "side_seams": 16,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 6,
+      "max_curvature_jump": 0.1633643725641205,
+      "flat_contacts": 6
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/details/dark-1000.svg",
+      "sha256": "3b792364a682d2714f0efca9184e5af487f733995935b0bff8dde49bda6dcd5d",
+      "connectors": 1,
+      "side_seams": 4,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 4,
+      "max_curvature_jump": 0.1633643725641205,
+      "flat_contacts": 4
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/details/dark-655.svg",
+      "sha256": "8fa68fce75f246bffb8191f4b4d2ee62f2d2cd6823114d17fae7d0380ecab3b4",
+      "connectors": 1,
+      "side_seams": 6,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 6,
+      "max_curvature_jump": 3.2542170633890346,
+      "flat_contacts": 2
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/details/dark-800.svg",
+      "sha256": "2c4d821fa1a20106ab2e656b34e24cdde5e02e3be3ea86f4e12e0de828cb0969",
+      "connectors": 1,
+      "side_seams": 14,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 2,
+      "max_curvature_jump": 0.1633643725641205,
+      "flat_contacts": 2
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/details/dark-850.svg",
+      "sha256": "60dcaaaa3234c4d3159051751cd5dfc10e75faff37c3e5a8a85986bd56c586ee",
+      "connectors": 1,
+      "side_seams": 4,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 4,
+      "max_curvature_jump": 0.22413980878589154,
+      "flat_contacts": 4
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/details/paper-1000.svg",
+      "sha256": "3cb884e0bf8fd217c9a16b1da0ab872fb1bd3c3ca8565f3955ca1fcfb7cd8aaa",
+      "connectors": 1,
+      "side_seams": 4,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 4,
+      "max_curvature_jump": 0.1633643725641205,
+      "flat_contacts": 4
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/details/paper-655.svg",
+      "sha256": "a5aaff1cc02c090432df185a36169a6018895163862c0162ca0777b61b5270a6",
+      "connectors": 1,
+      "side_seams": 6,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 6,
+      "max_curvature_jump": 3.2542170633890346,
+      "flat_contacts": 2
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/details/paper-800.svg",
+      "sha256": "e8a381f5a2ce9bcdc43cdc8e725bf19ee45680978f6683981e2156f58c9f7c54",
+      "connectors": 1,
+      "side_seams": 14,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 2,
+      "max_curvature_jump": 0.1633643725641205,
+      "flat_contacts": 2
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/details/paper-850.svg",
+      "sha256": "cb43d6d55258b61da18c965e18b738dc23ef26f0b5992a1a69eaaa4bab531833",
+      "connectors": 1,
+      "side_seams": 4,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 4,
+      "max_curvature_jump": 0.22413980878589154,
+      "flat_contacts": 4
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/001.svg",
+      "sha256": "9b4c2ac9816f57fb4e5d2264fd4d21d357273e342555b893245a38a7e17c782e",
+      "connectors": 6,
+      "side_seams": 42,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 40,
+      "max_curvature_jump": 0.24280993377286067,
+      "flat_contacts": 20
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/002.svg",
+      "sha256": "81e39fdb040e71df51adf83c719b9a5bd1ca5ddcc725967e46b54b6cc3efbd02",
+      "connectors": 5,
+      "side_seams": 60,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 58,
+      "max_curvature_jump": 0.23745741018267735,
+      "flat_contacts": 18
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/003.svg",
+      "sha256": "89b953f0f30545947fdea16c85d6767c55c986e8cfe1ac5c1bd29e46a18a2fc5",
+      "connectors": 9,
+      "side_seams": 86,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 84,
+      "max_curvature_jump": 0.34896409812519524,
+      "flat_contacts": 30
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/004.svg",
+      "sha256": "f69137362250f68bdf139131b683588ff10b3649fc4b7d9418eaf9eb7a12a7bf",
+      "connectors": 11,
+      "side_seams": 106,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 103,
+      "max_curvature_jump": 0.33336793731513065,
+      "flat_contacts": 40
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/005.svg",
+      "sha256": "a1ee7ebfc7938a2b3bbaac8f8509eb479f922935f25d622e17f9b4eff8b823e4",
+      "connectors": 8,
+      "side_seams": 86,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 83,
+      "max_curvature_jump": 0.3448213679100219,
+      "flat_contacts": 26
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/006.svg",
+      "sha256": "bc49f512048f47a3b6ef78143ca6e141b354eea51dd105c26504068df20d549e",
+      "connectors": 3,
+      "side_seams": 12,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 12,
+      "max_curvature_jump": 0.1633643725641205,
+      "flat_contacts": 12
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/007.svg",
+      "sha256": "42709f34cebd0ea105745ce3e47d70cd8136fb3a07218bf53c1bcaeb49ca81dd",
+      "connectors": 0,
+      "side_seams": 0,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 0,
+      "max_curvature_jump": 0,
+      "flat_contacts": 0
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/008.svg",
+      "sha256": "7267dd6f64753d465f8469054cad19c27f7b5e048595ed26c1c38f2db019c78b",
+      "connectors": 8,
+      "side_seams": 82,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 82,
+      "max_curvature_jump": 0.2898930909695655,
+      "flat_contacts": 32
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/009.svg",
+      "sha256": "72324d4acfeb184b7ce41ce83a314e95ca3014af396c483721c80a7fc640553b",
+      "connectors": 8,
+      "side_seams": 82,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 82,
+      "max_curvature_jump": 0.8486681914008106,
+      "flat_contacts": 10
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/010.svg",
+      "sha256": "6690f6ebd87b0268d770137291ed4fdf15ff47ec687a01302edcab07648c0865",
+      "connectors": 1,
+      "side_seams": 4,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 4,
+      "max_curvature_jump": 0.1633643725641205,
+      "flat_contacts": 4
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/011.svg",
+      "sha256": "5d95e2f6f25ac8ff346874d29f919a2f5eafb72885d6c50c382696a8ff3f939e",
+      "connectors": 11,
+      "side_seams": 106,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 106,
+      "max_curvature_jump": 0.33653590747967504,
+      "flat_contacts": 36
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/012.svg",
+      "sha256": "312daf7934aed1b2f197b6ff03bdc771e8e93683ac3689f38a06714a5395e707",
+      "connectors": 7,
+      "side_seams": 32,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 28,
+      "max_curvature_jump": 0.23928213413387622,
+      "flat_contacts": 28
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/013.svg",
+      "sha256": "04a66259b30364d45e3edfb7df8256479f18e3dd3eccc3a2f29fe9b767599fd6",
+      "connectors": 7,
+      "side_seams": 40,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 38,
+      "max_curvature_jump": 0.16895571269652343,
+      "flat_contacts": 28
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/014.svg",
+      "sha256": "ae78803e00ac64deb04e5f63be57329af54e18b63e519304ce457eab7d76b338",
+      "connectors": 0,
+      "side_seams": 0,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 0,
+      "max_curvature_jump": 0,
+      "flat_contacts": 0
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/015.svg",
+      "sha256": "b9d1762e010879befca4b73f4e576923dec503057a16e63d5063ebfba2b62306",
+      "connectors": 17,
+      "side_seams": 244,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 244,
+      "max_curvature_jump": 0.5128205128205128,
+      "flat_contacts": 64
+    },
+    {
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/016.svg",
+      "sha256": "069f366686068bcede239072e380c15c27f614b8a9fa1e549b1268264d30a581",
+      "connectors": 2,
+      "side_seams": 16,
+      "format_issues": [],
+      "exact_tangent_failures": 0,
+      "exact_curvature_failures": 16,
+      "max_curvature_jump": 0.16500530934210833,
+      "flat_contacts": 6
+    }
+  ],
+  "worst_seams": [
+    {
+      "point": [
+        55.163,
+        66.626
+      ],
+      "exact_point": [
+        "55163/1000",
+        "33313/500"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "40729/1000000",
+      "incoming_handle_length": 0.2018142710513803,
+      "outgoing_handle_length": 0.2018142710513803,
+      "incoming_curvature": 0.919255693653299,
+      "outgoing_curvature": -2.3349613697357356,
+      "curvature_jump": 3.2542170633890346,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "a\u2192b",
+      "path_index": 1,
+      "join_after": 5,
+      "side": "left_return",
+      "in_crop": false,
+      "file": "docs/research/2026-10-13-smoothness-evidence/details/dark-655.svg"
+    },
+    {
+      "point": [
+        55.163,
+        66.626
+      ],
+      "exact_point": [
+        "55163/1000",
+        "33313/500"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "40729/1000000",
+      "incoming_handle_length": 0.2018142710513803,
+      "outgoing_handle_length": 0.2018142710513803,
+      "incoming_curvature": 0.919255693653299,
+      "outgoing_curvature": -2.3349613697357356,
+      "curvature_jump": 3.2542170633890346,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "a\u2192b",
+      "path_index": 1,
+      "join_after": 5,
+      "side": "left_return",
+      "in_crop": false,
+      "file": "docs/research/2026-10-13-smoothness-evidence/details/paper-655.svg"
+    },
+    {
+      "point": [
+        56.837,
+        66.626
+      ],
+      "exact_point": [
+        "56837/1000",
+        "33313/500"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "40729/1000000",
+      "incoming_handle_length": 0.2018142710513803,
+      "outgoing_handle_length": 0.2018142710513803,
+      "incoming_curvature": -2.32498532859233,
+      "outgoing_curvature": 0.9092796525098936,
+      "curvature_jump": 3.234264981102224,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "a\u2192b",
+      "path_index": 1,
+      "join_after": 2,
+      "side": "right_forward",
+      "in_crop": false,
+      "file": "docs/research/2026-10-13-smoothness-evidence/details/dark-655.svg"
+    },
+    {
+      "point": [
+        56.837,
+        66.626
+      ],
+      "exact_point": [
+        "56837/1000",
+        "33313/500"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "40729/1000000",
+      "incoming_handle_length": 0.2018142710513803,
+      "outgoing_handle_length": 0.2018142710513803,
+      "incoming_curvature": -2.32498532859233,
+      "outgoing_curvature": 0.9092796525098936,
+      "curvature_jump": 3.234264981102224,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "a\u2192b",
+      "path_index": 1,
+      "join_after": 2,
+      "side": "right_forward",
+      "in_crop": false,
+      "file": "docs/research/2026-10-13-smoothness-evidence/details/paper-655.svg"
+    },
+    {
+      "point": [
+        54.8,
+        64.75
+      ],
+      "exact_point": [
+        "274/5",
+        "259/4"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "42849/250000",
+      "incoming_handle_length": 0.414,
+      "outgoing_handle_length": 0.414,
+      "incoming_curvature": -0.23337767509160076,
+      "outgoing_curvature": -1.306914980512964,
+      "curvature_jump": 1.0735373054213633,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "a\u2192b",
+      "path_index": 1,
+      "join_after": 7,
+      "side": "left_return",
+      "in_crop": false,
+      "file": "docs/research/2026-10-13-smoothness-evidence/details/dark-655.svg"
+    },
+    {
+      "point": [
+        54.8,
+        64.75
+      ],
+      "exact_point": [
+        "274/5",
+        "259/4"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "42849/250000",
+      "incoming_handle_length": 0.414,
+      "outgoing_handle_length": 0.414,
+      "incoming_curvature": -0.23337767509160076,
+      "outgoing_curvature": -1.306914980512964,
+      "curvature_jump": 1.0735373054213633,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "a\u2192b",
+      "path_index": 1,
+      "join_after": 7,
+      "side": "left_return",
+      "in_crop": false,
+      "file": "docs/research/2026-10-13-smoothness-evidence/details/paper-655.svg"
+    },
+    {
+      "point": [
+        57.2,
+        64.75
+      ],
+      "exact_point": [
+        "286/5",
+        "259/4"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "42849/250000",
+      "incoming_handle_length": 0.414,
+      "outgoing_handle_length": 0.414,
+      "incoming_curvature": -1.306914980512964,
+      "outgoing_curvature": -0.23726730300979407,
+      "curvature_jump": 1.06964767750317,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "a\u2192b",
+      "path_index": 1,
+      "join_after": 0,
+      "side": "right_forward",
+      "in_crop": false,
+      "file": "docs/research/2026-10-13-smoothness-evidence/details/dark-655.svg"
+    },
+    {
+      "point": [
+        57.2,
+        64.75
+      ],
+      "exact_point": [
+        "286/5",
+        "259/4"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "42849/250000",
+      "incoming_handle_length": 0.414,
+      "outgoing_handle_length": 0.414,
+      "incoming_curvature": -1.306914980512964,
+      "outgoing_curvature": -0.23726730300979407,
+      "curvature_jump": 1.06964767750317,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "a\u2192b",
+      "path_index": 1,
+      "join_after": 0,
+      "side": "right_forward",
+      "in_crop": false,
+      "file": "docs/research/2026-10-13-smoothness-evidence/details/paper-655.svg"
+    },
+    {
+      "point": [
+        90.8,
+        506.0
+      ],
+      "exact_point": [
+        "454/5",
+        "506"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "171396/15625",
+      "incoming_handle_length": 3.312,
+      "outgoing_handle_length": 3.312,
+      "incoming_curvature": -0.1633643725641205,
+      "outgoing_curvature": 0.6853038188366901,
+      "curvature_jump": 0.8486681914008106,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[]/fork\u2192[1]",
+      "path_index": 3,
+      "join_after": 5,
+      "side": "left_return",
+      "in_crop": false,
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/009.svg"
+    },
+    {
+      "point": [
+        90.8,
+        506.0
+      ],
+      "exact_point": [
+        "454/5",
+        "506"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "171396/15625",
+      "incoming_handle_length": 3.312,
+      "outgoing_handle_length": 3.312,
+      "incoming_curvature": -0.1633643725641205,
+      "outgoing_curvature": 0.6817180680996056,
+      "curvature_jump": 0.8450824406637261,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[]/fork\u2192[1]",
+      "path_index": 3,
+      "join_after": 5,
+      "side": "left_return",
+      "in_crop": false,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/009.svg"
+    },
+    {
+      "point": [
+        106.236,
+        491.566
+      ],
+      "exact_point": [
+        "26559/250",
+        "245783/500"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "247117/200000",
+      "incoming_handle_length": 1.111568711326475,
+      "outgoing_handle_length": 1.111568711326475,
+      "incoming_curvature": 0.5630883062489195,
+      "outgoing_curvature": -0.2778954010895706,
+      "curvature_jump": 0.84098370733849,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[]/fork\u2192[1]",
+      "path_index": 3,
+      "join_after": 7,
+      "side": "left_return",
+      "in_crop": false,
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/009.svg"
+    },
+    {
+      "point": [
+        106.188,
+        491.548
+      ],
+      "exact_point": [
+        "26547/250",
+        "122887/250"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "152833/125000",
+      "incoming_handle_length": 1.1057413802512774,
+      "outgoing_handle_length": 1.1057413802512774,
+      "incoming_curvature": 0.5476769865725338,
+      "outgoing_curvature": -0.2774609147405547,
+      "curvature_jump": 0.8251379013130885,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[]/fork\u2192[1]",
+      "path_index": 3,
+      "join_after": 7,
+      "side": "left_return",
+      "in_crop": false,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/009.svg"
+    }
+  ],
+  "worst_flat_contacts": [
+    {
+      "mouth": "source_right",
+      "segment": 0,
+      "point": [
+        57.95,
+        64.0
+      ],
+      "boundary_key": "a",
+      "boundary_segment": 4,
+      "tangent_line_agrees": true,
+      "connector_curvature": -1.306914980512964,
+      "exact_connector_curvature_numerator": "-39123/15625",
+      "exact_connector_speed_squared": "385641/250000",
+      "exact_curvature_agrees_with_flat": false,
+      "flat_boundary_curvature": 0.0,
+      "curvature_jump": 1.306914980512964,
+      "scope": "exact contact with a supplied flat segment; no filled-union theorem",
+      "key": "a\u2192b",
+      "path_index": 1,
+      "in_crop": false,
+      "file": "docs/research/2026-10-13-smoothness-evidence/details/dark-655.svg"
+    },
+    {
+      "mouth": "source_left",
+      "segment": 8,
+      "point": [
+        54.05,
+        64.0
+      ],
+      "boundary_key": "a",
+      "boundary_segment": 4,
+      "tangent_line_agrees": true,
+      "connector_curvature": -1.306914980512964,
+      "exact_connector_curvature_numerator": "-39123/15625",
+      "exact_connector_speed_squared": "385641/250000",
+      "exact_curvature_agrees_with_flat": false,
+      "flat_boundary_curvature": 0.0,
+      "curvature_jump": 1.306914980512964,
+      "scope": "exact contact with a supplied flat segment; no filled-union theorem",
+      "key": "a\u2192b",
+      "path_index": 1,
+      "in_crop": false,
+      "file": "docs/research/2026-10-13-smoothness-evidence/details/dark-655.svg"
+    },
+    {
+      "mouth": "source_right",
+      "segment": 0,
+      "point": [
+        57.95,
+        64.0
+      ],
+      "boundary_key": "a",
+      "boundary_segment": 4,
+      "tangent_line_agrees": true,
+      "connector_curvature": -1.306914980512964,
+      "exact_connector_curvature_numerator": "-39123/15625",
+      "exact_connector_speed_squared": "385641/250000",
+      "exact_curvature_agrees_with_flat": false,
+      "flat_boundary_curvature": 0.0,
+      "curvature_jump": 1.306914980512964,
+      "scope": "exact contact with a supplied flat segment; no filled-union theorem",
+      "key": "a\u2192b",
+      "path_index": 1,
+      "in_crop": false,
+      "file": "docs/research/2026-10-13-smoothness-evidence/details/paper-655.svg"
+    },
+    {
+      "mouth": "source_left",
+      "segment": 8,
+      "point": [
+        54.05,
+        64.0
+      ],
+      "boundary_key": "a",
+      "boundary_segment": 4,
+      "tangent_line_agrees": true,
+      "connector_curvature": -1.306914980512964,
+      "exact_connector_curvature_numerator": "-39123/15625",
+      "exact_connector_speed_squared": "385641/250000",
+      "exact_curvature_agrees_with_flat": false,
+      "flat_boundary_curvature": 0.0,
+      "curvature_jump": 1.306914980512964,
+      "scope": "exact contact with a supplied flat segment; no filled-union theorem",
+      "key": "a\u2192b",
+      "path_index": 1,
+      "in_crop": false,
+      "file": "docs/research/2026-10-13-smoothness-evidence/details/paper-655.svg"
+    },
+    {
+      "mouth": "source_right",
+      "segment": 0,
+      "point": [
+        222.544,
+        642.0
+      ],
+      "boundary_key": "[0 0 1 0 0 0]/fork",
+      "boundary_segment": 4,
+      "tangent_line_agrees": true,
+      "connector_curvature": -0.462658582316702,
+      "exact_connector_curvature_numerator": "-20007/1000",
+      "exact_connector_speed_squared": "123201/10000",
+      "exact_curvature_agrees_with_flat": false,
+      "flat_boundary_curvature": 0.0,
+      "curvature_jump": 0.462658582316702,
+      "scope": "exact contact with a supplied flat segment; no filled-union theorem",
+      "key": "[0 0 1 0 0 0]/fork/0\u2192[0 0 1 0 0 0]/0",
+      "path_index": 7,
+      "in_crop": false,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/015.svg"
+    },
+    {
+      "mouth": "source_left",
+      "segment": 16,
+      "point": [
+        217.456,
+        642.0
+      ],
+      "boundary_key": "[0 0 1 0 0 0]/fork",
+      "boundary_segment": 4,
+      "tangent_line_agrees": true,
+      "connector_curvature": -0.462658582316702,
+      "exact_connector_curvature_numerator": "-20007/1000",
+      "exact_connector_speed_squared": "123201/10000",
+      "exact_curvature_agrees_with_flat": false,
+      "flat_boundary_curvature": 0.0,
+      "curvature_jump": 0.462658582316702,
+      "scope": "exact contact with a supplied flat segment; no filled-union theorem",
+      "key": "[0 0 1 0 0 0]/fork/0\u2192[0 0 1 0 0 0]/0",
+      "path_index": 7,
+      "in_crop": false,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/015.svg"
+    },
+    {
+      "mouth": "source_right",
+      "segment": 0,
+      "point": [
+        314.544,
+        642.0
+      ],
+      "boundary_key": "[0 0 1 0 0 0]/fork",
+      "boundary_segment": 4,
+      "tangent_line_agrees": true,
+      "connector_curvature": -0.462658582316702,
+      "exact_connector_curvature_numerator": "-20007/1000",
+      "exact_connector_speed_squared": "123201/10000",
+      "exact_curvature_agrees_with_flat": false,
+      "flat_boundary_curvature": 0.0,
+      "curvature_jump": 0.462658582316702,
+      "scope": "exact contact with a supplied flat segment; no filled-union theorem",
+      "key": "[0 0 1 0 0 0]/fork/1\u2192[0 0 1 0 0 0 0 0]",
+      "path_index": 8,
+      "in_crop": false,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/015.svg"
+    },
+    {
+      "mouth": "target_right",
+      "segment": 7,
+      "point": [
+        314.544,
+        664.0
+      ],
+      "boundary_key": "[0 0 1 0 0 0 0 0]",
+      "boundary_segment": 0,
+      "tangent_line_agrees": true,
+      "connector_curvature": -0.462658582316702,
+      "exact_connector_curvature_numerator": "-20007/1000",
+      "exact_connector_speed_squared": "123201/10000",
+      "exact_curvature_agrees_with_flat": false,
+      "flat_boundary_curvature": 0.0,
+      "curvature_jump": 0.462658582316702,
+      "scope": "exact contact with a supplied flat segment; no filled-union theorem",
+      "key": "[0 0 1 0 0 0]/fork/1\u2192[0 0 1 0 0 0 0 0]",
+      "path_index": 8,
+      "in_crop": false,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/015.svg"
+    },
+    {
+      "mouth": "target_left",
+      "segment": 9,
+      "point": [
+        309.456,
+        664.0
+      ],
+      "boundary_key": "[0 0 1 0 0 0 0 0]",
+      "boundary_segment": 0,
+      "tangent_line_agrees": true,
+      "connector_curvature": -0.462658582316702,
+      "exact_connector_curvature_numerator": "-20007/1000",
+      "exact_connector_speed_squared": "123201/10000",
+      "exact_curvature_agrees_with_flat": false,
+      "flat_boundary_curvature": 0.0,
+      "curvature_jump": 0.462658582316702,
+      "scope": "exact contact with a supplied flat segment; no filled-union theorem",
+      "key": "[0 0 1 0 0 0]/fork/1\u2192[0 0 1 0 0 0 0 0]",
+      "path_index": 8,
+      "in_crop": false,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/015.svg"
+    },
+    {
+      "mouth": "source_left",
+      "segment": 16,
+      "point": [
+        309.456,
+        642.0
+      ],
+      "boundary_key": "[0 0 1 0 0 0]/fork",
+      "boundary_segment": 4,
+      "tangent_line_agrees": true,
+      "connector_curvature": -0.462658582316702,
+      "exact_connector_curvature_numerator": "-20007/1000",
+      "exact_connector_speed_squared": "123201/10000",
+      "exact_curvature_agrees_with_flat": false,
+      "flat_boundary_curvature": 0.0,
+      "curvature_jump": 0.462658582316702,
+      "scope": "exact contact with a supplied flat segment; no filled-union theorem",
+      "key": "[0 0 1 0 0 0]/fork/1\u2192[0 0 1 0 0 0 0 0]",
+      "path_index": 8,
+      "in_crop": false,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/015.svg"
+    },
+    {
+      "mouth": "source_right",
+      "segment": 0,
+      "point": [
+        314.544,
+        712.0
+      ],
+      "boundary_key": "[0 0 1 0 0 0 0 0]",
+      "boundary_segment": 4,
+      "tangent_line_agrees": true,
+      "connector_curvature": -0.462658582316702,
+      "exact_connector_curvature_numerator": "-20007/1000",
+      "exact_connector_speed_squared": "123201/10000",
+      "exact_curvature_agrees_with_flat": false,
+      "flat_boundary_curvature": 0.0,
+      "curvature_jump": 0.462658582316702,
+      "scope": "exact contact with a supplied flat segment; no filled-union theorem",
+      "key": "[0 0 1 0 0 0 0 0]\u2192[0 0 1 0 0 0 0 1]",
+      "path_index": 9,
+      "in_crop": false,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/015.svg"
+    },
+    {
+      "mouth": "target_right",
+      "segment": 7,
+      "point": [
+        314.544,
+        736.0
+      ],
+      "boundary_key": "[0 0 1 0 0 0 0 1]",
+      "boundary_segment": 0,
+      "tangent_line_agrees": true,
+      "connector_curvature": -0.462658582316702,
+      "exact_connector_curvature_numerator": "-20007/1000",
+      "exact_connector_speed_squared": "123201/10000",
+      "exact_curvature_agrees_with_flat": false,
+      "flat_boundary_curvature": 0.0,
+      "curvature_jump": 0.462658582316702,
+      "scope": "exact contact with a supplied flat segment; no filled-union theorem",
+      "key": "[0 0 1 0 0 0 0 0]\u2192[0 0 1 0 0 0 0 1]",
+      "path_index": 9,
+      "in_crop": false,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/015.svg"
+    }
+  ],
+  "crop_seams": [
+    {
+      "point": [
+        144.599,
+        500.997
+      ],
+      "exact_point": [
+        "144599/1000",
+        "500997/1000"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "683929/250000",
+      "incoming_handle_length": 1.654,
+      "outgoing_handle_length": 1.654,
+      "incoming_curvature": -0.3272756869986992,
+      "outgoing_curvature": 0.017545680911322668,
+      "curvature_jump": 0.3448213679100219,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[1 0 0]/fork/0\u2192[1 1]",
+      "path_index": 3,
+      "join_after": 0,
+      "side": "right_forward",
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/005.svg"
+    },
+    {
+      "point": [
+        144.599,
+        500.997
+      ],
+      "exact_point": [
+        "144599/1000",
+        "500997/1000"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "683929/250000",
+      "incoming_handle_length": 1.654,
+      "outgoing_handle_length": 1.654,
+      "incoming_curvature": -0.3272756869986992,
+      "outgoing_curvature": 0.0,
+      "curvature_jump": 0.3272756869986992,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[1 0 0]/fork/0\u2192[1 1]",
+      "path_index": 3,
+      "join_after": 0,
+      "side": "right_forward",
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/005.svg"
+    },
+    {
+      "point": [
+        143.401,
+        500.997
+      ],
+      "exact_point": [
+        "143401/1000",
+        "500997/1000"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "683929/250000",
+      "incoming_handle_length": 1.654,
+      "outgoing_handle_length": 1.654,
+      "incoming_curvature": 0.0,
+      "outgoing_curvature": -0.3272756869986992,
+      "curvature_jump": 0.3272756869986992,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[1 0 0]/fork/0\u2192[1 1]",
+      "path_index": 3,
+      "join_after": 19,
+      "side": "left_return",
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/005.svg"
+    },
+    {
+      "point": [
+        143.401,
+        500.997
+      ],
+      "exact_point": [
+        "143401/1000",
+        "500997/1000"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "683929/250000",
+      "incoming_handle_length": 1.654,
+      "outgoing_handle_length": 1.654,
+      "incoming_curvature": -0.018764130974608963,
+      "outgoing_curvature": -0.3272756869986992,
+      "curvature_jump": 0.30851155602409025,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[1 0 0]/fork/0\u2192[1 1]",
+      "path_index": 3,
+      "join_after": 19,
+      "side": "left_return",
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/005.svg"
+    },
+    {
+      "point": [
+        152.848,
+        508.242
+      ],
+      "exact_point": [
+        "19106/125",
+        "254121/500"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "5480281/1000000",
+      "incoming_handle_length": 2.341,
+      "outgoing_handle_length": 2.341,
+      "incoming_curvature": -0.23125334874860126,
+      "outgoing_curvature": 0.006204061434076099,
+      "curvature_jump": 0.23745741018267735,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[1 0 0]\u2192[1 0 1]",
+      "path_index": 4,
+      "join_after": 0,
+      "side": "right_forward",
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/002.svg"
+    },
+    {
+      "point": [
+        151.152,
+        508.242
+      ],
+      "exact_point": [
+        "18894/125",
+        "254121/500"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "5480281/1000000",
+      "incoming_handle_length": 2.341,
+      "outgoing_handle_length": 2.341,
+      "incoming_curvature": 0.000851537843892798,
+      "outgoing_curvature": -0.23125334874860126,
+      "curvature_jump": 0.23210488659249406,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[1 0 0]\u2192[1 0 1]",
+      "path_index": 4,
+      "join_after": 19,
+      "side": "left_return",
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/002.svg"
+    },
+    {
+      "point": [
+        160.848,
+        490.758
+      ],
+      "exact_point": [
+        "20106/125",
+        "245379/500"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "5480281/1000000",
+      "incoming_handle_length": 2.341,
+      "outgoing_handle_length": 2.341,
+      "incoming_curvature": 0.0,
+      "outgoing_curvature": -0.23125334874860126,
+      "curvature_jump": 0.23125334874860126,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[0 0 0 1]\u2192[0 0]/join/1",
+      "path_index": 5,
+      "join_after": 1,
+      "side": "right_forward",
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/001.svg"
+    },
+    {
+      "point": [
+        159.152,
+        490.758
+      ],
+      "exact_point": [
+        "19894/125",
+        "245379/500"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "5480281/1000000",
+      "incoming_handle_length": 2.341,
+      "outgoing_handle_length": 2.341,
+      "incoming_curvature": -0.23125334874860126,
+      "outgoing_curvature": 0.0,
+      "curvature_jump": 0.23125334874860126,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[0 0 0 1]\u2192[0 0]/join/1",
+      "path_index": 5,
+      "join_after": 4,
+      "side": "left_return",
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/001.svg"
+    },
+    {
+      "point": [
+        152.848,
+        508.242
+      ],
+      "exact_point": [
+        "19106/125",
+        "254121/500"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "5480281/1000000",
+      "incoming_handle_length": 2.341,
+      "outgoing_handle_length": 2.341,
+      "incoming_curvature": -0.23125334874860126,
+      "outgoing_curvature": 0.0,
+      "curvature_jump": 0.23125334874860126,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[1 0 0]\u2192[1 0 1]",
+      "path_index": 4,
+      "join_after": 0,
+      "side": "right_forward",
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/002.svg"
+    },
+    {
+      "point": [
+        151.152,
+        508.242
+      ],
+      "exact_point": [
+        "18894/125",
+        "254121/500"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "5480281/1000000",
+      "incoming_handle_length": 2.341,
+      "outgoing_handle_length": 2.341,
+      "incoming_curvature": 0.0,
+      "outgoing_curvature": -0.23125334874860126,
+      "curvature_jump": 0.23125334874860126,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[1 0 0]\u2192[1 0 1]",
+      "path_index": 4,
+      "join_after": 19,
+      "side": "left_return",
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/002.svg"
+    },
+    {
+      "point": [
+        160.848,
+        490.758
+      ],
+      "exact_point": [
+        "20106/125",
+        "245379/500"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "5480281/1000000",
+      "incoming_handle_length": 2.341,
+      "outgoing_handle_length": 2.341,
+      "incoming_curvature": 0.0,
+      "outgoing_curvature": -0.23125334874860126,
+      "curvature_jump": 0.23125334874860126,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[0 0 0 1]\u2192[0 0]/join/1",
+      "path_index": 5,
+      "join_after": 1,
+      "side": "right_forward",
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/001.svg"
+    },
+    {
+      "point": [
+        159.152,
+        490.758
+      ],
+      "exact_point": [
+        "19894/125",
+        "245379/500"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "5480281/1000000",
+      "incoming_handle_length": 2.341,
+      "outgoing_handle_length": 2.341,
+      "incoming_curvature": -0.23125334874860126,
+      "outgoing_curvature": 0.0,
+      "curvature_jump": 0.23125334874860126,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[0 0 0 1]\u2192[0 0]/join/1",
+      "path_index": 5,
+      "join_after": 4,
+      "side": "left_return",
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/001.svg"
+    },
+    {
+      "point": [
+        145.2,
+        503.5
+      ],
+      "exact_point": [
+        "726/5",
+        "1007/2"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "576081/62500",
+      "incoming_handle_length": 3.036,
+      "outgoing_handle_length": 3.036,
+      "incoming_curvature": -0.17821567916085873,
+      "outgoing_curvature": 0.0,
+      "curvature_jump": 0.17821567916085873,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[0 0]/join\u2192[1]",
+      "path_index": 6,
+      "join_after": 0,
+      "side": "right_forward",
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/001.svg"
+    },
+    {
+      "point": [
+        145.2,
+        514.5
+      ],
+      "exact_point": [
+        "726/5",
+        "1029/2"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "576081/62500",
+      "incoming_handle_length": 3.036,
+      "outgoing_handle_length": 3.036,
+      "incoming_curvature": 0.0,
+      "outgoing_curvature": -0.17821567916085873,
+      "curvature_jump": 0.17821567916085873,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[0 0]/join\u2192[1]",
+      "path_index": 6,
+      "join_after": 1,
+      "side": "right_forward",
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/001.svg"
+    },
+    {
+      "point": [
+        142.8,
+        514.5
+      ],
+      "exact_point": [
+        "714/5",
+        "1029/2"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "576081/62500",
+      "incoming_handle_length": 3.036,
+      "outgoing_handle_length": 3.036,
+      "incoming_curvature": -0.17821567916085873,
+      "outgoing_curvature": 0.0,
+      "curvature_jump": 0.17821567916085873,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[0 0]/join\u2192[1]",
+      "path_index": 6,
+      "join_after": 4,
+      "side": "left_return",
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/001.svg"
+    },
+    {
+      "point": [
+        142.8,
+        503.5
+      ],
+      "exact_point": [
+        "714/5",
+        "1007/2"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "576081/62500",
+      "incoming_handle_length": 3.036,
+      "outgoing_handle_length": 3.036,
+      "incoming_curvature": 0.0,
+      "outgoing_curvature": -0.17821567916085873,
+      "curvature_jump": 0.17821567916085873,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[0 0]/join\u2192[1]",
+      "path_index": 6,
+      "join_after": 5,
+      "side": "left_return",
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/001.svg"
+    },
+    {
+      "point": [
+        145.2,
+        503.5
+      ],
+      "exact_point": [
+        "726/5",
+        "1007/2"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "576081/62500",
+      "incoming_handle_length": 3.036,
+      "outgoing_handle_length": 3.036,
+      "incoming_curvature": -0.17821567916085873,
+      "outgoing_curvature": 0.0,
+      "curvature_jump": 0.17821567916085873,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[0 0]/join\u2192[1]",
+      "path_index": 6,
+      "join_after": 0,
+      "side": "right_forward",
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/001.svg"
+    },
+    {
+      "point": [
+        145.2,
+        514.5
+      ],
+      "exact_point": [
+        "726/5",
+        "1029/2"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "576081/62500",
+      "incoming_handle_length": 3.036,
+      "outgoing_handle_length": 3.036,
+      "incoming_curvature": 0.0,
+      "outgoing_curvature": -0.17821567916085873,
+      "curvature_jump": 0.17821567916085873,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[0 0]/join\u2192[1]",
+      "path_index": 6,
+      "join_after": 1,
+      "side": "right_forward",
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/001.svg"
+    },
+    {
+      "point": [
+        142.8,
+        514.5
+      ],
+      "exact_point": [
+        "714/5",
+        "1029/2"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "576081/62500",
+      "incoming_handle_length": 3.036,
+      "outgoing_handle_length": 3.036,
+      "incoming_curvature": -0.17821567916085873,
+      "outgoing_curvature": 0.0,
+      "curvature_jump": 0.17821567916085873,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[0 0]/join\u2192[1]",
+      "path_index": 6,
+      "join_after": 4,
+      "side": "left_return",
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/001.svg"
+    },
+    {
+      "point": [
+        142.8,
+        503.5
+      ],
+      "exact_point": [
+        "714/5",
+        "1007/2"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "576081/62500",
+      "incoming_handle_length": 3.036,
+      "outgoing_handle_length": 3.036,
+      "incoming_curvature": 0.0,
+      "outgoing_curvature": -0.17821567916085873,
+      "curvature_jump": 0.17821567916085873,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[0 0]/join\u2192[1]",
+      "path_index": 6,
+      "join_after": 5,
+      "side": "left_return",
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/001.svg"
+    },
+    {
+      "point": [
+        160.141,
+        501.24
+      ],
+      "exact_point": [
+        "160141/1000",
+        "12531/25"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "19774229/1000000",
+      "incoming_handle_length": 4.446822348599054,
+      "outgoing_handle_length": 4.446822348599054,
+      "incoming_curvature": 0.007559701572176558,
+      "outgoing_curvature": 0.00048493266269142174,
+      "curvature_jump": 0.007074768909485136,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[]/fork\u2192[]/1",
+      "path_index": 4,
+      "join_after": 4,
+      "side": "right_forward",
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/009.svg"
+    },
+    {
+      "point": [
+        160.164,
+        501.115
+      ],
+      "exact_point": [
+        "40041/250",
+        "100223/200"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "4949433/250000",
+      "incoming_handle_length": 4.449464237411061,
+      "outgoing_handle_length": 4.449464237411061,
+      "incoming_curvature": 0.006780437538978298,
+      "outgoing_curvature": -0.0002215933136679643,
+      "curvature_jump": 0.007002030852646262,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[]/fork\u2192[]/1",
+      "path_index": 4,
+      "join_after": 4,
+      "side": "right_forward",
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/009.svg"
+    },
+    {
+      "point": [
+        159.739,
+        503.476
+      ],
+      "exact_point": [
+        "159739/1000",
+        "125869/250"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "971821/50000",
+      "incoming_handle_length": 4.408675538072631,
+      "outgoing_handle_length": 4.408675538072631,
+      "incoming_curvature": -0.00036290983356952,
+      "outgoing_curvature": -0.006823056530937986,
+      "curvature_jump": 0.006460146697368467,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[]/fork\u2192[]/1",
+      "path_index": 4,
+      "join_after": 11,
+      "side": "left_return",
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/009.svg"
+    },
+    {
+      "point": [
+        145.816,
+        501.163
+      ],
+      "exact_point": [
+        "18227/125",
+        "501163/1000"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "22212909/1000000",
+      "incoming_handle_length": 4.713057288003191,
+      "outgoing_handle_length": 4.713057288003191,
+      "incoming_curvature": 0.00030021765259174066,
+      "outgoing_curvature": -0.006135310227050619,
+      "curvature_jump": 0.00643552787964236,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[]/fork\u2192[]/1",
+      "path_index": 4,
+      "join_after": 12,
+      "side": "left_return",
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/009.svg"
+    },
+    {
+      "point": [
+        145.812,
+        501.184
+      ],
+      "exact_point": [
+        "36453/250",
+        "62648/125"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "11108513/500000",
+      "incoming_handle_length": 4.7134940330926485,
+      "outgoing_handle_length": 4.7134940330926485,
+      "incoming_curvature": 0.0027792319362330057,
+      "outgoing_curvature": -0.002783325398853344,
+      "curvature_jump": 0.00556255733508635,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[]/fork\u2192[]/1",
+      "path_index": 4,
+      "join_after": 12,
+      "side": "left_return",
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/009.svg"
+    },
+    {
+      "point": [
+        146.187,
+        498.815
+      ],
+      "exact_point": [
+        "146187/1000",
+        "99763/200"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "11108513/500000",
+      "incoming_handle_length": 4.7134940330926485,
+      "outgoing_handle_length": 4.7134940330926485,
+      "incoming_curvature": 0.002729753877935533,
+      "outgoing_curvature": -0.0028279333188855615,
+      "curvature_jump": 0.0055576871968210945,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[]/fork\u2192[]/1",
+      "path_index": 4,
+      "join_after": 3,
+      "side": "right_forward",
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/009.svg"
+    },
+    {
+      "point": [
+        146.17,
+        498.922
+      ],
+      "exact_point": [
+        "14617/100",
+        "249461/500"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "2776177/125000",
+      "incoming_handle_length": 4.712686707176704,
+      "outgoing_handle_length": 4.712686707176704,
+      "incoming_curvature": 0.0013308107756054921,
+      "outgoing_curvature": -0.004070216247211689,
+      "curvature_jump": 0.005401027022817181,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[]/fork\u2192[]/1",
+      "path_index": 4,
+      "join_after": 3,
+      "side": "right_forward",
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/009.svg"
+    },
+    {
+      "point": [
+        159.73,
+        503.528
+      ],
+      "exact_point": [
+        "15973/100",
+        "62941/125"
+      ],
+      "contact_agrees": true,
+      "tangent_agrees": true,
+      "derivative_agrees": true,
+      "angle_degrees": 0.0,
+      "exact_tangent_cross": "0",
+      "exact_tangent_dot": "4855121/250000",
+      "incoming_handle_length": 4.406867821934305,
+      "outgoing_handle_length": 4.406867821934305,
+      "incoming_curvature": -0.0008714763330372363,
+      "outgoing_curvature": -0.005428694011736033,
+      "curvature_jump": 0.0045572176786987965,
+      "exact_curvature_agrees": false,
+      "regular_curvature": true,
+      "key": "[]/fork\u2192[]/1",
+      "path_index": 4,
+      "join_after": 11,
+      "side": "left_return",
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/009.svg"
+    }
+  ],
+  "crop_flat_contacts": [
+    {
+      "mouth": "source_right",
+      "segment": 0,
+      "point": [
+        147.596,
+        498.0
+      ],
+      "boundary_key": "[1 0 0]/fork",
+      "boundary_segment": 4,
+      "tangent_line_agrees": true,
+      "connector_curvature": -0.3272756869986992,
+      "exact_connector_curvature_numerator": "-9995949/250000",
+      "exact_connector_speed_squared": "6155361/250000",
+      "exact_curvature_agrees_with_flat": false,
+      "flat_boundary_curvature": 0.0,
+      "curvature_jump": 0.3272756869986992,
+      "scope": "exact contact with a supplied flat segment; no filled-union theorem",
+      "key": "[1 0 0]/fork/0\u2192[1 1]",
+      "path_index": 3,
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/005.svg"
+    },
+    {
+      "mouth": "source_left",
+      "segment": 20,
+      "point": [
+        140.404,
+        498.0
+      ],
+      "boundary_key": "[1 0 0]/fork",
+      "boundary_segment": 4,
+      "tangent_line_agrees": true,
+      "connector_curvature": -0.3272756869986992,
+      "exact_connector_curvature_numerator": "-9995949/250000",
+      "exact_connector_speed_squared": "6155361/250000",
+      "exact_curvature_agrees_with_flat": false,
+      "flat_boundary_curvature": 0.0,
+      "curvature_jump": 0.3272756869986992,
+      "scope": "exact contact with a supplied flat segment; no filled-union theorem",
+      "key": "[1 0 0]/fork/0\u2192[1 1]",
+      "path_index": 3,
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/005.svg"
+    },
+    {
+      "mouth": "source_right",
+      "segment": 0,
+      "point": [
+        147.596,
+        498.0
+      ],
+      "boundary_key": "[1 0 0]/fork",
+      "boundary_segment": 4,
+      "tangent_line_agrees": true,
+      "connector_curvature": -0.3272756869986992,
+      "exact_connector_curvature_numerator": "-9995949/250000",
+      "exact_connector_speed_squared": "6155361/250000",
+      "exact_curvature_agrees_with_flat": false,
+      "flat_boundary_curvature": 0.0,
+      "curvature_jump": 0.3272756869986992,
+      "scope": "exact contact with a supplied flat segment; no filled-union theorem",
+      "key": "[1 0 0]/fork/0\u2192[1 1]",
+      "path_index": 3,
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/005.svg"
+    },
+    {
+      "mouth": "source_left",
+      "segment": 20,
+      "point": [
+        140.404,
+        498.0
+      ],
+      "boundary_key": "[1 0 0]/fork",
+      "boundary_segment": 4,
+      "tangent_line_agrees": true,
+      "connector_curvature": -0.3272756869986992,
+      "exact_connector_curvature_numerator": "-9995949/250000",
+      "exact_connector_speed_squared": "6155361/250000",
+      "exact_curvature_agrees_with_flat": false,
+      "flat_boundary_curvature": 0.0,
+      "curvature_jump": 0.3272756869986992,
+      "scope": "exact contact with a supplied flat segment; no filled-union theorem",
+      "key": "[1 0 0]/fork/0\u2192[1 1]",
+      "path_index": 3,
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/005.svg"
+    },
+    {
+      "mouth": "target_left",
+      "segment": 4,
+      "point": [
+        154.91,
+        495.0
+      ],
+      "boundary_key": "[0 0]/join",
+      "boundary_segment": 0,
+      "tangent_line_agrees": true,
+      "connector_curvature": -0.23125334874860126,
+      "exact_connector_curvature_numerator": "-40052169/500000",
+      "exact_connector_speed_squared": "49322529/1000000",
+      "exact_curvature_agrees_with_flat": false,
+      "flat_boundary_curvature": 0.0,
+      "curvature_jump": 0.23125334874860126,
+      "scope": "exact contact with a supplied flat segment; no filled-union theorem",
+      "key": "[0 0 0 1]\u2192[0 0]/join/1",
+      "path_index": 5,
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/001.svg"
+    },
+    {
+      "mouth": "source_right",
+      "segment": 0,
+      "point": [
+        157.09,
+        504.0
+      ],
+      "boundary_key": "[1 0 0]",
+      "boundary_segment": 4,
+      "tangent_line_agrees": true,
+      "connector_curvature": -0.23125334874860126,
+      "exact_connector_curvature_numerator": "-40052169/500000",
+      "exact_connector_speed_squared": "49322529/1000000",
+      "exact_curvature_agrees_with_flat": false,
+      "flat_boundary_curvature": 0.0,
+      "curvature_jump": 0.23125334874860126,
+      "scope": "exact contact with a supplied flat segment; no filled-union theorem",
+      "key": "[1 0 0]\u2192[1 0 1]",
+      "path_index": 4,
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/002.svg"
+    },
+    {
+      "mouth": "source_left",
+      "segment": 20,
+      "point": [
+        146.91,
+        504.0
+      ],
+      "boundary_key": "[1 0 0]",
+      "boundary_segment": 4,
+      "tangent_line_agrees": true,
+      "connector_curvature": -0.23125334874860126,
+      "exact_connector_curvature_numerator": "-40052169/500000",
+      "exact_connector_speed_squared": "49322529/1000000",
+      "exact_curvature_agrees_with_flat": false,
+      "flat_boundary_curvature": 0.0,
+      "curvature_jump": 0.23125334874860126,
+      "scope": "exact contact with a supplied flat segment; no filled-union theorem",
+      "key": "[1 0 0]\u2192[1 0 1]",
+      "path_index": 4,
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/002.svg"
+    },
+    {
+      "mouth": "target_left",
+      "segment": 4,
+      "point": [
+        154.91,
+        495.0
+      ],
+      "boundary_key": "[0 0]/join",
+      "boundary_segment": 0,
+      "tangent_line_agrees": true,
+      "connector_curvature": -0.23125334874860126,
+      "exact_connector_curvature_numerator": "-40052169/500000",
+      "exact_connector_speed_squared": "49322529/1000000",
+      "exact_curvature_agrees_with_flat": false,
+      "flat_boundary_curvature": 0.0,
+      "curvature_jump": 0.23125334874860126,
+      "scope": "exact contact with a supplied flat segment; no filled-union theorem",
+      "key": "[0 0 0 1]\u2192[0 0]/join/1",
+      "path_index": 5,
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/001.svg"
+    },
+    {
+      "mouth": "source_right",
+      "segment": 0,
+      "point": [
+        157.09,
+        504.0
+      ],
+      "boundary_key": "[1 0 0]",
+      "boundary_segment": 4,
+      "tangent_line_agrees": true,
+      "connector_curvature": -0.23125334874860126,
+      "exact_connector_curvature_numerator": "-40052169/500000",
+      "exact_connector_speed_squared": "49322529/1000000",
+      "exact_curvature_agrees_with_flat": false,
+      "flat_boundary_curvature": 0.0,
+      "curvature_jump": 0.23125334874860126,
+      "scope": "exact contact with a supplied flat segment; no filled-union theorem",
+      "key": "[1 0 0]\u2192[1 0 1]",
+      "path_index": 4,
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/002.svg"
+    },
+    {
+      "mouth": "source_left",
+      "segment": 20,
+      "point": [
+        146.91,
+        504.0
+      ],
+      "boundary_key": "[1 0 0]",
+      "boundary_segment": 4,
+      "tangent_line_agrees": true,
+      "connector_curvature": -0.23125334874860126,
+      "exact_connector_curvature_numerator": "-40052169/500000",
+      "exact_connector_speed_squared": "49322529/1000000",
+      "exact_curvature_agrees_with_flat": false,
+      "flat_boundary_curvature": 0.0,
+      "curvature_jump": 0.23125334874860126,
+      "scope": "exact contact with a supplied flat segment; no filled-union theorem",
+      "key": "[1 0 0]\u2192[1 0 1]",
+      "path_index": 4,
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/002.svg"
+    },
+    {
+      "mouth": "source_right",
+      "segment": 0,
+      "point": [
+        150.7,
+        498.0
+      ],
+      "boundary_key": "[0 0]/join",
+      "boundary_segment": 4,
+      "tangent_line_agrees": true,
+      "connector_curvature": -0.17821567916085873,
+      "exact_connector_curvature_numerator": "-2103948/15625",
+      "exact_connector_speed_squared": "5184729/62500",
+      "exact_curvature_agrees_with_flat": false,
+      "flat_boundary_curvature": 0.0,
+      "curvature_jump": 0.17821567916085873,
+      "scope": "exact contact with a supplied flat segment; no filled-union theorem",
+      "key": "[0 0]/join\u2192[1]",
+      "path_index": 6,
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/after/001.svg"
+    },
+    {
+      "mouth": "source_right",
+      "segment": 0,
+      "point": [
+        150.7,
+        498.0
+      ],
+      "boundary_key": "[0 0]/join",
+      "boundary_segment": 4,
+      "tangent_line_agrees": true,
+      "connector_curvature": -0.17821567916085873,
+      "exact_connector_curvature_numerator": "-2103948/15625",
+      "exact_connector_speed_squared": "5184729/62500",
+      "exact_curvature_agrees_with_flat": false,
+      "flat_boundary_curvature": 0.0,
+      "curvature_jump": 0.17821567916085873,
+      "scope": "exact contact with a supplied flat segment; no filled-union theorem",
+      "key": "[0 0]/join\u2192[1]",
+      "path_index": 6,
+      "in_crop": true,
+      "file": "docs/research/2026-10-13-smoothness-evidence/noise/001.svg"
+    }
+  ],
+  "summary": {
+    "files": 40,
+    "connectors": 214,
+    "side_seams": 2052,
+    "exact_tangent_failures": 0,
+    "exact_curvature_failures": 1412,
+    "nonregular_curvature_seams": 0,
+    "format_issues": 0,
+    "flat_contacts": 732,
+    "curvature_cutoff": null,
+    "cutoff_failures": 0,
+    "result": "pass"
+  }
+}

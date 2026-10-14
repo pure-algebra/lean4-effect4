@@ -8,8 +8,9 @@ import Std.Data.HashSet
 # A program's flow: its own graph as a fold, and its layout as a fold
 
 Slices D2 and D3 of the program graph's design (`docs/research/2026-10-09-program-graph-design.md`;
-decisions row 337, point 9). A program's flow is what must happen before what. `bind` and
-statements stand in series. The branches of `raceAll`, and a forked fiber beside its parent's
+decisions row 337, point 9). A program's flow records structural layout constraints.
+It does not record scheduler events or establish runtime causality.
+`bind` and statements stand in series. The branches of `raceAll`, and a forked fiber beside its parent's
 continuation, stand in parallel. Alternatives (a handler, the branches of `select` and `ifElse`)
 stand side by side, one of them taken. A region (a scope, an uninterruptible span, a provided
 layer) brackets its part, and a loop returns.
@@ -306,10 +307,10 @@ end
 A program's waits make its graph more than series-parallel: an await may wait for a fiber forked
 in another part. So the layout has two passes. Across, it is a fold of the flow (`lay`): series
 centres its parts, parallel stands its branches side by side, a region adds a margin. Down, each
-item stands below every item before it, by the longest path over the flow's edges and its waits:
-so every edge descends, and an await stands below the end of the fiber it waits for. A wait that
-closes a cycle is a deadlock, and is drawn in a lane, so it stands out. A region's frame is the
-bounding box of what it holds.
+item stands below its accepted predecessors, by the longest path over the structural constraints.
+A wait that closes a constraint cycle appears in a lane.
+That cycle does not establish runtime deadlock.
+A region's frame is the bounding box of what it holds.
 
 **Positions, not names.** A part's edges name their ends by their positions among the part's
 items, as a variable names its binder by a position. Composing two parts moves the second's
@@ -332,7 +333,7 @@ def Edge.reindex (d : Nat) (e : Edge) : Edge := { e with fr := e.fr + d, to := e
 
 /-- A region before its height is known: its key, its name, its place and width across, the
 positions of the items inside it, and the regions inside it. -/
-structure Frame where
+structure RegionFrame where
   key : Key
   name : String
   x : Int
@@ -355,7 +356,7 @@ structure Box where
   botPad : Int := 0
   items : List Placed := []
   edges : List Edge := []
-  frames : List Frame := []
+  frames : List RegionFrame := []
   backs : List (Nat × Nat) := []
   exits : List (Key × Nat) := []
   waits : List (Nat × Key) := []
@@ -535,8 +536,9 @@ def sideBySide (how : Branching) (k : Key) (bs : List Box) : Box :=
   parAround how k W ends r.1 r.2
 
 /-- **A region**: its part inside a margin, under a row for its name; the room above and below is
-reserved in the gaps around it. -/
+reserved in the gaps around it. An empty part keeps one addressed point for this allocation. -/
 def framed (name k : String) (b : Box) : Box :=
+  let b := if b.empty then point (k ++ "/empty") else b
   let m := b.shift MARGIN
   let w := b.w + 2 * MARGIN
   { m with w, topPad := b.topPad + MARGIN + LABEL, botPad := b.botPad + MARGIN,
@@ -847,9 +849,18 @@ def layout (f : Flow) : Laid :=
       let v := keyAt j
       if i == j then Route.loop (u ++ "↺") u else Route.back (u ++ "↺" ++ v) u v lane
   let height := (placed.map bottomOf ++ rects.map fun (p : Key × Region) => p.2.y + p.2.h).foldl max 0
+  let routingWidth := b.w + (if pl.lanes.isEmpty then 0 else CELL * (GAP + 2 * pl.lanes.length))
+  let loops := routes.filterMap fun
+    | .loop _ k _ => (placed.find? (·.key == k)).map fun p =>
+      let centre := p.y + (if p.node.isSome then ROWH * BOXROWS / 2 else ROWH)
+      PaintBounds.controlHull (PaintBounds.loopSegment (p.x + p.w) centre LOOP_HALF LOOP_REACH)
+    | _ => none
+  let (width, height) := PaintBounds.reserveCanvas routingWidth height loops
   { placed := arr, routes := routes.toArray, regions := (rects.map (·.2)).reverse.toArray,
     marks := marks.toArray,
-    width := b.w + (if pl.lanes.isEmpty then 0 else CELL * (GAP + 2 * pl.lanes.length)), height }
+    attachments := (b.marks.flatMap fun (k, _, is) =>
+      is.filterMap fun i => (at_ i).map fun p => ({ port := p.key, mark := k } : PortAttachment)).toArray,
+    width, height, routingWidth := some routingWidth }
 
 /-- **A page's program graph**: the program's flow, each node labelled with its line's text and
 type on the page, laid out. -/

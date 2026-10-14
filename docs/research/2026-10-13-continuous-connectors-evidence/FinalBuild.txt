@@ -1,0 +1,18 @@
+warning: manifest out of date: git revision of dependency 'whatwg' changed; use `lake update whatwg` to update it
+✔ [639/654] Built Tools.View.Connector (1.4s)
+✔ [640/654] Built Tools.View.ConnectorMemo (1.4s)
+✔ [641/654] Built Tools.View.Graph (2.6s)
+✔ [642/654] Built Tools.View.GraphCheck (2.7s)
+✔ [643/654] Built Tools.View.Page (2.9s)
+✔ [644/654] Built Tools.View.Motion (2.0s)
+✔ [645/654] Built Tools.View.Specimen (2.0s)
+✔ [646/654] Built Tools.View.Program (3.1s)
+✔ [647/654] Built Tools.View.Run (3.3s)
+✔ [648/654] Built Tools.View.Flow (3.4s)
+✔ [649/654] Built Tools.View.Build (4.3s)
+✔ [650/654] Built Tools.View.FlowSpecimen (15s)
+✔ [651/654] Built Tools.View.Inc (15s)
+✔ [652/654] Built Tools.View.Live (4.1s)
+✔ [653/654] Built Drivers.View (4.8s)
+✔ [654/654] Built Tools.View.LiveChecks (11s)
+Build completed successfully (654 jobs).

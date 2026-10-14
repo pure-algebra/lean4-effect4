@@ -34,6 +34,7 @@ tools/view/v -H pFork       # the run's page in the browser: its frames as SVG, 
 tools/view/v -G             # every kept run in the browser, newest first
 tools/view/v -d             # the document specimen, dark beside paper, in the studio
 tools/view/v -V             # the vocabulary of marks (row 367), every mark drawn, in the viewer
+tools/view/v -V cells       # the Queue's cell, drawn by its type
 tools/view/v -f FILE        # the frames of a session request file
 tools/view/v -P -m 1 pLoop  # no marks; no motion
 tools/view/v -l paper pFork # in a look of tools/view/looks/
@@ -72,6 +73,12 @@ draws plain curves and square corners. A look is a file of
 the W3C design-token format, 2025.10, that names only what it changes from the dark look, the
 base (`tools/view/looks/`). A token the look does not have, or a value out of its range, is
 refused with its path and the reason.
+
+Each graph connector has one closed perimeter with integrated flares.
+`Connector` in `tools/Tools/View/Connector.lean` reserves the necks and shares their tangent handles.
+The kit's integer `Scene.Ribbon` assembles the perimeter.
+`ConnectorMemo` caches that outline, including both docking offsets and radii.
+`SceneBridge` converts the kit's integer records for the graph connectors.
 
 From one look come three outputs, so the native view and the web agree:
 
@@ -167,8 +174,8 @@ Proved in `tools/Tools/View/`, each resting on `[propext, Quot.sound]` or less:
 - `cata_keeps`: a property that each layer keeps holds of every fold.
 - `lines_at`: a program's lines at any address and depth are its lines at the root, moved there.
   So a splice redraws its own subtree alone.
-- `Grow.stroke_move`: an organic stroke of a moved line is the stroke, moved; so a stroke cache
-  answers the stroke itself (`Laid.cachedStroke_eq`) and stays valid (`cachedStroke_valid`).
+- `Connector.cached_eq` (`tools/Tools/View/ConnectorMemo.lean`): a valid cache answers the request's exact connector outline.
+- `Connector.cached_valid`: the next frame receives a valid cache.
 - `Laid.Ix.find_of`, `Ix.onBar_of`: a drawing's index of places answers as the scans do.
 - `ordersTable_eq`, `assignTable_eq`, `heightTable_eq`: the layout's tables answer as its lists,
   so the layout's laws stand on the tables.

@@ -1,0 +1,23 @@
+warning: manifest out of date: git revision of dependency 'whatwg' changed; use `lake update whatwg` to update it
+docs/research/2026-10-13-graph-library-evidence/RenderingAudit.lean:4:0: error: #axiom_audit: 4 of 13 declarations reach axioms outside [propext, Quot.sound]:
+  Tools.View.GraphLayout.checked._proof_2 reaches [Classical.choice]
+  Tools.View.GraphLayout.checked reaches [Classical.choice]
+  Tools.View.Specimen.checkedFrames reaches [Classical.choice]
+  Tools.View.Specimen.frames reaches [Classical.choice]
+2 of them stand under no other; each one's path to its axiom:
+  Tools.View.GraphLayout.checked._proof_2  (Tools.View.GraphLayout)
+  → Tools.View.Graph.layout  (Tools.View.Graph)
+  → Tools.View.Graph.items  (Tools.View.Graph)
+  → Tools.View.Graph.boxWidth  (Tools.View.Graph)
+  → String.length  (Init.Data.String.Length)
+  → ⋯ 7 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
+  Tools.View.Specimen.frames  (Tools.View.Specimen)
+  → Tools.View.Graph.layout  (Tools.View.Graph)
+  → Tools.View.Graph.items  (Tools.View.Graph)
+  → Tools.View.Graph.boxWidth  (Tools.View.Graph)
+  → String.length  (Init.Data.String.Length)
+  → ⋯ 7 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)

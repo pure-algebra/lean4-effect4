@@ -1,0 +1,17 @@
+warning: manifest out of date: git revision of dependency 'whatwg' changed; use `lake update whatwg` to update it
+docs/research/2026-10-13-continuous-connectors-evidence/PegAudit.lean:4:0: error: #axiom_audit: 2 of 40 declarations reach axioms outside [propext, Quot.sound]:
+  Tools.View.Tube.PegFigure.nodes reaches [Classical.choice]
+  Tools.View.Tube.PegFigure.still reaches [Classical.choice]
+1 of them stands under no other; each one's path to its axiom:
+  Tools.View.Tube.PegFigure.nodes  (Tools.View.Tube.PegRender)
+  → Whatwg.Html.SvgNode  (Whatwg.Html.Node.Svg)
+  → Whatwg.Html.SvgNode.raw  (Whatwg.Html.Node.Svg)
+  → Whatwg.Html.RawNode.valuesAnywhere  (Whatwg.Html.Node.Svg)
+  → Whatwg.Html.Content.valuesAt  (Whatwg.Html.Content.Values)
+  → Whatwg.Html.Content.valuesWalk  (Whatwg.Html.Content.Values)
+  → Whatwg.Html.Content.Ns.step  (Whatwg.Html.Svg)
+  → Whatwg.Html.Schema.Tag.ofForeignName?  (Whatwg.Html.Schema.Tags)
+  → String.toList  (Init.Data.String.Basic)
+  → ⋯ 6 more toolchain constants
+  → Classical.propDecidable  (Init.Classical)
+  → Classical.choice  (Init.Prelude)
