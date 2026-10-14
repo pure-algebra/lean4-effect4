@@ -387,6 +387,11 @@ ts/eff/node_modules: ts/eff/package.json ts/eff/bun.lock
 harness/truth/node_modules: | ts/eff/node_modules
 	ln -s ../../ts/eff/node_modules $@
 
+# The to-do application (`apps/todo/`, decisions row 378 (15)) resolves Effect through its own link
+# to that install, as the truth harness does.
+apps/todo/node_modules: | ts/eff/node_modules
+	ln -s ../../ts/eff/node_modules $@
+
 .PHONY: doctor
 doctor: ## the tools and installs every tier needs, with their versions
 	@printf 'lean       %s\n' "$$(lean --version 2>&1 | head -1)"
@@ -686,12 +691,13 @@ $(CHK)/ingest: $(CORPUS)/index.tsv ts/eff/node_modules $(TS_EFF_SOURCES) tools/D
 # The keyed lane also performs the scenarios' scripts (decisions row 254), so the batteries that
 # `harness/truth/session/Keyed.lean` imports are its inputs, by their sources. It performs the
 # to-do's scripts on the to-do's emitted Effect service too (decisions row 378 (20), slice E4), so
-# the service's writer, consumer, runner and red controls are its inputs. The recipe builds what
-# the four Lean files that the script runs import, since `lake env` builds nothing.
+# the service's runner and red controls, and the to-do application's writer of the service and its
+# consumer (`apps/todo/`), are its inputs. The recipe builds what the four Lean files that the
+# script runs import, since `lake env` builds nothing.
 HOST_PROTOCOL_SCENARIOS := $(wildcard Test/Dogfood/*.lean Test/Dogfood/Scenario/*.lean)
-HOST_PROTOCOL_SERVICE := $(wildcard harness/truth/service/*.lean harness/truth/service/*.ts harness/truth/service/*.json harness/truth/service/red/*)
-$(CHK)/host-protocol: $(LEAN_INPUTS) $(wildcard harness/truth/session/*.ts harness/truth/session/*.lean harness/truth/session/*.json) $(HOST_PROTOCOL_SCENARIOS) $(HOST_PROTOCOL_SERVICE) $(PRELUDE_SOURCES) tools/Tools/HostProtocol.lean scripts/check-host-protocol.py | harness/truth/node_modules
-	$(call build_imports,tools/Tools/HostProtocol.lean harness/truth/session/Keyed.lean harness/truth/session/Session.lean harness/truth/service/EmitTodo.lean)
+HOST_PROTOCOL_SERVICE := $(wildcard harness/truth/service/*.ts harness/truth/service/*.json harness/truth/service/red/* apps/todo/*.lean apps/todo/*.ts)
+$(CHK)/host-protocol: $(LEAN_INPUTS) $(wildcard harness/truth/session/*.ts harness/truth/session/*.lean harness/truth/session/*.json) $(HOST_PROTOCOL_SCENARIOS) $(HOST_PROTOCOL_SERVICE) $(PRELUDE_SOURCES) tools/Tools/HostProtocol.lean scripts/check-host-protocol.py | harness/truth/node_modules apps/todo/node_modules
+	$(call build_imports,tools/Tools/HostProtocol.lean harness/truth/session/Keyed.lean harness/truth/session/Session.lean apps/todo/EmitTodo.lean)
 	$(PY) scripts/check-host-protocol.py
 	@mkdir -p $(CHK) && touch $@
 

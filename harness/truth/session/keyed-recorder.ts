@@ -13,7 +13,15 @@
  * acts, by two rules that the session has (`src/Effect4/Api/HostSession.lean`): `submit` refuses
  * a reply with no live bound call as `noCall` and a second reply at a key as `pendingReply`,
  * and `applyReply` refuses a key with no bound call or no stored reply as `noCall`. The lane's
- * check compares each prediction with the verdict that Lean's replay gives the same record. */
+ * check compares each prediction with the verdict that Lean's replay gives the same record.
+ *
+ * A fixture may be `live` instead (decisions row 378 (16), slice V4): the to-do application's
+ * front records each request that it serves (`apps/todo/server.ts`). No plan holds a live call,
+ * and no script holds it: the host answers each call when it starts. So the recorder writes no
+ * decision record of a live call, whose guard token it cannot know. It keeps each call's row,
+ * request and completion in call order, and `request` writes them with the root's exit as the
+ * request's record. Lean rebuilds the request's run from that record and decides its checks
+ * (`apps/todo/Check.lean`, the lowering note's §6.1). */
 import { Cause, Deferred, Effect, Exit, Option, Result, type Fiber } from "effect"
 import { canonicalJson, payloadOf } from "../prelude.ts"
 import { equalJson, type Json } from "./protocol.ts"
@@ -22,7 +30,13 @@ import type { ProtocolState } from "./protocol.gen.ts"
 import type { Rc112ClockBoundary } from "./clock.ts"
 export interface PlannedCall extends Key { callId: number; row: number; request: Json }
 export interface PlannedAnswer { answerFor: number; completion: Json }
-export interface KeyedFixture { name: string; expression: string; table: Json[]; source: null | { variant: number; pulls: number }; plan: Array<PlannedCall | PlannedAnswer>; expected: Json; scripted?: true }
+export interface KeyedFixture { name: string; expression: string; table: Json[]; source: null | { variant: number; pulls: number }; plan: Array<PlannedCall | PlannedAnswer>; expected: Json; scripted?: true; live?: true }
+/** A call of a live run: the row's position in the table, the request, and the host's completion
+ * once the host operation exits. */
+export interface AnsweredCall { row: number; request: Json; completion?: Json }
+/** The record of one live request: the entry (the fixture's name), its arguments, each call with
+ * its row, its request and its completion, in call order, and the root's exit. */
+export interface RequestRecord { entry: string; args: Json[]; calls: Array<Required<AnsweredCall>>; exit: Json }
 /** A call that a scenario's script holds: one entry of the recorder's ledger. `reply` is the
  * completion that the recorder stored for it. `kept` says whether that reply waited when a
  * cancellation retired the call. */
@@ -151,6 +165,8 @@ export class KeyedRecorder {
   private readonly runtime = new Map<number, Fiber.Fiber<unknown, unknown>>()
   private readonly ledger: Held[] = []
   private readonly ledgerRefusals: LedgerRefusal[] = []
+  /** The calls of a live run, in call order. */
+  private readonly answered: AnsweredCall[] = []
   private readonly received: Held[] = []
   private readonly applied: Held[] = []
   private readonly retirements: Array<{ call: Held; kept: boolean; act: number }> = []
@@ -168,6 +184,7 @@ export class KeyedRecorder {
     this.records.push(decodeRecord({ ...fields, version: hostProtocol.version, session: this.session }, this.session))
   }
   external<A, E>(row: number, request: Json, work: Effect.Effect<A, E>): Effect.Effect<A, E> {
+    if (this.fixture.live) return this.answerLive(row, request, work)
     return Effect.withFiber(fiber => Effect.callback<A, E>(resume => {
       try {
         const call = this.calls[this.nextCall]
@@ -186,6 +203,40 @@ export class KeyedRecorder {
         resume(Effect.die(this.refused))
       }
     }))
+  }
+  /** A call of a live run. The recorder notes its row and request, runs the host operation in the
+   * calling fiber, and notes the completion when the operation exits. Only the root calls: no plan
+   * numbers another fiber. A call outside these terms is refused, and the request has no record. */
+  private answerLive<A, E>(row: number, request: Json, work: Effect.Effect<A, E>): Effect.Effect<A, E> {
+    return Effect.withFiber(fiber => {
+      try {
+        if (this.closed) throw Error("a live call after the request's record")
+        if (this.fibers.get(fiber.id) !== 0) throw Error("a live call from a fiber other than the root")
+        if (!Number.isSafeInteger(row) || row < 0 || row >= this.fixture.table.length) throw Error(`a live call on row ${row}, which the table does not hold`)
+      } catch (error) {
+        this.refused ??= error instanceof Error ? error : Error(String(error))
+        return Effect.die(this.refused)
+      }
+      const call: AnsweredCall = { row, request }
+      this.answered.push(call)
+      return Effect.onExit(work, exit => Effect.sync(() => {
+        try { call.completion = exitJson(exit, this.fibers) }
+        catch (error) { this.refused ??= error instanceof Error ? error : Error(String(error)) }
+      }))
+    })
+  }
+  /** The record of a live request, from its arguments and the root's exit. After it the recorder
+   * notes nothing more. */
+  request(args: Json[], exit: Exit.Exit<unknown, unknown>): RequestRecord {
+    if (this.refused) throw this.refused
+    if (!this.fixture.live) throw Error("a request record of a run that is not live")
+    const calls = this.answered.map(call => {
+      if (call.completion === undefined) throw Error(`the call on row ${call.row} has no completion`)
+      return { row: call.row, request: call.request, completion: call.completion }
+    })
+    const record: RequestRecord = { entry: this.fixture.name, args, calls, exit: this.exitOf(exit) }
+    this.closed = true
+    return structuredClone(record)
   }
   /** A runtime fiber is one fiber of the machine, and a fiber of the machine is one runtime fiber. */
   private associate(fiber: number, runtime: Fiber.Fiber<unknown, unknown>): void {

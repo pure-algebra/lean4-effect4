@@ -10,9 +10,10 @@ on its printed module, and Lean replays each recording. Every written module is 
 under each header that the runner writes for it.
 
 The to-do's scripts run a second time on its emitted Effect service (decisions row 378 (20),
-slice E4, `harness/truth/service/`). Lean writes the service's file; tsgo 7 checks it with its
-consumer and red controls. The consumer's programs perform each to-do script with the lane's
-recorder; Lean replays each recording and decides each run's checks beside the script's own run.
+slice E4, `harness/truth/service/`). Lean writes the service's file into the to-do application's
+folder (`apps/todo/`); tsgo 7 checks it with its consumer and red controls. The consumer's
+programs perform each to-do script with the lane's recorder; Lean replays each recording and
+decides each run's checks beside the script's own run.
 """
 from pathlib import Path
 import copy
@@ -28,10 +29,11 @@ from generate import native_libraries
 
 ROOT = Path(__file__).resolve().parent.parent
 SESSION = ROOT / 'harness/truth/session'
-# The to-do's emitted service (slice E4): its consumer, its runner and the file's writer, and the
-# folder its consumer imports the written file from.
+# The to-do's emitted service (slice E4): its runner and red controls. The to-do application holds
+# the file's writer, the consumer, and the work folder that the consumer imports the file from.
 SERVICE = ROOT / 'harness/truth/service'
-SERVICE_FILE = SESSION / '.work' / 'service'
+APP = ROOT / 'apps/todo'
+SERVICE_FILE = APP / '.work'
 MODULES = ROOT / 'ts/eff/node_modules'
 TSGO = MODULES / '@typescript/native-preview/bin/tsgo'
 # The scenarios' batteries, which `Keyed.lean` imports, and the one tool module beside them.
@@ -144,11 +146,11 @@ def main():
             raise SystemExit('FAIL host-protocol: the recordings of the four fixture families moved: '
                              f'cases.json has the digest {digest}, and the pin is {CASES_SHA256}')
         # The to-do's service file, where its consumer imports it from (slice E4).
-        lean('harness/truth/service/EmitTodo.lean', SERVICE_FILE, '../../../prelude.ts')
+        lean('apps/todo/EmitTodo.lean', SERVICE_FILE, '../../../harness/truth/prelude.ts')
         # Include the actual generated expressions, alongside every owned adapter source, and the
         # service's consumer and runner with the file they import.
         config = {'extends': str(ROOT / 'harness/truth/tsconfig.json'),
-                  'include': [str(host / '*.ts'), str(SESSION / '*.ts'), str(SERVICE / '*.ts')],
+                  'include': [str(host / '*.ts'), str(SESSION / '*.ts'), str(SERVICE / '*.ts'), str(APP / '*.ts')],
                   'compilerOptions': {'types': ['bun'], 'typeRoots': [str(MODULES / '@types')]}}
         (work / 'tsconfig.json').write_text(json.dumps(config))
         run(node, str(TSGO), '--pretty', 'false', '--noEmit', '-p', str(work / 'tsconfig.json'))

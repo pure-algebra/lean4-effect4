@@ -1,17 +1,27 @@
 import Test.Dogfood.Scenario.Todo
 import Effect4.Program.Authoring.ApplicationService
+import Effect4.Codegen.RowServices
 import Tools.Code.Module
+import Tools.ProfileJson
 
 /-!
-# The to-do application as one Effect service, written for its consumer (slice E4)
+# The to-do application as one Effect service, written for its consumers (slices E4 and V4)
 
-    lake env lean --run harness/truth/service/EmitTodo.lean OUT PRELUDE
+    lake env lean --run apps/todo/EmitTodo.lean OUT PRELUDE
 
 Writes `OUT/todo.gen.ts`, the to-do application (`Test/Dogfood/Scenario/Todo.lean`) as one Effect
 service (decisions row 378 (20)): the file `ModuleEmission.file` with its prelude at `PRELUDE`,
 laid out at Effect's width. The file holds the payload classes, the repository's service
 (`rowServiceDecls`, row 378 (19)), the service's block and its layer, and the main. Its imports
-come from Lean data (row 373 (11)). `run-todo.ts` beside this file runs the to-do's scripts on it.
+come from Lean data (row 373 (11)).
+
+Beside it stands `OUT/todo.table.json`: the application's name, its row table on the wire
+(`Tools.ProfileJson.tableJson`) and the namespaces that the file declares as services. The front
+(`apps/todo/server.ts`) records each host call by its row's position in that table. It writes the
+table into each session's header, and the checker (`apps/todo/Check.lean`) compares it whole.
+
+Two consumers run the file. The keyed lane's runner performs the to-do's scripts on it
+(`harness/truth/service/run-todo.ts`, slice E4). The front serves it over SQLite (slice V4).
 -/
 
 open Effect4 Effect4.Program Effect4.Program.Authoring Effect4.Codegen
@@ -33,7 +43,12 @@ def main (args : List String) : IO UInt32 := do
     | .error why => IO.eprintln s!"the file refuses: {reprStr why}"; return 1
   let header := ["todo: the to-do application as one Effect service, written by the Effect4 code",
     "generator (decisions row 378 (20)). Do not edit."]
+  let application := Test.Dogfood.Scenario.Todo.application
+  let table := Lean.Json.mkObj [("application", .str application.name),
+    ("table", Tools.ProfileJson.tableJson application.table),
+    ("services", Lean.toJson ((rowServices application.table).map (·.ns)))]
   IO.FS.createDirAll out
   IO.FS.writeFile (out / "todo.gen.ts") (Tools.Code.moduleText Tools.Code.Ts.width { file with header })
-  IO.println s!"EmitTodo: wrote the to-do's service module to {out / "todo.gen.ts"}"
+  IO.FS.writeFile (out / "todo.table.json") (table.compress ++ "\n")
+  IO.println s!"EmitTodo: wrote the to-do's service module and its table to {out}"
   return 0
