@@ -349,3 +349,22 @@ now carries no prelude, so `eff_types.ml` declares types alone.
 The host run's probe (§6.7) now reports no missing row. Its four clock refusals and `EffAlgebra`
 remain. `check-compiler`, which checks each row's runtime column against the environment,
 `check-native` and `check-ocaml` pass. The engines gain the one prelude line.
+
+### 6.9 What F3 and the clock refusals need, read
+
+**F3.** The host run reaches `EffAlgebra` through two folds that `Effect4.Run.Basic` imports:
+the fork-site reader `superAlg` (`src/Effect4/Api/Supervision.lean`, family `SiteReader`, a
+constant family) and the identity fold of the test clock (`src/Effect4/Api/TestClock.lean`).
+`R : EffFam → Type` ranges over `EffFam`, a finite inductive whose constructors take no
+argument. **The rule:** a type parameter of type `I → Type`, with `I` such a finite index,
+becomes one OCaml type parameter per constructor of `I`, and an instance reads each by
+reducing `R c`. It is exact and needs no cast. The type generator (`OCaml5.Lcnf.Types`) and the
+translator's annotations carry it.
+
+**The clock refusals.** `Run.drive` calls the reactor, a parameter of the function. The analysis
+(`OCaml5.Lcnf.ClockFlow`) marks a parameter call's result as unknown higher-order production, and
+the answer's values stay in the machine, where a program can read one as a duration. The engine
+artifact takes host answers as root data on the tape, and checks them at its ingress (EN8). The
+choice is the clock boundary's: treat a reactor's answer as the same host ingress, or resolve the
+known reactor through `runWith` and `drive` at the call site. Its owner is the clock boundary's
+design (DI-56), so the choice is recorded here, not made.
