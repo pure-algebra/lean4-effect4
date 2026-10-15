@@ -48,6 +48,45 @@ source, or misplaces a law. Write the review only. Change no other file.
    Does Effect RPC's split (group, serialization, protocol, socket) carry over cleanly, or does it
    hide a choice the plan should make explicitly?
 
+## The theoretical grounding (the owner's directive)
+
+The owner asks for one framework that fits the tree's literature and serves agents first. The
+interop capabilities are many: libraries, transports, platforms, faces. The framework must make
+each one a case of a few structures, so an agent reads one description and gets every surface.
+
+Ground each layer in the texts the tree already holds. Read them at these paths:
+
+- `docs/research/2026-10-09-comodel-papers/text/`: Plotkin and Power (2008), Uustalu (2015),
+  Ahman and Bauer (2020), Setzer and Hancock (2005), Niu and Spivak (2023);
+- `vendor/papers/program-graphs/`: interaction trees, choice trees, Foster et al. on bidirectional
+  tree transformations, Huet's zipper, Lamport (1978);
+- concept 9 of `docs/core/semantics.md`, with its session-type and I/O-automata literature.
+
+Answer these, each with the declarations it touches:
+
+1. **The interface.** Is a row table a polynomial, with operations as positions and answers as
+   directions (Niu and Spivak; Setzer and Hancock's interfaces)? Is a native library's interface
+   one too? `Effects.Signature.Hom` (`Effects/Lens.lean`) maps operations forward and answers
+   back: is it the polynomial morphism, and is a transport codec that morphism with partiality?
+2. **The transport.** State the top abstraction precisely. A candidate: a transport is a pair of
+   host maps, read through runners and comodels (Uustalu; Ahman and Bauer). Their composite is
+   the identity on a named observation. Does `rpc/Transport.lean`'s `through_serve` instantiate it?
+   What do the polynomial operations give for free: the parallel product for several services,
+   and composition for layering?
+3. **The codecs.** Framing and messages are exact embeddings (the tree's `Image`). Do the lens
+   laws of Foster et al. add anything the tree's two laws lack, such as a normaliser?
+4. **Correlation.** Is the correlation layer a simulation (concept 9's I/O automata), or an
+   interaction tree over the two operations send and receive? Which gives a shorter proof of the planned
+   law, and which observation does each name?
+5. **Lifecycle.** Setzer and Hancock's state-indexed interfaces are the tree's `ISignature`. Do
+   they carry resource handles and their capabilities, for P5 of the interop plan?
+6. **Agent utility.** For each choice, say what an agent gains: one place to read an interface,
+   generated surfaces, located refusals, replay of a recorded run.
+
+Mark each literature claim as the controlled English requires: "read" only for a text above,
+"named" otherwise. Take a locator only from
+`docs/research/2026-10-01-semantics/citations-audit.md`. Propose a paper to file; do not download one.
+
 ## The deliverable
 
 Write `docs/research/2026-10-15-ocaml-interop-explore/codex-review.md`. Open with the one finding
