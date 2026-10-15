@@ -120,7 +120,7 @@ theorem getCont_value_selected (world : World) (input output : Kind)
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- A hook keeps the recorded interrupt. A step of `popFrom_cause_selected`'s scratch
 invariant. -/
-private theorem ensure_recorded (code : Prim ν σ β ε δ ι α) (fiber : FrameFiber ν σ β ε δ ι α) :
+theorem ensure_recorded (code : Prim ν σ β ε δ ι α) (fiber : FrameFiber ν σ β ε δ ι α) :
     (code.ensure fiber).1.interruptedCause = fiber.interruptedCause := by
   cases code with
   | onExit _ _ _ =>

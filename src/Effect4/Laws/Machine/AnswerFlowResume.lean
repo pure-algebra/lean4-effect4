@@ -59,12 +59,21 @@ theorem getCont_suffix (world : World) (input output : Kind) (fiber : FrameFiber
   · exact ⟨input, stack⟩
   · exact popFrom_suffix model Edge mask world input output demand skip fiber.stack _ cause rfl stack
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+/-- An actual replacing hook is the restoring mask and returns its actual recorded cause. -/
+theorem ensure_replacement_recorded (frame : Prim ν σ β ε δ ι α)
+    (fiber : FrameFiber ν σ β ε δ ι α) (next : Prim ν σ β ε δ ι α)
+    (found : (frame.ensure fiber).2 = some next) :
+    ∃ cause, frame = .setInterruptible true ∧ fiber.interruptedCause = some cause ∧ next = .failure cause := by
+  fun_cases Prim.ensure frame fiber
+  all_goals aesop (rule_sets := [Effect4.Fibers]) (add norm simp [Prim.ensure])
+
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- Every replacement emitted by an existing mask hook is an actual failure primitive. -/
 theorem ensure_replacement_failure (frame : Prim ν σ β ε δ ι α)
     (fiber : FrameFiber ν σ β ε δ ι α) (next : Prim ν σ β ε δ ι α)
     (found : (frame.ensure fiber).2 = some next) : ∃ cause, next = .failure cause := by
-  fun_cases Prim.ensure frame fiber
-  all_goals aesop (add norm simp [Prim.ensure])
+  obtain ⟨cause, mask, recorded, failure⟩ := ensure_replacement_recorded frame fiber next found
+  exact ⟨cause, failure⟩
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- Existing hook answers replace code only with a failure primitive. -/
@@ -100,6 +109,75 @@ theorem drain_replacement_failure (fiber : FrameFiber ν σ β ε δ ι α) (dem
         exact answer_replacement_failure pushed {fiber with stack := below} demand next selected
     · cases found
 
+/-- A replacement retains its actual original hook or the actual hook-drain site.
+Consumer: Timeout's numeric restoring-mask permission; the old failure reader follows below. -/
+def ReplacementOrigin (Input : Kind → Prop) (world : World) (output : Kind)
+    (demand : Arm) (skip : Bool) (recorded : Option (Cause ε δ ι α))
+    (next : Prim ν σ β ε δ ι α) (returned : List (Prim ν σ β ε δ ι α)) : Prop :=
+  (∃ input middle head rest, ∃ scratch : FrameFiber ν σ β ε δ ι α,
+    Edge world input middle head ∧ Path (Edge world) middle output rest ∧ Input input ∧
+    scratch.stack = [] ∧ scratch.interruptedCause = recorded ∧
+    head.answerOf demand (head.ensure scratch).2 = some (.replacement next) ∧
+    returned = (head.ensure scratch).1.stack ++ rest) ∨
+  (∃ input middle head rest, ∃ scratch : FrameFiber ν σ β ε δ ι α, ∃ before after,
+    Edge world input middle head ∧ Path (Edge world) middle output rest ∧ Input input ∧
+    scratch.stack = [] ∧ scratch.interruptedCause = recorded ∧
+    PopTrace.Passes demand skip head scratch before after ∧
+    (FrameFiber.passPushed demand skip (head.ensure scratch).1 after).answer = .replacement next ∧
+    returned = (FrameFiber.passPushed demand skip (head.ensure scratch).1 after).fiber.stack ++ rest)
+
+/-- The nonrecursive hook drain retains the actual recorded cause. -/
+theorem passPushed_recorded (demand : Arm) (skip : Bool) (fiber : FrameFiber ν σ β ε δ ι α)
+    (cause : Option (Cause ε δ ι α)) :
+    (FrameFiber.passPushed demand skip fiber cause).fiber.interruptedCause = fiber.interruptedCause := by
+  rw [FrameFiber.passPushed_fiber_cause]
+  cases stack : fiber.stack with
+  | nil => rw [FrameFiber.passPushed_nil _ _ _ stack]
+  | cons head rest =>
+    rw [FrameFiber.passPushed_fiber _ _ _ head rest stack, Contextual.ensure_recorded]
+
+/-- One actual pop producer retains incoming data and the exact replacement site.
+The transport premise concerns only original frames that the actual pop passes. -/
+theorem popFrom_replacement_origin (Input : Kind → Prop) (world : World) (demand : Arm) (skip : Bool)
+    (transport : ∀ input middle head scratch before after,
+      Edge world input middle head → PopTrace.Passes demand skip head scratch before after →
+      Input input → Input middle)
+    (input output : Kind)
+    (frames : List (Prim ν σ β ε δ ι α)) (fiber : FrameFiber ν σ β ε δ ι α)
+    (carried recorded : Option (Cause ε δ ι α)) (stack : Path (Edge world) input output frames)
+    (empty : fiber.stack = []) (same : fiber.interruptedCause = recorded) (good : Input input)
+    (next : Prim ν σ β ε δ ι α)
+    (found : (FrameFiber.popFrom demand skip frames fiber carried).answer = .replacement next) :
+    ReplacementOrigin Edge Input world output demand skip recorded next
+      (FrameFiber.popFrom demand skip frames fiber carried).fiber.stack := by
+  have family : PopTrace.Family demand skip (Edge world)
+      (fun fiber => fiber.stack = [] ∧ fiber.interruptedCause = recorded)
+      (fun input output _ pop => Input input → pop.answer = .replacement next →
+        ReplacementOrigin Edge Input world output demand skip recorded next pop.fiber.stack) := by
+    constructor
+    · intro kind fiber cause scratch good found
+      cases found
+    · intro input middle output head tail fiber cause answer callback path scratch chosen kept good found
+      cases found
+      exact .inl ⟨input, middle, head, tail, fiber, callback, path, good, scratch.1, scratch.2, chosen, rfl⟩
+    · intro input middle head fiber after callback scratch
+      exact ⟨(FrameFiber.passPushed_fiber_cause demand skip (head.ensure fiber).1 after) ▸
+        PopTrace.drain_empty demand skip head fiber scratch.1,
+        (passPushed_recorded demand skip (head.ensure fiber).1 after).trans
+          ((Contextual.ensure_recorded head fiber).trans scratch.2)⟩
+    · intro input middle output head tail fiber before after tailPop callback path scratch passed drained nextProof good found
+      simp only [FrameFiber.passOn, FrameFiber.joinPushed, drained] at found ⊢
+      exact nextProof (transport input middle head fiber before after callback passed good) found
+    · intro input middle output head tail fiber before after tailPop callback path scratch passed answered good found
+      unfold FrameFiber.passOn FrameFiber.joinPushed at found ⊢
+      split at found
+      · rename_i drained
+        exact (answered drained).elim
+      · rename_i answer selected
+        exact .inr ⟨input, middle, head, tail, fiber, before, after,
+          callback, path, good, scratch.1, scratch.2, passed, found, rfl⟩
+  exact family.popFrom input output frames fiber carried stack ⟨empty, same⟩ good found
+
 /-- Actual fused pops replace code only with a represented failure from a mask hook. -/
 theorem popFrom_replacement_failure (world : World) (input output : Kind) (demand : Arm) (skip : Bool)
     (frames : List (Prim ν σ β ε δ ι α)) (fiber : FrameFiber ν σ β ε δ ι α)
@@ -107,27 +185,120 @@ theorem popFrom_replacement_failure (world : World) (input output : Kind) (deman
     (empty : fiber.stack = []) (next : Prim ν σ β ε δ ι α)
     (found : (FrameFiber.popFrom demand skip frames fiber recorded).answer = .replacement next) :
     ∃ cause, next = .failure cause := by
-  have family : PopTrace.Family demand skip (Edge world) (fun fiber => fiber.stack = [])
-      (fun _ _ _ pop => pop.answer = .replacement next → ∃ cause, next = .failure cause) := by
-    constructor
-    · intro kind fiber cause scratch found
-      cases found
-    · intro input middle output head tail fiber cause answer callback path scratch chosen kept found
-      cases found
-      exact answer_replacement_failure head fiber demand next chosen
-    · intro input middle head fiber after callback scratch
-      rw [FrameFiber.passPushed_fiber_cause]
-      exact PopTrace.drain_empty demand skip head fiber scratch
-    · intro input middle output head tail fiber before after tailPop callback path scratch passed drained nextProof found
-      simp only [FrameFiber.passOn, FrameFiber.joinPushed, drained] at found
-      exact nextProof found
-    · intro input middle output head tail fiber before after tailPop callback path scratch passed answered found
-      unfold FrameFiber.passOn FrameFiber.joinPushed at found
-      split at found
-      · rename_i drained
-        exact (answered drained).elim
-      · exact drain_replacement_failure _ demand skip after next found
-  exact family.popFrom input output frames fiber recorded stack empty found
+  have origin := popFrom_replacement_origin Edge (fun _ => True) world demand skip
+    (fun _ _ _ _ _ _ _ _ good => good) input output frames fiber recorded
+    fiber.interruptedCause stack empty rfl trivial next found
+  rcases origin with ⟨input, middle, head, rest, scratch, callback, path, good, empty, same, actual, suffix⟩ |
+    ⟨input, middle, head, rest, scratch, before, after, callback, path, good, empty, same, passed, actual, suffix⟩
+  · exact answer_replacement_failure head scratch demand next actual
+  · exact drain_replacement_failure _ demand skip after next actual
+
+/-- Actual value lookup retains the incoming value class and recorded cause at its replacement site.
+Consumer: numeric read and unit classes do not need a fabricated global cause premise. -/
+theorem getCont_value_replacement_origin
+    (interp : PrimInterp ν σ β ε δ ι α)
+    (Allowed : World → Option (Cause ε δ ι α) → Prop)
+    (family : ContextualSavedFamily model interp Edge Allowed)
+    (world : World) (input output : Kind) (fiber : FrameFiber ν σ β ε δ ι α) (value : β)
+    (good : model.value world input value) (stack : Path (Edge world) input output fiber.stack)
+    (next : Prim ν σ β ε δ ι α)
+    (found : (fiber.getCont .contA false).answer = .replacement next) :
+    ReplacementOrigin Edge (fun kind => model.value world kind value) world output .contA false
+      fiber.interruptedCause next (fiber.getCont .contA false).fiber.stack := by
+  have transport : ∀ input middle head scratch before after,
+      Edge world input middle head → PopTrace.Passes .contA false head scratch before after →
+      model.value world input value → model.value world middle value := by
+    intro input middle head scratch before after callback passed good
+    have missing : head.hasArm .contA = false := by
+      rcases passed with ⟨absent, same⟩ | ⟨answer, selected, skipped, same⟩
+      · exact PopTrace.answer_missing head .contA _ absent
+      · cases skipped
+    exact family.skip world input middle head callback world (model.future_refl world) value good missing
+  unfold FrameFiber.getCont at found ⊢
+  split at found
+  · cases found
+  · rename_i normal
+    rw [if_neg normal]
+    exact popFrom_replacement_origin Edge (fun kind => model.value world kind value) world .contA false
+      transport input output fiber.stack {fiber with stack := [], deferredInterrupt := false}
+      none fiber.interruptedCause stack rfl rfl good next found
+
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+/-- A real async finalizer lacks the value arm but still inserts a mask.
+Control: replacement provenance must retain actual hook drains. -/
+theorem asyncFinalizer_value_mask (name : ν) (fiber : FrameFiber ν σ β ε δ ι α)
+    (interruptible : fiber.interruptible = true) :
+    (Prim.asyncFinalizer name : Prim ν σ β ε δ ι α).hasArm .contA = false ∧
+      ((Prim.asyncFinalizer name).ensure fiber).1.stack = .setInterruptible true :: fiber.stack := by
+  constructor
+  · rfl
+  · simp only [Prim.ensure, interruptible, ↓reduceIte]
+
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+/-- A replacement answer is exactly the program returned by its actual ensure hook. -/
+theorem answer_replacement_hook (frame : Prim ν σ β ε δ ι α)
+    (fiber : FrameFiber ν σ β ε δ ι α) (demand : Arm) (next : Prim ν σ β ε δ ι α)
+    (found : frame.answerOf demand (frame.ensure fiber).2 = some (.replacement next)) :
+    (frame.ensure fiber).2 = some next := by
+  cases actual : (frame.ensure fiber).2 with
+  | none =>
+    simp only [actual, Prim.answerOf] at found
+    split at found <;> cases found
+  | some program =>
+    simp only [actual, Prim.answerOf_replacement] at found
+    cases found
+    rfl
+
+/-- The actual value replacement identifies its original typed edge and unchanged recorded cause.
+An actual hook-generated mask has the middle class reached by the passed original frame. -/
+theorem getCont_value_replacement_selected
+    (mask : ∀ world kind, Edge world kind kind (.setInterruptible true))
+    (interp : PrimInterp ν σ β ε δ ι α)
+    (Allowed : World → Option (Cause ε δ ι α) → Prop)
+    (family : ContextualSavedFamily model interp Edge Allowed)
+    (world : World) (input output : Kind) (fiber : FrameFiber ν σ β ε δ ι α) (value : β)
+    (good : model.value world input value) (stack : Path (Edge world) input output fiber.stack)
+    (next : Prim ν σ β ε δ ι α)
+    (found : (fiber.getCont .contA false).answer = .replacement next) :
+    ∃ incoming middle head rest, ∃ scratch : FrameFiber ν σ β ε δ ι α,
+      Edge world incoming middle head ∧ Path (Edge world) middle output rest ∧
+      model.value world incoming value ∧ scratch.stack = [] ∧
+      scratch.interruptedCause = fiber.interruptedCause ∧ (head.ensure scratch).2 = some next ∧
+      (fiber.getCont .contA false).fiber.stack = (head.ensure scratch).1.stack ++ rest := by
+  have origin := getCont_value_replacement_origin model Edge interp Allowed family world input output
+    fiber value good stack next found
+  rcases origin with ⟨incoming, middle, head, rest, scratch, callback, path, good, empty, same, actual, suffix⟩ |
+    ⟨incoming, middle, head, rest, scratch, before, after, callback, path, good, empty, same, passed, actual, suffix⟩
+  · exact ⟨incoming, middle, head, rest, scratch, callback, path, good, empty, same,
+      answer_replacement_hook head scratch .contA next actual, suffix⟩
+  · have missing : head.hasArm .contA = false := by
+      rcases passed with ⟨absent, equal⟩ | ⟨answer, selected, skipped, equal⟩
+      · exact PopTrace.answer_missing head .contA _ absent
+      · cases skipped
+    have middleGood := family.skip world incoming middle head callback world (model.future_refl world)
+      value good missing
+    rcases FrameFiber.ensure_stack_cases head scratch with kept | ⟨pushed, wasInterruptible, nowMasked⟩
+    · rw [FrameFiber.passPushed_answer_cause,
+        FrameFiber.passPushed_nil _ _ _ (kept.trans empty)] at actual
+      cases actual
+    · have pushedOne : (head.ensure scratch).1.stack = [.setInterruptible true] := by rw [pushed, empty]
+      rw [FrameFiber.passPushed_answer_cause,
+        FrameFiber.passPushed_answer _ _ _ (.setInterruptible true) [] pushedOne] at actual
+      cases selected : Prim.answerOf (.setInterruptible true) .contA
+          ((Prim.setInterruptible true).ensure {(head.ensure scratch).1 with stack := []}).2 with
+      | none => rw [selected] at actual; cases actual
+      | some answer =>
+        rw [selected] at actual
+        simp only [Bool.false_and, Bool.false_eq_true, ↓reduceIte] at actual
+        cases actual
+        refine ⟨middle, middle, .setInterruptible true,
+          rest, {(head.ensure scratch).1 with stack := []}, mask world middle, path, middleGood,
+          rfl, (Contextual.ensure_recorded head scratch).trans same,
+          answer_replacement_hook _ _ .contA next selected, ?_⟩
+        rw [FrameFiber.passPushed_fiber_cause,
+          FrameFiber.passPushed_fiber _ _ _ (.setInterruptible true) [] pushedOne] at suffix
+        exact suffix
+
 
 /-- Actual continuation lookup can replace current code only with a failure primitive. -/
 theorem getCont_replacement_failure (world : World) (input output : Kind)

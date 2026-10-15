@@ -827,3 +827,38 @@ The audit covers eleven native, uniform-path, configuration, interruption, and c
 This proof-only slice reaches no outside implementation gate.
 Actual restoring-mask replacement still needs the selected incoming class and recorded-cause provenance.
 Initialized numeric history, race assignments, cleanup and form writes, and the declared failure-origin producer remain open.
+
+## Exact restoring-mask replacement site
+
+The coordinator must retain the actual hook-drain branch when consuming replacement provenance.
+The base is `d47f06c22`.
+Both original Timeout endpoints remain open.
+
+`AnswerFlowResume.popFrom_replacement_origin` now owns the existing replacement fold.
+It retains incoming data, the actual source edge, the actual returned stack, and the detached frame's recorded cause.
+The old failure-only theorem becomes a reader of this producer.
+The value reader transports its actual value class to the original or hook-generated replacing mask.
+The actual mask reader identifies the returned failure with that mask's recorded cause.
+The existing `Contextual.ensure_recorded` proof is exposed for reuse without another metadata traversal.
+
+`asyncFinalizer_value_mask` retains a kernel-checked control.
+An async finalizer lacks the value arm but still pushes a restoring mask.
+The producer therefore retains that real hook-drain case.
+These helpers serve both numeric endpoints under R11, R10, and R4.
+They supply no numeric mask-class authority or initialized history.
+
+| Command through the serialized Lean slot | Result |
+| --- | --- |
+| `lake build Effect4.Laws.Machine.AnswerFlowResume` | Passed, 197 jobs |
+| `lake build Effect4.Laws.Machine.AnswerFlowNativeExit Effect4.Laws.Program.AnswerSlots.InitializedFrame` | NativeExit passed; InitializedFrame stops at the existing TypedStored alias-normalization proof |
+| `lake env lean scratch/TimeoutReplacementAudit.lean` | The output below |
+
+```text
+#axiom_audit: 152 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
+
+The audit covers the contextual saved-pop and actual replacement modules.
+The coordinator already owns the TypedStored normalization repair in its newer tree.
+No root import changes are needed.
+This proof-only slice reaches no outside implementation gate.
+The next shared refinement replaces unconditional mask generation with an actual-edge hook premise.
