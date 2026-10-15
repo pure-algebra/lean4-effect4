@@ -56,7 +56,7 @@ def RootStage (spec : Spec) (world : World) (index : Nat) (point : Point) : Prop
 
 /-- An allocation class describes the actual returned key and post-operation store lengths. -/
 def ValueAt (spec : Spec) (world : World) : Kind → Val → Prop
-  | .stable kind, value => Phase spec world ∧ Typed.ValueAt kind value
+  | .stable kind, value => Ready spec world ∧ Typed.ValueAt kind value
   | .allocated index, value => Phase spec world ∧ value = .cell ⟨index⟩ ∧
       world.state.refs.length = index + 1 ∧ world.state.deferreds.cells.length = 0
   | .gate, value => value = .promise ⟨0⟩ ∧ Ready spec world
@@ -128,7 +128,7 @@ theorem embedding (spec : Spec) (completed : List (FiberId × ExitV)) :
   ready_future := ready_future spec
   future := fun _ _ _ _ => trivial
   value_read := fun _ _ _ _ good => good.2
-  value_write := fun _ _ _ ready good => ⟨.inr ready, good⟩
+  value_write := fun _ _ _ ready good => ⟨ready, good⟩
   cause_read := fun _ _ _ _ _ => trivial
   cause_write := fun _ _ _ ready _ => .inr ready
   code := fun _ _ _ ready good => .stable ready good

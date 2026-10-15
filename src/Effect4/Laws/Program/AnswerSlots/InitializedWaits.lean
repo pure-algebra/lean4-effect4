@@ -42,7 +42,7 @@ theorem Demand.reply (spec : Spec) (raceFree : SourceScope.RaceFreeSource spec.r
   cases terminal with
   | success value =>
     cases demand with
-    | stable ready => exact .success ⟨.inr ready, trivial⟩
+    | stable ready => exact .success ⟨ready, trivial⟩
     | yielded phase pending => exact .success ⟨phase, rfl, rfl, pending⟩
   | failure cause =>
     cases demand with

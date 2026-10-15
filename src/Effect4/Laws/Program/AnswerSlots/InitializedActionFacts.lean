@@ -17,7 +17,7 @@ theorem action_facts (spec : Spec) (view : List (FiberId × ExitV)) (world : Wor
     (ready : Ready spec world) :
     SourceScope.ActionFlowFacts (model spec view) (Edge spec view)
       spec.root view spec.table world (.stable .root) where
-  value := fun _ => ⟨.inr ready, trivial⟩
+  value := fun _ => ⟨ready, trivial⟩
   cause := fun _ => .inr ready
   interrupt := fun _ => .stable ready ⟨rfl, trivial, trivial, trivial⟩
   interruptAs := fun _ _ => .stable ready ⟨rfl, trivial, trivial, trivial⟩

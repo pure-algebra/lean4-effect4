@@ -111,7 +111,7 @@ theorem sync_value (spec : Spec) (completed : List (FiberId × ExitV)) (world : 
   | stable ready held =>
     cases same
     obtain ⟨rfl, allowed⟩ := held
-    exact ⟨.inr (ready_future spec world _ (sync_future spec completed world thunk state value ran) ready), trivial⟩
+    exact ⟨ready_future spec world _ (sync_future spec completed world thunk state value ran) ready, trivial⟩
   | frontier zero phase | yielding phase refs deferred pending | bound first callback | yieldThen phase held => cases same
 
 /-- A native fallback retains its stable answer class or its ignored transient reply class. -/
@@ -131,6 +131,6 @@ theorem sync_fallback (spec : Spec) (completed : List (FiberId × ExitV)) (world
   | stable ready held =>
     cases same
     obtain ⟨rfl, allowed⟩ := held
-    exact ⟨.inr ready, trivial⟩
+    exact ⟨ready, trivial⟩
   | frontier zero phase | yielding phase refs deferred pending | bound first callback | yieldThen phase held => cases same
 end Effect4.Program.AnswerSlots.Initialized

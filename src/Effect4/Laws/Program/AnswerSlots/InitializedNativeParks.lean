@@ -29,7 +29,7 @@ theorem yield_value (spec : Spec) (world : World) (kind : Kind) (program : NCode
     all_goals cases current
   case stable ready held =>
     rw [current] at held
-    exact ⟨.inr ready, held ▸ True.intro⟩
+    exact ⟨ready, held ▸ True.intro⟩
   case yielding phase refs deferred pending => exact ⟨phase, refs, deferred, pending⟩
   all_goals cases current
 
@@ -143,9 +143,9 @@ theorem joined_code (spec : Spec) (completed : List (FiberId × ExitV)) (world :
     (ready : Ready spec world) (exit : ExitV) (mode : Supervision.ObserverMode) :
     CodeAt spec world (.stable .root) ((interpAt spec.root completed spec.table).exitValue exit mode) := by
   cases mode
-  · exact .success ⟨.inr ready, trivial⟩
+  · exact .success ⟨ready, trivial⟩
   · cases exit
-    · exact .success ⟨.inr ready, trivial⟩
+    · exact .success ⟨ready, trivial⟩
     · exact .failure (.inr ready)
 
 /-- Countdown entry uses the shared native action law rather than another countdown walk. -/
@@ -159,6 +159,6 @@ theorem countdown_frame (spec : Spec) (completed : List (FiberId × ExitV)) (wor
   apply SourceScope.countdown_family (model spec completed) (Edge spec completed)
     spec.root completed spec.table world (.stable .root) output machine fiber targets .exitsValue failFast owned saved
   · intro exits
-    exact .success ⟨.inr ready, trivial⟩
+    exact .success ⟨ready, trivial⟩
   · exact async_edge spec completed world ready _
 end Effect4.Program.AnswerSlots.Initialized

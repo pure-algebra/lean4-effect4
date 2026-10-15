@@ -15,7 +15,8 @@ open Effect4 Effect4.Machine Effect4.Program
 theorem value_phase (spec : Spec) (world : World) (kind : Kind) (value : Val)
     (good : ValueAt spec world kind value) : Phase spec world := by
   cases kind with
-  | stable _ | allocated _ | yielded _ _ => exact good.1
+  | stable _ => exact .inr good.1
+  | allocated _ | yielded _ _ => exact good.1
   | gate => exact .inr good.2
 
 /-- Every current code retains initialization ownership or stable readiness. -/
@@ -36,7 +37,7 @@ theorem value_rebase (spec : Spec) (first last : World) (future : Future first l
     (deferred : first.state.deferreds.cells.length = last.state.deferreds.cells.length)
     (kind : Kind) (value : Val) (good : ValueAt spec first kind value) : ValueAt spec last kind value := by
   cases kind with
-  | stable kind => exact ⟨phase_future spec first last future good.1, good.2⟩
+  | stable kind => exact ⟨ready_future spec first last future good.1, good.2⟩
   | allocated index =>
     exact ⟨phase_future spec first last future good.1, good.2.1,
       refs.symm.trans good.2.2.1, deferred.symm.trans good.2.2.2⟩
@@ -90,7 +91,7 @@ theorem value_future_ready (spec : Spec) (first last : World) (future : Future f
     (ready : Ready spec first) (kind : Kind) (value : Val) (good : ValueAt spec first kind value) :
     ValueAt spec last kind value := by
   cases kind with
-  | stable kind => exact ⟨phase_future spec first last future good.1, good.2⟩
+  | stable kind => exact ⟨ready_future spec first last future good.1, good.2⟩
   | allocated index =>
     have positive := ready.2
     rw [good.2.2.2] at positive
