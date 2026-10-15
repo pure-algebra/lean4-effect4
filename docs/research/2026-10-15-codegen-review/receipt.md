@@ -1253,3 +1253,42 @@ transcribes Lean, and no harness code (P10):
 **The gates.** `make gen-derived` writes the atoms at the new path. Then `check-truth`,
 `check-corpus`, `check-tsdiag`, `check-host-protocol` and `check-target` run, and no printed byte
 other than an import path moves.
+
+### Step 4, after row 397: the package's resolution is a boundary
+
+Row 397 (2) approves the three `Makefile` lines. Before the first build, the seat merged
+`158093669` at `cf98794f7`, as the coordinator asked. Then a probe found what the plan above
+missed, so nothing of step 4 lands yet.
+
+**The one thing to know.** A file under `ts/prelude/` cannot import `effect`. No `node_modules`
+stands above it, and bun resolves a bare import from the importing file's own folder, not from its
+importer's. The probe `cr4/resolve/` reproduces it: a file outside a link's folder, imported from a
+folder that holds the link, fails with "Cannot find package 'effect'". Each of the four runtime
+files imports `effect`, but `tuples.ts`.
+
+**What it rules out.** The plan's in-place uses all reach the package: the to-do's module, the
+batteries of `harness/truth/*.test.ts`, and the keyed lane's files. Copying the package does not
+help the lanes either. The truth, corpus and diagnostics lanes copy the prelude flat into a work
+folder, so that each copy resolves `effect` through that folder's own install. The release lane
+selects effect 4.0.1 there. A relative import from the harness's prelude into `ts/prelude/` does
+not hold in a flat copy.
+
+**The options (P-CR4-3).**
+
+- **(A) A link and a mirrored copy.** A `Makefile` rule links `ts/prelude/node_modules` to the one
+  install, as `apps/todo/node_modules` is linked: two lines beyond row 397's three. The copying
+  lanes copy the package at the repository's relative layout inside their work folders
+  (`scripts/lib/truth_host.py`, `scripts/check-corpus.py`, `harness/tsdiag/run-tsdiag.mjs`).
+- **(B) The package inside the one install's folder,** `ts/eff/prelude/`, which resolves `effect`
+  with no link. The copying lanes change as in (A). The reader's package then holds the prelude
+  too.
+- **(C) The package by name,** `@effect4/prelude`, a local dependency of the two installs
+  (`ts/eff`, `ts/release`), with `effect` as its peer dependency. A module imports it by name, and
+  no lane copies the runtime half. It is an install change, and it needs a probe of how bun links a
+  local package's peer dependency.
+
+**The recommendation.** (C) is the end state. Section 6.5 of the review makes the prelude a
+dependency of the emitted package, and a package is imported by its name. (A) serves now if the
+install change waits, and its two lines join row 397's three.
+
+**What does not wait.** The rest of CR-4 has landed. CR-5 goes on.
