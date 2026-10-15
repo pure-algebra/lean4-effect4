@@ -104,10 +104,78 @@ assumed the pair was exact from its types alone. A generated law check per image
 7. **Exceptions by kind.** Decide which OCaml exceptions are failures and which are defects, in
    Effect's sense, as data per row.
 
-## 6. What this does not establish
+## 6. Transports and RPC
 
-- Each result is a finite probe at the named versions. None is a theorem.
+### 6.1 The question
+
+Which model of transport is the smallest one that every RPC system fits? The probe reads Effect's
+RPC and two installed OCaml RPC libraries at source, and builds one end to end.
+
+### 6.2 The systems
+
+| System | Evidence | Typed descriptions | The channel it assumes | What to take |
+| --- | --- | --- | --- | --- |
+| Effect RPC (`effect/unstable/rpc`, rc.112) | reading, tested | `RpcGroup` of `Rpc.make` with payload, success and error schemas | `Socket`: a chunk handler and a writer | the message alphabet, `Exit` with its cause, serialization apart from protocol |
+| dune-rpc (installed `dune-rpc`) | reading | `Conv`: records, optional fields, sums, a version on each field | `Chan`: `write` a list of csexp, `read` one | version negotiation into a menu; a client over an abstract fiber and channel |
+| JSON-RPC 2.0 (installed `jsonrpc`) | reading | none: JSON values | any byte stream | the notification (a request with no reply) and the batch |
+| Jane Street `async_rpc_kernel` | named, not installed | `bin_prot` shapes | a reader and a writer, with heartbeats | streaming kinds as their own declarations; version menus |
+| Cap'n Proto RPC (`capnp-rpc`, on Eio) | named, not installed | a compiled schema | a byte stream | capabilities in messages; calls on a promised result |
+| `rpclib` | named, not installed | an IDL of OCaml values, derived by a PPX | any | the description as values, many protocols from one |
+
+### 6.3 The model: one native layer, four of data
+
+```mermaid
+flowchart BT
+  C[1. Channel: a duplex of byte chunks. Native] --> F[2. Framing: bytes and messages, a codec]
+  F --> M[3. Messages: a closed alphabet with request ids]
+  M --> K[4. Correlation: calls in flight, by id]
+  K --> R[5. Signature: rows with payload, success, error]
+```
+
+Only the channel is native. Framing is a codec with the read-back law. The messages are a free
+object. Effect's alphabet is Request, Ack, Interrupt, Ping and Eof from the client. From the
+server it is Chunk, Exit, Defect and Pong. Correlation is a state machine over data: each id is
+answered once, and an interrupt names a live id. The host session already holds the server's
+half of that law (`session_keys_once`, `src/Effect4/Laws/Run/Journal.lean`).
+
+### 6.4 What ran
+
+| Probe | Files | Evidence | Result |
+| --- | --- | --- | --- |
+| Effect's `RpcClient` against an OCaml server, over a TCP socket with NDJSON and over HTTP with JSON | `rpc/effect_rpc.ml`, `rpc/client.ts` | tested, `rpc/client.log`, `rpc/server.log` | the two channels answer 9 of 9 calls alike |
+| Correlation on one connection | the same | tested, `rpc/server.log` | ids 3 and 4 go out in order and come back as 4, then 3 |
+| Interruption | the same | tested, `rpc/server.log` | over the socket, the timed-out call's Interrupt cancels its fiber; over HTTP no Interrupt exists, and id 15 runs on |
+| The transport law in Lean | `rpc/Transport.lean` | proved, `rpc/transport-lean.log` | `through_serve`: through a lawful codec, client and server give back the host; `through_serve_stacked`: two layers give it back too |
+
+### 6.5 Findings
+
+- The channel decides which messages exist. HTTP carries no Interrupt and no Ack, so the same
+  answers can hide different work on the server. A transport law must name its observation.
+- Effect separates serialization from protocol, and its JSON and NDJSON serializations differ only
+  in framing (`includesFraming`). That is layer 2 apart from layer 3, as data.
+- Effect's `Exit` encoding is a success, or a failure with a cause of Fail, Die and Interrupt. It
+  is the machine's own exit and cause, so no conversion sits between them.
+- `through_serve` covers a request/response wire. A channel with several calls at once needs
+  layer 4 as a host with state. Its law is a simulation of the request/response wire.
+
+### 6.6 Proposals
+
+1. Declare the message alphabet as a Lean inductive, with its JSON image as an `Image`.
+2. Move `through_serve` and its codec into `effects`. Add the correlation layer: a host over
+   send and receive, whose state is the calls in flight. Prove it simulates the wire.
+3. Take dune-rpc's version menu for rows that change: negotiation as data at session start.
+4. Take Cap'n Proto's capabilities for P5's resources: a handle in a message is a capability.
+5. Generate layers 2 to 4 once, generic over the rows. The OCaml edge then comes from the same
+   description as Effect's client.
+
+## 7. What this does not establish
+
+- Each result is a finite probe at the named versions, except the two theorems of
+  `rpc/Transport.lean`.
 - The probes trust Fpath, Eio, js_of_ocaml and Effect, under row 393 (4).
 - The to-do server transcribes the four entries by hand. The lowered machine is P1's work.
 - The HTTP reader is minimal: no TLS, no pipelining limits, no timeouts.
-- The transport law holds on the scripted calls only.
+- The HTTP transport law holds on the scripted calls only.
+- `through_serve` covers a request/response wire with lawful codecs. It covers no correlation, loss
+  or interruption.
+- The systems marked "named" were not installed or read here.
