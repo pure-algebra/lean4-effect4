@@ -96,9 +96,9 @@ theorem counted_fiber (machine : Effect4.Program.NativeMachine)
     (context : CountContext) (fiber : Effect4.Program.SourceScope.SourceFiber) (yielding : Bool)
     (held : FiberAt machine (.pending context) fiber) (live : fiber.exit = none)
     (heap : HostTimeoutNumberPhaseFlow.At context.before machine.state)
-    (current : fiber.frame.current = context.write)
+    (_current : fiber.frame.current = context.write)
     (stack : fiber.frame.stack = [.onSuccess context.write (.cont (context.point.child 0)),
-      .onExit context.bound (.fin context.point) false]) (ready : CountReady context fiber yielding) :
+      .onExit context.bound (.fin context.point) false]) (_ready : CountReady context fiber yielding) :
     let state := {machine.state with refs := context.entered.heap}
     let after := {countOp fiber with frame := {fiber.frame with current := .success .unit}}
     FiberAt (installed machine state after) (.pending context) after := by
@@ -109,8 +109,7 @@ theorem counted_fiber (machine : Effect4.Program.NativeMachine)
   have running := held.pendingRunning context rfl heap installedFin
   constructor
   · refine ⟨HostTimeoutNumberSourceWrites.counted_frame context fiber.frame stack, ?_⟩
-    intro view
-    exact (count_iteration_commit context view machine fiber yielding heap current stack ready).2
+    exact counted_frame_uniform context _ fiber.frame rfl stack
   · intro selected published
     change fiber.exit = some selected at published
     rw [live] at published

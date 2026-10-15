@@ -30,6 +30,52 @@ theorem absorbs (view : HostTimeoutFlow.View) (state : Stores) (fiber : HostTime
   exact cause_combine state kind cause interrupted good (recorded interrupted present)
 
 /-- Actual native finalizer installation consumes the common contextual saved-pop producer. -/
+theorem installed_over (view : HostTimeoutFlow.View)
+    (Edge : Stores → Kind → Kind → NCode → Prop)
+    (family : AnswerFlow.ContextualSavedFamily (model view)
+      (HostTimeoutFlow.interpreter view).toPrimInterp Edge Allowed)
+    (mask : ∀ world kind, Edge world kind kind (.setInterruptible true)) (machine : NativeMachine)
+    (fiber : SourceScope.SourceFiber) (yielding : Bool) (exit : ExitV) (input output : Kind)
+    (body : NCode) (name : EffName) (flag : Bool) (program : NCode)
+    (owned : CodeAt machine.state input (Prim.ofExit exit))
+    (stack : Effect4.Contracts.Path (Edge machine.state) input output fiber.frame.stack)
+    (recorded : Allowed machine.state fiber.frame.interruptedCause)
+    (chosen : (fiber.frame.getCont
+      (match exit with | .success _ => .contA | .failure _ => .contE)
+      (match exit with | .success _ => false | .failure _ => true)
+      (match exit with | .success _ => none | .failure cause => some cause)).answer =
+        .frame (.onExit body name flag))
+    (hook : (HostTimeoutFlow.interpreter view).finalizerProgram name
+      ((fiber.frame.getCont
+        (match exit with | .success _ => .contA | .failure _ => .contE)
+        (match exit with | .success _ => false | .failure _ => true)
+        (match exit with | .success _ => none | .failure cause => some cause)).deliveredExit exit) = some program) :
+    let next := evaluatePrim.finalizerOr (HostTimeoutFlow.interpreter view) machine fiber yielding exit
+    AnswerFlow.FamilyResult (model view) Edge next.machine.state output
+      next.fiber.frame.current next.fiber.frame.stack := by
+  have wrapper : (model view).finalizer machine.state name
+      ((fiber.frame.getCont
+        (match exit with | .success _ => .contA | .failure _ => .contE)
+        (match exit with | .success _ => false | .failure _ => true)
+        (match exit with | .success _ => none | .failure cause => some cause)).deliveredExit exit) =
+      some (finalizerCode (HostTimeoutFlow.interpreter view)
+        ((fiber.frame.getCont
+          (match exit with | .success _ => .contA | .failure _ => .contE)
+          (match exit with | .success _ => false | .failure _ => true)
+          (match exit with | .success _ => none | .failure cause => some cause)).deliveredExit exit) program) := by
+    cases exit <;> exact congrArg (Option.map _) hook
+  have next := AnswerFlow.Contextual.finalizer_step (admitted := recorded) (model view)
+    (HostTimeoutFlow.interpreter view).toPrimInterp Edge Allowed family mask
+    (HostTimeoutFlow.interpreter view) machine.state input output machine fiber yielding exit body name flag program
+    (exit_class machine.state input exit owned) (fun _ _ => absorbs view machine.state fiber.frame recorded)
+    stack
+    (by cases exit <;> exact chosen) (by cases exit <;> exact hook)
+    (by cases exit <;> exact wrapper)
+  dsimp only
+  rw [next.1]
+  exact next.2
+
+/-- The previous semantic-path finalizer reader specializes the common external-edge producer. -/
 theorem installed (view : HostTimeoutFlow.View) (machine : NativeMachine)
     (fiber : SourceScope.SourceFiber) (yielding : Bool) (exit : ExitV) (input output : Kind)
     (body : NCode) (name : EffName) (flag : Bool) (program : NCode)
@@ -50,32 +96,15 @@ theorem installed (view : HostTimeoutFlow.View) (machine : NativeMachine)
     let next := evaluatePrim.finalizerOr (HostTimeoutFlow.interpreter view) machine fiber yielding exit
     AnswerFlow.FrameAt (model view) (HostTimeoutFlow.interpreter view).toPrimInterp
       next.machine.state output next.fiber.frame := by
-  let edge := AnswerFlow.SavedAt (model view) (HostTimeoutFlow.interpreter view).toPrimInterp
-  have family := AnswerFlow.SavedFamily.contextual (model view)
-    (HostTimeoutFlow.interpreter view).toPrimInterp edge Allowed
-    (AnswerFlow.saved_family (model view) (HostTimeoutFlow.interpreter view).toPrimInterp)
-  have wrapper : (model view).finalizer machine.state name
-      ((fiber.frame.getCont
-        (match exit with | .success _ => .contA | .failure _ => .contE)
-        (match exit with | .success _ => false | .failure _ => true)
-        (match exit with | .success _ => none | .failure cause => some cause)).deliveredExit exit) =
-      some (finalizerCode (HostTimeoutFlow.interpreter view)
-        ((fiber.frame.getCont
-          (match exit with | .success _ => .contA | .failure _ => .contE)
-          (match exit with | .success _ => false | .failure _ => true)
-          (match exit with | .success _ => none | .failure cause => some cause)).deliveredExit exit) program) := by
-    cases exit <;> exact congrArg (Option.map _) hook
-  have next := AnswerFlow.Contextual.finalizer_step (admitted := recorded) (model view)
-    (HostTimeoutFlow.interpreter view).toPrimInterp edge Allowed family
+  have result := installed_over view _
+    (AnswerFlow.SavedFamily.contextual (model view) (HostTimeoutFlow.interpreter view).toPrimInterp _ Allowed
+      (AnswerFlow.saved_family (model view) (HostTimeoutFlow.interpreter view).toPrimInterp))
     (fun world kind => AnswerFlow.saved_mask (model view) (HostTimeoutFlow.interpreter view).toPrimInterp world kind true)
-    (HostTimeoutFlow.interpreter view) machine.state input output machine fiber yielding exit body name flag program
-    (exit_class machine.state input exit owned) (fun _ _ => absorbs view machine.state fiber.frame recorded)
-    (AnswerFlow.stack_path (model view) (HostTimeoutFlow.interpreter view).toPrimInterp stack)
+    machine fiber yielding exit input output body name flag program owned
+    (AnswerFlow.stack_path (model view) (HostTimeoutFlow.interpreter view).toPrimInterp stack) recorded
     (by cases exit <;> exact chosen) (by cases exit <;> exact hook)
-    (by cases exit <;> exact wrapper)
   dsimp only
-  rw [next.1]
-  obtain ⟨middle, code, path⟩ := next.2
+  obtain ⟨middle, code, path⟩ := result
   exact ⟨middle, code, AnswerFlow.path_stack (model view) (HostTimeoutFlow.interpreter view).toPrimInterp path⟩
 
 end Test.Dogfood.Proofs.HostTimeoutNumberPhaseFinalizer

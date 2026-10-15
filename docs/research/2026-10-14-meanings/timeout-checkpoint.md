@@ -796,3 +796,34 @@ They establish no initialized numeric history, race provenance, or failure-origi
 The audit covers the shared mask module and six numeric native and uniform-view modules.
 The new leaves need root reach when their endpoint consumer is integrated.
 This proof-only slice reaches no outside implementation gate.
+
+## One uniform numeric path at the actual pending role
+
+The coordinator must retain the common input class when integrating the pending role.
+The base is `e1b410530`.
+Both original endpoints remain open.
+
+The pending configuration now consumes `HostTimeoutNumberUniform.FrameAt` instead of separate existential classes for each view.
+The existing numeric head proof accepts four nonrecursive saved-edge constructors.
+Its semantic and uniform readers specialize that one proof.
+The ordinary-step and running producers also share one proof over the external edge.
+The actual finalizer adapter accepts the same external contextual family and saved path.
+
+Count-prefix entry and the actual committed count answer now construct the uniform saved path.
+Addressed interruptions and the full count-command producer consume the stronger pending assertion.
+The old view-specific readers remain wrappers.
+These helpers serve both Timeout endpoints under R11 and R10.
+
+| Command through the serialized Lean slot | Result |
+| --- | --- |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberCountQueue Test.Dogfood.Proofs.HostTimeoutNumberTerminal Test.Dogfood.Proofs.HostTimeoutNumberAttemptNative` | Passed, 1262 jobs |
+| `lake env lean scratch/TimeoutUniformAudit.lean` | The output below |
+
+```text
+#axiom_audit: 271 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
+
+The audit covers eleven native, uniform-path, configuration, interruption, and count modules.
+This proof-only slice reaches no outside implementation gate.
+Actual restoring-mask replacement still needs the selected incoming class and recorded-cause provenance.
+Initialized numeric history, race assignments, cleanup and form writes, and the declared failure-origin producer remain open.

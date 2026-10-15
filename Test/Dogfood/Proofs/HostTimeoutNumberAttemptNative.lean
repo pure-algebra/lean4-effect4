@@ -1,4 +1,5 @@
 import Test.Dogfood.Proofs.HostTimeoutNumberPhaseHead
+import Test.Dogfood.Proofs.HostTimeoutNumberConfiguration
 
 /-!
 Concept: scope-lifetime-finalization R11 and translation-simulation R10.

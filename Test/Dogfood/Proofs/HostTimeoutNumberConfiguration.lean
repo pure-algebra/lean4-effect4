@@ -1,3 +1,4 @@
+import Test.Dogfood.Proofs.HostTimeoutNumberUniform
 import Test.Dogfood.Proofs.HostTimeoutNumberSourceWrites
 import Test.Dogfood.Proofs.HostTimeoutNumberRootControl
 import Test.Dogfood.Proofs.HostTimeoutNumberStable
@@ -95,10 +96,10 @@ theorem count_iteration (context : CountContext) (machine : Effect4.Program.Nati
   rw [quiet]
 
 /-- The structural pending prefix supplies the actual ordered answer-flow contract before the count commits. -/
-theorem count_frame_flow (context : CountContext) (view : View) (state : Stores)
+theorem count_frame_uniform (context : CountContext) (state : Stores)
     (frame : HostTimeoutFrames.NativeFrame) (heap : HostTimeoutNumberPhaseFlow.At context.before state)
     (held : CountFrameAt context frame) :
-    AnswerFlow.FrameAt (HostTimeoutNumberPhaseFlow.model view) (interpreter view).toPrimInterp state
+    HostTimeoutNumberUniform.FrameAt state
       (.attempt context.before context.entered (by
         change context.before.count + 1 = context.before.cleanups.length + 1
         rw [context.cleanups])) frame := by
@@ -112,23 +113,54 @@ theorem count_frame_flow (context : CountContext) (view : View) (state : Stores)
       exact HostTimeoutNumberPhaseFlow.CodeAt.attemptEntry context.before context.n context.cleanups context.forms
         context.cursor context.captured context.fuel context.delay context.previous heap
     · rw [stack]
-      exact .nil _ _
+      exact .nil _
   | finalizer current stack =>
     refine ⟨.before context.entered, ?_, ?_⟩
     · rw [current]
       exact HostTimeoutNumberPhaseFlow.CodeAt.countBind context.before context.n context.cleanups context.forms
         context.cursor context.captured context.fuel context.delay context.previous heap
     · rw [stack]
-      exact .cons (AttemptSource.saved context context.point context.source view state context.bound) (.nil _ _)
+      exact .cons (HostTimeoutNumberUniform.head_edges.finalizer _ _ _ _ _ _
+        (fun view => AttemptSource.saved context context.point context.source view state context.bound)) (.nil _)
   | binder current stack =>
     refine ⟨.unit context.entered, ?_, ?_⟩
     · rw [current]
       exact HostTimeoutNumberPhaseFlow.CodeAt.count context.before context.n context.cleanups context.forms
         context.cursor context.captured context.fuel context.delay context.previous heap
     · rw [stack]
-      exact .cons (HostTimeoutNumberPhaseFlow.count_saved view state context.entered context.captured
-        context.fuel context.delay context.n context.previous)
-        (.cons (AttemptSource.saved context context.point context.source view state context.bound) (.nil _ _))
+      exact .cons (HostTimeoutNumberUniform.head_edges.success _ _ _ _ _
+        (fun view => HostTimeoutNumberPhaseFlow.count_saved view state context.entered context.captured
+          context.fuel context.delay context.n context.previous))
+        (.cons (HostTimeoutNumberUniform.head_edges.finalizer _ _ _ _ _ _
+        (fun view => AttemptSource.saved context context.point context.source view state context.bound)) (.nil _))
+
+/-- The previous count-prefix reader consumes the common uniform source constructor. -/
+theorem count_frame_flow (context : CountContext) (view : View) (state : Stores)
+    (frame : HostTimeoutFrames.NativeFrame) (heap : HostTimeoutNumberPhaseFlow.At context.before state)
+    (held : CountFrameAt context frame) :
+    AnswerFlow.FrameAt (HostTimeoutNumberPhaseFlow.model view) (interpreter view).toPrimInterp state
+      (.attempt context.before context.entered (by
+        change context.before.count + 1 = context.before.cleanups.length + 1
+        rw [context.cleanups])) frame :=
+  HostTimeoutNumberUniform.FrameAt.each state _ frame (count_frame_uniform context state frame heap held) view
+
+/-- The actual committed count answer retains common saved classes across every future native view. -/
+theorem counted_frame_uniform (context : CountContext) (state : Stores) (frame : HostTimeoutFrames.NativeFrame)
+    (heap : HostTimeoutNumberPhaseFlow.At context.entered state)
+    (stack : frame.stack = [.onSuccess context.write (.cont (context.point.child 0)),
+      .onExit context.bound (.fin context.point) false]) :
+    HostTimeoutNumberUniform.FrameAt state
+      (.attempt context.before context.entered (by
+        change context.before.count + 1 = context.before.cleanups.length + 1
+        rw [context.cleanups])) {frame with current := .success .unit} := by
+  refine ⟨.unit context.entered, HostTimeoutNumberPhaseFlow.CodeAt.success _ _ ⟨heap, rfl⟩, ?_⟩
+  change Effect4.Contracts.Path _ _ _ frame.stack
+  rw [stack]
+  exact .cons (HostTimeoutNumberUniform.head_edges.success _ _ _ _ _
+    (fun view => HostTimeoutNumberPhaseFlow.count_saved view state context.entered context.captured
+      context.fuel context.delay context.n context.previous))
+    (.cons (HostTimeoutNumberUniform.head_edges.finalizer _ _ _ _ _ _
+      (fun view => AttemptSource.saved context context.point context.source view state context.bound)) (.nil _))
 
 /-- The admitted count-write iteration commits its new phase and produces the actual attempt continuation contract. -/
 theorem count_iteration_commit (context : CountContext) (view : View)
@@ -277,8 +309,8 @@ theorem allowed_target_distinct (context : MessageContext) (world : World)
 def FrameAt (machine : Effect4.Program.NativeMachine) (role : Role)
     (frame : HostTimeoutFrames.NativeFrame) : Prop :=
   match role with
-  | .pending context => HostTimeoutNumberSourceWrites.FrameAt context frame ∧ ∀ view, AnswerFlow.FrameAt (HostTimeoutNumberPhaseFlow.model view)
-      (interpreter view).toPrimInterp machine.state
+  | .pending context => HostTimeoutNumberSourceWrites.FrameAt context frame ∧
+      HostTimeoutNumberUniform.FrameAt machine.state
       (.attempt context.before context.entered (by
         change context.before.count + 1 = context.before.cleanups.length + 1
         rw [context.cleanups])) frame

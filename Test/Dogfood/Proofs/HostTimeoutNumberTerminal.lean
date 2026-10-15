@@ -1,5 +1,6 @@
 import Test.Dogfood.Proofs.HostTimeoutNumberPhaseFinalizer
 import Effect4.Laws.Program.Guard.Interruption
+import Test.Dogfood.Proofs.HostTimeoutNumberConfiguration
 
 /-!
 Concept: scope-lifetime-finalization R11 and translation-simulation R10.

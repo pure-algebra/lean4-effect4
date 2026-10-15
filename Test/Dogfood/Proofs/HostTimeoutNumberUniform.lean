@@ -42,6 +42,45 @@ theorem FrameAt.each (state : Stores) (output : Kind) (frame : HostTimeoutFrames
   obtain ⟨input, code, saved⟩ := held
   exact ⟨input, code, path view state input output frame.stack saved⟩
 
+/-- All numeric head constructors introduce the same nonrecursive saved shapes once. -/
+theorem head_edges : HostTimeoutNumberPhaseHead.HeadEdges Edge := by
+  constructor
+  · intro state input output body name each
+    exact ⟨each, (by intro name cursor impossible; cases impossible),
+      (by intro name cursor impossible; cases impossible)⟩
+  · intro state input output body name each
+    exact ⟨each, (by intro name cursor impossible; cases impossible),
+      (by intro name cursor impossible; cases impossible)⟩
+  · intro state input output body next each
+    exact ⟨each, (by intro name cursor impossible; cases impossible),
+      (by intro name cursor impossible; cases impossible)⟩
+  · intro state input output body name flag each
+    exact ⟨each, (by intro name cursor impossible; cases impossible),
+      (by intro name cursor impossible; cases impossible)⟩
+
+/-- The single numeric head proof also supplies uniform saved edges. -/
+theorem head (view : HostTimeoutFlow.View) (state : Stores) (kind : Kind) (program : NCode)
+    (owned : CodeAt state kind program) (noSync : ∀ thunk, program ≠ .sync thunk)
+    (noAction : ∀ thunk, program ≠ .withFiber thunk) :
+    AnswerFlow.HeadAt (model view) (HostTimeoutFlow.interpreter view).toPrimInterp Edge state kind program :=
+  HostTimeoutNumberPhaseHead.head_over Edge head_edges view state kind program owned noSync noAction
+
+/-- Actual ordinary delegation retains the one uniform path at the actual interpreter view. -/
+theorem ordinary_native (view : HostTimeoutFlow.View) (machine : NativeMachine)
+    (fiber : SourceScope.SourceFiber) (yielding : Bool) (output : Kind)
+    (held : FrameAt machine.state output fiber.frame)
+    (noSuccess : ∀ value, fiber.frame.current ≠ .success value)
+    (noFailure : ∀ cause, fiber.frame.current ≠ .failure cause)
+    (noSync : ∀ thunk, fiber.frame.current ≠ .sync thunk)
+    (ordinary : ∀ thunk, fiber.frame.current = .withFiber thunk →
+      (HostTimeoutFlow.interpreter view).withFiberOf thunk = none) :
+    let next := evaluatePrim.stepFrame (HostTimeoutFlow.interpreter view) machine fiber yielding
+    FrameAt next.machine.state output next.fiber.frame := by
+  obtain ⟨next, events, actual, good⟩ := HostTimeoutNumberPhaseHead.ordinary_running_over Edge head_edges
+    view machine.state output fiber.frame held noSuccess noFailure noSync ordinary
+  simp only [evaluatePrim.stepFrame, actual, evaluatePrim.finishFrame]
+  exact good
+
 /-- A saved interruptibility flag is uniform and retains exactly the same numeric answer class. -/
 theorem mask (state : Stores) (kind : Kind) (flag : Bool) :
     Edge state kind kind (.setInterruptible flag) := by
