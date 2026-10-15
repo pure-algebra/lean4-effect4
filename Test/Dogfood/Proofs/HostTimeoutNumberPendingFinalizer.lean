@@ -57,4 +57,8 @@ theorem installed (context : CountContext) (view : HostTimeoutFlow.View) (machin
     rw [fields.2.2.2] at interruptible
     cases interruptible
 
+  · intro next same masked
+    exact (HostTimeoutNumberProtected.installed_metadata_deferred view machine fiber yielding exit
+      body name flag program chosen hook).2.2.2.2.2.2.2.2
+
 end Test.Dogfood.Proofs.HostTimeoutNumberPendingFinalizer

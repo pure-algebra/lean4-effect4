@@ -1064,3 +1064,32 @@ The audit checks 951 declarations at the permitted axioms, with zero planned goa
 The shared path helper comes from checked commit `8544d49c9`, integrated here as `0346a15df`.
 The new mask-permission leaf needs test reach when its active loop consumer lands.
 This proof-only slice reaches no outside implementation gate.
+
+## Actual protected loop entry
+
+The pending fiber assertion now retains the actual deferred-interruption condition while masked.
+Ordinary execution uses the unchanged bit from the same shared primitive classification.
+Protected callback installation uses the actual selected continuation's cleared bit.
+The existing machine, observer, interruption, count, cleanup, request, and terminal consumers retain this field.
+The legacy shared shape and installed-metadata interfaces remain wrappers.
+
+The protected input's saved path supplies its actual mask.
+The pending fiber then supplies its cleared deferred-interruption bit.
+Together they prove that the actual loop top returns the same fiber.
+
+Placement: scope-lifetime-finalization R11 and reactive-scheduling R9; both numeric history endpoints consume this loop-entry result.
+The source producer still supplies the entered heap, actual finalizer custody, and saved input class.
+Scheduler yield injection and full active command history remain open.
+Both original Timeout numeric goals remain open.
+This proof-only slice reaches no outside implementation gate.
+
+Verification command:
+
+```text
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh bash scratch/timeout-custody-check.sh
+```
+
+The script builds the ordinary, cleanup, attempt, terminal, and mask-permission modules before the axiom gate.
+The build passes with 1273 jobs.
+The audit checks 960 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
+The audit also reads the new loop-top theorem by name.

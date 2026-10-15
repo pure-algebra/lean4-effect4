@@ -129,6 +129,9 @@ theorem counted_fiber (machine : Effect4.Program.NativeMachine)
     cases same
     exact installedFin
 
+  · intro next same masked
+    exact held.pendingDeferred next same masked
+
 /-- The actual count write advances the entire numeric machine and its stored reply tasks. -/
 theorem count_machine (world : HostTimeoutNumberConfiguration.World) (machine : Effect4.Program.NativeMachine)
     (context : CountContext) (fiber : Effect4.Program.SourceScope.SourceFiber) (yielding : Bool)

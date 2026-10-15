@@ -97,6 +97,7 @@ theorem fiber_fields (machine : Effect4.Program.NativeMachine) (role : Role)
     (frame : FrameAt machine role after.frame) (exit : after.exit = before.exit)
     (running : after.running = before.running) (stack : after.frame.stack = before.frame.stack)
     (mask : after.frame.interruptible = before.frame.interruptible)
+    (deferred : before.frame.interruptible = false → after.frame.deferredInterrupt = before.frame.deferredInterrupt)
     (recorded : ∀ cause, after.frame.interruptedCause = some cause → NoTypedFailure cause) :
     FiberAt machine role after := by
   constructor
@@ -125,6 +126,11 @@ theorem fiber_fields (machine : Effect4.Program.NativeMachine) (role : Role)
     rw [stack]
     exact held.pendingCustody context same heap (mask.symm.trans interruptible)
 
+  · intro context same masked
+    have beforeMasked := mask.symm.trans masked
+    rw [deferred beforeMasked]
+    exact held.pendingDeferred context same beforeMasked
+
 /-- An actual interruption retains the fiber fields used by the numeric execution permission. -/
 theorem interrupt_fields (fiber : Effect4.Program.SourceScope.SourceFiber) (cause : CauseV) :
     (interruptWithCause cause fiber).1.exit = fiber.exit ∧
@@ -139,6 +145,16 @@ theorem interrupt_fields (fiber : Effect4.Program.SourceScope.SourceFiber) (caus
     split
     · split <;> exact ⟨rfl, rfl, rfl, rfl⟩
     · exact ⟨rfl, rfl, rfl, rfl⟩
+
+/-- Recording an interruption while masked keeps the actual deferred-interruption bit. -/
+theorem interrupt_masked_deferred (fiber : Effect4.Program.SourceScope.SourceFiber) (cause : CauseV)
+    (masked : fiber.frame.interruptible = false) :
+    (interruptWithCause cause fiber).1.frame.deferredInterrupt = fiber.frame.deferredInterrupt := by
+  unfold interruptWithCause
+  split
+  · rfl
+  · dsimp only [FiberCore.interruptedCause, FiberCore.recordCause, FiberCore.interruptible, frameCore]
+    simp only [masked, Bool.false_eq_true, ↓reduceIte]
 
 /-- Actual cause recording retains the interruption-only reason condition. -/
 theorem interrupt_recorded (fiber : Effect4.Program.SourceScope.SourceFiber) (cause : CauseV)
@@ -172,6 +188,6 @@ theorem interrupt_fiber (machine : Effect4.Program.NativeMachine) (role : Role)
     FiberAt machine role (interruptWithCause cause fiber).1 := by
   have fields := interrupt_fields fiber cause
   exact fiber_fields machine role fiber _ held (interrupt_frame machine role fiber cause held incoming)
-    fields.1 fields.2.1 fields.2.2.1 fields.2.2.2 (interrupt_recorded fiber cause incoming held.recorded)
+    fields.1 fields.2.1 fields.2.2.1 fields.2.2.2 (interrupt_masked_deferred fiber cause) (interrupt_recorded fiber cause incoming held.recorded)
 
 end Test.Dogfood.Proofs.HostTimeoutNumberConfigurationInterrupt

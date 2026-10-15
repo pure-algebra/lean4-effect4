@@ -1,6 +1,7 @@
 import Effect4.Laws.Machine.FinalizerCustody
 import Test.Dogfood.Proofs.HostTimeoutNumberReplacement
 import Effect4.Laws.Program.Guard.Interruption
+import Effect4.Laws.Program.Guard.DeferredCause
 
 /-!
 Concept: scope-lifetime-finalization R11 and translation-simulation R10.
@@ -113,6 +114,34 @@ theorem installed_fields (view : HostTimeoutFlow.View) (machine : NativeMachine)
     exact ⟨rfl, rfl, Guard.Interruption.getCont_interruptedCause_carried _ _ _ _, masked⟩
 
 /-- Installed callback dispatch changes only the addressed frame and emitted trace. -/
+theorem installed_metadata_deferred (view : HostTimeoutFlow.View) (machine : NativeMachine)
+    (fiber : SourceScope.SourceFiber) (yielding : Bool) (exit : ExitV)
+    (body : NCode) (name : EffName) (flag : Bool) (program : NCode)
+    (chosen : (fiber.frame.getCont (HostTimeoutEvaluation.exitDemand exit) (HostTimeoutEvaluation.exitSkip exit)
+      (HostTimeoutEvaluation.exitCause exit)).answer = .frame (.onExit body name flag))
+    (hook : (HostTimeoutFlow.interpreter view).finalizerProgram name
+      ((fiber.frame.getCont (HostTimeoutEvaluation.exitDemand exit) (HostTimeoutEvaluation.exitSkip exit)
+        (HostTimeoutEvaluation.exitCause exit)).deliveredExit exit) = some program) :
+    let next := evaluatePrim.finalizerOr (HostTimeoutFlow.interpreter view) machine fiber yielding exit
+    next.machine.fibers = machine.fibers ∧ next.machine.completedExits = machine.completedExits ∧
+      next.fiber.id = fiber.id ∧ next.fiber.dispatcher = fiber.dispatcher ∧
+      next.fiber.parked = fiber.parked ∧ next.nested = [] ∧ next.edits = [] ∧ next.outcome = .continue_ ∧
+      next.fiber.frame.deferredInterrupt = false := by
+  cases exit <;> dsimp only [HostTimeoutEvaluation.exitDemand, HostTimeoutEvaluation.exitSkip,
+    HostTimeoutEvaluation.exitCause] at chosen hook
+  all_goals
+    unfold evaluatePrim.finalizerOr
+    dsimp only
+    rw [chosen]
+    dsimp only
+    rw [hook]
+    refine ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl, ?_⟩
+    change (fiber.frame.getCont _ _ _).fiber.deferredInterrupt = false
+    rw [FrameFiber.getCont_fiber_cause]
+    exact Guard.DeferredCause.getCont_deferred_false _ _ _
+
+
+/-- Installed callback dispatch changes only the addressed frame and emitted trace. -/
 theorem installed_metadata (view : HostTimeoutFlow.View) (machine : NativeMachine)
     (fiber : SourceScope.SourceFiber) (yielding : Bool) (exit : ExitV)
     (body : NCode) (name : EffName) (flag : Bool) (program : NCode)
@@ -125,14 +154,8 @@ theorem installed_metadata (view : HostTimeoutFlow.View) (machine : NativeMachin
     next.machine.fibers = machine.fibers ∧ next.machine.completedExits = machine.completedExits ∧
       next.fiber.id = fiber.id ∧ next.fiber.dispatcher = fiber.dispatcher ∧
       next.fiber.parked = fiber.parked ∧ next.nested = [] ∧ next.edits = [] ∧ next.outcome = .continue_ := by
-  cases exit <;> dsimp only [HostTimeoutEvaluation.exitDemand, HostTimeoutEvaluation.exitSkip,
-    HostTimeoutEvaluation.exitCause] at chosen hook
-  all_goals
-    unfold evaluatePrim.finalizerOr
-    dsimp only
-    rw [chosen]
-    dsimp only
-    rw [hook]
-    exact ⟨rfl, rfl, rfl, rfl, rfl, rfl, rfl, rfl⟩
+  obtain ⟨fibers, completed, key, dispatcher, parked, nested, edits, outcome, clear⟩ :=
+    installed_metadata_deferred view machine fiber yielding exit body name flag program chosen hook
+  exact ⟨fibers, completed, key, dispatcher, parked, nested, edits, outcome⟩
 
 end Test.Dogfood.Proofs.HostTimeoutNumberProtected

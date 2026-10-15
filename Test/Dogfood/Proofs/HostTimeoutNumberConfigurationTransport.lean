@@ -56,6 +56,7 @@ theorem fiber_machine (before after : Effect4.Program.NativeMachine) (role : Rol
     change after.state.refs = context.entered.heap at heap
     rw [state] at heap
     exact heap
+  · exact held.pendingDeferred
 
 /-- A reply reuses the actual lookup when fibers, store, and completed exits stay the same. -/
 theorem reply_fields (world : HostTimeoutNumberConfiguration.World) (before after : Effect4.Program.NativeMachine)

@@ -68,6 +68,8 @@ theorem fiber (context : CountContext) (view : HostTimeoutFlow.View) (machine : 
   have source := source_step context view machine row yielding frame events held.frame.1 actual noSuccess noFailure noSync
   have shape := FrameFiber.step_nonresume_fields (HostTimeoutFlow.interpreter view).toPrimInterp row.frame frame
     (congrArg Prod.fst actual) noSuccess noFailure noSync
+  have deferred := FrameFiber.step_nonresume_deferred (HostTimeoutFlow.interpreter view).toPrimInterp row.frame frame
+    (congrArg Prod.fst actual) noSuccess noFailure noSync
   have recorded := Guard.Interruption.frame_step_interruptedCause (HostTimeoutFlow.interpreter view).toPrimInterp
     row.frame frame (congrArg Prod.fst actual)
   simp only [evaluatePrim.stepFrame, actual, evaluatePrim.finishFrame]
@@ -90,6 +92,10 @@ theorem fiber (context : CountContext) (view : HostTimeoutFlow.View) (machine : 
   · intro next same entered interruptible
     cases same
     exact shape.2.subset (held.pendingCustody context rfl heap (shape.1.symm.trans interruptible))
+
+  · intro next same masked
+    rw [deferred]
+    exact held.pendingDeferred next same (shape.1.symm.trans masked)
 
 /-- The actual ordinary running native step retains the same joined numeric world. -/
 theorem joint (world : HostTimeoutNumberConfiguration.World) (context : CountContext)

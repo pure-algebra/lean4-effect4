@@ -355,6 +355,9 @@ structure FiberAt (machine : Effect4.Program.NativeMachine) (role : Role)
     HostTimeoutNumberPhaseFlow.At context.entered machine.state → fiber.frame.interruptible = true →
       CountInstalled context fiber.frame
 
+  pendingDeferred : ∀ context, role = .pending context → fiber.frame.interruptible = false →
+    fiber.frame.deferredInterrupt = false
+
 /-- An actual unmasked counted attempt retains its finalizer or becomes masked at the same pop. -/
 theorem FiberAt.pending_pop_custody (machine : Effect4.Program.NativeMachine) (context : CountContext)
     (fiber : Effect4.Program.SourceScope.SourceFiber) (held : FiberAt machine (.pending context) fiber)

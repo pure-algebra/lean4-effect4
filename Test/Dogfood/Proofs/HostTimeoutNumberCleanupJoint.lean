@@ -79,6 +79,9 @@ theorem fiber (context : CountContext) (machine : NativeMachine) (row : SourceSc
     have contradiction : False := by omega
     exact False.elim contradiction
 
+  · intro next same maskedNext
+    exact held.pendingDeferred next same masked
+
 /-- The actual cleanup writer returns one joined machine, old queue, and detached snapshot at its committed phase. -/
 theorem joint (world : HostTimeoutNumberConfiguration.World) (context : CountContext)
     (machine : NativeMachine) (row : SourceScope.SourceFiber) (selected : ExitV)

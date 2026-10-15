@@ -29,4 +29,14 @@ theorem later_masked (context : CountContext) (machine : NativeMachine) (fiber :
       (fun first last edge => edge.finalizerInput _ _ _ rfl) later
     exact False.elim (absent installed)
 
+/-- Actual protected numeric execution reaches the native operation without loop-top failure replacement. -/
+theorem later_top (context : CountContext) (machine : NativeMachine) (fiber : SourceScope.SourceFiber)
+    (held : FiberAt machine (.pending context) fiber) (heap : At context.entered machine.state)
+    (input output : Kind)
+    (path : Effect4.Contracts.Path (HostTimeoutNumberUniform.Edge machine.state) input output fiber.frame.stack)
+    (later : 1 < input.grade) : runloopTop fiber = fiber := by
+  have masked := later_masked context machine fiber held heap input output path later
+  have clear := held.pendingDeferred context rfl masked
+  simp only [runloopTop, clear, Bool.false_eq_true, ↓reduceIte]
+
 end Test.Dogfood.Proofs.HostTimeoutNumberMaskPermission

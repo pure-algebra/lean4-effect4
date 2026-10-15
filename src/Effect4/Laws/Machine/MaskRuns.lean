@@ -248,13 +248,13 @@ A step of R11's open part "the lift of saved-mask-pop-discipline to runs". Its c
 fiber machine's delegation to the frame machine, `evaluatePrim.stepFrame`. It states nothing of a
 finished step: `step_finished_stack` does. -/
 @[semantics "scope-lifetime-finalization"]
-theorem step_running_shape (interp : PrimInterp ν σ β ε δ ι α)
+theorem step_running_fields (interp : PrimInterp ν σ β ε δ ι α)
     (f : FrameFiber ν σ β ε δ ι α) (next : FrameFiber ν σ β ε δ ι α)
     (running : (f.step interp).fst = FrameStep.running next) :
     (∀ base, MaskChain base f.interruptible f.stack → MaskChain base next.interruptible next.stack) ∧
       ((∀ value, f.current ≠ .success value) → (∀ cause, f.current ≠ .failure cause) →
         (∀ thunk, f.current ≠ .sync thunk) →
-        next.interruptible = f.interruptible ∧ f.stack.Sublist next.stack) := by
+        next.interruptible = f.interruptible ∧ next.deferredInterrupt = f.deferredInterrupt ∧ f.stack.Sublist next.stack) := by
   cases current : f.current with
   | success value =>
     constructor
@@ -283,16 +283,16 @@ theorem step_running_shape (interp : PrimInterp ν σ β ε δ ι α)
     · rename_i arm
       cases running
       exact ⟨fun base valid => armA_maskChain interp _ _ _ _ _ arm base _ _ valid,
-        fun _ _ _ => ⟨rfl, List.sublist_append_right _ _⟩⟩
+        fun _ _ _ => ⟨rfl, rfl, List.sublist_append_right _ _⟩⟩
     · cases running
-      exact ⟨fun _ valid => valid, fun _ _ _ => ⟨rfl, List.Sublist.refl _⟩⟩
+      exact ⟨fun _ valid => valid, fun _ _ _ => ⟨rfl, rfl, List.Sublist.refl _⟩⟩
   | whileLoop loop cursor =>
     simp only [step, current] at running
     split at running
     · cases running
-      exact ⟨fun _ valid => valid, fun _ _ _ => ⟨rfl, List.Sublist.cons _ (List.Sublist.refl _)⟩⟩
+      exact ⟨fun _ valid => valid, fun _ _ _ => ⟨rfl, rfl, List.Sublist.cons _ (List.Sublist.refl _)⟩⟩
     · cases running
-      exact ⟨fun _ valid => valid, fun _ _ _ => ⟨rfl, List.Sublist.refl _⟩⟩
+      exact ⟨fun _ valid => valid, fun _ _ _ => ⟨rfl, rfl, List.Sublist.refl _⟩⟩
   | _ =>
     simp only [step, current] at running
     cases running
@@ -300,8 +300,32 @@ theorem step_running_shape (interp : PrimInterp ν σ β ε δ ι α)
     intro noValue noCause noSync
     constructor
     · rfl
-    · aesop (rule_sets := [Effect4.Fibers]) (add safe apply [List.Sublist.refl])
+    · refine ⟨rfl, ?_⟩
+      aesop (rule_sets := [Effect4.Fibers]) (add safe apply [List.Sublist.refl])
         (add safe constructors [List.Sublist])
+
+/-- The existing running-shape reader projects the shared primitive field classification. -/
+theorem step_running_shape (interp : PrimInterp ν σ β ε δ ι α)
+    (f : FrameFiber ν σ β ε δ ι α) (next : FrameFiber ν σ β ε δ ι α)
+    (running : (f.step interp).fst = FrameStep.running next) :
+    (∀ base, MaskChain base f.interruptible f.stack → MaskChain base next.interruptible next.stack) ∧
+      ((∀ value, f.current ≠ .success value) → (∀ cause, f.current ≠ .failure cause) →
+        (∀ thunk, f.current ≠ .sync thunk) →
+        next.interruptible = f.interruptible ∧ f.stack.Sublist next.stack) := by
+  have fields := step_running_fields interp f next running
+  refine ⟨fields.1, ?_⟩
+  intro noValue noCause noSync
+  have ordinary := fields.2 noValue noCause noSync
+  exact ⟨ordinary.1, ordinary.2.2⟩
+
+/-- An ordinary native head retains its actual deferred-interruption bit.
+Consumer: the pending masked-loop permission in Timeout's numeric history producer. -/
+theorem step_nonresume_deferred (interp : PrimInterp ν σ β ε δ ι α)
+    (f next : FrameFiber ν σ β ε δ ι α) (running : (f.step interp).fst = FrameStep.running next)
+    (noValue : ∀ value, f.current ≠ .success value) (noCause : ∀ cause, f.current ≠ .failure cause)
+    (noSync : ∀ thunk, f.current ≠ .sync thunk) :
+    next.deferredInterrupt = f.deferredInterrupt :=
+  ((step_running_fields interp f next running).2 noValue noCause noSync).2.1
 
 /-- The existing mask reader consumes the same actual running-step classification as saved-stack custody.
 Consumer: saved-mask-pop-discipline and the Timeout numeric native producer. -/
