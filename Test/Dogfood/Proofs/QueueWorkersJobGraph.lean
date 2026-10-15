@@ -57,6 +57,9 @@ inductive CodeAt (total : Nat) (table : RowTable) (owner : FiberId) : QueueWorke
         some (.eff (.perform (.refUpdateWith term) (.var 3)))) :
       CodeAt total table owner world .ordinary (.sync (.op (.refUpdate ⟨3⟩ term point.env)))
   | workerMake {world} : CodeAt total table owner world (.workerKey owner) (.sync (.op .deferredMake))
+  | maskGetter {world point}
+      (actual : actionAt (Programs.queueProgram total) point = some .getInterruptible) :
+      CodeAt total table owner world .maskFlag (.withFiber (.act point))
   | hintMake {world token} (selected : Owns world owner token)
       (waiting : world.requests.custody.requests token = .waiting) :
       CodeAt total table owner world (.hintKey owner token) (.sync (.op .deferredMake))

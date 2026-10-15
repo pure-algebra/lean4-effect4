@@ -50,6 +50,7 @@ def OwnerReady (world : World) (owner : FiberId) : Prop :=
 /-- Actual successful inputs distinguish a new key, a take result and the delivered job. -/
 inductive Kind
   | ordinary
+  | maskFlag
   | newKey (owner : FiberId)
   | hintKey (owner : FiberId) (token : Nat)
   | workerKey (owner : FiberId)
@@ -67,7 +68,7 @@ def RequestInput (token : Nat) : QueueWorkersCustody.Kind → Prop
 
 /-- Every actual worker binder reads its own owner and its captured literal request. -/
 def LocalKind (owner : FiberId) : Kind → Prop
-  | .ordinary => True
+  | .ordinary | .maskFlag => True
   | .newKey actual | .hintKey actual _ | .workerKey actual | .offerKey actual _ |
       .ownerReady actual | .snapshot actual _ _ | .restoreSnapshot actual _ _ _ | .job actual => actual = owner
   | .captured actual token input => actual = owner ∧ RequestInput token input
@@ -75,6 +76,7 @@ def LocalKind (owner : FiberId) : Kind → Prop
 /-- The outer job binder reads its owner's current request; inner binders retain their literal token. -/
 def ValueAt (world : World) : Kind → Val → Prop
   | .ordinary, _ => True
+  | .maskFlag, value => ∃ flag, value = Val.savedMask flag
   | .newKey owner, value => ∃ token, Owns world owner token ∧
       QueueWorkersRequestKeys.KeyAt world.requests token value
   | .hintKey owner token, .handle 3 _ => Owns world owner token ∧

@@ -33,6 +33,17 @@ abbrev Semantic (total : Nat) (table : RowTable) (owner : FiberId) :=
   ViewSavedAt (model total table owner)
     (fun view => (interpAt (Test.Dogfood.Scenario.Programs.queueProgram total) view table).toPrimInterp)
 
+/-- The real mask-restoration frame retains the same classified input at every completed-fiber view. -/
+theorem mask_saved (total : Nat) (table : RowTable) (owner : FiberId)
+    (world : QueueWorkersCustodyFlow.World) (kind : Kind) (flag : Bool) :
+    Semantic total table owner world kind kind (.setInterruptible flag) := by
+  refine ⟨?_, ?_, ?_⟩
+  · intro view
+    exact saved_mask (model total table owner view)
+      (interpAt (Test.Dogfood.Scenario.Programs.queueProgram total) view table).toPrimInterp world kind flag
+  · intros; intro impossible; cases impossible
+  · intros; intro impossible; cases impossible
+
 /-- The actual classified callback is the only successful entry into the assignment continuation. -/
 theorem bound_saved (total : Nat) (table : RowTable) (owner : FiberId)
     (world : QueueWorkersCustodyFlow.World) (input output : Kind) (body : NCode) (name : EffName)
