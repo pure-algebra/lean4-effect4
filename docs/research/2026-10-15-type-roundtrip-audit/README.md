@@ -19,6 +19,10 @@ The round trips stop at three places.
 Rows 380 (6) and 309 (5) already rule most of the repairs. Three are new proposals: sum types in
 modeling, reading back the effect types, and rows with named parameters.
 
+A survey of the earlier probes (§6) finds most answers recorded. Probe S designed and proved the
+Schema arms on 2026-10-01, and their seat never ran. DI-35 already admits `eq` at `bool`. §6A
+lands six fixes in one worktree with one rebuild. The OCaml compile gaps run beside it.
+
 ## 2. Question and evidence
 
 The question: which reading and writing back of types is missing, for the lowering, the modeling
@@ -198,18 +202,177 @@ flowchart LR
 
 The diagram records dependencies only. It is not proof evidence.
 
-## 6. Proposed decisions rows
+## 6. Informed recommendations, after the survey
 
-- **Modeling.** Widen `Modeled` to `Int`, literals, optional fields and sum types. `deriving
-  Modeled` on an inductive writes a union of tagged records. One Lean declaration then gives the
-  Lean type, its `Ty` and its terms, in place of a separate `eff_record`.
-- **Reading back.** `Classes.readNamed` reads every type that `Types.ofTy` prints: `unknown`,
-  `Exit`, `Cause`, `Fiber`, `Deferred` and the handles. `readTyChecked`'s re-print check keeps each
-  reading exact.
-- **Rows.** An `eff_rows` entry takes named parameters as one record request. The printed service
-  method takes them as named arguments.
-- **Equality.** Row 309 (1) admits what control flow needs. The proposal reads that as `eq` at
-  `bool` and at records.
+Four read-only searches of `docs/research/`, the register and the code answered one question each.
+The earlier probes settle most choices. Each item gives the record, the recommendation and its
+status. `probes/fanout.txt` counts the modules each edit rebuilds
+(`docs/research/2026-10-15-codegen-review/probes/fanout.py`).
+
+### 6.1 The Schema arms of `number`, `null`, `undefined` and `bytes` (R-T6, first part)
+
+- **The record.** Probe S designed and proved these arms on a copy
+  (`git:f7ccf52e0^:docs/research/2026-10-01-type-language-probe/S/note.md`, §1.1). Its patches are
+  in the same commit, under `S/patches/`. Seat W5 was to land them and never ran: no W5 receipt
+  exists. Row 162 refuses each appended constructor by name until its own commit.
+- **The JSON codec.** `Codec.lean` already carries `number` (`numberWire`). It refuses `null`,
+  `undefined`, `bytes` and `app`. The Schema arms are type-level and need no value image.
+- **Recommendation.** Land four arms in `Bridge.schemaAlg` and their readings in `Bridge.ofSchema`:
+  - `number` as `.number none []`, rc.112's `Number`; the value codec keeps refusing a NaN and an
+    infinity (row 309 (6));
+  - `null` and `undefined` as rc.112's keywords;
+  - `bytes` as the declaration `effect/schema/Uint8Array` with a `null` payload, a reserved id that
+    reads back as `.bytes`.
+- **Same commit.** Extend `ofSchema_exact` and the `closed ∧ reservedFree` premise, and change
+  `Schema/TyFaces.lean`, which `schema_eq_face` ties to the bridge. Add one red and one green
+  control per arm.
+- **What it unlocks.** The guard in `Test/Codegen/SurfaceContract.lean` flips: a service that
+  answers a number gets Schemas. The hand `Schema.Number` in `harness/truth/schema-codec/check.ts`
+  goes. A1's `NullOr` payloads read. A nullable field bridges.
+- **Left out.** `app` needs a variance table and a reviver per name (row 158). `contextOf` has no
+  plan. The value images of `null`, `undefined` and `bytes` wait on row 160's constraint and row 161
+  (a)'s base64 codec. `Shape` as a fold of `Ty` moves the store's pinned digests
+  (`Test/Store/NodeContract.lean`), so it is a slice of its own.
+- **Status.** Ruled by row 380 (6). Cost: `Effect4.Schema.Bridge` rebuilds 660 modules.
+
+### 6.2 The aliases `Int` and `Num` (R-T4)
+
+- **The record.** Rows 309 (5) and 380 (6) rule the aliases. The integers packet's slice SPELL
+  (`docs/research/2026-10-07-packet-integers.md`, §4.10) keeps `nat` as `number`, so no golden of
+  today moves. No truth module prints an `int` or a `number` (`grep`, at the base).
+- **Recommendation.** `Types.ofNormalized` prints `int` as `Int` and `number` as `Num`, and
+  `readNamed` reads both. The prelude declares `export type Int = number` and `Num` beside
+  `MaskRestore`, and both join `preludeNames` (`src/Effect4/Codegen/Checked.lean`). CR-1 found that
+  a helper missing there is never imported.
+- **One risk.** A payload class tagged `Int` or `Num` would collide with an alias. The alias arms
+  come before the class lookup, and `ClassTable` refuses the two tags.
+- **Twin.** `ts/eff/target-types.ts` and `ts/eff/read.ts` follow.
+- **Status.** Ruled. Cost: `Effect4.Codegen.Types` rebuilds 103 modules.
+
+### 6.3 Reading back what the printer writes
+
+- **The record.** The state plan's T5, part B (`docs/research/2026-10-05-seat-T5-receipt.md`, §9)
+  left these types without a reading. It was a choice of scope, not a law. Its open item 3 asks a
+  wider reader to keep the checked form. `readTyChecked_exact` holds by the re-print check alone,
+  so a new arm cannot break exactness. `f6dc2ec5a` added `Ref` at headers this way.
+- **Recommendation.** `readNamed` reads `unknown`, `Exit.Exit`, `Cause.Cause`, `Fiber.Fiber` and
+  `Deferred.Deferred` wherever the checked reader reads. `Ref` stays at headers (row 378 (8)), and
+  handles wait for CR-11. The twin `readNamedType` in `ts/eff/read.ts` follows.
+- **A known collision.** Test fixtures spell `.handle "Deferred.Deferred<number, never>"`, which
+  prints as `deferredOf` does. The reader answers `deferredOf`. CR-11's design note retires these
+  texts, as it retires `refT`.
+- **Left out.** The fold accumulator's type moves a claim's statement (T5, step (c)). CR-1's
+  eliminator annotations are a reader slice of their own.
+- **Status.** A coordinator decision: it widens an exact reader's domain, with no change of meaning
+  or representation. Cost: `Effect4.Codegen.Classes` rebuilds 93 modules.
+
+### 6.4 `eq` at `bool`
+
+- **The record.** DI-35 (`docs/DESIGN-ISSUES.md`, ruled 2026-09-09) widens `eq` one type at a time,
+  wherever `===` compares faithfully. `===` is faithful on Booleans. Past that, records need
+  `Equal.equals`, its own slice, and row 126 is open.
+- **Recommendation.** Add `([.bool, .bool], .bool)` to `eq`'s scheme and one `eval` arm in
+  `src/Effect4/Machine/Term.lean`. The prelude's type gains `boolean`, and the truth lane gains one
+  fixture, as DI-35 asks. No constructor is added, so the inventory and the OCaml alphabet stay.
+  The to-do's control (`Test/Dogfood/Scenario/Todo.lean`, `eq` at two Booleans) flips.
+- **Status.** Inside DI-35's ruling. Cost: the machine's term module sits low, about 1,000 modules.
+
+### 6.5 Sum types and `Int` in Lean modeling
+
+- **The record.**
+  - Probe T (`git:f7ccf52e0^:docs/research/2026-10-01-type-language-probe/T/note.md`, rows 12, 13
+    and 39): a union of `_tag` records needs no new constructor. It is mutual with rc.112's
+    `Data.TaggedEnum` and `Schema.Union` of tagged structs (tsgo d1 to d3). A TypeScript enum maps
+    to a union of literals.
+  - The MODULES review (`docs/research/2026-10-08-modules-r2-review.md`, R2-F5) asks for a
+    representation policy before a tagged sum serves `Ty.union`.
+  - `docs/research/2026-10-15-ocaml-seam-probes/ModelProbe.lean`: Lean's generic `Int` encoding
+    is not the program's `int`, which `intImage` encodes (`src/Effect4/Program/Typed.lean`).
+  - `E4-SCHEMA-CE-062`: distinct required `_tag` literals separate branches; optional fields do not.
+- **Recommendation.**
+  - `deriving Modeled` on an inductive writes a union of `_tag` records: the tag is the
+    constructor's name, and the fields are its named arguments.
+  - An inductive whose constructors all take no argument writes a union of string literals.
+  - `Int` gets a carrier through `intImage`.
+  - The deriving also writes `eff_record`'s declarations, so one Lean structure serves both faces.
+    The interop plan's P1, step 1, already writes the to-do's record as a structure deriving
+    `Modeled`.
+- **Left out.** Optional keys wait for the absent column's carrier and `E4-SCHEMA-CE-062`. `number`
+  and `bytes` carriers wait for their value codecs.
+- **Status.** A coordinator decision, since it follows rc.112's own idiom and Probe T. The owner may
+  undo it. Cost: `Effect4.Schema.Modeled` rebuilds 97 modules.
+
+### 6.6 Rows with named parameters
+
+- **The record.** No row rules the single request. It dates from the host-rows slice
+  (`docs/research/2026-09-08-host-rows-slice.md`, §1). Codex's interop review reads a row's position
+  as a whole request (`docs/research/2026-10-15-ocaml-interop-explore/codex-review.md`). A record
+  request stays one value, so that theory stands. `Row` already has its own error column.
+- **Recommendation.** `eff_rows` accepts `setDone(id : .nat, done : .bool) : …` as a record request.
+  The printed method takes one object, `setDone({ id, done })`, which needs no names work. An
+  optional `error E` clause per row overrides the block's. Positional named arguments wait for CR-5.
+  The to-do moves with P1 and V3, not here, so the host-protocol lane is not re-cut twice.
+- **Status.** A coordinator decision: new syntax, opt-in, with no change to an existing row. Cost:
+  `Effect4.Program.Authoring.Declare` rebuilds 19 modules.
+
+### 6.7 The lowered host's three compile gaps
+
+- **The record.** S3's receipt measures three gaps and leaves later errors unmeasured. No note
+  proposes the repairs. No gate compiles the host closure with `ocamlopt`. `Ml.checkModule` has no
+  check for an unbound type constructor, so the generator passed.
+- **Recommendation (inferred from the code).**
+  - `UInt32`: value rows for `UInt32.ofBitVec` and `BitVec.ofFin` as the identity on `int`, as
+    `ctorApp`'s `Array.mk` case does (`src/OCaml5/Lcnf/Translate.lean`).
+  - `String`: a row for `String.ofByteArray` with a UTF-8 decoding primitive, the inverse of F4's
+    encoder (lowering state §6.8).
+  - The value restriction: eta-expand an application whose arguments are all erased.
+  - An `unbound-type` diagnostic in `Ml.checkModule`, and an `ocamlopt` compile of the host closure
+    as a gate step.
+- **Status.** P1's first step (rows 391, 393). It touches `OCaml5` only, so it runs in its own
+  worktree beside the type slice.
+
+### 6.8 Not in this landing
+
+- `Shape` as a fold of `Ty`, `app` in the Schema, and the value images of `null`, `undefined` and
+  `bytes` (§6.1).
+- Repair A of R-T3. The order stands under M7, and `Ty` rebuilds 992 modules. It is a slice of its
+  own, with its stop rule.
+- CR-5's names (L), CR-11 (a design note first), and R-T7 with DI-88 (L).
+- Equality at records (`Equal.equals`, row 126).
+- Message failures as classes. Row 120 (c) keeps the pair `[tag, message]`, so one rc.112 class
+  never has two spellings.
+- An authoring syntax for row protocols. It is small, and its consumer is the to-do's P1 move.
+
+## 6A. The landing in one go
+
+One worktree runs one rebuild. Its commits follow the items, one per item, so each is reviewed
+alone. The machine's term module is the lowest edit, so the slice pays about 1,000 modules once.
+
+```mermaid
+flowchart LR
+  E[6.4 eq at bool] --> S[6.1 Schema arms]
+  S --> T[6.2 Int and Num]
+  T --> R[6.3 read back]
+  R --> M[6.5 sums and Int in Modeled]
+  M --> W[6.6 named row parameters]
+  W --> G[regenerate, audit, check-full]
+  O[6.7 compile gaps, own worktree] --> P[P1 native to-do]
+```
+
+The order:
+1. Make the six edits, then build once.
+2. Regenerate the reached groups: `derived`, `lcnf`, `ts`, and the truth lane where its prelude moves.
+3. Run `#axiom_audit` over the touched modules.
+4. Run `make check-full` and `make check-gen`.
+
+The gates each item reaches:
+- 6.1: `check-schema-codec`, `check-schema-ts`;
+- 6.2 and 6.3: `check-target`, `check-ts-reader`, `check-corpus`, `check-tsdiag`;
+- 6.4: `check-truth`, `check-ocaml`;
+- 6.5 and 6.6: the narrow builds and their batteries.
+
+The decisions rows to record: one coordinator row each for §6.3, §6.5 and §6.6, and one row for
+§6.4 under DI-35. Row 380 (6) already covers §6.1 and §6.2.
 
 ## 7. What this does not establish
 
@@ -220,3 +383,5 @@ The diagram records dependencies only. It is not proof evidence.
 - A `yes` in the table is a finite evaluation, not a theorem. The theorems are the type interface
   note's: `decode_iff`, `ofSchema_exact` and `readTyChecked_exact`.
 - No implementation follows from this note. Each proposal needs its decisions row first.
+- §6.7's repairs are inferred from the code. No probe has compiled past the three measured gaps.
+- The fan-out counts read import lines, not Lake's traces.
