@@ -143,4 +143,13 @@ theorem take_step (total : Nat) (nativeTable : RowTable)
     Except.ok.inj (tree.symm.trans (QueueWorkersTakeSites.tree worker member))
   subst actualTerm
   exact ⟨taken world run key.index token, _, _, future, actual, conserving, counted, .success answer⟩
+
+/-- A classified take answer carries its exact option and the actual notification lists. -/
+theorem reply_value (world : QueueWorkersCustodyFlow.World) (owner : FiberId) (token : Nat) (value : Val)
+    (good : ValueAt world (.captured owner token (.takeReply token)) value) :
+    ∃ option entered woken, value = .list [option, .list entered, .list woken] ∧
+      Owns world owner token ∧ QueueWorkersCustody.OptionAt world.requests.custody token option := by
+  obtain ⟨selected, answer⟩ := good
+  fun_cases QueueWorkersCustody.ValueAt world.requests.custody (.takeReply token) value
+  all_goals aesop (add norm simp [QueueWorkersCustody.ValueAt])
 end Test.Dogfood.Proofs.QueueWorkersTakeBinding

@@ -1,3 +1,4 @@
+import Test.Dogfood.Proofs.QueueWorkersNotificationFamily
 import Test.Dogfood.Proofs.QueueWorkersJobBinding
 import Test.Dogfood.Proofs.QueueWorkersTakeSites
 import Test.Dogfood.Proofs.QueueWorkersReadonlySource
@@ -21,6 +22,11 @@ inductive CodeAt (total : Nat) (table : RowTable) (owner : FiberId) : QueueWorke
   | failure {world kind cause} : CodeAt total table owner world kind (.failure cause)
   | ordinary {world code} (held : QueueWorkersReadonly.Code total code) :
       CodeAt total table owner world .ordinary code
+  | notification {world token option bindings code}
+      (spec : QueueWorkersNotificationFlow.Spec (Programs.queueProgram total))
+      (phase : Owns world owner token ∧ QueueWorkersCustody.OptionAt world.requests.custody token option)
+      (owned : QueueWorkersNotificationFlow.Code spec bindings code) :
+      CodeAt total table owner world (.snapshot owner token option) code
   | assignment {world point term}
       (held : QueueWorkersJobBinding.Capture (Programs.queueProgram total) world owner point)
       (leading : AnswerSlots.Prefix InitialSlots.bindings point.env)
@@ -110,6 +116,7 @@ theorem assignment_input (total : Nat) (table : RowTable)
   | ordinary owned =>
     change (3 ≠ 0 ∧ 3 ≠ 3) at owned
     exact (owned.2 rfl).elim
+  | notification _spec _phase owned => exact owned.elim
   | assignment held leading found => exact ⟨rfl, _, rfl, held, leading, found⟩
 
 /-- The selected assignment head spends exactly its protected occurrence and returns ordinary unit. -/
@@ -166,6 +173,7 @@ theorem take_input (total : Nat) (table : RowTable)
       (∃ hint, point.env[worker + 10]? = some (.promise hint)) := by
   cases good with
   | ordinary owned => exact owned.elim
+  | notification _spec _phase owned => exact owned.elim
   | take member request selected leading path hinted => exact ⟨_, member, _, _, rfl, rfl, rfl, request, selected, leading, path, hinted⟩
 
 end Test.Dogfood.Proofs.QueueWorkersJobGraph
