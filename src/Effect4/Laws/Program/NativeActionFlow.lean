@@ -30,17 +30,45 @@ structure ActionFlowFacts (root : NativeEff) (view : List (FiberId × ExitV)) (t
     (.asyncFinalizer ((interpAt root view table).cancelName (interpAt root view table).parkCancelName owner token))
 
 /-- A mask pushes its actual restoring edge before the existing saved suffix. -/
+theorem masked_path (world : World) (input output : Kind) (frame : FrameFiber EffName EffThunk Val Err Defect FiberId Ann)
+    (body : NCode) (code : model.code world input body)
+    (mask : Edge world input input (.setInterruptible true))
+    (stack : Contracts.Path (Edge world) input output frame.stack) :
+    model.code world input body ∧ Contracts.Path (Edge world) input output frame.uninterruptible.stack := by
+  unfold FrameFiber.uninterruptible
+  split
+  · exact ⟨code, .cons mask stack⟩
+  · exact ⟨code, stack⟩
+
+/-- The earlier existential result is a projection of the exact action input path. -/
 theorem masked_family (world : World) (input output : Kind) (frame : FrameFiber EffName EffThunk Val Err Defect FiberId Ann)
     (body : NCode) (code : model.code world input body)
     (mask : Edge world input input (.setInterruptible true))
     (stack : Contracts.Path (Edge world) input output frame.stack) :
-    FamilyResult model Edge world output body frame.uninterruptible.stack := by
-  unfold FrameFiber.uninterruptible
-  split
-  · exact ⟨input, code, .cons mask stack⟩
-  · exact ⟨input, code, stack⟩
+    FamilyResult model Edge world output body frame.uninterruptible.stack  := by
+  exact ⟨input, masked_path model Edge world input output frame body code mask stack⟩
 
 /-- Enabling interruption either enters the body or delivers the actual pending cause. -/
+theorem interruptible_path (world : World) (input output : Kind)
+    (frame : FrameFiber EffName EffThunk Val Err Defect FiberId Ann) (body : NCode)
+    (code : model.code world input body)
+    (mask : Edge world input input (.setInterruptible false))
+    (causes : ∀ cause, model.cause world input cause)
+    (stack : Contracts.Path (Edge world) input output frame.stack) :
+    model.code world input (frame.interruptibleRegion.2.getD body) ∧
+      Contracts.Path (Edge world) input output frame.interruptibleRegion.1.stack := by
+  unfold FrameFiber.interruptibleRegion
+  split
+  · exact ⟨code, stack⟩
+  · cases actual : frame.interruptedCause with
+    | none =>
+      simp only [FrameFiber.setFiberInterruptible, actual]
+      exact ⟨code, .cons mask stack⟩
+    | some cause =>
+      simp only [FrameFiber.setFiberInterruptible, actual]
+      exact ⟨model.failure world input cause (causes cause), .cons mask stack⟩
+
+/-- The earlier existential result is a projection of the exact action input path. -/
 theorem interruptible_family (world : World) (input output : Kind)
     (frame : FrameFiber EffName EffThunk Val Err Defect FiberId Ann) (body : NCode)
     (code : model.code world input body)
@@ -48,19 +76,28 @@ theorem interruptible_family (world : World) (input output : Kind)
     (causes : ∀ cause, model.cause world input cause)
     (stack : Contracts.Path (Edge world) input output frame.stack) :
     FamilyResult model Edge world output (frame.interruptibleRegion.2.getD body)
-      frame.interruptibleRegion.1.stack := by
-  unfold FrameFiber.interruptibleRegion
-  split
-  · exact ⟨input, code, stack⟩
-  · cases actual : frame.interruptedCause with
-    | none =>
-      simp only [FrameFiber.setFiberInterruptible, actual]
-      exact ⟨input, code, .cons mask stack⟩
-    | some cause =>
-      simp only [FrameFiber.setFiberInterruptible, actual]
-      exact ⟨input, model.failure world input cause (causes cause), .cons mask stack⟩
+      frame.interruptibleRegion.1.stack  := by
+  exact ⟨input, interruptible_path model Edge world input output frame body code mask causes stack⟩
 
 /-- The countdown keeps the old current code when parked and its actual cancellation edge. -/
+theorem countdown_path (root : NativeEff) (view) (table : RowTable)
+    (world : World) (input output : Kind) (m : NativeMachine) (fiber : SourceFiber)
+    (targets : List FiberId) (resume : Resume EffName) (failFast : Bool)
+    (code : model.code world input fiber.frame.current)
+    (stack : Contracts.Path (Edge world) input output fiber.frame.stack)
+    (answer : ∀ exits, model.code world input (countdownPark.resumePrim (interpAt root view table) resume exits))
+    (cancel : Edge world input input
+      (.asyncFinalizer ((interpAt root view table).cancelName (interpAt root view table).parkCancelName fiber.id m.nextToken))) :
+    let next := (countdownParkEdits (interpAt root view table) m fiber targets resume failFast).2.1
+    model.code world input next.frame.current ∧ Contracts.Path (Edge world) input output next.frame.stack := by
+  dsimp only
+  unfold countdownParkEdits
+  dsimp only
+  split
+  · exact ⟨answer _, stack⟩
+  · exact ⟨code, .cons cancel stack⟩
+
+/-- The earlier existential result is a projection of the exact action input path. -/
 theorem countdown_family (root : NativeEff) (view) (table : RowTable)
     (world : World) (input output : Kind) (m : NativeMachine) (fiber : SourceFiber)
     (targets : List FiberId) (resume : Resume EffName) (failFast : Bool)
@@ -70,16 +107,104 @@ theorem countdown_family (root : NativeEff) (view) (table : RowTable)
     (cancel : Edge world input input
       (.asyncFinalizer ((interpAt root view table).cancelName (interpAt root view table).parkCancelName fiber.id m.nextToken))) :
     let next := (countdownParkEdits (interpAt root view table) m fiber targets resume failFast).2.1
-    FamilyResult model Edge world output next.frame.current next.frame.stack := by
-  dsimp only
-  unfold countdownParkEdits
-  dsimp only
-  split
-  · exact ⟨input, answer _, stack⟩
-  · exact ⟨input, code, .cons cancel stack⟩
+    FamilyResult model Edge world output next.frame.current next.frame.stack  := by
+  exact ⟨input, countdown_path model Edge root view table world input output m fiber targets resume failFast code stack answer cancel⟩
 
 /-- Every native action retains the parent's actual saved path at its supplied post-operation world.
 The caller proves the store transfer separately; no arbitrary current-code monotonicity is assumed. -/
+theorem with_fiber_path (root : NativeEff) (view) (table : RowTable)
+    (world : World) (input output : Kind) (m : NativeMachine) (fiber : SourceFiber)
+    (yielding : Bool) (action : NAction)
+    (facts : ActionFlowFacts model Edge root view table world input)
+    (code : model.code world input fiber.frame.current)
+    (stack : Contracts.Path (Edge world) input output fiber.frame.stack)
+    (source : ActionProgramsAt root (fun _ => model.code world input) action)
+    (closed : ∀ scope exit state program,
+      (interpAt root view table).closeScope scope exit fiber.frame.interruptible fiber.id m.state = some (state, some program) →
+      model.code world input program) :
+    let next := evaluatePrim.withFiber (interpAt root view table) m fiber yielding action
+    model.code world input next.fiber.frame.current ∧
+      Contracts.Path (Edge world) input output next.fiber.frame.stack := by
+  dsimp only
+  have success (value : Val) := model.success world input value (facts.value value)
+  have failure (cause : CauseV) := model.failure world input cause (facts.cause cause)
+  cases action
+  case fork body options site =>
+    cases options with
+    | mk immediate daemon mode =>
+      cases daemon <;> cases immediate
+      all_goals exact ⟨success _, stack⟩
+  case forkIn body options scope site =>
+    cases options with
+    | mk immediate daemon mode =>
+      cases immediate
+      all_goals exact ⟨success _, stack⟩
+  case forkScoped body options site =>
+    simp only [evaluatePrim.withFiber]
+    split
+    · cases options with
+      | mk immediate daemon mode =>
+        cases immediate
+        all_goals exact ⟨success _, stack⟩
+    · exact ⟨failure _, stack⟩
+  case ambientScope =>
+    simp only [evaluatePrim.withFiber]
+    split
+    · exact ⟨success _, stack⟩
+    · exact ⟨failure _, stack⟩
+  case runIn target scope => exact ⟨success _, stack⟩
+  case interrupt target => exact ⟨facts.interruptAs target fiber.id, stack⟩
+  case interruptAs target owner =>
+    simp only [evaluatePrim.withFiber, evaluatePrim.interruptAs]
+    split
+    all_goals exact ⟨code, stack⟩
+  case interruptScoped target =>
+    simp only [evaluatePrim.withFiber]
+    split
+    · exact ⟨success _, stack⟩
+    · exact ⟨facts.interrupt target, stack⟩
+  case interruptAll targets owner => exact ⟨code, stack⟩
+  case awaitAll targets =>
+    exact countdown_path model Edge root view table world input output m fiber targets .exitsValue false
+      code stack (fun _ => success _) (facts.cancel fiber.id m.nextToken)
+  case awaitAllFailFast targets =>
+    exact countdown_path model Edge root view table world input output m fiber targets .exitsValue true
+      code stack (fun _ => success _) (facts.cancel fiber.id m.nextToken)
+  case snapshotChildren => exact ⟨success _, stack⟩
+  case awaitNewChildren snapshot =>
+    exact countdown_path model Edge root view table world input output m fiber _ .void false
+      code stack (fun _ => success _) (facts.cancel fiber.id m.nextToken)
+  case raceAll bodies site => exact ⟨facts.park m.nextRace, stack⟩
+  case raceAllFirst bodies site => exact ⟨facts.park m.nextRace, stack⟩
+  case setInterruptible body flag =>
+    cases flag with
+    | false => exact masked_path model Edge world input output fiber.frame body source (facts.mask true) stack
+    | true =>
+      exact interruptible_path model Edge world input output fiber.frame body source
+        (facts.mask false) facts.cause stack
+  case setContext context => exact ⟨success _, stack⟩
+  case getContext => exact ⟨success _, stack⟩
+  case getId => exact ⟨success _, stack⟩
+  case closeScope scope exit =>
+    simp only [evaluatePrim.withFiber]
+    split
+    · exact ⟨code, stack⟩
+    · exact ⟨success _, stack⟩
+    · rename_i state program actual
+      exact masked_path model Edge world input output fiber.frame program
+        (closed scope exit state program actual) (facts.mask true) stack
+  case closePar programs => exact ⟨code, stack⟩
+  case refuse cause => exact ⟨failure cause, stack⟩
+  case dropObservers token => exact ⟨success _, stack⟩
+  case cancelRace race =>
+    simp only [evaluatePrim.withFiber]
+    split
+    · exact ⟨success _, stack⟩
+    · exact ⟨code, stack⟩
+  case getInterruptible =>
+    exact masked_path model Edge world input output fiber.frame _ (success _) (facts.mask true) stack
+
+/-- The earlier existential result is a projection of the exact action input path. -/
 theorem with_fiber_family (root : NativeEff) (view) (table : RowTable)
     (world : World) (input output : Kind) (m : NativeMachine) (fiber : SourceFiber)
     (yielding : Bool) (action : NAction)
@@ -91,84 +216,7 @@ theorem with_fiber_family (root : NativeEff) (view) (table : RowTable)
       (interpAt root view table).closeScope scope exit fiber.frame.interruptible fiber.id m.state = some (state, some program) →
       model.code world input program) :
     let next := evaluatePrim.withFiber (interpAt root view table) m fiber yielding action
-    FamilyResult model Edge world output next.fiber.frame.current next.fiber.frame.stack := by
-  dsimp only
-  have success (value : Val) := model.success world input value (facts.value value)
-  have failure (cause : CauseV) := model.failure world input cause (facts.cause cause)
-  cases action
-  case fork body options site =>
-    cases options with
-    | mk immediate daemon mode =>
-      cases daemon <;> cases immediate
-      all_goals exact ⟨input, success _, stack⟩
-  case forkIn body options scope site =>
-    cases options with
-    | mk immediate daemon mode =>
-      cases immediate
-      all_goals exact ⟨input, success _, stack⟩
-  case forkScoped body options site =>
-    simp only [evaluatePrim.withFiber]
-    split
-    · cases options with
-      | mk immediate daemon mode =>
-        cases immediate
-        all_goals exact ⟨input, success _, stack⟩
-    · exact ⟨input, failure _, stack⟩
-  case ambientScope =>
-    simp only [evaluatePrim.withFiber]
-    split
-    · exact ⟨input, success _, stack⟩
-    · exact ⟨input, failure _, stack⟩
-  case runIn target scope => exact ⟨input, success _, stack⟩
-  case interrupt target => exact ⟨input, facts.interruptAs target fiber.id, stack⟩
-  case interruptAs target owner =>
-    simp only [evaluatePrim.withFiber, evaluatePrim.interruptAs]
-    split
-    all_goals exact ⟨input, code, stack⟩
-  case interruptScoped target =>
-    simp only [evaluatePrim.withFiber]
-    split
-    · exact ⟨input, success _, stack⟩
-    · exact ⟨input, facts.interrupt target, stack⟩
-  case interruptAll targets owner => exact ⟨input, code, stack⟩
-  case awaitAll targets =>
-    exact countdown_family model Edge root view table world input output m fiber targets .exitsValue false
-      code stack (fun _ => success _) (facts.cancel fiber.id m.nextToken)
-  case awaitAllFailFast targets =>
-    exact countdown_family model Edge root view table world input output m fiber targets .exitsValue true
-      code stack (fun _ => success _) (facts.cancel fiber.id m.nextToken)
-  case snapshotChildren => exact ⟨input, success _, stack⟩
-  case awaitNewChildren snapshot =>
-    exact countdown_family model Edge root view table world input output m fiber _ .void false
-      code stack (fun _ => success _) (facts.cancel fiber.id m.nextToken)
-  case raceAll bodies site => exact ⟨input, facts.park m.nextRace, stack⟩
-  case raceAllFirst bodies site => exact ⟨input, facts.park m.nextRace, stack⟩
-  case setInterruptible body flag =>
-    cases flag with
-    | false => exact masked_family model Edge world input output fiber.frame body source (facts.mask true) stack
-    | true =>
-      exact interruptible_family model Edge world input output fiber.frame body source
-        (facts.mask false) facts.cause stack
-  case setContext context => exact ⟨input, success _, stack⟩
-  case getContext => exact ⟨input, success _, stack⟩
-  case getId => exact ⟨input, success _, stack⟩
-  case closeScope scope exit =>
-    simp only [evaluatePrim.withFiber]
-    split
-    · exact ⟨input, code, stack⟩
-    · exact ⟨input, success _, stack⟩
-    · rename_i state program actual
-      exact masked_family model Edge world input output fiber.frame program
-        (closed scope exit state program actual) (facts.mask true) stack
-  case closePar programs => exact ⟨input, code, stack⟩
-  case refuse cause => exact ⟨input, failure cause, stack⟩
-  case dropObservers token => exact ⟨input, success _, stack⟩
-  case cancelRace race =>
-    simp only [evaluatePrim.withFiber]
-    split
-    · exact ⟨input, success _, stack⟩
-    · exact ⟨input, code, stack⟩
-  case getInterruptible =>
-    exact masked_family model Edge world input output fiber.frame _ (success _) (facts.mask true) stack
+    FamilyResult model Edge world output next.fiber.frame.current next.fiber.frame.stack  := by
+  exact ⟨input, with_fiber_path model Edge root view table world input output m fiber yielding action facts code stack source closed⟩
 
 end Effect4.Program.SourceScope
