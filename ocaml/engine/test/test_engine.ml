@@ -23,7 +23,9 @@
         repeats neither since 2026-10-15.
      3  The numeric profile at load: a natural literal outside it is refused, from a value
         and from the wire (EN8). The ordinal pin went with the conversion on 2026-10-15:
-        both instances open `Eff_types`, so `ocamlopt` holds the one alphabet.
+        both instances open `Eff_types`, so `ocamlopt` holds the one alphabet. A host's
+        answer passes the same profile before the machine reads it (EN9,
+        `answer_ingress_check`): a reactor's answer with a natural outside it is refused.
      5  The two `failwith` rows of the generated prelude (`sh_dispatcher_mk`,
         `sh_memo_map_mk`, api_engine.ml's PRELUDE) never fire in this file's runs: counted.
         Over every corpus, a raise fails `test_diff`.
@@ -536,6 +538,43 @@ let numeric_ingress_check () =
   check_instance (module En_fast);
   check_instance (module En_ref)
 
+(* EN9: a host's answer is host ingress. A reactor, as a driver holds one, answers; the driver
+   applies E4_engine.check_answer before the machine reads the answer. The red controls are
+   reactors that answer a natural outside the profile, at the top and nested; the green ones
+   answer naturals inside it and fields that are no naturals. *)
+let answer_ingress_check () =
+  let reactor answer = fun () (_ : E.val_) state -> Some (answer, state) in
+  let driven r = match r () E.Val_unit 0 with
+    | None -> ()
+    | Some (answer, _) -> E4_engine.check_answer answer
+  in
+  let refused answer = match driven (reactor answer) with
+    | () -> false | exception E4_clock.Profile_refusal _ -> true
+  in
+  let success v = E.Completion_ofExit (E.Exit_success v) in
+  let failure reasons = E.Completion_ofExit (E.Exit_failure reasons) in
+  let top = Int64.to_int 9007199254740991L and above = Int64.to_int 9007199254740992L in
+  List.iter (fun (label, answer) ->
+      check ("answer ingress: " ^ label ^ " refused") (refused answer))
+    ["a natural above the profile", success (E.Val_nat above);
+     "a negative natural", success (E.Val_nat (-1));
+     "a nested natural", success (E.Val_list [E.Val_pair (E.Val_unit, E.Val_some (E.Val_nat above))]);
+     "a constructor index", success (E.Val_ctor (above, []));
+     "a handle key", success (E.Val_handle (0, -1));
+     "a negative integer's magnitude", success (E.Val_negInt above);
+     "an error code", failure [E.Reason_fail (E.Err_tag above, [])];
+     "an error's payload", failure [E.Reason_fail (E.Err_payload (E.Val_nat (-1)), [])];
+     "a defect's payload", failure [E.Reason_die (E.Defect_user above, [])];
+     "an interrupting fiber", failure [E.Reason_interrupt (Some (-1), [])];
+     "a ref key", E.Completion_ofRefGet (-1)];
+  List.iter (fun (label, answer) ->
+      check ("answer ingress: " ^ label ^ " passes") (not (refused answer)))
+    ["the top natural", success (E.Val_nat top);
+     "nested naturals", success (E.Val_ctor (0, [E.Val_nat top; E.Val_negInt 0]));
+     "no natural", success (E.Val_list [E.Val_str "x"; E.Val_bytes [255]; E.Val_float 1; E.Val_ref (1, [2])]);
+     "a failure", failure [E.Reason_die (E.Defect_error (E.Err_tag top), []); E.Reason_interrupt (Some 0, [])];
+     "a ref key", E.Completion_ofRefGet top]
+
 (* ================================================================ the bench *)
 
 let best_of k f =
@@ -636,6 +675,7 @@ let () =
   g0 ();
   clock_profile_check ();
   numeric_ingress_check ();
+  answer_ingress_check ();
   multiplication_profile_check ();
   origin_prelude_check ();
   layer_environment_check ();

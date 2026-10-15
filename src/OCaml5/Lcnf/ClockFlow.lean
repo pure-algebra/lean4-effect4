@@ -1,4 +1,5 @@
 import Lean
+import OCaml5.Lcnf.Index
 import OCaml5.Lcnf.Externs
 
 /-! Clock-boundary dependency analysis over mono LCNF.
@@ -7,7 +8,20 @@ Properties: original literals identify known scalar narrowing; helper-parameter 
 returned-value summaries reach finite fixed points; unknown higher-order production is
 refused when its result reaches a clock ingress. Direct known literals are left to the
 exact decimal emitter. Other Nat consumers are unchanged. Finite controls live in
-`Test/Audit/ClockLowering.lean`; this pass does not prove arbitrary arithmetic bounds. -/
+`Test/Audit/ClockLowering.lean`; this pass does not prove arbitrary arithmetic bounds.
+
+* **Arity is mono arity.** A global's arity is the parameter count of its mono declaration
+  (`Context.mono`), the count a mono call supplies. A compiler-made declaration has no
+  kernel constant, and an instance's kernel type need not be a forall: read off the kernel, both
+  had arity 0, so a builtin passed as a callback (`List.appendTR._redArg`, the program folds'
+  `op`) read as a finished call of no flow, and every call through it as unknown production.
+* **A host's reactor is host ingress** (decisions row 394 (1)). A root parameter whose mono type
+  is a host reactor (`Context.reactor`, the type of `Effect4.Run.Reactor σ`) holds the
+  `ingress` origin. A call whose origins are ingress answers checked host data, as the tape's
+  answers are root data checked at the engine's ingress (EN8), and is not unknown production.
+  A reactor inside other data, or reached by any other unknown, stays unknown. The obligation it
+  leaves: the driver that supplies the reactor applies `E4_engine.check_answer` to every answer
+  before the machine reads it. -/
 
 namespace OCaml5.Lcnf.ClockFlow
 open Lean Compiler LCNF
@@ -17,6 +31,8 @@ values it depends on; calls retain original argument positions, including erased
 structure Flow where
   name : Name
   params : Array FVarId
+  /-- The parameters' mono types, in order: what tells a host's reactor at a root. -/
+  paramTypes : Array Lean.Expr := #[]
   clockResult : Bool := false
   deps : Array (FVarId × Array FVarId) := #[]
   calls : Array (Name × Array (Arg .pure) × Bool) := #[]
@@ -41,6 +57,7 @@ private def clockArgIds (args : Array (Arg .pure)) : Array FVarId :=
 def ofDecl (decl : LCNF.Decl .pure) : Flow := Id.run do
   let initial : Flow := {
     name := decl.name, params := decl.params.map (·.fvarId),
+    paramTypes := decl.params.map (·.type),
     clockResult := decl.type.getForallBody.getAppFn.isConstOf `Effect4.ClockMillis }
   let .code body := decl.value | return initial
   let (_, flow) := (body.forM fun node => do
@@ -140,7 +157,36 @@ private inductive Origin where
   | callable (target : Target) (supplied : Nat)
   | constructor (site : ValueKey)
   | unresolved
+  /-- A host's reactor, supplied at a root: its answers are host ingress (row 394 (1)). -/
+  | ingress
   deriving BEq, Hashable, Inhabited
+
+/-- What the analysis reads besides the flows, as data: the persisted mono declarations, whose
+parameter counts are the globals' arities, and the mono type of a host reactor. -/
+structure Context where
+  /-- The persisted mono declarations (`OCaml5.Lcnf.persistedMonoIndex`). -/
+  mono : MonoIndex
+  /-- The mono type of `Effect4.Run.Reactor σ`, its state `σ` written `lcAny`; `none` when the
+  environment has no reactor. -/
+  reactor : Option Lean.Expr
+
+/-- Whether a mono type is the reactor template at one state: equal to the template with every
+`lcAny` of the template replaced by one type, the same at each position (`Reactor τ`, any `τ`).
+The template's `lcAny` stand for its state alone: the compiler writes each free variable so. -/
+partial def isReactorType (template ty : Lean.Expr) : Bool :=
+  (go template ty none).isSome
+where
+  go (t e : Lean.Expr) (state : Option Lean.Expr) : Option (Option Lean.Expr) :=
+    match t, e with
+    | .mdata _ t, e => go t e state
+    | t, .mdata _ e => go t e state
+    | .const ``lcAny _, e =>
+      match state with
+      | none => some (some e)
+      | some s => if s == e then some state else none
+    | .forallE _ d₁ b₁ _, .forallE _ d₂ b₂ _ => go d₁ d₂ state >>= go b₁ b₂
+    | .app f₁ a₁, .app f₂ a₂ => go f₁ f₂ state >>= go a₁ a₂
+    | t, e => if t == e then some state else none
 
 private structure CallableState where
   values : Std.HashMap ValueKey (Std.HashSet Origin) := {}
@@ -183,18 +229,25 @@ private def addEdge (s : CallableState) (source destination : ValueKey) : Callab
       installed := s.installed.insert (source, destination) }
     addOrigins s destination (s.values.getD source {}).toArray
 
-private def globalArity (env : Environment) (byName : Std.HashMap Name Flow) (n : Name) : Nat :=
+/-- A global's arity in mono LCNF: its flow's parameters, else its mono declaration's (a builtin
+or an extern row has no flow), else a constructor's parameters and fields, else the head foralls
+of its kernel type. -/
+private def globalArity (ctx : Context) (env : Environment) (byName : Std.HashMap Name Flow)
+    (n : Name) : Nat :=
   match byName[n]? with
   | some f => f.params.size
-  | none => match env.find? n with
-    | some (.ctorInfo ci) => ci.numParams + ci.numFields
-    | some ci => ci.type.getNumHeadForalls
-    | none => 0
+  | none => match ctx.mono.findIn? env n with
+    | some decl => decl.params.size
+    | none => match env.find? n with
+      | some (.ctorInfo ci) => ci.numParams + ci.numFields
+      | some ci => ci.type.getNumHeadForalls
+      | none => 0
 
 /-- Resolve internal calls in a finite closed-world value graph. Unknown root values and
 unknown call results stay opaque; absence of a discovered target never establishes safety.
 Only the unknown-production markers are refined here; scalar-narrowing checks remain. -/
-private def resolveCallables (env : Environment) (roots : Array Name) (flows : Array Flow) :
+private def resolveCallables (ctx : Context) (env : Environment) (roots : Array Name)
+    (flows : Array Flow) :
     Option (Array Flow) := Id.run do
   let mut byName : Std.HashMap Name Flow := {}
   let mut constructors : Std.HashMap ValueKey (Name × Array (Arg .pure)) := {}
@@ -212,11 +265,14 @@ private def resolveCallables (env : Environment) (roots : Array Name) (flows : A
   let mut state : CallableState := { fieldOf }
   for flow in flows do
     if roots.contains flow.name then
-      for p in flow.params do state := addOrigins state (flow.name, p) #[.unresolved]
+      -- a root's parameter is unknown, unless it is a host's reactor: its answers are ingress
+      for p in flow.params, ty in flow.paramTypes do
+        let host := ctx.reactor.any (isReactorType · ty)
+        state := addOrigins state (flow.name, p) #[if host then .ingress else .unresolved]
     for (id, _) in flow.locals.toArray do
       state := addOrigins state (flow.name, id) #[.callable (.localFn flow.name id) 0]
   let targetArity (target : Target) := match target with
-    | .global n => globalArity env byName n
+    | .global n => globalArity ctx env byName n
     | .localFn owner id => ((byName.getD owner flowDefault).locals.getD id #[]).size
   let targetParams (target : Target) : Array ValueKey := match target with
     | .global n => ((byName.getD n flowDefault).params.map (n, ·))
@@ -242,15 +298,16 @@ private def resolveCallables (env : Environment) (roots : Array Name) (flows : A
         else for value in returns do s := addEdge s value result
     return s
   -- There are finitely many sites, constructor origins and (target, supplied-arity) pairs.
-  -- Each productive pass adds a fact. The computed product bounds all such additions.
+  -- Each productive pass adds a fact. The computed product bounds all such additions. The two
+  -- origins that name no site are `unresolved` and `ingress`.
   let mut sites := 0
-  let mut origins := constructors.size + 1
+  let mut origins := constructors.size + 2
   for flow in flows do
     sites := sites + flow.params.size + flow.globals.size + flow.aliases.size +
       flow.projections.size + flow.localCalls.size + flow.locals.size + 1
     origins := origins + flow.params.size + 1
     for (_, name, _) in flow.globals.toArray do
-      origins := origins + globalArity env byName name + 1
+      origins := origins + globalArity ctx env byName name + 1
     for (_, params) in flow.locals.toArray do
       sites := sites + params.size
       origins := origins + params.size + 1
@@ -296,12 +353,15 @@ private def resolveCallables (env : Environment) (roots : Array Name) (flows : A
             if let some (.ctorInfo ci) := env.find? ctor then
               if let some (.fvar field) := args[ci.numParams + index]? then
                 state := addEdge state (site.1, field) destination
-      | .callable .. => pure ()
+      | .callable .. | .ingress => pure ()
     for (owner, args, result) in watchers.getD source #[] do
       match origin with
       | .callable target supplied =>
         state := applyTarget state owner result target supplied args
       | .unresolved =>
+        if let some result := result then state := addOrigins state (owner, result) #[.unresolved]
+      -- a host's answer is data: a call of anything read out of it is unknown
+      | .ingress =>
         if let some result := result then state := addOrigins state (owner, result) #[.unresolved]
       | .constructor _ => pure ()
   -- Exhausting the finite fact bound is a refusal, never an incomplete fixed point.
@@ -312,7 +372,7 @@ private def resolveCallables (env : Environment) (roots : Array Name) (flows : A
     -- Partial application constructs a closure; it is not the callee's returned data.
     let mut results := flow.callResults.filter fun (name, result) =>
       match flow.globals[result]? with
-      | some (_, args) => args.size ≥ globalArity env byName name
+      | some (_, args) => args.size ≥ globalArity ctx env byName name
       | none => true
     let mut calls := flow.calls
     for (callee, args, result) in flow.localCalls do
@@ -324,7 +384,9 @@ private def resolveCallables (env : Environment) (roots : Array Name) (flows : A
           | _ => none).qsort fun (a, _, i) (b, _, j) =>
             Name.lt a b || (a == b && i < j)
       if let some result := result then
-        if targets.isEmpty || choices.contains .unresolved then unknown := unknown.insert result
+        -- an ingress origin answers checked host data; any other unresolved call is unknown
+        if choices.contains .unresolved || (targets.isEmpty && !choices.contains .ingress) then
+          unknown := unknown.insert result
       for (name, target, supplied) in targets do
         -- Captured arguments were checked where the partial application was made;
         -- retain original positions for the arguments supplied at this invocation.
@@ -340,6 +402,7 @@ private def resolveCallables (env : Environment) (roots : Array Name) (flows : A
       let localFlow := { refined with
         name := localName flow.name id
         params := params
+        paramTypes := #[]
         returns := flow.localReturns.getD id #[]
         clockResult := false }
       out := out.push localFlow
@@ -460,9 +523,10 @@ private def clockRoots (roots : Array Name) (input : Array Flow) : Array Name ×
 /-- Only values reaching a clock boundary are refused. Parameter and returned-value summaries
 reach fixed points bounded by the number of facts that can be added. Ordinary Nat arithmetic
 and its deliberate saturation stay unchanged. -/
-def refusals (env : Environment) (roots : Array Name) (input : Array Flow) : Array String := Id.run do
+def refusals (ctx : Context) (env : Environment) (roots : Array Name) (input : Array Flow) :
+    Array String := Id.run do
   let (roots, input) := clockRoots roots input
-  let some flows := resolveCallables env roots input
+  let some flows := resolveCallables ctx env roots input
     | return #["clock callable provenance did not reach a fixed point"]
   let indexes := flows.map DepIndex.of
   let mut summaries : Std.HashMap Name (Array Nat) := {}

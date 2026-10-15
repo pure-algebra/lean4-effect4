@@ -90,8 +90,10 @@ open Lean Compiler LCNF
 
 /-! ## Mono types as annotations -/
 
-/-- Map a mono type expression to an OCaml type. Inductive type arguments are filtered
-by `typeParameterIndices` to match the declared OCaml type arity. -/
+/-- Map a mono type expression to an OCaml type. Inductive type arguments are read by
+`typeParameterSlots`, to match the declared OCaml type arity. Mono LCNF writes the argument of a
+family over a finite index as `lcAny` (`toMonoType`: its domain is no sort), so each of the
+family's OCaml parameters is the anonymous type (F3). -/
 partial def monoTy (env : Environment) (ex : Externs) (tn : TypeNames) (e : Lean.Expr) : Ml.Ty :=
   match e with
   | .forallE _ d b _ => .arrow (monoTy env ex tn d) (monoTy env ex tn b)
@@ -104,8 +106,10 @@ partial def monoTy (env : Environment) (ex : Externs) (tn : TypeNames) (e : Lean
         | .const n _ =>
           match env.find? n with
           | some (.inductInfo info) =>
-            match typeParameterIndices n rawArgs.length info.type with
-            | .ok indices => indices.toList.filterMap (fun i => rawArgs[i]?) |>.map (monoTy env ex tn)
+            match typeParameterSlots (finiteIndexIn env) n rawArgs.length info.type with
+            | .ok slots => slots.toList.flatMap fun
+                | .type i => (rawArgs[i]?.map (monoTy env ex tn)).toList
+                | .family _ _ ctors => ctors.map fun _ => Ml.Ty.anon
             | .error _ => rawArgs.map (monoTy env ex tn)
           | _ => rawArgs.map (monoTy env ex tn)
         | _ => rawArgs.map (monoTy env ex tn)
@@ -327,8 +331,8 @@ def wrapperParams? (env : Environment) (n : Name) : Option (Array (LCNF.Param .p
 /-- `(_, …, _) t` for an inductive, as an annotation. -/
 def tyOfInd (ex : Externs) (tn : TypeNames) (env : Environment) (ind : Name) : Ml.Ty :=
   let params := match env.find? ind with
-    | some (.inductInfo info) => List.replicate
-        ((typeParameterIndices ind info.numParams info.type).toOption.getD #[]).size Ml.Ty.anon
+    | some (.inductInfo info) =>
+      List.replicate (typeParameterWidth env ind info.numParams info.type) Ml.Ty.anon
     | _ => []
   match ex.tys[ind]? with
   | some chain => applyChain chain params
@@ -1101,12 +1105,28 @@ private def collectClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeName
         queue := queue.push callee
   return (c, clockFlows)
 
+/-- The mono type of a host reactor, `Effect4.Run.Reactor σ`, made by the compiler's own type
+translation (`toLCNFType`, then `toMonoType`): the type mono LCNF gives a reactor parameter, with
+`σ` as `lcAny`. `none` when the environment holds no `Effect4.Run.Reactor`. -/
+def reactorMonoType? : CoreM (Option Lean.Expr) := do
+  unless (← getEnv).contains `Effect4.Run.Reactor do return none
+  Meta.MetaM.run' do
+    Meta.withLocalDeclD `σ (.sort (.succ .zero)) fun σ => do
+      let base ← toLCNFType (mkApp (mkConst `Effect4.Run.Reactor) σ)
+      return some (← toMonoType base)
+
+/-- What the clock boundary reads besides the flows (`ClockFlow.Context`): the persisted mono
+declarations and the mono type of a host reactor. -/
+def clockContext : CoreM ClockFlow.Context := do
+  return { mono := persistedMonoIndex (← getEnv), reactor := ← reactorMonoType? }
+
 /-- Translate `roots` and, transitively, every non-builtin constant they call, up to `cap`
 declarations. Validate the final closure at the clock boundary before returning it. -/
 def translateClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {})
     (ex : Externs := {}) : CoreM Closure := do
   let (closure, clockFlows) ← collectClosure roots cap tn ex
-  return { closure with clockRefusals := ClockFlow.refusals (← getEnv) roots clockFlows }
+  return { closure with
+    clockRefusals := ClockFlow.refusals (← clockContext) (← getEnv) roots clockFlows }
 
 /-- `translateClosure`, with the carrier parameters inferred. A carrier that has no `to_list`
 operation can only be passed on as itself, so a generated callee that is handed one takes it as
@@ -1137,7 +1157,8 @@ def translateClosureInferring (roots : Array Name) (cap : Nat := 60) (tn : TypeN
     throwError "carrier parameters still unsettled after 64 rounds: {closure.wantedCargs}"
   -- Carrier rows affect translation, so validate the graph of the settled result.
   -- Checking intermediate results repeats the same analysis without returning an artifact.
-  return ({ closure with clockRefusals := ClockFlow.refusals (← getEnv) roots clockFlows }, ex,
+  return ({ closure with
+    clockRefusals := ClockFlow.refusals (← clockContext) (← getEnv) roots clockFlows }, ex,
     inferred)
 
 /-- The closure translated again under other type names (`tn`), with its settled carrier table.

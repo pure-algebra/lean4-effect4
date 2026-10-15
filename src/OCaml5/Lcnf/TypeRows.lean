@@ -114,7 +114,7 @@ structure TypeRow where
   /-- The Lean type constant. -/
   lean : Name
   /-- The number of Lean arguments the row spells: the type's OCaml parameters
-  (`OCaml5.Lcnf.typeParameterIndices`). -/
+  (`OCaml5.Lcnf.typeParameterSlots`). -/
   arity : Nat
   spelling : TySpelling
   fidelity : Fidelity

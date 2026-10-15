@@ -11,6 +11,40 @@ type answer =
   | Outside_profile of string
   | Delay of frontier
 
+(* EN9: every natural of a host's answer passes the profile a natural reply passes (EN8). The
+   matches name every constructor, so a constructor added to the answer's types is a compile
+   error here rather than a natural this walk skips. *)
+let check_answer (answer : (val_, err, defect, int, unit) completion) : unit =
+  let nat n = ignore (E4_clock.to_profile_nat (E4_clock.of_nat n)) in
+  let rec value = function
+    | Val_nat n | Val_negInt n -> nat n
+    | Val_ctor (index, args) -> nat index; List.iter value args
+    | Val_handle (_, key) -> nat key
+    | Val_list items -> List.iter value items
+    | Val_pair (a, b) -> value a; value b
+    | Val_some a -> value a
+    | Val_unit | Val_bool _ | Val_str _ | Val_bytes _ | Val_none | Val_ref _ | Val_float _ -> ()
+  in
+  let error = function
+    | Err_tag code -> nat code
+    | Err_payload payload -> value payload
+    | Err_boom | Err_tagged _ | Err_text _ -> ()
+  in
+  let defect = function
+    | Defect_user payload -> nat payload
+    | Defect_error e -> error e
+    | Defect_notImplemented | Defect_asyncFiber | Defect_badName | Defect_missingService -> ()
+  in
+  let reason = function
+    | Reason_fail (e, _) -> error e
+    | Reason_die (d, _) -> defect d
+    | Reason_interrupt (fiber, _) -> Option.iter nat fiber
+  in
+  match answer with
+  | Completion_ofExit (Exit_success v) -> value v
+  | Completion_ofExit (Exit_failure cause) -> List.iter reason cause
+  | Completion_ofRefGet cell -> nat cell
+
 module type INSTANCE = sig
   val name : string
   val carriers : string
