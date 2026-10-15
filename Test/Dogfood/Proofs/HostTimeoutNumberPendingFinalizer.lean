@@ -53,4 +53,8 @@ theorem installed (context : CountContext) (view : HostTimeoutFlow.View) (machin
     rw [fields.1] at before
     exact False.elim (HostTimeoutNumberCountMachine.counted_heap_ne context (heap.symm.trans before))
 
+  · intro next same entered interruptible
+    rw [fields.2.2.2] at interruptible
+    cases interruptible
+
 end Test.Dogfood.Proofs.HostTimeoutNumberPendingFinalizer

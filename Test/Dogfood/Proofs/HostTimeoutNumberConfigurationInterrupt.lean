@@ -120,6 +120,11 @@ theorem fiber_fields (machine : Effect4.Program.NativeMachine) (role : Role)
     rw [stack] at installed
     exact installed
 
+  · intro context same heap interruptible
+    change _ ∈ after.frame.stack
+    rw [stack]
+    exact held.pendingCustody context same heap (mask.symm.trans interruptible)
+
 /-- An actual interruption retains the fiber fields used by the numeric execution permission. -/
 theorem interrupt_fields (fiber : Effect4.Program.SourceScope.SourceFiber) (cause : CauseV) :
     (interruptWithCause cause fiber).1.exit = fiber.exit ∧

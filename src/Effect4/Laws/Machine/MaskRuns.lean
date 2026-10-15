@@ -248,37 +248,78 @@ A step of R11's open part "the lift of saved-mask-pop-discipline to runs". Its c
 fiber machine's delegation to the frame machine, `evaluatePrim.stepFrame`. It states nothing of a
 finished step: `step_finished_stack` does. -/
 @[semantics "scope-lifetime-finalization"]
-theorem step_maskChain (base : Bool) (interp : PrimInterp ν σ β ε δ ι α)
-    (f : FrameFiber ν σ β ε δ ι α) (valid : MaskChain base f.interruptible f.stack)
-    (next : FrameFiber ν σ β ε δ ι α) (running : (f.step interp).fst = FrameStep.running next) :
-    MaskChain base next.interruptible next.stack := by
+theorem step_running_shape (interp : PrimInterp ν σ β ε δ ι α)
+    (f : FrameFiber ν σ β ε δ ι α) (next : FrameFiber ν σ β ε δ ι α)
+    (running : (f.step interp).fst = FrameStep.running next) :
+    (∀ base, MaskChain base f.interruptible f.stack → MaskChain base next.interruptible next.stack) ∧
+      ((∀ value, f.current ≠ .success value) → (∀ cause, f.current ≠ .failure cause) →
+        (∀ thunk, f.current ≠ .sync thunk) →
+        next.interruptible = f.interruptible ∧ f.stack.Sublist next.stack) := by
   cases current : f.current with
   | success value =>
-    simp only [step, current] at running
-    exact resumeValue_maskChain base interp f _ _ valid next running
+    constructor
+    · intro base valid
+      simp only [step, current] at running
+      exact resumeValue_maskChain base interp f _ _ valid next running
+    · intro absent
+      exact False.elim (absent value rfl)
   | failure cause =>
-    simp only [step, current] at running
-    exact resumeCause_maskChain base interp f _ _ valid next running
+    constructor
+    · intro base valid
+      simp only [step, current] at running
+      exact resumeCause_maskChain base interp f _ _ valid next running
+    · intro noValue absent
+      exact False.elim (absent cause rfl)
   | sync thunk =>
-    simp only [step, current] at running
-    exact resumeValue_maskChain base interp f _ _ valid next running
+    constructor
+    · intro base valid
+      simp only [step, current] at running
+      exact resumeValue_maskChain base interp f _ _ valid next running
+    · intro noValue noCause absent
+      exact False.elim (absent thunk rfl)
   | iterator generator cursor =>
     simp only [step, current] at running
     split at running
     · rename_i arm
       cases running
-      exact armA_maskChain interp _ _ _ _ _ arm base _ _ valid
+      exact ⟨fun base valid => armA_maskChain interp _ _ _ _ _ arm base _ _ valid,
+        fun _ _ _ => ⟨rfl, List.sublist_append_right _ _⟩⟩
     · cases running
-      exact valid
+      exact ⟨fun _ valid => valid, fun _ _ _ => ⟨rfl, List.Sublist.refl _⟩⟩
   | whileLoop loop cursor =>
     simp only [step, current] at running
-    split at running <;> cases running <;> exact valid
+    split at running
+    · cases running
+      exact ⟨fun _ valid => valid, fun _ _ _ => ⟨rfl, List.Sublist.cons _ (List.Sublist.refl _)⟩⟩
+    · cases running
+      exact ⟨fun _ valid => valid, fun _ _ _ => ⟨rfl, List.Sublist.refl _⟩⟩
   | _ =>
     simp only [step, current] at running
     cases running
-    exact valid
+    refine ⟨fun _ valid => valid, ?_⟩
+    intro noValue noCause noSync
+    constructor
+    · rfl
+    · aesop (rule_sets := [Effect4.Fibers]) (add safe apply [List.Sublist.refl])
+        (add safe constructors [List.Sublist])
 
-/-! ## A pop that answers nothing -/
+/-- The existing mask reader consumes the same actual running-step classification as saved-stack custody.
+Consumer: saved-mask-pop-discipline and the Timeout numeric native producer. -/
+@[semantics "scope-lifetime-finalization"]
+theorem step_maskChain (base : Bool) (interp : PrimInterp ν σ β ε δ ι α)
+    (f : FrameFiber ν σ β ε δ ι α) (valid : MaskChain base f.interruptible f.stack)
+    (next : FrameFiber ν σ β ε δ ι α) (running : (f.step interp).fst = FrameStep.running next) :
+    MaskChain base next.interruptible next.stack :=
+  (step_running_shape interp f next running).1 base valid
+
+/-- An ordinary head retains its actual saved suffix and interruption flag.
+Consumer: the authored-finalizer custody field of Timeout's pending native producer. -/
+theorem step_nonresume_fields (interp : PrimInterp ν σ β ε δ ι α)
+    (f next : FrameFiber ν σ β ε δ ι α) (running : (f.step interp).fst = FrameStep.running next)
+    (noValue : ∀ value, f.current ≠ .success value) (noCause : ∀ cause, f.current ≠ .failure cause)
+    (noSync : ∀ thunk, f.current ≠ .sync thunk) :
+    next.interruptible = f.interruptible ∧ f.stack.Sublist next.stack :=
+  (step_running_shape interp f next running).2 noValue noCause noSync
 
 /-- **A pop that answers nothing ends at an empty stack**, from an empty scratch stack. Every
 frame is passed, and one drain empties what each hook pushed (`passPushed_ensure_stack_nil`). An

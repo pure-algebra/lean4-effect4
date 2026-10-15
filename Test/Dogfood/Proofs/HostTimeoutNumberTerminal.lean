@@ -43,6 +43,8 @@ theorem terminal_fiber (machine : NativeMachine) (fiber : SourceScope.SourceFibe
     exact terminal_frame machine _ empty ⟨.failure cause, rfl⟩
   · intro context impossible; cases impossible
 
+  · intro context impossible; cases impossible
+
 /-- The actual drained frame retains its old terminal primitive and recorded cause. -/
 theorem exit_fields (frame : HostTimeoutFrames.NativeFrame) :
     (frameExitState frame).current = frame.current ∧

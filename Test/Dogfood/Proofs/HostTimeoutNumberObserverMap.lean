@@ -67,6 +67,7 @@ theorem fiber_observers (machine : Effect4.Program.NativeMachine) (role : Role)
   · exact held.recorded
   · exact held.immediate
   · exact held.pendingRunning
+  · exact held.pendingCustody
 
 /-- Observer-only maps retain the complete numeric machine assertion and stored reply tasks. -/
 theorem configuration (world : HostTimeoutNumberConfiguration.World) (machine : Effect4.Program.NativeMachine)

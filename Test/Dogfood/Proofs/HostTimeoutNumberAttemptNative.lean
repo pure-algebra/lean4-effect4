@@ -36,6 +36,6 @@ theorem request_fiber (view : HostTimeoutFlow.View) (machine : NativeMachine)
     let next := evaluatePrim (HostTimeoutFlow.interpreter view) machine fiber yielding
     FiberAt next.machine (.pending context) next.fiber := by
   rw [request_evaluation view machine fiber yielding current]
-  exact ⟨held.frame, held.exit, held.retired, held.recorded, held.immediate, held.pendingRunning⟩
+  exact ⟨held.frame, held.exit, held.retired, held.recorded, held.immediate, held.pendingRunning, held.pendingCustody⟩
 
 end Test.Dogfood.Proofs.HostTimeoutNumberAttemptNative

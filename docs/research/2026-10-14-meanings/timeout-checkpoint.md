@@ -996,3 +996,42 @@ Verification commands:
 
 The build passes with 1266 jobs.
 The audit checks 31 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
+
+## Actual protected finalizer retention and ordinary execution
+
+The shared finalizer rule uses the existing stack selection family.
+Selection retains the authored protected finalizer or returns a masked frame.
+The controls retain the deferred branch and reject the same conclusion for an unprotected callback.
+The numeric fiber assertion now retains this condition before cleanup.
+Its interruption, observer, store, terminal, and cleanup consumers retain the condition.
+
+The ordinary running native step retains the numeric fiber assertion.
+The existing primitive classification supplies its saved suffix and interruption flag.
+The legacy mask reader uses that same classification.
+The ordinary step and protected callback installation share one machine, command, and detached-task transport proof.
+Their assertions hold at the same world after the actual addressed update.
+
+Placement: scope-lifetime-finalization R11 and reactive-scheduling R9; the coupled Timeout history producer consumes these execution branches.
+The shared rule assumes actual finalizer membership and supplies no source occurrence or scheduling permission.
+The numeric consumers retain actual running authority, entered heap, selected-writer graph, and unique machine ids.
+The ordinary joined result also assumes a nonempty saved stack and an unparked live attempt.
+The active source producer, initialized history, and both original Timeout numeric goals remain open.
+This proof-only slice reaches no outside implementation gate.
+
+Verification commands:
+
+```text
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh bash scratch/timeout-custody-check.sh
+```
+
+The script runs the following commands while holding the shared slot:
+
+```text
+lake build Test.Dogfood.Proofs.HostTimeoutNumberOrdinary Test.Dogfood.Proofs.HostTimeoutNumberCleanupJoint Test.Dogfood.Proofs.HostTimeoutNumberAttemptNative Test.Dogfood.Proofs.HostTimeoutNumberTerminal
+lake env lean scratch/TimeoutCustodyAudit.lean
+```
+
+The build passes with 1271 jobs.
+The audit checks 638 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
+The shared leaf needs the Laws root import.
+The ordinary native leaf needs test reach when its active execution consumer lands.

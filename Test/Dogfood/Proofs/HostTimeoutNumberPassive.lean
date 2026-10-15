@@ -49,6 +49,9 @@ theorem fiber_store (before after : Effect4.Program.NativeMachine) (role : Role)
   · intro context same heap installed
     cases passive <;> cases same
 
+  · intro context same heap interruptible
+    cases passive <;> cases same
+
 /-- The role census names the one heap-dependent attempt without duplicating machine state. -/
 def OnlyAttempt (world : HostTimeoutNumberConfiguration.World) (active : FiberId) (context : CountContext) : Prop :=
   ∀ id role, (id, role) ∈ world.roles → (id = active ∧ role = .pending context) ∨ Passive role

@@ -66,6 +66,19 @@ theorem fiber (context : CountContext) (machine : NativeMachine) (row : SourceSc
     cases same
     exact False.elim (before_ne context selected oldHeap)
 
+  · intro next same entered interruptible
+    cases same
+    have ready : CleanupReady (installed machine {machine.state with refs := (cleaned context selected).heap}
+        {row with frame := {row.frame with current := .success .unit}}).state := by
+      refine ⟨cleaned context selected, rfl, ?_⟩
+      change (context.entered.cleanups ++ _).length = context.entered.count
+      simp only [List.length_append, List.length_cons, List.length_nil, Nat.zero_add]
+      exact (own context).symm
+    have equal := cleanup_ready_phase context.entered _ entered ready
+    have impossible := own context
+    have contradiction : False := by omega
+    exact False.elim contradiction
+
 /-- The actual cleanup writer returns one joined machine, old queue, and detached snapshot at its committed phase. -/
 theorem joint (world : HostTimeoutNumberConfiguration.World) (context : CountContext)
     (machine : NativeMachine) (row : SourceScope.SourceFiber) (selected : ExitV)

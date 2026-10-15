@@ -1,3 +1,4 @@
+import Test.Dogfood.Proofs.HostTimeoutNumberMaskCustody
 import Test.Dogfood.Proofs.HostTimeoutNumberUniform
 import Test.Dogfood.Proofs.HostTimeoutNumberSourceWrites
 import Test.Dogfood.Proofs.HostTimeoutNumberRootControl
@@ -348,6 +349,25 @@ structure FiberAt (machine : Effect4.Program.NativeMachine) (role : Role)
   pendingRunning : ∀ context, role = .pending context →
     HostTimeoutNumberPhaseFlow.At context.before machine.state → CountInstalled context fiber.frame →
       fiber.running = true
+
+
+  pendingCustody : ∀ context, role = .pending context →
+    HostTimeoutNumberPhaseFlow.At context.entered machine.state → fiber.frame.interruptible = true →
+      CountInstalled context fiber.frame
+
+/-- An actual unmasked counted attempt retains its finalizer or becomes masked at the same pop. -/
+theorem FiberAt.pending_pop_custody (machine : Effect4.Program.NativeMachine) (context : CountContext)
+    (fiber : Effect4.Program.SourceScope.SourceFiber) (held : FiberAt machine (.pending context) fiber)
+    (heap : HostTimeoutNumberPhaseFlow.At context.entered machine.state)
+    (unmasked : fiber.frame.interruptible = true) (demand : Effect4.Arm) (skip : Bool)
+    (exitDemand : demand = .contA ∨ demand = .contE) (cause : Option CauseV) :
+    CountInstalled context (fiber.frame.getCont demand skip cause).fiber ∨
+      (fiber.frame.getCont demand skip cause).fiber.interruptible = false := by
+  have installed := held.pendingCustody context rfl heap unmasked
+  rcases HostTimeoutNumberMaskCustody.getCont context.bound (.fin context.point) demand skip exitDemand
+      fiber.frame cause installed with masked | retained
+  · exact Or.inr masked
+  · exact Or.inl retained
 
 /-- A reply has a numeric obligation precisely when its existing token still matches a live park. -/
 def ReplyAt (world : World) (machine : Effect4.Program.NativeMachine)

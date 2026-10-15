@@ -36,6 +36,124 @@ theorem replies (world : HostTimeoutNumberConfiguration.World) (machine : Native
     rw [RunMachine.fiber?_update_other after machine id other] at selected
     exact frame_machine machine _ role _ rfl view (held fiber selected live waiting role assigned)
 
+/-- One actual read-only native replacement retains the joined numeric machine, queue, and detached tasks.
+Consumers: protected finalizer installation and ordinary running native steps. -/
+theorem readonly_update (world : HostTimeoutNumberConfiguration.World) (context : CountContext)
+    (machine afterMachine : NativeMachine) (fiber afterFiber : SourceScope.SourceFiber)
+    (pending : List Guard.NCmd) (tasks : List NTask)
+    (found : machine.fiber? fiber.id = some fiber) (ids : (machine.fibers.map (·.id)).Nodup)
+    (assigned : (fiber.id, Role.pending context) ∈ world.roles)
+    (held : Configuration world machine) (queued : Commands world machine pending)
+    (detached : Snapshot world machine tasks) (saved : fiber.frame.stack ≠ [])
+    (heap : At context.entered machine.state)
+    (state : afterMachine.state = machine.state) (fibers : afterMachine.fibers = machine.fibers)
+    (completed : afterMachine.completedExits = machine.completedExits)
+    (key : afterFiber.id = fiber.id) (dispatcher : afterFiber.dispatcher = fiber.dispatcher)
+    (exitSame : afterFiber.exit = fiber.exit) (unparked : afterFiber.parked = .notParked)
+    (provided : FiberAt afterMachine (.pending context) afterFiber) :
+    Configuration world (afterMachine.update afterFiber) ∧
+      Commands world (afterMachine.update afterFiber) pending ∧
+      Snapshot world (afterMachine.update afterFiber) tasks := by
+  have lookup : ∀ id, afterMachine.fiber? id = machine.fiber? id := by
+    intro id
+    change List.find? _ afterMachine.fibers = List.find? _ machine.fibers
+    rw [fibers]
+  have base := configuration_fields world machine afterMachine fibers state completed held
+  have awaiting : ∀ image own targets, HostTimeoutNumberWait.AwaitAt image own machine targets →
+      HostTimeoutNumberWait.AwaitAt image own afterMachine targets := by
+    intro image own targets previous
+    rcases previous with ready | ⟨attempt, member, present, complete⟩
+    · exact Or.inl (state ▸ ready)
+    · refine Or.inr ⟨attempt, member, ?_, ?_⟩
+      · rw [lookup]; exact present
+      · intro after actual published
+        rw [lookup] at actual
+        exact state ▸ complete after actual published
+  have cleanup : ∀ targets, CleanupAwait machine targets → CleanupAwait afterMachine targets := by
+    intro targets previous
+    rcases previous with ready | ⟨attempt, member, present, complete⟩
+    · exact Or.inl (state ▸ ready)
+    · refine Or.inr ⟨attempt, member, ?_, ?_⟩
+      · rw [lookup]; exact present
+      · intro after actual published
+        rw [lookup] at actual
+        exact state ▸ complete after actual published
+  have baseQueue : Commands world afterMachine pending := by
+    intro command member
+    apply command_transport world machine afterMachine pending command member (queued command member)
+      (fun id token code good => reply_fields world machine afterMachine id token code fibers state completed good)
+    · intro id yielding member previous nextContext roleAt oldHeap after actual installedFin
+      rw [state] at oldHeap
+      rw [lookup] at actual
+      exact previous nextContext roleAt oldHeap after actual installedFin
+    · intro id selected previous
+      exact ⟨fun after actual => previous.1 after ((lookup id).symm ▸ actual),
+        fun role roleAt => exit_machine machine afterMachine role selected state completed (previous.2 role roleAt)⟩
+    · intro host yielding kind member previous
+      cases kind with
+      | join target mode => trivial
+      | race race => trivial
+      | awaitAll targets =>
+        exact ⟨fun image own suffix roleAt => awaiting image own targets (previous.1 image own suffix roleAt),
+          fun suffix roleAt => cleanup targets (previous.2 suffix roleAt)⟩
+    · intro race host yielding remaining visited member previous
+      exact ⟨fun image own suffix roleAt => awaiting image own (remaining ++ visited) (previous.1 image own suffix roleAt),
+        fun suffix roleAt => cleanup (remaining ++ visited) (previous.2 suffix roleAt)⟩
+  have located : afterMachine.fiber? fiber.id = some fiber := (lookup fiber.id).symm ▸ found
+  have unique : (afterMachine.fibers.map (·.id)).Nodup := fibers ▸ ids
+  have viewSame := update_view afterMachine fiber afterFiber located unique key exitSame
+  have reply : ∀ id token code, ReplyAt world afterMachine id token code →
+      ReplyAt world (afterMachine.update afterFiber) id token code :=
+    fun id token code good => replies world afterMachine fiber afterFiber located key unparked
+      viewSame id token code good
+  have config : Configuration world (afterMachine.update afterFiber) := by
+    apply configuration_update world afterMachine fiber afterFiber located key dispatcher viewSame base
+    · intro role roleAt
+      have same := held.unique fiber.id role (.pending context) roleAt assigned
+      rw [same]
+      exact provided
+    · exact reply
+  have queue : Commands world (afterMachine.update afterFiber) pending := by
+    intro command member
+    apply command_transport world afterMachine _ pending command member (baseQueue command member) reply
+    · intro id yielding member previous nextContext roleAt oldHeap after actual installedFin
+      by_cases same : id = fiber.id
+      · subst id
+        have equal := held.unique fiber.id (.pending nextContext) (.pending context) roleAt assigned
+        cases equal
+        have entered : At context.entered afterMachine.state := state ▸ heap
+        exact False.elim (HostTimeoutNumberCountMachine.counted_heap_ne context (entered.symm.trans oldHeap))
+      · have other : id ≠ afterFiber.id := by intro equal; exact same (equal.trans key)
+        rw [RunMachine.fiber?_update_other afterFiber afterMachine id other] at actual
+        exact previous nextContext roleAt oldHeap after actual installedFin
+    · intro id selected previous
+      by_cases same : id = fiber.id
+      · subst id
+        exact False.elim (saved (previous.1 fiber located))
+      · constructor
+        · intro after actual
+          have other : id ≠ afterFiber.id := by intro equal; exact same (equal.trans key)
+          rw [RunMachine.fiber?_update_other afterFiber afterMachine id other] at actual
+          exact previous.1 after actual
+        · intro role roleAt
+          exact exit_machine afterMachine _ role selected rfl viewSame (previous.2 role roleAt)
+    · intro host yielding kind member previous
+      cases kind with
+      | join target mode => trivial
+      | race race => trivial
+      | awaitAll targets =>
+        exact ⟨fun image own suffix assigned => await_update afterMachine fiber afterFiber targets image own
+          located key exitSame (previous.1 image own suffix assigned),
+          fun suffix assigned => cleanup_await_update afterMachine fiber afterFiber targets
+          located key exitSame (previous.2 suffix assigned)⟩
+    · intro race host yielding remaining visited member previous
+      exact ⟨fun image own suffix assigned => await_update afterMachine fiber afterFiber (remaining ++ visited) image own
+        located key exitSame (previous.1 image own suffix assigned),
+        fun suffix assigned => cleanup_await_update afterMachine fiber afterFiber (remaining ++ visited)
+        located key exitSame (previous.2 suffix assigned)⟩
+  exact ⟨config, queue, snapshot_replies world afterMachine _ tasks reply
+    (snapshot_fields world machine afterMachine tasks fibers state completed detached)⟩
+
 /-- The actual installed protected callback returns the full joined numeric assertions at the same world. -/
 theorem joint (world : HostTimeoutNumberConfiguration.World) (context : CountContext)
     (view : HostTimeoutFlow.View) (machine : NativeMachine) (fiber : SourceScope.SourceFiber)
@@ -69,105 +187,11 @@ theorem joint (world : HostTimeoutNumberConfiguration.World) (context : CountCon
   change next.machine.state = machine.state at state
   change next.machine.fibers = machine.fibers at fibers
   change next.machine.completedExits = machine.completedExits at completed
-  have lookup : ∀ id, next.machine.fiber? id = machine.fiber? id := by
-    intro id
-    change List.find? _ next.machine.fibers = List.find? _ machine.fibers
-    rw [fibers]
-  have base := configuration_fields world machine next.machine fibers state completed held
-  have awaiting : ∀ image own targets, HostTimeoutNumberWait.AwaitAt image own machine targets →
-      HostTimeoutNumberWait.AwaitAt image own next.machine targets := by
-    intro image own targets previous
-    rcases previous with ready | ⟨attempt, member, present, complete⟩
-    · exact Or.inl (state ▸ ready)
-    · refine Or.inr ⟨attempt, member, ?_, ?_⟩
-      · rw [lookup]; exact present
-      · intro after actual published
-        rw [lookup] at actual
-        exact state ▸ complete after actual published
-  have cleanup : ∀ targets, CleanupAwait machine targets → CleanupAwait next.machine targets := by
-    intro targets previous
-    rcases previous with ready | ⟨attempt, member, present, complete⟩
-    · exact Or.inl (state ▸ ready)
-    · refine Or.inr ⟨attempt, member, ?_, ?_⟩
-      · rw [lookup]; exact present
-      · intro after actual published
-        rw [lookup] at actual
-        exact state ▸ complete after actual published
-  have baseQueue : Commands world next.machine pending := by
-    intro command member
-    apply command_transport world machine next.machine pending command member (queued command member)
-      (fun id token code good => reply_fields world machine next.machine id token code fibers state completed good)
-    · intro id yielding member previous nextContext roleAt oldHeap after actual installedFin
-      rw [state] at oldHeap
-      rw [lookup] at actual
-      exact previous nextContext roleAt oldHeap after actual installedFin
-    · intro id selected previous
-      exact ⟨fun after actual => previous.1 after ((lookup id).symm ▸ actual),
-        fun role roleAt => exit_machine machine next.machine role selected state completed (previous.2 role roleAt)⟩
-    · intro host yielding kind member previous
-      cases kind with
-      | join target mode => trivial
-      | race race => trivial
-      | awaitAll targets =>
-        exact ⟨fun image own suffix roleAt => awaiting image own targets (previous.1 image own suffix roleAt),
-          fun suffix roleAt => cleanup targets (previous.2 suffix roleAt)⟩
-    · intro race host yielding remaining visited member previous
-      exact ⟨fun image own suffix roleAt => awaiting image own (remaining ++ visited) (previous.1 image own suffix roleAt),
-        fun suffix roleAt => cleanup (remaining ++ visited) (previous.2 suffix roleAt)⟩
-  have located : next.machine.fiber? fiber.id = some fiber := (lookup fiber.id).symm ▸ found
-  have unique : (next.machine.fibers.map (·.id)).Nodup := fibers ▸ ids
-  have viewSame := update_view next.machine fiber next.fiber located unique key exitSame
-  have reply : ∀ id token code, ReplyAt world next.machine id token code →
-      ReplyAt world (next.machine.update next.fiber) id token code :=
-    fun id token code good => replies world next.machine fiber next.fiber located key (parked.trans unparked)
-      viewSame id token code good
-  have config : Configuration world (next.machine.update next.fiber) := by
-    apply configuration_update world next.machine fiber next.fiber located key dispatcher viewSame base
-    · intro role roleAt
-      have same := held.unique fiber.id role (.pending context) roleAt assigned
-      rw [same]
-      exact HostTimeoutNumberPendingFinalizer.installed context view machine fiber yielding exit body name flag program
-        classified live heap current chosen hook
-    · exact reply
-  have queue : Commands world (next.machine.update next.fiber) pending := by
-    intro command member
-    apply command_transport world next.machine _ pending command member (baseQueue command member) reply
-    · intro id yielding member previous nextContext roleAt oldHeap after actual installedFin
-      by_cases same : id = fiber.id
-      · subst id
-        have equal := held.unique fiber.id (.pending nextContext) (.pending context) roleAt assigned
-        cases equal
-        have entered : At context.entered next.machine.state := state ▸ heap
-        exact False.elim (HostTimeoutNumberCountMachine.counted_heap_ne context (entered.symm.trans oldHeap))
-      · have other : id ≠ next.fiber.id := by intro equal; exact same (equal.trans key)
-        rw [RunMachine.fiber?_update_other next.fiber next.machine id other] at actual
-        exact previous nextContext roleAt oldHeap after actual installedFin
-    · intro id selected previous
-      by_cases same : id = fiber.id
-      · subst id
-        exact False.elim (saved (previous.1 fiber located))
-      · constructor
-        · intro after actual
-          have other : id ≠ next.fiber.id := by intro equal; exact same (equal.trans key)
-          rw [RunMachine.fiber?_update_other next.fiber next.machine id other] at actual
-          exact previous.1 after actual
-        · intro role roleAt
-          exact exit_machine next.machine _ role selected rfl viewSame (previous.2 role roleAt)
-    · intro host yielding kind member previous
-      cases kind with
-      | join target mode => trivial
-      | race race => trivial
-      | awaitAll targets =>
-        exact ⟨fun image own suffix assigned => await_update next.machine fiber next.fiber targets image own
-          located key exitSame (previous.1 image own suffix assigned),
-          fun suffix assigned => cleanup_await_update next.machine fiber next.fiber targets
-          located key exitSame (previous.2 suffix assigned)⟩
-    · intro race host yielding remaining visited member previous
-      exact ⟨fun image own suffix assigned => await_update next.machine fiber next.fiber (remaining ++ visited) image own
-        located key exitSame (previous.1 image own suffix assigned),
-        fun suffix assigned => cleanup_await_update next.machine fiber next.fiber (remaining ++ visited)
-        located key exitSame (previous.2 suffix assigned)⟩
-  exact ⟨config, queue, snapshot_replies world next.machine _ tasks reply
-    (snapshot_fields world machine next.machine tasks fibers state completed detached), nested, edits, outcome⟩
+  have provided := HostTimeoutNumberPendingFinalizer.installed context view machine fiber yielding exit body name flag program
+    classified live heap current chosen hook
+  obtain ⟨config, queue, snapshot⟩ := readonly_update world context machine next.machine fiber next.fiber pending tasks
+    found ids assigned held queued detached saved heap state fibers completed key dispatcher exitSame
+    (parked.trans unparked) provided
+  exact ⟨config, queue, snapshot, nested, edits, outcome⟩
 
 end Test.Dogfood.Proofs.HostTimeoutNumberPendingInstall

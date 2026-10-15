@@ -1,3 +1,4 @@
+import Effect4.Laws.Machine.FinalizerCustody
 import Test.Dogfood.Proofs.HostTimeoutNumberReplacement
 import Effect4.Laws.Program.Guard.Interruption
 
@@ -15,10 +16,8 @@ open HostTimeoutNumberPhaseFlow HostTimeoutNumberUniform
 
 /-- The actual protected finalizer hook leaves its returned frame uninterruptible. -/
 theorem ensure_masked (fiber : HostTimeoutFrames.NativeFrame) (body : NCode) (name : EffName) :
-    ((Prim.onExit body name false).ensure fiber).1.interruptible = false := by
-  cases flag : fiber.interruptible <;>
-    simp only [Prim.ensure, flag, Bool.not_false, Bool.false_and, Bool.true_and,
-      Bool.false_eq_true, ↓reduceIte]
+    ((Prim.onExit body name false).ensure fiber).1.interruptible = false :=
+  ProtectedFinalizer.ensure_masked fiber body name
 
 /-- The value producer retains typed callback selection and actual masked state at the same edge. -/
 theorem value_selected (view : HostTimeoutFlow.View) (state : Stores) (input output : Kind)
