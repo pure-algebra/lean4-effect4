@@ -275,3 +275,28 @@ The audit command is `lean-slot.sh lake env lean /private/tmp/queue-request-audi
 It checks 26 declarations within `[propext, Quot.sound]`, with zero modulo declarations and zero planned goals.
 The output is `/private/tmp/queue-request-audit.log`.
 The worker mask, outer worker, feeder and whole-history consumers remain open.
+
+## Actual worker take and assignment binding
+
+Both queue endpoint goals remain open.
+The preceding commit is `69dc28301`.
+`QueueWorkersTakeWrapper.body` connects the actual mask getter to request allocation and the complete take continuation.
+Its input class reads `Val.savedMask flag`, the native getter's actual value.
+`getter_path` reuses `SourceScope.masked_path` and the existing saved-mask proof.
+`QueueWorkersWorkerBinding.body` connects that take result to its worker's actual assignment and existing readonly tail.
+The job binder consumes its actual classified Nat answer.
+It grants no job permission to an unrelated successful value.
+This source chain does not establish whole-history custody or waiting failure origin.
+
+The narrow command is:
+
+```sh
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake build Test.Dogfood.Proofs.QueueWorkersWorkerBinding Test.Dogfood.Proofs.QueueWorkersRetryFamily
+```
+
+It passes with 1422 jobs.
+The output is `/private/tmp/queue-worker-binding-build4.log`.
+The audit command is `lean-slot.sh lake env lean /private/tmp/queue-worker-binding-audit.lean`.
+It checks 331 declarations within `[propext, Quot.sound]`, with zero modulo declarations and zero planned goals.
+The output is `/private/tmp/queue-worker-binding-audit.log`.
+The feeder, root terminal publication and actual coupled command history remain open.
