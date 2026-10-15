@@ -62,6 +62,41 @@ theorem close_public (spec : Spec) (scope : Nat) (exit : ExitV) (flag : Bool)
         · exact fun fin member => fin_leading spec fin (slots.2.1 fin member)
         · exact slots.2.1
 
+/-- Unsafe scoped close exposes the actual certified captured finalizers. -/
+theorem close_unsafe (spec : Spec) (scope : Nat) (exit : ExitV) (flag : Bool)
+    (state next : Stores) (program : Option Program)
+    (owned : Effect4.Machine.ScopeFields.ScopesAt (scopeModel spec) state.scopes)
+    (found : storesCloseScopeUnsafe scope exit flag state = some (next, program)) :
+    Effect4.Machine.ScopeFields.ScopesAt (scopeModel spec) next.scopes ∧
+      ∀ code, program = some code → CodeAt spec .root (embed code) := by
+  unfold storesCloseScopeUnsafe at found
+  cases snapshot : scopeCloseSnapshot scope exit state with
+  | none => rw [snapshot] at found; cases found
+  | some result =>
+    obtain ⟨after, strategy, order⟩ := result
+    have slots := Effect4.Machine.ScopeFields.close_snapshot_at (scopeModel spec)
+      scope exit state after strategy order owned snapshot
+    simp only [snapshot, Option.pure_def] at found
+    cases order with
+    | nil => cases found; exact ⟨slots.1, fun _ impossible => by cases impossible⟩
+    | cons fin rest =>
+      cases rest with
+      | nil =>
+        cases found
+        refine ⟨slots.1, ?_⟩
+        intro code same
+        cases same
+        exact finProgram_at spec fin exit (slots.2.1 fin (.head _))
+      | cons second tail =>
+        cases found
+        refine ⟨slots.1, ?_⟩
+        intro code same
+        cases same
+        refine ⟨rfl, ?_, ?_, ?_⟩
+        · exact ⟨(fun fin member => fin_lexical spec fin (slots.2.1 fin member)), slots.2.2⟩
+        · exact fun fin member => fin_leading spec fin (slots.2.1 fin member)
+        · exact slots.2.1
+
 /-- The native close hook embeds the actual protected cleanup without assuming a returned program. -/
 theorem interp_close (spec : Spec) (completed : List (FiberId × ExitV))
     (scope : Nat) (exit : ExitV) (flag : Bool) (fiber : FiberId)

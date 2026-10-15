@@ -47,6 +47,20 @@ theorem close_counts (spec : Spec) (view : List (FiberId × ExitV)) (scope : Nat
     cases operation
     exact counts
 
+/-- Unsafe scoped close changes no allocation counts. -/
+theorem unsafe_counts (scope : Nat) (exit : ExitV) (flag : Bool) (state next : Stores)
+    (program : Option Program) (found : storesCloseScopeUnsafe scope exit flag state = some (next, program)) :
+    Counts state.refs.length state.deferreds.cells.length next := by
+  unfold storesCloseScopeUnsafe at found
+  cases actual : scopeCloseSnapshot scope exit state with
+  | none => rw [actual] at found; cases found
+  | some result =>
+    obtain ⟨after, strategy, order⟩ := result
+    have counts := snapshot_counts scope exit state after strategy order actual
+    simp only [actual, Option.pure_def] at found
+    cases found
+    exact counts
+
 /-- Deferred batch waking keeps the number of deferred cells. -/
 theorem wake_length (store : DeferredStore) (cell : DeferredKey) :
     (store.wakeBatch cell).cells.length = store.cells.length := by
