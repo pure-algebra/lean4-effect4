@@ -199,6 +199,7 @@ route and `Conform` sit outside `Effect4` and `Effect4.Laws`.
 | LC-5, the test census | §6.6's commit | the two unrun vector lanes and their drivers go; two duplicate sections of `test_engine` go; every remaining test names its own fault (§6.6) |
 | LC-4 D, the clock graph | its commit | constructor origins enter once a field holds a fact; no byte moved; ClockDiff agrees on 24 root sets; the analysis 16% and 30% faster |
 | K1b, the host boundary in the one module | its commit | `Store.Val`, `Err`, `Defect`, `Reason`, `Exit` and `Completion` join `eff_types.ml`; the engine driver's instance signature drops its ten hand transcriptions of them; every OCaml test and `check-ocaml` pass |
+| LC-6, the to-do on OCaml | the Lean half landed (§6.7); the face waits on three generator features | `Test/Dogfood/Scenario/Todo/Host.lean`: `serve` and `serveBuilt` run one request with a recording repository, and their guards pass in Lean |
 | K7 | ruled out | the scenario writer needs the authored programs, which import the author's laws by decisions row 332; the fixture rerun costs 20.0 s and moves no byte |
 
 ### 6.1 What F does, measured
@@ -302,3 +303,35 @@ elaborate.
 | The clock | `test_clock` | an exact clock value or refusal |
 
 `prop_fibers_view` takes 15.45 s of the 43 s. It retires with its carrier in LC-8.
+
+### 6.7 LC-6 and LC-7: the three generator features both faces wait on
+
+`Test/Dogfood/Scenario/Todo/Host.lean` defines one to-do request's host run: `serve` builds the
+cached consumer at the entry and arguments and drives it with `Run.runWith`, under a host that
+answers as `repository` does and records each call in `apps/todo/Check.lean`'s format.
+`serveBuilt` starts from a built program, with the reactor fixed. Its guards pass in Lean.
+
+The reactors alone lower: `repository` and `forgetful` close at 28 declarations, with no missing
+row and no clock refusal. The host loop does not, and a hand loop in OCaml would be a second
+session layer, so the face waits for the route to lower `Run.runWith`. Measured by
+`lake env lean --run src/OCaml5/Tools/LcnfGen.lean` with `--open Eff_types`:
+
+| Roots | Closure | Missing primitive rows | Clock refusals | Fields not spelled |
+| --- | ---: | --- | ---: | --- |
+| `serve`, `serveForgetful` | 1,713 | 8 | 5 | `EffAlgebra` |
+| `serveBuilt`, `serveBuiltForgetful` | 1,338 | the same 8 | 4 | `EffAlgebra` |
+
+The three features, which LC-7's session needs as well:
+
+1. **F4, eight primitive rows** in `OCaml5.Lcnf.builtins`: `String.ofList`, `USize.repr`,
+   `Array.getInternal`, `System.Platform.getNumBits`, `String.toByteArray`, `Char.ofNatAux`,
+   `ByteArray.emptyWithCapacity`, `ByteArray.push`, with a type row for `ByteArray`.
+2. **F3, the algebras' family parameter.** `EffAlgebra`'s fields have types `R EffFam.eff`, a
+   type-level function of an index, which no OCaml record type spells.
+3. **The clock analysis inside `Run`.** `Run.play`, `Run.drive` and `Run.exit` each reach clock
+   ingress "from unknown higher-order Nat production", with the reactor fixed. The same class
+   stopped `Effect4.Live.start` in the collation's probe E.
+
+F4 is mechanical. F3 is a design choice: erase the family to one type at the cost of casts in the
+generated code, or specialize each algebra at its family. The clock refusal needs its cause read
+first.
