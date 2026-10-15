@@ -86,8 +86,8 @@ theorem interp_finalizer (root : NativeEff) (q : List Nat) (view) (table : RowTa
       cases found
       exact ⟨finalizer_at q fin exit held, Nat.le_of_eq (fin_program_zero root q fin exit)⟩
     all_goals cases found
-  case scopeClose scope => cases found; exact ⟨⟨trivial, trivial⟩, Nat.le_refl _⟩
-  case restoreCtx previous => cases found; exact ⟨⟨trivial, trivial⟩, Nat.le_refl _⟩
+  case scopeClose scope => cases found; exact ⟨⟨trivial, trivial, trivial⟩, Nat.le_refl _⟩
+  case restoreCtx previous => cases found; exact ⟨⟨trivial, trivial, trivial⟩, Nat.le_refl _⟩
   all_goals cases found
 
 /-- Finalizer exit restoration adds no source reservation. -/
@@ -97,13 +97,13 @@ theorem finalizer_code (root : NativeEff) (q : List Nat) (view) (table : RowTabl
       current root q (finalizerCode (interpAt root view table) exit body) = current root q body := by
   cases exit with
   | success value =>
-    refine ⟨⟨⟨held.1, trivial⟩, ?_⟩, Nat.add_zero _⟩
-    exact CodeClosure.registration_success body (.restore (.success value)) held.2
+    refine ⟨⟨⟨held.1, trivial⟩, ?_, ⟨held.2.2, trivial⟩⟩, Nat.add_zero _⟩
+    exact CodeClosure.registration_success body (.restore (.success value)) held.2.1
       (by intro acquired fin same; cases same)
   | failure cause =>
-    refine ⟨⟨⟨⟨held.1, trivial⟩, trivial⟩, ?_⟩, ?_⟩
+    refine ⟨⟨⟨⟨held.1, trivial⟩, trivial⟩, ?_, ⟨⟨held.2.2, trivial⟩, trivial⟩⟩, ?_⟩
     · exact CodeClosure.registration_success (.onFailure body (.merge (.failure cause)))
-        (.restore (.failure cause)) ⟨held.2, trivial⟩
+        (.restore (.failure cause)) ⟨held.2.1, trivial⟩
         (by intro acquired fin same; cases same)
     · change current root q body + 0 + 0 = current root q body
       omega
@@ -150,10 +150,11 @@ def stableLaws (root : NativeEff) (q : List Nat) (table : RowTable)
 theorem templateArms (root : NativeEff) (q : List Nat) (view) (table : RowTable)
     (placed : OncePlaced (.eff root) q = true) :
     CodeClosure.Arms.Rules (TemplateAt q) (interpAt root view table).toPrimInterp where
-  success _ := ⟨trivial, trivial⟩
-  failure _ := ⟨trivial, trivial⟩
+  success _ := ⟨trivial, trivial, trivial⟩
+  failure _ := ⟨trivial, trivial, trivial⟩
   value body callback value held := (interp_value root q view table callback value placed held.1.2).1
-  constant body next held := ⟨held.1.2, held.2.2.1⟩
+  constant body next held := by
+    aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [TemplateAt])
   bothValue body callback other value held :=
     (interp_value root q view table callback value placed (ordinary_name q callback held.1.2.1)).1
   cause body callback cause held :=
@@ -167,7 +168,7 @@ theorem templateArms (root : NativeEff) (q : List Nat) (view) (table : RowTable)
     cases actual : ((interpAt root view table).iterNext callback value).2
     case resume body next =>
       rw [actual] at closed
-      exact ⟨closed.1, fun _ => ⟨closed.2, trivial⟩⟩
+      exact ⟨closed.1, fun _ => ⟨closed.2, trivial, trivial⟩⟩
     all_goals trivial
   loop := by
     intro callback cursor answer held
@@ -182,9 +183,9 @@ theorem templateArms (root : NativeEff) (q : List Nat) (view) (table : RowTable)
 theorem templateRules (root : NativeEff) (q : List Nat) (table : RowTable)
     (placed : OncePlaced (.eff root) q = true) :
     CodeClosure.PredicateFamily.Rules root table (TemplateAt q) where
-  success _ := ⟨trivial, trivial⟩
-  failure _ := ⟨trivial, trivial⟩
-  mask _ := ⟨trivial, trivial⟩
+  success _ := ⟨trivial, trivial, trivial⟩
+  failure _ := ⟨trivial, trivial, trivial⟩
+  mask _ := ⟨trivial, trivial, trivial⟩
   children := by
     intro code held
     cases code

@@ -1,4 +1,5 @@
 import Effect4.Laws.Machine.EditWords
+import Effect4.Laws.Machine.RaceLookup
 
 /-!
 Concept: reactive-scheduling, R11, the machine part of evaluation-moves.
@@ -124,7 +125,7 @@ theorem interrupt_commands_cost (interp : RunInterp ν σ β ε δ ι α χ St �
 /-- One actual observer path retains administrative payloads and generated command cost.
 Consumers: release custody, Timeout metadata, and operation-counter command accounting.
 The actual update retains the counter, independently of saved-frame equality. -/
-theorem observer_producer_path_controls
+theorem observer_producer_path_races
     {Edge : RunMachine ν σ β ε δ ι α χ St κ φ η → RunMachine ν σ β ε δ ι α χ St κ φ η →
       Edit ν σ β ε δ ι α χ St κ φ η → Prop}
     (interp : RunInterp ν σ β ε δ ι α χ St κ)
@@ -150,7 +151,9 @@ theorem observer_producer_path_controls
     (halt : ∀ m scope key, observer = .dropScopeFinalizer scope key →
       interp.dropFinalizer scope key m.state = none →
       Edge m (m.halt (.unknownScope scope)) (.halt (.unknownScope scope)))
-    (race : ∀ m raceId r, observer = .raceCallback raceId → Edge m (m.updateRace r) (.updateRace r))
+    (race : ∀ m raceId old r, observer = .raceCallback raceId →
+      m.race? raceId = some old → r.id = old.id → r.programs = old.programs →
+      Edge m (m.updateRace r) (.updateRace r))
     (interrupted : ∀ who extra targets held, Effect4.Contracts.Path Edge held.1
       (interruptEach interp who extra targets held).1 (interruptWords interp who extra targets held))
     (evaluateProducer : ∀ target, weight (.evaluate target) = 0 ∧ Allowed (.evaluate target))
@@ -221,7 +224,9 @@ theorem observer_producer_path_controls
   case case3.refine_1 => exact .cons (halt _ _ _ rfl (by assumption)) (.nil _)
   case case4.refine_1 => exact .cons (state _ _ _ _ rfl (by assumption)) (.nil _)
   case case15.refine_1 => exact .cons (callback _ _ _) (.nil _)
-  case case14.refine_1 => exact .cons (race _ _ _ rfl) (.nil _)
+  case case14.refine_1 =>
+    rename_i raceId original changed raced pending base found result
+    exact .cons (race _ _ original changed rfl found rfl rfl) (.nil _)
   case case7.refine_1 | case8.refine_1 =>
     rename_i choice
     have prior := chosen _ _ _ _ _ _ _ choice
@@ -259,8 +264,12 @@ theorem observer_producer_path_controls
       (of_decide_eq_true (List.find?_some (p := fun p : Pending ν β ε δ ι α => decide (p.token = token)) pendingFound))]
     simp only [Nat.add_zero]
   case case13.refine_1 =>
-    exact (Effect4.Contracts.Path.cons (race _ _ _ rfl) (.nil _)).append
-      (.cons (race _ _ _ rfl) (.cons (settled _ _ _) (.nil _)))
+    rename_i raceId original changed raced accepted unsettled acceptedAt base found updated settledAt final
+    refine (Effect4.Contracts.Path.cons (race _ _ original changed rfl found rfl rfl) (.nil _)).append
+      (.cons ?_ (.cons (settled _ _ _) (.nil _)))
+    simpa only [changed, Race.afterExit, acceptedAt] using
+      race _ _ changed {changed with settled := true} rfl
+        (RunMachine.race?_updateRace_at _ _ original changed found rfl) rfl rfl
   case case13.refine_2 =>
     split <;> simp only [List.map_cons, List.map_nil, List.sum_cons, List.sum_nil,
       raceCost _ _ _ _ _ rfl, Nat.add_zero]
@@ -305,6 +314,56 @@ theorem observer_producer_path_controls
     · rcases List.mem_cons.mp member with rfl | impossible
       · exact (raceProducer _ _ _ _ _ rfl).2
       · cases impossible
+
+/-- The original observer contract forgets only the selected race and its retained program list. -/
+theorem observer_producer_path_controls
+    {Edge : RunMachine ν σ β ε δ ι α χ St κ φ η → RunMachine ν σ β ε δ ι α χ St κ φ η →
+      Edit ν σ β ε δ ι α χ St κ φ η → Prop}
+    (interp : RunInterp ν σ β ε δ ι α χ St κ)
+    (weight : Cmd ν σ β ε δ ι α κ → Nat) (Allowed : Cmd ν σ β ε δ ι α κ → Prop)
+    (id : FiberId) (exit : Exit β ε δ ι α)
+    (acc : RunMachine ν σ β ε δ ι α χ St κ φ η × List (Cmd ν σ β ε δ ι α κ))
+    (observer : Observer)
+    (update : ∀ m target old next, m.fiber? target = some old → next.id = old.id →
+      next.frame = old.frame → next.dispatcher = old.dispatcher → next.parked = old.parked →
+      next.currentOpCount = old.currentOpCount → next.running = old.running →
+      (∀ pending ∈ next.pending, ∃ prior ∈ old.pending,
+        pending.token = prior.token ∧ pending.resumeWith = prior.resumeWith) →
+      next.observers = old.observers → next.exit = old.exit → next.children ⊆ old.children →
+      Edge m ((Edit.update next).apply m) (.update next))
+    (observe : ∀ m target observed, observed = observer →
+      Edge m ((Edit.observe target observed).apply m) (.observe target observed))
+    (fired : ∀ m id observer, Edge m (m.emit [.observerFired id observer]) (.emit [.observerFired id observer]))
+    (settled : ∀ m id exit, Edge m (m.emit [.raceSettled id exit]) (.emit [.raceSettled id exit]))
+    (callback : ∀ m key exit, Edge m (m.emit [.callback key exit]) (.emit [.callback key exit]))
+    (state : ∀ m scope key s, observer = .dropScopeFinalizer scope key →
+      interp.dropFinalizer scope key m.state = some s →
+      Edge m ((Edit.setState s).apply m) (.setState s))
+    (halt : ∀ m scope key, observer = .dropScopeFinalizer scope key →
+      interp.dropFinalizer scope key m.state = none →
+      Edge m (m.halt (.unknownScope scope)) (.halt (.unknownScope scope)))
+    (race : ∀ m raceId r, observer = .raceCallback raceId → Edge m (m.updateRace r) (.updateRace r))
+    (interrupted : ∀ who extra targets held, Effect4.Contracts.Path Edge held.1
+      (interruptEach interp who extra targets held).1 (interruptWords interp who extra targets held))
+    (evaluateProducer : ∀ target, weight (.evaluate target) = 0 ∧ Allowed (.evaluate target))
+    (awaitProducer : ∀ waiter token mode, observer = .resumeAwait waiter token mode →
+      weight (.resume waiter token (interp.exitValue exit mode)) = 0 ∧
+      Allowed (.resume waiter token (interp.exitValue exit mode)))
+    (raceProducer : ∀ raceId host token cleanup accepted, observer = .raceCallback raceId →
+      weight (.resume host token (interp.raceSettle raceId cleanup accepted)) = 0 ∧
+      Allowed (.resume host token (interp.raceSettle raceId cleanup accepted)))
+    (countdownProducer : ∀ waiter token fiber pending exits, observer = .countdown waiter token →
+      (acc.1.emit [.observerFired id observer]).fiber? waiter = some fiber → pending ∈ fiber.pending → pending.token = token →
+      weight (.resume waiter token (countdownPark.resumePrim (core := core) interp pending.resumeWith exits)) = 0 ∧
+      Allowed (.resume waiter token (countdownPark.resumePrim (core := core) interp pending.resumeWith exits))) :
+    Effect4.Contracts.Path Edge acc.1 (fireObserver interp id exit acc observer).1
+      (observerWord interp id exit acc.1 observer) ∧
+    (((fireObserver interp id exit acc observer).2).map weight).sum = (acc.2.map weight).sum ∧
+      ∀ command ∈ (fireObserver interp id exit acc observer).2, command ∈ acc.2 ∨ Allowed command := by
+  exact observer_producer_path_races interp weight Allowed id exit acc observer
+    update observe fired settled callback state halt
+    (fun m raceId _ r matching _ _ _ => race m raceId r matching)
+    interrupted evaluateProducer awaitProducer raceProducer countdownProducer
 
 /-- The accounting projection forgets only the observer update's running equation. -/
 theorem observer_producer_path_accounting

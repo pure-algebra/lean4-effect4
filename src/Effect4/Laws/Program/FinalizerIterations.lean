@@ -98,7 +98,7 @@ def loopWeight (root : NativeEff) (q : List Nat) : LoopNext Val NCode → Nat
 theorem loop_finish (root : NativeEff) (q : List Nat) (point : Point) (cursor : Val) :
     TemplateAt q (loopFinishAt root point cursor) ∧ current root q (loopFinishAt root point cursor) = 0 := by
   fun_cases loopFinishAt root point cursor
-  all_goals exact ⟨⟨trivial, trivial⟩, rfl⟩
+  all_goals exact ⟨⟨trivial, trivial, trivial⟩, rfl⟩
 
 /-- Native loop entry exposes no repeatedly usable selected source. -/
 theorem loop_next (root : NativeEff) (q : List Nat) (point : Point) (cursor : Val)
@@ -112,7 +112,7 @@ theorem loop_next (root : NativeEff) (q : List Nat) (point : Point) (cursor : Va
     rw [SourceScope.Opportunities.loop_child_zero root q (FinalizerPlacement.clear_loops root q placed) point test step body found] at bound
     exact Nat.eq_zero_of_le_zero bound
   case case2 => exact loop_finish root q point cursor
-  all_goals exact ⟨⟨trivial, trivial⟩, rfl⟩
+  all_goals exact ⟨⟨trivial, trivial, trivial⟩, rfl⟩
 
 /-- Native loop resumption reuses the same checked loop entry. -/
 theorem loop_resume (root : NativeEff) (q : List Nat) (point : Point) (cursor answer : Val)
@@ -120,12 +120,12 @@ theorem loop_resume (root : NativeEff) (q : List Nat) (point : Point) (cursor an
     LoopAt q (loopResumeAt root point cursor answer) ∧ loopWeight root q (loopResumeAt root point cursor answer) = 0 := by
   unfold loopResumeAt
   cases found : loopAt root point with
-  | none => exact ⟨⟨trivial, trivial⟩, rfl⟩
+  | none => exact ⟨⟨trivial, trivial, trivial⟩, rfl⟩
   | some row =>
     rcases row with ⟨test, step, body⟩
     dsimp only
     cases evaluated : evalTerm (point.env ++ [cursor, answer]) step with
-    | none => exact ⟨⟨trivial, trivial⟩, rfl⟩
+    | none => exact ⟨⟨trivial, trivial, trivial⟩, rfl⟩
     | some next => exact loop_next root q point next placed held
 
 /-- Actual loop entry changes only the completed-exit view of its point. -/
@@ -136,7 +136,7 @@ theorem interp_loop_enter (root : NativeEff) (q : List Nat) (completed) (table :
       loopWeight root q ((interpAt root completed table).loopEnter callback cursor) = 0 := by
   cases callback
   case loop point => exact loop_next root q {point with completed} cursor placed held
-  all_goals exact ⟨⟨trivial, trivial⟩, rfl⟩
+  all_goals exact ⟨⟨trivial, trivial, trivial⟩, rfl⟩
 
 /-- Actual loop resumption changes only the completed-exit view of its point. -/
 theorem interp_loop_resume (root : NativeEff) (q : List Nat) (completed) (table : RowTable)
@@ -146,6 +146,6 @@ theorem interp_loop_resume (root : NativeEff) (q : List Nat) (completed) (table 
       loopWeight root q ((interpAt root completed table).loopResume callback cursor answer) = 0 := by
   cases callback
   case loop point => exact loop_resume root q {point with completed} cursor answer placed held
-  all_goals exact ⟨⟨trivial, trivial⟩, rfl⟩
+  all_goals exact ⟨⟨trivial, trivial, trivial⟩, rfl⟩
 
 end Effect4.Program.FinalizerSource

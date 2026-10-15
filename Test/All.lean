@@ -432,6 +432,20 @@ import Test.Dogfood.Scenario.Atomic.StageObservation
 import Test.Dogfood.Proofs.QueueWorkersJobBinding
 import Test.Dogfood.Proofs.QueueWorkersNotificationFamily
 
+-- M3: full native source accounting and actual application transitions.
+import Test.Dogfood.Proofs.HostTimeoutNumberInjection
+import Test.Dogfood.Proofs.HostTimeoutNumberInterrupt
+import Test.Dogfood.Proofs.HostTimeoutNumberRootLoop
+import Test.Dogfood.Proofs.HostTimeoutNumberTerminalFiber
+import Test.Dogfood.Proofs.QueueWorkersCountSource
+import Test.Dogfood.Proofs.QueueWorkersRetryFamily
+import Test.Dogfood.Proofs.QueueWorkersTakeWithdrawal
+import Test.Dogfood.Proofs.QueueWorkersWorkerBinding
+import Test.Dogfood.Scenario.Atomic.StageNativeJoin
+import Test.Dogfood.Scenario.Timeout.FinishCut
+import Test.Dogfood.Scenario.Timeout.OriginControl
+import Test.Dogfood.Scenario.Timeout.SourceCut
+
 /-!
 # Effect4 test battery
 

@@ -1,0 +1,34 @@
+import ProofGraph.AxiomAudit
+import Effect4.Laws.Api.Supervision
+import Effect4.Laws.Machine.EditObserverWords
+import Effect4.Laws.Machine.RaceLookup
+import Effect4.Laws.Program.CodeClosure.Correlated
+import Effect4.Laws.Program.CodeClosure.NativeClosure
+import Effect4.Laws.Program.CodeClosure.PrimitiveClosure
+import Effect4.Laws.Program.CodeClosure.ScopedClosure
+import Effect4.Laws.Program.CodeClosure.ScopedFunding
+import Effect4.Laws.Program.FinalizerCallbacks
+import Effect4.Laws.Program.FinalizerCancellation
+import Effect4.Laws.Program.FinalizerGeneratorRun
+import Effect4.Laws.Program.FinalizerInterp
+import Effect4.Laws.Program.FinalizerIterations
+import Effect4.Laws.Program.FinalizerLayers
+import Effect4.Laws.Program.FinalizerNativeClosure
+import Effect4.Laws.Program.FinalizerNativeIteration
+import Effect4.Laws.Program.FinalizerNativePrimitive
+import Effect4.Laws.Program.FinalizerNativeScopeClosure
+import Effect4.Laws.Program.FinalizerNativeScoped
+import Effect4.Laws.Program.FinalizerScopes
+import Effect4.Laws.Program.FinalizerSourceCommands
+import Effect4.Laws.Program.FinalizerSuspensions
+import Effect4.Laws.Program.FinalizerSyntax
+import Effect4.Laws.Program.FinalizerTemplateCommands
+import Effect4.Laws.Program.Guard.Core
+import Effect4.Laws.Program.PlaceFunding.Commands
+import Effect4.Laws.Program.PlaceFunding.Control
+import Effect4.Laws.Program.PlaceFunding.History
+import Effect4.Laws.Program.PlaceFunding.Native
+import Effect4.Laws.Program.PlaceFunding.QueueProjection
+import Effect4.Laws.Program.PlaceFunding.Transfer
+
+#axiom_audit Effect4.Laws.Api.Supervision Effect4.Laws.Machine.EditObserverWords Effect4.Laws.Machine.RaceLookup Effect4.Laws.Program.CodeClosure.Correlated Effect4.Laws.Program.CodeClosure.NativeClosure Effect4.Laws.Program.CodeClosure.PrimitiveClosure Effect4.Laws.Program.CodeClosure.ScopedClosure Effect4.Laws.Program.CodeClosure.ScopedFunding Effect4.Laws.Program.FinalizerCallbacks Effect4.Laws.Program.FinalizerCancellation Effect4.Laws.Program.FinalizerGeneratorRun Effect4.Laws.Program.FinalizerInterp Effect4.Laws.Program.FinalizerIterations Effect4.Laws.Program.FinalizerLayers Effect4.Laws.Program.FinalizerNativeClosure Effect4.Laws.Program.FinalizerNativeIteration Effect4.Laws.Program.FinalizerNativePrimitive Effect4.Laws.Program.FinalizerNativeScopeClosure Effect4.Laws.Program.FinalizerNativeScoped Effect4.Laws.Program.FinalizerScopes Effect4.Laws.Program.FinalizerSourceCommands Effect4.Laws.Program.FinalizerSuspensions Effect4.Laws.Program.FinalizerSyntax Effect4.Laws.Program.FinalizerTemplateCommands Effect4.Laws.Program.Guard.Core Effect4.Laws.Program.PlaceFunding.Commands Effect4.Laws.Program.PlaceFunding.Control Effect4.Laws.Program.PlaceFunding.History Effect4.Laws.Program.PlaceFunding.Native Effect4.Laws.Program.PlaceFunding.QueueProjection Effect4.Laws.Program.PlaceFunding.Transfer

@@ -407,6 +407,14 @@ import Effect4.Laws.Machine.FinalizerCustody
 import Effect4.Laws.Contracts.FramePathOrder
 import Effect4.Laws.Program.AnswerSlots.AllocationCommandStep
 
+-- M3: full native source accounting and actual application transitions.
+import Effect4.Laws.Machine.AnswerFlowClassifiedEmbedding
+import Effect4.Laws.Machine.AnswerFlowEmpty
+import Effect4.Laws.Machine.AnswerFlowIndexedFamily
+import Effect4.Laws.Machine.AnswerFlowJointCommands
+import Effect4.Laws.Program.FinalizerTemplateCommands
+import Effect4.Laws.Program.NativePrimitiveDefault
+
 /-!
 # Effect4 proof graph
 

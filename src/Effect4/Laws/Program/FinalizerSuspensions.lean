@@ -56,7 +56,7 @@ theorem suspended (root : NativeEff) (q : List Nat) (suspension : EffThunk)
     rw [if_neg (by omega)]
     exact child.2
   case case5 point n fuel body found =>
-    refine ⟨⟨⟨held, .nil⟩, trivial⟩, ?_⟩
+    refine ⟨⟨⟨held, .nil⟩, trivial, trivial⟩, ?_⟩
     change FinalizerGenerator.remaining q (point.path ++ [0]) [] ≤ if point.fuel = 0 then 0 else _
     rw [if_neg (by omega), FinalizerGenerator.remaining_start]
     exact SourceScope.Opportunities.child_le q point.path 0

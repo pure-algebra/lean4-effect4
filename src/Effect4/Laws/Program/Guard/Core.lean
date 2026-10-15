@@ -1,3 +1,4 @@
+import Effect4.Laws.Machine.RaceLookup
 import Effect4.Laws.Auto.Obligations
 import Effect4.Laws.Machine.Lift
 import Effect4.Api
@@ -2844,12 +2845,9 @@ theorem frameCodeOwned_transport {m n : NativeMachine} (races : RaceHostsPreserv
   ⟨raceCodeOwned_transport races code.1, fun c hc => raceCodeOwned_transport races (code.2 c hc)⟩
 
 theorem raceIds_update (m : NativeMachine) (race : NRace) :
-    (m.updateRace race).races.map Race.id = m.races.map Race.id := by
-  simp only [RunMachine.updateRace, List.map_map]
-  congr 1
-  funext old
-  dsimp only [Function.comp_def]
-  split <;> simp_all
+    (m.updateRace race).races.map Race.id = m.races.map Race.id :=
+  RunMachine.race_ids_update m race
+
 
 theorem internalKeys_updateRace_subset {m : NativeMachine} {race : NRace}
     (hr : race ∈ m.races) (next : NRace) (host : next.host = race.host)

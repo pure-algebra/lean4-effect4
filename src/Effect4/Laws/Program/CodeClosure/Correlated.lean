@@ -49,6 +49,7 @@ def Correlated (relation : NCode → Prop) (code : NCode) : Prop :=
   (cata_prim (correlatedAlg relation) code).2
 
 /-- Registration keeps the exact operation which produces its callback answer. -/
+@[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
 def RegistrationBody : NCode → Prop
   | .onSuccess body callback => ∀ acquired fin, callback = .afterScopeAdd acquired fin →
       ∃ scope, body = .sync (.op (.scopeAdd scope fin))
@@ -56,107 +57,115 @@ def RegistrationBody : NCode → Prop
 
 abbrev RegistrationCode := Correlated RegistrationBody
 
-/-- Constructor normalization for the exact registration template. -/
+/-- The existing code fold exposes its local constructor relation. -/
 @[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
-theorem registration_code_success (value : Val) :
-    RegistrationCode (.success value) = (True) := rfl
+theorem correlated_success (relation : NCode → Prop) (value : Val) :
+    Correlated relation (.success value) = relation (.success value) := rfl
 
-/-- Constructor normalization for the exact registration template. -/
+/-- The existing code fold exposes its local constructor relation. -/
 @[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
-theorem registration_code_failure (cause : CauseV) :
-    RegistrationCode (.failure cause) = (True) := rfl
+theorem correlated_failure (relation : NCode → Prop) (cause : CauseV) :
+    Correlated relation (.failure cause) = relation (.failure cause) := rfl
 
-/-- Constructor normalization for the exact registration template. -/
+/-- The existing code fold exposes its local constructor relation. -/
 @[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
-theorem registration_code_sync (thunk : EffThunk) :
-    RegistrationCode (.sync thunk) = (True) := rfl
+theorem correlated_sync (relation : NCode → Prop) (thunk : EffThunk) :
+    Correlated relation (.sync thunk) = relation (.sync thunk) := rfl
 
-/-- Constructor normalization for the exact registration template. -/
+/-- The existing code fold exposes its local constructor relation. -/
 @[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
-theorem registration_code_suspend (thunk : EffThunk) :
-    RegistrationCode (.suspend thunk) = (True) := rfl
+theorem correlated_suspend (relation : NCode → Prop) (thunk : EffThunk) :
+    Correlated relation (.suspend thunk) = relation (.suspend thunk) := rfl
 
-/-- Constructor normalization for the exact registration template. -/
+/-- The existing code fold exposes its local constructor relation. -/
 @[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
-theorem registration_code_withFiber (thunk : EffThunk) :
-    RegistrationCode (.withFiber thunk) = (True) := rfl
+theorem correlated_withFiber (relation : NCode → Prop) (thunk : EffThunk) :
+    Correlated relation (.withFiber thunk) = relation (.withFiber thunk) := rfl
 
-/-- Constructor normalization for the exact registration template. -/
+/-- The existing code fold exposes its local constructor relation. -/
 @[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
-theorem registration_code_yieldableError (error : Err) :
-    RegistrationCode (.yieldableError error) = (True) := rfl
+theorem correlated_yieldableError (relation : NCode → Prop) (error : Err) :
+    Correlated relation (.yieldableError error) = relation (.yieldableError error) := rfl
 
-/-- Constructor normalization for the exact registration template. -/
+/-- The existing code fold exposes its local constructor relation. -/
 @[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
-theorem registration_code_iterator (callback : EffName) (cursor : Val) :
-    RegistrationCode (.iterator callback cursor) = (True) := rfl
+theorem correlated_iterator (relation : NCode → Prop) (callback : EffName) (cursor : Val) :
+    Correlated relation (.iterator callback cursor) = relation (.iterator callback cursor) := rfl
 
-/-- Constructor normalization for the exact registration template. -/
+/-- The existing code fold exposes its local constructor relation. -/
 @[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
-theorem registration_code_whileLoop (callback : EffName) (cursor : Val) :
-    RegistrationCode (.whileLoop callback cursor) = (True) := rfl
+theorem correlated_whileLoop (relation : NCode → Prop) (callback : EffName) (cursor : Val) :
+    Correlated relation (.whileLoop callback cursor) = relation (.whileLoop callback cursor) := rfl
 
-/-- Constructor normalization for the exact registration template. -/
+/-- The existing code fold exposes its local constructor relation. -/
 @[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
-theorem registration_code_setInterruptible (flag : Bool) :
-    RegistrationCode (.setInterruptible flag) = (True) := rfl
+theorem correlated_setInterruptible (relation : NCode → Prop) (flag : Bool) :
+    Correlated relation (.setInterruptible flag) = relation (.setInterruptible flag) := rfl
 
-/-- Constructor normalization for the exact registration template. -/
+/-- The existing code fold exposes its local constructor relation. -/
 @[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
-theorem registration_code_yieldNowWith (priority : Nat) :
-    RegistrationCode (.yieldNowWith priority) = (True) := rfl
+theorem correlated_yieldNowWith (relation : NCode → Prop) (priority : Nat) :
+    Correlated relation (.yieldNowWith priority) = relation (.yieldNowWith priority) := rfl
 
-/-- Constructor normalization for the exact registration template. -/
+/-- The existing code fold exposes its local constructor relation. -/
 @[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
-theorem registration_code_async (callback : EffName) (flag : Bool) (cancel : Option EffName) :
-    RegistrationCode (.async callback flag cancel) = (True) := rfl
+theorem correlated_async (relation : NCode → Prop) (callback : EffName) (flag : Bool) (cancel : Option EffName) :
+    Correlated relation (.async callback flag cancel) = relation (.async callback flag cancel) := rfl
 
-/-- Constructor normalization for the exact registration template. -/
+/-- The existing code fold exposes its local constructor relation. -/
 @[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
-theorem registration_code_asyncFinalizer (callback : EffName) :
-    RegistrationCode (.asyncFinalizer callback) = (True) := rfl
+theorem correlated_asyncFinalizer (relation : NCode → Prop) (callback : EffName) :
+    Correlated relation (.asyncFinalizer callback) = relation (.asyncFinalizer callback) := rfl
 
-/-- Constructor normalization for the exact registration template. -/
+/-- The existing code fold retains the actual child beside its local relation. -/
 @[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
-theorem registration_code_onSuccess (body : NCode) (callback : EffName) :
-    RegistrationCode (.onSuccess body callback) = (RegistrationCode body ∧ RegistrationBody (.onSuccess body callback)) := by
-  change (RegistrationCode body ∧ RegistrationBody (.onSuccess (cata_prim (correlatedAlg RegistrationBody) body).1 callback)) = _
+theorem correlated_onSuccess (relation : NCode → Prop) (body : NCode) (callback : EffName) :
+    Correlated relation (.onSuccess body callback) =
+      (Correlated relation body ∧ relation (.onSuccess body callback)) := by
+  change (Correlated relation body ∧ relation (.onSuccess (cata_prim (correlatedAlg relation) body).1 callback)) = _
   rw [correlated_rebuild]
 
-/-- Constructor normalization for the exact registration template. -/
+/-- The existing code fold retains the actual child beside its local relation. -/
 @[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
-theorem registration_code_onFailure (body : NCode) (callback : EffName) :
-    RegistrationCode (.onFailure body callback) = (RegistrationCode body) := by
-  change (RegistrationCode body ∧ True) = _
-  exact and_true _
+theorem correlated_onFailure (relation : NCode → Prop) (body : NCode) (callback : EffName) :
+    Correlated relation (.onFailure body callback) =
+      (Correlated relation body ∧ relation (.onFailure body callback)) := by
+  change (Correlated relation body ∧ relation (.onFailure (cata_prim (correlatedAlg relation) body).1 callback)) = _
+  rw [correlated_rebuild]
 
-/-- Constructor normalization for the exact registration template. -/
+/-- The existing code fold retains the actual child beside its local relation. -/
 @[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
-theorem registration_code_onSuccessAndFailure (body : NCode) (value cause : EffName) :
-    RegistrationCode (.onSuccessAndFailure body value cause) = (RegistrationCode body) := by
-  change (RegistrationCode body ∧ True) = _
-  exact and_true _
+theorem correlated_onSuccessAndFailure (relation : NCode → Prop) (body : NCode) (value cause : EffName) :
+    Correlated relation (.onSuccessAndFailure body value cause) =
+      (Correlated relation body ∧ relation (.onSuccessAndFailure body value cause)) := by
+  change (Correlated relation body ∧ relation (.onSuccessAndFailure (cata_prim (correlatedAlg relation) body).1 value cause)) = _
+  rw [correlated_rebuild]
 
-/-- Constructor normalization for the exact registration template. -/
+/-- The existing code fold retains the actual child beside its local relation. -/
 @[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
-theorem registration_code_onExit (body : NCode) (callback : EffName) (flag : Bool) :
-    RegistrationCode (.onExit body callback flag) = (RegistrationCode body) := by
-  change (RegistrationCode body ∧ True) = _
-  exact and_true _
+theorem correlated_onExit (relation : NCode → Prop) (body : NCode) (callback : EffName) (flag : Bool) :
+    Correlated relation (.onExit body callback flag) =
+      (Correlated relation body ∧ relation (.onExit body callback flag)) := by
+  change (Correlated relation body ∧ relation (.onExit (cata_prim (correlatedAlg relation) body).1 callback flag)) = _
+  rw [correlated_rebuild]
 
-/-- Constructor normalization for the exact registration template. -/
+/-- The existing code fold retains the actual child beside its local relation. -/
 @[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
-theorem registration_code_exitFrame (body : NCode) :
-    RegistrationCode (.exitFrame body) = (RegistrationCode body) := by
-  change (RegistrationCode body ∧ True) = _
-  exact and_true _
+theorem correlated_exitFrame (relation : NCode → Prop) (body : NCode)  :
+    Correlated relation (.exitFrame body) =
+      (Correlated relation body ∧ relation (.exitFrame body)) := by
+  change (Correlated relation body ∧ relation (.exitFrame (cata_prim (correlatedAlg relation) body).1)) = _
+  rw [correlated_rebuild]
 
-/-- Constructor normalization for the exact registration template. -/
+/-- The existing code fold retains both actual children beside their local relation. -/
 @[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
-theorem registration_code_onSuccessConst (body next : NCode) :
-    RegistrationCode (.onSuccessConst body next) = (RegistrationCode body ∧ RegistrationCode next) := by
-  change (RegistrationCode body ∧ RegistrationCode next ∧ True) = _
-  rw [and_true]
+theorem correlated_onSuccessConst (relation : NCode → Prop) (body next : NCode) :
+    Correlated relation (.onSuccessConst body next) =
+      (Correlated relation body ∧ Correlated relation next ∧ relation (.onSuccessConst body next)) := by
+  change (Correlated relation body ∧ Correlated relation next ∧
+    relation (.onSuccessConst (cata_prim (correlatedAlg relation) body).1
+      (cata_prim (correlatedAlg relation) next).1)) = _
+  rw [correlated_rebuild, correlated_rebuild]
 
 /-- The body-callback relation is available at the actual selected registration node. -/
 theorem registration_body (body : NCode) (acquired : Val) (fin : FinName)

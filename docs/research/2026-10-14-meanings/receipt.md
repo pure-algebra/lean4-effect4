@@ -604,3 +604,67 @@ Command: `lake env lean docs/research/2026-10-14-meanings/evidence/NativeActions
 Result: 643 declarations within `[propext, Quot.sound]`, zero modulo goals and zero planned goals.
 Evidence: [the audit](evidence/NativeActionsAudit.lean) and [its output](evidence/native-actions-audit.log).
 No outside implementation run is reached by these proof-only changes.
+
+
+### Full native source accounting through actual commands
+
+The six remaining M3 goals stay open. Full source command accounting now needs no direct-fragment or race-free premise.
+Base: `b46459e4d`. The commit containing this section records the slice head.
+
+The full annotation retains actual cancellation slots, registration bodies, current code, and saved frames.
+Native evaluation and charged iterations consume the shared closure and accounting producers.
+The command ledger retains actual race reservations.
+`RaceWeights.metadata` reads the actual race lookup and unchanged program list.
+Existing observer and command proofs now retain that information once.
+Their older zero-race APIs remain instances.
+The existing command frame law supplies launch independence from the queue suffix.
+`FinalizerSource.command_templates` instantiates the common answer-flow command theorem.
+
+Placement: scope-lifetime-finalization R11, serving `FinalizerRun.once_placed_outside_census`.
+These local facts assume the source annotation and terminal reply permission.
+They establish neither complete history funding nor release custody.
+
+Changed proof modules:
+
+- `src/Effect4/Laws/Api/Supervision.lean`
+- `src/Effect4/Laws/Machine/EditObserverWords.lean`
+- `src/Effect4/Laws/Machine/RaceLookup.lean`
+- `src/Effect4/Laws/Program/CodeClosure/Correlated.lean`
+- `src/Effect4/Laws/Program/CodeClosure/NativeClosure.lean`
+- `src/Effect4/Laws/Program/CodeClosure/PrimitiveClosure.lean`
+- `src/Effect4/Laws/Program/CodeClosure/ScopedClosure.lean`
+- `src/Effect4/Laws/Program/CodeClosure/ScopedFunding.lean`
+- `src/Effect4/Laws/Program/FinalizerCallbacks.lean`
+- `src/Effect4/Laws/Program/FinalizerCancellation.lean`
+- `src/Effect4/Laws/Program/FinalizerGeneratorRun.lean`
+- `src/Effect4/Laws/Program/FinalizerInterp.lean`
+- `src/Effect4/Laws/Program/FinalizerIterations.lean`
+- `src/Effect4/Laws/Program/FinalizerLayers.lean`
+- `src/Effect4/Laws/Program/FinalizerNativeClosure.lean`
+- `src/Effect4/Laws/Program/FinalizerNativeIteration.lean`
+- `src/Effect4/Laws/Program/FinalizerNativePrimitive.lean`
+- `src/Effect4/Laws/Program/FinalizerNativeScopeClosure.lean`
+- `src/Effect4/Laws/Program/FinalizerNativeScoped.lean`
+- `src/Effect4/Laws/Program/FinalizerScopes.lean`
+- `src/Effect4/Laws/Program/FinalizerSourceCommands.lean`
+- `src/Effect4/Laws/Program/FinalizerSuspensions.lean`
+- `src/Effect4/Laws/Program/FinalizerSyntax.lean`
+- `src/Effect4/Laws/Program/FinalizerTemplateCommands.lean`
+- `src/Effect4/Laws/Program/Guard/Core.lean`
+- `src/Effect4/Laws/Program/PlaceFunding/Commands.lean`
+- `src/Effect4/Laws/Program/PlaceFunding/Control.lean`
+- `src/Effect4/Laws/Program/PlaceFunding/History.lean`
+- `src/Effect4/Laws/Program/PlaceFunding/Native.lean`
+- `src/Effect4/Laws/Program/PlaceFunding/QueueProjection.lean`
+- `src/Effect4/Laws/Program/PlaceFunding/Transfer.lean`
+
+The root imports also connect the checked application leaves and retained boundary controls.
+Files: `src/Effect4/Laws.lean` and `Test/All.lean`.
+
+Command through `scratch/lean-slot.sh`:
+`lake build Effect4.Laws.Program.FinalizerTemplateCommands Effect4.Laws.Program.PlaceFunding.History Effect4.Laws.Api.Supervision ProofGraph.AxiomAudit`.
+Result: passed, 687 jobs.
+Command: `lake env lean docs/research/2026-10-14-meanings/evidence/FullNativeCommandsAudit.lean`.
+Result: 1975 declarations within `[propext, Quot.sound]`, zero modulo goals and zero planned goals.
+Evidence: [the audit](evidence/FullNativeCommandsAudit.lean) and [its output](evidence/full-native-commands.log).
+No outside implementation run is reached by this proof-only consolidation.

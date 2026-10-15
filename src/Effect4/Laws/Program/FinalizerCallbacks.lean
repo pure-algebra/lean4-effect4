@@ -92,7 +92,7 @@ theorem value_callback (root : NativeEff) (q : List Nat) (callback : EffName) (v
     unfold buildWithScopeK
     split
     · exact ⟨by aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [TemplateAt, CodeClosure.RegistrationBody, OrdinaryNameAt, NameAt, ThunkAt, RegionAt, CodeClosure.Slots.NameAt, CodeClosure.Qualified.NameAt, CodeClosure.Slots.ThunkAt, CodeClosure.Qualified.ThunkAt, CodeClosure.Slots.OpAt, CodeClosure.Qualified.OpAt, CodeClosure.Qualified.EnvironmentWrites, updateContextAt]), Nat.le_refl _⟩
-    · exact ⟨⟨trivial, trivial⟩, Nat.le_refl _⟩
+    · exact ⟨⟨trivial, trivial, trivial⟩, Nat.le_refl _⟩
   case case38 point memo child =>
     have h := inner_layer root q point memo child held
     exact ⟨by aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [TemplateAt, CodeClosure.RegistrationBody]), Nat.le_of_eq h.2⟩
@@ -106,7 +106,7 @@ theorem value_callback (root : NativeEff) (q : List Nat) (callback : EffName) (v
     unfold provideThenK
     split
     · exact ⟨by aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [TemplateAt, CodeClosure.RegistrationBody, OrdinaryNameAt, NameAt, ThunkAt, RegionAt, CodeClosure.Slots.NameAt, CodeClosure.Qualified.NameAt, CodeClosure.Slots.ThunkAt, CodeClosure.Qualified.ThunkAt, CodeClosure.Slots.OpAt, CodeClosure.Qualified.OpAt, CodeClosure.Qualified.EnvironmentWrites, updateContextAt]), Nat.le_refl _⟩
-    · exact ⟨⟨trivial, trivial⟩, Nat.le_refl _⟩
+    · exact ⟨⟨trivial, trivial, trivial⟩, Nat.le_refl _⟩
   all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [TemplateAt, CodeClosure.RegistrationBody, OrdinaryNameAt, NameAt, ThunkAt,
     RegionAt, CodeClosure.Slots.NameAt, CodeClosure.Qualified.NameAt, CodeClosure.Slots.ThunkAt, CodeClosure.Qualified.ThunkAt, CodeClosure.Slots.StoreNameAt, CodeClosure.Qualified.StoreNameAt,
     CodeClosure.Slots.StoreThunkAt, CodeClosure.Qualified.StoreThunkAt, CodeClosure.Slots.OpAt, CodeClosure.Qualified.OpAt, CodeClosure.Slots.FinAt, CodeClosure.Qualified.FinAt,

@@ -2,6 +2,7 @@ import Effect4.Laws.Program.FinalizerGeneratorPC
 import Effect4.Laws.Program.FinalizerLayerBody
 import Effect4.Laws.Program.CodeClosure.Callbacks
 import Effect4.Laws.Program.CodeClosure.Registration
+import Effect4.Laws.Program.FinalizerCancellation
 
 /-!
 Concept: scope-lifetime-finalization R11.
@@ -24,6 +25,7 @@ abbrev PointAt (q : List Nat) (point : Point) : Prop := ParamsClear q point.para
 
 /-- Full native names add generator and layer annotations to the existing stored-source slots. -/
 @[reducible] def NameAt (q : List Nat) : EffName → Prop
+  | .withWaiter base _ _ => NameAt q base
   | .gen point pc _ => PointAt q point ∧ FinalizerGenerator.Counter pc
   | .provideLayerWith point | .provideLayerBody point
   | .buildWithScopeFromContext point _ | .withMemoMapThen point _ | .fromBuildThen point _
@@ -50,7 +52,7 @@ abbrev CodeAt (q : List Nat) := CodeClosure.RoleCode (OrdinaryNameAt q) (NameAt 
 
 /-- The full source annotation retains the actual registration-body correlation. -/
 def TemplateAt (q : List Nat) (code : NCode) : Prop :=
-  CodeAt q code ∧ CodeClosure.RegistrationCode code
+  CodeAt q code ∧ CodeClosure.RegistrationCode code ∧ CancelsAt q code
 
 /-- A direct region is an instance of the full region annotation. -/
 theorem direct_region (q : List Nat) (region : Region)
@@ -62,7 +64,8 @@ theorem direct_region (q : List Nat) (region : Region)
 /-- The old direct callback annotation embeds without another code traversal. -/
 theorem direct_name (q : List Nat) (callback : EffName)
     (held : CodeClosure.Slots.NameAt (PointAt q) (fun _ => True) callback) : NameAt q callback := by
-  cases callback
+  induction callback
+  case withWaiter callback owner token ih => exact ih held
   case gen | provideLayerWith | provideLayerBody | buildWithScopeFromContext | withMemoMapThen
     | fromBuildThen | memoize | buildIntoLayerScope | thenBuildInto | freshThen | provideThen
     | mergeChildren | mergeForkOne | mergeForkNext | mergeAllChildren | mergeAllForkOne
@@ -93,7 +96,7 @@ theorem ordinary_name (q : List Nat) (callback : EffName) (held : OrdinaryNameAt
 /-- Stored embeddings use only store names, where the two callback roles agree. -/
 theorem embedded_code (q : List Nat) (program : Program)
     (held : CodeClosure.Slots.CodeAt (PointAt q) (fun _ => True) (embed program)) : TemplateAt q (embed program) := by
-  refine ⟨?_, CodeClosure.registration_embed program⟩
+  refine ⟨?_, CodeClosure.registration_embed program, embed_cancels q program⟩
   change CodeClosure.RoleCode (OrdinaryNameAt q) (NameAt q) (ThunkAt q) (embed program)
   rw [CodeClosure.embedded_roles (OrdinaryNameAt q) (NameAt q) (ThunkAt q) (fun _ => rfl)]
   exact broad_code q _ held
@@ -118,7 +121,7 @@ theorem async_at (q : List Nat) (row : NativeOp) (request : Term) (point : Point
   fun_cases asyncRoute row request point
   all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [TemplateAt, CodeClosure.RegistrationBody, OrdinaryNameAt,
     NameAt, CodeClosure.Slots.NameAt, CodeClosure.Qualified.NameAt,
-    CodeClosure.Slots.StoreNameAt, CodeClosure.Qualified.StoreNameAt, badShape])
+    CodeClosure.Slots.StoreNameAt, CodeClosure.Qualified.StoreNameAt, SourceScope.Opportunities.name, badShape])
 
 /-- The compiler supplies both callback roles through its existing minting contract. -/
 theorem role_contract (root : NativeEff) (q : List Nat) :
@@ -143,7 +146,7 @@ theorem compile_at (root : NativeEff) (q : List Nat) (effect : NativeEff) (point
     (found : Node.at_ (.eff root) point.path = some (.eff effect)) (held : PointAt q point) :
     TemplateAt q (compileEff effect point) :=
   ⟨CodeClosure.compile_roles (role_contract root q) effect point found held,
-    CodeClosure.registration_compile root effect point found⟩
+    CodeClosure.registration_compile root effect point found, compile_cancels root q effect point found⟩
 
 /-- Resolution keeps the same parameter-frame annotation at its actual source node. -/
 theorem resolve_at (root : NativeEff) (q : List Nat) (point : Point) (held : PointAt q point) :

@@ -1,5 +1,6 @@
 import Effect4.Api.Supervision
 import Effect4.Laws.Machine.Clauses
+import Effect4.Laws.Machine.RaceLookup
 import Effect4.Laws.Machine.ForkLedger
 import Effect4.Laws.Api.Frontier
 import Effect4.Laws.Auto.Inversion
@@ -600,18 +601,8 @@ omit [FiberCore ν β ε δ ι α κ φ] in
 /-- Updating the race found under an id leaves that id finding the update. -/
 theorem race?_updateRace_same (m : RunMachine ν σ β ε δ ι α χ St κ φ η)
     (race r : Race ν σ β ε δ ι α κ) (h : m.race? race.id = some race) (hid : r.id = race.id) :
-    (m.updateRace r).race? race.id = some r := by
-  unfold RunMachine.race? at h ⊢
-  unfold RunMachine.updateRace
-  rw [List.find?_map]
-  have same : ((fun s : Race ν σ β ε δ ι α κ => decide (s.id = race.id)) ∘
-      (fun s => if s.id = r.id then r else s)) = fun s => decide (s.id = race.id) := by
-    funext s
-    simp only [Function.comp]
-    by_cases hs : s.id = r.id
-    · simp only [hs, ↓reduceIte]
-    · simp only [hs, ↓reduceIte]
-  rw [same, h, Option.map_some, if_pos hid.symm]
+    (m.updateRace r).race? race.id = some r :=
+  RunMachine.race?_updateRace_same m race r h hid
 
 end OriginFacts
 

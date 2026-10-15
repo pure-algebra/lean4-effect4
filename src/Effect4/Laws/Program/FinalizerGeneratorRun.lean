@@ -100,7 +100,7 @@ theorem run_budget (root : NativeEff) (q : List Nat) (point : Point) (fuel : Nat
   induction fuel generalizing pc values folded with
   | zero =>
     unfold runStmts
-    refine ⟨⟨rfl, rfl, held, parameters, trivial⟩, ?_⟩
+    refine ⟨⟨rfl, rfl, held, parameters, trivial, trivial⟩, ?_⟩
     change 0 + remaining q (point.path ++ [0]) pc ≤ remaining q (point.path ++ [0]) pc
     exact Nat.le_of_eq (Nat.zero_add _)
   | succ fuel ih =>

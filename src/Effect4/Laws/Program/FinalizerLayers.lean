@@ -47,7 +47,7 @@ theorem layer_zero (root : NativeEff) (q : List Nat) (layer : LayerTerm NativeOp
   all_goals intro held empty
   case case1 =>
     constructor
-    · exact ⟨held, trivial⟩
+    · exact ⟨held, trivial, trivial⟩
     · simp only [frontier, current, cata_prim, thunk, empty, ↓reduceIte]
   case case2 inner point memo scope ih =>
     have child := ih held (by change point.fuel - 1 = 0; rw [empty])
@@ -67,10 +67,10 @@ theorem layer_with (root : NativeEff) (q : List Nat) (fuel : Nat) (layer : Layer
     case ref target =>
       unfold resolveLayerWith
       split
-      · exact ⟨⟨trivial, trivial⟩, rfl⟩
+      · exact ⟨⟨trivial, trivial, trivial⟩, rfl⟩
       · rename_i next skipped found
         exact ih next (point.redirect target) held (by change point.fuel - 1 = fuel; omega)
-      · exact ⟨⟨trivial, trivial⟩, rfl⟩
+      · exact ⟨⟨trivial, trivial, trivial⟩, rfl⟩
     case orDie inner =>
       have child := ih inner (point.child 0) held (by change point.fuel - 1 = fuel; omega)
       dsimp only [resolveLayerWith]
@@ -84,7 +84,7 @@ theorem resolve_layer (root : NativeEff) (q : List Nat) (point : Point)
   unfold resolveLayer
   split
   · exact layer_with root q point.fuel _ point memo scope held rfl
-  · exact ⟨⟨trivial, trivial⟩, rfl⟩
+  · exact ⟨⟨trivial, trivial, trivial⟩, rfl⟩
 
 /-- Inner layer dispatch uses the same zero-weight layer resolver. -/
 theorem inner_layer (root : NativeEff) (q : List Nat) (point : Point)
@@ -114,7 +114,7 @@ theorem construction_at (root : NativeEff) (q : List Nat) (point : Point)
     have zero := FinalizerPlacement.forbidden_child_zero (.eff root)
       (.layer (.effectDiscard body)) q point.path 0 found rfl placed
     exact ⟨by aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [TemplateAt, CodeClosure.RegistrationBody, updateContextAt, regionCode, addCurrentMemoMapK, combineWithK, OrdinaryNameAt, NameAt, RegionAt, CodeClosure.Slots.NameAt, CodeClosure.Qualified.NameAt, CodeClosure.Slots.StoreNameAt, CodeClosure.Qualified.StoreNameAt]), rfl⟩
-  · exact ⟨⟨trivial, trivial⟩, rfl⟩
+  · exact ⟨⟨trivial, trivial, trivial⟩, rfl⟩
 
 /-- A region spends its program reservation; layer and construction regions carry zero. -/
 def regionWeight (q : List Nat) : Region → Nat

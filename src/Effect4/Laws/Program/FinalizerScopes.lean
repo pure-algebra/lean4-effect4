@@ -49,7 +49,7 @@ theorem closePrograms (q : List Nat) :
     aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [TemplateAt])
   walk := by
     intro strategy order exit _ held
-    exact ⟨held, trivial⟩
+    exact ⟨held, trivial, trivial⟩
 
 /-- Unsafe close exposes only finalizers carrying the source annotation. -/
 theorem close_unsafe_at (q : List Nat) (scope : Nat) (exit : ExitV) (flag : Bool)
