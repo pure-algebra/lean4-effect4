@@ -1,4 +1,5 @@
 import Effect4.Laws.Machine.AnswerFlowHead
+import Effect4.Laws.Machine.AnswerFlowContextualFamily
 
 /-!
 Concept: store-typing R4 and scope-lifetime-finalization R11.
@@ -98,12 +99,16 @@ theorem FamilyEmbedding.result_over (embedding : FamilyEmbedding oldModel newMod
   exact ⟨kindOf input, embedding.code world input next ready code,
     path.map_objects kindOf (fun _ _ _ saved => .mapped ready saved)⟩
 
-/-- Ready stable edges and new initializer semantic edges share one saved-family proof. -/
-theorem FamilyEmbedding.family_over (embedding : FamilyEmbedding oldModel newModel worldOf kindOf Ready)
+/-- Ready stable and local edges share the actual recorded-cause admission at every callback. -/
+theorem FamilyEmbedding.contextual_family_over (embedding : FamilyEmbedding oldModel newModel worldOf kindOf Ready)
     (Semantic : NewWorld → NewKind → NewKind → Prim ν σ β ε δ ι α → Prop)
     (Edge : World → Kind → Kind → Prim ν σ β ε δ ι α → Prop)
-    (semantic : SavedFamily newModel interp Semantic) (family : SavedFamily oldModel interp Edge) :
-    SavedFamily newModel interp (EmbeddedEdgeOver worldOf kindOf Ready Semantic Edge) := by
+    (Allowed : NewWorld → Option (Cause ε δ ι α) → Prop)
+    (OldAllowed : World → Option (Cause ε δ ι α) → Prop)
+    (admission : ∀ world, Ready world → ∀ recorded, Allowed world recorded → OldAllowed (worldOf world) recorded)
+    (semantic : ContextualSavedFamily newModel interp Semantic Allowed)
+    (family : ContextualSavedFamily oldModel interp Edge OldAllowed) :
+    ContextualSavedFamily newModel interp (EmbeddedEdgeOver worldOf kindOf Ready Semantic Edge) Allowed := by
   constructor
   · intro world input output frame edge nextWorld future value good absent
     cases edge with
@@ -161,14 +166,27 @@ theorem FamilyEmbedding.family_over (embedding : FamilyEmbedding oldModel newMod
         exit next (embedding.exit_read nextWorld later _ exit good)
       rw [← embedding.programOf nextWorld later]
       exact program
-  · intro world input output frame edge nextWorld future fiber cause delivered good selected interrupted skipped
+  · intro world input output frame edge nextWorld future fiber cause delivered good selected admitted interrupted skipped
     cases edge with
-    | saved held => exact semantic.discard world input output frame held nextWorld future fiber cause delivered good selected interrupted skipped
+    | saved held => exact semantic.discard world input output frame held nextWorld future fiber cause delivered good selected admitted interrupted skipped
     | mapped ready held =>
       have later := embedding.ready_future world nextWorld future ready
       exact embedding.cause_write nextWorld _ delivered later
         (family.discard _ _ _ frame held _ (embedding.future world nextWorld future ready) fiber cause delivered
-          (embedding.cause_read nextWorld _ cause later good) selected interrupted skipped)
+          (embedding.cause_read nextWorld _ cause later good) selected
+          (admission nextWorld later _ admitted) interrupted skipped)
+
+
+/-- The original embedding is the unrestricted recorded-cause instance of the contextual proof. -/
+theorem FamilyEmbedding.family_over (embedding : FamilyEmbedding oldModel newModel worldOf kindOf Ready)
+    (Semantic : NewWorld → NewKind → NewKind → Prim ν σ β ε δ ι α → Prop)
+    (Edge : World → Kind → Kind → Prim ν σ β ε δ ι α → Prop)
+    (semantic : SavedFamily newModel interp Semantic) (family : SavedFamily oldModel interp Edge) :
+    SavedFamily newModel interp (EmbeddedEdgeOver worldOf kindOf Ready Semantic Edge) :=
+  ContextualSavedFamily.unconditional newModel interp _
+    (embedding.contextual_family_over interp Semantic Edge (fun _ _ => True) (fun _ _ => True)
+      (fun _ _ _ _ => trivial) (semantic.contextual newModel interp Semantic (fun _ _ => True))
+      (family.contextual oldModel interp Edge (fun _ _ => True)))
 
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- Embedded saved edges retain the stable and initializer future contracts together. -/
