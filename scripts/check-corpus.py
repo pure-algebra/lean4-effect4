@@ -55,7 +55,10 @@ from pathlib import Path
 
 root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(root / 'scripts/lib'))
+sys.path.insert(0, str(root / 'scripts'))
 import truth_host  # noqa: E402
+# The Lean producer runs with the core as native code, not interpreted (CR-2).
+from generate import native_flags  # noqa: E402
 
 truth = root / 'harness/truth'
 WORK = truth / 'corpus-check'
@@ -285,8 +288,9 @@ def main():
     shutil.copytree(truth / 'session', WORK / 'session', ignore=shutil.ignore_patterns('.work'))
 
     manifest = WORK / 'corpus.json'
-    subprocess.run(['lake', 'env', 'lean', '-M4096', '--run', 'harness/truth/Truth.lean', '--corpus',
-                    str(manifest), str(COUNT), str(DEPTH)], cwd=root, check=True, timeout=3600)
+    subprocess.run(['lake', 'env', 'lean', '-M4096', *native_flags(['harness/truth/Truth.lean']),
+                    '--run', 'harness/truth/Truth.lean', '--corpus', str(manifest), str(COUNT),
+                    str(DEPTH)], cwd=root, check=True, timeout=3600)
     entries = {e['name']: e for e in json.loads(manifest.read_text())['programs']}
 
     # Every printable program's modules, before any selection: what tsc compiles and what the

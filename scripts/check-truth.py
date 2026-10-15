@@ -28,7 +28,10 @@ import tempfile
 
 root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(root / 'scripts/lib'))
+sys.path.insert(0, str(root / 'scripts'))
 import truth_host  # noqa: E402
+# The truth manifest's producer runs with the core as native code, not interpreted (CR-2).
+from generate import native_flags  # noqa: E402
 
 truth = root / 'harness/truth'
 
@@ -156,8 +159,9 @@ def main():
         shutil.copyfile(truth/'mask.typecheck.ts', Path(work)/'mask.typecheck.ts')
         shutil.copytree(truth/'session', Path(work)/'session', ignore=shutil.ignore_patterns('.work'))
         manifest = Path(work)/'corpus.json'
-        subprocess.run(['lake', 'env', 'lean', '-M4096', '--run', 'harness/truth/Truth.lean', str(manifest),
-                        '--tapes', str(tapes)], cwd=root, check=True, timeout=540)
+        subprocess.run(['lake', 'env', 'lean', '-M4096', *native_flags(['harness/truth/Truth.lean']),
+                        '--run', 'harness/truth/Truth.lean', str(manifest), '--tapes', str(tapes)],
+                       cwd=root, check=True, timeout=540)
         subprocess.run([bun, 'run', host_path(truth/'run-truth.ts'), '--manifest', host_path(manifest),
                         '--out', host_path(Path(work)), '--timeout', '300',
                         '--tape-out', host_path(Path(work)/'tapes')], cwd=root, check=True, timeout=180)

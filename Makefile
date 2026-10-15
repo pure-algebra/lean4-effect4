@@ -60,6 +60,13 @@ LEAN_INPUTS := $(LEAN_SOURCES) $(BUILD_PINS)
 # (`lake env` builds nothing). An unreadable file stops the recipe; an empty list builds nothing,
 # since a bare `lake build` is every default target (Codex's BUILD-IMPORTS, 2026-10-10).
 build_imports = @modules="$$($(PY) scripts/lean-imports.py $(1))" && { [ -z "$$modules" ] || $(LAKE) build $$modules; }
+# The `--load-dynlib` flags of the native libraries that Lake loads for the same modules
+# (`native_flags`, `scripts/generate.py`): with them `lake env lean` runs the core as native code,
+# not interpreted. A producer that runs the machine imports a module of `TestProgram` or
+# `TestDogfood`, which load the native core, and takes them after `build_imports` (the codegen
+# refactor's CR-2; the truth manifest took 63 s interpreted and 12 s native). The other
+# producers' imports load no native library, and they stay interpreted, as the lakefile measured.
+native_flags = $$($(PY) scripts/lean-imports.py --dynlibs $(1))
 # Every folder that a lane of `ts/eff` reads (seat LANES, decisions row 295): the ingest's fidelity,
 # census and fixture folders and the red twins of the tests stood outside this list.
 TS_EFF_SOURCES := $(wildcard ts/eff/*.ts ts/eff/test/*.ts ts/eff/test/red/* ts/eff/ingest/*.ts ts/eff/ingest/test/*.ts \
@@ -91,11 +98,13 @@ build-tools: build ## the generator and checker roots (Tools, OCaml5, Conform, E
 
 # ---------------------------------------------------------------------------- gen
 #
-# The order below is the producers' dependency order: derived writes Lean modules the
-# rest import; lcnf cuts the engine face `ocaml/engine/api_engine.ml`; eff cuts the OCaml
-# files and the engine structure mirror, which READS that face; ts cuts the TypeScript
-# tables the ingest README renders. Each marker depends on the previous one, so a
-# regenerated upstream group re-cuts everything downstream of it.
+# Each group's marker depends on the markers of the groups whose outputs its producer reads,
+# and on no other. derived writes Lean modules the rest import, so every Lean producer waits
+# on it; readme renders the TypeScript tables that ts cuts; truth reads the atoms' prelude
+# (derived), the tables (ts) and the session protocol (host-protocol). A regenerated group
+# re-cuts what reads it and nothing else (the codegen refactor's CR-2). Until then each marker
+# depended on the one before it in GEN_GROUPS, so `make gen-schema-ts` re-cut the truth lane
+# first, and the truth lane read a protocol that host-protocol wrote after it.
 #
 # lcnf sits between derived and eff -- it used to sit after readme, which made `make gen` a
 # non-fixpoint: eff read the api_engine.ml of the previous run, so a changed row needed two
@@ -171,18 +180,18 @@ $(GEN)/eff: $(GEN)/derived $(EFF_SOURCES) $(CORE_SOURCES)
 	$(PY) scripts/generate.py --only eff
 	@mkdir -p $(GEN) && touch $@
 
-$(GEN)/wire: $(GEN)/eff src/OCaml5/Tools/EffWire.lean $(PRODUCER_COMMON) $(CORE_SOURCES)
+$(GEN)/wire: $(GEN)/derived src/OCaml5/Tools/EffWire.lean $(PRODUCER_COMMON) $(CORE_SOURCES)
 	$(PY) scripts/generate.py --only wire
 	@mkdir -p $(GEN) && touch $@
 
-$(GEN)/cas: $(GEN)/wire src/OCaml5/Tools/CasGoldens.lean $(PRODUCER_COMMON) $(CORE_SOURCES)
+$(GEN)/cas: $(GEN)/derived src/OCaml5/Tools/CasGoldens.lean $(PRODUCER_COMMON) $(CORE_SOURCES)
 	$(PY) scripts/generate.py --only cas
 	@mkdir -p $(GEN) && touch $@
 
 TS_SOURCES := $(wildcard tools/Tools/*.lean tools/Drivers/*.lean tools/TestSupport/*.lean) $(WIRE_TAGS) $(VARIANCES) src/Effect4/Codegen/Print.lean lakefile.toml \
   vendor/effect-4.0.0-rc.112/src/unstable/sql/SqlClient.ts vendor/effect-4.0.0-rc.112/src/unstable/sql/Statement.ts \
   vendor/effect-4.0.0-rc.112/src/unstable/persistence/KeyValueStore.ts scripts/generate.py
-$(GEN)/ts: $(GEN)/cas $(TS_SOURCES) $(CORE_SOURCES)
+$(GEN)/ts: $(GEN)/derived $(TS_SOURCES) $(CORE_SOURCES)
 	$(PY) scripts/generate.py --only ts
 	@mkdir -p $(GEN) && touch $@
 
@@ -201,20 +210,20 @@ $(GEN)/readme: $(GEN)/ts ts/eff/ingest/render-readme.ts ts/eff/profile.gen.ts ts
 PRELUDE_SOURCES := harness/truth/prelude.ts harness/truth/control.ts harness/truth/records.ts harness/truth/tuples.ts harness/truth/prelude-atoms.gen.ts
 TRUTH_SOURCES := harness/truth/Truth.lean Test/Codegen/TermRows.lean Test/Program/MaskContract.lean Test/Program/QueueScenarios.lean Test/Program/QueueMask.lean Test/Program/SemaphoreScenarios.lean Test/Program/PoolScenarios.lean Test/Program/PoolPublic.lean Test/Program/DefinitionsControls.lean Test/Program/QueueDefs.lean Test/Codegen/ServicesPrint.lean $(PRELUDE_SOURCES) harness/truth/module-imports.ts harness/truth/run-truth.ts \
   $(wildcard harness/truth/tapes/*.jsonl) ts/eff/package.json ts/eff/bun.lock
-$(GEN)/truth: $(GEN)/readme $(TRUTH_SOURCES) $(LEAN_INPUTS)
+$(GEN)/truth: $(GEN)/derived $(GEN)/ts $(GEN)/host-protocol $(TRUTH_SOURCES) $(LEAN_INPUTS)
 	$(call build_imports,harness/truth/Truth.lean)
-	$(LAKE) env lean -M4096 --run harness/truth/Truth.lean harness/truth/corpus.json --tapes harness/truth/tapes
+	$(LAKE) env lean -M4096 $(call native_flags,harness/truth/Truth.lean) --run harness/truth/Truth.lean harness/truth/corpus.json --tapes harness/truth/tapes
 	$(BUN) run harness/truth/run-truth.ts --manifest harness/truth/corpus.json --out harness/truth --timeout 300 --tape-out harness/truth/tapes
 	@mkdir -p $(GEN) && touch $@
 
-$(GEN)/host-protocol: $(GEN)/truth tools/Tools/HostProtocol.lean $(CORE_SOURCES)
+$(GEN)/host-protocol: $(GEN)/derived tools/Tools/HostProtocol.lean $(CORE_SOURCES)
 	$(LAKE) build Effect4.Api.HostSession
 	$(call build_imports,tools/Tools/HostProtocol.lean)
 	$(LAKE) env lean -M4096 --run tools/Tools/HostProtocol.lean harness/truth/session
 	@mkdir -p $(GEN) && touch $@
 
 SCHEMA_TS_DIR := harness/schema-generation
-$(GEN)/schema-ts: $(GEN)/host-protocol $(wildcard $(SCHEMA_TS_DIR)/Emit*.lean) $(LEAN_INPUTS)
+$(GEN)/schema-ts: $(GEN)/derived $(wildcard $(SCHEMA_TS_DIR)/Emit*.lean) $(LEAN_INPUTS)
 	$(call build_imports,$(wildcard $(SCHEMA_TS_DIR)/Emit*.lean))
 	$(LAKE) env lean -M4096 $(SCHEMA_TS_DIR)/EmitFixture.lean > $(SCHEMA_TS_DIR)/Person.generated.ts
 	$(LAKE) env lean -M4096 $(SCHEMA_TS_DIR)/EmitCoverageFixture.lean > $(SCHEMA_TS_DIR)/AllRepresentations.generated.ts
@@ -225,7 +234,7 @@ $(GEN)/schema-ts: $(GEN)/host-protocol $(wildcard $(SCHEMA_TS_DIR)/Emit*.lean) $
 # prints the table.
 generated/effect-runtime-census.tsv: scripts/generate-effect-runtime-census.sh $(VENDOR_SOURCES)
 	bash scripts/generate-effect-runtime-census.sh > $@
-$(GEN)/census: $(GEN)/schema-ts generated/effect-runtime-census.tsv
+$(GEN)/census: generated/effect-runtime-census.tsv
 	@mkdir -p $(GEN) && touch $@
 
 # The semantics report (generated/semantics.md): the registry's claims checked against the
@@ -369,7 +378,7 @@ $(CORPUS_TRACE): $(LEAN_INPUTS) $(wildcard tools/Tools/*.lean tools/Drivers/*.le
 
 $(CORPUS)/index.tsv: $(CORPUS_TRACE)
 	rm -rf $(CORPUS) && mkdir -p $(CORPUS)
-	$(LAKE) env lean -DwarningAsError=true -M4096 --run tools/Drivers/Corpus.lean $(CORPUS) 400 4
+	$(LAKE) env lean -DwarningAsError=true -M4096 $(call native_flags,tools/Drivers/Corpus.lean) --run tools/Drivers/Corpus.lean $(CORPUS) 400 4
 	{ printf '# GENERATED by make corpus (tools/Drivers/Corpus.lean over Test/Program/Gen.lean and the wire corpus); do not edit\n# name\twellTyped\treadable\tchars\treason\tpath\tcodes\n'; cat $(CORPUS)/index.tsv; } > generated/corpus-index.tsv
 
 .PHONY: corpus

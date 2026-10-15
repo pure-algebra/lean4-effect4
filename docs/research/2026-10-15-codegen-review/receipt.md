@@ -806,3 +806,75 @@ Base `1807268cb`. This part commits the note's §8, this section and the patch, 
   by its target's type. In (B) the typed print prints a node with no checked context by the
   fold, and the fused erasure's plain instance covers it. In (C) the row-only printer stays. The
   seat recommends (C) now and (B) inside the fusion slice.
+
+## The merge of the coordinator's branch
+
+At the CR-7 boundary, as the coordinator asked, `refactor/phase1-phase3` (`69cbf348c`) is merged
+into this branch at `5e19eff24`. The merge had no conflict. CR-2 and CR-6 start on its
+`Makefile`, `scripts/generate.py` and `tools/Effect4Gen/manifest.json`.
+
+## CR-2: the Lean producers that run the machine run native
+
+**The one thing to know.** The truth manifest and the corpus manifest are written with the core
+as native code, byte for byte as before. `check-truth` took 17 s and `check-corpus` 63 s.
+
+Base `5e19eff24`; the slice's commit is the head.
+
+### What landed
+
+- **One helper.** `native_flags` (`scripts/generate.py`, beside `native_libraries`) gives the
+  `--load-dynlib` flags of the native libraries that Lake loads for a Lean file's workspace
+  imports. `scripts/lean-imports.py --dynlibs FILE...` prints them, and the `Makefile`'s
+  `native_flags` reads them. `native_libraries` now queries Lake with nothing on stdout.
+- **The producers that run the machine take them.** A file that runs the machine imports a module
+  of `TestProgram` or `TestDogfood`, whose setups load the native core. They are the truth
+  manifest (`gen-truth` and `scripts/check-truth.py`), the corpus manifest
+  (`scripts/check-corpus.py`) and the printed corpus (`make corpus`).
+- **The other producers stay interpreted.** The host protocol's, the schema fixtures', the
+  codec's, the row types', the type vectors' and P2b's producers import no such module. Their
+  imports load no native library, so the flags are empty there, and the recipes keep their text.
+- **Each generation marker depends on the groups it reads.** `wire`, `cas`, `ts`,
+  `host-protocol` and `schema-ts` wait on `derived`. `truth` waits on `derived`, `ts` and
+  `host-protocol`, whose protocol its prelude imports. `census` waits on none. `docs/GENERATED.md`
+  states the rule.
+
+### Changed files
+
+`Makefile`; `scripts/generate.py`, `scripts/lean-imports.py`, `scripts/lib/lean_imports.py`;
+`scripts/check-truth.py`, `scripts/check-corpus.py`; `docs/GENERATED.md`.
+
+### Commands and results
+
+| Command | Result |
+| --- | --- |
+| `Truth.lean`, the truth manifest, interpreted and then native (`cr2/compare.sh`) | 68 s and 9 s; byte-identical, and equal to the committed `harness/truth/corpus.json` |
+| `Truth.lean --corpus 400 4`, interpreted and then native | 60 s and 7 s; byte-identical |
+| `tools/Drivers/Corpus.lean 400 4`, interpreted and then native | 3 s and 2 s; byte-identical, 408 programs kept |
+| `make -n gen` | the host protocol's recipe runs before the truth lane's, and the truth recipe carries the flags |
+| `make check-truth` | passes in 17 s: 81 programs agree, 12 signed divergences; the review measured 67 s |
+| `make check-corpus` | passes in 63 s: 400 programs match the committed results; the review measured 112 s |
+| `make check-host-protocol` | passes; 678 s, most of it the merged tree's first build |
+| `make check-schema-codec` | passes in 6 s |
+| `make check-target` | passes in 11 s: 104 resolved, none mismatching |
+| `make check-ts-reader` | passes in 6 s: 783 tests |
+| `python3 scripts/check-language.py --show docs/GENERATED.md` | no finding on the edited lines |
+
+### Axiom output
+
+None: no Lean source changed.
+
+### Evidence
+
+*Tested*: the gates and the byte comparisons above. *Measured*: the times, each run once through
+the slot, on a machine with other seats.
+
+### Open obligations
+
+None. The lowering's LC-4 plans a compiled generator for the same reason, and this helper is the
+one that it would share.
+
+### Proposed decisions rows (proposals only)
+
+- **P-CR2-1.** The review's P2, option (a), landed: the Lean producers that run the machine load
+  the native core through one helper, `native_flags`. Option (b), `lean_exe` targets, waits on
+  LC-4's compiled generator.

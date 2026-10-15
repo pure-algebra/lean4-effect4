@@ -16,7 +16,7 @@ import subprocess
 import tempfile
 
 from lib.derived_plan import imports_of, stages
-from lib.lean_imports import imports_of as lean_imports_of
+from lib.lean_imports import imports_of as lean_imports_of, workspace_source
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -109,15 +109,34 @@ def native_libraries(modules):
     and 14 s to 24 s native, on a machine with other Lean builds running (2026-10-10; the group
     192 s, and 25 s to 47 s). The list is the module setup that Lake hands `lean`
     (`lake query -J +<module>:setup`), so the lakefile stays its one source, and the file names
-    are Lake's (a `.dylib` written here would break the PC).
+    are Lake's (a `.dylib` written here would break the PC). The query writes nothing on stdout,
+    which `native_flags` prints.
     """
-    lines = run(['lake', 'query', '-J', *(f'+{module}:setup' for module in modules)], True)
+    lines = subprocess.run(['timeout', TIMEOUT, 'lake', 'query', '-J',
+                            *(f'+{module}:setup' for module in modules)],
+                           cwd=ROOT, check=True, stdout=subprocess.PIPE, text=True).stdout
     libraries = []
     for line in lines.splitlines():
         for path in json.loads(line)['dynlibs']:
             if path not in libraries:
                 libraries.append(path)
     return libraries
+
+
+def native_flags(files):
+    """The `--load-dynlib` flags with which `lake env lean` runs the Lean `files` with the core as
+    native code: the native libraries of the workspace modules the files import
+    (`native_libraries`). A file that runs the machine imports a module of `TestProgram` or
+    `TestDogfood`, whose setups load the native core: the truth lane's and the corpus's producers
+    and the gates' scripts that run them (the codegen refactor's CR-2; the truth manifest took 63 s
+    interpreted and 12 s native). Any other file's imports load none, and it runs interpreted.
+    """
+    modules = []
+    for name in files:
+        for module in lean_imports_of(ROOT / name):
+            if module not in modules and workspace_source(ROOT, module) is not None:
+                modules.append(module)
+    return [f'--load-dynlib={path}' for path in native_libraries(modules)] if modules else []
 
 
 def fixtures(out, checking):
