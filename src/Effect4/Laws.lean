@@ -375,3 +375,7 @@ The machine and program judgments, simulation, composition and execution laws.
 These modules continue their definition modules' namespaces; the module paths
 separate build targets. `import Effect4` never reaches this root.
 -/
+
+-- M3: carried driver guards and immutable initialized bindings.
+import Effect4.Laws.Program.PlaceFunding.FlowGuarded
+import Effect4.Laws.Program.AnswerSlots.Callbacks

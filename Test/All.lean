@@ -410,3 +410,7 @@ passing gate. The batteries of the Flow route live on branch
 -/
 
 #effect4_axiom_gate
+
+-- M3: the crews actual allocation and acquired-value obligations.
+import Test.Dogfood.Proofs.WorkersCapturedSlots
+import Test.Dogfood.Proofs.WorkersExclusivity
