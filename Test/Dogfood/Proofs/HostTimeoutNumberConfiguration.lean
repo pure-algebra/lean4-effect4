@@ -40,8 +40,7 @@ structure PendingCountAt (context : CountContext) (machine : Effect4.Program.Nat
 /-- A fresh attempt has no installed finalizer and therefore needs no fabricated running premise. -/
 theorem entry_not_installed (context : CountContext) (frame : HostTimeoutFrames.NativeFrame)
     (empty : frame.stack = []) : ¬ CountInstalled context frame := by
-  intro installed
-  change _ ∈ frame.stack at installed
+  rintro ⟨point, body, source, installed⟩
   rw [empty] at installed
   cases installed
 
@@ -121,19 +120,19 @@ theorem count_frame_uniform (context : CountContext) (state : Stores)
       exact HostTimeoutNumberPhaseFlow.CodeAt.countBind context.before context.n context.cleanups context.forms
         context.cursor context.captured context.fuel context.delay context.previous heap
     · rw [stack]
-      exact .cons (HostTimeoutNumberUniform.head_edges.finalizer _ _ _ _ _ _ (by dsimp only [HostTimeoutNumberPhaseFlow.Kind.grade]; decide) rfl (by trivial) (by dsimp only [HostTimeoutNumberPhaseFlow.Kind.grade]; decide)
-        (fun view => AttemptSource.saved context context.point context.source view state context.bound)) (.nil _)
+      exact .cons (HostTimeoutNumberUniform.head_edges.finalizer state (.before context.entered) (.attempt context.before context.entered (by change context.before.count + 1 = context.before.cleanups.length + 1; rw [context.cleanups])) context.bound (.fin context.point) false (by dsimp only [HostTimeoutNumberPhaseFlow.Kind.grade]; decide) rfl (by exact ⟨_, rfl⟩) (by trivial) (by dsimp only [HostTimeoutNumberPhaseFlow.Kind.grade]; decide)
+        rfl (by intro; trivial) (fun view => AttemptSource.saved context context.point context.source view state context.bound)) (.nil _)
   | binder current stack =>
     refine ⟨.countUnit context.entered, ?_, ?_⟩
     · rw [current]
       exact HostTimeoutNumberPhaseFlow.CodeAt.count context.before context.n context.cleanups context.forms
         context.cursor context.captured context.fuel context.delay context.previous heap
     · rw [stack]
-      exact .cons (HostTimeoutNumberUniform.head_edges.success _ _ _ _ _ (by dsimp only [HostTimeoutNumberPhaseFlow.Kind.grade]; decide)
-        (fun view => HostTimeoutNumberPhaseFlow.count_saved view state context.entered context.captured
+      exact .cons (HostTimeoutNumberUniform.head_edges.success state (.countUnit context.entered) (.before context.entered) context.write (.cont (context.point.child 0)) (by dsimp only [HostTimeoutNumberPhaseFlow.Kind.grade]; decide)
+        (fun early => early) rfl (fun good => good) (fun view => HostTimeoutNumberPhaseFlow.count_saved view state context.entered context.captured
           context.fuel context.delay context.n context.previous))
-        (.cons (HostTimeoutNumberUniform.head_edges.finalizer _ _ _ _ _ _ (by dsimp only [HostTimeoutNumberPhaseFlow.Kind.grade]; decide) rfl (by trivial) (by dsimp only [HostTimeoutNumberPhaseFlow.Kind.grade]; decide)
-        (fun view => AttemptSource.saved context context.point context.source view state context.bound)) (.nil _))
+        (.cons (HostTimeoutNumberUniform.head_edges.finalizer state (.before context.entered) (.attempt context.before context.entered (by change context.before.count + 1 = context.before.cleanups.length + 1; rw [context.cleanups])) context.bound (.fin context.point) false (by dsimp only [HostTimeoutNumberPhaseFlow.Kind.grade]; decide) rfl (by exact ⟨_, rfl⟩) (by trivial) (by dsimp only [HostTimeoutNumberPhaseFlow.Kind.grade]; decide)
+        rfl (by intro; trivial) (fun view => AttemptSource.saved context context.point context.source view state context.bound)) (.nil _))
 
 /-- The previous count-prefix reader consumes the common uniform source constructor. -/
 theorem count_frame_flow (context : CountContext) (view : View) (state : Stores)
@@ -157,11 +156,11 @@ theorem counted_frame_uniform (context : CountContext) (state : Stores) (frame :
   refine ⟨.countUnit context.entered, HostTimeoutNumberPhaseFlow.CodeAt.success _ _ ⟨heap, rfl⟩, ?_⟩
   change Effect4.Contracts.Path _ _ _ frame.stack
   rw [stack]
-  exact .cons (HostTimeoutNumberUniform.head_edges.success _ _ _ _ _ (by dsimp only [HostTimeoutNumberPhaseFlow.Kind.grade]; decide)
-    (fun view => HostTimeoutNumberPhaseFlow.count_saved view state context.entered context.captured
+  exact .cons (HostTimeoutNumberUniform.head_edges.success state (.countUnit context.entered) (.before context.entered) context.write (.cont (context.point.child 0)) (by dsimp only [HostTimeoutNumberPhaseFlow.Kind.grade]; decide)
+    (fun early => early) rfl (fun good => good) (fun view => HostTimeoutNumberPhaseFlow.count_saved view state context.entered context.captured
       context.fuel context.delay context.n context.previous))
-    (.cons (HostTimeoutNumberUniform.head_edges.finalizer _ _ _ _ _ _ (by dsimp only [HostTimeoutNumberPhaseFlow.Kind.grade]; decide) rfl (by trivial) (by dsimp only [HostTimeoutNumberPhaseFlow.Kind.grade]; decide)
-      (fun view => AttemptSource.saved context context.point context.source view state context.bound)) (.nil _))
+    (.cons (HostTimeoutNumberUniform.head_edges.finalizer state (.before context.entered) (.attempt context.before context.entered (by change context.before.count + 1 = context.before.cleanups.length + 1; rw [context.cleanups])) context.bound (.fin context.point) false (by dsimp only [HostTimeoutNumberPhaseFlow.Kind.grade]; decide) rfl (by exact ⟨_, rfl⟩) (by trivial) (by dsimp only [HostTimeoutNumberPhaseFlow.Kind.grade]; decide)
+      rfl (by intro; trivial) (fun view => AttemptSource.saved context context.point context.source view state context.bound)) (.nil _))
 
 /-- The admitted count-write iteration commits its new phase and produces the actual attempt continuation contract. -/
 theorem count_iteration_commit (context : CountContext) (view : View)
@@ -187,6 +186,7 @@ theorem count_iteration_commit (context : CountContext) (view : View)
     change context.before.count + 1 = context.before.cleanups.length + 1
     rw [context.cleanups]
   have installed : CountInstalled context fiber.frame := by
+    apply CountInstalled.exact
     change _ ∈ fiber.frame.stack
     rw [stack]
     exact List.mem_cons_of_mem _ (List.mem_cons_self ..)
@@ -366,11 +366,27 @@ theorem FiberAt.pending_pop_custody (machine : Effect4.Program.NativeMachine) (c
     (exitDemand : demand = .contA ∨ demand = .contE) (cause : Option CauseV) :
     CountInstalled context (fiber.frame.getCont demand skip cause).fiber ∨
       (fiber.frame.getCont demand skip cause).fiber.interruptible = false := by
-  have installed := held.pendingCustody context rfl heap unmasked
-  rcases HostTimeoutNumberMaskCustody.getCont context.bound (.fin context.point) demand skip exitDemand
+  obtain ⟨point, body, source, installed⟩ := held.pendingCustody context rfl heap unmasked
+  rcases HostTimeoutNumberMaskCustody.getCont body (.fin point) demand skip exitDemand
       fiber.frame cause installed with masked | retained
   · exact Or.inr masked
-  · exact Or.inl retained
+  · exact Or.inl ⟨point, body, source, retained⟩
+
+/-- The same uniform path and actual source slots identify the installed finalizer without fixing runtime point metadata.
+Consumer: pending native return custody after a real restoring-mask transition. -/
+theorem FiberAt.early_installed (machine : NativeMachine) (context : CountContext)
+    (fiber : SourceScope.SourceFiber) (held : FiberAt machine (.pending context) fiber)
+    (source : SourceScope.FrameAt HostTimeoutSource.program fiber.frame) (input : HostTimeoutNumberPhaseFlow.Kind)
+    (path : Effect4.Contracts.Path (HostTimeoutNumberUniform.Edge machine.state) input
+      (.attempt context.before context.entered (by
+        change context.before.count + 1 = context.before.cleanups.length + 1
+        rw [context.cleanups])) fiber.frame.stack)
+    (early : input.grade ≤ 1) : CountInstalled context fiber.frame := by
+  obtain ⟨body, point, member⟩ := HostTimeoutNumberUniform.early_finalizer machine.state input _ fiber.frame.stack
+    path early (by dsimp only [HostTimeoutNumberPhaseFlow.Kind.grade]; decide)
+  have lexical : SourceScope.NameAt HostTimeoutSource.program (.fin point) := (source.2 _ member).2
+  have captured : HostTimeoutNumberSourceSlots.At context point := (held.frame.1.toFrameAt.saved _ member).2
+  exact ⟨point, body, HostTimeoutNumberSourceSlots.actual_attempt_source context point captured lexical, member⟩
 
 /-- A reply has a numeric obligation precisely when its existing token still matches a live park. -/
 def ReplyAt (world : World) (machine : Effect4.Program.NativeMachine)

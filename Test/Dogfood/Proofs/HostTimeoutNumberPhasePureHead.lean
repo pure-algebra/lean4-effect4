@@ -58,21 +58,33 @@ theorem cleanup_bound_saved (view oldView : HostTimeoutFlow.View) (state : Store
 structure HeadEdges (Edge : Stores → Kind → Kind → NCode → Prop) : Prop where
   success : ∀ state input output body name,
     input.grade ≤ output.grade →
+    (input.grade ≤ 1 → output.grade ≤ 1) →
+    input.ownerCount = output.ownerCount →
+    (output.Valid → input.Valid) →
     (∀ view, AnswerFlow.SavedAt (model view) (HostTimeoutFlow.interpreter view).toPrimInterp
       state input output (.onSuccess body name)) → Edge state input output (.onSuccess body name)
   failure : ∀ state input output body name,
     input.grade ≤ output.grade →
+    (input.grade ≤ 1 → output.grade ≤ 1) →
+    input.ownerCount = output.ownerCount →
+    (output.Valid → input.Valid) →
     (∀ view, AnswerFlow.SavedAt (model view) (HostTimeoutFlow.interpreter view).toPrimInterp
       state input output (.onFailure body name)) → Edge state input output (.onFailure body name)
   constant : ∀ state input output body next,
     input.grade ≤ output.grade →
+    (input.grade ≤ 1 → output.grade ≤ 1) →
+    input.ownerCount = output.ownerCount →
+    (output.Valid → input.Valid) →
     (∀ view, AnswerFlow.SavedAt (model view) (HostTimeoutFlow.interpreter view).toPrimInterp
       state input output (.onSuccessConst body next)) → Edge state input output (.onSuccessConst body next)
   finalizer : ∀ state input output body name flag,
     input.grade ≤ 1 →
     flag = false →
+    (∃ point, name = .fin point) →
     HostTimeoutNumberMaskClass.Restorable output →
     input.grade ≤ output.grade →
+    input.ownerCount = output.ownerCount →
+    (output.Valid → input.Valid) →
     (∀ view, AnswerFlow.SavedAt (model view) (HostTimeoutFlow.interpreter view).toPrimInterp
       state input output (.onExit body name flag)) → Edge state input output (.onExit body name flag)
 
@@ -87,17 +99,17 @@ theorem head_over (Edge : Stores → Kind → Kind → NCode → Prop) (edges : 
   case form phase captured fuel delay n previous selected heap =>
     rw [completed_code]
     exact AnswerFlow.HeadAt.onSuccess (model := model view) (.read phase) _ _ (.get phase heap)
-      (edges.success _ _ _ _ _ (by dsimp only [Kind.grade]; decide) (fun view => read_saved view state phase captured fuel delay n previous selected))
+      (edges.success _ _ _ _ _ (by dsimp only [Kind.grade]; decide) (by dsimp only [Kind.grade]; omega) rfl (by intro; trivial) (fun view => read_saved view state phase captured fuel delay n previous selected))
   case cleanup phase own captured fuel delay n previous selected heap =>
     rw [cleanup_code]
     exact AnswerFlow.HeadAt.onSuccess (model := model view) (.read phase) _ _ (.get phase heap)
-      (edges.success _ _ _ _ _ (by dsimp only [Kind.grade]; decide) (fun view => cleanup_read_saved view state phase own captured fuel delay n previous selected))
+      (edges.success _ _ _ _ _ (by dsimp only [Kind.grade]; decide) (by dsimp only [Kind.grade]; omega) rfl (by intro; trivial) (fun view => cleanup_read_saved view state phase own captured fuel delay n previous selected))
   case cleanupReturn phase own selected body first =>
-    exact AnswerFlow.HeadAt.onSuccess (model := model view) _ _ _ first (edges.success _ _ _ _ _ (by dsimp only [Kind.grade]; decide) (fun view => cleanup_restore_saved view state phase own selected body))
+    exact AnswerFlow.HeadAt.onSuccess (model := model view) _ _ _ first (edges.success _ _ _ _ _ (by dsimp only [Kind.grade]; decide) (by dsimp only [Kind.grade]; omega) rfl (by intro; trivial) (fun view => cleanup_restore_saved view state phase own selected body))
   case attemptReturn before entered own selected body first =>
-    exact AnswerFlow.HeadAt.onSuccess (model := model view) _ _ _ first (edges.success _ _ _ _ _ (by dsimp only [Kind.grade]; decide) (fun view => flexible_restore_saved view state before entered own selected body))
+    exact AnswerFlow.HeadAt.onSuccess (model := model view) _ _ _ first (edges.success _ _ _ _ _ (by dsimp only [Kind.grade]; decide) (by dsimp only [Kind.grade]; omega) rfl (by intro; trivial) (fun view => flexible_restore_saved view state before entered own selected body))
   case restore phase selected body first =>
-    exact AnswerFlow.HeadAt.onSuccess (model := model view) _ _ _ first (edges.success _ _ _ _ _ (by dsimp only [Kind.grade]; decide) (fun view => restore_saved view state phase selected body))
+    exact AnswerFlow.HeadAt.onSuccess (model := model view) _ _ _ first (edges.success _ _ _ _ _ (by dsimp only [Kind.grade]; decide) (by dsimp only [Kind.grade]; omega) rfl (by intro; trivial) (fun view => restore_saved view state phase selected body))
   case yieldNow priority good =>
     exact AnswerFlow.HeadAt.yieldNowWith (model := model view) priority (.yieldNow kind priority good)
   case attemptBody phase captured fuel delay n previous heap =>
@@ -110,7 +122,7 @@ theorem head_over (Edge : Stores → Kind → Kind → NCode → Prop) (edges : 
     rw [cleanup_bound_code]
     exact AnswerFlow.HeadAt.onSuccess (model := model view) _ _ _
       (CodeAt.cleanupWrite phase own oldView captured fuel delay n previous selected heap)
-      (edges.success _ _ _ _ _ (by dsimp only [Kind.grade]; decide) (fun view => cleanup_bound_saved view oldView state phase own captured fuel delay n previous selected))
+      (edges.success _ _ _ _ _ (by dsimp only [Kind.grade]; decide) (by dsimp only [Kind.grade]; omega) rfl (by intro; trivial) (fun view => cleanup_bound_saved view oldView state phase own captured fuel delay n previous selected))
   case park phase parkKind heap =>
     apply AnswerFlow.HeadAt.suspend
     change CodeAt state (.before phase) (.failure (Cause.die Defect.notImplemented))
@@ -119,33 +131,33 @@ theorem head_over (Edge : Stores → Kind → Kind → NCode → Prop) (edges : 
     rw [count_bound_code]
     exact AnswerFlow.HeadAt.onSuccess (model := model view) _ _ _
       (CodeAt.count phase n cleanups forms cursor captured fuel delay previous heap)
-      (edges.success _ _ _ _ _ (by dsimp only [Kind.grade]; decide) (fun view => count_saved view state (phase.counted n cleanups forms cursor) captured fuel delay n previous))
+      (edges.success _ _ _ _ _ (by dsimp only [Kind.grade]; decide) (by dsimp only [Kind.grade]; omega) rfl (by intro; trivial) (fun view => count_saved view state (phase.counted n cleanups forms cursor) captured fuel delay n previous))
   case attemptEntry phase n cleanups forms cursor captured fuel delay previous heap =>
     rw [HostTimeoutNumberEntry.attempt_code]
     apply AnswerFlow.HeadAt.onExit (middle := .before (phase.counted n cleanups forms cursor))
     · rw [← count_bound_code captured fuel delay n previous]
       exact CodeAt.countBind phase n cleanups forms cursor captured fuel delay previous heap
-    · exact edges.finalizer _ _ _ _ _ _ (by dsimp only [Kind.grade]; decide) rfl (by trivial) (by dsimp only [Kind.grade]; decide) (fun view => flexible_attempt_saved view state phase (phase.counted n cleanups forms cursor) _ captured fuel delay n previous _)
+    · exact edges.finalizer _ _ _ _ _ _ (by dsimp only [Kind.grade]; decide) rfl (by exact ⟨_, rfl⟩) (by trivial) (by dsimp only [Kind.grade]; decide) rfl (by intro; trivial) (fun view => flexible_attempt_saved view state phase (phase.counted n cleanups forms cursor) _ captured fuel delay n previous _)
   case countEntry phase n cleanups forms cursor captured fuel delay previous heap =>
     rw [HostTimeoutNumberEntry.attempt_code]
     apply AnswerFlow.HeadAt.onExit (middle := .before (phase.counted n cleanups forms cursor))
     · rw [← count_bound_code captured fuel delay n previous]
       exact CodeAt.countBind phase n cleanups forms cursor captured fuel delay previous heap
-    · exact edges.finalizer _ _ _ _ _ _ (by dsimp only [Kind.grade]; decide) rfl (by trivial) (by dsimp only [Kind.grade]; decide) (fun view => attempt_saved view state (phase.counted n cleanups forms cursor) _ captured fuel delay n previous _)
+    · exact edges.finalizer _ _ _ _ _ _ (by dsimp only [Kind.grade]; decide) rfl (by exact ⟨_, rfl⟩) (by trivial) (by dsimp only [Kind.grade]; decide) rfl (by intro; trivial) (fun view => attempt_saved view state (phase.counted n cleanups forms cursor) _ captured fuel delay n previous _)
   case pausing phase priority body heap owned =>
     exact AnswerFlow.HeadAt.onSuccessConst (model := model view) (.paused phase kind) _ _
       (CodeAt.yieldNow (.paused phase kind) priority heap)
-      (edges.constant _ _ _ _ _ (Nat.le_refl _) (fun completed =>
+      (edges.constant _ _ _ _ _ (Nat.le_refl _) (fun early => early) rfl (fun good => good) (fun completed =>
         HostTimeoutNumberPause.saved completed state phase kind priority body heap owned))
-  case bind input first name head ordered callback skip =>
+  case bind input first name head ordered region owner valid callback skip =>
     exact AnswerFlow.HeadAt.onSuccess (model := model view) input first name head
-      (edges.success state input _ first name ordered (fun completed =>
+      (edges.success state input _ first name ordered region owner valid (fun completed =>
         AnswerFlow.saved_success (model completed) (HostTimeoutFlow.interpreter completed).toPrimInterp
           state input _ first name
           (fun next future value good => callback next future value good completed) skip))
-  case constant input first body head ordered callback skip =>
+  case constant input first body head ordered region owner valid callback skip =>
     exact AnswerFlow.HeadAt.onSuccessConst (model := model view) input first body head
-      (edges.constant state input _ first body ordered (fun completed =>
+      (edges.constant state input _ first body ordered region owner valid (fun completed =>
         AnswerFlow.saved_constant (model completed) (HostTimeoutFlow.interpreter completed).toPrimInterp
           state input _ first body callback skip))
   all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [completed_code, cleanup_code, write_code, cleanup_write_code,
@@ -159,8 +171,8 @@ theorem head (view : HostTimeoutFlow.View) (state : Stores) (kind : Kind) (progr
     AnswerFlow.HeadAt (model view) (HostTimeoutFlow.interpreter view).toPrimInterp
       (AnswerFlow.SavedAt (model view) (HostTimeoutFlow.interpreter view).toPrimInterp) state kind program :=
   head_over _
-    ⟨fun _ _ _ _ _ _ each => each view, fun _ _ _ _ _ _ each => each view,
-      fun _ _ _ _ _ _ each => each view, fun _ _ _ _ _ _ _ _ _ _ each => each view⟩
+    ⟨fun _ _ _ _ _ _ _ _ _ each => each view, fun _ _ _ _ _ _ _ _ _ each => each view,
+      fun _ _ _ _ _ _ _ _ _ each => each view, fun _ _ _ _ _ _ _ _ _ _ _ _ _ each => each view⟩
     view state kind program owned noSync noAction
 
 /-- Every numeric action head is handled by the actual native action dispatcher. -/
@@ -213,8 +225,8 @@ theorem ordinary_step (view : HostTimeoutFlow.View) (state : Stores) (output : K
       state output (fiber.step (HostTimeoutFlow.interpreter view).toPrimInterp).1 := by
   obtain ⟨input, code, stack⟩ := held
   exact ordinary_step_over _
-    ⟨fun _ _ _ _ _ _ each => each view, fun _ _ _ _ _ _ each => each view,
-      fun _ _ _ _ _ _ each => each view, fun _ _ _ _ _ _ _ _ _ _ each => each view⟩
+    ⟨fun _ _ _ _ _ _ _ _ _ each => each view, fun _ _ _ _ _ _ _ _ _ each => each view,
+      fun _ _ _ _ _ _ _ _ _ each => each view, fun _ _ _ _ _ _ _ _ _ _ _ _ _ each => each view⟩
     view state output fiber
     ⟨input, code, AnswerFlow.stack_path (model view) (HostTimeoutFlow.interpreter view).toPrimInterp stack⟩
     noSuccess noFailure noSync ordinary
@@ -260,8 +272,8 @@ theorem ordinary_running (view : HostTimeoutFlow.View) (state : Stores) (output 
       AnswerFlow.FrameAt (model view) (HostTimeoutFlow.interpreter view).toPrimInterp state output next := by
   obtain ⟨input, code, stack⟩ := held
   obtain ⟨next, events, actual, middle, code, path⟩ := ordinary_running_over _
-    ⟨fun _ _ _ _ _ _ each => each view, fun _ _ _ _ _ _ each => each view,
-      fun _ _ _ _ _ _ each => each view, fun _ _ _ _ _ _ _ _ _ _ each => each view⟩
+    ⟨fun _ _ _ _ _ _ _ _ _ each => each view, fun _ _ _ _ _ _ _ _ _ each => each view,
+      fun _ _ _ _ _ _ _ _ _ each => each view, fun _ _ _ _ _ _ _ _ _ _ _ _ _ each => each view⟩
     view state output fiber
     ⟨input, code, AnswerFlow.stack_path (model view) (HostTimeoutFlow.interpreter view).toPrimInterp stack⟩
     noSuccess noFailure noSync ordinary

@@ -19,7 +19,7 @@ open HostTimeoutNumberConfiguration
 
 /-- These immutable bindings identify one actual attempt's captured retry cursor. -/
 def bindings (context : CountContext) : List Val :=
-  HostTimeoutSlots.running (.cell ⟨0⟩) (.cell ⟨1⟩) (.cell ⟨2⟩)
+  HostTimeoutSlots.ready (.cell ⟨0⟩) (.cell ⟨1⟩) (.cell ⟨2⟩)
     context.n context.delay context.previous
 
 /-- The existing source path identifies the subtree whose finalizer cleans this attempt. -/
@@ -91,8 +91,14 @@ theorem count_return (context : CountContext) :
 /-- The actual lexical assertion and retained source annotation recover the numeric finalizer capture. -/
 theorem attempt_source (context : CountContext) (p : Point) (B : List Val)
     (held : At context p) (path : p.path = origin) (slots : HostTimeoutSlots.EnvAt B p.path p.env) :
-    AttemptSource context p :=
-  AttemptSource.of_prefix context p B path slots held.leading (held.entryFuel path)
+    AttemptSource context p := by
+  have leading := held.leading
+  change p.env.take 5 = bindings context at leading
+  have shorter := congrArg (fun values : List Val => values.take 4) leading
+  rw [List.take_take] at shorter
+  change p.env.take 4 = HostTimeoutSlots.running (.cell ⟨0⟩) (.cell ⟨1⟩) (.cell ⟨2⟩)
+    context.n context.delay context.previous at shorter
+  exact AttemptSource.of_prefix context p B path slots shorter (held.entryFuel path)
 
 /-- The existing source finalizer census identifies the only authored finalizer inside this attempt subtree. -/
 theorem finalizer_origin (context : CountContext) (p : Point) (held : At context p)
@@ -110,6 +116,23 @@ theorem finalizer_origin (context : CountContext) (p : Point) (held : At context
     change 12 ≤ 8 at lower
     omega
   · exact attempt
+
+/-- The actual source lexical length and retained five bindings recover the installed attempt capture.
+The completed-exit view and other point metadata remain those of the actual popped callback. -/
+theorem actual_attempt_source (context : CountContext) (p : Point) (held : At context p)
+    (source : SourceScope.NameAt HostTimeoutSource.program (.fin p)) : AttemptSource context p := by
+  have path := finalizer_origin context p held source
+  have lexical := source.1
+  change SourceScope.levelAt (.eff HostTimeoutSource.program) 0 (p.path ++ [1]) = some (p.env.length + 1) at lexical
+  rw [path] at lexical
+  have level : SourceScope.levelAt (.eff HostTimeoutSource.program) 0 (origin ++ [1]) = some 6 := by kernel_rfl
+  rw [level] at lexical
+  have measured := Option.some.inj lexical
+  have length : p.env.length = 5 := by omega
+  have leading := held.leading
+  change p.env.take 5 = bindings context at leading
+  rw [List.take_of_length_le (Nat.le_of_eq length)] at leading
+  exact ⟨path, leading, held.entryFuel path⟩
 
 /-- Actual source ownership and the callback annotation jointly supply the counted finalizer's numeric contract. -/
 theorem finalizer_saved (context : CountContext) (p : Point) (B : List Val)

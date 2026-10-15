@@ -1,5 +1,6 @@
 import Test.Dogfood.Proofs.HostTimeoutNumberPhasePureHead
 import Effect4.Laws.Machine.AnswerFlowViewsRefined
+import Effect4.Laws.Contracts.FramePathOrder
 
 /-!
 Concept: scope-lifetime-finalization R11 and translation-simulation R10.
@@ -24,13 +25,16 @@ structure Edge (state : Stores) (input output : Kind) (frame : NCode)
   ordered : input.grade ≤ output.grade
   finalizerInput : ∀ body name flag, frame = .onExit body name flag → input.grade ≤ 1
   finalizerFlag : ∀ body name flag, frame = .onExit body name flag → flag = false
+  crossing : input.grade ≤ 1 → 1 < output.grade → ∃ body point, frame = .onExit body (.fin point) false
+  owner : input.ownerCount = output.ownerCount
+  valid : output.Valid → input.Valid
 
 /-- The same authored saved edge retains its numeric classes after an admitted reference write. -/
 theorem Edge.future (before after : Stores) (input output : Kind) (frame : NCode)
     (future : HostTimeoutNumberFlow.Future before after) (held : Edge before input output frame) :
     Edge after input output frame :=
   ⟨AnswerFlow.ViewSavedAt.future (fun view => model view)
-    (fun view => (HostTimeoutFlow.interpreter view).toPrimInterp) (fun _ => future) held.toViewSavedAt, held.restores, held.generated, held.ordered, held.finalizerInput, held.finalizerFlag⟩
+    (fun view => (HostTimeoutFlow.interpreter view).toPrimInterp) (fun _ => future) held.toViewSavedAt, held.restores, held.generated, held.ordered, held.finalizerInput, held.finalizerFlag, held.crossing, held.owner, held.valid⟩
 
 /-- A hook that keeps its stack cannot also push a restoring mask. -/
 theorem no_push (before after : List NCode) (same : after = before)
@@ -67,32 +71,38 @@ theorem FrameAt.each (state : Stores) (output : Kind) (frame : HostTimeoutFrames
 /-- All numeric head constructors introduce the same nonrecursive saved shapes once. -/
 theorem head_edges : HostTimeoutNumberPhaseHead.HeadEdges Edge := by
   constructor
-  · intro state input output body name ordered each
-    refine ⟨⟨each, ?_, ?_⟩, ?_, ?_, ordered, ?_, ?_⟩
+  · intro state input output body name ordered region owner valid each
+    refine ⟨⟨each, ?_, ?_⟩, ?_, ?_, ordered, ?_, ?_, ?_, owner, valid⟩
     · intro name cursor impossible; cases impossible
     · intro name cursor impossible; cases impossible
     · intro impossible; cases impossible
     · intro fiber pushed; exact False.elim (no_push _ _ rfl pushed)
     · intro body name flag impossible; cases impossible
     · intro body name flag impossible; cases impossible
-  · intro state input output body name ordered each
-    refine ⟨⟨each, ?_, ?_⟩, ?_, ?_, ordered, ?_, ?_⟩
+    · intro early later
+      exact False.elim (Nat.not_le_of_gt later (region early))
+  · intro state input output body name ordered region owner valid each
+    refine ⟨⟨each, ?_, ?_⟩, ?_, ?_, ordered, ?_, ?_, ?_, owner, valid⟩
     · intro name cursor impossible; cases impossible
     · intro name cursor impossible; cases impossible
     · intro impossible; cases impossible
     · intro fiber pushed; exact False.elim (no_push _ _ rfl pushed)
     · intro body name flag impossible; cases impossible
     · intro body name flag impossible; cases impossible
-  · intro state input output body next ordered each
-    refine ⟨⟨each, ?_, ?_⟩, ?_, ?_, ordered, ?_, ?_⟩
+    · intro early later
+      exact False.elim (Nat.not_le_of_gt later (region early))
+  · intro state input output body next ordered region owner valid each
+    refine ⟨⟨each, ?_, ?_⟩, ?_, ?_, ordered, ?_, ?_, ?_, owner, valid⟩
     · intro name cursor impossible; cases impossible
     · intro name cursor impossible; cases impossible
     · intro impossible; cases impossible
     · intro fiber pushed; exact False.elim (no_push _ _ rfl pushed)
     · intro body name flag impossible; cases impossible
     · intro body name flag impossible; cases impossible
-  · intro state input output body name flag low flagFalse restorable ordered each
-    refine ⟨⟨each, ?_, ?_⟩, ?_, ?_, ordered, ?_, ?_⟩
+    · intro early later
+      exact False.elim (Nat.not_le_of_gt later (region early))
+  · intro state input output body name flag low flagFalse finName restorable ordered owner valid each
+    refine ⟨⟨each, ?_, ?_⟩, ?_, ?_, ordered, ?_, ?_, ?_, owner, valid⟩
     · intro name cursor impossible; cases impossible
     · intro name cursor impossible; cases impossible
     · intro impossible; cases impossible
@@ -102,6 +112,11 @@ theorem head_edges : HostTimeoutNumberPhaseHead.HeadEdges Edge := by
     · intro selectedBody selectedName selectedFlag actual
       cases actual
       exact flagFalse
+    · intro early later
+      obtain ⟨point, same⟩ := finName
+      cases same
+      cases flagFalse
+      exact ⟨body, point, rfl⟩
 
 /-- The single numeric head proof also supplies uniform saved edges. -/
 theorem head (view : HostTimeoutFlow.View) (state : Stores) (kind : Kind) (program : NCode)
@@ -130,7 +145,7 @@ theorem ordinary_native (view : HostTimeoutFlow.View) (machine : NativeMachine)
 theorem mask (state : Stores) (kind : Kind) (flag : Bool)
     (restorable : HostTimeoutNumberMaskClass.Restorable kind) :
     Edge state kind kind (.setInterruptible flag) := by
-  refine ⟨⟨?_, ?_, ?_⟩, ?_, ?_, Nat.le_refl _, ?_, ?_⟩
+  refine ⟨⟨?_, ?_, ?_⟩, ?_, ?_, Nat.le_refl _, ?_, ?_, ?_, rfl, (fun good => good)⟩
   · intro view
     exact AnswerFlow.saved_mask (model view) (HostTimeoutFlow.interpreter view).toPrimInterp state kind flag
   · intro name cursor impossible; cases impossible
@@ -140,10 +155,43 @@ theorem mask (state : Stores) (kind : Kind) (flag : Bool)
     exact False.elim (no_push _ _ (Prim.ensure_setInterruptible_stack flag fiber) pushed)
   · intro body name flag impossible; cases impossible
   · intro body name flag impossible; cases impossible
+  · intro early later
+    exact False.elim (Nat.not_le_of_gt later early)
 
 /-- Only the actual source edge authorizes its generated mask's answer class. -/
 theorem hook_mask : AnswerFlow.Contextual.HookMask Edge := by
   intro state input output code held fiber pushed
   exact mask state output true (held.generated fiber pushed)
+
+/-- One actual saved path retains its numeric owner count and pending endpoint validity together. -/
+theorem anchors (state : Stores) (input output : Kind) (stack : List NCode)
+    (path : Effect4.Contracts.Path (Edge state) input output stack) :
+    input.ownerCount = output.ownerCount ∧ (output.Valid → input.Valid) := by
+  exact Effect4.Contracts.Path.endpoints
+    (fun first last : Kind => first.ownerCount = last.ownerCount ∧ (last.Valid → first.Valid))
+    (fun _ => ⟨rfl, fun good => good⟩)
+    (fun _ _ _ first second => ⟨first.1.trans second.1, fun good => first.2 (second.2 good)⟩)
+    (fun _ _ _ edge => ⟨edge.owner, edge.valid⟩) path
+
+/-- An actual early numeric answer with a later saved output retains an authored protected finalizer. -/
+theorem early_finalizer (state : Stores) (input output : Kind) (stack : List NCode)
+    (path : Effect4.Contracts.Path (Edge state) input output stack)
+    (early : input.grade ≤ 1) (later : 1 < output.grade) :
+    ∃ body point, (.onExit body (.fin point) false : NCode) ∈ stack := by
+  obtain ⟨first, last, frame, member, owned, low, high⟩ :=
+    Effect4.Contracts.Path.crossing_member Kind.grade 1 path early later
+  obtain ⟨body, point, actual⟩ := owned.crossing low high
+  cases actual
+  exact ⟨body, point, member⟩
+
+/-- An ordinary constant frame cannot stand in for the authored early-to-late finalizer crossing.
+Control: pre-entry yield uses the actual paused class instead of this fabricated saved annotation. -/
+theorem early_constant_control (state : Stores) (before entered : HostTimeoutNumberPhase.Phase)
+    (own : entered.count = entered.cleanups.length + 1) (first body : NCode) :
+    ¬ Edge state (.fresh before) (.attempt before entered own) (.onSuccessConst first body) := by
+  intro held
+  obtain ⟨saved, point, impossible⟩ := held.crossing (by dsimp only [Kind.grade]; decide)
+    (by dsimp only [Kind.grade]; decide)
+  cases impossible
 
 end Test.Dogfood.Proofs.HostTimeoutNumberUniform

@@ -38,16 +38,16 @@ theorem code_refs (before : Stores) (kind : Kind) (program : NCode)
   | failure kind cause good =>
     intro after future same
     exact .failure kind cause (cause_refs _ _ same _ _ good)
-  | bind input output first name head ordered callback skip ih =>
+  | bind input output first name head ordered region owner valid callback skip ih =>
     intro after future same
-    apply CodeAt.bind input output first name (ih after future same) ordered
+    apply CodeAt.bind input output first name (ih after future same) ordered region owner valid
     · intro next later value good view
       exact callback next ((model view).future_trans _ _ _ future later) value good view
     · intro next later cause good
       exact skip next ((model []).future_trans _ _ _ future later) cause good
-  | constant input output first body head ordered callback skip ih =>
+  | constant input output first body head ordered region owner valid callback skip ih =>
     intro after future same
-    apply CodeAt.constant input output first body (ih after future same) ordered
+    apply CodeAt.constant input output first body (ih after future same) ordered region owner valid
     · intro next later value good
       exact callback next ((model []).future_trans _ _ _ future later) value good
     · intro next later cause good

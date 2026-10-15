@@ -1314,3 +1314,35 @@ The build passes with 1281 jobs.
 The audit checks 885 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
 It includes the indexed pop contract and every changed numeric certificate consumer.
 This proof-only slice reaches no outside implementation gate.
+
+
+## One source-phase certificate
+
+The existing numeric code and uniform saved edges now retain one owner count and pending endpoint validity.
+An attempt endpoint records that its entered count follows its predecessor count.
+Pending validity excludes the root's published-form class.
+Ordinary binds and constants retain their grade region.
+Only an authored protected source finalizer crosses from the early region to the late region.
+The old pre-entry yield instance uses the paused class instead of a fabricated crossing.
+A checked control rejects that old constant-frame annotation.
+
+The existing saved path transports the owner and validity facts together.
+Its actual crossing supplies an authored finalizer member.
+The source certificate retains all five captured entry bindings.
+The existing source lexical length then recovers the actual finalizer capture.
+The finalizer witness retains its actual runtime metadata through the existing pop producer.
+
+Installed-finalizer custody now names that actual source point and body existentially.
+It does not equate the popped point's completed-exit view with an older captured point.
+The existing source and numeric path jointly recover this actual witness at an early input.
+The same owner and validity facts exclude the unclean entered heap at a late restoring-mask return.
+
+Placement: scope-lifetime-finalization R11 and translation-simulation R10; the actual joined native producer consumes this coherent certificate.
+Reach: actual source bindings, exact numeric saved endpoints, and the real finalizer witness.
+The indexed authority step through passed masks, active command producer, fixed-budget attachment, and both original endpoint proofs remain open.
+This internal refinement changes neither public endpoint statement.
+
+The preceding region verification command checks this slice too.
+The build passes with 1281 jobs.
+The audit checks 885 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
+This proof-only slice reaches no outside implementation gate.

@@ -101,10 +101,8 @@ theorem loop_interrupt (context : MessageContext) (world : HostTimeoutNumberConf
     rw [self] at actual
     cases actual
     have oldInstalled : CountInstalled count fiber.frame := by
-      change _ ∈ fiber.frame.stack
-      change _ ∈ (interruptWithCause cause fiber).1.frame.stack at installed
-      rw [fields.2.2.1] at installed
-      exact installed
+      obtain ⟨point, body, source, member⟩ := installed
+      exact ⟨point, body, source, fields.2.2.1 ▸ member⟩
     exact False.elim (allowed.2.2 (coverage fiber.id count yielding fiber assigned heap found oldInstalled queued))
   · have other : id ≠ (interruptWithCause cause fiber).1.id := by
       intro equal
@@ -253,10 +251,7 @@ theorem protects_interrupt (context : MessageContext) (world : HostTimeoutNumber
     rw [self] at actual
     cases actual
     apply coverage fiber.id count yielding fiber assigned heap found _ previous
-    change _ ∈ fiber.frame.stack
-    change _ ∈ (interruptWithCause cause fiber).1.frame.stack at installed
-    rw [(HostTimeoutNumberConfigurationInterrupt.interrupt_fields fiber cause).2.2.1] at installed
-    exact installed
+    simpa only [CountInstalled, (HostTimeoutNumberConfigurationInterrupt.interrupt_fields fiber cause).2.2.1] using installed
   · have other : id ≠ (interruptWithCause cause fiber).1.id := by
       intro equal
       exact same (equal.trans key)

@@ -45,6 +45,24 @@ def Kind.grade : Kind → Nat
   | .attempt _ _ _ => 5
   | .paused _ incoming => incoming.grade
 
+/-- Each numeric endpoint names the committed count of its owning attempt.
+Consumer: the uniform pending path's context anchor through actual native returns. -/
+@[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
+def Kind.ownerCount : Kind → Nat
+  | .attempt _ entered _ => entered.count
+  | .fresh phase | .read phase | .unit phase | .countUnit phase | .before phase |
+      .cleanupExit phase _ | .published phase => phase.count
+  | .paused _ incoming => incoming.ownerCount
+
+/-- Pending endpoints exclude root publication and retain the actual count boundary at attempt exits.
+Consumer: restoring-mask permission at the same numeric attempt context. -/
+@[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
+def Kind.Valid : Kind → Prop
+  | .attempt prior entered _ => prior.count + 1 = entered.count
+  | .published _ => False
+  | .paused _ incoming => incoming.Valid
+  | _ => True
+
 /-- A restored success names the selected exit that the actual form log has just published. -/
 def ValueAt (state : Stores) : Kind → Val → Prop
   | .fresh phase, _ => At phase state
@@ -193,6 +211,9 @@ inductive CodeAt : Stores → Kind → NCode → Prop
       CodeAt state (.before phase) (.withFiber (.store (.act (.setInterruptible (.cancelRace race) false))))
   | bind {state : Stores} (input output : Kind) (first : NCode) (name : EffName)
       (head : CodeAt state input first) (ordered : input.grade ≤ output.grade)
+      (region : input.grade ≤ 1 → output.grade ≤ 1)
+      (owner : input.ownerCount = output.ownerCount)
+      (valid : output.Valid → input.Valid)
       (callback : ∀ next, HostTimeoutNumberFlow.Future state next → ∀ value,
         ValueAt next input value → ∀ view, CodeAt next output ((interpreter view).contA name value))
       (skip : ∀ next, HostTimeoutNumberFlow.Future state next → ∀ cause,
@@ -204,6 +225,9 @@ inductive CodeAt : Stores → Kind → NCode → Prop
   | yieldNow {state : Stores} (kind : Kind) (priority : Nat) (good : ValueAt state kind .unit) :
       CodeAt state kind (.yieldNowWith priority)
   | constant {state : Stores} (input output : Kind) (first body : NCode) (head : CodeAt state input first) (ordered : input.grade ≤ output.grade)
+      (region : input.grade ≤ 1 → output.grade ≤ 1)
+      (owner : input.ownerCount = output.ownerCount)
+      (valid : output.Valid → input.Valid)
       (callback : ∀ next, HostTimeoutNumberFlow.Future state next → ∀ value,
         ValueAt next input value → CodeAt next output body)
       (skip : ∀ next, HostTimeoutNumberFlow.Future state next → ∀ cause,
@@ -469,11 +493,8 @@ theorem fresh_entry_yield (state : Stores) (phase : Phase) (n : Fin 4)
       (by change phase.count + 1 = phase.cleanups.length + 1; rw [cleanups]))
       (.onSuccessConst (.yieldNowWith priority)
         (resolve HostTimeoutSource.program (HostTimeoutNumberEntry.attemptPoint captured (fuel + 1) delay n previous))) := by
-  apply CodeAt.constant (.fresh phase) _ _ _ (CodeAt.yieldNow (.fresh phase) priority heap) (by dsimp only [Kind.grade]; decide)
-  · intro next future value good
-    exact CodeAt.attemptEntry phase n cleanups forms cursor captured fuel delay previous good
-  · intro next future cause good
-    exact Or.inr good
+  exact CodeAt.pausing phase _ priority _ heap
+    (CodeAt.attemptEntry phase n cleanups forms cursor captured fuel delay previous heap)
 
 /-- A read-only race restore retains its exact reference phase when the awaited work has returned. -/
 theorem race_restore_saved (view : View) (state : Stores) (phase : Phase) (selected : ExitV) (body : NCode) :
@@ -493,7 +514,7 @@ theorem race_cancel_code (view : View) (state : Stores) (phase : Phase) (race to
     CodeAt state (.before phase)
       ((interpreter view).cancelThenFail (.withWaiter (.store (.cancelRace race)) owner token) cause) := by
   rw [HostTimeoutNumberFlow.race_cancel_program]
-  apply CodeAt.bind (.before phase) (.before phase) _ (.reFail cause) (CodeAt.cancelRace phase race heap) (by dsimp only [Kind.grade]; decide)
+  apply CodeAt.bind (.before phase) (.before phase) _ (.reFail cause) (CodeAt.cancelRace phase race heap) (by dsimp only [Kind.grade]; decide) (fun early => early) rfl (fun good => good)
   · intro next future value good nextView
     exact CodeAt.failure _ cause good
   · intro next future delivered good

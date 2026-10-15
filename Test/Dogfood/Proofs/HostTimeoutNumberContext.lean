@@ -112,6 +112,17 @@ inductive CountFrameAt (context : CountContext) : HostTimeoutFrames.NativeFrame 
 
 /-- The protected prefix has installed the actual source finalizer, rather than an unrelated saved frame. -/
 def CountInstalled (context : CountContext) (frame : HostTimeoutFrames.NativeFrame) : Prop :=
-  .onExit context.bound (.fin context.point) false ∈ frame.stack
+  ∃ point body, AttemptSource context point ∧ (.onExit body (.fin point) false : NCode) ∈ frame.stack
+
+/-- The original concrete entry supplies an actual installed source witness. -/
+theorem CountInstalled.exact (context : CountContext) (frame : HostTimeoutFrames.NativeFrame)
+    (member : (.onExit context.bound (.fin context.point) false : NCode) ∈ frame.stack) :
+    CountInstalled context frame := ⟨context.point, context.bound, context.source, member⟩
+
+/-- Retaining the actual saved frame retains its same source witness through native execution. -/
+theorem CountInstalled.mono (context : CountContext) (before after : HostTimeoutFrames.NativeFrame)
+    (subset : before.stack ⊆ after.stack) (held : CountInstalled context before) : CountInstalled context after := by
+  obtain ⟨point, body, source, member⟩ := held
+  exact ⟨point, body, source, subset member⟩
 
 end Test.Dogfood.Proofs.HostTimeoutNumberConfiguration

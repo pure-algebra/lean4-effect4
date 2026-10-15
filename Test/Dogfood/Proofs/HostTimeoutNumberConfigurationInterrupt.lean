@@ -116,15 +116,11 @@ theorem fiber_fields (machine : Effect4.Program.NativeMachine) (role : Role)
   · intro context same heap installed
     rw [running]
     apply held.pendingRunning context same heap
-    change _ ∈ before.frame.stack
-    change _ ∈ after.frame.stack at installed
-    rw [stack] at installed
-    exact installed
+    simpa only [CountInstalled, stack] using installed
 
   · intro context same heap interruptible
-    change _ ∈ after.frame.stack
-    rw [stack]
-    exact held.pendingCustody context same heap (mask.symm.trans interruptible)
+    simpa only [CountInstalled, stack] using
+      held.pendingCustody context same heap (mask.symm.trans interruptible)
 
   · intro context same masked
     have beforeMasked := mask.symm.trans masked

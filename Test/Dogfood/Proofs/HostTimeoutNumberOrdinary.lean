@@ -90,7 +90,8 @@ theorem fiber_running (context : CountContext) (view : HostTimeoutFlow.View) (ma
     exact running
   · intro next same entered interruptible
     cases same
-    exact shape.2.subset (held.pendingCustody context rfl entered (shape.1.symm.trans interruptible))
+    exact CountInstalled.mono context _ _ shape.2.subset
+      (held.pendingCustody context rfl entered (shape.1.symm.trans interruptible))
 
   · intro next same masked
     rw [deferred]

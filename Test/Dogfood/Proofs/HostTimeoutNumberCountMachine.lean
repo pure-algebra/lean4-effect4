@@ -103,6 +103,7 @@ theorem counted_fiber (machine : Effect4.Program.NativeMachine)
     let after := {countOp fiber with frame := {fiber.frame with current := .success .unit}}
     FiberAt (installed machine state after) (.pending context) after := by
   have installedFin : CountInstalled context fiber.frame := by
+    apply CountInstalled.exact
     change _ ∈ fiber.frame.stack
     rw [stack]
     exact List.mem_cons_of_mem _ (List.mem_cons_self ..)

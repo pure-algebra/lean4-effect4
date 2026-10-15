@@ -111,7 +111,7 @@ theorem selected_update_shape (context : CountContext) (key : RefKey) (term : Te
     change (some (Node.eff (.perform (.refUpdateWith HostTimeoutNumberEntry.countTerm) (.var 0))) :
       Option (Node NativeOp)) = some (Node.eff (.perform (.refUpdateWith term) request)) at found
     cases found
-    have value := held.leading.read 0 (by change 0 < 4; decide)
+    have value := held.leading.read 0 (by change 0 < 5; decide)
     change point.env[0]? = some (.cell ⟨0⟩) at value
     change point.env[0]? = some (.cell key) at evaluated
     rw [value] at evaluated
@@ -120,7 +120,7 @@ theorem selected_update_shape (context : CountContext) (key : RefKey) (term : Te
     change (some (Node.eff (.perform (.refUpdateWith HostTimeoutNumberPhaseFlow.cleanupTerm) (.var 1))) :
       Option (Node NativeOp)) = some (Node.eff (.perform (.refUpdateWith term) request)) at found
     cases found
-    have value := held.leading.read 1 (by change 1 < 4; decide)
+    have value := held.leading.read 1 (by change 1 < 5; decide)
     change point.env[1]? = some (.cell ⟨1⟩) at value
     change point.env[1]? = some (.cell key) at evaluated
     rw [value] at evaluated
