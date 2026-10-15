@@ -178,12 +178,16 @@ def model (root : NativeEff) (table : RowTable) (owner : Nat) (view : List (Fibe
   failure := fun _ _ _ held => .failure held
 
 /-- Ordinary bind callbacks retain their semantic contract at every actual completed-fiber view. -/
-def Semantic (root : NativeEff) (table : RowTable) (owner : Nat) :=
-  ViewSavedAt (model root table owner) (fun view => (interpAt root view table).toPrimInterp)
+structure Semantic (root : NativeEff) (table : RowTable) (owner : Nat)
+    (world : StageWorld.World) (input output : StageWorld.Kind) (frame : NCode) : Prop where
+  held : ViewSavedAt (model root table owner) (fun view => (interpAt root view table).toPrimInterp)
+    world input output frame
+  inputOwned : Owns owner input
+  outputOwned : Owns owner output
 
 /-- The request graph reuses the checked finalizer restore and merge family. -/
 def Edge (root : NativeEff) (table : RowTable) (owner : Nat) :=
-  EmbeddedEdgeOver id id (fun (_ : StageWorld.World) => True) (Semantic root table owner) StageFinalizer.Edge
+  EmbeddedEdgeOver id id (fun (_ : StageWorld.World) => True) (Semantic root table owner) (StageFinalizer.Edge owner)
 
 /-- The same model embeds its existing finalizer family without changing its world or classes. -/
 theorem embedding (root : NativeEff) (table : RowTable) (owner : Nat) (view : List (FiberId × ExitV)) :
@@ -209,11 +213,11 @@ theorem finalizer_code (root : NativeEff) (table : RowTable) (owner : Nat)
 
 /-- Actual restoring mask frames use the shared identity answer contract. -/
 theorem mask_edge (root : NativeEff) (table : RowTable) (owner : Nat)
-    (world : StageWorld.World) (kind : StageWorld.Kind) (flag : Bool) :
+    (world : StageWorld.World) (kind : StageWorld.Kind) (flag : Bool) (owns : Owns owner kind) :
     Edge root table owner world kind kind (.setInterruptible flag) := by
   apply EmbeddedEdgeOver.saved
-  refine ⟨fun view => saved_mask (model root table owner view) (interpAt root view table).toPrimInterp world kind flag,
-    ?_, ?_⟩
+  refine ⟨⟨fun view => saved_mask (model root table owner view) (interpAt root view table).toPrimInterp world kind flag,
+    ?_, ?_⟩, owns, owns⟩
   · intro name cursor equal
     cases equal
   · intro name cursor equal
@@ -222,13 +226,14 @@ theorem mask_edge (root : NativeEff) (table : RowTable) (owner : Nat)
 /-- Native bind edges consume the actual answer class and preserve the separate failure class. -/
 theorem bound_edge (root : NativeEff) (table : RowTable) (owner : Nat) (world : StageWorld.World)
     (input output : StageWorld.Kind) (body : NCode) (name : EffName)
+    (inputOwned : Owns owner input) (outputOwned : Owns owner output)
     (callback : ∀ nextWorld, Future world nextWorld → ∀ view answer,
       ValueAt nextWorld input answer → CodeAt root table owner nextWorld output ((interpAt root view table).contA name answer))
     (skip : ∀ nextWorld, Future world nextWorld → ∀ cause,
       CauseAt nextWorld input cause → CauseAt nextWorld output cause) :
     Edge root table owner world input output (.onSuccess body name) := by
   apply EmbeddedEdgeOver.saved
-  refine ⟨?_, ?_, ?_⟩
+  refine ⟨⟨?_, ?_, ?_⟩, inputOwned, outputOwned⟩
   · intro view
     exact saved_success (model root table owner view) (interpAt root view table).toPrimInterp world input output body name
       (fun nextWorld future answer good => callback nextWorld future view answer good) skip
@@ -245,7 +250,7 @@ theorem pause_edge (root : NativeEff) (table : RowTable) (owner : Nat) (world : 
     Edge root table owner world (.paused owner kind (world.stages owner) (world.cleaned owner)) kind
       (.onSuccessConst (.yieldNowWith priority) next) := by
   apply EmbeddedEdgeOver.saved
-  refine ⟨?_, ?_, ?_⟩
+  refine ⟨⟨?_, ?_, ?_⟩, ⟨rfl, owns⟩, owns⟩
   · intro view
     apply saved_constant (model root table owner view) (interpAt root view table).toPrimInterp
     · intro after future answer good
@@ -261,12 +266,13 @@ theorem pause_edge (root : NativeEff) (table : RowTable) (owner : Nat) (world : 
 theorem family (root : NativeEff) (table : RowTable) (owner : Nat) (view : List (FiberId × ExitV)) :
     ContextualSavedFamily (model root table owner view) (interpAt root view table).toPrimInterp
       (Edge root table owner) StageFinalizer.Allowed := by
-  exact (embedding root table owner view).contextual_family_over (interpAt root view table).toPrimInterp (Semantic root table owner) StageFinalizer.Edge
+  exact (embedding root table owner view).contextual_family_over (interpAt root view table).toPrimInterp (Semantic root table owner) (StageFinalizer.Edge owner)
     StageFinalizer.Allowed StageFinalizer.Allowed (fun _ _ _ held => held)
     (SavedFamily.contextual (model root table owner view) (interpAt root view table).toPrimInterp
       (Semantic root table owner) StageFinalizer.Allowed
-      (ViewSavedAt.family (model root table owner) (fun view => (interpAt root view table).toPrimInterp) view))
-    (StageFinalizer.family (model root table owner view) rfl rfl rfl root table view)
+      (ViewSavedAt.refined_family (model root table owner) (fun view => (interpAt root view table).toPrimInterp)
+        (Semantic root table owner) (fun _ _ _ _ held => held.held) view))
+    (StageFinalizer.family (model root table owner view) rfl rfl rfl owner root table view)
 
 /-- Exact source resolution supplies the decision code with its actual waiting premise. -/
 theorem decision_source (built : Api.Built) (accepted : Api.Author.build (shop .none) = .ok built)

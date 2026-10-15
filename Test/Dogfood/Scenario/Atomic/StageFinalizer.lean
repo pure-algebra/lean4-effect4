@@ -52,23 +52,23 @@ def Allowed (_ : StageWorld.World) (pending : Option CauseV) : Prop :=
   ∀ cause ∈ pending, ∀ reason ∈ cause.reasons, reason.tag ≠ .fail
 
 /-- The native restore and merge wrappers retain the captured body exit. -/
-inductive Edge : StageWorld.World → Kind → Kind → NCode → Prop
-  | restore (world : StageWorld.World) (id : Nat) (exit : ExitV) (body : NCode)
-      (good : BodyExit world id exit) :
-      Edge world (.cleanup id) (.finalized id) (.onSuccess body (.restore exit))
-  | merge (world : StageWorld.World) (id : Nat) (exit : ExitV) (body : NCode)
-      (good : BodyExit world id exit) :
-      Edge world (.note id) (.cleanup id) (.onFailure body (.merge exit))
+inductive Edge (owner : Nat) : StageWorld.World → Kind → Kind → NCode → Prop
+  | restore (world : StageWorld.World) (exit : ExitV) (body : NCode)
+      (good : BodyExit world owner exit) :
+      Edge owner world (.cleanup owner) (.finalized owner) (.onSuccess body (.restore exit))
+  | merge (world : StageWorld.World) (exit : ExitV) (body : NCode)
+      (good : BodyExit world owner exit) :
+      Edge owner world (.note owner) (.cleanup owner) (.onFailure body (.merge exit))
 
 /-- Saved finalizer names retain their captured body exit when the stage world advances. -/
 theorem edge_future (before after : StageWorld.World) (future : Future before after)
-    (input output : Kind) (frame : NCode) (held : Edge before input output frame) :
-    Edge after input output frame := by
+    (id : Nat) (input output : Kind) (frame : NCode) (held : Edge id before input output frame) :
+    Edge id after input output frame := by
   cases held with
-  | restore id exit body captured =>
-    exact .restore after id exit body (body_exit_future before after future id exit captured)
-  | merge id exit body captured =>
-    exact .merge after id exit body (body_exit_future before after future id exit captured)
+  | restore exit body captured =>
+    exact .restore after exit body (body_exit_future before after future id exit captured)
+  | merge exit body captured =>
+    exact .merge after exit body (body_exit_future before after future id exit captured)
 
 variable (model : Model (ν := EffName) (σ := EffThunk) (β := Val)
   (ε := Err) (δ := Defect) (ι := FiberId) (α := Ann) StageWorld.World Kind)
@@ -107,20 +107,20 @@ theorem merge_code (world : StageWorld.World) (id : Nat) (exit : ExitV) (good : 
 
 include futureEq valueEq causeEq in
 /-- Actual native restore and merge callbacks form one admitted saved-frame family. -/
-theorem family (root : NativeEff) (table : RowTable) (view) :
-    ContextualSavedFamily model (interpAt root view table).toPrimInterp Edge Allowed := by
+theorem family (id : Nat) (root : NativeEff) (table : RowTable) (view) :
+    ContextualSavedFamily model (interpAt root view table).toPrimInterp (Edge id) Allowed := by
   constructor
   · intro world input output frame held nextWorld future value good missing
     cases held with
     | restore => cases missing
-    | merge id exit body captured => simpa only [valueEq, ValueAt] using good
+    | merge exit body captured => simpa only [valueEq, ValueAt] using good
   · intro world input output frame held nextWorld future cause good missing
     cases held with
-    | restore id exit body captured => simpa only [causeEq, CauseAt] using good
+    | restore exit body captured => simpa only [causeEq, CauseAt] using good
     | merge => cases missing
   · intro world input output frame held nextWorld future value provided next pushed good supplied absent actual
     cases held with
-    | restore id exit body captured =>
+    | restore exit body captured =>
       change some (Prim.ofExit exit, []) = some (next, pushed) at actual
       cases actual
       have forward : Future world nextWorld := by rw [← futureEq]; exact future
@@ -131,7 +131,7 @@ theorem family (root : NativeEff) (table : RowTable) (view) :
   · intro world input output frame held nextWorld future cause provided next pushed good supplied absent actual
     cases held with
     | restore => cases actual
-    | merge id exit body captured =>
+    | merge exit body captured =>
       change some (Prim.ofExit (Exit.restoreAfterFinalizer exit (.failure cause)), []) = some (next, pushed) at actual
       cases actual
       have forward : Future world nextWorld := by rw [← futureEq]; exact future
@@ -143,7 +143,7 @@ theorem family (root : NativeEff) (table : RowTable) (view) :
   · intro world input output frame held nextWorld future fiber cause delivered good selected admitted interrupted actual
     cases held with
     | restore => cases selected
-    | merge id exit body captured =>
+    | merge exit body captured =>
       rw [causeEq]
       have finished : CauseAt nextWorld (.note id) cause := by rw [← causeEq]; exact good
       cases pending : fiber.interruptedCause with

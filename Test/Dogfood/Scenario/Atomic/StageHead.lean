@@ -22,7 +22,7 @@ theorem guarded_exit_edge (root : NativeEff) (table : RowTable) (owner : Nat)
         (resolve root (({point with completed := view} : Point).childWith 1 (reifyExitVal exit)))) :
     Edge root table owner world (.body owner) (.finalized owner) (.onExit body (.fin point) false) := by
   apply EmbeddedEdgeOver.saved
-  refine ⟨?_, ?_, ?_⟩
+  refine ⟨⟨?_, ?_, ?_⟩, rfl, rfl⟩
   · intro view
     refine SavedAt.mk world (StageWorld.Kind.body owner) (StageWorld.Kind.finalized owner) _ ?_ ?_ ?_ ?_ ?_ ?_
     · intro nextWorld future value good absent
@@ -53,7 +53,7 @@ theorem guarded_exit_edge (root : NativeEff) (table : RowTable) (owner : Nat)
 /-- Every annotated request head is an ordinary frame step or its actual stateful operation. -/
 theorem head_or_sync (root : NativeEff) (table : RowTable) (owner : Nat)
     (view : List (FiberId × ExitV)) (world : StageWorld.World) (kind : StageWorld.Kind)
-    (code : NCode) (owned : CodeAt root table owner world kind code) :
+    (code : NCode) (owned : CodeAt root table owner world kind code) (owns : Owns owner kind) :
     HeadAt (model root table owner view) (interpAt root view table).toPrimInterp
       (Edge root table owner) world kind code ∨ ∃ operation, code = .sync (.op operation) := by
   cases owned with
@@ -64,9 +64,9 @@ theorem head_or_sync (root : NativeEff) (table : RowTable) (owner : Nat)
   | reading => exact .inr ⟨_, rfl⟩
   | note => exact .inr ⟨_, rfl⟩
   | yielding waiting => exact .inl (.yieldNowWith _ (.yielding waiting))
-  | pause owns => exact .inl (.yieldNowWith _ (.pause owns))
-  | pausing owns held =>
-    exact .inl (.onSuccessConst _ _ _ (.pause owns) (pause_edge root table owner world _ _ _ owns held))
+  | pause localKind => exact .inl (.yieldNowWith _ (.pause localKind))
+  | pausing localKind held =>
+    exact .inl (.onSuccessConst _ _ _ (.pause localKind) (pause_edge root table owner world _ _ _ localKind held))
   | frontier zero =>
     apply Or.inl
     apply HeadAt.suspend
@@ -83,12 +83,12 @@ theorem head_or_sync (root : NativeEff) (table : RowTable) (owner : Nat)
     apply Or.inl
     apply HeadAt.onSuccess (middle := StageWorld.Kind.cleanup owner)
     · exact first
-    · exact EmbeddedEdgeOver.mapped trivial (StageFinalizer.Edge.restore world owner _ _ captured)
+    · exact EmbeddedEdgeOver.mapped trivial (StageFinalizer.Edge.restore (owner := owner) world _ _ captured)
   | merging captured first =>
     apply Or.inl
     apply HeadAt.onFailure (middle := StageWorld.Kind.note owner)
     · exact first
-    · exact EmbeddedEdgeOver.mapped trivial (StageFinalizer.Edge.merge world owner _ _ captured)
+    · exact EmbeddedEdgeOver.mapped trivial (StageFinalizer.Edge.merge (owner := owner) world _ _ captured)
   | bound localInput first callback skip =>
-    exact .inl (.onSuccess _ _ _ first (bound_edge root table owner world _ _ _ _ callback skip))
+    exact .inl (.onSuccess _ _ _ first (bound_edge root table owner world _ _ _ _ localInput owns callback skip))
 end Test.Dogfood.Scenario.Atomic.StageGraph
