@@ -339,6 +339,109 @@ theorem saved_discard_cause (world : World) (input middle : Kind)
     exact ⟨delivered, equation, family.discard world input middle code saved world
       (model.future_refl world) fiber cause delivered good arm admitted interrupted equation⟩
 
+include interp family in
+/-- The actual passed failure frame carries an admitted cause into the same output class.
+Consumer: the class-indexed selected-failure producer. -/
+theorem passed_cause (world : World) (input middle : Kind)
+    (head : Prim ν σ β ε δ ι α) (fiber : FrameFiber ν σ β ε δ ι α)
+    (before after : Option (Cause ε δ ι α)) (cause : Cause ε δ ι α)
+    (edge : Edge world input middle head) (carried : before = some cause)
+    (good : model.cause world input cause)
+    (absorbs : AbsorbsInterrupt model world (head.ensure fiber).1.interruptedCause)
+    (admitted : Allowed world (head.ensure fiber).1.interruptedCause)
+    (passed : PopTrace.Passes .contE true head fiber before after) :
+    ∃ delivered, after = some delivered ∧ model.cause world middle delivered := by
+  rcases passed with ⟨chosen, unchanged⟩ | ⟨answer, _, skipped, changed⟩
+  · have missing := PopTrace.answer_missing head .contE _ chosen
+    exact ⟨cause, unchanged.trans carried,
+      family.skipCause world input middle head edge world (model.future_refl world) cause good missing⟩
+  · obtain ⟨delivered, equation, nextGood⟩ := saved_discard_cause (admitted := admitted)
+      model interp Edge Allowed family world input middle head fiber cause edge good
+      (by simpa only [Bool.true_and] using skipped) absorbs
+    exact ⟨delivered, changed.trans (by rw [carried]; exact equation), nextGood⟩
+
+include interp family mask in
+/-- The selected failure producer retains authority at the actual carried-cause class.
+Consumer: Timeout's actual pending cleanup return and mask custody. -/
+theorem popFrom_cause_selected_with_authority
+    (Authority Post : Kind → FrameFiber ν σ β ε δ ι α → Prop)
+    (world : World) (input output : Kind)
+    (frames : List (Prim ν σ β ε δ ι α)) (fiber : FrameFiber ν σ β ε δ ι α)
+    (cause : Cause ε δ ι α) (selected : Prim ν σ β ε δ ι α)
+    (advance : ∀ incoming middle head rest scratch before after,
+      Edge world incoming middle head → Path (Edge world) middle output rest → scratch.stack = [] →
+      (∃ cause, model.cause world incoming cause) → (∃ cause, model.cause world middle cause) →
+      Authority incoming scratch → PopTrace.Passes .contE true head scratch before after →
+      (FrameFiber.passPushed .contE true (head.ensure scratch).1 after).answer = .empty →
+      Authority middle (FrameFiber.passPushed .contE true (head.ensure scratch).1 after).fiber)
+    (post : ∀ incoming middle rest scratch,
+      Edge world incoming middle selected → Path (Edge world) middle output rest → scratch.stack = [] →
+      (∃ cause, model.cause world incoming cause) → Authority incoming scratch →
+      Post middle {(selected.ensure scratch).1 with stack := (selected.ensure scratch).1.stack ++ rest})
+    (empty : fiber.stack = []) (good : model.cause world input cause)
+    (absorbs : AbsorbsInterrupt model world fiber.interruptedCause)
+    (authority : Authority input fiber) (stack : Path (Edge world) input output frames)
+    (found : (FrameFiber.popFrom .contE true frames fiber (some cause)).answer = .frame selected)
+    (admitted : Allowed world fiber.interruptedCause := by trivial) :
+    ∃ incoming middle delivered,
+      (FrameFiber.popFrom .contE true frames fiber (some cause)).carriedCause = some delivered ∧
+      model.cause world incoming delivered ∧ Edge world incoming middle selected ∧
+      Path (Edge world) middle output (FrameFiber.popFrom .contE true frames fiber (some cause)).fiber.stack ∧
+      Post middle (FrameFiber.popFrom .contE true frames fiber (some cause)).fiber := by
+  have popFamily : PopTrace.RootedFamily .contE true (Edge world) output
+      (fun kind scratch before => scratch.stack = [] ∧ scratch.interruptedCause = fiber.interruptedCause ∧
+        (∃ reason, before = some reason ∧ model.cause world kind reason) ∧ Authority kind scratch)
+      (fun _ _ pop => pop.answer = .frame selected → ∃ incoming middle delivered,
+        pop.carriedCause = some delivered ∧ model.cause world incoming delivered ∧
+        Edge world incoming middle selected ∧ Path (Edge world) middle output pop.fiber.stack ∧
+        Post middle pop.fiber) := by
+    constructor
+    · intro current before scratch found
+      cases found
+    · intro input middle head tail current before answer callback path scratch chosen kept found
+      obtain ⟨reason, carried, good⟩ := scratch.2.2.1
+      have shape := Prim.answerOf_frame_eq head selected .contE _ (chosen.trans (congrArg some found))
+      rw [shape.1] at post ⊢
+      have suffix : Path (Edge world) middle middle current.stack := by
+        rw [scratch.1]; exact .nil middle
+      exact ⟨input, middle, reason, carried, good, callback,
+        Path.append (ensure_path model Edge world middle middle head current
+          (fun pushed => mask world input middle head callback current pushed) suffix) path,
+        post input middle tail current callback path scratch.1 ⟨reason, good⟩ scratch.2.2.2⟩
+    · intro input middle head rest current before after callback path scratch passed drained
+      obtain ⟨reason, carried, good⟩ := scratch.2.2.1
+      have recorded : AbsorbsInterrupt model world (head.ensure current).1.interruptedCause := by
+        rw [ensure_recorded head current, scratch.2.1]; exact absorbs
+      have admissible : Allowed world (head.ensure current).1.interruptedCause := by
+        rw [ensure_recorded head current, scratch.2.1]; exact admitted
+      obtain ⟨delivered, changed, nextGood⟩ := passed_cause model interp Edge Allowed family
+        world input middle head current before after reason callback carried good recorded admissible passed
+      refine ⟨?_, ?_, ?_, advance input middle head rest current before after callback path scratch.1
+        ⟨reason, good⟩ ⟨delivered, nextGood⟩ scratch.2.2.2 passed drained⟩
+      · rw [FrameFiber.passPushed_fiber_cause]
+        exact PopTrace.drain_empty .contE true head current scratch.1
+      · rw [FrameFiber.passPushed_fiber_cause]
+        exact (drain_recorded .contE true (head.ensure current).1).trans
+          ((ensure_recorded head current).trans scratch.2.1)
+      · rcases (drain_cause head current delivered scratch.1).2 with kept | ⟨interrupted, pending, combined⟩
+        · exact ⟨delivered, by rw [changed]; exact kept, nextGood⟩
+        · exact ⟨Cause.combine delivered interrupted, by rw [changed]; exact combined,
+            absorbs interrupted (scratch.2.1.symm.trans pending) middle delivered nextGood⟩
+    · intro input middle head rest current before after tail callback path scratch passed drained next found
+      simp only [FrameFiber.passOn, FrameFiber.joinPushed, drained] at found ⊢
+      exact next found
+    · intro input middle head rest current before after tail callback path scratch passed answered found
+      obtain ⟨reason, carried, good⟩ := scratch.2.2.1
+      have recorded : AbsorbsInterrupt model world (head.ensure current).1.interruptedCause := by
+        rw [ensure_recorded head current, scratch.2.1]; exact absorbs
+      have admissible : Allowed world (head.ensure current).1.interruptedCause := by
+        rw [ensure_recorded head current, scratch.2.1]; exact admitted
+      obtain ⟨delivered, changed, nextGood⟩ := passed_cause model interp Edge Allowed family
+        world input middle head current before after reason callback carried good recorded admissible passed
+      rw [changed, (drain_cause head current delivered scratch.1).1] at answered
+      exact False.elim (answered rfl)
+  exact popFamily.popFrom input frames fiber (some cause) stack ⟨empty, rfl, ⟨cause, rfl, good⟩, authority⟩ found
+
 include interp family mask in
 /-- The selected failure callback retains the cause actually carried past earlier discarded handlers. -/
 theorem popFrom_cause_selected_with_flag (Post : Bool → Prop) (world : World) (input output : Kind)
@@ -358,64 +461,13 @@ theorem popFrom_cause_selected_with_flag (Post : Bool → Prop) (world : World) 
       Path (Edge world) middle output
         (FrameFiber.popFrom .contE true frames fiber (some cause)).fiber.stack ∧
       Post (FrameFiber.popFrom .contE true frames fiber (some cause)).fiber.interruptible := by
-  have popFamily : PopTrace.Family .contE true (Edge world)
-      (fun scratch => scratch.stack = [] ∧ scratch.interruptedCause = fiber.interruptedCause)
-      (fun input output carried pop => ∀ cause, carried = some cause → model.cause world input cause →
-        pop.answer = .frame selected → ∃ incoming middle delivered,
-          pop.carriedCause = some delivered ∧ model.cause world incoming delivered ∧
-          Edge world incoming middle selected ∧ Path (Edge world) middle output pop.fiber.stack ∧ Post pop.fiber.interruptible) := by
-    constructor
-    · intro kind current before scratch cause incoming good found
-      cases found
-    · intro input middle output head tail current before answer callback path scratch chosen kept cause incoming good found
-      have shape := Prim.answerOf_frame_eq head selected .contE _
-        (chosen.trans (congrArg some found))
-      rw [shape.1] at post ⊢
-      have suffix : Path (Edge world) middle middle current.stack := by
-        rw [scratch.1]; exact .nil middle
-      exact ⟨input, middle, cause, incoming, good, callback,
-        Path.append (ensure_path model Edge world middle middle head current
-          (fun pushed => mask world input middle head callback current pushed) suffix) path,
-        post input middle current callback⟩
-    · intro input middle head current after callback scratch
-      rw [FrameFiber.passPushed_fiber_cause]
-      exact ⟨PopTrace.drain_empty .contE true head current scratch.1,
-        (drain_recorded .contE true (head.ensure current).1).trans
-          ((ensure_recorded head current).trans scratch.2)⟩
-    · intro input middle output head tail current before after tailPop callback path scratch passed drained next cause incoming good found
-      have recorded : AbsorbsInterrupt model world (head.ensure current).1.interruptedCause := by
-        rw [ensure_recorded head current, scratch.2]; exact absorbs
-      have admissible : Allowed world (head.ensure current).1.interruptedCause := by
-        rw [ensure_recorded head current, scratch.2]; exact admitted
-      have advanced : ∃ delivered, after = some delivered ∧ model.cause world middle delivered := by
-        rcases passed with ⟨chosen, unchanged⟩ | ⟨answer, _, skipped, changed⟩
-        · have missing := PopTrace.answer_missing head .contE _ chosen
-          exact ⟨cause, unchanged.trans incoming,
-            family.skipCause world input middle head callback world (model.future_refl world) cause good missing⟩
-        · rcases saved_discard_cause (admitted := admissible) model interp Edge Allowed family world input middle head current cause callback good
-            (by simpa only [Bool.true_and] using skipped) recorded with ⟨delivered, equation, nextGood⟩
-          exact ⟨delivered, changed.trans (by rw [incoming]; exact equation), nextGood⟩
-      rcases advanced with ⟨delivered, changed, nextGood⟩
-      simp only [FrameFiber.passOn, FrameFiber.joinPushed, drained] at found ⊢
-      rcases (drain_cause head current delivered scratch.1).2 with kept | ⟨interrupted, pending, combined⟩
-      · exact next delivered (by rw [changed]; exact kept) nextGood found
-      · exact next (Cause.combine delivered interrupted) (by rw [changed]; exact combined)
-          (absorbs interrupted (scratch.2.symm.trans pending) middle delivered nextGood) found
-    · intro input middle output head tail current before after tailPop callback path scratch passed answered cause incoming good found
-      have recorded : AbsorbsInterrupt model world (head.ensure current).1.interruptedCause := by
-        rw [ensure_recorded head current, scratch.2]; exact absorbs
-      have admissible : Allowed world (head.ensure current).1.interruptedCause := by
-        rw [ensure_recorded head current, scratch.2]; exact admitted
-      have produced : ∃ delivered, after = some delivered := by
-        rcases passed with ⟨_, unchanged⟩ | ⟨answer, _, skipped, changed⟩
-        · exact ⟨cause, unchanged.trans incoming⟩
-        · rcases saved_discard_cause (admitted := admissible) model interp Edge Allowed family world input middle head current cause callback good
-            (by simpa only [Bool.true_and] using skipped) recorded with ⟨delivered, equation, _⟩
-          exact ⟨delivered, changed.trans (by rw [incoming]; exact equation)⟩
-      rcases produced with ⟨delivered, changed⟩
-      rw [changed, (drain_cause head current delivered scratch.1).1] at answered
-      exact False.elim (answered rfl)
-  exact popFamily.popFrom input output frames fiber (some cause) stack ⟨empty, rfl⟩ cause rfl good found
+  exact popFrom_cause_selected_with_authority (admitted := admitted) model interp Edge Allowed family mask
+    (fun _ _ => True) (fun _ scratch => Post scratch.interruptible)
+    world input output frames fiber cause selected
+    (fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ => trivial)
+    (fun incoming middle rest scratch edge _ _ _ _ => by
+      exact post incoming middle scratch edge)
+    empty good absorbs trivial stack found
 
 include interp family mask in
 /-- The previous selected-frame reader projects the common actual-state producer. -/
@@ -435,6 +487,40 @@ theorem popFrom_cause_selected (world : World) (input output : Kind)
         (FrameFiber.popFrom .contE true frames fiber (some cause)).fiber.stack := by
   obtain ⟨incoming, middle, delivered, carried, good, edge, path, flag⟩ := popFrom_cause_selected_with_flag (admitted := admitted) model interp Edge Allowed family mask (fun _ => True) world input output frames fiber cause selected (fun _ _ _ _ => trivial) empty good absorbs stack found
   exact ⟨incoming, middle, delivered, carried, good, edge, path⟩
+
+include interp family mask in
+/-- The selected failure producer retains authority at the actual carried-cause class.
+Consumer: Timeout's actual pending cleanup return and mask custody. -/
+theorem getCont_cause_selected_with_authority
+    (Authority Post : Kind → FrameFiber ν σ β ε δ ι α → Prop)
+    (world : World) (input output : Kind)
+    (fiber : FrameFiber ν σ β ε δ ι α)
+    (cause : Cause ε δ ι α) (selected : Prim ν σ β ε δ ι α)
+    (advance : ∀ incoming middle head rest scratch before after,
+      Edge world incoming middle head → Path (Edge world) middle output rest → scratch.stack = [] →
+      (∃ cause, model.cause world incoming cause) → (∃ cause, model.cause world middle cause) →
+      Authority incoming scratch → PopTrace.Passes .contE true head scratch before after →
+      (FrameFiber.passPushed .contE true (head.ensure scratch).1 after).answer = .empty →
+      Authority middle (FrameFiber.passPushed .contE true (head.ensure scratch).1 after).fiber)
+    (post : ∀ incoming middle rest scratch,
+      Edge world incoming middle selected → Path (Edge world) middle output rest → scratch.stack = [] →
+      (∃ cause, model.cause world incoming cause) → Authority incoming scratch →
+      Post middle {(selected.ensure scratch).1 with stack := (selected.ensure scratch).1.stack ++ rest})
+    (good : model.cause world input cause)
+    (absorbs : AbsorbsInterrupt model world fiber.interruptedCause)
+    (authority : Authority input {fiber with stack := [], deferredInterrupt := false}) (stack : Path (Edge world) input output fiber.stack)
+    (found : (fiber.getCont .contE true (some cause)).answer = .frame selected)
+    (admitted : Allowed world fiber.interruptedCause := by trivial) :
+    ∃ incoming middle delivered,
+      (fiber.getCont .contE true (some cause)).carriedCause = some delivered ∧
+      model.cause world incoming delivered ∧ Edge world incoming middle selected ∧
+      Path (Edge world) middle output (fiber.getCont .contE true (some cause)).fiber.stack ∧
+      Post middle (fiber.getCont .contE true (some cause)).fiber := by
+  simp only [FrameFiber.getCont, Bool.not_true, Bool.and_false, Bool.false_eq_true, ↓reduceIte] at found ⊢
+  exact popFrom_cause_selected_with_authority (admitted := admitted) model interp Edge Allowed family mask
+    Authority Post world input output fiber.stack {fiber with stack := [], deferredInterrupt := false}
+    cause selected advance post rfl good absorbs authority stack found
+
 
 include interp family mask in
 /-- Actual getCont selects a failure callback at the class of its delivered cause. -/
