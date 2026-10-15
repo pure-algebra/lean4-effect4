@@ -249,8 +249,66 @@ theorem answer_replacement_hook (frame : Prim ν σ β ε δ ι α)
     cases found
     rfl
 
-/-- The actual value replacement identifies its original typed edge and unchanged recorded cause.
-An actual hook-generated mask has the middle class reached by the passed original frame. -/
+/-- Any actual replacement retains its source edge, recorded cause and passed-frame input evidence. -/
+theorem getCont_replacement_hooked
+    (mask : Contextual.HookMask Edge) (Input : Kind → Prop)
+    (world : World) (demand : Arm) (skip : Bool)
+    (transport : ∀ input middle head scratch before after,
+      Edge world input middle head → PopTrace.Passes demand skip head scratch before after →
+      Input input → Input middle)
+    (input output : Kind) (fiber : FrameFiber ν σ β ε δ ι α)
+    (carried : Option (Cause ε δ ι α)) (good : Input input)
+    (stack : Path (Edge world) input output fiber.stack) (next : Prim ν σ β ε δ ι α)
+    (found : (fiber.getCont demand skip carried).answer = .replacement next) :
+    ∃ incoming middle head rest, ∃ scratch : FrameFiber ν σ β ε δ ι α,
+      Edge world incoming middle head ∧ Path (Edge world) middle output rest ∧
+      Input incoming ∧ scratch.stack = [] ∧
+      scratch.interruptedCause = fiber.interruptedCause ∧ (head.ensure scratch).2 = some next ∧
+      (fiber.getCont demand skip carried).fiber.stack = (head.ensure scratch).1.stack ++ rest := by
+  have origin : ReplacementOrigin Edge Input world output demand skip fiber.interruptedCause next
+      (fiber.getCont demand skip carried).fiber.stack := by
+    unfold FrameFiber.getCont at found ⊢
+    split at found
+    · cases found
+    · rename_i normal
+      rw [if_neg normal]
+      exact popFrom_replacement_origin Edge Input world demand skip transport input output fiber.stack
+        {fiber with stack := [], deferredInterrupt := false} carried fiber.interruptedCause stack rfl rfl good next found
+  rcases origin with ⟨incoming, middle, head, rest, scratch, callback, path, good, empty, same, actual, suffix⟩ |
+    ⟨incoming, middle, head, rest, scratch, before, after, callback, path, good, empty, same, passed, actual, suffix⟩
+  · exact ⟨incoming, middle, head, rest, scratch, callback, path, good, empty, same,
+      answer_replacement_hook head scratch demand next actual, suffix⟩
+  · have middleGood := transport incoming middle head scratch before after callback passed good
+    rcases FrameFiber.ensure_stack_cases head scratch with kept | ⟨pushed, wasInterruptible, nowMasked⟩
+    · rw [FrameFiber.passPushed_answer_cause,
+        FrameFiber.passPushed_nil _ _ _ (kept.trans empty)] at actual
+      cases actual
+    · have pushedOne : (head.ensure scratch).1.stack = [.setInterruptible true] := by rw [pushed, empty]
+      rw [FrameFiber.passPushed_answer_cause,
+        FrameFiber.passPushed_answer _ _ _ (.setInterruptible true) [] pushedOne] at actual
+      cases selected : Prim.answerOf (.setInterruptible true) demand
+          ((Prim.setInterruptible true).ensure {(head.ensure scratch).1 with stack := []}).2 with
+      | none => rw [selected] at actual; cases actual
+      | some answer =>
+        rw [selected] at actual
+        dsimp only at actual
+        by_cases skipping : (skip && ((Prim.setInterruptible true).ensure
+            {(head.ensure scratch).1 with stack := []}).1.interrupted) = true
+        · rw [if_pos skipping] at actual
+          cases actual
+        · rw [if_neg skipping] at actual
+          cases actual
+          refine ⟨middle, middle, .setInterruptible true,
+            rest, {(head.ensure scratch).1 with stack := []},
+            mask world incoming middle head callback scratch pushed, path, middleGood,
+            rfl, (Contextual.ensure_recorded head scratch).trans same,
+            answer_replacement_hook _ _ demand next selected, ?_⟩
+          rw [FrameFiber.passPushed_fiber_cause,
+            FrameFiber.passPushed_fiber _ _ _ (.setInterruptible true) [] pushedOne] at suffix
+          exact suffix
+
+
+/-- The actual value replacement specializes passed-frame input evidence to its value class. -/
 theorem getCont_value_replacement_hooked
     (mask : Contextual.HookMask Edge)
     (interp : PrimInterp ν σ β ε δ ι α)
@@ -265,41 +323,14 @@ theorem getCont_value_replacement_hooked
       model.value world incoming value ∧ scratch.stack = [] ∧
       scratch.interruptedCause = fiber.interruptedCause ∧ (head.ensure scratch).2 = some next ∧
       (fiber.getCont .contA false).fiber.stack = (head.ensure scratch).1.stack ++ rest := by
-  have origin := getCont_value_replacement_origin model Edge interp Allowed family world input output
-    fiber value good stack next found
-  rcases origin with ⟨incoming, middle, head, rest, scratch, callback, path, good, empty, same, actual, suffix⟩ |
-    ⟨incoming, middle, head, rest, scratch, before, after, callback, path, good, empty, same, passed, actual, suffix⟩
-  · exact ⟨incoming, middle, head, rest, scratch, callback, path, good, empty, same,
-      answer_replacement_hook head scratch .contA next actual, suffix⟩
-  · have missing : head.hasArm .contA = false := by
-      rcases passed with ⟨absent, equal⟩ | ⟨answer, selected, skipped, equal⟩
-      · exact PopTrace.answer_missing head .contA _ absent
-      · cases skipped
-    have middleGood := family.skip world incoming middle head callback world (model.future_refl world)
-      value good missing
-    rcases FrameFiber.ensure_stack_cases head scratch with kept | ⟨pushed, wasInterruptible, nowMasked⟩
-    · rw [FrameFiber.passPushed_answer_cause,
-        FrameFiber.passPushed_nil _ _ _ (kept.trans empty)] at actual
-      cases actual
-    · have pushedOne : (head.ensure scratch).1.stack = [.setInterruptible true] := by rw [pushed, empty]
-      rw [FrameFiber.passPushed_answer_cause,
-        FrameFiber.passPushed_answer _ _ _ (.setInterruptible true) [] pushedOne] at actual
-      cases selected : Prim.answerOf (.setInterruptible true) .contA
-          ((Prim.setInterruptible true).ensure {(head.ensure scratch).1 with stack := []}).2 with
-      | none => rw [selected] at actual; cases actual
-      | some answer =>
-        rw [selected] at actual
-        simp only [Bool.false_and, Bool.false_eq_true, ↓reduceIte] at actual
-        cases actual
-        refine ⟨middle, middle, .setInterruptible true,
-          rest, {(head.ensure scratch).1 with stack := []},
-          mask world incoming middle head callback scratch pushed, path, middleGood,
-          rfl, (Contextual.ensure_recorded head scratch).trans same,
-          answer_replacement_hook _ _ .contA next selected, ?_⟩
-        rw [FrameFiber.passPushed_fiber_cause,
-          FrameFiber.passPushed_fiber _ _ _ (.setInterruptible true) [] pushedOne] at suffix
-        exact suffix
-
+  apply getCont_replacement_hooked Edge mask (fun kind => model.value world kind value) world .contA false
+    ?_ input output fiber none good stack next found
+  intro input middle head scratch before after callback passed good
+  have missing : head.hasArm .contA = false := by
+    rcases passed with ⟨absent, equal⟩ | ⟨answer, selected, skipped, equal⟩
+    · exact PopTrace.answer_missing head .contA _ absent
+    · cases skipped
+  exact family.skip world input middle head callback world (model.future_refl world) value good missing
 
 /-- The earlier unconditional mask reader specializes the actual-edge replacement producer. -/
 abbrev getCont_value_replacement_selected
@@ -383,6 +414,47 @@ theorem resume_value (world : World) (input output : Kind)
   · exact supplied
   · exact pure
 
+/-- A whole cause return retains actual contextual deferred and replacement certificates. -/
+theorem resume_cause_local
+    (Allowed : World → Option (Cause ε δ ι α) → Prop)
+    (contextual : ContextualSavedFamily model interp Edge Allowed)
+    (hook : Contextual.HookMask Edge) (world : World) (input output : Kind)
+    (fiber : FrameFiber ν σ β ε δ ι α) (cause : Cause ε δ ι α) (provided : Option (Exit β ε δ ι α))
+    (good : model.cause world input cause) (stack : Path (Edge world) input output fiber.stack)
+    (absorbs : Contextual.AbsorbsInterrupt model world fiber.interruptedCause)
+    (admitted : Allowed world fiber.interruptedCause)
+    (deferred : ∀ reason, (fiber.getCont .contE true (some cause)).answer = .deferred reason →
+      FamilyResult model Edge world output (.failure reason) (fiber.getCont .contE true (some cause)).fiber.stack)
+    (replacement : ∀ next, (fiber.getCont .contE true (some cause)).answer = .replacement next →
+      FamilyResult model Edge world output next (fiber.getCont .contE true (some cause)).fiber.stack)
+    (supplied : ∀ incoming delivered, (fiber.getCont .contE true (some cause)).carriedCause = some delivered →
+      model.cause world incoming delivered →
+      ∀ exit ∈ provided.map (fiber.getCont .contE true (some cause)).deliveredExit, ExitAt model world incoming exit)
+    (pure : ∀ selected, (fiber.getCont .contE true (some cause)).answer = .frame selected →
+      ∀ delivered, (fiber.getCont .contE true (some cause)).carriedCause = some delivered →
+      programOf model world selected
+        ((provided.map (fiber.getCont .contE true (some cause)).deliveredExit).getD (.failure delivered)) = none) :
+    RunningStep model Edge world output (fiber.resumeCause interp cause provided).1 := by
+  cases selected : (fiber.getCont .contE true (some cause)).answer with
+  | empty => rw [FrameFiber.resumeCause_empty interp fiber cause provided selected]; trivial
+  | deferred reason =>
+    rw [FrameFiber.resumeCause_deferred interp fiber cause reason provided selected]
+    exact deferred reason selected
+  | replacement next =>
+    rw [FrameFiber.resumeCause_replacement interp fiber cause provided next selected]
+    exact replacement next selected
+  | frame frame =>
+    cases actual : frame.armE interp ((fiber.getCont .contE true (some cause)).carriedCause.getD cause)
+        (provided.map (fiber.getCont .contE true (some cause)).deliveredExit) with
+    | none => simp only [FrameFiber.resumeCause, selected, actual, RunningStep]
+    | some result =>
+      obtain ⟨next, pushed⟩ := result
+      obtain ⟨events, equation, typed⟩ := Contextual.Hooked.resumeCause_provided_selected
+        (admitted := admitted) model interp Edge Allowed contextual hook world input output
+        fiber cause provided frame next pushed good absorbs stack selected supplied (pure frame selected) actual
+      rw [equation]
+      exact typed
+
 include family mask in
 /-- A whole cause return consumes the actual delivered cause and shared selected-arm theorem. -/
 theorem resume_cause (world : World) (input output : Kind)
@@ -401,24 +473,17 @@ theorem resume_cause (world : World) (input output : Kind)
         ((provided.map (fiber.getCont .contE true (some cause)).deliveredExit).getD (.failure delivered)) = none) :
     RunningStep model Edge world output (fiber.resumeCause interp cause provided).1 := by
   have suffix := getCont_suffix model Edge mask world input output fiber .contE true (some cause) stack
-  cases selected : (fiber.getCont .contE true (some cause)).answer with
-  | empty => rw [FrameFiber.resumeCause_empty interp fiber cause provided selected]; trivial
-  | deferred reason =>
-    rw [FrameFiber.resumeCause_deferred interp fiber cause reason provided selected]
+  apply resume_cause_local model Edge interp (fun _ _ => True)
+    (SavedFamily.contextual model interp Edge (fun _ _ => True) family)
+    (Contextual.unconditional_hook_mask Edge mask) world input output fiber cause provided
+    good stack absorbs True.intro
+  · intro reason selected
     obtain ⟨incoming, path⟩ := suffix
     exact ⟨incoming, model.failure world incoming reason (causes incoming reason), path⟩
-  | replacement next =>
-    rw [FrameFiber.resumeCause_replacement interp fiber cause provided next selected]
+  · intro next selected
     obtain ⟨incoming, path⟩ := suffix
     exact ⟨incoming, replacement next selected incoming, path⟩
-  | frame frame =>
-    cases actual : frame.armE interp ((fiber.getCont .contE true (some cause)).carriedCause.getD cause)
-        (provided.map (fiber.getCont .contE true (some cause)).deliveredExit) with
-    | none => simp only [FrameFiber.resumeCause, selected, actual, RunningStep]
-    | some result =>
-      obtain ⟨next, pushed⟩ := result
-      obtain ⟨events, equation, typed⟩ := resumeCause_provided_selected model interp Edge family mask world input output
-        fiber cause provided frame next pushed good absorbs stack selected supplied (pure frame selected) actual
-      rw [equation]
-      exact typed
+  · exact supplied
+  · exact pure
+
 end Effect4.Machine.AnswerFlow.External

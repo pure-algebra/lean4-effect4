@@ -21,6 +21,25 @@ variable (Edge : World → Kind → Kind → NCode → Prop)
 variable (family : SavedFamily model interp.toPrimInterp Edge)
 variable (mask : ∀ world kind, Edge world kind kind (.setInterruptible true))
 
+/-- A native result retains either its actual completed exit or its live current and saved path. -/
+def ResultAt (world : World) (output : Kind) (result : Iter EffName EffThunk Val Err Defect FiberId Ann Ctx Stores) : Prop :=
+  match result.outcome with
+  | .finished exit => ExitAt model world output exit
+  | _ => FamilyResult model Edge world output result.fiber.frame.current result.fiber.frame.stack
+
+/-- The actual native frame dispatcher retains the exit permission of a completed frame. -/
+theorem step_frame_result (world : World) (output : Kind) (machine : NativeMachine)
+    (fiber : RunFiber EffName EffThunk Val Err Defect FiberId Ann Ctx) (yielding : Bool)
+    (typed : FamilyStep model Edge world output (fiber.frame.step interp.toPrimInterp).1) :
+    ResultAt model Edge world output (evaluatePrim.stepFrame interp machine fiber yielding) := by
+  unfold evaluatePrim.stepFrame
+  cases actual : fiber.frame.step interp.toPrimInterp with
+  | mk step events =>
+    rw [actual] at typed
+    cases step with
+    | running frame => exact typed
+    | finished exit => exact typed
+
 /-- The actual fused continuation pop retains the current primitive. -/
 theorem getCont_current (fiber : FrameFiber EffName EffThunk Val Err Defect FiberId Ann)
     (demand : Effect4.Arm) (skip : Bool) (cause : Option CauseV) :
