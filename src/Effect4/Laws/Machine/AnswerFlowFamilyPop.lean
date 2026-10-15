@@ -15,25 +15,44 @@ universe u v w
 variable {ν σ : Type u} {β : Type v} {ε δ ι α : Type u} {World Kind : Type w}
 variable [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α]
 
+/-- A generated restoring mask retains the output class of its actual source edge.
+Consumer: numeric callback families restrict masks at read and unit classes. -/
+def HookMask (Edge : World → Kind → Kind → Prim ν σ β ε δ ι α → Prop) : Prop :=
+  ∀ world input output code, Edge world input output code →
+    ∀ fiber : FrameFiber ν σ β ε δ ι α,
+      (code.ensure fiber).1.stack = .setInterruptible true :: fiber.stack →
+      Edge world output output (.setInterruptible true)
+
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+/-- An unconditional mask family supplies the source-sensitive hook interface. -/
+theorem unconditional_hook_mask
+    (Edge : World → Kind → Kind → Prim ν σ β ε δ ι α → Prop)
+    (mask : ∀ world kind, Edge world kind kind (.setInterruptible true)) : HookMask Edge :=
+  fun world _ output _ _ _ _ => mask world output
+
+namespace Hooked
+
 omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
 /-- Actual hook insertion adds only an identity edge to the existing saved path. -/
 theorem ensure_path
     (_model : Model (ν := ν) (σ := σ) (β := β) (ε := ε) (δ := δ) (ι := ι) (α := α) World Kind)
     (Edge : World → Kind → Kind → Prim ν σ β ε δ ι α → Prop)
-    (mask : ∀ world kind, Edge world kind kind (.setInterruptible true))
     (world : World) (input output : Kind) (code : Prim ν σ β ε δ ι α)
-    (fiber : FrameFiber ν σ β ε δ ι α) (stack : Path (Edge world) input output fiber.stack) :
+    (fiber : FrameFiber ν σ β ε δ ι α)
+    (generated : (code.ensure fiber).1.stack = .setInterruptible true :: fiber.stack →
+      Edge world input input (.setInterruptible true))
+    (stack : Path (Edge world) input output fiber.stack) :
     Path (Edge world) input output (code.ensure fiber).1.stack := by
   rcases FrameFiber.ensure_stack_cases code fiber with kept | ⟨pushed, _, _⟩
   · rw [kept]; exact stack
-  · rw [pushed]; exact .cons (mask world input) stack
+  · rw [pushed]; exact .cons (generated pushed) stack
 
 variable (model : Model (ν := ν) (σ := σ) (β := β) (ε := ε) (δ := δ) (ι := ι) (α := α) World Kind)
 variable (interp : PrimInterp ν σ β ε δ ι α)
 variable (Edge : World → Kind → Kind → Prim ν σ β ε δ ι α → Prop)
 variable (Allowed : World → Option (Cause ε δ ι α) → Prop)
 variable (family : ContextualSavedFamily model interp Edge Allowed)
-variable (mask : ∀ world kind, Edge world kind kind (.setInterruptible true))
+variable (mask : HookMask Edge)
 
 /-- The model's cause classes absorb a recorded interrupt. Latest's failure walk adds it to the
 cause it carries past a skipped restoring mask (Effect 4.0.1 `internal/core.ts:580-608`; U-01).
@@ -76,7 +95,8 @@ theorem popFrom_value_selected (world : World) (input output : Kind)
       have scratch : Path (Edge world) middle middle fiber.stack := by
         rw [empty]; exact .nil middle
       exact ⟨input, middle, good, callback,
-        Path.append (ensure_path model Edge mask world middle middle head fiber scratch) path⟩
+        Path.append (ensure_path model Edge world middle middle head fiber
+          (fun pushed => mask world input middle head callback fiber pushed) scratch) path⟩
     · intro input middle head fiber after callback empty
       rw [FrameFiber.passPushed_fiber_cause]; exact PopTrace.drain_empty .contA false head fiber empty
     · intro input middle output head tail fiber before after tailPop callback path empty passed drained next good found
@@ -247,7 +267,8 @@ theorem popFrom_cause_selected (world : World) (input output : Kind)
       have suffix : Path (Edge world) middle middle current.stack := by
         rw [scratch.1]; exact .nil middle
       exact ⟨input, middle, cause, incoming, good, callback,
-        Path.append (ensure_path model Edge mask world middle middle head current suffix) path⟩
+        Path.append (ensure_path model Edge world middle middle head current
+          (fun pushed => mask world input middle head callback current pushed) suffix) path⟩
     · intro input middle head current after callback scratch
       rw [FrameFiber.passPushed_fiber_cause]
       exact ⟨PopTrace.drain_empty .contE true head current scratch.1,
@@ -492,6 +513,181 @@ theorem finalizer_step {χ : Type u} {St : Type (max u v)}
     dsimp only
     rw [hook]
     exact ⟨rfl, typed⟩
+
+end Hooked
+
+abbrev AbsorbsInterrupt := @Hooked.AbsorbsInterrupt
+abbrev absorbsInterrupt_none := @Hooked.absorbsInterrupt_none
+abbrev ensure_recorded := @Hooked.ensure_recorded
+abbrev drain_cause := @Hooked.drain_cause
+abbrev saved_discard_cause := @Hooked.saved_discard_cause
+
+variable (model : Model (ν := ν) (σ := σ) (β := β) (ε := ε) (δ := δ) (ι := ι) (α := α) World Kind)
+variable (interp : PrimInterp ν σ β ε δ ι α)
+variable (Edge : World → Kind → Kind → Prim ν σ β ε δ ι α → Prop)
+variable (Allowed : World → Option (Cause ε δ ι α) → Prop)
+variable (family : ContextualSavedFamily model interp Edge Allowed)
+variable (mask : ∀ world kind, Edge world kind kind (.setInterruptible true))
+
+omit [DecidableEq ε] [DecidableEq δ] [DecidableEq ι] [DecidableEq α] in
+include model mask in
+/-- The former unconditional hook interface specializes the actual pushed-mask producer. -/
+theorem ensure_path
+    (world : World) (input output : Kind) (code : Prim ν σ β ε δ ι α)
+    (fiber : FrameFiber ν σ β ε δ ι α) (stack : Path (Edge world) input output fiber.stack) :
+    Path (Edge world) input output (code.ensure fiber).1.stack :=
+  Hooked.ensure_path model Edge world input output code fiber (fun _ => mask world input) stack
+
+/-- The previous mask interface specializes the common source-sensitive pop proof. -/
+abbrev popFrom_value_selected := Hooked.popFrom_value_selected model interp Edge Allowed family (unconditional_hook_mask Edge mask)
+
+/-- The previous mask interface specializes the common source-sensitive pop proof. -/
+abbrev getCont_value_selected := Hooked.getCont_value_selected model interp Edge Allowed family (unconditional_hook_mask Edge mask)
+
+include interp family mask in
+/-- The previous mask interface specializes the common source-sensitive pop proof. -/
+theorem popFrom_cause_selected (world : World) (input output : Kind)
+    (frames : List (Prim ν σ β ε δ ι α)) (fiber : FrameFiber ν σ β ε δ ι α)
+    (cause : Cause ε δ ι α) (selected : Prim ν σ β ε δ ι α)
+    (empty : fiber.stack = [])
+    (good : model.cause world input cause)
+    (absorbs : AbsorbsInterrupt model world fiber.interruptedCause)
+    (stack : Path (Edge world) input output frames)
+    (found : (FrameFiber.popFrom .contE true frames fiber (some cause)).answer = .frame selected)
+    (admitted : Allowed world fiber.interruptedCause := by trivial) :
+    ∃ incoming middle delivered,
+      (FrameFiber.popFrom .contE true frames fiber (some cause)).carriedCause = some delivered ∧
+      model.cause world incoming delivered ∧ Edge world incoming middle selected ∧
+      Path (Edge world) middle output
+        (FrameFiber.popFrom .contE true frames fiber (some cause)).fiber.stack := by
+  exact Hooked.popFrom_cause_selected (admitted := admitted) model interp Edge Allowed family (unconditional_hook_mask Edge mask) world input output frames fiber cause selected empty good absorbs stack found
+
+include interp family mask in
+/-- The previous mask interface specializes the common source-sensitive pop proof. -/
+theorem getCont_cause_selected (world : World) (input output : Kind)
+    (fiber : FrameFiber ν σ β ε δ ι α) (cause : Cause ε δ ι α)
+    (selected : Prim ν σ β ε δ ι α)
+    (good : model.cause world input cause)
+    (absorbs : AbsorbsInterrupt model world fiber.interruptedCause)
+    (stack : Path (Edge world) input output fiber.stack)
+    (found : (fiber.getCont .contE true (some cause)).answer = .frame selected)
+    (admitted : Allowed world fiber.interruptedCause := by trivial) :
+    ∃ incoming middle delivered,
+      (fiber.getCont .contE true (some cause)).carriedCause = some delivered ∧
+      model.cause world incoming delivered ∧ Edge world incoming middle selected ∧
+      Path (Edge world) middle output (fiber.getCont .contE true (some cause)).fiber.stack := by
+  exact Hooked.getCont_cause_selected (admitted := admitted) model interp Edge Allowed family (unconditional_hook_mask Edge mask) world input output fiber cause selected good absorbs stack found
+
+/-- The previous mask interface specializes the common source-sensitive pop proof. -/
+abbrev resumeValue_selected := Hooked.resumeValue_selected model interp Edge Allowed family (unconditional_hook_mask Edge mask)
+
+include interp family mask in
+/-- The previous mask interface specializes the common source-sensitive pop proof. -/
+theorem resumeCause_provided_selected (world : World) (input output : Kind)
+    (fiber : FrameFiber ν σ β ε δ ι α) (cause : Cause ε δ ι α)
+    (provided : Option (Exit β ε δ ι α))
+    (selected next : Prim ν σ β ε δ ι α) (pushed : List (Prim ν σ β ε δ ι α))
+    (good : model.cause world input cause)
+    (absorbs : AbsorbsInterrupt model world fiber.interruptedCause)
+    (stack : Path (Edge world) input output fiber.stack)
+    (found : (fiber.getCont .contE true (some cause)).answer = .frame selected)
+    (supplied : ∀ incoming delivered,
+      (fiber.getCont .contE true (some cause)).carriedCause = some delivered →
+      model.cause world incoming delivered →
+      ∀ exit ∈ provided.map (fiber.getCont .contE true (some cause)).deliveredExit,
+        ExitAt model world incoming exit)
+    (pure : ∀ delivered,
+      (fiber.getCont .contE true (some cause)).carriedCause = some delivered →
+      programOf model world selected
+        ((provided.map (fiber.getCont .contE true (some cause)).deliveredExit).getD
+          (.failure delivered)) = none)
+    (evaluated : selected.armE interp
+      ((fiber.getCont .contE true (some cause)).carriedCause.getD cause)
+      (provided.map (fiber.getCont .contE true (some cause)).deliveredExit) = some (next, pushed))
+    (admitted : Allowed world fiber.interruptedCause := by trivial) :
+    ∃ events, fiber.resumeCause interp cause provided =
+      (.running {(fiber.getCont .contE true (some cause)).fiber with
+        current := next
+        stack := pushed ++ (fiber.getCont .contE true (some cause)).fiber.stack}, events) ∧
+      FamilyResult model Edge world output next
+        (pushed ++ (fiber.getCont .contE true (some cause)).fiber.stack) := by
+  exact Hooked.resumeCause_provided_selected (admitted := admitted) model interp Edge Allowed family (unconditional_hook_mask Edge mask) world input output fiber cause provided selected next pushed good absorbs stack found supplied pure evaluated
+
+include interp family mask in
+/-- The previous mask interface specializes the common source-sensitive pop proof. -/
+theorem resumeCause_selected (world : World) (input output : Kind)
+    (fiber : FrameFiber ν σ β ε δ ι α) (cause : Cause ε δ ι α)
+    (selected next : Prim ν σ β ε δ ι α) (pushed : List (Prim ν σ β ε δ ι α))
+    (good : model.cause world input cause)
+    (absorbs : AbsorbsInterrupt model world fiber.interruptedCause)
+    (stack : Path (Edge world) input output fiber.stack)
+    (found : (fiber.getCont .contE true (some cause)).answer = .frame selected)
+    (pure : programOf model world selected
+      ((fiber.getCont .contE true (some cause)).deliveredExit (.failure cause)) = none)
+    (evaluated : selected.armE interp
+      ((fiber.getCont .contE true (some cause)).carriedCause.getD cause) none = some (next, pushed))
+    (admitted : Allowed world fiber.interruptedCause := by trivial) :
+    ∃ events, fiber.resumeCause interp cause none =
+      (.running {(fiber.getCont .contE true (some cause)).fiber with
+        current := next
+        stack := pushed ++ (fiber.getCont .contE true (some cause)).fiber.stack}, events) ∧
+      FamilyResult model Edge world output next (pushed ++ (fiber.getCont .contE true (some cause)).fiber.stack) := by
+  exact Hooked.resumeCause_selected (admitted := admitted) model interp Edge Allowed family (unconditional_hook_mask Edge mask) world input output fiber cause selected next pushed good absorbs stack found pure evaluated
+
+/-- The previous mask interface specializes the common source-sensitive pop proof. -/
+abbrev getCont_value_finalizer := Hooked.getCont_value_finalizer model interp Edge Allowed family (unconditional_hook_mask Edge mask)
+
+include interp family mask in
+/-- The previous mask interface specializes the common source-sensitive pop proof. -/
+theorem getCont_cause_finalizer (world : World) (input output : Kind)
+    (fiber : FrameFiber ν σ β ε δ ι α) (cause : Cause ε δ ι α) (selected next : Prim ν σ β ε δ ι α)
+    (good : model.cause world input cause) (absorbs : AbsorbsInterrupt model world fiber.interruptedCause)
+    (stack : Path (Edge world) input output fiber.stack)
+    (found : (fiber.getCont .contE true (some cause)).answer = .frame selected)
+    (installed : programOf model world selected
+      ((fiber.getCont .contE true (some cause)).deliveredExit (.failure cause)) = some next)
+    (admitted : Allowed world fiber.interruptedCause := by trivial) :
+    FamilyResult model Edge world output next (fiber.getCont .contE true (some cause)).fiber.stack := by
+  exact Hooked.getCont_cause_finalizer (admitted := admitted) model interp Edge Allowed family (unconditional_hook_mask Edge mask) world input output fiber cause selected next good absorbs stack found installed
+
+include interp family mask in
+/-- The previous mask interface specializes the common source-sensitive pop proof. -/
+theorem finalizer_step {χ : Type u} {St : Type (max u v)}
+    (runInterp : RunInterp ν σ β ε δ ι α χ St)
+    (world : World) (input output : Kind)
+    (machine : RunMachine ν σ β ε δ ι α χ St) (fiber : RunFiber ν σ β ε δ ι α χ)
+    (yielding : Bool) (exit : Exit β ε δ ι α)
+    (body : Prim ν σ β ε δ ι α) (name : ν) (flag : Bool) (program : Prim ν σ β ε δ ι α)
+    (good : ExitAt model world input exit)
+    (absorbs : ∀ cause, exit = .failure cause →
+      AbsorbsInterrupt model world fiber.frame.interruptedCause)
+    (stack : Path (Edge world) input output fiber.frame.stack)
+    (chosen : (fiber.frame.getCont
+      (match exit with | .success _ => .contA | .failure _ => .contE)
+      (match exit with | .success _ => false | .failure _ => true)
+      (match exit with | .success _ => none | .failure cause => some cause)).answer =
+        .frame (.onExit body name flag))
+    (hook : runInterp.finalizerProgram name
+      ((fiber.frame.getCont
+        (match exit with | .success _ => .contA | .failure _ => .contE)
+        (match exit with | .success _ => false | .failure _ => true)
+        (match exit with | .success _ => none | .failure cause => some cause)).deliveredExit exit) = some program)
+    (installed : model.finalizer world name
+      ((fiber.frame.getCont
+        (match exit with | .success _ => .contA | .failure _ => .contE)
+        (match exit with | .success _ => false | .failure _ => true)
+        (match exit with | .success _ => none | .failure cause => some cause)).deliveredExit exit) =
+      some (finalizerCode runInterp
+        ((fiber.frame.getCont
+          (match exit with | .success _ => .contA | .failure _ => .contE)
+          (match exit with | .success _ => false | .failure _ => true)
+          (match exit with | .success _ => none | .failure cause => some cause)).deliveredExit exit) program))
+    (admitted : Allowed world fiber.frame.interruptedCause := by trivial) :
+    let result := evaluatePrim.finalizerOr runInterp machine fiber yielding exit
+    result.machine.state = machine.state ∧
+      FamilyResult model Edge world output result.fiber.frame.current result.fiber.frame.stack := by
+  exact Hooked.finalizer_step (admitted := admitted) (χ := χ) (St := St) model interp Edge Allowed family (unconditional_hook_mask Edge mask) runInterp world input output machine fiber yielding exit body name flag program good absorbs stack chosen hook installed
+
 
 end Effect4.Machine.AnswerFlow.Contextual
 

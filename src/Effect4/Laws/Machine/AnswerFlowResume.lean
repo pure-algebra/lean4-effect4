@@ -251,8 +251,8 @@ theorem answer_replacement_hook (frame : Prim ν σ β ε δ ι α)
 
 /-- The actual value replacement identifies its original typed edge and unchanged recorded cause.
 An actual hook-generated mask has the middle class reached by the passed original frame. -/
-theorem getCont_value_replacement_selected
-    (mask : ∀ world kind, Edge world kind kind (.setInterruptible true))
+theorem getCont_value_replacement_hooked
+    (mask : Contextual.HookMask Edge)
     (interp : PrimInterp ν σ β ε δ ι α)
     (Allowed : World → Option (Cause ε δ ι α) → Prop)
     (family : ContextualSavedFamily model interp Edge Allowed)
@@ -292,13 +292,19 @@ theorem getCont_value_replacement_selected
         simp only [Bool.false_and, Bool.false_eq_true, ↓reduceIte] at actual
         cases actual
         refine ⟨middle, middle, .setInterruptible true,
-          rest, {(head.ensure scratch).1 with stack := []}, mask world middle, path, middleGood,
+          rest, {(head.ensure scratch).1 with stack := []},
+          mask world incoming middle head callback scratch pushed, path, middleGood,
           rfl, (Contextual.ensure_recorded head scratch).trans same,
           answer_replacement_hook _ _ .contA next selected, ?_⟩
         rw [FrameFiber.passPushed_fiber_cause,
           FrameFiber.passPushed_fiber _ _ _ (.setInterruptible true) [] pushedOne] at suffix
         exact suffix
 
+
+/-- The earlier unconditional mask reader specializes the actual-edge replacement producer. -/
+abbrev getCont_value_replacement_selected
+    (mask : ∀ world kind, Edge world kind kind (.setInterruptible true)) :=
+  getCont_value_replacement_hooked model Edge (Contextual.unconditional_hook_mask Edge mask)
 
 /-- Actual continuation lookup can replace current code only with a failure primitive. -/
 theorem getCont_replacement_failure (world : World) (input output : Kind)

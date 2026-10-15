@@ -862,3 +862,33 @@ The coordinator already owns the TypedStored normalization repair in its newer t
 No root import changes are needed.
 This proof-only slice reaches no outside implementation gate.
 The next shared refinement replaces unconditional mask generation with an actual-edge hook premise.
+
+## Actual source-edge mask generation
+
+The coordinator must keep the source-sensitive hook premise when refining numeric saved edges.
+The base is `61c481ccc`.
+Both original endpoints remain open.
+
+`Contextual.HookMask` grants an inserted mask only from its actual saved edge and actual pushed-stack equation.
+`Contextual.Hooked` now owns the existing value, cause, selected-callback, and finalizer pop proofs.
+The earlier Contextual and External interfaces specialize that one proof through `unconditional_hook_mask`.
+Their recorded-cause premises retain their defaults as explicit compatibility theorem parameters.
+The hooked replacement reader retains the actual synthetic mask at the passed source edge's output class.
+
+These helpers serve Timeout and Atomic native numeric consumers under R11, R10, and R4.
+They introduce no new machine or program representation and no second pop induction.
+The numeric application still must construct the source-sensitive saved-edge annotation.
+
+| Command through the serialized Lean slot | Result |
+| --- | --- |
+| `lake build Effect4.Laws.Machine.AnswerFlowFamilyPop Effect4.Laws.Machine.AnswerFlowResume Effect4.Laws.Program.NativeFrameScope` | Passed, 388 jobs |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberCountQueue Test.Dogfood.Proofs.HostTimeoutNumberTerminal Effect4.Laws.Machine.AnswerFlowResume Effect4.Laws.Program.NativeFrameScope` | Passed, 1261 jobs |
+| `lake env lean scratch/TimeoutReplacementAudit.lean` | The output below |
+
+```text
+#axiom_audit: 180 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
+
+The audit covers the shared contextual pop and replacement modules.
+Existing consumers reach both leaves, so no root import changes are needed.
+This proof-only slice reaches no outside implementation gate.
