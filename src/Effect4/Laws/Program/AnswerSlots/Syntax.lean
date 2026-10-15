@@ -1,3 +1,4 @@
+import Effect4.Laws.Program.CodeClosure.Predicate
 import Effect4.Laws.Program.AnswerSlots.Points
 
 /-!
@@ -102,4 +103,14 @@ def CodeAt (bindings : List Val) : NCode → Prop
   | .exitFrame body => CodeAt bindings body
   | .async register _ cancel => NameAt bindings register ∧ ∀ name ∈ cancel, NameAt bindings name
   | _ => True
+/-- The existing leading-binding predicate is the shared generated runtime-code fold.
+Consumer: the common compiler and callback closure. -/
+theorem codeAt_fold (bindings : List Val) (code : NCode) :
+    CodeAt bindings code =
+      cata_prim (CodeClosure.codeAlg (NameAt bindings) (ThunkAt bindings)) code := by
+  let hom : PrimHom (CodeClosure.codeAlg (NameAt bindings) (ThunkAt bindings)) := by
+    refine ⟨CodeAt bindings, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+    all_goals intros; rfl
+  exact hom_eq_cata_prim hom code
+
 end Effect4.Program.AnswerSlots
