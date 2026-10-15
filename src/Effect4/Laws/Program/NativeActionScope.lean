@@ -215,8 +215,10 @@ theorem mask_action_at (root : NativeEff) (fragment : Fragment root) (p : Point)
 
 set_option maxHeartbeats 2000000 in
 /-- Reading a source action retains every exact program child point. -/
-theorem source_action_children_under (root : NativeEff) (P : Point → Prop) (closed : ChildClosure root P) (p : Point) (action : NAction)
-    (owned : P p) (found : actionAt root p = some action) : ActionProgramsAt root (SourceProgramUnder root P p) action := by
+theorem source_action_children_with (root : NativeEff) (P : Point → Prop) (closed : ChildClosure root P)
+    (parallel : Prop) (p : Point) (action : NAction)
+    (owned : P p) (found : actionAt root p = some action) :
+    ActionProgramsWith (RaceAllowed root) parallel (SourceProgramUnder root P p) action := by
   fun_cases actionAt root p
   case case1 body source =>
     simp only [actionAt, source] at found
@@ -276,6 +278,12 @@ theorem source_action_children_under (root : NativeEff) (P : Point → Prop) (cl
     repeat' split at found
     all_goals aesop
 
+/-- Source actions satisfy the original parallel permission through the common producer. -/
+theorem source_action_children_under (root : NativeEff) (P : Point → Prop) (closed : ChildClosure root P)
+    (p : Point) (action : NAction) (owned : P p) (found : actionAt root p = some action) :
+    ActionProgramsAt root (SourceProgramUnder root P p) action :=
+  source_action_children_with root P closed (ParallelAllowed root) p action owned found
+
 /-- The original source caller uses lexical scope in the common action producer. -/
 theorem source_action_children (root : NativeEff) (p : Point) (action : NAction)
     (owned : At root p) (found : actionAt root p = some action) : ActionProgramsAt root (SourceProgramAt root p) action :=
@@ -288,9 +296,10 @@ theorem source_action_at (root : NativeEff) (fragment : Fragment root) (p : Poin
     (SourceProgramAt.scope root fragment p)
 
 /-- The scoped fork answer retains the same captured source point as its parent. -/
-theorem scoped_fork_children_under (root : NativeEff) (P : Point → Prop) (closed : ChildClosure root P) (p : Point) (scope : Nat)
-    (action : NAction) (owned : P p) (found : forkScopedAt root p scope = some action) :
-    ActionProgramsAt root (SourceProgramUnder root P p) action := by
+theorem scoped_fork_children_with (root : NativeEff) (P : Point → Prop) (closed : ChildClosure root P)
+    (parallel : Prop) (p : Point) (scope : Nat) (action : NAction) (owned : P p)
+    (found : forkScopedAt root p scope = some action) :
+    ActionProgramsWith (RaceAllowed root) parallel (SourceProgramUnder root P p) action := by
   unfold forkScopedAt at found
   split at found
   · rename_i body options source
@@ -301,6 +310,13 @@ theorem scoped_fork_children_under (root : NativeEff) (P : Point → Prop) (clos
       (.eff body) 0 first.1 first.2 rfl rfl
     exact ⟨body, second.1, second.2, rfl⟩
   · cases found
+
+/-- The scoped-fork producer supplies the original action permissions. -/
+theorem scoped_fork_children_under (root : NativeEff) (P : Point → Prop) (closed : ChildClosure root P)
+    (p : Point) (scope : Nat) (action : NAction) (owned : P p)
+    (found : forkScopedAt root p scope = some action) :
+    ActionProgramsAt root (SourceProgramUnder root P p) action :=
+  scoped_fork_children_with root P closed (ParallelAllowed root) p scope action owned found
 
 /-- The original scoped-fork caller uses the common child producer. -/
 theorem scoped_fork_children (root : NativeEff) (p : Point) (scope : Nat)
@@ -339,12 +355,32 @@ structure ActionClosure (root : NativeEff) (R S : Prop) (T : EffThunk → Prop) 
     P (.onSuccess (.withFiber .getCtx) (.updateThen update body flag))
   restore : ∀ body flag, T (.restoreRegion body flag) → P (regionCode root body)
 
-/-- One actual interpreter walk serves every supplied program-slot assertion. -/
-theorem interp_action_closed (root : NativeEff) (completed) (table : RowTable)
-    (R S : Prop) (T : EffThunk → Prop) (P : NCode → Prop) (closed : ActionClosure root R S T P)
+/-- The actual action result has one supplied assertion for every interpreter leaf.
+Consumer: program closure and the parallel-close source debit. -/
+structure ActionResults (root : NativeEff) (T : EffThunk → Prop) (A : NAction → Prop) : Prop where
+  source : ∀ point action, T (.act point) → actionAt root point = some action → A action
+  scopedFork : ∀ point scope action, T (.forkInAt point scope) → forkScopedAt root point scope = some action → A action
+  stored : ∀ name, T (.store (.act name)) → A (embedAction (actionOf name))
+  acquire : ∀ point context, T (.acquireMasked point context) →
+    A (.setInterruptible (.onSuccess (.withFiber (.store (.act .ambientScope))) (.acquireIn point context)) false)
+  release : ∀ point previous, T (.releaseMasked point previous) →
+    A (.setInterruptible (.onExit (resolve root point) (.restoreCtx previous) false) false)
+  layer : ∀ point memo scope, T (.forkLayer point memo scope) →
+    A (.fork (resolveLayer root point memo scope) ⟨true, true, .inherit⟩ point.path)
+  provide : ∀ update body flag, T (.provideMasked update body flag) →
+    A (.setInterruptible (.onSuccess (.withFiber .getCtx) (.updateThen update body flag)) false)
+  restore : ∀ body flag, T (.restoreRegion body flag) → A (.setInterruptible (regionCode root body) flag)
+  context : T .getCtx → A .getContext
+  captureMask : T .captureMask → A .getInterruptible
+  setContext : ∀ context, T (.setCtx context) → A (.setContext context)
+  closeScope : ∀ scope exit, T (.closeScope scope exit) → A (.closeScope scope exit)
+  awaitAllFailFast : ∀ targets, T (.awaitAllFailFast targets) → A (.awaitAllFailFast targets)
+
+/-- One actual interpreter walk serves every supplied action-result assertion. -/
+theorem interp_action_result (root : NativeEff) (completed) (table : RowTable)
+    (T : EffThunk → Prop) (A : NAction → Prop) (closed : ActionResults root T A)
     (thunk : EffThunk) (action : NAction) (owned : T thunk)
-    (found : (interpAt root completed table).withFiberOf thunk = some action) :
-    ActionProgramsWith R S (fun _ => P) action := by
+    (found : (interpAt root completed table).withFiberOf thunk = some action) : A action := by
   cases thunk
   case act p => exact closed.source p action owned found
   case forkInAt p scope => exact closed.scopedFork p scope action owned found
@@ -357,7 +393,37 @@ theorem interp_action_closed (root : NativeEff) (completed) (table : RowTable)
   case forkLayer p memo scope => cases found; exact closed.layer p memo scope owned
   case provideMasked update body flag => cases found; exact closed.provide update body flag owned
   case restoreRegion body flag => cases found; exact closed.restore body flag owned
-  all_goals aesop (add norm simp [interpAt, interpOf, ActionProgramsWith])
+  case getCtx => cases found; exact closed.context owned
+  case captureMask => cases found; exact closed.captureMask owned
+  case setCtx context => cases found; exact closed.setContext context owned
+  case closeScope scope exit => cases found; exact closed.closeScope scope exit owned
+  case awaitAllFailFast targets => cases found; exact closed.awaitAllFailFast targets owned
+  all_goals cases found
+
+/-- Program-slot closure supplies the same actual action-result contract. -/
+theorem ActionClosure.results (root : NativeEff) (R S : Prop) (T : EffThunk → Prop) (P : NCode → Prop)
+    (closed : ActionClosure root R S T P) : ActionResults root T (ActionProgramsWith R S (fun _ => P)) where
+  source := closed.source
+  scopedFork := closed.scopedFork
+  stored := closed.stored
+  acquire := closed.acquire
+  release := closed.release
+  layer := closed.layer
+  provide := closed.provide
+  restore := closed.restore
+  context := fun _ => trivial
+  captureMask := fun _ => trivial
+  setContext := fun _ _ => trivial
+  closeScope := fun _ _ _ => trivial
+  awaitAllFailFast := fun _ _ => trivial
+
+/-- Program-slot assertions use the common actual action-result producer. -/
+theorem interp_action_closed (root : NativeEff) (completed) (table : RowTable)
+    (R S : Prop) (T : EffThunk → Prop) (P : NCode → Prop) (closed : ActionClosure root R S T P)
+    (thunk : EffThunk) (action : NAction) (owned : T thunk)
+    (found : (interpAt root completed table).withFiberOf thunk = some action) :
+    ActionProgramsWith R S (fun _ => P) action :=
+  interp_action_result root completed table T _ (closed.results root R S T P) thunk action owned found
 
 /-- The original lexical source contract supplies the common action interpreter producer. -/
 theorem sourceActionClosure (root : NativeEff) (fragment : Fragment root) :

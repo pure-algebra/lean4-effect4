@@ -578,3 +578,29 @@ Both report zero declarations modulo goals and zero planned goals.
 Evidence: [the audit](evidence/FullSourceAudit.lean) and [its output](evidence/full-source-audit.log).
 The finalizer history endpoint remains a planned goal outside these audited helper modules.
 No outside implementation run is reached by these proof-only changes.
+
+
+### Actual native action accounting
+
+The six remaining M3 goals stay open. This slice supplies the full source action debit.
+Base: `cf8b0005e`. The commit containing this section records the slice head.
+
+`ActionResults` shares the native action producer for arbitrary result predicates.
+The old closure theorem is its instance. Full source closure and parallel-source zero use the same producer.
+`WriterWeights.parallel_bound` retains actual spawned finalizer rows with zero active source weight.
+`PlaceFunding.bound_debit_places` retains actual races and nested command weights.
+`FinalizerSource.action_debit` transfers authored race reservations into their actual race rows.
+Placement: scope-lifetime-finalization R11, serving `FinalizerRun.once_placed_outside_census`.
+Reach: the actual action result under source annotations and captured-scope ownership.
+This local debit establishes neither whole-history funding nor release custody.
+
+Changed files: `NativeActionScope.lean`, `FinalizerActions.lean`, `FinalizerNativeActions.lean`,
+`FinalizerRun.lean`, and `PlaceFunding/Actions.lean` under `src/Effect4/Laws/Program/`;
+`src/Effect4/Laws/Machine/WriterActions.lean`; this receipt and its evidence.
+Command through `scratch/lean-slot.sh`:
+`lake build Effect4.Laws.Program.FinalizerRun Effect4.Laws.Program.AnswerSlots.TypedActions ProofGraph.AxiomAudit`.
+Result: passed, 689 jobs.
+Command: `lake env lean docs/research/2026-10-14-meanings/evidence/NativeActionsAudit.lean`.
+Result: 643 declarations within `[propext, Quot.sound]`, zero modulo goals and zero planned goals.
+Evidence: [the audit](evidence/NativeActionsAudit.lean) and [its output](evidence/native-actions-audit.log).
+No outside implementation run is reached by these proof-only changes.

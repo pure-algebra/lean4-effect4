@@ -147,4 +147,44 @@ theorem interp_action_le (root : NativeEff) (q : List Nat) (view) (table : RowTa
   SourceScope.Opportunities.interp_action_bound root view table (current root q) (thunk root q)
     (ThunkAt q) (actionBounds root q) suspended next held found
 
+/-- Only stored finalizer actions produce parallel-close programs, whose source weight is zero. -/
+theorem parallelResults (root : NativeEff) (q : List Nat) :
+    SourceScope.ActionResults root (ThunkAt q)
+      (fun action => ∀ programs, action = .closePar programs → (programs.map (current root q)).sum = 0) where
+  source := by
+    intro point action held found programs selected
+    have actual := SourceScope.source_action_children_with root (PointAt q) (actionChildClosure root q)
+      False point action held found
+    rw [selected] at actual
+    exact actual.2.elim
+  scopedFork := by
+    intro point scope action held found programs selected
+    have actual := SourceScope.scoped_fork_children_with root (PointAt q) (actionChildClosure root q)
+      False point scope action held found
+    rw [selected] at actual
+    exact actual.2.elim
+  stored := by
+    intro name _ programs selected
+    have zero := stored_action_zero root q name
+    rw [selected] at zero
+    exact zero
+  acquire := fun _ _ _ _ impossible => nomatch impossible
+  release := fun _ _ _ _ impossible => nomatch impossible
+  layer := fun _ _ _ _ _ impossible => nomatch impossible
+  provide := fun _ _ _ _ _ impossible => nomatch impossible
+  restore := fun _ _ _ _ impossible => nomatch impossible
+  context := fun _ _ impossible => nomatch impossible
+  captureMask := fun _ _ impossible => nomatch impossible
+  setContext := fun _ _ _ impossible => nomatch impossible
+  closeScope := fun _ _ _ _ impossible => nomatch impossible
+  awaitAllFailFast := fun _ _ _ impossible => nomatch impossible
+
+/-- An actual parallel close transfers custody while adding no active source reservation. -/
+theorem interp_parallel_zero (root : NativeEff) (q : List Nat) (view) (table : RowTable)
+    (suspended : EffThunk) (programs : List NCode) (held : ThunkAt q suspended)
+    (found : (interpAt root view table).withFiberOf suspended = some (.closePar programs)) :
+    (programs.map (current root q)).sum = 0 :=
+  SourceScope.interp_action_result root view table (ThunkAt q) _ (parallelResults root q)
+    suspended (.closePar programs) held found programs rfl
+
 end Effect4.Program.FinalizerSource

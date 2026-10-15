@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.PlaceFunding.Transfer
 import Effect4.Laws.Machine.WriterActions
+import Effect4.Laws.Program.Guard.ReturnCommands
 
 /-!
 # The native action arm of a place ledger
@@ -18,6 +19,55 @@ set_option autoImplicit false
 namespace Effect4.Program.PlaceFunding
 open Effect4 Effect4.Machine Effect4.Program
 open Effect4.Program.Moves (AdministrativeTrace)
+
+/-- The existing nested-command certificate reads zero for the supplied administrative commands.
+Consumer: full source action accounting with nonzero resume programs. -/
+theorem nested_zero (weight : Guard.NCmd → Nat)
+    (simple : ∀ command, Guard.ReturnCommands.Simple command → weight command = 0)
+    (localCommand : ∀ owner command, Guard.ReturnCommands.Local owner command → weight command = 0)
+    (launch : ∀ race, weight (.launch race) = 0)
+    (registered : ∀ race yielding, weight (.registrationDone race yielding) = 0)
+    (root : NativeEff) (table : RowTable) (next : Moves.NIteration)
+    (held : Guard.ReturnCommands.Nested root table next) : (next.nested.map weight).sum = 0 := by
+  have every : ∀ command ∈ next.nested, weight command = 0 := by
+    intro command member
+    cases held with
+    | simple commands => exact simple command (commands command member)
+    | owned outcome front last commands previous final =>
+      rw [commands] at member
+      rcases List.mem_append.mp member with earlier | lastOne
+      · exact simple command (previous command earlier)
+      · rw [List.mem_singleton.mp lastOne]
+        exact localCommand _ last final
+    | registration outcome race row found host parked commands =>
+      rw [commands] at member
+      rcases List.mem_cons.mp member with first | rest
+      · rw [first]; exact launch race
+      · rw [List.mem_singleton.mp rest]; exact registered race next.yielding
+  have mapped : next.nested.map weight = next.nested.map (fun _ => 0) := List.map_congr_left every
+  rw [mapped, PlaceLedger.zero_sum]
+
+/-- Only a race-launch action appends an unlaunched program row.
+Consumer: action accounting retains existing nonzero race places. -/
+theorem with_fiber_races (interp : Moves.NInterp) (machine : NativeMachine) (fiber : Moves.NFiber)
+    (yielding : Bool) (action : NAction)
+    (first : ∀ programs site, action ≠ .raceAll programs site)
+    (last : ∀ programs site, action ≠ .raceAllFirst programs site) :
+    (evaluatePrim.withFiber interp machine fiber yielding action).machine.races = machine.races := by
+  fun_cases evaluatePrim.withFiber interp machine fiber yielding action
+  case case17 programs site => exact (first programs site rfl).elim
+  case case18 programs site => exact (last programs site rfl).elim
+  case case7 target scope next edits found =>
+    have same := Guard.FrameOwned.linkScopeEdits_races interp machine .fiberRunIn scope target
+      (some target) ReasonAnnotations.empty
+    rw [found] at same
+    exact same
+  case case27 programs next children found =>
+    have same := Guard.FrameOwned.forkFinalizers_races interp machine fiber programs
+    rw [found] at same
+    exact same
+  all_goals aesop (add norm simp [evaluatePrim.interruptAs, start, countdownParkEdits, spawn,
+    RunMachine.emit, Guard.FrameOwned.linkScopeEdits_races, Guard.FrameOwned.forkFinalizers_races])
 
 /-- A countdown registration extends the trace by its park event at most.
 Consumer: `withFiber_administrative`. -/
@@ -112,8 +162,31 @@ theorem Events.trace_debit {L : Ledger} (events : Events L) {m n : NativeMachine
   simp only [PlaceLedger.spent, PlaceLedger.issued, trace, List.map_append, List.sum_append]
   omega
 
-/-- A frame-model local bound with an administrative trace and a kept store is a ledger debit.
-Consumers: `action_debit` and `countdown_debit`. -/
+/-- Actual race and pending program weights compose with the existing frame and trace bounds.
+Consumer: the full finalizer source action debit. -/
+theorem bound_debit_places {L : Ledger} (events : Events L)
+    (model : FrameWeights.Model EffName EffThunk Val Err Defect FiberId Ann)
+    (rows : ∀ f : Moves.NFiber, L.fiber f = FrameWeights.frame model f.frame)
+    (m : NativeMachine) (fiber : Moves.NFiber) (next : Moves.NIteration)
+    (bounded : WriterWeights.LocalBound model m fiber next)
+    (traced : AdministrativeTrace m next.machine)
+    (kept : L.state next.machine.state ≤ L.state m.state)
+    (races : (next.machine.races.map L.race).sum ≤ (m.races.map L.race).sum)
+    (commands : (next.nested.map L.command).sum = 0) : L.IterDebit m fiber next := by
+  have trace := events.trace_debit traced
+  have row : L.fiber = fun f : Moves.NFiber => FrameWeights.frame model f.frame := funext rows
+  unfold WriterWeights.LocalBound at bounded
+  change FiberSum.outside (fun f : Moves.NFiber => FrameWeights.frame model f.frame) fiber.id next.machine +
+    FrameWeights.frame model next.fiber.frame ≤
+      FiberSum.outside (fun f : Moves.NFiber => FrameWeights.frame model f.frame) fiber.id m +
+        FrameWeights.frame model fiber.frame at bounded
+  rw [← row, ← rows next.fiber, ← rows fiber] at bounded
+  unfold PlaceLedger.IterDebit PlaceLedger.outside
+  simp only [commands, List.map_nil, List.sum_nil, Nat.add_zero]
+  omega
+
+/-- A ledger with zero race and command weights is an instance of the actual-place bound.
+Consumers: the original action and countdown callers. -/
 theorem bound_debit {L : Ledger} (quiet : NoQueue L) (events : Events L)
     (model : FrameWeights.Model EffName EffThunk Val Err Defect FiberId Ann)
     (rows : ∀ f : Moves.NFiber, L.fiber f = FrameWeights.frame model f.frame)
@@ -121,17 +194,9 @@ theorem bound_debit {L : Ledger} (quiet : NoQueue L) (events : Events L)
     (bounded : WriterWeights.LocalBound model m fiber next)
     (traced : AdministrativeTrace m next.machine)
     (kept : L.state next.machine.state ≤ L.state m.state) : L.IterDebit m fiber next := by
-  have trace := events.trace_debit traced
-  have row : L.fiber = fun f : Moves.NFiber => FrameWeights.frame model f.frame := funext rows
-  have outside (n : NativeMachine) : WriterWeights.outside model fiber.id n =
-      (n.fibers.map (ControlWeights.omitted RunFiber.id
-        (fun f : Moves.NFiber => FrameWeights.frame model f.frame) fiber.id)).sum := rfl
-  unfold WriterWeights.LocalBound at bounded
-  rw [outside, outside] at bounded
-  unfold PlaceLedger.IterDebit PlaceLedger.outside
-  simp only [funext quiet.races, funext quiet.commands, PlaceLedger.zero_sum, Nat.add_zero,
-    FiberSum.outside, row] at trace ⊢
-  omega
+  apply bound_debit_places events model rows m fiber next bounded traced kept
+  · simp only [funext quiet.races, PlaceLedger.zero_sum, Nat.le_refl]
+  · simp only [funext quiet.commands, PlaceLedger.zero_sum]
 
 /-- **The native action arm of a place ledger whose fiber row reads a frame weight model.**
 The frame part is `WriterWeights.action_bound`; the trace part is administrative; the instance
