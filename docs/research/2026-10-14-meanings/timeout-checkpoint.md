@@ -1290,3 +1290,27 @@ It supplies no active numeric invariant by itself.
 The cleanup reader then closes the original cleanup claim.
 The retry reader additionally consumes actual declared failure provenance.
 Neither result claims progress or host agreement beyond the existing reply-admission boundary.
+
+
+## Indexed authority through the existing pop
+
+The existing pop trace now carries scratch authority indexed by its current answer class and actual carried cause.
+The outer saved endpoint remains fixed.
+An actual passed frame supplies its remaining path, pass equation, and empty hook-drain equation to the authority step.
+The old family contract remains a constant-authority instance.
+The old trace and fused-pop interfaces delegate to the same induction.
+
+Placement: scope-lifetime-finalization R11 and store-typing R4; Timeout's passed restoring-mask authority consumes this interface.
+The generic interface assumes its local authority producer.
+It supplies no source-phase or numeric history invariant by itself.
+
+Verification command:
+
+```text
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh bash scratch/timeout-region-check.sh
+```
+
+The build passes with 1281 jobs.
+The audit checks 885 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
+It includes the indexed pop contract and every changed numeric certificate consumer.
+This proof-only slice reaches no outside implementation gate.
