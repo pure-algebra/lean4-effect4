@@ -2,6 +2,7 @@ import Test.Dogfood.Scenario.Atomic.StageSource
 import Test.Dogfood.Scenario.Atomic.StageFinalizer
 import Effect4.Laws.Machine.AnswerFlowViewsRefined
 import Effect4.Laws.Machine.AnswerFlowEmbedding
+import Effect4.Laws.Machine.AnswerFlowHooks
 
 /-!
 Concept: store-typing R4 and scope-lifetime-finalization R11.
@@ -19,6 +20,11 @@ open StageWorld
 def Owns (owner : Nat) : StageWorld.Kind → Prop
   | .waiting id | .seen id | .decision id | .deposit id | .body id | .finalized id | .note id | .cleanup id => owner = id
   | .ordinary | .rootAnswer _ => False
+
+/-- A failed body installs its merge wrapper; a successful body restores after cleanup directly. -/
+def FinalizerKind (owner : Nat) : ExitV → StageWorld.Kind
+  | .success _ => .cleanup owner
+  | .failure _ => .note owner
 
 /-- Current code retains the precise request stage required by its next actual operation. -/
 inductive CodeAt (root : NativeEff) (table : RowTable) (owner : Nat) : StageWorld.World → StageWorld.Kind → NCode → Prop
@@ -41,6 +47,12 @@ inductive CodeAt (root : NativeEff) (table : RowTable) (owner : Nat) : StageWorl
   | suspended {world kind thunk}
       (next : ∀ view, CodeAt root table owner world kind ((interpAt root view table).suspendBody thunk)) :
       CodeAt root table owner world kind (.suspend thunk)
+  | guardedExit {world body point} (first : CodeAt root table owner world (.body owner) body)
+      (callback : ∀ nextWorld, Future world nextWorld → ∀ view exit,
+        StageFinalizer.BodyExit nextWorld owner exit →
+        CodeAt root table owner nextWorld (FinalizerKind owner exit)
+          (resolve root (({point with completed := view} : Point).childWith 1 (reifyExitVal exit)))) :
+      CodeAt root table owner world (.finalized owner) (.onExit body (.fin point) false)
   | restoring {world body exit} (captured : StageFinalizer.BodyExit world owner exit)
       (first : CodeAt root table owner world (.cleanup owner) body) :
       CodeAt root table owner world (.finalized owner) (.onSuccess body (.restore exit))
@@ -111,6 +123,10 @@ theorem code_other (root : NativeEff) (table : RowTable) (owner : Nat)
   | suspended next ih =>
     intro after future stage cleaned owns
     exact .suspended (fun view => ih view after future stage cleaned owns)
+  | guardedExit first callback ihFirst ihCallback =>
+    intro after future stage cleaned owns
+    exact .guardedExit (ihFirst after future stage cleaned rfl)
+      (fun later next view exit good => callback later (order.trans future next) view exit good)
   | restoring captured first ih =>
     intro after future stage cleaned owns
     exact .restoring (StageFinalizer.body_exit_future _ after future owner _ captured)
@@ -159,6 +175,28 @@ theorem embedding (root : NativeEff) (table : RowTable) (owner : Nat) (view : Li
   cause_write := fun _ _ _ _ held => held
   code := fun _ _ _ _ held => held
   finalizer := fun _ _ _ _ => rfl
+
+/-- Actual native finalizer wrapping uses the captured body exit and the completed cleanup class. -/
+theorem finalizer_code (root : NativeEff) (table : RowTable) (owner : Nat)
+    (view : List (FiberId × ExitV)) (world : StageWorld.World) (exit : ExitV) (program : NCode)
+    (captured : StageFinalizer.BodyExit world owner exit)
+    (good : CodeAt root table owner world (FinalizerKind owner exit) program) :
+    CodeAt root table owner world (.finalized owner) (finalizerCode (interpAt root view table) exit program) := by
+  cases exit with
+  | success value => exact .restoring captured good
+  | failure cause => exact .restoring captured (.merging captured good)
+
+/-- Actual restoring mask frames use the shared identity answer contract. -/
+theorem mask_edge (root : NativeEff) (table : RowTable) (owner : Nat)
+    (world : StageWorld.World) (kind : StageWorld.Kind) (flag : Bool) :
+    Edge root table owner world kind kind (.setInterruptible flag) := by
+  apply EmbeddedEdgeOver.saved
+  refine ⟨fun view => saved_mask (model root table owner view) (interpAt root view table).toPrimInterp world kind flag,
+    ?_, ?_⟩
+  · intro name cursor equal
+    cases equal
+  · intro name cursor equal
+    cases equal
 
 /-- Native bind edges consume the actual answer class and preserve the separate failure class. -/
 theorem bound_edge (root : NativeEff) (table : RowTable) (owner : Nat) (world : StageWorld.World)

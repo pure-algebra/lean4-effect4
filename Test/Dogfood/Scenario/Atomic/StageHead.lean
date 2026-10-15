@@ -13,6 +13,43 @@ namespace Test.Dogfood.Scenario.Atomic.StageGraph
 open Effect4 Effect4.Machine Effect4.Program Effect4.Machine.AnswerFlow
 open StageWorld
 
+/-- The actual protected source finalizer always installs its real program before a pure arm. -/
+theorem guarded_exit_edge (root : NativeEff) (table : RowTable) (owner : Nat)
+    (world : StageWorld.World) (body : NCode) (point : Point)
+    (callback : ∀ nextWorld, Future world nextWorld → ∀ view exit,
+      StageFinalizer.BodyExit nextWorld owner exit →
+      CodeAt root table owner nextWorld (FinalizerKind owner exit)
+        (resolve root (({point with completed := view} : Point).childWith 1 (reifyExitVal exit)))) :
+    Edge root table owner world (.body owner) (.finalized owner) (.onExit body (.fin point) false) := by
+  apply EmbeddedEdgeOver.saved
+  refine ⟨?_, ?_, ?_⟩
+  · intro view
+    refine SavedAt.mk world (StageWorld.Kind.body owner) (StageWorld.Kind.finalized owner) _ ?_ ?_ ?_ ?_ ?_ ?_
+    · intro nextWorld future value good absent
+      cases absent
+    · intro nextWorld future cause good absent
+      cases absent
+    · intro nextWorld future value provided next pushed good supplied noProgram actual
+      change some _ = none at noProgram
+      cases noProgram
+    · intro nextWorld future cause provided next pushed good supplied noProgram actual
+      change some _ = none at noProgram
+      cases noProgram
+    · intro nextWorld future exit next good installed
+      change some (finalizerCode (interpAt root view table) exit
+        (resolve root (({point with completed := view} : Point).childWith 1 (reifyExitVal exit)))) = some next at installed
+      cases installed
+      have captured : StageFinalizer.BodyExit nextWorld owner exit := by
+        cases exit <;> exact good
+      exact finalizer_code root table owner view nextWorld exit _ captured (callback nextWorld future view exit captured)
+    · intro nextWorld future fiber cause delivered good arm interrupted skipped
+      rw [ensure_protected_not_interrupted] at interrupted
+      cases interrupted
+  · intro name cursor equal
+    cases equal
+  · intro name cursor equal
+    cases equal
+
 /-- Every annotated request head is an ordinary frame step or its actual stateful operation. -/
 theorem head_or_sync (root : NativeEff) (table : RowTable) (owner : Nat)
     (view : List (FiberId × ExitV)) (world : StageWorld.World) (kind : StageWorld.Kind)
@@ -34,6 +71,11 @@ theorem head_or_sync (root : NativeEff) (table : RowTable) (owner : Nat)
     simp only [suspendBodyAt, zero]
     exact .frontier rfl
   | suspended next => exact .inl (.suspend _ (next view))
+  | guardedExit first callback =>
+    apply Or.inl
+    apply HeadAt.onExit (middle := StageWorld.Kind.body owner)
+    · exact first
+    · exact guarded_exit_edge root table owner world _ _ callback
   | restoring captured first =>
     apply Or.inl
     apply HeadAt.onSuccess (middle := StageWorld.Kind.cleanup owner)
