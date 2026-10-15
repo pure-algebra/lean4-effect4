@@ -31,41 +31,59 @@ theorem finalizer_dispatcher (interp : NInterp) (machine : NativeMachine) (fiber
     · exact stepFrame_dispatcher interp machine fiber yielding
   · exact stepFrame_dispatcher interp machine fiber yielding
 
-/-- Nonaction primitive evaluation retains old tasks and adds only its actual successful yield reply. -/
-theorem evaluatePrim_dispatcher (interp : NInterp) (machine : NativeMachine) (fiber : NFiber) (yielding : Bool)
-    (P : Task EffName EffThunk Val Err Defect FiberId Ann → Prop)
+/-- The actual primitive producer transports stored-row and dispatcher assertions together. -/
+theorem evaluatePrim_dispatcher_on (interp : NInterp) (machine : NativeMachine) (fiber : NFiber) (yielding : Bool)
+    (R : List NFiber → Prop) (P : Task EffName EffThunk Val Err Defect FiberId Ann → Prop)
     (voidReply : ∀ owner token, P (.resume owner token (.success interp.voidValue)))
-    (owned : DispatcherPredicate.All P fiber.dispatcher)
-    (unparked : interp.parkOf fiber.frame.current = none)
-    (ordinary : ∀ thunk, fiber.frame.current ≠ .withFiber thunk) :
+    (rows : R machine.fibers) (owned : DispatcherPredicate.All P fiber.dispatcher)
+    (actions : ∀ thunk action, fiber.frame.current = .withFiber thunk →
+      interp.parkOf fiber.frame.current = none → interp.withFiberOf thunk = some action →
+      R (evaluatePrim.withFiber interp machine fiber yielding action).machine.fibers ∧
+        DispatcherPredicate.All P (evaluatePrim.withFiber interp machine fiber yielding action).fiber.dispatcher) :
     let result := evaluatePrim interp machine fiber yielding
-    result.machine.fibers = machine.fibers ∧ DispatcherPredicate.All P result.fiber.dispatcher := by
+    R result.machine.fibers ∧ DispatcherPredicate.All P result.fiber.dispatcher := by
   have produced := evaluatePrim_producer interp machine fiber yielding
   generalize actual : evaluatePrim interp machine fiber yielding = result at produced ⊢
   dsimp only
   cases produced with
   | step noPark noAction noSync noSuccess noFailure noYield noAsync =>
     have same := stepFrame_dispatcher interp machine fiber yielding
-    refine ⟨same.1, ?_⟩
-    rw [same.2]
-    exact owned
+    rw [same.1, same.2]
+    exact ⟨rows, owned⟩
   | finalizer exit current =>
     have same := finalizer_dispatcher interp machine fiber yielding exit
-    refine ⟨same.1, ?_⟩
-    rw [same.2]
-    exact owned
-  | action thunk action current noPark found => exact (ordinary thunk current).elim
-  | sync thunk state value current noPark found => exact ⟨rfl, owned⟩
-  | fallback thunk current noPark missing => exact ⟨rfl, owned⟩
+    rw [same.1, same.2]
+    exact ⟨rows, owned⟩
+  | action thunk action current noPark found => exact actions thunk action current noPark found
+  | sync thunk state value current noPark found => exact ⟨rows, owned⟩
+  | fallback thunk current noPark missing => exact ⟨rows, owned⟩
   | yieldNow priority current =>
-    exact ⟨rfl, DispatcherPredicate.enqueue P fiber.dispatcher priority _ owned (voidReply fiber.id machine.nextToken)⟩
-  | asyncImmediate register signal cancel state code current registered => exact ⟨rfl, owned⟩
-  | asyncParked register signal cancel state current registered =>
-    split <;> exact ⟨rfl, owned⟩
-  | rejectedPark cause park => rw [unparked] at park; cases park
-  | racePark race park => rw [unparked] at park; cases park
-  | countdownPark targets next returned parked edits park counted => rw [unparked] at park; cases park
-  | joinMissing target mode park missing => rw [unparked] at park; cases park
-  | joinExited target mode other exit park found exited => rw [unparked] at park; cases park
-  | joinWaiting target mode other park found live => rw [unparked] at park; cases park
+    exact ⟨rows, DispatcherPredicate.enqueue P fiber.dispatcher priority _ owned (voidReply fiber.id machine.nextToken)⟩
+  | asyncImmediate register signal cancel state code current registered => exact ⟨rows, owned⟩
+  | asyncParked register signal cancel state current registered => split <;> exact ⟨rows, owned⟩
+  | rejectedPark => exact ⟨rows, owned⟩
+  | racePark => unfold registerRace; split <;> exact ⟨rows, owned⟩
+  | countdownPark targets next returned parked edits park counted =>
+    have same : (countdownParkEdits interp machine fiber targets .exitsValue false).1.fibers = machine.fibers ∧
+        (countdownParkEdits interp machine fiber targets .exitsValue false).2.1.dispatcher = fiber.dispatcher := by
+      unfold countdownParkEdits
+      dsimp only
+      split <;> exact ⟨rfl, rfl⟩
+    rw [counted] at same
+    cases parked <;> exact ⟨same.1 ▸ rows, same.2 ▸ owned⟩
+  | joinMissing => exact ⟨rows, owned⟩
+  | joinExited => exact ⟨rows, owned⟩
+  | joinWaiting => exact ⟨rows, owned⟩
+
+/-- Nonaction primitive evaluation retains old tasks and adds only its actual successful yield reply. -/
+theorem evaluatePrim_dispatcher (interp : NInterp) (machine : NativeMachine) (fiber : NFiber) (yielding : Bool)
+    (P : Task EffName EffThunk Val Err Defect FiberId Ann → Prop)
+    (voidReply : ∀ owner token, P (.resume owner token (.success interp.voidValue)))
+    (owned : DispatcherPredicate.All P fiber.dispatcher)
+    (_unparked : interp.parkOf fiber.frame.current = none)
+    (ordinary : ∀ thunk, fiber.frame.current ≠ .withFiber thunk) :
+    let result := evaluatePrim interp machine fiber yielding
+    result.machine.fibers = machine.fibers ∧ DispatcherPredicate.All P result.fiber.dispatcher :=
+  evaluatePrim_dispatcher_on interp machine fiber yielding (fun rows => rows = machine.fibers) P voidReply rfl owned
+    (fun thunk _ current _ _ => (ordinary thunk current).elim)
 end Effect4.Program.Moves
