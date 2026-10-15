@@ -2503,7 +2503,7 @@ theorem requestOrInterrupted_driveStep_interruptTarget (p : NativeEff) (table : 
 structure CommandControlsPreserved (m n : NativeMachine) : Prop where
   active : ∀ fiber f, m.fiber? fiber = some f → f.running = true → f.parked = .notParked →
     ∃ g, n.fiber? fiber = some g ∧ g.running = true ∧ g.parked = .notParked ∧
-      g.frame.current = f.frame.current
+      g.frame.current = f.frame.current ∧ (f.frame.stack = [] → g.frame.stack = [])
   exited : ∀ fiber f, m.fiber? fiber = some f → f.exit.isSome = true →
     ∃ g, n.fiber? fiber = some g ∧ g.exit.isSome = true
 
@@ -2517,8 +2517,7 @@ theorem commandAuthority_transport_commands (p : NativeEff) (table : RowTable)
     {m n : NativeMachine} (controls : CommandControlsPreserved m n)
     (races : RaceHostsPreserved m n) (command : NCmd)
     (authority : CommandAuthority p table m command) : CommandAuthority p table n command := by
-  cases command <;> try (exact True.intro)
-  all_goals try (exact commandControls_activeAt controls authority)
+  cases command
   case launch raceId =>
     obtain ⟨race, hr, ha⟩ := authority
     obtain ⟨next, hn, he⟩ := races raceId race hr
@@ -2530,11 +2529,12 @@ theorem commandAuthority_transport_commands (p : NativeEff) (table : RowTable)
   case registrationDone raceId yielding =>
     obtain ⟨race, f, hr, hf, hrun, hpark, hcode⟩ := authority
     obtain ⟨next, hn, he⟩ := races raceId race hr
-    obtain ⟨g, hg, hrun', hpark', hcurrent⟩ := controls.active race.host f hf hrun hpark
+    obtain ⟨g, hg, hrun', hpark', hcurrent, _⟩ := controls.active race.host f hf hrun hpark
     exact ⟨next, g, hn, he ▸ hg, hrun', hpark', hcurrent ▸ hcode⟩
   case exitDone fiber =>
     obtain ⟨f, hf, he⟩ := authority
     exact controls.exited fiber f hf he
+  all_goals aesop (add norm unfold [CommandAuthority]) (add safe apply [commandControls_activeAt])
 
 theorem commandControls_interruptWithCause
     {m : NativeMachine} {f : NFiber} (hf : m.fiber? f.id = some f)
@@ -2551,8 +2551,8 @@ theorem commandControls_interruptWithCause
       subst old
       refine ⟨g, fiber_lookup_update_self hold g (hid.trans (fiber_id_of_lookup hold)), ?_⟩
       have fields := (Moves.OtherEdit.interruptCause f fresh).controls (Or.inl hrun)
-      exact ⟨fields.2.2.2 hrun, fields.2.1.trans hpark, fields.1⟩
-    · refine ⟨old, ?_, hrun, hpark, rfl⟩
+      exact ⟨fields.2.2.2 hrun, fields.2.1.trans hpark, fields.1, fun empty => (Moves.OtherEdit.interruptCause f fresh).stack.trans empty⟩
+    · refine ⟨old, ?_, hrun, hpark, rfl, fun h => h⟩
       change (m.update g).fiber? fiber = some old
       simp only [fiber_lookup_update, hold, Option.map_some, hid, he, ↓reduceIte]
   · intro fiber old hold hexit

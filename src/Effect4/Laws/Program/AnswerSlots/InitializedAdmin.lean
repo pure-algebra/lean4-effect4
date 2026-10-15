@@ -72,22 +72,11 @@ theorem RootPath.future (spec : Spec) (first last : World) (future : Future firs
 
 /-- An environment message preserves the saved suffix even when it delivers interruption. -/
 theorem otherEdit_stack {before after : SourceScope.SourceFiber} (edit : Moves.OtherEdit before after) :
-    after.frame.stack = before.frame.stack := by
-  cases edit with
-  | observe => rfl
-  | filterObservers => rfl
-  | interruptCause cause =>
-    unfold interruptWithCause
-    dsimp only
-    repeat' split
-    all_goals rfl
+    after.frame.stack = before.frame.stack := edit.stack
 
 /-- The existing environment edit word preserves the actual saved suffix. -/
 theorem otherEdits_stack {before after : SourceScope.SourceFiber} (edits : Moves.OtherEdits before after) :
-    after.frame.stack = before.frame.stack := by
-  induction edits with
-  | refl => rfl
-  | tail prior edit ih => exact (otherEdit_stack edit).trans ih
+    after.frame.stack = before.frame.stack := edits.stack
 
 /-- Existing forward lookup edits transport a reserved administrative host's demand. -/
 theorem AdminDemand.transport (spec : Spec) (before after : NativeMachine) (command : Guard.NCmd)
@@ -230,9 +219,39 @@ theorem AdminHead.transport (root : NativeEff) (table : RowTable) (before after 
   intro host isLocal fiber found
   have owner := NativeAdminOrigin.owner before command host (NativeAdminOrigin.of_guard command host isLocal)
   obtain ⟨old, previous, running, parked⟩ := Guard.commandAuthority_owner_active root table before command host authority owner
-  obtain ⟨next, seen, nextRunning, nextParked, current⟩ := controls.active host old previous running parked
+  obtain ⟨next, seen, nextRunning, nextParked, current, _⟩ := controls.active host old previous running parked
   have same := Option.some.inj (seen.symm.trans found)
   subst next
   obtain ⟨thunk, source⟩ := head host isLocal old previous
   exact ⟨thunk, current.trans source⟩
+
+/-- A pending finish retains its actual drained suffix independently of initialized stores. -/
+def FinishEmpty (machine : NativeMachine) : Guard.NCmd → Prop
+  | .finish host _ => ∀ fiber, machine.fiber? host = some fiber → fiber.frame.stack = []
+  | _ => True
+
+/-- The current child invariant supplies the remaining finish permission at consumption. -/
+theorem terminal_of_empty (spec : Spec) (machine : NativeMachine) (command : Guard.NCmd)
+    (children : ChildrenReady spec machine) (empty : FinishEmpty machine command) :
+    TerminalDemand spec machine command := by
+  cases command <;> simp only [FinishEmpty, TerminalDemand] at empty ⊢
+  rename_i host exit
+  intro fiber found
+  refine ⟨empty fiber found, ?_⟩
+  rw [← Guard.fiber_id_of_lookup found]
+  exact children fiber (List.mem_of_find?_eq_some found)
+
+/-- Existing active-control transport carries the actual pending finish's empty suffix. -/
+theorem FinishEmpty.transport (root : NativeEff) (table : RowTable) (before after : NativeMachine)
+    (command : Guard.NCmd) (empty : FinishEmpty before command)
+    (authority : Guard.CommandAuthority root table before command)
+    (controls : Guard.CommandControlsPreserved before after) : FinishEmpty after command := by
+  cases command <;> simp only [FinishEmpty] at empty ⊢
+  rename_i host exit
+  intro fiber found
+  obtain ⟨old, previous, running, parked⟩ := authority
+  obtain ⟨next, seen, nextRunning, nextParked, current, stacks⟩ := controls.active host old previous running parked
+  have same := Option.some.inj (seen.symm.trans found)
+  subst next
+  exact stacks (empty old previous)
 end Effect4.Program.AnswerSlots.Initialized
