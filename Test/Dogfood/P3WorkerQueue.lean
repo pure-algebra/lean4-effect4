@@ -1,3 +1,4 @@
+import Test.Dogfood.P3WorkerQueue.Data
 import Test.Dogfood.Stage
 import Effect4.Run
 import Effect4.Author
@@ -75,13 +76,6 @@ namespace Test.Dogfood.P3WorkerQueue
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 
-/-! ## 1. The program -/
-
-/-- `Queue.take` answered by the host: the next job's id. -/
-def take : RowDef := Row.host "Jobs.take" .unit .nat
-/-- Run one job on the host; it may fail with (tag, message). -/
-def runJob : RowDef := Row.host "Jobs.run" .nat .unit (.prod .string .string)
-
 /-- One worker: hold a connection for its whole life (a release that counts closes), take jobs
 forever, handle a failed job, and count each finished job. The job that makes the count `total`
 completes the gate. -/
@@ -122,8 +116,6 @@ def pool (total : Nat) : Module NativeOp := poolWith (Effect4.Codegen.Forms.defa
 
 /-- The probe's spelling: the workers forked with `childOptions` (started at once, not daemons). -/
 def poolChild (total : Nat) : Module NativeOp := poolWith childOptions total
-
-def built? (m : Module NativeOp) : Option Effect4.Api.Built := (Effect4.Api.Author.build m).toOption
 
 #guard verdict (pool 5) = "built"
 #guard verdict (poolChild 5) = "built"

@@ -1,3 +1,4 @@
+import Effect4.Laws.Program.Author
 import Test.Dogfood.Scenario.Routing.Model
 import Effect4.Laws.Api.AuthorBuild
 

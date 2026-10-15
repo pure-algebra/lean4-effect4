@@ -1,11 +1,11 @@
-import Test.Program.QueueMask
-import Test.Program.QueueDefs
+import Test.Program.QueueMaskData
+import Test.Program.QueueDefsData
 import Effect4.Store.Domain.ProgramWire
 
 /-!
 The writer of the Queue's engine fixture. `make gen-fixtures` runs it, with every other lane's
 writer (`scripts/generate.py --only fixtures`, the group `fixtures` of `docs/GENERATED.md`).
-Alone, run it from the repository's root, after a build of `Test.Program.QueueMask`:
+Alone, run it from the repository's root, after a build of `Test.Program.QueueMaskData`:
 
     lake env lean --run ocaml/engine/test/queue/write.lean
 

@@ -16,15 +16,15 @@ skipped while none of that has changed; `make -B <target>` or `make clean-check`
 forces it. One Lean process runs at a time. (Until 2026-09-13 this was
 `git:c67ff096:scripts/sweep.sh` with a per-script result cache; the script survives as a wrapper.)
 
-`truth/` is two lanes on one runner: `make check-truth`, the hand-written programs with
+`truth/` is two lanes on one runner: `make check-ts`, the hand-written programs with
 their recorded tapes (the behaviour register: layer sharing counters, host rows, the tag
-residual, chosen values), and `make check-corpus`, the 400 generated programs of
+residual, chosen values), and `make check-ts`, the 400 generated programs of
 `Test/Program/Gen.lean` run on rc.112 and type-checked, with one committed row per program
 (`truth/corpus-results.tsv`) and the disagreements it records listed with their reasons
 (`truth/corpus-known-differences.md`). The generated corpus adds breadth over constructs the
 hand corpus never runs; it does not replace the hand programs.
 
-`schema-generation/` is `make check-schema-ts`, in the full tier and the nightly CI lane, on
+`schema-generation/` is `make check-ts`, in the full tier and the nightly CI lane, on
 the Schema sources and the harness directory as inputs. (`schema-annotations/` and
 `schema-effectful-field/`, the `check-schema-host` gate, were deleted on 2026-10-01 under
 decisions row 39; their last revision is `git:d554cd71:harness/`.)

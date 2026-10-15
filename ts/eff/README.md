@@ -63,7 +63,7 @@ tier, so a stale file fails the check and nobody runs a generator by hand. Two c
 
 ## Check
 
-The receipt is a differential against Lean's own reader: `make check-ts-reader` (in the
+The receipt is a differential against Lean's own reader: `make check-ts` (in the
 per-change tier; needs bun). `make corpus` runs `tools/Drivers/Corpus.lean`, which writes 400
 generated programs and the wire corpus under `.lake/corpus` as `.ts` (the printer's bytes)
 with a `.json` and `.eff` beside each — the program Lean's reader gets back after the printer

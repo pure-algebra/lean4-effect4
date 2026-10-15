@@ -1,8 +1,7 @@
-import Test.Dogfood.Scenario
+import Test.Dogfood.Scenario.Data
 import Effect4.Author
-import Test.Dogfood.P4RateLimiter
-import Test.Dogfood.P5LedgerService
-import Effect4.Laws.Author
+import Test.Dogfood.P4RateLimiter.Data
+import Test.Dogfood.P5LedgerService.Data
 
 /-!
 # The atomic scenario's program and observation
@@ -16,7 +15,6 @@ set_option autoImplicit false
 namespace Test.Dogfood.Scenario.Atomic
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
-open Effect4.Program.Denote (Straight StraightEq)
 open Test.Dogfood.P4RateLimiter (window0 windowTy windowVal decision refill)
 open Test.Dogfood.P5LedgerService (account0 deposited)
 

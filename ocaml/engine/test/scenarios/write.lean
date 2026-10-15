@@ -1,9 +1,9 @@
-import Test.Dogfood.Scenario.Tape
+import Test.Dogfood.Scenario.TapeData
 
 /-!
 The writer of the scenario fixtures. `make gen-fixtures` runs it, with every other lane's
 writer (`scripts/generate.py --only fixtures`, the group `fixtures` of `docs/GENERATED.md`).
-Alone, run it from the repository's root, after a build of `Test.Dogfood.Scenario.Tape`:
+Alone, run it from the repository's root, after a build of `Test.Dogfood.Scenario.TapeData`:
 
     lake env lean --run ocaml/engine/test/scenarios/write.lean
 

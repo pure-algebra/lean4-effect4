@@ -3,7 +3,7 @@
 
     python3 scripts/check-conform.py [PROFILE ...]      default: native
 
-`make check-native` and `make check-compiler` run the `native` and `compiler` profiles; CI's OCaml job runs `compiler` by name. Each profile is a producer
+`make check-ocaml` runs the `native` and `compiler` profiles. Each profile is a producer
 that gets an empty directory and must write exactly its named files. A profile states the
 role of each file: a report, with
 the tool identity it must carry, or an artifact. `conform_report.fresh_run` validates the
@@ -18,10 +18,9 @@ emitted-code mutations follow (`MUTATIONS`), and each must fail the observation 
 The step takes every expectation from the selection: the identities a report must plan, its
 pins and its inputs. It never takes one from the report that came back.
 
-The runner's finite controls are `scripts/test-conform-runner.py`. They run without Lean and
-without a compiler. The `models`, `types`, `layouts` and `target` profiles were retired on
+The `models`, `types`, `layouts` and `target` profiles were retired on
 2026-09-13: receipts of theorems the build already checks, a layout enumeration the wire
-theorems and the OCaml lane cover, and a subset of `make check-target`.
+theorems and the OCaml lane cover, and a subset of `make check-ts`.
 """
 import argparse
 import json
@@ -241,7 +240,7 @@ def step_compiler(out, execute=execute):
         raise RuntimeError("expected.txt differs from the host lane of the selection")
     compiler = os.environ.get("OCAMLOPT") or shutil.which("ocamlopt")
     if shutil.which("opam") and not os.environ.get("OCAMLOPT"):
-        compiler = str(Path(processes.run(["opam", "var", "bin", "--switch=effect4"]).stdout.strip()) / "ocamlopt")
+        compiler = str(Path(processes.run(["opam", "var", "bin", "--switch=" + os.environ.get("OPAM_SWITCH", "effect4")]).stdout.strip()) / "ocamlopt")
     if not compiler:
         raise RuntimeError("ocamlopt is required for the compiler profile")
     processes.run([compiler, "-w", "-a", str(out / "normalization.ml"), "-o", str(out / "normalization")])

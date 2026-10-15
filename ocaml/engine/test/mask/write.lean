@@ -1,9 +1,9 @@
-import Test.Program.MaskContract
+import Test.Program.MaskData
 
 /-!
 The writer of the mask's engine fixture. `make gen-fixtures` runs it, with every other lane's
 writer (`scripts/generate.py --only fixtures`, the group `fixtures` of `docs/GENERATED.md`).
-Alone, run it from the repository's root, after a build of `Test.Program.MaskContract`:
+Alone, run it from the repository's root, after a build of `Test.Program.MaskData`:
 
     lake env lean --run ocaml/engine/test/mask/write.lean
 

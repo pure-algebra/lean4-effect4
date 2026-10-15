@@ -9,18 +9,20 @@
     registers and the counterexample register by status; the stale references in the
     authority documents (scripts/lib/doc_refs.py).
 
-No Lean runs. Freshness is read from GNU make's own database (`make -pn`): a marker is fresh
-when it exists and none of its prerequisites is newer; the two inventories (`.lake/check/inventory`,
-`.lake/check/paths`) are recomputed and compared. A semantics report whose tables or next goals
-this reader cannot find is a refusal, never `none`. `make status` runs it.
+No Lean compilation runs. Content-keyed markers compare their recorded inputs and tool identities.
+Other generation markers use GNU make's database (`make -pn`) and prerequisite times.
+The inventories are recomputed and compared. An unreadable semantics report refuses.
+`make status` runs this reader.
 """
 from __future__ import annotations
 
+import json
 import os
 import re
 import subprocess
 import sys
 from collections import Counter
+from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -28,6 +30,7 @@ sys.path.insert(0, str(ROOT / "scripts" / "lib"))
 
 from doc_refs import stale_references  # noqa: E402
 from build_profile import profile  # noqa: E402
+from gate_cache import digest, snapshot  # noqa: E402
 
 
 class StatusError(Exception):
@@ -106,6 +109,34 @@ def stale_reason(target: str, rules: dict[str, list[str]], inventories: dict[str
     if target in memo:
         return memo[target]
     memo[target] = None  # a cycle is make's error, not this report's
+    key_name = None
+    if target.startswith('.lake/check/') and not target.endswith('.json'):
+        key_name = Path(target).name.removesuffix('.key')
+    elif target.startswith('.lake/gen/'):
+        key_name = 'gen-' + Path(target).name
+    request_path = ROOT / f'.lake/check/{key_name}.inputs.json'
+    if key_name is not None and request_path.is_file():
+        try:
+            request = json.loads(request_path.read_text(encoding='utf-8'))
+            current = snapshot(ROOT, request['inputs'], request['runtime'],
+                               request['environment'], request.get('optional', ()))
+            if digest(current) != request['key']:
+                memo[target] = 'input content or tool identity changed'
+            elif not (ROOT / target).is_file():
+                memo[target] = 'missing'
+            elif target.startswith('.lake/check/') and (ROOT / target).read_text().strip() != request['key']:
+                memo[target] = 'no pass for the current key'
+        except (OSError, ValueError, KeyError, subprocess.CalledProcessError) as error:
+            memo[target] = f'cannot verify the input key: {error}'
+        if memo[target] is None:
+            for prerequisite in rules.get(f'.lake/check/{key_name}.key', []):
+                if prerequisite == 'FORCE':
+                    continue
+                upstream = stale_reason(prerequisite, rules, inventories, memo)
+                if upstream is not None:
+                    memo[target] = f'{prerequisite}: {upstream}'
+                    break
+        return memo[target]
     if target in inventories:
         memo[target] = None if inventory_fresh(target, inventories[target]) else "the inventory changed"
         return memo[target]
@@ -316,9 +347,8 @@ def main() -> int:
         print("build     never (lake build)")
     else:
         changed = sum(1 for s in sources if mtime(s) > built)
-        when = subprocess.run(["date", "-r", str(int(built)), "+%Y-%m-%d %H:%M"], capture_output=True,
-                              text=True).stdout.strip()
-        state = "up to date" if changed == 0 else f"{changed} Lean source(s) changed since (lake build)"
+        when = datetime.fromtimestamp(built).strftime('%Y-%m-%d %H:%M')
+        state = "no newer source timestamps" if changed == 0 else f"{changed} source timestamp(s) newer; content may match"
         print(f"build     battery built {when}; {state}")
     log = ROOT / ".lake/gen/build.log"
     last = profile(log) if log.is_file() else None

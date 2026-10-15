@@ -1,5 +1,5 @@
-import Test.Dogfood.Scenario
-import Test.Dogfood.P2HandlerLayers
+import Test.Dogfood.Scenario.Data
+import Test.Dogfood.P2HandlerLayers.Data
 
 /-!
 # The routing scenario's program and observation

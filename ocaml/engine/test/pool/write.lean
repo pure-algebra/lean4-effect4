@@ -1,9 +1,9 @@
-import Test.Program.PoolPublic
+import Test.Program.PoolPublicData
 
 /-!
 The writer of Pool's engine fixture. `make gen-fixtures` runs it, with every other lane's
 writer (`scripts/generate.py --only fixtures`, the group `fixtures` of `docs/GENERATED.md`).
-Alone, run it from the repository's root, after a build of `Test.Program.PoolPublic`:
+Alone, run it from the repository's root, after a build of `Test.Program.PoolPublicData`:
 
     lake env lean --run ocaml/engine/test/pool/write.lean
 

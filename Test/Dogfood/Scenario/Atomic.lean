@@ -1,3 +1,4 @@
+import Test.Dogfood.Scenario.Atomic.Runs
 import Test.Dogfood.Scenario.Atomic.Model
 import Test.Dogfood.Scenario.Atomic.Store
 import Test.Dogfood.Scenario.Atomic.Cleanup
@@ -249,20 +250,6 @@ def shows (s : Run) (expected : Observation) : Bool := observe s == expected
 /-- A program's run at its own bound. -/
 def atBound (e : NativeEff) : Api.Inspection := Api.run e (StraightEq.fuelFor e)
 
-/-- The scenario's named runs: each script of a control, once, from one build of each program.
-The first five are on the shop. The last four play `started` on the four faulty shops. The host
-lane performs them in this order. -/
-def runsOf (b racy erased undone twice : Api.Built) : List NamedRun :=
-  [ ⟨"started", opened b, started⟩
-  , ⟨"refilled", opened b, refilled⟩
-  , ⟨"finished", opened b, finished⟩
-  , ⟨"interrupted", opened b, interrupted⟩
-  , ⟨"stopped", opened b, stopped⟩
-  , ⟨"racy", opened racy, started⟩
-  , ⟨"erased", opened erased, started⟩
-  , ⟨"undone", opened undone, started⟩
-  , ⟨"twice", opened twice, started⟩ ]
-
 /-- The controls of the four clauses over the shop. Each names the runs of `runsOf` that its
 comparison reads, and the gate hands them over as played. The two controls of the typed row read
 no run: one reads the shop's build, and one a typing refusal. -/
@@ -378,23 +365,16 @@ def aloneControls (b suspended plain undone : Api.Built) : List Control :=
 /-- The scenario's runs and its controls, from one build of each program. A program that does
 not build leaves no run and one failing control. -/
 def runsAndControls : List NamedRun × List Control :=
-  let build := fun (m : Module NativeOp) => (Effect4.Api.Author.build m).toOption
-  match build (shop .none), build (shop .racy), build (shop .erased), build (shop .undone),
-    build (shop .twice), build (alone .none true), build (alone .none false),
-    build (alone .undone false) with
-  | some b, some racy, some erased, some undone, some twice, some suspended, some plain,
-      some aloneUndone =>
-    (runsOf b racy erased undone twice,
-      shopControls b ++ aloneControls b suspended plain aloneUndone)
-  | _, _, _, _, _, _, _, _ =>
-    ([], [green "bounded" "the shop and its variants build" [] fun _ => false])
+  match builtInputs with
+  | some (b, _racy, _erased, _undone, _twice, suspended, plain, aloneUndone) => (runSet.runs, shopControls b ++ aloneControls b suspended plain aloneUndone)
+  | none => ([], [green "bounded" "the shop and its variants build" [] fun _ => false])
 
 /-! ## 6. The record -/
 
 /-- The atomic scenario. The claim assembles the five clauses. The typing law of a
 read-modify-write row is an associated law: the record claims no dependency of `atomic` on it. -/
 def scenario : Scenario :=
-  { name := "atomic"
+  { name := runSet.name
     program := ``shop
     observation := ``observe
     claim := ``atomic

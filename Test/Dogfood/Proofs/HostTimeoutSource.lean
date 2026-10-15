@@ -1,3 +1,4 @@
+import Effect4.Laws.Program.Author
 import Test.Dogfood.Scenario.Timeout.Model
 import Effect4.Laws.Api.AuthorBuild
 import Effect4.Laws.Auto.KernelRfl

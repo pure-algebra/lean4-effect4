@@ -1,9 +1,9 @@
-import Test.Program.SemaphoreScenarios
+import Test.Program.SemaphoreScenariosData
 
 /-!
 The writer of Semaphore's engine fixture. `make gen-fixtures` runs it, with every other lane's
 writer (`scripts/generate.py --only fixtures`, the group `fixtures` of `docs/GENERATED.md`).
-Alone, run it from the repository's root, after a build of `Test.Program.SemaphoreScenarios`:
+Alone, run it from the repository's root, after a build of `Test.Program.SemaphoreScenariosData`:
 
     lake env lean --run ocaml/engine/test/semaphore/write.lean
 

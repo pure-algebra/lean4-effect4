@@ -1,6 +1,6 @@
 # Known disagreements in the corpus results
 
-`scripts/check-corpus.py` (`make check-corpus`) fails on a row of
+`scripts/check-corpus.py` (`make check-ts`) fails on a row of
 `harness/truth/corpus-results.tsv` that records a disagreement between the Lean machine and
 rc.112 (`run` other than agreement, `sync differs`), between Lean's type and the compiler's
 (`types mismatch-…`), or between Lean's checker and the compiler on a well-typed program

@@ -2,6 +2,7 @@
 """Finite controls for the shared Lean import reader (`scripts/lib/lean_imports.py`)."""
 import unittest
 import tempfile
+import re
 from pathlib import Path
 
 from lib.lean_imports import header_imports, imports_of, source_closure
@@ -10,6 +11,16 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class HeaderImports(unittest.TestCase):
+    def test_engine_writers_import_data_without_laws_or_batteries(self):
+        writers = [p.relative_to(ROOT).as_posix() for p in
+                   (ROOT / 'ocaml/engine/test').glob('*/write.lean')]
+        self.assertTrue(writers)
+        for name in source_closure(ROOT, writers):
+            self.assertNotIn('/Laws/', name, name)
+            if name.startswith('Test/'):
+                text = (ROOT / name).read_text(encoding='utf-8')
+                self.assertIsNone(re.search(r'^#(?:guard|scenario_gate)\b', text, re.M), name)
+
     def test_closure_follows_public_imports_and_cycles(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Controls for stale passes, failed runs and cross-worktree result reuse."""
 import os
+import json
 import shutil
 import subprocess
 import sys
@@ -9,7 +10,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from lib.gate_cache import prepare, run
+from lib.gate_cache import prepare, run, snapshot
+import status as status_reader
 
 REPO = Path(__file__).resolve().parents[1]
 
@@ -95,6 +97,14 @@ class GateCache(unittest.TestCase):
         (self.root / 'inputs/added').unlink()
         self.assertEqual(original, prepare(self.root, 'probe', ['inputs']))
 
+    def test_missing_producer_output_changes_the_key(self):
+        absent = prepare(self.root, 'producer', ['source'], outputs=['generated'])
+        (self.root / 'generated').write_text('output')
+        present = prepare(self.root, 'producer', ['source'], outputs=['generated'])
+        self.assertNotEqual(absent, present)
+        (self.root / 'generated').unlink()
+        self.assertEqual(absent, prepare(self.root, 'producer', ['source'], outputs=['generated']))
+
     def test_tool_and_environment_are_inputs(self):
         first = self.key()
         with patch('lib.gate_cache.tool_identity', return_value={'python': 'different'}):
@@ -103,6 +113,56 @@ class GateCache(unittest.TestCase):
             first = prepare(self.root, 'probe', ['source'], environment=['EFFECT4_TEST_PROFILE'])
         with patch.dict(os.environ, {'EFFECT4_TEST_PROFILE': 'second'}):
             self.assertNotEqual(first, prepare(self.root, 'probe', ['source'], environment=['EFFECT4_TEST_PROFILE']))
+
+    def test_nonexecuting_make_modes_never_publish_a_pass(self):
+        self.key()
+        for flags in ['n --no-print-directory', 'nt', 'q', '--dry-run']:
+            with self.subTest(flags=flags), patch.dict(os.environ, {'MAKEFLAGS': flags}):
+                self.assertEqual(0, self.execute("raise RuntimeError('must not run')"))
+                self.assertFalse((self.root / '.lake/check/probe').exists())
+                self.assertFalse(self.store.exists())
+
+    def test_unset_and_empty_environment_differ(self):
+        with patch.dict(os.environ, {}, clear=True):
+            absent = prepare(self.root, 'probe', ['source'], environment=['TSGO_HOME'])
+            os.environ['TSGO_HOME'] = ''
+            self.assertNotEqual(absent, prepare(self.root, 'probe', ['source'], environment=['TSGO_HOME']))
+
+    def test_status_checks_content_and_upstream_producers(self):
+        (self.root / 'generated').write_text('output')
+        prepare(self.root, 'gen-upstream', ['source'], outputs=['generated'])
+        marker = self.root / '.lake/gen/upstream'
+        marker.parent.mkdir(parents=True)
+        marker.touch()
+        prepare(self.root, 'probe', ['generated'])
+        self.assertEqual(0, self.execute('pass'))
+        rules = {'.lake/check/probe.key': ['.lake/gen/upstream']}
+        with patch.object(status_reader, 'ROOT', self.root), patch.object(status_reader, 'snapshot', snapshot):
+            state = lambda: status_reader.marker_state('.lake/check/probe', rules, {}, {})
+            self.assertEqual('fresh', state())
+            (self.root / 'source').touch()
+            self.assertEqual('fresh', state())
+            (self.root / 'source').write_text('changed')
+            self.assertEqual('stale', state())
+
+    def test_dependency_edits_change_identity_without_a_new_pin(self):
+        package = self.root / '.lake/packages/example'
+        package.mkdir(parents=True)
+        subprocess.run(['git', 'init', '-q', str(package)], check=True)
+        (package / 'Main.lean').write_text('def value := 1\n')
+        subprocess.run(['git', 'add', 'Main.lean'], cwd=package, check=True)
+        subprocess.run(['git', '-c', 'user.name=Cache Control', '-c', 'user.email=cache@example.test',
+                        'commit', '-qm', 'fixture'], cwd=package, check=True)
+        (self.root / 'lake-manifest.json').write_text(json.dumps({
+            'packagesDir': '.lake/packages', 'packages': [{'name': 'example', 'type': 'git'}]}))
+        key = lambda: prepare(self.root, 'probe', ['source'], runtime='lean')
+        original = key()
+        (package / 'Main.lean').write_text('def value := 2\n')
+        self.assertNotEqual(original, key())
+        (package / 'Main.lean').write_text('def value := 1\n')
+        self.assertEqual(original, key())
+        (package / 'New.lean').write_text('def extra := 3\n')
+        self.assertNotEqual(original, key())
 
 
 @unittest.skipUnless(shutil.which('make'), 'GNU make integration runs in the build environment')
@@ -132,6 +192,11 @@ _run:
                      'scripts/lib/lean_imports.py'])
             command(['git', '-c', 'user.name=Cache Test', '-c', 'user.email=cache@example.invalid',
                      'commit', '--quiet', '-m', 'fixture'])
+            command(['python3', 'scripts/gate-cache.py', 'key', 'probe', '--inputs',
+                     'source', 'Makefile', 'scripts/gate-cache.py', 'scripts/lib/gate_cache.py'])
+            command(['make', '--no-print-directory', '-n'])
+            self.assertFalse((root / 'runs').exists())
+            self.assertFalse((root / '.lake/check/probe').exists())
             command(['make', '--no-print-directory'])
             command(['make', '--no-print-directory'])
             self.assertEqual('x', (root / 'runs').read_text())

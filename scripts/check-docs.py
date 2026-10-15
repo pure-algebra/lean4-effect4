@@ -8,15 +8,22 @@ keyed on the documents, the Makefile and the tracked-path inventory (scripts/lib
 from __future__ import annotations
 
 import sys
+import argparse
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "scripts" / "lib"))
 
-from doc_refs import doc_files, stale_references  # noqa: E402
+from doc_refs import doc_files, stale_references, repair_deleted_paths  # noqa: E402
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--fix', action='store_true', help='cite the last revision of deleted paths')
+    args = parser.parse_args()
+    if args.fix:
+        for item, citation in repair_deleted_paths(ROOT):
+            print(f'REPAIRED {item.file}:{item.line}: {item.text} -> {citation}')
     stale = stale_references(ROOT)
     documents = len(doc_files(ROOT))
     if stale:

@@ -1,3 +1,4 @@
+import Test.Dogfood.StageData
 import Effect4.Author
 import Effect4.Emit
 
@@ -43,9 +44,6 @@ def verdict (m : Module NativeOp) : String :=
   | .error (.admission _) => "admission"
   | .error (.serviceCarrier _ _ none) => "serviceCarrier: signature none"
   | .error (.serviceCarrier _ _ (some _)) => "serviceCarrier: signature disagrees"
-
-/-- A module whose only field is its main program. -/
-def program (src : Src NativeOp) : Module NativeOp := { main := src }
 
 /-- The checker's reason when the build refuses at a type, and `none` otherwise. -/
 def typingReason? (m : Module NativeOp) : Option TypeReason :=
@@ -115,10 +113,6 @@ structure PartReach where
   /-- Reading the printed module (`Api.readModule`) gives the program back. -/
   readBack : Bool
 deriving DecidableEq, Repr
-
-/-- A record value, its fields in canonical order. -/
-def recordOf (names : List String) (values : List Effect4.Machine.Val) : Effect4.Machine.Val :=
-  (Effect4.Machine.Record.build names values).getD .unit
 
 /-- A class refusal's reason, as a word. -/
 def classReason : ClassRefusal → String

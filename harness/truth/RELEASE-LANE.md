@@ -1,6 +1,8 @@
 # The release lane: the truth harness on effect@4.0.1
 
-This note owns the release lane. `make check-truth-release` runs it, and its program is
+This note owns the release lane.
+`make check-sweep` runs it when `EFFECT4_RELEASE_NODE_MODULES` names its install.
+Its program is
 `scripts/check-truth-release.py`.
 
 Decisions row 248 moves the pin from `effect@4.0.0-rc.112` to `effect@4.0.1` in increments.
@@ -32,7 +34,7 @@ control runs steps 5 and 6 on the pin too.
 
 ```mermaid
 flowchart TD
-  PIN["pinned lane<br/>make check-truth"]
+  PIN["pinned lane<br/>make check-ts"]
   MAN["manifest<br/>corpus.json"]
   CON["control<br/>work copy on the pin"]
   REL["host run<br/>work copy on the release"]
@@ -48,7 +50,7 @@ flowchart TD
   TST -->|must pass before| JUD
 ```
 
-1. **The pinned lane runs first.** `make check-truth` holds the manifest, the result, the
+1. **The pinned lane runs first.** `make check-ts` holds the manifest, the result, the
    modules and the tapes to a fresh host run on the pin.
 2. **The lane makes a work copy for each build.** It copies the runner, the sources that
    `harness/truth/tsconfig.json` names, and every file that they import.
@@ -159,7 +161,7 @@ directories that a machine already has:
 2. Link a directory that holds the `effect@4.0.1` package as `R/effect`.
 3. Link `@typescript`, `@types`, `bun-types` and `undici-types` from the pin's install into `R`.
 4. Set `EFFECT4_RELEASE_NODE_MODULES` to `R`.
-5. Run `make check-truth-release`.
+5. Run `make check-sweep`.
 
 ```sh
 P="$PWD/ts/eff/node_modules"          # the pin's install
@@ -169,7 +171,7 @@ mkdir -p "$R"
 ln -s "$E" "$R/effect"
 for name in @typescript @types bun-types undici-types; do ln -s "$P/$name" "$R/$name"; done
 export EFFECT4_RELEASE_NODE_MODULES="$R"
-make check-truth-release
+make check-sweep
 ```
 
 On 2026-10-05 seat M0 linked bun's cache copy, `~/.bun/install/cache/effect@4.0.1@@@1`. Its
@@ -218,11 +220,11 @@ Change the ledger when the manifest or the printed program modules change, and w
 turns a program toward the release.
 
 1. Make the pinned lane pass on the changed tree. `make gen-truth` writes its files, and
-   `make check-truth` checks them.
+   `make check-ts` checks them.
 2. Run `make gen-truth-ledger`. It writes the entries and the run record from a fresh host run.
 3. Read the diff of both files.
 4. Write `reason` and `slice` for each line that has an entry other than `yes`.
-5. Run `make check-truth-release`.
+5. Run `make check-sweep`.
 
 `make gen-truth-ledger` keeps the hand columns of each line that still needs them. It empties
 them on a line whose six entries are `yes`.
@@ -247,6 +249,6 @@ After a failed run, three files show what the lane saw:
   `result.json`.
 - **The control covers the copy, not the two rewrites.** The pin's work copy has no rewritten
   import and no stub.
-- **The generated corpus is outside the lane.** `make check-corpus` runs it on the pin only.
+- **The generated corpus is outside the lane.** `make check-ts` runs it on the pin only.
 - **The lane is tested on macOS only.** On 2026-10-05 no run covered the Windows branch of
   `link_install` (`scripts/lib/truth_host.py`).

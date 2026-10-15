@@ -94,7 +94,7 @@ that renders it the way a caller does.
 A printed module type-checks under `HostConfig.pinned` (`src/Effect4/Codegen/Diagnostics.lean`):
 `strict`, `exactOptionalPropertyTypes` and `noUncheckedIndexedAccess`, with its module options.
 Its compiler is tsgo 7, the pinned `@typescript/native-preview` 7.0.0-dev.20260629.1, and
-`make check-tsdiag` tests the printed corpus under that configuration.
+`make check-ts` tests the printed corpus under that configuration.
 Without `exactOptionalPropertyTypes`, an optional field `b?: B` also admits `undefined`, so it
 no longer means rc.112's `optionalKey`.
 
@@ -341,19 +341,21 @@ type-checks the `--run` drivers under `tools/Tools/`; one runs as
 The gates beyond the build (bash; on Windows run them through WSL):
 
 ```text
-make check-tools                                 # the checkers' own self-tests (planted defects must be refused)
-make check-roots                                 # the module-closure, library-root and axiom gates, freshly
-make check-docs                                  # every path, link, citation and make target in the documents resolves
-make status                                      # one screen, measured: HEAD, build and check freshness, claims, registers, stale references
-make check-census                                # the rc.112 mechanism census join
 npm ci --prefix harness/schema-host # pinned Schema host and compiler integrations
-make check-gen                                   # every generated file is what its generator emits
-make check-ts-reader                             # the TypeScript reader = Lean's reader over the printed corpus (bun)
-make check-truth                                 # bounded Lean/rc.112 differential (bun)
-make check-schema-codec                          # fresh type-directed JSON vs rc.112 (bun)
-make check                                       # the per-change tier (make help lists the rest)
-make check-full                                  # the outside oracles: truth, T0, the OCaml tests
+make check          # the core and law graph; connect orphan modules before building
+make check-ts       # every comparison with Effect and tsgo 7
+make check-ocaml    # native layouts, the compiler and the OCaml estate
+make check-full     # the build and both comparison lanes
+make check-gen      # regenerate stale groups and refuse committed drift
+make check-sweep    # batteries, axioms, documents, controls and slow lanes
+make check-kernel   # replay compiled declarations through Lean's kernel
+make status         # measured build, checks, claims, registers and references
 ```
+
+Checks use content keys and share successful results between Git worktrees on the same host.
+A checkout with unchanged bytes reruns no comparison.
+`make -B check-full` forces fresh comparisons.
+The sweep includes the release comparison when `EFFECT4_RELEASE_NODE_MODULES` names its install.
 
 The TypeScript gates use the dependencies pinned in `ts/eff/package.json`; install them
 with `bun install --frozen-lockfile --cwd ts/eff`. The truth lane selects its pinned

@@ -257,6 +257,7 @@ import Effect4.Library.Ref.CacheModel
 -- The program interface's codegen face, in the namespace `Effect4.Api`: printing, reading,
 -- module emission and checked reading (the codegen refactor's CR-0, decisions row 392).
 import Effect4.Api.Codegen
+import Effect4.Library.Stream.ArrayModel
 
 /-!
 # Effect4

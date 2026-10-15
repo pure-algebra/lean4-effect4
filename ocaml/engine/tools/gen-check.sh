@@ -37,17 +37,23 @@ if [ "${1:-}" = "--regen-command" ]; then
 fi
 
 # ---- C1  no fiber is ever removed --------------------------------------------------------
+# The core root cannot import Laws; proof sources are outside this runtime check.
 # A removal is a WRITE of the field: `fibers := … fibers.filter …`. A read that filters the
 # table (`Api/Frontier.lean`'s runnable ids, `completedExits`' filterMap) removes nothing, and a
 # write that maps every fiber keeps them all (`fibers := m.fibers.map …`, whose body may filter
 # a fiber's own observers). `\b` keeps `filterMap` out.
-hits=$(grep -rEn 'fibers[[:space:]]*:=[^\n]*fibers\.(filter|erase|removeAll|dropWhile|eraseP|removeIf)\b' "$REPO/src/Effect4/" || true)
+hits=$(grep -rEn --include='*.lean' --exclude-dir=Laws --exclude=Laws.lean 'fibers[[:space:]]*:=[^\n]*fibers\.(filter|erase|removeAll|dropWhile|eraseP|removeIf)\b' "$REPO/src/Effect4/")
+scan_status=$?
+if [ "$scan_status" -gt 1 ]; then
+  note FAIL "C1 cannot scan the core sources"
+  exit 1
+fi
 if [ -n "$hits" ]; then
   note FAIL "C1 a fiber is removed from the fiber table — the ordering argument is dead:"
   printf '%s\n' "$hits"
   fail=1
 else
-  note ok "C1 no filter/erase/removeAll/dropWhile on RunMachine.fibers in src/Effect4/"
+  note ok "C1 no filter/erase/removeAll/dropWhile on RunMachine.fibers in the core sources"
 fi
 
 # ---- C2  the oracle -----------------------------------------------------------------------

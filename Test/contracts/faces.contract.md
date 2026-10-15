@@ -22,7 +22,7 @@ holds it, and where the battery is.
 | --- | --- | --- | --- | --- |
 | 1 | the Lean printer | `Api.print` / `Api.printModule`: an `Eff` to one TypeScript expression, or a declaration block with one `const L_<path>` per hoisted layer | expression and declaration-block reconstruction proved on the stated readable domains (§2); module admission remains open | `src/Effect4/Codegen/Print.lean`; `src/Effect4/Laws/Codegen/Module.lean`; `Test/Codegen/PrintContract.lean` |
 | 2 | the Lean reader | `readEff`: the partial expression inverse; `Api.readModule`: module reconstruction with a closed refusal alphabet | expression and declaration-block reconstruction proved on the stated readable domains (§2); module admission remains open | `src/Effect4/Codegen/Read.lean`; `src/Effect4/Laws/Codegen/Module.lean`; `Test/Codegen/ReadContract.lean` |
-| 3 | the TypeScript printer-image reader | `ts/eff/read.ts`: a third implementation of face 2's relation, in the target language | tested (byte equality against Lean-cut oracles over the generated corpus), reproduced (its head union is generated, so `tsc` holds head coverage) | `ts/eff/read.ts`, `ts/eff/check.ts`; `ts/eff/test/read.test.ts`, `tables.test.ts`; `make check-ts-reader` |
+| 3 | the TypeScript printer-image reader | `ts/eff/read.ts`: a third implementation of face 2's relation, in the target language | tested (byte equality against Lean-cut oracles over the generated corpus), reproduced (its head union is generated, so `tsc` holds head coverage) | `ts/eff/read.ts`, `ts/eff/check.ts`; `ts/eff/test/read.test.ts`, `tables.test.ts`; `make check-ts` |
 | 4 | the foreign recognizer `ck` | `ts/eff/ingest/ck.ts` over the TypeScript compiler API: an island recognizer of a sub-language of rc.112 | tested (agreement with face 5; equality with Lean where an oracle exists) | `ts/eff/ingest/ck.ts`; `ts/eff/ingest/test/foreign.test.ts`, `gate.test.ts`, `refusals.test.ts` |
 | 5 | the foreign recognizer `oxc` | `ts/eff/ingest/oxc.ts` over oxc 0.147.0, sharing **no** recognition code with face 4 | tested (the same) | `ts/eff/ingest/oxc.ts`; the same batteries |
 | 6 | the canonical wire | the byte encoding of a program, in three implementations: `Effect4.Program.Wire`, `ts/eff/wire.gen.ts`, `ocaml/eff/eff_wire.ml` | proved (`decode_encode`, `decode_exact`, `encode_injective`), reproduced (goldens), tested | `src/Effect4/Store/Domain/ProgramWire.lean` (namespace `Effect4.Program.Wire`; moved at `05417cc6` from `git:f7d22703:src/Effect4/Program/Wire.lean`); `ocaml/goldens/eff`; `ts/eff/test/wire.test.ts`, `ocaml/eff/test/test_lean_wire.ml`, `prop_wire.ml` |
@@ -280,7 +280,7 @@ The claim held by face 8 is bounded on five axes, and every one of them is part 
    for the count of the day (34 on 2026-09-13). The programs that perform package rows have
    tapes; the gate re-records them on every run and refuses a byte that moved, so a committed
    tape is the answer rc.112 just gave. Since 2026-09-13 the 400 programs of
-   `Test/Program/Gen.lean` are a second differential (`make check-corpus`): every printable
+   `Test/Program/Gen.lean` are a second differential (`make check-ts`): every printable
    program's module compiled, the admitted ones run, the sync exit, the schedule and the
    independently inferred type compared, one row per program in
    `harness/truth/corpus-results.tsv`, each disagreement registered by program, dimension and
@@ -457,7 +457,7 @@ The owner ruled a fast cutover. What this changes in the packet above, and nothi
   `readable`, and with it the four module-level corollaries above.
 - **Face 3** (`ts/eff/read.ts`) is still a port of the retired hand reader: it does not read the
   loop image or the two non-Boolean decisions until it becomes a matcher over the exported
-  table (R6). `make check-ts-reader` is expected to differ on exactly those oracles until then.
+  table (R6). `make check-ts` is expected to differ on exactly those oracles until then.
 
 ## Amendment, 2026-10-04: payload classes (decisions row 120, part E2)
 
@@ -843,7 +843,7 @@ What this changes in the packet above, and nothing else:
   (`Tools.Code.programModule`). The truth lane, the corpus lane and the keyed lane's scenarios
   run the module that ships. The diagnostics lane checks the unchecked module, with no declared
   type. The TypeScript reader reads a join's type arguments as the typed reader does, when asked
-  (`Joins`, `ts/eff/read.ts`). `make check-ts-reader` asks.
+  (`Joins`, `ts/eff/read.ts`). `make check-ts` asks.
 - **Evidence.** *Proved*: the laws above, under `[propext, Quot.sound]`. *Tested*: the truth
   lane's 93 modules, with no verdict moved. Their declarations equal the flat print's up to
   whitespace. *Tested*: the corpus lane's 400 programs, the diagnostics lane's 408, the reader's
@@ -871,5 +871,5 @@ The codegen refactor's CR-8 lands DI-88's first step. Face 3 answers in face 2's
   `readServiceMethods_ok` takes the service's name, which the closures now carry into their
   refusals.
 - **Evidence.** *Proved*: the laws above, under `[propext, Quot.sound]`. *Tested*: the reader's
-  unit tests and `make check-ts-reader`. *Reproduced*: `ts/eff/templates.gen.ts` and
+  unit tests and `make check-ts`. *Reproduced*: `ts/eff/templates.gen.ts` and
   `src/Effect4/Api/RefusalsDerived.lean` by `make check-gen`.

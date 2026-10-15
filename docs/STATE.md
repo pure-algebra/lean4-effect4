@@ -265,7 +265,7 @@ A program has folds, a journaled run with replay, and a printed image that reads
 | `AGENTS.md` | the operating rules, and one line per core word into the dictionary |
 | `docs/core/system-map.md` | the frame: the goal, the layers and their owners, the sorts, the arrow kinds, the requirements R1 to R14 |
 | `docs/core/semantics.md` | the judgments by concept; the statuses are generated into `generated/semantics.md` (`make gen-semantics`) |
-| `docs/core/controlled-english.md` | the writing rules and the dictionary (`make check-language`) |
+| `docs/core/controlled-english.md` | the writing rules and the dictionary (`make check-sweep`) |
 | `docs/core/host-boundary.md` | the external-reply lane: host answers, handle declarations, the session lifecycle |
 | `docs/core/decisions.md` | every decision, one list, with its status |
 | `docs/core/api-surface.md` | the live surface and its open decisions |
@@ -292,12 +292,12 @@ A program has folds, a journaled run with replay, and a printed image that reads
    - done: V2, the application as one Effect service with its layer. Its host rows are services
      of their own (row 378 (19), (20), (22); the
      [design note](research/2026-10-13-emitted-services/README.md)). The to-do's file reads back
-     whole (`ab8aeefa7`). `make check-host-protocol` runs its 13 scripts on rc.112 through a
+     whole (`ab8aeefa7`). `make check-ts` runs its 13 scripts on rc.112 through a
      consumer, and Lean decides each run's checks (`210424144`). A key that a service row names
      prints by the service's name and reads back by it (`"TodoRepo"`, row 378 (22));
    - V3, the generated declarations: the rows' bindings interface, the inputs' and answers'
      Schemas, the prelude package. They are also the agent's typed surface;
-   - done: V4, `apps/todo/` on SQLite with the per-run checker, in `make check-host-protocol`. A
+   - done: V4, `apps/todo/` on SQLite with the per-run checker, in `make check-ts`. A
      run from an empty database passes Lean's checks on each request, and four red controls fail
      the checks they target;
    - beside them, binder names in the TypeScript reader (row 378 (17)). `request_leads` is

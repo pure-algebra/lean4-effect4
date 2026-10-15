@@ -1,7 +1,6 @@
-import Test.Dogfood.Scenario
-import Test.Dogfood.P1HttpCache
+import Test.Dogfood.Scenario.Data
+import Test.Dogfood.P1HttpCache.Data
 import Effect4.Author
-import Test.Audit.ScenarioGate
 
 /-!
 # The timeout scenario: replies at a timeout's boundary

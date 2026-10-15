@@ -25,6 +25,7 @@ def main():
     key.add_argument('--environment', nargs='*', default=[])
     key.add_argument('--inputs', nargs='+', required=True)
     key.add_argument('--lean', nargs='*', default=[], help='Lean entry files or workspace modules')
+    key.add_argument('--outputs', nargs='*', default=[], help='producer outputs; absence changes the key')
     execute = commands.add_parser('run')
     execute.add_argument('--force', action='store_true')
     execute.add_argument('name')
@@ -37,7 +38,7 @@ def main():
         if args.lean:
             inputs = inputs + source_closure(ROOT, args.lean) + [
                 'lean-toolchain', 'lakefile.toml', 'lake-manifest.json', 'scripts/lib/lean_imports.py']
-        prepare(ROOT, args.name, inputs, args.runtime, args.environment)
+        prepare(ROOT, args.name, inputs, args.runtime, args.environment, args.outputs)
         return 0
     command = args.command[1:] if args.command[:1] == ['--'] else args.command
     if not command:

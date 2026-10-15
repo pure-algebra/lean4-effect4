@@ -221,7 +221,7 @@ on every lane. The engine's lane refuses an own run that carries the name of a r
 So a changed script of a battery reaches each reader with no second edit:
 
 - the gate, at the battery's next build;
-- the host lane, at the next `make check-host-protocol`;
+- the host lane, at the next `make check-ts`;
 - the engine's fixture, at the next `make gen-fixtures`. The lowered battery is red until then.
 
 Some comparisons do more than read a played run.
@@ -339,7 +339,7 @@ committed fixture that Lean does not write, and `make check-ocaml` runs after th
 ### The host runs
 
 The keyed lane (`harness/truth/session/`) performs a scenario's scripts on its printed
-TypeScript module, on effect 4.0.0-rc.112 under bun. `make check-host-protocol` runs it, and its
+TypeScript module, on effect 4.0.0-rc.112 under bun. `make check-ts` runs it, and its
 last lines give each scenario's counts.
 
 - **A host run** is one named run of a scenario's record: a script, on the program that the

@@ -61,7 +61,7 @@ def doc_files(root: Path) -> list[str]:
 def makefile_targets(root: Path) -> tuple[set[str], list[str], list[str]]:
     """The Makefile's literal targets, plus `check-<x>` / `gen-<x>` from its lists; the `%` rules;
     the committed generated paths (`GENERATED_PATHS`)."""
-    text = (root / "Makefile").read_text()
+    text = (root / "Makefile").read_text(encoding='utf-8')
     text = re.sub(r"\\\n", " ", text)
     targets: set[str] = set()
     patterns: list[str] = []
@@ -140,9 +140,9 @@ class Checker:
         candidates = sorted({s.text for s in self.missing if not s.text.startswith("docs/research/")})
         ignored: set[str] = set()
         if candidates:
-            out = subprocess.run(["git", "check-ignore", "--stdin"], cwd=self.root,
-                                 input="\n".join(candidates) + "\n", capture_output=True, text=True).stdout
-            ignored = {line for line in out.split("\n") if line}
+            out = subprocess.run(["git", "check-ignore", "--stdin", "-z"], cwd=self.root,
+                                 input=('\0'.join(candidates) + '\0').encode(), capture_output=True).stdout
+            ignored = {line for line in out.decode('utf-8').split('\0') if line}
         self.stale.extend(s for s in self.missing if s.text not in ignored)
 
     def hint_for(self, target: str, doc: str) -> str:
@@ -162,8 +162,8 @@ class Checker:
         if not self.citations:
             return
         keys = "\n".join(self.citations) + "\n"
-        out = subprocess.run(["git", "cat-file", "--batch-check"], cwd=self.root, input=keys,
-                             capture_output=True, text=True).stdout
+        out = subprocess.run(["git", "cat-file", "--batch-check"], cwd=self.root, input=keys.encode(),
+                             capture_output=True).stdout.decode('utf-8')
         for line in out.split("\n"):
             if line.endswith(" missing"):
                 key = line[: -len(" missing")]
@@ -216,7 +216,7 @@ class Checker:
 
     def check_doc(self, doc: str) -> None:
         fenced = False
-        for line_no, line in enumerate((self.root / doc).read_text().split("\n"), start=1):
+        for line_no, line in enumerate((self.root / doc).read_text(encoding='utf-8').split("\n"), start=1):
             stripped = line.lstrip()
             if stripped.startswith("```") or stripped.startswith("~~~"):
                 fenced = not fenced
@@ -242,3 +242,57 @@ def stale_references(root: Path) -> list[Stale]:
     checker.check_citations()
     checker.check_missing()
     return sorted(checker.stale, key=lambda s: (s.file, s.line, s.text))
+
+
+def last_citation(root: Path, target: str, doc: str) -> str | None:
+    """Find a revision on this branch where a missing path still exists.
+
+    A working-tree deletion cites HEAD. A committed deletion cites the last commit that
+    contains the path. An untracked typo has no history and remains a finding.
+    """
+    paths = [target.rstrip('/'), (Path(doc).parent / target).as_posix()]
+    for path in dict.fromkeys(paths):
+        if path.startswith('../') or Path(path).is_absolute():
+            continue
+        revisions = git_lines(root, 'log', '--format=%H', '--', path)
+        for rev in dict.fromkeys(['HEAD', *revisions]):
+            exists = subprocess.run(['git', 'cat-file', '-e', f'{rev}:{path}'], cwd=root,
+                                    capture_output=True).returncode == 0
+            if exists:
+                commit = git_lines(root, 'rev-parse', rev)[0]
+                return f'git:{commit}:{path}'
+    return None
+
+
+def repair_deleted_paths(root: Path) -> list[tuple[Stale, str]]:
+    """Repair historical path citations in hand-written authorities, leaving other findings."""
+    checker = Checker(root)
+    repairs = []
+    changed: dict[str, list[str]] = {}
+    for item in stale_references(root):
+        if item.kind not in ('path', 'link') or item.text.startswith('git:') or checker.is_generated(item.file):
+            continue
+        citation = last_citation(root, item.text, item.file)
+        if citation is None:
+            continue
+        if item.file not in changed:
+            changed[item.file] = (root / item.file).read_text(encoding='utf-8').splitlines(keepends=True)
+        lines = changed[item.file]
+        line = lines[item.line - 1]
+        if item.kind == 'path':
+            def replace_code(match):
+                token = match.group(1)
+                path = re.sub(r':[0-9][0-9,\-–]*$', '', token).rstrip('.,;:')
+                return f'`{citation}`' if path == item.text else match.group(0)
+            line = CODE.sub(replace_code, line)
+        else:
+            def replace_link(match):
+                target = match.group(1)
+                return match.group(0).replace(target, citation, 1) if target.split('#', 1)[0] == item.text else match.group(0)
+            line = LINK.sub(replace_link, line)
+        if line != lines[item.line - 1]:
+            lines[item.line - 1] = line
+            repairs.append((item, citation))
+    for doc, lines in changed.items():
+        (root / doc).write_text(''.join(lines), encoding='utf-8', newline='\n')
+    return repairs

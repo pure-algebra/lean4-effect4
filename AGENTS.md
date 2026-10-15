@@ -9,7 +9,7 @@ documents that the current task names.
 | --- | --- |
 | `README.md` | what the product is, the application face, how to build |
 | `docs/STATE.md` | the entry point: true at HEAD, the documents, what is next, what the owner must decide |
-| `docs/core/` | the current authorities: `system-map.md` (the goal, what a full program is, the layers and their owners, the sorts and arrow kinds, the requirements R1–R14 and their status: the frame), `controlled-english.md` (the writing rules for every Markdown artifact; the dictionary, one meaning per word with its tree anchor, its literature term and the words not to use; the seven judgments and the boundary behaviours; the artifact skeletons; checked by `make check-language`), `semantics.md` (the language's judgments by concept: what the literature defines, our adaptation and cuts, the definitions in the tree, the required properties; statuses are generated, `generated/semantics.md`), `host-boundary.md` (the external-reply lane: host answers, handle declarations, the session lifecycle and its contracts), `traversal-census.md`, `decisions.md` (every open decision, one list), `api-surface.md` (the live surface and its open decisions), `lcnf-route.md`, `machine-state.md` (what state the machine holds, its logs, transactions, and how the rest of Effect's stateful modules land) |
+| `docs/core/` | the current authorities: `system-map.md` (the goal, what a full program is, the layers and their owners, the sorts and arrow kinds, the requirements R1–R14 and their status: the frame), `controlled-english.md` (the writing rules for every Markdown artifact; the dictionary, one meaning per word with its tree anchor, its literature term and the words not to use; the seven judgments and the boundary behaviours; the artifact skeletons; checked by `make check-sweep`), `semantics.md` (the language's judgments by concept: what the literature defines, our adaptation and cuts, the definitions in the tree, the required properties; statuses are generated, `generated/semantics.md`), `host-boundary.md` (the external-reply lane: host answers, handle declarations, the session lifecycle and its contracts), `traversal-census.md`, `decisions.md` (every open decision, one list), `api-surface.md` (the live surface and its open decisions), `lcnf-route.md`, `machine-state.md` (what state the machine holds, its logs, transactions, and how the rest of Effect's stateful modules land) |
 | `docs/ARCHITECTURE.md` | the source tree, module boundaries, dependency direction, the API seam |
 | `docs/GENERATED.md` | the generated groups: producers (`make gen-<group>`), inputs, consumers and checks |
 | `docs/DESIGN-BASIS.md` | the representation decisions (DB-01 … DB-17): decision, rationale, witnesses, refusals, sources and literature marks; status only by link to the system map's §8 |
@@ -65,7 +65,7 @@ The OCaml estate is `ocaml/`, one dune workspace, with its Lean half `src/OCaml5
 ## Writing rules
 
 Every Markdown artifact follows `docs/core/controlled-english.md`. Its §2 owns the rules, and
-`make check-language` checks that file and this one. The summary:
+`make check-sweep` checks that file and this one. The summary:
 
 - Write one idea per sentence. A description has at most 25 words, an instruction at most 20.
 - Use the active voice, the present tense for facts and the imperative for procedures.
@@ -153,7 +153,7 @@ its arrows. Anything else is a leak.
 - Every battery file under `Test/` must be reachable from `Test/All.lean`, or the module-closure
   gate refuses the build.
 - The slow lane is the one exception: the files `slowLane` lists in `Test/Audit/AxiomGate.lean`,
-  reached from `Test/Slow.lean` and built at a sweep (`make check-slow`).
+  reached from `Test/Slow.lean` and built at a sweep (`make check-sweep`).
 - Name the exact judgment, observation, theorem or gate before you say "sound", "equivalent",
   "preserves", "fully reified" or "complete". Name its assumptions and the remaining host
   boundary too.
@@ -206,10 +206,8 @@ its arrows. Anything else is a leak.
   - the proofs: the narrow build, then `#axiom_audit` over the landing's modules;
   - the behaviour gates the change reaches: the runs that compare with an outside implementation.
 - The behaviour gates are the targets of `make check-full` (`make check` is the build alone):
-  - the codec against rc.112: `check-schema-codec`, `check-schema-ts`;
-  - the machine and the OCaml route: `check-compiler`, `check-native`, `check-ocaml`;
-  - the meaning against the Effect runtime: `check-truth`, `check-host-protocol`;
-  - the printed TypeScript under tsgo: `check-target`, `check-ts-reader`, `check-corpus`, `check-tsdiag`.
+  - `check-ts`: the codec, meaning, printed programs, readers and host protocol against rc.112 and tsgo 7;
+  - `check-ocaml`: the native layouts, compiler and OCaml estate.
 - No other run is owed. The batteries (`lake build Test`) and the whole-tree axiom gate run when
   the owner asks. So do the ratchets, the policies, the drift and the document checks.
 - A gate depends on its sources and builds exactly what its tool imports (`build_imports` in the
@@ -235,9 +233,10 @@ its arrows. Anything else is a leak.
   - the claims by status and the open planned goals;
   - the registers;
   - the documents' stale references.
-- `make check-docs` refuses a path, link, `git:<rev>:<path>` citation or make
-  target that an authority document names and that does not resolve. A cited research note must be
-  tracked (force-added).
+- `make build` connects orphan modules to their roots before building.
+  The axiom gate keeps its root separation and slow-lane rules.
+- `make check-sweep` repairs deleted paths to their last Git citations, then checks every authority reference.
+  A cited research note must be tracked (force-added).
 - History (`docs/research/`, the archives, `ATTACKS.md`) is not checked. What these tools measure
   is not written by hand anywhere else.
 - One `lake` at a time in a working tree, run as `LEAN_NUM_THREADS=3 lake build <Module>` or through
@@ -281,13 +280,13 @@ its arrows. Anything else is a leak.
 - TypeScript is checked by one compiler, tsgo 7 (owner, 2026-09-18, restated 2026-10-01):
   - the pinned `@typescript/native-preview` 7.0.0-dev.20260629.1 in `ts/eff` and `harness/truth`;
   - `typescript@7.0.2`, patched by `effect-tsgo`, in `harness/schema-host`.
-- tsgo 7 is the oracle of `check-target`, `check-truth` and the corpus lane. `tsc` and
+- tsgo 7 is the oracle of `check-ts`. `tsc` and
   `typescript@5.x` are never run, in a gate, a probe or a review.
 - A TypeScript result names its compiler and version. `scripts/check-host-protocol.py` runs tsgo
   (seat J, 2026-10-01).
 - The ingest parses with `oxc-parser` (one entry, `ts/eff/ingest/oxc.ts`). `check-styles.ts` asks
   tsgo's own API (`unstable/sync`, under node) for the oracle's grammar (decisions row 168, seat J2).
-- No `typescript` below 7 is installed under `ts/`, `harness/` or `tools/`. `make check-tsgo`
+- No `typescript` below 7 is installed under `ts/`, `harness/` or `tools/`. `make check-ts`
   refuses one.
 - A proof graph is mandatory only for these kinds of work:
   - an admission or a refusal of any input (a program, a table, a reply, a codec value, …);

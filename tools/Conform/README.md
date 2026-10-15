@@ -12,9 +12,8 @@ Makefile is the lane). The runner builds the selected tools once, then executes 
 requested profile once in an empty directory and keeps the receipt under `.lake/conform/`.
 
 ```sh
-python3 scripts/check-conform.py                      # the native layout (make check-native)
-python3 scripts/check-conform.py compiler             # actual emitted OCaml checkpoint (make check-compiler)
-python3 scripts/test-conform-runner.py                # the runner's own controls: no Lean, no compiler
+python3 scripts/check-conform.py                      # the native layout (make check-ocaml)
+python3 scripts/check-conform.py compiler             # actual emitted OCaml checkpoint (make check-ocaml)
 ```
 
 `compiler` requires `ocamlopt` from the `effect4` opam switch (or `OCAMLOPT`). `cases`
@@ -111,8 +110,8 @@ named exception. The target remains bounded by its
 integer representation, UTF-8 input assumptions and stated primitive contracts; finite
 agreement does not prove the translator or establish general host equivalence.
 
-Independent wrong-rule controls remain under `tools/conform-red/`; expected compilation
-failure must be checked for the intended diagnostic. Boundary, descriptor and compiler
+The wrong-rule control lives in `Test/Program/SelectRulesRed.lean`.
+Its guarded diagnostic rejects a select rule that drops the second arm's requirements. Boundary, descriptor and compiler
 controls compile with the tool library. The replaced fragment pilots, duplicated metadata
 codecs and handwritten SCC algorithm are retired. Unfinished host-resource work remains in
 the untracked foundation delivery area, outside both active source roots.

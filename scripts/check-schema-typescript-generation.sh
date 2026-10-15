@@ -30,14 +30,16 @@ temporary_dir="$(mktemp -d)"
 trap 'rm -rf "$temporary_dir"' EXIT
 
 cd "$project_root"
-lake env lean -M4096 "$harness_dir/EmitFixture.lean" > "$temporary_dir/Person.generated.ts"
-cmp -- "$harness_dir/Person.generated.ts" "$temporary_dir/Person.generated.ts"
-lake env lean -M4096 "$harness_dir/EmitCoverageFixture.lean" > \
-  "$temporary_dir/AllRepresentations.generated.ts"
-cmp -- "$harness_dir/AllRepresentations.generated.ts" "$temporary_dir/AllRepresentations.generated.ts"
-lake env lean -M4096 "$harness_dir/EmitMultiFixture.lean" > \
-  "$temporary_dir/TwoRoots.generated.ts"
-cmp -- "$harness_dir/TwoRoots.generated.ts" "$temporary_dir/TwoRoots.generated.ts"
+emit_and_compare() {
+  if ! lake env lean -M4096 "$harness_dir/$1" > "$temporary_dir/$2"; then
+    cat "$temporary_dir/$2" >&2
+    return 1
+  fi
+  cmp -- "$harness_dir/$2" "$temporary_dir/$2"
+}
+emit_and_compare EmitFixture.lean Person.generated.ts
+emit_and_compare EmitCoverageFixture.lean AllRepresentations.generated.ts
+emit_and_compare EmitMultiFixture.lean TwoRoots.generated.ts
 
 cp "$harness_dir/tsconfig.json" "$temporary_dir/tsconfig.json"
 cp "$harness_dir/runtime-check.ts" "$temporary_dir/runtime-check.ts"
@@ -49,7 +51,11 @@ cp "$harness_dir/multi-runtime-check.ts" "$temporary_dir/multi-runtime-check.ts"
 cp -RL "$node_modules" "$temporary_dir/node_modules"
 node_modules="$temporary_dir/node_modules"
 
-compiler_output="$("$host_compiler" -p "$temporary_dir/tsconfig.json" --pretty false 2>&1)"
+if ! compiler_output="$("$host_compiler" -p "$temporary_dir/tsconfig.json" --pretty false 2>&1)"; then
+  printf '%s\n' "$compiler_output" >&2
+  echo "schema TypeScript harness: direct compiler failed" >&2
+  exit 1
+fi
 if [[ -n "$compiler_output" ]]; then
   printf '%s\n' "$compiler_output" >&2
   echo "schema TypeScript harness: direct compiler emitted diagnostics" >&2

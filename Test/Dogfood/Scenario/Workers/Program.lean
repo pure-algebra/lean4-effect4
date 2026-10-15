@@ -1,5 +1,5 @@
-import Test.Dogfood.Scenario
-import Test.Dogfood.P3WorkerQueue
+import Test.Dogfood.Scenario.Data
+import Test.Dogfood.P3WorkerQueue.Data
 
 /-! The workers program, shared by the scenario and its invariant proofs. -/
 

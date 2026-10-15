@@ -1,6 +1,6 @@
-import Test.Dogfood.Scenario
-import Test.Dogfood.P3WorkerQueue
-import Test.Program.QueueTraces
+import Test.Dogfood.Scenario.Data
+import Test.Dogfood.P3WorkerQueue.Data
+import Test.Program.QueueTracesData
 import Effect4.Library.Queue.Ops
 
 /-!

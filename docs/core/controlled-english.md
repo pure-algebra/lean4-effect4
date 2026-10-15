@@ -25,7 +25,7 @@ How to use it:
 2. Use the word in its dictionary meaning only.
 3. If the word is missing, add an entry with its anchor in the same commit.
 4. If two entries seem to name one concept, stop and repair the dictionary.
-5. Run `make check-language` before you commit a change to this file or to `AGENTS.md`.
+5. Run `make check-sweep` before you commit a change to this file or to `AGENTS.md`.
 
 The checker of these rules is `scripts/check-language.py` (§7). It reads its rules and its words
 from this file, so this file is the one source. The checker measures each rule that §2 marks
@@ -192,7 +192,7 @@ Each entry is one row of six columns:
 | **LCNF** | Lean's compiler IR in its mono phase, read from compiled modules. OCaml is made only from LCNF. | `translateClosure` (`src/OCaml5/Lcnf/Translate.lean`) | the Lean compiler, by name | — | — |
 | **legalization** | What a profile does to a construct its target lacks: promote, expand or custom. Each legalization rule owes a semantic preservation obligation. | — | the LLVM code generator's legalization, by name (`docs/core/lcnf-route.md` §7) | — | — |
 | **differential** | A finite comparison of two implementations on the same named inputs. Its evidence word is tested. | `scripts/check-truth.py` | — | — | — |
-| **oracle** | The outside implementation a differential or check compares against: the rc.112 runtime for the truth lane, tsgo 7 for `make check-target`. | `harness/truth` | — | — | — |
+| **oracle** | The outside implementation a differential or check compares against: the rc.112 runtime for the truth lane, tsgo 7 for `make check-ts`. | `harness/truth` | — | — | — |
 | **corpus** | The generated set of programs that `make corpus` prints. | `Test/Program/Gen.lean` | — | — | — |
 | **ingest** | Reading foreign TypeScript source into `Eff` under the strict-foreign contract. It is a different contract from reading the printed image (DI-37). | `ts/eff/ingest/oxc.ts` | — | — | — |
 | **round trip** | Print, then read, gives the program back: the retraction law on a named domain. | `read_print` (`src/Effect4/Laws/Codegen/ReadPrint.lean`) | — | — | — |
@@ -827,7 +827,7 @@ with "Do not", "Never" or "Always":
 
 How to run it:
 
-1. Run `make check-language`. It runs the checker in strict mode on this file and on `AGENTS.md`,
+1. Run `make check-sweep`. It runs the checker in strict mode on this file and on `AGENTS.md`,
    and fails on any finding there.
 2. Run `python3 scripts/check-language.py` for the report: the findings per document, by rule.
 3. Run `python3 scripts/check-language.py --show FILE` to list one document's findings.

@@ -1,3 +1,5 @@
+import Test.Audit.ScenarioGate
+import Test.Dogfood.Scenario.Timeout.Runs
 import Test.Dogfood.Scenario.Timeout.Model
 import Test.Dogfood.Proofs.HostTimeoutHistory
 
@@ -123,33 +125,6 @@ def atSecond : Observation :=
 The declared controls separately read completed timeout outcomes through `retriesDeclared`. -/
 def shows (s : Run) (expected : Observation) : Bool :=
   { observe s with forms := [] } == { expected with forms := [] }
-
-/-- The scenario's named runs: each script of a control, once, from one build of each program.
-The first fourteen are on the fetch. The last two are on the client that retries every failure
-and on the client whose finalizer resets the count. The host lane performs them in this order.
-The first run, `parked`, is the part that every other script starts with. -/
-def runsOf (b eager resetting : Api.Built) : List NamedRun :=
-  let run := fun (name : String) (parts : List (List Move)) =>
-    (⟨name, opened b, script parts⟩ : NamedRun)
-  let notFound := [parked, answer http (failed "HttpError" "404"), [.tick 100, .flush, .hold http]]
-  [ run "parked" [parked]
-  , run "503" [parked, answer http (failed "HttpError" "503"), [.tick 100, .hold http],
-      answer http (ok body2)]
-  , run "timed-out" [timedOut]
-  , run "four" [[.start, .tick 2000, .tick 100, .tick 2000, .tick 200, .tick 2000, .tick 400,
-      .tick 2000]]
-  , run "404" notFound
-  , run "before" [parked, answer http (ok body1)]
-  , run "second" [timedOut, answer second (ok body2)]
-  , run "late" [timedOut, answer first (ok body1)]
-  , run "kept" [parked, [.receive http (ok body1), .tick 2000, .apply first]]
-  , run "crossed" [timedOut, [.wire (.submit (forged 0 key2 (ok body1)))]]
-  , run "direct" [timedOut, [.control (.answerAsync ⟨3⟩ 6 (ok body1))]]
-  , run "timer-interrupt" [parked, [.tick 2000]]
-  , run "host-interrupt" [parked, [.cancel ⟨1⟩, .flush, .tick 2000, .tick 100]]
-  , run "received" [parked, [.receive http (ok body1)]]
-  , ⟨"eager", opened eager, script notFound⟩
-  , ⟨"resetting", opened resetting, script [parked, [.tick 2000]]⟩ ]
 
 /-- The controls. Each names the runs of `runsOf` that its comparison reads, and the gate hands
 them over as played. Every control compares `observe`. A control of a refusal compares the
@@ -314,17 +289,16 @@ def controlsOf (b : Api.Built) : List Control :=
 /-- The scenario's runs and its controls, from one build of each program. A program that does
 not build leaves no run and one failing control. -/
 def runsAndControls : List NamedRun × List Control :=
-  let build := fun (m : Module NativeOp) => (Effect4.Api.Author.build m).toOption
-  match build fetch, build (client (fun _ => bool true) false), build (client retryable true) with
-  | some b, some eager, some resetting => (runsOf b eager resetting, controlsOf b)
-  | _, _, _ => ([], [green "declared" "the client and its variants build" [] fun _ => false])
+  match builtInputs with
+  | some (b, _eager, _resetting) => (runSet.runs, controlsOf b)
+  | none => ([], [green "declared" "the client and its variants build" [] fun _ => false])
 
 /-! ## 6. The record -/
 
 /-- The timeout scenario. The claim assembles the three clauses. The three laws are associated
 laws: the record claims no dependency of `timeout` on them. -/
 def scenario : Scenario :=
-  { name := "timeout"
+  { name := runSet.name
     program := ``fetch
     observation := ``observe
     claim := ``timeout

@@ -1,6 +1,6 @@
 # Independent target type diagnostics
 
-`make check-target` (`bun tools/target/cli.ts --repo .`) checks the actual printed programs and adapter members
+`make check-ts` (`bun tools/target/cli.ts --repo .`) checks the actual printed programs and adapter members
 against type metadata generated from Lean. It writes `.lake/target/report.json` and exits
 0 only when every selected comparison agrees, 1 on mismatch/refusal, and 2 on an unreadable
 or invalid top-level tool input. It neither runs Lean nor regenerates inputs.
@@ -8,7 +8,7 @@ or invalid top-level tool input. It neither runs Lean nor regenerates inputs.
 The independent finite selection in `Test/fixtures/target/selection.json` lists the truth
 programs and adapter rows. The tests compare exact program identities with the corpus,
 and retain exact selected row identities, rather than relying on a count. `corpus.ts` runs the
-same comparison over every well-typed program of a corpus manifest, for `make check-corpus`. It contains identities
+same comparison over every well-typed program of a corpus manifest, for `make check-ts`. It contains identities
 and explicit target symbol bindings, never expected signatures. Additions/removals in the
 source inventories require a reviewed selection change; selected missing entries are refused.
 Expected program A/E strings and full requirement keys come from `harness/truth/corpus.json`.
@@ -17,7 +17,7 @@ unannotated modules so its actual columns come from initializer inference; the h
 selection alone is not that independent inference check.
 Expected adapter types come from `generated/row-types.tsv`, which `tools/Tools/RowTypes.lean`
 writes at the spelling a printed module ships (`ofTy`, rendered: `tools/Tools/TypeSpelling.lean`)
-and each row's own `RowShape`. The tool has no type printer of its own, and `make check-target`
+and each row's own `RowShape`. The tool has no type printer of its own, and `make check-ts`
 refuses a stale table rather than reading it. The assignability pairs
 (`tools/Tools/TyVectors.lean`) are spelled the same way.
 The full `scopeKey` maps to `Scope.Scope`; a matching service code alone is insufficient.

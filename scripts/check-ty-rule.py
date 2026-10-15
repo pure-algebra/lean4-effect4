@@ -352,6 +352,9 @@ def tree_control(base, name, fault, mutate):
     script = root / 'scripts' / Path(__file__).name
     script.parent.mkdir()
     shutil.copyfile(Path(__file__).resolve(), script)
+    library = script.parent / 'lib'
+    library.mkdir()
+    shutil.copyfile(ROOT / 'scripts/lib/lean_imports.py', library / 'lean_imports.py')
     bin_dir = root / 'bin'
     bin_dir.mkdir()
     if fault is not None:

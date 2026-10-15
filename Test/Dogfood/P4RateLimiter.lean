@@ -1,3 +1,4 @@
+import Test.Dogfood.P4RateLimiter.Data
 import Test.Dogfood.Stage
 import Effect4.Author
 import Effect4.Laws.Author
@@ -54,49 +55,11 @@ namespace Test.Dogfood.P4RateLimiter
 
 open Effect4 Effect4.Machine Effect4.Program Effect4.Program.Authoring
 
-/-! ## 1. The program -/
-
-/-- `interface Window { used, admitted, rejected }`, every field a number. -/
-def windowFields : List (String × Bool × Ty) :=
-  [("used", false, .nat), ("admitted", false, .nat), ("rejected", false, .nat)]
-
-/-- The type of the window, its fields in canonical order. -/
-def windowTy : Ty :=
-  .record [("admitted", false, .nat), ("rejected", false, .nat), ("used", false, .nat)]
-
-/-- `{ used, admitted, rejected }` as a value, its fields in canonical order. -/
-def windowVal (used admitted rejected : Nat) : Val :=
-  recordOf ["admitted", "rejected", "used"] [.nat admitted, .nat rejected, .nat used]
-
-/-- `{ used: 0, admitted: 0, rejected: 0 }`. -/
-def window0 : TermSrc :=
-  record windowFields [("used", nat 0), ("admitted", nat 0), ("rejected", nat 0)]
-
-/-- The decision of one request over the window `w` (`p4-rate-limiter.ts`, `request`):
-`w.used < 3 ? [true, { ...w, used: w.used + 1, admitted: w.admitted + 1 }] :
-[false, { ...w, rejected: w.rejected + 1 }]`. `ite` evaluates both arms, and both are pure. -/
-def decision (w : TermSrc) : TermSrc :=
-  app "ite" [app "lt" [field w "used", nat 3],
-    app "pair" [bool true,
-      recordSet (recordSet w "used" (app "succ" [field w "used"]))
-        "admitted" (app "succ" [field w "admitted"])],
-    app "pair" [bool false, recordSet w "rejected" (app "succ" [field w "rejected"])]]
-
 /-- One request: one `Ref.modify` that decides and rewrites the window in one store step, and
 answers the decision. The optional yield comes before the step, never inside it. -/
 def request (yielding : Bool) (state : TermSrc) : Src NativeOp :=
   andThen (if yielding then yieldNow 0 else succeed unit)
     (Ref.modify "w" (decision (var "w")) state)
-
-/-- The refill daemon (`p4-rate-limiter.ts`, `refill`): forever, sleep a window, then reset the
-count with `Ref.update(state, w => ({ ...w, used: 0 }))`. `Effect.forever` is an `iterate` whose
-test is the constant `true`. -/
-def refill (state : TermSrc) : Src NativeOp :=
-  iterateWith (bool true)
-    { while_ := fun _ => bool true
-      body := fun _ => andThen (Effect.sleep (nat 1000))
-        (Ref.update "w" (recordSet (var "w") "used" (nat 0)) state)
-      step := fun c _ => c }
 
 /-- One accepted request as a count. -/
 def countOne (decision : TermSrc) : TermSrc := app "ite" [decision, nat 1, nat 0]

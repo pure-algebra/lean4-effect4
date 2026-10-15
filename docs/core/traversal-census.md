@@ -542,8 +542,7 @@ that had `termTy … (.lit l) = some l.ty` by `rfl` unfolds through `argTy` and 
 (the literal rule at `false` is an equation, not a definitional identity); `Forms.as_typed` adds
 the same two names to its simp set. Everything else — `HasTy`'s rules, the fifty inversions,
 `Sound`, `Checker.term?`, the batteries' `#guard`s — names `termTy` opaquely and compiled
-untouched. `tools/conform-red` names a `termTy_reflect` that does not exist; it is not a lake
-target.
+untouched. The later cleanup removes the obsolete `Probe2Neg` control, whose reflection names no longer exist.
 
 Both roots and `Test.All` build; `argTy_weaken`, `termTy_weaken`, `argTy.eq_cata`,
 `argsTy.eq_cata`, `evalTerm_hasTy`, `Forms.as_typed` at `[propext, Quot.sound]`;

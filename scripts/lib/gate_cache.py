@@ -39,7 +39,7 @@ def write_changed(path, content):
     return True
 
 
-def file_inputs(root, names):
+def file_inputs(root, names, optional=()):
     """Hash named files and directory inventories by logical path, following file links.
 
     Callers select directories explicitly. Missing inputs and directory links refuse: a
@@ -51,6 +51,9 @@ def file_inputs(root, names):
         path = Path(name)
         path = path if path.is_absolute() else root / path
         logical = path.relative_to(root).as_posix() if path.is_relative_to(root) else '@external/' + path.as_posix()
+        if name in optional and not path.exists():
+            files[logical] = None
+            continue
         if path.is_dir():
             if path.is_symlink():
                 raise ValueError(f'directory link is not a file input: {logical}')
@@ -67,10 +70,10 @@ def file_inputs(root, names):
     return files
 
 
-def output_of(root, command):
+def output_of(root, command, strip=True):
     result = subprocess.run(command, cwd=root, check=True, stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE, text=True)
-    return result.stdout.strip()
+    return result.stdout.strip() if strip else result.stdout
 
 
 def tool_identity(root, runtime):
@@ -85,15 +88,40 @@ def tool_identity(root, runtime):
             'opam exec --switch=' + os.environ.get('OPAM_SWITCH', 'effect4') + ' --'))
         commands['ocaml'] = prefix + ['ocamlopt', '-version']
         commands['dune'] = prefix + ['dune', '--version']
+        if os.environ.get('OCAMLOPT'):
+            commands['ocaml-override'] = [os.environ['OCAMLOPT'], '-version']
+        commands['opam-packages'] = ['opam', 'list', '--switch=' + os.environ.get('OPAM_SWITCH', 'effect4'),
+                                    '--installed', '--columns=name,version', '--short', '--color=never']
     return {name: output_of(root, command) for name, command in commands.items()}
 
 
-def snapshot(root, inputs, runtime, environment):
-    return {'version': VERSION, 'inputs': file_inputs(root, inputs),
+def snapshot(root, inputs, runtime, environment, optional=()):
+    return {'version': VERSION, 'inputs': file_inputs(root, inputs, optional),
             'host': [platform.system(), platform.machine()],
             'tools': tool_identity(root, runtime),
-            'environment': {name: os.environ.get(name, '').replace(str(Path(root).resolve()), '{root}')
+            'packages': package_state(root) if runtime != 'none' else {},
+            'environment': {name: (os.environ[name].replace(str(Path(root).resolve()), '{root}')
+                                   if name in os.environ else None)
                             for name in environment}}
+
+
+def package_state(root):
+    """Identify installed Git dependencies, including local edits beside their pinned commits."""
+    manifest = Path(root) / 'lake-manifest.json'
+    if not manifest.is_file():
+        return {}
+    data = json.loads(manifest.read_text(encoding='utf-8'))
+    states = {}
+    for package in data['packages']:
+        if package['type'] != 'git':
+            raise ValueError('content keys require a Git package: ' + package['name'])
+        folder = Path(root) / data['packagesDir'] / package['name']
+        head = output_of(folder, ['git', 'rev-parse', 'HEAD'])
+        changed = output_of(folder, ['git', 'diff', '--no-ext-diff', '--name-only', '-z', 'HEAD', '--'], strip=False)
+        added = output_of(folder, ['git', 'ls-files', '--others', '--exclude-standard', '-z'], strip=False)
+        names = sorted(set(filter(None, (changed + '\0' + added).split('\0'))))
+        states[package['name']] = {'head': head, 'changes': file_inputs(folder, names, names)}
+    return states
 
 
 def digest(value):
@@ -105,12 +133,14 @@ def shared_store(root):
     return common.parent / (common.name + '-checks')
 
 
-def prepare(root, name, inputs, runtime='none', environment=()):
+def prepare(root, name, inputs, runtime='none', environment=(), outputs=()):
     """Write a fresh manifest and update the key only when its content identity changes."""
     root = Path(root)
-    state = snapshot(root, inputs, runtime, environment)
+    inputs = sorted(set(inputs) | set(outputs))
+    state = snapshot(root, inputs, runtime, environment, outputs)
     request = {'name': name, 'inputs': sorted(set(inputs)), 'runtime': runtime,
-               'environment': list(environment), 'snapshot': state, 'key': digest(state)}
+               'environment': list(environment), 'optional': list(outputs),
+               'snapshot': state, 'key': digest(state)}
     check = root / '.lake/check'
     write_changed(check / (name + '.inputs.json'), json_bytes(request))
     write_changed(check / (name + '.key'), (request['key'] + '\n').encode())
@@ -119,13 +149,20 @@ def prepare(root, name, inputs, runtime='none', environment=()):
 
 def run(root, name, command, force=False, store=None):
     """Reuse a matching pass, or run the command and publish only an unchanged-input success."""
+    flags = shlex.split(os.environ.get('MAKEFLAGS', ''))
+    short = flags[0].lstrip('-') if flags and not flags[0].startswith('--') and '=' not in flags[0] else ''
+    if set(short) & set('ntq') or any(f in ('--dry-run', '--just-print', '--recon', '--touch', '--question') for f in flags):
+        # GNU make executes recursive recipes even under -n/-t/-q. They cannot publish evidence.
+        print(f'SKIP {name}: make requested no execution', flush=True)
+        return 0
     root = Path(root)
     check = root / '.lake/check'
     request = json.loads((check / (name + '.inputs.json')).read_text())
     key = (check / (name + '.key')).read_text().strip()
     if request['name'] != name or key != request['key']:
         raise ValueError('check manifest and key disagree; regenerate the key')
-    current = lambda: snapshot(root, request['inputs'], request['runtime'], request['environment'])
+    current = lambda: snapshot(root, request['inputs'], request['runtime'], request['environment'],
+                               request.get('optional', ()))
     if digest(current()) != key:
         raise ValueError('check inputs changed after key preparation')
     store = Path(store) if store is not None else shared_store(root)

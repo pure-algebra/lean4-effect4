@@ -248,7 +248,7 @@ fail.
 **D-E — where the `Schema.*` text comes from.** (D's D-6.) **Ruled** by decisions rows 392 (2),
 P4 (a), and 395 (9). The text is a second algebra of the representation fold,
 `Codegen.SchemaCode` (`src/Effect4/Codegen/SchemaCode.lean`, `Api.schemaCode`). rc.112's
-`toCodeDocument` is a finite oracle of it in `make check-schema-codec`. The recommendation above it was rc.112's
+`toCodeDocument` is a finite oracle of it in `make check-ts`. The recommendation above it was rc.112's
 `toCodeDocument` with a reviver table. rc.112's code quotes a `__proto__` key, so its object
 literal drops that field.
 

@@ -70,7 +70,7 @@ else in the machine's closure translates.
   values, the closure's primitive table and the mutants. `tools/Conform/Effect4/LcnfMl.lean` (rung 3's
   pieces): the emitted OCaml read into the target evaluator — "the evaluator handles what the
   translator emits" is a checked claim because the reader refuses by constructor name. The
-  compiler checkpoint (`make check-compiler`) runs both on its fixtures. The two vector lanes that
+  compiler checkpoint (`make check-ocaml`) runs both on its fixtures. The two vector lanes that
   ran them on 20,387 vectors went on 2026-10-15
   (`git:fef45fb5a:tools/Conform/Effect4/LcnfSemantics.lean`, `git:fef45fb5a:tools/Conform/Effect4/LcnfMl.lean`):
   no lane ran them, and decisions row 391 pauses the lowering's proof work. `tools/Conform/Effect4/TargetLeanNative.lean`
@@ -82,7 +82,7 @@ The recorded evidence is a differential on 20,387 vectors over the type-processi
 comparing LCNF and target-AST evaluation with compiled Lean. It is not a theorem that lowering
 preserves the LCNF semantics. **And that evidence was produced once, not on every change.** No
 `make` target, script or CI job ran the vector drivers, and they went on 2026-10-15. What runs is the compiler's own lanes
-(`make check-compiler`, `make check-native`); the case-site policy was cleared (decisions row 375). Wiring the vector lane into
+(`make check-ocaml`); the case-site policy was cleared (decisions row 375). Wiring the vector lane into
 `check-host` is the plan's item 4.5; until it lands, read this paragraph as a record of a run,
 with its date, and not as a standing check. Scout F's question 6 is whether to prove it
 (CompCert-shaped simulation over `Semantics` and `SemanticsTarget`, both of which exist as Lean
@@ -332,7 +332,7 @@ check, as the row intends.
   definitions in dependency order. Nine altered copies are refused, each for a stated reason
   (`#guard`, finite).
 - The compiler checkpoint is the `compiler` profile of `scripts/check-conform.py`. On a
-  checkout `make check-compiler` runs it, and `make check-full` names that target (decisions
+  checkout `make check-ocaml` runs it, and `make check-full` names that target (decisions
   row 263). The CI job `check-ocaml` runs the same command at a push, a pull request or a
   manual run (`.github/workflows/lean_action_ci.yml`). The target evaluator reads each support
   body from the definition that the prelude prints. Ten name fixtures agree with the compiled Lean

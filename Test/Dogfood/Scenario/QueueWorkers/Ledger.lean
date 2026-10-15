@@ -1,3 +1,4 @@
+import Effect4.Laws.Api.Runner
 import Test.Dogfood.Scenario.QueueWorkers.Model
 import Effect4.Laws.Library.Queue.Invariant
 import Effect4.Laws.Library.Queue.Conservation

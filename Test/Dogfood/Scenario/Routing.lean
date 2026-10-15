@@ -1,3 +1,4 @@
+import Test.Dogfood.Scenario.Routing.Runs
 import Test.Dogfood.Scenario.Routing.Model
 import Test.Dogfood.Proofs.HostRouting
 import Test.Dogfood.Scenario.Routing.Calls
@@ -191,29 +192,8 @@ def responded (status : Nat) (body : String) : Option ExitV :=
 def escaped (tag message : String) : Option ExitV :=
   some (.failure (Cause.fail (.tagged tag message)))
 
-/-- A user row with a column the type does not name, as a row decoder hands a wider row on. -/
-def wide : Val :=
-  .some (recordVal ["id", "name", "role", "createdAt"] [.nat 1, .str "ada", .str "admin", .nat 0])
-
 /-- Whether a run shows an observation. -/
 def shows (s : Run) (expected : Observation) : Bool := observe s == expected
-
-/-- The scenario's named runs: each script of a control, once, from one build of each program.
-The first six are on the scenario's own program `request`. The others are on the variants of the
-red controls. The host lane performs them in this order. -/
-def runsOf (bob missing denied misnamed catchAll eager exact : Api.Built) : List NamedRun :=
-  [ ⟨"200", opened bob, lookups 2⟩
-  , ⟨"404", opened missing, lookups 9⟩
-  , ⟨"401", opened denied, lookups 2⟩
-  , ⟨"escape", opened bob, failing "SqlError" "connection lost"⟩
-  , ⟨"business-tag", opened bob, failing "NotFound" "db"⟩
-  , ⟨"wide", opened bob,
-      script [[.start], answer cfg (ok (configOf "secret" 20)), answer repo (ok wide)]⟩
-  , ⟨"misnamed", opened misnamed, lookups 2⟩
-  , ⟨"catch-all", opened catchAll, failing "SqlError" "connection lost"⟩
-  , ⟨"eager", opened eager, lookups 2⟩
-  , ⟨"exact-business-tag", opened exact, failing "NotFound" "db"⟩
-  , ⟨"exact-escape", opened exact, failing "SqlError" "connection lost"⟩ ]
 
 /-- The controls. Each names the runs of `runsOf` that its comparison reads, and the gate hands
 them over as played. -/
@@ -272,20 +252,10 @@ def controlsOf : List Control :=
 that the scenario's program is p2's own. A program that does not build leaves no run and one
 failing control. -/
 def runsAndControls : List NamedRun × List Control :=
-  let build := fun (m : Module NativeOp) => (Effect4.Api.Author.build m).toOption
-  match build (request "secret" 2 "2"), build (request "secret" 9 "9"), build (request "wrong" 2 "2"),
-    build (routed false findById (named "NotFound") (named "Unauthorised") "wrong" 2 "2"),
-    build (routed false findById (named "NotFound") (fun _ => bool true) "secret" 2 "2"),
-    build (routed true findById (named "NotFound") (named "Unauthorized") "wrong" 2 "2"),
-    build (routed false findByIdExact (named "NotFound") (named "Unauthorized") "secret" 2 "2"),
-    build (caseModule "secret" 2 "2") with
-  | some bob, some missing, some denied, some misnamed, some catchAll, some eager, some exact,
-      some p2 =>
-    (runsOf bob missing denied misnamed catchAll eager exact,
-      green "exact" "the scenario's program is p2's own handler" []
+  match builtInputs with
+  | some (bob, _missing, _denied, _misnamed, _catchAll, _eager, _exact, p2) => (runSet.runs, green "exact" "the scenario's program is p2's own handler" []
         (fun _ => decide (bob.program = p2.program)) :: controlsOf)
-  | _, _, _, _, _, _, _, _ =>
-    ([], [green "exact" "the handler and its variants build" [] fun _ => false])
+  | none => ([], [green "exact" "the handler and its variants build" [] fun _ => false])
 
 /-! ## 6. The record -/
 
@@ -293,7 +263,7 @@ def runsAndControls : List NamedRun × List Control :=
 successful reply is an associated law: the record claims no dependency of `routing` on it. The
 registry places it by its module, a default module of `host-session-protocol`. -/
 def scenario : Scenario :=
-  { name := "routing"
+  { name := runSet.name
     program := ``request
     observation := ``observe
     claim := ``routing

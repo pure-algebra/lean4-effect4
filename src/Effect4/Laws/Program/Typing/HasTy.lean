@@ -138,7 +138,7 @@ inductive HasTy (sig : Signature Op) : TyEnv → Eff Op → EffTy → Prop
   `nat | bool`), and **both** arms' errors and requirements are in the conclusion. Under
   `.bool` this is `if` in a generator body (`E4-FLOW-CE-029`). (The row that is not this one,
   child 0's requirements alone, which rc.112's printed `Effect.suspend` head infers, is the
-  red control `tools/conform-red/RulesNeg.lean`.) -/
+  red control `Test/Program/SelectRulesRed.lean`.) -/
   | select {env : TyEnv} {s : Term} {d : Decision} {a0 a1 : Eff Op} {t : Ty}
       {e0 e1 : List Ty} {t0 t1 : EffTy} {answer : Ty} :
       termTy sig env s = some t →

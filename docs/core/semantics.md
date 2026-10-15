@@ -842,7 +842,7 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   A program with no such call and no such site has the typed print that is its print
   (`printTyped_eq_print`, the claim `typed-print-connector`).
   It establishes nothing that tsgo accepts and nothing of a run of the printed program.
-  The tsgo checks of the printed sites are finite checks (`make check-target`).
+  The tsgo checks of the printed sites are finite checks (`make check-ts`).
 - **A module with a definition block reads back (`module-defs-round-trip`)**: The module
   printer prints each definition as a constant (`printModule`, `src/Effect4/Codegen/Print.lean`).
   The constants stand before the layers and the main declaration.
@@ -895,7 +895,7 @@ theorem ofSchema_exact (r : Representation) : ∀ t, ofSchema r = some t → nor
   The application face refuses an invocation whose programs need a service, at its path
   (`PrintRefusal.callbackRequirement`): the printed header closes a parameter's row as `never`.
   It establishes nothing that tsgo accepts and nothing of a run of the printed module.
-  The truth lane runs the block programs on the pin, a finite check (`make check-truth`).
+  The truth lane runs the block programs on the pin, a finite check (`make check-ts`).
   Three counted programs compare the builds of a body's own layer with rc.112: two calls build
   twice, one call that provides its layer twice by reference builds once, and a call nested in
   another through the program it passed builds twice.
