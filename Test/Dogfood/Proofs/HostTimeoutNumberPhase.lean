@@ -66,6 +66,28 @@ def Phase.cleanup (phase : Phase) (own : phase.count = phase.cleanups.length + 1
     by simp only [List.length_append, List.length_cons, List.length_nil, Nat.zero_add]; omega,
     phase.formUpper, phase.bound⟩
 
+/-- Equal actual reference heaps retain the count and both stored logs, without identifying ghost exits. -/
+theorem Phase.heap_fields (before after : Phase) (same : before.heap = after.heap) :
+    before.count = after.count ∧ before.cleanups = after.cleanups ∧ before.completed = after.completed := by
+  have counts := congrArg (fun heap : RefHeap => heap[0]?) same
+  have cleanups := congrArg (fun heap : RefHeap => heap[1]?) same
+  have forms := congrArg (fun heap : RefHeap => heap[2]?) same
+  change some (Val.nat before.count) = some (.nat after.count) at counts
+  change some (Val.list before.cleanups) = some (.list after.cleanups) at cleanups
+  change some (Val.list before.completed) = some (.list after.completed) at forms
+  exact ⟨Store.Val.nat.inj (Option.some.inj counts), Store.Val.list.inj (Option.some.inj cleanups),
+    Store.Val.list.inj (Option.some.inj forms)⟩
+
+/-- The actual cleanup operation depends only on the same count and stored logs. -/
+theorem Phase.cleanup_heap_congr (before after : Phase)
+    (first : before.count = before.cleanups.length + 1) (last : after.count = after.cleanups.length + 1)
+    (interrupted : Bool) (same : before.heap = after.heap) :
+    (before.cleanup first interrupted).heap = (after.cleanup last interrupted).heap := by
+  obtain ⟨count, cleanups, completed⟩ := Phase.heap_fields before after same
+  change numberHeap before.count (before.cleanups ++ [.list [.nat before.count, .bool interrupted]]) before.completed =
+    numberHeap after.count (after.cleanups ++ [.list [.nat after.count, .bool interrupted]]) after.completed
+  rw [count, cleanups, completed]
+
 /-- Form publication changes neither the cleanup log nor the committed count. -/
 def Phase.form (phase : Phase) (seen : Nat) (exit : ExitV) : Phase :=
   ⟨phase.count, phase.cleanups, phase.completed ++ [.list [.nat seen, reifyExitVal exit]],

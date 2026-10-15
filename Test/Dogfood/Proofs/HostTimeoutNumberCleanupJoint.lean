@@ -33,11 +33,12 @@ theorem before_ne (context : CountContext) (selected : ExitV) : (cleaned context
   omega
 
 /-- An actual masked cleanup write retains every pending-fiber field in the committed store. -/
-theorem fiber (context : CountContext) (machine : NativeMachine) (row : SourceScope.SourceFiber)
-    (selected : ExitV) (held : FiberAt machine (.pending context) row) (live : row.exit = none)
+theorem fiber_value (context : CountContext) (machine : NativeMachine) (row : SourceScope.SourceFiber)
+    (selected : ExitV) (input : Kind) (held : FiberAt machine (.pending context) row) (live : row.exit = none)
     (heap : At context.entered machine.state) (masked : row.frame.interruptible = false)
     (saved : Effect4.Contracts.Path (HostTimeoutNumberUniform.Edge machine.state)
-      (.unit (cleaned context selected)) (.attempt context.before context.entered (own context)) row.frame.stack) :
+      input (.attempt context.before context.entered (own context)) row.frame.stack)
+    (good : ValueAt {machine.state with refs := (cleaned context selected).heap} input .unit) :
     let state := {machine.state with refs := (cleaned context selected).heap}
     let after := {row with frame := {row.frame with current := .success .unit}}
     FiberAt (installed machine state after) (.pending context) after := by
@@ -50,7 +51,7 @@ theorem fiber (context : CountContext) (machine : NativeMachine) (row : SourceSc
   constructor
   · constructor
     · exact ⟨⟨trivial, held.frame.1.saved⟩, trivial, held.frame.1.savedWrites⟩
-    · refine ⟨.unit (cleaned context selected), CodeAt.success _ .unit ⟨rfl, rfl⟩, ?_⟩
+    · refine ⟨input, CodeAt.success _ .unit good, ?_⟩
       exact Effect4.Contracts.Path.map (fun input output code edge =>
         HostTimeoutNumberUniform.Edge.future _ _ input output code future edge) saved
   · intro exit returned
@@ -82,7 +83,87 @@ theorem fiber (context : CountContext) (machine : NativeMachine) (row : SourceSc
   · intro next same maskedNext
     exact held.pendingDeferred next same masked
 
+/-- The original cleanup answer class remains an instance of the actual value producer. -/
+theorem fiber (context : CountContext) (machine : NativeMachine) (row : SourceScope.SourceFiber)
+    (selected : ExitV) (held : FiberAt machine (.pending context) row) (live : row.exit = none)
+    (heap : At context.entered machine.state) (masked : row.frame.interruptible = false)
+    (saved : Effect4.Contracts.Path (HostTimeoutNumberUniform.Edge machine.state)
+      (.unit (cleaned context selected)) (.attempt context.before context.entered (own context)) row.frame.stack) :
+    let state := {machine.state with refs := (cleaned context selected).heap}
+    let after := {row with frame := {row.frame with current := .success .unit}}
+    FiberAt (installed machine state after) (.pending context) after :=
+  fiber_value context machine row selected (.unit (cleaned context selected)) held live heap masked saved ⟨rfl, rfl⟩
+
 /-- The actual cleanup writer returns one joined machine, old queue, and detached snapshot at its committed phase. -/
+theorem joint_local_value (world : HostTimeoutNumberConfiguration.World) (context : CountContext)
+    (machine : NativeMachine) (resident row : SourceScope.SourceFiber) (selected : ExitV) (input : Kind)
+    (pending : List Guard.NCmd) (tasks : List NTask)
+    (census : OnlyAttempt world resident.id context) (found : machine.fiber? resident.id = some resident)
+    (assigned : (resident.id, Role.pending context) ∈ world.roles)
+    (held : Configuration world machine) (queued : Commands world machine pending)
+    (detached : Snapshot world machine tasks) (provided : FiberAt machine (.pending context) row)
+    (key : row.id = resident.id) (dispatcher : row.dispatcher = resident.dispatcher)
+    (live : row.exit = none)
+    (unparked : row.parked = .notParked) (masked : row.frame.interruptible = false)
+    (heap : At context.entered machine.state) (nonempty : resident.frame.stack ≠ [])
+    (saved : Effect4.Contracts.Path (HostTimeoutNumberUniform.Edge machine.state)
+      input (.attempt context.before context.entered (own context)) row.frame.stack)
+    (good : ValueAt {machine.state with refs := (cleaned context selected).heap} input .unit) :
+    let state := {machine.state with refs := (cleaned context selected).heap}
+    let after := {row with frame := {row.frame with current := .success .unit}}
+    let next := installed machine state after
+    Configuration {world with phase := cleaned context selected} next ∧
+      Commands {world with phase := cleaned context selected} next pending ∧
+      Snapshot {world with phase := cleaned context selected} next tasks := by
+  let state := {machine.state with refs := (cleaned context selected).heap}
+  let after : SourceScope.SourceFiber := {row with frame := {row.frame with current := .success .unit}}
+  let next := installed machine state after
+  have replies : ∀ id token code, ReplyAt world machine id token code → ReplyAt world next id token code :=
+    fun id token code good => reply_store world machine context resident after state census found key unparked id token code good
+  have config := configuration_store world machine context resident after state (cleaned context selected) census found assigned
+    key unparked dispatcher rfl held (fiber_value context machine row selected input provided
+      live heap masked saved good) (.inr (.inr ⟨HostTimeoutNumberSteps.interruptionFlag selected, rfl⟩))
+  have queue : Commands world next pending := by
+    intro command member
+    apply command_transport world machine next pending command member (queued command member) replies
+    · intro id yielding member previous nextContext roleAt oldHeap other actual installedFin
+      rcases census id (.pending nextContext) roleAt with ⟨same, equal⟩ | passive
+      · cases equal
+        exact False.elim (before_ne context selected oldHeap)
+      · cases passive
+    · intro id exit finishMember previous
+      by_cases same : id = resident.id
+      · subst id
+        exact False.elim (nonempty (previous.1 resident found))
+      · constructor
+        · intro fiber actual
+          have other : id ≠ after.id := fun equal => same (equal.trans key)
+          change (({machine with state}).update after).fiber? id = some fiber at actual
+          rw [RunMachine.fiber?_update_other after {machine with state} id other] at actual
+          exact previous.1 fiber actual
+        · intro role roleAt
+          exact exit_store next role exit (other_passive world resident.id context id role census roleAt same)
+    · intro host yielding kind member previous
+      cases kind with
+      | join target mode => trivial
+      | race race => trivial
+      | awaitAll targets =>
+        exact ⟨fun image own suffix roleAt => False.elim
+          (HostTimeoutNumberCountQueue.no_legacy world context resident.id host image own suffix census roleAt),
+          fun suffix roleAt => Or.inl ⟨cleaned context selected, rfl, by
+            change (context.entered.cleanups ++ _).length = context.entered.count
+            simp only [List.length_append, List.length_cons, List.length_nil, Nat.zero_add]
+            exact (own context).symm⟩⟩
+    · intro race host yielding remaining visited member previous
+      exact ⟨fun image own suffix roleAt => False.elim
+        (HostTimeoutNumberCountQueue.no_legacy world context resident.id host image own suffix census roleAt),
+        fun suffix roleAt => Or.inl ⟨cleaned context selected, rfl, by
+          change (context.entered.cleanups ++ _).length = context.entered.count
+          simp only [List.length_append, List.length_cons, List.length_nil, Nat.zero_add]
+          exact (own context).symm⟩⟩
+  exact ⟨config, queue, snapshot_replies world machine next tasks replies detached⟩
+
+/-- The existing resident-only cleanup interface remains an instance of the joined charged-row producer. -/
 theorem joint (world : HostTimeoutNumberConfiguration.World) (context : CountContext)
     (machine : NativeMachine) (row : SourceScope.SourceFiber) (selected : ExitV)
     (pending : List Guard.NCmd) (tasks : List NTask)
@@ -99,48 +180,10 @@ theorem joint (world : HostTimeoutNumberConfiguration.World) (context : CountCon
     let next := installed machine state after
     Configuration {world with phase := cleaned context selected} next ∧
       Commands {world with phase := cleaned context selected} next pending ∧
-      Snapshot {world with phase := cleaned context selected} next tasks := by
-  let state := {machine.state with refs := (cleaned context selected).heap}
-  let after : SourceScope.SourceFiber := {row with frame := {row.frame with current := .success .unit}}
-  let next := installed machine state after
-  have replies : ∀ id token code, ReplyAt world machine id token code → ReplyAt world next id token code :=
-    fun id token code good => reply_store world machine context row after state census found rfl unparked id token code good
-  have config := configuration_store world machine context row after state (cleaned context selected) census found assigned
-    rfl unparked rfl rfl held (fiber context machine row selected (held.lookup world machine row.id (.pending context) assigned row found)
-      live heap masked saved)
-  have queue : Commands world next pending := by
-    intro command member
-    apply command_transport world machine next pending command member (queued command member) replies
-    · intro id yielding member previous nextContext roleAt oldHeap other actual installedFin
-      rcases census id (.pending nextContext) roleAt with ⟨same, equal⟩ | passive
-      · cases equal
-        exact False.elim (before_ne context selected oldHeap)
-      · cases passive
-    · intro id exit finishMember previous
-      by_cases same : id = row.id
-      · subst id
-        exact False.elim (nonempty (previous.1 row found))
-      · exact ⟨terminal_update {machine with state} row after id found rfl rfl previous.1,
-          fun role roleAt => exit_store next role exit (other_passive world row.id context id role census roleAt same)⟩
-    · intro host yielding kind member previous
-      cases kind with
-      | join target mode => trivial
-      | race race => trivial
-      | awaitAll targets =>
-        exact ⟨fun image own suffix roleAt => False.elim
-          (HostTimeoutNumberCountQueue.no_legacy world context row.id host image own suffix census roleAt),
-          fun suffix roleAt => Or.inl ⟨cleaned context selected, rfl, by
-            change (context.entered.cleanups ++ _).length = context.entered.count
-            simp only [List.length_append, List.length_cons, List.length_nil, Nat.zero_add]
-            exact (own context).symm⟩⟩
-    · intro race host yielding remaining visited member previous
-      exact ⟨fun image own suffix roleAt => False.elim
-        (HostTimeoutNumberCountQueue.no_legacy world context row.id host image own suffix census roleAt),
-        fun suffix roleAt => Or.inl ⟨cleaned context selected, rfl, by
-          change (context.entered.cleanups ++ _).length = context.entered.count
-          simp only [List.length_append, List.length_cons, List.length_nil, Nat.zero_add]
-          exact (own context).symm⟩⟩
-  exact ⟨config, queue, snapshot_replies world machine next tasks replies detached⟩
+      Snapshot {world with phase := cleaned context selected} next tasks :=
+  joint_local_value world context machine row row selected (.unit (cleaned context selected)) pending tasks census found assigned
+    held queued detached (held.lookup world machine row.id (.pending context) assigned row found)
+    rfl rfl live unparked masked heap nonempty saved ⟨rfl, rfl⟩
 
 /-- The real native cleanup dispatch consumes the existing evaluator equation and the joined postcondition. -/
 theorem native_joint (world : HostTimeoutNumberConfiguration.World) (context : CountContext)

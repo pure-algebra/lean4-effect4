@@ -52,7 +52,8 @@ theorem configuration_store (world : HostTimeoutNumberConfiguration.World) (mach
     (assigned : (before.id, Role.pending context) ∈ world.roles)
     (key : after.id = before.id) (unparked : after.parked = .notParked)
     (dispatcher : after.dispatcher = before.dispatcher) (heap : state.refs = phase.heap)
-    (held : Configuration world machine) (active : FiberAt (installed machine state after) (.pending context) after) :
+    (held : Configuration world machine) (active : FiberAt (installed machine state after) (.pending context) after)
+    (progress : PendingPhase context phase) :
     Configuration {world with phase} (installed machine state after) := by
   constructor
   · exact heap
@@ -81,6 +82,12 @@ theorem configuration_store (world : HostTimeoutNumberConfiguration.World) (mach
     · exact snapshot_replies world machine _ bucket.tasks
         (reply_store world machine context before after state census found key unparked)
         (held.dispatchers old present bucket stored)
+
+  · intro id next assigned
+    rcases census id (.pending next) assigned with ⟨same, equal⟩ | passive
+    · cases equal
+      exact progress
+    · cases passive
 
 /-- A real count increment separates the entered heap from its predecessor heap. -/
 theorem counted_heap_ne (context : CountContext) : context.entered.heap ≠ context.before.heap := by
@@ -149,6 +156,6 @@ theorem count_machine (world : HostTimeoutNumberConfiguration.World) (machine : 
   let after : SourceScope.SourceFiber := {countOp fiber with frame := {fiber.frame with current := .success .unit}}
   exact configuration_store world machine context fiber after state context.entered census found assigned rfl
     ready.2.2 rfl rfl held (counted_fiber machine context fiber yielding
-      (held.lookup world machine fiber.id (.pending context) assigned fiber found) live heap current stack ready)
+      (held.lookup world machine fiber.id (.pending context) assigned fiber found) live heap current stack ready) (.inr (.inl rfl))
 
 end Test.Dogfood.Proofs.HostTimeoutNumberCountMachine

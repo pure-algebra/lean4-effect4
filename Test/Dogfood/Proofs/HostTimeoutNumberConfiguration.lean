@@ -442,12 +442,21 @@ def CommandAt (world : World) (machine : Effect4.Program.NativeMachine) : Guard.
 def Commands (world : World) (machine : Effect4.Program.NativeMachine) (commands : List Guard.NCmd) : Prop :=
   ∀ command ∈ commands, CommandAt world machine command
 
+/-- The assigned attempt retains its actual predecessor, counted, or single cleanup phase.
+Consumer: actual cleanup writer admission and the same declared-exit ghost across both endpoint histories. -/
+def PendingPhase (context : CountContext) (phase : Phase) : Prop :=
+  phase = context.before ∨ phase = context.entered ∨ ∃ interrupted,
+    phase = context.entered.cleanup (by
+      change context.before.count + 1 = context.before.cleanups.length + 1
+      rw [context.cleanups]) interrupted
+
 /-- The concrete active configuration retains numeric heap order and every existing fiber's role. -/
 structure Configuration (world : World) (machine : Effect4.Program.NativeMachine) : Prop where
   heap : machine.state.refs = world.phase.heap
   roles : ∀ fiber ∈ machine.fibers, ∃ role, (fiber.id, role) ∈ world.roles ∧ FiberAt machine role fiber
   unique : ∀ id first second, (id, first) ∈ world.roles → (id, second) ∈ world.roles → first = second
   dispatchers : ∀ fiber ∈ machine.fibers, ∀ bucket ∈ fiber.dispatcher.buckets, Snapshot world machine bucket.tasks
+  pendingPhase : ∀ id context, (id, Role.pending context) ∈ world.roles → PendingPhase context world.phase
 
 /-- A looked-up fiber receives the unique role recorded by the actual configuration. -/
 theorem Configuration.lookup (world : World) (machine : Effect4.Program.NativeMachine)

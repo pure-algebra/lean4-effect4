@@ -112,6 +112,9 @@ theorem passive_update (world : HostTimeoutNumberConfiguration.World) (machine :
       have other : fiber.id ≠ before.id := fun same => different (same.trans key.symm)
       exact ⟨role, (passive_other world before.id fiber.id role other).mpr assigned, good⟩
     · exact reply
+    · intro id context assigned
+      obtain ⟨different, old⟩ := passive_active world before.id id (.pending context) assigned (by intro equal; cases equal)
+      exact held.pendingPhase id context old
   have queue : Commands (passive world before.id) (machine.update after) pending := by
     intro command member
     apply HostTimeoutNumberQueueInterrupt.command_transport_into world (passive world before.id)

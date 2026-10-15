@@ -90,6 +90,8 @@ theorem configuration (world : HostTimeoutNumberConfiguration.World) (machine : 
       (fun id token code good => reply world machine observers id token code good)
       (held.dispatchers old present bucket stored)
 
+  · exact held.pendingPhase
+
 /-- A queued loop reads exactly the same execution and mask fields after an observer-only map. -/
 theorem loop (world : HostTimeoutNumberConfiguration.World) (machine : Effect4.Program.NativeMachine)
     (observers : Effect4.Program.SourceScope.SourceFiber → List Observer) (id : FiberId) (yielding : Bool)
