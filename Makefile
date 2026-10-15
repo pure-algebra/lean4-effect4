@@ -166,8 +166,7 @@ $(GEN)/lcnf: $(GEN)/derived $(LCNF_SOURCES) $(CORE_SOURCES)
 	@mkdir -p $(GEN) && touch $@
 
 EFF_SOURCES := src/OCaml5/Tools/EffGen.lean $(wildcard src/OCaml5/Eff/*.lean) $(WIRE_TAGS) \
-  scripts/generate-engine-structure.py scripts/lib/program_structure.py \
-  ocaml/engine/layout-allowance.json ocaml/engine/api_engine.ml $(PRODUCER_COMMON)
+  $(PRODUCER_COMMON)
 $(GEN)/eff: $(GEN)/derived $(EFF_SOURCES) $(CORE_SOURCES)
 	$(PY) scripts/generate.py --only eff
 	@mkdir -p $(GEN) && touch $@
@@ -335,8 +334,7 @@ clean-gen: ## forget the generation markers (the next `make gen` re-cuts everyth
 
 # Every committed path a generator writes. The drift check diffs exactly these.
 GENERATED_PATHS := $(DERIVED_OUT) $(VARIANCES) src/Effect4/Program/TyVariance.lean \
-  ocaml/eff ocaml/goldens/eff ocaml/engine/cas/goldens ocaml/engine/e4_program_layout.ml \
-  ocaml/engine/e4_program_layout.json \
+  ocaml/eff ocaml/goldens/eff ocaml/engine/cas/goldens \
   ocaml/gen/api_gen.ml ocaml/engine/api_engine.ml ocaml/gen/closure-api_gen.tsv ocaml/gen/closure-api_engine.tsv \
   ts/eff/eff.gen.ts ts/eff/json.gen.ts ts/eff/profile.gen.ts ts/eff/taxonomy.gen.ts ts/eff/names.gen.ts ts/eff/forms.gen.ts \
   ts/eff/wire.gen.ts ts/eff/packages.gen.ts ts/eff/templates.gen.ts ts/eff/test/type-projection.gen.json ts/eff/ingest/README.md \

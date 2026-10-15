@@ -333,13 +333,16 @@ structure Generated where
 
 /-- Emit the closure. `full` are the types to emit in full (every type `Translate` destructs
 or constructs, plus whatever the caller asks for); `mentioned` are types that need at least
-a placeholder (those in the annotations of translated code). -/
+a placeholder (those in the annotations of translated code). A `provided` type is declared by an
+opened module (`Gen.Args.opens`): it claims its OCaml name and is emitted nowhere, so a type of
+this run that shares the name is reported as a collision and renamed. -/
 partial def generate (full : Array Name) (mentioned : Array Name) (tn : TypeNames := {})
-    (ex : Externs := {}) : MetaM Generated := do
+    (ex : Externs := {}) (provided : NameSet := {}) : MetaM Generated := do
   let fullSet : NameSet := full.foldl (·.insert ·) {}
   let mut g : Generated := {}
-  let mut done : NameSet := {}
-  let mut taken : Std.HashMap String Name := {}
+  let mut done : NameSet := provided
+  let mut taken : Std.HashMap String Name :=
+    provided.foldl (fun m n => m.insert (typeNameIn tn n) n) {}
   let mut queue : Array (Name × Bool) := full.map (·, true) ++ mentioned.map (·, false)
   let mut i := 0
   while i < queue.size do

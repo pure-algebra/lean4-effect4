@@ -15,14 +15,14 @@ Standard library only. OCaml 5.1.1 / dune 3.24 (opam switch `effect4`).
 | --- | --- | --- |
 | `eff_frame.ml` | hand | the framing kernel: `emit_*`/`decode_*` for the twelve tags, base-256 naturals, UTF-8 validation |
 | `eff_json_text.ml` | hand | JSON string escaping and number/array/object assembly for the printer |
-| `eff_types.ml` | **generated** | one OCaml variant/record per Lean inductive/structure, constructor order pinned, `ctor_index_*` / `ctor_name_*` / `ctor_names_*` per family |
+| `eff_types.ml` | **generated** (the LCNF route, `make gen-lcnf`) | the program types, one OCaml variant, record or abbreviation per Lean family, spelled as the generated engines spell them; both engines open it |
+| `eff_ctors.ml` | **generated** | `ctor_index_*` / `wire_tag_*` / `ctor_name_*` / `ctor_names_*` per family, and the literal visitor `lits_*` |
 | `eff_layout.ml` | **generated** | the wire families and their fields, as data |
 | `eff_wire.ml` | **generated** | `encode_*` / `decode_*` per family, `*_exact` at the top level |
 | `eff_subterm.ml` | **generated** | the node sorts of `Effect4.Program.Node`, each constructor's children as (value argument index, child sort), the one-step `child`, and one witness per constructor with pairwise different children |
 | `eff_json.ml` | **generated** | `print_*` per family (a printer only — there is no JSON parser anywhere) |
 | `eff_native.ml` | **generated** | the native alphabet as data: atom names and const-generic metadata, the op values `all_ops` (`NativeOp.spelled`, one per spelling key; a read-modify-write row stands once, at its face), `scope_key`, the scope and context types; typing remains in Lean |
 | `eff_manifest.txt` | **generated** | one line per family: name, OCaml type, constructors and their carriers, in order |
-| `program-structure.json` | **generated** | the constructor families the engine's layout check reads |
 | `goldens/` | **generated** | for each program of the corpus (89 at 2026-10-11): `<name>.bin` (the canonical bytes), `<name>.json` (the Lean JSON printer's output), `<name>.ty` (Lean's `typeOf`); `corpus.txt` (each name with Lean's `wellTyped` verdict); `coverage.txt` (constructor counts over the corpus) |
 | `goldens/val_*.hex` | **hand-derived** | `val_handle.hex`, `val_ref.hex` — two `Store.Val` trees derived by hand from `Val.lean`'s encoder on 2026-09-07, pending a Lean cut |
 | `test/test_eff.ml` | hand | the golden battery and the wire kernel |
@@ -56,9 +56,10 @@ same through WSL: `wsl -e bash ocaml/eff/tools/test.sh`.
 
 ## Regenerating
 
-`make gen-eff` regenerates the five generated modules, the manifest, the goldens and the
-engine's layout files from one Lean tool that reads the families out of the environment
-(`src/OCaml5/Tools/EffGen.lean`, then `scripts/generate-engine-structure.py`). Each generated
+`make gen-eff` regenerates the codec modules, the manifest and the goldens from one Lean tool
+that reads the families out of the environment (`src/OCaml5/Tools/EffGen.lean`). The program
+types are `make gen-lcnf`'s (`ocaml/eff/eff_types.ml`), and the codecs spell every name by
+that route's rule. Each generated
 file carries a `GENERATED … do not edit` header; a fix to a generated file belongs in the
 tool. `make check-gen` refuses a committed generated file that differs from what the tool
 emits.

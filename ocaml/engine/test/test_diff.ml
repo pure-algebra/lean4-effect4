@@ -38,6 +38,7 @@
         make corpus && cd ocaml && dune build @engine/test/runtest --force *)
 
 open Effect4_engine
+open Eff_types
 
 let failures = ref 0
 let checks = ref 0
@@ -56,7 +57,7 @@ let note s = Printf.printf "  NOTE %s\n" s
    they are the ONLY lines that name a carrier, exactly as `api_engine_inst.ml` says --
    here every carrier is Lean's own list, so each projection is a `List` operation.  The
    ascription `E4_engine.Make (Api_gen_inst)` is itself a check: `ocamlopt` compares the
-   hand transcriptions of `E4_program.PROGRAM_TYPES` and `E4_engine.INSTANCE` against the
+   hand transcription of `E4_engine.INSTANCE` against the
    generated file of the OTHER route, so a constructor that drifted between
    `ocaml/gen/api_gen.ml` and `ocaml/engine/api_engine.ml` is a compile error here. *)
 module Api_gen_inst = struct

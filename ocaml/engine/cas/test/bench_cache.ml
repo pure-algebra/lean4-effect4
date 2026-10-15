@@ -137,7 +137,7 @@ let eff_goldens_dir () =
     ((try [ Sys.getenv "E4_EFF_GOLDENS" ] with Not_found -> [])
     @ List.concat (List.map per (ancestors here 9 [])))
 
-let rec bind_tree (d : int) : Eff_types.eff =
+let rec bind_tree (d : int) : Eff_wire.program =
   if d = 0 then Eff_types.Eff_succeed (Eff_types.Term_lit (Eff_types.Lit_nat 1))
   else Eff_types.Eff_bind (bind_tree (d - 1), bind_tree (d - 1))
 

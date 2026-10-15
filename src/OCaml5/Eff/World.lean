@@ -3,6 +3,7 @@ import Tools.ProgramStructure
 import Tools.WireTags
 import Effect4.Program.Native
 import Effect4.Program.Node
+import OCaml5.Lcnf.Types
 
 /-!
 # OCaml5.Eff.World
@@ -63,12 +64,12 @@ partial def OTy.renderArg : OTy → String
   | t => t.render
 end
 
-/-- The OCaml constructor of `<Type>.<ctor>`: the type's OCaml name capitalised, an underscore,
-the Lean constructor name verbatim. -/
-def octor (oname short : String) : String := oname.capitalize ++ "_" ++ short
+/-- The OCaml constructor of `<Type>.<ctor>`, spelled as `ocaml/eff/eff_types.ml` declares it: the
+LCNF route's rule (`OCaml5.Lcnf.ctorName`), since that route writes the one program type. -/
+def octor (t : Name) (short : String) : String := OCaml5.Lcnf.ctorName t short
 
-/-- The OCaml record field of `<Type>.<field>`. -/
-def ofield (oname field : String) : String := oname ++ "_" ++ field
+/-- The OCaml record field of a Lean structure field, by the same rule (`OCaml5.Lcnf.fieldName`). -/
+def ofield (field : String) : String := OCaml5.Lcnf.fieldName field
 
 def shortName : Name → String
   | .str _ s => s
@@ -127,7 +128,23 @@ deriving Inhabited
 structure Family where
   spec : Spec
   isStruct : Bool
+  /-- A trivial structure, one relevant field: Lean's compiler erases it to its field, and
+  `eff_types.ml` declares it as that field's type (`OCaml5.Lcnf.trivialFieldIdx?`). Its bytes
+  are still a structure's. -/
+  trivial : Bool
   ctors : List Ctor
+
+/-- The OCaml type of a family as `eff_types.ml` declares it: its parameters applied
+(`native_op eff`). `pre` qualifies each name (`Eff_types.`). -/
+def Family.tyRef (f : Family) (pre : String := "") : String :=
+  let name := pre ++ f.spec.oname
+  let arg (t : OTy) : String := match t with
+    | .named n => pre ++ n
+    | t => t.renderArg
+  match f.spec.params with
+  | [] => name
+  | [p] => arg p ++ " " ++ name
+  | ps => "(" ++ ", ".intercalate (ps.map arg) ++ ") " ++ name
 
 /-- `Effect4.Program.Term`, unambiguous beside `Lean.Term`. -/
 abbrev PTerm := Effect4.Program.Term
@@ -144,7 +161,8 @@ def projectFamily (tags : Tools.WireTags.Assignment)
       | .ok shape => pure (field.name, shape)
       | .error message => throwError message
     pure { name := ctor.name, short := shortName ctor.name, tag, args : Ctor }
-  pure { spec := projectSpec family.spec, isStruct := family.isStruct, ctors }
+  let trivial := (← OCaml5.Lcnf.trivialFieldIdx? family.spec.leanName).isSome
+  pure { spec := projectSpec family.spec, isStruct := family.isStruct, trivial, ctors }
 
 /-- The program world with its wire tags. The assignment is read once; an inductive family of
 the world that the assignment does not list is refused, so no tag here is a silent default. -/

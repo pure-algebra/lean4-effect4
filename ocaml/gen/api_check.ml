@@ -72,7 +72,7 @@ let root_exit (r : A.inspection) =
   | None -> None
   | Some f -> f.A.exit_
 
-let run_and_show name (p : A.native_op A.eff) =
+let run_and_show name (p : Eff_types.native_op Eff_types.eff) =
   let r = A.api_run p 1000 [] 1000 in
   let e = root_exit r in
   Printf.printf "  %s: outcome=%s fibers=%d exit=%s\n" name (show_outcome r.A.outcome)
@@ -81,23 +81,23 @@ let run_and_show name (p : A.native_op A.eff) =
 
 (* ---------------------------------------------------------------- the programs *)
 
-let p42 : A.native_op A.eff = A.Eff_succeed (A.Term_lit (A.Lit_nat 42))
+let p42 : Eff_types.native_op Eff_types.eff = Eff_types.Eff_succeed (Eff_types.Term_lit (Eff_types.Lit_nat 42))
 
-let fork_options : A.fork_options =
-  { A.start_immediately = false; daemon = false; mask_mode = A.MaskMode_inherit }
+let fork_options : Eff_types.fork_options =
+  { Eff_types.start_immediately = false; daemon = false; mask_mode = Eff_types.MaskMode_inherit }
 
-let p_fork : A.native_op A.eff =
-  A.Eff_bind
-    ( A.Eff_withFiber
-        (A.ActionTerm_fork
-           ( A.Eff_bind (A.Eff_yieldNow 0, A.Eff_succeed (A.Term_lit (A.Lit_nat 7))),
+let p_fork : Eff_types.native_op Eff_types.eff =
+  Eff_types.Eff_bind
+    ( Eff_types.Eff_withFiber
+        (Eff_types.ActionTerm_fork
+           ( Eff_types.Eff_bind (Eff_types.Eff_yieldNow 0, Eff_types.Eff_succeed (Eff_types.Term_lit (Eff_types.Lit_nat 7))),
              fork_options )),
-      A.Eff_awaitFiber (A.Term_var 0, A.ObserverMode_awaitValue) )
+      Eff_types.Eff_awaitFiber (Eff_types.Term_var 0, Eff_types.ObserverMode_awaitValue) )
 
-let p_await : A.native_op A.eff =
-  A.Eff_bind
-    ( A.Eff_perform (A.NativeOp_deferredMakeOf (A.Ty_nat, A.Ty_nat), A.Term_lit A.Lit_unit),
-      A.Eff_perform (A.NativeOp_deferredAwait, A.Term_var 0) )
+let p_await : Eff_types.native_op Eff_types.eff =
+  Eff_types.Eff_bind
+    ( Eff_types.Eff_perform (Eff_types.NativeOp_deferredMakeOf (Eff_types.Ty_nat, Eff_types.Ty_nat), Eff_types.Term_lit Eff_types.Lit_unit),
+      Eff_types.Eff_perform (Eff_types.NativeOp_deferredAwait, Eff_types.Term_var 0) )
 
 let () =
   print_endline "== G0. the generated engine runs a program (Api.run, fuel 1000) ==";

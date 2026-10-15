@@ -1,5 +1,7 @@
 (* E4_engine -- see e4_engine.mli. *)
 
+open Eff_types
+
 type frontier = { parked : (int * int) list; armed : int list; due : int }
 
 type answer =
@@ -10,8 +12,6 @@ type answer =
   | Delay of frontier
 
 module type INSTANCE = sig
-  include E4_program.PROGRAM_TYPES
-
   val name : string
   val carriers : string
 
@@ -253,10 +253,10 @@ module type ENGINE = sig
   val install_middleware : decision
   val advance : int -> decision
   val advance_exact : E4_clock.t -> decision
-  val compile : Eff_types.eff -> program
+  val compile : Eff_wire.program -> program
   val of_bytes : string -> program option
   val load_program : program -> fuel:int -> t
-  val load : Eff_types.eff -> fuel:int -> t
+  val load : Eff_wire.program -> fuel:int -> t
   val load_bytes : string -> fuel:int -> t option
   val step : t -> decision -> t
   val replay : t -> decision list -> t
@@ -264,7 +264,7 @@ module type ENGINE = sig
   val replay_steps : t -> decision list -> t Seq.t
   val replay_positions : t -> decision list -> t Seq.t
   val drive : t -> t
-  val run : Eff_types.eff -> fuel:int -> t
+  val run : Eff_wire.program -> fuel:int -> t
   val run_program : program -> fuel:int -> t
   val api_run : program -> fuel:int -> string
   val answer : t -> answer
@@ -287,8 +287,6 @@ module Make (I : INSTANCE) = struct
   let () =
     if Sys.int_size <> 63 then
       raise (E4_clock.Profile_refusal "engine: a 63-bit integer host is required")
-
-  module P = E4_program.Make (I)
 
   let name = I.name
   let carriers = I.carriers
@@ -333,14 +331,20 @@ module Make (I : INSTANCE) = struct
 
   (* -- loading -------------------------------------------------------------------- *)
 
-  let compile (p : Eff_types.eff) : program = P.load p
-  let of_bytes (b : string) : program option = P.of_bytes b
+  (* EN8: a natural literal of the program passes the selected profile before it runs. The
+     program type is the instance's own (`Eff_types`, the LCNF route's), so nothing converts. *)
+  let compile (p : Eff_wire.program) : program =
+    Eff_ctors.lits_eff
+      (function Lit_nat n -> ignore (E4_clock.to_profile_nat (E4_clock.of_nat n)) | _ -> ()) p;
+    p
+
+  let of_bytes (b : string) : program option = Option.map compile (Eff_wire.decode_program_exact b)
 
   let load_program (p : program) ~(fuel : int) : t =
     { program = p; interp = I.interp_of p; fuel_ = fuel;
       m = I.load p ~fuel; settled = true; outside_profile = None }
 
-  let load (p : Eff_types.eff) ~(fuel : int) : t = load_program (compile p) ~fuel
+  let load (p : Eff_wire.program) ~(fuel : int) : t = load_program (compile p) ~fuel
 
   let load_bytes (b : string) ~(fuel : int) : t option =
     match of_bytes b with None -> None | Some p -> Some (load_program p ~fuel)
@@ -413,7 +417,7 @@ module Make (I : INSTANCE) = struct
 
   let drive (t : t) : t = replay t [ I.api_evaluate; flush ]
   let run_program (p : program) ~(fuel : int) : t = drive (load_program p ~fuel)
-  let run (p : Eff_types.eff) ~(fuel : int) : t = run_program (compile p) ~fuel
+  let run (p : Eff_wire.program) ~(fuel : int) : t = run_program (compile p) ~fuel
 
   (* -- the renderers -------------------------------------------------------------- *)
 
@@ -476,10 +480,10 @@ module Make (I : INSTANCE) = struct
 
   let show_exit_opt = function None -> "-" | Some x -> show_exit x
 
-  let show_observer_mode (m : I.observer_mode) : string =
+  let show_observer_mode (m : observer_mode) : string =
     match m with
-    | I.ObserverMode_awaitValue -> "awaitValue"
-    | I.ObserverMode_joinEffect -> "joinEffect"
+    | ObserverMode_awaitValue -> "awaitValue"
+    | ObserverMode_joinEffect -> "joinEffect"
 
   let show_observer (o : I.observer) : string =
     match o with
@@ -511,7 +515,7 @@ module Make (I : INSTANCE) = struct
       (String.concat ","
          (List.map
             (fun (sv : I.val_ I.service) ->
-               Printf.sprintf "%d:%d=%s" sv.I.key.I.name sv.I.key.I.service
+               Printf.sprintf "%d:%d=%s" sv.I.key.name sv.I.key.service
                  (show_val sv.I.value))
             c.I.services))
       c.I.max_ops_before_yield c.I.prevent_yield

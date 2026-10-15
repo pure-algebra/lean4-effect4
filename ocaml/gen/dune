@@ -8,7 +8,7 @@
  (name effect4_gen)
  (public_name effect4_gen)
  (modules api_gen)
- (libraries effect4_clock)
+ (libraries effect4_clock effect4_eff)
  (flags
   (:standard -warn-error -a)))
 

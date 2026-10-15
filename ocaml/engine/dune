@@ -3,7 +3,7 @@
 ; -a3-queue-query). Flat layout: every module is one `e4_*.ml` with its `.mli` and a
 ; property list at its head (ocaml/STANDARDS.md); tests live in test/ (their own dune).
 ; Dependencies: the stdlib, unix, threads, `effect4_eff` (the exact program wire, ocaml/eff —
-; E4_program converts Eff_types.eff), `effect4_clock` and `effect4_bytes` (bytes/: framing,
+; the generated engine opens Eff_types, the one program type), `effect4_clock` and `effect4_bytes` (bytes/: framing,
 ; hexadecimal, the 63-bit naturals, SHA-256) — nothing else without a measured need recorded
 ; in the design that asks for it. Builds as part of the estate workspace (ocaml/dune lists
 ; engine; `cd ocaml && dune build engine`).

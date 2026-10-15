@@ -52,6 +52,12 @@ structure Args where
   It is where a row whose Lean body applies a builtin to a carrier field lives, because only
   there can it see both the carrier parameters and the generated record types. -/
   prelude : Option String := none
+  /-- An OCaml module that declares some of this artifact's types (`--open <Module>`): the
+  artifact opens it and declares none of them. -/
+  opens : Option String := none
+  /-- The types the opened module's own artifact requests (`--open-types A,B,…`). This run
+  generates them as that artifact does, so the two agree on every name. -/
+  openTypes : Array Name := #[]
 
 /-- The arguments of one artifact's command. Every word that is no option is a root. -/
 def Args.parse : List String → Args → Args
@@ -63,6 +69,9 @@ def Args.parse : List String → Args → Args
     Args.parse rest { a with imports := a.imports ++ ((m.splitOn ",").map String.toName).toArray }
   | "--externs" :: p :: rest, a => Args.parse rest { a with externs := some p }
   | "--prelude" :: p :: rest, a => Args.parse rest { a with prelude := some p }
+  | "--open" :: m :: rest, a => Args.parse rest { a with opens := some m }
+  | "--open-types" :: ts :: rest, a =>
+    Args.parse rest { a with openTypes := a.openTypes ++ ((ts.splitOn ",").map String.toName).toArray }
   | r :: rest, a => Args.parse rest { a with roots := a.roots.push r.toName }
   | [], a => a
 
@@ -74,9 +83,12 @@ def commandOf (argv : List String) : String :=
   "lean -M4096 --run src/OCaml5/Tools/LcnfGen.lean " ++ " ".intercalate argv
 
 /-- One recipe entry's argv, in the recipe's fixed order: `--out`, one `--import` per module,
-`--cap`, `--types` (comma-joined, when any), `--externs`, `--prelude`, the roots in the order
-listed, then the coverage roots. It is the text of the artifact's header. -/
-def argvOf (entry : Json) : Except String (List String) := do
+`--cap`, `--types` (comma-joined, when any), `--externs`, `--prelude`, `--open` and
+`--open-types` (when the entry opens another artifact's module), the roots in the order listed,
+then the coverage roots. It is the text of the artifact's header. `typesOf` gives an artifact's
+requested types by its `out`, so an `open` names the artifact once and its types are read from it. -/
+def argvOf (typesOf : String → Option (List String)) (entry : Json) :
+    Except String (List String) := do
   let out ← entry.getObjValAs? String "out"
   let imports := (entry.getObjValAs? (List String) "import").toOption.getD []
   let cap ← entry.getObjValAs? Nat "cap"
@@ -87,9 +99,17 @@ def argvOf (entry : Json) : Except String (List String) := do
     match entry.getObjValAs? String name with
     | .ok value => if value.isEmpty then [] else ["--" ++ name, value]
     | .error _ => []
+  let opens ← match entry.getObjVal? "open" with
+    | .error _ => pure []
+    | .ok spec => do
+      let m ← spec.getObjValAs? String "module"
+      let from_ ← spec.getObjValAs? String "artefact"
+      let some ts := typesOf from_
+        | throw s!"{out} opens the module of {from_}, which is no artefact of the recipe"
+      pure ["--open", m, "--open-types", ",".intercalate ts]
   return ["--out", out] ++ imports.flatMap (fun m => ["--import", m]) ++ ["--cap", toString cap]
     ++ (if types.isEmpty then [] else ["--types", ",".intercalate types])
-    ++ flag "externs" ++ flag "prelude" ++ roots ++ coverage
+    ++ flag "externs" ++ flag "prelude" ++ opens ++ roots ++ coverage
 
 /-- The recipe's artifacts, each as its argv, in the recipe's order. Another format is refused. -/
 def recipeArgvs (recipe : Json) : Except String (Array (List String)) := do
@@ -97,7 +117,12 @@ def recipeArgvs (recipe : Json) : Except String (Array (List String)) := do
   unless format == recipeFormat do
     throw s!"unsupported LCNF recipe format {format}; this generator reads {recipeFormat}"
   let entries ← recipe.getObjValAs? (Array Json) "artefacts"
-  entries.mapM argvOf
+  let typesOf (out : String) : Option (List String) :=
+    entries.findSome? fun e =>
+      if (e.getObjValAs? String "out").toOption == some out then
+        some ((e.getObjValAs? (List String) "types").toOption.getD [])
+      else none
+  entries.mapM (argvOf typesOf)
 
 /-- The `--out` paths of the recipe's artifacts, whose closure manifests are data in
 `GENERATED_PATHS` at `ocaml/gen/closure-<stem>.tsv` (decisions row 70). -/
@@ -161,11 +186,27 @@ def run (argv : List String) (recipeOuts : List String) : MetaM Unit := do
   -- first pass and fed back as `TypeNames` before anything is written; the loop repeats in
   -- case a fallback name collides in its turn. A renaming pass translates the declarations
   -- again (`retranslate`): the walk, the carrier rows and the clock boundary read no name.
+  -- The opened module's types, generated as its own artifact generates them (no table, the same
+  -- renaming loop), so every name agrees. A placeholder there would hide a type this run must
+  -- declare in full, so the opened artifact must declare each of its types in full.
   let mut tn : TypeNames := {}
+  let mut provided : NameSet := {}
+  let mut openedDecls : Array Ml.TypeDecl := #[]
+  if args.opens.isSome then
+    let mut og ← generate args.openTypes #[] tn {}
+    for _ in [:4] do
+      if og.collisions.isEmpty then break
+      for (_, _, n) in og.collisions do tn := tn.insert n (fullTypeName n)
+      og ← generate args.openTypes #[] tn {}
+    unless og.placeholders.isEmpty && og.collisions.isEmpty && og.unknown.isEmpty do
+      throwError s!"the opened module's types are not all declared in full (fatal): \
+        placeholders {og.placeholders}, collisions {og.collisions}, unknown {og.unknown}"
+    provided := (og.full ++ og.aliases).foldl (·.insert ·) {}
+    openedDecls := og.decls
   let (closure0, ex, inferred) ← translateClosureInferring args.roots args.cap tn handEx
   let t1 ← IO.monoNanosNow
   let mut closure := closure0
-  let mut gen ← generate (closure.realTypes ++ args.types) closure.mentioned tn ex
+  let mut gen ← generate (closure.realTypes ++ args.types) closure.mentioned tn ex provided
   let t2 ← IO.monoNanosNow
   let mut renamed : Array (String × Name × Name) := #[]
   for _ in [:4] do
@@ -173,7 +214,7 @@ def run (argv : List String) (recipeOuts : List String) : MetaM Unit := do
     renamed := renamed ++ gen.collisions
     for (_, _, n) in gen.collisions do tn := tn.insert n (fullTypeName n)
     closure ← retranslate closure tn ex
-    gen ← generate (closure.realTypes ++ args.types) closure.mentioned tn ex
+    gen ← generate (closure.realTypes ++ args.types) closure.mentioned tn ex provided
   let t3 ← IO.monoNanosNow
   let header := "GENERATED by OCaml5.Lcnf (src/OCaml5/Lcnf/*.lean) from the mono-phase LCNF "
     ++ "of " ++ ", ".intercalate (args.imports.toList.map toString)
@@ -191,12 +232,14 @@ def run (argv : List String) (recipeOuts : List String) : MetaM Unit := do
   -- record types) because the engine library compiles with `-w +a` and dune's dev profile
   -- makes 30 fatal; `ocaml/gen` builds with `-warn-error -a` and its list is left alone, so
   -- `ocaml/gen/api_gen.ml` regenerates byte for byte.
+  let opened : List Ml.Decl :=
+    match args.opens with | none => [] | some m => [.rawD s!"open {m}", .blank]
   let items : List Ml.Decl :=
     if args.externs.isNone then
-      [.floatingAttrD "warning \"-26-27-30-32-33-35-37-39-69\"", .blank] ++ body
+      [.floatingAttrD "warning \"-26-27-30-32-33-35-37-39-69\"", .blank] ++ opened ++ body
     else
-      [.floatingAttrD "warning \"-26-27-30-32-33-35-37-39-69\"", .blank,
-       .rawD carrierSignatures, .blank,
+      [.floatingAttrD "warning \"-26-27-30-32-33-35-37-39-69\"", .blank] ++ opened ++
+      [.rawD carrierSignatures, .blank,
        .moduleD "Make" carrierParams body]
   let modName := (System.FilePath.mk args.out).fileStem.getD "lcnf_gen"
   let m : Ml.Module := { name := modName, header := some header, items := items }
@@ -242,7 +285,7 @@ def run (argv : List String) (recipeOuts : List String) : MetaM Unit := do
   unless gen.collisions.isEmpty do
     throwError s!"unresolved type-name collisions (fatal): {gen.collisions}"
   -- The module's own well-formedness, FATAL (tooling plan 4.3), for every artifact.
-  let diags := Ml.checkModule m
+  let diags := Ml.checkModule m openedDecls.toList
   unless diags.isEmpty do
     throwError s!"Ml.checkModule (fatal): {diags.length} diagnostic(s)\n  " ++
       "\n  ".intercalate (diags.map Ml.Diag.toLine)
@@ -298,7 +341,9 @@ def run (argv : List String) (recipeOuts : List String) : MetaM Unit := do
   let t6 ← IO.monoNanosNow
   let text := Ml.render m
   IO.FS.writeFile args.out text
-  IO.FS.writeFile manifestPath manifestText
+  -- An artifact with no roots declares types only: it translates nothing, so it has no closure
+  -- to record.
+  unless args.roots.isEmpty do IO.FS.writeFile manifestPath manifestText
   let t7 ← IO.monoNanosNow
   IO.println s!"wrote {args.out} and {manifestPath}"
   IO.println s!"time (ms): closure {millis t0 t1}, types {millis t1 t2}, renaming {millis t2 t3}, \

@@ -261,14 +261,6 @@ def generate(families, output):
                 for source in sorted(temp.rglob('*')):
                     if source.is_file():
                         install(source, ROOT / target / source.relative_to(temp), False)
-            if family == 'eff':
-                engine_out = out / 'ocaml/engine'
-                run(['python3', 'scripts/generate-engine-structure.py',
-                     '--descriptor', str(temp / 'program-structure.json'), '--out', str(engine_out)])
-                if not checking:
-                    for source in sorted(engine_out.iterdir()):
-                        if source.is_file():
-                            install(source, ROOT / 'ocaml/engine' / source.name, False)
         if 'fixtures' in families:
             fixtures(out, checking)
         if 'readme' in families:

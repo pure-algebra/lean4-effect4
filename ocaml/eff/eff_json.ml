@@ -5,17 +5,17 @@
 open Eff_types
 
 let rec json_service_name (r : service_name) : Eff_json_text.t =
-  Eff_json_text.Object [("value", Eff_json_text.Int r.service_name_value)]
+  Eff_json_text.Object [("value", Eff_json_text.Int r)]
 
 let print_service_name (v : service_name) : string = Eff_json_text.render (json_service_name v)
 
 let rec json_service_type_code (r : service_type_code) : Eff_json_text.t =
-  Eff_json_text.Object [("value", Eff_json_text.Int r.service_type_code_value)]
+  Eff_json_text.Object [("value", Eff_json_text.Int r)]
 
 let print_service_type_code (v : service_type_code) : string = Eff_json_text.render (json_service_type_code v)
 
 let rec json_service_key (r : service_key) : Eff_json_text.t =
-  Eff_json_text.Object [("name", json_service_name r.service_key_name); ("service", json_service_type_code r.service_key_service)]
+  Eff_json_text.Object [("name", json_service_name r.name); ("service", json_service_type_code r.service)]
 
 let print_service_key (v : service_key) : string = Eff_json_text.render (json_service_key v)
 
@@ -64,8 +64,8 @@ let print_lit (v : lit) : string = Eff_json_text.render (json_lit v)
 
 let rec json_field_read_mode (v : field_read_mode) : Eff_json_text.t =
   match v with
-  | Field_read_mode_required -> Eff_json_text.Array [Eff_json_text.String "required"]
-  | Field_read_mode_optional -> Eff_json_text.Array [Eff_json_text.String "optional"]
+  | FieldReadMode_required -> Eff_json_text.Array [Eff_json_text.String "required"]
+  | FieldReadMode_optional -> Eff_json_text.Array [Eff_json_text.String "optional"]
 
 let print_field_read_mode (v : field_read_mode) : string = Eff_json_text.render (json_field_read_mode v)
 
@@ -89,67 +89,67 @@ let print_terms (v : terms) : string = Eff_json_text.render (json_terms v)
 
 let rec json_cause_term (v : cause_term) : Eff_json_text.t =
   match v with
-  | Cause_term_fail a0 -> Eff_json_text.Array [Eff_json_text.String "fail"; json_term a0]
-  | Cause_term_die a0 -> Eff_json_text.Array [Eff_json_text.String "die"; json_term a0]
-  | Cause_term_interrupt a0 -> Eff_json_text.Array [Eff_json_text.String "interrupt"; (match a0 with None -> Eff_json_text.Null | Some y -> json_term y)]
-  | Cause_term_both (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "both"; json_cause_term a0; json_cause_term a1]
+  | CauseTerm_fail a0 -> Eff_json_text.Array [Eff_json_text.String "fail"; json_term a0]
+  | CauseTerm_die a0 -> Eff_json_text.Array [Eff_json_text.String "die"; json_term a0]
+  | CauseTerm_interrupt a0 -> Eff_json_text.Array [Eff_json_text.String "interrupt"; (match a0 with None -> Eff_json_text.Null | Some y -> json_term y)]
+  | CauseTerm_both (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "both"; json_cause_term a0; json_cause_term a1]
 
 let print_cause_term (v : cause_term) : string = Eff_json_text.render (json_cause_term v)
 
 let rec json_mask_mode (v : mask_mode) : Eff_json_text.t =
   match v with
-  | Mask_mode_interruptible -> Eff_json_text.Array [Eff_json_text.String "interruptible"]
-  | Mask_mode_uninterruptible -> Eff_json_text.Array [Eff_json_text.String "uninterruptible"]
-  | Mask_mode_inherit -> Eff_json_text.Array [Eff_json_text.String "inherit"]
+  | MaskMode_interruptible -> Eff_json_text.Array [Eff_json_text.String "interruptible"]
+  | MaskMode_uninterruptible -> Eff_json_text.Array [Eff_json_text.String "uninterruptible"]
+  | MaskMode_inherit -> Eff_json_text.Array [Eff_json_text.String "inherit"]
 
 let print_mask_mode (v : mask_mode) : string = Eff_json_text.render (json_mask_mode v)
 
 let rec json_fork_options (r : fork_options) : Eff_json_text.t =
-  Eff_json_text.Object [("startImmediately", Eff_json_text.Bool r.fork_options_startImmediately); ("daemon", Eff_json_text.Bool r.fork_options_daemon); ("maskMode", json_mask_mode r.fork_options_maskMode)]
+  Eff_json_text.Object [("startImmediately", Eff_json_text.Bool r.start_immediately); ("daemon", Eff_json_text.Bool r.daemon); ("maskMode", json_mask_mode r.mask_mode)]
 
 let print_fork_options (v : fork_options) : string = Eff_json_text.render (json_fork_options v)
 
 let rec json_observer_mode (v : observer_mode) : Eff_json_text.t =
   match v with
-  | Observer_mode_awaitValue -> Eff_json_text.Array [Eff_json_text.String "awaitValue"]
-  | Observer_mode_joinEffect -> Eff_json_text.Array [Eff_json_text.String "joinEffect"]
+  | ObserverMode_awaitValue -> Eff_json_text.Array [Eff_json_text.String "awaitValue"]
+  | ObserverMode_joinEffect -> Eff_json_text.Array [Eff_json_text.String "joinEffect"]
 
 let print_observer_mode (v : observer_mode) : string = Eff_json_text.render (json_observer_mode v)
 
 let rec json_finalizer_strategy (v : finalizer_strategy) : Eff_json_text.t =
   match v with
-  | Finalizer_strategy_sequential -> Eff_json_text.Array [Eff_json_text.String "sequential"]
-  | Finalizer_strategy_parallel -> Eff_json_text.Array [Eff_json_text.String "parallel"]
+  | FinalizerStrategy_sequential -> Eff_json_text.Array [Eff_json_text.String "sequential"]
+  | FinalizerStrategy_parallel -> Eff_json_text.Array [Eff_json_text.String "parallel"]
 
 let print_finalizer_strategy (v : finalizer_strategy) : string = Eff_json_text.render (json_finalizer_strategy v)
 
 let rec json_native_op (v : native_op) : Eff_json_text.t =
   match v with
-  | Native_op_refMake -> Eff_json_text.Array [Eff_json_text.String "refMake"]
-  | Native_op_refGet -> Eff_json_text.Array [Eff_json_text.String "refGet"]
-  | Native_op_refSet -> Eff_json_text.Array [Eff_json_text.String "refSet"]
-  | Native_op_refGetAndSet -> Eff_json_text.Array [Eff_json_text.String "refGetAndSet"]
-  | Native_op_refSetAndGet -> Eff_json_text.Array [Eff_json_text.String "refSetAndGet"]
-  | Native_op_deferredIsDone -> Eff_json_text.Array [Eff_json_text.String "deferredIsDone"]
-  | Native_op_deferredPoll -> Eff_json_text.Array [Eff_json_text.String "deferredPoll"]
-  | Native_op_deferredSucceed -> Eff_json_text.Array [Eff_json_text.String "deferredSucceed"]
-  | Native_op_deferredFail -> Eff_json_text.Array [Eff_json_text.String "deferredFail"]
-  | Native_op_deferredAwait -> Eff_json_text.Array [Eff_json_text.String "deferredAwait"]
-  | Native_op_scopeMake a0 -> Eff_json_text.Array [Eff_json_text.String "scopeMake"; json_finalizer_strategy a0]
-  | Native_op_sleep -> Eff_json_text.Array [Eff_json_text.String "sleep"]
-  | Native_op_clockNow -> Eff_json_text.Array [Eff_json_text.String "clockNow"]
-  | Native_op_external a0 -> Eff_json_text.Array [Eff_json_text.String "external"; Eff_json_text.Int a0]
-  | Native_op_deferredMakeOf (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "deferredMakeOf"; json_ty a0; json_ty a1]
-  | Native_op_refUpdateWith a0 -> Eff_json_text.Array [Eff_json_text.String "refUpdateWith"; json_term a0]
-  | Native_op_refGetAndUpdateWith a0 -> Eff_json_text.Array [Eff_json_text.String "refGetAndUpdateWith"; json_term a0]
-  | Native_op_refUpdateAndGetWith a0 -> Eff_json_text.Array [Eff_json_text.String "refUpdateAndGetWith"; json_term a0]
-  | Native_op_refUpdateSomeWith a0 -> Eff_json_text.Array [Eff_json_text.String "refUpdateSomeWith"; json_term a0]
-  | Native_op_refGetAndUpdateSomeWith a0 -> Eff_json_text.Array [Eff_json_text.String "refGetAndUpdateSomeWith"; json_term a0]
-  | Native_op_refUpdateSomeAndGetWith a0 -> Eff_json_text.Array [Eff_json_text.String "refUpdateSomeAndGetWith"; json_term a0]
-  | Native_op_refModifyWith a0 -> Eff_json_text.Array [Eff_json_text.String "refModifyWith"; json_term a0]
-  | Native_op_refModifySomeWith a0 -> Eff_json_text.Array [Eff_json_text.String "refModifySomeWith"; json_term a0]
-  | Native_op_call a0 -> Eff_json_text.Array [Eff_json_text.String "call"; Eff_json_text.Int a0]
-  | Native_op_param a0 -> Eff_json_text.Array [Eff_json_text.String "param"; Eff_json_text.Int a0]
+  | NativeOp_refMake -> Eff_json_text.Array [Eff_json_text.String "refMake"]
+  | NativeOp_refGet -> Eff_json_text.Array [Eff_json_text.String "refGet"]
+  | NativeOp_refSet -> Eff_json_text.Array [Eff_json_text.String "refSet"]
+  | NativeOp_refGetAndSet -> Eff_json_text.Array [Eff_json_text.String "refGetAndSet"]
+  | NativeOp_refSetAndGet -> Eff_json_text.Array [Eff_json_text.String "refSetAndGet"]
+  | NativeOp_deferredIsDone -> Eff_json_text.Array [Eff_json_text.String "deferredIsDone"]
+  | NativeOp_deferredPoll -> Eff_json_text.Array [Eff_json_text.String "deferredPoll"]
+  | NativeOp_deferredSucceed -> Eff_json_text.Array [Eff_json_text.String "deferredSucceed"]
+  | NativeOp_deferredFail -> Eff_json_text.Array [Eff_json_text.String "deferredFail"]
+  | NativeOp_deferredAwait -> Eff_json_text.Array [Eff_json_text.String "deferredAwait"]
+  | NativeOp_scopeMake a0 -> Eff_json_text.Array [Eff_json_text.String "scopeMake"; json_finalizer_strategy a0]
+  | NativeOp_sleep -> Eff_json_text.Array [Eff_json_text.String "sleep"]
+  | NativeOp_clockNow -> Eff_json_text.Array [Eff_json_text.String "clockNow"]
+  | NativeOp_external a0 -> Eff_json_text.Array [Eff_json_text.String "external"; Eff_json_text.Int a0]
+  | NativeOp_deferredMakeOf (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "deferredMakeOf"; json_ty a0; json_ty a1]
+  | NativeOp_refUpdateWith a0 -> Eff_json_text.Array [Eff_json_text.String "refUpdateWith"; json_term a0]
+  | NativeOp_refGetAndUpdateWith a0 -> Eff_json_text.Array [Eff_json_text.String "refGetAndUpdateWith"; json_term a0]
+  | NativeOp_refUpdateAndGetWith a0 -> Eff_json_text.Array [Eff_json_text.String "refUpdateAndGetWith"; json_term a0]
+  | NativeOp_refUpdateSomeWith a0 -> Eff_json_text.Array [Eff_json_text.String "refUpdateSomeWith"; json_term a0]
+  | NativeOp_refGetAndUpdateSomeWith a0 -> Eff_json_text.Array [Eff_json_text.String "refGetAndUpdateSomeWith"; json_term a0]
+  | NativeOp_refUpdateSomeAndGetWith a0 -> Eff_json_text.Array [Eff_json_text.String "refUpdateSomeAndGetWith"; json_term a0]
+  | NativeOp_refModifyWith a0 -> Eff_json_text.Array [Eff_json_text.String "refModifyWith"; json_term a0]
+  | NativeOp_refModifySomeWith a0 -> Eff_json_text.Array [Eff_json_text.String "refModifySomeWith"; json_term a0]
+  | NativeOp_call a0 -> Eff_json_text.Array [Eff_json_text.String "call"; Eff_json_text.Int a0]
+  | NativeOp_param a0 -> Eff_json_text.Array [Eff_json_text.String "param"; Eff_json_text.Int a0]
 
 let print_native_op (v : native_op) : string = Eff_json_text.render (json_native_op v)
 
@@ -164,23 +164,23 @@ let print_decision (v : decision) : string = Eff_json_text.render (json_decision
 
 let rec json_def_role (v : def_role) : Eff_json_text.t =
   match v with
-  | Def_role_plain -> Eff_json_text.Array [Eff_json_text.String "plain"]
-  | Def_role_serviceInit a0 -> Eff_json_text.Array [Eff_json_text.String "serviceInit"; Eff_json_text.String a0]
-  | Def_role_serviceMethod (a0, a1, a2) -> Eff_json_text.Array [Eff_json_text.String "serviceMethod"; Eff_json_text.String a0; Eff_json_text.String a1; Eff_json_text.Int a2]
+  | DefRole_plain -> Eff_json_text.Array [Eff_json_text.String "plain"]
+  | DefRole_serviceInit a0 -> Eff_json_text.Array [Eff_json_text.String "serviceInit"; Eff_json_text.String a0]
+  | DefRole_serviceMethod (a0, a1, a2) -> Eff_json_text.Array [Eff_json_text.String "serviceMethod"; Eff_json_text.String a0; Eff_json_text.String a1; Eff_json_text.Int a2]
 
 let print_def_role (v : def_role) : string = Eff_json_text.render (json_def_role v)
 
 let rec json_param_decl (r : param_decl) : Eff_json_text.t =
-  Eff_json_text.Object [("name", Eff_json_text.String r.param_decl_name); ("request", json_ty r.param_decl_request); ("answer", json_ty r.param_decl_answer); ("error", json_ty r.param_decl_error)]
+  Eff_json_text.Object [("name", Eff_json_text.String r.name); ("request", json_ty r.request); ("answer", json_ty r.answer); ("error", json_ty r.error)]
 
 let print_param_decl (v : param_decl) : string = Eff_json_text.render (json_param_decl v)
 
 let rec json_def_decl (r : def_decl) : Eff_json_text.t =
-  Eff_json_text.Object [("name", Eff_json_text.String r.def_decl_name); ("request", json_ty r.def_decl_request); ("answer", json_ty r.def_decl_answer); ("error", json_ty r.def_decl_error); ("requires", Eff_json_text.Array (List.map (fun y -> json_service_key y) r.def_decl_requires)); ("role", json_def_role r.def_decl_role); ("params", Eff_json_text.Array (List.map (fun y -> json_param_decl y) r.def_decl_params))]
+  Eff_json_text.Object [("name", Eff_json_text.String r.name); ("request", json_ty r.request); ("answer", json_ty r.answer); ("error", json_ty r.error); ("requires", Eff_json_text.Array (List.map (fun y -> json_service_key y) r.requires)); ("role", json_def_role r.role); ("params", Eff_json_text.Array (List.map (fun y -> json_param_decl y) r.params))]
 
 let print_def_decl (v : def_decl) : string = Eff_json_text.render (json_def_decl v)
 
-let rec json_eff (v : eff) : Eff_json_text.t =
+let rec json_eff (v : native_op eff) : Eff_json_text.t =
   match v with
   | Eff_succeed a0 -> Eff_json_text.Array [Eff_json_text.String "succeed"; json_term a0]
   | Eff_fail a0 -> Eff_json_text.Array [Eff_json_text.String "fail"; json_term a0]
@@ -211,7 +211,7 @@ let rec json_eff (v : eff) : Eff_json_text.t =
   | Eff_defs (a0, a1, a2, a3) -> Eff_json_text.Array [Eff_json_text.String "defs"; Eff_json_text.Array (List.map (fun y -> json_def_decl y) a0); json_effs a1; json_eff a2; json_layer_terms a3]
   | Eff_invoke (a0, a1, a2) -> Eff_json_text.Array [Eff_json_text.String "invoke"; Eff_json_text.Int a0; json_term a1; json_effs a2]
   | Eff_provideContext (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "provideContext"; json_term a0; json_eff a1]
-and json_stmt (v : stmt) : Eff_json_text.t =
+and json_stmt (v : native_op stmt) : Eff_json_text.t =
   match v with
   | Stmt_bindYield a0 -> Eff_json_text.Array [Eff_json_text.String "bindYield"; json_eff a0]
   | Stmt_yieldDiscard a0 -> Eff_json_text.Array [Eff_json_text.String "yieldDiscard"; json_eff a0]
@@ -219,72 +219,72 @@ and json_stmt (v : stmt) : Eff_json_text.t =
   | Stmt_ifElse (a0, a1, a2) -> Eff_json_text.Array [Eff_json_text.String "ifElse"; json_term a0; json_stmts a1; json_stmts a2]
   | Stmt_whileTrue a0 -> Eff_json_text.Array [Eff_json_text.String "whileTrue"; json_stmts a0]
   | Stmt_breakLoop -> Eff_json_text.Array [Eff_json_text.String "breakLoop"]
-and json_stmts (v : stmts) : Eff_json_text.t =
+and json_stmts (v : native_op stmts) : Eff_json_text.t =
   match v with
   | Stmts_nil -> Eff_json_text.Array [Eff_json_text.String "nil"]
   | Stmts_cons (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "cons"; json_stmt a0; json_stmts a1]
-and json_effs (v : effs) : Eff_json_text.t =
+and json_effs (v : native_op effs) : Eff_json_text.t =
   match v with
   | Effs_nil -> Eff_json_text.Array [Eff_json_text.String "nil"]
   | Effs_cons (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "cons"; json_eff a0; json_effs a1]
-and json_action_term (v : action_term) : Eff_json_text.t =
+and json_action_term (v : native_op action_term) : Eff_json_text.t =
   match v with
-  | Action_term_fork (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "fork"; json_eff a0; json_fork_options a1]
-  | Action_term_forkIn (a0, a1, a2) -> Eff_json_text.Array [Eff_json_text.String "forkIn"; json_eff a0; json_fork_options a1; json_term a2]
-  | Action_term_forkScoped (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "forkScoped"; json_eff a0; json_fork_options a1]
-  | Action_term_runIn (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "runIn"; json_term a0; json_term a1]
-  | Action_term_interrupt a0 -> Eff_json_text.Array [Eff_json_text.String "interrupt"; json_term a0]
-  | Action_term_interruptScoped a0 -> Eff_json_text.Array [Eff_json_text.String "interruptScoped"; json_term a0]
-  | Action_term_interruptAll (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "interruptAll"; json_term a0; (match a1 with None -> Eff_json_text.Null | Some y -> json_term y)]
-  | Action_term_awaitAll a0 -> Eff_json_text.Array [Eff_json_text.String "awaitAll"; json_term a0]
-  | Action_term_awaitAllFailFast a0 -> Eff_json_text.Array [Eff_json_text.String "awaitAllFailFast"; json_term a0]
-  | Action_term_snapshotChildren -> Eff_json_text.Array [Eff_json_text.String "snapshotChildren"]
-  | Action_term_awaitNewChildren a0 -> Eff_json_text.Array [Eff_json_text.String "awaitNewChildren"; json_term a0]
-  | Action_term_raceAll a0 -> Eff_json_text.Array [Eff_json_text.String "raceAll"; json_effs a0]
-  | Action_term_getId -> Eff_json_text.Array [Eff_json_text.String "getId"]
-  | Action_term_closeScope (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "closeScope"; json_term a0; json_term a1]
-  | Action_term_getInterruptible -> Eff_json_text.Array [Eff_json_text.String "getInterruptible"]
-  | Action_term_raceAllFirst a0 -> Eff_json_text.Array [Eff_json_text.String "raceAllFirst"; json_effs a0]
-  | Action_term_context a0 -> Eff_json_text.Array [Eff_json_text.String "context"; Eff_json_text.Array (List.map json_service_key a0)]
-and json_layer_term (v : layer_term) : Eff_json_text.t =
+  | ActionTerm_fork (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "fork"; json_eff a0; json_fork_options a1]
+  | ActionTerm_forkIn (a0, a1, a2) -> Eff_json_text.Array [Eff_json_text.String "forkIn"; json_eff a0; json_fork_options a1; json_term a2]
+  | ActionTerm_forkScoped (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "forkScoped"; json_eff a0; json_fork_options a1]
+  | ActionTerm_runIn (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "runIn"; json_term a0; json_term a1]
+  | ActionTerm_interrupt a0 -> Eff_json_text.Array [Eff_json_text.String "interrupt"; json_term a0]
+  | ActionTerm_interruptScoped a0 -> Eff_json_text.Array [Eff_json_text.String "interruptScoped"; json_term a0]
+  | ActionTerm_interruptAll (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "interruptAll"; json_term a0; (match a1 with None -> Eff_json_text.Null | Some y -> json_term y)]
+  | ActionTerm_awaitAll a0 -> Eff_json_text.Array [Eff_json_text.String "awaitAll"; json_term a0]
+  | ActionTerm_awaitAllFailFast a0 -> Eff_json_text.Array [Eff_json_text.String "awaitAllFailFast"; json_term a0]
+  | ActionTerm_snapshotChildren -> Eff_json_text.Array [Eff_json_text.String "snapshotChildren"]
+  | ActionTerm_awaitNewChildren a0 -> Eff_json_text.Array [Eff_json_text.String "awaitNewChildren"; json_term a0]
+  | ActionTerm_raceAll a0 -> Eff_json_text.Array [Eff_json_text.String "raceAll"; json_effs a0]
+  | ActionTerm_getId -> Eff_json_text.Array [Eff_json_text.String "getId"]
+  | ActionTerm_closeScope (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "closeScope"; json_term a0; json_term a1]
+  | ActionTerm_getInterruptible -> Eff_json_text.Array [Eff_json_text.String "getInterruptible"]
+  | ActionTerm_raceAllFirst a0 -> Eff_json_text.Array [Eff_json_text.String "raceAllFirst"; json_effs a0]
+  | ActionTerm_context a0 -> Eff_json_text.Array [Eff_json_text.String "context"; Eff_json_text.Array (List.map json_service_key a0)]
+and json_layer_term (v : native_op layer_term) : Eff_json_text.t =
   match v with
-  | Layer_term_succeed (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "succeed"; json_service_key a0; json_lit a1]
-  | Layer_term_effect (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "effect"; json_service_key a0; json_eff a1]
-  | Layer_term_effectDiscard a0 -> Eff_json_text.Array [Eff_json_text.String "effectDiscard"; json_eff a0]
-  | Layer_term_provide (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "provide"; json_layer_term a0; json_layer_term a1]
-  | Layer_term_provideMerge (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "provideMerge"; json_layer_term a0; json_layer_term a1]
-  | Layer_term_merge (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "merge"; json_layer_term a0; json_layer_term a1]
-  | Layer_term_fresh a0 -> Eff_json_text.Array [Eff_json_text.String "fresh"; json_layer_term a0]
-  | Layer_term_orDie a0 -> Eff_json_text.Array [Eff_json_text.String "orDie"; json_layer_term a0]
-  | Layer_term_ref a0 -> Eff_json_text.Array [Eff_json_text.String "ref"; Eff_json_text.Array (List.map (fun y -> Eff_json_text.Int y) a0)]
-  | Layer_term_mergeAll a0 -> Eff_json_text.Array [Eff_json_text.String "mergeAll"; json_layer_terms a0]
-and json_layer_terms (v : layer_terms) : Eff_json_text.t =
+  | LayerTerm_succeed (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "succeed"; json_service_key a0; json_lit a1]
+  | LayerTerm_effect (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "effect"; json_service_key a0; json_eff a1]
+  | LayerTerm_effectDiscard a0 -> Eff_json_text.Array [Eff_json_text.String "effectDiscard"; json_eff a0]
+  | LayerTerm_provide (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "provide"; json_layer_term a0; json_layer_term a1]
+  | LayerTerm_provideMerge (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "provideMerge"; json_layer_term a0; json_layer_term a1]
+  | LayerTerm_merge (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "merge"; json_layer_term a0; json_layer_term a1]
+  | LayerTerm_fresh a0 -> Eff_json_text.Array [Eff_json_text.String "fresh"; json_layer_term a0]
+  | LayerTerm_orDie a0 -> Eff_json_text.Array [Eff_json_text.String "orDie"; json_layer_term a0]
+  | LayerTerm_ref a0 -> Eff_json_text.Array [Eff_json_text.String "ref"; Eff_json_text.Array (List.map (fun y -> Eff_json_text.Int y) a0)]
+  | LayerTerm_mergeAll a0 -> Eff_json_text.Array [Eff_json_text.String "mergeAll"; json_layer_terms a0]
+and json_layer_terms (v : native_op layer_terms) : Eff_json_text.t =
   match v with
-  | Layer_terms_nil -> Eff_json_text.Array [Eff_json_text.String "nil"]
-  | Layer_terms_cons (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "cons"; json_layer_term a0; json_layer_terms a1]
+  | LayerTerms_nil -> Eff_json_text.Array [Eff_json_text.String "nil"]
+  | LayerTerms_cons (a0, a1) -> Eff_json_text.Array [Eff_json_text.String "cons"; json_layer_term a0; json_layer_terms a1]
 
-let print_eff (v : eff) : string = Eff_json_text.render (json_eff v)
-let print_stmt (v : stmt) : string = Eff_json_text.render (json_stmt v)
-let print_stmts (v : stmts) : string = Eff_json_text.render (json_stmts v)
-let print_effs (v : effs) : string = Eff_json_text.render (json_effs v)
-let print_action_term (v : action_term) : string = Eff_json_text.render (json_action_term v)
-let print_layer_term (v : layer_term) : string = Eff_json_text.render (json_layer_term v)
-let print_layer_terms (v : layer_terms) : string = Eff_json_text.render (json_layer_terms v)
+let print_eff (v : native_op eff) : string = Eff_json_text.render (json_eff v)
+let print_stmt (v : native_op stmt) : string = Eff_json_text.render (json_stmt v)
+let print_stmts (v : native_op stmts) : string = Eff_json_text.render (json_stmts v)
+let print_effs (v : native_op effs) : string = Eff_json_text.render (json_effs v)
+let print_action_term (v : native_op action_term) : string = Eff_json_text.render (json_action_term v)
+let print_layer_term (v : native_op layer_term) : string = Eff_json_text.render (json_layer_term v)
+let print_layer_terms (v : native_op layer_terms) : string = Eff_json_text.render (json_layer_terms v)
 
 let rec json_row_kind (v : row_kind) : Eff_json_text.t =
   match v with
-  | Row_kind_sync -> Eff_json_text.Array [Eff_json_text.String "sync"]
-  | Row_kind_async -> Eff_json_text.Array [Eff_json_text.String "async"]
-  | Row_kind_program -> Eff_json_text.Array [Eff_json_text.String "program"]
+  | RowKind_sync -> Eff_json_text.Array [Eff_json_text.String "sync"]
+  | RowKind_async -> Eff_json_text.Array [Eff_json_text.String "async"]
+  | RowKind_program -> Eff_json_text.Array [Eff_json_text.String "program"]
 
 let print_row_kind (v : row_kind) : string = Eff_json_text.render (json_row_kind v)
 
 let rec json_row_shape (v : row_shape) : Eff_json_text.t =
   match v with
-  | Row_shape_call -> Eff_json_text.Array [Eff_json_text.String "call"]
-  | Row_shape_value -> Eff_json_text.Array [Eff_json_text.String "value"]
-  | Row_shape_tupleCall -> Eff_json_text.Array [Eff_json_text.String "tupleCall"]
-  | Row_shape_method -> Eff_json_text.Array [Eff_json_text.String "method"]
+  | RowShape_call -> Eff_json_text.Array [Eff_json_text.String "call"]
+  | RowShape_value -> Eff_json_text.Array [Eff_json_text.String "value"]
+  | RowShape_tupleCall -> Eff_json_text.Array [Eff_json_text.String "tupleCall"]
+  | RowShape_method -> Eff_json_text.Array [Eff_json_text.String "method"]
 
 let print_row_shape (v : row_shape) : string = Eff_json_text.render (json_row_shape v)
 
@@ -297,17 +297,17 @@ let print_registration (v : registration) : string = Eff_json_text.render (json_
 
 let rec json_row_arg (v : row_arg) : Eff_json_text.t =
   match v with
-  | Row_arg_name a0 -> Eff_json_text.Array [Eff_json_text.String "name"; Eff_json_text.String a0]
-  | Row_arg_str a0 -> Eff_json_text.Array [Eff_json_text.String "str"; Eff_json_text.String a0]
+  | RowArg_name a0 -> Eff_json_text.Array [Eff_json_text.String "name"; Eff_json_text.String a0]
+  | RowArg_str a0 -> Eff_json_text.Array [Eff_json_text.String "str"; Eff_json_text.String a0]
 
 let print_row_arg (v : row_arg) : string = Eff_json_text.render (json_row_arg v)
 
 let rec json_row (r : row) : Eff_json_text.t =
-  Eff_json_text.Object [("name", Eff_json_text.String r.row_name); ("spelling", Eff_json_text.String r.row_spelling); ("shape", json_row_shape r.row_shape); ("trailing", Eff_json_text.Array (List.map (fun y -> json_row_arg y) r.row_trailing)); ("kind", json_row_kind r.row_kind); ("request", json_ty r.row_request); ("answer", json_ty r.row_answer); ("error", json_ty r.row_error); ("requires", Eff_json_text.Array (List.map (fun y -> json_service_key y) r.row_requires)); ("cite", Eff_json_text.String r.row_cite); ("typeArgs", Eff_json_text.Array (List.map (fun y -> Eff_json_text.String y) r.row_typeArgs)); ("registration", json_registration r.row_registration)]
+  Eff_json_text.Object [("name", Eff_json_text.String r.name); ("spelling", Eff_json_text.String r.spelling); ("shape", json_row_shape r.shape); ("trailing", Eff_json_text.Array (List.map (fun y -> json_row_arg y) r.trailing)); ("kind", json_row_kind r.kind); ("request", json_ty r.request); ("answer", json_ty r.answer); ("error", json_ty r.error); ("requires", Eff_json_text.Array (List.map (fun y -> json_service_key y) r.requires)); ("cite", Eff_json_text.String r.cite); ("typeArgs", Eff_json_text.Array (List.map (fun y -> Eff_json_text.String y) r.type_args)); ("registration", json_registration r.registration)]
 
 let print_row (v : row) : string = Eff_json_text.render (json_row v)
 
 let rec json_eff_ty (r : eff_ty) : Eff_json_text.t =
-  Eff_json_text.Object [("answer", json_ty r.eff_ty_answer); ("error", json_ty r.eff_ty_error); ("requires", Eff_json_text.Array (List.map json_service_key r.eff_ty_requires))]
+  Eff_json_text.Object [("answer", json_ty r.answer); ("error", json_ty r.error); ("requires", Eff_json_text.Array (List.map json_service_key r.requires))]
 
 let print_eff_ty (v : eff_ty) : string = Eff_json_text.render (json_eff_ty v)

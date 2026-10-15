@@ -7,8 +7,7 @@
  (modules test_eff)
  (libraries effect4_eff)
  (deps
-  (glob_files %{project_root}/goldens/*)
-  %{project_root}/eff_manifest.txt))
+  (glob_files %{project_root}/goldens/*)))
 
 (test
  (name prop_wire)

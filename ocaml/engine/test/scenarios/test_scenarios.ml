@@ -18,11 +18,9 @@
    row table and the compile fuel.
 
    Properties:
-   S1  The row table is read from its wire bytes (`Eff_wire.decode_row_exact`) and converted
-       into the instance's row type by `of_row`.  The conversion is behind `E4_program.pin`,
-       has no catch-all arm, and each sum it maps is checked against the source's own ordinal
-       (`Eff_types.ctor_index_*`) by an independently written engine-side table.
-                                                                 by construction; tested
+   S1  The row table is read from its wire bytes (`Eff_wire.decode_row_exact`). The row type
+       is `Eff_types`', which the generated engine opens, so no conversion stands between the
+       bytes and the engine. A row with trailing arguments is refused.   by construction
    S2  At every position of every run, on BOTH instances (Fast and Ref), the view of
        `api_replay` on the tape's prefix is the view Lean wrote for its session machine.
                                                                  tested (finite runs)
@@ -53,6 +51,7 @@
    Run: cd ocaml && opam exec --switch=effect4 -- dune test --force engine *)
 
 open Effect4_engine
+open Eff_types
 
 let failures = ref 0
 let checks = ref 0
@@ -170,164 +169,17 @@ module type TIMERS = sig
 end
 
 module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
-  module P = E4_program.Make (A)
-
-  (* ------------------------------------------------------------ S1: the row table *)
-
-  let of_service_key (k : Eff_types.service_key) : A.service_key =
-    { A.name = k.Eff_types.service_key_name.Eff_types.service_name_value;
-      service = k.Eff_types.service_key_service.Eff_types.service_type_code_value }
-
-  let rec of_ty : Eff_types.ty -> A.ty = function
-    | Eff_types.Ty_never -> A.Ty_never
-    | Eff_types.Ty_unit -> A.Ty_unit
-    | Eff_types.Ty_nat -> A.Ty_nat
-    | Eff_types.Ty_int -> A.Ty_int
-    | Eff_types.Ty_string -> A.Ty_string
-    | Eff_types.Ty_bool -> A.Ty_bool
-    | Eff_types.Ty_handle h -> A.Ty_handle h
-    | Eff_types.Ty_option a -> A.Ty_option (of_ty a)
-    | Eff_types.Ty_list a -> A.Ty_list (of_ty a)
-    | Eff_types.Ty_prod (a, b) -> A.Ty_prod (of_ty a, of_ty b)
-    | Eff_types.Ty_except (a, b) -> A.Ty_except (of_ty a, of_ty b)
-    | Eff_types.Ty_exitOf (a, b) -> A.Ty_exitOf (of_ty a, of_ty b)
-    | Eff_types.Ty_causeOf a -> A.Ty_causeOf (of_ty a)
-    | Eff_types.Ty_fiberOf (a, b) -> A.Ty_fiberOf (of_ty a, of_ty b)
-    | Eff_types.Ty_union (a, b) -> A.Ty_union (of_ty a, of_ty b)
-    | Eff_types.Ty_lit s -> A.Ty_lit s
-    | Eff_types.Ty_refOf a -> A.Ty_refOf (of_ty a)
-    | Eff_types.Ty_deferredOf (a, b) -> A.Ty_deferredOf (of_ty a, of_ty b)
-    | Eff_types.Ty_var i -> A.Ty_var i
-    | Eff_types.Ty_unknown -> A.Ty_unknown
-    | Eff_types.Ty_record fs -> A.Ty_record (List.map (fun (n, (o, t)) -> (n, (o, of_ty t))) fs)
-    | Eff_types.Ty_map (k, v) -> A.Ty_map (of_ty k, of_ty v)
-    | Eff_types.Ty_tuple ts -> A.Ty_tuple (List.map of_ty ts)
-    | Eff_types.Ty_app (n, ts) -> A.Ty_app (n, List.map of_ty ts)
-    | Eff_types.Ty_null -> A.Ty_null
-    | Eff_types.Ty_undefined -> A.Ty_undefined
-    | Eff_types.Ty_number -> A.Ty_number
-    | Eff_types.Ty_bytes -> A.Ty_bytes
-    | Eff_types.Ty_contextOf ks -> A.Ty_contextOf (List.map of_service_key ks)
-
-  (* The engine side of the ordinal check, written apart from `of_ty`: the position of each
-     constructor in api_engine.ml's declaration (e4_program_layout.ml mirrors it). *)
-  let index_ty : A.ty -> int = function
-    | A.Ty_never -> 0
-    | A.Ty_unit -> 1
-    | A.Ty_nat -> 2
-    | A.Ty_int -> 3
-    | A.Ty_string -> 4
-    | A.Ty_bool -> 5
-    | A.Ty_handle _ -> 6
-    | A.Ty_option _ -> 7
-    | A.Ty_list _ -> 8
-    | A.Ty_prod _ -> 9
-    | A.Ty_except _ -> 10
-    | A.Ty_exitOf _ -> 11
-    | A.Ty_causeOf _ -> 12
-    | A.Ty_fiberOf _ -> 13
-    | A.Ty_union _ -> 14
-    | A.Ty_lit _ -> 15
-    | A.Ty_refOf _ -> 16
-    | A.Ty_deferredOf _ -> 17
-    | A.Ty_var _ -> 18
-    | A.Ty_unknown -> 19
-    | A.Ty_record _ -> 20
-    | A.Ty_map _ -> 21
-    | A.Ty_tuple _ -> 22
-    | A.Ty_app _ -> 23
-    | A.Ty_null -> 24
-    | A.Ty_undefined -> 25
-    | A.Ty_number -> 26
-    | A.Ty_bytes -> 27
-    | A.Ty_contextOf _ -> 28
-
-  let of_row_shape : Eff_types.row_shape -> A.row_shape = function
-    | Eff_types.Row_shape_call -> A.RowShape_call
-    | Eff_types.Row_shape_value -> A.RowShape_value
-    | Eff_types.Row_shape_tupleCall -> A.RowShape_tupleCall
-    | Eff_types.Row_shape_method -> A.RowShape_method
-
-  let index_row_shape : A.row_shape -> int = function
-    | A.RowShape_call -> 0
-    | A.RowShape_value -> 1
-    | A.RowShape_tupleCall -> 2
-    | A.RowShape_method -> 3
-
-  let of_row_kind : Eff_types.row_kind -> A.row_kind = function
-    | Eff_types.Row_kind_sync -> A.RowKind_sync
-    | Eff_types.Row_kind_async -> A.RowKind_async
-    | Eff_types.Row_kind_program -> A.RowKind_program
-
-  let index_row_kind : A.row_kind -> int = function
-    | A.RowKind_sync -> 0
-    | A.RowKind_async -> 1
-    | A.RowKind_program -> 2
-
-  let of_registration : Eff_types.registration -> A.registration = function
-    | Eff_types.Registration_deferred -> A.Registration_deferred
-    | Eff_types.Registration_external -> A.Registration_external
-
-  let index_registration : A.registration -> int = function
-    | A.Registration_deferred -> 0
-    | A.Registration_external -> 1
-
-
-  (* The checked conversion of one row.  `Error` names the column whose ordinal the engine
-     side disagrees on; the pin refuses the whole table when the two alphabets disagree. *)
-  let of_row (r : Eff_types.row) : (A.row, string) result =
-    let request = of_ty r.Eff_types.row_request in
-    let answer = of_ty r.Eff_types.row_answer in
-    let error = of_ty r.Eff_types.row_error in
-    let shape = of_row_shape r.Eff_types.row_shape in
-    let kind = of_row_kind r.Eff_types.row_kind in
-    let registration = of_registration r.Eff_types.row_registration in
-    let same what a b = if a = b then Ok () else Error (r.Eff_types.row_spelling ^ ": " ^ what) in
-    let ( let* ) = Result.bind in
-    let* () = Result.map_error (fun m -> "the ordinal pin: " ^ m) (E4_program.pin ()) in
-    let* () = same "request" (Eff_types.ctor_index_ty r.Eff_types.row_request) (index_ty request) in
-    let* () = same "answer" (Eff_types.ctor_index_ty r.Eff_types.row_answer) (index_ty answer) in
-    let* () = same "error" (Eff_types.ctor_index_ty r.Eff_types.row_error) (index_ty error) in
-    let* () =
-      same "shape" (Eff_types.ctor_index_row_shape r.Eff_types.row_shape) (index_row_shape shape)
-    in
-    let* () =
-      same "kind" (Eff_types.ctor_index_row_kind r.Eff_types.row_kind) (index_row_kind kind)
-    in
-    let* () =
-      same "registration"
-        (Eff_types.ctor_index_registration r.Eff_types.row_registration)
-        (index_registration registration)
-    in
-    (* The engine reads no trailing argument (its `row_arg` is a placeholder), so a row that
-       declares one has no engine image. *)
-    let* trailing =
-      match r.Eff_types.row_trailing with
-      | [] -> Ok []
-      | _ :: _ -> Error (r.Eff_types.row_spelling ^ ": trailing arguments")
-    in
-    Ok
-      { A.name = r.Eff_types.row_name;
-        spelling = r.Eff_types.row_spelling;
-        shape;
-        trailing;
-        kind;
-        request;
-        answer;
-        error;
-        requires = List.map of_service_key r.Eff_types.row_requires;
-        cite = r.Eff_types.row_cite;
-        type_args = r.Eff_types.row_typeArgs;
-        registration }
-
-  (* The table from its wire bytes.  A row that is not exactly one row is refused. *)
-  let table_of (rows : string list) : (A.row list, string) result =
+  (* The table from its wire bytes. A row that is not exactly one row is refused, and so is a
+     row with trailing arguments: the engine reads none. The row is `Eff_types`', the one
+     program type the engine opens, so nothing converts. *)
+  let table_of (rows : string list) : (row list, string) result =
     let rec go acc = function
       | [] -> Ok (List.rev acc)
       | bytes :: rest ->
         (match Eff_wire.decode_row_exact bytes with
          | None -> Error "a row's bytes are not exactly one row"
-         | Some r -> (match of_row r with Ok row -> go (row :: acc) rest | Error m -> Error m))
+         | Some r when r.trailing <> [] -> Error (r.spelling ^ ": trailing arguments")
+         | Some r -> go (r :: acc) rest)
     in
     go [] rows
 
@@ -459,7 +311,7 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
         (List.map
            (fun (a : A.await) ->
              Printf.sprintf "%d.%d.%s.%s" a.A.fiber a.A.token
-               (match a.A.op with A.NativeOp_external i -> string_of_int i | _ -> "x")
+               (match a.A.op with Eff_types.NativeOp_external i -> string_of_int i | _ -> "x")
                (hex_of_val a.A.request))
            (A.program_awaits m))
     in
@@ -482,7 +334,7 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
   let rec take n = function [] -> [] | x :: xs -> if n = 0 then [] else x :: take (n - 1) xs
 
   (* The views of `api_replay` on every prefix of a tape, the loaded machine first. *)
-  let views (program : A.program) (r : run) (table : A.row list) (tape : A.api_decision list)
+  let views (program : A.program) (r : run) (table : row list) (tape : A.api_decision list)
     : string list =
     List.init (List.length tape + 1) (fun count ->
         view_of (A.api_replay program r.fuel (take count tape) table r.compile))
@@ -497,7 +349,7 @@ module Adapter (A : GEN) (T : TIMERS with type machine = A.machine) = struct
 
   let run_one (r : run) : unit =
     let label what = Printf.sprintf "%s %s: %s" A.name r.name what in
-    match P.of_bytes r.program with
+    match Eff_wire.decode_program_exact r.program with
     | None -> check (label "the program's bytes are exactly one program") false
     | Some program ->
       (match table_of r.rows with

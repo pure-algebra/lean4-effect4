@@ -45,7 +45,7 @@
        check.  The cost: `be64`, `framed` and `nat_of_digits` build their bytes in a Buffer,
        one copy more than the transcription made.  The cost is not measured.
    D2  `program_of_bytes`, `bytes_of_program` and `address` are NOT here: their types name
-       `Eff_types.eff`.  The program seam is E4_program.
+       `Eff_wire.program`, the one program type (`Eff_types`).
    D3  `read_be64` bounds-checks its window (Eff_frame's reads eight bytes unconditionally
        because its one caller checked first).  The check runs before the call.  On every
        in-range input the two agree.

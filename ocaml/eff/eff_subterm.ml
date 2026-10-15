@@ -16,13 +16,13 @@ let family_name = function
   | Layers -> "layers"
 
 let family_ctor_names = function
-  | Eff -> Eff_types.ctor_names_eff
-  | Stmts -> Eff_types.ctor_names_stmts
-  | Stmt -> Eff_types.ctor_names_stmt
-  | Action -> Eff_types.ctor_names_action_term
-  | Effs -> Eff_types.ctor_names_effs
-  | Layer -> Eff_types.ctor_names_layer_term
-  | Layers -> Eff_types.ctor_names_layer_terms
+  | Eff -> Eff_ctors.ctor_names_eff
+  | Stmts -> Eff_ctors.ctor_names_stmts
+  | Stmt -> Eff_ctors.ctor_names_stmt
+  | Action -> Eff_ctors.ctor_names_action_term
+  | Effs -> Eff_ctors.ctor_names_effs
+  | Layer -> Eff_ctors.ctor_names_layer_term
+  | Layers -> Eff_ctors.ctor_names_layer_terms
 
 let children (f : family) (c : int) : (int * family) list =
   match f, c with
@@ -144,13 +144,13 @@ let position_of_tag (f : family) (tag : int) : int option =
   | _, _ -> None
 
 type node =
-  | N_eff of Eff_types.eff
-  | N_stmts of Eff_types.stmts
-  | N_stmt of Eff_types.stmt
-  | N_action of Eff_types.action_term
-  | N_effs of Eff_types.effs
-  | N_layer of Eff_types.layer_term
-  | N_layers of Eff_types.layer_terms
+  | N_eff of Eff_types.native_op Eff_types.eff
+  | N_stmts of Eff_types.native_op Eff_types.stmts
+  | N_stmt of Eff_types.native_op Eff_types.stmt
+  | N_action of Eff_types.native_op Eff_types.action_term
+  | N_effs of Eff_types.native_op Eff_types.effs
+  | N_layer of Eff_types.native_op Eff_types.layer_term
+  | N_layers of Eff_types.native_op Eff_types.layer_terms
 
 let family_of = function
   | N_eff _ -> Eff
@@ -162,13 +162,13 @@ let family_of = function
   | N_layers _ -> Layers
 
 let ctor_index = function
-  | N_eff v -> Eff_types.ctor_index_eff v
-  | N_stmts v -> Eff_types.ctor_index_stmts v
-  | N_stmt v -> Eff_types.ctor_index_stmt v
-  | N_action v -> Eff_types.ctor_index_action_term v
-  | N_effs v -> Eff_types.ctor_index_effs v
-  | N_layer v -> Eff_types.ctor_index_layer_term v
-  | N_layers v -> Eff_types.ctor_index_layer_terms v
+  | N_eff v -> Eff_ctors.ctor_index_eff v
+  | N_stmts v -> Eff_ctors.ctor_index_stmts v
+  | N_stmt v -> Eff_ctors.ctor_index_stmt v
+  | N_action v -> Eff_ctors.ctor_index_action_term v
+  | N_effs v -> Eff_ctors.ctor_index_effs v
+  | N_layer v -> Eff_ctors.ctor_index_layer_term v
+  | N_layers v -> Eff_ctors.ctor_index_layer_terms v
 
 let encode = function
   | N_eff v -> Eff_wire.encode_eff v
@@ -220,35 +220,35 @@ let child (n : node) (i : int) : node option =
   | N_stmt (Eff_types.Stmt_ifElse (_, a1, _)), 0 -> Some (N_stmts a1)
   | N_stmt (Eff_types.Stmt_ifElse (_, _, a2)), 1 -> Some (N_stmts a2)
   | N_stmt (Eff_types.Stmt_whileTrue a0), 0 -> Some (N_stmts a0)
-  | N_action (Eff_types.Action_term_fork (a0, _)), 0 -> Some (N_eff a0)
-  | N_action (Eff_types.Action_term_forkIn (a0, _, _)), 0 -> Some (N_eff a0)
-  | N_action (Eff_types.Action_term_forkScoped (a0, _)), 0 -> Some (N_eff a0)
-  | N_action (Eff_types.Action_term_raceAll a0), 0 -> Some (N_effs a0)
-  | N_action (Eff_types.Action_term_raceAllFirst a0), 0 -> Some (N_effs a0)
+  | N_action (Eff_types.ActionTerm_fork (a0, _)), 0 -> Some (N_eff a0)
+  | N_action (Eff_types.ActionTerm_forkIn (a0, _, _)), 0 -> Some (N_eff a0)
+  | N_action (Eff_types.ActionTerm_forkScoped (a0, _)), 0 -> Some (N_eff a0)
+  | N_action (Eff_types.ActionTerm_raceAll a0), 0 -> Some (N_effs a0)
+  | N_action (Eff_types.ActionTerm_raceAllFirst a0), 0 -> Some (N_effs a0)
   | N_effs (Eff_types.Effs_cons (a0, _)), 0 -> Some (N_eff a0)
   | N_effs (Eff_types.Effs_cons (_, a1)), 1 -> Some (N_effs a1)
-  | N_layer (Eff_types.Layer_term_effect (_, a1)), 0 -> Some (N_eff a1)
-  | N_layer (Eff_types.Layer_term_effectDiscard a0), 0 -> Some (N_eff a0)
-  | N_layer (Eff_types.Layer_term_provide (a0, _)), 0 -> Some (N_layer a0)
-  | N_layer (Eff_types.Layer_term_provide (_, a1)), 1 -> Some (N_layer a1)
-  | N_layer (Eff_types.Layer_term_provideMerge (a0, _)), 0 -> Some (N_layer a0)
-  | N_layer (Eff_types.Layer_term_provideMerge (_, a1)), 1 -> Some (N_layer a1)
-  | N_layer (Eff_types.Layer_term_merge (a0, _)), 0 -> Some (N_layer a0)
-  | N_layer (Eff_types.Layer_term_merge (_, a1)), 1 -> Some (N_layer a1)
-  | N_layer (Eff_types.Layer_term_fresh a0), 0 -> Some (N_layer a0)
-  | N_layer (Eff_types.Layer_term_orDie a0), 0 -> Some (N_layer a0)
-  | N_layer (Eff_types.Layer_term_mergeAll a0), 0 -> Some (N_layers a0)
-  | N_layers (Eff_types.Layer_terms_cons (a0, _)), 0 -> Some (N_layer a0)
-  | N_layers (Eff_types.Layer_terms_cons (_, a1)), 1 -> Some (N_layers a1)
+  | N_layer (Eff_types.LayerTerm_effect (_, a1)), 0 -> Some (N_eff a1)
+  | N_layer (Eff_types.LayerTerm_effectDiscard a0), 0 -> Some (N_eff a0)
+  | N_layer (Eff_types.LayerTerm_provide (a0, _)), 0 -> Some (N_layer a0)
+  | N_layer (Eff_types.LayerTerm_provide (_, a1)), 1 -> Some (N_layer a1)
+  | N_layer (Eff_types.LayerTerm_provideMerge (a0, _)), 0 -> Some (N_layer a0)
+  | N_layer (Eff_types.LayerTerm_provideMerge (_, a1)), 1 -> Some (N_layer a1)
+  | N_layer (Eff_types.LayerTerm_merge (a0, _)), 0 -> Some (N_layer a0)
+  | N_layer (Eff_types.LayerTerm_merge (_, a1)), 1 -> Some (N_layer a1)
+  | N_layer (Eff_types.LayerTerm_fresh a0), 0 -> Some (N_layer a0)
+  | N_layer (Eff_types.LayerTerm_orDie a0), 0 -> Some (N_layer a0)
+  | N_layer (Eff_types.LayerTerm_mergeAll a0), 0 -> Some (N_layers a0)
+  | N_layers (Eff_types.LayerTerms_cons (a0, _)), 0 -> Some (N_layer a0)
+  | N_layers (Eff_types.LayerTerms_cons (_, a1)), 1 -> Some (N_layers a1)
   | _, _ -> None
 
 let witnesses : node list = [
   N_eff (Eff_types.Eff_succeed (Eff_types.Term_var 1));
   N_eff (Eff_types.Eff_fail (Eff_types.Term_var 1));
-  N_eff (Eff_types.Eff_failCause (Eff_types.Cause_term_fail (Eff_types.Term_var 1)));
+  N_eff (Eff_types.Eff_failCause (Eff_types.CauseTerm_fail (Eff_types.Term_var 1)));
   N_eff (Eff_types.Eff_sync (Eff_types.Term_var 1));
   N_eff (Eff_types.Eff_suspend (Eff_types.Eff_succeed (Eff_types.Term_var 1)));
-  N_eff (Eff_types.Eff_perform ((Eff_types.Native_op_external 1), (Eff_types.Term_var 2)));
+  N_eff (Eff_types.Eff_perform ((Eff_types.NativeOp_external 1), (Eff_types.Term_var 2)));
   N_eff (Eff_types.Eff_bind ((Eff_types.Eff_succeed (Eff_types.Term_var 1)), (Eff_types.Eff_succeed (Eff_types.Term_var 2))));
   N_eff (Eff_types.Eff_gen (Eff_types.Stmts_cons ((Eff_types.Stmt_bindYield (Eff_types.Eff_succeed (Eff_types.Term_var 1))), (Eff_types.Stmts_nil))));
   N_eff (Eff_types.Eff_catchCause ((Eff_types.Eff_succeed (Eff_types.Term_var 1)), (Eff_types.Eff_succeed (Eff_types.Term_var 2))));
@@ -258,18 +258,18 @@ let witnesses : node list = [
   N_eff (Eff_types.Eff_uninterruptible (Eff_types.Eff_succeed (Eff_types.Term_var 1)));
   N_eff (Eff_types.Eff_interruptible (Eff_types.Eff_succeed (Eff_types.Term_var 1)));
   N_eff (Eff_types.Eff_yieldNow 1);
-  N_eff (Eff_types.Eff_awaitFiber ((Eff_types.Term_var 1), (Eff_types.Observer_mode_awaitValue)));
-  N_eff (Eff_types.Eff_withFiber (Eff_types.Action_term_fork ((Eff_types.Eff_succeed (Eff_types.Term_var 1)), { Eff_types.fork_options_startImmediately = false; fork_options_daemon = false; fork_options_maskMode = (Eff_types.Mask_mode_interruptible) })));
+  N_eff (Eff_types.Eff_awaitFiber ((Eff_types.Term_var 1), (Eff_types.ObserverMode_awaitValue)));
+  N_eff (Eff_types.Eff_withFiber (Eff_types.ActionTerm_fork ((Eff_types.Eff_succeed (Eff_types.Term_var 1)), ({ start_immediately = false; daemon = false; mask_mode = (Eff_types.MaskMode_interruptible) } : Eff_types.fork_options))));
   N_eff (Eff_types.Eff_scoped (Eff_types.Eff_succeed (Eff_types.Term_var 1)));
   N_eff (Eff_types.Eff_acquireRelease ((Eff_types.Eff_succeed (Eff_types.Term_var 1)), (Eff_types.Eff_succeed (Eff_types.Term_var 2))));
-  N_eff (Eff_types.Eff_provideLayer ((Eff_types.Layer_term_succeed ({ Eff_types.service_key_name = { Eff_types.service_name_value = 1 }; service_key_service = { Eff_types.service_type_code_value = 1 } }, (Eff_types.Lit_nat 1))), false, (Eff_types.Eff_succeed (Eff_types.Term_var 3))));
-  N_eff (Eff_types.Eff_service { Eff_types.service_key_name = { Eff_types.service_name_value = 1 }; service_key_service = { Eff_types.service_type_code_value = 1 } });
-  N_eff (Eff_types.Eff_provideService ({ Eff_types.service_key_name = { Eff_types.service_name_value = 1 }; service_key_service = { Eff_types.service_type_code_value = 1 } }, (Eff_types.Term_var 2), (Eff_types.Eff_succeed (Eff_types.Term_var 3))));
+  N_eff (Eff_types.Eff_provideLayer ((Eff_types.LayerTerm_succeed (({ name = (1); service = (1) } : Eff_types.service_key), (Eff_types.Lit_nat 1))), false, (Eff_types.Eff_succeed (Eff_types.Term_var 3))));
+  N_eff (Eff_types.Eff_service ({ name = (1); service = (1) } : Eff_types.service_key));
+  N_eff (Eff_types.Eff_provideService (({ name = (1); service = (1) } : Eff_types.service_key), (Eff_types.Term_var 2), (Eff_types.Eff_succeed (Eff_types.Term_var 3))));
   N_eff (Eff_types.Eff_catchIf ((Eff_types.Term_var 1), (Eff_types.Eff_succeed (Eff_types.Term_var 2)), (Eff_types.Eff_succeed (Eff_types.Term_var 3))));
   N_eff (Eff_types.Eff_select ((Eff_types.Term_var 1), (Eff_types.Decision_bool), (Eff_types.Eff_succeed (Eff_types.Term_var 3)), (Eff_types.Eff_succeed (Eff_types.Term_var 4))));
   N_eff (Eff_types.Eff_iterate (None, (Eff_types.Term_var 2), (Eff_types.Term_var 3), (Eff_types.Term_var 4), (Eff_types.Term_var 5), (Eff_types.Eff_succeed (Eff_types.Term_var 6))));
   N_eff (Eff_types.Eff_restore ((Eff_types.Term_var 1), (Eff_types.Eff_succeed (Eff_types.Term_var 2))));
-  N_eff (Eff_types.Eff_defs ([], (Eff_types.Effs_cons ((Eff_types.Eff_succeed (Eff_types.Term_var 2)), (Eff_types.Effs_nil))), (Eff_types.Eff_succeed (Eff_types.Term_var 3)), (Eff_types.Layer_terms_cons ((Eff_types.Layer_term_succeed ({ Eff_types.service_key_name = { Eff_types.service_name_value = 4 }; service_key_service = { Eff_types.service_type_code_value = 4 } }, (Eff_types.Lit_nat 4))), (Eff_types.Layer_terms_nil)))));
+  N_eff (Eff_types.Eff_defs ([], (Eff_types.Effs_cons ((Eff_types.Eff_succeed (Eff_types.Term_var 2)), (Eff_types.Effs_nil))), (Eff_types.Eff_succeed (Eff_types.Term_var 3)), (Eff_types.LayerTerms_cons ((Eff_types.LayerTerm_succeed (({ name = (4); service = (4) } : Eff_types.service_key), (Eff_types.Lit_nat 4))), (Eff_types.LayerTerms_nil)))));
   N_eff (Eff_types.Eff_invoke (1, (Eff_types.Term_var 2), (Eff_types.Effs_cons ((Eff_types.Eff_succeed (Eff_types.Term_var 3)), (Eff_types.Effs_nil)))));
   N_eff (Eff_types.Eff_provideContext ((Eff_types.Term_var 1), (Eff_types.Eff_succeed (Eff_types.Term_var 2))));
   N_stmts (Eff_types.Stmts_nil);
@@ -280,35 +280,35 @@ let witnesses : node list = [
   N_stmt (Eff_types.Stmt_ifElse ((Eff_types.Term_var 1), (Eff_types.Stmts_cons ((Eff_types.Stmt_bindYield (Eff_types.Eff_succeed (Eff_types.Term_var 2))), (Eff_types.Stmts_nil))), (Eff_types.Stmts_cons ((Eff_types.Stmt_bindYield (Eff_types.Eff_succeed (Eff_types.Term_var 3))), (Eff_types.Stmts_nil)))));
   N_stmt (Eff_types.Stmt_whileTrue (Eff_types.Stmts_cons ((Eff_types.Stmt_bindYield (Eff_types.Eff_succeed (Eff_types.Term_var 1))), (Eff_types.Stmts_nil))));
   N_stmt (Eff_types.Stmt_breakLoop);
-  N_action (Eff_types.Action_term_fork ((Eff_types.Eff_succeed (Eff_types.Term_var 1)), { Eff_types.fork_options_startImmediately = false; fork_options_daemon = false; fork_options_maskMode = (Eff_types.Mask_mode_interruptible) }));
-  N_action (Eff_types.Action_term_forkIn ((Eff_types.Eff_succeed (Eff_types.Term_var 1)), { Eff_types.fork_options_startImmediately = false; fork_options_daemon = false; fork_options_maskMode = (Eff_types.Mask_mode_interruptible) }, (Eff_types.Term_var 3)));
-  N_action (Eff_types.Action_term_forkScoped ((Eff_types.Eff_succeed (Eff_types.Term_var 1)), { Eff_types.fork_options_startImmediately = false; fork_options_daemon = false; fork_options_maskMode = (Eff_types.Mask_mode_interruptible) }));
-  N_action (Eff_types.Action_term_runIn ((Eff_types.Term_var 1), (Eff_types.Term_var 2)));
-  N_action (Eff_types.Action_term_interrupt (Eff_types.Term_var 1));
-  N_action (Eff_types.Action_term_interruptScoped (Eff_types.Term_var 1));
-  N_action (Eff_types.Action_term_interruptAll ((Eff_types.Term_var 1), None));
-  N_action (Eff_types.Action_term_awaitAll (Eff_types.Term_var 1));
-  N_action (Eff_types.Action_term_awaitAllFailFast (Eff_types.Term_var 1));
-  N_action (Eff_types.Action_term_snapshotChildren);
-  N_action (Eff_types.Action_term_awaitNewChildren (Eff_types.Term_var 1));
-  N_action (Eff_types.Action_term_raceAll (Eff_types.Effs_cons ((Eff_types.Eff_succeed (Eff_types.Term_var 1)), (Eff_types.Effs_nil))));
-  N_action (Eff_types.Action_term_getId);
-  N_action (Eff_types.Action_term_closeScope ((Eff_types.Term_var 1), (Eff_types.Term_var 2)));
-  N_action (Eff_types.Action_term_getInterruptible);
-  N_action (Eff_types.Action_term_raceAllFirst (Eff_types.Effs_cons ((Eff_types.Eff_succeed (Eff_types.Term_var 1)), (Eff_types.Effs_nil))));
-  N_action (Eff_types.Action_term_context []);
+  N_action (Eff_types.ActionTerm_fork ((Eff_types.Eff_succeed (Eff_types.Term_var 1)), ({ start_immediately = false; daemon = false; mask_mode = (Eff_types.MaskMode_interruptible) } : Eff_types.fork_options)));
+  N_action (Eff_types.ActionTerm_forkIn ((Eff_types.Eff_succeed (Eff_types.Term_var 1)), ({ start_immediately = false; daemon = false; mask_mode = (Eff_types.MaskMode_interruptible) } : Eff_types.fork_options), (Eff_types.Term_var 3)));
+  N_action (Eff_types.ActionTerm_forkScoped ((Eff_types.Eff_succeed (Eff_types.Term_var 1)), ({ start_immediately = false; daemon = false; mask_mode = (Eff_types.MaskMode_interruptible) } : Eff_types.fork_options)));
+  N_action (Eff_types.ActionTerm_runIn ((Eff_types.Term_var 1), (Eff_types.Term_var 2)));
+  N_action (Eff_types.ActionTerm_interrupt (Eff_types.Term_var 1));
+  N_action (Eff_types.ActionTerm_interruptScoped (Eff_types.Term_var 1));
+  N_action (Eff_types.ActionTerm_interruptAll ((Eff_types.Term_var 1), None));
+  N_action (Eff_types.ActionTerm_awaitAll (Eff_types.Term_var 1));
+  N_action (Eff_types.ActionTerm_awaitAllFailFast (Eff_types.Term_var 1));
+  N_action (Eff_types.ActionTerm_snapshotChildren);
+  N_action (Eff_types.ActionTerm_awaitNewChildren (Eff_types.Term_var 1));
+  N_action (Eff_types.ActionTerm_raceAll (Eff_types.Effs_cons ((Eff_types.Eff_succeed (Eff_types.Term_var 1)), (Eff_types.Effs_nil))));
+  N_action (Eff_types.ActionTerm_getId);
+  N_action (Eff_types.ActionTerm_closeScope ((Eff_types.Term_var 1), (Eff_types.Term_var 2)));
+  N_action (Eff_types.ActionTerm_getInterruptible);
+  N_action (Eff_types.ActionTerm_raceAllFirst (Eff_types.Effs_cons ((Eff_types.Eff_succeed (Eff_types.Term_var 1)), (Eff_types.Effs_nil))));
+  N_action (Eff_types.ActionTerm_context []);
   N_effs (Eff_types.Effs_nil);
   N_effs (Eff_types.Effs_cons ((Eff_types.Eff_succeed (Eff_types.Term_var 1)), (Eff_types.Effs_cons ((Eff_types.Eff_succeed (Eff_types.Term_var 2)), (Eff_types.Effs_nil)))));
-  N_layer (Eff_types.Layer_term_succeed ({ Eff_types.service_key_name = { Eff_types.service_name_value = 1 }; service_key_service = { Eff_types.service_type_code_value = 1 } }, (Eff_types.Lit_nat 2)));
-  N_layer (Eff_types.Layer_term_effect ({ Eff_types.service_key_name = { Eff_types.service_name_value = 1 }; service_key_service = { Eff_types.service_type_code_value = 1 } }, (Eff_types.Eff_succeed (Eff_types.Term_var 2))));
-  N_layer (Eff_types.Layer_term_effectDiscard (Eff_types.Eff_succeed (Eff_types.Term_var 1)));
-  N_layer (Eff_types.Layer_term_provide ((Eff_types.Layer_term_succeed ({ Eff_types.service_key_name = { Eff_types.service_name_value = 1 }; service_key_service = { Eff_types.service_type_code_value = 1 } }, (Eff_types.Lit_nat 1))), (Eff_types.Layer_term_succeed ({ Eff_types.service_key_name = { Eff_types.service_name_value = 2 }; service_key_service = { Eff_types.service_type_code_value = 2 } }, (Eff_types.Lit_nat 2)))));
-  N_layer (Eff_types.Layer_term_provideMerge ((Eff_types.Layer_term_succeed ({ Eff_types.service_key_name = { Eff_types.service_name_value = 1 }; service_key_service = { Eff_types.service_type_code_value = 1 } }, (Eff_types.Lit_nat 1))), (Eff_types.Layer_term_succeed ({ Eff_types.service_key_name = { Eff_types.service_name_value = 2 }; service_key_service = { Eff_types.service_type_code_value = 2 } }, (Eff_types.Lit_nat 2)))));
-  N_layer (Eff_types.Layer_term_merge ((Eff_types.Layer_term_succeed ({ Eff_types.service_key_name = { Eff_types.service_name_value = 1 }; service_key_service = { Eff_types.service_type_code_value = 1 } }, (Eff_types.Lit_nat 1))), (Eff_types.Layer_term_succeed ({ Eff_types.service_key_name = { Eff_types.service_name_value = 2 }; service_key_service = { Eff_types.service_type_code_value = 2 } }, (Eff_types.Lit_nat 2)))));
-  N_layer (Eff_types.Layer_term_fresh (Eff_types.Layer_term_succeed ({ Eff_types.service_key_name = { Eff_types.service_name_value = 1 }; service_key_service = { Eff_types.service_type_code_value = 1 } }, (Eff_types.Lit_nat 1))));
-  N_layer (Eff_types.Layer_term_orDie (Eff_types.Layer_term_succeed ({ Eff_types.service_key_name = { Eff_types.service_name_value = 1 }; service_key_service = { Eff_types.service_type_code_value = 1 } }, (Eff_types.Lit_nat 1))));
-  N_layer (Eff_types.Layer_term_ref []);
-  N_layer (Eff_types.Layer_term_mergeAll (Eff_types.Layer_terms_cons ((Eff_types.Layer_term_succeed ({ Eff_types.service_key_name = { Eff_types.service_name_value = 1 }; service_key_service = { Eff_types.service_type_code_value = 1 } }, (Eff_types.Lit_nat 1))), (Eff_types.Layer_terms_nil))));
-  N_layers (Eff_types.Layer_terms_nil);
-  N_layers (Eff_types.Layer_terms_cons ((Eff_types.Layer_term_succeed ({ Eff_types.service_key_name = { Eff_types.service_name_value = 1 }; service_key_service = { Eff_types.service_type_code_value = 1 } }, (Eff_types.Lit_nat 1))), (Eff_types.Layer_terms_cons ((Eff_types.Layer_term_succeed ({ Eff_types.service_key_name = { Eff_types.service_name_value = 2 }; service_key_service = { Eff_types.service_type_code_value = 2 } }, (Eff_types.Lit_nat 2))), (Eff_types.Layer_terms_nil)))));
+  N_layer (Eff_types.LayerTerm_succeed (({ name = (1); service = (1) } : Eff_types.service_key), (Eff_types.Lit_nat 2)));
+  N_layer (Eff_types.LayerTerm_effect (({ name = (1); service = (1) } : Eff_types.service_key), (Eff_types.Eff_succeed (Eff_types.Term_var 2))));
+  N_layer (Eff_types.LayerTerm_effectDiscard (Eff_types.Eff_succeed (Eff_types.Term_var 1)));
+  N_layer (Eff_types.LayerTerm_provide ((Eff_types.LayerTerm_succeed (({ name = (1); service = (1) } : Eff_types.service_key), (Eff_types.Lit_nat 1))), (Eff_types.LayerTerm_succeed (({ name = (2); service = (2) } : Eff_types.service_key), (Eff_types.Lit_nat 2)))));
+  N_layer (Eff_types.LayerTerm_provideMerge ((Eff_types.LayerTerm_succeed (({ name = (1); service = (1) } : Eff_types.service_key), (Eff_types.Lit_nat 1))), (Eff_types.LayerTerm_succeed (({ name = (2); service = (2) } : Eff_types.service_key), (Eff_types.Lit_nat 2)))));
+  N_layer (Eff_types.LayerTerm_merge ((Eff_types.LayerTerm_succeed (({ name = (1); service = (1) } : Eff_types.service_key), (Eff_types.Lit_nat 1))), (Eff_types.LayerTerm_succeed (({ name = (2); service = (2) } : Eff_types.service_key), (Eff_types.Lit_nat 2)))));
+  N_layer (Eff_types.LayerTerm_fresh (Eff_types.LayerTerm_succeed (({ name = (1); service = (1) } : Eff_types.service_key), (Eff_types.Lit_nat 1))));
+  N_layer (Eff_types.LayerTerm_orDie (Eff_types.LayerTerm_succeed (({ name = (1); service = (1) } : Eff_types.service_key), (Eff_types.Lit_nat 1))));
+  N_layer (Eff_types.LayerTerm_ref []);
+  N_layer (Eff_types.LayerTerm_mergeAll (Eff_types.LayerTerms_cons ((Eff_types.LayerTerm_succeed (({ name = (1); service = (1) } : Eff_types.service_key), (Eff_types.Lit_nat 1))), (Eff_types.LayerTerms_nil))));
+  N_layers (Eff_types.LayerTerms_nil);
+  N_layers (Eff_types.LayerTerms_cons ((Eff_types.LayerTerm_succeed (({ name = (1); service = (1) } : Eff_types.service_key), (Eff_types.Lit_nat 1))), (Eff_types.LayerTerms_cons ((Eff_types.LayerTerm_succeed (({ name = (2); service = (2) } : Eff_types.service_key), (Eff_types.Lit_nat 2))), (Eff_types.LayerTerms_nil)))));
 ]

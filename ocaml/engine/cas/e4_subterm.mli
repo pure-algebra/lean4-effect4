@@ -93,7 +93,7 @@ val family_eq : family -> family -> bool
 val families : family list
 
 val family_ctor_names : family -> string list
-(** `Eff_types.ctor_names_<t>` for the family: the alphabet the index is table-driven over
+(** `Eff_ctors.ctor_names_<t>` for the family: the alphabet the index is table-driven over
     (SB5). *)
 
 val arity : family -> int
@@ -170,13 +170,13 @@ module Tree : sig
       against, and `effSig`'s `children`/`rebuild` half (amendment M18). *)
 
   type node = Eff_subterm.node =
-    | N_eff of Eff_types.eff
-    | N_stmts of Eff_types.stmts
-    | N_stmt of Eff_types.stmt
-    | N_action of Eff_types.action_term
-    | N_effs of Eff_types.effs
-    | N_layer of Eff_types.layer_term
-    | N_layers of Eff_types.layer_terms
+    | N_eff of Eff_wire.program
+    | N_stmts of Eff_types.native_op Eff_types.stmts
+    | N_stmt of Eff_types.native_op Eff_types.stmt
+    | N_action of Eff_types.native_op Eff_types.action_term
+    | N_effs of Eff_types.native_op Eff_types.effs
+    | N_layer of Eff_types.native_op Eff_types.layer_term
+    | N_layers of Eff_types.native_op Eff_types.layer_terms
 
   val family_of : node -> family
   val ctor_index : node -> int

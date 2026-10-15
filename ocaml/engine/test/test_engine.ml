@@ -1,12 +1,11 @@
-(* test_engine.ml -- lane D: the drive loop, the program conversion, the differential
-   between the two instances of the generated engine, and the first W1/W2 numbers.
+(* test_engine.ml -- lane D: the drive loop, the differential between the two instances of
+   the generated engine, and the first W1/W2 numbers.
 
    What it checks (docs/research/2026-09-08-engine-brief.md §2.1; the lane's acceptance):
 
      1  G0 reproduced on BOTH instances.  `p42` / `pFork` / `pAwait` -- the byte-pinned
-        corpus of src/Effect4/Program/Wire.lean:74-106, here written in `Eff_types` and
-        converted by `E4_program`, where `ocaml/gen/api_check.ml` writes them directly in
-        the generated type -- give `finished ... success 42`, `finished fibers=2 success
+        corpus of src/Effect4/Program/Wire.lean:74-106, written in `Eff_types`, the one
+        program type of the wire and both instances -- give `finished ... success 42`, `finished fibers=2 success
         ctor 0 [7]` and `frontier fibers=1`; and `Fast` answers what `Ref` answers.
         With them, the term rows' environment (the state plan's T3b): a read-modify-write
         row's term reads an outer binder and the cell's value at the node's level
@@ -20,15 +19,13 @@
         refuses (`pFoldEmpty`, `pFoldRefuses`); the values are Lean's
         (Test/Program/FoldContract.lean).
      2  The differential D1 in miniature: the programs of ocaml/eff/goldens/*.bin,
-        decoded by `Eff_wire`, converted by `E4_program`, run at fuel 1000
+        decoded by `Eff_wire`, run at fuel 1000
         on both instances.  Outcome, answer, exits, the fiber-table projection, the trace
         rows and the store row must be EQUAL between `Fast` and `Ref` for every one, and
         each instance's drive loop must agree with its own generated `Api.run`.
-     3  The ordinal pin (CAS amendment M17): `Eff_types`' alphabet against the engine's,
-        against `ocaml/eff/eff_manifest.txt`, plus the per-constructor law
-        `ctor_index (of_x v) = Eff_types.ctor_index v` over a sample of EVERY arm of all
-        sampled families, on both instances -- and a mutation check that a transposed
-        manifest is refused.
+     3  The numeric profile at load: a natural literal outside it is refused, from a value
+        and from the wire (EN8). The ordinal pin went with the conversion on 2026-10-15:
+        both instances open `Eff_types`, so `ocamlopt` holds the one alphabet.
      4  `replay_steps` yields |tape| + 1 machines and its last equals `replay`'s.
      5  The two `failwith` rows of the generated prelude (`sh_dispatcher_mk`,
         `sh_memo_map_mk`, api_engine.ml's PRELUDE) never fire on the corpus: counted.
@@ -102,42 +99,35 @@ let read_file path =
   s
 
 (* the first occurrence of [needle] in [s] replaced by [by]; [s] unchanged when absent *)
-let replace_first needle by s =
-  let n = String.length needle and l = String.length s in
-  let rec at i = if i + n > l then None else if String.sub s i n = needle then Some i else at (i + 1) in
-  match at 0 with
-  | None -> s
-  | Some i -> String.sub s 0 i ^ by ^ String.sub s (i + n) (l - i - n)
-
 (* ================================================================ the G0 programs *)
 
-let p42 : E.eff = E.Eff_succeed (E.Term_lit (E.Lit_nat 42))
+let p42 : E.native_op E.eff = E.Eff_succeed (E.Term_lit (E.Lit_nat 42))
 
 let fork_opts : E.fork_options =
-  { E.fork_options_startImmediately = false;
-    fork_options_daemon = false;
-    fork_options_maskMode = E.Mask_mode_inherit }
+  { E.start_immediately = false;
+    daemon = false;
+    mask_mode = E.MaskMode_inherit }
 
-let p_fork : E.eff =
+let p_fork : E.native_op E.eff =
   E.Eff_bind
     ( E.Eff_withFiber
-        (E.Action_term_fork
+        (E.ActionTerm_fork
            ( E.Eff_bind (E.Eff_yieldNow 0, E.Eff_succeed (E.Term_lit (E.Lit_nat 7))),
              fork_opts )),
-      E.Eff_awaitFiber (E.Term_var 0, E.Observer_mode_awaitValue) )
+      E.Eff_awaitFiber (E.Term_var 0, E.ObserverMode_awaitValue) )
 
-let p_await : E.eff =
+let p_await : E.native_op E.eff =
   E.Eff_bind
-    ( E.Eff_perform (E.Native_op_deferredMakeOf (E.Ty_nat, E.Ty_nat), E.Term_lit E.Lit_unit),
-      E.Eff_perform (E.Native_op_deferredAwait, E.Term_var 0) )
+    ( E.Eff_perform (E.NativeOp_deferredMakeOf (E.Ty_nat, E.Ty_nat), E.Term_lit E.Lit_unit),
+      E.Eff_perform (E.NativeOp_deferredAwait, E.Term_var 0) )
 
 (* `chain 0 = succeed unit`, `chain (n+1) = bind (perform refMake (lit (nat n))) (chain n)`
    -- Test/Program/RuntimeRContract.lean's `chain`, the quadratic detector (A1 §6.1 W2). *)
-let rec chain n : E.eff =
+let rec chain n : E.native_op E.eff =
   if n <= 0 then E.Eff_succeed (E.Term_lit E.Lit_unit)
   else
     E.Eff_bind
-      ( E.Eff_perform (E.Native_op_refMake, E.Term_lit (E.Lit_nat (n - 1))),
+      ( E.Eff_perform (E.NativeOp_refMake, E.Term_lit (E.Lit_nat (n - 1))),
         chain (n - 1) )
 
 (* The term rows' environment (decisions row 43; the state plan's T3b).  A read-modify-write
@@ -153,26 +143,26 @@ let succ_at n = E.Term_app ("succ", E.Terms_cons (E.Term_var n, E.Terms_nil))
 (* `Ref.make(5)`, a bound `10`, `Ref.update(ref, a => add(a, x))`, then `Ref.get(ref)`: the
    term captures the outer `x` (`var 1`) and reads the cell's value at the node's level
    (`var 2`). *)
-let p_capture : E.eff =
+let p_capture : E.native_op E.eff =
   E.Eff_bind
-    ( E.Eff_perform (E.Native_op_refMake, nat_lit 5),
+    ( E.Eff_perform (E.NativeOp_refMake, nat_lit 5),
       E.Eff_bind
         ( E.Eff_succeed (nat_lit 10),
           E.Eff_bind
             ( E.Eff_perform
-                ( E.Native_op_refUpdateWith
+                ( E.NativeOp_refUpdateWith
                     (E.Term_app
                        ("add", E.Terms_cons (E.Term_var 2, E.Terms_cons (E.Term_var 1, E.Terms_nil)))),
                   E.Term_var 0 ),
-              E.Eff_perform (E.Native_op_refGet, E.Term_var 0) ) ) )
+              E.Eff_perform (E.NativeOp_refGet, E.Term_var 0) ) ) )
 
 (* `Ref.make(5)`, then `Ref.modify(ref, a => ["s", a])`: the row answers the string and stores
    the number it read (`pRefModifyOther`).  `B` is the term's, not the cell's. *)
-let p_modify_other : E.eff =
+let p_modify_other : E.native_op E.eff =
   E.Eff_bind
-    ( E.Eff_perform (E.Native_op_refMake, nat_lit 5),
+    ( E.Eff_perform (E.NativeOp_refMake, nat_lit 5),
       E.Eff_perform
-        ( E.Native_op_refModifyWith
+        ( E.NativeOp_refModifyWith
             (E.Term_app
                ( "pair",
                  E.Terms_cons
@@ -180,12 +170,12 @@ let p_modify_other : E.eff =
           E.Term_var 0 ) )
 
 (* `Ref.make(5)`, a bound `10`, then `Ref.updateAndGet(ref, f)` at a node of level 2. *)
-let p_level (f : E.term) : E.eff =
+let p_level (f : E.term) : E.native_op E.eff =
   E.Eff_bind
-    ( E.Eff_perform (E.Native_op_refMake, nat_lit 5),
+    ( E.Eff_perform (E.NativeOp_refMake, nat_lit 5),
       E.Eff_bind
         ( E.Eff_succeed (nat_lit 10),
-          E.Eff_perform (E.Native_op_refUpdateAndGetWith f, E.Term_var 0) ) )
+          E.Eff_perform (E.NativeOp_refUpdateAndGetWith f, E.Term_var 0) ) )
 
 (* The list fold with two binders (decisions row 228).  A fold's body runs at the environment
    extended by the accumulator and the element, so it reads the accumulator at the fold's level
@@ -199,12 +189,12 @@ let nat_list xs = List.fold_right (fun x acc -> app "cons" [ nat_lit x; acc ]) x
 let snoc xs x = app "append" [ xs; app "cons" [ x; nil_t ] ]
 
 (* From the head: `((10 - 1) - 2) - 3`. *)
-let p_fold : E.eff =
+let p_fold : E.native_op E.eff =
   E.Eff_succeed
     (E.Term_fold (None, nat_list [ 1; 2; 3 ], nat_lit 10, app "sub" [ E.Term_var 0; E.Term_var 1 ]))
 
 (* A bound `100`; the body reads it below the fold's level: `(0 + (1 + 100)) + (2 + 100)`. *)
-let p_fold_capture : E.eff =
+let p_fold_capture : E.native_op E.eff =
   E.Eff_bind
     ( E.Eff_succeed (nat_lit 100),
       E.Eff_succeed
@@ -214,7 +204,7 @@ let p_fold_capture : E.eff =
 
 (* A fold inside a fold, with a stated accumulator type: the inner body reads the outer element
    (`var 2`), and pairs each item with the length of its own list. *)
-let p_fold_nested : E.eff =
+let p_fold_nested : E.native_op E.eff =
   E.Eff_bind
     ( E.Eff_succeed (app "cons" [ nat_list [ 1; 2 ]; app "cons" [ nat_list [ 3 ]; nil_t ] ]),
       E.Eff_succeed
@@ -227,11 +217,11 @@ let p_fold_nested : E.eff =
 (* `Ref.make(5)`, then `Ref.modify(ref, a => [fold(xs, a, (b, x) => b + x), a])`: the term's
    binder is `var 1`, so the fold inside it binds `var 2` and `var 3`.  One store step answers
    `5 + 1 + 2 + 3` and stores the `5` it read. *)
-let p_fold_in_op : E.eff =
+let p_fold_in_op : E.native_op E.eff =
   E.Eff_bind
-    ( E.Eff_perform (E.Native_op_refMake, nat_lit 5),
+    ( E.Eff_perform (E.NativeOp_refMake, nat_lit 5),
       E.Eff_perform
-        ( E.Native_op_refModifyWith
+        ( E.NativeOp_refModifyWith
             (app "pair"
                [ E.Term_fold
                    ( None, nat_list [ 1; 2; 3 ], E.Term_var 1,
@@ -240,11 +230,11 @@ let p_fold_in_op : E.eff =
           E.Term_var 0 ) )
 
 (* An empty list answers the initial value, and the body, which would refuse, is not run. *)
-let p_fold_empty : E.eff =
+let p_fold_empty : E.native_op E.eff =
   E.Eff_succeed (E.Term_fold (None, nil_t, nat_lit 7, E.Term_tupleAt (E.Term_var 1, 5)))
 
 (* A body that refuses on an element refuses the fold: no partial answer. *)
-let p_fold_refuses : E.eff =
+let p_fold_refuses : E.native_op E.eff =
   E.Eff_succeed (E.Term_fold (None, nat_list [ 1; 2 ], nat_lit 0, E.Term_tupleAt (E.Term_var 1, 0)))
 
 (* ================================================================ one report per run *)
@@ -287,11 +277,11 @@ module Rep (En : E4_engine.ENGINE) = struct
       r_store = En.store_row t;
       r_root = En.root_exit t }
 
-  let report (p : E.eff) ~(fuel : int) : report = of_t (En.run p ~fuel)
+  let report (p : E.native_op E.eff) ~(fuel : int) : report = of_t (En.run p ~fuel)
 
   (* The instance's OWN generated `Effect4.Api.run`, so the drive loop is checked against
      the function it is a re-implementation of. *)
-  let api_outcome (p : E.eff) ~(fuel : int) : string = En.api_run (En.compile p) ~fuel
+  let api_outcome (p : E.native_op E.eff) ~(fuel : int) : string = En.api_run (En.compile p) ~fuel
 end
 
 module RF = Rep (En_fast)
@@ -319,7 +309,7 @@ let differ (a : report) (b : report) : string list =
 
 let g0 () =
   print_endline "== 1. G0 on both instances (fuel 1000) ==";
-  let one name (p : E.eff) expect_outcome expect_fibers expect_root =
+  let one name (p : E.native_op E.eff) expect_outcome expect_fibers expect_root =
     match guard (fun () -> (RF.report p ~fuel:1000, RR.report p ~fuel:1000)) with
     | Error e -> fail_note ("G0 " ^ name) e
     | Ok (f, r) ->
@@ -414,291 +404,6 @@ let goldens () =
          !equal n)
       (!equal = n)
 
-(* ================================================================ 3. the ordinal pin *)
-
-let sample_lits = [ E.Lit_unit; E.Lit_nat 1; E.Lit_bool true; E.Lit_str "s" ]
-let a_term = E.Term_var 0
-
-let sample_field_read_modes = [ E.Field_read_mode_required; E.Field_read_mode_optional ]
-
-let sample_terms =
-  [ E.Term_var 0; E.Term_lit E.Lit_unit; E.Term_app ("pair", E.Terms_nil);
-    E.Term_record (["x", (true, E.Ty_nat)], [], E.Terms_nil);
-    E.Term_field (E.Field_read_mode_required, a_term, "a-b");
-    E.Term_recordSet (a_term, "__proto__", E.Term_lit E.Lit_unit);
-    E.Term_tupleAt (a_term, 1);
-    E.Term_fold (Some E.Ty_nat, a_term, E.Term_lit E.Lit_unit, E.Term_var 1) ]
-
-let sample_decisions =
-  [ E.Decision_bool; E.Decision_option; E.Decision_tag "Found"; E.Decision_recordTag "Found" ]
-
-let sample_terms_l = [ E.Terms_nil; E.Terms_cons (a_term, E.Terms_nil) ]
-
-let sample_cause_terms =
-  [ E.Cause_term_fail a_term;
-    E.Cause_term_die a_term;
-    E.Cause_term_interrupt None;
-    E.Cause_term_both (E.Cause_term_fail a_term, E.Cause_term_die a_term) ]
-
-let sample_masks =
-  [ E.Mask_mode_interruptible; E.Mask_mode_uninterruptible; E.Mask_mode_inherit ]
-
-let sample_obs = [ E.Observer_mode_awaitValue; E.Observer_mode_joinEffect ]
-let sample_fins = [ E.Finalizer_strategy_sequential; E.Finalizer_strategy_parallel ]
-
-(* The binder term of a read-modify-write row (decisions row 43; the state plan's T3b): the
-   cell's current value at the node's level, here `succ(var 0)`, `incr`'s image at level 0. *)
-let succ_term = E.Term_app ("succ", E.Terms_cons (E.Term_var 0, E.Terms_nil))
-
-let sample_ops =
-  [ E.Native_op_refMake; E.Native_op_refGet; E.Native_op_refSet; E.Native_op_refGetAndSet;
-    E.Native_op_refSetAndGet;
-    E.Native_op_refUpdateWith succ_term;
-    E.Native_op_refGetAndUpdateWith succ_term;
-    E.Native_op_refUpdateAndGetWith succ_term;
-    E.Native_op_refUpdateSomeWith succ_term;
-    E.Native_op_refGetAndUpdateSomeWith succ_term;
-    E.Native_op_refUpdateSomeAndGetWith succ_term;
-    E.Native_op_refModifyWith succ_term;
-    E.Native_op_refModifySomeWith succ_term;
-    E.Native_op_deferredMakeOf (E.Ty_nat, E.Ty_nat); E.Native_op_deferredIsDone;
-    E.Native_op_deferredPoll;
-    E.Native_op_deferredSucceed; E.Native_op_deferredFail; E.Native_op_deferredAwait;
-    E.Native_op_scopeMake E.Finalizer_strategy_sequential ]
-
-let u : E.eff = E.Eff_succeed (E.Term_lit E.Lit_unit)
-
-let sample_effs =
-  [ E.Eff_succeed a_term;
-    E.Eff_fail a_term;
-    E.Eff_failCause (E.Cause_term_fail a_term);
-    E.Eff_sync a_term;
-    E.Eff_suspend u;
-    E.Eff_perform (E.Native_op_refMake, a_term);
-    E.Eff_bind (u, u);
-    E.Eff_gen E.Stmts_nil;
-    E.Eff_catchCause (u, u);
-    E.Eff_matchCause (u, u, u);
-    E.Eff_onExit (u, u);
-    E.Eff_exit u;
-    E.Eff_uninterruptible u;
-    E.Eff_interruptible u;
-    E.Eff_iterate (None, a_term, a_term, a_term, a_term, u);
-    E.Eff_iterate (Some E.Ty_unit, a_term, a_term, a_term, a_term, u);
-    E.Eff_yieldNow 0;
-    E.Eff_awaitFiber (a_term, E.Observer_mode_awaitValue);
-    E.Eff_withFiber E.Action_term_getId;
-    E.Eff_scoped u;
-    E.Eff_acquireRelease (u, u);
-    E.Eff_restore (a_term, u);
-    E.Eff_provideContext (a_term, u) ]
-
-let sample_stmts =
-  [ E.Stmt_bindYield u; E.Stmt_yieldDiscard u; E.Stmt_ret a_term;
-    E.Stmt_ifElse (a_term, E.Stmts_nil, E.Stmts_nil); E.Stmt_whileTrue E.Stmts_nil;
-    E.Stmt_breakLoop ]
-
-let sample_stmtss = [ E.Stmts_nil; E.Stmts_cons (E.Stmt_breakLoop, E.Stmts_nil) ]
-let sample_effss = [ E.Effs_nil; E.Effs_cons (u, E.Effs_nil) ]
-
-let sample_actions =
-  [ E.Action_term_fork (u, fork_opts);
-    E.Action_term_forkIn (u, fork_opts, a_term);
-    E.Action_term_forkScoped (u, fork_opts);
-    E.Action_term_runIn (a_term, a_term);
-    E.Action_term_interrupt a_term;
-    E.Action_term_interruptScoped a_term;
-    E.Action_term_interruptAll (a_term, None);
-    E.Action_term_awaitAll a_term;
-    E.Action_term_awaitAllFailFast a_term;
-    E.Action_term_snapshotChildren;
-    E.Action_term_awaitNewChildren a_term;
-    E.Action_term_raceAll E.Effs_nil;
-    E.Action_term_context [];
-    E.Action_term_getId;
-    E.Action_term_closeScope (a_term, a_term);
-    E.Action_term_getInterruptible;
-    E.Action_term_raceAllFirst E.Effs_nil ]
-
-module Ord (A : E4_program.PROGRAM_TYPES) = struct
-  module P = E4_program.Make (A)
-
-  let bad = ref []
-  let n = ref 0
-
-  let one family i src eng =
-    incr n;
-    if src <> eng then
-      bad := Printf.sprintf "%s[%d]: wire %d, engine %d" family i src eng :: !bad
-
-  let record_shapes () =
-    let raw = E.Term_record
-        (["z", (true, E.Ty_int); "z", (false, E.Ty_number); "__proto__", (true, E.Ty_nat)],
-         ["unknown"; "unknown"], E.Terms_cons (E.Term_lit (E.Lit_nat 1), E.Terms_nil)) in
-    let raw_fields = function
-      | A.Term_record
-          (["z", (true, A.Ty_int); "z", (false, A.Ty_number); "__proto__", (true, A.Ty_nat)],
-           ["unknown"; "unknown"], A.Terms_cons (A.Term_lit (A.Lit_nat 1), A.Terms_nil)) -> true
-      | _ -> false in
-    [ "raw declaration order, optional flags, and extra names", raw_fields (P.of_term raw);
-      "extra values", (match P.of_term
-          (E.Term_record (["x", (true, E.Ty_nat)], [], E.Terms_cons (a_term, E.Terms_nil))) with
-        | A.Term_record (["x", (true, A.Ty_nat)], [], A.Terms_cons (A.Term_var 0, A.Terms_nil)) -> true
-        | _ -> false);
-      "optional field mode and raw target", (match P.of_term
-          (E.Term_field (E.Field_read_mode_optional, raw, "a-b")) with
-        | A.Term_field (A.FieldReadMode_optional, target, "a-b") -> raw_fields target
-        | _ -> false);
-      "record replacement and raw target", (match P.of_term
-          (E.Term_recordSet (raw, "__proto__", E.Term_var 3)) with
-        | A.Term_recordSet (target, "__proto__", A.Term_var 3) -> raw_fields target
-        | _ -> false) ]
-
-  let tuple_and_tag_shapes () =
-    [ "tuple index beyond exact JavaScript integers", (match P.of_term
-          (E.Term_tupleAt (a_term, 9007199254740993)) with
-        | A.Term_tupleAt (A.Term_var 0, 9007199254740993) -> true
-        | _ -> false);
-      "nested tuple targets and maximum OCaml int", (match P.of_term
-          (E.Term_tupleAt (E.Term_tupleAt (E.Term_var 2, 65537), max_int)) with
-        | A.Term_tupleAt (A.Term_tupleAt (A.Term_var 2, 65537), index) -> index = max_int
-        | _ -> false);
-      "record access over tuple projection", (match P.of_term
-          (E.Term_field (E.Field_read_mode_optional, E.Term_tupleAt (a_term, 0), "a-b")) with
-        | A.Term_field (A.FieldReadMode_optional, A.Term_tupleAt (A.Term_var 0, 0), "a-b") -> true
-        | _ -> false);
-      "record tag exact string", (match P.of_decision (E.Decision_recordTag "é\n\"raw") with
-        | A.Decision_recordTag "é\n\"raw" -> true | _ -> false);
-      "record tag empty string", (match P.of_decision (E.Decision_recordTag "") with
-        | A.Decision_recordTag "" -> true | _ -> false);
-      "record tag stays distinct from sum tag", (match P.of_decision (E.Decision_tag "Found") with
-        | A.Decision_tag "Found" -> true | _ -> false);
-      "selection keeps decision and both branches", (match P.of_eff
-          (E.Eff_select (E.Term_tupleAt (a_term, 1), E.Decision_recordTag "Found",
-            E.Eff_succeed (E.Term_var 2), E.Eff_fail (E.Term_var 3))) with
-        | A.Eff_select (A.Term_tupleAt (A.Term_var 0, 1), A.Decision_recordTag "Found",
-            A.Eff_succeed (A.Term_var 2), A.Eff_fail (A.Term_var 3)) -> true
-        | _ -> false) ]
-
-  let go () =
-    List.iteri (fun i v -> one "lit" i (E.ctor_index_lit v) (P.ctor_index_lit (P.of_lit v)))
-      sample_lits;
-    List.iteri (fun i v -> one "field_read_mode" i (E.ctor_index_field_read_mode v)
-        (P.ctor_index_field_read_mode (P.of_field_read_mode v))) sample_field_read_modes;
-    List.iteri (fun i v -> one "term" i (E.ctor_index_term v) (P.ctor_index_term (P.of_term v)))
-      sample_terms;
-    List.iteri
-      (fun i v -> one "terms" i (E.ctor_index_terms v) (P.ctor_index_terms (P.of_terms v)))
-      sample_terms_l;
-    List.iteri
-      (fun i v ->
-         one "cause_term" i (E.ctor_index_cause_term v)
-           (P.ctor_index_cause_term (P.of_cause_term v)))
-      sample_cause_terms;
-    List.iteri
-      (fun i v ->
-         one "mask_mode" i (E.ctor_index_mask_mode v)
-           (P.ctor_index_mask_mode (P.of_mask_mode v)))
-      sample_masks;
-    List.iteri
-      (fun i v ->
-         one "observer_mode" i (E.ctor_index_observer_mode v)
-           (P.ctor_index_observer_mode (P.of_observer_mode v)))
-      sample_obs;
-    List.iteri
-      (fun i v ->
-         one "finalizer_strategy" i (E.ctor_index_finalizer_strategy v)
-           (P.ctor_index_finalizer_strategy (P.of_finalizer_strategy v)))
-      sample_fins;
-    List.iteri
-      (fun i v ->
-         one "native_op" i (E.ctor_index_native_op v)
-           (P.ctor_index_native_op (P.of_native_op v)))
-      sample_ops;
-    List.iteri (fun i v -> one "decision" i (E.ctor_index_decision v)
-        (P.ctor_index_decision (P.of_decision v))) sample_decisions;
-    List.iteri (fun i v -> one "eff" i (E.ctor_index_eff v) (P.ctor_index_eff (P.of_eff v)))
-      sample_effs;
-    List.iteri (fun i v -> one "stmt" i (E.ctor_index_stmt v) (P.ctor_index_stmt (P.of_stmt v)))
-      sample_stmts;
-    List.iteri
-      (fun i v -> one "stmts" i (E.ctor_index_stmts v) (P.ctor_index_stmts (P.of_stmts v)))
-      sample_stmtss;
-    List.iteri (fun i v -> one "effs" i (E.ctor_index_effs v) (P.ctor_index_effs (P.of_effs v)))
-      sample_effss;
-    List.iteri
-      (fun i v ->
-         one "action_term" i (E.ctor_index_action_term v)
-           (P.ctor_index_action_term (P.of_action_term v)))
-      sample_actions;
-    (!n, List.rev !bad)
-end
-
-module OrdF = Ord (Api_engine_inst)
-module OrdR = Ord (Api_engine_ref)
-
-let ordinals () =
-  print_endline "";
-  print_endline "== 3. the ordinal pin (M17) ==";
-  check "term samples cover every source constructor"
-    (List.sort_uniq Int.compare (List.map E.ctor_index_term sample_terms) =
-     List.init (List.length E.ctor_names_term) Fun.id);
-  check "field read mode samples cover every source constructor"
-    (List.sort_uniq Int.compare (List.map E.ctor_index_field_read_mode sample_field_read_modes) =
-     List.init (List.length E.ctor_names_field_read_mode) Fun.id);
-  check "decision samples cover every source constructor"
-    (List.sort_uniq Int.compare (List.map E.ctor_index_decision sample_decisions) =
-     List.init (List.length E.ctor_names_decision) Fun.id);
-  List.iter (fun (name, ok) -> check ("Fast tuple/tag conversion: " ^ name) ok) (OrdF.tuple_and_tag_shapes ());
-  List.iter (fun (name, ok) -> check ("Ref tuple/tag conversion: " ^ name) ok) (OrdR.tuple_and_tag_shapes ());
-  List.iter (fun (name, ok) -> check ("Fast record conversion: " ^ name) ok) (OrdF.record_shapes ());
-  List.iter (fun (name, ok) -> check ("Ref record conversion: " ^ name) ok) (OrdR.record_shapes ());
-  (match E4_program.pin () with
-   | Ok () -> check "the wire's alphabet is a PREFIX of the engine's, every family" true
-   | Error e -> fail_note "E4_program.pin" e);
-  (match find_path [ "eff"; "eff_manifest.txt" ] "E4_EFF_MANIFEST" with
-   | None -> fail_note "eff_manifest.txt" "not found from the cwd"
-   | Some path -> (
-     (match E4_program.parse_manifest path with
-      | Error e -> fail_note "eff_manifest.txt parses" e
-      | Ok rows ->
-        Printf.printf "  %s: %d inductive families\n" path (List.length rows);
-        check "eff_manifest.txt parses into inductive families" (List.length rows >= 15));
-     match E4_program.check_manifest path with
-     | Ok () -> check "eff_manifest.txt = Eff_types = the engine (the content table)" true
-     | Error e -> fail_note "E4_program.check_manifest" e));
-  (* the mutation: transpose two same-arity arms of `eff` in a copy of the manifest and the
-     pin must refuse it.  `succeed(term)` and `fail(term)` are positions 0 and 1, and both
-     carry one `term`, so nothing but the ORDER distinguishes them -- this is exactly the
-     transposition hole a structural map leaves open (A1 §2.2, U-a's risk). *)
-  (match find_path [ "eff"; "eff_manifest.txt" ] "E4_EFF_MANIFEST" with
-   | None -> ()
-   | Some path ->
-     let text = read_file path in
-     let swapped =
-       replace_first "succeed(term) fail(term) failCause"
-         "fail(term) succeed(term) failCause" text
-     in
-     let tmp = Filename.temp_file "e4_manifest" ".txt" in
-     let oc = open_out_bin tmp in
-     output_string oc swapped;
-     close_out oc;
-     let verdict = E4_program.check_manifest tmp in
-     Sys.remove tmp;
-     check "mutation: a transposed `eff` arm in the manifest is REFUSED"
-       (swapped <> text && Result.is_error verdict));
-  let nf, badf = OrdF.go () in
-  let nr, badr = OrdR.go () in
-  Printf.printf "  %d + %d constructor ordinals compared\n" nf nr;
-  check
-    (Printf.sprintf "ctor_index (of_x v) = Eff_types.ctor_index v, %d arms on Fast" nf)
-    (badf = []);
-  if badf <> [] then List.iter (fun s -> Printf.printf "    %s\n" s) badf;
-  check
-    (Printf.sprintf "ctor_index (of_x v) = Eff_types.ctor_index v, %d arms on Ref" nr)
-    (badr = []);
-  if badr <> [] then List.iter (fun s -> Printf.printf "    %s\n" s) badr
-
 (* ================================================================ 4. replay_steps *)
 
 let replay_steps_check () =
@@ -708,7 +413,7 @@ let replay_steps_check () =
     [ En_fast.evaluate 0; En_fast.flush; En_fast.flush; En_fast.fire 0;
       En_fast.yield_verdict 0 true ]
   in
-  let one name (p : E.eff) fuel =
+  let one name (p : E.native_op E.eff) fuel =
     let t0 = En_fast.load p ~fuel in
     let steps = List.of_seq (En_fast.replay_steps t0 tape) in
     let last = List.nth steps (List.length steps - 1) in
@@ -753,13 +458,12 @@ let replay_steps_check () =
 let origin_prelude_check () =
   let () =
     let module I = Api_engine_inst in
-    let module P = E4_program.Make (I) in
-    let program = P.load p42 in
+    let program = p42 in
     let machine = I.load program ~fuel:100 in
     let parent = List.assoc 0 (I.fibers machine) in
     check "Fast creation origin: the root has no fork record"
       (match machine.forks with [] -> true | _ -> false);
-    let options = { I.start_immediately = true; daemon = true; mask_mode = I.MaskMode_inherit } in
+    let options = { Eff_types.start_immediately = true; daemon = true; mask_mode = Eff_types.MaskMode_inherit } in
     let spawned, (_, child_id) = I.sh_spawn (I.interp_of program) machine parent
       parent.frame.current options [3; 1] in
     let _child = List.assoc child_id (I.fibers spawned) in
@@ -771,13 +475,12 @@ let origin_prelude_check () =
   in
   let () =
     let module I = Api_engine_ref in
-    let module P = E4_program.Make (I) in
-    let program = P.load p42 in
+    let program = p42 in
     let machine = I.load program ~fuel:100 in
     let parent = List.assoc 0 (I.fibers machine) in
     check "Ref creation origin: the root has no fork record"
       (match machine.forks with [] -> true | _ -> false);
-    let options = { I.start_immediately = true; daemon = true; mask_mode = I.MaskMode_inherit } in
+    let options = { Eff_types.start_immediately = true; daemon = true; mask_mode = Eff_types.MaskMode_inherit } in
     let spawned, (_, child_id) = I.sh_spawn (I.interp_of program) machine parent
       parent.frame.current options [3; 1] in
     let _child = List.assoc child_id (I.fibers spawned) in
@@ -834,11 +537,10 @@ let clock_profile_check () =
       (clock_is later "9223372036854775837")
   in
   let sleep_then_42 = E.Eff_bind
-    (E.Eff_perform (E.Native_op_sleep, E.Term_lit (E.Lit_nat 17)), p42) in
+    (E.Eff_perform (E.NativeOp_sleep, E.Term_lit (E.Lit_nat 17)), p42) in
   let () =
     let module I = Api_engine_inst in
-    let module P = E4_program.Make (I) in
-    let p = P.load sleep_then_42 in
+    let p = sleep_then_42 in
     let step m d = I.step p (I.interp_of p) ~fuel:100 m d in
     check_generated I.name (fun () -> I.load p ~fuel:100)
       (fun millis m -> step m (I.RunDecision_advance millis))
@@ -851,8 +553,7 @@ let clock_profile_check () =
   in
   let () =
     let module I = Api_engine_ref in
-    let module P = E4_program.Make (I) in
-    let p = P.load sleep_then_42 in
+    let p = sleep_then_42 in
     let step m d = I.step p (I.interp_of p) ~fuel:100 m d in
     check_generated I.name (fun () -> I.load p ~fuel:100)
       (fun millis m -> step m (I.RunDecision_advance millis))
@@ -866,8 +567,8 @@ let clock_profile_check () =
   let check_instance (module En : E4_engine.ENGINE) =
     let module Projection = E4_diff.Of (En) in
     let p = E.Eff_bind
-      (E.Eff_perform (E.Native_op_refMake, E.Term_lit (E.Lit_nat 7)),
-       E.Eff_perform (E.Native_op_clockNow, E.Term_lit E.Lit_unit)) in
+      (E.Eff_perform (E.NativeOp_refMake, E.Term_lit (E.Lit_nat 7)),
+       E.Eff_perform (E.NativeOp_clockNow, E.Term_lit E.Lit_unit)) in
     let prefix = En.name ^ " exact clock: " in
     let m0 = En.load p ~fuel:100 in
     let m = En.step m0 (En.advance_exact (E4_clock.literal "4611686018427387904")) in
@@ -894,7 +595,7 @@ let clock_profile_check () =
    Out-of-profile products refuse at the decision boundary and retain its input. *)
 let multiplication_profile_check () =
   let program a b = E.Eff_bind
-    (E.Eff_perform (E.Native_op_refMake, nat_lit 7),
+    (E.Eff_perform (E.NativeOp_refMake, nat_lit 7),
      E.Eff_succeed (E.Term_app ("mul",
        E.Terms_cons (nat_lit a, E.Terms_cons (nat_lit b, E.Terms_nil))))) in
   let check_instance (module En : E4_engine.ENGINE) =
@@ -979,7 +680,7 @@ let bench () =
       (float_of_int iters /. (ms /. 1000.0))
       (2.0 *. float_of_int iters /. (ms /. 1000.0))
   in
-  let w1_pair prog (p : E.eff) =
+  let w1_pair prog (p : E.native_op E.eff) =
     let pf = En_fast.compile p and pr = En_ref.compile p in
     w1 prog "Fast" (fun () -> for _ = 1 to iters do ignore (En_fast.api_run pf ~fuel:100) done);
     w1 prog "Ref" (fun () -> for _ = 1 to iters do ignore (En_ref.api_run pr ~fuel:100) done)
@@ -1027,13 +728,13 @@ let bench () =
 (* E4-PROV-CE-005: the layer's lexical environment starts closed, matching its checker. *)
 let layer_environment_check () =
   let key = {
-    E.service_key_name = { E.service_name_value = 4 };
-    service_key_service = { E.service_type_code_value = 4 };
+    E.name = 4;
+    service = 4;
   } in
   let program =
     E.Eff_bind (E.Eff_succeed (E.Term_lit (E.Lit_nat 9)),
       E.Eff_scoped (E.Eff_provideLayer (
-        E.Layer_term_effect (key,
+        E.LayerTerm_effect (key,
           E.Eff_bind (E.Eff_succeed (E.Term_lit (E.Lit_str "x")),
             E.Eff_fail (E.Term_var 0))),
         false, E.Eff_service key)))
@@ -1055,7 +756,6 @@ let () =
   print_endline "";
   g0 ();
   goldens ();
-  ordinals ();
   replay_steps_check ();
   clock_profile_check ();
   numeric_ingress_check ();

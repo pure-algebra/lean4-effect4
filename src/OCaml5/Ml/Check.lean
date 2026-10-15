@@ -322,9 +322,10 @@ def Env.ofModule (m : Module) : Env := m.items.foldl (fun e d => (cata_decl chec
 /-- Every well-formedness failure in a module, in declaration order. Empty means the module
 passes every check this file can decide; it does **not** mean `ocamlc` accepts it. A top-level
 `rawD` is verbatim text this module does not parse, and what it binds is exactly as invisible,
-so a module with one is checked with its value scope open. -/
-def checkModule (m : Module) : List Diag :=
-  let env0 := Env.ofModule m
+so a module with one is checked with its value scope open. `opened` are the type declarations of a
+module the checked one opens: their types, constructors and labels are in scope. -/
+def checkModule (m : Module) (opened : List TypeDecl := []) : List Diag :=
+  let env0 := (cata_decl checkDeclAlg (.types opened)).1 (Env.ofModule m)
   let env := if m.items.any (fun d => d matches .rawD _) then env0.opened else env0
   dup "duplicate-type" "module" env.types.reverse
     ++ (m.items.map fun d => (cata_decl checkDeclAlg d).2 env).flatten

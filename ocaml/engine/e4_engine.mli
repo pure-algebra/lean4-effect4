@@ -26,12 +26,12 @@
    ONE loop, TWO instances.  {!Fast} is `Api_engine.Make(E4_table)(E4_trace)(E4_memo)
    (E4_buckets)`; {!Ref} is the same generated bodies over Lean's list carriers.  Both are
    {!Make} applied to the module the instance file supplies, so the loop, the answer
-   alphabet, the ordinal pin and every renderer below exist once.  A differential can then
+   alphabet and every renderer below exist once.  A differential can then
    call both through {!ENGINE} with one signature -- which is what `test/test_engine.ml`
    does over the 37 byte goldens.
 
-   Depends on: Api_engine_inst, Api_engine_ref, E4_program, effect4_eff (Eff_types,
-   Eff_wire), stdlib.
+   Depends on: Api_engine_inst, Api_engine_ref, effect4_eff (Eff_types, Eff_ctors, Eff_wire),
+   stdlib.
 
    Behaviours:
    EN8 Public numeric reply constructors check representability before constructing a decision.
@@ -86,6 +86,9 @@
    are program-shaped, not carrier-shaped -- no carrier can reach them -- but the claim
    "the trace rows are equal" is exactly this projection and nothing wider. *)
 
+open Eff_types
+
+
 (** {1 The answer alphabet} *)
 
 type frontier = {
@@ -104,8 +107,6 @@ type answer =
 (** {1 What an instance must supply} *)
 
 module type INSTANCE = sig
-  include E4_program.PROGRAM_TYPES
-
   val name : string
   val carriers : string
 
@@ -115,9 +116,9 @@ module type INSTANCE = sig
 
   type s  (** [Effect4.Program.EffThunk], api_engine.ml:392 *)
 
-  (** The machine-side alphabet, transcribed from api_engine.ml.  As with
-      {!E4_program.PROGRAM_TYPES}, `ocamlopt` checks this transcription against every
-      instance: a constructor added, dropped, renamed or re-ordered in the generated file is
+  (** The machine-side alphabet, transcribed from api_engine.ml. The program alphabet is
+      `Eff_types`, opened here and by the generated engine. `ocamlopt` checks this transcription
+      against every instance: a constructor added, dropped, renamed or re-ordered in the generated file is
       a compile error here. *)
 
   type fiber_id = int  (* :775 *)
@@ -381,14 +382,14 @@ module type ENGINE = sig
 
   (** {2 Loading} *)
 
-  val compile : Eff_types.eff -> program
-  (** {!E4_program}'s conversion, behind the ordinal pin.
-      @raise E4_program.Ordinal_mismatch when the alphabets disagree.
+  val compile : Eff_wire.program -> program
+  (** The program, its natural literals checked against the selected profile. The program type
+      is `Eff_types`', which the LCNF route declares once for every instance.
       @raise E4_clock.Profile_refusal for a negative or out-of-profile natural literal. *)
 
   val of_bytes : string -> program option
   val load_program : program -> fuel:int -> t
-  val load : Eff_types.eff -> fuel:int -> t
+  val load : Eff_wire.program -> fuel:int -> t
   val load_bytes : string -> fuel:int -> t option
 
   (** {2 Driving} *)
@@ -423,7 +424,7 @@ module type ENGINE = sig
   val drive : t -> t
   (** `Api.run`'s tape, `[evaluate root; flush]` (Api.lean:171-172). *)
 
-  val run : Eff_types.eff -> fuel:int -> t
+  val run : Eff_wire.program -> fuel:int -> t
   val run_program : program -> fuel:int -> t
 
   val api_run : program -> fuel:int -> string

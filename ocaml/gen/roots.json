@@ -1,7 +1,48 @@
 {
   "format": "effect4-lcnf-roots-v2",
-  "claim": "Hand-written, not generated. The two LCNF artefacts and the exact arguments that cut them: `scripts/generate.py --only lcnf` runs `src/OCaml5/Tools/LcnfGen.lean --recipe` on this file, which builds each artefact's argv (`OCaml5.Lcnf.Gen.argvOf`), makes every artefact in one process and renders each artefact's `Regenerate with:` header from its argv -- so the header IS this file, rather than the file being read back out of the artefact it produced. Changing an artefact's roots, cap or seam is an edit here followed by `make gen-lcnf`. The argv order is fixed: --out, one --import per module, --cap, --types (comma-joined, when any), --externs, --prelude, then the roots in the order listed, then the coverage roots. A coverage root is translated so that the route keeps covering its closure, and nothing calls it: the roots of the retired `fibers_gen.ml` and `machine_gen.ml` are `api_gen.ml`'s coverage roots.",
+  "claim": "Hand-written, not generated. The three LCNF artefacts and the exact arguments that cut them: `scripts/generate.py --only lcnf` runs `src/OCaml5/Tools/LcnfGen.lean --recipe` on this file, which builds each artefact's argv (`OCaml5.Lcnf.Gen.argvOf`), makes every artefact in one process and renders each artefact's `Regenerate with:` header from its argv -- so the header IS this file, rather than the file being read back out of the artefact it produced. Changing an artefact's roots, cap or seam is an edit here followed by `make gen-lcnf`. The argv order is fixed: --out, one --import per module, --cap, --types (comma-joined, when any), --externs, --prelude, then the roots in the order listed, then the coverage roots. The first artefact declares the program types alone (no roots): `ocaml/eff/eff_types.ml`, the one OCaml spelling of the program, whose families are `Tools.ProgramStructure.blocks`. The other two open it (`open`), so they declare none of its types. A coverage root is translated so that the route keeps covering its closure, and nothing calls it: the roots of the retired `fibers_gen.ml` and `machine_gen.ml` are `api_gen.ml`'s coverage roots.",
   "artefacts": [
+    {
+      "out": "ocaml/eff/eff_types.ml",
+      "import": [
+        "Effect4.Api"
+      ],
+      "cap": 0,
+      "types": [
+        "Effect4.ServiceName",
+        "Effect4.ServiceTypeCode",
+        "Effect4.ServiceKey",
+        "Effect4.Program.Ty",
+        "Effect4.Program.Lit",
+        "Effect4.Program.FieldReadMode",
+        "Effect4.Program.Term",
+        "Effect4.Program.Terms",
+        "Effect4.Program.CauseTerm",
+        "Effect4.Supervision.MaskMode",
+        "Effect4.Supervision.ForkOptions",
+        "Effect4.Supervision.ObserverMode",
+        "Effect4.FinalizerStrategy",
+        "Effect4.Program.NativeOp",
+        "Effect4.Program.Decision",
+        "Effect4.Program.DefRole",
+        "Effect4.Program.ParamDecl",
+        "Effect4.Program.DefDecl",
+        "Effect4.Program.Eff",
+        "Effect4.Program.Stmt",
+        "Effect4.Program.Stmts",
+        "Effect4.Program.Effs",
+        "Effect4.Program.ActionTerm",
+        "Effect4.Program.LayerTerm",
+        "Effect4.Program.LayerTerms",
+        "Effect4.Program.RowKind",
+        "Effect4.Program.RowShape",
+        "Effect4.Program.Registration",
+        "Effect4.Program.RowArg",
+        "Effect4.Program.Row",
+        "Effect4.Program.EffTy"
+      ],
+      "roots": []
+    },
     {
       "out": "ocaml/gen/api_gen.ml",
       "import": [
@@ -62,7 +103,11 @@
         "Effect4.Machine.runCallback",
         "Effect4.Machine.runSyncExit",
         "Effect4.Machine.promiseOutcome"
-      ]
+      ],
+      "open": {
+        "module": "Eff_types",
+        "artefact": "ocaml/eff/eff_types.ml"
+      }
     },
     {
       "out": "ocaml/engine/api_engine.ml",
@@ -93,7 +138,11 @@
         "Effect4.Program.Node.child"
       ],
       "externs": "ocaml/engine/externs.txt",
-      "prelude": "ocaml/engine/tools/api_engine_prelude.ml"
+      "prelude": "ocaml/engine/tools/api_engine_prelude.ml",
+      "open": {
+        "module": "Eff_types",
+        "artefact": "ocaml/eff/eff_types.ml"
+      }
     }
   ]
 }

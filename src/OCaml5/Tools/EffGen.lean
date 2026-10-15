@@ -11,9 +11,9 @@ import Effect4.Program.Definitions
 
 Writes into `<outdir>`:
 
-* `eff_types.ml`    — one OCaml variant or record per Lean inductive or structure of the
-                      closed world below, constructors in the environment's declaration order,
-                      with `ctor_index_<t>`, `ctor_name_<t>`, `ctor_names_<t>` per type;
+* `eff_ctors.ml`    — `ctor_index_<t>`, `wire_tag_<t>`, `ctor_name_<t>`, `ctor_names_<t>` per
+                      type of the closed world below, and the literal visitor `lits_<t>`. The
+                      types are the LCNF route's `eff_types.ml`;
 * `eff_wire.ml`     — the canonical byte encoding (`src/Effect4/Store/Domain/Canonical.lean` framing,
                       constructor tag 10 with the index as a `Nat` frame) and its exact,
                       length-directed decoder, per type, over the hand-written `Eff_frame`;
@@ -76,13 +76,9 @@ def main (args : List String) : IO Unit := do
   let env ← importModules #[{ module := `Effect4.Program.Native }] {} 0
   let ctx : Core.Context := { fileName := "<effgen>", fileMap := default }
   let (bs, _) ← ((readBlocks.run' {}).toIO ctx { env := env })
-  let (sourceBlocks, _) ← ((Tools.ProgramStructure.readBlocks.run' {}).toIO ctx { env := env })
   let (sorts, _) ← ((readNodeSorts.run' {}).toIO ctx { env := env })
   let subtermText ← match emitSubterm sorts bs with
     | .ok text => pure text
-    | .error message => throw (IO.userError message)
-  let sourceJson ← match Tools.ProgramStructure.descriptorJson sourceBlocks with
-    | .ok json => pure json
     | .error message => throw (IO.userError message)
   let families := bs.flatten
   -- wire tags, by full constructor name, from the one assignment (`World.readBlocks` read
@@ -143,7 +139,6 @@ def main (args : List String) : IO Unit := do
   -- write
   IO.FS.createDirAll out
   IO.FS.createDirAll (out / "goldens")
-  IO.FS.writeFile (out / "program-structure.json") (sourceJson.compress ++ "\n")
   let wireFamilies := bs.flatten.map fun f =>
     let fields := if f.isStruct then f.ctors.head!.args.map (·.1) else f.ctors.map (·.short)
     "(" ++ ostr f.spec.leanName.getString! ++ ", [" ++ "; ".intercalate (fields.map ostr) ++ "])"
@@ -158,7 +153,7 @@ def main (args : List String) : IO Unit := do
     "let wire_tags = [\n  " ++ ";\n  ".intercalate wireTags ++ "\n]\n")
   IO.FS.writeFile (out / "goldens" / "metadata.tsv") ("\n".intercalate metadataLines ++ "\n")
   IO.FS.writeFile (out / "goldens" / "coverage-metadata.txt") ("\n".intercalate metadataRows ++ "\n")
-  IO.FS.writeFile (out / "eff_types.ml") ("(* " ++ stamp ++ " *)\n" ++ emitTypes bs)
+  IO.FS.writeFile (out / "eff_ctors.ml") ("(* " ++ stamp ++ " *)\n" ++ emitCtors bs)
   IO.FS.writeFile (out / "eff_wire.ml") ("(* " ++ stamp ++ " *)\n" ++ emitWire bs)
   IO.FS.writeFile (out / "eff_subterm.ml") ("(* " ++ stamp ++ " *)\n" ++ subtermText)
   IO.FS.writeFile (out / "eff_json.ml") ("(* " ++ stamp ++ " *)\n" ++ emitJson bs)

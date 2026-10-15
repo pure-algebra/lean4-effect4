@@ -12,30 +12,30 @@ let const_atom (name : string) : bool = List.mem name const_atoms
 
 (* 12 nullary operations, 1 at the faces' type arguments, 8 at their faces (a binder term at the unit literal), 1 over every finalizer_strategy: 23 values. *)
 let all_ops : native_op list =
-  [ Native_op_refMake
-  ; Native_op_refGet
-  ; Native_op_refSet
-  ; Native_op_refGetAndSet
-  ; Native_op_refSetAndGet
-  ; (Native_op_refUpdateWith (Term_lit Lit_unit))
-  ; (Native_op_refGetAndUpdateWith (Term_lit Lit_unit))
-  ; (Native_op_refUpdateAndGetWith (Term_lit Lit_unit))
-  ; (Native_op_refUpdateSomeWith (Term_lit Lit_unit))
-  ; (Native_op_refGetAndUpdateSomeWith (Term_lit Lit_unit))
-  ; (Native_op_refUpdateSomeAndGetWith (Term_lit Lit_unit))
-  ; (Native_op_refModifyWith (Term_lit Lit_unit))
-  ; (Native_op_refModifySomeWith (Term_lit Lit_unit))
-  ; (Native_op_deferredMakeOf (Ty_nat, Ty_nat))
-  ; Native_op_deferredIsDone
-  ; Native_op_deferredPoll
-  ; Native_op_deferredSucceed
-  ; Native_op_deferredFail
-  ; Native_op_deferredAwait
-  ; (Native_op_scopeMake Finalizer_strategy_sequential)
-  ; (Native_op_scopeMake Finalizer_strategy_parallel)
-  ; Native_op_sleep
-  ; Native_op_clockNow ]
+  [ NativeOp_refMake
+  ; NativeOp_refGet
+  ; NativeOp_refSet
+  ; NativeOp_refGetAndSet
+  ; NativeOp_refSetAndGet
+  ; (NativeOp_refUpdateWith (Term_lit Lit_unit))
+  ; (NativeOp_refGetAndUpdateWith (Term_lit Lit_unit))
+  ; (NativeOp_refUpdateAndGetWith (Term_lit Lit_unit))
+  ; (NativeOp_refUpdateSomeWith (Term_lit Lit_unit))
+  ; (NativeOp_refGetAndUpdateSomeWith (Term_lit Lit_unit))
+  ; (NativeOp_refUpdateSomeAndGetWith (Term_lit Lit_unit))
+  ; (NativeOp_refModifyWith (Term_lit Lit_unit))
+  ; (NativeOp_refModifySomeWith (Term_lit Lit_unit))
+  ; (NativeOp_deferredMakeOf (Ty_nat, Ty_nat))
+  ; NativeOp_deferredIsDone
+  ; NativeOp_deferredPoll
+  ; NativeOp_deferredSucceed
+  ; NativeOp_deferredFail
+  ; NativeOp_deferredAwait
+  ; (NativeOp_scopeMake FinalizerStrategy_sequential)
+  ; (NativeOp_scopeMake FinalizerStrategy_parallel)
+  ; NativeOp_sleep
+  ; NativeOp_clockNow ]
 
-let scope_key : service_key = { service_key_name = { service_name_value = 0 }; service_key_service = { service_type_code_value = 0 } }
+let scope_key : service_key = ({ name = 0; service = 0 } : service_key)
 let scope_ty : ty = (Ty_handle "Scope.Scope")
 let context_ty : ty = (Ty_handle "Context.Context<unknown>")

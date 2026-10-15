@@ -78,8 +78,8 @@ fresh run.
 
 | generated | generator | command |
 | --- | --- | --- |
-| `gen/api_gen.ml`, `engine/api_engine.ml`, `gen/closure-*.tsv` | `src/OCaml5/Tools/LcnfGen.lean` | `make gen-lcnf` (the recipe `gen/roots.json`; each file's header carries its command) |
-| `eff/eff_{types,wire,subterm,json,native}.ml`, `eff/eff_manifest.txt`, `eff/goldens/*` | `src/OCaml5/Tools/EffGen.lean` | `lake env lean -M4096 --run src/OCaml5/Tools/EffGen.lean ocaml/eff` |
+| `eff/eff_types.ml`, `gen/api_gen.ml`, `engine/api_engine.ml`, `gen/closure-*.tsv` | `src/OCaml5/Tools/LcnfGen.lean` | `make gen-lcnf` (the recipe `gen/roots.json`; each file's header carries its command) |
+| `eff/eff_{ctors,wire,subterm,json,native,layout}.ml`, `eff/eff_manifest.txt`, `eff/goldens/*` | `src/OCaml5/Tools/EffGen.lean` | `lake env lean -M4096 --run src/OCaml5/Tools/EffGen.lean ocaml/eff` |
 | `goldens/eff/*` | `src/OCaml5/Tools/EffWire.lean` | `lake env lean -M4096 --run src/OCaml5/Tools/EffWire.lean ocaml/goldens/eff` |
 | `engine/cas/goldens/*` | `src/OCaml5/Tools/CasGoldens.lean` | `lake env lean -M4096 --run src/OCaml5/Tools/CasGoldens.lean ocaml/engine/cas/goldens` |
 
