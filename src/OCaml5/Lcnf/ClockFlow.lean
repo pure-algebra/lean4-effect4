@@ -145,22 +145,27 @@ private inductive Origin where
 private structure CallableState where
   values : Std.HashMap ValueKey (Std.HashSet Origin) := {}
   facts : Nat := 0
+  /-- Each source's destinations, in the order they were installed. -/
   edges : Std.HashMap ValueKey (Array ValueKey) := {}
+  /-- The installed edges, for the membership test. -/
+  installed : Std.HashSet (ValueKey × ValueKey) := {}
   pending : Array (ValueKey × Origin) := #[]
 
+/-- A key's set and a source's destinations are updated in place (`Std.HashMap.alter`): a copy of
+the set or the array at every new fact made the walk quadratic in a key's facts (LC-4). -/
 private def addOrigins (s : CallableState) (key : ValueKey) (values : Array Origin) : CallableState :=
   values.foldl (fun s value =>
-    let old := s.values.getD key {}
-    if old.contains value then s else
+    if (s.values.getD key {}).contains value then s else
       { s with
-        values := s.values.insert key (old.insert value)
+        values := s.values.alter key fun old => some ((old.getD {}).insert value)
         facts := s.facts + 1
         pending := s.pending.push (key, value) }) s
 
 private def addEdge (s : CallableState) (source destination : ValueKey) : CallableState :=
-  let destinations := s.edges.getD source #[]
-  if destinations.contains destination then s else
-    let s := { s with edges := s.edges.insert source (destinations.push destination) }
+  if s.installed.contains (source, destination) then s else
+    let s := { s with
+      edges := s.edges.alter source fun old => some ((old.getD #[]).push destination)
+      installed := s.installed.insert (source, destination) }
     addOrigins s destination (s.values.getD source {}).toArray
 
 private def globalArity (env : Environment) (byName : Std.HashMap Name Flow) (n : Name) : Nat :=
@@ -237,12 +242,11 @@ private def resolveCallables (env : Environment) (roots : Array Name) (flows : A
     for (to, source) in flow.aliases.toArray do
       state := addEdge state (flow.name, source) (flow.name, to)
     for (result, source, expected, index) in flow.projections do
-      let key := (flow.name, source)
-      projections := projections.insert key
-        ((projections.getD key #[]).push ((flow.name, result), expected, index))
+      projections := projections.alter (flow.name, source) fun old =>
+        some ((old.getD #[]).push ((flow.name, result), expected, index))
     for (callee, args, result) in flow.localCalls do
-      let key := (flow.name, callee)
-      watchers := watchers.insert key ((watchers.getD key #[]).push (flow.name, args, result))
+      watchers := watchers.alter (flow.name, callee) fun old =>
+        some ((old.getD #[]).push (flow.name, args, result))
     for (id, name, args) in flow.globals.toArray do
       if let some (.ctorInfo ci) := env.find? name then
         if args.size ≥ ci.numParams + ci.numFields then
@@ -327,18 +331,47 @@ private def clockCallSlots (summaries : Std.HashMap Name (Array Nat))
     return slots
   return summaries.getD callee #[]
 
+/-- A flow's dependencies indexed both ways, built once per flow: each value's inputs and each
+value's results. The closures below walk them, each value once, where a pass over every
+dependency until nothing changed cost one pass per link of the longest chain (LC-4). -/
+private structure DepIndex where
+  inputsOf : Std.HashMap FVarId (Array FVarId) := {}
+  resultsOf : Std.HashMap FVarId (Array FVarId) := {}
+  /-- The number of input entries: no closure adds more values than this. -/
+  edges : Nat := 0
+
+private def DepIndex.of (flow : Flow) : DepIndex :=
+  flow.deps.foldl (fun ix (result, inputs) =>
+    { inputsOf := ix.inputsOf.alter result fun old => some ((old.getD #[]) ++ inputs)
+      resultsOf := inputs.foldl (fun m input =>
+        m.alter input fun old => some ((old.getD #[]).push result)) ix.resultsOf
+      edges := ix.edges + inputs.size }) {}
+
+/-- The least set that holds `seeds` and every value `next` gives of a member. Each value is
+expanded once; a value enters the set at most once, so the seeds and the index's edges bound
+the walk. -/
+private def closeUnder (next : Std.HashMap FVarId (Array FVarId)) (edges : Nat)
+    (seeds : Std.HashSet FVarId) : Std.HashSet FVarId := Id.run do
+  let mut out := seeds
+  let mut work := seeds.toArray
+  let mut cursor := 0
+  for _ in [:work.size + edges + 1] do
+    let some value := work[cursor]? | break
+    cursor := cursor + 1
+    for other in next.getD value #[] do
+      unless out.contains other do
+        out := out.insert other
+        work := work.push other
+  return out
+
 /-- Which parameters can reach clock ingress, including through another helper. -/
-private def clockInputSlots (flow : Flow) (summaries : Std.HashMap Name (Array Nat)) : Array Nat := Id.run do
-  let mut needed : Std.HashSet FVarId := {}
+private def clockInputSlots (flow : Flow) (ix : DepIndex)
+    (summaries : Std.HashMap Name (Array Nat)) : Array Nat := Id.run do
+  let mut seeds : Std.HashSet FVarId := {}
   for (callee, args, _) in flow.calls do
     for i in clockCallSlots summaries callee args do
-      if let some (.fvar value) := args[i]? then needed := needed.insert value
-  for _ in [:flow.deps.size + 1] do
-    let before := needed.size
-    for (result, inputs) in flow.deps do
-      if needed.contains result then
-        for input in inputs do needed := needed.insert input
-    if needed.size == before then break
+      if let some (.fvar value) := args[i]? then seeds := seeds.insert value
+  let needed := closeUnder ix.inputsOf ix.edges seeds
   let mut slots := #[]
   for i in [:flow.params.size] do
     if needed.contains flow.params[i]! then slots := slots.push i
@@ -346,7 +379,7 @@ private def clockInputSlots (flow : Flow) (summaries : Std.HashMap Name (Array N
 
 /-- Propagate both known narrowing and unknown higher-order production through return values.
 The two markers stay distinct so a refusal states which evidence is missing. -/
-private def clockRisks (flow : Flow) (narrowedReturns unknownReturns : Std.HashSet Name) :
+private def clockRisks (flow : Flow) (ix : DepIndex) (narrowedReturns unknownReturns : Std.HashSet Name) :
     Std.HashSet FVarId × Std.HashSet FVarId := Id.run do
   let mut narrowed : Std.HashSet FVarId := {}
   let mut unknown := flow.unknownResults
@@ -355,20 +388,13 @@ private def clockRisks (flow : Flow) (narrowedReturns unknownReturns : Std.HashS
   for (callee, result) in flow.callResults do
     if narrowedReturns.contains callee then narrowed := narrowed.insert result
     if unknownReturns.contains callee then unknown := unknown.insert result
-  for _ in [:flow.deps.size + 1] do
-    let before := narrowed.size + unknown.size
-    for (result, inputs) in flow.deps do
-      if inputs.any narrowed.contains then narrowed := narrowed.insert result
-      if inputs.any unknown.contains then unknown := unknown.insert result
-    if narrowed.size + unknown.size == before then break
-  return (narrowed, unknown)
+  return (closeUnder ix.resultsOf ix.edges narrowed, closeUnder ix.resultsOf ix.edges unknown)
 
 /-- The globals referenced by a root include partial applications and wrapper/redArg
 links. Local calls stay within their owning flow; their global targets are among those
 references. Retain the original input order when selecting the reachable flows. -/
-private def rootFlows (input : Array Flow) (root : Name) : Array Flow := Id.run do
-  let mut byName : Std.HashMap Name Flow := {}
-  for flow in input do byName := byName.insert flow.name flow
+private def rootFlows (input : Array Flow) (byName : Std.HashMap Name Flow) (root : Name) :
+    Array Flow := Id.run do
   let mut reached : NameSet := ({} : NameSet).insert root
   let mut work := #[root]
   let mut cursor := 0
@@ -388,10 +414,12 @@ private def rootFlows (input : Array Flow) (root : Name) : Array Flow := Id.run 
 into another export's shared polymorphic helpers. The remaining roots are still analyzed
 as a union: every clock-reaching root and all of its opaque inputs are retained. -/
 private def clockRoots (roots : Array Name) (input : Array Flow) : Array Name × Array Flow := Id.run do
+  let mut byName : Std.HashMap Name Flow := {}
+  for flow in input do byName := byName.insert flow.name flow
   let mut active : Array Name := #[]
   let mut names : NameSet := {}
   for root in roots do
-    let selected := rootFlows input root
+    let selected := rootFlows input byName root
     let relevant := selected.any fun flow => flow.clockResult || flow.calls.any fun (name, _, _) =>
       clockIngress name || name == `OCaml5.Lcnf.ClockFlow.higherOrderClockResult
     if relevant then
@@ -406,12 +434,13 @@ def refusals (env : Environment) (roots : Array Name) (input : Array Flow) : Arr
   let (roots, input) := clockRoots roots input
   let some flows := resolveCallables env roots input
     | return #["clock callable provenance did not reach a fixed point"]
+  let indexes := flows.map DepIndex.of
   let mut summaries : Std.HashMap Name (Array Nat) := {}
   let bound := flows.foldl (fun n flow => n + flow.params.size) 0
   for _ in [:bound + 1] do
     let mut changed := false
-    for flow in flows do
-      let slots := clockInputSlots flow summaries
+    for flow in flows, ix in indexes do
+      let slots := clockInputSlots flow ix summaries
       if slots != summaries.getD flow.name #[] then
         summaries := summaries.insert flow.name slots
         changed := true
@@ -420,14 +449,14 @@ def refusals (env : Environment) (roots : Array Name) (input : Array Flow) : Arr
   let mut unknownReturns : Std.HashSet Name := {}
   for _ in [:2 * flows.size + 1] do
     let before := narrowedReturns.size + unknownReturns.size
-    for flow in flows do
-      let (narrowed, unknown) := clockRisks flow narrowedReturns unknownReturns
+    for flow in flows, ix in indexes do
+      let (narrowed, unknown) := clockRisks flow ix narrowedReturns unknownReturns
       if flow.returns.any narrowed.contains then narrowedReturns := narrowedReturns.insert flow.name
       if flow.returns.any unknown.contains then unknownReturns := unknownReturns.insert flow.name
     if narrowedReturns.size + unknownReturns.size == before then break
   let mut refusals := #[]
-  for flow in flows do
-    let (narrowed, unknown) := clockRisks flow narrowedReturns unknownReturns
+  for flow in flows, ix in indexes do
+    let (narrowed, unknown) := clockRisks flow ix narrowedReturns unknownReturns
     -- Mono may erase a polymorphic helper's result type. Its caller's declared clock
     -- result still exposes a narrowed dependency, even without a named ingress call.
     if flow.clockResult && flow.returns.any narrowed.contains then
