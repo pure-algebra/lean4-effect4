@@ -424,3 +424,36 @@ Commands:
 
 The evidence is [the audit](evidence/FinalizerRoleAudit.lean) and [its output](evidence/finalizer-role-audit.log).
 The two log goals remain proved. The other six M3 goals, M1 and M2 remain open.
+
+
+## One frame-accounting producer
+
+The older source counter and release-writer counter now use the full finalizer's shared frame rule.
+The finalizer history goal remains open.
+Base: `cc7f8fd74`. Head: the commit containing this section.
+
+`CodeClosure.Events` owns the registration-event reading through continuation pops.
+`CodeClosure.Funding.step_bound` owns primitive frame accounting with explicit actual callback premises.
+`FinalizerEvaluation`, `SourceOpportunityEvaluation`, and `ReleaseWriter.Evaluation` supply its instances.
+The older source and writer frame walks are removed.
+`InitializedIteration.step_frame` uses the shared native frame connector.
+`TypedActions.store_action_at` unfolds the qualified stored-program predicate after the earlier alias migration.
+
+Placement: scope-lifetime-finalization, R11, serving `FinalizerRun.once_placed_outside_census` and both crew log claims.
+Consumers: native evaluator accounting and initialized crew iteration.
+Reach: actual selected callbacks and source-owned frames, with each instance's original premises.
+These local proofs establish no full finalizer history, progress, or host agreement.
+
+Files: `CodeClosure/{Events,StepFunding}.lean`, `FinalizerEvaluation.lean`, `FinalizerRun.lean`,
+`SourceOpportunityEvaluation.lean`, `ReleaseWriter/Evaluation.lean`, and
+`AnswerSlots/{TypedActions,InitializedIteration}.lean` under `src/Effect4/Laws/Program/`.
+
+Commands, through the shared `lean-slot.sh`:
+
+- `lake build Effect4.Laws.Program.FinalizerRun Effect4.Laws.Program.ReleaseWriter.Evaluation`: passed, 658 jobs.
+- `lake build Effect4.Laws.Program.AnswerSlots.InitializedIteration`: passed within the preceding direct-consumer build.
+- `lake env lean /private/tmp/FrameFundingAudit.lean`: passed.
+
+The audit reports 318 declarations within `[propext, Quot.sound]`, zero modulo goals, and zero planned goals.
+Evidence: [the audit](evidence/FrameFundingAudit.lean) and [its output](evidence/frame-funding-audit.log).
+The two log goals remain proved. The other six M3 goals, M1, and M2 remain open.
