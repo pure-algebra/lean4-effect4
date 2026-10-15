@@ -21,9 +21,10 @@ import OCaml5.Eff.Emit
 import OCaml5.Eff.Goldens
 import OCaml5.Eff.Metadata
 -- The LCNF → OCaml backend (route 2, the one engine): Lean's mono-phase compiler IR as typed
--- OCaml. `Tools/LcnfGen.lean` is the driver.
+-- OCaml. `Lcnf/Gen.lean` makes an artifact; `Tools/LcnfGen.lean` is the driver.
 import OCaml5.Lcnf.Dump
 import OCaml5.Lcnf.Naming
 import OCaml5.Lcnf.Types
 import OCaml5.Lcnf.Translate
 import OCaml5.Lcnf.TypeRows
+import OCaml5.Lcnf.Gen

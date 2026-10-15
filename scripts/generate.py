@@ -24,10 +24,9 @@ ROOT = Path(__file__).resolve().parents[1]
 # Every producer runs under one wall-clock budget, so a hung generator fails a lane instead
 # of hanging it. The budget is not a performance statement and it is not a target: it has to
 # cover the `lake build` each family runs first -- a cold build of the core is minutes -- and
-# the slowest cut on a machine that is busy. Measured on a quiet machine with the core
-# already built, `--only lcnf`'s four cuts are 37s end to end (the engine face 18s of it);
-# the same group was measured at 14m38s under four concurrent Lean compilers, past the old
-# 600s, which is why `--only lcnf` could not complete at all. One number for every command.
+# the slowest cut on a machine that is busy. The same group was measured at 14m38s under four
+# concurrent Lean compilers, past the old 600s, which is why `--only lcnf` could not complete at
+# all then. One number for every command.
 TIMEOUT = os.environ.get('EFFECT4_GEN_TIMEOUT', '5400')
 
 
@@ -160,24 +159,10 @@ def fixtures(out, checking):
 # The LCNF artefacts and their arguments. Until 2026-09-19 this list held the four paths and
 # the command came out of each file's own `Regenerate with:` header -- a generated file was its
 # own recipe, so a stale header regenerated a stale file and nothing could say so. The recipe
-# lives in `ocaml/gen/roots.json` now and the header is rendered FROM it (tooling plan 3.6).
+# lives in `ocaml/gen/roots.json` now and the header is rendered FROM it (tooling plan 3.6):
+# the generator reads the recipe, builds each artefact's argv in the recipe's fixed order
+# (`OCaml5.Lcnf.Gen.argvOf`) and makes every artefact in one process (LC-4).
 LCNF_ROOTS = 'ocaml/gen/roots.json'
-
-
-def lcnf_command(entry):
-    """One artefact's argv, in the fixed order `roots.json` documents. It is the text that
-    lands in the artefact's header, so the order is part of the format. The coverage roots
-    follow the roots: the generator translates both alike."""
-    argv = ['lean', '-M4096', '--run', 'src/OCaml5/Tools/LcnfGen.lean', '--out', entry['out']]
-    for module in entry.get('import', []):
-        argv += ['--import', module]
-    argv += ['--cap', str(entry['cap'])]
-    if entry.get('types'):
-        argv += ['--types', ','.join(entry['types'])]
-    for flag in ('externs', 'prelude'):
-        if entry.get(flag):
-            argv += ['--' + flag, entry[flag]]
-    return argv + entry['roots'] + entry.get('coverage', [])
 
 
 def lean_module(canonical):
@@ -296,11 +281,8 @@ def generate(families, output):
                 raise ValueError('LCNF regenerates in place only; the drift check is `git diff`')
             run(['lake', 'build', 'Effect4'])
             run(['lake', 'build', 'OCaml5.Tools.LcnfGen'])
-            roots = json.loads((ROOT / LCNF_ROOTS).read_text())
-            if roots.get('format') != 'effect4-lcnf-roots-v2':
-                raise ValueError('unsupported LCNF roots format')
-            for entry in roots['artefacts']:
-                run(['lake', 'env', *lcnf_command(entry)])
+            run(['lake', 'env', 'lean', '-M4096', '--run', 'src/OCaml5/Tools/LcnfGen.lean',
+                 '--recipe', LCNF_ROOTS])
 
 
 def main():

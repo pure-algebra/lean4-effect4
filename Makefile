@@ -126,9 +126,13 @@ $(GEN)/variances: $(VARIANCE_SOURCES) $(wildcard $(VARIANCE_OUT)) $(if $(filter-
 
 DERIVED_SOURCES := $(wildcard tools/Effect4Gen/*.lean tools/Effect4Gen/guards/*.lean) tools/Effect4Gen/manifest.json tools/Effect4Gen/binders.json \
   $(wildcard $(VARIANCES)) $(WIRE_TAGS) tools/Tools/WireTags.lean $(PRODUCER_COMMON) lakefile.toml
-# Bootstrap freshness cannot depend on compiled consumers of stale generated files.
-# Source files and directories also notice additions and deletions before Lake runs.
-DERIVED_INPUTS := $(shell find src tools -type d -o -name '*.lean') lake-manifest.json lean-toolchain
+# Bootstrap freshness cannot depend on compiled consumers of stale generated files, so the inputs
+# are source files: every one in the import closure of the generators and of each manifest group's
+# imports, read from the headers (`scripts/lean-imports.py --closure`). An edit outside it, to the
+# LCNF route or a battery, cannot change a derived output and reruns no group (LC-4). A file added
+# to the closure changes the file that imports it.
+DERIVED_INPUTS := $(shell $(PY) scripts/lean-imports.py --closure --manifest tools/Effect4Gen/manifest.json \
+  Effect4Gen.Exe Effect4Gen.CatalogueExe Tools.GeneratedStamp) lake-manifest.json lean-toolchain
 DERIVED_OUT := src/Effect4/Program/TyEq.lean src/Effect4/Store/Domain/Derived/Json.lean src/Effect4/Store/Domain/Derived/Schema.lean \
   src/Effect4/Store/Domain/Derived/Program.lean src/Effect4/Store/Domain/PinDerived.lean src/Effect4/Api/Derived.lean \
   src/Effect4/Store/Domain/Derived/Value.lean src/Effect4/Api/RefusalsDerived.lean src/Effect4/Api/RunnerDerived.lean \
@@ -308,7 +312,10 @@ deploy-site: site ## publish .lake/gen/site to Cloudflare Pages (effect4-docs) w
 $(GEN)/fixtures-inventory: FORCE
 	@mkdir -p $(GEN); printf '%s\n' $(sort $(wildcard ocaml/engine/test/*/*.txt) $(ENGINE_FIXTURE_WRITERS)) > $@.new; \
 	  if cmp -s $@.new $@; then rm -f $@.new; else mv $@.new $@; fi
-$(GEN)/fixtures: $(GEN)/fixtures-inventory $(wildcard ocaml/engine/test/*/*.txt) $(ENGINE_FIXTURE_WRITERS) $(LEAN_SOURCES) scripts/generate.py
+# The writers' inputs are the sources of their import closure (`scripts/lean-imports.py --closure`):
+# an edit outside it, to the LCNF route or the conformance tools, rewrites no fixture (LC-4).
+FIXTURE_INPUTS := $(shell $(PY) scripts/lean-imports.py --closure $(ENGINE_FIXTURE_WRITERS))
+$(GEN)/fixtures: $(GEN)/fixtures-inventory $(wildcard ocaml/engine/test/*/*.txt) $(ENGINE_FIXTURE_WRITERS) $(FIXTURE_INPUTS) scripts/generate.py
 	$(PY) scripts/generate.py --only fixtures
 	@mkdir -p $(GEN) && touch $@
 

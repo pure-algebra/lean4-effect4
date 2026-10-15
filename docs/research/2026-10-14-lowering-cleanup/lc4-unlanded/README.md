@@ -1,6 +1,6 @@
 # The LCNF lowering cleanup: what the seat handed back unlanded
 
-Status: the coordinator's hand-back note (history, not authority). The seat stopped on the
+Status: the coordinator's hand-back note (history, not authority). Parts C and F landed on 2026-10-15 (the receipt, "LC-4 C and F"). The seat stopped on the
 owner's order on 2026-10-15. LC-1 to LC-3 are merged (`6ce9ff704`). LC-4's parts A and B land
 with this note. Its parts C, D and F are kept here, and nothing else of LC-4 to LC-9 started.
 

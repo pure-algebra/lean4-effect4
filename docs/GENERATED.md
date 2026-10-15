@@ -41,9 +41,10 @@ controls are `make check-semantics`.
 The fixtures group is hermetic in the same way. Its marker also depends on its own outputs,
 because Lake does not take a file read by `include_str` as an input. A fixture that changes
 alone is written again from Lean, and a committed fixture that Lean does not write is drift.
-Its marker depends on every Lean source, and it does not wait for `build`. When a program
-changes, the binding battery refuses the old fixture, and the default build is red until
-`make gen-fixtures` writes the fixture again.
+Its marker depends on every Lean source its writers import, the import closure that
+`scripts/lean-imports.py --closure` reads from the headers, and it does not wait for `build`.
+When a program changes, the binding battery refuses the old fixture, and the default build is red
+until `make gen-fixtures` writes the fixture again.
 The group lcnf is another deliberate exception.
 It sits in the order between derived and eff, because eff cuts the engine's layout mirror from
 the api_engine.ml that lcnf writes.
