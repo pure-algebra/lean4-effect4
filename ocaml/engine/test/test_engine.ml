@@ -18,17 +18,15 @@
         operation's term (`pFoldInOp`), with two controls, the empty list and a body that
         refuses (`pFoldEmpty`, `pFoldRefuses`); the values are Lean's
         (Test/Program/FoldContract.lean).
-     2  The differential D1 in miniature: the programs of ocaml/eff/goldens/*.bin,
-        decoded by `Eff_wire`, run at fuel 1000
-        on both instances.  Outcome, answer, exits, the fiber-table projection, the trace
-        rows and the store row must be EQUAL between `Fast` and `Ref` for every one, and
-        each instance's drive loop must agree with its own generated `Api.run`.
+     2  The goldens' Fast = Ref differential is `test_diff`'s (every corpus, every position,
+        three engines), and `replay_steps` is `test_replay_steps`' (both instances): this file
+        repeats neither since 2026-10-15.
      3  The numeric profile at load: a natural literal outside it is refused, from a value
         and from the wire (EN8). The ordinal pin went with the conversion on 2026-10-15:
         both instances open `Eff_types`, so `ocamlopt` holds the one alphabet.
-     4  `replay_steps` yields |tape| + 1 machines and its last equals `replay`'s.
      5  The two `failwith` rows of the generated prelude (`sh_dispatcher_mk`,
-        `sh_memo_map_mk`, api_engine.ml's PRELUDE) never fire on the corpus: counted.
+        `sh_memo_map_mk`, api_engine.ml's PRELUDE) never fire in this file's runs: counted.
+        Over every corpus, a raise fails `test_diff`.
      6  E4-PROV-CE-005: a layer body binds its own string, even under an outer number
         binder; both generated-engine carriers must fail with that string.
 
@@ -74,31 +72,6 @@ let guard (f : unit -> 'a) : ('a, string) result =
     Error ("Failure: " ^ m)
   | exception e -> Error (Printexc.to_string e)
 
-(* ================================================================ locating the corpus *)
-
-let ancestors d n =
-  let rec go d n acc = if n = 0 then List.rev acc else go (Filename.dirname d) (n - 1) (d :: acc) in
-  go d n []
-
-let find_path (suffix : string list) (env : string) : string option =
-  let rel = List.fold_left Filename.concat (List.hd suffix) (List.tl suffix) in
-  let from_env = try [ Sys.getenv env ] with Not_found -> [] in
-  let cands =
-    from_env
-    @ List.concat_map
-        (fun a -> [ Filename.concat a rel; Filename.concat a (Filename.concat "ocaml" rel) ])
-        (ancestors (Sys.getcwd ()) 9)
-  in
-  List.find_opt Sys.file_exists cands
-
-let read_file path =
-  let ic = open_in_bin path in
-  let n = in_channel_length ic in
-  let s = really_input_string ic n in
-  close_in ic;
-  s
-
-(* the first occurrence of [needle] in [s] replaced by [by]; [s] unchanged when absent *)
 (* ================================================================ the G0 programs *)
 
 let p42 : E.native_op E.eff = E.Eff_succeed (E.Term_lit (E.Lit_nat 42))
@@ -358,100 +331,6 @@ let g0 () =
      refuses on an element refuses the fold, and the machine answers its wrong-shape defect. *)
   one "pFoldEmpty" p_fold_empty "finished" 1 (Some "success 7");
   one "pFoldRefuses" p_fold_refuses "finished" 1 (Some "failure [die(badName)]")
-
-(* ================================================================ 2. the 37 goldens *)
-
-let goldens () =
-  print_endline "";
-  print_endline "== 2. the byte corpus: 37 programs, Fast vs Ref (fuel 1000) ==";
-  match find_path [ "eff"; "goldens"; "p42.bin" ] "E4_EFF_GOLDENS" with
-  | None -> fail_note "the byte corpus" "ocaml/eff/goldens not found from the cwd"
-  | Some marker ->
-    let dir = Filename.dirname marker in
-    let names =
-      List.sort compare
-        (List.filter
-           (fun f -> Filename.check_suffix f ".bin")
-           (Array.to_list (Sys.readdir dir)))
-    in
-    Printf.printf "  %s: %d programs\n" dir (List.length names);
-    let equal = ref 0 and decoded = ref 0 in
-    List.iter
-      (fun f ->
-         let name = Filename.remove_extension f in
-         let bytes = read_file (Filename.concat dir f) in
-         match Eff_wire.decode_program_exact bytes with
-         | None -> Printf.printf "  %-16s DECODE-FAIL (%d bytes)\n" name (String.length bytes)
-         | Some p -> (
-           incr decoded;
-           match guard (fun () -> (RF.report p ~fuel:1000, RR.report p ~fuel:1000)) with
-           | Error e -> Printf.printf "  %-16s RAISED %s\n" name e
-           | Ok (a, b) ->
-             let d = differ a b in
-             if d = [] then incr equal;
-             Printf.printf "  %-16s %-9s fibers=%-2d trace=%-4d exits=%-2d %s\n" name
-               a.r_outcome a.r_fibers a.r_trace_len (List.length a.r_exits)
-               (if d = [] then "EQ" else "DIFF: " ^ String.concat "," d);
-             if RF.api_outcome p ~fuel:1000 <> a.r_outcome then
-               Printf.printf "  %-16s drive loop <> Api.run on Fast\n" name;
-             if RR.api_outcome p ~fuel:1000 <> b.r_outcome then
-               Printf.printf "  %-16s drive loop <> Api.run on Ref\n" name))
-      names;
-    let n = List.length names in
-    check (Printf.sprintf "every golden decodes (%d/%d)" !decoded n) (!decoded = n);
-    check
-      (Printf.sprintf "Fast = Ref on every golden: outcome, exits, fibers, trace, store (%d/%d)"
-         !equal n)
-      (!equal = n)
-
-(* ================================================================ 4. replay_steps *)
-
-let replay_steps_check () =
-  print_endline "";
-  print_endline "== 4. replay_steps (EN4) ==";
-  let tape =
-    [ En_fast.evaluate 0; En_fast.flush; En_fast.flush; En_fast.fire 0;
-      En_fast.yield_verdict 0 true ]
-  in
-  let one name (p : E.native_op E.eff) fuel =
-    let t0 = En_fast.load p ~fuel in
-    let steps = List.of_seq (En_fast.replay_steps t0 tape) in
-    let last = List.nth steps (List.length steps - 1) in
-    let folded = En_fast.replay t0 tape in
-    let same a b =
-      En_fast.outcome a = En_fast.outcome b
-      && En_fast.trace_rows a = En_fast.trace_rows b
-      && En_fast.store_row a = En_fast.store_row b
-      && En_fast.fiber_rows a = En_fast.fiber_rows b
-    in
-    (* every prefix: `replay_steps` at position i is `replay` of the first i decisions *)
-    let prefix_ok =
-      List.for_all
-        (fun i ->
-           let taken = List.filteri (fun j _ -> j < i) tape in
-           same (List.nth steps i) (En_fast.replay t0 taken))
-        (List.init (List.length tape + 1) Fun.id)
-    in
-    check
-      (Printf.sprintf "replay_steps %s: |tape|+1 = %d machines" name
-         (List.length tape + 1))
-      (List.length steps = List.length tape + 1);
-    check (Printf.sprintf "replay_steps %s: the last is replay's" name) (same last folded);
-    check (Printf.sprintf "replay_steps %s: position i is replay of the first i" name)
-      prefix_ok;
-    check (Printf.sprintf "snapshot %s is the value" name) (same (En_fast.snapshot t0) t0)
-  in
-  one "p42" p42 1000;
-  one "pFork" p_fork 1000;
-  one "pAwait" p_await 1000;
-  (* the fuel discriminator: a chain that cannot finish in its fuel answers Delay, not
-     Suspended -- the letter `Api.Outcome` does not have (E4_engine header). *)
-  let starved = En_fast.run (chain 200) ~fuel:20 in
-  Printf.printf "  chain 200 at fuel 20: %s\n" (show_answer (En_fast.answer starved));
-  check "a starved run answers Delay (the residue is non-empty), not Suspended"
-    (match En_fast.answer starved with E4_engine.Delay _ -> true | _ -> false);
-  check "a starved run's outcome is still Api.Outcome.frontier"
-    (En_fast.outcome starved = "frontier")
 
 (* Handwritten carrier substitutions must retain creation provenance. These checks call
    the prelude functions actually spliced into each generated engine instance. *)
@@ -755,8 +634,6 @@ let () =
   Printf.printf "  Fast = %s\n  Ref  = %s\n" En_fast.carriers En_ref.carriers;
   print_endline "";
   g0 ();
-  goldens ();
-  replay_steps_check ();
   clock_profile_check ();
   numeric_ingress_check ();
   multiplication_profile_check ();
@@ -766,7 +643,7 @@ let () =
   print_endline "== 5. the two failwith rows of the generated prelude ==";
   check
     (Printf.sprintf
-       "sh_dispatcher_mk / sh_memo_map_mk never fired on the corpus (%d hits)"
+       "sh_dispatcher_mk / sh_memo_map_mk never fired in this file's runs (%d hits); over every corpus, a raise fails test_diff"
        !extern_holes)
     (!extern_holes = 0);
   bench ();

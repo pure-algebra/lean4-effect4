@@ -66,19 +66,22 @@ else in the machine's closure translates.
   (`git:eaa45b6b9:tools/Conform/Lcnf/Rules.lean`) and the case-site check
   (`git:eaa45b6b9:tools/Conform/Lcnf/Cases.lean`) went on 2026-10-15: no lane ran either since
   decisions row 375 cleared the case policy.
-- `tools/Conform/Effect4/LcnfSemantics.lean` (rung 2): the LCNF evaluator against the compiled Lean functions
-  on 20,387 vectors. `tools/Conform/Effect4/LcnfMl.lean` (rung 3): the emitted OCaml read into the target
-  evaluator and run on the same vectors — "the evaluator handles what the translator emits" is
-  a checked claim because the reader refuses by constructor name. `tools/Conform/Effect4/TargetLeanNative.lean`
+- `tools/Conform/Effect4/LcnfSemantics.lean` (rung 2's pieces): `Ty` marshalled into the LCNF evaluator's
+  values, the closure's primitive table and the mutants. `tools/Conform/Effect4/LcnfMl.lean` (rung 3's
+  pieces): the emitted OCaml read into the target evaluator — "the evaluator handles what the
+  translator emits" is a checked claim because the reader refuses by constructor name. The
+  compiler checkpoint (`make check-compiler`) runs both on its fixtures. The two vector lanes that
+  ran them on 20,387 vectors went on 2026-10-15
+  (`git:fef45fb5a:tools/Conform/Effect4/LcnfSemantics.lean`, `git:fef45fb5a:tools/Conform/Effect4/LcnfMl.lean`):
+  no lane ran them, and decisions row 391 pauses the lowering's proof work. `tools/Conform/Effect4/TargetLeanNative.lean`
   reflects native Lean data layout; it is not another execution comparison. The two vector
   modules cover the Ty/GenTy.merge closure, not the full machine. LcnfMl reads in-memory
   Ml.Syntax, not printed OCaml text.
 
 The recorded evidence is a differential on 20,387 vectors over the type-processing closure,
 comparing LCNF and target-AST evaluation with compiled Lean. It is not a theorem that lowering
-preserves the LCNF semantics. **And that evidence was produced once, not on every change.** The three modules
-above are libraries; their `--run` drivers are named by no `make` target, no script and no CI
-job, so nothing re-runs the 20,387 cases. What runs is the compiler's own lanes
+preserves the LCNF semantics. **And that evidence was produced once, not on every change.** No
+`make` target, script or CI job ran the vector drivers, and they went on 2026-10-15. What runs is the compiler's own lanes
 (`make check-compiler`, `make check-native`); the case-site policy was cleared (decisions row 375). Wiring the vector lane into
 `check-host` is the plan's item 4.5; until it lands, read this paragraph as a record of a run,
 with its date, and not as a standing check. Scout F's question 6 is whether to prove it

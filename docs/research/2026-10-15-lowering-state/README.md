@@ -196,6 +196,7 @@ route and `Conform` sit outside `Effect4` and `Effect4.Laws`.
 | K4, narrowed | `212295674` | 9 modules and 11 data files go; `Conform.Cli.Audit` runs the mirror census alone (273 to 148 lines) |
 | K1, one OCaml program type | §6.4's commit | hand OCaml +614 and −1,869 lines, generated files +1,527 and −1,983; the route gates pass |
 | K2, the route owns its walk | §6.5's commit | the mono index, the census, the primitive alphabet and the constructor telescope move into `OCaml5.Lcnf`; the second `stripRedArg` goes; the route imports nothing of Conform |
+| LC-5, the test census | §6.6's commit | the two unrun vector lanes and their drivers go; two duplicate sections of `test_engine` go; every remaining test names its own fault (§6.6) |
 | K7 | ruled out | the scenario writer needs the authored programs, which import the author's laws by decisions row 332; the fixture rerun costs 20.0 s and moves no byte |
 
 ### 6.1 What F does, measured
@@ -274,3 +275,28 @@ each primitive on its values. Conform's own `stripRedArg`, identical to the rout
 `python3 scripts/generate.py --only lcnf` moves no byte. `check-compiler`, `check-native`,
 `check-ocaml` and `check-docs` pass. The three `ty-rule` fixtures that import Conform or OCaml5
 elaborate.
+
+### 6.6 LC-5, the test census
+
+**What went.**
+- The two vector lanes of rungs 2 and 3: the `main`s, vectors, differentials and drivers of
+  `tools/Conform/Effect4/LcnfSemantics.lean` and `LcnfMl.lean`, with `tools/Conform/Cli/LcnfMl.lean` and
+  `LcnfSemantics.lean`. No gate, script or CI job ran them. The readers, the marshalling, the
+  primitive table and the mutants stay: the compiler checkpoint runs them.
+- `test_engine` §2, the goldens' Fast = Ref differential: `test_diff` compares three engines on
+  every corpus at every position. Its drive-loop lines printed and gated nothing.
+- `test_engine` §4, `replay_steps` on one instance: `test_replay_steps` holds the same laws on
+  both. `test_engine` now runs 159 checks.
+
+**What each remaining test catches.** One subject per test, no second test of it:
+
+| Group | Tests | The fault each catches |
+| --- | --- | --- |
+| The wire (`ocaml/eff`) | `test_eff`, `test_lean_wire`, `prop_wire`, `test_frame`, `test_val_frames`, `test_metadata` | a codec that disagrees with Lean's bytes or JSON; a decoder that accepts a corrupt or noncanonical frame; a value frame or metadata row read wrong |
+| The persistence (`engine/cas`, `engine/bytes`) | `test_bytes`, `test_pack`, `test_index`, `test_control`, `test_cas`, `test_crash`, `test_wal`, `test_checkpoint`, `test_cache`, `test_math` | a broken law of the CRC, pack, index, control file, store, crash recovery, log, checkpoint, cache or 63-bit arithmetic |
+| The engine | `test_diff`, `test_engine`, `test_replay_steps`, `test_query`, `test_log`, `test_host`, `test_sched` | a wrong extern row or carrier law (three engines); a drive-loop, profile or prelude fault; the two replay axes; the query API; the log's indexes; the host primitives; the scheduler |
+| The lowered libraries | `test_mask`, `test_pool`, `test_queue`, `test_semaphore`, `test_scenarios` | a library program whose generated run differs from the view Lean wrote |
+| The hand carriers | `prop_table`, `prop_trace`, `prop_memo`, `prop_point`, `prop_fibers_view`, `test_buckets` | a carrier that drifts from its list twin on random operation sequences the corpora do not reach; they retire with LC-8 (K5) |
+| The clock | `test_clock` | an exact clock value or refusal |
+
+`prop_fibers_view` takes 15.45 s of the 43 s. It retires with its carrier in LC-8.

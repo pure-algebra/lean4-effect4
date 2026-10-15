@@ -72,14 +72,10 @@
 ; lane D — the drive loop: the two instances of the generated engine, the differential
 ; between them, and the first numbers. The program type is one (ocaml/eff/eff_types.ml, the
 ; LCNF route's), so no conversion or ordinal pin stands between the wire and the engine.
-;   test_engine  G0 (p42 / pFork / pAwait) on Fast AND Ref; the 37 byte goldens of
-;                ocaml/eff/goldens run at fuel 1000 on both, with outcome, exits, the
-;                fiber-table projection, the trace rows and the store row compared row by
-;                row (differential D1 in miniature); `replay_steps` at |tape|+1; the numeric
-;                profile at load; a count of the two `failwith` rows of the generated
-;                prelude; and the W1/W2 bench cells (a measurement, printed, not a gate).
-;                It reads ocaml/eff/goldens by an ancestor walk from the cwd —
-;                $E4_EFF_GOLDENS overrides.
+;   test_engine  G0 (p42 / pFork / pAwait) on Fast AND Ref; the numeric profile at load;
+;                the clock and creation-origin readers of the generated machine; a count of the
+;                two `failwith` rows of the generated prelude; and the W1/W2 bench cells (a
+;                measurement, printed, not a gate). The goldens' differential is test_diff's.
 
 (test
  (name test_engine)
