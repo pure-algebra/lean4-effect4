@@ -133,3 +133,32 @@
    admitted  {"_tag":"Ping"}
 ── fromClient round trip through Bridge.schema and ofSchema: true
 ── fromServer round trip through Bridge.schema and ofSchema: true
+   admitted  0
+   admitted  1
+   REFUSED   Explore.Alphabet.Refusal.wrongType "2" "setDone"
+   request 3 echoAfter: not a call, Explore.Alphabet.Refusal.noRow "echoAfter"
+   request 4 echoAfter: not a call, Explore.Alphabet.Refusal.noRow "echoAfter"
+   REFUSED   Explore.Alphabet.Refusal.unknownId "4"
+   REFUSED   Explore.Alphabet.Refusal.unknownId "3"
+   REFUSED   Explore.Alphabet.Refusal.wrongType "5" "insert"
+   request 6 echoAfter: not a call, Explore.Alphabet.Refusal.noRow "echoAfter"
+   REFUSED   Explore.Alphabet.Refusal.unknownId "6"
+   admitted  7
+   admitted  8
+   admitted  9
+   admitted  10
+   REFUSED   Explore.Alphabet.Refusal.wrongType "11" "setDone"
+   request 12 echoAfter: not a call, Explore.Alphabet.Refusal.noRow "echoAfter"
+   request 13 echoAfter: not a call, Explore.Alphabet.Refusal.noRow "echoAfter"
+   REFUSED   Explore.Alphabet.Refusal.unknownId "13"
+   REFUSED   Explore.Alphabet.Refusal.unknownId "12"
+   REFUSED   Explore.Alphabet.Refusal.wrongType "14" "insert"
+   request 15 echoAfter: not a call, Explore.Alphabet.Refusal.noRow "echoAfter"
+   admitted  16
+   admitted  17
+   REFUSED   Explore.Alphabet.Refusal.unknownId "15"
+── 8 replies admitted at their own call, 10 refused
+   tagged Some at setDone: admitted
+   a second reply to 100: Explore.Alphabet.Refusal.retired "100"
+   delete's answer at insert's call: Explore.Alphabet.Refusal.wrongType "101" "insert"
+   a reply to no call: Explore.Alphabet.Refusal.unknownId "102"

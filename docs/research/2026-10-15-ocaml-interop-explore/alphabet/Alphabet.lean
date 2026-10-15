@@ -15,6 +15,9 @@ Exploration probe (2026-10-15). Run: `lake env lean` on this file from the repos
    compared with the type the to-do rows declare (`TodoRepo.rows`).
 3. The alphabet is derived from the rows (`fromServer`, `fromClient`) and checked against the
    wire messages recorded in `../rpc/server.log`, with the existing codec (`Schema.decode`).
+   `fromServer` admits by shape alone, so this run is the control for section 4.
+4. Reply admission at the outstanding call (`Calls`): a request id selects the row that issued it,
+   and the reply is decoded at that row's exit only (Codex's review, F1).
 
 Each `#eval` prints what it finds; nothing here is a theorem.
 -/
@@ -232,6 +235,7 @@ def here : String := "docs/research/2026-10-15-ocaml-interop-explore/alphabet/"
   IO.println s!"── the envelope: widened  {showTy (readTy env true)}"
 
 -- The derived alphabet against the wire: each recorded server message, decoded at `fromServer`.
+-- The control for section 4: a reply that fits any row's exit passes here.
 #eval show IO Unit from do
   let log ← IO.FS.lines (here ++ "../rpc/server.log")
   let lines := log.toList.filterMap fun l =>
@@ -261,5 +265,119 @@ def here : String := "docs/research/2026-10-15-ocaml-interop-explore/alphabet/"
   -- the derived alphabet goes back to rc.112's representation through the existing writer
   IO.println s!"── fromClient round trip through Bridge.schema and ofSchema: {Bridge.ofSchema (Bridge.schema t) == some t}"
   IO.println s!"── fromServer round trip through Bridge.schema and ofSchema: {Bridge.ofSchema (Bridge.schema (fromServer todoRows)) == some (fromServer todoRows)}"
+
+/-! ## 4. Reply admission at the outstanding call
+
+`fromServer` admits a message by its shape alone. A reply passes when it fits any row's exit, so
+the recorded `setDone` reply passes as `insert`'s answer. Effect's client selects the call by its
+request id first, then decodes with that call's exit (`RpcClient.make`, `entry.schemas.decodeExit`,
+`vendor/effect-4.0.0-rc.112/src/unstable/rpc/RpcClient.ts`). Here the calls in flight are data:
+each live request id with the row that issued it. A reply is admitted only at its own call's
+message type, and its id then retires. -/
+
+/-- Why a request does not become a call in flight, or why a reply is not admitted. -/
+inductive Refusal where
+  | noRow (method : String)
+  | badPayload (method : String)
+  | notAReply
+  | unknownId (id : String)
+  | retired (id : String)
+  | wrongType (id method : String)
+  deriving Repr
+
+/-- The calls in flight on one connection, and the ids already answered. -/
+structure Calls where
+  live : List (String × Row) := []
+  retired : List String := []
+
+/-- The selected call's reply type: its row's own exit, inside the envelope's `Exit` message. -/
+def replyAt (row : Row) : Ty :=
+  msg "Exit" [("requestId", idTy), ("exit", .exitOf row.answer row.error)]
+
+def decodes (t : Ty) (j : Lean.Json) : Bool :=
+  match jsonOf 64 j with
+  | .ok v => (Schema.decode t v).isSome
+  | .error _ => false
+
+/-- A request becomes a call in flight when its method names a row and its payload decodes at the
+row's request type. -/
+def Calls.send (cs : Calls) (id method' : String) (payload : Lean.Json) : Except Refusal Calls :=
+  match todoRows.find? (method · == method') with
+  | none => .error (.noRow method')
+  | some row =>
+    if decodes row.request payload then .ok { cs with live := (id, row) :: cs.live }
+    else .error (.badPayload method')
+
+/-- A reply: the envelope gives its id, the id selects the call, and the call's type admits it. -/
+def Calls.receive (cs : Calls) (j : Lean.Json) : Except Refusal Calls := do
+  let some idJ := (j.getObjVal? "requestId").toOption | .error .notAReply
+  let id := idJ.compress
+  let some (_, row) := cs.live.find? (·.1 == id)
+    | .error (if cs.retired.contains id then .retired id else .unknownId id)
+  if decodes (replyAt row) j then
+    pure { live := cs.live.filter (·.1 != id), retired := id :: cs.retired }
+  else .error (.wrongType id (method row))
+
+def lookup (t : List (String × Calls)) (k : String) : Calls :=
+  ((t.find? (·.1 == k)).map (·.2)).getD {}
+
+def store (t : List (String × Calls)) (k : String) (cs : Calls) : List (String × Calls) :=
+  (k, cs) :: t.filter (·.1 != k)
+
+def messages (j : Lean.Json) : List Lean.Json :=
+  match j with
+  | .arr xs => xs.toList
+  | other => [other]
+
+-- The recorded log, replayed through the calls in flight, one table per connection.
+#eval show IO Unit from do
+  let log ← IO.FS.lines (here ++ "../rpc/server.log")
+  let mut tables : List (String × Calls) := []
+  let mut admitted := 0
+  let mut refused := 0
+  for l in log.toList do
+    let [chan, body] := l.splitOn "]  " | continue
+    let mut cs := lookup tables chan
+    match body.splitOn " " with
+    | "request" :: "id" :: id :: m :: rest =>
+      match Lean.Json.parse (" ".intercalate rest) with
+      | .error e => IO.println s!"   unparsed request {e}"
+      | .ok p =>
+        match cs.send id m p with
+        | .ok cs' => cs := cs'
+        | .error r => IO.println s!"   request {id} {m}: not a call, {reprStr r}"
+    | "reply" :: _ =>
+      let [_, j] := body.splitOn "reply " | continue
+      match Lean.Json.parse j with
+      | .error e => IO.println s!"   unparsed reply {e}"
+      | .ok js =>
+        for m in messages js do
+          match cs.receive m with
+          | .ok cs' =>
+            cs := cs'
+            admitted := admitted + 1
+            IO.println s!"   admitted  {(m.getObjVal? "requestId").toOption.map (·.compress) |>.getD "?"}"
+          | .error r =>
+            refused := refused + 1
+            IO.println s!"   REFUSED   {reprStr r}"
+    | _ => pure ()
+    tables := store tables chan cs
+  IO.println s!"── {admitted} replies admitted at their own call, {refused} refused"
+
+-- The controls: a correctly tagged option, a second reply to one call, a reply of another row.
+#eval show IO Unit from do
+  let parse (s : String) : Lean.Json := (Lean.Json.parse s).toOption.getD .null
+  let tagged := parse "{\"_tag\":\"Exit\",\"requestId\":100,\"exit\":{\"_tag\":\"Success\",\"value\":{\"_tag\":\"Some\",\"value\":{\"id\":1,\"title\":\"milk\",\"done\":true}}}}"
+  let crossRow := parse "{\"_tag\":\"Exit\",\"requestId\":101,\"exit\":{\"_tag\":\"Success\",\"value\":true}}"
+  let unknown := parse "{\"_tag\":\"Exit\",\"requestId\":102,\"exit\":{\"_tag\":\"Success\",\"value\":true}}"
+  let report (label : String) (r : Except Refusal Calls) : IO Unit :=
+    IO.println s!"   {label}: {match r with | .ok _ => "admitted" | .error e => reprStr e}"
+  let .ok cs := ({} : Calls).send "100" "setDone" (parse "[1,true]") | throw (IO.userError "send 100")
+  report "tagged Some at setDone" (cs.receive tagged)
+  let .ok cs := cs.receive tagged | throw (IO.userError "receive 100")
+  report "a second reply to 100" (cs.receive tagged)
+  let .ok cs := cs.send "101" "insert" (parse "\"tea\"") | throw (IO.userError "send 101")
+  report "delete's answer at insert's call" (cs.receive crossRow)
+  report "a reply to no call" (cs.receive unknown)
 
 end Explore.Alphabet
