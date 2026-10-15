@@ -1,4 +1,8 @@
 import Effect4.Laws.Program.FinalizerSyntax
+-- `ReleaseCustody.Evaluation` also runs `fun_induction resolveLayerZero`. Each run realizes the
+-- match congruence of `resolveLayerZero` with its `_sparseCasesOn` auxiliary, and Lean 4.33 refuses
+-- two modules that realized it apart. This import realizes it once.
+import Effect4.Laws.Program.ReleaseCustody.Evaluation
 
 /-!
 Concept: scope-lifetime-finalization R11.

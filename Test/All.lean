@@ -445,6 +445,14 @@ import Test.Dogfood.Scenario.Atomic.StageNativeJoin
 import Test.Dogfood.Scenario.Timeout.FinishCut
 import Test.Dogfood.Scenario.Timeout.OriginControl
 import Test.Dogfood.Scenario.Timeout.SourceCut
+import Test.Dogfood.Proofs.HostTimeoutNumberCleanupNative
+import Test.Dogfood.Proofs.HostTimeoutNumberRetirement
+import Test.Dogfood.Proofs.QueueWorkersCountHistory
+import Test.Dogfood.Proofs.QueueWorkersJobSourceFamilies
+import Test.Dogfood.Proofs.QueueWorkersOfferWrapper
+import Test.Dogfood.Scenario.Atomic.StageActivation
+import Test.Dogfood.Scenario.Atomic.StageNativeQueue
+import Test.Dogfood.Scenario.Atomic.StageTerminal
 
 /-!
 # Effect4 test battery
