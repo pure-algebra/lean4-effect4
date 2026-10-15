@@ -237,13 +237,62 @@ private def labelled (f : String) (args : List (Ml.ArgLabel × Ml.Expr)) : Ml.Ex
 
 -- The parameter rule by binder kind: a type parameter is kept, and an instance parameter and
 -- a value parameter are dropped. A telescope shorter than its count is the one refusal.
-#guard (Lcnf.typeParameterIndices `Indexed 3
+#guard (Lcnf.typeParameterSlots (fun _ => none) `Indexed 3
   (.forallE `α (.sort (.succ .zero))
     (.forallE `inst (.app (.const ``Inhabited [.succ .zero]) (.bvar 0))
       (.forallE `n (.const ``Nat []) (.sort .zero) .default) .instImplicit) .default)).toOption
-  == some #[0]
-#guard (Lcnf.typeParameterIndices `Indexed 2
+  == some #[.type 0]
+#guard (Lcnf.typeParameterSlots (fun _ => none) `Indexed 2
   (.forallE `n (.const ``Nat []) (.sort .zero) .default)).toOption.isNone
+
+/-- A type with one parameter, a family `R : index → codomain`. -/
+private def familyOver (index : Name) (codomain : Level) : Lean.Expr :=
+  .forallE `R (.forallE `i (.const index []) (.sort codomain) .default) (.sort (.succ .zero)) .default
+
+/-- A finite index of two constructors, `Fam`; every other name is none. -/
+private def twoCtors : Name → Option (List Name)
+  | `Fam => some [`Fam.a, `Fam.b]
+  | _ => none
+
+-- F3: a family over a finite index is one slot of one OCaml parameter per constructor of the
+-- index. The red controls: a family over a type that is no finite index, and a family into
+-- `Prop`, are dropped as a value parameter is.
+#guard (Lcnf.typeParameterSlots twoCtors `Alg 1 (familyOver `Fam (.succ .zero))).toOption
+  == some #[.family 0 [] [`Fam.a, `Fam.b]]
+#guard (Lcnf.typeParameterSlots twoCtors `Alg 1 (familyOver ``Nat (.succ .zero))).toOption
+  == some #[]
+#guard (Lcnf.typeParameterSlots twoCtors `Alg 1 (familyOver `Fam .zero)).toOption == some #[]
+
+-- F3 on the environment. `EffFam` is a finite index of seven constructors, and `Nat` and `Option`
+-- are none. `EffAlgebra` declares its family as seven parameters after `Op`, and an instance reads
+-- each by reducing the family at a constructor. The red control is `ArgF`: its field
+-- `r : R fam` is the family at a variable, which no parameter spells, so it stays unknown.
+run_cmd liftTermElabM do
+  let env ← getEnv
+  unless (Lcnf.finiteIndexIn env ``Effect4.Program.EffFam).map List.length == some 7 do
+    throwError "F3: EffFam is not read as a finite index of seven constructors"
+  unless (Lcnf.finiteIndexIn env ``Nat).isNone && (Lcnf.finiteIndexIn env ``Option).isNone do
+    throwError "F3: Nat or Option is read as a finite index"
+  let some alg ← Lcnf.typeInfo? {} {} ``Effect4.Program.EffAlgebra
+    | throwError "F3: no declaration for EffAlgebra"
+  unless alg.params == ["op", "r_eff", "r_stmt", "r_stmts", "r_effs", "r_action", "r_layer",
+      "r_layers"] && alg.unknown.isEmpty do
+    throwError "F3: EffAlgebra declares {alg.params}, with unknown fields {alg.unknown}"
+  let text := Ml.renderDecl (.types [alg.decl])
+  unless (text.splitOn "eff_gen : 'r_stmts -> 'r_eff;").length == 2 do
+    throwError "F3: EffAlgebra's field eff_gen is not 'r_stmts -> 'r_eff:\n{text}"
+  let op := mkConst ``Effect4.Program.NativeOp
+  let self := mkApp2 (mkConst ``Effect4.Program.EffAlgebra [Level.zero]) op
+    (mkApp (mkConst ``Effect4.Program.EffSelfCarrier) op)
+  let (spelled, _) ← Lcnf.kernelTy {} {} {} self
+  unless (spelled.map Ml.renderTy) == some ("(native_op, native_op eff, native_op stmt, " ++
+      "native_op stmts, native_op effs, native_op action_term, native_op layer_term, " ++
+      "native_op layer_terms) eff_algebra") do
+    throwError "F3: EffAlgebra at the identity carrier spells {spelled.map Ml.renderTy}"
+  let some argF ← Lcnf.typeInfo? {} {} ``Effect4.Program.ArgF
+    | throwError "F3: no declaration for ArgF"
+  unless argF.unknown.size == 1 && (argF.unknown[0]!.splitOn "ArgF.r :").length == 2 do
+    throwError "F3: ArgF's dependent field is not the one unknown field: {argF.unknown}"
 
 private def host (name : Name) (args : List Ml.Expr) : Ml.Expr :=
   ((Lcnf.builtin? name).map (·.apply args)).getD (.hole s!"no row for {name}" .unit)

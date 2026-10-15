@@ -90,8 +90,10 @@ open Lean Compiler LCNF
 
 /-! ## Mono types as annotations -/
 
-/-- Map a mono type expression to an OCaml type. Inductive type arguments are filtered
-by `typeParameterIndices` to match the declared OCaml type arity. -/
+/-- Map a mono type expression to an OCaml type. Inductive type arguments are read by
+`typeParameterSlots`, to match the declared OCaml type arity. Mono LCNF writes the argument of a
+family over a finite index as `lcAny` (`toMonoType`: its domain is no sort), so each of the
+family's OCaml parameters is the anonymous type (F3). -/
 partial def monoTy (env : Environment) (ex : Externs) (tn : TypeNames) (e : Lean.Expr) : Ml.Ty :=
   match e with
   | .forallE _ d b _ => .arrow (monoTy env ex tn d) (monoTy env ex tn b)
@@ -104,8 +106,10 @@ partial def monoTy (env : Environment) (ex : Externs) (tn : TypeNames) (e : Lean
         | .const n _ =>
           match env.find? n with
           | some (.inductInfo info) =>
-            match typeParameterIndices n rawArgs.length info.type with
-            | .ok indices => indices.toList.filterMap (fun i => rawArgs[i]?) |>.map (monoTy env ex tn)
+            match typeParameterSlots (finiteIndexIn env) n rawArgs.length info.type with
+            | .ok slots => slots.toList.flatMap fun
+                | .type i => (rawArgs[i]?.map (monoTy env ex tn)).toList
+                | .family _ _ ctors => ctors.map fun _ => Ml.Ty.anon
             | .error _ => rawArgs.map (monoTy env ex tn)
           | _ => rawArgs.map (monoTy env ex tn)
         | _ => rawArgs.map (monoTy env ex tn)
@@ -327,8 +331,8 @@ def wrapperParams? (env : Environment) (n : Name) : Option (Array (LCNF.Param .p
 /-- `(_, …, _) t` for an inductive, as an annotation. -/
 def tyOfInd (ex : Externs) (tn : TypeNames) (env : Environment) (ind : Name) : Ml.Ty :=
   let params := match env.find? ind with
-    | some (.inductInfo info) => List.replicate
-        ((typeParameterIndices ind info.numParams info.type).toOption.getD #[]).size Ml.Ty.anon
+    | some (.inductInfo info) =>
+      List.replicate (typeParameterWidth env ind info.numParams info.type) Ml.Ty.anon
     | _ => []
   match ex.tys[ind]? with
   | some chain => applyChain chain params
