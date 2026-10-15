@@ -16,7 +16,7 @@ open SourceScope.Opportunities
 /-- The actual statement walker returns only its own valid generator continuation. -/
 def ResultAt (q : List Nat) (point : Point) : IterStep EffName EffThunk Val Err Defect FiberId Ann → Prop
   | .resume code (.gen next pc _) => next.path = point.path ∧ next.params = point.params ∧
-      Counter pc ∧ FinalizerSource.CodeAt q code
+      Counter pc ∧ FinalizerSource.TemplateAt q code
   | .resume _ _ => False
   | _ => True
 
@@ -100,7 +100,7 @@ theorem run_budget (root : NativeEff) (q : List Nat) (point : Point) (fuel : Nat
   induction fuel generalizing pc values folded with
   | zero =>
     unfold runStmts
-    refine ⟨⟨rfl, rfl, held, parameters⟩, ?_⟩
+    refine ⟨⟨rfl, rfl, held, parameters, trivial⟩, ?_⟩
     change 0 + remaining q (point.path ++ [0]) pc ≤ remaining q (point.path ++ [0]) pc
     exact Nat.le_of_eq (Nat.zero_add _)
   | succ fuel ih =>

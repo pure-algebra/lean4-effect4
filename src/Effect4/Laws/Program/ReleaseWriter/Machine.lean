@@ -49,21 +49,13 @@ theorem frameIssue_events (target : Target) (owner : FiberId)
 /-- The shared pop law lowers the saved reservation while retaining active code. -/
 theorem getCont_bound (target : Target) (fiber : FrameFiber EffName EffThunk Val Err Defect FiberId Ann)
     (demand : Effect4.Arm) (skip : Bool) (cause : Option CauseV) :
-    frame target (fiber.getCont demand skip cause).fiber ≤ frame target fiber := by
-  have bounded := FrameWeights.getCont_le (model target) fiber demand skip cause
-  have same : (fiber.getCont demand skip cause).fiber.current = fiber.current := by
-    unfold FrameFiber.getCont
-    split
-    · rfl
-    · exact pop_current demand skip fiber.stack _ cause
-  simp only [frame, FrameWeights.frame, model, same] at bounded ⊢
-  omega
+    frame target (fiber.getCont demand skip cause).fiber ≤ frame target fiber :=
+  WriterWeights.getCont_frame_le (model target) fiber demand skip cause
 
 /-- A completed frame keeps only the reservation left after its actual pop. -/
 theorem frameExit_bound (target : Target) (fiber : FrameFiber EffName EffThunk Val Err Defect FiberId Ann) :
-    frame target (frameExitState fiber) ≤ frame target fiber := by
-  unfold frameExitState
-  split <;> exact getCont_bound target fiber _ _ none
+    frame target (frameExitState fiber) ≤ frame target fiber :=
+  WriterWeights.frameExit_le (model target) fiber
 
 /-- Delegated frame evaluation receives credit exactly at the actual release-start push. -/
 theorem Source.step_frame_bound {target : Target} {root : NativeEff} (source : Source target root)

@@ -402,6 +402,11 @@ import Effect4.Laws.Program.AnswerSlots.InitializedWaits
 import Effect4.Laws.Program.AnswerSlots.AllocationIteration
 import Effect4.Laws.Program.CrewLogs.InitializedHistory
 
+-- M3: checked shared producers and their concrete application readers.
+import Effect4.Laws.Machine.FinalizerCustody
+import Effect4.Laws.Contracts.FramePathOrder
+import Effect4.Laws.Program.AnswerSlots.AllocationCommandStep
+
 /-!
 # Effect4 proof graph
 

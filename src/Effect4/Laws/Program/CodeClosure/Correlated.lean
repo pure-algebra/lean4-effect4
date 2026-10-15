@@ -56,6 +56,108 @@ def RegistrationBody : NCode → Prop
 
 abbrev RegistrationCode := Correlated RegistrationBody
 
+/-- Constructor normalization for the exact registration template. -/
+@[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
+theorem registration_code_success (value : Val) :
+    RegistrationCode (.success value) = (True) := rfl
+
+/-- Constructor normalization for the exact registration template. -/
+@[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
+theorem registration_code_failure (cause : CauseV) :
+    RegistrationCode (.failure cause) = (True) := rfl
+
+/-- Constructor normalization for the exact registration template. -/
+@[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
+theorem registration_code_sync (thunk : EffThunk) :
+    RegistrationCode (.sync thunk) = (True) := rfl
+
+/-- Constructor normalization for the exact registration template. -/
+@[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
+theorem registration_code_suspend (thunk : EffThunk) :
+    RegistrationCode (.suspend thunk) = (True) := rfl
+
+/-- Constructor normalization for the exact registration template. -/
+@[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
+theorem registration_code_withFiber (thunk : EffThunk) :
+    RegistrationCode (.withFiber thunk) = (True) := rfl
+
+/-- Constructor normalization for the exact registration template. -/
+@[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
+theorem registration_code_yieldableError (error : Err) :
+    RegistrationCode (.yieldableError error) = (True) := rfl
+
+/-- Constructor normalization for the exact registration template. -/
+@[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
+theorem registration_code_iterator (callback : EffName) (cursor : Val) :
+    RegistrationCode (.iterator callback cursor) = (True) := rfl
+
+/-- Constructor normalization for the exact registration template. -/
+@[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
+theorem registration_code_whileLoop (callback : EffName) (cursor : Val) :
+    RegistrationCode (.whileLoop callback cursor) = (True) := rfl
+
+/-- Constructor normalization for the exact registration template. -/
+@[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
+theorem registration_code_setInterruptible (flag : Bool) :
+    RegistrationCode (.setInterruptible flag) = (True) := rfl
+
+/-- Constructor normalization for the exact registration template. -/
+@[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
+theorem registration_code_yieldNowWith (priority : Nat) :
+    RegistrationCode (.yieldNowWith priority) = (True) := rfl
+
+/-- Constructor normalization for the exact registration template. -/
+@[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
+theorem registration_code_async (callback : EffName) (flag : Bool) (cancel : Option EffName) :
+    RegistrationCode (.async callback flag cancel) = (True) := rfl
+
+/-- Constructor normalization for the exact registration template. -/
+@[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
+theorem registration_code_asyncFinalizer (callback : EffName) :
+    RegistrationCode (.asyncFinalizer callback) = (True) := rfl
+
+/-- Constructor normalization for the exact registration template. -/
+@[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
+theorem registration_code_onSuccess (body : NCode) (callback : EffName) :
+    RegistrationCode (.onSuccess body callback) = (RegistrationCode body ∧ RegistrationBody (.onSuccess body callback)) := by
+  change (RegistrationCode body ∧ RegistrationBody (.onSuccess (cata_prim (correlatedAlg RegistrationBody) body).1 callback)) = _
+  rw [correlated_rebuild]
+
+/-- Constructor normalization for the exact registration template. -/
+@[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
+theorem registration_code_onFailure (body : NCode) (callback : EffName) :
+    RegistrationCode (.onFailure body callback) = (RegistrationCode body) := by
+  change (RegistrationCode body ∧ True) = _
+  exact and_true _
+
+/-- Constructor normalization for the exact registration template. -/
+@[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
+theorem registration_code_onSuccessAndFailure (body : NCode) (value cause : EffName) :
+    RegistrationCode (.onSuccessAndFailure body value cause) = (RegistrationCode body) := by
+  change (RegistrationCode body ∧ True) = _
+  exact and_true _
+
+/-- Constructor normalization for the exact registration template. -/
+@[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
+theorem registration_code_onExit (body : NCode) (callback : EffName) (flag : Bool) :
+    RegistrationCode (.onExit body callback flag) = (RegistrationCode body) := by
+  change (RegistrationCode body ∧ True) = _
+  exact and_true _
+
+/-- Constructor normalization for the exact registration template. -/
+@[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
+theorem registration_code_exitFrame (body : NCode) :
+    RegistrationCode (.exitFrame body) = (RegistrationCode body) := by
+  change (RegistrationCode body ∧ True) = _
+  exact and_true _
+
+/-- Constructor normalization for the exact registration template. -/
+@[aesop norm simp (rule_sets := [Effect4.CodeClosure])]
+theorem registration_code_onSuccessConst (body next : NCode) :
+    RegistrationCode (.onSuccessConst body next) = (RegistrationCode body ∧ RegistrationCode next) := by
+  change (RegistrationCode body ∧ RegistrationCode next ∧ True) = _
+  rw [and_true]
+
 /-- The body-callback relation is available at the actual selected registration node. -/
 theorem registration_body (body : NCode) (acquired : Val) (fin : FinName)
     (held : RegistrationCode (.onSuccess body (.afterScopeAdd acquired fin))) :

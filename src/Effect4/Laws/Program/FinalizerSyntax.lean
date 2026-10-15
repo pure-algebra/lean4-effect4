@@ -1,6 +1,7 @@
 import Effect4.Laws.Program.FinalizerGeneratorPC
 import Effect4.Laws.Program.FinalizerLayerBody
 import Effect4.Laws.Program.CodeClosure.Callbacks
+import Effect4.Laws.Program.CodeClosure.Registration
 
 /-!
 Concept: scope-lifetime-finalization R11.
@@ -47,6 +48,10 @@ The other callback slots cannot borrow its transferred reservation. -/
 
 abbrev CodeAt (q : List Nat) := CodeClosure.RoleCode (OrdinaryNameAt q) (NameAt q) (ThunkAt q)
 
+/-- The full source annotation retains the actual registration-body correlation. -/
+def TemplateAt (q : List Nat) (code : NCode) : Prop :=
+  CodeAt q code ∧ CodeClosure.RegistrationCode code
+
 /-- A direct region is an instance of the full region annotation. -/
 theorem direct_region (q : List Nat) (region : Region)
     (held : CodeClosure.Slots.RegionAt (PointAt q) (fun _ => True) region) : RegionAt q region := by
@@ -87,7 +92,8 @@ theorem ordinary_name (q : List Nat) (callback : EffName) (held : OrdinaryNameAt
 
 /-- Stored embeddings use only store names, where the two callback roles agree. -/
 theorem embedded_code (q : List Nat) (program : Program)
-    (held : CodeClosure.Slots.CodeAt (PointAt q) (fun _ => True) (embed program)) : CodeAt q (embed program) := by
+    (held : CodeClosure.Slots.CodeAt (PointAt q) (fun _ => True) (embed program)) : TemplateAt q (embed program) := by
+  refine ⟨?_, CodeClosure.registration_embed program⟩
   change CodeClosure.RoleCode (OrdinaryNameAt q) (NameAt q) (ThunkAt q) (embed program)
   rw [CodeClosure.embedded_roles (OrdinaryNameAt q) (NameAt q) (ThunkAt q) (fun _ => rfl)]
   exact broad_code q _ held
@@ -108,9 +114,9 @@ theorem pointTransport (q : List Nat) : CodeClosure.Slots.Transport (PointAt q) 
 
 /-- Native asynchronous routing mints no release-start callback in an ordinary slot. -/
 theorem async_at (q : List Nat) (row : NativeOp) (request : Term) (point : Point) :
-    CodeAt q (asyncRoute row request point) := by
+    TemplateAt q (asyncRoute row request point) := by
   fun_cases asyncRoute row request point
-  all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [CodeAt, OrdinaryNameAt,
+  all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [TemplateAt, CodeClosure.RegistrationBody, OrdinaryNameAt,
     NameAt, CodeClosure.Slots.NameAt, CodeClosure.Qualified.NameAt,
     CodeClosure.Slots.StoreNameAt, CodeClosure.Qualified.StoreNameAt, badShape])
 
@@ -126,7 +132,7 @@ theorem role_contract (root : NativeEff) (q : List Nat) :
   case refine_4 =>
     intro p row request value op found held evaluated selected
     exact direct_thunk q _ (ordinary.operation p row request value op found held evaluated selected)
-  case refine_5 => intro p row request found held; exact async_at q row request p
+  case refine_5 => intro p row request found held; exact (async_at q row request p).1
   all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [NameAt, OrdinaryNameAt, ThunkAt,
     CodeClosure.Slots.NameAt, CodeClosure.Qualified.NameAt, CodeClosure.Slots.ThunkAt,
     CodeClosure.Qualified.ThunkAt, CodeClosure.Slots.RegionAt, CodeClosure.Qualified.RegionAt,
@@ -135,11 +141,13 @@ theorem role_contract (root : NativeEff) (q : List Nat) :
 /-- Compiler closure is shared; only its leaf annotations specialize. -/
 theorem compile_at (root : NativeEff) (q : List Nat) (effect : NativeEff) (point : Point)
     (found : Node.at_ (.eff root) point.path = some (.eff effect)) (held : PointAt q point) :
-    CodeAt q (compileEff effect point) := CodeClosure.compile_roles (role_contract root q) effect point found held
+    TemplateAt q (compileEff effect point) :=
+  ⟨CodeClosure.compile_roles (role_contract root q) effect point found held,
+    CodeClosure.registration_compile root effect point found⟩
 
 /-- Resolution keeps the same parameter-frame annotation at its actual source node. -/
 theorem resolve_at (root : NativeEff) (q : List Nat) (point : Point) (held : PointAt q point) :
-    CodeAt q (resolve root point) := by
+    TemplateAt q (resolve root point) := by
   unfold resolve
   split
   · exact compile_at root q _ point ‹_› held
@@ -148,13 +156,13 @@ theorem resolve_at (root : NativeEff) (q : List Nat) (point : Point) (held : Poi
 /-- Actual foreign finalizers reuse the existing stored-program closure. -/
 theorem finalizer_at (q : List Nat) (fin : FinName) (exit : ExitV)
     (held : CodeClosure.Slots.FinAt (PointAt q) (fun _ => True) fin) :
-    CodeAt q (embed (finProgram fin exit)) :=
+    TemplateAt q (embed (finProgram fin exit)) :=
   embedded_code q _ (CodeClosure.Slots.finProgram_at (PointAt q) (fun _ => True) fin exit held)
 
 /-- Actual stored programs reuse the existing recursive closure. -/
 theorem stored_at (q : List Nat) (program : ProgName)
     (held : CodeClosure.Slots.ProgAt (PointAt q) (fun _ => True) program) :
-    CodeAt q (embed (progOf program)) :=
+    TemplateAt q (embed (progOf program)) :=
   embedded_code q _ (CodeClosure.Slots.progOf_at (PointAt q) (fun _ => True) program held)
 
 end Effect4.Program.FinalizerSource

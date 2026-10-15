@@ -421,6 +421,17 @@ import Test.Program.CodeClosureBank
 
 import Test.Machine.AnswerFlowContextual
 
+-- M3: checked shared producers and their concrete application readers.
+import Test.Dogfood.Proofs.HostTimeoutNumberOrdinary
+import Test.Dogfood.Proofs.HostTimeoutNumberCleanupJoint
+import Test.Dogfood.Proofs.HostTimeoutNumberAttemptNative
+import Test.Dogfood.Proofs.HostTimeoutNumberTerminal
+import Test.Dogfood.Scenario.Atomic.FailureControls
+import Test.Dogfood.Scenario.Atomic.StageRoles
+import Test.Dogfood.Scenario.Atomic.StageObservation
+import Test.Dogfood.Proofs.QueueWorkersJobBinding
+import Test.Dogfood.Proofs.QueueWorkersNotificationFamily
+
 /-!
 # Effect4 test battery
 

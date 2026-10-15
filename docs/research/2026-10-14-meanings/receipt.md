@@ -523,3 +523,58 @@ Result: the narrow build passed, 428 jobs. The audit passed, 745 declarations wi
 The audit reports zero declarations modulo goals and zero planned goals.
 Evidence: [the audit](evidence/ActionsAudit.lean) and [its output](evidence/actions-audit.log).
 No outside implementation runs are reached by this proof-only consolidation.
+
+
+### Full source annotation and shared native frame accounting
+
+The six remaining M3 goals stay open. This slice closes the full source annotation and native frame accounting prerequisites.
+Base: `225fe1284`. The commit containing this section records the slice head.
+
+`TemplateAt` combines source annotations with the actual registration-body relation.
+The compiler, stored programs, callbacks, generator, layers, suspensions, scopes, and actions retain this annotation.
+Each instance consumes the common code closure, action, or scope producer.
+`PopTrace.current` reads the existing pop trace. Older source and frame-weight callers use it.
+`CodeClosure.Funding.step_frame_bound` and `finalizer_bound` connect actual native frame results to the supplied weights.
+Their consumers retain actual race programs, pending commands, and detached program places.
+Placement: scope-lifetime-finalization R11, serving `FinalizerRun.once_placed_outside_census`.
+Reach: the actual native frame result with the supplied annotation and source placement premises.
+These local facts establish neither complete history funding nor progress.
+
+Changed files:
+
+- `Test/All.lean`
+- `src/Effect4/Laws.lean`
+- `src/Effect4/Laws/Machine/WriterWeights.lean`
+- `src/Effect4/Laws/Program/CodeClosure/Correlated.lean`
+- `src/Effect4/Laws/Program/CodeClosure/Events.lean`
+- `src/Effect4/Laws/Program/FinalizerCallbacks.lean`
+- `src/Effect4/Laws/Program/FinalizerGeneratorRun.lean`
+- `src/Effect4/Laws/Program/FinalizerInterp.lean`
+- `src/Effect4/Laws/Program/FinalizerIterations.lean`
+- `src/Effect4/Laws/Program/FinalizerLayers.lean`
+- `src/Effect4/Laws/Program/FinalizerRun.lean`
+- `src/Effect4/Laws/Program/FinalizerSuspensions.lean`
+- `src/Effect4/Laws/Program/FinalizerSyntax.lean`
+- `src/Effect4/Laws/Program/NativeFrameScope.lean`
+- `src/Effect4/Laws/Program/NativeScopeStore.lean`
+- `src/Effect4/Laws/Program/PlaceFunding/Primitive.lean`
+- `src/Effect4/Laws/Program/ReleaseWriter/Machine.lean`
+- `src/Effect4/Laws/Program/SourceOpportunityActions.lean`
+- `src/Effect4/Laws/Program/SourceOpportunityMachine.lean`
+- `src/Effect4/Laws/Machine/PopCurrent.lean`
+- `src/Effect4/Laws/Machine/ScopeCloseFields.lean`
+- `src/Effect4/Laws/Program/CodeClosure/NativeFunding.lean`
+- `src/Effect4/Laws/Program/CodeClosure/Registration.lean`
+- `src/Effect4/Laws/Program/FinalizerActions.lean`
+- `src/Effect4/Laws/Program/FinalizerNativeFrames.lean`
+- `src/Effect4/Laws/Program/FinalizerScopes.lean`
+
+Command through `scratch/lean-slot.sh`:
+`lake build Effect4.Laws.Program.FinalizerRun Effect4.Laws.Program.ReleaseWriter.Machine Test.Dogfood.Proofs.HostTimeoutNumberMaskPermission ProofGraph.AxiomAudit`.
+Result: passed, 1352 jobs.
+Command: `lake env lean /private/tmp/MeaningsFullSourceAudit.lean`.
+The two audits report 1840 and 114 declarations within `[propext, Quot.sound]`.
+Both report zero declarations modulo goals and zero planned goals.
+Evidence: [the audit](evidence/FullSourceAudit.lean) and [its output](evidence/full-source-audit.log).
+The finalizer history endpoint remains a planned goal outside these audited helper modules.
+No outside implementation run is reached by these proof-only changes.

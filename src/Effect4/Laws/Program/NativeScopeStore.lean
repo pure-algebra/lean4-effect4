@@ -1,5 +1,5 @@
 import Effect4.Laws.Program.NativeStoreScope
-import Effect4.Laws.Machine.ScopeFields
+import Effect4.Laws.Machine.ScopeCloseFields
 
 /-!
 Concept: store-typing R4, serving `HeapSites.heap_sites_keep`.
@@ -94,58 +94,27 @@ theorem close_snapshot_at (root : NativeEff) (scope : Nat) (exit : ExitV) (state
     ScopesAt root next.scopes ∧ (∀ fin ∈ order, FinAt root fin) ∧ StrategyAt root strategy := by
   exact ScopeFields.close_snapshot_at (scopeFieldsModel root) scope exit state next strategy order owned found
 
-/-- Unsafe close returns only programs from the captured finalizer order. -/
+/-- The lexical source assertion supplies the common close-result constructors. -/
+theorem closePrograms (root : NativeEff) :
+    ScopeFields.ClosePrograms (scopeFieldsModel root) (fun code => CodeAt root (embed code)) where
+  finalizer := finProgram_at root
+  void := fun _ held => ⟨held, trivial⟩
+  walk := fun _ _ _ strategy order => ⟨order, strategy⟩
+
+/-- Unsafe close retains the source assertion through the common captured-program producer. -/
 theorem close_unsafe_at (root : NativeEff) (scope : Nat) (exit : ExitV) (flag : Bool)
     (state next : Stores) (program : Option Program) (owned : ScopesAt root state.scopes)
     (found : storesCloseScopeUnsafe scope exit flag state = some (next, program)) :
-    ScopesAt root next.scopes ∧ ∀ code ∈ program, CodeAt root (embed code) := by
-  unfold storesCloseScopeUnsafe at found
-  cases h : scopeCloseSnapshot scope exit state with
-  | none => rw [h] at found; cases found
-  | some snapshot =>
-    rcases snapshot with ⟨after, strategy, order⟩
-    have slots := close_snapshot_at root scope exit state after strategy order owned h
-    simp only [h, Option.pure_def] at found
-    cases order with
-    | nil =>
-      cases found
-      exact ⟨slots.1, by intro code member; cases member⟩
-    | cons fin rest =>
-      cases rest with
-      | nil =>
-        cases found
-        exact ⟨slots.1, fun code member => by
-          rw [Option.mem_def] at member
-          cases member
-          exact finProgram_at root fin exit (slots.2.1 fin (.head _))⟩
-      | cons second tail =>
-        cases found
-        exact ⟨slots.1, fun code member => by
-          rw [Option.mem_def] at member
-          cases member
-          exact slots.2⟩
+    ScopesAt root next.scopes ∧ ∀ code ∈ program, CodeAt root (embed code) :=
+  ScopeFields.close_unsafe_at (scopeFieldsModel root) _ (closePrograms root)
+    scope exit flag state next program owned found
 
-/-- Public close returns the same owned finalizers and its administrative void continuation. -/
+/-- Public close retains the same source assertion through its actual void continuation. -/
 theorem close_public_at (root : NativeEff) (scope : Nat) (exit : ExitV) (flag : Bool)
     (state next : Stores) (program : Option Program) (owned : ScopesAt root state.scopes)
     (found : storesCloseScope scope exit flag state = some (next, program)) :
-    ScopesAt root next.scopes ∧ ∀ code, program = some code → CodeAt root (embed code) := by
-  unfold storesCloseScope at found
-  cases h : scopeCloseSnapshot scope exit state with
-  | none => rw [h] at found; cases found
-  | some snapshot =>
-    rcases snapshot with ⟨after, strategy, order⟩
-    have slots := close_snapshot_at root scope exit state after strategy order owned h
-    simp only [h, Option.pure_def] at found
-    cases order with
-    | nil => cases found; exact ⟨slots.1, fun _ none => by cases none⟩
-    | cons fin rest =>
-      cases rest with
-      | nil =>
-        cases found
-        exact ⟨slots.1, fun _ same => by
-          cases same
-          exact ⟨finProgram_at root fin exit (slots.2.1 fin (.head _)), trivial⟩⟩
-      | cons second tail => cases found; exact ⟨slots.1, fun _ same => by cases same; exact slots.2⟩
+    ScopesAt root next.scopes ∧ ∀ code, program = some code → CodeAt root (embed code) :=
+  ScopeFields.close_public_at (scopeFieldsModel root) _ (closePrograms root)
+    scope exit flag state next program owned found
 
 end Effect4.Program.SourceScope

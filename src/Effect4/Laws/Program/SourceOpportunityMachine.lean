@@ -1,5 +1,7 @@
 import Effect4.Laws.Program.SourceOpportunityActions
 import Effect4.Laws.Machine.FiberSum
+import Effect4.Laws.Machine.WriterWeights
+import Effect4.Laws.Program.CodeClosure.NativeFunding
 
 /-!
 Concept: scope-lifetime-finalization, R11.
@@ -19,6 +21,14 @@ def runEvent (q : List Nat) : RunEvent EffName EffThunk Val Err Defect FiberId A
 
 /-- The existing machine trace records consumed source opportunities. -/
 def recorded (q : List Nat) (m : NativeMachine) : Nat := (m.trace.map (runEvent q)).sum
+
+/-- The source trace projection instantiates the shared native frame observation. -/
+theorem recorded_slots (q : List Nat) (machine : NativeMachine) :
+    recorded q machine = CodeClosure.Funding.recorded (event q) machine := by
+  have same : runEvent q = CodeClosure.Funding.runWeight (event q) := by
+    funext event
+    cases event <;> rfl
+  simp only [recorded, CodeClosure.Funding.recorded, same]
 
 /-- The stored fiber rows retain their actual active and saved source reservations. -/
 def fibers (root : NativeEff) (q : List Nat) (m : NativeMachine) : Nat :=
@@ -114,22 +124,14 @@ theorem frame_events_recorded (q : List Nat) (id : FiberId)
 theorem getCont_frame_le (root : NativeEff) (q : List Nat)
     (fiber : FrameFiber EffName EffThunk Val Err Defect FiberId Ann)
     (demand : Effect4.Arm) (skip : Bool) (cause : Option CauseV) :
-    frame root q (fiber.getCont demand skip cause).fiber ≤ frame root q fiber := by
-  have bound := getCont_le root q fiber demand skip cause
-  have same : (fiber.getCont demand skip cause).fiber.current = fiber.current := by
-    unfold FrameFiber.getCont
-    split
-    · rfl
-    · exact pop_current demand skip fiber.stack _ cause
-  simp only [frame, same]
-  omega
+    frame root q (fiber.getCont demand skip cause).fiber ≤ frame root q fiber :=
+  WriterWeights.getCont_frame_le (weightModel root q) fiber demand skip cause
 
 /-- Saving the actual post-exit frame cannot recreate a source opportunity. -/
 theorem frameExit_le (root : NativeEff) (q : List Nat)
     (fiber : FrameFiber EffName EffThunk Val Err Defect FiberId Ann) :
-    frame root q (frameExitState fiber) ≤ frame root q fiber := by
-  unfold frameExitState
-  split <;> exact getCont_frame_le root q fiber _ _ none
+    frame root q (frameExitState fiber) ≤ frame root q fiber :=
+  WriterWeights.frameExit_le (weightModel root q) fiber
 
 /-- A finished native frame step records no registration push. -/
 theorem finished_events_zero (q : List Nat)
@@ -138,22 +140,10 @@ theorem finished_events_zero (q : List Nat)
     (events : List (FrameEvent EffName EffThunk Val Err Defect FiberId Ann))
     (finished : fiber.step interp = (.finished exit, events)) :
     (events.map (event q)).sum = 0 := by
-  revert finished
-  fun_cases FrameFiber.step interp fiber
-  all_goals intro finished
-  case case1 value selected =>
-    have zero := resumeValue_events_zero q interp fiber value (some (.success value))
-    rw [finished] at zero
-    exact zero
-  case case2 cause selected =>
-    have zero := resumeCause_events_zero q interp fiber cause (some (.failure cause))
-    rw [finished] at zero
-    exact zero
-  case case3 suspended selected =>
-    have zero := resumeValue_events_zero q interp fiber (interp.syncValue suspended) none
-    rw [finished] at zero
-    exact zero
-  all_goals aesop (add norm simp [List.map_append, List.sum_append, event])
+  rw [funext (event_slots q)]
+  exact CodeClosure.Events.finished_events_zero
+    (fun callback => push q (.onSuccess (.success .unit) callback))
+    (fun callback flag => push q (.onExit (.success .unit) callback flag)) interp fiber exit events finished
 
 /-- Actual frame delegation funds its emitted registration pushes before the keyed installation.
 Consumer: the native evaluator source-use bound. -/
@@ -163,19 +153,19 @@ theorem step_frame_debit (root : NativeEff) (q : List Nat) (fragment : Fragment 
     let next := evaluatePrim.stepFrame (interpAt root completed table) m fiber yielding
     recorded q next.machine + frame root q next.fiber.frame ≤ recorded q m + frame root q fiber.frame := by
   have bounded := frame_step_debit root q fragment clearFin clearLoop completed table fiber.frame owned
-  unfold evaluatePrim.stepFrame
-  cases evaluated : fiber.frame.step (interpAt root completed table).toPrimInterp with
-  | mk next events =>
-    rw [evaluated] at bounded
-    cases next with
-    | running result =>
-      simp only [evaluatePrim.finishFrame, recorded_emit, frame_events_recorded, returned] at bounded ⊢
-      omega
-    | finished exit =>
-      have zero := finished_events_zero q (interpAt root completed table).toPrimInterp fiber.frame exit events evaluated
-      have kept := frameExit_le root q fiber.frame
-      simp only [evaluatePrim.finishFrame, recorded_emit, frame_events_recorded, zero, Nat.add_zero]
-      omega
+  rw [returned_slots] at bounded
+  have input : FrameWeights.returned (weightModel root q)
+      (fiber.frame.step (interpAt root completed table).toPrimInterp).1 +
+      ((fiber.frame.step (interpAt root completed table).toPrimInterp).2.map (event q)).sum ≤
+      FrameWeights.frame (weightModel root q) fiber.frame +
+      ((fiber.frame.step (interpAt root completed table).toPrimInterp).2.map (fun _ => 0)).sum := by
+    simpa only [List.map_const', List.sum_replicate_nat, Nat.mul_zero, Nat.add_zero,
+      frame, FrameWeights.frame, weightModel] using bounded
+  simp only [recorded_slots]
+  simpa only [CodeClosure.Funding.recorded_zero, Nat.add_zero, frame, FrameWeights.frame, weightModel] using
+    CodeClosure.Funding.step_frame_bound (weightModel root q) (event q) (fun _ => 0)
+      (interpAt root completed table) m fiber yielding input
+      (finished_events_zero q (interpAt root completed table).toPrimInterp fiber.frame)
 
 /-- The actual finalizer wrapper retains only the program opportunity it receives.
 Consumer: native finalizer invocation debit. -/
@@ -214,9 +204,8 @@ theorem step_frame_table (root : NativeEff) (completed) (table : RowTable)
     (m : NativeMachine) (fiber : SourceFiber) (yielding : Bool) :
     (evaluatePrim.stepFrame (interpAt root completed table) m fiber yielding).machine.fibers = m.fibers ∧
     (evaluatePrim.stepFrame (interpAt root completed table) m fiber yielding).fiber.id = fiber.id := by
-  unfold evaluatePrim.stepFrame
-  cases fiber.frame.step (interpAt root completed table).toPrimInterp with
-  | mk result events => cases result <;> exact ⟨rfl, rfl⟩
+  have fields := CodeClosure.Funding.step_frame_fields (interpAt root completed table) m fiber yielding
+  exact ⟨fields.2.1, fields.2.2.2.1⟩
 
 /-- Installing the actual delegated frame retains its global stored-row and trace bound.
 Consumer: whole-command accounting and actual Atomic and Workers history readers. -/

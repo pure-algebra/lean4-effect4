@@ -125,4 +125,29 @@ theorem resumeCause_events_zero (successWeight : EffName → Nat) (exitWeight : 
   all_goals aesop (add norm simp [List.map_append, List.sum_append, List.map_map,
     Function.comp_def, event, getCont_events_zero, finalizerEvents_zero]) (add safe forward [armE_push_zero])
 
+/-- A finished frame step records no new registration push.
+Consumer: native frame delegation for source and finalizer ledgers. -/
+theorem finished_events_zero (successWeight : EffName → Nat) (exitWeight : EffName → Bool → Nat)
+    (interp : PrimInterp EffName EffThunk Val Err Defect FiberId Ann)
+    (fiber : FrameFiber EffName EffThunk Val Err Defect FiberId Ann) (exit : ExitV)
+    (events : List (FrameEvent EffName EffThunk Val Err Defect FiberId Ann))
+    (finished : fiber.step interp = (.finished exit, events)) :
+    (events.map (event successWeight exitWeight)).sum = 0 := by
+  revert finished
+  fun_cases FrameFiber.step interp fiber
+  all_goals intro finished
+  case case1 value selected =>
+    have zero := resumeValue_events_zero successWeight exitWeight interp fiber value (some (.success value))
+    rw [finished] at zero
+    exact zero
+  case case2 cause selected =>
+    have zero := resumeCause_events_zero successWeight exitWeight interp fiber cause (some (.failure cause))
+    rw [finished] at zero
+    exact zero
+  case case3 suspended selected =>
+    have zero := resumeValue_events_zero successWeight exitWeight interp fiber (interp.syncValue suspended) none
+    rw [finished] at zero
+    exact zero
+  all_goals aesop (add norm simp [List.map_append, List.sum_append, event, push])
+
 end Effect4.Program.CodeClosure.Events

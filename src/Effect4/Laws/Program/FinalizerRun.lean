@@ -1,3 +1,5 @@
+import Effect4.Laws.Program.FinalizerScopes
+import Effect4.Laws.Program.FinalizerNativeFrames
 import Effect4.Laws.Program.FinalizerGeneratorRun
 import Effect4.Laws.Program.FinalizerEvaluation
 import Effect4.Laws.Program.FinalizerLayerBody
