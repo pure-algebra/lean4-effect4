@@ -2,8 +2,9 @@
 
 Both public job goals remain open. This slice proves local callback and operation facts, not their history producer.
 
-The action helpers require the coordinator's checked `ActionProgramsWith` and `scopedFork` dependency.
-The coordinator owns that dependency commit and the root imports.
+The action dependency is coordinator commit `88e21d671`, imported by explicit code paths as `ac2cff7af`.
+Its files match the borrowed snapshots used by the checks.
+The coordinator owns the root imports.
 
 ## Revisions
 
@@ -109,8 +110,9 @@ Result: 787 declarations within `[propext, Quot.sound]`, zero declarations modul
 Log: `/private/tmp/queue-current-all-owned-audit.log`.
 The audit also repeats the three focused checks.
 
-The checked action dependency uses borrowed coordinator snapshots of `NativeActionScope`, `AnswerSlots.Actions` and `AnswerSlots.TypedActions`.
-Those files are not part of these commits.
+The checked action dependency contains `NativeActionScope`, `AnswerSlots.Actions` and `AnswerSlots.TypedActions`.
+Commit `ac2cff7af` records their exact checked coordinator contents.
+The earlier proof commits do not edit those dependency files.
 No machine, program syntax, value syntax or host implementation changes occur.
 No outside-implementation behaviour gate is reached by this proof-only slice.
 
