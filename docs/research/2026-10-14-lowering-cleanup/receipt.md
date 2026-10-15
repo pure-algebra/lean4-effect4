@@ -195,6 +195,146 @@ base, which is probe A's finding, and row 391 pauses its repair (row 262).
 - The C column names the symbol of each extern row. The C face (LC-9) exports Lean's compiled
   machine and calls none of them by hand.
 
+## LC-3: one recipe, the OCaml syntax cut, one fold, the dead models gone
+
+### Base and head
+
+Base `ee7aa35b5`, head `a06aa2ba6`. LC-3 lands in three commits:
+
+- `640f9ed42`: the recipe, the dead models, the byte library and the gate;
+- `a136936dd`: the syntax cut, the fold and the profile;
+- `a06aa2ba6`: the documents.
+
+### Changed files
+
+| File | Change |
+| --- | --- |
+| `ocaml/gen/roots.json` | format `effect4-lcnf-roots-v2`: two artifacts; the roots of `fibers_gen.ml` and `machine_gen.ml` are the field `coverage` of `api_gen.ml` |
+| `scripts/generate.py` | `lcnf_command` appends the coverage roots and refuses a recipe of another format |
+| `src/OCaml5/Tools/LcnfGen.lean` | `--out` and `--import` are required, with no spike defaults; the carrier parameters print by their paths |
+| `ocaml/gen/fibers_gen.ml`, `machine_gen.ml`, `closure-fibers_gen.tsv`, `closure-machine_gen.tsv` | deleted |
+| `ocaml/gen/api_gen.ml`, `closure-api_gen.tsv`, `ocaml/gen/dune` | regenerated with the coverage roots; the library holds `api_gen` alone |
+| `ocaml/engine/e4_{due,wake,time,timers,store,fibers}.ml(i)` | deleted, with `test_due`, `test_wake`, `test_whatwg`, `test_timers`, `bench_timers`, `prop_store` and `prop_fibers` |
+| `ocaml/engine/test/bench_carriers.ml`, `test_diff.ml`, `bench_query.ml`, `ocaml/engine/tools/run-bench.sh` | the bench measures the live carriers (`E4_table`, `E4_fibers_view`); the differential's notes on the deleted models go |
+| `ocaml/engine/e4_table.ml(i)`, `e4_fibers_view.mli` | comments that named the deleted models |
+| `ocaml/engine/bytes/` (new) | the library `effect4_bytes`: `e4_be`, `e4_hex`, `e4_nat` and `e4_sha256` moved from `ocaml/engine/`, with `test_math` beside them; its goldens are found by an ancestor walk |
+| `ocaml/engine/dune`, `ocaml/engine/cas/dune`, `ocaml/engine/cas/test/dune`, `ocaml/engine/test/dune` | the engine and the CAS depend on `effect4_bytes`; only `E4_checkpoint` and its test name the engine |
+| `ocaml/engine/cas/*.ml`, `ocaml/engine/cas/test/*.ml` (23 files) | the line `open Effect4_engine` goes |
+| `ocaml/engine/tools/gen-check.sh` | the path of `e4_nat.mli` |
+| `Makefile`, `.github/workflows/lean_action_ci.yml` | `$(CHK)/ocaml` depends on `$(GEN)/lcnf`; the LCNF group's sources are the generator's import closure (`OCaml5.Ml`, the Conform modules it reads); the outputs are the two artifacts; the derived outputs include `src/OCaml5/Ml/Fold.lean` |
+| `src/OCaml5/Ml/Syntax.lean` | cut to the forms the route builds: `Expr` 55 to 22 constructors, `Pat` 18 to 7, `Ty` 8 to 5 and `Decl` 17 to 7; `ModTy`, `SigItem`, `Param`, `Effc`, `HandlerKind`, `Variance`, `PolyKind`, `TyParam` and every unused field go; a match arm is a pair |
+| `tools/Effect4Gen/manifest.json`, `src/OCaml5/Ml/Fold.lean` (generated) | the derived group `MlFold`: the algebra, fold, homomorphism with uniqueness, identity algebra and monoid fold of `Ty`, `Pat`, `Expr` and `Decl` |
+| `src/OCaml5/Ml/Render.lean` | the printer as four algebras of the fold (`renderTyAlg`, `renderPatAlg`, `renderExprAlg`, `renderDeclAlg`) |
+| `src/OCaml5/Ml/Check.lean` | the checker as algebras of the fold (`patVarsAlg`, `tyVarsAlg`, `checkPatAlg`, `checkExprAlg`, `checkDeclAlg`); `Check.profile`, `lawReport`, `rawSites` and the tail-position rule go |
+| `src/OCaml5/Ml/Profile.lean` | deleted |
+| `src/OCaml5/Ml/Identifier.lean` | keeps what the route reads; the injective field mangling and the path predicates go |
+| `src/OCaml5/Lcnf/Builtins.lean` | the uses and the substitution are algebras of the fold (`usesAlg`, `substAlg` over `Ml.ExprAlgebra.id`) |
+| `src/OCaml5/Lcnf/Translate.lean`, `Externs.lean`, `Naming.lean` | the cut's constructors: a local `let rec` with one binding, arms as pairs, `carrierParams` as module type paths |
+| `tools/Conform/Effect4/LcnfMl.lean`, `CompilerControls.lean` | the conformance reader as two algebras of the fold (`ofPatAlg`, `ofExprAlg`, both total); the controls follow the cut |
+| `src/OCaml5.lean` | imports `OCaml5.Ml.Fold` where it imported `OCaml5.Ml.Profile` |
+| `docs/ARCHITECTURE.md`, `docs/GENERATED.md`, `ocaml/README.md`, `ocaml/STANDARDS.md`, `ocaml/gen/NOTES.md`, `docs/DESIGN-ISSUES.md` | the stale rows; DI-56 and DI-96 cite the moved and the retired OCaml files |
+
+### Commands and results
+
+1. `python3 -u scripts/generate.py --only lcnf` after the recipe change: 37.0 s, where the base's
+   four artifacts took 43.1 s. `api_engine.ml` and its closure manifest did not move
+   (reproduced). `api_gen.ml` moved by the coverage roots only, as predicted. Its closure grew
+   from 786 to 890 declarations, and its `let` and `and` lines from 919 to 1,026. Every line of
+   the base's `api_gen.ml` is in the head's, counted as a multiset, except the header's command
+   line (reproduced, a multiset comparison by script). 276 lines change position, because the
+   new roots reorder the emission of the closure.
+2. `opam exec --switch=effect4 -- dune build`, then `dune test`, in `ocaml/`: built; 1,908 `PASS`
+   lines and no `FAIL` (tested).
+3. Part 1: `make check-ocaml` gave `gen-check: PASS` in 110.9 s.
+   It regenerated the variances, derived, lcnf and fixtures groups first.
+   The gate now depends on the LCNF group.
+   `make check-compiler` and `make check-native` were up to date, since part 1 changed none of
+   their inputs.
+4. The syntax cut was one edit, made from a reading of the producers: `OCaml5.Lcnf.Translate`,
+   `OCaml5.Lcnf.Types`, the forms of `OCaml5.Lcnf.Builtins` and `OCaml5.Tools.LcnfGen`. The build
+   `lake build OCaml5 Conform` (376 jobs) then measured every removal at once. A producer or
+   consumer that builds a removed form fails that build (tested). `lake build Test.Audit.LetReturn
+   Test.Audit.ClockLowering`: built (tested).
+5. `lake exe effect4gen Fold --group MlFold …` wrote `src/OCaml5/Ml/Fold.lean`, 1,273 lines.
+   `make check-ocaml` ran the derived group again and reproduced it (reproduced).
+6. Part 2, each command through the slot (tested):
+
+   | Command | Result | Time |
+   | --- | --- | --- |
+   | `python3 -u scripts/generate.py --only lcnf` | no generated byte moved (reproduced) | 35.8 s |
+   | `make check-compiler` | `conform compiler: PASS` | 21.4 s |
+   | `make check-native` | `conform native: PASS` | 18.8 s |
+   | `make check-ocaml` | `gen-check: PASS`, with the derived, lcnf and fixtures groups run first | 101.9 s |
+7. Part 3: `python3 scripts/check-docs.py` reports two references, both in `docs/core/decisions.md`.
+   Row 85 cites `ocaml/engine/test/prop_store.ml`, which LC-3 deleted (proposed below). Row 362
+   cites `tools/view/make_videos.py`, which the base tree does not hold either.
+8. `python3 scripts/check-language.py --show` on the six edited documents: no new finding.
+
+   | Document | Findings at base | Findings at head |
+   | --- | --- | --- |
+   | `docs/ARCHITECTURE.md` | 23 | 23 |
+   | `docs/GENERATED.md` | 24 | 23 |
+   | `ocaml/README.md` | 8 | 0 |
+   | `ocaml/STANDARDS.md` | 4 | 0 |
+   | `ocaml/gen/NOTES.md` | 23 | 23 |
+   | `docs/DESIGN-ISSUES.md` | 38 | 38 |
+
+### Axiom output
+
+`#axiom_audit` over LC-3's Lean modules at the head (`AuditLc3OCaml5.lean`), and over the Conform
+modules, compared with the base by `probes/audit-diff.py`.
+
+| Module | Base | Head |
+| --- | --- | --- |
+| `OCaml5.Ml.Syntax` | 0 of 1,403 outside | 0 of 603 outside |
+| `OCaml5.Ml.Fold` | absent | 0 of 723 outside |
+| `OCaml5.Ml.Render` | 78 of 160 outside | 10 of 37 outside |
+| `OCaml5.Ml.Check` | 67 of 296 outside | 11 of 105 outside |
+| `OCaml5.Ml.Identifier` | 23 of 39 outside | 11 of 21 outside |
+| `OCaml5.Ml.Profile` | 77 of 310 outside | absent |
+| `OCaml5.Lcnf.Builtins` | 8 of 226 outside | 8 of 265 outside |
+| `OCaml5.Lcnf.Translate` | 71 of 297 outside | 71 of 297 outside |
+| `OCaml5.Tools.LcnfGen` | 8 of 53 outside | 8 of 52 outside |
+| `Conform.Effect4.LcnfMl` | 22 of 95 outside | 22 of 94 outside |
+| `Conform.Effect4.CompilerControls` | 12 of 74 outside | 13 of 78 outside (LC-2's `runtimeProblems`) |
+
+The generated fold stays inside the trust ceiling. The new offenders are the algebras that
+replace the recursive printer and checker: `renderExprAlg`, `renderDeclAlg`, `checkPatAlg`,
+`checkExprAlg`, `checkDeclAlg` and `Env.ofModule`. Each reaches `Classical.choice` through
+`opInfo`, `isLowerIdent` or `Env.isQualifiedName`, then `String.toList` or the string searcher.
+Those are the base's causes (tested, by the walk's paths).
+
+### Lines removed and added
+
+| Commit | Hand-written lines | Generated lines |
+| --- | --- | --- |
+| `640f9ed42` | 71 files, 155 added, 3,517 removed | 6 files, 2,975 added, 6,045 removed |
+| `a136936dd` | 15 files, 541 added, 3,121 removed | 1 file, 1,273 added |
+| `a06aa2ba6` | 6 files, 104 added, 95 removed | none |
+
+### A planned change landed in another form (row 390)
+
+The brief cuts `Ml.Profile` to what `checkModule` reads. At the base `checkModule` read only
+`derivedNames`, for the names a `[@@deriving]` attribute adds. The route builds no such attribute,
+so the cut leaves nothing to read. No consumer outside `src/OCaml5/Ml/` called `Check.profile`,
+`lawReport` or `rawSites` (reading, `git grep` at the base). So the profile goes whole.
+
+### Left, with its reason
+
+- The arena controls ST9 to ST11 of the deleted `prop_store.ml` tested the deleted `E4_store`.
+  The live table carrier's test is `ocaml/engine/test/prop_table.ml`. Its lines T1, T2 and T3
+  catch three of those faults. The faults are a write that inserts, a write that disturbs
+  another key, and an allocation that loses a cell. LC-5's census states whether a density line
+  belongs there.
+- Row 85's citation is the coordinator's register, proposed below.
+
 ## Proposed decisions rows (proposals only)
 
-None yet.
+- **P1, row 85's evidence.** Row 85 names `ocaml/engine/test/prop_store.ml` as the evidence of
+  the OCaml store. LC-3 deleted that test with its model `E4_store`, as the brief says.
+  - Option A: cite the history, `git:3a8eac840:ocaml/engine/test/prop_store.ml`.
+  - Option B: cite the live carrier's test, `ocaml/engine/test/prop_table.ml`, and the history
+    beside it.
+  - Recommendation: option B. The generated engine runs `E4_table` as its ref heap, its deferred
+    cells and its scope entries (`ocaml/engine/e4_table.mli`).
+
