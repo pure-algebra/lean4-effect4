@@ -41,11 +41,15 @@ theorem finalizer_nested (interp : Moves.NInterp) (machine : NativeMachine) (fib
     · exact step_nested interp machine fiber yielding
   · exact step_nested interp machine fiber yielding
 
+/-- These are the only commands emitted directly by a non-action primitive. -/
+def Builtin : Guard.NCmd → Prop
+  | .drainDue | .launch _ | .registrationDone _ _ => True
+  | _ => False
+
 /-- Actual local administrative commands arise only from the existing action producer arm. -/
-theorem primitive_action (interp : Moves.NInterp) (machine : NativeMachine) (fiber : Moves.NFiber)
+theorem primitive_action_of_not_builtin (interp : Moves.NInterp) (machine : NativeMachine) (fiber : Moves.NFiber)
     (yielding : Bool) (next : Moves.NIteration) (produced : Moves.PrimitiveProducer interp machine fiber yielding next)
-    (command : Guard.NCmd) (member : command ∈ next.nested) (host : FiberId)
-    (owned : Local host command) :
+    (command : Guard.NCmd) (member : command ∈ next.nested) (outside : ¬ Builtin command) :
     ∃ thunk action, fiber.frame.current = .withFiber thunk ∧ interp.withFiberOf thunk = some action ∧
       next = evaluatePrim.withFiber interp machine fiber yielding action := by
   cases produced with
@@ -55,18 +59,28 @@ theorem primitive_action (interp : Moves.NInterp) (machine : NativeMachine) (fib
   | sync | asyncImmediate =>
     have same := List.mem_singleton.mp member
     subst command
-    exact owned.elim
+    exact (outside True.intro).elim
   | racePark race park =>
     unfold registerRace at member
     split at member
     · exact (List.not_mem_nil member).elim
     · rcases List.mem_cons.mp member with same | rest
-      · subst command; exact owned.elim
+      · subst command; exact (outside True.intro).elim
       · have same := List.mem_singleton.mp rest
         subst command
-        exact owned.elim
+        exact (outside True.intro).elim
   | fallback | yieldNow | asyncParked | rejectedPark | countdownPark | joinMissing | joinExited | joinWaiting =>
     exact (List.not_mem_nil member).elim
+
+/-- Administrative continuations are outside the built-in primitive command family. -/
+theorem primitive_action (interp : Moves.NInterp) (machine : NativeMachine) (fiber : Moves.NFiber)
+    (yielding : Bool) (next : Moves.NIteration) (produced : Moves.PrimitiveProducer interp machine fiber yielding next)
+    (command : Guard.NCmd) (member : command ∈ next.nested) (host : FiberId) (owned : Local host command) :
+    ∃ thunk action, fiber.frame.current = .withFiber thunk ∧ interp.withFiberOf thunk = some action ∧
+      next = evaluatePrim.withFiber interp machine fiber yielding action := by
+  apply primitive_action_of_not_builtin interp machine fiber yielding next produced command member
+  cases command <;> simp only [Builtin, Local] at owned ⊢
+  all_goals exact fun impossible => impossible
 
 /-- A local administrative continuation has a unique addressed host. -/
 theorem local_unique (command : Guard.NCmd) (first last : FiberId)
@@ -138,4 +152,35 @@ theorem owner (machine : NativeMachine) (command : Guard.NCmd) (host : FiberId)
     (owned : Local host command) : Guard.commandOwner machine command = some host := by
   fun_cases Local host command <;> simp only [Local] at owned
   all_goals subst host; rfl
+
+/-- The actual nested-command certificate never emits a finish before outcome settlement. -/
+theorem nested_no_finish (root : NativeEff) (table : RowTable) (next : Moves.NIteration)
+    (nested : Guard.ReturnCommands.Nested root table next) (host : FiberId) (exit : ExitV) :
+    Cmd.finish host exit ∉ next.nested := by
+  intro member
+  cases nested with
+  | simple commands => exact (commands (.finish host exit) member).elim
+  | owned outcome front last commands simple isLocal =>
+    rw [commands] at member
+    rcases List.mem_append.mp member with previous | final
+    · exact (simple (.finish host exit) previous).elim
+    · have same := List.mem_singleton.mp final
+      subst last
+      exact isLocal.elim
+  | registration outcome rid race lookup hostEq park commands =>
+    rw [commands] at member
+    rcases List.mem_cons.mp member with same | rest
+    · cases same
+    · have same := List.mem_singleton.mp rest
+      cases same
+
+/-- A primitive cannot emit a pending finish before its outcome is settled. -/
+theorem primitive_no_finish (root : NativeEff) (table : RowTable) (interp : Moves.NInterp)
+    (machine : NativeMachine) (fiber : Moves.NFiber) (yielding : Bool) (host : FiberId) (exit : ExitV) :
+    Cmd.finish host exit ∉ (evaluatePrim interp machine fiber yielding).nested := by
+  intro member
+  obtain ⟨thunk, action, current, found, actual⟩ := primitive_action_of_not_builtin interp machine fiber yielding _
+    (Moves.evaluatePrim_producer _ _ _ _) (.finish host exit) member (fun impossible => impossible)
+  rw [actual] at member
+  exact nested_no_finish root table _ (Guard.ReturnCommands.withFiber_nested root table interp machine fiber yielding action) host exit member
 end Effect4.Program.NativeAdminOrigin
