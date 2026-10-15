@@ -246,3 +246,40 @@ Its interruption premise must also read the installed-prefix running condition.
 The audit checks `NumberPhase`, `NumberPhaseFlow`, and `Timeout.CommandCut` in their full module namespaces.
 Both original Timeout goals remain unchanged and open.
 The coordinator must import the retained proof leaves and control through the scenario before merging.
+
+## Count permission and cleanup barrier
+
+The numeric producer remains open.
+This slice connects the local count permission and actual wait barrier to the configuration's assigned fiber roles.
+Its concepts remain scope-lifetime-finalization R11 and translation-simulation R10.
+Both original Timeout goals consume the planned coupled producer.
+
+`NumberConfiguration.CountFrameAt` names the three actual pre-count control positions.
+`CountReady` excludes deferred interruption and an injected yield after finalizer installation.
+The queued loop assertion carries that permission jointly with the machine assertion.
+An interruption allowed by the message assertion must avoid the reserved pending targets.
+`NumberPhaseFlow` retains the uncounted interruption arm beside the counted cleanup arm.
+Its saved contracts quantify the current completed-exit view.
+
+`Configuration.lookup` reads the uniquely assigned role of the actual looked-up fiber.
+`Configuration.await_attempt` derives the cleanup wait certificate from that role's published exit.
+`Configuration.await_complete` consumes the existing actual countdown producer.
+It establishes cleanup length equal to the current count through the exact heap cells.
+The proof covers counted cleanup and interruption before counting.
+It does not assume equal phase proof records.
+
+| Command through the serialized Lean slot | Result |
+| --- | --- |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberConfiguration` | Passed, 1217 jobs |
+| `lake env lean scratch/TimeoutCountBarrierAudit.lean` | The output below |
+
+```text
+#axiom_audit: 327 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
+
+The audit checks the full `NumberPhaseFlow` and `NumberConfiguration` module namespaces.
+No execution behaviour changes, so this slice reaches no outside implementation gate.
+The fixed-budget goals remain unchanged and open.
+The source initializer, root race relation, declared failure correlation, and coupled command producer remain open.
+The shared bare initialization producer belongs to the Queue seat.
+The shared code closure supplies source contracts without another syntax traversal.

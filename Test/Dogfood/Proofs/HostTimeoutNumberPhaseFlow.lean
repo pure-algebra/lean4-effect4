@@ -4,9 +4,9 @@ import Test.Dogfood.Proofs.HostTimeoutNumberFinalizers
 
 /-!
 Concept: scope-lifetime-finalization R11, with translation-simulation R10.
-Question: an uncounted race can publish its selected form without inventing an attempt cleanup.
+Question: numeric source contracts retain counted cleanup and permit an uncounted interruption before finalizer installation.
 Consumer: the uncounted root phase in both Timeout numeric command producers.
-Reach: the actual completed-form finalizer, its count read, and its captured selected exit.
+Reach: the actual count prefix, attempt cleanup, form finalizer, and constant yield continuation.
 Limit: the producer must retain the phase while the form reads and publishes its log entry.
 No equality between the retry cursor and the committed count is assumed here.
 -/
@@ -23,6 +23,8 @@ def At (phase : Phase) (state : Stores) : Prop := state.refs = phase.heap
 
 /-- The completed-form assertion records the actual heap count independently of the source cursor. -/
 inductive Kind
+  | fresh (phase : Phase)
+  | attempt (before entered : Phase) (own : entered.count = entered.cleanups.length + 1)
   | read (phase : Phase)
   | unit (phase : Phase)
   | before (phase : Phase)
@@ -31,6 +33,8 @@ inductive Kind
 
 /-- A restored success names the selected exit that the actual form log has just published. -/
 def ValueAt (state : Stores) : Kind → Val → Prop
+  | .fresh phase, _ => At phase state
+  | .attempt _ entered own, _ => ∃ selected, At (entered.cleanup own (HostTimeoutNumberSteps.interruptionFlag selected)) state
   | .read phase, value => At phase state ∧ value = .nat phase.count
   | .unit phase, value => At phase state ∧ value = .unit
   | .before phase, _ => At phase state
@@ -39,6 +43,10 @@ def ValueAt (state : Stores) : Kind → Val → Prop
 
 /-- An interruption may replace the delivered cause after the selected exit is already published. -/
 def CauseAt (state : Stores) : Kind → CauseV → Prop
+  | .fresh phase, cause => At phase state ∧ HostTimeoutNumberFlow.NoTypedFailure cause
+  | .attempt before entered own, cause =>
+      (∃ selected, At (entered.cleanup own (HostTimeoutNumberSteps.interruptionFlag selected)) state) ∨
+        (At before state ∧ HostTimeoutNumberFlow.NoTypedFailure cause)
   | .before phase, _ => At phase state
   | .cleanupExit phase own, _ => ∃ selected, At (phase.cleanup own (HostTimeoutNumberSteps.interruptionFlag selected)) state
   | .published phase, cause => ∃ selected, At (phase.form phase.count selected) state ∧
@@ -46,66 +54,97 @@ def CauseAt (state : Stores) : Kind → CauseV → Prop
   | _, _ => False
 
 /-- The code assertion classifies the existing form source and its saved native restore wrappers. -/
-inductive CodeAt (state : Stores) : Kind → NCode → Prop
-  | success (kind : Kind) (value : Val) (good : ValueAt state kind value) : CodeAt state kind (.success value)
-  | failure (kind : Kind) (cause : CauseV) (good : CauseAt state kind cause) : CodeAt state kind (.failure cause)
-  | get (phase : Phase) (heap : At phase state) : CodeAt state (.read phase) (.sync (.op (.refGet ⟨0⟩)))
-  | form (phase : Phase) (captured : Point) (fuel delay : Nat) (n : Fin 4) (previous : Val)
+inductive CodeAt : Stores → Kind → NCode → Prop
+  | success {state : Stores} (kind : Kind) (value : Val) (good : ValueAt state kind value) : CodeAt state kind (.success value)
+  | failure {state : Stores} (kind : Kind) (cause : CauseV) (good : CauseAt state kind cause) : CodeAt state kind (.failure cause)
+  | get {state : Stores} (phase : Phase) (heap : At phase state) : CodeAt state (.read phase) (.sync (.op (.refGet ⟨0⟩)))
+  | form {state : Stores} (phase : Phase) (captured : Point) (fuel delay : Nat) (n : Fin 4) (previous : Val)
       (selected : ExitV) (heap : At phase state) :
       CodeAt state (.unit (phase.form phase.count selected))
         (resolve HostTimeoutSource.program (completedPoint captured fuel delay n previous selected))
-  | write (phase : Phase) (view : View) (captured : Point) (fuel delay : Nat) (n : Fin 4)
+  | write {state : Stores} (phase : Phase) (view : View) (captured : Point) (fuel delay : Nat) (n : Fin 4)
       (previous : Val) (selected : ExitV) (heap : At phase state) :
       CodeAt state (.unit (phase.form phase.count selected))
         (resolve HostTimeoutSource.program
           ({completedPoint captured fuel delay n previous selected with completed := view}.childWith 1 (.nat phase.count)))
-  | cleanup (phase : Phase) (own : phase.count = phase.cleanups.length + 1)
+  | cleanup {state : Stores} (phase : Phase) (own : phase.count = phase.cleanups.length + 1)
       (captured : Point) (fuel delay : Nat) (n : Fin 4) (previous : Val) (selected : ExitV)
       (heap : At phase state) :
       CodeAt state (.unit (phase.cleanup own (HostTimeoutNumberSteps.interruptionFlag selected)))
         (resolve HostTimeoutSource.program (cleanupPoint captured fuel delay n previous selected))
-  | cleanupBound (phase : Phase) (own : phase.count = phase.cleanups.length + 1)
+  | cleanupBound {state : Stores} (phase : Phase) (own : phase.count = phase.cleanups.length + 1)
       (view : View) (captured : Point) (fuel delay : Nat) (n : Fin 4) (previous : Val) (selected : ExitV)
       (heap : At phase state) :
       CodeAt state (.unit (phase.cleanup own (HostTimeoutNumberSteps.interruptionFlag selected)))
         (resolve HostTimeoutSource.program
           ({cleanupPoint captured fuel delay n previous selected with completed := view}.childWith 1 (.nat phase.count)))
-  | cleanupWrite (phase : Phase) (own : phase.count = phase.cleanups.length + 1)
+  | cleanupWrite {state : Stores} (phase : Phase) (own : phase.count = phase.cleanups.length + 1)
       (view : View) (captured : Point) (fuel delay : Nat) (n : Fin 4) (previous : Val) (selected : ExitV)
       (heap : At phase state) :
       CodeAt state (.unit (phase.cleanup own (HostTimeoutNumberSteps.interruptionFlag selected)))
         (resolve HostTimeoutSource.program
           (({cleanupPoint captured fuel delay n previous selected with completed := view}.childWith 1 (.nat phase.count)).child 0))
-  | cleanupReturn (phase : Phase) (own : phase.count = phase.cleanups.length + 1)
+  | cleanupReturn {state : Stores} (phase : Phase) (own : phase.count = phase.cleanups.length + 1)
       (selected : ExitV) (body : NCode)
       (first : CodeAt state (.unit (phase.cleanup own (HostTimeoutNumberSteps.interruptionFlag selected))) body) :
       CodeAt state (.cleanupExit phase own) (.onSuccess body (.restore selected))
-  | attemptBody (phase : Phase) (captured : Point) (fuel delay : Nat) (n : Fin 4) (previous : Val)
+  | park {state : Stores} (phase : Phase) (kind : ParkKind) (heap : At phase state) :
+      CodeAt state (.before phase) (.suspend (.park kind))
+  | cancelRace {state : Stores} (phase : Phase) (race : Nat) (heap : At phase state) :
+      CodeAt state (.before phase) (.withFiber (.store (.act (.cancelRace race))))
+  | maskedCancelRace {state : Stores} (phase : Phase) (race : Nat) (heap : At phase state) :
+      CodeAt state (.before phase) (.withFiber (.store (.act (.setInterruptible (.cancelRace race) false))))
+  | bind {state : Stores} (input output : Kind) (first : NCode) (name : EffName)
+      (head : CodeAt state input first)
+      (callback : ∀ next, HostTimeoutNumberFlow.Future state next → ∀ value,
+        ValueAt next input value → ∀ view, CodeAt next output ((interpreter view).contA name value))
+      (skip : ∀ next, HostTimeoutNumberFlow.Future state next → ∀ cause,
+        CauseAt next input cause → CauseAt next output cause) :
+      CodeAt state output (.onSuccess first name)
+  | yieldNow {state : Stores} (kind : Kind) (priority : Nat) (good : ValueAt state kind .unit) :
+      CodeAt state kind (.yieldNowWith priority)
+  | constant {state : Stores} (input output : Kind) (first body : NCode) (head : CodeAt state input first)
+      (callback : ∀ next, HostTimeoutNumberFlow.Future state next → ∀ value,
+        ValueAt next input value → CodeAt next output body)
+      (skip : ∀ next, HostTimeoutNumberFlow.Future state next → ∀ cause,
+        CauseAt next input cause → CauseAt next output cause) :
+      CodeAt state output (.onSuccessConst first body)
+  | attemptReturn {state : Stores} (before entered : Phase) (own : entered.count = entered.cleanups.length + 1)
+      (selected : ExitV) (body : NCode)
+      (first : CodeAt state (.unit (entered.cleanup own (HostTimeoutNumberSteps.interruptionFlag selected))) body) :
+      CodeAt state (.attempt before entered own) (.onSuccess body (.restore selected))
+  | attemptEntry {state : Stores} (phase : Phase) (n : Fin 4) (cleanups : phase.cleanups.length = phase.count)
+      (forms : phase.count ≤ phase.exits.length) (cursor : phase.count ≤ n.val)
+      (captured : Point) (fuel delay : Nat) (previous : Val) (heap : At phase state) :
+      CodeAt state (.attempt phase (phase.counted n cleanups forms cursor)
+        (by change phase.count + 1 = phase.cleanups.length + 1; rw [cleanups]))
+        (resolve HostTimeoutSource.program (HostTimeoutNumberEntry.attemptPoint captured (fuel + 1) delay n previous))
+  | attemptBody {state : Stores} (phase : Phase) (captured : Point) (fuel delay : Nat) (n : Fin 4) (previous : Val)
       (heap : At phase state) :
       CodeAt state (.before phase)
         (resolve HostTimeoutSource.program
           (((HostTimeoutNumberEntry.attemptPoint captured (fuel + 1) delay n previous).child 0).childWith 1 .unit))
-  | count (phase : Phase) (n : Fin 4) (cleanups : phase.cleanups.length = phase.count)
+  | count {state : Stores} (phase : Phase) (n : Fin 4) (cleanups : phase.cleanups.length = phase.count)
       (forms : phase.count ≤ phase.exits.length) (cursor : phase.count ≤ n.val)
       (captured : Point) (fuel delay : Nat) (previous : Val) (heap : At phase state) :
       CodeAt state (.unit (phase.counted n cleanups forms cursor))
         (.sync (.op (.refUpdate ⟨0⟩ HostTimeoutNumberEntry.countTerm
           (HostTimeoutNumberEntry.attemptPoint captured (fuel + 1) delay n previous).env)))
-  | countBind (phase : Phase) (n : Fin 4) (cleanups : phase.cleanups.length = phase.count)
+  | countBind {state : Stores} (phase : Phase) (n : Fin 4) (cleanups : phase.cleanups.length = phase.count)
       (forms : phase.count ≤ phase.exits.length) (cursor : phase.count ≤ n.val)
       (captured : Point) (fuel delay : Nat) (previous : Val) (heap : At phase state) :
       CodeAt state (.before (phase.counted n cleanups forms cursor))
         (resolve HostTimeoutSource.program
           ((HostTimeoutNumberEntry.attemptPoint captured (fuel + 1) delay n previous).child 0))
-  | countEntry (phase : Phase) (n : Fin 4) (cleanups : phase.cleanups.length = phase.count)
+  | countEntry {state : Stores} (phase : Phase) (n : Fin 4) (cleanups : phase.cleanups.length = phase.count)
       (forms : phase.count ≤ phase.exits.length) (cursor : phase.count ≤ n.val)
       (captured : Point) (fuel delay : Nat) (previous : Val) (heap : At phase state) :
       CodeAt state (.cleanupExit (phase.counted n cleanups forms cursor)
         (by change phase.count + 1 = phase.cleanups.length + 1; rw [cleanups]))
         (resolve HostTimeoutSource.program (HostTimeoutNumberEntry.attemptPoint captured (fuel + 1) delay n previous))
-  | merge (phase : Phase) (exit : ExitV) (body : NCode) (first : CodeAt state (.unit phase) body) :
+  | merge {state : Stores} (phase : Phase) (exit : ExitV) (body : NCode) (first : CodeAt state (.unit phase) body) :
       CodeAt state (.unit phase) (.onFailure body (.merge exit))
-  | restore (phase : Phase) (selected : ExitV) (body : NCode)
+  | restore {state : Stores} (phase : Phase) (selected : ExitV) (body : NCode)
       (first : CodeAt state (.unit (phase.form phase.count selected)) body) :
       CodeAt state (.published phase) (.onSuccess body (.restore selected))
 
@@ -268,6 +307,136 @@ theorem attempt_saved (view : View) (state : Stores) (phase : Phase)
     rw [attempt_program, Option.map_some]
   · exact cleanup_finalizer_code view next phase own exit _
       (CodeAt.cleanup phase own {captured with completed := view} fuel delay n previous exit heap)
+
+/-- A counted attempt's native restore inhabits the pending-or-cleaned result family. -/
+theorem flexible_finalizer_code (view : View) (state : Stores) (before entered : Phase)
+    (own : entered.count = entered.cleanups.length + 1) (selected : ExitV) (body : NCode)
+    (first : CodeAt state (.unit (entered.cleanup own (HostTimeoutNumberSteps.interruptionFlag selected))) body) :
+    CodeAt state (.attempt before entered own) (finalizerCode (interpreter view) selected body) := by
+  cases selected with
+  | success value => exact CodeAt.attemptReturn before entered own _ body first
+  | failure cause => exact CodeAt.attemptReturn before entered own _ _ (CodeAt.merge _ _ body first)
+
+/-- The installed attempt finalizer permits the completed cleanup branch of the flexible result family. -/
+theorem flexible_attempt_saved (view : View) (state : Stores) (before entered : Phase)
+    (own : entered.count = entered.cleanups.length + 1) (captured : Point)
+    (fuel delay : Nat) (n : Fin 4) (previous : Val) (body : NCode) :
+    AnswerFlow.SavedAt (model view) (interpreter view).toPrimInterp state
+      (.before entered) (.attempt before entered own)
+      (.onExit body (.fin (HostTimeoutNumberEntry.attemptPoint captured (fuel + 1) delay n previous)) false) := by
+  apply AnswerFlow.saved_protected_finalizer
+  intro next future exit good
+  have heap : At entered next := by cases exit <;> exact good
+  refine ⟨finalizerCode (interpreter view) exit (resolve HostTimeoutSource.program
+    (cleanupPoint {captured with completed := view} fuel delay n previous exit)), ?_, ?_⟩
+  · change (((interpreter view).finalizerProgram
+      (.fin (HostTimeoutNumberEntry.attemptPoint captured (fuel + 1) delay n previous)) exit).map
+      (finalizerCode (interpreter view) exit)) = _
+    rw [attempt_program, Option.map_some]
+  · exact flexible_finalizer_code view next before entered own exit _
+      (CodeAt.cleanup entered own {captured with completed := view} fuel delay n previous exit heap)
+
+/-- A constant continuation shares the existing ordered saved-frame rule. -/
+theorem constant_saved (view : View) (state : Stores) (input output : Kind) (first body : NCode)
+    (callback : ∀ next, HostTimeoutNumberFlow.Future state next → ∀ value,
+      ValueAt next input value → CodeAt next output body)
+    (skip : ∀ next, HostTimeoutNumberFlow.Future state next → ∀ cause,
+      CauseAt next input cause → CauseAt next output cause) :
+    AnswerFlow.SavedAt (model view) (interpreter view).toPrimInterp state input output
+      (.onSuccessConst first body) :=
+  AnswerFlow.saved_constant (model view) (interpreter view).toPrimInterp state input output first body callback skip
+
+/-- The attempt restore consumes a completed cleanup in the flexible pending-or-cleaned result family. -/
+theorem flexible_restore_saved (view : View) (state : Stores) (before entered : Phase)
+    (own : entered.count = entered.cleanups.length + 1) (selected : ExitV) (body : NCode) :
+    AnswerFlow.SavedAt (model view) (interpreter view).toPrimInterp state
+      (.unit (entered.cleanup own (HostTimeoutNumberSteps.interruptionFlag selected)))
+      (.attempt before entered own) (.onSuccess body (.restore selected)) := by
+  apply AnswerFlow.saved_success
+  · intro next future value good
+    cases selected with
+    | success saved => exact CodeAt.success _ saved ⟨.success saved, good.1⟩
+    | failure saved => exact CodeAt.failure _ saved (Or.inl ⟨.failure saved, good.1⟩)
+  · intro next future cause good
+    exact False.elim good
+
+/-- The injected pre-entry yield retains the actual count source as its constant continuation. -/
+theorem fresh_entry_yield (state : Stores) (phase : Phase) (n : Fin 4)
+    (cleanups : phase.cleanups.length = phase.count) (forms : phase.count ≤ phase.exits.length)
+    (cursor : phase.count ≤ n.val) (captured : Point) (fuel delay : Nat) (previous : Val)
+    (priority : Nat) (heap : At phase state) :
+    CodeAt state (.attempt phase (phase.counted n cleanups forms cursor)
+      (by change phase.count + 1 = phase.cleanups.length + 1; rw [cleanups]))
+      (.onSuccessConst (.yieldNowWith priority)
+        (resolve HostTimeoutSource.program (HostTimeoutNumberEntry.attemptPoint captured (fuel + 1) delay n previous))) := by
+  apply CodeAt.constant (.fresh phase) _ _ _ (CodeAt.yieldNow (.fresh phase) priority heap)
+  · intro next future value good
+    exact CodeAt.attemptEntry phase n cleanups forms cursor captured fuel delay previous good
+  · intro next future cause good
+    exact Or.inr good
+
+/-- A read-only race restore retains its exact reference phase when the awaited work has returned. -/
+theorem race_restore_saved (view : View) (state : Stores) (phase : Phase) (selected : ExitV) (body : NCode) :
+    AnswerFlow.SavedAt (model view) (interpreter view).toPrimInterp state (.before phase) (.before phase)
+      (.onSuccess body (.store (.restore selected))) := by
+  apply AnswerFlow.saved_success
+  · intro next future value good
+    cases selected with
+    | success saved => exact CodeAt.success _ saved good
+    | failure cause => exact CodeAt.failure _ cause good
+  · intro next future cause good
+    exact good
+
+/-- The actual interrupted-race callback retains its cancellation body at the current reference phase. -/
+theorem race_cancel_code (view : View) (state : Stores) (phase : Phase) (race token : Nat)
+    (owner : FiberId) (cause : CauseV) (heap : At phase state) :
+    CodeAt state (.before phase)
+      ((interpreter view).cancelThenFail (.withWaiter (.store (.cancelRace race)) owner token) cause) := by
+  rw [HostTimeoutNumberFlow.race_cancel_program]
+  apply CodeAt.bind (.before phase) (.before phase) _ (.reFail cause) (CodeAt.cancelRace phase race heap)
+  · intro next future value good nextView
+    exact CodeAt.failure _ cause good
+  · intro next future delivered good
+    exact good
+
+/-- The parked race's actual async finalizer uses the same phase for every permitted future heap. -/
+theorem race_cancel_saved (view : View) (state : Stores) (phase : Phase)
+    (race token : Nat) (owner : FiberId) :
+    AnswerFlow.SavedAt (model view) (interpreter view).toPrimInterp state (.before phase) (.before phase)
+      (.asyncFinalizer (.withWaiter (.store (.cancelRace race)) owner token)) := by
+  refine AnswerFlow.SavedAt.mk state (Kind.before phase) (Kind.before phase) _ ?_ ?_ ?_ ?_ ?_ ?_
+  · intro next future value good absent
+    exact good
+  · intro next future cause good absent
+    cases absent
+  · intro next future value provided code pushed good supplied noProgram arm
+    cases arm
+  · intro next future cause provided code pushed good supplied noProgram arm
+    cases interrupted : cause.hasInterrupts with
+    | false =>
+      rw [Prim.armE_asyncFinalizer_no_interrupt _ _ cause provided interrupted] at arm
+      cases arm
+      exact .mk next (Kind.before phase) (Kind.before phase) _ [] (CodeAt.failure _ cause good) (.nil _ _)
+    | true =>
+      rw [Prim.armE_asyncFinalizer_interrupt _ _ cause provided interrupted] at arm
+      cases arm
+      exact .mk next (Kind.before phase) (Kind.before phase) _ []
+        (race_cancel_code view next phase race token owner cause good) (.nil _ _)
+  · intro next future exit code good installed
+    cases installed
+  · intro next future fiber cause delivered good arm interrupted skipped
+    have quiet : ((Prim.asyncFinalizer (.withWaiter (.store (.cancelRace race)) owner token)).ensure fiber).1.interrupted = false := by
+      cases flag : fiber.interruptible with
+      | false =>
+        rw [Prim.ensure_asyncFinalizer_already_masked _ fiber flag]
+        change (fiber.interruptible && fiber.interruptedCause.isSome) = false
+        rw [flag]
+        rfl
+      | true =>
+        rw [Prim.ensure_asyncFinalizer_masks _ fiber flag]
+        rfl
+    rw [quiet] at interrupted
+    cases interrupted
 
 /-- The saved count binder requires the post-count phase only when it receives the count update's unit answer. -/
 theorem count_saved (view : View) (state : Stores) (phase : Phase) (captured : Point)
