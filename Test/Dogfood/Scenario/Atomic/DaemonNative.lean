@@ -98,6 +98,84 @@ theorem action_shape (root : NativeEff) (table : RowTable) (thunk : EffThunk)
   | pause priority => cases equal
   | bound first callback => cases equal
 
+/-- The daemon registers only its authored timer and its matching cancellation name. -/
+theorem async_shape (root : NativeEff) (table : RowTable) (name : EffName) (signal : Bool)
+    (cancel : Option EffName) (held : CodeAt root table (.async name signal cancel)) :
+    name = .store (.registerSleep 1000) ∧ signal = true ∧ cancel = some (.store .cancelSleep) := by
+  generalize equal : Prim.async name signal cancel = code at held
+  cases held with
+  | @entry point owned =>
+    rw [SourceScope.resolve_at _ _ _ owned.1] at equal
+    cases amount : point.fuel with
+    | zero => simp only [Agreement.compileEff_at_zero _ amount] at equal; cases equal
+    | succ fuel => simp only [DaemonSource.program, compileEff, amount] at equal; cases equal
+  | @body point owned =>
+    rw [SourceScope.resolve_at _ _ _ owned.1] at equal
+    cases amount : point.fuel with
+    | zero => simp only [Agreement.compileEff_at_zero _ amount] at equal; cases equal
+    | succ fuel => simp only [DaemonSource.body, compileEff, amount] at equal; cases equal
+  | @update point owned =>
+    rw [SourceScope.resolve_at _ _ _ owned.1] at equal
+    cases amount : point.fuel with
+    | zero => simp only [Agreement.compileEff_at_zero _ amount] at equal; cases equal
+    | succ fuel =>
+      have captured : point.env[0]? = some (.cell ⟨0⟩) := owned.2.2.read 0 (by decide)
+      simp only [compileEff, amount, NativeOp.kind, evalTerm, captured, NativeOp.syncOpOf] at equal
+      cases equal
+  | interruptAll targets who => cases equal
+  | dropObservers token => cases equal
+  | success value => cases equal
+  | failure cause => cases equal
+  | loop owned cursor => cases equal
+  | frontier zero => cases equal
+  | sleep => cases equal; exact ⟨rfl, rfl, rfl⟩
+  | refill length => cases equal
+  | cancelClock waiter token => cases equal
+  | join target mode => cases equal
+  | awaitAll targets => cases equal
+  | constant first next => cases equal
+  | pause priority => cases equal
+  | bound first callback => cases equal
+
+/-- A daemon native park only joins one fiber or awaits the actual countdown list. -/
+theorem park_shape (root : NativeEff) (table : RowTable) (view : List (FiberId × ExitV))
+    (code : NCode) (held : CodeAt root table code) (kind : Except CauseV ParkKind)
+    (actual : (interpAt root view table).parkOf code = some kind) :
+    (∃ target mode, kind = .ok (.join target mode)) ∨ (∃ targets, kind = .ok (.awaitAll targets)) := by
+  cases held with
+  | @entry point owned =>
+    rw [SourceScope.resolve_at _ _ _ owned.1] at actual
+    cases amount : point.fuel with
+    | zero => simp only [Agreement.compileEff_at_zero _ amount] at actual; cases actual
+    | succ fuel => simp only [DaemonSource.program, compileEff, amount] at actual; cases actual
+  | @body point owned =>
+    rw [SourceScope.resolve_at _ _ _ owned.1] at actual
+    cases amount : point.fuel with
+    | zero => simp only [Agreement.compileEff_at_zero _ amount] at actual; cases actual
+    | succ fuel => simp only [DaemonSource.body, compileEff, amount] at actual; cases actual
+  | @update point owned =>
+    rw [SourceScope.resolve_at _ _ _ owned.1] at actual
+    cases amount : point.fuel with
+    | zero => simp only [Agreement.compileEff_at_zero _ amount] at actual; cases actual
+    | succ fuel =>
+      have captured : point.env[0]? = some (.cell ⟨0⟩) := owned.2.2.read 0 (by decide)
+      simp only [compileEff, amount, NativeOp.kind, evalTerm, captured, NativeOp.syncOpOf] at actual
+      cases actual
+  | join target mode => cases actual; exact .inl ⟨target, mode, rfl⟩
+  | awaitAll targets => cases actual; exact .inr ⟨targets, rfl⟩
+  | interruptAll targets who => cases actual
+  | dropObservers token => cases actual
+  | success value => cases actual
+  | failure cause => cases actual
+  | loop owned cursor => cases actual
+  | frontier zero => cases actual
+  | sleep => cases actual
+  | refill length => cases actual
+  | cancelClock waiter token => cases actual
+  | constant first next => cases actual
+  | pause priority => cases actual
+  | bound first callback => cases actual
+
 /-- The actual daemon synchronous primitive retains the shop heap at the same stage world. -/
 theorem sync_heap (root : NativeEff) (table : RowTable) (world : StageWorld.World) (state : Stores)
     (thunk : EffThunk) (code : CodeAt root table (.sync thunk)) (heap : HeapAt world state) :

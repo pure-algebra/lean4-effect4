@@ -1,5 +1,6 @@
 import Test.Dogfood.Scenario.Atomic.DaemonIteration
 import Effect4.Laws.Machine.AnswerFlowNativeExit
+import Effect4.Laws.Program.NativeActionFlow
 
 /-!
 Concept: store-typing R4.
@@ -64,6 +65,24 @@ theorem timer_edge (root : NativeEff) (table : RowTable) (world : StageWorld.Wor
   apply async_edge root table world _
   intro view cause
   exact .bound (.cancelClock waiter token) (fun _ _ => .failure cause)
+
+/-- The actual countdown cancellation removes observers before restoring its incoming cause. -/
+theorem park_edge (root : NativeEff) (table : RowTable) (world : StageWorld.World)
+    (waiter : FiberId) (token : Nat) :
+    Edge root table world () () (.asyncFinalizer (.withWaiter (.store .cancelPark) waiter token)) := by
+  apply async_edge root table world _
+  intro view cause
+  exact .bound (.dropObservers token) (fun _ _ => .failure cause)
+
+/-- Actual countdown parking retains the daemon's current code or its completed answer. -/
+theorem countdown_frame (root : NativeEff) (table : RowTable) (world : StageWorld.World)
+    (view : List (FiberId × ExitV)) (machine : NativeMachine) (fiber : SourceScope.SourceFiber)
+    (targets : List FiberId) (held : FrameAt root table world fiber.frame) :
+    FrameAt root table world
+      (countdownParkEdits (interpAt root view table) machine fiber targets .exitsValue false).2.1.frame := by
+  exact SourceScope.countdown_path (model root table view) (Edge root table) root view table world () ()
+    machine fiber targets .exitsValue false held.1 held.2 (fun _ => .success _)
+    (park_edge root table world fiber.id machine.nextToken)
 
 /-- The daemon's actual administrative action preserves its heap and complete saved frame. -/
 theorem action_frame (root : NativeEff) (table : RowTable) (world : StageWorld.World)
