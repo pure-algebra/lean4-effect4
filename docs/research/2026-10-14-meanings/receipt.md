@@ -393,3 +393,34 @@ Evidence: `evidence/finalizer-closure-audit.log` and `evidence/FinalizerClosureA
 
 Open: join recursive callbacks, native transitions, release custody, and command history to the endpoint.
 These are local kernel-checked facts. They establish no progress or host behavior.
+
+## Callback roles and full saved-frame accounting
+
+The full finalizer callback and saved-frame bounds now compile and pass the axiom audit.
+The whole-history producer remains open; this slice does not close the finalizer goal.
+Base: `94f99e804`. Head: the commit containing this receipt section.
+
+`CodeClosure.roleAlg` distinguishes unary success callbacks from ordinary callbacks.
+`CodeClosure.compile_roles` owns the compiler walk; the old equal-role interface is its instance.
+`CodeClosure.Family` owns saved-frame and current-head closure.
+`CodeClosure.Qualified.prefixLaws` now uses that producer, removing its duplicate closure proof.
+`CodeClosure.Funding.armA` and `armE` own callback reservation bounds.
+`FinalizerSource` supplies the full source instance, including generators, layers, definitions and stored callbacks.
+The strict annotation excludes `releaseUnder` from ordinary callback slots.
+Its unary success push transfers the captured release reservation into its saved callback.
+
+Placement: scope-lifetime-finalization, R11, steps of `once_placed_outside_census` in `src/Effect4/Laws/Program/FinalizerRun.lean`.
+Consumers: full native evaluator accounting and the selected-source history invariant.
+Reach: actual interpreter callbacks and selected saved frames under `OncePlaced` and the full source annotation.
+These facts prove no progress, complete history bound, or host agreement.
+
+Changed files: `CodeClosure/{Predicate,Compile,Family,Funding,Qualified/Stable}.lean` and
+`Finalizer{Syntax,Layers,Callbacks,Suspensions,Iterations,Interp,Funding,Run}.lean` under `src/Effect4/Laws/Program/`.
+
+Commands:
+- `lean-slot.sh lake build Effect4.Laws.Program.FinalizerRun Effect4.Laws.Program.CodeClosure.Qualified.Stable`: passed, 640 jobs.
+- `lean-slot.sh lake env lean /private/tmp/FinalizerRoleAudit.lean`: passed.
+- The audit reports 689 declarations within `[propext, Quot.sound]`, zero modulo goals, and zero planned goals in the audited modules.
+
+The evidence is [the audit](evidence/FinalizerRoleAudit.lean) and [its output](evidence/finalizer-role-audit.log).
+The two log goals remain proved. The other six M3 goals, M1 and M2 remain open.

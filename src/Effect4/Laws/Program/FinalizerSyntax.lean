@@ -39,7 +39,13 @@ abbrev PointAt (q : List Nat) (point : Point) : Prop := ParamsClear q point.para
   | .provideMasked _ region _ | .restoreRegion region _ => RegionAt q region
   | suspended => CodeClosure.Slots.ThunkAt (PointAt q) (fun _ => True) suspended
 
-abbrev CodeAt (q : List Nat) := CodeClosure.Code (NameAt q) (ThunkAt q)
+/-- A release-start callback is minted only in its unary success slot.
+The other callback slots cannot borrow its transferred reservation. -/
+@[reducible] def OrdinaryNameAt (q : List Nat) : EffName → Prop
+  | .releaseUnder _ _ _ => False
+  | callback => NameAt q callback
+
+abbrev CodeAt (q : List Nat) := CodeClosure.RoleCode (OrdinaryNameAt q) (NameAt q) (ThunkAt q)
 
 /-- A direct region is an instance of the full region annotation. -/
 theorem direct_region (q : List Nat) (region : Region)
@@ -68,9 +74,23 @@ theorem direct_thunk (q : List Nat) (suspended : EffThunk)
   all_goals exact held
 
 /-- Stored-code producers use their existing closure proof at clear parameter frames. -/
-theorem direct_code (q : List Nat) (code : NCode)
-    (held : CodeClosure.Slots.CodeAt (PointAt q) (fun _ => True) code) : CodeAt q code :=
+theorem broad_code (q : List Nat) (code : NCode)
+    (held : CodeClosure.Slots.CodeAt (PointAt q) (fun _ => True) code) :
+    CodeClosure.Code (NameAt q) (ThunkAt q) code :=
   CodeClosure.code_mono (direct_name q) (direct_thunk q) code held
+
+/-- An ordinary callback retains its source annotation. -/
+theorem ordinary_name (q : List Nat) (callback : EffName) (held : OrdinaryNameAt q callback) : NameAt q callback := by
+  cases callback
+  case releaseUnder => exact held.elim
+  all_goals exact held
+
+/-- Stored embeddings use only store names, where the two callback roles agree. -/
+theorem embedded_code (q : List Nat) (program : Program)
+    (held : CodeClosure.Slots.CodeAt (PointAt q) (fun _ => True) (embed program)) : CodeAt q (embed program) := by
+  change CodeClosure.RoleCode (OrdinaryNameAt q) (NameAt q) (ThunkAt q) (embed program)
+  rw [CodeClosure.embedded_roles (OrdinaryNameAt q) (NameAt q) (ThunkAt q) (fun _ => rfl)]
+  exact broad_code q _ held
 
 /-- Ordinary source point changes preserve the existing parameter-frame list. -/
 theorem point_same (q : List Nat) (first second : Point)
@@ -86,13 +106,36 @@ theorem pointTransport (q : List Nat) : CodeClosure.Slots.Transport (PointAt q) 
   childWith := fun held _ _ => held
   capture := fun held _ _ => held
 
-/-- Compiler closure is shared; only its name and thunk conclusions widen. -/
+/-- Native asynchronous routing mints no release-start callback in an ordinary slot. -/
+theorem async_at (q : List Nat) (row : NativeOp) (request : Term) (point : Point) :
+    CodeAt q (asyncRoute row request point) := by
+  fun_cases asyncRoute row request point
+  all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [CodeAt, OrdinaryNameAt,
+    NameAt, CodeClosure.Slots.NameAt, CodeClosure.Qualified.NameAt,
+    CodeClosure.Slots.StoreNameAt, CodeClosure.Qualified.StoreNameAt, badShape])
+
+/-- The compiler supplies both callback roles through its existing minting contract. -/
+theorem role_contract (root : NativeEff) (q : List Nat) :
+    CodeClosure.RoleCompileContract root (PointAt q) (OrdinaryNameAt q) (NameAt q) (ThunkAt q) := by
+  have ordinary := CodeClosure.Slots.compile_contract root (PointAt q) (fun _ => True) (pointTransport q)
+  refine {
+    child := ordinary.child, body := ?_, pure := ?_, act := ?_, operation := ?_, asynchronous := ?_,
+    cont := ?_, caught := ?_, caughtError := ?_, onValue := ?_, onCause := ?_, fin := ?_,
+    forkScoped := ?_, acquire := ?_, service := ?_, provideService := ?_, provideContext := ?_,
+    getContext := ?_, captureMask := ?_, park := ?_ }
+  case refine_4 =>
+    intro p row request value op found held evaluated selected
+    exact direct_thunk q _ (ordinary.operation p row request value op found held evaluated selected)
+  case refine_5 => intro p row request found held; exact async_at q row request p
+  all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [NameAt, OrdinaryNameAt, ThunkAt,
+    CodeClosure.Slots.NameAt, CodeClosure.Qualified.NameAt, CodeClosure.Slots.ThunkAt,
+    CodeClosure.Qualified.ThunkAt, CodeClosure.Slots.RegionAt, CodeClosure.Qualified.RegionAt,
+    PointAt])
+
+/-- Compiler closure is shared; only its leaf annotations specialize. -/
 theorem compile_at (root : NativeEff) (q : List Nat) (effect : NativeEff) (point : Point)
     (found : Node.at_ (.eff root) point.path = some (.eff effect)) (held : PointAt q point) :
-    CodeAt q (compileEff effect point) :=
-  direct_code q _ (CodeClosure.compile_closure
-    (CodeClosure.Slots.compile_contract root (PointAt q) (fun _ => True) (pointTransport q))
-    effect point found held)
+    CodeAt q (compileEff effect point) := CodeClosure.compile_roles (role_contract root q) effect point found held
 
 /-- Resolution keeps the same parameter-frame annotation at its actual source node. -/
 theorem resolve_at (root : NativeEff) (q : List Nat) (point : Point) (held : PointAt q point) :
@@ -106,12 +149,12 @@ theorem resolve_at (root : NativeEff) (q : List Nat) (point : Point) (held : Poi
 theorem finalizer_at (q : List Nat) (fin : FinName) (exit : ExitV)
     (held : CodeClosure.Slots.FinAt (PointAt q) (fun _ => True) fin) :
     CodeAt q (embed (finProgram fin exit)) :=
-  direct_code q _ (CodeClosure.Slots.finProgram_at (PointAt q) (fun _ => True) fin exit held)
+  embedded_code q _ (CodeClosure.Slots.finProgram_at (PointAt q) (fun _ => True) fin exit held)
 
 /-- Actual stored programs reuse the existing recursive closure. -/
 theorem stored_at (q : List Nat) (program : ProgName)
     (held : CodeClosure.Slots.ProgAt (PointAt q) (fun _ => True) program) :
     CodeAt q (embed (progOf program)) :=
-  direct_code q _ (CodeClosure.Slots.progOf_at (PointAt q) (fun _ => True) program held)
+  embedded_code q _ (CodeClosure.Slots.progOf_at (PointAt q) (fun _ => True) program held)
 
 end Effect4.Program.FinalizerSource

@@ -31,7 +31,7 @@ theorem compile_layer (root : NativeEff) (q : List Nat) (layer : LayerTerm Nativ
   revert held
   fun_induction compileLayer layer point memo scope
   all_goals intro held
-  all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [CodeAt, NameAt, ThunkAt,
+  all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [CodeAt, OrdinaryNameAt, NameAt, ThunkAt,
     CodeClosure.Slots.NameAt, CodeClosure.Qualified.NameAt, CodeClosure.Slots.ThunkAt, CodeClosure.Qualified.ThunkAt, CodeClosure.Slots.OpAt, CodeClosure.Qualified.OpAt, CodeClosure.Qualified.EnvironmentWrites,
     current, cata_prim, name, thunk, successPush, exitPush,
     SourceScope.Opportunities.name, SourceScope.Opportunities.thunk, badShape, PointAt, Point.child])
@@ -94,7 +94,7 @@ theorem inner_layer (root : NativeEff) (q : List Nat) (point : Point)
     have child := resolve_layer root q (point.child 1) memo scope held
     exact ⟨⟨child.1, held⟩, child.2⟩
   case case7 => exact compile_layer root q _ point memo scope held
-  all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [CodeAt, NameAt, ThunkAt,
+  all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [CodeAt, OrdinaryNameAt, NameAt, ThunkAt,
     CodeClosure.Slots.NameAt, CodeClosure.Qualified.NameAt, CodeClosure.Slots.ThunkAt, CodeClosure.Qualified.ThunkAt, CodeClosure.Slots.OpAt, CodeClosure.Qualified.OpAt, CodeClosure.Qualified.EnvironmentWrites,
     current, cata_prim, name, thunk, successPush, exitPush,
     SourceScope.Opportunities.name, SourceScope.Opportunities.thunk, badShape])

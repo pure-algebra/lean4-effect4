@@ -23,8 +23,8 @@ def RecursiveChild : NativeEff → Nat → Prop
 
 /-- Local facts for every leaf that the actual compiler can mint.
 Consumer: `compile_closure`, shared by the source-point predicates. -/
-structure CompileContract (root : NativeEff) (point : Point → Prop)
-    (name : EffName → Prop) (thunk : EffThunk → Prop) : Prop where
+structure RoleCompileContract (root : NativeEff) (point : Point → Prop)
+    (name successName : EffName → Prop) (thunk : EffThunk → Prop) : Prop where
   child : ∀ p e i, Node.at_ (.eff root) p.path = some (.eff e) → point p →
     RecursiveChild e i → point (p.child i)
   body : ∀ p e, Node.at_ (.eff root) p.path = some (.eff e) → point p → thunk (.body p)
@@ -35,34 +35,34 @@ structure CompileContract (root : NativeEff) (point : Point → Prop)
     evalTerm p.env request = some value → row.syncOpOf p.env value = some op → thunk (.op op)
   asynchronous : ∀ p row request,
     Node.at_ (.eff root) p.path = some (.eff (.perform row request)) → point p →
-    Code name thunk (asyncRoute row request p)
-  cont : ∀ p first rest, Node.at_ (.eff root) p.path = some (.eff (.bind first rest)) → point p → name (.cont p)
+    RoleCode name successName thunk (asyncRoute row request p)
+  cont : ∀ p first rest, Node.at_ (.eff root) p.path = some (.eff (.bind first rest)) → point p → successName (.cont p)
   caught : ∀ p body handler, Node.at_ (.eff root) p.path = some (.eff (.catchCause body handler)) → point p → name (.caught p)
   caughtError : ∀ p test body handler, Node.at_ (.eff root) p.path = some (.eff (.catchIf test body handler)) → point p → name (.caughtError p)
   onValue : ∀ p body success failure, Node.at_ (.eff root) p.path = some (.eff (.matchCause body success failure)) → point p → name (.onValue p)
   onCause : ∀ p body success failure, Node.at_ (.eff root) p.path = some (.eff (.matchCause body success failure)) → point p → name (.onCause p)
   fin : ∀ p body finalizer, Node.at_ (.eff root) p.path = some (.eff (.onExit body finalizer)) → point p → name (.fin p)
-  forkScoped : ∀ p body options, Node.at_ (.eff root) p.path = some (.eff (.withFiber (.forkScoped body options))) → point p → name (.forkScopedIn p)
-  acquire : ∀ p acquire release, Node.at_ (.eff root) p.path = some (.eff (.acquireRelease acquire release)) → point p → name (.acquireCtx p)
-  service : ∀ key, name (.serviceLookup key)
+  forkScoped : ∀ p body options, Node.at_ (.eff root) p.path = some (.eff (.withFiber (.forkScoped body options))) → point p → successName (.forkScopedIn p)
+  acquire : ∀ p acquire release, Node.at_ (.eff root) p.path = some (.eff (.acquireRelease acquire release)) → point p → successName (.acquireCtx p)
+  service : ∀ key, successName (.serviceLookup key)
   provideService : ∀ p key value body actual,
     Node.at_ (.eff root) p.path = some (.eff (.provideService key value body)) → point p →
     evalTerm p.env value = some actual →
-    name (.provideMask (.provideService key actual) (.program (p.child 0)))
+    successName (.provideMask (.provideService key actual) (.program (p.child 0)))
   provideContext : ∀ p context body actual,
     Node.at_ (.eff root) p.path = some (.eff (.provideContext context body)) → point p →
     (evalTerm p.env context).bind Val.context? = some actual →
-    name (.provideMask (.provide actual.services) (.program (p.child 0)))
+    successName (.provideMask (.provide actual.services) (.program (p.child 0)))
   getContext : thunk .getCtx
   captureMask : thunk .captureMask
   park : ∀ kind, thunk (.park kind)
 
 /-- The compiler's generated-code predicate follows from its local minting contract. -/
-theorem compile_closure {root : NativeEff} {point : Point → Prop}
-    {name : EffName → Prop} {thunk : EffThunk → Prop}
-    (contract : CompileContract root point name thunk) (e : NativeEff) (p : Point)
+theorem compile_roles {root : NativeEff} {point : Point → Prop}
+    {name successName : EffName → Prop} {thunk : EffThunk → Prop}
+    (contract : RoleCompileContract root point name successName thunk) (e : NativeEff) (p : Point)
     (found : Node.at_ (.eff root) p.path = some (.eff e)) (held : point p) :
-    Code name thunk (compileEff e p) := by
+    RoleCode name successName thunk (compileEff e p) := by
   revert found held
   fun_induction compileEff e p
   case case10 =>
@@ -121,4 +121,15 @@ theorem compile_closure {root : NativeEff} {point : Point → Prop}
   all_goals intro found held
   all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [Prim.ofExit, frontier, badShape, updateContextAt]) (add safe apply [contract.body, contract.pure, contract.act,
       contract.forkScoped, contract.acquire, contract.service, contract.getContext, contract.captureMask, contract.park])
+/-- Existing source predicates use one annotation for both callback roles. -/
+abbrev CompileContract (root : NativeEff) (point : Point → Prop)
+    (name : EffName → Prop) (thunk : EffThunk → Prop) := RoleCompileContract root point name name thunk
+
+/-- The existing compiler closure is the equal-role instance of the single producer. -/
+theorem compile_closure {root : NativeEff} {point : Point → Prop}
+    {name : EffName → Prop} {thunk : EffThunk → Prop}
+    (contract : CompileContract root point name thunk) (e : NativeEff) (p : Point)
+    (found : Node.at_ (.eff root) p.path = some (.eff e)) (held : point p) :
+    Code name thunk (compileEff e p) := compile_roles contract e p found held
+
 end Effect4.Program.CodeClosure

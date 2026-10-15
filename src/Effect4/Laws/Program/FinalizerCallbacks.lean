@@ -18,7 +18,7 @@ theorem stored_value (root : NativeEff) (q : List Nat) (callback : Name) (value 
     (held : CodeClosure.Slots.StoreNameAt (PointAt q) (fun _ => True) callback) :
     CodeAt q (embed (Machine.contAOf callback value)) ∧
       current root q (embed (Machine.contAOf callback value)) = 0 := by
-  refine ⟨direct_code q _ (CodeClosure.Slots.store_contA_at _ _ callback value held), ?_⟩
+  refine ⟨embedded_code q _ (CodeClosure.Slots.store_contA_at _ _ callback value held), ?_⟩
   fun_cases Machine.contAOf callback value
   all_goals aesop (add norm simp [current, cata_prim, name, thunk, successPush, exitPush,
     SourceScope.Opportunities.name, SourceScope.Opportunities.thunk, embed, Prim.ofExit,
@@ -28,7 +28,7 @@ theorem stored_value (root : NativeEff) (q : List Nat) (callback : Name) (value 
 theorem stored_cause (root : NativeEff) (q : List Nat) (callback : Name) (cause : CauseV) :
     CodeAt q (embed (Machine.contEOf callback cause)) ∧
       current root q (embed (Machine.contEOf callback cause)) = 0 := by
-  refine ⟨direct_code q _ (CodeClosure.Slots.store_contE_at _ _ callback cause), ?_⟩
+  refine ⟨embedded_code q _ (CodeClosure.Slots.store_contE_at _ _ callback cause), ?_⟩
   fun_cases Machine.contEOf callback cause
   all_goals aesop (add norm simp [current, cata_prim, name, thunk, successPush, exitPush,
     SourceScope.Opportunities.name, SourceScope.Opportunities.thunk, embed, Prim.ofExit])
@@ -38,7 +38,7 @@ theorem provide_with_at (root : NativeEff) (q : List Nat) (point : Point)
     (scope : Nat) (held : PointAt q point) : CodeAt q (provideLayerWithK root point scope) := by
   unfold provideLayerWithK
   repeat' split
-  all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [CodeAt, NameAt, ThunkAt,
+  all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [CodeAt, OrdinaryNameAt, NameAt, ThunkAt,
     CodeClosure.Slots.NameAt, CodeClosure.Qualified.NameAt, CodeClosure.Slots.ThunkAt, CodeClosure.Qualified.ThunkAt, CodeClosure.Slots.OpAt, CodeClosure.Qualified.OpAt,
     CodeClosure.Qualified.EnvironmentWrites, PointAt, Point.layerBuild,
     Point.child, badShape])
@@ -48,7 +48,7 @@ theorem provide_body_at (root : NativeEff) (q : List Nat) (point : Point)
     (value : Val) (held : PointAt q point) : CodeAt q (provideLayerBodyK root point value) := by
   unfold provideLayerBodyK
   repeat' split
-  all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [CodeAt, NameAt, ThunkAt,
+  all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [CodeAt, OrdinaryNameAt, NameAt, ThunkAt,
     RegionAt, CodeClosure.Slots.NameAt, CodeClosure.Qualified.NameAt, CodeClosure.Slots.ThunkAt, CodeClosure.Qualified.ThunkAt, updateContextAt,
     PointAt, Point.child, badShape, Prim.ofExit]) (add safe cases [Exit])
 
@@ -104,7 +104,7 @@ theorem value_callback (root : NativeEff) (q : List Nat) (callback : EffName) (v
     split
     · exact ⟨⟨⟨trivial, held⟩, trivial⟩, Nat.le_refl _⟩
     · exact ⟨trivial, Nat.le_refl _⟩
-  all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [CodeAt, NameAt, ThunkAt,
+  all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [CodeAt, OrdinaryNameAt, NameAt, ThunkAt,
     RegionAt, CodeClosure.Slots.NameAt, CodeClosure.Qualified.NameAt, CodeClosure.Slots.ThunkAt, CodeClosure.Qualified.ThunkAt, CodeClosure.Slots.StoreNameAt, CodeClosure.Qualified.StoreNameAt,
     CodeClosure.Slots.StoreThunkAt, CodeClosure.Qualified.StoreThunkAt, CodeClosure.Slots.OpAt, CodeClosure.Qualified.OpAt, CodeClosure.Slots.FinAt, CodeClosure.Qualified.FinAt,
     CodeClosure.Qualified.EnvironmentWrites,
@@ -126,7 +126,7 @@ theorem cause_callback (root : NativeEff) (q : List Nat) (callback : EffName) (c
   case case2 point test body handler found value answer =>
     exact ⟨resolve_at root q _ held, resolve_le root q (point.childWith 1 value)⟩
   case case5 point => exact ⟨resolve_at root q _ held, resolve_le root q (point.childWith 2 (.exitErr cause))⟩
-  all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [CodeAt, NameAt,
+  all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [CodeAt, OrdinaryNameAt, NameAt,
     CodeClosure.Slots.NameAt, CodeClosure.Qualified.NameAt, current, cata_prim, name, SourceScope.Opportunities.name,
     Prim.ofExit]) (add safe forward [(stored_cause root q)])
 

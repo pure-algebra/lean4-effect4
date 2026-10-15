@@ -80,7 +80,7 @@ theorem suspended (root : NativeEff) (q : List Nat) (suspension : EffThunk)
     rw [parameter_resolve_zero root q point top rest site params held
       (List.mem_of_getElem? selected) value]
     exact Nat.zero_le _
-  all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [CodeAt, NameAt, ThunkAt,
+  all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [CodeAt, OrdinaryNameAt, NameAt, ThunkAt,
     CodeClosure.Slots.NameAt, CodeClosure.Qualified.NameAt, CodeClosure.Slots.ThunkAt,
     CodeClosure.Qualified.ThunkAt, CodeClosure.Slots.StoreThunkAt, CodeClosure.Qualified.StoreThunkAt,
     CodeClosure.Slots.FinAt, CodeClosure.Qualified.FinAt, CodeClosure.Qualified.OpAt,
