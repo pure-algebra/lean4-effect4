@@ -99,4 +99,19 @@ theorem PendingNativeCut.settlement (spec : Spec) (fragment : SourceScope.Fragme
   | stuck why =>
     simp only [settleOutcome, outcome]
     exact PendingConfiguration.fields spec fragment _ _ stopped rfl rfl rfl
+/-- A real pending loop command settles in the same configuration or reaches actual application entry. -/
+theorem pending_loop_or_entry (spec : Spec) (fragment : SourceScope.Fragment spec.root)
+    (machine : NativeMachine) (fiber : SourceScope.SourceFiber) (yielding : Bool)
+    (before : PendingConfiguration spec fragment machine) (found : machine.fiber? fiber.id = some fiber)
+    (unparked : fiber.parked = .notParked) (rest : List SourceScope.SourceCommand) :
+    let result := iteration (evaluator := evaluatorFor spec.root spec.table) (interpOf spec.root spec.table) machine fiber yielding
+    (PendingNativeCut spec fragment machine fiber result ∧
+      PendingConfiguration spec fragment (settle fiber.id rest result).1) ∨
+      EntryRun spec fragment machine fiber yielding result := by
+  have member := RunMachine.mem_of_fiber? found
+  obtain ⟨input, output, current, saved⟩ := before.frames fiber member
+  rcases pending_iteration_cut_or_entry spec fragment machine fiber yielding input output current saved before.frames before.heap unparked with cut | entry
+  · exact .inl ⟨cut, cut.settlement spec fragment machine fiber _ before member fiber.id rest⟩
+  · exact .inr entry
+
 end Effect4.Program.AnswerSlots.AllocationAdapter

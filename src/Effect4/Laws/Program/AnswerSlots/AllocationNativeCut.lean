@@ -52,6 +52,46 @@ theorem pending_native_cut_or_entry (spec : Spec) (fragment : SourceScope.Fragme
   · rw [same]
     exact Moves.evaluatePrim_quiet (interpAt spec.root machine.completedExits spec.table) machine fiber yielding ordinary.1 ordinary.2.1
 
+/-- The common iteration walk retains the joint pending cut through charging and yield injection. -/
+theorem pending_iteration_cut_or_entry (spec : Spec) (fragment : SourceScope.Fragment spec.root)
+    (machine : NativeMachine) (fiber : SourceScope.SourceFiber) (yielding : Bool)
+    (input output : Kind spec.stable.Kind)
+    (owned : CodeAt spec ⟨fiber.id, machine.state, false⟩ input fiber.frame.current)
+    (saved : Effect4.Contracts.Path (Edge spec fragment ⟨fiber.id, machine.state, false⟩) input output fiber.frame.stack)
+    (held : FramesAt spec fragment false machine) (heap : HeapPrefix spec machine.state)
+    (unparked : fiber.parked = .notParked) :
+    let result := iteration (evaluator := evaluatorFor spec.root spec.table) (interpOf spec.root spec.table) machine fiber yielding
+    PendingNativeCut spec fragment machine fiber result ∨ EntryRun spec fragment machine fiber yielding result := by
+  let Post := fun result : Moves.NIteration =>
+    HeapPrefix spec result.machine.state ∧ result.machine.nextId = machine.nextId ∧
+    AnswerFlow.IterFlows (fun world _ => PendingFrame spec fragment world)
+      (fun state id => ⟨id, state, false⟩) result ∧
+    PendingWaits spec fragment ⟨result.fiber.id, result.machine.state, false⟩ result.fiber ∧
+    Moves.QuietEffects result
+  have admitted : (countOp (runloopTop fiber)).parked = .notParked := by
+    unfold countOp runloopTop
+    split <;> exact unparked
+  have localNative : ∀ actual actor y first last,
+      (actual.nextId = machine.nextId ∧ actor.parked = .notParked) →
+      CodeAt spec ⟨actor.id, actual.state, false⟩ first actor.frame.current →
+      Effect4.Contracts.Path (Edge spec fragment ⟨actor.id, actual.state, false⟩) first last actor.frame.stack →
+      FramesAt spec fragment false actual → HeapPrefix spec actual.state →
+      Post (evaluateNative spec.root actual actor y spec.table) ∨
+        ∃ point, first = .stable spec.stable.rootKind ∧ actor.frame.current = resolve spec.root point ∧
+          Entry spec ⟨actor.id, actual.state, false⟩ point := by
+    intro actual actor y first last permission current suffix frames contents
+    rcases pending_native_cut_or_entry spec fragment actual actor y first last current suffix frames contents permission.2 with cut | entry
+    · exact .inl ⟨cut.heap, cut.counter.trans permission.1, cut.flows, cut.waits, cut.effects⟩
+    · exact .inr entry
+  rcases pending_iteration_of_native spec fragment Post
+    (fun actual actor _ => actual.nextId = machine.nextId ∧ actor.parked = .notParked)
+    localNative machine fiber yielding input output owned saved held heap
+    ⟨⟨rfl, admitted⟩, ⟨rfl, admitted⟩⟩ with result | entry
+  · exact .inl ⟨result.1, result.2.1, result.2.2.1, result.2.2.2.1,
+      Moves.iteration_footprint spec.root spec.table (interpOf spec.root spec.table) machine fiber yielding,
+      result.2.2.2.2⟩
+  · exact .inr entry
+
 /-- Before entry every updated stored row is the actual returned root fiber. -/
 theorem PendingNativeCut.rows (spec : Spec) (fragment : SourceScope.Fragment spec.root)
     (machine : NativeMachine) (fiber : SourceScope.SourceFiber) (result : Moves.NIteration)
