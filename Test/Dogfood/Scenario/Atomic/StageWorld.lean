@@ -82,6 +82,7 @@ theorem markCleaned_future (world : World) (id : Nat) (positive : Bool) :
 inductive Kind
   | ordinary
   | rootAnswer (binder : Nat)
+  | rootPause (counter : Nat)
   | waiting (id : Nat)
   | seen (id : Nat)
   | decision (id : Nat)
@@ -96,6 +97,7 @@ inductive Kind
 Consumer: the actual decision continuation's saved-answer contract. -/
 def ValueAt (world : World) : Kind → Val → Prop
   | .ordinary, _ => True
+  | .rootPause counter, _ => world.nextId = counter
   | .paused id _ stage cleaned, _ => world.stages id = stage ∧ world.cleaned id = cleaned
   | .rootAnswer binder, value =>
     world.nextId = RootSlots.rank (binder + 1) ∧ RootSlots.Answer binder value

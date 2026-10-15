@@ -43,16 +43,24 @@ def FrameAt (root : NativeEff) (table : RowTable) (owner : Nat) (world : StageWo
   ∃ input, CodeAt root table owner world input frame.current ∧
     Effect4.Contracts.Path (Edge root table owner world) input (.finalized owner) frame.stack
 
+/-- Keeping this owner's two stage fields retypes its actual frame at the supplied future world. -/
+theorem frame_rebase (root : NativeEff) (table : RowTable) (owner : Nat)
+    (before after : StageWorld.World) (future : Future before after)
+    (stage : before.stages owner = after.stages owner) (cleaned : before.cleaned owner = after.cleaned owner)
+    (frame : FrameFiber EffName EffThunk Val Err Defect FiberId Ann) (held : FrameAt root table owner before frame) :
+    FrameAt root table owner after frame := by
+  obtain ⟨input, code, saved⟩ := held
+  exact ⟨input, code_other root table owner before input _ code after future stage cleaned
+    (path_input_owned root table owner before input _ _ saved rfl),
+    saved.map (edge_future root table owner before after future)⟩
+
 /-- A different request's actual write retypes this whole frame at the same new world. -/
 theorem frame_other (root : NativeEff) (table : RowTable) (owner acting : Nat)
     (before after : StageWorld.World) (future : Future before after) (change : RequestChange before after acting)
     (different : owner ≠ acting) (frame : FrameFiber EffName EffThunk Val Err Defect FiberId Ann)
     (held : FrameAt root table owner before frame) : FrameAt root table owner after frame := by
-  obtain ⟨input, code, saved⟩ := held
   obtain ⟨stage, cleaned⟩ := change.2 owner different
-  exact ⟨input, code_other root table owner before input _ code after future stage cleaned
-    (path_input_owned root table owner before input _ _ saved rfl),
-    saved.map (edge_future root table owner before after future)⟩
+  exact frame_rebase root table owner before after future stage cleaned frame held
 
 /-- An actual request sync answer retains the whole saved suffix at its chosen heap world. -/
 theorem sync_frame (root : NativeEff) (table : RowTable) (owner : Nat) (member : owner ∈ requests)

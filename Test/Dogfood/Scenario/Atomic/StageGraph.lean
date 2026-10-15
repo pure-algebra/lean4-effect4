@@ -19,7 +19,7 @@ open StageWorld
 /-- Request answer classes name the same owner as the current source role. -/
 def Owns (owner : Nat) : StageWorld.Kind → Prop
   | .waiting id | .seen id | .decision id | .deposit id | .body id | .finalized id | .note id | .cleanup id => owner = id
-  | .ordinary | .rootAnswer _ => False
+  | .ordinary | .rootAnswer _ | .rootPause _ => False
   | .paused id incoming _ _ => owner = id ∧ Owns owner incoming
 
 /-- A failed body installs its merge wrapper; a successful body restores after cleanup directly. -/
