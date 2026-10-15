@@ -457,3 +457,31 @@ Commands, through the shared `lean-slot.sh`:
 The audit reports 318 declarations within `[propext, Quot.sound]`, zero modulo goals, and zero planned goals.
 Evidence: [the audit](evidence/FrameFundingAudit.lean) and [its output](evidence/frame-funding-audit.log).
 The two log goals remain proved. The other six M3 goals, M1, and M2 remain open.
+
+
+## Constructor correlations in the shared callback family
+
+The full finalizer history remains open. The sequencing producer now takes the exact registration-body relation.
+Base: `04609f0fe`. Head: the commit containing this section.
+
+`CodeClosure.PredicateFamily` owns saved-family and head closure for a supplied predicate on actual code.
+`CodeClosure.Family` supplies the existing leaf instance. Its duplicate walks are removed.
+`CodeClosure.Correlated` retains each existing child beside its local relation through the generated fold.
+`ReleaseCustody.NativeSequencing` consumes the exact scope-registration template. Existing source callers use it as an instance.
+
+Placement: scope-lifetime-finalization, R11, serving `FinalizerRun.once_placed_outside_census`.
+Consumer: full-source release custody.
+Reach: actual native evaluator outputs with the registration template and the existing saved-stack sequencing premise.
+These local facts establish no command history, progress, or host agreement.
+
+Changed files: `CodeClosure/{Correlated,PredicateFamily,Family}.lean` and `ReleaseCustody/NativeSequencing.lean` under `src/Effect4/Laws/Program/`.
+
+Commands through `lean-slot.sh`:
+
+- `lake build Effect4.Laws.Program.CodeClosure.Family`: passed, 248 jobs.
+- `lake build Effect4.Laws.Program.ReleaseCustody.LoopCommand Effect4.Laws.Program.ReleaseCustody.NativeIterationDebit`: passed, 644 jobs.
+- `lake env lean /private/tmp/TemplateAudit.lean`: passed.
+
+The audit reports 278 declarations within `[propext, Quot.sound]`, zero modulo goals, and zero planned goals.
+Evidence: [the audit](evidence/TemplateAudit.lean) and [its output](evidence/template-audit.log).
+The two log goals remain proved. The other six M3 goals, M1, and M2 remain open.

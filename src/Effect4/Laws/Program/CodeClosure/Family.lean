@@ -1,5 +1,5 @@
 import Effect4.Laws.Program.CodeClosure.Predicate
-import Effect4.Laws.Program.AnswerSlots.Stable
+import Effect4.Laws.Program.CodeClosure.PredicateFamily
 
 /-!
 Concept: store-typing R4 and scope-lifetime-finalization R11.
@@ -105,69 +105,57 @@ theorem source_path_owned (names successNames : EffName → Prop) (thunks : EffT
     · rw [same]; exact head
     · exact ih code rest
 
-/-- Every actual callback view supplies the common saved-frame obligations. -/
-theorem source_family (root : NativeEff) (table : RowTable) (names successNames : EffName → Prop) (thunks : EffThunk → Prop)
-    (hooks : Hooks root table names successNames thunks) (view) :
-    AnswerFlow.SavedFamily ((sourceSpec root table names successNames thunks).model view)
-      (interpAt root view table).toPrimInterp (sourceEdge names successNames thunks) := by
-  constructor
-  · intros; trivial
-  · intros; trivial
-  · intro world input output frame held nextWorld future value provided next pushed good supplied absent actual
-    obtain ⟨code, stack⟩ := source_armA root table names successNames thunks hooks view frame value provided next pushed held actual
-    cases output
-    exact ⟨(), code, source_path names successNames thunks pushed stack⟩
-  · intro world input output frame held nextWorld future cause provided next pushed good supplied absent actual
-    obtain ⟨code, stack⟩ := source_armE root table names successNames thunks hooks view frame cause provided next pushed held actual
-    cases output
-    exact ⟨(), code, source_path names successNames thunks pushed stack⟩
-  · intro world input output frame held nextWorld future exit next good installed
+/-- The leaf annotation supplies the generic constructor-aware callback contract. -/
+theorem predicateRules (root : NativeEff) (table : RowTable) (names successNames : EffName → Prop)
+    (thunks : EffThunk → Prop) (hooks : Hooks root table names successNames thunks) :
+    PredicateFamily.Rules root table (RoleCode names successNames thunks) where
+  success := fun _ => trivial
+  failure := fun _ => trivial
+  mask := fun _ => trivial
+  children := by
+    intro code held
+    cases code
+    all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [PredicateFamily.Children])
+  suspend := by
+    intro view thunk held
+    rcases held with held | held
+    all_goals exact hooks.suspend view thunk held
+  value := source_armA root table names successNames thunks hooks
+  cause := source_armE root table names successNames thunks hooks
+  loopContinue := by
+    intro view callback cursor next body held found
+    have supplied := hooks.loopEnter view callback cursor held
+    rw [found] at supplied
+    exact ⟨supplied, held⟩
+  loopFinish := by
+    intro view callback cursor body held found
+    have supplied := hooks.loopEnter view callback cursor held
+    rw [found] at supplied
+    exact supplied
+  finalizer := by
+    intro view frame exit next held installed
     cases frame
     case onExit body name flag =>
-      change Option.map (finalizerCode (interpAt root view table) exit)
-        ((interpAt root view table).finalizerProgram name exit) = some next at installed
       obtain ⟨program, found, equal⟩ := Option.map_eq_some_iff.mp installed
       rw [← equal]
       exact hooks.restore view exit program (hooks.finalizer view name exit program held.2 found)
     all_goals cases installed
-  · intros; trivial
+
+/-- Every actual callback view supplies the common saved-frame obligations. -/
+theorem source_family (root : NativeEff) (table : RowTable) (names successNames : EffName → Prop) (thunks : EffThunk → Prop)
+    (hooks : Hooks root table names successNames thunks) (view) :
+    AnswerFlow.SavedFamily ((sourceSpec root table names successNames thunks).model view)
+      (interpAt root view table).toPrimInterp (sourceEdge names successNames thunks) :=
+  PredicateFamily.family root table (RoleCode names successNames thunks)
+    (predicateRules root table names successNames thunks hooks) view
 
 /-- Every permitted current head consumes the same stable binding class. -/
 theorem source_head (root : NativeEff) (table : RowTable) (names successNames : EffName → Prop) (thunks : EffThunk → Prop)
     (hooks : Hooks root table names successNames thunks) (view) (code : NCode) (owned : RoleCode names successNames thunks code) :
     AnswerFlow.HeadAt ((sourceSpec root table names successNames thunks).model view)
-      (interpAt root view table).toPrimInterp (sourceEdge names successNames thunks) () () code := by
-  cases code
-  case success value => exact .success value trivial
-  case failure cause => exact .failure cause trivial
-  case sync thunk => exact .sync thunk trivial
-  case suspend thunk => exact .suspend thunk (hooks.suspend view thunk owned)
-  case withFiber thunk => exact .withFiber thunk (hooks.suspend view thunk owned)
-  case yieldableError error => exact .yieldableError error trivial
-  case iterator name cursor =>
-    refine .iterator name cursor owned ?_
-    intro next pushed actual
-    obtain ⟨code, slots⟩ := source_armA root table names successNames thunks hooks view _ cursor none next pushed owned actual
-    exact ⟨(), code, source_path names successNames thunks pushed slots⟩
-  case whileLoop name cursor =>
-    have slots := hooks.loopEnter view name cursor owned
-    refine .whileLoop name cursor ?_ ?_
-    · intro next body actual
-      rw [actual] at slots
-      exact ⟨(), slots, .cons owned (.nil ())⟩
-    · intro body actual
-      rw [actual] at slots
-      exact ⟨(), slots, .nil ()⟩
-  case onSuccess body name => exact .onSuccess () body name owned.1 owned
-  case onSuccessConst body next => exact .onSuccessConst () body next owned.1 owned
-  case onFailure body name => exact .onFailure () body name owned.1 owned
-  case onSuccessAndFailure body success failure => exact .onSuccessAndFailure () body success failure owned.1 owned
-  case exitFrame body => exact .exitFrame () body owned owned
-  case onExit body name flag => exact .onExit () body name flag owned.1 owned
-  case yieldNowWith priority => exact .yieldNowWith priority owned
-  case async register signal cancel => exact .async register signal cancel owned
-  case setInterruptible flag => exact .setInterruptible flag trivial
-  case asyncFinalizer name => exact .asyncFinalizer name trivial
+      (interpAt root view table).toPrimInterp (sourceEdge names successNames thunks) () () code :=
+  PredicateFamily.head root table (RoleCode names successNames thunks)
+    (predicateRules root table names successNames thunks hooks) view code owned
 
 /-- The existing stable interface accepts the shared point annotation at every actual view. -/
 def sourceLaws (root : NativeEff) (table : RowTable) (names successNames : EffName → Prop) (thunks : EffThunk → Prop)
