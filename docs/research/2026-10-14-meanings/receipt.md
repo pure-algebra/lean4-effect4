@@ -176,3 +176,57 @@ Existing meaning and prefix module audit output:
 No behavior gate is reached because executable definitions remain unchanged.
 `make gen-semantics` does not run because no registry, placement or planned goal changes.
 The finish criteria remain unmet; this receipt records the packet's required stop.
+
+
+## Revised M3: shared crew consolidation
+
+The eight application goals remain open at this checkpoint.
+The shared crew history now has checked source instances; the complete initialized driver remains its premise.
+
+Base: `c42cb5f24`.
+Implementation head: `82f809d6b`.
+The commit changes 26 files, with 1571 insertions and 1867 deletions, as `git commit` reports.
+
+`CrewLogs.history` in `src/Effect4/Laws/Program/CrewLogs.lean` serves both crew log goals under R4 and R11.
+Its membership proof uses `command_refTransfer` through `RefInvariant.history` in `src/Effect4/Laws/Program/NativeRefInvariant.lean`.
+Its count proof uses `ReleaseWriter.history_funded` in `src/Effect4/Laws/Program/ReleaseWriter/History.lean`.
+Both proofs consume the same actual synchronous write observation.
+The log reader uses the native list view, matching the append operation's reader.
+The application observations still read their list-valued reference cells.
+
+`WorkersFlow.initializedSpec` in `Test/Dogfood/Proofs/WorkersFlow.lean` replaces the separate Workers initialization model.
+`WorkersLogContract.contract` and `QueueWorkersLogContract.contract` supply the concrete write contracts in their respective proof files.
+Their source censuses cover every reference writer and every job total.
+The contracts retain the initialized environment and protected acquired-identity premises.
+They establish no history, progress, or host agreement by themselves.
+
+The commit deletes `WorkersSlots`, `WorkersNativeSlots`, `WorkersCapturedSlots`, `WorkersConnections`, `WorkersExclusivity`, `WorkersWriters`, and `WorkersWriterCensus`.
+Their former consumers use the shared model and uniform source instances.
+`PlaceFunding.Flow` owns the guarded producers; the original producers become instances.
+`FlowGuarded` retains only its import for earlier evidence.
+
+The narrow build runs these exact targets through the shared Lean slot:
+
+```sh
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake build \
+  Test.Dogfood.Proofs.QueueWorkersLogContract \
+  Test.Dogfood.Proofs.WorkersLogContract
+```
+
+Result: 1343 jobs, successful.
+The retained build output is `evidence/crew-consolidation-build.log`.
+The audit imports the landing's 17 modules, then runs `#axiom_audit` over those modules.
+The retained command file is `evidence/CrewConsolidationAudit.lean`.
+
+```sh
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake env lean \
+  docs/research/2026-10-14-meanings/evidence/CrewConsolidationAudit.lean
+```
+
+```text
+#axiom_audit: 465 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
+
+The axiom output is retained in `evidence/crew-consolidation-audit.log`.
+The landing changes proof definitions and proofs; it changes no executable machine or source-program behavior.
+M1 and M2 remain pending after M3.

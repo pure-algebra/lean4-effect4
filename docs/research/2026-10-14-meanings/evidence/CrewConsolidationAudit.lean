@@ -1,0 +1,19 @@
+import Effect4.Laws.Program.PlaceFunding.Flow
+import Effect4.Laws.Program.PlaceFunding.FlowGuarded
+import Effect4.Laws.Program.PlaceFunding.Native
+import Effect4.Laws.Program.ReleaseWriter.Weights
+import Effect4.Laws.Program.ReleaseWriter.Primitive
+import Effect4.Laws.Program.ReleaseWriter.Native
+import Effect4.Laws.Program.ReleaseWriter.Iteration
+import Effect4.Laws.Program.ReleaseWriter.History
+import Effect4.Laws.Program.NativeRefInvariant
+import Effect4.Laws.Program.CrewLogs
+import Effect4.Laws.Program.CrewLogs.Writes
+import Effect4.Laws.Program.CrewLogs.Initialized
+import Test.Dogfood.Proofs.WorkersFlow
+import Test.Dogfood.Proofs.WorkersWriterSource
+import Test.Dogfood.Proofs.WorkersLogValues
+import Test.Dogfood.Proofs.WorkersLogContract
+import Test.Dogfood.Proofs.QueueWorkersLogContract
+import ProofGraph.AxiomAudit
+#axiom_audit Effect4.Laws.Program.PlaceFunding.Flow Effect4.Laws.Program.PlaceFunding.FlowGuarded Effect4.Laws.Program.PlaceFunding.Native Effect4.Laws.Program.ReleaseWriter.Weights Effect4.Laws.Program.ReleaseWriter.Primitive Effect4.Laws.Program.ReleaseWriter.Native Effect4.Laws.Program.ReleaseWriter.Iteration Effect4.Laws.Program.ReleaseWriter.History Effect4.Laws.Program.NativeRefInvariant Effect4.Laws.Program.CrewLogs Effect4.Laws.Program.CrewLogs.Writes Effect4.Laws.Program.CrewLogs.Initialized Test.Dogfood.Proofs.WorkersFlow Test.Dogfood.Proofs.WorkersWriterSource Test.Dogfood.Proofs.WorkersLogValues Test.Dogfood.Proofs.WorkersLogContract Test.Dogfood.Proofs.QueueWorkersLogContract

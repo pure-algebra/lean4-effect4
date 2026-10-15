@@ -1,0 +1,4 @@
+✔ [1341/1343] Built Test.Dogfood.Proofs.WorkersLogValues (4.3s)
+✔ [1342/1343] Built Test.Dogfood.Proofs.WorkersLogContract (1.9s)
+✔ [1343/1343] Built Test.Dogfood.Proofs.QueueWorkersLogContract (11s)
+Build completed successfully (1343 jobs).
