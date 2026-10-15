@@ -1,4 +1,6 @@
-import Effect4.Laws.Program.FinalizerPlacement
+import Effect4.Laws.Program.FinalizerGenerator
+import Effect4.Laws.Program.CodeClosure.Compile
+import Effect4.Laws.Program.CodeClosure.Weights
 import Effect4.Laws.Program.SourceOpportunityFrames
 import Effect4.Laws.Machine.PlaceLedger
 
@@ -21,6 +23,9 @@ def releaseWeight (q path : List Nat) : Nat := SourceScope.Opportunities.below q
 
 /-- Release custody owns foreign captures before their actual release-start push. -/
 def name (q : List Nat) : EffName → Nat
+  | .gen point pc _ => FinalizerGenerator.remaining q (point.path ++ [0]) pc
+  | .provideLayerWith point | .provideLayerBody point =>
+      SourceScope.Opportunities.below q (point.path ++ [1])
   | .afterScopeAdd _ _ | .releaseUnder _ _ _ => 0
   | callback => SourceScope.Opportunities.name q callback
 
@@ -86,9 +91,28 @@ def ledger (root : NativeEff) (q : List Nat) :
   consumed := fun | .frame _ event => consumedFrame q event | _ => 0
   produced := fun | .frame _ event => producedFrame q event | _ => 0
 
+/-- The compiler leaves delayed generator and layer callbacks in their suspension.
+Consumer: the existing compiler closure transfers its lexical bound to the full source weights. -/
+private def CompilerName : EffName → Prop
+  | .gen _ _ _ | .provideLayerWith _ | .provideLayerBody _ => False
+  | _ => True
+
+private theorem compiler_contract (root : NativeEff) :
+    CodeClosure.CompileContract root (fun _ => True) CompilerName (fun _ => True) := by
+  constructor
+  case asynchronous =>
+    intro point row request _ _
+    unfold asyncRoute
+    repeat' split
+    all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [CompilerName, badShape])
+  all_goals intros
+  all_goals trivial
+
 /-- Native names retain no more active source opportunity than the original lexical projection. -/
-theorem name_le (q : List Nat) (callback : EffName) : name q callback ≤ SourceScope.Opportunities.name q callback := by
+private theorem name_le (q : List Nat) (callback : EffName) (held : CompilerName callback) :
+    name q callback ≤ SourceScope.Opportunities.name q callback := by
   cases callback
+  case gen | provideLayerWith | provideLayerBody => exact held.elim
   case afterScopeAdd => exact Nat.zero_le _
   case releaseUnder => exact Nat.zero_le _
   all_goals exact Nat.le_refl _
@@ -110,10 +134,11 @@ theorem thunk_le (root : NativeEff) (q : List Nat) (suspended : EffThunk) :
   all_goals exact Nat.le_refl _
 
 /-- The registration template retains its descendant once, across its push and callback slots. -/
-theorem callback_le (q : List Nat) (callback : EffName) :
+private theorem callback_le (q : List Nat) (callback : EffName) (held : CompilerName callback) :
     name q callback + successPush q callback ≤
       SourceScope.Opportunities.name q callback + SourceScope.Opportunities.push q (.onSuccess (.success .unit) callback) := by
   cases callback
+  case gen | provideLayerWith | provideLayerBody => exact held.elim
   case afterScopeAdd acquired fin =>
     cases fin <;> simp only [name, successPush, SourceScope.Opportunities.name, SourceScope.Opportunities.push, SourceScope.Opportunities.fin, releaseWeight, Nat.zero_add]
     all_goals omega
@@ -121,40 +146,38 @@ theorem callback_le (q : List Nat) (callback : EffName) :
   all_goals simp only [name, successPush, SourceScope.Opportunities.push, Nat.add_zero]
   all_goals exact Nat.le_refl _
 
-/-- The source-only current weight is bounded by the existing compiler opportunity bound. -/
-theorem current_le (root : NativeEff) (q : List Nat) (code : NCode) :
-    current root q code ≤ SourceScope.Opportunities.current root q code := by
-  induction code with
-  | success | failure | yieldableError | setInterruptible | yieldNowWith => exact Nat.le_refl _
-  | sync suspended | suspend suspended | withFiber suspended => exact thunk_le root q suspended
-  | iterator callback cursor | whileLoop callback cursor | asyncFinalizer callback => exact name_le q callback
-  | onSuccess body callback ih =>
-    have bounded := callback_le q callback
-    change current root q body + name q callback + successPush q callback ≤
-      SourceScope.Opportunities.current root q body + SourceScope.Opportunities.name q callback + SourceScope.Opportunities.push q (.onSuccess (.success .unit) callback)
-    omega
-  | onSuccessConst body next ihBody ihNext => exact Nat.add_le_add ihBody ihNext
-  | onFailure body callback ih => exact Nat.add_le_add ih (name_le q callback)
-  | onSuccessAndFailure body success failure ih =>
-    exact Nat.add_le_add (Nat.add_le_add ih (name_le q success)) (name_le q failure)
-  | exitFrame body ih => exact ih
-  | onExit body callback flag ih =>
-    have bounded := name_le q callback
-    have same : exitPush q callback flag = SourceScope.Opportunities.push q (.onExit (.success .unit) callback flag) := by
-      cases callback <;> rfl
-    change current root q body + name q callback + exitPush q callback flag ≤
-      SourceScope.Opportunities.current root q body + SourceScope.Opportunities.name q callback + SourceScope.Opportunities.push q (.onExit (.success .unit) callback flag)
-    rw [same]
-    omega
-  | async register signal cancel =>
-    cases cancel with
-    | none => exact Nat.le_refl _
-    | some callback => exact name_le q callback
+/-- The existing compiler certificate transfers the lexical bound to the full source reading.
+Consumer: initial funding and every later source resolution. No second compiler walk is needed. -/
+theorem compile_le (root : NativeEff) (q : List Nat) (program : NativeEff) (point : Point)
+    (found : Node.at_ (.eff root) point.path = some (.eff program)) :
+    current root q (compileEff program point) ≤ SourceScope.Opportunities.below q point.path := by
+  have closed := CodeClosure.compile_closure (compiler_contract root) program point found True.intro
+  have bounds : CodeClosure.WeightBound (nativeWeights root q)
+      (SourceScope.Opportunities.nativeWeights root q) CompilerName (fun _ => True) := by
+    constructor
+    · intro callback held
+      exact name_le q callback held
+    · intro callback held
+      exact callback_le q callback held
+    · intro callback flag held
+      have same : exitPush q callback flag =
+          SourceScope.Opportunities.push q (.onExit (.success .unit) callback flag) := by
+        cases callback <;> rfl
+      change name q callback + exitPush q callback flag ≤ _
+      rw [same]
+      exact Nat.add_le_add_right (name_le q callback held) _
+    · intro suspended _
+      exact thunk_le root q suspended
+  exact Nat.le_trans (CodeClosure.weight_le bounds _ closed)
+    (SourceScope.Opportunities.compile_le root q program point found)
 
-/-- Every actual source resolution starts with at most its lexical source opportunity. -/
+/-- Every actual source resolution retains its selected-source bound at its existing address. -/
 theorem resolve_le (root : NativeEff) (q : List Nat) (point : Point) :
-    current root q (resolve root point) ≤ SourceScope.Opportunities.below q point.path :=
-  Nat.le_trans (current_le root q _) (SourceScope.Opportunities.resolve_le root q point)
+    current root q (resolve root point) ≤ SourceScope.Opportunities.below q point.path := by
+  unfold resolve
+  split
+  · exact compile_le root q _ point (by assumption)
+  · exact Nat.zero_le _
 
 /-- Administrative hooks add no selected-source reservation to the saved stack. -/
 theorem ensure_saved (root : NativeEff) (q : List Nat) (code : NCode) (fiber : SourceFrame) :
@@ -183,9 +206,7 @@ def frameModel (root : NativeEff) (q : List Nat) :
 /-- Every loaded program starts with at most one selected source reservation. -/
 theorem load_funded (root : NativeEff) (q : List Nat) (fuel : Nat) :
     (ledger root q).Funded 1 (Api.load root fuel) [] [] := by
-  have bound := SourceScope.Opportunities.compile_le root q root (rootPoint fuel) (by rfl)
-  have smaller := current_le root q (compileEff root (rootPoint fuel))
-  have compiled := Nat.le_trans smaller bound
+  have compiled := compile_le root q root (rootPoint fuel) (by rfl)
   change current root q (compileEff root (rootPoint fuel)) ≤ 1 at compiled
   simpa only [PlaceLedger.Funded, PlaceLedger.spent, PlaceLedger.held, PlaceLedger.issued,
     ledger, FiberSum.total, Api.load, RunMachine.empty, RunFiber.make, FrameFiber.start,

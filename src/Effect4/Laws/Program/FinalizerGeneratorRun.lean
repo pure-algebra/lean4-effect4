@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.FinalizerGeneratorPC
+import Effect4.Laws.Program.FinalizerLayerBody
 
 /-!
 Concept: scope-lifetime-finalization R11.
@@ -22,8 +23,8 @@ def ResultAt (point : Point) : IterStep EffName EffThunk Val Err Defect FiberId 
 def resultWeight (root : NativeEff) (q : List Nat) :
     IterStep EffName EffThunk Val Err Defect FiberId Ann → Nat
   | .resume code (.gen point pc _) =>
-      FinalizerSource.fullCurrent root q code + remaining q (point.path ++ [0]) pc
-  | .resume code _ => FinalizerSource.fullCurrent root q code
+      FinalizerSource.current root q code + remaining q (point.path ++ [0]) pc
+  | .resume code _ => FinalizerSource.current root q code
   | _ => 0
 
 /-- A real yielded effect occupies the statement's existing two-child source address.
@@ -55,7 +56,7 @@ theorem yield_budget (root : NativeEff) (q : List Nat) (point : Point) (effect :
       resultWeight root q (runStmts.yieldOf root point effect bind fuel pc values folded).2 ≤
         remaining q (point.path ++ [0]) pc := by
   have location := yield_found root point pc effect rest bind found
-  have compiled := FinalizerSource.compile_full_le root q effect
+  have compiled := FinalizerSource.compile_le root q effect
     {point with path := point.path ++ [0] ++ pc ++ [0, 0], env := values, fuel := fuel + 1} location
   unfold runStmts.yieldOf
   dsimp only

@@ -1,4 +1,4 @@
-import Effect4.Laws.Program.FinalizerLayerBody
+import Effect4.Laws.Program.FinalizerPlacement
 import Init.Data.List.Lex
 
 /-!

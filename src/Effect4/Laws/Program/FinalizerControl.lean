@@ -3,6 +3,8 @@ import Effect4.Laws.Program.PlaceFunding.Control
 import Effect4.Laws.Machine.WriterActions
 import Effect4.Laws.Program.NativeReplies
 import Effect4.Laws.Program.SourceOpportunityCommands
+import Effect4.Laws.Machine.AwaitCode
+import Effect4.Laws.Program.PlaceFunding.FrameControl
 
 /-!
 Concept: scope-lifetime-finalization, R11.
@@ -20,26 +22,8 @@ abbrev Free (root : NativeEff) (q : List Nat) (code : NCode) : Prop := current r
 
 /-- Actual metadata edits and interruptions keep or lower the existing source frame places. -/
 theorem control (root : NativeEff) (q : List Nat) :
-    PlaceFunding.Control (ledger root q) (Free root q) where
-  metadata := by
-    intro old next _ active stack _
-    change frame root q next.frame ≤ frame root q old.frame
-    simp only [frame, active, stack, Nat.le_refl]
-  interruption := Machine.WriterWeights.interrupt_weight_le (frameModel root q)
-  replace := by
-    intro fiber code free
-    change frame root q {fiber.frame with current := code} ≤ frame root q fiber.frame
-    simp only [frame, free, Nat.zero_add]
-    omega
-  entry := by
-    intro owner code flag budget context free
-    simp only [ledger, RunFiber.make, FrameFiber.start, frame, free, List.map_nil,
-      List.sum_nil, Nat.add_zero]
-  clear := by
-    intro fiber
-    change frame root q {fiber.frame with stack := []} ≤ frame root q fiber.frame
-    simp only [frame, List.map_nil, List.sum_nil, Nat.add_zero]
-    omega
+    PlaceFunding.Control (ledger root q) (Free root q) :=
+  PlaceFunding.Control.of_frame (ledger root q) (frameModel root q) (fun _ => rfl)
 
 /-- Actual administrative trace events spend no selected source reservation. -/
 theorem events (root : NativeEff) (q : List Nat) : PlaceFunding.Events (ledger root q) where
@@ -66,9 +50,11 @@ theorem terminal_zero (root : NativeEff) (q : List Nat) (code : NCode)
 theorem await_zero (root : NativeEff) (q : List Nat) (table : RowTable)
     (machine : NativeMachine) (kind : ParkKind) :
     Free root q (awaitCode (interpOf root table) machine kind) := by
-  have bound := current_le root q (awaitCode (interpOf root table) machine kind)
-  rw [SourceScope.Opportunities.await_code_zero root q table machine kind] at bound
-  exact Nat.eq_zero_of_le_zero bound
+  apply awaitCode_closed (interpOf root table) (fun code => Free root q code)
+  · intro exit mode
+    cases exit <;> cases mode <;> rfl
+  · intro kind
+    rfl
 
 /-- Native administrative code and saved cleanup hooks carry no selected source reservation. -/
 theorem administration (root : NativeEff) (q : List Nat) (table : RowTable) :
