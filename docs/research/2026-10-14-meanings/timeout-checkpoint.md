@@ -140,3 +140,42 @@ The last command audits `NumberFlow`, `NumberCounted`, `NumberInterrupt`, `Numbe
 ```text
 #axiom_audit: 301 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
 ```
+
+## Root and timer roles
+
+The original planned goals remain unchanged and open.
+This slice supplies local roles and their actual callback equations.
+It supplies no initialized command history.
+
+`NumberResult` connects the published form exit to the actual success encoder and typed catch callback.
+Its handler skip theorem requires the actual recorded interruption to contain no typed failure.
+It does not assume that fact for arbitrary frames.
+`NumberRegion` checks the actual root prefix above the source handler and loop suffix.
+`NumberTimer` checks the timer source and its reference-preserving primitive effects.
+`NumberStable` transports those numeric frames across reference-preserving scheduler edits.
+`NumberLoop` checks the actual success stop and the failure continuation below four attempts.
+
+`NumberConfiguration` defines the concrete active machine, command, and drained-snapshot assertions.
+Its reply assertion checks the actual replacement frame only when a live park still matches the token.
+Old-token replies need no fabricated numeric value class.
+Its cancellation commands retain the owning attempt's actual countdown assertion.
+Allocation and uncounted root forms still require additional phases.
+
+Each module's header records its concept, requirement, consumer, reach, and limit.
+The consumers remain both Timeout goals.
+No host behaviour gate changes because this slice changes proof modules only.
+
+| Command | Result |
+| --- | --- |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberStable` | Passed, 1209 jobs |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberRegion` | Passed, 1207 jobs |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberLoop` | Passed, 1207 jobs |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberConfiguration` | Passed, 1215 jobs |
+| `lake env lean scratch/TimeoutRolesAudit.lean` | The output below |
+
+The serialized slot runs every command in this table.
+The audit checks `NumberFlow`, `NumberResult`, `NumberRegion`, `NumberTimer`, `NumberStable`, `NumberLoop`, and `NumberConfiguration`.
+
+```text
+#axiom_audit: 402 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```

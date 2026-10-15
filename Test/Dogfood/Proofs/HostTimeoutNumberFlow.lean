@@ -82,6 +82,7 @@ inductive Kind
   | formExit (image : Image) (cleanupComplete : image.cleanups.length = image.count)
       (own : image.exits.length + 1 = image.count)
   | formAfterCleanup (image : Image) (own : image.count = image.cleanups.length + 1)
+  | retryResult (image : Image) (own : image.count = image.cleanups.length + 1)
   | raceWaiting (image : Image) (own : image.count = image.cleanups.length + 1)
 
 /-- A count or cleanup answer is valid only at the exact post-operation heap. -/
@@ -97,6 +98,14 @@ def ValueAt (state : Stores) : Kind → Val → Prop
     ∃ saved, ImageAt (image.form cleanupComplete own saved) state ∧ saved = .success value
   | .formAfterCleanup image own, value =>
     ∃ attemptExit saved, ImageAt (image.afterForm own attemptExit saved) state ∧ saved = .success value
+  | .retryResult image own, value =>
+    ∃ attemptExit saved, ImageAt (image.afterForm own attemptExit saved) state ∧
+      match saved with
+      | .success body => value = .list [.some body, .none]
+      | .failure cause => ∃ (n : Fin 4) (delay : Nat) (previous error : Val),
+          value = .list [.none, .some error] ∧
+          caughtErrorValue? (ready (Val.cell ⟨0⟩) (Val.cell ⟨1⟩) (Val.cell ⟨2⟩) n delay previous)
+            HostTimeoutSource.retryTest cause = some error
 
 /-- Interruption cleanup retains no typed failure for the declared retry handler to select. -/
 def NoTypedFailure (cause : CauseV) : Prop :=
@@ -115,6 +124,9 @@ def CauseAt (state : Stores) : Kind → CauseV → Prop
     ∃ saved, ImageAt (image.form cleanupComplete own saved) state ∧
       (saved = .failure cause ∨ NoTypedFailure cause)
   | .formAfterCleanup image own, cause =>
+    ∃ attemptExit saved, ImageAt (image.afterForm own attemptExit saved) state ∧
+      (saved = .failure cause ∨ NoTypedFailure cause)
+  | .retryResult image own, cause =>
     ∃ attemptExit saved, ImageAt (image.afterForm own attemptExit saved) state ∧
       (saved = .failure cause ∨ NoTypedFailure cause)
   | _, _ => False
@@ -618,6 +630,9 @@ theorem cause_strip (state : Stores) (kind : Kind) (cause : CauseV)
   | formAfterCleanup image own =>
     obtain ⟨attemptExit, saved, heap, _⟩ := good
     exact ⟨attemptExit, saved, heap, Or.inr (no_typed_strip cause)⟩
+  | retryResult image own =>
+    obtain ⟨attemptExit, saved, heap, _⟩ := good
+    exact ⟨attemptExit, saved, heap, Or.inr (no_typed_strip cause)⟩
 
 /-- Actual handler sanitization retains committed numeric phases under the explicit recorded interruption cut. -/
 theorem cause_sanitize (state : Stores) (kind : Kind) (cause interrupted : CauseV)
@@ -637,6 +652,9 @@ theorem cause_sanitize (state : Stores) (kind : Kind) (cause interrupted : Cause
     obtain ⟨saved, heap, _⟩ := good
     exact ⟨saved, heap, Or.inr (Cause.sanitize_clean cause interrupted recorded)⟩
   | formAfterCleanup image own =>
+    obtain ⟨attemptExit, saved, heap, _⟩ := good
+    exact ⟨attemptExit, saved, heap, Or.inr (Cause.sanitize_clean cause interrupted recorded)⟩
+  | retryResult image own =>
     obtain ⟨attemptExit, saved, heap, _⟩ := good
     exact ⟨attemptExit, saved, heap, Or.inr (Cause.sanitize_clean cause interrupted recorded)⟩
 
