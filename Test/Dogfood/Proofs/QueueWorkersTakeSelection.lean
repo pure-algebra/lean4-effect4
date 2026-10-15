@@ -21,17 +21,18 @@ theorem some_result (env : List Val) (job : Nat) :
   rfl
 
 /-- A real successful take branch supplies the same classified option to its retry hook. -/
-theorem some_body (total : Nat) (table : RowTable) (world : QueueWorkersCustodyFlow.World)
-    (owner : FiberId) (token job : Nat) (point : Point) (scrutinee : Term) (fallback : NativeEff)
+theorem return_body (total : Nat) (table : RowTable) (world : QueueWorkersCustodyFlow.World)
+    (owner : FiberId) (output : Kind) (job : Nat) (point : Point) (scrutinee resultTerm : Term)
+    (fallback : NativeEff) (answer : Val)
     (found : Node.at_ (.eff (Programs.queueProgram total)) point.path =
-      some (.eff (.select scrutinee .option fallback
-        (.succeed (.app "some" (.cons (.var point.env.length) .nil))))))
+      some (.eff (.select scrutinee .option fallback (.succeed resultTerm))))
     (selected : evalTerm point.env scrutinee = some (.some (.nat job)))
-    (good : ValueAt world (.captured owner token (.takeOption token)) (.some (.nat job))) :
-    QueueWorkersJobGraph.CodeAt total table owner world (.captured owner token (.takeOption token)) (.suspend (.body point)) := by
+    (returned : evalTerm (point.env ++ [.nat job]) resultTerm = some answer)
+    (good : ValueAt world output answer) :
+    QueueWorkersJobGraph.CodeAt total table owner world output (.suspend (.body point)) := by
   apply QueueWorkersJobGraph.CodeAt.suspended
   intro view
-  change QueueWorkersJobGraph.CodeAt total table owner world (.captured owner token (.takeOption token))
+  change QueueWorkersJobGraph.CodeAt total table owner world output
     (suspendBodyAt (Programs.queueProgram total) (.body {point with completed := view}))
   by_cases zero : point.fuel = 0
   · simp only [suspendBodyAt, zero]
@@ -43,7 +44,7 @@ theorem some_body (total : Nat) (table : RowTable) (world : QueueWorkersCustodyF
         rw [selected]
         rfl
       rw [Agreement.suspendBodyAt_select_of_decide (q := {point with completed := view}) fuel found decision]
-      change QueueWorkersJobGraph.CodeAt total table owner world (.captured owner token (.takeOption token))
+      change QueueWorkersJobGraph.CodeAt total table owner world output
         (resolve (Programs.queueProgram total) ({point with completed := view}.childWith 1 (.nat job)))
       rw [Agreement.resolve_of_at (Agreement.at_childWith (p := {point with completed := view}) found 1 (.nat job)),
         Agreement.compileEff_at_zero _ (by change point.fuel - 1 = 0; omega)]
@@ -51,7 +52,18 @@ theorem some_body (total : Nat) (table : RowTable) (world : QueueWorkersCustodyF
     · obtain ⟨remaining, next⟩ := Nat.exists_eq_succ_of_ne_zero one
       have available : point.fuel = remaining + 2 := by omega
       rw [QueueWorkersCustody.select_return (Programs.queueProgram total) {point with completed := view}
-        remaining scrutinee (.app "some" (.cons (.var point.env.length) .nil)) fallback
-        (.nat job) (.some (.nat job)) available found selected (some_result point.env job)]
+        remaining scrutinee resultTerm fallback (.nat job) answer available found selected returned]
       exact .success good
+
+/-- A real successful take branch supplies the same classified option to its retry hook. -/
+theorem some_body (total : Nat) (table : RowTable) (world : QueueWorkersCustodyFlow.World)
+    (owner : FiberId) (token job : Nat) (point : Point) (scrutinee : Term) (fallback : NativeEff)
+    (found : Node.at_ (.eff (Programs.queueProgram total)) point.path =
+      some (.eff (.select scrutinee .option fallback
+        (.succeed (.app "some" (.cons (.var point.env.length) .nil))))))
+    (selected : evalTerm point.env scrutinee = some (.some (.nat job)))
+    (good : ValueAt world (.captured owner token (.takeOption token)) (.some (.nat job))) :
+    QueueWorkersJobGraph.CodeAt total table owner world (.captured owner token (.takeOption token)) (.suspend (.body point)) :=
+  return_body total table world owner _ job point scrutinee _ fallback _ found selected
+    (some_result point.env job) good
 end Test.Dogfood.Proofs.QueueWorkersTakeSelection

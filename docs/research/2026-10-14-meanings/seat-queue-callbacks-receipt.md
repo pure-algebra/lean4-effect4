@@ -224,3 +224,36 @@ The remaining consumers are the worker retry hook, the outer worker, the feeder,
 The active command producer must carry the queue table together with custody, actual frames, and queued permissions.
 The rest proof also needs accepted-offer custody and actual waiting failure origin.
 No machine, program syntax, or external reply profile changes.
+
+## Actual classified retry and worker return
+
+The queue history producer remains open.
+Both endpoint goals remain unchanged.
+The preceding commit is `cb457c00f` on base `2a630ab46`.
+
+`QueueWorkersRetryFlow.loop_entry` starts the actual source loop with its classified empty cursor.
+`QueueWorkersRetryFamily.hooks` consumes the actual returned option through the existing `TypedRecursiveHooks` producer.
+Its saved family reuses `recursive_family_of_typed`.
+An empty cursor enters the complete waiting body.
+A successful cursor returns its own held occurrence.
+`QueueWorkersRetryReturn.some_body` unwraps that occurrence at the worker's job input class.
+`QueueWorkersTakeSelection.return_body` generalizes the existing selection proof; `some_body` remains its original wrapper.
+`QueueWorkersCountSource.counter_term` identifies every counter successor update.
+Its heap and history consumers remain open.
+
+The narrow command is:
+
+```sh
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh lake build Test.Dogfood.Proofs.QueueWorkersRetryFamily Test.Dogfood.Proofs.QueueWorkersRetryReturn Test.Dogfood.Proofs.QueueWorkersCountSource
+```
+
+It passes with 1419 jobs.
+The output is `/private/tmp/queue-retry-consumers-build3.log`.
+The audit command is `lean-slot.sh lake env lean /private/tmp/queue-retry-audit.lean`.
+It checks 233 declarations within `[propext, Quot.sound]`, with zero modulo declarations and zero planned goals.
+The output is `/private/tmp/queue-retry-audit.log`.
+
+The active history still needs the complete worker and feeder bindings, table custody, live-row transport, delayed-reply permission, and terminal publication.
+The rest proof retains its original bound.
+Funded histories exclude command-budget cuts; the automatic-yield segment bound remains a separate obligation.
+No actual counterexample to that bound is established here.
