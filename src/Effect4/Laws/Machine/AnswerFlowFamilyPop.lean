@@ -68,6 +68,70 @@ theorem absorbsInterrupt_none (world : World) : AbsorbsInterrupt model world non
   cases recorded
 
 include interp family mask in
+/-- The existing selected-value producer retains class-indexed authority through actual passed masks.
+Consumer: Timeout's numeric source-phase custody at a real restoring-mask return. -/
+theorem popFrom_value_selected_with_authority
+    (Authority Post : Kind → FrameFiber ν σ β ε δ ι α → Prop)
+    (world : World) (input output : Kind)
+    (frames : List (Prim ν σ β ε δ ι α)) (fiber : FrameFiber ν σ β ε δ ι α)
+    (value : β) (selected : Prim ν σ β ε δ ι α)
+    (advance : ∀ incoming middle head rest scratch before after,
+      Edge world incoming middle head → Path (Edge world) middle output rest → scratch.stack = [] →
+      model.value world incoming value → model.value world middle value → Authority incoming scratch →
+      PopTrace.Passes .contA false head scratch before after →
+      (FrameFiber.passPushed .contA false (head.ensure scratch).1 after).answer = .empty →
+      Authority middle (FrameFiber.passPushed .contA false (head.ensure scratch).1 after).fiber)
+    (post : ∀ incoming middle rest scratch,
+      Edge world incoming middle selected → Path (Edge world) middle output rest → scratch.stack = [] →
+      model.value world incoming value → Authority incoming scratch →
+      Post middle {(selected.ensure scratch).1 with stack := (selected.ensure scratch).1.stack ++ rest})
+    (empty : fiber.stack = []) (good : model.value world input value)
+    (authority : Authority input fiber) (stack : Path (Edge world) input output frames)
+    (found : (FrameFiber.popFrom .contA false frames fiber).answer = .frame selected) :
+    ∃ incoming middle, model.value world incoming value ∧ Edge world incoming middle selected ∧
+      Path (Edge world) middle output (FrameFiber.popFrom .contA false frames fiber).fiber.stack ∧
+      Post middle (FrameFiber.popFrom .contA false frames fiber).fiber := by
+  have popFamily : PopTrace.RootedFamily .contA false (Edge world) output
+      (fun kind fiber _ => fiber.stack = [] ∧ model.value world kind value ∧ Authority kind fiber)
+      (fun _ _ pop => pop.answer = .frame selected →
+        ∃ incoming middle, model.value world incoming value ∧ Edge world incoming middle selected ∧
+          Path (Edge world) middle output pop.fiber.stack ∧ Post middle pop.fiber) := by
+    constructor
+    · intro fiber cause scratch found
+      cases found
+    · intro input middle head tail fiber cause answer callback path scratch chosen kept found
+      have shape := Prim.answerOf_frame_eq head selected .contA _ (chosen.trans (congrArg some found))
+      rw [shape.1] at post ⊢
+      have emptyPath : Path (Edge world) middle middle fiber.stack := by
+        rw [scratch.1]; exact .nil middle
+      refine ⟨input, middle, scratch.2.1, callback, ?_, ?_⟩
+      · exact Path.append (ensure_path model Edge world middle middle head fiber
+          (fun pushed => mask world input middle head callback fiber pushed) emptyPath) path
+      · exact post input middle tail fiber callback path scratch.1 scratch.2.1 scratch.2.2
+    · intro input middle head rest fiber before after callback path scratch passed drained
+      have missing : head.hasArm .contA = false := by
+        rcases passed with ⟨chosen, _⟩ | ⟨answer, _, skipped, _⟩
+        · exact PopTrace.answer_missing head .contA _ chosen
+        · cases skipped
+      have nextGood := family.skip world input middle head callback world (model.future_refl world)
+        value scratch.2.1 missing
+      refine ⟨?_, nextGood, advance input middle head rest fiber before after callback path
+        scratch.1 scratch.2.1 nextGood scratch.2.2 passed drained⟩
+      rw [FrameFiber.passPushed_fiber_cause]
+      exact PopTrace.drain_empty .contA false head fiber scratch.1
+    · intro input middle head rest fiber before after tail callback path scratch passed drained next found
+      simp only [FrameFiber.passOn, FrameFiber.joinPushed, drained] at found ⊢
+      exact next found
+    · intro input middle head rest fiber before after tail callback path scratch passed answered found
+      unfold FrameFiber.passOn FrameFiber.joinPushed at found
+      split at found
+      · rename_i drained; exact False.elim (answered drained)
+      · rw [FrameFiber.passPushed_answer_cause] at found
+        exact False.elim (PopTrace.drain_not_frame .contA false rfl head selected fiber scratch.1 found)
+  exact popFamily.popFrom input frames fiber none stack ⟨empty, good, authority⟩ found
+
+
+include interp family mask in
 /-- The actual value pop carries its incoming value into the selected saved callback.
 It retains the suffix after that callback's actual mask hook. -/
 theorem popFrom_value_selected_with_flag (Post : Bool → Prop) (world : World) (input output : Kind)
@@ -83,42 +147,13 @@ theorem popFrom_value_selected_with_flag (Post : Bool → Prop) (world : World) 
       Edge world incoming middle selected ∧
       Path (Edge world) middle output (FrameFiber.popFrom .contA false frames fiber).fiber.stack ∧
       Post (FrameFiber.popFrom .contA false frames fiber).fiber.interruptible := by
-  have popFamily : PopTrace.Family .contA false (Edge world)
-      (fun fiber => fiber.stack = [])
-      (fun input output _ pop => model.value world input value → pop.answer = .frame selected →
-        ∃ incoming middle, model.value world incoming value ∧ Edge world incoming middle selected ∧
-          Path (Edge world) middle output pop.fiber.stack ∧ Post pop.fiber.interruptible) := by
-    constructor
-    · intro kind fiber cause scratch good found
-      cases found
-    · intro input middle output head tail fiber cause answer callback path empty chosen kept good found
-      have shape := Prim.answerOf_frame_eq head selected .contA _
-        (chosen.trans (congrArg some found))
-      rw [shape.1] at post ⊢
-      have scratch : Path (Edge world) middle middle fiber.stack := by
-        rw [empty]; exact .nil middle
-      exact ⟨input, middle, good, callback,
-        Path.append (ensure_path model Edge world middle middle head fiber
-          (fun pushed => mask world input middle head callback fiber pushed) scratch) path,
-        post input middle fiber callback⟩
-    · intro input middle head fiber after callback empty
-      rw [FrameFiber.passPushed_fiber_cause]; exact PopTrace.drain_empty .contA false head fiber empty
-    · intro input middle output head tail fiber before after tailPop callback path empty passed drained next good found
-      have missing : head.hasArm .contA = false := by
-        rcases passed with ⟨chosen, _⟩ | ⟨answer, _, skipped, _⟩
-        · exact PopTrace.answer_missing head .contA _ chosen
-        · cases skipped
-      have nextGood : model.value world middle value :=
-        family.skip world input middle head callback world (model.future_refl world) value good missing
-      simp only [FrameFiber.passOn, FrameFiber.joinPushed, drained] at found ⊢
-      exact next nextGood found
-    · intro input middle output head tail fiber before after tailPop callback path empty passed answered good found
-      unfold FrameFiber.passOn FrameFiber.joinPushed at found
-      split at found
-      · rename_i drained; exact False.elim (answered drained)
-      · rw [FrameFiber.passPushed_answer_cause] at found
-        exact False.elim (PopTrace.drain_not_frame .contA false rfl head selected fiber empty found)
-  exact popFamily.popFrom input output frames fiber none (stack) empty good found
+  exact popFrom_value_selected_with_authority model interp Edge Allowed family mask
+    (fun _ _ => True) (fun _ scratch => Post scratch.interruptible)
+    world input output frames fiber value selected
+    (fun _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ => trivial)
+    (fun incoming middle rest scratch edge _ _ _ _ => by
+      exact post incoming middle scratch edge)
+    empty good trivial stack found
 
 include interp family mask in
 /-- The previous selected-frame reader projects the common actual-state producer. -/
@@ -134,6 +169,40 @@ theorem popFrom_value_selected (world : World) (input output : Kind)
       Path (Edge world) middle output (FrameFiber.popFrom .contA false frames fiber).fiber.stack := by
   obtain ⟨incoming, middle, good, edge, path, flag⟩ := popFrom_value_selected_with_flag model interp Edge Allowed family mask (fun _ => True) world input output frames fiber value selected (fun _ _ _ _ => trivial) empty good stack found
   exact ⟨incoming, middle, good, edge, path⟩
+
+include interp family mask in
+/-- The existing selected-value producer retains class-indexed authority through actual passed masks.
+Consumer: Timeout's numeric source-phase custody at a real restoring-mask return. -/
+theorem getCont_value_selected_with_authority
+    (Authority Post : Kind → FrameFiber ν σ β ε δ ι α → Prop)
+    (world : World) (input output : Kind)
+    (fiber : FrameFiber ν σ β ε δ ι α)
+    (value : β) (selected : Prim ν σ β ε δ ι α)
+    (advance : ∀ incoming middle head rest scratch before after,
+      Edge world incoming middle head → Path (Edge world) middle output rest → scratch.stack = [] →
+      model.value world incoming value → model.value world middle value → Authority incoming scratch →
+      PopTrace.Passes .contA false head scratch before after →
+      (FrameFiber.passPushed .contA false (head.ensure scratch).1 after).answer = .empty →
+      Authority middle (FrameFiber.passPushed .contA false (head.ensure scratch).1 after).fiber)
+    (post : ∀ incoming middle rest scratch,
+      Edge world incoming middle selected → Path (Edge world) middle output rest → scratch.stack = [] →
+      model.value world incoming value → Authority incoming scratch →
+      Post middle {(selected.ensure scratch).1 with stack := (selected.ensure scratch).1.stack ++ rest})
+    (good : model.value world input value)
+    (authority : Authority input {fiber with stack := [], deferredInterrupt := false}) (stack : Path (Edge world) input output fiber.stack)
+    (found : (fiber.getCont .contA false).answer = .frame selected) :
+    ∃ incoming middle, model.value world incoming value ∧ Edge world incoming middle selected ∧
+      Path (Edge world) middle output (fiber.getCont .contA false).fiber.stack ∧
+      Post middle (fiber.getCont .contA false).fiber := by
+  unfold FrameFiber.getCont at found ⊢
+  split
+  · rename_i deferred
+    rw [if_pos deferred] at found
+    cases found
+  · rename_i normal
+    rw [if_neg normal] at found
+    exact popFrom_value_selected_with_authority model interp Edge Allowed family mask
+      Authority Post world input output fiber.stack _ value selected advance post rfl good authority stack found
 
 include interp family mask in
 /-- Actual getCont retains the selected callback and its ordered suffix.
