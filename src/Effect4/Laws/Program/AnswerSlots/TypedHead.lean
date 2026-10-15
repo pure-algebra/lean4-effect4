@@ -14,26 +14,32 @@ open Effect4 Effect4.Machine Effect4.Program
 /-- Cancellation frames retain the actual administrative cancellation and incoming failure. -/
 theorem async_edge (spec : Spec) (completed : List (FiberId × ExitV)) (name : EffName) :
     Edge spec completed () Kind.root Kind.root (.asyncFinalizer name) := by
-  apply AnswerFlow.RecursiveEdge.saved
-  refine .mk () Kind.root Kind.root _ ?_ ?_ ?_ ?_ ?_ ?_
-  · intro world future value good absent
-    trivial
-  · intro world future reason good absent
-    cases absent
-  · intro world future value provided next pushed good supplied absent arm
-    cases arm
-  · intro world future cause provided next pushed good supplied absent arm
-    change some (if cause.hasInterrupts then (interpAt spec.root completed spec.table).cancelThenFail name cause
-      else .failure cause, []) = some (next, pushed) at arm
-    cases arm
-    refine .mk world Kind.root Kind.root _ [] ?_ (.nil world Kind.root)
-    split
-    · exact interp_cancel_at spec completed name cause
-    · trivial
-  · intro world future exit next good program
-    cases program
-  · intro world future fiber cause delivered good selected interrupted skipped
-    trivial
+  apply AnswerFlow.RecursiveFamilyEdge.saved
+  refine ⟨?_, ?_, ?_⟩
+  · intro view
+    refine .mk () Kind.root Kind.root _ ?_ ?_ ?_ ?_ ?_ ?_
+    · intro world future value good absent
+      trivial
+    · intro world future reason good absent
+      cases absent
+    · intro world future value provided next pushed good supplied absent arm
+      cases arm
+    · intro world future cause provided next pushed good supplied absent arm
+      change some (if cause.hasInterrupts then (interpAt spec.root view spec.table).cancelThenFail name cause
+        else .failure cause, []) = some (next, pushed) at arm
+      cases arm
+      refine .mk world Kind.root Kind.root _ [] ?_ (.nil world Kind.root)
+      split
+      · exact interp_cancel_at spec view name cause
+      · trivial
+    · intro world future exit next good program
+      cases program
+    · intro world future fiber cause delivered good selected interrupted skipped
+      trivial
+  · intro loop cursor same
+    cases same
+  · intro generator cursor same
+    cases same
 
 /-- A zero-fuel native suspension stays a live source frontier at its existing answer class. -/
 theorem frontier_suspend (spec : Spec) (completed : List (FiberId × ExitV))
