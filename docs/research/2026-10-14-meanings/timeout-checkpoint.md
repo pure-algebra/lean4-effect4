@@ -1470,3 +1470,39 @@ It then runs `lake env lean scratch/TimeoutPendingMetadataAudit.lean`.
 The build passes with 676 jobs.
 The audit checks 132 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
 This proof-only slice reaches no outside implementation gate.
+
+## Actual terminal retirement
+
+The actual terminal native producer now joins its continued and finished outcomes in one next numeric world.
+The continued branch retains the whole pending fiber's source, saved path, and runtime permissions.
+The finished branch establishes actual cleanup readiness before relabeling the returned actor as passive.
+It reuses the existing timer role's no-write contract for the drained terminal frame.
+The relabeling retains the machine, queued commands, detached tasks, and unique-writer census together.
+
+The existing addressed-row producer now accepts explicit role relabeling.
+The old same-role interface remains a wrapper.
+The existing command-permission case split also accepts the chosen next world.
+Its same-world interface remains a wrapper.
+Common metadata queue transport replaces the installation producer's duplicate local proof.
+The actual terminal consumer uses that same transport for emitted native events.
+No new evaluator, source, saved-frame, command-driver, or history traversal enters this slice.
+
+Placement: scope-lifetime-finalization R11 and reactive-scheduling R9.
+Consumer: the pending terminal branch of the full coupled numeric command producer for both original Timeout endpoints.
+Reach: actual source configuration, live running actor, unique stored identities, actual returned outcome, and admitted remaining work.
+The continued branch still requires scheduled-loop heap permission and excludes an old finish for that actor.
+The full native producer, active command producer, fixed-budget history, and declared failure origin remain open.
+Neither public endpoint changes.
+
+Verification command:
+
+```text
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh bash scratch/timeout-retirement-check.sh
+```
+
+The script builds `HostTimeoutNumberRetirement` and `HostTimeoutNumberInjection`.
+It then runs `lake env lean scratch/TimeoutRetirementAudit.lean`.
+The build passes with 1296 jobs.
+The audit checks 50 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
+It covers the role update, queue transport, installation consumer, and joined terminal producer.
+This proof-only slice reaches no outside implementation gate.

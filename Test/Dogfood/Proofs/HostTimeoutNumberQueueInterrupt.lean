@@ -134,20 +134,20 @@ theorem terminal_update (machine : Effect4.Program.NativeMachine)
     exact held fiber actual
 
 /-- Numeric queue transport shares one assertion case split across actual metadata producers. -/
-theorem command_transport (world : HostTimeoutNumberConfiguration.World)
+theorem command_transport_into (world next : HostTimeoutNumberConfiguration.World)
     (before after : Effect4.Program.NativeMachine) (commands : List Guard.NCmd) (command : Guard.NCmd)
     (queued : command ∈ commands) (held : CommandAt world before command)
-    (replies : ∀ id token code, ReplyAt world before id token code → ReplyAt world after id token code)
+    (replies : ∀ id token code, ReplyAt world before id token code → ReplyAt next after id token code)
     (loops : ∀ id yielding, .loop id yielding ∈ commands →
-      CommandAt world before (.loop id yielding) → CommandAt world after (.loop id yielding))
+      CommandAt world before (.loop id yielding) → CommandAt next after (.loop id yielding))
     (finishes : ∀ id selected, .finish id selected ∈ commands → CommandAt world before (.finish id selected) →
-      CommandAt world after (.finish id selected))
+      CommandAt next after (.finish id selected))
     (afterReturns : ∀ host yielding kind, .afterInterrupt host yielding kind ∈ commands →
-      CommandAt world before (.afterInterrupt host yielding kind) → CommandAt world after (.afterInterrupt host yielding kind))
+      CommandAt world before (.afterInterrupt host yielding kind) → CommandAt next after (.afterInterrupt host yielding kind))
     (raceReturns : ∀ race host yielding remaining visited, .raceCancel race host yielding remaining visited ∈ commands →
       CommandAt world before (.raceCancel race host yielding remaining visited) →
-      CommandAt world after (.raceCancel race host yielding remaining visited)) :
-    CommandAt world after command := by
+      CommandAt next after (.raceCancel race host yielding remaining visited)) :
+    CommandAt next after command := by
   cases command with
   | resume id token code => exact replies id token code held
   | loop id yielding => exact loops id yielding queued held
@@ -168,6 +168,87 @@ theorem command_transport (world : HostTimeoutNumberConfiguration.World)
   | exitDone id => trivial
   | drainDue => trivial
 
+
+/-- The existing same-world queue transport remains an instance. -/
+theorem command_transport (world : HostTimeoutNumberConfiguration.World)
+    (before after : Effect4.Program.NativeMachine) (commands : List Guard.NCmd) (command : Guard.NCmd)
+    (queued : command ∈ commands) (held : CommandAt world before command)
+    (replies : ∀ id token code, ReplyAt world before id token code → ReplyAt world after id token code)
+    (loops : ∀ id yielding, .loop id yielding ∈ commands →
+      CommandAt world before (.loop id yielding) → CommandAt world after (.loop id yielding))
+    (finishes : ∀ id selected, .finish id selected ∈ commands → CommandAt world before (.finish id selected) →
+      CommandAt world after (.finish id selected))
+    (afterReturns : ∀ host yielding kind, .afterInterrupt host yielding kind ∈ commands →
+      CommandAt world before (.afterInterrupt host yielding kind) → CommandAt world after (.afterInterrupt host yielding kind))
+    (raceReturns : ∀ race host yielding remaining visited, .raceCancel race host yielding remaining visited ∈ commands →
+      CommandAt world before (.raceCancel race host yielding remaining visited) →
+      CommandAt world after (.raceCancel race host yielding remaining visited)) :
+    CommandAt world after command :=
+  command_transport_into world world before after commands command queued held replies loops finishes afterReturns raceReturns
+
+/-- The same exact fibers and store retain an existing actual cleanup wait. -/
+theorem cleanup_await_fields (before after : NativeMachine) (targets : List FiberId)
+    (state : after.state = before.state) (fibers : after.fibers = before.fibers)
+    (previous : CleanupAwait before targets) : CleanupAwait after targets := by
+  have lookup : ∀ id, after.fiber? id = before.fiber? id := by
+    intro id
+    change List.find? _ after.fibers = List.find? _ before.fibers
+    rw [fibers]
+  rcases previous with ready | ⟨attempt, member, present, complete⟩
+  · exact Or.inl (state ▸ ready)
+  · refine Or.inr ⟨attempt, member, ?_, ?_⟩
+    · rw [lookup]; exact present
+    · intro fiber actual published
+      rw [lookup] at actual
+      exact state ▸ complete fiber actual published
+
+/-- The same exact fibers and store retain the legacy actual cleanup image wait. -/
+theorem await_fields (before after : NativeMachine) (targets : List FiberId)
+    (image : HostTimeoutNumberFlow.Image) (own : image.count = image.cleanups.length + 1)
+    (state : after.state = before.state) (fibers : after.fibers = before.fibers)
+    (previous : HostTimeoutNumberWait.AwaitAt image own before targets) :
+    HostTimeoutNumberWait.AwaitAt image own after targets := by
+  have lookup : ∀ id, after.fiber? id = before.fiber? id := by
+    intro id
+    change List.find? _ after.fibers = List.find? _ before.fibers
+    rw [fibers]
+  rcases previous with ready | ⟨attempt, member, present, complete⟩
+  · exact Or.inl (state ▸ ready)
+  · refine Or.inr ⟨attempt, member, ?_, ?_⟩
+    · rw [lookup]; exact present
+    · intro fiber actual published
+      rw [lookup] at actual
+      exact state ▸ complete fiber actual published
+
+/-- Existing actual commands retain their permission through metadata fields outside the numeric observation. -/
+theorem commands_fields (world : HostTimeoutNumberConfiguration.World) (before after : NativeMachine)
+    (commands : List Guard.NCmd) (state : after.state = before.state) (fibers : after.fibers = before.fibers)
+    (view : after.completedExits = before.completedExits) (held : Commands world before commands) :
+    Commands world after commands := by
+  have lookup : ∀ id, after.fiber? id = before.fiber? id := by
+    intro id
+    change List.find? _ after.fibers = List.find? _ before.fibers
+    rw [fibers]
+  intro command member
+  apply command_transport world before after commands command member (held command member)
+    (fun id token code good => reply_fields world before after id token code fibers state view good)
+  · intro id yielding member previous context roleAt oldHeap fiber actual installedFin
+    rw [state] at oldHeap
+    rw [lookup] at actual
+    exact previous context roleAt oldHeap fiber actual installedFin
+  · intro id selected member previous
+    exact ⟨fun fiber actual => previous.1 fiber ((lookup id).symm ▸ actual),
+      fun role roleAt => exit_machine before after role selected state view (previous.2 role roleAt)⟩
+  · intro host yielding kind member previous
+    cases kind with
+    | join target mode => trivial
+    | race race => trivial
+    | awaitAll targets =>
+      exact ⟨fun image own suffix roleAt => await_fields before after targets image own state fibers (previous.1 image own suffix roleAt),
+        fun suffix roleAt => cleanup_await_fields before after targets state fibers (previous.2 suffix roleAt)⟩
+  · intro race host yielding remaining visited member previous
+    exact ⟨fun image own suffix roleAt => await_fields before after (remaining ++ visited) image own state fibers (previous.1 image own suffix roleAt),
+      fun suffix roleAt => cleanup_await_fields before after (remaining ++ visited) state fibers (previous.2 suffix roleAt)⟩
 
 /-- The actual admitted interrupt transports each existing queued numeric command. -/
 theorem command_interrupt (context : MessageContext) (world : HostTimeoutNumberConfiguration.World)

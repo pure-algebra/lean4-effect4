@@ -185,11 +185,11 @@ theorem interrupt_reply (world : HostTimeoutNumberConfiguration.World) (machine 
     fields.1 fields.2.2.1 (interrupt_metadata fiber cause).2 (interrupt_view machine fiber cause found unique) held
 
 
-/-- Detached tasks reuse a producer for every actual live-token reply. -/
-theorem snapshot_replies (world : HostTimeoutNumberConfiguration.World)
+/-- Detached tasks reuse a producer into the same chosen next proof world. -/
+theorem snapshot_replies_into (world next : HostTimeoutNumberConfiguration.World)
     (before after : Effect4.Program.NativeMachine) (tasks : List NTask)
-    (replies : ∀ id token code, ReplyAt world before id token code → ReplyAt world after id token code)
-    (held : Snapshot world before tasks) : Snapshot world after tasks := by
+    (replies : ∀ id token code, ReplyAt world before id token code → ReplyAt next after id token code)
+    (held : Snapshot world before tasks) : Snapshot next after tasks := by
   intro task member
   have good := held task member
   cases task with
@@ -197,7 +197,59 @@ theorem snapshot_replies (world : HostTimeoutNumberConfiguration.World)
   | start id => trivial
   | wake id token => exact good
 
-/-- Installing the actual addressed replacement retains all numeric roles and stored reply snapshots. -/
+/-- The existing same-world snapshot interface remains an instance. -/
+theorem snapshot_replies (world : HostTimeoutNumberConfiguration.World)
+    (before after : Effect4.Program.NativeMachine) (tasks : List NTask)
+    (replies : ∀ id token code, ReplyAt world before id token code → ReplyAt world after id token code)
+    (held : Snapshot world before tasks) : Snapshot world after tasks :=
+  snapshot_replies_into world world before after tasks replies held
+
+/-- The existing actual addressed-row update retains explicit role relabeling in the same joined world. -/
+theorem configuration_update_roles (world next : HostTimeoutNumberConfiguration.World) (machine : Effect4.Program.NativeMachine)
+    (before after : Effect4.Program.SourceScope.SourceFiber) (found : machine.fiber? before.id = some before)
+    (key : after.id = before.id) (dispatcher : after.dispatcher = before.dispatcher)
+    (view : (machine.update after).completedExits = machine.completedExits)
+    (held : Configuration world machine)
+    (phase : next.phase = world.phase)
+    (unique : ∀ id first second, (id, first) ∈ next.roles → (id, second) ∈ next.roles → first = second)
+    (replacement : ∀ role, (before.id, role) ∈ world.roles →
+      ∃ selected, (after.id, selected) ∈ next.roles ∧ FiberAt machine selected after)
+    (retained : ∀ fiber ∈ machine.fibers, fiber.id ≠ after.id → ∀ role,
+      (fiber.id, role) ∈ world.roles → FiberAt machine role fiber →
+      ∃ selected, (fiber.id, selected) ∈ next.roles ∧ FiberAt machine selected fiber)
+    (replies : ∀ id token code, ReplyAt world machine id token code →
+      ReplyAt next (machine.update after) id token code) : Configuration next (machine.update after) := by
+  constructor
+  · rw [phase]; exact held.heap
+  · intro fiber member
+    obtain ⟨old, present, equal⟩ := List.mem_map.mp member
+    rw [← equal]
+    change ∃ role, ((if old.id = after.id then after else old).id, role) ∈ next.roles ∧
+      FiberAt (machine.update after) role (if old.id = after.id then after else old)
+    split
+    · rename_i same
+      obtain ⟨role, assigned, good⟩ := held.roles old present
+      have oldKey : old.id = before.id := same.trans key
+      rw [oldKey] at assigned
+      obtain ⟨selected, assigned, good⟩ := replacement role assigned
+      exact ⟨selected, assigned, fiber_machine machine (machine.update after) selected after rfl view good⟩
+    · rename_i different
+      obtain ⟨role, assigned, good⟩ := held.roles old present
+      obtain ⟨selected, assigned, good⟩ := retained old present different role assigned good
+      exact ⟨selected, assigned, fiber_machine machine (machine.update after) selected old rfl view good⟩
+  · exact unique
+  · intro fiber member bucket stored
+    obtain ⟨old, present, equal⟩ := List.mem_map.mp member
+    rw [← equal] at stored
+    change bucket ∈ (if old.id = after.id then after else old).dispatcher.buckets at stored
+    split at stored
+    · rw [dispatcher] at stored
+      exact snapshot_replies_into world next machine (machine.update after) bucket.tasks replies
+        (held.dispatchers before (RunMachine.mem_of_fiber? found) bucket stored)
+    · exact snapshot_replies_into world next machine (machine.update after) bucket.tasks replies
+        (held.dispatchers old present bucket stored)
+
+/-- The original same-role update is an instance of the joined role producer. -/
 theorem configuration_update (world : HostTimeoutNumberConfiguration.World) (machine : Effect4.Program.NativeMachine)
     (before after : Effect4.Program.SourceScope.SourceFiber) (found : machine.fiber? before.id = some before)
     (key : after.id = before.id) (dispatcher : after.dispatcher = before.dispatcher)
@@ -206,33 +258,12 @@ theorem configuration_update (world : HostTimeoutNumberConfiguration.World) (mac
     (replacement : ∀ role, (before.id, role) ∈ world.roles → FiberAt machine role after)
     (replies : ∀ id token code, ReplyAt world machine id token code →
       ReplyAt world (machine.update after) id token code) : Configuration world (machine.update after) := by
-  constructor
-  · exact held.heap
-  · intro fiber member
-    obtain ⟨old, present, equal⟩ := List.mem_map.mp member
-    rw [← equal]
-    change ∃ role, ((if old.id = after.id then after else old).id, role) ∈ world.roles ∧
-      FiberAt (machine.update after) role (if old.id = after.id then after else old)
-    split
-    · rename_i same
-      obtain ⟨role, assigned, good⟩ := held.roles old present
-      have oldKey : old.id = before.id := same.trans key
-      rw [oldKey] at assigned
-      exact ⟨role, by rw [key]; exact assigned,
-        fiber_machine machine (machine.update after) role after rfl view (replacement role assigned)⟩
-    · obtain ⟨role, assigned, good⟩ := held.roles old present
-      exact ⟨role, assigned, fiber_machine machine (machine.update after) role old rfl view good⟩
-  · exact held.unique
-  · intro fiber member bucket stored
-    obtain ⟨old, present, equal⟩ := List.mem_map.mp member
-    rw [← equal] at stored
-    change bucket ∈ (if old.id = after.id then after else old).dispatcher.buckets at stored
-    split at stored
-    · rw [dispatcher] at stored
-      exact snapshot_replies world machine (machine.update after) bucket.tasks replies
-        (held.dispatchers before (RunMachine.mem_of_fiber? found) bucket stored)
-    · exact snapshot_replies world machine (machine.update after) bucket.tasks replies
-        (held.dispatchers old present bucket stored)
+  apply configuration_update_roles world world machine before after found key dispatcher view held rfl held.unique
+  · intro role assigned
+    exact ⟨role, key ▸ assigned, replacement role assigned⟩
+  · intro fiber member different role assigned good
+    exact ⟨role, assigned, good⟩
+  · exact replies
 
 /-- Actual addressed interruption retains the whole numeric machine assertion and every stored reply obligation. -/
 theorem interrupt_configuration (world : HostTimeoutNumberConfiguration.World)

@@ -60,46 +60,7 @@ theorem readonly_update (world : HostTimeoutNumberConfiguration.World) (context 
     change List.find? _ afterMachine.fibers = List.find? _ machine.fibers
     rw [fibers]
   have base := configuration_fields world machine afterMachine fibers state completed held
-  have awaiting : ∀ image own targets, HostTimeoutNumberWait.AwaitAt image own machine targets →
-      HostTimeoutNumberWait.AwaitAt image own afterMachine targets := by
-    intro image own targets previous
-    rcases previous with ready | ⟨attempt, member, present, complete⟩
-    · exact Or.inl (state ▸ ready)
-    · refine Or.inr ⟨attempt, member, ?_, ?_⟩
-      · rw [lookup]; exact present
-      · intro after actual published
-        rw [lookup] at actual
-        exact state ▸ complete after actual published
-  have cleanup : ∀ targets, CleanupAwait machine targets → CleanupAwait afterMachine targets := by
-    intro targets previous
-    rcases previous with ready | ⟨attempt, member, present, complete⟩
-    · exact Or.inl (state ▸ ready)
-    · refine Or.inr ⟨attempt, member, ?_, ?_⟩
-      · rw [lookup]; exact present
-      · intro after actual published
-        rw [lookup] at actual
-        exact state ▸ complete after actual published
-  have baseQueue : Commands world afterMachine pending := by
-    intro command member
-    apply command_transport world machine afterMachine pending command member (queued command member)
-      (fun id token code good => reply_fields world machine afterMachine id token code fibers state completed good)
-    · intro id yielding member previous nextContext roleAt oldHeap after actual installedFin
-      rw [state] at oldHeap
-      rw [lookup] at actual
-      exact previous nextContext roleAt oldHeap after actual installedFin
-    · intro id selected finishMember previous
-      exact ⟨fun after actual => previous.1 after ((lookup id).symm ▸ actual),
-        fun role roleAt => exit_machine machine afterMachine role selected state completed (previous.2 role roleAt)⟩
-    · intro host yielding kind member previous
-      cases kind with
-      | join target mode => trivial
-      | race race => trivial
-      | awaitAll targets =>
-        exact ⟨fun image own suffix roleAt => awaiting image own targets (previous.1 image own suffix roleAt),
-          fun suffix roleAt => cleanup targets (previous.2 suffix roleAt)⟩
-    · intro race host yielding remaining visited member previous
-      exact ⟨fun image own suffix roleAt => awaiting image own (remaining ++ visited) (previous.1 image own suffix roleAt),
-        fun suffix roleAt => cleanup (remaining ++ visited) (previous.2 suffix roleAt)⟩
+  have baseQueue := commands_fields world machine afterMachine pending state fibers completed queued
   have located : afterMachine.fiber? fiber.id = some fiber := (lookup fiber.id).symm ▸ found
   have unique : (afterMachine.fibers.map (·.id)).Nodup := fibers ▸ ids
   have viewSame := update_view afterMachine fiber afterFiber located unique key exitSame
