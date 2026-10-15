@@ -18,13 +18,15 @@ open Effect4 Effect4.Machine Effect4.Program Effect4.Contracts
 theorem edge_future (spec : Spec) (completed : List (FiberId × ExitV)) (first last : World)
     (future : Future first last) (input output : Kind) (frame : NCode)
     (held : Edge spec completed first input output frame) : Edge spec completed last input output frame := by
-  apply AnswerFlow.FamilyEmbedding.edge_future (interpAt spec.root completed spec.table).toPrimInterp
-    (embedding spec completed) (Typed.Edge spec.toSpec completed) ?_
-    first last future input output frame held
-  intro before after later incoming outgoing code owned
-  cases before
-  cases after
-  exact owned
+  apply AnswerFlow.FamilyEmbedding.edge_future_over (embedding spec completed)
+    (Semantic spec) (Typed.Edge spec.toSpec completed) ?_ ?_ first last future input output frame held
+  · intro before after later incoming outgoing code owned
+    exact AnswerFlow.ViewSavedAt.future (fun view => model spec view)
+      (fun view => (interpAt spec.root view spec.table).toPrimInterp) (fun _ => later) owned
+  · intro before after later incoming outgoing code owned
+    cases before
+    cases after
+    exact owned
 
 /-- The same ordered saved suffix remains valid after native store growth. -/
 theorem path_future (spec : Spec) (completed : List (FiberId × ExitV)) (first last : World)
@@ -36,8 +38,9 @@ theorem path_future (spec : Spec) (completed : List (FiberId × ExitV)) (first l
 /-- Restoring masks are identity saved edges at every transient or stable answer class. -/
 theorem mask_edge (spec : Spec) (completed : List (FiberId × ExitV)) (world : World)
     (kind : Kind) : Edge spec completed world kind kind (.setInterruptible true) :=
-  .saved (AnswerFlow.saved_mask (model spec completed)
-    (interpAt spec.root completed spec.table).toPrimInterp world kind true)
+  .saved ⟨(fun view => AnswerFlow.saved_mask (model spec view)
+    (interpAt spec.root view spec.table).toPrimInterp world kind true),
+    (by intro loop cursor same; cases same), (by intro generator cursor same; cases same)⟩
 
 /-- Every nonterminal pure step consumes the existing head theorem without another primitive walk. -/
 theorem nonterminal_step (spec : Spec) (fragment : SourceScope.Fragment spec.root)

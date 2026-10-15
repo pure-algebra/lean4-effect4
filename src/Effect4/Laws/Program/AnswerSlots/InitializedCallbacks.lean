@@ -1,4 +1,5 @@
 import Effect4.Laws.Program.AnswerSlots.Initialized
+import Effect4.Laws.Program.AnswerSlots.InitializationProtocol
 
 /-!
 Concept: store-typing R4 and scope-lifetime-finalization R11.
@@ -19,19 +20,15 @@ theorem allocation_callback (spec : Spec) (world nextWorld : World) (index : Nat
     CodeAt spec nextWorld (.stable .root) ((interpAt spec.root view spec.table).contA (.cont point) answer) := by
   obtain ⟨bound, owner, path, env, refs, deferred, source⟩ := stage
   obtain ⟨phase, rfl, afterRefs, afterDeferred⟩ := good
-  obtain ⟨tail, found⟩ := spec.initialization.head index small
-  rw [← path] at found
-  have next := SourceScope.next_of_at spec.root point _ 1 1 found source rfl
-  have extension := spec.initialization.next index small
-  rw [spec.bindings_eq] at extension
+  have rawStage : Initialization.Stage spec.initialization index point world.state.refs := by
+    refine ⟨bound, path, ?_, refs, source⟩
+    rw [spec.bindings_eq]
+    exact env
+  have advanced := Initialization.advance spec.initialization index point world.state.refs small rawStage view .unit
   apply CodeAt.initial
-  refine ⟨by omega, future.1.symm.trans owner, ?_, ?_, afterRefs, afterDeferred, ?_⟩
-  · change point.path ++ [1] = List.replicate (index + 1) 1
-    rw [path, List.replicate_succ']
-  · change point.env ++ [.cell ⟨index⟩] = spec.bindings.take (index + 1)
-    rw [env]
-    exact extension
-  · exact SourceScope.childWith_at spec.root _ 1 _ next
+  refine ⟨advanced.1, future.1.symm.trans owner, advanced.2.1, ?_, afterRefs, afterDeferred, advanced.2.2.2.2⟩
+  rw [← spec.bindings_eq]
+  exact advanced.2.2.1
 
 /-- The actual gate allocation enters the protected stable graph with all initialized bindings. -/
 theorem gate_callback (spec : Spec) (fragment : SourceScope.Fragment spec.root)

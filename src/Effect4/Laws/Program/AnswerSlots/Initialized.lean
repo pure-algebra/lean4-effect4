@@ -129,13 +129,22 @@ theorem embedding (spec : Spec) (completed : List (FiberId × ExitV)) :
   code := fun _ _ _ ready good => .stable ready good
   finalizer := fun _ _ _ _ => rfl
 
-/-- Initialization semantic frames join the existing ready stable edge graph. -/
-def Edge (spec : Spec) (completed : List (FiberId × ExitV)) :=
-  AnswerFlow.EmbeddedEdge (model spec completed) (interpAt spec.root completed spec.table).toPrimInterp
-    (fun _ => ()) Kind.stable (Ready spec) (Typed.Edge spec.toSpec completed)
+/-- Initializer callbacks retain their same answer endpoints at every completed-fiber view. -/
+def Semantic (spec : Spec) :=
+  AnswerFlow.ViewSavedAt (fun view => model spec view)
+    (fun view => (interpAt spec.root view spec.table).toPrimInterp)
 
-/-- The initialized graph reuses the stable family and admits its own actual initializer binders. -/
+/-- Initialization and stable saved edges retain uniform callbacks under actual view changes. -/
+def Edge (spec : Spec) (_completed : List (FiberId × ExitV)) :=
+  AnswerFlow.EmbeddedEdgeOver (fun (_ : World) => ()) Kind.stable (Ready spec)
+    (Semantic spec) (Typed.Edge spec.toSpec [])
+
+/-- The actual view projects both uniform initializer and stable saved families. -/
 theorem family (spec : Spec) (fragment : SourceScope.Fragment spec.root) (completed : List (FiberId × ExitV)) :
     AnswerFlow.SavedFamily (model spec completed) (interpAt spec.root completed spec.table).toPrimInterp (Edge spec completed) :=
-  (embedding spec completed).family _ _ (Typed.family spec.toSpec fragment completed)
+  AnswerFlow.FamilyEmbedding.family_over (interpAt spec.root completed spec.table).toPrimInterp
+    (embedding spec completed) (Semantic spec) (Typed.Edge spec.toSpec completed)
+    (AnswerFlow.ViewSavedAt.family (fun view => model spec view)
+      (fun view => (interpAt spec.root view spec.table).toPrimInterp) completed)
+    (Typed.family spec.toSpec fragment completed)
 end Effect4.Program.AnswerSlots.Initialized

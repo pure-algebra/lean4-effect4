@@ -18,12 +18,18 @@ theorem bound_edge (spec : Spec) (completed : List (FiberId × ExitV)) (world : 
       ValueAt spec nextWorld input answer → CodeAt spec nextWorld output
         ((interpAt spec.root view spec.table).contA name answer)) :
     Edge spec completed world input output (.onSuccess body name) := by
-  apply AnswerFlow.EmbeddedEdge.saved
-  apply AnswerFlow.saved_success
-  · intro nextWorld future answer good
-    exact callback nextWorld future completed answer good
-  · intro nextWorld future cause good
-    exact good
+  apply AnswerFlow.EmbeddedEdgeOver.saved
+  refine ⟨?_, ?_, ?_⟩
+  · intro view
+    apply AnswerFlow.saved_success
+    · intro nextWorld future answer good
+      exact callback nextWorld future view answer good
+    · intro nextWorld future cause good
+      exact good
+  · intro loop cursor same
+    cases same
+  · intro generator cursor same
+    cases same
 
 /-- An initializer child exposes either its actual reference allocation or a live source frontier. -/
 theorem allocation_code (spec : Spec) (world : World) (index : Nat) (point : Point)

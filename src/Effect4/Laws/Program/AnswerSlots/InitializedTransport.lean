@@ -16,12 +16,18 @@ theorem yield_edge (spec : Spec) (completed : List (FiberId × ExitV)) (world : 
     (kind : Kind) (priority : Nat) (next : NCode) (owned : CodeAt spec world kind next) :
     Edge spec completed world (.yielded world.state.refs.length world.state.deferreds.cells.length) kind
       (.onSuccessConst (.yieldNowWith priority) next) := by
-  apply AnswerFlow.EmbeddedEdge.saved
-  apply AnswerFlow.saved_constant
-  · intro nextWorld future value good
-    exact code_rebase spec world kind next owned nextWorld future good.2.2.1.symm good.2.2.2.1.symm
-  · intro nextWorld future cause good
-    exact good
+  apply AnswerFlow.EmbeddedEdgeOver.saved
+  refine ⟨?_, ?_, ?_⟩
+  · intro view
+    apply AnswerFlow.saved_constant
+    · intro nextWorld future value good
+      exact code_rebase spec world kind next owned nextWorld future good.2.2.1.symm good.2.2.2.1.symm
+    · intro nextWorld future cause good
+      exact good
+  · intro loop cursor same
+    cases same
+  · intro generator cursor same
+    cases same
 
 /-- The shared initialized source graph supplies every pure current head.
 Stateful allocation heads are consumed by the actual native synchronous producer. -/
@@ -37,7 +43,9 @@ theorem head (spec : Spec) (fragment : SourceScope.Fragment spec.root)
   | allocating small stage => exact (noSync _ rfl).elim
   | gateAllocating stage => exact (noSync _ rfl).elim
   | stable ready held =>
-    exact (embedding spec completed).head _ _ world ready _ program (Typed.head spec.toSpec fragment completed _ program held)
+    exact AnswerFlow.FamilyEmbedding.head_over (interpAt spec.root completed spec.table).toPrimInterp
+      (embedding spec completed) (Semantic spec) (Typed.Edge spec.toSpec completed) world ready _ program
+      (Typed.head spec.toSpec fragment completed _ program held)
   | frontier zero phase => exact .suspend _ (frontier_code spec completed world kind _ zero phase)
   | yielding phase refsEq deferredEq pending => exact .yieldNowWith _ (.yielding phase refsEq deferredEq pending)
   | bound first callback =>
@@ -45,12 +53,19 @@ theorem head (spec : Spec) (fragment : SourceScope.Fragment spec.root)
   | yieldThen phase held =>
     by_cases ready : Ready spec world
     · refine .onSuccessConst (Kind.stable Typed.Kind.root) _ _ (.stable ready rfl) ?_
-      apply AnswerFlow.EmbeddedEdge.saved
-      apply AnswerFlow.saved_constant
-      · intro nextWorld future value good
-        exact code_future_ready spec world kind _ held nextWorld future ready
-      · intro nextWorld future cause good
-        exact good
+      apply AnswerFlow.EmbeddedEdgeOver.saved
+      refine ⟨?_, ?_, ?_⟩
+      · intro view
+        apply AnswerFlow.saved_constant
+        · intro nextWorld future value good
+          exact code_future_ready spec world kind _ held nextWorld future ready
+        · intro nextWorld future cause good
+          exact good
+      · intro loop cursor same
+        cases same
+      · intro generator cursor same
+        cases same
+
     · exact .onSuccessConst (Kind.yielded world.state.refs.length world.state.deferreds.cells.length) _ _
         (.yielding phase rfl rfl ready) (yield_edge spec completed world kind _ _ held)
 
