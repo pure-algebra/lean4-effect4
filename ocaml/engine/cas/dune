@@ -5,10 +5,11 @@
 ; test/.  A sub-library of the engine's dune project (ocaml/engine/dune-project); it declares
 ; no dune-project of its own.
 ;
-; Dependencies: the stdlib, unix (the file classes lanes P1/P3/P5 land), effect4_engine for
+; Dependencies: the stdlib, unix (the file classes lanes P1/P3/P5 land), effect4_bytes for
 ; E4_sha256 / E4_hex / E4_be (never a second hash and never a second framing writer -- brief
-; §2.2), and effect4_eff for Eff_frame's tag alphabet and UTF-8 rule (read-only).
+; §2.2), effect4_eff for Eff_frame's tag alphabet and UTF-8 rule (read-only), and
+; effect4_engine for E4_checkpoint alone, which images the engine's machine.
 (library
  (name effect4_engine_cas)
- (libraries unix effect4_engine effect4_eff)
+ (libraries unix effect4_bytes effect4_engine effect4_eff)
  (flags (:standard -w +a-4-9-40-41-42-44-45-70)))

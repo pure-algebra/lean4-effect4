@@ -24,7 +24,7 @@ type 'a rep =
   | Small of (int * 'a) list (* ascending by key, no duplicate key, length <= small_max *)
   | Big of 'a IMap.t (* cardinal > small_max *)
 
-(* The cardinal is carried so that `cardinal` is O(1) (E4_store.grow allocates at it). *)
+(* The cardinal is carried so that `cardinal` is O(1) (the ref heap allocates at it). *)
 type 'a t = { n : int; rep : 'a rep }
 
 let empty : 'a t = { n = 0; rep = Small [] }

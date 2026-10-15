@@ -20,7 +20,6 @@
      R2  the same with a `kind_at` that answers from a table, i.e. the header scan alone — the
          floor `read_at` is measured against *)
 
-open Effect4_engine
 open Effect4_engine_cas
 
 let now () = Unix.gettimeofday ()

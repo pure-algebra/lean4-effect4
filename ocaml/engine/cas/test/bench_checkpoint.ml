@@ -23,7 +23,6 @@
      dune exec engine/cas/test/bench_checkpoint.exe -- /tmp/b7 -- A, B and C *)
 
 open Effect4_engine_cas
-open Effect4_engine
 module Ch = E4_chunk
 module Ck = E4_checkpoint
 

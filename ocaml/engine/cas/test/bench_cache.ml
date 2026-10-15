@@ -19,7 +19,6 @@
    temp directory, removed at the end).  On WSL2 it must be pointed at the LINUX filesystem —
    A2 §6.2 measures a 72x read penalty and a 146x append penalty on /mnt/c. *)
 
-open Effect4_engine
 open Effect4_engine_cas
 
 let now = Unix.gettimeofday

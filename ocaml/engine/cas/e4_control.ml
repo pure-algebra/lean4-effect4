@@ -1,7 +1,6 @@
 (* E4_control — the control file.  The grammar, the behaviour list and the deviations are in
    e4_control.mli; this file is the transcription and nothing else. *)
 
-open Effect4_engine
 
 (* ---------------------------------------------------------------- the plane *)
 

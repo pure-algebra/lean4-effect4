@@ -55,7 +55,6 @@
    Everything that touches the disk runs in a fresh directory under $E4_CACHE_TMP (default:
    the system temp dir) and is removed at the end.  Exit code 0 iff every check passed. *)
 
-open Effect4_engine
 open Effect4_engine_cas
 
 let failures = ref 0

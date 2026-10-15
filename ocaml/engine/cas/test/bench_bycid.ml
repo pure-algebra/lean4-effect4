@@ -17,7 +17,6 @@
    removed at the end).  On WSL2 point it at the LINUX filesystem — A2 §6.2 measures a 146x
    append penalty on /mnt/c. *)
 
-open Effect4_engine
 open Effect4_engine_cas
 
 let now = Unix.gettimeofday

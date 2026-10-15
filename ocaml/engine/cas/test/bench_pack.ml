@@ -19,7 +19,6 @@
    Usage: bench_pack <dir> [byte-budget-MiB]
    The store is created under <dir>/bench-<pid> and removed at the end. *)
 
-open Effect4_engine
 open Effect4_engine_cas
 
 let now () = Unix.gettimeofday ()

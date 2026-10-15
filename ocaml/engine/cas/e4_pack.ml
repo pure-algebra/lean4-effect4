@@ -8,7 +8,6 @@
      4. the reader
      5. the writer: the lock, staging, flush/sync, rotation, recovery, truncation *)
 
-open Effect4_engine
 
 (* ============================================================ 1. the grammar *)
 

@@ -1,6 +1,5 @@
 (* E4_subterm — see e4_subterm.mli for what this is and the behaviours it holds itself to. *)
 
-open Effect4_engine
 
 (* ============================================================ 1. families, the child table,
    the value side

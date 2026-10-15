@@ -26,7 +26,7 @@
    section).  R6's mitigation is therefore refuted, not adopted, and AC9 must be met — if it
    needs meeting at all — some other way.  The two-arm representation is retained because
    raising the constant re-enables it, and because `Small []` is a cheaper `empty`.
-   The cardinal is carried in the value, so `cardinal` is O(1): `E4_store.grow` allocates at
+   The cardinal is carried in the value, so `cardinal` is O(1): the ref heap allocates at
    `cardinal`, once per `refMake`, and an O(n) `Map.cardinal` there would restore the very
    quadratic the carrier exists to remove.  The representation is CANONICAL: `Big` is never
    used at or below `small_max` (a `remove` that crosses back down rebuilds a `Small`), so
@@ -87,7 +87,8 @@ val set : int -> 'a -> 'a t -> 'a t
     absent (T1).  This is Lean's `List.set` / replace-by-key `List.map`. *)
 
 val add : int -> 'a -> 'a t -> 'a t
-(** Insert or replace.  Allocation uses [add k v t] with [k = cardinal t] (E4_store.grow). *)
+(** Insert or replace.  Allocation uses [add k v t] with [k = cardinal t] (the ref heap's
+    `refMake`). *)
 
 val remove : int -> 'a t -> 'a t
 (** No Lean carrier removes; `remove` exists for the property tests and for A3. *)
