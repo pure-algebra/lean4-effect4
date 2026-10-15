@@ -11,6 +11,10 @@ set_option autoImplicit false
 namespace Effect4.Program.AnswerSlots.Initialized
 open Effect4 Effect4.Machine Effect4.Program
 
+/-- One source action returns both its broad suffix and its syntactic current-head certificate. -/
+def AdminResult (spec : Spec) (world : World) (frame : FrameFiber EffName EffThunk Val Err Defect FiberId Ann) : Prop :=
+  RootPath spec world frame ∧ ∃ thunk, frame.current = .withFiber thunk
+
 /-- A local command emitted by an actual primitive retains its actual host's broad-root suffix. -/
 theorem primitive_admin_path (spec : Spec) (fragment : SourceScope.Fragment spec.root)
     (view : List (FiberId × ExitV)) (machine : NativeMachine) (fiber : SourceScope.SourceFiber)
@@ -19,7 +23,7 @@ theorem primitive_admin_path (spec : Spec) (fragment : SourceScope.Fragment spec
     (command : Guard.NCmd) (host : FiberId)
     (member : command ∈ (evaluatePrim (interpAt spec.root view spec.table) machine fiber yielding).nested)
     (localHost : NativeAdminOrigin.Local host command) :
-    host = fiber.id ∧ RootPath spec
+    host = fiber.id ∧ AdminResult spec
       ⟨host, (evaluatePrim (interpAt spec.root view spec.table) machine fiber yielding).machine.state⟩
       (evaluatePrim (interpAt spec.root view spec.table) machine fiber yielding).fiber.frame := by
   obtain ⟨thunk, action, current, found, actual⟩ := NativeAdminOrigin.primitive_action
@@ -34,7 +38,9 @@ theorem primitive_admin_path (spec : Spec) (fragment : SourceScope.Fragment spec
   refine ⟨same, ?_⟩
   rw [same]
   obtain ⟨input, output, owned, saved⟩ := acting
-  exact action_root_path spec fragment view machine fiber yielding input output thunk action current owned saved found scopes
+  refine ⟨action_root_path spec fragment view machine fiber yielding input output thunk action current owned saved found scopes, thunk, ?_⟩
+  exact (NativeAdminOrigin.withFiber_local_current (interpAt spec.root view spec.table) machine fiber yielding action
+    command member host localHost).trans current
 
 /-- Terminal scoped interception emits no administrative continuation command. -/
 theorem scoped_exit_nested (root : NativeEff) (machine : NativeMachine) (fiber : SourceScope.SourceFiber)
@@ -58,7 +64,7 @@ theorem native_admin_path (spec : Spec) (fragment : SourceScope.Fragment spec.ro
     (command : Guard.NCmd) (host : FiberId)
     (member : command ∈ (evaluateNative spec.root machine fiber yielding spec.table).nested)
     (localHost : NativeAdminOrigin.Local host command) :
-    host = fiber.id ∧ RootPath spec
+    host = fiber.id ∧ AdminResult spec
       ⟨host, (evaluateNative spec.root machine fiber yielding spec.table).machine.state⟩
       (evaluateNative spec.root machine fiber yielding spec.table).fiber.frame := by
   generalize actual : evaluateNative spec.root machine fiber yielding spec.table = next at member ⊢
@@ -88,7 +94,7 @@ theorem iteration_admin_path (spec : Spec) (fragment : SourceScope.Fragment spec
     (command : Guard.NCmd) (host : FiberId)
     (member : command ∈ (iteration (evaluator := evaluatorFor spec.root spec.table) (interpOf spec.root spec.table) machine fiber yielding).nested)
     (localHost : NativeAdminOrigin.Local host command) :
-    host = fiber.id ∧ RootPath spec
+    host = fiber.id ∧ AdminResult spec
       ⟨host, (iteration (evaluator := evaluatorFor spec.root spec.table) (interpOf spec.root spec.table) machine fiber yielding).machine.state⟩
       (iteration (evaluator := evaluatorFor spec.root spec.table) (interpOf spec.root spec.table) machine fiber yielding).fiber.frame := by
   have topId : (countOp (runloopTop fiber)).id = fiber.id := by

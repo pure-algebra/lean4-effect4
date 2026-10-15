@@ -205,4 +205,34 @@ theorem iteration_finished_stack (spec : Spec) (machine : NativeMachine) (fiber 
   have kept := iteration_keepsMask (evaluator := evaluatorFor spec.root spec.table) (interpOf spec.root spec.table)
     (fun m f y => Effect4.Program.evaluateNative_keepsMask spec.root spec.table m f y) machine fiber yielding
   exact kept.finished_stack finished
+
+/-- The queued administrative host retains the source action head until its command executes. -/
+def AdminHead (machine : NativeMachine) (command : Guard.NCmd) : Prop :=
+  ∀ host, Guard.ReturnCommands.Local host command → ∀ fiber, machine.fiber? host = some fiber →
+    ∃ thunk, fiber.frame.current = .withFiber thunk
+
+/-- Actual current-code classification recovers the root suffix when the queued command executes. -/
+theorem admin_of_head (spec : Spec) (machine : NativeMachine) (command : Guard.NCmd)
+    (frames : FramesAt spec machine) (head : AdminHead machine command) : AdminDemand spec machine command := by
+  intro host isLocal fiber found
+  obtain ⟨thunk, current⟩ := head host isLocal fiber found
+  obtain ⟨input, output, code, saved⟩ := frames fiber (List.mem_of_find?_eq_some found)
+  obtain ⟨same, ready, permission⟩ := action_shape spec ⟨fiber.id, machine.state⟩ input thunk (current ▸ code)
+  subst input
+  rw [← Guard.fiber_id_of_lookup found]
+  exact ⟨ready, output, saved⟩
+
+/-- The existing guard current-code transport carries administrative heads without saved-graph transport. -/
+theorem AdminHead.transport (root : NativeEff) (table : RowTable) (before after : NativeMachine)
+    (command : Guard.NCmd) (head : AdminHead before command)
+    (authority : Guard.CommandAuthority root table before command)
+    (controls : Guard.CommandControlsPreserved before after) : AdminHead after command := by
+  intro host isLocal fiber found
+  have owner := NativeAdminOrigin.owner before command host (NativeAdminOrigin.of_guard command host isLocal)
+  obtain ⟨old, previous, running, parked⟩ := Guard.commandAuthority_owner_active root table before command host authority owner
+  obtain ⟨next, seen, nextRunning, nextParked, current⟩ := controls.active host old previous running parked
+  have same := Option.some.inj (seen.symm.trans found)
+  subst next
+  obtain ⟨thunk, source⟩ := head host isLocal old previous
+  exact ⟨thunk, current.trans source⟩
 end Effect4.Program.AnswerSlots.Initialized

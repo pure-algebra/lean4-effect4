@@ -102,4 +102,40 @@ theorem nested_host (root : NativeEff) (table : RowTable) (next : Moves.NIterati
     · have same := List.mem_singleton.mp rest
       subst command
       exact owned.elim
+
+/-- An action either retains its current head or emits only nonadministrative simple commands. -/
+theorem withFiber_head_or_simple (interp : Moves.NInterp)
+    (machine : NativeMachine) (fiber : Moves.NFiber) (yielding : Bool) (action : Guard.ReturnFields.NAction) :
+    (evaluatePrim.withFiber interp machine fiber yielding action).fiber.frame.current = fiber.frame.current ∨
+      Guard.ReturnCommands.AllSimple (evaluatePrim.withFiber interp machine fiber yielding action).nested := by
+  fun_cases evaluatePrim.withFiber interp machine fiber yielding action
+  case case1 | case2 | case3 =>
+    right
+    simp only [start] at *
+    aesop (add norm unfold [Guard.ReturnCommands.AllSimple, Guard.ReturnCommands.Simple])
+  case case9 =>
+    left
+    unfold evaluatePrim.interruptAs
+    split <;> rfl
+  case case12 | case27 | case31 => exact .inl rfl
+  case case17 | case18 =>
+    unfold beginRace
+    exact .inr Guard.ReturnCommands.allSimple_nil
+  all_goals exact .inr Guard.ReturnCommands.allSimple_nil
+
+/-- An emitted administrative continuation retains the action's current head. -/
+theorem withFiber_local_current (interp : Moves.NInterp)
+    (machine : NativeMachine) (fiber : Moves.NFiber) (yielding : Bool) (action : Guard.ReturnFields.NAction)
+    (command : Guard.NCmd) (member : command ∈ (evaluatePrim.withFiber interp machine fiber yielding action).nested)
+    (host : FiberId) (owned : Local host command) :
+    (evaluatePrim.withFiber interp machine fiber yielding action).fiber.frame.current = fiber.frame.current := by
+  rcases withFiber_head_or_simple interp machine fiber yielding action with same | simple
+  · exact same
+  · exact (simple_not_local command host (simple command member) owned).elim
+
+/-- Administrative host syntax agrees with the guard's existing command-owner observation. -/
+theorem owner (machine : NativeMachine) (command : Guard.NCmd) (host : FiberId)
+    (owned : Local host command) : Guard.commandOwner machine command = some host := by
+  fun_cases Local host command <;> simp only [Local] at owned
+  all_goals subst host; rfl
 end Effect4.Program.NativeAdminOrigin
