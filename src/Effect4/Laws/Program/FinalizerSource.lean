@@ -49,14 +49,15 @@ abbrev nativeWeights (root : NativeEff) (q : List Nat) : PrimWeights.Model EffNa
 abbrev current (root : NativeEff) (q : List Nat) (code : NCode) : Nat :=
   cata_prim (PrimWeights.currentAlgebra (nativeWeights root q)) code
 
-/-- A saved release-start continuation receives the descendant opportunity at its recorded push. -/
-def saved (root : NativeEff) (q : List Nat) : NCode → Nat
-  | .onSuccess _ (.releaseUnder point _ _) => releaseWeight q point.path
-  | .onSuccess _ callback | .onFailure _ callback | .onExit _ callback _ => name q callback
-  | .onSuccessConst _ next => current root q next
-  | .onSuccessAndFailure _ success failure => name q success + name q failure
-  | .iterator callback _ | .whileLoop callback _ | .asyncFinalizer callback => name q callback
-  | _ => 0
+/-- A success push can move an existing release reservation into its saved callback. -/
+def savedSuccess (q : List Nat) (base : EffName → Nat) : EffName → Nat
+  | .releaseUnder point _ _ => releaseWeight q point.path
+  | callback => base callback
+
+/-- The shared paired fold computes the saved source reading. -/
+abbrev saved (root : NativeEff) (q : List Nat) (code : NCode) : Nat :=
+  (cata_prim (PrimWeights.pairedAlgebra (nativeWeights root q)
+    (savedSuccess q (name q))) code).2
 
 /-- The source reservation held by an existing frame excludes its copied active body. -/
 def frame (root : NativeEff) (q : List Nat) (fiber : SourceFrame) : Nat :=
@@ -267,7 +268,7 @@ theorem registration_push (root : NativeEff) (q : List Nat)
       (.running {fiber with current := body, stack := .onSuccess body (.afterScopeAdd acquired (.foreign capture)) :: fiber.stack},
         [.pushed (.onSuccess body (.afterScopeAdd acquired (.foreign capture)))]) := by
   refine ⟨?_, FrameFiber.step_onSuccess interp fiber body _⟩
-  simp only [frame, current, cata_prim, saved, name, consumedFrame, successPush,
+  simp only [frame, current, cata_prim, saved, savedSuccess, name, consumedFrame, successPush,
     List.map_cons, List.sum_cons, Nat.add_zero, Nat.zero_add]
   omega
 
@@ -282,7 +283,7 @@ theorem release_push (root : NativeEff) (q : List Nat)
       (.running {fiber with current := body, stack := .onSuccess body (.releaseUnder point context exit) :: fiber.stack},
         [.pushed (.onSuccess body (.releaseUnder point context exit))]) := by
   refine ⟨?_, FrameFiber.step_onSuccess interp fiber body _⟩
-  simp only [frame, current, cata_prim, saved, name, successPush, producedFrame,
+  simp only [frame, current, cata_prim, saved, savedSuccess, name, successPush, producedFrame,
     List.map_cons, List.sum_cons, Nat.add_zero]
   omega
 

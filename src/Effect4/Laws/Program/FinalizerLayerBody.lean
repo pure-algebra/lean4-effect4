@@ -102,17 +102,10 @@ theorem compile_full_le (root : NativeEff) (q : List Nat) (program : NativeEff) 
   rw [compile_layerBody_zero, Nat.add_zero]
   exact Nat.le_trans (current_le root q _) (SourceScope.Opportunities.compile_le root q program point found)
 
-/-- The full saved reading adds the delayed layer body to every actual callback slot. -/
-def fullSaved (root : NativeEff) (q : List Nat) : NCode → Nat
-  | .onSuccess _ (.releaseUnder point _ _) => releaseWeight q point.path
-  | .onSuccess _ callback | .onFailure _ callback | .onExit _ callback _ =>
-      (fullWeights root q).name callback
-  | .onSuccessConst _ next => fullCurrent root q next
-  | .onSuccessAndFailure _ success failure =>
-      (fullWeights root q).name success + (fullWeights root q).name failure
-  | .iterator callback _ | .whileLoop callback _ | .asyncFinalizer callback =>
-      (fullWeights root q).name callback
-  | _ => 0
+/-- The shared paired fold computes the full saved reading with delayed layer bodies. -/
+abbrev fullSaved (root : NativeEff) (q : List Nat) (code : NCode) : Nat :=
+  (cata_prim (PrimWeights.pairedAlgebra (fullWeights root q)
+    (savedSuccess q (fullWeights root q).name)) code).2
 
 /-- Native administrative hooks retain the full saved source and layer-body reading. -/
 theorem full_ensure_saved (root : NativeEff) (q : List Nat) (code : NCode) (fiber : SourceFrame) :
