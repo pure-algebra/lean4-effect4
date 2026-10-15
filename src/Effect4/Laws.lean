@@ -386,3 +386,5 @@ import Effect4.Laws.Machine.LiftCoupledFact
 import Effect4.Laws.Program.NativeScopeFields
 
 import Effect4.Laws.Program.Guard.Lift
+
+import Effect4.Laws.Program.PlaceFunding.FrameControl

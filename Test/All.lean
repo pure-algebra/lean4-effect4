@@ -416,3 +416,5 @@ import Test.Dogfood.Proofs.WorkersCapturedSlots
 import Test.Dogfood.Proofs.WorkersExclusivity
 
 import Test.Dogfood.Proofs.WorkersWriterCensus
+
+import Test.Dogfood.Proofs.WorkersWriterSource
