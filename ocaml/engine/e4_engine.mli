@@ -39,6 +39,12 @@
        Float replies retain exact bits only when the existing value carrier holds them.
        The engine requires a 63-bit integer host. Raw INSTANCE constructors are a trusted input.
                                                           tested (numeric_ingress_check)
+   EN9 A host's answer is host ingress (decisions row 394 (1)): {!check_answer} walks every
+       natural of an answer through the profile check a natural reply passes (EN8), and
+       refuses with E4_clock.Profile_refusal, never a defect. The clock boundary of the LCNF
+       route (OCaml5.Lcnf.ClockFlow) reads a reactor supplied at a root as checked ingress,
+       so a driver that supplies one applies this check to every answer before the machine
+       reads it.                                          tested (answer_ingress_check)
    EN1 `run p ~fuel` is `Api.run p fuel []`: same outcome, same fiber table, same trace
        rows, same exits.  The check is against the instance's OWN `api_run` (the generated
        `Effect4.Api.run`, untouched) on every program of the corpus.
@@ -103,6 +109,15 @@ type answer =
   | Refused of string  (** the `Stuck` constructor, spelled *)
   | Outside_profile of string  (** host numeric boundary; the input machine is retained *)
   | Delay of frontier  (** the fuel ran out; the command residue is non-empty *)
+
+(** {1 A host's answer at ingress} *)
+
+val check_answer : (val_, err, defect, int, unit) completion -> unit
+(** EN9: every natural of a host's answer ([Api.HostSession.Answer], src/Effect4/Api/HostSession.lean)
+    through [E4_clock.to_profile_nat (E4_clock.of_nat n)]: [Val.nat], a [Val.ctor] index, a
+    [Val.handle] key, a [Val.negInt] magnitude, [Err.tag], [Defect.user], an interrupting
+    fiber and a [RefKey]. Raises [E4_clock.Profile_refusal] at the first natural outside the
+    profile. The byte, bit-pattern and string fields are no naturals and are not read here. *)
 
 (** {1 What an instance must supply} *)
 

@@ -1105,12 +1105,28 @@ private def collectClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeName
         queue := queue.push callee
   return (c, clockFlows)
 
+/-- The mono type of a host reactor, `Effect4.Run.Reactor σ`, made by the compiler's own type
+translation (`toLCNFType`, then `toMonoType`): the type mono LCNF gives a reactor parameter, with
+`σ` as `lcAny`. `none` when the environment holds no `Effect4.Run.Reactor`. -/
+def reactorMonoType? : CoreM (Option Lean.Expr) := do
+  unless (← getEnv).contains `Effect4.Run.Reactor do return none
+  Meta.MetaM.run' do
+    Meta.withLocalDeclD `σ (.sort (.succ .zero)) fun σ => do
+      let base ← toLCNFType (mkApp (mkConst `Effect4.Run.Reactor) σ)
+      return some (← toMonoType base)
+
+/-- What the clock boundary reads besides the flows (`ClockFlow.Context`): the persisted mono
+declarations and the mono type of a host reactor. -/
+def clockContext : CoreM ClockFlow.Context := do
+  return { mono := persistedMonoIndex (← getEnv), reactor := ← reactorMonoType? }
+
 /-- Translate `roots` and, transitively, every non-builtin constant they call, up to `cap`
 declarations. Validate the final closure at the clock boundary before returning it. -/
 def translateClosure (roots : Array Name) (cap : Nat := 60) (tn : TypeNames := {})
     (ex : Externs := {}) : CoreM Closure := do
   let (closure, clockFlows) ← collectClosure roots cap tn ex
-  return { closure with clockRefusals := ClockFlow.refusals (← getEnv) roots clockFlows }
+  return { closure with
+    clockRefusals := ClockFlow.refusals (← clockContext) (← getEnv) roots clockFlows }
 
 /-- `translateClosure`, with the carrier parameters inferred. A carrier that has no `to_list`
 operation can only be passed on as itself, so a generated callee that is handed one takes it as
@@ -1141,7 +1157,8 @@ def translateClosureInferring (roots : Array Name) (cap : Nat := 60) (tn : TypeN
     throwError "carrier parameters still unsettled after 64 rounds: {closure.wantedCargs}"
   -- Carrier rows affect translation, so validate the graph of the settled result.
   -- Checking intermediate results repeats the same analysis without returning an artifact.
-  return ({ closure with clockRefusals := ClockFlow.refusals (← getEnv) roots clockFlows }, ex,
+  return ({ closure with
+    clockRefusals := ClockFlow.refusals (← clockContext) (← getEnv) roots clockFlows }, ex,
     inferred)
 
 /-- The closure translated again under other type names (`tn`), with its settled carrier table.

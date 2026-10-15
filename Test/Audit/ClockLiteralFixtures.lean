@@ -1,8 +1,10 @@
 import Effect4.Data.ClockMillis
 import Effect4.Store.Carrier.Val
+import Effect4.Run.Basic
 
 /-! Three admitted clock construction routes beyond OCaml's native integer range.
-The companion audit inspects their actual persisted mono-LCNF translations. -/
+The companion audit inspects their actual persisted mono-LCNF translations. The last section
+holds the controls of a builtin callback's arity and of a host's reactor at a root. -/
 namespace Test.ClockLiteralFixtures
 open Effect4
 
@@ -61,6 +63,48 @@ structure NatBox where
   ClockMillis.ofNat (produce ()).value
 
 def unrelatedNat (n : Nat) : Nat := n + 4611686018427387904
+
+/-! ### A builtin callback, and a host's reactor at a root -/
+
+/-- A builtin passed as a callback (`List.appendTR._redArg` in mono LCNF, a declaration with no
+kernel constant) is a known callable, so its result is known data. -/
+@[noinline] def combine (op : List Nat → List Nat → List Nat) (a b : List Nat) : List Nat := op a b
+def throughBuiltinCallback : ClockMillis := ClockMillis.ofNat (combine (· ++ ·) [1] [2]).length
+/-- The same callback over a narrowed argument: its result still carries the narrowing. -/
+def throughBuiltinCallbackNarrowed : ClockMillis :=
+  ClockMillis.ofNat ((combine (· ++ ·) [4611686018427387904] []).headD 0)
+
+/-- A host's reactor at a root: its answer is host ingress (decisions row 394 (1)), so a natural
+of it reaches the clock as a checked answer of the tape does. -/
+@[noinline] def reactorClock (r : Effect4.Run.Reactor Nat) (row : Effect4.Program.Row) :
+    ClockMillis :=
+  match r row .unit 0 with
+  | some (.ofExit (.success (.nat n)), _) => ClockMillis.ofNat n
+  | _ => 0
+/-- A callback of another type at a root stays unknown production. -/
+@[noinline] def otherCallbackClock
+    (f : Effect4.Program.Row → Effect4.Store.Val → Option Effect4.Store.Val)
+    (row : Effect4.Program.Row) : ClockMillis :=
+  match f row .unit with
+  | some (.nat n) => ClockMillis.ofNat n
+  | _ => 0
+/-- A reactor beside a second relevant field: a record, not unboxed to its reactor. -/
+structure ReactorBox where
+  reactor : Effect4.Run.Reactor Nat
+  label : Nat
+/-- A reactor inside other data at a root stays unknown production. (A structure with the reactor
+as its one relevant field is unboxed to it, and so is a reactor.) -/
+@[noinline] def boxedReactorClock (box : ReactorBox) (row : Effect4.Program.Row) : ClockMillis :=
+  match box.reactor row .unit 0 with
+  | some (.ofExit (.success (.nat n)), _) => ClockMillis.ofNat n
+  | _ => 0
+/-- A function of a reactor's shape whose two states differ is no reactor: unknown production. -/
+@[noinline] def mixedStateClock
+    (f : Effect4.Program.Row → Effect4.Store.Val → Nat → Option (Effect4.Api.HostSession.Answer × Bool))
+    (row : Effect4.Program.Row) : ClockMillis :=
+  match f row .unit 0 with
+  | some (.ofExit (.success (.nat n)), _) => ClockMillis.ofNat n
+  | _ => 0
 
 #guard direct.toDecimal = "4611686018427387904"
 #guard numeral.toDecimal = "4611686018427387905"
