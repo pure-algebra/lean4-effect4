@@ -57,6 +57,7 @@ inductive Kind
   | ownerReady (owner : FiberId)
   | captured (owner : FiberId) (token : Nat) (input : QueueWorkersCustody.Kind)
   | snapshot (owner : FiberId) (token : Nat) (option : Val)
+  | restoreSnapshot (owner : FiberId) (token : Nat) (option : Val) (exit : ExitV)
   | job (owner : FiberId)
 
 /-- The outer job binder reads its owner's current request; inner binders retain their literal token. -/
@@ -77,6 +78,9 @@ def ValueAt (world : World) : Kind → Val → Prop
       QueueWorkersCustody.ValueAt world.requests.custody input value
   | .snapshot owner token option, _ => Owns world owner token ∧
       OptionAt world.requests.custody token option
+  | .restoreSnapshot owner token option (.success _), _ => Owns world owner token ∧
+      OptionAt world.requests.custody token option
+  | .restoreSnapshot _ _ _ (.failure _), _ => True
   | .job owner, .nat job => ∃ token, Owns world owner token ∧
       world.requests.custody.requests token = .holding job
   | _, _ => False

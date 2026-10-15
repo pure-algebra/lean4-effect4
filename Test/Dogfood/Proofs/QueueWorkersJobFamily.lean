@@ -61,6 +61,75 @@ theorem bound_head (total : Nat) (table : RowTable) (owner : FiberId)
       (Semantic total table owner) world output (.onSuccess body name) :=
   .onSuccess input body name first (bound_saved total table owner world input output body name callback)
 
+/-- Cleanup success restores its captured body exit under that exit's actual input permission. -/
+theorem restoring_saved (total : Nat) (table : RowTable) (owner : FiberId)
+    (world : QueueWorkersCustodyFlow.World) (token : Nat) (option : Val) (exit : ExitV) (body : NCode) :
+    Semantic total table owner world (.restoreSnapshot owner token option exit)
+      (.snapshot owner token option) (.onSuccess body (.restore exit)) := by
+  apply bound_saved
+  intro nextWorld future view answer good
+  change CodeAt total table owner nextWorld (.snapshot owner token option)
+    (contAOf (Test.Dogfood.Scenario.Programs.queueProgram total) (.restore exit) answer)
+  rw [Agreement.contAOf_restore]
+  cases exit with
+  | success value => exact .success good
+  | failure cause => exact .failure
+
+/-- The installed cleanup's failure arm returns a failure and creates no successful job input. -/
+theorem merging_saved (total : Nat) (table : RowTable) (owner : FiberId)
+    (world : QueueWorkersCustodyFlow.World) (kind : Kind) (exit : ExitV) (body : NCode) :
+    Semantic total table owner world kind kind (.onFailure body (.merge exit)) := by
+  refine ⟨?_, ?_, ?_⟩
+  · intro view
+    apply saved_failure (model total table owner view)
+      (interpAt (Test.Dogfood.Scenario.Programs.queueProgram total) view table).toPrimInterp
+      world kind kind body (.merge exit)
+    · intro _ _ _ good
+      exact good
+    · intro nextWorld _ cause _
+      change CodeAt total table owner nextWorld kind
+        (contEOf (Test.Dogfood.Scenario.Programs.queueProgram total) (.merge exit) cause)
+      rw [Agreement.contEOf_merge]
+      cases exit with
+      | success value => exact .failure
+      | failure original => exact .failure
+    · intros
+      trivial
+  · intros; intro impossible; cases impossible
+  · intros; intro impossible; cases impossible
+
+/-- The installed restore head keeps the captured body exit and actual older suffix. -/
+theorem restoring_head (total : Nat) (table : RowTable) (owner : FiberId)
+    (world : QueueWorkersCustodyFlow.World) (token : Nat) (option : Val) (exit : ExitV) (body : NCode)
+    (view : List (FiberId × ExitV))
+    (first : CodeAt total table owner world (.restoreSnapshot owner token option exit) body) :
+    HeadAt (model total table owner view)
+      (interpAt (Test.Dogfood.Scenario.Programs.queueProgram total) view table).toPrimInterp
+      (Semantic total table owner) world (.snapshot owner token option) (.onSuccess body (.restore exit)) := by
+  refine HeadAt.onSuccess (Kind.restoreSnapshot owner token option exit) body (.restore exit) ?_ ?_
+  · exact first
+  · exact restoring_saved total table owner world token option exit body
+
+/-- The actual failure-merging head shares its input class with its successful cleanup result. -/
+theorem merging_head (total : Nat) (table : RowTable) (owner : FiberId)
+    (world : QueueWorkersCustodyFlow.World) (kind : Kind) (exit : ExitV) (body : NCode)
+    (view : List (FiberId × ExitV)) (first : CodeAt total table owner world kind body) :
+    HeadAt (model total table owner view)
+      (interpAt (Test.Dogfood.Scenario.Programs.queueProgram total) view table).toPrimInterp
+      (Semantic total table owner) world kind (.onFailure body (.merge exit)) :=
+  .onFailure kind body (.merge exit) first (merging_saved total table owner world kind exit body)
+
+/-- The actual installed finalizer wrapper preserves its body's captured result permission. -/
+theorem finalizer_code (total : Nat) (table : RowTable) (owner : FiberId)
+    (world : QueueWorkersCustodyFlow.World) (token : Nat) (option : Val) (exit : ExitV) (body : NCode)
+    (view : List (FiberId × ExitV))
+    (first : CodeAt total table owner world (.restoreSnapshot owner token option exit) body) :
+    CodeAt total table owner world (.snapshot owner token option)
+      (finalizerCode (interpAt (Test.Dogfood.Scenario.Programs.queueProgram total) view table) exit body) := by
+  cases exit with
+  | success value => exact .restoring first
+  | failure cause => exact .restoring (.merging first)
+
 /-- The existing saved-family proof owns all actual callback and unwinding cases. -/
 theorem semantic_family (total : Nat) (table : RowTable) (owner : FiberId) (view : List (FiberId × ExitV)) :
     SavedFamily (model total table owner view)

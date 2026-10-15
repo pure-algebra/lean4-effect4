@@ -107,6 +107,7 @@ theorem take_step (total : Nat) (nativeTable : RowTable)
     (captured : List Val) (stores : Stores) (run : Queue.Model.Run)
     (good : QueueWorkersJobGraph.CodeAt total nativeTable owner world kind
       (.sync (.op (.refModify ⟨0⟩ term captured))))
+    (takeKind : ∃ token, kind = .captured owner token (.takeReply token))
     (queue : world.requests.custody.ledger.queue = some run)
     (credits : QueueWorkersCustody.Credits world.requests.custody)
     (conserved : world.requests.custody.ledger.Conserved)
@@ -120,7 +121,7 @@ theorem take_step (total : Nat) (nativeTable : RowTable)
       nextWorld.requests.custody.ledger.Conserved ∧ QueueWorkersCustody.Credits nextWorld.requests.custody ∧
       QueueWorkersJobGraph.CodeAt total nativeTable owner nextWorld kind (.success value) := by
   obtain ⟨worker, member, point, token, rfl, rfl, rfl, request, selected, _leading, path, hint, hintHeld⟩ :=
-    QueueWorkersJobGraph.take_input total nativeTable world owner kind term captured good
+    QueueWorkersJobGraph.take_input total nativeTable world owner kind term captured good takeKind
   obtain ⟨key, published, waiting, idHeld⟩ := request_key total world owner token (worker + 8) point selected request
   have depth : point.env.length = worker + 11 := by
     have scope := request.1

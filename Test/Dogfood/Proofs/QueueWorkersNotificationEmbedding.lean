@@ -34,7 +34,7 @@ theorem embedding (total : Nat) (table : RowTable) (owner : FiberId) (token : Na
   value_write _ _ _ ready _ := ready
   cause_read _ _ _ _ _ := trivial
   cause_write _ _ _ _ _ := trivial
-  code _ _ _ ready owned := .notification spec ready owned
+  code _ _ _ ready owned := .notification spec (fun _ _ => Iff.rfl) ready owned
   finalizer _ _ _ _ := rfl
 
 /-- Existing semantic binders and source notification edges share the same actual answer classes. -/
@@ -72,6 +72,60 @@ theorem head (total : Nat) (table : RowTable) (owner : FiberId) (token : Nat) (o
   (embedding total table owner token option spec bindings view).head_over
     (interpAt (Programs.queueProgram total) view table).toPrimInterp
     (QueueWorkersJobGraph.Semantic total table owner) _ world phase () code
+    (CodeClosure.PredicateFamily.head (Programs.queueProgram total) table _
+      (QueueWorkersNotificationFlow.rules spec (SourceFragment.queue_fragment total) bindings table) view code owned)
+
+/-- An ignored notification result retains any supplied value-independent captured exit class. -/
+theorem embedding_at (total : Nat) (table : RowTable) (owner : FiberId) (target : Kind)
+    (flat : ∀ world value, ValueAt world target value ↔ ValueAt world target .unit)
+    (spec : QueueWorkersNotificationFlow.Spec (Programs.queueProgram total)) (bindings : List Val)
+    (view : List (FiberId × ExitV)) :
+    ClassifiedInputEmbedding ((oldSpec total table spec bindings).model view)
+      (QueueWorkersJobGraph.model total table owner view) (fun _ => ()) (fun _ => target)
+      (fun world => ValueAt world target .unit) where
+  future _ _ _ := trivial
+  value_ready world _ value good := (flat world value).mp good
+  value_read _ _ _ _ _ := trivial
+  value_write world _ value ready _ := (flat world value).mpr ready
+  cause_read _ _ _ _ _ := trivial
+  cause_write _ _ _ _ _ := trivial
+  code _ _ _ ready owned := .notification spec flat ready owned
+  finalizer _ _ _ _ := rfl
+
+/-- A neutral helper or captured-exit cleanup keeps its exact selected answer class. -/
+def EdgeAt (total : Nat) (table : RowTable) (owner : FiberId) (target : Kind)
+    (spec : QueueWorkersNotificationFlow.Spec (Programs.queueProgram total)) (bindings : List Val) :=
+  ClassifiedEdgeOver (fun _ => ()) (fun _ => target) (QueueWorkersJobGraph.Semantic total table owner)
+    (CodeClosure.PredicateFamily.edge (QueueWorkersNotificationFlow.Code spec bindings))
+
+/-- The existing strict notification family also serves actual captured-exit cleanup. -/
+theorem family_at (total : Nat) (table : RowTable) (owner : FiberId) (target : Kind)
+    (flat : ∀ world value, ValueAt world target value ↔ ValueAt world target .unit)
+    (spec : QueueWorkersNotificationFlow.Spec (Programs.queueProgram total)) (bindings : List Val)
+    (view : List (FiberId × ExitV)) :
+    SavedFamily (QueueWorkersJobGraph.model total table owner view)
+      (interpAt (Programs.queueProgram total) view table).toPrimInterp (EdgeAt total table owner target spec bindings) :=
+  (embedding_at total table owner target flat spec bindings view).family_over
+    (interpAt (Programs.queueProgram total) view table).toPrimInterp
+    (QueueWorkersJobGraph.Semantic total table owner)
+    (CodeClosure.PredicateFamily.edge (QueueWorkersNotificationFlow.Code spec bindings))
+    (QueueWorkersJobGraph.semantic_family total table owner view)
+    (CodeClosure.PredicateFamily.family (Programs.queueProgram total) table _
+      (QueueWorkersNotificationFlow.rules spec (SourceFragment.queue_fragment total) bindings table) view)
+    (QueueWorkersNotificationFlow.cause_transfer spec bindings _ _ _ _ (fun _ _ => trivial))
+
+/-- Actual notification heads preserve the selected captured exit without inspecting their ignored answer. -/
+theorem head_at (total : Nat) (table : RowTable) (owner : FiberId) (target : Kind)
+    (flat : ∀ world value, ValueAt world target value ↔ ValueAt world target .unit)
+    (spec : QueueWorkersNotificationFlow.Spec (Programs.queueProgram total)) (bindings : List Val)
+    (view : List (FiberId × ExitV)) (world : QueueWorkersCustodyFlow.World) (code : NCode)
+    (ready : ValueAt world target .unit) (owned : QueueWorkersNotificationFlow.Code spec bindings code) :
+    HeadAt (QueueWorkersJobGraph.model total table owner view)
+      (interpAt (Programs.queueProgram total) view table).toPrimInterp
+      (EdgeAt total table owner target spec bindings) world target code :=
+  (embedding_at total table owner target flat spec bindings view).head_over
+    (interpAt (Programs.queueProgram total) view table).toPrimInterp
+    (QueueWorkersJobGraph.Semantic total table owner) _ world ready () code
     (CodeClosure.PredicateFamily.head (Programs.queueProgram total) table _
       (QueueWorkersNotificationFlow.rules spec (SourceFragment.queue_fragment total) bindings table) view code owned)
 end Test.Dogfood.Proofs.QueueWorkersNotificationEmbedding

@@ -13,8 +13,13 @@ namespace Test.Dogfood.Proofs.QueueWorkersJobFamilies
 open Effect4 Effect4.Machine Effect4.Program Effect4.Machine.AnswerFlow
 open Test.Dogfood.Scenario
 
-/-- Each notification frame retains its own concrete region, prefix and request option. -/
-abbrev Index (total : Nat) := Option (Nat × Val × List Val ×
+/-- Notification results do not inspect the returned value of their selected input class. -/
+abbrev FlatKind := {kind : QueueWorkersCustodyFlow.Kind //
+  ∀ world value, QueueWorkersCustodyFlow.ValueAt world kind value ↔
+    QueueWorkersCustodyFlow.ValueAt world kind .unit}
+
+/-- Each notification frame retains its concrete region, prefix and selected input class. -/
+abbrev Index (total : Nat) := Option (FlatKind × List Val ×
   QueueWorkersNotificationFlow.Spec (Programs.queueProgram total))
 
 /-- Semantic worker binders and source notification frames share one actual stack relation. -/
@@ -22,8 +27,8 @@ def member (total : Nat) (table : RowTable) (owner : FiberId) :
     Index total → QueueWorkersCustodyFlow.World → QueueWorkersCustodyFlow.Kind →
       QueueWorkersCustodyFlow.Kind → NCode → Prop
   | none => QueueWorkersJobGraph.Semantic total table owner
-  | some (token, option, bindings, spec) =>
-      QueueWorkersNotificationEmbedding.Edge total table owner token option spec bindings
+  | some (selected, bindings, spec) =>
+      QueueWorkersNotificationEmbedding.EdgeAt total table owner selected.val spec bindings
 
 /-- Every actual mixed stack edge retains its original classified input and output. -/
 abbrev Edge (total : Nat) (table : RowTable) (owner : FiberId) :=
@@ -38,8 +43,8 @@ theorem family (total : Nat) (table : RowTable) (owner : FiberId) (view : List (
   cases index with
   | none => exact QueueWorkersJobGraph.semantic_family total table owner view
   | some selected =>
-    obtain ⟨token, option, bindings, spec⟩ := selected
-    exact QueueWorkersNotificationEmbedding.family total table owner token option spec bindings view
+    obtain ⟨kind, bindings, spec⟩ := selected
+    exact QueueWorkersNotificationEmbedding.family_at total table owner kind.val kind.property spec bindings view
 
 /-- A real notification head enters the common mixed stack without changing its captured option. -/
 theorem notification_head (total : Nat) (table : RowTable) (owner : FiberId) (token : Nat) (option : Val)
@@ -50,8 +55,21 @@ theorem notification_head (total : Nat) (table : RowTable) (owner : FiberId) (to
     HeadAt (QueueWorkersJobGraph.model total table owner view)
       (interpAt (Programs.queueProgram total) view table).toPrimInterp
       (Edge total table owner) world (.snapshot owner token option) code :=
-  indexed_head _ _ (member total table owner) (some (token, option, bindings, spec)) world _ code
+  indexed_head _ _ (member total table owner) (some (⟨.snapshot owner token option, fun _ _ => Iff.rfl⟩, bindings, spec)) world _ code
     (QueueWorkersNotificationEmbedding.head total table owner token option spec bindings view world code phase owned)
+
+/-- A cleanup notification retains the actual captured exit class in the mixed stack. -/
+theorem notification_head_at (total : Nat) (table : RowTable) (owner : FiberId) (selected : FlatKind)
+    (spec : QueueWorkersNotificationFlow.Spec (Programs.queueProgram total)) (bindings : List Val)
+    (view : List (FiberId × ExitV)) (world : QueueWorkersCustodyFlow.World) (code : NCode)
+    (phase : QueueWorkersCustodyFlow.ValueAt world selected.val .unit)
+    (owned : QueueWorkersNotificationFlow.Code spec bindings code) :
+    HeadAt (QueueWorkersJobGraph.model total table owner view)
+      (interpAt (Programs.queueProgram total) view table).toPrimInterp
+      (Edge total table owner) world selected.val code :=
+  indexed_head _ _ (member total table owner) (some (selected, bindings, spec)) world _ code
+    (QueueWorkersNotificationEmbedding.head_at total table owner selected.val selected.property
+      spec bindings view world code phase owned)
 
 /-- The actual notification bind executes its certified body before consuming the captured option. -/
 theorem notification_bind (total : Nat) (table : RowTable) (owner : FiberId) (token : Nat) (option : Val)
@@ -74,7 +92,7 @@ theorem notification_bind (total : Nat) (table : RowTable) (owner : FiberId) (to
   | succ available =>
     rw [Agreement.compileEff_bind _ _ fuel]
     apply QueueWorkersJobGraph.CodeAt.bound (input := .snapshot owner token option)
-    · exact .notification spec phase (QueueWorkersNotificationFlow.compile_at spec point.env first
+    · exact .notification spec (fun _ _ => Iff.rfl) phase (QueueWorkersNotificationFlow.compile_at spec point.env first
         (point.child 0) (Agreement.at_child found 0) ⟨inside, List.take_length⟩)
     · exact callback
 
