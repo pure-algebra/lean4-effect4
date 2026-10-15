@@ -59,6 +59,58 @@ structure RoleCompileContract (root : NativeEff) (point : Point → Prop)
 
 /-- An indexed constructor contract retains the actual compiled child at each binding site.
 Consumers: QueueWorkers job classes and Finalizer's correlated scope-registration body. -/
+structure IndexedCompileConstructors (root : NativeEff) (Kind : Type)
+    (point : Kind → Point → Prop) (code : Kind → NCode → Prop) : Prop where
+  failure : ∀ kind cause, code kind (.failure cause)
+  success : ∀ p term value kind, Node.at_ (.eff root) p.path = some (.eff (.succeed term)) →
+    point kind p → evalTerm p.env term = some value → code kind (.success value)
+  body : ∀ p e kind, Node.at_ (.eff root) p.path = some (.eff e) → point kind p → code kind (.suspend (.body p))
+  pure : ∀ p term kind, Node.at_ (.eff root) p.path = some (.eff (.sync term)) → point kind p → code kind (.sync (.pure p))
+  act : ∀ p e kind, Node.at_ (.eff root) p.path = some (.eff e) → point kind p → code kind (.withFiber (.act p))
+  operation : ∀ p row request value op kind,
+    Node.at_ (.eff root) p.path = some (.eff (.perform row request)) → point kind p →
+    evalTerm p.env request = some value → row.syncOpOf p.env value = some op → code kind (.sync (.op op))
+  asynchronous : ∀ p row request kind,
+    Node.at_ (.eff root) p.path = some (.eff (.perform row request)) → point kind p → code kind (asyncRoute row request p)
+  caught : ∀ p first rest kind, Node.at_ (.eff root) p.path = some (.eff (.catchCause first rest)) → point kind p →
+    ∃ input, point input (p.child 0) ∧ ∀ body, code input body → code kind (.onFailure body (.caught p))
+  caughtError : ∀ p test first rest kind, Node.at_ (.eff root) p.path = some (.eff (.catchIf test first rest)) → point kind p →
+    ∃ input, point input (p.child 0) ∧ ∀ body, code input body → code kind (.onFailure body (.caughtError p))
+  matched : ∀ p first success failure kind, Node.at_ (.eff root) p.path = some (.eff (.matchCause first success failure)) → point kind p →
+    ∃ input, point input (p.child 0) ∧ ∀ body, code input body → code kind (.onSuccessAndFailure body (.onValue p) (.onCause p))
+  finalized : ∀ p first finalizer kind, Node.at_ (.eff root) p.path = some (.eff (.onExit first finalizer)) → point kind p →
+    ∃ input, point input (p.child 0) ∧ ∀ body, code input body → code kind (.onExit body (.fin p) false)
+  exited : ∀ p first kind, Node.at_ (.eff root) p.path = some (.eff (.exit first)) → point kind p →
+    ∃ input, point input (p.child 0) ∧ ∀ body, code input body →
+      code kind (match body.asExit? with | some exit => .success (reifyExitVal exit) | none => .exitFrame body)
+  restored : ∀ p saved first kind, Node.at_ (.eff root) p.path = some (.eff (.restore saved first)) → point kind p → point kind (p.child 0)
+  definitions : ∀ p declarations bodies main layers kind,
+    Node.at_ (.eff root) p.path = some (.eff (.defs declarations bodies main layers)) → point kind p → point kind (p.child 1)
+  yielding : ∀ p priority kind, Node.at_ (.eff root) p.path = some (.eff (.yieldNow priority)) → point kind p → code kind (.yieldNowWith priority)
+  awaited : ∀ p term mode id exit kind,
+    Node.at_ (.eff root) p.path = some (.eff (.awaitFiber term mode)) → point kind p →
+    evalTerm p.env term = some (.fiber id) → p.awaitExit id mode = some exit → code kind (Prim.ofExit exit)
+  parked : ∀ p term mode id kind,
+    Node.at_ (.eff root) p.path = some (.eff (.awaitFiber term mode)) → point kind p →
+    evalTerm p.env term = some (.fiber id) → p.awaitExit id mode = none → code kind (.suspend (.park (.join id mode)))
+  forkScoped : ∀ p first options kind,
+    Node.at_ (.eff root) p.path = some (.eff (.withFiber (.forkScoped first options))) → point kind p →
+    code kind (.onSuccess (.withFiber (.act p)) (.forkScopedIn p))
+  acquire : ∀ p first release kind,
+    Node.at_ (.eff root) p.path = some (.eff (.acquireRelease first release)) → point kind p →
+    code kind (.onSuccess (.withFiber .getCtx) (.acquireCtx p))
+  service : ∀ p key kind, Node.at_ (.eff root) p.path = some (.eff (.service key)) → point kind p →
+    code kind (.onSuccess (.withFiber .getCtx) (.serviceLookup key))
+  provideService : ∀ p key value first actual kind,
+    Node.at_ (.eff root) p.path = some (.eff (.provideService key value first)) → point kind p →
+    evalTerm p.env value = some actual → code kind (updateContextAt (.provideService key actual) (.program (p.child 0)))
+  context : ∀ p context first actual kind,
+    Node.at_ (.eff root) p.path = some (.eff (.provideContext context first)) → point kind p →
+    (evalTerm p.env context).bind Val.context? = some actual →
+    ∃ input, point input (p.child 0) ∧ ∀ body, code input body →
+      code kind (match body.asExit? with | some exit => Prim.ofExit exit | none => updateContextAt (.provide actual.services) (.program (p.child 0)))
+
+/-- The compatibility constructor contract ignores the actual compiled child's equality. -/
 structure IndexedCompileContract (root : NativeEff) (Kind : Type)
     (point : Kind → Point → Prop) (code : Kind → NCode → Prop) : Prop where
   failure : ∀ kind cause, code kind (.failure cause)
@@ -112,10 +164,53 @@ structure IndexedCompileContract (root : NativeEff) (Kind : Type)
     ∃ input, point input (p.child 0) ∧ ∀ body, code input body →
       code kind (match body.asExit? with | some exit => Prim.ofExit exit | none => updateContextAt (.provide actual.services) (.program (p.child 0)))
 
-/-- The sole compiler induction supports distinct actual input and output classes. -/
-theorem indexed_compile_closure {root : NativeEff} {Kind : Type}
+/-- The same compiler induction exposes the actual compiled child at a success binder.
+Consumer: QueueWorkers authored worker and feeder binder correlation. -/
+structure ActualIndexedCompileContract (root : NativeEff) (Kind : Type)
+    (point : Kind → Point → Prop) (code : Kind → NCode → Prop)
+    extends IndexedCompileConstructors root Kind point code where
+  bind : ∀ p first rest kind, Node.at_ (.eff root) p.path = some (.eff (.bind first rest)) → point kind p →
+    ∃ input, point input (p.child 0) ∧ ∀ body, body = compileEff first (p.child 0) →
+      code input body → code kind (.onSuccess body (.cont p))
+
+/-- Existing constructor contracts drop the extra equality rather than reproving compilation. -/
+theorem IndexedCompileContract.actual {root : NativeEff} {Kind : Type}
     {point : Kind → Point → Prop} {code : Kind → NCode → Prop}
-    (contract : IndexedCompileContract root Kind point code) (e : NativeEff) (p : Point)
+    (contract : IndexedCompileContract root Kind point code) :
+    ActualIndexedCompileContract root Kind point code where
+  toIndexedCompileConstructors := {
+    failure := contract.failure
+    success := contract.success
+    body := contract.body
+    pure := contract.pure
+    act := contract.act
+    operation := contract.operation
+    asynchronous := contract.asynchronous
+    caught := contract.caught
+    caughtError := contract.caughtError
+    matched := contract.matched
+    finalized := contract.finalized
+    exited := contract.exited
+    restored := contract.restored
+    definitions := contract.definitions
+    yielding := contract.yielding
+    awaited := contract.awaited
+    parked := contract.parked
+    forkScoped := contract.forkScoped
+    acquire := contract.acquire
+    service := contract.service
+    provideService := contract.provideService
+    context := contract.context
+  }
+  bind := by
+    intro p first rest kind found held
+    obtain ⟨input, child, build⟩ := contract.bind p first rest kind found held
+    exact ⟨input, child, fun body _actual good => build body good⟩
+
+/-- The sole compiler induction supports distinct actual input and output classes. -/
+theorem actual_indexed_compile_closure {root : NativeEff} {Kind : Type}
+    {point : Kind → Point → Prop} {code : Kind → NCode → Prop}
+    (contract : ActualIndexedCompileContract root Kind point code) (e : NativeEff) (p : Point)
     (kind : Kind) (found : Node.at_ (.eff root) p.path = some (.eff e)) (held : point kind p) :
     code kind (compileEff e p) := by
   revert kind found held
@@ -123,7 +218,7 @@ theorem indexed_compile_closure {root : NativeEff} {Kind : Type}
   case case18 p n hf first rest ih =>
     intro kind found held
     obtain ⟨input, child, build⟩ := contract.bind p first rest kind found held
-    exact build _ (ih input (Agreement.at_child found 0) child)
+    exact build _ rfl (ih input (Agreement.at_child found 0) child)
   case case20 p n hf first rest ih =>
     intro kind found held
     obtain ⟨input, child, build⟩ := contract.caught p first rest kind found held
@@ -224,6 +319,14 @@ theorem indexed_compile_closure {root : NativeEff} {Kind : Type}
     intro output found held
     exact contract.provideService _ _ _ _ _ output found held (by assumption)
 
+
+/-- The existing public compiler theorem is the equality-ignoring instance of the same induction. -/
+theorem indexed_compile_closure {root : NativeEff} {Kind : Type}
+    {point : Kind → Point → Prop} {code : Kind → NCode → Prop}
+    (contract : IndexedCompileContract root Kind point code) (e : NativeEff) (p : Point)
+    (kind : Kind) (found : Node.at_ (.eff root) p.path = some (.eff e)) (held : point kind p) :
+    code kind (compileEff e p) :=
+  actual_indexed_compile_closure contract.actual e p kind found held
 
 /-- The existing unindexed leaf contract is the one-class constructor instance. -/
 theorem RoleCompileContract.indexed {root : NativeEff} {point : Point → Prop}

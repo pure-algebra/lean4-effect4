@@ -346,3 +346,30 @@ The audit command is `lean-slot.sh lake env lean /private/tmp/queue-offer-alloca
 It checks 285 declarations within `[propext, Quot.sound]`, with zero modulo declarations and zero planned goals.
 The output is `/private/tmp/queue-offer-allocation-audit.log`.
 The new test consumer is `Test.Dogfood.Proofs.QueueWorkersOfferNative`.
+
+## Actual compiler bodies and shared native callback builders
+
+Both queue endpoint goals remain open.
+The base is `edbfb5a40`.
+The coordinator delegates this shared refactor for actual worker and feeder binders.
+`ActualIndexedCompileContract.bind` supplies the actual first child's compiled-body equality.
+`actual_indexed_compile_closure` owns the existing compiler induction.
+The original `IndexedCompileContract` retains its exact fields, field order and public theorem.
+Its adapter ignores the additional equality.
+
+`Qualified.contA_with` owns the existing value-callback case analysis.
+Its supplied native success builders cannot introduce an authored `cont` callback.
+The supplied source leaves retain compiler-produced continuations.
+`Qualified.contA_at` remains the original qualified-fold instance.
+`AuthoredBinders.compile`, `resolve`, `embed` and `value_callback` consume both shared interfaces.
+Their correlated fold retains the real source binder and its actual compiled first child.
+The callback theorem retains the direct-source qualified-name premise.
+It does not admit excluded generator names or establish a command history.
+
+The narrow command is `lean-slot.sh lake build Effect4.Laws.Program.CodeClosure.AuthoredBinders Effect4.Laws.Program.CodeClosure.Callbacks Effect4.Laws.Program.AnswerSlots.TypedCompile`.
+It passes with 412 jobs.
+The output is `/private/tmp/queue-actual-compiler-build.log`.
+The audit command is `lean-slot.sh lake env lean /private/tmp/queue-actual-compiler-audit.lean`.
+It checks 326 declarations within `[propext, Quot.sound]`, with zero modulo declarations and zero planned goals.
+The output is `/private/tmp/queue-actual-compiler-audit.log`.
+The coordinator must add the library-root import for `Effect4.Laws.Program.CodeClosure.AuthoredBinders`.
