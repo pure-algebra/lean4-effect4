@@ -119,6 +119,6 @@ theorem root_native_deferreds (built : Api.Built) (accepted : Api.Author.build (
     obtain ⟨next, future, freshNext, counterNext, heapNext, actor, rows, same⟩ :=
       RootGraph.action_result built accepted machine.completedExits world fresh machine fiber yielding kind thunk action
         (current ▸ code) current heap counter saved found (fun _ => True) (fun _ _ _ => Or.inr True.intro)
-    rw [same]
+    rw [same.1]
 
 end Test.Dogfood.Scenario.Atomic.StageConfiguration

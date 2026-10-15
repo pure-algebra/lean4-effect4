@@ -1,4 +1,5 @@
 import Test.Dogfood.Scenario.Atomic.RootNativeShape
+import Test.Dogfood.Scenario.Atomic.NativeEffects
 
 /-!
 Concept: store-typing R4.
@@ -27,14 +28,14 @@ theorem source_action_result (built : Api.Built) (accepted : Api.Author.build (s
       HeapAt next result.machine.state ∧ FrameAt built.program built.table next result.fiber.frame ∧
       (∀ row ∈ result.machine.fibers, row.id ≠ ⟨0⟩ →
         StageRoles.FrameAt built.program built.table next row.id row.frame ∨ Other row) ∧
-      result.machine.state = machine.state := by
+      result.machine.state = machine.state ∧ NativeEffects.ActionAt true fiber result := by
   rcases action_shape built accepted world point held action found with fork | interrupted
   · obtain ⟨owner, body, options, rest, small, binder, source, rfl⟩ := fork
     have parent := fork_parent built.program built.table view world machine fiber yielding point owner small held
       binder counter saved (resolve built.program (((point.child 0).child 0).child 0)) options ((point.child 0).child 0).path
     have fields := fork_fields built.program built.table view machine fiber yielding
       (resolve built.program (((point.child 0).child 0).child 0)) options ((point.child 0).child 0).path
-    refine ⟨allocate world, allocate_future world, fresh_allocate world fresh, parent.1, ?_, parent.2, ?_, fields.1⟩
+    refine ⟨allocate world, allocate_future world, fresh_allocate world fresh, parent.1, ?_, parent.2, ?_, fields.1, NativeEffects.fork _ _ _ _ _ _ _⟩
     · rw [fields.1]
       exact allocate_heap world machine.state heap
     · exact fork_rows built accepted view world fresh machine fiber yielding point owner small held binder counter
@@ -42,7 +43,7 @@ theorem source_action_result (built : Api.Built) (accepted : Api.Author.build (s
   · obtain ⟨binder, rfl⟩ := interrupted
     exact ⟨world, order.refl world, fresh, counter, heap,
       ⟨.rootAnswer point.env.length, interrupt_code built.program built.table view world point held binder ⟨1⟩ fiber.id,
-        saved⟩, rows, rfl⟩
+        saved⟩, rows, rfl, NativeEffects.quiet true fiber _ rfl rfl rfl (fun impossible => by cases impossible)⟩
 
 /-- Every actual root native action joins the actor and stored nonroot rows at its chosen world. -/
 theorem action_result (built : Api.Built) (accepted : Api.Author.build (shop .none) = .ok built)
@@ -62,7 +63,7 @@ theorem action_result (built : Api.Built) (accepted : Api.Author.build (shop .no
       HeapAt next result.machine.state ∧ FrameAt built.program built.table next result.fiber.frame ∧
       (∀ row ∈ result.machine.fibers, row.id ≠ ⟨0⟩ →
         StageRoles.FrameAt built.program built.table next row.id row.frame ∨ Other row) ∧
-      result.machine.state = machine.state := by
+      result.machine.state = machine.state ∧ NativeEffects.ActionAt true fiber result := by
   have prior : FrameAt built.program built.table world fiber.frame := ⟨input, current.symm ▸ code, saved⟩
   generalize equal : Prim.withFiber thunk = program at code
   cases code with
@@ -71,22 +72,30 @@ theorem action_result (built : Api.Built) (accepted : Api.Author.build (shop .no
     rcases admin with ⟨targets, who, rfl⟩ | ⟨token, rfl⟩
     · change some (.interruptAll targets who) = some action at found
       cases found
-      exact ⟨world, order.refl world, fresh, counter, heap, prior, rows, rfl⟩
+      exact ⟨world, order.refl world, fresh, counter, heap, prior, rows, rfl, NativeEffects.interrupt_all true _ _ _ _ _ _⟩
     · change some (.dropObservers token) = some action at found
       cases found
       exact ⟨world, order.refl world, fresh, counter, heap,
-        ⟨.ordinary, .success True.intro, saved⟩, rows, rfl⟩
+        ⟨.ordinary, .success True.intro, saved⟩, rows, rfl, NativeEffects.drop true _ _ _ _ token⟩
   | action owned =>
     cases equal
     change actionAt built.program _ = some action at found
     exact source_action_result built accepted view world fresh machine fiber yielding _ owned heap counter saved action found Other rows
-  | interrupting captured ignored =>
+  | @interrupting _ binder target who captured ignored =>
     cases equal
     change some (.interruptAs _ _) = some action at found
     cases found
+    have effects : NativeEffects.ActionAt true fiber
+        (evaluatePrim.withFiber (interpAt built.program view built.table) machine fiber yielding (.interruptAs target who)) :=
+      NativeEffects.interrupt_as true (interpAt built.program view built.table) machine fiber yielding target who
     simp only [evaluatePrim.withFiber, evaluatePrim.interruptAs]
     split
-    all_goals exact ⟨world, order.refl world, fresh, counter, heap, prior, rows, rfl⟩
+    · rename_i missing
+      simp only [evaluatePrim.withFiber, evaluatePrim.interruptAs, missing] at effects
+      exact ⟨world, order.refl world, fresh, counter, heap, prior, rows, rfl, effects⟩
+    · rename_i other present
+      simp only [evaluatePrim.withFiber, evaluatePrim.interruptAs, present] at effects
+      exact ⟨world, order.refl world, fresh, counter, heap, prior, rows, rfl, effects⟩
   | entry owned =>
     rcases entry_form built accepted world _ owned with ⟨zero, form⟩ | ⟨first, next, form⟩ | form
     all_goals rw [form] at equal

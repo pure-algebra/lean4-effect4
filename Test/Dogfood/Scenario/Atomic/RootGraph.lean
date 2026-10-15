@@ -71,6 +71,12 @@ theorem ignored_answer (world : StageWorld.World) (binder : Nat) (value : Val)
   intro required impossible
   rw [ignored] at impossible
   cases impossible
+/-- A root void reply marks an ignored answer endpoint, which accepts any awaited result. -/
+theorem unit_value (world : StageWorld.World) (kind : StageWorld.Kind) (owns : Owns kind)
+    (good : ValueAt world kind .unit) (value : Val) : ValueAt world kind value := by
+  fun_cases Owns kind
+  all_goals aesop (add norm simp [Owns, ValueAt]) (add safe apply [RootSlots.answer_of_unit])
+
 /-- The root's delivered values depend on its counter and its immutable captured bindings. -/
 theorem value_counter (before after : StageWorld.World) (counter : before.nextId = after.nextId)
     (kind : StageWorld.Kind) (owns : Owns kind) (value : Val) (good : ValueAt before kind value) :

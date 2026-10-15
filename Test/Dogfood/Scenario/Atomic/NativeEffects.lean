@@ -79,6 +79,19 @@ theorem interrupt_all (forks : Bool) (interp : Moves.NInterp) (machine : NativeM
   · intro impossible
     cases impossible
 
+/-- Actual observer withdrawal retains its real token edit and does not park. -/
+theorem drop (forks : Bool) (interp : Moves.NInterp) (machine : NativeMachine)
+    (fiber : SourceScope.SourceFiber) (yielding : Bool) (token : Nat) :
+    ActionAt forks fiber (evaluatePrim.withFiber interp machine fiber yielding (.dropObservers token)) := by
+  refine ⟨?_, ?_, rfl, ?_⟩
+  · intro command member
+    cases member
+  · intro message member
+    cases List.mem_singleton.mp member
+    exact .drop token
+  · intro impossible
+    cases impossible
+
 /-- Actual interrupt-as carries its real addressed interruption and no fabricated cause. -/
 theorem interrupt_as (forks : Bool) (interp : Moves.NInterp) (machine : NativeMachine)
     (fiber : SourceScope.SourceFiber) (yielding : Bool) (target who : FiberId) :

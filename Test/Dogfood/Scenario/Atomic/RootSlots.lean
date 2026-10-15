@@ -24,6 +24,31 @@ def rank (binder : Nat) : Nat :=
 def Answer (binder : Nat) (value : Val) : Prop :=
   ∀ required, expected binder = some required → value = required
 
+/-- A void result cannot occupy an authored cell or fiber binding. -/
+theorem unit_ignored (binder : Nat) (good : Answer binder .unit) : expected binder = none := by
+  unfold expected
+  split
+  · rename_i small
+    have impossible := good (.cell ⟨binder⟩) (by simp only [expected, if_pos small])
+    cases impossible
+  · rename_i large
+    split
+    · rename_i middle
+      have impossible := good (.fiber ⟨binder - 2⟩) (by simp only [expected, if_neg large, if_pos middle])
+      cases impossible
+    · rename_i late
+      split
+      · rename_i last
+        have impossible := good (.fiber ⟨7⟩) (by simp only [expected, if_neg large, if_neg late, if_pos last])
+        cases impossible
+      · rfl
+
+/-- Every value fits an endpoint whose authored answer is void. -/
+theorem answer_of_unit (binder : Nat) (good : Answer binder .unit) (value : Val) : Answer binder value := by
+  intro required found
+  rw [unit_ignored binder good] at found
+  cases found
+
 /-- Await, sleep and the final interruption allocate no new child identity. -/
 theorem rank_unchanged (binder : Nat) (late : 9 ≤ binder) (notFork : binder ≠ 15) :
     rank (binder + 1) = rank binder := by
