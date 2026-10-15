@@ -427,3 +427,38 @@ This local producer does not assume unrestricted interruption closure of each an
 The audit checks `NumberRootLoop`, `NumberConfiguration`, and `NumberConfigurationInterrupt` in their full module namespaces.
 Whole-machine and queue transport, native role advancement, initialized history, and both original endpoints remain open.
 No execution behaviour changes, so this slice reaches no outside implementation gate.
+
+## Joined actual interruption producer
+
+This slice changes neither original Timeout endpoint.
+Its concepts are reactive-scheduling R9 and scope-lifetime-finalization R11.
+Its consumer is the interrupt branch of the shared contextual addressed-message producer.
+
+`NumberConfigurationTransport.interrupt_configuration` retains the complete numeric machine assertion and stored reply tasks.
+`update_view` uses the actual lookup and the base driver's unique fiber identifiers.
+It retains the ordered completed-exit view when the actual addressed replacement retains its exit.
+`interrupt_reply` checks the actual surviving token guard and saved suffix.
+
+`NumberQueueInterrupt.commands_interrupt` retains the entire pending command queue and actual generated evaluate command.
+`loop_interrupt` excludes protected pending-prefix owners through the actual message permission.
+`cleanup_await_update` retains cancellation's concrete cleanup barrier through actual target-exit lookups.
+`protects_interrupt` retains the same protected-owner condition for the resulting queue.
+`interrupt_joint` returns the machine, queue, detached tasks, and protected-owner condition together.
+
+`NumberRootSuffix.value_selected` consumes the existing shared contextual value-pop reader.
+It requires no fabricated unconditional handler-discard premise.
+
+| Command through the serialized Lean slot | Result |
+| --- | --- |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberConfigurationTransport` | Passed, 1227 jobs |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberQueueInterrupt` | Passed, 1228 jobs |
+| `lake build Test.Dogfood.Proofs.HostTimeoutNumberRootLoop Test.Dogfood.Proofs.HostTimeoutNumberRootTransitions` | Passed in the affected-dependent run |
+| `lake env lean scratch/TimeoutActualInterruptAudit.lean` | The output below |
+
+```text
+#axiom_audit: 45 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
+
+The audit checks `NumberConfigurationTransport`, `NumberQueueInterrupt`, and `NumberRootSuffix` in their full module namespaces.
+Observer and token edits, native role advancement, initialized history, and both original endpoints remain open.
+No execution behaviour changes, so this slice reaches no outside implementation gate.

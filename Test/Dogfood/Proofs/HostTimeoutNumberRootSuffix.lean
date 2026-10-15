@@ -155,6 +155,19 @@ theorem control_path (view : View) (state : Stores) (phase : Phase)
     (Effect4.Contracts.Path.append front
       (.cons (.saved (.base (.form phase control.captured control.fuel control.delay control.cursor control.previous control.body))) (.nil _))) tail
 
+/-- The actual value pop uses the same contextual family without a fabricated discard premise. -/
+theorem value_selected (view : View) (state : Stores) (phase : Phase)
+    (frame : HostTimeoutFrames.NativeFrame) (suffix : List NCode)
+    (control : HostTimeoutNumberRootControl.RootControl frame suffix) (output : Kind)
+    (tail : Effect4.Contracts.Path (Edge view state) (.numeric (.published phase)) output suffix)
+    (value : Val) (selected : NCode) (heap : HostTimeoutNumberPhaseFlow.At phase state)
+    (found : (frame.getCont .contA false).answer = .frame selected) :
+    ∃ incoming middle, (model view).value state incoming value ∧ Edge view state incoming middle selected ∧
+      Effect4.Contracts.Path (Edge view state) middle output (frame.getCont .contA false).fiber.stack :=
+  AnswerFlow.Contextual.getCont_value_selected (model view) (interpreter view).toPrimInterp
+    (Edge view) Allowed (family view) (mask_edge view) state (.read phase) output frame value selected heap
+    (control_path view state phase frame suffix control output tail) found
+
 /-- The actual root failure pop consumes the recorded cause of the very frame being popped. -/
 theorem cause_selected (view : View) (state : Stores) (phase : Phase)
     (frame : HostTimeoutFrames.NativeFrame) (suffix : List NCode)
