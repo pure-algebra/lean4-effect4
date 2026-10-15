@@ -410,4 +410,53 @@ of it.
   a register of known differences, as the corpus lane keeps one. (b) The unchecked module, as
   now. Recommend (a): the lane would then check what an agent ships.
 - **P-CR1-3.** Register the slot-depth refusal as a counterexample of the typed print, and repair
-  `PrintEliminators.printArg`. The fallback in `shippedPieces` then goes.
+  the site printer. CR-7 found the cause. An `iterate`'s body prints under the cursor's binder,
+  at depth `n + 1`. The checker types it without the cursor, at length `n`. The options and the
+  recommendation are in `cr7-note.md` (§4). The fallback in `shippedPieces` then goes.
+
+## CR-7: stopped at a decision boundary
+
+### Base and head
+
+Base `1a72faa90`; the design note's commit is the head. No Lean source changed.
+
+### Why it stopped
+
+Step 4 deletes the row-only printer. The site printer would then print every program, and it
+refuses a well-typed one: `timeout/eager`, at a term slot in an `iterate`'s body. The body prints
+at depth `n + 1`, under the cursor's binder, and the checker types it at length `n`. So the
+deletion would cost such programs their typed print. It would also change the statement of
+`printTyped_eq_print` (`typed-print-connector`), which is CR-7's stop rule. The repair of the
+site printer is a design choice with three options, and the note recommends one
+(`docs/research/2026-10-15-codegen-review/cr7-note.md`, §4).
+
+Steps 1 and 2 do not depend on the repair, but their order does. Fused before the repair, the law
+covers two printers; after it, one. The note measures the module's parts. A fusion over both
+printers saves about 40%, not the review's 2,000 lines; the row-only erasure alone is 3,100 of the
+8,236 lines.
+
+### Changed files
+
+- `docs/research/2026-10-15-codegen-review/cr7-note.md` (new).
+
+### Commands and results
+
+| Command | Result |
+| --- | --- |
+| the locating probes, `lake env lean` on the seat's `cr1/probe/Eager2.lean` to `Eager4.lean` | the deepest refusing address is the `iterate` at `[1, 1, 1, 0]`; its term slots agree with the template's depths, and its body's checked length is one less than its print depth |
+| `python3 scripts/check-language.py --strict` on the note | passes |
+
+### Axiom output
+
+None: no declaration changed.
+
+### Open obligations
+
+- CR-7's five steps, in the note's order, after the owner or the coordinator rules P-CR1-3.
+
+### Proposed decisions rows (proposals only)
+
+- **P-CR7-1.** Rule P-CR1-3 by the note's option (a): the site printer pads a slot's environment
+  with the binders that the template adds. Then CR-7 runs as the note orders it. The row-only
+  printer and its erasure go, and the connector moves to the site printer with its statement.
+  Then the site erasure's casework fuses.
