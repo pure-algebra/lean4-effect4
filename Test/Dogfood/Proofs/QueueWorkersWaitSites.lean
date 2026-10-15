@@ -29,6 +29,27 @@ theorem source (total worker : Nat) (member : worker ∈ [1, 2]) :
   · kernel_rfl
   exact (List.not_mem_nil member).elim
 
+/-- The wait's actual protected finalizer captures the body exit at its authored point. -/
+theorem protected_source (total worker : Nat) (member : worker ∈ [1, 2]) :
+    Node.at_ (.eff (Programs.queueProgram total)) (path worker ++ [0]) = some (.eff
+      (.onExit (.restore (.var (worker + 7)) (.perform .deferredAwait (.var (worker + 10))))
+        (body (path worker ++ [0, 1])))) :=
+  by
+  rcases List.mem_cons.mp member with rfl | member
+  · kernel_rfl
+  rcases List.mem_cons.mp member with rfl | member
+  · kernel_rfl
+  exact (List.not_mem_nil member).elim
+
+/-- The protected wait captures the original request key before its body exit is appended. -/
+theorem protected_level (total worker : Nat) (member : worker ∈ [1, 2]) :
+    SourceScope.levelAt (.eff (Programs.queueProgram total)) 0 (path worker ++ [0]) = some (worker + 14) := by
+  rcases List.mem_cons.mp member with rfl | member
+  · kernel_rfl
+  rcases List.mem_cons.mp member with rfl | member
+  · kernel_rfl
+  exact (List.not_mem_nil member).elim
+
 /-- The protected cleanup selects its withdrawal from the actual captured body exit. -/
 theorem cleanup (total worker : Nat) (member : worker ∈ [1, 2]) :
     Node.at_ (.eff (Programs.queueProgram total)) (path worker ++ [0, 1]) = some (.eff

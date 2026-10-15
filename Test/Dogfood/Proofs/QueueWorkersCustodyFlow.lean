@@ -60,6 +60,18 @@ inductive Kind
   | restoreSnapshot (owner : FiberId) (token : Nat) (option : Val) (exit : ExitV)
   | job (owner : FiberId)
 
+/-- A captured core input reads the same literal request as its enclosing owner capture. -/
+def RequestInput (token : Nat) : QueueWorkersCustody.Kind → Prop
+  | .ordinary => True
+  | .job request | .pending request | .takeOption request | .takeReply request | .spent request => request = token
+
+/-- Every actual worker binder reads its own owner and its captured literal request. -/
+def LocalKind (owner : FiberId) : Kind → Prop
+  | .ordinary => True
+  | .newKey actual | .hintKey actual _ | .workerKey actual | .offerKey actual _ |
+      .ownerReady actual | .snapshot actual _ _ | .restoreSnapshot actual _ _ _ | .job actual => actual = owner
+  | .captured actual token input => actual = owner ∧ RequestInput token input
+
 /-- The outer job binder reads its owner's current request; inner binders retain their literal token. -/
 def ValueAt (world : World) : Kind → Val → Prop
   | .ordinary, _ => True

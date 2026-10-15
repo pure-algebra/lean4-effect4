@@ -40,7 +40,7 @@ theorem withdraw_body (total worker : Nat) (member : worker ∈ [1, 2])
     exact .frontier fuel
   | succ available =>
     rw [Agreement.compileEff_bind _ _ fuel]
-    apply QueueWorkersJobGraph.CodeAt.bound (input := .restoreSnapshot owner token option exit)
+    apply QueueWorkersJobGraph.CodeAt.bound (input := .restoreSnapshot owner token option exit) rfl
     · cases childFuel : (point.child 0).fuel with
       | zero =>
         rw [Agreement.compileEff_at_zero _ childFuel]
