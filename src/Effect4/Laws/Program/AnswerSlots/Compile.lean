@@ -1,5 +1,5 @@
 import Effect4.Laws.Program.AnswerSlots.Stored
-import Effect4.Laws.Program.CodeClosure.Compile
+import Effect4.Laws.Program.CodeClosure.Callbacks
 
 /-!
 Concept: store-typing R4 and scope-lifetime-finalization R11.
@@ -16,42 +16,34 @@ open Effect4 Effect4.Machine Effect4.Program
 /-- Native source operations retain their update environment's leading bindings. -/
 theorem operation_at (bindings env : List Val) (row : NativeOp) (value : Val) (operation : SyncOp)
     (held : Prefix bindings env) (answer : row.syncOpOf env value = some operation) :
-    OpAt bindings operation := by
-  fun_cases NativeOp.syncOpOf row env value
-  all_goals aesop (add norm simp [NativeOp.syncOpOf, OpAt])
+    OpAt bindings operation :=
+  CodeClosure.Slots.operation_at (fun p => Prefix bindings p.env) (Prefix bindings)
+    env row value operation held answer
 
 /-- An external registration carries no lexical continuation environment. -/
 theorem asyncRoute_at (bindings : List Val) (row : NativeOp) (request : Term) (p : Point) :
     CodeAt bindings (asyncRoute row request p) := by
-  fun_cases asyncRoute row request p
-  all_goals aesop (add norm simp [CodeAt, NameAt, StoreNameAt, badShape])
+  rw [codeAt_fold]
+  exact CodeClosure.Slots.asyncRoute_at (fun p => Prefix bindings p.env) (Prefix bindings) row request p
 
 /-- A shape refusal carries no delayed environment. -/
 theorem badShape_at (bindings : List Val) : CodeAt bindings badShape := trivial
+
+/-- Leading bindings instantiate the shared point transport operations. -/
+theorem prefix_transport (bindings : List Val) :
+    CodeClosure.Slots.Transport (fun p => Prefix bindings p.env) (Prefix bindings) where
+  environment := fun held => held
+  child := fun held index => child held index
+  childWith := fun held index value => childWith held index value
+  capture := fun held value context => capture held value context
 
 /-- Leading-binding facts discharge the compiler's local leaf contract.
 Consumer: `compile_at`; no compiler case analysis is repeated here. -/
 theorem compile_contract (root : NativeEff) (bindings : List Val) :
     CodeClosure.CompileContract root (fun p => Prefix bindings p.env)
-      (NameAt bindings) (ThunkAt bindings) := by
-  refine {
-    child := ?_, body := ?_, pure := ?_, act := ?_, operation := ?_, asynchronous := ?_,
-    cont := ?_, caught := ?_, caughtError := ?_, onValue := ?_, onCause := ?_, fin := ?_,
-    forkScoped := ?_, acquire := ?_, service := ?_, provideService := ?_, provideContext := ?_,
-    getContext := ?_, captureMask := ?_, park := ?_ }
-  case refine_1 => intro p e i found held selected; exact held
-  case refine_2 => intro p e found held; exact held
-  case refine_3 => intro p term found held; exact held
-  case refine_4 => intro p e found held; exact held
-  case refine_5 =>
-    intro p row request value op found held evaluated selected
-    exact operation_at bindings p.env row value op held selected
-  case refine_6 =>
-    intro p row request found held
-    change cata_prim (CodeClosure.codeAlg (NameAt bindings) (ThunkAt bindings)) _
-    rw [← codeAt_fold]
-    exact asyncRoute_at bindings row request p
-  all_goals aesop (add norm simp [NameAt, ThunkAt, RegionAt])
+      (NameAt bindings) (ThunkAt bindings) :=
+  CodeClosure.Slots.compile_contract root (fun p => Prefix bindings p.env) (Prefix bindings)
+    (prefix_transport bindings)
 
 /-- Direct source compilation preserves initialized leading bindings in all delayed fields. -/
 theorem compile_at (root : NativeEff) (_fragment : SourceScope.Fragment root) (bindings : List Val)

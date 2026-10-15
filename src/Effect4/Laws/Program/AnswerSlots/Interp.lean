@@ -45,22 +45,25 @@ theorem store_iter_at (bindings : List Val) (name : Name) (value : Val)
 theorem interp_contA_at (root : NativeEff) (bindings : List Val) (fragment : SourceScope.Fragment root) (completed) (table : RowTable)
     (name : EffName) (value : Val) (owned : NameAt bindings name) :
     CodeAt bindings ((interpAt root completed table).contA name value) := by
-  apply contA_at root fragment bindings
-  cases name <;> exact owned
+  rw [codeAt_fold]
+  exact CodeClosure.Slots.interp_contA_at root fragment (fun p => Prefix bindings p.env) (Prefix bindings)
+    (prefix_contract root bindings) (fun _ held _ => held) completed table name value owned
 
 /-- Current completed exits change no cause callback source path or lexical length. -/
 theorem interp_contE_at (root : NativeEff) (bindings : List Val) (fragment : SourceScope.Fragment root) (completed) (table : RowTable)
     (name : EffName) (cause : CauseV) (owned : NameAt bindings name) :
     CodeAt bindings ((interpAt root completed table).contE name cause) := by
-  apply contE_at root fragment bindings
-  cases name <;> exact owned
+  rw [codeAt_fold]
+  exact CodeClosure.Slots.interp_contE_at root fragment (fun p => Prefix bindings p.env) (Prefix bindings)
+    (prefix_contract root bindings) (fun _ held _ => held) completed table name cause owned
 
 /-- Current completed exits change no suspended source path or lexical length. -/
 theorem interp_suspend_at (root : NativeEff) (bindings : List Val) (fragment : SourceScope.Fragment root) (completed) (table : RowTable)
     (thunk : EffThunk) (owned : ThunkAt bindings thunk) :
     CodeAt bindings ((interpAt root completed table).suspendBody thunk) := by
-  apply suspend_at root fragment bindings
-  cases thunk <;> exact owned
+  rw [codeAt_fold]
+  exact CodeClosure.Slots.interp_suspend_at root fragment (fun p => Prefix bindings p.env) (Prefix bindings)
+    (prefix_contract root bindings) (fun _ held _ => held) completed table thunk owned
 
 /-- Invoking a saved iterator retains its body and next name. -/
 theorem interp_iter_at (root : NativeEff) (bindings : List Val) (completed) (table : RowTable)
@@ -89,8 +92,8 @@ theorem interp_loopResume_at (root : NativeEff) (bindings : List Val) (fragment 
 
 /-- Cancelling an asynchronous registration introduces no source writer. -/
 theorem cancel_at (bindings : List Val) (name : EffName) : CodeAt bindings (cancelProgramOf name) := by
-  fun_cases cancelProgramOf name
-  all_goals aesop (add norm simp [CodeAt, ThunkAt, OpAt, store_cancel_at])
+  rw [codeAt_fold]
+  exact CodeClosure.Slots.cancel_at (fun p => Prefix bindings p.env) (Prefix bindings) name
 
 /-- Native asynchronous cancellation retains the represented cleanup program. -/
 theorem interp_cancel_at (root : NativeEff) (bindings : List Val) (completed) (table : RowTable)

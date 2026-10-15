@@ -597,3 +597,60 @@ Both original endpoint goals remain open.
 
 The audit covers the same eight modules as the preceding joint count slice.
 No execution behaviour changes, so this slice reaches no outside implementation gate.
+
+## Shared callback point assertions
+
+The coordinator must add `Test.Dogfood.Scenario.Timeout.SourceCut` to the battery root.
+The shared callback factor keeps the existing Prefix theorem statements.
+It does not close either Timeout endpoint.
+The worktree base is `aa69faa6f`; its capture bridge is `c749915bd`.
+
+The shared files are `CodeClosure/Slots`, `CodeClosure/Stored`, and `CodeClosure/Callbacks` under `src/Effect4/Laws/Program/`.
+Their existing consumers are `AnswerSlots/Syntax`, `Stored`, `Compile`, `Callbacks`, and `Interp` in the same directory.
+The new application files are `HostTimeoutNumberSourceSlots` under `Test/Dogfood/Proofs/` and `Timeout/SourceCut` under `Test/Dogfood/Scenario/`.
+
+Concepts are store-typing R4, scope-lifetime-finalization R11, and translation-simulation R10.
+Consumers are the existing Prefix callback graph and both Timeout numeric goals.
+`Slots.Transport` retains supplied point assertions through children and captured releases.
+Its environment field supplies stored update assertions.
+`Slots.compile_contract` discharges the existing compiler's minting leaves.
+`Slots.Contract` supplies the shared value, cause, loop, and suspended callback producers.
+The runtime code assertion uses `CodeClosure.Code`, the generated fold.
+The old Prefix stored and callback producers now apply these shared proofs.
+The old runtime predicate keeps its existing fold connector.
+No second compiler or callback walk remains in the Prefix wrappers.
+
+The compiler theorem still accepts the existing unrestricted compiler leaf contract.
+The callback theorems retain `SourceScope.Fragment`.
+That fragment excludes generators, layers, definitions, invocation, and program parameters.
+Actual interpreter callbacks also consume `ViewStable` for completed-exit refresh.
+This slice establishes no callback closure outside that fragment.
+
+Timeout's point assertion retains the first four bindings and the attempt subtree.
+Only the original entry path retains its exact entry fuel.
+Child callbacks cannot return to that path.
+The existing `SourceScope.NameAt` retains the authored finalizer address.
+The existing finalizer census contains only the outer form and inner attempt positions.
+The subtree assertion excludes the outer form.
+`finalizer_joint` returns numeric and source assertions for the same actual selected finalizer program.
+The source reader applies the shared producer at the actual count continuation and actual completed-exit view.
+The controls reject an outer form address and altered entry fuel.
+These are universal kernel-checked controls, not execution samples.
+
+| Command through the serialized Lean slot | Result |
+| --- | --- |
+| `lake build Effect4.Laws.Program.AnswerSlots.Actions Test.Dogfood.Scenario.Timeout.SourceCut` | Passed, 1233 jobs |
+| `lake build ProofGraph.AxiomAudit` | Passed, 15 jobs |
+| `lake env lean scratch/TimeoutPointFactorAudit.lean` | The output below |
+
+```text
+#axiom_audit: 352 declarations within [propext, Quot.sound], 0 of them modulo planned goals; 0 planned goals
+```
+
+The audit covers all eight shared modules and both new application modules.
+The queued builds expose and repair alias normalization and the explicit source-fragment unfolding before the final run.
+No core machine, program syntax, store value, root, semantics registry, or decision changes occur.
+The slice changes proofs and assertions, so it reaches no outside implementation gate.
+
+Next, the pending attempt must carry this checked source assertion in the coupled machine fact.
+Actual race membership, all native numeric branches, initialized history, and both original endpoint proofs remain open.

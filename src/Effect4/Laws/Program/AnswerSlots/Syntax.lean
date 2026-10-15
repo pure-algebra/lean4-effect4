@@ -1,4 +1,4 @@
-import Effect4.Laws.Program.CodeClosure.Predicate
+import Effect4.Laws.Program.CodeClosure.Slots
 import Effect4.Laws.Program.AnswerSlots.Points
 
 /-!
@@ -12,84 +12,41 @@ set_option autoImplicit false
 namespace Effect4.Program.AnswerSlots
 open Effect4 Effect4.Machine Effect4.Program
 
-/-- A foreign finalizer retains its immutable leading bindings. -/
-def FinAt (bindings : List Val) : FinName → Prop
-  | .foreign capture => Prefix bindings capture.env
-  | _ => True
+/-- The leading-binding instance of the shared slot annotation. -/
+abbrev FinAt (bindings : List Val) :=
+  CodeClosure.Slots.FinAt (fun p => Prefix bindings p.env) (Prefix bindings)
 
-/-- Source update operations and registrations retain their captured leading bindings. -/
-def OpAt (bindings : List Val) : SyncOp → Prop
-  | .refUpdate _ _ env | .refGetAndUpdate _ _ env | .refUpdateAndGet _ _ env
-  | .refUpdateSome _ _ env | .refGetAndUpdateSome _ _ env | .refUpdateSomeAndGet _ _ env
-  | .refModify _ _ env | .refModifySome _ _ env => Prefix bindings env
-  | .scopeAdd _ fin => FinAt bindings fin
-  | _ => True
+/-- The leading-binding instance of the shared slot annotation. -/
+abbrev OpAt (bindings : List Val) :=
+  CodeClosure.Slots.OpAt (fun p => Prefix bindings p.env) (Prefix bindings)
 
-/-- Stored program wrappers retain every captured environment they can expose. -/
-def ProgAt (bindings : List Val) : ProgName → Prop
-  | .syncOp op => OpAt bindings op
-  | .intoDeferred body _ | .intoBody body _ | .forkThen body _ _ | .forkOnly body _
-  | .forkInScope body _ _ | .forkScopedOf body _ | .awaitAllNew body => ProgAt bindings body
-  | .finalizerOf fin _ => FinAt bindings fin
-  | .onExitOf body fin _ => ProgAt bindings body ∧ FinAt bindings fin
-  | .seqOf first second => ProgAt bindings first ∧ ProgAt bindings second
-  | .closeWalk _ order _ => ∀ fin ∈ order, FinAt bindings fin
-  | _ => True
+/-- The leading-binding instance of the shared slot annotation. -/
+abbrev ProgAt (bindings : List Val) :=
+  CodeClosure.Slots.ProgAt (fun p => Prefix bindings p.env) (Prefix bindings)
 
-/-- Stored callbacks retain their delayed captured environments. -/
-def StoreNameAt (bindings : List Val) : Name → Prop
-  | .seq next | .snapshotThen next => ProgAt bindings next
-  | .withWaiter base _ _ => StoreNameAt bindings base
-  | .finalizerName fin => FinAt bindings fin
-  | .closeSeq order _ _ => ∀ fin ∈ order, FinAt bindings fin
-  | _ => True
+/-- The leading-binding instance of the shared slot annotation. -/
+abbrev StoreNameAt (bindings : List Val) :=
+  CodeClosure.Slots.StoreNameAt (fun p => Prefix bindings p.env) (Prefix bindings)
 
-/-- Stored actions retain the captured environments of their programs. -/
-def StoreActionAt (bindings : List Val) : ActionName → Prop
-  | .fork body _ | .forkIn body _ _ | .forkScoped body _ | .setInterruptible body _ => ProgAt bindings body
-  | .closePar order _ => ∀ fin ∈ order, FinAt bindings fin
-  | _ => True
+/-- The leading-binding instance of the shared slot annotation. -/
+abbrev StoreActionAt (bindings : List Val) :=
+  CodeClosure.Slots.StoreActionAt (fun p => Prefix bindings p.env) (Prefix bindings)
 
-/-- Stored thunks retain the captured environments of their programs and registrations. -/
-def StoreThunkAt (bindings : List Val) : Thunk → Prop
-  | .op op => OpAt bindings op
-  | .body body => ProgAt bindings body
-  | .act action => StoreActionAt bindings action
-  | .foreign capture _ => FinAt bindings (.foreign capture)
-  | .park _ => True
+/-- The leading-binding instance of the shared slot annotation. -/
+abbrev StoreThunkAt (bindings : List Val) :=
+  CodeClosure.Slots.StoreThunkAt (fun p => Prefix bindings p.env) (Prefix bindings)
 
-/-- A direct program region retains its leading bindings. -/
-def RegionAt (bindings : List Val) : Region → Prop
-  | .program p => Prefix bindings p.env
-  | _ => False
+/-- The leading-binding instance of the shared slot annotation. -/
+abbrev RegionAt (bindings : List Val) :=
+  CodeClosure.Slots.RegionAt (fun p => Prefix bindings p.env) (Prefix bindings)
 
-/-- Every source-bearing continuation name retains the same initialized leading bindings. -/
-def NameAt (bindings : List Val) : EffName → Prop
-  | .cont p | .caught p | .caughtError p | .onValue p | .fin p | .onCause p | .loop p
-  | .scopeOpen p | .scopeProvide p _ | .scopeBody p _ | .forkScopedIn p
-  | .acquireCtx p | .acquireIn p _ | .acquired p _ _ | .releaseUnder p _ _ | .releaseBody p _ _ =>
-    Prefix bindings p.env
-  | .afterScopeAdd _ fin => FinAt bindings fin
-  | .withWaiter base _ _ => NameAt bindings base
-  | .store name => StoreNameAt bindings name
-  | .provideMask _ region | .updateThen _ region _ | .bodyThen region _ _ => RegionAt bindings region
-  | .gen _ _ _ | .provideLayerWith _ | .provideLayerBody _
-  | .buildWithScopeFromContext _ _ | .withMemoMapThen _ _ | .fromBuildThen _ _
-  | .memoize _ _ _ | .buildIntoLayerScope _ _ _ | .thenBuildInto _ _ _
-  | .freshThen _ _ | .provideThen _ _ _ _ | .mergeChildren _ _ | .mergeForkOne _ _ _ _ _
-  | .mergeForkNext _ _ _ _ _ | .mergeAllChildren _ _ | .mergeAllForkOne _ _ _ _ _
-  | .mergeAllForkNext _ _ _ _ _ => False
-  | _ => True
+/-- The leading-binding instance of the shared slot annotation. -/
+abbrev NameAt (bindings : List Val) :=
+  CodeClosure.Slots.NameAt (fun p => Prefix bindings p.env) (Prefix bindings)
 
-/-- Native thunks retain each source or stored environment they can expose. -/
-def ThunkAt (bindings : List Val) : EffThunk → Prop
-  | .pure p | .body p | .act p | .forkInAt p _ | .releaseMasked p _ | .acquireMasked p _ =>
-    Prefix bindings p.env
-  | .op op => OpAt bindings op
-  | .store thunk => StoreThunkAt bindings thunk
-  | .provideMasked _ region _ | .restoreRegion region _ => RegionAt bindings region
-  | .memoLookup _ _ _ | .forkLayer _ _ _ => False
-  | _ => True
+/-- The leading-binding instance of the shared slot annotation. -/
+abbrev ThunkAt (bindings : List Val) :=
+  CodeClosure.Slots.ThunkAt (fun p => Prefix bindings p.env) (Prefix bindings)
 
 /-- The native code graph retains leading bindings in every delayed source-bearing field. -/
 def CodeAt (bindings : List Val) : NCode → Prop
