@@ -30,6 +30,7 @@ theorem daemon_sync_deferreds (root : NativeEff) (table : RowTable) (thunk : Eff
   cases shape with
   | refill env length =>
     exact ref_deferreds (.refUpdate ⟨0⟩ (Store.refillAt 5) env) ⟨0⟩ _ rfl before after value actual
+  | readReply cell => exact ref_deferreds (.refGet cell) cell _ rfl before after value actual
   | cancel waiter token =>
     change syncOpStep (.sleepCancel waiter token) before = some (after, value) at actual
     rw [syncOpStep_sleepCancel before waiter token] at actual
@@ -43,9 +44,10 @@ theorem root_sync_deferreds (built : Api.Built) (accepted : Api.Author.build (sh
     (before after : Stores) (value : Val)
     (actual : (interpOf built.program built.table).syncState thunk before = some (after, value)) :
     after.deferreds = before.deferreds := by
-  rcases (RootGraph.sync_shape built accepted world kind thunk held).2 with rfl | daemon
+  rcases RootGraph.sync_shape built accepted world kind thunk held with ⟨_, rfl | daemon⟩ | ⟨cell, rfl, _⟩
   · exact ref_deferreds (.refGet ⟨0⟩) ⟨0⟩ _ rfl before after value actual
   · exact daemon_sync_deferreds built.program built.table thunk daemon before after value actual
+  · exact ref_deferreds (.refGet cell) cell _ rfl before after value actual
 
 /-- The request's four synchronous source forms are reference-kernel operations. -/
 theorem request_sync_deferreds (root : NativeEff) (table : RowTable) (world : StageWorld.World)

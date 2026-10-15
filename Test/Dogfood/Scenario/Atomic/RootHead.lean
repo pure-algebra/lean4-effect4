@@ -166,6 +166,7 @@ theorem head (built : Api.Built) (accepted : Api.Author.build (shop .none) = .ok
   | action owned => exact .withFiber _ .failure
   | await counter ignored => exact .suspend _ .failure
   | sleep counter ignored => exact .async _ _ _ (.sleep counter ignored)
+  | readReply cell owned values => exact .sync _ (values _)
   | read => exact .sync _ True.intro
   | interrupting counter ignored => exact .withFiber _ .failure
   | join target mode captured => exact .suspend _ .failure

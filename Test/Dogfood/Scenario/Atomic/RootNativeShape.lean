@@ -59,10 +59,11 @@ theorem entry_form (built : Api.Built) (accepted : Api.Author.build (shop .none)
 theorem sync_shape (built : Api.Built) (accepted : Api.Author.build (shop .none) = .ok built)
     (world : StageWorld.World) (kind : StageWorld.Kind) (thunk : EffThunk)
     (held : CodeAt built.program built.table world kind (.sync thunk)) :
-    kind = .ordinary ∧ (thunk = .op (.refGet ⟨0⟩) ∨ DaemonGraph.SyncAt thunk) := by
+    (kind = .ordinary ∧ (thunk = .op (.refGet ⟨0⟩) ∨ DaemonGraph.SyncAt thunk)) ∨
+      ∃ cell, thunk = .store (.op (.refGet cell)) ∧ ∀ value, ValueAt world kind value := by
   generalize equal : Prim.sync thunk = code at held
   cases held with
-  | ignored owned => exact ⟨rfl, .inr (DaemonGraph.sync_shape _ _ _ owned thunk equal.symm)⟩
+  | ignored owned => exact .inl ⟨rfl, .inr (DaemonGraph.sync_shape _ _ _ owned thunk equal.symm)⟩
   | entry owned =>
     rcases entry_form built accepted world _ owned with ⟨zero, form⟩ | ⟨first, name, form⟩ | form
     · rw [form] at equal
@@ -71,8 +72,9 @@ theorem sync_shape (built : Api.Built) (accepted : Api.Author.build (shop .none)
       cases equal
     · rw [form] at equal
       cases equal
-      exact ⟨rfl, .inl rfl⟩
-  | read => cases equal; exact ⟨rfl, .inl rfl⟩
+      exact .inl ⟨rfl, .inl rfl⟩
+  | readReply cell owned values => cases equal; exact .inr ⟨cell, rfl, values⟩
+  | read => cases equal; exact .inl ⟨rfl, .inl rfl⟩
   | success good => cases equal
   | failure => cases equal
   | frontier zero => cases equal
@@ -89,20 +91,30 @@ theorem sync_shape (built : Api.Built) (accepted : Api.Author.build (shop .none)
 /-- Actual root synchronous evaluation retains the same heap and supplies its ignored answer class. -/
 theorem sync_heap (built : Api.Built) (accepted : Api.Author.build (shop .none) = .ok built)
     (world : StageWorld.World) (kind : StageWorld.Kind) (thunk : EffThunk) (state : Stores)
-    (held : CodeAt built.program built.table world kind (.sync thunk)) (heap : HeapAt world state) :
-    ∃ after answer, (interpOf built.program built.table).syncState thunk state = some (after, answer) ∧
-      HeapAt world after ∧ ValueAt world kind answer := by
-  obtain ⟨rfl, read | administrative⟩ := sync_shape built accepted world kind thunk held
+    (held : CodeAt built.program built.table world kind (.sync thunk)) (heap : HeapAt world state)
+    (after : Stores) (answer : Val)
+    (ran : (interpOf built.program built.table).syncState thunk state = some (after, answer)) :
+    HeapAt world after ∧ ValueAt world kind answer := by
+  rcases sync_shape built accepted world kind thunk held with ⟨rfl, read | administrative⟩ | ⟨cell, rfl, values⟩
   · subst thunk
     obtain ⟨used, ids, log, refs, counts, length, owned, cleaned⟩ := heap.witness
     have allocated : 0 < state.refs.length := by rw [refs]; exact Nat.zero_lt_succ 2
-    exact ⟨state, state.refs[0]'allocated, syncOpStep_refGet_allocated allocated, heap, True.intro⟩
-  · obtain ⟨after, answer, actual, nextHeap⟩ :=
-      DaemonGraph.sync_heap built.program built.table world state thunk (by
+    change syncOpStep (.refGet ⟨0⟩) state = some (after, answer) at ran
+    rw [syncOpStep_refGet_allocated allocated] at ran
+    cases ran
+    exact ⟨heap, True.intro⟩
+  · exact ⟨DaemonGraph.sync_heap built.program built.table world state thunk (by
         cases administrative with
         | refill env length => exact .refill length
-        | cancel waiter token => exact .cancelClock waiter token) heap
-    exact ⟨after, answer, actual, nextHeap, True.intro⟩
+        | readReply cell => exact .readReply cell
+        | cancel waiter token => exact .cancelClock waiter token) heap after answer ran, True.intro⟩
+  · change syncOpStep (.refGet cell) state = some (after, answer) at ran
+    cases peek : refPeek state.refs cell with
+    | none => simp only [syncOpStep, refStep, peek, Option.map_none] at ran; cases ran
+    | some value =>
+      simp only [syncOpStep, refStep, peek, Option.map_some] at ran
+      cases ran
+      exact ⟨heap, values _⟩
 
 /-- Every actual root asynchronous operation is a timer whose answer is ignored at its captured counter. -/
 theorem async_shape (built : Api.Built) (accepted : Api.Author.build (shop .none) = .ok built)
@@ -128,6 +140,7 @@ theorem async_shape (built : Api.Built) (accepted : Api.Author.build (shop .none
   | action owned => cases equal
   | await counter ignored => cases equal
   | interrupting counter ignored => cases equal
+  | readReply cell owned values => cases equal
   | read => cases equal
   | join target mode counter => cases equal
   | awaitAll targets counter => cases equal
@@ -164,6 +177,7 @@ theorem park_shape (built : Api.Built) (accepted : Api.Author.build (shop .none)
   | action owned => cases actual
   | sleep counter ignored => cases actual
   | interrupting counter ignored => cases actual
+  | readReply cell owned values => cases actual
   | read => cases actual
   | pause => cases actual
   | pausing owned next => cases actual
@@ -189,6 +203,7 @@ theorem yield_value (built : Api.Built) (accepted : Api.Author.build (shop .none
   | await counter ignored => cases equal
   | sleep counter ignored => cases equal
   | interrupting counter ignored => cases equal
+  | readReply cell owned values => cases equal
   | read => cases equal
   | join target mode counter => cases equal
   | awaitAll targets counter => cases equal
@@ -247,6 +262,7 @@ theorem action_not_scoped (built : Api.Built) (accepted : Api.Author.build (shop
   | await counter ignored => cases equal
   | sleep counter ignored => cases equal
   | interrupting counter ignored => cases equal
+  | readReply cell owned values => cases equal
   | read => cases equal
   | join target mode counter => cases equal
   | awaitAll targets counter => cases equal

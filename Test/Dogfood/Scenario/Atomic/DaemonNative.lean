@@ -16,6 +16,7 @@ open StageWorld
 inductive SyncAt : EffThunk → Prop
   | refill (env : List Val) (length : env.length = 5) :
       SyncAt (.op (.refUpdate ⟨0⟩ (Store.refillAt 5) env))
+  | readReply (cell : RefKey) : SyncAt (.store (.op (.refGet cell)))
   | cancel (waiter : FiberId) (token : Nat) : SyncAt (.store (.op (.sleepCancel waiter token)))
 
 /-- The actual daemon source and its wrappers expose no other synchronous store operation. -/
@@ -44,6 +45,7 @@ theorem sync_shape (root : NativeEff) (table : RowTable) (code : NCode)
   | refill length =>
     cases equal
     exact .refill _ length
+  | readReply cell => cases equal; exact .readReply cell
   | cancelClock waiter token => cases equal; exact .cancel waiter token
   | join target mode => cases equal
   | awaitAll targets => cases equal
@@ -91,6 +93,7 @@ theorem action_shape (root : NativeEff) (table : RowTable) (thunk : EffThunk)
   | frontier zero => cases equal
   | sleep => cases equal
   | refill length => cases equal
+  | readReply cell => cases equal
   | cancelClock waiter token => cases equal
   | join target mode => cases equal
   | awaitAll targets => cases equal
@@ -130,6 +133,7 @@ theorem async_shape (root : NativeEff) (table : RowTable) (name : EffName) (sign
   | frontier zero => cases equal
   | sleep => cases equal; exact ⟨rfl, rfl, rfl⟩
   | refill length => cases equal
+  | readReply cell => cases equal
   | cancelClock waiter token => cases equal
   | join target mode => cases equal
   | awaitAll targets => cases equal
@@ -171,23 +175,37 @@ theorem park_shape (root : NativeEff) (table : RowTable) (view : List (FiberId �
   | frontier zero => cases actual
   | sleep => cases actual
   | refill length => cases actual
+  | readReply cell => cases actual
   | cancelClock waiter token => cases actual
   | constant first next => cases actual
   | pause priority => cases actual
   | bound first callback => cases actual
 
-/-- The actual daemon synchronous primitive retains the shop heap at the same stage world. -/
+/-- Each actual successful synchronous operation retains the shop heap. -/
 theorem sync_heap (root : NativeEff) (table : RowTable) (world : StageWorld.World) (state : Stores)
-    (thunk : EffThunk) (code : CodeAt root table (.sync thunk)) (heap : HeapAt world state) :
-    ∃ after answer, (interpOf root table).syncState thunk state = some (after, answer) ∧ HeapAt world after := by
+    (thunk : EffThunk) (code : CodeAt root table (.sync thunk)) (heap : HeapAt world state)
+    (after : Stores) (answer : Val)
+    (ran : (interpOf root table).syncState thunk state = some (after, answer)) : HeapAt world after := by
   have shape := sync_shape root table _ code thunk rfl
   cases shape with
   | refill env length =>
-    obtain ⟨after, actual, heapNext⟩ := refill_heap world state env heap
+    obtain ⟨next, actual, heapNext⟩ := refill_heap world state env heap
     rw [length] at actual
-    exact ⟨after, .unit, actual, heapNext⟩
+    change syncOpStep (.refUpdate ⟨0⟩ (Store.refillAt 5) env) state = some (after, answer) at ran
+    rw [actual] at ran
+    cases ran
+    exact heapNext
+  | readReply cell =>
+    change syncOpStep (.refGet cell) state = some (after, answer) at ran
+    cases peek : refPeek state.refs cell with
+    | none => simp only [syncOpStep, refStep, peek, Option.map_none] at ran; cases ran
+    | some value =>
+      simp only [syncOpStep, refStep, peek, Option.map_some] at ran
+      cases ran
+      exact heap
   | cancel waiter token =>
-    refine ⟨{state with timers := state.timers.cancel waiter token}, .unit,
-      syncOpStep_sleepCancel state waiter token, ?_⟩
+    change syncOpStep (.sleepCancel waiter token) state = some (after, answer) at ran
+    rw [syncOpStep_sleepCancel state waiter token] at ran
+    cases ran
     exact ⟨heap.witness⟩
 end Test.Dogfood.Scenario.Atomic.DaemonGraph

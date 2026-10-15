@@ -71,18 +71,15 @@ theorem primitive_result (built : Api.Built) (accepted : Api.Author.build (shop 
     exact ⟨next, future, freshNext, nextCounter, heapNext,
       result_of_frame built.program built.table view next _ actor, others⟩
   | sync thunk state value current noPark found =>
-    obtain ⟨after, answer, executed, nextHeap, good⟩ :=
-      sync_heap built accepted world input thunk machine.state (current ▸ code) heap
     change (interpOf built.program built.table).syncState thunk machine.state = some (state, value) at found
-    rw [executed] at found
-    cases found
+    obtain ⟨nextHeap, good⟩ := sync_heap built accepted world input thunk machine.state (current ▸ code) heap state value found
     exact ⟨world, order.refl world, fresh, counter, nextHeap, ⟨input, .success good, saved⟩, rows⟩
   | fallback thunk current noPark missing =>
-    obtain ⟨after, answer, executed, nextHeap, good⟩ :=
-      sync_heap built accepted world input thunk machine.state (current ▸ code) heap
-    change (interpOf built.program built.table).syncState thunk machine.state = none at missing
-    rw [executed] at missing
-    cases missing
+    have typed := head built accepted world input fiber.frame.current code owns view
+    rw [current] at typed
+    cases typed with
+    | sync chosen good =>
+      exact ⟨world, order.refl world, fresh, counter, heap, ⟨input, .success good, saved⟩, rows⟩
   | yieldNow priority current =>
     exact ⟨world, order.refl world, fresh, counter, heap, ⟨input,
       .success (yield_value built accepted world input priority (current ▸ code)), saved⟩, rows⟩

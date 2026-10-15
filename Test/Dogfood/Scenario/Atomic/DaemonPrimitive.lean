@@ -32,16 +32,10 @@ theorem primitive_frame (root : NativeEff) (table : RowTable) (world : StageWorl
     have fields := action_frame root table world view machine fiber yielding thunk action held current found
     exact ⟨(by rw [fields.1]; exact heap), fields.2.2⟩
   | sync thunk state value current noPark found =>
-    obtain ⟨after, answer, sync, nextHeap⟩ := sync_heap root table world machine.state thunk (current ▸ held.1) heap
     change (interpOf root table).syncState thunk machine.state = some (state, value) at found
-    rw [sync] at found
-    cases found
-    exact ⟨nextHeap, .success _, held.2⟩
-  | fallback thunk current noPark missing =>
-    obtain ⟨after, answer, sync, nextHeap⟩ := sync_heap root table world machine.state thunk (current ▸ held.1) heap
-    change (interpOf root table).syncState thunk machine.state = none at missing
-    rw [sync] at missing
-    cases missing
+    exact ⟨sync_heap root table world machine.state thunk (current ▸ held.1) heap state value found,
+      .success _, held.2⟩
+  | fallback thunk current noPark missing => exact ⟨heap, .success _, held.2⟩
   | yieldNow priority current => exact ⟨heap, .success .unit, held.2⟩
   | asyncImmediate name signal cancel state next current registered =>
     obtain ⟨rfl, rfl, rfl⟩ := async_shape root table name signal cancel (current ▸ held.1)

@@ -157,6 +157,7 @@ theorem head (root : NativeEff) (table : RowTable) (world : StageWorld.World)
     exact .frontier rfl
   | sleep => exact .async _ _ _ CodeAt.sleep
   | refill length => exact .sync _ True.intro
+  | readReply cell => exact .sync _ True.intro
   | cancelClock waiter token => exact .sync _ True.intro
   | join target mode => exact .suspend _ (.failure _)
   | awaitAll targets => exact .suspend _ (.failure _)

@@ -105,6 +105,7 @@ theorem root_reply (built : Api.Built) (accepted : Api.Author.build (shop .none)
   refine ⟨input, ?_, saved⟩
   cases reply with
   | unit => exact .success (values .unit)
+  | read cell small => exact .readReply cell owned values
   | exit result small =>
     cases result with
     | success value => exact .success (values value)
@@ -136,6 +137,9 @@ theorem request_reply (root : NativeEff) (table : RowTable) (owner : Nat) (world
     have same : { frame with current := Prim.success Val.unit } = frame := by
       rw [← current]
     exact same.symm ▸ typed
+  | read cell impossible =>
+    change owner + 1 < 2 at impossible
+    exact False.elim (Nat.not_lt_of_ge (Nat.succ_le_succ small) impossible)
   | exit result impossible =>
     change owner + 1 < 2 at impossible
     have lower : 2 ≤ owner + 1 := Nat.succ_le_succ small
@@ -157,6 +161,7 @@ theorem role_reply (built : Api.Built) (accepted : Api.Author.build (shop .none)
     refine ⟨?_, held.2⟩
     cases reply with
     | unit => exact .success _
+    | read cell small => exact .readReply cell
     | exit result small => cases result with
       | success value => exact .success value
       | failure cause => exact .failure cause

@@ -24,7 +24,22 @@ def LiveAt (root : NativeEff) (table : RowTable) (world : StageWorld.World)
 /-- Requests receive only scheduler void replies; root and daemon may receive awaited exits. -/
 inductive ReplyAt (id : FiberId) : NCode → Prop
   | unit : ReplyAt id (.success .unit)
+  | read (cell : RefKey) (small : id.value < 2) : ReplyAt id (.sync (.store (.op (.refGet cell))))
   | exit (result : ExitV) (small : id.value < 2) : ReplyAt id (Prim.ofExit result)
+
+/-- A reply owes its source class only at an actual matching parked token. -/
+def ReplyPermission (machine : NativeMachine) (id : FiberId) (token : Nat) (code : NCode) : Prop :=
+  ∀ fiber ∈ machine.fibers, fiber.id = id → fiber.parked = .withGuard token → ReplyAt id code
+
+/-- An unconditional source reply class supplies every actual matching admission. -/
+theorem ReplyAt.permission {machine : NativeMachine} {id : FiberId} {token : Nat} {code : NCode}
+    (reply : ReplyAt id code) : ReplyPermission machine id token code := fun _ _ _ _ => reply
+
+/-- Detached admission is conditional on the same actual parked token. -/
+inductive TaskPermission (machine : NativeMachine) : Guard.NTask → Prop
+  | start (id : FiberId) : TaskPermission machine (.start id)
+  | resume (id : FiberId) (token : Nat) (code : NCode) (reply : ReplyPermission machine id token code) :
+      TaskPermission machine (.resume id token code)
 
 /-- Detached tasks retain the exact reply profile emitted by this source. -/
 inductive TaskAt : Guard.NTask → Prop
@@ -41,7 +56,7 @@ inductive CommandAt (root : NativeEff) (table : RowTable) (world : StageWorld.Wo
       CommandAt root table world machine (.deliver id yielding)
   | finish (id : FiberId) (exit : ExitV) (completed : CompletedAt world id exit) :
       CommandAt root table world machine (.finish id exit)
-  | resume (id : FiberId) (token : Nat) (code : NCode) (reply : ReplyAt id code) :
+  | resume (id : FiberId) (token : Nat) (code : NCode) (reply : ReplyPermission machine id token code) :
       CommandAt root table world machine (.resume id token code)
   | interrupt (target : FiberId) (who : Option FiberId) (extra : ReasonAnnotations Ann) :
       CommandAt root table world machine (.interruptTarget target who extra)
@@ -60,8 +75,8 @@ def QueueAt (root : NativeEff) (table : RowTable) (world : StageWorld.World)
   ∀ command ∈ commands, CommandAt root table world machine command
 
 /-- The detached scheduler snapshot retains the same source reply profile. -/
-def SnapshotAt (_world : StageWorld.World) (_machine : NativeMachine) (tasks : List Guard.NTask) : Prop :=
-  ∀ task ∈ tasks, TaskAt task
+def SnapshotAt (_world : StageWorld.World) (machine : NativeMachine) (tasks : List Guard.NTask) : Prop :=
+  ∀ task ∈ tasks, TaskPermission machine task
 
 /-- Existing command classifiers select only the actual loop and delivery owners. -/
 def LiveOwners (machine : NativeMachine) (commands : List Guard.NCmd) : List FiberId :=

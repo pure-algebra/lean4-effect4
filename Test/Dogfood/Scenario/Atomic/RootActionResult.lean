@@ -124,6 +124,7 @@ theorem action_result (built : Api.Built) (accepted : Api.Author.build (shop .no
   | frontier zero => cases equal
   | await captured ignored => cases equal
   | sleep captured ignored => cases equal
+  | readReply cell owned values => cases equal
   | read => cases equal
   | join target mode captured => cases equal
   | awaitAll targets captured => cases equal
