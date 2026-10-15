@@ -622,7 +622,8 @@ if every source argument is scoped, the result is scoped (`Laws/Program/Authorin
 holds the predicates and the base). The proof is the same for every lift: open the `do`
 chain (`bind_ok` once per elaborated argument), read each argument's scope at the depth the
 row pushed, and close with the constructor's equation of the scope algebra
-(`Program/Scoped.lean`). An operation is data the lift takes as it is, not a source
+(`Program/Scoped.lean`) in a `simp only` that names its set (the proof-style ratchet,
+`Test/Audit/ProofStyle.lean`). An operation is data the lift takes as it is, not a source
 elaborated against the scope, so its hypothesis is its scope at every level (`ScopedOp`). -/
 
 def hypOf (kind : ArgKind) (name : String) : Option String :=
@@ -636,7 +637,7 @@ def hypOf (kind : ArgKind) (name : String) : Option String :=
   | .op => some s!"∀ n, ScopedOp.scopedAt {name} n = true"
   | .other => none
 
-def emitLiftLemmaCore (_t : Table) (c : Ctor) (row? : Option Row) (fixed? : Option (Nat × Ctor))
+def emitLiftLemmaCore (t : Table) (c : Ctor) (row? : Option Row) (fixed? : Option (Nat × Ctor))
     (defName : String) : MetaM (Option (String × String)) := do
   let slots := (row?.map (·.slots)).getD []
   let closedArg (j : Nat) : Bool := match row? with
@@ -692,12 +693,24 @@ def emitLiftLemmaCore (_t : Table) (c : Ctor) (row? : Option Row) (fixed? : Opti
         haves := haves ++ [s!"  simp only [Env.push_length, List.length_cons, List.length_nil] at s{j}"]
       ss := ss ++ [s!"s{j}"]
   let app := String.intercalate " " ([fullName] ++ appArgs)
-  let finish :=
-    if isCause then
-      match optionArg with
-      | some j => s!"  cases x{j} <;> simp_all [CauseTerm.scoped]"
-      | none => "  simp [CauseTerm.scoped" ++ (if ss.isEmpty then "]" else ", " ++ String.intercalate ", " ss ++ "]")
-    else if ss.isEmpty then "  simp" else "  simp [" ++ String.intercalate ", " ss ++ "]"
+  -- a data-head row (`select` at one `Decision`) reads an argument the row binds nothing for at
+  -- the equation's `n + match …`, which the head reduces to `n + 0`
+  let zeroLevel ← match fixed? with
+    | some (k, _) => do
+      let dataRows ← match dataHeadRowsOf t c with | .ok rs => pure rs | .error e => throwError e
+      c.args.zipIdx.anyM fun (_, j) => do
+        if j == k || pushedArg j then return false
+        return (← headCountMatch dataRows k j).isSome
+    | none => pure false
+  -- the closing `simp only` names its set: the constructor's equation of the scope algebra, the
+  -- arguments' scopes, `Bool.and_self` to fold two or more, `Nat.add_zero` at a zero level
+  let eqn := if isCause then "CauseTerm.scoped"
+    else s!"{shortName c.fam}.{if isLayerFam c.fam then "scoped" else "scopedAt"}_{c.short}"
+  let simpSet := [eqn] ++ ss ++ (if ss.length ≥ 2 then ["Bool.and_self"] else [])
+    ++ (if zeroLevel then ["Nat.add_zero"] else [])
+  let finish := match isCause, optionArg with
+    | true, some j => s!"  cases x{j} <;> simp_all [CauseTerm.scoped]"
+    | _, _ => s!"  simp only [{String.intercalate ", " simpSet}]"
   let sig := String.intercalate " " (params ++ hyps)
   let text := String.intercalate "\n" ([
     s!"theorem {fullName}_scoped {sig} :",

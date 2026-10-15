@@ -19,7 +19,7 @@ theorem succeed_scoped {Op : Type} [ScopedOp Op] {value : TermSrc} (h0 : value.S
   obtain ⟨x0, hx0, h⟩ := bind_ok h
   cases h
   have s0 := h0.holds _ _ _ hx0
-  simp [s0]
+  simp only [Eff.scopedAt_succeed, s0]
 
 theorem fail_scoped {Op : Type} [ScopedOp Op] {error : TermSrc} (h0 : error.Scoped) :
     ((fail error) : Src Op).Scoped := by
@@ -28,7 +28,7 @@ theorem fail_scoped {Op : Type} [ScopedOp Op] {error : TermSrc} (h0 : error.Scop
   obtain ⟨x0, hx0, h⟩ := bind_ok h
   cases h
   have s0 := h0.holds _ _ _ hx0
-  simp [s0]
+  simp only [Eff.scopedAt_fail, s0]
 
 theorem failCause_scoped {Op : Type} [ScopedOp Op] {cause : CauseSrc} (h0 : cause.Scoped) :
     ((failCause cause) : Src Op).Scoped := by
@@ -37,7 +37,7 @@ theorem failCause_scoped {Op : Type} [ScopedOp Op] {cause : CauseSrc} (h0 : caus
   obtain ⟨x0, hx0, h⟩ := bind_ok h
   cases h
   have s0 := h0.holds _ _ _ hx0
-  simp [s0]
+  simp only [Eff.scopedAt_failCause, s0]
 
 theorem sync_scoped {Op : Type} [ScopedOp Op] {thunk : TermSrc} (h0 : thunk.Scoped) :
     ((sync thunk) : Src Op).Scoped := by
@@ -46,7 +46,7 @@ theorem sync_scoped {Op : Type} [ScopedOp Op] {thunk : TermSrc} (h0 : thunk.Scop
   obtain ⟨x0, hx0, h⟩ := bind_ok h
   cases h
   have s0 := h0.holds _ _ _ hx0
-  simp [s0]
+  simp only [Eff.scopedAt_sync, s0]
 
 theorem suspend_scoped {Op : Type} [ScopedOp Op] {body : Src Op} (h0 : body.Scoped) :
     ((suspend body) : Src Op).Scoped := by
@@ -55,7 +55,7 @@ theorem suspend_scoped {Op : Type} [ScopedOp Op] {body : Src Op} (h0 : body.Scop
   obtain ⟨x0, hx0, h⟩ := bind_ok h
   cases h
   have s0 := h0.holds _ _ _ hx0
-  simp [s0]
+  simp only [Eff.scopedAt_suspend, s0]
 
 theorem perform_scoped {Op : Type} [ScopedOp Op] (op : Op) {request : TermSrc} (h0 : ∀ n, ScopedOp.scopedAt op n = true) (h1 : request.Scoped) :
     ((perform op request) : Src Op).Scoped := by
@@ -65,7 +65,7 @@ theorem perform_scoped {Op : Type} [ScopedOp Op] (op : Op) {request : TermSrc} (
   cases h
   have s0 := h0 env.names.length
   have s1 := h1.holds _ _ _ hx1
-  simp [s0, s1]
+  simp only [Eff.scopedAt_perform, s0, s1, Bool.and_self]
 
 theorem bind_scoped {Op : Type} [ScopedOp Op] (answer : String) {first : Src Op} {rest : Src Op} (h0 : first.Scoped) (h1 : rest.Scoped) :
     ((bind answer first rest) : Src Op).Scoped := by
@@ -77,7 +77,7 @@ theorem bind_scoped {Op : Type} [ScopedOp Op] (answer : String) {first : Src Op}
   have s0 := h0.holds _ _ _ hx0
   have s1 := h1.holds _ _ _ hx1
   simp only [Env.push_length, List.length_cons, List.length_nil] at s1
-  simp [s0, s1]
+  simp only [Eff.scopedAt_bind, s0, s1, Bool.and_self]
 
 theorem catchCause_scoped {Op : Type} [ScopedOp Op] (cause : String) {body : Src Op} {handler : Src Op} (h0 : body.Scoped) (h1 : handler.Scoped) :
     ((catchCause cause body handler) : Src Op).Scoped := by
@@ -89,7 +89,7 @@ theorem catchCause_scoped {Op : Type} [ScopedOp Op] (cause : String) {body : Src
   have s0 := h0.holds _ _ _ hx0
   have s1 := h1.holds _ _ _ hx1
   simp only [Env.push_length, List.length_cons, List.length_nil] at s1
-  simp [s0, s1]
+  simp only [Eff.scopedAt_catchCause, s0, s1, Bool.and_self]
 
 theorem matchCause_scoped {Op : Type} [ScopedOp Op] (value : String) (cause : String) {body : Src Op} {onValue : Src Op} {onCause : Src Op} (h0 : body.Scoped) (h1 : onValue.Scoped) (h2 : onCause.Scoped) :
     ((matchCause value cause body onValue onCause) : Src Op).Scoped := by
@@ -104,7 +104,7 @@ theorem matchCause_scoped {Op : Type} [ScopedOp Op] (value : String) (cause : St
   simp only [Env.push_length, List.length_cons, List.length_nil] at s1
   have s2 := h2.holds _ _ _ hx2
   simp only [Env.push_length, List.length_cons, List.length_nil] at s2
-  simp [s0, s1, s2]
+  simp only [Eff.scopedAt_matchCause, s0, s1, s2, Bool.and_self]
 
 theorem onExit_scoped {Op : Type} [ScopedOp Op] (exit : String) {body : Src Op} {finalizer : Src Op} (h0 : body.Scoped) (h1 : finalizer.Scoped) :
     ((onExit exit body finalizer) : Src Op).Scoped := by
@@ -116,7 +116,7 @@ theorem onExit_scoped {Op : Type} [ScopedOp Op] (exit : String) {body : Src Op} 
   have s0 := h0.holds _ _ _ hx0
   have s1 := h1.holds _ _ _ hx1
   simp only [Env.push_length, List.length_cons, List.length_nil] at s1
-  simp [s0, s1]
+  simp only [Eff.scopedAt_onExit, s0, s1, Bool.and_self]
 
 theorem exit_scoped {Op : Type} [ScopedOp Op] {body : Src Op} (h0 : body.Scoped) :
     ((exit body) : Src Op).Scoped := by
@@ -125,7 +125,7 @@ theorem exit_scoped {Op : Type} [ScopedOp Op] {body : Src Op} (h0 : body.Scoped)
   obtain ⟨x0, hx0, h⟩ := bind_ok h
   cases h
   have s0 := h0.holds _ _ _ hx0
-  simp [s0]
+  simp only [Eff.scopedAt_exit, s0]
 
 theorem uninterruptible_scoped {Op : Type} [ScopedOp Op] {body : Src Op} (h0 : body.Scoped) :
     ((uninterruptible body) : Src Op).Scoped := by
@@ -134,7 +134,7 @@ theorem uninterruptible_scoped {Op : Type} [ScopedOp Op] {body : Src Op} (h0 : b
   obtain ⟨x0, hx0, h⟩ := bind_ok h
   cases h
   have s0 := h0.holds _ _ _ hx0
-  simp [s0]
+  simp only [Eff.scopedAt_uninterruptible, s0]
 
 theorem interruptible_scoped {Op : Type} [ScopedOp Op] {body : Src Op} (h0 : body.Scoped) :
     ((interruptible body) : Src Op).Scoped := by
@@ -143,14 +143,14 @@ theorem interruptible_scoped {Op : Type} [ScopedOp Op] {body : Src Op} (h0 : bod
   obtain ⟨x0, hx0, h⟩ := bind_ok h
   cases h
   have s0 := h0.holds _ _ _ hx0
-  simp [s0]
+  simp only [Eff.scopedAt_interruptible, s0]
 
 theorem yieldNow_scoped {Op : Type} [ScopedOp Op] (priority : Nat) :
     ((yieldNow priority) : Src Op).Scoped := by
   refine ⟨fun env p e h => ?_⟩
   unfold yieldNow at h
   cases h
-  simp
+  simp only [Eff.scopedAt_yieldNow]
 
 theorem awaitFiber_scoped {Op : Type} [ScopedOp Op] {fiber : TermSrc} (mode : Effect4.Supervision.ObserverMode) (h0 : fiber.Scoped) :
     ((awaitFiber fiber mode) : Src Op).Scoped := by
@@ -159,7 +159,7 @@ theorem awaitFiber_scoped {Op : Type} [ScopedOp Op] {fiber : TermSrc} (mode : Ef
   obtain ⟨x0, hx0, h⟩ := bind_ok h
   cases h
   have s0 := h0.holds _ _ _ hx0
-  simp [s0]
+  simp only [Eff.scopedAt_awaitFiber, s0]
 
 theorem withFiber_scoped {Op : Type} [ScopedOp Op] {action : ActionSrc Op} (h0 : action.Scoped) :
     ((withFiber action) : Src Op).Scoped := by
@@ -168,7 +168,7 @@ theorem withFiber_scoped {Op : Type} [ScopedOp Op] {action : ActionSrc Op} (h0 :
   obtain ⟨x0, hx0, h⟩ := bind_ok h
   cases h
   have s0 := h0.holds _ _ _ hx0
-  simp [s0]
+  simp only [Eff.scopedAt_withFiber, s0]
 
 theorem scope_scoped {Op : Type} [ScopedOp Op] {body : Src Op} (h0 : body.Scoped) :
     ((scope body) : Src Op).Scoped := by
@@ -177,7 +177,7 @@ theorem scope_scoped {Op : Type} [ScopedOp Op] {body : Src Op} (h0 : body.Scoped
   obtain ⟨x0, hx0, h⟩ := bind_ok h
   cases h
   have s0 := h0.holds _ _ _ hx0
-  simp [s0]
+  simp only [Eff.scopedAt_scoped, s0]
 
 theorem acquireRelease_scoped {Op : Type} [ScopedOp Op] (resource : String) (exit : String) {acquire : Src Op} {release : Src Op} (h0 : acquire.Scoped) (h1 : release.Scoped) :
     ((acquireRelease resource exit acquire release) : Src Op).Scoped := by
@@ -189,7 +189,7 @@ theorem acquireRelease_scoped {Op : Type} [ScopedOp Op] (resource : String) (exi
   have s0 := h0.holds _ _ _ hx0
   have s1 := h1.holds _ _ _ hx1
   simp only [Env.push_length, List.length_cons, List.length_nil] at s1
-  simp [s0, s1]
+  simp only [Eff.scopedAt_acquireRelease, s0, s1, Bool.and_self]
 
 theorem provideLayer_scoped {Op : Type} [ScopedOp Op] {layer : LayerSrc Op} (isLocal : Bool) {body : Src Op} (h0 : layer.Scoped) (h2 : body.Scoped) :
     ((provideLayer layer isLocal body) : Src Op).Scoped := by
@@ -200,14 +200,14 @@ theorem provideLayer_scoped {Op : Type} [ScopedOp Op] {layer : LayerSrc Op} (isL
   cases h
   have s0 := h0.holds _ _ _ hx0
   have s2 := h2.holds _ _ _ hx2
-  simp [s0, s2]
+  simp only [Eff.scopedAt_provideLayer, s0, s2, Bool.and_self]
 
 theorem service_scoped {Op : Type} [ScopedOp Op] (key : Effect4.ServiceKey) :
     ((service key) : Src Op).Scoped := by
   refine ⟨fun env p e h => ?_⟩
   unfold service at h
   cases h
-  simp
+  simp only [Eff.scopedAt_service]
 
 theorem provideService_scoped {Op : Type} [ScopedOp Op] (key : Effect4.ServiceKey) {value : TermSrc} {body : Src Op} (h1 : value.Scoped) (h2 : body.Scoped) :
     ((provideService key value body) : Src Op).Scoped := by
@@ -218,7 +218,7 @@ theorem provideService_scoped {Op : Type} [ScopedOp Op] (key : Effect4.ServiceKe
   cases h
   have s1 := h1.holds _ _ _ hx1
   have s2 := h2.holds _ _ _ hx2
-  simp [s1, s2]
+  simp only [Eff.scopedAt_provideService, s1, s2, Bool.and_self]
 
 theorem catchIf_scoped {Op : Type} [ScopedOp Op] (error : String) {test : TermSrc} {body : Src Op} {handler : Src Op} (h0 : test.Scoped) (h1 : body.Scoped) (h2 : handler.Scoped) :
     ((catchIf error test body handler) : Src Op).Scoped := by
@@ -233,7 +233,7 @@ theorem catchIf_scoped {Op : Type} [ScopedOp Op] (error : String) {test : TermSr
   have s1 := h1.holds _ _ _ hx1
   have s2 := h2.holds _ _ _ hx2
   simp only [Env.push_length, List.length_cons, List.length_nil] at s2
-  simp [s0, s1, s2]
+  simp only [Eff.scopedAt_catchIf, s0, s1, s2, Bool.and_self]
 
 theorem selectBool_scoped {Op : Type} [ScopedOp Op] {scrutinee : TermSrc} {arm0 : Src Op} {arm1 : Src Op} (h0 : scrutinee.Scoped) (h2 : arm0.Scoped) (h3 : arm1.Scoped) :
     ((selectBool scrutinee arm0 arm1) : Src Op).Scoped := by
@@ -246,7 +246,7 @@ theorem selectBool_scoped {Op : Type} [ScopedOp Op] {scrutinee : TermSrc} {arm0 
   have s0 := h0.holds _ _ _ hx0
   have s2 := h2.holds _ _ _ hx2
   have s3 := h3.holds _ _ _ hx3
-  simp [s0, s2, s3]
+  simp only [Eff.scopedAt_select, s0, s2, s3, Bool.and_self, Nat.add_zero]
 
 theorem selectOption_scoped {Op : Type} [ScopedOp Op] (bound : String) {scrutinee : TermSrc} {arm0 : Src Op} {arm1 : Src Op} (h0 : scrutinee.Scoped) (h2 : arm0.Scoped) (h3 : arm1.Scoped) :
     ((selectOption bound scrutinee arm0 arm1) : Src Op).Scoped := by
@@ -260,7 +260,7 @@ theorem selectOption_scoped {Op : Type} [ScopedOp Op] (bound : String) {scrutine
   have s2 := h2.holds _ _ _ hx2
   have s3 := h3.holds _ _ _ hx3
   simp only [Env.push_length, List.length_cons, List.length_nil] at s3
-  simp [s0, s2, s3]
+  simp only [Eff.scopedAt_select, s0, s2, s3, Bool.and_self, Nat.add_zero]
 
 theorem selectTag_scoped {Op : Type} [ScopedOp Op] (payload : String) (rest : String) {scrutinee : TermSrc} (tag : String) {arm0 : Src Op} {arm1 : Src Op} (h0 : scrutinee.Scoped) (h2 : arm0.Scoped) (h3 : arm1.Scoped) :
     ((selectTag payload rest scrutinee tag arm0 arm1) : Src Op).Scoped := by
@@ -275,7 +275,7 @@ theorem selectTag_scoped {Op : Type} [ScopedOp Op] (payload : String) (rest : St
   simp only [Env.push_length, List.length_cons, List.length_nil] at s2
   have s3 := h3.holds _ _ _ hx3
   simp only [Env.push_length, List.length_cons, List.length_nil] at s3
-  simp [s0, s2, s3]
+  simp only [Eff.scopedAt_select, s0, s2, s3, Bool.and_self]
 
 theorem selectRecordTag_scoped {Op : Type} [ScopedOp Op] (hit : String) (miss : String) {scrutinee : TermSrc} (tag : String) {arm0 : Src Op} {arm1 : Src Op} (h0 : scrutinee.Scoped) (h2 : arm0.Scoped) (h3 : arm1.Scoped) :
     ((selectRecordTag hit miss scrutinee tag arm0 arm1) : Src Op).Scoped := by
@@ -290,7 +290,7 @@ theorem selectRecordTag_scoped {Op : Type} [ScopedOp Op] (hit : String) (miss : 
   simp only [Env.push_length, List.length_cons, List.length_nil] at s2
   have s3 := h3.holds _ _ _ hx3
   simp only [Env.push_length, List.length_cons, List.length_nil] at s3
-  simp [s0, s2, s3]
+  simp only [Eff.scopedAt_select, s0, s2, s3, Bool.and_self]
 
 theorem iterate_scoped {Op : Type} [ScopedOp Op] (cursor : String) (answer : String) (cursorTy : Option Effect4.Program.Ty) {initial : TermSrc} {test : TermSrc} {step : TermSrc} {result : TermSrc} {body : Src Op} (h1 : initial.Scoped) (h2 : test.Scoped) (h3 : step.Scoped) (h4 : result.Scoped) (h5 : body.Scoped) :
     ((iterate cursor answer cursorTy initial test step result body) : Src Op).Scoped := by
@@ -311,7 +311,7 @@ theorem iterate_scoped {Op : Type} [ScopedOp Op] (cursor : String) (answer : Str
   simp only [Env.push_length, List.length_cons, List.length_nil] at s4
   have s5 := h5.holds _ _ _ hx5
   simp only [Env.push_length, List.length_cons, List.length_nil] at s5
-  simp [s1, s2, s3, s4, s5]
+  simp only [Eff.scopedAt_iterate, s1, s2, s3, s4, s5, Bool.and_self]
 
 theorem restore_scoped {Op : Type} [ScopedOp Op] {saved : TermSrc} {body : Src Op} (h0 : saved.Scoped) (h1 : body.Scoped) :
     ((restore saved body) : Src Op).Scoped := by
@@ -322,7 +322,7 @@ theorem restore_scoped {Op : Type} [ScopedOp Op] {saved : TermSrc} {body : Src O
   cases h
   have s0 := h0.holds _ _ _ hx0
   have s1 := h1.holds _ _ _ hx1
-  simp [s0, s1]
+  simp only [Eff.scopedAt_restore, s0, s1, Bool.and_self]
 
 theorem provideContext_scoped {Op : Type} [ScopedOp Op] {context : TermSrc} {body : Src Op} (h0 : context.Scoped) (h1 : body.Scoped) :
     ((provideContext context body) : Src Op).Scoped := by
@@ -333,7 +333,7 @@ theorem provideContext_scoped {Op : Type} [ScopedOp Op] {context : TermSrc} {bod
   cases h
   have s0 := h0.holds _ _ _ hx0
   have s1 := h1.holds _ _ _ hx1
-  simp [s0, s1]
+  simp only [Eff.scopedAt_provideContext, s0, s1, Bool.and_self]
 
 theorem Action.fork_scoped {Op : Type} [ScopedOp Op] {program : Src Op} (options : Effect4.Supervision.ForkOptions) (h0 : program.Scoped) :
     ((Action.fork program options) : ActionSrc Op).Scoped := by
@@ -342,7 +342,7 @@ theorem Action.fork_scoped {Op : Type} [ScopedOp Op] {program : Src Op} (options
   obtain ⟨x0, hx0, h⟩ := bind_ok h
   cases h
   have s0 := h0.holds _ _ _ hx0
-  simp [s0]
+  simp only [ActionTerm.scopedAt_fork, s0]
 
 theorem Action.forkIn_scoped {Op : Type} [ScopedOp Op] {program : Src Op} (options : Effect4.Supervision.ForkOptions) {scope : TermSrc} (h0 : program.Scoped) (h2 : scope.Scoped) :
     ((Action.forkIn program options scope) : ActionSrc Op).Scoped := by
@@ -353,7 +353,7 @@ theorem Action.forkIn_scoped {Op : Type} [ScopedOp Op] {program : Src Op} (optio
   cases h
   have s0 := h0.holds _ _ _ hx0
   have s2 := h2.holds _ _ _ hx2
-  simp [s0, s2]
+  simp only [ActionTerm.scopedAt_forkIn, s0, s2, Bool.and_self]
 
 theorem Action.forkScoped_scoped {Op : Type} [ScopedOp Op] {program : Src Op} (options : Effect4.Supervision.ForkOptions) (h0 : program.Scoped) :
     ((Action.forkScoped program options) : ActionSrc Op).Scoped := by
@@ -362,7 +362,7 @@ theorem Action.forkScoped_scoped {Op : Type} [ScopedOp Op] {program : Src Op} (o
   obtain ⟨x0, hx0, h⟩ := bind_ok h
   cases h
   have s0 := h0.holds _ _ _ hx0
-  simp [s0]
+  simp only [ActionTerm.scopedAt_forkScoped, s0]
 
 theorem Action.runIn_scoped {Op : Type} [ScopedOp Op] {target : TermSrc} {scope : TermSrc} (h0 : target.Scoped) (h1 : scope.Scoped) :
     ((Action.runIn target scope) : ActionSrc Op).Scoped := by
@@ -373,7 +373,7 @@ theorem Action.runIn_scoped {Op : Type} [ScopedOp Op] {target : TermSrc} {scope 
   cases h
   have s0 := h0.holds _ _ _ hx0
   have s1 := h1.holds _ _ _ hx1
-  simp [s0, s1]
+  simp only [ActionTerm.scopedAt_runIn, s0, s1, Bool.and_self]
 
 theorem Action.interrupt_scoped {Op : Type} [ScopedOp Op] {target : TermSrc} (h0 : target.Scoped) :
     ((Action.interrupt target) : ActionSrc Op).Scoped := by
@@ -382,7 +382,7 @@ theorem Action.interrupt_scoped {Op : Type} [ScopedOp Op] {target : TermSrc} (h0
   obtain ⟨x0, hx0, h⟩ := bind_ok h
   cases h
   have s0 := h0.holds _ _ _ hx0
-  simp [s0]
+  simp only [ActionTerm.scopedAt_interrupt, s0]
 
 theorem Action.interruptAll_scoped {Op : Type} [ScopedOp Op] {targets : TermSrc} {interruptor : Option TermSrc} (h0 : targets.Scoped) (h1 : ∀ t ∈ interruptor, t.Scoped) :
     ((Action.interruptAll targets interruptor) : ActionSrc Op).Scoped := by
@@ -393,7 +393,7 @@ theorem Action.interruptAll_scoped {Op : Type} [ScopedOp Op] {targets : TermSrc}
   cases h
   have s0 := h0.holds _ _ _ hx0
   have s1 := elabOption_scoped h1 hx1
-  simp [s0, s1]
+  simp only [ActionTerm.scopedAt_interruptAll, s0, s1, Bool.and_self]
 
 theorem Action.awaitAll_scoped {Op : Type} [ScopedOp Op] {targets : TermSrc} (h0 : targets.Scoped) :
     ((Action.awaitAll targets) : ActionSrc Op).Scoped := by
@@ -402,7 +402,7 @@ theorem Action.awaitAll_scoped {Op : Type} [ScopedOp Op] {targets : TermSrc} (h0
   obtain ⟨x0, hx0, h⟩ := bind_ok h
   cases h
   have s0 := h0.holds _ _ _ hx0
-  simp [s0]
+  simp only [ActionTerm.scopedAt_awaitAll, s0]
 
 theorem Action.raceAll_scoped {Op : Type} [ScopedOp Op] {entrants : List (Src Op)} (h0 : ∀ s ∈ entrants, s.Scoped) :
     ((Action.raceAll entrants) : ActionSrc Op).Scoped := by
@@ -411,14 +411,14 @@ theorem Action.raceAll_scoped {Op : Type} [ScopedOp Op] {entrants : List (Src Op
   obtain ⟨x0, hx0, h⟩ := bind_ok h
   cases h
   have s0 := elabEffs_scoped h0 hx0
-  simp [s0]
+  simp only [ActionTerm.scopedAt_raceAll, s0]
 
 theorem Action.getId_scoped {Op : Type} [ScopedOp Op] :
     ((Action.getId) : ActionSrc Op).Scoped := by
   refine ⟨fun env p e h => ?_⟩
   unfold Action.getId at h
   cases h
-  simp
+  simp only [ActionTerm.scopedAt_getId]
 
 theorem Action.closeScope_scoped {Op : Type} [ScopedOp Op] {scope : TermSrc} {exit : TermSrc} (h0 : scope.Scoped) (h1 : exit.Scoped) :
     ((Action.closeScope scope exit) : ActionSrc Op).Scoped := by
@@ -429,14 +429,14 @@ theorem Action.closeScope_scoped {Op : Type} [ScopedOp Op] {scope : TermSrc} {ex
   cases h
   have s0 := h0.holds _ _ _ hx0
   have s1 := h1.holds _ _ _ hx1
-  simp [s0, s1]
+  simp only [ActionTerm.scopedAt_closeScope, s0, s1, Bool.and_self]
 
 theorem Action.getInterruptible_scoped {Op : Type} [ScopedOp Op] :
     ((Action.getInterruptible) : ActionSrc Op).Scoped := by
   refine ⟨fun env p e h => ?_⟩
   unfold Action.getInterruptible at h
   cases h
-  simp
+  simp only [ActionTerm.scopedAt_getInterruptible]
 
 theorem Action.raceAllFirst_scoped {Op : Type} [ScopedOp Op] {entrants : List (Src Op)} (h0 : ∀ s ∈ entrants, s.Scoped) :
     ((Action.raceAllFirst entrants) : ActionSrc Op).Scoped := by
@@ -445,21 +445,21 @@ theorem Action.raceAllFirst_scoped {Op : Type} [ScopedOp Op] {entrants : List (S
   obtain ⟨x0, hx0, h⟩ := bind_ok h
   cases h
   have s0 := elabEffs_scoped h0 hx0
-  simp [s0]
+  simp only [ActionTerm.scopedAt_raceAllFirst, s0]
 
 theorem Action.context_scoped {Op : Type} [ScopedOp Op] (keys : Effect4.Row Effect4.ServiceKey) :
     ((Action.context keys) : ActionSrc Op).Scoped := by
   refine ⟨fun env p e h => ?_⟩
   unfold Action.context at h
   cases h
-  simp
+  simp only [ActionTerm.scopedAt_context]
 
 theorem Layer.succeed_scoped {Op : Type} [ScopedOp Op] (key : Effect4.ServiceKey) (value : Effect4.Program.Lit) :
     ((Layer.succeed key value) : LayerSrc Op).Scoped := by
   refine ⟨fun env p e h => ?_⟩
   unfold Layer.succeed at h
   cases h
-  simp
+  simp only [LayerTerm.scoped_succeed]
 
 theorem Layer.effect_scoped {Op : Type} [ScopedOp Op] (key : Effect4.ServiceKey) {body : Src Op} (h1 : body.Scoped) :
     ((Layer.effect key body) : LayerSrc Op).Scoped := by
@@ -469,7 +469,7 @@ theorem Layer.effect_scoped {Op : Type} [ScopedOp Op] (key : Effect4.ServiceKey)
   cases h
   have s1 := h1.holds _ _ _ hx1
   simp only [Env.closed_length] at s1
-  simp [s1]
+  simp only [LayerTerm.scoped_effect, s1]
 
 theorem Layer.effectDiscard_scoped {Op : Type} [ScopedOp Op] {body : Src Op} (h0 : body.Scoped) :
     ((Layer.effectDiscard body) : LayerSrc Op).Scoped := by
@@ -479,7 +479,7 @@ theorem Layer.effectDiscard_scoped {Op : Type} [ScopedOp Op] {body : Src Op} (h0
   cases h
   have s0 := h0.holds _ _ _ hx0
   simp only [Env.closed_length] at s0
-  simp [s0]
+  simp only [LayerTerm.scoped_effectDiscard, s0]
 
 theorem Layer.provide_scoped {Op : Type} [ScopedOp Op] {self : LayerSrc Op} {that : LayerSrc Op} (h0 : self.Scoped) (h1 : that.Scoped) :
     ((Layer.provide self that) : LayerSrc Op).Scoped := by
@@ -490,7 +490,7 @@ theorem Layer.provide_scoped {Op : Type} [ScopedOp Op] {self : LayerSrc Op} {tha
   cases h
   have s0 := h0.holds _ _ _ hx0
   have s1 := h1.holds _ _ _ hx1
-  simp [s0, s1]
+  simp only [LayerTerm.scoped_provide, s0, s1, Bool.and_self]
 
 theorem Layer.provideMerge_scoped {Op : Type} [ScopedOp Op] {self : LayerSrc Op} {that : LayerSrc Op} (h0 : self.Scoped) (h1 : that.Scoped) :
     ((Layer.provideMerge self that) : LayerSrc Op).Scoped := by
@@ -501,7 +501,7 @@ theorem Layer.provideMerge_scoped {Op : Type} [ScopedOp Op] {self : LayerSrc Op}
   cases h
   have s0 := h0.holds _ _ _ hx0
   have s1 := h1.holds _ _ _ hx1
-  simp [s0, s1]
+  simp only [LayerTerm.scoped_provideMerge, s0, s1, Bool.and_self]
 
 theorem Layer.merge_scoped {Op : Type} [ScopedOp Op] {left : LayerSrc Op} {right : LayerSrc Op} (h0 : left.Scoped) (h1 : right.Scoped) :
     ((Layer.merge left right) : LayerSrc Op).Scoped := by
@@ -512,7 +512,7 @@ theorem Layer.merge_scoped {Op : Type} [ScopedOp Op] {left : LayerSrc Op} {right
   cases h
   have s0 := h0.holds _ _ _ hx0
   have s1 := h1.holds _ _ _ hx1
-  simp [s0, s1]
+  simp only [LayerTerm.scoped_merge, s0, s1, Bool.and_self]
 
 theorem Layer.fresh_scoped {Op : Type} [ScopedOp Op] {inner : LayerSrc Op} (h0 : inner.Scoped) :
     ((Layer.fresh inner) : LayerSrc Op).Scoped := by
@@ -521,7 +521,7 @@ theorem Layer.fresh_scoped {Op : Type} [ScopedOp Op] {inner : LayerSrc Op} (h0 :
   obtain ⟨x0, hx0, h⟩ := bind_ok h
   cases h
   have s0 := h0.holds _ _ _ hx0
-  simp [s0]
+  simp only [LayerTerm.scoped_fresh, s0]
 
 theorem Layer.orDie_scoped {Op : Type} [ScopedOp Op] {inner : LayerSrc Op} (h0 : inner.Scoped) :
     ((Layer.orDie inner) : LayerSrc Op).Scoped := by
@@ -530,7 +530,7 @@ theorem Layer.orDie_scoped {Op : Type} [ScopedOp Op] {inner : LayerSrc Op} (h0 :
   obtain ⟨x0, hx0, h⟩ := bind_ok h
   cases h
   have s0 := h0.holds _ _ _ hx0
-  simp [s0]
+  simp only [LayerTerm.scoped_orDie, s0]
 
 theorem Layer.mergeAll_scoped {Op : Type} [ScopedOp Op] {layers : List (LayerSrc Op)} (h0 : ∀ s ∈ layers, s.Scoped) :
     ((Layer.mergeAll layers) : LayerSrc Op).Scoped := by
@@ -539,7 +539,7 @@ theorem Layer.mergeAll_scoped {Op : Type} [ScopedOp Op] {layers : List (LayerSrc
   obtain ⟨x0, hx0, h⟩ := bind_ok h
   cases h
   have s0 := elabLayers_scoped h0 hx0
-  simp [s0]
+  simp only [LayerTerm.scoped_mergeAll, s0]
 
 theorem Cause.fail_scoped {error : TermSrc} (h0 : error.Scoped) :
     ((Cause.fail error) : CauseSrc).Scoped := by
@@ -548,7 +548,7 @@ theorem Cause.fail_scoped {error : TermSrc} (h0 : error.Scoped) :
   obtain ⟨x0, hx0, h⟩ := bind_ok h
   cases h
   have s0 := h0.holds _ _ _ hx0
-  simp [CauseTerm.scoped, s0]
+  simp only [CauseTerm.scoped, s0]
 
 theorem Cause.die_scoped {defect : TermSrc} (h0 : defect.Scoped) :
     ((Cause.die defect) : CauseSrc).Scoped := by
@@ -557,7 +557,7 @@ theorem Cause.die_scoped {defect : TermSrc} (h0 : defect.Scoped) :
   obtain ⟨x0, hx0, h⟩ := bind_ok h
   cases h
   have s0 := h0.holds _ _ _ hx0
-  simp [CauseTerm.scoped, s0]
+  simp only [CauseTerm.scoped, s0]
 
 theorem Cause.interrupt_scoped {interruptor : Option TermSrc} (h0 : ∀ t ∈ interruptor, t.Scoped) :
     ((Cause.interrupt interruptor) : CauseSrc).Scoped := by
@@ -577,7 +577,7 @@ theorem Cause.both_scoped {left : CauseSrc} {right : CauseSrc} (h0 : left.Scoped
   cases h
   have s0 := h0.holds _ _ _ hx0
   have s1 := h1.holds _ _ _ hx1
-  simp [CauseTerm.scoped, s0, s1]
+  simp only [CauseTerm.scoped, s0, s1, Bool.and_self]
 
 end Effect4.Program.Authoring
 
