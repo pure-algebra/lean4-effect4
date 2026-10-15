@@ -760,3 +760,49 @@ step, `atDepth_length`.
 | `#axiom_audit` of the two edited modules (`cr7/AuditCR7a.lean`) | 2,259 declarations within `[propext, Quot.sound]` |
 
 The fallback in `shippedPieces` stays in this part. Part 2 removes it with the row-only printer.
+
+### Part 2: the deletion stops at a decision boundary
+
+**The one thing to know.** The site printer has no checked context in the main piece of a
+program that shares a layer by reference. Deleting the row-only printer loses those modules: the
+truth lane's `pDiamond` and two batteries' programs. The options and the recommendation are in
+`cr7-note.md` §8.3. Nothing of part 2 lands. Part 1 stays as it landed.
+
+Base `1807268cb`. This part commits the note's §8, this section and the patch, all under
+`docs/research`. The patch applies to the base (`git apply --check`).
+
+**What the patch holds**, by the note's §8.1:
+
+- the row-only printer, its erasure and the fallback of `shippedPieces` deleted;
+- the connector at the site printer, proved: a successful typed print under `NoJoin` is the print
+  (`printTyped_eq_print`, by `plain_upTo`);
+- `emitModule_complete` with the premise `typedMain`, and the counterexample battery of
+  `E4-PRINT-CE-004` and `E4-PRINT-CE-005` (`cr7-part2/TypedPrintRefuses.lean`);
+- a second repair: a spine reads no context, so an invocation's spine prints;
+- the battery's port, the register rows, the claim's title and the two authority documents.
+
+| Command | Result |
+| --- | --- |
+| `lake build Effect4.Laws.Codegen.PrintTyped`, the patch applied | passes, 73 s |
+| `lake build` of its importers and the 32 batteries that emit a module, the patch applied | 30 pass. `Test.Codegen.ReadContract` fails at `nestedSharing`, and `Test.Api.ApiContract` at `sharedLayers` |
+| the truth harness's `lake env lean --run`, the patch applied | stops at its two checks of `pDiamond`, before it writes a manifest |
+| the probe `cr7/InvokeProbe.lean`, before the spine repair | an invocation's main piece refuses: no context at the spine's end, `[0, 1]` |
+| the probe `cr7/LayerProbe.lean` | `nestedSharing`'s main piece has no environment at `[1]` and below; `typed:missing context` |
+| `git apply --check cr7-part2/part2.patch` at `1807268cb` | applies |
+| `python3 scripts/check-language.py --strict` on the note | passes |
+
+**Axiom output.** None: no `#axiom_audit` ran over the patch, because it does not land.
+
+**Lines.** The patch adds 2,026 lines and removes 2,074 (`cr7-part2/part2.stat`).
+
+**Open obligations.** CR-7's deletion, its connector and its fusion wait on the ruling of §8.3.
+
+**Evidence.** *Tested*: the builds and the three failing checks above, the patch applied.
+*Assumed*: option (B)'s 800 to 1,000 lines, an estimate from the deleted row-only erasure.
+
+**Proposed decisions row (proposal only).**
+
+- **P-CR7-1.** A ruling among §8.3's three options. In (A) the checker types a layer reference
+  by its target's type. In (B) the typed print prints a node with no checked context by the
+  fold, and the fused erasure's plain instance covers it. In (C) the row-only printer stays. The
+  seat recommends (C) now and (B) inside the fusion slice.
