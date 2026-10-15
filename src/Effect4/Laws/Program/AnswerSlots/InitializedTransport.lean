@@ -17,6 +17,7 @@ theorem yield_edge (spec : Spec) (completed : List (FiberId × ExitV)) (world : 
     Edge spec completed world (.yielded world.state.refs.length world.state.deferreds.cells.length) kind
       (.onSuccessConst (.yieldNowWith priority) next) := by
   apply AnswerFlow.EmbeddedEdgeOver.saved
+  refine ⟨?_, by intro body previous scope flag same; cases same⟩
   refine ⟨?_, ?_, ?_⟩
   · intro view
     apply AnswerFlow.saved_constant
@@ -54,6 +55,7 @@ theorem head (spec : Spec) (fragment : SourceScope.Fragment spec.root)
     by_cases ready : Ready spec world
     · refine .onSuccessConst (Kind.stable Typed.Kind.root) _ _ (.stable ready rfl) ?_
       apply AnswerFlow.EmbeddedEdgeOver.saved
+      refine ⟨?_, by intro body previous scope flag same; cases same⟩
       refine ⟨?_, ?_, ?_⟩
       · intro view
         apply AnswerFlow.saved_constant

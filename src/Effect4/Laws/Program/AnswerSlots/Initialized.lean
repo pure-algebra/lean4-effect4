@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.AnswerSlots.TypedHead
 import Effect4.Laws.Machine.AnswerFlowEmbedding
+import Effect4.Laws.Machine.AnswerFlowViewsRefined
 
 /-!
 Concept: store-typing R4 and scope-lifetime-finalization R11.
@@ -134,21 +135,40 @@ theorem embedding (spec : Spec) (completed : List (FiberId × ExitV)) :
   finalizer := fun _ _ _ _ => rfl
 
 /-- Initializer callbacks retain their same answer endpoints at every completed-fiber view. -/
-def Semantic (spec : Spec) :=
+def ScopedExitTag (spec : Spec) (world : World) (input output : Kind) (frame : NCode) : Prop :=
+  ∀ body previous scope flag, frame = .onExit body (.scopedExit previous scope) flag →
+    input = .stable .root ∧ output = .stable .root ∧ Ready spec world
+
+def Semantic (spec : Spec) (world : World) (input output : Kind) (frame : NCode) : Prop :=
   AnswerFlow.ViewSavedAt (fun view => model spec view)
-    (fun view => (interpAt spec.root view spec.table).toPrimInterp)
+    (fun view => (interpAt spec.root view spec.table).toPrimInterp) world input output frame ∧
+      ScopedExitTag spec world input output frame
 
 /-- Initialization and stable saved edges retain uniform callbacks under actual view changes. -/
 def Edge (spec : Spec) (_completed : List (FiberId × ExitV)) :=
   AnswerFlow.EmbeddedEdgeOver (fun (_ : World) => ()) Kind.stable (Ready spec)
     (Semantic spec) (Typed.Edge spec.toSpec [])
 
+/-- Native scoped cleanup reads the actual source-generated stable endpoint and ready phase. -/
+theorem scoped_edge (spec : Spec) (view : List (FiberId × ExitV)) (world : World)
+    (input output : Kind) (body : NCode) (previous : Ctx) (scope : Nat) (flag : Bool)
+    (held : Edge spec view world input output (.onExit body (.scopedExit previous scope) flag)) :
+    input = .stable .root ∧ output = .stable .root ∧ Ready spec world := by
+  generalize same : Prim.onExit body (.scopedExit previous scope) flag = frame at held
+  cases held with
+  | saved owned => exact owned.2 body previous scope flag same.symm
+  | mapped ready owned =>
+    cases same
+    obtain ⟨rfl, rfl⟩ := Typed.scoped_edge spec.toSpec [] () _ _ body previous scope flag owned
+    exact ⟨rfl, rfl, ready⟩
+
 /-- The actual view projects both uniform initializer and stable saved families. -/
 theorem family (spec : Spec) (fragment : SourceScope.Fragment spec.root) (completed : List (FiberId × ExitV)) :
     AnswerFlow.SavedFamily (model spec completed) (interpAt spec.root completed spec.table).toPrimInterp (Edge spec completed) :=
   AnswerFlow.FamilyEmbedding.family_over (interpAt spec.root completed spec.table).toPrimInterp
     (embedding spec completed) (Semantic spec) (Typed.Edge spec.toSpec completed)
-    (AnswerFlow.ViewSavedAt.family (fun view => model spec view)
-      (fun view => (interpAt spec.root view spec.table).toPrimInterp) completed)
+    (AnswerFlow.ViewSavedAt.refined_family (fun view => model spec view)
+      (fun view => (interpAt spec.root view spec.table).toPrimInterp) (Semantic spec)
+      (fun _ _ _ _ held => held.1) completed)
     (Typed.family spec.toSpec fragment completed)
 end Effect4.Program.AnswerSlots.Initialized

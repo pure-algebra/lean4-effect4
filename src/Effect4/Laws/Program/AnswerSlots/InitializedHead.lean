@@ -19,6 +19,7 @@ theorem bound_edge (spec : Spec) (completed : List (FiberId × ExitV)) (world : 
         ((interpAt spec.root view spec.table).contA name answer)) :
     Edge spec completed world input output (.onSuccess body name) := by
   apply AnswerFlow.EmbeddedEdgeOver.saved
+  refine ⟨?_, by intro body previous scope flag same; cases same⟩
   refine ⟨?_, ?_, ?_⟩
   · intro view
     apply AnswerFlow.saved_success

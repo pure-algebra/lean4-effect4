@@ -15,6 +15,7 @@ open Effect4 Effect4.Machine Effect4.Program
 theorem async_edge (spec : Spec) (completed : List (FiberId × ExitV)) (name : EffName) :
     Edge spec completed () Kind.root Kind.root (.asyncFinalizer name) := by
   apply AnswerFlow.RecursiveFamilyEdge.saved
+  refine ⟨?_, by intro body previous scope flag same; cases same⟩
   refine ⟨?_, ?_, ?_⟩
   · intro view
     refine .mk () Kind.root Kind.root _ ?_ ?_ ?_ ?_ ?_ ?_

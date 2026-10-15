@@ -1,6 +1,7 @@
 import Effect4.Laws.Program.AnswerSlots.TypedInterp
 import Effect4.Laws.Machine.AnswerFlowRecursiveFamily
 import Effect4.Laws.Machine.AnswerFlowHooks
+import Effect4.Laws.Machine.AnswerFlowViewsRefined
 
 /-!
 Concept: store-typing R4 and scope-lifetime-finalization R11.
@@ -31,28 +32,44 @@ theorem hooks (spec : Spec) (fragment : SourceScope.Fragment spec.root) (complet
       rw [actual] at result <;> exact result
 
 /-- Native semantic callbacks retain their class endpoints under every completed-fiber view. -/
-def Semantic (spec : Spec) :=
+def ScopedExitTag (input output : Kind) (frame : NCode) : Prop :=
+  ∀ body previous scope flag, frame = .onExit body (.scopedExit previous scope) flag → input = .root ∧ output = .root
+
+def Semantic (spec : Spec) (world : Unit) (input output : Kind) (frame : NCode) : Prop :=
   AnswerFlow.ViewSavedAt (fun view => model spec view)
-    (fun view => (interpAt spec.root view spec.table).toPrimInterp)
+    (fun view => (interpAt spec.root view spec.table).toPrimInterp) world input output frame ∧
+      ScopedExitTag input output frame
 
 /-- The stable graph retains uniform callbacks and the existing recursive source-name classes. -/
 def Edge (spec : Spec) (_completed : List (FiberId × ExitV)) :=
   AnswerFlow.RecursiveFamilyEdge (Semantic spec) Kind.root
     (fun _ => OrdinaryName spec) (fun _ => OrdinaryName spec)
 
+/-- Source-produced scoped exits retain their broad native cleanup endpoint classes. -/
+theorem scoped_edge (spec : Spec) (view : List (FiberId × ExitV)) (world : Unit)
+    (input output : Kind) (body : NCode) (previous : Ctx) (scope : Nat) (flag : Bool)
+    (held : Edge spec view world input output (.onExit body (.scopedExit previous scope) flag)) :
+    input = .root ∧ output = .root := by
+  generalize same : Prim.onExit body (.scopedExit previous scope) flag = frame at held
+  cases held with
+  | saved owned => exact owned.2 body previous scope flag same.symm
+  | loop cursor owned | iterator cursor owned => cases same
+
 /-- One actual view projects the common class endpoints and actual uniform pushed suffixes. -/
 theorem family (spec : Spec) (fragment : SourceScope.Fragment spec.root) (completed : List (FiberId × ExitV)) :
     AnswerFlow.SavedFamily (model spec completed) (interpAt spec.root completed spec.table).toPrimInterp
       (Edge spec completed) :=
   AnswerFlow.recursive_family_of _ _ _ _ _ _
-    (AnswerFlow.ViewSavedAt.family (fun view => model spec view)
-      (fun view => (interpAt spec.root view spec.table).toPrimInterp) completed) (hooks spec fragment completed)
+    (AnswerFlow.ViewSavedAt.refined_family (fun view => model spec view)
+      (fun view => (interpAt spec.root view spec.table).toPrimInterp) (Semantic spec)
+      (fun _ _ _ _ held => held.1) completed) (hooks spec fragment completed)
 
 /-- Protected value binders use the actual intermediate acquisition class. -/
 theorem success_edge (spec : Spec) (fragment : SourceScope.Fragment spec.root) (completed : List (FiberId × ExitV))
     (input output : Kind) (body : NCode) (name : EffName) (owned : NameAt spec input output name) :
     Edge spec completed () input output (.onSuccess body name) := by
   apply AnswerFlow.RecursiveFamilyEdge.saved
+  refine ⟨?_, by intro body previous scope flag same; cases same⟩
   refine ⟨?_, ?_, ?_⟩
   · intro view
     apply AnswerFlow.saved_success
@@ -70,6 +87,7 @@ theorem constant_edge (spec : Spec) (completed : List (FiberId × ExitV))
     (output : Kind) (body next : NCode) (owned : CodeAt spec output next) :
     Edge spec completed () .root output (.onSuccessConst body next) := by
   apply AnswerFlow.RecursiveFamilyEdge.saved
+  refine ⟨?_, by intro body previous scope flag same; cases same⟩
   refine ⟨?_, ?_, ?_⟩
   · intro view
     apply AnswerFlow.saved_constant
@@ -87,6 +105,7 @@ theorem failure_edge (spec : Spec) (fragment : SourceScope.Fragment spec.root) (
     (body : NCode) (name : EffName) (owned : OrdinaryName spec name) :
     Edge spec completed () .root .root (.onFailure body name) := by
   apply AnswerFlow.RecursiveFamilyEdge.saved
+  refine ⟨?_, by intro body previous scope flag same; cases same⟩
   refine ⟨?_, ?_, ?_⟩
   · intro view
     apply AnswerFlow.saved_failure
@@ -106,6 +125,7 @@ theorem both_edge (spec : Spec) (fragment : SourceScope.Fragment spec.root) (com
     (body : NCode) (success failure : EffName) (first : OrdinaryName spec success) (second : OrdinaryName spec failure) :
     Edge spec completed () .root .root (.onSuccessAndFailure body success failure) := by
   apply AnswerFlow.RecursiveFamilyEdge.saved
+  refine ⟨?_, by intro body previous scope flag same; cases same⟩
   refine ⟨?_, ?_, ?_⟩
   · intro view
     apply AnswerFlow.saved_both
@@ -124,6 +144,7 @@ theorem both_edge (spec : Spec) (fragment : SourceScope.Fragment spec.root) (com
 theorem exitFrame_edge (spec : Spec) (completed : List (FiberId × ExitV)) (body : NCode) :
     Edge spec completed () .root .root (.exitFrame body) := by
   apply AnswerFlow.RecursiveFamilyEdge.saved
+  refine ⟨?_, by intro body previous scope flag same; cases same⟩
   refine ⟨?_, ?_, ?_⟩
   · intro view
     apply AnswerFlow.saved_exitFrame
@@ -141,6 +162,7 @@ theorem onExit_edge (spec : Spec) (fragment : SourceScope.Fragment spec.root) (c
     (body : NCode) (name : EffName) (flag : Bool) (owned : OrdinaryName spec name) :
     Edge spec completed () .root .root (.onExit body name flag) := by
   apply AnswerFlow.RecursiveFamilyEdge.saved
+  refine ⟨?_, by intro body previous scope flag same; exact ⟨rfl, rfl⟩⟩
   refine ⟨?_, ?_, ?_⟩
   · intro view
     apply AnswerFlow.saved_onExit

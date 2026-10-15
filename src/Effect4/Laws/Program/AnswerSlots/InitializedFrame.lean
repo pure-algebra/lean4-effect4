@@ -21,8 +21,11 @@ theorem edge_future (spec : Spec) (completed : List (FiberId × ExitV)) (first l
   apply AnswerFlow.FamilyEmbedding.edge_future_over (embedding spec completed)
     (Semantic spec) (Typed.Edge spec.toSpec completed) ?_ ?_ first last future input output frame held
   · intro before after later incoming outgoing code owned
-    exact AnswerFlow.ViewSavedAt.future (fun view => model spec view)
-      (fun view => (interpAt spec.root view spec.table).toPrimInterp) (fun _ => later) owned
+    refine ⟨AnswerFlow.ViewSavedAt.future (fun view => model spec view)
+      (fun view => (interpAt spec.root view spec.table).toPrimInterp) (fun _ => later) owned.1, ?_⟩
+    intro body previous scope flag same
+    obtain ⟨rfl, rfl, ready⟩ := owned.2 body previous scope flag same
+    exact ⟨rfl, rfl, ready_future spec before after later ready⟩
   · intro before after later incoming outgoing code owned
     cases before
     cases after
@@ -38,9 +41,10 @@ theorem path_future (spec : Spec) (completed : List (FiberId × ExitV)) (first l
 /-- Either restoring mask is an identity saved edge at every initialized answer class. -/
 theorem mask_edge_flag (spec : Spec) (completed : List (FiberId × ExitV)) (world : World)
     (kind : Kind) (flag : Bool) : Edge spec completed world kind kind (.setInterruptible flag) :=
-  .saved ⟨(fun view => AnswerFlow.saved_mask (model spec view)
+  .saved ⟨⟨(fun view => AnswerFlow.saved_mask (model spec view)
     (interpAt spec.root view spec.table).toPrimInterp world kind flag),
-    (by intro loop cursor same; cases same), (by intro generator cursor same; cases same)⟩
+    (by intro loop cursor same; cases same), (by intro generator cursor same; cases same)⟩,
+    (by intro body previous scope flag same; cases same)⟩
 
 /-- The native exit restoration uses the true-mask instance. -/
 theorem mask_edge (spec : Spec) (completed : List (FiberId × ExitV)) (world : World)
