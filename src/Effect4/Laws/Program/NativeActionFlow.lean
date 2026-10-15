@@ -110,15 +110,24 @@ theorem countdown_family (root : NativeEff) (view) (table : RowTable)
     FamilyResult model Edge world output next.frame.current next.frame.stack  := by
   exact ⟨input, countdown_path model Edge root view table world input output m fiber targets resume failFast code stack answer cancel⟩
 
+/-- Only a mask body becomes the acting parent's current code; other programs belong to children. -/
+def ParentProgramsWith (races parallel : Prop) (P : NCode → Prop) : NAction → Prop :=
+  ActionProgramsWith races parallel (fun role code => match role with
+    | .maskBody => P code
+    | .forkBody | .entrantBody => True)
+
+/-- The lexical source instance retains its existing action permissions. -/
+abbrev ParentProgramsAt (root : NativeEff) := ParentProgramsWith (RaceAllowed root) (ParallelAllowed root)
+
 /-- Every native action retains the parent's actual saved path at its supplied post-operation world.
 The caller proves the store transfer separately; no arbitrary current-code monotonicity is assumed. -/
-theorem with_fiber_path (root : NativeEff) (view) (table : RowTable)
+theorem with_fiber_parent_path {races parallel : Prop} (root : NativeEff) (view) (table : RowTable)
     (world : World) (input output : Kind) (m : NativeMachine) (fiber : SourceFiber)
     (yielding : Bool) (action : NAction)
     (facts : ActionFlowFacts model Edge root view table world input)
     (code : model.code world input fiber.frame.current)
     (stack : Contracts.Path (Edge world) input output fiber.frame.stack)
-    (source : ActionProgramsAt root (fun _ => model.code world input) action)
+    (source : ParentProgramsWith races parallel (model.code world input) action)
     (closed : ∀ scope exit state program,
       (interpAt root view table).closeScope scope exit fiber.frame.interruptible fiber.id m.state = some (state, some program) →
       model.code world input program) :
@@ -203,6 +212,28 @@ theorem with_fiber_path (root : NativeEff) (view) (table : RowTable)
     · exact ⟨code, stack⟩
   case getInterruptible =>
     exact masked_path model Edge world input output fiber.frame _ (success _) (facts.mask true) stack
+
+/-- Existing callers may continue supplying every action-program role at the parent's class. -/
+theorem with_fiber_path (root : NativeEff) (view) (table : RowTable)
+    (world : World) (input output : Kind) (m : NativeMachine) (fiber : SourceFiber)
+    (yielding : Bool) (action : NAction)
+    (facts : ActionFlowFacts model Edge root view table world input)
+    (code : model.code world input fiber.frame.current)
+    (stack : Contracts.Path (Edge world) input output fiber.frame.stack)
+    (source : ActionProgramsAt root (fun _ => model.code world input) action)
+    (closed : ∀ scope exit state program,
+      (interpAt root view table).closeScope scope exit fiber.frame.interruptible fiber.id m.state = some (state, some program) →
+      model.code world input program) :
+    let next := evaluatePrim.withFiber (interpAt root view table) m fiber yielding action
+    model.code world input next.fiber.frame.current ∧
+      Contracts.Path (Edge world) input output next.fiber.frame.stack := by
+  apply with_fiber_parent_path (races := RaceAllowed root) (parallel := ParallelAllowed root) model Edge root view table world input output m fiber yielding action
+    facts code stack _ closed
+  apply ActionProgramsAt.mono root _ source
+  intro role program owned
+  cases role
+  case maskBody => exact owned
+  all_goals trivial
 
 /-- The earlier existential result is a projection of the exact action input path. -/
 theorem with_fiber_family (root : NativeEff) (view) (table : RowTable)
