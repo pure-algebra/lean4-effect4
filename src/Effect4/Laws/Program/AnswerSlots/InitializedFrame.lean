@@ -35,12 +35,17 @@ theorem path_future (spec : Spec) (completed : List (FiberId × ExitV)) (first l
     Effect4.Contracts.Path (Edge spec completed last) input output frames :=
   held.map (edge_future spec completed first last future)
 
-/-- Restoring masks are identity saved edges at every transient or stable answer class. -/
+/-- Either restoring mask is an identity saved edge at every initialized answer class. -/
+theorem mask_edge_flag (spec : Spec) (completed : List (FiberId × ExitV)) (world : World)
+    (kind : Kind) (flag : Bool) : Edge spec completed world kind kind (.setInterruptible flag) :=
+  .saved ⟨(fun view => AnswerFlow.saved_mask (model spec view)
+    (interpAt spec.root view spec.table).toPrimInterp world kind flag),
+    (by intro loop cursor same; cases same), (by intro generator cursor same; cases same)⟩
+
+/-- The native exit restoration uses the true-mask instance. -/
 theorem mask_edge (spec : Spec) (completed : List (FiberId × ExitV)) (world : World)
     (kind : Kind) : Edge spec completed world kind kind (.setInterruptible true) :=
-  .saved ⟨(fun view => AnswerFlow.saved_mask (model spec view)
-    (interpAt spec.root view spec.table).toPrimInterp world kind true),
-    (by intro loop cursor same; cases same), (by intro generator cursor same; cases same)⟩
+  mask_edge_flag spec completed world kind true
 
 /-- Every nonterminal pure step consumes the existing head theorem without another primitive walk. -/
 theorem nonterminal_step (spec : Spec) (fragment : SourceScope.Fragment spec.root)

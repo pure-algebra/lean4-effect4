@@ -400,3 +400,6 @@ import Effect4.Laws.Program.AnswerSlots.InitializedNativeExit
 import Effect4.Laws.Program.CrewLogs.Initialized
 import Effect4.Laws.Program.AnswerSlots.PrefixStable
 import Effect4.Laws.Program.NativeActionRows
+import Effect4.Laws.Program.AnswerSlots.InitializedActionFacts
+import Effect4.Laws.Program.AnswerSlots.InitializedNativeShapes
+import Effect4.Laws.Program.CrewLogs.Observation
