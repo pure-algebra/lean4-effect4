@@ -16,9 +16,10 @@ theorem semantic_future (spec : Spec) (before after : World) (future : Future be
     (input output : Kind spec.stable.Kind) (frame : NCode) (held : Semantic spec before input output frame) :
     Semantic spec after input output frame := by
   cases held with
-  | saved saved =>
+  | saved saved scopeReady =>
     exact .saved (AnswerFlow.ViewSavedAt.future (fun view => model spec view)
       (fun view => (interpAt spec.root view spec.table).toPrimInterp) (fun _ => future) saved)
+      (fun body previous scope flag same => ready_future spec before after future (scopeReady body previous scope flag same))
   | allocation captured index point body small stage reached =>
     exact .allocation captured index point body small stage ((model spec []).future_trans _ _ _ reached future)
   | gate captured point body stage gate present reached =>
@@ -33,19 +34,23 @@ theorem semantic_family (spec : Spec) (fragment : SourceScope.Fragment spec.root
   constructor
   · intro world input output frame held nextWorld future value good missing
     cases held with
-    | saved held => exact uniform.skip world input output frame held nextWorld future value good missing
+    | saved held scopeReady => exact uniform.skip world input output frame held nextWorld future value good missing
     | allocation => cases missing
     | gate => cases missing
   · intro world input output frame held nextWorld future cause good missing
     cases held with
-    | saved held => exact uniform.skipCause world input output frame held nextWorld future cause good missing
+    | saved held scopeReady => exact uniform.skipCause world input output frame held nextWorld future cause good missing
     | allocation => exact good
     | gate => exact good
   · intro world input output frame held nextWorld future value provided next pushed good supplied absent actual
     cases held with
-    | saved held =>
-      obtain ⟨middle, code, path⟩ := uniform.answer world input output frame held nextWorld future value provided next pushed good supplied absent actual
-      exact ⟨middle, code, path.map (fun _ _ _ edge => .saved edge)⟩
+    | saved held scopeReady =>
+      have empty := AnswerFlow.nonrecursive_armA_nil (interpAt spec.root view spec.table).toPrimInterp
+        frame held.noLoop held.noIterator value provided next pushed actual
+      subst pushed
+      obtain ⟨middle, code, path⟩ := uniform.answer world input output frame held nextWorld future value provided next [] good supplied absent actual
+      cases path
+      exact ⟨output, code, .nil output⟩
     | allocation captured index point body small stage reached =>
       change some ((interpAt spec.root view spec.table).contA (.cont point) value, []) = some (next, pushed) at actual
       cases actual
@@ -59,19 +64,22 @@ theorem semantic_family (spec : Spec) (fragment : SourceScope.Fragment spec.root
         gate present view value good
   · intro world input output frame held nextWorld future cause provided next pushed good supplied absent actual
     cases held with
-    | saved held =>
-      obtain ⟨middle, code, path⟩ := uniform.cause world input output frame held nextWorld future cause provided next pushed good supplied absent actual
-      exact ⟨middle, code, path.map (fun _ _ _ edge => .saved edge)⟩
+    | saved held scopeReady =>
+      have empty := FrameFiber.armE_pushes_nothing (interpAt spec.root view spec.table).toPrimInterp frame cause provided next pushed actual
+      subst pushed
+      obtain ⟨middle, code, path⟩ := uniform.cause world input output frame held nextWorld future cause provided next [] good supplied absent actual
+      cases path
+      exact ⟨output, code, .nil output⟩
     | allocation => cases actual
     | gate => cases actual
   · intro world input output frame held nextWorld future exit next good installed
     cases held with
-    | saved held => exact uniform.program world input output frame held nextWorld future exit next good installed
+    | saved held scopeReady => exact uniform.program world input output frame held nextWorld future exit next good installed
     | allocation => cases installed
     | gate => cases installed
   · intro world input output frame held nextWorld future fiber cause delivered good selected interrupted actual
     cases held with
-    | saved held => exact uniform.discard world input output frame held nextWorld future fiber cause delivered good selected interrupted actual
+    | saved held scopeReady => exact uniform.discard world input output frame held nextWorld future fiber cause delivered good selected interrupted actual
     | allocation => cases selected
     | gate => cases selected
 

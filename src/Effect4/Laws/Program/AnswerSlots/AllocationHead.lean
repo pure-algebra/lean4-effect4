@@ -22,7 +22,7 @@ theorem bound_edge (spec : Spec) (fragment : SourceScope.Fragment spec.root)
         ((interpAt spec.root view spec.table).contA name answer)) :
     Edge spec fragment world input output (.onSuccess body name) := by
   apply AnswerFlow.EmbeddedEdgeOver.saved
-  apply Semantic.saved
+  refine Semantic.saved ?_ (by intro body previous scope flag same; cases same)
   refine ⟨?_, ?_, ?_⟩
   · intro view
     exact AnswerFlow.saved_success (model spec view) (interpAt spec.root view spec.table).toPrimInterp
@@ -40,15 +40,15 @@ theorem yield_edge (spec : Spec) (fragment : SourceScope.Fragment spec.root)
     Edge spec fragment world (.yielded world.state.refs.length world.state.deferreds.cells.length) kind
       (.onSuccessConst (.yieldNowWith priority) next) := by
   apply AnswerFlow.EmbeddedEdgeOver.saved
-  apply Semantic.saved
+  refine Semantic.saved ?_ (by intro body previous scope flag same; cases same)
   refine ⟨?_, ?_, ?_⟩
   · intro view
     apply AnswerFlow.saved_constant (model spec view) (interpAt spec.root view spec.table).toPrimInterp
       world (.yielded world.state.refs.length world.state.deferreds.cells.length) kind (.yieldNowWith priority) next
     · intro nextWorld future answer good
-      exact code_rebase spec world kind next owned nextWorld future good.2.2.1.symm good.2.2.2.1.symm
-        good.2.2.2.2.2.2 (good.2.2.2.2.2.1.trans
-          (congrArg (Initialization.values spec.initialization) good.2.2.1.symm))
+      exact code_rebase spec world kind next owned nextWorld future good.2.1.symm good.2.2.1.symm
+        good.2.2.2.2.2 (good.2.2.2.2.1.trans
+          (congrArg (Initialization.values spec.initialization) good.2.1.symm))
     · intro _ _ _ good
       exact good
   · intro name cursor equal
@@ -139,7 +139,7 @@ theorem head_or_entry (spec : Spec) (fragment : SourceScope.Fragment spec.root)
   | success good => exact .inl (.success _ good)
   | failure phase => exact .inl (.failure _ phase)
   | initial stage active => exact .inl (initial_head spec fragment view world _ _ stage active)
-  | allocating small stage => exact (noSync _ rfl).elim
+  | allocating small stage | reading phase refs deferred pending contents entered => exact (noSync _ rfl).elim
   | gateAllocating stage available => exact (noSync _ rfl).elim
   | entered fragment entry => exact .inr ⟨_, rfl, rfl, entry⟩
   | stable ready held =>
@@ -155,7 +155,7 @@ theorem head_or_entry (spec : Spec) (fragment : SourceScope.Fragment spec.root)
     by_cases ready : Ready spec world
     · refine .onSuccessConst (Kind.stable spec.stable.rootKind) _ _ (.stable ready (spec.yield_code _)) ?_
       apply AnswerFlow.EmbeddedEdgeOver.saved
-      apply Semantic.saved
+      refine Semantic.saved ?_ (by intro body previous scope flag same; cases same)
       refine ⟨?_, ?_, ?_⟩
       · intro nextView
         apply AnswerFlow.saved_constant

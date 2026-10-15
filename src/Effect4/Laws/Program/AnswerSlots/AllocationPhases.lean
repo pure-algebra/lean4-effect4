@@ -14,7 +14,9 @@ open Effect4 Effect4.Machine Effect4.Program
 /-- Every returned initializer answer retains the root-or-ready phase. -/
 theorem value_phase (spec : Spec) (world : World) (kind : Kind spec.stable.Kind) (value : Val)
     (good : ValueAt spec world kind value) : Phase spec world := by
-  cases kind <;> exact good.1
+  cases kind with
+  | stable kind => exact .inr good.1
+  | allocated index | gate | yielded refs deferred => exact good.1
 
 /-- Every current initializer code retains the root-or-ready phase. -/
 theorem code_phase (spec : Spec) (world : World) (kind : Kind spec.stable.Kind) (program : NCode)
@@ -28,7 +30,7 @@ theorem code_phase (spec : Spec) (world : World) (kind : Kind spec.stable.Kind) 
   | entered _ entry => exact .inl entry.owner
   | stable ready => exact .inr ready
   | frontier _ phase => exact phase
-  | yielding phase => exact phase
+  | yielding phase | reading phase => exact phase
   | bound _ _ ih => exact ih
   | yieldThen phase => exact phase
 
@@ -72,7 +74,7 @@ theorem value_rebase (spec : Spec) (first last : World) (future : Future first l
     (kind : Kind spec.stable.Kind) (value : Val) (good : ValueAt spec first kind value) :
     ValueAt spec last kind value := by
   cases kind with
-  | stable kind => exact ⟨phase_future spec first last future good.1, good.2⟩
+  | stable kind => exact ⟨ready_future spec first last future good.1, good.2⟩
   | allocated index =>
     obtain ⟨phase, key, count, empty, oldContents, oldPending⟩ := good
     have nextCount := refs.symm.trans count
@@ -86,9 +88,9 @@ theorem value_rebase (spec : Spec) (first last : World) (future : Future first l
       ⟨Nat.le_trans cells.1 future.refs, Nat.le_trans cells.2 future.deferreds⟩,
       contents.trans (congrArg (Initialization.values spec.initialization) (refs.symm.trans count)), pending⟩
   | yielded refCount deferredCount =>
-    obtain ⟨phase, key, count, empty, oldReady, oldContents, oldPending⟩ := good
+    obtain ⟨phase, count, empty, oldReady, oldContents, oldPending⟩ := good
     have nextCount := refs.symm.trans count
-    exact ⟨phase_future spec first last future phase, key, nextCount, deferreds.symm.trans empty,
+    exact ⟨phase_future spec first last future phase, nextCount, deferreds.symm.trans empty,
       pending_not_ready spec last pending,
       contents.trans (congrArg (Initialization.values spec.initialization) nextCount), pending⟩
 
@@ -114,6 +116,11 @@ theorem code_rebase (spec : Spec) (first : World) (kind : Kind spec.stable.Kind)
     exact .yielding (phase_future spec _ _ future phase) nextRefs (deferreds.symm.trans oldDeferred)
       (pending_not_ready spec last pending)
       (contents.trans (congrArg (Initialization.values spec.initialization) nextRefs)) pending
+  | reading phase oldRefs oldDeferred oldReady oldContents oldPending =>
+    have nextRefs := refs.symm.trans oldRefs
+    exact .reading (phase_future spec _ _ future phase) nextRefs (deferreds.symm.trans oldDeferred)
+      (pending_not_ready spec last pending)
+      (contents.trans (congrArg (Initialization.values spec.initialization) nextRefs)) pending
   | bound first callback ih =>
     refine .bound (ih last future refs deferreds pending contents) ?_
     intro nextWorld nextFuture view answer good
@@ -127,10 +134,10 @@ theorem value_future_ready (spec : Spec) (first last : World) (future : Future f
     (ready : Ready spec first) (kind : Kind spec.stable.Kind) (value : Val)
     (good : ValueAt spec first kind value) : ValueAt spec last kind value := by
   cases kind with
-  | stable kind => exact ⟨phase_future spec first last future good.1, good.2⟩
+  | stable kind => exact ⟨ready_future spec first last future good.1, good.2⟩
   | allocated index => exact False.elim (pending_not_ready spec first good.2.2.2.2.2 ready)
   | gate => exact False.elim (pending_not_ready spec first good.2.2.2.2 ready)
-  | yielded refs deferreds => exact False.elim (good.2.2.2.2.1 ready)
+  | yielded refs deferreds => exact False.elim (good.2.2.2.1 ready)
 
 /-- Stable current code tolerates actual heap writes after its entry marker has been consumed. -/
 theorem code_future_ready (spec : Spec) (first : World) (kind : Kind spec.stable.Kind) (program : NCode)
@@ -144,7 +151,7 @@ theorem code_future_ready (spec : Spec) (first : World) (kind : Kind spec.stable
   | entered fragment entry => exact False.elim (pending_not_ready spec _ entry.pending ready)
   | stable current code => exact .stable (ready_future spec _ _ future current) code
   | frontier zero phase => exact .frontier zero (phase_future spec _ _ future phase)
-  | yielding phase refs deferreds pending => exact False.elim (pending ready)
+  | yielding phase refs deferreds pending | reading phase refs deferreds pending => exact False.elim (pending ready)
   | bound first callback ih =>
     refine .bound (ih last future ready) ?_
     intro nextWorld nextFuture view answer good

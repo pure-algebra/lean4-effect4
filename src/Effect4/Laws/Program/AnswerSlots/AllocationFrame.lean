@@ -34,7 +34,7 @@ theorem mask_edge (spec : Spec) (fragment : SourceScope.Fragment spec.root) (wor
     (kind : Kind spec.stable.Kind) (flag : Bool) : Edge spec fragment world kind kind (.setInterruptible flag) :=
   .saved (.saved ⟨(fun view => AnswerFlow.saved_mask (model spec view)
     (interpAt spec.root view spec.table).toPrimInterp world kind flag),
-    (by intro name cursor equal; cases equal), (by intro name cursor equal; cases equal)⟩)
+    (by intro name cursor equal; cases equal), (by intro name cursor equal; cases equal)⟩ (by intro body previous scope flag same; cases same))
 
 /-- The actual entry hook changes only the independent world flag and preserves the entire saved suffix. -/
 theorem activate_frame (spec : Spec) (fragment : SourceScope.Fragment spec.root)
@@ -91,5 +91,18 @@ theorem nonterminal_step_or_entry (spec : Spec) (fragment : SourceScope.Fragment
     · intro cause current good
       exact (noFailure cause current).elim
   · exact .inr entry
+
+/-- A native captured scoped callback is admitted only after actual prefix entry. -/
+theorem scoped_edge_ready (spec : Spec) (fragment : SourceScope.Fragment spec.root) (world : World)
+    (input output : Kind spec.stable.Kind) (body : NCode) (previous : Ctx) (scope : Nat) (flag : Bool)
+    (held : Edge spec fragment world input output (.onExit body (.scopedExit previous scope) flag)) : Ready spec world := by
+  generalize same : Prim.onExit body (.scopedExit previous scope) flag = frame at held
+  cases held with
+  | saved held =>
+    cases held with
+    | saved held scopeReady => exact scopeReady body previous scope flag same.symm
+    | allocation => cases same
+    | gate => cases same
+  | mapped ready held => exact ready
 
 end Effect4.Program.AnswerSlots.AllocationAdapter

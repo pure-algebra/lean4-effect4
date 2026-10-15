@@ -92,14 +92,14 @@ structure Entry (spec : Spec) (world : World) (point : Point) : Prop where
 def Active (spec : Spec) (index : Nat) : Prop := index < spec.initialization.width ∨ spec.gate.isSome = true
 
 def ValueAt (spec : Spec) (world : World) : Kind spec.stable.Kind → Val → Prop
-  | .stable kind, value => Phase spec world ∧ spec.stable.value kind value
+  | .stable kind, value => Ready spec world ∧ spec.stable.value kind value
   | .allocated index, value => Phase spec world ∧ value = .cell ⟨index⟩ ∧
       world.state.refs.length = index + 1 ∧ world.state.deferreds.cells.length = 0 ∧
       world.state.refs = Initialization.values spec.initialization (index + 1) ∧ world.entered = false
   | .gate, value => Phase spec world ∧ value = .promise ⟨0⟩ ∧
       (spec.initialization.width ≤ world.state.refs.length ∧ spec.gateNeed ≤ world.state.deferreds.cells.length) ∧
       world.state.refs = Initialization.values spec.initialization spec.initialization.width ∧ world.entered = false
-  | .yielded refs deferred, value => Phase spec world ∧ value = .unit ∧
+  | .yielded refs deferred, _ => Phase spec world ∧
       world.state.refs.length = refs ∧ world.state.deferreds.cells.length = deferred ∧ ¬ Ready spec world ∧
       world.state.refs = Initialization.values spec.initialization refs ∧ world.entered = false
 
@@ -125,6 +125,12 @@ inductive CodeAt (spec : Spec) : World → Kind spec.stable.Kind → NCode → P
       (contents : world.state.refs = Initialization.values spec.initialization refs)
       (entered : world.entered = false) :
       CodeAt spec world (.yielded refs deferred) (.yieldNowWith priority)
+  | reading {world refs deferred cell} (phase : Phase spec world)
+      (refsEq : world.state.refs.length = refs) (deferredEq : world.state.deferreds.cells.length = deferred)
+      (pending : ¬ Ready spec world)
+      (contents : world.state.refs = Initialization.values spec.initialization refs)
+      (entered : world.entered = false) :
+      CodeAt spec world (.yielded refs deferred) (.sync (.store (.op (.refGet cell))))
   | bound {world input output body name} (first : CodeAt spec world input body)
       (callback : ∀ nextWorld, Future world nextWorld → ∀ view answer,
         ValueAt spec nextWorld input answer → CodeAt spec nextWorld output
@@ -166,7 +172,7 @@ theorem embedding (spec : Spec) (completed : List (FiberId × ExitV)) :
   ready_future := ready_future spec
   future := fun _ _ _ _ => trivial
   value_read := fun _ _ _ _ good => good.2
-  value_write := fun _ _ _ ready good => ⟨.inr ready, good⟩
+  value_write := fun _ _ _ ready good => ⟨ready, good⟩
   cause_read := fun _ _ _ _ _ => trivial
   cause_write := fun _ _ _ ready _ => .inr ready
   code := fun _ _ _ ready good => .stable ready good
@@ -178,7 +184,8 @@ def UniformSaved (spec : Spec) :=
 
 /-- Prefix saved edges retain their actual allocation point until entry is exposed. -/
 inductive Semantic (spec : Spec) : World → Kind spec.stable.Kind → Kind spec.stable.Kind → NCode → Prop
-  | saved {world input output frame} (held : UniformSaved spec world input output frame) :
+  | saved {world input output frame} (held : UniformSaved spec world input output frame)
+      (scopeReady : ∀ body previous scope flag, frame = .onExit body (.scopedExit previous scope) flag → Ready spec world) :
       Semantic spec world input output frame
   | allocation {world} (captured : World) (index : Nat) (point : Point) (body : NCode)
       (small : index < spec.initialization.width) (stage : RootStage spec captured index point)

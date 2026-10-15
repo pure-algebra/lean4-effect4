@@ -11,23 +11,24 @@ set_option autoImplicit false
 namespace Effect4.Program.AnswerSlots.AllocationAdapter
 open Effect4 Effect4.Machine Effect4.Program Effect4.Contracts
 
-/-- The source prefix root is a binder or frontier and cannot itself be a direct sync operation. -/
-theorem initial_not_sync (spec : Spec) (world : World) (index : Nat) (point : Point)
-    (stage : RootStage spec world index point) (active : Active spec index) (thunk : EffThunk) :
-    resolve spec.root point ≠ .sync thunk := by
-  intro same
-  change resolve spec.stable.root point = .sync thunk at same
+/-- Actual prefix resolution exposes one binder, a source frontier or its located failure. -/
+theorem initial_shape (spec : Spec) (world : World) (index : Nat) (point : Point)
+    (stage : RootStage spec world index point) (active : Active spec index) :
+    (∃ body name, resolve spec.root point = .onSuccess body name) ∨
+    resolve spec.root point = frontier point ∨ (∃ cause, resolve spec.root point = .failure cause) := by
+  change (∃ body name, resolve spec.stable.root point = .onSuccess body name) ∨
+    resolve spec.stable.root point = frontier point ∨ (∃ cause, resolve spec.stable.root point = .failure cause)
   cases amount : point.fuel with
   | zero =>
-    unfold resolve at same
-    split at same
-    · rw [Agreement.compileEff_at_zero _ amount] at same
-      cases same
-    · cases same
+    unfold resolve
+    split
+    · rw [Agreement.compileEff_at_zero _ amount]
+      exact .inr (.inl rfl)
+    · exact .inr (.inr ⟨_, rfl⟩)
   | succ fuel =>
     by_cases small : index < spec.initialization.width
-    · rw [spec.initialization.compile index point fuel small stage.stage.source.2.1 amount] at same
-      cases same
+    · rw [spec.initialization.compile index point fuel small stage.stage.source.2.1 amount]
+      exact .inl ⟨_, _, rfl⟩
     · have last : index = spec.initialization.width := by
         have bound := stage.stage.source.1
         omega
@@ -38,8 +39,17 @@ theorem initial_not_sync (spec : Spec) (world : World) (index : Nat) (point : Po
       | some gate =>
         obtain ⟨tail, found⟩ := gate.head
         rw [← stage.stage.source.2.1] at found
-        rw [Agreement.resolve_of_at found, Agreement.compileEff_bind _ _ amount] at same
-        cases same
+        rw [Agreement.resolve_of_at found, Agreement.compileEff_bind _ _ amount]
+        exact .inl ⟨_, _, rfl⟩
+
+/-- An actual prefix binder cannot itself be a direct synchronous operation. -/
+theorem initial_not_sync (spec : Spec) (world : World) (index : Nat) (point : Point)
+    (stage : RootStage spec world index point) (active : Active spec index) (thunk : EffThunk) :
+    resolve spec.root point ≠ .sync thunk := by
+  intro same
+  rcases initial_shape spec world index point stage active with ⟨body, name, shape⟩ | shape | ⟨cause, shape⟩
+  all_goals rw [shape] at same
+  all_goals cases same
 
 /-- Actual synchronous store steps preserve the independent entry flag and grow allocation counts. -/
 theorem sync_future (spec : Spec) (view : List (FiberId × ExitV)) (world : World)
@@ -75,11 +85,44 @@ theorem sync_or_entry (spec : Spec) (view : List (FiberId × ExitV)) (world : Wo
   | gateAllocating stage available =>
     cases same
     exact .inl (gate_actual spec world _ stage available state value ran).2
+  | @reading _ refs deferred cell phase refsEq deferredEq pending contents entered =>
+    cases same
+    change syncOpStep (.refGet cell) world.state = some (state, value) at ran
+    cases peek : refPeek world.state.refs cell with
+    | none =>
+      simp only [syncOpStep, refStep, peek, Option.map_none] at ran
+      cases ran
+    | some answer =>
+      simp only [syncOpStep, refStep, peek, Option.map_some] at ran
+      cases ran
+      exact .inl ⟨phase, refsEq, deferredEq, pending, contents, entered⟩
   | entered fragment entry => exact .inr ⟨_, rfl, rfl, entry⟩
   | stable ready held =>
     cases same
-    exact .inl ⟨.inr (ready_future spec world _ (sync_future spec view world thunk state value ran) ready),
+    exact .inl ⟨ready_future spec world _ (sync_future spec view world thunk state value ran) ready,
       spec.sync_value _ thunk value held⟩
+  | frontier zero phase | yielding phase refs deferred pending contents entered
+    | bound first callback | yieldThen phase held pending => cases same
+
+/-- An absent native operation retains its real fallback value at the ignored or stable class. -/
+theorem fallback_or_entry (spec : Spec) (view : List (FiberId × ExitV)) (world : World)
+    (kind : Kind spec.stable.Kind) (thunk : EffThunk) (owned : CodeAt spec world kind (.sync thunk))
+    (missing : (interpAt spec.root view spec.table).syncState thunk world.state = none) :
+    ValueAt spec world kind ((interpAt spec.root view spec.table).syncValue thunk) ∨
+      ∃ point, kind = .stable spec.stable.rootKind ∧ .sync thunk = resolve spec.root point ∧ Entry spec world point := by
+  generalize same : Prim.sync thunk = program at owned
+  cases owned with
+  | success good | failure phase => cases same
+  | initial stage active => exact (initial_not_sync spec world _ _ stage active thunk same.symm).elim
+  | allocating small stage => cases same; cases missing
+  | gateAllocating stage available => cases same; cases missing
+  | reading phase refs deferred pending contents entered =>
+    cases same
+    exact .inl ⟨phase, refs, deferred, pending, contents, entered⟩
+  | entered fragment entry => exact .inr ⟨_, rfl, rfl, entry⟩
+  | stable ready held =>
+    cases same
+    exact .inl ⟨ready, spec.sync_value _ thunk _ held⟩
   | frontier zero phase | yielding phase refs deferred pending contents entered
     | bound first callback | yieldThen phase held pending => cases same
 
