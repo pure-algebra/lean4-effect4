@@ -1,5 +1,6 @@
 import Effect4.Laws.Program.CodeClosure.Predicate
 import Effect4.Laws.Program.CodeClosure.PredicateFamily
+import Effect4.Laws.Program.CodeClosure.Arms
 
 /-!
 Concept: store-typing R4 and scope-lifetime-finalization R11.
@@ -52,23 +53,45 @@ def sourceSpec (root : NativeEff) (table : RowTable) (names successNames : EffNa
 theorem source_ofExit (names successNames : EffName → Prop) (thunks : EffThunk → Prop) (exit : ExitV) : RoleCode names successNames thunks (Prim.ofExit exit) := by
   cases exit <;> trivial
 
+/-- Existing leaf annotations supply the shared actual-arm constructor contract. -/
+theorem armRules (root : NativeEff) (table : RowTable) (names successNames : EffName → Prop)
+    (thunks : EffThunk → Prop) (hooks : Hooks root table names successNames thunks) (view) :
+    Arms.Rules (RoleCode names successNames thunks) (interpAt root view table).toPrimInterp where
+  success _ := trivial
+  failure _ := trivial
+  value body callback value held := hooks.value view callback value held.2
+  constant body next held := held.2
+  bothValue body callback other value held := hooks.bothValue view callback value held.2.1
+  cause body callback cause held := hooks.cause view callback cause held.2
+  bothCause body other callback cause held := hooks.cause view callback cause held.2.2
+  cancel callback cause _ := hooks.cancel view callback cause
+  iterator := by
+    intro callback cursor value held
+    have closed := hooks.iterator view callback value held
+    cases actual : ((interpAt root view table).iterNext callback value).2
+    case resume body next =>
+      rw [actual] at closed
+      exact ⟨closed.1, fun _ => closed.2⟩
+    all_goals trivial
+  loop := by
+    intro callback cursor value held
+    have closed := hooks.loopResume view callback cursor value held
+    cases actual : (interpAt root view table).loopResume callback cursor value
+    case «continue» next body =>
+      rw [actual] at closed
+      exact ⟨closed, held⟩
+    case finish body =>
+      rw [actual] at closed
+      exact closed
+
 /-- Actual value callbacks retain the current code and every pushed binding certificate. -/
 theorem source_armA (root : NativeEff) (table : RowTable) (names successNames : EffName → Prop) (thunks : EffThunk → Prop)
     (hooks : Hooks root table names successNames thunks) (view)
     (frame : NCode) (value : Val) (provided : Option ExitV) (next : NCode) (pushed : List NCode)
     (owned : RoleCode names successNames thunks frame)
     (actual : frame.armA (interpAt root view table).toPrimInterp value provided = some (next, pushed)) :
-    RoleCode names successNames thunks next ∧ ∀ code ∈ pushed, RoleCode names successNames thunks code := by
-  fun_cases Prim.armA (interpAt root view table).toPrimInterp frame value provided
-  case case3 body onValue onCause =>
-    have closed := hooks.bothValue view onValue value owned.2.1
-    aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [Prim.armA])
-  case case10 generator cursor body next selected =>
-    have closed := hooks.iterator view generator value owned
-    rw [selected] at closed
-    aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [Prim.armA, IterResult])
-  all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [Prim.armA, LoopResult]) (add safe apply [source_ofExit, hooks.value]) (add safe forward [hooks.loopResume])
-
+    RoleCode names successNames thunks next ∧ ∀ code ∈ pushed, RoleCode names successNames thunks code :=
+  Arms.value _ _ (armRules root table names successNames thunks hooks view) frame value provided next pushed owned actual
 
 /-- Actual cause callbacks retain the current code and every pushed binding certificate. -/
 theorem source_armE (root : NativeEff) (table : RowTable) (names successNames : EffName → Prop) (thunks : EffThunk → Prop)
@@ -76,9 +99,8 @@ theorem source_armE (root : NativeEff) (table : RowTable) (names successNames : 
     (frame : NCode) (cause : CauseV) (provided : Option ExitV) (next : NCode) (pushed : List NCode)
     (owned : RoleCode names successNames thunks frame)
     (actual : frame.armE (interpAt root view table).toPrimInterp cause provided = some (next, pushed)) :
-    RoleCode names successNames thunks next ∧ ∀ code ∈ pushed, RoleCode names successNames thunks code := by
-  fun_cases Prim.armE (interpAt root view table).toPrimInterp frame cause provided
-  all_goals aesop (rule_sets := [Effect4.CodeClosure]) (add norm simp [Prim.armE]) (add safe apply [source_ofExit, hooks.cause, hooks.cancel])
+    RoleCode names successNames thunks next ∧ ∀ code ∈ pushed, RoleCode names successNames thunks code :=
+  Arms.cause _ _ (armRules root table names successNames thunks hooks view) frame cause provided next pushed owned actual
 
 /-- The same binding certificate annotates saved code at every completed-fiber view. -/
 def sourceEdge (names successNames : EffName → Prop) (thunks : EffThunk → Prop) (_ : Unit) (_ _ : Unit) : NCode → Prop := RoleCode names successNames thunks
