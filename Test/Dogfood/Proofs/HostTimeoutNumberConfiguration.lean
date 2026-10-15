@@ -374,8 +374,8 @@ theorem FiberAt.pending_pop_custody (machine : Effect4.Program.NativeMachine) (c
 
 /-- The same uniform path and actual source slots identify the installed finalizer without fixing runtime point metadata.
 Consumer: pending native return custody after a real restoring-mask transition. -/
-theorem FiberAt.early_installed (machine : NativeMachine) (context : CountContext)
-    (fiber : SourceScope.SourceFiber) (held : FiberAt machine (.pending context) fiber)
+theorem FrameAt.early_installed (machine : NativeMachine) (context : CountContext)
+    (fiber : SourceScope.SourceFiber) (held : FrameAt machine (.pending context) fiber.frame)
     (source : SourceScope.FrameAt HostTimeoutSource.program fiber.frame) (input : HostTimeoutNumberPhaseFlow.Kind)
     (path : Effect4.Contracts.Path (HostTimeoutNumberUniform.Edge machine.state) input
       (.attempt context.before context.entered (by
@@ -385,8 +385,19 @@ theorem FiberAt.early_installed (machine : NativeMachine) (context : CountContex
   obtain ⟨body, point, member⟩ := HostTimeoutNumberUniform.early_finalizer machine.state input _ fiber.frame.stack
     path early (by dsimp only [HostTimeoutNumberPhaseFlow.Kind.grade]; decide)
   have lexical : SourceScope.NameAt HostTimeoutSource.program (.fin point) := (source.2 _ member).2
-  have captured : HostTimeoutNumberSourceSlots.At context point := (held.frame.1.toFrameAt.saved _ member).2
+  have captured : HostTimeoutNumberSourceSlots.At context point := (held.1.toFrameAt.saved _ member).2
   exact ⟨point, body, HostTimeoutNumberSourceSlots.actual_attempt_source context point captured lexical, member⟩
+
+/-- The whole-fiber reader projects its actual frame custody producer. -/
+theorem FiberAt.early_installed (machine : NativeMachine) (context : CountContext)
+    (fiber : SourceScope.SourceFiber) (held : FiberAt machine (.pending context) fiber)
+    (source : SourceScope.FrameAt HostTimeoutSource.program fiber.frame) (input : HostTimeoutNumberPhaseFlow.Kind)
+    (path : Effect4.Contracts.Path (HostTimeoutNumberUniform.Edge machine.state) input
+      (.attempt context.before context.entered (by
+        change context.before.count + 1 = context.before.cleanups.length + 1
+        rw [context.cleanups])) fiber.frame.stack)
+    (early : input.grade ≤ 1) : CountInstalled context fiber.frame := by
+  exact FrameAt.early_installed machine context fiber held.frame source input path early
 
 /-- A reply has a numeric obligation precisely when its existing token still matches a live park. -/
 def ReplyAt (world : World) (machine : Effect4.Program.NativeMachine)

@@ -1346,3 +1346,35 @@ The preceding region verification command checks this slice too.
 The build passes with 1281 jobs.
 The audit checks 885 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
 This proof-only slice reaches no outside implementation gate.
+
+## Actual value-return authority
+
+The existing selected-value producer now consumes the checked class-indexed pop family.
+Its scratch assertion retains the current numeric class and actual mask authority together.
+The selected result retains that authority at the same saved output class.
+The previous flag interface remains a wrapper.
+No second pop induction enters this slice.
+
+The concrete numeric instance reads the entered heap and the same owner-anchored saved path.
+A restoring mask supplies its actual input permission.
+An early-to-late crossing is the authored protected finalizer, whose actual hook masks the fiber.
+The actual callback retains the resulting early permission at its new current code and saved path.
+The installed-finalizer reader consumes frame facts without assuming the whole-fiber assertion.
+
+Placement: scope-lifetime-finalization R11 and store-typing R4; the joined numeric native producer consumes these facts.
+Reach: actual selected value callbacks, actual mask hooks, the entered heap, and the existing uniform saved path.
+Failure-return authority, the joined command producer, fixed-budget history, and both original endpoint proofs remain open.
+Neither public endpoint changes.
+
+Verification command:
+
+```text
+/Users/pooks/Dev/lean4-effect4/scratch/lean-slot.sh bash scratch/timeout-authority-check.sh
+```
+
+The script builds `Test.Dogfood.Proofs.HostTimeoutNumberPopAuthority` and `Test.Dogfood.Proofs.HostTimeoutNumberTerminal`.
+It then runs `lake env lean scratch/TimeoutAuthorityAudit.lean`.
+The build passes with 1255 jobs.
+The audit checks 281 declarations at the permitted axioms, with zero planned goals and zero declarations modulo planned goals.
+The audit covers `AnswerFlowFamilyPop`, `HostTimeoutNumberConfiguration`, and `HostTimeoutNumberPopAuthority`.
+This proof-only slice reaches no outside implementation gate.
