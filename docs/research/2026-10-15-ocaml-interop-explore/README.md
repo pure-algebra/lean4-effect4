@@ -154,15 +154,18 @@ half of that law (`session_keys_once`, `src/Effect4/Laws/Run/Journal.lean`).
 - Effect separates serialization from protocol, and its JSON and NDJSON serializations differ only
   in framing (`includesFraming`). That is layer 2 apart from layer 3, as data.
 - Effect's `Exit` encoding is a success, or a failure with a cause of Fail, Die and Interrupt. It
-  is the machine's own exit and cause, so no conversion sits between them.
-- `through_serve` covers a request/response wire. A channel with several calls at once needs
-  layer 4 as a host with state. Its law is a simulation of the request/response wire.
+  has the machine's shape, and the existing `encodeReason` and `decodeReason` convert causes at
+  the JSON boundary. The error value inside a failure still needs a row-specific conversion (§9).
+- `through_serve` covers a request/response wire. It is a one-sided retraction: the host comes
+  back through the codec. A channel with several calls at once needs layer 4 as a host with state.
+  Its law names a public exchange observation (§9).
 
 ### 6.6 Proposals
 
-1. Declare the message alphabet as a Lean inductive, with its JSON image as an `Image`.
+1. Withdrawn (row 396 (1)): the alphabet is a function of the rows (§7), not a new inductive.
 2. Move `through_serve` and its codec into `effects`. Add the correlation layer: a host over
-   send and receive, whose state is the calls in flight. Prove it simulates the wire.
+   send and receive, whose state is the calls in flight. State its law over a public exchange
+   observation, first for completed calls without cancellation (row 396 (5)).
 3. Take dune-rpc's version menu for rows that change: negotiation as data at session start.
 4. Take Cap'n Proto's capabilities for P5's resources: a handle in a message is a capability.
 5. Generate layers 2 to 4 once, generic over the rows. The OCaml edge then comes from the same
@@ -181,8 +184,9 @@ against it. No new representation enters.
 | Probe | Files | Evidence | Result |
 | --- | --- | --- | --- |
 | Effect's RPC schemas exported as data | `alphabet/export.ts`, `alphabet/vendored/effect-rpc-rc112.json` | tested | the envelope, each RPC's payload, success, error and exit, and five serializations, written by rc.112's own `SchemaRepresentation` |
-| Those schemas read into `Ty` | `alphabet/Alphabet.lean` | tested, `alphabet/alphabet.log` | payloads read as they are; exits and errors read after three widenings; the envelope stays refused |
-| The alphabet derived from the rows | the same | tested | 6 of 9 recorded server messages admitted; the 3 refused are named in §7.3 |
+| Those schemas read into `Ty` | `alphabet/Alphabet.lean` | tested, `alphabet/alphabet.log` | payloads read as they are; exits and errors read after three widenings; the envelope stays refused, and it is the binary stage (§9) |
+| The alphabet derived from the rows | the same | tested | 6 of 9 recorded server messages admitted by shape alone, the control for the next line |
+| Each reply at its outstanding call | the same, section 4 | tested | 8 of 18 recorded replies admitted; 10 refused by named cause (§9) |
 | The derived alphabet through the bridge | the same | tested | `ofSchema (schema t) = some t` for both directions' alphabets |
 
 `Alphabet.lean` reads rc.112's representation JSON into `Representation` with a small reader
@@ -197,11 +201,14 @@ decodes with the existing `Schema.decode` (`src/Effect4/Schema/Codec.lean`).
 | Unions of one or of three or more | `Rpc.exitSchema` wraps an error in a one-member union; the envelope has nine members | read a one-member union as its member, many as nested pairs |
 | The `~identifier` annotation | a tagged error carries it, and `erasedKeys` lacks it | add it to the erased keys, with `ofSchema_exact` kept |
 | A request id is a JS `number` | `Ty.number` is unlowered in the bridge, so the envelope is refused | lower `number`, or restrict ids to integers and strings with a named refusal |
-| The failure form | `eff_failure SqlError message` is a pair; the face (`Codegen/Classes.lean`, row 120 (b)) and Effect's wire use the tagged record | one failure form: the tagged record |
-| An option on the wire | the codec admitted a bare record at `option` | check against rc.112's `Option` JSON codec, which `check-schema-codec` owns |
-| The hand-written client | `Int` for a natural, `Null` for unit, `NullOr` for an option, declared field order | print the RPC group from the rows; compare types modulo `Ty.normalize` |
+| The failure form | `eff_failure SqlError message` is a pair; the face (`Codegen/Classes.lean`, row 120 (b)) and Effect's wire use the tagged record | a row-specific error conversion over the pair (row 396 (4)) |
+| A reply admitted by shape | `fromServer` admitted `setDone`'s bare record as `insert`'s answer; the option codec is right | decode each reply at its outstanding call (§9) |
+| The hand-written client | `Int` for a natural, `Null` for unit, `NullOr` for an option, declared field order | print the RPC group from the rows; `Ty.normalize` reconciles field order only |
 
-The two answers of `echoAfter` are refused correctly: `echoAfter` is no row of the table.
+Shape alone refuses `echoAfter`'s two answers by their values, and admits the interrupt of its
+call, which no row issued. Reply admission at the outstanding call refuses all three. Codex's review
+names four more seams: the field-encoding stage, incremental framing, the defect's `.unknown`
+field, and the declared capability profile (F2, F6).
 
 ### 7.4 Each layer: its owner, its Effect surface and its OCaml surface
 
@@ -209,8 +216,8 @@ The two answers of `echoAfter` are refused correctly: `echoAfter` is no row of t
 | --- | --- | --- | --- | --- |
 | 5. Signature | `Row`, `eff_rows`, `rowServices` | `RpcGroup` of `Rpc.make`, printed from the rows | the host: generated glue or the lowered machine | the `RpcGroup` printer |
 | 4. Correlation | `session_keys_once`; `Run.Reactor`; `Effects.Comodel` | inside Effect's `RpcClient` and `RpcServer` | one module, generic in the alphabet | the client half's law; correlation as a host over send and receive |
-| 3. Messages | `Ty`: the alphabet as `fromClient rows` and `fromServer rows` | Effect's `RpcMessage`, read from the vendored document | the lowered codec at the alphabet's type | the id type and the failure form |
-| 2. Framing | `Schema.encode` and `Schema.decode` at a `Ty` | `RpcSerialization` layers: json, ndjson, jsonRpc, msgPack | NDJSON and JSON framing, once | the serialization table as Lean data |
+| 3. Messages | `Ty`: the alphabet as `fromClient rows` and `fromServer rows` | Effect's `RpcMessage`, read from the vendored document | the lowered codec at the alphabet's type | the id profile, the error conversion, admission at the selected call |
+| 2. Framing | none yet: `Schema.encode` and `Schema.decode` work on whole values, after framing | `RpcSerialization` layers: json, ndjson, jsonRpc, msgPack | NDJSON and JSON framing, once | parser state as data, with its byte profile, residual input and limits; the serialization table |
 | 1. Channel | none: native and assumed (row 393 (4)) | platform layers: `Socket`, `FetchHttpClient`, workers, stdio | Eio flows | the platform table as Lean data |
 
 ### 7.5 The platform model, as data
@@ -224,9 +231,12 @@ content type and whether it frames its messages. The platform model is that tabl
   layer that provides it;
 - a serialization: its name, its content type and whether it includes framing.
 
-A deployment is a channel with a serialization. It is valid when a channel that needs framing
-gets a framed serialization. The transport law observes only the messages the channel carries.
-Over HTTP the law covers answers, and interruption stays unobserved.
+A deployment is a channel with a serialization. A channel that needs framing must get a framed
+serialization, and that is one condition of several. A deployment also selects the field encoding
+(`codecFor`), the envelope encoding and the protocol's capabilities. JSON-RPC changes envelopes
+and adds batches; workers use structured clone with no serialization layer. The transport law
+observes only the messages the channel carries. Over HTTP the law covers answers, and
+interruption stays unobserved.
 
 ### 7.6 The vendoring route
 
@@ -240,13 +250,13 @@ Over HTTP the law covers answers, and interruption stays unobserved.
 
 | Slice | What lands | Consumer |
 | --- | --- | --- |
-| A1 | `Representation.ofJson`; the three widenings in `ofSchema`, with `ofSchema_exact` kept | the vendored rc.112 document reads into `Ty` |
-| A2 | `fromClient` and `fromServer` as functions of the rows; agreement with the vendored exits | the wire admission of every message |
-| A3 | one failure form: the tagged record | the alphabet admits the codec value of Effect's failure |
-| A4 | the `RpcGroup` printer from the rows | Effect's `RpcClient` against the OCaml server, with no hand-written schema |
-| A5 | the platform and serialization tables as data, and the layer printer | a deployment's Effect layers |
-| A6 | correlation in `effects`: a host over send and receive that simulates the request/response wire | the transport law for sockets |
-| A7 | the OCaml layers 2 to 4, generated once from the alphabet | replaces `rpc/effect_rpc.ml` |
+| A1 | `Representation.ofJson`; document preparation at the `Document` boundary (references, union shape); `~identifier` erased; `ofSchema_exact` kept at the prepared representation | the vendored rc.112 document reads into `Ty` |
+| A2 | `fromClient` and `fromServer` as functions of the rows, each reply decoded at its outstanding call; agreement with the vendored exits after the field substitution | the wire admission of every message |
+| A3 | a row-specific error conversion over the existing pair, on `encodeReason` and `decodeReason` | the alphabet admits the codec value of Effect's failure |
+| A4 | the `RpcGroup` printer from the rows, one group per service of `rowServices` | Effect's `RpcClient` against the OCaml server, with no hand-written schema |
+| A5 | the RPC profile of row 396 (3), and the platform and serialization tables as data, with the layer printer | a deployment's Effect layers |
+| A6 | correlation in `effects`: a host over send and receive, its law over a public exchange observation, completed unary calls first | the transport law for sockets |
+| A7 | the OCaml layers 2 to 4, generated once from the alphabet, framing as parser state | replaces `rpc/effect_rpc.ml` |
 
 ## 8. What this does not establish
 
@@ -259,3 +269,42 @@ Over HTTP the law covers answers, and interruption stays unobserved.
 - `through_serve` covers a request/response wire with lawful codecs. It covers no correlation, loss
   or interruption.
 - The systems marked "named" were not installed or read here.
+- The correlation probe replays one recorded log and four controls. It is a finite probe, with no
+  cancellation and no streaming.
+
+## 9. After Codex's review
+
+Codex's review (`codex-review.md`, beside this note) checked §6 and §7 against the tree and the
+pin. Row 396 rules its six proposals. Four corrections change this note.
+
+- **Reply admission needs the call** (F1, tested). The aggregate `fromServer` admits a reply that fits
+  any row's exit. Section 4 of `alphabet/Alphabet.lean` holds the calls in flight as data, as
+  Effect's `RpcClient.make` does. A request becomes a call only when its method names a row and its
+  payload decodes at the row's request type. A reply is decoded at its own call's exit, and its id
+  then retires. The run admits 8 of the 18 recorded replies. The other 10 are refused:
+
+  | Cause | Ids | What it shows |
+  | --- | --- | --- |
+  | no call: `echoAfter` names no row | 3, 4, 6, 12, 13, 15 | the server answered outside the interface |
+  | wrong type at `setDone` | 2, 11 | the hand-written server sends an option bare |
+  | wrong type at `insert` | 5, 14 | the failure form (row 396 (4)) |
+
+  The four controls behave as expected. A tagged `Some` at `setDone` is admitted. A second reply to
+  one call is refused as retired. `delete`'s answer at `insert`'s call is refused as wrongly typed.
+  A reply to no call is refused as unknown.
+
+- **The two hand halves agreed with each other, not with the rows.** The hand-written OCaml server
+  sends `setDone`'s option bare, and the hand-written client reads it with `NullOr`. Their nine
+  calls succeeded. The rows' codec refuses the reply. Only generation from the rows prevents this.
+
+- **The envelope is the binary stage** (F2, reading). rc.112's `EncodedSchema` holds `Uint8Array`
+  payload, exit and defect fields, after a serializer encodes them. The row-derived alphabet holds
+  JSON values in those fields. A comparison needs the declared field substitution first.
+
+- **Exactness stays at the prepared representation** (F3, tested). Resolving a reference or
+  reshaping a union changes `normS`. The preparation therefore belongs at the `Document` boundary,
+  with `ofSchema_exact` unchanged.
+
+The review also places each planned law in `docs/core/semantics.md`, with its consumer. Its
+framework table reads the rows as a polynomial, `Signature.Hom` as its total morphism, and the
+transport as a handler with partial decoding. None of these adds a representation.
