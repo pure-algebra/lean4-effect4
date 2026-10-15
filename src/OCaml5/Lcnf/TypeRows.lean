@@ -8,8 +8,7 @@ import OCaml5.Ml.Syntax
 row per constant, as `OCaml5.Lcnf.builtins` is for values. A row is data: the constant, the
 number of Lean arguments it takes, its OCaml spelling over the converted arguments, and its
 contract. The lookup (`builtinTy?`, `isBuiltinType`), the names (`builtinTypeNames`), the
-reserved type names (`reservedTypeNames`) and the fidelity inventory
-(`Conform.Effect4.Lcnf.typeFidelityTable`) are computed from the rows. The module also owns the
+reserved type names (`reservedTypeNames`) are computed from the rows. The module also owns the
 contract's class (`Fidelity`), which the value table shares.
 
 **Depends on.** `OCaml5.Ml.Syntax` (a spelling is an OCaml type) and `Lean.Name`.

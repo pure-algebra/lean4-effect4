@@ -136,12 +136,10 @@ def areas : List Area := [
   ⟨"src/Effect4/Laws.lean", .laws, 7, "Effect4.Laws", "the root of the proof graph", false, true⟩,
   -- the tool roots
   ⟨"tools/ProofGraph", .tools, 0, "ProofGraph", "checked theorem references, rolled-back search, published theorems, the obligation join; below Laws and Conform", false, true⟩,
-  ⟨"tools/Conform", .tools, 1, "Conform", "generic conformance: source descriptions, reports and evidence, obligations, the LCNF walkers and semantics, layouts, models, the `Std.Do` pilot", false, true⟩,
-  ⟨"tools/Conform/Core", .tools, 1, "Conform/Core", "reports, evidence, obligations, policy, the proof shim", true, true⟩,
-  ⟨"tools/Conform/Lcnf", .tools, 1, "Conform/Lcnf", "the mono-LCNF walkers, rules, validity and semantics", true, true⟩,
+  ⟨"tools/Conform", .tools, 1, "Conform", "generic conformance: source descriptions, reports and evidence, obligations, the LCNF walkers and semantics, layouts, the mirror census", false, true⟩,
+  ⟨"tools/Conform/Core", .tools, 1, "Conform/Core", "reports, evidence, obligations, policy", true, true⟩,
+  ⟨"tools/Conform/Lcnf", .tools, 1, "Conform/Lcnf", "the mono-LCNF walkers, validity and semantics", true, true⟩,
   ⟨"tools/Conform/Layout", .tools, 1, "Conform/Layout", "layout coherence: build, check, reflect, native", true, true⟩,
-  ⟨"tools/Conform/Model", .tools, 1, "Conform/Model", "model builders", true, true⟩,
-  ⟨"tools/Conform/Spec", .tools, 1, "Conform/Spec", "the specification reflection pilot", true, true⟩,
   ⟨"tools/Conform/Source", .tools, 1, "Conform/Source", "the generic source description", true, true⟩,
   ⟨"tools/Conform/Manifest", .tools, 1, "Conform/Manifest", "manifest readers and the mirror", true, true⟩,
   ⟨"tools/Conform/Cli", .tools, 5, "Conform/Cli", "the `--run` drivers over the generic core and the Effect4 adapters", false, true⟩,
@@ -325,15 +323,14 @@ def roots : List String := [
   "Test", "OCaml5", "ProofGraph.Goal", "ProofGraph.Plan", "ProofGraph.Sketch", "ProofGraph.Search",
   "Tools.ProgramStructure", "Tools.WireTags", "Drivers.Styles", "Drivers.ForeignCorpus",
   "Tools.ProfileJson", "Tools.GeneratedStamp",
-  "Conform.Core.Evidence", "Conform.Core.Obligation", "Conform.Core.Policy", "Conform.Core.Proof",
+  "Conform.Core.Evidence", "Conform.Core.Obligation", "Conform.Core.Policy",
   "Conform.Core.Report", "Conform.Layout.Build", "Conform.Layout.Check", "Conform.Layout.Laws",
   "Conform.Layout.Layout", "Conform.Layout.Native", "Conform.Layout.Reflect", "Conform.Layout.Types",
-  "Conform.Lcnf.Cases", "Conform.Lcnf.Index", "Conform.Lcnf.Rules", "Conform.Lcnf.Semantics",
+  "Conform.Lcnf.Index", "Conform.Lcnf.Semantics",
   "Conform.Lcnf.SemanticsTarget", "Conform.Lcnf.Validity", "Conform.Manifest.Mirror",
-  "Conform.Manifest.Readers", "Conform.Model.Container", "Conform.Source.Description",
-  "Conform.Spec.Reflect", "Conform.Effect4.Fixtures.Traffic", "Conform.Effect4.LayoutWorld",
-  "Conform.Effect4.NormalizationInputs", "Conform.Effect4.TargetLeanNative",
-  "Conform.Cli.BoundaryControls", "Conform.Cli.Selftest"
+  "Conform.Manifest.Readers", "Conform.Source.Description",
+  "Conform.Effect4.LayoutWorld",
+  "Conform.Effect4.NormalizationInputs", "Conform.Effect4.TargetLeanNative"
 ]
 
 end Tools.Architecture

@@ -62,9 +62,10 @@ else in the machine's closure translates.
 - `Lcnf/SemanticsTarget.lean` (606): an evaluator for the *target* language as read back from
   the emitted syntax (`Expr`, `Pat`, `TValue`, `evalT` at `:424`, `PrimEnv` for the named
   primitive assumptions).
-- `Lcnf/Validity.lean` (728), `Lcnf/Rules.lean` (757), `Lcnf/Cases.lean` (721): the validity
-  check, structural rule summaries, and the case-site check. No lane runs the last since its
-  policy was cleared (decisions row 375).
+- `Lcnf/Validity.lean` (728): the validity check. The structural rule summaries
+  (`git:eaa45b6b9:tools/Conform/Lcnf/Rules.lean`) and the case-site check
+  (`git:eaa45b6b9:tools/Conform/Lcnf/Cases.lean`) went on 2026-10-15: no lane ran either since
+  decisions row 375 cleared the case policy.
 - `tools/Conform/Effect4/LcnfSemantics.lean` (rung 2): the LCNF evaluator against the compiled Lean functions
   on 20,387 vectors. `tools/Conform/Effect4/LcnfMl.lean` (rung 3): the emitted OCaml read into the target
   evaluator and run on the same vectors — "the evaluator handles what the translator emits" is
@@ -150,8 +151,8 @@ ourselves." Read against that document:
   promote, expand, custom) is the name for what a profile does — `Nat` promoted to `bigint` or
   expanded to a clamped `int63`, tail calls expanded to loops, `cases` to `switch`, strings
   custom — and each proposed legalization rule must carry a semantic preservation obligation.
-  `tools/Conform/Lcnf/Rules.lean` currently holds structural summaries and policy joins,
-  not proofs of those semantic rewrite obligations. `MCInst` as "the common currency" →
+  The deleted `git:eaa45b6b9:tools/Conform/Lcnf/Rules.lean` held structural summaries and
+  policy joins, not proofs of those semantic rewrite obligations. `MCInst` as "the common currency" →
   promote `Conform.Lcnf.SemanticsTarget.Expr` from the rung-3 reader's image to the emission
   language; each backend a printer with a reader. LLVM's own note that a non-traditional target
   (its C backend) implements only the two mandatory classes is the class OCaml and TypeScript

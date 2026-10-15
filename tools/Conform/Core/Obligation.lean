@@ -14,8 +14,8 @@ serialised Lean proposition, never a "proved" string standing in for a proof.
 
 An obligation report can therefore say "this is what would make the certificate complete"
 without ever confusing a receipt with a theorem. The propositions the kinds stand for live with
-the check that emits them (in Lean, as the statement the check reconstructs and compares a
-supplied theorem's type against — `Conform.Spec`); this module holds only the data.
+the check that emits them, in Lean, as the statement the check reconstructs and compares a
+supplied theorem's type against; this module holds only the data.
 
 **Depends on.** `Conform.Core.Report`, `Lean.Json`.
 

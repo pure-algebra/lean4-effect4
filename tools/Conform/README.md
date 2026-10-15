@@ -80,17 +80,19 @@ the whole input without a second decoder. `Test.Program.TypingCheckContract` exe
 | Module | Owns / consumer |
 | --- | --- |
 | `Core.Report`, `Core.Evidence`, `Core.Obligation`, `Core.Policy` | Exact report coverage, separate evidence methods, open obligations, strict configuration |
-| `Core.Proof` | Checked theorem kind, exact frozen proposition/universes and transitive axiom ceiling; used by `Spec.Reflect` and by the validator's own controls (`Cli.BoundaryControls`). No report row is `proved` today: the normalization rows are `tested` |
 | `Source.Description` | Generic bounded constructor reflection; used by ProgramStructure, layouts and OCaml parameter handling |
 | `Layout` | One layout plan for construction, projection and matching; exact applied-type keys and target usages; standard `Function.Injective` laws |
-| `Model.Container` | Higher-order builders over the caller's existing model carrier |
-| `Spec.Reflect` | Tool-side equation inspection (the `specs` group it fed was cut on 2026-09-18: its `@[spec]` output had no consumer) |
 | `Lcnf.Index`, `Lcnf.Validity` | One persisted mono index per walk, structural checks, explicit opt-in on-demand compilation with phase diagnostics |
-| `Lcnf.Cases`, `Lcnf.Rules`, `Manifest` | Compiler walkers and indexed lookups, with deterministic output ordering |
+| `Manifest` | The mirror census: each mirror file read back to a constructor list and compared with the environment's |
 | `Lcnf.Semantics`, `Lcnf.SemanticsTarget` | Bounded source and target interpreters with separate fuel bounds |
 | `Lcnf.TargetLaws` | Laws of the target evaluator: `let x = e in x` and `e` have one outcome at related fuels. Its axiom list holds `Classical.choice`, from the evaluator's own definition |
-| `Effect4` | Named profiles, actual fixtures, the fidelity inventory read off the OCaml builtin table, the name fixtures and target adapters |
+| `Effect4` | Named profiles, actual fixtures, the name fixtures and target adapters |
 | `Cli` | Thin executable drivers; reusable LCNF modules expose namespaced entry points |
+
+The case-site audit (`Lcnf.Cases`), the rule extraction (`Lcnf.Rules`), `Core.Proof`, `Spec.Reflect`,
+`Model.Container` and the drivers `Cli.Selftest` and `Cli.BoundaryControls` went on 2026-10-15: no
+gate, script or test imported or ran them (`docs/research/2026-10-15-lowering-state/README.md`, K4).
+They are at `git:eaa45b6b9:tools/Conform/`.
 
 The generic modules do not import Effect4 or OCaml5. The OCaml emitter consumes the generic
 source and persisted-index utilities, uses `Lean.SCC.scc`, rejects duplicate emitted names,

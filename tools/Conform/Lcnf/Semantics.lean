@@ -154,7 +154,7 @@ end Outcome
 The constants with no mono body. Every row is a claim about what the Lean constant means,
 and this inductive **is** the claim: it is data, it can be printed, and it can be lined up
 against a target's builtin table row by row (which is what the fidelity classes of
-`Conform.Effect4.Lcnf` do for OCaml). -/
+`OCaml5.Lcnf.TypeRows` and `OCaml5.Lcnf.Builtins` do for OCaml). -/
 
 inductive Prim where
   | natAdd | natSub | natMul | natDiv | natMod | natPow
